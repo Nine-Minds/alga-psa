@@ -397,7 +397,8 @@
       "profileSource": {
         "client_default": "domyślny klienta",
         "contract": "przypisany do umowy",
-        "contract_line": "ustawiony w pozycji"
+        "contract_line": "ustawiony w pozycji",
+        "work_item": "ustawiony w zgłoszeniu lub projekcie"
       },
       "valueSource": {
         "profile": "Profil",
@@ -434,9 +435,13 @@
       "warnings": {
         "inactiveProfile": "Profil {{name}} jest nieaktywny, ale nadal rozlicza tę umowę. Opłaty pozostają na nim; nie są przenoszone do profilu domyślnego.",
         "mixedProfiles": "Ta umowa jest rozliczana przez {{count}} różne profile, więc żaden pojedynczy profil jej nie obejmuje. Każdy profil stosuje własne warunki płatności.",
-        "lineOverride": "Pozycja „{{line}}\" jest rozliczana przez {{name}} zamiast profilu umowy."
+        "lineOverride": "Pozycja „{{line}}\" jest rozliczana przez {{name}} zamiast profilu umowy.",
+        "workItemOverride": "Czas zapisany w zgłoszeniu lub projekcie jest rozliczany przez profil tego elementu pracy, jeśli go ma. W przeciwnym razie obowiązuje domyślny profil klienta.",
+        "workItemOverrideWithProfiles": "Czas zapisany w zgłoszeniu lub projekcie jest rozliczany przez profil tego elementu pracy, jeśli go ma ({{names}}). W przeciwnym razie obowiązuje domyślny profil klienta."
       },
-      "simulationNote": "Symulowana wycena używa zwolnienia z podatku na poziomie klienta. Własne zwolnienie profilu nie jest stosowane w tej symulacji."
+      "simulationNote": "Symulowana wycena używa zwolnienia z podatku na poziomie klienta. Własne zwolnienie profilu nie jest stosowane w tej symulacji.",
+      "dueSentenceWorkItem": "Faktura z dnia {{invoiceDate}} jest płatna do {{dueDate}} — {{terms}} {{source}}, chyba że zgłoszenie lub projekt jest rozliczane przez inny profil",
+      "workItemProfileLine": "Jeśli zgłoszenie lub projekt jest rozliczane przez {{name}}:"
     }
   },
   "contractDialog": {

@@ -176,4 +176,32 @@ describe('ContractOverview billing terms section', () => {
     await screen.findByText("What's Included");
     expect(screen.queryByTestId('billing-terms-section')).toBeNull();
   });
+
+  it('does not present the client default as final when a work item may bill another profile', async () => {
+    const caveated: ContractBillingTrace = {
+      ...singleTrace,
+      warnings: [
+        {
+          code: 'work_item_override_possible',
+          contractLineIds: ['l1'],
+          candidateProfiles: [{ billingProfileId: 'p-b', name: 'Facility B' }],
+        },
+      ],
+      workItemProfiles: [
+        {
+          billingProfileId: 'p-b', name: 'Facility B', source: 'work_item', lineCount: 1, isActive: true, isDefault: false,
+          terms: terms({ value: 'net_15', source: 'profile', days: 15, dueDateExample: { invoiceDate: '2026-10-22', dueDate: '2026-11-06' } }),
+          fields: fields(),
+        },
+      ],
+    };
+    actionMocks.getContractOverview.mockResolvedValue(overviewWith(caveated));
+    render(<ContractOverview contractId="c1" />);
+
+    expect(await screen.findByTestId('billing-warning-work_item_override_possible')).toHaveTextContent('Facility B');
+    expect(screen.getByTestId('billing-due-sentence')).toHaveTextContent(
+      'unless the ticket or project is billed to another profile',
+    );
+    expect(screen.getByTestId('billing-work-item-profile-p-b')).toHaveTextContent('2026-11-06');
+  });
 });

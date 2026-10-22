@@ -179,4 +179,83 @@ describe('buildContractBillingTrace', () => {
   it('rejects a pointer to a profile the client does not own', () => {
     expect(() => build({ assignmentBillingProfileId: 'foreign-profile' })).toThrow(/different client/);
   });
+
+  describe('work-item profiles (step 4)', () => {
+    const hourly = (id: string, billingProfileId: string | null = null) => ({
+      contractLineId: id,
+      contractLineName: id,
+      billingProfileId,
+      billingFrequency: 'monthly',
+      contractLineType: 'Hourly',
+    });
+    const northTerms = identity(NORTH_ID, { paymentTerms: 'due_on_receipt', overriddenFields: ['payment_terms'] });
+
+    it('unassigned hourly line, work-item profile exists: warns, lists the candidate with its own terms, keeps the default as fallback', () => {
+      const trace = build({ lines: [hourly('time')], workItemProfileIds: [NORTH_ID], identities: { [DEFAULT_ID]: identity(DEFAULT_ID), [NORTH_ID]: northTerms } });
+      expect(trace.warnings).toContainEqual({
+        code: 'work_item_override_possible',
+        contractLineIds: ['time'],
+        candidateProfiles: [{ billingProfileId: NORTH_ID, name: 'North Plant' }],
+      });
+      expect(trace.workItemProfiles).toHaveLength(1);
+      expect(trace.workItemProfiles![0]).toMatchObject({ billingProfileId: NORTH_ID, source: 'work_item', lineCount: 1 });
+      expect(trace.workItemProfiles![0].terms).toMatchObject({ value: 'due_on_receipt', days: 0 });
+      expect(trace.workItemProfiles![0].terms.dueDateExample.dueDate).toBe(dueDateForPaymentTerms('2026-10-22', 'due_on_receipt'));
+      // The fallback stays, and profiles[0] stays the primary.
+      expect(trace.profiles.map((p) => [p.billingProfileId, p.source])).toEqual([[DEFAULT_ID, 'client_default']]);
+      expect(trace.terms).toBe(trace.profiles[0].terms);
+    });
+
+    it('unassigned hourly line, no work item carries a profile: still warns (one may be set later), with no candidates', () => {
+      const trace = build({ lines: [hourly('time')], workItemProfileIds: [] });
+      expect(trace.warnings).toContainEqual({ code: 'work_item_override_possible', contractLineIds: ['time'], candidateProfiles: [] });
+      expect(trace.workItemProfiles).toBeUndefined();
+      expect(trace.profiles[0]).toMatchObject({ billingProfileId: DEFAULT_ID, source: 'client_default' });
+    });
+
+    it('a candidate equal to the client default is not an alternative outcome', () => {
+      const trace = build({ lines: [hourly('time')], workItemProfileIds: [DEFAULT_ID] });
+      expect(trace.workItemProfiles).toBeUndefined();
+    });
+
+    it('assigned contract: step 3 beats step 4, no warning', () => {
+      const trace = build({
+        assignmentBillingProfileId: SOUTH_ID,
+        lines: [hourly('time')],
+        workItemProfileIds: [NORTH_ID],
+        identities: { [DEFAULT_ID]: identity(DEFAULT_ID), [NORTH_ID]: northTerms, [SOUTH_ID]: identity(SOUTH_ID) },
+      });
+      expect(trace.warnings.map((w) => w.code)).not.toContain('work_item_override_possible');
+      expect(trace.workItemProfiles).toBeUndefined();
+    });
+
+    it('assigned line: step 2 beats step 4, and only the unassigned hourly line is flagged', () => {
+      const trace = build({
+        lines: [hourly('assigned', SOUTH_ID), hourly('open')],
+        workItemProfileIds: [NORTH_ID],
+        identities: { [DEFAULT_ID]: identity(DEFAULT_ID), [NORTH_ID]: northTerms, [SOUTH_ID]: identity(SOUTH_ID) },
+      });
+      expect(trace.warnings).toContainEqual(
+        expect.objectContaining({ code: 'work_item_override_possible', contractLineIds: ['open'] }),
+      );
+    });
+
+    it.each(['Fixed', 'Usage', 'Bucket'])('only %s lines, unassigned: no warning', (contractLineType) => {
+      const trace = build({
+        lines: [{ contractLineId: 'a', billingProfileId: null, contractLineType }],
+        workItemProfileIds: [NORTH_ID],
+      });
+      expect(trace.warnings.map((w) => w.code)).not.toContain('work_item_override_possible');
+      expect(trace.workItemProfiles).toBeUndefined();
+    });
+
+    it('single-profile client: a work item has nothing to point at, no warning', () => {
+      const trace = build({ lines: [hourly('time')], profiles: [profiles[0]] });
+      expect(trace.warnings).toEqual([]);
+    });
+
+    it('rejects a candidate the client does not own', () => {
+      expect(() => build({ lines: [hourly('time')], workItemProfileIds: ['foreign-profile'] })).toThrow(/different client/);
+    });
+  });
 });

@@ -397,7 +397,8 @@
       "profileSource": {
         "client_default": "kundens standard",
         "contract": "tilldelad avtalet",
-        "contract_line": "angiven på raden"
+        "contract_line": "angiven på raden",
+        "work_item": "angiven på ärendet eller projektet"
       },
       "valueSource": {
         "profile": "Profil",
@@ -434,9 +435,13 @@
       "warnings": {
         "inactiveProfile": "{{name}} är inaktiv men fakturerar fortfarande detta avtal. Avgifter ligger kvar på den; de flyttas inte till standardprofilen.",
         "mixedProfiles": "Detta avtal faktureras via {{count}} olika profiler, så ingen enskild profil täcker det. Varje profil använder sina egna betalningsvillkor.",
-        "lineOverride": "Raden \"{{line}}\" faktureras via {{name}} i stället för avtalets profil."
+        "lineOverride": "Raden \"{{line}}\" faktureras via {{name}} i stället för avtalets profil.",
+        "workItemOverride": "Tid på ett ärende eller projekt faktureras via det arbetsobjektets profil om det har en. Annars gäller kundens standardprofil.",
+        "workItemOverrideWithProfiles": "Tid på ett ärende eller projekt faktureras via det arbetsobjektets profil om det har en ({{names}}). Annars gäller kundens standardprofil."
       },
-      "simulationNote": "Den simulerade prissättningen använder skattebefrielsen på kundnivå. En profils egen befrielse tillämpas inte i denna simulering."
+      "simulationNote": "Den simulerade prissättningen använder skattebefrielsen på kundnivå. En profils egen befrielse tillämpas inte i denna simulering.",
+      "dueSentenceWorkItem": "En faktura daterad {{invoiceDate}} förfaller {{dueDate}} — {{terms}} {{source}}, om inte ärendet eller projektet faktureras via en annan profil",
+      "workItemProfileLine": "Om ärendet eller projektet faktureras via {{name}}:"
     }
   },
   "contractDialog": {

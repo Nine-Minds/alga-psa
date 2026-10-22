@@ -42,6 +42,7 @@ export const BillingTermsSection: React.FC<BillingTermsSectionProps> = ({
   const { t } = useTranslation('msp/contracts');
   const [showDetails, setShowDetails] = useState(false);
   const isMixed = trace.profiles.length > 1;
+  const workItemProfiles = trace.workItemProfiles ?? [];
 
   const termsLabel = (value: ContractBillingTraceTerms['value']) =>
     t(`contractOverview.billing.terms.${value}`, { defaultValue: TERMS_LABELS[value] });
@@ -61,6 +62,7 @@ export const BillingTermsSection: React.FC<BillingTermsSectionProps> = ({
         client_default: 'client default',
         contract: 'assigned on contract',
         contract_line: 'set on line',
+        work_item: 'set on ticket or project',
       }[source],
     });
 
@@ -74,14 +76,26 @@ export const BillingTermsSection: React.FC<BillingTermsSectionProps> = ({
       ? t('contractOverview.billing.lineCountOne', { count, defaultValue: '{{count}} line' })
       : t('contractOverview.billing.lineCountOther', { count, defaultValue: '{{count}} lines' });
 
-  const dueSentence = (terms: ContractBillingTraceTerms) =>
-    t('contractOverview.billing.dueSentence', {
-      invoiceDate: terms.dueDateExample.invoiceDate,
-      dueDate: terms.dueDateExample.dueDate,
-      terms: termsLabel(terms.value),
-      source: termsSourceLabel(terms.source),
-      defaultValue: 'A {{invoiceDate}} invoice is due {{dueDate}} — {{terms}} {{source}}',
-    });
+  // The client default is the fallback, not the answer, while time can follow a work item's profile.
+  const workItemCaveat = trace.warnings.some((warning) => warning.code === 'work_item_override_possible');
+
+  const dueSentence = (terms: ContractBillingTraceTerms, caveat = false) =>
+    caveat
+      ? t('contractOverview.billing.dueSentenceWorkItem', {
+          invoiceDate: terms.dueDateExample.invoiceDate,
+          dueDate: terms.dueDateExample.dueDate,
+          terms: termsLabel(terms.value),
+          source: termsSourceLabel(terms.source),
+          defaultValue:
+            'A {{invoiceDate}} invoice is due {{dueDate}} — {{terms}} {{source}}, unless the ticket or project is billed to another profile',
+        })
+      : t('contractOverview.billing.dueSentence', {
+          invoiceDate: terms.dueDateExample.invoiceDate,
+          dueDate: terms.dueDateExample.dueDate,
+          terms: termsLabel(terms.value),
+          source: termsSourceLabel(terms.source),
+          defaultValue: 'A {{invoiceDate}} invoice is due {{dueDate}} — {{terms}} {{source}}',
+        });
 
   const fieldValue = (field: ContractBillingTraceField): string => {
     const none = t('contractOverview.billing.fieldNone', { defaultValue: 'None' });
@@ -134,6 +148,17 @@ export const BillingTermsSection: React.FC<BillingTermsSectionProps> = ({
           defaultValue:
             'This contract bills {{count}} different profiles, so no single profile covers it. Each profile uses its own payment terms.',
         });
+      case 'work_item_override_possible':
+        return warning.candidateProfiles.length > 0
+          ? t('contractOverview.billing.warnings.workItemOverrideWithProfiles', {
+              names: warning.candidateProfiles.map((profile) => profile.name).join(', '),
+              defaultValue:
+                "Time on a ticket or project is billed to that work item's profile when it has one ({{names}}). Without one, it goes to the client default.",
+            })
+          : t('contractOverview.billing.warnings.workItemOverride', {
+              defaultValue:
+                "Time on a ticket or project is billed to that work item's profile when it has one. Without one, it goes to the client default.",
+            });
       case 'line_override':
         return t('contractOverview.billing.warnings.lineOverride', {
           line: warning.contractLineName ?? warning.contractLineId,
@@ -219,12 +244,26 @@ export const BillingTermsSection: React.FC<BillingTermsSectionProps> = ({
             {isMixed && (
               <div className="pl-2 text-sm text-muted-foreground" data-testid={`billing-profile-terms-${profile.billingProfileId}`}>
                 {termsLabel(profile.terms.value)} · {termsSourceLabel(profile.terms.source)}
-                <div>{dueSentence(profile.terms)}</div>
+                <div>{dueSentence(profile.terms, workItemCaveat && profile.isDefault)}</div>
               </div>
             )}
           </li>
         ))}
       </ul>
+
+      {workItemProfiles.length > 0 && (
+        <ul className="space-y-1 text-sm text-muted-foreground" data-testid="billing-work-item-profiles">
+          {workItemProfiles.map((profile) => (
+            <li key={profile.billingProfileId} data-testid={`billing-work-item-profile-${profile.billingProfileId}`}>
+              {t('contractOverview.billing.workItemProfileLine', {
+                name: profile.name,
+                defaultValue: 'If the ticket or project is billed to {{name}}:',
+              })}{' '}
+              {dueSentence(profile.terms)}
+            </li>
+          ))}
+        </ul>
+      )}
 
       {!isMixed && (
         <div className="space-y-1 text-sm">
@@ -240,7 +279,7 @@ export const BillingTermsSection: React.FC<BillingTermsSectionProps> = ({
             </span>
           </div>
           <p className="text-muted-foreground" data-testid="billing-due-sentence">
-            {dueSentence(trace.terms)}
+            {dueSentence(trace.terms, workItemCaveat && trace.profiles[0]?.isDefault)}
           </p>
         </div>
       )}

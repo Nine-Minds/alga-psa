@@ -397,7 +397,8 @@
       "profileSource": {
         "client_default": "standaard van de klant",
         "contract": "toegewezen aan het contract",
-        "contract_line": "ingesteld op de regel"
+        "contract_line": "ingesteld op de regel",
+        "work_item": "ingesteld op ticket of project"
       },
       "valueSource": {
         "profile": "Profiel",
@@ -434,9 +435,13 @@
       "warnings": {
         "inactiveProfile": "{{name}} is inactief maar factureert dit contract nog steeds. Kosten blijven erop staan; ze worden niet naar het standaardprofiel verplaatst.",
         "mixedProfiles": "Dit contract factureert via {{count}} verschillende profielen, dus geen enkel profiel dekt het volledig. Elk profiel gebruikt zijn eigen betalingsvoorwaarden.",
-        "lineOverride": "Regel \"{{line}}\" factureert via {{name}} in plaats van het profiel van het contract."
+        "lineOverride": "Regel \"{{line}}\" factureert via {{name}} in plaats van het profiel van het contract.",
+        "workItemOverride": "Tijd op een ticket of project wordt gefactureerd via het profiel van dat werkitem als het er een heeft. Zonder profiel geldt het standaardprofiel van de klant.",
+        "workItemOverrideWithProfiles": "Tijd op een ticket of project wordt gefactureerd via het profiel van dat werkitem als het er een heeft ({{names}}). Zonder profiel geldt het standaardprofiel van de klant."
       },
-      "simulationNote": "De gesimuleerde prijsstelling gebruikt de belastingvrijstelling op klantniveau. De eigen vrijstelling van een profiel wordt in deze simulatie niet toegepast."
+      "simulationNote": "De gesimuleerde prijsstelling gebruikt de belastingvrijstelling op klantniveau. De eigen vrijstelling van een profiel wordt in deze simulatie niet toegepast.",
+      "dueSentenceWorkItem": "Een factuur van {{invoiceDate}} is verschuldigd op {{dueDate}} — {{terms}} {{source}}, tenzij het ticket of project via een ander profiel wordt gefactureerd",
+      "workItemProfileLine": "Als het ticket of project via {{name}} wordt gefactureerd:"
     }
   },
   "contractDialog": {

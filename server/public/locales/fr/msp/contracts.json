@@ -397,7 +397,8 @@
       "profileSource": {
         "client_default": "par défaut du client",
         "contract": "attribué au contrat",
-        "contract_line": "défini sur la ligne"
+        "contract_line": "défini sur la ligne",
+        "work_item": "défini sur le ticket ou le projet"
       },
       "valueSource": {
         "profile": "Profil",
@@ -434,9 +435,13 @@
       "warnings": {
         "inactiveProfile": "{{name}} est inactif mais facture toujours ce contrat. Les frais y restent ; ils ne sont pas déplacés vers le profil par défaut.",
         "mixedProfiles": "Ce contrat est facturé via {{count}} profils différents ; aucun profil unique ne le couvre. Chaque profil applique ses propres conditions de paiement.",
-        "lineOverride": "La ligne « {{line}} » est facturée via {{name}} au lieu du profil du contrat."
+        "lineOverride": "La ligne « {{line}} » est facturée via {{name}} au lieu du profil du contrat.",
+        "workItemOverride": "Le temps saisi sur un ticket ou un projet est facturé via le profil de cet élément de travail s'il en a un. Sinon, c'est le profil par défaut du client qui s'applique.",
+        "workItemOverrideWithProfiles": "Le temps saisi sur un ticket ou un projet est facturé via le profil de cet élément de travail s'il en a un ({{names}}). Sinon, c'est le profil par défaut du client qui s'applique."
       },
-      "simulationNote": "La tarification simulée utilise l'exonération fiscale au niveau du client. L'exonération propre à un profil n'est pas appliquée dans cette simulation."
+      "simulationNote": "La tarification simulée utilise l'exonération fiscale au niveau du client. L'exonération propre à un profil n'est pas appliquée dans cette simulation.",
+      "dueSentenceWorkItem": "Une facture du {{invoiceDate}} est due le {{dueDate}} — {{terms}} {{source}}, sauf si le ticket ou le projet est facturé via un autre profil",
+      "workItemProfileLine": "Si le ticket ou le projet est facturé via {{name}} :"
     }
   },
   "contractDialog": {

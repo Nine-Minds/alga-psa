@@ -68,7 +68,47 @@ rejects a profile whose `client_id` does not own the assignment (same guard as
 lineCount, isActive), `terms { value, source, days, dueDateExample }`, `fields[]`
 (`{ key, label, value, source }` for bill-to, payment method, tax exemption, tax region, delivery,
 template, PO, currency, cadence), `warnings[]` (`inactive_profile`, `mixed_profiles`,
-`line_override`).
+`line_override`, `work_item_override_possible`), and an optional `workItemProfiles[]` (see below).
+
+**Step 4: the work item's profile.** The chain is line → contract → work item → client default, and
+the engine does reach step 4: time entries are loaded with
+`COALESCE(tickets.billing_profile_id, projects.billing_profile_id)` (`billingEngine.ts:2812`, `:5880`)
+and passed to `resolveChargeProfile` (`computeTimeBasedCharges.ts:329`). So a contract whose lines and
+assignment have no profile does not bill time on the client default when the ticket or project carries
+another profile. Findings from the engine, which match the resolver doc comment:
+- Only time reaches step 4 on a contract. Fixed, usage, bucket, product/license and project-schedule
+  charges never receive a work-item profile. (Unresolved non-contract time also uses it, but has no
+  contract to trace.) The time loader runs per line and is driven by Hourly service configs, so the
+  trace treats `contract_line_type = 'Hourly'` (prepaid-block lines are Hourly) as the lines that can
+  reach it. Time attributed to a Fixed or Usage line's services through the fallback service list is not
+  flagged; that is the one place the trace under-reports.
+- A line can reach step 4 only if steps 2 and 3 are both empty, i.e. `resolveChargeProfile` without a
+  work item lands on `client_default`. Assigned lines and assigned contracts never raise the warning.
+  A client with one profile never raises it either: nothing else can be pointed at.
+- The ticket→project relationship is the engine's `COALESCE(ticket, project)`, where the project is the
+  task's project or the single billable-linked project of the ticket. The loader takes the distinct
+  non-null `billing_profile_id` of the client's tickets and of its projects. That is a superset of what
+  any single charge sees, which is the right size for "profiles this could resolve to".
+
+The trace stays on `resolveChargeProfile`: every candidate is resolved by a call that includes
+`workItemBillingProfileId`, then its identity comes from `resolveEffectiveBillingIdentity` and its terms
+from the same `buildTerms` (`paymentTermDays`, `dueDateForPaymentTerms`). A candidate that resolves to
+where the line already lands is dropped. Shape: `warnings[]` gains
+`{ code: 'work_item_override_possible', contractLineIds, candidateProfiles: [{ billingProfileId, name }] }`;
+`workItemProfiles?: ContractBillingTraceProfile[]` carries each candidate with `source: 'work_item'`,
+its `terms` and the number of affected lines. They are conditional, so they are kept out of `profiles[]`;
+`profiles[0]` stays the primary and the client-default entry stays as the real fallback. The warning is
+raised even when no work item carries a profile yet, because one can be set at any time, and then
+`candidateProfiles` is empty. The due-date sentence for the client default adds "unless the ticket or
+project is billed to another profile" whenever the warning is present.
+
+A candidate profile the client does not own is excluded, not thrown on: it is data on a ticket or
+project, not something the operator authored on this contract, and failing the whole panel for it would
+hide the real trace. The contract and line pointers still throw.
+
+`loadContractBillingTrace` is not purely a read: it calls `ensureClientDefaultBillingProfile`, which can
+insert the default profile for a client that has none. That is inherited engine convention and is kept.
+The step-4 query runs only when at least one line can reach step 4.
 
 **`getContractOverview` (`contractActions.ts:1165`).**
 Add `billingTrace: ContractBillingTrace | null` to `IContractOverview`; populate for live contracts,
@@ -188,9 +228,15 @@ New cases:
 - `shared/billingClients/contractBillingTrace.test.ts`: single-profile default; explicit assignment;
   line override beats assignment; missing profile at both levels → default; client terms null →
   Net 30 with `source: default`; profile terms override client; tax region labelled client;
-  inactive-profile warning; `mixed_profiles` only when more than one profile actually bills.
+  inactive-profile warning; `mixed_profiles` only when more than one profile actually bills;
+  step 4: warning plus candidate terms for an unassigned Hourly line, warning with no candidates when
+  no work item carries a profile, nothing for an assigned contract or line, nothing for Fixed / Usage /
+  Bucket lines or a one-profile client, foreign candidate rejected.
 - Contract-overview integration: one-profile and multi-profile clients, template returns `null`,
-  cross-tenant profile rejected, trace due-date offset equals `resolveInvoiceDueDate`.
+  cross-tenant profile rejected, trace due-date offset equals `resolveInvoiceDueDate`; a ticket on
+  Profile B under an unassigned contract gives a candidate whose profile and due date equal the
+  engine's `resolveChargeProfile` (with the ticket's profile) + `resolveInvoiceDueDate`, and a ticket
+  with no profile lands on the client default in both.
 - `ContractOverview` UI: profile name visible for one profile (finding 1); default named in the
   assignment field (finding 2); every row carries a source (finding 3); line-override warning shown.
 - `ContractDetail` assignment field: read-only text for one profile; picker + named default for

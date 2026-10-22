@@ -208,7 +208,7 @@ export interface IContractPricingSchedule extends TenantEntity {
  * contract — through `resolveChargeProfile`, `resolveEffectiveBillingIdentity`
  * and `paymentTermDays`, so it cannot disagree with invoice generation.
  */
-export type ContractBillingTraceProfileSource = 'contract_line' | 'contract' | 'client_default';
+export type ContractBillingTraceProfileSource = 'contract_line' | 'contract' | 'work_item' | 'client_default';
 
 /** Where a value inside the winning profile's identity came from. */
 export type ContractBillingTraceValueSource = 'profile' | 'client' | 'default' | 'contract';
@@ -259,7 +259,13 @@ export interface ContractBillingTraceProfile {
 export type ContractBillingTraceWarning =
   | { code: 'inactive_profile'; billingProfileId: string; profileName: string }
   | { code: 'mixed_profiles'; profileCount: number }
-  | { code: 'line_override'; contractLineId: string; contractLineName: string | null; billingProfileId: string; profileName: string };
+  | { code: 'line_override'; contractLineId: string; contractLineName: string | null; billingProfileId: string; profileName: string }
+  /**
+   * Hourly lines with no line or contract profile follow the work item's profile
+   * (ticket/project) when one is set, else the client default. `candidateProfiles`
+   * are the profiles the client's work items carry today (may be empty).
+   */
+  | { code: 'work_item_override_possible'; contractLineIds: string[]; candidateProfiles: Array<{ billingProfileId: string; name: string }> };
 
 export interface ContractBillingTrace {
   asOf: ISO8601String;
@@ -270,4 +276,10 @@ export interface ContractBillingTrace {
   /** Fields of the primary (first) profile. With `mixed_profiles`, read `profiles[].fields`. */
   fields: ContractBillingTraceField[];
   warnings: ContractBillingTraceWarning[];
+  /**
+   * Conditional outcomes (source `work_item`): profiles the client's tickets or
+   * projects carry, billing only the lines named by `work_item_override_possible`.
+   * Never part of `profiles[]`; absent when there are none.
+   */
+  workItemProfiles?: ContractBillingTraceProfile[];
 }

@@ -6,9 +6,11 @@ import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import {
   createBillingProfile,
+  createTicket,
   ensureDefaultBillingProfile,
 } from '../../../../test-utils/billingProfileTestHelpers';
 import { loadContractBillingTrace } from '@alga-psa/shared/billingClients/contractBillingTrace';
+import { resolveChargeProfile } from '@alga-psa/shared/billingClients/billingProfileResolution';
 import { resolveInvoiceDueDate } from '../../../../../packages/billing/src/lib/billing/invoiceDueDate';
 
 /**
@@ -58,7 +60,7 @@ async function createClient(tenant: string, name: string, paymentTerms: string |
 async function createContract(
   tenant: string,
   clientId: string,
-  options: { assignmentProfileId?: string | null; lineProfileIds?: Array<string | null> } = {},
+  options: { assignmentProfileId?: string | null; lineProfileIds?: Array<string | null>; lineType?: string } = {},
 ): Promise<{ contractId: string; clientContractId: string; lineIds: string[] }> {
   const contractId = uuidv4();
   const clientContractId = uuidv4();
@@ -94,6 +96,7 @@ async function createContract(
       billing_frequency: 'monthly',
       display_order: order++,
       billing_profile_id: profileId,
+      ...(options.lineType ? { contract_line_type: options.lineType } : {}),
     });
   }
   return { contractId, clientContractId, lineIds };
@@ -241,5 +244,89 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     }
     // Reading as the other tenant never exposes tenant A's contract.
     expect(await loadContractBillingTrace(db, otherTenantId, { contractId })).toBeNull();
+  }, HOOK_TIMEOUT);
+
+  // Step 4. The engine reads COALESCE(tickets.billing_profile_id, projects.billing_profile_id)
+  // for a time entry's work item, then runs resolveChargeProfile and bills the
+  // invoice due date for the resolved profile (resolveInvoiceDueDate). Both are
+  // driven here from the same seeded ticket and compared to the trace.
+  async function engineOutcomeForTicket(clientId: string, ticketId: string, contractId: string, defaultId: string) {
+    const row = await tenantDb(db, tenantId)
+      .table('tickets')
+      .where({ ticket_id: ticketId })
+      .first('billing_profile_id'); // no project link: COALESCE(ticket, project) is the ticket's value
+    const lines = await table('contract_lines').where({ contract_id: contractId }).select('billing_profile_id');
+    const assignment = await table('client_contracts').where({ contract_id: contractId }).first('billing_profile_id');
+    const resolved = resolveChargeProfile({
+      contractLineBillingProfileId: lines[0].billing_profile_id,
+      contractBillingProfileId: assignment.billing_profile_id,
+      workItemBillingProfileId: row.billing_profile_id,
+      clientDefaultBillingProfileId: defaultId,
+    });
+    return {
+      ...resolved,
+      dueDate: await resolveInvoiceDueDate(db, tenantId, clientId, ASOF, resolved.billingProfileId),
+    };
+  }
+
+  it('work-item-only profile: the trace candidate matches the engine for a ticket on Profile B', async () => {
+    const clientId = await createClient(tenantId, 'Work Item Client', 'net_30');
+    const defaultId = await ensureDefaultBillingProfile({ db, tenantId }, clientId);
+    const profileB = await createBillingProfile({ db, tenantId }, clientId, 'Facility B');
+    await table('client_billing_profiles').where({ billing_profile_id: profileB }).update({ payment_terms: 'net_15' });
+    const { contractId } = await createContract(tenantId, clientId, { lineProfileIds: [null], lineType: 'Hourly' });
+    const ticketId = await createTicket({ db, tenantId }, {
+      clientId,
+      title: 'Facility B work',
+      ticketNumber: `WI-${uuidv4().slice(0, 6)}`,
+      billingProfileId: profileB,
+    });
+
+    const trace = await loadContractBillingTrace(db, tenantId, { contractId, asOf: ASOF });
+    const engine = await engineOutcomeForTicket(clientId, ticketId, contractId, defaultId);
+
+    expect(engine).toMatchObject({ billingProfileId: profileB, source: 'work_item' });
+    expect(trace!.warnings.map((w) => w.code)).toContain('work_item_override_possible');
+    const candidate = trace!.workItemProfiles!.find((p) => p.billingProfileId === engine.billingProfileId)!;
+    expect(candidate).toBeDefined();
+    expect(candidate.terms.dueDateExample.dueDate).toBe(engine.dueDate);
+    // The default is still shown as the fallback, on different terms.
+    expect(trace!.profiles[0]).toMatchObject({ billingProfileId: defaultId, source: 'client_default' });
+    expect(trace!.profiles[0].terms.dueDateExample.dueDate).not.toBe(engine.dueDate);
+  }, HOOK_TIMEOUT);
+
+  it('work-item fallback: a ticket with no profile lands on the client default in both the trace and the engine', async () => {
+    const clientId = await createClient(tenantId, 'Work Item Fallback Client', 'net_30');
+    const defaultId = await ensureDefaultBillingProfile({ db, tenantId }, clientId);
+    await createBillingProfile({ db, tenantId }, clientId, 'Unused Facility');
+    const { contractId } = await createContract(tenantId, clientId, { lineProfileIds: [null], lineType: 'Hourly' });
+    const ticketId = await createTicket({ db, tenantId }, {
+      clientId,
+      title: 'No profile work',
+      ticketNumber: `WF-${uuidv4().slice(0, 6)}`,
+    });
+
+    const trace = await loadContractBillingTrace(db, tenantId, { contractId, asOf: ASOF });
+    const engine = await engineOutcomeForTicket(clientId, ticketId, contractId, defaultId);
+
+    expect(engine).toMatchObject({ billingProfileId: defaultId, source: 'client_default' });
+    expect(trace!.profiles[0].billingProfileId).toBe(engine.billingProfileId);
+    expect(trace!.profiles[0].terms.dueDateExample.dueDate).toBe(engine.dueDate);
+    expect(trace!.workItemProfiles).toBeUndefined();
+    expect(trace!.warnings).toContainEqual(expect.objectContaining({ code: 'work_item_override_possible', candidateProfiles: [] }));
+  }, HOOK_TIMEOUT);
+
+  it('an assigned contract is not flagged even when a ticket carries another profile', async () => {
+    const clientId = await createClient(tenantId, 'Assigned Wins Client');
+    await ensureDefaultBillingProfile({ db, tenantId }, clientId);
+    const profileA = await createBillingProfile({ db, tenantId }, clientId, 'Assigned A');
+    const profileB = await createBillingProfile({ db, tenantId }, clientId, 'Ticket B');
+    const { contractId } = await createContract(tenantId, clientId, { assignmentProfileId: profileA, lineType: 'Hourly' });
+    await createTicket({ db, tenantId }, { clientId, title: 't', ticketNumber: `AW-${uuidv4().slice(0, 6)}`, billingProfileId: profileB });
+
+    const trace = await loadContractBillingTrace(db, tenantId, { contractId, asOf: ASOF });
+
+    expect(trace!.warnings.map((w) => w.code)).not.toContain('work_item_override_possible');
+    expect(trace!.workItemProfiles).toBeUndefined();
   }, HOOK_TIMEOUT);
 });

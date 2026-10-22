@@ -28,7 +28,8 @@ import { DEFAULT_PAYMENT_TERMS, normalizePaymentTerms, paymentTermDays } from '.
  * `resolveChargeProfile` for which profile, `resolveEffectiveBillingIdentity`
  * for which value, `paymentTermDays` / `dueDateForPaymentTerms` for arithmetic —
  * so what an operator reads cannot disagree with the invoice that follows.
- * This module must not grow a second `line ?? contract ?? default` chain.
+ * This module must not grow a second `line ?? contract ?? workItem ?? default`
+ * chain: the work-item step is just one more input to `resolveChargeProfile`.
  */
 
 export interface ContractBillingTraceProfileRow {
@@ -43,6 +44,8 @@ export interface ContractBillingTraceLineInput {
   contractLineName?: string | null;
   billingProfileId: string | null;
   billingFrequency?: string | null;
+  /** `contract_lines.contract_line_type`. Unknown (absent) is never treated as time-based. */
+  contractLineType?: string | null;
 }
 
 export interface BuildContractBillingTraceInput {
@@ -56,12 +59,17 @@ export interface BuildContractBillingTraceInput {
   lines: ContractBillingTraceLineInput[];
   /** Every profile of the owning client, inactive ones included. */
   profiles: ContractBillingTraceProfileRow[];
-  /** `resolveEffectiveBillingIdentity` output for every profile that bills. */
+  /** `resolveEffectiveBillingIdentity` output for every profile that bills, and for each work-item candidate. */
   identities: Record<string, EffectiveBillingIdentity>;
+  /**
+   * Distinct non-null `billing_profile_id` values carried by the client's tickets
+   * and projects (step 4 of the chain). Each must be a profile of this client.
+   */
+  workItemProfileIds?: string[];
 }
 
 // Most specific step first; a profile reached by several steps reports the most specific.
-const SOURCE_SPECIFICITY: ContractBillingTraceProfileSource[] = ['contract_line', 'contract', 'client_default'];
+const SOURCE_SPECIFICITY: ContractBillingTraceProfileSource[] = ['contract_line', 'contract', 'work_item', 'client_default'];
 
 const ENGLISH_LABELS: Record<ContractBillingTraceField['key'], string> = {
   bill_to: 'Bill to',
@@ -80,12 +88,36 @@ const ENGLISH_LABELS: Record<ContractBillingTraceField['key'], string> = {
 function resolveForLine(
   input: Pick<BuildContractBillingTraceInput, 'assignmentBillingProfileId' | 'clientDefaultBillingProfileId'>,
   lineBillingProfileId: string | null,
+  workItemBillingProfileId: string | null = null,
 ) {
   return resolveChargeProfile({
     contractLineBillingProfileId: lineBillingProfileId,
     contractBillingProfileId: input.assignmentBillingProfileId,
+    workItemBillingProfileId,
     clientDefaultBillingProfileId: input.clientDefaultBillingProfileId,
   });
+}
+
+type StepFourInput = Pick<
+  BuildContractBillingTraceInput,
+  'assignmentBillingProfileId' | 'clientDefaultBillingProfileId' | 'lines' | 'profiles'
+>;
+
+/**
+ * Lines whose charges can reach step 4 (the work item's profile). Engine facts:
+ * time is priced through the hourly obligation (`computeTimeBasedCharges`), which
+ * is fed by Hourly lines (prepaid block lines are Hourly); fixed, usage, bucket and
+ * project-schedule charges never receive a work-item profile. A line only reaches
+ * step 4 when steps 2 and 3 are both empty, i.e. it lands on the client default.
+ * A client with a single profile has nothing for a work item to point at.
+ */
+export function resolveStepFourLines(input: StepFourInput): ContractBillingTraceLineInput[] {
+  if (input.profiles.length < 2) return [];
+  return input.lines.filter(
+    (line) =>
+      line.contractLineType?.trim().toLowerCase() === 'hourly' &&
+      resolveForLine(input, line.billingProfileId).source === 'client_default',
+  );
 }
 
 /**
@@ -232,6 +264,52 @@ export function buildContractBillingTrace(input: BuildContractBillingTraceInput)
     }
   }
 
+  // Step 4. Lines that fell through to the client default may instead follow the
+  // work item's profile. The default entry above stays: it is the fallback.
+  const stepFourLines = resolveStepFourLines(input);
+  const workItemProfiles: ContractBillingTraceProfile[] = [];
+  if (stepFourLines.length > 0) {
+    const candidates = new Map<string, number>();
+    for (const line of stepFourLines) {
+      for (const candidateId of input.workItemProfileIds ?? []) {
+        requireProfile(candidateId);
+        const resolved = resolveForLine(input, line.billingProfileId, candidateId);
+        // Landing where the line lands without a work item is not an alternative outcome.
+        if (resolved.source !== 'work_item') continue;
+        if (resolved.billingProfileId === resolveForLine(input, line.billingProfileId).billingProfileId) continue;
+        candidates.set(resolved.billingProfileId, (candidates.get(resolved.billingProfileId) ?? 0) + 1);
+      }
+    }
+    for (const [billingProfileId, lineCount] of candidates) {
+      const row = requireProfile(billingProfileId);
+      const identity = input.identities[billingProfileId];
+      if (!identity) {
+        throw new Error(`Missing billing identity for profile ${billingProfileId}.`);
+      }
+      workItemProfiles.push({
+        billingProfileId,
+        name: row.name,
+        source: 'work_item',
+        lineCount,
+        isActive: row.isActive,
+        isDefault: row.isDefault,
+        terms: buildTerms(identity, input.asOf),
+        fields: buildFields(identity, input.currencyCode, input.contractBillingFrequency ?? null),
+      });
+    }
+    workItemProfiles.sort((a, b) => a.name.localeCompare(b.name));
+    // Raised even with no candidates today: a ticket or project can be given a
+    // profile at any time, and the client default must not read as final.
+    warnings.push({
+      code: 'work_item_override_possible',
+      contractLineIds: stepFourLines.map((line) => line.contractLineId),
+      candidateProfiles: workItemProfiles.map((profile) => ({
+        billingProfileId: profile.billingProfileId,
+        name: profile.name,
+      })),
+    });
+  }
+
   const primary = profiles[0];
   return {
     asOf: input.asOf,
@@ -239,6 +317,7 @@ export function buildContractBillingTrace(input: BuildContractBillingTraceInput)
     terms: primary.terms,
     fields: primary.fields,
     warnings,
+    ...(workItemProfiles.length > 0 ? { workItemProfiles } : {}),
   };
 }
 
@@ -301,7 +380,7 @@ export async function loadContractBillingTrace(
       .table('contract_lines')
       .where({ contract_id: options.contractId })
       .orderBy('display_order', 'asc')
-      .select('contract_line_id', 'contract_line_name', 'billing_profile_id', 'billing_frequency'),
+      .select('contract_line_id', 'contract_line_name', 'billing_profile_id', 'billing_frequency', 'contract_line_type'),
     db
       .table('client_billing_profiles')
       .where({ client_id: clientId })
@@ -336,11 +415,13 @@ export async function loadContractBillingTrace(
     contract_line_name: string | null;
     billing_profile_id: string | null;
     billing_frequency: string | null;
+    contract_line_type: string | null;
   }>).map((row) => ({
     contractLineId: row.contract_line_id,
     contractLineName: row.contract_line_name,
     billingProfileId: row.billing_profile_id,
     billingFrequency: row.billing_frequency,
+    contractLineType: row.contract_line_type,
   }));
 
   const asOf = options.asOf ?? (new Date().toISOString().slice(0, 10) as ISO8601String);
@@ -351,8 +432,29 @@ export async function loadContractBillingTrace(
   const billingProfileIds = new Set<string>(
     resolveTracedLines({ ...base, lines }).map(({ resolved }) => resolved.billingProfileId),
   );
+
+  // Step 4 candidates: the profiles this client's tickets and projects carry, read
+  // only when some line can reach step 4. The engine takes
+  // COALESCE(ticket, linked-or-task project); the union of both columns is a
+  // superset of what any one charge can see. A profile the client does not own
+  // is excluded (the engine would have no identity for it); the contract
+  // pointers above throw because an operator authored them.
+  const workItemProfileIds: string[] = [];
+  if (resolveStepFourLines({ ...base, lines, profiles }).length > 0) {
+    const [ticketRows, projectRows] = await Promise.all([
+      db.table('tickets').where({ client_id: clientId }).whereNotNull('billing_profile_id').distinct('billing_profile_id'),
+      db.table('projects').where({ client_id: clientId }).whereNotNull('billing_profile_id').distinct('billing_profile_id'),
+    ]);
+    const found = new Set<string>(
+      [...(ticketRows as Array<{ billing_profile_id: string }>), ...(projectRows as Array<{ billing_profile_id: string }>)].map(
+        (row) => row.billing_profile_id,
+      ),
+    );
+    workItemProfileIds.push(...[...found].filter((id) => ownedIds.has(id)).sort());
+  }
+
   const identities: Record<string, EffectiveBillingIdentity> = {};
-  for (const billingProfileId of billingProfileIds) {
+  for (const billingProfileId of new Set([...billingProfileIds, ...workItemProfileIds])) {
     identities[billingProfileId] = await resolveEffectiveBillingIdentity(knex, tenant, clientId, billingProfileId);
   }
 
@@ -364,5 +466,6 @@ export async function loadContractBillingTrace(
     lines,
     profiles,
     identities,
+    workItemProfileIds,
   });
 }
