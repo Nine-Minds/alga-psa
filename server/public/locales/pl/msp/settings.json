@@ -1396,7 +1396,9 @@
         "saveDomain": "Zapisz domenę",
         "updateDomain": "Aktualizuj domenę",
         "submitting": "Wysyłanie…",
-        "cancelEdit": "Anuluj edycję"
+        "cancelEdit": "Anuluj edycję",
+        "confirmUris": "Zarejestrowano — potwierdź",
+        "confirmingUris": "Potwierdzanie…"
       },
       "form": {
         "label": "Domena niestandardowa",
@@ -1434,7 +1436,8 @@
         "deploying": "Wdrażanie",
         "active": "Aktywna",
         "disabled": "Wyłączona",
-        "unknown": "Nieznany"
+        "unknown": "Nieznany",
+        "pending_redirect_uri": "Oczekiwanie na URI przekierowania"
       },
       "messages": {
         "requestSubmitted": "Wysłano żądanie domeny niestandardowej.",
@@ -1446,9 +1449,32 @@
         "registerFailed": "Nie udało się zarejestrować domeny niestandardowej.",
         "refreshFailed": "Nie udało się odświeżyć statusu domeny.",
         "retryFailed": "Ponowienie nie powiodło się.",
-        "disableFailed": "Nie udało się wyłączyć domeny niestandardowej."
+        "disableFailed": "Nie udało się wyłączyć domeny niestandardowej.",
+        "confirmUrisFailed": "Nie udało się potwierdzić identyfikatorów URI przekierowania.",
+        "urisConfirmed": "Identyfikatory URI przekierowania potwierdzone."
       },
-      "hostedTlsNote": "Po zweryfikowaniu DNS automatycznie wystawimy certyfikaty TLS."
+      "hostedTlsNote": "Po zweryfikowaniu DNS automatycznie wystawimy certyfikaty TLS.",
+      "surface": {
+        "label": "Obsługuje",
+        "current": "Obsługuje: {{value}}",
+        "updatingSurface": "Zapisanie zmieni aplikację obsługiwaną przez tę domenę i uruchomi ponownie konfigurację.",
+        "options": {
+          "client_portal": "Portal klienta",
+          "msp": "Aplikacja MSP",
+          "both": "Obie"
+        },
+        "descriptions": {
+          "client_portal": "Domena otwiera portal klienta. To ustawienie domyślne.",
+          "msp": "Domena otwiera aplikację MSP (dla techników). Najpierw trzeba zarejestrować identyfikatory URI przekierowania logowania jednokrotnego.",
+          "both": "Jedna domena obsługuje obie aplikacje. Ścieżki pod /msp otwierają aplikację MSP, a ścieżki pod /client-portal otwierają portal klienta."
+        }
+      },
+      "redirectUris": {
+        "title": "Trzeba zarejestrować identyfikatory URI przekierowania SSO",
+        "description": "Ta domena obsługuje aplikację MSP, więc logowanie jednokrotne zadziała dopiero po zarejestrowaniu poniższych identyfikatorów URI przekierowania u dostawcy SSO. Domena pozostaje oczekująca do czasu ich potwierdzenia.",
+        "listLabel": "Zarejestruj te identyfikatory URI przekierowania:",
+        "contactSupport": "Poproś administratora lub skontaktuj się z pomocą techniczną, aby zarejestrować i potwierdzić te identyfikatory URI przekierowania."
+      }
     },
     "yourCompanyName": "Nazwa Twojej firmy",
     "brandingPreviewMode": "Tryb motywu podglądu marki",
@@ -3642,7 +3668,12 @@
       "noLeadingTrailingDot": "Domena nie może zaczynać się ani kończyć kropką.",
       "notApplianceHost": "Wybierz domenę inną niż główny host tego serwera. Niestandardowa domena portalu musi być inną nazwą hosta, którą serwer proxy przekierowuje tutaj.",
       "nothingToRetry": "Brak nieudanej rejestracji domeny niestandardowej do ponowienia.",
-      "retryOnlyAfterFailure": "Ponowienie jest dostępne tylko po nieudanej rejestracji."
+      "retryOnlyAfterFailure": "Ponowienie jest dostępne tylko po nieudanej rejestracji.",
+      "alreadyInUse": "Ta domena jest już używana. Wybierz inną domenę.",
+      "usedByOtherSurface": "Ta domena jest już używana przez inną z Twoich domen niestandardowych. Aby udostępniać portal klienta i aplikację MSP z jednej domeny, wybierz „Oba”.",
+      "invalidSurface": "Wybierz, co udostępnia domena niestandardowa: portal klienta, aplikację MSP lub oba.",
+      "redirectUrisHosted": "Identyfikatory URI przekierowań dla domen hostowanych rejestruje wsparcie platformy.",
+      "nothingToConfirm": "Brak oczekującego potwierdzenia identyfikatorów URI przekierowań SSO dla tej domeny."
     }
   },
   "common": {

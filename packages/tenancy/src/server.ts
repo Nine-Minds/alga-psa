@@ -3,6 +3,7 @@ import { getTenantContext } from '@alga-psa/db';
 
 export * from './server/portalDomainStatus';
 export * from './server/onboardingProgress';
+export * from './server/tenantAppBaseUrl';
 
 export async function getTenantForCurrentRequest(fallbackTenant?: string): Promise<string | null> {
   const contextTenant = getTenantContext() ?? null;

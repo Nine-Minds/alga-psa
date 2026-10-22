@@ -1396,7 +1396,9 @@
         "saveDomain": "Enregistrer le domaine",
         "updateDomain": "Mettre à jour le domaine",
         "submitting": "Envoi…",
-        "cancelEdit": "Annuler la modification"
+        "cancelEdit": "Annuler la modification",
+        "confirmUris": "Je les ai enregistrés — confirmer",
+        "confirmingUris": "Confirmation…"
       },
       "form": {
         "label": "Domaine personnalisé",
@@ -1434,7 +1436,8 @@
         "deploying": "Déploiement en cours",
         "active": "Actif",
         "disabled": "Désactivé",
-        "unknown": "Inconnu"
+        "unknown": "Inconnu",
+        "pending_redirect_uri": "URI de redirection en attente"
       },
       "messages": {
         "requestSubmitted": "Demande de domaine personnalisé soumise.",
@@ -1446,9 +1449,32 @@
         "registerFailed": "Échec de l'enregistrement du domaine personnalisé.",
         "refreshFailed": "Échec de l'actualisation du statut du domaine.",
         "retryFailed": "Échec de la nouvelle tentative.",
-        "disableFailed": "Échec de la désactivation du domaine personnalisé."
+        "disableFailed": "Échec de la désactivation du domaine personnalisé.",
+        "confirmUrisFailed": "Échec de la confirmation des URI de redirection.",
+        "urisConfirmed": "URI de redirection confirmés."
       },
-      "hostedTlsNote": "Nous provisionnerons automatiquement les certificats TLS une fois le DNS vérifié."
+      "hostedTlsNote": "Nous provisionnerons automatiquement les certificats TLS une fois le DNS vérifié.",
+      "surface": {
+        "label": "Dessert",
+        "current": "Dessert : {{value}}",
+        "updatingSurface": "L'enregistrement modifiera l'application desservie par ce domaine et relancera le provisionnement.",
+        "options": {
+          "client_portal": "Portail client",
+          "msp": "Application MSP",
+          "both": "Les deux"
+        },
+        "descriptions": {
+          "client_portal": "Le domaine ouvre votre portail client. C'est le choix par défaut.",
+          "msp": "Le domaine ouvre l'application MSP (techniciens). Les URI de redirection de l'authentification unique doivent d'abord être enregistrés.",
+          "both": "Un seul domaine dessert les deux applications. Les chemins sous /msp ouvrent l'application MSP et ceux sous /client-portal ouvrent le portail client."
+        }
+      },
+      "redirectUris": {
+        "title": "Les URI de redirection SSO doivent être enregistrés",
+        "description": "Ce domaine dessert l'application MSP : l'authentification unique ne fonctionnera qu'une fois les URI de redirection ci-dessous enregistrés auprès de votre fournisseur SSO. Le domaine reste en attente jusqu'à leur confirmation.",
+        "listLabel": "Enregistrez ces URI de redirection :",
+        "contactSupport": "Demandez à votre administrateur ou contactez le support pour enregistrer et confirmer ces URI de redirection."
+      }
     },
     "yourCompanyName": "Nom de votre entreprise",
     "brandingPreviewMode": "Mode de thème d'aperçu de la marque",
@@ -3642,7 +3668,12 @@
       "noLeadingTrailingDot": "Le domaine ne peut pas commencer ni se terminer par un point.",
       "notApplianceHost": "Choisissez un domaine différent de l'hôte principal de ce serveur. Le domaine personnalisé du portail doit être un autre nom d'hôte que votre proxy inverse redirige ici.",
       "nothingToRetry": "Aucun enregistrement de domaine personnalisé en échec à relancer.",
-      "retryOnlyAfterFailure": "La relance n'est possible qu'après un enregistrement en échec."
+      "retryOnlyAfterFailure": "La relance n'est possible qu'après un enregistrement en échec.",
+      "alreadyInUse": "Ce domaine est déjà utilisé. Choisissez un autre domaine.",
+      "usedByOtherSurface": "Ce domaine est déjà utilisé par un autre de vos domaines personnalisés. Pour servir le portail client et l’application MSP depuis un même domaine, choisissez « Les deux ».",
+      "invalidSurface": "Choisissez ce que sert le domaine personnalisé : portail client, application MSP ou les deux.",
+      "redirectUrisHosted": "Les URI de redirection des domaines hébergés sont enregistrées par le support de la plateforme.",
+      "nothingToConfirm": "Aucune confirmation d’URI de redirection SSO en attente pour ce domaine."
     }
   },
   "common": {

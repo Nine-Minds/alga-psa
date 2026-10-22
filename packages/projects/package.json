@@ -44,6 +44,7 @@
     "@alga-psa/inventory": "*",
     "@alga-psa/notifications": "*",
     "@alga-psa/shared": "*",
+    "@alga-psa/tenancy": "*",
     "@alga-psa/types": "*",
     "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",

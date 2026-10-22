@@ -1396,7 +1396,9 @@
         "saveDomain": "Salva dominio",
         "updateDomain": "Aggiorna dominio",
         "submitting": "Invio in corso…",
-        "cancelEdit": "Annulla modifica"
+        "cancelEdit": "Annulla modifica",
+        "confirmUris": "Li ho registrati — conferma",
+        "confirmingUris": "Conferma in corso…"
       },
       "form": {
         "label": "Dominio personalizzato",
@@ -1434,7 +1436,8 @@
         "deploying": "Distribuzione in corso",
         "active": "Attivo",
         "disabled": "Disattivato",
-        "unknown": "Sconosciuto"
+        "unknown": "Sconosciuto",
+        "pending_redirect_uri": "URI di reindirizzamento in sospeso"
       },
       "messages": {
         "requestSubmitted": "Richiesta di dominio personalizzato inviata.",
@@ -1446,9 +1449,32 @@
         "registerFailed": "Impossibile registrare il dominio personalizzato.",
         "refreshFailed": "Impossibile aggiornare lo stato del dominio.",
         "retryFailed": "Nuovo tentativo non riuscito.",
-        "disableFailed": "Impossibile disattivare il dominio personalizzato."
+        "disableFailed": "Impossibile disattivare il dominio personalizzato.",
+        "confirmUrisFailed": "Impossibile confermare gli URI di reindirizzamento.",
+        "urisConfirmed": "URI di reindirizzamento confermati."
       },
-      "hostedTlsNote": "Provvederemo automaticamente al provisioning dei certificati TLS una volta verificato il DNS."
+      "hostedTlsNote": "Provvederemo automaticamente al provisioning dei certificati TLS una volta verificato il DNS.",
+      "surface": {
+        "label": "Serve",
+        "current": "Serve: {{value}}",
+        "updatingSurface": "Salvando cambierà l'app servita da questo dominio e il provisioning ripartirà.",
+        "options": {
+          "client_portal": "Portale clienti",
+          "msp": "App MSP",
+          "both": "Entrambe"
+        },
+        "descriptions": {
+          "client_portal": "Il dominio apre il portale clienti. È l'impostazione predefinita.",
+          "msp": "Il dominio apre l'app MSP (tecnici). Gli URI di reindirizzamento del single sign-on devono essere registrati prima.",
+          "both": "Un dominio serve entrambe le app. I percorsi sotto /msp aprono l'app MSP e quelli sotto /client-portal aprono il portale clienti."
+        }
+      },
+      "redirectUris": {
+        "title": "Gli URI di reindirizzamento SSO devono essere registrati",
+        "description": "Questo dominio serve l'app MSP, quindi il single sign-on funzionerà solo dopo la registrazione degli URI di reindirizzamento qui sotto presso il provider SSO. Il dominio resta in sospeso fino alla conferma.",
+        "listLabel": "Registra questi URI di reindirizzamento:",
+        "contactSupport": "Chiedi all'amministratore o contatta l'assistenza per registrare e confermare questi URI di reindirizzamento."
+      }
     },
     "yourCompanyName": "Nome della tua azienda",
     "brandingPreviewMode": "Modalità tema anteprima branding",
@@ -3642,7 +3668,12 @@
       "noLeadingTrailingDot": "Il dominio non può iniziare o terminare con un punto.",
       "notApplianceHost": "Scegli un dominio diverso dall'host principale di questo server. Il dominio personalizzato del portale deve essere un altro nome host che il tuo reverse proxy inoltra qui.",
       "nothingToRetry": "Non c'è alcuna registrazione di dominio personalizzato non riuscita da ritentare.",
-      "retryOnlyAfterFailure": "Il nuovo tentativo è disponibile solo dopo una registrazione non riuscita."
+      "retryOnlyAfterFailure": "Il nuovo tentativo è disponibile solo dopo una registrazione non riuscita.",
+      "alreadyInUse": "Questo dominio è già in uso. Scegli un dominio diverso.",
+      "usedByOtherSurface": "Questo dominio è già usato da un altro dei tuoi domini personalizzati. Per servire il portale clienti e l’app MSP da un unico dominio, scegli «Entrambi».",
+      "invalidSurface": "Scegli cosa serve il dominio personalizzato: portale clienti, app MSP o entrambi.",
+      "redirectUrisHosted": "Gli URI di reindirizzamento per i domini ospitati vengono registrati dal supporto della piattaforma.",
+      "nothingToConfirm": "Nessuna conferma di URI di reindirizzamento SSO in sospeso per questo dominio."
     }
   },
   "common": {

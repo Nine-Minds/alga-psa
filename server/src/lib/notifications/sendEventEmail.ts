@@ -483,6 +483,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
           supportsAttachments: capabilities.supportsAttachments,
           blockedAttachmentExtensions: capabilities.blockedAttachmentExtensions,
           maxAttachmentBytes: capabilities.maxAttachmentSize || 0,
+          // LEVERAGE: pattern tenant-link-context — hand-built tenant-facing base URL; recipient may be MSP or client, so surface is not known here (left canonical).
           baseUrl: process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || '',
         });
         if (prepared.downloadLinks.length) attachmentDownloadText = '\nDownload attachments within one hour (verify the recipient email; no portal account required):\n' + prepared.downloadLinks.join('\n');

@@ -22,6 +22,7 @@ export default defineConfig({
         __dirname,
         '../client-portal/src/models/PortalDomainModel.ts'
       ),
+      '@alga-psa/shared': path.resolve(__dirname, '../../shared'),
       '@shared': path.resolve(__dirname, '../../shared'),
       '@ee': path.resolve(__dirname, '../ee/src'),
       '@': path.resolve(__dirname, '../../server/src'),

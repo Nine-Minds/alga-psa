@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto';
 import { createTenantKnex, tenantDb, runWithTenant } from '@alga-psa/db';
 import { PortalInvitationService } from '../services/PortalInvitationService';
 import { getTenantSlugForTenant } from '@alga-psa/db';
-import { getPortalDomainStatusForTenant } from '@alga-psa/tenancy/server';
+import { resolveTenantAppBase } from '@alga-psa/tenancy/server';
 import { getSystemEmailService, TenantEmailService, sendPortalInvitationEmail } from '@alga-psa/email';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
@@ -572,13 +572,13 @@ export const sendPortalInvitation = withAuth(async (
       };
     }
 
-    // Prefer the tenant's active custom portal domain (vanity host) so the
+    // Prefer the tenant's active custom domain serving the client portal (vanity host) so the
     // invitation lands on the host the client portal is served from.
     let vanityBaseUrl = '';
     try {
-      const portalDomain = await getPortalDomainStatusForTenant(tenant);
-      if (portalDomain.status === 'active' && portalDomain.domain) {
-        vanityBaseUrl = `https://${portalDomain.domain}`;
+      const resolved = await resolveTenantAppBase(tenant, 'client_portal');
+      if (resolved.source === 'vanity') {
+        vanityBaseUrl = resolved.baseUrl;
       }
     } catch (domainError) {
       console.warn('Failed to resolve custom portal domain for invitation link:', domainError);
