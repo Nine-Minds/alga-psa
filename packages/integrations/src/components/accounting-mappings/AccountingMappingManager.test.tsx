@@ -154,13 +154,18 @@ describe('accounting mapping tab strip layout', () => {
   });
 
   // A fixed-column grid list silently wraps the surplus tab onto a second row
-  // whenever a module is added, so the list must stay count-agnostic.
-  it.each(adapterManagers)('lays $name tabs out in one row', ({ moduleCount, renderManager }) => {
+  // whenever a module is added, so the list must stay count-agnostic. Any
+  // `grid*` token fails the assertion: a bare `grid` still beats the default
+  // `flex` in the cascade and stacks every tab into a single column. A flex
+  // list only wraps once the triggers genuinely outgrow the row, which is the
+  // graceful behaviour (the eight-module QuickBooks CSV strip does exactly
+  // that on a narrow viewport).
+  it.each(adapterManagers)('renders every $name module without grid-constraining the list', ({ moduleCount, renderManager }) => {
     renderManager();
 
     expect(moduleCount).toBeGreaterThan(0);
     expect(screen.getAllByRole('tab')).toHaveLength(moduleCount);
-    expect(screen.getByRole('tablist').className).not.toMatch(/grid-cols-/);
+    expect(screen.getByRole('tablist').className).not.toMatch(/\bgrid\b/);
   });
 
   // The QBO and Xero live strips only render once an external organisation is
