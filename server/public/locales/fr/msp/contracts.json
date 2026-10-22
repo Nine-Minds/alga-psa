@@ -2488,7 +2488,7 @@
       "editDetails": "Modifier les règles",
       "editDetailsFor": "Modifier les détails de {{line}}",
       "fields": {
-        "adjustmentAmount": "Montant de l'ajustement en dollars",
+        "adjustmentAmount": "Montant de l'ajustement",
         "adjustmentDescription": "Description de l'ajustement",
         "adjustmentPeriod": "Période de l'ajustement",
         "billingFrequency": "Fréquence de facturation",
@@ -2511,11 +2511,11 @@
         "roundUpMinutes": "Arrondir aux minutes",
         "scheduleEffectiveDate": "Date d'effet du barème",
         "scheduleEndDate": "Date de fin du barème",
-        "scheduleRate": "Tarif du barème en dollars",
+        "scheduleRate": "Tarif du barème",
         "serviceQuantity": "Quantité de licences ou de produits",
         "tierMaximum": "Maximum du palier",
         "tierMinimum": "Minimum du palier",
-        "tierRate": "Tarif du palier en dollars",
+        "tierRate": "Tarif du palier",
         "usageUnit": "Unité d'utilisation"
       },
       "frequencies": {

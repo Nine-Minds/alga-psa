@@ -2488,7 +2488,7 @@
       "editDetails": "Regeln bearbeiten",
       "editDetailsFor": "Details für {{line}} bearbeiten",
       "fields": {
-        "adjustmentAmount": "Korrekturbetrag in Dollar",
+        "adjustmentAmount": "Korrekturbetrag",
         "adjustmentDescription": "Korrekturbeschreibung",
         "adjustmentPeriod": "Korrekturzeitraum",
         "billingFrequency": "Abrechnungsfrequenz",
@@ -2511,11 +2511,11 @@
         "roundUpMinutes": "Aufrunden auf Minuten",
         "scheduleEffectiveDate": "Preisplan gültig ab",
         "scheduleEndDate": "Preisplan-Enddatum",
-        "scheduleRate": "Preisplansatz in Dollar",
+        "scheduleRate": "Preisplansatz",
         "serviceQuantity": "Lizenz- oder Produktmenge",
         "tierMaximum": "Stufenmaximum",
         "tierMinimum": "Stufenminimum",
-        "tierRate": "Stufensatz in Dollar",
+        "tierRate": "Stufensatz",
         "usageUnit": "Nutzungseinheit"
       },
       "frequencies": {

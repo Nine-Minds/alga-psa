@@ -2488,7 +2488,7 @@
       "editDetails": "Editar reglas",
       "editDetailsFor": "Editar detalles de {{line}}",
       "fields": {
-        "adjustmentAmount": "Importe del ajuste en dólares",
+        "adjustmentAmount": "Importe del ajuste",
         "adjustmentDescription": "Descripción del ajuste",
         "adjustmentPeriod": "Período del ajuste",
         "billingFrequency": "Frecuencia de facturación",
@@ -2511,11 +2511,11 @@
         "roundUpMinutes": "Redondear a minutos",
         "scheduleEffectiveDate": "Fecha de entrada en vigor del horario",
         "scheduleEndDate": "Fecha de fin del horario",
-        "scheduleRate": "Tarifa del horario en dólares",
+        "scheduleRate": "Tarifa del horario",
         "serviceQuantity": "Cantidad de licencias o productos",
         "tierMaximum": "Máximo del nivel",
         "tierMinimum": "Mínimo del nivel",
-        "tierRate": "Tarifa del nivel en dólares",
+        "tierRate": "Tarifa del nivel",
         "usageUnit": "Unidad de uso"
       },
       "frequencies": {

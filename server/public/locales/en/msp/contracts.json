@@ -2485,7 +2485,7 @@
       },
       "discounts": "Discounts",
       "fields": {
-        "adjustmentAmount": "Adjustment amount dollars",
+        "adjustmentAmount": "Adjustment amount",
         "adjustmentDescription": "Adjustment description",
         "adjustmentPeriod": "Adjustment period",
         "billingFrequency": "Billing frequency",
@@ -2508,11 +2508,11 @@
         "roundUpMinutes": "Round up to minutes",
         "scheduleEffectiveDate": "Schedule effective date",
         "scheduleEndDate": "Schedule end date",
-        "scheduleRate": "Schedule rate dollars",
+        "scheduleRate": "Schedule rate",
         "serviceQuantity": "License or product quantity",
         "tierMaximum": "Tier maximum",
         "tierMinimum": "Tier minimum",
-        "tierRate": "Tier rate dollars",
+        "tierRate": "Tier rate",
         "usageUnit": "Usage unit"
       },
       "frequencies": {

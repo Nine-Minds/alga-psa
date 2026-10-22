@@ -2485,7 +2485,7 @@
       },
       "discounts": "Rabatter",
       "fields": {
-        "adjustmentAmount": "Justeringsbelopp i dollar",
+        "adjustmentAmount": "Justeringsbelopp",
         "adjustmentDescription": "Beskrivning av justeringen",
         "adjustmentPeriod": "Justeringsperiod",
         "billingFrequency": "Faktureringsintervall",
@@ -2508,11 +2508,11 @@
         "roundUpMinutes": "Avrunda uppåt till minuter",
         "scheduleEffectiveDate": "Schemats startdatum",
         "scheduleEndDate": "Schemats slutdatum",
-        "scheduleRate": "Schemats taxa i dollar",
+        "scheduleRate": "Schemats taxa",
         "serviceQuantity": "Antal licenser eller produkter",
         "tierMaximum": "Nivåns maximivärde",
         "tierMinimum": "Nivåns minimivärde",
-        "tierRate": "Nivåns taxa i dollar",
+        "tierRate": "Nivåns taxa",
         "usageUnit": "Förbrukningsenhet"
       },
       "frequencies": {

@@ -2498,7 +2498,7 @@
       "editDetails": "Edytuj reguły",
       "editDetailsFor": "Edytuj szczegóły dla {{line}}",
       "fields": {
-        "adjustmentAmount": "Kwota korekty w dolarach",
+        "adjustmentAmount": "Kwota korekty",
         "adjustmentDescription": "Opis korekty",
         "adjustmentPeriod": "Okres korekty",
         "billingFrequency": "Częstotliwość rozliczeń",
@@ -2521,11 +2521,11 @@
         "roundUpMinutes": "Zaokrąglaj do minut",
         "scheduleEffectiveDate": "Data wejścia w życie harmonogramu",
         "scheduleEndDate": "Data zakończenia harmonogramu",
-        "scheduleRate": "Stawka harmonogramu w dolarach",
+        "scheduleRate": "Stawka harmonogramu",
         "serviceQuantity": "Liczba licencji lub produktów",
         "tierMaximum": "Maksimum progu",
         "tierMinimum": "Minimum progu",
-        "tierRate": "Stawka progu w dolarach",
+        "tierRate": "Stawka progu",
         "usageUnit": "Jednostka zużycia"
       },
       "frequencies": {

@@ -2488,7 +2488,7 @@
       "editDetails": "Modifica regole",
       "editDetailsFor": "Modifica i dettagli di {{line}}",
       "fields": {
-        "adjustmentAmount": "Importo della rettifica in dollari",
+        "adjustmentAmount": "Importo della rettifica",
         "adjustmentDescription": "Descrizione della rettifica",
         "adjustmentPeriod": "Periodo della rettifica",
         "billingFrequency": "Frequenza di fatturazione",
@@ -2511,11 +2511,11 @@
         "roundUpMinutes": "Arrotonda ai minuti",
         "scheduleEffectiveDate": "Data di decorrenza del piano",
         "scheduleEndDate": "Data di fine del piano",
-        "scheduleRate": "Tariffa del piano in dollari",
+        "scheduleRate": "Tariffa del piano",
         "serviceQuantity": "Quantità di licenze o prodotti",
         "tierMaximum": "Massimo dello scaglione",
         "tierMinimum": "Minimo dello scaglione",
-        "tierRate": "Tariffa dello scaglione in dollari",
+        "tierRate": "Tariffa dello scaglione",
         "usageUnit": "Unità di utilizzo"
       },
       "frequencies": {

@@ -812,10 +812,13 @@ describe("currency glyph in billing rate labels", () => {
     expect(locales.length).toBeGreaterThanOrEqual(11);
     for (const required of ["sv", "xx", "yy"]) expect(locales).toContain(required);
     const glyph = new RegExp(`\\(\\s*(?:${GLYPH_ALT})`);
+    // A currency *word* is as wrong as a glyph: "Tier rate dollars" is announced on a EUR field.
+    const CURRENCY_WORD =
+      /(?<!\p{L})(?:dollars?|dollari|dollaro|dólares?|dolar(?:es|ach|y|ów)?)(?!\p{L})/iu;
     const offenders: string[] = [];
     const walk = (value: unknown, where: string): void => {
       if (typeof value === "string") {
-        if (glyph.test(value) || LABEL_GLYPH.test(value)) {
+        if (glyph.test(value) || LABEL_GLYPH.test(value) || CURRENCY_WORD.test(value)) {
           offenders.push(`${where} = ${value}`);
         }
       } else if (value && typeof value === "object") {

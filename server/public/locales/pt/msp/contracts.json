@@ -2488,7 +2488,7 @@
       "editDetails": "Editar regras",
       "editDetailsFor": "Editar detalhes de {{line}}",
       "fields": {
-        "adjustmentAmount": "Valor do ajuste em dólares",
+        "adjustmentAmount": "Valor do ajuste",
         "adjustmentDescription": "Descrição do ajuste",
         "adjustmentPeriod": "Período do ajuste",
         "billingFrequency": "Frequência de faturamento",
@@ -2511,11 +2511,11 @@
         "roundUpMinutes": "Arredondar para minutos",
         "scheduleEffectiveDate": "Data de vigência do cronograma",
         "scheduleEndDate": "Data de término do cronograma",
-        "scheduleRate": "Tarifa do cronograma em dólares",
+        "scheduleRate": "Tarifa do cronograma",
         "serviceQuantity": "Quantidade de licenças ou produtos",
         "tierMaximum": "Máximo da faixa",
         "tierMinimum": "Mínimo da faixa",
-        "tierRate": "Tarifa da faixa em dólares",
+        "tierRate": "Tarifa da faixa",
         "usageUnit": "Unidade de uso"
       },
       "frequencies": {

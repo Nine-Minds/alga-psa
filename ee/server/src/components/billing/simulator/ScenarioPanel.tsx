@@ -85,7 +85,7 @@ interface InlineRateEditorProps {
   onCommit: (cents: number | null) => void;
 }
 
-/** Click-to-edit rate: text button that swaps to a number input, edited in dollars. */
+/** Click-to-edit rate: text button that swaps to a number input, edited in major currency units. */
 const InlineRateEditor: React.FC<InlineRateEditorProps> = ({
   id,
   label,
@@ -1272,7 +1272,7 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                                     <input
                                       aria-label={t(
                                         "contractSimulator.scenario.fields.tierRate",
-                                        { defaultValue: "Tier rate dollars" },
+                                        { defaultValue: "Tier rate" },
                                       )}
                                       type="number"
                                       className={`${fieldClass} ${adornedFieldClass}`}
@@ -1578,7 +1578,7 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                     aria-label={t(
                       "contractSimulator.scenario.fields.scheduleRate",
                       {
-                        defaultValue: "Schedule rate dollars",
+                        defaultValue: "Schedule rate",
                       },
                     )}
                     type="number"
@@ -1881,7 +1881,7 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                   <input
                     aria-label={t(
                       "contractSimulator.scenario.fields.adjustmentAmount",
-                      { defaultValue: "Adjustment amount dollars" },
+                      { defaultValue: "Adjustment amount" },
                     )}
                     type="number"
                     className={`${fieldClass} ${adornedFieldClass}`}

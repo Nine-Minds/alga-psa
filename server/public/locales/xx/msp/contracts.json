@@ -2485,7 +2485,7 @@
       },
       "discounts": "⟦Ḓīşƈȯŭƞŧş⟧",
       "fields": {
-        "adjustmentAmount": "⟦Ȧḓĵŭşŧḿḗƞŧ ȧḿȯŭƞŧ ḓȯŀŀȧřş⟧",
+        "adjustmentAmount": "⟦Ȧḓĵŭşŧḿḗƞŧ ȧḿȯŭƞŧ⟧",
         "adjustmentDescription": "⟦Ȧḓĵŭşŧḿḗƞŧ ḓḗşƈřīƥŧīȯƞ⟧",
         "adjustmentPeriod": "⟦Ȧḓĵŭşŧḿḗƞŧ ƥḗřīȯḓ⟧",
         "billingFrequency": "⟦Ɓīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ⟧",
@@ -2508,11 +2508,11 @@
         "roundUpMinutes": "⟦Řȯŭƞḓ ŭƥ ŧȯ ḿīƞŭŧḗş⟧",
         "scheduleEffectiveDate": "⟦Şƈħḗḓŭŀḗ ḗƒƒḗƈŧīṽḗ ḓȧŧḗ⟧",
         "scheduleEndDate": "⟦Şƈħḗḓŭŀḗ ḗƞḓ ḓȧŧḗ⟧",
-        "scheduleRate": "⟦Şƈħḗḓŭŀḗ řȧŧḗ ḓȯŀŀȧřş⟧",
+        "scheduleRate": "⟦Şƈħḗḓŭŀḗ řȧŧḗ⟧",
         "serviceQuantity": "⟦Ŀīƈḗƞşḗ ȯř ƥřȯḓŭƈŧ ʠŭȧƞŧīŧẏ⟧",
         "tierMaximum": "⟦Ŧīḗř ḿȧẋīḿŭḿ⟧",
         "tierMinimum": "⟦Ŧīḗř ḿīƞīḿŭḿ⟧",
-        "tierRate": "⟦Ŧīḗř řȧŧḗ ḓȯŀŀȧřş⟧",
+        "tierRate": "⟦Ŧīḗř řȧŧḗ⟧",
         "usageUnit": "⟦Ŭşȧɠḗ ŭƞīŧ⟧"
       },
       "frequencies": {

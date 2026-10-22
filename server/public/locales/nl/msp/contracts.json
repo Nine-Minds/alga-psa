@@ -2488,7 +2488,7 @@
       "editDetails": "Regels bewerken",
       "editDetailsFor": "Details van {{line}} bewerken",
       "fields": {
-        "adjustmentAmount": "Correctiebedrag in dollars",
+        "adjustmentAmount": "Correctiebedrag",
         "adjustmentDescription": "Omschrijving van de correctie",
         "adjustmentPeriod": "Correctieperiode",
         "billingFrequency": "Factureringsfrequentie",
@@ -2511,11 +2511,11 @@
         "roundUpMinutes": "Afronden naar minuten",
         "scheduleEffectiveDate": "Ingangsdatum van het schema",
         "scheduleEndDate": "Einddatum van het schema",
-        "scheduleRate": "Schematarief in dollars",
+        "scheduleRate": "Schematarief",
         "serviceQuantity": "Aantal licenties of producten",
         "tierMaximum": "Staffelmaximum",
         "tierMinimum": "Staffelminimum",
-        "tierRate": "Staffeltarief in dollars",
+        "tierRate": "Staffeltarief",
         "usageUnit": "Verbruikseenheid"
       },
       "frequencies": {
