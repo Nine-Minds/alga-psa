@@ -135,7 +135,7 @@
         "overtime": {
           "enableLabel": "Aktivera övertidstaxor",
           "rateHelp": "Taxa som tillämpas när gränsen överskrids.",
-          "rateLabel": "Övertidstaxa ($/h)",
+          "rateLabel": "Övertidstaxa (per timme)",
           "thresholdHelp": "Antal timmar innan övertidstaxan börjar gälla.",
           "thresholdLabel": "Övertidsgräns (h/period)",
           "thresholdPlaceholder": "40",
@@ -375,7 +375,7 @@
     },
     "hourlyConfig": {
       "labels": {
-        "hourlyRate": "Timtaxa ($)",
+        "hourlyRate": "Timtaxa (per timme)",
         "minimumBillableTime": "Minsta debiterbara tid (minuter)",
         "roundUpToNearest": "Avrunda uppåt till närmaste (minuter)"
       },
@@ -398,7 +398,7 @@
           "technician": "Tekniker"
         },
         "perHourSuffix": "/h",
-        "rateSrLabel": "Taxa ($/h)",
+        "rateSrLabel": "Taxa (per timme)",
         "selectTypePlaceholder": "Välj typ",
         "tooltip": "Ange olika timtaxor för specifika användartyper som arbetar med denna tjänst. Dessa åsidosätter tjänstens standardtimtaxa.",
         "userTypeSrLabel": "Användartyp",

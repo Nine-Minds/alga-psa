@@ -218,7 +218,7 @@ export function ServiceHourlyConfigForm({
       <div>
         <div className="flex items-center">
           <Label htmlFor="hourly-rate">
-            {t('forms.hourlyConfig.labels.hourlyRate', { defaultValue: 'Hourly Rate ($)' })}
+            {t('forms.hourlyConfig.labels.hourlyRate', { defaultValue: 'Hourly Rate (per hour)' })}
           </Label>
           {renderTooltip(
             t('forms.hourlyConfig.tooltips.hourlyRate', {
@@ -365,7 +365,7 @@ export function ServiceHourlyConfigForm({
                    </div>
                    <div className="mt-2"> {/* Removed flex-1 and min-w, added margin */}
                        <Label htmlFor={`new-user-type-rate-${configId}`} className="sr-only">
-                         {t('forms.hourlyConfig.userTypeRates.rateSrLabel', { defaultValue: 'Rate ($/hr)' })}
+                         {t('forms.hourlyConfig.userTypeRates.rateSrLabel', { defaultValue: 'Rate (per hour)' })}
                        </Label>
                        <div className="relative">
                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>

@@ -135,7 +135,7 @@
         "overtime": {
           "enableLabel": "Schakel overurentarieven in",
           "rateHelp": "Tarief toegepast na drempel.",
-          "rateLabel": "Overurentarief ($/uur)",
+          "rateLabel": "Overurentarief (per uur)",
           "thresholdHelp": "Uren voordat OT van toepassing is.",
           "thresholdLabel": "Drempel voor overuren (uren/periode)",
           "thresholdPlaceholder": "40",
@@ -375,7 +375,7 @@
     },
     "hourlyConfig": {
       "labels": {
-        "hourlyRate": "Uurtarief ($)",
+        "hourlyRate": "Uurtarief (per uur)",
         "minimumBillableTime": "Minimale factureerbare tijd (minuten)",
         "roundUpToNearest": "Naar boven afronden naar dichtstbijzijnde (minuten)"
       },
@@ -398,7 +398,7 @@
           "technician": "Technicus"
         },
         "perHourSuffix": "/uur",
-        "rateSrLabel": "Tarief ($/uur)",
+        "rateSrLabel": "Tarief (per uur)",
         "selectTypePlaceholder": "Selecteer type",
         "tooltip": "Definieer verschillende uurtarieven voor specifieke gebruikerstypen die aan deze service werken. Deze overschrijven het standaarduurtarief van de service.",
         "userTypeSrLabel": "Gebruikerstype",

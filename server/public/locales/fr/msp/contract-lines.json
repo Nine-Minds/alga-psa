@@ -135,7 +135,7 @@
         "overtime": {
           "enableLabel": "Activer les taux d'heures supplémentaires",
           "rateHelp": "Taux appliqué après seuil.",
-          "rateLabel": "Taux d'heures supplémentaires ($/h)",
+          "rateLabel": "Taux d'heures supplémentaires (par heure)",
           "thresholdHelp": "Heures avant l’application de l’OT.",
           "thresholdLabel": "Seuil d'heures supplémentaires (heures/période)",
           "thresholdPlaceholder": "40",
@@ -375,7 +375,7 @@
     },
     "hourlyConfig": {
       "labels": {
-        "hourlyRate": "Taux horaire ($)",
+        "hourlyRate": "Taux horaire (par heure)",
         "minimumBillableTime": "Temps minimum facturable (minutes)",
         "roundUpToNearest": "Arrondir au plus proche (minutes)"
       },
@@ -398,7 +398,7 @@
           "technician": "Technicien"
         },
         "perHourSuffix": "/heure",
-        "rateSrLabel": "Tarif ($/h)",
+        "rateSrLabel": "Tarif (par heure)",
         "selectTypePlaceholder": "Sélectionnez le type",
         "tooltip": "Définissez différents taux horaires pour des types d'utilisateurs spécifiques travaillant sur ce service. Ceux-ci remplacent le taux horaire par défaut du service.",
         "userTypeSrLabel": "Type d'utilisateur",

@@ -671,7 +671,7 @@ export function HourlyPlanConfiguration({
                                     <div>
                                     <Label htmlFor="overtime-rate">
                                       {t('configuration.hourly.planWideSettings.overtime.rateLabel', {
-                                        defaultValue: 'Overtime Rate ($/hr)',
+                                        defaultValue: 'Overtime Rate (per hour)',
                                       })}
                                     </Label>
                                     <div className="relative">

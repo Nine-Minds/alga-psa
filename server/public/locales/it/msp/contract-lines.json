@@ -135,7 +135,7 @@
         "overtime": {
           "enableLabel": "Abilita tariffe per gli straordinari",
           "rateHelp": "Tasso applicato dopo la soglia.",
-          "rateLabel": "Tariffa per gli straordinari ($/ora)",
+          "rateLabel": "Tariffa per gli straordinari (all'ora)",
           "thresholdHelp": "Ore prima dell'applicazione dell'OT.",
           "thresholdLabel": "Soglia per gli straordinari (ore/periodo)",
           "thresholdPlaceholder": "40",
@@ -375,7 +375,7 @@
     },
     "hourlyConfig": {
       "labels": {
-        "hourlyRate": "Tariffa oraria ($)",
+        "hourlyRate": "Tariffa oraria (all'ora)",
         "minimumBillableTime": "Tempo minimo fatturabile (minuti)",
         "roundUpToNearest": "Arrotonda per eccesso al più vicino (minuti)"
       },
@@ -398,7 +398,7 @@
           "technician": "Tecnico"
         },
         "perHourSuffix": "/ora",
-        "rateSrLabel": "Tariffa ($/ora)",
+        "rateSrLabel": "Tariffa (all'ora)",
         "selectTypePlaceholder": "Seleziona il tipo",
         "tooltip": "Definisci tariffe orarie diverse per tipi di utenti specifici che lavorano su questo servizio. Questi sovrascrivono la tariffa oraria predefinita del servizio.",
         "userTypeSrLabel": "Tipo utente",
