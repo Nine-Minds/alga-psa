@@ -34,7 +34,7 @@ import {
   getClientBillingProfiles,
 } from '../../actions/clientBillingProfileActions';
 import { ClientContractDialog, ClientContractDialogSubmission } from './ClientContractDialog';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -64,6 +64,7 @@ const isClientContractActionError = (
 
 const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ clientId, onAssignmentsChanged }) => {
   const { t } = useTranslation('msp/clients');
+  const { formatDate } = useFormatters();
   const router = useRouter();
   const { renderContractWizard, renderContractQuickAdd } = useClientCrossFeature();
   const [clientContracts, setClientContracts] = useState<DetailedClientContract[]>([]);
@@ -215,13 +216,8 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
     }
   };
 
-  const formatDate = (dateString: string | null): string => {
-    if (!dateString) {
-      return t('clientContractAssignment.ongoing', { defaultValue: 'Ongoing' });
-    }
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
-  };
+  const formatDateOrOngoing = (value: string | Date | null | undefined): string =>
+    value ? formatDate(value) : t('clientContractAssignment.ongoing', { defaultValue: 'Ongoing' });
 
   const getRenewalSummary = (contract: DetailedClientContract): string => {
     if (!contract.end_date) {
@@ -334,12 +330,12 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
     {
       title: t('clientContractAssignment.startDate', { defaultValue: 'Start Date' }),
       dataIndex: 'start_date',
-      render: (value) => formatDate(value),
+      render: (value) => formatDateOrOngoing(value),
     },
     {
       title: t('clientContractAssignment.endDate', { defaultValue: 'End Date' }),
       dataIndex: 'end_date',
-      render: (value) => formatDate(value),
+      render: (value) => formatDateOrOngoing(value),
     },
     {
       title: t('clientContractAssignment.renewal', { defaultValue: 'Renewal' }),

@@ -258,6 +258,12 @@ export const normalizeClientContract = (row: any): IClientContract => {
 
   const normalizedEndDate = normalizeDateOnly(normalized.end_date);
   const normalizedStartDate = normalizeDateOnly(normalized.start_date);
+  // Date-only fields live in timestamp columns, so pg yields a Date at UTC midnight.
+  // Emit the calendar day (YYYY-MM-DD) so every consumer sees one representation.
+  if (normalizedStartDate !== undefined) normalized.start_date = normalizedStartDate;
+  if (normalizedEndDate !== undefined || normalized.end_date === null) {
+    normalized.end_date = normalizedEndDate ?? null;
+  }
   const effectiveNoticePeriodDays = normalizeNonNegativeInteger(normalized.effective_notice_period_days);
   const effectiveRenewalMode = normalizeRenewalMode(normalized.effective_renewal_mode);
   const isInactiveAssignment = normalized.is_active !== true;
