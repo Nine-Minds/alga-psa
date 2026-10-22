@@ -1462,7 +1462,14 @@
           "widthTooltip": "Użyj dokładnej szerokości wpisanej poniżej",
           "heightTooltip": "Użyj dokładnej wysokości wpisanej poniżej"
         }
-      }
+      },
+      "barcode": "Kod kreskowy",
+      "barcodeSymbology": "Typ",
+      "barcodeQr": "Kod QR",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Wartość",
+      "barcodeHintWorkTag": "Tekst lub pole, np. {{example}} (link do rekordu). Kod powinien mieć co najmniej około 20 mm szerokości, aby dał się zeskanować.",
+      "barcodeHint": "Tekst do zakodowania. Kod powinien mieć co najmniej około 20 mm szerokości, aby dał się zeskanować."
     },
     "shell": {
       "selectedLabel": "Wybrano:",
@@ -1475,7 +1482,11 @@
       "title": "Ustawienia strony",
       "description": "Wybierz preset papieru i margines bez wybierania ukrytego węzła strony.",
       "paperPreset": "Preset papieru",
-      "marginMm": "Margines (mm)"
+      "marginMm": "Margines (mm)",
+      "customSize": "Rozmiar niestandardowy…",
+      "customWidth": "Szerokość",
+      "customHeight": "Wysokość",
+      "customUnit": "Jednostka"
     },
     "breadcrumbs": {
       "emptyHelp": "Wybierz komponent na kanwie, aby zobaczyć hierarchię.",

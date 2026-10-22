@@ -1412,7 +1412,14 @@
           "widthTooltip": "Usar el ancho exacto indicado abajo",
           "heightTooltip": "Usar el alto exacto indicado abajo"
         }
-      }
+      },
+      "barcode": "Código de barras",
+      "barcodeSymbology": "Tipo",
+      "barcodeQr": "Código QR",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Valor",
+      "barcodeHintWorkTag": "Texto o un campo como {{example}} (el enlace al registro). Mantenga el código con al menos unos 20 mm de ancho para que se pueda escanear.",
+      "barcodeHint": "El texto que se codificará. Mantenga el código con al menos unos 20 mm de ancho para que se pueda escanear."
     },
     "shell": {
       "selectedLabel": "Seleccionado:",
@@ -1425,7 +1432,11 @@
       "title": "Configuración de página",
       "description": "Elija preset de papel y margen sin seleccionar el nodo de página oculto.",
       "paperPreset": "Preset de papel",
-      "marginMm": "Margen (mm)"
+      "marginMm": "Margen (mm)",
+      "customSize": "Tamaño personalizado…",
+      "customWidth": "Ancho",
+      "customHeight": "Alto",
+      "customUnit": "Unidad"
     },
     "breadcrumbs": {
       "emptyHelp": "Seleccione un componente del lienzo para ver su jerarquía.",

@@ -2558,7 +2558,8 @@
       "Cc",
       "Bcc",
       "Cc/Bcc",
-      "Training"
+      "Training",
+      "Code 128"
     ],
     "caseInsensitive": [
       "account",
