@@ -7,7 +7,6 @@ import { z } from 'zod';
 import { 
   uuidSchema, 
   createListQuerySchema, 
-  createUpdateSchema,
   baseFilterSchema,
   booleanTransform,
   dateSchema
@@ -46,7 +45,7 @@ export const createAssetSchema = z.object({
 const assetExtensionDataInputSchema = z.record(z.unknown());
 
 // Update asset schema (all fields optional)
-export const updateAssetSchema = createUpdateSchema(createAssetSchema).extend({
+export const updateAssetSchema = createAssetSchema.partial().extend({
   extension_data: assetExtensionDataInputSchema.optional()
 });
 
