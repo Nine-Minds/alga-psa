@@ -1667,7 +1667,9 @@
       "ruleCategoryBoardMismatch": "La categoria selezionata appartiene a una bacheca diversa da quella della regola.",
       "ruleCategoryInvalid": "La categoria selezionata non è una categoria di primo livello.",
       "ruleSubcategoryInvalid": "La sottocategoria selezionata non appartiene alla categoria selezionata.",
-      "ruleSubcategoryRequiresCategory": "Seleziona una categoria prima di scegliere una sottocategoria."
+      "ruleSubcategoryRequiresCategory": "Seleziona una categoria prima di scegliere una sottocategoria.",
+      "templateClientMismatch": "Questo modello di checklist è limitato a un cliente diverso da quello del ticket.",
+      "templateClientInvalid": "Il cliente selezionato non è stato trovato."
     }
   },
   "ticketSection": {

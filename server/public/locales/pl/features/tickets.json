@@ -1667,7 +1667,9 @@
       "ruleCategoryBoardMismatch": "Wybrana kategoria należy do innej tablicy niż reguła.",
       "ruleCategoryInvalid": "Wybrana kategoria nie jest kategorią najwyższego poziomu.",
       "ruleSubcategoryInvalid": "Wybrana podkategoria nie należy do wybranej kategorii.",
-      "ruleSubcategoryRequiresCategory": "Wybierz kategorię przed wybraniem podkategorii."
+      "ruleSubcategoryRequiresCategory": "Wybierz kategorię przed wybraniem podkategorii.",
+      "templateClientMismatch": "Ten szablon listy kontrolnej jest ograniczony do innego klienta niż klient zgłoszenia.",
+      "templateClientInvalid": "Nie znaleziono wybranego klienta."
     }
   },
   "ticketSection": {

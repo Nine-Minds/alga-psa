@@ -315,7 +315,19 @@
     "inboundDomainAutoCreateHelp": "Los dominios asignados pueden crear un contacto para un nuevo remitente de confianza.",
     "inboundDomainAutoCreateUpdated": "Se actualizó la configuración de contactos.",
     "inboundDomainAutoCreateUpdateFailed": "No se pudo actualizar la configuración de contactos.",
-    "recurringTickets": "Tickets recurrentes"
+    "recurringTickets": "Tickets recurrentes",
+    "checklistsTab": "Listas de verificación",
+    "checklists": {
+      "name": "Nombre",
+      "items": "Elementos",
+      "status": "Estado",
+      "active": "Activa",
+      "inactive": "Inactiva",
+      "description": "Plantillas de listas de verificación que solo se ofrecen en los tickets de este cliente. Edítelas en Configuración > Tickets > Plantillas de listas de verificación.",
+      "empty": "No hay plantillas de listas de verificación específicas del cliente.",
+      "loadFailed": "No se pudieron cargar las plantillas de listas de verificación",
+      "retry": "Reintentar"
+    }
   },
   "clientCommandCenter": {
     "cards": {

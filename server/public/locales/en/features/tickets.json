@@ -1675,7 +1675,9 @@
       "ruleCategoryBoardMismatch": "The selected category belongs to a different board than the rule.",
       "ruleCategoryInvalid": "The selected category is not a top-level category.",
       "ruleSubcategoryInvalid": "The selected subcategory does not belong to the selected category.",
-      "ruleSubcategoryRequiresCategory": "Select a category before choosing a subcategory."
+      "ruleSubcategoryRequiresCategory": "Select a category before choosing a subcategory.",
+      "templateClientMismatch": "This checklist template is limited to a different client than this ticket's client.",
+      "templateClientInvalid": "The selected client was not found."
     }
   },
   "ticketSection": {
