@@ -854,8 +854,11 @@ jobs:
         id: browser_system
         if: ${{ !cancelled() && steps.browser_packages.outcome == 'success' }}
         working-directory: ./e2e-tests
-        # Hard ceiling so this step can never again consume the whole job budget.
-        timeout-minutes: 12
+        # Hard ceiling so this step can never again consume the whole job
+        # budget, sized so the bounded attempts below always get to finish and
+        # report inside it (2 x 420s + one 10s sleep = 850s) instead of this
+        # cap killing the last one.
+        timeout-minutes: 16
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
@@ -868,10 +871,34 @@ jobs:
           # all services were up and healthy by ~T+29m. Good runs finish this
           # step in 35-490s, so bound each attempt and retry: a transient stall
           # self-heals instead of killing the job.
+          #
+          # A stall is not the only way the mirror hurts. On 2026-10-22 this
+          # runner's azure.archive.ubuntu.com served the 25.9 MB of packages at
+          # ~45 kB/s -- the same 25.9 MB the enterprise matrix member fetched
+          # at 56 MB/s minutes earlier -- so every 240s attempt was killed
+          # mid-download. Three of them plus the sleeps wanted 740s under a
+          # 720s ceiling, so the third could never report: the step died as an
+          # unattributable "action has timed out", the browser phase was
+          # skipped, and the gate could say only "received 0" execution
+          # bundles. Fewer, longer attempts now cover ~10 minutes of degraded
+          # transfer and still fit the ceiling -- apt keeps finished .debs in
+          # /var/cache/apt/archives, so each attempt resumes where the last one
+          # stopped rather than starting the download over.
           set -x
+          # Default Acquire timeout is 120s per stalled read, long enough to
+          # eat an attempt before apt gives up. Fail a quiet connection fast
+          # instead, and let Retries re-fetch -- the runner resolves archives
+          # through /etc/apt/apt-mirrors.txt, so a retry can land on a
+          # different mirror than the degraded one.
+          # Advisory: apt's own defaults still install, so a runner that will
+          # not take the drop-in must not fail the browser phase over it.
+          printf '%s\n' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' \
+            'Acquire::Retries "3";' \
+            | sudo tee /etc/apt/apt.conf.d/99-playwright-install-deps >/dev/null \
+            || echo "could not pin apt Acquire timeouts; continuing with apt defaults"
           attempt=1
-          max_attempts=3
-          until timeout 240 npx playwright install-deps chromium; do
+          max_attempts=2
+          until timeout 420 npx playwright install-deps chromium; do
             code=$?
             if [ "$attempt" -ge "$max_attempts" ]; then
               echo "playwright install-deps failed after $attempt attempts (last exit $code)."
