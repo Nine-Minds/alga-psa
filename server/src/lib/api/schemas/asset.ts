@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { 
   uuidSchema, 
   createListQuerySchema, 
+  createUpdateSchema,
   baseFilterSchema,
   booleanTransform,
   dateSchema
