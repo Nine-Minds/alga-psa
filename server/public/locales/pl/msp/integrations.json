@@ -2831,7 +2831,7 @@
         },
         "connection": {
           "title": "Połączono z kontem {{account}}",
-          "summary": "Organizacje: {{organizations}} (bez przypisania: {{unmapped}}) · otwarte incydenty: {{openIncidents}} · ostatnie odpytywanie: {{lastPoll}}",
+          "summary": "Organizacje: {{organizations}} (bez przypisania: {{unmapped}}) · otwarte alerty: {{openAlerts}} · ostatnie odpytywanie: {{lastPoll}}",
           "neverPolled": "nigdy",
           "lastPollFailed": "Ostatnie odpytywanie nie powiodło się: {{error}}",
           "routingIncompleteWarning": "Odpytywanie o incydenty jest wstrzymane do czasu uzupełnienia poniższej konfiguracji routingu (tablica zabezpieczeń, zapasowy klient, zapasowa tablica oraz priorytety wszystkich trzech poziomów ważności).",
@@ -2854,6 +2854,8 @@
           "selectPriority": "Priorytet",
           "pollInterval": "Interwał odpytywania (minuty)",
           "autoClose": "Zamykaj zgłoszenia po zamknięciu incydentu w Huntress",
+          "ingestEscalations": "Twórz zgłoszenia z eskalacji Huntress",
+          "ingestEscalationsHelp": "Eskalacje korzystają z tych samych ustawień tablicy, kategorii, mapowania priorytetów i automatycznego zamykania co incydenty. Eskalacja obejmująca kilka organizacji tworzy jedno zgłoszenie dla każdej organizacji.",
           "closedStatus": "Status zamknięcia",
           "selectStatus": "Wybierz status",
           "save": "Zapisz konfigurację routingu",

@@ -27,6 +27,7 @@ This starts every emulator on its default port and the console at
 | `stripe` | `@alga-psa/emulator-stripe` | 4050 | Stripe /v1 API (customers, Checkout sessions) + simulated hosted Checkout with signed webhooks |
 | `xero` | `@alga-psa/emulator-xero` | 4060 | Xero identity OAuth + connections list + api.xro/2.0 accounting API (invoices, contacts, settings) |
 | `levelio` | `@alga-psa/emulator-levelio` | 4080 | Level v2 REST API (groups, devices, alerts, updates) with API-key auth and cursor pagination; sends Level's native webhooks (signed envelopes, retries, re-run) and monitor-automation HTTP Request actions rendered with Level's system variables |
+| `huntress` | `@alga-psa/emulator-huntress` | 4090 | Huntress v1 API (account, organizations, agents, incident reports, escalations + escalation resolution) with HTTP Basic auth, `page_token` pagination and the documented `sort_field`/`sort_direction` ordering |
 | `threecx` | `@alga-psa/emulator-threecx` | 4070 | 3CX both ways: the CRM engine client that dials the AlgaPSA 3CX routes (lookup, search, report-call, contacts, report-chat) with the bearer key, and the PBX that AlgaPSA dials back — `/connect/token`, XAPI (users, contacts, call history, recordings), call control with its WebSocket event feed |
 
 The control API and console share port 9500. Override ports with
@@ -67,6 +68,7 @@ Emulators implement the vendor protocol subsets listed in this guide and the
 | SMTP | Configure the SMTP provider with host `localhost`, port `4040`, no TLS |
 | 3CX | `THREECX_EMULATOR_MODE=true`, then enter `http://localhost:4070` as the PBX base URL on the 3CX integration card |
 | Level | `LEVELIO_API_BASE_URL=http://localhost:4080`, then save `algasim-level-key` as the Level API key. Webhooks and automations go outbound: register their target URL in the emulator (see [Level](#level)) |
+| Huntress | `HUNTRESS_API_BASE_URL=http://localhost:4090`, then connect with API key `algasim-huntress-key` and secret `algasim-huntress-secret`. No env var is needed either way: the connect card's **Base URL** field is stored as `rmm_integrations.instance_url` and wins over the env default (see [Huntress](#huntress)) |
 
 `TEAMS_EMULATOR_MODE` is the single gate for every Teams override, and it is
 deny-by-default: unless it is explicitly `true` (or `1`), the Teams surface
@@ -592,6 +594,76 @@ Two scenarios reproduce the alert-ingestion failures seen in production on
 uses it to run both scenarios against the real route and database. The
 failure assertions in that test describe the route as of 2026-10-15 and are
 meant to flip to ticket-creation assertions once the route is fixed.
+
+### Huntress
+
+The `huntress` emulator on port 4090 serves the Huntress v1 API Alga's
+`HuntressClient` polls. Auth is HTTP Basic:
+`Authorization: Basic base64(algasim-huntress-key:algasim-huntress-secret)`.
+A missing, malformed or unknown credential answers
+`403 {"error":"There was an issue with your API credential or permissions."}` —
+the status every documented operation declares.
+
+| Route | Behaviour |
+| --- | --- |
+| `GET /v1/account` | `{ account: { id, name, subdomain, status, support_type, neighborhood_watch, billing_address, shipping_address } }` — note the documented wrapper |
+| `GET /v1/organizations`, `GET /v1/organizations/:id` | Filters `name`, `key`; sort `id`/`created_at`/`updated_at`/`name`/`key`. The detail response is `OrganizationWithActualProductUsages`, so `actual_usages` (when seeded) appears there only |
+| `GET /v1/agents`, `GET /v1/agents/:id` | Filters `organization_id`, `platform`, `hostname`, `os`, `version`; sort `id`/`created_at`/`updated_at`. `ipv4_address` is the primary entry of `ipv4_addresses` |
+| `GET /v1/incident_reports`, `GET /v1/incident_reports/:id` | Filters `indicator_type`, `status`, `severity`, `platform`, `organization_id`, `agent_id`, `psa_ticket_eid`; sort `id`/`created_at`/`updated_at`. `remediations` carries the first 10 items plus `total_count`/`has_more`. A `draft` report is served by the by-id route only, as documented |
+| `GET /v1/escalations`, `GET /v1/escalations/:id` | Filters `status`, `severity`, `subtype`, `organization_id`, `psa_ticket_eid`; sort `id`/`severity`/`due_at`/`created_at`/`updated_at`. The list serves `Escalation`; only the by-id route adds `entities` |
+| `POST /v1/escalations/:id/resolution` | 201 `{ escalation, resolution_method: rule\|dismiss\|direct }`; 400 invalid parameters, 403 read-only credential, 409 already resolved, 422 not API-resolvable |
+| any other `/v1` route | `501` with `code: EmulatorUnsupportedOperation` |
+
+Every list is cursor-paginated: `limit` 1–500 (clamped, default 10), an opaque
+`page_token`, and a `pagination` object whose `next_page_token` is `null` on the
+last page (`next_page_url` only appears while another page exists). Ties on the
+sort field break on `id`, so a `updated_at desc` walk never repeats or skips a
+row — which is what Alga's `cursorWalk` depends on. Every mutation moves
+`updated_at` on the virtual clock, so `clock advance` plus `touch-incident` is
+the "updated but unchanged" path.
+
+Seeders: `account`, `credential { key, secret, escalationsWrite }`,
+`organization` (`count` seeds that many numbered organizations for multi-page
+walks), `agent`, `incident` (with `remediations`), `escalation` (zero, one or
+many `organization_ids`, `Agent`/`Identity` `entities`, `type`/`type_code`/
+`subtype`, `due_at`, `api_resolvable`).
+
+Actions: `configure` (credential pairs, account name/subdomain/status),
+`update-incident` (status change: stamps `status_updated_at`, sets `closed_at`
+for `closed`), `touch-incident` (bump `updated_at` only), `update-agent`,
+`update-escalation` (status, add/remove/replace organizations, replace
+entities), `resolve-escalation`, `delete-agent`, `delete-organization` (the
+"host/org dropped off" paths that make a by-id call answer 404).
+
+```bash
+algasim seed huntress organization -p '{"name":"Acme Inc.","key":"acme"}'
+algasim seed huntress agent -p '{"hostname":"laptop01","organization_id":1,"ipv4_address":"10.0.0.5"}'
+algasim seed huntress incident -p '{"organization_id":1,"agent_id":1,"severity":"high","subject":"HIGH - Incident on laptop01"}'
+algasim clock advance 1h
+algasim action huntress update-incident -p '{"incidentId":1,"status":"closed"}'
+algasim state huntress incidents            # including drafts the list endpoint hides
+algasim state huntress auth-failures        # every 403, with method, path and reason
+```
+
+Faults: `rate-limit { remaining, retryAfterSeconds }` answers 429 with
+`Retry-After` (Huntress limits every account to 60 requests/minute on a sliding
+window); `operation-fault { operation, status, message, retryAfterSeconds,
+remaining }` fails one operation (`"GET /v1/incident_reports"`, a trailing-`*`
+prefix, or `"*"`). The transport faults apply too.
+
+State views: `config` (secrets masked), `organizations`, `agents`, `incidents`,
+`escalations`, `auth-failures`, `operation-faults`.
+
+Two bundled scenarios: `huntress-incident-lifecycle` (the poll-twice
+ticket-then-close walk: seed org/agent/incident, advance the clock, close the
+incident) and `huntress-escalation-multi-org` (one escalation across two
+organizations with `Agent` and `Identity` entities, moved to `overdue` and then
+resolved). Wire-contract coverage lives in
+[huntress/tests/](huntress/tests/); Alga's own client and poller run against
+this emulator in
+[huntressEmulatorApiClient.integration.test.ts](../../ee/server/src/__tests__/integration/huntressEmulatorApiClient.integration.test.ts)
+and
+[huntressEmulatorPoller.integration.test.ts](../../ee/server/src/__tests__/integration/huntressEmulatorPoller.integration.test.ts).
 
 ### Living with the emulator
 

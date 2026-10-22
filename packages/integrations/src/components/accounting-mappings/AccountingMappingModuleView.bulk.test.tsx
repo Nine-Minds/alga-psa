@@ -24,6 +24,7 @@ const externalTarget = {
   kindForMapping: (m: any) => (m.metadata?.xeroTargetKind === 'account' ? 'account' : 'item'),
   optionIdForMapping: (m: any) =>
     `${m.metadata?.xeroTargetKind === 'account' ? 'account' : 'item'}:${m.external_entity_id}`,
+  isExclusiveKind: (kindId: string) => kindId === 'item',
   invalidNotice: 'invalid'
 };
 
@@ -319,6 +320,139 @@ describe('AccountingMappingModuleView bulk grid', () => {
     const error = await screen.findByTestId(`${P}-error-svc-host`);
     expect(error).toHaveTextContent(message);
     expect(error).toHaveAttribute('title', message);
+  });
+
+  describe('targets already held by an existing mapping', () => {
+    const twinLoad = (mappedId: string | null = 'svc-pbi-1', extra: any[] = []) => ({
+      mappings: mappedId
+        ? [
+            {
+              id: 'm-pbi',
+              alga_entity_id: mappedId,
+              external_entity_id: 'PBI',
+              metadata: { xeroTargetKind: 'item', externalDisplayName: 'Power BI Pro' }
+            }
+          ]
+        : [],
+      algaEntities: [
+        { id: 'svc-pbi-1', name: 'Power BI Pro', baseName: 'Power BI Pro' },
+        { id: 'svc-pbi-2', name: 'Power BI Pro', baseName: 'Power BI Pro' },
+        { id: 'svc-host', name: 'Hosting', baseName: 'Hosting' },
+        ...extra
+      ],
+      externalEntities: [item('PBI', 'Power BI Pro'), item('PBIA', 'Power BI Pro Annual'), item('HOST', 'Hosting')]
+    });
+
+    it('gives an unmapped twin no suggestion but keeps the taken item pickable', async () => {
+      loadMock.mockResolvedValue(twinLoad());
+      await openBulk();
+      expect(screen.queryByTestId(`${P}-suggested-svc-pbi-2`)).not.toBeInTheDocument();
+      expect(screen.queryByTestId(`${P}-possible-svc-pbi-2`)).not.toBeInTheDocument();
+      expect(el(`${P}-select-svc-pbi-2`).checked).toBe(false);
+      expect(screen.getByTestId(`${P}-count`)).toHaveTextContent('1');
+      // Picker is empty for the twin, and the taken item is still selectable.
+      expect(screen.getAllByText('Select Xero Item or Account...')).toHaveLength(1);
+      fireEvent.click(screen.getByText('Select Xero Item or Account...').closest('button')!);
+      expect(await screen.findByText('Item · Power BI Pro (PBI)')).toBeInTheDocument();
+    });
+
+    const salesLoad = (heldKind: 'account' | 'item' | null, heldCode = '200') => ({
+      mappings: [
+        {
+          id: 'm-1',
+          alga_entity_id: 'svc-sales-1',
+          external_entity_id: heldCode,
+          metadata: heldKind ? { xeroTargetKind: heldKind } : {}
+        }
+      ],
+      algaEntities: [
+        { id: 'svc-sales-1', name: 'Sales', baseName: 'Sales' },
+        { id: 'svc-sales-2', name: 'Sales', baseName: 'Sales' }
+      ],
+      externalEntities: [
+        { id: 'account:200', name: 'Revenue account · Sales (200)', kind: 'account', code: '200', baseName: 'Sales' }
+      ]
+    });
+
+    it('still suggests and pre-ticks a shared account for the twin of a service holding it', async () => {
+      loadMock.mockResolvedValue(salesLoad('account'));
+      await openBulk();
+      expect(screen.getByTestId(`${P}-suggested-svc-sales-2`)).toBeInTheDocument();
+      expect(el(`${P}-select-svc-sales-2`).checked).toBe(true);
+    });
+
+    it('a held account:200 does not block an item:200 suggestion', async () => {
+      loadMock.mockResolvedValue({
+        ...salesLoad('account'),
+        algaEntities: [
+          { id: 'svc-sales-1', name: 'Sales', baseName: 'Sales' },
+          { id: 'svc-item', name: 'Item two hundred', baseName: 'Item two hundred' }
+        ],
+        externalEntities: [item('200', 'Item two hundred')]
+      });
+      await openBulk();
+      expect(screen.getByTestId(`${P}-suggested-svc-item`)).toBeInTheDocument();
+    });
+
+    it('a held item still blocks the same item for another service', async () => {
+      loadMock.mockResolvedValue({
+        ...salesLoad('item', '200'),
+        externalEntities: [item('200', 'Sales')]
+      });
+      await openBulk();
+      expect(screen.queryByTestId(`${P}-suggested-svc-sales-2`)).not.toBeInTheDocument();
+      expect(el(`${P}-select-svc-sales-2`).checked).toBe(false);
+    });
+
+    it('a legacy kind-less mapping holds the matching item', async () => {
+      loadMock.mockResolvedValue({ ...salesLoad(null), externalEntities: [item('200', 'Sales')] });
+      await openBulk();
+      expect(screen.queryByTestId(`${P}-suggested-svc-sales-2`)).not.toBeInTheDocument();
+    });
+
+    it('without a target config, a held external id excludes that option', async () => {
+      loadMock.mockResolvedValue({
+        mappings: [{ id: 'm-1', alga_entity_id: 'svc-sales-1', external_entity_id: 'Q1', metadata: {} }],
+        algaEntities: [
+          { id: 'svc-sales-1', name: 'Sales', baseName: 'Sales' },
+          { id: 'svc-sales-2', name: 'Sales', baseName: 'Sales' }
+        ],
+        externalEntities: [{ id: 'Q1', name: 'Sales' }]
+      });
+      render(
+        <AccountingMappingModuleView
+          module={buildModule({ externalTarget: undefined })}
+          context={context}
+        />
+      );
+      fireEvent.click(await screen.findByText('Bulk map'));
+      await screen.findByTestId(`${P}-grid`);
+      expect(screen.queryByTestId(`${P}-suggested-svc-sales-2`)).not.toBeInTheDocument();
+    });
+
+    it('drops suggestions for targets that were just saved, after the reload', async () => {
+      loadMock.mockResolvedValue(twinLoad(null));
+      createManyMock.mockImplementation(async (_ctx: unknown, inputs: any[]) =>
+        inputs.map((i) => ({ algaEntityId: i.algaEntityId, ok: true }))
+      );
+      await openBulk();
+      // Neither twin is suggested (same-batch guard); the untouched third row is.
+      expect(screen.queryByTestId(`${P}-suggested-svc-pbi-2`)).not.toBeInTheDocument();
+      expect(screen.getByTestId(`${P}-suggested-svc-host`)).toBeInTheDocument();
+      // Reload reports twin 1 mapped to PBI and Hosting's target HOST as held.
+      loadMock.mockResolvedValue({
+        ...twinLoad('svc-pbi-1'),
+        mappings: [
+          { id: 'm-1', alga_entity_id: 'svc-pbi-1', external_entity_id: 'PBI', metadata: { xeroTargetKind: 'item' } },
+          { id: 'm-2', alga_entity_id: 'svc-other', external_entity_id: 'HOST', metadata: { xeroTargetKind: 'item' } }
+        ]
+      });
+      fireEvent.click(saveAll());
+      await waitFor(() => expect(createManyMock).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(screen.queryByTestId(`${P}-suggested-svc-host`)).not.toBeInTheDocument());
+      expect(screen.queryByTestId(`${P}-suggested-svc-pbi-2`)).not.toBeInTheDocument();
+      expect(el(`${P}-select-svc-host`).checked).toBe(false);
+    });
   });
 });
 

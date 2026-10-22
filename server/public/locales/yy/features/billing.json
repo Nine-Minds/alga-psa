@@ -361,7 +361,8 @@
     "contractLineType": {
       "Fixed": "〖Ƒīẋḗḓ ··〗",
       "Hourly": "〖Ħȯŭřŀẏ ···〗",
-      "Usage": "〖Ŭşȧɠḗ Ɓȧşḗḓ ·····〗"
+      "Usage": "〖Ŭşȧɠḗ Ɓȧşḗḓ ·····〗",
+      "PrepaidBlock": "〖Ƥřḗƥȧīḓ Ɓŀȯƈķ ······〗"
     },
     "quoteStatus": {
       "draft": "〖Ḓřȧƒŧ ··〗",
@@ -443,7 +444,8 @@
     "hoursLeft": "〖{{hours}}ħ ŀḗƒŧ ······〗",
     "expires": "〖Ḗẋƥīřḗş {{date}} ·······〗",
     "recentBurn": "〖Řḗƈḗƞŧ ŭşȧɠḗ ·····〗",
-    "timeEntry": "〖Ŧīḿḗ ḗƞŧřẏ ····〗"
+    "timeEntry": "〖Ŧīḿḗ ḗƞŧřẏ ····〗",
+    "contractLabel": "〖Ƈȯƞŧřȧƈŧ: {{contract}} ·········〗"
   },
   "bucketUsage": {
     "contractLine": "〖Ɓŭƈķḗŧ Ƈȯƞŧřȧƈŧ Ŀīƞḗ ········〗",

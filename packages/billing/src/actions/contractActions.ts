@@ -3,6 +3,7 @@
 
 import { randomUUID } from 'node:crypto';
 
+import { resolveContractLineDisplayKinds, resolveTemplateLineDisplayKinds } from '../services/prepaidBlockConfigService';
 import { resolveEffectiveRecurringUnitPricingInTransaction } from '../lib/billing/seatRevisions';
 import { resolveUsageMeasurementRevision } from '../lib/billing/usageMeasurementTransitions';
 
@@ -45,6 +46,7 @@ import {
 } from '../repositories/contractLineRepository';
 import { newSupportReference } from '../lib/supportReference';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
+import { syncPrepaidBlockIssuancesForContractLine } from '../services/prepaidBlockIssuanceSync';
 
 type TenantScopedKnex = Knex | Knex.Transaction;
 type ContractActionError = ActionMessageError | ActionPermissionError;
@@ -431,11 +433,13 @@ export const addContractLine = withAuth(async (
 
     return knex.transaction((trx: Knex.Transaction) =>
       repoAddContractLine(trx, tenant, contractId, contractLineId, customRate).then(async (mapping) => {
+        // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
         await syncRecurringServicePeriodsForContractLine(trx, {
           tenant,
           contractLineId: mapping.contract_line_id,
           sourceRunPrefix: 'contract_add_line',
         });
+        await syncPrepaidBlockIssuancesForContractLine(trx, tenant, mapping.contract_line_id);
         return mapping;
       })
     );
@@ -486,11 +490,13 @@ export const updateContractLineAssociation = withAuth(async (
 
     const updated = await repoUpdateContractLine(knex, tenant, contractId, contractLineId, updateData);
     await knex.transaction(async (trx) => {
+      // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
       await syncRecurringServicePeriodsForContractLine(trx, {
         tenant,
         contractLineId,
         sourceRunPrefix: 'contract_line_association_update',
       });
+      await syncPrepaidBlockIssuancesForContractLine(trx, tenant, contractLineId);
     });
     return updated;
   } catch (error) {
@@ -526,11 +532,13 @@ export const updateContractLineRate = withAuth(async (
 
     await knex.transaction(async (trx) => {
       await repoUpdateContractLineRate(trx, tenant, contractId, contractLineId, rate, billingTiming, invoiceLineDescription);
+      // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
       await syncRecurringServicePeriodsForContractLine(trx, {
         tenant,
         contractLineId,
         sourceRunPrefix: 'contract_line_rate_update',
       });
+      await syncPrepaidBlockIssuancesForContractLine(trx, tenant, contractLineId);
     });
   } catch (error) {
     console.error(`Error updating contract line ${contractLineId} rate for contract ${contractId}:`, error);
@@ -1096,6 +1104,8 @@ export interface IContractLineOverview {
   contract_line_id: string;
   contract_line_name: string;
   contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
+  /** Derived label kind ('PrepaidBlock' for Hourly lines with a block config); the stored type is untouched. */
+  display_kind?: string;
   billing_frequency: string;
   base_rate: number | null;  // For fixed lines - in cents
   display_order: number;
@@ -1476,6 +1486,16 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           })
         });
       }
+    }
+
+    // Derived label kind so the overview labels Prepaid Block lines correctly.
+    const overviewDisplayKinds = await (isTemplate ? resolveTemplateLineDisplayKinds : resolveContractLineDisplayKinds)(
+      knex,
+      tenant,
+      contractLines.map((line) => ({ contract_line_id: line.contract_line_id, contract_line_type: line.contract_line_type })),
+    );
+    for (const line of contractLines) {
+      line.display_kind = overviewDisplayKinds.get(line.contract_line_id) ?? line.contract_line_type;
     }
 
     // Calculate totals

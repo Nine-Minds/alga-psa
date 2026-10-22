@@ -82,9 +82,11 @@ it runs on every candidate.
 
 So the deferred item is the Teams **browser** journey specifically, not Teams
 and not Microsoft. `development-tests/teams-profile.spec.ts` is quarantined to
-2026-10-21 under F034/T028 for the development-server chunk truncation recorded
-in `evidence/native-teams-12gib-chunk-failure.json`. Teams wire coverage is
-unaffected and keeps running.
+2026-12-02 under F034/T028, renewed once on 2026-10-21, for the
+development-server failure recorded in
+`evidence/native-teams-12gib-chunk-failure.json` -- the chunk truncation in that
+file is resolved under Turbopack and the lane now stops on the unstyled profile
+dialog instead. Teams wire coverage is unaffected and keeps running.
 
 ### Recurrence and timezone expansion
 

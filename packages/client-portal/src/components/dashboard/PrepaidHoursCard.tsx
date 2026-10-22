@@ -160,6 +160,17 @@ export function PrepaidHoursCard() {
                     </span>
                   )}
                 </div>
+                {block.contract_name && (
+                  <p
+                    id={`prepaid-hour-block-contract-${block.block_id}`}
+                    className="truncate text-xs text-gray-500"
+                  >
+                    {t('hourBlocks.contractLabel', {
+                      contract: block.contract_name,
+                      defaultValue: 'Contract: {{contract}}',
+                    })}
+                  </p>
+                )}
                 <div className="mt-1.5 h-1.5 w-full rounded-full bg-gray-200">
                   <div
                     className="h-1.5 rounded-full bg-[rgb(var(--color-primary-500))]"

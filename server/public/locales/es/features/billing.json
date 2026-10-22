@@ -242,7 +242,8 @@
     "contractLineType": {
       "Fixed": "Fijo",
       "Hourly": "Por hora",
-      "Usage": "Basado en uso"
+      "Usage": "Basado en uso",
+      "PrepaidBlock": "Bloque prepagado"
     },
     "quoteStatus": {
       "draft": "Borrador",
@@ -443,7 +444,8 @@
     "hoursLeft": "Quedan {{hours}} h",
     "expires": "Vence el {{date}}",
     "recentBurn": "Consumo reciente",
-    "timeEntry": "Entrada de tiempo"
+    "timeEntry": "Entrada de tiempo",
+    "contractLabel": "Contrato: {{contract}}"
   },
   "bucketUsage": {
     "contractLine": "Línea de contrato de bolsa de horas",

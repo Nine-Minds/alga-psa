@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { TIME_SHEET_LIST_SORT_KEYS, TIME_SHEET_LIST_SORT_ALIASES, TIME_SHEET_LIST_DEFAULT_SORT } from './timeSheetSort';
 import { Temporal } from '@js-temporal/polyfill';
 import { 
   uuidSchema, 
@@ -70,7 +71,12 @@ export const timeSheetFilterSchema = baseFilterSchema.extend({
 });
 
 // Time sheet list query schema
-export const timeSheetListQuerySchema = createListQuerySchema(timeSheetFilterSchema);
+// `sort` is an allowlist (see TimeSheetService.resolveTimeSheetListSort); created_at is a legacy alias of period_start.
+export const timeSheetListQuerySchema = createListQuerySchema(timeSheetFilterSchema).extend({
+  sort: z.enum([...TIME_SHEET_LIST_SORT_KEYS, ...Object.keys(TIME_SHEET_LIST_SORT_ALIASES)] as [string, ...string[]])
+    .optional()
+    .default(TIME_SHEET_LIST_DEFAULT_SORT)
+});
 
 // Time sheet response schema
 export const timeSheetResponseSchema = z.object({
