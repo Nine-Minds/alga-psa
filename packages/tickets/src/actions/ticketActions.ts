@@ -1854,7 +1854,9 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
       query = query.whereExists(
         tenantScopedTable(trx, 'statuses', tenant)
           .select('*')
-          .whereRaw('statuses.status_id = t.status_id')
+          // LEVERAGE: pattern tenant-correlated-exists — correlate on the distribution column so Citus can co-locate the subquery
+          .whereRaw('statuses.tenant = t.tenant')
+          .andWhereRaw('statuses.status_id = t.status_id')
           .andWhere('statuses.is_closed', false)
       );
     } else if (parsedStatusFilter.kind === 'name') {
