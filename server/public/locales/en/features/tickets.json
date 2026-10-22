@@ -469,6 +469,13 @@
     "clientPortal": "Received via Client Portal",
     "inboundEmail": "Received via Inbound Email"
   },
+  "originalEmail": {
+    "text": "Text",
+    "original": "Original email",
+    "loading": "Loading the original email…",
+    "error": "The original email could not be loaded.",
+    "group": "Message view"
+  },
   "documents": {
     "title": "Documents",
     "noDocuments": "No documents attached",

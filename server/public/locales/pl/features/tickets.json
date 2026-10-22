@@ -461,6 +461,13 @@
     "clientPortal": "Otrzymano przez Portal Klienta",
     "inboundEmail": "Otrzymano przez e-mail"
   },
+  "originalEmail": {
+    "text": "Tekst",
+    "original": "Oryginalny e-mail",
+    "loading": "Wczytywanie oryginalnego e-maila…",
+    "error": "Nie można wczytać oryginalnego e-maila.",
+    "group": "Widok wiadomości"
+  },
   "documents": {
     "title": "Dokumenty",
     "noDocuments": "Brak dołączonych dokumentów",

@@ -461,6 +461,13 @@
     "clientPortal": "Reçu via le Portail Client",
     "inboundEmail": "Reçu via e-mail"
   },
+  "originalEmail": {
+    "text": "Texte",
+    "original": "E-mail d’origine",
+    "loading": "Chargement de l’e-mail d’origine…",
+    "error": "Impossible de charger l’e-mail d’origine.",
+    "group": "Affichage du message"
+  },
   "documents": {
     "title": "Documents",
     "noDocuments": "Aucun document joint",

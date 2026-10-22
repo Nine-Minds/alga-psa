@@ -461,6 +461,13 @@
     "clientPortal": "Recibido vía Portal de Cliente",
     "inboundEmail": "Recibido vía correo electrónico"
   },
+  "originalEmail": {
+    "text": "Texto",
+    "original": "Correo original",
+    "loading": "Cargando el correo original…",
+    "error": "No se pudo cargar el correo original.",
+    "group": "Vista del mensaje"
+  },
   "documents": {
     "title": "Documentos",
     "noDocuments": "No hay documentos adjuntos",
