@@ -192,7 +192,7 @@ describe('Datto asset device actions', () => {
   it('replaces unknown (non-Datto, non-axios) errors with a generic message and logs the original', async () => {
     const { dattoRmmAssetDeviceActions } = await import('@ee/lib/integrations/datto/assetDeviceActions');
     const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const internal = 'select * from rmm_integrations: connect ECONNREFUSED 10.0.0.5:5432 (secret provider token=abc123)';
+    const internal = 'integration row lookup failed: connect ECONNREFUSED 10.0.0.5:5432 (internal host detail)';
 
     quickJobImpl = async () => { throw new Error(internal); };
     for (const run of [
