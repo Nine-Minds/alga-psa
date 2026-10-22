@@ -2170,6 +2170,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                             service_name: serviceConfig.service.service_name,
                           }))}
                           schedules={bucketSchedules}
+                          currencyCode={contract.currency_code}
                           onChanged={() => {
                             void loadServicesForLine(line.contract_line_id, true);
                           }}

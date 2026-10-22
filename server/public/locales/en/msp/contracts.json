@@ -2503,7 +2503,7 @@
         "minimumUsage": "Minimum usage",
         "includedHours": "Included hours",
         "includedUnits": "Included units",
-        "overtimeRate": "Overtime rate ($/hr)",
+        "overtimeRate": "Overtime rate per hour",
         "overtimeThreshold": "Overtime threshold (hours)",
         "roundUpMinutes": "Round up to minutes",
         "scheduleEffectiveDate": "Schedule effective date",
@@ -2538,7 +2538,7 @@
       "placeholders": {
         "minimum": "minimum",
         "minimumMinutes": "minimum minutes",
-        "overtimeRate": "overtime $/hr",
+        "overtimeRate": "overtime rate per hour",
         "roundMinutes": "round minutes",
         "thresholdHours": "threshold hours"
       },
@@ -2580,7 +2580,8 @@
         "value": "Value",
         "appliesTo": "Applies to",
         "description": "Description",
-        "amount": "Amount ($)",
+        "amount": "Amount",
+        "rate": "Rate",
         "billingPeriod": "Billing period",
         "timing": "Timing"
       }

@@ -2506,7 +2506,7 @@
         "lineType": "Lijntype",
         "minimumBillableMinutes": "Minimaal factureerbare minuten",
         "minimumUsage": "Minimaal verbruik",
-        "overtimeRate": "Overurentarief ($/uur)",
+        "overtimeRate": "Overurentarief per uur",
         "overtimeThreshold": "Overurendrempel (uren)",
         "roundUpMinutes": "Afronden naar minuten",
         "scheduleEffectiveDate": "Ingangsdatum van het schema",
@@ -2540,7 +2540,7 @@
       "placeholders": {
         "minimum": "minimum",
         "minimumMinutes": "minimale minuten",
-        "overtimeRate": "overuren $/uur",
+        "overtimeRate": "overurentarief per uur",
         "roundMinutes": "afronding in minuten",
         "thresholdHours": "drempeluren"
       },
@@ -2580,7 +2580,8 @@
         "value": "Waarde",
         "appliesTo": "Van toepassing op",
         "description": "Beschrijving",
-        "amount": "Bedrag ($)",
+        "amount": "Bedrag",
+        "rate": "Tarief",
         "billingPeriod": "Factureringsperiode",
         "timing": "Moment"
       }

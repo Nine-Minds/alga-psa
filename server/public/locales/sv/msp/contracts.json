@@ -2503,7 +2503,7 @@
         "minimumUsage": "Minsta förbrukning",
         "includedHours": "Ingående timmar",
         "includedUnits": "Ingående enheter",
-        "overtimeRate": "Övertidstaxa ($/h)",
+        "overtimeRate": "Övertidstaxa per timme",
         "overtimeThreshold": "Övertidsgräns (timmar)",
         "roundUpMinutes": "Avrunda uppåt till minuter",
         "scheduleEffectiveDate": "Schemats startdatum",
@@ -2538,7 +2538,7 @@
       "placeholders": {
         "minimum": "minimivärde",
         "minimumMinutes": "minsta antal minuter",
-        "overtimeRate": "övertid $/h",
+        "overtimeRate": "övertidstaxa per timme",
         "roundMinutes": "avrunda minuter",
         "thresholdHours": "timgräns"
       },
@@ -2580,7 +2580,8 @@
         "value": "Värde",
         "appliesTo": "Gäller för",
         "description": "Beskrivning",
-        "amount": "Belopp ($)",
+        "amount": "Belopp",
+        "rate": "Taxa",
         "billingPeriod": "Faktureringsperiod",
         "timing": "Tidpunkt"
       }

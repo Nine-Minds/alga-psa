@@ -2506,7 +2506,7 @@
         "lineType": "Linientyp",
         "minimumBillableMinutes": "Minimal abrechenbare Minuten",
         "minimumUsage": "Mindestnutzung",
-        "overtimeRate": "Überstundensatz ($/Std.)",
+        "overtimeRate": "Überstundensatz pro Stunde",
         "overtimeThreshold": "Überstundenschwelle (Stunden)",
         "roundUpMinutes": "Aufrunden auf Minuten",
         "scheduleEffectiveDate": "Preisplan gültig ab",
@@ -2540,7 +2540,7 @@
       "placeholders": {
         "minimum": "Minimum",
         "minimumMinutes": "Mindestminuten",
-        "overtimeRate": "Überstunden $/Std.",
+        "overtimeRate": "Überstundensatz pro Stunde",
         "roundMinutes": "Minuten runden",
         "thresholdHours": "Schwellenstunden"
       },
@@ -2573,7 +2573,8 @@
         "value": "Wert",
         "appliesTo": "Gilt für",
         "description": "Beschreibung",
-        "amount": "Betrag ($)",
+        "amount": "Betrag",
+        "rate": "Satz",
         "billingPeriod": "Abrechnungszeitraum",
         "timing": "Zeitpunkt"
       },

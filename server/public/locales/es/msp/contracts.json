@@ -2506,7 +2506,7 @@
         "lineType": "Tipo de línea",
         "minimumBillableMinutes": "Minutos mínimos facturables",
         "minimumUsage": "Uso mínimo",
-        "overtimeRate": "Tarifa de horas extra ($/h)",
+        "overtimeRate": "Tarifa de horas extra por hora",
         "overtimeThreshold": "Umbral de horas extra (horas)",
         "roundUpMinutes": "Redondear a minutos",
         "scheduleEffectiveDate": "Fecha de entrada en vigor del horario",
@@ -2540,7 +2540,7 @@
       "placeholders": {
         "minimum": "mínimo",
         "minimumMinutes": "minutos mínimos",
-        "overtimeRate": "horas extra $/h",
+        "overtimeRate": "tarifa de horas extra por hora",
         "roundMinutes": "redondeo en minutos",
         "thresholdHours": "horas del umbral"
       },
@@ -2580,7 +2580,8 @@
         "value": "Valor",
         "appliesTo": "Se aplica a",
         "description": "Descripción",
-        "amount": "Importe ($)",
+        "amount": "Importe",
+        "rate": "Tarifa",
         "billingPeriod": "Período de facturación",
         "timing": "Momento"
       }

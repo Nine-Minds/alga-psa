@@ -2506,7 +2506,7 @@
         "lineType": "Tipo di linea",
         "minimumBillableMinutes": "Minuti minimi fatturabili",
         "minimumUsage": "Utilizzo minimo",
-        "overtimeRate": "Tariffa straordinari ($/ora)",
+        "overtimeRate": "Tariffa straordinari oraria",
         "overtimeThreshold": "Soglia straordinari (ore)",
         "roundUpMinutes": "Arrotonda ai minuti",
         "scheduleEffectiveDate": "Data di decorrenza del piano",
@@ -2540,7 +2540,7 @@
       "placeholders": {
         "minimum": "minimo",
         "minimumMinutes": "minuti minimi",
-        "overtimeRate": "straordinari $/ora",
+        "overtimeRate": "tariffa straordinari oraria",
         "roundMinutes": "arrotondamento minuti",
         "thresholdHours": "ore di soglia"
       },
@@ -2580,7 +2580,8 @@
         "value": "Valore",
         "appliesTo": "Si applica a",
         "description": "Descrizione",
-        "amount": "Importo ($)",
+        "amount": "Importo",
+        "rate": "Tariffa",
         "billingPeriod": "Periodo di fatturazione",
         "timing": "Tempistica"
       }

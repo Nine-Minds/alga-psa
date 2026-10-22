@@ -2516,7 +2516,7 @@
         "lineType": "Typ linii",
         "minimumBillableMinutes": "Minimalne rozliczane minuty",
         "minimumUsage": "Minimalne zużycie",
-        "overtimeRate": "Stawka za nadgodziny ($/godz.)",
+        "overtimeRate": "Godzinowa stawka za nadgodziny",
         "overtimeThreshold": "Próg nadgodzin (godziny)",
         "roundUpMinutes": "Zaokrąglaj do minut",
         "scheduleEffectiveDate": "Data wejścia w życie harmonogramu",
@@ -2550,7 +2550,7 @@
       "placeholders": {
         "minimum": "wartość minimalna",
         "minimumMinutes": "minimalne minuty",
-        "overtimeRate": "nadgodziny $/godz.",
+        "overtimeRate": "godzinowa stawka za nadgodziny",
         "roundMinutes": "zaokrąglenie w minutach",
         "thresholdHours": "godziny progu"
       },
@@ -2583,7 +2583,8 @@
         "value": "Wartość",
         "appliesTo": "Dotyczy",
         "description": "Opis",
-        "amount": "Kwota ($)",
+        "amount": "Kwota",
+        "rate": "Stawka",
         "billingPeriod": "Okres rozliczeniowy",
         "timing": "Moment rozliczenia"
       },

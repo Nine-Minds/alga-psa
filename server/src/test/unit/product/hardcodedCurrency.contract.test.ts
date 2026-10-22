@@ -710,10 +710,13 @@ describe("hardcoded currency (locale files)", () => {
 // contract's currency. A label with a glyph is wrong for every non-USD
 // contract. Detector 1 misses this shape (no digit follows the symbol).
 //
-// Scoped to the contract-line panel: that is the surface this regression hit,
-// and a repo-wide scan of `defaultValue`s has not been triaged for false
-// positives. Widen SCOPE when other directories are cleaned up.
-const LABEL_SCOPE_DIR = "../packages/billing/src/components/billing-dashboard/contract-lines";
+// Scoped to the billing screens: the whole billing dashboard and the EE
+// billing components (contract simulator). Widen when other directories are
+// triaged for false positives.
+const LABEL_SCOPE_DIRS = [
+  "../packages/billing/src/components/billing-dashboard",
+  "../ee/server/src/components/billing",
+];
 const GLYPHS = SYMBOLIC; // letter-only symbols ("kr", "R") are ordinary words in labels
 const GLYPH_ALT = alternation(GLYPHS);
 // "(" glyph, optional "/unit", ")" — e.g. ($), ($/hr), (€/h), ($/Std.)
@@ -730,6 +733,12 @@ function scanLabelDefaults(absFile: string, out: Violation[]): void {
     /x$/.test(absFile) ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
   const file = path.relative(REPO_ROOT, absFile);
+  const report = (node: ts.Node, snippet: string): void => {
+    const { line } = sourceFile.getLineAndCharacterOfPosition(
+      node.getStart(sourceFile),
+    );
+    out.push({ file, line: line + 1, snippet });
+  };
   const visit = (node: ts.Node): void => {
     if (
       ts.isPropertyAssignment(node) &&
@@ -739,17 +748,25 @@ function scanLabelDefaults(absFile: string, out: Violation[]): void {
         ts.isNoSubstitutionTemplateLiteral(node.initializer)) &&
       LABEL_GLYPH.test(node.initializer.text)
     ) {
-      const { line } = sourceFile.getLineAndCharacterOfPosition(
-        node.getStart(sourceFile),
-      );
-      out.push({ file, line: line + 1, snippet: node.initializer.text });
+      report(node, node.initializer.text);
+    } else if (ts.isJsxText(node) && LABEL_GLYPH.test(node.text)) {
+      // Raw JSX text, e.g. <span>Rate ($)</span>
+      report(node, node.text.trim());
+    } else if (
+      ts.isJsxAttribute(node) &&
+      node.initializer &&
+      ts.isStringLiteral(node.initializer) &&
+      LABEL_GLYPH.test(node.initializer.text)
+    ) {
+      // Literal attribute text, e.g. placeholder="Rate ($/hr)"
+      report(node, node.initializer.text);
     }
     ts.forEachChild(node, visit);
   };
   visit(sourceFile);
 }
 
-describe("currency glyph in contract-line rate labels", () => {
+describe("currency glyph in billing rate labels", () => {
   it("LABEL_GLYPH flags the known bad shapes and spares good labels", () => {
     for (const bad of [
       "Hourly Rate ($)",
@@ -757,6 +774,7 @@ describe("currency glyph in contract-line rate labels", () => {
       "Rate (€/h)",
       "Überstundensatz ($/Std.)",
       "Taxa ( $ /hora)",
+      "Amount ($)",
     ]) {
       expect(LABEL_GLYPH.test(bad), bad).toBe(true);
     }
@@ -770,10 +788,13 @@ describe("currency glyph in contract-line rate labels", () => {
     }
   });
 
-  it("no t() defaultValue in contract-lines components carries a currency glyph", () => {
+  it("no t() defaultValue or JSX text in billing components carries a currency glyph", () => {
     const files: string[] = [];
-    collectSourceFiles(path.resolve(process.cwd(), LABEL_SCOPE_DIR), files);
-    expect(files.length).toBeGreaterThan(0);
+    for (const dir of LABEL_SCOPE_DIRS) {
+      const before = files.length;
+      collectSourceFiles(path.resolve(process.cwd(), dir), files);
+      expect(files.length, `${dir} yielded no source files`).toBeGreaterThan(before);
+    }
     const violations: Violation[] = [];
     for (const f of files) scanLabelDefaults(f, violations);
     expect(
@@ -782,32 +803,33 @@ describe("currency glyph in contract-line rate labels", () => {
     ).toEqual([]);
   });
 
-  it("contract-lines locale rate labels carry no currency glyph in any locale", () => {
-    const KEYS = [
-      ["configuration", "hourly", "planWideSettings", "overtime", "rateLabel"],
-      ["forms", "hourlyConfig", "labels", "hourlyRate"],
-      ["forms", "hourlyConfig", "userTypeRates", "rateSrLabel"],
-    ];
+  it("billing locale strings carry no currency glyph in any locale", () => {
+    const FILES = ["contract-lines.json", "contracts.json"];
     const locales = fs
       .readdirSync(LOCALES_ROOT, { withFileTypes: true })
       .filter((d) => d.isDirectory())
       .map((d) => d.name);
     expect(locales.length).toBeGreaterThanOrEqual(11);
-    const glyph = new RegExp(GLYPH_ALT);
+    for (const required of ["sv", "xx", "yy"]) expect(locales).toContain(required);
+    const glyph = new RegExp(`\\(\\s*(?:${GLYPH_ALT})`);
     const offenders: string[] = [];
-    for (const locale of locales) {
-      const file = path.join(LOCALES_ROOT, locale, "msp", "contract-lines.json");
-      if (!fs.existsSync(file)) continue;
-      const json = JSON.parse(fs.readFileSync(file, "utf8"));
-      for (const keyPath of KEYS) {
-        let value: unknown = json;
-        for (const k of keyPath) value = (value as any)?.[k];
-        const where = `${locale}::${keyPath.join(".")}`;
-        if (typeof value !== "string") {
-          offenders.push(`${where} (missing)`);
-        } else if (glyph.test(value) || LABEL_GLYPH.test(value)) {
+    const walk = (value: unknown, where: string): void => {
+      if (typeof value === "string") {
+        if (glyph.test(value) || LABEL_GLYPH.test(value)) {
           offenders.push(`${where} = ${value}`);
         }
+      } else if (value && typeof value === "object") {
+        for (const [k, v] of Object.entries(value)) walk(v, `${where}.${k}`);
+      }
+    };
+    for (const locale of locales) {
+      for (const name of FILES) {
+        const file = path.join(LOCALES_ROOT, locale, "msp", name);
+        if (!fs.existsSync(file)) {
+          offenders.push(`${locale}/msp/${name} (missing)`);
+          continue;
+        }
+        walk(JSON.parse(fs.readFileSync(file, "utf8")), `${locale}::${name}`);
       }
     }
     expect(offenders).toEqual([]);
