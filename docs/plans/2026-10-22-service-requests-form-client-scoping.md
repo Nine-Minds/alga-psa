@@ -81,6 +81,11 @@ It returns `providerAllowed && audienceAllowed`, where `audienceAllowed` is:
   `audience.groupIds` → true;
 - otherwise false.
 
+Audience semantics: a client row admits every contact of that client. A group
+row admits only contacts whose `portal_visibility_group_id` is that group, and
+needs no client row. A `scoped` audience may therefore be clients only, groups
+only, or a mix across *different* clients.
+
 `contactGroupId` is loaded once per request from `contacts` (`null` contactId
 never matches a group). The predicate is pure and unit-testable; only the
 loaders run SQL.
@@ -117,13 +122,24 @@ the provider is `all-authenticated-client-users`:
   groups**.
 - Scoped mode: `ClientPicker` with `searchClients={searchClientsForPicker}`,
   each pick rendered as a removable chip (`ClientAvatar` + name).
-- Under each selected client, a checkbox/chip list of that client's visibility
-  groups from `getClientPortalVisibilityGroups`, labelled with the client name.
-  No group picker exists; this is the minimum honest UI.
+- Each selected client has an access choice: "All users of {client}" (stored
+  as a client row) or "Only members of selected groups". The second option
+  lists that client's groups from `getClientPortalVisibilityGroups` and stores
+  group rows only, with no client row. No group picker exists; this is the
+  minimum honest UI.
+- Editor data includes `groupClientIds` (group id to owning client id) next to
+  `mode`, `clientIds` and `groupIds`, so the editor can rebuild the per-client
+  rows of a group-only audience from the saved group rows.
 - Save calls `updateServiceRequestAudienceAction(definitionId, { mode, clientIds, groupIds })`.
-  It requires `service-request:update`, verifies clients and groups belong to
-  the tenant (and each group to a selected client), replaces rows in one
-  transaction, and writes `audience_mode`.
+  Validation (`saveServiceRequestDefinitionAudience`):
+  - `service-request:update` is required.
+  - Every client and group must exist in the tenant; foreign-tenant ids are
+    rejected.
+  - A client may not be selected together with one of its own groups; the error
+    is "choose either all users or specific groups".
+  - A client with all users plus a group of a *different* client is allowed.
+
+  It replaces rows in one transaction and writes `audience_mode`.
 - Keep the raw JSON textarea only for `advanced-visibility` under a labelled
   advanced section; server-side both restrictions apply.
 - Add keys under `editor.execution.visibility.audience.*` in
@@ -149,8 +165,9 @@ the provider is `all-authenticated-client-users`:
 
 ## 7. Risks
 
-- **Groups are client-owned.** A group from client A never grants a client B
-  user; show the client name next to every group. **Group deletion** cascades
+- **Groups are client-owned.** A group from client A only ever admits client
+  A's members of that group, so it can never grant a client B user; show the
+  client name next to every group. **Group deletion** cascades
   scope rows away, so deleting the last group of a `scoped` form means nobody
   (fail closed). Warn in the UI; do not auto-flip to `all`.
 - **Contacts without a group** match client scopes only. Reassigning a contact
@@ -175,13 +192,22 @@ AND), and `editor.i18n.test.tsx` / `npm run validate-translations`.
 
 New `serviceRequestAudienceScoping.integration.test.ts`: `all` visible to
 everyone (regression); client scope visible/detail/submit for A but not B (no
-submission row for B); group scope allows the assigned contact, not a contact
-with no group or another group; a group from another client cannot grant
-access; `scoped` with zero rows is invisible; duplicate copies mode + rows;
-tenant isolation. New `definitionAudience.unit.test.ts` for the pure predicate
+submission row for B); group-only scope saved through the action ("group scope
+admits the member contact…"): no client row exists, the member contact sees the
+form in the catalog, opens the detail and can submit, while a contact with no
+group or a different group cannot; saving a client together with its own group
+is rejected, as are foreign-tenant client and group ids; a client plus another
+client's group is accepted and both populations see the form; a contact
+carrying another client's group id is not admitted by an unrelated scope;
+`scoped` with zero rows is invisible; group-only plus deletion of the last group
+fails closed; editor data exposes `groupClientIds`; duplicate copies mode +
+rows; tenant isolation. New `definitionAudience.unit.test.ts` for the pure predicate
 (all, scoped, group, null contact), and `ServiceRequestAudienceEditor.test.tsx`
 under `server/src/test/unit/app/msp/service-requests/` for the Everyone default,
-add/remove client, per-client group toggles, and the `mode: 'scoped'` payload.
+the per-client "all users / only selected groups" toggle (including rebuilding a
+group-only client from saved groups and switching back to all users), no
+duplicate clients, and the `mode: 'scoped'` payload (group-only clients send
+group ids and no client id).
 
 Verify with `npx tsc --noEmit` in `server`, the integration files above against
 the test DB, then a browser pass as an MSP admin and as a client user in the
@@ -190,7 +216,7 @@ restricted and unrestricted clients.
 ## 9. Corrections to the card
 
 1. CE does not "ignore config"; `all-authenticated-client-users` accepts any config and returns `true`.
-2. `client_portal_visibility_groups` are per-client groups of contacts, not tenant-wide client-user groups; a group selection implies its client.
+2. `client_portal_visibility_groups` are per-client groups of contacts, not tenant-wide client-user groups; groups belong to exactly one client, but selecting a group does not select its client.
 3. "Add service-request definitions to what visibility groups can scope" is the reverse relation and would change the group tables. The form referencing groups is smaller and correct.
 4. Submit does not enforce visibility itself: `submissionService.ts:261` calls the detail function. Only catalog and detail need wiring.
 5. `allowedRequesterUserIds` is a per-user id allow-list, not group membership; it stays with the EE provider.
