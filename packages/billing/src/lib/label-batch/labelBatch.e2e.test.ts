@@ -2,7 +2,7 @@
  * End to end: label view models -> template evaluate -> barcode prepass -> composed HTML -> Chromium
  * PDF -> rasterize with pdftoppm -> decode the codes -> compare with the canonical record URL.
  * Needs a Chromium that Puppeteer can launch (PUPPETEER_EXECUTABLE_PATH or its own download) and
- * `pdftoppm` (poppler) on PATH. Both are required: this test fails, not skips, when they are absent.
+ * `pdftoppm` and `pdfinfo` (poppler) on PATH. Both are required: this test fails, not skips, when they are absent.
  */
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -14,7 +14,6 @@ import { createRequire } from 'node:module';
 const { PNG } = createRequire(import.meta.url)('pngjs') as {
   PNG: { sync: { read(buffer: Buffer): { width: number; height: number; data: Buffer } } };
 };
-import { PDFDocument } from 'pdf-lib';
 import {
   BarcodeFormat,
   BinaryBitmap,
@@ -194,9 +193,25 @@ afterAll(async () => {
   await browserPoolService.cleanup();
 });
 
-function rasterize(pdf: Buffer, name: string): Raster[] {
+function writePdf(pdf: Buffer, name: string): string {
   const pdfPath = path.join(workDir, `${name}.pdf`);
   writeFileSync(pdfPath, pdf);
+  return pdfPath;
+}
+
+/**
+ * Page sizes in PDF points, read by poppler's `pdfinfo` rather than pdf-lib: the server unit
+ * config (which runs this suite in CI) aliases `pdf-lib` to an empty module.
+ */
+function pageSizes(pdfPath: string): Array<{ width: number; height: number }> {
+  const info = execFileSync('pdfinfo', ['-f', '1', '-l', '100000', pdfPath], { encoding: 'utf8' });
+  return [...info.matchAll(/^Page\s+\d+\s+size:\s+([\d.]+)\s+x\s+([\d.]+)\s+pts/gm)].map((m) => ({
+    width: Number(m[1]),
+    height: Number(m[2]),
+  }));
+}
+
+function rasterize(pdfPath: string, name: string): Raster[] {
   execFileSync('pdftoppm', ['-r', String(DPI), '-png', pdfPath, path.join(workDir, name)]);
   return readdirSync(workDir)
     .filter((file) => file.startsWith(`${name}-`) && file.endsWith('.png'))
@@ -273,8 +288,8 @@ async function printLabels(items: LabelPrintItem[], layout: LabelBatchLayout, na
     tenantClient: { name: 'Example MSP', logoUrl: null },
   });
   const pdf = await renderHtmlToPdf(html, printOptions);
-  const doc = await PDFDocument.load(pdf);
-  return { html, geometry, pdf, pages: doc.getPages().map((p) => p.getSize()), rasters: rasterize(pdf, name) };
+  const pdfPath = writePdf(pdf, name);
+  return { html, geometry, pdf, pages: pageSizes(pdfPath), rasters: rasterize(pdfPath, name) };
 }
 
 const ONE_PER_PAGE: LabelBatchLayout = { kind: 'one-per-page', pageSize: { width: 4, height: 2, unit: 'in' } };
