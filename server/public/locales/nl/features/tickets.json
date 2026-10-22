@@ -968,7 +968,38 @@
     "tagCreatePartialFailure_few": "{{count}} tags konden niet worden aangemaakt",
     "tagCreatePartialFailure_many": "{{count}} tags konden niet worden aangemaakt",
     "tagCreationFailed_few": "{{count}} tags konden niet worden aangemaakt",
-    "tagCreationFailed_many": "{{count}} tags konden niet worden aangemaakt"
+    "tagCreationFailed_many": "{{count}} tags konden niet worden aangemaakt",
+    "customFields": {
+      "heading": "Aangepaste velden",
+      "empty": "Nog geen waarden voor aangepaste velden.",
+      "name": "Veldnaam",
+      "value": "Waarde",
+      "remove": "Veld verwijderen",
+      "add": "Aangepast veld toevoegen",
+      "errors": {
+        "nameBlank": "Voer een naam in voor dit veld",
+        "nameReserved": "Deze naam is gereserveerd",
+        "nameTooLong": "Namen mogen maximaal {{max}} tekens bevatten",
+        "nameDuplicate": "Een ander veld gebruikt deze naam al",
+        "valueTooLong": "Waarden mogen maximaal {{max}} tekens bevatten",
+        "tooMany": "Maximaal {{max}} aangepaste velden zijn toegestaan"
+      }
+    },
+    "assets": {
+      "heading": "Assets",
+      "selectClientFirst": "Selecteer een klant om assets te koppelen.",
+      "unavailable": "Assets kunnen na het aanmaken vanuit het ticket worden gekoppeld."
+    },
+    "attachments": {
+      "heading": "Bijlagen",
+      "add": "Bestanden toevoegen",
+      "remove": "{{name}} verwijderen"
+    },
+    "watchers": {
+      "heading": "Volgers",
+      "placeholder": "Volgers toevoegen..."
+    },
+    "attachmentsPartialFailure": "Ticket aangemaakt, maar deze bestanden konden niet worden bijgevoegd: {{files}}. Voeg ze toe vanuit het ticket."
   },
   "itil": {
     "calculatedPriority": "Prioriteit (berekend)",
@@ -1514,7 +1545,8 @@
       "statusRequired": "Selecteer een status",
       "priorityRequired": "Selecteer een prioriteit",
       "impactRequired": "Selecteer een impact",
-      "urgencyRequired": "Selecteer een urgentie"
+      "urgencyRequired": "Selecteer een urgentie",
+      "customFieldsInvalid": "Corrigeer de gemarkeerde aangepaste velden"
     },
     "category": {
       "nameRequired": "Categorienaam is verplicht",

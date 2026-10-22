@@ -968,7 +968,38 @@
     "tagCreatePartialFailure_few": "No se pudieron crear {{count}} etiquetas",
     "tagCreatePartialFailure_many": "No se pudieron crear {{count}} etiquetas",
     "tagCreationFailed_few": "No se pudieron crear {{count}} etiquetas",
-    "tagCreationFailed_many": "No se pudieron crear {{count}} etiquetas"
+    "tagCreationFailed_many": "No se pudieron crear {{count}} etiquetas",
+    "customFields": {
+      "heading": "Campos personalizados",
+      "empty": "Aún no hay valores de campos personalizados.",
+      "name": "Nombre del campo",
+      "value": "Valor",
+      "remove": "Quitar campo",
+      "add": "Añadir campo personalizado",
+      "errors": {
+        "nameBlank": "Introduzca un nombre para este campo",
+        "nameReserved": "Este nombre está reservado",
+        "nameTooLong": "Los nombres pueden tener como máximo {{max}} caracteres",
+        "nameDuplicate": "Otro campo ya usa este nombre",
+        "valueTooLong": "Los valores pueden tener como máximo {{max}} caracteres",
+        "tooMany": "Se permiten como máximo {{max}} campos personalizados"
+      }
+    },
+    "assets": {
+      "heading": "Activos",
+      "selectClientFirst": "Seleccione un cliente para vincular activos.",
+      "unavailable": "Los activos se pueden vincular desde el ticket una vez creado."
+    },
+    "attachments": {
+      "heading": "Archivos adjuntos",
+      "add": "Añadir archivos",
+      "remove": "Quitar {{name}}"
+    },
+    "watchers": {
+      "heading": "Observadores",
+      "placeholder": "Añadir observadores..."
+    },
+    "attachmentsPartialFailure": "Ticket creado, pero no se pudieron adjuntar estos archivos: {{files}}. Añádalos desde el ticket."
   },
   "itil": {
     "calculatedPriority": "Prioridad (calculada)",
@@ -1514,7 +1545,8 @@
       "statusRequired": "Seleccione un estado",
       "priorityRequired": "Seleccione una prioridad",
       "impactRequired": "Seleccione un impacto",
-      "urgencyRequired": "Seleccione una urgencia"
+      "urgencyRequired": "Seleccione una urgencia",
+      "customFieldsInvalid": "Corrija los campos personalizados resaltados"
     },
     "category": {
       "nameRequired": "El nombre de la categoría es obligatorio",

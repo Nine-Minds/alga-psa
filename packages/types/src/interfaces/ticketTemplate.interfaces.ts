@@ -117,6 +117,8 @@ export interface TicketTemplateForCreate {
   }[];
   checklist: { item_name: string; is_required: boolean }[];
   custom_field_count: number;
+  /** The template's custom field values, so the create form can show them as editable rows. */
+  custom_fields?: Record<string, unknown>;
   /** Dangling references that were dropped from the prefill (e.g. "Board no longer exists"). */
   warnings: string[];
 }

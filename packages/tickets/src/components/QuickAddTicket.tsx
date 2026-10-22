@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, Plus, Trash2, Paperclip, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Link2, Copy, LayoutTemplate } from 'lucide-react';
@@ -33,6 +33,7 @@ import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
+import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextEditor } from '@alga-psa/ui/editor';
@@ -64,6 +65,11 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  validateTicketCustomFieldEntries,
+  TICKET_CUSTOM_FIELD_LIMITS,
+  type TicketCustomFieldIssueCode,
+} from '../lib/ticketCreateExtras';
 import { nextTemplateTitle, renderTitleTemplate, titleHasTokens, toCalendarDate, type TitleTokenContext } from '../lib/ticketTitleTokens';
 import {
   extractTicketRichTextPlainText,
@@ -76,6 +82,34 @@ import { useQuickAddRichTextUploadSession } from './useQuickAddRichTextUploadSes
 import { getTicketStatuses } from '@alga-psa/reference-data/actions/status-actions/statusActions';
 import { useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { toCalendarDisplayDate } from '@alga-psa/core';
+
+/** One editable custom-field row. `original` keeps non-string template values intact until the user edits them. */
+interface CustomFieldRow {
+  key: string;
+  name: string;
+  text: string;
+  original: unknown;
+  /** True once the user has typed in the row (or added it). Template values never overwrite a touched row. */
+  touched: boolean;
+}
+
+export interface QuickAddAssetPickerProps {
+  id: string;
+  clientId: string;
+  value: string[];
+  onChange: (assetIds: string[]) => void;
+  label: string;
+  disabled?: boolean;
+}
+
+/** A non-string template value stays as it was until the user edits the text. */
+function customFieldRowValue(row: CustomFieldRow): unknown {
+  if (typeof row.original === 'string') return row.text;
+  return JSON.stringify(row.original) === row.text ? row.original : row.text;
+}
+
+const customFieldText = (value: unknown): string =>
+  typeof value === 'string' ? value : JSON.stringify(value) ?? '';
 
 /** Renders a <form> normally, or a plain <div> when embedded to avoid nested form tags. */
 function FormOrDiv({ isEmbedded, onSubmit, children }: { isEmbedded: boolean; onSubmit: (e: React.FormEvent) => void; children: React.ReactNode }) {
@@ -209,6 +243,12 @@ interface QuickAddTicketProps {
    * Ignored when `duplicateFromTicketId` is set; a request names a duplicate source or a template, never both.
    */
   templateId?: string;
+  /**
+   * Multi-select of the chosen client's assets. The assets package owns the picker and the tickets package
+   * cannot import it, so the composition layer injects it; without it the Assets section is not shown
+   * beyond the asset the form was opened from.
+   */
+  renderAssetPicker?: (props: QuickAddAssetPickerProps) => React.ReactNode;
 }
 
 export function QuickAddTicket({
@@ -231,6 +271,7 @@ export function QuickAddTicket({
   isAlgaDeskMode = false,
   duplicateFromTicketId,
   templateId,
+  renderAssetPicker,
 }: QuickAddTicketProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -327,6 +368,13 @@ export function QuickAddTicket({
   const lastRenderedTitleRef = useRef<string | null>(null);
   const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
   const effectiveAssetId = isAlgaDeskMode ? undefined : assetId;
+  // Create extras (all optional, sent in the same addTicket call except attachments).
+  const [customFieldRows, setCustomFieldRows] = useState<CustomFieldRow[]>([]);
+  const customFieldKeyRef = useRef(0);
+  const [extraAssetIds, setExtraAssetIds] = useState<string[]>([]);
+  const [watcherIds, setWatcherIds] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   // Calculate ITIL priority when impact and urgency are set
@@ -689,6 +737,8 @@ export function QuickAddTicket({
     }
 
     setClientId(newClientId || '');
+    // Assets are picked from the client's own list, so the previous client's selection no longer applies.
+    setExtraAssetIds([]);
     setContactId(null);
     // The location belongs to the client that was selected before.
     setLocationId(null);
@@ -780,6 +830,7 @@ export function QuickAddTicket({
   // effect pick the board's default status and the categories effect load the picker
   // without clearing the selection. Status and due date are deliberately not copied.
   function applyDuplicateSource(source: TicketDuplicateSource) {
+    seedCustomFieldRows(source.custom_fields, false);
     setDuplicateSource(source);
     setCopyChecklist(true);
     applyCopiedTicketFields({
@@ -855,7 +906,31 @@ export function QuickAddTicket({
     return renderTitleTemplate(rawTitle, templateTitleContext());
   }
 
-  function applyTemplateSource(source: TicketTemplateForCreate) {
+  const nextCustomFieldKey = () => `cf-${customFieldKeyRef.current++}`;
+
+  // Seeds the custom-field rows from a duplicate or template. `replaceTouched` is true only when the user
+  // confirmed replacing their draft; otherwise a row the user has edited (or added) keeps its value, so a
+  // template that finishes loading later never overwrites what was typed.
+  function seedCustomFieldRows(fields: Record<string, unknown> | undefined, replaceTouched: boolean) {
+    const incoming = Object.entries(fields ?? {});
+    setCustomFieldRows((current) => {
+      const kept = current.filter((row) => row.touched && !replaceTouched);
+      const keptNames = new Set(kept.map((row) => row.name.trim().toLowerCase()));
+      const seeded = incoming
+        .filter(([name]) => !keptNames.has(name.trim().toLowerCase()))
+        .map(([name, value]): CustomFieldRow => ({
+          key: nextCustomFieldKey(),
+          name,
+          text: customFieldText(value),
+          original: value,
+          touched: false,
+        }));
+      return [...seeded, ...kept];
+    });
+  }
+
+  function applyTemplateSource(source: TicketTemplateForCreate, replaceTouched = false) {
+    seedCustomFieldRows(source.custom_fields, replaceTouched);
     setTemplateSource(source);
     setCopyTemplateChecklist(true);
     setTemplateLoadError(null);
@@ -880,13 +955,13 @@ export function QuickAddTicket({
     });
   }
 
-  async function loadAndApplyTemplate(nextTemplateId: string) {
+  async function loadAndApplyTemplate(nextTemplateId: string, replaceTouched = false) {
     try {
       const result = await getTicketTemplateForCreate(nextTemplateId);
       if (isReturnedActionError(result)) {
         setTemplateLoadError(getErrorMessage(result));
       } else {
-        applyTemplateSource(result);
+        applyTemplateSource(result, replaceTouched);
       }
     } catch (loadError) {
       console.error('Error loading ticket template:', loadError);
@@ -903,7 +978,7 @@ export function QuickAddTicket({
       return;
     }
     if (nextTemplateId === templateSource?.template_id) return;
-    if (hasUnsavedDraftText) {
+    if (hasUnsavedDraftText || hasTouchedCustomFields) {
       setPendingTemplateId(nextTemplateId);
       return;
     }
@@ -960,6 +1035,10 @@ export function QuickAddTicket({
     setTemplateLoadError(null);
     setCopyTemplateChecklist(true);
     setPendingTemplateId(null);
+    setCustomFieldRows([]);
+    setExtraAssetIds([]);
+    setWatcherIds([]);
+    setAttachments([]);
     setIsQuickAddContactOpen(false);
     if (prefilledDueDate) {
       setDueDate(toPrefilledDueDate(prefilledDueDate));
@@ -1016,6 +1095,33 @@ export function QuickAddTicket({
         extractTicketRichTextPlainText(draftBaselineDescription || '').trim());
 
 
+  // Rows with neither a name nor a value are placeholders and are ignored.
+  const activeCustomFieldRows = customFieldRows.filter((row) => row.name.trim() !== '' || row.text !== '');
+  const hasTouchedCustomFields = customFieldRows.some((row) => row.touched);
+  // Chosen-but-unsent extras count as unsaved work for the leave guard, with the same saved/in-flight exemptions.
+  const hasUnsavedExtras =
+    open &&
+    !isSubmitting &&
+    !isNavigatingToTicket &&
+    !ticketCreated &&
+    (hasTouchedCustomFields || attachments.length > 0 || watcherIds.length > 0 || extraAssetIds.length > 0);
+  // The same validator addTicket runs; `index` refers to activeCustomFieldRows.
+  const customFieldIssues = useMemo(
+    () => validateTicketCustomFieldEntries(activeCustomFieldRows.map((row) => ({ name: row.name, value: customFieldRowValue(row) }))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [customFieldRows]
+  );
+  const customFieldIssueMessage = (code: TicketCustomFieldIssueCode): string => {
+    switch (code) {
+      case 'name_blank': return t('quickAdd.customFields.errors.nameBlank', 'Enter a name for this field');
+      case 'name_reserved': return t('quickAdd.customFields.errors.nameReserved', 'This name is reserved');
+      case 'name_too_long': return t('quickAdd.customFields.errors.nameTooLong', { defaultValue: 'Names can be at most {{max}} characters', max: TICKET_CUSTOM_FIELD_LIMITS.maxNameLength });
+      case 'name_duplicate': return t('quickAdd.customFields.errors.nameDuplicate', 'Another field already uses this name');
+      case 'value_too_long': return t('quickAdd.customFields.errors.valueTooLong', { defaultValue: 'Values can be at most {{max}} characters', max: TICKET_CUSTOM_FIELD_LIMITS.maxValueLength });
+      case 'too_many_fields': return t('quickAdd.customFields.errors.tooMany', { defaultValue: 'At most {{max}} custom fields are allowed', max: TICKET_CUSTOM_FIELD_LIMITS.maxFields });
+    }
+  };
+
   const validateForm = () => {
     const validationErrors: string[] = [];
     if (!title.trim()) validationErrors.push(t('create.errors.titleRequired', 'Title is required'));
@@ -1040,6 +1146,9 @@ export function QuickAddTicket({
     }
 
     if (!clientId) validationErrors.push(t('validation.quickAdd.clientRequired', 'Please select a client'));
+    if (customFieldIssues.length > 0) {
+      validationErrors.push(t('validation.quickAdd.customFieldsInvalid', 'Fix the highlighted custom fields'));
+    }
     return validationErrors;
   };
 
@@ -1098,6 +1207,35 @@ export function QuickAddTicket({
     }
 
     return serializedDescription;
+  };
+
+  // Returns the names of files that failed to upload. Never throws.
+  const uploadAttachmentsForTicket = async (ticketId: string): Promise<string[]> => {
+    const failed: string[] = [];
+    let effectiveUserId: string | undefined;
+    try {
+      effectiveUserId = session?.user?.id || (await getCurrentUser())?.user_id;
+    } catch (userError) {
+      console.error('Failed to resolve user for attachment upload:', userError);
+    }
+    if (!effectiveUserId) {
+      return attachments.map((file) => file.name);
+    }
+    const { uploadDocument } = await import('@alga-psa/documents/actions/documentActions');
+    for (const file of attachments) {
+      try {
+        const fileFormData = new FormData();
+        fileFormData.append('file', file);
+        const uploadResult = await uploadDocument(fileFormData, { userId: effectiveUserId, ticketId });
+        if (isActionPermissionError(uploadResult) || !uploadResult.success) {
+          failed.push(file.name);
+        }
+      } catch (uploadError) {
+        console.error(`Failed to upload attachment ${file.name}:`, uploadError);
+        failed.push(file.name);
+      }
+    }
+    return failed;
   };
 
   const handleCreateTicket = async ({ openAfterCreate = false }: { openAfterCreate?: boolean } = {}) => {
@@ -1162,6 +1300,24 @@ export function QuickAddTicket({
       if (effectiveAssetId) {
         formData.append('asset_id', effectiveAssetId);
       }
+      // Extra linked assets, watchers and custom fields travel in the same addTicket call, so the server
+      // writes them in the ticket's transaction. Omitted when empty so the legacy payload is unchanged.
+      const additionalAssetIds = extraAssetIds.filter((assetIdValue) => assetIdValue !== effectiveAssetId);
+      if (additionalAssetIds.length > 0) {
+        formData.append('asset_ids', JSON.stringify(additionalAssetIds));
+      }
+      if (watcherIds.length > 0) {
+        formData.append('watcher_ids', JSON.stringify(watcherIds));
+      }
+      // Once a duplicate/template is applied the rows are the full, user-edited set, so an empty list
+      // (the user removed every copied value) is sent too and wins over the source's values.
+      if (activeCustomFieldRows.length > 0 || duplicateSource || templateSource) {
+        const customFields: Record<string, unknown> = {};
+        for (const row of activeCustomFieldRows) {
+          customFields[row.name.trim()] = customFieldRowValue(row);
+        }
+        formData.append('custom_fields', JSON.stringify(customFields));
+      }
 
       // Add ITIL Impact and Urgency for calculation (if provided)
       if (itilImpact) {
@@ -1210,6 +1366,18 @@ export function QuickAddTicket({
       } catch (descriptionFinalizeError) {
         console.error('Failed to finalize quick add description:', descriptionFinalizeError);
         toast.error(t('quickAdd.clipboardUploadPartialFailure', 'Ticket created, but pasted images could not be attached to the description.'));
+      }
+
+      // Attachments are uploaded after the ticket exists, outside its transaction, one file at a time.
+      // A failed file never affects the ticket or the other files; the user is told which ones failed.
+      if (attachments.length > 0 && newTicket.ticket_id) {
+        const failedFiles = await uploadAttachmentsForTicket(newTicket.ticket_id);
+        if (failedFiles.length > 0) {
+          toast.error(t('quickAdd.attachmentsPartialFailure', {
+            defaultValue: 'Ticket created, but these files could not be attached: {{files}}. Add them from the ticket.',
+            files: failedFiles.join(', '),
+          }), { duration: 10000 });
+        }
       }
 
       // Assign team if selected
@@ -1409,7 +1577,7 @@ export function QuickAddTicket({
         id={`${id}-dialog`}
         isOpen={open}
         onClose={handleClose}
-        hasUnsavedChanges={hasUnsavedDraftText}
+        hasUnsavedChanges={hasUnsavedDraftText || hasUnsavedExtras}
         className="w-full max-w-2xl max-h-[90vh]"
         title={duplicateSource
           ? t('quickAdd.duplicateDialogTitle', {
@@ -2038,6 +2206,161 @@ export function QuickAddTicket({
                     </p>
                   )}
 
+                  <div className="space-y-4" data-testid="quick-add-ticket-extras">
+                    <div id={`${id}-custom-fields-section`} className="space-y-2" data-testid="quick-add-ticket-custom-fields">
+                      <div className="text-sm font-medium text-gray-700">{t('quickAdd.customFields.heading', 'Custom Fields')}</div>
+                      {customFieldRows.length === 0 && (
+                        <p className="text-xs text-gray-500">{t('quickAdd.customFields.empty', 'No custom field values yet.')}</p>
+                      )}
+                      {customFieldRows.map((row) => {
+                        const activeIndex = activeCustomFieldRows.findIndex((candidate) => candidate.key === row.key);
+                        const rowIssues = customFieldIssues.filter((issue) => issue.index === activeIndex && activeIndex >= 0);
+                        const nameIssue = rowIssues.find((issue) => issue.code !== 'value_too_long');
+                        const valueIssue = rowIssues.find((issue) => issue.code === 'value_too_long');
+                        const updateRow = (changes: Partial<CustomFieldRow>) =>
+                          setCustomFieldRows((current) => current.map((candidate) => (candidate.key === row.key ? { ...candidate, ...changes, touched: true } : candidate)));
+                        return (
+                          <div key={row.key} className="space-y-1">
+                            <div className="flex items-start gap-2">
+                              <Input
+                                id={`${id}-custom-field-name-${row.key}`}
+                                aria-label={t('quickAdd.customFields.name', 'Field name')}
+                                placeholder={t('quickAdd.customFields.name', 'Field name')}
+                                value={row.name}
+                                onChange={(e) => updateRow({ name: e.target.value })}
+                                disabled={isSubmitting}
+                                containerClassName="flex-1 mb-0"
+                              />
+                              <Input
+                                id={`${id}-custom-field-value-${row.key}`}
+                                aria-label={t('quickAdd.customFields.value', 'Value')}
+                                placeholder={t('quickAdd.customFields.value', 'Value')}
+                                value={row.text}
+                                onChange={(e) => updateRow({ text: e.target.value })}
+                                disabled={isSubmitting}
+                                containerClassName="flex-1 mb-0"
+                              />
+                              <Button
+                                id={`${id}-custom-field-remove-${row.key}`}
+                                type="button"
+                                variant="icon"
+                                size="icon"
+                                aria-label={t('quickAdd.customFields.remove', 'Remove field')}
+                                onClick={() => setCustomFieldRows((current) => current.filter((candidate) => candidate.key !== row.key))}
+                                disabled={isSubmitting}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            {(nameIssue || valueIssue) && (
+                              <p role="alert" className="text-xs text-red-600" data-testid={`quick-add-ticket-custom-field-error-${row.key}`}>
+                                {customFieldIssueMessage((nameIssue ?? valueIssue)!.code)}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {customFieldIssues.some((issue) => issue.code === 'too_many_fields') && (
+                        <p role="alert" className="text-xs text-red-600">{customFieldIssueMessage('too_many_fields')}</p>
+                      )}
+                      <Button
+                        id={`${id}-custom-field-add`}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCustomFieldRows((current) => [...current, { key: nextCustomFieldKey(), name: '', text: '', original: '', touched: true }])}
+                        disabled={isSubmitting || customFieldRows.length >= TICKET_CUSTOM_FIELD_LIMITS.maxFields}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        {t('quickAdd.customFields.add', 'Add custom field')}
+                      </Button>
+                    </div>
+
+                    {!isAlgaDeskMode && (
+                      <div id={`${id}-assets-section`} className="space-y-2" data-testid="quick-add-ticket-assets">
+                        <div className="text-sm font-medium text-gray-700">{t('quickAdd.assets.heading', 'Assets')}</div>
+                        {renderAssetPicker && clientId ? (
+                          renderAssetPicker({
+                            id: `${id}-assets`,
+                            clientId,
+                            value: extraAssetIds,
+                            onChange: setExtraAssetIds,
+                            label: '',
+                            disabled: isSubmitting,
+                          })
+                        ) : (
+                          <p className="text-xs text-gray-500">
+                            {renderAssetPicker
+                              ? t('quickAdd.assets.selectClientFirst', 'Select a client to link assets.')
+                              : t('quickAdd.assets.unavailable', 'Assets can be linked from the ticket after it is created.')}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    <div id={`${id}-attachments-section`} className="space-y-2" data-testid="quick-add-ticket-attachments">
+                      <div className="text-sm font-medium text-gray-700">{t('quickAdd.attachments.heading', 'Attachments')}</div>
+                      <input
+                        ref={attachmentInputRef}
+                        id={`${id}-attachments-input`}
+                        type="file"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          const picked = Array.from(e.target.files ?? []);
+                          if (picked.length > 0) setAttachments((current) => [...current, ...picked]);
+                          e.target.value = '';
+                        }}
+                      />
+                      <Button
+                        id={`${id}-attachments-add`}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => attachmentInputRef.current?.click()}
+                        disabled={isSubmitting}
+                      >
+                        <Paperclip className="h-4 w-4 mr-1" />
+                        {t('quickAdd.attachments.add', 'Add files')}
+                      </Button>
+                      {attachments.length > 0 && (
+                        <ul className="space-y-1" id={`${id}-attachments-list`}>
+                          {attachments.map((file, index) => (
+                            <li key={`${index}-${file.name}-${file.size}`} className="flex items-center gap-2 text-sm text-gray-700">
+                              <span className="truncate">{file.name}</span>
+                              <Button
+                                id={`${id}-attachment-remove-${index}`}
+                                type="button"
+                                variant="icon"
+                                size="icon"
+                                aria-label={t('quickAdd.attachments.remove', { defaultValue: 'Remove {{name}}', name: file.name })}
+                                onClick={() => setAttachments((current) => current.filter((_, candidate) => candidate !== index))}
+                                disabled={isSubmitting}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    {(
+                      <div id={`${id}-watchers-section`} className="space-y-2" data-testid="quick-add-ticket-watchers">
+                        <div className="text-sm font-medium text-gray-700">{t('quickAdd.watchers.heading', 'Watchers')}</div>
+                        <MultiUserPicker
+                          id={`${id}-watchers`}
+                          values={watcherIds}
+                          onValuesChange={setWatcherIds}
+                          users={users}
+                          getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                          disabled={isSubmitting}
+                          placeholder={t('quickAdd.watchers.placeholder', 'Add watchers...')}
+                        />
+                      </div>
+                    )}
+                  </div>
+
                   <QuickAddTagPicker
                     id="quick-add-ticket-tags"
                     entityType="ticket"
@@ -2119,7 +2442,8 @@ export function QuickAddTicket({
         onConfirm={() => {
           const nextTemplateId = pendingTemplateId;
           setPendingTemplateId(null);
-          if (nextTemplateId) void loadAndApplyTemplate(nextTemplateId);
+          // The user confirmed replacing their draft, so edited custom-field rows are replaced too.
+          if (nextTemplateId) void loadAndApplyTemplate(nextTemplateId, true);
         }}
         title={t('quickAdd.templateReplaceTitle', 'Replace your changes?')}
         message={t('quickAdd.templateReplaceMessage', 'Applying a template replaces the title, description and other fields you have entered.')}
