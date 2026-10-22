@@ -144,7 +144,30 @@
       "visibility": {
         "title": "Sichtbarkeitskonfiguration",
         "config": "Sichtbarkeitskonfiguration (JSON-Objekt)",
-        "save": "Sichtbarkeitskonfiguration speichern"
+        "save": "Sichtbarkeitskonfiguration speichern",
+        "audience": {
+          "title": "Wer dieses Formular sehen kann",
+          "everyone": "Alle",
+          "everyoneHelp": "Alle authentifizierten Kundenbenutzer können dieses Formular sehen und absenden.",
+          "scoped": "Ausgewählte Kunden und Kundenbenutzergruppen",
+          "scopedHelp": "Nur Benutzer der ausgewählten Kunden oder Mitglieder der ausgewählten Gruppen können dieses Formular sehen und absenden.",
+          "addClient": "Kunden hinzufügen",
+          "clientPlaceholder": "Kunden suchen...",
+          "noClients": "Noch keine Kunden ausgewählt.",
+          "selectedClients": "Ausgewählte Kunden",
+          "removeClient": "{{name}} entfernen",
+          "groupsOf": "Kundenbenutzergruppen von {{name}}",
+          "groupLabel": "{{group}} ({{client}})",
+          "loadingGroups": "Gruppen werden geladen...",
+          "noGroups": "Dieser Kunde hat keine Kundenbenutzergruppen.",
+          "groupsHelp": "Gruppen gehören zu genau einem Kunden: Eine Gruppe gewährt nur Benutzern des eigenen Kunden Zugriff. Die Auswahl eines Kunden lässt alle seine Benutzer zu; die Auswahl von Gruppen nur deren Mitglieder.",
+          "emptyWarning": "Es ist nichts ausgewählt, daher kann kein Kundenbenutzer dieses Formular sehen. Wählen Sie mindestens einen Kunden oder eine Gruppe aus oder wechseln Sie zurück zu „Alle“. Das Löschen der letzten ausgewählten Gruppe hat denselben Effekt.",
+          "save": "Zielgruppe speichern"
+        },
+        "advanced": {
+          "title": "Erweiterte Sichtbarkeitsregeln",
+          "help": "Gelten zusätzlich zur obigen Zielgruppe: Ein Benutzer muss beide erfüllen."
+        }
       },
       "fields": {
         "executionProvider": "Ausführungsanbieter",
@@ -387,7 +410,8 @@
       "ticketRoutingUpdated": "Konfiguration des Ticket-Routings aktualisiert",
       "workflowConfigurationUpdated": "Workflow-Konfiguration aktualisiert",
       "formBehaviorConfigUpdated": "Formularverhalten-Konfiguration aktualisiert",
-      "visibilityConfigUpdated": "Sichtbarkeitskonfiguration aktualisiert"
+      "visibilityConfigUpdated": "Sichtbarkeitskonfiguration aktualisiert",
+      "audienceUpdated": "Zielgruppe aktualisiert"
     },
     "error": {
       "loadFailed": "Serviceanfragen konnten nicht geladen werden",
@@ -410,7 +434,8 @@
       "formBehaviorInvalid": "Ungültiges Formularverhalten-JSON",
       "visibilityNotObject": "Sichtbarkeitskonfiguration muss ein JSON-Objekt sein",
       "visibilityInvalid": "Ungültiges Sichtbarkeits-JSON",
-      "saveAllPartial": "Einige Abschnitte konnten nicht gespeichert werden: {{sections}}"
+      "saveAllPartial": "Einige Abschnitte konnten nicht gespeichert werden: {{sections}}",
+      "audienceSaveFailed": "Zielgruppe konnte nicht aktualisiert werden"
     }
   }
 }

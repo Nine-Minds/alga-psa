@@ -144,7 +144,30 @@
       "visibility": {
         "title": "Configuration de la visibilité",
         "config": "Configuration de la visibilité (objet JSON)",
-        "save": "Enregistrer la configuration de la visibilité"
+        "save": "Enregistrer la configuration de la visibilité",
+        "audience": {
+          "title": "Qui peut voir ce formulaire",
+          "everyone": "Tout le monde",
+          "everyoneHelp": "Tous les utilisateurs clients authentifiés peuvent voir et soumettre ce formulaire.",
+          "scoped": "Clients et groupes d'utilisateurs clients sélectionnés",
+          "scopedHelp": "Seuls les utilisateurs des clients sélectionnés, ou les membres des groupes sélectionnés, peuvent voir et soumettre ce formulaire.",
+          "addClient": "Ajouter un client",
+          "clientPlaceholder": "Rechercher des clients...",
+          "noClients": "Aucun client sélectionné pour l'instant.",
+          "selectedClients": "Clients sélectionnés",
+          "removeClient": "Retirer {{name}}",
+          "groupsOf": "Groupes d'utilisateurs de {{name}}",
+          "groupLabel": "{{group}} ({{client}})",
+          "loadingGroups": "Chargement des groupes...",
+          "noGroups": "Ce client n'a aucun groupe d'utilisateurs.",
+          "groupsHelp": "Les groupes appartiennent à un seul client : un groupe n'accorde l'accès qu'aux utilisateurs de son propre client. Sélectionner un client admet tous ses utilisateurs ; sélectionner des groupes n'admet que leurs membres.",
+          "emptyWarning": "Rien n'est sélectionné, donc aucun utilisateur client ne peut voir ce formulaire. Sélectionnez au moins un client ou un groupe, ou revenez à Tout le monde. Supprimer le dernier groupe sélectionné a le même effet.",
+          "save": "Enregistrer l'audience"
+        },
+        "advanced": {
+          "title": "Règles de visibilité avancées",
+          "help": "S'appliquent en plus de l'audience ci-dessus : un utilisateur doit satisfaire les deux."
+        }
       },
       "fields": {
         "executionProvider": "Fournisseur d'exécution",
@@ -387,7 +410,8 @@
       "ticketRoutingUpdated": "Configuration du routage des tickets mise à jour",
       "workflowConfigurationUpdated": "Configuration du workflow mise à jour",
       "formBehaviorConfigUpdated": "Configuration du comportement du formulaire mise à jour",
-      "visibilityConfigUpdated": "Configuration de la visibilité mise à jour"
+      "visibilityConfigUpdated": "Configuration de la visibilité mise à jour",
+      "audienceUpdated": "Audience mise à jour"
     },
     "error": {
       "loadFailed": "Échec du chargement des demandes de service",
@@ -410,7 +434,8 @@
       "formBehaviorInvalid": "JSON du comportement du formulaire non valide",
       "visibilityNotObject": "La configuration de la visibilité doit être un objet JSON",
       "visibilityInvalid": "JSON de visibilité non valide",
-      "saveAllPartial": "Certaines sections n'ont pas pu être enregistrées : {{sections}}"
+      "saveAllPartial": "Certaines sections n'ont pas pu être enregistrées : {{sections}}",
+      "audienceSaveFailed": "Échec de la mise à jour de l'audience"
     }
   }
 }

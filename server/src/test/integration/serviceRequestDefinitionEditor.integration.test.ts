@@ -95,6 +95,7 @@ describe('service request definition editor', () => {
         },
       ])
     );
+    expect(editorData?.execution.audience).toEqual({ mode: 'all', clientIds: [], groupIds: [] });
     expect(editorData?.publish.publishedVersionNumber).toBe(1);
     expect(editorData?.publish.publishedAt).toBeTruthy();
   });

@@ -2,6 +2,11 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { getServiceRequestVisibilityProvider } from './providers/registry';
 import type { ServiceRequestDefinitionShape } from './domain';
+import {
+  isDefinitionVisibleToRequester,
+  loadContactVisibilityGroupId,
+  loadDefinitionAudience,
+} from './definitionAudience';
 import type { ServiceRequestPortalCatalogContext } from './portalCatalog';
 import { resolveStaticDefaultValues } from './basicFormBuilder';
 import { getServiceRequestFormBehaviorProvider } from './providers/registry';
@@ -115,7 +120,14 @@ export async function getVisiblePublishedServiceRequestDefinitionDetail(
     definitionForVisibility,
     latestVersion.visibility_config ?? {}
   );
-  if (!canAccess) {
+  const [audience, contactGroupId] = await Promise.all([
+    loadDefinitionAudience(knex, context.tenant, definitionId),
+    loadContactVisibilityGroupId(knex, context.tenant, {
+      clientId: context.clientId,
+      contactId: context.contactId ?? null,
+    }),
+  ]);
+  if (!isDefinitionVisibleToRequester({ audience, contactGroupId, context }, canAccess)) {
     return null;
   }
 

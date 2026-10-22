@@ -2,6 +2,11 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { getServiceRequestVisibilityProvider } from './providers/registry';
 import type { ServiceRequestDefinitionShape } from './domain';
+import {
+  isDefinitionVisibleToRequester,
+  loadContactVisibilityGroupId,
+  loadDefinitionAudiences,
+} from './definitionAudience';
 
 interface PortalCatalogDefinitionRow {
   definition_id: string;
@@ -90,6 +95,19 @@ export async function listVisibleServiceRequestCatalogItems(
     }
   }
 
+  // Audience scoping: batch-load once, resolve the requester's group once.
+  const [audiencesByDefinitionId, contactGroupId] = await Promise.all([
+    loadDefinitionAudiences(
+      knex,
+      context.tenant,
+      definitionRows.map((row) => row.definition_id)
+    ),
+    loadContactVisibilityGroupId(knex, context.tenant, {
+      clientId: context.clientId,
+      contactId: context.contactId ?? null,
+    }),
+  ]);
+
   const visible: ServiceRequestPortalCatalogItem[] = [];
 
   for (const definitionRow of definitionRows) {
@@ -129,7 +147,11 @@ export async function listVisibleServiceRequestCatalogItems(
       row.visibility_config ?? {}
     );
 
-    if (!canAccess) {
+    const audience = audiencesByDefinitionId.get(definitionRow.definition_id);
+    if (
+      !audience ||
+      !isDefinitionVisibleToRequester({ audience, contactGroupId, context }, canAccess)
+    ) {
       continue;
     }
 

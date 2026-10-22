@@ -1,6 +1,10 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import {
+  loadDefinitionAudience,
+  type ServiceRequestDefinitionAudience,
+} from './definitionAudience';
+import {
   listServiceRequestExecutionProviders,
   listServiceRequestFormBehaviorProviders,
   listServiceRequestVisibilityProviders,
@@ -35,6 +39,7 @@ export interface ServiceRequestDefinitionEditorData {
     formBehaviorConfig: Record<string, unknown>;
     visibilityProvider: string;
     visibilityConfig: Record<string, unknown>;
+    audience: ServiceRequestDefinitionAudience;
     availableExecutionProviders: Array<{
       key: string;
       displayName: string;
@@ -119,7 +124,7 @@ export async function getServiceRequestDefinitionEditorData(
     return null;
   }
 
-  const [availableCategories, categoryRow, serviceRow, latestPublishedVersion] = await Promise.all([
+  const [availableCategories, categoryRow, serviceRow, latestPublishedVersion, audience] = await Promise.all([
     db.table('service_categories')
       .orderBy('category_name', 'asc')
       .select('category_id', 'category_name') as Promise<ServiceRequestCategoryRow[]>,
@@ -140,6 +145,7 @@ export async function getServiceRequestDefinitionEditorData(
       .orderBy('version_number', 'desc')
       .select('version_number', 'published_at', 'published_by')
       .first<ServiceRequestPublishedVersionRow>(),
+    loadDefinitionAudience(knex, tenant, definitionId),
   ]);
 
   const workflowProviderKeys = new Set(['workflow-only', 'ticket-plus-workflow']);
@@ -181,6 +187,7 @@ export async function getServiceRequestDefinitionEditorData(
       formBehaviorConfig: definition.form_behavior_config,
       visibilityProvider: definition.visibility_provider,
       visibilityConfig: definition.visibility_config,
+      audience,
       availableExecutionProviders,
       availableFormBehaviorProviders,
       availableVisibilityProviders,
