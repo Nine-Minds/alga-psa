@@ -97,6 +97,18 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio/malicious')).toBe(false);
   });
 
+  it('allows the Datto RMM webhook route (X-Alga-Webhook-Secret authenticated in-route)', () => {
+    expect(shouldSkipApiKeyAuth('/api/webhooks/datto')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/datto/')).toBe(true);
+  });
+
+  it('exempts the Datto RMM route exactly, never a prefixed or deeper sibling', () => {
+    expect(shouldSkipApiKeyAuth('/api/webhooks/dattoevil')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/datto-extra')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/datto/x')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/datto/malicious')).toBe(false);
+  });
+
   it('keeps sibling RMM + payment webhook routes and unrelated APIs gated', () => {
     expect(shouldSkipApiKeyAuth('/api/webhooks/ninjaone')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/webhooks/tacticalrmm')).toBe(true);

@@ -2613,6 +2613,194 @@
           "select": "Seleccionar contacto"
         }
       },
+      "datto": {
+        "errors": {
+          "loadSettings": "No se pudo cargar la configuración de Datto RMM",
+          "loadSiteMappings": "No se pudieron cargar las asignaciones de sitios",
+          "saveConfig": "No se pudo guardar la configuración de Datto RMM",
+          "connectionTest": "Error en la prueba de conexión",
+          "disconnect": "Error al desconectar",
+          "syncSites": "Error en la sincronización de sitios",
+          "someSitesFailed": "Algunos sitios no se pudieron sincronizar: {{errors}}",
+          "syncDevices": "Error en la sincronización de dispositivos",
+          "someDevicesFailed": "Algunos dispositivos no se pudieron sincronizar: {{errors}}",
+          "updateMapping": "No se pudo actualizar la asignación",
+          "backfillAlerts": "Error al rellenar alertas",
+          "someAlertsFailed": "Algunas alertas no se pudieron actualizar: {{errors}}",
+          "ingestSoftware": "Error en la ingestión de software",
+          "someSoftwareFailed": "No se pudo ingerir el software de algunos dispositivos: {{errors}}",
+          "createClients": "No se pudieron crear clientes para los sitios de Datto",
+          "someClientsFailed": "Algunos sitios no se asignaron: {{errors}}"
+        },
+        "toasts": {
+          "saveFailedTitle": "Error al guardar",
+          "savedTitle": "Guardado",
+          "savedDescription": "Configuración de Datto RMM actualizada.",
+          "connectionFailedTitle": "Error de conexión",
+          "connectedTitle": "Conectado",
+          "connectedDescription": "Conexión con Datto RMM verificada.",
+          "disconnectFailedTitle": "Error al desconectar",
+          "disconnectedTitle": "Desconectado",
+          "disconnectedDescription": "Credenciales de Datto RMM eliminadas. Se conservaron las asignaciones de sitios.",
+          "syncFailedTitle": "Error en la sincronización",
+          "sitesSyncedTitle": "Sitios sincronizados",
+          "sitesSyncedDescription": "Los sitios de Datto se sincronizaron como asignaciones de sitios.",
+          "devicesSyncedTitle": "Dispositivos sincronizados",
+          "devicesSyncedDescription": "Los dispositivos de Datto se sincronizaron como activos.",
+          "updateFailedTitle": "Error en la actualización",
+          "backfillFailedTitle": "Error en el relleno",
+          "alertsSyncedTitle": "Alertas sincronizadas",
+          "alertsSyncedDescription": "Se rellenaron las alertas abiertas de Datto.",
+          "ingestionFailedTitle": "Error en la ingestión",
+          "softwareIngestedTitle": "Software ingerido",
+          "softwareIngestedDescription": "Se ingirió el inventario de software de Datto.",
+          "optionsSavedDescription": "Opciones de Datto RMM actualizadas.",
+          "createClientsFailedTitle": "Error al crear clientes",
+          "sitesSyncedWithClients": "Se sincronizaron los sitios de Datto. Sitios nuevos: {{created}} clientes creados, {{linked}} vinculados, {{failed}} fallidos."
+        },
+        "success": {
+          "saved": "Configuración de Datto RMM guardada. Ejecute «Probar conexión» para activarla.",
+          "unnamedAccount": "su cuenta",
+          "connection": "Conexión exitosa. Cuenta: {{account}}. Sitios: {{sites}}, Dispositivos: {{devices}}.",
+          "disconnected": "Desconectado.",
+          "siteSyncCompleted": "Sincronización de sitios completada. Procesados: {{processed}}, Creados: {{created}}, Actualizados: {{updated}}, Fallidos: {{failed}}",
+          "deviceSyncCompleted": "Sincronización de dispositivos completada. Procesados: {{processed}}, Creados: {{created}}, Actualizados: {{updated}}, Fallidos: {{failed}}",
+          "alertBackfillCompleted": "Relleno de alertas completado. Procesadas: {{processed}}, Creadas: {{created}}, Actualizadas: {{updated}}, Fallidas: {{failed}}",
+          "softwareIngestionCompleted": "Ingestión de software completada. Procesados: {{processed}}, Instalados/Actualizados: {{created}}, Activos actualizados: {{updated}}, Fallidos: {{failed}}",
+          "clientsCreated": "Se crearon {{created}} clientes y se vincularon {{linked}} existentes. Omitidos: {{skipped}}, Fallidos: {{failed}}"
+        },
+        "mappings": {
+          "site": "Sitio de Datto",
+          "client": "Cliente de Alga",
+          "defaultContact": "Contacto predeterminado",
+          "missingBadge": "No está en Datto",
+          "onDemandBadge": "Bajo demanda",
+          "signedInUsersSite": "Usuarios con sesión iniciada del sitio",
+          "signedInUsersSelect": "Elija un sitio asignado"
+        },
+        "dattoIdLabel": "ID de Datto: {{id}}",
+        "client": {
+          "loading": "Cargando clientes…",
+          "select": "Seleccionar cliente",
+          "suggested": "Sugerido: {{client}}",
+          "create": "Crear cliente \"{{name}}\"",
+          "creating": "Creando…"
+        },
+        "contact": {
+          "select": "Seleccionar contacto"
+        },
+        "autoSync": "Sincronización automática",
+        "platform": {
+          "custom": "URL personalizada"
+        },
+        "webhook": {
+          "copiedTitle": "Copiado",
+          "url": "URL del webhook",
+          "urlCopied": "URL del webhook copiada al portapapeles.",
+          "copy": "Copiar",
+          "headerName": "Nombre de cabecera personalizada",
+          "headerNameCopied": "Nombre de la cabecera del webhook copiado al portapapeles.",
+          "secret": "Secreto de la cabecera",
+          "secretCopied": "Secreto del webhook copiado al portapapeles.",
+          "bodyTemplate": "Plantilla del cuerpo (alerta activada)",
+          "bodyTemplateCopied": "Plantilla del cuerpo copiada al portapapeles.",
+          "resolveBodyTemplate": "Plantilla del cuerpo (alerta resuelta)",
+          "resolveBodyTemplateCopied": "Plantilla del cuerpo de resolución copiada al portapapeles.",
+          "unavailable": "Información del webhook no disponible. (Requiere permiso de actualización de la configuración.)"
+        },
+        "disconnectConfirm": {
+          "title": "¿Desconectar Datto RMM?",
+          "message": "Se eliminan la clave API y el secreto almacenados y se detienen las sincronizaciones programadas. Se conservan las asignaciones de sitios y los activos sincronizados."
+        },
+        "actions": {
+          "disconnect": "Desconectar",
+          "refresh": "Actualizar",
+          "saving": "Guardando...",
+          "save": "Guardar",
+          "testing": "Probando...",
+          "testConnection": "Probar conexión",
+          "disconnecting": "Desconectando...",
+          "syncing": "Sincronizando...",
+          "syncSites": "Sincronizar sitios",
+          "syncDevices": "Sincronizar dispositivos",
+          "ingesting": "Ingiriendo...",
+          "ingestSoftware": "Ingerir software",
+          "syncAlerts": "Sincronizar alertas",
+          "createClients": "Crear clientes",
+          "createClientsForUnmapped": "Crear clientes para no asignados ({{count}})"
+        },
+        "title": "Datto RMM",
+        "description": "Conecte Datto RMM para sincronizar sitios y dispositivos, ingerir alertas y abrir Web Remote desde los activos.",
+        "status": {
+          "connected": "Conectado",
+          "disconnected": "Desconectado",
+          "instanceUrlNotSet": "URL de API no establecida"
+        },
+        "counts": {
+          "mappedSites": "Sitios asignados",
+          "syncedDevices": "Dispositivos sincronizados",
+          "activeAlerts": "Alertas activas",
+          "lastSync": "Última sincronización",
+          "never": "Nunca"
+        },
+        "lastError": "Último error: {{error}}",
+        "fields": {
+          "platform": "Plataforma",
+          "platformHelp": "Elija la región que aparece en la dirección con la que inicia sesión en Datto RMM (por ejemplo, https://merlot.rmm.datto.com corresponde a Merlot).",
+          "instanceUrl": "URL de API",
+          "instanceUrlHelp": "El host de la API de Datto, p. ej. https://merlot-api.centrastage.net. Se añade /api al final automáticamente.",
+          "apiUserNote": "Cree un usuario de API de Datto dedicado para Alga. Abra ese usuario en Datto RMM para generar su clave API y su secreto, y otorgue a su nivel de seguridad acceso de lectura a los datos de la cuenta, los sitios, los dispositivos, las alertas y la auditoría.",
+          "softwareOnSync": "Ingerir software durante la sincronización de dispositivos",
+          "softwareOnSyncHelp": "Lee la auditoría de software de cada dispositivo modificado como parte de la sincronización. Esto supone una llamada adicional a la API por dispositivo modificado, lo que puede ser lento en cuentas grandes.",
+          "resolveOnClose": "Resolver la alerta de Datto cuando se cierre su ticket",
+          "resolveOnCloseHelp": "Requiere un usuario de API de Datto con acceso de escritura a las alertas. Déjelo desactivado para un usuario de API de solo lectura.",
+          "rebootComponent": "Componente de reinicio",
+          "rebootComponentSelect": "Seleccionar un componente",
+          "rebootComponentUid": "UID del componente",
+          "rebootComponentFallback": "La lista de componentes no está disponible ({{reason}}). Pegue en su lugar el UID del componente.",
+          "rebootComponentUnknownReason": "error desconocido",
+          "rebootComponentHelp": "Déjelo vacío para desactivar la acción de reinicio. Solo se pueden ejecutar componentes que ya estén en su cuenta de Datto.",
+          "hostChangedHint": "La plataforma o la URL de la API han cambiado. Vuelva a introducir la clave API y el secreto de API para guardar.",
+          "optionsNeedCredentials": "Guarde primero la clave API y el secreto. Estas opciones están bloqueadas mientras no haya credenciales almacenadas.",
+          "autoCreateClients": "Crear clientes automáticamente para sitios nuevos",
+          "autoCreateClientsHelp": "Los sitios se actualizan antes de cada sincronización programada de dispositivos. Si está activado, un sitio visto por primera vez recibe un cliente de Alga con su nombre o se vincula al cliente que ya tiene ese nombre. Los sitios no asignados existentes y los sitios bajo demanda no se modifican."
+        },
+        "auth": {
+          "apiKey": "Clave API",
+          "enterApiKey": "Introducir clave API",
+          "saved": "Guardado: {{value}}",
+          "apiSecret": "Secreto de API",
+          "savedEnterToUpdate": "Guardado (introducir para actualizar)",
+          "enterApiSecret": "Introducir secreto de API"
+        },
+        "statusLine": {
+          "configured": "Estado: Configurado",
+          "notConfigured": "Estado: No configurado"
+        },
+        "loadingSettings": "Cargando configuración de Datto RMM...",
+        "sections": {
+          "sites": "Sitios",
+          "sitesDescription": "Sincronice los sitios de Datto con las asignaciones de sitios de Alga y luego asígnelos a clientes de Alga.",
+          "siteMapping": "Asignación de sitios",
+          "siteMappingDescription": "Asigne cada sitio de Datto a un cliente de Alga y controle la sincronización automática por sitio. Las sugerencias provienen del nombre del sitio o del nombre de su empresa en Autotask y nunca se aplican automáticamente.",
+          "siteMappingEmpty": "No se encontraron sitios. Ejecute primero «Sincronizar sitios».",
+          "devices": "Dispositivos",
+          "devicesDescription": "Sincronice los dispositivos de Datto como activos de Alga para los sitios con la sincronización automática activada.",
+          "alerts": "Alertas",
+          "alertsDescription": "Las alertas se consultan según la programación configurada en Automatización de alertas, más abajo. Use «Sincronizar alertas» para obtener ahora las alertas abiertas.",
+          "webhooks": "Webhook (vía rápida opcional)",
+          "webhooksDescription": "La consulta periódica es la vía garantizada. Para recibir alertas en segundos, añada una acción de respuesta por webhook a sus políticas de monitor de Datto usando la URL, la cabecera personalizada y la plantilla del cuerpo que aparecen a continuación.",
+          "assetActions": "Acciones de activos",
+          "assetActionsDescription": "Elija el componente de Datto que reinicia un dispositivo cuando un técnico hace clic en «Reiniciar dispositivo» en un activo. Se ejecuta como Quick Job y requiere un usuario de API con acceso de escritura."
+        },
+        "createClientsConfirm": {
+          "title": "¿Crear clientes para los sitios no asignados?",
+          "message": "Cada uno de los {{count}} sitios no asignados recibe un cliente de Alga con su nombre y se asigna a él. Un sitio cuyo nombre coincide con un cliente existente se vincula a ese cliente. Los sitios bajo demanda y los que ya no están en Datto no se modifican."
+        },
+        "proFeature": {
+          "description": "La integración con Datto RMM está disponible en AlgaPSA Pro."
+        }
+      },
       "tanium": {
         "proFeature": {
           "description": "La integración RMM con Tanium está disponible en AlgaPSA Pro."
@@ -2981,7 +3169,9 @@
         "invalidPeopleMode": "Ese no es un modo de personas válido.",
         "billingProfileUnavailable": "Ese perfil de facturación no está disponible para este cliente.",
         "mappingNotFound": "Esa asignación ya no existe. Actualice la página e inténtelo de nuevo.",
-        "forbidden": "No tiene permiso para cambiar esto."
+        "forbidden": "No tiene permiso para cambiar esto.",
+        "clientNotFound": "Ese cliente ya no existe. Actualice e inténtelo de nuevo.",
+        "contactNotForClient": "Ese contacto no pertenece al cliente al que está asignado este sitio."
       }
     },
     "sso": {

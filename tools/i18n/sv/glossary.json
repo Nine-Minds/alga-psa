@@ -533,6 +533,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Datto RMM",
       "TeamViewer",
       "VNC",
       "RDP",

@@ -208,6 +208,11 @@ const exactApiKeySkipPaths = [
   // the ninjaone/tacticalrmm entries, but Level has no sub-routes.
   '/api/webhooks/levelio',
   '/api/webhooks/levelio/',
+  // Datto RMM alert webhook: single POST route that authenticates the tenant +
+  // X-Alga-Webhook-Secret in the route handler (no x-api-key). Exact match only,
+  // so `/api/webhooks/dattoevil` and deeper routes stay behind the API-key gate.
+  '/api/webhooks/datto',
+  '/api/webhooks/datto/',
 ];
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
