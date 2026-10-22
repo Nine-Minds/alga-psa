@@ -701,3 +701,115 @@ describe("hardcoded currency (locale files)", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Detector 3: currency glyph baked into a LABEL's unit suffix.
+//
+// "Hourly Rate ($)", "Rate ($/hr)", "(€/h)", "($/Std.)" — the unit belongs in
+// the label, the currency belongs in the in-field adornment, which follows the
+// contract's currency. A label with a glyph is wrong for every non-USD
+// contract. Detector 1 misses this shape (no digit follows the symbol).
+//
+// Scoped to the contract-line panel: that is the surface this regression hit,
+// and a repo-wide scan of `defaultValue`s has not been triaged for false
+// positives. Widen SCOPE when other directories are cleaned up.
+const LABEL_SCOPE_DIR = "../packages/billing/src/components/billing-dashboard/contract-lines";
+const GLYPHS = SYMBOLIC; // letter-only symbols ("kr", "R") are ordinary words in labels
+const GLYPH_ALT = alternation(GLYPHS);
+// "(" glyph, optional "/unit", ")" — e.g. ($), ($/hr), (€/h), ($/Std.)
+const LABEL_GLYPH = new RegExp(`\\(\\s*(?:${GLYPH_ALT})\\s*(?:/[^)]*)?\\)`);
+
+function scanLabelDefaults(absFile: string, out: Violation[]): void {
+  const text = fs.readFileSync(absFile, "utf8");
+  if (!LABEL_GLYPH.test(text)) return;
+  const sourceFile = ts.createSourceFile(
+    absFile,
+    text,
+    ts.ScriptTarget.Latest,
+    true,
+    /x$/.test(absFile) ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
+  const file = path.relative(REPO_ROOT, absFile);
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isPropertyAssignment(node) &&
+      ((ts.isIdentifier(node.name) && node.name.text === "defaultValue") ||
+        (ts.isStringLiteral(node.name) && node.name.text === "defaultValue")) &&
+      (ts.isStringLiteral(node.initializer) ||
+        ts.isNoSubstitutionTemplateLiteral(node.initializer)) &&
+      LABEL_GLYPH.test(node.initializer.text)
+    ) {
+      const { line } = sourceFile.getLineAndCharacterOfPosition(
+        node.getStart(sourceFile),
+      );
+      out.push({ file, line: line + 1, snippet: node.initializer.text });
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+}
+
+describe("currency glyph in contract-line rate labels", () => {
+  it("LABEL_GLYPH flags the known bad shapes and spares good labels", () => {
+    for (const bad of [
+      "Hourly Rate ($)",
+      "Rate ($/hr)",
+      "Rate (€/h)",
+      "Überstundensatz ($/Std.)",
+      "Taxa ( $ /hora)",
+    ]) {
+      expect(LABEL_GLYPH.test(bad), bad).toBe(true);
+    }
+    for (const good of [
+      "Hourly Rate (per hour)",
+      "Rate (per hour)",
+      "Stawka (za godzinę)",
+      "Threshold (hours/period)",
+    ]) {
+      expect(LABEL_GLYPH.test(good), good).toBe(false);
+    }
+  });
+
+  it("no t() defaultValue in contract-lines components carries a currency glyph", () => {
+    const files: string[] = [];
+    collectSourceFiles(path.resolve(process.cwd(), LABEL_SCOPE_DIR), files);
+    expect(files.length).toBeGreaterThan(0);
+    const violations: Violation[] = [];
+    for (const f of files) scanLabelDefaults(f, violations);
+    expect(
+      violations.map((v) => `${v.file}:${v.line} ${v.snippet}`),
+      "rate labels must carry the period (per hour), never the currency — the in-field adornment shows the contract's symbol",
+    ).toEqual([]);
+  });
+
+  it("contract-lines locale rate labels carry no currency glyph in any locale", () => {
+    const KEYS = [
+      ["configuration", "hourly", "planWideSettings", "overtime", "rateLabel"],
+      ["forms", "hourlyConfig", "labels", "hourlyRate"],
+      ["forms", "hourlyConfig", "userTypeRates", "rateSrLabel"],
+    ];
+    const locales = fs
+      .readdirSync(LOCALES_ROOT, { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name);
+    expect(locales.length).toBeGreaterThanOrEqual(11);
+    const glyph = new RegExp(GLYPH_ALT);
+    const offenders: string[] = [];
+    for (const locale of locales) {
+      const file = path.join(LOCALES_ROOT, locale, "msp", "contract-lines.json");
+      if (!fs.existsSync(file)) continue;
+      const json = JSON.parse(fs.readFileSync(file, "utf8"));
+      for (const keyPath of KEYS) {
+        let value: unknown = json;
+        for (const k of keyPath) value = (value as any)?.[k];
+        const where = `${locale}::${keyPath.join(".")}`;
+        if (typeof value !== "string") {
+          offenders.push(`${where} (missing)`);
+        } else if (glyph.test(value) || LABEL_GLYPH.test(value)) {
+          offenders.push(`${where} = ${value}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});
