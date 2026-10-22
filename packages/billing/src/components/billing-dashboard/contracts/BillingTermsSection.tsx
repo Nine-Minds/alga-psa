@@ -195,9 +195,9 @@ export const BillingTermsSection: React.FC<BillingTermsSectionProps> = ({
               defaultValue:
                 "Time on a ticket or project is billed to that work item's profile when it has one. Without one, it goes to the client default.",
             });
-        return warning.bucketTimeExcluded
-          ? `${base} ${t('contractOverview.billing.warnings.bucketTimeNote', {
-              defaultValue: 'Time covered by a prepaid bucket or hour block does not follow the work item.',
+        return warning.bucketCoverage
+          ? `${base} ${t('contractOverview.billing.warnings.bucketCoverageNote', {
+              defaultValue: 'On lines with a prepaid bucket or hour block, time the bucket or block covers does not follow the work item; only the remaining hourly time does.',
             })}`
           : base;
       }

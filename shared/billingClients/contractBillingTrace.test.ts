@@ -280,7 +280,7 @@ describe('buildContractBillingTrace', () => {
         code: 'work_item_override_possible',
         contractLineIds: ['time'],
         candidateProfiles: [{ billingProfileId: NORTH_ID, name: 'North Plant' }],
-        bucketTimeExcluded: false,
+        bucketCoverage: false,
       });
       expect(trace.workItemProfiles).toHaveLength(1);
       expect(trace.workItemProfiles![0]).toMatchObject({ billingProfileId: NORTH_ID, source: 'work_item', lineCount: 1 });
@@ -293,7 +293,7 @@ describe('buildContractBillingTrace', () => {
 
     it('unassigned hourly line, no work item carries a profile: still warns (one may be set later), with no candidates', () => {
       const trace = build({ lines: [hourly('time')], workItemProfileIds: [] });
-      expect(trace.warnings).toContainEqual({ code: 'work_item_override_possible', contractLineIds: ['time'], candidateProfiles: [], bucketTimeExcluded: false });
+      expect(trace.warnings).toContainEqual({ code: 'work_item_override_possible', contractLineIds: ['time'], candidateProfiles: [], bucketCoverage: false });
       expect(trace.workItemProfiles).toBeUndefined();
       expect(trace.profiles[0]).toMatchObject({ billingProfileId: DEFAULT_ID, source: 'client_default' });
     });
@@ -337,24 +337,71 @@ describe('buildContractBillingTrace', () => {
       expect(trace.workItemProfiles?.map((p) => p.billingProfileId)).toEqual([NORTH_ID]);
     });
 
-    it('bucket-covered services do not follow the work item (engine: bucket and hour-block charges use line assignments only)', () => {
-      const allBucket = build({
-        lines: [{ contractLineId: 'prepaid', billingProfileId: null, serviceCount: 2, bucketServiceCount: 2 }],
+    it('an all-bucket line is not reachable: generated invoices assign its time and the bucket pool prices it', () => {
+      const trace = build({
+        lines: [{ contractLineId: 'bucket', billingProfileId: null, serviceCount: 2, bucketServiceCount: 2 }],
         workItemProfileIds: [NORTH_ID],
       });
-      expect(allBucket.warnings.map((w) => w.code)).not.toContain('work_item_override_possible');
-      expect(allBucket.workItemProfiles).toBeUndefined();
+      expect(trace.warnings.map((w) => w.code)).not.toContain('work_item_override_possible');
+      expect(trace.workItemProfiles).toBeUndefined();
     });
 
-    it('a line mixing bucket and non-bucket services stays reachable and says bucket time does not follow', () => {
+    it('a prepaid-block line stays reachable: the engine bucket filter ignores prepaid blocks', () => {
+      const trace = build({
+        lines: [{ contractLineId: 'prepaid', billingProfileId: null, serviceCount: 3, bucketServiceCount: 0, hasPrepaidBlocks: true }],
+        workItemProfileIds: [NORTH_ID],
+        identities: { [DEFAULT_ID]: identity(DEFAULT_ID), [NORTH_ID]: northTerms },
+      });
+      expect(trace.warnings).toContainEqual(
+        expect.objectContaining({ code: 'work_item_override_possible', contractLineIds: ['prepaid'], bucketCoverage: true }),
+      );
+      expect(trace.workItemProfiles?.map((p) => p.billingProfileId)).toEqual([NORTH_ID]);
+    });
+
+    it('a line mixing bucket and non-bucket services stays reachable and notes the bucket coverage', () => {
       const trace = build({
         lines: [{ contractLineId: 'mixed', billingProfileId: null, serviceCount: 3, bucketServiceCount: 2 }],
         workItemProfileIds: [NORTH_ID],
         identities: { [DEFAULT_ID]: identity(DEFAULT_ID), [NORTH_ID]: northTerms },
       });
       expect(trace.warnings).toContainEqual(
-        expect.objectContaining({ code: 'work_item_override_possible', contractLineIds: ['mixed'], bucketTimeExcluded: true }),
+        expect.objectContaining({ code: 'work_item_override_possible', contractLineIds: ['mixed'], bucketCoverage: true }),
       );
+      expect(trace.workItemProfiles?.map((p) => p.billingProfileId)).toEqual([NORTH_ID]);
+    });
+
+    it('bucketCoverage is false when no reachable line has bucket coverage', () => {
+      const trace = build({
+        lines: [
+          { contractLineId: 'plain', billingProfileId: null, serviceCount: 2, bucketServiceCount: 0 },
+          { contractLineId: 'assigned-bucket', billingProfileId: NORTH_ID, serviceCount: 2, bucketServiceCount: 2 },
+        ],
+        workItemProfileIds: [NORTH_ID],
+        identities: { [DEFAULT_ID]: identity(DEFAULT_ID), [NORTH_ID]: northTerms },
+      });
+      expect(trace.warnings).toContainEqual(
+        expect.objectContaining({ code: 'work_item_override_possible', contractLineIds: ['plain'], bucketCoverage: false }),
+      );
+    });
+
+    it('an assigned bucket line is not reachable', () => {
+      const trace = build({
+        lines: [{ contractLineId: 'assigned-bucket', billingProfileId: NORTH_ID, serviceCount: 2, bucketServiceCount: 2 }],
+        workItemProfileIds: [NORTH_ID],
+        identities: { [DEFAULT_ID]: identity(DEFAULT_ID), [NORTH_ID]: northTerms },
+      });
+      expect(trace.warnings.map((w) => w.code)).not.toContain('work_item_override_possible');
+      expect(trace.workItemProfiles).toBeUndefined();
+    });
+
+    it('a bucket line in an assigned contract is not reachable', () => {
+      const trace = build({
+        assignmentBillingProfileId: NORTH_ID,
+        lines: [{ contractLineId: 'bucket', billingProfileId: null, serviceCount: 2, bucketServiceCount: 2 }],
+        workItemProfileIds: [NORTH_ID],
+        identities: { [DEFAULT_ID]: identity(DEFAULT_ID), [NORTH_ID]: northTerms },
+      });
+      expect(trace.warnings.map((w) => w.code)).not.toContain('work_item_override_possible');
     });
 
     it.each([undefined, 0])('a line with no services (%s) cannot price time: no warning', (serviceCount) => {

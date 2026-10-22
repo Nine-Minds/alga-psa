@@ -115,12 +115,15 @@ cannot import, so `loadContractBillingTrace` takes `perProfileInvoicing: boolean
 separately-billing profiles with `listSeparatelyBillingProfiles`. Still live, no snapshot, no column,
 no migration.
 
-**Bucket time.** Bucket, hour-block and prepaid-issuance charges are attributed from line assignments
-only and never from a work item, and the time loader skips explicitly-assigned bucket-covered entries.
-A line whose services are all bucket-configured is therefore excluded from step-4 reachability
-(`resolveStepFourLines`). A mixed line stays reachable, and the warning carries `bucketTimeExcluded`
-because an unassigned entry on a bucket-covered service still follows its work item (disclosed, not
-modelled).
+**Bucket time.** Bucket overage and prepaid-issuance charges are attributed from line assignments only. The
+time loader's bucket filter (`resolveBucketForLine`) drops entries with `contract_line_id` set whose service a
+bucket pool covers; it does not know prepaid blocks, so a prepaid line's time (minus block-drawn minutes)
+follows the work item. Invoice generation first runs `reconcileWindowAttribution`, which persists a line onto
+every unassigned entry it can resolve, so on a generated invoice bucket-covered time reaches the pool, not the
+work item. `resolveStepFourLines` therefore excludes a line only when every service is pool-covered
+(`bucketServiceCount`; prepaid blocks are not counted). The warning's `bucketCoverage` flag notes
+bucket/prepaid coverage on a reachable line. Not modelled: unassigned bucket time the writer leaves
+unresolved, the `projectTarget` branch, and previews.
 
 The trace stays on `resolveChargeProfile`: every candidate is resolved by a call that includes
 `workItemBillingProfileId`, then its identity comes from `resolveEffectiveBillingIdentity` and its terms

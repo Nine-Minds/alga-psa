@@ -217,7 +217,7 @@ describe('ContractOverview billing terms section', () => {
           code: 'work_item_override_possible',
           contractLineIds: ['l1'],
           candidateProfiles: [{ billingProfileId: 'p-b', name: 'Facility B' }],
-          bucketTimeExcluded: false,
+          bucketCoverage: false,
         },
       ],
       workItemProfiles: [

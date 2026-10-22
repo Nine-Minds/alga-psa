@@ -439,7 +439,7 @@
         "workItemOverride": "Time on a ticket or project is billed to that work item's profile when it has one. Without one, it goes to the client default.",
         "workItemOverrideWithProfiles": "Time on a ticket or project is billed to that work item's profile when it has one ({{names}}). Without one, it goes to the client default.",
         "mixedProfilesSameInvoice": "This contract's charges are attributed to {{count}} different profiles, but they all land on {{invoice}}'s invoice, so one set of payment terms applies.",
-        "bucketTimeNote": "Time covered by a prepaid bucket or hour block does not follow the work item."
+        "bucketCoverageNote": "On lines with a prepaid bucket or hour block, time the bucket or block covers does not follow the work item; only the remaining hourly time does."
       },
       "simulationNote": "Simulated pricing uses the client-level tax exemption. A profile's own exemption is not applied in this simulation.",
       "dueSentenceWorkItem": "A {{invoiceDate}} invoice is due {{dueDate}} — {{terms}} {{source}}, unless the ticket or project is billed to another profile",

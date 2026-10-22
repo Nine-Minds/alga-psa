@@ -66,10 +66,13 @@ export interface ContractBillingTraceLineInput {
    */
   serviceCount?: number;
   /**
-   * How many of those services draw from a bucket pool on the line (or the line
-   * carries a prepaid-block config, making all of them so). Absent counts as none.
+   * How many of those services are covered by a bucket pool on the line, by the
+   * engine's own rule (`resolveBucketForLine`). Absent counts as none. Prepaid
+   * blocks are NOT counted: the engine's bucket filter ignores them.
    */
   bucketServiceCount?: number;
+  /** The line has a `contract_line_prepaid_blocks` config. Absent counts as none. */
+  hasPrepaidBlocks?: boolean;
 }
 
 export interface BuildContractBillingTraceInput {
@@ -174,15 +177,25 @@ type StepFourInput = Pick<
  * so they are outside this trace. A line only reaches step 4 when steps 2 and 3 are
  * both empty, i.e. it lands on the client default.
  *
- * Bucket and prepaid-block coverage does NOT follow the work item. Engine facts:
- * bucket overage charges and "Prepaid hour block" charges are attributed from the
- * line's assignments only (`loadBucketObligation`, the hour-block path and prepaid
- * block issuance call `loadChargeProfileAssignments` / `resolveChargeProfile` with
- * no work-item profile), and the time loader skips entries explicitly assigned to a
- * bucket-covered service. So a line whose services are all bucket-covered is not
- * reachable; a mixed line stays reachable for its non-bucket services. Whether a work item has
- * anything to point at is decided by the caller (several profiles, or a work item
- * carrying a profile owned by another client).
+ * Bucket-pool coverage makes a service unreachable; prepaid blocks do not. Engine
+ * facts: bucket overage and prepaid-block issuance charges are attributed from the
+ * line's assignments only (`loadBucketObligation`, `loadPrepaidBlockIssuanceCharges`
+ * resolve with no work-item profile). `loadTimeBasedObligation` drops time entries
+ * with `contract_line_id` set whose service `resolveBucketForLine` covers; that
+ * function reads only `contract_line_bucket_services` / `contract_line_buckets`,
+ * never `contract_line_prepaid_blocks`, so a prepaid line's time is never dropped
+ * (only block-drawn minutes are removed, `applyPrepaidBlockCoverageToTimeEntries`)
+ * and its remainder follows the work item. Entries with `contract_line_id IS NULL`
+ * are kept by the filter, but invoice generation first runs
+ * `reconcileWindowAttribution` (`contractLineAttributionWriter.ts`), which persists
+ * a line for every unassigned entry it can resolve (single eligible line,
+ * profile or overlay tie-break), so on a generated invoice a bucket-covered
+ * service's time reaches the pool, not the work item. Unassigned bucket time that
+ * the writer leaves unresolved (e.g. dated before the contract starts), the
+ * `projectTarget` branch (skips the filter) and previews are not modelled.
+ * A line is therefore reachable when it has a service outside bucket-pool coverage.
+ * Whether a work item has anything to point at is decided by the caller (several
+ * profiles, or a work item carrying a profile owned by another client).
  */
 export function resolveStepFourLines(input: StepFourInput): ContractBillingTraceLineInput[] {
   return input.lines.filter(
@@ -417,7 +430,7 @@ export function buildContractBillingTrace(input: BuildContractBillingTraceInput)
         billingProfileId: profile.billingProfileId,
         name: profile.name,
       })),
-      bucketTimeExcluded: input.lines.some((line) => (line.bucketServiceCount ?? 0) > 0),
+      bucketCoverage: stepFourLines.some((line) => (line.bucketServiceCount ?? 0) > 0 || line.hasPrepaidBlocks === true),
     });
   }
 
@@ -546,14 +559,10 @@ export async function loadContractBillingTrace(
           contract_line_id: string;
         }>).map((row) => row.contract_line_id),
   );
-  // Same pool rule the engine uses to decide whether a service draws from a bucket.
+  // Same pool rule the engine's time loader uses (`resolveBucketForLine`); prepaid blocks are not pools to it.
   const bucketCounts = new Map<string, number>();
   for (const lineId of lineIds) {
     const serviceIds = serviceIdsByLine.get(lineId) ?? [];
-    if (prepaidBlockLineIds.has(lineId)) {
-      bucketCounts.set(lineId, serviceIds.length);
-      continue;
-    }
     let covered = 0;
     for (const serviceId of serviceIds) {
       if (await resolveBucketForLine(knex, tenant, lineId, serviceId)) covered += 1;
@@ -573,6 +582,7 @@ export async function loadContractBillingTrace(
     billingFrequency: row.billing_frequency,
     serviceCount: serviceIdsByLine.get(row.contract_line_id)?.length ?? 0,
     bucketServiceCount: bucketCounts.get(row.contract_line_id) ?? 0,
+    hasPrepaidBlocks: prepaidBlockLineIds.has(row.contract_line_id),
   }));
 
   const asOf = options.asOf ?? (new Date().toISOString().slice(0, 10) as ISO8601String);

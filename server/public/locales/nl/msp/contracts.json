@@ -439,7 +439,7 @@
         "workItemOverride": "Tijd op een ticket of project wordt gefactureerd via het profiel van dat werkitem als het er een heeft. Zonder profiel geldt het standaardprofiel van de klant.",
         "workItemOverrideWithProfiles": "Tijd op een ticket of project wordt gefactureerd via het profiel van dat werkitem als het er een heeft ({{names}}). Zonder profiel geldt het standaardprofiel van de klant.",
         "mixedProfilesSameInvoice": "De kosten van dit contract worden toegewezen aan {{count}} verschillende profielen, maar komen allemaal op de factuur van {{invoice}} terecht, dus er geldt één set betalingsvoorwaarden.",
-        "bucketTimeNote": "Tijd die door een vooruitbetaald tegoed of urenblok wordt gedekt, volgt het werkitem niet."
+        "bucketCoverageNote": "Op regels met een vooruitbetaald tegoed of urenblok volgt de tijd die door het tegoed of blok wordt gedekt het werkitem niet; alleen de resterende uurtijd doet dat wel."
       },
       "simulationNote": "De gesimuleerde prijsstelling gebruikt de belastingvrijstelling op klantniveau. De eigen vrijstelling van een profiel wordt in deze simulatie niet toegepast.",
       "dueSentenceWorkItem": "Een factuur van {{invoiceDate}} is verschuldigd op {{dueDate}} — {{terms}} {{source}}, tenzij het ticket of project via een ander profiel wordt gefactureerd",

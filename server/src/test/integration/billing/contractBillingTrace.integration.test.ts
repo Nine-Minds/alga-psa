@@ -754,6 +754,93 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     expect(candidate.terms.dueDateExample.dueDate).toBe(dateOnly(invoice.due_date));
   }, HOOK_TIMEOUT);
 
+  // Bucket and prepaid lines. `resolveBucketForLine` (the time loader's bucket
+  // filter) knows bucket pools, not prepaid blocks. Invoice generation first
+  // persists a line onto each unassigned entry it can resolve
+  // (`reconcileWindowAttribution`), so a bucket-covered entry is assigned and then
+  // priced by the pool, while a prepaid line's entry is billed hourly with the
+  // ticket's profile. The trace has to say the same for each.
+  async function seedCoveredLine(kind: 'bucket' | 'prepaid', clientId: string, name: string) {
+    const hourly = await seedHourlyLine(clientId, name);
+    if (kind === 'bucket') {
+      const bucketId = uuidv4();
+      await table('contract_line_buckets').insert({
+        tenant: tenantId, bucket_id: bucketId, contract_line_id: hourly.contractLineId,
+        total_minutes: 6000, overage_rate: 18500, allow_rollover: false, covers_all_services: false,
+      });
+      await table('contract_line_bucket_services').insert({
+        tenant: tenantId, bucket_id: bucketId, contract_line_id: hourly.contractLineId,
+        service_id: hourly.serviceId, burn_multiplier: 1,
+      });
+    } else {
+      await table('contract_line_prepaid_blocks').insert({
+        tenant: tenantId, contract_line_id: hourly.contractLineId, block_minutes: 2400, block_price: 440000,
+        expiry_months: 12, sold_as_service_id: hourly.serviceId,
+      });
+    }
+    return hourly;
+  }
+
+  async function generateCoveredInvoice(kind: 'bucket' | 'prepaid') {
+    const { clientId, defaultId } = await seedBillableClient(`Covered ${kind} Client`, 'net_30');
+    const profileP = await createBillingProfile({ db, tenantId }, clientId, `Covered ${kind} P`);
+    await table('client_billing_profiles')
+      .where({ billing_profile_id: profileP })
+      .update({ payment_terms: 'net_15', bills_separately: false });
+    const cycleId = await seedCycle(clientId, defaultId);
+    const hourly = await seedCoveredLine(kind, clientId, `Covered ${kind} Support`);
+    const ticketId = await createTicket({ db, tenantId }, {
+      clientId, title: `${kind} work`, ticketNumber: `CV-${uuidv4().slice(0, 5)}`, billingProfileId: profileP,
+    });
+    // Unassigned: contract_line_id NULL.
+    const entryId = await createApprovedTimeEntry({ db, tenantId }, {
+      userId, ticketId, serviceId: hourly.serviceId, contractLineId: null, workDate: '2024-12-16', minutes: 60,
+    });
+    await enableFlag(false);
+    const result = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(cycleId));
+    const invoice = await invoiceRow(result.invoice_id);
+    const workItemCharges = await table('invoice_charges')
+      .where({ invoice_id: result.invoice_id, billing_profile_source: 'work_item' })
+      .select('billing_profile_id');
+    const trace = await traceOf(hourly.contractId, { perProfileInvoicing: false, asOf: dateOnly(invoice.invoice_date) });
+    return { defaultId, profileP, hourly, entryId, invoice, workItemCharges, trace };
+  }
+
+  it('prepaid-block line: unassigned time follows the ticket profile and the trace agrees with the invoice', async () => {
+    const { defaultId, profileP, hourly, invoice, workItemCharges, trace } = await generateCoveredInvoice('prepaid');
+
+    // Engine: the entry is billed hourly on the ticket's profile and lands on the default invoice.
+    expect(workItemCharges.length).toBeGreaterThan(0);
+    expect(workItemCharges.every((c: any) => c.billing_profile_id === profileP)).toBe(true);
+    expect(invoice.billing_profile_id).toBe(defaultId);
+    // Trace: the line is reachable, the warning names the profile, and the pairing matches the invoice.
+    expect(trace!.warnings).toContainEqual(
+      expect.objectContaining({
+        code: 'work_item_override_possible',
+        contractLineIds: [hourly.contractLineId],
+        bucketCoverage: true,
+        candidateProfiles: [expect.objectContaining({ billingProfileId: profileP })],
+      }),
+    );
+    const candidate = trace!.workItemProfiles!.find((p) => p.billingProfileId === profileP)!;
+    expect(candidate).toBeDefined();
+    expect(candidate.invoiceProfile.billingProfileId).toBe(invoice.billing_profile_id);
+    expect(candidate.invoiceReason).toBe('separate_invoicing_off');
+    expect(candidate.terms.dueDateExample.dueDate).toBe(dateOnly(invoice.due_date));
+  }, HOOK_TIMEOUT);
+
+  it('bucket line: generation assigns the unassigned entry to the line, the pool prices it, and the trace does not offer the ticket profile', async () => {
+    const { profileP, hourly, entryId, workItemCharges, trace } = await generateCoveredInvoice('bucket');
+
+    // Engine: attribution persisted the line on the entry, then the bucket filter dropped it.
+    const entry = await table('time_entries').where({ entry_id: entryId }).first('contract_line_id');
+    expect(entry.contract_line_id).toBe(hourly.contractLineId);
+    expect(workItemCharges.filter((c: any) => c.billing_profile_id === profileP)).toHaveLength(0);
+    // Trace: an all-bucket line is not reachable by a work-item profile.
+    expect(trace!.warnings.map((w) => w.code)).not.toContain('work_item_override_possible');
+    expect(trace!.workItemProfiles).toBeUndefined();
+  }, HOOK_TIMEOUT);
+
   it('(iii) flag on and P bills separately: the engine issues P\'s own invoice on P\'s Net 15 terms, and the trace shows the same', async () => {
     const { clientId, defaultId } = await seedBillableClient('Agreement (iii) Client', 'net_30');
     const profileP = await createBillingProfile({ db, tenantId }, clientId, 'Agreement (iii) P');

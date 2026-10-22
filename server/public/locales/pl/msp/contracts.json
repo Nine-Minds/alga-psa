@@ -439,7 +439,7 @@
         "workItemOverride": "Czas zapisany w zgłoszeniu lub projekcie jest rozliczany przez profil tego elementu pracy, jeśli go ma. W przeciwnym razie obowiązuje domyślny profil klienta.",
         "workItemOverrideWithProfiles": "Czas zapisany w zgłoszeniu lub projekcie jest rozliczany przez profil tego elementu pracy, jeśli go ma ({{names}}). W przeciwnym razie obowiązuje domyślny profil klienta.",
         "mixedProfilesSameInvoice": "Opłaty z tej umowy są przypisane do {{count}} różnych profili, ale wszystkie trafiają na fakturę profilu {{invoice}}, więc obowiązuje jeden zestaw warunków płatności.",
-        "bucketTimeNote": "Czas pokryty przez przedpłaconą pulę lub blok godzin nie podąża za elementem pracy."
+        "bucketCoverageNote": "Na pozycjach z przedpłaconą pulą lub blokiem godzin czas pokryty przez pulę lub blok nie podąża za elementem pracy; podąża za nim tylko pozostały czas godzinowy."
       },
       "simulationNote": "Symulowana wycena używa zwolnienia z podatku na poziomie klienta. Własne zwolnienie profilu nie jest stosowane w tej symulacji.",
       "dueSentenceWorkItem": "Faktura z dnia {{invoiceDate}} jest płatna do {{dueDate}} — {{terms}} {{source}}, chyba że zgłoszenie lub projekt jest rozliczane przez inny profil",

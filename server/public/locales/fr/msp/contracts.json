@@ -439,7 +439,7 @@
         "workItemOverride": "Le temps saisi sur un ticket ou un projet est facturé via le profil de cet élément de travail s'il en a un. Sinon, c'est le profil par défaut du client qui s'applique.",
         "workItemOverrideWithProfiles": "Le temps saisi sur un ticket ou un projet est facturé via le profil de cet élément de travail s'il en a un ({{names}}). Sinon, c'est le profil par défaut du client qui s'applique.",
         "mixedProfilesSameInvoice": "Les frais de ce contrat sont attribués à {{count}} profils différents, mais ils figurent tous sur la facture de {{invoice}} ; un seul jeu de conditions de paiement s'applique.",
-        "bucketTimeNote": "Le temps couvert par un forfait prépayé ou un bloc d'heures ne suit pas l'élément de travail."
+        "bucketCoverageNote": "Sur les lignes avec un forfait prépayé ou un bloc d'heures, le temps couvert par le forfait ou le bloc ne suit pas l'élément de travail ; seul le reste du temps horaire le suit."
       },
       "simulationNote": "La tarification simulée utilise l'exonération fiscale au niveau du client. L'exonération propre à un profil n'est pas appliquée dans cette simulation.",
       "dueSentenceWorkItem": "Une facture du {{invoiceDate}} est due le {{dueDate}} — {{terms}} {{source}}, sauf si le ticket ou le projet est facturé via un autre profil",

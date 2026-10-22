@@ -439,7 +439,7 @@
         "workItemOverride": "Zeit auf einem Ticket oder Projekt wird über das Profil dieses Arbeitselements abgerechnet, sofern es eines hat. Ohne Profil gilt das Standardprofil des Kunden.",
         "workItemOverrideWithProfiles": "Zeit auf einem Ticket oder Projekt wird über das Profil dieses Arbeitselements abgerechnet, sofern es eines hat ({{names}}). Ohne Profil gilt das Standardprofil des Kunden.",
         "mixedProfilesSameInvoice": "Die Positionen dieses Vertrags sind {{count}} verschiedenen Profilen zugeordnet, landen aber alle auf der Rechnung von {{invoice}}; es gilt ein einziger Satz Zahlungsbedingungen.",
-        "bucketTimeNote": "Zeit, die durch ein vorausbezahltes Kontingent oder einen Stundenblock abgedeckt ist, folgt nicht dem Arbeitselement."
+        "bucketCoverageNote": "Bei Positionen mit vorausbezahltem Kontingent oder Stundenblock folgt die vom Kontingent oder Block abgedeckte Zeit nicht dem Arbeitselement; nur die übrige Stundenzeit tut das."
       },
       "simulationNote": "Die simulierte Preisgestaltung verwendet die Steuerbefreiung auf Kundenebene. Die Befreiung eines Profils wird in dieser Simulation nicht angewendet.",
       "dueSentenceWorkItem": "Eine Rechnung vom {{invoiceDate}} ist am {{dueDate}} fällig — {{terms}} {{source}}, sofern das Ticket oder Projekt nicht über ein anderes Profil abgerechnet wird",

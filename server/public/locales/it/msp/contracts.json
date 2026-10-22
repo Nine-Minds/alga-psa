@@ -439,7 +439,7 @@
         "workItemOverride": "Il tempo registrato su un ticket o progetto viene fatturato con il profilo di quell'elemento di lavoro, se ne ha uno. In caso contrario si usa il profilo predefinito del cliente.",
         "workItemOverrideWithProfiles": "Il tempo registrato su un ticket o progetto viene fatturato con il profilo di quell'elemento di lavoro, se ne ha uno ({{names}}). In caso contrario si usa il profilo predefinito del cliente.",
         "mixedProfilesSameInvoice": "Gli addebiti di questo contratto sono attribuiti a {{count}} profili diversi, ma finiscono tutti sulla fattura di {{invoice}}, quindi si applica un unico insieme di condizioni di pagamento.",
-        "bucketTimeNote": "Il tempo coperto da un pacchetto prepagato o da un blocco di ore non segue l'elemento di lavoro."
+        "bucketCoverageNote": "Sulle righe con un pacchetto prepagato o un blocco di ore, il tempo coperto dal pacchetto o dal blocco non segue l'elemento di lavoro; lo segue solo il tempo orario rimanente."
       },
       "simulationNote": "I prezzi simulati usano l'esenzione fiscale a livello di cliente. L'esenzione propria di un profilo non viene applicata in questa simulazione.",
       "dueSentenceWorkItem": "Una fattura del {{invoiceDate}} scade il {{dueDate}}: — {{terms}} {{source}}, a meno che il ticket o il progetto sia fatturato con un altro profilo",

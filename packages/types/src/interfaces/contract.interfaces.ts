@@ -296,14 +296,15 @@ export type ContractBillingTraceWarning =
    * Hourly lines with no line or contract profile follow the work item's profile
    * (ticket/project) when one is set, else the client default. `candidateProfiles`
    * are the profiles the client's work items carry today (may be empty).
-   * `bucketTimeExcluded`: the contract has bucket/prepaid-block coverage, and time
-   * that a bucket or hour block absorbs does NOT follow the work item.
+   * `bucketCoverage`: a reachable line has bucket-pool or prepaid-block coverage. Time
+   * drawn from a bucket pool bills through the line's own assignments; prepaid-block
+   * minutes are already paid for. Only the remaining hourly time follows the work item.
    */
   | {
       code: 'work_item_override_possible';
       contractLineIds: string[];
       candidateProfiles: Array<{ billingProfileId: string; name: string }>;
-      bucketTimeExcluded: boolean;
+      bucketCoverage: boolean;
     };
 
 export interface ContractBillingTrace {
