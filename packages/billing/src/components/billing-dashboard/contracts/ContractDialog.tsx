@@ -218,8 +218,7 @@ export function ContractDialog({
 
     try {
       // Get currency code from client or editing contract
-      const selectedClient = clients.find(c => c.client_id === clientId);
-      const currencyCode = editingContract?.currency_code || selectedClient?.default_currency_code || 'USD';
+      const currencyCode = resolvedContractCurrency;
 
       // Create the contract (without client-specific fields)
       const contractData: Omit<IContract, 'contract_id' | 'tenant' | 'created_at' | 'updated_at'> = {
@@ -326,6 +325,12 @@ export function ContractDialog({
       onClose();
     }
   };
+
+  // LEVERAGE: pattern contract-currency-resolution — contract currency falls back to client default then USD; repeated across dialogs
+  const resolvedContractCurrency =
+    editingContract?.currency_code ||
+    clients.find(c => c.client_id === clientId)?.default_currency_code ||
+    'USD';
 
   return (
     <>
@@ -684,6 +689,7 @@ export function ContractDialog({
               ) : (
                 <ContractLinePresetPicker
                   selection={presetSelection}
+                  currencyCode={resolvedContractCurrency}
                   typeFilterId="contract-line-preset-type-filter"
                   resetFiltersId="clear-preset-filters-button"
                   filtersClassName="flex flex-wrap items-center gap-2 mb-3"

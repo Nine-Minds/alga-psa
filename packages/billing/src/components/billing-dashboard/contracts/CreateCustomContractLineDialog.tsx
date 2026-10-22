@@ -741,6 +741,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                   />
                   {service.bucket_overlay && (
                     <BucketOverlayFields
+                      currencyCode={currencyCode}
                       mode="hours"
                       value={service.bucket_overlay}
                       onChange={(overlay) => {
@@ -969,6 +970,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                   />
                   {service.bucket_overlay && (
                     <BucketOverlayFields
+                      currencyCode={currencyCode}
                       mode="usage"
                       value={service.bucket_overlay}
                       onChange={(overlay) => {

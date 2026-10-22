@@ -30,6 +30,8 @@ interface ContractLinePresetPickerProps {
   resetFiltersId: string;
   filtersClassName?: string;
   listClassName?: string;
+  /** Currency of the contract the preset is being added to. */
+  currencyCode: string;
 }
 
 /**
@@ -44,6 +46,7 @@ export const ContractLinePresetPicker: React.FC<ContractLinePresetPickerProps> =
   resetFiltersId,
   filtersClassName = 'flex flex-wrap items-center gap-2',
   listClassName = 'overflow-y-auto border rounded-md p-2 space-y-1',
+  currencyCode,
 }) => {
   const { t } = useTranslation('msp/contracts');
   const { money, symbol } = useCurrencyFormat();
@@ -228,7 +231,7 @@ export const ContractLinePresetPicker: React.FC<ContractLinePresetPickerProps> =
                             </span>
                             <span className="ml-2 text-[rgb(var(--color-text-900))] font-semibold">
                               {fixedConfig?.base_rate !== null && fixedConfig?.base_rate !== undefined
-                                ? money(Number(fixedConfig.base_rate))
+                                ? money(Number(fixedConfig.base_rate), currencyCode)
                                 : t('addLines.fixedConfig.notSet', { defaultValue: 'Not set' })}
                             </span>
                           </div>
@@ -237,7 +240,7 @@ export const ContractLinePresetPicker: React.FC<ContractLinePresetPickerProps> =
                               {t('addLines.fixedConfig.overrideBaseRate', { defaultValue: 'Override Base Rate' })}
                             </Label>
                             <div className="relative mt-1.5">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol()}</span>
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol(currencyCode)}</span>
                               <Input
                                 id={`rate-override-${presetId}`}
                                 type="text"
@@ -355,7 +358,7 @@ export const ContractLinePresetPicker: React.FC<ContractLinePresetPickerProps> =
                                       {t('addLines.hourlyConfig.hourlyRate', { defaultValue: 'Hourly Rate' })}
                                     </Label>
                                     <div className="relative mt-1">
-                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol()}</span>
+                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol(currencyCode)}</span>
                                       <Input
                                         id={`hourly-rate-${presetId}-${service.service_id}`}
                                         type="text"
@@ -397,7 +400,7 @@ export const ContractLinePresetPicker: React.FC<ContractLinePresetPickerProps> =
                                     {t('addLines.usageConfig.ratePerUnit', { defaultValue: 'Rate (per unit)' })}
                                   </Label>
                                   <div className="relative mt-1">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol()}</span>
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol(currencyCode)}</span>
                                     <Input
                                       id={`rate-${presetId}-${service.service_id}`}
                                       type="text"

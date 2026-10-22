@@ -2044,6 +2044,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                           />
                                           {editBucketConfigs[serviceConfig.service.service_id] && (
                                             <BucketOverlayFields
+                                              currencyCode={contract.currency_code || 'USD'}
                                               mode={serviceConfig.configuration.configuration_type === 'Hourly' ? 'hours' : 'usage'}
                                               value={editBucketConfigs[serviceConfig.service.service_id] || {}}
                                               onChange={(next) => {
@@ -2196,6 +2197,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
             onClose={() => setShowAddDialog(false)}
             contractId={contract.contract_id}
             onAdd={handleAddContractLines}
+            currencyCode={contract.currency_code || 'USD'}
           />
 
           <CreateCustomContractLineDialog

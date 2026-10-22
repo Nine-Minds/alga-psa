@@ -21,6 +21,8 @@ interface BucketOverlayFieldsProps {
   disabled?: boolean;
   automationId?: string;
   billingFrequency?: string;
+  /** Contract currency; omit to use the tenant default. */
+  currencyCode?: string;
 }
 
 export function BucketOverlayFields({
@@ -30,7 +32,8 @@ export function BucketOverlayFields({
   unitLabel,
   disabled = false,
   automationId,
-  billingFrequency = 'monthly'
+  billingFrequency = 'monthly',
+  currencyCode
 }: BucketOverlayFieldsProps) {
   const { t } = useTranslation('msp/contracts');
   const { symbol } = useCurrencyFormat();
@@ -157,7 +160,7 @@ export function BucketOverlayFields({
           </Tooltip>
         </div>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol(currencyCode)}</span>
           <Input
             id={automationId ? `${automationId}-overage` : undefined}
             data-automation-id={automationId ? `${automationId}-overage` : undefined}

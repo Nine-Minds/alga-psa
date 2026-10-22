@@ -94,6 +94,8 @@ export default defineConfig({
       // must not re-scale them. Listed for the same reason as above.
       'src/components/billing-dashboard/contract-lines/GenericContractLineServicesList.customRate.test.tsx',
       'src/components/billing-dashboard/contract-lines/ServiceHourlyConfigForm.currency.test.tsx',
+      // Live contract-line adornments (preset picker, bucket overlay) follow the contract currency.
+      'src/components/billing-dashboard/contracts/ContractLineCurrency.adornments.test.tsx',
       // Wizard quantity input draft/commit behavior.
       'src/components/billing-dashboard/contracts/QuantityInput.test.tsx',
       // Template saves must stay valid upserts on Citus distributed tables.
