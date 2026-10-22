@@ -20,8 +20,19 @@ describe('classifyMicrosoftOAuthFailure', () => {
     ).toBe('single_tenant_app');
   });
 
+  it('classifies client-secret rejections from the token exchange', () => {
+    expect(classifyMicrosoftOAuthFailure({ errorCodes: [7000215], errorDescription: 'AADSTS7000215: Invalid client secret provided.' })).toBe('invalid_client_secret');
+    expect(classifyMicrosoftOAuthFailure({ errorCodes: [7000222], errorDescription: 'AADSTS7000222: expired' })).toBe('expired_client_secret');
+    expect(describeMicrosoftOAuthFailureForMailboxFlow('invalid_client_secret')).toBe(
+      'Microsoft rejected the client secret on the Microsoft profile. Make sure you saved the secret Value, not its Secret ID.'
+    );
+    expect(describeMicrosoftOAuthFailureForMailboxFlow('expired_client_secret')).toBe(
+      'The client secret on the Microsoft profile has expired. Create a new secret in Azure and update the profile.'
+    );
+  });
+
   it('returns null for unknown codes', () => {
-    expect(classifyMicrosoftOAuthFailure({ errorCodes: [7000222], errorDescription: 'AADSTS7000222: expired' })).toBeNull();
+    expect(classifyMicrosoftOAuthFailure({ errorCodes: [7000999], errorDescription: 'AADSTS7000999: other' })).toBeNull();
     expect(classifyMicrosoftOAuthFailure({})).toBeNull();
   });
 

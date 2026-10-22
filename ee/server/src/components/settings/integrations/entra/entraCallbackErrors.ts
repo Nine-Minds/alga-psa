@@ -25,6 +25,10 @@ export const buildEntraCallbackErrorKey = (errorCode: string | null | undefined)
       return 'integrations.entra.settings.connection.callbackErrors.wrongDirectory';
     case 'aadsts_50011_redirect_uri':
       return 'integrations.entra.settings.connection.callbackErrors.redirectUriMismatch';
+    case 'aadsts_7000215_invalid_secret':
+      return 'integrations.entra.settings.connection.callbackErrors.invalidClientSecret';
+    case 'aadsts_7000222_expired_secret':
+      return 'integrations.entra.settings.connection.callbackErrors.expiredClientSecret';
     case 'expired_state':
     case 'session_expired':
       return 'integrations.entra.settings.connection.callbackErrors.expired';
