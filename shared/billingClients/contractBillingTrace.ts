@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type {
   ContractBillingTrace,
+  ContractBillingTraceInvoiceReason,
   ContractBillingTraceField,
   ContractBillingTraceProfile,
   ContractBillingTraceProfileSource,
@@ -11,10 +12,17 @@ import type {
 } from '@alga-psa/types';
 import { resolveChargeProfile } from './billingProfileResolution';
 import {
+  listSeparatelyBillingProfiles,
   resolveEffectiveBillingIdentity,
   type EffectiveBillingIdentity,
 } from './billingProfileSettings';
 import { ensureClientDefaultBillingProfile } from './billingProfiles';
+import { resolveBucketForLine } from './bucketUsageService';
+import {
+  buildInvoiceProfileScope,
+  describeInvoiceProfileLanding,
+  type InvoiceProfileScope,
+} from './invoiceProfileScope';
 import { dueDateForPaymentTerms } from './paymentDueDate';
 import { DEFAULT_PAYMENT_TERMS, normalizePaymentTerms, paymentTermDays } from './paymentPreferences';
 
@@ -28,6 +36,14 @@ import { DEFAULT_PAYMENT_TERMS, normalizePaymentTerms, paymentTermDays } from '.
  * `resolveChargeProfile` for which profile, `resolveEffectiveBillingIdentity`
  * for which value, `paymentTermDays` / `dueDateForPaymentTerms` for arithmetic —
  * so what an operator reads cannot disagree with the invoice that follows.
+ *
+ * Attribution is not invoicing. A charge attributed to profile P lands on P's
+ * invoice only when the tenant flag is on and P bills separately; otherwise it
+ * lands on the client default's invoice and carries the default's terms. The
+ * trace therefore resolves attribution (`resolveChargeProfile`), then the invoice
+ * profile (`resolveInvoiceProfileForAttribution`, the function the engine's
+ * selection resolver calls), then terms and due date from the invoice profile.
+ * The flag is evaluated by the caller and passed in as `perProfileInvoicing`.
  * This module must not grow a second `line ?? contract ?? workItem ?? default`
  * chain: the work-item step is just one more input to `resolveChargeProfile`.
  */
@@ -49,6 +65,11 @@ export interface ContractBillingTraceLineInput {
    * The engine's time loader prices time on any line that has services.
    */
   serviceCount?: number;
+  /**
+   * How many of those services draw from a bucket pool on the line (or the line
+   * carries a prepaid-block config, making all of them so). Absent counts as none.
+   */
+  bucketServiceCount?: number;
 }
 
 export interface BuildContractBillingTraceInput {
@@ -57,6 +78,10 @@ export interface BuildContractBillingTraceInput {
   /** `contracts.billing_frequency`; used for cadence only when the contract has no lines. */
   contractBillingFrequency?: string | null;
   clientDefaultBillingProfileId: string;
+  /** Tenant flag `billing-profiles-separate-invoicing`, evaluated by the caller. */
+  perProfileInvoicing: boolean;
+  /** `listSeparatelyBillingProfiles` ids for the client (active, `bills_separately`). */
+  separatelyBillingProfileIds: string[];
   /** `client_contracts.billing_profile_id` of the binding being traced. */
   assignmentBillingProfileId: string | null;
   lines: ContractBillingTraceLineInput[];
@@ -95,6 +120,28 @@ const ENGLISH_LABELS: Record<ContractBillingTraceField['key'], string> = {
   profile_billing_cycle: 'Profile billing cycle',
 };
 
+type LandingInput = Pick<
+  BuildContractBillingTraceInput,
+  'clientDefaultBillingProfileId' | 'perProfileInvoicing' | 'separatelyBillingProfileIds'
+>;
+
+function defaultInvoiceScope(input: LandingInput): InvoiceProfileScope {
+  return buildInvoiceProfileScope({
+    billingProfileId: input.clientDefaultBillingProfileId,
+    defaultProfileId: input.clientDefaultBillingProfileId,
+    perProfileInvoicing: input.perProfileInvoicing,
+    separatelyBillingProfileIds: input.separatelyBillingProfileIds,
+  });
+}
+
+/** On which profile's invoice does a charge attributed to `attributedProfileId` land, and why. */
+export function resolveTraceInvoiceLanding(
+  input: LandingInput,
+  attributedProfileId: string,
+): { invoiceProfileId: string; reason: ContractBillingTraceInvoiceReason } {
+  return describeInvoiceProfileLanding(attributedProfileId, defaultInvoiceScope(input), input.perProfileInvoicing);
+}
+
 /** Which profile bills one line (or the contract as a whole when `line` is null). */
 function resolveForLine(
   input: Pick<BuildContractBillingTraceInput, 'assignmentBillingProfileId' | 'clientDefaultBillingProfileId'>,
@@ -125,14 +172,22 @@ type StepFourInput = Pick<
  * usage, bucket and product/license charges carry no work-item profile; project
  * milestone/deposit charges do (the project's profile) but have no contract line,
  * so they are outside this trace. A line only reaches step 4 when steps 2 and 3 are
- * both empty, i.e. it lands on the client default. Whether a work item has
+ * both empty, i.e. it lands on the client default.
+ *
+ * Bucket and prepaid-block coverage does NOT follow the work item. Engine facts:
+ * bucket overage charges and "Prepaid hour block" charges are attributed from the
+ * line's assignments only (`loadBucketObligation`, the hour-block path and prepaid
+ * block issuance call `loadChargeProfileAssignments` / `resolveChargeProfile` with
+ * no work-item profile), and the time loader skips entries explicitly assigned to a
+ * bucket-covered service. So a line whose services are all bucket-covered is not
+ * reachable; a mixed line stays reachable for its non-bucket services. Whether a work item has
  * anything to point at is decided by the caller (several profiles, or a work item
  * carrying a profile owned by another client).
  */
 export function resolveStepFourLines(input: StepFourInput): ContractBillingTraceLineInput[] {
   return input.lines.filter(
     (line) =>
-      (line.serviceCount ?? 0) > 0 &&
+      (line.serviceCount ?? 0) - (line.bucketServiceCount ?? 0) > 0 &&
       resolveForLine(input, line.billingProfileId).source === 'client_default',
   );
 }
@@ -147,6 +202,14 @@ export function resolveTracedLines(
   return input.lines.length > 0
     ? input.lines.map((line) => ({ line: line as ContractBillingTraceLineInput | null, resolved: resolveForLine(input, line.billingProfileId) }))
     : [{ line: null as ContractBillingTraceLineInput | null, resolved: resolveForLine(input, null) }];
+}
+
+function requireIdentity(input: Pick<BuildContractBillingTraceInput, 'identities'>, billingProfileId: string) {
+  const identity = input.identities[billingProfileId];
+  if (!identity) {
+    throw new Error(`Missing billing identity for profile ${billingProfileId}.`);
+  }
+  return identity;
 }
 
 function buildTerms(identity: EffectiveBillingIdentity, asOf: ISO8601String): ContractBillingTraceTerms {
@@ -200,6 +263,37 @@ function buildFields(
   ];
 }
 
+function buildTraceProfile(
+  input: BuildContractBillingTraceInput,
+  rowFor: (billingProfileId: string) => ContractBillingTraceProfileRow,
+  attributedId: string,
+  extras: { source: ContractBillingTraceProfileSource; lineCount: number; cadence: string | null },
+): ContractBillingTraceProfile {
+  const row = rowFor(attributedId);
+  const landing = resolveTraceInvoiceLanding(input, attributedId);
+  const invoiceRow = rowFor(landing.invoiceProfileId);
+  // Terms, due date and identity fields all come from the profile whose invoice
+  // carries the charge; the attributed profile is only the reporting dimension.
+  const identity = requireIdentity(input, landing.invoiceProfileId);
+  return {
+    billingProfileId: attributedId,
+    name: row.name,
+    source: extras.source,
+    lineCount: extras.lineCount,
+    isActive: row.isActive,
+    isDefault: row.isDefault,
+    invoiceProfile: {
+      billingProfileId: landing.invoiceProfileId,
+      name: invoiceRow.name,
+      isActive: invoiceRow.isActive,
+      isDefault: invoiceRow.isDefault,
+    },
+    invoiceReason: landing.reason,
+    terms: buildTerms(identity, input.asOf),
+    fields: buildFields(identity, input.currencyCode, extras.cadence),
+  };
+}
+
 export function buildContractBillingTrace(input: BuildContractBillingTraceInput): ContractBillingTrace {
   const profileById = new Map(input.profiles.map((profile) => [profile.billingProfileId, profile]));
   const requireProfile = (billingProfileId: string): ContractBillingTraceProfileRow => {
@@ -228,26 +322,15 @@ export function buildContractBillingTrace(input: BuildContractBillingTraceInput)
   }
 
   const profiles: ContractBillingTraceProfile[] = [...grouped.entries()]
-    .map(([billingProfileId, entry]) => {
-      const row = requireProfile(billingProfileId);
-      const identity = input.identities[billingProfileId];
-      if (!identity) {
-        throw new Error(`Missing billing identity for profile ${billingProfileId}.`);
-      }
-      const cadence = entry.frequencies.size > 0
-        ? [...entry.frequencies].join(',')
-        : input.contractBillingFrequency ?? null;
-      return {
-        billingProfileId,
-        name: row.name,
+    .map(([billingProfileId, entry]) =>
+      buildTraceProfile(input, requireProfile, billingProfileId, {
         source: entry.source,
         lineCount: entry.lineCount,
-        isActive: row.isActive,
-        isDefault: row.isDefault,
-        terms: buildTerms(identity, input.asOf),
-        fields: buildFields(identity, input.currencyCode, cadence),
-      };
-    })
+        cadence: entry.frequencies.size > 0
+          ? [...entry.frequencies].join(',')
+          : input.contractBillingFrequency ?? null,
+      }),
+    )
     .sort(
       (a, b) =>
         b.lineCount - a.lineCount ||
@@ -263,7 +346,13 @@ export function buildContractBillingTrace(input: BuildContractBillingTraceInput)
     }
   }
   if (profiles.length > 1) {
-    warnings.push({ code: 'mixed_profiles', profileCount: profiles.length });
+    const invoiceProfileIds = new Set(profiles.map((profile) => profile.invoiceProfile.billingProfileId));
+    warnings.push({
+      code: 'mixed_profiles',
+      profileCount: profiles.length,
+      invoiceProfileCount: invoiceProfileIds.size,
+      invoiceProfileName: invoiceProfileIds.size === 1 ? profiles[0].invoiceProfile.name : null,
+    });
   }
   // A line override matters only where it moves the line off the profile the
   // contract would otherwise bill.
@@ -310,21 +399,13 @@ export function buildContractBillingTrace(input: BuildContractBillingTraceInput)
       }
     }
     for (const [billingProfileId, lineCount] of candidates) {
-      const row = requireWorkItemProfile(billingProfileId);
-      const identity = input.identities[billingProfileId];
-      if (!identity) {
-        throw new Error(`Missing billing identity for profile ${billingProfileId}.`);
-      }
-      workItemProfiles.push({
-        billingProfileId,
-        name: row.name,
-        source: 'work_item',
-        lineCount,
-        isActive: row.isActive,
-        isDefault: row.isDefault,
-        terms: buildTerms(identity, input.asOf),
-        fields: buildFields(identity, input.currencyCode, input.contractBillingFrequency ?? null),
-      });
+      workItemProfiles.push(
+        buildTraceProfile(input, requireWorkItemProfile, billingProfileId, {
+          source: 'work_item',
+          lineCount,
+          cadence: input.contractBillingFrequency ?? null,
+        }),
+      );
     }
     workItemProfiles.sort((a, b) => a.name.localeCompare(b.name));
     // Raised even with no candidates today: a ticket or project can be given a
@@ -336,6 +417,7 @@ export function buildContractBillingTrace(input: BuildContractBillingTraceInput)
         billingProfileId: profile.billingProfileId,
         name: profile.name,
       })),
+      bucketTimeExcluded: input.lines.some((line) => (line.bucketServiceCount ?? 0) > 0),
     });
   }
 
@@ -355,6 +437,12 @@ export interface LoadContractBillingTraceOptions {
   /** Trace one specific assignment (a merged-in client) instead of the owning client's. */
   clientContractId?: string | null;
   asOf?: ISO8601String;
+  /**
+   * Tenant flag `billing-profiles-separate-invoicing`. Evaluated by the caller
+   * (`perProfileInvoicingEnabled` in packages/billing): shared code must not
+   * depend on the feature-flag client.
+   */
+  perProfileInvoicing: boolean;
 }
 
 /**
@@ -439,15 +527,39 @@ export async function loadContractBillingTrace(
     isDefault: Boolean(row.is_default),
   }));
 
-  const serviceCountRows = (lineRows as Array<{ contract_line_id: string }>).length === 0
+  const lineIds = (lineRows as Array<{ contract_line_id: string }>).map((row) => row.contract_line_id);
+  const serviceRows = lineIds.length === 0
     ? []
     : ((await db
         .table('contract_line_services')
-        .whereIn('contract_line_id', (lineRows as Array<{ contract_line_id: string }>).map((row) => row.contract_line_id))
-        .groupBy('contract_line_id')
-        .select('contract_line_id')
-        .count({ service_count: '*' })) as Array<{ contract_line_id: string; service_count: string | number }>);
-  const serviceCounts = new Map(serviceCountRows.map((row) => [row.contract_line_id, Number(row.service_count)]));
+        .whereIn('contract_line_id', lineIds)
+        .select('contract_line_id', 'service_id')) as Array<{ contract_line_id: string; service_id: string }>);
+  const serviceIdsByLine = new Map<string, string[]>();
+  for (const row of serviceRows) {
+    serviceIdsByLine.set(row.contract_line_id, [...(serviceIdsByLine.get(row.contract_line_id) ?? []), row.service_id]);
+  }
+  // Prepaid hour blocks are configured per line (`contract_line_prepaid_blocks`).
+  const prepaidBlockLineIds = new Set<string>(
+    lineIds.length === 0
+      ? []
+      : ((await db.table('contract_line_prepaid_blocks').whereIn('contract_line_id', lineIds).select('contract_line_id')) as Array<{
+          contract_line_id: string;
+        }>).map((row) => row.contract_line_id),
+  );
+  // Same pool rule the engine uses to decide whether a service draws from a bucket.
+  const bucketCounts = new Map<string, number>();
+  for (const lineId of lineIds) {
+    const serviceIds = serviceIdsByLine.get(lineId) ?? [];
+    if (prepaidBlockLineIds.has(lineId)) {
+      bucketCounts.set(lineId, serviceIds.length);
+      continue;
+    }
+    let covered = 0;
+    for (const serviceId of serviceIds) {
+      if (await resolveBucketForLine(knex, tenant, lineId, serviceId)) covered += 1;
+    }
+    bucketCounts.set(lineId, covered);
+  }
 
   const lines: ContractBillingTraceLineInput[] = (lineRows as Array<{
     contract_line_id: string;
@@ -459,13 +571,19 @@ export async function loadContractBillingTrace(
     contractLineName: row.contract_line_name,
     billingProfileId: row.billing_profile_id,
     billingFrequency: row.billing_frequency,
-    serviceCount: serviceCounts.get(row.contract_line_id) ?? 0,
+    serviceCount: serviceIdsByLine.get(row.contract_line_id)?.length ?? 0,
+    bucketServiceCount: bucketCounts.get(row.contract_line_id) ?? 0,
   }));
 
   const asOf = options.asOf ?? (new Date().toISOString().slice(0, 10) as ISO8601String);
+  const separatelyBillingProfileIds = (await listSeparatelyBillingProfiles(knex, tenant, clientId)).map(
+    (profile) => profile.billing_profile_id,
+  );
   const base = {
     assignmentBillingProfileId: assignment?.billing_profile_id ?? null,
     clientDefaultBillingProfileId,
+    perProfileInvoicing: options.perProfileInvoicing,
+    separatelyBillingProfileIds,
   };
   const billingProfileIds = new Set<string>(
     resolveTracedLines({ ...base, lines }).map(({ resolved }) => resolved.billingProfileId),
@@ -509,7 +627,11 @@ export async function loadContractBillingTrace(
   }
 
   const identities: Record<string, EffectiveBillingIdentity> = {};
-  for (const billingProfileId of new Set([...billingProfileIds, ...workItemProfileIds])) {
+  // Terms and identity come from the invoice profile, not the attributed one.
+  const invoiceProfileIds = new Set(
+    [...billingProfileIds, ...workItemProfileIds].map((id) => resolveTraceInvoiceLanding(base, id).invoiceProfileId),
+  );
+  for (const billingProfileId of invoiceProfileIds) {
     identities[billingProfileId] = await resolveEffectiveBillingIdentity(knex, tenant, clientId, billingProfileId);
   }
 

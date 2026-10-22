@@ -434,14 +434,20 @@
       },
       "warnings": {
         "inactiveProfile": "{{name}} è inattivo ma fattura ancora questo contratto. Gli addebiti restano su di esso; non vengono spostati sul profilo predefinito.",
-        "mixedProfiles": "Questo contratto fattura su {{count}} profili diversi, quindi nessun profilo singolo lo copre. Ogni profilo usa i propri termini di pagamento.",
+        "mixedProfiles": "Questo contratto fattura tramite {{count}} profili diversi, quindi nessun profilo singolo lo copre. Ogni fattura usa le condizioni di pagamento del profilo su cui è emessa.",
         "lineOverride": "La riga \"{{line}}\" fattura su {{name}} anziché sul profilo del contratto.",
         "workItemOverride": "Il tempo registrato su un ticket o progetto viene fatturato con il profilo di quell'elemento di lavoro, se ne ha uno. In caso contrario si usa il profilo predefinito del cliente.",
-        "workItemOverrideWithProfiles": "Il tempo registrato su un ticket o progetto viene fatturato con il profilo di quell'elemento di lavoro, se ne ha uno ({{names}}). In caso contrario si usa il profilo predefinito del cliente."
+        "workItemOverrideWithProfiles": "Il tempo registrato su un ticket o progetto viene fatturato con il profilo di quell'elemento di lavoro, se ne ha uno ({{names}}). In caso contrario si usa il profilo predefinito del cliente.",
+        "mixedProfilesSameInvoice": "Gli addebiti di questo contratto sono attribuiti a {{count}} profili diversi, ma finiscono tutti sulla fattura di {{invoice}}, quindi si applica un unico insieme di condizioni di pagamento.",
+        "bucketTimeNote": "Il tempo coperto da un pacchetto prepagato o da un blocco di ore non segue l'elemento di lavoro."
       },
       "simulationNote": "I prezzi simulati usano l'esenzione fiscale a livello di cliente. L'esenzione propria di un profilo non viene applicata in questa simulazione.",
       "dueSentenceWorkItem": "Una fattura del {{invoiceDate}} scade il {{dueDate}}: — {{terms}} {{source}}, a meno che il ticket o il progetto sia fatturato con un altro profilo",
-      "workItemProfileLine": "Se il ticket o progetto è fatturato con {{name}}:"
+      "workItemProfileLine": "Se il ticket o progetto è fatturato con {{name}}:",
+      "invoiceLanding": {
+        "notBilledSeparately": "Attribuito a {{attributed}}; fatturato su {{invoice}} ({{attributed}} non fattura separatamente) — {{terms}}, scadenza {{dueDate}}",
+        "separateInvoicingOff": "Attribuito a {{attributed}}; fatturato su {{invoice}} (la fatturazione separata è disattivata per questo tenant) — {{terms}}, scadenza {{dueDate}}"
+      }
     }
   },
   "contractDialog": {

@@ -244,7 +244,30 @@ export interface ContractBillingTraceField {
   applied?: boolean;
 }
 
+/**
+ * Why the profile a charge is attributed to differs from the profile whose
+ * invoice carries it (decided by `resolveInvoiceProfileForAttribution`).
+ */
+export type ContractBillingTraceInvoiceReason =
+  /** Same profile: attributed to the one whose invoice carries the charge. */
+  | 'same_profile'
+  /** The attributed profile bills separately and the tenant flag is on: it keeps its own invoice. */
+  | 'own_invoice'
+  /** The attributed profile does not bill separately (or is inactive): charges roll up to the default. */
+  | 'not_billed_separately'
+  /** Separate invoicing is off for the tenant: every charge lands on the default profile's invoice. */
+  | 'separate_invoicing_off';
+
+/** The profile whose invoice carries the charges; its terms stamp the due date. */
+export interface ContractBillingTraceInvoiceProfile {
+  billingProfileId: string;
+  name: string;
+  isActive: boolean;
+  isDefault: boolean;
+}
+
 export interface ContractBillingTraceProfile {
+  /** The profile the charges are attributed to (`resolveChargeProfile`). */
   billingProfileId: string;
   name: string;
   /** The highest-priority chain step that routes at least one line here. */
@@ -252,26 +275,42 @@ export interface ContractBillingTraceProfile {
   lineCount: number;
   isActive: boolean;
   isDefault: boolean;
+  /** The profile whose invoice these charges land on. Equals the attributed profile only when `invoiceReason` is `same_profile` or `own_invoice`. */
+  invoiceProfile: ContractBillingTraceInvoiceProfile;
+  invoiceReason: ContractBillingTraceInvoiceReason;
+  /** Terms and due date of the INVOICE profile, not the attributed profile. */
   terms: ContractBillingTraceTerms;
+  /** Identity fields of the invoice profile (the invoice reads bill-to, PO, delivery from it). */
   fields: ContractBillingTraceField[];
 }
 
 export type ContractBillingTraceWarning =
   | { code: 'inactive_profile'; billingProfileId: string; profileName: string }
-  | { code: 'mixed_profiles'; profileCount: number }
+  /**
+   * `profileCount` = distinct attributed profiles; `invoiceProfileCount` = distinct
+   * invoice profiles among them. Terms differ per profile only when the latter is > 1.
+   */
+  | { code: 'mixed_profiles'; profileCount: number; invoiceProfileCount: number; invoiceProfileName: string | null }
   | { code: 'line_override'; contractLineId: string; contractLineName: string | null; billingProfileId: string; profileName: string }
   /**
    * Hourly lines with no line or contract profile follow the work item's profile
    * (ticket/project) when one is set, else the client default. `candidateProfiles`
    * are the profiles the client's work items carry today (may be empty).
+   * `bucketTimeExcluded`: the contract has bucket/prepaid-block coverage, and time
+   * that a bucket or hour block absorbs does NOT follow the work item.
    */
-  | { code: 'work_item_override_possible'; contractLineIds: string[]; candidateProfiles: Array<{ billingProfileId: string; name: string }> };
+  | {
+      code: 'work_item_override_possible';
+      contractLineIds: string[];
+      candidateProfiles: Array<{ billingProfileId: string; name: string }>;
+      bucketTimeExcluded: boolean;
+    };
 
 export interface ContractBillingTrace {
   asOf: ISO8601String;
   /** Every profile that actually bills a line of this contract, primary first. */
   profiles: ContractBillingTraceProfile[];
-  /** Terms of the primary (first) profile. With `mixed_profiles`, read `profiles[].terms`. */
+  /** Terms of the primary (first) profile's INVOICE profile. With `mixed_profiles`, read `profiles[].terms`. */
   terms: ContractBillingTraceTerms;
   /** Fields of the primary (first) profile. With `mixed_profiles`, read `profiles[].fields`. */
   fields: ContractBillingTraceField[];

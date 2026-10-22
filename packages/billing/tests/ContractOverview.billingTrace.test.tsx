@@ -64,10 +64,12 @@ const fields = (): ContractBillingTrace['fields'] => [
   { key: 'profile_billing_cycle', label: 'Profile billing cycle', value: 'weekly', source: 'profile', applied: false },
 ];
 
+const self = (billingProfileId: string, name: string, isDefault = false) => ({ billingProfileId, name, isActive: true, isDefault });
+
 const singleTrace: ContractBillingTrace = {
   asOf: '2026-10-22',
   profiles: [
-    { billingProfileId: 'p-default', name: 'Acme Corp', source: 'client_default', lineCount: 1, isActive: true, isDefault: true, terms: terms(), fields: fields() },
+    { billingProfileId: 'p-default', name: 'Acme Corp', source: 'client_default', lineCount: 1, isActive: true, isDefault: true, invoiceProfile: self('p-default', 'Acme Corp', true), invoiceReason: 'same_profile', terms: terms(), fields: fields() },
   ],
   terms: terms(),
   fields: fields(),
@@ -77,14 +79,14 @@ const singleTrace: ContractBillingTrace = {
 const mixedTrace: ContractBillingTrace = {
   asOf: '2026-10-22',
   profiles: [
-    { billingProfileId: 'p-default', name: 'Acme Corp', source: 'contract_line', lineCount: 1, isActive: true, isDefault: true, terms: terms(), fields: fields() },
-    { billingProfileId: 'p-north', name: 'North Plant', source: 'contract', lineCount: 1, isActive: false, isDefault: false, terms: terms({ value: 'net_15', source: 'profile', days: 15, dueDateExample: { invoiceDate: '2026-10-22', dueDate: '2026-11-06' } }), fields: fields() },
+    { billingProfileId: 'p-default', name: 'Acme Corp', source: 'contract_line', lineCount: 1, isActive: true, isDefault: true, invoiceProfile: self('p-default', 'Acme Corp', true), invoiceReason: 'same_profile', terms: terms(), fields: fields() },
+    { billingProfileId: 'p-north', name: 'North Plant', source: 'contract', lineCount: 1, isActive: false, isDefault: false, invoiceProfile: self('p-north', 'North Plant'), invoiceReason: 'own_invoice', terms: terms({ value: 'net_15', source: 'profile', days: 15, dueDateExample: { invoiceDate: '2026-10-22', dueDate: '2026-11-06' } }), fields: fields() },
   ],
   terms: terms(),
   fields: fields(),
   warnings: [
     { code: 'inactive_profile', billingProfileId: 'p-north', profileName: 'North Plant' },
-    { code: 'mixed_profiles', profileCount: 2 },
+    { code: 'mixed_profiles', profileCount: 2, invoiceProfileCount: 2, invoiceProfileName: null },
     { code: 'line_override', contractLineId: 'l2', contractLineName: 'Hosting', billingProfileId: 'p-default', profileName: 'Acme Corp' },
   ],
 };
@@ -162,6 +164,36 @@ describe('ContractOverview billing terms section', () => {
     expect(screen.getByTestId('billing-warning-line_override')).toHaveTextContent('Line "Hosting" bills Acme Corp');
   });
 
+  it('says where a non-separately-billing profile is invoiced, with the invoice profile\'s terms and due date', async () => {
+    const landed: ContractBillingTrace = {
+      ...singleTrace,
+      profiles: [
+        {
+          ...singleTrace.profiles[0],
+          billingProfileId: 'p-north', name: 'North Plant', source: 'contract', isDefault: false,
+          invoiceProfile: self('p-default', 'Acme Corp', true), invoiceReason: 'not_billed_separately',
+        },
+      ],
+    };
+    actionMocks.getContractOverview.mockResolvedValue(overviewWith(landed));
+    render(<ContractOverview contractId="c1" />);
+    expect(await screen.findByTestId('billing-due-sentence')).toHaveTextContent(
+      'Attributed to North Plant; invoiced on Acme Corp (North Plant does not bill separately) — Net 30, due 2026-11-21',
+    );
+  });
+
+  it('uses the single-invoice mixed_profiles text when every profile lands on one invoice', async () => {
+    const oneInvoice: ContractBillingTrace = {
+      ...mixedTrace,
+      warnings: [{ code: 'mixed_profiles', profileCount: 2, invoiceProfileCount: 1, invoiceProfileName: 'Acme Corp' }],
+    };
+    actionMocks.getContractOverview.mockResolvedValue(overviewWith(oneInvoice));
+    render(<ContractOverview contractId="c1" />);
+    const warning = await screen.findByTestId('billing-warning-mixed_profiles');
+    expect(warning).toHaveTextContent("all land on Acme Corp's invoice, so one set of payment terms applies");
+    expect(warning).not.toHaveTextContent('Each invoice uses');
+  });
+
   it('renders no billing section for a template overview', async () => {
     actionMocks.getContractOverview.mockResolvedValue(overviewWith(null));
     render(<ContractOverview contractId="t1" />);
@@ -185,11 +217,13 @@ describe('ContractOverview billing terms section', () => {
           code: 'work_item_override_possible',
           contractLineIds: ['l1'],
           candidateProfiles: [{ billingProfileId: 'p-b', name: 'Facility B' }],
+          bucketTimeExcluded: false,
         },
       ],
       workItemProfiles: [
         {
           billingProfileId: 'p-b', name: 'Facility B', source: 'work_item', lineCount: 1, isActive: true, isDefault: false,
+          invoiceProfile: self('p-b', 'Facility B'), invoiceReason: 'own_invoice',
           terms: terms({ value: 'net_15', source: 'profile', days: 15, dueDateExample: { invoiceDate: '2026-10-22', dueDate: '2026-11-06' } }),
           fields: fields(),
         },

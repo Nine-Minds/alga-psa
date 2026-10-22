@@ -17,6 +17,7 @@ import {
 } from '@alga-psa/types';
 import type { ContractBillingTrace } from '@alga-psa/types';
 import { loadContractBillingTrace } from '@alga-psa/shared/billingClients/contractBillingTrace';
+import { perProfileInvoicingEnabled } from '../lib/billing/billingProfileInvoiceScope';
 import {
   IContractTemplate,
   IContractTemplateWithLines,
@@ -1556,7 +1557,12 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
       currencyCode,
       clientId,
       // Same engine functions the invoice uses; a template has no client to bill.
-      billingTrace: isTemplate ? null : await loadContractBillingTrace(knex, tenant, { contractId }),
+      billingTrace: isTemplate
+        ? null
+        : await loadContractBillingTrace(knex, tenant, {
+            contractId,
+            perProfileInvoicing: await perProfileInvoicingEnabled(tenant),
+          }),
     };
   } catch (error) {
     console.error(`Error fetching contract overview for ${contractId}:`, error);

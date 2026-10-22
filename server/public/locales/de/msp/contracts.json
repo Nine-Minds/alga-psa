@@ -434,14 +434,20 @@
       },
       "warnings": {
         "inactiveProfile": "{{name}} ist inaktiv, rechnet diesen Vertrag aber weiterhin ab. Positionen bleiben dort; sie werden nicht auf das Standardprofil verschoben.",
-        "mixedProfiles": "Dieser Vertrag wird über {{count}} verschiedene Profile abgerechnet, daher deckt kein einzelnes Profil ihn ab. Jedes Profil verwendet eigene Zahlungsbedingungen.",
+        "mixedProfiles": "Dieser Vertrag wird über {{count}} verschiedene Profile abgerechnet, daher deckt kein einzelnes Profil ihn ab. Jede Rechnung verwendet die Zahlungsbedingungen des Profils, auf dem sie ausgestellt wird.",
         "lineOverride": "Die Linie „{{line}}\" wird über {{name}} statt über das Profil des Vertrags abgerechnet.",
         "workItemOverride": "Zeit auf einem Ticket oder Projekt wird über das Profil dieses Arbeitselements abgerechnet, sofern es eines hat. Ohne Profil gilt das Standardprofil des Kunden.",
-        "workItemOverrideWithProfiles": "Zeit auf einem Ticket oder Projekt wird über das Profil dieses Arbeitselements abgerechnet, sofern es eines hat ({{names}}). Ohne Profil gilt das Standardprofil des Kunden."
+        "workItemOverrideWithProfiles": "Zeit auf einem Ticket oder Projekt wird über das Profil dieses Arbeitselements abgerechnet, sofern es eines hat ({{names}}). Ohne Profil gilt das Standardprofil des Kunden.",
+        "mixedProfilesSameInvoice": "Die Positionen dieses Vertrags sind {{count}} verschiedenen Profilen zugeordnet, landen aber alle auf der Rechnung von {{invoice}}; es gilt ein einziger Satz Zahlungsbedingungen.",
+        "bucketTimeNote": "Zeit, die durch ein vorausbezahltes Kontingent oder einen Stundenblock abgedeckt ist, folgt nicht dem Arbeitselement."
       },
       "simulationNote": "Die simulierte Preisgestaltung verwendet die Steuerbefreiung auf Kundenebene. Die Befreiung eines Profils wird in dieser Simulation nicht angewendet.",
       "dueSentenceWorkItem": "Eine Rechnung vom {{invoiceDate}} ist am {{dueDate}} fällig — {{terms}} {{source}}, sofern das Ticket oder Projekt nicht über ein anderes Profil abgerechnet wird",
-      "workItemProfileLine": "Wenn das Ticket oder Projekt über {{name}} abgerechnet wird:"
+      "workItemProfileLine": "Wenn das Ticket oder Projekt über {{name}} abgerechnet wird:",
+      "invoiceLanding": {
+        "notBilledSeparately": "Zugeordnet zu {{attributed}}; abgerechnet auf {{invoice}} ({{attributed}} rechnet nicht separat ab) — {{terms}}, fällig am {{dueDate}}",
+        "separateInvoicingOff": "Zugeordnet zu {{attributed}}; abgerechnet auf {{invoice}} (separate Rechnungsstellung ist für diesen Mandanten deaktiviert) — {{terms}}, fällig am {{dueDate}}"
+      }
     }
   },
   "contractDialog": {

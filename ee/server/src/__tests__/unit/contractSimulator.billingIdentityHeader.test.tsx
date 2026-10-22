@@ -29,6 +29,8 @@ const trace: ContractBillingTrace = {
       lineCount: 3,
       isActive: true,
       isDefault: false,
+      invoiceProfile: { billingProfileId: "p-1", name: "Entity B", isActive: true, isDefault: false },
+      invoiceReason: "own_invoice",
       terms: {
         value: "net_15",
         source: "profile",
@@ -50,7 +52,31 @@ const trace: ContractBillingTrace = {
 
 afterEach(cleanup);
 
+const landedOnDefault: ContractBillingTrace = {
+  ...trace,
+  profiles: [
+    {
+      ...trace.profiles[0],
+      invoiceProfile: { billingProfileId: "p-0", name: "Acme Corp", isActive: true, isDefault: true },
+      invoiceReason: "not_billed_separately",
+      terms: {
+        value: "net_30",
+        source: "client",
+        days: 30,
+        dueDateExample: { invoiceDate: "2026-10-22", dueDate: "2026-11-21" },
+      },
+    },
+  ],
+};
+
 describe("simulator billing identity header", () => {
+  it("states the invoice profile and its terms when the attributed profile does not bill separately", () => {
+    render(<BillingTermsSection trace={landedOnDefault} variant="simulation" />);
+    expect(screen.getByTestId("billing-due-sentence")).toHaveTextContent(
+      "Attributed to Entity B; invoiced on Acme Corp (Entity B does not bill separately) — Net 30, due 2026-11-21",
+    );
+  });
+
   it("renders the billing profile name and payment terms", () => {
     render(<BillingTermsSection trace={trace} variant="simulation" />);
     expect(screen.getByTestId("billing-profile-name")).toHaveTextContent("Entity B");

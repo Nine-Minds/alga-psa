@@ -434,14 +434,20 @@
       },
       "warnings": {
         "inactiveProfile": "{{name}} är inaktiv men fakturerar fortfarande detta avtal. Avgifter ligger kvar på den; de flyttas inte till standardprofilen.",
-        "mixedProfiles": "Detta avtal faktureras via {{count}} olika profiler, så ingen enskild profil täcker det. Varje profil använder sina egna betalningsvillkor.",
+        "mixedProfiles": "Det här avtalet faktureras via {{count}} olika profiler, så ingen enskild profil täcker det. Varje faktura använder betalningsvillkoren för den profil den utfärdas på.",
         "lineOverride": "Raden \"{{line}}\" faktureras via {{name}} i stället för avtalets profil.",
         "workItemOverride": "Tid på ett ärende eller projekt faktureras via det arbetsobjektets profil om det har en. Annars gäller kundens standardprofil.",
-        "workItemOverrideWithProfiles": "Tid på ett ärende eller projekt faktureras via det arbetsobjektets profil om det har en ({{names}}). Annars gäller kundens standardprofil."
+        "workItemOverrideWithProfiles": "Tid på ett ärende eller projekt faktureras via det arbetsobjektets profil om det har en ({{names}}). Annars gäller kundens standardprofil.",
+        "mixedProfilesSameInvoice": "Avgifterna i det här avtalet är hänförda till {{count}} olika profiler, men alla hamnar på {{invoice}}s faktura, så en enda uppsättning betalningsvillkor gäller.",
+        "bucketTimeNote": "Tid som täcks av ett förbetalt paket eller ett timblock följer inte arbetsobjektet."
       },
       "simulationNote": "Den simulerade prissättningen använder skattebefrielsen på kundnivå. En profils egen befrielse tillämpas inte i denna simulering.",
       "dueSentenceWorkItem": "En faktura daterad {{invoiceDate}} förfaller {{dueDate}} — {{terms}} {{source}}, om inte ärendet eller projektet faktureras via en annan profil",
-      "workItemProfileLine": "Om ärendet eller projektet faktureras via {{name}}:"
+      "workItemProfileLine": "Om ärendet eller projektet faktureras via {{name}}:",
+      "invoiceLanding": {
+        "notBilledSeparately": "Hänförd till {{attributed}}; faktureras på {{invoice}} ({{attributed}} faktureras inte separat) — {{terms}}, förfaller {{dueDate}}",
+        "separateInvoicingOff": "Hänförd till {{attributed}}; faktureras på {{invoice}} (separat fakturering är avstängd för den här hyresgästen) — {{terms}}, förfaller {{dueDate}}"
+      }
     }
   },
   "contractDialog": {

@@ -434,14 +434,20 @@
       },
       "warnings": {
         "inactiveProfile": "{{name}} está inativo, mas continua a faturar este contrato. Os encargos permanecem nele; não são movidos para o perfil predefinido.",
-        "mixedProfiles": "Este contrato fatura em {{count}} perfis diferentes, pelo que nenhum perfil o cobre por inteiro. Cada perfil usa as suas próprias condições de pagamento.",
+        "mixedProfiles": "Este contrato fatura por {{count}} perfis diferentes, portanto nenhum perfil único o cobre. Cada fatura usa as condições de pagamento do perfil em que é emitida.",
         "lineOverride": "A linha \"{{line}}\" fatura em {{name}} em vez do perfil do contrato.",
         "workItemOverride": "O tempo registrado em um ticket ou projeto é faturado pelo perfil desse item de trabalho, se ele tiver um. Sem perfil, vale o perfil padrão do cliente.",
-        "workItemOverrideWithProfiles": "O tempo registrado em um ticket ou projeto é faturado pelo perfil desse item de trabalho, se ele tiver um ({{names}}). Sem perfil, vale o perfil padrão do cliente."
+        "workItemOverrideWithProfiles": "O tempo registrado em um ticket ou projeto é faturado pelo perfil desse item de trabalho, se ele tiver um ({{names}}). Sem perfil, vale o perfil padrão do cliente.",
+        "mixedProfilesSameInvoice": "As cobranças deste contrato são atribuídas a {{count}} perfis diferentes, mas todas aparecem na fatura de {{invoice}}, portanto aplica-se um único conjunto de condições de pagamento.",
+        "bucketTimeNote": "O tempo coberto por um pacote pré-pago ou bloco de horas não acompanha o item de trabalho."
       },
       "simulationNote": "Os preços simulados usam a isenção de impostos ao nível do cliente. A isenção própria de um perfil não é aplicada nesta simulação.",
       "dueSentenceWorkItem": "Uma fatura de {{invoiceDate}} vence em {{dueDate}} — {{terms}} {{source}}, a menos que o ticket ou projeto seja faturado por outro perfil",
-      "workItemProfileLine": "Se o ticket ou projeto for faturado por {{name}}:"
+      "workItemProfileLine": "Se o ticket ou projeto for faturado por {{name}}:",
+      "invoiceLanding": {
+        "notBilledSeparately": "Atribuído a {{attributed}}; faturado em {{invoice}} ({{attributed}} não fatura separadamente) — {{terms}}, vencimento {{dueDate}}",
+        "separateInvoicingOff": "Atribuído a {{attributed}}; faturado em {{invoice}} (a faturação separada está desativada para este inquilino) — {{terms}}, vencimento {{dueDate}}"
+      }
     }
   },
   "contractDialog": {

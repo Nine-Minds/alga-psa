@@ -34,6 +34,7 @@ import {
   type ClientContractServiceConfigDetails,
 } from "@alga-psa/billing/services/clientContractServiceConfigurationService";
 import { loadContractBillingTrace } from "@alga-psa/shared/billingClients/contractBillingTrace";
+import { perProfileInvoicingEnabled } from "@alga-psa/billing/lib/billing/billingProfileInvoiceScope";
 import { assumptionKey } from "./syntheticActivity";
 
 const DEFAULT_HORIZON_PERIOD_COUNT = 6;
@@ -569,6 +570,7 @@ export async function snapshotContractToScenario(
       ? await loadContractBillingTrace(knex, tenant, {
           contractId: params.contractId,
           clientContractId: billingIdentitySource.clientContractId,
+          perProfileInvoicing: await perProfileInvoicingEnabled(tenant),
         })
       : null,
     invoice_schedule: invoiceSchedule,

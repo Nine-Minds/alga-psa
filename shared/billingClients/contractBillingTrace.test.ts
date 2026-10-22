@@ -46,6 +46,9 @@ const build = (overrides: Partial<BuildContractBillingTraceInput> = {}) =>
     currencyCode: 'USD',
     contractBillingFrequency: 'monthly',
     clientDefaultBillingProfileId: DEFAULT_ID,
+    // North bills separately and the tenant flag is on, unless a test says otherwise.
+    perProfileInvoicing: true,
+    separatelyBillingProfileIds: [NORTH_ID],
     assignmentBillingProfileId: null,
     lines: [{ contractLineId: 'line-1', contractLineName: 'Managed', billingProfileId: null, billingFrequency: 'monthly' }],
     profiles,
@@ -173,7 +176,88 @@ describe('buildContractBillingTrace', () => {
         { contractLineId: 'b', billingProfileId: DEFAULT_ID },
       ],
     });
-    expect(mixed.warnings).toContainEqual({ code: 'mixed_profiles', profileCount: 2 });
+    expect(mixed.warnings).toContainEqual({
+      code: 'mixed_profiles',
+      profileCount: 2,
+      invoiceProfileCount: 2,
+      invoiceProfileName: null,
+    });
+  });
+
+  describe('invoice profile (attribution is not invoicing)', () => {
+    const northNet15 = identity(NORTH_ID, { paymentTerms: 'net_15', overriddenFields: ['payment_terms'] });
+    const defaultNet30 = identity(DEFAULT_ID);
+    const assigned = { assignmentBillingProfileId: NORTH_ID };
+
+    it('flag on and the attributed profile bills separately: its own invoice, its own terms', () => {
+      const trace = build({ ...assigned, identities: { [NORTH_ID]: northNet15 } });
+      expect(trace.profiles[0]).toMatchObject({
+        billingProfileId: NORTH_ID,
+        invoiceProfile: { billingProfileId: NORTH_ID, name: 'North Plant' },
+        invoiceReason: 'own_invoice',
+      });
+      expect(trace.terms).toMatchObject({ value: 'net_15', days: 15 });
+      expect(trace.terms.dueDateExample.dueDate).toBe('2026-11-06');
+    });
+
+    it('flag on but the profile does not bill separately: invoiced on the default, at the default terms', () => {
+      const trace = build({ ...assigned, separatelyBillingProfileIds: [], identities: { [DEFAULT_ID]: defaultNet30, [NORTH_ID]: northNet15 } });
+      expect(trace.profiles[0]).toMatchObject({
+        billingProfileId: NORTH_ID,
+        name: 'North Plant',
+        invoiceProfile: { billingProfileId: DEFAULT_ID, name: 'Acme Corp', isDefault: true },
+        invoiceReason: 'not_billed_separately',
+      });
+      expect(trace.terms).toMatchObject({ value: 'net_30', days: 30 });
+      expect(trace.terms.dueDateExample.dueDate).toBe('2026-11-21');
+    });
+
+    it('flag off: bills_separately is inert, everything lands on the default', () => {
+      const trace = build({ ...assigned, perProfileInvoicing: false, identities: { [DEFAULT_ID]: defaultNet30, [NORTH_ID]: northNet15 } });
+      expect(trace.profiles[0]).toMatchObject({
+        invoiceProfile: { billingProfileId: DEFAULT_ID },
+        invoiceReason: 'separate_invoicing_off',
+      });
+      expect(trace.terms.days).toBe(30);
+    });
+
+    it('does not load or use the attributed profile\'s identity when it does not invoice', () => {
+      // North has no identity entry at all: only the default is read.
+      const trace = build({ ...assigned, perProfileInvoicing: false, identities: { [DEFAULT_ID]: defaultNet30 } });
+      expect(trace.terms.days).toBe(30);
+    });
+
+    it('mixed attribution that all lands on the default is one invoice: count of invoice profiles is 1', () => {
+      const trace = build({
+        assignmentBillingProfileId: NORTH_ID,
+        perProfileInvoicing: false,
+        lines: [
+          { contractLineId: 'a', billingProfileId: null },
+          { contractLineId: 'b', billingProfileId: DEFAULT_ID },
+        ],
+        identities: { [DEFAULT_ID]: defaultNet30 },
+      });
+      expect(trace.warnings).toContainEqual({
+        code: 'mixed_profiles',
+        profileCount: 2,
+        invoiceProfileCount: 1,
+        invoiceProfileName: 'Acme Corp',
+      });
+    });
+
+    it('work-item candidates split attribution from invoicing the same way', () => {
+      const lines = [{ contractLineId: 'time', billingProfileId: null, serviceCount: 1 }];
+      const off = build({ lines, perProfileInvoicing: false, workItemProfileIds: [NORTH_ID], identities: { [DEFAULT_ID]: defaultNet30 } });
+      expect(off.workItemProfiles![0]).toMatchObject({
+        billingProfileId: NORTH_ID,
+        invoiceProfile: { billingProfileId: DEFAULT_ID },
+        invoiceReason: 'separate_invoicing_off',
+      });
+      expect(off.workItemProfiles![0].terms.days).toBe(30);
+      const on = build({ lines, workItemProfileIds: [NORTH_ID], identities: { [DEFAULT_ID]: defaultNet30, [NORTH_ID]: northNet15 } });
+      expect(on.workItemProfiles![0]).toMatchObject({ invoiceProfile: { billingProfileId: NORTH_ID }, invoiceReason: 'own_invoice' });
+      expect(on.workItemProfiles![0].terms.days).toBe(15);
+    });
   });
 
   it('rejects a pointer to a profile the client does not own', () => {
@@ -196,6 +280,7 @@ describe('buildContractBillingTrace', () => {
         code: 'work_item_override_possible',
         contractLineIds: ['time'],
         candidateProfiles: [{ billingProfileId: NORTH_ID, name: 'North Plant' }],
+        bucketTimeExcluded: false,
       });
       expect(trace.workItemProfiles).toHaveLength(1);
       expect(trace.workItemProfiles![0]).toMatchObject({ billingProfileId: NORTH_ID, source: 'work_item', lineCount: 1 });
@@ -208,7 +293,7 @@ describe('buildContractBillingTrace', () => {
 
     it('unassigned hourly line, no work item carries a profile: still warns (one may be set later), with no candidates', () => {
       const trace = build({ lines: [hourly('time')], workItemProfileIds: [] });
-      expect(trace.warnings).toContainEqual({ code: 'work_item_override_possible', contractLineIds: ['time'], candidateProfiles: [] });
+      expect(trace.warnings).toContainEqual({ code: 'work_item_override_possible', contractLineIds: ['time'], candidateProfiles: [], bucketTimeExcluded: false });
       expect(trace.workItemProfiles).toBeUndefined();
       expect(trace.profiles[0]).toMatchObject({ billingProfileId: DEFAULT_ID, source: 'client_default' });
     });
@@ -250,6 +335,26 @@ describe('buildContractBillingTrace', () => {
         expect.objectContaining({ code: 'work_item_override_possible', contractLineIds: ['fixed-with-services'] }),
       );
       expect(trace.workItemProfiles?.map((p) => p.billingProfileId)).toEqual([NORTH_ID]);
+    });
+
+    it('bucket-covered services do not follow the work item (engine: bucket and hour-block charges use line assignments only)', () => {
+      const allBucket = build({
+        lines: [{ contractLineId: 'prepaid', billingProfileId: null, serviceCount: 2, bucketServiceCount: 2 }],
+        workItemProfileIds: [NORTH_ID],
+      });
+      expect(allBucket.warnings.map((w) => w.code)).not.toContain('work_item_override_possible');
+      expect(allBucket.workItemProfiles).toBeUndefined();
+    });
+
+    it('a line mixing bucket and non-bucket services stays reachable and says bucket time does not follow', () => {
+      const trace = build({
+        lines: [{ contractLineId: 'mixed', billingProfileId: null, serviceCount: 3, bucketServiceCount: 2 }],
+        workItemProfileIds: [NORTH_ID],
+        identities: { [DEFAULT_ID]: identity(DEFAULT_ID), [NORTH_ID]: northTerms },
+      });
+      expect(trace.warnings).toContainEqual(
+        expect.objectContaining({ code: 'work_item_override_possible', contractLineIds: ['mixed'], bucketTimeExcluded: true }),
+      );
     });
 
     it.each([undefined, 0])('a line with no services (%s) cannot price time: no warning', (serviceCount) => {

@@ -434,14 +434,20 @@
       },
       "warnings": {
         "inactiveProfile": "{{name}} is inactive but still bills this contract. Charges stay on it; they are not moved to the default profile.",
-        "mixedProfiles": "This contract bills {{count}} different profiles, so no single profile covers it. Each profile uses its own payment terms.",
+        "mixedProfiles": "This contract bills {{count}} different profiles, so no single profile covers it. Each invoice uses the payment terms of the profile it is issued on.",
         "lineOverride": "Line \"{{line}}\" bills {{name}} instead of the contract's profile.",
         "workItemOverride": "Time on a ticket or project is billed to that work item's profile when it has one. Without one, it goes to the client default.",
-        "workItemOverrideWithProfiles": "Time on a ticket or project is billed to that work item's profile when it has one ({{names}}). Without one, it goes to the client default."
+        "workItemOverrideWithProfiles": "Time on a ticket or project is billed to that work item's profile when it has one ({{names}}). Without one, it goes to the client default.",
+        "mixedProfilesSameInvoice": "This contract's charges are attributed to {{count}} different profiles, but they all land on {{invoice}}'s invoice, so one set of payment terms applies.",
+        "bucketTimeNote": "Time covered by a prepaid bucket or hour block does not follow the work item."
       },
       "simulationNote": "Simulated pricing uses the client-level tax exemption. A profile's own exemption is not applied in this simulation.",
       "dueSentenceWorkItem": "A {{invoiceDate}} invoice is due {{dueDate}} — {{terms}} {{source}}, unless the ticket or project is billed to another profile",
-      "workItemProfileLine": "If the ticket or project is billed to {{name}}:"
+      "workItemProfileLine": "If the ticket or project is billed to {{name}}:",
+      "invoiceLanding": {
+        "notBilledSeparately": "Attributed to {{attributed}}; invoiced on {{invoice}} ({{attributed}} does not bill separately) — {{terms}}, due {{dueDate}}",
+        "separateInvoicingOff": "Attributed to {{attributed}}; invoiced on {{invoice}} (separate invoicing is off for this tenant) — {{terms}}, due {{dueDate}}"
+      }
     }
   },
   "contractDialog": {

@@ -21,12 +21,23 @@ fallback. The profiles are already loaded at `:205`; `useClientBillingProfiles` 
 needed.
 
 **3. Nothing states precedence or effective date.**
-The real precedence is two different chains, and the contract shows neither:
-- *Which profile*: `resolveChargeProfile` — line → contract → work item → client default
-  (`packages/billing/src/lib/billing/billingProfileResolution.ts:64-104`).
-- *Which value within a profile*: `resolveEffectiveBillingIdentity` — per field profile, else
-  client, with `overriddenFields` recording what the profile actually won
-  (`shared/billingClients/billingProfileSettings.ts:117-175`).
+The real precedence is a chain of four steps, and the contract shows none of them. **Attribution is
+not invoicing**: the profile a charge is attributed to is not necessarily the profile whose invoice
+it lands on, so the trace must state the terms and due date of the *invoice profile*.
+1. *Attribution — which profile the charge is attributed to*: `resolveChargeProfile` — line →
+   contract → work item → client default
+   (`packages/billing/src/lib/billing/billingProfileResolution.ts:64-104`).
+2. *Invoice profile — which profile's invoice the charge lands on*: the landing rule in
+   `shared/billingClients/invoiceProfileScope.ts` (`chargeBelongsToScope`,
+   `resolveInvoiceProfileForAttribution`, `describeInvoiceProfileLanding`). With separate invoicing
+   off, or when the attributed profile does not bill separately (`bills_separately`), the charge
+   lands on the default profile's invoice; only an attributed profile that bills separately, with
+   the `billing-profiles-separate-invoicing` flag on, keeps its own invoice. The engine
+   (`resolveRecurringSelectionBillingProfileId`) and the trace call this same helper.
+3. *Terms — which value within the invoice profile*: `resolveEffectiveBillingIdentity` of the
+   **invoice** profile — per field profile, else client, with `overriddenFields` recording what the
+   profile actually won (`shared/billingClients/billingProfileSettings.ts:117-175`).
+4. *Due date*: `dueDateForPaymentTerms` on the invoice date and those terms.
 - Payment terms additionally fall back to Net 30 when neither level has a known key
   (`shared/billingClients/paymentPreferences.ts:50,86-87`).
 - Tax region is deliberately **not** profile-scoped: `service region → contract-line location →
@@ -65,7 +76,9 @@ reads (contract, `client_contracts`, `contract_lines`, `client_billing_profiles`
 rejects a profile whose `client_id` does not own the assignment (same guard as
 `shared/billingClients/clientContracts.ts:490-500`). Shape, in
 `packages/types/src/interfaces/contract.interfaces.ts`: `asOf`, `profiles[]` (id, name, source,
-lineCount, isActive), `terms { value, source, days, dueDateExample }`, `fields[]`
+lineCount, isActive, plus `invoiceProfile { billingProfileId, name, isActive, isDefault }` and
+`invoiceReason` — `same_profile | own_invoice | not_billed_separately | separate_invoicing_off`),
+`terms { value, source, days, dueDateExample }` (the invoice profile's), `fields[]`
 (`{ key, label, value, source }` for bill-to, payment method, tax exemption, tax region, delivery,
 template, PO, currency, cadence), `warnings[]` (`inactive_profile`, `mixed_profiles`,
 `line_override`, `work_item_override_possible`), and an optional `workItemProfiles[]` (see below).
@@ -95,6 +108,19 @@ another profile. Findings from the engine, which match the resolver doc comment:
   task's project or the single billable-linked project of the ticket. The loader takes the distinct
   non-null `billing_profile_id` of the client's tickets and of its projects. That is a superset of what
   any single charge sees, which is the right size for "profiles this could resolve to".
+
+**Flag input.** `perProfileInvoicingEnabled` pulls in the feature-flag client, which the shared module
+cannot import, so `loadContractBillingTrace` takes `perProfileInvoicing: boolean` from its caller
+(`getContractOverview` and `snapshotContractToScenario` evaluate it). The loader reads the
+separately-billing profiles with `listSeparatelyBillingProfiles`. Still live, no snapshot, no column,
+no migration.
+
+**Bucket time.** Bucket, hour-block and prepaid-issuance charges are attributed from line assignments
+only and never from a work item, and the time loader skips explicitly-assigned bucket-covered entries.
+A line whose services are all bucket-configured is therefore excluded from step-4 reachability
+(`resolveStepFourLines`). A mixed line stays reachable, and the warning carries `bucketTimeExcluded`
+because an unassigned entry on a bucket-covered service still follows its work item (disclosed, not
+modelled).
 
 The trace stays on `resolveChargeProfile`: every candidate is resolved by a call that includes
 `workItemBillingProfileId`, then its identity comes from `resolveEffectiveBillingIdentity` and its terms

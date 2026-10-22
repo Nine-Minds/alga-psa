@@ -79,7 +79,7 @@ export const BillingTermsSection: React.FC<BillingTermsSectionProps> = ({
   // The client default is the fallback, not the answer, while time can follow a work item's profile.
   const workItemCaveat = trace.warnings.some((warning) => warning.code === 'work_item_override_possible');
 
-  const dueSentence = (terms: ContractBillingTraceTerms, caveat = false) =>
+  const plainDueSentence = (terms: ContractBillingTraceTerms, caveat = false) =>
     caveat
       ? t('contractOverview.billing.dueSentenceWorkItem', {
           invoiceDate: terms.dueDateExample.invoiceDate,
@@ -96,6 +96,34 @@ export const BillingTermsSection: React.FC<BillingTermsSectionProps> = ({
           source: termsSourceLabel(terms.source),
           defaultValue: 'A {{invoiceDate}} invoice is due {{dueDate}} — {{terms}} {{source}}',
         });
+
+  // Terms and due date belong to the INVOICE profile. When the charges are
+  // attributed to a profile whose invoice is another one, say so rather than
+  // letting the attributed profile's name stand next to the invoice's terms.
+  const dueSentence = (profile: ContractBillingTraceProfile, caveat = false) => {
+    if (profile.invoiceReason === 'not_billed_separately' || profile.invoiceReason === 'separate_invoicing_off') {
+      const params = {
+        attributed: profile.name,
+        invoice: profile.invoiceProfile.name,
+        terms: termsLabel(profile.terms.value),
+        dueDate: profile.terms.dueDateExample.dueDate,
+      };
+      const landing =
+        profile.invoiceReason === 'not_billed_separately'
+          ? t('contractOverview.billing.invoiceLanding.notBilledSeparately', {
+              ...params,
+              defaultValue:
+                'Attributed to {{attributed}}; invoiced on {{invoice}} ({{attributed}} does not bill separately) — {{terms}}, due {{dueDate}}',
+            })
+          : t('contractOverview.billing.invoiceLanding.separateInvoicingOff', {
+              ...params,
+              defaultValue:
+                'Attributed to {{attributed}}; invoiced on {{invoice}} (separate invoicing is off for this tenant) — {{terms}}, due {{dueDate}}',
+            });
+      return `${landing}.`;
+    }
+    return plainDueSentence(profile.terms, caveat);
+  };
 
   const fieldValue = (field: ContractBillingTraceField): string => {
     const none = t('contractOverview.billing.fieldNone', { defaultValue: 'None' });
@@ -143,13 +171,21 @@ export const BillingTermsSection: React.FC<BillingTermsSectionProps> = ({
             '{{name}} is inactive but still bills this contract. Charges stay on it; they are not moved to the default profile.',
         });
       case 'mixed_profiles':
-        return t('contractOverview.billing.warnings.mixedProfiles', {
-          count: warning.profileCount,
-          defaultValue:
-            'This contract bills {{count}} different profiles, so no single profile covers it. Each profile uses its own payment terms.',
-        });
-      case 'work_item_override_possible':
-        return warning.candidateProfiles.length > 0
+        // "Each invoice uses its own terms" is only true when there is more than one invoice.
+        return warning.invoiceProfileCount > 1
+          ? t('contractOverview.billing.warnings.mixedProfiles', {
+              count: warning.profileCount,
+              defaultValue:
+                'This contract bills {{count}} different profiles, so no single profile covers it. Each invoice uses the payment terms of the profile it is issued on.',
+            })
+          : t('contractOverview.billing.warnings.mixedProfilesSameInvoice', {
+              count: warning.profileCount,
+              invoice: warning.invoiceProfileName ?? '',
+              defaultValue:
+                "This contract's charges are attributed to {{count}} different profiles, but they all land on {{invoice}}'s invoice, so one set of payment terms applies.",
+            });
+      case 'work_item_override_possible': {
+        const base = warning.candidateProfiles.length > 0
           ? t('contractOverview.billing.warnings.workItemOverrideWithProfiles', {
               names: warning.candidateProfiles.map((profile) => profile.name).join(', '),
               defaultValue:
@@ -159,6 +195,12 @@ export const BillingTermsSection: React.FC<BillingTermsSectionProps> = ({
               defaultValue:
                 "Time on a ticket or project is billed to that work item's profile when it has one. Without one, it goes to the client default.",
             });
+        return warning.bucketTimeExcluded
+          ? `${base} ${t('contractOverview.billing.warnings.bucketTimeNote', {
+              defaultValue: 'Time covered by a prepaid bucket or hour block does not follow the work item.',
+            })}`
+          : base;
+      }
       case 'line_override':
         return t('contractOverview.billing.warnings.lineOverride', {
           line: warning.contractLineName ?? warning.contractLineId,
@@ -239,12 +281,12 @@ export const BillingTermsSection: React.FC<BillingTermsSectionProps> = ({
                 <span className="text-xs text-muted-foreground">{lineCountLabel(profile.lineCount)}</span>
               )}
             </div>
-            {/* With several profiles each states its own terms: one headline
-                value would read as if it covered the whole contract. */}
+            {/* With several attributed profiles each states the terms of its own
+                invoice profile: one headline value would read as if it covered the whole contract. */}
             {isMixed && (
               <div className="pl-2 text-sm text-muted-foreground" data-testid={`billing-profile-terms-${profile.billingProfileId}`}>
                 {termsLabel(profile.terms.value)} · {termsSourceLabel(profile.terms.source)}
-                <div>{dueSentence(profile.terms, workItemCaveat && profile.isDefault)}</div>
+                <div>{dueSentence(profile, workItemCaveat && profile.isDefault)}</div>
               </div>
             )}
           </li>
@@ -259,7 +301,7 @@ export const BillingTermsSection: React.FC<BillingTermsSectionProps> = ({
                 name: profile.name,
                 defaultValue: 'If the ticket or project is billed to {{name}}:',
               })}{' '}
-              {dueSentence(profile.terms)}
+              {dueSentence(profile)}
             </li>
           ))}
         </ul>
@@ -279,7 +321,7 @@ export const BillingTermsSection: React.FC<BillingTermsSectionProps> = ({
             </span>
           </div>
           <p className="text-muted-foreground" data-testid="billing-due-sentence">
-            {dueSentence(trace.terms, workItemCaveat && trace.profiles[0]?.isDefault)}
+            {dueSentence(trace.profiles[0], workItemCaveat && trace.profiles[0]?.isDefault)}
           </p>
         </div>
       )}

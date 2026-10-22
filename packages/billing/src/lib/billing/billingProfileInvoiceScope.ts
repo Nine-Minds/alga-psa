@@ -4,6 +4,15 @@ import type { IBillingCharge } from '@alga-psa/types';
 import { featureFlags } from '@alga-psa/core/server';
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 import { listSeparatelyBillingProfiles } from '@alga-psa/shared/billingClients/billingProfileSettings';
+import {
+  buildInvoiceProfileScope,
+  chargeBelongsToScope,
+  type InvoiceProfileScope,
+} from '@alga-psa/shared/billingClients/invoiceProfileScope';
+
+// The pure scope rule lives in `shared/` so the read-side contract billing
+// trace calls the engine's own function (same pattern as billingProfileResolution).
+export * from '@alga-psa/shared/billingClients/invoiceProfileScope';
 
 /**
  * Which charges belong on the invoice a given billing cycle produces (F094).
@@ -28,14 +37,6 @@ import { listSeparatelyBillingProfiles } from '@alga-psa/shared/billingClients/b
  */
 
 export const PER_PROFILE_INVOICING_FLAG = 'billing-profiles-separate-invoicing';
-
-export interface InvoiceProfileScope {
-  /** True when this cycle should filter charges at all. */
-  isScoped: boolean;
-  billingProfileId: string;
-  isDefaultProfile: boolean;
-  separatelyBillingProfileIds: Set<string>;
-}
 
 /**
  * Per-profile invoice production is gated behind a per-tenant feature flag
@@ -68,46 +69,17 @@ export async function resolveInvoiceProfileScope(
   if (!ownedProfile) {
     throw new Error(`Billing profile ${billingProfileId} does not belong to client ${clientId} in this tenant.`);
   }
-  const isDefaultProfile = billingProfileId === defaultProfileId;
 
-  if (!(await perProfileInvoicingEnabled(tenant, options?.userId))) {
-    return {
-      isScoped: false,
-      billingProfileId,
-      isDefaultProfile,
-      separatelyBillingProfileIds: new Set(),
-    };
-  }
-
-  const separatelyBilling = await listSeparatelyBillingProfiles(knex, tenant, clientId);
-  return {
-    // Nothing bills separately → nothing to split, so do not filter. This is
-    // what keeps a single-profile client's invoice byte-identical.
-    isScoped: separatelyBilling.length > 0,
+  const perProfileInvoicing = await perProfileInvoicingEnabled(tenant, options?.userId);
+  const separatelyBilling = perProfileInvoicing
+    ? await listSeparatelyBillingProfiles(knex, tenant, clientId)
+    : [];
+  return buildInvoiceProfileScope({
     billingProfileId,
-    isDefaultProfile,
-    separatelyBillingProfileIds: new Set(
-      separatelyBilling.map((profile) => profile.billing_profile_id),
-    ),
-  };
-}
-
-export function chargeBelongsToScope(
-  charge: Pick<IBillingCharge, 'billing_profile_id'>,
-  scope: InvoiceProfileScope,
-): boolean {
-  if (!scope.isScoped) return true;
-
-  const chargeProfileId = charge.billing_profile_id ?? null;
-  if (chargeProfileId === scope.billingProfileId) return true;
-
-  // A charge with no attribution at all cannot be assigned to a separately
-  // billing profile, so it belongs on the client's main invoice rather than
-  // being dropped.
-  if (!chargeProfileId) return scope.isDefaultProfile;
-
-  // Non-separately-billing segments roll up onto the default profile's invoice.
-  return scope.isDefaultProfile && !scope.separatelyBillingProfileIds.has(chargeProfileId);
+    defaultProfileId,
+    perProfileInvoicing,
+    separatelyBillingProfileIds: separatelyBilling.map((profile) => profile.billing_profile_id),
+  });
 }
 
 export function scopeChargesToProfile<T extends Pick<IBillingCharge, 'billing_profile_id'>>(
