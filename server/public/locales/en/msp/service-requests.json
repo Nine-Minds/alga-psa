@@ -160,9 +160,11 @@
           "groupLabel": "{{group}} ({{client}})",
           "loadingGroups": "Loading groups...",
           "noGroups": "This client has no client-user groups.",
-          "groupsHelp": "Groups belong to a single client: a group only grants access to its own client's users. Selecting a client admits all of its users; selecting groups admits only their members.",
+          "groupsHelp": "Each client is either all of its users, or only the members of selected groups. A group only grants access to its own client's members. A client cannot be set to all users and also have its groups selected.",
           "emptyWarning": "Nothing is selected, so no client user can see this form. Select at least one client or group, or switch back to Everyone. Deleting the last selected group has the same effect.",
-          "save": "Save audience"
+          "save": "Save audience",
+          "allUsersOf": "All users of {{name}}",
+          "onlyGroups": "Only members of selected groups"
         },
         "advanced": {
           "title": "Advanced visibility rules",

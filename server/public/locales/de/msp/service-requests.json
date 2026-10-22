@@ -160,9 +160,11 @@
           "groupLabel": "{{group}} ({{client}})",
           "loadingGroups": "Gruppen werden geladen...",
           "noGroups": "Dieser Kunde hat keine Kundenbenutzergruppen.",
-          "groupsHelp": "Gruppen gehören zu genau einem Kunden: Eine Gruppe gewährt nur Benutzern des eigenen Kunden Zugriff. Die Auswahl eines Kunden lässt alle seine Benutzer zu; die Auswahl von Gruppen nur deren Mitglieder.",
+          "groupsHelp": "Jeder Kunde gilt entweder für alle seine Benutzer oder nur für die Mitglieder ausgewählter Gruppen. Eine Gruppe gewährt nur Mitgliedern des eigenen Kunden Zugriff. Ein Kunde kann nicht für alle Benutzer freigegeben sein und zugleich ausgewählte Gruppen haben.",
           "emptyWarning": "Es ist nichts ausgewählt, daher kann kein Kundenbenutzer dieses Formular sehen. Wählen Sie mindestens einen Kunden oder eine Gruppe aus oder wechseln Sie zurück zu „Alle“. Das Löschen der letzten ausgewählten Gruppe hat denselben Effekt.",
-          "save": "Zielgruppe speichern"
+          "save": "Zielgruppe speichern",
+          "allUsersOf": "Alle Benutzer von {{name}}",
+          "onlyGroups": "Nur Mitglieder ausgewählter Gruppen"
         },
         "advanced": {
           "title": "Erweiterte Sichtbarkeitsregeln",

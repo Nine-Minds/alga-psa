@@ -160,9 +160,11 @@
           "groupLabel": "{{group}} ({{client}})",
           "loadingGroups": "Ładowanie grup...",
           "noGroups": "Ten klient nie ma grup użytkowników.",
-          "groupsHelp": "Grupy należą do jednego klienta: grupa daje dostęp tylko użytkownikom własnego klienta. Wybranie klienta dopuszcza wszystkich jego użytkowników; wybranie grup dopuszcza tylko ich członków.",
+          "groupsHelp": "Każdy klient oznacza albo wszystkich jego użytkowników, albo tylko członków wybranych grup. Grupa daje dostęp tylko członkom własnego klienta. Klient nie może mieć ustawionych wszystkich użytkowników i jednocześnie wybranych grup.",
           "emptyWarning": "Nic nie wybrano, więc żaden użytkownik klienta nie zobaczy tego formularza. Wybierz co najmniej jednego klienta lub grupę albo wróć do opcji Wszyscy. Usunięcie ostatniej wybranej grupy ma ten sam skutek.",
-          "save": "Zapisz odbiorców"
+          "save": "Zapisz odbiorców",
+          "allUsersOf": "Wszyscy użytkownicy klienta {{name}}",
+          "onlyGroups": "Tylko członkowie wybranych grup"
         },
         "advanced": {
           "title": "Zaawansowane reguły widoczności",

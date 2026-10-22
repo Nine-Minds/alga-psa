@@ -160,9 +160,11 @@
           "groupLabel": "{{group}} ({{client}})",
           "loadingGroups": "Groepen laden...",
           "noGroups": "Deze klant heeft geen klantgebruikersgroepen.",
-          "groupsHelp": "Groepen horen bij één klant: een groep geeft alleen toegang aan gebruikers van de eigen klant. Een klant selecteren laat al zijn gebruikers toe; groepen selecteren alleen hun leden.",
+          "groupsHelp": "Elke klant geldt voor al zijn gebruikers of alleen voor de leden van geselecteerde groepen. Een groep geeft alleen toegang aan leden van de eigen klant. Een klant kan niet op alle gebruikers staan en tegelijk geselecteerde groepen hebben.",
           "emptyWarning": "Er is niets geselecteerd, dus geen enkele klantgebruiker kan dit formulier zien. Selecteer minstens één klant of groep, of schakel terug naar Iedereen. Het verwijderen van de laatste geselecteerde groep heeft hetzelfde effect.",
-          "save": "Doelgroep opslaan"
+          "save": "Doelgroep opslaan",
+          "allUsersOf": "Alle gebruikers van {{name}}",
+          "onlyGroups": "Alleen leden van geselecteerde groepen"
         },
         "advanced": {
           "title": "Geavanceerde zichtbaarheidsregels",

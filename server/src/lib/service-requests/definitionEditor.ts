@@ -39,7 +39,10 @@ export interface ServiceRequestDefinitionEditorData {
     formBehaviorConfig: Record<string, unknown>;
     visibilityProvider: string;
     visibilityConfig: Record<string, unknown>;
-    audience: ServiceRequestDefinitionAudience;
+    audience: ServiceRequestDefinitionAudience & {
+      /** group_id -> owning client_id, so the editor can hang each saved group on its client. */
+      groupClientIds: Record<string, string>;
+    };
     availableExecutionProviders: Array<{
       key: string;
       displayName: string;
@@ -148,6 +151,16 @@ export async function getServiceRequestDefinitionEditorData(
     loadDefinitionAudience(knex, tenant, definitionId),
   ]);
 
+  const groupClientIds: Record<string, string> = {};
+  if (audience.groupIds.length > 0) {
+    const groupRows = (await db.table('client_portal_visibility_groups')
+      .whereIn('group_id', audience.groupIds)
+      .select('group_id', 'client_id')) as Array<{ group_id: string; client_id: string }>;
+    for (const row of groupRows) {
+      groupClientIds[row.group_id] = row.client_id;
+    }
+  }
+
   const workflowProviderKeys = new Set(['workflow-only', 'ticket-plus-workflow']);
   const availableExecutionProviderKeys = new Set(
     availableExecutionProviders.map((provider) => provider.key)
@@ -187,7 +200,7 @@ export async function getServiceRequestDefinitionEditorData(
       formBehaviorConfig: definition.form_behavior_config,
       visibilityProvider: definition.visibility_provider,
       visibilityConfig: definition.visibility_config,
-      audience,
+      audience: { ...audience, groupClientIds },
       availableExecutionProviders,
       availableFormBehaviorProviders,
       availableVisibilityProviders,

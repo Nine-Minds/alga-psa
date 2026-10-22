@@ -682,14 +682,19 @@ export async function saveServiceRequestDefinitionAudience({
       const groups = (await db.table('client_portal_visibility_groups')
         .whereIn('group_id', groupIds)
         .select('group_id', 'client_id')) as Array<{ group_id: string; client_id: string }>;
-      const selectedClients = new Set(clientIds);
-      if (
-        groups.length !== groupIds.length ||
-        groups.some((group) => !selectedClients.has(group.client_id))
-      ) {
+      if (groups.length !== groupIds.length) {
         throw new ServiceRequestDefinitionBusinessError(
           'INVALID_AUDIENCE',
-          'Each selected group must exist and belong to a selected client'
+          'One or more selected client groups do not exist'
+        );
+      }
+      // A client row already admits every user of that client, so also selecting
+      // one of its groups is redundant and ambiguous.
+      const selectedClients = new Set(clientIds);
+      if (groups.some((group) => selectedClients.has(group.client_id))) {
+        throw new ServiceRequestDefinitionBusinessError(
+          'INVALID_AUDIENCE',
+          'A client cannot be selected for all of its users and also have one of its groups selected; choose either all users or specific groups'
         );
       }
     }

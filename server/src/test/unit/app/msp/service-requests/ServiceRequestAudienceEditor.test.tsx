@@ -88,7 +88,7 @@ describe('ServiceRequestAudienceEditor', () => {
     );
   });
 
-  it('adds clients, toggles groups, removes a client and sends the scoped payload', async () => {
+  it('adds clients as all-users, switches one to only-groups and sends no client id for it', async () => {
     const onChange = vi.fn();
     render(<ServiceRequestAudienceEditor definitionId="def-1" initialAudience={everyone} onChange={onChange} />);
 
@@ -98,20 +98,34 @@ describe('ServiceRequestAudienceEditor', () => {
     fireEvent.click(screen.getByText('pick-a'));
     fireEvent.click(screen.getByText('pick-b'));
 
-    const finance = await screen.findByLabelText('Finance', { exact: false });
-    fireEvent.click(finance);
-    expect((await screen.findAllByText('Acme')).length).toBeGreaterThan(0);
-
+    // New clients default to all users.
     fireEvent.click(screen.getByText(en.editor.execution.visibility.audience.save));
     await waitFor(() =>
       expect(updateMock).toHaveBeenLastCalledWith('def-1', {
         mode: 'scoped',
         clientIds: ['client-a', 'client-b'],
-        groupIds: ['group-a1'],
+        groupIds: [],
       })
     );
 
-    // Removing a client drops its groups too.
+    // Client A has groups: switch it to only-groups and tick Finance.
+    const onlyGroups = await screen.findByLabelText(en.editor.execution.visibility.audience.onlyGroups);
+    fireEvent.click(onlyGroups);
+    fireEvent.click(await screen.findByLabelText('Finance', { exact: false }));
+    fireEvent.click(screen.getByText(en.editor.execution.visibility.audience.save));
+    await waitFor(() =>
+      expect(updateMock).toHaveBeenLastCalledWith('def-1', {
+        mode: 'scoped',
+        clientIds: ['client-b'],
+        groupIds: ['group-a1'],
+      })
+    );
+    expect(onChange).toHaveBeenLastCalledWith({ mode: 'scoped', clientIds: ['client-b'], groupIds: ['group-a1'] });
+
+    // Client B has no groups: only all-users is offered.
+    expect(screen.getAllByLabelText(en.editor.execution.visibility.audience.onlyGroups)).toHaveLength(1);
+
+    // Removing a client removes its groups too.
     fireEvent.click(document.getElementById('service-request-audience-remove-client-client-a')!);
     fireEvent.click(screen.getByText(en.editor.execution.visibility.audience.save));
     await waitFor(() =>
@@ -121,7 +135,45 @@ describe('ServiceRequestAudienceEditor', () => {
         groupIds: [],
       })
     );
-    expect(onChange).toHaveBeenLastCalledWith({ mode: 'scoped', clientIds: ['client-b'], groupIds: [] });
+  });
+
+  it('reconstructs a group-only client row from saved groups and keeps it out of clientIds', async () => {
+    render(
+      <ServiceRequestAudienceEditor
+        definitionId="def-1"
+        initialAudience={{
+          mode: 'scoped',
+          clientIds: [],
+          groupIds: ['group-a2'],
+          groupClientIds: { 'group-a2': 'client-a' },
+        }}
+      />
+    );
+    expect(await screen.findByLabelText('Ops', { exact: false })).toBeChecked();
+    fireEvent.click(screen.getByText(en.editor.execution.visibility.audience.save));
+    await waitFor(() =>
+      expect(updateMock).toHaveBeenCalledWith('def-1', { mode: 'scoped', clientIds: [], groupIds: ['group-a2'] })
+    );
+  });
+
+  it('switching a group-only client back to all users drops its groups', async () => {
+    render(
+      <ServiceRequestAudienceEditor
+        definitionId="def-1"
+        initialAudience={{
+          mode: 'scoped',
+          clientIds: [],
+          groupIds: ['group-a2'],
+          groupClientIds: { 'group-a2': 'client-a' },
+        }}
+      />
+    );
+    await screen.findByLabelText('Ops', { exact: false });
+    fireEvent.click(screen.getByLabelText('All users of Acme'));
+    fireEvent.click(screen.getByText(en.editor.execution.visibility.audience.save));
+    await waitFor(() =>
+      expect(updateMock).toHaveBeenCalledWith('def-1', { mode: 'scoped', clientIds: ['client-a'], groupIds: [] })
+    );
   });
 
   it('does not add the same client twice', async () => {

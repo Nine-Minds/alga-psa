@@ -52,6 +52,7 @@ import { AnswerMappingSection } from './AnswerMappingSection';
 import {
   ServiceRequestAudienceEditor,
   type ServiceRequestAudienceValue,
+  type ServiceRequestAudienceInitialValue,
 } from './ServiceRequestAudienceEditor';
 import { SubmissionMappingPanel } from './SubmissionMappingPanel';
 import { SERVICE_REQUEST_ICON_OPTIONS } from '../../../lib/service-requests/iconCatalog';
@@ -99,7 +100,7 @@ interface EditorData {
     formBehaviorConfig: Record<string, unknown>;
     visibilityProvider: string;
     visibilityConfig: Record<string, unknown>;
-    audience: ServiceRequestAudienceValue;
+    audience: ServiceRequestAudienceInitialValue;
     availableExecutionProviders: Array<{
       key: string;
       displayName: string;
@@ -988,7 +989,11 @@ export default function ServiceRequestDefinitionEditorPage() {
     setVisibilityConfigText(
       JSON.stringify(data.execution.visibilityConfig ?? {}, null, 2)
     );
-    setAudienceDraft(data.execution.audience);
+    setAudienceDraft({
+      mode: data.execution.audience.mode,
+      clientIds: data.execution.audience.clientIds,
+      groupIds: data.execution.audience.groupIds,
+    });
   }, [data]);
 
   const handleTicketRoutingBoardChange = async (nextBoardId: string) => {

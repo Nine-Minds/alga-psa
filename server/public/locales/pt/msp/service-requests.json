@@ -160,9 +160,11 @@
           "groupLabel": "{{group}} ({{client}})",
           "loadingGroups": "A carregar grupos...",
           "noGroups": "Este cliente não tem grupos de utilizadores.",
-          "groupsHelp": "Os grupos pertencem a um único cliente: um grupo só concede acesso aos utilizadores do seu próprio cliente. Selecionar um cliente admite todos os seus utilizadores; selecionar grupos admite apenas os seus membros.",
+          "groupsHelp": "Cada cliente corresponde a todos os seus utilizadores ou apenas aos membros dos grupos selecionados. Um grupo só concede acesso aos membros do seu próprio cliente. Um cliente não pode estar definido para todos os utilizadores e ter também grupos selecionados.",
           "emptyWarning": "Nada está selecionado, por isso nenhum utilizador de cliente pode ver este formulário. Selecione pelo menos um cliente ou grupo, ou volte a Todos. Eliminar o último grupo selecionado tem o mesmo efeito.",
-          "save": "Guardar público-alvo"
+          "save": "Guardar público-alvo",
+          "allUsersOf": "Todos os utilizadores de {{name}}",
+          "onlyGroups": "Apenas membros dos grupos selecionados"
         },
         "advanced": {
           "title": "Regras de visibilidade avançadas",

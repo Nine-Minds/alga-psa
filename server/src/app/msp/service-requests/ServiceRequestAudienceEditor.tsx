@@ -20,6 +20,55 @@ export interface ServiceRequestAudienceValue {
   groupIds: string[];
 }
 
+/** Persisted audience plus the owning client of each saved group (from editor data). */
+export interface ServiceRequestAudienceInitialValue extends ServiceRequestAudienceValue {
+  groupClientIds?: Record<string, string>;
+}
+
+type ClientAccess = 'all' | 'groups';
+
+interface ClientRow {
+  clientId: string;
+  access: ClientAccess;
+  /** Checked groups; only meaningful (and only persisted) when access is 'groups'. */
+  groupIds: string[];
+}
+
+/** A client row means "all users"; a group-only client is a UI row built from its saved groups. */
+function rowsFromAudience(audience: ServiceRequestAudienceInitialValue): ClientRow[] {
+  const rows: ClientRow[] = audience.clientIds.map((clientId) => ({
+    clientId,
+    access: 'all' as const,
+    groupIds: [],
+  }));
+  const groupRows = new Map<string, ClientRow>();
+  for (const groupId of audience.groupIds) {
+    const clientId = audience.groupClientIds?.[groupId];
+    if (!clientId || audience.clientIds.includes(clientId)) {
+      continue;
+    }
+    let row = groupRows.get(clientId);
+    if (!row) {
+      row = { clientId, access: 'groups', groupIds: [] };
+      groupRows.set(clientId, row);
+      rows.push(row);
+    }
+    row.groupIds.push(groupId);
+  }
+  return rows;
+}
+
+function audienceFromRows(mode: 'all' | 'scoped', rows: ClientRow[]): ServiceRequestAudienceValue {
+  if (mode === 'all') {
+    return { mode, clientIds: [], groupIds: [] };
+  }
+  return {
+    mode,
+    clientIds: rows.filter((row) => row.access === 'all').map((row) => row.clientId),
+    groupIds: [...new Set(rows.filter((row) => row.access === 'groups').flatMap((row) => row.groupIds))],
+  };
+}
+
 interface ClientInfo {
   name: string;
   logoUrl: string | null;
@@ -33,7 +82,7 @@ interface GroupInfo {
 interface ServiceRequestAudienceEditorProps {
   definitionId: string;
   /** Persisted audience; changing it resets the editor to that state. */
-  initialAudience: ServiceRequestAudienceValue;
+  initialAudience: ServiceRequestAudienceInitialValue;
   /** Called on every edit so a parent ("Save all") can persist the same value. */
   onChange?: (value: ServiceRequestAudienceValue) => void;
   /** Called after the editor's own Save succeeded. */
@@ -49,7 +98,8 @@ export function ServiceRequestAudienceEditor({
   disabled = false,
 }: ServiceRequestAudienceEditorProps) {
   const { t } = useTranslation('msp/service-requests');
-  const [value, setValue] = useState<ServiceRequestAudienceValue>(initialAudience);
+  const [mode, setMode] = useState<'all' | 'scoped'>(initialAudience.mode);
+  const [rows, setRows] = useState<ClientRow[]>(() => rowsFromAudience(initialAudience));
   const [clientInfo, setClientInfo] = useState<Record<string, ClientInfo>>({});
   const [groupsByClient, setGroupsByClient] = useState<Record<string, GroupInfo[]>>({});
   const [saving, setSaving] = useState(false);
@@ -65,20 +115,26 @@ export function ServiceRequestAudienceEditor({
   }, []);
 
   useEffect(() => {
-    setValue(initialAudience);
+    setMode(initialAudience.mode);
+    setRows(rowsFromAudience(initialAudience));
   }, [initialAudience]);
 
+  const value = audienceFromRows(mode, rows);
+
   const update = useCallback(
-    (next: ServiceRequestAudienceValue) => {
-      setValue(next);
-      onChange?.(next);
+    (nextMode: 'all' | 'scoped', nextRows: ClientRow[]) => {
+      setMode(nextMode);
+      setRows(nextRows);
+      onChange?.(audienceFromRows(nextMode, nextRows));
     },
     [onChange]
   );
 
+  const rowClientKey = rows.map((row) => row.clientId).join('|');
+
   // Hydrate names/logos for persisted client ids.
   useEffect(() => {
-    const missing = value.clientIds.filter((id) => !requestedClients.current.has(id));
+    const missing = rows.map((row) => row.clientId).filter((id) => !requestedClients.current.has(id));
     if (missing.length === 0) {
       return;
     }
@@ -98,11 +154,12 @@ export function ServiceRequestAudienceEditor({
         console.error('Failed to load audience clients', error);
       }
     })();
-  }, [value.clientIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rowClientKey]);
 
   // Load each selected client's visibility groups once.
   useEffect(() => {
-    const missing = value.clientIds.filter((id) => !requestedGroups.current.has(id));
+    const missing = rows.map((row) => row.clientId).filter((id) => !requestedGroups.current.has(id));
     missing.forEach((clientId) => {
       requestedGroups.current.add(clientId);
       void (async () => {
@@ -118,41 +175,47 @@ export function ServiceRequestAudienceEditor({
         }
       })();
     });
-  }, [value.clientIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rowClientKey]);
 
   const addClient = (clientId: string | null) => {
-    if (!clientId || value.clientIds.includes(clientId)) {
+    if (!clientId || rows.some((row) => row.clientId === clientId)) {
       return;
     }
-    update({ ...value, clientIds: [...value.clientIds, clientId] });
+    update(mode, [...rows, { clientId, access: 'all', groupIds: [] }]);
   };
 
   const removeClient = (clientId: string) => {
-    const clientGroupIds = new Set((groupsByClient[clientId] ?? []).map((group) => group.groupId));
-    update({
-      ...value,
-      clientIds: value.clientIds.filter((id) => id !== clientId),
-      groupIds: value.groupIds.filter((id) => !clientGroupIds.has(id)),
-    });
+    update(mode, rows.filter((row) => row.clientId !== clientId));
   };
 
-  const toggleGroup = (groupId: string, checked: boolean) => {
-    update({
-      ...value,
-      groupIds: checked
-        ? [...new Set([...value.groupIds, groupId])]
-        : value.groupIds.filter((id) => id !== groupId),
-    });
+  const setAccess = (clientId: string, access: ClientAccess) => {
+    update(
+      mode,
+      rows.map((row) => (row.clientId === clientId ? { ...row, access, groupIds: [] } : row))
+    );
+  };
+
+  const toggleGroup = (clientId: string, groupId: string, checked: boolean) => {
+    update(
+      mode,
+      rows.map((row) =>
+        row.clientId === clientId
+          ? {
+              ...row,
+              groupIds: checked
+                ? [...new Set([...row.groupIds, groupId])]
+                : row.groupIds.filter((id) => id !== groupId),
+            }
+          : row
+      )
+    );
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const result = await updateServiceRequestAudienceAction(definitionId, {
-        mode: value.mode,
-        clientIds: value.mode === 'scoped' ? value.clientIds : [],
-        groupIds: value.mode === 'scoped' ? value.groupIds : [],
-      });
+      const result = await updateServiceRequestAudienceAction(definitionId, value);
       if (result && typeof result === 'object' && 'success' in result && result.success === false) {
         toast.error(result.message || t('messages.error.audienceSaveFailed'));
         return;
@@ -167,7 +230,7 @@ export function ServiceRequestAudienceEditor({
     }
   };
 
-  const isScoped = value.mode === 'scoped';
+  const isScoped = mode === 'scoped';
   const hasSelection = value.clientIds.length > 0 || value.groupIds.length > 0;
 
   return (
@@ -176,9 +239,9 @@ export function ServiceRequestAudienceEditor({
         id="service-request-audience-mode"
         name="service-request-audience-mode"
         label={t('editor.execution.visibility.audience.title')}
-        value={value.mode}
+        value={mode}
         disabled={disabled}
-        onChange={(mode) => update({ ...value, mode: mode === 'scoped' ? 'scoped' : 'all' })}
+        onChange={(next) => update(next === 'scoped' ? 'scoped' : 'all', rows)}
         options={[
           {
             value: 'all',
@@ -202,7 +265,7 @@ export function ServiceRequestAudienceEditor({
             <ClientPicker
               id="service-request-audience-client-picker"
               searchClients={searchClientsForPicker}
-              excludeIds={value.clientIds}
+              excludeIds={rows.map((row) => row.clientId)}
               selectedClientId={null}
               placeholder={t('editor.execution.visibility.audience.clientPlaceholder')}
               disabled={disabled}
@@ -210,13 +273,14 @@ export function ServiceRequestAudienceEditor({
             />
           </div>
 
-          {value.clientIds.length === 0 ? (
+          {rows.length === 0 ? (
             <div className="text-sm text-[rgb(var(--color-text-600))]">
               {t('editor.execution.visibility.audience.noClients')}
             </div>
           ) : (
             <ul className="space-y-3" aria-label={t('editor.execution.visibility.audience.selectedClients')}>
-              {value.clientIds.map((clientId) => {
+              {rows.map((row) => {
+                const clientId = row.clientId;
                 const info = clientInfo[clientId];
                 const clientName = info?.name ?? clientId;
                 const groups = groupsByClient[clientId];
@@ -237,28 +301,56 @@ export function ServiceRequestAudienceEditor({
                         </button>
                       </span>
                     </div>
-                    <div className="pl-2">
-                      <div className="text-xs text-[rgb(var(--color-text-600))] mb-1">
-                        {t('editor.execution.visibility.audience.groupsOf', { name: clientName })}
-                      </div>
+                    <div className="pl-2 space-y-2">
                       {groups === undefined ? (
                         <div className="text-xs">{t('editor.execution.visibility.audience.loadingGroups')}</div>
                       ) : groups.length === 0 ? (
-                        <div className="text-xs">{t('editor.execution.visibility.audience.noGroups')}</div>
+                        <>
+                          <div className="text-xs">{t('editor.execution.visibility.audience.allUsersOf', { name: clientName })}</div>
+                          <div className="text-xs text-[rgb(var(--color-text-600))]">
+                            {t('editor.execution.visibility.audience.noGroups')}
+                          </div>
+                        </>
                       ) : (
-                        groups.map((group) => (
-                          <Checkbox
-                            key={group.groupId}
-                            id={`service-request-audience-group-${group.groupId}`}
-                            label={t('editor.execution.visibility.audience.groupLabel', {
-                              group: group.name,
-                              client: clientName,
-                            })}
-                            checked={value.groupIds.includes(group.groupId)}
+                        <>
+                          <RadioGroup
+                            id={`service-request-audience-access-${clientId}`}
+                            name={`service-request-audience-access-${clientId}`}
+                            value={row.access}
                             disabled={disabled}
-                            onChange={(event) => toggleGroup(group.groupId, event.target.checked)}
+                            onChange={(next) => setAccess(clientId, next === 'groups' ? 'groups' : 'all')}
+                            options={[
+                              {
+                                value: 'all',
+                                label: t('editor.execution.visibility.audience.allUsersOf', { name: clientName }),
+                              },
+                              {
+                                value: 'groups',
+                                label: t('editor.execution.visibility.audience.onlyGroups'),
+                              },
+                            ]}
                           />
-                        ))
+                          {row.access === 'groups' && (
+                            <div>
+                              <div className="text-xs text-[rgb(var(--color-text-600))] mb-1">
+                                {t('editor.execution.visibility.audience.groupsOf', { name: clientName })}
+                              </div>
+                              {groups.map((group) => (
+                                <Checkbox
+                                  key={group.groupId}
+                                  id={`service-request-audience-group-${group.groupId}`}
+                                  label={t('editor.execution.visibility.audience.groupLabel', {
+                                    group: group.name,
+                                    client: clientName,
+                                  })}
+                                  checked={row.groupIds.includes(group.groupId)}
+                                  disabled={disabled}
+                                  onChange={(event) => toggleGroup(clientId, group.groupId, event.target.checked)}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </li>

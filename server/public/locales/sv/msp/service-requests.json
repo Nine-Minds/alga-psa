@@ -160,9 +160,11 @@
           "groupLabel": "{{group}} ({{client}})",
           "loadingGroups": "Laddar grupper...",
           "noGroups": "Den här kunden har inga kundanvändargrupper.",
-          "groupsHelp": "Grupper tillhör en enda kund: en grupp ger bara åtkomst till användare hos sin egen kund. Att välja en kund släpper in alla dess användare; att välja grupper släpper bara in deras medlemmar.",
+          "groupsHelp": "Varje kund gäller antingen alla sina användare eller bara medlemmarna i valda grupper. En grupp ger bara åtkomst till medlemmar hos sin egen kund. En kund kan inte vara inställd på alla användare och samtidigt ha valda grupper.",
           "emptyWarning": "Inget är valt, så ingen kundanvändare kan se det här formuläret. Välj minst en kund eller grupp, eller växla tillbaka till Alla. Att ta bort den sista valda gruppen har samma effekt.",
-          "save": "Spara målgrupp"
+          "save": "Spara målgrupp",
+          "allUsersOf": "Alla användare hos {{name}}",
+          "onlyGroups": "Endast medlemmar i valda grupper"
         },
         "advanced": {
           "title": "Avancerade synlighetsregler",

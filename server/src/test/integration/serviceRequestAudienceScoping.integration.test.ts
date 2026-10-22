@@ -265,9 +265,9 @@ describe('service request audience scoping', () => {
   it('group scope admits the member contact and rejects no-group and other-group contacts', async () => {
     const f = await createFixture();
     const id = await createPublishedDefinition(f.tenant);
-    await scope(f, id, 'scoped', [f.clientA], [f.groupA1]);
-    // Client A is selected only to host the group; remove client-level access to test groups alone.
-    await t(f.tenant, 'service_request_audience_clients').where({ definition_id: id }).del();
+    // Group-only audience, saved through the action: no client row exists.
+    await scope(f, id, 'scoped', [], [f.groupA1]);
+    expect((await loadDefinitionAudience(db, f.tenant, id)).clientIds).toEqual([]);
 
     expect(await catalogIds(f, 'A1')).toContain(id);
     expect(await detail(f, 'A1', id)).not.toBeNull();
@@ -307,19 +307,24 @@ describe('service request audience scoping', () => {
 
     expect(await catalogIds(f, 'A0')).not.toContain(id);
     expect(await detail(f, 'A0', id)).toBeNull();
-    // The legitimate member of B1 is admitted through its own client.
+    // The legitimate member of B1 is admitted through the group itself.
     expect(await catalogIds(f, 'B1')).toContain(id);
   });
 
-  it('the save action rejects groups that do not belong to a selected client and foreign clients', async () => {
+  it('the save action rejects a client together with its own group, and foreign-tenant ids', async () => {
     const f = await createFixture();
     const other = await createFixture();
     const id = await createPublishedDefinition(f.tenant);
 
-    await expect(scope(f, id, 'scoped', [f.clientA], [f.groupB1])).rejects.toThrow(/selected client/);
+    await expect(scope(f, id, 'scoped', [f.clientA], [f.groupA1])).rejects.toThrow(/either all users or specific groups/);
     await expect(scope(f, id, 'scoped', [other.clientA])).rejects.toThrow(/clients do not exist/);
-    await expect(scope(f, id, 'scoped', [f.clientA], [other.groupA1])).rejects.toThrow();
+    await expect(scope(f, id, 'scoped', [], [other.groupA1])).rejects.toThrow(/groups do not exist/);
     expect(await loadDefinitionAudience(db, f.tenant, id)).toEqual({ mode: 'all', clientIds: [], groupIds: [] });
+
+    // A client with all users plus a group of a *different* client is fine.
+    await scope(f, id, 'scoped', [f.clientA], [f.groupB1]);
+    expect(await catalogIds(f, 'A0')).toContain(id);
+    expect(await catalogIds(f, 'B1')).toContain(id);
   });
 
   it('scoped with zero rows is invisible to everyone', async () => {
@@ -335,8 +340,7 @@ describe('service request audience scoping', () => {
   it('deleting the last selected group fails closed instead of reopening the form', async () => {
     const f = await createFixture();
     const id = await createPublishedDefinition(f.tenant);
-    await scope(f, id, 'scoped', [f.clientA], [f.groupA1]);
-    await t(f.tenant, 'service_request_audience_clients').where({ definition_id: id }).del();
+    await scope(f, id, 'scoped', [], [f.groupA1]);
     await t(f.tenant, 'contacts').where({ portal_visibility_group_id: f.groupA1 }).update({ portal_visibility_group_id: null });
     await t(f.tenant, 'client_portal_visibility_groups').where({ group_id: f.groupA1 }).del();
     const audience = await loadDefinitionAudience(db, f.tenant, id);
@@ -387,23 +391,28 @@ describe('service request audience scoping', () => {
   it('duplicating a form copies the audience mode and scope rows', async () => {
     const f = await createFixture();
     const id = await createPublishedDefinition(f.tenant);
-    await scope(f, id, 'scoped', [f.clientA], [f.groupA1]);
+    await scope(f, id, 'scoped', [f.clientB], [f.groupA1]);
 
     const copy = await duplicateServiceRequestDefinition({ knex: db, tenant: f.tenant, sourceDefinitionId: id });
     const audience = await loadDefinitionAudience(db, f.tenant, copy.definition_id);
     expect(audience.mode).toBe('scoped');
-    expect(audience.clientIds).toEqual([f.clientA]);
+    expect(audience.clientIds).toEqual([f.clientB]);
     expect(audience.groupIds).toEqual([f.groupA1]);
     // The source is untouched.
-    expect((await loadDefinitionAudience(db, f.tenant, id)).clientIds).toEqual([f.clientA]);
+    expect((await loadDefinitionAudience(db, f.tenant, id)).clientIds).toEqual([f.clientB]);
   });
 
   it('exposes execution.audience in the editor data', async () => {
     const f = await createFixture();
     const id = await createPublishedDefinition(f.tenant);
-    await scope(f, id, 'scoped', [f.clientA], [f.groupA2]);
+    await scope(f, id, 'scoped', [f.clientB], [f.groupA2]);
     const data = await getServiceRequestDefinitionEditorData(db, f.tenant, id);
-    expect(data?.execution.audience).toEqual({ mode: 'scoped', clientIds: [f.clientA], groupIds: [f.groupA2] });
+    expect(data?.execution.audience).toEqual({
+      mode: 'scoped',
+      clientIds: [f.clientB],
+      groupIds: [f.groupA2],
+      groupClientIds: { [f.groupA2]: f.clientA },
+    });
   });
 
   it('tenant isolation: another tenant cannot see or be granted a scoped form', async () => {
