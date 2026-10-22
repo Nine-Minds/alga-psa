@@ -1456,7 +1456,13 @@
         "noQuotesFound": "No quotes found.",
         "selectQuote": "Select quote",
         "loadingQuoteDetails": "Loading quote details...",
-        "loadingDocumentDetails": "Loading document details..."
+        "loadingDocumentDetails": "Loading document details...",
+        "zoom": {
+          "fit": "Fit",
+          "actual": "100%",
+          "label": "Preview zoom",
+          "fitWithScale": "Fit ({{percent}}%)"
+        }
       },
       "tabs": {
         "design": "Design",

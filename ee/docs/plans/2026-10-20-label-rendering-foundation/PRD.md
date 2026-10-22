@@ -67,6 +67,14 @@ Print buttons in UI (C2), scanning (C3), custody (C4), RMA (C5), project staging
 - **Designer barcode hint:** the work-tag binding root is `label.*`, so the Value placeholder and hint show `{{label.recordUrl}}`
   (the token the designer itself displays for an imported record-URL binding, and which binds back when typed). Other document
   types get no fake example.
+- **Label preview is drawn on the label (human review):** the work-tag designer Preview tab draws the label on a sheet the
+  size of its printed cell (e.g. 4 x 2 in), clipped like the cell, with a dashed printable-area guide at the template margin.
+  It opens zoomed to fit the pane (up to 400%) with a 100% toggle. Framing is screen-only CSS (`@media screen`) added only by
+  the preview action, so no PDF path changes. The document type's `printGeometry` in the registry (`label-cell` vs
+  `document`) chooses this. Sales order, packing slip and pick list previews stay unframed: their PDFs apply the margin twice
+  (Puppeteer margin plus the renderer's root padding), and designer-saved templates fit only because Chromium's print path
+  shrinks the full-width root. A sheet would clip what the PDF shrinks. That path is marked `LEVERAGE: friction
+  document-pdf-margin`.
 
 ## Security invariants
 - Route authenticates (`withAuth`), requires an internal (MSP) user, and providers enforce RBAC + record-level permission

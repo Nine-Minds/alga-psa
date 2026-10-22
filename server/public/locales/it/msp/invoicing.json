@@ -1456,7 +1456,13 @@
         "noQuotesFound": "Nessun preventivo trovato.",
         "selectQuote": "Seleziona preventivo",
         "loadingQuoteDetails": "Caricamento dettagli preventivo…",
-        "loadingDocumentDetails": "Caricamento dettagli documento…"
+        "loadingDocumentDetails": "Caricamento dettagli documento…",
+        "zoom": {
+          "fit": "Adatta",
+          "actual": "100%",
+          "label": "Zoom anteprima",
+          "fitWithScale": "Adatta ({{percent}}%)"
+        }
       },
       "tabs": {
         "design": "Progettazione",

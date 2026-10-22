@@ -14,6 +14,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/component
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { LOCALE_CONFIG, normalizeLocale, type SupportedLocale } from '@alga-psa/core/i18n/config';
 import { PreviewLocaleSelect } from '../../invoice-designer/preview/PreviewLocaleSelect';
+import { PreviewSheetFrame } from '../../invoice-designer/preview/PreviewSheetFrame';
+import type { PreviewZoomMode } from '../../invoice-designer/preview/previewSheetScale';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -133,6 +135,12 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewNonce, setPreviewNonce] = useState(0);
+  // The preview is drawn on the printed page's sheet; 'fit' enlarges a label to fill the pane.
+  const [previewZoomMode, setPreviewZoomMode] = useState<PreviewZoomMode>('fit');
+  const [previewScale, setPreviewScale] = useState<number | null>(null);
+  // Only labels are drawn on their printed sheet (see resolveTemplatePreviewSheetFromAst), so only they zoom.
+  const previewIsLabelSheet = isDocumentType(documentType)
+    && getDocumentTypeRegistryEntry(documentType).printGeometry === 'label-cell';
   // Standard templates carry translatable labels, so an author can see the
   // document in the language each client will actually receive it in.
   const [previewLocale, setPreviewLocale] = useState<SupportedLocale>(
@@ -537,6 +545,30 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                         })}
                     </p>
                     <div className="flex items-center gap-2">
+                      {previewIsLabelSheet && (
+                      <ViewSwitcher
+                        aria-label={t('designer.workspace.preview.zoom.label', { defaultValue: 'Preview zoom' })}
+                        currentView={previewZoomMode}
+                        onChange={(mode: PreviewZoomMode) => setPreviewZoomMode(mode)}
+                        options={[
+                          {
+                            value: 'fit',
+                            id: 'document-designer-preview-zoom-fit',
+                            label: previewZoomMode === 'fit' && previewScale !== null
+                              ? t('designer.workspace.preview.zoom.fitWithScale', {
+                                defaultValue: 'Fit ({{percent}}%)',
+                                percent: Math.round(previewScale * 100),
+                              })
+                              : t('designer.workspace.preview.zoom.fit', { defaultValue: 'Fit' }),
+                          },
+                          {
+                            value: 'actual',
+                            id: 'document-designer-preview-zoom-actual',
+                            label: t('designer.workspace.preview.zoom.actual', { defaultValue: '100%' }),
+                          },
+                        ]}
+                      />
+                      )}
                       <PreviewLocaleSelect
                         id="document-designer-preview-locale-select"
                         value={previewLocale}
@@ -570,14 +602,15 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                   )}
 
                   {!previewLoading && !previewError && previewHtml && (
-                    <iframe
+                    <PreviewSheetFrame
                       title={t('documentTemplates.editor.preview.frameTitle', {
                         defaultValue: '{{type}} preview',
                         type: typeLabel,
                       })}
-                      srcDoc={previewHtml}
-                      className="w-full min-h-[640px] border-0 bg-white"
-                      data-automation-id="document-designer-preview-frame"
+                      html={previewHtml}
+                      zoomMode={previewZoomMode}
+                      onScaleChange={setPreviewScale}
+                      automationId="document-designer-preview-frame"
                     />
                   )}
 

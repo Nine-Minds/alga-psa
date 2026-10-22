@@ -1506,7 +1506,13 @@
         "noQuotesFound": "Brak wycen.",
         "selectQuote": "Wybierz wycenę",
         "loadingQuoteDetails": "Ładowanie szczegółów wyceny…",
-        "loadingDocumentDetails": "Ładowanie szczegółów dokumentu…"
+        "loadingDocumentDetails": "Ładowanie szczegółów dokumentu…",
+        "zoom": {
+          "fit": "Dopasuj",
+          "actual": "100%",
+          "label": "Powiększenie podglądu",
+          "fitWithScale": "Dopasuj ({{percent}}%)"
+        }
       },
       "tabs": {
         "design": "Projektowanie",

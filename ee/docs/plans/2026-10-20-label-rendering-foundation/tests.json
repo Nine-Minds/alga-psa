@@ -78,5 +78,25 @@
     "id": "T016",
     "description": "Designer: imported record-URL binding displays as {{label.recordUrl}} and typing it exports a binding, not a literal",
     "implemented": true
+  },
+  {
+    "id": "T017",
+    "description": "resolveTemplatePreviewSheetFromAst: 4x2in label -> 101.6x50.8 mm sheet, guide at the renderer's 11 px margin; mm labels at their size; documents return null",
+    "implemented": true
+  },
+  {
+    "id": "T018",
+    "description": "Preview sheet CSS is screen-only (guide hidden in print); renderTemplateAstHtmlDocument adds the sheet only with previewSheet and leaves the @page rule unchanged",
+    "implemented": true
+  },
+  {
+    "id": "T019",
+    "description": "Chromium e2e: for every standard label template the preview sheet equals the printed 4x2in label cell (size, overflow hidden) and every rendered node's box matches within 0.5 px",
+    "implemented": true
+  },
+  {
+    "id": "T020",
+    "description": "computePreviewSheetScale: fit fills the pane bounded by height and 400%, shrinks in narrow panes; 100% is 1",
+    "implemented": true
   }
 ]

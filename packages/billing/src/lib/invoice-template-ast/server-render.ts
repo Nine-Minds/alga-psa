@@ -4,7 +4,8 @@ import type { TemplateAst } from '@alga-psa/types';
 import type { TemplateEvaluationResult } from './evaluator';
 import { renderEvaluatedTemplateAst } from './react-renderer';
 import { localizeTemplateAstForLocale } from './i18nLabels';
-import { resolveCustomPageCssFromAst } from './printSettings';
+import { resolveCustomPageCssFromAst, type TemplatePreviewSheet } from './printSettings';
+import { buildPreviewSheetCss, wrapInPreviewSheet } from './previewSheet';
 import { StorageProviderFactory, FileStoreModel } from '@alga-psa/storage';
 
 const escapeHtml = (value: string): string =>
@@ -40,6 +41,11 @@ export interface TemplateHtmlDocumentOptions {
    * 30/09/2026 whatever language the document speaks.
    */
   dateFormat?: CountryDateFormat;
+  /**
+   * Screen preview only: draw the markup on a sheet the size of its printed page (see previewSheet.ts).
+   * Never set on a path that produces a PDF.
+   */
+  previewSheet?: TemplatePreviewSheet;
 }
 
 // ---------------------------------------------------------------------------
@@ -132,7 +138,9 @@ export const renderTemplateAstHtmlDocument = async (
   const title = escapeHtml(options.title ?? 'Invoice');
   // Custom page size: emit a real @page rule (preferCSSPageSize makes Chromium honour it).
   const customPageCss = resolveCustomPageCssFromAst(ast);
-  const additionalCss = [customPageCss, options.additionalCss].filter(Boolean).join('\n');
+  const previewSheetCss = options.previewSheet ? buildPreviewSheetCss(options.previewSheet) : null;
+  const additionalCss = [customPageCss, options.additionalCss, previewSheetCss].filter(Boolean).join('\n');
+  const bodyHtml = options.previewSheet ? wrapInPreviewSheet(html, options.previewSheet) : html;
   const bodyClassName = options.bodyClassName ? ` class="${escapeHtml(options.bodyClassName)}"` : '';
 
   // When Puppeteer renders HTML via page.setContent(), the page origin is about:blank.
@@ -153,7 +161,7 @@ ${additionalCss}
     </style>
   </head>
   <body${bodyClassName}>
-${html}
+${bodyHtml}
   </body>
 </html>`;
 

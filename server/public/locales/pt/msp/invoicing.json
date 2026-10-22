@@ -1456,7 +1456,13 @@
         "noQuotesFound": "Nenhuma cotação encontrada.",
         "selectQuote": "Selecione a cotação",
         "loadingQuoteDetails": "Carregando detalhes da cotação...",
-        "loadingDocumentDetails": "Carregando detalhes do documento..."
+        "loadingDocumentDetails": "Carregando detalhes do documento...",
+        "zoom": {
+          "fit": "Ajustar",
+          "actual": "100%",
+          "label": "Zoom da pré-visualização",
+          "fitWithScale": "Ajustar ({{percent}}%)"
+        }
       },
       "tabs": {
         "design": "Projeto",

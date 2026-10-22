@@ -1456,7 +1456,13 @@
         "noQuotesFound": "Sin cotizaciones.",
         "selectQuote": "Seleccionar cotización",
         "loadingQuoteDetails": "Cargando detalles de la cotización…",
-        "loadingDocumentDetails": "Cargando detalles del documento…"
+        "loadingDocumentDetails": "Cargando detalles del documento…",
+        "zoom": {
+          "fit": "Ajustar",
+          "actual": "100 %",
+          "label": "Zoom de la vista previa",
+          "fitWithScale": "Ajustar ({{percent}} %)"
+        }
       },
       "tabs": {
         "design": "Diseño",

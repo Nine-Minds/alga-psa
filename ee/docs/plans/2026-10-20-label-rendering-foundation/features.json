@@ -113,5 +113,10 @@
     "id": "F023",
     "description": "Designer barcode Value placeholder/hint shows the real work-tag binding {{label.recordUrl}}",
     "implemented": true
+  },
+  {
+    "id": "F024",
+    "description": "Work-tag designer preview drawn on a sheet the size of the printed label cell (screen-only CSS, clipped, printable-area guide), with Fit/100% zoom; registry printGeometry selects it and full-page documents stay unframed",
+    "implemented": true
   }
 ]

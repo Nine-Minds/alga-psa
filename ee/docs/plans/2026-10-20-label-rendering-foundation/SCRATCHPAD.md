@@ -8,3 +8,4 @@
 - Pre-existing `qrcode` uses (MFA authenticator, MobileAppCard) are unrelated to the barcode node.
 - Human review round: the renderer pads the document root by marginMm; never pad the label cell too (it did, double margin).
 - Containment e2e measures painted text with Range.getClientRects in Chromium; use it when changing any standard label template.
+- Preview sheet: only `label-cell` documents are framed. Document PDFs double the margin and rely on Chromium print shrink-to-fit (designer pins root width to the page), so a document sheet would clip what the PDF shrinks; verified by rendering a designer-exported sales order to PDF.

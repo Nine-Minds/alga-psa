@@ -1456,7 +1456,13 @@
         "noQuotesFound": "⟦Ƞȯ ʠŭȯŧḗş ƒȯŭƞḓ.⟧",
         "selectQuote": "⟦Şḗŀḗƈŧ ʠŭȯŧḗ⟧",
         "loadingQuoteDetails": "⟦Ŀȯȧḓīƞɠ ʠŭȯŧḗ ḓḗŧȧīŀş...⟧",
-        "loadingDocumentDetails": "⟦Ŀȯȧḓīƞɠ ḓȯƈŭḿḗƞŧ ḓḗŧȧīŀş...⟧"
+        "loadingDocumentDetails": "⟦Ŀȯȧḓīƞɠ ḓȯƈŭḿḗƞŧ ḓḗŧȧīŀş...⟧",
+        "zoom": {
+          "fit": "⟦Ƒīŧ⟧",
+          "actual": "⟦100%⟧",
+          "label": "⟦Ƥřḗṽīḗẇ ẑȯȯḿ⟧",
+          "fitWithScale": "⟦Ƒīŧ ({{percent}}%)⟧"
+        }
       },
       "tabs": {
         "design": "⟦Ḓḗşīɠƞ⟧",

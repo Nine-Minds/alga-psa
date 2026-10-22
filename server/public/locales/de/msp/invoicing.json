@@ -1456,7 +1456,13 @@
         "noQuotesFound": "Keine Angebote gefunden.",
         "selectQuote": "Angebot wählen",
         "loadingQuoteDetails": "Angebotsdetails werden geladen…",
-        "loadingDocumentDetails": "Dokumentdetails werden geladen…"
+        "loadingDocumentDetails": "Dokumentdetails werden geladen…",
+        "zoom": {
+          "fit": "Einpassen",
+          "actual": "100 %",
+          "label": "Vorschau-Zoom",
+          "fitWithScale": "Einpassen ({{percent}} %)"
+        }
       },
       "tabs": {
         "design": "Entwurf",

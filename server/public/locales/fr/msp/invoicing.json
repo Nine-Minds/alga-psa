@@ -1456,7 +1456,13 @@
         "noQuotesFound": "Aucun devis trouvé.",
         "selectQuote": "Sélectionner un devis",
         "loadingQuoteDetails": "Chargement des détails du devis…",
-        "loadingDocumentDetails": "Chargement des détails du document…"
+        "loadingDocumentDetails": "Chargement des détails du document…",
+        "zoom": {
+          "fit": "Ajuster",
+          "actual": "100 %",
+          "label": "Zoom de l'aperçu",
+          "fitWithScale": "Ajuster ({{percent}} %)"
+        }
       },
       "tabs": {
         "design": "Conception",

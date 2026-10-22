@@ -1456,7 +1456,13 @@
         "noQuotesFound": "Geen offertes gevonden.",
         "selectQuote": "Offerte kiezen",
         "loadingQuoteDetails": "Offertedetails worden geladen…",
-        "loadingDocumentDetails": "Documentdetails worden geladen…"
+        "loadingDocumentDetails": "Documentdetails worden geladen…",
+        "zoom": {
+          "fit": "Passend",
+          "actual": "100%",
+          "label": "Zoom voorbeeld",
+          "fitWithScale": "Passend ({{percent}}%)"
+        }
       },
       "tabs": {
         "design": "Ontwerp",

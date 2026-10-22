@@ -1,5 +1,7 @@
 import type { TemplateAst } from '@alga-psa/types';
 
+import type { TemplatePrintGeometry } from '../invoice-template-ast/printSettings';
+
 import { buildSalesOrderTemplateBindings } from '../sales-order-template-ast/bindings';
 import { buildSampleSalesOrderViewModel } from '../sales-order-template-ast/sampleData';
 import {
@@ -47,6 +49,8 @@ export interface DocumentTypeRegistryEntry {
   buildBindings: () => NonNullable<TemplateAst['bindings']>;
   /** A representative render model for designer preview (rendered against the template). */
   buildSampleViewModel: () => Record<string, unknown>;
+  /** The print path this type reaches paper through; the designer preview frames content to match it. */
+  printGeometry: TemplatePrintGeometry;
 }
 
 export const DOCUMENT_TYPE_REGISTRY: Record<DocumentType, DocumentTypeRegistryEntry> = {
@@ -57,6 +61,7 @@ export const DOCUMENT_TYPE_REGISTRY: Record<DocumentType, DocumentTypeRegistryEn
     getStandardTemplateAstByCode: getStandardSalesOrderTemplateAstByCode,
     buildBindings: buildSalesOrderTemplateBindings,
     buildSampleViewModel: () => buildSampleSalesOrderViewModel() as unknown as Record<string, unknown>,
+    printGeometry: 'document',
   },
   // Packing slip + pick list render from the SAME Sales Order data, so they reuse the SO bindings +
   // sample; only their standard templates differ. Adding a document type is "register an entry".
@@ -67,6 +72,7 @@ export const DOCUMENT_TYPE_REGISTRY: Record<DocumentType, DocumentTypeRegistryEn
     getStandardTemplateAstByCode: getStandardPackingSlipTemplateAstByCode,
     buildBindings: buildSalesOrderTemplateBindings,
     buildSampleViewModel: () => buildSampleSalesOrderViewModel() as unknown as Record<string, unknown>,
+    printGeometry: 'document',
   },
   'pick-list': {
     label: 'Pick List',
@@ -75,6 +81,7 @@ export const DOCUMENT_TYPE_REGISTRY: Record<DocumentType, DocumentTypeRegistryEn
     getStandardTemplateAstByCode: getStandardPickListTemplateAstByCode,
     buildBindings: buildSalesOrderTemplateBindings,
     buildSampleViewModel: () => buildSampleSalesOrderViewModel() as unknown as Record<string, unknown>,
+    printGeometry: 'document',
   },
   // ONE generic label type (decision for alga-2026-0002683 PLAN.md question 3): every label class
   // (ticket work tag, asset label, stock-unit label) renders from the uniform LabelViewModel, with
@@ -86,6 +93,8 @@ export const DOCUMENT_TYPE_REGISTRY: Record<DocumentType, DocumentTypeRegistryEn
     getStandardTemplateAstByCode: getStandardLabelTemplateAstByCode,
     buildBindings: buildLabelTemplateBindings,
     buildSampleViewModel: () => buildSampleLabelViewModel() as unknown as Record<string, unknown>,
+    // Printed by the label batch path: one clipped cell per label, never the single-document PDF path.
+    printGeometry: 'label-cell',
   },
 };
 

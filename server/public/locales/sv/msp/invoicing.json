@@ -1456,7 +1456,13 @@
         "noQuotesFound": "Inga offerter hittades.",
         "selectQuote": "Välj offert",
         "loadingQuoteDetails": "Läser in offertuppgifter…",
-        "loadingDocumentDetails": "Läser in dokumentuppgifter…"
+        "loadingDocumentDetails": "Läser in dokumentuppgifter…",
+        "zoom": {
+          "fit": "Anpassa",
+          "actual": "100 %",
+          "label": "Förhandsgranskningszoom",
+          "fitWithScale": "Anpassa ({{percent}} %)"
+        }
       },
       "tabs": {
         "design": "Design",
