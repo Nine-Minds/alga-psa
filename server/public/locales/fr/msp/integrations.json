@@ -785,7 +785,9 @@
             "singleTenantApp": "Microsoft a refusé la connexion car cet enregistrement d'application est mono-locataire. Entra nécessite une application multilocataire : ouvrez l'enregistrement de l'application, accédez à Authentification, définissez Types de comptes pris en charge sur « Comptes dans un annuaire organisationnel quelconque », puis reconnectez-vous. Rien n'a été enregistré.",
             "appNotInDirectory": "Microsoft n'a pas trouvé cette application dans l'annuaire indiqué par l'ID de locataire du profil Microsoft. Vérifiez que l'ID de locataire est l'ID d'annuaire (locataire) où l'application est enregistrée. Rien n'a été enregistré.",
             "wrongDirectory": "Le compte avec lequel vous vous êtes connecté appartient à un autre annuaire que cette application mono-locataire. Rendez l'application multilocataire (Comptes dans un annuaire organisationnel quelconque), puis reconnectez-vous. Rien n'a été enregistré.",
-            "redirectUriMismatch": "Microsoft a refusé l'URI de redirection car il n'est pas enregistré sur l'application. Ajoutez cet URI exact sous Authentification > URI de redirection web, puis reconnectez-vous : {{redirectUri}}"
+            "redirectUriMismatch": "Microsoft a refusé l'URI de redirection car il n'est pas enregistré sur l'application. Ajoutez cet URI exact sous Authentification > URI de redirection web, puis reconnectez-vous : {{redirectUri}}",
+            "invalidClientSecret": "Microsoft a refusé la clé secrète client du profil Microsoft. Vérifiez que vous avez enregistré la Valeur de la clé secrète, et non son ID de clé secrète.",
+            "expiredClientSecret": "La clé secrète client du profil Microsoft a expiré. Créez une nouvelle clé secrète dans Azure, puis mettez à jour le profil."
           },
           "cippServerLabel": "Serveur CIPP",
           "connectingSuffix": " (Connexion...)",

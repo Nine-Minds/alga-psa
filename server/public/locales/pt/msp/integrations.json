@@ -782,10 +782,12 @@
             "generic": "O Microsoft Entra não foi conectado e nada foi salvo. Tente novamente.",
             "validationFailed": "A Microsoft fez seu login, mas a lista de tenants gerenciados não pôde ser lida; nada foi salvo. Suas permissões foram aceitas — geralmente significa que o tenant de parceiro não está integrado ao Microsoft 365 Lighthouse ou não tem relações GDAP ativas.",
             "tokenRejected": "A Microsoft rejeitou o token de acesso da conexão; nada foi salvo. Inicie a conexão novamente.",
-            "singleTenantApp": "A Microsoft rejeitou o início de sessão porque este registo de aplicação é de inquilino único. O Entra precisa de uma aplicação multi-inquilino: abra o registo da aplicação, aceda a Autenticação, defina Tipos de conta suportados como \"Contas em qualquer diretório organizacional\" e volte a ligar. Nada foi guardado.",
-            "appNotInDirectory": "A Microsoft não encontrou esta aplicação no diretório indicado pelo ID de inquilino do perfil Microsoft. Verifique se o ID de inquilino é o ID do diretório (inquilino) onde a aplicação está registada. Nada foi guardado.",
+            "singleTenantApp": "A Microsoft rejeitou o início de sessão porque este registro de aplicação é de inquilino único. O Entra precisa de uma aplicação multi-inquilino: abra o registro da aplicação, aceda a Autenticação, defina Tipos de conta suportados como \"Contas em qualquer diretório organizacional\" e volte a ligar. Nada foi guardado.",
+            "appNotInDirectory": "A Microsoft não encontrou esta aplicação no diretório indicado pelo ID de inquilino do perfil Microsoft. Verifique se o ID de inquilino é o ID do diretório (inquilino) onde a aplicação está registrada. Nada foi guardado.",
             "wrongDirectory": "A conta com que iniciou sessão pertence a um diretório diferente do desta aplicação de inquilino único. Torne a aplicação multi-inquilino (Contas em qualquer diretório organizacional) e volte a ligar. Nada foi guardado.",
-            "redirectUriMismatch": "A Microsoft rejeitou o URI de redirecionamento porque não está registado na aplicação. Adicione este URI exato em Autenticação > URIs de redirecionamento Web e volte a ligar: {{redirectUri}}"
+            "redirectUriMismatch": "A Microsoft rejeitou o URI de redirecionamento porque não está registrado na aplicação. Adicione este URI exato em Autenticação > URIs de redirecionamento Web e volte a ligar: {{redirectUri}}",
+            "invalidClientSecret": "A Microsoft rejeitou o segredo do cliente no perfil Microsoft. Verifique se você salvou o Valor do segredo, não o ID do segredo.",
+            "expiredClientSecret": "O segredo do cliente no perfil Microsoft expirou. Crie um novo segredo no Azure e atualize o perfil."
           },
           "cippServerLabel": "Servidor CIPP",
           "connectingSuffix": "(Conectando...)",
