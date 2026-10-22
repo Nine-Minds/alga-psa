@@ -49,8 +49,15 @@ vi.mock('./SellHourBlockNote', () => ({ SellHourBlockNote: () => null }));
 
 import { BucketPoolEditor } from './BucketPoolEditor';
 
+// The symbol must be the Input wrapper's own adornment: a child of the same
+// div.relative as the <input>. A sibling span outside that wrapper is painted
+// over by the input background (the original alga0002089 defect).
 const adornments = (container: HTMLElement) =>
-  [...container.querySelectorAll('span.absolute')].map((el) => el.textContent);
+  [...container.querySelectorAll('div.relative > span[aria-hidden="true"] + input')].map((input) => {
+    const span = input.previousElementSibling as HTMLElement;
+    expect(span.parentElement).toBe(input.parentElement);
+    return span.textContent;
+  });
 
 describe('BucketPoolEditor overage rate currency', () => {
   afterEach(() => cleanup());
@@ -73,6 +80,7 @@ describe('BucketPoolEditor overage rate currency', () => {
     await waitFor(() => expect(screen.getAllByText('Overage rate per hour')).toHaveLength(2));
     expect(adornments(container)).toEqual(['€', '€']);
     expect(container.textContent).not.toMatch(/\(\s*[$]/);
+    expect(container.querySelectorAll('span.absolute:not([aria-hidden])')).toHaveLength(0);
   });
 
   it('falls back to the tenant default only when no contract currency is passed', async () => {

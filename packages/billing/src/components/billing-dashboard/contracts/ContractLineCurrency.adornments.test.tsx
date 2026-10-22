@@ -42,8 +42,15 @@ vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', () => ({
 import { BucketOverlayFields } from './BucketOverlayFields';
 import { ContractLinePresetPicker } from './ContractLinePresetPicker';
 
+// The symbol must be the Input wrapper's own adornment: a child of the same
+// div.relative as the <input>. A sibling span outside that wrapper is painted
+// over by the input background (the original alga0002089 defect).
 const adornments = (container: HTMLElement) =>
-  [...container.querySelectorAll('span.absolute')].map((el) => el.textContent);
+  [...container.querySelectorAll('div.relative > span[aria-hidden="true"] + input')].map((input) => {
+    const span = input.previousElementSibling as HTMLElement;
+    expect(span.parentElement).toBe(input.parentElement);
+    return span.textContent;
+  });
 
 describe('BucketOverlayFields currency', () => {
   afterEach(() => cleanup());

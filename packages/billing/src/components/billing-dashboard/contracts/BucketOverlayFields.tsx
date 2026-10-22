@@ -159,38 +159,35 @@ export function BucketOverlayFields({
             <Info className="h-4 w-4 text-primary-500" />
           </Tooltip>
         </div>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol(currencyCode)}</span>
-          <Input
-            id={automationId ? `${automationId}-overage` : undefined}
-            data-automation-id={automationId ? `${automationId}-overage` : undefined}
-            type="text"
-            inputMode="decimal"
-            value={overageRateInput}
-            onChange={(e) => {
-              const value = e.target.value.replace(/[^0-9.]/g, '');
-              // Allow only one decimal point
-              const decimalCount = (value.match(/\./g) || []).length;
-              if (decimalCount <= 1) {
-                setOverageRateInput(value);
-              }
-            }}
-            onBlur={() => {
-              if (overageRateInput.trim() === '' || overageRateInput === '.') {
-                setOverageRateInput('');
-                handleOverageChange(0);
-              } else {
-                const dollars = parseFloat(overageRateInput) || 0;
-                const cents = Math.round(dollars * 100);
-                handleOverageChange(cents);
-                setOverageRateInput((cents / 100).toFixed(2));
-              }
-            }}
-            placeholder="0.00"
-            className="pl-10"
-            disabled={disabled}
-          />
-        </div>
+        <Input
+          leadingAdornment={symbol(currencyCode)}
+          id={automationId ? `${automationId}-overage` : undefined}
+          data-automation-id={automationId ? `${automationId}-overage` : undefined}
+          type="text"
+          inputMode="decimal"
+          value={overageRateInput}
+          onChange={(e) => {
+            const value = e.target.value.replace(/[^0-9.]/g, '');
+            // Allow only one decimal point
+            const decimalCount = (value.match(/\./g) || []).length;
+            if (decimalCount <= 1) {
+              setOverageRateInput(value);
+            }
+          }}
+          onBlur={() => {
+            if (overageRateInput.trim() === '' || overageRateInput === '.') {
+              setOverageRateInput('');
+              handleOverageChange(0);
+            } else {
+              const dollars = parseFloat(overageRateInput) || 0;
+              const cents = Math.round(dollars * 100);
+              handleOverageChange(cents);
+              setOverageRateInput((cents / 100).toFixed(2));
+            }
+          }}
+          placeholder="0.00"
+          disabled={disabled}
+        />
       </div>
 
       <div className="flex items-start gap-2 pt-1">

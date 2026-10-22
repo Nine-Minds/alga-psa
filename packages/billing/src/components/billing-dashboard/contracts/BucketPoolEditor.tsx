@@ -388,10 +388,7 @@ function PoolCard({
         </div>
         <div className="space-y-1">
           <Label className="text-xs">{t('bucketPools.labels.overageRate', { defaultValue: 'Overage rate per hour' })}</Label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol(currencyCode)}</span>
-            <Input type="number" min="0" step="0.01" className="pl-10" value={rateInput} onChange={(e) => setRateInput(e.target.value)} onBlur={applyRate} />
-          </div>
+          <Input type="number" min="0" step="0.01" leadingAdornment={symbol(currencyCode)} value={rateInput} onChange={(e) => setRateInput(e.target.value)} onBlur={applyRate} />
         </div>
         <div className="space-y-1 flex items-end">
           <SwitchWithLabel
@@ -610,10 +607,7 @@ function CreatePoolForm({
         </div>
         <div className="space-y-1">
           <Label className="text-xs">{t('bucketPools.labels.overageRate', { defaultValue: 'Overage rate per hour' })}</Label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol(currencyCode)}</span>
-            <Input type="number" min="0" step="0.01" className="pl-10" value={overageRate} onChange={(e) => setOverageRate(e.target.value)} />
-          </div>
+          <Input type="number" min="0" step="0.01" leadingAdornment={symbol(currencyCode)} value={overageRate} onChange={(e) => setOverageRate(e.target.value)} />
         </div>
       </div>
 
