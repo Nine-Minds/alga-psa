@@ -9,7 +9,9 @@ export type MicrosoftOAuthFailureKind =
   | 'single_tenant_app' // AADSTS50194
   | 'app_not_in_directory' // AADSTS700016
   | 'user_wrong_directory' // AADSTS50020
-  | 'redirect_uri_mismatch'; // AADSTS50011
+  | 'redirect_uri_mismatch' // AADSTS50011
+  | 'invalid_client_secret' // AADSTS7000215
+  | 'expired_client_secret'; // AADSTS7000222
 
 export interface MicrosoftOAuthFailureInput {
   error?: string | null;
@@ -22,6 +24,8 @@ const CODE_TO_KIND: Record<number, MicrosoftOAuthFailureKind> = {
   700016: 'app_not_in_directory',
   50020: 'user_wrong_directory',
   50011: 'redirect_uri_mismatch',
+  7000215: 'invalid_client_secret',
+  7000222: 'expired_client_secret',
 };
 
 export function extractAadstsCode(input: MicrosoftOAuthFailureInput): number | null {
@@ -60,6 +64,8 @@ export const MICROSOFT_OAUTH_FAILURE_ERROR_CODES: Record<MicrosoftOAuthFailureKi
   app_not_in_directory: 'aadsts_700016_app_not_found',
   user_wrong_directory: 'aadsts_50020_wrong_directory',
   redirect_uri_mismatch: 'aadsts_50011_redirect_uri',
+  invalid_client_secret: 'aadsts_7000215_invalid_secret',
+  expired_client_secret: 'aadsts_7000222_expired_secret',
 };
 
 export function kindFromMicrosoftOAuthErrorCode(code: string | null | undefined): MicrosoftOAuthFailureKind | null {
@@ -81,6 +87,10 @@ export function describeMicrosoftOAuthFailureForMailboxFlow(
       return "Microsoft could not find this app registration in the directory named by the profile's Tenant ID. Check that the Tenant ID on the Microsoft profile is the directory (tenant) ID where the app was registered.";
     case 'user_wrong_directory':
       return 'The account you signed in with belongs to a different directory than this single-tenant app. Sign in with an account from the app\'s directory, or make the app multi-tenant.';
+    case 'invalid_client_secret':
+      return 'Microsoft rejected the client secret on the Microsoft profile. Make sure you saved the secret Value, not its Secret ID.';
+    case 'expired_client_secret':
+      return 'The client secret on the Microsoft profile has expired. Create a new secret in Azure and update the profile.';
     case 'redirect_uri_mismatch':
       return context.redirectUri
         ? `Microsoft rejected the redirect URI because it is not registered on the app. Add this exact URI under Authentication > Web redirect URIs: ${context.redirectUri}`

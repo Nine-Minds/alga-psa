@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import { buildEntraCallbackErrorKey } from '@ee/components/settings/integrations/entra/entraCallbackErrors';
 
 const axiosPostMock = vi.fn();
 const axiosGetMock = vi.fn();
@@ -369,6 +370,39 @@ describe('Entra OAuth callback validation', () => {
       const output = logged.join('\n');
       expect(output).not.toContain('LEAK-ME-SECRET');
       expect(output).not.toContain('client_secret');
+    });
+
+    it('maps an AADSTS7000215 invalid client secret (HTTP 401) to its error code and message', async () => {
+      const knex = knexDouble();
+      createTenantKnexMock.mockResolvedValue({ knex: knex.knexMock });
+      runWithTenantMock.mockImplementation(async (_tenant: string, fn: () => Promise<unknown>) => fn());
+      axiosPostMock.mockRejectedValue(
+        Object.assign(new Error('Request failed with status code 401'), {
+          isAxiosError: true,
+          config: { data: 'client_secret=LEAK-ME-SECRET' },
+          response: {
+            status: 401,
+            data: {
+              error: 'invalid_client',
+              error_codes: [7000215],
+              error_description: 'AADSTS7000215: Invalid client secret provided. Ensure the secret being sent in the request is the client secret value, not the client secret ID.',
+            },
+          },
+        })
+      );
+      const spies = (['log', 'info', 'warn', 'error', 'debug'] as const).map((m) =>
+        vi.spyOn(console, m).mockImplementation(() => undefined)
+      );
+      try {
+        const { GET } = await import('@ee/app/api/auth/microsoft/entra/callback/route');
+        const response = await GET(callbackRequest(encodeState()));
+        const location = new URL(response.headers.get('location') as string);
+        const code = location.searchParams.get('error');
+        expect(code).toBe('aadsts_7000215_invalid_secret');
+        expect(buildEntraCallbackErrorKey(code)).toBe('integrations.entra.settings.connection.callbackErrors.invalidClientSecret');
+      } finally {
+        spies.forEach((spy) => spy.mockRestore());
+      }
     });
 
     it('keeps Entra on the /common authority', async () => {
