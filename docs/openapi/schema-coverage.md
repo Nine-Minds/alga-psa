@@ -1,7 +1,7 @@
 # Schema Coverage Snapshot
 
-- Total routes: 943
-- Routes with canonical schemas: 467 (49%)
+- Total routes: 929
+- Routes with canonical schemas: 453 (48%)
 - Routes missing canonical schemas: 476
 - Routes handled without controllers (likely Next.js handlers): 460
 
