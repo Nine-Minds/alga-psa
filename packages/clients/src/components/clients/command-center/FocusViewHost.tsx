@@ -31,6 +31,7 @@ const RAIL_GROUP_BY_TAB: Record<string, string> = {
   'tax-settings': 'money',
   equipment: 'installBase',
   assets: 'installBase',
+  software: 'installBase',
   contacts: 'records',
   documents: 'records',
   notes: 'records',

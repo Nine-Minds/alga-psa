@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -13,7 +14,9 @@ interface SoftwareInventoryTabProps {
 
 export const SoftwareInventoryTab: React.FC<SoftwareInventoryTabProps> = ({ asset }) => {
   const { t } = useTranslation('msp/assets');
-  const [search, setSearch] = useState('');
+  // Optional initial filter from the client-level Software view (?software=<title>).
+  const searchParams = useSearchParams();
+  const [search, setSearch] = useState(() => searchParams?.get('software') ?? '');
   const unknownValue = t('softwareInventoryTab.values.unknown', { defaultValue: 'Unknown' });
   
   // Fallback to getting software from asset extension data

@@ -97,6 +97,7 @@ function isClientActionError(value: unknown): value is ActionMessageError | Acti
 }
 import { ClientDetailsTabContent } from './ClientDetailsTabContent';
 import ClientCommandCenter from './command-center/ClientCommandCenter';
+import ClientSoftwareView from './command-center/ClientSoftwareView';
 import HuduClientTab from './HuduClientTab';
 import HuduClientPasswordsTab from './HuduClientPasswordsTab';
 import HuduClientDocumentsSection from './HuduClientDocumentsSection';
@@ -203,7 +204,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const { t } = useTranslation('msp/clients');
   // Field messages live under common:clients.validation.*, not this page's namespace.
   const { t: tValidation } = useTranslation('common');
-  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, renderClientRecurringTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
+  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, getClientSoftwareSummary, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, renderClientRecurringTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
   const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
   // `client` is a prop and does not advance after this component saves. Keep
@@ -1431,6 +1432,20 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       label: t('clientDetails.assets', { defaultValue: 'Assets' }),
       content: shouldRenderPsaOnlyClientSurfaces ? renderClientAssets({ clientId: client.client_id }) : null,
     },
+    // Software focus view: aggregate of the client's asset software — PSA-only,
+    // and only when the composition layer provides the (assets-owned) read action.
+    ...((shouldRenderPsaOnlyClientSurfaces && getClientSoftwareSummary) ? [{
+      id: 'software',
+      label: t('clientDetails.software', { defaultValue: 'Software' }),
+      content: (
+        <ClientSoftwareView
+          id={`${id}-software`}
+          clientId={client.client_id}
+          getSummary={getClientSoftwareSummary}
+          t={t}
+        />
+      ),
+    }] : []),
     // F022/F023: inventory Equipment tab — PSA-only, and only when inventory:read.
     ...((shouldRenderPsaOnlyClientSurfaces && clientEquipmentTab.visible) ? [{
       id: 'equipment',
@@ -1748,6 +1763,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     handleAddClientNameAlias,
     handleRemoveClientNameAlias,
     renderSurveySummaryCard,
+    getClientSoftwareSummary,
     currentUser,
     documents,
     memoizedRouter,
@@ -1943,6 +1959,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             idPrefix={`${id}-cc`}
             clientId={client.client_id}
             tabs={tabContent}
+            getSoftwareSummary={shouldRenderPsaOnlyClientSurfaces ? getClientSoftwareSummary ?? null : null}
             initialTabId={searchParams?.get('tab')?.toLowerCase() || null}
             onTabUrlChange={handleFocusTabUrlChange}
             hasUnsavedRecordChanges={hasUnsavedChanges}
