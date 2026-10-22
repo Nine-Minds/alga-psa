@@ -40,6 +40,11 @@ import { SlaStatusBadge } from '@alga-psa/ui/components/sla';
 import type { ITeam } from '@alga-psa/types';
 import { useSession } from 'next-auth/react';
 import { FieldConflictBanner } from '@alga-psa/ui/presence/FieldConflictBanner';
+import { InboundEmailBody } from '@alga-psa/ui/components/EmailHtmlViewer';
+import {
+  originalEmailSourceForTicket,
+  originalEmailToggleLabels,
+} from '../../lib/inboundEmailOriginalView';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../lib/ticketRichText';
 import { useTicketRichTextUploadSession } from './useTicketRichTextUploadSession';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
@@ -563,6 +568,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [descriptionContent, setDescriptionContent] = useState<PartialBlock[]>(() =>
     parseTicketRichTextContent(ticket.attributes?.description as string | object | undefined)
   );
+
+  // Only the view mode offers it: the editor owns the stored body, not the archive.
+  const originalEmailSrc = useMemo(() => originalEmailSourceForTicket(ticket), [ticket]);
 
   const discardDescriptionEdit = useCallback(() => {
     const originalDescription =
@@ -2034,7 +2042,22 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
                   if (!descriptionText) return t('info.noDescription', 'No description found.');
 
-                  return <RichTextViewer content={descriptionText} className="break-words max-w-full min-w-0" />;
+                  const storedBody = (
+                    <RichTextViewer content={descriptionText} className="break-words max-w-full min-w-0" />
+                  );
+
+                  // An email-opened ticket can also be read as the original message.
+                  return originalEmailSrc ? (
+                    <InboundEmailBody
+                      id={`${id}-description-original-email`}
+                      src={originalEmailSrc}
+                      labels={originalEmailToggleLabels(t)}
+                    >
+                      {storedBody}
+                    </InboundEmailBody>
+                  ) : (
+                    storedBody
+                  );
                 })()}
               </div>
             )}

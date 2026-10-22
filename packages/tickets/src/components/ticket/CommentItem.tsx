@@ -13,12 +13,17 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { ClampedContent } from '@alga-psa/ui/components/ClampedContent';
+import { InboundEmailBody } from '@alga-psa/ui/components/EmailHtmlViewer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { ReactionDisplay } from '@alga-psa/ui/components/ReactionDisplay';
 import type { IAggregatedReaction } from '@alga-psa/types';
 import { getCommentResponseSource } from '../../lib/responseSource';
+import {
+  originalEmailSourceForComment,
+  originalEmailToggleLabels,
+} from '../../lib/inboundEmailOriginalView';
 import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { resolveCommentAuthor } from '../../lib/commentAuthorResolution';
 import ResponseSourceBadge from '../ResponseSourceBadge';
@@ -259,6 +264,11 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const commentSource = useMemo(
     () => getCommentResponseSource(conversation),
     [conversation]
+  );
+  // Inbound-email comments can also be read as the message the sender wrote.
+  const originalEmailSrc = useMemo(
+    () => originalEmailSourceForComment(ticketId, conversation),
+    [ticketId, conversation]
   );
   const authorEmail = getAuthorEmail();
 
@@ -800,11 +810,27 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     showMoreLabel={t('conversation.showMore', 'Show more')}
                     showLessLabel={t('conversation.showLess', 'Show less')}
                   >
-                    <RichTextViewer
-                      key={`${conversation.comment_id}-${conversation.updated_at || conversation.created_at}`}
-                      content={displayContent as any}
-                      className="w-full min-w-0 max-w-full"
-                    />
+                    {(() => {
+                      const storedBody = (
+                        <RichTextViewer
+                          key={`${conversation.comment_id}-${conversation.updated_at || conversation.created_at}`}
+                          content={displayContent as any}
+                          className="w-full min-w-0 max-w-full"
+                        />
+                      );
+
+                      return originalEmailSrc ? (
+                        <InboundEmailBody
+                          id={`${commentId}-original-email`}
+                          src={originalEmailSrc}
+                          labels={originalEmailToggleLabels(t)}
+                        >
+                          {storedBody}
+                        </InboundEmailBody>
+                      ) : (
+                        storedBody
+                      );
+                    })()}
                   </ClampedContent>
               </div>
           )}

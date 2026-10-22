@@ -27,6 +27,11 @@ import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossF
 import { computeSlaClocks, formatSlaLabel, type TicketSlaFields } from './slaClocks';
 import { useTeamAvatarUrl } from './useTeamAvatarUrl';
 import type { TicketLiveConflictState } from '../ticketLiveFields';
+import { InboundEmailBody } from '@alga-psa/ui/components/EmailHtmlViewer';
+import {
+  originalEmailSourceForTicket,
+  originalEmailToggleLabels,
+} from '../../../lib/inboundEmailOriginalView';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../../lib/ticketRichText';
 import { useTicketRichTextUploadSession } from '../useTicketRichTextUploadSession';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
@@ -318,6 +323,8 @@ export function BentoHero({
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [descriptionOverflows, setDescriptionOverflows] = useState(false);
   const descriptionBodyRef = useRef<HTMLDivElement>(null);
+  // Only the view mode offers it: the editor owns the stored body, not the archive.
+  const originalEmailSrc = useMemo(() => originalEmailSourceForTicket(ticket), [ticket]);
 
   const discardDescriptionEdit = useCallback(() => {
     const originalDescription =
@@ -1256,7 +1263,17 @@ export function BentoHero({
                 ref={descriptionBodyRef}
                 className={`text-sm ${descriptionExpanded ? '' : 'max-h-40 overflow-hidden'}`}
               >
-                <RichTextViewer id={`${id}-description-view`} content={descriptionContent} />
+                {originalEmailSrc ? (
+                  <InboundEmailBody
+                    id={`${id}-description-original-email`}
+                    src={originalEmailSrc}
+                    labels={originalEmailToggleLabels(t)}
+                  >
+                    <RichTextViewer id={`${id}-description-view`} content={descriptionContent} />
+                  </InboundEmailBody>
+                ) : (
+                  <RichTextViewer id={`${id}-description-view`} content={descriptionContent} />
+                )}
               </div>
               {descriptionOverflows || descriptionExpanded ? (
                 <button

@@ -17,6 +17,11 @@ import { getClientAssetById } from '@alga-psa/client-portal/actions';
 import type { Asset, ProductCode } from '@alga-psa/types';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
 import { getTicketOrigin } from '@alga-psa/tickets/lib/ticketOrigin';
+import { InboundEmailBody } from '@alga-psa/ui/components/EmailHtmlViewer';
+import {
+  originalEmailSourceForTicket,
+  originalEmailToggleLabels,
+} from '@alga-psa/tickets/lib/inboundEmailOriginalView';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
@@ -102,6 +107,7 @@ export function TicketDetails({
    * workspace clause and answer "Ticket not found".
    */
   const canInteract = (ticket as { can_interact?: boolean }).can_interact !== false;
+  const originalEmailSrc = useMemo(() => originalEmailSourceForTicket(ticket), [ticket]);
   // Re-derive on every current-status change: the server seeds the initial list
   // with the ticket's current restricted status, but once the ticket moves the
   // restricted status must stop being offered as a target without a reload.
@@ -886,11 +892,23 @@ export function TicketDetails({
                   if (!description) {
                     return t('messages.noDescription', 'No description found.');
                   }
-                  return (
+                  const storedBody = (
                     <RichTextViewer
                       content={description as string | PartialBlock[]}
                       className="break-words max-w-full min-w-0"
                     />
+                  );
+                  // Same endpoint as the MSP view; portal visibility is enforced there.
+                  return originalEmailSrc ? (
+                    <InboundEmailBody
+                      id="portal-ticket-description-original-email"
+                      src={originalEmailSrc}
+                      labels={originalEmailToggleLabels(t)}
+                    >
+                      {storedBody}
+                    </InboundEmailBody>
+                  ) : (
+                    storedBody
                   );
                 })()}
               </div>
