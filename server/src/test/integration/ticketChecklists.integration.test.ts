@@ -86,8 +86,8 @@ import {
   updateChecklistTemplateApplyRule,
 } from '../../../../packages/tickets/src/actions/checklists/checklistTemplateActions';
 import { applyChecklistTemplate } from '../../../../packages/tickets/src/actions/checklists/applyChecklistTemplate';
-import { deactivateClientScopedChecklistTemplates } from '../../../../packages/clients/src/lib/clientChecklistTemplates';
 import {
+  deactivateClientScopedChecklistTemplates,
   applyChecklistTemplateToTicket,
   applyMatchingChecklistTemplates,
 } from '@alga-psa/shared/lib/ticketChecklists';
@@ -601,13 +601,13 @@ describe('ticket checklists', () => {
       const unrelated = await createScopedTemplate(fixture.clientId);
 
       const count = await db.transaction((trx) =>
-        deactivateClientScopedChecklistTemplates(trx, fixture.tenantId, doomed.clientId, 'Doomed Co')
+        deactivateClientScopedChecklistTemplates(trx, fixture.tenantId, doomed.clientId)
       );
       expect(count).toBe(1);
 
       const row = await scopedDbFor(fixture.tenantId).table('checklist_templates').where({ template_id: scoped }).first();
       expect(row).toMatchObject({ is_active: false, client_id: null });
-      expect(row.description).toContain('Doomed Co');
+      expect(row.description).toContain('was deleted');
       const untouched = await scopedDbFor(fixture.tenantId).table('checklist_templates').where({ template_id: unrelated }).first();
       expect(untouched).toMatchObject({ is_active: true, client_id: fixture.clientId });
     });
