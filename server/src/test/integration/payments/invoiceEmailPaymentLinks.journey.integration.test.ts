@@ -529,9 +529,20 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       expect(result.results[0].recipientEmail).toBe(chosenBillingEmail);
       expect(capturedEmails[0].message.to).toEqual([{ email: chosenBillingEmail, name: expect.any(String) }]);
 
+      // Sending creates no provider state: the Stripe customer and Checkout
+      // session are created when the emailed /pay link is clicked.
+      expect(capturedEmails).toHaveLength(1);
+      expect(await emulatorState('customers')).toHaveLength(0);
+      expect(await emulatorState('checkout-sessions')).toHaveLength(0);
+
+      const resolution = await clickEmailedPayLink(0);
+      expect(resolution.kind).toBe('redirect');
+
+      // The customer created at click time carries the chosen billing email.
       const customers = await emulatorState('customers');
       expect(customers).toHaveLength(1);
       expect(customers[0].email).toBe(chosenBillingEmail);
+      expect(await emulatorState('checkout-sessions')).toHaveLength(1);
     }, HOOK_TIMEOUT);
 
     it('expires and replaces an active Checkout session when credits and prior payments reduce the balance', async () => {
