@@ -1675,7 +1675,9 @@
       "ruleCategoryBoardMismatch": "Den valda kategorin tillhör en annan tavla än regeln.",
       "ruleCategoryInvalid": "Den valda kategorin är inte en kategori på översta nivån.",
       "ruleSubcategoryInvalid": "Den valda underkategorin tillhör inte den valda kategorin.",
-      "ruleSubcategoryRequiresCategory": "Välj en kategori innan du väljer en underkategori."
+      "ruleSubcategoryRequiresCategory": "Välj en kategori innan du väljer en underkategori.",
+      "templateClientMismatch": "Den här checklistmallen är begränsad till en annan kund än ärendets kund.",
+      "templateClientInvalid": "Den valda kunden hittades inte."
     }
   },
   "ticketSection": {

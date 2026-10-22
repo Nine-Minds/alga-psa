@@ -984,7 +984,8 @@
         "description": "Descrição",
         "items": "Unid",
         "status": "Status",
-        "actions": "Ações"
+        "actions": "Ações",
+        "scope": "Disponível para"
       },
       "statusLabels": {
         "active": "Ativo",
@@ -1002,7 +1003,9 @@
         "down": "Abaixo",
         "remove": "Remover",
         "addItem": "Adicionar item",
-        "addRule": "Adicionar regra"
+        "addRule": "Adicionar regra",
+        "duplicateToClient": "Duplicar para cliente…",
+        "duplicate": "Duplicar"
       },
       "fields": {
         "name": {
@@ -1030,7 +1033,13 @@
           "category": "Categoria",
           "subcategory": "Subcategoria",
           "priority": "Prioridade",
-          "any": "Qualquer"
+          "any": "Qualquer",
+          "clientScopedWarning": "Este modelo está limitado a {{client}}: estas regras só se aplicam a tickets de {{client}}."
+        },
+        "availableTo": {
+          "label": "Disponível para",
+          "clear": "Todos os clientes",
+          "help": "Deixe em Todos os clientes para oferecer este modelo em qualquer ticket, ou escolha um cliente para limitá-lo aos tickets dele."
         }
       },
       "dialog": {
@@ -1038,13 +1047,17 @@
         "editTemplate": "Editar modelo de lista de verificação",
         "createFirstHelp": "Crie o modelo primeiro e, em seguida, adicione itens da lista de verificação e aplique regras automaticamente.",
         "deleteTitle": "Excluir modelo de lista de verificação",
-        "deleteMessage": "Tem certeza de que deseja excluir \"{{name}}\"? As listas de verificação já adicionadas aos tickets não serão afetadas."
+        "deleteMessage": "Tem certeza de que deseja excluir \"{{name}}\"? As listas de verificação já adicionadas aos tickets não serão afetadas.",
+        "duplicateTitle": "Duplicar para cliente",
+        "duplicateHelp": "Copie \"{{name}}\" e seus itens para um novo modelo limitado a um cliente. A cópia é independente: alterações posteriores em um dos modelos não afetam o outro.",
+        "duplicateClientPlaceholder": "Selecione um cliente"
       },
       "messages": {
         "success": {
           "created": "Modelo de lista de verificação criado com sucesso",
           "updated": "Modelo de lista de verificação atualizado com sucesso",
-          "deleted": "Modelo de lista de verificação excluído com sucesso"
+          "deleted": "Modelo de lista de verificação excluído com sucesso",
+          "duplicated": "Modelo de checklist duplicado para o cliente"
         },
         "error": {
           "fetchFailed": "Falha ao buscar modelos de lista de verificação",
@@ -1054,8 +1067,18 @@
           "deleteFailed": "Falha ao excluir modelo de lista de verificação",
           "updateStatusFailed": "Falha ao atualizar o status do modelo",
           "itemSaveFailed": "Falha ao salvar o item da lista de verificação",
-          "ruleSaveFailed": "Falha ao salvar a regra de aplicação automática"
+          "ruleSaveFailed": "Falha ao salvar a regra de aplicação automática",
+          "duplicateFailed": "Falha ao duplicar o modelo de checklist"
         }
+      },
+      "scope": {
+        "allClients": "Todos os clientes",
+        "unknownClient": "Cliente desconhecido"
+      },
+      "filter": {
+        "client": "Cliente",
+        "allClients": "Todos os clientes",
+        "clear": "Limpar filtro"
       }
     },
     "externalSystems": {

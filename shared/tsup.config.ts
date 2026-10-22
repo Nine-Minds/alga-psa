@@ -119,6 +119,7 @@ export default defineConfig({
     'lib/ticketActivity/writeTicketActivity': 'lib/ticketActivity/writeTicketActivity.ts',
     'lib/ticketActivity/readTicketActivity': 'lib/ticketActivity/readTicketActivity.ts',
     'lib/ticketActivity/curatedTicketDiff': 'lib/ticketActivity/curatedTicketDiff.ts',
+    'lib/ticketChecklists/scope': 'lib/ticketChecklists/scope.ts',
     'lib/businessHours/businessHoursSegmentation': 'lib/businessHours/businessHoursSegmentation.ts',
     'lib/businessHours/businessDayCalendar': 'lib/businessHours/businessDayCalendar.ts',
     'lib/businessHours/loadBusinessDayCalendar': 'lib/businessHours/loadBusinessDayCalendar.ts',

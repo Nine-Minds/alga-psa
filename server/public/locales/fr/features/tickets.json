@@ -1667,7 +1667,9 @@
       "ruleCategoryBoardMismatch": "La catégorie sélectionnée appartient à un tableau différent de celui de la règle.",
       "ruleCategoryInvalid": "La catégorie sélectionnée n'est pas une catégorie de premier niveau.",
       "ruleSubcategoryInvalid": "La sous-catégorie sélectionnée n'appartient pas à la catégorie sélectionnée.",
-      "ruleSubcategoryRequiresCategory": "Sélectionnez une catégorie avant de choisir une sous-catégorie."
+      "ruleSubcategoryRequiresCategory": "Sélectionnez une catégorie avant de choisir une sous-catégorie.",
+      "templateClientMismatch": "Ce modèle de liste de contrôle est limité à un autre client que celui du ticket.",
+      "templateClientInvalid": "Le client sélectionné est introuvable."
     }
   },
   "ticketSection": {

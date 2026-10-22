@@ -1675,7 +1675,9 @@
       "ruleCategoryBoardMismatch": "⟦Ŧħḗ şḗŀḗƈŧḗḓ ƈȧŧḗɠȯřẏ ƀḗŀȯƞɠş ŧȯ ȧ ḓīƒƒḗřḗƞŧ ƀȯȧřḓ ŧħȧƞ ŧħḗ řŭŀḗ.⟧",
       "ruleCategoryInvalid": "⟦Ŧħḗ şḗŀḗƈŧḗḓ ƈȧŧḗɠȯřẏ īş ƞȯŧ ȧ ŧȯƥ-ŀḗṽḗŀ ƈȧŧḗɠȯřẏ.⟧",
       "ruleSubcategoryInvalid": "⟦Ŧħḗ şḗŀḗƈŧḗḓ şŭƀƈȧŧḗɠȯřẏ ḓȯḗş ƞȯŧ ƀḗŀȯƞɠ ŧȯ ŧħḗ şḗŀḗƈŧḗḓ ƈȧŧḗɠȯřẏ.⟧",
-      "ruleSubcategoryRequiresCategory": "⟦Şḗŀḗƈŧ ȧ ƈȧŧḗɠȯřẏ ƀḗƒȯřḗ ƈħȯȯşīƞɠ ȧ şŭƀƈȧŧḗɠȯřẏ.⟧"
+      "ruleSubcategoryRequiresCategory": "⟦Şḗŀḗƈŧ ȧ ƈȧŧḗɠȯřẏ ƀḗƒȯřḗ ƈħȯȯşīƞɠ ȧ şŭƀƈȧŧḗɠȯřẏ.⟧",
+      "templateClientMismatch": "⟦Ŧħīş ƈħḗƈķŀīşŧ ŧḗḿƥŀȧŧḗ īş ŀīḿīŧḗḓ ŧȯ ȧ ḓīƒƒḗřḗƞŧ ƈŀīḗƞŧ ŧħȧƞ ŧħīş ŧīƈķḗŧ'ş ƈŀīḗƞŧ.⟧",
+      "templateClientInvalid": "⟦Ŧħḗ şḗŀḗƈŧḗḓ ƈŀīḗƞŧ ẇȧş ƞȯŧ ƒȯŭƞḓ.⟧"
     }
   },
   "ticketSection": {

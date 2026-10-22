@@ -27,4 +27,11 @@ describe('default-contract client-delete cleanup parity wiring', () => {
     expect(source).toContain("await db.table('client_contracts')");
     expect(source).toContain('is_system_managed_default: true,');
   });
+
+  it('all three client-delete paths release client-scoped checklist templates via the shared helper', () => {
+    const call = 'await deactivateClientScopedChecklistTemplates(trx,';
+    expect(readRepo('packages/clients/src/actions/clientActions.ts')).toContain(call);
+    expect(readRepo('server/src/lib/api/services/ClientService.ts')).toContain(call);
+    expect(readRepo('shared/workflow/runtime/actions/businessOperations/clients.ts')).toContain(call);
+  });
 });

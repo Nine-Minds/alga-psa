@@ -984,7 +984,8 @@
         "description": "Beschreibung",
         "items": "Elemente",
         "status": "Status",
-        "actions": "Aktionen"
+        "actions": "Aktionen",
+        "scope": "Verfügbar für"
       },
       "statusLabels": {
         "active": "Aktiv",
@@ -1002,7 +1003,9 @@
         "down": "Nach unten",
         "remove": "Entfernen",
         "addItem": "Element hinzufügen",
-        "addRule": "Regel hinzufügen"
+        "addRule": "Regel hinzufügen",
+        "duplicateToClient": "Für Client duplizieren…",
+        "duplicate": "Duplizieren"
       },
       "fields": {
         "name": {
@@ -1030,7 +1033,13 @@
           "category": "Kategorie",
           "subcategory": "Unterkategorie",
           "priority": "Priorität",
-          "any": "Beliebig"
+          "any": "Beliebig",
+          "clientScopedWarning": "Diese Vorlage ist auf {{client}} beschränkt: Diese Regeln gelten nur für Tickets von {{client}}."
+        },
+        "availableTo": {
+          "label": "Verfügbar für",
+          "clear": "Alle Clients",
+          "help": "Auf „Alle Clients“ belassen, um die Vorlage in jedem Ticket anzubieten, oder einen Client wählen, um sie auf dessen Tickets zu beschränken."
         }
       },
       "dialog": {
@@ -1038,13 +1047,17 @@
         "editTemplate": "Checklisten-Vorlage bearbeiten",
         "createFirstHelp": "Erstellen Sie zuerst die Vorlage, dann fügen Sie Checklisten-Elemente und Regeln für die automatische Anwendung hinzu.",
         "deleteTitle": "Checklisten-Vorlage löschen",
-        "deleteMessage": "Möchten Sie \"{{name}}\" wirklich löschen? Checklisten, die bereits zu Tickets hinzugefügt wurden, sind davon nicht betroffen."
+        "deleteMessage": "Möchten Sie \"{{name}}\" wirklich löschen? Checklisten, die bereits zu Tickets hinzugefügt wurden, sind davon nicht betroffen.",
+        "duplicateTitle": "Für Client duplizieren",
+        "duplicateHelp": "„{{name}}“ samt Punkten in eine neue, auf einen Client beschränkte Vorlage kopieren. Die Kopie ist unabhängig: Spätere Änderungen an einer der Vorlagen wirken sich nicht auf die andere aus.",
+        "duplicateClientPlaceholder": "Client auswählen"
       },
       "messages": {
         "success": {
           "created": "Checklisten-Vorlage erfolgreich erstellt",
           "updated": "Checklisten-Vorlage erfolgreich aktualisiert",
-          "deleted": "Checklisten-Vorlage erfolgreich gelöscht"
+          "deleted": "Checklisten-Vorlage erfolgreich gelöscht",
+          "duplicated": "Checklistenvorlage für Client dupliziert"
         },
         "error": {
           "fetchFailed": "Checklisten-Vorlagen konnten nicht abgerufen werden",
@@ -1054,8 +1067,18 @@
           "deleteFailed": "Checklisten-Vorlage konnte nicht gelöscht werden",
           "updateStatusFailed": "Vorlagenstatus konnte nicht aktualisiert werden",
           "itemSaveFailed": "Checklisten-Element konnte nicht gespeichert werden",
-          "ruleSaveFailed": "Regel für automatische Anwendung konnte nicht gespeichert werden"
+          "ruleSaveFailed": "Regel für automatische Anwendung konnte nicht gespeichert werden",
+          "duplicateFailed": "Checklistenvorlage konnte nicht dupliziert werden"
         }
+      },
+      "scope": {
+        "allClients": "Alle Clients",
+        "unknownClient": "Unbekannter Client"
+      },
+      "filter": {
+        "client": "Client",
+        "allClients": "Alle Clients",
+        "clear": "Filter zurücksetzen"
       }
     },
     "externalSystems": {

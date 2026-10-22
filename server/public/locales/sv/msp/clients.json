@@ -315,7 +315,19 @@
     "inboundDomainAutoCreateHelp": "Mappade domäner kan valfritt skapa en kontakt för en betrodd ny avsändare. Domäner måste vara unika för varje kund.",
     "inboundDomainAutoCreateUpdated": "Inställningen för avsändarkontakter har uppdaterats.",
     "inboundDomainAutoCreateUpdateFailed": "Det gick inte att uppdatera inställningen för avsändarkontakter.",
-    "recurringTickets": "Återkommande ärenden"
+    "recurringTickets": "Återkommande ärenden",
+    "checklistsTab": "Checklistor",
+    "checklists": {
+      "name": "Namn",
+      "items": "Punkter",
+      "status": "Status",
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "description": "Checklistmallar som bara erbjuds på den här kundens ärenden. Redigera dem under Inställningar > Ärenden > Checklistmallar.",
+      "empty": "Inga kundspecifika checklistmallar.",
+      "loadFailed": "Det gick inte att läsa in checklistmallar",
+      "retry": "Försök igen"
+    }
   },
   "clientCommandCenter": {
     "cards": {

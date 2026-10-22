@@ -1667,7 +1667,9 @@
       "ruleCategoryBoardMismatch": "De geselecteerde categorie hoort bij een ander bord dan de regel.",
       "ruleCategoryInvalid": "De geselecteerde categorie is geen categorie op het hoogste niveau.",
       "ruleSubcategoryInvalid": "De geselecteerde subcategorie hoort niet bij de geselecteerde categorie.",
-      "ruleSubcategoryRequiresCategory": "Selecteer een categorie voordat u een subcategorie kiest."
+      "ruleSubcategoryRequiresCategory": "Selecteer een categorie voordat u een subcategorie kiest.",
+      "templateClientMismatch": "Dit checklistsjabloon is beperkt tot een andere klant dan die van het ticket.",
+      "templateClientInvalid": "De geselecteerde klant is niet gevonden."
     }
   },
   "ticketSection": {

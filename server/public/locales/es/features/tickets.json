@@ -1667,7 +1667,9 @@
       "ruleCategoryBoardMismatch": "La categoría seleccionada pertenece a un tablero distinto al de la regla.",
       "ruleCategoryInvalid": "La categoría seleccionada no es una categoría de nivel superior.",
       "ruleSubcategoryInvalid": "La subcategoría seleccionada no pertenece a la categoría seleccionada.",
-      "ruleSubcategoryRequiresCategory": "Seleccione una categoría antes de elegir una subcategoría."
+      "ruleSubcategoryRequiresCategory": "Seleccione una categoría antes de elegir una subcategoría.",
+      "templateClientMismatch": "Esta plantilla de lista de verificación está limitada a un cliente distinto del cliente del ticket.",
+      "templateClientInvalid": "No se encontró el cliente seleccionado."
     }
   },
   "ticketSection": {

@@ -315,7 +315,19 @@
     "inboundDomainAutoCreateHelp": "I domini associati possono creare un contatto per un nuovo mittente attendibile.",
     "inboundDomainAutoCreateUpdated": "Impostazione dei contatti mittente aggiornata.",
     "inboundDomainAutoCreateUpdateFailed": "Impossibile aggiornare l’impostazione dei contatti mittente.",
-    "recurringTickets": "Ticket ricorrenti"
+    "recurringTickets": "Ticket ricorrenti",
+    "checklistsTab": "Checklist",
+    "checklists": {
+      "name": "Nome",
+      "items": "Elementi",
+      "status": "Stato",
+      "active": "Attivo",
+      "inactive": "Inattivo",
+      "description": "Modelli di checklist offerti solo sui ticket di questo cliente. Modificali in Impostazioni > Ticket > Modelli di checklist.",
+      "empty": "Nessun modello di checklist specifico per il cliente.",
+      "loadFailed": "Impossibile caricare i modelli di checklist",
+      "retry": "Riprova"
+    }
   },
   "clientCommandCenter": {
     "cards": {

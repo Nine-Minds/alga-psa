@@ -59,6 +59,8 @@
     "./lib/ticketActivity/index.js": "./dist/lib/ticketActivity/index.js",
     "./lib/ticketChecklists": "./dist/lib/ticketChecklists/index.js",
     "./lib/ticketChecklists/index.js": "./dist/lib/ticketChecklists/index.js",
+    "./lib/ticketChecklists/scope": "./dist/lib/ticketChecklists/scope.js",
+    "./lib/ticketChecklists/scope.js": "./dist/lib/ticketChecklists/scope.js",
     "./lib/ticketCloseRules": "./dist/lib/ticketCloseRules/index.js",
     "./lib/ticketCloseRules/index.js": "./dist/lib/ticketCloseRules/index.js",
     "./lib/recurrence": "./dist/lib/recurrence/index.js",
