@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
 import { getAllBoards, getAllPriorities, getTicketStatuses } from '@alga-psa/reference-data/actions';
@@ -26,6 +27,8 @@ import {
   getServiceRequestDefinitionEditorData,
   publishServiceRequestDefinitionWithValidation,
   saveServiceRequestDefinitionDraft,
+  saveServiceRequestDefinitionAudience,
+  type ServiceRequestAudienceMode,
   searchServiceCatalogForLinking,
   setLinkedServiceForServiceRequestDefinitionDraft,
   updateBasicFormFieldInDefinitionDraft,
@@ -502,6 +505,34 @@ export const updateServiceRequestVisibilityConfigAction = withAuth(async (
     },
     updatedBy: getActorId(user),
   });
+});
+
+export const updateServiceRequestAudienceAction = withAuth(async (
+  user,
+  { tenant },
+  definitionId: string,
+  audience: { mode: ServiceRequestAudienceMode; clientIds: string[]; groupIds: string[] }
+): Promise<ServiceRequestDefinitionActionResult> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'update', knex);
+  try {
+    await saveServiceRequestDefinitionAudience({
+      knex,
+      tenant,
+      definitionId,
+      updatedBy: getActorId(user),
+      audience: {
+        mode: audience.mode,
+        clientIds: audience.clientIds ?? [],
+        groupIds: audience.groupIds ?? [],
+      },
+    });
+  } catch (error) {
+    return mapServiceRequestDefinitionError(error);
+  }
+  // Audience is a live access policy; make the portal catalog/detail re-render with it.
+  revalidatePath('/client-portal/request-services');
+  return serviceRequestSuccess(undefined);
 });
 
 export const validateServiceRequestDefinitionForPublishAction = withAuth(async (

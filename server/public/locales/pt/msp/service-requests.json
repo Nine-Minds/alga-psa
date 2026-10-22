@@ -144,7 +144,32 @@
       "visibility": {
         "title": "Configuração de visibilidade",
         "config": "Configuração de visibilidade (objeto JSON)",
-        "save": "Salvar configuração de visibilidade"
+        "save": "Salvar configuração de visibilidade",
+        "audience": {
+          "title": "Quem pode ver este formulário",
+          "everyone": "Todos",
+          "everyoneHelp": "Todos os utilizadores de cliente autenticados podem ver e enviar este formulário.",
+          "scoped": "Clientes e grupos de utilizadores de cliente selecionados",
+          "scopedHelp": "Apenas os utilizadores dos clientes selecionados, ou os membros dos grupos selecionados, podem ver e enviar este formulário.",
+          "addClient": "Adicionar um cliente",
+          "clientPlaceholder": "Pesquisar clientes...",
+          "noClients": "Ainda não há clientes selecionados.",
+          "selectedClients": "Clientes selecionados",
+          "removeClient": "Remover {{name}}",
+          "groupsOf": "Grupos de utilizadores de {{name}}",
+          "groupLabel": "{{group}} ({{client}})",
+          "loadingGroups": "A carregar grupos...",
+          "noGroups": "Este cliente não tem grupos de utilizadores.",
+          "groupsHelp": "Cada cliente corresponde a todos os seus utilizadores ou apenas aos membros dos grupos selecionados. Um grupo só concede acesso aos membros do seu próprio cliente. Um cliente não pode estar definido para todos os utilizadores e ter também grupos selecionados.",
+          "emptyWarning": "Nada está selecionado, por isso nenhum utilizador de cliente pode ver este formulário. Selecione pelo menos um cliente ou grupo, ou volte a Todos. Eliminar o último grupo selecionado tem o mesmo efeito.",
+          "save": "Guardar público-alvo",
+          "allUsersOf": "Todos os utilizadores de {{name}}",
+          "onlyGroups": "Apenas membros dos grupos selecionados"
+        },
+        "advanced": {
+          "title": "Regras de visibilidade avançadas",
+          "help": "Aplicam-se além do público-alvo acima: um utilizador tem de cumprir ambos."
+        }
       },
       "fields": {
         "executionProvider": "Provedor de Execução",
@@ -387,7 +412,8 @@
       "ticketRoutingUpdated": "Configuração de roteamento de tickets atualizada",
       "workflowConfigurationUpdated": "Configuração do fluxo de trabalho atualizada",
       "formBehaviorConfigUpdated": "Configuração de comportamento do formulário atualizada",
-      "visibilityConfigUpdated": "Configuração de visibilidade atualizada"
+      "visibilityConfigUpdated": "Configuração de visibilidade atualizada",
+      "audienceUpdated": "Público-alvo atualizado"
     },
     "error": {
       "loadFailed": "Falha ao carregar solicitações de serviço",
@@ -410,7 +436,8 @@
       "formBehaviorInvalid": "Comportamento de formulário inválido JSON",
       "visibilityNotObject": "A configuração de visibilidade precisa ser um objeto JSON",
       "visibilityInvalid": "Visibilidade JSON inválida",
-      "saveAllPartial": "Algumas seções não puderam ser salvas: {{sections}}"
+      "saveAllPartial": "Algumas seções não puderam ser salvas: {{sections}}",
+      "audienceSaveFailed": "Falha ao atualizar o público-alvo"
     }
   }
 }

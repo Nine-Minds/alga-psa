@@ -144,7 +144,32 @@
       "visibility": {
         "title": "Visibility Configuration",
         "config": "Visibility Config (JSON object)",
-        "save": "Save Visibility Config"
+        "save": "Save Visibility Config",
+        "audience": {
+          "title": "Who can see this form",
+          "everyone": "Everyone",
+          "everyoneHelp": "All authenticated client users can see and submit this form.",
+          "scoped": "Selected clients and client-user groups",
+          "scopedHelp": "Only users of the selected clients, or members of the selected groups, can see and submit this form.",
+          "addClient": "Add a client",
+          "clientPlaceholder": "Search clients...",
+          "noClients": "No clients selected yet.",
+          "selectedClients": "Selected clients",
+          "removeClient": "Remove {{name}}",
+          "groupsOf": "Client-user groups of {{name}}",
+          "groupLabel": "{{group}} ({{client}})",
+          "loadingGroups": "Loading groups...",
+          "noGroups": "This client has no client-user groups.",
+          "groupsHelp": "Each client is either all of its users, or only the members of selected groups. A group only grants access to its own client's members. A client cannot be set to all users and also have its groups selected.",
+          "emptyWarning": "Nothing is selected, so no client user can see this form. Select at least one client or group, or switch back to Everyone. Deleting the last selected group has the same effect.",
+          "save": "Save audience",
+          "allUsersOf": "All users of {{name}}",
+          "onlyGroups": "Only members of selected groups"
+        },
+        "advanced": {
+          "title": "Advanced visibility rules",
+          "help": "Applies in addition to the audience above: a user must satisfy both."
+        }
       },
       "fields": {
         "executionProvider": "Execution Provider",
@@ -387,7 +412,8 @@
       "ticketRoutingUpdated": "Ticket routing configuration updated",
       "workflowConfigurationUpdated": "Workflow configuration updated",
       "formBehaviorConfigUpdated": "Form behavior config updated",
-      "visibilityConfigUpdated": "Visibility config updated"
+      "visibilityConfigUpdated": "Visibility config updated",
+      "audienceUpdated": "Audience updated"
     },
     "error": {
       "loadFailed": "Failed to load service requests",
@@ -410,7 +436,8 @@
       "formBehaviorInvalid": "Invalid form behavior JSON",
       "visibilityNotObject": "Visibility config must be a JSON object",
       "visibilityInvalid": "Invalid visibility JSON",
-      "saveAllPartial": "Some sections couldn't be saved: {{sections}}"
+      "saveAllPartial": "Some sections couldn't be saved: {{sections}}",
+      "audienceSaveFailed": "Failed to update audience"
     }
   }
 }

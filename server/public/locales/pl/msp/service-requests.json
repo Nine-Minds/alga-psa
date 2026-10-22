@@ -144,7 +144,32 @@
       "visibility": {
         "title": "Konfiguracja widoczności",
         "config": "Konfiguracja widoczności (obiekt JSON)",
-        "save": "Zapisz konfigurację widoczności"
+        "save": "Zapisz konfigurację widoczności",
+        "audience": {
+          "title": "Kto może zobaczyć ten formularz",
+          "everyone": "Wszyscy",
+          "everyoneHelp": "Wszyscy uwierzytelnieni użytkownicy klienta mogą zobaczyć i wysłać ten formularz.",
+          "scoped": "Wybrani klienci i grupy użytkowników klienta",
+          "scopedHelp": "Tylko użytkownicy wybranych klientów lub członkowie wybranych grup mogą zobaczyć i wysłać ten formularz.",
+          "addClient": "Dodaj klienta",
+          "clientPlaceholder": "Szukaj klientów...",
+          "noClients": "Nie wybrano jeszcze klientów.",
+          "selectedClients": "Wybrani klienci",
+          "removeClient": "Usuń {{name}}",
+          "groupsOf": "Grupy użytkowników klienta {{name}}",
+          "groupLabel": "{{group}} ({{client}})",
+          "loadingGroups": "Ładowanie grup...",
+          "noGroups": "Ten klient nie ma grup użytkowników.",
+          "groupsHelp": "Każdy klient oznacza albo wszystkich jego użytkowników, albo tylko członków wybranych grup. Grupa daje dostęp tylko członkom własnego klienta. Klient nie może mieć ustawionych wszystkich użytkowników i jednocześnie wybranych grup.",
+          "emptyWarning": "Nic nie wybrano, więc żaden użytkownik klienta nie zobaczy tego formularza. Wybierz co najmniej jednego klienta lub grupę albo wróć do opcji Wszyscy. Usunięcie ostatniej wybranej grupy ma ten sam skutek.",
+          "save": "Zapisz odbiorców",
+          "allUsersOf": "Wszyscy użytkownicy klienta {{name}}",
+          "onlyGroups": "Tylko członkowie wybranych grup"
+        },
+        "advanced": {
+          "title": "Zaawansowane reguły widoczności",
+          "help": "Obowiązują dodatkowo do powyższych odbiorców: użytkownik musi spełniać oba warunki."
+        }
       },
       "fields": {
         "executionProvider": "Dostawca wykonania",
@@ -389,7 +414,8 @@
       "ticketRoutingUpdated": "Zaktualizowano konfigurację routingu zgłoszeń",
       "workflowConfigurationUpdated": "Zaktualizowano konfigurację workflow",
       "formBehaviorConfigUpdated": "Zaktualizowano konfigurację zachowania formularza",
-      "visibilityConfigUpdated": "Zaktualizowano konfigurację widoczności"
+      "visibilityConfigUpdated": "Zaktualizowano konfigurację widoczności",
+      "audienceUpdated": "Odbiorcy zaktualizowani"
     },
     "error": {
       "loadFailed": "Nie udało się wczytać zgłoszeń serwisowych",
@@ -412,7 +438,8 @@
       "formBehaviorInvalid": "Nieprawidłowy JSON zachowania formularza",
       "visibilityNotObject": "Konfiguracja widoczności musi być obiektem JSON",
       "visibilityInvalid": "Nieprawidłowy JSON widoczności",
-      "saveAllPartial": "Nie udało się zapisać niektórych sekcji: {{sections}}"
+      "saveAllPartial": "Nie udało się zapisać niektórych sekcji: {{sections}}",
+      "audienceSaveFailed": "Nie udało się zaktualizować odbiorców"
     }
   }
 }

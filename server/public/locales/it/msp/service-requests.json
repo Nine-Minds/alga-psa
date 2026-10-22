@@ -144,7 +144,32 @@
       "visibility": {
         "title": "Configurazione della visibilità",
         "config": "Configurazione della visibilità (oggetto JSON)",
-        "save": "Salva configurazione della visibilità"
+        "save": "Salva configurazione della visibilità",
+        "audience": {
+          "title": "Chi può vedere questo modulo",
+          "everyone": "Tutti",
+          "everyoneHelp": "Tutti gli utenti cliente autenticati possono vedere e inviare questo modulo.",
+          "scoped": "Clienti e gruppi di utenti cliente selezionati",
+          "scopedHelp": "Solo gli utenti dei clienti selezionati, o i membri dei gruppi selezionati, possono vedere e inviare questo modulo.",
+          "addClient": "Aggiungi un cliente",
+          "clientPlaceholder": "Cerca clienti...",
+          "noClients": "Nessun cliente selezionato.",
+          "selectedClients": "Clienti selezionati",
+          "removeClient": "Rimuovi {{name}}",
+          "groupsOf": "Gruppi di utenti di {{name}}",
+          "groupLabel": "{{group}} ({{client}})",
+          "loadingGroups": "Caricamento dei gruppi...",
+          "noGroups": "Questo cliente non ha gruppi di utenti.",
+          "groupsHelp": "Ogni cliente corrisponde a tutti i suoi utenti oppure solo ai membri dei gruppi selezionati. Un gruppo concede l'accesso solo ai membri del proprio cliente. Un cliente non può essere impostato su tutti gli utenti e avere anche gruppi selezionati.",
+          "emptyWarning": "Non è selezionato nulla, quindi nessun utente cliente può vedere questo modulo. Seleziona almeno un cliente o un gruppo, oppure torna a Tutti. Eliminare l'ultimo gruppo selezionato ha lo stesso effetto.",
+          "save": "Salva destinatari",
+          "allUsersOf": "Tutti gli utenti di {{name}}",
+          "onlyGroups": "Solo i membri dei gruppi selezionati"
+        },
+        "advanced": {
+          "title": "Regole di visibilità avanzate",
+          "help": "Si applicano in aggiunta ai destinatari sopra: un utente deve soddisfare entrambi."
+        }
       },
       "fields": {
         "executionProvider": "Provider di esecuzione",
@@ -387,7 +412,8 @@
       "ticketRoutingUpdated": "Configurazione dell'instradamento dei ticket aggiornata",
       "workflowConfigurationUpdated": "Configurazione del workflow aggiornata",
       "formBehaviorConfigUpdated": "Configurazione del comportamento del modulo aggiornata",
-      "visibilityConfigUpdated": "Configurazione della visibilità aggiornata"
+      "visibilityConfigUpdated": "Configurazione della visibilità aggiornata",
+      "audienceUpdated": "Destinatari aggiornati"
     },
     "error": {
       "loadFailed": "Impossibile caricare le richieste di servizio",
@@ -410,7 +436,8 @@
       "formBehaviorInvalid": "JSON del comportamento del modulo non valido",
       "visibilityNotObject": "La configurazione della visibilità deve essere un oggetto JSON",
       "visibilityInvalid": "JSON della visibilità non valido",
-      "saveAllPartial": "Impossibile salvare alcune sezioni: {{sections}}"
+      "saveAllPartial": "Impossibile salvare alcune sezioni: {{sections}}",
+      "audienceSaveFailed": "Impossibile aggiornare i destinatari"
     }
   }
 }

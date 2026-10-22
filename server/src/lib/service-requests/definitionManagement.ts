@@ -9,6 +9,7 @@ import { listServiceRequestTemplateProviders } from './providers/registry';
 import type { ServiceRequestTemplateDefinition } from './providers/contracts';
 import { isLicenseDistributionTenant } from '@alga-psa/licensing';
 import { ServiceRequestDefinitionBusinessError } from './definitionErrors';
+import type { ServiceRequestAudienceMode } from './definitionAudience';
 
 /**
  * Template provider whose templates author the in-app appliance-license purchase
@@ -45,6 +46,7 @@ interface ServiceRequestDefinitionSourceRow extends ServiceRequestDefinitionMana
   form_behavior_config: Record<string, unknown>;
   visibility_provider: string;
   visibility_config: Record<string, unknown>;
+  audience_mode?: 'all' | 'scoped';
 }
 
 interface ServiceRequestDefinitionVersionSourceRow {
@@ -339,7 +341,9 @@ export async function duplicateServiceRequestDefinition({
     );
   }
 
-  const [created] = (await db.table('service_request_definitions')
+  const created = await knex.transaction(async (trx) => {
+    const trxDb = tenantDb(trx, tenant);
+    const [row] = (await trxDb.table('service_request_definitions')
     .insert({
       tenant,
       name: `${source.name} (Copy)`,
@@ -357,6 +361,7 @@ export async function duplicateServiceRequestDefinition({
       form_behavior_config: source.form_behavior_config,
       visibility_provider: source.visibility_provider,
       visibility_config: source.visibility_config,
+      audience_mode: source.audience_mode ?? 'all',
       lifecycle_state: 'draft',
       published_by: null,
       published_at: null,
@@ -364,6 +369,28 @@ export async function duplicateServiceRequestDefinition({
       updated_by: createdBy,
     })
     .returning('*')) as ServiceRequestDefinitionManagementRow[];
+
+    // Audience is a live access policy on the definition; the copy starts with the same scope.
+    const [clientRows, groupRows] = await Promise.all([
+      trxDb.table('service_request_audience_clients')
+        .where({ definition_id: sourceDefinitionId })
+        .select('client_id') as Promise<Array<{ client_id: string }>>,
+      trxDb.table('service_request_audience_client_groups')
+        .where({ definition_id: sourceDefinitionId })
+        .select('group_id') as Promise<Array<{ group_id: string }>>,
+    ]);
+    if (clientRows.length > 0) {
+      await trxDb.table('service_request_audience_clients').insert(
+        clientRows.map((r) => ({ tenant, definition_id: row.definition_id, client_id: r.client_id }))
+      );
+    }
+    if (groupRows.length > 0) {
+      await trxDb.table('service_request_audience_client_groups').insert(
+        groupRows.map((r) => ({ tenant, definition_id: row.definition_id, group_id: r.group_id }))
+      );
+    }
+    return row;
+  });
 
   await publishServiceRequestDefinitionSearchEvent(
     'SERVICE_REQUEST_DEFINITION_CREATED',
@@ -590,4 +617,102 @@ export async function deleteServiceRequestDefinitionFromManagement(
   }
 
   return deleted > 0;
+}
+
+export interface SaveServiceRequestDefinitionAudienceInput {
+  knex: Knex;
+  tenant: string;
+  definitionId: string;
+  updatedBy?: string | null;
+  audience: {
+    mode: ServiceRequestAudienceMode;
+    clientIds: string[];
+    groupIds: string[];
+  };
+}
+
+/**
+ * Replaces a definition's audience (mode + client/group scope rows) in one transaction.
+ *
+ * Validates that every client and group belongs to this tenant and that every group belongs to
+ * one of the selected clients (groups are per-client; a group never grants access across
+ * clients). Mode 'all' clears the scope rows. A 'scoped' audience with no rows is allowed here
+ * (it means nobody); publish validation rejects it. Never flips the mode implicitly.
+ * The audience is a live access policy: it does not touch definition versions.
+ */
+export async function saveServiceRequestDefinitionAudience({
+  knex,
+  tenant,
+  definitionId,
+  updatedBy = null,
+  audience,
+}: SaveServiceRequestDefinitionAudienceInput): Promise<void> {
+  if (audience.mode !== 'all' && audience.mode !== 'scoped') {
+    throw new ServiceRequestDefinitionBusinessError('INVALID_AUDIENCE', 'Invalid audience mode');
+  }
+  const clientIds = audience.mode === 'scoped' ? [...new Set(audience.clientIds)] : [];
+  const groupIds = audience.mode === 'scoped' ? [...new Set(audience.groupIds)] : [];
+
+  await knex.transaction(async (trx) => {
+    const db = tenantDb(trx, tenant);
+
+    const definition = await db.table('service_request_definitions')
+      .where({ definition_id: definitionId })
+      .first('definition_id');
+    if (!definition) {
+      throw new ServiceRequestDefinitionBusinessError(
+        'DEFINITION_NOT_FOUND',
+        'Service request definition not found'
+      );
+    }
+
+    if (clientIds.length > 0) {
+      const found = (await db.table('clients')
+        .whereIn('client_id', clientIds)
+        .select('client_id')) as Array<{ client_id: string }>;
+      if (found.length !== clientIds.length) {
+        throw new ServiceRequestDefinitionBusinessError(
+          'INVALID_AUDIENCE',
+          'One or more selected clients do not exist'
+        );
+      }
+    }
+
+    if (groupIds.length > 0) {
+      const groups = (await db.table('client_portal_visibility_groups')
+        .whereIn('group_id', groupIds)
+        .select('group_id', 'client_id')) as Array<{ group_id: string; client_id: string }>;
+      if (groups.length !== groupIds.length) {
+        throw new ServiceRequestDefinitionBusinessError(
+          'INVALID_AUDIENCE',
+          'One or more selected client groups do not exist'
+        );
+      }
+      // A client row already admits every user of that client, so also selecting
+      // one of its groups is redundant and ambiguous.
+      const selectedClients = new Set(clientIds);
+      if (groups.some((group) => selectedClients.has(group.client_id))) {
+        throw new ServiceRequestDefinitionBusinessError(
+          'INVALID_AUDIENCE',
+          'A client cannot be selected for all of its users and also have one of its groups selected; choose either all users or specific groups'
+        );
+      }
+    }
+
+    await db.table('service_request_audience_clients').where({ definition_id: definitionId }).delete();
+    await db.table('service_request_audience_client_groups').where({ definition_id: definitionId }).delete();
+    if (clientIds.length > 0) {
+      await db.table('service_request_audience_clients').insert(
+        clientIds.map((clientId) => ({ tenant, definition_id: definitionId, client_id: clientId }))
+      );
+    }
+    if (groupIds.length > 0) {
+      await db.table('service_request_audience_client_groups').insert(
+        groupIds.map((groupId) => ({ tenant, definition_id: definitionId, group_id: groupId }))
+      );
+    }
+    await db.table('service_request_definitions')
+      .where({ definition_id: definitionId })
+      .update({ audience_mode: audience.mode, updated_by: updatedBy, updated_at: trx.fn.now() });
+  });
 }

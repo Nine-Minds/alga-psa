@@ -24,6 +24,7 @@ interface ServiceRequestDefinitionForValidation {
   form_behavior_config: Record<string, unknown>;
   visibility_provider: string;
   visibility_config: Record<string, unknown>;
+  audience_mode?: 'all' | 'scoped';
 }
 
 export async function validateServiceRequestDefinitionForPublish(
@@ -100,6 +101,22 @@ export async function validateServiceRequestDefinitionForPublish(
       errors.push(...(validation.errors ?? []).map((error) => `Visibility: ${error}`));
     }
     warnings.push(...(validation.warnings ?? []).map((warning) => `Visibility: ${warning}`));
+  }
+
+  if (definition.audience_mode === 'scoped') {
+    const [clientRow, groupRow] = await Promise.all([
+      db.table('service_request_audience_clients')
+        .where({ definition_id: definitionId })
+        .first('client_id'),
+      db.table('service_request_audience_client_groups')
+        .where({ definition_id: definitionId })
+        .first('group_id'),
+    ]);
+    if (!clientRow && !groupRow) {
+      errors.push(
+        'Visibility: Restricted audience has no clients or client groups selected; choose at least one or set the audience to Everyone'
+      );
+    }
   }
 
   return {
