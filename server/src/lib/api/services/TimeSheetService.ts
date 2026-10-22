@@ -1189,27 +1189,34 @@ export class TimeSheetService extends BaseService<any> {
         const assigneeIds = await tenantDb(trx, context.tenant).table('schedule_entry_assignees')
           .where({ entry_id: id })
           .pluck('user_id');
-        const isOwnEntry = existing.created_by === context.userId ||
-          (assigneeIds.length === 1 && assigneeIds[0] === context.userId);
-
-        if (existing.is_private && !isOwnEntry) {
+        // Same rule as the updateScheduleEntry server action and the REST controller.
+        const access = await resolveCalendarAccess(
+          trx,
+          context.tenant,
+          { user_id: context.userId },
+          await this.canViewAllSchedules(context)
+        );
+        const isOwnEntry = assigneeIds.length === 1 && assigneeIds[0] === context.userId;
+        if (existing.is_private && !existing.calendar_id && !isOwnEntry) {
           throw new ForbiddenError('Permission denied: Cannot update a private schedule entry');
         }
-
-        if (!await this.canManageSchedules(context, 'update')) {
-          const assignmentRemainsOwn = data.assigned_user_ids
-            ? data.assigned_user_ids.length === 1 && data.assigned_user_ids[0] === context.userId
-            : true;
-          if (!isOwnEntry || !assignmentRemainsOwn) {
-            throw new ForbiddenError('Permission denied: Cannot update this schedule entry');
-          }
+        const decision = evaluateEntryAccess({ ...existing, assigned_user_ids: assigneeIds }, access);
+        if (decision.access === 'none') {
+          throw new NotFoundError('Schedule entry not found');
+        }
+        if (!decision.canEdit) {
+          throw new ForbiddenError('Permission denied: Cannot update this schedule entry');
+        }
+        const addedToEntry = (data.assigned_user_ids ?? []).filter((userId: string) => !assigneeIds.includes(userId));
+        if (addedToEntry.some((userId: string) => !canAssignUser(userId, access))) {
+          throw new ForbiddenError('Permission denied: Cannot assign schedules to other users');
         }
 
         // Moving onto a group calendar requires edit access there; never silently ignored.
         if (data.calendar_id && data.calendar_id !== existing.calendar_id) {
-          const access = await this.assertWritableGroupCalendar(trx, data.calendar_id, context);
+          const targetAccess = await this.assertWritableGroupCalendar(trx, data.calendar_id, context);
           const addedAssignees = (data.assigned_user_ids ?? []).filter((userId: string) => !assigneeIds.includes(userId));
-          if (addedAssignees.some((userId: string) => !canAssignUser(userId, access))) {
+          if (addedAssignees.some((userId: string) => !canAssignUser(userId, targetAccess))) {
             throw new ForbiddenError('Permission denied: Cannot assign schedules to other users');
           }
         }
@@ -1294,14 +1301,22 @@ export class TimeSheetService extends BaseService<any> {
         const assigneeIds = await tenantDb(trx, context.tenant).table('schedule_entry_assignees')
           .where({ entry_id: id })
           .pluck('user_id');
-        const isOwnEntry = existing.created_by === context.userId ||
-          (assigneeIds.length === 1 && assigneeIds[0] === context.userId);
-
+        // Same rule as the deleteScheduleEntry server action (which checks plain is_private).
+        const isOwnEntry = assigneeIds.length === 1 && assigneeIds[0] === context.userId;
         if (existing.is_private && !isOwnEntry) {
           throw new ForbiddenError('Permission denied: Cannot delete a private schedule entry');
         }
-
-        if (!isOwnEntry && !await this.canManageSchedules(context, 'delete')) {
+        const access = await resolveCalendarAccess(
+          trx,
+          context.tenant,
+          { user_id: context.userId },
+          await this.canViewAllSchedules(context)
+        );
+        const decision = evaluateEntryAccess({ ...existing, assigned_user_ids: assigneeIds }, access);
+        if (decision.access === 'none') {
+          throw new NotFoundError('Schedule entry not found');
+        }
+        if (!decision.canEdit) {
           throw new ForbiddenError('Permission denied: Cannot delete this schedule entry');
         }
 
@@ -1594,6 +1609,22 @@ export class TimeSheetService extends BaseService<any> {
       };
     }
 
+
+  /**
+   * Raw entry plus assigned_user_ids, for authorization only. getScheduleEntry cannot be used
+   * for that: it returns null/masked data for viewers without full access and exposes
+   * assigned_users, not the assigned_user_ids evaluateEntryAccess reads.
+   */
+  async getScheduleEntryForAccess(id: string, context: ServiceContext): Promise<any | null> {
+      const { knex } = await this.getKnex();
+      const db = tenantDb(knex, context.tenant);
+      const entry = await db.table('schedule_entries').where({ entry_id: id }).first();
+      if (!entry) return null;
+      const assigned_user_ids: string[] = await db.table('schedule_entry_assignees')
+        .where({ entry_id: id })
+        .pluck('user_id');
+      return { ...entry, assigned_user_ids };
+    }
 
   private async getScheduleAssignees(entryId: string, context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();

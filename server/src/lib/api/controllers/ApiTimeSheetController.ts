@@ -49,11 +49,25 @@ import {
   createPaginatedResponse,
   handleApiError
 } from '../middleware/apiMiddleware';
+import {
+  canAssignUser,
+  evaluateEntryAccess,
+  resolveCalendarAccess,
+} from '@alga-psa/scheduling/lib/calendarAccess';
 import { ZodError } from 'zod';
 import { uuidSchema } from '../schemas/common';
 
 export class ApiTimeSheetController extends ApiBaseController {
   private timeSheetService: TimeSheetService;
+
+  /**
+   * Shared-calendar access for the caller, resolved exactly as the schedule server actions do
+   * (user_schedule:update is the global escalation, not a prerequisite).
+   */
+  private async resolveScheduleAccess(user: any, tenantId: string, db: any) {
+    const canUpdateGlobally = await hasPermission(user, 'user_schedule', 'update', db);
+    return resolveCalendarAccess(db, tenantId, user, canUpdateGlobally);
+  }
 
   private async assertManualProductAccess(
     req: NextRequest,
@@ -2013,18 +2027,12 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw error;
         }
 
-        // Assigning entries to other users requires the broader update permission
-        const assignsOthers = (scheduleData.assigned_user_ids || []).some(
-          (assignedId) => assignedId !== user.user_id
-        );
-        if (assignsOthers) {
-          const canAssignOthers = await hasPermission(
-            user,
-            'user_schedule',
-            'update',
-            db
-          );
-          if (!canAssignOthers) {
+        // Same rule as addScheduleEntry: self, user_schedule:update, or an edit share on the
+        // assignee's personal calendar. TimeSheetService re-checks this for group calendars.
+        const assignedIds: string[] = scheduleData.assigned_user_ids || [];
+        if (assignedIds.length > 0) {
+          const access = await this.resolveScheduleAccess(user, tenantId!, db);
+          if (assignedIds.some((assignedId) => !canAssignUser(assignedId, access))) {
             throw new ForbiddenError('Permission denied: Cannot assign schedules to other users');
           }
         }
@@ -2084,12 +2092,10 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const canUpdateAll = await hasPermission(
-          user,
-          'user_schedule',
-          'update',
-          db
-        );
+        const canReadSchedule = await hasPermission(user, 'user_schedule', 'read', db);
+        if (!canReadSchedule) {
+          throw new ForbiddenError('Permission denied: Cannot update schedules');
+        }
 
         // Extract ID from path
         const pathParts = req.url.split('/');
@@ -2108,7 +2114,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         const existing = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.getScheduleEntry(id, {
+          return await this.timeSheetService.getScheduleEntryForAccess(id, {
             userId: user.user_id,
             user,
             tenant: tenantId!,
@@ -2119,21 +2125,29 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new NotFoundError('Schedule entry not found');
         }
 
-        const assignedIds = (existing.assigned_users || []).map((u: any) => u.user_id);
-        const isOwnEntry = existing.created_by === user.user_id ||
-          (assignedIds.length === 1 && assignedIds[0] === user.user_id);
-
-        if (existing.is_private && !isOwnEntry) {
+        // Same rule as the updateScheduleEntry server action.
+        const isOwnEntry =
+          existing.assigned_user_ids.length === 1 && existing.assigned_user_ids[0] === user.user_id;
+        if (existing.is_private && !existing.calendar_id && !isOwnEntry) {
           throw new ForbiddenError('Permission denied: Cannot update a private schedule entry');
         }
 
-        if (!canUpdateAll) {
-          const assignmentRemainsOwn = scheduleData.assigned_user_ids
-            ? scheduleData.assigned_user_ids.length === 1 &&
-              scheduleData.assigned_user_ids[0] === user.user_id
-            : true;
-          if (!isOwnEntry || !assignmentRemainsOwn) {
-            throw new ForbiddenError('Permission denied: Cannot update schedules');
+        // LEVERAGE: pattern rest-calendar-access — resolve + evaluateEntryAccess block repeated in update/delete (and the service)
+        const access = await this.resolveScheduleAccess(user, tenantId!, db);
+        const decision = evaluateEntryAccess(existing, access);
+        if (decision.access === 'none') {
+          throw new NotFoundError('Schedule entry not found');
+        }
+        if (!decision.canEdit) {
+          throw new ForbiddenError('Permission denied: Cannot update this schedule entry');
+        }
+
+        if (scheduleData.assigned_user_ids) {
+          const addedAssignees = scheduleData.assigned_user_ids.filter(
+            (assignedId: string) => !existing.assigned_user_ids.includes(assignedId)
+          );
+          if (addedAssignees.some((assignedId: string) => !canAssignUser(assignedId, access))) {
+            throw new ForbiddenError('Permission denied: Cannot assign schedules to other users');
           }
         }
 
@@ -2192,19 +2206,12 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const canDeleteAll = await hasPermission(
-          user,
-          'user_schedule',
-          'delete',
-          db
-        );
-
         // Extract ID from path
         const pathParts = req.url.split('/');
         const id = pathParts[pathParts.length - 1];
 
         const existing = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.getScheduleEntry(id, {
+          return await this.timeSheetService.getScheduleEntryForAccess(id, {
             userId: user.user_id,
             user,
             tenant: tenantId!,
@@ -2215,16 +2222,22 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new NotFoundError('Schedule entry not found');
         }
 
-        const assignedIds = (existing.assigned_users || []).map((u: any) => u.user_id);
-        const isOwnEntry = existing.created_by === user.user_id ||
-          (assignedIds.length === 1 && assignedIds[0] === user.user_id);
-
+        // Same rule as the deleteScheduleEntry server action. Note: the action checks plain
+        // is_private here (not `&& !calendar_id` as update does); mirrored as written.
+        const isOwnEntry =
+          existing.assigned_user_ids.length === 1 && existing.assigned_user_ids[0] === user.user_id;
         if (existing.is_private && !isOwnEntry) {
           throw new ForbiddenError('Permission denied: Cannot delete a private schedule entry');
         }
 
-        if (!canDeleteAll && !isOwnEntry) {
-          throw new ForbiddenError('Permission denied: Cannot delete schedules');
+        // LEVERAGE: pattern rest-calendar-access — resolve + evaluateEntryAccess block repeated in update/delete (and the service)
+        const access = await this.resolveScheduleAccess(user, tenantId!, db);
+        const decision = evaluateEntryAccess(existing, access);
+        if (decision.access === 'none') {
+          throw new NotFoundError('Schedule entry not found');
+        }
+        if (!decision.canEdit) {
+          throw new ForbiddenError('Permission denied: Cannot delete this schedule entry');
         }
 
         // Delete schedule entry within tenant context

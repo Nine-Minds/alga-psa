@@ -250,4 +250,31 @@ describe('REST schedule entries: calendar_id', () => {
       expect(event!.payload.changes.after.assignedUserIds).toEqual([USER]);
     });
   });
+  describe('update/delete follow the shared-calendar rule (same as the controller)', () => {
+    const groupEntry = () => {
+      state.tables.schedule_entries[0] = { ...state.tables.schedule_entries[0], created_by: OTHER_USER, calendar_id: CAL_EDIT };
+      state.tables.schedule_entry_assignees = [{ tenant: TENANT, entry_id: ENTRY_ID, user_id: OTHER_USER }];
+    };
+
+    it('edit share on the group calendar may update and delete', async () => {
+      groupEntry();
+      const service = makeService();
+      await service.updateScheduleEntry(ENTRY_ID, { notes: 'x' } as any, context);
+      await service.deleteScheduleEntry(ENTRY_ID, context);
+      expect(state.tables.schedule_entries).toHaveLength(0);
+    });
+
+    it('read-only share gets 403; no visibility gets 404', async () => {
+      groupEntry();
+      state.tables.schedule_entries[0].calendar_id = CAL_VIEW;
+      state.groupLevels.set(CAL_VIEW, { calendarId: CAL_VIEW, level: 'read', isArchived: false });
+      await expect(makeService().updateScheduleEntry(ENTRY_ID, { notes: 'x' } as any, context))
+        .rejects.toMatchObject({ name: 'ForbiddenError' });
+      await expect(makeService().deleteScheduleEntry(ENTRY_ID, context))
+        .rejects.toMatchObject({ name: 'ForbiddenError' });
+      state.tables.schedule_entries[0].calendar_id = CAL_HIDDEN;
+      await expect(makeService().updateScheduleEntry(ENTRY_ID, { notes: 'x' } as any, context))
+        .rejects.toMatchObject({ name: 'NotFoundError' });
+    });
+  });
 });
