@@ -668,36 +668,33 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                       defaultValue: 'Hourly Rate',
                     })}
                   </Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
-                    <Input
-                      id={`hourly-rate-${index}`}
-                      type="text"
-                      inputMode="decimal"
-                      value={hourlyServiceRateInputs[index] || ''}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/[^0-9.]/g, '');
-                        const decimalCount = (value.match(/\./g) || []).length;
-                        if (decimalCount <= 1) {
-                          setHourlyServiceRateInputs(prev => ({ ...prev, [index]: value }));
-                        }
-                      }}
-                      onBlur={() => {
-                        const inputValue = hourlyServiceRateInputs[index] || '';
-                        if (inputValue.trim() === '' || inputValue === '.') {
-                          setHourlyServiceRateInputs(prev => ({ ...prev, [index]: '' }));
-                          handleHourlyRateChange(index, 0);
-                        } else {
-                          const dollars = parseFloat(inputValue) || 0;
-                          const cents = Math.round(dollars * 100);
-                          handleHourlyRateChange(index, cents);
-                          setHourlyServiceRateInputs(prev => ({ ...prev, [index]: (cents / 100).toFixed(2) }));
-                        }
-                      }}
-                      placeholder={t('createCustomLine.moneyPlaceholder', { defaultValue: '0.00' })}
-                      className="pl-7"
-                    />
-                  </div>
+                  <Input
+                    leadingAdornment={symbol()}
+                    id={`hourly-rate-${index}`}
+                    type="text"
+                    inputMode="decimal"
+                    value={hourlyServiceRateInputs[index] || ''}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9.]/g, '');
+                      const decimalCount = (value.match(/\./g) || []).length;
+                      if (decimalCount <= 1) {
+                        setHourlyServiceRateInputs(prev => ({ ...prev, [index]: value }));
+                      }
+                    }}
+                    onBlur={() => {
+                      const inputValue = hourlyServiceRateInputs[index] || '';
+                      if (inputValue.trim() === '' || inputValue === '.') {
+                        setHourlyServiceRateInputs(prev => ({ ...prev, [index]: '' }));
+                        handleHourlyRateChange(index, 0);
+                      } else {
+                        const dollars = parseFloat(inputValue) || 0;
+                        const cents = Math.round(dollars * 100);
+                        handleHourlyRateChange(index, cents);
+                        setHourlyServiceRateInputs(prev => ({ ...prev, [index]: (cents / 100).toFixed(2) }));
+                      }
+                    }}
+                    placeholder={t('createCustomLine.moneyPlaceholder', { defaultValue: '0.00' })}
+                  />
                   <p className="text-xs text-muted-foreground">
                     {service.hourly_rate
                       ? t('createCustomLine.hourlyRateDisplay', {
@@ -887,36 +884,33 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                         defaultValue: 'Rate per Unit',
                       })}
                     </Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
-                      <Input
-                        id={`unit-rate-${index}`}
-                        type="text"
-                        inputMode="decimal"
-                        value={usageServiceRateInputs[index] || ''}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/[^0-9.]/g, '');
-                          const decimalCount = (value.match(/\./g) || []).length;
-                          if (decimalCount <= 1) {
-                            setUsageServiceRateInputs(prev => ({ ...prev, [index]: value }));
-                          }
-                        }}
-                        onBlur={() => {
-                          const inputValue = usageServiceRateInputs[index] || '';
-                          if (inputValue.trim() === '' || inputValue === '.') {
-                            setUsageServiceRateInputs(prev => ({ ...prev, [index]: '' }));
-                            handleUsageRateChange(index, 0);
-                          } else {
-                            const dollars = parseFloat(inputValue) || 0;
-                            const cents = Math.round(dollars * 100);
-                            handleUsageRateChange(index, cents);
-                            setUsageServiceRateInputs(prev => ({ ...prev, [index]: (cents / 100).toFixed(2) }));
-                          }
-                        }}
-                        placeholder={t('createCustomLine.moneyPlaceholder', { defaultValue: '0.00' })}
-                        className="pl-10"
-                      />
-                    </div>
+                    <Input
+                      leadingAdornment={symbol()}
+                      id={`unit-rate-${index}`}
+                      type="text"
+                      inputMode="decimal"
+                      value={usageServiceRateInputs[index] || ''}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^0-9.]/g, '');
+                        const decimalCount = (value.match(/\./g) || []).length;
+                        if (decimalCount <= 1) {
+                          setUsageServiceRateInputs(prev => ({ ...prev, [index]: value }));
+                        }
+                      }}
+                      onBlur={() => {
+                        const inputValue = usageServiceRateInputs[index] || '';
+                        if (inputValue.trim() === '' || inputValue === '.') {
+                          setUsageServiceRateInputs(prev => ({ ...prev, [index]: '' }));
+                          handleUsageRateChange(index, 0);
+                        } else {
+                          const dollars = parseFloat(inputValue) || 0;
+                          const cents = Math.round(dollars * 100);
+                          handleUsageRateChange(index, cents);
+                          setUsageServiceRateInputs(prev => ({ ...prev, [index]: (cents / 100).toFixed(2) }));
+                        }
+                      }}
+                      placeholder={t('createCustomLine.moneyPlaceholder', { defaultValue: '0.00' })}
+                    />
                     <p className="text-xs text-muted-foreground">
                       {service.unit_rate
                         ? t('createCustomLine.unitRateDisplay', {
@@ -1273,35 +1267,32 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                     <Label htmlFor="base-rate">
                       {t('createCustomLine.recurringBaseRateLabel', { defaultValue: 'Recurring Base Rate' })}
                     </Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
-                      <Input
-                        id="base-rate"
-                        type="text"
-                        inputMode="decimal"
-                        value={baseRateInput}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/[^0-9.]/g, '');
-                          const decimalCount = (value.match(/\./g) || []).length;
-                          if (decimalCount <= 1) {
-                            setBaseRateInput(value);
-                          }
-                        }}
-                        onBlur={() => {
-                          if (baseRateInput.trim() === '' || baseRateInput === '.') {
-                            setBaseRateInput('');
-                            setBaseRate(undefined);
-                          } else {
-                            const dollars = parseFloat(baseRateInput) || 0;
-                            const cents = Math.round(dollars * 100);
-                            setBaseRate(cents);
-                            setBaseRateInput((cents / 100).toFixed(2));
-                          }
-                        }}
-                        placeholder={t('createCustomLine.moneyPlaceholder', { defaultValue: '0.00' })}
-                        className="pl-10"
-                      />
-                    </div>
+                    <Input
+                      leadingAdornment={symbol()}
+                      id="base-rate"
+                      type="text"
+                      inputMode="decimal"
+                      value={baseRateInput}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^0-9.]/g, '');
+                        const decimalCount = (value.match(/\./g) || []).length;
+                        if (decimalCount <= 1) {
+                          setBaseRateInput(value);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (baseRateInput.trim() === '' || baseRateInput === '.') {
+                          setBaseRateInput('');
+                          setBaseRate(undefined);
+                        } else {
+                          const dollars = parseFloat(baseRateInput) || 0;
+                          const cents = Math.round(dollars * 100);
+                          setBaseRate(cents);
+                          setBaseRateInput((cents / 100).toFixed(2));
+                        }
+                      }}
+                      placeholder={t('createCustomLine.moneyPlaceholder', { defaultValue: '0.00' })}
+                    />
                     <p className="text-xs text-muted-foreground">
                       {t('createCustomLine.bundleBaseRateHelp', {
                         defaultValue: 'Recurring fee for bundle-priced services. Recurring seats are billed separately at quantity × unit rate.',

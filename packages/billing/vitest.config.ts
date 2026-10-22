@@ -95,6 +95,7 @@ export default defineConfig({
       'src/components/billing-dashboard/contract-lines/GenericContractLineServicesList.customRate.test.tsx',
       // Live contract-line adornments (preset picker, bucket overlay) follow the contract currency.
       'src/components/billing-dashboard/contracts/ContractLineCurrency.adornments.test.tsx',
+      'src/components/billing-dashboard/contracts/ContractLineCurrency.inputs.test.tsx',
       'src/components/billing-dashboard/contracts/BucketPoolEditor.currency.test.tsx',
       // Wizard quantity input draft/commit behavior.
       'src/components/billing-dashboard/contracts/QuantityInput.test.tsx',
