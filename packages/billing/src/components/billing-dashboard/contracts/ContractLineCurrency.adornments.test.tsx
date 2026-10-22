@@ -24,7 +24,9 @@ vi.mock('@alga-psa/ui/lib', () => ({
 }));
 
 const stableTranslation = {
-  t: (key: string, options?: Record<string, unknown>) => String(options?.defaultValue ?? key),
+  // Interpolates {{vars}} like i18next so rate strings are observable.
+  t: (key: string, options?: Record<string, unknown>) =>
+    String(options?.defaultValue ?? key).replace(/{{(\w+)}}/g, (_m, k) => String(options?.[k] ?? '')),
 };
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => stableTranslation,
@@ -118,6 +120,9 @@ describe('ContractLinePresetPicker currency', () => {
   it('formats the Fixed default base rate and override adornment in the contract currency', () => {
     const { container } = renderPicker('Fixed', 'EUR');
     expect(container.textContent).toContain('€123.45');
+    const placeholders = [...container.querySelectorAll('input')].map((el) => el.getAttribute('placeholder'));
+    expect(placeholders).toContain('Default: €123.45');
+    expect(placeholders.join('|')).not.toContain('$');
     expect(adornments(container)).toContain('€');
     expect(container.textContent).not.toContain('TENANT-DEFAULT');
   });
@@ -126,6 +131,9 @@ describe('ContractLinePresetPicker currency', () => {
     const { container } = renderPicker(type, 'CAD');
     const found = adornments(container).filter((a) => a === 'CA$');
     expect(found.length).toBeGreaterThan(0);
+    expect(container.textContent).toContain('Default: CA$50.00');
+    // No bare '$' (one not part of the 'CA$' symbol).
+    expect(container.textContent).not.toMatch(/(?<!CA)\$/);
     expect(container.textContent).not.toContain('TENANT-DEFAULT');
   });
 });

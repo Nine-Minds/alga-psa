@@ -767,7 +767,7 @@
     },
     "fixedConfig": {
       "defaultBaseRate": "Default Base Rate:",
-      "defaultRatePlaceholder": "Default: ${{rate}}",
+      "defaultRatePlaceholder": "Default: {{rate}}",
       "enterBaseRate": "Enter base rate",
       "leaveBlankDefault": "Leave blank to use the default rate",
       "notSet": "Not set",
@@ -775,7 +775,7 @@
       "title": "Fixed Rate Configuration"
     },
     "hourlyConfig": {
-      "defaultRate": "Default: ${{rate}}",
+      "defaultRate": "Default: {{rate}}",
       "hourlyRate": "Hourly Rate",
       "minimumBillableMinutes": "Minimum billable minutes",
       "roundUpToNearest": "Round up to nearest (minutes)",
@@ -801,7 +801,7 @@
     },
     "title": "Add Contract Lines from Presets",
     "usageConfig": {
-      "defaultRate": "Default: ${{rate}}",
+      "defaultRate": "Default: {{rate}}",
       "recordDrivenNote": "Usage services bill from usage recorded in Usage Tracking for each service period. A period with no usage record produces no charge — record usage (or an explicit zero) each period to bill these services.",
       "ratePerUnit": "Rate (per unit)",
       "unitHint": "e.g., GB, API call, user",

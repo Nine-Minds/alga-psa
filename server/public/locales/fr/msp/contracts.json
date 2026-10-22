@@ -767,7 +767,7 @@
     },
     "fixedConfig": {
       "defaultBaseRate": "Tarif de base par défaut :",
-      "defaultRatePlaceholder": "Par défaut : ${{rate}}",
+      "defaultRatePlaceholder": "Par défaut : {{rate}}",
       "enterBaseRate": "Saisissez le tarif de base",
       "leaveBlankDefault": "Laisser vide pour utiliser le tarif par défaut",
       "notSet": "Non défini",
@@ -775,7 +775,7 @@
       "title": "Configuration à tarif fixe"
     },
     "hourlyConfig": {
-      "defaultRate": "Par défaut : ${{rate}}",
+      "defaultRate": "Par défaut : {{rate}}",
       "hourlyRate": "Tarif horaire",
       "minimumBillableMinutes": "Minutes minimum facturables",
       "roundUpToNearest": "Arrondir au plus proche (minutes)",
@@ -801,7 +801,7 @@
     },
     "title": "Ajouter des lignes de contrat à partir des préréglages",
     "usageConfig": {
-      "defaultRate": "Par défaut : ${{rate}}",
+      "defaultRate": "Par défaut : {{rate}}",
       "recordDrivenNote": "Les services à l'utilisation sont facturés selon l'utilisation enregistrée dans le suivi d'utilisation pour chaque période de service. Une période sans enregistrement d'utilisation ne produit aucun frais : enregistrez l'utilisation (ou un zéro explicite) à chaque période pour facturer ces services.",
       "ratePerUnit": "Tarif (par unité)",
       "unitHint": "par ex., Go, appel API, utilisateur",

@@ -767,7 +767,7 @@
     },
     "fixedConfig": {
       "defaultBaseRate": "Tariffa base predefinita:",
-      "defaultRatePlaceholder": "Predefinito: ${{rate}}",
+      "defaultRatePlaceholder": "Predefinito: {{rate}}",
       "enterBaseRate": "Inserisci la tariffa base",
       "leaveBlankDefault": "Lascia vuoto per utilizzare la tariffa predefinita",
       "notSet": "Non impostato",
@@ -775,7 +775,7 @@
       "title": "Configurazione tariffa fissa"
     },
     "hourlyConfig": {
-      "defaultRate": "Predefinito: ${{rate}}",
+      "defaultRate": "Predefinito: {{rate}}",
       "hourlyRate": "Tariffa oraria",
       "minimumBillableMinutes": "Minuti minimi fatturabili",
       "roundUpToNearest": "Arrotonda per eccesso al più vicino (minuti)",
@@ -801,7 +801,7 @@
     },
     "title": "Aggiungi linee contrattuali da preimpostazioni",
     "usageConfig": {
-      "defaultRate": "Predefinito: ${{rate}}",
+      "defaultRate": "Predefinito: {{rate}}",
       "recordDrivenNote": "I servizi a consumo vengono fatturati in base all'utilizzo registrato nel monitoraggio utilizzo per ogni periodo di servizio. Un periodo senza record di utilizzo non produce alcun addebito: registra l'utilizzo (o uno zero esplicito) in ogni periodo per fatturare questi servizi.",
       "ratePerUnit": "Tariffa (per unità)",
       "unitHint": "es., GB, chiamata API, utente",

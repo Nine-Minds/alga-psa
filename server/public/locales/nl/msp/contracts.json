@@ -767,7 +767,7 @@
     },
     "fixedConfig": {
       "defaultBaseRate": "Standaard basistarief:",
-      "defaultRatePlaceholder": "Standaard: ${{rate}}",
+      "defaultRatePlaceholder": "Standaard: {{rate}}",
       "enterBaseRate": "Voer basistarief in",
       "leaveBlankDefault": "Laat leeg om het standaardtarief te gebruiken",
       "notSet": "Niet ingesteld",
@@ -775,7 +775,7 @@
       "title": "Vast tarief configuratie"
     },
     "hourlyConfig": {
-      "defaultRate": "Standaard: ${{rate}}",
+      "defaultRate": "Standaard: {{rate}}",
       "hourlyRate": "Uurtarief",
       "minimumBillableMinutes": "Minimum factureerbare minuten",
       "roundUpToNearest": "Naar boven afronden op dichtstbijzijnde (minuten)",
@@ -801,7 +801,7 @@
     },
     "title": "Contractregels uit presets toevoegen",
     "usageConfig": {
-      "defaultRate": "Standaard: ${{rate}}",
+      "defaultRate": "Standaard: {{rate}}",
       "recordDrivenNote": "Verbruiksdiensten worden gefactureerd op basis van het in Verbruiksregistratie geregistreerde verbruik per serviceperiode. Een periode zonder verbruiksrecord levert geen kosten op — registreer het verbruik (of een expliciete nul) per periode om deze services te factureren.",
       "ratePerUnit": "Tarief (per eenheid)",
       "unitHint": "bijv. GB, API-aanroep, gebruiker",

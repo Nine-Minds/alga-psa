@@ -767,7 +767,7 @@
     },
     "fixedConfig": {
       "defaultBaseRate": "Domyślna stawka bazowa:",
-      "defaultRatePlaceholder": "Domyślnie: ${{rate}}",
+      "defaultRatePlaceholder": "Domyślnie: {{rate}}",
       "enterBaseRate": "Wprowadź stawkę bazową",
       "leaveBlankDefault": "Pozostaw puste, aby użyć stawki domyślnej",
       "notSet": "Nie ustawiono",
@@ -775,7 +775,7 @@
       "title": "Konfiguracja stałej stawki"
     },
     "hourlyConfig": {
-      "defaultRate": "Domyślnie: ${{rate}}",
+      "defaultRate": "Domyślnie: {{rate}}",
       "hourlyRate": "Stawka godzinowa",
       "minimumBillableMinutes": "Minimalne minuty podlegające rozliczeniu",
       "roundUpToNearest": "Zaokrąglij w górę do najbliższych (minuty)",
@@ -801,7 +801,7 @@
     },
     "title": "Dodaj linie kontraktowe z presetów",
     "usageConfig": {
-      "defaultRate": "Domyślnie: ${{rate}}",
+      "defaultRate": "Domyślnie: {{rate}}",
       "recordDrivenNote": "Usługi rozliczane według użycia są fakturowane na podstawie użycia zarejestrowanego w śledzeniu użycia dla każdego okresu rozliczeniowego. Okres bez rekordu użycia nie generuje opłaty — rejestruj użycie (lub jawne zero) w każdym okresie, aby rozliczyć te usługi.",
       "ratePerUnit": "Stawka (za jednostkę)",
       "unitHint": "np. GB, wywołanie API, użytkownik",

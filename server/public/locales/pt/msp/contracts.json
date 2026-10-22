@@ -767,7 +767,7 @@
     },
     "fixedConfig": {
       "defaultBaseRate": "Taxa básica padrão:",
-      "defaultRatePlaceholder": "Padrão: ${{rate}}",
+      "defaultRatePlaceholder": "Padrão: {{rate}}",
       "enterBaseRate": "Insira a taxa básica",
       "leaveBlankDefault": "Deixe em branco para usar a taxa padrão",
       "notSet": "Não definido",
@@ -775,7 +775,7 @@
       "title": "Configuração de taxa fixa"
     },
     "hourlyConfig": {
-      "defaultRate": "Padrão: ${{rate}}",
+      "defaultRate": "Padrão: {{rate}}",
       "hourlyRate": "Taxa horária",
       "minimumBillableMinutes": "Minutos mínimos faturáveis",
       "roundUpToNearest": "Arredondar para o mais próximo (minutos)",
@@ -801,7 +801,7 @@
     },
     "title": "Adicionar linhas de contrato de predefinições",
     "usageConfig": {
-      "defaultRate": "Padrão: ${{rate}}",
+      "defaultRate": "Padrão: {{rate}}",
       "recordDrivenNote": "Os serviços baseados em uso são faturados com base no uso registrado no Rastreamento de uso para cada período de serviço. Um período sem registro de uso não gera cobrança — registre o uso (ou um zero explícito) em cada período para faturar esses serviços.",
       "ratePerUnit": "Taxa (por unidade)",
       "unitHint": "por exemplo, GB, chamada de API, usuário",

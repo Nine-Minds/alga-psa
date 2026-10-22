@@ -250,8 +250,8 @@ export const ContractLinePresetPicker: React.FC<ContractLinePresetPickerProps> =
                                 onBlur={() => handleRateInputBlur(presetId)}
                                 placeholder={fixedConfig?.base_rate
                                   ? t('addLines.fixedConfig.defaultRatePlaceholder', {
-                                    defaultValue: 'Default: ${{rate}}',
-                                    rate: (fixedConfig.base_rate / 100).toFixed(2),
+                                    defaultValue: 'Default: {{rate}}',
+                                    rate: money(Number(fixedConfig.base_rate), currencyCode),
                                   })
                                   : t('addLines.fixedConfig.enterBaseRate', { defaultValue: 'Enter base rate' })}
                                 className="pl-8 h-9 text-sm"
@@ -372,8 +372,8 @@ export const ContractLinePresetPicker: React.FC<ContractLinePresetPickerProps> =
                                     </div>
                                     <p className="text-xs text-muted-foreground mt-0.5">
                                       {t('addLines.hourlyConfig.defaultRate', {
-                                        defaultValue: 'Default: ${{rate}}',
-                                        rate: (service.default_rate! / 100).toFixed(2),
+                                        defaultValue: 'Default: {{rate}}',
+                                        rate: money(Number(service.default_rate), currencyCode),
                                       })}
                                     </p>
                                   </div>
@@ -414,8 +414,8 @@ export const ContractLinePresetPicker: React.FC<ContractLinePresetPickerProps> =
                                   </div>
                                   <p className="text-xs text-muted-foreground mt-0.5">
                                     {t('addLines.usageConfig.defaultRate', {
-                                      defaultValue: 'Default: ${{rate}}',
-                                      rate: (service.default_rate! / 100).toFixed(2),
+                                      defaultValue: 'Default: {{rate}}',
+                                      rate: money(Number(service.default_rate), currencyCode),
                                     })}
                                   </p>
                                 </div>
