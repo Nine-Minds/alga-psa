@@ -2831,7 +2831,7 @@
         },
         "connection": {
           "title": "Mit {{account}} verbunden",
-          "summary": "{{organizations}} Organisationen ({{unmapped}} nicht zugeordnet) · {{openIncidents}} offene Vorfälle · letzte Abfrage: {{lastPoll}}",
+          "summary": "{{organizations}} Organisationen ({{unmapped}} nicht zugeordnet) · {{openAlerts}} offene Warnungen · letzte Abfrage: {{lastPoll}}",
           "neverPolled": "nie",
           "lastPollFailed": "Letzte Abfrage fehlgeschlagen: {{error}}",
           "routingIncompleteWarning": "Die Vorfallabfrage ist pausiert, bis die Routing-Konfiguration unten vollständig ist (Board, Fallback-Kunde/-Board und Prioritäten für alle drei Schweregrade).",
@@ -2854,6 +2854,8 @@
           "selectPriority": "Priorität",
           "pollInterval": "Abfrageintervall (Minuten)",
           "autoClose": "Tickets schließen, wenn Huntress den Vorfall schließt",
+          "ingestEscalations": "Tickets aus Huntress-Eskalationen erstellen",
+          "ingestEscalationsHelp": "Eskalationen verwenden dieselben Board-, Kategorie-, Prioritätszuordnungs- und Auto-Schließen-Einstellungen wie Vorfälle. Eine Eskalation, die mehrere Organisationen betrifft, erstellt ein Ticket pro Organisation.",
           "closedStatus": "Status für geschlossene Tickets",
           "selectStatus": "Status auswählen",
           "save": "Routing-Konfiguration speichern",

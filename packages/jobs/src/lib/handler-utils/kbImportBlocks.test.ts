@@ -454,7 +454,9 @@ describe('kbImportBlocks link sanitization', () => {
 // identical, so only the work differs. A wall-clock ratio could not tell the
 // two apart on a loaded CI runner (an 8MB parse is dominated by the linear
 // lexer and GC), so count the characters the search inspects instead.
-describe('kbImportBlocks inline chunk splitting', () => {
+// The masking-work guard parses ~255KB of code spans twice under a spy; that
+// is ~11s on a loaded CI runner, past the package's 10s default.
+describe('kbImportBlocks inline chunk splitting', { timeout: 20_000 }, () => {
   // Stands in for the source string and tallies every character a search
   // reads. Any other access throws, so a rewrite that reads the source some
   // new way fails loudly here instead of going uncounted.
