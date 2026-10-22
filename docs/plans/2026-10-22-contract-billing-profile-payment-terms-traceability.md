@@ -90,7 +90,7 @@ another profile. Findings from the engine, which match the resolver doc comment:
   no services cannot price time and is not flagged.
 - A line can reach step 4 only if steps 2 and 3 are both empty, i.e. `resolveChargeProfile` without a
   work item lands on `client_default`. Assigned lines and assigned contracts never raise the warning.
-  A client with one profile never raises it either: nothing else can be pointed at.
+  A client with one profile raises it only if one of its work items carries another client's profile.
 - The ticket→project relationship is the engine's `COALESCE(ticket, project)`, where the project is the
   task's project or the single billable-linked project of the ticket. The loader takes the distinct
   non-null `billing_profile_id` of the client's tickets and of its projects. That is a superset of what
@@ -108,9 +108,13 @@ raised even when no work item carries a profile yet, because one can be set at a
 `candidateProfiles` is empty. The due-date sentence for the client default adds "unless the ticket or
 project is billed to another profile" whenever the warning is present.
 
-A candidate profile the client does not own is excluded, not thrown on: it is data on a ticket or
-project, not something the operator authored on this contract, and failing the whole panel for it would
-hide the real trace. The contract and line pointers still throw.
+A candidate profile owned by another client of the tenant is kept, not excluded. Nothing ties a ticket's
+or project's profile to its client (the FKs are tenant-scoped; a ticket that moves client keeps its
+profile), and the engine looks the id up with no ownership check, so it bills with that profile. The
+loader therefore queries the client's tickets and projects even for a one-profile client, loads the
+foreign rows by id, and the warning fires for a one-profile client only when such a candidate exists.
+An id that matches no profile in the tenant still throws. Contract and line pointers still throw on
+foreign profiles, because an operator authored them.
 
 `loadContractBillingTrace` is not purely a read: it calls `ensureClientDefaultBillingProfile`, which can
 insert the default profile for a client that has none. That is inherited engine convention and is kept.

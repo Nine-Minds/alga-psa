@@ -66,9 +66,17 @@ export interface BuildContractBillingTraceInput {
   identities: Record<string, EffectiveBillingIdentity>;
   /**
    * Distinct non-null `billing_profile_id` values carried by the client's tickets
-   * and projects (step 4 of the chain). Each must be a profile of this client.
+   * and projects (step 4 of the chain). Each must be a row of `profiles` or of
+   * `workItemProfileRows`.
    */
   workItemProfileIds?: string[];
+  /**
+   * Rows for work-item profiles that another client of the tenant owns. Nothing
+   * on the write path or in the engine ties a ticket's or project's profile to
+   * its client (the FK is tenant-scoped), and the engine bills whatever id it
+   * reads, so such a profile is a real step-4 outcome.
+   */
+  workItemProfileRows?: ContractBillingTraceProfileRow[];
 }
 
 // Most specific step first; a profile reached by several steps reports the most specific.
@@ -103,7 +111,7 @@ function resolveForLine(
 
 type StepFourInput = Pick<
   BuildContractBillingTraceInput,
-  'assignmentBillingProfileId' | 'clientDefaultBillingProfileId' | 'lines' | 'profiles'
+  'assignmentBillingProfileId' | 'clientDefaultBillingProfileId' | 'lines'
 >;
 
 /**
@@ -117,11 +125,11 @@ type StepFourInput = Pick<
  * usage, bucket and product/license charges carry no work-item profile; project
  * milestone/deposit charges do (the project's profile) but have no contract line,
  * so they are outside this trace. A line only reaches step 4 when steps 2 and 3 are
- * both empty, i.e. it lands on the client default. A client with a single profile
- * has nothing for a work item to point at.
+ * both empty, i.e. it lands on the client default. Whether a work item has
+ * anything to point at is decided by the caller (several profiles, or a work item
+ * carrying a profile owned by another client).
  */
 export function resolveStepFourLines(input: StepFourInput): ContractBillingTraceLineInput[] {
-  if (input.profiles.length < 2) return [];
   return input.lines.filter(
     (line) =>
       (line.serviceCount ?? 0) > 0 &&
@@ -277,11 +285,23 @@ export function buildContractBillingTrace(input: BuildContractBillingTraceInput)
   // work item's profile. The default entry above stays: it is the fallback.
   const stepFourLines = resolveStepFourLines(input);
   const workItemProfiles: ContractBillingTraceProfile[] = [];
-  if (stepFourLines.length > 0) {
+  const workItemRowById = new Map([...input.profiles, ...(input.workItemProfileRows ?? [])].map((row) => [row.billingProfileId, row]));
+  const requireWorkItemProfile = (billingProfileId: string): ContractBillingTraceProfileRow => {
+    const row = workItemRowById.get(billingProfileId);
+    if (!row) {
+      throw new Error('That billing profile belongs to a different client.');
+    }
+    return row;
+  };
+  const candidateIds = input.workItemProfileIds ?? [];
+  // A one-profile client has nothing for a work item to point at unless a work
+  // item carries another client's profile.
+  const stepFourReachable = stepFourLines.length > 0 && (input.profiles.length > 1 || candidateIds.length > 0);
+  if (stepFourReachable) {
     const candidates = new Map<string, number>();
     for (const line of stepFourLines) {
-      for (const candidateId of input.workItemProfileIds ?? []) {
-        requireProfile(candidateId);
+      for (const candidateId of candidateIds) {
+        requireWorkItemProfile(candidateId);
         const resolved = resolveForLine(input, line.billingProfileId, candidateId);
         // Landing where the line lands without a work item is not an alternative outcome.
         if (resolved.source !== 'work_item') continue;
@@ -290,7 +310,7 @@ export function buildContractBillingTrace(input: BuildContractBillingTraceInput)
       }
     }
     for (const [billingProfileId, lineCount] of candidates) {
-      const row = requireProfile(billingProfileId);
+      const row = requireWorkItemProfile(billingProfileId);
       const identity = input.identities[billingProfileId];
       if (!identity) {
         throw new Error(`Missing billing identity for profile ${billingProfileId}.`);
@@ -451,14 +471,16 @@ export async function loadContractBillingTrace(
     resolveTracedLines({ ...base, lines }).map(({ resolved }) => resolved.billingProfileId),
   );
 
-  // Step 4 candidates: the profiles this client's tickets and projects carry, read
-  // only when some line can reach step 4. The engine takes
+  // Step 4 candidates: the profiles this client's tickets and projects carry,
+  // queried only when some line can reach step 4. The engine takes
   // COALESCE(ticket, linked-or-task project); the union of both columns is a
-  // superset of what any one charge can see. A profile the client does not own
-  // is excluded (the engine would have no identity for it); the contract
-  // pointers above throw because an operator authored them.
+  // superset of what any one charge can see. A profile owned by another client
+  // of the tenant is kept: the engine looks the id up without an ownership check
+  // and bills with it. (The contract pointers above throw because an operator
+  // authored them; this is data on a ticket or project.)
   const workItemProfileIds: string[] = [];
-  if (resolveStepFourLines({ ...base, lines, profiles }).length > 0) {
+  const workItemProfileRows: ContractBillingTraceProfileRow[] = [];
+  if (resolveStepFourLines({ ...base, lines }).length > 0) {
     const [ticketRows, projectRows] = await Promise.all([
       db.table('tickets').where({ client_id: clientId }).whereNotNull('billing_profile_id').distinct('billing_profile_id'),
       db.table('projects').where({ client_id: clientId }).whereNotNull('billing_profile_id').distinct('billing_profile_id'),
@@ -468,7 +490,22 @@ export async function loadContractBillingTrace(
         (row) => row.billing_profile_id,
       ),
     );
-    workItemProfileIds.push(...[...found].filter((id) => ownedIds.has(id)).sort());
+    workItemProfileIds.push(...[...found].sort());
+    const foreignIds = workItemProfileIds.filter((id) => !ownedIds.has(id));
+    if (foreignIds.length > 0) {
+      const foreignRows = await db
+        .table('client_billing_profiles')
+        .whereIn('billing_profile_id', foreignIds)
+        .select('billing_profile_id', 'name', 'is_active', 'is_default');
+      workItemProfileRows.push(
+        ...(foreignRows as Array<{ billing_profile_id: string; name: string; is_active: boolean; is_default: boolean }>).map((row) => ({
+          billingProfileId: row.billing_profile_id,
+          name: row.name,
+          isActive: Boolean(row.is_active),
+          isDefault: Boolean(row.is_default),
+        })),
+      );
+    }
   }
 
   const identities: Record<string, EffectiveBillingIdentity> = {};
@@ -485,5 +522,6 @@ export async function loadContractBillingTrace(
     profiles,
     identities,
     workItemProfileIds,
+    workItemProfileRows,
   });
 }

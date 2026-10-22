@@ -266,6 +266,18 @@ describe('buildContractBillingTrace', () => {
       expect(trace.warnings).toEqual([]);
     });
 
+    it('a work item carrying another client\'s profile is a candidate the engine would bill, even for a one-profile client', () => {
+      const trace = build({
+        lines: [hourly('time')],
+        profiles: [profiles[0]],
+        workItemProfileIds: ['other-client-profile'],
+        workItemProfileRows: [{ billingProfileId: 'other-client-profile', name: 'Elsewhere', isActive: true, isDefault: false }],
+        identities: { [DEFAULT_ID]: identity(DEFAULT_ID), 'other-client-profile': identity('other-client-profile') },
+      });
+      expect(trace.workItemProfiles?.map((p) => p.billingProfileId)).toEqual(['other-client-profile']);
+      expect(trace.warnings).toContainEqual(expect.objectContaining({ code: 'work_item_override_possible' }));
+    });
+
     it('rejects a candidate the client does not own', () => {
       expect(() => build({ lines: [hourly('time')], workItemProfileIds: ['foreign-profile'] })).toThrow(/different client/);
     });

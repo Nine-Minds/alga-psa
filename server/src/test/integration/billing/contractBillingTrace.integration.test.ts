@@ -364,6 +364,29 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     expect(candidate.terms.dueDateExample.dueDate).toBe(engine.dueDate);
   }, HOOK_TIMEOUT);
 
+  it('a ticket carrying another client\'s profile is still billed by the engine, so the trace lists it (even for a one-profile client)', async () => {
+    const clientId = await createClient(tenantId, 'Moved Ticket Client', 'net_30');
+    const defaultId = await ensureDefaultBillingProfile({ db, tenantId }, clientId);
+    const otherClientId = await createClient(tenantId, 'Profile Owner Client', 'net_30');
+    await ensureDefaultBillingProfile({ db, tenantId }, otherClientId);
+    const foreignProfile = await createBillingProfile({ db, tenantId }, otherClientId, 'Foreign Facility');
+    await table('client_billing_profiles').where({ billing_profile_id: foreignProfile }).update({ payment_terms: 'net_15' });
+    const { contractId } = await createContract(tenantId, clientId, { lineProfileIds: [null], lineType: 'Hourly', withService: true });
+    const ticketId = await createTicket({ db, tenantId }, {
+      clientId, title: 'Moved ticket', ticketNumber: `MV-${uuidv4().slice(0, 6)}`,
+    });
+    // The FK is tenant-scoped only, so this state is reachable (e.g. a ticket moved between clients).
+    await table('tickets').where({ ticket_id: ticketId }).update({ billing_profile_id: foreignProfile });
+
+    const trace = await loadContractBillingTrace(db, tenantId, { contractId, asOf: ASOF });
+    const engine = await engineOutcomeForTicket(clientId, ticketId, contractId, defaultId);
+
+    expect(engine).toMatchObject({ billingProfileId: foreignProfile, source: 'work_item' });
+    expect(trace!.warnings.map((w) => w.code)).toContain('work_item_override_possible');
+    const candidate = trace!.workItemProfiles!.find((p) => p.billingProfileId === engine.billingProfileId)!;
+    expect(candidate.terms.dueDateExample.dueDate).toBe(engine.dueDate);
+  }, HOOK_TIMEOUT);
+
   it('a line with no services cannot price time and is not flagged', async () => {
     const clientId = await createClient(tenantId, 'No Service Line Client');
     await ensureDefaultBillingProfile({ db, tenantId }, clientId);
