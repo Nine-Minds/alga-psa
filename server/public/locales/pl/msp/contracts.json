@@ -148,7 +148,11 @@
       "title": "Przypisanie klienta",
       "useTenantRenewalDefaults": "Użyj domyślnych ustawień odnowień tenanta",
       "usingCustomSettings": "Używanie niestandardowych ustawień przypisania",
-      "usingTenantDefaults": "Używanie domyślnych ustawień tenanta"
+      "usingTenantDefaults": "Używanie domyślnych ustawień tenanta",
+      "billingProfileUseDefault": "Użyj {{name}} (domyślny klienta)",
+      "billingProfileAssigned": "Przypisany profil rozliczeniowy",
+      "billingProfileUnavailable": "Brak profilu — przypisanie oczekuje",
+      "billingProfileLoading": "Ładowanie profilu rozliczeniowego…"
     },
     "clientOwnership": {
       "assignmentStatus": "Status przypisania",
@@ -371,6 +375,68 @@
         "failed": "Nie udało się zmienić sposobu pomiaru tej usługi."
       },
       "effectiveFrom": "Zmiana sposobu pomiaru obowiązuje od"
+    },
+    "billing": {
+      "title": "Profil rozliczeniowy i warunki płatności",
+      "asOf": "stan na {{date}}",
+      "profileLabel": "Profil rozliczeniowy",
+      "inactive": "Nieaktywny",
+      "lineCountOne": "{{count}} pozycja",
+      "lineCountOther": "{{count}} pozycji",
+      "termsLabel": "Warunki płatności",
+      "terms": {
+        "net_30": "Netto 30",
+        "net_15": "Netto 15",
+        "due_on_receipt": "Płatne po otrzymaniu"
+      },
+      "termsSource": {
+        "profile": "z profilu rozliczeniowego",
+        "client": "od klienta",
+        "default": "domyślne — nie ustawiono warunków"
+      },
+      "profileSource": {
+        "client_default": "domyślny klienta",
+        "contract": "przypisany do umowy",
+        "contract_line": "ustawiony w pozycji"
+      },
+      "valueSource": {
+        "profile": "Profil",
+        "client": "Klient",
+        "contract": "Umowa",
+        "default": "Domyślne"
+      },
+      "dueSentence": "Faktura z dnia {{invoiceDate}} jest płatna do {{dueDate}} — {{terms}} {{source}}",
+      "detailsToggle": "Pozostałe szczegóły rozliczeń",
+      "fieldNone": "Brak",
+      "taxRegionChain": "Region usługi, następnie lokalizacja pozycji umowy, następnie domyślny region klienta",
+      "taxExempt": "Zwolniony z podatku",
+      "taxable": "Podlega opodatkowaniu",
+      "templateCustom": "Szablon niestandardowy",
+      "templateDefault": "Szablon domyślny",
+      "paymentMethod": {
+        "credit_card": "Karta kredytowa",
+        "bank_transfer": "Przelew bankowy",
+        "check": "Czek"
+      },
+      "fieldLabel": {
+        "bill_to": "Nabywca",
+        "payment_method": "Metoda płatności",
+        "tax_exemption": "Zwolnienie z podatku",
+        "tax_region": "Region podatkowy",
+        "delivery": "Dostarczanie faktur",
+        "template": "Szablon faktury",
+        "po_number": "Numer zamówienia",
+        "currency": "Waluta",
+        "cadence": "Cykl rozliczeń",
+        "profile_billing_cycle": "Cykl rozliczeniowy profilu",
+        "profile_billing_cycle_unapplied": "Cykl rozliczeniowy profilu (jeszcze niezastosowany)"
+      },
+      "warnings": {
+        "inactiveProfile": "Profil {{name}} jest nieaktywny, ale nadal rozlicza tę umowę. Opłaty pozostają na nim; nie są przenoszone do profilu domyślnego.",
+        "mixedProfiles": "Ta umowa jest rozliczana przez {{count}} różne profile, więc żaden pojedynczy profil jej nie obejmuje. Każdy profil stosuje własne warunki płatności.",
+        "lineOverride": "Pozycja „{{line}}\" jest rozliczana przez {{name}} zamiast profilu umowy."
+      },
+      "simulationNote": "Symulowana wycena używa zwolnienia z podatku na poziomie klienta. Własne zwolnienie profilu nie jest stosowane w tej symulacji."
     }
   },
   "contractDialog": {

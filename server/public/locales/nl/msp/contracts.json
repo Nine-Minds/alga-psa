@@ -148,7 +148,11 @@
       "title": "Klanttoewijzing",
       "useTenantRenewalDefaults": "Standaardverlengingswaarden tenant gebruiken",
       "usingCustomSettings": "Aangepaste toewijzingsinstellingen in gebruik",
-      "usingTenantDefaults": "Standaardwaarden tenant in gebruik"
+      "usingTenantDefaults": "Standaardwaarden tenant in gebruik",
+      "billingProfileUseDefault": "{{name}} gebruiken (standaard van de klant)",
+      "billingProfileAssigned": "Toegewezen factureringsprofiel",
+      "billingProfileUnavailable": "Geen profiel — toewijzing in behandeling",
+      "billingProfileLoading": "Factureringsprofiel laden…"
     },
     "clientOwnership": {
       "assignmentStatus": "Toewijzingsstatus",
@@ -371,6 +375,68 @@
         "failed": "Kon niet wijzigen hoe deze dienst wordt gemeten."
       },
       "effectiveFrom": "Wijziging van de meting geldt vanaf"
+    },
+    "billing": {
+      "title": "Factureringsprofiel & betalingsvoorwaarden",
+      "asOf": "per {{date}}",
+      "profileLabel": "Factureringsprofiel",
+      "inactive": "Inactief",
+      "lineCountOne": "{{count}} regel",
+      "lineCountOther": "{{count}} regels",
+      "termsLabel": "Betalingsvoorwaarden",
+      "terms": {
+        "net_30": "Netto 30",
+        "net_15": "Netto 15",
+        "due_on_receipt": "Direct betaalbaar"
+      },
+      "termsSource": {
+        "profile": "uit het factureringsprofiel",
+        "client": "van de klant",
+        "default": "standaard: geen voorwaarden ingesteld"
+      },
+      "profileSource": {
+        "client_default": "standaard van de klant",
+        "contract": "toegewezen aan het contract",
+        "contract_line": "ingesteld op de regel"
+      },
+      "valueSource": {
+        "profile": "Profiel",
+        "client": "Klant",
+        "contract": "Contract",
+        "default": "Standaard"
+      },
+      "dueSentence": "Een factuur van {{invoiceDate}} is verschuldigd op {{dueDate}} — {{terms}} {{source}}",
+      "detailsToggle": "Overige factureringsgegevens",
+      "fieldNone": "Geen",
+      "taxRegionChain": "Servicegebied, dan locatie van de contractregel, dan klantstandaard",
+      "taxExempt": "Vrijgesteld van belasting",
+      "taxable": "Belastbaar",
+      "templateCustom": "Eigen sjabloon",
+      "templateDefault": "Standaardsjabloon",
+      "paymentMethod": {
+        "credit_card": "Creditcard",
+        "bank_transfer": "Bankoverschrijving",
+        "check": "Cheque"
+      },
+      "fieldLabel": {
+        "bill_to": "Factuur aan",
+        "payment_method": "Betaalmethode",
+        "tax_exemption": "Belastingvrijstelling",
+        "tax_region": "Belastinggebied",
+        "delivery": "Factuurlevering",
+        "template": "Factuursjabloon",
+        "po_number": "Inkoopordernummer",
+        "currency": "Valuta",
+        "cadence": "Factureringsfrequentie",
+        "profile_billing_cycle": "Factureringscyclus van het profiel",
+        "profile_billing_cycle_unapplied": "Factureringscyclus van het profiel (nog niet toegepast)"
+      },
+      "warnings": {
+        "inactiveProfile": "{{name}} is inactief maar factureert dit contract nog steeds. Kosten blijven erop staan; ze worden niet naar het standaardprofiel verplaatst.",
+        "mixedProfiles": "Dit contract factureert via {{count}} verschillende profielen, dus geen enkel profiel dekt het volledig. Elk profiel gebruikt zijn eigen betalingsvoorwaarden.",
+        "lineOverride": "Regel \"{{line}}\" factureert via {{name}} in plaats van het profiel van het contract."
+      },
+      "simulationNote": "De gesimuleerde prijsstelling gebruikt de belastingvrijstelling op klantniveau. De eigen vrijstelling van een profiel wordt in deze simulatie niet toegepast."
     }
   },
   "contractDialog": {

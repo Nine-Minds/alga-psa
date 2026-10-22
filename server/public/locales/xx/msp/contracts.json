@@ -148,7 +148,11 @@
       "title": "⟦Ƈŀīḗƞŧ Ȧşşīɠƞḿḗƞŧ⟧",
       "useTenantRenewalDefaults": "⟦Ŭşḗ ŧḗƞȧƞŧ řḗƞḗẇȧŀ ḓḗƒȧŭŀŧş⟧",
       "usingCustomSettings": "⟦Ŭşīƞɠ ƈŭşŧȯḿ ȧşşīɠƞḿḗƞŧ şḗŧŧīƞɠş⟧",
-      "usingTenantDefaults": "⟦Ŭşīƞɠ ŧḗƞȧƞŧ ḓḗƒȧŭŀŧş⟧"
+      "usingTenantDefaults": "⟦Ŭşīƞɠ ŧḗƞȧƞŧ ḓḗƒȧŭŀŧş⟧",
+      "billingProfileUseDefault": "⟦Ŭşḗ {{name}} (ƈŀīḗƞŧ ḓḗƒȧŭŀŧ)⟧",
+      "billingProfileAssigned": "⟦Ȧşşīɠƞḗḓ ƀīŀŀīƞɠ ƥřȯƒīŀḗ⟧",
+      "billingProfileUnavailable": "⟦Ƞȯ ƥřȯƒīŀḗ — ȧŀŀȯƈȧŧīȯƞ ƥḗƞḓīƞɠ⟧",
+      "billingProfileLoading": "⟦Ŀȯȧḓīƞɠ ƀīŀŀīƞɠ ƥřȯƒīŀḗ…⟧"
     },
     "clientOwnership": {
       "assignmentStatus": "⟦Ȧşşīɠƞḿḗƞŧ Şŧȧŧŭş⟧",
@@ -371,6 +375,68 @@
         "failed": "⟦Ƈȯŭŀḓ ƞȯŧ ƈħȧƞɠḗ ħȯẇ ŧħīş şḗřṽīƈḗ īş ḿḗȧşŭřḗḓ.⟧"
       },
       "effectiveFrom": "⟦Ḿḗȧşŭřḗḿḗƞŧ ƈħȧƞɠḗ ḗƒƒḗƈŧīṽḗ ƒřȯḿ⟧"
+    },
+    "billing": {
+      "title": "⟦Ɓīŀŀīƞɠ ƥřȯƒīŀḗ & ƥȧẏḿḗƞŧ ŧḗřḿş⟧",
+      "asOf": "⟦ȧş ȯƒ {{date}}⟧",
+      "profileLabel": "⟦Ɓīŀŀīƞɠ ƥřȯƒīŀḗ⟧",
+      "inactive": "⟦Īƞȧƈŧīṽḗ⟧",
+      "lineCountOne": "⟦{{count}} ŀīƞḗ⟧",
+      "lineCountOther": "⟦{{count}} ŀīƞḗş⟧",
+      "termsLabel": "⟦Ƥȧẏḿḗƞŧ ŧḗřḿş⟧",
+      "terms": {
+        "net_30": "⟦Ƞḗŧ 30⟧",
+        "net_15": "⟦Ƞḗŧ 15⟧",
+        "due_on_receipt": "⟦Ḓŭḗ ȯƞ řḗƈḗīƥŧ⟧"
+      },
+      "termsSource": {
+        "profile": "⟦ƒřȯḿ ŧħḗ ƀīŀŀīƞɠ ƥřȯƒīŀḗ⟧",
+        "client": "⟦ƒřȯḿ ŧħḗ ƈŀīḗƞŧ⟧",
+        "default": "⟦ḓḗƒȧŭŀŧ — ƞȯ ŧḗřḿş ȧřḗ şḗŧ⟧"
+      },
+      "profileSource": {
+        "client_default": "⟦ƈŀīḗƞŧ ḓḗƒȧŭŀŧ⟧",
+        "contract": "⟦ȧşşīɠƞḗḓ ȯƞ ƈȯƞŧřȧƈŧ⟧",
+        "contract_line": "⟦şḗŧ ȯƞ ŀīƞḗ⟧"
+      },
+      "valueSource": {
+        "profile": "⟦Ƥřȯƒīŀḗ⟧",
+        "client": "⟦Ƈŀīḗƞŧ⟧",
+        "contract": "⟦Ƈȯƞŧřȧƈŧ⟧",
+        "default": "⟦Ḓḗƒȧŭŀŧ⟧"
+      },
+      "dueSentence": "⟦Ȧ {{invoiceDate}} īƞṽȯīƈḗ īş ḓŭḗ {{dueDate}} — {{terms}} {{source}}⟧",
+      "detailsToggle": "⟦Ȯŧħḗř ƀīŀŀīƞɠ ḓḗŧȧīŀş⟧",
+      "fieldNone": "⟦Ƞȯƞḗ⟧",
+      "taxRegionChain": "⟦Şḗřṽīƈḗ řḗɠīȯƞ, ŧħḗƞ ƈȯƞŧřȧƈŧ-ŀīƞḗ ŀȯƈȧŧīȯƞ, ŧħḗƞ ƈŀīḗƞŧ ḓḗƒȧŭŀŧ⟧",
+      "taxExempt": "⟦Ŧȧẋ ḗẋḗḿƥŧ⟧",
+      "taxable": "⟦Ŧȧẋȧƀŀḗ⟧",
+      "templateCustom": "⟦Ƈŭşŧȯḿ ŧḗḿƥŀȧŧḗ⟧",
+      "templateDefault": "⟦Ḓḗƒȧŭŀŧ ŧḗḿƥŀȧŧḗ⟧",
+      "paymentMethod": {
+        "credit_card": "⟦Ƈřḗḓīŧ Ƈȧřḓ⟧",
+        "bank_transfer": "⟦Ɓȧƞķ Ŧřȧƞşƒḗř⟧",
+        "check": "⟦Ƈħḗƈķ⟧"
+      },
+      "fieldLabel": {
+        "bill_to": "⟦Ɓīŀŀ ŧȯ⟧",
+        "payment_method": "⟦Ƥȧẏḿḗƞŧ ḿḗŧħȯḓ⟧",
+        "tax_exemption": "⟦Ŧȧẋ ḗẋḗḿƥŧīȯƞ⟧",
+        "tax_region": "⟦Ŧȧẋ řḗɠīȯƞ⟧",
+        "delivery": "⟦Īƞṽȯīƈḗ ḓḗŀīṽḗřẏ⟧",
+        "template": "⟦Īƞṽȯīƈḗ ŧḗḿƥŀȧŧḗ⟧",
+        "po_number": "⟦ƤȮ ƞŭḿƀḗř⟧",
+        "currency": "⟦Ƈŭřřḗƞƈẏ⟧",
+        "cadence": "⟦Ɓīŀŀīƞɠ ƈȧḓḗƞƈḗ⟧",
+        "profile_billing_cycle": "⟦Ƥřȯƒīŀḗ ƀīŀŀīƞɠ ƈẏƈŀḗ⟧",
+        "profile_billing_cycle_unapplied": "⟦Ƥřȯƒīŀḗ ƀīŀŀīƞɠ ƈẏƈŀḗ (ƞȯŧ ẏḗŧ ȧƥƥŀīḗḓ)⟧"
+      },
+      "warnings": {
+        "inactiveProfile": "⟦{{name}} īş īƞȧƈŧīṽḗ ƀŭŧ şŧīŀŀ ƀīŀŀş ŧħīş ƈȯƞŧřȧƈŧ. Ƈħȧřɠḗş şŧȧẏ ȯƞ īŧ; ŧħḗẏ ȧřḗ ƞȯŧ ḿȯṽḗḓ ŧȯ ŧħḗ ḓḗƒȧŭŀŧ ƥřȯƒīŀḗ.⟧",
+        "mixedProfiles": "⟦Ŧħīş ƈȯƞŧřȧƈŧ ƀīŀŀş {{count}} ḓīƒƒḗřḗƞŧ ƥřȯƒīŀḗş, şȯ ƞȯ şīƞɠŀḗ ƥřȯƒīŀḗ ƈȯṽḗřş īŧ. Ḗȧƈħ ƥřȯƒīŀḗ ŭşḗş īŧş ȯẇƞ ƥȧẏḿḗƞŧ ŧḗřḿş.⟧",
+        "lineOverride": "⟦Ŀīƞḗ \"{{line}}\" ƀīŀŀş {{name}} īƞşŧḗȧḓ ȯƒ ŧħḗ ƈȯƞŧřȧƈŧ'ş ƥřȯƒīŀḗ.⟧"
+      },
+      "simulationNote": "⟦Şīḿŭŀȧŧḗḓ ƥřīƈīƞɠ ŭşḗş ŧħḗ ƈŀīḗƞŧ-ŀḗṽḗŀ ŧȧẋ ḗẋḗḿƥŧīȯƞ. Ȧ ƥřȯƒīŀḗ'ş ȯẇƞ ḗẋḗḿƥŧīȯƞ īş ƞȯŧ ȧƥƥŀīḗḓ īƞ ŧħīş şīḿŭŀȧŧīȯƞ.⟧"
     }
   },
   "contractDialog": {

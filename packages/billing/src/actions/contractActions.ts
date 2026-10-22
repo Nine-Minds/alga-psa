@@ -15,6 +15,8 @@ import {
   IContractWithClient,
   IContractLineMapping,
 } from '@alga-psa/types';
+import type { ContractBillingTrace } from '@alga-psa/types';
+import { loadContractBillingTrace } from '@alga-psa/shared/billingClients/contractBillingTrace';
 import {
   IContractTemplate,
   IContractTemplateWithLines,
@@ -1157,6 +1159,11 @@ export interface IContractOverview {
   currencyCode: string;  // ISO currency code (e.g., 'USD', 'AUD')
   /** Owning client for contract-backed overviews (null for templates); lets usage deep links prefill the client filter. */
   clientId: string | null;
+  /**
+   * Which billing profile(s) bill this contract, its payment terms, and where
+   * each value comes from. Resolved live (never stored); null for templates.
+   */
+  billingTrace: ContractBillingTrace | null;
 }
 
 /**
@@ -1547,7 +1554,9 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
       hasHourlyServices,
       hasUsageServices,
       currencyCode,
-      clientId
+      clientId,
+      // Same engine functions the invoice uses; a template has no client to bill.
+      billingTrace: isTemplate ? null : await loadContractBillingTrace(knex, tenant, { contractId }),
     };
   } catch (error) {
     console.error(`Error fetching contract overview for ${contractId}:`, error);

@@ -1815,7 +1815,8 @@
     },
     "cardExpiry": ", ważna do {{month}}/{{year}}",
     "legacyPaymentTerms": "„{{value}}” nie jest rozpoznawanym warunkiem płatności i nigdy nie został zastosowany. Zapisanie spowoduje jego usunięcie.",
-    "cardOnFile": "{{type}} z końcówką {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} z końcówką {{last4}}{{expiry}}",
+    "inheritDefaultTerms": "Dziedzicz od klienta (brak warunków — obowiązuje {{value}})"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Alerty salda przedpłaconego",

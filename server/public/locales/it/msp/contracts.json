@@ -148,7 +148,11 @@
       "title": "Assegnazione del cliente",
       "useTenantRenewalDefaults": "Utilizza le impostazioni predefinite di rinnovo del tenant",
       "usingCustomSettings": "Utilizzo delle impostazioni di assegnazione personalizzate",
-      "usingTenantDefaults": "Utilizzo delle impostazioni predefinite del tenant"
+      "usingTenantDefaults": "Utilizzo delle impostazioni predefinite del tenant",
+      "billingProfileUseDefault": "Usa {{name}} (predefinito del cliente)",
+      "billingProfileAssigned": "Profilo di fatturazione assegnato",
+      "billingProfileUnavailable": "Nessun profilo: assegnazione in sospeso",
+      "billingProfileLoading": "Caricamento del profilo di fatturazione…"
     },
     "clientOwnership": {
       "assignmentStatus": "Stato dell'assegnazione",
@@ -371,6 +375,68 @@
         "failed": "Non è stato possibile modificare il modo in cui questo servizio viene misurato."
       },
       "effectiveFrom": "Modifica della misurazione con effetto dal"
+    },
+    "billing": {
+      "title": "Profilo di fatturazione e termini di pagamento",
+      "asOf": "al {{date}}",
+      "profileLabel": "Profilo di fatturazione",
+      "inactive": "Inattivo",
+      "lineCountOne": "{{count}} riga",
+      "lineCountOther": "{{count}} righe",
+      "termsLabel": "Termini di pagamento",
+      "terms": {
+        "net_30": "Netto 30",
+        "net_15": "Netto 15",
+        "due_on_receipt": "Dovuto alla ricezione"
+      },
+      "termsSource": {
+        "profile": "dal profilo di fatturazione",
+        "client": "dal cliente",
+        "default": "predefinito: nessun termine impostato"
+      },
+      "profileSource": {
+        "client_default": "predefinito del cliente",
+        "contract": "assegnato al contratto",
+        "contract_line": "impostato sulla riga"
+      },
+      "valueSource": {
+        "profile": "Profilo",
+        "client": "Cliente",
+        "contract": "Contratto",
+        "default": "Predefinito"
+      },
+      "dueSentence": "Una fattura del {{invoiceDate}} scade il {{dueDate}}: {{terms}} {{source}}",
+      "detailsToggle": "Altri dettagli di fatturazione",
+      "fieldNone": "Nessuno",
+      "taxRegionChain": "Regione del servizio, poi sede della riga di contratto, poi predefinito del cliente",
+      "taxExempt": "Esente da imposte",
+      "taxable": "Imponibile",
+      "templateCustom": "Modello personalizzato",
+      "templateDefault": "Modello predefinito",
+      "paymentMethod": {
+        "credit_card": "Carta di credito",
+        "bank_transfer": "Bonifico bancario",
+        "check": "Assegno"
+      },
+      "fieldLabel": {
+        "bill_to": "Intestatario",
+        "payment_method": "Metodo di pagamento",
+        "tax_exemption": "Esenzione fiscale",
+        "tax_region": "Regione fiscale",
+        "delivery": "Invio delle fatture",
+        "template": "Modello di fattura",
+        "po_number": "Numero ordine di acquisto",
+        "currency": "Valuta",
+        "cadence": "Cadenza di fatturazione",
+        "profile_billing_cycle": "Ciclo di fatturazione del profilo",
+        "profile_billing_cycle_unapplied": "Ciclo di fatturazione del profilo (non ancora applicato)"
+      },
+      "warnings": {
+        "inactiveProfile": "{{name}} è inattivo ma fattura ancora questo contratto. Gli addebiti restano su di esso; non vengono spostati sul profilo predefinito.",
+        "mixedProfiles": "Questo contratto fattura su {{count}} profili diversi, quindi nessun profilo singolo lo copre. Ogni profilo usa i propri termini di pagamento.",
+        "lineOverride": "La riga \"{{line}}\" fattura su {{name}} anziché sul profilo del contratto."
+      },
+      "simulationNote": "I prezzi simulati usano l'esenzione fiscale a livello di cliente. L'esenzione propria di un profilo non viene applicata in questa simulazione."
     }
   },
   "contractDialog": {

@@ -1763,7 +1763,8 @@
     },
     "cardExpiry": ", gültig bis {{month}}/{{year}}",
     "legacyPaymentTerms": "„{{value}}“ ist keine anerkannte Zahlungsbedingung und wurde nie angewendet. Beim Speichern wird sie gelöscht.",
-    "cardOnFile": "{{type}} mit Endziffern {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} mit Endziffern {{last4}}{{expiry}}",
+    "inheritDefaultTerms": "Vom Kunden übernehmen (keine Bedingungen hinterlegt – {{value}} gilt)"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Prepaid-Saldo-Warnungen",

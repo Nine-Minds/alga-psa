@@ -200,3 +200,74 @@ export interface IContractPricingSchedule extends TenantEntity {
   created_by?: string;
   updated_by?: string;
 }
+
+/**
+ * Billing traceability for a live contract: which billing profile(s) bill it,
+ * what payment terms apply, and which level of the engine's own chains
+ * produced each value. Resolved live at read time — never stored on the
+ * contract — through `resolveChargeProfile`, `resolveEffectiveBillingIdentity`
+ * and `paymentTermDays`, so it cannot disagree with invoice generation.
+ */
+export type ContractBillingTraceProfileSource = 'contract_line' | 'contract' | 'client_default';
+
+/** Where a value inside the winning profile's identity came from. */
+export type ContractBillingTraceValueSource = 'profile' | 'client' | 'default' | 'contract';
+
+export interface ContractBillingTraceTerms {
+  /** Known terms key that applies (`net_30` when nothing is configured). */
+  value: 'net_30' | 'net_15' | 'due_on_receipt';
+  /** `default` = the Net 30 fallback: neither profile nor client holds a known key. */
+  source: Exclude<ContractBillingTraceValueSource, 'contract'>;
+  days: number;
+  /** Worked example: an invoice dated `asOf` is due on `dueDate`. */
+  dueDateExample: { invoiceDate: ISO8601String; dueDate: ISO8601String };
+}
+
+export interface ContractBillingTraceField {
+  key:
+    | 'bill_to'
+    | 'payment_method'
+    | 'tax_exemption'
+    | 'tax_region'
+    | 'delivery'
+    | 'template'
+    | 'po_number'
+    | 'currency'
+    | 'cadence'
+    | 'profile_billing_cycle';
+  /** Authored English label; UI surfaces translate by `key`. */
+  label: string;
+  /** Null when the field has no value of its own (e.g. tax region is a chain, not a value). */
+  value: string | null;
+  source: ContractBillingTraceValueSource;
+  /** False for values the engine does not read (the profile billing cycle). */
+  applied?: boolean;
+}
+
+export interface ContractBillingTraceProfile {
+  billingProfileId: string;
+  name: string;
+  /** The highest-priority chain step that routes at least one line here. */
+  source: ContractBillingTraceProfileSource;
+  lineCount: number;
+  isActive: boolean;
+  isDefault: boolean;
+  terms: ContractBillingTraceTerms;
+  fields: ContractBillingTraceField[];
+}
+
+export type ContractBillingTraceWarning =
+  | { code: 'inactive_profile'; billingProfileId: string; profileName: string }
+  | { code: 'mixed_profiles'; profileCount: number }
+  | { code: 'line_override'; contractLineId: string; contractLineName: string | null; billingProfileId: string; profileName: string };
+
+export interface ContractBillingTrace {
+  asOf: ISO8601String;
+  /** Every profile that actually bills a line of this contract, primary first. */
+  profiles: ContractBillingTraceProfile[];
+  /** Terms of the primary (first) profile. With `mixed_profiles`, read `profiles[].terms`. */
+  terms: ContractBillingTraceTerms;
+  /** Fields of the primary (first) profile. With `mixed_profiles`, read `profiles[].fields`. */
+  fields: ContractBillingTraceField[];
+  warnings: ContractBillingTraceWarning[];
+}

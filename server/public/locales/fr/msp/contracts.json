@@ -148,7 +148,11 @@
       "title": "Affectation client",
       "useTenantRenewalDefaults": "Utiliser les valeurs par défaut de renouvellement du locataire",
       "usingCustomSettings": "Utilisation de paramètres d'affectation personnalisés",
-      "usingTenantDefaults": "Utilisation des valeurs par défaut du locataire"
+      "usingTenantDefaults": "Utilisation des valeurs par défaut du locataire",
+      "billingProfileUseDefault": "Utiliser {{name}} (par défaut du client)",
+      "billingProfileAssigned": "Profil de facturation attribué",
+      "billingProfileUnavailable": "Aucun profil — attribution en attente",
+      "billingProfileLoading": "Chargement du profil de facturation…"
     },
     "clientOwnership": {
       "assignmentStatus": "Statut d'affectation",
@@ -371,6 +375,68 @@
         "failed": "Impossible de modifier la façon dont ce service est mesuré."
       },
       "effectiveFrom": "Changement de mesure applicable à partir du"
+    },
+    "billing": {
+      "title": "Profil de facturation et conditions de paiement",
+      "asOf": "au {{date}}",
+      "profileLabel": "Profil de facturation",
+      "inactive": "Inactif",
+      "lineCountOne": "{{count}} ligne",
+      "lineCountOther": "{{count}} lignes",
+      "termsLabel": "Conditions de paiement",
+      "terms": {
+        "net_30": "Net 30",
+        "net_15": "Net 15",
+        "due_on_receipt": "Dû à réception"
+      },
+      "termsSource": {
+        "profile": "du profil de facturation",
+        "client": "du client",
+        "default": "par défaut : aucune condition définie"
+      },
+      "profileSource": {
+        "client_default": "par défaut du client",
+        "contract": "attribué au contrat",
+        "contract_line": "défini sur la ligne"
+      },
+      "valueSource": {
+        "profile": "Profil",
+        "client": "Client",
+        "contract": "Contrat",
+        "default": "Par défaut"
+      },
+      "dueSentence": "Une facture du {{invoiceDate}} est due le {{dueDate}} — {{terms}} {{source}}",
+      "detailsToggle": "Autres détails de facturation",
+      "fieldNone": "Aucun",
+      "taxRegionChain": "Région du service, puis lieu de la ligne de contrat, puis valeur par défaut du client",
+      "taxExempt": "Exonéré de taxes",
+      "taxable": "Imposable",
+      "templateCustom": "Modèle personnalisé",
+      "templateDefault": "Modèle par défaut",
+      "paymentMethod": {
+        "credit_card": "Carte de crédit",
+        "bank_transfer": "Virement bancaire",
+        "check": "Chèque"
+      },
+      "fieldLabel": {
+        "bill_to": "Facturer à",
+        "payment_method": "Mode de paiement",
+        "tax_exemption": "Exonération fiscale",
+        "tax_region": "Région fiscale",
+        "delivery": "Envoi des factures",
+        "template": "Modèle de facture",
+        "po_number": "Numéro de bon de commande",
+        "currency": "Devise",
+        "cadence": "Fréquence de facturation",
+        "profile_billing_cycle": "Cycle de facturation du profil",
+        "profile_billing_cycle_unapplied": "Cycle de facturation du profil (pas encore appliqué)"
+      },
+      "warnings": {
+        "inactiveProfile": "{{name}} est inactif mais facture toujours ce contrat. Les frais y restent ; ils ne sont pas déplacés vers le profil par défaut.",
+        "mixedProfiles": "Ce contrat est facturé via {{count}} profils différents ; aucun profil unique ne le couvre. Chaque profil applique ses propres conditions de paiement.",
+        "lineOverride": "La ligne « {{line}} » est facturée via {{name}} au lieu du profil du contrat."
+      },
+      "simulationNote": "La tarification simulée utilise l'exonération fiscale au niveau du client. L'exonération propre à un profil n'est pas appliquée dans cette simulation."
     }
   },
   "contractDialog": {

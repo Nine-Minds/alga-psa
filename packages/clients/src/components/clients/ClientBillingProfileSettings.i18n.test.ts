@@ -29,6 +29,11 @@ describe.each(['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'xx', 'yy'])(
         expect(t(key)).not.toBe('');
       }
       expect(t('inheritFromClient', { value: 'Net 30' })).toContain('Net 30');
+      // No normalized client terms: the engine applies Net 30, so the option says so.
+      expect(i18n.exists(prefix + 'inheritDefaultTerms')).toBe(true);
+      expect(t('inheritDefaultTerms', { value: 'Net 30' })).toContain('Net 30');
+      expect(t('inheritDefaultTerms', { value: 'Net 30' })).not.toContain('{{');
+      expect(t('inheritDefaultTerms', { value: 'Net 30' })).not.toBe(t('inheritFromClient', { value: 'Net 30' }));
       expect(t('legacyPaymentTerms', { value: 'legacy-terms' })).toContain('legacy-terms');
       const expiry = t('cardExpiry', { month: '03', year: '29' });
       expect(expiry).toContain('03/29');
@@ -47,3 +52,25 @@ describe.each(['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'xx', 'yy'])(
     });
   },
 );
+
+describe('billing profile payment terms inherit option', () => {
+  const source = readFileSync(resolve(__dirname, './ClientBillingProfileSettings.tsx'), 'utf8');
+  const en = JSON.parse(readFileSync(resolve(
+    __dirname, '../../../../../server/public/locales/en/msp/clients.json',
+  ), 'utf8')).clientBillingProfileSettings;
+
+  it('names Net 30 instead of "Not set" when the client holds no terms', () => {
+    expect(en.inheritDefaultTerms).toBe('Inherit from client (no terms set — {{value}} applies)');
+    expect(source).toContain("t('clientBillingProfileSettings.inheritDefaultTerms'");
+    // The default is the engine's DEFAULT_PAYMENT_TERMS, not a literal.
+    expect(source).toMatch(/inheritDefaultTerms'[\s\S]{0,120}termsLabels\[DEFAULT_PAYMENT_TERMS\]/);
+    // The terms select never routes its inherit label through notSetLabel.
+    const termsCall = source.slice(source.indexOf("'payment_terms',\n          t("), source.indexOf("'preferred_payment_method',\n          t("));
+    expect(termsCall.replace(/\/\/.*$/gm, '')).not.toContain('notSetLabel');
+  });
+
+  it('names the client terms that apply, e.g. Net 15', () => {
+    expect(source).toMatch(/inheritFromClient'[\s\S]{0,80}termsLabels\[clientValues\.paymentTerms\]/);
+    expect(en.inheritFromClient.replace('{{value}}', 'Net 15')).toBe('Inherit from client (Net 15)');
+  });
+});
