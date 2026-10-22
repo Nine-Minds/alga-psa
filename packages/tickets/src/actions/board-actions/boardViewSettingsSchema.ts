@@ -75,6 +75,8 @@ const capturedFiltersShape: { [K in CapturableFilterKey]: z.ZodTypeAny } = {
     responseState: z.enum(['awaiting_client', 'awaiting_internal', 'none', 'all']),
     slaStatusFilter: z.enum(['all', 'has_sla', 'no_sla', 'on_track', 'breached', 'paused']),
     bundleView: z.enum(['bundled', 'individual']),
+    requester_vip: z.boolean(),
+    client_vip: z.boolean(),
 } as const;
 
 const viewSettingsShape = (filters: z.ZodTypeAny) => ({

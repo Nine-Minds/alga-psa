@@ -27,6 +27,8 @@ export interface IClient extends TenantEntity, ITaggable {
   default_currency_code?: string | null;
   notes?: string | null;
   is_inactive: boolean;
+  /** VIP client: labelling and ticket-list filtering only. */
+  is_vip?: boolean;
   /**
    * Forwarding address left by a merge. Set means this client was absorbed
    * into another as a billing profile and only survives as a tombstone.

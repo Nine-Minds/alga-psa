@@ -90,7 +90,10 @@
         "description": "Choose which columns to include when printing contacts."
       }
     },
-    "shareTooltip": "Print, import and export"
+    "shareTooltip": "Print, import and export",
+    "filters": {
+      "vipOnly": "VIP only"
+    }
   },
   "contactDetails": {
     "title": "Contact Details",
@@ -520,6 +523,12 @@
       "emailExistsPrefix": "Email already exists:",
       "invalidReferencePrefix": "Invalid reference:",
       "systemPrefix": "System error:"
+    },
+    "vip": {
+      "label": "VIP"
+    },
+    "poc": {
+      "label": "Point of contact"
     }
   },
   "contactDetailsEdit": {
@@ -558,7 +567,9 @@
       "reportsTo": "Reports to:",
       "reportsToPlaceholder": "No manager",
       "reportsToClear": "Clear",
-      "reportsToHelp": "Must be someone at the same client. Used for portal \"my staff\" visibility of tickets, devices and projects."
+      "reportsToHelp": "Must be someone at the same client. Used for portal \"my staff\" visibility of tickets, devices and projects.",
+      "vip": "VIP:",
+      "poc": "Point of contact:"
     },
     "loading": {
       "destinations": "Loading destinations..."

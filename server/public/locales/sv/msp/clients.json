@@ -315,7 +315,13 @@
     "inboundDomainAutoCreateHelp": "Mappade domäner kan valfritt skapa en kontakt för en betrodd ny avsändare. Domäner måste vara unika för varje kund.",
     "inboundDomainAutoCreateUpdated": "Inställningen för avsändarkontakter har uppdaterats.",
     "inboundDomainAutoCreateUpdateFailed": "Det gick inte att uppdatera inställningen för avsändarkontakter.",
-    "recurringTickets": "Återkommande ärenden"
+    "recurringTickets": "Återkommande ärenden",
+    "vip": {
+      "label": "VIP-kund",
+      "helper": "Visa en VIP-bricka för den här kunden i ärendelistor och detaljer",
+      "on": "VIP",
+      "off": "Standard"
+    }
   },
   "clientCommandCenter": {
     "cards": {

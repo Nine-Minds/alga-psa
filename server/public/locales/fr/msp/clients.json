@@ -315,7 +315,13 @@
     "inboundDomainAutoCreateHelp": "Les domaines associés peuvent créer un contact pour un nouvel expéditeur de confiance.",
     "inboundDomainAutoCreateUpdated": "Paramètre des contacts expéditeurs mis à jour.",
     "inboundDomainAutoCreateUpdateFailed": "Impossible de mettre à jour le paramètre des contacts expéditeurs.",
-    "recurringTickets": "Tickets récurrents"
+    "recurringTickets": "Tickets récurrents",
+    "vip": {
+      "label": "Client VIP",
+      "helper": "Afficher un badge VIP pour ce client dans les listes et détails des tickets",
+      "on": "VIP",
+      "off": "Standard"
+    }
   },
   "clientCommandCenter": {
     "cards": {

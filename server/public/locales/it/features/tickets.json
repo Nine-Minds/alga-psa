@@ -527,7 +527,9 @@
       "bundled": "Raggruppati",
       "activeBoards": "Bacheche attive",
       "inactiveBoards": "Bacheche inattive",
-      "allBoards": "Tutte le bacheche"
+      "allBoards": "Tutte le bacheche",
+      "vipOnly": "Solo VIP",
+      "vipRequesters": "Richiedenti VIP"
     },
     "selection": {
       "pageSelected_one": "Tutti i {{count}} ticket di questa pagina sono selezionati.",

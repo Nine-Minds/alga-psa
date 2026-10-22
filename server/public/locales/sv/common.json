@@ -2172,5 +2172,11 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Byt vy"
+  },
+  "flags": {
+    "vip": "VIP",
+    "poc": "Huvudkontakt",
+    "pocFull": "Huvudkontakt",
+    "pocShort": "HK"
   }
 }

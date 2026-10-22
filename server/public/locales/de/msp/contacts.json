@@ -90,7 +90,10 @@
         "description": "Wählen Sie die beim Drucken von Kontakten enthaltenen Spalten."
       }
     },
-    "shareTooltip": "Drucken, importieren und exportieren"
+    "shareTooltip": "Drucken, importieren und exportieren",
+    "filters": {
+      "vipOnly": "Nur VIP"
+    }
   },
   "contactDetails": {
     "title": "Kontaktdetails",
@@ -520,6 +523,12 @@
       "emailExistsPrefix": "E-Mail-Adresse existiert bereits:",
       "invalidReferencePrefix": "Ungültige Referenz:",
       "systemPrefix": "Systemfehler:"
+    },
+    "vip": {
+      "label": "VIP"
+    },
+    "poc": {
+      "label": "Ansprechpartner"
     }
   },
   "contactDetailsEdit": {
@@ -558,7 +567,9 @@
       "reportsTo": "Berichtet an:",
       "reportsToPlaceholder": "Keine Führungskraft",
       "reportsToClear": "Zurücksetzen",
-      "reportsToHelp": "Muss eine Person desselben Kunden sein. Wird für die Portalsichtbarkeit von Tickets, Geräten und Projekten („meine Mitarbeitenden“) verwendet."
+      "reportsToHelp": "Muss eine Person desselben Kunden sein. Wird für die Portalsichtbarkeit von Tickets, Geräten und Projekten („meine Mitarbeitenden“) verwendet.",
+      "vip": "VIP:",
+      "poc": "Ansprechpartner:"
     },
     "loading": {
       "destinations": "Ziele werden geladen..."

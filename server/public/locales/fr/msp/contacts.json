@@ -90,7 +90,10 @@
         "description": "Choisissez les colonnes à inclure lors de l'impression des contacts."
       }
     },
-    "shareTooltip": "Imprimer, importer et exporter"
+    "shareTooltip": "Imprimer, importer et exporter",
+    "filters": {
+      "vipOnly": "VIP uniquement"
+    }
   },
   "contactDetails": {
     "title": "Détails du contact",
@@ -520,6 +523,12 @@
       "emailExistsPrefix": "L’e-mail existe déjà :",
       "invalidReferencePrefix": "Référence invalide :",
       "systemPrefix": "Erreur système :"
+    },
+    "vip": {
+      "label": "VIP"
+    },
+    "poc": {
+      "label": "Contact principal"
     }
   },
   "contactDetailsEdit": {
@@ -558,7 +567,9 @@
       "reportsTo": "Rattaché à :",
       "reportsToPlaceholder": "Aucun responsable",
       "reportsToClear": "Effacer",
-      "reportsToHelp": "Doit être une personne du même client. Utilisé pour la visibilité « mon équipe » des tickets, appareils et projets dans le portail."
+      "reportsToHelp": "Doit être une personne du même client. Utilisé pour la visibilité « mon équipe » des tickets, appareils et projets dans le portail.",
+      "vip": "VIP:",
+      "poc": "Contact principal:"
     },
     "loading": {
       "destinations": "Chargement des destinations..."

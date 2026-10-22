@@ -708,7 +708,9 @@ export const addContact = withAuth(async (
       manager_contact_id: contactData.manager_contact_id || undefined,
       role: contactData.role ?? undefined,
       notes: contactData.notes || undefined,
-      is_inactive: contactData.is_inactive ?? undefined
+      is_inactive: contactData.is_inactive ?? undefined,
+      is_vip: contactData.is_vip ?? undefined,
+      is_primary_contact: contactData.is_primary_contact ?? undefined,
     };
 
     // LEVERAGE: pattern contact-create-with-event
@@ -936,6 +938,8 @@ export const updateContact = withAuth(async (
         role: contactData.role ?? undefined,
         notes: contactData.notes ?? undefined,
         is_inactive: contactData.is_inactive ?? undefined,
+        is_vip: contactData.is_vip ?? undefined,
+        is_primary_contact: contactData.is_primary_contact ?? undefined,
       }, tenant, trx);
 
       if (contactData.is_inactive === true) {

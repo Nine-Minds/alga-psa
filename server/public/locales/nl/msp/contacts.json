@@ -90,7 +90,10 @@
         "description": "Kies welke kolommen worden opgenomen bij het afdrukken van contactpersonen."
       }
     },
-    "shareTooltip": "Afdrukken, importeren en exporteren"
+    "shareTooltip": "Afdrukken, importeren en exporteren",
+    "filters": {
+      "vipOnly": "Alleen VIP"
+    }
   },
   "contactDetails": {
     "title": "Contactdetails",
@@ -520,6 +523,12 @@
       "emailExistsPrefix": "E-mail bestaat al:",
       "invalidReferencePrefix": "Ongeldige verwijzing:",
       "systemPrefix": "Systeemfout:"
+    },
+    "vip": {
+      "label": "VIP"
+    },
+    "poc": {
+      "label": "Hoofdcontactpersoon"
     }
   },
   "contactDetailsEdit": {
@@ -558,7 +567,9 @@
       "reportsTo": "Rapporteert aan:",
       "reportsToPlaceholder": "Geen leidinggevende",
       "reportsToClear": "Wissen",
-      "reportsToHelp": "Moet iemand van dezelfde klant zijn. Wordt gebruikt voor de portalzichtbaarheid (“mijn team”) van tickets, apparaten en projecten."
+      "reportsToHelp": "Moet iemand van dezelfde klant zijn. Wordt gebruikt voor de portalzichtbaarheid (“mijn team”) van tickets, apparaten en projecten.",
+      "vip": "VIP:",
+      "poc": "Hoofdcontactpersoon:"
     },
     "loading": {
       "destinations": "Bestemmingen laden..."

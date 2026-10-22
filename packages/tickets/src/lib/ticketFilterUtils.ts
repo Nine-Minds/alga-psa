@@ -137,5 +137,6 @@ export function parseReturnFilters(returnFiltersEncoded: string): ITicketListFil
     sortBy: params.get('sortBy') || 'entered_at',
     sortDirection: (params.get('sortDirection') as 'asc' | 'desc') || 'desc',
     bundleView: (params.get('bundleView') as 'bundled' | 'individual') || 'bundled',
+    requester_vip: params.get('requesterVip') === 'true' ? true : undefined,
   };
 }

@@ -535,7 +535,9 @@
       "bundled": "⟦Ɓŭƞḓŀḗḓ⟧",
       "activeBoards": "⟦Ȧƈŧīṽḗ Ɓȯȧřḓş⟧",
       "inactiveBoards": "⟦Īƞȧƈŧīṽḗ Ɓȯȧřḓş⟧",
-      "allBoards": "⟦Ȧŀŀ Ɓȯȧřḓş⟧"
+      "allBoards": "⟦Ȧŀŀ Ɓȯȧřḓş⟧",
+      "vipOnly": "⟦ṼĪƤ ȯƞŀẏ⟧",
+      "vipRequesters": "⟦ṼĪƤ řḗʠŭḗşŧḗřş⟧"
     },
     "selection": {
       "pageSelected_one": "⟦Ȧŀŀ {{count}} ŧīƈķḗŧ ȯƞ ŧħīş ƥȧɠḗ ȧřḗ şḗŀḗƈŧḗḓ.⟧",
