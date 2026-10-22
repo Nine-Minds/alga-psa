@@ -162,4 +162,22 @@ describe('accounting mapping tab strip layout', () => {
     expect(screen.getAllByRole('tab')).toHaveLength(moduleCount);
     expect(screen.getByRole('tablist').className).not.toMatch(/grid-cols-/);
   });
+
+  // The QBO and Xero live strips only render once an external organisation is
+  // connected, so they cannot be exercised in a browser without live OAuth.
+  // Pinning all four adapters to one list class — flex, never grid, since a
+  // later `grid` would win the cascade over the default `flex` — lets the
+  // browser-verified Xero CSV strip stand in for the two live screens.
+  it('hands every adapter the same tab list class', () => {
+    const listClasses = adapterManagers.map(({ renderManager }) => {
+      renderManager();
+      const listClass = screen.getByRole('tablist').className;
+      cleanup();
+      return listClass;
+    });
+
+    expect(new Set(listClasses).size).toBe(1);
+    expect(listClasses[0]).toContain('flex');
+    expect(listClasses[0]).not.toMatch(/\bgrid\b/);
+  });
 });
