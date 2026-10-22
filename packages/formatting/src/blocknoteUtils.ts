@@ -1518,6 +1518,9 @@ export function blockNoteToPlainText(value: unknown, maxLen: number = BLOCKNOTE_
       if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
         try {
           const parsed = JSON.parse(trimmed);
+          // An empty BlockNote document serialises as "[]". It carries no text,
+          // so never let it become the literal string "[]".
+          if (Array.isArray(parsed) && parsed.length === 0) return '';
           if (looksLikeBlockContent(parsed) || (parsed && (parsed as { type?: unknown }).type === 'doc')) {
             source = parsed;
             structured = true;

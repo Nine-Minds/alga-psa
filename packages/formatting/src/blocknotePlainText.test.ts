@@ -29,6 +29,12 @@ describe('blockNoteToPlainText', () => {
     expect(out).not.toContain('textColor');
   });
 
+  it('treats a bare empty BlockNote document as empty', () => {
+    expect(blockNoteToPlainText('[]')).toBe('');
+    expect(blockNoteToPlainText([])).toBe('');
+    expect(blockNoteToPlainText('[]', 160)).toBe('');
+  });
+
   it('treats a document of only empty paragraphs as empty', () => {
     expect(blockNoteToPlainText(JSON.stringify([emptyP, emptyP]))).toBe('');
     expect(blockNoteToPlainText([emptyP])).toBe('');
