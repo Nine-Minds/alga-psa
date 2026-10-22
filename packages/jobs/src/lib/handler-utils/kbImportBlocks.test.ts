@@ -454,7 +454,9 @@ describe('kbImportBlocks link sanitization', () => {
 // identical, so only the work differs. A wall-clock ratio could not tell the
 // two apart on a loaded CI runner (an 8MB parse is dominated by the linear
 // lexer and GC), so count the characters the search inspects instead.
-describe('kbImportBlocks inline chunk splitting', () => {
+// The masking-work guard parses ~255KB of code spans twice under a spy; that
+// is ~11s on a loaded CI runner, past the package's 10s default.
+describe('kbImportBlocks inline chunk splitting', { timeout: 20_000 }, () => {
   // Stands in for the source string and tallies every character a search
   // reads. Any other access throws, so a rewrite that reads the source some
   // new way fails loudly here instead of going uncounted.
@@ -542,11 +544,18 @@ describe('kbImportBlocks inline chunk splitting', () => {
   // dominated by the linear lexer and by GC, so the ratio moved too little to
   // separate the two: it measured ~2.5x per doubling against a 4x bound, and a
   // loaded CI runner crossed it on correct code (2509ms vs 614ms). The work
-  // itself is deterministic, so assert it instead. What it counts is portable;
-  // how long it takes to count is not -- parsing 127KB then 255KB of code spans
-  // is ~1.7s on a laptop and ~14s on a loaded CI runner, past the 10s default
-  // testTimeout. Budget it like the pathological-input block below.
-  it('keeps the inline pass linear as one inline-dense block grows', { timeout: 120_000 }, () => {
+  // itself is deterministic, so assert it instead.
+  //
+  // The two parses below still cost ~2s of real wall-clock time on quiet
+  // hardware (two full marked lexes of a 127KB/255KB document, each spied on
+  // via vi.spyOn), same as the sibling "pathological input" describe below —
+  // and that block raises its timeout for exactly this reason: a CI runner
+  // sharing the box with dozens of other Nx projects routinely blows past the
+  // default 10s per-test timeout on work a dev laptop finishes in a blink.
+  // This test's assertions are about work linearity, not timing, so a longer
+  // timeout costs nothing: the counting checks still fail immediately (and
+  // fast) if the quadratic masking regresses.
+  it('keeps the inline pass linear as one inline-dense block grows', () => {
     // Code spans with no whitespace to split on: the densest shape we know of,
     // and the one that grew ~12x per doubling while the inline pass was quadratic.
     for (const repeats of [42_500, 85_000]) {
@@ -561,7 +570,7 @@ describe('kbImportBlocks inline chunk splitting', () => {
       expect(runs).toHaveLength(Math.ceil(markdown.length / INLINE_CHUNK_SIZE));
       expect(runs.reduce((total, length) => total + length, 0)).toBe(markdown.length);
     }
-  });
+  }, 60_000);
 });
 
 // Guards against reintroducing the quadratic/backtracking parser: every case

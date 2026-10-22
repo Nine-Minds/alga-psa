@@ -169,6 +169,9 @@ export async function createHuntressClient(tenantId: string): Promise<HuntressCl
   return new HuntressClient({
     apiKey,
     apiSecret,
-    baseUrl: row?.instance_url || undefined,
+    // The tenant's stored Base URL wins; HUNTRESS_API_BASE_URL is the
+    // suite-wide default (the algasim Huntress emulator), as
+    // LEVELIO_API_BASE_URL is for Level.
+    baseUrl: row?.instance_url || process.env.HUNTRESS_API_BASE_URL || undefined,
   });
 }

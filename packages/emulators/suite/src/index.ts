@@ -6,6 +6,7 @@ import stripe from '@alga-psa/emulator-stripe';
 import xero from '@alga-psa/emulator-xero';
 import threecx from '@alga-psa/emulator-threecx';
 import levelio from '@alga-psa/emulator-levelio';
+import huntress from '@alga-psa/emulator-huntress';
 import type { EmulatorPackage } from '@alga-psa/emulator-host';
 
 /** Every emulator in the suite. New emulators register here. */
@@ -18,4 +19,5 @@ export const SUITE_EMULATORS: EmulatorPackage[] = [
   xero as EmulatorPackage,
   threecx as EmulatorPackage,
   levelio as EmulatorPackage,
+  huntress as EmulatorPackage,
 ];
