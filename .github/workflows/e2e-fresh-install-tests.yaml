@@ -854,20 +854,25 @@ jobs:
         id: browser_system
         if: ${{ !cancelled() && steps.browser_packages.outcome == 'success' }}
         working-directory: ./e2e-tests
-        # Hard ceiling so this step can never again consume the whole job budget.
-        timeout-minutes: 12
+        # Hard ceiling so this step can never consume the whole job budget.
+        # Must fit three 240s attempts plus the pauses between them (~12.5 min);
+        # at 12 the third attempt was always cut off.
+        timeout-minutes: 14
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          # `npx playwright install-deps` shells out to `apt-get`, which has
-          # intermittently stalled for 30+ minutes on the GitHub runner (an
-          # apt/dpkg lock or a Debian mirror hang). Because the step had no
-          # timeout, a single stall consumed the entire 60-minute job budget and
-          # the run was cancelled at "Install Playwright system dependencies"
-          # before the login e2e test ever executed -- even though the build and
-          # all services were up and healthy by ~T+29m. Good runs finish this
-          # step in 35-490s, so bound each attempt and retry: a transient stall
-          # self-heals instead of killing the job.
+          # `npx playwright install-deps` shells out to `apt-get`. The runners'
+          # primary mirror (azure.archive.ubuntu.com) intermittently accepts the
+          # connection and then stops sending, and apt's default has no socket
+          # timeout, so a stalled .deb download hung until the attempt timeout.
+          # A short timeout makes the stalled fetch fail in seconds, which is
+          # what lets apt retry and fall through to the next mirror in
+          # /etc/apt/apt-mirrors.txt instead of waiting out the whole attempt.
+          sudo tee /etc/apt/apt.conf.d/99-ci-fetch-timeouts >/dev/null <<'EOF'
+          Acquire::http::Timeout "20";
+          Acquire::https::Timeout "20";
+          Acquire::Retries "3";
+          EOF
           set -x
           attempt=1
           max_attempts=3
@@ -879,8 +884,10 @@ jobs:
             fi
             echo "Attempt $attempt failed/stalled (exit $code); clearing apt locks and retrying..."
             # A timed-out attempt can leave apt/dpkg holding a lock; clear it so
-            # the retry is not guaranteed to stall the same way.
-            sudo pkill -9 -f 'apt-get|dpkg' 2>/dev/null || true
+            # the retry is not guaranteed to stall the same way. The pattern is
+            # anchored so pkill does not match its own `sudo pkill ... apt-get`
+            # command line and kill itself before reaching apt.
+            sudo pkill -9 -f '^(/usr/bin/)?(apt-get|dpkg)( |$)' 2>/dev/null || true
             sudo rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock \
               /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend 2>/dev/null || true
             sudo dpkg --configure -a 2>/dev/null || true
