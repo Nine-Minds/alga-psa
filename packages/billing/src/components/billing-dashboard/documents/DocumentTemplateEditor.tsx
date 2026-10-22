@@ -333,7 +333,7 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="p-6 space-y-4" id="document-template-editor-page">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">
