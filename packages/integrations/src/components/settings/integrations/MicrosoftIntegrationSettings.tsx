@@ -335,6 +335,8 @@ export function MicrosoftIntegrationSettings({
   const [emailSetupOpen, setEmailSetupOpen] = React.useState(false);
   const [setupFailure, setSetupFailure] = React.useState<string | null>(null);
   const handledSetupOutcomeRef = React.useRef(false);
+  // Set only for a URL-driven (full-page) outcome; popup outcomes already show in-place.
+  const pendingOutcomeScrollRef = React.useRef<'ok' | 'error' | null>(null);
 
   const isEnterpriseEdition = isMicrosoftConsumerEnterpriseEdition();
   const profiles = status?.success ? status.profiles ?? [] : [];
@@ -463,6 +465,7 @@ export function MicrosoftIntegrationSettings({
     const outcome = searchParams?.get('microsoft_email_setup');
     if (!outcome || handledSetupOutcomeRef.current) return;
     handledSetupOutcomeRef.current = true;
+    pendingOutcomeScrollRef.current = outcome === 'ok' ? 'ok' : 'error';
     handleEmailSetupOutcome(
       outcome === 'ok'
         ? { success: true, stage: 'admin_consent' }
@@ -482,6 +485,20 @@ export function MicrosoftIntegrationSettings({
     const base = pathname ?? window.location.pathname;
     router.replace(query ? `${base}?${query}` : base);
   }, [handleEmailSetupOutcome, pathname, router, searchParams]);
+
+  // Bring the URL-driven outcome into view once it has rendered.
+  React.useEffect(() => {
+    const pending = pendingOutcomeScrollRef.current;
+    if (!pending) return;
+    const target = document.getElementById(
+      pending === 'error' ? 'microsoft-email-setup-failure' : 'microsoft-email-setup-ready',
+    );
+    if (!target) return;
+    pendingOutcomeScrollRef.current = null;
+    if (typeof target.scrollIntoView === 'function') {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [setupFailure, emailSetup?.state]);
 
   const copyPendingEmailApprovalLink = React.useCallback(async () => {
     const url = await getPendingEmailApprovalUrl();
@@ -708,7 +725,7 @@ export function MicrosoftIntegrationSettings({
           )}
 
           {emailSetup?.state === 'ready' && (
-            <Alert variant="success">
+            <Alert variant="success" id="microsoft-email-setup-ready">
               <AlertDescription>
                 <div className="font-medium">
                   {t('integrations.microsoft.settings.platform.title', { defaultValue: 'Microsoft email is ready to connect' })}
