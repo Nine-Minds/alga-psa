@@ -205,7 +205,6 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/tenant',
       '/api/v1/feature-flags',
       '/api/v1/workflow',
-      '/api/v1/automation',
       '/api/v1/rmm',
       '/api/v1/scheduling',
       '/api/v1/dispatch',
