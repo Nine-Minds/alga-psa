@@ -545,6 +545,16 @@ describe('kbImportBlocks inline chunk splitting', { timeout: 20_000 }, () => {
   // separate the two: it measured ~2.5x per doubling against a 4x bound, and a
   // loaded CI runner crossed it on correct code (2509ms vs 614ms). The work
   // itself is deterministic, so assert it instead.
+  //
+  // The two parses below still cost ~2s of real wall-clock time on quiet
+  // hardware (two full marked lexes of a 127KB/255KB document, each spied on
+  // via vi.spyOn), same as the sibling "pathological input" describe below —
+  // and that block raises its timeout for exactly this reason: a CI runner
+  // sharing the box with dozens of other Nx projects routinely blows past the
+  // default 10s per-test timeout on work a dev laptop finishes in a blink.
+  // This test's assertions are about work linearity, not timing, so a longer
+  // timeout costs nothing: the counting checks still fail immediately (and
+  // fast) if the quadratic masking regresses.
   it('keeps the inline pass linear as one inline-dense block grows', () => {
     // Code spans with no whitespace to split on: the densest shape we know of,
     // and the one that grew ~12x per doubling while the inline pass was quadratic.
@@ -560,7 +570,7 @@ describe('kbImportBlocks inline chunk splitting', { timeout: 20_000 }, () => {
       expect(runs).toHaveLength(Math.ceil(markdown.length / INLINE_CHUNK_SIZE));
       expect(runs.reduce((total, length) => total + length, 0)).toBe(markdown.length);
     }
-  });
+  }, 60_000);
 });
 
 // Guards against reintroducing the quadratic/backtracking parser: every case
