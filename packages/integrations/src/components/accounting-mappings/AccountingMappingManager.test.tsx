@@ -170,9 +170,11 @@ describe('accounting mapping tab strip layout', () => {
 
   // The QBO and Xero live strips only render once an external organisation is
   // connected, so they cannot be exercised in a browser without live OAuth.
-  // Pinning all four adapters to one list class — flex, never grid, since a
-  // later `grid` would win the cascade over the default `flex` — lets the
-  // browser-verified Xero CSV strip stand in for the two live screens.
+  // Pinning all four adapters to one list class lets the browser-verified Xero
+  // CSV strip stand in for the two live screens. Assert `flex-wrap` rather than
+  // `flex`: CustomTabs' own default list class already contains `flex`, so that
+  // token passes even when a manager forwards no override at all, while
+  // `flex-wrap` can only come from the managers.
   it('hands every adapter the same tab list class', () => {
     const listClasses = adapterManagers.map(({ renderManager }) => {
       renderManager();
@@ -182,7 +184,7 @@ describe('accounting mapping tab strip layout', () => {
     });
 
     expect(new Set(listClasses).size).toBe(1);
-    expect(listClasses[0]).toContain('flex');
+    expect(listClasses[0]).toContain('flex-wrap');
     expect(listClasses[0]).not.toMatch(/\bgrid\b/);
   });
 });
