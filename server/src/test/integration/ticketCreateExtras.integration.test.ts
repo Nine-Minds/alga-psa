@@ -197,4 +197,29 @@ describe('addTicket create extras (integration)', () => {
     expect(dupes).toMatch(/Invalid custom fields/);
     expect(await countTickets()).toBe(before);
   });
+
+  it('rejects blank and over-limit custom fields sent straight to the action', async () => {
+    const before = await countTickets();
+    const blank = await ticketActions.addTicket(createForm({ custom_fields: JSON.stringify({ '   ': 'x' }) }))
+      .then((v: any) => JSON.stringify(v), (e: Error) => e.message);
+    expect(blank).toMatch(/Invalid custom fields.*blank name/);
+    const longValue = await ticketActions.addTicket(createForm({ custom_fields: JSON.stringify({ A: 'x'.repeat(2001) }) }))
+      .then((v: any) => JSON.stringify(v), (e: Error) => e.message);
+    expect(longValue).toMatch(/Invalid custom fields.*longer than 2000/);
+    const tooMany = Object.fromEntries(Array.from({ length: 101 }, (_, n) => [`f${n}`, 'v']));
+    const many = await ticketActions.addTicket(createForm({ custom_fields: JSON.stringify(tooMany) }))
+      .then((v: any) => JSON.stringify(v), (e: Error) => e.message);
+    expect(many).toMatch(/at most 100 custom fields/);
+    expect(await countTickets()).toBe(before);
+  });
+
+  it('rejects linking assets without asset:update permission', async () => {
+    const before = await countTickets();
+    const denied = await tt('permissions').where({ resource: 'asset', action: 'update', msp: true }).select('permission_id');
+    await tt('role_permissions').whereIn('permission_id', denied.map((p: any) => p.permission_id)).delete();
+    const message = await ticketActions.addTicket(createForm({ asset_ids: JSON.stringify([assetA]) }))
+      .then((v: any) => JSON.stringify(v), (e: Error) => e.message);
+    expect(message).toMatch(/Cannot link assets/);
+    expect(await countTickets()).toBe(before);
+  });
 });
