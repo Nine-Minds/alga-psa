@@ -38,7 +38,9 @@ import { ensureTimePeriodCoversDate } from '@alga-psa/scheduling/lib/timePeriodM
 import { Temporal } from '@js-temporal/polyfill';
 import { hasPermission } from '../../auth/rbac';
 import {
+  assertEditableGroupCalendar,
   buildVisibilityFilter,
+  canAssignUser,
   evaluateEntryAccess,
   resolveCalendarAccess,
   type CalendarAccess,
@@ -1117,6 +1119,17 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       const ScheduleEntry = (await import('@alga-psa/shared/models/scheduleEntry')).default;
 
+      // Group calendar placement: same access path as the addScheduleEntry server action.
+      // Failures throw (404/403); they never fall back to a personal entry.
+      const calendarId = data.calendar_id ?? null;
+      const assignedUserIds: string[] = data.assigned_user_ids || [];
+      if (calendarId) {
+        const access = await this.assertWritableGroupCalendar(knex, calendarId, context);
+        if (assignedUserIds.some((userId) => !canAssignUser(userId, access))) {
+          throw new ForbiddenError('Permission denied: Cannot assign schedules to other users');
+        }
+      }
+
       const entry = await withTransaction(knex, async (trx) => {
         // Map work_item_type to valid WorkItemType or default
         let workItemType: 'ticket' | 'project_task' | 'non_billable_category' | 'ad_hoc' | 'interaction';
@@ -1138,10 +1151,11 @@ export class TimeSheetService extends BaseService<any> {
           is_private: data.is_private,
           is_all_day: data.is_all_day ?? false,
           recurrence_pattern: data.recurrence_pattern ? JSON.parse(data.recurrence_pattern) : null,
-          assigned_user_ids: data.assigned_user_ids || [],
+          assigned_user_ids: assignedUserIds,
+          calendar_id: calendarId,
           status: 'scheduled'
         }, {
-          assignedUserIds: data.assigned_user_ids || [],
+          assignedUserIds,
           assignedByUserId: context.userId
         });
 
@@ -1150,7 +1164,7 @@ export class TimeSheetService extends BaseService<any> {
 
       await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_CREATED', payload: buildScheduleEntryCreatedPayload({ userId: context.userId, entryId: entry.entry_id, changes: {
             after: entry,
-            assignedUserIds: data.assigned_user_ids || [],
+            assignedUserIds,
           } }), ctx: { tenantId: context.tenant, actor: { actorType: 'USER', actorUserId: context.userId } } });
 
       // Re-fetch after commit: getScheduleEntry runs on a pooled
@@ -1191,11 +1205,23 @@ export class TimeSheetService extends BaseService<any> {
           }
         }
 
+        // Moving onto a group calendar requires edit access there; never silently ignored.
+        if (data.calendar_id && data.calendar_id !== existing.calendar_id) {
+          const access = await this.assertWritableGroupCalendar(trx, data.calendar_id, context);
+          const addedAssignees = (data.assigned_user_ids ?? []).filter((userId: string) => !assigneeIds.includes(userId));
+          if (addedAssignees.some((userId: string) => !canAssignUser(userId, access))) {
+            throw new ForbiddenError('Permission denied: Cannot assign schedules to other users');
+          }
+        }
+
+        // assigned_user_ids lives in schedule_entry_assignees, not on schedule_entries.
+        const { assigned_user_ids: _assignedUserIds, ...rowData } = data;
         const updateData = {
-          ...data,
+          ...rowData,
+          // Group calendar entries are never private (same invariant as ScheduleEntry.create).
+          ...(data.calendar_id ? { is_private: false } : {}),
           updated_at: new Date()
         };
-  
 
         const { validateAllDayInterval } = await import('@alga-psa/shared/models/scheduleEntry');
         validateAllDayInterval({
@@ -1229,16 +1255,21 @@ export class TimeSheetService extends BaseService<any> {
           .where({ entry_id: id })
           .first();
 
+        const finalAssigneeIds: string[] = data.assigned_user_ids !== undefined
+          ? data.assigned_user_ids
+          : assigneeIds;
+
         return {
           existing,
           updated,
+          beforeAssigneeIds: assigneeIds as string[],
+          afterAssigneeIds: finalAssigneeIds,
         };
       });
 
       await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: buildScheduleEntryUpdatedPayload({ userId: context.userId, entryId: id, changes: {
-            before: result.existing,
-            after: result.updated,
-            assignedUserIds: data.assigned_user_ids,
+            before: this.scheduleEntryEventSnapshot(result.existing, result.beforeAssigneeIds),
+            after: this.scheduleEntryEventSnapshot(result.updated, result.afterAssigneeIds),
           } }), ctx: { tenantId: context.tenant, actor: { actorType: 'USER', actorUserId: context.userId } } });
 
       // Re-fetch after commit: getScheduleEntry runs on a pooled
@@ -1391,6 +1422,61 @@ export class TimeSheetService extends BaseService<any> {
   private async canApproveTimeSheets(context: ServiceContext): Promise<boolean> {
     // Check RBAC permissions
     return false; // Simplified for now
+  }
+
+  /**
+   * Resolve the caller's calendar access and require an editable, non-archived group calendar.
+   * 404 when the calendar is unavailable to the caller (missing, other tenant, personal, archived,
+   * or not visible to them); 403 when they can see it but lack edit access.
+   */
+  private async assertWritableGroupCalendar(
+    knexOrTrx: Knex | Knex.Transaction,
+    calendarId: string,
+    context: ServiceContext
+  ): Promise<CalendarAccess> {
+    const access = await resolveCalendarAccess(
+      knexOrTrx,
+      context.tenant,
+      { user_id: context.userId },
+      await this.canViewAllSchedules(context)
+    );
+    const error = await assertEditableGroupCalendar(knexOrTrx, context.tenant, calendarId, access);
+    if (error) {
+      // A group calendar the caller has some access to (but not edit) is a 403; one they cannot
+      // see at all must be indistinguishable from a missing/other-tenant calendar (404).
+      if (access.groupLevels.has(calendarId) && error.startsWith('Permission denied')) {
+        throw new ForbiddenError(error);
+      }
+      throw new NotFoundError('The selected calendar is not available.');
+    }
+    return access;
+  }
+
+  /**
+   * Same before/after shape the scheduleActions server action publishes (camelCase, with
+   * assignedUserIds), which the calendar sync subscriber reads to decide per-user sync.
+   */
+  // LEVERAGE: pattern schedule-entry-event-snapshot — duplicates sanitizeScheduleEntryForEvent in scheduleActions.ts
+  private scheduleEntryEventSnapshot(entry: any, assignedUserIds: string[]) {
+    if (!entry) return undefined;
+    const toIso = (value: unknown): string | null => {
+      if (!value) return null;
+      const date = value instanceof Date ? value : new Date(value as string);
+      return Number.isNaN(date.getTime()) ? null : date.toISOString();
+    };
+    return {
+      id: entry.entry_id,
+      title: entry.title,
+      scheduledStart: toIso(entry.scheduled_start),
+      scheduledEnd: toIso(entry.scheduled_end),
+      status: entry.status,
+      workItemId: entry.work_item_id,
+      workItemType: entry.work_item_type,
+      isRecurring: entry.is_recurring,
+      recurrencePattern: entry.recurrence_pattern,
+      assignedUserIds,
+      isPrivate: entry.is_private,
+    };
   }
 
   private async canViewAllSchedules(context: ServiceContext): Promise<boolean> {

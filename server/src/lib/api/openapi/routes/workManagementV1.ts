@@ -6,7 +6,12 @@ import {
   createTimeEntrySchema,
   updateTimeEntrySchema,
 } from '../../schemas/timeEntry';
-import { createTimePeriodSchema, updateTimePeriodSchema } from '../../schemas/timeSheet';
+import {
+  createScheduleEntrySchema,
+  createTimePeriodSchema,
+  updateScheduleEntrySchema,
+  updateTimePeriodSchema,
+} from '../../schemas/timeSheet';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 import {
   activeStopwatchQuerySchema,
@@ -295,6 +300,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   const CreateTimePeriodBody = registry.registerSchema('WorkV1CreateTimePeriodBody', createTimePeriodSchema);
   const UpdateTimePeriodBody = registry.registerSchema('WorkV1UpdateTimePeriodBody', updateTimePeriodSchema);
 
+  const CreateScheduleEntryBody = registry.registerSchema('WorkV1CreateScheduleEntryBody', createScheduleEntrySchema);
+  const UpdateScheduleEntryBody = registry.registerSchema('WorkV1UpdateScheduleEntryBody', updateScheduleEntrySchema);
+
   const CreateTimeSheetBody = registry.registerSchema(
     'WorkV1CreateTimeSheetBody',
     zOpenApi.object({
@@ -549,6 +557,8 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       if (def.method === 'post' && def.path === '/api/v1/time-periods') req.body = { schema: CreateTimePeriodBody };
       if (def.method === 'put' && def.path === '/api/v1/time-periods/{id}') req.body = { schema: UpdateTimePeriodBody };
     } else if ((def.path.startsWith('/api/v1/time-sheets') || def.path.startsWith('/api/v1/schedules')) && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) req.body = { schema: def.path === '/api/v1/time-sheets' && def.method === 'post' ? CreateTimeSheetBody : GenericBody };
+    if (def.path === '/api/v1/schedules' && def.method === 'post') req.body = { schema: CreateScheduleEntryBody };
+    if (def.path === '/api/v1/schedules/{id}' && def.method === 'put') req.body = { schema: UpdateScheduleEntryBody };
 
     return req;
   }
