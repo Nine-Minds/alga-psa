@@ -76,12 +76,18 @@ the engine does reach step 4: time entries are loaded with
 and passed to `resolveChargeProfile` (`computeTimeBasedCharges.ts:329`). So a contract whose lines and
 assignment have no profile does not bill time on the client default when the ticket or project carries
 another profile. Findings from the engine, which match the resolver doc comment:
-- Only time reaches step 4 on a contract. Fixed, usage, bucket, product/license and project-schedule
-  charges never receive a work-item profile. (Unresolved non-contract time also uses it, but has no
-  contract to trace.) The time loader runs per line and is driven by Hourly service configs, so the
-  trace treats `contract_line_type = 'Hourly'` (prepaid-block lines are Hourly) as the lines that can
-  reach it. Time attributed to a Fixed or Usage line's services through the fallback service list is not
-  flagged; that is the one place the trace under-reports.
+- On a contract, only time reaches step 4. Fixed-price, usage, bucket and product/license charges are
+  never given a work-item profile. Project milestone and deposit charges are: `calculateProjectScheduleCharges`
+  (`billingEngine.ts:2467-2470`) resolves them with the project's `billing_profile_id`. They have no
+  contract line, so they are outside the contract trace. Unresolved non-contract time also uses step 4
+  and has no contract to trace.
+- Time is routed to a line by the engine's time loader (`loadTimeBasedObligation`), which runs for every
+  live client contract line. It takes an entry that names the line in `time_entries.contract_line_id`, or
+  an unassigned entry whose service belongs to only that line, and it filters on the line's services
+  (`contract_line_services`) and never on `contract_line_type`. Rates come from the catalog price, so no
+  Hourly config is required. Any line that has services can therefore price time, whatever its type,
+  and the trace keys on exactly that: `serviceCount > 0` (rows in `contract_line_services`). A line with
+  no services cannot price time and is not flagged.
 - A line can reach step 4 only if steps 2 and 3 are both empty, i.e. `resolveChargeProfile` without a
   work item lands on `client_default`. Assigned lines and assigned contracts never raise the warning.
   A client with one profile never raises it either: nothing else can be pointed at.
@@ -229,9 +235,8 @@ New cases:
   line override beats assignment; missing profile at both levels → default; client terms null →
   Net 30 with `source: default`; profile terms override client; tax region labelled client;
   inactive-profile warning; `mixed_profiles` only when more than one profile actually bills;
-  step 4: warning plus candidate terms for an unassigned Hourly line, warning with no candidates when
-  no work item carries a profile, nothing for an assigned contract or line, nothing for Fixed / Usage /
-  Bucket lines or a one-profile client, foreign candidate rejected.
+  step 4: warning plus candidate terms for an unassigned line that has services (any type), warning with no candidates when
+  no work item carries a profile, nothing for an assigned contract or line, nothing for a line with no services or a one-profile client, foreign candidate rejected.
 - Contract-overview integration: one-profile and multi-profile clients, template returns `null`,
   cross-tenant profile rejected, trace due-date offset equals `resolveInvoiceDueDate`; a ticket on
   Profile B under an unassigned contract gives a candidate whose profile and due date equal the

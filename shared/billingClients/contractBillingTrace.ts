@@ -44,8 +44,11 @@ export interface ContractBillingTraceLineInput {
   contractLineName?: string | null;
   billingProfileId: string | null;
   billingFrequency?: string | null;
-  /** `contract_lines.contract_line_type`. Unknown (absent) is never treated as time-based. */
-  contractLineType?: string | null;
+  /**
+   * Number of `contract_line_services` rows on the line. Absent counts as none.
+   * The engine's time loader prices time on any line that has services.
+   */
+  serviceCount?: number;
 }
 
 export interface BuildContractBillingTraceInput {
@@ -104,18 +107,24 @@ type StepFourInput = Pick<
 >;
 
 /**
- * Lines whose charges can reach step 4 (the work item's profile). Engine facts:
- * time is priced through the hourly obligation (`computeTimeBasedCharges`), which
- * is fed by Hourly lines (prepaid block lines are Hourly); fixed, usage, bucket and
- * project-schedule charges never receive a work-item profile. A line only reaches
- * step 4 when steps 2 and 3 are both empty, i.e. it lands on the client default.
- * A client with a single profile has nothing for a work item to point at.
+ * Lines whose charges can reach step 4 (the work item's profile). Engine facts
+ * (`billingEngine.ts` `loadTimeBasedObligation`, run for every live client contract
+ * line): time entries are the charges that carry `work_item_billing_profile_id`.
+ * The loader takes a line's entries by explicit `time_entries.contract_line_id`, or
+ * unassigned entries whose service belongs to only that line, and it filters on
+ * the line's services (`contract_line_services`), never on `contract_line_type`.
+ * So any line with services can price time, whatever its type. Fixed-price,
+ * usage, bucket and product/license charges carry no work-item profile; project
+ * milestone/deposit charges do (the project's profile) but have no contract line,
+ * so they are outside this trace. A line only reaches step 4 when steps 2 and 3 are
+ * both empty, i.e. it lands on the client default. A client with a single profile
+ * has nothing for a work item to point at.
  */
 export function resolveStepFourLines(input: StepFourInput): ContractBillingTraceLineInput[] {
   if (input.profiles.length < 2) return [];
   return input.lines.filter(
     (line) =>
-      line.contractLineType?.trim().toLowerCase() === 'hourly' &&
+      (line.serviceCount ?? 0) > 0 &&
       resolveForLine(input, line.billingProfileId).source === 'client_default',
   );
 }
@@ -380,7 +389,7 @@ export async function loadContractBillingTrace(
       .table('contract_lines')
       .where({ contract_id: options.contractId })
       .orderBy('display_order', 'asc')
-      .select('contract_line_id', 'contract_line_name', 'billing_profile_id', 'billing_frequency', 'contract_line_type'),
+      .select('contract_line_id', 'contract_line_name', 'billing_profile_id', 'billing_frequency'),
     db
       .table('client_billing_profiles')
       .where({ client_id: clientId })
@@ -410,18 +419,27 @@ export async function loadContractBillingTrace(
     isDefault: Boolean(row.is_default),
   }));
 
+  const serviceCountRows = (lineRows as Array<{ contract_line_id: string }>).length === 0
+    ? []
+    : ((await db
+        .table('contract_line_services')
+        .whereIn('contract_line_id', (lineRows as Array<{ contract_line_id: string }>).map((row) => row.contract_line_id))
+        .groupBy('contract_line_id')
+        .select('contract_line_id')
+        .count({ service_count: '*' })) as Array<{ contract_line_id: string; service_count: string | number }>);
+  const serviceCounts = new Map(serviceCountRows.map((row) => [row.contract_line_id, Number(row.service_count)]));
+
   const lines: ContractBillingTraceLineInput[] = (lineRows as Array<{
     contract_line_id: string;
     contract_line_name: string | null;
     billing_profile_id: string | null;
     billing_frequency: string | null;
-    contract_line_type: string | null;
   }>).map((row) => ({
     contractLineId: row.contract_line_id,
     contractLineName: row.contract_line_name,
     billingProfileId: row.billing_profile_id,
     billingFrequency: row.billing_frequency,
-    contractLineType: row.contract_line_type,
+    serviceCount: serviceCounts.get(row.contract_line_id) ?? 0,
   }));
 
   const asOf = options.asOf ?? (new Date().toISOString().slice(0, 10) as ISO8601String);

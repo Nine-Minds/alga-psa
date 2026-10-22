@@ -186,7 +186,7 @@ describe('buildContractBillingTrace', () => {
       contractLineName: id,
       billingProfileId,
       billingFrequency: 'monthly',
-      contractLineType: 'Hourly',
+      serviceCount: 1,
     });
     const northTerms = identity(NORTH_ID, { paymentTerms: 'due_on_receipt', overriddenFields: ['payment_terms'] });
 
@@ -240,9 +240,21 @@ describe('buildContractBillingTrace', () => {
       );
     });
 
-    it.each(['Fixed', 'Usage', 'Bucket'])('only %s lines, unassigned: no warning', (contractLineType) => {
+    it('a line with services reaches step 4 whatever its type (the engine keys on services, not line type)', () => {
       const trace = build({
-        lines: [{ contractLineId: 'a', billingProfileId: null, contractLineType }],
+        lines: [{ contractLineId: 'fixed-with-services', billingProfileId: null, serviceCount: 2 }],
+        workItemProfileIds: [NORTH_ID],
+        identities: { [DEFAULT_ID]: identity(DEFAULT_ID), [NORTH_ID]: northTerms },
+      });
+      expect(trace.warnings).toContainEqual(
+        expect.objectContaining({ code: 'work_item_override_possible', contractLineIds: ['fixed-with-services'] }),
+      );
+      expect(trace.workItemProfiles?.map((p) => p.billingProfileId)).toEqual([NORTH_ID]);
+    });
+
+    it.each([undefined, 0])('a line with no services (%s) cannot price time: no warning', (serviceCount) => {
+      const trace = build({
+        lines: [{ contractLineId: 'a', billingProfileId: null, serviceCount }],
         workItemProfileIds: [NORTH_ID],
       });
       expect(trace.warnings.map((w) => w.code)).not.toContain('work_item_override_possible');

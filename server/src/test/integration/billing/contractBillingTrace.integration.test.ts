@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
+import { createTestService } from '../../../../test-utils/billingTestHelpers';
 import {
   createBillingProfile,
   createTicket,
@@ -60,7 +61,7 @@ async function createClient(tenant: string, name: string, paymentTerms: string |
 async function createContract(
   tenant: string,
   clientId: string,
-  options: { assignmentProfileId?: string | null; lineProfileIds?: Array<string | null>; lineType?: string } = {},
+  options: { assignmentProfileId?: string | null; lineProfileIds?: Array<string | null>; lineType?: string; withService?: boolean } = {},
 ): Promise<{ contractId: string; clientContractId: string; lineIds: string[] }> {
   const contractId = uuidv4();
   const clientContractId = uuidv4();
@@ -98,6 +99,21 @@ async function createContract(
       billing_profile_id: profileId,
       ...(options.lineType ? { contract_line_type: options.lineType } : {}),
     });
+    if (options.withService) {
+      const serviceId = await createTestService({ db, tenantId: tenant, clientId } as any, {
+        service_name: `Trace service ${lineId.slice(0, 6)}`,
+        billing_method: 'per_unit',
+        default_rate: 10000,
+        unit_of_measure: 'hour',
+      });
+      await table('contract_line_services', tenant).insert({
+        tenant,
+        contract_line_id: lineId,
+        service_id: serviceId,
+        quantity: 1,
+        custom_rate: 10000,
+      });
+    }
   }
   return { contractId, clientContractId, lineIds };
 }
@@ -274,7 +290,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     const defaultId = await ensureDefaultBillingProfile({ db, tenantId }, clientId);
     const profileB = await createBillingProfile({ db, tenantId }, clientId, 'Facility B');
     await table('client_billing_profiles').where({ billing_profile_id: profileB }).update({ payment_terms: 'net_15' });
-    const { contractId } = await createContract(tenantId, clientId, { lineProfileIds: [null], lineType: 'Hourly' });
+    const { contractId } = await createContract(tenantId, clientId, { lineProfileIds: [null], lineType: 'Hourly', withService: true });
     const ticketId = await createTicket({ db, tenantId }, {
       clientId,
       title: 'Facility B work',
@@ -299,7 +315,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     const clientId = await createClient(tenantId, 'Work Item Fallback Client', 'net_30');
     const defaultId = await ensureDefaultBillingProfile({ db, tenantId }, clientId);
     await createBillingProfile({ db, tenantId }, clientId, 'Unused Facility');
-    const { contractId } = await createContract(tenantId, clientId, { lineProfileIds: [null], lineType: 'Hourly' });
+    const { contractId } = await createContract(tenantId, clientId, { lineProfileIds: [null], lineType: 'Hourly', withService: true });
     const ticketId = await createTicket({ db, tenantId }, {
       clientId,
       title: 'No profile work',
@@ -321,12 +337,42 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     await ensureDefaultBillingProfile({ db, tenantId }, clientId);
     const profileA = await createBillingProfile({ db, tenantId }, clientId, 'Assigned A');
     const profileB = await createBillingProfile({ db, tenantId }, clientId, 'Ticket B');
-    const { contractId } = await createContract(tenantId, clientId, { assignmentProfileId: profileA, lineType: 'Hourly' });
+    const { contractId } = await createContract(tenantId, clientId, { assignmentProfileId: profileA, lineType: 'Hourly', withService: true });
     await createTicket({ db, tenantId }, { clientId, title: 't', ticketNumber: `AW-${uuidv4().slice(0, 6)}`, billingProfileId: profileB });
 
     const trace = await loadContractBillingTrace(db, tenantId, { contractId, asOf: ASOF });
 
     expect(trace!.warnings.map((w) => w.code)).not.toContain('work_item_override_possible');
     expect(trace!.workItemProfiles).toBeUndefined();
+  }, HOOK_TIMEOUT);
+
+  it('a Fixed line with a service can price time, so the trace flags it exactly as it does an Hourly line', async () => {
+    const clientId = await createClient(tenantId, 'Fixed Line Time Client', 'net_30');
+    const defaultId = await ensureDefaultBillingProfile({ db, tenantId }, clientId);
+    const profileB = await createBillingProfile({ db, tenantId }, clientId, 'Fixed Facility B');
+    await table('client_billing_profiles').where({ billing_profile_id: profileB }).update({ payment_terms: 'net_15' });
+    const { contractId } = await createContract(tenantId, clientId, { lineProfileIds: [null], lineType: 'Fixed', withService: true });
+    const ticketId = await createTicket({ db, tenantId }, {
+      clientId, title: 'Facility B work', ticketNumber: `FX-${uuidv4().slice(0, 6)}`, billingProfileId: profileB,
+    });
+
+    const trace = await loadContractBillingTrace(db, tenantId, { contractId, asOf: ASOF });
+    const engine = await engineOutcomeForTicket(clientId, ticketId, contractId, defaultId);
+
+    expect(engine).toMatchObject({ billingProfileId: profileB, source: 'work_item' });
+    const candidate = trace!.workItemProfiles!.find((p) => p.billingProfileId === engine.billingProfileId)!;
+    expect(candidate.terms.dueDateExample.dueDate).toBe(engine.dueDate);
+  }, HOOK_TIMEOUT);
+
+  it('a line with no services cannot price time and is not flagged', async () => {
+    const clientId = await createClient(tenantId, 'No Service Line Client');
+    await ensureDefaultBillingProfile({ db, tenantId }, clientId);
+    const profileB = await createBillingProfile({ db, tenantId }, clientId, 'Idle B');
+    const { contractId } = await createContract(tenantId, clientId, { lineProfileIds: [null], lineType: 'Fixed' });
+    await createTicket({ db, tenantId }, { clientId, title: 't', ticketNumber: `NS-${uuidv4().slice(0, 6)}`, billingProfileId: profileB });
+
+    const trace = await loadContractBillingTrace(db, tenantId, { contractId, asOf: ASOF });
+
+    expect(trace!.warnings.map((w) => w.code)).not.toContain('work_item_override_possible');
   }, HOOK_TIMEOUT);
 });
