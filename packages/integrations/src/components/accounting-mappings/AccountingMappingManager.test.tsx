@@ -157,9 +157,10 @@ describe('accounting mapping tab strip layout', () => {
   // whenever a module is added, so the list must stay count-agnostic. Any
   // `grid*` token fails the assertion: a bare `grid` still beats the default
   // `flex` in the cascade and stacks every tab into a single column. A flex
-  // list only wraps once the triggers genuinely outgrow the row, which is the
-  // graceful behaviour (the eight-module QuickBooks CSV strip does exactly
-  // that on a narrow viewport).
+  // list instead holds one row until the triggers genuinely outgrow it, which
+  // none of these come close to doing: QuickBooks CSV is the widest at five
+  // modules, and the four-module Xero CSV strip measures 454px of 1074px
+  // available at a 1440px viewport.
   it.each(adapterManagers)('renders every $name module without grid-constraining the list', ({ moduleCount, renderManager }) => {
     renderManager();
 
