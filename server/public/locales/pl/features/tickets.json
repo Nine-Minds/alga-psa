@@ -968,7 +968,38 @@
     "templateReplaceTitle": "Zastąpić wprowadzone zmiany?",
     "templateReplaceMessage": "Zastosowanie szablonu zastąpi tytuł, opis i inne wprowadzone pola.",
     "templateReplaceConfirm": "Zastosuj szablon",
-    "templateTokenHint": "Tytuł uzupełnia się o wybranego klienta, kontakt i termin wykonania, dopóki go nie zmienisz."
+    "templateTokenHint": "Tytuł uzupełnia się o wybranego klienta, kontakt i termin wykonania, dopóki go nie zmienisz.",
+    "customFields": {
+      "heading": "Pola niestandardowe",
+      "empty": "Brak wartości pól niestandardowych.",
+      "name": "Nazwa pola",
+      "value": "Wartość",
+      "remove": "Usuń pole",
+      "add": "Dodaj pole niestandardowe",
+      "errors": {
+        "nameBlank": "Wpisz nazwę tego pola",
+        "nameReserved": "Ta nazwa jest zarezerwowana",
+        "nameTooLong": "Nazwy mogą mieć maksymalnie {{max}} znaków",
+        "nameDuplicate": "Inne pole używa już tej nazwy",
+        "valueTooLong": "Wartości mogą mieć maksymalnie {{max}} znaków",
+        "tooMany": "Dozwolone jest maksymalnie {{max}} pól niestandardowych"
+      }
+    },
+    "assets": {
+      "heading": "Zasoby",
+      "selectClientFirst": "Wybierz klienta, aby powiązać zasoby.",
+      "unavailable": "Zasoby można powiązać ze zgłoszeniem po jego utworzeniu."
+    },
+    "attachments": {
+      "heading": "Załączniki",
+      "add": "Dodaj pliki",
+      "remove": "Usuń {{name}}"
+    },
+    "watchers": {
+      "heading": "Obserwatorzy",
+      "placeholder": "Dodaj obserwatorów..."
+    },
+    "attachmentsPartialFailure": "Zgłoszenie utworzone, ale nie udało się dołączyć tych plików: {{files}}. Dodaj je w zgłoszeniu."
   },
   "itil": {
     "calculatedPriority": "Priorytet (obliczony)",
@@ -1514,7 +1545,8 @@
       "statusRequired": "Proszę wybrać status",
       "priorityRequired": "Proszę wybrać priorytet",
       "impactRequired": "Proszę wybrać wpływ",
-      "urgencyRequired": "Proszę wybrać pilność"
+      "urgencyRequired": "Proszę wybrać pilność",
+      "customFieldsInvalid": "Popraw zaznaczone pola niestandardowe"
     },
     "category": {
       "nameRequired": "Nazwa kategorii jest wymagana",

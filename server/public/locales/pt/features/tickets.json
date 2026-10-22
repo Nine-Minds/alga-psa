@@ -968,7 +968,38 @@
     "tagCreatePartialFailure_few": "Não foi possível criar tags {{count}}",
     "tagCreatePartialFailure_many": "Não foi possível criar tags {{count}}",
     "tagCreationFailed_few": "Não foi possível criar tags {{count}}",
-    "tagCreationFailed_many": "Não foi possível criar tags {{count}}"
+    "tagCreationFailed_many": "Não foi possível criar tags {{count}}",
+    "customFields": {
+      "heading": "Campos personalizados",
+      "empty": "Ainda não há valores de campos personalizados.",
+      "name": "Nome do campo",
+      "value": "Valor",
+      "remove": "Remover campo",
+      "add": "Adicionar campo personalizado",
+      "errors": {
+        "nameBlank": "Introduza um nome para este campo",
+        "nameReserved": "Este nome está reservado",
+        "nameTooLong": "Os nomes podem ter no máximo {{max}} caracteres",
+        "nameDuplicate": "Outro campo já usa este nome",
+        "valueTooLong": "Os valores podem ter no máximo {{max}} caracteres",
+        "tooMany": "São permitidos no máximo {{max}} campos personalizados"
+      }
+    },
+    "assets": {
+      "heading": "Ativos",
+      "selectClientFirst": "Selecione um cliente para associar ativos.",
+      "unavailable": "Os ativos podem ser associados a partir do ticket depois de criado."
+    },
+    "attachments": {
+      "heading": "Anexos",
+      "add": "Adicionar ficheiros",
+      "remove": "Remover {{name}}"
+    },
+    "watchers": {
+      "heading": "Observadores",
+      "placeholder": "Adicionar observadores..."
+    },
+    "attachmentsPartialFailure": "Ticket criado, mas não foi possível anexar estes ficheiros: {{files}}. Adicione-os a partir do ticket."
   },
   "itil": {
     "calculatedPriority": "Prioridade (calculada)",
@@ -1514,7 +1545,8 @@
       "statusRequired": "Selecione um status",
       "priorityRequired": "Selecione uma prioridade",
       "impactRequired": "Selecione um impacto",
-      "urgencyRequired": "Selecione uma urgência"
+      "urgencyRequired": "Selecione uma urgência",
+      "customFieldsInvalid": "Corrija os campos personalizados destacados"
     },
     "category": {
       "nameRequired": "O nome da categoria é obrigatório",
