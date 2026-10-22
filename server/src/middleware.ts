@@ -217,7 +217,11 @@ export function shouldSkipApiKeyAuth(pathname: string): boolean {
     /^\/api\/client-portal\/documents\/[^/]+\/(?:file|export)$/.test(pathname) ||
     exactApiKeySkipPaths.includes(pathname) ||
     apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
-    (pathname.startsWith('/api/tickets/') && pathname.endsWith('/live-token')) ||
+    (pathname.startsWith('/api/tickets/') &&
+      (pathname.endsWith('/live-token') ||
+        // Original-email view for MSP and client-portal readers; the route
+        // authenticates the session and reuses the ticket read authorization.
+        pathname.endsWith('/email-html'))) ||
     (pathname.startsWith('/api/documents/') &&
       (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview') ||
         pathname.endsWith('/download') || pathname.endsWith('/content'))) ||
