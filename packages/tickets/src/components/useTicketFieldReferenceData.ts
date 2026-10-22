@@ -10,7 +10,7 @@ import { getTicketStatuses } from '@alga-psa/reference-data/actions/status-actio
 import { getAllBoards } from '../actions/board-actions';
 import { getTicketCategoriesByBoard } from '../actions/ticketCategoryActions';
 import { getChecklistTemplates } from '../actions/checklists/checklistTemplateActions';
-import { isChecklistTemplateInScopeForClient } from '@alga-psa/shared/lib/ticketChecklists';
+import { isChecklistTemplateInScopeForClient } from '@alga-psa/shared/lib/ticketChecklists/scope';
 import { unwrapRecurring } from './recurring/recurringUi';
 
 /** What depends on the selected board: its statuses, its priority set and its categories. */

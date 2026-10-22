@@ -9,6 +9,7 @@ import {
   type TicketActivityActorInfo,
   type TicketActivitySource,
 } from '../ticketActivity';
+import { CHECKLIST_TEMPLATE_CLIENT_MISMATCH, isChecklistTemplateInScopeForClient } from './scope';
 
 /**
  * Applying a checklist template copies its items onto the ticket. The copy
@@ -21,9 +22,6 @@ import {
  * See docs/plans/2026-06-10-ticket-close-rules/PRD.md §5.2.
  */
 
-/** Why a template was not applied, when that is not simply "already applied" / "no items". */
-export const CHECKLIST_TEMPLATE_CLIENT_MISMATCH = 'template-client-mismatch' as const;
-
 export interface ApplyChecklistTemplateResult {
   applied: boolean;
   itemsAdded: number;
@@ -34,17 +32,6 @@ export interface ApplyChecklistTemplateResult {
    * ticket creation: skip; workflow: report in the action output).
    */
   reason?: typeof CHECKLIST_TEMPLATE_CLIENT_MISMATCH;
-}
-
-/**
- * Template scope predicate: a template with no client is tenant-wide; otherwise it is only in
- * scope for tickets of that client. Independent of auto-apply rule matching.
- */
-export function isChecklistTemplateInScopeForClient(
-  templateClientId: string | null | undefined,
-  ticketClientId: string | null | undefined
-): boolean {
-  return !templateClientId || templateClientId === ticketClientId;
 }
 
 export interface ChecklistApplyAuditContext {
