@@ -14,7 +14,7 @@ import { reconcileStripeWebhookEvents } from './stripeWebhookEvents';
 import { startInvoiceAutopay, signalInvoiceAutopay, signalProfileAutopayChanged } from '../temporal/invoiceAutopay';
 import { getSystemEmailService } from '@alga-psa/email';
 import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services/invoiceBillingRecipientService';
-import { buildDurablePaymentUrl, buildPortalInvoiceUrl } from '@alga-psa/billing/actions/invoiceEmailLinkContext';
+import { buildDurablePaymentUrl, buildPortalInvoiceUrl } from '@alga-psa/billing/lib/payments/invoicePaymentUrls';
 
 type Authorization = { userId: string | null; source: 'client_portal' | 'msp'; ip?: string | null; userAgent?: string | null; consentTextVersion: string };
 

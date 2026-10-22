@@ -4,7 +4,7 @@ vi.mock('./paymentActions', () => ({
   getPaymentService: vi.fn(),
   expireInvoicePaymentLinksForTerminalStatus: vi.fn(),
 }));
-vi.mock('@alga-psa/tenancy/server', () => ({ getPortalDomainStatusForTenant: vi.fn() }));
+vi.mock('@alga-psa/tenancy/lib/portalDomainStatus', () => ({ getPortalDomainStatusForTenant: vi.fn() }));
 vi.mock('@alga-psa/db', () => ({ getConnection: vi.fn(), tenantDb: vi.fn() }));
 vi.mock('@alga-psa/core/logger', () => ({
   default: { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() },

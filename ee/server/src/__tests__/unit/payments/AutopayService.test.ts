@@ -22,7 +22,7 @@ vi.mock('../../../lib/temporal/invoiceAutopay', () => ({ startInvoiceAutopay: vi
 vi.mock('../../../lib/payments/stripeWebhookEvents', () => ({ reconcileStripeWebhookEvents: vi.fn() }));
 vi.mock('@alga-psa/email', () => ({ getSystemEmailService: vi.fn(async () => ({ sendEmail })) }));
 vi.mock('@alga-psa/billing/services/invoiceBillingRecipientService', () => ({ resolveInvoiceBillingRecipient: (...a: unknown[]) => resolveRecipient(...a) }));
-vi.mock('@alga-psa/billing/actions/invoiceEmailLinkContext', () => ({ buildDurablePaymentUrl: (...a: unknown[]) => buildDurablePaymentUrl(...a), buildPortalInvoiceUrl: (...a: unknown[]) => buildPortalInvoiceUrl(...a) }));
+vi.mock('@alga-psa/billing/lib/payments/invoicePaymentUrls', () => ({ buildDurablePaymentUrl: (...a: unknown[]) => buildDurablePaymentUrl(...a), buildPortalInvoiceUrl: (...a: unknown[]) => buildPortalInvoiceUrl(...a) }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(), publishEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 
 import { getConnection } from '@alga-psa/db';
