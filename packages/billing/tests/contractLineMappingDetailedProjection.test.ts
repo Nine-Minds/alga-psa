@@ -15,6 +15,7 @@ const fakeTrx = {
  */
 class FakeQuery {
   private requested: string[] | null = null;
+  private rawNullAliases: string[] = [];
 
   constructor(private readonly rows: Row[]) {}
 
@@ -33,6 +34,11 @@ class FakeQuery {
   select(columns: unknown, ...rest: unknown[]) {
     const list = Array.isArray(columns) ? columns : [columns, ...rest];
     this.requested = list.filter((column): column is string => typeof column === 'string');
+    // Raw `NULL::uuid as x` selects project a literal null under that alias.
+    this.rawNullAliases = list
+      .map((column) => (column && typeof column === 'object' ? String((column as { sql?: string }).sql ?? '') : ''))
+      .map((sql) => sql.match(/^NULL::uuid as (\w+)$/i)?.[1])
+      .filter((alias): alias is string => Boolean(alias));
     return this;
   }
 
@@ -53,6 +59,7 @@ class FakeQuery {
       const key = match?.[3] ?? source;
       projected[key] = row[key] ?? row[source] ?? null;
     }
+    for (const alias of this.rawNullAliases) projected[alias] = null;
     return projected;
   }
 }
@@ -107,6 +114,7 @@ const LIVE_ROW: Row = {
   round_up_to_nearest: null,
   default_rate: 250,
   location_id: null,
+  billing_profile_id: null,
 };
 
 describe('detailed contract-line read path preserves invoice text and line window', () => {
@@ -167,5 +175,41 @@ describe('detailed contract-line read path preserves invoice text and line windo
 
     const [line] = result as Row[];
     expect(line.invoice_line_description).toBe('Template invoice text');
+  });
+
+  it('projects the stored billing_profile_id on live lines and null when unassigned', async () => {
+    fixtures['contract_templates'] = [];
+    fixtures['contract_lines as cl'] = [
+      { ...LIVE_ROW, contract_line_id: 'line-assigned', billing_profile_id: 'profile-2' },
+      { ...LIVE_ROW, contract_line_id: 'line-unassigned', billing_profile_id: null },
+    ];
+
+    const { getDetailedContractLines } = await import('../src/actions/contractLineMappingActions');
+    const result = (await getDetailedContractLines('contract-1')) as Row[];
+
+    expect(result.find((l) => l.contract_line_id === 'line-assigned')?.billing_profile_id).toBe('profile-2');
+    expect(result.find((l) => l.contract_line_id === 'line-unassigned')?.billing_profile_id).toBeNull();
+  });
+
+  it('returns billing_profile_id: null for template lines (the table has no such column)', async () => {
+    fixtures['contract_templates'] = [{ template_id: 'template-1' }];
+    fixtures['contract_template_lines as lines'] = [
+      {
+        tenant: 'tenant-1',
+        contract_id: 'template-1',
+        contract_line_id: 'template-line-1',
+        display_order: 0,
+        cadence_owner: 'client',
+        created_at: '2026-09-01T00:00:00.000Z',
+        contract_line_name: 'Template line',
+        billing_frequency: 'monthly',
+        contract_line_type: 'Fixed',
+        default_rate: 100,
+      },
+    ];
+
+    const { getDetailedContractLines } = await import('../src/actions/contractLineMappingActions');
+    const [line] = (await getDetailedContractLines('template-1')) as Row[];
+    expect(line).toHaveProperty('billing_profile_id', null);
   });
 });
