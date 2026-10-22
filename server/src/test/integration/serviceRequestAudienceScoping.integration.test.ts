@@ -288,6 +288,19 @@ describe('service request audience scoping', () => {
       })
     ).rejects.toThrow('not visible');
     expect(await submissionCount(f.tenant)).toBe(0);
+
+    // The group-A1 member can submit even though no client row exists.
+    const submitted = await submitPortalServiceRequest({
+      knex: db,
+      tenant: f.tenant,
+      definitionId: id,
+      requesterUserId: f.userA,
+      clientId: f.clientA,
+      contactId: f.contactA1,
+      payload: { notes: 'member' },
+    });
+    expect(submitted.submissionId).toBeTruthy();
+    expect(await submissionCount(f.tenant)).toBe(1);
   });
 
   it("a group from another client grants nothing, even if mis-assigned to a contact or scope row", async () => {
