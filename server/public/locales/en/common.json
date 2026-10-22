@@ -2175,6 +2175,7 @@
   },
   "flags": {
     "vip": "VIP",
-    "poc": "POC"
+    "poc": "POC",
+    "pocFull": "Point of contact"
   }
 }

@@ -8,7 +8,7 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
-import { PocBadge, VipBadge } from '@alga-psa/ui/components/FlagBadges';
+import { ContactFlagBadges, VipBadge } from '@alga-psa/ui/components/FlagBadges';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { getUserTimeZone } from '@alga-psa/core';
 import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
@@ -450,7 +450,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
           const hasClient = !!value;
           const multiClient = !record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 && (record.bundle_distinct_client_count ?? 0) > 1;
           const body = (
-            <span className="flex items-center gap-2 overflow-hidden">
+            <span className="flex min-w-0 max-w-full items-center gap-2 overflow-hidden">
               {hasClient ? (
                 <ClientAvatar
                   clientId={record.client_id || value}
@@ -490,7 +490,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                 e.stopPropagation();
                 if (record.client_id) onClientClick(record.client_id);
               }}
-              className="bg-transparent border-none p-0 text-left text-[rgb(var(--color-text-700))] hover:[&_.truncate]:text-[rgb(var(--color-primary-700))]"
+              className="min-w-0 max-w-full bg-transparent border-none p-0 text-left text-[rgb(var(--color-text-700))] hover:[&_.truncate]:text-[rgb(var(--color-primary-700))]"
             >
               {body}
             </button>
@@ -507,10 +507,13 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       col: {
         title: t('fields.contact', 'Contact'),
         dataIndex: 'contact_name',
-        width: '8%',
+        // LEVERAGE: friction datatable-min-width — `minWidth` is only a shrink floor (percent widths
+        // are already raised to the ~161px "natural" size), so it cannot reserve room for the
+        // avatar + 6ch name + combined flag badge. A fixed px width is the only way to set a floor.
+        width: '200px',
         render: (value: string | null, record: ITicketListItem) => {
           const body = (
-            <span className="flex items-center gap-2 overflow-hidden">
+            <span className="flex min-w-0 max-w-full items-center gap-2 overflow-hidden">
               {value ? (
                 <ContactAvatar
                   contactId={record.contact_name_id || value}
@@ -525,8 +528,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
               )}
               <span className="min-w-[6ch] truncate">{value || <span className="text-[rgb(var(--color-text-400))]">—</span>}</span>
               <span className="flex shrink-0 items-center gap-1">
-                <VipBadge isVip={record.contact_is_vip} />
-                <PocBadge isPoc={record.contact_is_primary_contact} />
+                <ContactFlagBadges isVip={record.contact_is_vip} isPoc={record.contact_is_primary_contact} />
               </span>
             </span>
           );
@@ -539,7 +541,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                 e.stopPropagation();
                 onContactClick(record.contact_name_id!);
               }}
-              className="bg-transparent border-none p-0 text-left text-[rgb(var(--color-text-700))] hover:[&_.truncate]:text-[rgb(var(--color-primary-700))]"
+              className="min-w-0 max-w-full bg-transparent border-none p-0 text-left text-[rgb(var(--color-text-700))] hover:[&_.truncate]:text-[rgb(var(--color-primary-700))]"
             >
               {body}
             </button>

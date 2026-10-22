@@ -40,3 +40,42 @@ export const PocBadge = ({ isPoc, size = 'sm', className }: PocBadgeProps) => {
     </Badge>
   );
 };
+
+interface ContactFlagBadgesProps {
+  isVip?: boolean | null;
+  isPoc?: boolean | null;
+  size?: BadgeSize;
+  className?: string;
+}
+
+/**
+ * Compact flag display for space-constrained cells (e.g. ticket list). With both flags set it
+ * renders ONE combined "VIP·POC" badge (narrower than two badges plus a gap) whose aria-label and
+ * tooltip name each flag in full; a single flag renders the regular badge; no flags renders nothing.
+ */
+export const ContactFlagBadges = ({ isVip, isPoc, size = 'sm', className }: ContactFlagBadgesProps) => {
+  const { t } = useTranslation('common');
+  if (isVip === true && isPoc === true) {
+    const vip = t('flags.vip', { defaultValue: 'VIP' });
+    const poc = t('flags.poc', { defaultValue: 'POC' });
+    const full = `${vip}, ${t('flags.pocFull', { defaultValue: 'Point of contact' })}`;
+    return (
+      <Badge
+        variant="warning"
+        size={size}
+        className={cn('shrink-0 whitespace-nowrap uppercase tracking-wide', className)}
+        data-testid="vip-poc-badge"
+        aria-label={full}
+        title={full}
+      >
+        {vip}·{poc}
+      </Badge>
+    );
+  }
+  return (
+    <>
+      <VipBadge isVip={isVip} size={size} className={className} />
+      <PocBadge isPoc={isPoc} size={size} className={className} />
+    </>
+  );
+};

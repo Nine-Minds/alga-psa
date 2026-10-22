@@ -3,7 +3,7 @@
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { PocBadge, VipBadge } from './FlagBadges';
+import { ContactFlagBadges, PocBadge, VipBadge } from './FlagBadges';
 
 vi.mock('../lib/i18n/client', () => ({
   useTranslation: () => ({
@@ -32,5 +32,30 @@ describe('PocBadge', () => {
       rerender(<PocBadge isPoc={value} />);
       expect(screen.queryByTestId('poc-badge')).toBeNull();
     }
+  });
+});
+
+describe('ContactFlagBadges', () => {
+  it('renders one combined badge naming both flags when both are true', () => {
+    render(<ContactFlagBadges isVip={true} isPoc={true} />);
+    const badge = screen.getByTestId('vip-poc-badge');
+    expect(badge.textContent).toBe('VIP·POC');
+    expect(badge.getAttribute('aria-label')).toBe('VIP, Point of contact');
+    expect(badge.getAttribute('title')).toBe('VIP, Point of contact');
+    expect(screen.queryByTestId('vip-badge')).toBeNull();
+    expect(screen.queryByTestId('poc-badge')).toBeNull();
+  });
+
+  it('falls back to the regular single badges and renders nothing with no flags', () => {
+    const { rerender } = render(<ContactFlagBadges isVip={true} isPoc={false} />);
+    expect(screen.getByTestId('vip-badge')).toBeTruthy();
+    expect(screen.queryByTestId('poc-badge')).toBeNull();
+    rerender(<ContactFlagBadges isVip={null} isPoc={true} />);
+    expect(screen.getByTestId('poc-badge')).toBeTruthy();
+    expect(screen.queryByTestId('vip-badge')).toBeNull();
+    rerender(<ContactFlagBadges />);
+    expect(screen.queryByTestId('vip-poc-badge')).toBeNull();
+    expect(screen.queryByTestId('vip-badge')).toBeNull();
+    expect(screen.queryByTestId('poc-badge')).toBeNull();
   });
 });
