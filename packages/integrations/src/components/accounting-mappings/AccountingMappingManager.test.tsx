@@ -20,8 +20,52 @@ vi.mock('./AccountingMappingModuleView', () => ({
   )
 }));
 
+// The adapter managers pull their module definitions from factories that
+// value-import server actions at module scope.
+vi.mock('@alga-psa/integrations/actions', () => ({
+  createExternalEntityMapping: vi.fn(),
+  createExternalEntityMappings: vi.fn(),
+  deleteExternalEntityMapping: vi.fn(),
+  getExternalEntityMappings: vi.fn(),
+  getQboAutomatedSalesTaxMode: vi.fn(),
+  getQboCompanyCountryInfo: vi.fn(),
+  getQboItems: vi.fn(),
+  getQboTaxCodes: vi.fn(),
+  getQboTerms: vi.fn(),
+  getServices: vi.fn(),
+  getTaxRegions: vi.fn(),
+  getXeroAccounts: vi.fn(),
+  getXeroItems: vi.fn(),
+  getXeroTaxRates: vi.fn(),
+  updateExternalEntityMapping: vi.fn()
+}));
+
+vi.mock('../../actions/clientLookupActions', () => ({
+  getIntegrationClients: vi.fn()
+}));
+
+// The managers reach the manager through the package barrel, which also drags
+// in unrelated component surfaces; serve them the real component directly.
+vi.mock('@alga-psa/integrations/components', async () => ({
+  AccountingMappingManager: (await import('./AccountingMappingManager')).AccountingMappingManager
+}));
+
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key
+  })
+}));
+
 import { AccountingMappingManager } from './AccountingMappingManager';
 import type { AccountingMappingModule } from './types';
+import { CSVMappingManager } from '../csv/CSVMappingManager';
+import { XeroCsvMappingManager } from '../csv/XeroCsvMappingManager';
+import { QboLiveMappingManager } from '../qbo/QboLiveMappingManager';
+import { XeroLiveMappingManager } from '../xero/XeroLiveMappingManager';
+import { createCsvMappingModules } from '../csv/csvMappingModules';
+import { createXeroCsvMappingModules } from '../csv/xeroCsvMappingModules';
+import { createQboLiveMappingModules } from '../qbo/qboLiveMappingModules';
+import { createXeroLiveMappingModules } from '../xero/xeroLiveMappingModules';
 
 const modules = [
   { id: 'service-mappings', labels: { tab: 'Items / Services' } },
@@ -65,5 +109,57 @@ describe('AccountingMappingManager tab selection', () => {
 
     expect(screen.getByText('Panel tax-mappings')).toBeVisible();
     expect(routerReplaceMock).toHaveBeenCalledWith('/?mappingTab=tax-mappings', { scroll: false });
+  });
+});
+
+const t = (key: string, options?: Record<string, unknown>) =>
+  (options?.defaultValue as string | undefined) ?? key;
+
+const adapterManagers = [
+  {
+    name: 'QboLiveMappingManager',
+    moduleCount: createQboLiveMappingModules(t).length,
+    renderManager: () => render(
+      <QboLiveMappingManager
+        defaultConnection={{ realmId: 'realm-1', displayName: 'Acme Books', status: 'active' }}
+      />
+    )
+  },
+  {
+    name: 'XeroLiveMappingManager',
+    moduleCount: createXeroLiveMappingModules(t).length,
+    renderManager: () => render(
+      <XeroLiveMappingManager
+        defaultConnection={{ connectionId: 'xero-conn-1', xeroTenantId: 'org-guid-1', tenantName: 'Acme Holdings' }}
+      />
+    )
+  },
+  {
+    name: 'XeroCsvMappingManager',
+    moduleCount: createXeroCsvMappingModules(t).length,
+    renderManager: () => render(<XeroCsvMappingManager />)
+  },
+  {
+    name: 'CSVMappingManager',
+    moduleCount: createCsvMappingModules(t).length,
+    renderManager: () => render(<CSVMappingManager />)
+  }
+];
+
+describe('accounting mapping tab strip layout', () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    window.history.replaceState({}, '', '/');
+  });
+
+  // A fixed-column grid list silently wraps the surplus tab onto a second row
+  // whenever a module is added, so the list must stay count-agnostic.
+  it.each(adapterManagers)('lays $name tabs out in one row', ({ moduleCount, renderManager }) => {
+    renderManager();
+
+    expect(moduleCount).toBeGreaterThan(0);
+    expect(screen.getAllByRole('tab')).toHaveLength(moduleCount);
+    expect(screen.getByRole('tablist').className).not.toMatch(/grid-cols-/);
   });
 });
