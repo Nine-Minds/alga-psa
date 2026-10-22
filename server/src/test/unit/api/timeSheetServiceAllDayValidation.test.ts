@@ -18,6 +18,14 @@ vi.mock('@alga-psa/db', () => ({
 // @alga-psa/event-bus/publishers, so the publication assertions (state.publish) are bound to that function.
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: vi.fn(async () => undefined), publishWorkflowEvent: state.publish, publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 vi.mock('server/src/lib/eventBus/publishers', () => ({ publishEvent: vi.fn(async () => undefined), publishWorkflowEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
+// updateScheduleEntry resolves shared-calendar access before validating; stub the resolver (the tenantDb mock has no .select).
+vi.mock('@alga-psa/scheduling/lib/calendarAccess', () => ({
+  resolveCalendarAccess: vi.fn(async () => ({})),
+  evaluateEntryAccess: vi.fn(() => ({ access: 'full', canEdit: true })),
+  canAssignUser: vi.fn(() => true),
+  buildVisibilityFilter: vi.fn(() => undefined),
+  assertEditableGroupCalendar: vi.fn(async () => undefined),
+}));
 vi.mock('@alga-psa/scheduling/models/timePeriod', () => ({ TimePeriod: {} }));
 vi.mock('../../../lib/auth/rbac', () => ({ hasPermission: vi.fn().mockResolvedValue(true) }));
 vi.mock('../../../lib/api/middleware/apiMiddleware', () => ({
