@@ -1,7 +1,9 @@
 {
   "escalationManager": {
     "unsavedChanges_one": "{{count}} unsaved change",
-    "unsavedChanges_other": "{{count}} unsaved changes"
+    "unsavedChanges_other": "{{count}} unsaved changes",
+    "unsavedChanges_few": "{{count}} unsaved changes",
+    "unsavedChanges_many": "{{count}} unsaved changes"
   },
   "page": {
     "title": "Admin Settings"
@@ -448,7 +450,9 @@
       },
       "leadName": "Lead: {{name}}",
       "memberCount_one": "{{count}} member",
-      "memberCount_other": "{{count}} members"
+      "memberCount_other": "{{count}} members",
+      "memberCount_few": "{{count}} members",
+      "memberCount_many": "{{count}} members"
     },
     "messages": {
       "error": {
@@ -1139,7 +1143,9 @@
         "success": {
           "deleted": "Interaction type deleted",
           "imported_one": "Imported {{count}} interaction type",
-          "imported_other": "Imported {{count}} interaction types"
+          "imported_other": "Imported {{count}} interaction types",
+          "imported_few": "Imported {{count}} interaction types",
+          "imported_many": "Imported {{count}} interaction types"
         },
         "error": {
           "fetchFailed": "Failed to fetch interaction types",
@@ -1956,6 +1962,48 @@
       "editor": {
         "inlineLogoHint": "Your logo is embedded in the message when it is sent. Keep the src=\"cid:{{cid}}\" reference as it is — replacing it with a URL makes recipients approve an image download first."
       }
+    },
+    "templateVariables": {
+      "actions": {
+        "insert": "Insert at cursor",
+        "guide": "Read the complete guide",
+        "copy": "Copy {{path}}"
+      },
+      "insertHelp": "Select a variable to insert it.",
+      "availableHelp": "Variables available to this template.",
+      "fields": {
+        "search": {
+          "placeholder": "Search variables"
+        },
+        "globalSearch": {
+          "placeholder": "Search paths, descriptions, and concepts"
+        },
+        "category": {
+          "all": "All areas"
+        }
+      },
+      "title": "Email template variable reference",
+      "panelTitle": "Template variables",
+      "inferredContract": "Not currently sent. This contract is inferred from the template.",
+      "empty": "No matching variables.",
+      "example": "Example:",
+      "usedBy": "Used by {{templates}}",
+      "description": "Find the data available to each system email template. Copy the exact Handlebars token into a custom template.",
+      "enums": {
+        "categories": {
+          "appointments": "Appointments",
+          "auth": "Authentication",
+          "billing": "Billing",
+          "quotes": "Quotes",
+          "invoices": "Invoices",
+          "opportunities": "Opportunities",
+          "projects": "Projects",
+          "sla": "SLA",
+          "surveys": "Surveys",
+          "tickets": "Tickets",
+          "time": "Time"
+        }
+      }
     }
   },
   "timeEntry": {
@@ -2265,7 +2313,9 @@
         "samples_other": "{{sample}} · {{count}} records",
         "noSample": "No sample",
         "missingRequired": "Required fields not mapped: {{fields}}",
-        "duplicate": "A custom field is mapped more than once. Choose a unique target for each source."
+        "duplicate": "A custom field is mapped more than once. Choose a unique target for each source.",
+        "samples_few": "{{sample}} · {{count}} records",
+        "samples_many": "{{sample}} · {{count}} records"
       },
       "actions": {
         "back": "Back to migrations",
@@ -2383,7 +2433,16 @@
   },
   "policyManagement": {
     "title": "Policy Management",
-    "upgradeDescription": "Policy management is a Pro feature. Please upgrade to access advanced policy controls."
+    "upgradeDescription": "Policy management is a Pro feature. Please upgrade to access advanced policy controls.",
+    "bundleLibrary": {
+      "title": "Authorization Bundle Library",
+      "upgradeDescription": "Advanced authorization bundle management is available on Pro. Upgrade to configure narrowing bundles for roles, teams, users, and API keys.",
+      "protectionsDescription": "Built-in authorization protections remain active even when configurable advanced controls are unavailable in this edition or tier."
+    },
+    "proFeature": {
+      "title": "Pro Feature",
+      "description": "Policy Management requires Pro. Please upgrade to access this feature."
+    }
   },
   "roleManagement": {
     "title": "Manage Roles",
@@ -2528,7 +2587,9 @@
         "noSessions": "No active sessions found"
       },
       "subtitle_one": "{{sessionCount}} active session across {{userCount}} user",
-      "subtitle_other": "{{sessionCount}} active sessions across {{userCount}} users"
+      "subtitle_other": "{{sessionCount}} active sessions across {{userCount}} users",
+      "subtitle_few": "{{sessionCount}} active sessions across {{userCount}} users",
+      "subtitle_many": "{{sessionCount}} active sessions across {{userCount}} users"
     }
   },
   "ssoBulk": {
@@ -2621,7 +2682,9 @@
         "unlinkedCount": "Unlinked {{count}} accounts via {{provider}}.",
         "previewUnlink_one": "Preview ready. We'll unlink {{count}} selected user.",
         "previewUnlink_other": "Preview ready. We'll unlink {{count}} selected users.",
-        "previewLink": "Preview ready. Review the summary before linking accounts."
+        "previewLink": "Preview ready. Review the summary before linking accounts.",
+        "previewUnlink_few": "Preview ready. We'll unlink {{count}} selected users.",
+        "previewUnlink_many": "Preview ready. We'll unlink {{count}} selected users."
       },
       "results": {
         "completeTitle": "Assignment complete",
@@ -2636,12 +2699,16 @@
         "wouldLink": "Would link",
         "alreadyUnlinked": "Already unlinked",
         "alreadyLinked": "Already linked",
-        "skippedInactive": "Skipped (inactive)"
+        "skippedInactive": "Skipped (inactive)",
+        "processed_few": "Processed {{count}} users.",
+        "processed_many": "Processed {{count}} users."
       },
       "providerNames": {
         "google": "Google Workspace",
         "microsoft": "Microsoft 365"
-      }
+      },
+      "selected_few": "{{count}} users selected.",
+      "selected_many": "{{count}} users selected."
     },
     "clientPortalProvisioning": {
       "deactivateBody": "When enabled, users managed by Entra provisioning are deactivated when access-group entitlement is removed.",
@@ -2657,6 +2724,10 @@
       "modeTitle": "Client portal Entra provisioning mode",
       "modeWorkflowManaged": "Workflow-managed",
       "workflowManagedInfo": "Workflow-managed mode publishes Entra access events only. The selected workflow is responsible for client portal user provisioning, role assignment, invitations, and lifecycle changes."
+    },
+    "proFeature": {
+      "title": "Single Sign-On Bulk Assignment",
+      "description": "This feature is available in Pro. Upgrade to manage Google Workspace and Microsoft 365 SSO assignments directly from the Security settings page."
     }
   },
   "profile": {
@@ -2905,7 +2976,9 @@
         "overallCompliance": "Overall Compliance",
         "pausedSla": "tickets with paused SLA",
         "ticketsTracked_one": "{{count}} ticket tracked",
-        "ticketsTracked_other": "{{count}} tickets tracked"
+        "ticketsTracked_other": "{{count}} tickets tracked",
+        "ticketsTracked_few": "{{count}} tickets tracked",
+        "ticketsTracked_many": "{{count}} tickets tracked"
       },
       "recentBreaches": {
         "empty": "No SLA breaches in the selected period",
@@ -2948,7 +3021,9 @@
         "responseTrackingDisabled": "Response state tracking disabled",
         "responseTrackingEnabled": "Response state tracking enabled",
         "statusesUpdated_one": "Successfully updated {{count}} status configuration",
-        "statusesUpdated_other": "Successfully updated {{count}} status configurations"
+        "statusesUpdated_other": "Successfully updated {{count}} status configurations",
+        "statusesUpdated_few": "Successfully updated {{count}} status configurations",
+        "statusesUpdated_many": "Successfully updated {{count}} status configurations"
       },
       "perStatus": {
         "description": "Configure which ticket statuses should pause the SLA timer. When a ticket is moved to a status with pausing enabled, the SLA timer will stop until the ticket is moved to another status.",
@@ -2960,7 +3035,9 @@
         "resetChanges": "Reset Changes",
         "saveChanges": "Save Changes",
         "saving": "Saving...",
-        "title": "Per-Status Pause Configuration"
+        "title": "Per-Status Pause Configuration",
+        "modifiedCount_few": "{{count}} statuses modified",
+        "modifiedCount_many": "{{count}} statuses modified"
       },
       "retry": "Retry"
     },
@@ -3003,7 +3080,9 @@
         "selectAll": "Select all",
         "selectAllVisible": "Select all visible",
         "selectedCount_one": "{{count}} selected",
-        "selectedCount_other": "{{count}} selected"
+        "selectedCount_other": "{{count}} selected",
+        "selectedCount_few": "{{count}} selected",
+        "selectedCount_many": "{{count}} selected"
       },
       "targets": {
         "always": "24/7 (ignore business hours)",
@@ -3096,7 +3175,13 @@
         "usageClients_one": "Client: {{names}}",
         "usageClients_other": "Clients: {{names}}",
         "usageTickets_one": "{{count}} ticket",
-        "usageTickets_other": "{{count}} tickets"
+        "usageTickets_other": "{{count}} tickets",
+        "usageBoards_few": "Boards: {{names}}",
+        "usageBoards_many": "Boards: {{names}}",
+        "usageClients_few": "Clients: {{names}}",
+        "usageClients_many": "Clients: {{names}}",
+        "usageTickets_few": "{{count}} tickets",
+        "usageTickets_many": "{{count}} tickets"
       },
       "description": "Manage service level agreement policies that define response and resolution time targets",
       "empty": "No SLA policies found. Click \"Add Policy\" to create your first policy.",
@@ -3562,5 +3647,185 @@
   },
   "common": {
     "saving": "Saving..."
+  },
+  "featureFlags": {
+    "categories": {
+      "core": {
+        "title": "Core Features",
+        "description": "Essential features for daily operations"
+      },
+      "ui": {
+        "title": "User Interface",
+        "description": "New UI features and improvements"
+      },
+      "ai": {
+        "title": "AI Features",
+        "description": "Artificial intelligence powered features"
+      },
+      "integrations": {
+        "title": "Integrations",
+        "description": "Third-party service integrations"
+      },
+      "performance": {
+        "title": "Performance",
+        "description": "Performance optimization features"
+      },
+      "experimental": {
+        "title": "Experimental",
+        "description": "Cutting-edge features in development"
+      }
+    },
+    "features": {
+      "enable_ticket_automation": {
+        "title": "Ticket Automation",
+        "description": "Automatically assign and route tickets based on rules"
+      },
+      "enable_time_tracking": {
+        "title": "Time Tracking",
+        "description": "Track time spent on tickets and projects"
+      },
+      "enable_billing": {
+        "title": "Billing System",
+        "description": "Invoice generation and payment tracking"
+      },
+      "new_ticket_ui": {
+        "title": "New Ticket Interface",
+        "description": "Redesigned ticket creation and management UI"
+      },
+      "new_dashboard_layout": {
+        "title": "Modern Dashboard",
+        "description": "New dashboard with customizable widgets"
+      },
+      "ai_ticket_suggestions": {
+        "title": "AI Ticket Suggestions",
+        "description": "AI-powered ticket categorization and priority suggestions"
+      },
+      "enable_ai_time_tracking": {
+        "title": "AI Time Tracking",
+        "description": "Automatically track time based on activity"
+      },
+      "enable_predictive_analytics": {
+        "title": "Predictive Analytics",
+        "description": "Predict ticket volume and resource needs"
+      },
+      "enable_slack_integration": {
+        "title": "Slack Integration",
+        "description": "Send notifications and updates to Slack"
+      },
+      "teams-integration-ui": {
+        "description": "Integrate with Microsoft Teams"
+      },
+      "enable_jira_sync": {
+        "title": "Jira Sync",
+        "description": "Sync tickets with Jira issues"
+      },
+      "enable_query_caching": {
+        "title": "Query Caching",
+        "description": "Cache database queries for faster response times"
+      },
+      "enable_lazy_loading": {
+        "title": "Lazy Loading",
+        "description": "Load content as needed for better performance"
+      },
+      "enable_websocket_updates": {
+        "title": "Real-time Updates",
+        "description": "Use WebSockets for instant updates"
+      },
+      "enable_voice_commands": {
+        "title": "Voice Commands",
+        "description": "Control the app with voice commands"
+      },
+      "beta_mobile_app": {
+        "title": "Mobile App Beta",
+        "description": "Access to beta mobile application"
+      }
+    },
+    "enums": {
+      "stable": "Stable",
+      "beta": "Beta",
+      "experimental": "Experimental"
+    },
+    "loading": "Loading feature flags...",
+    "title": "Feature Flags",
+    "description": "Enable or disable features across your application. Some features may require a restart.",
+    "unsaved": "You have unsaved changes. Click Save to apply them.",
+    "requiresRestart": "Requires restart",
+    "errors": {
+      "loadFailed": "Error loading feature flags: {{message}}"
+    },
+    "dependencies": "Requires: {{dependencies}}"
+  },
+  "clientPortalLanguageConfig": {
+    "title": "Client Portal Language Settings",
+    "description": "Configure the language options available to your clients",
+    "fields": {
+      "defaultLanguage": {
+        "label": "Default Language",
+        "help": "This language will be used for new clients and when no preference is set"
+      },
+      "availableLanguages": {
+        "label": "Available Languages",
+        "help": "Select which languages clients can choose from"
+      }
+    },
+    "defaultSuffix": "(default)",
+    "preview": {
+      "title": "Preview",
+      "defaultLanguage": "Default language:",
+      "availableLanguages": "Available languages:"
+    },
+    "messages": {
+      "success": {
+        "saved": "Settings saved successfully"
+      }
+    },
+    "errors": {
+      "saveFailed": "Failed to save settings"
+    }
+  },
+  "enums": {
+    "locale": {
+      "en": "English",
+      "fr": "French",
+      "es": "Spanish",
+      "de": "German",
+      "nl": "Dutch",
+      "it": "Italian",
+      "pl": "Polish",
+      "pt": "Portuguese (Brazil)",
+      "sv": "Swedish",
+      "xx": "Pseudo (xx)",
+      "yy": "Pseudo (yy)"
+    }
+  },
+  "telemetry": {
+    "fields": {
+      "usageStats": {
+        "label": "Usage Statistics",
+        "enabledDescription": "Enabled - Sends anonymous usage data to help improve the product",
+        "disabledDescription": "Disabled - Sends anonymous usage data to help improve the product"
+      }
+    },
+    "environmentHelp": "Usage statistics are controlled via the {{variable}} environment variable. Contact your system administrator to modify this setting.",
+    "sections": {
+      "collectedData": {
+        "title": "What data is collected",
+        "featureUsage": "Feature usage patterns (no personal data)",
+        "errorReports": "Error reports for debugging",
+        "performance": "Performance metrics",
+        "configuration": "System configuration (anonymized)"
+      }
+    }
+  },
+  "dialogs": {
+    "statusImport": {
+      "title": "Import Standard Statuses",
+      "description": "Select the standard statuses you want to import",
+      "selectAll": "Select All ({{selected}}/{{total}})",
+      "closed": "Closed",
+      "default": "Default",
+      "empty": "No standard statuses available for import",
+      "importSelected": "Import Selected ({{count}})"
+    }
   }
 }

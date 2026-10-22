@@ -10,6 +10,7 @@ import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import type { ColumnDefinition } from '@alga-psa/types';
+import type { ExternalEntityMapping } from '@alga-psa/integrations/actions';
 
 import { suggestMappingTargets } from './suggestMappingTargets';
 import type {
@@ -33,7 +34,17 @@ export const BULK_GRID_COLUMN_SIZES = {
   id: { width: '140px' }
 } as const;
 
-type MappedRow = { externalName?: string; alga_entity_id: string };
+/**
+ * Whether bulk mapping types the target instead of picking it from a catalog.
+ * Explicit per module: a catalog-backed module whose catalog happens to be
+ * empty (a new company, nothing of that kind yet) keeps the picker, so a
+ * free-text value can never be saved where a provider id is expected.
+ */
+export function isManualEntryModule(module: Pick<AccountingMappingModule, 'manualExternalEntry' | 'externalTarget'>): boolean {
+  return module.manualExternalEntry === true && !module.externalTarget;
+}
+
+type MappedRow = ExternalEntityMapping & { externalName?: string };
 
 type RowEdit = {
   ignored?: boolean;
@@ -84,6 +95,9 @@ export function AccountingMappingBulkGrid({
   const { t } = useTranslation('msp/integrations');
   const targetConfig = module.externalTarget;
   const idPrefix = `${module.id}-bulk`;
+  // File-based modules (no provider catalog) type the target, exactly as it
+  // appears in the accounting system.
+  const manualEntry = isManualEntryModule(module);
 
   const [filter, setFilter] = useState<MappedFilter>('unmapped');
   const [search, setSearch] = useState('');
@@ -102,13 +116,33 @@ export function AccountingMappingBulkGrid({
     [algaEntities, mappedByAlga]
   );
 
-  // Suggestions are computed once per catalog load, only for unmapped rows.
+  // Catalog options an existing mapping holds exclusively, i.e. targets the
+  // server's unique index would reject a second mapping to. Only those are
+  // withheld from suggestions; targets the server lets several mappings share
+  // (Xero revenue accounts) stay suggestable. Multi-catalog modules compare by
+  // option id (`item:200` and `account:200` are different targets); modules
+  // without a target config compare the bare external id (one-to-one).
+  const unavailableExternalIds = useMemo(() => {
+    const held = new Set<string>();
+    for (const mapping of mappings) {
+      if (!targetConfig) {
+        held.add(mapping.external_entity_id);
+      } else if (targetConfig.isExclusiveKind(targetConfig.kindForMapping(mapping))) {
+        held.add(targetConfig.optionIdForMapping(mapping));
+      }
+    }
+    return new Set(externalEntities.filter((entity) => held.has(entity.id)).map((entity) => entity.id));
+  }, [mappings, externalEntities, targetConfig]);
+
+  // Suggestions cover unmapped rows only and never offer a target an existing
+  // mapping holds; recomputed after a save reload so fresh mappings exclude theirs.
   const suggestions = useMemo(
     () =>
       suggestMappingTargets(unmappedAlga, externalEntities, {
-        preferredKind: targetConfig?.defaultKindId
+        preferredKind: targetConfig?.defaultKindId,
+        unavailableExternalIds
       }),
-    [unmappedAlga, externalEntities, targetConfig?.defaultKindId]
+    [unmappedAlga, externalEntities, targetConfig?.defaultKindId, unavailableExternalIds]
   );
 
   const externalById = useMemo(
@@ -138,7 +172,7 @@ export function AccountingMappingBulkGrid({
         // Exact (code/name) suggestions are preselected; near-misses need an
         // explicit tick so a variant is never saved without review.
         const selected = edit.selected ?? (suggested && !fuzzy);
-        const externalName = mapped?.externalName ?? externalById.get(externalId)?.name ?? '';
+        const externalName = mapped?.externalName ?? externalById.get(externalId)?.name ?? (manualEntry ? externalId : '');
 
         return {
           id: entity.id,
@@ -150,11 +184,11 @@ export function AccountingMappingBulkGrid({
           fuzzy,
           ignored,
           selected,
-          toSave: !mapped && selected && !ignored && Boolean(externalId),
+          toSave: !mapped && selected && !ignored && Boolean(externalId.trim()),
           searchText: `${entity.name} ${externalName}`.toLowerCase()
         };
       }),
-    [algaEntities, edits, mappedByAlga, suggestions, externalById, targetConfig]
+    [algaEntities, edits, mappedByAlga, suggestions, externalById, targetConfig, manualEntry]
   );
 
   const visibleRows = useMemo(() => {
@@ -187,7 +221,7 @@ export function AccountingMappingBulkGrid({
 
   // Only rows with a target and not ignored can ever be "selected to save".
   const selectableVisible = useMemo(
-    () => editableVisible.filter((row) => row.externalId && !row.ignored),
+    () => editableVisible.filter((row) => row.externalId.trim() && !row.ignored),
     [editableVisible]
   );
   const allSelected = selectableVisible.length > 0 && selectableVisible.every((row) => row.selected);
@@ -204,7 +238,7 @@ export function AccountingMappingBulkGrid({
     // infers it, and the module's createMany rejects an unprefixed id per row.
     const inputs: AccountingMappingBulkCreateInput[] = pending.map((row) => ({
       algaEntityId: row.id,
-      externalEntityId: row.externalId
+      externalEntityId: manualEntry ? row.externalId.trim() : row.externalId
     }));
 
     setIsSaving(true);
@@ -310,6 +344,31 @@ export function AccountingMappingBulkGrid({
         ...BULK_GRID_COLUMN_SIZES.externalId,
         render: (_value, row) => {
           if (row.mappedTo !== null) return <span>{row.mappedTo}</span>;
+          if (manualEntry) {
+            return (
+              // The cell clips its content to truncate text, and the field fills
+              // it edge to edge, so the focus ring is drawn outside the clip and
+              // sliced off. The 2px inset is exactly the ring's width.
+              <div className="p-0.5">
+                <Input
+                  id={`${idPrefix}-external-${row.id}`}
+                  value={row.externalId}
+                  disabled={row.ignored || isSaving}
+                  onChange={(event) =>
+                    patchRow(row.id, { externalId: event.target.value, selected: Boolean(event.target.value.trim()) })
+                  }
+                  placeholder={t('integrations.accounting.dialog.enterPlaceholder', {
+                    defaultValue: 'Enter {{field}}...',
+                    field: module.labels.dialog.externalField
+                  })}
+                  aria-label={`${module.labels.dialog.externalField}: ${row.name}`}
+                  // Ignored rows read as disabled here the same way the picker
+                  // rows do.
+                  className="w-full min-w-0 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+            );
+          }
           const options = externalEntities
             .filter((entity) => !targetConfig || !entity.kind || entity.kind === row.kindId)
             .map((entity) => ({ value: entity.id, label: entity.name }));
@@ -409,7 +468,8 @@ export function AccountingMappingBulkGrid({
     rowErrors,
     savedIds,
     isSaving,
-    patchRow
+    patchRow,
+    manualEntry
   ]);
 
   const filterOptions = useMemo(
@@ -486,6 +546,14 @@ export function AccountingMappingBulkGrid({
           </Button>
         </div>
       </div>
+
+      {manualEntry ? (
+        <p className="text-xs text-muted-foreground" id={`${idPrefix}-manual-entry-help`}>
+          {t('integrations.accounting.dialog.manualEntryHelp', {
+            defaultValue: 'Enter the identifier exactly as it appears in your accounting system.'
+          })}
+        </p>
+      ) : null}
 
       {visibleRows.length === 0 ? (
         <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">

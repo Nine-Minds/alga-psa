@@ -1519,7 +1519,9 @@
         "summary_one": "{{count}} événement ignoré au cours des {{days}} derniers jours — {{reasons}}",
         "summary_other": "{{count}} événements ignorés au cours des {{days}} derniers jours — {{reasons}}",
         "lastSkipped": "Dernier ignoré {{when}}",
-        "view": "Voir les événements ignorés"
+        "view": "Voir les événements ignorés",
+        "summary_few": "{{count}} événements ignorés au cours des {{days}} derniers jours — {{reasons}}",
+        "summary_many": "{{count}} événements ignorés au cours des {{days}} derniers jours — {{reasons}}"
       },
       "drawer": {
         "title": "Événements ignorés",
@@ -1862,7 +1864,9 @@
     "insertionPointLabel": "Les nouvelles étapes vont ici",
     "emptyBranchPrompt": "Ajoutez une étape à cette branche",
     "emptyActivePrompt": "Les nouvelles étapes vont ici. Choisissez-en une dans la palette.",
-    "stepCount": "({{count}} étapes)"
+    "stepCount": "({{count}} étapes)",
+    "stepCount_few": "({{count}} étapes)",
+    "stepCount_many": "({{count}} étapes)"
   },
   "expressionEditor": {
     "ariaLabel": "Éditeur d’expression",
@@ -2375,7 +2379,12 @@
       "currentRun": "Exécution {{id}}",
       "backToWorkflow": "Retour au workflow"
     },
-    "title": "Studio d'exécution de workflow"
+    "title": "Studio d'exécution de workflow",
+    "communityEdition": {
+      "title": "Fonctionnalité Pro",
+      "description": "Le studio d’exécution des workflows est disponible uniquement dans Pro.",
+      "runId": "ID d’exécution : {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3148,6 +3157,10 @@
         "selectBoard": "Sélectionnez ou saisissez un tableau",
         "selectPriority": "Sélectionnez ou saisissez une priorité"
       }
+    },
+    "proFeature": {
+      "title": "Fonctionnalité Pro",
+      "description": "Le système de workflows est uniquement disponible dans Pro. Veuillez mettre à niveau votre installation pour accéder à cette fonctionnalité."
     }
   },
   "toggle": {

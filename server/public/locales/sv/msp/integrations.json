@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Pro-funktion"
+    },
     "accounting": {
       "bulk": {
         "button": "Massmappning",
@@ -1232,7 +1235,12 @@
         "recommendedUnsaved": "Rekommenderat – inte sparat",
         "unsavedChange": "Osparad ändring",
         "unsavedNotice": "De här filterinställningarna gäller först när du har sparat dem."
-      }
+      },
+      "proFeature": {
+        "description": "Integrationen med Microsoft Entra är tillgänglig i AlgaPSA Pro.",
+        "notice": "Identitetsintegrationen med Microsoft Entra är en Pro-funktion."
+      },
+      "loading": "Läser in integrationen med Microsoft Entra…"
     },
     "google": {
       "settings": {
@@ -1303,6 +1311,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "Integrationen med Hudu för IT-dokumentation är tillgänglig i AlgaPSA Pro."
+      },
       "clientTab": {
         "source": "Källa: Hudu",
         "openInHudu": "Öppna i Hudu",
@@ -2346,6 +2357,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "RMM-integrationen med NinjaOne är tillgänglig i AlgaPSA Pro."
+        },
         "loading": "Läser in inställningar för NinjaOne-integration…",
         "card": {
           "title": "RMM-integration för NinjaOne",
@@ -2623,6 +2637,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "RMM-integrationen med Tanium är tillgänglig i AlgaPSA Pro."
+        },
         "loading": "Läser in inställningar för Tanium-integration…",
         "actions": {
           "discoverScopes": "Identifiera omfång",
@@ -2693,6 +2710,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "RMM-integrationen med Level.io är tillgänglig i AlgaPSA Pro."
+        },
         "actions": {
           "backfillAlerts": "Efterhämta larm",
           "disconnect": "Koppla från",
@@ -2790,6 +2810,10 @@
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Huntress-integration",
+          "description": "Säkerhetsintegrationen med Huntress är en Pro-funktion."
+        },
         "columns": {
           "organization": "Huntress-organisation",
           "client": "Alga-kund",
@@ -2830,7 +2854,7 @@
         },
         "connection": {
           "title": "Ansluten till {{account}}",
-          "summary": "{{organizations}} organisationer ({{unmapped}} inte mappade) · {{openIncidents}} öppna incidenter · senaste avfrågning: {{lastPoll}}",
+          "summary": "{{organizations}} organisationer ({{unmapped}} inte mappade) · {{openAlerts}} öppna larm · senaste avfrågning: {{lastPoll}}",
           "neverPolled": "aldrig",
           "lastPollFailed": "Senaste avfrågningen misslyckades: {{error}}",
           "routingIncompleteWarning": "Incidentavfrågning pausas tills ärendefördelningen nedan är konfigurerad (tavla, reservkund/reservtavla och prioriteter för alla tre allvarlighetsgraderna).",
@@ -2853,6 +2877,8 @@
           "selectPriority": "Prioritet",
           "pollInterval": "Avfrågningsintervall (minuter)",
           "autoClose": "Stäng ärenden när Huntress stänger incidenten",
+          "ingestEscalations": "Skapa ärenden från Huntress-eskaleringar",
+          "ingestEscalationsHelp": "Eskaleringar använder samma inställningar för tavla, kategori, prioritetsmappning och automatisk stängning som incidenter. En eskalering som omfattar flera organisationer skapar ett ärende per organisation.",
           "closedStatus": "Status för stängt ärende",
           "selectStatus": "Välj status",
           "save": "Spara ärendefördelning",
@@ -3549,6 +3575,11 @@
           "regenerate": "Generera paketet igen",
           "regenerating": "Genererar igen…"
         }
+      },
+      "unavailable": {
+        "signInTitle": "Teams-inloggning är inte tillgänglig",
+        "tabTitle": "Teams-fliken är inte tillgänglig",
+        "description": "Integrationen med Microsoft Teams är endast tillgänglig i Pro."
       }
     },
     "xero": {

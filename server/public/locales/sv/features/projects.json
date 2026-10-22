@@ -85,7 +85,9 @@
     "noService": "Ingen tjänst",
     "servicePlaceholder": "Välj standardtjänst",
     "serviceHelp": "Används för tidposter på den här fasens uppgifter när uppgiften själv inte anger någon tjänst.",
-    "serviceDisplayLabel": "Tjänst"
+    "serviceDisplayLabel": "Tjänst",
+    "taskCount_few": "{{count}} uppgifter",
+    "taskCount_many": "{{count}} uppgifter"
   },
   "projectList": {
     "addProject": "Lägg till projekt",
@@ -314,7 +316,9 @@
     "confirmMoveTasksMessage": "Vill du flytta de markerade uppgifterna ({{count}}) till fasen ”{{targetPhase}}”?",
     "taskTypeFallback": "Uppgift",
     "timeline": "Tidslinje",
-    "loadingTimeline": "Läser in tidslinje..."
+    "loadingTimeline": "Läser in tidslinje...",
+    "bulkTagsSuccess_few": "Taggar har lagts till på {{count}} uppgifter",
+    "bulkTagsSuccess_many": "Taggar har lagts till på {{count}} uppgifter"
   },
   "taskForm": {
     "addTitle": "Lägg till ny uppgift",
@@ -433,7 +437,15 @@
     "serviceInheritedFromProject": "Ärver {{service}} från projektet.",
     "startDateLabel": "Startdatum",
     "taskStartDateLabel": "Uppgiftens startdatum",
-    "startDatePlaceholder": "Välj startdatum"
+    "startDatePlaceholder": "Välj startdatum",
+    "createdTicketsIntro_few": "Du skapade {{count}} ärenden under den här sessionen:",
+    "createdTicketsIntro_many": "Du skapade {{count}} ärenden under den här sessionen:",
+    "documentCleanupFailure_few": "Det gick inte att radera {{count}} dokument. De blir kvar i Dokument",
+    "documentCleanupFailure_many": "Det gick inte att radera {{count}} dokument. De blir kvar i Dokument",
+    "documentsCleanupIntro_few": "Du har {{count}} dokument som har {{cleanupType}}:",
+    "documentsCleanupIntro_many": "Du har {{count}} dokument som har {{cleanupType}}:",
+    "ticketCleanupFailure_few": "Det gick inte att radera {{count}} ärenden",
+    "ticketCleanupFailure_many": "Det gick inte att radera {{count}} ärenden"
   },
   "taskDependencies": {
     "title": "Beroenden",
@@ -644,7 +656,13 @@
     },
     "exportSelected": "Exportera markerade ({{count}})",
     "selectedTasksNotice_one": "Exporterar {{count}} markerad uppgift.",
-    "selectedTasksNotice_other": "Exporterar {{count}} markerade uppgifter."
+    "selectedTasksNotice_other": "Exporterar {{count}} markerade uppgifter.",
+    "phasesSelected_few": "{{selected}} av {{total}} faser valda",
+    "phasesSelected_many": "{{selected}} av {{total}} faser valda",
+    "selectedTasksNotice_few": "Exporterar {{count}} markerade uppgifter.",
+    "selectedTasksNotice_many": "Exporterar {{count}} markerade uppgifter.",
+    "success_few": "{{count}} uppgifter har exporterats till CSV.",
+    "success_many": "{{count}} uppgifter har exporterats till CSV."
   },
   "import": {
     "title": "Importera faser och uppgifter",
@@ -765,7 +783,9 @@
     "statusUnmatchedTooltip": "Statusen matchar ingen befintlig status för den här fasen. Hantera detta i mappningsstegen före importen.",
     "statusFallbackSuffix": "Standard",
     "statusFallbackTooltip": "Använder standardstatusen som reserv för den här fasen.",
-    "inPhaseBadge": "i {{phase}}"
+    "inPhaseBadge": "i {{phase}}",
+    "taskCountLabel_few": "({{count}} uppgifter)",
+    "taskCountLabel_many": "({{count}} uppgifter)"
   },
   "dialogs": {
     "moveTask": {
@@ -839,7 +859,9 @@
       "restrictedTooltip": "Begränsade detaljer – du är inte tilldelad den här uppgiften",
       "badgeCount_one": "{{count}} uppgift",
       "billsToProject": "Tiden debiteras som projekttid",
-      "billsToClient": "Tiden debiteras på kundnivå"
+      "billsToClient": "Tiden debiteras på kundnivå",
+      "badgeCount_few": "{{count}} uppgifter",
+      "badgeCount_many": "{{count}} uppgifter"
     },
     "bulkMoveTask": {
       "title": "Flytta uppgifter",
@@ -1215,7 +1237,9 @@
       "taskCount_other": "{{count}} uppgifter",
       "unknownUser": "Okänd",
       "unknownTask": "Okänd uppgift",
-      "checklistCountTitle": "{{count}} checklistpunkt"
+      "checklistCountTitle": "{{count}} checklistpunkt",
+      "taskCount_few": "{{count}} uppgifter",
+      "taskCount_many": "{{count}} uppgifter"
     },
     "taskForm": {
       "addTitle": "Lägg till uppgift",
@@ -1625,7 +1649,9 @@
       "submitting": "Lägger till taggar…",
       "confirm_one": "Lägg till taggar på {{count}} uppgift",
       "confirm_other": "Lägg till taggar på {{count}} uppgifter",
-      "failedHeading": "Det gick inte att lägga till taggar på följande uppgifter:"
+      "failedHeading": "Det gick inte att lägga till taggar på följande uppgifter:",
+      "confirm_few": "Lägg till taggar på {{count}} uppgifter",
+      "confirm_many": "Lägg till taggar på {{count}} uppgifter"
     }
   },
   "common:actions": {
@@ -1688,7 +1714,9 @@
       "lockedSummary_other": "{{count}} poster på totalt {{amount}} är låsta och ändras inte.",
       "edit": "Redigera villkor",
       "saved": "Faktureringsvillkoren har uppdaterats",
-      "dialogTitle": "Redigera faktureringsvillkor"
+      "dialogTitle": "Redigera faktureringsvillkor",
+      "lockedSummary_few": "{{count}} poster på totalt {{amount}} är låsta och ändras inte.",
+      "lockedSummary_many": "{{count}} poster på totalt {{amount}} är låsta och ändras inte."
     },
     "setup": {
       "title": "Fakturera det här projektet",
@@ -2037,5 +2065,22 @@
     "question": "Beroenden tvingas inte, så du kan fortsätta. Vill du det?",
     "proceed": "Fortsätt ändå",
     "cancel": "Avbryt"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "Kompakt"
+    },
+    "spacious": {
+      "label": "Rymlig"
+    },
+    "decrease": {
+      "title": "Minska kolumnbredden"
+    },
+    "increase": {
+      "title": "Öka kolumnbredden"
+    },
+    "reset": {
+      "title": "Återställ till standard"
+    }
   }
 }

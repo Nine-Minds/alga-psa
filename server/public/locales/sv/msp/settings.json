@@ -1,7 +1,9 @@
 {
   "escalationManager": {
     "unsavedChanges_one": "{{count}} osparad ändring",
-    "unsavedChanges_other": "{{count}} osparade ändringar"
+    "unsavedChanges_other": "{{count}} osparade ändringar",
+    "unsavedChanges_few": "{{count}} osparade ändringar",
+    "unsavedChanges_many": "{{count}} osparade ändringar"
   },
   "page": {
     "title": "Administrationsinställningar"
@@ -448,7 +450,9 @@
       },
       "leadName": "Ledare: {{name}}",
       "memberCount_one": "{{count}} medlem",
-      "memberCount_other": "{{count}} medlemmar"
+      "memberCount_other": "{{count}} medlemmar",
+      "memberCount_few": "{{count}} medlemmar",
+      "memberCount_many": "{{count}} medlemmar"
     },
     "messages": {
       "error": {
@@ -1139,7 +1143,9 @@
         "success": {
           "deleted": "Interaktionstypen har raderats",
           "imported_one": "{{count}} interaktionstyp har importerats",
-          "imported_other": "{{count}} interaktionstyper har importerats"
+          "imported_other": "{{count}} interaktionstyper har importerats",
+          "imported_few": "{{count}} interaktionstyper har importerats",
+          "imported_many": "{{count}} interaktionstyper har importerats"
         },
         "error": {
           "fetchFailed": "Det gick inte att hämta interaktionstyper",
@@ -1956,6 +1962,48 @@
       "editor": {
         "inlineLogoHint": "Din logotyp bäddas in i meddelandet när det skickas. Behåll referensen src=\"cid:{{cid}}\" oförändrad – om den ersätts med en URL måste mottagarna först godkänna att bilden laddas ner."
       }
+    },
+    "templateVariables": {
+      "actions": {
+        "insert": "Infoga vid markören",
+        "guide": "Läs hela guiden",
+        "copy": "Kopiera {{path}}"
+      },
+      "insertHelp": "Välj en variabel för att infoga den.",
+      "availableHelp": "Variabler som är tillgängliga för den här mallen.",
+      "fields": {
+        "search": {
+          "placeholder": "Sök variabler"
+        },
+        "globalSearch": {
+          "placeholder": "Sök sökvägar, beskrivningar och begrepp"
+        },
+        "category": {
+          "all": "Alla områden"
+        }
+      },
+      "title": "Referens för variabler i e-postmallar",
+      "panelTitle": "Mallvariabler",
+      "inferredContract": "Skickas inte för närvarande. Detta kontrakt härleds från mallen.",
+      "empty": "Inga matchande variabler.",
+      "example": "Exempel:",
+      "usedBy": "Används av {{templates}}",
+      "description": "Hitta de data som är tillgängliga för varje e-postmall i systemet. Kopiera exakt Handlebars-token till en anpassad mall.",
+      "enums": {
+        "categories": {
+          "appointments": "Bokningar",
+          "auth": "Autentisering",
+          "billing": "Fakturering",
+          "quotes": "Offerter",
+          "invoices": "Fakturor",
+          "opportunities": "Affärsmöjligheter",
+          "projects": "Projekt",
+          "sla": "SLA",
+          "surveys": "Enkäter",
+          "tickets": "Ärenden",
+          "time": "Tid"
+        }
+      }
     }
   },
   "timeEntry": {
@@ -2265,7 +2313,9 @@
         "samples_other": "{{sample}} · {{count}} poster",
         "noSample": "Inget exempel",
         "missingRequired": "Obligatoriska fält är inte mappade: {{fields}}",
-        "duplicate": "Ett anpassat fält är mappat mer än en gång. Välj ett unikt målfält för varje källa."
+        "duplicate": "Ett anpassat fält är mappat mer än en gång. Välj ett unikt målfält för varje källa.",
+        "samples_few": "{{sample}} · {{count}} poster",
+        "samples_many": "{{sample}} · {{count}} poster"
       },
       "actions": {
         "back": "Tillbaka till migreringar",
@@ -2383,7 +2433,16 @@
   },
   "policyManagement": {
     "title": "Policyhantering",
-    "upgradeDescription": "Policyhantering är en Pro-funktion. Uppgradera för att få tillgång till avancerade policykontroller."
+    "upgradeDescription": "Policyhantering är en Pro-funktion. Uppgradera för att få tillgång till avancerade policykontroller.",
+    "bundleLibrary": {
+      "title": "Bibliotek för behörighetspaket",
+      "upgradeDescription": "Avancerad hantering av behörighetspaket är tillgänglig i Pro. Uppgradera för att konfigurera begränsande paket för roller, team, användare och API-nycklar.",
+      "protectionsDescription": "Inbyggda behörighetsskydd förblir aktiva även när konfigurerbara avancerade kontroller inte är tillgängliga i den här utgåvan eller abonnemangsnivån."
+    },
+    "proFeature": {
+      "title": "Pro-funktion",
+      "description": "Policyhantering kräver Pro. Uppgradera för att få tillgång till den här funktionen."
+    }
   },
   "roleManagement": {
     "title": "Hantera roller",
@@ -2528,7 +2587,9 @@
         "noSessions": "Inga aktiva sessioner hittades"
       },
       "subtitle_one": "{{sessionCount}} aktiv session för {{userCount}} användare",
-      "subtitle_other": "{{sessionCount}} aktiva sessioner för {{userCount}} användare"
+      "subtitle_other": "{{sessionCount}} aktiva sessioner för {{userCount}} användare",
+      "subtitle_few": "{{sessionCount}} aktiva sessioner för {{userCount}} användare",
+      "subtitle_many": "{{sessionCount}} aktiva sessioner för {{userCount}} användare"
     }
   },
   "ssoBulk": {
@@ -2621,7 +2682,9 @@
         "unlinkedCount": "Kopplingen för {{count}} konton via {{provider}} har tagits bort.",
         "previewUnlink_one": "Förhandsgranskningen är klar. Vi tar bort kopplingen för {{count}} vald användare.",
         "previewUnlink_other": "Förhandsgranskningen är klar. Vi tar bort kopplingen för {{count}} valda användare.",
-        "previewLink": "Förhandsgranskningen är klar. Granska sammanfattningen innan du kopplar konton."
+        "previewLink": "Förhandsgranskningen är klar. Granska sammanfattningen innan du kopplar konton.",
+        "previewUnlink_few": "Förhandsgranskningen är klar. Vi tar bort kopplingen för {{count}} valda användare.",
+        "previewUnlink_many": "Förhandsgranskningen är klar. Vi tar bort kopplingen för {{count}} valda användare."
       },
       "results": {
         "completeTitle": "Tilldelningen är klar",
@@ -2636,12 +2699,16 @@
         "wouldLink": "Skulle koppla",
         "alreadyUnlinked": "Kopplingen är redan borttagen",
         "alreadyLinked": "Redan kopplad",
-        "skippedInactive": "Överhoppad (inaktiv)"
+        "skippedInactive": "Överhoppad (inaktiv)",
+        "processed_few": "{{count}} användare har bearbetats.",
+        "processed_many": "{{count}} användare har bearbetats."
       },
       "providerNames": {
         "google": "Google Workspace",
         "microsoft": "Microsoft 365"
-      }
+      },
+      "selected_few": "{{count}} användare valda.",
+      "selected_many": "{{count}} användare valda."
     },
     "clientPortalProvisioning": {
       "deactivateBody": "När detta är aktiverat inaktiveras användare som hanteras via Entra-etablering när deras behörighet via åtkomstgruppen tas bort.",
@@ -2657,6 +2724,10 @@
       "modeTitle": "Läge för Entra-etablering i kundportalen",
       "modeWorkflowManaged": "Hanteras av arbetsflöde",
       "workflowManagedInfo": "Läget som hanteras av arbetsflöden publicerar endast Entra-åtkomsthändelser. Det valda arbetsflödet ansvarar för etablering av kundportalanvändare, rolltilldelning, inbjudningar och livscykeländringar."
+    },
+    "proFeature": {
+      "title": "Masstilldelning av enkel inloggning",
+      "description": "Den här funktionen är tillgänglig i Pro. Uppgradera för att hantera SSO-tilldelningar för Google Workspace och Microsoft 365 direkt från sidan med säkerhetsinställningar."
     }
   },
   "profile": {
@@ -2905,7 +2976,9 @@
         "overallCompliance": "Total efterlevnad",
         "pausedSla": "ärenden med pausat SLA",
         "ticketsTracked_one": "{{count}} ärende följs",
-        "ticketsTracked_other": "{{count}} ärenden följs"
+        "ticketsTracked_other": "{{count}} ärenden följs",
+        "ticketsTracked_few": "{{count}} ärenden följs",
+        "ticketsTracked_many": "{{count}} ärenden följs"
       },
       "recentBreaches": {
         "empty": "Inga SLA-brott under den valda perioden",
@@ -2948,7 +3021,9 @@
         "responseTrackingDisabled": "Uppföljning av svarsstatus har inaktiverats",
         "responseTrackingEnabled": "Uppföljning av svarsstatus har aktiverats",
         "statusesUpdated_one": "{{count}} statuskonfiguration har uppdaterats",
-        "statusesUpdated_other": "{{count}} statuskonfigurationer har uppdaterats"
+        "statusesUpdated_other": "{{count}} statuskonfigurationer har uppdaterats",
+        "statusesUpdated_few": "{{count}} statuskonfigurationer har uppdaterats",
+        "statusesUpdated_many": "{{count}} statuskonfigurationer har uppdaterats"
       },
       "perStatus": {
         "description": "Konfigurera vilka ärendestatusar som ska pausa SLA-tidtagningen. När ett ärende får en status med pausning aktiverad stoppas SLA-tidtagningen tills ärendet får en annan status.",
@@ -2960,7 +3035,9 @@
         "resetChanges": "Återställ ändringar",
         "saveChanges": "Spara ändringar",
         "saving": "Sparar…",
-        "title": "Pauskonfiguration per status"
+        "title": "Pauskonfiguration per status",
+        "modifiedCount_few": "{{count}} statusar ändrade",
+        "modifiedCount_many": "{{count}} statusar ändrade"
       },
       "retry": "Försök igen"
     },
@@ -3003,7 +3080,9 @@
         "selectAll": "Markera alla",
         "selectAllVisible": "Markera alla synliga",
         "selectedCount_one": "{{count}} vald",
-        "selectedCount_other": "{{count}} valda"
+        "selectedCount_other": "{{count}} valda",
+        "selectedCount_few": "{{count}} valda",
+        "selectedCount_many": "{{count}} valda"
       },
       "targets": {
         "always": "Dygnet runt (ignorera öppettider)",
@@ -3096,7 +3175,13 @@
         "usageClients_one": "Kund: {{names}}",
         "usageClients_other": "Kunder: {{names}}",
         "usageTickets_one": "{{count}} ärende",
-        "usageTickets_other": "{{count}} ärenden"
+        "usageTickets_other": "{{count}} ärenden",
+        "usageBoards_few": "Tavlor: {{names}}",
+        "usageBoards_many": "Tavlor: {{names}}",
+        "usageClients_few": "Kunder: {{names}}",
+        "usageClients_many": "Kunder: {{names}}",
+        "usageTickets_few": "{{count}} ärenden",
+        "usageTickets_many": "{{count}} ärenden"
       },
       "description": "Hantera policyer för servicenivåavtal som definierar mål för svars- och lösningstider",
       "empty": "Inga SLA-policyer hittades. Klicka på ”Lägg till policy” för att skapa din första policy.",
@@ -3562,5 +3647,185 @@
   },
   "common": {
     "saving": "Sparar…"
+  },
+  "featureFlags": {
+    "categories": {
+      "core": {
+        "title": "Grundfunktioner",
+        "description": "Viktiga funktioner för det dagliga arbetet"
+      },
+      "ui": {
+        "title": "Användargränssnitt",
+        "description": "Nya funktioner och förbättringar i gränssnittet"
+      },
+      "ai": {
+        "title": "AI-funktioner",
+        "description": "Funktioner som använder artificiell intelligens"
+      },
+      "integrations": {
+        "title": "Integrationer",
+        "description": "Integrationer med tredjepartstjänster"
+      },
+      "performance": {
+        "title": "Prestanda",
+        "description": "Funktioner för prestandaoptimering"
+      },
+      "experimental": {
+        "title": "Experimentell",
+        "description": "Nyskapande funktioner under utveckling"
+      }
+    },
+    "features": {
+      "enable_ticket_automation": {
+        "title": "Ärendeautomatisering",
+        "description": "Tilldela och vidarebefordra ärenden automatiskt utifrån regler"
+      },
+      "enable_time_tracking": {
+        "title": "Tidregistrering",
+        "description": "Registrera tid som läggs på ärenden och projekt"
+      },
+      "enable_billing": {
+        "title": "Faktureringssystem",
+        "description": "Skapa fakturor och följ upp betalningar"
+      },
+      "new_ticket_ui": {
+        "title": "Nytt ärendegränssnitt",
+        "description": "Omarbetat gränssnitt för att skapa och hantera ärenden"
+      },
+      "new_dashboard_layout": {
+        "title": "Modern översikt",
+        "description": "Ny översikt med anpassningsbara widgetar"
+      },
+      "ai_ticket_suggestions": {
+        "title": "AI-förslag för ärenden",
+        "description": "AI-baserad ärendekategorisering och prioritetsförslag"
+      },
+      "enable_ai_time_tracking": {
+        "title": "AI-tidregistrering",
+        "description": "Registrera tid automatiskt utifrån aktivitet"
+      },
+      "enable_predictive_analytics": {
+        "title": "Prediktiv analys",
+        "description": "Förutse ärendevolym och resursbehov"
+      },
+      "enable_slack_integration": {
+        "title": "Slack-integration",
+        "description": "Skicka aviseringar och uppdateringar till Slack"
+      },
+      "teams-integration-ui": {
+        "description": "Integrera med Microsoft Teams"
+      },
+      "enable_jira_sync": {
+        "title": "Jira-synkronisering",
+        "description": "Synkronisera ärenden med Jira-ärenden"
+      },
+      "enable_query_caching": {
+        "title": "Cachelagring av frågor",
+        "description": "Cachelagra databasfrågor för snabbare svarstider"
+      },
+      "enable_lazy_loading": {
+        "title": "Inläsning vid behov",
+        "description": "Läs in innehåll vid behov för bättre prestanda"
+      },
+      "enable_websocket_updates": {
+        "title": "Uppdateringar i realtid",
+        "description": "Använd WebSockets för omedelbara uppdateringar"
+      },
+      "enable_voice_commands": {
+        "title": "Röstkommandon",
+        "description": "Styr appen med röstkommandon"
+      },
+      "beta_mobile_app": {
+        "title": "Mobilapp i betaversion",
+        "description": "Tillgång till mobilappen i betaversion"
+      }
+    },
+    "enums": {
+      "stable": "Stabil",
+      "beta": "Beta",
+      "experimental": "Experimentell"
+    },
+    "loading": "Läser in funktionsflaggor...",
+    "title": "Funktionsflaggor",
+    "description": "Aktivera eller inaktivera funktioner i appen. Vissa funktioner kan kräva en omstart.",
+    "unsaved": "Du har osparade ändringar. Klicka på Spara för att tillämpa dem.",
+    "requiresRestart": "Kräver omstart",
+    "errors": {
+      "loadFailed": "Det gick inte att läsa in funktionsflaggor: {{message}}"
+    },
+    "dependencies": "Kräver: {{dependencies}}"
+  },
+  "clientPortalLanguageConfig": {
+    "title": "Språkinställningar för kundportalen",
+    "description": "Konfigurera de språkalternativ som är tillgängliga för dina kunder",
+    "fields": {
+      "defaultLanguage": {
+        "label": "Standardspråk",
+        "help": "Det här språket används för nya kunder och när ingen språkinställning har valts"
+      },
+      "availableLanguages": {
+        "label": "Tillgängliga språk",
+        "help": "Välj vilka språk kunderna kan välja mellan"
+      }
+    },
+    "defaultSuffix": "(standard)",
+    "preview": {
+      "title": "Förhandsgranskning",
+      "defaultLanguage": "Standardspråk:",
+      "availableLanguages": "Tillgängliga språk:"
+    },
+    "messages": {
+      "success": {
+        "saved": "Inställningarna har sparats"
+      }
+    },
+    "errors": {
+      "saveFailed": "Det gick inte att spara inställningarna"
+    }
+  },
+  "enums": {
+    "locale": {
+      "en": "Engelska",
+      "fr": "Franska",
+      "es": "Spanska",
+      "de": "Tyska",
+      "nl": "Nederländska",
+      "it": "Italienska",
+      "pl": "Polska",
+      "pt": "Portugisiska (Brasilien)",
+      "sv": "Svenska",
+      "xx": "Pseudospråk (xx)",
+      "yy": "Pseudospråk (yy)"
+    }
+  },
+  "telemetry": {
+    "fields": {
+      "usageStats": {
+        "label": "Användningsstatistik",
+        "enabledDescription": "Aktiverad - Skickar anonyma användningsdata för att hjälpa till att förbättra produkten",
+        "disabledDescription": "Inaktiverad - Skickar anonyma användningsdata för att hjälpa till att förbättra produkten"
+      }
+    },
+    "environmentHelp": "Användningsstatistik styrs via miljövariabeln {{variable}}. Kontakta din systemadministratör för att ändra den här inställningen.",
+    "sections": {
+      "collectedData": {
+        "title": "Vilka data samlas in",
+        "featureUsage": "Användningsmönster för funktioner (inga personuppgifter)",
+        "errorReports": "Felrapporter för felsökning",
+        "performance": "Prestandamått",
+        "configuration": "Systemkonfiguration (anonymiserad)"
+      }
+    }
+  },
+  "dialogs": {
+    "statusImport": {
+      "title": "Importera standardstatusar",
+      "description": "Välj de standardstatusar du vill importera",
+      "selectAll": "Markera alla ({{selected}}/{{total}})",
+      "closed": "Stängd",
+      "default": "Standard",
+      "empty": "Inga standardstatusar tillgängliga för import",
+      "importSelected": "Importera markerade ({{count}})"
+    }
   }
 }

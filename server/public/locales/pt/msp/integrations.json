@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Recurso Pro"
+    },
     "accounting": {
       "bulk": {
         "button": "Mapeamento em massa",
@@ -1232,7 +1235,12 @@
         "recommendedUnsaved": "Recomendado — não salvo",
         "unsavedChange": "Alteração não salva",
         "unsavedNotice": "Estes filtros só terão efeito depois de serem salvos."
-      }
+      },
+      "proFeature": {
+        "description": "A integração com o Microsoft Entra está disponível no AlgaPSA Pro.",
+        "notice": "A integração de identidade do Microsoft Entra é um recurso do Pro."
+      },
+      "loading": "Carregando a integração com o Microsoft Entra…"
     },
     "google": {
       "settings": {
@@ -1303,6 +1311,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "A integração com a documentação de TI do Hudu está disponível no AlgaPSA Pro."
+      },
       "clientTab": {
         "source": "Fonte: Hudu",
         "openInHudu": "Aberto em Hudu",
@@ -2323,6 +2334,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "A integração RMM com NinjaOne está disponível no AlgaPSA Pro."
+        },
         "loading": "Carregando as configurações de integração do NinjaOne...",
         "card": {
           "title": "Integração NinjaOne RMM",
@@ -2600,6 +2614,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "A integração RMM com Tanium está disponível no AlgaPSA Pro."
+        },
         "loading": "Carregando configurações de integração do Tanium...",
         "actions": {
           "discoverScopes": "Descubra escopos",
@@ -2670,6 +2687,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "A integração RMM com Level.io está disponível no AlgaPSA Pro."
+        },
         "actions": {
           "backfillAlerts": "Alertas de preenchimento",
           "disconnect": "Desconectar",
@@ -2767,6 +2787,10 @@
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Integração com Huntress",
+          "description": "A integração de segurança com Huntress é um recurso Pro."
+        },
         "columns": {
           "organization": "Organização da Huntress",
           "client": "Cliente Alga",
@@ -2807,7 +2831,7 @@
         },
         "connection": {
           "title": "Conectado à conta {{account}}",
-          "summary": "{{organizations}} organizações ({{unmapped}} não mapeadas) · {{openIncidents}} incidentes em aberto · última consulta: {{lastPoll}}",
+          "summary": "{{organizations}} organizações ({{unmapped}} não mapeadas) · {{openAlerts}} alertas em aberto · última consulta: {{lastPoll}}",
           "neverPolled": "nunca",
           "lastPollFailed": "Falha na última consulta: {{error}}",
           "routingIncompleteWarning": "A consulta de incidentes está pausada até que a configuração de roteamento abaixo esteja completa (quadro, cliente/quadro alternativo e as prioridades dos três níveis de gravidade).",
@@ -2830,6 +2854,8 @@
           "selectPriority": "Prioridade",
           "pollInterval": "Intervalo de consulta (minutos)",
           "autoClose": "Fechar os tickets quando a Huntress encerrar o incidente",
+          "ingestEscalations": "Criar tickets a partir das escalações da Huntress",
+          "ingestEscalationsHelp": "As escalações usam as mesmas configurações de quadro, categoria, mapeamento de prioridades e fechamento automático dos incidentes. Uma escalação que abrange várias organizações cria um ticket por organização.",
           "closedStatus": "Status de encerramento",
           "selectStatus": "Selecionar status",
           "save": "Salvar configuração de roteamento",
@@ -3526,6 +3552,11 @@
           "regenerate": "Gerar pacote novamente",
           "regenerating": "Gerando novamente..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Login no Teams indisponível",
+        "tabTitle": "Guia do Teams indisponível",
+        "description": "A integração com o Microsoft Teams está disponível apenas no Pro."
       }
     },
     "xero": {

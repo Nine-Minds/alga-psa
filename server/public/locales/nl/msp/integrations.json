@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Pro-functie"
+    },
     "accounting": {
       "bulk": {
         "button": "Bulkkoppeling",
@@ -1232,7 +1235,12 @@
         "recommendedUnsaved": "Aanbevolen — niet opgeslagen",
         "unsavedChange": "Niet-opgeslagen wijziging",
         "unsavedNotice": "Deze filters worden pas toegepast nadat u ze hebt opgeslagen."
-      }
+      },
+      "proFeature": {
+        "description": "De Microsoft Entra-integratie is beschikbaar in AlgaPSA Pro.",
+        "notice": "De identiteitsintegratie met Microsoft Entra is een Pro-functie."
+      },
+      "loading": "Microsoft Entra-integratie laden…"
     },
     "google": {
       "settings": {
@@ -1303,6 +1311,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "De integratie met de IT-documentatie van Hudu is beschikbaar in AlgaPSA Pro."
+      },
       "clientTab": {
         "source": "Bron: Hudu",
         "openInHudu": "Openen in Hudu",
@@ -2323,6 +2334,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "De RMM-integratie met NinjaOne is beschikbaar in AlgaPSA Pro."
+        },
         "loading": "NinjaOne-integratie-instellingen laden...",
         "card": {
           "title": "NinjaOne RMM-integratie",
@@ -2600,6 +2614,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "De RMM-integratie met Tanium is beschikbaar in AlgaPSA Pro."
+        },
         "loading": "Tanium-integratie-instellingen worden geladen...",
         "actions": {
           "discoverScopes": "Scopes ontdekken",
@@ -2670,6 +2687,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "De RMM-integratie met Level.io is beschikbaar in AlgaPSA Pro."
+        },
         "actions": {
           "backfillAlerts": "Waarschuwingen backfillen",
           "disconnect": "Verbinding verbreken",
@@ -2767,6 +2787,10 @@
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Huntress-integratie",
+          "description": "De beveiligingsintegratie met Huntress is een Pro-functie."
+        },
         "columns": {
           "organization": "Huntress-organisatie",
           "client": "Alga-klant",
@@ -2807,7 +2831,7 @@
         },
         "connection": {
           "title": "Verbonden met {{account}}",
-          "summary": "{{organizations}} organisaties ({{unmapped}} niet gekoppeld) · {{openIncidents}} open incidenten · laatste poll: {{lastPoll}}",
+          "summary": "{{organizations}} organisaties ({{unmapped}} niet gekoppeld) · {{openAlerts}} open waarschuwingen · laatste poll: {{lastPoll}}",
           "neverPolled": "nooit",
           "lastPollFailed": "Laatste poll mislukt: {{error}}",
           "routingIncompleteWarning": "Het pollen van incidenten is gepauzeerd totdat de onderstaande routeringsconfiguratie volledig is (bord, fallbackklant/-bord en alle drie prioriteiten voor ernstniveaus).",
@@ -2830,6 +2854,8 @@
           "selectPriority": "Prioriteit",
           "pollInterval": "Pollinterval (minuten)",
           "autoClose": "Tickets sluiten wanneer Huntress het incident sluit",
+          "ingestEscalations": "Tickets aanmaken op basis van Huntress-escalaties",
+          "ingestEscalationsHelp": "Escalaties gebruiken dezelfde instellingen voor bord, categorie, prioriteitstoewijzing en automatisch sluiten als incidenten. Een escalatie die meerdere organisaties betreft, maakt één ticket per organisatie aan.",
           "closedStatus": "Status Gesloten",
           "selectStatus": "Status selecteren",
           "save": "Routeringsconfiguratie opslaan",
@@ -3526,6 +3552,11 @@
           "regenerate": "Pakket opnieuw genereren",
           "regenerating": "Opnieuw genereren..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Aanmelden bij Teams niet beschikbaar",
+        "tabTitle": "Teams-tabblad niet beschikbaar",
+        "description": "De Microsoft Teams-integratie is alleen beschikbaar in Pro."
       }
     },
     "xero": {

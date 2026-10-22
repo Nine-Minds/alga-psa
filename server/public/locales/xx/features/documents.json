@@ -376,5 +376,8 @@
     "altVideoThumbnail": "⟦Ŧħŭḿƀƞȧīŀ ȯƒ {{name}}⟧",
     "pageCount_one": "⟦{{count}} ƥȧɠḗ⟧",
     "pageCount_other": "⟦{{count}} ƥȧɠḗş⟧"
+  },
+  "skeleton": {
+    "cardLabel": "⟦Ḓȯƈŭḿḗƞŧ Şķḗŀḗŧȯƞ Ƈȧřḓ⟧"
   }
 }

@@ -2081,6 +2081,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "mention",
       ",",
       "3CX",
       "Acme IT Solutions",
@@ -2247,7 +2248,13 @@
       "Normal (400)",
       "Style",
       "auto | 50% | 120px",
-      "Cc"
+      "Cc",
+      "Note",
+      "Consultation",
+      "Important",
+      "Compact",
+      "Extensions (Pro)",
+      "Stable"
     ],
     "caseInsensitive": [
       "api",

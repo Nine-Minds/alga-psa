@@ -118,6 +118,36 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  // GET /api/v1/time-sheets validates `sort` against an allowlist (TimeSheetService
+  // resolveTimeSheetListSort): anything else is a 400, not a database error.
+  const TimeSheetListQuery = registry.registerSchema(
+    'WorkV1TimeSheetListQuery',
+    zOpenApi.object({
+      page: zOpenApi.string().optional(),
+      limit: zOpenApi.string().optional(),
+      sort: zOpenApi
+        .enum(['approval_status', 'approved_at', 'created_at', 'period_end', 'period_start', 'submitted_at'])
+        .optional()
+        .describe(
+          'Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400.',
+        ),
+      order: zOpenApi.enum(['asc', 'desc']).optional(),
+      user_id: zOpenApi.string().uuid().optional(),
+      period_id: zOpenApi.string().uuid().optional(),
+      approval_status: zOpenApi.string().optional(),
+      approved_by: zOpenApi.string().uuid().optional(),
+      submitted_from: zOpenApi.string().datetime().optional(),
+      submitted_to: zOpenApi.string().datetime().optional(),
+      approved_from: zOpenApi.string().datetime().optional(),
+      approved_to: zOpenApi.string().datetime().optional(),
+      has_entries: zOpenApi.string().optional(),
+      period_start_from: zOpenApi.string().datetime().optional(),
+      period_start_to: zOpenApi.string().datetime().optional(),
+      period_end_from: zOpenApi.string().datetime().optional(),
+      period_end_to: zOpenApi.string().datetime().optional(),
+    }),
+  );
+
   const GenericBody = registry.registerSchema(
     'WorkV1GenericBody',
     zOpenApi.record(zOpenApi.unknown()).describe('Controller/service-specific payload; see source route/controller for exact required shape.'),
@@ -393,10 +423,10 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'put', path: '/api/v1/tickets/{id}/bundle/settings', summary: 'Update ticket bundle settings', description: 'Updates the bundle mode and/or reopen-on-child-reply policy for master {id}.', family: 'ticket' },
 
     { method: 'get', path: '/api/v1/time-entries', summary: 'List time entries', description: 'Lists time entries via ApiBaseController list flow.', family: 'time_entry' },
-    { method: 'post', path: '/api/v1/time-entries', summary: 'Create time entry', description: 'Creates time entry.', family: 'time_entry' },
+    { method: 'post', path: '/api/v1/time-entries', summary: 'Create time entry', description: 'Creates a time entry. Billable entries are linked to a contract line (optional `contract_line_id`; auto-resolved when exactly one line is eligible) and draw bucket/hour-block usage. Returns 400 ValidationError (VALIDATION_ERROR) with details.reason `contract_line_ambiguous` or `contract_line_not_eligible` and details.eligible_contract_lines[] (contract_line_id, contract_line_name, contract_line_type, contract_id, contract_name, has_bucket) when the line cannot be resolved.', family: 'time_entry' },
     { method: 'get', path: '/api/v1/time-entries/active-session', summary: 'Get active tracking session', description: 'Deprecated: use GET /api/v1/stopwatch/active. Returns the caller\'s open stopwatch session in the legacy time-entry-row shape (`session_id` is the stopwatch session id, `start_time` the first segment start). Requires time_entry:read.', family: 'time_entry' },
     { method: 'post', path: '/api/v1/time-entries/approve', summary: 'Approve time entries', description: 'Approves time entries payload.', family: 'time_entry' },
-    { method: 'delete', path: '/api/v1/time-entries/bulk', summary: 'Bulk delete time entries', description: 'Bulk delete time entry operation.', family: 'time_entry' },
+    { method: 'delete', path: '/api/v1/time-entries/bulk', summary: 'Bulk delete time entries', description: 'Bulk delete time entry operation. Each deletion reverses the entry\'s bucket usage and hour-block burn.', family: 'time_entry' },
     { method: 'post', path: '/api/v1/time-entries/bulk', summary: 'Bulk create time entries', description: 'Bulk create time entry operation.', family: 'time_entry' },
     { method: 'put', path: '/api/v1/time-entries/bulk', summary: 'Bulk update time entries', description: 'Bulk update time entry operation.', family: 'time_entry' },
     { method: 'get', path: '/api/v1/time-entries/export', summary: 'Export time entries', description: 'Exports time entries with optional filter/format query.', family: 'time_entry' },
@@ -406,9 +436,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/time-entries/stats', summary: 'Get time entry stats', description: 'Returns time entry statistics.', family: 'time_entry' },
     { method: 'post', path: '/api/v1/time-entries/stop-tracking/{sessionId}', summary: 'Stop time tracking', description: 'Deprecated: use POST /api/v1/stopwatch/{id}/log. Logs the open (running or paused) session as a time entry and returns the entry.', family: 'time_entry' },
     { method: 'get', path: '/api/v1/time-entries/templates', summary: 'List time entry templates', description: 'Lists available time entry templates.', family: 'time_entry' },
-    { method: 'delete', path: '/api/v1/time-entries/{id}', summary: 'Delete time entry', description: 'Deletes time entry UUID.', family: 'time_entry' },
+    { method: 'delete', path: '/api/v1/time-entries/{id}', summary: 'Delete time entry', description: 'Deletes time entry UUID and reverses the bucket usage draw and hour-block burn the entry made.', family: 'time_entry' },
     { method: 'get', path: '/api/v1/time-entries/{id}', summary: 'Get time entry', description: 'Gets time entry UUID.', family: 'time_entry' },
-    { method: 'put', path: '/api/v1/time-entries/{id}', summary: 'Update time entry', description: 'Updates time entry UUID.', family: 'time_entry' },
+    { method: 'put', path: '/api/v1/time-entries/{id}', summary: 'Update time entry', description: 'Updates time entry UUID. Re-resolves the contract line and adjusts bucket usage by the change; returns the same 400 contract_line_ambiguous / contract_line_not_eligible ValidationError as create.', family: 'time_entry' },
 
     { method: 'get', path: '/api/v1/time-periods', summary: 'List time periods', description: 'Lists time periods via ApiTimeSheetController.listTimePeriods(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-periods', summary: 'Create time period', description: 'Creates a time period. start_date/end_date accept YYYY-MM-DD (datetimes are truncated to their date). is_current is ignored on input and derived on read. Returns 409 when it overlaps an existing period; periods that touch (one\'s end_date equals the next\'s start_date) are allowed. end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).', family: 'time_sheet' },
@@ -495,6 +525,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
 
     if (def.method === 'get' && def.path === '/api/v1/tickets') {
       req.query = TicketListQuery;
+    }
+    if (def.method === 'get' && (def.path === '/api/v1/time-sheets' || def.path === '/api/v1/time-sheets/search')) {
+      req.query = TimeSheetListQuery;
     }
 
     if (def.path.startsWith('/api/v1/projects') && (def.method === 'post' || def.method === 'put')) {

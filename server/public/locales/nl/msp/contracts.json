@@ -587,7 +587,8 @@
       "failedToUpdate": "Contractregel bijwerken is mislukt",
       "failedToResetRate": "Kan het regeltarief niet opnieuw instellen",
       "protectedStartDate": "De startdatum moet op of vóór {{boundary}} liggen om beschermde servicehistorie mee te nemen.",
-      "protectedEndDate": "De einddatum moet op of na {{boundary}} liggen om beschermde servicehistorie mee te nemen."
+      "protectedEndDate": "De einddatum moet op of na {{boundary}} liggen om beschermde servicehistorie mee te nemen.",
+      "cannotEditWithInvoices": "Kan contractregel niet bewerken: dit contract heeft bijbehorende facturen. Contractregels kunnen niet worden bewerkt zodra facturen zijn gegenereerd."
     },
     "loading": {
       "contractLines": "Contractregels laden",
@@ -831,7 +832,9 @@
       "hourlyTitle": "Per uur",
       "usageDescription": "Factureer voor verbruikte eenheden.",
       "usageTitle": "Op verbruik",
-      "fixedSemantics": "Factureer elke periode een bundelprijs of een terugkerend aantal × tarief per eenheid."
+      "fixedSemantics": "Factureer elke periode een bundelprijs of een terugkerend aantal × tarief per eenheid.",
+      "prepaidBlockTitle": "Prepaid blok",
+      "prepaidBlockDescription": "Factureer vooraf een blok uren; geregistreerde tijd put het uit en het volgende blok wordt gefactureerd wanneer het op is."
     },
     "billingTiming": {
       "advance": "Vooraf (factureren aan het begin van de periode)",
@@ -899,7 +902,8 @@
       "usageServiceRequired": "Minstens één verbruiksgebaseerde service is vereist",
       "usageServiceSelectRequired": "Service {{index}}: selecteer een service",
       "invalidQuantity": "Hoeveelheid moet nul of hoger zijn.",
-      "recurringUnitRateRequired": "Voer voor elke terugkerende service een tarief per eenheid in."
+      "recurringUnitRateRequired": "Voer voor elke terugkerende service een tarief per eenheid in.",
+      "prepaidBlockCurrencyRequired": "Het contract heeft een valuta nodig voordat een prepaid blok kan worden geprijsd."
     },
     "fixedServicesPricingIntent": "Kies per service een bundelprijs of terugkerende plaatsen/eenheden.",
     "fixedServicesPricingExplanation": "Bundelverdelingen delen het basistarief van de regel. Terugkerende plaatsen factureren elke periode het afgesproken aantal × tarief per eenheid, zonder verbruiksregistraties.",
@@ -910,7 +914,9 @@
     "invoiceTextPlaceholder": "Wordt op de factuur afgedrukt; standaard de regelnaam",
     "invoiceTextHelp": "Deze tekst wordt letterlijk op de terugkerende factuurregel afgedrukt.",
     "startDateLabel": "Startdatum regel",
-    "endDateLabel": "Einddatum regel"
+    "endDateLabel": "Einddatum regel",
+    "prepaidBlockTitle": "Prepaid blok",
+    "prepaidBlockDescription": "Stel de blokgrootte en prijs in. De prijs is standaard uren x tarief van de dienst en wordt opgeslagen als expliciet bedrag."
   },
   "pricingSchedules": {
     "list": {
@@ -1256,7 +1262,8 @@
       "hourlyRateLabel": "Uurtarief:",
       "unitRateFromCatalog": "Catalogusprijs in de valuta van de klant",
       "unitAmountLabel": "Terugkerend bedrag:",
-      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}",
+      "prepaidBlockKind": "Prepaid blok"
     },
     "editBasicsTitle": "Sjabloonbasis bewerken",
     "editGuidanceTitle": "Sjabloonrichtlijnen bewerken",
@@ -1345,6 +1352,10 @@
       "add": "Standaardkorting toevoegen",
       "chooseLine": "Kies een sjabloonregel",
       "chooseService": "Kies een service"
+    },
+    "prepaidBlock": {
+      "setup": "Verkopen als prepaid blok",
+      "blockNeutral": "{{hours}} u / {{price}} (in de valuta van de klant)"
     }
   },
   "quickStart": {
@@ -1854,7 +1865,8 @@
       "products": "Producten",
       "hourlyServices": "Uurservices",
       "usageBasedServices": "Verbruiksgebaseerde services",
-      "fixedFeeServicesNumbered": "Diensten met vaste prijs ({{number}})"
+      "fixedFeeServicesNumbered": "Diensten met vaste prijs ({{number}})",
+      "prepaidBlocks": "Prepaid blokregels"
     },
     "fields": {
       "client": "Klant",
@@ -1983,6 +1995,14 @@
       "itemPo": "Bevestig PO-vereisten (indien van toepassing)",
       "itemDates": "Verifieer de start- en einddatums",
       "itemEditLater": "Onthoud: u kunt het contract later bewerken indien nodig"
+    },
+    "prepaid": {
+      "badgeCount_one": "{{count}} regel",
+      "badgeCount_other": "{{count}} regels",
+      "blockSummary": "{{hours}} uur voor {{price}}",
+      "expiresAfter_one": "verloopt na {{count}} maand",
+      "expiresAfter_other": "verloopt na {{count}} maanden",
+      "neverExpires": "verloopt nooit"
     }
   },
   "wizardTemplateLines": {
@@ -2210,7 +2230,8 @@
       "fixedFeeServices": "Vaste-vergoedingsservices",
       "products": "Producten",
       "hourlyServices": "Uurservices",
-      "usageBasedServices": "Verbruiksgebaseerde services"
+      "usageBasedServices": "Verbruiksgebaseerde services",
+      "prepaidBlocks": "Prepaid blokregels"
     },
     "fields": {
       "templateName": "Sjabloonnaam",
@@ -2271,6 +2292,9 @@
       "unitSingular": "eenheid",
       "rolloverEnabled": "Overloop ingeschakeld",
       "period": "Periode: {{period}}"
+    },
+    "prepaid": {
+      "blockSummaryNeutral": "{{hours}} uur voor {{price}} (in de valuta van de klant)"
     }
   },
   "templatePreview": {
@@ -2711,7 +2735,7 @@
     "done": "Klaar"
   },
   "sellHourBlockNote": {
-    "text": "Een urenbundel in het contract factureert alleen het meerverbruik. Wilt u een blok uren vooraf in rekening brengen, gebruik dan Blok verkopen onder Urenblokken op het tabblad Factureringsdashboard van de klant."
+    "text": "Een urenbundel in het contract factureert alleen het meerverbruik. Wilt u een blok uren vooraf in rekening brengen, voeg dan een regel Vooruitbetaald blok toe aan dit contract."
   },
   "billingTimingField": {
     "arrears": "Achteraf",
@@ -2792,6 +2816,126 @@
     "errors": {
       "loadFailed": "Kortingen laden mislukt.",
       "saveFailed": "Korting opslaan mislukt."
+    }
+  },
+  "prepaidBlock": {
+    "errors": {
+      "hoursInvalid": "Voer een blokgrootte groter dan nul in (delen van een uur zijn toegestaan).",
+      "priceInvalid": "Voer een blokprijs van nul of meer in.",
+      "expiryInvalid": "De vervaldatum moet een geheel aantal maanden van 1 tot 120 zijn, of leeg.",
+      "thresholdInvalid": "De gebruiksdrempel moet een geheel percentage van 1 tot 99 zijn, of leeg.",
+      "serviceRequired": "De regel heeft minimaal één uurdienst nodig."
+    },
+    "hoursValue": "{{hours}} u",
+    "trigger": {
+      "initial": "Eerste blok",
+      "exhaustion": "Blok opgebruikt",
+      "threshold": "Gebruiksdrempel",
+      "expiry": "Blok verlopen",
+      "renewal": "Contractverlenging",
+      "manual": "Handmatig uitgegeven"
+    },
+    "loading": "Details van het prepaid blok laden...",
+    "heading": "Prepaid blok",
+    "actions": {
+      "edit": "Bewerken",
+      "remove": "Blokconfiguratie verwijderen",
+      "cancel": "Annuleren",
+      "save": "Opslaan",
+      "issueNext": "Volgend blok uitgeven"
+    },
+    "warnings": {
+      "coveredServiceOnOtherLine": "{{service}} staat ook op een andere actieve regel ({{line}}). De tijd kan daar worden gefactureerd in plaats van van dit blok af te gaan."
+    },
+    "summary": {
+      "block": "Blok",
+      "expiry": "Vervaldatum",
+      "neverExpires": "Verloopt nooit",
+      "expiresAfterMonths": "{{months}} maanden",
+      "soldAs": "Verkocht als",
+      "triggers": "Het volgende blok wordt gefactureerd wanneer",
+      "onExhaustion": "het blok opgebruikt is",
+      "onThreshold": "{{percent}}% gebruikt",
+      "onExpiry": "het blok verloopt",
+      "onRenewal": "het contract wordt verlengd",
+      "tierAutoIssue": "Automatisch afgerond",
+      "tierDraft": "Concept ter controle"
+    },
+    "balance": {
+      "label": "Actief saldo",
+      "value": "{{remaining}} van {{total}} resterend",
+      "none": "Nog geen actief blok. Een blok wordt actief zodra de factuur is afgerond.",
+      "contractEnded": "Contract beëindigd; de resterende uren zijn vervallen."
+    },
+    "pending": {
+      "heading": "Openstaand blok wacht op afronding van de factuur",
+      "draftInvoice": "Conceptfactuur",
+      "noInvoice": "Geen factuur gekoppeld",
+      "ageDays": "{{days}} dagen oud",
+      "held": "{{hours}} geregistreerde tijd wordt vastgehouden tot dit blok actief wordt."
+    },
+    "next": {
+      "label": "Volgende geplande uitgifte",
+      "none": "Geen"
+    },
+    "history": {
+      "heading": "Blokgeschiedenis",
+      "empty": "Er zijn nog geen blokken uitgegeven.",
+      "columns": {
+        "issued": "Uitgegeven",
+        "reason": "Reden",
+        "status": "Status",
+        "hours": "Resterend",
+        "amount": "Bedrag",
+        "invoice": "Factuur"
+      }
+    },
+    "fields": {
+      "blockHours": "Blokgrootte (uren)",
+      "blockHoursHelp": "Breuken zijn toegestaan, bijvoorbeeld 1,5 voor 90 minuten.",
+      "blockPrice": "Blokprijs ({{currency}})",
+      "blockPriceManualHelp": "Expliciet ingesteld. Wordt opgeslagen zoals ingevoerd en volgt het uurtarief niet.",
+      "blockPriceDefaultHelp": "Standaard uren x tarief van de dienst. Wordt opgeslagen als expliciete prijs.",
+      "useRateTimesHours": "Uren x tarief gebruiken",
+      "soldAs": "Factuurregel wordt verkocht als",
+      "soldAsHelp": "Bepaalt de btw, het grootboek en de koppeling voor de boekhoudexport van de blokfactuurregel.",
+      "expiryMonths": "Verloopt na (maanden)",
+      "neverExpires": "Verloopt nooit",
+      "expiryMonthsHelp": "Laat leeg voor uren die nooit verlopen. Ongebruikte uren vervallen bij het verlopen.",
+      "thresholdPercent": "Volgend blok uitgeven bij gebruik (%)",
+      "noThreshold": "Geen drempel",
+      "triggersHeading": "Volgend blok factureren wanneer",
+      "triggerExhaustion": "Het blok opgebruikt is",
+      "triggerExpiry": "Het blok verloopt",
+      "triggerRenewal": "Het contract wordt verlengd",
+      "triggerRenewalHint": "Factureert bij elke verlenging een nieuw blok (verjaardag van een doorlopend contract of geactiveerd verlengingscontract). Bestaande blokken behouden hun eigen vervaldatum.",
+      "tier": "Vervolgfactuur",
+      "tierDraft": "Een concept ter controle aanmaken",
+      "tierAutoIssue": "Automatisch afronden en verzenden",
+      "blockPriceNeutral": "Blokprijs (in de valuta van de klant)"
+    },
+    "status": {
+      "pending": "In behandeling",
+      "active": "Actief",
+      "expired": "Verlopen",
+      "voided": "Geannuleerd"
+    }
+  },
+  "wizardPrepaidBlock": {
+    "heading": "Regels met prepaid blokken",
+    "description": "Verkoop uren vooraf. Elke regel factureert een blok uren tegen een vaste prijs en geregistreerde tijd verbruikt het blok; uren boven het blok worden gefactureerd tegen het uurtarief.",
+    "templateDescription": "Verkoop uren vooraf. Elke regel factureert een blok uren tegen een vaste prijs en geregistreerde tijd verbruikt het blok. De prijs neemt de valuta van de klant over wanneer er een contract van deze sjabloon wordt gemaakt.",
+    "lineName": "Regelnaam (optioneel)",
+    "lineNamePlaceholder": "Prepaid blok",
+    "removeLine": "Prepaid blokregel verwijderen",
+    "serviceItem": "Dienst {{index}}",
+    "overageRate": "Uurtarief",
+    "removeService": "Dienst verwijderen",
+    "addService": "Dienst aan deze regel toevoegen",
+    "addLine": "Prepaid blokregel toevoegen",
+    "validation": {
+      "invalidBlock": "Vul de blokgrootte, prijs en triggers van elke prepaid blokregel in voordat u afrondt.",
+      "rateRequired": "De prepaid blokdienst \"{{serviceName}}\" heeft een uurtarief boven nul nodig (uren boven het blok worden tegen dat tarief gefactureerd)."
     }
   }
 }

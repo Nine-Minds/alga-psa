@@ -16,7 +16,7 @@ import {
   ArrowRight,
   X
 } from 'lucide-react';
-import { format, formatDistanceToNow } from 'date-fns';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useRouter } from 'next/navigation';
 
 interface NotificationDetailViewProps {
@@ -82,6 +82,8 @@ const renderPriority = (name: string, color?: string) => {
 };
 
 export function NotificationDetailView({ notification, onClose, onNavigateToDocument, onNavigateToTicket, onNavigateToProjectTask }: NotificationDetailViewProps) {
+  const { t } = useTranslation('common');
+  const { formatDate, formatRelativeTime } = useFormatters();
   const router = useRouter();
   const style = getNotificationStyle(notification.status);
 
@@ -113,7 +115,7 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
 
         if (documentId && onNavigateToDocument) {
           // Get document name from metadata if available
-          const documentName = notification.metadata?.documentName || 'Document';
+          const documentName = notification.metadata?.documentName || t('notifications.detail.document');
           // Use the callback to open the document
           onNavigateToDocument(documentId, documentName);
         }
@@ -224,12 +226,12 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
 
             {/* Change details */}
             <div className="bg-gray-50 border border-gray-200 rounded-md p-4 space-y-3">
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">Changes:</h4>
+              <h4 className="text-sm font-semibold text-gray-900 mb-2">{t('notifications.detail.changes')}</h4>
 
               {/* Status change */}
               {changes.status && (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600 min-w-24">Status:</span>
+                  <span className="text-sm text-gray-600 min-w-24">{t('notifications.detail.status')}</span>
                   <span className="font-medium text-gray-900">{changes.status.old}</span>
                   <ArrowRight className="w-4 h-4 text-gray-400" />
                   <span className="font-medium text-blue-600">{changes.status.new}</span>
@@ -239,7 +241,7 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
               {/* Priority change */}
               {changes.priority && (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600 min-w-24">Priority:</span>
+                  <span className="text-sm text-gray-600 min-w-24">{t('notifications.detail.priority')}</span>
                   {renderPriority(changes.priority.old, changes.priority.oldColor)}
                   <ArrowRight className="w-4 h-4 text-gray-400" />
                   {renderPriority(changes.priority.new, changes.priority.newColor)}
@@ -249,7 +251,7 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
               {/* Assignment change */}
               {changes.assigned_to && (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600 min-w-24">Assigned to:</span>
+                  <span className="text-sm text-gray-600 min-w-24">{t('notifications.detail.assignedTo')}</span>
                   <span className="font-medium text-gray-900">{changes.assigned_to.old}</span>
                   <ArrowRight className="w-4 h-4 text-gray-400" />
                   <span className="font-medium text-blue-600">{changes.assigned_to.new}</span>
@@ -260,7 +262,7 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
               {data.performedByName && (
                 <div className="pt-2 mt-2 border-t border-gray-300">
                   <p className="text-sm text-gray-600">
-                    Changed by: <span className="font-medium text-gray-900">{data.performedByName}</span>
+                    {t('notifications.detail.changedBy')} <span className="font-medium text-gray-900">{data.performedByName}</span>
                   </p>
                 </div>
               )}
@@ -278,12 +280,12 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
             </p>
             <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Priority:</span>
+                <span className="text-sm text-gray-600">{t('notifications.detail.priority')}</span>
                 {renderPriority(data.priority, data.priorityColor)}
               </div>
               {data.performedByName && (
                 <p className="text-sm text-gray-600 mt-2">
-                  Assigned by: <span className="font-medium text-gray-900">{data.performedByName}</span>
+                  {t('notifications.detail.assignedBy')} <span className="font-medium text-gray-900">{data.performedByName}</span>
                 </p>
               )}
             </div>
@@ -328,7 +330,7 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
                 </h2>
                 {!notification.isRead && (
                   <Badge variant="default" className="mt-1 bg-blue-500">
-                    Unread
+                    {t('notifications.detail.unread')}
                   </Badge>
                 )}
               </div>
@@ -339,7 +341,7 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
                 variant="ghost"
                 size="sm"
                 onClick={onClose}
-                aria-label="Close"
+                aria-label={t('actions.close')}
               >
                 <X className="h-5 w-5" />
               </Button>
@@ -358,10 +360,10 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
               <div className="flex items-center gap-1.5">
                 <Calendar className="h-4 w-4" />
                 <span>
-                  {format(new Date(notification.createdAt), 'MMM d, yyyy h:mm a')}
+                  {formatDate(notification.createdAt, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                 </span>
                 <span className="text-gray-400">
-                  ({formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })})
+                  ({formatRelativeTime(notification.createdAt)})
                 </span>
               </div>
             )}
@@ -385,12 +387,12 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
               <div className="flex items-start gap-2 mb-2">
                 {notification.metadata?.commentAuthor && (
                   <span className="text-sm font-medium text-gray-700">
-                    Comment by {notification.metadata.commentAuthor}:
+                    {t('notifications.detail.commentBy', { author: notification.metadata.commentAuthor })}
                   </span>
                 )}
                 {isInternalComment && (
                   <Badge variant="warning">
-                    Internal Comment
+                    {t('notifications.detail.internalComment')}
                   </Badge>
                 )}
               </div>
@@ -422,7 +424,7 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
           <div className="text-sm text-gray-600">
             {notification.isRead && notification.readAt && (
               <span>
-                Read {formatDistanceToNow(new Date(notification.readAt), { addSuffix: true })}
+                {t('notifications.detail.readAt', { time: formatRelativeTime(notification.readAt) })}
               </span>
             )}
           </div>
@@ -433,7 +435,7 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
                 variant="outline"
                 onClick={onClose}
               >
-                Close
+                {t('actions.close')}
               </Button>
             )}
             {notification.link && (
@@ -443,10 +445,10 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
                 className="gap-2 bg-primary-600 hover:bg-primary-700 text-white"
                 size="lg"
               >
-                {notification.link.includes('/msp/documents') ? 'Open Document' :
-                 notification.link.includes('/msp/tickets/') || notification.link.includes('/client-portal/tickets/') ? 'View Ticket' :
-                 notification.link.includes('/msp/projects/') && notification.link.includes('/tasks/') ? 'View Task' :
-                 'View Details'}
+                {notification.link.includes('/msp/documents') ? t('notifications.detail.actions.openDocument') :
+                 notification.link.includes('/msp/tickets/') || notification.link.includes('/client-portal/tickets/') ? t('notifications.detail.actions.viewTicket') :
+                 notification.link.includes('/msp/projects/') && notification.link.includes('/tasks/') ? t('notifications.detail.actions.viewTask') :
+                 t('notifications.detail.actions.viewDetails')}
                 <ExternalLink className="h-4 w-4" />
               </Button>
             )}

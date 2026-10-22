@@ -2276,6 +2276,7 @@
       "Contract.pdf",
       "Contract:",
       "Contract: {{name}}",
+      "Contract: {{contract}}",
       "Control",
       "CPU",
       "Cron",
@@ -2557,7 +2558,8 @@
       "is",
       "Cc",
       "Bcc",
-      "Cc/Bcc"
+      "Cc/Bcc",
+      "Training"
     ],
     "caseInsensitive": [
       "account",

@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Pro-Funktion"
+    },
     "accounting": {
       "bulk": {
         "button": "Sammelzuordnung",
@@ -1232,7 +1235,12 @@
         "recommendedUnsaved": "Empfohlen – nicht gespeichert",
         "unsavedChange": "Ungespeicherte Änderung",
         "unsavedNotice": "Diese Filtereinstellungen gelten erst, wenn Sie sie speichern."
-      }
+      },
+      "proFeature": {
+        "description": "Die Microsoft Entra-Integration ist in AlgaPSA Pro verfügbar.",
+        "notice": "Die Microsoft Entra-Identitätsintegration ist eine Pro-Funktion."
+      },
+      "loading": "Microsoft Entra-Integration wird geladen…"
     },
     "google": {
       "settings": {
@@ -1303,6 +1311,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "Die Integration der IT-Dokumentation von Hudu ist in AlgaPSA Pro verfügbar."
+      },
       "clientTab": {
         "source": "Quelle: Hudu",
         "openInHudu": "In Hudu öffnen",
@@ -2323,6 +2334,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "Die NinjaOne-RMM-Integration ist in AlgaPSA Pro verfügbar."
+        },
         "loading": "NinjaOne-Integrationseinstellungen werden geladen...",
         "card": {
           "title": "NinjaOne RMM-Integration",
@@ -2600,6 +2614,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "Die Tanium-RMM-Integration ist in AlgaPSA Pro verfügbar."
+        },
         "loading": "Tanium-Integrationseinstellungen werden geladen...",
         "actions": {
           "discoverScopes": "Scopes erkennen",
@@ -2670,6 +2687,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "Die Level.io-RMM-Integration ist in AlgaPSA Pro verfügbar."
+        },
         "actions": {
           "backfillAlerts": "Warnungen nacherfassen",
           "disconnect": "Trennen",
@@ -2767,6 +2787,10 @@
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Huntress-Integration",
+          "description": "Die Huntress-Sicherheitsintegration ist eine Pro-Funktion."
+        },
         "columns": {
           "organization": "Huntress-Organisation",
           "client": "Alga-Kunde",
@@ -2807,7 +2831,7 @@
         },
         "connection": {
           "title": "Mit {{account}} verbunden",
-          "summary": "{{organizations}} Organisationen ({{unmapped}} nicht zugeordnet) · {{openIncidents}} offene Vorfälle · letzte Abfrage: {{lastPoll}}",
+          "summary": "{{organizations}} Organisationen ({{unmapped}} nicht zugeordnet) · {{openAlerts}} offene Warnungen · letzte Abfrage: {{lastPoll}}",
           "neverPolled": "nie",
           "lastPollFailed": "Letzte Abfrage fehlgeschlagen: {{error}}",
           "routingIncompleteWarning": "Die Vorfallabfrage ist pausiert, bis die Routing-Konfiguration unten vollständig ist (Board, Fallback-Kunde/-Board und Prioritäten für alle drei Schweregrade).",
@@ -2830,6 +2854,8 @@
           "selectPriority": "Priorität",
           "pollInterval": "Abfrageintervall (Minuten)",
           "autoClose": "Tickets schließen, wenn Huntress den Vorfall schließt",
+          "ingestEscalations": "Tickets aus Huntress-Eskalationen erstellen",
+          "ingestEscalationsHelp": "Eskalationen verwenden dieselben Board-, Kategorie-, Prioritätszuordnungs- und Auto-Schließen-Einstellungen wie Vorfälle. Eine Eskalation, die mehrere Organisationen betrifft, erstellt ein Ticket pro Organisation.",
           "closedStatus": "Status für geschlossene Tickets",
           "selectStatus": "Status auswählen",
           "save": "Routing-Konfiguration speichern",
@@ -3526,6 +3552,11 @@
           "regenerate": "Paket neu erstellen",
           "regenerating": "Wird neu erstellt..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Teams-Anmeldung nicht verfügbar",
+        "tabTitle": "Teams-Registerkarte nicht verfügbar",
+        "description": "Die Microsoft Teams-Integration ist nur in Pro verfügbar."
       }
     },
     "xero": {

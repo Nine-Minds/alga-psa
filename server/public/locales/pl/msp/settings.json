@@ -1962,6 +1962,48 @@
       "editor": {
         "inlineLogoHint": "Twoje logo jest osadzane w wiadomości podczas wysyłki. Pozostaw odwołanie src=\"cid:{{cid}}\" bez zmian — zastąpienie go adresem URL sprawi, że odbiorcy będą musieli najpierw zezwolić na pobranie obrazu."
       }
+    },
+    "templateVariables": {
+      "actions": {
+        "insert": "Wstaw w miejscu kursora",
+        "guide": "Przeczytaj pełny przewodnik",
+        "copy": "Kopiuj {{path}}"
+      },
+      "insertHelp": "Wybierz zmienną, aby ją wstawić.",
+      "availableHelp": "Zmienne dostępne w tym szablonie.",
+      "fields": {
+        "search": {
+          "placeholder": "Szukaj zmiennych"
+        },
+        "globalSearch": {
+          "placeholder": "Szukaj ścieżek, opisów i pojęć"
+        },
+        "category": {
+          "all": "Wszystkie obszary"
+        }
+      },
+      "title": "Informacje o zmiennych szablonów e-mail",
+      "panelTitle": "Zmienne szablonu",
+      "inferredContract": "Obecnie nie jest wysyłany. Ten kontrakt został wywnioskowany z szablonu.",
+      "empty": "Brak pasujących zmiennych.",
+      "example": "Przykład:",
+      "usedBy": "Używane przez {{templates}}",
+      "description": "Znajdź dane dostępne w każdym systemowym szablonie e-mail. Skopiuj dokładny token Handlebars do własnego szablonu.",
+      "enums": {
+        "categories": {
+          "appointments": "Wizyty",
+          "auth": "Uwierzytelnianie",
+          "billing": "Rozliczenia",
+          "quotes": "Oferty",
+          "invoices": "Faktury",
+          "opportunities": "Szanse sprzedaży",
+          "projects": "Projekty",
+          "sla": "SLA",
+          "surveys": "Ankiety",
+          "tickets": "Zgłoszenia",
+          "time": "Czas"
+        }
+      }
     }
   },
   "timeEntry": {
@@ -2391,7 +2433,16 @@
   },
   "policyManagement": {
     "title": "Zarządzanie zasadami",
-    "upgradeDescription": "Zarządzanie zasadami jest funkcją Pro. Uaktualnij plan, aby uzyskać dostęp do zaawansowanych ustawień zasad."
+    "upgradeDescription": "Zarządzanie zasadami jest funkcją Pro. Uaktualnij plan, aby uzyskać dostęp do zaawansowanych ustawień zasad.",
+    "bundleLibrary": {
+      "title": "Biblioteka pakietów autoryzacji",
+      "upgradeDescription": "Zaawansowane zarządzanie pakietami autoryzacji jest dostępne w Pro. Przejdź na Pro, aby skonfigurować pakiety ograniczające uprawnienia ról, zespołów, użytkowników i kluczy API.",
+      "protectionsDescription": "Wbudowane zabezpieczenia autoryzacji pozostają aktywne nawet wtedy, gdy konfigurowalne zaawansowane mechanizmy kontroli są niedostępne w tej edycji lub planie."
+    },
+    "proFeature": {
+      "title": "Funkcja Pro",
+      "description": "Zarządzanie zasadami wymaga wersji Pro. Przejdź na wersję Pro, aby uzyskać dostęp do tej funkcji."
+    }
   },
   "roleManagement": {
     "title": "Zarządzanie rolami",
@@ -2673,6 +2724,10 @@
       "modeTitle": "Tryb inicjowania obsługi Entra dla portalu klienta",
       "modeWorkflowManaged": "Zarządzany przez workflow",
       "workflowManagedInfo": "Tryb zarządzany przez workflow publikuje tylko zdarzenia dostępu z Entra. Wybrany workflow odpowiada za tworzenie użytkowników portalu klienta, przypisywanie ról, zaproszenia i zmiany w cyklu życia."
+    },
+    "proFeature": {
+      "title": "Zbiorcze przypisywanie pojedynczego logowania",
+      "description": "Ta funkcja jest dostępna w Pro. Przejdź na Pro, aby zarządzać przypisaniami SSO Google Workspace i Microsoft 365 bezpośrednio na stronie ustawień bezpieczeństwa."
     }
   },
   "profile": {
@@ -3592,5 +3647,185 @@
   },
   "common": {
     "saving": "Zapisywanie…"
+  },
+  "featureFlags": {
+    "categories": {
+      "core": {
+        "title": "Podstawowe funkcje",
+        "description": "Niezbędne funkcje do codziennej pracy"
+      },
+      "ui": {
+        "title": "Interfejs użytkownika",
+        "description": "Nowe funkcje i ulepszenia interfejsu"
+      },
+      "ai": {
+        "title": "Funkcje AI",
+        "description": "Funkcje oparte na sztucznej inteligencji"
+      },
+      "integrations": {
+        "title": "Integracje",
+        "description": "Integracje z usługami zewnętrznymi"
+      },
+      "performance": {
+        "title": "Wydajność",
+        "description": "Funkcje optymalizacji wydajności"
+      },
+      "experimental": {
+        "title": "Eksperymentalne",
+        "description": "Innowacyjne funkcje w fazie rozwoju"
+      }
+    },
+    "features": {
+      "enable_ticket_automation": {
+        "title": "Automatyzacja zgłoszeń",
+        "description": "Automatycznie przypisuj i kieruj zgłoszenia na podstawie reguł"
+      },
+      "enable_time_tracking": {
+        "title": "Rejestrowanie czasu",
+        "description": "Rejestruj czas poświęcony na zgłoszenia i projekty"
+      },
+      "enable_billing": {
+        "title": "System rozliczeń",
+        "description": "Generowanie faktur i śledzenie płatności"
+      },
+      "new_ticket_ui": {
+        "title": "Nowy interfejs zgłoszeń",
+        "description": "Przeprojektowany interfejs tworzenia zgłoszeń i zarządzania nimi"
+      },
+      "new_dashboard_layout": {
+        "title": "Nowoczesny pulpit",
+        "description": "Nowy pulpit z konfigurowalnymi widżetami"
+      },
+      "ai_ticket_suggestions": {
+        "title": "Sugestie AI dotyczące zgłoszeń",
+        "description": "Kategoryzacja zgłoszeń i sugestie priorytetów oparte na AI"
+      },
+      "enable_ai_time_tracking": {
+        "title": "Rejestrowanie czasu z AI",
+        "description": "Automatycznie rejestruj czas na podstawie aktywności"
+      },
+      "enable_predictive_analytics": {
+        "title": "Analityka predykcyjna",
+        "description": "Przewiduj liczbę zgłoszeń i zapotrzebowanie na zasoby"
+      },
+      "enable_slack_integration": {
+        "title": "Integracja ze Slack",
+        "description": "Wysyłaj powiadomienia i aktualizacje do Slack"
+      },
+      "teams-integration-ui": {
+        "description": "Zintegruj z Microsoft Teams"
+      },
+      "enable_jira_sync": {
+        "title": "Synchronizacja z Jira",
+        "description": "Synchronizuj zgłoszenia z zadaniami Jira"
+      },
+      "enable_query_caching": {
+        "title": "Buforowanie zapytań",
+        "description": "Buforuj zapytania do bazy danych, aby skrócić czas odpowiedzi"
+      },
+      "enable_lazy_loading": {
+        "title": "Ładowanie na żądanie",
+        "description": "Ładuj treść w miarę potrzeb, aby poprawić wydajność"
+      },
+      "enable_websocket_updates": {
+        "title": "Aktualizacje w czasie rzeczywistym",
+        "description": "Używaj WebSockets do natychmiastowych aktualizacji"
+      },
+      "enable_voice_commands": {
+        "title": "Polecenia głosowe",
+        "description": "Steruj aplikacją za pomocą poleceń głosowych"
+      },
+      "beta_mobile_app": {
+        "title": "Wersja beta aplikacji mobilnej",
+        "description": "Dostęp do wersji beta aplikacji mobilnej"
+      }
+    },
+    "enums": {
+      "stable": "Stabilne",
+      "beta": "Wersja beta",
+      "experimental": "Eksperymentalne"
+    },
+    "loading": "Ładowanie flag funkcji...",
+    "title": "Flagi funkcji",
+    "description": "Włączaj lub wyłączaj funkcje w aplikacji. Niektóre funkcje mogą wymagać ponownego uruchomienia.",
+    "unsaved": "Masz niezapisane zmiany. Kliknij Zapisz, aby je zastosować.",
+    "requiresRestart": "Wymaga ponownego uruchomienia",
+    "errors": {
+      "loadFailed": "Błąd ładowania flag funkcji: {{message}}"
+    },
+    "dependencies": "Wymaga: {{dependencies}}"
+  },
+  "clientPortalLanguageConfig": {
+    "title": "Ustawienia języka portalu klienta",
+    "description": "Skonfiguruj opcje językowe dostępne dla klientów",
+    "fields": {
+      "defaultLanguage": {
+        "label": "Język domyślny",
+        "help": "Ten język będzie używany dla nowych klientów oraz gdy nie ustawiono preferencji"
+      },
+      "availableLanguages": {
+        "label": "Dostępne języki",
+        "help": "Wybierz języki, z których mogą korzystać klienci"
+      }
+    },
+    "defaultSuffix": "(domyślny)",
+    "preview": {
+      "title": "Podgląd",
+      "defaultLanguage": "Język domyślny:",
+      "availableLanguages": "Dostępne języki:"
+    },
+    "messages": {
+      "success": {
+        "saved": "Ustawienia zapisane pomyślnie"
+      }
+    },
+    "errors": {
+      "saveFailed": "Nie udało się zapisać ustawień"
+    }
+  },
+  "enums": {
+    "locale": {
+      "en": "Angielski",
+      "fr": "Francuski",
+      "es": "Hiszpański",
+      "de": "Niemiecki",
+      "nl": "Niderlandzki",
+      "it": "Włoski",
+      "pl": "Polski",
+      "pt": "Portugalski (Brazylia)",
+      "sv": "Szwedzki",
+      "xx": "Pseudo-język (xx)",
+      "yy": "Pseudo-język (yy)"
+    }
+  },
+  "telemetry": {
+    "fields": {
+      "usageStats": {
+        "label": "Statystyki użytkowania",
+        "enabledDescription": "Włączone - Wysyła anonimowe dane o użytkowaniu, aby pomóc ulepszać produkt",
+        "disabledDescription": "Wyłączone - Wysyła anonimowe dane o użytkowaniu, aby pomóc ulepszać produkt"
+      }
+    },
+    "environmentHelp": "Statystyki użytkowania są kontrolowane przez zmienną środowiskową {{variable}}. Skontaktuj się z administratorem systemu, aby zmienić to ustawienie.",
+    "sections": {
+      "collectedData": {
+        "title": "Jakie dane są zbierane",
+        "featureUsage": "Wzorce korzystania z funkcji (bez danych osobowych)",
+        "errorReports": "Raporty błędów do debugowania",
+        "performance": "Wskaźniki wydajności",
+        "configuration": "Konfiguracja systemu (zanonimizowana)"
+      }
+    }
+  },
+  "dialogs": {
+    "statusImport": {
+      "title": "Importuj standardowe statusy",
+      "description": "Wybierz standardowe statusy, które chcesz zaimportować",
+      "selectAll": "Zaznacz wszystko ({{selected}}/{{total}})",
+      "closed": "Zamknięty",
+      "default": "Domyślny",
+      "empty": "Brak standardowych statusów do zaimportowania",
+      "importSelected": "Importuj wybrane ({{count}})"
+    }
   }
 }

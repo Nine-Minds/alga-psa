@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Pro Feature"
+    },
     "accounting": {
       "bulk": {
         "button": "Bulk map",
@@ -1232,7 +1235,12 @@
         "recommendedUnsaved": "Recommended – not saved",
         "unsavedChange": "Unsaved change",
         "unsavedNotice": "These filter settings are not in effect until you save them."
-      }
+      },
+      "proFeature": {
+        "description": "Microsoft Entra integration is available in AlgaPSA Pro.",
+        "notice": "Microsoft Entra Identity Integration is a Pro Feature."
+      },
+      "loading": "Loading Microsoft Entra integration…"
     },
     "google": {
       "settings": {
@@ -1303,6 +1311,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "The Hudu IT documentation integration is available in AlgaPSA Pro."
+      },
       "clientTab": {
         "source": "Source: Hudu",
         "openInHudu": "Open in Hudu",
@@ -2346,6 +2357,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "NinjaOne RMM integration is available in AlgaPSA Pro."
+        },
         "loading": "Loading NinjaOne integration settings...",
         "card": {
           "title": "NinjaOne RMM Integration",
@@ -2623,6 +2637,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "Tanium RMM integration is available in AlgaPSA Pro."
+        },
         "loading": "Loading Tanium integration settings...",
         "actions": {
           "discoverScopes": "Discover Scopes",
@@ -2693,6 +2710,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "Level.io RMM integration is available in AlgaPSA Pro."
+        },
         "actions": {
           "backfillAlerts": "Backfill Alerts",
           "disconnect": "Disconnect",
@@ -2790,6 +2810,10 @@
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Huntress Integration",
+          "description": "The Huntress security integration is a Pro feature."
+        },
         "columns": {
           "organization": "Huntress Organization",
           "client": "Alga Client",
@@ -2830,7 +2854,7 @@
         },
         "connection": {
           "title": "Connected to {{account}}",
-          "summary": "{{organizations}} organizations ({{unmapped}} unmapped) · {{openIncidents}} open incidents · last poll: {{lastPoll}}",
+          "summary": "{{organizations}} organizations ({{unmapped}} unmapped) · {{openAlerts}} open alerts · last poll: {{lastPoll}}",
           "neverPolled": "never",
           "lastPollFailed": "Last poll failed: {{error}}",
           "routingIncompleteWarning": "Incident polling is paused until the routing configuration below is complete (board, fallback client/board, and all three severity priorities).",
@@ -2853,6 +2877,8 @@
           "selectPriority": "Priority",
           "pollInterval": "Poll interval (minutes)",
           "autoClose": "Close tickets when Huntress closes the incident",
+          "ingestEscalations": "Create tickets from Huntress escalations",
+          "ingestEscalationsHelp": "Escalations use the same board, category, priority mapping and auto-close settings as incidents. An escalation that covers several organizations creates one ticket per organization.",
           "closedStatus": "Closed status",
           "selectStatus": "Select status",
           "save": "Save routing configuration",
@@ -3549,6 +3575,11 @@
           "regenerate": "Regenerate package",
           "regenerating": "Regenerating..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Teams sign-in unavailable",
+        "tabTitle": "Teams tab unavailable",
+        "description": "Microsoft Teams integration is only available in Pro."
       }
     },
     "xero": {
