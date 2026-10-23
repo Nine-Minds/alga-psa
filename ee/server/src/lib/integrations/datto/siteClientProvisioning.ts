@@ -1,7 +1,7 @@
 /**
  * Datto RMM site -> Alga client provisioning.
  *
- * Plain lib module (no 'use server') for the same reason as siteSync: the
+ * Plain lib module (not a server-actions file) for the same reason as siteSync: the
  * settings actions wrap it with permission checks, and the scheduled sync calls
  * it without an acting user when the tenant opted into auto-creation.
  *

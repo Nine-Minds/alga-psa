@@ -6,7 +6,7 @@ export type DattoRmmPlatform = typeof DATTO_RMM_PLATFORMS[number];
 
 // Tenant-secret names. Here rather than in the actions module so non-action
 // callers (device sync, alert polling) can build a client without importing a
-// 'use server' file.
+// server-actions file.
 export const DATTO_RMM_SECRET_KEYS = {
   apiKey: 'datto_rmm_api_key',
   apiSecret: 'datto_rmm_api_secret',

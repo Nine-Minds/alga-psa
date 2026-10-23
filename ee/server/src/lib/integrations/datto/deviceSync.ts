@@ -2,7 +2,7 @@
  * Datto RMM bulk device sync, as a callable engine.
  *
  * Like Tactical's engine this lives outside the actions module on purpose:
- * every export from a 'use server' file is a callable RPC endpoint, so an
+ * every export from a server-actions file is a callable RPC endpoint, so an
  * unauthenticated sync cannot be exported from there. The action keeps the
  * permission check and delegates here; the scheduled job calls this directly
  * with no acting user (the event payload models that as actorType 'SYSTEM').

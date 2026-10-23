@@ -1,7 +1,7 @@
 /**
  * Datto RMM site sync: mirrors /v2/account/sites into rmm_organization_mappings.
  *
- * Like the device engine this is a plain lib module (no 'use server') so the
+ * Like the device engine this is a plain lib module (not a server-actions file) so the
  * settings action can wrap it with a permission check and a job could call it
  * without an acting user.
  *

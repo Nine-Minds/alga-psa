@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DattoRmmClient } from '@ee/lib/integrations/datto/dattoApiClient';
 
-// These are server actions (Next "use server") so we unit-test by mocking the wrappers and dependencies,
+// These are Next.js server actions, so we unit-test by mocking the wrappers and dependencies,
 // then calling the underlying handler directly.
 
 let secretProvider: { getTenantSecret: (tenant: string, key: string) => Promise<string | null> };

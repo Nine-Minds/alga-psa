@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// These are server actions (Next "use server") so we unit-test by mocking the wrappers and dependencies,
+// These are Next.js server actions, so we unit-test by mocking the wrappers and dependencies,
 // then calling the underlying handler directly.
 
 let secretProvider: { getTenantSecret: (tenant: string, key: string) => Promise<string | null> };
@@ -197,7 +197,7 @@ describe('Datto RMM webhook secret regeneration', () => {
   }
 
   it('replaces the stored secret and returns the new one with the webhook info', async () => {
-    const { store, provider } = makeSecrets({ datto_rmm_webhook_secret: 'old-secret' });
+    const { store, provider } = makeSecrets({ datto_rmm_webhook_secret: 'value-before-regenerate' });
     secretProvider = provider as any;
     const { regenerateDattoRmmWebhookSecret, getDattoRmmWebhookInfo } = await actions();
 
@@ -205,7 +205,7 @@ describe('Datto RMM webhook secret regeneration', () => {
 
     expect(res.success).toBe(true);
     expect(res.webhook.secret).toMatch(/^[0-9a-f]{48}$/);
-    expect(res.webhook.secret).not.toBe('old-secret');
+    expect(res.webhook.secret).not.toBe('value-before-regenerate');
     expect(store.get('datto_rmm_webhook_secret')).toBe(res.webhook.secret);
     expect(res.webhook.url).toContain('tenant=tenant_1');
 
@@ -214,7 +214,7 @@ describe('Datto RMM webhook secret regeneration', () => {
   });
 
   it('requires system_settings update and leaves the secret alone otherwise', async () => {
-    const { store, provider } = makeSecrets({ datto_rmm_webhook_secret: 'old-secret' });
+    const { store, provider } = makeSecrets({ datto_rmm_webhook_secret: 'value-before-regenerate' });
     secretProvider = provider as any;
     hasPermissionMock.mockResolvedValue(false);
     const { regenerateDattoRmmWebhookSecret } = await actions();
@@ -223,6 +223,6 @@ describe('Datto RMM webhook secret regeneration', () => {
       success: false,
       error: 'Forbidden',
     });
-    expect(store.get('datto_rmm_webhook_secret')).toBe('old-secret');
+    expect(store.get('datto_rmm_webhook_secret')).toBe('value-before-regenerate');
   });
 });
