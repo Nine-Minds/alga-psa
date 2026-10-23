@@ -654,7 +654,8 @@
       "referenceMissing": "Wybrany klient, umowa lub zapis rozliczeniowy już nie istnieje. Odśwież stronę i spróbuj ponownie.",
       "duplicate": "To przypisanie umowy klienta już istnieje.",
       "missingField": "Brakuje wymaganego pola umowy klienta.",
-      "missingFieldNamed": "Brakuje wymaganego pola umowy klienta: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola umowy klienta: {{field}}.",
+      "alreadyActiveScheduled": "Ta umowa jest już aktywna i rozpoczyna się {{startDate}}; nie ma nic do aktywacji."
     },
     "cycle": {
       "cannotCreateNext": "Nie można teraz utworzyć następnego cyklu rozliczeniowego"

@@ -74,6 +74,7 @@ jobs:
       - run: npm install -g npm@11
       - run: npm ci
       - run: npm --prefix e2e-tests ci
+      - uses: ./.github/actions/prepare-apt
       - name: Install Chromium for authenticated dashboard hydration tests
         working-directory: e2e-tests
         # Split from the single `--with-deps` call. The browser binary comes

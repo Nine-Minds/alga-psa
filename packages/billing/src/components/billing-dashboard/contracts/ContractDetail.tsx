@@ -369,6 +369,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     primaryAssignment?.use_tenant_renewal_defaults !== false;
   const formatStatusLabel = useCallback((status?: string) => {
     if (status === 'active') return t('status.active', { defaultValue: 'Active' });
+    if (status === 'scheduled') return t('status.scheduled', { defaultValue: 'Scheduled' });
     if (status === 'terminated') return t('status.terminated', { defaultValue: 'Terminated' });
     if (status === 'expired') return t('status.expired', { defaultValue: 'Expired' });
     return t('status.draft', { defaultValue: 'Draft' });
@@ -1740,6 +1741,8 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                               variant={
                                 primaryAssignmentStatus === 'active'
                                   ? 'success'
+                                  : primaryAssignmentStatus === 'scheduled'
+                                    ? 'info'
                                   : primaryAssignmentStatus === 'terminated'
                                     ? 'warning'
                                     : primaryAssignmentStatus === 'expired'
@@ -1754,6 +1757,15 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                 defaultValue: 'Live client status is controlled by the assignment lifecycle below.',
                               })}
                             </p>
+                            {primaryAssignmentStatus === 'scheduled' && (
+                              // Already active, so there is no "Set to Active" here; explain the start date.
+                              <p id="contract-scheduled-start-note" className="text-xs text-muted-foreground">
+                                {t('contractDetail.headerCard.scheduledExplanation', {
+                                  defaultValue: 'This contract is active and begins billing on {{date}}.',
+                                  date: formatDate(primaryAssignment?.start_date),
+                                })}
+                              </p>
+                            )}
                           </>
                         ) : (
                           <>
@@ -1934,6 +1946,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                           </span>
                           <Badge variant={
                             primaryAssignmentStatus === 'active' ? 'success' :
+                            primaryAssignmentStatus === 'scheduled' ? 'info' :
                             primaryAssignmentStatus === 'terminated' ? 'warning' :
                             primaryAssignmentStatus === 'expired' ? 'error' :
                             'default-muted'

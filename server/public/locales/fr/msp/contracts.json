@@ -53,6 +53,8 @@
   },
   "status": {
     "active": "Actif",
+    "scheduled": "Planifié",
+    "startsOn": "Commence le {{date}}",
     "draft": "Brouillon",
     "expired": "Expiré",
     "terminated": "Terminé"
@@ -177,6 +179,7 @@
     },
     "headerCard": {
       "assignmentLifecycleHint": "Le statut client en direct est contrôlé par le cycle de vie d'affectation ci-dessous.",
+      "scheduledExplanation": "Ce contrat est actif et commencera la facturation le {{date}}.",
       "assignmentStatus": "Statut d'affectation",
       "billingFrequencyLabel": "Fréquence de facturation *",
       "billingFrequencyPlaceholder": "Sélectionnez la fréquence de facturation",
@@ -298,6 +301,7 @@
     },
     "status": {
       "active": "Actif",
+      "scheduled": "Planifié",
       "draft": "Brouillon",
       "expired": "Expiré",
       "terminated": "Résilié"

@@ -53,6 +53,8 @@
   },
   "status": {
     "active": "Aktiv",
+    "scheduled": "Geplant",
+    "startsOn": "Beginnt am {{date}}",
     "draft": "Entwurf",
     "expired": "Abgelaufen",
     "terminated": "Beendet"
@@ -177,6 +179,7 @@
     },
     "headerCard": {
       "assignmentLifecycleHint": "Der Live-Kundenstatus wird durch den unten angezeigten Zuweisungslebenszyklus gesteuert.",
+      "scheduledExplanation": "Dieser Vertrag ist aktiv und beginnt die Abrechnung am {{date}}.",
       "assignmentStatus": "Zuweisungsstatus",
       "billingFrequencyLabel": "Abrechnungsfrequenz *",
       "billingFrequencyPlaceholder": "Abrechnungsfrequenz auswählen",
@@ -298,6 +301,7 @@
     },
     "status": {
       "active": "Aktiv",
+      "scheduled": "Geplant",
       "draft": "Entwurf",
       "expired": "Abgelaufen",
       "terminated": "Beendet"

@@ -850,55 +850,27 @@ jobs:
         run: npx playwright install chromium
         shell: bash
 
+      - uses: ./.github/actions/prepare-apt
+        if: ${{ !cancelled() && steps.browser_packages.outcome == 'success' }}
+
       - name: Install Playwright system dependencies
         id: browser_system
         if: ${{ !cancelled() && steps.browser_packages.outcome == 'success' }}
         working-directory: ./e2e-tests
-        # Hard ceiling so this step can never again consume the whole job
-        # budget, sized so the bounded attempts below always get to finish and
-        # report inside it (2 x 420s + one 10s sleep = 850s) instead of this
-        # cap killing the last one.
-        timeout-minutes: 16
+        # Hard ceiling so this step can never consume the whole job budget.
+        # Must fit three 240s attempts plus the pauses between them (~12.5 min);
+        # at 12 the third attempt was always cut off.
+        timeout-minutes: 14
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          # `npx playwright install-deps` shells out to `apt-get`, which has
-          # intermittently stalled for 30+ minutes on the GitHub runner (an
-          # apt/dpkg lock or a Debian mirror hang). Because the step had no
-          # timeout, a single stall consumed the entire 60-minute job budget and
-          # the run was cancelled at "Install Playwright system dependencies"
-          # before the login e2e test ever executed -- even though the build and
-          # all services were up and healthy by ~T+29m. Good runs finish this
-          # step in 35-490s, so bound each attempt and retry: a transient stall
-          # self-heals instead of killing the job.
-          #
-          # A stall is not the only way the mirror hurts. On 2026-10-22 this
-          # runner's azure.archive.ubuntu.com served the 25.9 MB of packages at
-          # ~45 kB/s -- the same 25.9 MB the enterprise matrix member fetched
-          # at 56 MB/s minutes earlier -- so every 240s attempt was killed
-          # mid-download. Three of them plus the sleeps wanted 740s under a
-          # 720s ceiling, so the third could never report: the step died as an
-          # unattributable "action has timed out", the browser phase was
-          # skipped, and the gate could say only "received 0" execution
-          # bundles. Fewer, longer attempts now cover ~10 minutes of degraded
-          # transfer and still fit the ceiling -- apt keeps finished .debs in
-          # /var/cache/apt/archives, so each attempt resumes where the last one
-          # stopped rather than starting the download over.
+          # `npx playwright install-deps` shells out to `apt-get`; prepare-apt
+          # above keeps a bad mirror from hanging it. Bound each attempt anyway
+          # so a stall that gets past apt's own timeouts cannot eat the job.
           set -x
-          # Default Acquire timeout is 120s per stalled read, long enough to
-          # eat an attempt before apt gives up. Fail a quiet connection fast
-          # instead, and let Retries re-fetch -- the runner resolves archives
-          # through /etc/apt/apt-mirrors.txt, so a retry can land on a
-          # different mirror than the degraded one.
-          # Advisory: apt's own defaults still install, so a runner that will
-          # not take the drop-in must not fail the browser phase over it.
-          printf '%s\n' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' \
-            'Acquire::Retries "3";' \
-            | sudo tee /etc/apt/apt.conf.d/99-playwright-install-deps >/dev/null \
-            || echo "could not pin apt Acquire timeouts; continuing with apt defaults"
           attempt=1
-          max_attempts=2
-          until timeout 420 npx playwright install-deps chromium; do
+          max_attempts=3
+          until timeout 240 npx playwright install-deps chromium; do
             code=$?
             if [ "$attempt" -ge "$max_attempts" ]; then
               echo "playwright install-deps failed after $attempt attempts (last exit $code)."
@@ -906,8 +878,10 @@ jobs:
             fi
             echo "Attempt $attempt failed/stalled (exit $code); clearing apt locks and retrying..."
             # A timed-out attempt can leave apt/dpkg holding a lock; clear it so
-            # the retry is not guaranteed to stall the same way.
-            sudo pkill -9 -f 'apt-get|dpkg' 2>/dev/null || true
+            # the retry is not guaranteed to stall the same way. The pattern is
+            # anchored so pkill does not match its own `sudo pkill ... apt-get`
+            # command line and kill itself before reaching apt.
+            sudo pkill -9 -f '^(/usr/bin/)?(apt-get|dpkg)( |$)' 2>/dev/null || true
             sudo rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock \
               /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend 2>/dev/null || true
             sudo dpkg --configure -a 2>/dev/null || true

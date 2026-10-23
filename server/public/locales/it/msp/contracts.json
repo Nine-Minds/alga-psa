@@ -53,6 +53,8 @@
   },
   "status": {
     "active": "Attivo",
+    "scheduled": "Pianificato",
+    "startsOn": "Inizia il {{date}}",
     "draft": "Bozza",
     "expired": "Scaduto",
     "terminated": "Terminato"
@@ -177,6 +179,7 @@
     },
     "headerCard": {
       "assignmentLifecycleHint": "Lo stato live del cliente è controllato dal ciclo di vita dell'assegnazione riportato di seguito.",
+      "scheduledExplanation": "Questo contratto è attivo e inizierà la fatturazione il {{date}}.",
       "assignmentStatus": "Stato dell'assegnazione",
       "billingFrequencyLabel": "Frequenza di fatturazione *",
       "billingFrequencyPlaceholder": "Seleziona frequenza di fatturazione",
@@ -298,6 +301,7 @@
     },
     "status": {
       "active": "Attivo",
+      "scheduled": "Pianificato",
       "draft": "Bozza",
       "expired": "Scaduto",
       "terminated": "Terminato"
