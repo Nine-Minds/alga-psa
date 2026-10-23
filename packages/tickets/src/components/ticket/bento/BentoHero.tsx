@@ -373,8 +373,16 @@ export function BentoHero({
   useEffect(() => {
     const el = descriptionBodyRef.current;
     if (!el || descriptionExpanded) return;
-    setDescriptionOverflows(el.scrollHeight > el.clientHeight + 4);
-  }, [descriptionContent, descriptionExpanded, hasDescription]);
+    const check = () => setDescriptionOverflows(el.scrollHeight > el.clientHeight + 4);
+    check();
+    // The body grows after this effect runs — a late image, or the original-email
+    // frame resolving its height — and the box is already clamped, so `el` itself
+    // never resizes. Observe what grows inside it instead.
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(check);
+    for (const child of Array.from(el.children)) observer.observe(child);
+    return () => observer.disconnect();
+  }, [descriptionContent, descriptionExpanded, hasDescription, originalEmailSrc]);
 
   const responseStateOptions = useMemo<SelectOption[]>(
     () => [
