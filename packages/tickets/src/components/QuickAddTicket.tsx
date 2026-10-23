@@ -28,7 +28,7 @@ import { IUser, IBoard, ITicketStatus, IPriority, IStandardPriority, IClientLoca
 import { IUserWithRoles } from '@alga-psa/types';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
+import { searchClientsForPicker } from '../actions/clientLookupActions';
 import { CategoryPicker } from './CategoryPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';

@@ -37,7 +37,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
+import { searchClientsForPicker } from '../actions/clientLookupActions';
 import { TagFilter } from '@alga-psa/ui/components/tags/TagFilter';
 import type { TagSize } from '@alga-psa/ui/components/tags';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';

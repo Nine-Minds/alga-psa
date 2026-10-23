@@ -68,12 +68,10 @@ vi.mock('../../actions/ticketFormActions', () => ({
 vi.mock('../../actions/clientLookupActions', () => ({
   getContactsByClient: (...args: unknown[]) => getContactsByClientMock(...args),
   getClientLocations: (...args: unknown[]) => getClientLocationsMock(...args),
-  getClientById: (...args: unknown[]) => getClientByIdMock(...args)
-}));
-
-vi.mock('@alga-psa/clients/actions/clientPickerActions', () => ({
+  getClientById: (...args: unknown[]) => getClientByIdMock(...args),
   searchClientsForPicker: (...args: unknown[]) => searchClientsForPickerMock(...args)
 }));
+
 
 // Lightweight non-modal Dialog: the real radix-based Dialog aria-hides sibling
 // content (the QuickAddContact/QuickAddClient mocks render as siblings), which

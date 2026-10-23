@@ -7,7 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
+import { searchClientsForPicker } from '../../../actions/clientLookupActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';

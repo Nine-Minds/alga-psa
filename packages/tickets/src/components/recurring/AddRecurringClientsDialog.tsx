@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
+import { searchClientsForPicker } from '../../actions/clientLookupActions';
 import { addClientsToRecurringTicketDefinition } from '../../actions/recurringTicketActions';
 import { recurringErrorMessage } from './recurringUi';
 

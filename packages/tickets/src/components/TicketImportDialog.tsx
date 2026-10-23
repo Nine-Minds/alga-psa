@@ -14,7 +14,7 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import type { IUser, IBoard } from '@alga-psa/types';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
+import { searchClientsForPicker } from '../actions/clientLookupActions';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Upload, AlertTriangle, Check, Download, ChevronDown } from 'lucide-react';
 import { parseCSV } from '@alga-psa/core';

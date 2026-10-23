@@ -67,11 +67,10 @@ vi.mock('../../actions/ticketFormActions', () => ({
   getTicketFormData: (...args: unknown[]) => getTicketFormDataMock(...args)
 }));
 
-vi.mock('@alga-psa/clients/actions/clientPickerActions', () => ({ searchClientsForPicker: vi.fn() }));
-
 vi.mock('../../actions/clientLookupActions', () => ({
   getContactsByClient: (...args: unknown[]) => getContactsByClientMock(...args),
   getClientLocations: (...args: unknown[]) => getClientLocationsMock(...args),
+  searchClientsForPicker: vi.fn(),
   getClientById: vi.fn(async (id: string) => ({ client_id: id, client_name: id, client_type: 'company' })),
 }));
 
