@@ -689,6 +689,11 @@ export async function cloneTemplateLineToContract(
 
     let memberRate: number | null;
     let rateFromEdit = false;
+    // What the stored Fixed member number means (see fixedMemberRate.ts): a
+    // seat's rate is per unit; a bundle member's stored number is its share of
+    // the line total, except a fixed-mode default below, which is a catalog
+    // price per unit.
+    let memberRateBasis: 'per_unit' | 'share' = isUnitMember ? 'per_unit' : 'share';
     if (edit && edit.rate !== undefined) {
       memberRate = edit.rate === null ? null : positiveCentsOrNull(edit.rate);
       rateFromEdit = true;
@@ -712,6 +717,7 @@ export async function cloneTemplateLineToContract(
     // follow the catalog at billing time; Hourly/Usage members need a number
     // now, so they take the mode default, then the current catalog price.
     if (memberRate === null && !rateFromEdit && currencyRates) {
+      if (lineType === 'Fixed') memberRateBasis = 'per_unit';
       memberRate =
         lineType === 'Fixed'
           ? currencyRates.modeDefaults.get(service.service_id) ?? null
@@ -773,6 +779,7 @@ export async function cloneTemplateLineToContract(
           tenant,
           config_id: newConfigId,
           base_rate: memberRate,
+          base_rate_basis: memberRate === null ? null : memberRateBasis,
           rate_provenance: memberRate === null ? 'inherited' : 'custom',
           pricing_basis: serviceFixedByConfigId.get(templateConfiguration.config_id)?.pricing_basis === 'unit'
             ? 'unit'

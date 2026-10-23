@@ -616,6 +616,7 @@
       "quantityShort": "Quantidade: {{quantity}}",
       "quantityTaxAllocation": "Quantidade (para alocação de impostos)",
       "rateTaxAllocation": "Taxa (para alocação de impostos)",
+      "shareOfLineFee": "Parcela da tarifa da linha",
       "title": "Serviços ({{count}})",
       "typeLabel": "Serviço {{type}}",
       "unitOfMeasure": "Unidade de Medida",

@@ -616,6 +616,7 @@
       "quantityShort": "Qty: {{quantity}}",
       "quantityTaxAllocation": "Quantity (for tax allocation)",
       "rateTaxAllocation": "Rate (for tax allocation)",
+      "shareOfLineFee": "Share of line fee",
       "title": "Services ({{count}})",
       "typeLabel": "{{type}} Service",
       "unitOfMeasure": "Unit of Measure",
