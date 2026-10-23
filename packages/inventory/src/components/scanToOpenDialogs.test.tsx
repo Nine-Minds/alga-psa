@@ -214,6 +214,13 @@ describe('RmaManager ?rmaId=', () => {
     expect(screen.queryByText(/RMA-77|SN-R-9|Dead on arrival/)).toBeNull();
   });
 
+  it('does not call the action for a malformed id', async () => {
+    setParams('rmaId=not-a-uuid');
+    render(<RmaManager initialCases={[]} initialDeadOwed={[]} />);
+    await screen.findByText("Not found, or you don't have access");
+    expect(actions.getRmaCase).not.toHaveBeenCalled();
+  });
+
   it('closing removes rmaId', async () => {
     actions.getRmaCase.mockResolvedValue(rma);
     setParams(`rmaId=${RMA_ID}`);
