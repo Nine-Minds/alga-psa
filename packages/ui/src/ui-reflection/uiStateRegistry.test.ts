@@ -44,14 +44,21 @@ function unregisterAll(reg: ReturnType<typeof make>['reg'], n: number) {
 const COMPONENTS_PER_SAMPLE = 20_000;
 const TRIALS = 3;
 
-/** Register + unregister COMPONENTS_PER_SAMPLE components, n at a time. */
+// Time each cycle on its own and keep the cheapest per component, rather than
+// summing the cycles of a sample: a collector pause costs the same at both
+// sizes but 1k gets 20 cycles to absorb it and 5k only 4, so a summed 5k
+// sample carries every pause of its trial and the fastest-of-three could not
+// escape one. Scoring the fastest single cycle at each size needs only one
+// uncontended cycle to survive, which is what makes the 3x bound below a
+// statement about the registry rather than about the runner's load.
+/** Cheapest per-component register/unregister cost over the cycles of one sample. */
 function timeSample(n: number) {
-  let reg = 0;
-  let unreg = 0;
+  let reg = Infinity;
+  let unreg = Infinity;
   for (let cycles = COMPONENTS_PER_SAMPLE / n; cycles > 0; cycles--) {
     const { reg: registry } = make();
-    reg += registerMix(registry, n);
-    unreg += unregisterAll(registry, n);
+    reg = Math.min(reg, registerMix(registry, n) / n);
+    unreg = Math.min(unreg, unregisterAll(registry, n) / n);
   }
   return { reg, unreg };
 }
@@ -111,11 +118,11 @@ describe('uiStateRegistry', () => {
       results[n] = bestTrial(n);
     }
     // eslint-disable-next-line no-console
-    console.info('registry bench (ms)', JSON.stringify(results));
-    // Equal component count per sample, so work that is linear in the registry
-    // costs ~1x at every size and work that grows with it (the whole-dictionary
-    // unregister scan the child index replaced) costs ~5x from 1k to 5k. 3x
-    // sits between the two, with room for cache and GC effects at 5k.
+    console.info('registry bench (ms per component)', JSON.stringify(results));
+    // Per-component cost, so work that is linear in the registry costs ~1x at
+    // every size and work that grows with it (the whole-dictionary unregister
+    // scan the child index replaced) costs ~5x from 1k to 5k. 3x sits between
+    // the two, with room for cache and GC effects at 5k.
     expect(results[5000].reg / results[1000].reg).toBeLessThan(3);
     expect(results[5000].unreg / results[1000].unreg).toBeLessThan(3);
   });
