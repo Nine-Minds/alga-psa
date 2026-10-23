@@ -135,6 +135,7 @@ The following REST API groups are available in the Community Edition under the b
 - **Billing** — Access contracts, contract lines, invoices, and billing analytics.
 - **Email Templates** — Read, create, and delete per-language notification email templates. `GET /api/v1/email/templates` lists all effective templates, merging system defaults with tenant overrides, and is filterable by `name`, `language`, `category`, and `customized` (pass `customized=true` to list only templates the tenant has overridden). `GET`, `PUT`, and `DELETE` on `/api/v1/email/templates/{name}` read, upsert, and remove individual tenant overrides; on the first `PUT` the system default is cloned as the baseline. Write and delete operations require the `settings` write permission and are flagged as requiring approval in the AI/MCP tool registry.
 - **Companies (Clients)** — Create, read, update, and delete client records. `GET /api/v1/clients` and `GET /api/v1/clients/{id}` include `phone_no`, `email`, and `address` fields populated from the client's default active location, so callers do not need a separate locations fetch for basic contact display. See the Client Merge and Billing Profile Contacts sections below for new sub-resources.
+- **Label Printing** — Generate PDF labels for tickets, assets, and stock inventory units via `POST /api/labels/pdf`. See **Label Printing** below.
 - Additional endpoints: contacts, projects, boards, categories, priorities, statuses, time entries, schedules, and more.
 
 #### Ticket Bundling
@@ -185,6 +186,18 @@ Beyond the primary assignee set via `PUT /tickets/{id}/assignment`, a ticket can
 **Assignment consistency fix:** `PUT /tickets/{id}/assignment` previously failed with an "Invalid reference" FK error when the ticket already had additional agents. The endpoint now atomically clears and re-keys `ticket_resources` rows before updating `tickets.assigned_to`, making primary-assignee changes reliable regardless of how many additional agents are attached.
 
 **Permissions:** all five routes require `ticket:update`.
+
+#### Ticket → Project Links
+
+A support ticket is often blocked on, or related to, a project task — an upgrade scheduled for next week, a hardware procurement in flight. `GET /api/v1/tickets/{id}/project-links` returns all the project tasks the ticket is linked to, so an automation watching a ticket no longer has to scan every project to find its dependencies.
+
+| Method | Path | Purpose |
+|--------|------|-------|
+| `GET` | `/tickets/{id}/project-links` | List the project tasks linked to this ticket |
+
+Each row includes the project, phase, and task the link points to, the task's resolved status (custom mapping name, then project status, then standard status), an `is_closed` flag, and the last time the task changed. Links to projects the caller does not have `project:read` access to are silently omitted from the response.
+
+**Permissions:** requires `ticket:read` and `project:read`.
 
 #### Ticket Comment Cc/Bcc
 
@@ -243,6 +256,20 @@ Time periods are the billing or pay windows that time sheets are filed against. 
 - Unknown period IDs return `404`; malformed (non-UUID) IDs return `400`. `close` is idempotent.
 
 **Permissions:** all time-period write endpoints require the `time_management` write permission.
+
+#### Label Printing
+
+Printable PDF labels can be generated for tickets, assets, and stock inventory units.
+
+| Method | Path | Purpose |
+|--------|------|-------|
+| `POST` | `/api/labels/pdf` | Generate a PDF label batch for one or more records |
+
+The request body is a JSON array of `{ "labelClass": "ticket" | "asset" | "stock_unit", "id": "<uuid>" }` objects. An optional `layout` field selects an n-up sheet format (e.g., a 2×5 Letter grid matching Avery 5163). Standard templates ship for each record type: ticket work tags (4×2 in, QR code encoding the ticket URL), asset labels (4×2 in, QR code plus a full-width Code 128 barcode for the asset tag), and stock unit labels (QR code encoding the unit URL).
+
+Any null, unauthorized, or unrecognized record in the batch returns `404 Not Found` for the entire request. A `labelClass` value outside the three above returns `400 Bad Request`.
+
+**Permissions:** `ticket:read` for ticket labels, `asset:read` for asset labels, and `inventory:read` for stock unit labels. All required permissions must be present for a mixed-type batch.
 
 ### Enterprise Edition APIs
 - **Tenant Provisioning API:** Enables partner-driven tenant management. See [tenant_provisioning_api.md](tenant_provisioning_api.md) for details.
