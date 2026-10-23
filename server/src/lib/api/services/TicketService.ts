@@ -1926,7 +1926,12 @@ export class TicketService extends BaseService<ITicket> {
       }
 
       // Priority family must match the board's priority_type; checked only when this patch changes either.
-      const priorityProblem = await findTicketUpdatePriorityBoardTypeProblem(trx, context.tenant, currentTicket, cleanedData);
+      const priorityProblem = await findTicketUpdatePriorityBoardTypeProblem(
+        trx,
+        context.tenant,
+        currentTicket,
+        cleanedData as { board_id?: string | null; priority_id?: string | null }
+      );
       if (priorityProblem) {
         throw new ValidationError('Validation failed', [{ path: ['priority_id'], message: priorityProblem }]);
       }
