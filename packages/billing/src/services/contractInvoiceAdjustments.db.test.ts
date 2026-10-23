@@ -867,7 +867,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
           sourceDescription: 'SMOKE Prod Users', direction, units: 3,
           start: '2026-08-16', exclusiveEnd: '2026-09-01', unitPrice: 10_000,
           coveredDays: 16, fullPeriodDays: 31, currencyCode: 'USD',
-          formatCurrency: (amount) => `$${amount.toFixed(2)}`,
+          formatCurrency: (minorUnits) => `$${(minorUnits / 100).toFixed(2)}`,
           describe: (kind, values) => kind === 'increase'
             ? `${values.description} — additional ${values.units} users, ${values.period} — ${values.calculation}`
             : `${values.description} — credit for ${values.units} fewer users, ${values.period} — ${values.calculation}`,

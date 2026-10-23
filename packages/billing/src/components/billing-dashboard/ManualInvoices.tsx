@@ -296,9 +296,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const isDraftAdjustments = variant === 'draftAdjustments';
   const { t } = useTranslation('msp/invoicing');
   const router = useRouter();
-  // formatCurrency stays for buildPartialPeriodInvoiceDescription, whose callback
-  // contract is major units; every amount rendered here is in minor units.
-  const { formatCurrency, locale } = useFormatters();
+  // Every amount on this screen — including the partial-period description written onto
+  // the invoice line — is in the currency's own minor units.
+  const { locale } = useFormatters();
   const { renderQuickAddClient } = useQuickAddClient();
   const [clientOptions, setClientOptions] = useState<IClient[]>(clients);
   const [selectedClient, setSelectedClient] = useState<string | null>(
@@ -831,7 +831,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         coveredDays: calculation.coveredDays,
         fullPeriodDays: calculation.fullPeriodDays,
         currencyCode,
-        formatCurrency,
+        formatCurrency: (minorUnits, code) => formatCurrencyFromMinorUnits(minorUnits, locale, code),
         describe: (direction, values) => t(`manualInvoices.partialPeriod.invoiceDescription.${direction}`, {
           ...values,
           defaultValue: direction === 'increase'
