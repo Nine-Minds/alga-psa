@@ -4,11 +4,16 @@
  * alga0002338: starting from a contact on the inbound triage client, the real
  * ClientPicker in the edit form must list the other clients (inactive ones too,
  * because the picker's filter is "all") and saving must send the new client_id.
+ *
+ * The picker is the async one: it gets its options from the context searcher (the
+ * server search in the app), not from a list passed by the caller.
  */
 import '@testing-library/jest-dom/vitest';
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ClientPickerSearchProvider } from '@alga-psa/ui/context/ClientPickerSearchContext';
+import { ClientTagsProvider } from '@alga-psa/ui/context/ClientTagsContext';
 import ContactDetailsEdit from './ContactDetailsEdit';
 
 const hoisted = vi.hoisted(() => ({
@@ -48,9 +53,30 @@ vi.mock('../../lib/usersHelpers', () => ({
 }));
 vi.mock('./ContactAvatarUpload', () => ({ default: () => null }));
 
-const triage: any = { client_id: 'triage-id', client_name: 'Unmatched Email', is_inactive: false, client_type: 'company' };
-const life: any = { client_id: 'life-id', client_name: 'Life Landscaping', is_inactive: false, client_type: 'company' };
-const inactive: any = { client_id: 'inactive-id', client_name: 'Dormant Co', is_inactive: true, client_type: 'company' };
+const triage = { client_id: 'triage-id', client_name: 'Unmatched Email', is_inactive: false, client_type: 'company', logoUrl: null };
+const life = { client_id: 'life-id', client_name: 'Life Landscaping', is_inactive: false, client_type: 'company', logoUrl: null };
+const inactive = { client_id: 'inactive-id', client_name: 'Dormant Co', is_inactive: true, client_type: 'company', logoUrl: null };
+const tenantClients = [triage, life, inactive];
+
+// Stand-in for searchClientsForPicker: honours `ids` hydration, otherwise returns everything.
+const searchClients = vi.fn(async (params?: { ids?: string[] }) => {
+  const rows = params?.ids ? tenantClients.filter((c) => params.ids!.includes(c.client_id)) : tenantClients;
+  return { clients: rows, total: rows.length };
+});
+
+const renderEdit = () =>
+  render(
+    <ClientTagsProvider value={{ fetchClientTags: async () => [], fetchClientTagOptions: async () => [] }}>
+      <ClientPickerSearchProvider value={{ searchClients }}>
+        <ContactDetailsEdit
+          initialContact={contact}
+          onSave={onSave}
+          onCancel={onCancel}
+          isInDrawer
+        />
+      </ClientPickerSearchProvider>
+    </ClientTagsProvider>
+  );
 
 const contact: any = {
   contact_name_id: 'contact-1',
@@ -63,9 +89,10 @@ const contact: any = {
   is_inactive: false,
 };
 
+const onSave = vi.fn();
+const onCancel = vi.fn();
+
 describe('ContactDetailsEdit client change', () => {
-  const onSave = vi.fn();
-  const onCancel = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -73,45 +100,26 @@ describe('ContactDetailsEdit client change', () => {
   });
 
   it('lists the other clients, including inactive ones, when editing a contact on the triage client', async () => {
-    render(
-      <ContactDetailsEdit
-        initialContact={contact}
-        clients={[triage, life, inactive]}
-        onSave={onSave}
-        onCancel={onCancel}
-        isInDrawer
-      />
-    );
+    renderEdit();
 
     const trigger = document.querySelector('#contact-edit-client-picker-trigger') as HTMLElement;
     expect(trigger).toBeInTheDocument();
-    expect(trigger).toHaveTextContent('Unmatched Email');
+    await waitFor(() => expect(trigger).toHaveTextContent('Unmatched Email'));
 
     fireEvent.click(trigger);
 
     expect(await screen.findByRole('listbox')).toBeInTheDocument();
-    expect(document.querySelector('#contact-edit-client-picker-option-triage-id')).toBeInTheDocument();
-    expect(document.querySelector('#contact-edit-client-picker-option-life-id')).toBeInTheDocument();
-    expect(document.querySelector('#contact-edit-client-picker-option-inactive-id')).toBeInTheDocument();
+    expect(await screen.findByText('Life Landscaping')).toBeInTheDocument();
+    expect(await screen.findByText('Dormant Co')).toBeInTheDocument();
+    // Never a caller-supplied list: every call is a search or an id hydration.
+    expect(searchClients).toHaveBeenCalled();
   });
 
   it('saves the newly selected client as client_id', async () => {
-    render(
-      <ContactDetailsEdit
-        initialContact={contact}
-        clients={[triage, life, inactive]}
-        onSave={onSave}
-        onCancel={onCancel}
-        isInDrawer
-      />
-    );
+    renderEdit();
 
     fireEvent.click(document.querySelector('#contact-edit-client-picker-trigger') as HTMLElement);
-    fireEvent.click(await waitFor(() => {
-      const option = document.querySelector('#contact-edit-client-picker-option-life-id') as HTMLElement | null;
-      expect(option).toBeInTheDocument();
-      return option!;
-    }));
+    fireEvent.click(await screen.findByText('Life Landscaping'));
 
     await waitFor(() =>
       expect(document.querySelector('#contact-edit-client-picker-trigger')).toHaveTextContent('Life Landscaping')
