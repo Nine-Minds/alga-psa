@@ -47,7 +47,10 @@ export async function guardAssetRead(
     }
   }
 
-  const record = await loader.getAuthorizationRecord(assetId, context);
+  // LEVERAGE: friction guard-needs-db-in-context — the API-key path has no
+  // ambient tenant, so the loader's getDbForContext() would throw unless the
+  // connection we already hold is handed in explicitly.
+  const record = await loader.getAuthorizationRecord(assetId, { ...context, db: knex } as ApiContext);
   if (!record) {
     return assetNotFoundResponse();
   }
