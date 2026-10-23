@@ -15,6 +15,10 @@ import {
   SALES_ORDER_TEMPLATE_VALUE_BINDINGS,
   buildSalesOrderTemplateBindings,
 } from '../../../lib/sales-order-template-ast/bindings';
+import {
+  LABEL_TEMPLATE_VALUE_BINDINGS,
+  buildLabelTemplateBindings,
+} from '../../../lib/label-template-ast/bindings';
 import type { DesignerDocumentKind } from '../utils/documentKind';
 import {
   getTemplateFieldDefinition,
@@ -122,6 +126,8 @@ const ITEM_FIELDS: Record<DesignerDocumentKind, DocumentItemField[]> = {
     { name: 'unit_price', valueType: 'number', description: 'Unit price.' },
     { name: 'amount', valueType: 'number', description: 'Line amount (qty × unit price).' },
   ],
+  // Labels render one record; there are no repeating item rows.
+  'work-tag': [],
 };
 
 const resolveValueType = (renderPath: string): DocumentBindingField['valueType'] =>
@@ -163,6 +169,9 @@ const buildDocumentBindingFields = (documentKind: DesignerDocumentKind): Documen
   }
   if (documentKind === 'sales-order') {
     return buildCatalogFields(SALES_ORDER_TEMPLATE_VALUE_BINDINGS, { scalarRoot: 'salesOrder' });
+  }
+  if (documentKind === 'work-tag') {
+    return buildCatalogFields(LABEL_TEMPLATE_VALUE_BINDINGS, { scalarRoot: 'label' });
   }
   return [
     ...buildCatalogFields(buildInvoiceTemplateBindings().values ?? {}, {
@@ -281,6 +290,7 @@ export const resolveDocumentCanonicalBindings = (
 ): NonNullable<TemplateAst['bindings']> => {
   if (documentKind === 'quote') return buildQuoteTemplateBindings();
   if (documentKind === 'sales-order') return buildSalesOrderTemplateBindings();
+  if (documentKind === 'work-tag') return buildLabelTemplateBindings();
   return buildInvoiceTemplateBindings();
 };
 
@@ -300,7 +310,7 @@ export const resolveDocumentLogoRenderPath = (documentKind: DesignerDocumentKind
 
 /** Every document kind's logo path, for recognising a logo binding in imported layouts. */
 export const isDocumentLogoRenderPath = (path: string): boolean =>
-  (['invoice', 'quote', 'sales-order'] as const).some(
+  (['invoice', 'quote', 'sales-order', 'work-tag'] as const).some(
     (documentKind) => resolveDocumentLogoRenderPath(documentKind) === path.trim()
   );
 
@@ -356,7 +366,7 @@ export const buildDocumentExpressionPathOptions = (params: {
     contextRoots: buildDocumentExpressionContextRoots(params.documentKind),
   });
 
-const DOCUMENT_KINDS: DesignerDocumentKind[] = ['invoice', 'quote', 'sales-order'];
+const DOCUMENT_KINDS: DesignerDocumentKind[] = ['invoice', 'quote', 'sales-order', 'work-tag'];
 
 /**
  * Every render path a binding key could mean, across document types. The editor canvas resolves a

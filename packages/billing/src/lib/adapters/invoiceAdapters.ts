@@ -16,6 +16,7 @@ import type {
   DateValue,
 } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
+import { blockNoteToPlainText } from '@alga-psa/formatting/blocknoteUtils';
 import { displayAddressField, displayCountry, toISODate, toPlainDate } from '@alga-psa/core';
 import { paymentMethodDisplayLabel } from '@alga-psa/shared/billingClients/paymentPreferences';
 // toPlainDate is likely not needed here as we format to string for Wasm
@@ -309,6 +310,24 @@ export function buildInvoiceLocationGroups(items: WasmInvoiceLineItem[]): WasmIn
 /** Round minutes to display hours (6dp, like invoice_charges.quantity; minutes stay authoritative). */
 const minutesToHours = (minutes: number): number => Math.round((minutes / 60) * 1e6) / 1e6;
 
+/**
+ * Display rounding for invoice quantities (2dp, integers untouched — the same
+ * rule as the `formatQuantity` helpers in billing/compute). Applied to the
+ * by-ticket presentation rows only; the 6dp stored/derived hours and the
+ * authoritative minutes are never altered.
+ */
+// LEVERAGE: pattern invoice-quantity-format — formatQuantity is copy-pasted in computeBucketCharges, computeUsageBasedCharges and computeRecurringQuantityCharges; this is a 4th variant. Extract one shared invoice quantity formatter.
+const roundInvoiceQuantity = (quantity: number): number =>
+  Number.isInteger(quantity) ? quantity : Math.round(quantity * 100) / 100;
+
+/**
+ * Read-time description for a by-ticket row: plain text of the ticket description
+ * (snapshots written before the write-time fix still hold BlockNote JSON), else
+ * the ticket title, else an empty cell. Never JSON.
+ */
+const ticketRowDescription = (description: unknown, title: unknown): string =>
+  blockNoteToPlainText(description) || blockNoteToPlainText(title);
+
 /** Snapshot input for the billed-time collections: entry + owning charge id. */
 export type InvoiceTimeCollectionSource = IInvoiceChargeTimeEntrySnapshot & {
   itemId?: string | null;
@@ -350,7 +369,7 @@ export function buildInvoiceTimeCollections(
       workItemId: source.workItemId ?? null,
       ticketNumber: source.ticketNumber ?? null,
       title: source.title ?? null,
-      description: source.description ?? null,
+      description: source.description == null ? null : (blockNoteToPlainText(source.description) || null),
       date: source.entryDate ?? null,
       billedMinutes: Math.round(toFiniteNumber(source.billedMinutes)),
       hours: minutesToHours(Math.round(toFiniteNumber(source.billedMinutes))),
@@ -414,7 +433,7 @@ export function buildInvoiceTimeCollections(
         workItemId: isTicket || isTask ? first.workItemId : null,
         ticketNumber: isTicket ? first.ticketNumber : null,
         title: isTicket || isTask ? first.title : null,
-        description: isTicket ? first.description : null,
+        description: isTicket ? first.description : null, // already plain text (see timeEntries mapping)
         label,
         labelKey: !label ? `time.${isTicket ? 'ticket' : isTask ? 'task' : 'other'}` : undefined,
         rateKind,
@@ -533,7 +552,7 @@ function attachTicketPresentation(
   let rows: InvoiceTicketPresentationRow[] = [
     ...groups.map((group) => ({
       timePresentation: true as const, id: group.key, label: group.label, labelKey: group.labelKey,
-      description: group.description ?? '', quantity: group.totalHours,
+      description: ticketRowDescription(group.description, group.title), quantity: roundInvoiceQuantity(group.totalHours),
       rate: group.rate, rateKind: group.rateKind, rateDisplay: group.rate,
       amount: group.totalAmount,
       contributions: group.entries.map((entry) => ({ itemId: entry.itemId!, entryId: entry.id, amount: entry.amount })),
