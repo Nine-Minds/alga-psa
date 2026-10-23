@@ -155,14 +155,8 @@ describe('accounting mapping tab strip layout', () => {
 
   // A fixed-column grid list silently wraps the surplus tab onto a second row
   // whenever a module is added, so the list must stay count-agnostic. Any
-  // `grid*` token fails the assertion: a bare `grid` still beats the default
-  // `flex` in the cascade and stacks every tab into a single column. A flex
-  // list instead holds one row for as long as the triggers fit: the
-  // four-module Xero CSV strip measures 454px of the 1074px available at a
-  // 1440px viewport. QuickBooks CSV already exceeds that — its eight modules
-  // (five CSV plus three QuickBooks Desktop) need 1111px, so its last trigger
-  // wraps on intrinsic width alone, which is a content-width problem rather
-  // than the fixed-grid bug guarded here.
+  // `grid` token fails the assertion: even a bare `grid` beats CustomTabs'
+  // default `flex` in the cascade and stacks every tab into one column.
   it.each(adapterManagers)('renders every $name module without grid-constraining the list', ({ moduleCount, renderManager }) => {
     renderManager();
 
@@ -172,12 +166,10 @@ describe('accounting mapping tab strip layout', () => {
   });
 
   // The QBO and Xero live strips only render once an external organisation is
-  // connected, so they cannot be exercised in a browser without live OAuth.
-  // Pinning all four adapters to one list class lets the browser-verified Xero
-  // CSV strip stand in for the two live screens. Assert `flex-wrap` rather than
-  // `flex`: CustomTabs' own default list class already contains `flex`, so that
-  // token passes even when a manager forwards no override at all, while
-  // `flex-wrap` can only come from the managers.
+  // connected, so only the CSV strips are browser-reachable; pinning all four
+  // adapters to one class lets those stand in for the live screens. Assert
+  // `flex-wrap` rather than `flex` — CustomTabs' default list class already
+  // supplies `flex`, so that token passes even with no override at all.
   it('hands every adapter the same tab list class', () => {
     const listClasses = adapterManagers.map(({ renderManager }) => {
       renderManager();
