@@ -37,7 +37,8 @@ const actions = vi.hoisted(() => ({
 }));
 
 const getQuoteDocumentTemplatesMock = vi.hoisted(() => vi.fn());
-const getAllClientsMock = vi.hoisted(() => vi.fn());
+// The tenant's clients for the picker stub and the by-id lookup (the real picker searches the server).
+const clientCatalog = vi.hoisted(() => ({ current: [] as any[] }));
 const getActiveLocationsMock = vi.hoisted(() => vi.fn());
 const getContactsMock = vi.hoisted(() => vi.fn());
 const getDefaultBillingSettingsMock = vi.hoisted(() => vi.fn());
@@ -50,7 +51,8 @@ vi.mock('../../src/actions/quoteDocumentTemplates', () => ({
   getQuoteDocumentTemplates: (...args: unknown[]) => getQuoteDocumentTemplatesMock(...args),
 }));
 vi.mock('../../src/actions/billingClientsActions', () => ({
-  getAllClientsForBilling: (...args: unknown[]) => getAllClientsMock(...args),
+  getClientByIdForBilling: async (clientId: string) =>
+    clientCatalog.current.find((client) => client.client_id === clientId) ?? null,
 }));
 vi.mock('../../src/actions/billingClientLocationActions', () => ({
   getActiveClientLocationsForBilling: (...args: unknown[]) => getActiveLocationsMock(...args),
@@ -140,12 +142,12 @@ vi.mock('@alga-psa/ui/components/CurrencyPicker', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
-  ClientPicker: ({ id, clients, selectedClientId, onSelect }: any) =>
+  ClientPicker: ({ id, selectedClientId, onSelect }: any) =>
     React.createElement(
       'select',
       { id, value: selectedClientId ?? '', onChange: (event: any) => onSelect(event.target.value) },
       React.createElement('option', { key: '', value: '' }, ''),
-      (clients ?? []).map((client: any) =>
+      clientCatalog.current.map((client: any) =>
         React.createElement('option', { key: client.client_id, value: client.client_id }, client.client_name),
       ),
     ),
@@ -310,7 +312,7 @@ describe('QuoteForm template instantiation', () => {
     getQuoteDocumentTemplatesMock.mockResolvedValue([]);
     actions.getQuoteApprovalSettings.mockResolvedValue({ approvalRequired: false });
     getDefaultBillingSettingsMock.mockResolvedValue({ defaultCurrencyCode: 'USD' });
-    getAllClientsMock.mockResolvedValue([]);
+    clientCatalog.current = ([]);
     getActiveLocationsMock.mockResolvedValue([]);
     getContactsMock.mockResolvedValue([]);
     actions.createQuoteFromTemplate.mockResolvedValue({
@@ -547,7 +549,7 @@ describe('QuoteForm currency source resolution', () => {
     getQuoteDocumentTemplatesMock.mockResolvedValue([]);
     actions.getQuoteApprovalSettings.mockResolvedValue({ approvalRequired: false });
     getDefaultBillingSettingsMock.mockResolvedValue({ defaultCurrencyCode: 'USD' });
-    getAllClientsMock.mockResolvedValue([]);
+    clientCatalog.current = ([]);
     getActiveLocationsMock.mockResolvedValue([]);
     getContactsMock.mockResolvedValue([]);
     actions.createQuote.mockResolvedValue({ quote_id: 'new-2', quote_items: [] });
@@ -560,7 +562,7 @@ describe('QuoteForm currency source resolution', () => {
   });
 
   it('F008/F009/F015: seeds the initial-context client currency and re-resolves on select and clear', async () => {
-    getAllClientsMock.mockResolvedValue([
+    clientCatalog.current = ([
       { client_id: 'client-aud', client_name: 'Aussie Co', default_currency_code: 'AUD' },
       { client_id: 'client-gbp', client_name: 'Brit Co', default_currency_code: 'GBP' },
     ]);
@@ -603,7 +605,7 @@ describe('QuoteForm currency source resolution', () => {
   });
 
   it('F011/F012: a business template overrides the client currency and a manual pick sets manual source', async () => {
-    getAllClientsMock.mockResolvedValue([
+    clientCatalog.current = ([
       { client_id: 'client-aud', client_name: 'Aussie Co', default_currency_code: 'AUD' },
       { client_id: 'client-gbp', client_name: 'Brit Co', default_currency_code: 'GBP' },
     ]);
@@ -678,7 +680,7 @@ describe('QuoteForm quote status change callback', () => {
     getQuoteDocumentTemplatesMock.mockResolvedValue([]);
     actions.getQuoteApprovalSettings.mockResolvedValue({ approvalRequired: false });
     getDefaultBillingSettingsMock.mockResolvedValue({ defaultCurrencyCode: 'USD' });
-    getAllClientsMock.mockResolvedValue([]);
+    clientCatalog.current = ([]);
     getActiveLocationsMock.mockResolvedValue([]);
     getContactsMock.mockResolvedValue([]);
   });

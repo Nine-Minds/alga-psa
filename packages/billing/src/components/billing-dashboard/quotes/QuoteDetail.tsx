@@ -9,7 +9,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import type { IClient, IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
+import type { IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
 import { isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { useBillingClient } from '../../../hooks/useBillingClient';
 import { getActiveClientLocationsForBilling, type BillingLocationSummary } from '../../../actions/billingClientLocationActions';

@@ -5,7 +5,7 @@ import { render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const actionMocks = vi.hoisted(() => ({
-  getAllClientsForBilling: vi.fn(),
+  getClientByIdForBilling: vi.fn(),
   getContractLinePresets: vi.fn(),
   getContractLinePresetServiceCounts: vi.fn(),
   getContractLinePresetServices: vi.fn(),
@@ -13,7 +13,7 @@ const actionMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({
-  getAllClientsForBilling: actionMocks.getAllClientsForBilling,
+  getClientByIdForBilling: actionMocks.getClientByIdForBilling,
   createClientContractForBilling: vi.fn(),
 }));
 
@@ -100,7 +100,7 @@ const { ContractDialog } = await import('../src/components/billing-dashboard/con
 describe('ContractDialog preset loading', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    actionMocks.getAllClientsForBilling.mockResolvedValue([]);
+    actionMocks.getClientByIdForBilling.mockResolvedValue(null);
     actionMocks.getContractLinePresets.mockResolvedValue(presets);
     actionMocks.getContractLinePresetServiceCounts.mockResolvedValue({
       'preset-1': 2,
@@ -113,7 +113,7 @@ describe('ContractDialog preset loading', () => {
 
     await Promise.resolve();
 
-    expect(actionMocks.getAllClientsForBilling).not.toHaveBeenCalled();
+    expect(actionMocks.getClientByIdForBilling).not.toHaveBeenCalled();
     expect(actionMocks.getContractLinePresets).not.toHaveBeenCalled();
     expect(actionMocks.getContractLinePresetServiceCounts).not.toHaveBeenCalled();
   });
@@ -129,7 +129,8 @@ describe('ContractDialog preset loading', () => {
       expect(actionMocks.getContractLinePresetServiceCounts).toHaveBeenCalledTimes(1);
     });
 
-    expect(actionMocks.getAllClientsForBilling).toHaveBeenCalledTimes(1);
+    // No client is selected, so nothing is looked up (and no full client list is ever fetched).
+    expect(actionMocks.getClientByIdForBilling).not.toHaveBeenCalled();
     expect(actionMocks.getContractLinePresets).toHaveBeenCalledTimes(1);
     // The per-preset fan-out is gone: details stay lazy until a preset is expanded.
     expect(actionMocks.getContractLinePresetServices).not.toHaveBeenCalled();
