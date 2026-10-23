@@ -654,7 +654,8 @@
       "referenceMissing": "The selected client, contract, or billing record no longer exists. Please refresh and try again.",
       "duplicate": "This client contract assignment already exists.",
       "missingField": "Missing required client contract field.",
-      "missingFieldNamed": "Missing required client contract field: {{field}}."
+      "missingFieldNamed": "Missing required client contract field: {{field}}.",
+      "alreadyActiveScheduled": "This contract is already active and starts on {{startDate}}; there is nothing to activate."
     },
     "cycle": {
       "cannotCreateNext": "Cannot create next billing cycle at this time"

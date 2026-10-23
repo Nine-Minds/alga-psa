@@ -2854,7 +2854,7 @@
         },
         "connection": {
           "title": "Connected to {{account}}",
-          "summary": "{{organizations}} organizations ({{unmapped}} unmapped) · {{openIncidents}} open incidents · last poll: {{lastPoll}}",
+          "summary": "{{organizations}} organizations ({{unmapped}} unmapped) · {{openAlerts}} open alerts · last poll: {{lastPoll}}",
           "neverPolled": "never",
           "lastPollFailed": "Last poll failed: {{error}}",
           "routingIncompleteWarning": "Incident polling is paused until the routing configuration below is complete (board, fallback client/board, and all three severity priorities).",
@@ -2877,6 +2877,8 @@
           "selectPriority": "Priority",
           "pollInterval": "Poll interval (minutes)",
           "autoClose": "Close tickets when Huntress closes the incident",
+          "ingestEscalations": "Create tickets from Huntress escalations",
+          "ingestEscalationsHelp": "Escalations use the same board, category, priority mapping and auto-close settings as incidents. An escalation that covers several organizations creates one ticket per organization.",
           "closedStatus": "Closed status",
           "selectStatus": "Select status",
           "save": "Save routing configuration",

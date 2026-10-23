@@ -1675,7 +1675,10 @@
       "ruleCategoryBoardMismatch": "The selected category belongs to a different board than the rule.",
       "ruleCategoryInvalid": "The selected category is not a top-level category.",
       "ruleSubcategoryInvalid": "The selected subcategory does not belong to the selected category.",
-      "ruleSubcategoryRequiresCategory": "Select a category before choosing a subcategory."
+      "ruleSubcategoryRequiresCategory": "Select a category before choosing a subcategory.",
+      "ruleTooManyKeywords": "Use at most {{max}} keywords per rule.",
+      "ruleKeywordTooLong": "Keep each keyword to {{max}} characters or fewer.",
+      "ruleOriginInvalid": "One of the selected ticket sources is not valid."
     }
   },
   "ticketSection": {

@@ -53,6 +53,8 @@
   },
   "status": {
     "active": "Aktivt",
+    "scheduled": "Schemalagt",
+    "startsOn": "Startar {{date}}",
     "draft": "Utkast",
     "expired": "Utgånget",
     "terminated": "Avslutat"
@@ -177,6 +179,7 @@
     },
     "headerCard": {
       "assignmentLifecycleHint": "Kundens aktuella status styrs av tilldelningens livscykel nedan.",
+      "scheduledExplanation": "Det här avtalet är aktivt och påbörjar fakturering {{date}}.",
       "assignmentStatus": "Tilldelningsstatus",
       "billingFrequencyLabel": "Faktureringsintervall *",
       "billingFrequencyPlaceholder": "Välj faktureringsintervall",
@@ -298,6 +301,7 @@
     },
     "status": {
       "active": "Aktivt",
+      "scheduled": "Schemalagt",
       "draft": "Utkast",
       "expired": "Utgånget",
       "terminated": "Avslutat"

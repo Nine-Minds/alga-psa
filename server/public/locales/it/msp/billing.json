@@ -654,7 +654,8 @@
       "referenceMissing": "Il cliente, il contratto o il record di fatturazione selezionato non esiste più. Aggiornare la pagina e riprovare.",
       "duplicate": "Questa assegnazione del contratto del cliente esiste già.",
       "missingField": "Manca un campo obbligatorio del contratto del cliente.",
-      "missingFieldNamed": "Manca un campo obbligatorio del contratto del cliente: {{field}}."
+      "missingFieldNamed": "Manca un campo obbligatorio del contratto del cliente: {{field}}.",
+      "alreadyActiveScheduled": "Questo contratto è già attivo e inizia il {{startDate}}; non c’è nulla da attivare."
     },
     "cycle": {
       "cannotCreateNext": "Al momento non è possibile creare il ciclo di fatturazione successivo"
