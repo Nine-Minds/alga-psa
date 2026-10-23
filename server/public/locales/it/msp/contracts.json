@@ -616,6 +616,7 @@
       "quantityShort": "Qtà: {{quantity}}",
       "quantityTaxAllocation": "Quantità (per allocazione fiscale)",
       "rateTaxAllocation": "Tariffa (per allocazione fiscale)",
+      "shareOfLineFee": "Quota del canone della riga",
       "title": "Servizi ({{count}})",
       "typeLabel": "Servizio {{type}}",
       "unitOfMeasure": "Unità di misura",

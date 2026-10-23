@@ -30,7 +30,8 @@
           "mapped": "Mappad",
           "noResult": "Inget resultat returnerades för den här raden.",
           "pending": "Väntar",
-          "saved": "Sparad"
+          "saved": "Sparad",
+          "missingField": "{{field}} saknas"
         },
         "suggested": "Föreslagen",
         "toSave": "{{total}} att spara"
@@ -84,7 +85,8 @@
           "instant": "Omedelbar",
           "live": "I realtid",
           "manual": "Manuell",
-          "twoWay": "Dubbelriktad"
+          "twoWay": "Dubbelriktad",
+          "iif": "IIF"
         },
         "highlights": {
           "delivery": "Leverans",
@@ -104,6 +106,9 @@
           },
           "xeroCsv": {
             "description": "Exportera fakturor och importera skatterapporter från Xero."
+          },
+          "qbd": {
+            "description": "Exportera fakturor som IIF-fil för import i QuickBooks Desktop."
           }
         },
         "selected": "{{title}} har valts",
@@ -129,13 +134,22 @@
         }
       },
       "adjustmentMappings": {
-        "desktopServices": "Tjänstekonton i Desktop",
-        "desktopDiscounts": "Rabatter i Desktop",
         "desktopAccount": "Intäktskontots namn i Desktop",
         "description": "Mappa fakturarabatter och krediteringar före export. Mappningen tillhör det här bokföringsföretaget.",
         "add": "Lägg till mappning",
         "remove": "Ta bort mappning",
-        "removeConfirm": "Vill du ta bort den här bokföringsmappningen?"
+        "removeConfirm": "Vill du ta bort den här bokföringsmappningen?",
+        "desktopTaxAccount": "Försäljningsskattekontots namn i Desktop",
+        "desktopCustomer": "Kundens namn i Desktop",
+        "desktopTerms": "Villkorets namn i Desktop",
+        "descriptionTaxCodes": "Varje skatteregion anger den artikel eller grupp för försäljningsskatt som QuickBooks Desktop debiterar och skuldkontot den bokförs på.",
+        "descriptionServices": "Varje tjänst anger den artikel i QuickBooks Desktop som dess fakturarader använder och intäktskontot de bokförs på.",
+        "descriptionClients": "Den kund i QuickBooks Desktop som varje kund faktureras som. Omappade kunder blockerar exporten.",
+        "descriptionPaymentTerms": "Villkoren i QuickBooks Desktop som skrivs ut på varje faktura. Omappade villkor lämnas tomma.",
+        "desktopItem": "Artikelns namn i Desktop",
+        "desktopItemHelp": "Artikeln exakt som den visas i artikellistan i QuickBooks Desktop. Varje fakturarad anger en artikel, så exporter blockeras tills den har angetts.",
+        "desktopSalesTaxItem": "Artikel eller grupp för försäljningsskatt",
+        "desktopSalesTaxItemHelp": "Lämna tomt för att använda standardartikeln för försäljningsskatt från inställningarna för QuickBooks Desktop."
       }
     },
     "calendar": {
@@ -4056,6 +4070,59 @@
           "providers": "Teams Phone idag. Framtida leverantörer ansluts till samma samtalskärna."
         }
       }
+    },
+    "qbd": {
+      "settings": {
+        "title": "QuickBooks Desktop (IIF)-integration",
+        "description": "Exportera fakturor som IIF-fil för Arkiv → Verktyg → Importera → IIF-filer i QuickBooks Desktop.",
+        "loading": "Läser in QuickBooks Desktop-inställningar...",
+        "savedMessage": "Inställningarna har sparats",
+        "save": "Spara inställningar",
+        "connectionsPermissionNotice": "Du kan visa QuickBooks Desktop-inställningarna, men för att ändra dem krävs behörigheten att hantera anslutningar. Be en administratör att bevilja den.",
+        "errors": {
+          "load": "Det gick inte att läsa in QuickBooks Desktop-inställningarna",
+          "save": "Det gick inte att spara QuickBooks Desktop-inställningarna"
+        },
+        "warning": {
+          "title": "Säkerhetskopiera företagsfilen först",
+          "description": "QuickBooks Desktop skapar alla kund-, artikel-, konto- eller villkorsnamn som det inte känner igen vid import av en IIF-fil, och IIF-importer kan inte ångras. Se till att varje namn nedan och i mappningarna exakt matchar din företagsfil och testa den första importen på en säkerhetskopia."
+        },
+        "exportSettings": {
+          "title": "IIF-exportinställningar",
+          "description": "Ange konto- och artikelnamnen i QuickBooks Desktop exakt som de visas i kontoplanen och artikellistan."
+        },
+        "fields": {
+          "arAccount": "Kundfordringskonto",
+          "arAccountHelp": "Kundfordringskontot som varje faktura bokförs på.",
+          "defaultIncomeAccount": "Standardintäktskonto",
+          "defaultIncomeAccountHelp": "Intäktskontot för artiklar som mappas från en export och för varje mappning av tjänster eller rabatter utan konto.",
+          "salesTaxPayableAccount": "Konto för utgående försäljningsskatt",
+          "salesTaxPayableAccountHelp": "Kontot som raden för försäljningsskatt bokförs på, om inte skatteregionens skattekodsmappning anger ett annat.",
+          "defaultSalesTaxItem": "Standardartikel för försäljningsskatt",
+          "defaultSalesTaxItemHelp": "Artikel eller grupp för försäljningsskatt för beskattade fakturor vars skattekodsmappning inte anger någon.",
+          "newProductItemType": "Artikeltyp för nya produkter",
+          "inventoryWarning": "Lagerinleveranser i Alga exporteras inte, så saldona i QuickBooks blir negativa om du inte också registrerar lagret i QuickBooks.",
+          "nonInventoryHelp": "Rekommenderas: Alga förblir lagrets huvudsystem och QuickBooks registrerar bara försäljningen.",
+          "inventoryAssetAccount": "Konto för lagertillgångar",
+          "cogsAccount": "Konto för kostnad sålda varor"
+        },
+        "mappings": {
+          "title": "QuickBooks-mappningar",
+          "description": "Mappa Algas kunder, tjänster, rabatter, skattekoder och betalningsvillkor till namnen i företagsfilen i QuickBooks Desktop. Varje tjänst och rabatt behöver en Desktop-artikel; omappade betalningsvillkor lämnas tomma.",
+          "permissionNotice": "Att redigera mappningar för QuickBooks Desktop kräver behörigheten att hantera mappningar. Be en administratör att tilldela den."
+        },
+        "exports": {
+          "description": "Skapa en exportbatch för QuickBooks Desktop och kör den, och ladda sedan ned IIF-filen från batchinformationen."
+        },
+        "newItems": {
+          "title": "Artiklar som skapas av exporter",
+          "description": "När en export skapar en ny QuickBooks-artikel för en Alga-produkt används den här artikeltypen. Tjänster skapas alltid som tjänsteartiklar."
+        },
+        "itemTypes": {
+          "nonInventory": "Icke-lagerförd artikel",
+          "inventory": "Lagerförd artikel"
+        }
+      }
     }
   },
   "errors": {
@@ -4175,6 +4242,10 @@
       "contactWithoutClient": "En kontakt med den här e-postadressen finns redan i systemet utan kundtilldelning",
       "emailOnAnotherClient": "Den här e-postadressen är redan kopplad till en annan kund",
       "emailOnAnotherClientNamed": "Den här e-postadressen är redan kopplad till {{clientName}}"
+    },
+    "quickbooksDesktop": {
+      "viewSettingsPermission": "Användaren har inte behörighet att visa integrationsinställningar",
+      "manageIntegrationsPermission": "Användaren har inte behörighet att hantera integrationsinställningar"
     }
   },
   "telephony": {

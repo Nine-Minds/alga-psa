@@ -6,12 +6,19 @@ import type { PageState, UIComponent } from './types';
 const btn = (id: string, parentId?: string, extra: Partial<UIComponent> = {}) =>
   ({ id, type: 'button', label: id, parentId, ...extra }) as UIComponent;
 
+const countNodes = (components: UIComponent[]): number =>
+  components.reduce((total, comp) => total + 1 + countNodes(comp.children ?? []), 0);
+
 function make() {
+  // Tallied at publish time: a rebuild mutates the component objects it emits,
+  // so a tree counted after a later flush no longer reflects what this one did.
+  let publishedNodes = 0;
   const publish = vi.fn((s: PageState) => {
+    publishedNodes += countNodes(s.components);
     (window as any).__UI_STATE__ = s;
   });
   const reg = createUIStateRegistry({ onPublish: publish });
-  return { reg, publish };
+  return { reg, publish, publishedNodes: () => publishedNodes };
 }
 
 /** Register n components: 1 root parent per 100 children-ish mix, time register+flush. */
@@ -34,43 +41,6 @@ function unregisterAll(reg: ReturnType<typeof make>['reg'], n: number) {
   for (let i = 0; i < parents; i++) reg.unregister(`p${i}`);
   reg.flush();
   return performance.now() - t0;
-}
-
-// Every size moves the same number of components, in cycles of n, so a linear
-// registry costs the same wall clock at every size. Sampling equal work is
-// what makes the comparison a slope: while the 5k sample did 5x the work of
-// the 1k one it also made 5x the garbage, so collection settled inside the
-// largest sample on a loaded runner and the "slope" read 12x on linear code.
-const COMPONENTS_PER_SAMPLE = 20_000;
-const TRIALS = 3;
-
-// Time each cycle on its own and keep the cheapest per component, rather than
-// summing the cycles of a sample: a collector pause costs the same at both
-// sizes but 1k gets 20 cycles to absorb it and 5k only 4, so a summed 5k
-// sample carries every pause of its trial and the fastest-of-three could not
-// escape one. Scoring the fastest single cycle at each size needs only one
-// uncontended cycle to survive, which is what makes the 3x bound below a
-// statement about the registry rather than about the runner's load.
-/** Cheapest per-component register/unregister cost over the cycles of one sample. */
-function timeSample(n: number) {
-  let reg = Infinity;
-  let unreg = Infinity;
-  for (let cycles = COMPONENTS_PER_SAMPLE / n; cycles > 0; cycles--) {
-    const { reg: registry } = make();
-    reg = Math.min(reg, registerMix(registry, n) / n);
-    unreg = Math.min(unreg, unregisterAll(registry, n) / n);
-  }
-  return { reg, unreg };
-}
-
-/** Keep the fastest trial: scheduler noise on a busy runner only ever adds time. */
-function bestTrial(n: number) {
-  let best = timeSample(n);
-  for (let i = 1; i < TRIALS; i++) {
-    const next = timeSample(n);
-    best = { reg: Math.min(best.reg, next.reg), unreg: Math.min(best.unreg, next.unreg) };
-  }
-  return best;
 }
 
 describe('uiStateRegistry', () => {
@@ -109,22 +79,33 @@ describe('uiStateRegistry', () => {
     expect(unregMs).toBeLessThan(100);
   });
 
-  it('scales roughly linearly (1k / 2k / 5k)', () => {
-    const results: Record<number, { reg: number; unreg: number }> = {};
-    // warm up at the largest size, so the JIT is hot and the heap has already
-    // grown to its high-water mark before the first sample is timed
-    { const { reg } = make(); registerMix(reg, 5000); unregisterAll(reg, 5000); }
+  // The rebuild walks the whole dictionary, so rebuilding once per mutation
+  // instead of once per flush makes a batch of n mutations cost O(n^2) -- the
+  // regression the coalescing in markDirty exists to prevent. A wall-clock
+  // ratio of the 1k and 5k batches could not separate that from noise: correct
+  // code spends single-digit milliseconds at these sizes, so one GC pause
+  // inside the 5k sample crossed the 10x bound on a loaded CI runner
+  // (11.7 vs a 1ms floor). Count the rebuild's work instead, the way #3588 did
+  // for the kb-import split test: every node a rebuild emits is a node it
+  // walked, so the published total is the work and it is exactly linear in the
+  // batch size while the mutations coalesce. The absolute budgets stay on the
+  // 5000-component case above.
+  it('scales linearly: one rebuild per flush, not one per mutation', () => {
+    const emitted: Record<number, { reg: number; unreg: number }> = {};
     for (const n of [1000, 2000, 5000]) {
-      results[n] = bestTrial(n);
+      const { reg, publishedNodes } = make();
+      registerMix(reg, n);
+      const afterRegister = publishedNodes();
+      unregisterAll(reg, n);
+      emitted[n] = { reg: afterRegister, unreg: publishedNodes() - afterRegister };
     }
-    // eslint-disable-next-line no-console
-    console.info('registry bench (ms per component)', JSON.stringify(results));
-    // Per-component cost, so work that is linear in the registry costs ~1x at
-    // every size and work that grows with it (the whole-dictionary unregister
-    // scan the child index replaced) costs ~5x from 1k to 5k. 3x sits between
-    // the two, with room for cache and GC effects at 5k.
-    expect(results[5000].reg / results[1000].reg).toBeLessThan(3);
-    expect(results[5000].unreg / results[1000].unreg).toBeLessThan(3);
+    // Register batch: one rebuild emitting each component once. Unregister
+    // batch: one rebuild of an empty tree. Publishing per mutation would emit
+    // ~n^2/2 nodes for the register batch alone.
+    for (const n of [1000, 2000, 5000]) {
+      expect(emitted[n]).toEqual({ reg: n, unreg: 0 });
+    }
+    expect(emitted[5000].reg / emitted[1000].reg).toBe(5);
   });
 
   it('coalesces many mutations in one tick into a single publish (microtask)', async () => {

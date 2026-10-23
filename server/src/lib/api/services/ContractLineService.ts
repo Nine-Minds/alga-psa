@@ -766,12 +766,16 @@ export class ContractLineService extends BaseService<IContractLine> {
             throw new ValidationError('custom_rate and type_config.base_rate disagree; provide the unit rate once');
           }
           const unitRate = explicitBaseRate ?? data.custom_rate ?? null;
-          typeConfig = { ...requestedTypeConfig, pricing_basis: 'unit', base_rate: unitRate };
+          typeConfig = { ...requestedTypeConfig, pricing_basis: 'unit', base_rate: unitRate, base_rate_basis: 'per_unit' };
           // A second, conflicting price on the base configuration would be
           // ambiguous; the per-unit rate is the only price.
           customRate = undefined;
         } else if (pricingBasis !== undefined && pricingBasis !== 'bundle') {
           throw new ValidationError(`Unsupported pricing basis: ${pricingBasis}`);
+        } else if (configurationType === 'Fixed' && typeConfig.base_rate != null && typeConfig.base_rate_basis == null) {
+          // A bundle member's stored rate must state its meaning. The API's
+          // documented sense of base_rate is the unit rate.
+          typeConfig = { ...typeConfig, base_rate_basis: 'per_unit' };
         }
 
         if (configurationType === 'Fixed') {
@@ -888,6 +892,10 @@ export class ContractLineService extends BaseService<IContractLine> {
           typeConfig = restTypeConfig;
           // custom_rate is the unit-rate alias for a per-unit service (see addServiceToPlan).
           const isUnit = isUnitFixedService({ pricing_basis: storedBasis });
+          if (typeConfig.base_rate != null && typeConfig.base_rate_basis == null && !fixed?.base_rate_basis) {
+            // Nothing stored and nothing stated: the API's documented unit-rate sense.
+            typeConfig = { ...typeConfig, base_rate_basis: 'per_unit' };
+          }
           if (isUnit && typeConfig.base_rate != null && data.custom_rate != null && typeConfig.base_rate !== data.custom_rate) {
             throw new ValidationError('custom_rate and type_config.base_rate disagree; provide the unit rate once');
           }
@@ -2261,7 +2269,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       // A per-unit service must stay per-unit in the copy: without its fixed
       // config it would be re-created as a bundle allocation and the seats
       // would silently stop billing.
-      let typeConfig: { pricing_basis: 'unit'; base_rate: number | null } | undefined;
+      let typeConfig: { pricing_basis: 'unit'; base_rate: number | null; base_rate_basis: 'per_unit' } | undefined;
       if (sourceService.configuration_type === 'Fixed') {
         const sourceFixed = await tenantDb(trx, context.tenant).table('contract_line_service_fixed_config')
           .where('config_id', sourceService.config_id)
@@ -2270,6 +2278,7 @@ export class ContractLineService extends BaseService<IContractLine> {
           const sourceRate = sourceFixed.base_rate == null ? null : Number(sourceFixed.base_rate);
           typeConfig = {
             pricing_basis: 'unit',
+            base_rate_basis: 'per_unit',
             base_rate: sourceRate === null ? null : Math.round(modifyRates ? adjust(sourceRate) : sourceRate),
           };
         }

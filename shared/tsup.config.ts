@@ -95,6 +95,7 @@ export default defineConfig({
     'extensions/installs': 'extensions/installs.ts',
     'extensions/types': 'extensions/types.ts',
     'billingClients/resolveFixedLineRate': 'billingClients/resolveFixedLineRate.ts',
+    'billingClients/fixedMemberRate': 'billingClients/fixedMemberRate.ts',
     'billingClients/recurringUnitPricing': 'billingClients/recurringUnitPricing.ts',
     'billingClients/recurringUnitMidPeriodAdjustment': 'billingClients/recurringUnitMidPeriodAdjustment.ts',
     'billingClients/coverageProration': 'billingClients/coverageProration.ts',

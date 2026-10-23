@@ -616,6 +616,7 @@
       "quantityShort": "Aantal: {{quantity}}",
       "quantityTaxAllocation": "Hoeveelheid (voor belastingtoewijzing)",
       "rateTaxAllocation": "Tarief (voor belastingtoewijzing)",
+      "shareOfLineFee": "Aandeel in het regeltarief",
       "title": "Services ({{count}})",
       "typeLabel": "{{type}}-service",
       "unitOfMeasure": "Meeteenheid",

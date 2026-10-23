@@ -605,6 +605,8 @@ export async function cloneTemplateServiceFixedConfig(
     tenant,
     config_id: targetConfigId,
     base_rate: templateBaseRate,
+    // Template fixed-config rows exist only for per-unit services, whose rate is per unit.
+    base_rate_basis: templateBaseRate === null ? null : 'per_unit',
     pricing_basis: fixedConfig.pricing_basis ?? null,
     rate_provenance: templateBaseRate === null ? 'inherited' : 'custom',
     created_at: trx.fn.now(),

@@ -616,6 +616,7 @@
       "quantityShort": "Antal: {{quantity}}",
       "quantityTaxAllocation": "Antal (för skattefördelning)",
       "rateTaxAllocation": "Taxa (för skattefördelning)",
+      "shareOfLineFee": "Andel av radavgiften",
       "title": "Tjänster ({{count}})",
       "typeLabel": "Tjänst av typen {{type}}",
       "unitOfMeasure": "Måttenhet",

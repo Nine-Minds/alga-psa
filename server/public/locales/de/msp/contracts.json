@@ -616,6 +616,7 @@
       "quantityShort": "Menge: {{quantity}}",
       "quantityTaxAllocation": "Menge (für Steuerzuweisung)",
       "rateTaxAllocation": "Tarif (für Steuerzuweisung)",
+      "shareOfLineFee": "Anteil am Positionspreis",
       "title": "Dienste ({{count}})",
       "typeLabel": "{{type}}-Service",
       "unitOfMeasure": "Maßeinheit",

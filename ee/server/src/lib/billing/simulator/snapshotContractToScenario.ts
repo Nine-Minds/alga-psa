@@ -893,11 +893,14 @@ async function buildScenarioServiceConfig(
     case "Fixed": {
       const fixed = configDetails.typeConfig as {
         base_rate?: number | null;
+        base_rate_basis?: "per_unit" | "share" | null;
         pricing_basis?: "unit" | "bundle" | null;
       } | null;
+      const fixedBaseRate = toCents(fixed?.base_rate ?? null);
       return {
         configuration_type: "Fixed",
-        base_rate: toCents(fixed?.base_rate ?? null),
+        base_rate: fixedBaseRate,
+        base_rate_basis: fixedBaseRate === null ? null : fixed?.base_rate_basis ?? null,
         pricing_basis: fixed?.pricing_basis ?? null,
       };
     }

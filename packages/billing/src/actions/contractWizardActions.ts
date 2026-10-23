@@ -218,6 +218,7 @@ async function writeFixedLineMembers(
         {
           pricing_basis: 'unit',
           base_rate: service.unit_rate as number,
+          base_rate_basis: 'per_unit',
           rate_provenance: 'custom',
         },
       );
@@ -229,9 +230,12 @@ async function writeFixedLineMembers(
     // reaches it. Snapshotting the catalog here would shadow it forever.
     let serviceBaseRate: number | null = null;
     let serviceBaseProvenance: 'custom' | 'inherited' = 'inherited';
+    // What the stored number means: a slice of the bundle fee, or a unit price.
+    let serviceBaseBasis: 'per_unit' | 'share' = 'per_unit';
     if (bundleShares) {
       serviceBaseProvenance = 'custom';
       serviceBaseRate = bundleShares[index];
+      serviceBaseBasis = 'share';
     } else {
       // A configured fixed-mode default is a chosen rate for this service,
       // and the rate resolver does not read that table — so it must be
@@ -243,6 +247,7 @@ async function writeFixedLineMembers(
       if (modeDefault !== undefined) {
         serviceBaseRate = modeDefault;
         serviceBaseProvenance = 'custom';
+        serviceBaseBasis = 'per_unit';
       }
     }
 
@@ -255,7 +260,9 @@ async function writeFixedLineMembers(
         tenant,
         custom_rate: undefined,
       },
-      { base_rate: serviceBaseRate, rate_provenance: serviceBaseProvenance },
+      serviceBaseRate === null
+        ? { base_rate: null, rate_provenance: serviceBaseProvenance }
+        : { base_rate: serviceBaseRate, base_rate_basis: serviceBaseBasis, rate_provenance: serviceBaseProvenance },
     );
   }
 
@@ -2067,7 +2074,9 @@ export const createClientContractFromWizard = withAuth(async (
             tenant,
             custom_rate: customRate,
           },
-          { base_rate: 0 }
+          // Placeholder (products bill on their own); kept so readers that
+          // expect a fixed-config row for a Fixed member still find one.
+          { base_rate: 0, base_rate_basis: 'per_unit' }
         );
       }
 

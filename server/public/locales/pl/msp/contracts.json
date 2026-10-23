@@ -616,6 +616,7 @@
       "quantityShort": "Ilość: {{quantity}}",
       "quantityTaxAllocation": "Ilość (do alokacji podatków)",
       "rateTaxAllocation": "Stawka (do alokacji podatków)",
+      "shareOfLineFee": "Udział w opłacie pozycji",
       "title": "Usługi ({{count}})",
       "typeLabel": "Usługa {{type}}",
       "unitOfMeasure": "Jednostka miary",
