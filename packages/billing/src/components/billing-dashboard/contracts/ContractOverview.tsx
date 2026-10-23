@@ -7,7 +7,7 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { getContractOverview } from '@alga-psa/billing/actions/contractActions';
 import type { IContractOverview, IContractLineOverview } from '@alga-psa/billing/actions/contractActions';
 import { Package, Clock, Activity, Coins, Layers3, ChevronDown, ChevronRight, Edit } from 'lucide-react';
-import { resolveEffectiveBillingTiming } from '@shared/billingClients/contractLineTimingRule';
+import { getContractLineBillingTimingLabel } from './contractLineBillingTimingLabel';
 import { unitFixedServiceAmountCents } from '../../../lib/fixedServiceBasis';
 import { UsageLegacyTransitionDialog, type UsageLegacyTransitionMode } from './UsageLegacyTransitionDialog';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -592,11 +592,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
                   formatFrequencyLabel={formatFrequencyLabel}
                   formatServiceCountLabel={formatServiceCountLabel}
                   formatContractLineType={formatContractLineType}
-                  billingTimingLabel={
-                    resolveEffectiveBillingTiming(line.contract_line_type, line.billing_timing) === 'advance'
-                      ? t('billing.timing.advance', { defaultValue: 'In Advance' })
-                      : t('billing.timing.arrears', { defaultValue: 'In Arrears' })
-                  }
+                  billingTimingLabel={getContractLineBillingTimingLabel(t, line.contract_line_type, line.billing_timing)}
                   editLabel={t('common.actions.edit', { defaultValue: 'Edit' })}
                   onEditLine={onEditLine && !isReadOnly ? () => onEditLine(line.contract_line_id) : undefined}
                   includedServicesLabel={includedServicesLabel}

@@ -66,6 +66,7 @@ import {
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency, useFormatContractLineType } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { BillingTimingField } from './BillingTimingField';
+import { getContractLineBillingTimingLabel } from './contractLineBillingTimingLabel';
 import {
   isAdvanceTimingAllowedForLineType,
   resolveEffectiveBillingTiming,
@@ -1328,9 +1329,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                         <span>•</span>
                         <span data-testid={`contract-line-billing-timing-${line.contract_line_id}`}>
                           {t('billing.labels.timing', { defaultValue: 'Billing Timing' })}:{' '}
-                          {resolveEffectiveBillingTiming(line.contract_line_type, line.billing_timing) === 'advance'
-                            ? t('billing.timing.advance', { defaultValue: 'In Advance' })
-                            : t('billing.timing.arrears', { defaultValue: 'In Arrears' })}
+                          {getContractLineBillingTimingLabel(t, line.contract_line_type, line.billing_timing)}
                         </span>
                         {services.length > 0 && (
                           <>
@@ -1631,9 +1630,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                   />
                                 ) : (
                                   <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
-                                    {resolveEffectiveBillingTiming(line.contract_line_type, line.billing_timing) === 'advance'
-                                      ? t('billing.timing.advance', { defaultValue: 'In Advance' })
-                                      : t('billing.timing.arrears', { defaultValue: 'In Arrears' })}
+                                    {getContractLineBillingTimingLabel(t, line.contract_line_type, line.billing_timing)}
                                   </p>
                                 )}
                               </div>

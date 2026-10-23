@@ -65,10 +65,8 @@ import { listContractSimulationClients } from "@alga-psa/billing/actions/contrac
 import GenericPlanServicesList from "../contract-lines/GenericContractLineServicesList";
 import { ContractLineEditDialog } from "./ContractLineEditDialog";
 import { BillingTimingField } from "./BillingTimingField";
-import {
-  isAdvanceTimingAllowedForLineType,
-  resolveEffectiveBillingTiming,
-} from "@shared/billingClients/contractLineTimingRule";
+import { isAdvanceTimingAllowedForLineType } from "@shared/billingClients/contractLineTimingRule";
+import { getContractLineBillingTimingLabel } from "./contractLineBillingTimingLabel";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import { unitFixedServiceAmountCents } from "../../../lib/fixedServiceBasis";
 import {
@@ -1820,7 +1818,16 @@ const ContractTemplateDetail: React.FC = () => {
                                   defaultValue: "Prepaid Block",
                                 })
                               : humanize(line.contract_line_type)}{" "}
-                            • {humanize(line.billing_frequency)}
+                            • {humanize(line.billing_frequency)} •{" "}
+                            <span
+                              data-testid={`template-composition-line-billing-timing-${line.contract_line_id}`}
+                            >
+                              {getContractLineBillingTimingLabel(
+                                t,
+                                line.contract_line_type,
+                                line.billing_timing,
+                              )}
+                            </span>
                           </p>
                         </div>
                         <Badge variant="outline" className="text-xs">
@@ -2117,12 +2124,11 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
                     {humanize(line.contract_line_type)} •{" "}
                     {humanize(line.billing_frequency)} •{" "}
                     <span data-testid={`template-line-billing-timing-${line.contract_line_id}`}>
-                      {resolveEffectiveBillingTiming(
+                      {getContractLineBillingTimingLabel(
+                        t,
                         line.contract_line_type,
                         line.billing_timing,
-                      ) === "advance"
-                        ? t("billing.timing.advance", { defaultValue: "In Advance" })
-                        : t("billing.timing.arrears", { defaultValue: "In Arrears" })}
+                      )}
                     </span>
                   </p>
                 </div>

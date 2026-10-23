@@ -147,4 +147,40 @@ describe('ContractTemplateDetail Manage Services', () => {
     // rates live on the services below.
     expect(screen.queryByText(/Unit rate:/)).toBeNull();
   });
+
+  it('shows effective billing timing in the Template Composition line summaries', async () => {
+    actions.getDetailedContractLines.mockResolvedValue([
+      {
+        contract_line_id: 'line-fixed',
+        contract_line_name: 'Managed Bundle',
+        contract_line_type: 'Fixed',
+        billing_frequency: 'monthly',
+        billing_timing: 'advance',
+        rate: 10000,
+      },
+      {
+        contract_line_id: 'line-hourly',
+        contract_line_name: 'Support Hours',
+        contract_line_type: 'Hourly',
+        billing_frequency: 'monthly',
+        billing_timing: 'advance',
+        rate: 15000,
+      },
+    ]);
+
+    render(
+      <CurrencyFormatProvider currencyCode="USD" locale="en-US">
+        <ContractTemplateDetail />
+      </CurrencyFormatProvider>,
+    );
+
+    // Manage Services is intentionally not opened: this is the default composition view.
+    const fixedTiming = await screen.findByTestId('template-composition-line-billing-timing-line-fixed');
+    expect(fixedTiming).toHaveTextContent('In Advance');
+    // Hourly lines are always arrears, even when stored as advance.
+    expect(screen.getByTestId('template-composition-line-billing-timing-line-hourly')).toHaveTextContent(
+      'In Arrears',
+    );
+    expect(screen.queryByText('Manage Template Services')).toBeNull();
+  });
 });
