@@ -1,0 +1,321 @@
+[
+  {
+    "id": "T001",
+    "description": "Scope parity: payload, step result, meta, caught error (error.* and vars.<captureAs>), loop item and loop index are offered, valid, and evaluate to the runtime value in Reference, Text and Expression modes; Text↔Expression round-trips (inputModeScopeParity.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F024",
+      "F025",
+      "F048",
+      "F049",
+      "F013"
+    ],
+    "file": "ee/server/src/components/workflow-designer/__tests__/inputModeScopeParity.test.ts"
+  },
+  {
+    "id": "T002",
+    "description": "Catalog-wide Text mode coverage: every plain string input in the registered action catalog resolves to Text mode; email bodies, comment body and description are multi-line (workflowTextInputCoverage.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ],
+    "file": "ee/server/src/components/workflow-designer/__tests__/workflowTextInputCoverage.test.ts"
+  },
+  {
+    "id": "T003",
+    "description": "Reachability: Then/Else isolation, both branches after the If, loop bodies hidden after the loop; reference options and condition fields agree (workflowDataContext.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F022"
+    ],
+    "file": "ee/server/src/components/workflow-designer/__tests__/workflowDataContext.test.ts"
+  },
+  {
+    "id": "T004",
+    "description": "Condition model parses and serializes all/any field-operator-value conditions, round-trips stored expressions and evaluates in the runtime engine (conditionModel.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ],
+    "file": "shared/workflow/runtime/designer/__tests__/conditionModel.test.ts"
+  },
+  {
+    "id": "T005",
+    "description": "Condition builder renders entity pickers for kinded fields, boolean/enum selects, opens Add condition with the field picker, and falls back to Expression mode (WorkflowConditionBuilder.test.tsx, workflowConditionFields.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F015",
+      "F016"
+    ],
+    "file": "ee/server/src/components/workflow-designer/__tests__/WorkflowConditionBuilder.test.tsx"
+  },
+  {
+    "id": "T006",
+    "description": "tickets.find returns related-record names, latest_comment and latest_customer_comment, and nulls when records or comments are missing (ticketWorkflowBoardStatusRuntime.test.ts; mocked query builder).",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F018"
+    ],
+    "file": "shared/workflow/runtime/actions/__tests__/ticketWorkflowBoardStatusRuntime.test.ts"
+  },
+  {
+    "id": "T007",
+    "description": "Step insertion targeting and unique default output names (workflowStepTree.test.ts, workflowSaveAsNames.test.ts, insertionText.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F010",
+      "F011",
+      "F012"
+    ],
+    "file": "ee/server/src/components/workflow-designer/__tests__/workflowStepTree.test.ts"
+  },
+  {
+    "id": "T008",
+    "description": "Palette and event search ranking, synonyms scoped to name and code, nested action listing and no-match state (paletteSearch.test.ts, searchSynonyms.test.ts, workflowTriggerEventOptions.test.ts, WorkflowDesignerPalette.test.tsx, SearchableSelect.ranking/keywords tests).",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005",
+      "F006",
+      "F007",
+      "F008"
+    ],
+    "file": "ee/server/src/components/workflow-designer/__tests__/paletteSearch.test.ts"
+  },
+  {
+    "id": "T009",
+    "description": "Trigger lookup hints list carried fields, offer the pre-wired lookup step and event tips (WorkflowEntityLookupHint.test.tsx, workflowEntityLookupSuggestions.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003"
+    ],
+    "file": "ee/server/src/components/workflow-designer/__tests__/WorkflowEntityLookupHint.test.tsx"
+  },
+  {
+    "id": "T010",
+    "description": "Single Value from control and shared grouped field picker: options, ranking, pick writes reference/fixed/text/expression (workflowFieldPicker.test.tsx, referenceSourceModel.test.ts, InputMappingEditorReferenceMode/UnifiedEditor tests).",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F022",
+      "F028"
+    ],
+    "file": "ee/server/src/components/workflow-designer/__tests__/workflowFieldPicker.test.tsx"
+  },
+  {
+    "id": "T011",
+    "description": "Text templates compile to and parse from joined expressions; preview uses sample data and the first loop item; caret intent appends at end unless placed (textTemplate.test.ts, InputMappingEditorUnifiedEditor.test.tsx).",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F026",
+      "F029"
+    ],
+    "file": "ee/server/src/components/workflow-designer/__tests__/textTemplate.test.ts"
+  },
+  {
+    "id": "T012",
+    "description": "One-item list wrapping for single-value references into list inputs and its reopen note (referenceValue.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ],
+    "file": "ee/server/src/components/workflow-designer/__tests__/referenceValue.test.ts"
+  },
+  {
+    "id": "T013",
+    "description": "Expression function catalog: every catalog function is accepted by the runtime validator and designer diagnostics; truncate/substring bounds and errors; syntax help renders the catalog (expressionEngine.test.ts, diagnosticsProvider.test.ts, ExpressionSyntaxHelp.test.tsx, authoringGuide.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F047",
+      "F030"
+    ],
+    "file": "shared/workflow/runtime/__tests__/expressionEngine.test.ts"
+  },
+  {
+    "id": "T014",
+    "description": "Expression type inference: concatenation is text, comparisons boolean, list literals arrays (expressionTypeInference.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ],
+    "file": "shared/workflow/runtime/__tests__/expressionTypeInference.test.ts"
+  },
+  {
+    "id": "T015",
+    "description": "Suggestion quality: whole-word matching, type/kind/role rules, actor fields excluded, free-text excluded; bulk apply limited to required exact matches (autoMappingSuggestions.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F032",
+      "F033",
+      "F034"
+    ],
+    "file": "ee/server/src/components/workflow-designer/__tests__/autoMappingSuggestions.test.ts"
+  },
+  {
+    "id": "T016",
+    "description": "Default values and required counts: structured sub-fields only when set, boolean/number defaults, explicit-choice visibility, card and panel counts agree (inputDefaultsAndRequired.test.tsx, actionInputEditorState.test.ts, InputMappingEditorStructuredLiterals.test.tsx).",
+    "implemented": true,
+    "featureIds": [
+      "F035",
+      "F036",
+      "F037"
+    ],
+    "file": "ee/server/src/components/workflow-designer/__tests__/inputDefaultsAndRequired.test.tsx"
+  },
+  {
+    "id": "T017",
+    "description": "Schema metadata coverage: every entity id in event and date-trigger payloads has a picker kind; ticket, notification and email action editor metadata; settings schema metadata (entityIdMetadata.test.ts, register*Metadata tests, workflow-runtime-v2-schemas.metadata.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F037",
+      "F038",
+      "F039",
+      "F042"
+    ],
+    "file": "shared/workflow/runtime/schemas/__tests__/entityIdMetadata.test.ts"
+  },
+  {
+    "id": "T018",
+    "description": "Assignment picker commits a selection under parent re-renders (regression), and the flat assignment editor maps to the runtime shape (WorkflowTicketAssignmentEditor.picker.test.tsx, WorkflowTicketAssignmentEditor.test.ts, InputMappingEditorPickerFields.test.tsx).",
+    "implemented": true,
+    "featureIds": [
+      "F040",
+      "F041"
+    ],
+    "file": "ee/server/src/components/workflow-designer/__tests__/WorkflowTicketAssignmentEditor.picker.test.tsx"
+  },
+  {
+    "id": "T019",
+    "description": "Recipient editors: in-app users/roles and email address chips; custom literal editor dispatcher falls back for computed values (WorkflowRecipientEditors.test.tsx, workflowCustomLiteralEditor.test.tsx).",
+    "implemented": true,
+    "featureIds": [
+      "F042",
+      "F043"
+    ],
+    "file": "ee/server/src/components/workflow-designer/__tests__/WorkflowRecipientEditors.test.tsx"
+  },
+  {
+    "id": "T020",
+    "description": "Shared UI: CustomSelect first-click commit, SearchableSelect groups and ranking, multi-user picker search (CustomSelect.test.tsx, SearchableSelect.*.test.tsx, MultiUserAndTeamPicker.search.test.tsx).",
+    "implemented": true,
+    "featureIds": [
+      "F043",
+      "F044",
+      "F046"
+    ],
+    "file": "packages/ui/src/components/__tests__/CustomSelect.test.tsx"
+  },
+  {
+    "id": "T021",
+    "description": "Route-keyed loading: Back after first save and bfcache restore show the saved workflow; replaceEditorAddress keeps Next's router in sync (WorkflowDesignerRouteLoading.test.tsx, workflowEditorRoute.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F057"
+    ],
+    "file": "ee/server/src/components/workflow-designer/__tests__/WorkflowDesignerRouteLoading.test.tsx"
+  },
+  {
+    "id": "T022",
+    "description": "Header lifecycle: save status states, publish confirmation, Active/Paused switch with rollback, settings with empty concurrency limit and plain errors, session-expired dialog (WorkflowSaveStatus.test.tsx, WorkflowDesignerPublishErrorReset.test.tsx, workflowDesignerShellHelpers.test.ts, WorkflowDesigner.smoke.test.tsx).",
+    "implemented": true,
+    "featureIds": [
+      "F051",
+      "F052",
+      "F053",
+      "F054",
+      "F055",
+      "F056",
+      "F058"
+    ],
+    "file": "ee/server/src/components/workflow-designer/__tests__/WorkflowSaveStatus.test.tsx"
+  },
+  {
+    "id": "T023",
+    "description": "Run dialog payload issues: browser and server produce the same plain-language per-field issues; inline rendering and Generate test id (payloadIssues.test.ts, workflowRunPayloadIssues.test.ts, WorkflowRunDialogPayloadIssues.test.tsx).",
+    "implemented": true,
+    "featureIds": [
+      "F064",
+      "F065"
+    ],
+    "file": "ee/packages/workflows/src/authoring/__tests__/payloadIssues.test.ts"
+  },
+  {
+    "id": "T024",
+    "description": "Run dialog record fill replaces untouched samples and keeps author edits; ticket reply, contract and asset resolvers (workflowRunRecordFill.test.ts, workflowRunRecordResolvers.test.ts, WorkflowContractPicker.test.tsx, WorkflowTicketPicker.test.tsx, workflowTicketPickerSearch.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F060",
+      "F061",
+      "F063"
+    ],
+    "file": "ee/server/src/components/workflow-designer/__tests__/workflowRunRecordFill.test.ts"
+  },
+  {
+    "id": "T025",
+    "description": "Date-trigger occurrence rule shared by scheduler and dialog (sign convention, all four sources) and per-workflow draft payloads (dateTriggerOccurrence.test.ts, workflowRunDateTriggerAndDrafts.test.ts, WorkflowRunDialogDateTrigger.test.tsx).",
+    "implemented": true,
+    "featureIds": [
+      "F062",
+      "F066"
+    ],
+    "file": "shared/workflow/runtime/__tests__/dateTriggerOccurrence.test.ts"
+  },
+  {
+    "id": "T026",
+    "description": "Run start feedback and initial payload: success/failure messaging, run links, blank Form Builder defaults, launcher returns run id and reason (workflowRunStartFeedback.test.ts, workflowRunDialogInitialPayload.test.ts, workflowRunDialogFormFields.test.ts, workflowRunLauncher.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F060",
+      "F067",
+      "F068"
+    ],
+    "file": "ee/server/src/components/workflow-designer/__tests__/workflowRunStartFeedback.test.ts"
+  },
+  {
+    "id": "T027",
+    "description": "Run Studio labels, graph layout and run-source presentation, engine-unreachable explanation (runStudioStepLabels.test.ts, buildWorkflowGraph.test.ts, RunStudioShell.test.tsx, workflowRunDisplayError.test.ts, workflowRunTriggerPresentation.unit.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F069"
+    ],
+    "file": "ee/server/src/components/workflow-run-studio/__tests__/runStudioStepLabels.test.ts"
+  },
+  {
+    "id": "T028",
+    "description": "Workflow list row menu and Unpublished changes badge; audit user names (WorkflowList.test.tsx, WorkflowDesignerAuditPanel.test.tsx, workflow-audit-csv.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F070",
+      "F071"
+    ],
+    "file": "ee/packages/workflows/src/components/automation-hub/WorkflowList.test.tsx"
+  },
+  {
+    "id": "T029",
+    "description": "Friendly field labels and trigger-aware wording (workflowFieldNamesAndWording.test.ts, workflowReferenceOptions.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F054"
+    ],
+    "file": "ee/server/src/components/workflow-designer/__tests__/workflowFieldNamesAndWording.test.ts"
+  },
+  {
+    "id": "T030",
+    "description": "Playwright journeys updated for the publish confirmation and Value from control (workflow-designer-publish, workflow-designer-e2e, workflow-ticket-created-add-comment). Updated, not run in this environment.",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F053"
+    ],
+    "file": "ee/server/src/__tests__/integration/workflow-designer-publish.playwright.test.ts"
+  }
+]

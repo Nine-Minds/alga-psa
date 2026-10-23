@@ -24,6 +24,7 @@ import {
   Phone,
   BookOpen,
 } from 'lucide-react';
+import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
 import AccountingIntegrationsSetup from './AccountingIntegrationsSetup';
 import RmmIntegrationsSetup from './RmmIntegrationsSetup';
 import { EmailProviderConfiguration } from '../../email/EmailProviderConfiguration';
@@ -104,7 +105,9 @@ interface IntegrationItem {
   id: string;
   name: string;
   description: string;
-  component: React.ComponentType;
+  // Elements keep stable component types when slot props refresh, preserving
+  // panel drafts and server-action confirmations across revalidation.
+  content: React.ReactNode;
   isEE?: boolean;
 }
 
@@ -137,12 +140,15 @@ function AddOnRequiredNotice({ featureName, addOn, addOnName, description, linkI
 }
 
 interface IntegrationsSettingsPageProps {
+  /** Pro access to paid integrations; provider credentials and email remain available. */
+  canUseIntegrations?: boolean;
   /** Whether the user can use Entra sync (Enterprise add-on) */
   canUseEntraSync?: boolean;
   /** Whether the user can use CIPP (Pro feature) */
   canUseCipp?: boolean;
   /** Slot for QBO sync health panel (injected from billing to avoid a circular dep) */
   qboSyncHealthSlot?: React.ReactNode;
+  xeroSyncHealthSlot?: React.ReactNode;
   /** Slot for QBO onboarding wizard entry (injected from billing to avoid a circular dep) */
   qboOnboardingSlot?: React.ReactNode;
 }
@@ -154,7 +160,7 @@ interface IntegrationsSettingsPageProps {
  * re-run each panel's data fetch (and a deep link into one panel does not throw
  * the others' loaded state away).
  */
-function CategorySubSections({ category }: { category: IntegrationCategory }) {
+function CategorySubSections({ category, renderIntegration }: { category: IntegrationCategory; renderIntegration: (integration: IntegrationItem) => React.ReactNode }) {
   // CE strips the EE-only integrations out of the category, so a sub-section
   // with nothing left in it must not leave an empty tab behind.
   const subSections = (category.subSections ?? []).filter((subSection) =>
@@ -197,9 +203,7 @@ function CategorySubSections({ category }: { category: IntegrationCategory }) {
         >
           {category.integrations
             .filter((integration) => subSection.integrationIds.includes(integration.id))
-            .map((integration) => (
-              <integration.component key={integration.id} />
-            ))}
+            .map(renderIntegration)}
         </div>
       ))}
     </div>
@@ -207,9 +211,11 @@ function CategorySubSections({ category }: { category: IntegrationCategory }) {
 }
 
 const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
+  canUseIntegrations = true,
   canUseEntraSync = true,
   canUseCipp = true,
   qboSyncHealthSlot,
+  xeroSyncHealthSlot,
   qboOnboardingSlot,
 }) => {
   const { t } = useTranslation('msp/settings');
@@ -243,7 +249,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           id: 'accounting-setup',
           name: t('integrations.items.accountingSetup.name'),
           description: t('integrations.items.accountingSetup.description'),
-          component: () => <AccountingIntegrationsSetup qboSyncHealthSlot={qboSyncHealthSlot} qboOnboardingSlot={qboOnboardingSlot} />,
+          content: <AccountingIntegrationsSetup canUseLiveIntegrations={canUseIntegrations} qboSyncHealthSlot={qboSyncHealthSlot} xeroSyncHealthSlot={xeroSyncHealthSlot} qboOnboardingSlot={qboOnboardingSlot} />,
         }
       ],
     },
@@ -257,7 +263,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           id: 'rmm-setup',
           name: t('integrations.items.rmmSetup.name'),
           description: t('integrations.items.rmmSetup.description'),
-          component: RmmIntegrationsSetup,
+          content: <RmmIntegrationsSetup />,
         }
       ],
     },
@@ -271,7 +277,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           id: 'hudu',
           name: t('integrations.items.hudu.name'),
           description: t('integrations.items.hudu.description'),
-          component: HuduIntegrationSettings,
+          content: <HuduIntegrationSettings />,
           isEE: true,
         },
       ],
@@ -286,7 +292,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           id: 'email',
           name: t('integrations.items.email.name'),
           description: t('integrations.items.email.description'),
-          component: () => (
+          content: (
             <Card>
               <CardHeader>
                 <CardTitle>{t('integrations.items.email.cardTitle')}</CardTitle>
@@ -304,7 +310,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           id: 'teams',
           name: t('integrations.items.teams.name'),
           description: t('integrations.items.teams.description'),
-          component: TeamsEnterpriseIntegrationSettings,
+          content: <TeamsEnterpriseIntegrationSettings />,
           isEE: true,
         },
         {
@@ -313,7 +319,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           description: t('integrations.items.telephony.description', {
             defaultValue: 'Journal calls as interactions, recognise callers, and turn a call into a ticket.',
           }),
-          component: TelephonyEnterpriseIntegrationSettings,
+          content: <TelephonyEnterpriseIntegrationSettings />,
           isEE: true,
         }] : []),
       ],
@@ -340,7 +346,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           id: 'calendar-sync',
           name: t('integrations.items.calendarSync.name'),
           description: t('integrations.items.calendarSync.description'),
-          component: CalendarEnterpriseIntegrationSettings,
+          content: <CalendarEnterpriseIntegrationSettings />,
         },
       ],
     }] : []),
@@ -358,7 +364,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           description: isEEAvailable
             ? t('integrations.items.google.description.ee')
             : t('integrations.items.google.description.oss'),
-          component: () => <ProviderCredentialsWorkbench canUseTeams={isEEAvailable} isEnterpriseEdition={isEEAvailable} />,
+          content: <ProviderCredentialsWorkbench canUseTeams={isEEAvailable} isEnterpriseEdition={isEEAvailable} />,
         },
       ],
     },
@@ -373,9 +379,9 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           name: t('integrations.items.entra.name'),
           description: t('integrations.items.entra.description'),
           // Entra owns its own route now; the category keeps a summary and a way in.
-          component: canUseEntraSync
-            ? () => <EntraIntegrationSummaryCard />
-            : () => (
+          content: canUseEntraSync
+            ? <EntraIntegrationSummaryCard />
+            : (
                 <AddOnRequiredNotice
                   featureName={t('integrations.items.entra.name')}
                   addOn={ADD_ONS.ENTERPRISE}
@@ -397,12 +403,12 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           id: 'stripe',
           name: t('integrations.items.stripe.name'),
           description: t('integrations.items.stripe.description'),
-          component: StripeConnectionSettings,
+          content: <StripeConnectionSettings />,
           isEE: true,
         }] : []),
       ],
     },
-  ], [canUseCipp, canUseEntraSync, isEEAvailable, isHuduEnabled, t]);
+  ], [canUseIntegrations, canUseCipp, canUseEntraSync, isEEAvailable, isHuduEnabled, qboSyncHealthSlot, xeroSyncHealthSlot, qboOnboardingSlot, t]);
 
   // Filter out empty categories
   const visibleCategories = categories.filter((category) => {
@@ -412,6 +418,15 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
   // Get current category
   const currentCategory = visibleCategories.find(cat => cat.id === selectedCategory) || visibleCategories[0];
 
+  // Shared credentials are prerequisites for email, so they cannot inherit the
+  // paid integration gate. Accounting applies its gate only to live connectors.
+  const renderIntegration = (integration: IntegrationItem) => {
+    const included = ['google', 'email', 'accounting-setup'].includes(integration.id);
+    return !canUseIntegrations && !included
+      ? <FeatureUpgradeNotice key={integration.id} featureName={integration.name} requiredTier="pro" />
+      : <React.Fragment key={integration.id}>{integration.content}</React.Fragment>;
+  };
+
   // Build tab content
   const tabContent: TabContent[] = visibleCategories.map(category => ({
     id: category.id,
@@ -420,17 +435,15 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
     content: (
       <div className="space-y-6">
         {category.id !== 'providers' && (
-          <div className="rounded-xl border bg-muted/30 px-6 py-8 text-center">
-            <div className="mx-auto flex max-w-3xl flex-col items-center gap-3">
-              <div className="flex items-center justify-center gap-3">
-                <category.icon className="h-7 w-7 text-primary" />
-                <h2 className="text-3xl font-bold tracking-tight">
+          <div className="rounded-xl border bg-muted/30 px-5 py-4">
+            <div className="flex items-start gap-3">
+              <category.icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+              <div className="space-y-1">
+                <h2 className="text-xl font-semibold tracking-tight">
                   {t('integrations.categoryHeading', { label: category.label })}
                 </h2>
+                <p className="text-sm text-muted-foreground">{category.description}</p>
               </div>
-              <p className="max-w-2xl text-sm text-muted-foreground">
-                {category.description}
-              </p>
             </div>
           </div>
         )}
@@ -438,12 +451,10 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
         {/* Integration components */}
         {category.integrations.length > 0 ? (
           category.subSections ? (
-            <CategorySubSections category={category} />
+            <CategorySubSections category={category} renderIntegration={renderIntegration} />
           ) : (
           <div className="space-y-6">
-            {category.integrations.map(integration => (
-              <integration.component key={integration.id} />
-            ))}
+            {category.integrations.map(renderIntegration)}
           </div>
           )
         ) : (
@@ -465,6 +476,12 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
       {/* Category tabs */}
       <CustomTabs
         tabs={tabContent}
+        tabStyles={{
+          root: 'min-w-0',
+          list: 'max-w-full flex-wrap gap-y-1',
+          trigger: 'shrink-0',
+          content: 'min-w-0'
+        }}
         defaultTab={currentCategory?.id ?? 'accounting'}
         onTabChange={(tabId) => {
           const category = visibleCategories.find(cat => cat.id === tabId);

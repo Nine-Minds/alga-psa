@@ -9,18 +9,29 @@
  * supplies the resolved identity), so they must never be registered as client-callable
  * server actions. They import knex, so this module must stay out of any client bundle (it
  * is exposed only through `@alga-psa/user-activities/server/activity-actions`).
+ *
+ * Membership lifecycle decision (alga0002045): a group membership row is PERSONAL
+ * bookkeeping and is KEPT when its record leaves the owner's list (unassigned or reassigned
+ * to someone else). If the record is assigned back, it reappears in its old group. Nothing
+ * clears memberships on reassignment: stale rows are never rendered (the grouped view only
+ * shows items in the current activity set), and clearing would let a colleague's edit
+ * destroy part of my private organization. See `isActivityOnUsersListForApi`.
  */
 
 import { createTenantKnex, tenantDb, withTransaction } from "@alga-psa/db";
 import { hasPermission } from "@alga-psa/auth";
 import type { IUserWithRoles } from "@alga-psa/types";
 import type { Knex } from "knex";
+import { ActivityType } from "@alga-psa/types";
+import { whereProjectTaskOnUsersList, whereTicketOnUsersList } from "./activityAssignmentScope";
 
 export interface ActivityGroup {
   groupId: string;
   groupName: string;
   sortOrder: number;
   isCollapsed: boolean;
+  /** Unfiled activities show in this group instead of "Ungrouped" (at most one per user) */
+  isDefault: boolean;
   items: ActivityGroupItem[];
 }
 
@@ -68,7 +79,7 @@ export async function getUserActivityGroupsForApi(
     const groups = await scopedDb.table("user_activity_groups")
       .where({ user_id: ownerUserId })
       .orderBy("sort_order")
-      .select("group_id", "group_name", "sort_order", "is_collapsed");
+      .select("group_id", "group_name", "sort_order", "is_collapsed", "is_default");
 
     if (groups.length === 0) return [];
 
@@ -96,6 +107,7 @@ export async function getUserActivityGroupsForApi(
       groupName: g.group_name,
       sortOrder: g.sort_order,
       isCollapsed: g.is_collapsed,
+      isDefault: g.is_default,
       items: itemsByGroup.get(g.group_id) || [],
     }));
   });
@@ -249,6 +261,10 @@ export async function removeActivityFromGroupsForApi(
  * Persist the full ordered membership of a single group after a drag-to-reorder. Pass every
  * item as it should appear; each row's `sort_order` is set to its position. Identity-explicit
  * core scoped to the caller's own groups.
+ *
+ * Upsert: a listed activity with no row in this group gets one (this is how reordering inside
+ * the user's default group pins its unpinned items). Before upserting, those activities are
+ * removed from the caller's other groups so an activity is never in two groups.
  */
 export async function reorderActivitiesInGroupForApi(
   user: IUserWithRoles,
@@ -272,14 +288,114 @@ export async function reorderActivitiesInGroupForApi(
       throw new Error("Group not found");
     }
 
+    const otherGroupIds: string[] = await scopedDb.table("user_activity_groups")
+      .where({ user_id: user.user_id })
+      .whereNot({ group_id: groupId })
+      .pluck("group_id");
+
     for (const item of orderedItems) {
+      if (otherGroupIds.length > 0) {
+        await scopedDb.table("user_activity_group_items")
+          .where({ activity_id: item.activityId, activity_type: item.activityType })
+          .whereIn("group_id", otherGroupIds)
+          .del();
+      }
+
       await scopedDb.table("user_activity_group_items")
-        .where({
+        .insert({
+          tenant,
           group_id: groupId,
           activity_id: item.activityId,
           activity_type: item.activityType,
+          sort_order: item.sortOrder,
         })
-        .update({ sort_order: item.sortOrder });
+        .onConflict(["tenant", "group_id", "activity_id", "activity_type"])
+        .merge(["sort_order"]);
     }
+  });
+}
+
+/**
+ * Set (or clear, with `groupId = null`) the caller's default activity group. Unfiled
+ * activities render in the default group instead of "Ungrouped" (applied at view time; no
+ * membership rows are written). Clears the current default first, then sets the new one, in
+ * one transaction; the partial unique index `idx_user_activity_groups_one_default` rejects a
+ * racing second default. Scoped to the caller's own groups only.
+ */
+export async function setDefaultActivityGroupForApi(
+  user: IUserWithRoles,
+  tenant: string,
+  groupId: string | null,
+): Promise<void> {
+  const { knex: db } = await createTenantKnex(tenant);
+  await withTransaction(db, async (trx: Knex.Transaction) => {
+    const scopedDb = tenantDb(trx, tenant);
+    await assertCanOrganizeGroups(trx, user);
+
+    if (groupId) {
+      const group = await scopedDb.table("user_activity_groups")
+        .where({ group_id: groupId, user_id: user.user_id })
+        .first();
+      if (!group) {
+        throw new Error("Group not found");
+      }
+    }
+
+    await scopedDb.table("user_activity_groups")
+      .where({ user_id: user.user_id, is_default: true })
+      .update({ is_default: false, updated_at: new Date() });
+
+    if (groupId) {
+      await scopedDb.table("user_activity_groups")
+        .where({ group_id: groupId, user_id: user.user_id })
+        .update({ is_default: true, updated_at: new Date() });
+    }
+  });
+}
+
+/**
+ * Is this record on the caller's own activities list? Drives whether the detail-screen
+ * "My group" control is shown. Uses the same predicates as the board
+ * (`activityAssignmentScope`), so "appears on my board" and "can be grouped from the detail
+ * screen" cannot drift apart.
+ *
+ * Only `ticket` and `projectTask` are supported; any other type returns `false`, as does a
+ * caller without `user_schedule:read` (they couldn't organize groups anyway). This never
+ * throws for those cases. Closed records still count as on the list: the board shows them
+ * when the closed filter is off, and membership should survive while a record is closed.
+ *
+ * Reassignment keeps group membership (see the header note): a record that leaves the list
+ * keeps its `user_activity_group_items` row, which stays invisible until the record returns.
+ * That is why the existing mutations carry no eligibility guard either: workflow actions
+ * file items into other users' groups on purpose, possibly before assignment.
+ */
+export async function isActivityOnUsersListForApi(
+  user: IUserWithRoles,
+  tenant: string,
+  activityType: string,
+  activityId: string,
+): Promise<boolean> {
+  if (!activityId) return false;
+  if (activityType !== ActivityType.TICKET && activityType !== ActivityType.PROJECT_TASK) {
+    return false;
+  }
+
+  const { knex: db } = await createTenantKnex(tenant);
+  return await withTransaction(db, async (trx: Knex.Transaction) => {
+    if (!(await hasPermission(user, "user_schedule", "read", trx))) {
+      return false;
+    }
+
+    const scopedDb = tenantDb(trx, tenant);
+    const row = activityType === ActivityType.TICKET
+      ? await scopedDb.table("tickets")
+          .where("tickets.ticket_id", activityId)
+          .where(whereTicketOnUsersList(scopedDb, trx, user.user_id))
+          .first("tickets.ticket_id")
+      : await scopedDb.table("project_tasks")
+          .where("project_tasks.task_id", activityId)
+          .where(whereProjectTaskOnUsersList(scopedDb, trx, user.user_id))
+          .first("project_tasks.task_id");
+    return !!row;
   });
 }

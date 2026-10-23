@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import {
   useClientBillingProfiles,
   type BillingProfileOption,
@@ -108,4 +108,37 @@ describe('T021: no client, no request', () => {
     expect(loader).not.toHaveBeenCalled();
     expect(result.current.isSegmented).toBe(false);
   });
+});
+
+describe('in-flight loads', () => {
+  const deferred = <T,>() => {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((res) => {
+      resolve = res;
+    });
+    return { promise, resolve };
+  };
+
+  it('ignores a response for a client that is no longer selected', async () => {
+    const first = deferred<BillingProfileOption[]>();
+    const loader = vi
+      .fn()
+      .mockReturnValueOnce(first.promise)
+      .mockResolvedValueOnce([profile('only-profile', true)]);
+    const { result, rerender } = renderHook(
+      ({ clientId }) => useClientBillingProfiles(clientId, loader),
+      { initialProps: { clientId: 'client-1' } },
+    );
+
+    rerender({ clientId: 'client-2' });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    await act(async () => {
+      first.resolve([profile('stale-a', true), profile('stale-b')]);
+      await first.promise;
+    });
+
+    expect(result.current.profiles.map((p) => p.billing_profile_id)).toEqual(['only-profile']);
+    expect(result.current.isSegmented).toBe(false);
+  });
+
 });

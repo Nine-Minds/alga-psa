@@ -9,7 +9,10 @@
 import {
   isHexColor,
   normalizeHex,
+  type EmailBrandingLogo,
+  type EmailBrandingLogoArtwork,
   type EmailBrandingPalette,
+  type EmailBrandingPreview,
   type EmailBrandingSuggestion,
   type EmailPaletteOverrides,
   type EmailPaletteTokens,
@@ -31,7 +34,10 @@ export interface EmailBrandingTemplateStatus {
 
 export interface EmailBrandingLogoOptions {
   logoUrl?: string;
+  /** Artwork for a dark header; Enterprise only, like the wide variants. */
+  logoDarkUrl?: string;
   logoWideUrl?: string;
+  logoWideDarkUrl?: string;
   clientName?: string;
 }
 
@@ -73,12 +79,32 @@ export interface EmailBrandingRemoveResult {
   kept: number;
 }
 
+/** One (name, language) the apply dialog asks to see before committing. */
+export interface EmailBrandingPreviewRequest {
+  name: string;
+  language: string;
+  /** Preview the forced rebuild from the standard template instead. */
+  overwrite?: boolean;
+}
+
+export type EmailBrandingPreviewResult = EmailBrandingPreview;
+
 export interface EmailBrandingPaletteInput {
   primary: string;
   secondary?: string | null;
   overrides?: EmailPaletteOverrides;
-  logo?: { variant: 'wide' | 'default' } | null;
+  logo?: { variant: 'wide' | 'default'; artwork?: EmailBrandingLogoArtwork | null } | null;
   hideAttribution?: boolean;
+}
+
+/** The logo block as persisted or submitted; only an explicit pin survives, auto is the absence of one. */
+function readBrandLogo(raw: unknown): EmailBrandingLogo | null {
+  const value = raw as Record<string, any> | null | undefined;
+  if (value?.variant !== 'wide' && value?.variant !== 'default') return null;
+  return {
+    variant: value.variant,
+    ...(value.artwork === 'light' || value.artwork === 'dark' ? { artwork: value.artwork } : {}),
+  };
 }
 
 export interface TenantSettingsBlob {
@@ -124,14 +150,13 @@ export function readEmailBrandingPalette(raw: unknown): EmailBrandingPalette | n
   if (!raw || typeof raw !== 'object') return null;
   const value = raw as Record<string, any>;
   if (!isHexColor(value.primary)) return null;
+  const logo = readBrandLogo(value.logo);
 
   return {
     primary: normalizeHex(value.primary)!,
     secondary: isHexColor(value.secondary) ? normalizeHex(value.secondary)! : null,
     ...(value.overrides && typeof value.overrides === 'object' ? { overrides: value.overrides } : {}),
-    ...(value.logo?.variant === 'wide' || value.logo?.variant === 'default'
-      ? { logo: { variant: value.logo.variant } }
-      : {}),
+    ...(logo ? { logo } : {}),
     ...(value.hideAttribution === true ? { hideAttribution: true } : {}),
     ...(typeof value.appliedAt === 'string' ? { appliedAt: value.appliedAt } : {}),
     ...(value.appliedPalette && typeof value.appliedPalette === 'object'
@@ -156,6 +181,7 @@ export function normalizeEmailBrandingInput(
   enterprise: boolean,
 ): Omit<EmailBrandingPalette, 'appliedAt' | 'appliedPalette'> {
   const overrides: EmailPaletteOverrides = {};
+  const logo = enterprise ? readBrandLogo(input.logo) : null;
 
   for (const [key, value] of Object.entries(input.overrides ?? {})) {
     if (value === undefined || value === null || value === '') continue;
@@ -174,7 +200,7 @@ export function normalizeEmailBrandingInput(
     primary: assertHex(input.primary, 'primary'),
     secondary: input.secondary ? assertHex(input.secondary, 'secondary') : null,
     ...(Object.keys(overrides).length > 0 ? { overrides } : {}),
-    ...(enterprise && input.logo?.variant ? { logo: { variant: input.logo.variant } } : {}),
+    ...(logo ? { logo } : {}),
     ...(enterprise && input.hideAttribution ? { hideAttribution: true } : {}),
   };
 }

@@ -1,3 +1,4 @@
+import { loadInvoiceChargeLineIds } from '../services/invoiceChargeLineage';
 /**
  * @alga-psa/billing - Invoice Model
  *
@@ -24,7 +25,7 @@ import type {
   InvoiceTimeEntrySnapshot,
   InvoiceViewModel,
 } from '@alga-psa/types';
-import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { isValidInvoiceTimeSnapshot } from '../lib/billing/invoiceTimeSnapshot';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
@@ -38,6 +39,8 @@ type InvoiceChargeDetailPeriodRow = {
 
 type InvoiceChargeDisplayRow = IInvoiceCharge & {
   name?: string | null;
+  adjustment_period_start?: string | Date | null;
+  adjustment_period_end?: string | Date | null;
 };
 
 type InvoiceTimeEntrySnapshotRow = {
@@ -189,6 +192,13 @@ function attachCanonicalRecurringDetailPeriods(
     const chargeDetailRows = detailRowsByItemId.get(charge.item_id);
     if (!chargeDetailRows || chargeDetailRows.length === 0) {
       // Historical flat invoices stay parent-only when canonical detail rows do not exist.
+      if (charge.adjustment_period_start || charge.adjustment_period_end) {
+        return {
+          ...charge,
+          service_period_start: normalizeRecurringDetailPeriodDate(charge.adjustment_period_start),
+          service_period_end: normalizeRecurringDetailPeriodDate(charge.adjustment_period_end),
+        };
+      }
       return charge;
     }
 
@@ -500,7 +510,7 @@ const Invoice = {
         .select('full_name')
         .where({ client_id: invoice.client_id })
         .first() as unknown as Promise<InvoiceContactRow | undefined>,
-      getClientLogoUrl(invoice.client_id, tenant).catch(() => null),
+      getClientDocumentLogoUrl(invoice.client_id, tenant).catch(() => null),
       tenantClientQuery
         .select(
           'tc.client_id',
@@ -535,6 +545,51 @@ const Invoice = {
       throw new Error(`Customer client details not found for invoice ${invoiceId}`);
     }
 
+    // The profile this invoice bills, and the identity it prints. Only read for
+    // an invoice that carries a profile, so a pre-profile invoice costs nothing
+    // and reads exactly as it always did.
+    const clientBillingProfiles = invoice.billing_profile_id
+      ? await tenantDb(knexOrTrx, tenant)
+        .table('client_billing_profiles')
+        .where({ client_id: invoice.client_id })
+        .select(
+          'billing_profile_id',
+          'name',
+          'bill_to_name',
+          'bill_to_location_id',
+          'is_default',
+        ) as Array<{
+          billing_profile_id: string;
+          name: string;
+          bill_to_name: string | null;
+          bill_to_location_id: string | null;
+          is_default: boolean;
+        }>
+      : [];
+    const billingProfile = clientBillingProfiles.find(
+      (profile) => profile.billing_profile_id === invoice.billing_profile_id,
+    ) ?? null;
+    // A profile's bill-to address is a location of the same client; when the
+    // profile names one, that is the address the invoice is billed to.
+    const billToLocation = billingProfile?.bill_to_location_id
+      ? await tenantScopedTable(knexOrTrx, tenant, 'client_locations')
+        .where({
+          location_id: billingProfile.bill_to_location_id,
+          client_id: invoice.client_id,
+        })
+        .select(
+          knexOrTrx.raw(`CONCAT_WS(', ',
+            NULLIF(address_line1, 'N/A'),
+            address_line2,
+            NULLIF(city, 'N/A'),
+            state_province,
+            postal_code,
+            NULLIF(country_name, 'Unknown')
+          ) as location_address`),
+        )
+        .first() as { location_address?: string | null } | undefined
+      : undefined;
+
     let clientProperties: { logo?: string } = {};
     if (typeof client.properties === 'string') {
       try {
@@ -563,7 +618,7 @@ const Invoice = {
 
     let tenantClient: InvoiceViewModel['tenantClient'] = null;
     if (tenantClientDetails?.client_id) {
-      const tenantLogoUrl = await getClientLogoUrl(tenantClientDetails.client_id, tenant).catch(() => null);
+      const tenantLogoUrl = await getClientDocumentLogoUrl(tenantClientDetails.client_id, tenant).catch(() => null);
       const tenantClientName = asTrimmedString(tenantClientDetails.client_name);
       const tenantClientAddress = asTrimmedString(tenantClientDetails.location_address);
 
@@ -627,12 +682,21 @@ const Invoice = {
       invoice_number: invoice.invoice_number,
       client_id: invoice.client_id,
       po_number: invoice.po_number ?? null,
+      payment_method: invoice.payment_method ?? null,
       client_contract_id: invoice.client_contract_id ?? null,
       client: {
-        name: client.client_name || '',
+        // Bill-to, not the client's own name: a profile that carries its own
+        // billing identity is the customer on this document. NULL inherits the
+        // client name, which is every unsegmented invoice.
+        name: billingProfile?.bill_to_name?.trim() || client.client_name || '',
         logo: logoUrl || clientProperties.logo || '',
-        address: client.location_address || ''
+        address: billToLocation?.location_address || client.location_address || ''
       },
+      billing_profile_id: invoice.billing_profile_id ?? null,
+      billing_profile_name: billingProfile?.name ?? null,
+      // D6 — profile surfaces stay invisible until a client actually holds more
+      // than one profile.
+      client_has_multiple_billing_profiles: clientBillingProfiles.length > 1,
       contact: {
         name: contact?.full_name || '',
         address: ''
@@ -651,6 +715,7 @@ const Invoice = {
       credit_applied: creditApplied,
       billing_cycle_id: invoice.billing_cycle_id,
       is_manual: Boolean(invoice.is_manual),
+      draft_adjustment_revision: Number((invoice as { draft_adjustment_revision?: number }).draft_adjustment_revision ?? 0),
       tax_source: invoice.tax_source || 'internal',
       recurring_service_period_start: recurringServicePeriodStarts[0] || null,
       recurring_service_period_end: recurringServicePeriodEnds[recurringServicePeriodEnds.length - 1] || null,
@@ -736,18 +801,36 @@ const Invoice = {
           'ic.tenant',
           'ic.billing_charge_type',
           'ic.service_id',
+          'ic.client_contract_id',
+          'ic.adjustment_source_kind',
+          'ic.adjustment_source_id',
+          'ic.adjustment_source_revision',
+          'ic.adjustment_reason',
+          'ic.adjustment_period_start',
+          'ic.adjustment_period_end',
           'sc.item_kind as service_item_kind',
           'sc.sku as service_sku',
           'sc.service_name as service_name',
           'ic.description as name',
           'ic.description',
           'ic.is_discount',
+          'ic.discount_type',
+          'ic.discount_percentage',
+          'ic.applies_to_item_id',
+          'ic.applies_to_service_id',
+          'ic.is_manual_credit',
+          'ic.unit_code',
+          'ic.unit_label',
           knexOrTrx.raw('CAST(ic.quantity AS DOUBLE PRECISION) as quantity'),
           knexOrTrx.raw('CAST(ic.unit_price AS BIGINT) as unit_price'),
           knexOrTrx.raw('CAST(ic.total_price AS BIGINT) as total_price'),
           knexOrTrx.raw('CAST(ic.tax_amount AS BIGINT) as tax_amount'),
           knexOrTrx.raw('CAST(ic.net_amount AS BIGINT) as net_amount'),
           'ic.is_manual',
+          'ic.is_taxable',
+          'ic.tax_region',
+          'ic.billing_profile_id',
+          'ic.manual_line_metadata',
           'ic.location_id'
         )
         .where('ic.invoice_id', invoiceId);
@@ -755,6 +838,17 @@ const Invoice = {
       const items = (await query) as InvoiceChargeDisplayRow[];
       if (items.length === 0) {
         return items;
+      }
+
+      const lineIds = await loadInvoiceChargeLineIds(knexOrTrx, tenant, invoiceId);
+      for (const item of items) {
+        item.adjustment_period_start = normalizeRecurringDetailPeriodDate(item.adjustment_period_start)?.slice(0, 10) ?? null;
+        item.adjustment_period_end = normalizeRecurringDetailPeriodDate(item.adjustment_period_end)?.slice(0, 10) ?? null;
+        const ids = lineIds.get(item.item_id);
+        const partial = (item.manual_line_metadata as any)?.partialPeriod;
+        (item as IInvoiceCharge).contract_line_id = ids?.size === 1
+          ? ids.values().next().value ?? null
+          : ids?.size ? null : partial?.contract_line_id ?? null;
       }
 
       const itemIds = items.map((item) => item.item_id).filter(Boolean);
@@ -1006,6 +1100,11 @@ const Invoice = {
       name: insertRecord.name,
       version: insertRecord.version,
       is_default: insertRecord.is_default,
+      // The insert path takes the column default; a conflict-merge must bump it explicitly.
+      // Bound, not now(): Citus rejects non-IMMUTABLE functions in DO UPDATE SET on
+      // distributed tables.
+      // LEVERAGE: pattern citus-upsert-timestamp — every merge that bumps a timestamp hand-binds new Date()
+      updated_at: new Date(),
     };
     if (Object.prototype.hasOwnProperty.call(insertRecord, 'templateAst')) {
       updateRecord.templateAst = insertRecord.templateAst;

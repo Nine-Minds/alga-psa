@@ -440,6 +440,10 @@ describe('listAssetTypes ordering and lookup', () => {
     const listed = await listAssetTypes(knexMock, 'tenant_a');
     expect(listed.map((t) => t.slug)).toEqual([
       'workstation',
+      'network_device',
+      'server',
+      'mobile_device',
+      'printer',
       'unknown',
       'backup',
       'door_access',
@@ -529,16 +533,13 @@ describe('updateAssetType built-in immutability (T306)', () => {
     }
   });
 
-  it('rejects schema changes on built-ins with a typed error', async () => {
+  it('allows additional field schemas on built-ins', async () => {
     seedBuiltin('server', 'Server', 2);
     const result = await updateAssetType(knexMock, 'tenant_a', 'server', {
       fields_schema: [{ key: 'cpu', label: 'CPU', kind: 'text' }],
     });
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toEqual({ code: 'builtin_immutable', slug: 'server', attempted: ['fields_schema'] });
-    }
-    expect(state.asset_type_registry[0].fields_schema).toBe('[]');
+    expect(result.ok).toBe(true);
+    expect(JSON.parse(state.asset_type_registry[0].fields_schema)).toEqual([{ key: 'cpu', label: 'CPU', kind: 'text' }]);
   });
 
   it('rejects display_order changes on built-ins', async () => {

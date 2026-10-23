@@ -10,6 +10,7 @@ vi.mock('@alga-psa/auth', () => ({
     action(currentUser, { tenant: currentUser.tenant }, ...args),
   withOptionalAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),
+  hasPermission: async () => true,
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -51,6 +52,10 @@ function buildChain(result: any) {
 function buildTrx(invoiceRows: any[]) {
   return Object.assign(
     ((table: string) => {
+      if (table === 'boards') {
+        return { select: async () => [] };
+      }
+
       if (table === 'contacts') {
         const contactRow = {
           contact_name_id: 'contact-1',

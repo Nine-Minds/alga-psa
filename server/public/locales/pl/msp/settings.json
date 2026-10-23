@@ -60,8 +60,22 @@
     },
     "clients": {
       "title": "Państwa firma",
-      "help": "Klient oznaczony jako Państwa firma reprezentuje Państwa własną organizację. Jego nazwa, adres i logo pojawiają się na fakturach, ofertach oraz w komunikacji z klientami.",
+      "help": "Klient oznaczony jako Państwa firma reprezentuje Państwa własną organizację. Jego nazwa, adres i logo pojawiają się na fakturach, ofertach oraz w komunikacji z klientami, a kraj jego lokalizacji określa format daty i kraj wstępnie wybierany w nowych rekordach.",
       "currentDefault": "Państwa firmą jest obecnie {{name}}.",
+      "defaults": {
+        "title": "Co określa Państwa firma",
+        "intro": "Kraj lokalizacji {{name}} określa poniższe ustawienia dla całej aplikacji MSP:",
+        "country": "Nowi klienci, kontakty i lokalizacje mają wstępnie wybrany kraj {{country}}.",
+        "countryMissing": "Nowi klienci, kontakty i lokalizacje nie mają wstępnie wybranego kraju.",
+        "phoneCode": "Numery telefonów zaczynają się od numeru kierunkowego {{code}}.",
+        "phoneCodeMissing": "Numery telefonów zaczynają się bez numeru kierunkowego.",
+        "dateFormat": "Daty są zapisywane jako {{pattern}} — {{example}} — w formacie {{clock}}.",
+        "clock12": "12-godzinnym",
+        "clock24": "24-godzinnym",
+        "noCountry": "{{name}} nie ma kraju w lokalizacji, więc wszystkie trzy wracają do domyślnego formatu {{pattern}}. Aby je zmienić, proszę dodać do {{name}} lokalizację z krajem — nie ma osobnego ustawienia formatu daty.",
+        "portalNote": "W portalu klienta daty są wyświetlane w formacie właściwym dla danego klienta, wynikającym z kraju jego lokalizacji, a nie Państwa.",
+        "changeIntro": "Przełączenie na {{name}} zmienia także te ustawienia domyślne:"
+      },
       "yourCompanyBadge": "Państwa firma",
       "table": {
         "name": "Nazwa",
@@ -99,6 +113,18 @@
         "setDefaultClient": "Nie udało się ustawić domyślnego klienta",
         "loadClients": "Nie udało się załadować klientów"
       }
+    }
+  },
+  "dashboardWelcome": {
+    "label": "Używaj nazwy firmy w powitaniu na pulpicie",
+    "help": "Domyślnie wyłączone: pulpit MSP wyświetla „Witamy w centrum dowodzenia MSP”. Po włączeniu pojawia się nazwa klienta oznaczonego jako Państwa firma. Ten przełącznik zapisuje się natychmiast i niezależnie.",
+    "noCompany": "Żaden klient nie jest jeszcze oznaczony jako Państwa firma. Proszę wybrać go w Ustawienia → Ogólne, aby jego nazwa mogła się tu pojawić.",
+    "previewLabel": "Państwa zespół zobaczy:",
+    "preview": "Witamy w centrum dowodzenia {{companyName}}",
+    "previewDefault": "Witamy w centrum dowodzenia MSP",
+    "messages": {
+      "saved": "Zaktualizowano powitanie na pulpicie",
+      "saveFailed": "Nie udało się zaktualizować powitania na pulpicie"
     }
   },
   "experimentalFeatures": {
@@ -367,6 +393,7 @@
         "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
         "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
         "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości",
+        "invalidTimezone": "Wybierz strefę czasową powiązaną z miastem, np. America/New_York.",
         "permissionDenied": "Nie masz uprawnień do zmiany ról użytkowników.",
         "invalidCapacity": "Tygodniowa wydajność musi być liczbą dodatnią.",
         "invalidWorkSchedule": "Godziny pracy muszą być prawidłowymi przedziałami kończącymi się po rozpoczęciu."
@@ -398,7 +425,8 @@
       "placeholders": {
         "teamName": "Wprowadź nazwę zespołu",
         "selectTeamLead": "Wybierz lidera zespołu",
-        "selectUserToAdd": "Wybierz użytkownika do dodania"
+        "selectUserToAdd": "Wybierz użytkownika do dodania",
+        "noTeamLead": "Nieprzypisany"
       },
       "alert": {
         "unsavedChanges": "Mają Państwo niezapisane zmiany"
@@ -445,7 +473,8 @@
       "boards": "Tablice",
       "priorities": "Priorytety",
       "categories": "Kategorie",
-      "checklistTemplates": "Szablony list kontrolnych"
+      "checklistTemplates": "Szablony list kontrolnych",
+      "externalSystems": "Systemy zewnętrzne"
     },
     "numbering": {
       "title": "Format numeru",
@@ -553,7 +582,8 @@
       },
       "statusLabels": {
         "active": "Aktywna",
-        "inactive": "Nieaktywna"
+        "inactive": "Nieaktywna",
+        "hiddenFromPortal": "Ukryta w portalu"
       },
       "actions": {
         "addBoard": "Dodaj tablicę",
@@ -633,7 +663,8 @@
           "loading": "Ładowanie statusów zgłoszeń tablicy…",
           "statusName": "Nazwa statusu",
           "closed": "Zamknięte",
-          "default": "Domyślne"
+          "default": "Domyślne",
+          "portalSelectable": "Użytkownicy portalu klienta mogą wybrać ten status"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Otwórz ponownie zamknięte zgłoszenia przy przychodzących odpowiedziach",
@@ -647,8 +678,12 @@
           "suppressAiHelp": "Tylko dodatek Enterprise AI Assistant. Jeśli niedostępny, odpowiedzi otwierają zgłoszenia normalnie."
         },
         "liveTimer": {
-          "label": "Włącz stoper zgłoszeń na żywo",
-          "help": "Pokazuje stoper na żywo i rejestrowane interwały na zgłoszeniach tej tablicy. Ręczne wprowadzanie czasu pozostaje dostępne."
+          "label": "Pokaż stoper przy zgłoszeniach",
+          "help": "Pokazuje elementy sterujące stoperem przy zgłoszeniach tej tablicy. Wyłącz, aby ukryć tutaj stoper; ręczne wprowadzanie czasu pozostaje dostępne. Już uruchomiony stoper działa dalej."
+        },
+        "clientPortalVisible": {
+          "label": "Widoczna w portalu klienta",
+          "help": "Gdy wyłączone, ta tablica i jej zgłoszenia są ukryte przed wszystkimi użytkownikami portalu klienta, niezależnie od grup widoczności."
         },
         "defaultBoard": {
           "label": "Domyślna tablica dla zgłoszeń z portalu klienta",
@@ -791,6 +826,27 @@
           "appearanceHelp": "Przypinanie karty i domyślny widok listy tablicy",
           "assignment": "Przypisanie i SLA",
           "assignmentHelp": "Domyślne kierowanie, SLA i menedżer tablicy",
+          "notifications": "Powiadomienia",
+          "notificationsHelp": "Powiadamiaj techników o nowych zgłoszeniach i zmianach statusu oraz ustaw domyślnych obserwatorów",
+          "notificationsRulesLabel": "Reguły powiadomień",
+          "notificationsRulesHelp": "Odbiorcy otrzymują jedno powiadomienie na zdarzenie. Nie są dodawani jako obserwatorzy.",
+          "notificationsAddRule": "Dodaj regułę",
+          "notificationsRuleTitle": "Reguła {{number}}",
+          "notificationsRuleEnabled": "Włączona",
+          "notificationsRemoveRule": "Usuń regułę",
+          "notificationsOnCreate": "Gdy zgłoszenie zostanie utworzone na tej tablicy",
+          "notificationsOnStatus": "Gdy zgłoszenie przechodzi do statusu",
+          "notificationsNoStatuses": "Statusy można wybrać po zapisaniu tablicy.",
+          "notificationsRecipients": "Powiadom",
+          "notificationsRecipientsPlaceholder": "Wybierz użytkowników i zespoły...",
+          "notificationsRecipientsHelp": "Członkowie zespołu są ustalani przy każdym wysłaniu powiadomienia.",
+          "notificationsDefaultWatchers": "Domyślni obserwatorzy",
+          "notificationsDefaultWatchersPlaceholder": "Wybierz użytkowników...",
+          "notificationsDefaultWatchersHelp": "Dodawani do listy obserwatorów każdego nowego zgłoszenia na tej tablicy i powiadamiani o każdej późniejszej aktualizacji.",
+          "notificationsTriggerRequired": "Każda reguła powiadomień wymaga co najmniej jednego wyzwalacza: utworzenia zgłoszenia lub statusu.",
+          "notificationsRecipientRequired": "Każda reguła powiadomień wymaga co najmniej jednego użytkownika lub zespołu do powiadomienia.",
+          "notificationsFetchFailed": "Nie udało się wczytać ustawień powiadomień",
+          "notificationsStatusRemapFailed": "Tablica została utworzona, ale nie udało się dopasować statusu reguły powiadomień do nowej tablicy. Dodaj reguły powiadomień ponownie.",
           "inbound": "E-mail i odpowiedzi przychodzące",
           "inboundHelp": "Ponownie otwieraj zgłoszenia, gdy klienci odpowiadają e-mailem",
           "close": "Reguły zamykania",
@@ -800,7 +856,7 @@
           "statuses": "Priorytety i statusy",
           "statusesHelp": "Domyślny priorytet oraz statusy zgłoszeń dla tej tablicy",
           "display": "Wyświetlanie i zachowanie",
-          "displayHelp": "Licznik na żywo i typ tablicy"
+          "displayHelp": "Stoper i typ tablicy"
         },
         "saveChanges": "Zapisz zmiany",
         "unsaved": "Niezapisane",
@@ -827,7 +883,17 @@
         }
       },
       "empty": "Nie znaleziono tablic.",
-      "searchPlaceholder": "Szukaj tablic…"
+      "searchPlaceholder": "Szukaj tablic…",
+      "emailSender": {
+        "useDefault": "Użyj nadawcy domyślnego zgłoszenia",
+        "duplicateRoute": "Ta trasa nadawcy już istnieje.",
+        "saveFailed": "Nie można zapisać nadawcy zgłoszenia. Spróbuj ponownie.",
+        "label": "Nadawca wiadomości wychodzących",
+        "inboundWarning": "Ten nadawca jest używany do wychodzących wiadomości e-mail dotyczących zgłoszeń. Ustawienia poczty przychodzącej pozostają bez zmian.",
+        "displayName": "Nazwa wyświetlana",
+        "save": "Zapisz nadawcę",
+        "saved": "Zapisano nadawcę"
+      }
     },
     "priorities": {
       "title": {
@@ -958,13 +1024,40 @@
         },
         "rules": {
           "label": "Reguły automatycznego stosowania",
-          "help": "Szablon jest automatycznie stosowany do nowych zgłoszeń pasujących do którejkolwiek z tych reguł. Pozostaw pole jako \"Dowolny\", aby dopasować wszystkie wartości.",
+          "help": "Szablon jest stosowany do nowego zgłoszenia, gdy pasuje ono do dowolnej z jego reguł. Reguła pasuje tylko wtedy, gdy zgłoszenie spełnia wszystkie ustawione filtry. Pozostaw filtr pusty, aby go pominąć.",
           "empty": "Brak reguł automatycznego stosowania. Szablon nadal można stosować do zgłoszeń ręcznie.",
           "board": "Tablica",
           "category": "Kategoria",
           "subcategory": "Podkategoria",
           "priority": "Priorytet",
-          "any": "Dowolny"
+          "any": "Dowolny",
+          "appliesToAll": "Dotyczy wszystkich zgłoszeń",
+          "clients": "Klienci",
+          "clientsAny": "Dowolny klient",
+          "clientsAddAnother": "Dodaj kolejnego klienta",
+          "removeClient": "Usuń {{name}}",
+          "origins": "Źródło zgłoszenia",
+          "originsAny": "Dowolne źródło",
+          "fromServiceRequest": "Tylko zgłoszenia z żądania usługi",
+          "anyServiceRequest": "Dowolne żądanie usługi",
+          "keywords": "Słowa kluczowe",
+          "keywordsPlaceholder": "Wpisz słowo lub frazę i naciśnij Enter",
+          "keywordsHelp": "Dopasowywane są także fragmenty słów, więc \"onboard\" znajdzie \"onboarding\". Wielkość liter jest pomijana.",
+          "removeKeyword": "Usuń {{keyword}}",
+          "keywordMode": "Dopasowanie",
+          "keywordModeAny": "Dowolne słowo kluczowe",
+          "keywordModeAll": "Wszystkie słowa kluczowe",
+          "keywordTarget": "Szukaj w",
+          "keywordTargetBoth": "Tytuł i opis",
+          "keywordTargetTitle": "Tytuł",
+          "keywordTargetDescription": "Opis",
+          "originLabels": {
+            "internal": "Utworzone przez personel",
+            "client_portal": "Portal klienta",
+            "inbound_email": "Przychodząca wiadomość e-mail",
+            "api": "API",
+            "recurring": "Harmonogram cykliczny"
+          }
         }
       },
       "dialog": {
@@ -989,6 +1082,47 @@
           "updateStatusFailed": "Nie udało się zaktualizować statusu szablonu",
           "itemSaveFailed": "Nie udało się zapisać elementu listy kontrolnej",
           "ruleSaveFailed": "Nie udało się zapisać reguły automatycznego stosowania"
+        }
+      }
+    },
+    "externalSystems": {
+      "title": "Systemy zewnętrzne",
+      "subtitle": "Dodaj niestandardowe systemy zewnętrzne, aby zgłoszenia mogły odwoływać się do rekordów spoza wbudowanego katalogu.",
+      "addButton": "Dodaj system",
+      "builtInTitle": "Systemy wbudowane",
+      "builtInSubtitle": "Dostępne dla każdej organizacji; ich adresy URL są generowane na podstawie szablonu systemu.",
+      "table": {
+        "label": "Etykieta",
+        "key": "Klucz",
+        "urlTemplate": "Szablon adresu URL",
+        "actions": "Działania"
+      },
+      "actions": {
+        "edit": "Edytuj",
+        "delete": "Usuń",
+        "cancel": "Anuluj",
+        "save": "Zapisz"
+      },
+      "fields": {
+        "key": "Klucz",
+        "keyHint": "Musi być zgodny z custom:<slug> przy użyciu małych liter, cyfr lub podkreśleń.",
+        "label": "Etykieta",
+        "urlTemplate": "Szablon adresu URL",
+        "urlTemplateHint": "Opcjonalne. Użyj symboli zastępczych {realm} i {external_id}."
+      },
+      "dialog": {
+        "addTitle": "Dodaj system zewnętrzny",
+        "editTitle": "Edytuj system zewnętrzny"
+      },
+      "deleteDialog": {
+        "title": "Usuń system zewnętrzny",
+        "message": "Usunąć \"{{label}}\"? Systemy nadal używane przez łącza nie mogą zostać usunięte."
+      },
+      "messages": {
+        "success": {
+          "created": "Utworzono system zewnętrzny.",
+          "updated": "Zaktualizowano system zewnętrzny.",
+          "deleted": "Usunięto system zewnętrzny."
         }
       }
     }
@@ -1176,6 +1310,8 @@
         "followTheme": "Gdy włączone, portal klienta używa motywu wybranego w Ustawienia → Wygląd. Gdy wyłączone, kolory poniżej go zastępują.",
         "followThemeActive": "Kolory poniżej pozostają zapisane, ale nie są stosowane, dopóki portal podąża za motywem organizacji."
       },
+      "cropHelp": "Przeciągaj i powiększaj, aby wybrać część widoczną w panelu bocznym portalu i w każdej okrągłej ramce. Szerokie logo pozostaje bez zmian.",
+      "cropHelpFromSquare": "Przeciągaj i powiększaj, aby wybrać część widoczną w panelu bocznym portalu i w każdej okrągłej ramce. Zmienia się tylko znak, więc możesz go później ponownie dostosować.",
       "heroGradient": {
         "primaryShades": "Kolor główny do odcienia głównego",
         "primarySecondary": "Kolor główny do koloru dodatkowego"
@@ -1270,7 +1406,7 @@
     },
     "domain": {
       "title": "Domena niestandardowa",
-      "description": "Skonfiguruj firmową nazwę hosta dla portalu klienta. Po zweryfikowaniu DNS automatycznie wystawimy certyfikaty TLS.",
+      "description": "Skonfiguruj firmową nazwę hosta dla portalu klienta.",
       "currentStatus": "Aktualny status",
       "noDomainConfigured": "Nie skonfigurowano domeny niestandardowej",
       "defaultStatusMessage": "Nie zarejestrowano jeszcze żadnej domeny niestandardowej.",
@@ -1312,7 +1448,8 @@
         "step3": "Uzyskaj i utrzymuj certyfikat TLS dla domeny na swoim proxy.",
         "step4": "Zapisz domenę tutaj — aktywuje się natychmiast. Najpierw skonfiguruj DNS i proxy, ponieważ linki portalu od razu przełączą się na tę domenę.",
         "docLinkText": "Przewodnik konfiguracji i rozwiązywania problemów z reverse proxy",
-        "neverSeenWarning": "Żadne żądania nie dotarły jeszcze do {{domain}}. Sprawdź, czy Twój reverse proxy przekazuje oryginalny nagłówek Host."
+        "neverSeenWarning": "Żadne żądania nie dotarły jeszcze do {{domain}}. Sprawdź, czy Twój reverse proxy przekazuje oryginalny nagłówek Host.",
+        "tlsNote": "TLS kończy się na Twoim reverse proxy, który przechowuje certyfikat."
       },
       "badges": {
         "pending_dns": "Oczekuje na DNS",
@@ -1337,7 +1474,8 @@
         "refreshFailed": "Nie udało się odświeżyć statusu domeny.",
         "retryFailed": "Ponowienie nie powiodło się.",
         "disableFailed": "Nie udało się wyłączyć domeny niestandardowej."
-      }
+      },
+      "hostedTlsNote": "Po zweryfikowaniu DNS automatycznie wystawimy certyfikaty TLS."
     },
     "yourCompanyName": "Nazwa Twojej firmy",
     "brandingPreviewMode": "Tryb motywu podglądu marki",
@@ -1445,7 +1583,13 @@
     "whiteLabel": {
       "title": "Własna marka w aplikacji MSP",
       "description": "Prześlij swoje logo jeden raz. Zastępuje ono znak Alga w menu bocznym MSP, a portal klienta korzysta z tych samych obrazów.",
-      "logoHelp": "Kwadratowy znak jest używany wszędzie tam, gdzie miejsce jest kwadratowe: w zwiniętym menu bocznym i w okrągłych ramkach. Opcjonalne szerokie logo zastępuje znak i nazwę w rozwiniętym menu bocznym, prześlij więc takie, które zawiera już nazwę Twojej firmy. Menu boczne dopasowuje się do własnego tła: przy ciemnym menu używa wariantów na ciemne tła, przy jasnym — jasnych, a jeśli pasującego brakuje, sięga po ten, który przesłano.",
+      "logoHelp": "Kwadratowy znak jest używany wszędzie tam, gdzie miejsce jest kwadratowe: w zwiniętym menu bocznym i w okrągłych ramkach. Wrzuć szerokie logo do kwadratowego pola i wybierz, która część stanie się znakiem; po przesłaniu szerokiego logo możesz też wyciąć znak bezpośrednio z niego. Opcjonalne szerokie logo zastępuje znak i nazwę w rozwiniętym menu bocznym, prześlij więc takie, które zawiera już nazwę Twojej firmy. Menu boczne dopasowuje się do własnego tła: przy ciemnym menu używa wariantów na ciemne tła, przy jasnym — jasnych, a jeśli pasującego brakuje, sięga po ten, który przesłano.",
+      "cropHelp": "Przeciągaj i powiększaj, aby wybrać część widoczną w zwiniętym menu bocznym i w każdej okrągłej ramce. Szerokie logo pozostaje bez zmian.",
+      "cropHelpFromSquare": "Przeciągaj i powiększaj, aby wybrać część widoczną w zwiniętym menu bocznym i w każdej okrągłej ramce. Zmienia się tylko znak, więc możesz go później ponownie dostosować.",
+      "linkDocument": {
+        "title": "Użyj przesłanego obrazu",
+        "description": "Wybierz obraz przesłany wcześniej do sekcji Dokumenty. Sam dokument pozostaje bez zmian."
+      },
       "fields": {
         "mark": "Znak kwadratowy",
         "markDark": "Znak kwadratowy na ciemne tła",
@@ -1566,7 +1710,8 @@
       "preview": {
         "subjectLabel": "Podgląd tematu",
         "iframeTitle": "Podgląd szablonu e-maila",
-        "sampleDataNote": "Podgląd korzysta z przykładowych danych. Rzeczywiste e-maile będą zawierać prawdziwe wartości."
+        "sampleDataNote": "Podgląd korzysta z przykładowych danych. Rzeczywiste e-maile będą zawierać prawdziwe wartości.",
+        "sourceSyncNote": "Kliknij element w podglądzie, aby zaznaczyć odpowiadający mu kod; przesunięcie kursora w kodzie obrysowuje ten element tutaj."
       },
       "errors": {
         "loadFailed": "Nie udało się załadować szablonów"
@@ -1615,7 +1760,8 @@
       },
       "tabs": {
         "source": "Kod źródłowy",
-        "preview": "Podgląd"
+        "preview": "Podgląd",
+        "variables": "Zmienne"
       },
       "common": {
         "notAvailable": "Nd."
@@ -1686,6 +1832,20 @@
           "text": "tekst",
           "subject": "temat"
         },
+        "overwrite": "Nadpisz",
+        "overwriteHint": "Nadpisanie odtwarza szablon na podstawie standardowego z Twoją paletą i usuwa Twoje zmiany.",
+        "preview": {
+          "open": "Zobacz podgląd wyniku",
+          "title": "Podgląd: {{name}}",
+          "loading": "Tworzenie podglądu...",
+          "captions": {
+            "create": "Ze standardowego szablonu powstanie kopia w Państwa kolorystyce.",
+            "update": "Państwa kopia zostanie zbudowana na nowo ze standardowego szablonu z zapisaną paletą.",
+            "customized": "Państwa zmiany pozostają słowo w słowo. Zamieniane są tylko kolory standardowe, które jeszcze zostały w tym szablonie.",
+            "overwrite": "Twoje zmiany w tym szablonie zostaną usunięte. Szablon zostanie odtworzony na podstawie standardowego z Twoją paletą.",
+            "skipped": "Nic nie zostanie zapisane — {{reason}}. Tak wygląda ten szablon dzisiaj."
+          }
+        },
         "summary": "{{written}} z brandingiem, {{skipped}} pominiętych, {{failed}} nieudanych",
         "groups": {
           "system": {
@@ -1720,6 +1880,12 @@
         "useLogo": "Używaj mojego logo w nagłówku e-maili",
         "logoWide": "Szerokie logo",
         "logoDefault": "Kwadratowe logo",
+        "logoArtwork": "Wersja logo",
+        "logoArtworkAuto": "Dopasuj do nagłówka",
+        "logoArtworkLight": "Logo na jasne tło",
+        "logoArtworkDark": "Logo na ciemne tło",
+        "logoArtworkAutoDark": "Tryb automatyczny uznaje ten nagłówek za ciemny i używa logo na ciemne tło.",
+        "logoArtworkAutoLight": "Tryb automatyczny uznaje ten nagłówek za jasny i używa logo na jasne tło.",
         "noLogo": "Prześlij logo w Ustawienia → Portal klienta → Branding, aby użyć go tutaj.",
         "showAttribution": "Pokazuj „Powered by AlgaPSA” w stopce"
       }
@@ -1818,11 +1984,60 @@
         "normal": "Normalny",
         "low": "Niski"
       }
+    },
+    "emailTemplates": {
+      "editor": {
+        "inlineLogoHint": "Twoje logo jest osadzane w wiadomości podczas wysyłki. Pozostaw odwołanie src=\"cid:{{cid}}\" bez zmian — zastąpienie go adresem URL sprawi, że odbiorcy będą musieli najpierw zezwolić na pobranie obrazu."
+      }
+    },
+    "templateVariables": {
+      "actions": {
+        "insert": "Wstaw w miejscu kursora",
+        "guide": "Przeczytaj pełny przewodnik",
+        "copy": "Kopiuj {{path}}"
+      },
+      "insertHelp": "Wybierz zmienną, aby ją wstawić.",
+      "availableHelp": "Zmienne dostępne w tym szablonie.",
+      "fields": {
+        "search": {
+          "placeholder": "Szukaj zmiennych"
+        },
+        "globalSearch": {
+          "placeholder": "Szukaj ścieżek, opisów i pojęć"
+        },
+        "category": {
+          "all": "Wszystkie obszary"
+        }
+      },
+      "title": "Informacje o zmiennych szablonów e-mail",
+      "panelTitle": "Zmienne szablonu",
+      "inferredContract": "Obecnie nie jest wysyłany. Ten kontrakt został wywnioskowany z szablonu.",
+      "empty": "Brak pasujących zmiennych.",
+      "example": "Przykład:",
+      "usedBy": "Używane przez {{templates}}",
+      "description": "Znajdź dane dostępne w każdym systemowym szablonie e-mail. Skopiuj dokładny token Handlebars do własnego szablonu.",
+      "enums": {
+        "categories": {
+          "appointments": "Wizyty",
+          "auth": "Uwierzytelnianie",
+          "billing": "Rozliczenia",
+          "quotes": "Oferty",
+          "invoices": "Faktury",
+          "opportunities": "Szanse sprzedaży",
+          "projects": "Projekty",
+          "sla": "SLA",
+          "surveys": "Ankiety",
+          "tickets": "Zgłoszenia",
+          "time": "Czas"
+        }
+      }
     }
   },
   "timeEntry": {
     "title": "Ustawienia wpisów czasu",
     "description": "Zarządzanie ustawieniami wpisów czasu i okresami rozliczeniowymi",
+    "accessDenied": "Brak dostępu: nie masz uprawnień do wyświetlania okresów.",
+    "loading": "Ładowanie ustawień wpisów czasu...",
     "timePeriods": {
       "title": "Ustawienia okresów rozliczeniowych",
       "description": "Skonfiguruj okresy rozliczeniowe",
@@ -1920,7 +2135,7 @@
       "openMenu": "Otwórz menu",
       "columns": {
         "startDate": "Data początkowa",
-        "endDate": "Data końcowa",
+        "endDate": "Ostatni dzień",
         "actions": "Akcje"
       },
       "form": {
@@ -1932,7 +2147,8 @@
         "startDate": "Data początkowa",
         "startDatePlaceholder": "Wybierz datę początkową",
         "noEndDate": "Bez daty końcowej",
-        "endDate": "Data końcowa",
+        "endDate": "Ostatni dzień okresu",
+        "endDateHelp": "Okres obejmuje ten dzień.",
         "endDatePlaceholder": "Wybierz datę końcową",
         "deletePeriod": "Usuń okres",
         "confirmDeleteTitle": "Potwierdź usunięcie",
@@ -1946,7 +2162,7 @@
         "noSettings": "Brak dostępnych ustawień okresów rozliczeniowych. Nie można utworzyć nowego okresu.",
         "settingsRequired": "Bez ustawień nie można zarządzać okresem.",
         "startDateRequired": "Należy podać datę początkową.",
-        "startBeforeEnd": "Data początkowa musi być wcześniejsza niż data końcowa.",
+        "startBeforeEnd": "Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.",
         "overlap": "Okres nakłada się na istniejący okres.",
         "overlapRetry": "Ten okres nakłada się na istniejący. Wybierz inne daty.",
         "create": "Nie udało się utworzyć okresu.",
@@ -2114,12 +2330,36 @@
       "comingSoon": "Szablony mapowania i zaplanowane importy będą dostępne tutaj. Zapisuj mapowania kolumn, udostępniaj je zespołowi i konfiguruj powtarzające się zadania."
     },
     "migration": {
+      "customFields": {
+        "required": "wymagane",
+        "title": "Pola dla {{name}}",
+        "mapping": "Mapowanie pól niestandardowych",
+        "description": "Przypisz zachowane kolumny CSV do pól tego typu zasobu.",
+        "empty": "Nie zachowano kolumn niestandardowych dla tego typu zasobu.",
+        "samples_one": "{{sample}} · {{count}} rekord",
+        "samples_other": "{{sample}} · {{count}} rekordów",
+        "noSample": "Brak przykładu",
+        "missingRequired": "Nieprzypisane pola wymagane: {{fields}}",
+        "duplicate": "Pole niestandardowe jest przypisane więcej niż raz. Wybierz unikalne pole docelowe dla każdego źródła.",
+        "samples_few": "{{sample}} · {{count}} rekordy",
+        "samples_many": "{{sample}} · {{count}} rekordów"
+      },
       "actions": {
         "back": "Powrót do migracji",
         "upload": "Prześlij pakiet"
       },
       "errors": {
-        "noImportableRecords": "Ten pakiet nie zawierał rekordów możliwych do zaimportowania."
+        "noImportableRecords": "Ten pakiet nie zawierał rekordów możliwych do zaimportowania.",
+        "permissionDenied": "Nie masz uprawnień do importowania lub eksportowania danych.",
+        "invalidSpreadsheet": "Nie udało się odczytać tego arkusza. Sprawdź, czy to prawidłowy plik CSV lub XLSX, i spróbuj ponownie.",
+        "notAmpPackage": "Ten plik nie jest pakietem AMP. Prześlij plik .amp lub .sqlite.",
+        "tooLarge": "To przesłanie przekracza maksymalny dozwolony rozmiar.",
+        "sizeMismatch": "Przesyłanie nie zostało ukończone. Spróbuj ponownie.",
+        "noRecognizedHeaders": "Nie rozpoznano żadnej z kolumn tego arkusza. Sprawdź wiersz nagłówka i spróbuj ponownie.",
+        "storageRejected": "Serwer odrzucił to przesłanie. Poproś administratora o sprawdzenie konfiguracji typów plików magazynu.",
+        "spreadsheetFailed": "Nie udało się zaimportować arkusza. Spróbuj ponownie.",
+        "uploadFailed": "Nie udało się przesłać pakietu. Spróbuj ponownie.",
+        "unknown": "Przesyłanie nie powiodło się. Spróbuj ponownie."
       },
       "preflight": {
         "title": "Kontrola wstępna"
@@ -2127,6 +2367,19 @@
       "run": {
         "queued": "Migracja w kolejce",
         "applying": "Migracja w toku"
+      },
+      "badges": {
+        "nothingImported": "Nic nie zaimportowano"
+      },
+      "results": {
+        "skippedSamePackage": "Pominięte rekordy zostały już zmigrowane przez poprzednie uruchomienie tego samego pakietu.",
+        "skippedOtherPackage": "Pominięte rekordy dopasowano do encji utworzonych przez wcześniejszą migrację innego pakietu: {{packages}}.",
+        "skippedExistingEntity": "Pominięte rekordy dopasowano do istniejących encji.",
+        "nothingImportedTitle": "Nic nie zaimportowano",
+        "nothingImportedBody": "To uruchomienie nie utworzyło żadnych nowych rekordów. Każdy wiersz odpowiadał czemuś, co już istniało, więc nic nie zmieniono.",
+        "claimedBySamePackage": "Już zmigrowane przez ten pakiet",
+        "claimedByOtherPackage": "Już zmigrowane przez {{file}}",
+        "claimedByExistingEntity": "Dopasowano do istniejącej encji"
       }
     },
     "jobDetails": {
@@ -2207,7 +2460,16 @@
   },
   "policyManagement": {
     "title": "Zarządzanie zasadami",
-    "upgradeDescription": "Zarządzanie zasadami jest funkcją Pro. Uaktualnij plan, aby uzyskać dostęp do zaawansowanych ustawień zasad."
+    "upgradeDescription": "Zarządzanie zasadami jest funkcją Pro. Uaktualnij plan, aby uzyskać dostęp do zaawansowanych ustawień zasad.",
+    "bundleLibrary": {
+      "title": "Biblioteka pakietów autoryzacji",
+      "upgradeDescription": "Zaawansowane zarządzanie pakietami autoryzacji jest dostępne w Pro. Przejdź na Pro, aby skonfigurować pakiety ograniczające uprawnienia ról, zespołów, użytkowników i kluczy API.",
+      "protectionsDescription": "Wbudowane zabezpieczenia autoryzacji pozostają aktywne nawet wtedy, gdy konfigurowalne zaawansowane mechanizmy kontroli są niedostępne w tej edycji lub planie."
+    },
+    "proFeature": {
+      "title": "Funkcja Pro",
+      "description": "Zarządzanie zasadami wymaga wersji Pro. Przejdź na wersję Pro, aby uzyskać dostęp do tej funkcji."
+    }
   },
   "roleManagement": {
     "title": "Zarządzanie rolami",
@@ -2247,6 +2509,11 @@
       "updateFailed": "Nie udało się zaktualizować roli",
       "validateDeletionFailed": "Nie udało się sprawdzić możliwości usunięcia. Spróbuj ponownie.",
       "deleteFailed": "Nie udało się usunąć roli"
+    },
+    "editDialog": {
+      "title": "Edytuj rolę",
+      "builtInNameLocked": "Nazw wbudowanych ról nie można zmienić, ponieważ system z nich korzysta.",
+      "portalLocked": "Dostępu do portalu nie można zmienić po utworzeniu roli."
     }
   },
   "security": {
@@ -2484,6 +2751,10 @@
       "modeTitle": "Tryb inicjowania obsługi Entra dla portalu klienta",
       "modeWorkflowManaged": "Zarządzany przez workflow",
       "workflowManagedInfo": "Tryb zarządzany przez workflow publikuje tylko zdarzenia dostępu z Entra. Wybrany workflow odpowiada za tworzenie użytkowników portalu klienta, przypisywanie ról, zaproszenia i zmiany w cyklu życia."
+    },
+    "proFeature": {
+      "title": "Zbiorcze przypisywanie pojedynczego logowania",
+      "description": "Ta funkcja jest dostępna w Pro. Przejdź na Pro, aby zarządzać przypisaniami SSO Google Workspace i Microsoft 365 bezpośrednio na stronie ustawień bezpieczeństwa."
     }
   },
   "profile": {
@@ -2989,7 +3260,7 @@
     "assetTypes": {
       "tab": "Zasoby",
       "title": "Typy zasobów",
-      "description": "Zarządzaj typami zasobów dostępnymi w module zasobów. Typy niestandardowe mają schemat pól, który steruje ich formularzami tworzenia/edycji.",
+      "description": "Typy niestandardowe używają schematu pól w formularzach; typy wbudowane również obsługują pola dodatkowe.",
       "loading": "Ładowanie typów zasobów...",
       "table": {
         "name": "Nazwa",
@@ -3017,7 +3288,7 @@
         "namePlaceholder": "np. Firewall",
         "displayOrderLabel": "Kolejność wyświetlania",
         "iconLabel": "Ikona",
-        "builtinSchemaHint": "Typy wbudowane używają stałych formularzy zarządzanych przez AlgaPSA, więc ich schematu pól nie można edytować. Nadal możesz zmienić nazwę typu lub jego ikonę."
+        "builtinSchemaHint": "Standardowy wbudowany formularz pozostaje niezmienny. Te dodatkowe pola są definiowane dla danego tenanta."
       },
       "deleteDialog": {
         "title": "Usuń typ zasobu",
@@ -3075,7 +3346,8 @@
           "invalidOptions": "Opcje nie mogą być puste.",
           "invalidField": "To pole jest nieprawidłowe."
         }
-      }
+      },
+      "additionalFields": "Pola dodatkowe"
     }
   },
   "mcpServer": {
@@ -3322,7 +3594,10 @@
       "duplicate": "Ten użytkownik ma już wybraną rolę.",
       "changePermission": "Odmowa uprawnień: brak uprawnień do zmiany ról użytkowników.",
       "missingField": "Brakuje wymaganego pola roli użytkownika.",
-      "missingFieldNamed": "Brakuje wymaganego pola roli użytkownika: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola roli użytkownika: {{field}}.",
+      "nameRequired": "Nazwa roli jest wymagana.",
+      "builtInRename": "Nie można zmieniać nazw wbudowanych ról.",
+      "duplicateName": "Rola o nazwie „{{name}}” już istnieje dla tego portalu."
     },
     "secrets": {
       "tenantContextMissing": "Brak kontekstu organizacji. Odśwież stronę i spróbuj ponownie.",
@@ -3347,6 +3622,7 @@
       "missingField": "Brakuje wymaganego pola ustawień organizacji.",
       "missingFieldNamed": "Brakuje wymaganego pola ustawień organizacji: {{field}}.",
       "invalidTimezone": "Nieprawidłowa strefa czasowa: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} nie jest strefą czasową powiązaną z miastem. Wybierz strefę, np. America/New_York.",
       "permissions": {
         "clearOnboarding": "Odmowa uprawnień: tylko administratorzy mogą usuwać dane onboardingu.",
         "update": "Odmowa uprawnień: nie można zaktualizować ustawień",
@@ -3394,6 +3670,189 @@
       "notApplianceHost": "Wybierz domenę inną niż główny host tego serwera. Niestandardowa domena portalu musi być inną nazwą hosta, którą serwer proxy przekierowuje tutaj.",
       "nothingToRetry": "Brak nieudanej rejestracji domeny niestandardowej do ponowienia.",
       "retryOnlyAfterFailure": "Ponowienie jest dostępne tylko po nieudanej rejestracji."
+    }
+  },
+  "common": {
+    "saving": "Zapisywanie…"
+  },
+  "featureFlags": {
+    "categories": {
+      "core": {
+        "title": "Podstawowe funkcje",
+        "description": "Niezbędne funkcje do codziennej pracy"
+      },
+      "ui": {
+        "title": "Interfejs użytkownika",
+        "description": "Nowe funkcje i ulepszenia interfejsu"
+      },
+      "ai": {
+        "title": "Funkcje AI",
+        "description": "Funkcje oparte na sztucznej inteligencji"
+      },
+      "integrations": {
+        "title": "Integracje",
+        "description": "Integracje z usługami zewnętrznymi"
+      },
+      "performance": {
+        "title": "Wydajność",
+        "description": "Funkcje optymalizacji wydajności"
+      },
+      "experimental": {
+        "title": "Eksperymentalne",
+        "description": "Innowacyjne funkcje w fazie rozwoju"
+      }
+    },
+    "features": {
+      "enable_ticket_automation": {
+        "title": "Automatyzacja zgłoszeń",
+        "description": "Automatycznie przypisuj i kieruj zgłoszenia na podstawie reguł"
+      },
+      "enable_time_tracking": {
+        "title": "Rejestrowanie czasu",
+        "description": "Rejestruj czas poświęcony na zgłoszenia i projekty"
+      },
+      "enable_billing": {
+        "title": "System rozliczeń",
+        "description": "Generowanie faktur i śledzenie płatności"
+      },
+      "new_ticket_ui": {
+        "title": "Nowy interfejs zgłoszeń",
+        "description": "Przeprojektowany interfejs tworzenia zgłoszeń i zarządzania nimi"
+      },
+      "new_dashboard_layout": {
+        "title": "Nowoczesny pulpit",
+        "description": "Nowy pulpit z konfigurowalnymi widżetami"
+      },
+      "ai_ticket_suggestions": {
+        "title": "Sugestie AI dotyczące zgłoszeń",
+        "description": "Kategoryzacja zgłoszeń i sugestie priorytetów oparte na AI"
+      },
+      "enable_ai_time_tracking": {
+        "title": "Rejestrowanie czasu z AI",
+        "description": "Automatycznie rejestruj czas na podstawie aktywności"
+      },
+      "enable_predictive_analytics": {
+        "title": "Analityka predykcyjna",
+        "description": "Przewiduj liczbę zgłoszeń i zapotrzebowanie na zasoby"
+      },
+      "enable_slack_integration": {
+        "title": "Integracja ze Slack",
+        "description": "Wysyłaj powiadomienia i aktualizacje do Slack"
+      },
+      "teams-integration-ui": {
+        "description": "Zintegruj z Microsoft Teams"
+      },
+      "enable_jira_sync": {
+        "title": "Synchronizacja z Jira",
+        "description": "Synchronizuj zgłoszenia z zadaniami Jira"
+      },
+      "enable_query_caching": {
+        "title": "Buforowanie zapytań",
+        "description": "Buforuj zapytania do bazy danych, aby skrócić czas odpowiedzi"
+      },
+      "enable_lazy_loading": {
+        "title": "Ładowanie na żądanie",
+        "description": "Ładuj treść w miarę potrzeb, aby poprawić wydajność"
+      },
+      "enable_websocket_updates": {
+        "title": "Aktualizacje w czasie rzeczywistym",
+        "description": "Używaj WebSockets do natychmiastowych aktualizacji"
+      },
+      "enable_voice_commands": {
+        "title": "Polecenia głosowe",
+        "description": "Steruj aplikacją za pomocą poleceń głosowych"
+      },
+      "beta_mobile_app": {
+        "title": "Wersja beta aplikacji mobilnej",
+        "description": "Dostęp do wersji beta aplikacji mobilnej"
+      }
+    },
+    "enums": {
+      "stable": "Stabilne",
+      "beta": "Wersja beta",
+      "experimental": "Eksperymentalne"
+    },
+    "loading": "Ładowanie flag funkcji...",
+    "title": "Flagi funkcji",
+    "description": "Włączaj lub wyłączaj funkcje w aplikacji. Niektóre funkcje mogą wymagać ponownego uruchomienia.",
+    "unsaved": "Masz niezapisane zmiany. Kliknij Zapisz, aby je zastosować.",
+    "requiresRestart": "Wymaga ponownego uruchomienia",
+    "errors": {
+      "loadFailed": "Błąd ładowania flag funkcji: {{message}}"
+    },
+    "dependencies": "Wymaga: {{dependencies}}"
+  },
+  "clientPortalLanguageConfig": {
+    "title": "Ustawienia języka portalu klienta",
+    "description": "Skonfiguruj opcje językowe dostępne dla klientów",
+    "fields": {
+      "defaultLanguage": {
+        "label": "Język domyślny",
+        "help": "Ten język będzie używany dla nowych klientów oraz gdy nie ustawiono preferencji"
+      },
+      "availableLanguages": {
+        "label": "Dostępne języki",
+        "help": "Wybierz języki, z których mogą korzystać klienci"
+      }
+    },
+    "defaultSuffix": "(domyślny)",
+    "preview": {
+      "title": "Podgląd",
+      "defaultLanguage": "Język domyślny:",
+      "availableLanguages": "Dostępne języki:"
+    },
+    "messages": {
+      "success": {
+        "saved": "Ustawienia zapisane pomyślnie"
+      }
+    },
+    "errors": {
+      "saveFailed": "Nie udało się zapisać ustawień"
+    }
+  },
+  "enums": {
+    "locale": {
+      "en": "Angielski",
+      "fr": "Francuski",
+      "es": "Hiszpański",
+      "de": "Niemiecki",
+      "nl": "Niderlandzki",
+      "it": "Włoski",
+      "pl": "Polski",
+      "pt": "Portugalski (Brazylia)",
+      "sv": "Szwedzki",
+      "xx": "Pseudo-język (xx)",
+      "yy": "Pseudo-język (yy)"
+    }
+  },
+  "telemetry": {
+    "fields": {
+      "usageStats": {
+        "label": "Statystyki użytkowania",
+        "enabledDescription": "Włączone - Wysyła anonimowe dane o użytkowaniu, aby pomóc ulepszać produkt",
+        "disabledDescription": "Wyłączone - Wysyła anonimowe dane o użytkowaniu, aby pomóc ulepszać produkt"
+      }
+    },
+    "environmentHelp": "Statystyki użytkowania są kontrolowane przez zmienną środowiskową {{variable}}. Skontaktuj się z administratorem systemu, aby zmienić to ustawienie.",
+    "sections": {
+      "collectedData": {
+        "title": "Jakie dane są zbierane",
+        "featureUsage": "Wzorce korzystania z funkcji (bez danych osobowych)",
+        "errorReports": "Raporty błędów do debugowania",
+        "performance": "Wskaźniki wydajności",
+        "configuration": "Konfiguracja systemu (zanonimizowana)"
+      }
+    }
+  },
+  "dialogs": {
+    "statusImport": {
+      "title": "Importuj standardowe statusy",
+      "description": "Wybierz standardowe statusy, które chcesz zaimportować",
+      "selectAll": "Zaznacz wszystko ({{selected}}/{{total}})",
+      "closed": "Zamknięty",
+      "default": "Domyślny",
+      "empty": "Brak standardowych statusów do zaimportowania",
+      "importSelected": "Importuj wybrane ({{count}})"
     }
   }
 }

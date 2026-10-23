@@ -11,11 +11,13 @@ import { Info } from 'lucide-react';
 import { ServiceTierEditor, TierConfig } from './ServiceTierEditor'; // Import the tier editor and its config type
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
 
 // Define the shape of the configuration for a single service
 export interface ServiceUsageConfig {
     base_rate?: number;
     unit_of_measure?: string;
+    unit_code?: string;
     enable_tiered_pricing?: boolean;
     minimum_usage?: number;
     tiers?: TierConfig[]; // Use the imported TierConfig
@@ -84,8 +86,10 @@ export function ServiceUsageConfigForm({
             onConfigChange(serviceId, field, checked);
         };
 
-    const handleUnitOfMeasureChange = (value: string) => {
-        onConfigChange(serviceId, 'unit_of_measure', value);
+    const handleUnitOfMeasureChange = (value: { code: string; label: string } | string) => {
+        if (typeof value === 'string') return;
+        onConfigChange(serviceId, 'unit_of_measure', value.label);
+        onConfigChange(serviceId, 'unit_code', value.code);
     };
 
     const isTiered = config.enable_tiered_pricing ?? false;
@@ -146,13 +150,17 @@ export function ServiceUsageConfigForm({
                         </Tooltip>
                     </Label>
                     <UnitOfMeasureInput
-                        value={unit}
+                        id={`usage-contract-line-unit-of-measure-${serviceId}`}
+                        value={{ code: config.unit_code || '', label: unit }}
                         onChange={handleUnitOfMeasureChange}
+                        loadCustomUnits={listTenantUnitsOfMeasure}
+                        registerCustomUnit={registerTenantUnitOfMeasure}
                         placeholder={t('forms.usageConfig.placeholders.selectUnit', { defaultValue: 'Select unit' })}
                         disabled={disabled}
                         serviceType="Usage" // Assuming Usage type for now
                         className={saveAttempted && validationErrors.unit_of_measure ? 'border-red-500' : ''}
                     />
+                    <p className="mt-1 text-xs text-muted-foreground">{t('forms.usageConfig.catalogUnitPrecedence', { defaultValue: 'The catalog unit takes precedence over this usage-config unit.' })}</p>
                     {saveAttempted && validationErrors.unit_of_measure && <p className="text-sm text-red-500 mt-1">{validationErrors.unit_of_measure}</p>}
                 </div>
                 <div>

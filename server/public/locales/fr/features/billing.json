@@ -151,7 +151,8 @@
     "tryAgain": "Réessayer",
     "backToBilling": "Retour à la facturation",
     "retryFailed": "Nous n'avons toujours pas pu démarrer le paiement. Veuillez réessayer dans un instant.",
-    "loading": "Chargement..."
+    "loading": "Chargement...",
+    "offlinePaymentMethod": "Cette facture se règle par chèque ou virement bancaire : le paiement en ligne n’est pas disponible. Veuillez suivre les instructions de paiement figurant sur la facture."
   },
   "quotes": {
     "pendingQuotes": "Devis en attente",
@@ -240,7 +241,8 @@
     "contractLineType": {
       "Fixed": "Forfait",
       "Hourly": "Horaire",
-      "Usage": "À l'usage"
+      "Usage": "À l'usage",
+      "PrepaidBlock": "Bloc prépayé"
     },
     "quoteStatus": {
       "draft": "Brouillon",
@@ -441,6 +443,14 @@
     "hoursLeft": "{{hours}} h restantes",
     "expires": "Expire le {{date}}",
     "recentBurn": "Consommation récente",
-    "timeEntry": "Entrée de temps"
+    "timeEntry": "Entrée de temps",
+    "contractLabel": "Contrat : {{contract}}"
+  },
+  "bucketUsage": {
+    "contractLine": "Ligne de contrat de forfait d’heures",
+    "usage": "Utilisation",
+    "hoursUsed": "{{hours}} heures utilisées",
+    "hoursTotal": "{{hours}} heures au total",
+    "rolloverHours": "Comprend {{hours}} heures reportées"
   }
 }

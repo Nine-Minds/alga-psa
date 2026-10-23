@@ -1,0 +1,35 @@
+{
+  "scope": "native-browser-metric-index-filtered-collection-and-retention",
+  "status": "passed",
+  "tests": 195,
+  "files": 4,
+  "failed": 0,
+  "skipped": 0,
+  "todo": 0,
+  "durationMs": 1551.333875,
+  "command": "node --test scripts/tests/browser-metric-execution-collection.test.mjs scripts/tests/browser-metric-execution-reconciliation.test.mjs scripts/tests/browser-metrics-retention.test.mjs scripts/tests/browser-artifact-revision.test.mjs",
+  "node": "25.8.1",
+  "logSha256": "bd63e48f200ac4f79a3c11c348830cafd4fcb16ff637e1141b2bb57995abbc3c",
+  "fullToolingSuite": {
+    "command": "ls scripts/tests/*.test.mjs | xargs node --test",
+    "tests": 897,
+    "failed": 0,
+    "skipped": 0
+  },
+  "covers": [
+    "Index scan of run_url finds matches at the first, middle and last allocated rows and in adjacent groups.",
+    "Rows of other runs, other repositories and longer run-id prefixes are never fetched.",
+    "Other attempts of the same run are fetched, so stale-attempt detection is unchanged.",
+    "Missing tab, header-only tab and legacy 18/20-column headers keep their existing observations.",
+    "The 200,000-row index-scan cap still fails with sheet-row-limit-exceeded before reading a row.",
+    "Every existing reconciliation case yields an identical report from index-filtered and whole-table input.",
+    "outside-retention replaces missing-export only for runs older than the 90-day window.",
+    "Weekly summary counts, retried journeys and medians; idempotent re-run; bottom-up deletion ranges for non-adjacent blocks; dry run writes nothing; a failed summary append blocks deletion; rows inside the window are untouched."
+  ],
+  "limitations": [
+    "Injected HTTP responses validate API and schema behavior, not live Google credentials or workflow execution.",
+    "actionlint was unavailable in this environment; both workflows were parsed and asserted with js-yaml instead.",
+    "The retention job has not been dispatched against the live workbook; the ~19.5k-row cleanup and the empty-row grid trim remain operator actions.",
+    "The failure notice was not exercised against the live GitHub issues API."
+  ]
+}

@@ -22,6 +22,9 @@
       "@tiptap/pm/view": [
         "./node_modules/@tiptap/pm/dist/view/index.d.ts"
       ],
+      "libphonenumber-js": [
+        "./node_modules/libphonenumber-js"
+      ],
       "zod": [
         "./node_modules/zod"
       ]

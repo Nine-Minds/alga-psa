@@ -13,7 +13,6 @@ import { NotificationCategories } from "@alga-psa/notifications/components/setti
 import { InternalNotificationCategories } from "@alga-psa/notifications/components/settings/InternalNotificationCategories";
 import { TelemetrySettings } from "@alga-psa/ui/components/settings/telemetry/TelemetrySettings";
 import { useUnsavedChanges } from "@alga-psa/ui";
-import { useFeatureFlag } from "@alga-psa/ui/hooks";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useProduct } from '@/context/ProductContext';
 
@@ -35,7 +34,6 @@ function NotificationsTabContent() {
   const sectionParam = searchParams?.get('section');
   const { productCode } = useProduct();
   const isAlgaDesk = productCode === 'algadesk';
-  const { enabled: emailBrandingEnabled } = useFeatureFlag('release-v1-6-feature');
 
   // Determine initial view based on URL parameter
   const getInitialView = (): NotificationView => {
@@ -48,7 +46,7 @@ function NotificationsTabContent() {
     const requestedTab = sectionParam?.toLowerCase();
     const emailTabIds = isAlgaDesk ? ALGA_DESK_EMAIL_TAB_IDS : EMAIL_NOTIFICATION_TAB_IDS;
     const validTabs: readonly string[] = view === 'email'
-      ? [...emailTabIds, ...(!isAlgaDesk && emailBrandingEnabled ? ['email-branding'] : [])]
+      ? [...emailTabIds, ...(isAlgaDesk ? [] : ['email-branding'])]
       : INTERNAL_NOTIFICATION_TAB_IDS;
     const defaultTab = view === 'email' ? 'settings' : 'categories';
 
@@ -75,7 +73,7 @@ function NotificationsTabContent() {
     } else if (newTab !== currentTab) {
       setCurrentTab(newTab);
     }
-  }, [viewParam, sectionParam, currentView, currentTab, isAlgaDesk, emailBrandingEnabled]);
+  }, [viewParam, sectionParam, currentView, currentTab, isAlgaDesk]);
 
   // Update URL when view or tab changes
   const updateURL = useCallback((view: NotificationView, tabId: string) => {
@@ -166,7 +164,7 @@ function NotificationsTabContent() {
       ),
     }]),
     // The branding panel is its own card; no extra header wrapper needed.
-    ...(isAlgaDesk || !emailBrandingEnabled ? [] : [{
+    ...(isAlgaDesk ? [] : [{
       id: 'email-branding',
       label: t('notifications.emailTabs.emailBranding'),
       content: <EmailBrandingTab />,

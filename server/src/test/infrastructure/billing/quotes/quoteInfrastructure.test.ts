@@ -61,6 +61,12 @@ describe('Quote infrastructure', () => {
     context = await resetContext();
     mockedTenantConnection.db = context.db;
     mockedTenantConnection.tenant = context.tenantId;
+    // The dev seeds ship grouped-layout quote fixtures (Q-0001 / Q-0002, see
+    // server/seeds/dev/90_quotes.cjs) into the very tenant this file reuses,
+    // and the listByTenant cases below assert tenant-wide counts and ordering.
+    // Drop them inside the test transaction — quote_items and quote_activities
+    // cascade — so each case sees only the rows it created.
+    await context.db('quotes').where({ tenant: context.tenantId }).del();
   }, 30000);
 
   afterEach(async () => {
@@ -940,7 +946,11 @@ describe('Quote infrastructure', () => {
   });
 
   it('T068: Versioning: revise creates new quote row with version+1 and parent_quote_id set', async () => {
-    const quote = await createFinancialQuote({ status: 'sent' });
+    const quote = await createFinancialQuote({
+      status: 'sent',
+      recurring_section_title: 'Monthly Retainer',
+      onetime_section_title: 'Implementation',
+    });
 
     await QuoteItem.create(context.db, context.tenantId, {
       quote_id: quote.quote_id,
@@ -956,6 +966,8 @@ describe('Quote infrastructure', () => {
     expect(revision.version).toBe(2);
     expect(revision.parent_quote_id).toBe(quote.quote_id);
     expect(revision.status).toBe('draft');
+    expect(revision.recurring_section_title).toBe('Monthly Retainer');
+    expect(revision.onetime_section_title).toBe('Implementation');
   });
 
   it('T069: Versioning: revise copies all quote_items to new version with new item_ids', async () => {
@@ -2686,7 +2698,7 @@ describe('Quote infrastructure', () => {
     const service = createPDFGenerationService(context.tenantId);
     const preview = await service.renderQuotePreview({ quoteId: quote.quote_id });
 
-    expect(preview.html).toContain('Monthly Items');
+    expect(preview.html).toContain('Monthly');
     // The renderer emits the ast-table-cell-line class deliberately (7feee8b23c,
     // "Each line <div> now renders class=ast-... alongside its inline style"),
     // but these exact-string assertions were not updated with it, so they fail
@@ -2722,13 +2734,124 @@ describe('Quote infrastructure', () => {
       expect(Buffer.isBuffer(pdf)).toBe(true);
       expect(pdf.toString('utf8')).toContain('%PDF-quote-lines');
       expect(capturedHtml.value).toContain('<!doctype html>');
-      expect(capturedHtml.value).toContain('Monthly Items');
+      expect(capturedHtml.value).toContain('Monthly');
       expect(capturedHtml.value).toContain('<div class="ast-table-cell-line" style="font-weight:600;line-height:1.3">Managed Support A</div>');
       expect(capturedHtml.value).toContain('-$5.00');
       expect(capturedHtml.value).toContain('$50.00');
     } finally {
       getBrowserSpy.mockRestore();
       releaseSpy.mockRestore();
+    }
+  });
+
+  it('T221: the migrated grouped catalog row is the cadence-band layout bound to groupsByCadence', async () => {
+    const row = await context.db('standard_quote_document_templates')
+      .where({ standard_quote_document_template_code: 'standard-quote-grouped' })
+      .first<{ templateAst: any }>();
+
+    expect(row).toBeTruthy();
+    const serialized = JSON.stringify(row.templateAst.layout);
+
+    // Required cadence bands: repeating stack over the renderer-computed
+    // groups_by_cadence, with a nested table on the scope-named group.items.
+    expect(serialized).toContain('"id":"cadence-bands"');
+    expect(serialized).toContain('"bindingId":"groupsByCadence"');
+    expect(serialized).toContain('"id":"cadence-band-items"');
+    expect(serialized).toContain('"bindingId":"group.items"');
+    // Optional add-on bands.
+    expect(serialized).toContain('"id":"cadence-optional-bands"');
+    expect(serialized).toContain('"bindingId":"groupsByCadenceWithOptionals"');
+    expect(serialized).toContain('"bindingId":"group.optional_items"');
+
+    // The old hard-coded monthly table/total are gone from the shipped catalog.
+    expect(serialized).not.toContain('Monthly Items');
+    expect(serialized).not.toContain('Monthly Total');
+
+    // The bindings the layout references are declared on the row.
+    expect(row.templateAst.bindings.collections.groupsByCadence.path).toBe('groups_by_cadence');
+    expect(row.templateAst.bindings.collections.groupsByCadenceWithOptionals.path).toBe(
+      'groups_by_cadence_with_optionals',
+    );
+    expect(row.templateAst.bindings.values.optionalTotal.path).toBe('optional_total');
+  });
+
+  it('T222: save/reload keeps tax_rate on an unselected optional row so the if-selected tax is quotable (SMOKE-2383-TAX)', async () => {
+    await context.db('clients')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .update({ region_code: 'US-WA', is_tax_exempt: false });
+    await setupClientTaxConfiguration(context, { regionCode: 'US-WA', taxPercentage: 6 });
+
+    const createItems = async (annualSelected: boolean) => {
+      const quote = await Quote.create(context.db, context.tenantId, {
+        client_id: context.clientId,
+        title: `Optional tax ${annualSelected ? 'selected' : 'unselected'}`,
+        quote_date: '2026-09-21T00:00:00.000Z',
+        valid_until: '2026-10-21T00:00:00.000Z',
+        subtotal: 0,
+        discount_total: 0,
+        tax: 0,
+        total_amount: 0,
+        currency_code: 'USD',
+        is_template: false,
+        created_by: context.userId,
+      });
+
+      const rows = [
+        { description: 'Managed Support', unit_price: 10000, is_recurring: true, billing_frequency: 'monthly', is_optional: false, is_selected: true },
+        { description: 'Annual Firewall Subscription', unit_price: 15900, is_recurring: true, billing_frequency: 'annually', is_optional: false, is_selected: true },
+        { description: 'Onboarding', unit_price: 50000, is_recurring: false, billing_frequency: null, is_optional: false, is_selected: true },
+        { description: 'Optional Endpoint Backup', unit_price: 4000, is_recurring: true, billing_frequency: 'monthly', is_optional: true, is_selected: true },
+        { description: 'Optional Annual Security Review', unit_price: 5000, is_recurring: true, billing_frequency: 'annually', is_optional: true, is_selected: annualSelected },
+      ];
+      const ids: Record<string, string> = {};
+      for (const row of rows) {
+        const created = await QuoteItem.create(context.db, context.tenantId, {
+          quote_id: quote.quote_id,
+          quantity: 1,
+          is_taxable: true,
+          created_by: context.userId,
+          ...row,
+        } as any);
+        ids[row.description] = created.quote_item_id;
+      }
+      return { quote, ids };
+    };
+
+    for (const annualSelected of [false, true]) {
+      const { quote, ids } = await createItems(annualSelected);
+
+      const stored = await context.db('quote_items')
+        .where({ tenant: context.tenantId, quote_id: quote.quote_id })
+        .select('quote_item_id', 'tax_rate', 'tax_amount', 'net_amount');
+      const byId = new Map(stored.map((row: any) => [row.quote_item_id, row]));
+      const annualOpt = byId.get(ids['Optional Annual Security Review'])!;
+      const monthlyOpt = byId.get(ids['Optional Endpoint Backup'])!;
+
+      // The rate is persisted regardless of selection; the amount only while included.
+      expect(Number(annualOpt.tax_rate)).toBe(6);
+      expect(Number(annualOpt.tax_amount)).toBe(annualSelected ? 300 : 0);
+      expect(Number(annualOpt.net_amount)).toBe(annualSelected ? 5000 : 0);
+      expect(Number(monthlyOpt.tax_rate)).toBe(6);
+      expect(Number(monthlyOpt.tax_amount)).toBe(240);
+
+      // Persisted quote totals follow the shared rule (required + selected optional).
+      const storedQuote = await context.db('quotes')
+        .where({ tenant: context.tenantId, quote_id: quote.quote_id })
+        .first();
+      expect(Number(storedQuote.subtotal)).toBe(annualSelected ? 84900 : 79900);
+      expect(Number(storedQuote.tax)).toBe(annualSelected ? 5094 : 4794);
+      expect(Number(storedQuote.total_amount)).toBe(annualSelected ? 89994 : 84694);
+
+      // The presented quote (PDF) reports exactly the persisted totals, and
+      // quotes the pending annual add-on with its hypothetical tax.
+      const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, quote.quote_id);
+      expect(viewModel).toBeTruthy();
+      expect(viewModel!.subtotal).toBe(Number(storedQuote.subtotal));
+      expect(viewModel!.tax).toBe(Number(storedQuote.tax));
+      expect(viewModel!.total_amount).toBe(Number(storedQuote.total_amount));
+      expect(viewModel!.optional_subtotal).toBe(annualSelected ? 0 : 5000);
+      expect(viewModel!.optional_tax).toBe(annualSelected ? 0 : 300);
+      expect(viewModel!.optional_total).toBe(annualSelected ? 0 : 5300);
     }
   });
 });

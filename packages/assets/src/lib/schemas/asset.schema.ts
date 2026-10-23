@@ -21,16 +21,19 @@ export const createAssetRelationshipSchema = z.object({
   relationship_type: z.string().min(1)
 });
 
+// alga0002283: every extension numeric column is nullable in the database and
+// "empty" means "unknown", not 0 — so the schemas accept and the types carry
+// `number | null` end to end.
 const workstationAssetSchema = z.object({
   tenant: z.string().uuid(),
   asset_id: z.string().uuid(),
   os_type: z.string(),
   os_version: z.string(),
   cpu_model: z.string(),
-  cpu_cores: z.number(),
-  ram_gb: z.number(),
+  cpu_cores: z.number().nullable(),
+  ram_gb: z.number().nullable(),
   storage_type: z.string(),
-  storage_capacity_gb: z.number(),
+  storage_capacity_gb: z.number().nullable(),
   gpu_model: z.string().optional(),
   last_login: z.string().optional(),
   installed_software: z.array(z.unknown())
@@ -41,10 +44,10 @@ const network_device_asset_schema = z.object({
   asset_id: z.string().uuid(),
   device_type: z.enum(['switch', 'router', 'firewall', 'access_point', 'load_balancer']),
   management_ip: z.string(),
-  port_count: z.number(),
+  port_count: z.number().nullable(),
   firmware_version: z.string(),
   supports_poe: z.boolean(),
-  power_draw_watts: z.number(),
+  power_draw_watts: z.number().nullable(),
   vlan_config: z.record(z.unknown()),
   port_config: z.record(z.unknown())
 });
@@ -55,8 +58,8 @@ const serverAssetSchema = z.object({
   os_type: z.string(),
   os_version: z.string(),
   cpu_model: z.string(),
-  cpu_cores: z.number(),
-  ram_gb: z.number(),
+  cpu_cores: z.number().nullable(),
+  ram_gb: z.number().nullable(),
   storage_config: z.array(z.unknown()),
   raid_config: z.string().optional(),
   is_virtual: z.boolean(),
@@ -88,10 +91,20 @@ const printerAssetSchema = z.object({
   is_network_printer: z.boolean(),
   supports_color: z.boolean(),
   supports_duplex: z.boolean(),
-  max_paper_size: z.number().optional(),
+  max_paper_size: z.number().nullable().optional(),
   supported_paper_types: z.array(z.unknown()),
-  monthly_duty_cycle: z.number().optional(),
+  monthly_duty_cycle: z.number().nullable().optional(),
   supply_levels: z.record(z.unknown())
+});
+
+const assetGroupSummarySchema = z.object({
+  group_id: z.string().uuid(),
+  name: z.string(),
+  kind: z.enum(['bundle', 'shared_workspace']),
+  location_id: z.string().uuid().nullable().optional(),
+  location_name: z.string().nullable().optional(),
+  member_count: z.number().optional(),
+  user_count: z.number().optional(),
 });
 
 export const assetSchema = z.object({
@@ -104,9 +117,24 @@ export const assetSchema = z.object({
   name: z.string(),
   status: z.string(),
   location_id: z.string().uuid().nullable().optional(),
+  // Client contact the device is assigned to (portal contact-scoped visibility).
+  contact_name_id: z.string().uuid().nullable().optional(),
+  contact_name: z.string().nullable().optional(),
+  // The group this asset belongs to, when it has one (FR-E12).
+  group: assetGroupSummarySchema.nullable().optional(),
   location: z.string().optional(),
   purchase_date: z.string().optional(),
   warranty_end_date: z.string().optional(),
+  manufacturer: z.string().nullable().optional(),
+  model: z.string().nullable().optional(),
+  vendor_id: z.string().uuid().nullable().optional(),
+  vendor_name: z.string().nullable().optional(),
+  // Minor units (cents); pg returns bigint as a string, so coerce.
+  purchase_cost: z.coerce.number().int().nullable().optional(),
+  purchase_cost_currency: z.string().nullable().optional(),
+  order_number: z.string().nullable().optional(),
+  billing_profile_id: z.string().uuid().nullable().optional(),
+  billing_profile_name: z.string().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
   tenant: z.string().uuid(),
@@ -200,10 +228,19 @@ export const createAssetSchema = z.object({
   name: z.string(),
   status: z.string(),
   location_id: z.string().uuid().nullable().optional(),
+  // Client contact the device is assigned to (portal contact-scoped visibility).
+  contact_name_id: z.string().uuid().nullable().optional(),
   location: z.string().optional(),
   serial_number: z.string().optional(),
   purchase_date: z.string().optional(),
   warranty_end_date: z.string().optional(),
+  manufacturer: z.string().nullable().optional(),
+  model: z.string().nullable().optional(),
+  vendor_id: z.string().uuid().nullable().optional(),
+  purchase_cost: z.coerce.number().int().nullable().optional(),
+  purchase_cost_currency: z.string().min(3).max(3).nullable().optional(),
+  order_number: z.string().nullable().optional(),
+  billing_profile_id: z.string().uuid().nullable().optional(),
   workstation: workstationAssetSchema.omit({ tenant: true, asset_id: true }).optional(),
   network_device: network_device_asset_schema.omit({ tenant: true, asset_id: true }).optional(),
   server: serverAssetSchema.omit({ tenant: true, asset_id: true }).optional(),
@@ -258,8 +295,13 @@ export const updateMaintenanceHistorySchema = createMaintenanceHistorySchema.par
 export const assetQuerySchema = z.object({
   client_id: z.string().uuid().optional(),
   location_id: z.string().uuid().optional(),
+  contact_name_id: z.string().uuid().optional(),
   asset_type: z.string().optional(),
   status: z.string().optional(),
+  vendor_id: z.string().uuid().optional(),
+  group_id: z.string().uuid().optional(),
+  /** Only assets that are not in any group (the group drawer's Add assets). */
+  ungrouped_only: z.boolean().optional(),
   page: z.number().int().positive().optional(),
   pageSize: z.number().int().positive().optional(),
   limit: z.number().int().positive().optional(),

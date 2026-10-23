@@ -116,6 +116,14 @@ export const PORTAL_ROUTE_RULES: readonly RouteRule[] = [
 
 export const API_RULES: readonly ApiRule[] = [
   {
+    // Authenticated app-internal stream used by ticket and project list smart
+    // search. It is not part of the public v1 metadata surface.
+    group: 'api_smart_search',
+    staticPrefixes: ['/api/smart-search'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false },
+  },
+  {
     group: 'api_ticket_psa_only_subroutes',
     staticPrefixes: [
       '/api/v1/tickets/from-asset',
@@ -124,6 +132,16 @@ export const API_RULES: readonly ApiRule[] = [
       /^\/api\/v1\/tickets\/[^/]+\/time-entries(?:\/.*)?$/,
       /^\/api\/v1\/tickets\/[^/]+\/materials(?:\/.*)?$/,
       /^\/api\/v1\/tickets\/[^/]+\/assets(?:\/.*)?$/,
+    ],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
+    visibleInMetadataByProduct: { psa: true, algadesk: false },
+  },
+  {
+    // Notification settings are PSA-only in the UI (/msp/settings/notifications),
+    // so editing the same templates over the API follows them.
+    group: 'api_email_templates_psa_only',
+    staticPrefixes: [
+      '/api/v1/email/templates',
     ],
     behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
     visibleInMetadataByProduct: { psa: true, algadesk: false },
@@ -140,6 +158,7 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/boards',
       '/api/v1/statuses',
       '/api/v1/priorities',
+      '/api/v1/countries',
       '/api/v1/tags',
       '/api/v1/knowledge-base',
       '/api/v1/kb-articles',
@@ -150,6 +169,7 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/teams',
       '/api/v1/interactions',
       '/api/v1/interaction-types',
+      '/api/v1/interaction-statuses',
       '/api/v1/mobile/me/capabilities',
     ],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
@@ -162,7 +182,10 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/invoices',
       '/api/v1/projects',
       '/api/v1/assets',
+      '/api/v1/asset-groups',
+      '/api/v1/asset-statuses',
       '/api/v1/time-entries',
+      '/api/v1/stopwatch',
       '/api/v1/workflows',
       '/api/v1/extensions',
       '/api/v1/surveys',
@@ -239,6 +262,18 @@ export const API_RULES: readonly ApiRule[] = [
     group: 'api_telephony_webhooks',
     staticPrefixes: [
       '/api/telephony',
+    ],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false },
+  },
+  {
+    // Label printing (POST /api/labels/pdf): session-authenticated render of
+    // ticket, asset and stock-unit labels through the PSA document-layout
+    // renderer. App-internal, not v1 API, so it never appears in /api/v1/meta
+    // metadata. PSA-only, like the asset/inventory records and the layouts.
+    group: 'api_label_printing',
+    staticPrefixes: [
+      '/api/labels',
     ],
     behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
     visibleInMetadataByProduct: { psa: false, algadesk: false },

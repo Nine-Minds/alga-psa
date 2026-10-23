@@ -40,6 +40,50 @@ export function computeCapWriteDown(
   };
 }
 
+/**
+ * A cap is a number of minor units in the project's own billing currency, so it
+ * can only be compared with charges billed in that same currency. Tenants do
+ * drift apart — a project capped in USD under a client that bills ARS — and
+ * there is no exchange rate anywhere in the engine, so a cross-currency cap is
+ * not applied at all rather than written down against a meaningless number.
+ * An unknown currency on either side means "no evidence of a mismatch" and the
+ * cap applies as before.
+ */
+export function capAppliesToInvoiceCurrency(
+  capCurrency: string | null | undefined,
+  invoiceCurrency: string | null | undefined,
+): boolean {
+  const cap = capCurrency?.trim().toUpperCase();
+  const invoice = invoiceCurrency?.trim().toUpperCase();
+  if (!cap || !invoice) return true;
+  return cap === invoice;
+}
+
+/**
+ * The currency an invoice bills in, from the contract lines it carries and the
+ * client's own currency. A contract line's rates are denominated in its
+ * contract's currency, so a single contract currency on the invoice decides it;
+ * with no contract line due, or lines in several currencies, the client's own
+ * currency does. A standalone project invoice is no exception: the engine
+ * loads the period's contract lines for a project-target run too.
+ *
+ * One rule in one place: a cap is only applied when it is counted in this
+ * currency (`capAppliesToInvoiceCurrency`), so the engine, the due-work listing
+ * and the project billing tab must all answer this question identically or a
+ * cap is written down in a preview and not on the invoice, or named as live on
+ * a card while it sleeps.
+ */
+export function resolveInvoiceCurrency(
+  contractLineCurrencies: readonly (string | null | undefined)[],
+  clientDefaultCurrency: string | null | undefined,
+): string {
+  const unique = Array.from(
+    new Set(contractLineCurrencies.filter((code): code is string => !!code)),
+  );
+  if (unique.length === 1) return unique[0];
+  return clientDefaultCurrency || 'USD';
+}
+
 /** First persisted hard-cap overage; used to dedupe workflow and user notifications. */
 export function isFirstProjectCapOverage(
   writtenDownBefore: number,

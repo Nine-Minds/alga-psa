@@ -110,6 +110,19 @@ const COPY = {
     footer: 'Powered by AlgaPSA &middot; Mantenha a próxima ação em movimento',
     textOpenQueue: 'Abra sua fila',
   },
+  sv: {
+    subject: 'Din veckosammanfattning av affärsmöjligheter',
+    headerLabel: 'Veckosammanfattning av affärsmöjligheter',
+    heading: 'Din veckosammanfattning av affärsmöjligheter',
+    intro: 'Här är det som kräver din uppmärksamhet den här veckan.',
+    actionsDue: 'Åtgärder som ska utföras den här veckan',
+    stalledDeals: 'Affärer som har stannat av',
+    newSuggestions: 'Nya förslag',
+    winsLastWeek: 'Vunna affärsmöjligheter förra veckan',
+    cta: 'Öppna din kö med affärsmöjligheter',
+    footer: 'Drivs av AlgaPSA &middot; Driv nästa åtgärd framåt',
+    textOpenQueue: 'Öppna din kö',
+  },
 };
 
 function buildBodyHtml(c) {

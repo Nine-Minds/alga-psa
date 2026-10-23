@@ -17,6 +17,7 @@ const getAccountingSyncHealthMock = vi.hoisted(() => vi.fn());
 const updateAccountingSyncSettingsActionMock = vi.hoisted(() => vi.fn());
 const runAccountingSyncNowMock = vi.hoisted(() => vi.fn());
 const setDefaultQboRealmMock = vi.hoisted(() => vi.fn());
+const setDefaultAccountingRealmMock = vi.hoisted(() => vi.fn());
 const getQboAccountsMock = vi.hoisted(() => vi.fn());
 const getQboClassesMock = vi.hoisted(() => vi.fn());
 const getQboDepartmentsMock = vi.hoisted(() => vi.fn());
@@ -76,6 +77,7 @@ vi.mock('../../actions/accountingSyncActions', () => ({
   updateAccountingSyncSettingsAction: async (...args: unknown[]) => updateAccountingSyncSettingsActionMock(...args),
   runAccountingSyncNow: async (...args: unknown[]) => runAccountingSyncNowMock(...args),
   setDefaultQboRealm: async (...args: unknown[]) => setDefaultQboRealmMock(...args),
+  setDefaultAccountingRealm: async (...args: unknown[]) => setDefaultAccountingRealmMock(...args),
 }));
 
 vi.mock('@alga-psa/integrations/actions', () => ({
@@ -159,6 +161,7 @@ describe('QboSyncHealthPanel contracts', () => {
     });
     runAccountingSyncNowMock.mockResolvedValue({ ran: true, status: 'succeeded' });
     setDefaultQboRealmMock.mockResolvedValue({ success: true });
+    setDefaultAccountingRealmMock.mockResolvedValue({ success: true });
     getQboAccountsMock.mockResolvedValue([]);
     getQboClassesMock.mockResolvedValue([]);
     getQboDepartmentsMock.mockResolvedValue([]);
@@ -197,7 +200,7 @@ describe('QboSyncHealthPanel contracts', () => {
       const card = document.getElementById('qbo-integration-sync-health-card');
       expect(card).toBeInTheDocument();
       // cycle status badge
-      expect(card).toHaveTextContent('succeeded');
+      expect(card).toHaveTextContent('Sync completed');
       // stats
       expect(card).toHaveTextContent('10 ops processed');
     });
@@ -260,6 +263,9 @@ describe('QboSyncHealthPanel contracts', () => {
     await waitFor(() => {
       expect(screen.getByText(/Sync completed successfully/)).toBeInTheDocument();
     });
+    const feedback = document.getElementById('qbo-sync-now-feedback');
+    expect(feedback).toHaveAttribute('role', 'status');
+    expect(feedback?.parentElement).toContainElement(syncNowButton);
   });
 
   it('T076: Sync Now shows skipped message when ran=false', async () => {
@@ -493,4 +499,128 @@ describe('QboSyncHealthPanel contracts', () => {
     expect(syncNowButton).not.toBeNull();
     expect(syncNowButton.disabled).toBe(true);
   });
+
+  it('T085: a Xero connection is labelled as Xero and never loads QBO catalogs', async () => {
+    getAccountingSyncHealthMock.mockResolvedValue({
+      ...healthConnected,
+      adapterType: 'xero',
+      organisationName: 'Acme Xero Org',
+      autoApplyCreditsEnabled: null,
+      refreshTokenExpiresAt: new Date(Date.now() - 60_000).toISOString(),
+      realms: [{ realmId: 'conn-1', isDefault: true }],
+    });
+
+    const { default: QboSyncHealthPanel } = await import('./QboSyncHealthPanel');
+    render(<QboSyncHealthPanel />);
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-integration-sync-health-card')).toBeInTheDocument();
+    });
+
+    // Xero-labelled card and reconnect information.
+    expect(screen.getByText(/Xero sync activity/)).toBeInTheDocument();
+    expect(screen.getByText(/Xero token expired — reconnect/)).toBeInTheDocument();
+    // No QBO-only sync configuration, and no QBO catalog requests.
+    expect(document.getElementById('qbo-sync-config-section')).not.toBeInTheDocument();
+    expect(getQboAccountsMock).not.toHaveBeenCalled();
+    expect(getQboClassesMock).not.toHaveBeenCalled();
+    expect(getQboDepartmentsMock).not.toHaveBeenCalled();
+  });
+
+  it('demotes a healthy Xero token lifetime to quiet connection metadata', async () => {
+    getAccountingSyncHealthMock.mockResolvedValue({
+      ...healthConnected,
+      adapterType: 'xero',
+      refreshTokenExpiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+      realms: [{ realmId: 'conn-1', isDefault: true }],
+    });
+
+    const { default: QboSyncHealthPanel } = await import('./QboSyncHealthPanel');
+    render(<QboSyncHealthPanel adapterType="xero" />);
+
+    const metadata = await screen.findByText(/Xero authorization valid until/);
+    expect(metadata).toHaveClass('text-muted-foreground');
+    expect(metadata.closest('[role="alert"]')).toBeNull();
+  });
+
+  it('T086: a Xero connection offers organisation selection and passes the Xero target to Sync Now', async () => {
+    setDefaultAccountingRealmMock.mockResolvedValue({ success: true });
+    runAccountingSyncNowMock.mockResolvedValue({ ran: true, status: 'succeeded' });
+    getAccountingSyncHealthMock.mockResolvedValue({
+      ...healthConnected,
+      adapterType: 'xero',
+      organisationName: 'Acme Xero Org',
+      autoApplyCreditsEnabled: null,
+      realms: [
+        { realmId: 'conn-1', isDefault: true },
+        { realmId: 'conn-2', isDefault: false }
+      ]
+    });
+
+    const { default: QboSyncHealthPanel } = await import('./QboSyncHealthPanel');
+    render(<QboSyncHealthPanel />);
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-integration-sync-health-card')).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(document.getElementById('qbo-realm-list')).toBeInTheDocument();
+    });
+
+    // Xero's second organisation is selectable (previously hidden).
+    fireEvent.click(screen.getByRole('button', { name: 'Make default' }));
+    await waitFor(() => {
+      expect(setDefaultAccountingRealmMock).toHaveBeenCalledWith('xero', 'conn-2');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sync Now' }));
+    await waitFor(() => {
+      expect(runAccountingSyncNowMock).toHaveBeenCalledWith(
+        expect.objectContaining({ preferredAdapterType: 'xero', preferredTargetRealm: 'conn-1' })
+      );
+    });
+  });
+  it.each(['aborted', 'failed'])('reports a %s cycle error instead of success', async (status) => {
+    runAccountingSyncNowMock.mockResolvedValue({ ran: true, status, error: 'Xero refresh token was rejected; reconnect required' });
+    const { default: Panel } = await import('./QboSyncHealthPanel');
+    render(<Panel adapterType="xero" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Sync Now' }));
+    expect(await screen.findByText('Xero refresh token was rejected; reconnect required')).toBeInTheDocument();
+    expect(screen.queryByText('Sync completed successfully.')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    [{ truncated: true }, /Sync is incomplete/],
+    [{ opsFailed: 1 }, /Some accounting operations failed/]
+  ])('reports incomplete results for stats %j', async (stats, message) => {
+    runAccountingSyncNowMock.mockResolvedValue({ ran: true, status: 'succeeded', stats });
+    const { default: Panel } = await import('./QboSyncHealthPanel');
+    render(<Panel />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Sync Now' }));
+    expect(await screen.findByText(message as RegExp)).toBeInTheDocument();
+    expect(screen.queryByText('Sync completed successfully.')).not.toBeInTheDocument();
+  });
+
+  it('shows a persisted reconnect error and disables sync for an unavailable connection', async () => {
+    getAccountingSyncHealthMock.mockResolvedValue({ ...healthConnected, connected: false, adapterType: 'xero',
+      lastCycle: { ...healthConnected.lastCycle, status: 'aborted', error: 'Credentials revoked; reconnect Xero' } });
+    const { default: Panel } = await import('./QboSyncHealthPanel');
+    render(<Panel adapterType="xero" />);
+    expect(await screen.findByText('Credentials revoked; reconnect Xero')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sync Now' })).toBeDisabled();
+    expect(getAccountingSyncHealthMock).toHaveBeenCalledWith({ preferredAdapterType: 'xero' });
+  });
+
+  it('surfaces an unavailable organisation when Make default fails', async () => {
+    getAccountingSyncHealthMock.mockResolvedValue({ ...healthConnected, adapterType: 'xero', realms: [
+      { realmId: 'conn-1', isDefault: true }, { realmId: 'removed', isDefault: false }
+    ] });
+    setDefaultAccountingRealmMock.mockResolvedValue({ success: false, error: 'Organisation removed; reconnect required' });
+    const { default: Panel } = await import('./QboSyncHealthPanel');
+    render(<Panel adapterType="xero" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Make default' }));
+    expect(await screen.findByText('Organisation removed; reconnect required')).toBeInTheDocument();
+    expect(runAccountingSyncNowMock).not.toHaveBeenCalled();
+  });
+
 });

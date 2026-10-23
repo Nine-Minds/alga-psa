@@ -52,9 +52,9 @@ describe('Chat model Citus-safe query shapes', () => {
 
     expect(rawMock).toHaveBeenCalledTimes(1);
     expect(rawMock.mock.calls[0][0]).toMatch(
-      /where "m"\."chat_id" = "chats"\."id"\s+and "m"\."tenant" = "chats"\."tenant"/i
+      /where "m"\."tenant" = \? and "m"\."chat_id" = "chats"\."id"\s+and "m"\."tenant" = "chats"\."tenant"/i
     );
-    expect(rawMock.mock.calls[0][1]).toEqual([1]);
+    expect(rawMock.mock.calls[0][1]).toEqual(['tenant-1', 1]);
     expect(rawMock.mock.calls[0][0]).not.toMatch(/\bm\.tenant\s*=\s*chats\.tenant\b/i);
     expect(chatsBuilder.where).toHaveBeenCalledWith({ user_id: 'user-1' });
     expect(chatsBuilder.limit).toHaveBeenCalledWith(20);
@@ -87,7 +87,15 @@ describe('Chat model Citus-safe query shapes', () => {
     expect(searchCall?.[0]).toMatch(
       /"m_aggregate"\."chat_id" = "chats"\."id"\s+and "m_aggregate"\."tenant" = "chats"\."tenant"/i
     );
-    expect(searchCall?.[1]).toEqual(['printer', 1, 'user-1', 20]);
+    expect(searchCall?.[1]).toEqual([
+      'printer',
+      'tenant-1',
+      1,
+      'tenant-1',
+      'tenant-1',
+      'user-1',
+      20,
+    ]);
     expect(searchCall?.[0]).not.toMatch(/\bm_latest\.tenant\s*=\s*chats\.tenant\b/i);
     expect(searchCall?.[0]).not.toMatch(/\bm_aggregate\.tenant\s*=\s*chats\.tenant\b/i);
   });

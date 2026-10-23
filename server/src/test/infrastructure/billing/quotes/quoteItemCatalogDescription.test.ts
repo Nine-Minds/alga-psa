@@ -539,13 +539,13 @@ describe('Quote item catalog-description snapshot', () => {
     expect(standardRows.length).toBe(4);
     const descriptions = standardRows.flatMap((row) => {
       const ast = row.templateAst;
-      const out: Array<{ code: string; column: any }> = [];
+      const out: Array<{ code: string; tableId: string; column: any }> = [];
       const visit = (node: any) => {
         if (!node || typeof node !== 'object') return;
         if ((node.type === 'dynamic-table' || node.type === 'table') && Array.isArray(node.columns)) {
           for (const column of node.columns) {
             if (column?.id === 'description' && column?.value?.type === 'path' && column?.value?.path === 'description') {
-              out.push({ code: row.standard_quote_document_template_code, column });
+              out.push({ code: row.standard_quote_document_template_code, tableId: node.id, column });
             }
           }
         }
@@ -559,9 +559,19 @@ describe('Quote item catalog-description snapshot', () => {
     });
 
     expect(descriptions.length).toBeGreaterThanOrEqual(5);
-    for (const { column } of descriptions) {
+    for (const { code, tableId, column } of descriptions) {
       expect(column.value).toEqual({ type: 'path', path: 'description' });
-      expect(column.lines?.map((line: any) => line.value.path)).toEqual(['service_name', 'catalog_description']);
+      // The grouped base band also annotates included optional items. Its
+      // supplemental marker must preserve the legacy description fallback.
+      const hasOptionalMarker = code === 'standard-quote-grouped' && tableId === 'cadence-band-items';
+      expect(column.lines?.map((line: any) => line.value.path)).toEqual(
+        hasOptionalMarker
+          ? ['service_name', 'catalog_description', 'optional_label']
+          : ['service_name', 'catalog_description'],
+      );
+      if (hasOptionalMarker) {
+        expect(column.lines[2].supplemental).toBe(true);
+      }
     }
 
     // A tenant-owned custom AST inserted with a plain description column is untouched.
@@ -646,6 +656,56 @@ describe('Quote item catalog-description snapshot', () => {
       .first();
     expect(Number(unchanged.subtotal)).toBe(175000);
     expect(Number(unchanged.total_amount)).toBe(157500);
+  });
+
+  it('renders catalog snapshots and custom descriptions alongside optional markers in the migrated grouped template', async () => {
+    const catalogRow = await context.db('standard_quote_document_templates')
+      .where({ standard_quote_document_template_code: 'standard-quote-grouped' })
+      .first();
+    expect(catalogRow).toBeDefined();
+
+    const quote = await createQuote('Grouped description regression');
+    await context.db('quotes')
+      .where({ tenant: context.tenantId, quote_id: quote.quote_id })
+      .update({ template_id: catalogRow.template_id });
+
+    const serviceId = await seedCatalogService();
+    await createCatalogItem(quote.quote_id, serviceId, {
+      is_optional: true,
+      is_recurring: true,
+      billing_frequency: 'annually',
+    });
+    for (const isOptional of [true, false]) {
+      await QuoteItem.create(context.db, context.tenantId, {
+        quote_id: quote.quote_id,
+        description: isOptional ? 'Custom annual backup' : 'Required annual onboarding',
+        quantity: 1,
+        unit_price: 10000,
+        is_optional: isOptional,
+        is_selected: true,
+        is_recurring: true,
+        billing_frequency: 'annually',
+      });
+    }
+
+    const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, quote.quote_id);
+    expect(viewModel).toBeDefined();
+    const resolved = await resolveQuoteTemplateAst(context.db, context.tenantId, quote.quote_id);
+    expect(resolved.source).toBe('quote');
+    expect(resolved.standardCode).toBe('standard-quote-grouped');
+    expect(resolved.templateAst).toEqual(catalogRow.templateAst);
+
+    const evaluation = evaluateTemplateAst(resolved.templateAst, viewModel as unknown as Record<string, unknown>);
+    const { html } = await renderEvaluatedTemplateAst(resolved.templateAst, evaluation, { locale: 'en-US' });
+    const cells = Array.from(html.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/g), (match) =>
+      match[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+    );
+
+    // Assert visible text and ordering in each cell, not just AST bindings.
+    expect(cells).toContain(`${NAME} ${CATALOG_DESCRIPTION} Optional (included)`);
+    expect(cells).toContain('Custom annual backup Optional (included)');
+    expect(cells).toContain('Required annual onboarding');
+    expect(html.match(/Optional \(included\)/g)).toHaveLength(2);
   });
 
   it('renders catalog snapshots through the DB view model and the seeded standard template', async () => {

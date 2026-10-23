@@ -208,7 +208,7 @@ describe('Calendar webhook processing', () => {
     expect(provider.provider_config.syncToken).toBe('next-token');
   });
 
-  it('processes Google webhook deletions by calling deleteScheduleEntry', async () => {
+  it('processes Google webhook deletions through the shared access-aware handler', async () => {
     const providerId = uuidv4();
     const scheduleEntryId = uuidv4();
     const provider = {
@@ -255,8 +255,8 @@ describe('Calendar webhook processing', () => {
     const syncServiceStub = {
       syncScheduleEntryToExternal: vi.fn(async () => ({ success: true })),
       syncExternalEventToSchedule: vi.fn(async () => ({ success: true })),
-      deleteScheduleEntry: vi.fn(async (entryId: string, providerIdArg: string, scope: string) => {
-        shared.deleteCalls.push({ entryId, providerId: providerIdArg, scope });
+      handleInboundProviderDelete: vi.fn(async (entryId: string, providerIdArg: string) => {
+        shared.deleteCalls.push({ entryId, providerId: providerIdArg, scope: 'all' });
         return { success: true };
       }),
       resolveConflict: vi.fn(async () => ({ success: true })),
@@ -356,7 +356,7 @@ describe('Calendar webhook processing', () => {
     expect(provider.provider_config.deltaLink).toBe('next-delta');
   });
 
-  it('processes Microsoft webhook deletions by calling deleteScheduleEntry', async () => {
+  it('processes Microsoft webhook deletions through the shared access-aware handler', async () => {
     const providerId = uuidv4();
     const scheduleEntryId = uuidv4();
     const provider = {
@@ -401,8 +401,8 @@ describe('Calendar webhook processing', () => {
     const syncServiceStub = {
       syncScheduleEntryToExternal: vi.fn(async () => ({ success: true })),
       syncExternalEventToSchedule: vi.fn(async () => ({ success: true })),
-      deleteScheduleEntry: vi.fn(async (entryId: string, providerIdArg: string, scope: string) => {
-        shared.deleteCalls.push({ entryId, providerId: providerIdArg, scope });
+      handleInboundProviderDelete: vi.fn(async (entryId: string, providerIdArg: string) => {
+        shared.deleteCalls.push({ entryId, providerId: providerIdArg, scope: 'all' });
         return { success: true };
       }),
       resolveConflict: vi.fn(async () => ({ success: true })),
@@ -489,8 +489,8 @@ describe('Calendar webhook processing', () => {
         shared.syncCalls.push({ externalEventId, providerId: providerIdArg });
         return { success: true };
       }),
-      deleteScheduleEntry: vi.fn(async (entryId: string, providerIdArg: string, scope: string) => {
-        shared.deleteCalls.push({ entryId, providerId: providerIdArg, scope });
+      handleInboundProviderDelete: vi.fn(async (entryId: string, providerIdArg: string) => {
+        shared.deleteCalls.push({ entryId, providerId: providerIdArg, scope: 'all' });
         return { success: true };
       }),
       resolveConflict: vi.fn(async () => ({ success: true })),
@@ -551,7 +551,7 @@ describe('Calendar webhook processing', () => {
     expect(shared.deleteCalls).toContainEqual({ entryId: scheduleEntryDeleted, providerId: provider.id, scope: 'all' });
     expect(provider.provider_config.deltaLink).toBe('delta-next');
     expect(syncServiceStub.syncExternalEventToSchedule).toHaveBeenCalledTimes(4);
-    expect(syncServiceStub.deleteScheduleEntry).toHaveBeenCalledTimes(1);
+    expect(syncServiceStub.handleInboundProviderDelete).toHaveBeenCalledTimes(1);
   });
 
   it('counts Microsoft notifications with invalid client state as failures', async () => {
@@ -726,8 +726,8 @@ describe('Calendar webhook processing', () => {
     const syncServiceStub = {
       syncScheduleEntryToExternal: vi.fn(async () => ({ success: true })),
       syncExternalEventToSchedule: vi.fn(async () => ({ success: true })),
-      deleteScheduleEntry: vi.fn(async (entryId: string, providerIdArg: string, scope: string) => {
-        shared.deleteCalls.push({ entryId, providerId: providerIdArg, scope });
+      handleInboundProviderDelete: vi.fn(async (entryId: string, providerIdArg: string) => {
+        shared.deleteCalls.push({ entryId, providerId: providerIdArg, scope: 'all' });
         return { success: true };
       }),
       resolveConflict: vi.fn(async () => ({ success: true })),

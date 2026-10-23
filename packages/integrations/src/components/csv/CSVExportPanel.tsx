@@ -200,7 +200,9 @@ export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
                             : serviceId
                               ? t('integrations.csv.export.errors.missingItemMappingId', { defaultValue: 'Missing item mapping ({{serviceId}})', serviceId })
                               : t('integrations.csv.export.errors.missingItemMapping', { defaultValue: 'Missing item mapping' }))
-                        : item.message;
+                        : item.code === 'missing_discount_mapping'
+                          ? t('integrations.csv.export.errors.missingDiscountMapping', { defaultValue: 'Missing discount mapping (Discounts tab)' })
+                          : item.message;
                     return <li key={`${item.code}-${index}`}>{label}</li>;
                   })}
                 </ul>

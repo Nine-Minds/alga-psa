@@ -2,6 +2,7 @@ import { badRequest, dynamic, ok, parseJsonBody, runtime } from '../../_response
 import { requireEntraAccess } from '../../_guards';
 import { runEntraPreflight } from '@ee/lib/integrations/entra/sync/preflightService';
 import { entraRouteErrorMessage } from '../../_errors';
+import { parseEntraUserFilterConfig, validateEntraUserFilterConfig } from '@ee/lib/integrations/entra/sync/userFilterConfig';
 
 export { dynamic, runtime };
 
@@ -32,6 +33,10 @@ export async function POST(request: Request): Promise<Response> {
       body.fieldSyncConfig && typeof body.fieldSyncConfig === 'object' && !Array.isArray(body.fieldSyncConfig)
         ? (body.fieldSyncConfig as Record<string, unknown>)
         : null;
+    const userFilterConfigOverride = body.userFilterConfig
+      ? validateEntraUserFilterConfig(body.userFilterConfig).config
+      : null;
+    if (body.userFilterConfig && !userFilterConfigOverride) return badRequest('Invalid user filter configuration.');
 
     const result = await runEntraPreflight({
       tenantId: accessGate.tenantId,
@@ -40,6 +45,7 @@ export async function POST(request: Request): Promise<Response> {
       userId: accessGate.userId,
       sampleLimit,
       fieldSyncConfigOverride,
+      userFilterConfigOverride: userFilterConfigOverride ? parseEntraUserFilterConfig(userFilterConfigOverride) : null,
     });
 
     return ok(result);

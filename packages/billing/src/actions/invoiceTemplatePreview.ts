@@ -13,6 +13,7 @@ import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bi
 import { localizeTemplateAstForLocale, resolveTemplateAstI18n } from '../lib/invoice-template-ast/i18nLabels';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { validateTemplateAst } from '../lib/invoice-template-ast/schema';
+import { createPDFGenerationService } from '../services/pdfGenerationService';
 
 type AuthoritativePreviewInput = {
   workspace: DesignerWorkspaceSnapshot;
@@ -83,7 +84,7 @@ function previewFailureResult(message: string, details?: string): AuthoritativeP
 }
 
 export const runAuthoritativeInvoiceTemplatePreview = withAuth(
-  async (user, _context, input: AuthoritativePreviewInput): Promise<AuthoritativePreviewResult> => {
+  async (user, { tenant }, input: AuthoritativePreviewInput): Promise<AuthoritativePreviewResult> => {
     if (!await hasPermission(user, 'billing', 'read')) {
       return previewFailureResult('Permission denied: billing read required');
     }
@@ -163,9 +164,15 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
         input.invoiceData as unknown as Record<string, unknown>,
         { bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES }
       );
-      // Same seam the PDF path uses, so the preview is authoritative.
+      // Same seam the PDF path uses, so the preview is authoritative. There is
+      // no concrete invoice here, so the country is the tenant's default.
       const localized = await localizeTemplateAstForLocale(validation.ast, input.locale);
-      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, { locale: localized.locale, t: localized.t });
+      const dateFormat = await createPDFGenerationService(tenant).resolveRenderCountry({});
+      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, {
+        locale: localized.locale,
+        dateFormat,
+        t: localized.t,
+      });
       const presentationLabels = timePresentationLabels(localized.t);
       // Reuse the document AST's display-only walk for canvas labels. Never
       // translate authored literals or expose the translator across the wire.

@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { withUnitCode } from '@alga-psa/core/unitOfMeasure';
 import { requireTenantId, tenantDb } from '@alga-psa/db';
 import type { IContractLineServiceUsageConfig, IContractLineServiceRateTier } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -50,7 +51,7 @@ export default class ContractLineServiceUsageConfig {
     
     await this.table('contract_line_service_usage_config', tenant).insert({
       config_id: data.config_id,
-      unit_of_measure: data.unit_of_measure,
+      ...withUnitCode({ unit_of_measure: data.unit_of_measure, unit_code: data.unit_code }),
       enable_tiered_pricing: data.enable_tiered_pricing,
       minimum_usage: data.minimum_usage,
       base_rate: data.base_rate,
@@ -70,7 +71,7 @@ export default class ContractLineServiceUsageConfig {
     const tenant = await this.getTenant();
     
     const updateData = {
-      ...data,
+      ...withUnitCode(data),
       updated_at: new Date()
     };
     

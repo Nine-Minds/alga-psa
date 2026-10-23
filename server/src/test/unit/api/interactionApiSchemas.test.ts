@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createInteractionApiSchema,
   interactionListQuerySchema,
+  updateInteractionApiSchema,
 } from '../../../lib/api/schemas/interactionSchemas';
 
 describe('interaction REST schemas', () => {
@@ -90,5 +91,17 @@ describe('interaction REST schemas', () => {
       page: 2,
       page_size: 100,
     });
+  });
+
+  it('parses the is_closed query flag and the status/notes update body', () => {
+    expect(interactionListQuerySchema.parse({ is_closed: 'false' }).is_closed).toBe(false);
+    expect(interactionListQuerySchema.parse({ is_closed: 'true' }).is_closed).toBe(true);
+    expect(interactionListQuerySchema.parse({}).is_closed).toBeUndefined();
+    expect(interactionListQuerySchema.safeParse({ is_closed: 'maybe' }).success).toBe(false);
+
+    expect(updateInteractionApiSchema.safeParse({ status_id: '11111111-1111-4111-8111-111111111111' }).success).toBe(true);
+    expect(updateInteractionApiSchema.safeParse({ notes: 'called back' }).success).toBe(true);
+    expect(updateInteractionApiSchema.safeParse({}).success).toBe(false);
+    expect(updateInteractionApiSchema.safeParse({ title: 'nope' }).success).toBe(false);
   });
 });

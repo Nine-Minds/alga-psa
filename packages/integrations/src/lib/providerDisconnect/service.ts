@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { notifyQboConnectionChanged } from '../qbo/qboConnectionChangeProvider';
+import { notifyAccountingConnectionChanged } from '../accountingConnectionChangeProvider';
 import { invalidateAccountingOAuthStates } from '../accountingOAuthStateStore';
 import { getDisconnectRecord, createDisconnectRecord, deleteDisconnectRecord, updateTargetOutcome, setRecordStatus, replaceDisconnectTargets } from './repository';
 import { withProviderCredentialLock } from './lock';
@@ -230,6 +230,7 @@ export async function disconnectProvider(
   });
 
   if (initiation.earlyResult) {
+    await notifyAccountingConnectionChanged(tenantId);
     return initiation.earlyResult;
   }
   const record = initiation.record!;
@@ -543,9 +544,7 @@ async function runRevocationPass(
       correlationId: latest.correlationId,
       userId: opts.userId,
     });
-    if (provider === PROVIDER_QBO) {
-      await notifyQboConnectionChanged(tenantId);
-    }
+    await notifyAccountingConnectionChanged(tenantId);
     return { status: 'disconnected', transientTargets: counters.transientTargets, permanentTargets: counters.permanentTargets };
   }
 
@@ -690,9 +689,11 @@ export async function forceFinalizeProviderDisconnect(
   const secretProvider = (await getSecretProviderInstance()) as unknown as SecretProviderLike;
   const record = await getDisconnectRecord(knex, tenantId, provider);
   if (!record) {
+    await notifyAccountingConnectionChanged(tenantId);
     return { status: 'no_credentials', record: null, error: 'No disconnect record exists for this provider.' };
   }
   if (record.status === 'finalized') {
+    await notifyAccountingConnectionChanged(tenantId);
     return { status: 'already_disconnected', record };
   }
 
@@ -750,9 +751,7 @@ export async function forceFinalizeProviderDisconnect(
     );
     throw error;
   }
-  if (provider === PROVIDER_QBO) {
-    await notifyQboConnectionChanged(tenantId);
-  }
+  await notifyAccountingConnectionChanged(tenantId);
 
   const latest = await getDisconnectRecord(knex, tenantId, provider);
   logger.warn('[providerDisconnect] Operator force-finalized provider disconnect', {

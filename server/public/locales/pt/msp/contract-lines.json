@@ -276,7 +276,10 @@
       "heading": "Serviços de taxa fixa",
       "itemLabel": "Item {{index}}",
       "selectItemPlaceholder": "Selecione um item",
-      "servicesAndProducts": "Serviços e Produtos"
+      "servicesAndProducts": "Serviços e Produtos",
+      "recurringQuantity": "Quantidade recorrente",
+      "unitRateOptional": "Opcional. Deixe a tarifa unitária vazia para usar o preço de catálogo do serviço na moeda do cliente quando uma linha for criada a partir desta predefinição.",
+      "alertUnits": "Para faturar um serviço por posto ou unidade, escolha para ele o preço por quantidade recorrente: é faturado quantidade × tarifa unitária em cada período e não faz parte da tarifa base."
     },
     "hourly": {
       "addHourlyService": "Adicionar serviço por hora",
@@ -333,7 +336,8 @@
       "serviceSelectRequired": "Serviço {{index}}: Selecione um serviço",
       "unitOfMeasureRequired": "Serviço {{index}}: Unidade de medida obrigatória",
       "unitRateRequired": "Serviço {{index}}: taxa unitária é obrigatória",
-      "usageServiceRequired": "É necessário pelo menos um serviço baseado em uso"
+      "usageServiceRequired": "É necessário pelo menos um serviço baseado em uso",
+      "recurringQuantityInvalid": "Serviço {{index}}: A quantidade recorrente deve ser um número inteiro, zero ou mais"
     }
   },
   "forms": {
@@ -455,7 +459,8 @@
         "defaultRatePerUnit": "Taxa por unidade (usada se o preço diferenciado estiver desativado).",
         "minimumUsage": "Unidades faturáveis ​​mínimas por período.",
         "unitOfMeasure": "por exemplo, GB, usuário, dispositivo."
-      }
+      },
+      "catalogUnitPrecedence": "A unidade do catálogo tem precedência sobre a unidade desta configuração de uso."
     }
   },
   "list": {
@@ -694,7 +699,10 @@
       "allServicesAssociated": "Todos os serviços disponíveis já estão associados a esta linha de contrato.",
       "badges": {
         "billingMismatch": "Incompatibilidade de faturamento",
-        "defaultConfigType": "Padrão"
+        "defaultConfigType": "Padrão",
+        "standard": "Padrão",
+        "custom": "Personalizado",
+        "unreviewed": "Não revisto"
       },
       "billingMethod": {
         "fixed": "Preço Fixo",
@@ -724,7 +732,8 @@
         "enterRatePlaceholder": "Insira a taxa",
         "metadata": "Tipo de serviço: {{type}} | Método: {{method}}",
         "noCurrencyPrice": "Sem preço {{currency}}",
-        "rateDetail": "Taxa: {{symbol}}{{amount}}"
+        "rateDetail": "Taxa: {{symbol}}{{amount}}",
+        "catalogDefaultRateDetail": "Padrão do catálogo: {{symbol}}{{amount}}"
       },
       "unknownService": "Serviço desconhecido"
     },
@@ -812,7 +821,8 @@
       "conflict": "Esta alteração da linha de contrato conflita com um registro existente. Atualize a página e tente novamente.",
       "notAllowed": "Um dos valores da linha de contrato não é permitido. Revise o formulário e tente novamente.",
       "missingField": "Falta um campo obrigatório da linha de contrato.",
-      "missingFieldNamed": "Falta um campo obrigatório da linha de contrato: {{field}}."
+      "missingFieldNamed": "Falta um campo obrigatório da linha de contrato: {{field}}.",
+      "advanceTimingNotAllowed": "A faturação antecipada só está disponível para linhas de contrato fixas. As linhas por hora e por utilização são sempre faturadas após o período, depois de o trabalho ser realizado."
     },
     "templateLine": {
       "unavailable": "A linha de modelo selecionada não está mais disponível. Atualize a página e tente novamente."

@@ -9,6 +9,31 @@ export type AccountingMappingEntityOption = {
    * shown regardless of the selected kind.
    */
   kind?: string;
+  /**
+   * Structured provider/Alga identifier (Xero item or account code, QBO item
+   * id, Alga service SKU). Loaders populate it so the suggestion matcher never
+   * has to parse it back out of the display `name`.
+   */
+  code?: string;
+  /**
+   * The entity's own name with no display decoration (no `[Product] ` /
+   * `Item · ` prefix, no ` (CODE)` suffix). Loaders populate it for the same
+   * reason as `code`. Falls back to `name` when absent.
+   */
+  baseName?: string;
+};
+
+export type AccountingMappingBulkCreateInput = {
+  algaEntityId: string;
+  externalEntityId: string;
+  metadata?: Record<string, unknown> | null;
+};
+
+export type AccountingMappingBulkCreateResult = {
+  algaEntityId: string;
+  ok: boolean;
+  mapping?: ExternalEntityMapping;
+  error?: string;
 };
 
 export type AccountingMappingLoadResult = {
@@ -19,13 +44,14 @@ export type AccountingMappingLoadResult = {
 
 export type AccountingMappingContext = {
   /**
-   * Adapter/realm specific identifier (e.g., QBO realm ID, Xero tenant ID).
-   * Optional so configurations that do not require a realm/context can omit it.
+   * Canonical mapping identity the external entity is stored against (e.g.,
+   * QBO realm id, Xero connection id). Optional so configurations that do not
+   * require a realm/context can omit it.
    */
   realmId?: string | null;
   /**
-   * Optional identifier used solely for authenticated API calls (e.g., Xero connectionId).
-   * When provided, components can use this for catalog lookups while persisting realmId separately.
+   * Optional identifier used for authenticated API calls (e.g., Xero
+   * connectionId, which for Xero is the same canonical identity as realmId).
    */
   connectionId?: string | null;
   /**
@@ -92,11 +118,28 @@ export type AccountingMappingTargetConfig = {
   /** Catalog option id a stored mapping row corresponds to. */
   optionIdForMapping: (mapping: ExternalEntityMapping) => string;
   /**
+   * Whether a mapping of this kind holds its target exclusively, i.e. the
+   * server's unique index rejects a second mapping to the same target. The bulk
+   * grid withholds only exclusively-held options from suggestions.
+   */
+  isExclusiveKind: (kindId: string) => boolean;
+  /**
    * Copy rendered (table and edit dialog) when a stored mapping's target no
    * longer exists in the live catalog — the remediation prompt for invalid
    * legacy mappings.
    */
   invalidNotice: string;
+};
+
+export type AccountingMetadataField = {
+  /** Metadata key the value is stored under. */
+  key: string;
+  label: string;
+  placeholder?: string;
+  helpText?: string;
+  /** Column heading in the mappings table; defaults to `label`. */
+  columnLabel?: string;
+  required?: boolean;
 };
 
 export type AccountingMetadataConfig = {
@@ -105,10 +148,16 @@ export type AccountingMetadataConfig = {
     * Defaults to false.
     */
   enableJsonEditor?: boolean;
+  /**
+   * Named text inputs stored in the mapping's metadata, edited in the dialog
+   * and shown as table columns. Other metadata keys are preserved on save.
+   */
+  fields?: AccountingMetadataField[];
 };
 
 export type AccountingMappingElementIds = {
   addButton?: string;
+  bulkButton?: string;
   table?: string;
   dialog?: string;
   deleteDialogPrefix?: string;
@@ -125,6 +174,13 @@ export interface AccountingMappingModule {
   metadata?: AccountingMetadataConfig;
   /** Present when the external side spans multiple provider catalogs. */
   externalTarget?: AccountingMappingTargetConfig;
+  /**
+   * The external value is typed by hand: file-based exports (QuickBooks CSV,
+   * QuickBooks Desktop, Xero CSV) have no provider catalog to pick from. Bulk
+   * mapping then renders a text input per row. Catalog-backed modules leave
+   * this unset, so an empty or unavailable catalog never turns into free text.
+   */
+  manualExternalEntry?: boolean;
   overridesKey?: string;
   resolveOverrides?: (
     context: AccountingMappingContext
@@ -149,4 +205,13 @@ export interface AccountingMappingModule {
     }
   ): Promise<ExternalEntityMapping>;
   remove(context: AccountingMappingContext, mappingId: string): Promise<void>;
+  /**
+   * Optional one-request bulk create used by the bulk grid. Row-level failures
+   * are reported in the results, never thrown. When absent the engine falls
+   * back to sequential `create` calls with per-row error capture.
+   */
+  createMany?(
+    context: AccountingMappingContext,
+    inputs: AccountingMappingBulkCreateInput[]
+  ): Promise<AccountingMappingBulkCreateResult[]>;
 }

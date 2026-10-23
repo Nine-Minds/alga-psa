@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '../../workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   fileUploadedEventPayloadSchema,
   mediaProcessingFailedEventPayloadSchema,
   mediaProcessingSucceededEventPayloadSchema,
-} from '../../../runtime/schemas/assetMediaEventSchemas';
+} from '@alga-psa/event-schemas';
 import {
   buildFileUploadedPayload,
   buildMediaProcessingFailedPayload,

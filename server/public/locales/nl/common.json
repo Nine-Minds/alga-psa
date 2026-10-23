@@ -1,4 +1,10 @@
 {
+  "breadcrumbs": {
+    "ariaLabel": "Kruimelpad"
+  },
+  "phone": {
+    "extension": "toestel"
+  },
   "colorPicker": {
     "invalidHexBackground": "Ongeldige hexadecimale kleur (bijv. #FF0000)",
     "invalidHexText": "Ongeldige hexadecimale kleur (bijv. #FFFFFF)",
@@ -19,13 +25,19 @@
     "add": "Reageren",
     "ariaSummary_one": "{{emoji}} {{count}} reactie",
     "ariaSummary_other": "{{emoji}} {{count}} reacties",
-    "ariaYouReacted": ", u heeft gereageerd"
+    "ariaYouReacted": ", u heeft gereageerd",
+    "ariaSummary_few": "{{emoji}} {{count}} reacties",
+    "ariaSummary_many": "{{emoji}} {{count}} reacties"
   },
   "credits": {
     "expiresInDaysOn_one": "Verloopt over {{count}} dag, op {{date}}",
     "expiresInDaysOn_other": "Verloopt over {{count}} dagen, op {{date}}",
     "expiringForClient_one": "{{count}} tegoed van {{clientName}} verloopt binnenkort",
-    "expiringForClient_other": "{{count}} tegoeden van {{clientName}} verlopen binnenkort"
+    "expiringForClient_other": "{{count}} tegoeden van {{clientName}} verlopen binnenkort",
+    "expiresInDaysOn_few": "Verloopt over {{count}} dagen, op {{date}}",
+    "expiresInDaysOn_many": "Verloopt over {{count}} dagen, op {{date}}",
+    "expiringForClient_few": "{{count}} tegoeden van {{clientName}} verlopen binnenkort",
+    "expiringForClient_many": "{{count}} tegoeden van {{clientName}} verlopen binnenkort"
   },
   "staleAction": {
     "message": "Deze pagina is verouderd. Vernieuw de pagina om live-updates en acties te herstellen."
@@ -43,7 +55,13 @@
     "licenseWrongTenant": "Deze licentie is voor een andere appliance uitgegeven en is hier niet geldig. De installatie gebruikt Essentials-functies.",
     "manageLicense": "Licentie beheren",
     "ariaLabel": "Licentiestatus",
-    "dismiss": "Sluiten"
+    "dismiss": "Sluiten",
+    "licenseExpiresIn_few": "De licentie verloopt over {{count}} dagen. Verleng om serviceonderbreking te voorkomen.",
+    "licenseExpiresIn_many": "De licentie verloopt over {{count}} dagen. Verleng om serviceonderbreking te voorkomen.",
+    "trialDaysRemaining_few": "Pro-proefperiode actief — nog {{count}} dagen.",
+    "trialDaysRemaining_many": "Pro-proefperiode actief — nog {{count}} dagen.",
+    "trialExpiresIn_few": "De Pro-proefperiode verloopt over {{count}} dagen. Voer een licentiesleutel in om Pro-functies te behouden.",
+    "trialExpiresIn_many": "De Pro-proefperiode verloopt over {{count}} dagen. Voer een licentiesleutel in om Pro-functies te behouden."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -96,7 +114,18 @@
     "done": "Klaar",
     "continue": "Doorgaan",
     "printSelected": "Geselecteerde afdrukken ({{count}})",
-    "removeTag": "Label verwijderen"
+    "removeTag": "Label verwijderen",
+    "saveChanges": "Wijzigingen opslaan",
+    "printSelected_few": "Geselecteerde afdrukken ({{count}})",
+    "printSelected_many": "Geselecteerde afdrukken ({{count}})",
+    "saveSettings": "Instellingen opslaan",
+    "finishSetup": "Installatie voltooien",
+    "skip": "Overslaan",
+    "saveAsDraft": "Opslaan als concept",
+    "completing": "Voltooien...",
+    "more": "Meer",
+    "closeDialog": "Dialoogvenster sluiten",
+    "clearSearch": "Zoekopdracht wissen"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -114,7 +143,8 @@
     "inactive": "Inactief",
     "completed": "Voltooid",
     "cancelled": "Geannuleerd",
-    "processing": "Bezig..."
+    "processing": "Bezig...",
+    "loadingLabel": "Bezig met laden"
   },
   "messages": {
     "welcome": "Welkom",
@@ -169,6 +199,10 @@
         "updateComments": "Onvoldoende rechten om opmerkingen bij te werken",
         "deleteComments": "Onvoldoende rechten om opmerkingen te verwijderen",
         "viewDocuments": "Onvoldoende rechten om ticketdocumenten te bekijken"
+      },
+      "projects": {
+        "read": "Onvoldoende rechten om projecten te bekijken",
+        "readDetails": "Onvoldoende rechten om projectdetails te bekijken"
       }
     },
     "tags": {
@@ -472,7 +506,11 @@
     "expand": "Uitklappen",
     "showInDrawer": "Tonen in zijpaneel",
     "showEarlierReplies_one": "{{count}} eerder antwoord tonen",
-    "showEarlierReplies_other": "{{count}} eerdere antwoorden tonen"
+    "showEarlierReplies_other": "{{count}} eerdere antwoorden tonen",
+    "replies_few": "{{count}} antwoorden",
+    "replies_many": "{{count}} antwoorden",
+    "showEarlierReplies_few": "{{count}} eerdere antwoorden tonen",
+    "showEarlierReplies_many": "{{count}} eerdere antwoorden tonen"
   },
   "pagination": {
     "previous": "Vorige",
@@ -494,7 +532,9 @@
     "totalRecordsInline": "({{count}} records in totaal)",
     "pageOf": "Pagina {{current}} van {{total}}",
     "itemsLabel_one": "element",
-    "itemsLabel_other": "elementen"
+    "itemsLabel_other": "elementen",
+    "itemsLabel_few": "elementen",
+    "itemsLabel_many": "elementen"
   },
   "documents": {
     "title": "Documenten",
@@ -547,7 +587,11 @@
       "downloadFailed": "Document kon niet worden gedownload",
       "bulkDeleteFailed": "Sommige documenten konden niet worden verwijderd",
       "bulkDeleteSuccess_one": "{{count}} document is succesvol verwijderd",
-      "bulkDeleteSuccess_other": "{{count}} documenten zijn succesvol verwijderd"
+      "bulkDeleteSuccess_other": "{{count}} documenten zijn succesvol verwijderd",
+      "bulkDeleteSuccess_few": "{{count}} documenten zijn succesvol verwijderd",
+      "bulkDeleteSuccess_many": "{{count}} documenten zijn succesvol verwijderd",
+      "moveDocumentsSuccess_few": "{{count}} documenten zijn verplaatst naar {{destination}}",
+      "moveDocumentsSuccess_many": "{{count}} documenten zijn verplaatst naar {{destination}}"
     },
     "empty": {
       "default": "Geen documenten gevonden",
@@ -561,11 +605,15 @@
       "selected_other": "{{count}} documenten geselecteerd",
       "moveToFolder": "Naar map verplaatsen",
       "deleteSelected": "Selectie verwijderen",
-      "clearSelection": "Selectie wissen"
+      "clearSelection": "Selectie wissen",
+      "selected_few": "{{count}} documenten geselecteerd",
+      "selected_many": "{{count}} documenten geselecteerd"
     },
     "prompts": {
       "confirmBulkDelete_one": "Weet u zeker dat u {{count}} document wilt verwijderen?",
-      "confirmBulkDelete_other": "Weet u zeker dat u {{count}} documenten wilt verwijderen?"
+      "confirmBulkDelete_other": "Weet u zeker dat u {{count}} documenten wilt verwijderen?",
+      "confirmBulkDelete_few": "Weet u zeker dat u {{count}} documenten wilt verwijderen?",
+      "confirmBulkDelete_many": "Weet u zeker dat u {{count}} documenten wilt verwijderen?"
     },
     "pagination": {
       "perPage": "{{count}} per pagina"
@@ -598,7 +646,9 @@
       "rootOption": "Hoofdmap (geen map)",
       "empty": "Geen mappen beschikbaar. Documenten worden in de hoofdmap opgeslagen.",
       "showAllFolders": "Alle mappen tonen",
-      "showEntityFolders": "Entiteitsmappen tonen"
+      "showEntityFolders": "Entiteitsmappen tonen",
+      "bulkMoveDescription_few": "Selecteer de doelmap voor {{count}} documenten",
+      "bulkMoveDescription_many": "Selecteer de doelmap voor {{count}} documenten"
     },
     "filters": {
       "searchLabel": "Documenten zoeken",
@@ -689,7 +739,16 @@
       "fileError": "Bestand kon niet worden geüpload",
       "associatedEntityTypeLabel": "Koppelen aan",
       "noAssociation": "Geen koppeling",
-      "selectAssociatedEntityError": "Selecteer een gekoppelde entiteit voordat u uploadt."
+      "selectAssociatedEntityError": "Selecteer een gekoppelde entiteit voordat u uploadt.",
+      "uploaded": "Geüpload",
+      "failed": "Mislukt",
+      "failureSummary": "{{failed}} van {{total}} bestanden konden niet worden geüpload. Bekijk de fouten hieronder.",
+      "outcomeSummary": "{{succeeded}} van {{total}} bestanden geüpload",
+      "emptyDropTitle": "Geen bestanden ontvangen",
+      "emptyDropMessage": "Er zijn geen bestanden ontvangen. Sla de bijlage of e-mail op uw computer op en sleep het opgeslagen bestand hierheen of gebruik ‘Bestanden bladeren’.",
+      "uploadInProgress": "Er is al een upload bezig. Wacht tot deze is voltooid voordat u meer bestanden toevoegt.",
+      "refreshFailed": "Uw bestanden zijn geüpload, maar de documentenlijst kon niet worden vernieuwd. Herlaad de pagina om ze te zien.",
+      "clearResults": "Resultaten wissen"
     },
     "folders": {
       "root": "Hoofdmap",
@@ -768,7 +827,18 @@
     }
   },
   "fields": {
-    "notes": "Notities"
+    "notes": "Notities",
+    "phone": {
+      "label": "Telefoon",
+      "placeholder": "+1 (555) 123-4567"
+    },
+    "phoneExtension": {
+      "label": "Toestelnummer",
+      "placeholder": "toestel 1234"
+    },
+    "priority": {
+      "placeholder": "Prioriteit selecteren"
+    }
   },
   "auth": {
     "signOut": {
@@ -854,7 +924,8 @@
       "clientPortal": "Aangemaakt via klantenportaal",
       "inboundEmail": "Aangemaakt via inkomende e-mail",
       "api": "Aangemaakt via API",
-      "other": "Aangemaakt via overig"
+      "other": "Aangemaakt via overig",
+      "recurring": "Aangemaakt door terugkerend schema"
     }
   },
   "surveys": {
@@ -1182,7 +1253,9 @@
       "revoking": "Intrekken...",
       "loggingOut": "Uitloggen...",
       "logoutFromOther_one": "Uitloggen van {{count}} ander apparaat",
-      "logoutFromOther_other": "Uitloggen van {{count}} andere apparaten"
+      "logoutFromOther_other": "Uitloggen van {{count}} andere apparaten",
+      "logoutFromOther_few": "Uitloggen van {{count}} andere apparaten",
+      "logoutFromOther_many": "Uitloggen van {{count}} andere apparaten"
     },
     "confirmations": {
       "logoutCurrent": "Dit zal u uitloggen van uw huidige sessie. Weet u het zeker?",
@@ -1278,8 +1351,34 @@
     "saving": "Opslaan..."
   },
   "enums": {
+    "locale": {
+      "en": "Engels",
+      "fr": "Frans",
+      "es": "Spaans",
+      "de": "Duits",
+      "nl": "Nederlands",
+      "it": "Italiaans",
+      "pl": "Pools",
+      "pt": "Portugees (Brazilië)",
+      "sv": "Zweeds",
+      "xx": "Pseudotaal (xx)",
+      "yy": "Pseudotaal (yy)"
+    },
     "addOnDescription": {
       "ai_assistant": "Ontgrendel AI-chat, documenthulp, zijbalk-assistentie en workflow-AI-tools voor uw team."
+    },
+    "notificationCategory": {
+      "tickets": "Tickets",
+      "invoices": "Facturen",
+      "messages": "Berichten",
+      "projects": "Projecten",
+      "system": "Systeem",
+      "appointments": "Afspraken"
+    },
+    "theme": {
+      "light": "Licht",
+      "dark": "Donker",
+      "system": "Systeem"
     }
   },
   "form": {
@@ -1305,7 +1404,9 @@
     "notAssigned": "Niet toegewezen",
     "searchUsersOrTeams": "Zoek gebruikers of teams...",
     "unnamedUser": "Naamloze gebruiker",
-    "unnamedTeam": "Naamloos team"
+    "unnamedTeam": "Naamloos team",
+    "userPicker": "Gebruikerskiezer",
+    "noUsersFound": "Geen gebruikers gevonden"
   },
   "serviceTypeSelect": {
     "placeholder": "Servicetype selecteren...",
@@ -1333,9 +1434,11 @@
   },
   "timezonePicker": {
     "selectPlaceholder": "Tijdzone selecteren...",
-    "searchPlaceholder": "Tijdzones of afkortingen zoeken (bijv. EST)...",
+    "searchPlaceholder": "Zoek op stad, naam of afkorting (bijv. New York, EST)...",
     "noResults": "Geen tijdzones gevonden",
     "matchingGroup": "Overeenkomsten met \"{{query}}\"",
+    "noDst": "Geen zomertijd",
+    "noDaylightSavingHint": "Geen zomertijd. De klokken blijven het hele jaar op {{offset}}.",
     "regions": {
       "Africa": "Afrika",
       "America": "Amerika",
@@ -1506,7 +1609,22 @@
     "showAll": "Alles tonen",
     "showingAllColumns": "Alle kolommen worden getoond; scroll horizontaal om ze te zien.",
     "showLess": "Minder tonen",
-    "columnsHidden": "{{count}} kolommen verborgen vanwege beperkte ruimte."
+    "columnsHidden": "{{count}} kolommen verborgen vanwege beperkte ruimte.",
+    "columnsHidden_few": "{{count}} kolommen verborgen wegens beperkte ruimte.",
+    "columnsHidden_many": "{{count}} kolommen verborgen wegens beperkte ruimte.",
+    "responsiveColumnsHidden_one": "{{count}} kolom verborgen wegens beperkte ruimte. Pas de grootte aan om meer te zien.",
+    "responsiveColumnsHidden_other": "{{count}} kolommen verborgen wegens beperkte ruimte. Pas de grootte aan om meer te zien.",
+    "responsiveColumnsHidden_few": "{{count}} kolommen verborgen wegens beperkte ruimte. Pas de grootte aan om meer te zien.",
+    "responsiveColumnsHidden_many": "{{count}} kolommen verborgen wegens beperkte ruimte. Pas de grootte aan om meer te zien.",
+    "empty": "Geen resultaten",
+    "pagination": {
+      "empty": "Geen items",
+      "range_one": "{{first}}–{{last}} van {{count}} item",
+      "range_other": "{{first}}–{{last}} van {{count}} items",
+      "range_few": "{{first}}–{{last}} van {{count}} items",
+      "range_many": "{{first}}–{{last}} van {{count}} items",
+      "perPage": "{{count}} per pagina"
+    }
   },
   "richTextEditorSkeleton": {
     "loading": "Editor laden…"
@@ -1525,7 +1643,36 @@
   },
   "notifications": {
     "needsAttention": "Vereist aandacht ({{count}})",
-    "lowPriority": "Lage prioriteit ({{count}})"
+    "lowPriority": "Lage prioriteit ({{count}})",
+    "detail": {
+      "document": "Document",
+      "actions": {
+        "openDocument": "Document openen",
+        "viewTicket": "Ticket bekijken",
+        "viewTask": "Taak bekijken",
+        "viewDetails": "Bekijk details"
+      },
+      "changes": "Wijzigingen:",
+      "status": "Status:",
+      "priority": "Prioriteit:",
+      "assignedTo": "Toegewezen aan:",
+      "changedBy": "Gewijzigd door:",
+      "assignedBy": "Toegewezen door:",
+      "unread": "Ongelezen",
+      "internalComment": "Intern commentaar",
+      "commentBy": "Reactie van {{author}}:",
+      "readAt": "Gelezen {{time}}"
+    },
+    "item": {
+      "unknown": "Onbekend",
+      "justNow": "Zojuist",
+      "minutesAgo": "{{minutes}} min geleden",
+      "hoursAgo": "{{hours}} u geleden",
+      "daysAgo": "{{days}} d geleden",
+      "assigned": "Toegewezen:",
+      "performedBy": "door {{name}}",
+      "internal": "Intern"
+    }
   },
   "importConflicts": {
     "title": "Importconflicten oplossen",
@@ -1574,7 +1721,41 @@
       "document": "documenten",
       "knowledge_base_article": "kennisbankartikelen",
       "opportunity": "opportuniteiten"
-    }
+    },
+    "messages": {
+      "error": {
+        "duplicate": "Het label \"{{tag}}\" bestaat al op dit item",
+        "missingEntityId": "Kan label niet toevoegen: de entiteits-ID ontbreekt"
+      },
+      "success": {
+        "added": "Label \"{{tag}}\" is toegevoegd"
+      }
+    },
+    "dialogs": {
+      "lastUsage": {
+        "title": "Laatste gebruik van label",
+        "message": "Dit is het laatste gebruik van het label \"{{tag}}\". Wilt u de labeldefinitie verwijderen of bewaren voor toekomstig gebruik?",
+        "confirm": "Loskoppelen en definitie verwijderen",
+        "keep": "Loskoppelen en definitie bewaren"
+      }
+    },
+    "fields": {
+      "tags": {
+        "label": "Labels",
+        "placeholder": "Label toevoegen..."
+      },
+      "newTag": {
+        "placeholder": "Nieuw label"
+      }
+    },
+    "actions": {
+      "removeTag": "Label {{tag}} verwijderen",
+      "saving": "..."
+    },
+    "errors": {
+      "providerRequired": "useTags moet binnen een TagProvider worden gebruikt"
+    },
+    "empty": "Geen labels gevonden"
   },
   "statusDialog": {
     "nameRequired": "De statusnaam is verplicht",
@@ -1599,12 +1780,28 @@
     "defaultClosedHelp": "Een afgesloten status kan niet de standaard voor nieuwe items zijn."
   },
   "callLink": {
-    "teamsCall": "Bellen in Microsoft Teams"
+    "teamsCall": "Bellen in Microsoft Teams",
+    "threecxCall": "Bellen via 3CX",
+    "threecxDialing": "Bellen vanaf uw 3CX-toestel",
+    "threecxFailed": "De PBX kon de oproep niet plaatsen"
+  },
+  "unsavedChangesGuard": {
+    "title": "Niet-opgeslagen wijzigingen negeren?",
+    "message": "U heeft niet-opgeslagen wijzigingen die verloren gaan als u dit sluit. Wilt u ze negeren?",
+    "discard": "Wijzigingen negeren",
+    "keepEditing": "Verder bewerken"
   },
   "editor": {
     "attachFiles": "Bestanden bijvoegen",
     "uploadingFiles": "Bestanden uploaden…",
-    "fileUploadFailed": "Bestand uploaden mislukt."
+    "fileUploadFailed": "Bestand uploaden mislukt.",
+    "mentions": {
+      "everyone": "Iedereen",
+      "aiAssistant": "Alga AI-assistent",
+      "noUsername": "geen gebruikersnaam",
+      "userTitle": "{{displayName}} ({{username}})",
+      "fallback": "vermelding"
+    }
   },
   "emailPreferences": {
     "loading": "E-mailvoorkeuren laden…",
@@ -1616,5 +1813,364 @@
     "disabledByAdmin": "Uitgeschakeld door beheerder",
     "mixed": "Gedeeltelijk ingeschakeld",
     "empty": "Geen categorieën voor e-mailmeldingen beschikbaar."
+  },
+  "listViews": {
+    "defaultView": "Standaardweergave",
+    "unsavedChanges": "Deze weergave heeft niet-opgeslagen wijzigingen",
+    "searchPlaceholder": "Weergaven zoeken",
+    "noMatches": "Geen overeenkomende weergaven",
+    "sections": {
+      "mine": "Mijn weergaven",
+      "mineEmpty": "Nog geen privéweergaven",
+      "shared": "Gedeelde weergaven",
+      "sharedEmpty": "Nog geen gedeelde weergaven"
+    },
+    "labels": {
+      "myDefault": "Mijn standaard",
+      "sharedByYou": "Door u gedeeld"
+    },
+    "visibility": {
+      "private": "Privé",
+      "shared": "Gedeeld"
+    },
+    "actions": {
+      "delete": "Verwijderen",
+      "manage": "Beheren",
+      "setDefault": "Als mijn standaard instellen",
+      "clearDefault": "Mijn standaard wissen",
+      "copyLink": "Link kopiëren",
+      "saveChanges": "Wijzigingen opslaan",
+      "saveChangesTo": "Wijzigingen opslaan in \"{{name}}\"",
+      "saveAsNew": "Opslaan als nieuwe weergave…",
+      "discardChanges": "Wijzigingen negeren"
+    },
+    "dialog": {
+      "createTitle": "Opslaan als nieuwe weergave",
+      "manageTitle": "Weergave beheren",
+      "nameLabel": "Naam",
+      "nameInvalid": "Voer een naam in van 1 tot {{max}} tekens.",
+      "visibilityLabel": "Wie kan hem zien",
+      "privateHint": "Alleen u kunt deze weergave zien.",
+      "sharedHint": "Iedereen die deze lijst kan openen, kan hem zien en toepassen.",
+      "sharedDisabledHint": "U hebt geen toestemming om weergaven te delen."
+    },
+    "deleteDialog": {
+      "title": "Weergave verwijderen",
+      "message": "\"{{name}}\" verwijderen?",
+      "messageShared": "\"{{name}}\" verwijderen? Hij is gedeeld en verdwijnt dus voor iedereen die hem gebruikt."
+    },
+    "toasts": {
+      "saved": "\"{{name}}\" opgeslagen",
+      "updated": "\"{{name}}\" bijgewerkt",
+      "deleted": "Weergave verwijderd",
+      "defaultSet": "Standaardweergave ingesteld",
+      "defaultCleared": "Standaardweergave gewist",
+      "linkCopied": "Link gekopieerd",
+      "droppedReferences": "Sommige items in \"{{name}}\" bestaan niet meer en zijn overgeslagen: {{fields}}"
+    },
+    "errors": {
+      "notFound": "Deze weergave is privé of bestaat niet meer.",
+      "unknownList": "Onbekende lijst.",
+      "invalidName": "Een weergavenaam moet 1 tot 100 tekens lang zijn.",
+      "duplicateName": "U hebt al een weergave met de naam \"{{name}}\" in deze lijst.",
+      "invalidSettings": "De weergave kon niet worden opgeslagen: {{detail}}",
+      "invalidVisibility": "Zichtbaarheid moet privé of gedeeld zijn.",
+      "cannotShare": "U hebt geen toestemming om weergaven te delen.",
+      "cannotEdit": "U hebt geen toestemming om deze weergave te wijzigen.",
+      "cannotReadList": "U hebt geen toestemming om deze lijst te bekijken.",
+      "saveFailed": "De weergave kon niet worden opgeslagen.",
+      "deleteFailed": "De weergave kon niet worden verwijderd.",
+      "defaultFailed": "Uw standaardweergave kon niet worden gewijzigd.",
+      "copyFailed": "De link kon niet worden gekopieerd."
+    }
+  },
+  "unitOfMeasure": {
+    "labels": {
+      "each": "Stuk",
+      "piece": "Artikel",
+      "box": "Doos",
+      "seat": "Plek",
+      "license": "Licentie",
+      "device": "Apparaat",
+      "user": "Gebruiker",
+      "kit": "Kit",
+      "hour": "Uur",
+      "day": "Dag",
+      "week": "Week",
+      "month": "Maand",
+      "year": "Jaar",
+      "minute": "Minuut",
+      "gigabyte": "Gigabyte",
+      "terabyte": "Terabyte",
+      "liter": "Liter",
+      "kilogram": "Kilogram",
+      "meter": "Meter"
+    },
+    "groups": {
+      "time": "Tijd",
+      "count": "Aantal",
+      "volume": "Volume",
+      "mass": "Massa",
+      "length": "Lengte",
+      "other": "Overig",
+      "custom": "Aangepast"
+    },
+    "customOption": "Aangepast…",
+    "customPlaceholder": "Geef deze eenheid een naam",
+    "register": "Toevoegen",
+    "selectPlaceholder": "Selecteer een eenheid"
+  },
+  "emailRecipients": {
+    "remove": "{{email}} verwijderen",
+    "placeholder": "Typ een adres en druk op Enter"
+  },
+  "iconPicker": {
+    "enums": {
+      "icons": {
+        "phone": "Telefoon",
+        "mail": "E-mail",
+        "message-circle": "Bericht",
+        "video": "Videogesprek",
+        "send": "Verzenden",
+        "users": "Vergadering",
+        "calendar": "Afspraak",
+        "presentation": "Presentatie",
+        "coffee": "Informele bijeenkomst",
+        "handshake": "Overeenkomst",
+        "file-text": "Document",
+        "sticky-note": "Notitie",
+        "edit": "Bewerken",
+        "flag": "Opvolging",
+        "alarm-clock": "Herinnering",
+        "clock": "Tijdregistratie",
+        "activity": "Algemene activiteit",
+        "briefcase": "Accountbeheer",
+        "search": "Onderzoek",
+        "book-open": "Training",
+        "headphones": "Ondersteuning",
+        "check-square": "Beoordeling",
+        "clipboard": "Documentatie",
+        "users-2": "Overleg",
+        "target": "Planning",
+        "settings": "Configuratie",
+        "star": "Belangrijk",
+        "award": "Prestatie",
+        "zap": "Snelle actie",
+        "map-pin": "Locatie",
+        "tag": "Label",
+        "bell": "Melding",
+        "shield": "Beveiliging",
+        "key": "Toegang",
+        "heart": "Favoriet"
+      },
+      "categories": {
+        "Communication": "Communicatie",
+        "Meetings": "Vergaderingen",
+        "Documents": "Documenten",
+        "Tasks": "Taken",
+        "Activities": "Activiteiten",
+        "Business": "Zakelijk"
+      }
+    },
+    "selected": "Geselecteerd: {{label}}",
+    "help": "Selecteer een pictogram voor dit interactietype. Het pictogram wordt weergegeven in lijsten en formulieren."
+  },
+  "skeletons": {
+    "calendar": {
+      "loading": "Kalender laden..."
+    },
+    "kanbanBoard": {
+      "loading": "Kanbanbord laden"
+    },
+    "chart": {
+      "loading": "Grafiek laden...",
+      "loadingNamed": "{{title}} laden..."
+    },
+    "settingsTab": {
+      "loading": "Instellingen laden..."
+    },
+    "editor": {
+      "loading": "Editor laden..."
+    },
+    "taskForm": {
+      "loading": "Taakformulier laden..."
+    },
+    "workflow": {
+      "loading": "Workflowvisualisatie laden..."
+    }
+  },
+  "dialogs": {
+    "success": {
+      "title": "Gelukt",
+      "confirm": "OK"
+    },
+    "contactPicker": {
+      "title": "Contact selecteren",
+      "columns": {
+        "name": "Naam",
+        "email": "E-mail",
+        "phone": "Telefoon",
+        "action": "Actie"
+      },
+      "select": "Selecteren",
+      "searchPlaceholder": "Zoeken op naam, e-mail of telefoon..."
+    },
+    "defaultTitle": "Dialoogvenster",
+    "confirmDelete": {
+      "title": "{{itemType}} verwijderen",
+      "message": "Weet u zeker dat u \"{{itemName}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+    },
+    "unsavedChanges": {
+      "title": "Niet-opgeslagen wijzigingen",
+      "message": "U hebt niet-opgeslagen wijzigingen. Weet u zeker dat u wilt vertrekken? Uw wijzigingen gaan verloren.",
+      "confirm": "Verlaten zonder opslaan",
+      "cancel": "Blijven"
+    },
+    "confirmAction": {
+      "title": "Actie bevestigen"
+    },
+    "contentTitle": "Inhoud van dialoogvenster"
+  },
+  "viewDensity": {
+    "compact": {
+      "label": "Compact",
+      "title": "Naar compacte weergave schakelen"
+    },
+    "spacious": {
+      "label": "Ruim",
+      "title": "Naar ruime weergave schakelen"
+    },
+    "decrease": {
+      "title": "Afstand verkleinen"
+    },
+    "reset": {
+      "title": "Standaardinstellingen herstellen"
+    },
+    "increase": {
+      "title": "Afstand vergroten"
+    }
+  },
+  "multiContactPicker": {
+    "fields": {
+      "contacts": {
+        "placeholder": "Contacten selecteren..."
+      },
+      "search": {
+        "placeholder": "Contacten zoeken..."
+      }
+    },
+    "noResults": "Geen resultaten gevonden",
+    "noContacts": "Geen contacten beschikbaar",
+    "noEmail": "geen e-mail",
+    "actions": {
+      "clearAll": "Alles wissen"
+    }
+  },
+  "themeToggle": {
+    "ariaLabel": "Thema wisselen",
+    "selected": "Geselecteerd"
+  },
+  "drawer": {
+    "formTitle": "{{title}} - Formulier",
+    "actions": {
+      "goBack": "Terug",
+      "goForward": "Vooruit",
+      "close": "Zijpaneel sluiten"
+    }
+  },
+  "countryPicker": {
+    "placeholder": "Land selecteren",
+    "searchPlaceholder": "Landen zoeken...",
+    "otherCountries": "Andere landen",
+    "empty": "Geen landen gevonden"
+  },
+  "input": {
+    "actions": {
+      "typeIntoLabel": "Voer tekst in het veld {{label}} in",
+      "type": "Voer tekst in dit veld in",
+      "focus": "Geef dit invoerveld de focus",
+      "clear": "Wis de huidige tekst"
+    }
+  },
+  "button": {
+    "actions": {
+      "clickLabel": "Klik op {{label}}",
+      "click": "Klik op deze knop",
+      "focus": "Geef deze knop de focus"
+    }
+  },
+  "inlineReplyComposer": {
+    "actions": {
+      "reply": "Beantwoorden"
+    },
+    "fields": {
+      "internal": {
+        "label": "Markeren als intern"
+      }
+    }
+  },
+  "featureUpgradeNotice": {
+    "title": "{{featureName}} vereist {{tierLabel}}",
+    "description": "Upgrade naar het abonnement {{tierLabel}} om {{featureName}} en meer krachtige functies te ontgrendelen.",
+    "actions": {
+      "viewPlans": "Abonnementen bekijken"
+    }
+  },
+  "widgets": {
+    "highlight": {
+      "ariaLabel": "Gemarkeerde inhoud"
+    },
+    "buttonLink": {
+      "unavailable": "Link niet beschikbaar",
+      "actions": {
+        "openLink": "Link openen"
+      }
+    },
+    "richTextViewer": {
+      "loading": "Inhoud laden...",
+      "errors": {
+        "loadFailed": "Fout bij het laden van de inhoud"
+      }
+    }
+  },
+  "reflection": {
+    "parentId": "ID van bovenliggende component: {{id}}",
+    "noParent": "Geen bovenliggende component"
+  },
+  "teamAvatar": {
+    "alt": "Avatar van {{name}}",
+    "defaultAlt": "Teamavatar"
+  },
+  "userAvatar": {
+    "alt": "Avatar van {{name}}",
+    "defaultAlt": "Gebruikersavatar"
+  },
+  "featurePlaceholder": {
+    "description": "404 - Deze pagina is in aanbouw. U bent op een deel van de site terechtgekomen dat nog niet helemaal klaar is. Alga legt achter de schermen de basis. Kom binnenkort terug!"
+  },
+  "contactAvatar": {
+    "alt": "Avatar van {{name}}",
+    "defaultAlt": "Avatar van contact"
+  },
+  "entityAvatar": {
+    "alt": "Afbeelding van {{name}}",
+    "defaultAlt": "Afbeelding van entiteit"
+  },
+  "editableField": {
+    "notSet": "Niet ingesteld"
+  },
+  "editableText": {
+    "actions": {
+      "edit": "Klik om te bewerken"
+    }
+  },
+  "label": {
+    "required": "Verplicht"
+  },
+  "tabs": {
+    "ariaLabel": "Tabbladen"
+  },
+  "viewSwitcher": {
+    "ariaLabel": "Weergave wisselen"
   }
 }

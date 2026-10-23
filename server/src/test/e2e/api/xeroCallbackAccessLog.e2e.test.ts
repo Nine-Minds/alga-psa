@@ -18,6 +18,17 @@ const appDir = path.resolve(__dirname, '../../../../../server');
 const nextBin = path.resolve(appDir, '../node_modules/next/dist/bin/next');
 const CALLBACK_PATH = '/api/integrations/xero/callback';
 
+// Cold-start budget for the spawned dev server, shared by both routes. Nothing
+// here is network-bound: `next dev` loads this app's config, then compiles the
+// instrumentation bundle (which pulls the whole app-init graph) before it will
+// answer the first request. Measured cost of reaching the connect route: 24s
+// on an idle fresh-install runner, 179s on a contended laptop, and past the
+// old fixed 180s window on the lane runner that failed this file. Spend one
+// budget across the two warm-ups so a slow machine can put it where the
+// compile actually is, with the callback keeping its own floor.
+const READY_BUDGET_MS = 480_000;
+const CALLBACK_READY_FLOOR_MS = 60_000;
+
 let child: ChildProcess | null = null;
 let baseUrl = '';
 let port = 0;
@@ -39,18 +50,28 @@ function allocatePort(): Promise<number> {
   });
 }
 
-async function waitForServer(url: string, timeoutMs: number): Promise<void> {
+async function waitForServer(url: string, timeoutMs: number): Promise<Response> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
+    // A dead server never becomes ready, so a crashed boot must not sit out
+    // the whole cold-start budget before it is reported.
+    if (child && (child.exitCode !== null || child.signalCode !== null)) {
+      throw new Error(
+        `next dev server exited (code ${child.exitCode}, signal ${child.signalCode}) before serving ${url}`
+      );
+    }
     try {
-      const res = await fetch(url, { redirect: 'manual' });
-      if (res.status !== 404) return;
+      const res = await fetch(url, {
+        redirect: 'manual',
+        signal: AbortSignal.timeout(Math.max(1, deadline - Date.now())),
+      });
+      if (res.status !== 404) return res;
     } catch {
       // Not listening yet.
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  throw new Error(`next dev server did not become ready on ${url}`);
+  throw new Error(`next dev server did not become ready on ${url} within ${timeoutMs}ms`);
 }
 
 describe('Xero callback access-log redaction (real Next server)', () => {
@@ -100,8 +121,22 @@ describe('Xero callback access-log redaction (real Next server)', () => {
       throw error;
     });
 
-    await waitForServer(baseUrl + '/api/integrations/xero/connect', 180_000);
-  }, 240_000);
+    const readyBy = Date.now() + READY_BUDGET_MS;
+    const connectResponse = await waitForServer(baseUrl + '/api/integrations/xero/connect', READY_BUDGET_MS);
+    expect(connectResponse.status).toBe(401);
+
+    // Next compiles each route on its first request. Warming connect alone
+    // leaves callback compilation inside the 20-second behavioral test budget
+    // (cold compilation can take longer on CI). Compile both in setup, without
+    // credentials or a CSRF cookie, and require the real callback response.
+    const callbackResponse = await waitForServer(
+      baseUrl + CALLBACK_PATH,
+      Math.max(CALLBACK_READY_FLOOR_MS, readyBy - Date.now())
+    );
+    expect(callbackResponse.status).toBe(307);
+    expect(new URL(callbackResponse.headers.get('location')!).searchParams.get('xero_error'))
+      .toBe('missing_params');
+  }, READY_BUDGET_MS + CALLBACK_READY_FLOOR_MS + 60_000);
 
   afterAll(async () => {
     if (child) {

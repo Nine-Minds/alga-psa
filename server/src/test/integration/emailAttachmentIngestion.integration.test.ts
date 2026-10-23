@@ -97,7 +97,7 @@ vi.mock('@alga-psa/integrations/runtime', () => ({
 }));
 
 const uploads: Array<{ path: string; size: number; mime_type?: string }> = [];
-vi.mock('@alga-psa/storage', () => ({
+vi.mock('@alga-psa/storage/StorageProviderFactory', () => ({
   StorageProviderFactory: {
     createProvider: vi.fn(async () => ({
       upload: vi.fn(async (file: Buffer, path: string, options?: { mime_type?: string }) => {

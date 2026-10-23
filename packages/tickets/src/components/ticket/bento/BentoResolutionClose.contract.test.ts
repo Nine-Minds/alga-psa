@@ -55,6 +55,19 @@ describe('resolution comment close contract', () => {
     expect(conversation).toContain('setNotificationSuppression(defaultNotificationSuppression())');
   });
 
+  it('bento composer keeps visibility and resolution independent, like the legacy composer', () => {
+    const tile = read('./BentoTimelineTile.tsx');
+
+    // Two-way visibility segment only: resolution rides along as its own toggle
+    // so an internal note can also be the resolution.
+    expect(tile).toContain("useState<'client' | 'internal'>('client')");
+    expect(tile).not.toContain("'resolution'");
+    expect(tile).toContain('id={`${id}-composer-resolution-toggle`}');
+    expect(tile).toContain("composerVisibility === 'internal',");
+    expect(tile).toContain('const isResolution = isResolutionToggle;');
+    expect(tile).toContain('setIsResolutionToggle(false)');
+  });
+
   it('T055: no close status selected keeps a resolution comment as comment-only', () => {
     const conversation = read('../TicketConversation.tsx');
     const tile = read('./BentoTimelineTile.tsx');

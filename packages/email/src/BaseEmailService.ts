@@ -9,8 +9,16 @@ import {
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/publishers';
+import {
+  buildOutboundEmailFailedPayload,
+  buildOutboundEmailQueuedPayload,
+  buildOutboundEmailSentPayload,
+} from '@alga-psa/shared/workflow/streams/domainEventBuilders/emailLifecycleEventBuilders';
+import { addGradientFallback } from './branding/gradientFallback';
+import { embedBrandLogo } from './inlineBrandLogo';
 import { SupportedLocale } from './lib/localeConfig';
 import type { Knex } from 'knex';
+import type { OutboundMailClass, TenantEmailSettings } from '@alga-psa/types';
 
 const tenantScopedTable = (knex: Knex | Knex.Transaction, table: string, tenant: string) =>
   tenantDb(knex, tenant).table(table);
@@ -41,6 +49,7 @@ export interface EmailSendResult {
   retryCount?: number;   // current retry attempt (0 = first attempt)
   providerId?: string;
   providerType?: string;
+  sentAt?: Date;
   metadata?: Record<string, any>;
 }
 
@@ -61,6 +70,12 @@ export interface EmailTemplateContent {
 }
 
 export interface BaseEmailParams {
+  mailClass: OutboundMailClass;
+  /** Internal immutable settings snapshot used for call-scoped From resolution. */
+  resolvedTenantEmailSettings?: TenantEmailSettings | null;
+  boardId?: string;
+  boardName?: string;
+  senderId?: string;
   revalidateCommentOnRetry?: boolean;
   to: string | string[] | EmailAddress | EmailAddress[];
   from?: string | EmailAddress;
@@ -86,6 +101,8 @@ export interface BaseEmailParams {
   resolvedTenantCompanyName?: string | null;
   /** Internal provider snapshot used by TenantEmailService during cache refreshes. */
   resolvedEmailProvider?: IEmailProvider | null;
+  resolvedMicrosoftProviderId?: string;
+  allowUnverifiedSender?: boolean;
   /** Internal initialization error paired with resolvedEmailProvider. */
   resolvedProviderInitError?: string | null;
   /** Internal forced sender identity for a system-provider fallback. */
@@ -574,6 +591,22 @@ export abstract class BaseEmailService {
       const effectiveEntityType = params.entityType ?? (effectiveTicketId ? 'ticket' : undefined);
       const effectiveEntityId = params.entityId ?? effectiveTicketId;
 
+      // Every email path lands here after its template is rendered, so this is
+      // where gradient surfaces get the flat color the Outlooks fall back to,
+      // and where the branded header logo becomes an inline attachment.
+      html = addGradientFallback(html);
+      let attachments = params.attachments;
+      if (params.tenantId && params.tenantId !== 'system') {
+        const embedded = await embedBrandLogo(html, {
+          tenantId: params.tenantId,
+          context: { service: this.getServiceName(), subject, notificationSubtypeId: params.notificationSubtypeId },
+        });
+        html = embedded.html;
+        if (embedded.attachments.length > 0) {
+          attachments = [...(attachments ?? []), ...embedded.attachments];
+        }
+      }
+
       // Convert to provider email message format
       emailMessage = {
         from,
@@ -586,8 +619,9 @@ export abstract class BaseEmailService {
         subject,
         html,
         text,
-        attachments: params.attachments,
-        headers
+        attachments,
+        headers,
+        microsoftProviderId: params.resolvedMicrosoftProviderId,
       };
 
       // Outbound email lifecycle workflow events (F071). Best-effort: publishing
@@ -612,17 +646,17 @@ export abstract class BaseEmailService {
       try {
         await publishWorkflowEvent({
           eventType: 'OUTBOUND_EMAIL_QUEUED',
-          payload: {
+          payload: buildOutboundEmailQueuedPayload({
             messageId: workflowMessageId,
-            ...(maybeThreadId ? { threadId: maybeThreadId } : {}),
-            ...(maybeTicketId ? { ticketId: maybeTicketId } : {}),
+            threadId: maybeThreadId,
+            ticketId: maybeTicketId,
             from: fromEmail,
             to: toEmails,
-            ...(ccEmails?.length ? { cc: ccEmails } : {}),
+            cc: ccEmails,
             subject,
             queuedAt: new Date().toISOString(),
             provider: emailProvider.providerType,
-          },
+          }),
           ctx: workflowCtx,
           idempotencyKey: `outbound_email:${workflowMessageId}:queued`,
         });
@@ -670,31 +704,31 @@ export abstract class BaseEmailService {
         if (result.success) {
           await publishWorkflowEvent({
             eventType: 'OUTBOUND_EMAIL_SENT',
-            payload: {
+            payload: buildOutboundEmailSentPayload({
               messageId: workflowMessageId,
               providerMessageId:
                 result.providerMessageId || result.messageId || `${result.providerType}:${result.providerId}:${workflowMessageId}`,
-              ...(maybeThreadId ? { threadId: maybeThreadId } : {}),
-              ...(maybeTicketId ? { ticketId: maybeTicketId } : {}),
+              threadId: maybeThreadId,
+              ticketId: maybeTicketId,
               sentAt: result.sentAt?.toISOString?.() || new Date().toISOString(),
               provider: result.providerType || emailProvider.providerType,
-            },
+            }),
             ctx: workflowCtx,
             idempotencyKey: `outbound_email:${workflowMessageId}:sent`,
           });
         } else {
           await publishWorkflowEvent({
             eventType: 'OUTBOUND_EMAIL_FAILED',
-            payload: {
+            payload: buildOutboundEmailFailedPayload({
               messageId: workflowMessageId,
-              ...(maybeThreadId ? { threadId: maybeThreadId } : {}),
-              ...(maybeTicketId ? { ticketId: maybeTicketId } : {}),
+              threadId: maybeThreadId,
+              ticketId: maybeTicketId,
               failedAt: new Date().toISOString(),
               provider: result.providerType || emailProvider.providerType,
               errorMessage: result.error || 'Email send failed',
-              ...(result.metadata?.errorCode ? { errorCode: String(result.metadata.errorCode) } : {}),
-              ...(typeof result.metadata?.retryable === 'boolean' ? { retryable: result.metadata.retryable } : {}),
-            },
+              errorCode: result.metadata?.errorCode ? String(result.metadata.errorCode) : undefined,
+              retryable: typeof result.metadata?.retryable === 'boolean' ? result.metadata.retryable : undefined,
+            }),
             ctx: workflowCtx,
             idempotencyKey: `outbound_email:${workflowMessageId}:failed`,
           });
@@ -717,6 +751,7 @@ export abstract class BaseEmailService {
         error: result.error,
         providerId: result.providerId,
         providerType: result.providerType,
+        sentAt: result.sentAt,
         metadata: result.metadata
       };
     } catch (error) {
@@ -756,15 +791,15 @@ export abstract class BaseEmailService {
         const failureTenantId = params.tenantId || 'system';
         await publishWorkflowEvent({
           eventType: 'OUTBOUND_EMAIL_FAILED',
-          payload: {
+          payload: buildOutboundEmailFailedPayload({
             messageId: failureMessageId,
-            ...(isUuid(params.replyContext?.threadId) ? { threadId: params.replyContext?.threadId } : {}),
-            ...(isUuid(params.replyContext?.ticketId) ? { ticketId: params.replyContext?.ticketId } : {}),
+            threadId: isUuid(params.replyContext?.threadId) ? params.replyContext?.threadId : undefined,
+            ticketId: isUuid(params.replyContext?.ticketId) ? params.replyContext?.ticketId : undefined,
             failedAt: new Date().toISOString(),
             provider: emailProvider.providerType,
             errorMessage: error instanceof Error ? error.message : 'Unknown error',
-            ...(typeof (error as any)?.code === 'string' ? { errorCode: (error as any).code } : {}),
-          },
+            errorCode: typeof (error as any)?.code === 'string' ? (error as any).code : undefined,
+          }),
           ctx: {
             tenantId: failureTenantId,
             correlationId: params.correlationId || failureMessageId,

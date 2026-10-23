@@ -12,21 +12,45 @@
       "clearAll": "Limpar tudo",
       "viewWeek": "Ver semana",
       "compare": "Comparar",
-      "stopComparing": "Pare de comparar"
+      "stopComparing": "Pare de comparar",
+      "shareMyCalendar": "Compartilhar minha agenda",
+      "newGroupCalendar": "Nova agenda de grupo",
+      "manageGroupCalendar": "Gerenciar agenda"
     },
     "labels": {
-      "inactive": "(Inativo)"
+      "inactive": "(Inativo)",
+      "archived": "(Arquivada)"
     },
     "aria": {
       "viewWeek": "Ver semana para {{name}}",
-      "compare": "Comparar {{name}}"
+      "compare": "Comparar {{name}}",
+      "toggleGroupCalendar": "Mostrar {{name}}"
+    },
+    "sections": {
+      "myCalendar": "Minha agenda",
+      "people": "Pessoas",
+      "groupCalendars": "Agendas de grupo"
+    },
+    "empty": {
+      "people": "Ninguém compartilhou uma agenda com você ainda. Compartilhe a sua para que os colegas vejam quando você está livre.",
+      "groups": "Agendas de grupo guardam eventos compartilhados, como plantões ou fechamentos do escritório."
     }
   },
   "agentView": {
     "loading": "Carregando...",
     "errors": {
       "loadPermissions": "Falha ao carregar as permissões do usuário",
-      "forbidden": "Você não tem permissão para visualizar esta programação."
+      "forbidden": "Você não tem permissão para visualizar esta programação.",
+      "moveFailed": "Não foi possível mover a entrada de agenda"
+    },
+    "schedulingFor": "Agendando",
+    "selectSlotHint": "Arraste para criar, mover ou redimensionar entradas. Clique numa entrada para editá-la.",
+    "readOnlyHint": "Você pode ver esta agenda, mas precisa da permissão de atualização de agenda para adicionar ou alterar entradas.",
+    "workItemLegend": "Este item de trabalho",
+    "schedulingForAgent": "Agendando para {{name}}",
+    "otherWorkLegend": "Outro trabalho",
+    "workItemTypeLabel": {
+      "ticket": "Ticket"
     }
   },
   "calendar": {
@@ -80,7 +104,8 @@
         "start": "Início: {{dateTime}}",
         "end": "Fim: {{dateTime}}",
         "multiDay": "(Vários dias)"
-      }
+      },
+      "busy": "Ocupado"
     },
     "deleteDialog": {
       "title": "Excluir entrada de agendamento",
@@ -112,6 +137,11 @@
         "title": "Opções de impressão",
         "description": "Escolha quais colunas incluir ao imprimir a programação."
       }
+    },
+    "busyDialog": {
+      "title": "Ocupado",
+      "close": "Fechar",
+      "timeRange": "{{start}} – {{end}}"
     }
   },
   "weeklyEvent": {
@@ -553,7 +583,8 @@
       "appointmentRequest": "Solicitação de agendamento",
       "view": "Ver entrada",
       "edit": "Editar entrada",
-      "new": "Nova entrada"
+      "new": "Nova entrada",
+      "newForWorkItem": "Agendar {{name}}"
     },
     "alerts": {
       "privateEntryOnlyCreator": "Esta é uma entrada privada. Somente o criador pode visualizar ou editar detalhes."
@@ -578,7 +609,13 @@
       "privateEntry": "Entrada privada (não visível para outros usuários)",
       "start": "Começar *",
       "end": "Fim *",
-      "notes": "Notas"
+      "notes": "Notas",
+      "technician": "Técnico",
+      "notesPlaceholder": "Tudo o que o técnico deve saber antes de começar",
+      "calendarPersonal": "Pessoal",
+      "calendarUnavailable": "Agenda de grupo",
+      "calendar": "Agenda",
+      "assignedUsersOptional": "Usuários atribuídos"
     },
     "actions": {
       "cancel": "Cancelar",
@@ -588,7 +625,11 @@
     },
     "workItem": {
       "adHocFallback": "Entrada ad hoc (sem item de trabalho)",
-      "openDetails": "Detalhes"
+      "openDetails": "Detalhes",
+      "loading": "Carregando item de trabalho…",
+      "openTicket": "Abrir ticket",
+      "openTask": "Abrir tarefa",
+      "openInteraction": "Abrir interação"
     },
     "appointmentRequest": {
       "approved": {
@@ -691,6 +732,11 @@
       "created": "Reunião do Microsoft Teams criada",
       "createFailed": "Falha ao criar a reunião do Teams",
       "recurringUnsupported": "Reuniões do Teams só podem ser adicionadas a entradas avulsas, não a séries recorrentes."
+    },
+    "duration": {
+      "minutes": "{{count}} min",
+      "hours": "{{count}} h",
+      "hoursMinutes": "{{hours}} h {{minutes}} min"
     }
   },
   "actions": {
@@ -744,5 +790,144 @@
       "graphThrottled": "O Microsoft Graph está limitando a taxa de downloads de gravações. Tente novamente em instantes.",
       "graphHttpStatus": "O Microsoft Graph retornou HTTP {{status}} ao baixar a gravação do Teams."
     }
+  },
+  "workItemEditor": {
+    "created": "{{title}} agendado",
+    "updated": "Entrada de agenda atualizada",
+    "deleted": "Entrada de agenda excluída",
+    "createFailed": "Não foi possível agendar este trabalho",
+    "updateFailed": "Não foi possível atualizar a entrada de agenda",
+    "deleteFailed": "Não foi possível excluir a entrada de agenda",
+    "loadFailed": "Não foi possível carregar a entrada de agenda",
+    "noPermission": "Você precisa da permissão de atualização de agenda para agendar trabalho."
+  },
+  "sharing": {
+    "levels": {
+      "freeBusy": "Livre/ocupado",
+      "read": "Ver detalhes",
+      "edit": "Editar",
+      "manage": "Gerenciar"
+    },
+    "addRecipient": "Adicionar pessoa ou equipe",
+    "noRecipients": "Ainda não compartilhada com ninguém.",
+    "unknownRecipient": "Destinatário desconhecido",
+    "removeRecipient": "Remover {{name}}",
+    "errors": {
+      "load": "Não foi possível carregar o compartilhamento da agenda.",
+      "save": "Não foi possível salvar o compartilhamento da agenda."
+    },
+    "shareDialog": {
+      "title": "Compartilhar minha agenda",
+      "description": "Livre/ocupado mostra apenas quando você está ocupado. Ver detalhes mostra suas entradas, exceto as privadas. Editar também permite adicionar e alterar entradas por você."
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "saving": "Salvando...",
+      "save": "Salvar"
+    },
+    "settings": {
+      "title": "Compartilhamento da agenda",
+      "description": "Escolha quais colegas e equipes podem ver sua agenda e se podem reservar horários para você."
+    }
+  },
+  "groupCalendars": {
+    "errors": {
+      "load": "Não foi possível carregar a agenda.",
+      "nameRequired": "O nome da agenda é obrigatório.",
+      "save": "Não foi possível salvar a agenda."
+    },
+    "dialog": {
+      "manageTitle": "Gerenciar agenda de grupo",
+      "createTitle": "Nova agenda de grupo"
+    },
+    "actions": {
+      "restore": "Restaurar",
+      "archive": "Arquivar",
+      "create": "Criar agenda"
+    },
+    "fields": {
+      "name": "Nome",
+      "namePlaceholder": "ex.: Escala de plantão",
+      "color": "Cor",
+      "description": "Descrição (opcional)",
+      "members": "Membros",
+      "creatorNote": "Você poderá gerenciar esta agenda."
+    }
+  },
+  "ticketDetails": {
+    "title": "Detalhes do ticket",
+    "numberedTitle": "Ticket nº {{number}}",
+    "untitled": "Ticket sem título",
+    "noDescription": "Sem descrição",
+    "notAvailable": "N/D",
+    "unassigned": "Não atribuído",
+    "fields": {
+      "title": {
+        "label": "Título"
+      },
+      "description": {
+        "label": "Descrição"
+      },
+      "status": {
+        "label": "Status"
+      },
+      "priority": {
+        "label": "Prioridade"
+      },
+      "board": {
+        "label": "Quadro"
+      },
+      "client": {
+        "label": "Cliente"
+      },
+      "contact": {
+        "label": "Contato"
+      },
+      "assignedUser": {
+        "label": "Usuário atribuído"
+      },
+      "entered": {
+        "label": "Criado"
+      },
+      "updated": {
+        "label": "Atualizado"
+      },
+      "closed": {
+        "label": "Fechado"
+      }
+    }
+  },
+  "projectTaskDetails": {
+    "title": "Tarefa do projeto",
+    "noDescription": "Sem descrição",
+    "notAvailable": "N/D",
+    "unassigned": "Não atribuído",
+    "untitledItem": "Item sem título",
+    "noChecklistItems": "Nenhum item na lista de verificação",
+    "fields": {
+      "description": {
+        "label": "Descrição"
+      },
+      "project": {
+        "label": "Projeto"
+      },
+      "phase": {
+        "label": "Fase"
+      },
+      "assignedTo": {
+        "label": "Atribuído a"
+      },
+      "dueDate": {
+        "label": "Data de vencimento"
+      },
+      "checklist": {
+        "label": "Lista de verificação"
+      }
+    }
+  },
+  "fallback": {
+    "agentSchedule": "A visualização da agenda do agente agora fica em Agendamento. (agentId: {{agentId}})",
+    "timeEntry": "O lançamento de horas é gerenciado em Agendamento.",
+    "scheduling": "O agendamento é gerenciado em Agendamento."
   }
 }

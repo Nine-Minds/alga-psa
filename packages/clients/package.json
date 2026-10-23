@@ -20,6 +20,10 @@
       "types": "./src/actions/interactionCreateHelper.ts",
       "import": "./src/actions/interactionCreateHelper.ts"
     },
+    "./actions/clientNoteActions": {
+      "types": "./src/actions/clientNoteActions.ts",
+      "import": "./src/actions/clientNoteActions.ts"
+    },
     "./components": {
       "types": "./src/components/index.ts",
       "import": "./dist/components/index.js",
@@ -34,9 +38,29 @@
       "types": "./src/lib/onlineMeetingArtifactCapture.ts",
       "import": "./src/lib/onlineMeetingArtifactCapture.ts"
     },
+    "./lib/clientMergeEngine": {
+      "types": "./src/lib/clientMergeEngine.ts",
+      "import": "./src/lib/clientMergeEngine.ts"
+    },
+    "./lib/clientMergePlan": {
+      "types": "./src/lib/clientMergePlan.ts",
+      "import": "./src/lib/clientMergePlan.ts"
+    },
+    "./lib/clientSince": {
+      "import": "./src/lib/clientSince.ts",
+      "types": "./src/lib/clientSince.ts"
+    },
     "./lib/contactActionErrorCodes": {
       "import": "./src/lib/contactActionErrorCodes.ts",
       "types": "./src/lib/contactActionErrorCodes.ts"
+    },
+    "./lib/createContactRoute": {
+      "import": "./src/lib/createContactRoute.ts",
+      "types": "./src/lib/createContactRoute.ts"
+    },
+    "./lib/clientWebsiteUpdate": {
+      "import": "./src/lib/clientWebsiteUpdate.ts",
+      "types": "./src/lib/clientWebsiteUpdate.ts"
     },
     "./context/ClientCrossFeatureContext": {
       "types": "./src/context/ClientCrossFeatureContext.tsx",
@@ -63,10 +87,13 @@
     "@alga-psa/block-content": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/event-bus": "*",
     "@alga-psa/formatting": "*",
+    "@alga-psa/list-views": "*",
     "@alga-psa/inventory": "*",
     "@alga-psa/shared": "*",
     "@alga-psa/storage": "*",
+    "@alga-psa/tenancy": "*",
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
     "@alga-psa/user-composition": "*",

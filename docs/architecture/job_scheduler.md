@@ -157,6 +157,7 @@ await scheduler.scheduleRecurringJob('daily-report', '0 0 * * *', {});
 | `cleanup-ai-session-keys` | Clean up AI sessions (EE only) | default |
 | `createClientContractLineCycles` | Create billing cycles | default |
 | `createNextTimePeriods` | Create time periods | default |
+| `generate-recurring-tickets` | 15-minute sweep that generates tickets for all active recurring-ticket definitions across tenants | 10 min |
 
 ## Adding a New Job Handler
 

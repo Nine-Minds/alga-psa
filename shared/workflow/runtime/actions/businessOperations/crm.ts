@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
-import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
+import { withWorkflowPicker, withWorkflowNotFoundPolicy } from '@alga-psa/event-schemas';
 import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
 import {
   Quote,
@@ -30,6 +30,7 @@ import {
   rethrowAsStandardError,
   type TenantTxContext,
 } from './shared';
+import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import { buildInteractionLoggedPayload } from '../../../streams/domainEventBuilders/crmInteractionNoteEventBuilders';
 import { buildTagAppliedPayload, buildTagDefinitionCreatedPayload } from '../../../streams/domainEventBuilders/tagEventBuilders';
 import {
@@ -41,26 +42,6 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import type { TaggedEntityType } from '@alga-psa/types';
-
-const WORKFLOW_PICKER_HINTS = {
-  client: 'Search clients',
-  contact: 'Search contacts',
-  ticket: 'Search tickets',
-  user: 'Search users',
-} as const;
-
-const withWorkflowPicker = <T extends z.ZodTypeAny>(
-  schema: T,
-  description: string,
-  kind: keyof typeof WORKFLOW_PICKER_HINTS,
-  dependencies?: string[]
-): T =>
-  withWorkflowJsonSchemaMetadata(schema, description, {
-    'x-workflow-picker-kind': kind,
-    'x-workflow-picker-dependencies': dependencies,
-    'x-workflow-picker-fixed-value-hint': WORKFLOW_PICKER_HINTS[kind],
-    'x-workflow-picker-allow-dynamic-reference': true,
-  });
 
 const nullableUuidSchema = z.union([uuidSchema, z.null()]);
 const visibilitySchema = z.enum(['internal', 'client_visible']);
@@ -82,11 +63,11 @@ const activitySummarySchema = z.object({
   type_name: z.string().nullable(),
   status_id: nullableUuidSchema,
   status_name: z.string().nullable(),
-  client_id: nullableUuidSchema,
+  client_id: withWorkflowPicker(nullableUuidSchema, 'Client id', 'client'),
   client_name: z.string().nullable(),
-  contact_id: nullableUuidSchema,
+  contact_id: withWorkflowPicker(nullableUuidSchema, 'Contact id', 'contact'),
   contact_name: z.string().nullable(),
-  ticket_id: nullableUuidSchema,
+  ticket_id: withWorkflowPicker(nullableUuidSchema, 'Ticket id', 'ticket'),
   ticket_number: z.string().nullable(),
   title: z.string().nullable(),
   notes_preview: z.string().nullable(),
@@ -94,7 +75,7 @@ const activitySummarySchema = z.object({
   start_time: isoDateTimeSchema.nullable(),
   end_time: isoDateTimeSchema.nullable(),
   duration: z.number().int().nullable(),
-  user_id: nullableUuidSchema,
+  user_id: withWorkflowPicker(nullableUuidSchema, 'User id', 'user'),
   user_name: z.string().nullable(),
   visibility: z.string().nullable(),
   category: z.string().nullable(),
@@ -105,7 +86,7 @@ const quoteSummarySchema = z.object({
   quote_id: uuidSchema,
   quote_number: z.string().nullable(),
   status: z.string().nullable(),
-  client_id: nullableUuidSchema,
+  client_id: withWorkflowPicker(nullableUuidSchema, 'Client id', 'client'),
   title: z.string(),
 });
 
@@ -120,7 +101,7 @@ const findActivitiesInputSchema = z
     date_from: isoDateTimeSchema.optional(),
     date_to: isoDateTimeSchema.optional(),
     limit: z.number().int().positive().max(200).default(25),
-    on_empty: onEmptySchema.default('return_empty'),
+    on_empty: withWorkflowNotFoundPolicy(onEmptySchema.default('return_empty'), 'What to do when there are no results'),
   })
   .superRefine((value, refinementCtx) => {
     const hasMeaningfulFilter = Boolean(
@@ -334,7 +315,7 @@ const findQuotesInputSchema = z
     pageSize: z.number().int().positive().max(200).default(25),
     sortBy: z.enum(['quote_date', 'total_amount', 'status', 'created_at']).default('quote_date'),
     sortOrder: z.enum(['asc', 'desc']).default('desc'),
-    on_empty: onEmptySchema.default('return_empty'),
+    on_empty: withWorkflowNotFoundPolicy(onEmptySchema.default('return_empty'), 'What to do when there are no results'),
   })
   .superRefine((value, refinementCtx) => {
     if (value.date_from && value.date_to && value.date_from.getTime() > value.date_to.getTime()) {
@@ -388,8 +369,8 @@ const quoteDetailSummarySchema = z.object({
   quote_id: uuidSchema,
   quote_number: z.string().nullable(),
   status: z.string().nullable(),
-  client_id: nullableUuidSchema,
-  contact_id: nullableUuidSchema,
+  client_id: withWorkflowPicker(nullableUuidSchema, 'Client id', 'client'),
+  contact_id: withWorkflowPicker(nullableUuidSchema, 'Contact id', 'contact'),
   title: z.string(),
   quote_date: isoDateTimeSchema.nullable(),
   valid_until: isoDateTimeSchema.nullable(),
@@ -674,30 +655,16 @@ const maybeWorkflowActor = (userId: string): { actorType: 'USER'; actorUserId: s
   actorUserId: userId,
 });
 
-async function publishWorkflowDomainEvent(params: {
-  eventType: string;
-  payload: Record<string, unknown>;
+async function publishWorkflowDomainEvent<T extends WorkflowCatalogEventType>(params: {
+  eventType: T;
+  payload: BuiltWorkflowPayload<T>;
   tenantId: string;
   occurredAt: string;
   actorUserId: string;
   idempotencyKey: string;
 }): Promise<void> {
   try {
-    const publishers = (await import('@alga-psa/event-bus/publishers')) as unknown as {
-      publishWorkflowEvent?: (value: {
-        eventType: string;
-        payload: Record<string, unknown>;
-        ctx: {
-          tenantId: string;
-          occurredAt: string;
-          actor: { actorType: 'USER'; actorUserId: string };
-        };
-        idempotencyKey: string;
-      }) => Promise<unknown>;
-    };
-
-    if (!publishers.publishWorkflowEvent) return;
-
+    const publishers = await import('@alga-psa/event-bus/publishers');
     await publishers.publishWorkflowEvent({
       eventType: params.eventType,
       payload: params.payload,
@@ -786,6 +753,7 @@ async function sendQuoteEmailBestEffort(params: {
     );
 
     const emailResult = await service.sendEmail({
+      mailClass: 'sales',
       tenantId: params.tenantId,
       to: params.recipients.map((email) => ({ email })),
       templateProcessor,
@@ -1620,6 +1588,11 @@ export function registerCrmActions(): void {
 
         const createdQuote = await Quote.create(tx.trx, tx.tenantId, {
           ...(parsedQuote as any),
+          // Carry the template's authored rich terms through the duplicate path.
+          // The workflow input schema stays string-only (FR11); the block column
+          // is copied internally so a template created with rich terms does not
+          // lose them.
+          terms_and_conditions_block: templateWithItems.terms_and_conditions_block ?? null,
           subtotal: 0,
           discount_total: 0,
           tax: 0,

@@ -16,14 +16,30 @@ import { StorageProviderFactory, generateStoragePath } from './StorageProviderFa
 import { FileStoreModel } from './models/storage';
 import type { FileStore } from './types/storage';
 import { StorageError } from './providers/StorageProvider';
+import { renderSquareMark, type LogoCropRect } from './imageCrop';
 import fs from 'fs';
 import type { Knex } from 'knex';
 
 import {
     getProviderConfig,
     getStorageConfig,
-    validateFileUpload as validateFileConfig
+    validateFileUpload as validateFileConfig,
+    validateSystemArtifact,
+    type StorageArtifactOrigin,
 } from './config/storage';
+
+/**
+ * Run the attachment validator for user uploads, or the size-only validator
+ * for product-generated artifacts. Omitting `origin` keeps the user-upload
+ * allowlist, so a call site that forgets to declare provenance fails closed.
+ */
+async function validateUpload(origin: StorageArtifactOrigin | undefined, mimeType: string, fileSize: number): Promise<void> {
+    if ((origin ?? 'user-upload') === 'system-artifact') {
+        await validateSystemArtifact(fileSize);
+        return;
+    }
+    await validateFileConfig(mimeType, fileSize);
+}
 import { LocalProviderConfig, S3ProviderConfig } from './types/storage';
 import { createTenantKnex } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -90,13 +106,21 @@ export class StorageService {
       tenant: string,
       stream: Readable,
       originalName: string,
-      options: { mime_type?: string; uploaded_by_id: string; size: number; metadata?: Record<string, any> }
+      options: {
+        mime_type?: string;
+        uploaded_by_id: string;
+        size: number;
+        metadata?: Record<string, any>;
+        /** Who chose the MIME type. Defaults to `'user-upload'`. */
+        // LEVERAGE: friction storage-artifact-origin — 'system-artifact' skips the allowlist but nothing forces mime_type to be a code-chosen literal; a typed narrowing would make a header-derived MIME a compile error
+        origin?: StorageArtifactOrigin;
+      }
     ): Promise<FileStore> {
       if (!options.uploaded_by_id) throw new Error('uploaded_by_id is required');
-      await validateFileConfig(options.mime_type || 'application/octet-stream', options.size);
+      await validateUpload(options.origin, options.mime_type || 'application/octet-stream', options.size);
       const provider = await StorageProviderFactory.createProvider();
       const storagePath = generateStoragePath(tenant, '', originalName);
-      const uploaded = await provider.upload(stream, storagePath, { mime_type: options.mime_type || 'application/octet-stream' });
+      const uploaded = await provider.upload(stream, storagePath, { mime_type: options.mime_type || 'application/octet-stream', size: options.size });
       if (uploaded.size !== options.size) {
         await provider.delete(uploaded.path);
         throw new Error('Uploaded stream size did not match the declared size');
@@ -124,11 +148,17 @@ export class StorageService {
       // Browser tab icon: raster input is flattened to a 32x32 PNG, SVG/ICO are
       // stored untouched. Takes precedence over isEntityLogo.
       isFavicon?: boolean;
+      // Square mark cut from a logo: the chosen zone (fractions of the source)
+      // rendered at avatar size. SVG sources are rasterized for this. Takes
+      // precedence over every other image branch.
+      cropRect?: LogoCropRect;
       // Derived artifacts (e.g. preview/thumbnail regenerations) are not
       // first-class documents. Set this to skip DOCUMENT_UPLOADED /
       // MEDIA_PROCESSING_SUCCEEDED so a preview upload can't re-trigger the
       // workflow that produced it. FILE_UPLOADED still fires (unchanged).
       isDerivedArtifact?: boolean;
+      /** Who chose the MIME type. Defaults to `'user-upload'`. */
+      origin?: StorageArtifactOrigin;
     }
   ) {
     try {
@@ -152,7 +182,7 @@ export class StorageService {
       }
 
       const originalMimeType = options.mime_type || 'application/octet-stream';
-      await validateFileConfig(originalMimeType, fileSize);
+      await validateUpload(options.origin, originalMimeType, fileSize);
 
       let processedBuffer = fileBuffer;
       let processedMimeType = originalMimeType;
@@ -170,7 +200,19 @@ export class StorageService {
         const isSvg = originalName.toLowerCase().endsWith('.svg') ||
           options.mime_type === 'image/svg+xml';
 
-        if (isSvg) {
+        if (options.cropRect) {
+          if (!isSvg) {
+            const detectedType = await fileTypeFromBuffer(new Uint8Array(fileBuffer));
+            if (!detectedType || !['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(detectedType.mime)) {
+              throw new Error('Invalid file format. Only JPEG, PNG, GIF, WebP, SVG are allowed for avatars/logos.');
+            }
+          }
+          const sharp = await loadSharp();
+          processedBuffer = await renderSquareMark(sharp, fileBuffer, options.cropRect, isSvg);
+          processedMimeType = 'image/webp';
+          processedFileSize = processedBuffer.length;
+          processedOriginalName = changeFileExtension(originalName, 'webp');
+        } else if (isSvg) {
           // SVGs are vector and don't need raster processing — store as-is
           processedBuffer = fileBuffer;
           processedMimeType = 'image/svg+xml';
@@ -223,13 +265,16 @@ export class StorageService {
           // center-cropped to a 256px-wide square (alga0002162). Avatars keep the
           // square cover-crop so they fill circular/framed slots cleanly.
           const LOGO_MAX_DIMENSION = 1024;
+          // A logo also has to survive an email: Outlook renders no WebP, so a
+          // logo is stored as PNG (alpha preserved) and needs no transcode at
+          // send time. Avatars never leave the browser, so they stay WebP.
           processedBuffer = options.isEntityLogo
             ? await sharp(fileBuffer)
                 .resize(LOGO_MAX_DIMENSION, LOGO_MAX_DIMENSION, {
                   fit: 'inside',
                   withoutEnlargement: true,
                 })
-                .webp({ quality: 85 })
+                .png()
                 .toBuffer()
             : await sharp(fileBuffer)
                 .resize(256, 256, {
@@ -239,10 +284,10 @@ export class StorageService {
                 .webp({ quality: 85 })
                 .toBuffer();
 
-          processedMimeType = 'image/webp';
+          processedMimeType = options.isEntityLogo ? 'image/png' : 'image/webp';
           processedFileSize = processedBuffer.length;
 
-          processedOriginalName = changeFileExtension(originalName, 'webp');
+          processedOriginalName = changeFileExtension(originalName, options.isEntityLogo ? 'png' : 'webp');
         }
       }
       // --- End Image Processing Logic ---

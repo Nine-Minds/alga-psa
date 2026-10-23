@@ -95,7 +95,7 @@ test.describe('Workflow Designer UI - publish', () => {
     const { db, tenantData, workflowPage } = await setupDesigner(page);
     try {
       await workflowPage.clickNewWorkflow();
-      await workflowPage.publishButton.click();
+      await workflowPage.publish();
       await expect(page.getByText('Save the workflow before publishing')).toBeVisible();
     } finally {
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
@@ -118,7 +118,7 @@ test.describe('Workflow Designer UI - publish', () => {
       await workflowPage.saveDraft();
       await page.getByRole('button', { name: workflowName }).waitFor({ state: 'visible' });
 
-      await workflowPage.publishButton.click();
+      await workflowPage.publish();
       await expect(page.getByText('Publish failed - fix validation errors')).toBeVisible();
 
       const errorHeading = page.getByRole('heading', { name: 'Publish Errors' });
@@ -161,7 +161,7 @@ test.describe('Workflow Designer UI - publish', () => {
       await workflowPage.saveDraft();
       await page.getByRole('button', { name: workflowName }).waitFor({ state: 'visible' });
 
-      await workflowPage.publishButton.click();
+      await workflowPage.publish();
       await expect(page.getByText('Workflow published')).toBeVisible();
 
       const warningBadge = page.getByText(/\d+ warnings/);
@@ -198,7 +198,7 @@ test.describe('Workflow Designer UI - publish', () => {
       await workflowPage.saveDraft();
       await page.getByRole('button', { name: workflowName }).waitFor({ state: 'visible' });
 
-      await workflowPage.publishButton.click();
+      await workflowPage.publish();
       await expect(page.getByText('Publish failed - fix validation errors')).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Publish Errors' })).toBeVisible();
       await expect(page.getByText(/\d+ warnings/)).toBeVisible();
@@ -206,7 +206,7 @@ test.describe('Workflow Designer UI - publish', () => {
       await workflowPage.stepDeleteButton(actionStepId).click();
       await workflowPage.stepDeleteButton(assignStepId).click();
 
-      await workflowPage.publishButton.click();
+      await workflowPage.publish();
       await expect(page.getByText('Workflow published')).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Publish Errors' })).toHaveCount(0);
       await expect(page.getByText(/\d+ warnings/)).toHaveCount(0);
@@ -237,7 +237,7 @@ test.describe('Workflow Designer UI - publish', () => {
       await page.getByRole('button', { name: workflowNameB }).waitFor({ state: 'visible' });
 
       await workflowPage.selectWorkflowByName(workflowNameA);
-      await workflowPage.publishButton.click();
+      await workflowPage.publish();
       await expect(page.getByText('Publish failed - fix validation errors')).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Publish Errors' })).toBeVisible();
 
@@ -263,7 +263,7 @@ test.describe('Workflow Designer UI - publish', () => {
       await workflowPage.saveDraft();
       await page.getByRole('button', { name: workflowName }).waitFor({ state: 'visible' });
 
-      await workflowPage.publishButton.click();
+      await workflowPage.publish();
       await expect(workflowPage.publishButton).toBeDisabled();
       await expect(workflowPage.publishButton).toHaveText('Publishing...');
 
@@ -291,7 +291,7 @@ test.describe('Workflow Designer UI - publish', () => {
       await workflowPage.saveDraft();
       await page.getByRole('button', { name: workflowName }).waitFor({ state: 'visible' });
 
-      await workflowPage.publishButton.click();
+      await workflowPage.publish();
       await expect(page.getByText('Failed to publish workflow')).toBeVisible();
       await expect(workflowPage.nameInput).toHaveValue(workflowName);
       await expect(workflowPage.stepSelectButton(stepId)).toBeVisible();
@@ -315,7 +315,7 @@ test.describe('Workflow Designer UI - publish', () => {
       await workflowPage.saveDraft();
       await page.getByRole('button', { name: workflowName }).waitFor({ state: 'visible' });
 
-      await workflowPage.publishButton.click();
+      await workflowPage.publish();
       await expect(page.getByText('Workflow published')).toBeVisible();
       await expect(page.locator('#workflow-designer-published-version')).toContainText('2');
     } finally {
@@ -343,7 +343,7 @@ test.describe('Workflow Designer UI - publish', () => {
       }
       await expect(pausedToggle).toHaveAttribute('data-state', 'checked');
 
-      await workflowPage.publishButton.click();
+      await workflowPage.publish();
       await expect(page.getByText('Workflow published')).toBeVisible();
 
       const record = await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).first();

@@ -3,7 +3,7 @@
 import toast from 'react-hot-toast';
 import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
 import { createPortal } from 'react-dom';
-import { calendarDisplayDates, calendarStoredDates, hasAllDayDates } from '../../lib/calendarDateDisplay';
+import { calendarDisplayDates } from '../../lib/calendarDateDisplay';
 import dynamic from 'next/dynamic';
 import { momentLocalizer, NavigateAction, View, ToolbarProps } from 'react-big-calendar';
 import moment from 'moment';
@@ -30,9 +30,14 @@ import EntryPopup from './EntryPopup';
 import { CalendarStyleProvider } from './CalendarStyleProvider';
 import TechnicianSidebar from './TechnicianSidebar';
 import WeeklyScheduleEvent from './WeeklyScheduleEvent';
+import MonthScheduleChip from './MonthScheduleChip';
 import { ScheduleCalendarEventContext, ScheduleCalendarEventRenderer } from './ScheduleCalendarEventRenderer';
-import { getScheduleEntries, addScheduleEntry, updateScheduleEntry as updateScheduleEntryAction, deleteScheduleEntry, getAppointmentRequestById, IAppointmentRequest } from '@alga-psa/scheduling/actions';
-import { IEditScope, IScheduleEntry, DeletionValidationResult } from '@alga-psa/types';
+import { workItemFills } from '../../lib/scheduleChipInk';
+import { getScheduleEntries, addScheduleEntry, updateScheduleEntry as updateScheduleEntryAction, deleteScheduleEntry, getAppointmentRequestById, IAppointmentRequest, getCalendarsVisibleToMe, getShareableUsers } from '@alga-psa/scheduling/actions';
+import { IEditScope, IScheduleEntry, DeletionValidationResult, IScheduleViewerCapabilities, IVisibleCalendar, IUser } from '@alga-psa/types';
+import ShareCalendarDialog from './sharing/ShareCalendarDialog';
+import GroupCalendarDialog from './sharing/GroupCalendarDialog';
+import { personalCalendarColor } from '../../lib/calendarColors';
 import { produce } from 'immer';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { WorkItemType, IExtendedWorkItem } from '@alga-psa/types';
@@ -49,6 +54,8 @@ import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Label } from '@alga-psa/ui/components/Label';
 import { isSourceOwnedWorkItemType } from '../../lib/entryOwnedWorkItems';
+import { slotFromCalendarSelection } from '../../lib/workItemScheduling';
+import { droppedEntryDates, movedEntryUpdate, resizedEntryDates } from '../../lib/entryMoves';
 
 // A local save can succeed while its Teams reschedule fails. Every calendar
 // update gesture must surface the server warning without reverting that save.
@@ -61,6 +68,21 @@ async function updateScheduleEntry(...args: Parameters<typeof updateScheduleEntr
 }
 
 const localizer = momentLocalizer(moment);
+
+/** Overlay selection persisted per user: people and group calendars shown alongside the focus. */
+interface ScheduleOverlayPreference {
+  people: string[];
+  groups: string[];
+}
+
+const EMPTY_OVERLAYS: ScheduleOverlayPreference = { people: [], groups: [] };
+
+function normalizeOverlayPreference(value: unknown): ScheduleOverlayPreference {
+  if (!value || typeof value !== 'object') return EMPTY_OVERLAYS;
+  const candidate = value as Partial<ScheduleOverlayPreference>;
+  const ids = (list: unknown) => (Array.isArray(list) ? list.filter((id): id is string => typeof id === 'string') : []);
+  return { people: ids(candidate.people), groups: ids(candidate.groups) };
+}
 
 interface ScheduleCalendarProps {
   headerActionsSlot?: HTMLElement | null;
@@ -92,7 +114,33 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
   const [error, setError] = useState<string | null>(null);
   const [date, setDate] = useState(new Date());
   const [focusedTechnicianId, setFocusedTechnicianId] = useState<string | null>(null);
-  const [comparisonTechnicianIds, setComparisonTechnicianIds] = useState<string[]>([]);
+  // Shared calendars: what the viewer can see, computed on the server.
+  const [capabilities, setCapabilities] = useState<IScheduleViewerCapabilities | null>(null);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [groupDialog, setGroupDialog] = useState<{ open: boolean; calendar: IVisibleCalendar | null }>({
+    open: false,
+    calendar: null,
+  });
+  const [busyEntry, setBusyEntry] = useState<IScheduleEntry | null>(null);
+  // Assignee candidates for the entry popup, fed by the `user_schedule:read`
+  // gated action rather than useUsers()/getAllUsers, which needs `user:read`.
+  const [popupUsers, setPopupUsers] = useState<IUser[]>([]);
+  const [popupUsersLoading, setPopupUsersLoading] = useState(false);
+  const {
+    value: overlayPreferenceValue,
+    setValue: setOverlayPreference,
+  } = useUserPreference<ScheduleOverlayPreference>(
+    'scheduleCalendarOverlays',
+    {
+      defaultValue: EMPTY_OVERLAYS,
+      localStorageKey: 'scheduleCalendarOverlays',
+      debounceMs: 300
+    }
+  );
+  const overlayPreference = useMemo(
+    () => normalizeOverlayPreference(overlayPreferenceValue),
+    [overlayPreferenceValue]
+  );
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [canModifySchedule, setCanModifySchedule] = useState<boolean>(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -200,26 +248,6 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     setSelectedEvent(null);
   };
 
-  const workItemColors: Record<WorkItemType, string> = {
-    ticket: 'rgb(var(--color-primary-200))',
-    project_task: 'rgb(var(--color-secondary-100))',
-    non_billable_category: 'rgb(var(--color-event-non-billable))',
-    ad_hoc: 'rgb(var(--color-border-200))',
-    interaction: 'rgb(var(--color-event-interaction))',
-    appointment_request: 'rgb(var(--color-event-appointment))',
-    opportunity_step: 'rgb(var(--color-event-opportunity))',
-  };
-
-  const workItemHoverColors: Record<WorkItemType, string> = {
-    ticket: 'rgb(var(--color-primary-200))',
-    project_task: 'rgb(var(--color-secondary-200))',
-    non_billable_category: 'rgb(var(--color-event-non-billable-hover))',
-    ad_hoc: 'rgb(var(--color-border-300))',
-    interaction: 'rgb(var(--color-event-interaction-hover))',
-    appointment_request: 'rgb(var(--color-event-appointment-hover))',
-    opportunity_step: 'rgb(var(--color-event-opportunity-hover))',
-  };
-
   const getViewLabel = useCallback((calendarView: View) => {
     const fallbackMap: Record<View, string> = {
       month: 'Month',
@@ -265,11 +293,11 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
   const Legend = () => (
     <div className="flex justify-between items-center mb-4 p-2 rounded-lg bg-opacity-50">
       <div className="flex justify-center space-x-4 flex-1">
-        {Object.entries(workItemColors).map(([type, color]): React.JSX.Element => (
+        {Object.entries(workItemFills).map(([type, fill]): React.JSX.Element => (
           <div key={type} className="flex items-center">
             <div
               className="w-4 h-4 mr-2 rounded"
-              style={{ backgroundColor: color }}
+              style={{ backgroundColor: `rgb(var(${fill}))` }}
             ></div>
             <span className="capitalize text-sm font-medium text-[rgb(var(--color-text-900))]">
               {getWorkItemLabel(type as WorkItemType)}
@@ -289,7 +317,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     </div>
   );
 
-  const { users: allTechnicians, loading: usersLoading, error: usersError } = useUsers();
+  const { users: allTechnicians } = useUsers();
 
   // Filter technicians based on showInactiveUsers toggle
   const displayedTechnicians = useMemo(() => {
@@ -322,6 +350,19 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     });
   }, [allTechnicians, showInactiveUsers]);
 
+  const loadCapabilities = useCallback(async () => {
+    try {
+      const result = await getCalendarsVisibleToMe();
+      if (result.success === false) {
+        console.error('Failed to load visible calendars:', result.error);
+      } else {
+        setCapabilities(result.data);
+      }
+    } catch (err) {
+      console.error('Failed to load visible calendars:', err);
+    }
+  }, []);
+
   useEffect(() => {
     async function fetchUserDataAndPermissions() {
       const user = await getCurrentUser();
@@ -335,21 +376,17 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
           setCanModifySchedule(canUpdate);
 
           setFocusedTechnicianId(user.user_id);
-          const canReadBroadly = fetchedPermissions.some((p: string) => p === 'user_schedule:read:all' || p === 'user_schedule:update');
-          // Initialize with empty comparison list
-          setComparisonTechnicianIds([]);
+          await loadCapabilities();
 
           setIsLoadingPreferences(false);
         } catch (err: any) {
            console.error("Failed to fetch user permissions:", err);
            setError(err?.message || t('calendar.errors.loadPermissions', { defaultValue: 'Failed to load permissions.' }));
            setUserPermissions([]);
-           setComparisonTechnicianIds([]);
            setIsLoadingPreferences(false);
         }
       } else {
         setError(t('calendar.errors.loadCurrentUser', { defaultValue: 'Failed to load current user.' }));
-        setComparisonTechnicianIds([]);
         setIsLoadingPreferences(false);
       }
     }
@@ -357,7 +394,92 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
   }, []);
 
   const canAssignOthers = useMemo(() => userPermissions.includes('user_schedule:update'), [userPermissions]);
-  const canViewOthers = useMemo(() => userPermissions.some((p: string) => p === 'user_schedule:read:all' || p === 'user_schedule:update'), [userPermissions]);
+  // Server-provided: user_schedule:update holders see every calendar.
+  const canViewOthers = capabilities?.canViewAll ?? false;
+
+  // People whose calendars the viewer can overlay. Admins get every internal
+  // user (honouring the inactive toggle); others get what was shared with them.
+  const visiblePeople = useMemo<IVisibleCalendar[]>(() => {
+    if (!capabilities) return [];
+    if (!capabilities.canViewAll) return capabilities.people;
+    return displayedTechnicians
+      .filter((tech) => tech.user_type === 'internal' && tech.user_id !== capabilities.viewerUserId)
+      .map((tech) => ({
+        key: tech.user_id,
+        calendar_type: 'personal' as const,
+        calendar_id: null,
+        owner_user_id: tech.user_id,
+        name: `${tech.first_name ?? ''} ${tech.last_name ?? ''}`.trim(),
+        color: personalCalendarColor(tech.user_id),
+        access_level: 'edit' as const,
+      }));
+  }, [capabilities, displayedTechnicians]);
+  const visibleGroups = capabilities?.groups ?? [];
+  const inactiveUserIds = useMemo(
+    () => new Set((allTechnicians || []).filter((tech) => tech.is_inactive).map((tech) => tech.user_id)),
+    [allTechnicians]
+  );
+
+  // Restore the persisted overlay selection, dropping calendars no longer visible.
+  const comparisonTechnicianIds = useMemo(() => {
+    if (!capabilities) return [];
+    const visible = new Set(
+      capabilities.canViewAll
+        ? (allTechnicians || []).map((tech) => tech.user_id)
+        : capabilities.people.map((person) => person.key)
+    );
+    return overlayPreference.people.filter((id) => visible.has(id) && id !== focusedTechnicianId);
+  }, [allTechnicians, capabilities, focusedTechnicianId, overlayPreference.people]);
+  const selectedGroupCalendarIds = useMemo(() => {
+    if (!capabilities) return [];
+    const visible = new Set(capabilities.groups.map((group) => group.key));
+    return overlayPreference.groups.filter((id) => visible.has(id));
+  }, [capabilities, overlayPreference.groups]);
+
+  const setComparisonTechnicianIds = useCallback((update: (prev: string[]) => string[]) => {
+    setOverlayPreference({ people: update(comparisonTechnicianIds), groups: selectedGroupCalendarIds });
+  }, [comparisonTechnicianIds, selectedGroupCalendarIds, setOverlayPreference]);
+
+  const handleGroupCalendarToggle = useCallback((calendarId: string, add: boolean) => {
+    const groups = add
+      ? Array.from(new Set([...selectedGroupCalendarIds, calendarId]))
+      : selectedGroupCalendarIds.filter((id) => id !== calendarId);
+    setOverlayPreference({ people: comparisonTechnicianIds, groups });
+  }, [comparisonTechnicianIds, selectedGroupCalendarIds, setOverlayPreference]);
+
+  const calendarColorByKey = useMemo(() => {
+    const map = new Map<string, string>();
+    visiblePeople.forEach((person) => map.set(person.key, person.color));
+    visibleGroups.forEach((group) => map.set(group.key, group.color));
+    return map;
+  }, [visibleGroups, visiblePeople]);
+
+  // Group calendars the viewer can add entries to, and users they may assign.
+  const editableGroupCalendars = useMemo(
+    () => visibleGroups.filter((group) => !group.is_archived && (group.access_level === 'edit' || group.access_level === 'manage')),
+    [visibleGroups]
+  );
+  const assignableUserIds = useMemo(() => {
+    if (!capabilities || capabilities.canViewAll) return undefined;
+    return [
+      capabilities.viewerUserId,
+      ...capabilities.people.filter((person) => person.access_level === 'edit').map((person) => person.key),
+    ];
+  }, [capabilities]);
+
+  const canDragEntry = useCallback((entry: IScheduleEntry) => {
+    if (!entry || isSourceOwnedWorkItemType(entry.work_item_type) || entry.access === 'busy') return false;
+    if (typeof entry.can_edit === 'boolean') return entry.can_edit;
+    return focusedTechnicianId !== null && (entry.assigned_user_ids ?? []).includes(focusedTechnicianId);
+  }, [focusedTechnicianId]);
+
+  // Busy entries arrive masked; show the translated label rather than the server placeholder.
+  const displayEvents = useMemo(
+    () => events.map((entry) => entry.access === 'busy'
+      ? { ...entry, title: t('calendar.event.busy', { defaultValue: 'Busy' }) }
+      : entry),
+    [events, t]
+  );
 
   // Get all technician IDs to display (focused + comparison)
   const viewingTechnicianIds = useMemo(() => {
@@ -368,7 +490,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
   }, [focusedTechnicianId, comparisonTechnicianIds]);
 
   const fetchEvents = useCallback(async () => {
-    if (viewingTechnicianIds.length === 0) {
+    if (viewingTechnicianIds.length === 0 && selectedGroupCalendarIds.length === 0) {
       setEvents([]);
       setIsLoading(false);
       return;
@@ -407,7 +529,8 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     const result = await getScheduleEntries(
       rangeStart,
       rangeEnd,
-      viewingTechnicianIds
+      viewingTechnicianIds,
+      selectedGroupCalendarIds
     );
 
     if (result.success) {
@@ -421,30 +544,48 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
       setEvents([]);
     }
     setIsLoading(false);
-  }, [date, t, view, viewingTechnicianIds]);
+  }, [date, t, view, viewingTechnicianIds, selectedGroupCalendarIds]);
 
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
 
+  // Load the popup's assignee candidates when it opens. The entry's stored
+  // assignees are passed through so their real names resolve even when they are
+  // inactive or otherwise outside the viewer's assignable set.
+  // LEVERAGE: pattern gated-user-list-self-fetch — ShareCalendarDialog,
+  // GroupCalendarDialog and this calendar each load-error-loading-wrap a
+  // getShareableUsers() call; a shared gated-user-list hook would collapse them.
+  useEffect(() => {
+    if (!showEntryPopup) return;
+    const assignedIds = selectedEvent?.assigned_user_ids ?? selectedSlot?.assigned_user_ids ?? [];
+    let active = true;
+    setPopupUsersLoading(true);
+    getShareableUsers(assignedIds)
+      .then((result) => {
+        if (!active) return;
+        setPopupUsers(result.success ? result.data : []);
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.error('Failed to load assignable users:', err);
+        setPopupUsers([]);
+      })
+      .finally(() => {
+        if (active) setPopupUsersLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [showEntryPopup, selectedEvent, selectedSlot]);
+
   const handleSelectSlot = (slotInfo: any) => {
-    // For month view, adjust the start time to 8am and end time to be 15 minutes after
-    let adjustedSlotInfo = { ...slotInfo };
-    if (view === 'month') {
-      const startDate = new Date(slotInfo.start);
-      // Set the start time to 8am
-      startDate.setHours(8, 0, 0, 0);
-      
-      const endDate = new Date(startDate);
-      endDate.setMinutes(startDate.getMinutes() + 15);
-      
-      adjustedSlotInfo = {
-        ...slotInfo,
-        start: startDate,
-        end: endDate
-      };
-    }
-    
+    // A date-only (month) selection is pinned to 8am for one grid step.
+    const adjustedSlotInfo = {
+      ...slotInfo,
+      ...slotFromCalendarSelection(slotInfo, view, { durationMs: 15 * 60 * 1000 }),
+    };
+
     setSelectedSlot({
       ...adjustedSlotInfo,
       defaultAssigneeId: focusedTechnicianId,
@@ -510,6 +651,12 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
 
     if (target.closest('.delete-entry-btn')) {
       e.stopPropagation();
+      return;
+    }
+
+    // Busy blocks carry no details: show time only, read-only.
+    if (scheduleEvent.access === 'busy') {
+      setBusyEntry(scheduleEvent);
       return;
     }
 
@@ -615,9 +762,12 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
         canModifySchedule={canModifySchedule}
         focusedTechnicianId={focusedTechnicianId}
         canAssignOthers={canAssignOthers}
-        users={usersLoading ? [] : displayedTechnicians}
-        loading={usersLoading}
-        error={usersError}
+        calendarOptions={editableGroupCalendars}
+        visibleGroupCalendars={visibleGroups}
+        assignableUserIds={assignableUserIds}
+        users={popupUsersLoading ? [] : popupUsers}
+        loading={popupUsersLoading}
+        error={null}
       />
     );
   };
@@ -664,12 +814,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     const originalStart = new Date(event.scheduled_start);
     const originalEnd = new Date(event.scheduled_end);
 
-    const updatedEvent = {
-      ...event,
-      ...calendarStoredDates({ scheduled_start: start, scheduled_end: end }, event),
-      assigned_user_ids: event.assigned_user_ids,
-      ...(event.entry_id.includes('_') ? { original_entry_id: event.original_entry_id } : {})
-    };
+    const updatedEvent = movedEntryUpdate(event, resizedEntryDates(event, { start, end }));
 
     // Update local state immediately for responsive UI
     updateEventLocally(updatedEvent);
@@ -689,136 +834,34 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
 
   const handleEventDrop = async ({ event, start, end, isAllDay }: any) => {
     if (isSourceOwnedWorkItemType(event?.work_item_type)) return;
-    // Get original event details - these are the source of truth
-    const originalStart = new Date(event.scheduled_start);
-    const originalEnd = new Date(event.scheduled_end);
-    const originalDuration = originalEnd.getTime() - originalStart.getTime();
-    const isOriginallyMultiDay = originalStart.toDateString() !== originalEnd.toDateString();
+    const updatedEvent = movedEntryUpdate(event, droppedEntryDates(event, { start, end, isAllDay }));
+    const finalStart = updatedEvent.scheduled_start;
 
-    // CRITICAL: Always preserve exact original times for multi-day events
-    let finalStart: Date;
-    let finalEnd: Date;
-
-    // Calculate the day offset - use only the date part, ignore times from drop
-    const dropDate = new Date(start);
-    const originalDateOnly = new Date(originalStart.getFullYear(), originalStart.getMonth(), originalStart.getDate());
-    const dropDateOnly = new Date(dropDate.getFullYear(), dropDate.getMonth(), dropDate.getDate());
-    const dayDifference = Math.round((dropDateOnly.getTime() - originalDateOnly.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (hasAllDayDates(event)) {
-      // The grid supplies local calendar dates, while imported date-only
-      // events are stored at UTC midnight with an exclusive end.
-      finalStart = new Date(Date.UTC(dropDate.getFullYear(), dropDate.getMonth(), dropDate.getDate()));
-      finalEnd = new Date(finalStart.getTime() + originalDuration);
-    } else if (isOriginallyMultiDay || isAllDay) {
-      // Multi-day event or event in all-day section: IGNORE drop times completely
-      // Only use the day difference to shift the original times
-      finalStart = new Date(
-        originalStart.getFullYear(),
-        originalStart.getMonth(),
-        originalStart.getDate() + dayDifference,
-        originalStart.getHours(),
-        originalStart.getMinutes(),
-        originalStart.getSeconds(),
-        originalStart.getMilliseconds()
-      );
-      finalEnd = new Date(finalStart.getTime() + originalDuration);
-    } else {
-      // For single-day events, check if we're dropping in the same day
-      if (dayDifference === 0 && !isAllDay) {
-        // Same day - use the actual drop time
-        const newDuration = end.getTime() - start.getTime();
-
-        // Only use the new times if duration is preserved (within 1 minute tolerance)
-        if (Math.abs(newDuration - originalDuration) < 60000) {
-          finalStart = new Date(start);
-          finalEnd = new Date(end);
-        } else {
-          // Duration changed - preserve original duration
-          finalStart = new Date(start);
-          finalEnd = new Date(finalStart.getTime() + originalDuration);
-        }
-      } else {
-        // Different day or marked as all-day - preserve original time of day
-        finalStart = new Date(
-          dropDate.getFullYear(),
-          dropDate.getMonth(),
-          dropDate.getDate(),
-          originalStart.getHours(),
-          originalStart.getMinutes(),
-          originalStart.getSeconds()
-        );
-        finalEnd = new Date(finalStart.getTime() + originalDuration);
-      }
-    }
-
-    // Check if we need to navigate to a different week
-    if (view === 'week' && finalStart) {
+    // A drop outside the visible week navigates there first, then saves once
+    // the grid has re-rendered.
+    if (view === 'week') {
       const currentWeekStart = moment(date).startOf('week').toDate();
       const currentWeekEnd = moment(date).endOf('week').toDate();
+      const weekOffset =
+        finalStart < currentWeekStart
+          ? -Math.ceil((currentWeekStart.getTime() - finalStart.getTime()) / (7 * 24 * 60 * 60 * 1000))
+          : finalStart > currentWeekEnd
+            ? Math.ceil((finalStart.getTime() - currentWeekEnd.getTime()) / (7 * 24 * 60 * 60 * 1000))
+            : 0;
 
-      if (finalStart < currentWeekStart) {
-        // Calculate weeks to go back
-        const weeksBack = Math.ceil((currentWeekStart.getTime() - finalStart.getTime()) / (7 * 24 * 60 * 60 * 1000));
-        const newDate = moment(date).subtract(weeksBack, 'weeks').toDate();
-
-        // Navigate to the new week
-        setDate(newDate);
-
-        // Delay the update slightly to allow navigation to complete
+      if (weekOffset !== 0) {
+        setDate(moment(date).add(weekOffset, 'weeks').toDate());
         setTimeout(async () => {
-          const updatedEvent = {
-            ...event,
-            scheduled_start: finalStart,
-            scheduled_end: finalEnd,
-            assigned_user_ids: event.assigned_user_ids,
-            ...(event.entry_id.includes('_') ? { original_entry_id: event.original_entry_id } : {})
-          };
-
           const result = await updateScheduleEntry(event.entry_id, updatedEvent);
-          if (result.success) {
-            await fetchEvents();
-          } else {
+          if (!result.success) {
             console.error("Drop failed:", result.error);
-            await fetchEvents();
           }
-        }, 150);
-        return; // Exit early since we're handling the update asynchronously
-      } else if (finalStart > currentWeekEnd) {
-        // Calculate weeks to go forward
-        const weeksForward = Math.ceil((finalStart.getTime() - currentWeekEnd.getTime()) / (7 * 24 * 60 * 60 * 1000));
-        const newDate = moment(date).add(weeksForward, 'weeks').toDate();
-
-        setDate(newDate);
-
-        setTimeout(async () => {
-          const updatedEvent = {
-            ...event,
-            scheduled_start: finalStart,
-            scheduled_end: finalEnd,
-            assigned_user_ids: event.assigned_user_ids,
-            ...(event.entry_id.includes('_') ? { original_entry_id: event.original_entry_id } : {})
-          };
-
-          const result = await updateScheduleEntry(event.entry_id, updatedEvent);
-          if (result.success) {
-            await fetchEvents();
-          } else {
-            console.error("Drop failed:", result.error);
-            await fetchEvents();
-          }
+          await fetchEvents();
         }, 150);
         return;
       }
     }
 
-    const updatedEvent = {
-      ...event,
-      scheduled_start: finalStart,
-      scheduled_end: finalEnd,
-      assigned_user_ids: event.assigned_user_ids,
-      ...(event.entry_id.includes('_') ? { original_entry_id: event.original_entry_id } : {})
-    };
     updateEventLocally(updatedEvent);
     const result = await updateScheduleEntry(event.entry_id, updatedEvent);
     if (result.success && result.entry && (result.entry.recurrence_pattern || event.recurrence_pattern)) {
@@ -848,16 +891,16 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
   const handleResetSelections = () => {
     if (currentUserId) {
       setFocusedTechnicianId(currentUserId);
-      setComparisonTechnicianIds([]);
+      setOverlayPreference(EMPTY_OVERLAYS);
     }
   };
 
   const handleSelectAll = () => {
-    const techIds = displayedTechnicians
-      ?.filter(tech => tech.user_id !== focusedTechnicianId)
-      .map(tech => tech.user_id) || [];
+    const techIds = visiblePeople
+      .filter(person => person.key !== focusedTechnicianId)
+      .map(person => person.key);
     
-    setComparisonTechnicianIds(techIds);
+    setComparisonTechnicianIds(() => techIds);
   };
 
   // Create a map of technician details for the event display
@@ -998,9 +1041,9 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
   const handleResizeStart = useCallback((e: React.MouseEvent, event: IScheduleEntry, direction: 'top' | 'bottom') => {
     e.stopPropagation();
 
-    // Only allow resize for primary events (events assigned to the focused technician)
-    if (!focusedTechnicianId || !event.assigned_user_ids.includes(focusedTechnicianId)) {
-      console.log("Prevented resize of comparison event.");
+    // Only allow resize for entries the viewer may edit (own, delegate or group edit access)
+    if (!canDragEntry(event)) {
+      console.log("Prevented resize of read-only event.");
       return;
     }
 
@@ -1092,7 +1135,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
 
     document.addEventListener('mousemove', handleResizeMove);
     document.addEventListener('mouseup', handleResizeEnd);
-  }, [focusedTechnicianId, events, updateEventLocally, updateScheduleEntry]);
+  }, [canDragEntry, events, updateEventLocally, updateScheduleEntry]);
 
   // State changes refresh event content through context without replacing the
   // component react-big-calendar uses for an in-progress click or drag.
@@ -1105,6 +1148,14 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
                          scheduleEvent.assigned_user_ids?.some(id => comparisonTechnicianIds.includes(id));
     
     const isHovered = hoveredEventId === scheduleEvent.entry_id;
+    // Overlay entries carry their calendar's color as a stripe.
+    const overlayColor = scheduleEvent.calendar_id
+      ? calendarColorByKey.get(scheduleEvent.calendar_id)
+      : isComparison
+        ? calendarColorByKey.get(
+            scheduleEvent.assigned_user_ids?.find(id => comparisonTechnicianIds.includes(id)) ?? ''
+          )
+        : undefined;
 
     // For month view, use a different component to show more details
     if (view === 'month') {
@@ -1161,24 +1212,21 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
       const opacity = isPrimary ? 1 : (isComparison ? 0.3 : 1);
 
       return (
-        <div
-          className={`h-full w-full p-1 rounded text-xs ${isPrimary ? 'font-semibold' : ''} flex items-center`}
-          style={{
-            backgroundColor: workItemColors[scheduleEvent.work_item_type] || 'rgb(var(--color-border-200))',
-            minHeight: '30px',
-            cursor: 'pointer',
-            opacity
-          }}
+        <MonthScheduleChip
+          workItemType={scheduleEvent.work_item_type}
+          isPrimary={Boolean(isPrimary)}
+          opacity={opacity}
+          tooltip={tooltipTitle}
+          calendarColor={overlayColor}
           onClick={(e) => handleSelectEvent(scheduleEvent as unknown as object, e as unknown as React.SyntheticEvent<HTMLElement>)}
           onMouseEnter={() => setHoveredEventId(scheduleEvent.entry_id)}
           onMouseLeave={() => setHoveredEventId(null)}
-          title={tooltipTitle}
         >
           {isMultiDay && (
             <CalendarDaysIcon className="w-3 h-3 mr-1 opacity-70 flex-shrink-0" />
           )}
           <span className="truncate">{mainTitle}</span>
-        </div>
+        </MonthScheduleChip>
       );
     }
 
@@ -1196,9 +1244,11 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
         onDeleteEvent={(event: IScheduleEntry) => handleDeleteClick(event)}
         onResizeStart={handleResizeStart}
         technicianMap={technicianMap}
+        canEdit={canDragEntry(scheduleEvent)}
+        calendarColor={overlayColor}
       />
     );
-  }, [comparisonTechnicianIds, formatDate, focusedTechnicianId, handleResizeStart, handleSelectEvent, hoveredEventId, technicianMap, t, view]);
+  }, [calendarColorByKey, canDragEntry, comparisonTechnicianIds, formatDate, focusedTechnicianId, handleResizeStart, handleSelectEvent, hoveredEventId, technicianMap, t, view]);
 
 
   // Show loading state until preferences are loaded
@@ -1259,7 +1309,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
               defaultValue: '{{count}} scheduled entries',
               count: events.length,
             })}
-            rows={[...events].sort((a, b) => new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime())}
+            rows={[...displayEvents].sort((a, b) => new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime())}
             columns={selectedSchedulePrintColumns}
             getRowKey={(event) => event.entry_id}
             emptyMessage={t('calendar.print.noEntries', { defaultValue: 'No scheduled entries to print' })}
@@ -1285,16 +1335,25 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
       <Legend />
       {/* Main content with sidebar and calendar */}
       <div className="flex-grow flex overflow-hidden">
-        {/* Technician sidebar */}
-        {canViewOthers && (
+        {/* Calendars sidebar: my calendar, shared people, group calendars */}
+        {capabilities && (
           <TechnicianSidebar
-            technicians={displayedTechnicians}
+            me={capabilities.me}
+            people={visiblePeople}
+            groups={visibleGroups}
+            canViewAll={capabilities.canViewAll}
+            inactiveUserIds={inactiveUserIds}
             focusedTechnicianId={focusedTechnicianId}
             comparisonTechnicianIds={comparisonTechnicianIds}
+            selectedGroupCalendarIds={selectedGroupCalendarIds}
             onSetFocus={handleFocusTechnicianChange}
             onComparisonChange={handleComparisonChange}
+            onGroupCalendarToggle={handleGroupCalendarToggle}
             onResetSelections={handleResetSelections}
             onSelectAll={handleSelectAll}
+            onShareMyCalendar={() => setIsShareDialogOpen(true)}
+            onNewGroupCalendar={() => setGroupDialog({ open: true, calendar: null })}
+            onManageGroupCalendar={(calendar) => setGroupDialog({ open: true, calendar })}
           />
         )}
         
@@ -1315,7 +1374,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
                 <ScheduleCalendarEventContext.Provider value={renderEvent}>
                   <DynamicBigCalendar
                     localizer={localizer}
-                    events={events}
+                    events={displayEvents}
                     startAccessor={(event: object) => calendarDisplayDates(event as IScheduleEntry).scheduled_start}
                     endAccessor={(event: object) => calendarDisplayDates(event as IScheduleEntry).scheduled_end}
                     allDayAccessor={(event: object) => {
@@ -1351,22 +1410,10 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
                     selectable
                     onSelectSlot={handleSelectSlot}
                     onSelectEvent={handleSelectEvent}
-                    resizableAccessor={(event: object) => {
-                      const scheduleEvent = event as IScheduleEntry;
-                      // Source-owned entries (deal steps) mirror another record;
-                      // resizing here would diverge from it until the next sync.
-                      return !isSourceOwnedWorkItemType(scheduleEvent?.work_item_type) &&
-                            focusedTechnicianId !== null &&
-                            scheduleEvent?.assigned_user_ids &&
-                            scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
-                    }}
-                    draggableAccessor={(event: object) => {
-                      const scheduleEvent = event as IScheduleEntry;
-                      return !isSourceOwnedWorkItemType(scheduleEvent?.work_item_type) &&
-                            focusedTechnicianId !== null &&
-                            scheduleEvent?.assigned_user_ids &&
-                            scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
-                    }}
+                    // Source-owned entries (deal steps) mirror another record and
+                    // busy blocks are read-only; otherwise the server's can_edit decides.
+                    resizableAccessor={(event: object) => canDragEntry(event as IScheduleEntry)}
+                    draggableAccessor={(event: object) => canDragEntry(event as IScheduleEntry)}
                     onEventResize={handleEventResize}
                     onEventDrop={handleEventDrop}
                     step={15}
@@ -1385,6 +1432,50 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
         </div>
       </div>
       {renderEntryPopup()}
+
+      {currentUserId && isShareDialogOpen && (
+        <ShareCalendarDialog
+          isOpen={isShareDialogOpen}
+          onClose={() => setIsShareDialogOpen(false)}
+          currentUserId={currentUserId}
+        />
+      )}
+      {currentUserId && groupDialog.open && (
+        <GroupCalendarDialog
+          isOpen={groupDialog.open}
+          onClose={() => setGroupDialog({ open: false, calendar: null })}
+          onSaved={() => {
+            void loadCapabilities();
+            void fetchEvents();
+          }}
+          currentUserId={currentUserId}
+          calendar={groupDialog.calendar}
+        />
+      )}
+      <Dialog
+        id="busy-entry-dialog"
+        isOpen={busyEntry !== null}
+        onClose={() => setBusyEntry(null)}
+        title={t('calendar.busyDialog.title', { defaultValue: 'Busy' })}
+        className="max-w-sm"
+        footer={
+          <div className="flex justify-end">
+            <Button id="busy-entry-close" onClick={() => setBusyEntry(null)}>
+              {t('calendar.busyDialog.close', { defaultValue: 'Close' })}
+            </Button>
+          </div>
+        }
+      >
+        {busyEntry && (
+          <p className="text-sm text-[rgb(var(--color-text-700))]">
+            {t('calendar.busyDialog.timeRange', {
+              defaultValue: '{{start}} – {{end}}',
+              start: formatDate(new Date(busyEntry.scheduled_start), { dateStyle: 'medium', timeStyle: 'short' }),
+              end: formatDate(new Date(busyEntry.scheduled_end), { dateStyle: 'medium', timeStyle: 'short' }),
+            })}
+          </p>
+        )}
+      </Dialog>
 
       <ConfirmationDialog
         className="max-w-[450px]"

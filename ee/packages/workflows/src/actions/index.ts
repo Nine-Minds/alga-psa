@@ -9,5 +9,6 @@ export * from './workflow-actions/taskInboxActions';
 // activity-actions moved to @alga-psa/user-activities/actions.
 export * from './event-catalog-actions';
 export * from './workflow-runtime-v2-actions';
+export * from './workflow-launch-skip-actions';
 export * from './workflow-schedule-v2-actions';
 export * from './workflow-event-catalog-v2-actions';

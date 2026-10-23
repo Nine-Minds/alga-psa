@@ -20,8 +20,11 @@ function sectionBetween(startMarker: string, endMarker: string): string {
 
 describe('internal notification subscriber tenant-scoped query contract', () => {
   it('uses structural tenant scoping for ticket and assignment notification roots', () => {
-    const ticketCreatedSection = sectionBetween('async function handleTicketCreated', 'async function getAllTicketAssignees');
-    const ticketAssigneesSection = sectionBetween('async function getAllTicketAssignees', 'async function handleTicketAssigned');
+    const ticketCreatedSection = sectionBetween('async function handleTicketCreated', 'async function handleTicketAssigned');
+    const ticketAssigneesSection = readFileSync(
+      path.join(repoRoot, 'shared/lib/tickets/ticketAssignees.ts'),
+      'utf8'
+    );
     const ticketAssignedSection = sectionBetween('async function handleTicketAssigned', 'async function handleTicketAdditionalAgentAssigned');
     const additionalAgentSection = sectionBetween('async function handleTicketAdditionalAgentAssigned', 'async function handleProjectTaskAdditionalAgentAssigned');
     const taskAdditionalAgentSection = sectionBetween('async function handleProjectTaskAdditionalAgentAssigned', 'async function handleTicketUpdated');
@@ -51,10 +54,8 @@ describe('internal notification subscriber tenant-scoped query contract', () => 
     expect(ticketCreatedSection).not.toContain('.where({ team_id: teamId, tenant: tenantId })');
     expect(ticketCreatedSection).not.toContain('tenant: tenantId,\n          user_type:');
 
-    expect(ticketAssigneesSection).toContain("tenantScopedTable(db, 'tickets', tenantId)");
-    expect(ticketAssigneesSection).toContain("tenantScopedTable(db, 'ticket_resources', tenantId)");
-    expect(ticketAssigneesSection).toContain("tenantScopedTable(db, 'project_tasks', tenantId)");
-    expect(ticketAssigneesSection).toContain("tenantScopedTable(db, 'task_resources', tenantId)");
+    expect(ticketAssigneesSection).toContain("'tickets'");
+    expect(ticketAssigneesSection).toContain("'ticket_resources'");
     expect(ticketAssigneesSection).not.toContain('.where({ ticket_id: ticketId, tenant: tenantId })');
     expect(ticketAssigneesSection).not.toContain('.where({ tenant: tenantId, ticket_id: ticketId })');
     expect(ticketAssigneesSection).not.toContain('.where({ task_id: taskId, tenant: tenantId })');

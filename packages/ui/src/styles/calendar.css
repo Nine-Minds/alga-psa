@@ -834,9 +834,14 @@ button[aria-selected="true"].rdp-day {
   white-space: nowrap;
 }
 
-.dtf-footer-button:hover {
+.dtf-footer-button:hover:not(:disabled) {
   background: rgb(var(--color-border-100));
   color: rgb(var(--color-text-800));
+}
+
+.dtf-footer-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 @media (max-width: 640px) {

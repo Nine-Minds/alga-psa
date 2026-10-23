@@ -33,9 +33,20 @@ export * from './lib/version';
 // Template utilities
 export * from './lib/templateUtils';
 
+// Quote line inclusion rule (required always; optional only while selected)
+export * from './lib/quoteItemInclusion';
+
 // Formatting utilities
 export * from './lib/formatters';
+export * from './lib/fileNames';
 export * from './lib/projectBillingStatus';
+export * from './lib/appointmentRequestLinks';
+
+// Task → phase → project service fallback (shared by scheduling + projects)
+export * from './lib/effectiveService';
+
+// Time-entry worked duration (billability-independent)
+export * from './lib/timeEntryDuration';
 
 // Barcode / GTIN utilities
 export * from './lib/gtin';
@@ -54,3 +65,5 @@ export * from './constants/currency';
 
 // Types barrel export
 export * from './types/index';
+
+export { isInlineTextDocumentMimeType, isPreviewableDocumentMimeType } from './lib/documentMimeType';

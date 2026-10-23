@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -21,17 +21,17 @@ function writeFixture(mode) {
     test('browser outcome', async ({ page }, testInfo) => {
       ${mode === 'skipped' ? "test.skip(true, 'deliberate skipped case');" : ''}
       ${mode === 'expected-failure' ? 'test.fail();' : ''}
-      // A fast about:blank/setContent test can finish before Linux Chromium
-      // emits a video frame. Navigate and require a rendered frame before
-      // testing retention; the intentional failure remains a separate step.
       await page.goto('data:text/html,<h1>Browser policy probe</h1>');
       await expect(page.getByRole('heading')).toHaveText('Browser policy probe');
-      // Xvfb's first surface can appear after DOM readiness. Poll the surface
-      // itself instead of sleeping or accepting a retry-only passing test.
-      await expect(async () => {
-        expect((await page.screenshot()).length, 'probe must render a frame').toBeGreaterThan(0);
-      }).toPass({ timeout: 10_000, intervals: [100, 250, 500] });
-      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      // Screenshots and animation frames do not establish that Chromium's
+      // independent video screencast has started. path() resolves once
+      // Playwright receives the first video frame (not when recording ends).
+      // Keep the page open until then, with a bounded, diagnostic failure.
+      await test.step('Wait for the first recorded video frame', async () => {
+        const video = page.video();
+        expect(video, 'production config must enable video recording').not.toBeNull();
+        await video!.path();
+      }, { timeout: 10_000 });
       expect(${mode === 'flaky' ? 'testInfo.retry' : mode === 'expected-failure' ? '0' : '1'}, 'deliberate first-attempt failure').toBe(1);
     });
   `);
@@ -95,11 +95,14 @@ try {
   assert.equal(flaky.evidence.status, 'failed');
   assert.equal(flaky.evidence.counts.flaky, 1);
   assert.deepEqual(flaky.test.results.map(result => result.status), ['failed', 'passed']);
+  assert.ok(!flaky.test.results[1].attachments.some(item => item.name === 'video'),
+    'Successful retry must discard its video');
   const firstAttempt = flaky.test.results[0];
   assert.match(firstAttempt.error.message, /deliberate first-attempt failure/);
   for (const name of ['trace', 'screenshot', 'video']) {
     const attachment = firstAttempt.attachments.find(item => item.name === name);
     assert.ok(attachment?.path && existsSync(attachment.path), `First attempt must retain ${name}`);
+    assert.ok(statSync(attachment.path).size > 0, `First attempt must retain nonempty ${name}`);
   }
   for (const mode of ['skipped', 'expected-failure']) {
     writeFixture(mode);

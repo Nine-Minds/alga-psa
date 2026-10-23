@@ -1,6 +1,8 @@
 // server/src/lib/actions/contractLineMappingActions.ts
 'use server'
 
+import { resolveContractLineDisplayKinds, resolveTemplateLineDisplayKinds } from '../services/prepaidBlockConfigService';
+import { snapshotContractLinePrepaidBlockToTemplateLine } from '@alga-psa/shared/billingClients/templateClone';
 import ContractLineMapping from '../models/contractLineMapping';
 import { IContractLineMapping } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
@@ -13,7 +15,9 @@ import {
   DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
   resolveRecurringAuthoringPolicy,
 } from '@alga-psa/shared/billingClients/recurringAuthoringPolicy';
-import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
+import { normalizeLiveRecurringStorage, normalizeRecurringStorageForLineType } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
+import { isContractLineTimingNotAllowedError } from '@alga-psa/shared/billingClients/contractLineTimingRule';
+import { toDateOnly } from '../lib/billing/dateOnly';
 
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -31,6 +35,10 @@ class ContractLineMappingDomainError extends Error {
 }
 
 function contractLineMappingActionErrorFrom(error: unknown): ContractLineMappingActionError | null {
+  if (isContractLineTimingNotAllowedError(error)) {
+    return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
+  }
+
   if (error instanceof ContractLineMappingDomainError) {
     if (error.message.startsWith('Permission denied:')) {
       return permissionError(error.message);
@@ -115,11 +123,18 @@ function normalizeDetailedContractLine<
   T extends {
     cadence_owner?: IContractLineMapping['cadence_owner'] | null;
     billing_timing?: IContractLineMapping['billing_timing'] | null;
+    start_date?: string | Date | null;
+    end_date?: string | Date | null;
   },
 >(
   line: T,
 ): T & Pick<IContractLineMapping, 'cadence_owner' | 'billing_timing'> {
-  return normalizeLiveRecurringStorage(line);
+  const normalized = normalizeLiveRecurringStorage(line);
+  return {
+    ...normalized,
+    ...('start_date' in line ? { start_date: toDateOnly(line.start_date) } : {}),
+    ...('end_date' in line ? { end_date: toDateOnly(line.end_date) } : {}),
+  } as T & Pick<IContractLineMapping, 'cadence_owner' | 'billing_timing'>;
 }
 
 type DetailedContractLineResultRow =
@@ -144,7 +159,8 @@ export async function ensureTemplateLineSnapshot(
   }
 
   const now = new Date().toISOString();
-  const contractRecurringStorage = normalizeLiveRecurringStorage(contractLine);
+  // LEVERAGE: pattern recurring-storage-copy — copy sites each re-derive (billing_timing, cadence_owner) from the source row; a shared copy helper would remove the repeated per-site normalization
+  const contractRecurringStorage = normalizeRecurringStorageForLineType(contractLine, contractLine.contract_line_type);
 
   // All terms columns are now stored directly on contract_lines
   await tenantScopedTable(knex, tenant, 'contract_template_lines')
@@ -190,6 +206,10 @@ export async function ensureTemplateLineSnapshot(
       cadence_owner: contractRecurringStorage.cadence_owner,
       updated_at: now,
     });
+
+  // Prepaid Block overlay (Hourly line + config row) rides along with the template line.
+  // LEVERAGE: pattern template-line-clone — this snapshot duplicates repositories/contractLineRepository.ts ensureTemplateLineSnapshot; the prepaid copy is shared via shared/billingClients/templateClone.ts so the two cannot drift.
+  await snapshotContractLinePrepaidBlockToTemplateLine(knex, tenant, contractLineId, contractLineId);
 
   const services = await tenantScopedTable(knex, tenant, 'contract_line_services')
     .where({ contract_line_id: contractLineId });
@@ -317,6 +337,32 @@ export async function ensureTemplateLineSnapshot(
 
   if (configs.length > 0) {
     const configIds = (configs as any[]).map((c: any) => c.config_id);
+
+    // Per-seat services: carry the pricing basis (and the unit rate the line
+    // currently bills, unless it follows the catalog) onto the template so a
+    // contract created from it stays per-seat. Bundle services keep no row.
+    const unitFixedConfigs = await tenantScopedTable(knex, tenant, 'contract_line_service_fixed_config')
+      .whereIn('config_id', configIds)
+      .where({ pricing_basis: 'unit' });
+
+    for (const fixed of unitFixedConfigs) {
+      const unitRate = fixed.rate_provenance === 'inherited' ? null : (fixed.base_rate ?? null);
+      await tenantScopedTable(knex, tenant, 'contract_template_line_service_fixed_config')
+        .insert({
+          tenant,
+          config_id: fixed.config_id,
+          base_rate: unitRate,
+          pricing_basis: 'unit',
+          created_at: fixed.created_at ?? now,
+          updated_at: now,
+        })
+        .onConflict(['tenant', 'config_id'])
+        .merge({
+          base_rate: unitRate,
+          pricing_basis: 'unit',
+          updated_at: now,
+        });
+    }
 
     const hourlyConfigs = await tenantScopedTable(knex, tenant, 'contract_line_service_hourly_config')
       .whereIn('config_id', configIds);
@@ -505,6 +551,7 @@ export const getDetailedContractLines = withAuth(async (user, { tenant }, contra
             'lines.display_order',
             'lines.custom_rate',
             'lines.cadence_owner',
+            'lines.invoice_line_description',
             'lines.created_at',
             'lines.template_line_name as contract_line_name',
             'lines.billing_frequency',
@@ -517,11 +564,34 @@ export const getDetailedContractLines = withAuth(async (user, { tenant }, contra
           ])
           .orderBy('lines.display_order', 'asc') as unknown as DetailedContractLineResultRow[];
 
-        return rows.map((row) => normalizeDetailedContractLine(row));
+        const templateDisplayKinds = await resolveTemplateLineDisplayKinds(
+          trx,
+          tenant,
+          rows.map((row) => ({
+            contract_line_id: String(row.contract_line_id),
+            contract_line_type: String(row.contract_line_type),
+          })),
+        );
+        return rows.map((row) => ({
+          ...normalizeDetailedContractLine(row),
+          display_kind: templateDisplayKinds.get(String(row.contract_line_id)) ?? row.contract_line_type,
+        }));
       }
 
       const rows = await ContractLineMapping.getDetailedContractLines(contractId) as unknown as DetailedContractLineResultRow[];
-      return rows.map((row) => normalizeDetailedContractLine(row));
+      // Derived label kind ('PrepaidBlock' for Hourly lines with a block config); the stored type is untouched.
+      const displayKinds = await resolveContractLineDisplayKinds(
+        trx,
+        tenant,
+        rows.map((row) => ({
+          contract_line_id: String(row.contract_line_id),
+          contract_line_type: String(row.contract_line_type),
+        })),
+      );
+      return rows.map((row) => ({
+        ...normalizeDetailedContractLine(row),
+        display_kind: displayKinds.get(String(row.contract_line_id)) ?? row.contract_line_type,
+      }));
     });
   } catch (error) {
     console.error(`Error fetching detailed contract line mappings for contract ${contractId}:`, error);
@@ -688,6 +758,9 @@ export const updateContractLineAssociation = withAuth(async (
       if (dbUpdateData.custom_rate === undefined) {
         dbUpdateData.custom_rate = null;
       }
+      if (dbUpdateData.custom_rate !== null && (!Number.isFinite(Number(dbUpdateData.custom_rate)) || Number(dbUpdateData.custom_rate) < 0)) {
+        throw new ContractLineMappingDomainError('Rate must be zero or greater.');
+      }
 
       // Remove tenant field if present to prevent override
       delete dbUpdateData.tenant;
@@ -699,8 +772,9 @@ export const updateContractLineAssociation = withAuth(async (
             template_id: contractId,
             template_line_id: contractLineId,
           })
-          .first(['cadence_owner', 'billing_timing']);
+          .first(['cadence_owner', 'billing_timing', 'line_type']);
         const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+          lineType: existingTemplateLine?.line_type ?? null,
           cadenceOwner: dbUpdateData.cadence_owner,
           fallbackCadenceOwner: existingTemplateLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
           billingTiming: dbUpdateData.billing_timing,

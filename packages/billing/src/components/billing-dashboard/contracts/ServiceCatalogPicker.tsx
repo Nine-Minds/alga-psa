@@ -141,6 +141,7 @@ export function ServiceCatalogPicker({
         label: item.item_kind === 'product' && item.sku
           ? `${item.service_name} (${item.sku})`
           : item.service_name,
+        secondaryLabel: item.product_category || undefined,
         badge: item.item_kind === 'product'
           ? {
             text: t('servicePicker.catalog.badges.product', { defaultValue: 'Product' }),

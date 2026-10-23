@@ -14,12 +14,23 @@ const userRef = vi.hoisted(() => ({
 
 const hasPermissionMock = vi.hoisted(() => vi.fn(async () => true));
 const publishEventMock = vi.hoisted(() => vi.fn(async () => undefined));
-const publishWorkflowEventMock = vi.hoisted(() => vi.fn(async () => undefined));
+const publishWorkflowEventMock = vi.hoisted(() =>
+  vi.fn<typeof import('server/src/lib/eventBus/publishers').publishWorkflowEvent>(async () => undefined)
+);
 
 vi.mock('@alga-psa/db', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/db')>()),
   createTenantKnex: vi.fn(async () => ({ knex: dbRef.knex, tenant: dbRef.tenant })),
   getConnection: vi.fn(async () => dbRef.knex),
+}));
+
+// BaseService (the TicketService base) imports createTenantKnex from the
+// internal tenant module, not the @alga-psa/db barrel, so the barrel mock
+// above never intercepts it. Mock the same resolved module to point the
+// service at the suite's tenant/db handle while keeping real withTransaction.
+vi.mock('@alga-psa/db/tenant', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/db/tenant')>()),
+  createTenantKnex: vi.fn(async () => ({ knex: dbRef.knex, tenant: dbRef.tenant })),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -41,6 +52,25 @@ vi.mock('@alga-psa/auth/actions', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: publishEventMock,
   publishWorkflowEvent: publishWorkflowEventMock,
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  // Comment publication outbox replays through publishStoredWorkflowEvent; keep the assertions on the comment event.
+  publishStoredWorkflowEvent: (...args: any[]) => publishEventMock(...args),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
+}));
+
+// TicketService uses the server-local publisher. Capture delivery at that
+// boundary so the service still exercises its workflow-event behavior.
+vi.mock('server/src/lib/eventBus/publishers', () => ({
+  publishWorkflowEvent: publishWorkflowEventMock,
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  // Comment publication outbox replays through publishStoredWorkflowEvent; keep the assertions on the comment event.
+  publishStoredWorkflowEvent: (...args: any[]) => publishEventMock(...args),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/event-bus', () => ({
@@ -75,6 +105,7 @@ import {
   checkTicketClosure,
 } from '../../../../packages/tickets/src/actions/close-rules/closeRuleActions';
 import { updateTicketInTransaction } from '../../../../packages/tickets/src/actions/optimizedTicketActions';
+import { TicketService } from '../../lib/api/services/TicketService';
 // Real withTransaction (the @alga-psa/db mock spreads the original): it flushes
 // the after-commit hooks that defer TICKET_CLOSED/live-update publishing, so the
 // close path must run through it — exactly as the production callers do — for the
@@ -718,14 +749,14 @@ describe('ticket close rules', () => {
   it('T047: reopening clears closure fields and publishes TICKET_REOPENED', async () => {
     const ticketId = await insertTicket(db, fixture);
 
-    await db.transaction((trx) =>
+    await withTransaction(db, (trx) =>
       updateTicketInTransaction(trx, userRef.user, fixture.tenantId, ticketId, {
         status_id: fixture.closedStatusId,
       })
     );
     publishWorkflowEventMock.mockClear();
 
-    await db.transaction((trx) =>
+    await withTransaction(db, (trx) =>
       updateTicketInTransaction(trx, userRef.user, fixture.tenantId, ticketId, {
         status_id: fixture.openStatusId,
       })
@@ -740,5 +771,341 @@ describe('ticket close rules', () => {
       ([params]: any[]) => params.eventType === 'TICKET_REOPENED'
     );
     expect(reopenedEvents.length).toBeGreaterThanOrEqual(1);
+  });
+
+  // The REST API's TicketService.update returns the row produced by its write.
+  // These assert on that returned value directly (not a re-read) because the
+  // defect was a stale snapshot: is_closed/closed_at were denormalized by a
+  // follow-up UPDATE after the returned row had already been captured.
+  const serviceContext = () =>
+    ({ tenant: fixture.tenantId, userId: fixture.userId, user: userRef.user }) as any;
+
+  it('T048: TicketService.update returns final closure state on close', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    const service = new TicketService();
+
+    // Caller-supplied closure metadata must not win on a close-boundary
+    // crossing: the derived actor/timestamp is what the pre-fix code wrote
+    // last, and folding into the same UPDATE must preserve that precedence.
+    const returned = await service.update(
+      ticketId,
+      {
+        status_id: fixture.closedStatusId,
+        closed_at: '2000-01-01T00:00:00.000Z',
+        closed_by: uuidv4(),
+      },
+      serviceContext()
+    );
+
+    expect(returned.is_closed).toBe(true);
+    expect(returned.closed_at).not.toBeNull();
+    expect(new Date(returned.closed_at as unknown as string).toISOString()).not.toBe(
+      '2000-01-01T00:00:00.000Z'
+    );
+    expect(returned.closed_by).toBe(fixture.userId);
+
+    const persisted = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
+    expect(persisted.is_closed).toBe(true);
+    expect(new Date(returned.closed_at as unknown as string).toISOString()).toBe(
+      new Date(persisted.closed_at).toISOString()
+    );
+    expect(returned.closed_by).toBe(persisted.closed_by);
+
+    const closedEvents = publishWorkflowEventMock.mock.calls.filter(
+      ([params]: any[]) => params.eventType === 'TICKET_CLOSED'
+    );
+    expect(closedEvents).toHaveLength(1);
+    expect(closedEvents[0][0]).toMatchObject({
+      payload: {
+        ticketId,
+        closedByUserId: fixture.userId,
+        closedAt: new Date(persisted.closed_at).toISOString(),
+      },
+      ctx: {
+        tenantId: fixture.tenantId,
+        actor: { actorType: 'USER', actorUserId: fixture.userId },
+      },
+    });
+  });
+
+  it('T049: TicketService.update returns cleared closure state on reopen', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    const service = new TicketService();
+
+    await service.update(ticketId, { status_id: fixture.closedStatusId }, serviceContext());
+    const returned = await service.update(
+      ticketId,
+      { status_id: fixture.openStatusId },
+      serviceContext()
+    );
+
+    expect(returned.is_closed).toBe(false);
+    expect(returned.closed_at).toBeNull();
+    expect(returned.closed_by).toBeNull();
+
+    const persisted = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
+    expect(persisted.is_closed).toBe(false);
+    expect(persisted.closed_at).toBeNull();
+    expect(persisted.closed_by).toBeNull();
+  });
+
+  it('T050: TicketService.update general-update path returns final closure state', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    const service = new TicketService();
+
+    const returned = await service.update(
+      ticketId,
+      { status_id: fixture.closedStatusId, title: 'Closed via general update' },
+      serviceContext()
+    );
+
+    expect(returned.title).toBe('Closed via general update');
+    expect(returned.is_closed).toBe(true);
+    expect(returned.closed_at).not.toBeNull();
+    expect(returned.closed_by).toBe(fixture.userId);
+
+    const persisted = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
+    expect(persisted.is_closed).toBe(true);
+    expect(new Date(returned.closed_at as unknown as string).toISOString()).toBe(
+      new Date(persisted.closed_at).toISOString()
+    );
+    expect(returned.closed_by).toBe(persisted.closed_by);
+  });
+
+  async function insertStatus(overrides: Record<string, unknown>): Promise<string> {
+    const statusId = uuidv4();
+    await scopedDb().table('statuses').insert({
+      tenant: fixture.tenantId,
+      status_id: statusId,
+      board_id: fixture.boardId,
+      name: `Status ${statusId.slice(0, 6)}`,
+      status_type: 'ticket',
+      is_closed: false,
+      is_default: false,
+      order_number: 90,
+      created_by: fixture.userId,
+      ...overrides,
+    });
+    return statusId;
+  }
+
+  it('T051: moving between two closed statuses preserves closure metadata', async () => {
+    const secondClosedStatusId = await insertStatus({
+      name: 'Cancelled',
+      is_closed: true,
+      order_number: 40,
+    });
+    const ticketId = await insertTicket(db, fixture);
+    const service = new TicketService();
+
+    const closed = await service.update(
+      ticketId,
+      { status_id: fixture.closedStatusId },
+      serviceContext()
+    );
+    const moved = await service.update(
+      ticketId,
+      { status_id: secondClosedStatusId },
+      serviceContext()
+    );
+
+    expect(moved.status_id).toBe(secondClosedStatusId);
+    expect(moved.is_closed).toBe(true);
+    expect(new Date(moved.closed_at as unknown as string).toISOString()).toBe(
+      new Date(closed.closed_at as unknown as string).toISOString()
+    );
+    expect(moved.closed_by).toBe(closed.closed_by);
+
+    const persisted = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
+    expect(persisted.status_id).toBe(secondClosedStatusId);
+    expect(persisted.is_closed).toBe(true);
+    expect(new Date(persisted.closed_at).toISOString()).toBe(
+      new Date(closed.closed_at as unknown as string).toISOString()
+    );
+    expect(persisted.closed_by).toBe(closed.closed_by);
+  });
+
+  it('T052: repeating the same closed status preserves closure metadata', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    const service = new TicketService();
+
+    const closed = await service.update(
+      ticketId,
+      { status_id: fixture.closedStatusId },
+      serviceContext()
+    );
+    const repeated = await service.update(
+      ticketId,
+      { status_id: fixture.closedStatusId },
+      serviceContext()
+    );
+
+    expect(repeated.is_closed).toBe(true);
+    expect(new Date(repeated.closed_at as unknown as string).toISOString()).toBe(
+      new Date(closed.closed_at as unknown as string).toISOString()
+    );
+    expect(repeated.closed_by).toBe(closed.closed_by);
+
+    const persisted = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
+    expect(persisted.is_closed).toBe(true);
+    expect(new Date(persisted.closed_at).toISOString()).toBe(
+      new Date(closed.closed_at as unknown as string).toISOString()
+    );
+    expect(persisted.closed_by).toBe(closed.closed_by);
+  });
+
+  it('T053: an update with no status_id preserves closure state and metadata', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    const service = new TicketService();
+
+    const closed = await service.update(
+      ticketId,
+      { status_id: fixture.closedStatusId },
+      serviceContext()
+    );
+    const renamed = await service.update(ticketId, { title: 'Still closed' }, serviceContext());
+
+    expect(renamed.title).toBe('Still closed');
+    expect(renamed.is_closed).toBe(true);
+    expect(new Date(renamed.closed_at as unknown as string).toISOString()).toBe(
+      new Date(closed.closed_at as unknown as string).toISOString()
+    );
+    expect(renamed.closed_by).toBe(closed.closed_by);
+
+    const persisted = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
+    expect(persisted.title).toBe('Still closed');
+    expect(persisted.is_closed).toBe(true);
+    expect(new Date(persisted.closed_at).toISOString()).toBe(
+      new Date(closed.closed_at as unknown as string).toISOString()
+    );
+    expect(persisted.closed_by).toBe(closed.closed_by);
+  });
+
+  it('T054: open-to-open status change keeps is_closed false and closure metadata null', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    const service = new TicketService();
+
+    const moved = await service.update(
+      ticketId,
+      { status_id: fixture.waitingStatusId },
+      serviceContext()
+    );
+
+    expect(moved.status_id).toBe(fixture.waitingStatusId);
+    expect(moved.is_closed).toBe(false);
+    expect(moved.closed_at).toBeNull();
+    expect(moved.closed_by).toBeNull();
+
+    const persisted = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
+    expect(persisted.status_id).toBe(fixture.waitingStatusId);
+    expect(persisted.is_closed).toBe(false);
+    expect(persisted.closed_at).toBeNull();
+    expect(persisted.closed_by).toBeNull();
+  });
+
+  it('T055: a close-rule-rejected status change leaves the ticket wholly unchanged', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    await setBoardCloseRules(db, fixture, { require_time_entry: true });
+    const service = new TicketService();
+
+    await expect(
+      service.update(ticketId, { status_id: fixture.closedStatusId }, serviceContext())
+    ).rejects.toThrow(/close rules/i);
+
+    const persisted = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
+    expect(persisted.status_id).toBe(fixture.openStatusId);
+    expect(persisted.is_closed).toBe(false);
+    expect(persisted.closed_at).toBeNull();
+    expect(persisted.closed_by).toBeNull();
+  });
+
+  // Pre-fix precedence: the derived close fields only win when the status
+  // crosses the closed boundary. On a status change that stays open, a
+  // caller-supplied closed_at/closed_by passed through updateTicketStatusSchema
+  // must still reach the row (the follow-up writes only ever touched the
+  // boundary cases). This is the silent-regression seam called out in the
+  // review: folding must not start clobbering caller metadata.
+  it('T056: caller-supplied closure metadata survives a non-boundary status change', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    const service = new TicketService();
+    const callerClosedAt = '2020-05-05T05:05:05.000Z';
+    const callerClosedBy = uuidv4();
+
+    const moved = await service.update(
+      ticketId,
+      {
+        status_id: fixture.waitingStatusId,
+        closed_at: callerClosedAt,
+        closed_by: callerClosedBy,
+      },
+      serviceContext()
+    );
+
+    expect(moved.status_id).toBe(fixture.waitingStatusId);
+    expect(moved.is_closed).toBe(false);
+    expect(new Date(moved.closed_at as unknown as string).toISOString()).toBe(callerClosedAt);
+    expect(moved.closed_by).toBe(callerClosedBy);
+
+    const persisted = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
+    expect(new Date(persisted.closed_at).toISOString()).toBe(callerClosedAt);
+    expect(persisted.closed_by).toBe(callerClosedBy);
+  });
+
+  // The resolution comment and the status change share one transaction per
+  // ticket: a rejected close must leave no comment, thread, activity row, or
+  // published comment event behind, and a retry must not duplicate the comment.
+  it('T057: bulk close with a resolution comment is atomic per ticket', async () => {
+    const passingId = await insertTicket(db, fixture);
+    const failingId = await insertTicket(db, fixture);
+    await setBoardCloseRules(db, fixture, { require_resolution_comment: true, require_time_entry: true });
+    await insertTicketTimeEntry(db, fixture, passingId);
+    const failingBefore = await scopedDb().table('tickets').where({ ticket_id: failingId }).first();
+
+    const commentEventTicketIds = () =>
+      (publishEventMock.mock.calls as unknown as Array<[{ eventType: string; payload: { ticketId?: string } }]>)
+        .filter(([event]) => event.eventType === 'TICKET_COMMENT_ADDED')
+        .map(([event]) => event.payload.ticketId);
+
+    const result = await bulkUpdateTicketStatus([passingId, failingId], fixture.closedStatusId, {
+      resolutionComment: { text: 'Replaced the PSU.' },
+    });
+
+    expect(result.updatedIds).toEqual([passingId]);
+    expect(result.failed.length).toBe(1);
+    expect(result.failed[0].ticketId).toBe(failingId);
+    // The resolution gate is satisfied by the in-transaction comment.
+    expect(result.failed[0].closeRuleFailures?.map((f) => f.rule)).toEqual(['time_entry']);
+
+    const passing = await scopedDb().table('tickets').where({ ticket_id: passingId }).first();
+    expect(passing.is_closed).toBe(true);
+    expect(passing.response_state).toBeNull();
+    const passingComments = await scopedDb().table('comments').where({ ticket_id: passingId });
+    expect(passingComments.filter((c: any) => c.is_resolution === true).length).toBe(1);
+
+    const failing = await scopedDb().table('tickets').where({ ticket_id: failingId }).first();
+    expect(failing.is_closed).toBe(false);
+    expect(failing.response_state ?? null).toBe(failingBefore.response_state ?? null);
+    expect(await scopedDb().table('comments').where({ ticket_id: failingId })).toHaveLength(0);
+    expect(await scopedDb().table('comment_threads').where({ ticket_id: failingId })).toHaveLength(0);
+    expect(
+      await scopedDb().table('ticket_audit_logs').where({ ticket_id: failingId, entity_type: 'comment' })
+    ).toHaveLength(0);
+
+    expect(commentEventTicketIds()).toContain(passingId);
+    expect(commentEventTicketIds()).not.toContain(failingId);
+
+    // Retry: the first attempt left nothing behind, so this closes with exactly one resolution comment.
+    await insertTicketTimeEntry(db, fixture, failingId);
+    const retry = await bulkUpdateTicketStatus([failingId], fixture.closedStatusId, {
+      resolutionComment: { text: 'Replaced the PSU.' },
+    });
+    expect(retry.updatedIds).toEqual([failingId]);
+    expect(retry.failed).toEqual([]);
+
+    const retried = await scopedDb().table('tickets').where({ ticket_id: failingId }).first();
+    expect(retried.is_closed).toBe(true);
+    const retriedComments = await scopedDb().table('comments').where({ ticket_id: failingId });
+    expect(retriedComments).toHaveLength(1);
+    expect(retriedComments[0].is_resolution).toBe(true);
   });
 });

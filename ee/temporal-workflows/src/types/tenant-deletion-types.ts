@@ -164,6 +164,7 @@ export interface DeactivateMasterClientResult {
   clientId?: string;
   clientDeactivated: boolean;
   contactsDeactivated: number;
+  portalUsersDeactivated?: number;
 }
 
 export interface ValidateTenantDeletionResult {

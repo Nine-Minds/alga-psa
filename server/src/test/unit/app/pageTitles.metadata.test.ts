@@ -16,6 +16,15 @@ function hasMetadataExport(content: string): boolean {
   return METADATA_EXPORT_RE.test(content);
 }
 
+// A page whose entire body is a redirect answers with a 307 and never renders a
+// document, so it has no browser title to cover. Deliberately narrow: it only matches
+// a default export whose single statement is `redirect('<literal>')`.
+const REDIRECT_ONLY_PAGE_RE = /export default (?:async )?function \w*\s*\([^)]*\)\s*\{\s*redirect\(\s*(['"`])[^'"`]*\1\s*\)\s*;?\s*\}/;
+
+function isRedirectOnlyPage(content: string): boolean {
+  return REDIRECT_ONLY_PAGE_RE.test(content);
+}
+
 // For routes that translate their title via generateMetadata and pass the English
 // string as the i18n `defaultValue` instead of a literal `title: '...'`.
 function expectTranslatedTitle(relativePath: string, defaultValue: string): void {
@@ -100,6 +109,7 @@ describe('route title metadata coverage', () => {
       ['server/src/app/msp/add-ons/layout.tsx', 'Add-ons'],
       ['server/src/app/msp/profile/layout.tsx', 'Profile'],
       ['server/src/app/msp/tickets/page.tsx', 'Tickets'],
+      ['server/src/app/msp/tickets/recurring/layout.tsx', 'Recurring tickets'],
       ['server/src/app/msp/clients/page.tsx', 'Clients'],
       ['server/src/app/msp/contacts/page.tsx', 'Contacts'],
       ['server/src/app/msp/interactions/page.tsx', 'Interactions'],
@@ -276,6 +286,8 @@ describe('route title metadata coverage', () => {
       ['server/src/app/client-portal/appointments/[appointmentRequestId]/layout.tsx', 'Appointment Details'],
       ['server/src/app/client-portal/billing/invoices/[invoiceId]/pay/page.tsx', 'Pay Invoice'],
       ['server/src/app/client-portal/billing/invoices/[invoiceId]/payment-success/page.tsx', 'Payment Success'],
+      ['server/src/app/client-portal/billing/payment-methods/setup-complete/page.tsx', 'Card Setup'],
+      ['server/src/app/payment-methods/setup-complete/page.tsx', 'Card Setup'],
     ] as const;
 
     for (const [relativePath, title] of staticDynamicRoutes) {
@@ -428,7 +440,12 @@ describe('route title metadata coverage', () => {
   it('T026: every CE and EE page route has metadata coverage', () => {
     for (const rootRelativePath of ['server/src/app', 'ee/server/src/app']) {
       for (const relativePath of collectPages(rootRelativePath)) {
-        expect(pageHasMetadata(relativePath)).toBe(true);
+        if (isRedirectOnlyPage(read(relativePath))) {
+          // e.g. the plain /msp/tickets/bulk-* routes, which exist only so a hard load of
+          // an intercepted modal URL bounces back to the list.
+          continue;
+        }
+        expect(pageHasMetadata(relativePath), `${relativePath} has no title metadata`).toBe(true);
       }
     }
   });

@@ -39,11 +39,33 @@ import {
 import { WorkflowActionInputFieldInfo } from '../WorkflowActionInputFieldInfo';
 import { getWorkflowActionInputTypeHint, WorkflowActionInputTypeHint } from '../WorkflowActionInputTypeHint';
 import {
+  WORKFLOW_FIXED_PICKER_MULTI_RESOURCES,
   WorkflowActionInputFixedMultiPicker,
   WorkflowActionInputFixedPicker,
 } from '../WorkflowActionInputFixedPicker';
+import { renderWorkflowCustomLiteralEditor } from './workflowCustomLiteralEditor';
+import { buildReferenceExpression, getOneItemListReferencePath, getReferenceExpressionType } from './referenceValue';
 import {
-  WorkflowActionInputSourceMode,
+  findAutoMappingSuggestions,
+  selectBulkApplicableSuggestions,
+  isFillableSuggestion,
+  type AutoMappingSuggestion,
+} from './autoMappingSuggestions';
+import { getTextTemplateScope, textTemplateFromValue } from './textTemplate';
+import { WorkflowTextTemplateEditor } from './WorkflowTextTemplateEditor';
+import { WorkflowValueSourceChooser } from './WorkflowValueSourceChooser';
+import { countMissingRequiredInputs, isMappingValueSet } from './mappingValueState';
+import { isWorkflowFreeTextInput, isWorkflowMultilineTextInput } from './workflowTextInput';
+import { humanizeWorkflowRecordKind, takesAnArticle } from '../workflowFieldNames';
+import {
+  WorkflowPickableFieldsContext,
+  buildWorkflowPickableFields,
+  useWorkflowFieldOriginLabels,
+  type WorkflowPickableField,
+} from './WorkflowFieldPicker';
+import { buildWorkflowSampleContext } from './sampleContext';
+import {
+  buildDefaultWorkflowActionInputLiteralValue,
   createWorkflowActionInputValueForMode,
   deriveWorkflowActionInputSourceMode,
   getDefaultWorkflowActionInputSourceMode,
@@ -178,7 +200,14 @@ export interface ActionInputField {
       resource: string;
     };
     softEnum?: import('@alga-psa/shared/workflow/runtime').WorkflowEditorSoftEnumMetadata;
+    custom?: import('@alga-psa/shared/workflow/runtime').WorkflowEditorJsonSchemaMetadata['custom'];
   };
+  /** Plain-language labels for enum options, from schema metadata. */
+  optionLabels?: Record<string, string>;
+  /** For not-found style inputs: the option value that fails the step (so a Catch can handle it). */
+  failurePolicy?: { failValue: string };
+  /** The author must pick an option themselves (e.g. comment visibility); see withWorkflowExplicitChoice. */
+  explicitChoice?: { prompt: string };
   picker?: {
     kind: string;
     dependencies?: string[];
@@ -232,6 +261,12 @@ const getWorkflowFieldEditor = (field: ActionInputField): NonNullable<ActionInpu
   return undefined;
 };
 
+/** Entity kind of each source path, shared with every field editor below an InputMappingEditor. */
+const SourceKindContext = React.createContext<Map<string, string> | undefined>(undefined);
+
+/** Free-text inputs are edited as "text with fields" (see workflowTextInput). */
+const isPlainTextField = (field: ActionInputField): boolean => isWorkflowFreeTextInput(field);
+
 /**
  * Props for the InputMappingEditor component
  */
@@ -275,6 +310,8 @@ export interface InputMappingEditorProps {
    * §19.1 - Source field type lookup for compatibility indicators
    */
   sourceTypeMap?: Map<string, string>;
+  /** Entity kind (contact, user, client…) of each source path, from schema metadata. */
+  sourceKindMap?: Map<string, string>;
 
   /**
    * Reference context derived from workflow schemas.
@@ -326,32 +363,6 @@ function getDisplayValue(value: MappingValue | undefined): string {
 }
 
 /**
- * Determine whether a mapping value is effectively "set" (not just present).
- * Used to highlight required fields that are missing values.
- */
-function isMappingValueSet(value: MappingValue | undefined, fieldType?: string): boolean {
-  if (value === undefined) return false;
-  if (value === null) return true;
-
-  if (typeof value === 'object') {
-    if ('$expr' in value) {
-      return Boolean((value as Expr).$expr?.trim());
-    }
-    if ('$secret' in value) {
-      return Boolean((value as { $secret: string }).$secret?.trim());
-    }
-    return true;
-  }
-
-  if (typeof value === 'string') {
-    // Treat empty strings as "unset" so required string fields can be flagged.
-    return fieldType === 'string' ? value.trim().length > 0 : true;
-  }
-
-  return true;
-}
-
-/**
  * Editor for a single mapping field
  */
 export const MappingFieldEditor: React.FC<{
@@ -394,20 +405,45 @@ export const MappingFieldEditor: React.FC<{
     deriveWorkflowActionInputSourceMode(value).mode === 'expression' ? value : undefined
   );
   const [manualMode, setManualMode] = useState<WorkflowActionInputSourceModeValue | null>(null);
+  const [modeChangeNotice, setModeChangeNotice] = useState<string | null>(null);
   const valueType = useMemo(() => getMappingValueType(value), [value]);
   // An empty `{ $expr: '' }` derives as 'reference', so an explicit user choice of
   // Expression/Reference must win until the value is unambiguous (literal/secret).
+  const expressionSampleContext = useMemo(
+    () => buildWorkflowSampleContext(referenceBrowseContext) as unknown as Record<string, unknown>,
+    [referenceBrowseContext]
+  );
+  const plainTextField = isPlainTextField(field);
+  const textScope = useMemo(() => getTextTemplateScope(referenceBrowseContext?.forEach), [referenceBrowseContext?.forEach]);
+  const textTemplate = useMemo(
+    () => (plainTextField ? textTemplateFromValue(value, textScope) : null),
+    [plainTextField, textScope, value]
+  );
   const effectiveValueType: ValueType = useMemo(() => {
     if (valueType === 'legacy') return 'legacy';
     const derived = deriveWorkflowActionInputSourceMode(value).mode;
-    return (manualMode ?? derived) as ValueType;
-  }, [valueType, value, manualMode]);
+    // Text joined with fields ("Hi " & payload.name) reads as text with fields, unless the user
+    // chose the Expression editor.
+    const readsAsText = plainTextField && derived === 'expression' && textTemplate !== null;
+    return (manualMode ?? (readsAsText ? 'fixed' : derived)) as ValueType;
+  }, [valueType, value, manualMode, plainTextField, textTemplate]);
 
   const resolvedFieldPath = fieldPath ?? field.name;
   const idPrefix = `mapping-${stepId}-${resolvedFieldPath}`;
+  const sourceKindMap = React.useContext(SourceKindContext);
+  const originLabels = useWorkflowFieldOriginLabels();
+  // One labelled list of the fields this input can read: the source control and every Insert field
+  // picker below it use it.
+  const pickableFields = useMemo<WorkflowPickableField[]>(
+    () => buildWorkflowPickableFields(fieldOptions, referenceBrowseContext, originLabels, {
+      typeOf: (path) => sourceTypeMap?.get(path) ?? inferTypeFromPath(path),
+      kindOf: (path) => sourceKindMap?.get(path),
+    }),
+    [fieldOptions, originLabels, referenceBrowseContext, sourceKindMap, sourceTypeMap]
+  );
   const isMissingRequired = useMemo(
-    () => Boolean(field.required) && !isMappingValueSet(value, field.type),
-    [field.required, field.type, value]
+    () => countMissingRequiredInputs([field], { [field.name]: value } as InputMapping) > 0,
+    [field, value]
   );
   const showJsonataAskAi =
     aiAssistantAvailable &&
@@ -430,12 +466,47 @@ export const MappingFieldEditor: React.FC<{
   }, [value, valueType]);
 
   const handleSourceModeChange = useCallback((nextMode: WorkflowActionInputSourceModeValue) => {
+    setModeChangeNotice(null);
+    if (plainTextField) {
+      const valueIsExpr = value !== null && typeof value === 'object' && '$expr' in value;
+      // Text and Expression are two views of the same value: switching converts, never clears.
+      if (nextMode === 'fixed' && valueIsExpr) {
+        const source = String((value as Expr).$expr ?? '').trim();
+        if (!source) {
+          // Nothing to convert: bring back the text from before the switch, if any.
+          setManualMode('fixed');
+          onChange(preservedFixedValue ?? '');
+          return;
+        }
+        if (textTemplate !== null) {
+          setManualMode('fixed');
+          return;
+        }
+        if (effectiveValueType === 'expression') {
+          setModeChangeNotice(t('inputMappingEditor.textModeUnavailable', {
+            defaultValue: 'This expression does more than join text and fields, so it can only be edited as an expression. Clear it to start again as text.',
+          }));
+          return;
+        }
+      }
+      if (nextMode === 'expression' && effectiveValueType === 'fixed') {
+        setPreservedFixedValue(value);
+        setManualMode('expression');
+        if (typeof value === 'string') {
+          onChange({ $expr: value ? JSON.stringify(value) : '' });
+        } else if (!valueIsExpr) {
+          onChange({ $expr: '' });
+        }
+        return;
+      }
+    }
     const transition = transitionWorkflowActionInputMode(
       field,
       value,
       nextMode,
       {
-        preservedFixedValue,
+        // Text with fields is saved as an expression; keep it as the value to return to in Text mode.
+        preservedFixedValue: plainTextField && effectiveValueType === 'fixed' ? value : preservedFixedValue,
         preservedReferenceValue,
         preservedExpressionValue,
       }
@@ -445,11 +516,29 @@ export const MappingFieldEditor: React.FC<{
     setPreservedExpressionValue(transition.preservedExpressionValue);
     setManualMode(nextMode);
     onChange(transition.nextValue);
-  }, [field, onChange, preservedFixedValue, preservedReferenceValue, preservedExpressionValue, value, valueType]);
+  }, [effectiveValueType, field, onChange, plainTextField, preservedFixedValue, preservedReferenceValue, preservedExpressionValue, t, textTemplate, value, valueType]);
 
   const handleLiteralChange = useCallback((literalValue: unknown) => {
     onChange(literalValue as MappingValue);
   }, [onChange]);
+
+  const resolvePathType = useCallback(
+    (path: string) => sourceTypeMap?.get(path) ?? inferTypeFromPath(path),
+    [sourceTypeMap]
+  );
+  const resolveReferenceType = useCallback(
+    (expression: string | undefined) => {
+      const listType = getReferenceExpressionType(expression, resolvePathType);
+      if (listType) return listType;
+      const path = extractPrimaryPath(expression);
+      return path ? resolvePathType(path) : undefined;
+    },
+    [resolvePathType]
+  );
+  const targetTypeForReference = field.type === 'array' && field.constraints?.itemType
+    && field.constraints.itemType !== 'unknown' && field.constraints.itemType !== 'any'
+    ? `array<${field.constraints.itemType}>`
+    : field.type;
 
   const typeMismatchWarning = useMemo(() => {
     if (
@@ -465,15 +554,15 @@ export const MappingFieldEditor: React.FC<{
     const sourcePath = extractPrimaryPath(expr);
     if (!sourcePath) return null;
 
-    const sourceType = sourceTypeMap?.get(sourcePath) ?? inferTypeFromPath(sourcePath);
+    const sourceType = resolveReferenceType(expr);
 
     // Get target type
-    const targetType = field.type;
+    const targetType = targetTypeForReference;
 
     if (!sourceType || !targetType) return null;
 
     return getWorkflowActionInputTypeHint(sourceType, targetType);
-  }, [valueType, value, fieldOptions, field.type, sourceTypeMap]);
+  }, [valueType, value, field.type, resolveReferenceType, targetTypeForReference]);
 
   const compatibilityBadge = useMemo(() => {
     if (
@@ -489,10 +578,10 @@ export const MappingFieldEditor: React.FC<{
     const sourcePath = extractPrimaryPath(expr);
     if (!sourcePath) return null;
 
-    const sourceType = sourceTypeMap?.get(sourcePath) ?? inferTypeFromPath(sourcePath);
+    const sourceType = resolveReferenceType(expr);
     if (!field.type) return null;
 
-    const compatibility = getTypeCompatibility(sourceType, field.type);
+    const compatibility = getTypeCompatibility(sourceType, targetTypeForReference);
     if (compatibility === TypeCompatibility.EXACT) return null;
     const classes = getCompatibilityClasses(compatibility);
 
@@ -502,14 +591,18 @@ export const MappingFieldEditor: React.FC<{
       sourceType,
       targetType: field.type
     };
-  }, [valueType, value, sourceTypeMap, field.type]);
+  }, [valueType, value, field.type, resolveReferenceType, targetTypeForReference]);
 
   const [showBrowseSources, setShowBrowseSources] = useState(false);
   const currentSourceMode = effectiveValueType === 'legacy' ? deriveWorkflowActionInputSourceMode(value).mode : effectiveValueType;
   const selectedReferencePath = currentSourceMode === 'reference' ? extractPrimaryPath(getDisplayValue(value)) : null;
   const referenceSourceModel = useMemo(
-    () => buildReferenceSourceModel(referenceBrowseContext, fieldOptions, expressionContext?.payloadSchema),
-    [expressionContext?.payloadSchema, referenceBrowseContext, fieldOptions]
+    () => buildReferenceSourceModel(referenceBrowseContext, fieldOptions, expressionContext?.payloadSchema, {
+      firstItem: t('inputMappingEditor.reference.firstItem', { defaultValue: '(first item)' }),
+      lastItem: t('inputMappingEditor.reference.lastItem', { defaultValue: '(last item)' }),
+      wholeResult: t('inputMappingEditor.reference.wholeResult', { defaultValue: 'Entire result' }),
+    }),
+    [expressionContext?.payloadSchema, referenceBrowseContext, fieldOptions, t]
   );
   const [selectedReferenceScope, setSelectedReferenceScope] = useState<ReferenceSourceScope | ''>(() =>
     deriveReferenceScope(selectedReferencePath, referenceBrowseContext).scope
@@ -517,6 +610,10 @@ export const MappingFieldEditor: React.FC<{
   const [selectedReferenceStep, setSelectedReferenceStep] = useState(() =>
     deriveReferenceScope(selectedReferencePath, referenceBrowseContext).step
   );
+
+  // Picking a field happens in the source control; step-by-step browsing (scope → step → field, and
+  // the data tree) opens on request, or by itself while a reference has no field yet.
+  const browseOpen = currentSourceMode === 'reference' && (showBrowseSources || !selectedReferencePath);
 
   useEffect(() => {
     if (currentSourceMode !== 'reference' && showBrowseSources) {
@@ -533,9 +630,9 @@ export const MappingFieldEditor: React.FC<{
   }, [currentSourceMode, referenceBrowseContext, selectedReferencePath]);
 
   const handleBrowseSelect = useCallback((path: string) => {
-    onChange({ $expr: path });
+    onChange({ $expr: buildReferenceExpression(path, resolvePathType(path), targetTypeForReference) });
     setShowBrowseSources(false);
-  }, [onChange]);
+  }, [onChange, resolvePathType, targetTypeForReference]);
 
   const handleReferenceScopeChange = useCallback((nextScope: ReferenceSourceScope | '') => {
     setSelectedReferenceScope(nextScope);
@@ -553,10 +650,11 @@ export const MappingFieldEditor: React.FC<{
       onChange({ $expr: '' });
       return;
     }
-    onChange({ $expr: path });
-  }, [onChange]);
+    onChange({ $expr: buildReferenceExpression(path, resolvePathType(path), targetTypeForReference) });
+  }, [onChange, resolvePathType, targetTypeForReference]);
 
   return (
+    <WorkflowPickableFieldsContext.Provider value={pickableFields}>
     <Card className="p-3 space-y-2">
       <div className="flex items-start justify-between gap-3">
         <button
@@ -591,23 +689,28 @@ export const MappingFieldEditor: React.FC<{
 
       {expanded && (
         <div className="space-y-3 pl-2">
-          <div className="flex items-center justify-between gap-3">
-            <WorkflowActionInputSourceMode
+          {effectiveValueType !== 'legacy' && (
+            <WorkflowValueSourceChooser
               idPrefix={idPrefix}
-              value={value}
-              onModeChange={handleSourceModeChange}
+              target={field}
+              fields={pickableFields}
+              mode={effectiveValueType}
+              selectedPath={selectedReferencePath}
+              isPlainText={plainTextField}
+              onChooseField={(_path, expression) => {
+                setModeChangeNotice(null);
+                setManualMode('reference');
+                onChange({ $expr: expression });
+              }}
+              onChooseMode={handleSourceModeChange}
               disabled={disabled}
-              mode={effectiveValueType !== 'legacy' ? effectiveValueType : undefined}
             />
-            {compatibilityBadge && effectiveValueType === 'reference' && (
-              <Badge
-                className={`text-[10px] ${compatibilityBadge.classes.bg} ${compatibilityBadge.classes.text} ${compatibilityBadge.classes.border}`}
-                title={`${compatibilityBadge.label}: ${compatibilityBadge.sourceType ?? 'unknown'} → ${compatibilityBadge.targetType}`}
-              >
-                {compatibilityBadge.label}
-              </Badge>
-            )}
-          </div>
+          )}
+          {modeChangeNotice && (
+            <p id={`${idPrefix}-mode-notice`} className="text-[11px] text-[rgb(var(--color-text-500))]" role="status">
+              {modeChangeNotice}
+            </p>
+          )}
           {effectiveValueType === 'reference' && (
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
@@ -616,30 +719,41 @@ export const MappingFieldEditor: React.FC<{
                   variant="ghost"
                   size="sm"
                   type="button"
-                  disabled={disabled || !referenceBrowseContext}
+                  disabled={disabled}
+                  aria-expanded={showBrowseSources}
                   onClick={() => setShowBrowseSources((current) => !current)}
-                  className="text-xs text-gray-600 hover:text-gray-900"
+                  className="h-7 px-2 text-xs text-gray-600 hover:text-gray-900"
                 >
                   {showBrowseSources ? (
                     <ChevronDown className="mr-1 h-3.5 w-3.5" />
                   ) : (
                     <ChevronRight className="mr-1 h-3.5 w-3.5" />
                   )}
-                  {t('inputMappingEditor.browseSources', { defaultValue: 'Browse sources' })}
+                  {t('inputMappingEditor.browseSources', { defaultValue: 'Browse step by step' })}
                 </Button>
+                {compatibilityBadge && (
+                  <Badge
+                    className={`text-[10px] ${compatibilityBadge.classes.bg} ${compatibilityBadge.classes.text} ${compatibilityBadge.classes.border}`}
+                    title={`${compatibilityBadge.label}: ${compatibilityBadge.sourceType ?? 'unknown'} → ${compatibilityBadge.targetType}`}
+                  >
+                    {compatibilityBadge.label}
+                  </Badge>
+                )}
               </div>
-              <ReferenceScopeSelector
-                idPrefix={idPrefix}
-                model={referenceSourceModel}
-                targetType={field.type}
-                selectedScope={selectedReferenceScope}
-                selectedStep={selectedReferenceStep}
-                selectedField={selectedReferencePath}
-                disabled={disabled}
-                onScopeChange={handleReferenceScopeChange}
-                onStepChange={handleReferenceStepChange}
-                onFieldChange={handleReferenceFieldChange}
-              />
+              {browseOpen && (
+                <ReferenceScopeSelector
+                  idPrefix={idPrefix}
+                  model={referenceSourceModel}
+                  targetType={field.type}
+                  selectedScope={selectedReferenceScope}
+                  selectedStep={selectedReferenceStep}
+                  selectedField={selectedReferencePath}
+                  disabled={disabled}
+                  onScopeChange={handleReferenceScopeChange}
+                  onStepChange={handleReferenceStepChange}
+                  onFieldChange={handleReferenceFieldChange}
+                />
+              )}
               {showBrowseSources && referenceBrowseContext && (
                 <SourceDataTree
                   context={referenceBrowseContext}
@@ -653,9 +767,16 @@ export const MappingFieldEditor: React.FC<{
               )}
               {typeMismatchWarning && (
                 <WorkflowActionInputTypeHint
-                  sourceType={sourceTypeMap?.get(extractPrimaryPath((value as Expr).$expr) ?? '') ?? inferTypeFromPath(extractPrimaryPath((value as Expr).$expr) ?? '')}
-                  targetType={field.type}
+                  sourceType={resolveReferenceType((value as Expr).$expr)}
+                  targetType={targetTypeForReference}
                 />
+              )}
+              {getOneItemListReferencePath((value as Expr | undefined)?.$expr) && (
+                <p id={`${idPrefix}-one-item-list-note`} className="text-[11px] text-[rgb(var(--color-text-500))]">
+                  {t('inputMappingEditor.reference.oneItemList', {
+                    defaultValue: 'This single value is sent as a one-item list.',
+                  })}
+                </p>
               )}
             </div>
           )}
@@ -720,9 +841,10 @@ export const MappingFieldEditor: React.FC<{
                 }}
                 singleLine={false}
                 height={96}
+                sampleContext={expressionSampleContext}
                 showFieldPicker
                 placeholder={t('inputMappingEditor.expression.placeholder', {
-                  defaultValue: 'e.g. payload.body.task_name',
+                  defaultValue: 'e.g. "Re: " & payload.title',
                 })}
                 disabled={disabled}
               />
@@ -751,6 +873,7 @@ export const MappingFieldEditor: React.FC<{
         </div>
       )}
     </Card>
+    </WorkflowPickableFieldsContext.Provider>
   );
 };
 
@@ -770,23 +893,36 @@ const normalizeJsonLiteral = (value: MappingValue | undefined, fieldType: string
   return value ?? null;
 };
 
-const buildDefaultLiteralValue = (field: ActionInputField): MappingValue => {
-  if (field.default !== undefined) return field.default as MappingValue;
-  if (field.type === 'boolean') return false;
-  if (field.type === 'number' || field.type === 'integer') return 0;
-  if (field.type === 'array') return [];
-  if (field.type === 'object') {
-    if (!field.children?.length) return {};
-    const next: Record<string, MappingValue> = {};
-    for (const child of field.children) {
-      if (child.required || child.default !== undefined) {
-        next[child.name] = buildDefaultLiteralValue(child);
-      }
-    }
-    return next;
-  }
-  return '';
-};
+/**
+ * The options of a choice the author must make themselves (see withWorkflowExplicitChoice), as
+ * buttons under the question. Nothing is preselected.
+ */
+const ExplicitChoiceOptions: React.FC<{
+  id: string;
+  field: ActionInputField;
+  onChoose: (value: MappingValue) => void;
+  disabled?: boolean;
+}> = ({ id, field, onChoose, disabled }) => (
+  <div id={id} role="group" aria-label={field.explicitChoice?.prompt} className="space-y-1.5">
+    <p className="text-xs font-medium text-[rgb(var(--color-text-700))]">{field.explicitChoice?.prompt}</p>
+    <div className="flex flex-wrap gap-2">
+      {(field.enum ?? []).map((option) => (
+        <Button
+          key={String(option)}
+          id={`${id}-${String(option)}`}
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={disabled}
+          onClick={() => onChoose(option as MappingValue)}
+          className="h-auto whitespace-normal py-1 text-left text-xs"
+        >
+          {field.optionLabels?.[String(option)] ?? String(option)}
+        </Button>
+      ))}
+    </div>
+  </div>
+);
 
 const StructuredLiteralGroup: React.FC<{
   id: string;
@@ -1088,6 +1224,11 @@ const LiteralValueEditor: React.FC<{
   const fieldEditor = getWorkflowFieldEditor(field);
   const inlineEditorMode = fieldEditor?.inline?.mode;
   const hasPickerEditor = fieldEditor?.kind === 'picker' && inlineEditorMode === 'picker-summary';
+  const sampleContext = useMemo(
+    () => buildWorkflowSampleContext(referenceBrowseContext) as unknown as Record<string, unknown>,
+    [referenceBrowseContext]
+  );
+  const textScope = useMemo(() => getTextTemplateScope(referenceBrowseContext?.forEach), [referenceBrowseContext?.forEach]);
   const softEnum = fieldEditor?.softEnum;
   const isNamespaceSoftEnum =
     softEnum?.component === 'soft-enum-combobox' &&
@@ -1108,7 +1249,7 @@ const LiteralValueEditor: React.FC<{
   const hasMultiUserPickerEditor =
     hasPickerEditor &&
     fieldType === 'array' &&
-    pickerResource === 'user' &&
+    Boolean(pickerResource && WORKFLOW_FIXED_PICKER_MULTI_RESOURCES.has(pickerResource)) &&
     fieldConstraints?.itemType === 'string';
   const hasStructuredObjectEditor = fieldType === 'object' && (fieldChildren?.length ?? 0) > 0;
   const hasStructuredArrayObjectEditor = fieldType === 'array' && (fieldChildren?.length ?? 0) > 0;
@@ -1144,6 +1285,11 @@ const LiteralValueEditor: React.FC<{
   const [listError, setListError] = useState<string | null>(null);
   const [listText, setListText] = useState(() => formatPrimitiveList(value));
   const [isEditingPrimitiveList, setIsEditingPrimitiveList] = useState(false);
+  const [showCustomEditorFields, setShowCustomEditorFields] = useState(false);
+  const customEditorComponent = fieldEditor?.kind === 'custom' ? fieldEditor.custom?.component : undefined;
+  const customLiteralEditor = customEditorComponent
+    ? renderWorkflowCustomLiteralEditor(customEditorComponent, { idPrefix, value, onChange, disabled })
+    : null;
 
   useEffect(() => {
     if (!supportsStructuredEditor) {
@@ -1186,7 +1332,7 @@ const LiteralValueEditor: React.FC<{
             }
 
             if (value === null) {
-              onChange(buildDefaultLiteralValue(field));
+              onChange(buildDefaultWorkflowActionInputLiteralValue(field, { chosen: true }));
             }
           }}
           disabled={disabled}
@@ -1196,6 +1342,25 @@ const LiteralValueEditor: React.FC<{
       </div>
     );
   };
+
+  // Purpose-built editors replace the generic nested-object editor when the value is fixed.
+  if (customLiteralEditor && !showCustomEditorFields) {
+    return (
+      <div className="space-y-2">
+        {customLiteralEditor}
+        <Button
+          id={`${idPrefix}-${customEditorComponent}-edit-fields`}
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs text-[rgb(var(--color-text-600))]"
+          onClick={() => setShowCustomEditorFields(true)}
+        >
+          {t('inputMappingEditor.ticketAssignment.editFields', { defaultValue: 'Edit as individual fields' })}
+        </Button>
+      </div>
+    );
+  }
 
   // Handle picker-backed fields
   if (hasMultiUserPickerEditor) {
@@ -1229,6 +1394,7 @@ const LiteralValueEditor: React.FC<{
             idPrefix={idPrefix}
             rootInputMapping={rootInputMapping}
             disabled={disabled}
+            hideLabel
           />
         }
       />
@@ -1293,7 +1459,7 @@ const LiteralValueEditor: React.FC<{
   if (fieldEnum && fieldEnum.length > 0) {
     const enumOptions: SelectOption[] = fieldEnum.map(e => ({
       value: String(e ?? ''),
-      label: String(e ?? '')
+      label: field.optionLabels?.[String(e ?? '')] ?? String(e ?? '')
     }));
 
     return wrapNullableEditor(
@@ -1301,6 +1467,7 @@ const LiteralValueEditor: React.FC<{
         id={`${idPrefix}-literal-enum`}
         options={enumOptions}
         value={value === undefined || value === null ? '' : String(value)}
+        placeholder={field.explicitChoice?.prompt}
         onValueChange={(val) => {
           // Try to preserve type
           const enumVal = fieldEnum.find(e => String(e) === val);
@@ -1394,7 +1561,7 @@ const LiteralValueEditor: React.FC<{
               variant="ghost"
               size="sm"
               type="button"
-              onClick={() => onChange(buildDefaultLiteralValue(field))}
+              onClick={() => onChange(buildDefaultWorkflowActionInputLiteralValue(field, { chosen: true }))}
               disabled={disabled}
               className="h-7 px-2 text-gray-500 hover:text-gray-900"
             >
@@ -1402,27 +1569,103 @@ const LiteralValueEditor: React.FC<{
             </Button>
           }
         >
-          {fieldChildren?.map((child) => (
-            <MappingFieldEditor
-              key={child.name}
-              field={child}
-              fieldPath={`${field.name}.${child.name}`}
-              value={nextValue[child.name] as MappingValue | undefined}
-              onChange={(childValue) => {
-                onChange({
-                  ...nextValue,
-                  [child.name]: childValue
-                });
-              }}
-              rootInputMapping={rootInputMapping}
-              fieldOptions={fieldOptions}
-              stepId={stepId}
-              disabled={disabled}
-              sourceTypeMap={sourceTypeMap}
-              expressionContext={expressionContext}
-              referenceBrowseContext={referenceBrowseContext}
-            />
-          ))}
+          {fieldChildren?.map((child) => {
+            const childValue = nextValue[child.name] as MappingValue | undefined;
+            const removeChild = () => {
+              const rest: Record<string, unknown> = { ...(nextValue as Record<string, unknown>) };
+              delete rest[child.name];
+              onChange(rest as MappingValue);
+            };
+            // Optional sub-fields stay unset (and out of the saved value) until the user sets them,
+            // instead of showing placeholder defaults such as false or 0 for every one.
+            if (childValue === undefined && child.explicitChoice && child.enum?.length) {
+              return (
+                <div
+                  key={child.name}
+                  id={`${idPrefix}-literal-object-choice-${child.name}`}
+                  className="space-y-2 rounded-md border border-dashed border-destructive/40 px-3 py-2"
+                >
+                  <WorkflowActionInputFieldInfo field={child} isMissingRequired compact />
+                  <ExplicitChoiceOptions
+                    id={`${idPrefix}-literal-object-choose-${child.name}`}
+                    field={child}
+                    disabled={disabled}
+                    onChoose={(choice) => onChange({ ...nextValue, [child.name]: choice })}
+                  />
+                </div>
+              );
+            }
+            if (childValue === undefined && !child.required) {
+              return (
+                <div
+                  key={child.name}
+                  id={`${idPrefix}-literal-object-unset-${child.name}`}
+                  className="flex items-start justify-between gap-3 rounded-md border border-dashed border-[rgb(var(--color-border-200))] px-3 py-2"
+                >
+                  <div className="min-w-0 flex-1">
+                    <WorkflowActionInputFieldInfo field={child} compact />
+                  </div>
+                  <Button
+                    id={`${idPrefix}-literal-object-set-${child.name}`}
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => onChange({
+                      ...nextValue,
+                      [child.name]: createWorkflowActionInputValueForMode(
+                        child,
+                        undefined,
+                        getDefaultWorkflowActionInputSourceMode(child)
+                      ),
+                    })}
+                  >
+                    <Plus className="mr-1 h-3.5 w-3.5" />
+                    {t('inputMappingEditor.setOptionalField', { defaultValue: 'Set' })}
+                  </Button>
+                </div>
+              );
+            }
+            return (
+              <div key={child.name} className="space-y-1">
+                <MappingFieldEditor
+                  field={child}
+                  fieldPath={`${field.name}.${child.name}`}
+                  value={childValue}
+                  onChange={(nextChildValue) => {
+                    if (nextChildValue === undefined) {
+                      removeChild();
+                      return;
+                    }
+                    onChange({
+                      ...nextValue,
+                      [child.name]: nextChildValue
+                    });
+                  }}
+                  rootInputMapping={rootInputMapping}
+                  fieldOptions={fieldOptions}
+                  stepId={stepId}
+                  disabled={disabled}
+                  sourceTypeMap={sourceTypeMap}
+                  expressionContext={expressionContext}
+                  referenceBrowseContext={referenceBrowseContext}
+                />
+                {!child.required && (
+                  <Button
+                    id={`${idPrefix}-literal-object-unset-button-${child.name}`}
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    disabled={disabled}
+                    onClick={removeChild}
+                    className="h-6 px-2 text-xs text-[rgb(var(--color-text-500))]"
+                  >
+                    {t('inputMappingEditor.unsetOptionalField', { defaultValue: 'Leave {{name}} unset', name: child.name })}
+                  </Button>
+                )}
+              </div>
+            );
+          })}
         </StructuredLiteralGroup>
       );
     };
@@ -1434,8 +1677,8 @@ const LiteralValueEditor: React.FC<{
       const buildEmptyRow = () => {
         const newRow: Record<string, MappingValue> = {};
         for (const child of fieldChildren ?? []) {
-          if (child.required || child.default !== undefined) {
-            newRow[child.name] = buildDefaultLiteralValue(child);
+          if (child.required && !child.explicitChoice) {
+            newRow[child.name] = buildDefaultWorkflowActionInputLiteralValue(child);
           }
         }
         return newRow;
@@ -1688,6 +1931,24 @@ const LiteralValueEditor: React.FC<{
     );
   }
 
+  // Free text is "text with fields": type text and insert workflow fields, single- or multi-line.
+  if (isPlainTextField(field)) {
+    const template = textTemplateFromValue(value, textScope) ?? (typeof value === 'string' ? value : '');
+    return wrapNullableEditor(
+      <WorkflowTextTemplateEditor
+        idPrefix={idPrefix}
+        scope={textScope}
+        template={template}
+        onChange={onChange}
+        fieldOptions={fieldOptions}
+        sampleContext={sampleContext}
+        multiline={isWorkflowMultilineTextInput(field)}
+        label={field.name}
+        disabled={disabled}
+      />
+    );
+  }
+
   // Default to string
   const stringInputType = fieldConstraints?.format === 'email' ? 'email' : 'text';
   const isMultilineString = inlineEditorMode === 'textarea';
@@ -1726,75 +1987,6 @@ const LiteralValueEditor: React.FC<{
 };
 
 /**
- * Auto-mapping suggestion for a target field.
- */
-interface AutoMappingSuggestion {
-  targetField: string;
-  sourcePath: string;
-  confidence: 'exact' | 'fuzzy';
-}
-
-/**
- * Find auto-mapping suggestions based on field name matching.
- *
- * @param targetFields - Fields to find suggestions for
- * @param fieldOptions - Available source fields from data context
- * @param currentMappings - Current mappings to exclude already-mapped fields
- * @returns Array of suggestions with confidence levels
- */
-function findAutoMappingSuggestions(
-  targetFields: ActionInputField[],
-  fieldOptions: SelectOption[],
-  currentMappings: InputMapping
-): AutoMappingSuggestion[] {
-  const suggestions: AutoMappingSuggestion[] = [];
-  const mappedFields = new Set(Object.keys(currentMappings));
-
-  // Extract field names from options (e.g., "payload.ticketId" -> "ticketId")
-  const optionsByFieldName = new Map<string, string[]>();
-  fieldOptions.forEach(opt => {
-    const parts = opt.value.split('.');
-    const fieldName = parts[parts.length - 1].toLowerCase();
-    if (!optionsByFieldName.has(fieldName)) {
-      optionsByFieldName.set(fieldName, []);
-    }
-    optionsByFieldName.get(fieldName)!.push(opt.value);
-  });
-
-  for (const field of targetFields) {
-    // Skip already-mapped fields
-    if (mappedFields.has(field.name)) continue;
-
-    const fieldNameLower = field.name.toLowerCase();
-
-    // Try exact match first
-    const exactMatches = optionsByFieldName.get(fieldNameLower);
-    if (exactMatches && exactMatches.length > 0) {
-      suggestions.push({
-        targetField: field.name,
-        sourcePath: exactMatches[0],
-        confidence: 'exact'
-      });
-      continue;
-    }
-
-    // Try fuzzy match (contains)
-    for (const [optFieldName, optPaths] of optionsByFieldName) {
-      if (optFieldName.includes(fieldNameLower) || fieldNameLower.includes(optFieldName)) {
-        suggestions.push({
-          targetField: field.name,
-          sourcePath: optPaths[0],
-          confidence: 'fuzzy'
-        });
-        break;
-      }
-    }
-  }
-
-  return suggestions;
-}
-
-/**
  * InputMappingEditor component
  *
  * Provides a visual editor for mapping action inputs using structured references
@@ -1808,18 +2000,15 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   stepId,
   actionId,
   sourceTypeMap,
+  sourceKindMap,
   disabled,
   expressionContext: providedExpressionContext,
   referenceBrowseContext,
 }) => {
   const { t } = useTranslation('msp/workflows');
   const { aiAssistantAvailable, openQuickAsk } = useQuickAsk();
-  const missingRequiredCount = useMemo(() => {
-    return targetFields.filter((field) => {
-      if (!field.required) return false;
-      return !isMappingValueSet(value[field.name], field.type);
-    }).length;
-  }, [targetFields, value]);
+  // Same count as the step card's badge: required inputs, nested ones included.
+  const missingRequiredCount = useMemo(() => countMissingRequiredInputs(targetFields, value), [targetFields, value]);
 
   const filledFieldCount = useMemo(
     () => targetFields.filter((field) => isMappingValueSet(value[field.name], field.type)).length,
@@ -1828,8 +2017,25 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
 
   // §17.3.3 - Auto-mapping suggestions
   const suggestions = useMemo(() =>
-    findAutoMappingSuggestions(targetFields, fieldOptions, value),
-    [targetFields, fieldOptions, value]
+    findAutoMappingSuggestions(
+      targetFields,
+      fieldOptions.map((option) => ({
+        path: option.value,
+        type: sourceTypeMap?.get(option.value) ?? inferTypeFromPath(option.value),
+        kind: sourceKindMap?.get(option.value),
+      })),
+      value
+    ),
+    [targetFields, fieldOptions, sourceKindMap, sourceTypeMap, value]
+  );
+  // Bulk apply only fills empty required inputs with same-name, type-matched sources; the rest
+  // stay per-field hints.
+  const applicableSuggestions = useMemo(
+    () =>
+      selectBulkApplicableSuggestions(suggestions, targetFields, (fieldName) =>
+        isMappingValueSet(value[fieldName], targetFields.find((field) => field.name === fieldName)?.type)
+      ),
+    [suggestions, targetFields, value]
   );
 
   const suggestionMap = useMemo(() => {
@@ -1847,18 +2053,18 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
 
   // Apply all auto-mapping suggestions
   const handleAutoMapAll = useCallback(() => {
-    if (suggestions.length === 0) return;
+    if (applicableSuggestions.length === 0) return;
 
     const newMappings = { ...value };
-    suggestions.forEach(s => {
-      newMappings[s.targetField] = { $expr: s.sourcePath };
+    applicableSuggestions.forEach(s => {
+      newMappings[s.targetField] = { $expr: s.expression };
     });
     onChange(newMappings);
-  }, [suggestions, value, onChange]);
+  }, [applicableSuggestions, value, onChange]);
 
   // Apply single suggestion
   const handleApplySuggestion = useCallback((suggestion: AutoMappingSuggestion) => {
-    onChange({ ...value, [suggestion.targetField]: { $expr: suggestion.sourcePath } });
+    onChange({ ...value, [suggestion.targetField]: { $expr: suggestion.expression } });
   }, [value, onChange]);
 
   const handleFieldChange = useCallback((fieldName: string, newValue: MappingValue | undefined) => {
@@ -1875,12 +2081,20 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   const handleAddMapping = useCallback((fieldName: string) => {
     const field = targetFields.find((candidate) => candidate.name === fieldName);
     if (!field) return;
+    // The suggestion shown beside the field fills it directly (a same-name, type-matched source, or
+    // a same-kind record on a picker); otherwise start in the field's natural editor (picker,
+    // text, structured fields).
+    const suggestion = suggestionMap.get(fieldName);
+    if (isFillableSuggestion(suggestion, field)) {
+      onChange({ ...value, [fieldName]: { $expr: suggestion!.expression } });
+      return;
+    }
     const defaultMode = getDefaultWorkflowActionInputSourceMode(field);
     onChange({
       ...value,
       [fieldName]: createWorkflowActionInputValueForMode(field, undefined, defaultMode),
     });
-  }, [onChange, targetFields, value]);
+  }, [onChange, suggestionMap, targetFields, value]);
 
   const handleRemoveMapping = useCallback((fieldName: string) => {
     const next = { ...value };
@@ -1952,6 +2166,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   }
 
   return (
+    <SourceKindContext.Provider value={sourceKindMap}>
     <div
       className="space-y-4"
       onKeyDown={keyboardHandlers.handleKeyDown}
@@ -1988,7 +2203,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
           )}
         </div>
         <div className="flex flex-col items-start gap-1">
-          {suggestions.length > 0 && (
+          {applicableSuggestions.length > 0 && (
             <Button
               id={`auto-map-${stepId}`}
               variant="ghost"
@@ -1996,11 +2211,12 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
               onClick={handleAutoMapAll}
               disabled={disabled}
               className="text-xs text-primary-600 hover:text-primary-700"
+              title={applicableSuggestions.map((s) => `${s.targetField} ← ${s.sourcePath}`).join('\n')}
             >
               <Wand2 className="w-3.5 h-3.5 mr-1" />
               {t('inputMappingEditor.applySuggestions', {
                 defaultValue: 'Apply suggestions ({{count}})',
-                count: suggestions.length,
+                count: applicableSuggestions.length,
               })}
             </Button>
           )}
@@ -2055,11 +2271,12 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
         )}
       </div>
     </div>
+    </SourceKindContext.Provider>
   );
 
   function renderFieldEntry(field: ActionInputField): React.ReactNode {
           const suggestion = suggestionMap.get(field.name);
-          const isMissingRequired = Boolean(field.required) && !isMappingValueSet(value[field.name], field.type);
+          const isMissingRequired = countMissingRequiredInputs([field], value) > 0;
           const fieldIndex = allFieldNames.indexOf(field.name);
           const isFocused = keyboardState.isActive && keyboardState.focusedIndex === fieldIndex;
           const fieldProps = keyboardHandlers.getFieldProps(fieldIndex);
@@ -2126,15 +2343,36 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                     isMissingRequired={isMissingRequired}
                     compact
                   />
+                  {field.explicitChoice && field.enum?.length ? (
+                    <ExplicitChoiceOptions
+                      id={`choose-${stepId}-${field.name}`}
+                      field={field}
+                      disabled={disabled}
+                      onChoose={(choice) => handleFieldChange(field.name, choice)}
+                    />
+                  ) : null}
                   {suggestion && (
                     <span className="flex min-w-0 items-center gap-1 text-xs text-primary-600">
                       <Sparkles className="w-3 h-3" />
                       <span className="truncate">← {suggestion.sourcePath}</span>
-                      {suggestion.confidence === 'fuzzy' && (
+                      {suggestion.confidence === 'partial' && (
                         <span className="text-primary-400">
-                          {t('inputMappingEditor.fuzzySuffix', { defaultValue: '(fuzzy)' })}
+                          {t('inputMappingEditor.partialMatchSuffix', { defaultValue: '(similar name: check before using)' })}
                         </span>
                       )}
+                      {suggestion.confidence === 'kind' && (() => {
+                        // Say what the match is: "(also a contact)", not "same kind of record".
+                        const kind = humanizeWorkflowRecordKind(field.editor?.picker?.resource ?? field.picker?.kind ?? '');
+                        return (
+                          <span className="text-primary-400">
+                            {kind
+                              ? takesAnArticle(kind)
+                                ? t('inputMappingEditor.kindMatchSuffixAn', { defaultValue: '(also an {{kind}})', kind })
+                                : t('inputMappingEditor.kindMatchSuffixA', { defaultValue: '(also a {{kind}})', kind })
+                              : t('inputMappingEditor.kindMatchSuffix', { defaultValue: '(the same kind of record)' })}
+                          </span>
+                        );
+                      })()}
                     </span>
                   )}
                 </div>
@@ -2176,6 +2414,8 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                       <span>{t('inputMappingEditor.askAi.title', { defaultValue: 'Ask AI' })}</span>
                     </button>
                   ) : null}
+                  {/* A choice the author must make is answered with the option buttons, not Fill. */}
+                  {!(field.explicitChoice && field.enum?.length) && (
                   <Button
                     id={`add-mapping-${stepId}-${field.name}`}
                     variant="ghost"
@@ -2186,6 +2426,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                     <Plus className="w-3.5 h-3.5 mr-1" />
                     {t('inputMappingEditor.fill', { defaultValue: 'Fill' })}
                   </Button>
+                  )}
                 </div>
               </div>
             </div>

@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { TICKET_ORIGINS } from '@alga-psa/types';
+
+const TICKET_1 = '00000000-0000-4000-8000-000000000001';
+
+vi.mock('../../lib/portalTicketExternalLinks', () => ({ loadPortalTicketExternalLinks: vi.fn(async () => []) }));
 
 let currentUser: any;
 
@@ -47,10 +52,17 @@ vi.mock('@alga-psa/analytics', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: vi.fn(),
+  revertBundlePropagationForChild: vi.fn(),
 }));
 
 vi.mock('@alga-psa/tickets/lib/liveUpdates', () => ({
@@ -64,7 +76,7 @@ vi.mock('@alga-psa/users/actions', () => ({
 
 function makeTicket(overrides: Record<string, unknown> = {}) {
   return {
-    ticket_id: 'ticket-1',
+    ticket_id: TICKET_1,
     ticket_number: 'T-2001',
     title: 'Portal Ticket',
     board_id: 'board-1',
@@ -117,6 +129,10 @@ function buildTrx(params: { ticket: Record<string, unknown> | undefined }) {
               .mockResolvedValue({ user_id: currentUser.user_id, contact_id: 'contact-1' }),
           }),
         };
+      }
+
+      if (table === 'boards') {
+        return { select: vi.fn().mockResolvedValue([]) };
       }
 
       if (table === 'contacts') {
@@ -188,7 +204,7 @@ describe('getClientTicketDetails ticket origin derivation', () => {
     );
 
     const { getClientTicketDetails } = await import('./client-tickets');
-    const ticket = await getClientTicketDetails('ticket-1');
+    const ticket = await getClientTicketDetails(TICKET_1);
 
     expect(ticket.ticket_origin).toBe(TICKET_ORIGINS.INTERNAL);
   });
@@ -207,7 +223,7 @@ describe('getClientTicketDetails ticket origin derivation', () => {
     );
 
     const { getClientTicketDetails } = await import('./client-tickets');
-    const ticket = await getClientTicketDetails('ticket-1');
+    const ticket = await getClientTicketDetails(TICKET_1);
 
     expect(ticket.ticket_origin).toBe(TICKET_ORIGINS.INBOUND_EMAIL);
   });
@@ -226,7 +242,7 @@ describe('getClientTicketDetails ticket origin derivation', () => {
     );
 
     const { getClientTicketDetails } = await import('./client-tickets');
-    const ticket = await getClientTicketDetails('ticket-1');
+    const ticket = await getClientTicketDetails(TICKET_1);
 
     expect(ticket.ticket_origin).toBe(TICKET_ORIGINS.CLIENT_PORTAL);
   });
@@ -245,7 +261,7 @@ describe('getClientTicketDetails ticket origin derivation', () => {
     );
 
     const { getClientTicketDetails } = await import('./client-tickets');
-    const ticket = await getClientTicketDetails('ticket-1');
+    const ticket = await getClientTicketDetails(TICKET_1);
 
     expect(ticket.ticket_origin).toBe(TICKET_ORIGINS.API);
   });

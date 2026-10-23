@@ -36,7 +36,7 @@ describe('workflow data-store enum localization contracts', () => {
       .filter((locale) => fs.existsSync(workflowLocalePath(locale)))
       .sort();
 
-    expect(locales).toEqual(['de', 'en', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'xx', 'yy']);
+    expect(locales).toEqual(['de', 'en', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'sv', 'xx', 'yy']);
 
     for (const locale of locales) {
       const data = readWorkflowLocale(locale);

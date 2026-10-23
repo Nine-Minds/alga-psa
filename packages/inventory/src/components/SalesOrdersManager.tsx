@@ -163,6 +163,7 @@ export interface SalesOrderServiceOption {
   service_id: string;
   service_name: string | null;
   sku: string | null;
+  product_category?: string | null;
   default_rate: number | null;
   is_kit?: boolean;
   kit_pricing_mode?: 'sum' | 'fixed' | null;
@@ -252,6 +253,7 @@ export function SalesOrdersManager({
     label: s.sku
       ? `${s.service_name ?? t('salesOrders.unnamedService', 'Unnamed')} (${s.sku})`
       : s.service_name ?? t('salesOrders.unnamedService', 'Unnamed'),
+    secondaryLabel: s.product_category ? s.product_category : undefined,
   }));
   const serviceById = React.useMemo(
     () => new Map(services.map((s) => [s.service_id, s])),

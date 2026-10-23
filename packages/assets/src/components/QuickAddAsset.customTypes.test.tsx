@@ -22,12 +22,23 @@ vi.mock('../actions/assetActions', () => ({
 }));
 
 vi.mock('../actions/clientLookupActions', () => ({
+  getVendorOptionsForAssets: vi.fn(async () => []),
   getAllClientsForAssets: vi.fn(async () => []),
   getClientLocationsForAssets: vi.fn(async () => []),
+  getClientContactsForAssets: vi.fn(async () => [
+    { contact_name_id: '11000000-0000-4000-8000-000000000001', client_id: 'b0000000-0000-4000-8000-00000000000b', full_name: 'Pat Person', email: null },
+  ]),
 }));
 
 vi.mock('../actions/assetTypeRegistryActions', () => ({
   getAssetTypes: (...args: unknown[]) => mockGetAssetTypes(...args),
+}));
+
+vi.mock('../actions/assetStatusActions', () => ({
+  listAssetStatuses: vi.fn(async () => [
+    { tenant: 't', status_id: 'st-active', slug: 'active', label: 'Active', kind: 'deployable', is_builtin: true, is_active: true, display_order: 0, created_at: '', updated_at: '' },
+    { tenant: 't', status_id: 'st-inactive', slug: 'inactive', label: 'Inactive', kind: 'undeployable', is_builtin: true, is_active: true, display_order: 1, created_at: '', updated_at: '' },
+  ]),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
@@ -77,6 +88,24 @@ vi.mock('@alga-psa/ui/components/Input', () => ({
       placeholder={placeholder}
       className={className}
     />
+  ),
+}));
+
+vi.mock('@alga-psa/ui/components/ContactPicker', () => ({
+  ContactPicker: ({ id, contacts = [], value, onValueChange, placeholder, disabled }: any) => (
+    <select
+      aria-label={id ?? 'contact-picker'}
+      value={value ?? ''}
+      onChange={(event) => onValueChange(event.target.value)}
+      disabled={disabled}
+    >
+      <option value="">{placeholder ?? 'Select contact'}</option>
+      {contacts.map((contact: any) => (
+        <option key={contact.contact_name_id} value={contact.contact_name_id}>
+          {contact.full_name}
+        </option>
+      ))}
+    </select>
   ),
 }));
 
@@ -294,13 +323,50 @@ describe('QuickAddAsset custom asset types', () => {
       os_type: 'Windows',
       os_version: '11',
       cpu_model: '',
-      cpu_cores: 0,
-      ram_gb: 0,
+      cpu_cores: null,
+      ram_gb: null,
       storage_type: '',
-      storage_capacity_gb: 0,
+      storage_capacity_gb: null,
       installed_software: [],
     });
     expect(payload.attributes).toBeUndefined();
+  });
+
+  it('submits the picked "Assigned to" contact and omits it (null) when none is picked', async () => {
+    const user = userEvent.setup();
+    const CONTACT_ID = '11000000-0000-4000-8000-000000000001';
+    const { typeSelect } = await renderQuickAdd();
+
+    await user.type(screen.getByLabelText('asset-name-input'), 'WS-03');
+    await user.type(screen.getByLabelText('asset-tag-input'), 'TAG-03');
+    await user.selectOptions(typeSelect, 'workstation');
+    await user.type(await screen.findByLabelText('workstation-os-type-input'), 'Windows');
+    await user.type(screen.getByLabelText('workstation-os-version-input'), '11');
+
+    const picker = (await screen.findByLabelText('asset-contact-picker')) as HTMLSelectElement;
+    expect(screen.getByText('Assigned to')).toBeTruthy();
+    await waitFor(() => expect(picker.options.length).toBeGreaterThan(1));
+    await user.selectOptions(picker, CONTACT_ID);
+    await user.click(screen.getByRole('button', { name: 'Create Asset' }));
+
+    await waitFor(() => expect(mockCreateAsset).toHaveBeenCalledTimes(1));
+    expect(mockCreateAsset.mock.calls[0][0].contact_name_id).toBe(CONTACT_ID);
+  });
+
+  it('renders and submits additional fields alongside built-in workstation fields', async () => {
+    const user = userEvent.setup();
+    mockGetAssetTypes.mockResolvedValue(REGISTRY.map((entry: any) => entry.slug === 'workstation'
+      ? { ...entry, fields_schema: [{ key: 'sc_session', label: 'ScreenConnect Session', kind: 'text' }] }
+      : entry));
+    const { typeSelect } = await renderQuickAdd();
+    await user.type(screen.getByLabelText('asset-name-input'), 'WS-02');
+    await user.type(screen.getByLabelText('asset-tag-input'), 'TAG-02');
+    await user.selectOptions(typeSelect, 'workstation');
+    expect(await screen.findByLabelText('workstation-os-type-input')).toBeTruthy();
+    await user.type(screen.getByLabelText('quick-add-asset-additional-field-sc_session'), 'sess-2562-abc');
+    await user.click(screen.getByRole('button', { name: 'Create Asset' }));
+    await waitFor(() => expect(mockCreateAsset).toHaveBeenCalledTimes(1));
+    expect(mockCreateAsset.mock.calls[0][0].attributes).toEqual({ sc_session: 'sess-2562-abc' });
   });
 
   it('D4: switching type keeps entered attribute values; fields simply stop rendering', async () => {

@@ -1,6 +1,5 @@
 'use client'
 
-import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@alga-psa/ui/components/Card';
@@ -28,10 +27,11 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { voidInvoice } from '../../../actions/voidInvoiceActions';
 import { InvoiceTaxSourceBadge } from '../../invoices/InvoiceTaxSourceBadge';
-import { InvoiceSyncBadge, qboInvoiceDeepLink } from '../../invoices/InvoiceSyncBadge';
+import { InvoiceSyncBadge, qboInvoiceDeepLink, xeroInvoiceDeepLink } from '../../invoices/InvoiceSyncBadge';
 import { useInvoiceSyncStatuses } from '../../invoices/useInvoiceSyncStatuses';
 import { resolveTemplatePrintSettingsFromAst } from '../../../lib/invoice-template-ast/printSettings';
 import DraftInvoiceDetailsCard, { type DraftInvoiceDetailsSummary } from './DraftInvoiceDetailsCard';
+import DraftInvoiceAdjustmentsCard from './DraftInvoiceAdjustmentsCard';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
@@ -56,12 +56,19 @@ interface InvoicePreviewPanelProps {
   onEmail?: () => Promise<void>;
   onEdit?: () => void;
   onUnfinalize?: () => Promise<void>;
-  onDraftInvoiceUpdated?: (updated: DraftInvoicePropertiesUpdateResult) => Promise<void> | void;
+  onDraftInvoiceUpdated?: (updated?: DraftInvoicePropertiesUpdateResult) => Promise<void> | void;
   isFinalized: boolean;
   /** Suppress mutation controls when embedded as cross-feature invoice detail. */
   readOnly?: boolean;
   creditApplied?: number;
   draftInvoiceSummary?: DbInvoiceViewModel | null;
+  /**
+   * Listing row for the selected invoice. A finalized invoice can no longer be
+   * re-pointed, so the profile it bills is stated here rather than edited —
+   * without it a finalized invoice gives no hint why it was addressed the way
+   * it was.
+   */
+  invoiceSummary?: DbInvoiceViewModel | null;
   /** Client owning the invoice; enables the manual Apply Credit action. */
   clientId?: string | null;
   /** Invoice total in minor units; caps the manual credit application. */
@@ -86,18 +93,19 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   readOnly = false,
   creditApplied = 0,
   draftInvoiceSummary = null,
+  invoiceSummary = null,
   clientId = null,
   invoiceTotal = 0,
   onCreditApplied
 }) => {
   const { t } = useTranslation('msp/invoicing');
-  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
   const router = useRouter();
   const [detailedInvoiceData, setDetailedInvoiceData] = useState<WasmInvoiceViewModel | null>(null);
   const [poSummary, setPoSummary] = useState<InvoicePurchaseOrderSummary | null>(null);
   const [resolvedTemplateId, setResolvedTemplateId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [previewAuthenticationExpired, setPreviewAuthenticationExpired] = useState(false);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [taxSource, setTaxSource] = useState<TaxSource>('internal');
@@ -114,6 +122,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const [voidLoading, setVoidLoading] = useState(false);
   const [applyCreditOpen, setApplyCreditOpen] = useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const previewInvoiceIdentityRef = React.useRef(invoiceId);
   const isReturnedActionError = (value: unknown) =>
     isActionMessageError(value) || isActionPermissionError(value);
 
@@ -121,6 +130,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const syncIds = invoiceId ? [invoiceId] : [];
   const { statuses: syncStatuses, hidden: syncHidden } = useInvoiceSyncStatuses(syncIds);
   const syncStatus = invoiceId ? syncStatuses[invoiceId] : undefined;
+  const syncProviderLabel = syncStatus?.provider === 'xero' ? 'Xero' : 'QuickBooks';
 
   // Match invoice/PDF rendering: honor an explicit URL template selection first,
   // then fall back to the invoice's resolved client/default template.
@@ -171,16 +181,24 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     const loadInvoiceData = async () => {
       if (!invoiceId) {
         setDetailedInvoiceData(null);
+        setPoSummary(null);
+        setResolvedTemplateId(null);
         setTaxSource('internal');
         setResolvedTemplateId(null);
         setIsLoading(false);
         return;
       }
 
+      if (previewInvoiceIdentityRef.current !== invoiceId) {
+        previewInvoiceIdentityRef.current = invoiceId;
+        setDetailedInvoiceData(null);
+        setPoSummary(null);
+        setResolvedTemplateId(null);
+      }
+
       setIsLoading(true);
       setError(null);
-      setDetailedInvoiceData(null);
-      setPoSummary(null);
+      setPreviewAuthenticationExpired(false);
 
       try {
         const [viewModel, summary, templateId] = await Promise.all([
@@ -191,12 +209,16 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
 
         if (cancelled) return;
 
+        if (isAuthenticationFailure(viewModel)) throw Object.assign(new Error('AuthenticationError'), { name: 'AuthenticationError' });
         if (isReturnedActionError(viewModel)) {
           throw new Error(getErrorMessage(viewModel));
         }
+        if (isAuthenticationFailure(summary)) throw Object.assign(new Error('AuthenticationError'), { name: 'AuthenticationError' });
         if (isReturnedActionError(summary)) {
           throw new Error(getErrorMessage(summary));
         }
+        if (isAuthenticationFailure(templateId)) throw Object.assign(new Error('AuthenticationError'), { name: 'AuthenticationError' });
+        if (isReturnedActionError(templateId)) throw new Error(getErrorMessage(templateId));
         if (!viewModel) {
           throw new Error(`Invoice data for ID ${invoiceId} not found.`);
         }
@@ -210,15 +232,17 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
         setDetailedInvoiceData(viewModel);
       } catch (err) {
         if (cancelled) return;
+        if (isAuthenticationFailure(err)) {
+          setPreviewAuthenticationExpired(true);
+          setError(null);
+          return;
+        }
         console.error(`Error fetching detailed data for invoice ${invoiceId}:`, err);
         const message = err instanceof Error ? err.message : 'An unknown error occurred.';
         setError(t('invoicePreview.errors.loadFailed', {
           message,
           defaultValue: 'Failed to load preview: {{message}}',
         }));
-        setDetailedInvoiceData(null);
-        setPoSummary(null);
-        setResolvedTemplateId(null);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -247,6 +271,15 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
           return;
         }
 
+        if (isAuthenticationFailure(result)) {
+          setPreviewAuthenticationExpired(true);
+          return;
+        }
+        if (isReturnedActionError(result)) {
+          setError(getErrorMessage(result));
+          return;
+        }
+
         if (result && !('permissionError' in result)) {
           setSourceQuote(result);
           return;
@@ -254,8 +287,9 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
 
         setSourceQuote(null);
       } catch (sourceQuoteError) {
-        console.error(`Error fetching source quote for invoice ${invoiceId}:`, sourceQuoteError);
         if (isMounted) {
+          if (isAuthenticationFailure(sourceQuoteError)) setPreviewAuthenticationExpired(true);
+          else console.error(`Error fetching source quote for invoice ${invoiceId}`);
           setSourceQuote(null);
         }
       }
@@ -266,7 +300,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [invoiceId]);
+  }, [invoiceId, previewRefreshCounter]);
 
   useEffect(() => {
     if (!detailedInvoiceData || typeof window === 'undefined') {
@@ -306,13 +340,21 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     let isMounted = true;
     getInvoiceAnnotations(invoiceId)
       .then((annotations) => {
-        if (isMounted) {
-          setInvoiceAnnotations(annotations);
+        if (!isMounted) return;
+        if (isAuthenticationFailure(annotations)) {
+          setPreviewAuthenticationExpired(true);
+          return;
         }
+        if (isReturnedActionError(annotations)) {
+          setError(getErrorMessage(annotations));
+          return;
+        }
+        setInvoiceAnnotations(annotations);
       })
       .catch((annotationError) => {
-        console.error(`Error fetching annotations for invoice ${invoiceId}:`, annotationError);
         if (isMounted) {
+          if (isAuthenticationFailure(annotationError)) setPreviewAuthenticationExpired(true);
+          else console.error(`Error fetching annotations for invoice ${invoiceId}`);
           setInvoiceAnnotations([]);
         }
       });
@@ -320,7 +362,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [invoiceId]);
+  }, [invoiceId, previewRefreshCounter]);
 
   const handleAction = async (action: () => Promise<void>, actionLabel: string) => {
     setIsActionLoading(true);
@@ -349,6 +391,8 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
         invoice_number: updated.invoiceNumber,
         invoice_date: updated.invoiceDate,
         due_date: updated.dueDate,
+        billing_profile_id: updated.billingProfileId,
+        billing_profile_name: updated.billingProfileName,
       };
     });
 
@@ -402,10 +446,43 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   return (
     <Card className="h-full">
       <div className="p-6" ref={containerRef}>
+        {previewAuthenticationExpired ? (
+          <Alert variant="warning" className="mb-4">
+            <AlertDescription>
+              {t('invoicePreview.sessionExpired', { defaultValue: 'Your session expired while loading this invoice. Sign in again, then retry the preview.' })}
+              <span className="ml-3 inline-flex gap-3">
+                <a id="invoice-preview-sign-in" href="/auth/msp/signin" target="_blank" rel="noreferrer" className="underline">{t('draftInvoiceAdjustments.signIn', { defaultValue: 'Sign in' })}</a>
+                <Button id="invoice-preview-retry" type="button" variant="secondary" onClick={() => setPreviewRefreshCounter((count) => count + 1)}>{t('draftInvoiceAdjustments.retry', { defaultValue: 'Retry loading' })}</Button>
+              </span>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
         {!readOnly && !isFinalized && draftInvoiceEditorSummary ? (
           <DraftInvoiceDetailsCard
             invoice={draftInvoiceEditorSummary}
             onSaved={handleDraftInvoiceUpdated}
+          />
+        ) : null}
+
+        {!readOnly && !isFinalized && draftInvoiceSummary && draftInvoiceSummary.status === 'draft' ? (
+          <DraftInvoiceAdjustmentsCard
+            invoice={draftInvoiceSummary}
+            blockedReason={
+              syncStatus?.state === 'synced'
+                ? t('draftInvoiceAdjustments.blocked.exported', {
+                    defaultValue:
+                      'This invoice is synced to an accounting system. Void it or issue a separate credit instead of editing its lines.',
+                  })
+                : null
+            }
+            onUpdated={async () => {
+              // Refresh the DraftsTab list row as well as the detailed preview:
+              // that row owns the summary passed back into the adjustment editor
+              // after the operator deselects and reselects this invoice.
+              await onDraftInvoiceUpdated?.();
+              setPreviewRefreshCounter((current) => current + 1);
+            }}
           />
         ) : null}
 
@@ -421,12 +498,21 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
               )}
             </div>
           </div>
+          {/* A finalized invoice states the profile it bills; the draft card
+              above already lets a draft's pick be corrected (D6). */}
+          {isFinalized && invoiceSummary?.client_has_multiple_billing_profiles ? (
+            <p id="invoice-preview-billing-profile" className="mb-2 text-sm text-[rgb(var(--color-text-600))]">
+              {t('invoicePreview.labels.billingProfile', {
+                defaultValue: 'Billing profile: {{name}}',
+                name: invoiceSummary.billing_profile_name
+                  || t('invoicePreview.labels.billingProfileDefault', {
+                    defaultValue: "the client's default profile",
+                  }),
+              })}
+            </p>
+          ) : null}
           <CustomSelect
-            options={templates.filter(template =>
-              releaseV16Enabled ||
-              template.standard_invoice_template_code !== 'standard-invoice-by-ticket' ||
-              template.template_id === effectiveTemplateId || !template.isStandard
-            ).map((template) => ({
+            options={templates.map((template) => ({
               value: template.template_id,
               label: (
                 <div className="flex items-center gap-2">
@@ -475,7 +561,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 try {
                   await queueInvoiceSync(invoiceId);
                   await runAccountingSyncNow();
-                  setSyncActionFeedback({ type: 'success', message: 'Invoice queued for QuickBooks sync.' });
+                  setSyncActionFeedback({ type: 'success', message: `Invoice queued for ${syncProviderLabel} sync.` });
                 } catch (err) {
                   setSyncActionFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Sync failed.' });
                 } finally {
@@ -483,7 +569,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 }
               }}
             >
-              {t('invoicePreview.actions.syncNow', { defaultValue: 'Sync to QuickBooks' })}
+              {t('invoicePreview.actions.syncNow', { defaultValue: `Sync to ${syncProviderLabel}` })}
             </Button>
 
             {syncStatus.state === 'drift' && (
@@ -499,7 +585,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                     setSyncActionFeedback(null);
                     try {
                       await resolveAccountingDriftReExport(invoiceId);
-                      setSyncActionFeedback({ type: 'success', message: 'Re-export to QuickBooks queued.' });
+                      setSyncActionFeedback({ type: 'success', message: `Re-export to ${syncProviderLabel} queued.` });
                     } catch (err) {
                       setSyncActionFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Re-export failed.' });
                     } finally {
@@ -507,7 +593,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                     }
                   }}
                 >
-                  {t('invoicePreview.actions.driftReexport', { defaultValue: 'Re-export to QuickBooks' })}
+                  {t('invoicePreview.actions.driftReexport', { defaultValue: `Re-export to ${syncProviderLabel}` })}
                 </Button>
 
                 <Button
@@ -521,7 +607,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                     setSyncActionFeedback(null);
                     try {
                       await resolveAccountingDriftAccept(invoiceId);
-                      setSyncActionFeedback({ type: 'success', message: 'QuickBooks version accepted.' });
+                      setSyncActionFeedback({ type: 'success', message: `${syncProviderLabel} version accepted.` });
                     } catch (err) {
                       setSyncActionFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Accept failed.' });
                     } finally {
@@ -529,7 +615,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                     }
                   }}
                 >
-                  {t('invoicePreview.actions.driftAccept', { defaultValue: 'Accept QuickBooks Version' })}
+                  {t('invoicePreview.actions.driftAccept', { defaultValue: `Accept ${syncProviderLabel} Version` })}
                 </Button>
               </>
             )}
@@ -542,11 +628,17 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 asChild
               >
                 <a
-                  href={qboInvoiceDeepLink(syncStatus.externalId, syncStatus.environment)}
+                  href={
+                    syncStatus.provider === 'xero'
+                      ? xeroInvoiceDeepLink(syncStatus.externalId)
+                      : qboInvoiceDeepLink(syncStatus.externalId, syncStatus.environment)
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  {t('invoicePreview.actions.viewInQbo', { defaultValue: 'View in QuickBooks' })}
+                  {syncStatus.provider === 'xero'
+                    ? t('invoicePreview.actions.viewInXero', { defaultValue: 'View in Xero' })
+                    : t('invoicePreview.actions.viewInQbo', { defaultValue: 'View in QuickBooks' })}
                 </a>
               </Button>
             )}
@@ -713,6 +805,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 <CreditApplicationUI
                   clientId={clientId}
                   invoiceId={invoiceId ?? undefined}
+                  currencyCode={detailedInvoiceData?.currencyCode}
                   invoiceAmount={Math.max((invoiceTotal ?? 0) - creditApplied, 0)}
                   onApplyCredit={async () => {
                     setApplyCreditOpen(false);
@@ -831,6 +924,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 <CreditExpirationInfo
                   creditApplied={creditApplied}
                   invoiceId={invoiceId}
+                  currencyCode={detailedInvoiceData?.currencyCode}
                 />
               </div>
             )}
@@ -848,3 +942,10 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
 };
 
 export default InvoicePreviewPanel;
+
+function isAuthenticationFailure(value: unknown): value is { success: false; code: 'UNAUTHENTICATED'; message?: string; error?: string; params?: Record<string, unknown> } | { name: 'AuthenticationError'; message?: string; code?: string } {
+  if (!value || typeof value !== 'object') return false;
+  const error = value as { name?: string; message?: string; code?: string };
+  return error.name === 'AuthenticationError' || error.code === 'UNAUTHENTICATED'
+    || error.message === 'User not authenticated';
+}

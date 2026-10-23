@@ -11,6 +11,7 @@ import { AssetAgentCell, AssetCoverageCell, AssetIdentityMeta, AssetPatchingCell
 import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {
   createPrintColumnsFromColumnDefinitions,
@@ -23,6 +24,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import {
   DropdownMenu,
@@ -31,11 +33,12 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator
 } from '@alga-psa/ui/components/DropdownMenu';
-import type { Asset, AssetListResponse, AssetQueryParams, ClientMaintenanceSummary, ColumnDefinition, IClient, IClientLocation } from '@alga-psa/types';
+import type { Asset, AssetGroup, AssetGroupKind, AssetListResponse, AssetQueryParams, AssetStatus, ClientMaintenanceSummary, ColumnDefinition, IClient, IClientLocation, IContact } from '@alga-psa/types';
 import { bulkDeleteAssets, bulkUpdateAssets, getClientMaintenanceSummaries, listAssets } from '../actions/assetActions';
-import { unwrapAssetActionResult } from '../actions/assetActionErrors';
+import { assetActionErrorMessage, isAssetActionError, unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { loadAssetDetailDrawerData } from '../actions/assetDrawerActions';
-import { getAllClientsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
+import { getAllClientsForAssets, getClientContactsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
+import { addAssetsToGroup, createAssetGroup, listAssetGroups } from '../actions/assetGroupActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRangeSelection } from '@alga-psa/ui/hooks';
 import { toast } from 'react-hot-toast';
@@ -44,6 +47,7 @@ import { QuickAddAsset } from './QuickAddAsset';
 import { AssetCommandPalette } from './AssetCommandPalette';
 import { AssetTypeBreakdownCard } from './AssetTypeBreakdownCard';
 import { useAssetTypeRegistry } from './shared/useAssetTypeOptions';
+import { buildAssetStatusOptions, resolveAssetStatusLabel, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
 import { fallbackAssetTypeLabel, resolveAssetTypeLabel } from '../lib/assetTypeDisplay';
 import { isBuiltinAssetTypeSlug } from '../lib/assetTypeAttributes';
 import { getIconComponent } from '@alga-psa/ui/components/IconPicker';
@@ -81,11 +85,32 @@ import {
   Trash2,
   MapPin,
   CircleDot,
+  UserPlus,
 } from 'lucide-react';
+import { useListViews } from '@alga-psa/list-views/hooks';
+import { ListViewPicker } from '@alga-psa/list-views/components';
+import {
+  assetColumnsFromView,
+  assetColumnsToView,
+  createAssetListViewAdapter,
+  type AssetListLiveState,
+} from '../lib/assetListViewAdapter';
 
 interface AssetDashboardClientProps {
   initialAssets: AssetListResponse;
 }
+
+/** The column chooser's starting selection, in display order. */
+const DEFAULT_VISIBLE_ASSET_COLUMNS = [
+  'select',
+  'name',
+  'agent',
+  'patching',
+  'coverage',
+  'client_name',
+  'location',
+  'actions',
+] as const satisfies readonly ColumnKey[];
 
 type ColumnKey =
   | 'select'
@@ -102,10 +127,36 @@ type ColumnKey =
   | 'patching'
   | 'coverage'
   | 'client_name'
+  | 'contact_name'
+  | 'manufacturer'
+  | 'model'
+  | 'group'
   | 'location'
   | 'actions';
 
-const STATUS_OPTIONS: string[] = ['active', 'inactive', 'maintenance'];
+/**
+ * Status badge tone per lifecycle kind. Full class strings on purpose —
+ * Tailwind's JIT cannot see a template-interpolated class name.
+ */
+const STATUS_KIND_BADGE: Record<string, { pill: string; dot: string }> = {
+  deployable: {
+    pill: 'bg-[rgb(var(--badge-success-bg))] text-[rgb(var(--badge-success-text))] ring-1 ring-[rgb(var(--badge-success-border))]',
+    dot: 'bg-[rgb(var(--badge-success-text))]',
+  },
+  pending: {
+    pill: 'bg-[rgb(var(--badge-warning-bg))] text-[rgb(var(--badge-warning-text))] ring-1 ring-[rgb(var(--badge-warning-border))]',
+    dot: 'bg-[rgb(var(--badge-warning-text))]',
+  },
+  undeployable: {
+    pill: 'bg-[rgb(var(--badge-default-bg))] text-[rgb(var(--badge-default-text))] ring-1 ring-[rgb(var(--badge-default-border))]',
+    dot: 'bg-[rgb(var(--badge-default-text))]',
+  },
+  archived: {
+    pill: 'bg-[rgb(var(--badge-default-bg))] text-[rgb(var(--badge-default-text))] ring-1 ring-[rgb(var(--badge-default-border))]',
+    dot: 'bg-[rgb(var(--badge-default-text))]',
+  },
+};
+
 const TYPE_OPTIONS: string[] = ['workstation', 'server', 'network_device', 'mobile_device', 'printer'];
 const ASSETS_PRINT_PAGE_SIZE = 5000;
 
@@ -157,6 +208,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   const [sortBy, setSortBy] = useState<string>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  // F021: status filter + bulk options come from the tenant's status registry.
+  const { statuses: assetStatuses } = useAssetStatusRegistry();
   const [typeFilters, setTypeFilters] = useState<string[]>([]);
   const [clientFilters, setClientFilters] = useState<string[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
@@ -165,18 +218,22 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   const [clientsLoading, setClientsLoading] = useState(false);
   const [agentStatusFilters, setAgentStatusFilters] = useState<string[]>([]);
   const [rmmManagedFilter, setRmmManagedFilter] = useState<string[]>([]);
-  const [visibleColumnIds, setVisibleColumnIds] = useState<ColumnKey[]>([
-    'select',
-    'name',
-    'agent',
-    'patching',
-    'coverage',
-    'client_name',
-    'location',
-    'actions'
-  ]);
+  const [visibleColumnIds, setVisibleColumnIds] = useState<ColumnKey[]>(() => [...DEFAULT_VISIBLE_ASSET_COLUMNS]);
+  const [columnSizing, setColumnSizing] = useState<Record<string, number> | undefined>(undefined);
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
   const [isBulkStatusOpen, setIsBulkStatusOpen] = useState(false);
+  // F039: bulk assignment only makes sense inside one client — a contact
+  // belongs to a client, so a mixed selection has no valid picker.
+  const [isBulkAssignOpen, setIsBulkAssignOpen] = useState(false);
+  const [bulkContacts, setBulkContacts] = useState<IContact[]>([]);
+  // F075: grouping only makes sense inside one client, like assignment.
+  const [isBulkGroupOpen, setIsBulkGroupOpen] = useState(false);
+  const [clientGroups, setClientGroups] = useState<AssetGroup[]>([]);
+  const [bulkGroupId, setBulkGroupId] = useState<string>('');
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupKind, setNewGroupKind] = useState<AssetGroupKind>('bundle');
+  const [groupFilter, setGroupFilter] = useState<string>('');
+  const [confirmBulkWorkspace, setConfirmBulkWorkspace] = useState(false);
   const [isBulkLocationOpen, setIsBulkLocationOpen] = useState(false);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [bulkStatusValue, setBulkStatusValue] = useState<string>('active');
@@ -484,6 +541,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       client_id: clientFilters.length > 0 ? clientFilters[0] : undefined,
       agent_status: agentStatusFilters.length > 0 ? (agentStatusFilters[0] as AssetQueryParams['agent_status']) : undefined,
       rmm_managed: rmmManaged,
+      group_id: groupFilter || undefined,
       // Patch/OS state lives on the per-type extension row.
       include_extension_data: true,
       sort_by: sortBy,
@@ -494,6 +552,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     agentStatusFilters,
     clientFilters,
     debouncedSearchTerm,
+    groupFilter,
     rmmManagedFilter,
     sortBy,
     sortDirection,
@@ -726,6 +785,124 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     }
   }, [bulkCustomLocation, bulkLocationId, bulkLocationMode, refreshAssets, removeSucceededSelections, selectedAssetIds, summarizeBulkResult, t]);
 
+  useEffect(() => {
+    if (!isBulkAssignOpen || !singleClientSelectionId) {
+      setBulkContacts([]);
+      return;
+    }
+    let mounted = true;
+    void (async () => {
+      try {
+        const list = await getClientContactsForAssets(singleClientSelectionId, null);
+        if (mounted) setBulkContacts(list);
+      } catch (error) {
+        console.error('Failed to load client contacts for bulk assign:', error);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [isBulkAssignOpen, singleClientSelectionId]);
+
+  useEffect(() => {
+    const clientId = singleClientSelectionId ?? (clientFilters.length === 1 ? clientFilters[0] : null);
+    if (!clientId) {
+      setClientGroups([]);
+      return;
+    }
+    let mounted = true;
+    void (async () => {
+      const result = await listAssetGroups(clientId);
+      if (mounted && Array.isArray(result)) setClientGroups(result);
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [singleClientSelectionId, clientFilters, isBulkGroupOpen]);
+
+  // The group select only renders while a client is in scope. Without this a
+  // filter picked and then orphaned by clearing the selection kept filtering
+  // the list from a control nobody could see.
+  useEffect(() => {
+    if (groupFilter && !clientGroups.some((group) => group.group_id === groupFilter)) {
+      setGroupFilter('');
+    }
+  }, [clientGroups, groupFilter]);
+
+  /** The kind the bulk dialog would put the selection into. */
+  const bulkTargetKind: AssetGroupKind = bulkGroupId
+    ? clientGroups.find((group) => group.group_id === bulkGroupId)?.kind ?? 'bundle'
+    : newGroupKind;
+
+  const applyBulkAddToGroup = useCallback(async () => {
+    if (!singleClientSelectionId) return;
+    setBulkActionLoading(true);
+    try {
+      // Creating the group and filling it is one call, so a failure to add
+      // the assets cannot leave an empty group behind.
+      const result = bulkGroupId
+        ? await addAssetsToGroup(bulkGroupId, selectedAssetIds)
+        : await createAssetGroup({
+            clientId: singleClientSelectionId,
+            name: newGroupName,
+            kind: newGroupKind,
+            assetIds: selectedAssetIds,
+          });
+
+      if (isAssetActionError(result)) {
+        toast.error(assetActionErrorMessage(result));
+        return;
+      }
+      if (!result || !('group_id' in result)) {
+        toast.error(t('assetGroups.errors.addFailed', { defaultValue: 'Unable to add the selected assets.' }));
+        return;
+      }
+      setIsBulkGroupOpen(false);
+      setConfirmBulkWorkspace(false);
+      setBulkGroupId('');
+      setNewGroupName('');
+      setSelectedAssetIds([]);
+      refreshAssets();
+    } finally {
+      setBulkActionLoading(false);
+    }
+  }, [bulkGroupId, newGroupKind, newGroupName, refreshAssets, selectedAssetIds, singleClientSelectionId, t]);
+
+  const handleBulkAddToGroup = useCallback(async () => {
+    // FR-E4: a shared workspace clears the assignee of everything it takes
+    // in. The drawer asks first; doing it silently from the list did not.
+    const assignedCount = assets
+      .filter((asset) => selectedAssetIds.includes(asset.asset_id) && asset.contact_name_id)
+      .length;
+    if (bulkTargetKind === 'shared_workspace' && assignedCount > 0) {
+      setConfirmBulkWorkspace(true);
+      return;
+    }
+    await applyBulkAddToGroup();
+  }, [applyBulkAddToGroup, assets, bulkTargetKind, selectedAssetIds]);
+
+  const handleBulkAssignContact = useCallback(async (contactId: string | null) => {
+    setBulkActionLoading(true);
+    try {
+      const response = unwrapAssetActionResult(await bulkUpdateAssets(selectedAssetIds, { contact_name_id: contactId }));
+      summarizeBulkResult(
+        t('assetDashboardClient.bulk.actions.assignContact', { defaultValue: 'Assignment' }),
+        response.succeeded,
+        response.failed
+      );
+      removeSucceededSelections(response.results);
+      setIsBulkAssignOpen(false);
+      refreshAssets();
+    } catch (error) {
+      console.error('Failed to bulk assign assets:', error);
+      toast.error(t('assetDashboardClient.bulk.errors.assignFailed', {
+        defaultValue: 'Unable to assign selected assets.'
+      }));
+    } finally {
+      setBulkActionLoading(false);
+    }
+  }, [refreshAssets, removeSucceededSelections, selectedAssetIds, summarizeBulkResult, t]);
+
   const handleBulkDelete = useCallback(async () => {
     setBulkActionLoading(true);
     try {
@@ -774,13 +951,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
   const renderAssetDetails = useCallback((asset: Asset): string => {
     if (asset.workstation) {
-      return `${asset.workstation.os_type} - ${asset.workstation.cpu_model} - ${asset.workstation.ram_gb}GB RAM`;
+      return `${asset.workstation.os_type} - ${asset.workstation.cpu_model} - ${asset.workstation.ram_gb != null ? `${asset.workstation.ram_gb}GB RAM` : t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })}`;
     }
     if (asset.network_device) {
       return `${asset.network_device.device_type} - ${asset.network_device.management_ip || t('assetDashboardClient.details.noIp', { defaultValue: 'No IP' })}`;
     }
     if (asset.server) {
-      return `${asset.server.os_type} - ${asset.server.cpu_model} - ${asset.server.ram_gb}GB RAM`;
+      return `${asset.server.os_type} - ${asset.server.cpu_model} - ${asset.server.ram_gb != null ? `${asset.server.ram_gb}GB RAM` : t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })}`;
     }
     if (asset.mobile_device) {
       return `${asset.mobile_device.os_type} - ${asset.mobile_device.model}`;
@@ -791,11 +968,20 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     return t('assetDashboardClient.details.noDetails', { defaultValue: 'No details available' });
   }, [t]);
 
-  const getAssetStatusLabel = useCallback((status: string) => {
-    return t(`assetDashboardClient.statuses.${status}`, {
-      defaultValue: status.charAt(0).toUpperCase() + status.slice(1)
-    });
-  }, [t]);
+  // F021: the filter list and the bulk dialog read the tenant's
+  // asset_statuses registry instead of three hardcoded slugs.
+  // One reading of a slug across every surface: the registry label wins and
+  // only an untouched builtin is translated, so a renamed status reads the
+  // same here, in the drawer and on the details page.
+  const getAssetStatusLabel = useCallback(
+    (status: string) => resolveAssetStatusLabel(t, status, assetStatuses),
+    [assetStatuses, t]
+  );
+
+  const statusFilterOptions = useMemo(
+    () => buildAssetStatusOptions(assetStatuses, t),
+    [assetStatuses, t]
+  );
 
   const getAssetTypeLabel = useCallback((type: string) => {
     // Built-ins keep their existing i18n labels; custom slugs resolve to the
@@ -938,7 +1124,9 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       dataIndex: 'coverage',
       title: t('assetDashboardClient.table.coverage', { defaultValue: 'Coverage' }),
       sortable: false,
-      render: (_: unknown, record: Asset) => <AssetCoverageCell asset={record} now={Date.now()} />
+      render: (_: unknown, record: Asset) => (
+        <AssetCoverageCell asset={record} now={Date.now()} statuses={assetStatuses} />
+      )
     },
     asset_tag: {
       dataIndex: 'asset_tag',
@@ -974,21 +1162,14 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       title: t('assetDashboardClient.table.status', { defaultValue: 'Status' }),
       render: (value: unknown) => {
         const status = value as string;
+        // F021: the badge tone follows the registry's lifecycle kind, so a
+        // tenant's custom "In use" reads as deployed and "Retired" does not.
+        const kind = assetStatuses?.find((candidate: AssetStatus) => candidate.slug === status)?.kind
+          ?? (status === 'active' ? 'deployable' : status === 'inactive' ? 'undeployable' : 'pending');
+        const badge = STATUS_KIND_BADGE[kind] ?? STATUS_KIND_BADGE.undeployable;
         return (
-          <span
-            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
-              status === 'active'
-                ? 'bg-[rgb(var(--badge-success-bg))] text-[rgb(var(--badge-success-text))] ring-1 ring-[rgb(var(--badge-success-border))]'
-                : status === 'inactive'
-                ? 'bg-[rgb(var(--badge-default-bg))] text-[rgb(var(--badge-default-text))] ring-1 ring-[rgb(var(--badge-default-border))]'
-                : 'bg-[rgb(var(--badge-warning-bg))] text-[rgb(var(--badge-warning-text))] ring-1 ring-[rgb(var(--badge-warning-border))]'
-            }`}
-          >
-            <span
-              className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                status === 'active' ? 'bg-[rgb(var(--badge-success-text))]' : status === 'inactive' ? 'bg-[rgb(var(--badge-default-text))]' : 'bg-[rgb(var(--badge-warning-text))]'
-              }`}
-            ></span>
+          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${badge.pill}`}>
+            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${badge.dot}`}></span>
             {getAssetStatusLabel(status)}
           </span>
         );
@@ -1029,6 +1210,37 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
         }
         return <ClientNameCell clientId={record.client_id} clientName={name} logoUrl={logoUrl} />;
       }
+    },
+    contact_name: {
+      dataIndex: 'contact_name',
+      title: t('assetDashboardClient.table.assignedTo', { defaultValue: 'Assigned to' }),
+      render: (value: unknown) => (
+        <span className="text-sm font-medium text-gray-700">{(value as string) || t('common.states.none', { defaultValue: 'None' })}</span>
+      )
+    },
+    group: {
+      dataIndex: 'group',
+      title: t('assetDashboardClient.table.group', { defaultValue: 'Group' }),
+      sortable: false,
+      render: (_: unknown, record: Asset) => (
+        <span className="text-sm font-medium text-gray-700">
+          {record.group?.name || t('common.states.none', { defaultValue: 'None' })}
+        </span>
+      )
+    },
+    manufacturer: {
+      dataIndex: 'manufacturer',
+      title: t('assetDashboardClient.table.manufacturer', { defaultValue: 'Manufacturer' }),
+      render: (value: unknown) => (
+        <span className="text-sm font-medium text-gray-700">{(value as string) || t('common.states.none', { defaultValue: 'None' })}</span>
+      )
+    },
+    model: {
+      dataIndex: 'model',
+      title: t('assetDashboardClient.table.model', { defaultValue: 'Model' }),
+      render: (value: unknown) => (
+        <span className="text-sm font-medium text-gray-700">{(value as string) || t('common.states.none', { defaultValue: 'None' })}</span>
+      )
     },
     location: {
       dataIndex: 'location',
@@ -1104,11 +1316,74 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     clientLogoById,
     getAssetStatusLabel,
     getAssetTypeLabel,
+    assetStatuses,
   ]);
 
   const columns: ColumnDefinition<Asset>[] = useMemo(() => {
     return visibleColumnIds.map((key) => columnLibrary[key]);
   }, [visibleColumnIds, columnLibrary]);
+
+  // ── Named list views ──────────────────────────────────────────────────────
+  const allColumnIds = useMemo(() => Object.keys(columnLibrary) as ColumnKey[], [columnLibrary]);
+
+  const listViewLive = useMemo<AssetListLiveState>(() => ({
+    filters: {
+      statuses: statusFilters,
+      types: typeFilters,
+      clientIds: clientFilters,
+      agentStatuses: agentStatusFilters,
+      rmmManaged: rmmManagedFilter,
+    },
+    sort: { by: sortBy, direction: sortDirection },
+    pageSize,
+    columnSizing,
+    ...assetColumnsToView(visibleColumnIds, allColumnIds),
+  }), [
+    statusFilters,
+    typeFilters,
+    clientFilters,
+    agentStatusFilters,
+    rmmManagedFilter,
+    sortBy,
+    sortDirection,
+    pageSize,
+    columnSizing,
+    visibleColumnIds,
+    allColumnIds,
+  ]);
+
+  const assetListViewAdapter = useMemo(() => createAssetListViewAdapter({
+    defaultPageSize: 10,
+    defaultColumns: assetColumnsToView(DEFAULT_VISIBLE_ASSET_COLUMNS, allColumnIds),
+    knownClientIds: clients.length > 0 ? new Set(clients.map((client) => client.client_id)) : undefined,
+  }), [allColumnIds, clients]);
+
+  const handleListViewApply = useCallback((next: AssetListLiveState) => {
+    // A view replaces the whole filter set; search text is not part of it.
+    setSearchTerm('');
+    setStatusFilters(next.filters.statuses ?? []);
+    setTypeFilters(next.filters.types ?? []);
+    setClientFilters(next.filters.clientIds ?? []);
+    setAgentStatusFilters(next.filters.agentStatuses ?? []);
+    setRmmManagedFilter(next.filters.rmmManaged ?? []);
+    setSortBy(next.sort.by);
+    setSortDirection(next.sort.direction);
+    setPageSize(next.pageSize);
+    setCurrentPage(1);
+    setColumnSizing(next.columnSizing);
+    setVisibleColumnIds(assetColumnsFromView(
+      next.columnVisibility,
+      next.columnOrder,
+      allColumnIds,
+      DEFAULT_VISIBLE_ASSET_COLUMNS,
+    ));
+  }, [allColumnIds]);
+
+  const listViews = useListViews({
+    adapter: assetListViewAdapter,
+    live: listViewLive,
+    onApply: handleListViewApply,
+  });
 
   const printColumns = useMemo(() => (
     createPrintColumnsFromColumnDefinitions(Object.values(columnLibrary), {
@@ -1126,6 +1401,10 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
         client_name: (asset) => asset.client?.client_name
           || clientNameById.get(asset.client_id)
           || t('assetDashboardClient.details.unassigned', { defaultValue: 'Unassigned' }),
+        contact_name: (asset) => asset.contact_name || t('assetDashboardClient.print.emptyValue', { defaultValue: '-' }),
+        group: (asset) => asset.group?.name || t('assetDashboardClient.print.emptyValue', { defaultValue: '-' }),
+        manufacturer: (asset) => asset.manufacturer || t('assetDashboardClient.print.emptyValue', { defaultValue: '-' }),
+        model: (asset) => asset.model || t('assetDashboardClient.print.emptyValue', { defaultValue: '-' }),
         location: (asset) => asset.location || t('assetDashboardClient.print.emptyValue', { defaultValue: '-' }),
       },
     })
@@ -1222,6 +1501,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                   >
                   {t('assetDashboardClient.filters.reset', { defaultValue: 'Reset' })}
                   </Button>
+                  <ListViewPicker id="assets-view-picker" controller={listViews} />
                 </div>
               <div className="flex flex-wrap items-center gap-2">
                 <DropdownMenu>
@@ -1233,7 +1513,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-48">
-                    {STATUS_OPTIONS.map((status) => (
+                    {statusFilterOptions.map(({ value: status }: { value: string }) => (
                       <DropdownMenuItem key={status} id={`filter-status-${status}`} onSelect={(event) => event.preventDefault()}>
                         <Checkbox
                           id={`status-checkbox-${status}`}
@@ -1246,6 +1526,21 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
+
+                {/* F075: only offered once the list is narrowed to one client,
+                    because a group belongs to a client. */}
+                {clientGroups.length > 0 ? (
+                  <CustomSelect
+                    id="group-filter-select"
+                    value={groupFilter}
+                    onValueChange={setGroupFilter}
+                    options={[
+                      { value: '', label: t('assetDashboardClient.filters.allGroups', { defaultValue: 'All groups' }) },
+                      ...clientGroups.map((group) => ({ value: group.group_id, label: group.name })),
+                    ]}
+                    className="min-w-[180px]"
+                  />
+                ) : null}
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -1528,6 +1823,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                 sortBy={sortBy}
                 sortDirection={sortDirection}
                 onSortChange={handleTableSortChange}
+                columnSizing={columnSizing}
+                onColumnSizingChange={setColumnSizing}
               />
             </ShortcutActiveRegion>
             <div className="app-print-root app-print-only">
@@ -1604,10 +1901,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
               id="bulk-status-select"
               value={bulkStatusValue}
               onValueChange={setBulkStatusValue}
-              options={STATUS_OPTIONS.map((status) => ({
-                value: status,
-                label: getAssetStatusLabel(status),
-              }))}
+              options={statusFilterOptions}
             />
           </div>
         </DialogContent>
@@ -1736,6 +2030,128 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
           </p>
         </DialogContent>
       </Dialog>
+      <Dialog
+        id="bulk-assign-assets"
+        isOpen={isBulkAssignOpen}
+        onClose={() => setIsBulkAssignOpen(false)}
+        title={t('assetDashboardClient.bulk.assignDialog.title', { defaultValue: 'Assign to contact' })}
+        className="max-w-lg"
+        footer={(
+          <div className="flex justify-between gap-2">
+            <Button
+              id="bulk-assign-unassign"
+              variant="outline"
+              disabled={bulkActionLoading}
+              onClick={() => { void handleBulkAssignContact(null); }}
+            >
+              {t('assetBento.unassign', { defaultValue: 'Unassign' })}
+            </Button>
+            <Button id="bulk-assign-cancel" variant="secondary" onClick={() => setIsBulkAssignOpen(false)}>
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+          </div>
+        )}
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              {t('assetDashboardClient.bulk.assignDialog.description', {
+                defaultValue: 'Assign {{count}} selected asset(s) to one of this client\u2019s contacts.',
+                count: selectedAssetIds.length,
+              })}
+            </p>
+            <ContactPicker
+              id="bulk-assign-contact-picker"
+              label={t('assetDashboardClient.table.assignedTo', { defaultValue: 'Assigned to' })}
+              contacts={bulkContacts}
+              value={''}
+              onValueChange={(value) => { if (value) void handleBulkAssignContact(value); }}
+              clientId={singleClientSelectionId ?? undefined}
+              placeholder={t('assetForm.placeholders.selectContact', { defaultValue: 'Select a contact' })}
+              disabled={bulkActionLoading}
+              buttonWidth="full"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        id="bulk-add-to-group"
+        isOpen={isBulkGroupOpen}
+        onClose={() => setIsBulkGroupOpen(false)}
+        title={t('assetDashboardClient.bulk.groupDialog.title', { defaultValue: 'Add to group' })}
+        className="max-w-lg"
+        footer={(
+          <div className="flex justify-end gap-2">
+            <Button id="bulk-group-cancel" variant="secondary" onClick={() => setIsBulkGroupOpen(false)}>
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button
+              id="bulk-group-apply"
+              disabled={bulkActionLoading || (!bulkGroupId && !newGroupName.trim())}
+              onClick={() => { void handleBulkAddToGroup(); }}
+            >
+              {t('common.actions.save', { defaultValue: 'Save' })}
+            </Button>
+          </div>
+        )}
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              {t('assetDashboardClient.bulk.groupDialog.description', {
+                defaultValue: 'Add {{count}} selected asset(s) to one of this client\u2019s groups, or create a new one.',
+                count: selectedAssetIds.length,
+              })}
+            </p>
+            <CustomSelect
+              id="bulk-group-select"
+              value={bulkGroupId}
+              onValueChange={setBulkGroupId}
+              options={[
+                { value: '', label: t('assetDashboardClient.bulk.groupDialog.newGroup', { defaultValue: 'Create a new group' }) },
+                ...clientGroups.map((group) => ({ value: group.group_id, label: group.name })),
+              ]}
+            />
+            {!bulkGroupId ? (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium" htmlFor="bulk-group-name">
+                  {t('assetGroups.fields.name', { defaultValue: 'Name' })}
+                  <Input id="bulk-group-name" value={newGroupName} onChange={(event) => setNewGroupName(event.target.value)} />
+                </label>
+                <div>
+                  <label className="block text-sm font-medium" htmlFor="bulk-group-kind">
+                    {t('assetGroups.fields.kind', { defaultValue: 'Kind' })}
+                  </label>
+                  <CustomSelect
+                    id="bulk-group-kind"
+                    value={newGroupKind}
+                    onValueChange={(value) => setNewGroupKind(value as AssetGroupKind)}
+                    options={[
+                      { value: 'bundle', label: t('assetGroups.kinds.bundle', { defaultValue: 'Bundle' }) },
+                      { value: 'shared_workspace', label: t('assetGroups.kinds.shared_workspace', { defaultValue: 'Shared workspace' }) },
+                    ]}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
+      <ConfirmationDialog
+        id="bulk-group-confirm-workspace-dialog"
+        isOpen={confirmBulkWorkspace}
+        onClose={() => setConfirmBulkWorkspace(false)}
+        onConfirm={() => { void applyBulkAddToGroup(); }}
+        title={t('assetGroups.confirmUnassignTitle', { defaultValue: 'Unassign these assets?' })}
+        message={t('assetGroups.confirmUnassignMessage', {
+          defaultValue: 'A shared workspace has users rather than one assignee, so {{count}} asset(s) will be unassigned.',
+          count: assets.filter((asset) => selectedAssetIds.includes(asset.asset_id) && asset.contact_name_id).length,
+        })}
+        confirmLabel={t('assetGroups.addAssets', { defaultValue: 'Add assets' })}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
+        isConfirming={bulkActionLoading}
+      />
       <BulkActionBar
         idPrefix="asset-bulk-action-bar"
         count={selectedAssetIds.length}
@@ -1758,6 +2174,20 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
               setBulkLocationMode(canBulkAssignSavedLocation ? 'saved' : 'custom');
               setIsBulkLocationOpen(true);
             },
+          },
+          {
+            id: 'assign',
+            label: t('assetDashboardClient.bulk.actionBar.assignContact', { defaultValue: 'Assign to contact' }),
+            icon: <UserPlus className="h-4 w-4" />,
+            disabled: !singleClientSelectionId,
+            onClick: () => setIsBulkAssignOpen(true),
+          },
+          {
+            id: 'group',
+            label: t('assetDashboardClient.bulk.actionBar.addToGroup', { defaultValue: 'Add to group' }),
+            icon: <Boxes className="h-4 w-4" />,
+            disabled: !singleClientSelectionId,
+            onClick: () => setIsBulkGroupOpen(true),
           },
           {
             id: 'delete',

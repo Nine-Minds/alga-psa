@@ -27,6 +27,8 @@ const EXPECTED_BOARD_MESSAGES = [
   'Target status must be a closed status',
   'An auto-close rule for this status already exists on this board',
   'Auto-close rule not found',
+  'Notification rule',
+  'Notification recipients and default watchers must be',
   // Matched by prefix (see below), so the Zod detail after the em dash reaches
   // the caller. Strict-on-write exists precisely to produce a readable reason;
   // letting it rethrow would replace that reason with a generic failure toast.

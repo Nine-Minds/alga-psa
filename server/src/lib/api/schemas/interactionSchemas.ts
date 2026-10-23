@@ -61,6 +61,9 @@ export const interactionListQuerySchema = z.object({
   project_id: uuidSchema.optional(),
   user_id: uuidSchema.optional(),
   type_id: uuidSchema.optional(),
+  status_id: uuidSchema.optional(),
+  // 'false' also matches interactions that have no status yet.
+  is_closed: z.enum(['true', 'false']).optional().transform((value) => (value === undefined ? undefined : value === 'true')),
   date_from: optionalDateTime,
   date_to: optionalDateTime,
   page: positiveIntegerQuery.optional().default('1'),
@@ -126,6 +129,29 @@ export const interactionListResponseSchema = paginatedResponseSchema.extend({
 export const interactionTypeListResponseSchema = successResponseSchema.extend({
   data: z.array(interactionTypeResponseSchema),
 });
+
+export const interactionStatusResponseSchema = z.object({
+  status_id: uuidSchema,
+  name: z.string(),
+  is_closed: z.boolean(),
+  is_default: z.boolean().nullable(),
+  order_number: z.number().nullable(),
+});
+
+export const interactionStatusListResponseSchema = successResponseSchema.extend({
+  data: z.array(interactionStatusResponseSchema),
+});
+
+// Mobile needs to close/reopen and annotate; title and timing stay web-only
+// because they also have to re-sync the linked calendar entry.
+export const updateInteractionApiSchema = z.object({
+  status_id: uuidSchema.nullable().optional(),
+  notes: z.string().max(10000).optional(),
+}).refine((value) => value.status_id !== undefined || value.notes !== undefined, {
+  message: 'Provide status_id or notes',
+});
+
+export type UpdateInteractionApi = z.infer<typeof updateInteractionApiSchema>;
 
 export type CreateInteractionApi = z.infer<typeof createInteractionApiSchema>;
 export type InteractionListQuery = z.infer<typeof interactionListQuerySchema>;

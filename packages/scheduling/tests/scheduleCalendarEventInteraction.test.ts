@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React, { useState } from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 import type { IScheduleEntry } from '@alga-psa/types';
@@ -22,7 +22,15 @@ it('delivers the first click when hovering updates the event presentation', asyn
       React.createElement(ScheduleCalendarEventRenderer, { event }));
   }
   render(React.createElement(Calendar));
-  await userEvent.setup().click(screen.getByRole('button', { name: event.title }));
+  const user = userEvent.setup();
+  const button = screen.getByRole('button', { name: event.title });
+  // click() bundles its hover-then-press pointer sequence into a single
+  // dispatch, which races the mouseenter-triggered re-render against the
+  // press under CI load. Awaiting the hover and its resulting re-render as
+  // their own step removes that race before the click fires.
+  await user.hover(button);
+  await waitFor(() => expect(button).toHaveAttribute('aria-pressed', 'true'));
+  await user.click(button);
   expect(select).toHaveBeenCalledExactlyOnceWith(event.entry_id, true);
 });
 

@@ -27,6 +27,8 @@ vi.mock('@alga-psa/teams/actions', () => ({
   getTeamsBasic: vi.fn().mockResolvedValue([]),
 }));
 
+vi.mock('@alga-psa/ui/components/SearchableSelect', () => import('./mocks/searchableSelectMock'));
+
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   __esModule: true,
   default: ({
@@ -146,12 +148,12 @@ describe('InputMappingEditor unified fixed-value editors', () => {
     });
 
     expect(
-      document.getElementById('mapping-step-unified-editor-subject-literal-str')?.tagName
-    ).toBe('INPUT');
+      document.getElementById('mapping-step-unified-editor-subject-literal-str')?.getAttribute('rows')
+    ).toBe('1');
     expect(screen.queryByRole('button', { name: /open editor/i })).not.toBeInTheDocument();
   });
 
-  it('T005: renders a dialog affordance when a field is configured with a dialog-only editor surface', async () => {
+  it('T005: a large-text field is free text: the multi-line Text editor with Insert field and Expand', async () => {
     await act(async () => {
       render(
         <UnifiedEditorHarness
@@ -170,13 +172,12 @@ describe('InputMappingEditor unified fixed-value editors', () => {
       );
     });
 
-    expect(
-      document.getElementById('mapping-step-unified-editor-notes-literal-str')
-    ).toBeNull();
-    expect(screen.getByRole('button', { name: /open editor/i })).toBeInTheDocument();
+    expect(document.getElementById('mapping-step-unified-editor-notes-literal-str')?.tagName).toBe('TEXTAREA');
+    expect(document.getElementById('mapping-step-unified-editor-notes-text-template')).toBeInTheDocument();
+    expect(document.getElementById('mapping-step-unified-editor-notes-text-template-expand')).toBeInTheDocument();
   });
 
-  it('T006: prompt fields render an inline multiline editor plus a dialog-launch control from unified editor metadata', async () => {
+  it('T006: prompt fields get the multi-line Text editor rather than a plain box', async () => {
     await act(async () => {
       render(
         <UnifiedEditorHarness
@@ -196,13 +197,13 @@ describe('InputMappingEditor unified fixed-value editors', () => {
       );
     });
 
-    expect(
-      document.getElementById('mapping-step-unified-editor-prompt-literal-str')?.tagName
-    ).toBe('TEXTAREA');
-    expect(screen.getByRole('button', { name: /open editor/i })).toBeInTheDocument();
+    const textArea = document.getElementById('mapping-step-unified-editor-prompt-literal-str') as HTMLTextAreaElement;
+    expect(textArea.tagName).toBe('TEXTAREA');
+    expect(textArea.value).toBe('Line 1\nLine 2');
+    expect(screen.queryByRole('button', { name: /open editor/i })).not.toBeInTheDocument();
   });
 
-  it('T007/T010: prompt dialog editing starts from the current value and writes changes back to the fixed mapping', async () => {
+  it('T007/T010: the expanded editor starts from the current value and writes changes back to the fixed mapping', async () => {
     await act(async () => {
       render(
         <UnifiedEditorHarness
@@ -222,30 +223,27 @@ describe('InputMappingEditor unified fixed-value editors', () => {
       );
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /open editor/i }));
+    fireEvent.click(document.getElementById('mapping-step-unified-editor-prompt-text-template-expand') as HTMLElement);
 
-    const dialogTextArea = document.getElementById(
-      'mapping-step-unified-editor-prompt-dialog-textarea'
+    const expanded = document.getElementById(
+      'mapping-step-unified-editor-prompt-text-template-expanded'
     ) as HTMLTextAreaElement | null;
+    expect(expanded?.value).toBe('Initial prompt');
+    // The expanded editor keeps Insert field.
+    expect(screen.getByTestId('mapping-step-unified-editor-prompt-text-template-expanded-insert-field')).toBeInTheDocument();
 
-    expect(dialogTextArea?.value).toBe('Initial prompt');
-
-    fireEvent.change(dialogTextArea as HTMLTextAreaElement, {
-      target: { value: 'Updated prompt body' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: /apply/i }));
+    fireEvent.change(expanded as HTMLTextAreaElement, { target: { value: 'Updated prompt body' } });
+    fireEvent.click(screen.getByRole('button', { name: /done/i }));
 
     await waitFor(() => {
       expect(screen.getByTestId('mapping-value').textContent).toContain('Updated prompt body');
     });
-
     expect(
-      (document.getElementById('mapping-step-unified-editor-prompt-literal-str') as HTMLTextAreaElement)
-        .value
+      (document.getElementById('mapping-step-unified-editor-prompt-literal-str') as HTMLTextAreaElement).value
     ).toBe('Updated prompt body');
   });
 
-  it('T009: fixed and reference source-mode switching continues to preserve unified editor-backed fixed values', async () => {
+  it('T009: switching the value source away and back continues to preserve unified editor-backed fixed values', async () => {
     await act(async () => {
       render(
         <UnifiedEditorHarness
@@ -265,11 +263,11 @@ describe('InputMappingEditor unified fixed-value editors', () => {
       );
     });
 
-    fireEvent.change(screen.getByTestId('mapping-step-unified-editor-prompt-source-mode'), {
-      target: { value: 'reference' },
+    fireEvent.change(screen.getByTestId('mapping-step-unified-editor-prompt-value-source'), {
+      target: { value: '__workflow-value-source:expression' },
     });
-    fireEvent.change(screen.getByTestId('mapping-step-unified-editor-prompt-source-mode'), {
-      target: { value: 'fixed' },
+    fireEvent.change(screen.getByTestId('mapping-step-unified-editor-prompt-value-source'), {
+      target: { value: '__workflow-value-source:fixed' },
     });
 
     await waitFor(() => {

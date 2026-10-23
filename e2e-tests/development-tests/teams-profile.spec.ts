@@ -64,11 +64,16 @@ test('Teams profile recovery and calendar meeting creation preserve saved identi
     let title = `Teams appointment ${actors.runId}`;
     await page.goto('/msp/schedule');
     const noon = page.locator('.rbc-day-slot.rbc-today .rbc-time-slot').nth(24);
+    await expect(noon).toBeVisible();
+    // Slots mount before the event fetch completes. A raw mouse click bypasses
+    // actionability checks and would otherwise hit the calendar loading overlay.
+    await expect(page.getByText('Loading...', { exact: true })).toBeHidden();
     await noon.scrollIntoViewIfNeeded();
     const bounds = await noon.boundingBox();
     if (!bounds) throw new Error('Today noon slot must be visible');
     await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
     const newEntry = page.getByRole('dialog', { name: 'New Entry', exact: true });
+    await expect(newEntry).toBeVisible();
     await newEntry.locator('#title').fill(title);
     await newEntry.locator('#save-entry-btn').click();
     await expect(newEntry).toBeHidden();
@@ -116,7 +121,9 @@ test('Teams profile recovery and calendar meeting creation preserve saved identi
       .locator('xpath=ancestor::div[contains(@class,"dtf-fields")][1]')
       .getByRole('combobox', { name: 'Select time', exact: true });
     await deniedTime.fill('12:30 PM');
-    await deniedTime.press('Tab');
+    // Enter commits and closes the picker; Tab opens the next date field.
+    await deniedTime.press('Enter');
+    await expect(deniedTime).toHaveAttribute('aria-expanded', 'false');
     await reopened.locator('#save-entry-btn').click();
     await expect(reopened).toBeHidden();
     await expect(page.getByText('Entry moved, but the Microsoft Teams meeting could not be rescheduled. Please update it manually in Teams.', { exact: true })).toBeVisible();
@@ -142,7 +149,8 @@ test('Teams profile recovery and calendar meeting creation preserve saved identi
       .locator('xpath=ancestor::div[contains(@class,"dtf-fields")][1]')
       .getByRole('combobox', { name: 'Select time', exact: true });
     await startTime.fill('1:00 PM');
-    await startTime.press('Tab');
+    await startTime.press('Enter');
+    await expect(startTime).toHaveAttribute('aria-expanded', 'false');
     await reopened.locator('#save-entry-btn').click();
     await expect(reopened).toBeHidden();
     title = rescheduledTitle;

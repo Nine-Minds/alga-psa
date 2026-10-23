@@ -43,7 +43,7 @@ export function generateMicrosoftAuthUrl(
     response_mode: 'query',
     scope: scopes.join(' '),
     state: encodedState ?? encodeState(state),
-    prompt: 'consent' // Force consent to ensure we get refresh token
+    prompt: 'select_account' // Select an account without forcing consent; offline_access requests a refresh token.
   });
 
   return `${baseUrl}?${params.toString()}`;

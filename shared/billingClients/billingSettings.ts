@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { ensureDefaultContractForClient } from './defaultContract';
+import { assertValidClientDefaultTimeEntryService } from './defaultTimeEntryServiceValidation';
 
 export type CreditServiceTypeRestrictionMode = 'all' | 'restricted';
 
@@ -22,6 +23,8 @@ export type ClientBillingSettings = {
   creditServiceTypeRestrictionMode?: CreditServiceTypeRestrictionMode | null;
   /** undefined = leave unchanged; non-empty array = restrict to these service type ids (pairs with mode 'restricted'); null = no ids. */
   creditEligibleServiceTypeIds?: string[] | null;
+  /** undefined = leave unchanged; a service id = client override; null = revert to tenant default. */
+  defaultTimeEntryServiceId?: string | null;
 };
 
 type DbClientBillingSettings = {
@@ -38,6 +41,7 @@ type DbClientBillingSettings = {
   credit_application_order: string | null;
   credit_service_type_restriction_mode: CreditServiceTypeRestrictionMode | null;
   credit_eligible_service_type_ids: string[] | null;
+  default_time_entry_service_id: string | null;
 };
 
 async function ensureClientBillingSettingsRowInTransaction(
@@ -112,7 +116,8 @@ export async function getClientBillingSettings(
       'credit_auto_apply_enabled',
       'credit_application_order',
       'credit_service_type_restriction_mode',
-      'credit_eligible_service_type_ids'
+      'credit_eligible_service_type_ids',
+      'default_time_entry_service_id'
     );
 
   if (!row) return null;
@@ -133,6 +138,7 @@ export async function getClientBillingSettings(
       ? row.credit_service_type_restriction_mode
       : undefined,
     creditEligibleServiceTypeIds: row.credit_eligible_service_type_ids,
+    defaultTimeEntryServiceId: row.default_time_entry_service_id ?? null,
   };
 }
 
@@ -152,6 +158,13 @@ export async function updateClientBillingSettings(
   if (settings === null) {
     await tenantDb(knexOrTrx, tenant).table('client_billing_settings').where({ client_id: clientId }).del();
     return;
+  }
+
+  // A non-null default must be usable before it is persisted; the migration has
+  // no FK, so this is the write-time guard. Stale values are still re-checked at
+  // resolution time. Null clears the override and needs no validation.
+  if (settings.defaultTimeEntryServiceId !== undefined && settings.defaultTimeEntryServiceId !== null) {
+    await assertValidClientDefaultTimeEntryService(knexOrTrx, tenant, clientId, settings.defaultTimeEntryServiceId);
   }
 
   const updates: Record<string, unknown> = {};
@@ -205,6 +218,10 @@ export async function updateClientBillingSettings(
       updates.credit_service_type_restriction_mode = 'restricted';
       updates.credit_eligible_service_type_ids = JSON.stringify(ids);
     }
+  }
+
+  if (settings.defaultTimeEntryServiceId !== undefined) {
+    updates.default_time_entry_service_id = settings.defaultTimeEntryServiceId;
   }
 
   await ensureClientBillingSettingsRow(knexOrTrx, { tenant, clientId });

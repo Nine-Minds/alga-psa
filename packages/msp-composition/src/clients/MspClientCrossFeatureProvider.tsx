@@ -2,11 +2,12 @@
 
 import React, { useMemo, useCallback, type ReactNode } from 'react';
 import { ClientCrossFeatureProvider } from '@alga-psa/clients/context/ClientCrossFeatureContext';
-import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, HourBlocksSectionRenderProps, ClientOpportunitiesRenderProps, ClientTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps, ClientBillingProfileSpendRenderProps, ClientUnresolvedChargeReviewRenderProps, ScheduleTeamsMeetingFromClientInput } from '@alga-psa/clients/context/ClientCrossFeatureContext';
+import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, HourBlocksSectionRenderProps, ClientOpportunitiesRenderProps, ClientTicketsRenderProps, ClientRecurringTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps, ClientBillingProfileSpendRenderProps, ClientUnresolvedChargeReviewRenderProps, ScheduleTeamsMeetingFromClientInput } from '@alga-psa/clients/context/ClientCrossFeatureContext';
 import { ClientOpportunitiesTab } from '@alga-psa/opportunities/components';
 import type { ClientLifecycleStatus } from '@alga-psa/types';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
+import { MspRecurringTicketsClientSection } from '../tickets/MspRecurringTickets';
 import { useTicketDetailsDrawer } from './useTicketDetailsDrawer';
 import { useOpportunityDetailsDrawer } from './useOpportunityDetailsDrawer';
 import ClientSurveySummaryCard from '@alga-psa/surveys/components/ClientSurveySummaryCard';
@@ -14,6 +15,7 @@ import { getSlaPolicies } from '@alga-psa/sla/actions/slaActions';
 import HourBlocksSection from '@alga-psa/billing/components/hour-blocks/HourBlocksSection';
 import { ContractWizard } from '@alga-psa/billing/components/billing-dashboard/contracts/ContractWizard';
 import { ContractDialog } from '@alga-psa/billing/components/billing-dashboard/contracts/ContractDialog';
+import { ForceModalContext } from '@alga-psa/ui/components/ModalityContext';
 import { SpendByBillingProfileReport } from '@alga-psa/billing/components/billing-dashboard/reports/SpendByBillingProfileReport';
 import { UnresolvedChargeReview } from '@alga-psa/billing/components/billing-dashboard/UnresolvedChargeReview';
 import { getTeamsMeetingCapability } from '@alga-psa/scheduling/actions/appointmentRequestManagementActions';
@@ -93,6 +95,11 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
     []
   );
 
+  const renderClientRecurringTickets = useCallback(
+    (props: ClientRecurringTicketsRenderProps) => <MspRecurringTicketsClientSection clientId={props.clientId} />,
+    []
+  );
+
   const renderClientTickets = useCallback(
     (props: ClientTicketsRenderProps) => (
       <MspClientTickets
@@ -129,24 +136,31 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
 
   const renderContractWizard = useCallback(
     (props: ContractWizardRenderProps) => (
-      <ContractWizard
-        open={props.open}
-        onOpenChange={props.onOpenChange}
-        onComplete={props.onComplete}
-        initialClientId={props.clientId}
-      />
+      // The client Billing tab hosts this in a focus-view Drawer. Pop the wizard
+      // as a real modal so the form gets the full viewport instead of being
+      // squeezed into the drawer panel.
+      <ForceModalContext.Provider value={true}>
+        <ContractWizard
+          open={props.open}
+          onOpenChange={props.onOpenChange}
+          onComplete={props.onComplete}
+          initialClientId={props.clientId}
+        />
+      </ForceModalContext.Provider>
     ),
     []
   );
 
   const renderContractQuickAdd = useCallback(
     (props: ContractQuickAddRenderProps) => (
-      <ContractDialog
-        isOpen={props.open}
-        onOpenChange={props.onOpenChange}
-        onContractSaved={props.onSaved}
-        initialClientId={props.clientId}
-      />
+      <ForceModalContext.Provider value={true}>
+        <ContractDialog
+          isOpen={props.open}
+          onOpenChange={props.onOpenChange}
+          onContractSaved={props.onSaved}
+          initialClientId={props.clientId}
+        />
+      </ForceModalContext.Provider>
     ),
     []
   );
@@ -181,6 +195,7 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       renderClientBillingProfileSpend,
       renderClientUnresolvedChargeReview,
       renderClientTickets,
+      renderClientRecurringTickets,
       renderContactTickets,
       renderContractWizard,
       renderContractQuickAdd,
@@ -200,6 +215,7 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       renderClientBillingProfileSpend,
       renderClientUnresolvedChargeReview,
       renderClientTickets,
+      renderClientRecurringTickets,
       renderContactTickets,
       renderContractWizard,
       renderContractQuickAdd,

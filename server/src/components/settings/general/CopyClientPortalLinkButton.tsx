@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Button } from '@alga-psa/ui/components/Button';
+import { copyTextToClipboard } from '@alga-psa/ui/lib/clipboard';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getTenantPortalLoginLink } from '@alga-psa/client-portal/actions/portal-actions/clientPortalLinkActions';
@@ -38,8 +39,8 @@ export const CopyClientPortalLinkButton = ({
       }
 
       const portalLink = linkResult.data;
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(portalLink.url);
+      const copied = await copyTextToClipboard(portalLink.url);
+      if (copied) {
         toast.success(
           portalLink.source === 'vanity'
             ? t('users.messages.success.copiedVanityLink')

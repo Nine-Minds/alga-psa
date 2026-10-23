@@ -1,4 +1,5 @@
 import { TenantEntity } from './index';
+import type { IExternalEntityLink } from './externalSystem.interfaces';
 
 export type CommentAuthorType = 'internal' | 'client' | 'contact' | 'system' | 'unknown';
 export const COMMENT_RESPONSE_SOURCES = {
@@ -29,9 +30,28 @@ export interface CommentMetadataEmail {
   [key: string]: unknown;
 }
 
+/**
+ * One-off Cc/Bcc recipient explicitly added to a single public comment. These
+ * are never promoted to the ticket watch list: they receive that one comment
+ * email and nothing after it.
+ */
+export interface CommentEmailRecipient {
+  email: string;
+  name?: string;
+  contact_id?: string;
+  user_id?: string;
+}
+
+export interface CommentEmailRecipients {
+  cc: CommentEmailRecipient[];
+  bcc: CommentEmailRecipient[];
+}
+
 export interface CommentMetadata {
   responseSource?: CommentResponseSource;
   email?: CommentMetadataEmail;
+  /** Per-comment Cc/Bcc for the outbound comment email. Public comments only. */
+  email_recipients?: CommentEmailRecipients;
   [key: string]: unknown;
 }
 
@@ -64,4 +84,19 @@ export interface IComment extends TenantEntity {
   scheduled_response_event_id?: string | null;
   scheduled_previous_response_state?: string | null;
   scheduled_response_dispatched_at?: string | null;
+  /** Structured references to external records attached to this comment. */
+  external_links?: IExternalEntityLink[];
+  /**
+   * Read-time provenance from `ticket_bundle_mirrors`; never written by
+   * callers. Present only on comments loaded through a conversation loader
+   * that joins the mirrors table. The client-portal loader deliberately omits
+   * `master_ticket_id` / `master_ticket_number` so a bundle that spans clients
+   * never leaks the master's identity.
+   */
+  bundle_mirror_source?: {
+    source_comment_id: string;
+    /** MSP loader only; the portal omits master identity on purpose. */
+    master_ticket_id?: string | null;
+    master_ticket_number?: string | null;
+  } | null;
 }

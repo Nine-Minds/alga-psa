@@ -8,14 +8,31 @@ const translatedManualInvoiceErrorCodes = new Set<ManualInvoiceErrorCode>([
   'USAGE_RECORDS_MISSING',
   'USAGE_RECORDS_MISSING_ACK_REQUIRED',
   'USAGE_PERIOD_TOTAL_STALE',
+  'RECURRING_PRICING_STALE',
   'USAGE_CALCULATION_ERROR',
+  'RECURRING_PERIODS_NOT_MATERIALIZED',
+  'NO_ACTIVE_CONTRACT_LINES',
+  'NOTHING_TO_BILL',
+  'FIXED_LINE_RATE_UNRESOLVED',
+  'FIXED_LINE_NO_SERVICES',
   'CLIENT_NOT_FOUND',
+  'CLIENT_CONTRACT_NOT_FOUND',
   'SERVICE_NOT_FOUND',
+  'SERVICE_REQUIRED',
   'INVALID_QUANTITY',
   'NO_TAX_RATE',
+  'TAX_RATE_COVERAGE_GAP',
   'DISCOUNT_TARGET_NOT_FOUND',
+  'LOCATION_NOT_FOUND',
+  'BILLING_PROFILE_NOT_FOUND',
+  'TAX_RATE_NOT_FOUND',
+  'STALE_ADJUSTMENT_REVISION',
   'INVOICE_NUMBER_CONFLICT',
+  'SOURCE_ALREADY_BILLED',
+  'SOURCE_NOT_ELIGIBLE',
+  'SOURCE_CURRENCY_MISMATCH',
   'PERMISSION_DENIED',
+  'UNAUTHENTICATED',
   'UNEXPECTED',
 ]);
 
@@ -29,6 +46,11 @@ export function translateManualInvoiceFailure(
   result: Partial<ManualInvoiceFailure>,
 ): string {
   const message = result.message ?? result.error ?? 'Error generating invoice';
+  if (result.code === 'UNAUTHENTICATED') {
+    return t('manualInvoices.errors.sessionExpired', {
+      defaultValue: 'Your session expired before this save completed. Your edits remain in this editor and were not saved. Sign in again in a new tab, then retry the save here.',
+    });
+  }
   if (result.code === 'TIME_APPROVAL_REQUIRED') {
     return t('automaticInvoices.executionRows.blockedUntilApproval', {
       count: Number(result.params?.count), defaultValue: message,

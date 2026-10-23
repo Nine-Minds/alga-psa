@@ -1,0 +1,28 @@
+[
+  {
+    "id": "T1",
+    "description": "Rendered provider composition, selected organisation and cycle outcomes",
+    "passed": true
+  },
+  {
+    "id": "T2",
+    "description": "Pagination beyond cap, timestamp ties, missing timestamps, failure and recovery",
+    "passed": true
+  },
+  {
+    "id": "T3",
+    "description": "QBO regressions, Xero HTTP boundary and DB reconciliation",
+    "passed": true
+  },
+  {
+    "id": "T4",
+    "description": "Affected package typechecks and lint",
+    "passed": true
+  },
+  {
+    "id": "T5",
+    "description": "Composed stored-connection selection and batch creation cover unset, other-provider, stale, explicit, historical, ambiguous and disconnected defaults",
+    "implemented": true,
+    "passed": true
+  }
+]

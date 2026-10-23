@@ -4,11 +4,16 @@
  * The importer writes phases and tasks, and can also seed the tenant's shared
  * status library. The reference-data loader that feeds its mapping UI returns
  * the tenant's internal user directory, so it needs a read gate of its own.
+ *
+ * Both gates are tenant-wide: holding project:update does not mean the caller
+ * may reach *this* project, so every entry point that takes a projectId also
+ * has to clear the record-level kernel decision the task actions apply.
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hasPermissionMock = vi.hoisted(() => vi.fn());
+const authorizeResourceMock = vi.hoisted(() => vi.fn(async () => ({ allowed: true })));
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
 const withTransactionMock = vi.hoisted(() => vi.fn());
 const getAllUsersBasicMock = vi.hoisted(() => vi.fn(async () => []));
@@ -71,21 +76,34 @@ vi.mock('@alga-psa/projects/models/project', () => ({
   },
 }));
 vi.mock('../models/projectTask', () => ({ default: { addTask: vi.fn() } }));
-vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn() }));
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(), publishEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...((await importOriginal()) as any),
   buildProjectTaskAssignedPayload: vi.fn(),
   buildProjectTaskCreatedPayload: vi.fn(),
+}));
+vi.mock('@alga-psa/authorization/kernel', () => ({
+  BuiltinAuthorizationKernelProvider: class {},
+  BundleAuthorizationKernelProvider: class {
+    constructor(_options: unknown) {}
+  },
+  RequestLocalAuthorizationCache: class {},
+  createAuthorizationKernel: () => ({ authorizeResource: authorizeResourceMock }),
+}));
+vi.mock('@alga-psa/authorization/bundles/service', () => ({
+  resolveBundleNarrowingRulesForEvaluation: async () => [],
 }));
 
 import { getImportReferenceData, importPhasesAndTasks } from './phaseTaskImportActions';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  createTenantKnexMock.mockResolvedValue({ knex: {}, tenant: 'tenant-1' });
+  createTenantKnexMock.mockResolvedValue({ knex: stubQuery(), tenant: 'tenant-1' });
   withTransactionMock.mockImplementation(async (_db: unknown, cb: any) => cb(stubQuery()));
+  authorizeResourceMock.mockResolvedValue({ allowed: true });
   getAllUsersBasicMock.mockResolvedValue([]);
   getAllPrioritiesMock.mockResolvedValue([]);
-  getServicesMock.mockResolvedValue([]);
+  getServicesMock.mockResolvedValue({ services: [] } as any);
   projectGetByIdMock.mockResolvedValue({ project_id: 'project-1' } as any);
   getProjectStatusMappingsMock.mockResolvedValue([
     { project_status_mapping_id: 'psm-1', custom_name: 'Open', status_name: 'Open', name: 'Open' },
@@ -119,6 +137,32 @@ describe('importPhasesAndTasks authorization', () => {
 
     expect(projectGetByIdMock).toHaveBeenCalled();
   });
+
+  it('refuses to import into a project the caller is restricted from', async () => {
+    // Tenant-wide project:update, but bundle narrowing hides this project.
+    hasPermissionMock.mockResolvedValue(true);
+    authorizeResourceMock.mockResolvedValue({ allowed: false });
+
+    const result = await importPhasesAndTasks('project-1', []);
+
+    expect(result.success).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/Permission denied: Cannot read project/);
+    expect(getProjectStatusMappingsMock).not.toHaveBeenCalled();
+  });
+
+  it('imports into a project the caller may read', async () => {
+    hasPermissionMock.mockResolvedValue(true);
+    authorizeResourceMock.mockResolvedValue({ allowed: true });
+
+    await importPhasesAndTasks('project-1', []).catch(() => undefined);
+
+    expect(authorizeResourceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resource: expect.objectContaining({ type: 'project', action: 'read', id: 'project-1' }),
+      }),
+    );
+    expect(getProjectStatusMappingsMock).toHaveBeenCalled();
+  });
 });
 
 describe('getImportReferenceData authorization', () => {
@@ -147,5 +191,24 @@ describe('getImportReferenceData authorization', () => {
 
     expect(result).toBeDefined();
     expect(createTenantKnexMock).toHaveBeenCalled();
+  });
+
+  it('refuses reference data for a project the caller is restricted from', async () => {
+    hasPermissionMock.mockResolvedValue(true);
+    authorizeResourceMock.mockResolvedValue({ allowed: false });
+
+    await expect(getImportReferenceData('project-1')).rejects.toThrow(
+      /Permission denied: Cannot read project/,
+    );
+    expect(getPhasesMock).not.toHaveBeenCalled();
+  });
+
+  it('loads the project phases when the caller may read that project', async () => {
+    hasPermissionMock.mockResolvedValue(true);
+    authorizeResourceMock.mockResolvedValue({ allowed: true });
+
+    await getImportReferenceData('project-1');
+
+    expect(getPhasesMock).toHaveBeenCalled();
   });
 });

@@ -55,6 +55,8 @@ export function TicketMetaBar({
   assignedToName,
   dueDateIso,
   assigneeDisabled,
+  statusDisabled,
+  priorityDisabled,
   onStatusPress,
   onPriorityPress,
   onAssigneePress,
@@ -66,6 +68,8 @@ export function TicketMetaBar({
   assignedToName: string | null;
   dueDateIso: string | null;
   assigneeDisabled?: boolean;
+  statusDisabled?: boolean;
+  priorityDisabled?: boolean;
   onStatusPress: () => void;
   onPriorityPress: () => void;
   onAssigneePress: () => void;
@@ -80,12 +84,14 @@ export function TicketMetaBar({
         tone={statusIsClosed ? "neutral" : "info"}
         accessibilityLabel={t("detail.changeStatus")}
         onPress={onStatusPress}
+        disabled={statusDisabled}
       />
       <MetaChip
         label={priorityName ?? t("detail.priority", "Priority")}
         tone={priorityName ? "warning" : "neutral"}
         accessibilityLabel={t("detail.changePriority")}
         onPress={onPriorityPress}
+        disabled={priorityDisabled}
       />
       <MetaChip
         icon="user"

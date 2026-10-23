@@ -71,6 +71,18 @@ describe('i18nMiddleware', () => {
     expect(response.headers.get('x-locale')).toBe('pl');
   });
 
+  it('hints at Swedish from the browser header and from an explicit cookie', () => {
+    const guessed = runMiddleware(
+      request('http://localhost:3000/msp/tickets', { 'accept-language': 'sv-SE,sv;q=0.9' }),
+    );
+    expect(guessed.headers.get('x-locale')).toBe('sv');
+
+    const chosen = runMiddleware(
+      request('http://localhost:3000/msp/tickets', { cookie: 'locale=sv' }),
+    );
+    expect(chosen.headers.get('x-locale')).toBe('sv');
+  });
+
   it('falls back to the default locale when the browser asks for nothing supported', () => {
     const response = runMiddleware(
       request('http://localhost:3000/msp/tickets', { 'accept-language': 'kl-GL,kl;q=0.9' }),

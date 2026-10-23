@@ -5,6 +5,15 @@
     "authorizedBy": "Autorizado por",
     "billTo": "Faturar para",
     "billedTimeByTicket": "Tempo faturado por ticket",
+    "cadence": {
+      "annually": "Anual",
+      "monthly": "Mensal",
+      "oneTime": "Único",
+      "other": "Outro",
+      "quarterly": "Trimestral",
+      "semiAnnually": "Semestral"
+    },
+    "cadenceTotal": "Total {{cadence}}",
     "date": "Data",
     "description": "Descrição",
     "discounts": "Descontos",
@@ -27,6 +36,10 @@
     "oneTimeItems": "Itens avulsos",
     "oneTimeTotal": "Total avulso",
     "optional": "Opcional",
+    "optionalIncluded": "Opcional (incluído)",
+    "optionalSection": "Opcional (se selecionado)",
+    "optionalSubtotal": "Subtotal opcional",
+    "optionalTotal": "Opcional se selecionado",
     "orderConfirmationTitle": "CONFIRMAÇÃO DE PEDIDO",
     "orderDate": "Data do pedido",
     "orderNumber": "Pedido nº",
@@ -77,7 +90,9 @@
       "pickedBy": "Separado por: ____________________     Data: ____________",
       "preTaxTotals": "Os totais exibidos não incluem impostos. O imposto aplicável é calculado na sua fatura.",
       "thankYouForOrder": "Obrigado pelo seu pedido."
-    }
+    },
+    "serialNumbers": "Números de série",
+    "allocatedSerialsNote": "Números de série alocados; sujeitos a alteração no atendimento."
   },
   "errors": {
     "permissions": {

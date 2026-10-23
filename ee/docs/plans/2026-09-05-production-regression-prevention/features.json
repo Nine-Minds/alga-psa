@@ -329,8 +329,10 @@
     ],
     "evidence": [
       "evidence/ci-browser-metrics-cb884.json",
-      "evidence/isolated-browser-identity.json"
-    ]
+      "evidence/isolated-browser-identity.json",
+      "evidence/native-browser-metrics-retention.json"
+    ],
+    "notes": "The additive tab had no retention policy, so browser_readiness grew to 19,091 rows and every reconcile since 2026-09-25 refused it. Collection now reads run_url as an index and fetches only the reconciled run's rows, and a weekly retention job keeps 90 days of raw rows with browser_readiness_weekly summaries behind them. The live cleanup run and the empty-row grid trim remain operator actions."
   },
   {
     "id": "F025",
@@ -343,7 +345,11 @@
     ],
     "dependsOn": [
       "F024"
-    ]
+    ],
+    "evidence": [
+      "evidence/native-browser-metrics-retention.json"
+    ],
+    "notes": "browser_readiness_weekly gives the long-term trend a summary grain that survives raw-row deletion, and reconciliation gained the explicit outside-retention status so an archived run is not presented as a reporting gap. Live chart/view work and the run-kind trend separation remain open, so this stays false."
   },
   {
     "id": "F026",

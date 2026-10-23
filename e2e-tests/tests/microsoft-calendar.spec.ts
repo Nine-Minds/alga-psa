@@ -3,8 +3,9 @@ import { test, expect } from '../fixtures/emulators';
 import { signIn } from '../fixtures/auth';
 import { createMicrosoftProfile } from '../fixtures/microsoft-profile';
 import { createProductionBrowserActors } from '../../server/test-utils/productionBrowserFixtures';
+import { BROWSER_TIMEZONE, browserCalendarDayStart } from '../fixtures/browser-calendar.mjs';
 
-test.use({ emulatorProviders: ['msgraph'], timezoneId: 'Europe/Berlin' });
+test.use({ emulatorProviders: ['msgraph'], timezoneId: BROWSER_TIMEZONE });
 const profileURL = '/msp/profile?tab=calendar';
 type GraphEvent = { id: string; subject: string; isAllDay?: boolean; start?: { dateTime: string }; end?: { dateTime: string } };
 type CalendarChange = { event: GraphEvent; deliveries: Array<{ delivered: boolean; status: number | null }> };
@@ -87,11 +88,14 @@ if (process.env.E2E_EDITION !== 'enterprise') {
         await expect.poll(async () => (await database('schedule_entries').where({ ...scope, title: outboundTitle })).length).toBe(1);
         const outboundEntry = await database('schedule_entries').where({ ...scope, title: outboundTitle }).first();
         const outboundMappingScope = { ...providerScope, schedule_entry_id: outboundEntry.entry_id };
+        // The first outbound sync of the suite can be slow to warm the calendar
+        // workload; allow the same headroom as the rest of the journey so a cold
+        // start is not misreported as a failure.
         await expect.poll(async () => (await database('calendar_event_mappings').where(outboundMappingScope)).length,
-          { timeout: 60000 }).toBe(1);
+          { timeout: 120000 }).toBe(1);
         const outboundMapping = await database('calendar_event_mappings').where(outboundMappingScope).first();
         await expect.poll(async () => await emulators.state<GraphEvent[]>('msgraph', 'calendar-events'),
-          { timeout: 60000 }).toEqual([expect.objectContaining({ id: outboundMapping.external_event_id, subject: outboundTitle })]);
+          { timeout: 120000 }).toEqual([expect.objectContaining({ id: outboundMapping.external_event_id, subject: outboundTitle })]);
         await page.reload();
         const outboundEvent = page.locator('.rbc-event').filter({ hasText: outboundTitle });
         await expect(outboundEvent).toHaveCount(1);
@@ -112,7 +116,10 @@ if (process.env.E2E_EDITION !== 'enterprise') {
         expect(outboundHistory.requests).toContainEqual(expect.objectContaining({ method: 'DELETE', status: 204,
           path: `/v1.0/me/calendar/events/${outboundMapping.external_event_id}` }));
 
-        const start = new Date(); start.setUTCHours(allDay ? 0 : 12, 0, 0, 0);
+        // Anchor on the day the browser's week view is showing. Reading the day
+        // off the runner's UTC clock puts the event on the previous local day,
+        // and across a Saturday it puts it in the previous week, out of range.
+        const start = browserCalendarDayStart(); start.setUTCHours(allDay ? 0 : 12, 0, 0, 0);
         const end = new Date(start.getTime() + (allDay ? 86400000 : 3600000));
         const created = await emulators.action<CalendarChange>('msgraph', 'calendar-change', { changeType: 'created', event: {
           subject: title, body: { contentType: 'text', content: 'Customer calendar visit' },

@@ -52,10 +52,18 @@ export interface IUsagePeriodTotalUpsert {
 }
 
 /**
- * Prospective quantity/unit-rate version for a unit-priced Fixed service.
- * Effective at the service-period boundary `effective_period_start`: service
- * periods whose covered start is at/after that date bill the revision values,
- * earlier periods keep the configuration columns and are never rewritten.
+ * How a revision resolves its unit rate. `override` stores an explicit rate
+ * (zero is a real free-unit price); `catalog` inherits the currency- and
+ * period-effective catalog price at billing time and stores no rate.
+ */
+export type ContractLineUnitPricePolicy = 'override' | 'catalog';
+
+/**
+ * Prospective quantity/unit-rate version for a recurring contract item — an
+ * explicitly unit-priced Fixed service or a recurring product. Effective at the
+ * service-period boundary `effective_period_start`: service periods whose
+ * covered start is at/after that date bill the revision values, earlier periods
+ * keep the configuration columns and are never rewritten.
  */
 export interface IContractLineUnitPricingRevision extends TenantEntity {
   revision_id: string;
@@ -63,10 +71,23 @@ export interface IContractLineUnitPricingRevision extends TenantEntity {
   service_id: string;
   config_id: string;
   quantity: number;
-  unit_rate_cents: number;
+  /** Null for catalog-policy revisions. */
+  unit_rate_cents: number | null;
+  price_policy: ContractLineUnitPricePolicy;
+  /** Optimistic-concurrency token; increments on each replacement. */
+  version: number;
   effective_period_start: ISO8601String;
+  /**
+   * The true mid-period quantity-change date when the operator explicitly opted
+   * in. Null on the default boundary-only path and on legacy rows. When set,
+   * `effective_period_start` is the next canonical boundary (where the standing
+   * quantity begins) and a one-time prorated true-up covers the partial period.
+   */
+  mid_period_effective_date?: ISO8601String | null;
   created_by?: string | null;
+  updated_by?: string | null;
   created_at: ISO8601String | Date;
+  updated_at?: ISO8601String | Date | null;
 }
 
 export interface IContractLineUnitPricingRevisionInput {
@@ -74,6 +95,53 @@ export interface IContractLineUnitPricingRevisionInput {
   service_id: string;
   config_id: string;
   quantity: number;
-  unit_rate_cents: number;
+  /** Required for `override`; ignored/omitted for `catalog`. */
+  unit_rate_cents?: number | null;
+  price_policy?: ContractLineUnitPricePolicy;
+  /** When supplied, the stored version must match or the write is rejected. */
+  expected_version?: number | null;
+  /**
+   * Canonical boundary where the standing quantity/price begins. On the
+   * mid-period path this is the next boundary after `mid_period_effective_date`.
+   */
   effective_period_start: ISO8601String;
+  /**
+   * Explicit opt-in to a quantity-only change effective inside an eligible
+   * unbilled service period. When true, `mid_period_effective_date` supplies the
+   * true date and `effective_period_start` must be the period's next boundary.
+   * Boundary-only scheduling remains the default.
+   */
+  allow_mid_period?: boolean;
+  mid_period_effective_date?: ISO8601String | null;
+  /**
+   * Recurring-unit kind. When omitted the server resolves it from the
+   * configuration (unit-priced Fixed service vs catalog product).
+   */
+  kind?: 'service' | 'product';
+}
+
+export interface IContractLineUnitPricingRevisionHistoryEntry extends TenantEntity {
+  history_id: string;
+  revision_id: string;
+  contract_line_id: string;
+  service_id: string;
+  config_id: string;
+  quantity: number;
+  unit_rate_cents: number | null;
+  price_policy: ContractLineUnitPricePolicy;
+  effective_period_start: ISO8601String;
+  /** True mid-period date when the superseded edit opted in; null otherwise. */
+  mid_period_effective_date?: ISO8601String | null;
+  version: number;
+  /** Actor who performed the replacement. */
+  superseded_by: string;
+  /** Display name for `superseded_by`; null for 'system' or an unresolvable user. */
+  superseded_by_name?: string | null;
+  recorded_by?: string | null;
+  /** Author of the superseded values, when known and different from the replacer. */
+  original_created_by?: string | null;
+  original_created_at?: ISO8601String | Date | null;
+  original_updated_by?: string | null;
+  original_updated_at?: ISO8601String | Date | null;
+  created_at: ISO8601String | Date;
 }

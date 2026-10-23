@@ -1,15 +1,17 @@
 # Start with a base image and install system dependencies
-# Pinned to Node 24 because the monorepo enforces ">=20 <25" in package.json engines.
-FROM node:24-alpine AS base
-RUN apk add \
+# Use Debian in both build and runtime stages so native dependencies use glibc.
+FROM node:24-bookworm-slim AS base
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
     graphicsmagick \
     imagemagick \
     ghostscript \
     postgresql-client \
-    redis \
+    redis-tools \
     curl \
     nano \
-    bash
+    bash \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 # Stage for installing dependencies (cache-friendly)
@@ -87,23 +89,20 @@ COPY .env.example /app/.env
 COPY .env.example /app/server/.env  
 
 # Final production image with minimal runtime artifacts
-FROM node:24-alpine
-RUN apk add --no-cache bash \
+FROM node:24-bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
     postgresql-client \
-    redis \
+    redis-tools \
     graphicsmagick \
     imagemagick \
     ghostscript \
     curl \
     nano \
-    bash \
     chromium \
-    nss \
-    freetype \
-    freetype-dev \
-    harfbuzz \
     ca-certificates \
-    ttf-freefont
+    fonts-freefont-ttf \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY tsconfig.base.json ./
@@ -151,7 +150,7 @@ ENV NODE_ENV=production
 
 # Puppeteer chromium configuration
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Secret provider configuration
 # Default configuration for composite secret system

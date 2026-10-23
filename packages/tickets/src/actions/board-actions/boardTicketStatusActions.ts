@@ -3,9 +3,10 @@
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
-import { withAuth } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { IStatus } from '@alga-psa/types';
 
 import Status from '../../models/status';
@@ -54,6 +55,7 @@ export interface BoardTicketStatusInput {
   order_number?: number;
   color?: string | null;
   icon?: string | null;
+  portal_selectable?: boolean;
 }
 
 type NormalizedBoardTicketStatus = {
@@ -64,6 +66,7 @@ type NormalizedBoardTicketStatus = {
   order_number: number;
   color: string | null;
   icon: string | null;
+  portal_selectable: boolean;
 };
 
 function formatBoardTicketStatusValidationError(message: string): Error {
@@ -106,6 +109,8 @@ function normalizeBoardTicketStatuses(
       order_number: status.order_number ?? ((normalized.length + 1) * 10),
       color: status.color ?? null,
       icon: status.icon ?? null,
+      // New statuses are selectable by default; an explicit false is preserved.
+      portal_selectable: status.portal_selectable ?? true,
     });
   });
 
@@ -208,6 +213,7 @@ function buildStatusInsertRow(
     ...(hasStatusColumn(columns, 'is_custom') ? { is_custom: true } : {}),
     ...(hasStatusColumn(columns, 'color') ? { color: status.color } : {}),
     ...(hasStatusColumn(columns, 'icon') ? { icon: status.icon } : {}),
+    ...(hasStatusColumn(columns, 'portal_selectable') ? { portal_selectable: status.portal_selectable } : {}),
     ...(hasStatusColumn(columns, 'created_at') ? { created_at: now } : {}),
     ...(hasStatusColumn(columns, 'updated_at') ? { updated_at: now } : {}),
   };
@@ -291,6 +297,7 @@ async function persistBoardTicketStatuses(
         order_number: status.order_number,
         ...(hasStatusColumn(columns, 'color') ? { color: status.color } : {}),
         ...(hasStatusColumn(columns, 'icon') ? { icon: status.icon } : {}),
+        ...(hasStatusColumn(columns, 'portal_selectable') ? { portal_selectable: status.portal_selectable } : {}),
         ...(hasStatusColumn(columns, 'updated_at') ? { updated_at: now } : {}),
       });
   }
@@ -338,6 +345,11 @@ export const saveBoardTicketStatuses = withAuth(async (
   statuses: BoardTicketStatusInput[]
 ): Promise<IStatus[] | BoardActionError> => {
   const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermission(user, 'ticket_settings', 'update', db)) {
+    return permissionError('Permission denied: Cannot update ticket settings', 'features/tickets:errors.settings.updateDenied');
+  }
+
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => (
       persistBoardTicketStatuses(trx, tenant, boardId, user.user_id, statuses)
@@ -358,6 +370,11 @@ export const createBoardTicketStatus = withAuth(async (
   statusData: BoardTicketStatusInput
 ): Promise<IStatus | BoardActionError> => {
   const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermission(user, 'ticket_settings', 'update', db)) {
+    return permissionError('Permission denied: Cannot update ticket settings', 'features/tickets:errors.settings.updateDenied');
+  }
+
   try {
     const createdStatus = await withTransaction(db, async (trx: Knex.Transaction) => {
       const existingStatuses = await Status.getTicketStatusesByBoard(trx, tenant, boardId);
@@ -370,6 +387,7 @@ export const createBoardTicketStatus = withAuth(async (
         order_number: status.order_number,
         color: status.color ?? null,
         icon: status.icon ?? null,
+        portal_selectable: status.portal_selectable ?? true,
       }));
 
       nextStatuses.push({
@@ -407,6 +425,11 @@ export const updateBoardTicketStatus = withAuth(async (
   statusData: Partial<BoardTicketStatusInput>
 ): Promise<IStatus | BoardActionError> => {
   const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermission(user, 'ticket_settings', 'update', db)) {
+    return permissionError('Permission denied: Cannot update ticket settings', 'features/tickets:errors.settings.updateDenied');
+  }
+
   try {
     if (statusData.status_id && statusData.status_id !== statusId) {
       throw new Error('Ticket statuses cannot be moved or replaced implicitly.');
@@ -440,6 +463,7 @@ export const updateBoardTicketStatus = withAuth(async (
             order_number: statusData.order_number ?? status.order_number,
             color: statusData.color ?? status.color ?? null,
             icon: statusData.icon ?? status.icon ?? null,
+            portal_selectable: statusData.portal_selectable ?? status.portal_selectable ?? true,
           };
         }
 
@@ -451,6 +475,7 @@ export const updateBoardTicketStatus = withAuth(async (
           order_number: status.order_number,
           color: status.color ?? null,
           icon: status.icon ?? null,
+          portal_selectable: status.portal_selectable ?? true,
         };
       });
 
@@ -482,6 +507,11 @@ export const deleteBoardTicketStatus = withAuth(async (
   statusId: string
 ): Promise<IStatus[] | BoardActionError> => {
   const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermission(user, 'ticket_settings', 'update', db)) {
+    return permissionError('Permission denied: Cannot update ticket settings', 'features/tickets:errors.settings.updateDenied');
+  }
+
   try {
     const remainingStatuses = await withTransaction(db, async (trx: Knex.Transaction) => {
       const existingStatuses = await Status.getTicketStatusesByBoard(trx, tenant, boardId);
@@ -499,6 +529,7 @@ export const deleteBoardTicketStatus = withAuth(async (
           order_number: status.order_number,
           color: status.color ?? null,
           icon: status.icon ?? null,
+          portal_selectable: status.portal_selectable ?? true,
         }));
 
       return persistBoardTicketStatuses(trx, tenant, boardId, user.user_id, nextStatuses);

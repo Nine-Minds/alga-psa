@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -11,12 +11,20 @@ import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import toast from 'react-hot-toast';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { cancelAccountingExportBatch, createAccountingExportBatch, executeAccountingExportBatch, getAccountingExportBatch, listAccountingExportBatches } from '@alga-psa/billing/actions/accountingExportActions';
+import { cancelAccountingExportBatch, createAccountingExportBatch, downloadAccountingExportArtifact, executeAccountingExportBatch, getAccountingExportBatch, getAccountingExportConnections, listAccountingExportBatches } from '@alga-psa/billing/actions/accountingExportActions';
 import type { AccountingExportActionError } from '@alga-psa/billing/actions/accountingExportActions';
-import { getAccountingSyncHealth } from '@alga-psa/billing/actions/accountingSyncActions';
+import { getUnmappedQuickBooksEntities, saveQuickBooksExportMappings } from '../../../actions/quickBooksExportMappingActions';
+import {
+  QUICKBOOKS_FILE_ADAPTERS,
+  type QuickBooksMappingDecision,
+  type UnmappedQuickBooksEntity
+} from '../../../actions/quickBooksExportMappingRules';
+import { QuickBooksUnmappedItemsDialog } from './QuickBooksUnmappedItemsDialog';
 import { useAccountingCapabilities } from '@alga-psa/auth/hooks/useAccountingCapabilities';
+
+const UNMAPPED_ERROR_CODES = new Set(['missing_client_mapping', 'missing_service_mapping', 'missing_discount_mapping']);
 
 type AccountingExportStatus =
   | 'pending'
@@ -71,6 +79,7 @@ type BatchDetail = {
   batch: AccountingExportBatch | null;
   lines: AccountingExportLine[];
   errors: AccountingExportError[];
+  artifacts?: Array<{ artifact_id: string; filename: string; content_type: string; storage_fallback: boolean }>;
 };
 
 function isAccountingExportActionError(value: unknown): value is AccountingExportActionError {
@@ -97,6 +106,16 @@ const DEFAULT_ADAPTERS = [
   { id: 'quickbooks_online', label: 'QuickBooks Online' },
   { id: 'quickbooks_desktop', label: 'QuickBooks Desktop' }
 ] as const;
+
+type LiveAccountingProvider = 'quickbooks_online' | 'xero';
+
+/**
+ * Live adapters route through a connected accounting organisation and need a
+ * provider-scoped realm/connection; file adapters (CSV/desktop) do not.
+ */
+function getLiveProviderForAdapter(adapterId: string): LiveAccountingProvider | null {
+  return adapterId === 'quickbooks_online' || adapterId === 'xero' ? adapterId : null;
+}
 
 function getAccountingExportStatusKey(status: AccountingExportStatus): string {
   switch (status) {
@@ -160,6 +179,23 @@ export default function AccountingExportsTab(): React.JSX.Element {
   const [notes, setNotes] = useState<string>('');
   const [targetRealm, setTargetRealm] = useState<string>('');
   const [availableRealms, setAvailableRealms] = useState<Array<{ realmId: string; isDefault: boolean }>>([]);
+  const [realmLoading, setRealmLoading] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [connectionIssue, setConnectionIssue] = useState<'ambiguous' | 'none_connected' | null>(null);
+  const [realmReloadNonce, setRealmReloadNonce] = useState(0);
+  const [unmappedPrompt, setUnmappedPrompt] = useState<{
+    batchId: string;
+    adapterType: string;
+    entities: UnmappedQuickBooksEntity[];
+  } | null>(null);
+  const [unmappedSaving, setUnmappedSaving] = useState(false);
+  const [unmappedError, setUnmappedError] = useState<string | null>(null);
+  const realmRequestRef = useRef(0);
+  // Keep `t` out of the connection-loading effect deps: some i18n setups return
+  // a fresh bound function each render, which would re-trigger the effect
+  // forever. The ref keeps the latest translator available without looping.
+  const tRef = useRef(t);
+  tRef.current = t;
 
   const denyAccess = useCallback(() => {
     setAccessDenied(true);
@@ -169,6 +205,8 @@ export default function AccountingExportsTab(): React.JSX.Element {
     setCreateOpen(false);
     setAvailableRealms([]);
     setTargetRealm('');
+    setConnectionError(null);
+    setConnectionIssue(null);
   }, []);
 
   const loadBatches = useCallback(async () => {
@@ -211,28 +249,80 @@ export default function AccountingExportsTab(): React.JSX.Element {
     }
   }, [denyAccess, t]);
 
-  // Load available realms once on mount for multi-realm picker in the create dialog
+  // Load the connected organisations for the currently selected live adapter.
+  // This uses the export-scoped connection action (authorized by
+  // `exports_execute`, not `catalog_read`) and returns only connection choices,
+  // never the broader health payload. Switching adapters resets the previous
+  // provider's options and target immediately; a request token drops any
+  // in-flight response so an earlier provider can never repopulate the picker
+  // or reselect a stale target. A target is auto-selected only when the shared
+  // resolver produced a default — an ambiguous saved organisation leaves it
+  // unset so the operator must choose deliberately. File adapters have no
+  // accounting realm, so their selection is cleared.
   useEffect(() => {
-    if (!accountingCapabilities.loaded || !accountingCapabilities.exportsExecute || accessDenied) return;
-    let cancelled = false;
-    getAccountingSyncHealth()
-      .then((health) => {
-        if (cancelled) return;
-        if (health.realms.length > 1) {
-          setAvailableRealms(health.realms);
-          const defaultRealm = health.realms.find((r) => r.isDefault);
-          if (defaultRealm) {
-            setTargetRealm(defaultRealm.realmId);
-          }
+    const requestId = ++realmRequestRef.current;
+    setAvailableRealms([]);
+    setTargetRealm('');
+    setConnectionIssue(null);
+    setConnectionError(null);
+
+    if (
+      !createOpen ||
+      !accountingCapabilities.loaded ||
+      !accountingCapabilities.exportsExecute ||
+      accessDenied
+    ) {
+      setRealmLoading(false);
+      return;
+    }
+
+    const provider = getLiveProviderForAdapter(adapterType);
+    if (!provider) {
+      setRealmLoading(false);
+      return;
+    }
+
+    setRealmLoading(true);
+    getAccountingExportConnections(provider)
+      .then((view) => {
+        if (requestId !== realmRequestRef.current) return;
+        if (isActionPermissionError(view)) {
+          setRealmLoading(false);
+          denyAccess();
+          return;
         }
+        const realms = Array.isArray(view.realms) ? view.realms : [];
+        setAvailableRealms(realms);
+        setConnectionIssue(view.issue ?? null);
+        // Only auto-select when the shared resolver returned a usable default.
+        // An unresolved (ambiguous) selection deliberately stays unset.
+        const defaultRealm = view.connected
+          ? realms.find((realm) => realm.isDefault)
+          : undefined;
+        setTargetRealm(defaultRealm ? defaultRealm.realmId : '');
       })
       .catch(() => {
-        // Not EE or no permission — realm picker stays hidden
+        if (requestId !== realmRequestRef.current) return;
+        setAvailableRealms([]);
+        setTargetRealm('');
+        setConnectionIssue(null);
+        setConnectionError(tRef.current('accountingExports.createDialog.connectionLoadError', {
+          defaultValue: 'Could not load accounting connections. Check your connection settings and try again.',
+        }));
+      })
+      .finally(() => {
+        if (requestId !== realmRequestRef.current) return;
+        setRealmLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [accessDenied, accountingCapabilities.exportsExecute, accountingCapabilities.loaded]);
+  }, [
+    accessDenied,
+    accountingCapabilities.exportsExecute,
+    accountingCapabilities.loaded,
+    adapterType,
+    createOpen,
+    denyAccess,
+    realmReloadNonce,
+  ]);
 
   useEffect(() => {
     if (!accountingCapabilities.loaded || !accountingCapabilities.exportsExecute || accessDenied) {
@@ -254,7 +344,25 @@ export default function AccountingExportsTab(): React.JSX.Element {
   const getStatusLabel = (status: AccountingExportStatus) =>
     t(`accountingExports.status.${getAccountingExportStatusKey(status)}`, { defaultValue: status });
 
+  const liveProvider = getLiveProviderForAdapter(adapterType);
+  const realmSelectionRequired = liveProvider !== null;
+  // A live export cannot be submitted until its provider's connections have
+  // loaded and a target is selected for that provider.
+  const realmSelectionReady = !realmSelectionRequired || Boolean(targetRealm);
+  const canSubmit = !creating && !realmLoading && !connectionError && realmSelectionReady;
+  const showRealmPicker =
+    realmSelectionRequired && (availableRealms.length > 1 || (availableRealms.length > 0 && !targetRealm));
+  const retryConnectionLoad = useCallback(() => {
+    setRealmReloadNonce((nonce) => nonce + 1);
+  }, []);
+
   const onCreate = async () => {
+    if (realmSelectionRequired && (realmLoading || !targetRealm)) {
+      handleError(t('accountingExports.toast.realmRequired', {
+        defaultValue: 'Choose a connected accounting company before creating the export.',
+      }));
+      return;
+    }
     setCreating(true);
     try {
       const filters: Record<string, unknown> = {
@@ -270,12 +378,13 @@ export default function AccountingExportsTab(): React.JSX.Element {
           .filter(Boolean);
       }
 
+      const submittedTargetRealm = realmSelectionRequired ? targetRealm : '';
       const batchResult = await createAccountingExportBatch({
         adapter_type: adapterType,
         export_type: 'invoice',
         filters,
         notes: notes.trim() || null,
-        ...(targetRealm ? { target_realm: targetRealm } : {})
+        ...(submittedTargetRealm ? { target_realm: submittedTargetRealm } : {})
       });
       if (isActionPermissionError(batchResult)) {
         denyAccess();
@@ -301,7 +410,21 @@ export default function AccountingExportsTab(): React.JSX.Element {
     }
   };
 
-  const onExecute = async (batchId: string) => {
+  /** Opens the create/link prompt when a QuickBooks file batch is blocked on unmapped entities. */
+  const openUnmappedPrompt = async (batchId: string, adapterType: string | undefined): Promise<boolean> => {
+    if (!adapterType || !QUICKBOOKS_FILE_ADAPTERS.includes(adapterType)) return false;
+    try {
+      const entities = await getUnmappedQuickBooksEntities(batchId);
+      if (!Array.isArray(entities) || entities.length === 0) return false;
+      setUnmappedError(null);
+      setUnmappedPrompt({ batchId, adapterType, entities });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const onExecute = async (batchId: string, adapterTypeHint?: string) => {
     try {
       const result = await executeAccountingExportBatch(batchId);
       if (isActionPermissionError(result)) {
@@ -311,6 +434,10 @@ export default function AccountingExportsTab(): React.JSX.Element {
       if (isAccountingExportActionError(result)) {
         await loadBatches();
         await loadBatchDetail(batchId);
+        const adapterType = adapterTypeHint ?? batches.find((batch) => batch.batch_id === batchId)?.adapter_type;
+        if (await openUnmappedPrompt(batchId, adapterType)) {
+          return;
+        }
         handleError(result.message);
         return;
       }
@@ -323,6 +450,36 @@ export default function AccountingExportsTab(): React.JSX.Element {
       handleError(e, t('accountingExports.toast.executeError', {
         defaultValue: 'Failed to execute batch',
       }));
+    }
+  };
+
+  const onSubmitUnmapped = async (decisions: QuickBooksMappingDecision[]) => {
+    if (!unmappedPrompt) return;
+    const { batchId, adapterType } = unmappedPrompt;
+    setUnmappedSaving(true);
+    setUnmappedError(null);
+    try {
+      const result = await saveQuickBooksExportMappings(batchId, decisions);
+      if (isActionPermissionError(result)) {
+        setUnmappedError(result.permissionError);
+        return;
+      }
+      if (isActionMessageError(result)) {
+        setUnmappedError(getErrorMessage(result));
+        return;
+      }
+      setUnmappedPrompt(null);
+      toast.success(t('accountingExports.unmapped.toast.saved', {
+        defaultValue: 'QuickBooks mappings saved',
+      }));
+      await onExecute(batchId, adapterType);
+    } catch (e) {
+      setUnmappedError(t('accountingExports.unmapped.toast.saveError', {
+        defaultValue: 'Failed to save QuickBooks mappings',
+      }));
+      handleError(e);
+    } finally {
+      setUnmappedSaving(false);
     }
   };
 
@@ -346,6 +503,23 @@ export default function AccountingExportsTab(): React.JSX.Element {
       handleError(e, t('accountingExports.toast.cancelError', {
         defaultValue: 'Failed to cancel batch',
       }));
+    }
+  };
+
+  const onDownloadArtifact = async (batchId: string, artifactId: string) => {
+    try {
+      const result = await downloadAccountingExportArtifact(batchId, artifactId);
+      if (isActionPermissionError(result)) { denyAccess(); return; }
+      if (!('contentBase64' in result)) { handleError(result.message); return; }
+      const bytes = Uint8Array.from(atob(result.contentBase64), (char) => char.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: result.contentType }));
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = result.filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      handleError(error, t('accountingExports.toast.artifactDownloadError', { defaultValue: 'Unable to download this export file.' }));
     }
   };
 
@@ -435,7 +609,7 @@ export default function AccountingExportsTab(): React.JSX.Element {
                         <Button
                           variant="default"
                           size="sm"
-                          onClick={() => void onExecute(batch.batch_id)}
+                          onClick={() => void onExecute(batch.batch_id, batch.adapter_type)}
                           id={`accounting-exports-execute-${batch.batch_id}`}
                         >
                           {t('accountingExports.actions.execute', { defaultValue: 'Execute' })}
@@ -468,7 +642,7 @@ export default function AccountingExportsTab(): React.JSX.Element {
             >
               {t('common.cancel', { defaultValue: 'Cancel' })}
             </Button>
-            <Button onClick={() => void onCreate()} disabled={creating} id="accounting-export-create-submit">
+            <Button onClick={() => void onCreate()} disabled={!canSubmit} id="accounting-export-create-submit">
               {creating
                 ? t('accountingExports.actions.creating', { defaultValue: 'Creating...' })
                 : t('accountingExports.actions.createBatch', { defaultValue: 'Create Batch' })}
@@ -493,7 +667,64 @@ export default function AccountingExportsTab(): React.JSX.Element {
               />
             </div>
 
-            {availableRealms.length > 1 && (
+            {realmSelectionRequired && realmLoading && (
+              <div className="text-sm text-muted-foreground" role="status" id="accounting-export-connections-loading">
+                {t('accountingExports.createDialog.loadingConnections', {
+                  defaultValue: 'Loading accounting connections...',
+                })}
+              </div>
+            )}
+
+            {connectionError && (
+              <div
+                id="accounting-export-connections-error"
+                role="alert"
+                className="flex items-start justify-between gap-3 rounded-md border border-[rgb(var(--badge-error-border))] bg-[rgb(var(--badge-error-bg))] p-3 text-sm text-[rgb(var(--badge-error-text))]"
+              >
+                <span>{connectionError}</span>
+                <Button
+                  id="accounting-export-connections-retry"
+                  variant="outline"
+                  size="sm"
+                  onClick={retryConnectionLoad}
+                >
+                  {t('accountingExports.actions.retry', { defaultValue: 'Retry' })}
+                </Button>
+              </div>
+            )}
+
+            {!connectionError && connectionIssue === 'ambiguous' && !targetRealm && (
+              <div
+                id="accounting-export-realm-guidance"
+                role="status"
+                className="rounded-md border border-[rgb(var(--color-border-200))] p-3 text-sm text-[rgb(var(--color-text-700))]"
+              >
+                {t('accountingExports.createDialog.ambiguousRealm', {
+                  defaultValue:
+                    'Your saved default accounting organisation is shared by more than one connection. Choose a connection to continue.',
+                })}
+              </div>
+            )}
+
+            {!connectionError && connectionIssue === 'none_connected' && (
+              <div
+                id="accounting-export-realm-guidance"
+                role="status"
+                className="rounded-md border border-[rgb(var(--color-border-200))] p-3 text-sm text-[rgb(var(--color-text-700))]"
+              >
+                {liveProvider === 'xero'
+                  ? t('accountingExports.createDialog.noXeroConnection', {
+                      defaultValue:
+                        'No Xero connection is available. Connect Xero in accounting settings to export.',
+                    })
+                  : t('accountingExports.createDialog.noQboConnection', {
+                      defaultValue:
+                        'No QuickBooks Online connection is available. Connect it in accounting settings to export.',
+                    })}
+              </div>
+            )}
+
+            {showRealmPicker && !connectionError && (
               <div className="space-y-2" id="accounting-export-realm-picker">
                 <Label htmlFor="accounting-export-realm">
                   {t('accountingExports.createDialog.fields.realm', { defaultValue: 'Target Company (Realm)' })}
@@ -669,6 +900,27 @@ export default function AccountingExportsTab(): React.JSX.Element {
                 </div>
               ) : null}
 
+              {(selectedDetail?.artifacts?.length ?? 0) > 0 ? (
+                <section aria-label={t('accountingExports.artifacts.title', { defaultValue: 'Delivered files' })}>
+                  <div className="mb-2 text-xs text-muted-foreground">{t('accountingExports.artifacts.title', { defaultValue: 'Delivered files' })}</div>
+                  <ul className="space-y-2">
+                    {selectedDetail!.artifacts!.map((artifact, index) => (
+                      <li key={artifact.artifact_id} className="flex items-center justify-between gap-3 text-sm">
+                        <span className="truncate">
+                          {artifact.filename}
+                          {artifact.storage_fallback ? <span className="ml-2 text-amber-700 dark:text-amber-300">{t('accountingExports.artifacts.storageFallback', { defaultValue: 'Stored in database backup' })}</span> : null}
+                        </span>
+                        <Button id={`download-export-artifact-${index + 1}`} variant="outline" onClick={() => void onDownloadArtifact(selectedBatch.batch_id, artifact.artifact_id)}>
+                          {t('accountingExports.artifacts.download', { defaultValue: 'Download' })}
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : selectedBatch.status === 'delivered' && ['quickbooks_csv', 'quickbooks_desktop', 'xero_csv'].includes(selectedBatch.adapter_type) ? (
+                <p className="text-sm text-muted-foreground">{t('accountingExports.artifacts.unavailable', { defaultValue: 'This historical batch has no saved file artifact. It cannot be recovered without running a new export.' })}</p>
+              ) : null}
+
               {(selectedDetail?.errors?.length ?? 0) > 0 ? (
                 <div>
                   <div className="text-xs text-muted-foreground">
@@ -706,9 +958,21 @@ export default function AccountingExportsTab(): React.JSX.Element {
                     {t('accountingExports.actions.cancelBatch', { defaultValue: 'Cancel Batch' })}
                   </Button>
                 )}
+                {QUICKBOOKS_FILE_ADAPTERS.includes(selectedBatch.adapter_type) &&
+                  (selectedDetail?.errors ?? []).some(
+                    (error) => error.resolution_state === 'open' && UNMAPPED_ERROR_CODES.has(error.code)
+                  ) && (
+                  <Button
+                    id="accounting-exports-detail-resolve-unmapped"
+                    variant="outline"
+                    onClick={() => void openUnmappedPrompt(selectedBatch.batch_id, selectedBatch.adapter_type)}
+                  >
+                    {t('accountingExports.actions.resolveUnmapped', { defaultValue: 'Resolve unmapped items' })}
+                  </Button>
+                )}
                 <Button
                   id="accounting-exports-detail-execute"
-                  onClick={() => void onExecute(selectedBatch.batch_id)}
+                  onClick={() => void onExecute(selectedBatch.batch_id, selectedBatch.adapter_type)}
                 >
                   {t('accountingExports.actions.execute', { defaultValue: 'Execute' })}
                 </Button>
@@ -717,6 +981,20 @@ export default function AccountingExportsTab(): React.JSX.Element {
           )}
         </DialogContent>
       </Dialog>
+
+      <QuickBooksUnmappedItemsDialog
+        isOpen={Boolean(unmappedPrompt)}
+        adapterType={unmappedPrompt?.adapterType ?? ''}
+        entities={unmappedPrompt?.entities ?? []}
+        canManageMappings={accountingCapabilities.mappingsManage}
+        saving={unmappedSaving}
+        error={unmappedError}
+        onCancel={() => {
+          setUnmappedPrompt(null);
+          setUnmappedError(null);
+        }}
+        onSubmit={(decisions) => void onSubmitUnmapped(decisions)}
+      />
     </div>
   );
 }

@@ -43,13 +43,14 @@
       "contractTemplates": "Vertragsvorlagen",
       "invoicing": "Fakturierung",
       "invoiceLayouts": "Rechnungslayouts",
-      "taxRates": "Steuersätze",
+      "taxRates": "Steuern",
       "contractLinePresets": "Voreinstellungen für Vertragszeilen",
       "billingCycles": "Abrechnungszyklen",
       "servicePeriods": "Servicezeiträume",
       "usageTracking": "Nutzungsverfolgung",
       "reports": "Berichte",
       "serviceTypes": "Servicetypen",
+      "serviceCategories": "Servicekategorien",
       "serviceCatalog": "Dienste",
       "products": "Produkte"
     }
@@ -229,12 +230,14 @@
       "selectService": "Dienst auswählen",
       "taxable": "(Steuerpflichtig)",
       "nonTaxable": "(Nicht steuerpflichtig)",
-      "calculatedOnSave": "(berechnet beim Speichern)"
+      "calculatedOnSave": "(berechnet beim Speichern)",
+      "credit": "Gutschrift"
     },
     "expanded": {
       "discount": "Rabatt",
       "item": "Artikel {{number}}",
-      "markedForRemoval": "Zur Entfernung markiert"
+      "markedForRemoval": "Zur Entfernung markiert",
+      "credit": "Gutschrift"
     },
     "fields": {
       "service": "Dienst",
@@ -246,10 +249,18 @@
       "applyDiscountTo": "Rabatt anwenden auf",
       "entireInvoice": "Gesamte Rechnung",
       "rate": "Preis ({{currencySymbol}})",
-      "description": "Beschreibung"
+      "description": "Beschreibung",
+      "creditUnit": "Gutschrift pro Einheit ({{currencySymbol}})",
+      "taxTreatment": "Steuerliche Behandlung",
+      "nonTaxable": "Nicht steuerpflichtig",
+      "location": "Standort",
+      "clientDefaultLocation": "Standard des Kunden",
+      "billingProfile": "Abrechnungsprofil",
+      "clientDefaultProfile": "Standard des Kunden"
     },
     "placeholders": {
-      "discountDescription": "z. B. Skonto bei vorzeitiger Zahlung"
+      "discountDescription": "z. B. Skonto bei vorzeitiger Zahlung",
+      "creditDescription": "z. B. Kulanzgutschrift"
     },
     "actions": {
       "add": "Hinzufügen",
@@ -266,11 +277,15 @@
       "invoiceTotal": "{{percentage}}% der Rechnungssumme",
       "amount": "Betrag: -{{currencySymbol}}{{amount}}",
       "appliedTo": "Angewendet auf: {{description}}",
-      "subtotal": "Zwischensumme: {{currencySymbol}}{{amount}}"
+      "subtotal": "Zwischensumme: {{currencySymbol}}{{amount}}",
+      "credit": "Gutschrift"
     },
     "options": {
       "percentage": "Prozentsatz",
       "fixedAmount": "Fester Betrag"
+    },
+    "errors": {
+      "serviceRequired": "Weisen Sie dieser Position vor dem Speichern einen Dienst zu."
     }
   },
   "contractLineServices": {
@@ -334,7 +349,8 @@
       "billingMethod": "Abrechnungsmethode",
       "quantity": "Menge",
       "defaultRate": "Standardtarif",
-      "actions": "Aktionen"
+      "actions": "Aktionen",
+      "pricing": "Preisgestaltung"
     },
     "tooltip": {
       "defaultRate": "Der Standardsatz des Dienstes, der für die interne Wertzuordnung und Berichterstattung innerhalb der festen Plansumme verwendet wird."
@@ -369,7 +385,17 @@
       "saveSuccess": "Voreingestellte Vertragszeilendienste erfolgreich gespeichert",
       "saveError": "Dienste konnten nicht gespeichert werden"
     },
-    "unknownService": "Unbekannter Dienst"
+    "unknownService": "Unbekannter Dienst",
+    "pricing": {
+      "product": "Abrechnung nach Stückzahl",
+      "bundle": "Teil der Positionssumme",
+      "unit": "Pro Arbeitsplatz / Einheit",
+      "unitRate": "Stückpreis",
+      "unitRatePlaceholder": "Katalogpreis"
+    },
+    "errors": {
+      "recurringQuantityInvalid": "{{name}}: Die wiederkehrende Menge muss eine ganze Zahl von null oder mehr sein."
+    }
   },
   "accountingExports": {
     "title": "Buchhaltungsexporte",
@@ -389,7 +415,9 @@
       "execute": "Ausführen",
       "createBatch": "Stapel erstellen",
       "creating": "Erstellen...",
-      "cancelBatch": "Stapel stornieren"
+      "cancelBatch": "Stapel stornieren",
+      "retry": "Erneut versuchen",
+      "resolveUnmapped": "Nicht zugeordnete Einträge auflösen"
     },
     "states": {
       "loadingBatches": "Stapel werden geladen...",
@@ -416,7 +444,12 @@
         "invoiceStatuses": "Komma-getrennt (optional), z.B. abgeschlossen, veröffentlicht",
         "notes": "Optionale Notizen"
       },
-      "defaultRealmLabel": "{{realmId}} (Standard)"
+      "defaultRealmLabel": "{{realmId}} (Standard)",
+      "loadingConnections": "Buchhaltungsverbindungen werden geladen...",
+      "connectionLoadError": "Buchhaltungsverbindungen konnten nicht geladen werden. Prüfen Sie Ihre Verbindungseinstellungen und versuchen Sie es erneut.",
+      "ambiguousRealm": "Ihre gespeicherte Standard-Buchhaltungsorganisation wird von mehr als einer Verbindung verwendet. Wählen Sie eine Verbindung, um fortzufahren.",
+      "noXeroConnection": "Es ist keine Xero-Verbindung verfügbar. Verbinden Sie Xero in den Buchhaltungseinstellungen, um zu exportieren.",
+      "noQboConnection": "Es ist keine QuickBooks Online-Verbindung verfügbar. Verbinden Sie sie in den Buchhaltungseinstellungen, um zu exportieren."
     },
     "detailDialog": {
       "title": "Buchhaltungsexportstapel",
@@ -440,7 +473,9 @@
       "createError": "Exportstapel konnte nicht erstellt werden",
       "executeError": "Batch konnte nicht ausgeführt werden",
       "cancelled": "Stapel storniert",
-      "cancelError": "Batch konnte nicht storniert werden"
+      "cancelError": "Batch konnte nicht storniert werden",
+      "realmRequired": "Wählen Sie ein verbundenes Buchhaltungsunternehmen, bevor Sie den Export erstellen.",
+      "artifactDownloadError": "Diese Exportdatei kann nicht heruntergeladen werden."
     },
     "status": {
       "pending": "Ausstehend",
@@ -451,6 +486,41 @@
       "failed": "Fehlgeschlagen",
       "cancelled": "Storniert",
       "needsAttention": "Erfordert Aufmerksamkeit"
+    },
+    "artifacts": {
+      "title": "Bereitgestellte Dateien",
+      "download": "Herunterladen",
+      "unavailable": "Für diesen historischen Stapel ist keine Datei gespeichert. Sie kann nur durch einen neuen Export wiederhergestellt werden.",
+      "storageFallback": "In einer Datenbanksicherung gespeichert"
+    },
+    "unmapped": {
+      "title": "Nicht zugeordnete QuickBooks-Einträge",
+      "descriptionDesktop": "Diese benötigen einen QuickBooks Desktop-Kunden oder -Artikel, bevor sie exportiert werden können. Legen Sie sie als neue Einträge an (die IIF-Datei fügt sie QuickBooks Desktop hinzu) oder verknüpfen Sie sie mit einem vorhandenen QuickBooks-Eintrag mit genau demselben Namen. Ihre Auswahl wird als QuickBooks Desktop-Zuordnung gespeichert, sodass künftige Exporte nicht erneut fragen.",
+      "descriptionCsv": "Für diese Einträge gibt es noch keine QuickBooks-Zuordnung. Exportieren Sie sie unter dem unten stehenden Namen (QuickBooks legt neue Namen beim CSV-Import an) oder verknüpfen Sie sie mit einem vorhandenen QuickBooks-Eintrag mit genau demselben Namen. Ihre Auswahl wird als Zuordnung gespeichert, damit künftige Exporte nicht erneut fragen.",
+      "permissionNotice": "Zum Speichern von QuickBooks-Zuordnungen ist die Berechtigung zum Verwalten von Zuordnungen erforderlich. Wenden Sie sich an einen Administrator oder ordnen Sie diese Einträge in den QuickBooks-Einstellungen zu.",
+      "kinds": {
+        "client": "Kunde",
+        "service": "Leistung",
+        "product": "Produkt",
+        "discount": "Rabatt"
+      },
+      "modes": {
+        "create": "Neu anlegen",
+        "existing": "Bereits in QuickBooks"
+      },
+      "nameAria": "QuickBooks-Name für {{name}}",
+      "desktopNote": "Neue Produkte verwenden den in den QuickBooks Desktop-Einstellungen gewählten Artikeltyp. Wählen Sie „Bereits in QuickBooks\" für alles, was in Ihrer Firmendatei existiert, damit dessen Angaben nicht überschrieben werden.",
+      "actions": {
+        "cancel": "Abbrechen",
+        "goToMappings": "Zu den QuickBooks-Zuordnungen",
+        "save": "Zuordnungen speichern und exportieren"
+      },
+      "toast": {
+        "saved": "QuickBooks-Zuordnungen gespeichert",
+        "saveError": "QuickBooks-Zuordnungen konnten nicht gespeichert werden"
+      },
+      "postsTo": "Bucht auf {{account}}",
+      "postsToDefault": "Bucht auf das Standard-Erlöskonto"
     }
   },
   "templateRenderer": {
@@ -614,7 +684,8 @@
       "referenceMissing": "Der ausgewählte Kunde, Vertrag oder Abrechnungsdatensatz existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "duplicate": "Diese Vertragszuordnung des Kunden existiert bereits.",
       "missingField": "Erforderliches Feld des Kundenvertrags fehlt.",
-      "missingFieldNamed": "Erforderliches Feld des Kundenvertrags fehlt: {{field}}."
+      "missingFieldNamed": "Erforderliches Feld des Kundenvertrags fehlt: {{field}}.",
+      "alreadyActiveScheduled": "Dieser Vertrag ist bereits aktiv und beginnt am {{startDate}}; es gibt nichts zu aktivieren."
     },
     "cycle": {
       "cannotCreateNext": "Der nächste Abrechnungszeitraum kann derzeit nicht erstellt werden"
@@ -688,7 +759,25 @@
         "create": "Berechtigung verweigert: Buchhaltungsexport-Stapel können nicht erstellt werden",
         "read": "Berechtigung verweigert: Auf Buchhaltungsexport-Stapel kann nicht zugegriffen werden",
         "update": "Berechtigung verweigert: Buchhaltungsexport-Stapel können nicht geändert werden",
-        "execute": "Berechtigung verweigert: Buchhaltungsexport-Stapel können nicht ausgeführt werden"
+        "execute": "Berechtigung verweigert: Buchhaltungsexport-Stapel können nicht ausgeführt werden",
+        "createMappings": "Zum Anlegen von QuickBooks-Zuordnungen aus einem Export sind die Berechtigungen für Exporte und das Verwalten von Zuordnungen erforderlich"
+      },
+      "quickbooksMapping": {
+        "noDecisions": "Legen Sie für mindestens einen nicht zugeordneten Eintrag fest, wie er behandelt werden soll.",
+        "stale": "Einer der ausgewählten Einträge ist für diesen Stapel nicht mehr unzugeordnet. Aktualisieren Sie und versuchen Sie es erneut.",
+        "duplicateSubmission": "„{{algaName}}\" wurde doppelt übermittelt.",
+        "invalidMode": "Wählen Sie für „{{algaName}}\" „Neu anlegen\" oder „Bereits in QuickBooks\".",
+        "nameRequired": "Geben Sie einen QuickBooks-Namen für „{{algaName}}\" ein.",
+        "nameInvalidCharacters": "Der QuickBooks-Name für „{{algaName}}\" darf keine Tabulatoren, Zeilenumbrüche oder doppelten Anführungszeichen enthalten.",
+        "nameTooLong": "Der QuickBooks-Name für „{{algaName}}\" ist länger als {{maxLength}} Zeichen.",
+        "duplicateNewName": "„{{qbName}}\" wird für mehr als einen neuen QuickBooks-Eintrag verwendet.",
+        "duplicateClientName": "„{{qbName}}\" ist für mehr als einen Kunden ausgewählt. Jeder QuickBooks-Name kann nur einem zugeordnet werden.",
+        "duplicateItemName": "„{{qbName}}\" ist für mehr als einen Artikel ausgewählt. Jeder QuickBooks-Name kann nur einem zugeordnet werden.",
+        "nameTakenByClient": "„{{qbName}}\" ist bereits einem anderen Kunden zugeordnet und kann daher nicht auch für „{{algaName}}\" verwendet werden. Wählen Sie einen anderen QuickBooks-Namen oder ändern Sie die bestehende Zuordnung in den QuickBooks-Zuordnungen.",
+        "nameTakenByItem": "„{{qbName}}\" ist bereits einem anderen Artikel zugeordnet und kann daher nicht auch für „{{algaName}}\" verwendet werden. Wählen Sie einen anderen QuickBooks-Namen oder ändern Sie die bestehende Zuordnung in den QuickBooks-Zuordnungen.",
+        "unsupportedBatch": "Dieser Stapel ist kein QuickBooks Desktop- oder QuickBooks CSV-Export.",
+        "nameTakenConcurrently": "Einer dieser QuickBooks-Namen wurde gerade einem anderen Eintrag zugeordnet. Aktualisieren Sie die Liste und wählen Sie einen anderen Namen.",
+        "desktopIncomeAccountRequired": "Legen Sie das Standard-Erlöskonto in den QuickBooks Desktop-Einstellungen fest, bevor Sie Artikel aus einem Export zuordnen."
       }
     },
     "vendorBill": {

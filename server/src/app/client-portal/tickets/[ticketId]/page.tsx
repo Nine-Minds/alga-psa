@@ -1,7 +1,6 @@
 import React from 'react';
 import { cache } from 'react';
-import { getClientTicketDetails } from '@alga-psa/client-portal/actions';
-import { getTicketStatuses } from '@alga-psa/reference-data/actions';
+import { getClientTicketDetails, getClientPortalTicketStatuses } from '@alga-psa/client-portal/actions';
 import { TicketDetailsContainer } from '@alga-psa/client-portal/components';
 import logger from '@alga-psa/core/logger';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -9,6 +8,7 @@ import {
   getErrorMessage,
   isActionMessageError,
   isActionPermissionError,
+  userFacingErrorMessage,
 } from '@alga-psa/ui/lib/errorHandling';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
@@ -70,7 +70,26 @@ export default async function TicketPage({ params }: TicketPageProps) {
       );
     }
 
-    const statuses = await getTicketStatuses(ticketData.board_id);
+    const statusesResult = ticketData.board_id
+      ? await getClientPortalTicketStatuses(ticketData.board_id, ticketData.status_id)
+      : [];
+    if (isReturnedActionError(statusesResult)) {
+      const message = getErrorMessage(statusesResult);
+      logger.warn('[ClientPortal] Ticket statuses returned action error', {
+        ticketId,
+        error: message
+      });
+
+      return (
+        <Alert id="ticket-error-message" variant="destructive">
+          <AlertDescription>
+            {t('messages.errorWithMessage', { message, defaultValue: 'Error: {{message}}' })}
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    const statuses = statusesResult;
     const productCode = await getCurrentTenantProduct();
 
     return (
@@ -93,12 +112,10 @@ export default async function TicketPage({ params }: TicketPageProps) {
     return (
       <Alert id="ticket-error-message" variant="destructive">
         <AlertDescription>
-          {t('messages.errorWithMessage', {
-            message: error instanceof Error
-              ? error.message
-              : t('messages.loadError', { defaultValue: 'Failed to load ticket details' }),
-            defaultValue: 'Error: {{message}}',
-          })}
+          {userFacingErrorMessage(
+            error,
+            t('messages.loadError', { defaultValue: 'Failed to load ticket details' }),
+          )}
         </AlertDescription>
       </Alert>
     );

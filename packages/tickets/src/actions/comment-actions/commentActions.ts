@@ -10,12 +10,12 @@ import { createTenantKnex, tenantDb, registerAfterCommit } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { TicketResponseState } from '@alga-psa/types';
+import { publishEvent, publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { buildTicketCommunicationWorkflowEvents } from '../../lib/workflowTicketCommunicationEvents';
-import { isResponseStateTrackingEnabled } from '../../lib/responseStateSettings';
+import { buildTicketCommunicationWorkflowEvents, publishTicketCommunicationWorkflowEvent } from '../../lib/workflowTicketCommunicationEvents';
+import { applyCommentResponseState, resolveCommentAuthor } from '@alga-psa/shared/lib/tickets/responseState';
 import { publishTicketUpdate } from '../../lib/liveUpdates';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -24,6 +24,10 @@ import {
   TICKET_ACTIVITY_SOURCE,
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
+import {
+  prepareCommentEmailRecipients,
+  type CommentEmailRecipientsInput,
+} from '@shared/lib/tickets/commentEmailRecipients';
 import { ticketActionErrorFrom, type TicketActionError } from '../ticketActionErrors';
 import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
 
@@ -114,84 +118,6 @@ async function assertClientCanCreateComment(
   }
 }
 
-/**
- * Helper function to determine the new response state based on comment properties
- * and update the ticket's response_state accordingly.
- *
- * Logic:
- * - Internal note (is_internal=true): No change to response state
- * - Client-visible comment from internal user: Set to 'awaiting_client'
- * - Comment from client: Set to 'awaiting_internal'
- */
-async function updateTicketResponseState(
-  trx: Knex.Transaction,
-  tenant: string,
-  ticketId: string,
-  authorType: 'internal' | 'client' | 'unknown',
-  isInternal: boolean,
-  userId: string | null
-): Promise<{ previousState: TicketResponseState; newState: TicketResponseState }> {
-  // Skip response state tracking when disabled for this tenant
-  const trackingEnabled = await isResponseStateTrackingEnabled(tenant, trx);
-  if (!trackingEnabled) {
-    return { previousState: null, newState: null };
-  }
-
-  // Get current ticket response state
-  const ticket = await tenantScopedTable(trx, 'tickets', tenant)
-    .select('response_state')
-    .where({ ticket_id: ticketId })
-    .first();
-
-  const previousState = (ticket?.response_state || null) as TicketResponseState;
-  let newState: TicketResponseState = previousState;
-
-  // Internal notes don't change response state
-  if (isInternal) {
-    return { previousState, newState };
-  }
-
-  // Determine new state based on author type
-  if (authorType === 'internal') {
-    // Internal staff posting client-visible comment -> awaiting client response
-    newState = 'awaiting_client';
-  } else if (authorType === 'client') {
-    // Client posting comment -> awaiting internal response
-    newState = 'awaiting_internal';
-  }
-
-  // Only update if state actually changed
-  if (newState !== previousState) {
-    await tenantScopedTable(trx, 'tickets', tenant)
-      .where({ ticket_id: ticketId })
-      .update({ response_state: newState });
-
-    // Publish response state change event
-    try {
-      await publishEvent({
-        eventType: 'TICKET_RESPONSE_STATE_CHANGED',
-        payload: {
-          tenantId: tenant,
-          occurredAt: new Date().toISOString(),
-          ticketId,
-          userId,
-          previousResponseState: previousState,
-          newResponseState: newState,
-          previousState,
-          newState,
-          trigger: 'comment'
-        }
-      });
-      console.log(`[updateTicketResponseState] Published event: ${previousState} -> ${newState}`);
-    } catch (eventError) {
-      console.error(`[updateTicketResponseState] Failed to publish event:`, eventError);
-      // Don't throw - allow comment creation to succeed even if event publishing fails
-    }
-  }
-
-  return { previousState, newState };
-}
-
 export const findCommentsByTicketId = withAuth(async (_user, { tenant }, ticketId: string): Promise<IComment[] | TicketActionError> => {
   const { knex: db } = await createTenantKnex();
   try {
@@ -226,7 +152,12 @@ export const findCommentById = withAuth(async (_user, { tenant }, commentId: str
   }
 });
 
-export const createComment = withAuth(async (user, { tenant }, comment: Omit<IComment, 'tenant'>): Promise<string | TicketActionError> => {
+export const createComment = withAuth(async (
+  user,
+  { tenant },
+  comment: Omit<IComment, 'tenant'>,
+  emailRecipients?: CommentEmailRecipientsInput | null,
+): Promise<string | TicketActionError> => {
   try {
     if (!await hasPermission(user, 'ticket', 'update')) throw new Error('Permission denied: Cannot add comment');
     comment.user_id = user.user_id;
@@ -237,21 +168,13 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
       user_id: comment.user_id
     });
 
-    // Get user's type to set author_type
+    // Resolve author_type through the shared rules (same as the REST API path)
     if (comment.user_id) {
       const { knex: db } = await createTenantKnex();
-      const user = await withTransaction(db, async (trx: Knex.Transaction) => {
-        return await tenantScopedTable(trx, 'users', tenant!)
-          .select('user_type')
-          .where('user_id', comment.user_id)
-          .first();
+      const author = await withTransaction(db, async (trx: Knex.Transaction) => {
+        return await resolveCommentAuthor(trx, tenant!, comment.user_id);
       });
-
-      if (user) {
-        comment.author_type = user.user_type === 'internal' ? 'internal' : 'client';
-      } else {
-        comment.author_type = 'unknown';
-      }
+      comment.author_type = author.authorType;
     } else {
       comment.author_type = 'unknown';
     }
@@ -306,6 +229,37 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       await assertClientCanCreateComment(trx, commentTenant!, user, commentToInsert);
 
+      // A reply inherits its thread's visibility (Comment.insert enforces it),
+      // so resolve the effective visibility before validating one-off Cc/Bcc.
+      let effectiveIsInternal = Boolean(commentToInsert.is_internal);
+      if (commentToInsert.parent_comment_id) {
+        const parentThread = await tenantDb(trx, commentTenant!)
+          .tenantJoin(
+            tenantScopedTable(trx, 'comments as parent', commentTenant!),
+            'comment_threads as thread',
+            'parent.thread_id',
+            'thread.thread_id'
+          )
+          .select('thread.is_internal as thread_is_internal')
+          .where('parent.comment_id', commentToInsert.parent_comment_id)
+          .first();
+        if (parentThread) {
+          effectiveIsInternal = Boolean(parentThread.thread_is_internal);
+        }
+      }
+
+      const resolvedEmailRecipients = await prepareCommentEmailRecipients(trx, commentTenant!, {
+        cc: emailRecipients?.cc,
+        bcc: emailRecipients?.bcc,
+        isInternal: effectiveIsInternal,
+      });
+      if (resolvedEmailRecipients) {
+        commentToInsert.metadata = {
+          ...(commentToInsert.metadata ?? {}),
+          email_recipients: resolvedEmailRecipients,
+        };
+      }
+
       const commentId = await Comment.insert(trx, commentTenant!, commentToInsert);
       console.log(`[createComment] Comment inserted with ID:`, commentId);
 
@@ -322,14 +276,13 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
       // Update ticket response state based on comment (F005-F008)
       const isScheduled = comment.publish_state === 'scheduled';
       if (!isScheduled && comment.ticket_id && commentTenant) {
-        const { previousState, newState } = await updateTicketResponseState(
-          trx,
-          commentTenant,
-          comment.ticket_id,
-          comment.author_type as 'internal' | 'client' | 'unknown',
-          comment.is_internal || false,
-          comment.user_id || null
-        );
+        const { previousState, newState } = await applyCommentResponseState(trx, {
+          tenant: commentTenant,
+          ticketId: comment.ticket_id,
+          authorType: comment.author_type as 'internal' | 'client' | 'unknown',
+          isInternal: comment.is_internal || false,
+          userId: comment.user_id || null,
+        });
         console.log(`[createComment] Response state updated: ${previousState} -> ${newState}`);
       }
 
@@ -348,7 +301,7 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
           const eventComment = await Comment.get(trx, commentTenant, commentId);
           await persistCommentPublication(trx, {
             eventType: 'TICKET_COMMENT_ADDED',
-            payload: {
+            payload: buildTicketCommentAddedPayload({
               tenantId: commentTenant,
               occurredAt: new Date().toISOString(),
               ticketId: comment.ticket_id!,
@@ -358,7 +311,6 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
               parent_comment_id: eventComment?.parent_comment_id ?? null,
               is_reply: Boolean(eventComment?.parent_comment_id),
               comment: {
-                id: commentId,
                 content: comment.note!,
                 author: authorName,
                 isInternal: comment.is_internal || false,
@@ -367,8 +319,8 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
                 parent_comment_id: eventComment?.parent_comment_id ?? null,
                 is_reply: Boolean(eventComment?.parent_comment_id)
               }
-            }
-          }, publishEvent);
+            })
+          }, publishStoredWorkflowEvent);
           console.log(`[createComment] Persisted TICKET_COMMENT_ADDED intent for comment:`, commentId);
         } catch (eventError) {
           console.error(`[createComment] Failed to publish TICKET_COMMENT_ADDED event:`, eventError);
@@ -411,11 +363,7 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
           });
 
           for (const ev of events) {
-            await publishWorkflowEvent({
-              eventType: ev.eventType,
-              payload: ev.payload,
-              ctx: workflowCtx,
-            });
+            await publishTicketCommunicationWorkflowEvent(ev, workflowCtx);
           }
         } catch (eventError) {
           console.error(`[createComment] Failed to publish workflow ticket message events:`, eventError);

@@ -44,7 +44,9 @@ export function useSurfaceIsLight(
       attributeFilter: ['class', 'style', 'data-theme-pair'],
     });
     return () => observer.disconnect();
-  }, [surfaceRef]);
+    // The token is a dependency, not just a ref: a caller that swaps which
+    // variable it measures — a hover fill, say — needs the reading redone.
+  }, [surfaceRef, cssVariable]);
 
   return isLight;
 }

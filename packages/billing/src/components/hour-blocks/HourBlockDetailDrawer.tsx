@@ -7,6 +7,7 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCalendarDate, formatDateOnly } from '@alga-psa/core';
 import type { IHourBlock, IHourBlockAllocation, IHourBlockAuditEntry } from '@alga-psa/types';
+import HourBlockCoverageNotice from './HourBlockCoverageNotice';
 import { getHourBlockDetail } from '@alga-psa/billing/actions/hourBlockActions';
 
 interface HourBlockDetailDrawerProps {
@@ -98,6 +99,14 @@ export default function HourBlockDetailDrawer({ block, onClose }: HourBlockDetai
               </p>
             </div>
 
+            {data.block.contract_coverage && data.block.contract_coverage.length > 0 && (
+              <HourBlockCoverageNotice
+                variant="alert"
+                coverage={data.block.contract_coverage}
+                unscoped={(data.scopes ?? []).length === 0}
+              />
+            )}
+
             <div className="grid grid-cols-3 gap-4">
               <div className="rounded-md bg-[rgb(var(--color-border-100))] p-3">
                 <p className="text-xs text-[rgb(var(--color-text-500))]">{t('detail.total', { defaultValue: 'Total' })}</p>
@@ -133,6 +142,14 @@ export default function HourBlockDetailDrawer({ block, onClose }: HourBlockDetai
                   {t('detail.expires', { date: formatCalendarDate(data.block.expiration_date) ?? '', defaultValue: 'Expires {{date}}' })}
                 </p>
               )}
+              {(data.block.source_type === 'contract' || data.block.contract_line_id != null) && (
+                <p id="hb-detail-source-contract" className="text-[rgb(var(--color-text-500))]">
+                  {t('detail.sourceContract', {
+                    contract: data.block.contract_name || data.block.contract_line_name || '',
+                    defaultValue: 'Contract: {{contract}}',
+                  })}
+                </p>
+              )}
               {data.block.source_invoice_id && data.block.invoice_number ? (
                 <p className="text-[rgb(var(--color-text-500))]">
                   {t('detail.sourceInvoice', { defaultValue: 'Source invoice' })} #{data.block.invoice_number}
@@ -141,7 +158,7 @@ export default function HourBlockDetailDrawer({ block, onClose }: HourBlockDetai
                 <p className="text-[rgb(var(--color-text-500))]">
                   {t('detail.invoiceDeleted', { defaultValue: 'Invoice (deleted)' })}
                 </p>
-              ) : (
+              ) : data.block.source_type === 'contract' || data.block.contract_line_id != null ? null : (
                 <p className="text-[rgb(var(--color-text-500))]">{t('detail.directGrant', { defaultValue: 'Direct grant' })}</p>
               )}
             </div>

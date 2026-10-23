@@ -444,6 +444,84 @@ export class PgBossJobRunner implements IJobRunner {
     };
   }
 
+  /**
+   * Schedule a genuinely recurring, non-tenant job through pg-boss's durable
+   * `schedule` table. The schedule is persisted (independent of this process)
+   * and fires on its cron; the worker is registered from the already-registered
+   * base handler, so a restart re-registers it without recreating the schedule.
+   * Unlike {@link scheduleRecurringJob} it does not write a tenant-attributed
+   * jobs tracker row, which a global sweep cannot satisfy.
+   */
+  async scheduleGlobalRecurringJob(
+    jobName: string,
+    interval: string,
+    options: {
+      scheduleId?: string;
+      timezone?: string;
+      data?: Record<string, unknown>;
+      queuePolicy?: 'standard' | 'stately';
+      expireInSeconds?: number;
+    } = {},
+  ): Promise<{ scheduleId: string }> {
+    const base = this.handlers.get(jobName);
+    if (!base) {
+      throw new Error(
+        `No handler registered for job type: ${jobName}. Register a handler before scheduling jobs.`,
+      );
+    }
+
+    const scheduleId = options.scheduleId ?? `global-${jobName}`;
+    // createQueue never changes the policy of an existing queue.
+    await this.boss.createQueue(
+      scheduleId,
+      options.queuePolicy ? { name: scheduleId, policy: options.queuePolicy } : undefined,
+    );
+    await this.registerHandler({ ...base, name: scheduleId });
+
+    const timezone = options.timezone?.trim() || 'UTC';
+    await this.boss.schedule(scheduleId, interval, options.data ?? {}, {
+      retryLimit: 3,
+      retryBackoff: true,
+      tz: timezone,
+      ...(options.expireInSeconds !== undefined ? { expireInSeconds: options.expireInSeconds } : {}),
+    });
+
+    logger.info('Scheduled global recurring job', {
+      jobName,
+      scheduleId,
+      cronExpression: interval,
+      timezone,
+    });
+
+    return { scheduleId };
+  }
+
+  /** List the durable pg-boss schedules whose name starts with `prefix`. */
+  async listGlobalRecurringJobs(prefix: string): Promise<Array<{ scheduleId: string; cron: string; timezone: string }>> {
+    // pg-boss returns the whole schedule row (including `timezone`), which its typings omit.
+    const schedules = (await this.boss.getSchedules()) as Array<{ name: string; cron: string; timezone?: string }>;
+    return schedules
+      .filter((schedule) => schedule.name.startsWith(prefix))
+      .map((schedule) => ({ scheduleId: schedule.name, cron: schedule.cron, timezone: schedule.timezone ?? 'UTC' }));
+  }
+
+  /** Remove a schedule created by scheduleGlobalRecurringJob, and best-effort its queue. */
+  async unscheduleGlobalRecurringJob(scheduleId: string): Promise<void> {
+    await this.boss.unschedule(scheduleId);
+    try {
+      // Stop this process's worker first so it does not poll a deleted queue.
+      await this.boss.offWork(scheduleId);
+      await this.boss.deleteQueue(scheduleId);
+    } catch (error) {
+      logger.warn('Failed to delete queue of unscheduled global recurring job', {
+        scheduleId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    this.handlers.delete(scheduleId);
+    this.workerRegistrations.delete(scheduleId);
+  }
+
   async cancelJob(jobId: string, tenantId: string): Promise<boolean> {
     try {
       // Get the external ID and job type from our database
@@ -629,6 +707,7 @@ export class PgBossJobRunner implements IJobRunner {
     return this.storageService;
   }
 
+  // LEVERAGE: friction runner-recurring-tracker-row — scheduleRecurringJob inserts a new `jobs` row on every call, but boss.schedule upserts, so each boot leaves the previous row queued and the 'already exists' catch is dead; converge on the existing tracker row instead.
   /**
    * Create a job record in the database
    */

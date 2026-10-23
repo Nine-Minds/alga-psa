@@ -39,6 +39,7 @@ export const webhookEventTypeSchema = z.enum([
   'ticket.assigned',
   'ticket.closed',
   'ticket.comment.added',
+  'ticket.response_state_changed',
   'project.created',
   'project.updated',
   'project.status_changed',
@@ -365,6 +366,12 @@ export const bulkWebhookOperationSchema = z.object({
   test_event_type: webhookEventTypeSchema.optional() // Required for test operation
 });
 
+// Bulk retry of a webhook's failed/abandoned deliveries
+export const webhookRetryFailedSchema = z.object({
+  since: z.string().datetime().optional(),
+  limit: z.coerce.number().int().min(1).max(1000).optional()
+});
+
 // Webhook subscription schema (for event-based subscriptions)
 export const webhookSubscriptionSchema = z.object({
   subscription_id: uuidSchema,
@@ -493,6 +500,7 @@ export type WebhookTemplate = z.infer<typeof webhookTemplateSchema>;
 export type WebhookSubscription = z.infer<typeof webhookSubscriptionSchema>;
 export type WebhookAnalytics = z.infer<typeof webhookAnalyticsSchema>;
 export type WebhookEvent = z.infer<typeof webhookEventSchema>;
+export type WebhookRetryFailedData = z.infer<typeof webhookRetryFailedSchema>;
 export type WebhookSecurityConfig = z.infer<typeof webhookSecurityConfigSchema>;
 export type RetryConfig = z.infer<typeof retryConfigSchema>;
 export type EventFilter = z.infer<typeof eventFilterSchema>;

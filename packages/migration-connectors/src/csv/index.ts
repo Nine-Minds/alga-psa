@@ -5,7 +5,7 @@ export type {
   CsvConversionResult,
   RunConversionOptions,
 } from './convert';
-export { buildEntityRows } from './engine';
+export { buildEntityRows, CLIENT_NAME_COLUMN, FULL_NAME_COLUMN } from './engine';
 export type { CsvConversionDiagnostic, CsvValueTransform, EntityRowsInput } from './engine';
 export { parseSpreadsheet } from './parse';
 export type { ParsedSheet } from './parse';

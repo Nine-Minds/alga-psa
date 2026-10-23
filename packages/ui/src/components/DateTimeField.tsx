@@ -11,7 +11,7 @@ import { useOptionalI18n } from '../lib/i18n/client';
 import { usePickerText } from '../lib/pickerText';
 import { LOCALE_CONFIG } from '../lib/i18n/config';
 import { getDateFnsLocale } from '../lib/dateFnsLocale';
-import { localeUses12HourClock } from '../lib/localeTimeFormat';
+import { useDateFormat } from '../lib/dateFormat/useDateFormat';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import type {
   DatePickerComponent,
@@ -26,6 +26,7 @@ import {
   isExactMinuteOption,
   isTypableDateText,
   isTypableTimeText,
+  diffTextEdit,
   isValidTimeValue,
   minutesToTime,
   parseDateInput,
@@ -59,9 +60,14 @@ export interface DateTimeFieldProps {
   minDate?: Date;
   /** Latest selectable date (inclusive) */
   maxDate?: Date;
-  /** Fixed date-fns display pattern; overrides the locale-derived format */
+  /**
+   * Per-day rule for gaps inside the min/max range. A disabled day cannot be
+   * clicked, typed, or reached through the "Today" shortcut.
+   */
+  isDateDisabled?: (date: Date) => boolean;
+  /** Fixed date-fns display pattern; overrides the country-derived format */
   displayFormat?: string;
-  /** Time format preference; when unset, derived from the active locale */
+  /** Time format preference; when unset, derived from the active country */
   timeFormat?: TimeFormatPreference;
   /** Rail granularity. Exact minutes stay reachable whatever this is. */
   minuteStep?: number;
@@ -104,6 +110,7 @@ export function DateTimeField({
   required,
   minDate,
   maxDate,
+  isDateDisabled,
   displayFormat,
   timeFormat,
   minuteStep = 15,
@@ -113,9 +120,11 @@ export function DateTimeField({
   const t = usePickerText();
   const i18n = useOptionalI18n();
   const locale = i18n?.locale ?? LOCALE_CONFIG.defaultLocale;
+  // Language names the months; the country orders the digits and picks the dial.
   const dateFnsLocale = getDateFnsLocale(locale);
+  const dateFormat = useDateFormat();
   const effectiveTimeFormat: TimeFormatPreference =
-    timeFormat ?? (localeUses12HourClock(locale) ? '12h' : '24h');
+    timeFormat ?? (dateFormat.hour12 ? '12h' : '24h');
 
   const showDate = variant !== 'time';
   const showTime = variant !== 'date';
@@ -129,8 +138,9 @@ export function DateTimeField({
   }, [variant, value, dateValue]);
 
   const dateDisplay = React.useCallback(
-    (date?: Date) => (date ? format(date, displayFormat ?? 'P', { locale: dateFnsLocale }) : ''),
-    [displayFormat, dateFnsLocale]
+    (date?: Date) =>
+      (date ? format(date, displayFormat ?? dateFormat.datePattern, { locale: dateFnsLocale }) : ''),
+    [displayFormat, dateFormat.datePattern, dateFnsLocale]
   );
   const timeDisplay = React.useCallback(
     (time?: string) => formatTimeDisplay(time, effectiveTimeFormat),
@@ -140,7 +150,8 @@ export function DateTimeField({
   const [open, setOpen] = React.useState(false);
   const [dateText, setDateText] = React.useState(() => dateDisplay(dateValue));
   const [timeText, setTimeText] = React.useState(() => timeDisplay(timeValue));
-  const [dateError, setDateError] = React.useState(false);
+  // 'unavailable' is a real date the caller ruled out, which deserves different words than bad text.
+  const [dateError, setDateError] = React.useState<false | 'invalid' | 'unavailable'>(false);
   const [timeError, setTimeError] = React.useState(false);
 
   const fieldsRef = React.useRef<HTMLDivElement>(null);
@@ -171,25 +182,29 @@ export function DateTimeField({
     [t]
   );
 
-  // What a half-typed entry is allowed to look like, in this locale.
+  // What a half-typed entry is allowed to look like, in this country.
   const typableDateOptions = React.useMemo(
     () => ({
-      separators: [getDateSeparator(locale)],
+      separators: [getDateSeparator(dateFormat)],
       words: [...relativeWords.today, ...relativeWords.tomorrow, ...relativeWords.yesterday],
     }),
-    [locale, relativeWords]
+    [dateFormat, relativeWords]
   );
 
   // What the panel should show: the text if it parses, otherwise the value.
   const parsedDateText = React.useMemo(
-    () => (dateText.trim() ? parseDateInput(dateText, locale, { relativeWords }) : null),
-    [dateText, locale, relativeWords]
+    () => (dateText.trim() ? parseDateInput(dateText, dateFormat, { relativeWords }) : null),
+    [dateText, dateFormat, relativeWords]
   );
   const parsedTimeText = React.useMemo(
     () => (timeText.trim() ? parseTimeInput(timeText) : null),
     [timeText]
   );
   const panelDate = parsedDateText ?? (dateValue ? startOfDay(dateValue) : undefined);
+  // The calendar follows typed text to its month, but a ruled-out day is never
+  // shown as selected; the committed value stays marked until a valid day lands.
+  const selectedPanelDate =
+    panelDate && isDateDisabled?.(panelDate) ? (dateValue ? startOfDay(dateValue) : undefined) : panelDate;
   const panelTime = parsedTimeText ?? timeValue;
 
   const timeOptions = React.useMemo(
@@ -201,8 +216,9 @@ export function DateTimeField({
     const matchers: Matcher[] = [];
     if (minDate) matchers.push({ before: minDate });
     if (maxDate) matchers.push({ after: maxDate });
+    if (isDateDisabled) matchers.push(isDateDisabled);
     return matchers.length > 0 ? matchers : undefined;
-  }, [minDate, maxDate]);
+  }, [minDate, maxDate, isDateDisabled]);
 
   const automationType = AUTOMATION_TYPE[variant];
   const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<
@@ -277,15 +293,20 @@ export function DateTimeField({
       return true;
     }
 
-    const parsed = parseDateInput(raw, locale, { relativeWords });
+    const parsed = parseDateInput(raw, dateFormat, { relativeWords });
     if (!parsed) {
       // Bad text never becomes a guess and never becomes empty: the old value stands.
-      setDateError(true);
+      setDateError('invalid');
       return false;
     }
 
-    setDateError(false);
     const clamped = clampDate(parsed, minDate, maxDate);
+    if (isDateDisabled?.(clamped)) {
+      // Same rule as bad text: a day the caller has ruled out is not committed.
+      setDateError('unavailable');
+      return false;
+    }
+    setDateError(false);
     setDateText(dateDisplay(clamped));
     if (!dateValue || startOfDay(dateValue).getTime() !== clamped.getTime()) {
       commitValue(clamped, panelTime);
@@ -297,10 +318,11 @@ export function DateTimeField({
     clearable,
     clearFieldValue,
     dateDisplay,
-    locale,
+    dateFormat,
     relativeWords,
     minDate,
     maxDate,
+    isDateDisabled,
     commitValue,
     panelTime,
   ]);
@@ -343,8 +365,14 @@ export function DateTimeField({
   // Focusing a field opens the panel, so a programmatic re-focus after a commit
   // has to say whether it means to re-open it.
   const skipOpenOnFocusRef = React.useRef(false);
+  // Names the field whose whole-text selection its first click would otherwise
+  // collapse to a caret; see the mouse handlers on the input. One ref serves both
+  // halves, so each half may only clear what it owns: the half losing focus
+  // blurs after the half gaining it has already claimed the flag.
+  const keepSelectionOnPointerUpRef = React.useRef<'date' | 'time' | null>(null);
   const focusField = React.useCallback((field: 'date' | 'time', reopen = false) => {
     skipOpenOnFocusRef.current = !reopen;
+    keepSelectionOnPointerUpRef.current = field;
     const input = field === 'date' ? dateInputRef.current : timeInputRef.current;
     input?.focus();
     input?.select();
@@ -362,6 +390,7 @@ export function DateTimeField({
     (day: Date | undefined) => {
       if (!day) return;
       const picked = startOfDay(day);
+      if (isDateDisabled?.(picked)) return;
       setDateError(false);
       setDateText(dateDisplay(picked));
       commitValue(picked, panelTime);
@@ -374,7 +403,7 @@ export function DateTimeField({
         focusField('date');
       }
     },
-    [dateDisplay, commitValue, panelTime, variant, focusField]
+    [dateDisplay, commitValue, panelTime, variant, focusField, isDateDisabled]
   );
 
   const handleTimeSelect = React.useCallback(
@@ -524,7 +553,7 @@ export function DateTimeField({
   }, []);
 
   const datePlaceholder = showDate
-    ? (variant === 'date' ? placeholder : undefined) ?? getDatePlaceholder(locale)
+    ? (variant === 'date' ? placeholder : undefined) ?? getDatePlaceholder(dateFormat)
     : undefined;
   const timePlaceholder = showTime
     ? (variant === 'time' ? placeholder : undefined) ?? timeDisplay('09:00')
@@ -545,7 +574,7 @@ export function DateTimeField({
 
   const renderField = (field: 'date' | 'time') => {
     const isDateField = field === 'date';
-    const hasError = isDateField ? dateError : timeError;
+    const hasError = isDateField ? Boolean(dateError) : timeError;
     const text = isDateField ? dateText : timeText;
     const fieldPlaceholder = (isDateField ? datePlaceholder : timePlaceholder) ?? '';
     // In the pair the value is one thing, so it clears from one place: the date half.
@@ -584,11 +613,57 @@ export function DateTimeField({
           onChange={(event) => {
             const input = event.target as HTMLInputElement;
             const next = input.value;
-            const typable = isDateField
-              ? isTypableDateText(next, typableDateOptions)
-              : isTypableTimeText(next);
+            if (keepSelectionOnPointerUpRef.current === field) keepSelectionOnPointerUpRef.current = null;
+            const isTypable = (candidate: string) =>
+              isDateField
+                ? isTypableDateText(candidate, typableDateOptions)
+                : isTypableTimeText(candidate);
 
-            if (!typable) {
+            // A caret inside an untouched, committed value is not an edit of it:
+            // clicking into a field that was just selected collapses the
+            // selection, and the typed entry would then run on after the old
+            // text (12:002 AM) and be refused. So when the text is still exactly
+            // what was committed and a keystroke is a pure insertion that cannot
+            // make a complete valid entry together with that text (the result is
+            // untypable, or typable but still unparseable: 09/310/2026), the
+            // inserted characters replace the text instead. An insertion that
+            // does make a valid entry is a deliberate edit and takes the normal
+            // path (2:30 PM with a 1 before the 2 is 12:30 PM, not "1"), as does
+            // every keystroke once the text has changed or a selection is replaced.
+            const committedText = isDateField ? dateDisplay(dateValue) : timeDisplay(timeValue);
+            if (text === committedText) {
+              const { inserted, removed } = diffTextEdit(text, next);
+              const makesValidEntry = isDateField
+                ? Boolean(parseDateInput(next, dateFormat, { relativeWords }))
+                : Boolean(parseTimeInput(next));
+              if (
+                removed === 0 &&
+                inserted !== '' &&
+                isTypable(inserted) &&
+                (!isTypable(next) || !makesValidEntry)
+              ) {
+                const setCaret = () => {
+                  // Not once the user has typed on: the caret is theirs by then.
+                  if (document.activeElement === input && input.value === inserted) {
+                    input.setSelectionRange(inserted.length, inserted.length);
+                  }
+                };
+                input.value = inserted;
+                setCaret();
+                // The controlled value is rewritten by the render this triggers.
+                window.requestAnimationFrame(setCaret);
+                if (isDateField) {
+                  setDateText(inserted);
+                  setDateError(false);
+                } else {
+                  setTimeText(inserted);
+                  setTimeError(false);
+                }
+                return;
+              }
+            }
+
+            if (!isTypable(next)) {
               // A character no valid entry can hold never lands: refusing the
               // keystroke beats accepting it and arguing at commit time.
               const caret = Math.min(
@@ -612,11 +687,29 @@ export function DateTimeField({
             event.target.select();
             if (!disabled && !skipOpenOnFocusRef.current) setOpen(true);
           }}
+          onMouseDown={(event) => {
+            // A click that is what focuses the input lands its caret after the
+            // focus handler has selected the text; so does a click on an input
+            // focusField selected. Either way the first click keeps the selection.
+            if (document.activeElement !== event.currentTarget) {
+              keepSelectionOnPointerUpRef.current = field;
+            }
+          }}
+          onMouseUp={(event) => {
+            if (keepSelectionOnPointerUpRef.current !== field) return;
+            keepSelectionOnPointerUpRef.current = null;
+            event.preventDefault();
+            event.currentTarget.select();
+          }}
           onBlur={() => {
+            if (keepSelectionOnPointerUpRef.current === field) keepSelectionOnPointerUpRef.current = null;
             if (isDateField) commitDateText();
             else commitTimeText();
           }}
-          onKeyDown={isDateField ? handleDateKeyDown : handleTimeKeyDown}
+          onKeyDown={(event) => {
+            if (keepSelectionOnPointerUpRef.current === field) keepSelectionOnPointerUpRef.current = null;
+            (isDateField ? handleDateKeyDown : handleTimeKeyDown)(event);
+          }}
         />
         {canClear && (
           <button
@@ -664,7 +757,11 @@ export function DateTimeField({
 
         {(dateError || timeError) && (
           <p className="dtf-error" role="status">
-            {dateError
+            {dateError === 'unavailable'
+              ? t('dateTimePicker.unavailableDate', 'That day can’t be chosen — kept {{value}}', {
+                  value: dateDisplay(dateValue) || t('dateTimePicker.empty', 'nothing'),
+                })
+              : dateError
               ? t('dateTimePicker.invalidDate', 'Not a date — kept {{value}}', {
                   value: dateDisplay(dateValue) || t('dateTimePicker.empty', 'nothing'),
                 })
@@ -697,7 +794,7 @@ export function DateTimeField({
                 <div className="dtf-panel-calendar">
                   <Calendar
                     mode="single"
-                    selected={panelDate}
+                    selected={selectedPanelDate}
                     month={panelDate}
                     onSelect={handleDaySelect}
                     fromDate={minDate}
@@ -745,6 +842,7 @@ export function DateTimeField({
                   <button
                     type="button"
                     className="dtf-footer-button"
+                    disabled={isDateDisabled?.(clampDate(startOfDay(new Date()), minDate, maxDate))}
                     onClick={() => handleDaySelect(clampDate(startOfDay(new Date()), minDate, maxDate))}
                   >
                     {t('datePicker.today', 'Today')}

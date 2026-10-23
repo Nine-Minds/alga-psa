@@ -43,13 +43,14 @@
       "contractTemplates": "Modelli di contratto",
       "invoicing": "Fatturazione",
       "invoiceLayouts": "Layout di fattura",
-      "taxRates": "Aliquote fiscali",
+      "taxRates": "Imposte",
       "contractLinePresets": "Preimpostazioni della linea di contratto",
       "billingCycles": "Cicli di fatturazione",
       "servicePeriods": "Periodi di servizio",
       "usageTracking": "Monitoraggio dell'utilizzo",
       "reports": "Rapporti",
       "serviceTypes": "Tipi di servizio",
+      "serviceCategories": "Categorie di servizio",
       "serviceCatalog": "Servizi",
       "products": "Prodotti"
     }
@@ -229,12 +230,14 @@
       "selectService": "Seleziona Servizio",
       "taxable": "(Imponibile)",
       "nonTaxable": "(Non imponibile)",
-      "calculatedOnSave": "(calcolato al salvataggio)"
+      "calculatedOnSave": "(calcolato al salvataggio)",
+      "credit": "Credito"
     },
     "expanded": {
       "discount": "Sconto",
       "item": "Articolo {{number}}",
-      "markedForRemoval": "Contrassegnato per la rimozione"
+      "markedForRemoval": "Contrassegnato per la rimozione",
+      "credit": "Credito"
     },
     "fields": {
       "service": "Servizio",
@@ -246,10 +249,18 @@
       "applyDiscountTo": "Applica lo sconto a",
       "entireInvoice": "Fattura intera",
       "rate": "Tariffa ({{currencySymbol}})",
-      "description": "Descrizione"
+      "description": "Descrizione",
+      "creditUnit": "Credito per unità ({{currencySymbol}})",
+      "taxTreatment": "Trattamento fiscale",
+      "nonTaxable": "Non imponibile",
+      "location": "Sede",
+      "clientDefaultLocation": "Predefinito del cliente",
+      "billingProfile": "Profilo di fatturazione",
+      "clientDefaultProfile": "Predefinito del cliente"
     },
     "placeholders": {
-      "discountDescription": "ad esempio, sconto per pagamento anticipato"
+      "discountDescription": "ad esempio, sconto per pagamento anticipato",
+      "creditDescription": "ad esempio, credito di cortesia"
     },
     "actions": {
       "add": "Aggiungi",
@@ -266,11 +277,15 @@
       "invoiceTotal": "{{percentage}}% del totale della fattura",
       "amount": "Importo: -{{currencySymbol}}{{amount}}",
       "appliedTo": "Applicato a: {{description}}",
-      "subtotal": "Totale parziale: {{currencySymbol}}{{amount}}"
+      "subtotal": "Totale parziale: {{currencySymbol}}{{amount}}",
+      "credit": "Credito"
     },
     "options": {
       "percentage": "Percentuale",
       "fixedAmount": "Importo fisso"
+    },
+    "errors": {
+      "serviceRequired": "Assegna un servizio a questo addebito prima di salvare."
     }
   },
   "contractLineServices": {
@@ -334,7 +349,8 @@
       "billingMethod": "Metodo di fatturazione",
       "quantity": "Quantità",
       "defaultRate": "Tasso predefinito",
-      "actions": "Azioni"
+      "actions": "Azioni",
+      "pricing": "Prezzo"
     },
     "tooltip": {
       "defaultRate": "Tariffa standard del servizio, utilizzata per l'allocazione del valore interno e il reporting all'interno del totale del piano fisso."
@@ -369,7 +385,17 @@
       "saveSuccess": "Servizi preimpostati della linea di contratto salvati correttamente",
       "saveError": "Impossibile salvare i servizi"
     },
-    "unknownService": "Servizio sconosciuto"
+    "unknownService": "Servizio sconosciuto",
+    "pricing": {
+      "product": "Fatturato per quantità di unità",
+      "bundle": "Parte del totale della linea",
+      "unit": "Per postazione / unità",
+      "unitRate": "Tariffa unitaria",
+      "unitRatePlaceholder": "Prezzo di catalogo"
+    },
+    "errors": {
+      "recurringQuantityInvalid": "{{name}}: la quantità ricorrente deve essere un numero intero, zero o più."
+    }
   },
   "accountingExports": {
     "title": "Esportazioni contabili",
@@ -389,7 +415,9 @@
       "execute": "Esegui",
       "createBatch": "Crea lotto",
       "creating": "Creazione...",
-      "cancelBatch": "Annulla lotto"
+      "cancelBatch": "Annulla lotto",
+      "retry": "Riprova",
+      "resolveUnmapped": "Risolvi elementi non mappati"
     },
     "states": {
       "loadingBatches": "Caricamento batch...",
@@ -416,7 +444,12 @@
         "invoiceStatuses": "Separati da virgole (facoltativo), ad es. finalizzato, pubblicato",
         "notes": "Note facoltative"
       },
-      "defaultRealmLabel": "{{realmId}} (predefinito)"
+      "defaultRealmLabel": "{{realmId}} (predefinito)",
+      "loadingConnections": "Caricamento delle connessioni contabili...",
+      "connectionLoadError": "Impossibile caricare le connessioni contabili. Controlla le impostazioni di connessione e riprova.",
+      "ambiguousRealm": "L'organizzazione contabile predefinita salvata è condivisa da più connessioni. Scegli una connessione per continuare.",
+      "noXeroConnection": "Nessuna connessione Xero disponibile. Connetti Xero nelle impostazioni contabili per esportare.",
+      "noQboConnection": "Nessuna connessione QuickBooks Online disponibile. Connettila nelle impostazioni contabili per esportare."
     },
     "detailDialog": {
       "title": "Batch di esportazione contabile",
@@ -440,7 +473,9 @@
       "createError": "Impossibile creare il batch di esportazione",
       "executeError": "Impossibile eseguire il batch",
       "cancelled": "Batch annullato",
-      "cancelError": "Impossibile annullare il batch"
+      "cancelError": "Impossibile annullare il batch",
+      "realmRequired": "Scegli un'azienda contabile connessa prima di creare l'esportazione.",
+      "artifactDownloadError": "Impossibile scaricare questo file esportato."
     },
     "status": {
       "pending": "In sospeso",
@@ -451,6 +486,41 @@
       "failed": "Non riuscito",
       "cancelled": "Annullato",
       "needsAttention": "Richiede attenzione"
+    },
+    "artifacts": {
+      "title": "File consegnati",
+      "download": "Scarica",
+      "unavailable": "Questo batch storico non contiene file salvati. Non è possibile recuperarli senza eseguire una nuova esportazione.",
+      "storageFallback": "Salvato in un backup del database"
+    },
+    "unmapped": {
+      "title": "Elementi QuickBooks non mappati",
+      "descriptionDesktop": "Questi elementi richiedono un cliente o un articolo QuickBooks Desktop prima di poter essere esportati. Creali come nuove voci (il file IIF li aggiungerà a QuickBooks Desktop) o collegali a una voce QuickBooks esistente con esattamente lo stesso nome. Le tue scelte vengono salvate come mappature QuickBooks Desktop, quindi le esportazioni future non lo chiederanno di nuovo.",
+      "descriptionCsv": "Questi elementi non hanno ancora una mappatura QuickBooks. Esportali con il nome indicato (QuickBooks aggiunge i nuovi nomi durante l'importazione del CSV) oppure collegali a una voce QuickBooks esistente con esattamente lo stesso nome. Le scelte vengono salvate come mappature, quindi le prossime esportazioni non lo chiederanno più.",
+      "permissionNotice": "Per salvare le mappature QuickBooks serve la capacità di gestione delle mappature. Chiedi a un amministratore oppure mappa questi elementi dalle impostazioni di QuickBooks.",
+      "kinds": {
+        "client": "Cliente",
+        "service": "Servizio",
+        "product": "Prodotto",
+        "discount": "Sconto"
+      },
+      "modes": {
+        "create": "Crea nuovo",
+        "existing": "Già in QuickBooks"
+      },
+      "nameAria": "Nome QuickBooks per {{name}}",
+      "desktopNote": "I nuovi prodotti usano il tipo di articolo scelto nelle impostazioni di QuickBooks Desktop. Scegli \"Già in QuickBooks\" per tutto ciò che esiste già nel file aziendale, così i suoi dati non vengono sovrascritti.",
+      "actions": {
+        "cancel": "Annulla",
+        "goToMappings": "Vai alle mappature QuickBooks",
+        "save": "Salva mappature ed esporta"
+      },
+      "toast": {
+        "saved": "Mappature QuickBooks salvate",
+        "saveError": "Impossibile salvare le mappature QuickBooks"
+      },
+      "postsTo": "Registrato su {{account}}",
+      "postsToDefault": "Registrato sul conto ricavi predefinito"
     }
   },
   "templateRenderer": {
@@ -614,7 +684,8 @@
       "referenceMissing": "Il cliente, il contratto o il record di fatturazione selezionato non esiste più. Aggiornare la pagina e riprovare.",
       "duplicate": "Questa assegnazione del contratto del cliente esiste già.",
       "missingField": "Manca un campo obbligatorio del contratto del cliente.",
-      "missingFieldNamed": "Manca un campo obbligatorio del contratto del cliente: {{field}}."
+      "missingFieldNamed": "Manca un campo obbligatorio del contratto del cliente: {{field}}.",
+      "alreadyActiveScheduled": "Questo contratto è già attivo e inizia il {{startDate}}; non c’è nulla da attivare."
     },
     "cycle": {
       "cannotCreateNext": "Al momento non è possibile creare il ciclo di fatturazione successivo"
@@ -688,7 +759,25 @@
         "create": "Autorizzazione negata: impossibile creare lotti di esportazione contabile",
         "read": "Autorizzazione negata: impossibile accedere ai lotti di esportazione contabile",
         "update": "Autorizzazione negata: impossibile modificare i lotti di esportazione contabile",
-        "execute": "Autorizzazione negata: impossibile eseguire i lotti di esportazione contabile"
+        "execute": "Autorizzazione negata: impossibile eseguire i lotti di esportazione contabile",
+        "createMappings": "Per creare mappature QuickBooks da un'esportazione servono le capacità di esportazione e di gestione delle mappature"
+      },
+      "quickbooksMapping": {
+        "noDecisions": "Scegli come gestire almeno un elemento non mappato.",
+        "stale": "Uno degli elementi selezionati non è più non mappato per questo batch. Aggiorna e riprova.",
+        "duplicateSubmission": "\"{{algaName}}\" è stato inviato due volte.",
+        "invalidMode": "Scegli crea o esistente per \"{{algaName}}\".",
+        "nameRequired": "Inserisci un nome QuickBooks per \"{{algaName}}\".",
+        "nameInvalidCharacters": "Il nome QuickBooks per \"{{algaName}}\" non può contenere tabulazioni, interruzioni di riga o virgolette doppie.",
+        "nameTooLong": "Il nome QuickBooks per \"{{algaName}}\" supera i {{maxLength}} caratteri.",
+        "duplicateNewName": "\"{{qbName}}\" è usato per più di una nuova voce QuickBooks.",
+        "duplicateClientName": "\"{{qbName}}\" è scelto per più di un cliente. Ogni nome QuickBooks può essere mappato a uno solo.",
+        "duplicateItemName": "\"{{qbName}}\" è scelto per più di un articolo. Ogni nome QuickBooks può essere mappato a uno solo.",
+        "nameTakenByClient": "\"{{qbName}}\" è già mappato a un altro cliente, quindi non può essere usato anche per \"{{algaName}}\". Scegli un altro nome QuickBooks o modifica la mappatura esistente nelle mappature QuickBooks.",
+        "nameTakenByItem": "\"{{qbName}}\" è già mappato a un altro articolo, quindi non può essere usato anche per \"{{algaName}}\". Scegli un altro nome QuickBooks o modifica la mappatura esistente nelle mappature QuickBooks.",
+        "unsupportedBatch": "Questo batch non è un'esportazione QuickBooks Desktop o QuickBooks CSV.",
+        "nameTakenConcurrently": "Uno di questi nomi QuickBooks è appena stato mappato a un'altra voce. Aggiorna l'elenco e scegli un altro nome.",
+        "desktopIncomeAccountRequired": "Imposta il conto ricavi predefinito nelle impostazioni di QuickBooks Desktop prima di mappare articoli da un’esportazione."
       }
     },
     "vendorBill": {

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { AUTOMATIC_DISCOUNT_MAPPING_ID, DISCOUNT_MAPPING_ENTITY_TYPE } from '@alga-psa/types';
 import {
   createTestDbConnection,
   wireLocalTestDbEnv,
@@ -23,6 +24,12 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn(async () => undefined),
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('../lib/qbo/qboClientService', () => ({
@@ -47,6 +54,7 @@ import { getStoredQboCredentialsMap } from '../lib/qbo/qboClientService';
 import { getStoredXeroConnections } from '../lib/xero/xeroClientService';
 import {
   createExternalEntityMapping,
+  createExternalEntityMappings,
   updateExternalEntityMapping,
   deleteExternalEntityMapping,
   getExternalEntityMappings,
@@ -82,7 +90,7 @@ async function seedService(tenantId: string): Promise<string> {
     tenant: tenantId,
     name: `Service Type ${serviceId.slice(0, 8)}`,
     is_active: true,
-    order_number: 1,
+    order_number: Math.floor(Math.random() * 1_000_000_000),
   });
   await db('service_catalog').insert({
     tenant: tenantId,
@@ -157,6 +165,7 @@ beforeEach(async () => {
   realmA = `realm-${uuidv4()}`;
   await db('tenant_external_entity_mappings').where({ tenant: tenantA }).del();
   await db('audit_logs').where({ tenant: tenantA }).del();
+  await setAutomatedSalesTaxRealms(tenantA, []);
   vi.mocked(getStoredQboCredentialsMap).mockResolvedValue({ [realmA]: { realmId: realmA } } as any);
   qboReadMock.mockReset();
   // By default the remote entity exists; individual tests override to ghost it.
@@ -196,6 +205,18 @@ afterAll(async () => {
   await db('tenants').where({ tenant: tenantA }).orWhere({ tenant: tenantB }).del();
   await db.destroy().catch(() => undefined);
 });
+
+/**
+ * Puts the realm in (or out of) tenant_settings.settings.qboAutomatedSalesTax —
+ * Alga's "QuickBooks calculates sales tax" toggle, which is what proves the
+ * TAX/NON pseudo codes instead of a read-by-id.
+ */
+async function setAutomatedSalesTaxRealms(tenantId: string, realms: string[]): Promise<void> {
+  await db('tenant_settings')
+    .insert({ tenant: tenantId, settings: { qboAutomatedSalesTax: { realms } } })
+    .onConflict('tenant')
+    .merge(['settings']);
+}
 
 async function lastAudit(tenantId: string, operation: string) {
   return db('audit_logs')
@@ -326,6 +347,152 @@ describe('createExternalEntityMapping — the generic surface is constrained', (
     // No OAuth tokens or raw provider payloads in the audit event.
     const serialized = JSON.stringify(audit);
     expect(serialized).not.toMatch(/accessToken|refreshToken|clientSecret/i);
+  });
+});
+
+/**
+ * TAX and NON are Intuit's Automated Sales Tax pseudo codes: the only line-level
+ * tax codes a US AST company accepts, and the only ones it rejects as a
+ * read-by-id (`GET /taxcode/NON` 404s). Proving them with a catalog read made
+ * the mapping dialog fail with "Unable to update mapping. Please try again." —
+ * leaving the customer able to save only codes the exporter is guaranteed to
+ * fault on (ticket alga-2026-0002629).
+ */
+describe('tax_code mappings to the AST pseudo codes', () => {
+  it.each(['TAX', 'NON'])('creates a %s mapping on an AST realm without reading the catalog', async (pseudo) => {
+    await setAutomatedSalesTaxRealms(tenantA, [realmA]);
+
+    const result = await (createExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      {
+        integration_type: 'quickbooks_online',
+        alga_entity_type: 'tax_code',
+        alga_entity_id: taxRegionA,
+        external_entity_id: pseudo,
+        external_realm_id: realmA,
+        metadata: { externalDisplayName: `${pseudo} — pseudo` },
+      }
+    );
+
+    expect(result).toMatchObject({ id: expect.any(String), external_entity_id: pseudo });
+    expect(qboReadMock).not.toHaveBeenCalled();
+    const rows = await db('tenant_external_entity_mappings').where({
+      tenant: tenantA,
+      alga_entity_type: 'tax_code',
+      alga_entity_id: taxRegionA,
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].external_entity_id).toBe(pseudo);
+  });
+
+  it.each(['TAX', 'NON'])('retargets an existing mapping to %s on an AST realm', async (pseudo) => {
+    await setAutomatedSalesTaxRealms(tenantA, [realmA]);
+    const { id } = await seedMapping({
+      alga_entity_type: 'tax_code',
+      alga_entity_id: taxRegionA,
+      external_entity_id: '2',
+    });
+
+    const result = await (updateExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      id,
+      { external_entity_id: pseudo }
+    );
+
+    expect(result).toMatchObject({ id, external_entity_id: pseudo });
+    expect(qboReadMock).not.toHaveBeenCalled();
+    const row = await db('tenant_external_entity_mappings').where({ id }).first();
+    expect(row.external_entity_id).toBe(pseudo);
+  });
+
+  it.each(['TAX', 'NON'])('rejects %s with an explicit message when AST is off for the realm', async (pseudo) => {
+    const result = await (createExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      {
+        integration_type: 'quickbooks_online',
+        alga_entity_type: 'tax_code',
+        alga_entity_id: taxRegionA,
+        external_entity_id: pseudo,
+        external_realm_id: realmA,
+      }
+    );
+
+    expect(result).toMatchObject({
+      actionError: expect.stringContaining('"QuickBooks calculates sales tax" is enabled'),
+    });
+    expect(result.actionError).toContain(pseudo);
+    expect(qboReadMock).not.toHaveBeenCalled();
+    expect(await db('tenant_external_entity_mappings').where({ tenant: tenantA })).toHaveLength(0);
+  });
+
+  it('rejects a retarget to NON when AST is off, leaving the stored code in place', async () => {
+    const { id } = await seedMapping({
+      alga_entity_type: 'tax_code',
+      alga_entity_id: taxRegionA,
+      external_entity_id: '2',
+    });
+
+    const result = await (updateExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      id,
+      { external_entity_id: 'NON' }
+    );
+
+    expect(result).toMatchObject({
+      actionError: expect.stringContaining('"QuickBooks calculates sales tax" is enabled'),
+    });
+    const row = await db('tenant_external_entity_mappings').where({ id }).first();
+    expect(row.external_entity_id).toBe('2');
+  });
+
+  it('still proves a numeric tax code by reading it, AST on or off', async () => {
+    await setAutomatedSalesTaxRealms(tenantA, [realmA]);
+    qboReadMock.mockImplementation(async () => null);
+
+    const result = await (createExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      {
+        integration_type: 'quickbooks_online',
+        alga_entity_type: 'tax_code',
+        alga_entity_id: taxRegionA,
+        external_entity_id: '4',
+        external_realm_id: realmA,
+      }
+    );
+
+    expect(result).toMatchObject({
+      actionError: expect.stringContaining('does not exist in the connected company'),
+    });
+    expect(qboReadMock).toHaveBeenCalledWith('TaxCode', '4');
+  });
+
+  it('does not exempt TAX/NON on a non-tax entity type', async () => {
+    // The exemption is specific to tax codes: a service called "NON" is still
+    // an Item that has to exist in the connected company.
+    await setAutomatedSalesTaxRealms(tenantA, [realmA]);
+    qboReadMock.mockImplementation(async () => null);
+
+    const result = await (createExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      {
+        integration_type: 'quickbooks_online',
+        alga_entity_type: 'service',
+        alga_entity_id: serviceA,
+        external_entity_id: 'NON',
+        external_realm_id: realmA,
+      }
+    );
+
+    expect(result).toMatchObject({
+      actionError: expect.stringContaining('does not exist in the connected company'),
+    });
+    expect(qboReadMock).toHaveBeenCalledWith('Item', 'NON');
   });
 });
 
@@ -687,6 +854,117 @@ describe('createExternalEntityMapping — Xero account-mode service mappings', (
     const rows = await db('tenant_external_entity_mappings').where({ id: created.id });
     expect(rows[0].metadata).toMatchObject({ xeroTargetKind: 'account' });
   });
+
+  describe('shared codes and shared accounts', () => {
+    const itemMapping = (serviceId: string, code: string, metadata: Record<string, unknown> | null = { xeroTargetKind: 'item' }) => ({
+      integration_type: 'xero',
+      alga_entity_type: 'service',
+      alga_entity_id: serviceId,
+      external_entity_id: code,
+      external_realm_id: xeroRealm,
+      ...(metadata ? { metadata } : {}),
+    });
+    const create = (m: Record<string, unknown>) =>
+      (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, m);
+    const update = (id: string, u: Record<string, unknown>) =>
+      (updateExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, id, u);
+    const itemMessage = /Xero item is already mapped to another service/;
+
+    beforeEach(() => {
+      xeroListItemsMock.mockResolvedValue([
+        { itemId: 'g200', code: '200', name: 'Item 200', status: 'ACTIVE' },
+        { itemId: 'g201', code: '201', name: 'Item 201', status: 'ACTIVE' },
+      ]);
+    });
+
+    it('lets two services map to the same revenue account', async () => {
+      const other = await seedService(tenantA);
+      expect(await create(accountMapping())).toMatchObject({ id: expect.any(String) });
+      expect(await create(accountMapping({ alga_entity_id: other }))).toMatchObject({ id: expect.any(String) });
+      const rows = await db('tenant_external_entity_mappings').where({ tenant: tenantA });
+      expect(rows).toHaveLength(2);
+      for (const r of rows) {
+        expect(r.external_entity_id).toBe('200');
+        expect(r.metadata).toMatchObject({ xeroTargetKind: 'account' });
+      }
+    });
+
+    it('lets item:200 and account:200 coexist in one realm', async () => {
+      const other = await seedService(tenantA);
+      expect(await create(itemMapping(serviceA, '200'))).toMatchObject({ id: expect.any(String) });
+      expect(await create(accountMapping({ alga_entity_id: other }))).toMatchObject({ id: expect.any(String) });
+      expect(await db('tenant_external_entity_mappings').where({ tenant: tenantA })).toHaveLength(2);
+    });
+
+    it('still rejects a second service on the same item, inserting nothing', async () => {
+      const other = await seedService(tenantA);
+      expect(await create(itemMapping(serviceA, '200'))).toMatchObject({ id: expect.any(String) });
+      const dup = await create(itemMapping(other, '200'));
+      expect(dup.actionError).toMatch(itemMessage);
+      expect(dup.messageKey).toBe('msp/integrations:errors.mappings.duplicateXeroItem');
+      expect(await db('tenant_external_entity_mappings').where({ tenant: tenantA, alga_entity_id: other })).toHaveLength(0);
+    });
+
+    it('still enforces a legacy row whose metadata is NULL', async () => {
+      const other = await seedService(tenantA);
+      await seedMapping({
+        integration_type: 'xero',
+        alga_entity_id: serviceA,
+        external_entity_id: '200',
+        external_realm_id: xeroRealm,
+        metadata: null,
+      });
+      const dup = await create(itemMapping(other, '200', null));
+      expect(dup.actionError).toMatch(itemMessage);
+      expect(await db('tenant_external_entity_mappings').where({ tenant: tenantA, alga_entity_id: other })).toHaveLength(0);
+    });
+
+    it('update into an item someone else holds returns the item message', async () => {
+      const other = await seedService(tenantA);
+      // An edit rewrites a pre-unification org-keyed realm to the owning
+      // connection id, so the holder is seeded under that canonical realm.
+      await seedMapping({
+        integration_type: 'xero',
+        alga_entity_id: serviceA,
+        external_entity_id: '200',
+        external_realm_id: 'xero-conn-1',
+        metadata: { xeroTargetKind: 'item' },
+      });
+      const b = await create(itemMapping(other, '201'));
+      const result = await update(b.id, { external_entity_id: '200' });
+      expect(result.actionError).toMatch(itemMessage);
+      expect(result.messageKey).toBe('msp/integrations:errors.mappings.duplicateXeroItem');
+      const row = await db('tenant_external_entity_mappings').where({ id: b.id }).first();
+      expect(row.external_entity_id).toBe('201');
+    });
+
+    it('blocks switching a shared account mapping to item mode when the item is held', async () => {
+      const other = await seedService(tenantA);
+      await seedMapping({
+        integration_type: 'xero',
+        alga_entity_id: serviceA,
+        external_entity_id: '200',
+        external_realm_id: 'xero-conn-1',
+        metadata: { xeroTargetKind: 'item' },
+      });
+      const b = await create(accountMapping({ alga_entity_id: other }));
+      const result = await update(b.id, { metadata: { xeroTargetKind: 'item' } });
+      expect(result.actionError).toMatch(itemMessage);
+      const row = await db('tenant_external_entity_mappings').where({ id: b.id }).first();
+      expect(row.metadata).toMatchObject({ xeroTargetKind: 'account' });
+    });
+
+    it('reports the item message when a relink collides with a newly held item', async () => {
+      const other = await seedService(tenantA);
+      const a = await create(itemMapping(serviceA, '201'));
+      await (deleteExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, a.id);
+      expect(await create(itemMapping(other, '200'))).toMatchObject({ id: expect.any(String) });
+      const relink = await create(itemMapping(serviceA, '200'));
+      expect(relink.actionError).toMatch(itemMessage);
+      const tombstone = await db('tenant_external_entity_mappings').where({ id: a.id }).first();
+      expect(tombstone.deleted_at).not.toBeNull();
+    });
+  });
 });
 
 describe('updateExternalEntityMapping — retarget rules', () => {
@@ -816,5 +1094,151 @@ describe('unlink (tombstone) and explicit relink', () => {
 
     const audit = await lastAudit(tenantA, 'CREATE');
     expect(audit.details).toMatchObject({ relinked: true });
+  });
+});
+
+describe('createExternalEntityMappings — bulk create with per-row isolation', () => {
+  const bulkRow = (serviceId: string, code: string, kind: 'item' | 'account') => ({
+    integration_type: 'xero',
+    alga_entity_type: 'service',
+    alga_entity_id: serviceId,
+    external_entity_id: code,
+    external_realm_id: xeroRealm,
+    metadata: { xeroTargetKind: kind },
+  });
+
+  it('persists the good rows with their own kinds while a duplicate row fails alone', async () => {
+    xeroListItemsMock.mockResolvedValue([
+      { itemId: 'g1', code: '200', name: 'Item 200', status: 'ACTIVE' },
+    ]);
+    xeroListAccountsMock.mockResolvedValue([
+      { accountId: 'ga1', code: '200', name: 'Sales', type: 'REVENUE', status: 'ACTIVE' },
+      { accountId: 'ga2', code: '210', name: 'Hosting Sales', type: 'REVENUE', status: 'ACTIVE' },
+    ]);
+    xeroListItemsMock.mockClear();
+    xeroListAccountsMock.mockClear();
+    const extraService = await seedService(tenantA);
+    const unknownService = uuidv4();
+    await (createExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      bulkRow(serviceA, '200', 'item')
+    );
+    xeroListItemsMock.mockClear();
+
+    const results = await (createExternalEntityMappings as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      [
+        bulkRow(serviceA, '200', 'item'),
+        bulkRow(unknownService, '200', 'item'),
+        bulkRow(extraService, '210', 'account'),
+      ]
+    );
+
+    expect(results.map((r: any) => r.ok)).toEqual([false, false, true]);
+    expect(results[0].error).toMatch(/already exists/);
+    expect(xeroListItemsMock).toHaveBeenCalledTimes(1);
+    expect(xeroListAccountsMock).toHaveBeenCalledTimes(1);
+    const rows = await db('tenant_external_entity_mappings').where({ tenant: tenantA });
+    expect(rows).toHaveLength(2);
+    expect(rows.find((r: any) => r.alga_entity_id === extraService).metadata).toMatchObject({
+      xeroTargetKind: 'account',
+    });
+  });
+
+  it('lets item and account targets share a code, and many services share one account', async () => {
+    xeroListItemsMock.mockResolvedValue([
+      { itemId: 'g1', code: '200', name: 'Item 200', status: 'ACTIVE' },
+      { itemId: 'g2', code: '201', name: 'Item 201', status: 'ACTIVE' },
+    ]);
+    xeroListAccountsMock.mockResolvedValue([
+      { accountId: 'ga1', code: '200', name: 'Sales', type: 'REVENUE', status: 'ACTIVE' },
+    ]);
+    const [s1, s2, s3, s4, s5] = [
+      await seedService(tenantA),
+      await seedService(tenantA),
+      await seedService(tenantA),
+      await seedService(tenantA),
+      await seedService(tenantA),
+    ];
+    const results = await (createExternalEntityMappings as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      [
+        bulkRow(s1, '201', 'item'),
+        bulkRow(s2, '201', 'item'),
+        bulkRow(s3, '200', 'account'),
+        bulkRow(s4, '200', 'account'),
+        bulkRow(s5, '200', 'item'),
+      ]
+    );
+    // s2 collides with s1 on the same item; accounts are shareable; item:200
+    // and account:200 coexist.
+    expect(results.map((r: any) => r.ok)).toEqual([true, false, true, true, true]);
+    expect(results[1].error).toMatch(/Xero item is already mapped to another service/);
+  });
+
+  it('maps each unique-index violation to its own message', async () => {
+    const target = uuidv4();
+    const svc1 = await seedService(tenantA);
+    const svc2 = await seedService(tenantA);
+    const make = (alga: string, external: string) => ({
+      integration_type: 'quickbooks_online',
+      alga_entity_type: 'service',
+      alga_entity_id: alga,
+      external_entity_id: external,
+      external_realm_id: realmA,
+    });
+    const first = await (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, make(svc1, target));
+    expect(first).not.toHaveProperty('actionError');
+
+    // Same target, different entity: idx_unique_external_mapping.
+    const sameTarget = await (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, make(svc2, target));
+    expect(sameTarget.actionError).toMatch(/target is already mapped to another entity/);
+    expect(sameTarget.messageKey).toBe('msp/integrations:errors.mappings.duplicateTarget');
+
+    // Same entity, different target: idx_unique_alga_mapping.
+    const sameEntity = await (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, make(svc1, uuidv4()));
+    expect(sameEntity.actionError).toMatch(/A mapping already exists for this entity/);
+  });
+});
+
+describe('invoice discount mapping configuration', () => {
+  it.each(['quickbooks_online', 'xero', 'quickbooks_csv', 'xero_csv', 'quickbooks_desktop'])('creates, reads, edits and removes the tenant-scoped %s mapping', async (provider) => {
+    const realm = provider === 'quickbooks_online' ? realmA : provider === 'xero' ? xeroRealm : null;
+    const external = provider === 'xero' ? '200' : 'Discount account';
+    const user = { user_id: 'u' };
+    const context = { tenant: tenantA };
+    const result = await (createExternalEntityMapping as any)(user, context, {
+      integration_type: provider, alga_entity_type: DISCOUNT_MAPPING_ENTITY_TYPE, alga_entity_id: AUTOMATIC_DISCOUNT_MAPPING_ID,
+      external_entity_id: external, external_realm_id: realm,
+      ...(provider === 'xero' ? { metadata: { xeroTargetKind: 'account' } } : {}),
+    });
+    expect(result.id).toBeTruthy();
+    expect(await db('tenant_external_entity_mappings').where({ tenant: tenantB, alga_entity_type: 'discount' })).toHaveLength(0);
+    if (provider === 'quickbooks_online') expect(qboReadMock).toHaveBeenCalledWith('Item', external);
+    if (provider === 'xero') expect(xeroListAccountsMock).toHaveBeenCalled();
+    const read = await (getExternalEntityMappings as any)(user, context, { integrationType: provider, algaEntityType: 'discount', externalRealmId: realm });
+    expect(read).toHaveLength(1);
+    const updated = await (updateExternalEntityMapping as any)(user, context, result.id, { external_entity_id: external });
+    expect(updated.external_entity_id).toBe(external);
+    await (deleteExternalEntityMapping as any)(user, context, result.id);
+    expect(await (getExternalEntityMappings as any)(user, context, { integrationType: provider, algaEntityType: 'discount', externalRealmId: realm })).toHaveLength(0);
+  });
+
+  it('rejects forged discount identities and unmappable Xero accounts', async () => {
+    for (const input of [
+      { alga_entity_id: uuidv4(), external_entity_id: '200' },
+      { alga_entity_id: AUTOMATIC_DISCOUNT_MAPPING_ID, external_entity_id: '090' },
+      { alga_entity_id: AUTOMATIC_DISCOUNT_MAPPING_ID, external_entity_id: '299' },
+    ]) {
+      const result = await (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, {
+        integration_type: 'xero', alga_entity_type: DISCOUNT_MAPPING_ENTITY_TYPE, external_realm_id: xeroRealm,
+        metadata: { xeroTargetKind: 'account' }, ...input,
+      });
+      expect(result.actionError).toBeTruthy();
+    }
+    expect(await db('tenant_external_entity_mappings').where({ tenant: tenantA, alga_entity_type: 'discount' })).toHaveLength(0);
   });
 });

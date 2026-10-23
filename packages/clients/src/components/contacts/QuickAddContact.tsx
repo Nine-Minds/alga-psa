@@ -10,6 +10,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { addContact, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
 import type { ContactPhoneNumberInput, CreateContactInput, IClient } from '@alga-psa/types';
 import QuickAddClient from '../clients/QuickAddClient';
 import { IContact } from '@alga-psa/types';
@@ -50,8 +51,11 @@ interface QuickAddContactProps {
   isOpen: boolean;
   onClose: () => void;
   onContactAdded: (newContact: IContact) => void;
-  clients: IClient[];
+  /** @deprecated No longer used: the client picker searches on the server. Callers may drop this prop. */
+  clients?: IClient[];
   selectedClientId?: string | null;
+  /** Seeds the first phone row (e.g. the caller ID of an unmatched incoming call). */
+  initialPhoneNumber?: string | null;
 }
 
 function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
@@ -85,8 +89,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   isOpen,
   onClose,
   onContactAdded,
-  clients,
-  selectedClientId = null
+  selectedClientId = null,
+  initialPhoneNumber = null,
 }) => {
   const { toast } = useToast();
   const { t } = useTranslation('msp/contacts');
@@ -120,7 +124,6 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   const [tenantDefaultCountry, setTenantDefaultCountry] = useState<ICountry | null>(null);
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
-  const [localClients, setLocalClients] = useState<IClient[]>([]);
 
   useEffect(() => {
     if (selectedClientId) {
@@ -132,10 +135,12 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     if (isOpen) {
       const fetchFormMetadata = async () => {
         try {
+          // The preselected dial country is a nicety; it must not take the country
+          // list and the phone types down with it.
           const [countriesData, suggestionLabels, tenantCountry] = await Promise.all([
             countries.length > 0 ? Promise.resolve(countries) : getAllCountries(),
             listContactPhoneTypeSuggestions(),
-            getTenantDefaultCountry(),
+            getTenantDefaultCountry().catch(() => null),
           ]);
           setCountries(countriesData);
           setCustomPhoneTypeSuggestions(suggestionLabels);
@@ -152,6 +157,9 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     if (isOpen) {
       if (selectedClientId) {
         setClientId(selectedClientId);
+      }
+      if (initialPhoneNumber) {
+        setPhoneNumbers([{ phone_number: initialPhoneNumber, canonical_type: 'work', is_default: true }]);
       }
       setError(null);
     } else {
@@ -177,12 +185,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       setFieldErrors({});
       setPendingTags([]);
     }
-  }, [isOpen, selectedClientId]);
-
-  const mergedClients = React.useMemo(() => {
-    const clientIds = new Set(clients.map(c => c.client_id));
-    return [...clients, ...localClients.filter(c => !clientIds.has(c.client_id))];
-  }, [clients, localClients]);
+  }, [isOpen, selectedClientId, initialPhoneNumber]);
 
   const handleClientSelect = (nextClientId: string | null) => {
     if (typeof nextClientId === 'string' || nextClientId === null) {
@@ -617,7 +620,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               </Label>
               <ClientPicker
                 id="quick-add-contact-client"
-                clients={mergedClients}
+                searchClients={searchClientsForPicker}
                 onSelect={handleClientSelect}
                 selectedClientId={clientId}
                 filterState={filterState}
@@ -709,7 +712,6 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
         open={isQuickAddClientOpen}
         onOpenChange={setIsQuickAddClientOpen}
         onClientAdded={(newClient) => {
-          setLocalClients(prev => [...prev, newClient]);
           setClientId(newClient.client_id);
         }}
         skipSuccessDialog

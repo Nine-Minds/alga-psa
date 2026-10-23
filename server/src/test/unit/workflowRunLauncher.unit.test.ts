@@ -95,6 +95,7 @@ describe('Workflow run launcher', () => {
 
     getWorkflowByIdMock.mockResolvedValue({
       workflow_id: 'workflow-1',
+      tenant: 'tenant-1',
       is_paused: false,
       concurrency_limit: null,
       payload_schema_ref: null
@@ -142,7 +143,8 @@ describe('Workflow run launcher', () => {
 
     expect(result).toEqual({
       runId: 'run-started',
-      workflowVersion: 5
+      workflowVersion: 5,
+      created: true
     });
     expect(initializeWorkflowRuntimeV2Mock).toHaveBeenCalledTimes(1);
     expect(startRunMock).toHaveBeenCalledTimes(1);
@@ -153,14 +155,15 @@ describe('Workflow run launcher', () => {
       workflowVersion: 5,
       triggerType: null,
       executionKey: expect.stringMatching(/^launch-workflow-1-/)
-    });
+    }, { connectTimeoutMs: undefined });
     expect(updateRunMock).toHaveBeenCalledWith(
       knexMock,
       'run-started',
       expect.objectContaining({
         temporal_workflow_id: 'workflow-runtime-v2:run:run-started',
         temporal_run_id: 'temporal-run-1'
-      })
+      }),
+      'tenant-1'
     );
   });
 
@@ -199,7 +202,8 @@ describe('Workflow run launcher', () => {
 
     expect(result).toEqual({
       runId: 'run-existing',
-      workflowVersion: 5
+      workflowVersion: 5,
+      created: false
     });
     expect(startRunMock).toHaveBeenCalledTimes(1);
     expect(startWorkflowRuntimeV2TemporalRunMock).not.toHaveBeenCalled();
@@ -223,7 +227,8 @@ describe('Workflow run launcher', () => {
 
     expect(result).toEqual({
       runId: 'run-created',
-      workflowVersion: 5
+      workflowVersion: 5,
+      created: true
     });
     expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledWith({
       runId: 'run-created',
@@ -232,7 +237,7 @@ describe('Workflow run launcher', () => {
       workflowVersion: 5,
       triggerType: 'event',
       executionKey: 'exec-1'
-    });
+    }, { connectTimeoutMs: undefined });
     expect(startRunMock).toHaveBeenCalledWith(
       knexMock,
       expect.objectContaining({
@@ -248,7 +253,8 @@ describe('Workflow run launcher', () => {
       expect.objectContaining({
         temporal_workflow_id: 'workflow-runtime-v2:run:run-created',
         temporal_run_id: 'temporal-run-1'
-      })
+      }),
+      'tenant-1'
     );
   });
 
@@ -274,7 +280,8 @@ describe('Workflow run launcher', () => {
           message: 'temporal unavailable',
           stage: 'launch'
         })
-      })
+      }),
+      'tenant-1'
     );
   });
 
@@ -294,7 +301,8 @@ describe('Workflow run launcher', () => {
 
     expect(result).toEqual({
       runId: 'run-created',
-      workflowVersion: 5
+      workflowVersion: 5,
+      created: true
     });
     expect(createRunMock).toHaveBeenCalledWith(
       knexMock,

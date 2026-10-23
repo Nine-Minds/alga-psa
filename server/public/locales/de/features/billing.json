@@ -151,7 +151,8 @@
     "tryAgain": "Erneut versuchen",
     "backToBilling": "Zurück zur Abrechnung",
     "retryFailed": "Die Zahlung konnte weiterhin nicht gestartet werden. Bitte versuchen Sie es gleich erneut.",
-    "loading": "Wird geladen..."
+    "loading": "Wird geladen...",
+    "offlinePaymentMethod": "Diese Rechnung wird per Scheck oder Banküberweisung bezahlt, daher ist keine Online-Zahlung möglich. Bitte folgen Sie den Zahlungshinweisen auf der Rechnung."
   },
   "quotes": {
     "pendingQuotes": "Ausstehende Angebote",
@@ -240,7 +241,8 @@
     "contractLineType": {
       "Fixed": "Festpreis",
       "Hourly": "Stündlich",
-      "Usage": "Nutzungsbasiert"
+      "Usage": "Nutzungsbasiert",
+      "PrepaidBlock": "Prepaid-Block"
     },
     "quoteStatus": {
       "draft": "Entwurf",
@@ -441,6 +443,14 @@
     "hoursLeft": "Noch {{hours}} Std.",
     "expires": "Läuft am {{date}} ab",
     "recentBurn": "Letzte Nutzung",
-    "timeEntry": "Zeiteintrag"
+    "timeEntry": "Zeiteintrag",
+    "contractLabel": "Vertrag: {{contract}}"
+  },
+  "bucketUsage": {
+    "contractLine": "Vertragslinie für Stundenkontingent",
+    "usage": "Verbrauch",
+    "hoursUsed": "{{hours}} Stunden verbraucht",
+    "hoursTotal": "{{hours}} Stunden insgesamt",
+    "rolloverHours": "Enthält {{hours}} übertragene Stunden"
   }
 }

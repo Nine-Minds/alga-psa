@@ -13,7 +13,13 @@ export function reconcileInterruptedUpdate(options) {
     now = () => new Date(),
     pidIsAlive = isPidAlive,
     maxAgeMs = DEFAULT_UPDATE_OWNER_MAX_AGE_MS,
-    logger = console
+    logger = console,
+    // Runs after an update is marked interrupted. The engine suspends the
+    // application HelmReleases while it works; a hard-killed engine (pod
+    // eviction, OOM, reboot) leaves them suspended and looking healthy, and
+    // every later update would silently do nothing. The control plane passes
+    // a resume here so that state never outlives the engine that created it.
+    onInterrupted = null
   } = options;
   const state = readJsonFile(stateFile);
   const classification = classifyUpdateOwner(state, {
@@ -39,6 +45,11 @@ export function reconcileInterruptedUpdate(options) {
     message: interrupted.failure.message
   }, historyFile, () => at);
   logger.warn?.(interrupted.failure.suspectedCause);
+  if (onInterrupted) {
+    Promise.resolve()
+      .then(() => onInterrupted(interrupted))
+      .catch((error) => logger.warn?.(`Post-interruption recovery failed: ${error instanceof Error ? error.message : String(error)}`));
+  }
   return { classification, state: interrupted };
 }
 
@@ -50,7 +61,8 @@ export function createUpdateCoordinator(options) {
     now = () => new Date(),
     pidIsAlive = isPidAlive,
     maxAgeMs = DEFAULT_UPDATE_OWNER_MAX_AGE_MS,
-    logger = console
+    logger = console,
+    onInterrupted = null
   } = options;
   let deciding = false;
 
@@ -61,7 +73,8 @@ export function createUpdateCoordinator(options) {
       now,
       pidIsAlive,
       maxAgeMs,
-      logger
+      logger,
+      onInterrupted
     });
   }
 

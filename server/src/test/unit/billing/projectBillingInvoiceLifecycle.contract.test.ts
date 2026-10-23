@@ -83,7 +83,7 @@ describe("project invoice lifecycle contracts", () => {
     const materialPersistence = section(
       invoiceGeneration,
       "// Mark ticket/project materials in this billing window as billed by this invoice.",
-      "for (const discount of billingResult.discounts)",
+      "// One shared evaluator owns configured automatic discounts.",
     );
 
     expect(materialPersistence).toContain(
@@ -144,12 +144,21 @@ describe("project invoice lifecycle contracts", () => {
       "async function releaseProjectBillingForDeletedInvoice",
       "type ProjectDepositCreditEvent",
     );
+    // updateInvoiceManualItems is now an exported wrapper around the authed
+    // implementation, so the authed const is what follows unfinalizeInvoice.
     const unfinalize = section(
       invoiceModification,
       "export const unfinalizeInvoice",
-      "export const updateInvoiceManualItems",
+      "const updateInvoiceManualItemsWithAuth = withAuth(",
     );
-    const hardDelete = invoiceModification.slice(
+    // Hard delete logic lives in the auth-free shared engine; the UI action
+    // (hardDeleteInvoice) is a thin wrapper that delegates to it.
+    const deleteEngine = section(
+      invoiceModification,
+      "export async function deleteInvoiceWithKnex",
+      "export const hardDeleteInvoice",
+    );
+    const hardDeleteAction = invoiceModification.slice(
       invoiceModification.indexOf("export const hardDeleteInvoice"),
     );
 
@@ -180,11 +189,12 @@ describe("project invoice lifecycle contracts", () => {
     expect(invoiceModification).toContain("billed_at: null");
     expect(unfinalize).not.toContain("releaseProjectBillingForDeletedInvoice");
     expect(unfinalize).not.toContain("releaseMaterialsForDeletedInvoice");
-    expect(hardDelete).toContain(
+    expect(deleteEngine).toContain(
       "await releaseProjectBillingForDeletedInvoice(trx, tenant, invoiceId);",
     );
-    expect(hardDelete).toContain(
+    expect(deleteEngine).toContain(
       "await releaseMaterialsForDeletedInvoice(trx, tenant, invoiceId);",
     );
+    expect(hardDeleteAction).toContain("deleteInvoiceWithKnex(");
   });
 });

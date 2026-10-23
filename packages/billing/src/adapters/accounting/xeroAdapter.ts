@@ -1,16 +1,21 @@
+import { expandAccountingExportCharges } from '../../services/accountingExportChargeExpansion';
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Accounting export adapter - intentionally bridges billing and Xero integration APIs */
 import logger from '@alga-psa/core/logger';
 import { Knex } from 'knex';
 import {
+  AccountingChangeSet,
   AccountingExportAdapter,
   AccountingExportAdapterCapabilities,
   AccountingExportAdapterContext,
   AccountingExportDeliveryResult,
   AccountingExportTransformResult,
   AccountingExportDocument,
+  AccountingExternalChange,
   ExternalInvoiceFetchResult,
   ExternalInvoiceData,
   ExternalInvoiceChargeTax,
+  NormalizedExternalDocumentPayload,
+  NormalizedExternalPaymentPayload,
   PendingTaxImportRecord
 } from '@alga-psa/types';
 import {
@@ -31,8 +36,13 @@ import { CompanyAccountingSyncService } from '../../services/companySync/company
 import { KnexCompanyMappingRepository } from '../../services/companySync/companyMappingRepository';
 import { buildNormalizedCompanyPayload } from '../../services/companySync/companySyncNormalizer';
 import { XeroCompanyAdapter } from '../../services/companySync/adapters/xeroCompanyAdapter';
+import { resolveClientExportEmail } from './exportRecipientEmails';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
-import { AppError } from '@alga-psa/core';
+import { resolveXeroRealmAliases } from '../../services/accountingSync/xeroRealmIdentity';
+import { AppError, fromMinorUnits, toMinorUnits } from '@alga-psa/core';
+import { reconcileExportLineQuantity } from './exportLineQuantity';
+
+const XERO_MAX_QUANTITY_DECIMALS = 4;
 
 export function buildXeroInvoiceReference(baseReference: string, poNumber?: string | null): string {
   const reference = poNumber ? `${baseReference} | PO ${poNumber}` : baseReference;
@@ -82,6 +92,7 @@ type DbCharge = {
   net_amount?: number | null;
   tax_amount?: number | null;
   tax_region?: string | null;
+  is_discount?: boolean | null;
 };
 
 type DbClient = {
@@ -116,6 +127,8 @@ interface XeroDocumentPayload {
   invoice: XeroInvoicePayload;
   /** Charge IDs in same order as invoice.lines[] for mapping after delivery */
   chargeIds: string[];
+  /** Original invoice parent and fixed-detail identities parallel to chargeIds. */
+  chargeLineage: Array<{ parentChargeId: string; allocationDetailId?: string }>;
   mapping: {
     clientId: string;
     source?: string;
@@ -142,8 +155,194 @@ export class XeroAdapter implements AccountingExportAdapter {
       supportsInvoiceUpdates: true,
       supportsTaxDelegation: true,
       supportsInvoiceFetch: true,
-      supportsTaxComponentImport: true // Xero provides detailed tax component breakdown
+      supportsTaxComponentImport: true, // Xero provides detailed tax component breakdown
+      supportsChangePolling: true,
+      // Xero outbound writes beyond invoice export are not implemented. These
+      // flags make shared appliers gate them explicitly (observable exception)
+      // instead of dispatching through another provider's client.
+      supportsPaymentRecording: false,
+      supportsOutboundPayment: false,
+      supportsOutboundCredit: false,
+      supportsOutboundVoid: false
     };
+  }
+
+  /**
+   * Poll changed invoices, payments and credit notes since a cursor.
+   *
+   * Pagination: each Xero collection is fetched page by page (100 per page)
+   * until a short page is returned, so the caller receives a complete change
+   * set before the cycle may advance its cursor. A repeated page fails the
+   * poll rather than returning an incomplete set or looping indefinitely.
+   *
+   * Replay/idempotency: every emitted change carries a stable external id and
+   * a `syncToken` (Xero UpdatedDateUTC, plus amount for synthesized credit
+   * allocations). The shared appliers no-op on an unchanged token, which makes
+   * overlapping polls and the cursor overlap window safe.
+   *
+   * Reversals: a status of DELETED/VOIDED emits a deleted document change; a
+   * removed credit allocation emits a deleted synthesized payment change for
+   * the previously recorded ledger row.
+   */
+  async fetchChanges(
+    tenantId: string,
+    since: string,
+    targetRealm?: string | null
+  ): Promise<AccountingChangeSet> {
+    if (!targetRealm) {
+      throw new AppError('XERO_REALM_REQUIRED', 'Xero change polling requires a connection id');
+    }
+
+    // Conservative pre-poll watermark: any change written after this instant is
+    // re-fetched on the next cycle, so a poll that outlives the cursor overlap
+    // can never skip a record it happened to collect before that record was
+    // written. `fetchedAt` is therefore the *start* of the poll, not its end.
+    const watermark = new Date().toISOString();
+
+    const client = await XeroClientService.create(tenantId, targetRealm);
+    const changes: AccountingExternalChange[] = [];
+
+    const [invoices, payments, creditNotes] = await Promise.all([
+      this.collectChanged(client, 'invoice', since),
+      this.collectChanged(client, 'payment', since),
+      this.collectChanged(client, 'creditNote', since)
+    ]);
+
+    const truncated = invoices.truncated || payments.truncated || creditNotes.truncated;
+
+    for (const record of invoices.records) {
+      const change = normalizeXeroInvoice(record);
+      if (change) {
+        changes.push(change);
+      }
+    }
+
+    for (const record of payments.records) {
+      const change = normalizeXeroPayment(record);
+      if (change) {
+        changes.push(change);
+      }
+    }
+
+    const currentCreditAllocations = new Map<string, Set<string>>();
+    for (const record of creditNotes.records) {
+      const documentChange = normalizeXeroCreditNote(record);
+      if (documentChange) {
+        changes.push(documentChange);
+      }
+      const creditNoteId = String(record?.CreditNoteID ?? '');
+      if (!creditNoteId) {
+        continue;
+      }
+      const allocationIds = new Set<string>();
+      for (const allocationChange of normalizeXeroCreditAllocations(record)) {
+        changes.push(allocationChange);
+        allocationIds.add(allocationChange.externalId);
+      }
+      currentCreditAllocations.set(creditNoteId, allocationIds);
+    }
+
+    // Reconcile credit notes whose allocations were removed: emit a deletion
+    // for any previously recorded synthetic allocation that is no longer in
+    // Xero's current allocation set. Deletions are emitted before the document
+    // changes that may have created them so a replacement is reversible even
+    // if a consumer does not reorder; the shared cycle still sorts deletions
+    // ahead of applications.
+    if (currentCreditAllocations.size > 0) {
+      const removed = await this.findRemovedCreditAllocations(
+        tenantId,
+        targetRealm,
+        currentCreditAllocations
+      );
+      changes.unshift(...removed);
+    }
+
+    // Only a fully collected set may advance the pre-poll watermark. Timestamps
+    // from individual feeds cannot represent progress through numbered pages.
+    return {
+      changes,
+      truncated,
+      fetchedAt: watermark
+    };
+  }
+
+  private async collectChanged(
+    client: XeroClientService,
+    kind: 'invoice' | 'payment' | 'creditNote',
+    since: string
+  ): Promise<{ records: Array<Record<string, any>>; truncated: boolean }> {
+    const records: Array<Record<string, any>> = [];
+    const seenPages = new Set<string>();
+    const idField = kind === 'invoice' ? 'InvoiceID' : kind === 'payment' ? 'PaymentID' : 'CreditNoteID';
+
+    for (let page = 1; ; page += 1) {
+      const result =
+        kind === 'invoice'
+          ? await client.listChangedInvoices(since, page)
+          : kind === 'payment'
+            ? await client.listChangedPayments(since, page)
+            : await client.listChangedCreditNotes(since, page);
+
+      // Detect servers ignoring the page argument without imposing a ceiling
+      // that permanently strands large histories or timestamp ties. Identity,
+      // not UpdatedDateUTC, determines whether a page made progress.
+      const pageIds = JSON.stringify(result.records.map((record) => record[idField]).sort());
+      if ((result.hasMore && result.records.length === 0) || (result.records.length > 0 && seenPages.has(pageIds))) {
+        throw new AppError('XERO_PAGINATION_STALLED', `Xero ${kind} pagination did not advance at page ${page}`);
+      }
+      seenPages.add(pageIds);
+      records.push(...result.records);
+
+      if (!result.hasMore) {
+        return { records, truncated: false };
+      }
+    }
+  }
+
+  private async findRemovedCreditAllocations(
+    tenantId: string,
+    targetRealm: string,
+    current: Map<string, Set<string>>
+  ): Promise<AccountingExternalChange[]> {
+    const creditNoteIds = Array.from(current.keys());
+    if (creditNoteIds.length === 0) {
+      return [];
+    }
+
+    const { knex } = await createTenantKnex();
+    // Accept the connection's uniquely-owned organisation id as a historical
+    // alias for mappings created before the identity was unified.
+    const realmIds = await resolveXeroRealmAliases(tenantId, targetRealm);
+    const acceptedRealms = realmIds.length > 0 ? realmIds : [targetRealm];
+    // `metadata->>` is a JSON expression, not a column: bind it through a raw
+    // parameterized predicate so PostgreSQL evaluates the extraction instead
+    // of looking for a column literally named `metadata->>xero_credit_note_id`.
+    const rows = await tenantDb(knex, tenantId).table<MappingRowRaw>('tenant_external_entity_mappings')
+      .select('*')
+      .where('integration_type', this.type)
+      .where('alga_entity_type', 'invoice_payment')
+      .whereIn('external_realm_id', acceptedRealms)
+      .whereNull('deleted_at')
+      .whereRaw("(metadata->>'xero_credit_note_id') = ANY(?)", [creditNoteIds]);
+
+    const removed: AccountingExternalChange[] = [];
+    for (const row of rows) {
+      const metadata = parseMetadata(row.metadata) ?? {};
+      const creditNoteId = String(metadata.xero_credit_note_id ?? '');
+      if (!creditNoteId) {
+        continue;
+      }
+      const allocations = current.get(creditNoteId);
+      if (allocations && !allocations.has(row.external_entity_id)) {
+        removed.push({
+          entityType: 'Payment',
+          externalId: row.external_entity_id,
+          deleted: true,
+          updatedAt: new Date().toISOString()
+        });
+      }
+    }
+    return removed;
   }
 
   async transform(context: AccountingExportAdapterContext): Promise<AccountingExportTransformResult> {
@@ -165,7 +364,10 @@ export class XeroAdapter implements AccountingExportAdapter {
     const invoiceMappingRepository = new KnexInvoiceMappingRepository(knex);
 
     const invoicesById = await this.loadInvoices(knex, tenantId, context);
-    const chargesById = await this.loadCharges(knex, tenantId, context);
+    const loadedCharges = await this.loadCharges(knex, tenantId, context);
+    const expanded = await expandAccountingExportCharges(knex, tenantId, loadedCharges, context.lines);
+    const chargesById = expanded.charges;
+    context = { ...context, lines: expanded.lines };
     const clientData = await this.loadClients(knex, tenantId, context, invoicesById);
 
     const linesByInvoice = groupBy(context.lines, (line) => line.document_id);
@@ -271,6 +473,7 @@ export class XeroAdapter implements AccountingExportAdapter {
 
       const lineItems: XeroInvoiceLinePayload[] = [];
       const chargeIds: string[] = []; // Track charge IDs in same order as lineItems
+      const chargeLineage: XeroDocumentPayload['chargeLineage'] = [];
       let invoiceTotal = 0;
       let detectedLineAmountType: LineAmountType | undefined;
 
@@ -283,19 +486,28 @@ export class XeroAdapter implements AccountingExportAdapter {
         if (!charge) {
           throw new AppError('XERO_CHARGE_NOT_FOUND', `Charge ${line.document_line_id} missing for invoice ${invoiceId}`);
         }
-        if (!charge.service_id) {
+        const isServicelessDiscount = !charge.service_id && Boolean(charge.is_discount);
+        if (!charge.service_id && !isServicelessDiscount) {
           throw new AppError('XERO_SERVICE_MISSING', `Charge ${charge.item_id} missing service_id for invoice ${invoiceId}`);
         }
 
-        const serviceMapping = await resolver.resolveServiceMapping({
-          tenantId: context.batch.tenant,
-          adapterType: this.type,
-          serviceId: charge.service_id,
-          targetRealm: context.batch.target_realm
-        });
+        const serviceMapping = isServicelessDiscount
+          ? await resolver.resolveDiscountMapping({
+              tenantId: context.batch.tenant,
+              adapterType: this.type,
+              targetRealm: context.batch.target_realm
+            })
+          : await resolver.resolveServiceMapping({
+              tenantId: context.batch.tenant,
+              adapterType: this.type,
+              serviceId: charge.service_id!,
+              targetRealm: context.batch.target_realm
+            });
 
         if (!serviceMapping) {
-          throw new AppError('XERO_SERVICE_MAPPING_MISSING', `No Xero mapping for service ${charge.service_id}`);
+          throw isServicelessDiscount
+            ? new AppError('XERO_DISCOUNT_MAPPING_MISSING', `No Xero mapping for discount lines on invoice ${invoiceId}`)
+            : new AppError('XERO_SERVICE_MAPPING_MISSING', `No Xero mapping for service ${charge.service_id}`);
         }
 
         const serviceMetadata = serviceMapping.metadata ?? {};
@@ -329,7 +541,8 @@ export class XeroAdapter implements AccountingExportAdapter {
           taxComponents = normalizeTaxComponents(
             lineResolution.taxComponents ??
               serviceMetadata.taxComponents ??
-              (taxMapping?.metadata ? (taxMapping.metadata as Record<string, any>)?.components : null)
+              (taxMapping?.metadata ? (taxMapping.metadata as Record<string, any>)?.components : null),
+            invoice.currency_code ?? exportLines[0]?.currency_code ?? 'USD'
           );
 
           taxAmountCents = coerceChargeCents(charge.tax_amount);
@@ -363,6 +576,13 @@ export class XeroAdapter implements AccountingExportAdapter {
             `Charge ${charge.item_id} on invoice ${invoiceId} is missing net_amount; run the backfill migration.`
           );
         }
+
+        const lineQuantity = reconcileExportLineQuantity({
+          quantity: charge.quantity,
+          unitPriceCents: unitAmountCents,
+          amountCents: netAmountCents,
+          maxQuantityDecimals: XERO_MAX_QUANTITY_DECIMALS
+        });
 
         const servicePeriod = resolveXeroLineServicePeriod(line);
 
@@ -411,8 +631,8 @@ export class XeroAdapter implements AccountingExportAdapter {
           externalLineItemId: knownChargeToXeroLineItemId.get(line.document_line_id) ?? null,
           amountCents: netAmountCents,
           description,
-          quantity: coerceChargeDecimal(charge.quantity) ?? 1,
-          unitAmountCents,
+          quantity: lineQuantity.quantity,
+          unitAmountCents: lineQuantity.unitPriceCents,
           itemCode,
           accountCode,
           taxType: taxType ?? undefined,
@@ -446,6 +666,10 @@ export class XeroAdapter implements AccountingExportAdapter {
 
         lineItems.push(payload);
         chargeIds.push(line.document_line_id);
+        chargeLineage.push({
+          parentChargeId: line.payload?.metadata?.allocation_parent_charge_id ?? line.document_line_id,
+          allocationDetailId: line.payload?.metadata?.allocation_detail_id,
+        });
         invoiceTotal += netAmountCents;
       }
 
@@ -483,6 +707,7 @@ export class XeroAdapter implements AccountingExportAdapter {
         connectionId: context.batch.target_realm ?? null,
         invoice: invoicePayload,
         chargeIds, // Alga charge IDs in same order as invoice.lines[]
+        chargeLineage,
         mapping: {
           clientId,
           source: extractMappingSource(clientMapping.metadata)
@@ -491,7 +716,7 @@ export class XeroAdapter implements AccountingExportAdapter {
 
       documents.push({
         documentId: invoiceId,
-        lineIds: exportLines.map((line) => line.line_id),
+        lineIds: [...new Set(exportLines.map((line) => line.line_id))],
         payload: documentPayload as unknown as Record<string, unknown>
       });
     }
@@ -577,22 +802,36 @@ export class XeroAdapter implements AccountingExportAdapter {
         // Xero may return line IDs in the raw response - extract if available
         const rawInvoice = result.raw as Record<string, any> | undefined;
         const xeroLines = rawInvoice?.LineItems ?? [];
-        const chargeLineMappings: Array<{ chargeId: string; xeroLineItemId: string }> = [];
+        const chargeLineMappings: Array<{ chargeId: string; parentChargeId: string; allocationDetailId?: string; xeroLineItemId: string }> = [];
 
         for (let j = 0; j < payload.chargeIds.length && j < xeroLines.length; j++) {
           const xeroLineItemId = xeroLines[j]?.LineItemID;
           if (xeroLineItemId) {
             chargeLineMappings.push({
               chargeId: payload.chargeIds[j],
+              parentChargeId: payload.chargeLineage[j]?.parentChargeId ?? payload.chargeIds[j],
+              allocationDetailId: payload.chargeLineage[j]?.allocationDetailId,
               xeroLineItemId
             });
           }
         }
 
-        // Store invoice mapping with charge line mappings
+        // Store invoice mapping with the authoritative delivery snapshot the
+        // drift detector compares against, plus the charge line mappings used
+        // for tax import. Older mappings that lack a snapshot are handled
+        // explicitly by the drift detector (it adopts the first observed
+        // document as the baseline instead of silently ignoring changes).
+        const rawTotal = Number(rawInvoice?.Total);
+        const exportedTotal = Number.isFinite(rawTotal)
+          ? rawTotal
+          : fromMinorUnits(payload.invoice.amountCents, 'en-US', payload.invoice.currency ?? 'USD');
         const metadata = {
           last_exported_at: new Date().toISOString(),
-          invoiceNumber: result.invoiceNumber,
+          invoiceNumber: result.invoiceNumber ?? rawInvoice?.InvoiceNumber ?? null,
+          doc_number: result.invoiceNumber ?? rawInvoice?.InvoiceNumber ?? null,
+          sync_token: rawInvoice?.UpdatedDateUTC != null ? String(rawInvoice.UpdatedDateUTC) : null,
+          exported_total: exportedTotal,
+          external_entity_type: 'Invoice',
           chargeLineMappings // Store mapping for tax import
         };
 
@@ -666,13 +905,16 @@ export class XeroAdapter implements AccountingExportAdapter {
         'item_id',
         'invoice_id',
         'service_id',
+        'is_manual',
         'description',
         'quantity',
         'unit_price',
         'total_price',
         'net_amount',
         'tax_amount',
-        'tax_region'
+        'tax_region',
+        'is_discount',
+        'adjustment_source_kind'
       )
       .whereIn('item_id', chargeIds);
 
@@ -707,7 +949,28 @@ export class XeroAdapter implements AccountingExportAdapter {
       .select('client_id', 'client_name', 'billing_email')
       .whereIn('client_id', Array.from(clientIds));
 
+    // The contact's email is the address the client's invoices are emailed to
+    // (billing contact, billing email, billing/default location), not the raw column.
+    for (const client of clients) {
+      client.billing_email = await resolveClientExportEmail(knex, tenantId, client.client_id);
+    }
     const clientMap = new Map(clients.map((client) => [client.client_id, client]));
+
+    const targetRealm = context.batch.target_realm;
+    // A Xero target realm is the connection id. Accept the organisation id it
+    // uniquely owns as a historical alias so a contact mapping created before
+    // the connection-id/organisation-id identity was unified still resolves —
+    // never a different organisation or tenant (resolveXeroRealmAliases fails
+    // closed on ambiguous or foreign ownership). This mirrors the resolver's
+    // catalog lookup so export reuses the mapped Xero contact instead of
+    // creating a duplicate. It stays realm-scoped: a legacy realm-less row is
+    // still excluded when the batch targets a realm.
+    const acceptedRealms = targetRealm
+      ? await (async () => {
+          const aliases = await resolveXeroRealmAliases(tenantId, targetRealm);
+          return aliases.length > 0 ? aliases : [targetRealm];
+        })()
+      : [];
 
     const mappingRows = await tenantDb(knex, tenantId).table<MappingRowRaw>('tenant_external_entity_mappings')
       .select('*')
@@ -716,11 +979,11 @@ export class XeroAdapter implements AccountingExportAdapter {
       .whereIn('alga_entity_id', Array.from(clientIds))
       .whereNull('deleted_at')
       .modify((qb) => {
-        // Realm-exact: a contact mapping from another Xero organisation (or a
-        // legacy realm-less row) must not select the contact this batch
-        // exports against.
-        if (context.batch.target_realm) {
-          qb.andWhere('external_realm_id', context.batch.target_realm);
+        if (targetRealm) {
+          qb.whereIn('external_realm_id', acceptedRealms);
+          // Prefer the exact connection id over the historical organisation
+          // alias so a canonical mapping always wins when both exist.
+          qb.orderByRaw('CASE WHEN external_realm_id = ? THEN 0 ELSE 1 END', [targetRealm]);
         } else {
           qb.andWhere((builder) => builder.whereNull('external_realm_id'));
         }
@@ -729,7 +992,11 @@ export class XeroAdapter implements AccountingExportAdapter {
     const mappingMap = new Map<string, MappingRow>();
     mappingRows.forEach((row: MappingRowRaw) => {
       const normalized = normalizeMapping(row);
-      mappingMap.set(normalized.alga_entity_id, normalized);
+      // First row per client wins: rows are ordered connection-id-first, so the
+      // canonical mapping is never overwritten by a historical alias row.
+      if (!mappingMap.has(normalized.alga_entity_id)) {
+        mappingMap.set(normalized.alga_entity_id, normalized);
+      }
     });
 
     return { clients: clientMap, mappings: mappingMap };
@@ -779,18 +1046,19 @@ export class XeroAdapter implements AccountingExportAdapter {
         })
         .first();
 
-      const chargeLineMappings: Array<{ chargeId: string; xeroLineItemId: string }> =
+      const chargeLineMappings: Array<{ chargeId: string; parentChargeId?: string; allocationDetailId?: string; xeroLineItemId: string }> =
         (mappingRow?.metadata as any)?.chargeLineMappings ?? [];
 
-      // Build reverse map: Xero lineItemId -> Alga charge ID
-      const xeroLineToChargeId = new Map<string, string>();
+      // Keep provider split identity and original invoice parent identity together.
+      const xeroLineToCharge = new Map<string, { chargeId: string; parentChargeId?: string; allocationDetailId?: string }>();
       for (const mapping of chargeLineMappings) {
-        xeroLineToChargeId.set(mapping.xeroLineItemId, mapping.chargeId);
+        xeroLineToCharge.set(mapping.xeroLineItemId, mapping);
       }
 
       // Map Xero line items to external invoice charges with full tax component details
       const charges: ExternalInvoiceChargeTax[] = xeroInvoice.lineItems.map((line, index) => {
         // Calculate effective tax rate from the line if available
+        // (percentage — dimensionless ratio × 100, not a minor-unit conversion)
         const effectiveRate = line.lineAmount > 0
           ? (line.taxAmount / line.lineAmount) * 100
           : undefined;
@@ -804,11 +1072,13 @@ export class XeroAdapter implements AccountingExportAdapter {
 
         // Use stored charge ID if available, otherwise fall back to Xero lineItemId or positional index
         const xeroLineItemId = line.lineItemId;
-        const chargeId = xeroLineItemId ? xeroLineToChargeId.get(xeroLineItemId) : undefined;
-        const lineId = chargeId ?? xeroLineItemId ?? `line-${index}`;
+        const chargeMapping = xeroLineItemId ? xeroLineToCharge.get(xeroLineItemId) : undefined;
+        const lineId = chargeMapping?.chargeId ?? xeroLineItemId ?? `line-${index}`;
 
         return {
           lineId,
+          parentChargeId: chargeMapping?.parentChargeId,
+          allocationDetailId: chargeMapping?.allocationDetailId,
           externalLineId: xeroLineItemId,
           taxAmount: line.taxAmount,
           taxCode: line.taxType,
@@ -932,23 +1202,257 @@ function safeString(value: unknown): string | undefined {
   return undefined;
 }
 
+function xeroSyncToken(record: Record<string, any> | undefined): string | undefined {
+  return record?.UpdatedDateUTC != null ? String(record.UpdatedDateUTC) : undefined;
+}
+
+/**
+ * Normalize the date shapes Xero returns. Wrapped dates
+ * (`/Date(1700000000000+0000)/`) are common in older responses; a naive
+ * `new Date(value)` yields Invalid Date and downstream writes would silently
+ * fall back to "now".
+ */
+function xeroDateToIso(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value.toISOString();
+  }
+  if (typeof value === 'string') {
+    const match = /^\/Date\((-?\d+)([+-]\d{4})?\)\/$/.exec(value.trim());
+    if (match) {
+      const ms = Number(match[1]);
+      return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+    }
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  }
+  return null;
+}
+
+function xeroStatusIsDeleted(status: unknown): boolean {
+  return (
+    typeof status === 'string' &&
+    (status.toUpperCase() === 'DELETED' || status.toUpperCase() === 'VOIDED')
+  );
+}
+
+function normalizeXeroInvoice(record: Record<string, any>): AccountingExternalChange | null {
+  const externalId = record?.InvoiceID != null ? String(record.InvoiceID) : null;
+  if (!externalId) {
+    return null;
+  }
+  const status = record?.Status;
+  const total = Number(record?.Total);
+  const normalized: NormalizedExternalDocumentPayload = {
+    totalAmount: Number.isFinite(total) ? total : null,
+    docNumber: record?.InvoiceNumber != null ? String(record.InvoiceNumber) : null,
+    isVoided: xeroStatusIsDeleted(status),
+    providerMetadata: {
+      xero_status: status ?? null,
+      xero_type: record?.Type ?? null,
+      xero_reference: record?.Reference ?? null
+    }
+  };
+  return {
+    entityType: 'Invoice',
+    externalId,
+    syncToken: xeroSyncToken(record),
+    deleted: typeof status === 'string' && status.toUpperCase() === 'DELETED',
+    updatedAt: xeroDateToIso(record?.UpdatedDateUTC) ?? undefined,
+    payload: record,
+    normalized
+  };
+}
+
+function normalizeXeroCreditNote(record: Record<string, any>): AccountingExternalChange | null {
+  const externalId = record?.CreditNoteID != null ? String(record.CreditNoteID) : null;
+  if (!externalId) {
+    return null;
+  }
+  const status = record?.Status;
+  const total = Number(record?.Total);
+  const normalized: NormalizedExternalDocumentPayload = {
+    totalAmount: Number.isFinite(total) ? total : null,
+    docNumber: record?.CreditNoteNumber != null ? String(record.CreditNoteNumber) : null,
+    isVoided: xeroStatusIsDeleted(status),
+    providerMetadata: { xero_status: status ?? null, xero_type: record?.Type ?? null }
+  };
+  return {
+    entityType: 'CreditMemo',
+    externalId,
+    syncToken: xeroSyncToken(record),
+    deleted: typeof status === 'string' && status.toUpperCase() === 'DELETED',
+    updatedAt: xeroDateToIso(record?.UpdatedDateUTC) ?? undefined,
+    payload: record,
+    normalized
+  };
+}
+
+function normalizeXeroPayment(record: Record<string, any>): AccountingExternalChange | null {
+  const externalId = record?.PaymentID != null ? String(record.PaymentID) : null;
+  if (!externalId) {
+    return null;
+  }
+  const currency = typeof record?.CurrencyCode === 'string' ? String(record.CurrencyCode) : undefined;
+  const amountCents = toMinorUnits(Number(record?.Amount), 'en-US', currency ?? 'USD');
+  const allocations: NormalizedExternalPaymentPayload['allocations'] = [];
+  const invoiceId = record?.Invoice?.InvoiceID;
+  if (invoiceId && Number.isFinite(amountCents) && amountCents > 0) {
+    allocations.push({ externalInvoiceId: String(invoiceId), amountCents });
+  }
+  const isCreditApplication = Boolean(record?.CreditNote?.CreditNoteID);
+  const reference =
+    typeof record?.Reference === 'string' && record.Reference.trim().length > 0
+      ? record.Reference.trim()
+      : externalId;
+
+  const normalized: NormalizedExternalPaymentPayload = {
+    reference,
+    currency,
+    txnDate: xeroDateToIso(record?.Date) ?? undefined,
+    totalCents: Number.isFinite(amountCents) ? amountCents : undefined,
+    allocations,
+    isCreditApplication,
+    providerMetadata: {
+      xero_status: record?.Status ?? null,
+      xero_payment_type: isCreditApplication ? 'credit_application' : 'payment'
+    }
+  };
+
+  return {
+    entityType: 'Payment',
+    externalId,
+    syncToken: xeroSyncToken(record),
+    deleted: typeof record?.Status === 'string' && record.Status.toUpperCase() === 'DELETED',
+    updatedAt: xeroDateToIso(record?.UpdatedDateUTC) ?? undefined,
+    payload: record,
+    normalized
+  };
+}
+
+interface NormalizedXeroAllocation {
+  allocationId: string | null;
+  invoiceId: string;
+  amountCents: number;
+  date: string | null;
+}
+
+function makeCreditAllocationChange(
+  record: Record<string, any>,
+  externalId: string,
+  allocation: { invoiceId: string; amountCents: number; date: string | null },
+  providerMetadata: Record<string, unknown>
+): AccountingExternalChange {
+  const normalized: NormalizedExternalPaymentPayload = {
+    reference: `Xero credit note ${record?.CreditNoteNumber ?? record?.CreditNoteID ?? ''}`,
+    txnDate: allocation.date ?? undefined,
+    totalCents: allocation.amountCents,
+    allocations: [{ externalInvoiceId: allocation.invoiceId, amountCents: allocation.amountCents }],
+    isCreditApplication: true,
+    providerMetadata
+  };
+  return {
+    entityType: 'Payment',
+    externalId,
+    syncToken: `${xeroSyncToken(record) ?? ''}:${allocation.amountCents}`,
+    deleted: false,
+    updatedAt: xeroDateToIso(record?.UpdatedDateUTC) ?? undefined,
+    payload: record,
+    normalized
+  };
+}
+
+/**
+ * Synthesize the payment changes that carry a credit note's current
+ * allocations into the shared applier.
+ *
+ * Identity: when every allocation has an AllocationID, one change is emitted
+ * per allocation (`creditnote:<noteId>:alloc:<allocationId>`). Two allocations
+ * to the same invoice therefore stay distinct instead of collapsing (equal
+ * amounts skipped, differing amounts replacing one another). When Xero omits
+ * AllocationID, allocations are explicitly aggregated per invoice
+ * (`creditnote:<noteId>:inv:<invoiceId>`, summed amount). The stable ids are
+ * what let the applier replay, reverse, and reconcile removals correctly; a
+ * scheme change across polls surfaces as a removal + fresh application.
+ */
+function normalizeXeroCreditAllocations(record: Record<string, any>): AccountingExternalChange[] {
+  const creditNoteId = record?.CreditNoteID != null ? String(record.CreditNoteID) : null;
+  if (!creditNoteId || xeroStatusIsDeleted(record?.Status)) {
+    return [];
+  }
+
+  const rawAllocations = Array.isArray(record?.Allocations) ? record.Allocations : [];
+  const allocations: NormalizedXeroAllocation[] = [];
+  const creditNoteCurrency = typeof record?.CurrencyCode === 'string' ? String(record.CurrencyCode) : 'USD';
+  for (const allocation of rawAllocations) {
+    const invoiceId = allocation?.Invoice?.InvoiceID;
+    const amountCents = toMinorUnits(Number(allocation?.Amount), 'en-US', creditNoteCurrency);
+    if (!invoiceId || !Number.isFinite(amountCents) || amountCents <= 0) {
+      continue;
+    }
+    allocations.push({
+      allocationId: typeof allocation?.AllocationID === 'string' ? allocation.AllocationID : null,
+      invoiceId: String(invoiceId),
+      amountCents,
+      date: xeroDateToIso(allocation?.Date)
+    });
+  }
+
+  if (allocations.length === 0) {
+    return [];
+  }
+
+  const allHaveIds = allocations.every((allocation) => Boolean(allocation.allocationId));
+  if (allHaveIds) {
+    return allocations.map((allocation) =>
+      makeCreditAllocationChange(
+        record,
+        `creditnote:${creditNoteId}:alloc:${allocation.allocationId}`,
+        allocation,
+        {
+          xero_credit_note_id: creditNoteId,
+          xero_allocation_id: allocation.allocationId,
+          xero_allocation_invoice_id: allocation.invoiceId
+        }
+      )
+    );
+  }
+
+  const byInvoice = new Map<string, { amountCents: number; date: string | null }>();
+  for (const allocation of allocations) {
+    const existing = byInvoice.get(allocation.invoiceId);
+    if (existing) {
+      existing.amountCents += allocation.amountCents;
+      if (!existing.date) {
+        existing.date = allocation.date;
+      }
+    } else {
+      byInvoice.set(allocation.invoiceId, { amountCents: allocation.amountCents, date: allocation.date });
+    }
+  }
+
+  return Array.from(byInvoice.entries()).map(([invoiceId, aggregate]) =>
+    makeCreditAllocationChange(
+      record,
+      `creditnote:${creditNoteId}:inv:${invoiceId}`,
+      { invoiceId, amountCents: aggregate.amountCents, date: aggregate.date },
+      {
+        xero_credit_note_id: creditNoteId,
+        xero_allocation_invoice_id: invoiceId,
+        xero_allocations_aggregated: true
+      }
+    )
+  );
+}
+
 function coerceChargeCents(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return Math.round(value);
   }
   if (typeof value === 'string' && /^-?\d+$/.test(value.trim())) {
     const parsed = parseInt(value.trim(), 10);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
-}
-
-function coerceChargeDecimal(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === 'string' && value.trim().length > 0) {
-    const parsed = Number(value.trim());
     return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
@@ -1007,7 +1511,7 @@ function mergeTrackingOptions(
   return merged.size > 0 ? Array.from(merged.values()) : undefined;
 }
 
-function normalizeTaxComponents(input: unknown): XeroTaxComponentPayload[] | undefined {
+function normalizeTaxComponents(input: unknown, currency: string): XeroTaxComponentPayload[] | undefined {
   if (!input) return undefined;
   if (!Array.isArray(input)) {
     return undefined;
@@ -1032,9 +1536,10 @@ function normalizeTaxComponents(input: unknown): XeroTaxComponentPayload[] | und
       normalized.rate = raw.rate;
     }
     if (typeof raw.amountCents === 'number') {
+      // Already minor units — round only, no scaling.
       normalized.amountCents = Math.round(raw.amountCents);
     } else if (typeof raw.amount === 'number') {
-      normalized.amountCents = Math.round(raw.amount * 100);
+      normalized.amountCents = toMinorUnits(raw.amount, 'en-US', currency);
     }
 
     if (Object.keys(normalized).length > 0) {

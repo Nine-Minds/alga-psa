@@ -2,7 +2,12 @@ import type { DateValue, ISO8601String } from '../lib/temporal';
 import { TenantEntity } from './index';
 import { WasmInvoiceViewModel as RendererInvoiceViewModel, WasmInvoiceViewModel } from '../lib/invoice-renderer/types'; // Import the correct ViewModel
 import type { TemplateAst } from '../lib/invoice-template-ast';
-import type { BillingProfileSource, InvoiceTimeEntrySnapshot, IUsageServicePeriodStatus } from './billing.interfaces';
+import type {
+  BillingProfileSource,
+  InvoiceTimeEntrySnapshot,
+  IRecurringPricingSource,
+  IUsageServicePeriodStatus,
+} from './billing.interfaces';
 
 // Tax source types for external tax delegation
 export type TaxSource = 'internal' | 'external' | 'pending_external';
@@ -31,8 +36,17 @@ export interface IInvoice extends TenantEntity {
   prepayment_description?: string | null;
   /** Snapshot of the purchase order number for this invoice (nullable). */
   po_number?: string | null;
+  /**
+   * The billing profile's effective payment method when the invoice was
+   * generated (`credit_card` | `bank_transfer` | `check`). NULL on invoices
+   * generated before it was recorded. Check and bank transfer suppress the
+   * online "Pay now" link.
+   */
+  payment_method?: string | null;
   /** Client contract assignment that generated this invoice (nullable). */
   client_contract_id?: string | null;
+  /** Support ticket this manual invoice was raised from (nullable; quick-invoice-a-ticket). */
+  ticket_id?: string | null;
   invoice_date: DateValue;
   due_date: DateValue;
   subtotal: number;
@@ -45,6 +59,12 @@ export interface IInvoice extends TenantEntity {
   credit_applied: number;
   billing_cycle_id?: string;
   is_manual: boolean;
+  /**
+   * Monotonic token bumped by every manual adjustment save. The editor sends
+   * the revision it loaded; a stale value is rejected instead of overwriting a
+   * newer edit.
+   */
+  draft_adjustment_revision?: number;
   invoice_charges: IInvoiceCharge[];
   /** @deprecated Use invoice_charges instead. */
   invoice_items?: IInvoiceCharge[];
@@ -68,6 +88,21 @@ export interface NetAmountItem {
   applies_to_service_id?: string; // Reference a service instead of an item
 }
 
+/**
+ * Identifies the source record a manual invoice line claims, so the line and
+ * that record's billed state move together inside the invoice transaction.
+ *
+ * Used by quick-invoice-a-ticket: a time-entry line marks `time_entries.invoiced`
+ * and writes the `invoice_time_entries` link; a ticket-material line marks the
+ * `ticket_materials` row billed. The claim is validated and snapshotted from the
+ * source rows inside the transaction — callers never supply the work-item
+ * snapshot — so a stale, foreign, or ineligible selection fails the whole
+ * transaction rather than double-bill or bill a source it does not own.
+ */
+export type ManualInvoiceSourceLink =
+  | { kind: 'time_entry'; entryId: string }
+  | { kind: 'ticket_material'; materialId: string };
+
 export interface IInvoiceChargeRecurringDetailPeriod {
   service_period_start?: ISO8601String | null;
   service_period_end?: ISO8601String | null;
@@ -86,11 +121,16 @@ export interface IInvoiceChargeTimeEntryLink {
 }
 
 export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
+  unit_code?: string | null;
+  unit_label?: string | null;
   item_id: string;
   invoice_id: string;
   service_id?: string;
   service_period_start?: ISO8601String | null;
   service_period_end?: ISO8601String | null;
+  /** Manual adjustment impact window; recurring coverage remains in detail rows. */
+  adjustment_period_start?: ISO8601String | null;
+  adjustment_period_end?: ISO8601String | null;
   billing_timing?: 'arrears' | 'advance' | null;
   /**
    * Canonical recurring detail periods linked to this charge.
@@ -124,6 +164,14 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   is_manual: boolean;
   is_taxable?: boolean;
   is_discount?: boolean;
+  /**
+   * True when a manual row's amount was derived from `quantity × unit_price`
+   * (an operator credit entered as a negative-rate charge), rather than an
+   * authored fixed discount whose amount is quantity-independent. The two
+   * shapes share `is_discount`/`discount_type='fixed'`, so the draft edit
+   * recalculation uses this flag to pick the right recompute rule.
+   */
+  is_manual_credit?: boolean;
   discount_type?: DiscountType;
   discount_percentage?: number;
   applies_to_item_id?: string;
@@ -135,7 +183,21 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
    */
   billing_profile_id?: string | null;
   billing_profile_source?: BillingProfileSource | null;
-  client_contract_id?: string; // Reference to the client contract assignment
+  /** Provenance for automatic discounts/true-ups and manual adjustments. */
+  adjustment_source_kind?: AdjustmentSourceKind | null;
+  /** Stable source id (discount id or contract-change id) for automatic lines. */
+  adjustment_source_id?: string | null;
+  /** Source revision claimed by this settlement; re-validated on draft refresh. */
+  adjustment_source_revision?: number | null;
+  /** Scope an automatic discount resolved against. */
+  adjustment_scope?: AdjustmentScope | null;
+  /** Eligible base used to derive the amount (integer minor units). */
+  adjustment_base_amount?: number | null;
+  /** Human-readable calculation reason for the adjustment line. */
+  adjustment_reason?: string | null;
+  /** Authoring facts for manually entered adjustment lines. */
+  manual_line_metadata?: ManualLineMetadata | null;
+  client_contract_id?: string | null; // Reference to the client contract assignment
   contract_name?: string; // Contract name
   is_bundle_header?: boolean; // Whether this item is a contract group header
   parent_item_id?: string; // Reference to the parent contract group header item
@@ -153,6 +215,46 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
 }
 
 export type DiscountType = 'percentage' | 'fixed';
+
+/** What produced an invoice adjustment line. */
+export type AdjustmentSourceKind = 'discount' | 'contract_change' | 'manual_adjustment';
+/** Which charges an automatic discount resolves against. */
+export type AdjustmentScope = 'invoice' | 'contract' | 'service' | 'item';
+
+/**
+ * Authoring facts for a manually entered adjustment line, kept separate from
+ * the resolved monetary values so a partial-period line such as
+ * "3 × $100 × 15/30" stays intelligible after it is priced.
+ */
+export interface ManualLineMetadata {
+  /** Partial-period calculator inputs (contracted, not resolved). */
+  partialPeriod?: ManualPartialPeriodMetadata;
+  /** Optional freeform note explaining the adjustment. */
+  reason?: string;
+  /** Source true-up rows operator explicitly chose to overlap. */
+  confirmed_overlap_item_ids?: string[];
+  [key: string]: unknown;
+}
+
+export interface ManualPartialPeriodMetadata {
+    version: 1;
+    source_kind: 'invoice_charge';
+  source_item_id: string;
+  contract_line_id?: string | null;
+    direction: 'increase' | 'decrease';
+    effective_date: string;
+    source_period_start: string;
+    source_period_end: string;
+    /** Unit delta retained at invoice_charges.quantity precision (0.01). */
+    units: number;
+    /** Original source rate in integer currency minor units per unit. */
+    source_unit_price_minor: number;
+    /** Date-derived coverage inputs. */
+    covered_days: number;
+    full_period_days: number;
+    /** Server-validated row amount (minor units), equals rounded quantity × stored rate. */
+    resolved_amount_minor?: number;
+}
 
 /**
  * Interface for adding manual items to an invoice
@@ -346,6 +448,16 @@ export interface IConditionalRule {
 }
 
 /**
+ * Advisory note on a successful preview: the client (or the profile the
+ * invoice bills) has no address to email the invoice to, so it can be
+ * generated but not sent or paid online until one is set.
+ */
+export interface InvoiceBillingEmailWarning {
+  code: 'NO_BILLING_EMAIL';
+  params: { clientName: string };
+}
+
+/**
  * Known, safe recurring-invoice failure codes that may cross the action boundary
  * for localized, actionable UI remediation. Absent for unknown/internal failures,
  * which keep the generic error string. Only allowlisted codes belong here.
@@ -355,7 +467,14 @@ export type RecurringInvoiceFailureCode =
   | 'TIME_APPROVAL_REQUIRED'
   | 'USAGE_RECORDS_MISSING'
   | 'USAGE_CALCULATION_ERROR'
-  | 'USAGE_PERIOD_TOTAL_STALE';
+  | 'FIXED_LINE_RATE_UNRESOLVED'
+  | 'FIXED_LINE_NO_SERVICES'
+  | 'USAGE_PERIOD_TOTAL_STALE'
+  | 'RECURRING_PRICING_STALE'
+  | 'RECURRING_PERIODS_NOT_MATERIALIZED'
+  | 'NO_ACTIVE_CONTRACT_LINES'
+  | 'NOTHING_TO_BILL'
+  | 'UNEXPECTED';
 
 /**
  * The previewed period-total identity a caller passes back to generation so
@@ -382,6 +501,19 @@ export interface IExpectedUsagePeriodTotal {
   totalCents?: number;
 }
 
+/**
+ * Recurring pricing source bound to the obligation it priced, so preview can
+ * hand the exact reviewed revision/catalog identity back to generation.
+ */
+export interface IExpectedRecurringPricingSource extends IRecurringPricingSource {
+  clientContractLineId: string | null;
+  configId: string | null;
+  serviceId: string;
+  servicePeriodStart: ISO8601String | null;
+  servicePeriodEnd: ISO8601String | null;
+  quantity: number;
+}
+
 export type PreviewInvoiceResponse = {
   success: true;
   data: WasmInvoiceViewModel; // Use the imported ViewModel alias
@@ -397,6 +529,15 @@ export type PreviewInvoiceResponse = {
    * finalization refuses when a report or its pricing changed after preview.
    */
   expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
+  /**
+   * Reviewed recurring revision/catalog sources for every scheduled
+   * product/license/unit-service charge, to hand back to generation
+   * (expectedRecurringPricingSources) so finalization refuses when the revision
+   * or its inherited catalog price changed after preview.
+   */
+  expectedRecurringPricingSources?: IExpectedRecurringPricingSource[];
+  /** Set when the billed client/profile has no address to email the invoice to. */
+  billingEmailWarning?: InvoiceBillingEmailWarning;
 } | {
   success: false;
   error: string;
@@ -555,12 +696,26 @@ export interface InvoiceViewModel {
   invoice_number: string;
   client_id: string;
   po_number?: string | null;
+  /** Payment-method snapshot key; see IInvoice.payment_method. */
+  payment_method?: string | null;
   client_contract_id?: string | null;
   client: {
+    /**
+     * Who the invoice is billed to: the billing profile's bill-to name when it
+     * carries one, otherwise the client's own name.
+     */
     name: string;
     logo: string;
     address: string;
   };
+  /** The billing profile this invoice bills; NULL for a pre-profile invoice. */
+  billing_profile_id?: string | null;
+  billing_profile_name?: string | null;
+  /**
+   * True only when the client holds more than one billing profile — the one
+   * condition every profile surface renders behind (D6).
+   */
+  client_has_multiple_billing_profiles?: boolean;
   contact: {
     name: string;
     address: string;
@@ -587,6 +742,12 @@ export interface InvoiceViewModel {
   credit_applied: number;
   billing_cycle_id?: string;
   is_manual: boolean;
+  /**
+   * Monotonic token bumped by every manual adjustment save. The editor sends
+   * the revision it loaded; a stale value is rejected instead of overwriting a
+   * newer edit.
+   */
+  draft_adjustment_revision?: number;
   /** Financial-document identity, stamped at finalization. */
   invoice_type?: 'standard' | 'credit_note' | 'prepayment' | null;
   is_prepayment?: boolean;

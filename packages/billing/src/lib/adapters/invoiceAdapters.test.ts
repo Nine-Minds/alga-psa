@@ -6,6 +6,24 @@ import {
 } from './invoiceAdapters';
 
 describe('mapDbInvoiceToWasmViewModel', () => {
+  it('maps the payment-method snapshot to its label, and a missing one to null', () => {
+    const base = {
+      invoice_number: 'INV-600',
+      invoice_date: '2026-02-01',
+      due_date: '2026-02-01',
+      client: { name: 'Acme', address: '123 Main' },
+      invoice_charges: [],
+      subtotal: '0',
+      tax: '0',
+      total: '0',
+    };
+
+    expect(mapDbInvoiceToWasmViewModel({ ...base, payment_method: 'check' })?.paymentMethod).toBe('Check');
+    expect(mapDbInvoiceToWasmViewModel({ ...base, payment_method: null })?.paymentMethod).toBeNull();
+    // Invoices generated before the snapshot existed carry no column value.
+    expect(mapDbInvoiceToWasmViewModel(base)?.paymentMethod).toBeNull();
+  });
+
   it('maps db invoice payload numeric and string fields into wasm preview model', () => {
     const mapped = mapDbInvoiceToWasmViewModel({
       invoice_number: 'INV-500',
@@ -44,6 +62,22 @@ describe('mapDbInvoiceToWasmViewModel', () => {
     expect(mapped?.subtotal).toBe(2000);
     expect(mapped?.tax).toBe(100);
     expect(mapped?.total).toBe(2100);
+  });
+
+  it('passes the persisted partial-period description through the shared customer invoice model', () => {
+    const description = 'SMOKE Prod Users — additional 3 users, Aug 16–31, 2026 — 3 × $100.00 × 16/31';
+    const mapped = mapDbInvoiceToWasmViewModel({
+      invoice_number: 'INV-PARTIAL', invoice_date: '2026-09-01', due_date: '2026-09-15', currency_code: 'USD',
+      client: { name: 'Smoke Customer', address: '' },
+      invoice_charges: [{
+        item_id: 'partial-increase', description, quantity: 3, unit_price: 5161, net_amount: 15483,
+        total_price: 15483, manual_line_metadata: { partialPeriod: { source_item_id: 'source-charge-1', source_period_start: '2026-08-01', source_period_end: '2026-09-01', covered_days: 16, full_period_days: 31 } },
+      }],
+      subtotal: 15483, tax: 0, total: 15483,
+    });
+
+    expect(mapped?.items[0]).toMatchObject({ description, quantity: 3, unitPrice: 5161, total: 15483 });
+    expect(mapped?.items[0].manualLineMetadata).toMatchObject({ partialPeriod: { source_item_id: 'source-charge-1', covered_days: 16, full_period_days: 31 } });
   });
 
   it('handles nullable/partial values safely', () => {

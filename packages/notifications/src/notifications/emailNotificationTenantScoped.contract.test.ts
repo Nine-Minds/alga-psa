@@ -8,7 +8,7 @@ describe('email notification service tenant-scoped query contract', () => {
   it('uses structural tenant scoping for tenant-owned notification roots', () => {
     expect(source).toContain('private tenantScopedTable');
     expect(source).toContain('tenantDb(knex, tenant).table(table)');
-    expect(source).toContain("'tenant_email_settings', tenantId");
+    expect(source).toContain('return TenantEmailService.getTenantEmailSettings(tenantId, knex)');
     expect(source).toContain("tenantDb(knex, tenant).table<NotificationSettings>('notification_settings')");
     expect(source).toContain("tenantDb(knex, tenant).table<TenantEmailTemplate>('tenant_email_templates')");
     expect(source).toContain("tenantDb(knex, tenant).table<any>('user_notification_preferences')");

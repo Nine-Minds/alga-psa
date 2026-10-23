@@ -133,6 +133,12 @@ vi.mock('@alga-psa/integrations/components', () => ({
   EmailProviderConfiguration: () => <div data-testid="email-provider-config-stub">Inbound Email Settings</div>,
   CalendarIntegrationsSettings: () => <div data-testid="shared-calendar-integrations-settings-stub" />,
 }));
+// The page imports EmailProviderConfiguration by relative path, so the
+// barrel mock above never reaches it; stub the concrete module too, or the
+// real component mounts and its provider load can outlive the test.
+vi.mock('../../../../../../packages/integrations/src/components/email/EmailProviderConfiguration', () => ({
+  EmailProviderConfiguration: () => <div data-testid="email-provider-config-stub">Inbound Email Settings</div>,
+}));
 
 vi.mock('@alga-psa/integrations/entra/components/entry', () => ({
   __esModule: true,

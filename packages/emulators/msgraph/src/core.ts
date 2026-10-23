@@ -128,6 +128,7 @@ export interface GraphCalendarEvent {
   singleValueExtendedProperties?: unknown;
   lastModifiedDateTime?: string;
   recurrence?: unknown;
+  categories?: string[];
 }
 
 type CalendarDeltaItem = GraphCalendarEvent | { id: string; '@removed': { reason: 'deleted' } };
@@ -249,6 +250,19 @@ export interface CapturedSendMail {
   receivedAt: string;
 }
 
+/**
+ * The identity Graph `/me` reports: the account whoever holds the delegated
+ * token signed in as. Entra hands out a `mail` that need not match the
+ * `userPrincipalName` (an `.onmicrosoft.com` UPN beside a vanity mail address
+ * is the common case), so both are settable with the `signed-in-user` seeder.
+ */
+export interface SignedInUser {
+  id: string;
+  mail: string;
+  userPrincipalName: string;
+  displayName?: string;
+}
+
 /** Defaults for inbound activity injection; tune with the `configure` action. */
 export interface BotConfig {
   /** Where injected activities are POSTed (the app's bot endpoint). */
@@ -310,6 +324,7 @@ export interface OperationFault {
 }
 
 export interface TokenGrantInput {
+  authorityTenant?: string;
   grant_type?: string;
   client_id?: string;
   client_secret?: string;
@@ -383,6 +398,12 @@ export interface SeedChatInput {
 
 export const EMULATED_TENANT_ID = '11111111-2222-4333-8444-555555555555';
 
+const DEFAULT_SIGNED_IN_USER: SignedInUser = {
+  id: 'emulated-user',
+  userPrincipalName: 'support@example.test',
+  mail: 'support@example.test',
+};
+
 const DEFAULT_BOT_CONFIG: BotConfig = {
   targetUrl: 'http://localhost:3000/api/teams/bot/messages',
   serviceUrl: 'http://localhost:4010',
@@ -404,16 +425,18 @@ export class MsGraphCore implements EmulatorCore {
     scope?: string;
   }>();
   private readonly refreshTokens = new Map<string, { clientId: string; revoked: boolean; scope: string }>();
-  private readonly accessTokens = new Map<string, { clientId: string; expiresAt: number }>();
+  private readonly accessTokens = new Map<string, { clientId: string; tenantId: string; expiresAt: number }>();
   readonly messages = new Map<string, GraphMessage>();
   readonly subscriptions = new Map<string, GraphSubscription>();
   readonly organizations = new Map<string, GraphOrganization>();
   readonly directoryUsers = new Map<string, GraphDirectoryUser>();
+  readonly directoryGroups = new Map<string, { id: string; displayName: string; securityEnabled: boolean; memberIds: string[] }>();
   readonly applications = new Map<string, GraphApplication>();
   readonly servicePrincipals = new Map<string, GraphServicePrincipal>();
   readonly teams = new Map<string, GraphTeam>();
   readonly chats = new Map<string, GraphChat>();
   readonly chatMessages = new Map<string, GraphChatMessage[]>();
+  readonly masterCategories = new Map<string, { id: string; displayName: string; color: string }>();
   readonly calendarEvents = new Map<string, GraphCalendarEvent>();
   private readonly calendarDeltaSnapshots = new Map<string, CalendarDeltaSnapshot>();
   private readonly calendarDeltaPages = new Map<string, CalendarDeltaPage>();
@@ -427,6 +450,7 @@ export class MsGraphCore implements EmulatorCore {
   /** Notification delivery results per call record, for the state view. */
   readonly callRecordDeliveries = new Map<string, unknown[]>();
   readonly seedPresets = new Map<string, SeedPreset>();
+  signedInUser: SignedInUser = { ...DEFAULT_SIGNED_IN_USER };
   defaultActor: DefaultActor = {};
   readonly botConversations = new Map<string, BotConversation>();
   readonly capturedBotActivities: CapturedBotActivity[] = [];
@@ -437,10 +461,25 @@ export class MsGraphCore implements EmulatorCore {
   rotateRefreshTokens = true;
   botConfig: BotConfig = { ...DEFAULT_BOT_CONFIG };
   private idCounter = 0;
+  /** Optional delegation policies keyed by mailbox and OAuth client (the emulator's delegate identity). */
+  private readonly mailboxFolderPermissions = new Map<string, { fullAccess: boolean; folders: Set<string> }>();
 
   constructor(readonly env: HostEnv) {}
 
+  setMailboxFolderPermissions(mailbox: string, delegate: string, permission: { fullAccess?: boolean; folders?: string[] }): void {
+    this.mailboxFolderPermissions.set(`${mailbox.toLowerCase()}|${delegate.toLowerCase()}`, {
+      fullAccess: Boolean(permission.fullAccess), folders: new Set((permission.folders || []).map((folder) => folder.toLowerCase())),
+    });
+  }
+
+  canAccessMailboxFolder(mailbox: string, delegate: string, folder: string, root = false): boolean | undefined {
+    const policy = this.mailboxFolderPermissions.get(`${mailbox.toLowerCase()}|${delegate.toLowerCase()}`);
+    if (!policy) return undefined;
+    return policy.fullAccess || (!root && (policy.folders.has(folder.toLowerCase()) || policy.folders.has('inbox') && folder.toLowerCase() === 'emulated-inbox-folder'));
+  }
+
   reset(): void {
+    this.mailboxFolderPermissions.clear();
     this.clients.clear();
     this.codes.clear();
     this.refreshTokens.clear();
@@ -449,12 +488,14 @@ export class MsGraphCore implements EmulatorCore {
     this.subscriptions.clear();
     this.organizations.clear();
     this.directoryUsers.clear();
+    this.directoryGroups.clear();
     this.applications.clear();
     this.servicePrincipals.clear();
     this.teams.clear();
     this.chats.clear();
     this.chatMessages.clear();
     this.calendarEvents.clear();
+    this.masterCategories.clear();
     this.calendarDeltaSnapshots.clear();
     this.calendarDeltaPages.clear();
     this.onlineMeetings.clear();
@@ -463,6 +504,7 @@ export class MsGraphCore implements EmulatorCore {
     this.callArtifacts.clear();
     this.callRecordDeliveries.clear();
     this.seedPresets.clear();
+    this.signedInUser = { ...DEFAULT_SIGNED_IN_USER };
     this.defaultActor = {};
     this.botConversations.clear();
     this.capturedBotActivities.length = 0;
@@ -534,7 +576,10 @@ export class MsGraphCore implements EmulatorCore {
       if (!refresh || refresh.revoked || refresh.clientId !== input.client_id) {
         throw new GraphApiError(400, { error: 'invalid_grant' });
       }
-      return this.issueTokens(String(input.client_id), String(input.refresh_token), { scope: refresh.scope });
+      return this.issueTokens(String(input.client_id), String(input.refresh_token), {
+        scope: refresh.scope,
+        tenantId: input.authorityTenant,
+      });
     }
     if (input.grant_type === 'client_credentials') {
       // App-only flow used by the Teams bot connector
@@ -558,9 +603,10 @@ export class MsGraphCore implements EmulatorCore {
   private issueTokens(
     clientId: string,
     existingRefreshToken?: string,
-    claims?: { nonce?: string; scope?: string; appOnly?: boolean }
+    claims?: { nonce?: string; scope?: string; appOnly?: boolean; tenantId?: string }
   ) {
-    const tenantId = EMULATED_TENANT_ID;
+    const tenantId = claims?.tenantId && !['common', 'organizations'].includes(claims.tenantId)
+      ? claims.tenantId : EMULATED_TENANT_ID;
     // OAuth requests accept resource-qualified Graph scopes; Graph access
     // tokens expose permission names in scp, which the application validates.
     const scope = (claims?.scope || 'Mail.Read Mail.Read.Shared offline_access')
@@ -575,6 +621,8 @@ export class MsGraphCore implements EmulatorCore {
       // refreshes and clients cannot overwrite another token's stored identity.
       jti: this.newId('access'),
       tid: tenantId,
+      appid: clientId,
+      preferred_username: 'operator@northwind.example',
       iss: `https://login.microsoftonline.com/${tenantId}/v2.0`,
       ...(claims?.appOnly
         ? { roles: this.clients.get(clientId)?.appRoles ?? [] }
@@ -588,10 +636,12 @@ export class MsGraphCore implements EmulatorCore {
       : undefined;
     this.accessTokens.set(accessToken, {
       clientId,
+      tenantId,
       expiresAt: this.nowMs() + this.accessTokenTtlSeconds * 1000,
     });
     if (refreshToken) this.refreshTokens.set(refreshToken, { clientId, revoked: false, scope });
-    if (existingRefreshToken && existingRefreshToken !== refreshToken) {
+    if (existingRefreshToken && existingRefreshToken !== refreshToken &&
+        (!claims?.tenantId || ['common', 'organizations'].includes(claims.tenantId))) {
       this.refreshTokens.delete(existingRefreshToken);
     }
     return {
@@ -606,7 +656,7 @@ export class MsGraphCore implements EmulatorCore {
   }
 
   /** Returns the token record for a valid bearer token, else throws 401. */
-  authenticate(bearerToken: string): { clientId: string } {
+  authenticate(bearerToken: string): { clientId: string; tenantId: string } {
     const record = this.accessTokens.get(bearerToken);
     if (!record || record.expiresAt <= this.nowMs()) {
       throw new GraphApiError(401, {
@@ -697,6 +747,15 @@ export class MsGraphCore implements EmulatorCore {
 
   listOrganizations(): GraphOrganization[] {
     return [...this.organizations.values()];
+  }
+
+  /** Partial update: unset fields keep the identity Graph already reported. */
+  setSignedInUser(input: Partial<SignedInUser>): SignedInUser {
+    this.signedInUser = {
+      ...this.signedInUser,
+      ...Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined)),
+    };
+    return this.signedInUser;
   }
 
   addDirectoryUser(input: SeedDirectoryUserInput): GraphDirectoryUser {
@@ -1008,6 +1067,7 @@ export class MsGraphCore implements EmulatorCore {
       isAllDay: body.isAllDay,
       singleValueExtendedProperties: body.singleValueExtendedProperties,
       recurrence: body.recurrence,
+      categories: Array.isArray(body.categories) ? body.categories.map(String) : [],
       lastModifiedDateTime: this.env.clock.now().toISOString(),
       createdDateTime: this.env.clock.now().toISOString(),
     };
@@ -1031,6 +1091,7 @@ export class MsGraphCore implements EmulatorCore {
     if (patch.end !== undefined) event.end = patch.end;
     if (patch.body !== undefined) event.body = patch.body;
     if (Array.isArray(patch.attendees)) event.attendees = patch.attendees;
+    if (Array.isArray(patch.categories)) event.categories = patch.categories.map(String);
     for (const key of ['location', 'showAs', 'sensitivity', 'isAllDay', 'singleValueExtendedProperties', 'recurrence'] as const) {
       if (patch[key] !== undefined) event[key] = patch[key];
     }
@@ -1399,17 +1460,20 @@ export class MsGraphCore implements EmulatorCore {
       subscriptions: [...this.subscriptions.values()],
       organizations: [...this.organizations.values()],
       directoryUsers: [...this.directoryUsers.values()],
+      directoryGroups: [...this.directoryGroups.values()],
       applications: [...this.applications.values()],
       servicePrincipals: [...this.servicePrincipals.values()],
       teams: [...this.teams.values()],
       chats: [...this.chats.values()],
       chatMessages: [...this.chatMessages.entries()],
       calendarEvents: [...this.calendarEvents.values()],
+      masterCategories: [...this.masterCategories.values()],
       onlineMeetings: [...this.onlineMeetings.values()],
       meetingArtifacts: [...this.meetingArtifacts.entries()],
       callRecords: [...this.callRecords.values()],
       callArtifacts: [...this.callArtifacts.entries()],
       seedPresets: [...this.seedPresets.values()],
+      signedInUser: this.signedInUser,
       defaultActor: this.defaultActor,
       accessTokenTtlSeconds: this.accessTokenTtlSeconds,
       rotateRefreshTokens: this.rotateRefreshTokens,
@@ -1445,18 +1509,21 @@ export class MsGraphCore implements EmulatorCore {
     load(this.subscriptions, snapshot.subscriptions, (row) => row.id);
     load(this.organizations, snapshot.organizations, (row) => row.id);
     load(this.directoryUsers, snapshot.directoryUsers, (row) => row.id);
+    load(this.directoryGroups, snapshot.directoryGroups, (row) => row.id);
     load(this.applications, snapshot.applications, (row) => row.id);
     load(this.servicePrincipals, snapshot.servicePrincipals, (row) => row.id);
     load(this.teams, snapshot.teams, (row) => row.id);
     load(this.chats, snapshot.chats, (row) => row.id);
     loadEntries(this.chatMessages, snapshot.chatMessages);
     load(this.calendarEvents, snapshot.calendarEvents, (row) => row.id);
+    load(this.masterCategories, snapshot.masterCategories, (row) => row.id);
     load(this.onlineMeetings, snapshot.onlineMeetings, (row) => row.id);
     loadEntries(this.meetingArtifacts, snapshot.meetingArtifacts);
     load(this.callRecords, snapshot.callRecords, (row) => row.id);
     loadEntries(this.callArtifacts, snapshot.callArtifacts);
     load(this.seedPresets, snapshot.seedPresets, (row) => row.name);
 
+    this.signedInUser = { ...DEFAULT_SIGNED_IN_USER, ...(snapshot.signedInUser ?? {}) };
     this.defaultActor = snapshot.defaultActor ?? {};
     if (typeof snapshot.accessTokenTtlSeconds === 'number') this.accessTokenTtlSeconds = snapshot.accessTokenTtlSeconds;
     if (typeof snapshot.rotateRefreshTokens === 'boolean') this.rotateRefreshTokens = snapshot.rotateRefreshTokens;

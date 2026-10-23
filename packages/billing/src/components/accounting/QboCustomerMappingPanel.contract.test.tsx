@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -22,7 +22,7 @@ vi.mock('../../actions/qboOnboardingActions', () => ({
   createQboCustomerForClient: async (...args: unknown[]) => createQboCustomerForClientMock(...args),
 }));
 
-vi.mock('@alga-psa/integrations/actions', () => ({
+vi.mock('@alga-psa/integrations/actions/qboActions', () => ({
   getQboCustomers: async (...args: unknown[]) => getQboCustomersMock(...args),
 }));
 
@@ -80,6 +80,63 @@ describe('QboCustomerMappingPanel contracts', () => {
 
   afterEach(() => {
     cleanup();
+  });
+
+  it.each(['resolve', 'reject'] as const)(
+    'ignores a stale load that settles via %s after the effect restarts',
+    async (outcome) => {
+      let resolveOld!: (value: { rows: typeof baseRows }) => void;
+      let rejectOld!: (reason: Error) => void;
+      const oldLoad = new Promise<{ rows: typeof baseRows }>((resolve, reject) => {
+        resolveOld = resolve;
+        rejectOld = reject;
+      });
+      getCustomerMatchCandidatesMock.mockReturnValueOnce(oldLoad);
+
+      const { QboCustomerMappingPanel } = await import('./QboCustomerMappingPanel');
+      render(<React.StrictMode><QboCustomerMappingPanel /></React.StrictMode>);
+
+      // StrictMode cleans up the first effect and starts a second request.
+      await screen.findByText('Acme Corp');
+      expect(getCustomerMatchCandidatesMock).toHaveBeenCalledTimes(2);
+      expect(getQboCustomersMock).toHaveBeenCalledTimes(2);
+
+      await act(async () => {
+        if (outcome === 'resolve') {
+          resolveOld({ rows: [] });
+        } else {
+          rejectOld(new Error('Obsolete request failed'));
+        }
+      });
+
+      expect(screen.getByText('Acme Corp')).toBeInTheDocument();
+      expect(screen.queryByText('No clients found.')).not.toBeInTheDocument();
+      expect(screen.queryByText('Failed to load customer mappings.')).not.toBeInTheDocument();
+    }
+  );
+
+  it('keeps loading until the current request settles and surfaces its failure', async () => {
+    let resolveOld!: (value: { rows: typeof baseRows }) => void;
+    let rejectCurrent!: (reason: Error) => void;
+    getCustomerMatchCandidatesMock
+      .mockReturnValueOnce(new Promise((resolve) => { resolveOld = resolve; }))
+      .mockReturnValueOnce(new Promise((_resolve, reject) => { rejectCurrent = reject; }));
+
+    const { QboCustomerMappingPanel } = await import('./QboCustomerMappingPanel');
+    render(<React.StrictMode><QboCustomerMappingPanel /></React.StrictMode>);
+    await act(async () => { resolveOld({ rows: [] }); });
+
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    expect(screen.queryByText('No clients found.')).not.toBeInTheDocument();
+
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await act(async () => { rejectCurrent(new Error('Current request failed')); });
+      expect(screen.getByText('Failed to load customer mappings.')).toBeInTheDocument();
+      expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it('T080: renders client rows from getCustomerMatchCandidates', async () => {

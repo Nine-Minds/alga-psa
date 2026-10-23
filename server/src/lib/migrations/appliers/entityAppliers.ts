@@ -1,19 +1,23 @@
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
-import type {
-  AmpAssetRecord,
-  AmpContactRecord,
-  AmpEntityType,
-  AmpLocationRecord,
-  AmpOrganizationRecord,
-  AmpTicketCommentRecord,
-  AmpTicketRecord,
+import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
+import {
+  AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY,
+  type AmpAssetRecord,
+  type AmpContactRecord,
+  type AmpEntityType,
+  type AmpLocationRecord,
+  type AmpOrganizationRecord,
+  type AmpTicketCommentRecord,
+  type AmpTicketRecord,
 } from '@alga-psa/migration-spec';
+import { tenantDb } from '@alga-psa/db';
 import { createLocation } from '@alga-psa/clients/models';
 import { ClientModel } from '@alga-psa/shared/models/clientModel';
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import { createAssetInTransaction } from '@alga-psa/assets/actions';
+// LEVERAGE: pattern asset-attribute-coercion — same coercion used by planner validation.
+import { coerceAttributeValue } from '@alga-psa/assets/lib/assetTypeAttributes';
 import type { ApplierContext } from './context';
 
 export interface AppliedTarget {
@@ -22,14 +26,46 @@ export interface AppliedTarget {
   warnings?: string[];
 }
 
+/**
+ * FR-B2: an imported asset keeps its source lifecycle state when the tenant
+ * already has a status with that slug or label (case-insensitive, so "Retired"
+ * lands on `retired`); anything else falls back to `active` rather than
+ * creating statuses behind the operator's back.
+ */
+async function resolveImportedAssetStatus(
+  trx: Knex.Transaction,
+  tenant: string,
+  sourceStatus?: string | null
+): Promise<string> {
+  const raw = String(sourceStatus ?? '').trim();
+  if (!raw) return 'active';
+
+  const slugCandidate = raw.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  const match = await tenantDb(trx, tenant).table('asset_statuses')
+    .where({ is_active: true })
+    .where((builder: Knex.QueryBuilder) => {
+      builder.whereRaw('lower(slug) = ?', [slugCandidate]).orWhereRaw('lower(label) = ?', [raw.toLowerCase()]);
+    })
+    .first<{ slug: string }>('slug');
+
+  return match?.slug ?? 'active';
+}
+
 export interface EntityApplier {
   readonly entityType: AmpEntityType;
   readonly targetEntityType: string;
   apply(
     trx: Knex.Transaction,
     context: ApplierContext,
-    payload: Record<string, unknown>
+    payload: Record<string, unknown>,
+    staged?: { customFieldValues: Record<string, unknown> }
   ): Promise<AppliedTarget>;
+}
+
+/** Leading calendar date of an AMP timestamp, or undefined if it has none. */
+function sourceCreatedDate(value?: string | null): string | undefined {
+  const match = typeof value === 'string' ? /^\d{4}-\d{2}-\d{2}/.exec(value.trim()) : null;
+  return match ? match[0] : undefined;
 }
 
 /**
@@ -51,6 +87,10 @@ export class OrganizationMigrationApplier implements EntityApplier {
       client_name: record.name,
       url: record.website ?? undefined,
       phone_no: record.phone ?? undefined,
+      // Tenure carried over from the source PSA: when the organization was
+      // created there, not when this row lands here. An unreadable timestamp
+      // falls back to created_at rather than failing the whole organization.
+      client_since: sourceCreatedDate(record.created_at),
       properties: {
         ...(record.website ? { website: record.website } : {}),
         ...(record.phone ? { phone: record.phone } : {}),
@@ -128,6 +168,8 @@ export class ContactMigrationApplier implements EntityApplier {
     payload: Record<string, unknown>
   ): Promise<AppliedTarget> {
     const record = payload as unknown as AmpContactRecord;
+    const warnings: string[] = [];
+    const carriedClientName = readCarriedClientName(record);
 
     let clientId: string | null = null;
     if (record.organization_package_record_id) {
@@ -140,6 +182,25 @@ export class ContactMigrationApplier implements EntityApplier {
         throw new Error(
           `Owning organization ${record.organization_package_record_id} has not been applied; the contact cannot be placed.`
         );
+      }
+    } else if (carriedClientName) {
+      // A single-sheet contacts import has no organizations table to resolve
+      // against, so the carried name is matched against existing tenant clients
+      // and the configured default is the fallback. An unmatched name is a
+      // diagnostic, never a rejection.
+      clientId = await context.resolveClientByName(trx, carriedClientName);
+      if (!clientId) {
+        const fallback = context.configuration.defaultClientId ?? null;
+        if (fallback) {
+          clientId = fallback;
+          warnings.push(
+            `Client "${carriedClientName}" was not matched to an existing client; the configured default client was used.`
+          );
+        } else {
+          warnings.push(
+            `Client "${carriedClientName}" was not matched to an existing client and no default client is configured; the contact was created without a client.`
+          );
+        }
       }
     } else {
       clientId = context.configuration.defaultClientId ?? null;
@@ -163,7 +224,7 @@ export class ContactMigrationApplier implements EntityApplier {
       {
         full_name: fullName,
         email: record.email,
-        client_id: clientId,
+        client_id: clientId ?? undefined,
         role: record.title ?? undefined,
         phone_numbers: record.phone
           ? [{ phone_number: record.phone, is_default: true }]
@@ -173,7 +234,26 @@ export class ContactMigrationApplier implements EntityApplier {
       trx
     );
 
-    return { targetEntityType: this.targetEntityType, targetEntityId: contact.contact_name_id };
+    return {
+      targetEntityType: this.targetEntityType,
+      targetEntityId: contact.contact_name_id,
+      ...(warnings.length > 0 ? { warnings } : {}),
+    };
+  }
+}
+
+/** Read the carried client name stashed by the CSV converter, if any. */
+function readCarriedClientName(record: AmpContactRecord): string | null {
+  const extensionJson = record.extension_json;
+  if (typeof extensionJson !== 'string' || extensionJson.length === 0) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(extensionJson) as Record<string, unknown>;
+    const value = parsed[AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY];
+    return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+  } catch {
+    return null;
   }
 }
 
@@ -256,7 +336,7 @@ export class TicketMigrationApplier implements EntityApplier {
       context.tenant,
       trx,
       {},
-      undefined,
+      silentTicketCreation('data migration'),
       undefined,
       context.actorUserId
     );
@@ -323,7 +403,8 @@ export class AssetMigrationApplier implements EntityApplier {
   async apply(
     trx: Knex.Transaction,
     context: ApplierContext,
-    payload: Record<string, unknown>
+    payload: Record<string, unknown>,
+    staged?: { customFieldValues: Record<string, unknown> }
   ): Promise<AppliedTarget> {
     const record = payload as unknown as AmpAssetRecord;
     const assetConfig = context.configuration.assets;
@@ -333,7 +414,9 @@ export class AssetMigrationApplier implements EntityApplier {
     if (!record.asset_type_name) {
       throw new Error('Asset has no asset_type_name; AMP assets must carry a source type to map.');
     }
-    const assetTypeSlug = assetConfig.assetTypeMapping[record.asset_type_name];
+    const assetTypeSlug = Object.prototype.hasOwnProperty.call(assetConfig.assetTypeMapping, record.asset_type_name)
+      ? assetConfig.assetTypeMapping[record.asset_type_name]
+      : undefined;
     if (!assetTypeSlug) {
       throw new Error(`Source asset type "${record.asset_type_name}" is not mapped.`);
     }
@@ -366,28 +449,87 @@ export class AssetMigrationApplier implements EntityApplier {
       );
     }
 
+    const fields = await context.assetTypeFields(trx, assetTypeSlug);
+    const customFieldMappings = assetConfig.customFieldMapping;
+    const sourceMapping = customFieldMappings && Object.prototype.hasOwnProperty.call(customFieldMappings, assetTypeSlug)
+      ? customFieldMappings[assetTypeSlug]
+      : {};
+    const customAttributes: Record<string, unknown> = {};
+    for (const [sourceName, targetKey] of Object.entries(sourceMapping)) {
+      const values = staged?.customFieldValues;
+      const sourceValue = values && Object.prototype.hasOwnProperty.call(values, sourceName) ? values[sourceName] : undefined;
+      if (sourceValue === undefined || sourceValue === null || (typeof sourceValue === 'string' && sourceValue.trim() === '')) continue;
+      const field = fields.find((candidate) => candidate.key === targetKey);
+      if (!field) throw new Error(`Mapped custom asset field "${targetKey}" no longer exists; preflight must pass before applying.`);
+      const coerced = coerceAttributeValue(field, sourceValue);
+      if (coerced.ok === false) {
+        const valueDescription = typeof sourceValue === 'string' ? sourceValue : JSON.stringify(sourceValue) ?? '[value]';
+        throw new Error(`Custom asset field "${sourceName}" value "${valueDescription}" ${coerced.reason}.`);
+      }
+      customAttributes[targetKey] = coerced.value;
+    }
+
+    // FR-C3: an imported assignee is recorded with source `import` by
+    // createAssetInTransaction, which routes it through setAssetAssignee.
+    //
+    // The contact is checked against the asset's client here rather than
+    // letting the helper throw: a source assignee who belongs to another
+    // client would otherwise fail the whole asset import. The device comes in
+    // unassigned, and the row says so.
+    const assigneeWarnings: string[] = [];
+    let assigneeContactId: string | null = null;
+    if (record.assignee_external_identifier) {
+      assigneeContactId = await context.resolveReference(
+        trx,
+        'contacts',
+        record.assignee_external_identifier
+      );
+
+      if (assigneeContactId) {
+        const contact = await tenantDb(trx, context.tenant).table('contacts')
+          .where({ contact_name_id: assigneeContactId, client_id: clientId })
+          .whereNot({ contact_kind: 'shared_mailbox' })
+          .first('contact_name_id');
+        if (!contact) {
+          assigneeWarnings.push(
+            `Assignee "${record.assignee_external_identifier}" is not a contact of this client; the asset was imported unassigned.`
+          );
+          assigneeContactId = null;
+        }
+      }
+    }
+
+    const assetInput = {
+      asset_type: assetTypeSlug,
+      client_id: clientId,
+      asset_tag: record.serial_number ?? record.source_record_id,
+      name: record.name,
+      // FR-B2: keep the source lifecycle state when the tenant has a status
+      // with that slug or label; otherwise fall back to `active`.
+      status: await resolveImportedAssetStatus(trx, context.tenant, record.status),
+      location_id: locationId,
+      contact_name_id: assigneeContactId,
+      serial_number: record.serial_number ?? undefined,
+      purchase_date: record.purchase_date ?? undefined,
+      // Manufacturer and model are first-class columns (FR-A4), not attributes.
+      manufacturer: record.manufacturer ?? null,
+      model: record.model ?? null,
+      attributes: customAttributes,
+    };
+
     const asset = await createAssetInTransaction(
       trx,
       context.tenant,
       context.actorUserId,
-      {
-        asset_type: assetTypeSlug,
-        client_id: clientId,
-        asset_tag: record.serial_number ?? record.source_record_id,
-        name: record.name,
-        status: 'active',
-        location_id: locationId,
-        serial_number: record.serial_number ?? undefined,
-        purchase_date: record.purchase_date ?? undefined,
-        attributes: {
-          ...(record.manufacturer ? { manufacturer: record.manufacturer } : {}),
-          ...(record.model ? { model: record.model } : {}),
-        },
-      },
-      { requireCustomAttributes: false }
+      assetInput,
+      { requireCustomAttributes: false, assignmentSource: 'import' }
     );
 
-    return { targetEntityType: this.targetEntityType, targetEntityId: asset.asset_id };
+    return {
+      targetEntityType: this.targetEntityType,
+      targetEntityId: asset.asset_id,
+      ...(assigneeWarnings.length > 0 ? { warnings: assigneeWarnings } : {}),
+    };
   }
 }
 

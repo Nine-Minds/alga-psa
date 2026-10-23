@@ -29,6 +29,15 @@ describe('quote form client creation wiring contract', () => {
             ...current,
             client_id: newClient.client_id,
             contact_id: '',
+            // Only a new quote without a source template adopts the created
+            // client's default currency; editing keeps the saved currency and a
+            // template keeps its own.
+            ...(isEditMode || form.source_template_id
+              ? {}
+              : { currency_code: newClient.default_currency_code || defaultCurrency }),
           }));`);
+    expect(source).toContain(`if (!isEditMode && !form.source_template_id) {
+            setCurrencySource('client');
+          }`);
   });
 });

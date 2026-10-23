@@ -1,6 +1,5 @@
 import type { Locale } from 'date-fns';
 import { enUS } from 'date-fns/locale/en-US';
-import { enAU } from 'date-fns/locale/en-AU';
 import { fr } from 'date-fns/locale/fr';
 import { es } from 'date-fns/locale/es';
 import { de } from 'date-fns/locale/de';
@@ -8,11 +7,11 @@ import { nl } from 'date-fns/locale/nl';
 import { it } from 'date-fns/locale/it';
 import { pl } from 'date-fns/locale/pl';
 import { pt } from 'date-fns/locale/pt';
+import { sv } from 'date-fns/locale/sv';
 import type { SupportedLocale } from './i18n/config';
 
 const DATE_FNS_LOCALES: Record<SupportedLocale, Locale> = {
   en: enUS,
-  'en-AU': enAU,
   fr,
   es,
   de,
@@ -20,15 +19,16 @@ const DATE_FNS_LOCALES: Record<SupportedLocale, Locale> = {
   it,
   pl,
   pt,
+  sv,
   xx: enUS,
   yy: enUS,
 };
 
 /**
- * Map the app's active locale to the date-fns locale used for 'P'-style
- * formatting. Region-tagged locales must match on the FULL tag first — an
- * `en-AU` split to `en` would silently render US month/day order — and only
- * fall back to the language code for region tags we do not ship.
+ * Map the app's active locale to the date-fns locale, for the NAMES it carries:
+ * months, weekdays, relative-time wording. Digit order and separator come from
+ * the tenant's country instead (see countryDateFormat), so a region tag here is
+ * only ever collapsed to its language.
  */
 export function getDateFnsLocale(language?: string): Locale {
   if (language) {

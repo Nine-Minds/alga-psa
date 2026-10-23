@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
@@ -32,6 +32,9 @@ type FilterStatus = 'all' | AppointmentStatus;
 export default function AppointmentsPage() {
   const { t } = useTranslation('features/appointments');
   const { t: tCommon } = useTranslation('common');
+  // A hardcoded 'en-US' ignored the client's country entirely, so a German
+  // client still read US order and a 12-hour clock.
+  const { formatDate } = useFormatters();
 
   const [appointments, setAppointments] = useState<AppointmentRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -184,7 +187,7 @@ export default function AppointmentsPage() {
       render: (value: unknown, record: AppointmentRequest) => {
         const dt = toBrowserDate(value, record.requested_time, record.requester_timezone);
         const display = dt
-          ? dt.toLocaleString('en-US', {
+          ? formatDate(dt, {
               month: 'short', day: 'numeric', year: 'numeric',
               hour: '2-digit', minute: '2-digit',
             })
@@ -486,7 +489,7 @@ export default function AppointmentsPage() {
                           selectedAppointment.requester_timezone,
                         );
                         return dt
-                          ? dt.toLocaleString('en-US', {
+                          ? formatDate(dt, {
                               weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
                               hour: '2-digit', minute: '2-digit',
                             })

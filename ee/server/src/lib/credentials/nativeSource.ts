@@ -560,11 +560,24 @@ export class NativeCredentialSource implements CredentialSource {
       const existing = await fetchCredentialById(trx, ctx.tenant, id);
       if (!existing) notFound();
       if (!(await isCredentialAuthorizedForUser(trx, ctx, existing))) notFound();
+      // Snapshot the ACL metadata BEFORE the row (and its cascading grants) is
+      // gone: the audit reader can no longer join a deleted credential to
+      // `credentials`, so it re-derives both visibility and the display name
+      // from these details. Metadata only — never a value.
+      const grants = existing.is_restricted === true
+        ? await fetchGrantsForCredential(trx, ctx.tenant, id)
+        : [];
       await tenantDb(trx, ctx.tenant).table('credentials').where('credential_id', id).del();
       await writeCredentialAudit(trx, ctx.tenant, 'credential_deleted', {
         userId: ctx.userId,
         credentialId: id,
         clientId: existing.client_id,
+      }, {
+        credential_name: existing.name,
+        was_restricted: existing.is_restricted === true,
+        created_by: existing.created_by,
+        granted_user_ids: grants.filter((g) => g.subject_type === 'user').map((g) => g.subject_id),
+        granted_team_ids: grants.filter((g) => g.subject_type === 'team').map((g) => g.subject_id),
       });
     });
   }

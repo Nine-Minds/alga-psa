@@ -26,6 +26,11 @@
         "detail": {
           "title": "Détails du devis"
         }
+      },
+      "paymentMethods": {
+        "setupComplete": {
+          "title": "Configuration de la carte"
+        }
       }
     },
     "dashboard": {
@@ -255,6 +260,12 @@
       "detail": {
         "title": "Ticket n° {{ticketNumber}} - {{ticketTitle}}",
         "fallbackTitle": "Détails du ticket"
+      },
+      "recurring": {
+        "title": "Tickets récurrents"
+      },
+      "templates": {
+        "title": "Modèles de tickets"
       }
     },
     "workflowEditor": {
@@ -613,6 +624,11 @@
     },
     "tab": {
       "title": "Équipes"
+    }
+  },
+  "paymentMethods": {
+    "setupComplete": {
+      "title": "Configuration de la carte"
     }
   }
 }

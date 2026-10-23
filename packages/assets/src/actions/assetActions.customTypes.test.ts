@@ -30,6 +30,7 @@ const h = vi.hoisted(() => {
     for (const key of Object.keys(dbState)) delete dbState[key];
     dbState.assets = [];
     dbState.asset_type_registry = [];
+    dbState.asset_remote_access_links = [];
     dbState.asset_history = [];
     dbState.asset_relationships = [];
     dbState.asset_associations = [];
@@ -42,6 +43,14 @@ const h = vi.hoisted(() => {
     dbState.server_assets = [];
     dbState.mobile_device_assets = [];
     dbState.printer_assets = [];
+    // The status registry backs FR-B3 validation on every asset write.
+    dbState.asset_statuses = [
+      { tenant: TENANT, status_id: 'st-active', slug: 'active', label: 'Active', kind: 'deployable', is_builtin: true, is_active: true, display_order: 0 },
+      { tenant: TENANT, status_id: 'st-in-stock', slug: 'in_stock', label: 'In stock', kind: 'deployable', is_builtin: true, is_active: true, display_order: 1 },
+      { tenant: TENANT, status_id: 'st-maintenance', slug: 'maintenance', label: 'In maintenance', kind: 'pending', is_builtin: true, is_active: true, display_order: 2 },
+      { tenant: TENANT, status_id: 'st-inactive', slug: 'inactive', label: 'Inactive', kind: 'undeployable', is_builtin: true, is_active: true, display_order: 3 },
+      { tenant: TENANT, status_id: 'st-retired', slug: 'retired', label: 'Retired', kind: 'archived', is_builtin: true, is_active: true, display_order: 4 },
+    ];
     updateCalls.length = 0;
     uuidCounter = 0;
   };
@@ -94,6 +103,22 @@ const h = vi.hoisted(() => {
       return this;
     }
 
+    private nullWheres: Array<{ col: string; isNull: boolean }> = [];
+
+    whereNull(col: string) {
+      this.nullWheres.push({ col: stripPrefix(col), isNull: true });
+      return this;
+    }
+
+    whereNotNull(col: string) {
+      this.nullWheres.push({ col: stripPrefix(col), isNull: false });
+      return this;
+    }
+
+    join(_table: any, _fn: any) {
+      return this;
+    }
+
     leftJoin(_table: any, _fn: any) {
       return this;
     }
@@ -109,6 +134,9 @@ const h = vi.hoisted(() => {
       }
       for (const { col, vals } of this.inWheres) {
         rows = rows.filter((row) => vals.includes(row[col]));
+      }
+      for (const { col, isNull } of this.nullWheres) {
+        rows = rows.filter((row) => (isNull ? row[col] === null || row[col] === undefined : row[col] !== null && row[col] !== undefined));
       }
       return rows;
     }
@@ -215,9 +243,10 @@ vi.mock('@alga-psa/db', () => ({
 
 vi.mock('@alga-psa/core', () => ({ deleteEntityWithValidation: vi.fn() }));
 
-vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(async () => undefined) }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(async () => undefined), publishEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...((await importOriginal()) as any),
   buildAssetAssignedPayload: vi.fn(() => ({})),
   buildAssetCreatedPayload: vi.fn(() => ({})),
   buildAssetUnassignedPayload: vi.fn(() => ({})),
@@ -248,6 +277,8 @@ vi.mock('../lib/assetFactsService', () => ({
 }));
 
 import { createAsset, updateAsset } from './assetActions';
+import { isAssetValidationError, type AssetValidationError } from './assetActionErrors';
+import { getRemoteAccessLinksForAsset } from './remoteAccessLinkActions';
 
 const CLOUD_ACCOUNT_FIELDS = [
   { key: 'account_name', label: 'Account Name', kind: 'text', required: true },
@@ -368,6 +399,14 @@ describe('createAsset with custom asset types (T313)', () => {
     expect(h.dbState.assets).toHaveLength(0);
   });
 
+  it('validates workstation additional fields during create', async () => {
+    h.dbState.asset_type_registry.push({ tenant: TENANT, slug: 'workstation', name: 'Workstation', is_builtin: true, fields_schema: JSON.stringify([{ key: 'sc_session', label: 'ScreenConnect Session', kind: 'number' }]) });
+    const rejection = await createAsset({ ...baseCreateRequest, asset_type: 'workstation', attributes: { sc_session: 'bad' } }).then(() => null, (error: Error) => error);
+    expect(rejection).toBeInstanceOf(Error);
+    expect(JSON.parse((rejection as Error).message).issues[0].path).toEqual(['attributes', 'sc_session']);
+    expect(h.dbState.assets).toHaveLength(0);
+  });
+
   it('built-in regression: workstation create still lands extension data, no registry lookup, no attributes', async () => {
     // Registry intentionally EMPTY — built-ins must not require a registry row.
     const created = await createAsset({
@@ -425,9 +464,12 @@ describe('updateAsset with custom asset types (T313)', () => {
     seedCloudAccountType();
     const asset = seedAsset();
 
-    await expect(updateAsset(asset.asset_id, { asset_type: 'door_access' })).rejects.toThrow(
-      /invalid_asset_type/
-    );
+    // alga0002283: updateAsset RETURNS the structured error (thrown messages are
+    // masked by Next.js in production builds).
+    const result = await updateAsset(asset.asset_id, { asset_type: 'door_access' });
+    expect(result).toMatchObject({
+      actionError: 'Asset type "door_access" is not available. Choose a valid asset type.',
+    });
     expect(h.dbState.assets[0].asset_type).toBe('cloud_account');
     expect(h.dbState.assets[0].attributes.account_name).toBe('Old Name');
   });
@@ -436,16 +478,33 @@ describe('updateAsset with custom asset types (T313)', () => {
     seedCloudAccountType();
     const asset = seedAsset();
 
-    await updateAsset(asset.asset_id, { attributes: { seats: 'five' } }).catch((error: Error) => {
-      const parsed = JSON.parse(error.message);
-      expect(parsed.kind).toBe('validation');
-      expect(parsed.issues[0].path).toEqual(['attributes', 'seats']);
-    });
+    const result = await updateAsset(asset.asset_id, { attributes: { seats: 'five' } });
+    expect(isAssetValidationError(result)).toBe(true);
+    expect((result as unknown as AssetValidationError).validationIssues[0].path).toEqual(['attributes', 'seats']);
 
     expect(h.dbState.assets[0].attributes).toEqual({
       account_name: 'Old Name',
       hudu_fields: [{ label: 'Plan', value: 'Gold' }],
     });
+  });
+
+  it('validates built-in additional fields and merge-preserves sibling namespaces', async () => {
+    h.dbState.asset_type_registry.push({ tenant: TENANT, slug: 'workstation', name: 'Workstation', is_builtin: true, fields_schema: JSON.stringify([{ key: 'sc_session', label: 'Session', kind: 'text' }]) });
+    const asset = seedAsset({ asset_type: 'workstation', attributes: { hudu_fields: [{ label: 'Plan', value: 'Gold' }] } });
+    const rejection = await updateAsset(asset.asset_id, { attributes: { sc_session: 123 } });
+    expect(isAssetValidationError(rejection)).toBe(true);
+    expect((rejection as unknown as AssetValidationError).validationIssues[0].path).toEqual(['attributes', 'sc_session']);
+    await updateAsset(asset.asset_id, { attributes: { sc_session: 'sess-1' } });
+    expect(h.dbState.assets[0].attributes).toEqual({ sc_session: 'sess-1', hudu_fields: [{ label: 'Plan', value: 'Gold' }] });
+  });
+
+  it('renders a built-in additional field in remote access links after updateAsset sets it', async () => {
+    h.dbState.asset_type_registry.push({ tenant: TENANT, slug: 'workstation', name: 'Workstation', is_builtin: true, fields_schema: JSON.stringify([{ key: 'sc_session', label: 'Session', kind: 'text' }]) });
+    const asset = seedAsset({ asset_type: 'workstation', attributes: {} });
+    h.dbState.asset_remote_access_links.push({ tenant: TENANT, link_id: 'link-sc', label: 'ScreenConnect', url_template: 'https://sc.example/session/{field.sc_session}' });
+    await expect(getRemoteAccessLinksForAsset(asset.asset_id)).resolves.toEqual([{ label: 'ScreenConnect', url: null }]);
+    await updateAsset(asset.asset_id, { attributes: { sc_session: 'sess-2562-abc' } });
+    await expect(getRemoteAccessLinksForAsset(asset.asset_id)).resolves.toEqual([{ label: 'ScreenConnect', url: 'https://sc.example/session/sess-2562-abc' }]);
   });
 
   it('allows partial updates that omit required fields (merge keeps stored values)', async () => {

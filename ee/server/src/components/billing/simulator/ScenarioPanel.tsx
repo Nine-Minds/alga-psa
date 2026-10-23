@@ -4,8 +4,14 @@ import React, { useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { Button } from "@alga-psa/ui/components/Button";
 import { DatePicker } from "@alga-psa/ui/components/DatePicker";
+import { UnitOfMeasureInput } from "@alga-psa/ui/components/UnitOfMeasureInput";
+import { labelForUnitCode } from "@alga-psa/core/unitOfMeasure";
 import { dateFromString, dateToString } from "@alga-psa/ui/lib/dateInput";
 import { cn } from "@alga-psa/ui/lib/utils";
+import {
+  isAdvanceTimingAllowedForLineType,
+  resolveEffectiveBillingTiming,
+} from "@alga-psa/shared/billingClients/contractLineTimingRule";
 import { useFormatters, useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import type {
   ScenarioCatalogService,
@@ -242,7 +248,7 @@ function defaultConfiguration(
   if (type === "Usage") {
     return {
       configuration_type: "Usage",
-      unit_of_measure: "unit",
+      unit_of_measure: labelForUnitCode("C62"),
       enable_tiered_pricing: false,
       minimum_usage: null,
       base_rate: null,
@@ -464,13 +470,23 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                           { defaultValue: line.billing_frequency },
                         ),
                         timing:
-                          line.billing_timing === "advance"
+                          resolveEffectiveBillingTiming(
+                            line.contract_line_type,
+                            line.billing_timing,
+                          ) === "advance"
                             ? t("contractSimulator.scenario.timing.advance", {
                                 defaultValue: "Bill in advance",
                               })
-                            : t("contractSimulator.scenario.timing.arrears", {
-                                defaultValue: "Bill in arrears",
-                              }),
+                            : !isAdvanceTimingAllowedForLineType(
+                                  line.contract_line_type,
+                                )
+                              ? t(
+                                  "contractSimulator.scenario.timing.arrearsOnly",
+                                  { defaultValue: "Billed in arrears" },
+                                )
+                              : t("contractSimulator.scenario.timing.arrears", {
+                                  defaultValue: "Bill in arrears",
+                                }),
                         services:
                           line.services.length === 1
                             ? t("contractSimulator.scenario.oneService", {
@@ -589,6 +605,10 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                             const type = event.target
                               .value as ScenarioLine["contract_line_type"];
                             draft.contract_line_type = type;
+                            draft.billing_timing = resolveEffectiveBillingTiming(
+                              type,
+                              draft.billing_timing,
+                            );
                             draft.services = draft.services.map((service) =>
                               service.item_kind === "product" ||
                               service.configuration.configuration_type ===
@@ -655,39 +675,52 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                         ))}
                       </select>
                     </label>
-                    <label className={fieldLabelClass}>
-                      {t("contractSimulator.scenario.fields.billingTiming", {
-                        defaultValue: "Billing timing",
-                      })}
-                      <select
-                        aria-label={t(
-                          "contractSimulator.scenario.fields.billingTiming",
-                          {
-                            defaultValue: "Billing timing",
-                          },
-                        )}
-                        className={fieldClass}
-                        value={line.billing_timing}
-                        onChange={(event) =>
-                          updateLine(line.key, (draft) => {
-                            draft.billing_timing = event.target.value as
-                              | "arrears"
-                              | "advance";
-                          })
-                        }
-                      >
-                        <option value="advance">
-                          {t("contractSimulator.scenario.timing.advance", {
-                            defaultValue: "Bill in advance",
-                          })}
-                        </option>
-                        <option value="arrears">
+                    {isAdvanceTimingAllowedForLineType(line.contract_line_type) ? (
+                      <label className={fieldLabelClass}>
+                        {t("contractSimulator.scenario.fields.billingTiming", {
+                          defaultValue: "Billing timing",
+                        })}
+                        <select
+                          aria-label={t(
+                            "contractSimulator.scenario.fields.billingTiming",
+                            {
+                              defaultValue: "Billing timing",
+                            },
+                          )}
+                          className={fieldClass}
+                          value={line.billing_timing}
+                          onChange={(event) =>
+                            updateLine(line.key, (draft) => {
+                              draft.billing_timing = event.target.value as
+                                | "arrears"
+                                | "advance";
+                            })
+                          }
+                        >
+                          <option value="advance">
+                            {t("contractSimulator.scenario.timing.advance", {
+                              defaultValue: "Bill in advance",
+                            })}
+                          </option>
+                          <option value="arrears">
+                            {t("contractSimulator.scenario.timing.arrears", {
+                              defaultValue: "Bill in arrears",
+                            })}
+                          </option>
+                        </select>
+                      </label>
+                    ) : (
+                      <div className={fieldLabelClass}>
+                        {t("contractSimulator.scenario.fields.billingTiming", {
+                          defaultValue: "Billing timing",
+                        })}
+                        <span className="mt-1 block text-sm text-[rgb(var(--color-text-700))]">
                           {t("contractSimulator.scenario.timing.arrears", {
                             defaultValue: "Bill in arrears",
                           })}
-                        </option>
-                      </select>
-                    </label>
+                        </span>
+                      </div>
+                    )}
                     <label className={fieldLabelClass}>
                       {t("contractSimulator.scenario.fields.cadenceOwner", {
                         defaultValue: "Billing schedule",
@@ -1088,21 +1121,17 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                                   "contractSimulator.scenario.fields.usageUnit",
                                   { defaultValue: "Usage unit" },
                                 )}
-                                <input
-                                  aria-label={t(
-                                    "contractSimulator.scenario.fields.usageUnit",
-                                    { defaultValue: "Usage unit" },
-                                  )}
-                                  className={fieldClass}
+                                <UnitOfMeasureInput
+                                  id={`scenario-usage-unit-${line.key}-${serviceIndex}`}
                                   value={config.unit_of_measure}
-                                  onChange={(event) =>
+                                  onChange={(unit: string) =>
                                     updateService((draft) => {
                                       if (
                                         draft.configuration
                                           .configuration_type === "Usage"
                                       )
                                         draft.configuration.unit_of_measure =
-                                          event.target.value;
+                                          unit;
                                     })
                                   }
                                 />

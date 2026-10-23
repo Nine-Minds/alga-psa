@@ -20,7 +20,7 @@ vi.mock('@alga-psa/storage', () => ({ uploadEntityImage: vi.fn(), deleteEntityIm
 vi.mock('@alga-psa/clients/lib/documentsHelpers', () => ({ getClientLogoUrlAsync: vi.fn(), getClientLogoUrlsBatchAsync: vi.fn() }));
 vi.mock('@alga-psa/tags/actions/tagActions', () => ({ createTag: vi.fn(), findTagsByEntityId: vi.fn() }));
 vi.mock('@alga-psa/tags/lib/tagCleanup', () => ({ deleteEntityTags: vi.fn() }));
-vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn() }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(), publishEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 
 import { createClient } from '@alga-psa/clients/actions/clientActions';
 let db: Knex;
@@ -51,12 +51,15 @@ const create = () => createClient({ client_name: 'Atomic customer', is_inactive:
 
 // Found while auditing #3338. This rollback gap is not asserted to be the
 // original incident's root cause (that report confirmed stale image/schema).
-it('a real missing-active-tax-rate failure leaves no client or billing profile', async () => {
+it('creates a client without fabricating a tax rate when tax is not configured', async () => {
   await tenant();
-  await expect(create()).rejects.toThrow('No active tax rates found');
-  expect(await db('clients').where({ tenant: context.tenant })).toEqual([]);
-  expect(await db('client_billing_profiles').where({ tenant: context.tenant })).toEqual([]);
-  expect(await db('client_tax_settings').where({ tenant: context.tenant })).toEqual([]);
+  const result = await create();
+  expect(result).toMatchObject({ success: true });
+  expect(await db('clients').where({ tenant: context.tenant })).toHaveLength(1);
+  expect(await db('client_billing_profiles').where({ tenant: context.tenant })).toHaveLength(1);
+  expect(await db('client_tax_settings').where({ tenant: context.tenant })).toHaveLength(1);
+  expect(await db('client_tax_rates').where({ tenant: context.tenant })).toEqual([]);
+  expect(await db('tax_rates').where({ tenant: context.tenant })).toEqual([]);
 });
 
 it('creates the client, default profile and tax settings together when an active tax rate exists', async () => {

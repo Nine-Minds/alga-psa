@@ -108,9 +108,10 @@ interface AssetTypeSchemaEditorProps {
   fields: SchemaEditorField[];
   onChange: (next: SchemaEditorField[]) => void;
   issues: FieldSchemaIssue[];
+  title?: string;
 }
 
-const AssetTypeSchemaEditor: React.FC<AssetTypeSchemaEditorProps> = ({ fields, onChange, issues }) => {
+const AssetTypeSchemaEditor: React.FC<AssetTypeSchemaEditorProps> = ({ fields, onChange, issues, title }) => {
   const { t } = useTranslation('msp/settings');
 
   const kindOptions = ASSET_TYPE_FIELD_KINDS.map((kind) => ({
@@ -138,7 +139,7 @@ const AssetTypeSchemaEditor: React.FC<AssetTypeSchemaEditorProps> = ({ fields, o
   return (
     <div className="space-y-3">
       <Label className="text-sm font-medium">
-        {t('settings.assetTypes.editor.title', { defaultValue: 'Fields' })}
+        {title ?? t('settings.assetTypes.editor.title', { defaultValue: 'Fields' })}
       </Label>
       {fields.length === 0 && (
         <p className="text-sm text-muted-foreground">

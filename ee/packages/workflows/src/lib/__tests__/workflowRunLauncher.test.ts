@@ -47,7 +47,12 @@ vi.mock('../workflowRuntimeV2Temporal', () => ({
   startWorkflowRuntimeV2TemporalRun: startWorkflowRuntimeV2TemporalRunMock,
 }));
 
-import { launchPublishedWorkflowRun } from '../workflowRunLauncher';
+import {
+  INTERACTIVE_ENGINE_CONNECT_TIMEOUT_MS,
+  classifyWorkflowRunLaunchFailure,
+  isWorkflowRunLaunchError,
+  launchPublishedWorkflowRun,
+} from '../workflowRunLauncher';
 
 describe('workflowRunLauncher', () => {
   beforeEach(() => {
@@ -61,6 +66,7 @@ describe('workflowRunLauncher', () => {
 
     workflowGetByIdMock.mockResolvedValue({
       workflow_id: 'wf-1',
+      tenant: 'tenant-1',
       is_paused: false,
       concurrency_limit: null,
       payload_schema_ref: null,
@@ -102,15 +108,64 @@ describe('workflowRunLauncher', () => {
     );
     expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledWith(
       expect.objectContaining({ runId: 'run-1', workflowId: 'wf-1', workflowVersion: 3 }),
+      { connectTimeoutMs: undefined },
     );
     expect(workflowRunUpdateMock).toHaveBeenCalledWith({} as any, 'run-1', {
       temporal_workflow_id: 'workflow-runtime-v2:run:run-1',
       temporal_run_id: 'temporal-run-1',
-    });
+    }, 'tenant-1');
     expect(result).toEqual({
       runId: 'run-1',
       workflowVersion: 3,
+      created: true,
     });
+  });
+
+  it('passes an interactive start\'s engine connect deadline to the Temporal client', async () => {
+    await launchPublishedWorkflowRun({} as any, {
+      workflowId: 'wf-1',
+      tenantId: 'tenant-1',
+      payload: {},
+      engineConnectTimeoutMs: INTERACTIVE_ENGINE_CONNECT_TIMEOUT_MS,
+    });
+
+    expect(INTERACTIVE_ENGINE_CONNECT_TIMEOUT_MS).toBeLessThanOrEqual(5000);
+    expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledWith(
+      expect.objectContaining({ runId: 'run-1' }),
+      { connectTimeoutMs: INTERACTIVE_ENGINE_CONNECT_TIMEOUT_MS },
+    );
+  });
+
+  // Unscoped workflow_id / trigger_fire_key lookups fan out to every Citus shard
+  // and open internal connections; the launcher must route them to the
+  // definition's tenant.
+  it('scopes version and fire-key lookups to the workflow tenant', async () => {
+    await launchPublishedWorkflowRun({} as any, {
+      workflowId: 'wf-1',
+      tenantId: 'tenant-1',
+      payload: {},
+      triggerType: 'date',
+      triggerFireKey: 'date:wf-1:fire',
+    });
+
+    expect(listByWorkflowMock).toHaveBeenCalledWith({} as any, 'wf-1', 'tenant-1');
+    expect(getByTriggerFireKeyMock).toHaveBeenCalledWith({} as any, 'date:wf-1:fire', 'tenant-1');
+  });
+
+  it('returns the existing run for a repeated date fire key', async () => {
+    getByTriggerFireKeyMock.mockResolvedValue({ run_id: 'existing-run', workflow_version: 3 });
+
+    const result = await launchPublishedWorkflowRun({} as any, {
+      workflowId: 'wf-1',
+      tenantId: 'tenant-1',
+      payload: { occursOn: '2026-09-23' },
+      triggerType: 'date',
+      triggerFireKey: 'date:wf-1:client.anniversary:client-1:2026-09-23:0',
+    });
+
+    expect(result).toEqual({ runId: 'existing-run', workflowVersion: 3, created: false });
+    expect(startRunMock).not.toHaveBeenCalled();
+    expect(startWorkflowRuntimeV2TemporalRunMock).not.toHaveBeenCalled();
   });
 
   it('ignores the retired engine-selection env flag', async () => {
@@ -151,6 +206,34 @@ describe('workflowRunLauncher', () => {
           stage: 'launch',
         }),
       }),
+      'tenant-1',
     );
+  });
+
+  it('rethrows a WorkflowRunLaunchError carrying the failed run id and an engine-unavailable reason', async () => {
+    startWorkflowRuntimeV2TemporalRunMock.mockRejectedValue(new Error('Failed to connect before the deadline'));
+
+    const error = await launchPublishedWorkflowRun({} as any, {
+      workflowId: 'wf-1',
+      tenantId: 'tenant-1',
+      payload: { ticketId: 'ticket-1' },
+      eventType: 'TICKET_CREATED',
+    }).catch((caught: unknown) => caught);
+
+    expect(isWorkflowRunLaunchError(error)).toBe(true);
+    expect(error).toMatchObject({
+      runId: 'run-1',
+      reason: 'runtime_unavailable',
+      message: 'Failed to connect before the deadline',
+    });
+  });
+});
+
+describe('classifyWorkflowRunLaunchFailure', () => {
+  it('separates unreachable-engine errors from other launch failures', () => {
+    expect(classifyWorkflowRunLaunchFailure(new Error('14 UNAVAILABLE: No connection established'))).toBe('runtime_unavailable');
+    expect(classifyWorkflowRunLaunchFailure(new Error('getaddrinfo ENOTFOUND temporal-frontend'))).toBe('runtime_unavailable');
+    expect(classifyWorkflowRunLaunchFailure(new Error('Workflow type not registered'))).toBe('launch_failed');
+    expect(classifyWorkflowRunLaunchFailure('unexpected')).toBe('launch_failed');
   });
 });

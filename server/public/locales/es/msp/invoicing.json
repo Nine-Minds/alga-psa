@@ -98,6 +98,20 @@
         "assignedContractLine": "Línea de contrato asignada",
         "assignedWorkItem": "Elemento de trabajo asignado",
         "unresolvedWork": "Trabajo no resuelto"
+      },
+      "prepaidBlock": {
+        "due": "{{trigger}} · vence el {{date}}",
+        "trigger": {
+          "contract_start": "Bloque prepago: inicio del contrato",
+          "exhaustion": "Bloque prepago: agotado",
+          "threshold": "Bloque prepago: umbral de uso",
+          "expiry": "Bloque prepago: vencimiento",
+          "renewal": "Bloque prepago: renovación",
+          "manual": "Bloque prepago: emitido manualmente"
+        },
+        "stalePendingWarning": "{{count}} bloques prepago pendientes llevan más de 14 días esperando su finalización y retienen entradas de tiempo. Finalice o elimine sus facturas en borrador para que el tiempo retenido pueda facturarse.",
+        "stalePendingWarning_one": "{{count}} bloque prepago pendiente lleva más de 14 días esperando su finalización y retiene entradas de tiempo. Finalice o elimine su factura en borrador para que el tiempo retenido pueda facturarse.",
+        "stalePendingWarning_other": "{{count}} bloques prepago pendientes llevan más de 14 días esperando su finalización y retienen entradas de tiempo. Finalice o elimine sus facturas en borrador para que el tiempo retenido pueda facturarse."
       }
     },
     "actions": {
@@ -147,6 +161,7 @@
       "preview": {
         "title": "Vista previa de factura",
         "description": "Esta es una vista previa de cómo se verá la factura una vez finalizada.",
+        "noBillingEmailWarning": "{{clientName}} no tiene correo electrónico de facturación. La factura se puede generar, pero no se podrá enviar por correo electrónico ni pagar en línea hasta que configure un contacto de facturación, un correo electrónico de facturación del cliente o un correo electrónico en la ubicación de facturación o predeterminada.",
         "summary_one": "Factura {{count}} seleccionada",
         "summary_other": "Facturas {{count}} seleccionadas",
         "summaryCombined": "Esta selección generará una factura combinada.",
@@ -238,7 +253,8 @@
       "fixAllResult": "Se reconstruyeron {{schedules}} programación(es) en {{clients}} cliente(s).",
       "fixAllNoop": "Todas las programaciones de facturación ya están actualizadas. Todo lo que siga apareciendo abajo requiere revisión individual.",
       "fixAllError": "No se pudieron reconstruir los períodos de servicio. Inténtelo de nuevo.",
-      "fixAllDenied": "No tiene permiso para reconstruir los períodos de servicio."
+      "fixAllDenied": "No tiene permiso para reconstruir los períodos de servicio.",
+      "fixAllManualReview": "{{count}} período(s) por horas o de uso requieren revisión individual."
     },
     "errors": {
       "title": "Se produjeron errores al finalizar las facturas:",
@@ -271,7 +287,8 @@
       "fixed": "FIX",
       "hourly": "T&M",
       "usage": "USE",
-      "bucket": "BKT"
+      "bucket": "BKT",
+      "prepaidBlock": "PRE"
     },
     "summary": {
       "selected": "{{count}} seleccionado(s)",
@@ -317,20 +334,23 @@
       "client": "Cliente",
       "invoiceNumber": "Número de factura",
       "invoiceNumberOptional": "Número de factura (opcional)",
-      "sourceSalesOrder": "Orden de venta de origen (opcional)"
+      "sourceSalesOrder": "Orden de venta de origen (opcional)",
+      "billingProfile": "Perfil de facturación"
     },
     "placeholders": {
       "selectClient": "Seleccione un cliente",
       "invoiceNumberOptional": "Déjelo en blanco para generar automáticamente",
       "sourceSalesOrder": "Seleccione una orden de venta cumplida o facturable manualmente",
       "searchSalesOrders": "Buscar órdenes de venta...",
-      "noInvoiceableSalesOrders": "No se encontraron órdenes de venta facturables."
+      "noInvoiceableSalesOrders": "No se encontraron órdenes de venta facturables.",
+      "selectBillingProfile": "Seleccione un perfil de facturación"
     },
     "automatedItems": {
       "title": "Líneas de pedido automatizadas",
       "service": "Servicio",
       "total": "Total",
-      "unknownService": "Servicio desconocido"
+      "unknownService": "Servicio desconocido",
+      "period": "Período"
     },
     "lineItems": {
       "manual": "Elementos de línea manuales",
@@ -343,10 +363,14 @@
       "saveChanges": "Guardar cambios",
       "processing": "Procesando...",
       "generateSalesOrderInvoice": "Generar factura de la orden de venta",
-      "clearSalesOrderSource": "Quitar la orden de venta de origen"
+      "clearSalesOrderSource": "Quitar la orden de venta de origen",
+      "addPartialPeriodCharge": "Agregar cargo de período parcial",
+      "reauthenticate": "Iniciar sesión de nuevo",
+      "retrySave": "Reintentar guardado"
     },
     "labels": {
-      "total": "Total"
+      "total": "Total",
+      "defaultBillingProfile": "{{name}} (predeterminado)"
     },
     "prepayment": {
       "label": "Esta es una factura de prepago (crea crédito)",
@@ -381,10 +405,24 @@
       "salesOrderNotInvoiceable": "Esa orden de venta ya no está disponible para facturar.",
       "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Esta ventana de facturación tiene cargos facturables, pero {{services}} no tiene uso registrado para el período de servicio del {{periodStart}} al {{periodEnd}}. Registre primero el uso o confirme explícitamente la generación sin él; los servicios sin registrar seguirán siendo facturables más adelante.",
       "USAGE_PERIOD_TOTAL_STALE": "La vista previa está desactualizada: {{details}}. Vuelva a ejecutar la vista previa para ver las cifras actuales y genere de nuevo.",
-      "USAGE_CALCULATION_ERROR": "El uso de {{services}} en el período de servicio del {{periodStart}} al {{periodEnd}} está registrado pero no se pudo tarificar. Corrija los precios del servicio (precio de catálogo en la moneda del contrato, una tarifa personalizada o tramos de tarifas) e inténtelo de nuevo. No registre uso de reemplazo."
+      "USAGE_CALCULATION_ERROR": "El uso de {{services}} en el período de servicio del {{periodStart}} al {{periodEnd}} está registrado pero no se pudo tarificar. Corrija los precios del servicio (precio de catálogo en la moneda del contrato, una tarifa personalizada o tramos de tarifas) e inténtelo de nuevo. No registre uso de reemplazo.",
+      "RECURRING_PERIODS_NOT_MATERIALIZED": "Aún no se han generado los períodos de servicio de esta ventana de facturación. Use Corregir todo en la página de facturas automáticas o regenérelos en Facturación > Períodos de servicio y vuelva a previsualizar.",
+      "NO_ACTIVE_CONTRACT_LINES": "Ninguna línea de contrato está activa en este período de facturación. Revise las fechas de inicio y fin del contrato y que el contrato esté activo.",
+      "NOTHING_TO_BILL": "No hay nada listo para facturar en esta ventana. Las líneas facturadas a período vencido solo se pueden facturar cuando termina su período de servicio, así que revise el momento de facturación y las fechas.",
+      "FIXED_LINE_RATE_UNRESOLVED": "La línea de tarifa fija {{lines}} no tiene tarifa. Defina una tarifa en la línea del contrato (o un precio para sus servicios en la moneda del contrato) e inténtelo de nuevo.",
+      "FIXED_LINE_NO_SERVICES": "La línea de tarifa fija {{lines}} tiene una tarifa pero ningún servicio en el que facturarla. Agregue un servicio a la línea del contrato e inténtelo de nuevo.",
+      "SOURCE_ALREADY_BILLED": "Algunos elementos seleccionados ya no son facturables (ya facturados, no aprobados o eliminados). Actualiza e inténtalo de nuevo.",
+      "SOURCE_NOT_ELIGIBLE": "Uno de los elementos seleccionados no pertenece a este ticket o ya no es elegible. Actualiza e inténtalo de nuevo.",
+      "SOURCE_CURRENCY_MISMATCH": "Algunos productos seleccionados tienen un precio en una moneda distinta a la de facturación de este cliente, por lo que no se pueden añadir. Factúralos por separado en su propia moneda.",
+      "CLIENT_CONTRACT_NOT_FOUND": "El contrato seleccionado no pertenece al cliente de esta factura.",
+      "SERVICE_REQUIRED": "Asigne un servicio a este cargo antes de guardar.",
+      "RECURRING_PRICING_STALE": "La vista previa está desactualizada: {{details}}. Vuelva a ejecutar la vista previa para ver los valores actuales y, luego, genere de nuevo.",
+      "BILLING_PROFILE_NOT_FOUND": "El perfil de facturación seleccionado no está disponible para este cliente. Actualice la página e inténtelo de nuevo.",
+      "sessionExpired": "Su sesión ha caducado. Sus cambios siguen aquí, pero no se guardaron. Inicie sesión de nuevo en otra pestaña y luego vuelva a intentar guardar.",
+      "saveRefreshFailed": "Sus cambios se guardaron, pero la página de la factura no pudo actualizarse por completo. Recargue la página para ver la factura guardada."
     },
     "warnings": {
-      "noBillingEmail": "Este cliente no tiene correo electrónico de facturación. Añada un contacto de facturación, un correo electrónico de facturación del cliente o una dirección de correo en la ubicación de facturación o predeterminada antes de generar la factura."
+      "noBillingEmail": "Este cliente no tiene correo electrónico de facturación. La factura se puede generar, pero no se podrá enviar por correo electrónico ni pagar en línea hasta que configure un contacto de facturación, un correo electrónico de facturación del cliente o un correo electrónico en la ubicación de facturación o predeterminada."
     },
     "errorFallback": {
       "title": "algo salió mal",
@@ -392,6 +430,72 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} artículo(s) de {{lineCount}} línea(s) listo(s) para facturar. Este borrador se vinculará a la orden de venta."
+    },
+    "draftAdjustments": {
+      "title": "Ajustes de factura",
+      "description": "Agregue cargos, descuentos o créditos únicos. Los cargos de contrato generados permanecen de solo lectura; corrija el contrato de origen o agregue un ajuste."
+    },
+    "partialPeriod": {
+      "title": "Cargo de período parcial",
+      "help": "Se calcula como unidades × precio unitario del período × días cubiertos / días del período completo. Las entradas se conservan con el concepto para que siga siendo comprensible.",
+      "direction": "Dirección",
+      "increase": "Aumento",
+      "decrease": "Reducción (crédito)",
+      "units": "Unidades",
+      "unitPrice": "Precio unitario",
+      "coveredDays": "Días cubiertos",
+      "fullPeriodDays": "Días del período completo",
+      "description": "Descripción (opcional)",
+      "reason": "Motivo (opcional)",
+      "previewUnavailable": "Introduzca un cálculo válido.",
+      "resolvedAmount": "Importe calculado: {{amount}}",
+      "addCharge": "Agregar cargo",
+      "creditDescription": "Crédito: {{proration}}",
+      "errors": {
+        "units": "Las unidades deben ser mayores que cero.",
+        "unitPrice": "El precio unitario debe ser un número.",
+        "invalid": "Introduzca un período parcial válido.",
+        "source": "Elija un servicio facturado con un período de servicio inequívoco."
+      },
+      "source": "Seleccionar servicio facturado",
+      "effectiveDate": "Fecha de vigencia",
+      "sourceRate": "Tarifa {{rate}}",
+      "permanentChangeNudge": "¿Es un cambio permanente? Regístrelo en el contrato.",
+      "overlapConfirm": "Ya existe un ajuste automático de contrato que se solapa con este período. ¿Añadir de todos modos este ajuste manual separado?",
+      "invoiceDescription": {
+        "increase": "{{description}} — {{units}} {{unitLabel}} adicionales, {{period}} — {{calculation}}",
+        "decrease": "{{description}} — crédito por {{units}} {{unitLabel}} menos, {{period}} — {{calculation}}"
+      },
+      "sourceDescriptionFallback": "Ajuste de servicio"
+    },
+    "exportWarnings": {
+      "discount": "{{adapter}}: configure la asignación de descuentos antes de exportar {{description}}.",
+      "service": "{{adapter}}: asigne un servicio con correspondencia a {{description}} antes de exportar.",
+      "unavailable": "No se pudo comprobar la preparación contable. Revise las asignaciones antes de exportar."
+    },
+    "hints": {
+      "billingProfile": "La factura y sus líneas se facturan a este perfil."
+    }
+  },
+  "quickInvoice": {
+    "currencyExcluded": "Se excluyeron {{count}} producto(s) porque su moneda difiere de {{currency}}.",
+    "action": "Factura rápida",
+    "title": "Facturar rápidamente este ticket",
+    "loading": "Cargando elementos facturables…",
+    "empty": "No hay elementos no facturados en este ticket.",
+    "billableTime": "Tiempo facturable",
+    "products": "Productos",
+    "selectedTotal": "Total seleccionado",
+    "create": "Crear factura",
+    "creating": "Creando…",
+    "done": "Hecho",
+    "viewInvoice": "Ver factura",
+    "created": "Factura creada",
+    "createdDetail": "La factura se creó y se vinculó a este ticket.",
+    "existingInvoices": "Facturas de este ticket",
+    "unknownService": "Elemento facturable",
+    "errors": {
+      "ticketNotFound": "Ese ticket ya no existe."
     }
   },
   "draftsTab": {
@@ -465,7 +569,8 @@
       "finalizedDate": "Fecha finalizada",
       "status": "Estado",
       "actions": "Acciones",
-      "quickbooks": "QuickBooks"
+      "quickbooks": "QuickBooks",
+      "autopay": "Pago automático"
     },
     "actions": {
       "downloadPdfs": "Descargar archivos PDF",
@@ -497,6 +602,9 @@
         "selectedCount": "{{count}} seleccionados",
         "clear": "Limpiar selección"
       }
+    },
+    "autopay": {
+      "scheduled": "Pago automático {{status}}"
     }
   },
   "recurringServicePeriods": {
@@ -698,10 +806,13 @@
     }
   },
   "invoicePreview": {
+    "sessionExpired": "La sesión expiró mientras se cargaba esta factura. Inicie sesión de nuevo y vuelva a cargar la vista previa.",
     "title": "Vista previa de factura",
     "templatePlaceholder": "Seleccionar plantilla de factura...",
     "labels": {
-      "standard": "(Estándar)"
+      "standard": "(Estándar)",
+      "billingProfile": "Perfil de facturación: {{name}}",
+      "billingProfileDefault": "el perfil predeterminado del cliente"
     },
     "actions": {
       "finalizeInvoice": "Finalizar factura",
@@ -716,7 +827,8 @@
       "driftReexport": "Reexportar a QuickBooks",
       "syncNow": "Sincronizar con QuickBooks",
       "viewInQbo": "Ver en QuickBooks",
-      "voidInvoice": "Anular factura"
+      "voidInvoice": "Anular factura",
+      "viewInXero": "Ver en Xero"
     },
     "loading": "Cargando vista previa...",
     "empty": "Seleccione una factura para obtener una vista previa",
@@ -752,7 +864,8 @@
       "back": "Volver a diseños de facturas",
       "cancel": "Cancelar",
       "save": "Guardar plantilla",
-      "saving": "Guardando..."
+      "saving": "Guardando...",
+      "close": "Cerrar"
     },
     "titles": {
       "create": "Crear nuevo diseño de factura",
@@ -762,7 +875,9 @@
       "templateName": "Nombre de la plantilla",
       "templateAst": "Plantilla AST (JSON)",
       "created": "Creado",
-      "lastUpdated": "Última actualización"
+      "lastUpdated": "Última actualización",
+      "savedAt": "Guardado {{time}}",
+      "notSaved": "Aún no guardado"
     },
     "tabs": {
       "visual": "Visual",
@@ -778,6 +893,9 @@
       "templateNameRequired": "El nombre de la plantilla es obligatorio",
       "astExportFailed": "No se pudo exportar la plantilla AST desde el espacio de trabajo visual: {{message}}",
       "unknownAstExport": "Error de exportación AST desconocido"
+    },
+    "toast": {
+      "saved": "Diseño «{{name}}» guardado."
     }
   },
   "templates": {
@@ -955,12 +1073,17 @@
       "billingEmail": "Correo electrónico de facturación",
       "clientEmail": "Correo electrónico de la empresa",
       "noEmailFound": "No se encontró ningún correo electrónico",
-      "notConfigured": "No hay ninguna dirección de correo electrónico configurada para este cliente."
+      "notConfigured": "No hay ninguna dirección de correo electrónico configurada para este cliente.",
+      "billingProfile": "Perfil de facturación",
+      "billingProfileNamed": "Perfil de facturación: {{name}}",
+      "billingProfileDefault": "el perfil predeterminado del cliente"
     },
     "fields": {
       "due": "Vencimiento",
       "additionalMessage": "Mensaje adicional",
-      "additionalMessagePlaceholder": "Añada una nota personal para incluirla en el correo electrónico..."
+      "additionalMessagePlaceholder": "Añada una nota personal para incluirla en el correo electrónico...",
+      "from": "De",
+      "useDefault": "Usar remitente predeterminado"
     },
     "preview": "Los correos electrónicos se enviarán desde {{fromEmail}} en nombre de {{companyName}}. Cada factura se adjuntará en formato PDF.",
     "values": {
@@ -1071,7 +1194,9 @@
     "tooltip": {
       "qboNumberPrefix": "QBO #",
       "lastSynced": "Última sincronización:",
-      "viewInQuickBooks": "Ver en QuickBooks"
+      "viewInQuickBooks": "Ver en QuickBooks",
+      "viewInXero": "Ver en Xero",
+      "xeroNumberPrefix": "N.º de Xero "
     }
   },
   "templateManager": {
@@ -1167,7 +1292,10 @@
         "drags": "Arrastres: {{count}}",
         "success": "Éxito: {{count}}",
         "invalid": "No válidos: {{count}}"
-      }
+      },
+      "zoomOut": "Alejar",
+      "zoomIn": "Acercar",
+      "zoomFit": "Ajustar"
     },
     "palette": {
       "tabs": {
@@ -1208,6 +1336,15 @@
         "content": "Contenido",
         "media": "Medios",
         "dynamic": "Dinámico"
+      },
+      "insertTarget": {
+        "page": "Los bloques nuevos se añaden al final de la página.",
+        "inside": "Los bloques nuevos se añaden dentro de {{name}}.",
+        "after": "Los bloques nuevos se añaden justo después de {{name}}.",
+        "label": "Dónde se añaden los bloques nuevos",
+        "insideOption": "Dentro",
+        "afterOption": "Después",
+        "shiftHint": "Shift+click en + para añadirlo después."
       }
     },
     "inspector": {
@@ -1227,7 +1364,77 @@
       "fitSectionToContents": "Ajustar sección al contenido",
       "sectionNoChildContent": "La sección no tiene contenido para ajustar.",
       "apply": "Aplicar",
-      "emptyHelp": "Seleccione un componente para editar sus propiedades."
+      "emptyHelp": "Seleccione un componente para editar sus propiedades.",
+      "size": "Tamaño",
+      "width": "Ancho",
+      "widthValue": "Valor de ancho",
+      "minWidth": "Ancho mín.",
+      "maxWidth": "Ancho máx.",
+      "height": "Alto",
+      "heightValue": "Valor de alto",
+      "minHeight": "Alto mín.",
+      "maxHeight": "Alto máx.",
+      "mediaSource": "Origen de la imagen",
+      "mediaSourceLogo": "Logotipo de la empresa",
+      "mediaSourceCustom": "Imagen personalizada",
+      "mediaSourceLogoHint": "Muestra en cada documento el logotipo de la configuración de marca de su empresa.",
+      "mediaSourceUrl": "URL de origen",
+      "renameInner": "¿Cambiar también el nombre de {{count}} capas internas ({{from}} → {{to}}…)?",
+      "renameInnerApply": "Cambiar nombre",
+      "renameInnerDismiss": "No",
+      "tabsLabel": "Secciones del inspector",
+      "insertDataField": "+ Insertar campo de datos…",
+      "searchDataFields": "Buscar campos de datos…",
+      "dataFields": "Campos de datos",
+      "box": {
+        "top": "Arriba",
+        "right": "Derecha",
+        "bottom": "Abajo",
+        "left": "Izquierda",
+        "all": "Todos los lados",
+        "sameOnAllSides": "Igual en todos los lados",
+        "unit": "Unidad",
+        "customValue": "Valor CSS personalizado conservado hasta que edite un lado: {{value}}"
+      },
+      "examplePlaceholder": "p. ej. {{value}}",
+      "setCount": "{{count}} definidos",
+      "overrides": {
+        "none": "Solo usa los valores predeterminados.",
+        "jump": "Editar en la pestaña {{tab}}",
+        "title": "Definido en este bloque ({{count}}):"
+      },
+      "tabs": {
+        "content": "Contenido",
+        "style": "Estilo",
+        "layout": "Diseño y tamaño"
+      },
+      "sizeModes": {
+        "auto": {
+          "label": "Auto",
+          "widthTooltip": "Lo decide el contenedor (se estira en una pila vertical)",
+          "heightTooltip": "Crecer con el contenido"
+        },
+        "fill": {
+          "label": "Llenar",
+          "widthTooltip": "Ocupar todo el ancho del contenedor"
+        },
+        "fit": {
+          "label": "Ajustar",
+          "widthTooltip": "Reducir para ajustarse al contenido"
+        },
+        "fixed": {
+          "label": "Fijo",
+          "widthTooltip": "Usar el ancho exacto indicado abajo",
+          "heightTooltip": "Usar el alto exacto indicado abajo"
+        }
+      },
+      "barcode": "Código de barras",
+      "barcodeSymbology": "Tipo",
+      "barcodeQr": "Código QR",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Valor",
+      "barcodeHintWorkTag": "Texto o un campo como {{example}} (el enlace al registro). Mantenga el código con al menos unos 20 mm de ancho para que se pueda escanear.",
+      "barcodeHint": "El texto que se codificará. Mantenga el código con al menos unos 20 mm de ancho para que se pueda escanear."
     },
     "shell": {
       "selectedLabel": "Seleccionado:",
@@ -1240,7 +1447,11 @@
       "title": "Configuración de página",
       "description": "Elija preset de papel y margen sin seleccionar el nodo de página oculto.",
       "paperPreset": "Preset de papel",
-      "marginMm": "Margen (mm)"
+      "marginMm": "Margen (mm)",
+      "customSize": "Tamaño personalizado…",
+      "customWidth": "Ancho",
+      "customHeight": "Alto",
+      "customUnit": "Unidad"
     },
     "breadcrumbs": {
       "emptyHelp": "Seleccione un componente del lienzo para ver su jerarquía.",
@@ -1271,7 +1482,13 @@
         "noQuotesFound": "Sin cotizaciones.",
         "selectQuote": "Seleccionar cotización",
         "loadingQuoteDetails": "Cargando detalles de la cotización…",
-        "loadingDocumentDetails": "Cargando detalles del documento…"
+        "loadingDocumentDetails": "Cargando detalles del documento…",
+        "zoom": {
+          "fit": "Ajustar",
+          "actual": "100 %",
+          "label": "Zoom de la vista previa",
+          "fitWithScale": "Ajustar ({{percent}} %)"
+        }
       },
       "tabs": {
         "design": "Diseño",
@@ -1519,6 +1736,12 @@
             },
             "margin": {
               "label": "Margen"
+            },
+            "padding": {
+              "label": "Relleno"
+            },
+            "containerPadding": {
+              "label": "Relleno"
             }
           }
         },
@@ -1606,6 +1829,84 @@
         },
         "totals-rows": {
           "title": "Filas de totales"
+        },
+        "typography": {
+          "title": "Tipografía",
+          "fields": {
+            "fontSize": {
+              "label": "Tamaño"
+            },
+            "fontWeight": {
+              "label": "Grosor",
+              "options": {
+                "400": "Normal (400)",
+                "500": "Medio (500)",
+                "600": "Semi-negrita (600)",
+                "700": "Negrita (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Interlineado"
+            },
+            "textAlign": {
+              "label": "Alineación",
+              "options": {
+                "left": "Izquierda",
+                "center": "Centro",
+                "right": "Derecha",
+                "justify": "Justificado"
+              }
+            },
+            "fontStyle": {
+              "label": "Estilo",
+              "options": {
+                "normal": "Normal",
+                "italic": "Cursiva"
+              }
+            },
+            "color": {
+              "label": "Color"
+            }
+          }
+        },
+        "value-typography": {
+          "title": "Texto del valor",
+          "fields": {
+            "fontSize": {
+              "label": "Tamaño"
+            },
+            "fontWeight": {
+              "label": "Grosor",
+              "options": {
+                "400": "Normal (400)",
+                "500": "Medio (500)",
+                "600": "Semi-negrita (600)",
+                "700": "Negrita (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Interlineado"
+            },
+            "textAlign": {
+              "label": "Alineación",
+              "options": {
+                "left": "Izquierda",
+                "center": "Centro",
+                "right": "Derecha",
+                "justify": "Justificado"
+              }
+            },
+            "fontStyle": {
+              "label": "Estilo",
+              "options": {
+                "normal": "Normal",
+                "italic": "Cursiva"
+              }
+            },
+            "color": {
+              "label": "Color"
+            }
+          }
         }
       }
     },
@@ -1705,10 +2006,80 @@
     },
     "canvas": {
       "templateBoundary": "Límite de la plantilla",
-      "translatableHint": "Se traduce automáticamente al idioma del destinatario. Si edita el texto, se usará su propio texto fijo."
+      "translatableHint": "Se traduce automáticamente al idioma del destinatario. Si edita el texto, se usará su propio texto fijo.",
+      "noLineItems": "Sin conceptos",
+      "moreRows": "+{{count}} filas más",
+      "subtotal": "Subtotal",
+      "tax": "Impuesto",
+      "total": "Total",
+      "buttonLabel": "Botón",
+      "signatureLabel": "Firma",
+      "attachmentsLabel": "Adjuntos",
+      "spacerLabel": "Espaciador",
+      "companyLogo": "Logotipo de la empresa",
+      "insertionMarker": "El siguiente bloque que añada irá aquí",
+      "emptyContainer": "Vacío: selecciónelo y añada bloques desde el panel izquierdo",
+      "localeChip": "Etiquetas traducidas mostradas en {{language}} (Idioma de vista previa)",
+      "badgeDragHint": "Arrastra para mover este bloque"
     },
     "dragOverlay": {
       "component": "Componente"
+    },
+    "arrange": {
+      "up": "Subir",
+      "upHint": "Mover antes dentro de su contenedor (↑)",
+      "down": "Bajar",
+      "downHint": "Mover después dentro de su contenedor (↓)",
+      "out": "Sacar",
+      "outHint": "Sacar de su contenedor y colocarlo justo después (Alt+←)",
+      "into": "Anidar",
+      "intoHint": "Mover al contenedor que está justo antes (Alt+→)",
+      "copy": "Copiar",
+      "copyHint": "Copiar (Ctrl/⌘+C). Seleccione dónde debe ir y pegue con Ctrl/⌘+V.",
+      "paste": "Pegar",
+      "pasteHint": "Pegar en el contenedor seleccionado o después del bloque seleccionado (Ctrl/⌘+V)",
+      "duplicate": "Duplicar",
+      "duplicateHint": "Duplicar justo a continuación (Ctrl/⌘+D)",
+      "copyStyle": "Copiar estilo",
+      "copyStyleHint": "Copiar colores, bordes, espaciado y estilo de texto (Ctrl/⌘+Alt+C)",
+      "pasteStyle": "Pegar estilo",
+      "pasteStyleHint": "Aplicar el estilo copiado a este bloque (Ctrl/⌘+Alt+V)",
+      "delete": "Eliminar",
+      "deleteHint": "Eliminar (tecla Supr)",
+      "title": "Organizar"
+    },
+    "feedback": {
+      "cannotInsert": "No se puede añadir {{block}} aquí.",
+      "insertedOnPage": "Se añadió {{block}} a la página.",
+      "insertedInto": "Se añadió {{block}} a {{parent}}.",
+      "fieldRebound": "{{name}} ahora muestra {{path}}."
+    },
+    "translation": {
+      "translatedAs": "Etiqueta estándar «{{name}}», traducida para cada destinatario",
+      "useFixedText": "Usar texto fijo",
+      "pickStandardLabel": "Texto fijo. Traducir automáticamente…",
+      "searchStandardLabels": "Buscar etiquetas estándar…",
+      "standardLabels": "Etiquetas estándar",
+      "noMatches": "Ninguna etiqueta estándar coincide.",
+      "cancel": "Cancelar"
+    },
+    "outline": {
+      "collapse": "Contraer {{name}}",
+      "expand": "Expandir {{name}}",
+      "title": "Esquema"
+    },
+    "dragPreview": {
+      "noTarget": "Fuera de la página: suelta para cancelar",
+      "noChange": "Se queda donde está",
+      "before": "Antes de {{block}}",
+      "after": "Después de {{block}}",
+      "inside": "Dentro de {{container}}",
+      "dropOnPage": "Suelta en la página para añadir este bloque.",
+      "cancelled": "No se ha movido: suelta sobre la página o el Esquema para colocarlo."
+    },
+    "resize": {
+      "handleHint": "Arrastra para cambiar el tamaño · doble clic para ajustarlo al contenido",
+      "autoValue": "Automático ({{value}})"
     }
   },
   "projectBilling": {
@@ -1774,7 +2145,8 @@
         "selectedCount": "{{count}} seleccionados",
         "clear": "Limpiar selección"
       }
-    }
+    },
+    "emptyTimeHint": "El tiempo y los materiales aprobados nunca se encolan aquí: se facturan en la ejecución de facturación normal o con el botón Generar factura del proyecto."
   },
   "invoiceDesigner": {
     "transforms": {
@@ -1963,7 +2335,9 @@
         "addLine": "+ Línea",
         "clearLines": "Línea única",
         "stackedLinesHint": "Cada línea no vacía se muestra en su propia fila. Cuando todas las líneas están vacías, se muestra la clave de vinculación de la columna indicada arriba.",
-        "removeLine": "Quitar la línea {{index}}"
+        "removeLine": "Quitar la línea {{index}}",
+        "align": "Alineación",
+        "widthPlaceholder": "auto | 50% | 120px"
       },
       "columnTypes": {
         "text": "Texto",
@@ -1998,6 +2372,12 @@
         "groupedRowKey": "Clave de fila agrupada",
         "groupedRowItems": "Elementos de fila agrupada",
         "availableBinding": "Vinculación disponible"
+      },
+      "columnAlign": {
+        "default": "Predeterminado",
+        "left": "Izquierda",
+        "center": "Centro",
+        "right": "Derecha"
       }
     },
     "imagePicker": {
@@ -2016,10 +2396,18 @@
       "clearRowBackground": "Borrar color de fondo de la fila",
       "clearRowTextColor": "Borrar color de texto de la fila",
       "labelColorOverrideNote": "Esta etiqueta conserva su propio color guardado y no hereda el color de texto de la fila establecido arriba. El importe sigue el color de texto de la fila.",
-      "noRows": "Este bloque de totales aún no tiene filas guardadas. Guarde la plantilla y vuelva a abrirla para editar los colores de las filas."
+      "noRows": "Este bloque de totales aún no tiene filas guardadas. Guarde la plantilla y vuelva a abrirla para editar los colores de las filas.",
+      "addRow": "Añadir fila:",
+      "empty": "Aún no hay filas. Añada una abajo.",
+      "moveUp": "Mover {{row}} hacia arriba",
+      "moveDown": "Mover {{row}} hacia abajo",
+      "remove": "Quitar {{row}}",
+      "label": "Etiqueta",
+      "emphasize": "Destacar (estilo de total general)"
     }
   },
   "draftInvoiceDetails": {
+    "sessionExpired": "La sesión expiró mientras se cargaban los detalles de la factura. Inicie sesión de nuevo y vuelva a cargar los detalles.",
     "title": "Detalles de la factura",
     "description": "Edite los metadatos del borrador de factura antes de finalizarlo.",
     "actions": {
@@ -2028,6 +2416,13 @@
     "errors": {
       "invoiceNumberRequired": "El número de factura es obligatorio.",
       "invoiceDateRequired": "La fecha de la factura es obligatoria."
+    },
+    "labels": {
+      "billingProfile": "Perfil de facturación",
+      "billingProfileDefault": "El perfil predeterminado del cliente"
+    },
+    "hints": {
+      "billingProfile": "La factura, sus líneas y la copia enviada por correo siguen este perfil."
     }
   },
   "documentTemplates": {
@@ -2109,7 +2504,8 @@
     "types": {
       "salesOrder": "Orden de venta",
       "packingSlip": "Nota de entrega",
-      "pickList": "Lista de preparación de pedidos"
+      "pickList": "Lista de preparación de pedidos",
+      "workTag": "Etiqueta de trabajo / Etiqueta"
     }
   },
   "errors": {
@@ -2138,7 +2534,8 @@
       "referenceMissing": "La factura, cliente, contrato o registro de facturación seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
       "duplicate": "Ya existe una factura en conflicto. Actualice la página e inténtelo de nuevo.",
       "missingField": "Falta un campo obligatorio de la factura.",
-      "missingFieldNamed": "Falta un campo obligatorio de la factura: {{field}}."
+      "missingFieldNamed": "Falta un campo obligatorio de la factura: {{field}}.",
+      "billingProfileUnavailable": "El perfil de facturación seleccionado no está disponible para este cliente."
     },
     "billingCycle": {
       "notFoundRefresh": "No se encontró el ciclo de facturación. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
@@ -2178,5 +2575,15 @@
     "saving": "Guardando…",
     "saveCorrection": "Guardar corrección",
     "save": "Guardar"
+  },
+  "draftInvoiceAdjustments": {
+    "sessionExpired": "La sesión expiró mientras se cargaban los ajustes de la factura. Inicie sesión de nuevo y vuelva a cargar esta factura.",
+    "signIn": "Iniciar sesión",
+    "retry": "Volver a cargar",
+    "blockedTitle": "Ajustes de factura no disponibles",
+    "blocked": {
+      "exported": "Esta factura está sincronizada con un sistema de contabilidad. Anúlela o emita un crédito por separado en lugar de editar sus conceptos.",
+      "exporting": "Se está preparando una exportación contable para esta factura. Espere a que termine antes de cambiarla."
+    }
   }
 }

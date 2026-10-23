@@ -4,6 +4,7 @@ import React, { useCallback } from 'react';
 import { useDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
+import { ticketDetailsInitialProps } from '../tickets/ticketDetailsInitialProps';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 
@@ -46,7 +47,7 @@ export function useTicketDetailsDrawer(): (ticketId: string) => Promise<void> {
           initialClient={ticketData.client}
           initialContacts={ticketData.contacts}
           initialContactInfo={ticketData.contactInfo}
-          initialCreatedByUser={ticketData.createdByUser}
+          {...ticketDetailsInitialProps(ticketData)}
           initialAdditionalAgents={ticketData.additionalAgents}
           initialAvailableAgents={ticketData.availableAgents}
           initialUserMap={ticketData.userMap}

@@ -7,6 +7,7 @@
 import { extractEmailDomain, normalizeEmailAddress } from '../../../lib/email/addressUtils';
 import type {
   ExtractAssignClientActionConfig,
+  InboundEmailClientMatchTarget,
   InboundEmailExtraction,
   InboundEmailRuleCondition,
   InboundEmailRuleConditionResult,
@@ -157,6 +158,20 @@ export function extractionToRegexSource(extraction: InboundEmailExtraction): str
 /** Trim, collapse internal whitespace, lowercase. Empty result = no value. */
 export function normalizeExtractedValue(value: string | null | undefined): string {
   return (value ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+const CANONICAL_MATCH_TARGETS: InboundEmailClientMatchTarget[] = ['client_name', 'contact_email', 'asset_name'];
+
+export function resolveMatchTargets(config: Pick<ExtractAssignClientActionConfig, 'match_by'>): InboundEmailClientMatchTarget[] {
+  const requested = config.match_by ?? ['client_name'];
+  const selected = new Set(requested);
+  return CANONICAL_MATCH_TARGETS.filter((target) => selected.has(target));
+}
+
+export function extractEmailCandidate(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const candidate = raw.match(/[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?(?:\.[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?)+/i)?.[0];
+  return normalizeEmailAddress(candidate) ?? null;
 }
 
 /**

@@ -52,7 +52,8 @@ describe('workflowBusinessDayScheduling', () => {
         ...baseResolution,
         is24x7: true,
         holidays: [
-          { tenant: 'tenant-1', schedule_id: null, holiday_date: new Date('2026-12-25T00:00:00.000Z'), is_recurring: false }
+          // PostgreSQL DATE is parsed as local midnight, not UTC midnight.
+          { tenant: 'tenant-1', schedule_id: null, holiday_date: new Date(2026, 11, 25), is_recurring: false }
         ]
       }
     });

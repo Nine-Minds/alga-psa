@@ -10,9 +10,18 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 
 const tableMock = vi.fn();
 
+const fakeKnex: any = {
+  fn: { now: () => 'now()' },
+  transaction: (cb: (trx: any) => Promise<unknown>) => cb(fakeKnex),
+};
+
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: vi.fn(async () => ({ knex: { fn: { now: () => 'now()' } } })),
+  createTenantKnex: vi.fn(async () => ({ knex: fakeKnex })),
   tenantDb: vi.fn(() => ({ table: tableMock })),
+}));
+
+vi.mock('../lib/billing/billingMutationLock', () => ({
+  lockTenantBilling: vi.fn(async () => undefined),
 }));
 
 import { hasPermission } from '@alga-psa/auth/rbac';

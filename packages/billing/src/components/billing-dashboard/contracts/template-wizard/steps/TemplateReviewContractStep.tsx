@@ -7,6 +7,8 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { getRecurringAuthoringPreview } from '../../recurringAuthoringPreview';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
+import { useTemplateNeutralRate } from '../../templateNeutralRate';
+import { draftToInput, minutesToHoursText } from '../../prepaidBlockConfigDraft';
 
 interface TemplateReviewContractStepProps {
   data: TemplateWizardData;
@@ -18,6 +20,9 @@ export function TemplateReviewContractStep({
 }: TemplateReviewContractStepProps) {
   const { t } = useTranslation('msp/contracts');
   const formatBillingFrequency = useFormatBillingFrequency();
+
+  // Templates are currency-neutral: rates render as a plain number (see useTemplateNeutralRate).
+  const formatNeutralRate = useTemplateNeutralRate();
 
   const recurringPreview = getRecurringAuthoringPreview({
     cadenceOwner: data.cadence_owner,
@@ -94,6 +99,9 @@ export function TemplateReviewContractStep({
   const productServices = data.product_services;
   const hourlyServices = data.hourly_services;
   const usageServices = data.usage_services ?? [];
+  const prepaidBlockLines = (data.prepaid_block_drafts ?? []).filter((line) =>
+    line.services.some((service) => service.service_id),
+  );
   const formattedBillingFrequency = data.billing_frequency
     ? formatBillingFrequency(data.billing_frequency)
     : t('templateReview.fallback.none', { defaultValue: '—' });
@@ -218,9 +226,24 @@ export function TemplateReviewContractStep({
                         t('templateReview.fallback.unnamedService', { defaultValue: 'Unnamed Service' })}
                     </p>
                     <div className="text-xs text-[rgb(var(--color-text-500))] mt-1">
-                      {t('templateReview.common.quantity', { defaultValue: 'Quantity:' })}{' '}
-                      {service.quantity ?? 1}
+                      {service.pricing_basis === 'unit'
+                        ? t('templateReview.common.recurringQuantity', { defaultValue: 'Recurring quantity:' })
+                        : t('templateReview.common.quantity', { defaultValue: 'Quantity:' })}{' '}
+                      {service.quantity ?? (service.pricing_basis === 'unit' ? 0 : 1)}
                     </div>
+                    {service.pricing_basis === 'unit' && (
+                      <div className="text-xs text-[rgb(var(--color-text-500))] mt-1">
+                        {t('templateReview.fixed.unitRateLabel', { defaultValue: 'Unit rate:' })}{' '}
+                        {service.unit_rate != null
+                          ? t('templateReview.fixed.unitRateNeutral', {
+                              rate: formatNeutralRate(service.unit_rate),
+                              defaultValue: "{{rate}} in the client's currency",
+                            })
+                          : t('templateReview.fixed.unitRateFromCatalog', {
+                              defaultValue: "Catalog price in the client's currency",
+                            })}
+                      </div>
+                    )}
                   </div>
                 ))}
               </>
@@ -319,6 +342,50 @@ export function TemplateReviewContractStep({
             )}
           </CardContent>
         </Card>
+
+        {prepaidBlockLines.length > 0 && (
+          <Card id="template-review-prepaid-blocks">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                {t('templateReview.sections.prepaidBlocks', { defaultValue: 'Prepaid Block Lines' })}
+                <Badge variant="outline">{prepaidBlockLines.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {prepaidBlockLines.map((line, index) => {
+                const parsed = draftToInput(line.block, undefined);
+                const config = 'input' in parsed ? parsed.input : null;
+                return (
+                  <div
+                    key={index}
+                    id={`template-review-prepaid-block-${index}`}
+                    className="border border-[rgb(var(--color-border-200))] rounded-md p-3 bg-[rgb(var(--color-border-50))]"
+                  >
+                    <p className="font-medium text-[rgb(var(--color-text-900))]">
+                      {line.name?.trim() ||
+                        t('wizardPrepaidBlock.lineNamePlaceholder', { defaultValue: 'Prepaid Block' })}
+                    </p>
+                    <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
+                      {line.services
+                        .filter((service) => service.service_id)
+                        .map((service) => service.service_name || service.service_id)
+                        .join(', ')}
+                    </p>
+                    {config && (
+                      <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
+                        {t('templateReview.prepaid.blockSummaryNeutral', {
+                          hours: minutesToHoursText(config.block_minutes),
+                          price: formatNeutralRate(config.block_price),
+                          defaultValue: "{{hours}} hours for {{price}} (in the client's currency)",
+                        })}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

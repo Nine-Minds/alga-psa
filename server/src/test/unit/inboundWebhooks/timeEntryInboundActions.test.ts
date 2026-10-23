@@ -47,6 +47,12 @@ vi.mock('@alga-psa/db', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: mocks.publishEvent,
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/shared/inboundWebhooks/externalEntityMappings', () => ({

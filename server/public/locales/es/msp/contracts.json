@@ -53,6 +53,8 @@
   },
   "status": {
     "active": "Activo",
+    "scheduled": "Programado",
+    "startsOn": "Comienza el {{date}}",
     "draft": "Borrador",
     "expired": "Venció",
     "terminated": "Finalizado"
@@ -118,6 +120,9 @@
       "renewalHandling": "Manejo de renovación"
     },
     "clientAssignment": {
+      "billingProfile": "Perfil de facturación",
+      "billingProfileLabel": "Perfil de facturación de la asignación",
+      "billingProfileNone": "Usar el perfil predeterminado del cliente",
       "clientContractId": "ID de contrato del cliente: {{id}}",
       "creditDrawdownOptOut": "Excluir del consumo de crédito",
       "empty": "Este contrato aún no está asignado a un cliente.",
@@ -174,6 +179,7 @@
     },
     "headerCard": {
       "assignmentLifecycleHint": "El estado del cliente en vivo se controla mediante el ciclo de vida de la asignación que aparece a continuación.",
+      "scheduledExplanation": "Este contrato está activo y comenzará a facturarse el {{date}}.",
       "assignmentStatus": "Estado de asignación",
       "billingFrequencyLabel": "Frecuencia de facturación *",
       "billingFrequencyPlaceholder": "Seleccione la frecuencia de facturación",
@@ -261,7 +267,8 @@
       "lines": "Líneas de contrato",
       "overview": "Descripción general",
       "pricing": "Horarios de precios",
-      "simulator": "Simular"
+      "simulator": "Simular",
+      "discounts": "Descuentos"
     },
     "validation": {
       "billingFrequencyRequired": "Se requiere frecuencia de facturación.",
@@ -294,6 +301,7 @@
     },
     "status": {
       "active": "Activo",
+      "scheduled": "Programado",
       "draft": "Borrador",
       "expired": "Vencido",
       "terminated": "Rescindido"
@@ -325,7 +333,8 @@
       "serviceCountOther": "{{count}} servicios",
       "previouslyConfiguredQuantity": "Cantidad configurada previamente: {{count}} — no se utiliza para la facturación",
       "billedOnPeriodCount": "Facturado según la cantidad informada en cada periodo",
-      "recurringSeats": "{{count}} × {{rate}} (puestos recurrentes)",
+      "recurringSeats": "{{count}} × {{rate}} = {{amount}} (puestos recurrentes)",
+      "recurringSeatsCatalogRate": "{{count}} × precio de catálogo (puestos recurrentes)",
       "bundleAllocation": "Reparto del precio del paquete — no son puestos facturables",
       "setUpRecurringSeats": "Configurar puestos recurrentes",
       "reportPeriodCount": "Informar una cantidad del periodo"
@@ -399,7 +408,10 @@
       "selectClientFirst": "Seleccione primero un cliente",
       "startDateLabel": "Fecha de inicio *",
       "useTenantDefaultsDescription": "Aplicar la configuración de modo de renovación y período de aviso a nivel de organización.",
-      "useTenantDefaultsLabel": "Usar los valores predeterminados de renovación del inquilino"
+      "useTenantDefaultsLabel": "Usar los valores predeterminados de renovación del inquilino",
+      "billingProfileLabel": "Perfil de facturación",
+      "billingProfileNone": "Usar el perfil predeterminado del cliente",
+      "billingProfileHint": "Los cargos de este contrato se facturan a este perfil."
     },
     "po": {
       "amountLabel": "Importe de OC (opcional)",
@@ -504,7 +516,8 @@
       "addFromPresets": "Agregar desde preajustes",
       "collapseLine": "Contraer línea de contrato",
       "createCustom": "Crear personalizada",
-      "expandLine": "Expandir línea de contrato"
+      "expandLine": "Expandir línea de contrato",
+      "resetToStandard": "Restablecer al estándar"
     },
     "billingProfile": {
       "hint": "Los cargos de esta línea se facturan a este perfil, anulando el contrato.",
@@ -531,7 +544,8 @@
       "name": "Nombre",
       "rate": "Tarifa",
       "services": "Servicios",
-      "type": "Tipo"
+      "type": "Tipo",
+      "dates": "Fechas"
     },
     "configuration": {
       "description": "Configuración que se aplica a esta línea de contrato",
@@ -542,7 +556,15 @@
       "minutesValue": "{{count}} minutos",
       "roundUpToNearest": "Redondear al más cercano (minutos)",
       "title": "Configuración de la línea de contrato",
-      "usageInfo": "Las líneas de contrato basadas en uso se configuran por servicio con tarifas por unidad."
+      "usageInfo": "Las líneas de contrato basadas en uso se configuran por servicio con tarifas por unidad.",
+      "invoiceText": "Texto de la línea de factura",
+      "invoiceTextPlaceholder": "Se imprime en la factura; por defecto, el nombre de la línea",
+      "invoiceTextDefault": "Usa el nombre de la línea",
+      "startDate": "Fecha de inicio",
+      "endDate": "Fecha de fin",
+      "inheritsContract": "Inicio del contrato",
+      "inheritsContractEnd": "Fin del contrato",
+      "billedEditExplanation": "Después de facturar una línea, se pueden editar el texto de factura y sus fechas. Las fechas no pueden excluir períodos de servicio ya facturados o reclamados; los precios y cantidades se cambian de forma prospectiva."
     },
     "customRate": "Personalizado",
     "description": {
@@ -550,19 +572,23 @@
       "readOnly": "Este contrato predeterminado gestionado por el sistema es solo de atribución. La creación de líneas de contrato está deshabilitada."
     },
     "dialogs": {
-      "confirmRemove": "¿Quitar línea de contrato \"{{name}}\"?"
+      "confirmRemove": "¿Quitar línea de contrato \"{{name}}\"?",
+      "confirmResetRate": "¿Restablecer esta línea al precio de catálogo estándar? Se eliminará el precio personalizado guardado."
     },
     "empty": {
       "noneAdded": "Aún no se han agregado líneas de contrato.",
       "selectAbove": "Seleccione una línea de contrato arriba para empezar."
     },
     "errors": {
-      "cannotEditWithInvoices": "No se puede editar la línea de contrato: este contrato tiene facturas asociadas. Las líneas de contrato no se pueden editar una vez que se han generado facturas.",
       "failedToCheckEditable": "No se pudo verificar si el contrato se puede editar",
       "failedToLoad": "No se pudieron cargar las líneas de contrato",
       "failedToRefresh": "No se pudieron actualizar las líneas de contrato",
       "failedToRemove": "No se pudo quitar la línea de contrato",
-      "failedToUpdate": "No se pudo actualizar la línea de contrato"
+      "failedToUpdate": "No se pudo actualizar la línea de contrato",
+      "failedToResetRate": "No se pudo restablecer el precio de la línea",
+      "protectedStartDate": "La fecha de inicio debe ser el {{boundary}} o anterior para incluir el historial protegido.",
+      "protectedEndDate": "La fecha de fin debe ser el {{boundary}} o posterior para incluir el historial protegido.",
+      "cannotEditWithInvoices": "No se puede editar la línea de contrato: este contrato tiene facturas asociadas. Las líneas de contrato no se pueden editar una vez que se han generado facturas."
     },
     "loading": {
       "contractLines": "Cargando líneas de contrato",
@@ -590,6 +616,7 @@
       "quantityShort": "Cant.: {{quantity}}",
       "quantityTaxAllocation": "Cantidad (para asignación de impuestos)",
       "rateTaxAllocation": "Tarifa (para asignación de impuestos)",
+      "shareOfLineFee": "Parte de la tarifa de la línea",
       "title": "Servicios ({{count}})",
       "typeLabel": "Servicio {{type}}",
       "unitOfMeasure": "Unidad de medida",
@@ -601,7 +628,77 @@
       "semanticsEffectiveFrom": "Cambios de precios y medición del servicio en vigor desde",
       "prospectiveSemanticsHelp": "Los cambios se aplican en este límite del período de servicio; las cantidades, la medición y los precios anteriores se conservan. Al cambiar la fecha se vuelve a cargar la configuración aplicable para revisarla."
     },
-    "title": "Líneas de contrato"
+    "title": "Líneas de contrato",
+    "rateProvenance": {
+      "standard": "Estándar",
+      "custom": "Personalizado",
+      "unreviewed": "Sin revisar"
+    },
+    "recurringSchedule": {
+      "openPanel": "Programar cambio recurrente e historial",
+      "systemActor": "Sistema",
+      "unknownActor": "Usuario desconocido",
+      "midPeriodToggle": "Aplicar un ajuste de regularización único a mitad de período",
+      "midPeriodToggleHelp": "Solo cantidad. La nueva cantidad permanente comienza en el límite indicado arriba, y un único cargo o crédito prorrateado cubre los días desde la fecha del cambio hasta ese límite. Déjelo desactivado para cambiar solo en el límite.",
+      "midPeriodDate": "La cantidad cambia el",
+      "midPeriodQuantityOnly": "Un ajuste de regularización a mitad de período solo puede cambiar la cantidad. En su lugar, programe el cambio de precio unitario en un límite del período de servicio.",
+      "midPeriodAffected": "El período afectado del {{start}} al {{end}} cambia en {{delta}} unidades.",
+      "midPeriodMath": "{{delta}} unidades × {{rate}} × {{covered}}/{{full}} días = {{amount}} de {{effect}}.",
+      "credit": "crédito",
+      "charge": "cargo",
+      "midPeriodStanding": "A partir del {{boundary}}, la cantidad permanente es {{quantity}}. El ajuste de regularización se agrega al siguiente borrador editable que corresponda (con los descuentos e impuestos aplicables).",
+      "midPeriodNote": "Ajuste de regularización a mitad de período: la nueva cantidad permanente comienza en el límite indicado, y un único cargo o crédito prorrateado cubre el período parcial. Los importes facturados anteriormente nunca se reescriben.",
+      "midPeriodDateRequired": "Elija una fecha dentro de un próximo período sin facturar para el ajuste de regularización único a mitad de período.",
+      "midPeriodFrom": "ajuste de regularización desde el {{date}}",
+      "previewImpact": "Vista previa del impacto en la factura",
+      "invoiceWindowMidPeriod": "Factura estimada del cliente del {{start}} al {{end}}. Incluye los demás artículos de esta ventana de facturación y el ajuste de regularización único a mitad de período.",
+      "invoiceWindowBoundaryOnly": "Factura estimada del cliente del {{start}} al {{end}}. Incluye los demás artículos de esta ventana de facturación; sin ajuste a mitad de período.",
+      "invoiceTotals": "Subtotal después de descuentos: {{subtotal}}. Impuesto: {{tax}}. Total: {{before}} → {{after}}.",
+      "olderUnbilled": "Este límite está en el pasado. La facturación pendiente a partir de esta fecha usará los valores programados; los períodos facturados anteriormente no cambian.",
+      "catalogPriceMissing": "Ningún precio de catálogo en {{currency}} cubre este límite, por lo que no se puede facturar una cantidad positiva. Agregue un precio de catálogo en {{currency}} o elija \"Anular precio unitario\" antes de guardar.",
+      "invoiceImpact": "A partir del {{date}}, el subtotal recurrente de este artículo cambia en {{delta}} hasta {{total}} (antes de descuentos e impuestos). Los períodos facturados anteriormente no cambian.",
+      "discardDirty": "Al cambiar la fecha de entrada en vigor se vuelven a cargar los valores vigentes y se descarta su edición sin guardar. ¿Desea continuar?",
+      "discardDirtyTitle": "¿Descartar la edición sin guardar?",
+      "discardDirtyConfirm": "Descartar y volver a cargar",
+      "invalidQuantity": "La cantidad debe ser un número entero igual o mayor que 0.",
+      "invalidRate": "Introduzca un precio unitario igual o mayor que 0, o cambie al precio de catálogo.",
+      "saved": "Programado: {{quantity}} a partir del {{date}}.",
+      "openPeriod": "próximo límite",
+      "title": "Calendario recurrente de cantidades y precios",
+      "kindProduct": "Producto",
+      "kindService": "Servicio por unidad",
+      "historyLoadError": "No se pudo cargar el historial programado: {{error}}",
+      "protectedPeriod": "Este período ya está {{state}} y está protegido. Elija un límite de período de servicio posterior y sin facturar; los importes de facturas ya facturados nunca se reescriben.",
+      "existingRevisionNotice": "Ya hay un cambio programado vigente desde el {{date}}. Si vuelve a guardar en este mismo límite, se reemplazará (versión {{version}}); los períodos anteriores no cambian.",
+      "boundaryOnly": "Los cambios se aplican solo en un límite del período de servicio. No hay prorrateo, ajuste de regularización ni crédito a mitad de período: los importes facturados anteriormente no cambian y la nueva cantidad o precio se aplica a partir del límite indicado.",
+      "stopHelp": "Cero detiene la facturación recurrente a partir de este período. Se conservan el artículo, su historial y los demás artículos del contrato; agregue una revisión posterior para reanudarla.",
+      "pricingSource": "Origen del precio unitario",
+      "useCatalog": "Usar precio de catálogo",
+      "override": "Anular precio unitario",
+      "inherited": "Heredado del catálogo",
+      "currentEffective": "Vigente para los períodos desde el {{date}}: {{quantity}} × {{rate}} ({{source}}).",
+      "sourceCatalog": "precio de catálogo",
+      "sourceOverride": "precio anulado explícitamente",
+      "coverage": "Abarca del {{start}} al {{end}} ({{currency}}).",
+      "catalogSource": "Precio de catálogo {{priceId}} vigente desde el {{effectiveDate}}; al ser heredado, cualquier cambio posterior en el catálogo se aplica automáticamente.",
+      "baselineRow": "Valores originales (sin revisión): {{quantity}} × {{rate}}.",
+      "replace": "Reemplazar cambio programado",
+      "schedule": "Programar cambio",
+      "scheduledPeriods": "Períodos programados",
+      "effectiveDate": "Vigente desde",
+      "quantity": "Cantidad",
+      "unitPrice": "Precio unitario",
+      "version": "Versión",
+      "status": "Estado",
+      "actor": "Autor",
+      "baselineLabel": "Valores originales",
+      "catalogLabel": "Catálogo",
+      "statusInForce": "Vigente",
+      "statusScheduled": "Programado",
+      "statusSuperseded": "Reemplazado",
+      "supersededHistory": "Ediciones pendientes reemplazadas ({{count}})",
+      "supersededBy": "Reemplazado por"
+    }
   },
   "contractLineEdit": {
     "actions": {
@@ -614,7 +711,10 @@
     },
     "fields": {
       "billingTimingQuestion": "¿Cuándo se debe facturar esta línea?",
-      "rate": "Tarifa"
+      "rate": "Tarifa",
+      "invoiceText": "Texto de la línea de factura",
+      "invoiceTextPlaceholder": "Se imprime en la factura; por defecto, el nombre de la línea",
+      "invoiceTextHelp": "Este texto se imprime textualmente en la línea de factura recurrente."
     },
     "sections": {
       "billingTiming": "Momento de facturación",
@@ -733,13 +833,15 @@
       "hourlyTitle": "Por hora",
       "usageDescription": "Facturar por unidades consumidas.",
       "usageTitle": "Basado en uso",
-      "fixedSemantics": "Facture un precio de paquete o una cantidad recurrente × tarifa por unidad en cada período."
+      "fixedSemantics": "Facture un precio de paquete o una cantidad recurrente × tarifa por unidad en cada período.",
+      "prepaidBlockTitle": "Bloque prepagado",
+      "prepaidBlockDescription": "Facture un bloque de horas por adelantado; el tiempo registrado lo consume y el siguiente bloque se factura cuando se agota."
     },
     "billingTiming": {
       "advance": "Anticipado (facturar al inicio del período)",
       "arrears": "A plazo vencido (facturar al final del período)"
     },
-    "billingTimingHelp": "La facturación anticipada es habitual para tarifas fijas; a plazo vencido para servicios basados en tiempo/uso.",
+    "billingTimingHelp": "Las líneas fijas pueden facturarse por adelantado o al vencimiento. Las líneas por horas y por uso siempre se facturan al vencimiento, después de realizar el trabajo.",
     "chooseBillingModel": "Elija un modelo de facturación *",
     "chooseBillingModelDescription": "Seleccione el comportamiento de facturación que se adapte a esta oferta.",
     "contractLineNameLabel": "Nombre de la línea de contrato *",
@@ -801,13 +903,21 @@
       "usageServiceRequired": "Se requiere al menos un servicio basado en uso",
       "usageServiceSelectRequired": "Servicio {{index}}: seleccione un servicio",
       "invalidQuantity": "La cantidad debe ser cero o mayor.",
-      "recurringUnitRateRequired": "Ingrese una tarifa por unidad para cada servicio recurrente."
+      "recurringUnitRateRequired": "Ingrese una tarifa por unidad para cada servicio recurrente.",
+      "prepaidBlockCurrencyRequired": "El contrato necesita una moneda antes de poder fijar el precio de un bloque prepagado."
     },
     "fixedServicesPricingIntent": "Elija un precio de paquete o puestos/unidades recurrentes para cada servicio.",
     "fixedServicesPricingExplanation": "Las asignaciones del paquete comparten la tarifa base de la línea. Los puestos recurrentes facturan la cantidad acordada × tarifa por unidad en cada período sin registros de uso.",
     "recurringQuantity": "Cantidad recurrente",
     "allocationQuantity": "Cantidad de asignación",
-    "bundleBaseRateHelp": "Tarifa recurrente para los servicios con precio de paquete. Los puestos recurrentes se facturan por separado a cantidad × tarifa por unidad."
+    "bundleBaseRateHelp": "Tarifa recurrente para los servicios con precio de paquete. Los puestos recurrentes se facturan por separado a cantidad × tarifa por unidad.",
+    "invoiceTextLabel": "Texto de la línea de factura",
+    "invoiceTextPlaceholder": "Se imprime en la factura; por defecto, el nombre de la línea",
+    "invoiceTextHelp": "Este texto se imprime textualmente en la línea de factura recurrente.",
+    "startDateLabel": "Fecha de inicio de la línea",
+    "endDateLabel": "Fecha de fin de la línea",
+    "prepaidBlockTitle": "Bloque prepagado",
+    "prepaidBlockDescription": "Defina el tamaño y el precio del bloque. El precio por defecto es horas x tarifa del servicio y se guarda como un importe explícito."
   },
   "pricingSchedules": {
     "list": {
@@ -968,6 +1078,7 @@
       "published": "Publicada"
     },
     "toasts": {
+      "contractActivated": "Contrato activado",
       "draftDiscarded": "Borrador descartado",
       "failedToActivateContract": "No se pudo activar el contrato",
       "failedToDeleteContract": "No se pudo eliminar el contrato",
@@ -1124,7 +1235,7 @@
     "composition": {
       "addContractLinesBeforeManaging": "Agregue líneas de contrato a esta plantilla antes de gestionar los servicios.",
       "additionalPlans": "Planes adicionales",
-      "bucketSummary": "Bloque: {{minutes}} min • Exceso ${{overage}}",
+      "bucketSummary": "Bloque: {{minutes}} min • Exceso {{overage}}",
       "closeManager": "Cerrar gestor",
       "editRate": "Editar tarifa",
       "fixedFeeBundles": "Paquetes de tarifa fija",
@@ -1146,7 +1257,14 @@
       "serviceFallback": "Servicio",
       "title": "Composición de la plantilla",
       "unitLabel": "Unidad:",
-      "usageBasedPlans": "Planes basados en uso"
+      "usageBasedPlans": "Planes basados en uso",
+      "recurringQuantityLabel": "Cantidad recurrente:",
+      "unitRateLabel": "Tarifa unitaria:",
+      "hourlyRateLabel": "Tarifa por hora:",
+      "unitRateFromCatalog": "Precio de catálogo en la moneda del cliente",
+      "unitAmountLabel": "Importe recurrente:",
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}",
+      "prepaidBlockKind": "Bloque prepagado"
     },
     "editBasicsTitle": "Editar información básica de la plantilla",
     "editGuidanceTitle": "Editar orientación de la plantilla",
@@ -1173,6 +1291,9 @@
     },
     "loadingTemplate": "Cargando plantilla...",
     "servicesLabel": "Servicios",
+    "summary": {
+      "clientCurrency": "Moneda del cliente"
+    },
     "templateBadge": "Plantilla",
     "templateNotFound": "Plantilla de contrato no encontrada",
     "templateSnapshotTitle": "Captura de la plantilla",
@@ -1217,6 +1338,25 @@
       "hypothetical": "Perfil de cliente hipotético",
       "open": "Simular",
       "title": "Simulación de plantilla"
+    },
+    "discounts": {
+      "title": "Descuentos de contrato predeterminados",
+      "help": "Cada contrato de cliente recibe una copia editable independiente. Los descuentos globales se aplican a sus líneas aptas.",
+      "invalid": "Introduce un nombre, un valor positivo y una fecha de inicio.",
+      "remove": "Eliminar",
+      "name": "Nombre del descuento",
+      "percentage": "Porcentaje",
+      "fixed": "Importe fijo",
+      "value": "Valor",
+      "startDate": "Comienza el",
+      "endDate": "Finaliza (opcional)",
+      "add": "Añadir descuento predeterminado",
+      "chooseLine": "Elige una línea de plantilla",
+      "chooseService": "Elige un servicio"
+    },
+    "prepaidBlock": {
+      "setup": "Vender como bloque prepagado",
+      "blockNeutral": "{{hours}} h / {{price}} (en la moneda del cliente)"
     }
   },
   "quickStart": {
@@ -1337,6 +1477,7 @@
       "hourlyServices": "Servicios por hora",
       "products": "Productos",
       "reviewCreate": "Revisar y crear",
+      "templateLines": "Líneas de la plantilla",
       "usageBasedServices": "Servicios basados en uso"
     },
     "title": {
@@ -1372,7 +1513,11 @@
       "selectClientBeforeDraft": "Seleccione un cliente antes de guardar como borrador",
       "selectProductForEachLine": "Seleccione un producto para cada línea de producto",
       "startDateRequired": "La fecha de inicio es obligatoria",
-      "unsupportedRecurringAuthoringCombination": "Combinación de creación recurrente no admitida para servicios de {{lineType}}: la cadencia de aniversario de contrato actualmente admite las frecuencias de facturación {{supportedFrequencies}}. {{billingFrequency}} aún no es compatible. Use una de las frecuencias admitidas o facture según el calendario de facturación del cliente en su lugar."
+      "unsupportedRecurringAuthoringCombination": "Combinación de creación recurrente no admitida para servicios de {{lineType}}: la cadencia de aniversario de contrato actualmente admite las frecuencias de facturación {{supportedFrequencies}}. {{billingFrequency}} aún no es compatible. Use una de las frecuencias admitidas o facture según el calendario de facturación del cliente en su lugar.",
+      "recurringUnitRateRequired": "Introduzca una tarifa unitaria para cada servicio recurrente.",
+      "recurringQuantityWholeNumber": "La cantidad recurrente debe ser un número entero.",
+      "fixedQuantityInvalid": "La cantidad debe ser cero o mayor.",
+      "fixedLineNoService": "La línea fija \"{{lineName}}\" tiene un importe recurrente pero ningún servicio sobre el que facturarlo. Añada un servicio antes de finalizar."
     },
     "nav": {
       "back": "Atrás",
@@ -1386,6 +1531,27 @@
     "simulation": {
       "description": "Pruebe este borrador sin guardar con actividad prevista. La simulación no guarda ni emite nada.",
       "title": "Simular antes de crear"
+    },
+    "fixedLines": {
+      "addLine": "Añadir línea fija",
+      "nameLabel": "Nombre de la línea (opcional)",
+      "namePlaceholder": "Línea fija {{number}}",
+      "removeLine": "Quitar línea fija",
+      "noServiceWarning": "Esta línea tiene un importe recurrente pero ningún servicio sobre el que facturarlo. Añada un servicio antes de finalizar; aún puede guardarla como borrador."
+    },
+    "recurringChange": {
+      "title": "Confirmar el cambio del total recurrente",
+      "message": "Esto cambia el valor recurrente mensual estimado del contrato de {{before}} a {{after}}.",
+      "confirm": "Confirmar y continuar",
+      "cancel": "Volver"
+    },
+    "discounts": {
+      "help": "Los descuentos globales se aplican a cada cargo apto que factura este contrato. Se crean junto con el contrato al finalizar la configuración y la simulación de abajo los calcula.",
+      "draftDialog": {
+        "title": "¿Guardar el borrador sin descuentos?",
+        "message": "Un borrador guardado conserva solo sus líneas, por lo que los descuentos añadidos aquí no se guardan con él. Finalice la configuración para crearlos junto con el contrato o añádalos después en la pestaña Descuentos del contrato.",
+        "confirm": "Guardar el borrador igualmente"
+      }
     }
   },
   "wizardBasics": {
@@ -1512,6 +1678,11 @@
       },
       "selectTemplateOptional": "Seleccione una plantilla (opcional)",
       "startFromTemplate": "Comenzar desde una plantilla"
+    },
+    "billingProfile": {
+      "label": "Perfil de facturación",
+      "none": "Usar el perfil predeterminado del cliente",
+      "hint": "Los cargos de este contrato se facturan a este perfil, salvo que una línea lo sustituya."
     }
   },
   "wizardFixed": {
@@ -1519,7 +1690,8 @@
     "baseRate": {
       "hint": "Tarifa recurrente total para todos los servicios fijos combinados.",
       "label": "Tarifa base recurrente",
-      "placeholder": "0.00"
+      "placeholder": "0.00",
+      "hintWithUnits": "Tarifa recurrente total de los servicios del paquete. Los puestos/unidades recurrentes se facturan aparte como cantidad × tarifa unitaria y no forman parte de esta tarifa."
     },
     "description": "Configure servicios que se facturan a una tarifa fija en cada ciclo de facturación. Todavía puede registrar tiempo, pero la facturación se basa en este importe fijo.",
     "emptyState": "Aún no se han agregado servicios de tarifa fija. Haga clic en “Agregar servicio” arriba o “Omitir” para continuar.",
@@ -1536,12 +1708,15 @@
         "invoiceWindow": "Ventana de facturación:",
         "recurringRate": "Tarifa recurrente:",
         "service": "Servicio:",
-        "services": "Servicios:"
+        "services": "Servicios:",
+        "recurringUnits": "Puestos/unidades recurrentes:",
+        "recurringTotal": "Total por período:"
       },
       "materializedPeriods": {
         "tooltip": "Vista previa de los próximos periodos de servicio y las ventanas de facturación que se generarían para ellos según la configuración actual. Permiten verificar la cadencia antes de guardar — las facturas reales se generan después en la ejecución de facturación."
       },
-      "title": "Vista previa recurrente antes de guardar"
+      "title": "Vista previa recurrente antes de guardar",
+      "unitRow": "{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}"
     },
     "proration": {
       "label": "Ajustar por períodos parciales",
@@ -1552,7 +1727,15 @@
       "label": "Servicios",
       "quantityLabel": "Cantidad",
       "selectServicePlaceholder": "Seleccione un servicio",
-      "serviceItemLabel": "Servicio {{index}}"
+      "serviceItemLabel": "Servicio {{index}}",
+      "catalogDefaultHint": "No hay precio de catálogo en {{currency}}; se usa el valor predeterminado del catálogo.",
+      "recurringQuantityLabel": "Cantidad recurrente",
+      "allocationQuantityLabel": "Cantidad de asignación",
+      "noCurrencyPrice": "No hay precio en {{currency}} en el catálogo. Introduzca una tarifa unitaria."
+    },
+    "advanceSuggestion": {
+      "message": "Con facturación a plazo vencido, esta línea no se puede facturar hasta que termine su primer período de servicio. Con facturación anticipada según el ciclo del contrato, se factura en la fecha de inicio.",
+      "action": "Facturar por anticipado según el ciclo del contrato"
     }
   },
   "wizardProducts": {
@@ -1600,7 +1783,8 @@
       "serviceItem": "Servicio {{index}}",
       "setBucketOfHours": "Establecer bloque de horas",
       "noCurrencyPriceEnterRate": "No hay precio en {{currency}} en el catálogo. Introduzca una tarifa por hora.",
-      "noCurrencyPriceWithLegacyHint": "No hay precio en {{currency}} en el catálogo. Tarifa predeterminada heredada: {{rate}}. Introduzca una tarifa por hora en {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "No hay precio en {{currency}} en el catálogo. Tarifa predeterminada heredada: {{rate}}. Introduzca una tarifa por hora en {{currency}}.",
+      "catalogDefaultRateHint": "No hay precio de catálogo en {{currency}}; se usa el valor predeterminado del catálogo."
     },
     "minimumBillableTime": {
       "hint": "p. ej., 15 minutos: cualquier entrada de tiempo inferior a esto se redondeará hacia arriba",
@@ -1660,7 +1844,8 @@
       "unitOfMeasureHint": "Elija la unidad en la que se factura este servicio.",
       "unitOfMeasurePlaceholder": "p. ej., GB, llamada a API, usuario",
       "noCurrencyPriceEnterRate": "No hay precio en {{currency}} en el catálogo. Introduzca una tarifa unitaria.",
-      "noCurrencyPriceWithLegacyHint": "No hay precio en {{currency}} en el catálogo. Tarifa predeterminada heredada: {{rate}}. Introduzca una tarifa unitaria en {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "No hay precio en {{currency}} en el catálogo. Tarifa predeterminada heredada: {{rate}}. Introduzca una tarifa unitaria en {{currency}}.",
+      "catalogDefaultRateHint": "No hay precio de catálogo en {{currency}}; se usa el valor predeterminado del catálogo."
     },
     "summary": {
       "labels": {
@@ -1680,10 +1865,13 @@
       "fixedFeeServices": "Servicios de tarifa fija",
       "products": "Productos",
       "hourlyServices": "Servicios por hora",
-      "usageBasedServices": "Servicios basados en uso"
+      "usageBasedServices": "Servicios basados en uso",
+      "fixedFeeServicesNumbered": "Servicios de tarifa fija ({{number}})",
+      "prepaidBlocks": "Líneas de bloques prepagados"
     },
     "fields": {
       "client": "Cliente",
+      "billingProfile": "Perfil de facturación",
       "contractName": "Nombre del contrato",
       "billingFrequency": "Frecuencia de facturación",
       "currency": "Moneda",
@@ -1692,6 +1880,9 @@
       "renewalMode": "Modo de renovación",
       "noticePeriod": "Período de aviso",
       "renewalTerm": "Plazo de renovación"
+    },
+    "billingProfile": {
+      "clientDefault": "El perfil predeterminado del cliente"
     },
     "fallback": {
       "notSelected": "No seleccionado",
@@ -1745,23 +1936,14 @@
         "other": "{{count}} servicios"
       },
       "monthlyBaseRate": "Tarifa base mensual:",
-      "partialPeriodAdjustment": "Ajuste por período parcial:"
+      "partialPeriodAdjustment": "Ajuste por período parcial:",
+      "recurringUnitRow": "{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}"
     },
     "recurring": {
       "cadenceOwner": {
         "label": "Propietario de la cadencia:",
         "contractAnniversary": "Aniversario del contrato",
         "clientBillingSchedule": "Calendario de facturación del cliente"
-      },
-      "firstInvoice": {
-        "contract": {
-          "advance": "Primera factura: facturar en la ventana de aniversario del contrato que abre el primer período de servicio cubierto.",
-          "arrears": "Primera factura: facturar en la siguiente ventana de aniversario del contrato después del cierre del primer período de servicio cubierto."
-        },
-        "client": {
-          "advance": "Primera factura: facturar en la primera ventana del calendario de facturación del cliente que cubre el período de servicio.",
-          "arrears": "Primera factura: facturar en la siguiente ventana del calendario de facturación del cliente después del cierre del primer período de servicio cubierto."
-        }
       },
       "partialPeriod": {
         "enabled": "Los períodos parciales ajustan la tarifa recurrente a la porción cubierta del período de servicio.",
@@ -1805,7 +1987,8 @@
     "total": {
       "title": "Total mensual estimado",
       "description": "Solo cargos fijos. Los servicios por hora y de uso se facturan por separado según el uso real.",
-      "perMonth": "por mes"
+      "perMonth": "por mes",
+      "savedDraftValue": "Valor del borrador guardado: {{amount}}"
     },
     "finalChecklist": {
       "title": "Antes de finalizar:",
@@ -1813,7 +1996,38 @@
       "itemPo": "Confirme los requisitos de OC (si los hay)",
       "itemDates": "Verifique las fechas de inicio y finalización",
       "itemEditLater": "Recuerde: puede editar el contrato más tarde si es necesario"
+    },
+    "prepaid": {
+      "badgeCount_one": "{{count}} línea",
+      "badgeCount_other": "{{count}} líneas",
+      "blockSummary": "{{hours}} horas por {{price}}",
+      "expiresAfter_one": "caduca tras {{count}} mes",
+      "expiresAfter_other": "caduca tras {{count}} meses",
+      "neverExpires": "no caduca"
     }
+  },
+  "wizardTemplateLines": {
+    "title": "Líneas de la plantilla",
+    "description": "Cada línea de la plantilla se crea en el contrato con su propio nombre, frecuencia de facturación, servicios y tarifas. Cambie cualquier valor a continuación para anularlo solo en este contrato; los valores sin modificar se copian de la plantilla. Las tarifas están en {{currency}}.",
+    "loading": "Cargando líneas de la plantilla...",
+    "noTemplate": "Seleccione una plantilla en el primer paso.",
+    "emptyTemplate": "Esta plantilla no tiene líneas, por lo que no hay nada que crear.",
+    "bucketPools_one": "{{count}} bolsa de horas copiada de la plantilla",
+    "bucketPools_other": "{{count}} bolsas de horas copiadas de la plantilla",
+    "lineName": "Nombre de la línea",
+    "billingFrequency": "Frecuencia de facturación",
+    "fixedBaseRate": "Tarifa base fija",
+    "fixedBaseRateHint": "Tarifa de la plantilla {{rate}}. Déjelo vacío para conservarla.",
+    "fixedBaseRateNone": "La plantilla no establece una tarifa de línea; los servicios siguen los precios de su catálogo.",
+    "minimumBillableTime": "Tiempo mínimo facturable (minutos)",
+    "roundUpToNearest": "Redondear al más cercano (minutos)",
+    "quantity": "Cantidad",
+    "hourlyRate": "Tarifa por hora",
+    "unitRate": "Tarifa unitaria",
+    "serviceRate": "Tarifa del servicio",
+    "noCurrencyPrice": "No hay precio en {{currency}} para este servicio. Introduzca una tarifa o no se podrá crear el contrato.",
+    "templateRateNote": "De la plantilla (el importe no tiene moneda asociada).",
+    "reviewTitle": "Líneas creadas a partir de la plantilla"
   },
   "templateWizard": {
     "title": {
@@ -1856,7 +2070,8 @@
           "hourly": "Por hora",
           "usage": "Uso"
         }
-      }
+      },
+      "recurringQuantityInvalid": "La cantidad recurrente de «{{serviceName}}» debe ser un número entero de cero o más, y cualquier tarifa unitaria debe ser un importe válido."
     }
   },
   "templateBasics": {
@@ -1902,11 +2117,12 @@
       "advance": "Anticipado: facturar al inicio del período"
     },
     "fields": {
-      "billingTiming": "Momento de facturación",
+      "billingTiming": "Momento de facturación de las líneas de tarifa fija",
       "adjustPartialPeriods": "Ajustar por períodos parciales",
       "services": "Servicios",
       "serviceNumber": "Servicio {{index}}",
-      "quantityOptional": "Cantidad (opcional)"
+      "quantityOptional": "Cantidad (opcional)",
+      "recurringQuantity": "Cantidad recurrente"
     },
     "placeholders": {
       "billingTiming": "Seleccione el momento de facturación",
@@ -1914,7 +2130,9 @@
     },
     "help": {
       "adjustPartialPeriods": "Use esta opción cuando los contratos creados a partir de la plantilla deban escalar la tarifa recurrente si el servicio comienza o termina dentro de un período.",
-      "quantity": "Cantidad sugerida al crear contratos"
+      "quantity": "Cantidad sugerida al crear contratos",
+      "recurringQuantity": "Número inicial de puestos/unidades. Se puede ajustar al crear un contrato a partir de esta plantilla.",
+      "unitRateOptional": "Opcional. Deje la tarifa unitaria vacía para usar el precio de catálogo de este servicio en la moneda del cliente al crear un contrato."
     },
     "preview": {
       "unknownService": "Servicio desconocido",
@@ -2013,7 +2231,8 @@
       "fixedFeeServices": "Servicios de tarifa fija",
       "products": "Productos",
       "hourlyServices": "Servicios por hora",
-      "usageBasedServices": "Servicios basados en uso"
+      "usageBasedServices": "Servicios basados en uso",
+      "prepaidBlocks": "Líneas de bloques prepagados"
     },
     "fields": {
       "templateName": "Nombre de la plantilla",
@@ -2036,7 +2255,8 @@
       "quantity": "Cantidad:",
       "bucket": "Bloque:",
       "enabled": "Habilitado",
-      "disabled": "Deshabilitado"
+      "disabled": "Deshabilitado",
+      "recurringQuantity": "Cantidad recurrente:"
     },
     "fixed": {
       "cadenceOwnerLabel": "Propietario de la cadencia:",
@@ -2051,7 +2271,10 @@
       },
       "partialPeriodLabel": "Ajuste por período parcial:",
       "serviceLabel": "Servicio:",
-      "invoiceWindowLabel": "Ventana de facturación:"
+      "invoiceWindowLabel": "Ventana de facturación:",
+      "unitRateLabel": "Tarifa unitaria:",
+      "unitRateFromCatalog": "Precio de catálogo en la moneda del cliente",
+      "unitRateNeutral": "{{rate}} en la moneda del cliente"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Tiempo mínimo facturable:",
@@ -2070,6 +2293,9 @@
       "unitSingular": "unidad",
       "rolloverEnabled": "Acumulación habilitada",
       "period": "Período: {{period}}"
+    },
+    "prepaid": {
+      "blockSummaryNeutral": "{{hours}} horas por {{price}} (en la moneda del cliente)"
     }
   },
   "templatePreview": {
@@ -2081,7 +2307,8 @@
     },
     "selectedHeading": "Servicios seleccionados de {{type}} ({{count}})",
     "labels": {
-      "qty": "Cant.:"
+      "qty": "Cant.:",
+      "recurringUnits": "Puestos/unidades recurrentes"
     },
     "removeDialog": {
       "title": "Quitar preajuste de línea de contrato",
@@ -2341,7 +2568,8 @@
       "tieredPricing": "precios por niveles",
       "timing": {
         "advance": "Facturar por adelantado",
-        "arrears": "Facturar a período vencido"
+        "arrears": "Facturar a período vencido",
+        "arrearsOnly": "Facturado a período vencido"
       },
       "title": "Cambios del contrato",
       "types": {
@@ -2437,7 +2665,8 @@
       "conflict": "Este cambio del contrato entra en conflicto con un registro existente. Actualice la página e inténtelo de nuevo.",
       "notAllowed": "Uno de los valores del contrato no está permitido. Revise el formulario e inténtelo de nuevo.",
       "missingField": "Falta un campo obligatorio del contrato.",
-      "missingFieldNamed": "Falta un campo obligatorio del contrato: {{field}}."
+      "missingFieldNamed": "Falta un campo obligatorio del contrato: {{field}}.",
+      "deleteFailed": "Algo salió mal al eliminar este contrato. Indique la referencia {{ref}} al contactar con soporte."
     },
     "wizard": {
       "permissions": {
@@ -2453,7 +2682,10 @@
       "missingClient": "Al contrato en borrador le falta la asignación de cliente",
       "invalidStartDate": "El contrato en borrador tiene una fecha de inicio no válida",
       "recordInvalid": "Uno de los registros seleccionados del asistente de contratos ya no es válido. Actualice la página e inténtelo de nuevo.",
-      "duplicate": "Ya existe un registro coincidente del asistente de contratos."
+      "duplicate": "Ya existe un registro coincidente del asistente de contratos.",
+      "resumeUnsupportedShape": "Este borrador no se puede reanudar en el asistente sin cambiar sus precios: {{lines}}",
+      "fixedLineNoService": "La línea fija \"{{lineName}}\" tiene un importe recurrente pero ningún servicio sobre el que facturarlo. Añada un servicio antes de finalizar.",
+      "standingTerms": "Este borrador tiene condiciones de descuento recurrentes. Edite las pestañas Líneas y Descuentos para conservarlas."
     },
     "pricingSchedule": {
       "endAfterEffective": "La fecha de fin debe ser posterior a la fecha de entrada en vigor",
@@ -2478,6 +2710,233 @@
       "activatedContractIdRequired": "Se requiere el id del contrato de renovación activado.",
       "contractNotActive": "El contrato de renovación activado ya no está activo. Actualice la página e inténtelo de nuevo.",
       "manualRetryDueOnly": "El reintento manual solo está disponible para los ciclos de renovación vencidos."
+    }
+  },
+  "wizardFirstInvoice": {
+    "loading": "Comprobando el calendario de facturación del cliente…",
+    "arrearsPreviewNote": "Hasta entonces, una vista previa de facturas de este cliente no tiene nada que facturar para esta línea.",
+    "unavailable": {
+      "missingStartDate": "Elija una fecha de inicio para ver cuándo se factura por primera vez este contrato.",
+      "unsupportedFrequency": "No se muestra la fecha de la primera factura porque la facturación según el ciclo del contrato no admite esta frecuencia. Elija una frecuencia admitida o facture según el calendario del cliente.",
+      "clientSchedule": "Esta línea se factura según el calendario de facturación del cliente. No se pudo cargar ese calendario, por lo que no se muestra ninguna fecha."
+    },
+    "contract": {
+      "arrears": "Facturada a plazo vencido según el ciclo del contrato: la primera factura estará disponible el {{date}}, cuando termine el primer período de servicio.",
+      "advance": "Facturada por anticipado según el ciclo del contrato: la primera factura está disponible desde el {{date}}, la fecha de inicio del contrato."
+    },
+    "client": {
+      "arrears": "Facturada a plazo vencido según el calendario de facturación del cliente: la primera factura estará disponible el {{date}}, cuando termine el período de facturación actual del cliente.",
+      "advance": "Facturada por anticipado según el calendario de facturación del cliente: la primera factura está disponible desde el {{date}}, el inicio del período de facturación del cliente que incluye la fecha de inicio del contrato."
+    }
+  },
+  "wizardCreated": {
+    "title": "Contrato creado",
+    "heading": "Se creó {{contractName}}",
+    "firstInvoiceHeading": "Primera factura",
+    "done": "Listo"
+  },
+  "sellHourBlockNote": {
+    "text": "Una bolsa de horas del contrato solo factura el exceso. Para cobrar por adelantado un bloque de horas, agregue una línea de Bloque prepagado a este contrato."
+  },
+  "billingTimingField": {
+    "arrears": "Al vencimiento",
+    "fixedHelp": "Las líneas fijas pueden facturarse por adelantado o al vencimiento.",
+    "nonFixedHelp": "Las líneas por horas y por uso siempre se facturan al vencimiento, después de realizar el trabajo.",
+    "options": {
+      "advance": "Por adelantado (facturar al inicio del periodo)",
+      "arrears": "Al vencimiento (facturar al final del periodo)"
+    }
+  },
+  "contractDiscounts": {
+    "title": "Descuentos",
+    "description": "Cada contrato de cliente tiene una copia editable propia. Los descuentos del contrato se aplican a los cargos elegibles de sus líneas facturadas.",
+    "loading": "Cargando descuentos…",
+    "empty": "Este contrato aún no tiene descuentos configurados.",
+    "actions": {
+      "attach": "Vincular",
+      "pickShared": "Vincular descuento existente",
+      "detach": "Desvincular de este contrato",
+      "toggleActive": "Cambiar estado del descuento",
+      "add": "Añadir descuento",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "saving": "Guardando…"
+    },
+    "attachment": {
+      "shared": "Vinculación al contrato",
+      "line": "Vinculación a línea"
+    },
+    "sharedEditNotice": "Los cambios solo afectan a este contrato de cliente. Editar la plantilla no modifica las copias de contratos existentes.",
+    "dialog": {
+      "contractAttachmentLineScopeLocked": "Este descuento está asociado a este contrato de cliente. Para limitarlo a una línea, desvincúlelo y cree un descuento específico para esa línea.",
+      "createTitle": "Añadir descuento",
+      "editTitle": "Editar descuento"
+    },
+    "columns": {
+      "name": "Nombre",
+      "value": "Valor",
+      "scope": "Ámbito",
+      "line": "Línea de contrato",
+      "dates": "Fechas",
+      "status": "Estado"
+    },
+    "status": {
+      "active": "Activo",
+      "inactive": "Inactivo"
+    },
+    "scopes": {
+      "invoice": "Todos los cargos elegibles",
+      "contract": "Este contrato",
+      "service": "Un servicio",
+      "line": "Una línea de contrato"
+    },
+    "values": {
+      "unnamedLine": "Línea sin nombre"
+    },
+    "types": {
+      "percentage": "Porcentaje",
+      "fixed": "Importe fijo"
+    },
+    "fields": {
+      "name": "Nombre",
+      "namePlaceholder": "p. ej. Fidelidad 10 %",
+      "type": "Tipo",
+      "percentValue": "Porcentaje (0–100)",
+      "fixedValue": "Importe",
+      "startDate": "Fecha de inicio",
+      "endDate": "Fecha de fin",
+      "line": "Línea de contrato",
+      "linePlaceholder": "Selecciona una línea de contrato",
+      "scope": "Ámbito",
+      "priority": "Prioridad",
+      "priorityPlaceholder": "Opcional",
+      "service": "Servicio",
+      "servicePlaceholder": "Selecciona un servicio",
+      "active": "Activo"
+    },
+    "errors": {
+      "loadFailed": "No se pudieron cargar los descuentos.",
+      "saveFailed": "No se pudo guardar el descuento."
+    }
+  },
+  "prepaidBlock": {
+    "errors": {
+      "hoursInvalid": "Introduzca un tamaño de bloque mayor que cero (se permiten fracciones de hora).",
+      "priceInvalid": "Introduzca un precio de bloque de cero o más.",
+      "expiryInvalid": "El vencimiento debe ser un número entero de meses entre 1 y 120, o estar vacío.",
+      "thresholdInvalid": "El umbral de uso debe ser un porcentaje entero de 1 a 99, o estar vacío.",
+      "serviceRequired": "La línea necesita al menos un servicio por horas."
+    },
+    "hoursValue": "{{hours}} h",
+    "trigger": {
+      "initial": "Bloque inicial",
+      "exhaustion": "Bloque agotado",
+      "threshold": "Umbral de uso",
+      "expiry": "Bloque vencido",
+      "renewal": "Renovación del contrato",
+      "manual": "Emitido manualmente"
+    },
+    "loading": "Cargando detalles del bloque prepagado...",
+    "heading": "Bloque prepagado",
+    "actions": {
+      "edit": "Editar",
+      "remove": "Quitar configuración de bloque",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "issueNext": "Emitir siguiente bloque"
+    },
+    "warnings": {
+      "coveredServiceOnOtherLine": "{{service}} también está en otra línea activa ({{line}}). Su tiempo puede facturarse allí en lugar de descontarse de este bloque."
+    },
+    "summary": {
+      "block": "Bloque",
+      "expiry": "Vencimiento",
+      "neverExpires": "No vence nunca",
+      "expiresAfterMonths": "{{months}} meses",
+      "soldAs": "Vendido como",
+      "triggers": "El siguiente bloque se factura cuando",
+      "onExhaustion": "el bloque se agota",
+      "onThreshold": "{{percent}} % usado",
+      "onExpiry": "el bloque vence",
+      "onRenewal": "el contrato se renueva",
+      "tierAutoIssue": "Finalizado automáticamente",
+      "tierDraft": "Borrador para revisión"
+    },
+    "balance": {
+      "label": "Saldo activo",
+      "value": "{{remaining}} de {{total}} restantes",
+      "none": "Aún no hay un bloque activo. Un bloque se activa cuando se finaliza su factura.",
+      "contractEnded": "Contrato finalizado; las horas restantes se han perdido."
+    },
+    "pending": {
+      "heading": "Bloque pendiente a la espera de finalizar la factura",
+      "draftInvoice": "Factura borrador",
+      "noInvoice": "Sin factura vinculada",
+      "ageDays": "{{days}} días de antigüedad",
+      "held": "{{hours}} de tiempo registrado se retiene hasta que este bloque se active."
+    },
+    "next": {
+      "label": "Próxima emisión programada",
+      "none": "Ninguna"
+    },
+    "history": {
+      "heading": "Historial de bloques",
+      "empty": "Aún no se ha emitido ningún bloque.",
+      "columns": {
+        "issued": "Emitido",
+        "reason": "Motivo",
+        "status": "Estado",
+        "hours": "Restante",
+        "amount": "Importe",
+        "invoice": "Factura"
+      }
+    },
+    "fields": {
+      "blockHours": "Tamaño del bloque (horas)",
+      "blockHoursHelp": "Se admiten fracciones, por ejemplo 1,5 para 90 minutos.",
+      "blockPrice": "Precio del bloque ({{currency}})",
+      "blockPriceManualHelp": "Establecido explícitamente. Se guarda tal como se introdujo y no sigue la tarifa por hora.",
+      "blockPriceDefaultHelp": "Por defecto, horas x tarifa del servicio. Se guarda como un precio explícito.",
+      "useRateTimesHours": "Usar horas x tarifa",
+      "soldAs": "La línea de factura se vende como",
+      "soldAsHelp": "Determina el impuesto, el libro mayor y la asignación de exportación contable de la línea de factura del bloque.",
+      "expiryMonths": "Vence tras (meses)",
+      "neverExpires": "No vence nunca",
+      "expiryMonthsHelp": "Déjelo vacío para horas que no vencen. Las horas sin usar se pierden al vencer.",
+      "thresholdPercent": "Emitir el siguiente bloque al uso (%)",
+      "noThreshold": "Sin umbral",
+      "triggersHeading": "Facturar el siguiente bloque cuando",
+      "triggerExhaustion": "El bloque se agota",
+      "triggerExpiry": "El bloque vence",
+      "triggerRenewal": "El contrato se renueva",
+      "triggerRenewalHint": "Factura un bloque nuevo en cada renovación (aniversario de un contrato indefinido o contrato de renovación activado). Los bloques existentes conservan su propia caducidad.",
+      "tier": "Factura de seguimiento",
+      "tierDraft": "Crear un borrador para revisión",
+      "tierAutoIssue": "Finalizar y enviar automáticamente",
+      "blockPriceNeutral": "Precio del bloque (en la moneda del cliente)"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "active": "Activo",
+      "expired": "Vencido",
+      "voided": "Anulado"
+    }
+  },
+  "wizardPrepaidBlock": {
+    "heading": "Líneas de bloques prepagados",
+    "description": "Venda horas por adelantado. Cada línea factura un bloque de horas a un precio fijo y el tiempo registrado consume el bloque; las horas que excedan el bloque se facturan a la tarifa por hora.",
+    "templateDescription": "Venda horas por adelantado. Cada línea factura un bloque de horas a un precio fijo y el tiempo registrado consume el bloque. El precio adopta la moneda del cliente cuando se crea un contrato a partir de esta plantilla.",
+    "lineName": "Nombre de la línea (opcional)",
+    "lineNamePlaceholder": "Bloque prepagado",
+    "removeLine": "Quitar línea de bloque prepagado",
+    "serviceItem": "Servicio {{index}}",
+    "overageRate": "Tarifa por hora",
+    "removeService": "Quitar servicio",
+    "addService": "Añadir servicio a esta línea",
+    "addLine": "Añadir línea de bloque prepagado",
+    "validation": {
+      "invalidBlock": "Complete el tamaño, el precio y los disparadores de cada línea de bloque prepagado antes de finalizar.",
+      "rateRequired": "El servicio de bloque prepagado \"{{serviceName}}\" necesita una tarifa por hora superior a cero (las horas que excedan el bloque se facturan a esa tarifa)."
     }
   }
 }

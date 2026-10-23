@@ -14,6 +14,7 @@ export const buildInvoiceTemplateBindings = (): NonNullable<TemplateAst['binding
     recurringServicePeriodEnd: { id: 'recurringServicePeriodEnd', kind: 'value', path: 'recurringServicePeriodEnd' },
     recurringServicePeriodLabel: { id: 'recurringServicePeriodLabel', kind: 'value', path: 'recurringServicePeriodLabel' },
     poNumber: { id: 'poNumber', kind: 'value', path: 'poNumber' },
+    paymentMethod: { id: 'paymentMethod', kind: 'value', path: 'paymentMethod' },
     subtotal: { id: 'subtotal', kind: 'value', path: 'subtotal' },
     tax: { id: 'tax', kind: 'value', path: 'tax' },
     total: { id: 'total', kind: 'value', path: 'total' },
@@ -919,18 +920,18 @@ const buildStandardByTicketAst = (): TemplateAst => ({
       {
         id: 'ticket-time-summary',
         type: 'dynamic-table',
-        style: { inline: { margin: '0 0 6px 0', border: '1px solid #e5e7eb', borderRadius: '10px' } },
+        style: { inline: { margin: '0 0 6px 0', border: '1px solid #e5e7eb', borderRadius: '10px', tableLayout: 'fixed' } },
         repeat: { sourceBinding: { bindingId: 'ticketPresentationRows' }, itemBinding: 'item' },
         emptyStateText: {
           i18nKey: 'labels.emptyState.noBilledTimeDetail',
           defaultValue: 'No billed-time detail is available for this invoice.',
         },
         columns: [
-          { id: 'ticket', header: { i18nKey: 'labels.ticket', defaultValue: 'Ticket' }, value: { type: 'path', path: 'label' }, style: { inline: { width: '26%' } } },
-          { id: 'ticket-description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: { type: 'path', path: 'description' }, style: { inline: { width: '34%' } } },
-          { id: 'ticket-hours', header: { i18nKey: 'time.quantityHours', defaultValue: 'Qty / Hours' }, value: { type: 'path', path: 'quantity' }, format: 'number', style: { inline: { textAlign: 'right', width: '10%' } } },
-          { id: 'ticket-rate', header: { i18nKey: 'labels.rate', defaultValue: 'Rate' }, value: { type: 'path', path: 'rateDisplay' }, format: 'currency', style: { inline: { textAlign: 'right', width: '14%' } } },
-          { id: 'ticket-amount', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'amount' }, format: 'currency', style: { inline: { textAlign: 'right', width: '16%' } } },
+          { id: 'ticket', header: { i18nKey: 'labels.ticket', defaultValue: 'Ticket' }, value: { type: 'path', path: 'label' }, style: { inline: { width: '27%', overflowWrap: 'anywhere' } } },
+          { id: 'ticket-description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: { type: 'path', path: 'description' }, style: { inline: { width: '33%', overflowWrap: 'anywhere', lineHeight: 1.35 } } },
+          { id: 'ticket-hours', header: { i18nKey: 'time.quantityHours', defaultValue: 'Qty / Hours' }, value: { type: 'path', path: 'quantity' }, format: 'number', style: { inline: { textAlign: 'right', width: '14%', whiteSpace: 'nowrap' } } },
+          { id: 'ticket-rate', header: { i18nKey: 'labels.rate', defaultValue: 'Rate' }, value: { type: 'path', path: 'rateDisplay' }, format: 'currency', style: { inline: { textAlign: 'right', width: '12%', whiteSpace: 'nowrap' } } },
+          { id: 'ticket-amount', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'amount' }, format: 'currency', style: { inline: { textAlign: 'right', width: '14%', whiteSpace: 'nowrap' } } },
         ],
       },
       {

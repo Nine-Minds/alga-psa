@@ -14,6 +14,13 @@
  *     ACL predicate the list uses, so activity on a restricted credential the
  *     viewer cannot otherwise see stays invisible (an audit log that leaked
  *     it would become a side channel revealing the credential exists);
+ *   - a DELETED native credential no longer joins to `credentials`, so its
+ *     rows (the deletion plus the credential's prior history) are authorized
+ *     from the metadata snapshot the writer stamps on `credential_deleted`:
+ *     restricted rows stay owner/grantee-only, everything else is client-
+ *     scoped like Hudu rows. Deletions predating the snapshot fall back to the
+ *     client-scope rule, so the history of an already-deleted credential
+ *     surfaces retroactively;
  *   - Hudu `record_id`s (`hudu:…`) do not exist in the credentials table;
  *     they are client-bound and shown only when the viewer may read that
  *     client's credentials (Hudu rows are not per-item restricted);
@@ -69,7 +76,10 @@ export interface CredentialAuditEvent {
   /** `name` is null when the row is a system action or the user was removed. */
   actor: { userId: string | null; name: string | null };
   credentialId: string;
-  /** Resolved for native rows; null for deleted credentials and Hudu rows. */
+  /**
+   * Resolved for native rows, from the `credential_deleted` snapshot for
+   * deleted ones; null for Hudu rows and pre-snapshot deletions.
+   */
   credentialName: string | null;
   clientId: string | null;
   clientName: string | null;
@@ -230,6 +240,105 @@ async function collectCandidateHuduClientIds(
 }
 
 /**
+ * The metadata a `credential_deleted` row carries about the credential that is
+ * no longer in the `credentials` table. `hasSnapshot` is false for deletions
+ * written before the writer started stamping the ACL snapshot.
+ */
+interface DeletedCredentialSnapshot {
+  clientId: string | null;
+  createdBy: string;
+  /** Actor of the deletion — they passed the ACL check at delete time. */
+  deletedBy: string | null;
+  wasRestricted: boolean;
+  grants: CredentialGrantRow[];
+  credentialName: string | null;
+  hasSnapshot: boolean;
+}
+
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string' && entry.length > 0) : [];
+}
+
+/**
+ * Deleted native credentials that still have audit history, keyed by
+ * `record_id`. A group is eligible only when the vault itself recorded the
+ * deletion (`credential_deleted`); rows whose credential vanished without that
+ * record stay invisible, since nothing authoritative remains to authorize them
+ * against. The `NOT IN (live credential ids)` guard keeps a live credential on
+ * the live branch, which is never weaker than a snapshot.
+ */
+async function collectDeletedNativeCredentials(
+  trx: Knex.Transaction,
+  tenant: string
+): Promise<Map<string, DeletedCredentialSnapshot>> {
+  const rows = await tenantDb(trx, tenant)
+    .table('audit_logs')
+    .where('table_name', 'credentials')
+    .where('operation', 'credential_deleted')
+    .whereNot(function (hudu) {
+      hudu.whereILike('record_id', 'hudu:%');
+    })
+    // `record_id` is varchar while `credential_id` is uuid; cast the subquery
+    // column to text so the comparison holds for every record id shape.
+    .whereNotIn(
+      'record_id',
+      tenantDb(trx, tenant).table('credentials').select(trx.raw('credential_id::text'))
+    )
+    .select('record_id', 'user_id', 'details');
+
+  const snapshots = new Map<string, DeletedCredentialSnapshot>();
+  for (const row of rows) {
+    const recordId = String(row.record_id);
+    const details = (row.details ?? {}) as Record<string, unknown>;
+    const hasSnapshot = details.was_restricted !== undefined;
+    snapshots.set(recordId, {
+      clientId: typeof details.client_id === 'string' && details.client_id.length > 0 ? details.client_id : null,
+      createdBy: typeof details.created_by === 'string' ? details.created_by : '',
+      deletedBy: typeof row.user_id === 'string' && row.user_id.length > 0 ? row.user_id : null,
+      wasRestricted: details.was_restricted === true,
+      grants: [
+        ...asStringArray(details.granted_user_ids).map((id) => ({ subject_type: 'user' as const, subject_id: id })),
+        ...asStringArray(details.granted_team_ids).map((id) => ({ subject_type: 'team' as const, subject_id: id })),
+      ],
+      credentialName: typeof details.credential_name === 'string' ? details.credential_name : null,
+      hasSnapshot,
+    });
+  }
+  return snapshots;
+}
+
+/**
+ * Authorize deleted credentials from their snapshots with the same kernel the
+ * live rows use: a restricted credential stays visible only to its owner, its
+ * snapshot grantees and the deleting actor, anything else is client-scoped.
+ * A pre-snapshot deletion is treated as unrestricted (client scope) — the same
+ * rule Hudu rows get — so old deletions surface retroactively.
+ */
+async function authorizeDeletedNativeCredentials(
+  trx: Knex.Transaction,
+  authContext: CredentialAuthorizationContext,
+  snapshots: Map<string, DeletedCredentialSnapshot>
+): Promise<string[]> {
+  const allowedIds: string[] = [];
+  for (const [recordId, snapshot] of snapshots) {
+    // The deleting actor satisfied this same ACL before the delete, so keep
+    // their own deletion visible to them; modelling it as an implicit user
+    // grant leaves bundle narrowing ANDed on top rather than bypassed.
+    const grants = snapshot.deletedBy
+      ? [...snapshot.grants, { subject_type: 'user' as const, subject_id: snapshot.deletedBy }]
+      : snapshot.grants;
+    const ok = await authorizeCredentialRecord(trx, authContext, {
+      credential_id: recordId,
+      created_by: snapshot.createdBy,
+      client_id: snapshot.clientId ?? '',
+      is_restricted: snapshot.hasSnapshot && snapshot.wasRestricted,
+    }, grants);
+    if (ok) allowedIds.push(recordId);
+  }
+  return allowedIds;
+}
+
+/**
  * Parse a Hudu synthetic credential id (`hudu:<companyId>:<passwordId>`) back
  * into its parts. Hudu password reveals store the client id in `record_id` and
  * the company/password ids only in `details`, so a per-credential History must
@@ -309,6 +418,12 @@ export const getCredentialAuditEvents = withAuth(
         ? null
         : await loadAuthorizedLiveCredentialIds(trx, authContext);
 
+      // Deleted-credential scope: the rows of a credential that no longer
+      // exists cannot join to `credentials`, so they are authorized from the
+      // snapshot the deletion recorded.
+      const deletedCredentials = await collectDeletedNativeCredentials(trx, tenant);
+      const allowedDeletedIds = await authorizeDeletedNativeCredentials(trx, authContext, deletedCredentials);
+
       // Hudu client scope: the viewer may see a client's Hudu rows only when
       // the kernel's bundle narrowing admits that client (Hudu rows are not
       // per-item restricted).
@@ -347,6 +462,11 @@ export const getCredentialAuditEvents = withAuth(
             if (live.length === 0) native.whereRaw('1 = 0');
             else native.whereIn('record_id', live);
           }
+        });
+        scopeWhere.orWhere(function (deletedNative) {
+          deletedNative.where('table_name', 'credentials');
+          if (allowedDeletedIds.length === 0) deletedNative.whereRaw('1 = 0');
+          else deletedNative.whereIn('record_id', allowedDeletedIds);
         });
         scopeWhere.orWhere(function (huduCreds) {
           huduCreds.where('table_name', 'credentials');
@@ -496,7 +616,12 @@ export const getCredentialAuditEvents = withAuth(
           credentialId,
           credentialName:
             row.table_name === 'credentials' && !String(row.record_id).startsWith('hudu:')
-              ? credentialNames.get(row.record_id) ?? null
+              // The live lookup misses once the credential is deleted; fall back
+              // to the name the deletion snapshotted (a structural key, so it
+              // survives the redaction pass).
+              ? credentialNames.get(row.record_id)
+                ?? deletedCredentials.get(String(row.record_id))?.credentialName
+                ?? null
               : null,
           clientId: clientIdForRow,
           clientName: clientIdForRow ? clientNameMap.get(clientIdForRow) ?? null : null,

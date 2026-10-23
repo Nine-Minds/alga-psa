@@ -8,6 +8,8 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
+import { closeOpenAssignmentsForContact } from './assetAssignmentModel';
+import { clearGroupContactLinksForContact } from './assetGroupContactModel';
 import {
   CONTACT_PHONE_CANONICAL_TYPES,
   type ContactPhoneCanonicalType,
@@ -26,6 +28,123 @@ import { ValidationResult } from '../interfaces/validation.interfaces';
 const canonicalPhoneTypeSchema = z.enum(CONTACT_PHONE_CANONICAL_TYPES);
 const canonicalEmailTypeSchema = z.enum(CONTACT_EMAIL_CANONICAL_TYPES);
 
+export async function isSharedMailboxContact(
+  db: Knex | Knex.Transaction,
+  tenant: string,
+  contactId: string
+): Promise<boolean> {
+  const contact = await tenantDb(db, tenant).table('contacts')
+    .where({ contact_name_id: contactId })
+    .first('contact_kind');
+  return contact?.contact_kind === 'shared_mailbox';
+}
+
+export async function assertContactIsNotSharedMailbox(
+  db: Knex | Knex.Transaction,
+  tenant: string,
+  contactId: string,
+  message = 'Shared mailbox contacts cannot have a client portal user.'
+): Promise<void> {
+  if (await isSharedMailboxContact(db, tenant, contactId)) {
+    throw new Error(message);
+  }
+}
+
+/** Upper bound on the reports-to chain walked for cycle detection. */
+const MAX_MANAGER_CHAIN_DEPTH = 100;
+
+/** Nulls reports-to and asset-assignment references to a contact; call before hard-deleting it. */
+export async function clearContactLinksBeforeDelete(
+  db: Knex | Knex.Transaction,
+  tenant: string,
+  contactId: string
+): Promise<void> {
+  // Reports-to and asset assignment are NO ACTION composite FKs (a composite
+  // SET NULL would null `tenant` too, and Citus refuses it), so every code path
+  // that hard-deletes a contact must clear them first, in the same transaction.
+  const scoped = tenantDb(db, tenant);
+  await scoped.table('contacts')
+    .where({ manager_contact_id: contactId })
+    .update({ manager_contact_id: null });
+  await scoped.table('assets')
+    .where({ contact_name_id: contactId })
+    .update({ contact_name_id: null });
+  // FR-C5: the assignments the contact held are closed, not deleted — "who had
+  // this laptop in March" must survive the person leaving.
+  await closeOpenAssignmentsForContact(db, tenant, contactId);
+  // FR-E6: the contact stops being a workspace user; a deleted bundle owner
+  // leaves its members unassigned.
+  await clearGroupContactLinksForContact(db, tenant, contactId);
+}
+
+/**
+ * Guards `contacts.manager_contact_id`. The database only guarantees the manager
+ * exists in the tenant and is not the contact itself; everything else lives here
+ * so every write path (MSP actions, portal admin, REST v1, workflows) shares it:
+ *
+ *  - the manager belongs to the same client as the contact (managers never cross
+ *    a client boundary, so "my staff" can never leak another client's tickets);
+ *  - the manager is a person, not a shared mailbox;
+ *  - the manager is not the contact itself;
+ *  - no cycle results: walking up from the manager must never reach the contact.
+ *
+ * `contactId` is omitted when the contact is being created (a brand-new contact
+ * has no reports, so it cannot close a cycle).
+ */
+export async function assertValidContactManager(
+  db: Knex | Knex.Transaction,
+  tenant: string,
+  input: { contactId?: string | null; clientId: string | null | undefined; managerContactId: string }
+): Promise<void> {
+  const { contactId, clientId, managerContactId } = input;
+
+  if (!clientId) {
+    throw new Error('VALIDATION_ERROR: A contact must belong to a client before a manager can be set');
+  }
+  if (contactId && managerContactId === contactId) {
+    throw new Error('VALIDATION_ERROR: A contact cannot be their own manager');
+  }
+
+  const scoped = tenantDb(db, tenant);
+  const manager = await scoped.table('contacts')
+    .where({ contact_name_id: managerContactId })
+    .first('contact_name_id', 'client_id', 'contact_kind');
+
+  if (!manager) {
+    throw new Error('FOREIGN_KEY_ERROR: The selected manager no longer exists');
+  }
+  if (manager.client_id !== clientId) {
+    throw new Error('VALIDATION_ERROR: The manager must belong to the same client as the contact');
+  }
+  if (manager.contact_kind === 'shared_mailbox') {
+    throw new Error('VALIDATION_ERROR: A shared mailbox cannot be a manager');
+  }
+
+  if (!contactId) return;
+
+  // Walk up the chain from the manager; reaching the contact means a cycle.
+  const visited = new Set<string>([managerContactId]);
+  let cursor: string | null = managerContactId;
+  for (let depth = 0; cursor && depth < MAX_MANAGER_CHAIN_DEPTH; depth += 1) {
+    const row: { manager_contact_id: string | null } | undefined = await scoped.table('contacts')
+      .where({ contact_name_id: cursor })
+      .first('manager_contact_id');
+    const next: string | null = row?.manager_contact_id ?? null;
+    if (!next) return;
+    if (next === contactId) {
+      throw new Error('VALIDATION_ERROR: This manager assignment would create a reporting loop');
+    }
+    if (visited.has(next)) return; // pre-existing loop elsewhere; it cannot involve this contact
+    visited.add(next);
+    cursor = next;
+  }
+  if (cursor) {
+    throw new Error('VALIDATION_ERROR: The reporting chain is too deep');
+  }
+}
+
+// LEVERAGE: pattern contact-row-input-schema — API (server/src/lib/api/schemas/contact.ts) and model
+// each define the phone/email row input shape
 const phoneRowInputSchema = z.object({
   contact_phone_number_id: z.string().uuid().optional(),
   phone_number: z.string().trim().min(1, 'Phone number is required'),
@@ -50,6 +169,7 @@ const emailRowInputSchema = z.object({
 // =============================================================================
 
 export const contactFormSchema = z.object({
+  contact_kind: z.enum(['person', 'shared_mailbox']).optional(),
   full_name: z.string().trim().min(1, 'Full name is required'),
   // Validate with the same pattern the action/model/client all use, and surface a
   // single clear message. A z.union([...email(), '', null]) here reported a confusing
@@ -71,12 +191,14 @@ export const contactFormSchema = z.object({
   phone_numbers: z.array(phoneRowInputSchema).optional(),
   client_id: z.string().uuid('Client ID must be a valid UUID').optional().nullable(),
   inbound_ticket_defaults_id: z.string().uuid('Inbound ticket destination must be a valid UUID').nullable().optional(),
+  manager_contact_id: z.string().uuid('Manager must be a valid contact').nullable().optional(),
   role: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   is_inactive: z.boolean().optional(),
 });
 
 export const contactSchema = z.object({
+  contact_kind: z.enum(['person', 'shared_mailbox']).optional(),
   contact_name_id: z.string().uuid(),
   tenant: z.string().uuid(),
   full_name: z.string(),
@@ -261,7 +383,7 @@ export function validateData<T>(schema: z.ZodSchema<T>, data: unknown): T {
 export function cleanNullableFields(data: Record<string, any>): Record<string, any> {
   const cleaned = { ...data };
   const nullableFields = [
-    'email', 'client_id', 'role',
+    'email', 'client_id', 'role', 'manager_contact_id',
     'title', 'department', 'notes', 'login_email',
   ];
 
@@ -745,11 +867,19 @@ export class ContactModel {
       }
     }
 
+    if (validatedInput.manager_contact_id) {
+      await assertValidContactManager(trx, tenant, {
+        clientId: input.client_id,
+        managerContactId: validatedInput.manager_contact_id,
+      });
+    }
+
     const contactId = uuidv4();
     const now = new Date().toISOString();
     const primaryEmailCustomTypeId = await this.resolvePrimaryCustomEmailTypeId(validatedInput, tenant, trx, now);
 
     const insertData = {
+      contact_kind: input.contact_kind ?? 'person',
       contact_name_id: contactId,
       tenant,
       full_name: input.full_name.trim(),
@@ -759,6 +889,7 @@ export class ContactModel {
         : (validatedInput.primary_email_canonical_type ?? 'work'),
       primary_email_custom_type_id: primaryEmailCustomTypeId,
       client_id: input.client_id || null,
+      manager_contact_id: validatedInput.manager_contact_id ?? null,
       inbound_ticket_defaults_id: validatedInput.inbound_ticket_defaults_id ?? null,
       role: input.role?.trim() || null,
       notes: input.notes?.trim() || null,
@@ -944,6 +1075,29 @@ export class ContactModel {
       if (!client) {
         throw new Error('FOREIGN_KEY_ERROR: The selected client is no longer valid');
       }
+    }
+
+    // Reports-to integrity. The manager FK is NO ACTION (a composite SET NULL would
+    // null `tenant` too), so every transition that could orphan or cross-link the
+    // hierarchy is handled here rather than by the database.
+    const clientChanged = Boolean(updateData.client_id) && updateData.client_id !== existingContact.client_id;
+    const effectiveClientId = updateData.client_id || existingContact.client_id;
+    const managerInput = (updateData as { manager_contact_id?: string | null }).manager_contact_id;
+    if (managerInput) {
+      await assertValidContactManager(trx, tenant, {
+        contactId,
+        clientId: effectiveClientId,
+        managerContactId: managerInput,
+      });
+    } else if (clientChanged && managerInput === undefined) {
+      // Moving to another client drops the old manager: a manager never crosses clients.
+      (updateData as { manager_contact_id?: string | null }).manager_contact_id = null;
+    }
+    if (clientChanged) {
+      // ...and detaches everyone who reported to this contact in the old client.
+      await tenantScopedTable(trx, 'contacts', tenant)
+        .where('manager_contact_id', contactId)
+        .update({ manager_contact_id: null });
     }
 
     const now = new Date().toISOString();

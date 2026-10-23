@@ -6,6 +6,8 @@ env:
   # Ownership repair tests operate only on mkdtemp fixtures and restore the
   # runner UID on exit. Fail if the capability is unavailable instead of skipping.
   ALGA_TEST_PRIVILEGED_CHOWN: '1'
+  # Keep CI off the production PostHog project (flag-request and event quotas).
+  ALGA_USAGE_STATS: 'false'
 
 jobs:
   skip-budget:
@@ -20,19 +22,35 @@ jobs:
           # which only exists on Node >= 22.5. Node 20 fails those suites with
           # "node:sqlite is unavailable in this runtime".
           node-version: '22'
+          cache: 'npm'
       - name: Verify test selection and execution accounting
-        run: node --test scripts/tests/integration-selection.test.mjs scripts/tests/test-execution-evidence.test.mjs scripts/tests/test-discovery.test.mjs scripts/tests/playwright-execution-evidence.test.mjs scripts/tests/test-sharding.test.mjs
+        run: node --test scripts/tests/integration-selection.test.mjs scripts/tests/test-execution-evidence.test.mjs scripts/tests/test-discovery.test.mjs scripts/tests/playwright-execution-evidence.test.mjs scripts/tests/test-sharding.test.mjs scripts/tests/react-test-environment.test.mjs scripts/tests/gate-metrics.test.mjs scripts/tests/unit-lane-pdf-tools.test.mjs
       - name: Check skip budget
         run: node scripts/check-skip-budget.mjs
+
+      # Emit-site guard (alga0002106): proves, with ts-morph and the type checker, that every
+      # catalogued workflow event is published through typed publishWorkflowEvent with a builder
+      # the emitter contract registry exercises, and that the untyped paths (calendar publisher,
+      # levelio sync engine, legacy raw publishers) never carry a catalogued event. Always runs
+      # (no path filter) so a drifted emitter fails CI even when the diff looks unrelated.
+      - name: Install dependencies for the emit-site guard
+        run: |
+          npm install -g npm@11
+          npm ci --ignore-scripts
+      - name: Emit-site guard self-test
+        run: node --test scripts/tests/check-workflow-event-emit-sites.test.mjs
+      - name: Check workflow event emit sites
+        run: npm run check:workflow-event-emit-sites
 
   unit-tests:
     name: Nx affected unit tests
     runs-on: ubuntu-latest
     # A microtask-spinning test starves vitest's own timeout timer entirely
     # (see billing's RenewalAutomationSettings hang), so the job needs its own
-    # backstop instead of the 6h default. The measured full affected run takes
-    # about 30 minutes including setup and cache cleanup (the server tests alone
-    # take 18 minutes). Allow bounded headroom so successful cleanup can finish.
+    # backstop instead of the 6h default. With the server app excluded (its unit
+    # directory runs in the server-unit shards) the affected library run is
+    # dominated by setup and the shared-library build; 45 minutes keeps headroom
+    # for a cold Nx cache.
     timeout-minutes: 45
 
     steps:
@@ -78,6 +96,11 @@ jobs:
       # from its GitHub release, not apt — see the composite action for why.
       - name: Install ripgrep
         uses: ./.github/actions/install-ripgrep
+      # The label PDF end-to-end suite rasterizes Chromium's output with
+      # poppler's pdftoppm; the runner image has no poppler. Bounded apt
+      # install — see the composite action.
+      - name: Install poppler-utils
+        uses: ./.github/actions/install-poppler
 
       # Build the shared infra libraries' dist before testing. Most package
       # vitest configs alias @alga-psa/<lib> to src, but a handful (auth, sla,
@@ -86,9 +109,11 @@ jobs:
       # `test` target has no `dependsOn: ^build`). Without this their suites die at
       # collection with `Failed to resolve entry for package "@alga-psa/db"`.
       # `dependsOn: ^build` cascades to each lib's own deps, so this set covers the
-      # horizontal libs real-import tests pull in.
+      # horizontal libs real-import tests pull in. @alga-psa/storage joined the
+      # set once sla's email import chain started resolving its `/models/storage`
+      # subpath through the same dist-only "exports" mechanism.
       - name: Build shared libraries
-        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search,@alga-psa/storage --parallel=3
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=8192'
@@ -104,10 +129,12 @@ jobs:
             echo "NX_HEAD=${{ github.sha }}" >> "$GITHUB_ENV"
           fi
 
-      # Same two-pass split as typecheck.yml: the server app's vitest config inlines
-      # next/next-auth and needs most of the runner's memory to itself, so libraries
-      # run in parallel first and the heavy apps run serially afterwards (libraries
-      # are instant Nx cache hits in pass 2).
+      # Libraries and services only. The server app is excluded on purpose: its
+      # `test` target is `vitest run src/test/unit`, and the server-unit shards
+      # below run that same directory (plus packages/shared) with coverage and
+      # retry evidence. Running it here as well cost ~18 serial minutes per PR
+      # for no additional coverage. sebastian-ee is excluded for the reason on
+      # its own step comment in typecheck.yml (209-file suite, ~50 min serial).
       # temporal-workflows' suite needs live Postgres/Redis/Temporal (49 of its
       # 71 tests fail without them) and its clients reconnect forever, so the
       # vitest process never exits and hangs the job. It has no place in a
@@ -127,46 +154,40 @@ jobs:
           # Fixed shuffle seed so order-dependent failures are reproducible across reruns.
           VITEST_SEED: '20260610'
 
-      # sebastian-ee's inferred test target is a bare `vitest` over its full
-      # 209-file suite (~50 minutes serial — past this job's 45-minute
-      # backstop, which it blew via WorkflowAiSchemaSection's render-loop hang
-      # before that was fixed). Excluded until the suite gets a bounded
-      # unit-test target that fits a PR gate.
-      - name: Nx affected tests (apps, isolated & serial)
-        run: npx nx affected -t test --base="$NX_BASE" --head="$NX_HEAD" --output-style=stream --parallel=1 --exclude=temporal-workflows,sebastian-ee
-        env:
-          NX_DAEMON: 'false'
-          NODE_OPTIONS: '--max-old-space-size=14336'
-          VITEST_SEED: '20260610'
-          TEST_PROGRESS_PATH: ${{ github.workspace }}/test-results/affected-server/progress.jsonl
-
-      - name: Preserve affected-server failure progress
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: affected-server-progress-${{ github.sha }}
-          path: test-results/affected-server/
-          # An unrelated change may legitimately leave server:test unselected.
-          if-no-files-found: warn
-          retention-days: 30
-
-  # Coverage report for the full server unit suite. This is the only gate that
-  # runs the entire server suite, so it fails loudly on PRs and protected-branch
-  # pushes rather than leaving a required check in the skipped state.
+  # The full server unit suite with coverage, partitioned across shards. This
+  # is the only gate that runs the entire suite, so it fails loudly on PRs and
+  # protected-branch pushes rather than leaving a required check skipped.
   # Scope: src/test/unit plus the workspace package/shared unit tests the
   # server vitest config already includes — running them here is what gets
   # package sources into the coverage report (the v8 provider only measures
   # loaded files, and its untested-file crawl never leaves server/).
-  # src/test/infrastructure is DB-backed and runs in its own job below with a
-  # Postgres service.
-  coverage-report:
-    name: Server unit suite + coverage
+  # src/test/infrastructure is DB-backed and runs in integration-tests.yml
+  # with a Postgres service.
+  #
+  # Every shard collects the full inventory and takes its modulo partition
+  # (scripts/lib/test-sharding.mjs); server-unit-complete proves the
+  # partitions tile that inventory before merging reports and coverage.
+  # Each file still gets a fresh forked process (a shared worker once stalled
+  # during InvoicePreviewPanel's import after 20 minutes of good files), but
+  # the forks now run in parallel: recycling processes serially cost ~40
+  # minutes of spawn gaps for ~10 minutes of test time.
+  server-unit:
+    name: Server unit shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
-    # Native run 34118119027 hit 60 minutes while still making progress:
-    # 2544/2692 files and 13843/14550 cases had finished in the execution
-    # journal. Collection/import plus isolated per-file coverage needs more
-    # headroom; retain a bounded job and per-file progress diagnostics.
-    timeout-minutes: 90
+    # Shards land at 27-29 minutes (~6 min collection, ~8 min tests, then v8
+    # spends ~14 silent minutes on coverage after the last test module), so 30
+    # left no headroom: shard 4 was killed at exactly 30m0s with all 776 of its
+    # files already green, and the null evidence it uploaded then failed the
+    # server-unit-complete, inventory and readiness gates. Same 45 the
+    # nx-affected job above uses.
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      SERVER_UNIT_SHARD_INDEX: ${{ matrix.shard }}
+      SERVER_UNIT_SHARD_TOTAL: '4'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -179,24 +200,33 @@ jobs:
           cache: 'npm'
       - name: Upgrade npm to version 11
         run: npm install -g npm@11
-      - name: Install dependencies
-        run: npm ci
+      - name: Install server unit dependencies with bounded download recovery
+        env:
+          FFMPEG_STATIC_DOWNLOAD_RETRY: 'true'
+        run: node scripts/install-api-test-dependencies.mjs
       # A few contract tests shell out to ripgrep; it isn't on the runner by
       # default. Installed from its GitHub release, not apt (the apt mirror hang
       # here once stalled this job for ~6h). See the composite action for why.
       - name: Install ripgrep
         uses: ./.github/actions/install-ripgrep
+      # The label PDF end-to-end suite rasterizes Chromium's output with
+      # poppler's pdftoppm; the runner image has no poppler. Bounded apt
+      # install — see the composite action.
+      - name: Install poppler-utils
+        uses: ./.github/actions/install-poppler
       # Package suites that real-import @alga-psa/* through native Node
       # resolution (onboarding seeds are .cjs) need the dists on disk; same
       # project set the nx job builds.
       - name: Build shared libraries
-        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search,@alga-psa/storage --parallel=3
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=8192'
       - name: Verify per-file worker isolation
         run: node --test scripts/tests/vitest-worker-isolation.test.mjs
+      # Timezone-sensitive files run once; they are independent of the partition.
       - name: Exercise calendar boundaries in non-UTC timezones
+        if: matrix.shard == 1
         working-directory: ./server
         run: |
           mkdir -p ../test-results/calendar-timezones
@@ -208,42 +238,33 @@ jobs:
               ../packages/scheduling/tests/scheduleCalendar.teamsMeetingRefresh.test.tsx \
               ../packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts \
               ../packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts \
-              --poolOptions.forks.singleFork=false --maxWorkers=2 \
+              ../packages/billing/src/components/settings/billing/PriceChangeRolloutDialog.contract.test.tsx \
+              --maxWorkers=2 \
               --reporter=default --reporter=json --outputFile.json="../test-results/calendar-timezones/$report.json"
           done
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
           SKIP_DB_TESTS: '1'
+          # A fresh fork per file. Passing --poolOptions.forks.singleFork=false
+          # on the CLI stopped working when the config grew projects (vitest
+          # forwards only a whitelist of CLI options into them); the config
+          # reads this instead.
+          VITEST_RECYCLE_FORKS: '1'
           DB_USER_ADMIN: ''
           DB_PASSWORD_ADMIN: ''
       - name: Upload calendar timezone execution
-        if: always()
+        if: always() && matrix.shard == 1
         uses: actions/upload-artifact@v4
         with:
           name: calendar-timezone-execution
           path: test-results/calendar-timezones/
           if-no-files-found: error
           retention-days: 7
-      # A shared worker stalled during InvoicePreviewPanel module import after
-      # 20 minutes of successful files, before the test timeout could start.
-      # Recycle the process between files; retain serial execution and the same
-      # collection/coverage scope. The progress journal records any recurrence.
-      - name: Run server unit tests with coverage
-        id: server-unit-run
-        working-directory: ./server
-        run: |
-          selection=(src/test/unit ../packages ../shared ../ee/packages/workflows/src/actions)
-          mkdir -p ../test-results/server-coverage
-          node ../scripts/verify-server-unit-execution.mjs --capture-source
-          npx vitest list "${selection[@]}" --filesOnly --json=../test-results/server-coverage/collected.json
-          # Collect registrations in two isolated processes; test execution
-          # below remains serial. Keep the same independent identity inventory.
-          npx vitest list "${selection[@]}" --poolOptions.forks.singleFork=false --fileParallelism=true --maxWorkers=2 --json=../test-results/server-coverage/collected-tests.json
-          node -e 'for (const file of ["collected.json", "collected-tests.json"]) { const entries = require("../test-results/server-coverage/" + file); if (!Array.isArray(entries) || entries.length === 0) throw new Error("Empty mandatory collection: " + file); }'
-          npx vitest run "${selection[@]}" --poolOptions.forks.singleFork=false --maxWorkers=1 --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=json-summary --reporter=default --reporter=json --reporter=../scripts/lib/vitest-progress-reporter.mjs --outputFile.json=./test-results.json
+      - name: Collect, execute and reconcile the assigned server unit partition
+        run: node scripts/run-server-unit-shard.mjs
         env:
-          TEST_PROGRESS_PATH: ${{ github.workspace }}/test-results/server-coverage/progress.jsonl
-          NODE_OPTIONS: '--max-old-space-size=14336'
+          SERVER_UNIT_WORKERS: '4'
+          NODE_OPTIONS: '--max-old-space-size=8192'
           # This job has no database; *.db.test.* suites are DB-backed
           # integration tests (see the exclude block in server/vitest.config.ts).
           SKIP_DB_TESTS: '1'
@@ -254,13 +275,82 @@ jobs:
           DB_USER_ADMIN: ''
           DB_PASSWORD_ADMIN: ''
           VITEST_SEED: '20260610'
+      # `if: always()`: a red shard is exactly the evidence the merge job and
+      # the metrics sheet exist to capture. The blob alone is ~150MB per
+      # shard; the merged server-unit-execution artifact keeps the durable
+      # diagnostics, so shard bundles only need to outlive the run.
+      - name: Retain shard execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-unit-shard-${{ matrix.shard }}
+          path: test-results/server-coverage/
+          if-no-files-found: error
+          retention-days: 7
+      # The shard bundle above expires in a week; the weekly flaky report reads
+      # this one, and only when this shard actually retried a test. A shard that
+      # retried nothing (or died before the reporter ran) publishes nothing, so
+      # the weekly job never spends its API budget downloading empty documents;
+      # the always-written document stays in the shard bundle above.
+      - name: Retain shard flaky-test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flaky-tests-unit-shard-${{ matrix.shard }}
+          path: test-results/server-unit-flaky/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  server-unit-complete:
+    name: Server unit execution complete
+    needs: [server-unit]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SERVER_UNIT_JOB_RESULT: ${{ needs.server-unit.result }}
+      SERVER_UNIT_SHARD_TOTAL: '4'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Upgrade npm to version 11
+        run: npm install -g npm@11
+      # `vitest --merge-reports` replays the shard blobs through the server
+      # config and its coverage provider, so this job needs the workspace.
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify the shard runner, reunion and merged verification end to end
+        run: node --test scripts/tests/server-unit-shards.test.mjs
+      - name: Download every shard's raw execution evidence
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          pattern: server-unit-shard-*
+          path: test-results/server-unit-shards
+      - name: Verify every partition and reunite the collection manifests
+        id: shards
+        if: always()
+        run: node scripts/merge-server-unit-shards.mjs
+      - name: Merge shard reports and render coverage
+        id: merge
+        if: always()
+        working-directory: ./server
+        run: npx vitest run --merge-reports ../test-results/server-unit-blobs --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=json-summary --reporter=default --reporter=json --outputFile.json=./test-results.json
+        env:
+          # AST-aware remapping of the merged package/shared/server map still
+          # needs the headroom the single full run had.
+          NODE_OPTIONS: '--max-old-space-size=14336'
+          SKIP_DB_TESTS: '1'
+          DB_USER_ADMIN: ''
+          DB_PASSWORD_ADMIN: ''
       - name: Require complete server unit execution
         if: always()
         run: node scripts/verify-server-unit-execution.mjs
         env:
-          SERVER_UNIT_RUN_OUTCOME: ${{ steps.server-unit-run.outcome }}
-      # `if: always()`: a red run is exactly the data point the coverage
-      # artifact and metrics sheet exist to capture.
+          SERVER_UNIT_RUN_OUTCOME: ${{ (needs.server-unit.result == 'success' && steps.shards.outcome == 'success' && steps.merge.outcome == 'success') && 'success' || 'failure' }}
       - name: Upload lcov artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -268,6 +358,9 @@ jobs:
           name: server-unit-coverage
           path: server/coverage/lcov.info
           retention-days: 30
+      # Same layout the single full run produced, so the repository inventory
+      # and readiness consumers read it unchanged; shard-aggregate.json adds
+      # the partition verdict.
       - name: Upload unit execution diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -279,9 +372,22 @@ jobs:
             test-results/server-coverage/progress.jsonl
             test-results/server-coverage/evidence.json
             test-results/server-coverage/source-before.json
+            test-results/server-coverage/shard-aggregate.json
             server/test-results.json
             server/coverage/coverage-summary.json
           retention-days: 30
+      - name: Independently reconcile required files and assertions
+        if: always()
+        run: node scripts/verify-server-unit-aggregate.mjs
+        env:
+          SERVER_UNIT_INPUT_DIR: '.'
+      - name: Upload unit aggregate verdict
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-unit-aggregate
+          path: test-results/server-unit-gate/
+          if-no-files-found: error
       # Appends pass/coverage numbers to the shared metrics sheet
       # (docs/reference/test-metrics.md). No-op until the Google secrets exist.
       - name: Record metrics to Google Sheet
@@ -296,36 +402,6 @@ jobs:
           TEST_METRICS_DETAIL: '1'
           GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
           TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
-
-  server-unit-complete:
-    name: Server unit execution complete
-    needs: [coverage-report]
-    if: always()
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    env:
-      SERVER_UNIT_JOB_RESULT: ${{ needs.coverage-report.result }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Download raw unit execution evidence
-        if: always()
-        uses: actions/download-artifact@v4
-        with:
-          name: server-unit-execution
-          path: test-results/server-unit-input
-      - name: Independently reconcile required files and assertions
-        if: always()
-        run: node scripts/verify-server-unit-aggregate.mjs
-      - name: Upload unit aggregate verdict
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: server-unit-aggregate
-          path: test-results/server-unit-gate/
-          if-no-files-found: error
 
   # DB-backed infrastructure tests run inside integration-tests.yml (sharing its
   # Postgres job): Tier-1 subset on PRs, full suite nightly — both non-blocking.

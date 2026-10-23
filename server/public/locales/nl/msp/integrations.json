@@ -1,6 +1,41 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Pro-functie"
+    },
     "accounting": {
+      "bulk": {
+        "button": "Bulkkoppeling",
+        "columns": {
+          "ignore": "Negeren",
+          "select": "Opslaan",
+          "status": "Status"
+        },
+        "exit": "Terug naar koppelingen",
+        "filter": {
+          "all": "Alle",
+          "mapped": "Gekoppeld",
+          "unmapped": "Niet gekoppeld"
+        },
+        "ignoreAll": "Alles negeren",
+        "noRows": "Geen rijen komen overeen met het huidige filter.",
+        "possibleMatch": "Mogelijke overeenkomst",
+        "rowIgnoreAria": "{{name}} negeren",
+        "rowSelectAria": "{{name}} meenemen bij opslaan",
+        "saveAll": "Alles opslaan",
+        "searchPlaceholder": "Zoek diensten en doelen...",
+        "selectAll": "Alles selecteren",
+        "status": {
+          "ignored": "Genegeerd",
+          "mapped": "Gekoppeld",
+          "noResult": "Voor deze rij is geen resultaat teruggegeven.",
+          "pending": "In afwachting",
+          "saved": "Opgeslagen",
+          "missingField": "{{field}} ontbreekt"
+        },
+        "suggested": "Voorgesteld",
+        "toSave": "{{total}} op te slaan"
+      },
       "dialog": {
         "cancel": "Annuleren",
         "enterPlaceholder": "{{field}} invoeren...",
@@ -48,7 +83,8 @@
           "instant": "Direct",
           "live": "Live",
           "manual": "Handmatig",
-          "twoWay": "Tweerichtings"
+          "twoWay": "Tweerichtings",
+          "iif": "IIF"
         },
         "highlights": {
           "delivery": "Levering",
@@ -68,6 +104,9 @@
           },
           "xeroCsv": {
             "description": "Exporteer facturen naar CSV voor handmatige import in Xero en importeer belastinggegevens uit Xero-rapporten."
+          },
+          "qbd": {
+            "description": "Exporteer facturen als IIF-bestand om te importeren in QuickBooks Desktop."
           }
         },
         "selected": "{{title}} geselecteerd",
@@ -78,15 +117,39 @@
         "noPermission": {
           "title": "Geen toegang tot boekhoudintegraties",
           "description": "U hebt geen toestemming om boekhoudintegraties te bekijken of te configureren. Vraag een beheerder om toegang."
-        }
+        },
+        "changeIntegration": "Andere kiezen",
+        "currentIntegration": "Boekhoudintegratie",
+        "selectedAction": "Geselecteerd",
+        "reconnectRequired": "Opnieuw verbinden vereist",
+        "settingsTitle": "Instellingen voor {{title}}"
       },
       "modules": {
         "tabs": {
           "clients": "Klanten",
           "itemsServices": "Items / Diensten",
           "taxCodes": "Belastingcodes",
-          "paymentTerms": "Betalingsvoorwaarden"
+          "paymentTerms": "Betalingsvoorwaarden",
+          "discounts": "Kortingen"
         }
+      },
+      "adjustmentMappings": {
+        "desktopAccount": "Naam Desktop-opbrengstrekening",
+        "description": "Koppel factuurkortingen en credits vóór export. De koppeling hoort bij dit boekhoudbedrijf.",
+        "add": "Koppeling toevoegen",
+        "remove": "Koppeling verwijderen",
+        "removeConfirm": "Deze boekhoudkoppeling verwijderen?",
+        "desktopTaxAccount": "Naam Desktop-omzetbelastingrekening",
+        "desktopCustomer": "Naam Desktop-klant",
+        "desktopTerms": "Naam Desktop-betalingsvoorwaarde",
+        "descriptionTaxCodes": "Elke belastingregio noemt het omzetbelastingartikel of de -groep die QuickBooks Desktop berekent en de passivarekening waarop wordt geboekt.",
+        "descriptionServices": "Elke service noemt het QuickBooks Desktop-artikel dat de factuurregels gebruiken en de opbrengstrekening waarop ze worden geboekt.",
+        "descriptionClients": "De QuickBooks Desktop-klant waaronder elke klant wordt gefactureerd. Niet-gekoppelde klanten blokkeren de export.",
+        "descriptionPaymentTerms": "De QuickBooks Desktop-betalingsvoorwaarden die op elke factuur worden afgedrukt. Niet-gekoppelde voorwaarden blijven leeg.",
+        "desktopItem": "Naam Desktop-artikel",
+        "desktopItemHelp": "Het artikel precies zoals het in uw QuickBooks Desktop-artikellijst staat. Elke factuurregel noemt een artikel, dus exports worden geblokkeerd totdat het is ingesteld.",
+        "desktopSalesTaxItem": "Omzetbelastingartikel of -groep",
+        "desktopSalesTaxItemHelp": "Laat leeg om het standaard omzetbelastingartikel uit de QuickBooks Desktop-instellingen te gebruiken."
       }
     },
     "calendar": {
@@ -106,6 +169,7 @@
           "failed": "Export mislukt",
           "missingItemMapping": "Item-toewijzing ontbreekt",
           "missingItemMappingId": "Item-toewijzing ontbreekt ({{serviceId}})",
+          "missingDiscountMapping": "Kortingstoewijzing ontbreekt (tabblad Kortingen)",
           "missingItemMappingNamed": "Item-toewijzing ontbreekt: {{serviceName}}"
         },
         "fields": {
@@ -464,7 +528,8 @@
           "previousCount": "Vorige",
           "syncFinished": "Synchronisatie voltooid voor {{client}}.",
           "syncing": "Bezig met synchroniseren…",
-          "syncTrackingFailed": "De synchronisatie is gestart, maar deze pagina kon deze niet tot voltooiing volgen. Vernieuw om het nieuwste resultaat te bekijken."
+          "syncTrackingFailed": "De synchronisatie is gestart, maar deze pagina kon deze niet tot voltooiing volgen. Vernieuw om het nieuwste resultaat te bekijken.",
+          "syncWorkerUnavailable": "De synchronisatie staat in de wachtrij, maar op dit moment verwerkt niets de achtergrondwachtrij. Hij wordt uitgevoerd zodra de worker terug is; blijft hij hangen, herstart dan de service temporal-worker."
         },
         "connection": {
           "changeAction": "Verbinding wijzigen",
@@ -1143,7 +1208,53 @@
           "unmatched": "Niet gekoppeld"
         },
         "title": "Tenant-toewijzingsvoorbeeld"
-      }
+      },
+      "userImportFilter": {
+        "title": "Importfilter",
+        "licensed": "Alleen leden met licentie",
+        "include": "Beveiligingsgroep opnemen",
+        "exclude": "Beveiligingsgroep uitsluiten",
+        "patterns": "Extra uitsluitingspatronen (één reguliere expressie per regel)",
+        "save": "Filter opslaan",
+        "loading": "Importfilter laden…",
+        "saved": "Opgeslagen",
+        "invalid": "Ongeldige reguliere expressie: {{pattern}}",
+        "exclusions": "Uitsluitingen door importfilter",
+        "unknown": "Gegevens van de provider die nodig zijn voor het filter ontbreken. Betrokken gebruikers blijven opgenomen.",
+        "userType": "Gebruikerstype ontbreekt: {{count}}.",
+        "license": "Licentiegegevens ontbreken: {{count}}.",
+        "transitive": "Groepslidmaatschap is transitief met Direct; CIPP retourneert mogelijk alleen directe leden.",
+        "defaultsDescription": "Deze instellingen gelden standaard voor beheerde klanten. Elke klant kan ze overschrijven.",
+        "memberUsersOnly": "Alleen leden",
+        "licensedUsersOnly": "Alleen gebruikers met licentie",
+        "patternPlaceholder": "Uitsluitingspatroon (één reguliere expressie per regel)",
+        "invalidPattern": "Ongeldige reguliere expressie.",
+        "addPattern": "Patroon toevoegen",
+        "remove": "Verwijderen",
+        "saving": "Opslaan…",
+        "saveFailed": "Het importfilter kon niet worden opgeslagen.",
+        "broadGroupWarning": "Dit filter bevat of sluit een brede groep uit, zoals Alle gebruikers. Controleer de gevolgen voordat u opslaat.",
+        "deactivateExcludedContacts": "Gekoppelde contacten deactiveren die door dit filter worden uitgesloten",
+        "importSharedMailboxes": "Gedeelde postvakken importeren",
+        "sharedMailboxReason": "Gedeelde mailbox",
+        "effectivePatterns": "Effectieve patronen: {{patterns}}",
+        "inherited": "Overgenomen",
+        "overridden": "Overschreven",
+        "preview": "Voorbeeld",
+        "previewing": "Voorbeeld wordt gemaakt…",
+        "reset": "Herstellen",
+        "retry": "Opnieuw proberen",
+        "recommendedHint": "Aanbevolen voor nieuwe configuraties: alleen leden en alleen gebruikers met een licentie. Niet aangevinkte waarden volgen het opgeslagen beleid.",
+        "excludedContactInactive": "Uitgesloten door het importfilter; het gekoppelde contact zou inactief worden gemaakt. Er wordt niets verwijderd.",
+        "recommendedUnsaved": "Aanbevolen — niet opgeslagen",
+        "unsavedChange": "Niet-opgeslagen wijziging",
+        "unsavedNotice": "Deze filters worden pas toegepast nadat u ze hebt opgeslagen."
+      },
+      "proFeature": {
+        "description": "De Microsoft Entra-integratie is beschikbaar in AlgaPSA Pro.",
+        "notice": "De identiteitsintegratie met Microsoft Entra is een Pro-functie."
+      },
+      "loading": "Microsoft Entra-integratie laden…"
     },
     "google": {
       "settings": {
@@ -1214,6 +1325,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "De integratie met de IT-documentatie van Hudu is beschikbaar in AlgaPSA Pro."
+      },
       "clientTab": {
         "source": "Bron: Hudu",
         "openInHudu": "Openen in Hudu",
@@ -1856,7 +1970,8 @@
           "credentialsReady": "Inloggegevens gereed",
           "credentialsRequired": "Inloggegevens vereist",
           "defaultConnected": "Bedrijf verbonden",
-          "noCompany": "Geen bedrijf verbonden"
+          "noCompany": "Geen bedrijf verbonden",
+          "sharedApp": "Gedeelde Intuit-app"
         },
         "callback": {
           "accessDenied": "QuickBooks-toegang werd geweigerd voordat de verbinding was voltooid.",
@@ -1880,11 +1995,12 @@
         "connectSuccess": "QuickBooks succesvol verbonden. Het verbonden bedrijf is nu de standaard live QuickBooks-context.",
         "connection": {
           "defaultCompany": "Verbonden bedrijf",
-          "description": "Start OAuth pas nadat de QuickBooks app-inloggegevens zijn geconfigureerd. Ontkoppelen verwijdert opgeslagen QuickBooks-toegangstokens maar behoudt de tenant-eigen app-inloggegevens.",
-          "notConnected": "Er is nog geen QuickBooks-bedrijf verbonden. Sla de inloggegevens op en klik vervolgens op QuickBooks verbinden.",
+          "description": "„QuickBooks koppelen” wordt beschikbaar zodra er een Intuit-app is (zie de kaart „Intuit-app” hierboven). Ontkoppelen verwijdert opgeslagen QuickBooks-toegangstokens, maar behoudt de eigen Intuit-app-inloggegevens van deze tenant.",
+          "notConnected": "Er is nog geen QuickBooks-bedrijf gekoppeld. Klik op „QuickBooks koppelen” om in te loggen bij Intuit en een bedrijf te kiezen.",
           "realmId": "Realm ID: {{id}}",
           "title": "Live QuickBooks-verbinding",
-          "unknown": "onbekend"
+          "unknown": "onbekend",
+          "descriptionShared": "Klik op „QuickBooks koppelen”, log in bij Intuit en kies het bedrijf dat u wilt koppelen. Er hoeft vooraf niets anders te worden ingesteld. Ontkoppelen verwijdert de opgeslagen QuickBooks-toegangstokens."
         },
         "credentialsSaved": "QuickBooks-inloggegevens opgeslagen. U kunt nu de QuickBooks OAuth-flow starten.",
         "csvAvailableMiddle": "in deze zelfde sectie Boekhouding en beheer exports vanuit",
@@ -1901,7 +2017,7 @@
           "load": "QuickBooks-instellingen laden mislukt.",
           "saveCredentials": "QuickBooks-inloggegevens opslaan mislukt."
         },
-        "howItWorksDescription": "Sla hier QuickBooks app-inloggegevens op, voltooi de Intuit OAuth-flow, en AlgaPSA gebruikt het verbonden QuickBooks-bedrijf als standaard live context voor exports en koppelingen.",
+        "howItWorksDescription": "Koppel uw QuickBooks-bedrijf door in te loggen bij Intuit; AlgaPSA gebruikt het dan als standaard live-context voor exports en toewijzingen. De kaart „Intuit-app” hieronder laat zien of uw installatie de app voor die aanmelding al levert of dat u er eerst een moet registreren.",
         "howItWorksTitle": "Hoe live QuickBooks werkt in deze release",
         "loading": "QuickBooks-instellingen worden geladen…",
         "mapping": {
@@ -1919,8 +2035,8 @@
         "requiredScopes": "Vereiste scopes",
         "storedClientId": "Opgeslagen client ID: {{value}}",
         "storedClientSecret": "Opgeslagen client secret: {{value}}",
-        "tenantOauthDescription": "Via welke Intuit-app deze tenant verbinding maakt. Secrets worden na opslaan nooit teruggestuurd naar de browser.",
-        "tenantOauthTitle": "Intuit-app-gegevens",
+        "tenantOauthDescription": "AlgaPSA bereikt QuickBooks via een Intuit-app: een ontwikkelaarsregistratie op developer.intuit.com, geen instelling binnen QuickBooks of AlgaPSA. Deze kaart laat zien of er al een voor u beschikbaar is.",
+        "tenantOauthTitle": "Intuit-app",
         "title": "QuickBooks Online",
         "automatedSalesTax": {
           "disabledMessage": "De Automated Sales Tax-modus staat uit. Alga blijft de belasting voor dit bedrijf berekenen.",
@@ -1929,9 +2045,10 @@
           "label": "QuickBooks berekent de omzetbelasting"
         },
         "credentialSource": {
-          "app": "Deze omgeving biedt een gedeelde Intuit-app, dus u kunt QuickBooks koppelen zonder er zelf een te registreren. Vul de velden hieronder alleen in als deze tenant een eigen Intuit-app moet gebruiken.",
-          "none": "Er is nog geen Intuit-app beschikbaar. Registreer er een in het Intuit Developer-portaal en plak hieronder de client-ID en het secret — de installatiegids legt dit stap voor stap uit.",
-          "tenant": "Deze tenant maakt verbinding via een eigen Intuit-app, met de hieronder opgeslagen gegevens."
+          "app": "Deze installatie levert een gedeelde Intuit-app, dus u kunt QuickBooks koppelen zonder er zelf een te registreren. Sla deze kaart over en klik hieronder op „QuickBooks koppelen”.",
+          "none": "Er is nog geen Intuit-app beschikbaar. Registreer er een bij Intuit voordat u kunt koppelen.",
+          "tenant": "Deze tenant maakt verbinding via een eigen Intuit-app met de hieronder opgeslagen inloggegevens. Plak een nieuwe waarde en sla op om een sleutel te roteren.",
+          "appTitle": "Geen inloggegevens nodig"
         },
         "setupGuideLink": "QuickBooks-installatiegids",
         "noPermissionDescription": "U hebt geen toestemming om boekhoudintegraties te bekijken of te configureren.",
@@ -1946,6 +2063,19 @@
           "targetFailed": "vereist aandacht",
           "targetPending": "in behandeling",
           "failedPermanentDescription": "De opschoning bij de aanbieder is op een permanente fout gestuit. U kunt het opnieuw proberen of geforceerd afronden om de opgeslagen inloggegevens te verwijderen met een auditregistratie."
+        },
+        "registerSteps": {
+          "createApp": "Log in op",
+          "createAppSuffix": "en maak een app voor QuickBooks Online and Payments met de Accounting-scope. Uw QuickBooks-login werkt daar.",
+          "openKeys": "Open de pagina „Keys & credentials” van de app. Gebruik de Development-sleutels als de Intuit-omgeving hieronder Sandbox toont, of de Production-sleutels als deze Productie toont.",
+          "addRedirect": "Voeg de hieronder getoonde Redirect-URI exact zo toe aan de lijst met redirect-URI’s van de app.",
+          "pasteKeys": "Kopieer de Client ID en het Client Secret van die pagina naar de twee velden hieronder en klik op „QuickBooks-inloggegevens opslaan”.",
+          "connect": "Klik op „QuickBooks koppelen” en log in bij het QuickBooks-bedrijf dat u wilt koppelen."
+        },
+        "ownApp": {
+          "show": "In plaats daarvan uw eigen Intuit-app gebruiken (geavanceerd)",
+          "hide": "Instellingen eigen app verbergen",
+          "intro": "Doe dit alleen als deze tenant moet autoriseren via een Intuit-app die u zelf beheert. Registreer de app zoals beschreven in de installatiehandleiding en plak hier de sleutels. Zolang niet beide zijn opgeslagen, blijft de gedeelde app in gebruik."
         }
       },
       "sync": {
@@ -1974,6 +2104,10 @@
         "syncNowSuccess": "Synchronisatie voltooid.",
         "syncNowSkipped": "Synchronisatie overgeslagen: {{reason}}",
         "syncNowError": "Synchronisatie mislukt: {{error}}",
+        "connectionUnavailableProvider": "{{provider}}-verbinding is niet beschikbaar. Maak opnieuw verbinding om te synchroniseren.",
+        "defaultRealmError": "Kon deze organisatie niet selecteren. Maak opnieuw verbinding en probeer het opnieuw.",
+        "syncIncomplete": "Synchronisatie is onvolledig. De cursor is behouden omdat de provider een gedeeltelijke wijzigingsset heeft geretourneerd.",
+        "syncOperationsFailed": "Sommige boekhoudkundige bewerkingen zijn mislukt. Controleer de synchronisatiefouten voordat u het opnieuw probeert.",
         "viewExceptionsLink": "Uitzonderingen bekijken",
         "autoApplyCreditsWarning": "QuickBooks staat ingesteld om tegoeden automatisch toe te passen, wat conflicteert met tegoedtoepassingen vanuit Alga: QuickBooks kan geëxporteerde creditnota's vóór de synchronisatie op een andere factuur toepassen. Ga in QuickBooks naar \"Account and Settings → Advanced → Automation\" en schakel \"Automatically apply credits\" uit.",
         "configTitle": "Synchronisatieconfiguratie",
@@ -1986,7 +2120,20 @@
         "noDefault": "Geen standaard",
         "saving": "Opslaan…",
         "undepositedFunds": "Niet-gestorte middelen (standaard)",
-        "catalogLoadError": "Configuratieopties voor QuickBooks-synchronisatie laden mislukt."
+        "catalogLoadError": "Configuratieopties voor QuickBooks-synchronisatie laden mislukt.",
+        "healthCardTitleProvider": "{{provider}}-synchronisatiestatus",
+        "healthCardDescriptionProvider": "Status en bediening van de {{provider}}-boekhoudsynchronisatie. Draait elke 15 minuten.",
+        "refreshTokenExpiredProvider": "{{provider}}-token verlopen — maak opnieuw verbinding om te synchroniseren.",
+        "refreshTokenExpiryProvider": "{{provider}}-token verloopt op {{date}}",
+        "autoProvisionCustomersLabelProvider": "{{provider}}-klanten automatisch aanmaken",
+        "connectedOrganisations": "Xero-organisaties",
+        "defaultOrganisationDescription": "De standaardorganisatie wordt gebruikt voor synchronisatie, exports en koppelingen.",
+        "outstandingItems": "Openstaande items",
+        "outstandingItemsDescription": "Items die nog moeten worden gecontroleerd of opnieuw gesynchroniseerd.",
+        "outstandingItemsReconnect": "Voor alle gekoppelde organisaties. Deze items blijven bewaard totdat u Xero opnieuw verbindt.",
+        "refreshTokenValidUntilProvider": "{{provider}}-autorisatie geldig tot {{date}}. Tokens worden automatisch vernieuwd.",
+        "syncSucceeded": "Synchronisatie voltooid",
+        "syncStopped": "Synchronisatie gestopt"
       },
       "itemImport": {
         "description": "Importeer uw QuickBooks-producten en -services in de Alga-servicecatalogus voor het verbonden QuickBooks-bedrijf. QuickBooks blijft de gezaghebbende bron voor namen, tarieven, SKU’s, beschrijvingen en kosten; de facturatiemethode, maateenheid en het servicetype worden hier ingesteld en daarna door Alga beheerd. Deze stap is optioneel — sla deze over met Volgende.",
@@ -2201,6 +2348,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "De RMM-integratie met NinjaOne is beschikbaar in AlgaPSA Pro."
+        },
         "loading": "NinjaOne-integratie-instellingen laden...",
         "card": {
           "title": "NinjaOne RMM-integratie",
@@ -2478,6 +2628,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "De RMM-integratie met Tanium is beschikbaar in AlgaPSA Pro."
+        },
         "loading": "Tanium-integratie-instellingen worden geladen...",
         "actions": {
           "discoverScopes": "Scopes ontdekken",
@@ -2548,6 +2701,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "De RMM-integratie met Level.io is beschikbaar in AlgaPSA Pro."
+        },
         "actions": {
           "backfillAlerts": "Waarschuwingen backfillen",
           "disconnect": "Verbinding verbreken",
@@ -2620,16 +2776,35 @@
           "copied": "Gekopieerd",
           "copy": "Kopiëren",
           "description": "Level kan geen webhooks registreren via zijn API. Maak in Level een automatisering met een HTTP POST-actie met de onderstaande URL, header en payload om waarschuwingen in realtime naar Alga te pushen.",
+          "fallbackDescription": "Gebruik deze terugval alleen als de native webhooks onder Instellingen → Webhooks in Level niet kunnen worden gebruikt. Maak een automatisering met een HTTP POST-actie met de onderstaande URL, header en payload om meldingen naar Alga te sturen.",
+          "fallbackNameHint": "Pas de waarde \"name\" aan in elke automatisering. Samen met het apparaat identificeert die de melding; herhalingen met dezelfde naam op hetzelfde apparaat gelden als één melding.",
+          "fallbackTitle": "Terugval: HTTP-verzoek via automatisering",
           "header": "Header: {{name}}",
           "hideSecret": "Geheim verbergen",
           "loading": "Webhookdetails worden geladen nadat de integratie is geconfigureerd.",
+          "nativeDescription": "Open in Level Instellingen → Webhooks, voeg een webhook toe met de URL en de ondertekeningssleutel hieronder en schakel de genoemde events in. Level ondertekent elke aanlevering en Alga controleert de handtekening.",
+          "nativeEvents": "In te schakelen events",
+          "nativeEventsHelp": "Schakel alert_active en alert_resolved in. Andere events worden bevestigd en genegeerd.",
+          "nativeSigningSecret": "Ondertekeningssleutel",
+          "nativeTitle": "Native webhook (aanbevolen)",
           "payload": "Payloadsjabloon",
+          "regenerateCancel": "Annuleren",
+          "regenerateConfirmLabel": "Opnieuw genereren",
+          "regenerateConfirmMessage": "Bestaande Level-webhooks mislukken met 401 totdat u de nieuwe ondertekeningssleutel in de webhookinstellingen van Level plakt. Level probeert aanleveringen opnieuw, maar ze kunnen verloren gaan als de sleutel niet wordt bijgewerkt.",
+          "regenerateConfirmTitle": "Ondertekeningssleutel opnieuw genereren?",
+          "regenerateConfirmed": "Ondertekeningssleutel opnieuw gegenereerd. Werk hem bij in de webhookinstellingen van Level.",
+          "regenerateFailed": "Ondertekeningssleutel opnieuw genereren mislukt",
+          "regenerateSecret": "Sleutel opnieuw genereren",
           "showSecret": "Geheim tonen",
           "title": "Waarschuwingswebhook",
           "url": "Webhook-URL"
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Huntress-integratie",
+          "description": "De beveiligingsintegratie met Huntress is een Pro-functie."
+        },
         "columns": {
           "organization": "Huntress-organisatie",
           "client": "Alga-klant",
@@ -2670,7 +2845,7 @@
         },
         "connection": {
           "title": "Verbonden met {{account}}",
-          "summary": "{{organizations}} organisaties ({{unmapped}} niet gekoppeld) · {{openIncidents}} open incidenten · laatste poll: {{lastPoll}}",
+          "summary": "{{organizations}} organisaties ({{unmapped}} niet gekoppeld) · {{openAlerts}} open waarschuwingen · laatste poll: {{lastPoll}}",
           "neverPolled": "nooit",
           "lastPollFailed": "Laatste poll mislukt: {{error}}",
           "routingIncompleteWarning": "Het pollen van incidenten is gepauzeerd totdat de onderstaande routeringsconfiguratie volledig is (bord, fallbackklant/-bord en alle drie prioriteiten voor ernstniveaus).",
@@ -2693,6 +2868,8 @@
           "selectPriority": "Prioriteit",
           "pollInterval": "Pollinterval (minuten)",
           "autoClose": "Tickets sluiten wanneer Huntress het incident sluit",
+          "ingestEscalations": "Tickets aanmaken op basis van Huntress-escalaties",
+          "ingestEscalationsHelp": "Escalaties gebruiken dezelfde instellingen voor bord, categorie, prioriteitstoewijzing en automatisch sluiten als incidenten. Een escalatie die meerdere organisaties betreft, maakt één ticket per organisatie aan.",
           "closedStatus": "Status Gesloten",
           "selectStatus": "Status selecteren",
           "save": "Routeringsconfiguratie opslaan",
@@ -2771,6 +2948,54 @@
         "errors": {
           "saveFailed": "Kan het schema voor apparaatsynchronisatie niet opslaan."
         }
+      },
+      "peopleMode": {
+        "label": "Personen",
+        "options": {
+          "off": "Uit",
+          "suggest": "Voorstellen",
+          "auto": "Automatisch toewijzen"
+        },
+        "updateFailed": "Kan de personenmodus niet bijwerken"
+      },
+      "signedInUsers": {
+        "title": "Aangemelde gebruikers",
+        "description": "De gebruikersnamen die de apparaten van deze organisatie rapporteren en het contact waarnaar elk wordt herleid.",
+        "empty": "Nog geen aangemelde gebruikers gerapporteerd.",
+        "noClient": "Koppel deze organisatie aan een klant voordat u haar gebruikers koppelt.",
+        "refresh": "Vernieuwen",
+        "selectContact": "Contact selecteren",
+        "loadFailed": "Kan aangemelde gebruikers niet laden.",
+        "saveFailed": "Kan de koppeling niet opslaan.",
+        "columns": {
+          "user": "Aangemelde gebruiker",
+          "devices": "Apparaten",
+          "method": "Gekoppeld via",
+          "contact": "Contact"
+        },
+        "methods": {
+          "mapped": "Opgeslagen koppeling",
+          "email": "E-mail",
+          "username": "Gebruikersnaam",
+          "name": "Volledige naam",
+          "none": "Geen overeenkomst"
+        }
+      },
+      "clientChange": {
+        "title": "Apparaten van deze organisatie verplaatsen?",
+        "message": "{{count}} asset(s) worden verplaatst naar {{client}}. Toewijzingen, groepen en factureringsprofielen van de vorige klant worden gewist.",
+        "confirm": "Apparaten verplaatsen"
+      },
+      "billingProfile": {
+        "label": "Factureringsprofiel",
+        "clientDefault": "Standaard van de klant",
+        "updateFailed": "Bijwerken van het factureringsprofiel is mislukt"
+      },
+      "errors": {
+        "invalidPeopleMode": "Dat is geen geldige personenmodus.",
+        "billingProfileUnavailable": "Dat facturatieprofiel is niet beschikbaar voor deze klant.",
+        "mappingNotFound": "Die koppeling bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+        "forbidden": "U hebt geen rechten om dit te wijzigen."
       }
     },
     "sso": {
@@ -3341,6 +3566,11 @@
           "regenerate": "Pakket opnieuw genereren",
           "regenerating": "Opnieuw genereren..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Aanmelden bij Teams niet beschikbaar",
+        "tabTitle": "Teams-tabblad niet beschikbaar",
+        "description": "De Microsoft Teams-integratie is alleen beschikbaar in Pro."
       }
     },
     "xero": {
@@ -3500,7 +3730,9 @@
           "saveCredentials": "Xero-inloggegevens opslaan",
           "saving": "Opslaan…",
           "retryDisconnect": "Ontkoppeling opnieuw proberen",
-          "forceFinalizeDisconnect": "Geforceerd afronden"
+          "forceFinalizeDisconnect": "Geforceerd afronden",
+          "disconnectAll": "Alle Xero-organisaties ontkoppelen",
+          "replaceCredentials": "Inloggegevens vervangen"
         },
         "badges": {
           "connectionExpired": "Verbinding verlopen",
@@ -3529,14 +3761,22 @@
         "clientIdPlaceholder": "Plak uw tenant-eigen Xero Client ID",
         "clientSecretLabel": "Xero Client Secret",
         "clientSecretPlaceholder": "Plak uw tenant-eigen Xero Client Secret",
-        "connectSuccess": "Xero succesvol verbonden. De eerste verbonden organisatie is nu de standaard live Xero-context.",
+        "connectSuccess": "Xero verbonden. {{count}} organisaties gekoppeld; {{organisation}} is de standaardorganisatie voor synchronisatie.",
         "connection": {
           "connectionId": "Verbindings-ID: {{id}}",
           "defaultOrganisation": "Standaardorganisatie",
           "description": "Start OAuth pas nadat de tenant-eigen Xero-app is geconfigureerd. Ontkoppelen verwijdert opgeslagen Xero-toegangstokens maar behoudt de tenant-eigen app-inloggegevens.",
           "notConnected": "Er is nog geen live Xero-organisatie verbonden. Sla de inloggegevens op en klik vervolgens op Xero verbinden.",
           "title": "Live Xero-verbinding",
-          "unknown": "onbekend"
+          "unknown": "onbekend",
+          "defaultBadge": "Standaard voor synchronisatie",
+          "linkedOrganisations": "Gekoppelde organisaties ({{count}})",
+          "multipleOrganisationScope": "Deze autorisatie omvat {{count}} Xero-organisaties. Opnieuw verbinden en ontkoppelen gelden voor alle organisaties.",
+          "reconnectRequiredBadge": "Opnieuw verbinden vereist",
+          "organisationScope": "Opnieuw verbinden en ontkoppelen gelden voor elke organisatie in deze lijst.",
+          "reconnectRequiredDescription": "Synchronisatie en exports zijn gepauzeerd. Verbind eenmaal opnieuw om ze voor alle {{count}} gekoppelde organisaties te hervatten.",
+          "reconnectRequiredTitle": "Verbinding verlopen",
+          "singleOrganisationScope": "Opnieuw verbinden en ontkoppelen gelden voor deze Xero-organisatie."
         },
         "credentialsSaved": "Xero-inloggegevens opgeslagen. U kunt nu de live Xero OAuth-flow starten.",
         "csvAvailableMiddle": "in deze zelfde sectie Boekhouding en beheer exports vanuit",
@@ -3549,11 +3789,11 @@
           "load": "Xero-instellingen laden mislukt.",
           "saveCredentials": "Xero-inloggegevens opslaan mislukt."
         },
-        "howItWorksDescription": "Sla hier een tenant-eigen Xero Client ID en Client Secret op, voltooi de Xero OAuth-flow, en AlgaPSA gebruikt de eerste verbonden Xero-organisatie als standaard live context.",
+        "howItWorksDescription": "Sla hier een tenant-eigen Xero Client ID en Client Secret op, voltooi de Xero OAuth-flow, en AlgaPSA gebruikt de geselecteerde Xero-organisatie als standaard voor live exports en synchronisatie.",
         "howItWorksTitle": "Hoe live Xero werkt in deze release",
         "loading": "Xero-instellingen worden geladen…",
         "mapping": {
-          "alert": "Xero-items, omzetrekeningen, belastingtarieven en tracking-categorieën worden geladen uit de standaard verbonden organisatie, zodat live exports in v1 de eerste opgeslagen Xero-verbinding kunnen blijven gebruiken.",
+          "alert": "Xero-items, omzetrekeningen, belastingtarieven en tracking-categorieën worden geladen uit de geselecteerde standaardorganisatie, en toewijzingen worden voor die verbinding opgeslagen, zodat live exports en reconciliatie dezelfde organisatie gebruiken.",
           "descriptionPrefix": "Configureer live Xero-toewijzingen voor de standaard verbonden organisatie. Deze toewijzingen zijn beperkt tot",
           "placeholderAlert": "De toewijzingsbeheerder wordt beschikbaar nadat de eerste Xero-organisatie is verbonden en ingesteld als standaard live Xero-context.",
           "placeholderDescription": "Verbind een live Xero-organisatie voordat u live Xero-item- en belastingtoewijzingen configureert.",
@@ -3566,7 +3806,7 @@
         "requiredScopes": "Vereiste scopes",
         "scopeOverride": "Implementatie-override (XERO_OAUTH_SCOPES)",
         "scopeOverrideInvalid": "De XERO_OAUTH_SCOPES-override is genegeerd omdat deze ongeldige waarden bevat ({{scopes}}). In plaats daarvan worden de standaardscopes gebruikt.",
-        "scopeReconnectNote": "Deze scopes gelden voor nieuwe autorisaties. Een bestaande verbinding behoudt de scopes die oorspronkelijk zijn verleend. Verbreek de verbinding met Xero en maak opnieuw verbinding om de huidige set toe te passen. U kunt deze app ook verwijderen uit Connected apps in Xero om eerdere machtigingen in te trekken.",
+        "scopeReconnectNote": "Deze scopes gelden voor nieuwe autorisaties. Een bestaande verbinding behoudt de scopes die oorspronkelijk zijn verleend. Verbreek de verbinding met Xero en maak opnieuw verbinding om de huidige set toe te passen. Het vernieuwen van het token behoudt de bestaande machtigingen; alleen een nieuwe autorisatie verleent nieuwe. U kunt deze app ook verwijderen uit Connected apps in Xero om eerdere machtigingen in te trekken.",
         "storedClientId": "Opgeslagen client ID: {{value}}",
         "storedClientSecret": "Opgeslagen client secret: {{value}}",
         "tenantOauthDescription": "Plak de Xero-app-inloggegevens die voor deze tenant zijn geregistreerd. Secret-waarden worden na opslaan nooit meer aan de browser geretourneerd.",
@@ -3585,8 +3825,14 @@
           "targetRevoked": "ingetrokken",
           "targetFailed": "vereist aandacht",
           "targetPending": "in behandeling",
-          "failedPermanentDescription": "De opschoning bij de aanbieder is op een permanente fout gestuit. U kunt het opnieuw proberen of geforceerd afronden om de opgeslagen inloggegevens te verwijderen met een auditregistratie."
-        }
+          "failedPermanentDescription": "De opschoning bij de aanbieder is op een permanente fout gestuit. U kunt het opnieuw proberen of geforceerd afronden om de opgeslagen inloggegevens te verwijderen met een auditregistratie.",
+          "confirmDescription": "Dit ontkoppelt {{organisations}} en pauzeert synchronisatie en exports. Uw Xero-appgegevens blijven opgeslagen.",
+          "confirmTitle": "Xero ontkoppelen van Alga PSA?",
+          "dangerDescription": "Stopt synchronisatie en exports en verwijdert alle {{count}} gekoppelde organisaties. Appgegevens blijven opgeslagen.",
+          "dangerTitle": "Xero ontkoppelen"
+        },
+        "connectNeedsAttention": "De Xero-autorisatie is voltooid, maar de verbinding vereist nog aandacht. Synchronisatie blijft gepauzeerd.",
+        "credentialsStoredDescription": "De client-ID en het clientgeheim worden veilig opgeslagen."
       }
     },
     "stripe": {
@@ -3621,7 +3867,8 @@
         "failedTitle": "Webhook-configuratie mislukt",
         "failedBody": "Automatische webhook-configuratie mislukt. Klik op Opnieuw proberen om de configuratie opnieuw te proberen.",
         "configuring": "Configureren...",
-        "retry": "Configuratie opnieuw proberen"
+        "retry": "Configuratie opnieuw proberen",
+        "eventsOutOfDate": "De webhookgebeurtenissen zijn verouderd. Probeer de webhookconfiguratie opnieuw om ze bij te werken."
       },
       "disconnectDialog": {
         "title": "Stripe loskoppelen",
@@ -3677,10 +3924,97 @@
         "disabled": "Uitgeschakeld",
         "notConfigured": "Niet ingesteld"
       },
+      "setup": {
+        "configure": "Integratie configureren",
+        "selectedAction": "Geselecteerd",
+        "currentIntegration": "Telefonie-integratie",
+        "changeIntegration": "Andere kiezen"
+      },
       "providers": {
         "teamsPhone": {
           "description": "Legt Teams Phone-gesprekken na afloop vast als interacties. Gespreksgeschiedenis, geen live schermmelding.",
-          "prerequisite": "Stel eerst de Microsoft Teams-integratie in — Teams Phone hergebruikt het Microsoft-profiel daarvan."
+          "prerequisite": "Stel eerst de Microsoft Teams-integratie in — Teams Phone hergebruikt het Microsoft-profiel daarvan.",
+          "label": "Teams Phone"
+        },
+        "threecx": {
+          "label": "3CX",
+          "description": "Legt 3CX-gesprekken vast als interacties en herkent bellers in de 3CX-client via het CRM-sjabloon.",
+          "permission": "U hebt de systeeminstellingen-permissie nodig om de 3CX-integratie te beheren.",
+          "endpoint": "Basis-URL van eindpunt",
+          "copy": "Kopiëren",
+          "apiKey": "API-sleutel",
+          "rotate": "Roteren",
+          "fullKeyWarning": "Kopieer deze sleutel nu — hij wordt niet opnieuw getoond.",
+          "download": "Sjabloon downloaden",
+          "tierRequired": "3CX-telefonie vereist het Pro-abonnement.",
+          "templateStale": "Er is een nieuwer sjabloon beschikbaar. Download het en upload het opnieuw in de 3CX-console.",
+          "pbx": {
+            "title": "PBX-API (3CX Enterprise/AI)",
+            "help": "Oproepmelding, click-to-call, import van de belgeschiedenis en telefoonboeksynchronisatie gebruiken de 3CX Call Control- en Configuration-API, waarvoor een 3CX Enterprise- of AI-licentie (8SC+) nodig is. Maak in de 3CX-beheerconsole onder Integraties → API een API-app, vink beide API-toegangen aan en vermeld elk toestel dat u wilt volgen.",
+            "baseUrl": "PBX-adres",
+            "clientId": "Client-id (toestel van de API-app)",
+            "clientSecret": "Clientgeheim",
+            "replaceSecret": "Vervangen",
+            "save": "Gegevens opslaan",
+            "test": "Verbinding testen",
+            "clear": "Verwijderen",
+            "connected": "Verbonden",
+            "granted": "toegekend",
+            "notGranted": "niet toegekend",
+            "callControl": "Oproepbesturing",
+            "xapi": "Configuratie-API",
+            "lastChecked": "Laatst gecontroleerd",
+            "notConnectedHint": "Verbind hierboven de PBX-API om deze functie te gebruiken."
+          },
+          "extensions": {
+            "title": "Toestellen",
+            "sync": "Synchroniseren vanaf PBX",
+            "lastSync": "Laatste synchronisatie",
+            "empty": "Nog geen toestellen gesynchroniseerd.",
+            "dn": "Toestel",
+            "pbxUser": "PBX-gebruiker",
+            "algaUser": "AlgaPSA-gebruiker",
+            "unmapped": "Niet gekoppeld",
+            "auto": "gekoppeld op e-mail"
+          },
+          "cdr": {
+            "title": "Import van belgeschiedenis",
+            "help": "Leest elk uur het belregister van de PBX en registreert externe oproepen die nog niet in het logboek staan.",
+            "lookback": "Dagen geschiedenis bij de eerste run",
+            "lastRun": "Laatste run",
+            "added": "Records toegevoegd"
+          },
+          "phonebook": {
+            "title": "Telefoonboeksynchronisatie",
+            "help": "Stuurt contacten met telefoonnummers naar het 3CX-bedrijfstelefoonboek en voegt nummers die alleen in de PBX staan toe aan overeenkomende contacten.",
+            "schedule": "Afstemmingsschema",
+            "daily": "Dagelijks",
+            "hourly": "Elk uur",
+            "pushNow": "Nu versturen",
+            "importNow": "Nu importeren",
+            "lastPush": "Laatste verzending",
+            "lastImport": "Laatste import",
+            "countsLegend": "Aantallen: aangemaakt/bijgewerkt/verwijderd/geïmporteerd/overgeslagen"
+          },
+          "queue": {
+            "title": "Contacten aangemaakt vanuit 3CX",
+            "empty": "Niets in de wachtrij. Contacten die vanuit de 3CX-client zijn aangemaakt zonder overeenkomende klant verschijnen hier.",
+            "pendingBadge": "e-mail vereist",
+            "unmappedBadge": "geen klant",
+            "company": "Bedrijf",
+            "chooseClient": "Kies een klant…",
+            "apply": "Toepassen",
+            "leaveWithoutClient": "Zonder klant laten",
+            "complete": "Aanvullen",
+            "dismiss": "Negeren",
+            "completeTitle": "Contact uit 3CX aanvullen",
+            "firstName": "Voornaam",
+            "lastName": "Achternaam",
+            "email": "E-mail",
+            "number": "Telefoonnummer",
+            "cancel": "Annuleren",
+            "save": "Contact aanmaken"
+          }
         }
       },
       "subscriptionExpires": "Abonnement wordt vernieuwd vóór",
@@ -3717,7 +4051,8 @@
         "assignTo": "Toewijzen aan",
         "searchPlaceholder": "Zoek contacten en klanten…",
         "noTargets": "Geen overeenkomende contacten of klanten.",
-        "chooseTarget": "Toewijzen aan een klant…"
+        "chooseTarget": "Toewijzen aan een klant…",
+        "chatBadge": "Chat"
       },
       "forbidden": "U hebt geen toestemming om de telefonie-instellingen van deze tenant te bekijken.",
       "paywall": {
@@ -3733,6 +4068,59 @@
           "tickets": "Maak een ticket vanuit een gesprek of koppel het gesprek aan een ticket waaraan u al werkt.",
           "queue": "Een wachtrij voor niet-herkende en meerduidige nummers, zodat geen gesprek op gevoel wordt toegewezen.",
           "providers": "Vandaag Teams Phone; dezelfde gesprekskern draagt toekomstige aanbieders."
+        }
+      }
+    },
+    "qbd": {
+      "settings": {
+        "title": "QuickBooks Desktop (IIF)-integratie",
+        "description": "Exporteer facturen als IIF-bestand voor Bestand → Hulpprogramma's → Importeren → IIF-bestanden in QuickBooks Desktop.",
+        "loading": "QuickBooks Desktop-instellingen laden...",
+        "savedMessage": "Instellingen succesvol opgeslagen",
+        "save": "Instellingen opslaan",
+        "connectionsPermissionNotice": "U kunt de QuickBooks Desktop-instellingen bekijken, maar voor wijzigen is de bevoegdheid voor het beheren van verbindingen nodig. Vraag een beheerder om deze toe te kennen.",
+        "errors": {
+          "load": "QuickBooks Desktop-instellingen konden niet worden geladen",
+          "save": "QuickBooks Desktop-instellingen konden niet worden opgeslagen"
+        },
+        "warning": {
+          "title": "Maak eerst een back-up van uw bedrijfsbestand",
+          "description": "QuickBooks Desktop maakt elke klant-, artikel-, rekening- of voorwaardenaam aan die het niet herkent bij het importeren van een IIF-bestand, en IIF-imports kunnen niet ongedaan worden gemaakt. Zorg dat elke naam hieronder en in de koppelingen exact overeenkomt met uw bedrijfsbestand en test uw eerste import op een back-upkopie."
+        },
+        "exportSettings": {
+          "title": "IIF-exportinstellingen",
+          "description": "Voer de rekening- en artikelnamen van QuickBooks Desktop exact in zoals ze in uw rekeningschema en artikellijst staan."
+        },
+        "fields": {
+          "arAccount": "Debiteurenrekening",
+          "arAccountHelp": "De debiteurenrekening waarop elke factuur wordt geboekt.",
+          "defaultIncomeAccount": "Standaard opbrengstrekening",
+          "defaultIncomeAccountHelp": "De opbrengstrekening voor artikelen die vanuit een export worden gekoppeld, en voor elke koppeling van Services of Kortingen zonder rekening.",
+          "salesTaxPayableAccount": "Rekening te betalen omzetbelasting",
+          "salesTaxPayableAccountHelp": "De rekening waarop de omzetbelastingregel wordt geboekt, tenzij de belastingcodekoppeling van de belastingregio een andere noemt.",
+          "defaultSalesTaxItem": "Standaard omzetbelastingartikel",
+          "defaultSalesTaxItemHelp": "Omzetbelastingartikel of -groep voor belaste facturen waarvan de belastingcodekoppeling er geen noemt.",
+          "newProductItemType": "Artikeltype voor nieuwe producten",
+          "inventoryWarning": "Voorraadontvangsten uit Alga worden niet geëxporteerd, dus de voorraad in QuickBooks wordt negatief tenzij u de voorraad ook in QuickBooks invoert.",
+          "nonInventoryHelp": "Aanbevolen: Alga blijft het leidende voorraadsysteem en QuickBooks registreert alleen de verkoop.",
+          "inventoryAssetAccount": "Rekening voorraadactiva",
+          "cogsAccount": "Rekening kostprijs verkopen"
+        },
+        "mappings": {
+          "title": "QuickBooks-koppelingen",
+          "description": "Koppel Alga-klanten, services, kortingen, belastingcodes en betalingsvoorwaarden aan de namen in uw QuickBooks Desktop-bedrijfsbestand. Elke service en korting heeft een Desktop-artikel nodig; niet-gekoppelde betalingsvoorwaarden blijven leeg.",
+          "permissionNotice": "Voor het bewerken van QuickBooks Desktop-koppelingen is de bevoegdheid koppelingen beheren nodig. Vraag een beheerder om deze toe te kennen."
+        },
+        "exports": {
+          "description": "Maak een QuickBooks Desktop-exportbatch, voer deze uit en download daarna het IIF-bestand via de batchgegevens."
+        },
+        "newItems": {
+          "title": "Door exports aangemaakte artikelen",
+          "description": "Wanneer een export een nieuw QuickBooks-artikel aanmaakt voor een Alga-product, wordt dit artikeltype gebruikt. Diensten worden altijd als dienstartikel aangemaakt."
+        },
+        "itemTypes": {
+          "nonInventory": "Niet-voorraadartikel",
+          "inventory": "Voorraadartikel"
         }
       }
     }
@@ -3762,6 +4150,8 @@
       "managePermission": "Toestemming geweigerd: u hebt geen rechten om boekhoudkoppelingen te beheren.",
       "loadFailed": "Kan de koppelingsgegevens niet laden. Probeer het opnieuw.",
       "duplicate": "Er bestaat al een koppeling voor deze entiteit. Bewerk in plaats daarvan de bestaande koppeling.",
+      "duplicateTarget": "Dit doel is in deze organisatie al aan een andere entiteit gekoppeld. Kies een ander doel.",
+      "duplicateXeroItem": "Dit Xero-artikel is al aan een andere dienst gekoppeld. Een artikel kan aan slechts één dienst worden gekoppeld; koppel diensten aan een opbrengstrekening om ze onder dezelfde code te factureren.",
       "saveFailed": "Kan de koppeling niet opslaan. Probeer het opnieuw.",
       "idRequiredForUpdate": "Voor het bijwerken is de koppelings-ID verplicht.",
       "noUpdateData": "Er zijn geen bij te werken gegevens opgegeven.",
@@ -3816,6 +4206,7 @@
       "enterpriseOnly": "De Xero-integratie is alleen beschikbaar in de Enterprise Edition.",
       "viewPermission": "Verboden: u hebt geen rechten om de instellingen van de Xero-integratie te bekijken.",
       "organisationDisconnected": "De geselecteerde Xero-organisatie is niet meer verbonden. Verbind Xero opnieuw en probeer het nogmaals.",
+      "organisationAmbiguous": "De opgeslagen standaard Xero-organisatie is eigendom van meer dan één verbinding. Kies welke verbinding de standaard is in de boekhoudinstellingen.",
       "accounts": {
         "notConnected": "Verbind Xero voordat u Xero-grootboekrekeningen laadt.",
         "reconnect": "Verbind Xero opnieuw voordat u Xero-grootboekrekeningen laadt.",
@@ -3851,6 +4242,27 @@
       "contactWithoutClient": "Er bestaat al een contact met dit e-mailadres in het systeem zonder klanttoewijzing",
       "emailOnAnotherClient": "Dit e-mailadres is al gekoppeld aan een andere klant",
       "emailOnAnotherClientNamed": "Dit e-mailadres is al gekoppeld aan {{clientName}}"
+    },
+    "quickbooksDesktop": {
+      "viewSettingsPermission": "Gebruiker heeft geen toestemming om integratie-instellingen te bekijken",
+      "manageIntegrationsPermission": "Gebruiker heeft geen toestemming om integratie-instellingen te beheren"
+    }
+  },
+  "telephony": {
+    "incomingCall": {
+      "title": "Inkomende oproep",
+      "unknownCaller": "Onbekende beller",
+      "noNumber": "Geen nummerweergave",
+      "extension": "Toestel {{dn}} gaat over",
+      "openTickets": "Openstaande tickets",
+      "recentInteractions": "Recente interacties",
+      "openContact": "Contact openen",
+      "openClient": "Klant openen",
+      "newTicket": "Nieuw ticket",
+      "createContact": "Contact aanmaken",
+      "dismiss": "Sluiten",
+      "answer": "Opnemen",
+      "answerFailed": "De PBX kon de oproep niet opnemen"
     }
   }
 }

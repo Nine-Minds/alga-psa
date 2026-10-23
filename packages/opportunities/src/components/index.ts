@@ -29,6 +29,7 @@ export type { OpportunityDraftingCallbacks } from './detail/OpportunityDetailHos
 export { WhitespaceGridView } from './suggestions/WhitespaceGridView';
 export { TmOnePagerDialog } from './suggestions/TmOnePagerDialog';
 export { OpportunityPlanPanel } from './detail/OpportunityPlanPanel';
+export { OpportunityDocumentsTile } from './detail/OpportunityDocumentsTile';
 export { OpportunityStepTimeline } from './detail/OpportunityStepTimeline';
 export { StepEditorDialog } from './dialogs/StepEditorDialog';
 export {

@@ -1,9 +1,12 @@
+
+import { resolveUnitOfMeasure, withUnitCode } from '@alga-psa/core/unitOfMeasure';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import type { IContractTemplateLine } from '@alga-psa/types';
-import { cloneTemplateLinePools } from '@alga-psa/shared/billingClients/templateClone';
+import { cloneTemplateLinePools, cloneTemplateLinePrepaidBlock, cloneTemplateServiceFixedConfig } from '@alga-psa/shared/billingClients/templateClone';
 
+// LEVERAGE: pattern template-clone-substrate — older, divergent template->contract clone. The faithful one is cloneTemplateLineToContract in packages/billing/src/repositories/contractLineRepository.ts (alga-2026-0002371).
 interface CloneTemplateOptions {
   tenant: string;
   templateContractLineId: string;
@@ -65,6 +68,7 @@ export async function cloneTemplateContractLine(
   // Clone services from template to contract_line_services
   const hasTemplatePools = await cloneTemplateLinePools(trx, tenant, templateContractLineId, targetContractLineId);
   await cloneServices(trx, tenant, templateContractLineId, targetContractLineId, hasTemplatePools);
+  await cloneTemplateLinePrepaidBlock(trx, tenant, templateContractLineId, targetContractLineId);
 
   // Resolve the custom rate to apply
   const templateCustomRate = await resolveTemplateCustomRate(
@@ -77,16 +81,114 @@ export async function cloneTemplateContractLine(
   const appliedCustomRate = overrideRate ?? templateCustomRate;
 
   // Update the contract_line's custom_rate directly (no separate pricing table needed)
-  if (appliedCustomRate !== null) {
+  const templateInvoiceText = (templateLine as { invoice_line_description?: string | null })
+    .invoice_line_description ?? null;
+  if (appliedCustomRate !== null || templateInvoiceText !== null) {
     await tenantDb(trx, tenant).table('contract_lines')
       .where({ contract_line_id: targetContractLineId })
       .update({
-        custom_rate: appliedCustomRate,
+        ...(appliedCustomRate !== null ? { custom_rate: appliedCustomRate } : {}),
+        invoice_line_description: templateInvoiceText,
         updated_at: trx.fn.now()
       });
   }
 
   return { appliedCustomRate };
+}
+
+/** Copy template default discounts into one client-contract-owned definition set. */
+export async function cloneTemplateDefaultDiscounts(
+  trx: Knex.Transaction,
+  options: { tenant: string; templateId: string; clientContractId: string; clientId: string; lineIdMap?: Record<string, string> },
+): Promise<void> {
+  const { tenant, templateId, clientContractId, clientId, lineIdMap = {} } = options;
+  const db = tenantDb(trx, tenant);
+  const template = await db.table('contract_templates')
+    .where({ template_id: templateId }).forUpdate().first('template_metadata');
+  const metadata = typeof template?.template_metadata === 'string'
+    ? JSON.parse(template.template_metadata)
+    : template?.template_metadata;
+  type TemplateDefaultDiscount = {
+    template_discount_key?: string; discount_name?: string; discount_type?: string; value?: number | string;
+    scope?: string | null; start_date?: string; end_date?: string | null; is_active?: boolean;
+    scope_service_id?: string; contract_line_id?: string; priority?: number | null;
+  };
+  let definitions: TemplateDefaultDiscount[] = Array.isArray(metadata?.default_discounts) ? metadata.default_discounts : [];
+  if (!definitions.length) return;
+  if (definitions.some((definition) => !definition?.template_discount_key)) {
+    definitions = definitions.map((definition) => ({
+      ...definition, template_discount_key: definition.template_discount_key || uuidv4(),
+    }));
+    await db.table('contract_templates').where({ template_id: templateId }).update({
+      template_metadata: { ...metadata, default_discounts: definitions }, updated_at: trx.fn.now(),
+    });
+  }
+
+  // Serialize retries for this assignment, then track every source term
+  // independently. An unrelated discount or a line-only copy is not evidence
+  // that the template copy completed.
+  const owner = await db.table('client_contracts').where({ client_contract_id: clientContractId }).forUpdate().first('client_contract_id');
+  if (!owner) throw new Error('The client contract for template discount copying no longer exists.');
+
+  for (const definition of definitions) {
+    if (!definition || typeof definition.discount_name !== 'string'
+      || typeof definition.discount_type !== 'string'
+      || !['fixed', 'percentage'].includes(definition.discount_type)
+      || (definition.scope != null && !['contract', 'line', 'service'].includes(definition.scope))
+      || !Number.isFinite(Number(definition.value))
+      || Number(definition.value) <= 0
+      || (definition.discount_type === 'percentage' && Number(definition.value) > 100)
+      || !/^\d{4}-\d{2}-\d{2}$/.test(String(definition.start_date ?? ''))
+      || (definition.end_date && !/^\d{4}-\d{2}-\d{2}$/.test(String(definition.end_date)))) {
+      throw new Error('Template default discount has invalid required fields.');
+    }
+    const discountType = definition.discount_type as 'fixed' | 'percentage';
+    const startDate = String(definition.start_date);
+    const templateDiscountKey = String(definition.template_discount_key);
+    const copied = await db.table('contract_template_discount_copies')
+      .where({ client_contract_id: clientContractId, template_discount_key: templateDiscountKey })
+      .first('discount_id');
+    if (copied) continue;
+    const discountId = uuidv4();
+    const scope = definition.scope === 'service' || definition.scope === 'line' ? definition.scope : 'contract';
+    if (scope === 'service' && typeof definition.scope_service_id !== 'string') throw new Error('Template service-scoped discount is missing its service.');
+    if (scope === 'line' && typeof definition.contract_line_id !== 'string') throw new Error('Template line-scoped discount is missing its template line.');
+    await tenantDb(trx, tenant).table('discounts').insert({
+      tenant,
+      discount_id: discountId,
+      discount_name: definition.discount_name.trim(),
+      discount_type: discountType,
+      value: discountType === 'percentage'
+        ? Math.round((Number(definition.value) / 100) * 1e4) / 1e4
+        : Math.round(Number(definition.value) * 100) / 100,
+      start_date: `${startDate}T00:00:00.000Z`,
+      end_date: definition.end_date ? `${definition.end_date}T00:00:00.000Z` : null,
+      is_active: definition.is_active !== false,
+      scope,
+      scope_service_id: scope === 'service' ? definition.scope_service_id as string : null,
+      applies_to_item_id: null,
+      priority: definition.priority ?? null,
+      created_at: trx.fn.now(),
+      updated_at: trx.fn.now(),
+    });
+    if (scope === 'line') {
+      const templateLineId = definition.contract_line_id as string;
+      const targetLineId = lineIdMap[templateLineId] ?? templateLineId;
+      if (!targetLineId || !lineIdMap[templateLineId]) throw new Error('Template line-scoped discount could not be mapped to a client contract line.');
+      await tenantDb(trx, tenant).table('contract_line_discounts').insert({
+        tenant, discount_id: discountId, contract_line_id: targetLineId, client_id: clientId,
+        client_contract_id: clientContractId,
+      });
+    } else {
+      await tenantDb(trx, tenant).table('contract_discount_assignments').insert({
+        tenant, assignment_id: uuidv4(), client_contract_id: clientContractId,
+        discount_id: discountId, created_at: trx.fn.now(),
+      });
+    }
+    await db.table('contract_template_discount_copies').insert({
+      tenant, client_contract_id: clientContractId, template_discount_key: templateDiscountKey, discount_id: discountId,
+    });
+  }
 }
 
 async function cloneServices(
@@ -114,15 +216,12 @@ async function cloneServices(
         contract_line_id: contractLineId,
         service_id: service.service_id,
         quantity: service.quantity,
-        custom_rate: normalizeNumeric(service.custom_rate),
-        created_at: trx.fn.now(),
-        updated_at: trx.fn.now()
+        custom_rate: normalizeNumeric(service.custom_rate)
       })
       .onConflict(['tenant', 'contract_line_id', 'service_id'])
       .merge({
         quantity: service.quantity,
-        custom_rate: normalizeNumeric(service.custom_rate),
-        updated_at: new Date().toISOString()
+        custom_rate: normalizeNumeric(service.custom_rate)
       });
 
     await cloneServiceConfiguration(
@@ -188,7 +287,7 @@ async function cloneServiceConfiguration(
     }
 
     if (configuration.configuration_type === 'Fixed') {
-      await cloneFixedConfig(trx, tenant, configuration.config_id, newConfigId);
+      await cloneTemplateServiceFixedConfig(trx, tenant, configuration.config_id, newConfigId);
     }
   }
 }
@@ -237,31 +336,6 @@ async function cloneBucketConfig(
     service_id: serviceId,
     contract_line_id: contractLineId,
     burn_multiplier: 1,
-    created_at: trx.fn.now(),
-    updated_at: trx.fn.now()
-  });
-}
-
-type TemplateFixedConfigRow = {
-  base_rate: number | string | null;
-};
-
-async function cloneFixedConfig(
-  trx: Knex.Transaction,
-  tenant: string,
-  sourceConfigId: string,
-  targetConfigId: string
-) {
-  const fixedConfig = await tenantDb(trx, tenant).table('contract_template_line_service_fixed_config')
-    .where('config_id', sourceConfigId)
-    .first('base_rate');
-
-  if (!fixedConfig) return;
-
-  await tenantDb(trx, tenant).table('contract_line_service_fixed_config').insert({
-    tenant,
-    config_id: targetConfigId,
-    base_rate: normalizeNumeric(fixedConfig.base_rate),
     created_at: trx.fn.now(),
     updated_at: trx.fn.now()
   });
@@ -355,13 +429,17 @@ async function cloneUsageConfig(
 ) {
   const usageConfig = await tenantDb(trx, tenant).table('contract_template_line_service_usage_config')
     .where('config_id', sourceConfigId)
-    .first('unit_of_measure', 'enable_tiered_pricing', 'minimum_usage', 'base_rate');
+    .first('unit_of_measure', 'unit_code', 'enable_tiered_pricing', 'minimum_usage', 'base_rate');
 
+  const clonedUnit = withUnitCode({
+    unit_of_measure: usageConfig?.unit_of_measure ?? resolveUnitOfMeasure({ fallback: 'C62' }).label,
+    unit_code: usageConfig?.unit_code ?? null,
+  });
   await tenantDb(trx, tenant).table('contract_line_service_usage_config')
     .insert({
       tenant,
       config_id: targetConfigId,
-      unit_of_measure: usageConfig?.unit_of_measure ?? 'unit',
+      ...clonedUnit,
       enable_tiered_pricing: Boolean(usageConfig?.enable_tiered_pricing),
       minimum_usage: usageConfig?.minimum_usage ?? 0,
       base_rate: normalizeNumeric(configuration.custom_rate ?? usageConfig?.base_rate),
@@ -370,7 +448,7 @@ async function cloneUsageConfig(
     })
     .onConflict(['tenant', 'config_id'])
     .merge({
-      unit_of_measure: usageConfig?.unit_of_measure ?? 'unit',
+      ...clonedUnit,
       enable_tiered_pricing: Boolean(usageConfig?.enable_tiered_pricing),
       minimum_usage: usageConfig?.minimum_usage ?? 0,
       base_rate: normalizeNumeric(configuration.custom_rate ?? usageConfig?.base_rate),

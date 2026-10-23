@@ -1,3 +1,4 @@
+import { formatPhoneForDisplay } from "../../../../packages/validation/src/lib/phone";
 import type { CompositeScreenProps } from "@react-navigation/native";
 import type { DrawerScreenProps } from "@react-navigation/drawer";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -16,6 +17,10 @@ import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
 import { listClients, type ClientListItem } from "../api/clients";
+import { useCapabilities } from "../capabilities/CapabilitiesContext";
+import { ClientFormModal } from "../features/clients/components/ClientFormModal";
+import { HeaderTimerChip } from "../features/timer/components/HeaderTimerChip";
+import { HeaderAddButton } from "../ui/components/HeaderAddButton";
 import { useTheme } from "../ui/ThemeContext";
 import type { Theme } from "../ui/themes";
 import { logger } from "../logging/logger";
@@ -55,12 +60,28 @@ export function ClientsListScreen({ navigation }: Props) {
   const [noAccess, setNoAccess] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const { features } = useCapabilities();
 
   useEffect(() => {
     return () => {
       listAbortRef.current?.abort();
     };
   }, []);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        // The drawer header adds no trailing inset of its own; keep the same gutter as the stack headers.
+        <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm, marginRight: theme.spacing.md }}>
+          <HeaderTimerChip />
+          {features.clientsCreate ? (
+            <HeaderAddButton testID="clients-create" onPress={() => setCreateOpen(true)} accessibilityLabel={t("list.create")} />
+          ) : null}
+        </View>
+      ),
+    });
+  }, [features.clientsCreate, navigation, t, theme.spacing.md, theme.spacing.sm]);
 
   useEffect(() => {
     const handle = setTimeout(() => setSearch(searchInput.trim()), SEARCH_DEBOUNCE_MS);
@@ -180,6 +201,21 @@ export function ClientsListScreen({ navigation }: Props) {
     return <ErrorState title={t("list.noAccess")} description={t("list.noAccessDescription")} />;
   }
 
+  const createModal = (
+    <ClientFormModal
+      visible={createOpen}
+      mode="create"
+      client={client}
+      apiKey={session.accessToken}
+      baseUrl={config.baseUrl}
+      onClose={() => setCreateOpen(false)}
+      onSaved={(created) => {
+        void refresh();
+        navigation.navigate("ClientDetail", { clientId: created.client_id, clientName: created.client_name });
+      }}
+    />
+  );
+
   if (initialLoading && items.length === 0) {
     return <LoadingState message={t("list.loadingClients")} />;
   }
@@ -210,6 +246,7 @@ export function ClientsListScreen({ navigation }: Props) {
   if (!error && items.length === 0) {
     return (
       <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        {createModal}
         <View style={{ padding: theme.spacing.lg }}>{header}</View>
         {search ? (
           <EmptyState title={t("list.noResults")} description={t("list.noResultsDescription")} />
@@ -226,6 +263,7 @@ export function ClientsListScreen({ navigation }: Props) {
 
   return (
     <View style={{ flex: 1 }}>
+      {createModal}
       <FlatList
         data={items}
         keyExtractor={keyExtractor}
@@ -271,7 +309,7 @@ const ClientRow = memo(function ClientRow({
   const clientName = item.client_name;
   const handlePress = useCallback(() => onPressClient(clientId, clientName), [clientId, clientName, onPressClient]);
 
-  const snippet = [item.phone_no, item.email].filter(Boolean).join(" • ");
+  const snippet = [item.phone_no ? formatPhoneForDisplay(item.phone_no).number : null, item.email].filter(Boolean).join(" • ");
   const imageUri = item.logoUrl && baseUrl ? `${baseUrl}${item.logoUrl}` : null;
 
   return (

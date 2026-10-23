@@ -54,6 +54,11 @@ vi.mock('@alga-psa/auth/actions', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: publishEventMock,
   publishWorkflowEvent: publishWorkflowEventMock,
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/event-bus', () => ({
@@ -295,12 +300,14 @@ describe('auto-close engine', () => {
     await insertAutoCloseRule(fixture);
     // Board has gates the abandoned ticket can't satisfy — the engine bypasses them.
     await setBoardCloseRules(db, fixture, { require_time_entry: true });
-    const ticketId = await insertStaleTicket(fixture, 10); // due
+    // Last edited by a human: the system close must clear, not keep, that name.
+    const ticketId = await insertStaleTicket(fixture, 10, { updated_by: fixture.userId }); // due
 
     await autoCloseTicketsHandler({ tenantId: fixture.tenantId });
 
     const ticket = await scopedDbFor(fixture.tenantId).table('tickets').where({ ticket_id: ticketId }).first();
     expect(ticket.status_id).toBe(fixture.closedStatusId);
+    expect(ticket.updated_by).toBeNull();
     expect(ticket.is_closed).toBe(true);
     expect(ticket.closed_at).not.toBeNull();
     expect(ticket.closed_by).toBeNull();
@@ -413,5 +420,69 @@ describe('auto-close engine', () => {
     await autoCloseTicketsHandler({ tenantId: secondary.tenantId });
     const otherAfter = await scopedDbFor(secondary.tenantId).table('tickets').where({ ticket_id: secondaryTicket }).first();
     expect(otherAfter.is_closed).toBe(false);
+  });
+
+  it('T038: auto-close propagates a sync master close to open children via the ledger', async () => {
+    await insertAutoCloseRule(fixture);
+    const scopedDb = scopedDbFor(fixture.tenantId);
+
+    // Master is due: trigger status, idle well past the rule deadline.
+    const masterId = await insertStaleTicket(fixture, 10);
+
+    // One open child (propagated close) and one child closed independently
+    // before this sweep (must be left untouched).
+    const openChildId = await insertTicket(db, fixture, { status_id: fixture.openStatusId });
+    const closedChildId = await insertTicket(db, fixture, { status_id: fixture.closedStatusId });
+    await scopedDb.table('tickets')
+      .where({ ticket_id: closedChildId })
+      .update({ is_closed: true, closed_at: db.fn.now(), closed_by: null });
+    const closedChildBefore = await scopedDb.table('tickets').where({ ticket_id: closedChildId }).first();
+
+    await scopedDb.table('tickets')
+      .whereIn('ticket_id', [openChildId, closedChildId])
+      .update({ master_ticket_id: masterId });
+
+    await scopedDb.table('ticket_bundle_settings').insert({
+      tenant: fixture.tenantId,
+      master_ticket_id: masterId,
+      mode: 'sync_updates',
+      reopen_on_child_reply: false,
+    });
+
+    await autoCloseTicketsHandler({ tenantId: fixture.tenantId });
+
+    const master = await scopedDb.table('tickets').where({ ticket_id: masterId }).first();
+    expect(master.status_id).toBe(fixture.closedStatusId);
+    expect(master.is_closed).toBe(true);
+    expect(master.closed_by).toBeNull();
+
+    const openChild = await scopedDb.table('tickets').where({ ticket_id: openChildId }).first();
+    expect(openChild.status_id).toBe(fixture.closedStatusId);
+    expect(openChild.is_closed).toBe(true);
+    expect(openChild.closed_by).toBeNull();
+
+    const closedChildAfter = await scopedDb.table('tickets').where({ ticket_id: closedChildId }).first();
+    expect(closedChildAfter.status_id).toBe(fixture.closedStatusId);
+    expect(closedChildAfter.closed_at).toEqual(closedChildBefore.closed_at);
+    expect(closedChildAfter.closed_by).toEqual(closedChildBefore.closed_by);
+
+    const activeRows = await scopedDb.table('ticket_bundle_status_propagations')
+      .where({ master_ticket_id: masterId })
+      .whereNull('reverted_at');
+    expect(activeRows.length).toBe(1);
+    expect(activeRows[0].child_ticket_id).toBe(openChildId);
+    expect(activeRows[0].action).toBe('close');
+    expect(activeRows[0].propagated_by).toBeNull();
+
+    const audit = await scopedDb.table('ticket_audit_logs')
+      .where({ ticket_id: masterId, event_type: 'TICKET_BUNDLE_STATUS_PROPAGATED' })
+      .first();
+    expect(audit).toBeTruthy();
+    expect(audit.actor_type).toBe('system');
+    expect(audit.source).toBe('system');
+    expect(audit.details.propagated).toBe(true);
+
+    // State cleared inside the closing transaction: the sweep does not retry.
+    expect(await getState(fixture, masterId)).toBeUndefined();
   });
 });

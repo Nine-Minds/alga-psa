@@ -148,6 +148,24 @@ function hasInlineContent(item: any): boolean {
 }
 
 /**
+ * Collect one line per block, descending into nested (indented) child blocks so
+ * their text is not dropped from the plain-text rendering.
+ */
+function collectBlockLines(block: any, lines: string[]): void {
+  if (!block) return;
+
+  if (Array.isArray(block.content)) {
+    lines.push(block.content.map(extractInlineText).join(''));
+  }
+
+  if (Array.isArray(block.children)) {
+    for (const child of block.children) {
+      collectBlockLines(child, lines);
+    }
+  }
+}
+
+/**
  * Extract plain text from a task description for display in cards, lists, and search.
  * Handles both BlockNote JSON and plain text strings.
  */
@@ -164,10 +182,7 @@ export function extractTaskDescriptionText(description: string | null | undefine
 
       const lines: string[] = [];
       for (const block of blocks) {
-        if (block?.content && Array.isArray(block.content)) {
-          const line = block.content.map(extractInlineText).join('');
-          lines.push(line);
-        }
+        collectBlockLines(block, lines);
       }
       return lines.join('\n').trim();
     } catch {
@@ -179,26 +194,36 @@ export function extractTaskDescriptionText(description: string | null | undefine
 }
 
 /**
+ * Check if a block carries content of its own, or nests a child block that
+ * does. A text container with blank inline content can still hold indented
+ * children (a list item with sub-items, a paragraph with a nested image).
+ */
+function blockHasMeaningfulContent(block: any): boolean {
+  if (!block) return false;
+
+  const blockType = block.type;
+
+  // Non-text block types (image, table, video, audio, file, codeBlock, etc.)
+  // are inherently non-empty even without an inline content array.
+  if (blockType && !TEXT_CONTAINER_BLOCK_TYPES.has(blockType)) {
+    return true;
+  }
+
+  if (Array.isArray(block.content) && (block.content as any[]).some(hasInlineContent)) {
+    return true;
+  }
+
+  return Array.isArray(block.children)
+    && (block.children as any[]).some((child) => blockHasMeaningfulContent(child));
+}
+
+/**
  * Check if a BlockNote content array represents empty content (no real text,
- * inline elements, or non-text blocks like images/tables/embeds).
+ * inline elements, or non-text blocks like images/tables/embeds) at any
+ * nesting depth.
  */
 export function isTaskRichTextEmpty(content: PartialBlock[]): boolean {
   if (!content || content.length === 0) return true;
 
-  for (const block of content) {
-    const blockType = (block as any).type;
-
-    // Non-text block types (image, table, video, audio, file, codeBlock, etc.)
-    // are inherently non-empty even without an inline content array.
-    if (blockType && !TEXT_CONTAINER_BLOCK_TYPES.has(blockType)) {
-      return false;
-    }
-
-    if (Array.isArray(block.content)) {
-      for (const item of block.content as any[]) {
-        if (hasInlineContent(item)) return false;
-      }
-    }
-  }
-  return true;
+  return !content.some((block) => blockHasMeaningfulContent(block));
 }

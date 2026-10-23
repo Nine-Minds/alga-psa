@@ -17,6 +17,7 @@ import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { PhoneInput } from '@alga-psa/ui/components/PhoneInput';
+import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -209,7 +210,7 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
                 helperText={t('clients.locations.card.phoneHelper', 'Phone number for this location')}
               >
                 <div className="mt-1">
-                  {`${t('clients.locations.card.phoneLabel', 'Phone')}: ${location.phone}`}
+                  <><span>{t('clients.locations.card.phoneLabel', 'Phone')}: </span><PhoneText value={location.phone} extension={location.phone_extension} defaultCountry={location.country_code} /></>
                 </div>
               </LocationDetailField>
             )}
@@ -536,6 +537,24 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
     setValidationErrors([]);
   };
 
+  /**
+   * The picker is keyed on the ISO code, so a row saved with a legacy alias
+   * ('UK') opens with an empty country even though the address reads "United
+   * Kingdom". Match the stored name instead, so the field shows the country and
+   * saving repairs the code.
+   */
+  const storedCountryForPicker = (location: IClientLocation) => {
+    const code = (location.country_code || '').trim().toUpperCase();
+    if (!code || !countries.some((country) => country.code === code)) {
+      const name = (location.country_name || '').trim().toLowerCase();
+      const byName = name && countries.find((country) => country.name.toLowerCase() === name);
+      if (byName) {
+        return { country_code: byName.code, country_name: byName.name };
+      }
+    }
+    return { country_code: location.country_code, country_name: location.country_name };
+  };
+
   const handleEditLocation = (location: IClientLocation) => {
     setEditingLocation(location);
     setFormData({
@@ -546,8 +565,7 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
       city: location.city,
       state_province: location.state_province || '',
       postal_code: location.postal_code || '',
-      country_code: location.country_code,
-      country_name: location.country_name,
+      ...storedCountryForPicker(location),
       region_code: location.region_code || null,
       phone: location.phone || '',
       phone_extension: location.phone_extension || '',

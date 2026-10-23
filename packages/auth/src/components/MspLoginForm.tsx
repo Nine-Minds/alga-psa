@@ -32,7 +32,7 @@ export default function MspLoginForm({
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const captcha = useLoginCaptcha();
-  const { t } = useTranslation('msp/auth');
+  const { t } = useTranslation('msp/auth', { useSuspense: false });
 
   useEffect(() => {
     setEmail(initialEmail ?? '');

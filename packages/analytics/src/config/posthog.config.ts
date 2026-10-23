@@ -39,11 +39,17 @@ export const posthogConfig = {
 export function isPostHogEnabled(): boolean {
   // Check environment variable override
   // Using generic name so we can switch providers in the future
-  if (process.env.ALGA_USAGE_STATS === 'false' || 
+  if (process.env.ALGA_USAGE_STATS === 'false' ||
       process.env.NEXT_PUBLIC_ALGA_USAGE_STATS === 'false') {
     return false;
   }
-  
+
+  // Test runs are opt-in: they must never count against the production
+  // PostHog quotas unless a suite explicitly asks for the real client.
+  if (process.env.NODE_ENV === 'test') {
+    return process.env.ALGA_USAGE_STATS === 'true';
+  }
+
   // Usage statistics are enabled by default
   return true;
 }

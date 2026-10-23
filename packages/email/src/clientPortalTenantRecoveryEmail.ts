@@ -4,6 +4,7 @@ import { getSystemEmailService } from './system/SystemEmailService';
 import logger from '@alga-psa/core/logger';
 import { getConnection, tenantDb } from '@alga-psa/db';
 import { SupportedLocale, LOCALE_CONFIG } from './lib/localeConfig';
+import { replaceTemplateVariables as replaceVariables } from './lib/replaceTemplateVariables';
 import { resolveEmailLocale } from './emailLocaleResolver';
 
 const SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT = '__system_email_template_lookup__';
@@ -66,26 +67,6 @@ async function fetchTemplate(
     logger.error(`[fetchTemplate] Error fetching template ${templateName}:`, error);
     return null;
   }
-}
-
-/**
- * Replace template variables including dynamic content
- */
-function replaceVariables(template: string, variables: Record<string, any>): string {
-  let result = template;
-
-  // Handle {{#if condition}} blocks
-  result = result.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (match, condition, content) => {
-    return variables[condition] ? content : '';
-  });
-
-  // Replace simple variables {{variableName}}
-  for (const [key, value] of Object.entries(variables)) {
-    const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g');
-    result = result.replace(regex, String(value || ''));
-  }
-
-  return result;
 }
 
 /**

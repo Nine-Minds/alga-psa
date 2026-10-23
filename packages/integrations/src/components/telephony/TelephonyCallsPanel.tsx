@@ -7,18 +7,21 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { PhoneMissed, PhoneIncoming, PhoneOutgoing } from 'lucide-react';
+import { MessageSquare, PhoneMissed, PhoneIncoming, PhoneOutgoing } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   createTicketFromTelephonyCall,
   getTelephonyOverview,
   linkTelephonyCallToTicket,
+  listTelephonyChats,
   listTelephonyLinkableTickets,
   listTelephonyResolutionTargets,
   resolveTelephonyCall,
+  resolveTelephonyChat,
 } from '../../actions/integrations/telephonyActions';
 import type {
   TelephonyCallSummary,
+  TelephonyChatSummary,
   TelephonyLinkableTicket,
   TelephonyOverview,
   TelephonyResolutionTarget,
@@ -54,20 +57,31 @@ export function TelephonyCallsPanel({
   const [linkableTickets, setLinkableTickets] = useState<TelephonyLinkableTicket[]>([]);
   // Active clients backing the standard attribution picker shared by all rows.
   const [targets, setTargets] = useState<TelephonyResolutionTarget[]>([]);
+  // Chats the matcher could not place; they share the assign picker with calls.
+  const [chats, setChats] = useState<TelephonyChatSummary[]>([]);
+
+  const loadChats = useCallback(async () => {
+    const result = await listTelephonyChats().catch(() => ({ success: false, chats: [] as TelephonyChatSummary[] }));
+    setChats(result?.success ? result.chats : []);
+  }, []);
 
   const load = useCallback(async () => {
     try {
-      const next = await getTelephonyOverview();
+      const [next] = await Promise.all([getTelephonyOverview(), loadChats()]);
       setOverview(next);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError));
     }
-  }, []);
+  }, [loadChats]);
 
   useEffect(() => {
-    if (initialOverview) return;
+    // The server hands over the call overview; chats are never part of it.
+    if (initialOverview) {
+      void loadChats();
+      return;
+    }
     void load();
-  }, [initialOverview, load]);
+  }, [initialOverview, load, loadChats]);
 
   const canResolve = Boolean(overview?.canResolve);
 
@@ -129,12 +143,12 @@ export function TelephonyCallsPanel({
   }, []);
 
   useEffect(() => {
-    if (!canResolve || !overview?.unresolvedCalls.length) {
+    if (!canResolve || (!overview?.unresolvedCalls.length && !chats.length)) {
       setTargets([]);
       return;
     }
     void loadResolutionClients();
-  }, [canResolve, overview?.unresolvedCalls.length, loadResolutionClients]);
+  }, [canResolve, overview?.unresolvedCalls.length, chats.length, loadResolutionClients]);
 
   const resolutionClients = useMemo<IClient[]>(() => targets.flatMap((target) => {
     if (target.contactId || !target.clientId) return [];
@@ -157,6 +171,20 @@ export function TelephonyCallsPanel({
     setError(null);
     try {
       const result = await resolveTelephonyCall({ callRecordId: call.callRecordId, contactId, clientId });
+      if (!result.success) {
+        setError(result.error ?? null);
+      }
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resolveChat = async (chat: TelephonyChatSummary, contactId: string | null, clientId: string | null) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await resolveTelephonyChat({ chatRecordId: chat.chatRecordId, contactId, clientId });
       if (!result.success) {
         setError(result.error ?? null);
       }
@@ -279,7 +307,7 @@ export function TelephonyCallsPanel({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {overview && overview.unresolvedCalls.length === 0 ? (
+          {overview && overview.unresolvedCalls.length === 0 && chats.length === 0 ? (
             <p className="text-sm text-muted-foreground" id="telephony-unmatched-empty">
               {t('integrations.telephony.unmatched.empty', { defaultValue: 'Every captured call is attributed.' })}
             </p>
@@ -321,6 +349,55 @@ export function TelephonyCallsPanel({
                       selectedClientId={null}
                       onSelect={(clientId) => {
                         if (clientId) void resolveCall(call, null, clientId);
+                      }}
+                      placeholder={t('integrations.telephony.unmatched.chooseTarget', {
+                        defaultValue: 'Assign to client…',
+                      })}
+                      disabled={!canResolve || busy}
+                    />
+                  </div>
+                </li>
+              ))}
+              {chats.map((chat) => (
+                <li key={chat.chatRecordId} className="space-y-2 py-3 text-sm" id={`telephony-unmatched-chat-row-${chat.chatRecordId}`}>
+                  <div className="flex items-center gap-3">
+                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">
+                      {chat.partyName ?? chat.partyEmail ?? chat.partyNumber ?? t('integrations.telephony.unknownNumber', { defaultValue: 'Unknown number' })}
+                    </span>
+                    <Badge variant="secondary">{t('integrations.telephony.unmatched.chatBadge', { defaultValue: 'Chat' })}</Badge>
+                    <Badge variant="secondary">
+                      {t(`integrations.telephony.matchStatus.${chat.matchStatus}`, { defaultValue: chat.matchStatus })}
+                    </Badge>
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {chat.startedAt ? new Date(chat.startedAt).toLocaleString() : '—'}
+                    </span>
+                  </div>
+                  <p className="truncate text-xs text-muted-foreground" id={`telephony-unmatched-chat-preview-${chat.chatRecordId}`}>{chat.preview}</p>
+                  {chat.candidates.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {chat.candidates.map((candidate, index) => (
+                        <Button
+                          key={`${chat.chatRecordId}-${candidate.contactId ?? candidate.clientId ?? index}`}
+                          size="sm"
+                          variant="outline"
+                          disabled={!canResolve || busy}
+                          onClick={() => void resolveChat(chat, candidate.contactId ?? null, candidate.clientId ?? null)}
+                          id={`telephony-resolve-chat-candidate-${chat.chatRecordId}-${index}`}
+                        >
+                          {t('integrations.telephony.unmatched.assignTo', { defaultValue: 'Assign to' })}{' '}
+                          {candidate.contactName ?? candidate.contactId ?? candidate.clientId}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="max-w-sm">
+                    <ClientPicker
+                      id={`telephony-resolve-chat-client-${chat.chatRecordId}`}
+                      clients={resolutionClients}
+                      selectedClientId={null}
+                      onSelect={(clientId) => {
+                        if (clientId) void resolveChat(chat, null, clientId);
                       }}
                       placeholder={t('integrations.telephony.unmatched.chooseTarget', {
                         defaultValue: 'Assign to client…',

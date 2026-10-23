@@ -12,6 +12,19 @@ export function hasAllDayDates(entry: ScheduleDates): boolean {
   return midnight(start) && midnight(end) && end.getTime() - start.getTime() >= 86400000;
 }
 
+/**
+ * Whether react-big-calendar routes this entry to the all-day header row. The
+ * row holds any entry whose local start and end fall on different dates:
+ * explicit date-only entries and timed entries that cross midnight alike. The
+ * row's visibility decision must use this same classification, or a populated
+ * row gets hidden and its entries disappear.
+ */
+export function occupiesAllDayRow(entry: ScheduleDates): boolean {
+  const start = new Date(entry.scheduled_start);
+  const end = new Date(entry.scheduled_end);
+  return start.toDateString() !== end.toDateString();
+}
+
 export function calendarDisplayDates(entry: ScheduleDates): ScheduleDates & { scheduled_start: Date; scheduled_end: Date } {
   const display = (value: Date | string) => {
     const date = new Date(value);

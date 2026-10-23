@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import fs from 'fs';
 import os from 'os';
+import { getAllowedDevOrigins } from './src/lib/http/devAllowedOrigins.mjs';
 // build-trigger: update to force CI rebuild
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
@@ -180,17 +181,16 @@ const buildCpus = parsePositiveInt(process.env.NEXT_BUILD_CPUS) ?? Math.min(4, h
 const memoryBasedWorkersCount = truthyEnv(process.env.NEXT_BUILD_MEMORY_BASED_WORKERS_COUNT);
 
 const nextConfig = {
-  // Permit isolated dev/test servers to coexist with the normal worktree server.
-  // Production and ordinary development retain Next's default `.next` directory.
+  // Keep development output out of the production `.next` directory. A build
+  // can clear `.next` while the board-managed dev server is running; separating
+  // the outputs prevents its route manifests and compiled pages from diverging.
+  // Isolated dev/test servers may override this with their own directory.
   ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   // Dev-only (ignored in production builds): Next blocks /_next/* asset, HMR,
   // and RSC requests from origins it does not recognize, which stalls
   // hydration when a phone/tablet loads the dev server by LAN IP.
   // Comma-separated hostnames, e.g. DEV_ALLOWED_ORIGINS=192.168.1.20,my-mac.local
-  allowedDevOrigins: (process.env.DEV_ALLOWED_ORIGINS ?? '')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean),
+  allowedDevOrigins: getAllowedDevOrigins(),
   env: {
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || appVersion,
     // Propagate edition to client-side code
@@ -261,6 +261,8 @@ const nextConfig = {
       '@alga-psa/ee-calendar/': '../ee/packages/calendar/src/',
       '@alga-psa/ee-microsoft-teams': isEE ? '../ee/packages/microsoft-teams/src/index.ts' : '../packages/ee/src/index.ts',
       '@alga-psa/ee-microsoft-teams/': isEE ? '../ee/packages/microsoft-teams/src/' : '../packages/ee/src/',
+      '@alga-psa/ee-threecx': isEE ? '../ee/packages/threecx/src/index.ts' : '../packages/ee/src/index.ts',
+      '@alga-psa/ee-threecx/': isEE ? '../ee/packages/threecx/src/' : '../packages/ee/src/',
       '@alga-psa/ee-stubs': isEE ? '../ee/server/src' : '../packages/ee/src',
       '@alga-psa/ee-stubs/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
       '@alga-psa/tags': '../packages/tags/src',
@@ -286,7 +288,12 @@ const nextConfig = {
       '@alga-psa/types': '../packages/types/src',
       '@alga-psa/types/': '../packages/types/src/',
       '@alga-psa/core': '../packages/core/src',
+      // core exports whose name does not mirror src/ (they live in src/lib/) need
+      // an explicit entry: the '@alga-psa/core/' prefix would send them to
+      // src/<name>, and the dist/ fallback is absent wherever packages/ is
+      // mounted from source (e.g. the Teams development browser lane).
       '@alga-psa/core/rateLimit': '../packages/core/src/lib/rateLimit/index.ts',
+      '@alga-psa/core/fileNames': '../packages/core/src/lib/fileNames.ts',
       '@alga-psa/core/': '../packages/core/src/',
       '@alga-psa/validation': '../packages/validation/src',
       '@alga-psa/validation/': '../packages/validation/src/',
@@ -341,6 +348,11 @@ const nextConfig = {
       '@alga-psa/db/models/tenant': '../packages/db/src/models/tenant.ts',
       '@alga-psa/db/models/UserSession': '../packages/db/src/models/UserSession.ts',
       // Surveys package
+      '@alga-psa/list-views': '../packages/list-views/src',
+      '@alga-psa/list-views/': '../packages/list-views/src/',
+      '@alga-psa/list-views/actions': '../packages/list-views/src/actions/index.ts',
+      '@alga-psa/list-views/components': '../packages/list-views/src/components/index.ts',
+      '@alga-psa/list-views/hooks': '../packages/list-views/src/hooks/index.ts',
       '@alga-psa/surveys': '../packages/surveys/src',
       '@alga-psa/surveys/': '../packages/surveys/src/',
       '@alga-psa/surveys/actions': '../packages/surveys/src/actions/index.ts',
@@ -437,6 +449,10 @@ const nextConfig = {
       '@alga-psa/workflows/entry': isEE
         ? '../ee/server/src/workflows/entry'
         : '../packages/ee/src/workflows/entry',
+      // Create-workflow-from-ticket seam (EE-only source; CE resolves to a disabled stub).
+      '@alga-psa/workflows/ticket-actions': isEE
+        ? '../ee/server/src/workflows/createFromTicket/entry'
+        : '../packages/ee/src/workflows/createFromTicket/entry',
       // user-activities workflow-task seam (EE-only source). CE resolves to stubs; EE to
       // the real implementations. Keeps the base user-activities package free of @alga-psa/workflows.
       '@alga-psa/user-activities/server/workflow-tasks': isEE
@@ -502,6 +518,7 @@ const nextConfig = {
     '@alga-psa/user-composition',
     '@alga-psa/user-activities',
     '@alga-psa/projects',
+    '@alga-psa/list-views',
     '@alga-psa/surveys',
     '@alga-psa/tickets',
     // Product feature packages (only those needed in this app)
@@ -612,6 +629,9 @@ const nextConfig = {
       '@alga-psa/core/rateLimit': usePrebuilt
         ? path.join(prebuiltDirAbs('core'), 'lib/rateLimit/index.js')
         : path.join(__dirname, '../packages/core/src/lib/rateLimit/index.ts'),
+      '@alga-psa/core/fileNames': usePrebuilt
+        ? path.join(prebuiltDirAbs('core'), 'lib/fileNames.js')
+        : path.join(__dirname, '../packages/core/src/lib/fileNames.ts'),
       '@alga-psa/core/': `${prebuiltDirAbs('core')}/`,
       '@alga-psa/validation': prebuiltDirAbs('validation'),
       '@alga-psa/validation/': `${prebuiltDirAbs('validation')}/`,
@@ -658,8 +678,12 @@ const nextConfig = {
       '@alga-psa/ee-microsoft-teams': isEE
         ? path.join(__dirname, '../ee/packages/microsoft-teams/src')
         : path.join(__dirname, '../packages/ee/src'),
+      '@alga-psa/ee-threecx': isEE
+        ? path.join(__dirname, '../ee/packages/threecx/src')
+        : path.join(__dirname, '../packages/ee/src'),
       '@alga-psa/users': path.join(__dirname, '../packages/users/src'),
       '@alga-psa/teams': path.join(__dirname, '../packages/teams/src'),
+      '@alga-psa/list-views': path.join(__dirname, '../packages/list-views/src'),
       '@alga-psa/surveys': path.join(__dirname, '../packages/surveys/src'),
       '@alga-psa/client-portal': path.join(__dirname, '../packages/client-portal/src'),
       '@alga-psa/portal-shared': path.join(__dirname, '../packages/portal-shared/src'),
@@ -729,6 +753,9 @@ const nextConfig = {
       '@alga-psa/workflows/entry': isEE
         ? path.join(__dirname, '../ee/server/src/workflows/entry.tsx')
         : path.join(__dirname, '../packages/ee/src/workflows/entry.tsx'),
+      '@alga-psa/workflows/ticket-actions': isEE
+        ? path.join(__dirname, '../ee/server/src/workflows/createFromTicket/entry.tsx')
+        : path.join(__dirname, '../packages/ee/src/workflows/createFromTicket/entry.tsx'),
       // user-activities workflow-task seam (EE-only source) — CE stubs / EE impls.
       '@alga-psa/user-activities/server/workflow-tasks': isEE
         ? path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.server.ts')
@@ -1060,6 +1087,7 @@ const nextConfig = {
         const cePackagesEeRegex = new RegExp(cePackagesEePrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
         const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
         const workflowsEeEntry = path.join(__dirname, '../ee/server/src/workflows/entry.tsx');
+        const workflowsCreateFromTicketEeEntry = path.join(__dirname, '../ee/server/src/workflows/createFromTicket/entry.tsx');
         const userActivitiesWorkflowTasksServerEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.server.ts');
         const userActivitiesWorkflowTaskActionsServerEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTaskActions.server.ts');
         const userActivitiesWorkflowTasksClientEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.client.tsx');
@@ -1087,6 +1115,10 @@ const nextConfig = {
             // Force consistency by rewriting the workflows entry specifier to the canonical EE source file *before* resolution.
             if (req === '@alga-psa/workflows/entry') {
               resource.request = workflowsEeEntry;
+              return;
+            }
+            if (req === '@alga-psa/workflows/ticket-actions') {
+              resource.request = workflowsCreateFromTicketEeEntry;
               return;
             }
             // user-activities workflow-task seam: it's a real package export, so without
@@ -1288,6 +1320,9 @@ const nextConfig = {
     'handlebars',
     'jsdom',
     'monaco-editor',
+    // The SDK generator transpiles with the compiler API at runtime; keep it
+    // on disk so `ts.sys` can still read the default lib .d.ts files.
+    'typescript',
     '@js-temporal/polyfill',
     'pdfkit',
     'sharp',
@@ -1321,6 +1356,8 @@ const nextConfig = {
     'bcryptjs',
     'speakeasy',
     'qrcode',
+    // Barcode node (label rendering): server-only; loaded via bwip-js/node from barcode/encode.server.ts.
+    'bwip-js',
     'pdf-lib',
     'pdf2pic',
     'marked',

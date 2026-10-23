@@ -12,13 +12,13 @@
 import logger from '@alga-psa/core/logger';
 import { getEventBus } from '../index';
 import { EventSchemas } from '@alga-psa/event-schemas';
-import { runMaintenanceJob, isKnownMaintenanceJob } from '@alga-psa/jobs/fanout';
+import { isKnownMaintenanceJob } from '@alga-psa/jobs/fanout';
 // IMPORTANT: use the SERVER-LOCAL registry — registerAllHandlers populates
 // server/src/lib/jobs/jobHandlerRegistry (a different singleton than the
 // @alga-psa/jobs one), so rmm/huntress are only registered there.
 import { executeJobHandler } from '../../jobs/jobHandlerRegistry';
 import { runWithTenant } from '@alga-psa/db';
-import { acquireMaintenanceJobLock } from './maintenanceJobLock';
+import { prepareMaintenanceRegistry, runMaintenanceJobExclusive } from '../../jobs/runMaintenanceJobExclusive';
 
 let isRegistered = false;
 
@@ -27,6 +27,11 @@ export async function registerMaintenanceJobSubscriber(): Promise<void> {
     return;
   }
 
+  // Configure the fanout's EE date-workflow launcher and register the server-local
+  // jobs before accepting Temporal requests, so an early date-trigger-scan cannot
+  // run without them and isKnownMaintenanceJob does not route server-local jobs to
+  // the forwarded-job path. Starts no runner.
+  await prepareMaintenanceRegistry();
   await getEventBus().subscribe('MAINTENANCE_JOB_REQUESTED', handleMaintenanceJobRequested);
 
   isRegistered = true;
@@ -49,21 +54,14 @@ async function handleMaintenanceJobRequested(event: unknown): Promise<void> {
   const { jobName, jobId, data, tenantId } = validated.payload;
 
   try {
-    if (isKnownMaintenanceJob(jobName)) {
+    // Maintenance schedules publish a bare jobName; forwarded jobs always carry
+    // the originating jobId. A job can be both (e.g. accounting-sync-cycle while
+    // legacy per-tenant schedules drain), and a forwarded tenant tick must stay a
+    // single-tenant run rather than trigger an all-tenant fan-out.
+    if (isKnownMaintenanceJob(jobName) && !jobId) {
       // Global maintenance fan-out: run once / across all tenants, and never
       // concurrently with another run of the same job anywhere in the cluster.
-      const lock = await acquireMaintenanceJobLock(jobName);
-      if (!lock) {
-        logger.info(`[MaintenanceJobSubscriber] Skipping maintenance job '${jobName}': a run is already in progress`);
-        return;
-      }
-      try {
-        logger.info(`[MaintenanceJobSubscriber] Running maintenance job '${jobName}'`);
-        const result = await runMaintenanceJob(jobName);
-        logger.info(`[MaintenanceJobSubscriber] Maintenance job '${jobName}' complete`, result);
-      } finally {
-        await lock.release();
-      }
+      await runMaintenanceJobExclusive(jobName);
     } else {
       // Worker-scheduled job (e.g. rmm/huntress) forwarded for server-side
       // execution because its handler imports src-consumed packages the worker

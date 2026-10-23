@@ -151,7 +151,8 @@
     "tryAgain": "Try again",
     "backToBilling": "Back to billing",
     "retryFailed": "We still could not start the payment. Please try again in a moment.",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "offlinePaymentMethod": "This invoice is paid by check or bank transfer, so online payment is not available. Please follow the payment instructions on the invoice."
   },
   "quotes": {
     "pendingQuotes": "Pending Quotes",
@@ -359,7 +360,8 @@
     "contractLineType": {
       "Fixed": "Fixed",
       "Hourly": "Hourly",
-      "Usage": "Usage Based"
+      "Usage": "Usage Based",
+      "PrepaidBlock": "Prepaid Block"
     },
     "quoteStatus": {
       "draft": "Draft",
@@ -441,6 +443,14 @@
     "hoursLeft": "{{hours}}h left",
     "expires": "Expires {{date}}",
     "recentBurn": "Recent usage",
-    "timeEntry": "Time entry"
+    "timeEntry": "Time entry",
+    "contractLabel": "Contract: {{contract}}"
+  },
+  "bucketUsage": {
+    "contractLine": "Bucket Contract Line",
+    "usage": "Usage",
+    "hoursUsed": "{{hours}} hours used",
+    "hoursTotal": "{{hours}} hours total",
+    "rolloverHours": "Includes {{hours}} rollover hours"
   }
 }

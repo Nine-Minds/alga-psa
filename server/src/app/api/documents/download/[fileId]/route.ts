@@ -17,6 +17,9 @@ import { tenantDb, withTransaction, runWithTenant } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { getCurrentUser, getSession } from '@alga-psa/auth';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { buildDocumentMarkdown } from '@alga-psa/documents/lib/documentMarkdownExport';
+
+// LEVERAGE: pattern document-byte-serving
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ fileId: string }> }) {
   const resolvedParams = await params;
@@ -91,18 +94,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
           return NextResponse.json({ error: 'Document not found.' }, { status: 404 });
         }
 
-        let markdown: string | null = null;
-
-        if (blockRow?.block_data !== undefined && blockRow?.block_data !== null) {
-          const converted = convertBlockContentToMarkdown(blockRow.block_data);
-          if (typeof converted === 'string' && converted.trim().length > 0) {
-            markdown = converted;
-          }
-        }
-
-        if (!markdown && typeof textRow?.content === 'string' && textRow.content.trim().length > 0) {
-          markdown = textRow.content;
-        }
+        let markdown: string | null = buildDocumentMarkdown(blockRow?.block_data, textRow?.content);
 
         // Fall back to the stored file for file-backed text documents (e.g. uploaded .txt/.md).
         if (!markdown && document.file_id) {
@@ -127,14 +119,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
 
         // Collapse whitespace-only lines and runs of blank lines left over by the
         // BlockNote → markdown converter (empty paragraphs → " \n\n").
-        markdown = markdown
-          .replace(/\r\n/g, '\n')
-          .split('\n')
-          .map((line) => (line.trim().length === 0 ? '' : line.replace(/[ \t]+$/, '')))
-          .join('\n')
-          .replace(/\n{3,}/g, '\n\n')
-          .trim() + '\n';
-
         const safeName = (document.document_name || 'document').replace(/[\r\n"]/g, '_');
         const headers = new Headers();
         headers.set('Content-Type', 'text/markdown; charset=utf-8');

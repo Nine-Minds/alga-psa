@@ -253,7 +253,7 @@ const primary: CollectionDescriptor = {
 };
 const items: CollectionDescriptor = {
   documentKind: 'invoice', id: 'lineItems', path: 'items', presets: buildColumnPresets,
-  fields: fields(['description', 'quantity', 'unitPrice', 'total', 'servicePeriodStart', 'servicePeriodEnd', 'billingTiming'], ['quantity', 'unitPrice', 'total']),
+  fields: fields(['description', 'quantity', 'unitPrice', 'total', 'unit_code', 'unit_label', 'servicePeriodStart', 'servicePeriodEnd', 'billingTiming'], ['quantity', 'unitPrice', 'total']),
 };
 export const INVOICE_COLLECTION_DESCRIPTORS = [items, ticket, entry, primary];
 

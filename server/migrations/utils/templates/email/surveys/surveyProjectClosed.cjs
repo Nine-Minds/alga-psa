@@ -10,6 +10,7 @@ const PROJECT_COPY = {
   it: ['Ci farebbe piacere il tuo feedback sul progetto {{project_number}}', 'Progetto'],
   pl: ['Chętnie poznamy Twoją opinię o projekcie {{project_number}}', 'Projekt'],
   pt: ['Queremos sua opinião sobre o projeto {{project_number}}', 'Projeto'],
+  sv: ['Vi vill gärna höra vad du tycker om projekt {{project_number}}', 'Projekt'],
 };
 function getTemplate() {
   return {

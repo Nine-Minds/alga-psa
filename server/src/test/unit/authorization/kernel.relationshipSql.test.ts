@@ -27,6 +27,7 @@ const ALL_TEMPLATES: RelationshipTemplateKey[] = [
   'selected_clients',
   'same_team',
   'selected_boards',
+  'contact_visibility',
 ];
 
 const subject: AuthorizationSubject = {

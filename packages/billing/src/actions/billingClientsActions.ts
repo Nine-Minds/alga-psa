@@ -14,16 +14,22 @@ import {
   getDetailedClientContract,
   createClientContractAssignment,
   updateClientContractAssignment,
+  activateClientContractAssignment,
+  ContractAlreadyActiveScheduledError,
   checkAndReactivateExpiredContract,
   type ClientPaginationParams,
   type ClientContractAssignmentCreateInput,
   type PaginatedClientsResponse,
 } from '@alga-psa/shared/billingClients';
 import { withAuth } from '@alga-psa/auth';
+import { withSerializableAuth } from './serializableAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getClientLogoUrl, getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildContractCreatedPayload } from '@alga-psa/workflow-streams';
 import { syncRecurringServicePeriodsForContract } from './recurringServicePeriodSync';
+import { syncPrepaidBlockIssuancesForContract } from '../services/prepaidBlockIssuanceSync';
 import {
   actionError,
   permissionError,
@@ -34,6 +40,13 @@ import {
 export type BillingClientsActionError = ActionMessageError | ActionPermissionError;
 
 function billingClientsActionErrorFrom(error: unknown): BillingClientsActionError | null {
+  if (error instanceof ContractAlreadyActiveScheduledError) {
+    return actionError(
+      error.message,
+      'msp/billing:errors.clientContract.alreadyActiveScheduled',
+      { startDate: error.startDate },
+    );
+  }
   if (error instanceof Error) {
     if (error.message.startsWith('Permission denied')) {
       return permissionError(error.message);
@@ -142,6 +155,9 @@ export const getAllClientsForBilling = withAuth(async (
   return attachClientLogos(clients, tenant);
   });
 });
+
+/** Same read for the draft adjustment loader, with auth rejection kept serializable. */
+export const getAllClientsForBillingRecoverable = withSerializableAuth(getAllClientsForBilling);
 
 export const getAllClientsPaginatedForBilling = withAuth(async (
   user,
@@ -259,11 +275,13 @@ export const createClientContractForBilling = withAuth(async (
 
     const created = await createClientContractAssignment(trx, tenant, input);
     if (created.is_active) {
+      // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
       await syncRecurringServicePeriodsForContract(trx, {
         tenant,
         contractId: created.contract_id,
         sourceRunPrefix: 'client_contract_assignment_create',
       });
+      await syncPrepaidBlockIssuancesForContract(trx, tenant, created.contract_id);
     }
     return created;
   });
@@ -285,15 +303,67 @@ export const updateClientContractForBilling = withAuth(async (
   const updated = await withTransaction(knex, async (trx: Knex.Transaction) => {
     await assertClientContractAssignmentIsAuthorable(trx, tenant, clientContractId);
     const updatedAssignment = await updateClientContractAssignment(trx, tenant, clientContractId, updateData);
+    // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
     await syncRecurringServicePeriodsForContract(trx, {
       tenant,
       contractId: updatedAssignment.contract_id,
       sourceRunPrefix: 'client_contract_assignment_update',
     });
+    await syncPrepaidBlockIssuancesForContract(trx, tenant, updatedAssignment.contract_id);
     return updatedAssignment;
   });
 
   await checkAndReactivateExpiredContract(knex, tenant, updated.contract_id);
   return updated;
+  });
+});
+
+export const activateClientContractForBilling = withAuth(async (
+  user,
+  { tenant },
+  clientContractId: string
+): Promise<IClientContract | BillingClientsActionError> => {
+  return withBillingClientsActionErrors(async () => {
+  if (!await hasPermission(user, 'client', 'update')) {
+    throw new Error('Permission denied: Cannot update client contract assignments');
+  }
+  const { knex } = await createTenantKnex();
+
+  const activated = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await assertClientContractAssignmentIsAuthorable(trx, tenant, clientContractId);
+    const activatedAssignment = await activateClientContractAssignment(trx, tenant, clientContractId);
+    // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
+    await syncRecurringServicePeriodsForContract(trx, {
+      tenant,
+      contractId: activatedAssignment.contract_id,
+      sourceRunPrefix: 'client_contract_activate',
+    });
+    await syncPrepaidBlockIssuancesForContract(trx, tenant, activatedAssignment.contract_id);
+    return activatedAssignment;
+  });
+
+  // Quote-converted contracts never emitted CONTRACT_CREATED, so activation is their first
+  // chance to. The wizard's idempotency key shape dedupes the drafts it already announced.
+  const occurredAt = new Date().toISOString();
+  await publishWorkflowEvent({
+    eventType: 'CONTRACT_CREATED',
+    payload: buildContractCreatedPayload({
+      contractId: activated.contract_id,
+      clientId: activated.client_id,
+      createdByUserId: user.user_id,
+      createdAt: occurredAt,
+      startDate: activated.start_date ?? undefined,
+      endDate: activated.end_date ?? null,
+      status: 'active',
+    }),
+    ctx: {
+      tenantId: tenant,
+      occurredAt,
+      actor: user.user_id ? { actorType: 'USER' as const, actorUserId: user.user_id } : undefined,
+    },
+    idempotencyKey: `contract_created:${activated.contract_id}:${activated.client_id}`,
+  });
+
+  return activated;
   });
 });

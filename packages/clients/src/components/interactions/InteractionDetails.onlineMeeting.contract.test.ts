@@ -12,7 +12,7 @@ describe('InteractionDetails online meeting section', () => {
     expect(source).toContain('handleRefreshMeetingRecordings');
     expect(source).toContain('id="online-meeting-join-button"');
     expect(source).toContain('id="online-meeting-refresh-recordings-button"');
-    expect(source).toContain('/api/documents/${encodeURIComponent(artifact.document_id)}/download');
+    expect(source).toContain('/msp/documents?doc=${encodeURIComponent(artifact.document_id)}');
     expect(source).toContain('/api/online-meetings/recordings/${encodeURIComponent(artifact.artifact_id)}');
     expect(source).toContain('interactions.onlineMeeting.viewTranscript');
     expect(source).toContain('interactions.onlineMeeting.downloadRecording');

@@ -1,4 +1,10 @@
 {
+  "tabs": {
+    "paymentMethods": "Payment methods & auto-pay"
+  },
+  "invoice": {
+    "autopayWillCharge": "Will be charged on {{date}} to {{brand}} •••• {{last4}}"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "tickets": "Tickets",
@@ -59,12 +65,9 @@
       "network": "Network",
       "unknown": "Other"
     },
-    "statusWarnTitle": "Some devices inactive",
-    "statusWarnBody": "{{active}} active · {{inactive}} inactive",
-    "status": {
-      "active": "Active",
-      "inactive": "Inactive"
-    },
+    "statusAttentionTitle": "Some devices need attention",
+    "statusAttentionBody": "{{active}} of {{total}} devices active",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Search by name, tag, or serial",
     "filters": {
       "allTypes": "All types",
@@ -169,17 +172,15 @@
       "viewAll": "View all",
       "countLabel": "{{count}} managed",
       "emptyShort": "No devices yet",
-      "emptyBody": "Devices your provider manages will appear here.",
-      "healthy": "Healthy",
-      "inactive": "Inactive",
-      "active": "Active"
+      "emptyBody": "Devices your provider manages will appear here."
     },
     "quickActions": {
       "title": "Quick Actions",
       "createTicket": "Create ticket",
       "requestAppointment": "Request appointment",
       "viewLatestInvoice": "View Latest Invoice",
-      "newServiceRequest": "New service request"
+      "newServiceRequest": "New service request",
+      "createSupportTicket": "Create Support Ticket"
     },
     "appointments": {
       "title": "Upcoming Appointments",
@@ -332,6 +333,8 @@
     },
     "captchaRequired": "Please complete the verification below, then sign in again.",
     "tooManyAttempts": "Too many failed sign-in attempts. Please wait a few minutes before trying again.",
+    "tenantRequiredMessage": "Your email is linked to more than one organization — choose your organization to continue.",
+    "tenantRequiredLink": "Choose your organization",
     "tenantDiscovery": {
       "title": "Find Your Organization",
       "description": "Enter your email address and we'll send you login links for all organizations you have access to.",
@@ -369,6 +372,34 @@
         "verifiedContact": "Verified contact email",
         "validPassword": "Valid password"
       }
+    },
+    "ssoNoMatchTitle": "SSO sign-in failed",
+    "ssoNoMatch": {
+      "no_matching_user": "No client portal account matches {{providerEmail}}. Sign in with your password or contact your service provider.",
+      "missing_email": "Your identity provider did not return an email address, so no client portal account could be matched. Sign in with your password or contact your service provider.",
+      "inactive_user": "The client portal account for {{providerEmail}} is inactive. Contact your service provider to reactivate it.",
+      "user_type_mismatch": "{{providerEmail}} is not a client portal account. Contact your service provider.",
+      "tenant_mismatch": "{{providerEmail}} belongs to a different organization's portal. Sign in with your password or contact your service provider."
+    },
+    "configurationTitle": "Sign-in failed",
+    "configurationMessage": "Sign-in failed. Please try again or contact your service provider.",
+    "registration": {
+      "messages": {
+        "verified": "User verified and registered successfully"
+      },
+      "errors": {
+        "verifyFailed": "Failed to verify and register user",
+        "invalidToken": "Invalid token",
+        "tokenExpired": "Token expired",
+        "tokenNotActive": "Token is not yet active",
+        "unknown": "Unknown error"
+      },
+      "user": "User",
+      "clientPortalUser": "Client Portal User",
+      "mspUser": "MSP User",
+      "resetExpiration": "1 hour",
+      "verificationExpiration": "24 hours",
+      "superadminRole": "Superadmin role"
     }
   },
   "account": {
@@ -436,6 +467,7 @@
       "addPaymentError": "Failed to add payment method",
       "removePaymentError": "Failed to remove payment method",
       "setDefaultError": "Failed to set default payment method",
+      "methodUpdateError": "Could not update this payment method. Please try again.",
       "loadingBillingInfo": "Loading billing information...",
       "overviewTitle": "Billing Overview",
       "paymentMethodsTitle": "Payment Methods",
@@ -454,6 +486,29 @@
         "addPaymentMethod": "Add Payment Method",
         "adding": "Adding...",
         "view": "View"
+      },
+      "cardSetup": {
+        "success": "Card saved securely.",
+        "error": "We could not save the card. Please try again."
+      },
+      "autopay": {
+        "title": "Payment methods & auto-pay",
+        "loading": "Loading payment methods…",
+        "profileUnavailable": "Payment method and auto-pay settings are unavailable for this billing profile.",
+        "cardFallback": "Card",
+        "enrolled": "Auto-pay is enabled.",
+        "disable": "Turn off auto-pay",
+        "consent": "I authorize recurring charges to this card for finalized invoices.",
+        "enable": "Enable auto-pay",
+        "noCards": "Add a card to enable auto-pay.",
+        "changeCard": "Use this card for auto-pay",
+        "updateError": "Could not update auto-pay. Please try again."
+      },
+      "publicCardSetup": {
+        "saved": "Card saved",
+        "failed": "We could not save your card",
+        "savedDescription": "Your card is ready for future payments.",
+        "failedDescription": "The setup could not be verified. Please ask your billing provider for a new link."
       },
       "fields": {
         "cardNumber": "Card Number",
@@ -571,7 +626,9 @@
       "invoices": "Invoice Notifications",
       "announcements": "System Announcements",
       "emailPreferences": "Email",
-      "internalPreferences": "Internal"
+      "internalPreferences": "Internal",
+      "unreadCount_few": "{{count}} unread notifications",
+      "unreadCount_many": "{{count}} unread notifications"
     },
     "actions": {
       "save": "Save Changes",
@@ -586,6 +643,7 @@
       "emailAlreadyExists": "A user with this email address already exists",
       "reportsToSelf": "A user cannot report to themselves",
       "reportsToCycle": "This would create a circular reporting chain",
+      "invalidTimezone": "Choose a city-based time zone, such as America/New_York.",
       "photoUploaded": "Photo uploaded successfully",
       "photoRemoved": "Photo removed successfully",
       "userNotFound": "User not found",
@@ -615,7 +673,19 @@
       "deleteError": "Failed to delete.",
       "deleteConfirm": "Are you sure you want to delete this? This action cannot be undone.",
       "linking": "Linking...",
-      "linkDocument": "Link Document"
+      "linkDocument": "Link Document",
+      "cropTitle": "Choose the square mark",
+      "cropHelp": "Drag the logo and zoom to pick the part shown in small, square spaces. Zoom out to leave space around it. The full logo is kept as well.",
+      "zoom": "Zoom",
+      "zoomOut": "Zoom out",
+      "zoomIn": "Zoom in",
+      "cropPreview": "Preview",
+      "applyCrop": "Use this crop",
+      "adjustMark": "Adjust mark",
+      "cropFromWide": "Crop from wide logo",
+      "recropSuccess": "Mark updated.",
+      "recropError": "Failed to update the mark.",
+      "fileNameLabel": "Stored file"
     },
     "validation": {
       "clientNameRequired": "Client name is required",
@@ -695,7 +765,10 @@
       "reportsToSelf": "A user cannot report to themselves",
       "reportsToCycle": "This would create a circular reporting chain",
       "createError": "Failed to create user",
-      "deleteError": "Failed to delete user"
+      "deleteError": "Failed to delete user",
+      "reportsTo": "Reports to",
+      "noManager": "No manager",
+      "reportsToHelp": "A manager can see the tickets, devices and projects of the people who report to them, when their visibility group is limited to their own records."
     },
     "messages": {
       "saveChanges": "Save Changes",
@@ -742,7 +815,27 @@
       "fullAccess": "Full access",
       "cancel": "Cancel",
       "assignSuccess": "Contact visibility assignment updated",
-      "assignError": "Unable to assign visibility group"
+      "assignError": "Unable to assign visibility group",
+      "scopeLabel": "Ticket visibility",
+      "scopeClient": "All of this client’s tickets",
+      "scopeContact": "Only their own tickets",
+      "scopeClientDescription": "Members see every ticket for this client on the selected boards.",
+      "scopeContactDescription": "Members see tickets they are the contact on, tickets of people who report to them, and tickets they watch. Client admins always see everything on the selected boards, including tickets with no contact.",
+      "assignmentHelp": "Assign a group to limit boards and what this person sees of tickets, devices and projects, or keep full client access.",
+      "boardHiddenFromPortal": "Hidden from client portal",
+      "assetScopeLabel": "Device visibility",
+      "assetScopeClient": "All of this client’s devices",
+      "assetScopeContact": "Only their own devices",
+      "assetScopeClientDescription": "Members see every device for this client, including unassigned ones.",
+      "assetScopeContactDescription": "Members see only devices assigned to them or to people who report to them. Unassigned devices are hidden. Client admins always see everything.",
+      "projectScopeLabel": "Project visibility",
+      "projectScopeClient": "All of this client’s projects",
+      "projectScopeContact": "Only their own projects",
+      "projectScopeClientDescription": "Members see every project for this client.",
+      "projectScopeContactDescription": "Members see only projects whose contact is them or someone who reports to them. Projects with no contact are hidden. Client admins always see everything.",
+      "scopeSummary": "Tickets: {{tickets}} · Devices: {{devices}} · Projects: {{projects}}",
+      "scopeSummaryAll": "All",
+      "scopeSummaryOwn": "Own"
     },
     "domain": {
       "title": "Custom Domain",
@@ -813,7 +906,9 @@
     "card": {
       "unread": "Unread",
       "noMessage": "No message"
-    }
+    },
+    "unreadCount_few": "{{count}} unread notifications",
+    "unreadCount_many": "{{count}} unread notifications"
   },
   "billing": {
     "columns": {
@@ -932,14 +1027,18 @@
   },
   "assets": {
     "columns": {
-      "name": "Name",
-      "type": "Type",
-      "status": "Status",
-      "location": "Location",
-      "lastUpdated": "Last Updated"
+      "assignedTo": "Assigned to"
     },
-    "notAvailable": "N/A",
-    "detailsTitle": "Asset Details"
+    "statuses": {
+      "active": "Active",
+      "in_stock": "In stock",
+      "maintenance": "In maintenance",
+      "inactive": "Inactive",
+      "retired": "Retired"
+    },
+    "unassigned": "Unassigned",
+    "sharedWorkspace": "Shared workspace: {{name}}",
+    "sharedWorkspaceLabel": "Shared workspace"
   },
   "errors": {
     "account": {
@@ -976,7 +1075,8 @@
     },
     "tickets": {
       "notFoundOrDenied": "Ticket not found or access denied",
-      "invalidData": "Invalid ticket data"
+      "invalidData": "Invalid ticket data",
+      "statusNotPortalSelectable": "This status cannot be selected from the client portal"
     },
     "visibilityGroups": {
       "checkDetails": "Please check the visibility group details and try again.",

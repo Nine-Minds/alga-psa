@@ -9,8 +9,11 @@ export type CreateClientLocationInput = Omit<
 
 export type UpdateClientLocationInput = Partial<Omit<
   IClientLocation,
-  'location_id' | 'tenant' | 'client_id' | 'created_at' | 'updated_at'
->>;
+  'location_id' | 'tenant' | 'client_id' | 'created_at' | 'updated_at' | 'email'
+>> & {
+  // null clears the stored email; undefined leaves it untouched.
+  email?: string | null;
+};
 
 async function lockClient(trx: Knex.Transaction, tenant: string, clientId: string): Promise<void> {
   const client = await tenantDb(trx, tenant).table('clients')
@@ -158,9 +161,15 @@ export async function updateLocation(
     }
   }
 
+  const { email, ...rest } = updateData;
   const [location] = await db.table<IClientLocation>('client_locations')
     .where({ client_id: clientId, location_id: locationId })
-    .update({ ...updateData, updated_at: trx.fn.now() })
+    .update({
+      ...rest,
+      // The email column is nullable in the database even though the row type says string.
+      ...(email !== undefined ? { email: email as string | undefined } : {}),
+      updated_at: trx.fn.now(),
+    })
     .returning('*');
 
   if (!location) {

@@ -24,8 +24,11 @@ export function extractServerCredentials(logs) {
 }
 
 export function captureServerCredentials({ logs, outputPath, mask = value => process.stdout.write(value) }) {
+  writeServerCredentials({ credentials: extractServerCredentials(logs), outputPath, mask });
+}
+
+export function writeServerCredentials({ credentials, outputPath, mask = value => process.stdout.write(value) }) {
   if (!outputPath) throw new Error('GitHub output path required');
-  const credentials = extractServerCredentials(logs);
   // Escape command data before Actions sees it; never emit the input logs.
   const escaped = credentials.password.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
   mask(`::add-mask::${escaped}\n`);

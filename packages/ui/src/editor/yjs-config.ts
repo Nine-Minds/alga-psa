@@ -4,31 +4,34 @@ import { HocuspocusProvider } from '@hocuspocus/provider';
 /**
  * Build the Hocuspocus WebSocket URL.
  *
- * Priority:
- *   1. NEXT_PUBLIC_HOCUSPOCUS_URL env var (full URL, e.g. "wss://algapsa.com/hocuspocus")
- *   2. Server-side only: HOCUSPOCUS_INTERNAL_URL (e.g. "ws://hocuspocus:1234" for Docker service networking)
- *   3. In the browser (production): derive from window.location (same domain, /hocuspocus path)
- *   4. Fallback for local dev: ws://localhost:1234
+ * Selection is driven by NODE_ENV, never by sniffing the browser hostname, so
+ * a dev server reached over a LAN/tailnet address still targets the configured
+ * local Hocuspocus instance instead of deriving a same-origin URL.
+ *
+ * Development: NEXT_PUBLIC_HOCUSPOCUS_URL, defaulting to ws://localhost:1234.
+ * Production: NEXT_PUBLIC_HOCUSPOCUS_URL, otherwise the same-origin
+ *   ws(s)://{host}/hocuspocus URL (assuming a reverse proxy at /hocuspocus).
  */
-function getHocuspocusUrl(): string {
-  // Explicit env var (must be NEXT_PUBLIC_ to reach the client bundle)
+export function getHocuspocusUrl(): string {
+  // Explicit env var (must be NEXT_PUBLIC_ to reach the client bundle).
   const envUrl = process.env.NEXT_PUBLIC_HOCUSPOCUS_URL;
-  if (envUrl) return envUrl;
 
-  // Server-side: use internal URL for container-to-container communication
-  // (not prefixed with NEXT_PUBLIC_ so it stays server-only)
-  if (typeof window === 'undefined') {
-    const internalUrl = process.env.HOCUSPOCUS_INTERNAL_URL;
-    if (internalUrl) return internalUrl;
+  if (process.env.NODE_ENV !== 'production') {
+    return envUrl || 'ws://localhost:1234';
   }
 
-  // Browser in production: derive from current origin (assumes reverse proxy at /hocuspocus)
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+  if (envUrl) return envUrl;
+
+  if (typeof window !== 'undefined') {
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     return `${proto}//${window.location.host}/hocuspocus`;
   }
 
-  // Local dev fallback
+  // Server-side production: use internal URL for container-to-container
+  // communication (not prefixed with NEXT_PUBLIC_ so it stays server-only).
+  const internalUrl = process.env.HOCUSPOCUS_INTERNAL_URL;
+  if (internalUrl) return internalUrl;
+
   return 'ws://localhost:1234';
 }
 

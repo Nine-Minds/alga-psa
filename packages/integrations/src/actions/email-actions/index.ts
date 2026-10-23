@@ -2,7 +2,7 @@ export { configureGmailProvider, type ConfigureGmailProviderResult } from './con
 export { getEmailProviders, upsertEmailProvider, createEmailProvider, updateEmailProvider, deleteEmailProvider, resyncImapProvider, testEmailProviderConnection, retryMicrosoftSubscriptionRenewal, runMicrosoft365Diagnostics } from './emailProviderActions';
 export { pauseEmailProvider, resumeEmailProvider } from './inboundPauseActions';
 export { getEmailDomains, addEmailDomain, verifyEmailDomain, deleteEmailDomain } from './emailDomainActions';
-export { getEmailSettings, getMicrosoftOutboundMailboxes, updateEmailSettings, testOutboundEmail } from './emailSettingsActions';
+export { getEmailSettings, getMicrosoftOutboundMailboxes, updateEmailSettings, testOutboundEmail, runOutboundEmailDiagnostics } from './emailSettingsActions';
 export type { MicrosoftOutboundMailboxOption } from './emailSettingsActions';
 export { getInboundTicketDefaults, createInboundTicketDefaults, updateInboundTicketDefaults, deleteInboundTicketDefaults } from './inboundTicketDefaultsActions';
 export { getInboundEmailRules, createInboundEmailRule, updateInboundEmailRule, setInboundEmailRuleActive, deleteInboundEmailRule, reorderInboundEmailRules, testInboundEmailRule } from './inboundEmailRulesActions';

@@ -6,6 +6,7 @@ import {
 } from "./calculateContractCharge";
 import type {
   CalculatedBillingLine,
+  CalculationDiagnostic,
   ContractBillingCalculationInput,
   ContractBillingCalculationResult,
   LiveContractBillingCalculationResult,
@@ -36,6 +37,7 @@ export function calculateContractBilling(
 
   const sourceCharges: ContractBillingCalculationResult["sourceCharges"] = [];
   const lines: CalculatedBillingLine[] = [];
+  const diagnostics: CalculationDiagnostic[] = [];
   for (const obligation of input.obligations) {
     if (obligation.tenantId !== input.execution.tenantId)
       throw new Error(`Cross-tenant obligation ${obligation.obligationId}`);
@@ -59,6 +61,9 @@ export function calculateContractBilling(
       input.execution.mode,
       taxContext,
     );
+    if (calculated.kind === "fixed" && calculated.blockers) {
+      diagnostics.push(...calculated.blockers);
+    }
     for (const { charge, explanation } of calculated.chargeExplanations) {
       const netAmount = charge.total ?? 0;
       const taxAmount = charge.tax_amount ?? 0;
@@ -232,7 +237,7 @@ export function calculateContractBilling(
     subtotal,
     taxTotal,
     total: subtotal + taxTotal,
-    diagnostics: [],
+    diagnostics,
     sourceCharges,
     ...(capResult ? { projectCapThresholdCrossings: capResult.thresholdCrossings } : {}),
   };

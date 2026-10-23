@@ -25,6 +25,7 @@ export interface ClientInboundEmailDomain {
   id: string;
   client_id: string;
   domain: string;
+  auto_create_contacts: boolean;
   created_at?: string;
 }
 
@@ -77,7 +78,7 @@ export const listClientInboundEmailDomains = withAuth(async (
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const rows = await tenantDb(trx, tenant).table('client_inbound_email_domains')
-      .select('id', 'client_id', 'domain', 'created_at')
+      .select('id', 'client_id', 'domain', 'created_at', 'auto_create_contacts')
       .where({ client_id: clientId })
       .orderBy('domain', 'asc');
     return rows as any;
@@ -88,7 +89,8 @@ export const addClientInboundEmailDomain = withAuth(async (
   user,
   { tenant },
   clientId: string,
-  rawDomain: string
+  rawDomain: string,
+  options?: { autoCreateContacts?: boolean }
 ): Promise<ClientInboundEmailDomain | ClientInboundEmailDomainActionError> => {
   if (!await hasMspPermission(user, 'client', 'update')) {
     return permissionError('Permission denied: Cannot update clients', 'msp/clients:errors.permissions.updateClients');
@@ -112,10 +114,11 @@ export const addClientInboundEmailDomain = withAuth(async (
             id,
             client_id: clientId,
             domain,
+            auto_create_contacts: options?.autoCreateContacts ?? false,
             created_at: now,
             updated_at: now,
           })
-          .returning(['id', 'client_id', 'domain', 'created_at']);
+          .returning(['id', 'client_id', 'domain', 'created_at', 'auto_create_contacts']);
         return row as any;
       } catch (e: any) {
         // Uniqueness (tenant, lower(domain))
@@ -136,6 +139,21 @@ export const addClientInboundEmailDomain = withAuth(async (
     console.error('Unexpected failure while adding client inbound email domain:', e);
     return actionError('Failed to add inbound email domain. Please try again.', 'msp/clients:errors.inboundEmailDomain.addFailed');
   }
+});
+
+export const setClientInboundEmailDomainAutoCreateContacts = withAuth(async (
+  user, { tenant }, clientId: string, domainId: string, enabled: boolean,
+): Promise<ClientInboundEmailDomain | ClientInboundEmailDomainActionError> => {
+  if (!await hasMspPermission(user, 'client', 'update')) {
+    return permissionError('Permission denied: Cannot update clients', 'msp/clients:errors.permissions.updateClients');
+  }
+  const { knex } = await createTenantKnex();
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const [row] = await tenantDb(trx, tenant).table('client_inbound_email_domains')
+      .where({ client_id: clientId, id: domainId }).update({ auto_create_contacts: enabled, updated_at: new Date().toISOString() })
+      .returning(['id', 'client_id', 'domain', 'created_at', 'auto_create_contacts']);
+    return row ? row as any : actionError('Inbound email domain not found.', 'msp/clients:errors.inboundEmailDomain.notFound');
+  });
 });
 
 export const removeClientInboundEmailDomain = withAuth(async (

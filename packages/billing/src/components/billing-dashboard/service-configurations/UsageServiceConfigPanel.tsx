@@ -1,8 +1,9 @@
 'use client'
 
-import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import React, { useState, useEffect } from 'react';
 import { Input } from '@alga-psa/ui/components/Input';
+import { UnitOfMeasureInput, type UnitSelection } from '@alga-psa/ui/components/UnitOfMeasureInput';
+import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -44,11 +45,8 @@ export function UsageServiceConfigPanel({
   disabled = false
 }: UsageServiceConfigPanelProps) {
   const { t } = useTranslation('msp/service-catalog');
-  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
-  const defaultUnitOfMeasure = t('usageConfig.defaults.unitOfMeasure', {
-    defaultValue: 'Unit',
-  });
-  const [unitOfMeasure, setUnitOfMeasure] = useState(configuration.unit_of_measure || defaultUnitOfMeasure);
+  const [unitOfMeasure, setUnitOfMeasure] = useState(configuration.unit_of_measure ?? '');
+  const [unitCode, setUnitCode] = useState(configuration.unit_code ?? '');
   const [enableTieredPricing, setEnableTieredPricing] = useState(configuration.enable_tiered_pricing || false);
   const [minimumUsage, setMinimumUsage] = useState<number>(configuration.minimum_usage || 0);
   // Legacy configurations carry no explicit mode; they measure additive
@@ -72,11 +70,12 @@ export function UsageServiceConfigPanel({
 
   // Update local state when props change
   useEffect(() => {
-    setUnitOfMeasure(configuration.unit_of_measure || defaultUnitOfMeasure);
+    setUnitOfMeasure(configuration.unit_of_measure ?? '');
+    setUnitCode(configuration.unit_code ?? '');
     setEnableTieredPricing(configuration.enable_tiered_pricing || false);
     setMinimumUsage(configuration.minimum_usage || 0);
     setMeasurementMode(configuration.measurement_mode === 'period_total' ? 'period_total' : 'additive');
-  }, [configuration.unit_of_measure, configuration.enable_tiered_pricing, configuration.minimum_usage, configuration.measurement_mode, defaultUnitOfMeasure]);
+  }, [configuration.unit_of_measure, configuration.unit_code, configuration.enable_tiered_pricing, configuration.minimum_usage, configuration.measurement_mode]);
 
   useEffect(() => {
     // A later effective boundary can have no tiers; clear the previous display.
@@ -149,10 +148,10 @@ export function UsageServiceConfigPanel({
     setValidationErrors(errors);
   }, [unitOfMeasure, minimumUsage, tiers, enableTieredPricing, t]);
 
-  const handleUnitOfMeasureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setUnitOfMeasure(value);
-    onConfigurationChange({ unit_of_measure: value });
+  const handleUnitOfMeasureChange = (value: UnitSelection) => {
+    setUnitOfMeasure(value.label);
+    setUnitCode(value.code);
+    onConfigurationChange({ unit_of_measure: value.label, unit_code: value.code || null });
   };
 
   const handleEnableTieredPricingChange = (checked: boolean) => {
@@ -281,65 +280,60 @@ export function UsageServiceConfigPanel({
               sum, or one replaceable count reported for each period. The
               choice changes what the next period requires, so the options
               spell that out rather than naming the stored value. */}
-          {(releaseV16Enabled || measurementMode === 'period_total') && (
-            <div data-testid="usage-measurement-mode">
-              <Label>
-                {t('usageConfig.measurementMode.label', {
-                  defaultValue: 'How is usage measured?',
-                })}
-              </Label>
-              <RadioGroup
-                id={`${idPrefix}usage-measurement-mode`}
-                name={`${idPrefix}usage-measurement-mode`}
-                value={measurementMode}
-                onChange={handleMeasurementModeChange}
-                disabled={disabled}
-                options={[
-                  {
-                    value: 'additive',
-                    label: t('usageConfig.measurementMode.additive.label', {
-                      defaultValue: 'Record consumption as it occurs',
-                    }),
-                    description: t('usageConfig.measurementMode.additive.description', {
-                      defaultValue:
-                        'Dated entries add together: entries of 10 and 12 bill 22. The minimum and any tiers apply to each entry. The next period starts with no entries.',
-                    }),
-                  },
-                  {
-                    value: 'period_total',
-                    label: t('usageConfig.measurementMode.periodTotal.label', {
-                      defaultValue: 'Report a count for each period',
-                    }),
-                    description: t('usageConfig.measurementMode.periodTotal.description', {
-                      defaultValue:
-                        'One count per service period replaces the previous one: correcting 10 to 12 bills 12, never 22. The minimum and any tiers apply once to that count. The next period starts unreported — no count carries forward.',
-                    }),
-                  },
-                ]}
-              />
-              <p className="text-sm text-muted-foreground mt-2">
-                {t('usageConfig.measurementMode.transitionNote', {
-                  defaultValue:
-                    'Changing the mode takes effect from the next unbilled service period. Recorded entries or counts already in an open period must be billed or removed first.',
-                })}
-              </p>
-            </div>
-          )}
+          <div data-testid="usage-measurement-mode">
+            <Label>
+              {t('usageConfig.measurementMode.label', {
+                defaultValue: 'How is usage measured?',
+              })}
+            </Label>
+            <RadioGroup
+              id={`${idPrefix}usage-measurement-mode`}
+              name={`${idPrefix}usage-measurement-mode`}
+              value={measurementMode}
+              onChange={handleMeasurementModeChange}
+              disabled={disabled}
+              options={[
+                {
+                  value: 'additive',
+                  label: t('usageConfig.measurementMode.additive.label', {
+                    defaultValue: 'Record consumption as it occurs',
+                  }),
+                  description: t('usageConfig.measurementMode.additive.description', {
+                    defaultValue:
+                      'Dated entries add together: entries of 10 and 12 bill 22. The minimum and any tiers apply to each entry. The next period starts with no entries.',
+                  }),
+                },
+                {
+                  value: 'period_total',
+                  label: t('usageConfig.measurementMode.periodTotal.label', {
+                    defaultValue: 'Report a count for each period',
+                  }),
+                  description: t('usageConfig.measurementMode.periodTotal.description', {
+                    defaultValue:
+                      'One count per service period replaces the previous one: correcting 10 to 12 bills 12, never 22. The minimum and any tiers apply once to that count. The next period starts unreported — no count carries forward.',
+                  }),
+                },
+              ]}
+            />
+            <p className="text-sm text-muted-foreground mt-2">
+              {t('usageConfig.measurementMode.transitionNote', {
+                defaultValue:
+                  'Changing the mode takes effect from the next unbilled service period. Recorded entries or counts already in an open period must be billed or removed first.',
+              })}
+            </p>
+          </div>
 
           <div>
             <Label htmlFor={`${idPrefix}usage-unit-of-measure`}>
               {t('usageConfig.fields.unitOfMeasure.label', { defaultValue: 'Unit of Measure' })}
             </Label>
-            <Input
+            <UnitOfMeasureInput
               id={`${idPrefix}usage-unit-of-measure`}
-              type="text"
-              value={unitOfMeasure}
+              value={{ code: unitCode, label: unitOfMeasure }}
               onChange={handleUnitOfMeasureChange}
-              placeholder={t('usageConfig.fields.unitOfMeasure.placeholder', {
-                defaultValue: 'Enter unit of measure',
-              })}
               disabled={disabled}
-              className={validationErrors.unitOfMeasure ? 'border-red-500' : ''}
+              loadCustomUnits={listTenantUnitsOfMeasure}
+              registerCustomUnit={registerTenantUnitOfMeasure}
             />
               {validationErrors.unitOfMeasure ? (
               <p className="text-sm text-red-500 mt-1">{validationErrors.unitOfMeasure}</p>

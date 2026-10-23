@@ -38,6 +38,12 @@ export const resolveClientBillingCurrency = withAuth(async (user, { tenant }, cl
     .select('default_currency_code')
     .first();
 
+  // The client's own currency outranks its contracts — see the same ordering
+  // and reasoning in projectBillingConfigActions'
+  // resolveClientBillingCurrencyInternal, which this action must agree with or
+  // the setup wizard offers a currency the save then rejects.
+  if (client?.default_currency_code) return client.default_currency_code;
+
   const currenciesQuery = db.table('client_contracts as cc');
   db.tenantJoin(currenciesQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');
   const currencies = await currenciesQuery
@@ -62,7 +68,6 @@ export const resolveClientBillingCurrency = withAuth(async (user, { tenant }, cl
   }
 
   if (unique[0]) return unique[0];
-  if (client?.default_currency_code) return client.default_currency_code;
 
   // Fall back to tenant-level billing settings default currency
   const billingSettings = await db.table('default_billing_settings')

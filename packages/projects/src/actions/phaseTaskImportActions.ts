@@ -6,17 +6,13 @@ import { withTransaction } from '@alga-psa/shared/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { unparseCSV } from '@alga-psa/core';
-import { getAllUsersBasic } from '@alga-psa/user-composition/actions/userQueryActions';
-import { getAllPriorities } from '@alga-psa/reference-data/actions/priorityActions';
-import { getServices } from './serviceCatalogActions';
 import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions/tagActions';
 import ProjectModel from '@alga-psa/projects/models/project';
 import ProjectTaskModel from '../models/projectTask';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { IProjectPhase } from '@alga-psa/types';
-import { IPriority } from '@alga-psa/types';
-import { IService } from '@alga-psa/types';
-import { IUser } from '@shared/interfaces/user.interfaces';
+import type { IUserWithRoles } from '@alga-psa/types';
+import { assertProjectReadAllowed } from '../lib/projectReadAuthorization';
 import {
   buildProjectTaskAssignedPayload,
   buildProjectTaskCreatedPayload,
@@ -108,6 +104,17 @@ async function resolveProjectStatusInfo(
  * Parse a date string to Date object
  * Supports: YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY
  */
+/**
+ * Task dates as they will be stored. A start date after the due date cannot
+ * be drawn or scheduled, so it is dropped rather than failing the row.
+ */
+function resolveImportTaskDates(row: ITaskImportRow): { start_date: Date | null; due_date: Date | null } {
+  const due_date = parseImportDate(row.due_date);
+  const parsedStart = parseImportDate(row.start_date);
+  const start_date = parsedStart && due_date && parsedStart > due_date ? null : parsedStart;
+  return { start_date, due_date };
+}
+
 function parseImportDate(dateStr: string | undefined): Date | null {
   if (!dateStr?.trim()) return null;
 
@@ -148,6 +155,17 @@ function parseImportNumber(numStr: string | undefined): number | null {
 
   const parsed = parseFloat(numStr.trim());
   return isNaN(parsed) ? null : parsed;
+}
+
+/**
+ * Parse a CSV hours value into the whole minutes stored in
+ * project_tasks.estimated_hours (BIGINT minutes, same convention as TaskForm).
+ * Returns null for the values the validator already flags as "will be skipped".
+ */
+function parseImportHoursToMinutes(hoursStr: string | undefined): number | null {
+  const hours = parseImportNumber(hoursStr);
+  if (hours === null || hours < 0) return null;
+  return Math.round(hours * 60);
 }
 
 type ImportStatusMappingRow = IProjectStatusMapping & {
@@ -299,9 +317,9 @@ export async function groupRowsIntoPhases(
       description: row.task_description?.trim() || null,
       assigned_to: primaryAgentId,
       additional_agent_ids: additionalAgentIds,
-      estimated_hours: parseImportNumber(row.estimated_hours),
+      estimated_hours: parseImportHoursToMinutes(row.estimated_hours),
       actual_hours: null,
-      due_date: parseImportDate(row.due_date),
+      ...resolveImportTaskDates(row),
       priority_id: priorityLookup[priorityName] || null,
       service_id: serviceLookup[serviceName] || null,
       task_type_key: row.task_type?.trim() || 'task',
@@ -334,6 +352,7 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
       task_description: 'Collect and document client requirements',
       assigned_to: 'John Smith',
       estimated_hours: '16',
+      start_date: '2024-02-12',
       due_date: '2024-02-15',
       priority: 'High',
       service: 'Consulting',
@@ -401,6 +420,7 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
     'task_description',
     'assigned_to',
     'estimated_hours',
+    'start_date',
     'due_date',
     'priority',
     'service',
@@ -432,6 +452,12 @@ export const getImportReferenceData = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
+    // The phases and statuses below belong to one project, so the caller has to
+    // be allowed to read that project and not merely projects in general.
+    if (projectId && tenant) {
+      await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+    }
+
     // Fetch all reference data in parallel within the same transaction
     const [users, priorities, services, phases, statusReferenceData] = await Promise.all([
       // Users (only active internal/MSP agents - exclude client portal users)
@@ -606,11 +632,17 @@ export async function validatePhaseTaskImportDataWithReferenceData(
     }
 
     // Date validation
+    if (row.start_date?.trim() && !parseImportDate(row.start_date)) {
+      warnings.push(`Invalid date format for start_date: "${row.start_date}" - will be skipped`);
+    }
     if (row.due_date?.trim()) {
       const parsedDate = parseImportDate(row.due_date);
       if (!parsedDate) {
         warnings.push(`Invalid date format for due_date: "${row.due_date}" - will be skipped`);
       }
+    }
+    if (!resolveImportTaskDates(row).start_date && parseImportDate(row.start_date) && parseImportDate(row.due_date)) {
+      warnings.push(`start_date "${row.start_date}" is after due_date "${row.due_date}" - start date will be skipped`);
     }
 
     // Number validation
@@ -647,193 +679,6 @@ export async function validatePhaseTaskImportDataWithReferenceData(
 }
 
 /**
- * Validate phase/task import data and build lookup maps
- * @deprecated Use getImportReferenceData + validatePhaseTaskImportDataWithReferenceData for better performance
- */
-export const validatePhaseTaskImportData = withAuth(async (
-  _user,
-  { tenant },
-  rows: ITaskImportRow[],
-  projectId?: string
-): Promise<IPhaseTaskValidationResponse> => {
-  const { knex: db } = await createTenantKnex();
-
-  // Fetch lookup data
-  const [users, priorities, servicesResponse] = await Promise.all([
-    getAllUsersBasic(true, 'internal'), // Only fetch active internal/MSP agents
-    getAllPriorities('project_task'),
-    getServices(1, 999),
-  ]);
-
-  const services = servicesResponse.services.filter((service) => {
-    const isActive = (service as any).is_active;
-    return isActive === undefined ? true : Boolean(isActive);
-  });
-
-  // Build lookup maps (case-insensitive)
-  const userLookup: Record<string, string> = {};
-  users.forEach((user: IUser) => {
-    const fullName = `${user.first_name} ${user.last_name}`.toLowerCase().trim();
-    userLookup[fullName] = user.user_id;
-  });
-
-  const priorityLookup: Record<string, string> = {};
-  priorities.forEach((priority: IPriority) => {
-    priorityLookup[priority.priority_name.toLowerCase().trim()] = priority.priority_id;
-  });
-
-  const serviceLookup: Record<string, string> = {};
-  services.forEach((service: IService) => {
-    serviceLookup[service.service_name.toLowerCase().trim()] = service.service_id;
-  });
-
-  const statusLookup: Record<string, string> = {};
-  let statusLookupByPhase: Record<string, Record<string, string>> = {};
-  const unmatchedStatuses: Array<{ phaseName: string; statusName: string }> = [];
-
-  if (projectId && tenant) {
-    const statusReferenceData = await getImportStatusReferenceData(db, tenant, projectId);
-    Object.assign(statusLookup, statusReferenceData.statusLookup);
-    statusLookupByPhase = statusReferenceData.statusLookupByPhase;
-  }
-
-  // Collect unique (phase, status) pairs from CSV. We preserve original casing for display.
-  const csvStatusPairs = new Map<string, { phaseName: string; statusName: string }>();
-  rows.forEach(row => {
-    const statusName = row.status?.trim();
-    if (statusName) {
-      const phaseName = row.phase_name?.trim() || DEFAULT_PHASE_NAME;
-      const key = `${phaseName.toLowerCase()}::${statusName.toLowerCase()}`;
-      if (!csvStatusPairs.has(key)) {
-        csvStatusPairs.set(key, { phaseName, statusName });
-      }
-    }
-  });
-
-  csvStatusPairs.forEach(({ phaseName, statusName }) => {
-    const lookup = statusLookupByPhase[phaseName.toLowerCase()] || statusLookup;
-    if (!lookup[statusName.toLowerCase()]) {
-      unmatchedStatuses.push({ phaseName, statusName });
-    }
-  });
-
-  // Collect unique agent names from CSV that don't match existing users
-  const unmatchedAgents: string[] = [];
-  const csvAgentNames = new Set<string>();
-  rows.forEach(row => {
-    if (row.assigned_to?.trim()) {
-      const agentNames = row.assigned_to.split(',').map(name => name.trim()).filter(name => name);
-      agentNames.forEach(agentName => {
-        csvAgentNames.add(agentName);
-      });
-    }
-  });
-
-  csvAgentNames.forEach(agentName => {
-    const normalizedName = agentName.toLowerCase();
-    if (!userLookup[normalizedName]) {
-      unmatchedAgents.push(agentName);
-    }
-  });
-
-  // Validate each row
-  const validationResults: ITaskImportValidationResult[] = rows.map((row, index) => {
-    const errors: string[] = [];
-    const warnings: string[] = [];
-    const rowNumber = index + 2; // +2 for 1-based indexing and header row
-
-    // Required field validation
-    if (!row.task_name?.trim()) {
-      errors.push('Task name is required');
-    }
-
-    // Name matching validation - supports comma-separated agents (first = primary, rest = additional)
-    if (row.assigned_to?.trim()) {
-      const agentNames = row.assigned_to.split(',').map(name => name.trim()).filter(name => name);
-      const notFoundAgents: string[] = [];
-
-      agentNames.forEach(agentName => {
-        const normalizedName = agentName.toLowerCase();
-        if (!userLookup[normalizedName]) {
-          notFoundAgents.push(agentName);
-        }
-      });
-
-      if (notFoundAgents.length > 0) {
-        if (notFoundAgents.length === agentNames.length) {
-          // All agents not found
-          warnings.push(`User(s) "${notFoundAgents.join(', ')}" not found - task will be unassigned`);
-        } else {
-          // Some agents not found
-          warnings.push(`User(s) "${notFoundAgents.join(', ')}" not found - will be skipped`);
-        }
-      }
-    }
-
-    if (row.priority?.trim()) {
-      const normalizedPriority = row.priority.toLowerCase().trim();
-      if (!priorityLookup[normalizedPriority]) {
-        warnings.push(`Priority "${row.priority}" not found - will be skipped`);
-      }
-    }
-
-    if (row.service?.trim()) {
-      const normalizedService = row.service.toLowerCase().trim();
-      if (!serviceLookup[normalizedService]) {
-        warnings.push(`Service "${row.service}" not found - will be skipped`);
-      }
-    }
-
-    // Status validation - only warn, actual resolution happens in wizard step
-    if (row.status?.trim() && projectId) {
-      const normalizedStatus = row.status.toLowerCase().trim();
-      if (!statusLookup[normalizedStatus]) {
-        // Don't warn here - the status resolution step will handle this
-      }
-    }
-
-    // Date validation
-    if (row.due_date?.trim()) {
-      const parsedDate = parseImportDate(row.due_date);
-      if (!parsedDate) {
-        warnings.push(`Invalid date format for due_date: "${row.due_date}" - will be skipped`);
-      }
-    }
-
-    // Number validation
-    if (row.estimated_hours?.trim()) {
-      const parsed = parseImportNumber(row.estimated_hours);
-      if (parsed === null || parsed < 0) {
-        warnings.push(`Invalid estimated_hours: "${row.estimated_hours}" - will be skipped`);
-      }
-    }
-
-    if (row.actual_hours?.trim()) {
-      warnings.push('Actual Hours is derived from linked time entries and will be ignored');
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-      warnings,
-      rowNumber,
-      data: row,
-    };
-  });
-
-  return {
-    validationResults,
-    userLookup,
-    priorityLookup,
-    serviceLookup,
-    statusLookup,
-    statusLookupByPhase,
-    unmatchedStatuses,
-    unmatchedAgents,
-  };
-});
-
-/**
  * Default status column name for tasks without a matching status
  */
 const DEFAULT_UNSPECIFIED_STATUS_NAME = 'No Status Specified';
@@ -858,11 +703,9 @@ export const importPhasesAndTasks = withAuth(async (
         throw new Error('Permission denied: Cannot update projects');
       }
 
-    // Verify project exists
-    const project = await ProjectModel.getById(trx, tenant, projectId);
-    if (!project) {
-      throw new Error('Project not found');
-    }
+    // Verify the project exists and this caller may reach that specific project —
+    // project:update alone does not grant access to every project in the tenant.
+    const project = await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
     // Get existing status mappings
     let statusMappings = await ProjectModel.getProjectStatusMappings(trx, tenant, projectId);
@@ -1033,62 +876,81 @@ export const importPhasesAndTasks = withAuth(async (
     const { generateKeyBetween } = await import('fractional-indexing');
 
     for (const groupedPhase of groupedPhases) {
-      try {
-        let phase: IProjectPhase;
-        const existingPhase = existingPhaseMap.get(groupedPhase.phase_name.toLowerCase());
+      let phase: IProjectPhase;
+      const existingPhase = existingPhaseMap.get(groupedPhase.phase_name.toLowerCase());
 
-        if (existingPhase) {
-          // Use existing phase
-          phase = existingPhase;
-        } else {
-          // Create new phase
-          const phases = await ProjectModel.getPhases(trx, tenant, projectId);
-          const nextOrderNumber = phases.length + 1;
+      if (existingPhase) {
+        // Use existing phase
+        phase = existingPhase;
+      } else {
+        try {
+          // Savepoint per phase: a failed phase rolls back alone instead of
+          // poisoning the shared transaction and taking every later row with it.
+          phase = await trx.transaction(async (phaseTrx) => {
+            const phases = await ProjectModel.getPhases(phaseTrx, tenant, projectId);
+            const nextOrderNumber = phases.length + 1;
 
-          // Generate WBS code
-          const phaseNumbers = phases
-            .map((p): number => {
-              const parts = p.wbs_code.split('.');
-              return parseInt(parts[parts.length - 1]);
-            })
-            .filter(num => !isNaN(num));
-          const maxPhaseNumber = phaseNumbers.length > 0 ? Math.max(...phaseNumbers) : 0;
-          const newWbsCode = `${project.wbs_code}.${maxPhaseNumber + 1}`;
+            // Generate WBS code
+            const phaseNumbers = phases
+              .map((p): number => {
+                const parts = p.wbs_code.split('.');
+                return parseInt(parts[parts.length - 1]);
+              })
+              .filter(num => !isNaN(num));
+            const maxPhaseNumber = phaseNumbers.length > 0 ? Math.max(...phaseNumbers) : 0;
+            const newWbsCode = `${project.wbs_code}.${maxPhaseNumber + 1}`;
 
-          // Generate order key
-          let orderKey: string;
-          if (phases.length === 0) {
-            orderKey = generateKeyBetween(null, null);
-          } else {
-            const sortedPhases = [...phases].sort((a, b) => {
-              if (a.order_key && b.order_key) {
-                return a.order_key < b.order_key ? -1 : a.order_key > b.order_key ? 1 : 0;
-              }
-              return 0;
+            // Generate order key
+            let orderKey: string;
+            if (phases.length === 0) {
+              orderKey = generateKeyBetween(null, null);
+            } else {
+              const sortedPhases = [...phases].sort((a, b) => {
+                if (a.order_key && b.order_key) {
+                  return a.order_key < b.order_key ? -1 : a.order_key > b.order_key ? 1 : 0;
+                }
+                return 0;
+              });
+              const lastPhase = sortedPhases[sortedPhases.length - 1];
+              orderKey = generateKeyBetween(lastPhase.order_key || null, null);
+            }
+
+            return ProjectModel.addPhase(phaseTrx, tenant, {
+              project_id: projectId,
+              phase_name: groupedPhase.phase_name,
+              description: groupedPhase.description,
+              start_date: null,
+              end_date: null,
+              status: 'pending',
+              order_number: nextOrderNumber,
+              wbs_code: newWbsCode,
+              order_key: orderKey,
             });
-            const lastPhase = sortedPhases[sortedPhases.length - 1];
-            orderKey = generateKeyBetween(lastPhase.order_key || null, null);
-          }
-
-          phase = await ProjectModel.addPhase(trx, tenant, {
-            project_id: projectId,
-            phase_name: groupedPhase.phase_name,
-            description: groupedPhase.description,
-            start_date: null,
-            end_date: null,
-            status: 'pending',
-            order_number: nextOrderNumber,
-            wbs_code: newWbsCode,
-            order_key: orderKey,
           });
 
+          // Counted only once the savepoint resolved, so the reported totals
+          // always match what is actually persisted.
           phasesCreated++;
           existingPhaseMap.set(groupedPhase.phase_name.toLowerCase(), phase);
+        } catch (phaseError) {
+          const errorMessage = phaseError instanceof Error ? phaseError.message : 'Unknown error';
+          const rowNumbers = groupedPhase.tasks
+            .map(t => t.csvRowNumber)
+            .filter((n): n is number => typeof n === 'number');
+          const rowRef = rowNumbers.length > 0 ? ` (rows ${rowNumbers.join(', ')})` : '';
+          errors.push(`Failed to process phase "${groupedPhase.phase_name}"${rowRef}: ${errorMessage}`);
+          continue;
         }
+      }
 
-        // Create tasks for this phase
-        for (const taskData of groupedPhase.tasks) {
-          try {
+      const phaseId = phase.phase_id;
+
+      // Create tasks for this phase
+      for (const taskData of groupedPhase.tasks) {
+        try {
+          // Savepoint per task row: only the failing row is rolled back, and its
+          // workflow events are published last so a rolled-back row emits none.
+          await trx.transaction(async (taskTrx) => {
             // Determine the status mapping ID for this task
             let taskStatusMappingId: string;
             if (taskData.status_mapping_id) {
@@ -1109,12 +971,13 @@ export const importPhasesAndTasks = withAuth(async (
               taskStatusMappingId = fallbackForPhase(groupedPhase.phase_name);
             }
 
-            const newTask = await ProjectTaskModel.addTask(trx, tenant, phase.phase_id, {
+            const newTask = await ProjectTaskModel.addTask(taskTrx, tenant, phaseId, {
               task_name: taskData.task_name,
               description: taskData.description,
               description_rich_text: null,
               assigned_to: taskData.assigned_to,
               estimated_hours: taskData.estimated_hours,
+              start_date: taskData.start_date,
               due_date: taskData.due_date,
               priority_id: taskData.priority_id,
               service_id: taskData.service_id,
@@ -1130,7 +993,7 @@ export const importPhasesAndTasks = withAuth(async (
                 text_color: null,
                 isNew: true,
               }));
-              await createTagsForEntityWithTransaction(trx, tenant, newTask.task_id, 'project_task', pendingTags);
+              await createTagsForEntityWithTransaction(taskTrx, tenant, newTask.task_id, 'project_task', pendingTags);
             }
 
             // Add additional agents as task resources (only if primary agent is assigned)
@@ -1141,7 +1004,10 @@ export const importPhasesAndTasks = withAuth(async (
               );
               for (const additionalAgentId of uniqueAdditionalAgents) {
                 try {
-                  await ProjectTaskModel.addTaskResource(trx, tenant, newTask.task_id, additionalAgentId);
+                  // Nested savepoint: a rejected resource stays non-fatal for the row.
+                  await taskTrx.transaction((resourceTrx) =>
+                    ProjectTaskModel.addTaskResource(resourceTrx, tenant, newTask.task_id, additionalAgentId)
+                  );
                 } catch (resourceError) {
                   console.error(`Failed to add additional agent ${additionalAgentId}:`, resourceError);
                 }
@@ -1154,7 +1020,7 @@ export const importPhasesAndTasks = withAuth(async (
               occurredAt,
               actor: { actorType: 'USER' as const, actorUserId: user.user_id },
             };
-            const statusInfo = await resolveProjectStatusInfo(trx, tenant, newTask.project_status_mapping_id);
+            const statusInfo = await resolveProjectStatusInfo(taskTrx, tenant, newTask.project_status_mapping_id);
 
             await publishWorkflowEvent({
               eventType: 'PROJECT_TASK_CREATED',
@@ -1185,21 +1051,14 @@ export const importPhasesAndTasks = withAuth(async (
                 }),
               });
             }
+          });
 
-            tasksCreated++;
-          } catch (taskError) {
-            const errorMessage = taskError instanceof Error ? taskError.message : 'Unknown error';
-            const rowRef = taskData.csvRowNumber ? ` (row ${taskData.csvRowNumber})` : '';
-            errors.push(`Failed to create task "${taskData.task_name}"${rowRef}: ${errorMessage}`);
-          }
+          tasksCreated++;
+        } catch (taskError) {
+          const errorMessage = taskError instanceof Error ? taskError.message : 'Unknown error';
+          const rowRef = taskData.csvRowNumber ? ` (row ${taskData.csvRowNumber})` : '';
+          errors.push(`Failed to create task "${taskData.task_name}"${rowRef}: ${errorMessage}`);
         }
-      } catch (phaseError) {
-        const errorMessage = phaseError instanceof Error ? phaseError.message : 'Unknown error';
-        const rowNumbers = groupedPhase.tasks
-          .map(t => t.csvRowNumber)
-          .filter((n): n is number => typeof n === 'number');
-        const rowRef = rowNumbers.length > 0 ? ` (rows ${rowNumbers.join(', ')})` : '';
-        errors.push(`Failed to process phase "${groupedPhase.phase_name}"${rowRef}: ${errorMessage}`);
       }
     }
 

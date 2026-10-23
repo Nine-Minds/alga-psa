@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { formatDate, getServerLocale, getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { SupportedLocale } from '@alga-psa/core/i18n/config';
+import { SYSTEM_DATE_FORMAT, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
+import { getDateFormatPreference } from '@alga-psa/clients/actions/countryActions';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { getMyServiceRequestSubmissionDetailAction } from '../actions';
 import { getSubmissionFieldDisplay } from '../../submissionFieldPresentation';
@@ -22,26 +24,29 @@ interface MyRequestDetailPageProps {
   }>;
 }
 
-// Module scope has no hook to read the locale from, so it is passed in rather
-// than omitted — omitting it silently means the browser's, not the app's.
+// Module scope has no hook to read the locale or the country pattern from, so
+// both are passed in rather than omitted — omitting them silently means the
+// browser's language and the language's own digit order.
 function formatDateTime(
   value: Date | string,
   locale: SupportedLocale,
+  dateFormat: CountryDateFormat,
   unknownLabel: string,
 ): string {
   const date = typeof value === 'string' ? new Date(value) : value;
   if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
     return unknownLabel;
   }
-  return formatDate(date, locale, { dateStyle: 'medium', timeStyle: 'short' });
+  return formatDate(date, locale, { dateStyle: 'medium', timeStyle: 'short' }, dateFormat);
 }
 
 export default async function MyRequestDetailPage(props: MyRequestDetailPageProps) {
   const { submissionId } = await props.params;
-  const [submission, { t }, locale] = await Promise.all([
+  const [submission, { t }, locale, dateFormat] = await Promise.all([
     getMyServiceRequestSubmissionDetailAction(submissionId),
     getServerTranslation(undefined, 'client-portal/service-requests'),
     getServerLocale(),
+    getDateFormatPreference().catch(() => SYSTEM_DATE_FORMAT),
   ]);
 
   if (!submission) {
@@ -73,7 +78,7 @@ export default async function MyRequestDetailPage(props: MyRequestDetailPageProp
         <h2 className="text-base font-semibold mb-2">{t('submissionDetail.statusSection')}</h2>
         <p className="text-sm">
           {t('submissionDetail.submittedAt', {
-            date: formatDateTime(submission.submitted_at, locale, unknownLabel),
+            date: formatDateTime(submission.submitted_at, locale, dateFormat, unknownLabel),
           })}
         </p>
         <p className="text-sm">
@@ -187,7 +192,7 @@ export default async function MyRequestDetailPage(props: MyRequestDetailPageProp
                   })}
                 </p>
                 <p className="text-xs text-[rgb(var(--color-text-600))]">
-                  {formatDateTime(event.timestamp, locale, unknownLabel)}
+                  {formatDateTime(event.timestamp, locale, dateFormat, unknownLabel)}
                   {event.actor_name
                     ? ` · ${t('submissionDetail.historyActor', { actor: event.actor_name })}`
                     : ''}

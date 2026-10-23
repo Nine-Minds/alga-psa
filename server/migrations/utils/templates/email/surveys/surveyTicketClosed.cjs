@@ -5,7 +5,7 @@
  * because the survey email has a unique layout with inline rating buttons and
  * a fallback survey link.
  *
- * Supports all 7 languages: en, fr, es, de, nl, it, pl.
+ * Supports all 9 languages: en, fr, es, de, nl, it, pl, pt, sv.
  */
 
 const TEMPLATE_NAME = 'SURVEY_TICKET_CLOSED';
@@ -90,6 +90,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Queremos sua opinião sobre o ticket {{ticket_number}}';
+SUBJECTS.sv = 'Vi vill gärna höra vad du tycker om ärende {{ticket_number}}';
 COPY.pt = {
   salutation: 'Olá {{contact_name}},',
   summary: 'Ticket #{{ticket_number}} · {{ticket_subject}}',
@@ -98,6 +99,16 @@ COPY.pt = {
   buttonHelp: 'Escolha uma nota abaixo para nos contar como foi o atendimento:',
   fallback: 'Se os botões não carregarem, abra este link seguro da pesquisa:',
   thankYou: '{{thank_you_text}}',
+};
+COPY.sv = {
+  salutation: 'Hej {{contact_name}},',
+  summary: 'Ärende #{{ticket_number}} · {{ticket_subject}}',
+  technicianLine: 'Tekniker: {{technician_name}}',
+  ratingIntro: '{{prompt_text}}',
+  buttonHelp: 'Välj ett betyg nedan för att berätta hur du upplevde vår service:',
+  fallback: 'Om knapparna inte visas kan du öppna den här säkra länken till enkäten:',
+  thankYou: '{{thank_you_text}}',
+  ticketLabel: 'Ärende',
 };
 
 /* eslint-enable max-len */
@@ -116,7 +127,7 @@ function buildBodyHtml(lang, c, subject) {
       <td align="center">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;box-shadow:0 10px 30px rgba(15,23,42,0.08);overflow:hidden;">
           <tr>
-            <td style="background:linear-gradient(135deg,#8A4DEA,#40CFF9);padding:28px 32px;color:#ffffff;">
+            <td bgcolor="#8A4DEA" style="background-color:#8A4DEA;background:linear-gradient(135deg,#8A4DEA,#40CFF9);padding:28px 32px;color:#ffffff;">
               <h1 style="margin:0;font-size:24px;font-weight:600;">${subject}</h1>
               <p style="margin:8px 0 0 0;font-size:14px;opacity:0.85;">${c.summary}</p>
               <p style="margin:8px 0 0 0;font-size:14px;opacity:0.85;">${c.technicianLine}</p>

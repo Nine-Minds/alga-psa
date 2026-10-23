@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
-import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import { Input } from '@alga-psa/ui/components/Input';
+import SearchableSelect, { type SelectOption } from '@alga-psa/ui/components/SearchableSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
@@ -14,12 +13,17 @@ import { getAllContacts, getContactsByClient } from '@alga-psa/clients/actions';
 import { getAvailableStatuses, getTicketFieldOptions } from '@alga-psa/integrations/actions';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction, getTeamsBasic, isTeamActionError } from '@alga-psa/teams/actions';
-import { getTicketById, getTicketsForList } from '@alga-psa/tickets/actions/ticketActions';
+import { getTicketById } from '@alga-psa/tickets/actions/ticketActions';
+import { getRoles } from '@alga-psa/auth/actions';
+import { listWorkflowAssetOptionsAction, listWorkflowContractOptionsAction } from './workflowPickerServerActions';
+import { AsyncSearchableSelect } from '@alga-psa/ui/components/AsyncSearchableSelect';
+import { formatWorkflowTicketLabel, searchWorkflowTickets } from './workflowTicketPickerSearch';
 import { getProjectsWithPhases } from '@alga-psa/projects/actions/projectActions';
 import { getProjectTaskData } from '@alga-psa/projects/actions/projectTaskActions';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { TFunction } from 'i18next';
+import { groupSharedStatusIds, toAnyBoardStatusValue } from './workflowStatusGroups';
 import type {
   IBoard,
   IClient,
@@ -29,6 +33,16 @@ import type {
   TicketFieldOptions,
 } from '@alga-psa/types';
 import type { InputMapping, MappingValue } from '@alga-psa/workflows/runtime';
+
+// LEVERAGE: pattern workflow-fixed-picker-copies — ee/packages/workflows/src/components/automation-hub/
+// WorkflowActionInputFixedPicker.tsx is a second, diverging copy of this picker (data loading via injected
+// actions). Kind support, labels, and fixes (role, ticket search, multi-pickers) land in one copy only.
+/** Extra detail about a picked value, for pickers that mix entity kinds (users and teams). */
+export type WorkflowPickerChangeMeta = {
+  assigneeType?: 'user' | 'team';
+  /** For a "(any board)" status choice: every status id the list offered under that name. */
+  anyBoardStatusIds?: string[];
+};
 
 export type WorkflowActionInputPickerField = {
   name: string;
@@ -60,10 +74,13 @@ type DependencyResolution = {
 type WorkflowPickerOption = SelectOption & {
   boardId?: string | null;
   clientId?: string | null;
+  /** The client's name, for the "Filtered to <client>" note on client-scoped lists. */
+  clientName?: string | null;
   parentId?: string | null;
   projectId?: string | null;
   phaseId?: string | null;
   assigneeType?: 'user' | 'team';
+  anyBoardStatusIds?: string[];
 };
 
 type WorkflowTicketSearchResult = {
@@ -105,6 +122,31 @@ type WorkflowPickerData = {
   projects: WorkflowProjectPickerProject[];
   projectTasks: WorkflowProjectTaskPickerTask[];
   projectStatuses: WorkflowProjectStatusPickerStatus[];
+  roles: Array<{ role_id: string; role_name: string; msp?: boolean | null }>;
+  contracts: WorkflowContractPickerContract[];
+  assets: WorkflowAssetPickerAsset[];
+};
+
+export type WorkflowAssetPickerAsset = {
+  asset_id: string;
+  asset_name?: string | null;
+  asset_tag?: string | null;
+  client_id?: string | null;
+  client_name?: string | null;
+  warranty_end_date?: string | null;
+};
+
+export type WorkflowContractPickerContract = {
+  contract_id: string;
+  contract_name?: string | null;
+  client_id?: string | null;
+  client_name?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  client_contract_id?: string | null;
+  decision_due_date?: string | null;
+  renewal_mode?: string | null;
+  renewal_cycle_key?: string | null;
 };
 
 const EMPTY_PICKER_DATA: WorkflowPickerData = {
@@ -116,6 +158,9 @@ const EMPTY_PICKER_DATA: WorkflowPickerData = {
   projects: [],
   projectTasks: [],
   projectStatuses: [],
+  roles: [],
+  contracts: [],
+  assets: [],
 };
 
 const EMPTY_TICKET_FIELD_OPTIONS: TicketFieldOptions = {
@@ -187,7 +232,15 @@ export const WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES = new Set([
   'ticket-category',
   'ticket-subcategory',
   'client-location',
+  'role',
+  'contract',
+  'asset',
 ]);
+
+/** Kinds that can be picked as a list (array inputs such as recipient or assignee ids). */
+export const WORKFLOW_FIXED_PICKER_MULTI_RESOURCES = new Set(
+  Array.from(WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES).filter((kind) => kind !== 'ticket' && kind !== 'user-or-team')
+);
 
 const DEDICATED_PICKER_KINDS = new Set([
   'board',
@@ -254,6 +307,23 @@ const resolveDependency = (
   };
 };
 
+/**
+ * Resolves a picker's dependencies against the step's input mapping. The result keeps its identity
+ * until a resolved value changes, so callers that pass a fresh mapping object on every render (or
+ * re-render for unrelated reasons) don't make the picker reload its options. A reload swaps the
+ * dedicated picker for the loading placeholder, which closed an open dropdown before the user's
+ * pick could land.
+ */
+const useDependencyResolutions = (
+  dependencies: string[] | undefined,
+  rootInputMapping: InputMapping
+): DependencyResolution[] => {
+  const resolutions = (dependencies ?? []).map((dependency) => resolveDependency(rootInputMapping, dependency));
+  const signature = JSON.stringify(resolutions);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by value, not identity
+  return useMemo(() => resolutions, [signature]);
+};
+
 const buildDisabledExplanation = (
   t: TFunction,
   kind: string,
@@ -306,6 +376,11 @@ const getWorkflowPickerPlaceholder = (
   return `Select ${field.name.replace(/_/g, ' ')}`;
 };
 
+const getWorkflowPickerSearchPlaceholder = (t: TFunction, field: WorkflowActionInputPickerField): string =>
+  field.editor?.fixedValueHint?.trim()
+  ?? field.picker?.fixedValueHint?.trim()
+  ?? t('actionInputFixedPicker.searchPlaceholder', { defaultValue: 'Search' });
+
 const toBoards = (ticketOptions: TicketFieldOptions | null): IBoard[] =>
   (ticketOptions?.boards ?? []).map((board) => ({
     board_id: board.id,
@@ -323,7 +398,9 @@ const toClients = (ticketOptions: TicketFieldOptions | null): IClient[] =>
 
 const mapTicketFieldOptions = (
   kind: string,
-  ticketOptions: TicketFieldOptions | null
+  ticketOptions: TicketFieldOptions | null,
+  detailLabels: WorkflowPickerOptionDetailLabels,
+  includeAnyBoardStatus: boolean
 ): WorkflowPickerOption[] => {
   if (!ticketOptions) {
     return [];
@@ -340,11 +417,35 @@ const mapTicketFieldOptions = (
         value: client.id,
         label: client.name,
       }));
-    case 'ticket-status':
-      return ticketOptions.statuses.map((status) => ({
+    case 'ticket-status': {
+      // Statuses belong to a board, so the same name can appear once per board. Unscoped lists
+      // carry board_name and show it; board-scoped lists drop it (every row is the same board).
+      const statusOption = (status: TicketFieldOptions['statuses'][number]): WorkflowPickerOption => ({
         value: status.id,
-        label: status.name,
-      }));
+        label: status.board_name ? `${status.name} · ${status.board_name}` : status.name,
+        boardId: status.board_id ?? null,
+      });
+      if (!includeAnyBoardStatus) return ticketOptions.statuses.map(statusOption);
+      // "<name> (any board)" comes first, then that name's board-specific rows.
+      const shared = groupSharedStatusIds(ticketOptions.statuses);
+      const emitted = new Set<string>();
+      const options: WorkflowPickerOption[] = [];
+      for (const status of ticketOptions.statuses) {
+        if (!shared.has(status.name)) {
+          options.push(statusOption(status));
+          continue;
+        }
+        if (emitted.has(status.name)) continue;
+        emitted.add(status.name);
+        options.push({
+          value: toAnyBoardStatusValue(status.name),
+          label: detailLabels.anyBoardStatus(status.name),
+          anyBoardStatusIds: shared.get(status.name),
+        });
+        options.push(...ticketOptions.statuses.filter((other) => other.name === status.name).map(statusOption));
+      }
+      return options;
+    }
     case 'ticket-priority':
       return ticketOptions.priorities.map((priority) => ({
         value: priority.id,
@@ -369,9 +470,41 @@ const mapTicketFieldOptions = (
   }
 };
 
-const mapWorkflowPickerOptions = (
+/** Second-line wording for record options whose key date matters (contract end, warranty end). */
+export type WorkflowPickerOptionDetailLabels = {
+  endsOn: (date: string) => string;
+  noEndDate: string;
+  warrantyEndsOn: (date: string) => string;
+  noWarrantyEnd: string;
+  anyBoardStatus: (name: string) => string;
+};
+
+const DEFAULT_OPTION_DETAIL_LABELS: WorkflowPickerOptionDetailLabels = {
+  endsOn: (date) => `Ends ${date}`,
+  noEndDate: 'No end date',
+  warrantyEndsOn: (date) => `Warranty ends ${date}`,
+  noWarrantyEnd: 'No warranty end date',
+  anyBoardStatus: (name) => `${name} (any board)`,
+};
+
+export const useWorkflowPickerOptionDetailLabels = (): WorkflowPickerOptionDetailLabels => {
+  const { t } = useTranslation('msp/workflows');
+  return useMemo(() => ({
+    endsOn: (date) => t('actionInputFixedPicker.details.endsOn', { defaultValue: 'Ends {{date}}', date }),
+    noEndDate: t('actionInputFixedPicker.details.noEndDate', { defaultValue: 'No end date' }),
+    warrantyEndsOn: (date) => t('actionInputFixedPicker.details.warrantyEndsOn', { defaultValue: 'Warranty ends {{date}}', date }),
+    noWarrantyEnd: t('actionInputFixedPicker.details.noWarrantyEnd', { defaultValue: 'No warranty end date' }),
+    anyBoardStatus: (name) => t('actionInputFixedPicker.details.anyBoardStatus', { defaultValue: '{{name}} (any board)', name }),
+  }), [t]);
+};
+
+const dateOnly = (value: string | null | undefined): string | null => (value ? value.slice(0, 10) : null);
+
+export const mapWorkflowPickerOptions = (
   kind: string,
-  data: WorkflowPickerData
+  data: WorkflowPickerData,
+  detailLabels: WorkflowPickerOptionDetailLabels = DEFAULT_OPTION_DETAIL_LABELS,
+  { includeAnyBoardStatus = false }: { includeAnyBoardStatus?: boolean } = {}
 ): WorkflowPickerOption[] => {
   switch (kind) {
     case 'project':
@@ -424,14 +557,79 @@ const mapWorkflowPickerOptions = (
           assigneeType: 'team' as const,
         })),
       ];
+    case 'role':
+      // Workflows notify and assign internal (MSP) users, so client-portal roles are left out.
+      return data.roles
+        .filter((role) => role.msp !== false)
+        .map((role) => ({ value: role.role_id, label: role.role_name }));
+    case 'contract':
+      // The end date is what contract date triggers fire on, so every row says it (or that there is none).
+      return data.contracts.map((contract) => ({
+        value: contract.contract_id,
+        label: [contract.contract_name || contract.contract_id, contract.client_name].filter(Boolean).join(' · '),
+        secondaryLabel: dateOnly(contract.end_date) ? detailLabels.endsOn(dateOnly(contract.end_date)!) : detailLabels.noEndDate,
+        clientId: contract.client_id ?? null,
+        clientName: contract.client_name ?? null,
+      }));
+    case 'asset':
+      return data.assets.map((asset) => ({
+        value: asset.asset_id,
+        label: [asset.asset_name || asset.asset_tag || asset.asset_id, asset.client_name].filter(Boolean).join(' · '),
+        secondaryLabel: dateOnly(asset.warranty_end_date)
+          ? detailLabels.warrantyEndsOn(dateOnly(asset.warranty_end_date)!)
+          : detailLabels.noWarrantyEnd,
+        keywords: asset.asset_tag ?? undefined,
+        clientId: asset.client_id ?? null,
+        clientName: asset.client_name ?? null,
+      }));
     case 'ticket':
       return data.tickets.map((ticket) => ({
         value: ticket.ticket_id,
         label: ticket.ticket_number ? `${ticket.ticket_number} · ${ticket.title ?? ticket.ticket_id}` : (ticket.title ?? ticket.ticket_id),
       }));
     default:
-      return mapTicketFieldOptions(kind, data.ticketOptions);
+      return mapTicketFieldOptions(kind, data.ticketOptions, detailLabels, includeAnyBoardStatus);
   }
+};
+
+/** Client contracts (contract, client, dates), shared by the contract picker and record fill. */
+export const loadWorkflowContracts = async (): Promise<WorkflowContractPickerContract[]> => {
+  const result = await listWorkflowContractOptionsAction();
+  return result
+    .filter((contract) => Boolean(contract.contract_id))
+    .map((contract) => ({
+      contract_id: contract.contract_id,
+      contract_name: contract.contract_name ?? null,
+      client_id: contract.client_id ?? null,
+      client_name: contract.client_name ?? null,
+      start_date: contract.start_date ?? null,
+      end_date: contract.end_date ?? null,
+      client_contract_id: contract.client_contract_id ?? null,
+      decision_due_date: contract.decision_due_date ?? null,
+      renewal_mode: contract.renewal_mode ?? null,
+      renewal_cycle_key: contract.renewal_cycle_key ?? null,
+    }));
+};
+
+/** Kinds whose options are narrowed to a client chosen elsewhere (record lists, not lookups). */
+const CLIENT_SCOPED_OPTION_KINDS = new Set(['contract']);
+
+/** The fixed client a client-scoped list is narrowed to, if any. */
+export const getWorkflowPickerClientScope = (
+  kind: string | undefined,
+  dependencies: DependencyResolution[]
+): string | null => {
+  if (!kind || !CLIENT_SCOPED_OPTION_KINDS.has(kind)) return null;
+  // Trigger payloads name the client clientId; action inputs name it client_id.
+  const scope = dependencies.find(
+    (dependency) => (dependency.path === 'client_id' || dependency.path === 'clientId') && dependency.status === 'fixed' && dependency.value
+  );
+  return scope?.value ?? null;
+};
+
+const dedupeWorkflowPickerOptions = (options: WorkflowPickerOption[]): WorkflowPickerOption[] => {
+  const seen = new Set<string>();
+  return options.filter((option) => (seen.has(option.value) ? false : (seen.add(option.value), true)));
 };
 
 const filterWorkflowPickerOptions = (
@@ -451,6 +649,10 @@ const filterWorkflowPickerOptions = (
       return clientId
         ? options.filter((option) => option.clientId === clientId)
         : options;
+    }
+    case 'contract': {
+      const clientId = getWorkflowPickerClientScope(kind, dependencies);
+      return dedupeWorkflowPickerOptions(clientId ? options.filter((option) => option.clientId === clientId) : options);
     }
     case 'client-location': {
       const clientId = dependencyValues.get('client_id');
@@ -584,6 +786,13 @@ const loadWorkflowPickerData = async (
     case 'ticket-status': {
       const fixedBoard = dependencies.find((dependency) => dependency.path === 'board_id');
       const fixedTicket = dependencies.find((dependency) => dependency.path === 'ticket_id');
+      if (!fixedBoard && !fixedTicket) {
+        // No board scope declared (e.g. comparing a ticket's status in a condition): offer every ticket status.
+        return {
+          ...EMPTY_PICKER_DATA,
+          ticketOptions: (await getTicketFieldOptions()).options,
+        };
+      }
       let boardId: string | null = null;
 
       if (fixedBoard?.status === 'fixed' && fixedBoard.value) {
@@ -605,7 +814,8 @@ const loadWorkflowPickerData = async (
         ...EMPTY_PICKER_DATA,
         ticketOptions: {
           ...EMPTY_TICKET_FIELD_OPTIONS,
-          statuses,
+          // One board, so the board name would only repeat on every row.
+          statuses: statuses.map(({ board_name: _boardName, ...status }) => status),
         },
       };
     }
@@ -623,6 +833,21 @@ const loadWorkflowPickerData = async (
       return {
         ...EMPTY_PICKER_DATA,
         users: await getAllUsersBasic(true, 'internal'),
+      };
+    case 'role':
+      return {
+        ...EMPTY_PICKER_DATA,
+        roles: await getRoles(),
+      };
+    case 'contract':
+      return {
+        ...EMPTY_PICKER_DATA,
+        contracts: await loadWorkflowContracts(),
+      };
+    case 'asset':
+      return {
+        ...EMPTY_PICKER_DATA,
+        assets: await listWorkflowAssetOptionsAction(),
       };
     case 'user-or-team': {
       const [users, teams] = await Promise.all([
@@ -656,108 +881,58 @@ const WorkflowTicketPicker: React.FC<{
   disabled?: boolean;
 }> = ({ field, value, onChange, idPrefix, disabled }) => {
   const { t } = useTranslation('msp/workflows');
-  const [search, setSearch] = useState('');
-  const [options, setOptions] = useState<WorkflowPickerOption[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [selectedLabel, setSelectedLabel] = useState<string | undefined>(undefined);
 
+  // Resolve a readable label for a value that was set earlier (saved mapping, prior run payload).
   useEffect(() => {
+    if (!value) {
+      setSelectedLabel(undefined);
+      return;
+    }
     let active = true;
-    const normalizedSearch = search.trim();
-
-    const loadOptions = async () => {
-      if (!normalizedSearch) {
-        if (value) {
-          try {
-            setIsLoading(true);
-            setLoadError(null);
-            const ticket = await getTicketById(value);
-            if (!active) return;
-            setOptions(ticket ? [{
-              value: ticket.ticket_id,
-              label: ticket.ticket_number ? `${ticket.ticket_number} · ${ticket.title ?? ticket.ticket_id}` : (ticket.title ?? ticket.ticket_id),
-            }] : []);
-          } catch (error) {
-            if (!active) return;
-            console.error('Failed to load selected workflow ticket picker value:', error);
-            setOptions(value ? [{ value, label: value }] : []);
-            setLoadError(error instanceof Error ? error.message : t('actionInputFixedPicker.errors.loadTicket', { defaultValue: 'Failed to load ticket' }));
-          } finally {
-            if (active) {
-              setIsLoading(false);
-            }
-          }
-          return;
-        }
-
-        setOptions([]);
-        setLoadError(null);
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-        setLoadError(null);
-        const result = await getTicketsForList({
-          boardFilterState: 'active',
-          searchQuery: normalizedSearch,
-        });
+    setSelectedLabel(value);
+    getTicketById(value)
+      .then((ticket) => {
+        if (!active || !ticket) return;
+        setSelectedLabel(formatWorkflowTicketLabel(ticket, value));
+      })
+      .catch((error) => {
         if (!active) return;
-        const mapped = ((result as { tickets?: WorkflowTicketSearchResult[] } | null)?.tickets ?? [])
-          .slice(0, 25)
-          .map((ticket) => ({
-            value: ticket.ticket_id,
-            label: ticket.ticket_number ? `${ticket.ticket_number} · ${ticket.title ?? ticket.ticket_id}` : (ticket.title ?? ticket.ticket_id),
-          }));
-        setOptions(appendCurrentValueOption(mapped, value));
-      } catch (error) {
-        if (!active) return;
-        console.error('Failed to search tickets for workflow picker:', error);
-        setOptions(appendCurrentValueOption([], value));
-        setLoadError(error instanceof Error ? error.message : t('actionInputFixedPicker.errors.searchTickets', { defaultValue: 'Failed to search tickets' }));
-      } finally {
-        if (active) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    const timeoutId = window.setTimeout(() => {
-      void loadOptions();
-    }, normalizedSearch ? 200 : 0);
-
+        console.error('Failed to load selected workflow ticket picker value:', error);
+      });
     return () => {
       active = false;
-      window.clearTimeout(timeoutId);
     };
-  }, [search, value, t]);
+  }, [value]);
 
-  const placeholder = field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? t('actionInputFixedPicker.ticketSearchPlaceholder', { defaultValue: 'Search tickets by number or title' });
+  const loadOptions = useCallback(
+    (args: { search: string; page: number; limit: number }) => searchWorkflowTickets(args),
+    []
+  );
+
+  const placeholder = field.editor?.fixedValueHint?.trim()
+    || field.picker?.fixedValueHint?.trim()
+    || t('actionInputFixedPicker.ticketSearchPlaceholder', { defaultValue: 'Search tickets by number or title' });
 
   return (
-    <div className="space-y-2">
-      <Input
-        id={`${idPrefix}-literal-ticket-search`}
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        placeholder={placeholder}
-        disabled={disabled}
-      />
-      <CustomSelect
-        id={`${idPrefix}-literal-picker`}
-        options={options}
-        value={value ?? ''}
-        onValueChange={(nextValue) => onChange(nextValue || null)}
-        placeholder={search.trim().length > 0
-          ? t('actionInputFixedPicker.ticketSelect', { defaultValue: 'Select ticket' })
-          : t('actionInputFixedPicker.ticketTypeAbove', { defaultValue: 'Type above to search tickets' })}
-        disabled={disabled || isLoading || (search.trim().length === 0 && !value)}
-      />
-      {loadError && (
-        <p className="text-[11px] text-gray-500">{loadError}</p>
-      )}
-    </div>
+    <AsyncSearchableSelect
+      id={`${idPrefix}-literal-picker`}
+      value={value ?? ''}
+      onChange={(nextValue, option) => {
+        if (option?.label) setSelectedLabel(option.label);
+        onChange(nextValue || null);
+      }}
+      loadOptions={loadOptions}
+      limit={25}
+      placeholder={t('actionInputFixedPicker.ticketSelect', { defaultValue: 'Select ticket' })}
+      searchPlaceholder={placeholder}
+      selectedLabel={selectedLabel}
+      emptyMessage={t('actionInputFixedPicker.ticketNoMatches', {
+        defaultValue: 'No tickets match. Try the ticket number (for example 1122) or words from the title.',
+      })}
+      dropdownMode="overlay"
+      disabled={disabled}
+    />
   );
 };
 
@@ -771,6 +946,7 @@ const renderDedicatedPicker = ({
   onChange,
   idPrefix,
   disabled,
+  hideLabel,
 }: {
   t: TFunction;
   field: WorkflowActionInputPickerField;
@@ -778,9 +954,10 @@ const renderDedicatedPicker = ({
   data: WorkflowPickerData;
   dependencyResolutions: DependencyResolution[];
   value: string | null;
-  onChange: (value: string | null) => void;
+  onChange: (value: string | null, meta?: WorkflowPickerChangeMeta) => void;
   idPrefix: string;
   disabled?: boolean;
+  hideLabel?: boolean;
 }): React.ReactNode => {
   switch (pickerKind) {
     case 'board': {
@@ -822,6 +999,7 @@ const renderDedicatedPicker = ({
           onValueChange={(nextValue) => onChange(nextValue || null)}
           clientId={getResolvedDependencyValue(dependencyResolutions, 'client_id')}
           label={field.name.replace(/_/g, ' ')}
+          labelStyle={hideLabel ? 'none' : undefined}
           placeholder={field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? t('actionInputFixedPicker.placeholders.contact', { defaultValue: 'Select Contact' })}
         />
       );
@@ -830,6 +1008,7 @@ const renderDedicatedPicker = ({
         <UserPicker
           id={`${idPrefix}-literal-picker`}
           label={field.name.replace(/_/g, ' ')}
+          labelStyle={hideLabel ? 'none' : undefined}
           value={value ?? ''}
           onValueChange={(nextValue) => onChange(nextValue || null)}
           users={data.users}
@@ -853,9 +1032,10 @@ const renderDedicatedPicker = ({
         <UserAndTeamPicker
           id={`${idPrefix}-literal-picker`}
           label={field.name.replace(/_/g, ' ')}
+          labelStyle={hideLabel ? 'none' : undefined}
           value={value ?? ''}
-          onValueChange={(nextValue) => onChange(nextValue || null)}
-          onTeamSelect={(teamId) => onChange(teamId)}
+          onValueChange={(nextValue) => onChange(nextValue || null, { assigneeType: 'user' })}
+          onTeamSelect={(teamId) => onChange(teamId, { assigneeType: 'team' })}
           users={filteredUsers}
           teams={filteredTeams}
           userTypeFilter="internal"
@@ -905,14 +1085,12 @@ export const WorkflowActionInputFixedMultiPicker: React.FC<{
   const [data, setData] = useState<WorkflowPickerData>(EMPTY_PICKER_DATA);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const optionDetailLabels = useWorkflowPickerOptionDetailLabels();
 
   const pickerKind = field.editor?.picker?.resource ?? field.picker?.kind;
-  const dependencyResolutions = useMemo(
-    () =>
-      (field.editor?.dependencies ?? field.picker?.dependencies ?? []).map((dependency) =>
-        resolveDependency(rootInputMapping, dependency)
-      ),
-    [field.editor?.dependencies, field.picker?.dependencies, rootInputMapping]
+  const dependencyResolutions = useDependencyResolutions(
+    field.editor?.dependencies ?? field.picker?.dependencies,
+    rootInputMapping
   );
   const disabledExplanation = useMemo(
     () => (pickerKind ? buildDisabledExplanation(t, pickerKind, dependencyResolutions) : undefined),
@@ -923,8 +1101,10 @@ export const WorkflowActionInputFixedMultiPicker: React.FC<{
     [dependencyResolutions]
   );
 
+  const supportsKind = Boolean(pickerKind && WORKFLOW_FIXED_PICKER_MULTI_RESOURCES.has(pickerKind));
+
   useEffect(() => {
-    if (pickerKind !== 'user') {
+    if (!pickerKind || !supportsKind) {
       setData(EMPTY_PICKER_DATA);
       setLoadError(null);
       return;
@@ -960,10 +1140,70 @@ export const WorkflowActionInputFixedMultiPicker: React.FC<{
     return () => {
       active = false;
     };
-  }, [dependencyResolutions, dependencySignature, disabledExplanation, pickerKind]);
+  }, [dependencyResolutions, dependencySignature, disabledExplanation, pickerKind, supportsKind]);
+
+  const options = useMemo(() => {
+    if (!pickerKind || pickerKind === 'user') return [];
+    return filterWorkflowPickerOptions(pickerKind, mapWorkflowPickerOptions(pickerKind, data, optionDetailLabels), dependencyResolutions);
+  }, [data, dependencyResolutions, optionDetailLabels, pickerKind]);
+
+  if (!pickerKind || !supportsKind) {
+    return null;
+  }
 
   if (pickerKind !== 'user') {
-    return null;
+    const labelByValue = new Map(options.map((option) => [option.value, String(option.label)]));
+    const remainingOptions = options.filter((option) => !values.includes(option.value));
+    const placeholder = field.editor?.fixedValueHint?.trim()
+      ?? field.picker?.fixedValueHint?.trim()
+      ?? t('actionInputFixedPicker.addValue', { defaultValue: 'Add a value' });
+    return (
+      <div className="space-y-2" id={`${idPrefix}-literal-multi-picker`}>
+        {values.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {values.map((value) => (
+              <span
+                key={value}
+                className="inline-flex items-center gap-1 rounded-full border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] px-2 py-0.5 text-xs text-[rgb(var(--color-text-700))]"
+              >
+                {labelByValue.get(value) ?? value}
+                <button
+                  id={`${idPrefix}-literal-multi-remove-${value}`}
+                  type="button"
+                  className="text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-900))] disabled:opacity-50"
+                  onClick={() => onChange(values.filter((item) => item !== value))}
+                  disabled={disabled}
+                  aria-label={t('actionInputFixedPicker.removeValue', {
+                    defaultValue: 'Remove {{label}}',
+                    label: labelByValue.get(value) ?? value,
+                  })}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <SearchableSelect
+          id={`${idPrefix}-literal-picker`}
+          options={remainingOptions}
+          value=""
+          onChange={(next) => {
+            if (next && !values.includes(next)) onChange([...values, next]);
+          }}
+          placeholder={isLoading ? t('actionInputFixedPicker.loadingOptions', { defaultValue: 'Loading options...' }) : placeholder}
+          searchPlaceholder={getWorkflowPickerSearchPlaceholder(t, field)}
+          emptyMessage={t('actionInputFixedPicker.noMatchingOptions', { defaultValue: 'No matching options' })}
+          dropdownMode="overlay"
+          disabled={disabled || isLoading || Boolean(disabledExplanation) || Boolean(loadError) || remainingOptions.length === 0}
+        />
+        {(disabledExplanation || loadError) && (
+          <p className="text-[11px] text-gray-500">
+            {disabledExplanation ?? loadError}
+          </p>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -992,10 +1232,17 @@ export const WorkflowActionInputFixedMultiPicker: React.FC<{
 export const WorkflowActionInputFixedPicker: React.FC<{
   field: WorkflowActionInputPickerField;
   value: string | null;
-  onChange: (value: string | null) => void;
+  onChange: (value: string | null, meta?: WorkflowPickerChangeMeta) => void;
   idPrefix: string;
   rootInputMapping: InputMapping;
   disabled?: boolean;
+  /** Hide the picker's own visible label when the caller already renders one for the field. */
+  hideLabel?: boolean;
+  /**
+   * Ticket-status lists only: for a name that exists on several boards, offer "<name> (any board)"
+   * first. Its value is `toAnyBoardStatusValue(name)`, which the caller must translate.
+   */
+  includeAnyBoardStatus?: boolean;
 }> = ({
   field,
   value,
@@ -1003,20 +1250,22 @@ export const WorkflowActionInputFixedPicker: React.FC<{
   idPrefix,
   rootInputMapping,
   disabled,
+  hideLabel,
+  includeAnyBoardStatus = false,
 }) => {
   const { t } = useTranslation('msp/workflows');
   const [data, setData] = useState<WorkflowPickerData>(EMPTY_PICKER_DATA);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadedDependencySignature, setLoadedDependencySignature] = useState<string | null>(null);
+  // A client-scoped list (contracts) can be widened to every client; the narrowing is always shown.
+  const [showAllClients, setShowAllClients] = useState(false);
+  const optionDetailLabels = useWorkflowPickerOptionDetailLabels();
 
   const pickerKind = field.editor?.picker?.resource ?? field.picker?.kind;
-  const dependencyResolutions = useMemo(
-    () =>
-      (field.editor?.dependencies ?? field.picker?.dependencies ?? []).map((dependency) =>
-        resolveDependency(rootInputMapping, dependency)
-      ),
-    [field.editor?.dependencies, field.picker?.dependencies, rootInputMapping]
+  const dependencyResolutions = useDependencyResolutions(
+    field.editor?.dependencies ?? field.picker?.dependencies,
+    rootInputMapping
   );
   const disabledExplanation = useMemo(
     () => (pickerKind ? buildDisabledExplanation(t, pickerKind, dependencyResolutions) : undefined),
@@ -1028,12 +1277,17 @@ export const WorkflowActionInputFixedPicker: React.FC<{
   );
   const baseOptions = useMemo(() => {
     if (!pickerKind) return [];
-    return mapWorkflowPickerOptions(pickerKind, data);
-  }, [data, pickerKind]);
+    return mapWorkflowPickerOptions(pickerKind, data, optionDetailLabels, { includeAnyBoardStatus });
+  }, [data, includeAnyBoardStatus, optionDetailLabels, pickerKind]);
+  const clientScope = getWorkflowPickerClientScope(pickerKind, dependencyResolutions);
   const filteredOptions = useMemo(() => {
     if (!pickerKind) return [];
+    if (clientScope && showAllClients) return dedupeWorkflowPickerOptions(baseOptions);
     return filterWorkflowPickerOptions(pickerKind, baseOptions, dependencyResolutions);
-  }, [baseOptions, dependencyResolutions, pickerKind]);
+  }, [baseOptions, clientScope, dependencyResolutions, pickerKind, showAllClients]);
+  const clientScopeName = clientScope
+    ? baseOptions.find((option) => option.clientId === clientScope && option.clientName)?.clientName ?? null
+    : null;
   const pickerOptions = useMemo(() => {
     return appendCurrentValueOption(filteredOptions, value);
   }, [filteredOptions, value]);
@@ -1113,12 +1367,21 @@ export const WorkflowActionInputFixedPicker: React.FC<{
   return (
     <div className="space-y-2">
       {shouldRenderFallback ? (
-        <CustomSelect
+        <SearchableSelect
           id={`${idPrefix}-literal-picker`}
           options={pickerOptions}
           value={value ?? ''}
-          onValueChange={(nextValue) => onChange(nextValue || null)}
+          onChange={(nextValue) => {
+            const picked = pickerOptions.find((option) => option.value === nextValue);
+            const meta: WorkflowPickerChangeMeta = {};
+            if (picked?.assigneeType) meta.assigneeType = picked.assigneeType;
+            if (picked?.anyBoardStatusIds) meta.anyBoardStatusIds = picked.anyBoardStatusIds;
+            onChange(nextValue || null, Object.keys(meta).length > 0 ? meta : undefined);
+          }}
           placeholder={getWorkflowPickerPlaceholder(t, field, isLoading, disabledExplanation)}
+          searchPlaceholder={getWorkflowPickerSearchPlaceholder(t, field)}
+          emptyMessage={t('actionInputFixedPicker.noMatchingOptions', { defaultValue: 'No matching options' })}
+          dropdownMode="overlay"
           disabled={disabled || isLoading || Boolean(disabledExplanation) || Boolean(loadError)}
         />
       ) : (
@@ -1132,7 +1395,30 @@ export const WorkflowActionInputFixedPicker: React.FC<{
           onChange,
           idPrefix,
           disabled,
+          hideLabel,
         })
+      )}
+      {clientScope && !isLoading && !disabledExplanation && !loadError && (
+        <div id={`${idPrefix}-client-scope`} className="flex flex-wrap items-center gap-1.5 text-[11px] text-[rgb(var(--color-text-500))]">
+          <span className="inline-flex items-center rounded-full border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] px-2 py-0.5 text-[rgb(var(--color-text-700))]">
+            {showAllClients
+              ? t('actionInputFixedPicker.clientScope.showingAll', { defaultValue: 'Showing every client' })
+              : clientScopeName
+                ? t('actionInputFixedPicker.clientScope.filteredTo', { defaultValue: 'Filtered to {{client}}', client: clientScopeName })
+                : t('actionInputFixedPicker.clientScope.filteredToChosen', { defaultValue: 'Filtered to the chosen client' })}
+          </span>
+          <button
+            id={`${idPrefix}-client-scope-toggle`}
+            type="button"
+            className="font-medium text-[rgb(var(--color-primary-600))] hover:underline disabled:opacity-50"
+            onClick={() => setShowAllClients((current) => !current)}
+            disabled={disabled}
+          >
+            {showAllClients
+              ? t('actionInputFixedPicker.clientScope.filterAgain', { defaultValue: 'Only this client' })
+              : t('actionInputFixedPicker.clientScope.showAll', { defaultValue: 'Show all clients' })}
+          </button>
+        </div>
       )}
       {(disabledExplanation || loadError) && (
         <p className="text-[11px] text-gray-500">

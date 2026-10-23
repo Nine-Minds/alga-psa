@@ -44,19 +44,38 @@ export class S3StorageProvider extends BaseStorageProvider {
         };
     }
 
-    async upload(file: Buffer | Readable, path: string, options?: { mime_type?: string; metadata?: Record<string, string> }): Promise<UploadResult> {
+    async upload(file: Buffer | Readable, path: string, options?: { mime_type?: string; metadata?: Record<string, string>; size?: number }): Promise<UploadResult> {
         try {
-            return await this.withRetry(async () => {
-                const command = new PutObjectCommand({
+            // LEVERAGE: pattern s3-stream-put — identical stream/size/no-retry logic duplicated in the package and EE S3 providers (duplicated provider layer)
+            const isStream = !Buffer.isBuffer(file);
+            let contentLength: number | undefined;
+            if (isStream) {
+                // The SDK cannot measure a stream; without ContentLength it sends an
+                // undefined x-amz-decoded-content-length header and the PUT fails.
+                if (typeof options?.size !== 'number' || !Number.isFinite(options.size) || options.size < 0) {
+                    throw new Error('S3 upload of a stream requires options.size (the exact byte length)');
+                }
+                contentLength = options.size;
+            }
+
+            const put = async () => {
+                await this.client.send(new PutObjectCommand({
                     Bucket: this.bucket,
                     Key: path,
                     Body: file,
+                    ContentLength: contentLength,
                     ContentType: options?.mime_type,
                     Metadata: options?.metadata,
-                });
+                }));
+            };
+            // A Readable can be consumed only once, so a stream PUT must not be retried.
+            if (isStream) {
+                await put();
+            } else {
+                await this.withRetry(put);
+            }
 
-                await this.client.send(command);
-
+            return await this.withRetry(async () => {
                 // Get the uploaded object's metadata
                 const headCommand = new HeadObjectCommand({
                     Bucket: this.bucket,

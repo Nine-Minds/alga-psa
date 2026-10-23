@@ -37,6 +37,8 @@ const SIDEBAR_COOKIE_KEY = 'client_portal_sidebar_collapsed';
 interface SidebarPermissions {
   hasClientSettingsAccess: boolean;
   hasBillingAccess: boolean;
+  hasProjectAccess: boolean;
+  hasDocumentAccess: boolean;
   isLicenseDistributor: boolean;
 }
 
@@ -114,7 +116,11 @@ export function ClientPortalSidebar({
         { key: 'dashboard', href: '/client-portal/dashboard', label: t('nav.dashboard', 'Dashboard'), icon: Home },
         { key: 'tickets', href: '/client-portal/tickets', label: t('nav.tickets', 'Tickets'), icon: Ticket },
         { key: 'request-services', href: '/client-portal/request-services', label: t('nav.requestServices', 'Request Services'), icon: LayoutTemplate },
-        { key: 'projects', href: '/client-portal/projects', label: t('nav.projects', 'Projects'), icon: ListTodo },
+        // Projects and Documents are role-gated; the routes enforce the same
+        // permissions server-side, so the links only appear once granted.
+        ...(permissions.hasProjectAccess
+          ? [{ key: 'projects', href: '/client-portal/projects', label: t('nav.projects', 'Projects'), icon: ListTodo }]
+          : []),
         ...(appointmentsEnabled
           ? [{ key: 'appointments', href: '/client-portal/appointments', label: t('nav.appointments', 'Appointments'), icon: Calendar }]
           : []),
@@ -131,7 +137,9 @@ export function ClientPortalSidebar({
         },
       ]
     : [
-        { key: 'documents', href: '/client-portal/documents', label: t('nav.documents', 'Documents'), icon: FileText },
+        ...(permissions.hasDocumentAccess
+          ? [{ key: 'documents', href: '/client-portal/documents', label: t('nav.documents', 'Documents'), icon: FileText }]
+          : []),
         {
           key: 'knowledge-base',
           href: '/client-portal/knowledge-base',
@@ -316,7 +324,7 @@ export function ClientPortalSidebar({
         <Link
           prefetch={false}
           href="/client-portal/dashboard"
-          className="p-4 flex items-center space-x-2 hover:bg-sidebar-hover cursor-pointer"
+          className="px-4 pt-4 pb-3 flex items-center space-x-2 hover:bg-sidebar-hover cursor-pointer"
           aria-label={t('sidebar.goToDashboard', 'Go to dashboard')}
           id="client-portal-logo-home-link"
         >
@@ -325,7 +333,7 @@ export function ClientPortalSidebar({
             <img
               src={wideLogoUrl}
               alt={brandLabel}
-              className="h-8 w-auto max-w-full object-contain"
+              className="h-14 w-auto max-w-full object-contain object-left"
               onError={() => setFailedWideLogoUrl(wideLogoUrl)}
             />
           ) : (
@@ -366,9 +374,9 @@ export function ClientPortalSidebar({
           </div>
         )}
 
-        {/* Nav sections */}
+        {/* Nav sections — the brand link above already pads its bottom. */}
         <nav
-          className="mt-2 flex-grow min-h-0 overflow-y-auto overscroll-contain sidebar-nav"
+          className="flex-grow min-h-0 overflow-y-auto overscroll-contain sidebar-nav"
           aria-label={t('nav.clientPortalLabel', 'Client portal')}
         >
           {visibleSections.map((section, idx) => (

@@ -1,3 +1,7 @@
+import type { TicketMobileEditorThemePayload } from "./editorTheme";
+
+export type { TicketMobileEditorThemePayload };
+
 export type TicketMobileEditorCommand =
   | "focus"
   | "blur"
@@ -59,6 +63,10 @@ export type TicketMobileEditorNativeToWebMessage =
   | {
       type: "init";
       payload: TicketMobileEditorInitPayload;
+    }
+  | {
+      type: "set-theme";
+      payload: TicketMobileEditorThemePayload;
     }
   | {
       type: "command";

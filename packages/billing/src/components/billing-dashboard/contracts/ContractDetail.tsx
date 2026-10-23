@@ -51,11 +51,15 @@ import { fetchInvoicesByContract } from '@alga-psa/billing/actions/invoiceQuerie
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
 
 import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
+import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
+import { useClientBillingProfiles } from '@alga-psa/ui/hooks/useClientBillingProfiles';
+import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import ContractHeader from './ContractHeader';
 import ContractLines from './ContractLines';
 import ContractOverview from './ContractOverview';
 import PricingSchedules from './PricingSchedules';
+import ContractDiscounts from './ContractDiscounts';
 import InvoicePreviewPanel from '../invoicing/InvoicePreviewPanel';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from '@alga-psa/core';
@@ -64,6 +68,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useUnsavedNavigationGuard } from '../../../hooks/useUnsavedNavigationGuard';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -100,6 +105,8 @@ const ContractSimulator = dynamic(
     ssr: false,
   }
 );
+
+const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -168,6 +175,77 @@ const ContractInvoicePreviewDrawerContent: React.FC<ContractInvoicePreviewDrawer
   );
 };
 
+interface AssignmentBillingProfileFieldProps {
+  clientContractId: string;
+  clientId: string;
+  billingProfileId: string | null;
+  billingProfileName: string | null;
+  isEditing: boolean;
+  onChange: (billingProfileId: string | null) => void;
+}
+
+/**
+ * The billing profile a client assignment bills, on the contract itself.
+ *
+ * A contract raised against a merged-in client bills that client's profile, and
+ * this is the screen where an operator comes back to check or change it. The
+ * hook lives in its own component because the assignments are rendered in a
+ * map — and it keeps the D6 invisibility rule: a single-profile client sees
+ * nothing here at all.
+ */
+const AssignmentBillingProfileField: React.FC<AssignmentBillingProfileFieldProps> = ({
+  clientContractId,
+  clientId,
+  billingProfileId,
+  billingProfileName,
+  isEditing,
+  onChange,
+}) => {
+  const { t } = useTranslation('msp/contracts');
+  const { profiles, isSegmented } = useClientBillingProfiles(clientId || null, loadBillingProfiles);
+
+  if (!isSegmented) {
+    return null;
+  }
+
+  const selectedName = billingProfileId
+    ? profiles.find((profile) => profile.billing_profile_id === billingProfileId)?.name
+      ?? billingProfileName
+    : null;
+
+  return (
+    <div>
+      <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+        {t('contractDetail.clientAssignment.billingProfile', { defaultValue: 'Billing Profile' })}
+      </Label>
+      {isEditing ? (
+        <div className="mt-1 w-full md:w-72">
+          <BillingProfilePicker
+            id={`assignment-billing-profile-${clientContractId}`}
+            clientId={clientId || null}
+            loadProfiles={loadBillingProfiles}
+            value={billingProfileId}
+            onChange={onChange}
+            label={t('contractDetail.clientAssignment.billingProfileLabel', {
+              defaultValue: 'Assignment billing profile',
+            })}
+            unassignedLabel={t('contractDetail.clientAssignment.billingProfileNone', {
+              defaultValue: "Use the client's default profile",
+            })}
+          />
+        </div>
+      ) : (
+        <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
+          {selectedName
+            ?? t('contractDetail.clientAssignment.billingProfileNone', {
+              defaultValue: "Use the client's default profile",
+            })}
+        </p>
+      )}
+    </div>
+  );
+};
+
 const ContractDetail: React.FC<ContractDetailProps> = ({
   resolvedContractId,
   resolvedClientContractId,
@@ -188,13 +266,14 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   });
   const contractId = (searchParams?.get('contractId') ?? resolvedContractId ?? null) as string | null;
   const clientContractId = searchParams?.get('clientContractId') ?? resolvedClientContractId ?? null;
+  const focusedContractLineId = searchParams?.get('contractLineId') ?? null;
   const tenant = useTenant()!;
   const { getDocumentsByContractId, renderDocuments } = useDocumentsCrossFeature();
 
   const [contract, setContract] = useState<IContract | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const validTabs = useMemo(() => new Set(['edit', 'lines', 'pricing', 'documents', 'invoices', 'simulator']), []);
+  const validTabs = useMemo(() => new Set(['edit', 'lines', 'pricing', 'discounts', 'documents', 'invoices', 'simulator']), []);
   const initialTab = useMemo(() => {
     const requested = searchParams?.get('contractView');
     if (!requested || !validTabs.has(requested)) {
@@ -222,9 +301,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
   // Confirmation dialog state
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [showNavigateAwayConfirm, setShowNavigateAwayConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   // Edit tab state
   const [editContractName, setEditContractName] = useState('');
@@ -292,6 +369,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     primaryAssignment?.use_tenant_renewal_defaults !== false;
   const formatStatusLabel = useCallback((status?: string) => {
     if (status === 'active') return t('status.active', { defaultValue: 'Active' });
+    if (status === 'scheduled') return t('status.scheduled', { defaultValue: 'Scheduled' });
     if (status === 'terminated') return t('status.terminated', { defaultValue: 'Terminated' });
     if (status === 'expired') return t('status.expired', { defaultValue: 'Expired' });
     return t('status.draft', { defaultValue: 'Draft' });
@@ -540,44 +618,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     }
   }, [contractId, clientContractId]);
 
-  // Warn before leaving page with unsaved changes (browser navigation)
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = ''; // Required for Chrome
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges]);
-
-  // Intercept internal navigation (clicking links)
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (!hasUnsavedChanges) return;
-
-      const target = e.target as HTMLElement;
-      const link = target.closest('a[href]') as HTMLAnchorElement;
-
-      if (link && link.href) {
-        const currentPath = window.location.pathname + window.location.search;
-        const linkPath = new URL(link.href, window.location.origin).pathname + new URL(link.href, window.location.origin).search;
-
-        // Only intercept if navigating to a different page
-        if (linkPath !== currentPath && !link.target && !link.download) {
-          e.preventDefault();
-          e.stopPropagation();
-          setPendingNavigation(link.href);
-          setShowNavigateAwayConfirm(true);
-        }
-      }
-    };
-
-    document.addEventListener('click', handleClick, true);
-    return () => document.removeEventListener('click', handleClick, true);
-  }, [hasUnsavedChanges]);
+  // Warn before leaving this editor with unsaved changes
+  const {
+    showConfirm: showNavigateAwayConfirm,
+    confirmNavigation: handleNavigateAwayConfirm,
+    cancelNavigation: handleNavigateAwayDismiss,
+  } = useUnsavedNavigationGuard(hasUnsavedChanges);
 
   // Initialize edit form when contract loads
   useEffect(() => {
@@ -842,20 +888,6 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     setShowCancelConfirm(false);
   };
 
-  const handleNavigateAwayConfirm = () => {
-    if (pendingNavigation) {
-      // Allow navigation
-      window.location.href = pendingNavigation;
-    }
-    setShowNavigateAwayConfirm(false);
-    setPendingNavigation(null);
-  };
-
-  const handleNavigateAwayDismiss = () => {
-    setShowNavigateAwayConfirm(false);
-    setPendingNavigation(null);
-  };
-
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
       setValidationErrors([]);
@@ -970,6 +1002,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         if (editedAssignment.credit_drawdown_opt_out !== originalAssignment.credit_drawdown_opt_out) {
           updatePayload.credit_drawdown_opt_out = editedAssignment.credit_drawdown_opt_out ?? false;
         }
+        if ((editedAssignment.billing_profile_id ?? null) !== (originalAssignment.billing_profile_id ?? null)) {
+          updatePayload.billing_profile_id = editedAssignment.billing_profile_id ?? null;
+        }
 
         // Only update if there are changes
         if (Object.keys(updatePayload).length > 1) { // More than just tenant
@@ -1079,7 +1114,6 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     setEditingAssignmentId(null);
     setPreEditSnapshot(null);
   };
-
 
   const handleAssignmentFieldChange = (
     assignmentId: string,
@@ -1409,6 +1443,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           <TabsTrigger value="pricing" disabled={isSystemManagedDefault}>
             {t('contractDetail.tabs.pricing', { defaultValue: 'Pricing Schedules' })}
           </TabsTrigger>
+          <TabsTrigger value="discounts" disabled={isSystemManagedDefault}>
+            {t('contractDetail.tabs.discounts', { defaultValue: 'Discounts' })}
+          </TabsTrigger>
           <TabsTrigger value="documents">
             {t('contractDetail.tabs.documents', { defaultValue: 'Documents' })}
           </TabsTrigger>
@@ -1704,6 +1741,8 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                               variant={
                                 primaryAssignmentStatus === 'active'
                                   ? 'success'
+                                  : primaryAssignmentStatus === 'scheduled'
+                                    ? 'info'
                                   : primaryAssignmentStatus === 'terminated'
                                     ? 'warning'
                                     : primaryAssignmentStatus === 'expired'
@@ -1718,6 +1757,15 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                 defaultValue: 'Live client status is controlled by the assignment lifecycle below.',
                               })}
                             </p>
+                            {primaryAssignmentStatus === 'scheduled' && (
+                              // Already active, so there is no "Set to Active" here; explain the start date.
+                              <p id="contract-scheduled-start-note" className="text-xs text-muted-foreground">
+                                {t('contractDetail.headerCard.scheduledExplanation', {
+                                  defaultValue: 'This contract is active and begins billing on {{date}}.',
+                                  date: formatDate(primaryAssignment?.start_date),
+                                })}
+                              </p>
+                            )}
                           </>
                         ) : (
                           <>
@@ -1898,6 +1946,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                           </span>
                           <Badge variant={
                             primaryAssignmentStatus === 'active' ? 'success' :
+                            primaryAssignmentStatus === 'scheduled' ? 'info' :
                             primaryAssignmentStatus === 'terminated' ? 'warning' :
                             primaryAssignmentStatus === 'expired' ? 'error' :
                             'default-muted'
@@ -2120,6 +2169,22 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                 </p>
                               )}
                             </div>
+                            <AssignmentBillingProfileField
+                              clientContractId={assignment.client_contract_id}
+                              clientId={assignment.client_id}
+                              billingProfileId={editData.billing_profile_id ?? null}
+                              billingProfileName={assignment.billing_profile_name ?? null}
+                              isEditing={isEditing}
+                              onChange={(billingProfileId) =>
+                                setEditAssignments((prev) => ({
+                                  ...prev,
+                                  [assignment.client_contract_id]: {
+                                    ...(prev[assignment.client_contract_id] || assignment),
+                                    billing_profile_id: billingProfileId,
+                                  },
+                                }))
+                              }
+                            />
                           </div>
 
                           <div className="grid gap-4 md:grid-cols-2">
@@ -2623,6 +2688,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           <ContractLines
             contract={contract}
             clientId={primaryAssignment?.client_id ?? contract.owner_client_id ?? null}
+            focusContractLineId={focusedContractLineId}
             onContractLinesChanged={handleContractLinesChanged}
             isReadOnly={isSystemManagedDefault}
           />
@@ -2632,6 +2698,14 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           <PricingSchedules
             contractId={contract.contract_id}
             currencyCode={currencyMeta.currencyCode}
+            isReadOnly={isSystemManagedDefault}
+          />
+        </TabsContent>
+
+        <TabsContent value="discounts">
+          <ContractDiscounts
+            contractId={contract.contract_id}
+            clientContractId={clientContractId ?? assignments[0]?.client_contract_id ?? null}
             isReadOnly={isSystemManagedDefault}
           />
         </TabsContent>

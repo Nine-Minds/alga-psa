@@ -19,6 +19,7 @@ import {
   type BucketPoolActionError,
 } from '@alga-psa/billing/actions/bucketPoolActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { SellHourBlockNote } from './SellHourBlockNote';
 
 function isBucketPoolError(result: unknown): result is BucketPoolActionError {
   return Boolean(
@@ -215,6 +216,8 @@ export function BucketPoolEditor({
           {t('bucketPools.actions.addPool', { defaultValue: 'Add Pool' })}
         </Button>
       </div>
+
+      <SellHourBlockNote id="bucket-pools-sell-hour-block-note" />
 
       {error && (
         <Alert variant="destructive">

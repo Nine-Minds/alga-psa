@@ -1,30 +1,15 @@
 'use server';
 
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
-import { aggregateReactions, validateEmoji } from '@alga-psa/types';
 import type { IReactionsBatchResult } from '@alga-psa/types';
-import type { Knex } from 'knex';
+import {
+  getTaskCommentsReactionsBatchWithDb,
+  toggleTaskCommentReactionWithDb,
+} from '../lib/taskComments/taskCommentService';
 
-type TaskCommentReactionRow = {
-  task_comment_id: string;
-  emoji: string;
-  user_id: string;
-};
-
-type ReactionUserRow = {
-  user_id: string;
-  first_name?: string | null;
-  last_name?: string | null;
-};
-
-function tenantScopedTable(
-  conn: Knex | Knex.Transaction,
-  table: string,
-  tenant: string,
-): Knex.QueryBuilder {
-  return tenantDb(conn, tenant).table(table);
-}
+// Reaction queries live in ../lib/taskComments/taskCommentService, shared with
+// the REST API; these actions only add the web's auth context.
 
 /**
  * Toggle a reaction on a project task comment.
@@ -36,27 +21,8 @@ export const toggleTaskCommentReaction = withAuth(async (
   taskCommentId: string,
   emoji: string
 ): Promise<{ added: boolean }> => {
-  validateEmoji(emoji);
   const { knex: db } = await createTenantKnex();
-  const userId = user.user_id;
-
-  return withTransaction(db, async (trx) => {
-    const existing = await tenantScopedTable(trx, 'project_task_comment_reactions', tenant)
-      .where({ task_comment_id: taskCommentId, user_id: userId, emoji })
-      .first();
-
-    if (existing) {
-      await tenantScopedTable(trx, 'project_task_comment_reactions', tenant)
-        .where({ reaction_id: existing.reaction_id })
-        .del();
-      return { added: false };
-    }
-
-    await tenantScopedTable(trx, 'project_task_comment_reactions', tenant)
-      .insert({ tenant, task_comment_id: taskCommentId, user_id: userId, emoji });
-
-    return { added: true };
-  });
+  return toggleTaskCommentReactionWithDb(db, tenant, user.user_id, taskCommentId, emoji);
 });
 
 /**
@@ -68,29 +34,6 @@ export const getTaskCommentsReactionsBatch = withAuth(async (
   { tenant },
   taskCommentIds: string[]
 ): Promise<IReactionsBatchResult> => {
-  if (taskCommentIds.length === 0) return { reactions: {}, userNames: {} };
-
   const { knex: db } = await createTenantKnex();
-  const currentUserId = user.user_id;
-
-  const rows = await tenantScopedTable(db, 'project_task_comment_reactions', tenant)
-    .whereIn('task_comment_id', taskCommentIds)
-    .select('task_comment_id', 'emoji', 'user_id')
-    .orderBy('created_at', 'asc') as TaskCommentReactionRow[];
-
-  const reactions = aggregateReactions(rows, 'task_comment_id', currentUserId);
-
-  // Collect unique user IDs and fetch display names
-  const allUserIds = [...new Set(rows.map(r => r.user_id))];
-  const userNames: Record<string, string> = {};
-  if (allUserIds.length > 0) {
-    const users = await tenantScopedTable(db, 'users', tenant)
-      .whereIn('user_id', allUserIds)
-      .select('user_id', 'first_name', 'last_name') as ReactionUserRow[];
-    for (const u of users) {
-      userNames[u.user_id] = `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Unknown';
-    }
-  }
-
-  return { reactions, userNames };
+  return getTaskCommentsReactionsBatchWithDb(db, tenant, user.user_id, taskCommentIds);
 });

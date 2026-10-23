@@ -278,4 +278,17 @@ describe('watchList utilities', () => {
       },
     ]);
   });
+
+  it('board_default entries are preserved on parse and lose to existing entries on merge', () => {
+    const merged = mergeTicketWatchListRecipients(
+      [{ email: 'a@example.com', active: false, source: 'manual' }],
+      [
+        { email: 'a@example.com', source: 'board_default' },
+        { email: 'b@example.com', source: 'board_default' },
+      ]
+    );
+    expect(merged.find((e) => e.email === 'a@example.com')).toMatchObject({ source: 'manual' });
+    expect(merged.find((e) => e.email === 'b@example.com')?.source).toBe('board_default');
+    expect(parseTicketWatchListAttributes(setTicketWatchListOnAttributes({}, merged))).toEqual(merged);
+  });
 });

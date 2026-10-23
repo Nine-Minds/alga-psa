@@ -1,7 +1,7 @@
 'use server';
 
 import { randomUUID } from 'node:crypto';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -9,7 +9,14 @@ import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
 import { normalizeClientContract } from '@alga-psa/shared/billingClients/clientContracts';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
-import { TicketModel } from '@shared/models/ticketModel';
+import { reownBlocksForRenewalActivation } from '../services/prepaidBlockRenewalService';
+import {
+  RENEWAL_TICKET_MANUAL_RETRY_SOURCE,
+  buildRenewalTicketIdempotencyKey,
+  createRenewalTicket,
+  normalizeOptionalUuid,
+  resolveRenewalTicketRouting,
+} from '@alga-psa/shared/billingClients/renewalTicket';
 
 const DEFAULT_RENEWALS_HORIZON_DAYS = 90;
 const RENEWAL_WORK_ITEM_STATUSES: RenewalWorkItemStatus[] = [
@@ -20,9 +27,6 @@ const RENEWAL_WORK_ITEM_STATUSES: RenewalWorkItemStatus[] = [
   'completed',
 ];
 const DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY = 'create_ticket' as const;
-const RENEWAL_TICKET_SOURCE = 'renewal_due_date_manual_retry';
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isRenewalWorkItemStatus = (value: unknown): value is RenewalWorkItemStatus =>
   typeof value === 'string' && RENEWAL_WORK_ITEM_STATUSES.includes(value as RenewalWorkItemStatus);
 const toRenewalWorkItemStatus = (value: unknown): RenewalWorkItemStatus =>
@@ -85,11 +89,6 @@ const withActionLabel = (
 ): Record<string, unknown> => (
   { ...updateData, last_action: actionLabel }
 );
-const normalizeOptionalUuid = (value: unknown): string | null => (
-  typeof value === 'string' && UUID_PATTERN.test(value)
-    ? value
-    : null
-);
 const resolveOptionalRenewalDueDateActionPolicy = (value: unknown): 'queue_only' | 'create_ticket' | null => (
   value === 'queue_only' || value === 'create_ticket'
     ? value
@@ -98,45 +97,6 @@ const resolveOptionalRenewalDueDateActionPolicy = (value: unknown): 'queue_only'
 const resolveRenewalDueDateActionPolicy = (value: unknown): 'queue_only' | 'create_ticket' => (
   resolveOptionalRenewalDueDateActionPolicy(value) ?? DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY
 );
-const buildRenewalTicketIdempotencyKey = (params: {
-  tenantId: string;
-  clientContractId: string;
-  cycleKey: string;
-}): string => `renewal-ticket:${params.tenantId}:${params.clientContractId}:${params.cycleKey}`;
-const buildRenewalTicketTitle = (row: Record<string, unknown>, decisionDueDate: string): string => {
-  const clientName = typeof row.client_name === 'string' && row.client_name.trim().length > 0
-    ? row.client_name.trim()
-    : 'Client';
-  const contractName = typeof row.contract_name === 'string' && row.contract_name.trim().length > 0
-    ? row.contract_name.trim()
-    : 'Contract';
-  return `Renewal Decision Due ${decisionDueDate}: ${clientName} / ${contractName}`;
-};
-const buildRenewalTicketDescription = (
-  row: Record<string, unknown>,
-  normalized: Record<string, unknown>,
-  decisionDueDate: string
-): string => {
-  const renewalMode = typeof normalized.effective_renewal_mode === 'string'
-    ? normalized.effective_renewal_mode
-    : 'manual';
-  const noticePeriod = typeof normalized.effective_notice_period_days === 'number'
-    ? normalized.effective_notice_period_days
-    : 'unknown';
-  const cycleKey = typeof normalized.renewal_cycle_key === 'string'
-    ? normalized.renewal_cycle_key
-    : 'unknown';
-  const contractId = typeof row.contract_id === 'string' ? row.contract_id : 'unknown';
-
-  return [
-    'Contract renewal decision is due.',
-    `Decision due date: ${decisionDueDate}`,
-    `Renewal mode: ${renewalMode}`,
-    `Notice period (days): ${noticePeriod}`,
-    `Renewal cycle: ${cycleKey}`,
-    `Source contract: ${contractId}`,
-  ].join('\n');
-};
 export type RenewalQueueRow = {
   client_contract_id: string;
   contract_id: string;
@@ -314,7 +274,7 @@ export const listRenewalQueueRows = withAuth(async (
   const rows = await query;
 
   const queueRows = rows
-    .map(normalizeClientContract)
+    .map((row) => normalizeClientContract(row))
     .filter(
       (row) =>
         Boolean(row.decision_due_date) &&
@@ -545,6 +505,7 @@ export const createRenewalDraftForQueueItem = withAuth(async (
         'cc.notice_period_days',
         'cc.renewal_term_months',
         'cc.use_tenant_renewal_defaults',
+        'cc.billing_profile_id',
         'c.contract_name',
         'c.contract_description',
         'c.billing_frequency',
@@ -599,6 +560,8 @@ export const createRenewalDraftForQueueItem = withAuth(async (
       is_active: false,
       status: 'draft',
       is_template: false,
+      // Durable renewal marker (the source's created_draft_contract_id link is nulled on cycle change).
+      renewal_of_contract_id: (source as any).contract_id,
       created_at: nowIso,
       updated_at: nowIso,
     });
@@ -616,6 +579,8 @@ export const createRenewalDraftForQueueItem = withAuth(async (
       po_required: false,
       po_number: null,
       po_amount: null,
+      // A renewal keeps billing where the expiring term billed it.
+      billing_profile_id: (source as any).billing_profile_id ?? null,
     };
 
     if (hasTemplateContractIdColumn) {
@@ -893,6 +858,15 @@ export const completeRenewalQueueItemForActivation = withAuth(async (
       throw new Error('Activated renewal contract was not found in active status');
     }
 
+    // Prepaid Block carry-over (captain decision 1b): the source assignment's unexpired contract
+    // blocks move to the matching block line of the renewal contract (equal covered-service set).
+    // Unmatched lines keep their blocks, which the contract-end pass forfeits when the term ends.
+    await reownBlocksForRenewalActivation(trx, tenant, {
+      sourceClientContractId: clientContractId,
+      renewalContractId: resolvedActivatedContractId,
+      userId: actorUserId,
+    });
+
     const updatedAt = new Date().toISOString();
     await db.table('client_contracts')
       .where({
@@ -998,7 +972,8 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  return knex.transaction(async (trx) => {
+  // withTransaction owns the frame so the after-commit ticket events flush.
+  return withTransaction(knex, async (trx) => {
     const db = tenantDb(trx, tenant);
     const defaultSelections: string[] = [
       'dbs.renewal_due_date_action_policy as tenant_renewal_due_date_action_policy',
@@ -1061,20 +1036,8 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
       };
     }
 
-    const tenantBoardId = normalizeOptionalUuid((sourceRow as any).tenant_renewal_ticket_board_id);
-    const tenantStatusId = normalizeOptionalUuid((sourceRow as any).tenant_renewal_ticket_status_id);
-    const tenantPriorityId = normalizeOptionalUuid((sourceRow as any).tenant_renewal_ticket_priority);
-    const tenantAssignedTo = normalizeOptionalUuid((sourceRow as any).tenant_renewal_ticket_assignee_id);
-    const contractBoardId = normalizeOptionalUuid((sourceRow as any).renewal_ticket_board_id);
-    const contractStatusId = normalizeOptionalUuid((sourceRow as any).renewal_ticket_status_id);
-    const contractPriorityId = normalizeOptionalUuid((sourceRow as any).renewal_ticket_priority);
-    const contractAssignedTo = normalizeOptionalUuid((sourceRow as any).renewal_ticket_assignee_id);
-
-    const boardId = useTenantRenewalDefaults ? tenantBoardId : (contractBoardId ?? tenantBoardId);
-    const statusId = useTenantRenewalDefaults ? tenantStatusId : (contractStatusId ?? tenantStatusId);
-    const priorityId = useTenantRenewalDefaults ? tenantPriorityId : (contractPriorityId ?? tenantPriorityId);
-    const assignedTo = useTenantRenewalDefaults ? tenantAssignedTo : (contractAssignedTo ?? tenantAssignedTo);
-    const clientId = normalizeOptionalUuid((sourceRow as any).client_id);
+    const routing = resolveRenewalTicketRouting(sourceRow as Record<string, unknown>, useTenantRenewalDefaults);
+    const { clientId, boardId, statusId, priorityId } = routing;
 
     if (!clientId || !boardId || !statusId || !priorityId) {
       const missingDefaultsError = 'Missing renewal ticket routing defaults for create_ticket policy';
@@ -1118,42 +1081,28 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
       };
     }
 
-    const title = buildRenewalTicketTitle(sourceRow as Record<string, unknown>, decisionDueDate);
-    const description = buildRenewalTicketDescription(sourceRow as Record<string, unknown>, normalized, decisionDueDate);
-
     try {
-      const createdTicket = await TicketModel.createTicketWithRetry(
-        {
-          title,
-          description,
-          client_id: clientId,
-          board_id: boardId,
-          status_id: statusId,
-          priority_id: priorityId,
-          assigned_to: assignedTo ?? undefined,
-          source: RENEWAL_TICKET_SOURCE,
-          attributes: {
-            renewal_cycle_key: cycleKey,
-            decision_due_date: decisionDueDate,
-            source_client_contract_id: clientContractId,
-            idempotency_key: idempotencyKey,
-          },
-        },
-        tenant,
-        trx
-      );
+      const createdTicket = await createRenewalTicket(trx, tenant, {
+        row: sourceRow as Record<string, unknown>,
+        normalized,
+        decisionDueDate,
+        cycleKey,
+        routing,
+        actor: { type: 'user', userId: user.user_id },
+        source: RENEWAL_TICKET_MANUAL_RETRY_SOURCE,
+      });
 
       await db.table('client_contracts')
         .where({ client_contract_id: clientContractId })
         .update({
-          created_ticket_id: createdTicket.ticket_id,
+          created_ticket_id: createdTicket.ticketId,
           automation_error: null,
           updated_at: new Date().toISOString(),
         });
 
       return {
         client_contract_id: clientContractId,
-        created_ticket_id: createdTicket.ticket_id,
+        created_ticket_id: createdTicket.ticketId,
         automation_error: null,
         retried: true,
       };

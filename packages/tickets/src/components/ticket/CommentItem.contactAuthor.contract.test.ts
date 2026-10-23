@@ -39,7 +39,7 @@ describe('CommentItem contact-authored rendering contract', () => {
     // The fallback label is now i18n-backed; the English locale must still
     // resolve the key to "Unknown User".
     expect(source).toContain("userName={unknownAuthorAvatarName}");
-    expect(source).toContain(": t('conversation.unknownUser');");
+    expect(source).toContain("const unknownAuthorAvatarName = inboundSenderLabel || t('conversation.unknownUser');");
     const locale = JSON.parse(
       fs.readFileSync(
         path.resolve(

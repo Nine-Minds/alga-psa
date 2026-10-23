@@ -29,17 +29,25 @@ This runbook covers the day-to-day operational tasks for the Google and Microsof
 - UI surfaces show `Conflict` badges and direct users back to Calendar Settings to resolve.
 - Operators should review the mapping, decide which side wins, and re-run the manual sync once conflict remediation is complete.
 
+## Shared Calendar Entries
+- Group calendar entries sync only to connected providers belonging to their assignees. Group entries with no assignees never sync externally.
+- An inbound provider edit is applied to Alga only when that provider's user has edit access to the entry. Otherwise Alga stays authoritative and its current version is pushed back to that provider. An accepted edit is published as a normal schedule update, so the other assignees' copies are updated too (the provider it came from is skipped).
+- An inbound provider delete removes the whole Alga entry only when the provider's user has delete-equivalent edit access and is the sole assignee. Otherwise only that user's assignment and provider mapping are removed.
+- Archiving a group calendar removes its assignees' external copies and mappings; restoring the calendar recreates those copies. Webhook changes are ignored while the group calendar is archived.
+- A mapped copy that no longer exists on the provider (for example, deleted while a notification was missed) is treated as already removed: archiving drops its mapping, and the next outbound sync of the entry creates a fresh copy instead of recording a sync error.
+
 ## Deleting A Provider
 1. Select **Delete** in the provider card.
 2. A confirmation dialog explains the blast radius (webhooks removed, sync halted). Confirm to proceed.
 3. The provider is removed and a toast confirms success. Any scheduled jobs referencing the provider will skip automatically.
 
 ## Troubleshooting Checklist
-- **Authorization failures**: ensure the OAuth popup is not blocked and that tenant secrets are valid.
+- **"Calendar provider has not completed OAuth authorization yet"**: this message appears immediately when **Sync Now** is clicked on a provider that has no stored OAuth tokens — the OAuth consent flow was never finished. Open the provider's settings card, click **Authorize**, complete the consent flow until you see the **OAuth Complete** badge, save the form, then retry the sync.
+- **Authorization failures (other)**: ensure the OAuth popup is not blocked, that tenant secrets are valid, and that the provider credentials have not been revoked.
 - **Stale last sync**: run a manual sync to force a pass; if the timestamp does not advance check webhook subscriptions.
-- **Webhook errors**: consult the `calendar-webhook-maintenance` job logs. Google uses Calendar “watch” channels (webhook) and Microsoft uses Graph subscriptions; both are renewed by maintenance jobs.
+- **Webhook errors**: consult the `calendar-webhook-maintenance` job logs. Google uses Calendar "watch" channels (webhook) and Microsoft uses Graph subscriptions; both are renewed by maintenance jobs.
 - **Multi-tenant bleed**: confirm the provider belongs to the active tenant. All actions enforce tenant scoping; mismatches result in `Forbidden` errors.
-- **Conflicts stuck**: if repeated conflicts appear, reset the mapping’s `sync_status` through the conflict resolution workflow and retry.
+- **Conflicts stuck**: if repeated conflicts appear, reset the mapping's `sync_status` through the conflict resolution workflow and retry.
 
 ## Escalation
 - Pager duty rotation: **Platform Integrations**.

@@ -21,6 +21,7 @@ import {
   FileSignature,
   FileText,
   FlaskConical,
+  FolderTree,
   Globe,
   Gauge,
   Ghost,
@@ -57,6 +58,7 @@ import {
   Users,
   Star,
   Target,
+  Repeat,
   Ticket,
   BadgeCheck,
   Wrench
@@ -73,6 +75,11 @@ export interface MenuItem {
   icon: ElementType;
   translationKey?: string;
   href?: string;
+  /**
+   * Route prefixes that belong to this item although they live outside `href`
+   * (detail pages such as a workflow run). Used to label the header breadcrumb.
+   */
+  relatedPaths?: readonly string[];
   subItems?: MenuItem[];
   requiredFeature?: TIER_FEATURES;
   availableEditions?: readonly MenuEdition[];
@@ -107,7 +114,11 @@ export const navigationSections: NavigationSection[] = [
         name: 'Tickets',
         translationKey: 'nav.tickets',
         icon: Ticket,
-        href: '/msp/tickets'
+        subItems: [
+          { name: 'All Tickets', translationKey: 'nav.ticketsAll', icon: Ticket, href: '/msp/tickets' },
+          { name: 'Recurring Tickets', translationKey: 'nav.ticketsRecurring', icon: Repeat, href: '/msp/tickets/recurring', requiredPermission: 'recurring_ticket:read' },
+          { name: 'Ticket Templates', translationKey: 'nav.ticketsTemplates', icon: LayoutTemplate, href: '/msp/tickets/templates', requiredPermission: 'ticket_template:read' }
+        ]
       },
       {
         name: 'Service Requests',
@@ -198,7 +209,10 @@ export const navigationSections: NavigationSection[] = [
         name: 'Inventory',
         translationKey: 'nav.inventory.label',
         icon: Package,
-        href: '/msp/inventory'
+        href: '/msp/inventory',
+        // Document Layouts lives under the Inventory sidebar (inventoryNavigationSections) but at
+        // /msp/document-templates, so the header breadcrumb needs it named here too.
+        relatedPaths: ['/msp/document-templates'],
       },
       {
         name: 'Reports',
@@ -237,6 +251,9 @@ export const navigationSections: NavigationSection[] = [
         name: 'Workflows',
         translationKey: 'nav.workflows',
         icon: Rocket,
+        // Run Studio pages belong to workflows as a whole, not to the Control Panel tab; the page
+        // shows its own Workflows › Runs › run breadcrumb under this header label.
+        relatedPaths: ['/msp/workflows/runs'],
         subItems: [
           {
             name: 'Control Panel',
@@ -475,9 +492,10 @@ export const billingNavigationSections: NavigationSection[] = [
     translationKey: 'nav.billing.sections.pricing',
     items: [
       { name: 'Service Types', translationKey: 'nav.billing.serviceTypes', icon: Layers3, href: '/msp/billing?tab=service-types' },
+      { name: 'Service Categories', translationKey: 'nav.billing.serviceCategories', icon: FolderTree, href: '/msp/billing?tab=service-categories' },
       { name: 'Services', translationKey: 'nav.billing.serviceCatalog', icon: Package, href: '/msp/billing?tab=service-catalog' },
       { name: 'Products', translationKey: 'nav.billing.products', icon: Package, href: '/msp/billing?tab=products' },
-      { name: 'Tax Rates', translationKey: 'nav.billing.taxRates', icon: Percent, href: '/msp/billing?tab=tax-rates' },
+      { name: 'Tax', translationKey: 'nav.billing.taxRates', icon: Percent, href: '/msp/billing?tab=tax-rates' },
     ]
   },
   {

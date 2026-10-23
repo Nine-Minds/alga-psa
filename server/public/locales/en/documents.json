@@ -5,6 +5,15 @@
     "authorizedBy": "Authorized By",
     "billTo": "Bill To",
     "billedTimeByTicket": "Billed Time by Ticket",
+    "cadence": {
+      "annually": "Annually",
+      "monthly": "Monthly",
+      "oneTime": "One-time",
+      "other": "Other",
+      "quarterly": "Quarterly",
+      "semiAnnually": "Semi-annually"
+    },
+    "cadenceTotal": "{{cadence}} Total",
     "date": "Date",
     "description": "Description",
     "discounts": "Discounts",
@@ -27,6 +36,10 @@
     "oneTimeItems": "One-time Items",
     "oneTimeTotal": "One-time Total",
     "optional": "Optional",
+    "optionalIncluded": "Optional (included)",
+    "optionalSection": "Optional (if selected)",
+    "optionalSubtotal": "Optional Subtotal",
+    "optionalTotal": "Optional if selected",
     "orderConfirmationTitle": "ORDER CONFIRMATION",
     "orderDate": "Order Date",
     "orderNumber": "Order #",
@@ -77,7 +90,9 @@
       "pickedBy": "Picked by: ____________________     Date: ____________",
       "preTaxTotals": "Totals shown are pre-tax. Applicable tax is calculated on your invoice.",
       "thankYouForOrder": "Thank you for your order."
-    }
+    },
+    "serialNumbers": "Serial numbers",
+    "allocatedSerialsNote": "Allocated serial numbers; subject to change at fulfillment."
   },
   "errors": {
     "permissions": {

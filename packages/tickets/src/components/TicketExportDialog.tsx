@@ -48,6 +48,7 @@ const EXPORT_FIELDS = [
   { key: 'closed_by', labelKey: 'fields.closedBy', fallback: 'Closed By' },
   { key: 'entered_at', labelKey: 'fields.enteredAt', fallback: 'Entered At' },
   { key: 'updated_at', labelKey: 'fields.updatedAt', fallback: 'Updated At' },
+  { key: 'latest_activity_at', labelKey: 'fields.lastActivity', fallback: 'Last Activity' },
   { key: 'closed_at', labelKey: 'fields.closedAt', fallback: 'Closed At' },
   { key: 'due_date', labelKey: 'fields.dueDate', fallback: 'Due Date' },
   { key: 'response_state', labelKey: 'fields.responseState', fallback: 'Response State' },

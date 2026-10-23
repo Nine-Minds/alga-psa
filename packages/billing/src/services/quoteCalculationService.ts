@@ -1,7 +1,8 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 
-import { allocateQuoteDiscounts } from './quoteDiscountAllocation';
+import { isQuoteItemIncluded } from '../lib/quoteItemInclusion';
+import { allocateIncludedQuoteDiscounts, rowGrossAmount, summarizeQuoteTotals } from '../lib/quoteTotals';
 
 interface QuoteCalculationContext {
   quote_id: string;
@@ -54,34 +55,10 @@ function toQuoteDate(value?: string | null): string {
   return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
 }
 
-function isItemIncluded(item: QuoteItemRow): boolean {
-  if (!item.is_optional) return true;
-  return item.is_selected === true;
-}
-
 function resolveQuoteDiscounts(
   items: QuoteItemRow[]
 ): { byItemId: Map<string, number>; totalDiscount: number } {
-  const includedBaseItems = items.filter((item) => !item.is_discount && isItemIncluded(item));
-  const bases = includedBaseItems.map((item) => ({
-    id: item.quote_item_id,
-    serviceId: item.service_id ?? null,
-    amount: toNumber(item.quantity) * toNumber(item.unit_price),
-    isRecurring: item.is_recurring === true,
-  }));
-
-  const discounts = items
-    .filter((item) => item.is_discount === true && isItemIncluded(item))
-    .map((item) => ({
-      id: item.quote_item_id,
-      discountType: (item.discount_type === 'percentage' ? 'percentage' : 'fixed') as 'percentage' | 'fixed',
-      fixedAmount: Math.abs(toNumber(item.quantity || 1) * toNumber(item.unit_price)),
-      discountPercentage: toNumber(item.discount_percentage),
-      appliesToItemId: item.applies_to_item_id ?? null,
-      appliesToServiceId: item.applies_to_service_id ?? null,
-    }));
-
-  const allocation = allocateQuoteDiscounts(bases, discounts);
+  const allocation = allocateIncludedQuoteDiscounts(items, (item) => item.quote_item_id);
   const byItemId = new Map<string, number>();
   for (const result of allocation.discounts) {
     byItemId.set(result.discountId, result.resolvedAmount);
@@ -326,11 +303,16 @@ export async function recalculateQuoteFinancials(
   // independent of each discount row's own persisted cadence fields.
   const { byItemId: discountAmountById, totalDiscount } = resolveQuoteDiscounts(items);
 
-  let subtotal = 0;
-  let tax = 0;
+  // Persisted per-row figures, then the stored totals through the shared
+  // derivation the editor and the document view model use. Included rows
+  // (required, or optional and selected) carry a tax_amount and count toward
+  // quotes.subtotal/tax/total_amount; a pending optional row keeps its
+  // resolved tax_rate (so the presented "if selected" tax can be derived) but
+  // persists tax_amount/net_amount 0 and is excluded from the stored totals.
+  const persistedRows: Array<QuoteItemRow & { resolved_total_price: number; resolved_tax_amount: number }> = [];
 
   for (const item of items) {
-    const isIncludedInTotals = isItemIncluded(item);
+    const isIncludedInTotals = isQuoteItemIncluded(item);
     const isDiscount = item.is_discount === true;
     // Preserve manual override: if tax_region was explicitly set on the item, keep it.
     // Otherwise fall back to the item's location.region_code, then to the client default.
@@ -341,36 +323,34 @@ export async function recalculateQuoteFinancials(
 
     const resolvedTotalPrice = isDiscount
       ? (discountAmountById.get(item.quote_item_id) ?? 0)
-      : (toNumber(item.quantity) * toNumber(item.unit_price));
+      : rowGrossAmount(item);
 
-    let netAmount = isIncludedInTotals ? resolvedTotalPrice : 0;
+    const netAmount = isIncludedInTotals ? resolvedTotalPrice : 0;
     let taxAmount = 0;
-    let taxRate = isIncludedInTotals ? toNumber(item.tax_rate) : 0;
+    let taxRate = toNumber(item.tax_rate);
 
     if (!isDiscount) {
-      subtotal += isIncludedInTotals ? resolvedTotalPrice : 0;
-
-      if (isIncludedInTotals && quote.client_id && taxSource === 'internal') {
+      if (quote.client_id && taxSource === 'internal') {
         const taxResult = await calculateTaxWithConnection(
           knexOrTrx,
           tenant,
           quote.client_id,
-          netAmount,
+          resolvedTotalPrice,
           quoteDate,
           taxRegion ?? undefined,
           item.is_taxable !== false,
           currencyCode
         );
 
-        taxAmount = taxResult.taxAmount;
+        taxAmount = isIncludedInTotals ? taxResult.taxAmount : 0;
         taxRate = Math.round(Number(taxResult.taxRate ?? 0));
       } else if (taxSource !== 'internal') {
         taxAmount = 0;
         taxRate = 0;
       }
-
-      tax += taxAmount;
     }
+
+    persistedRows.push({ ...item, resolved_total_price: resolvedTotalPrice, resolved_tax_amount: taxAmount });
 
     await db.table('quote_items')
       .where({ quote_item_id: item.quote_item_id })
@@ -384,13 +364,19 @@ export async function recalculateQuoteFinancials(
       });
   }
 
+  const totals = summarizeQuoteTotals(persistedRows, {
+    amountOf: (row) => row.resolved_total_price,
+    taxOf: (row) => row.resolved_tax_amount,
+    discountTotal: totalDiscount,
+  });
+
   await db.table('quotes')
     .where({ quote_id: quoteId })
     .update({
-      subtotal,
-      discount_total: totalDiscount,
-      tax,
-      total_amount: subtotal - totalDiscount + tax,
+      subtotal: totals.subtotal,
+      discount_total: totals.discount_total,
+      tax: totals.tax,
+      total_amount: totals.total_amount,
       updated_at: knexOrTrx.fn.now(),
     });
 }

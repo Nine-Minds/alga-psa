@@ -5,7 +5,8 @@ import { getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/user-com
 import { 
   addTicketLinkAction,
   deleteTaskTicketLinkAction,
-  getTaskTicketLinksAction
+  getTaskTicketLinksAction,
+  setTicketLinkBillingAction
 } from '../actions/projectTaskActions';
 import { ITicketListFilters } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
@@ -13,7 +14,7 @@ import { ITicketListItem, ITicket, ITicketCategory, IStatus } from '@alga-psa/ty
 import { IProjectTicketLinkWithDetails } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import { Link, Lock, Plus, ExternalLink, Trash2, X } from 'lucide-react';
+import { Link, Lock, Plus, ExternalLink, Trash2, Wallet, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import {
   getErrorMessage,
@@ -114,6 +115,9 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
   const [showLinkTicketDialog, setShowLinkTicketDialog] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [shouldLinkNewTicket, setShouldLinkNewTicket] = useState(true);
+  // Linking a ticket to a task almost always means the ticket is project work,
+  // so the choice starts ticked and only the exceptions carry a click.
+  const [billUnderProject, setBillUnderProject] = useState(true);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -281,16 +285,19 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
     }
   };
 
-  // Refresh links from the server when the task already has cached links
-  // (e.g. opened from the kanban board). The cached copy may be stale or
-  // filtered differently than the user's current permissions, so we re-fetch
-  // and report the result via onInitialLinksLoaded so the dirty-check can use
-  // the post-fetch state as its baseline rather than the stale prop.
+  // Load the saved links for any existing task. A cached copy (e.g. from the
+  // kanban board) may be stale or filtered differently than the user's current
+  // permissions, so the server answer always wins and is reported through
+  // onInitialLinksLoaded, giving the dirty-check a post-fetch baseline rather
+  // than the stale prop. This used to wait for a cached copy to exist, so a
+  // task opened by a caller that does not preload `ticket_links` showed an
+  // empty Associated Tickets section — and with it no way to reach the
+  // per-link billing toggle — while the ticket itself listed the link.
   useEffect(() => {
     let mounted = true;
 
     const fetchLinks = async () => {
-      if (taskId && initialLinks) {
+      if (taskId) {
         try {
           const links = await getTaskTicketLinksAction(taskId);
           if (isReturnedActionError(links)) {
@@ -381,6 +388,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
       created_at: new Date(),
       project_id: projectId,
       phase_id: phaseId,
+      bill_under_project: billUnderProject,
       status_name: 'status_name' in ticketDetails
         ? ticketDetails.status_name || linkT('defaultNewStatus', 'New')
         : linkT('defaultNewStatus', 'New'),
@@ -397,7 +405,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
     
     try {
       if (taskId) {
-        const result = await addTicketLinkAction(projectId, taskId, selectedTicketId, phaseId);
+        const result = await addTicketLinkAction(projectId, taskId, selectedTicketId, phaseId, billUnderProject);
         if (isReturnedActionError(result)) {
           handleError(result);
           return;
@@ -409,7 +417,9 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
         if (selectedTicketDetails) {
           // Create a new link object instead of fetching all links again
           const newLink: IProjectTicketLinkWithDetails = {
-            link_id: `new-${Date.now()}`, // This will be replaced with the actual ID on next fetch
+            // Keep the persisted id so the billing toggle on this row reaches
+            // the server instead of only moving local state.
+            link_id: result.link_id,
             task_id: taskId,
             ticket_id: selectedTicketDetails.ticket_id!,
             ticket_number: selectedTicketDetails.ticket_number,
@@ -417,6 +427,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
             created_at: new Date(),
             project_id: projectId,
             phase_id: phaseId,
+            bill_under_project: result.bill_under_project ?? billUnderProject,
             status_name: selectedTicketDetails.status_name || linkT('defaultNewStatus', 'New'),
             is_closed: false
           };
@@ -438,6 +449,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
       }
       setShowLinkTicketDialog(false);
       setSelectedTicketId('');
+      setBillUnderProject(true);
     } catch (error) {
       handleError(error, linkT('linkFailed', 'Failed to link ticket'));
     }
@@ -500,6 +512,35 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
     }
   };
 
+  // Links on an unsaved task have no persisted link_id yet, so their flag only
+  // moves in local state until the task is saved.
+  const isPersistedLink = (linkId: string) => !linkId.startsWith('temp-');
+
+  const onToggleLinkBilling = async (link: IProjectTicketLinkWithDetails) => {
+    const nextValue = link.bill_under_project === false;
+    try {
+      if (taskId && isPersistedLink(link.link_id)) {
+        const result = await setTicketLinkBillingAction(link.link_id, nextValue);
+        if (isReturnedActionError(result)) {
+          handleError(result);
+          return;
+        }
+      }
+      const newLinks = (taskTicketLinks || []).map((candidate) => (
+        candidate.link_id === link.link_id
+          ? { ...candidate, bill_under_project: nextValue }
+          : candidate
+      ));
+      setTaskTicketLinks(newLinks);
+      onLinksChange?.(newLinks);
+      toast.success(nextValue
+        ? linkT('billingOnSuccess', "This ticket's time will bill as project time")
+        : linkT('billingOffSuccess', "This ticket's time will bill at the client level"));
+    } catch (error) {
+      handleError(error, linkT('billingUpdateFailed', 'Failed to update ticket billing'));
+    }
+  };
+
   const handleBoardSelect = (boardId: string) => {
     setSelectedBoard(boardId);
     setBoardFilterState('all');
@@ -520,7 +561,8 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
 
         // Create a new link object instead of fetching all links again
         const newLink: IProjectTicketLinkWithDetails = {
-          link_id: `new-${Date.now()}`, // This will be replaced with the actual ID on next fetch
+          // Persisted id, so the row's billing toggle hits the server.
+          link_id: result.link_id,
           task_id: taskId,
           ticket_id: ticket.ticket_id,
           ticket_number: ticket.ticket_number || `#${Date.now()}`,
@@ -528,6 +570,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
           created_at: new Date(),
           project_id: projectId,
           phase_id: phaseId,
+          bill_under_project: result.bill_under_project ?? true,
           status_name: defaultStatus?.name || linkT('defaultNewStatus', 'New'),
           is_closed: false
         };
@@ -634,6 +677,28 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
               )}
             </div>
             <div className="flex items-center space-x-2">
+              {link.bill_under_project === false && (
+                <span className="text-xs px-2 py-0.5 rounded bg-gray-200 text-gray-700">
+                  {linkT('billingOffBadge', 'Billed at client level')}
+                </span>
+              )}
+              <Button
+                id={`toggle-link-billing-${link.link_id}-button`}
+                type="button"
+                variant="ghost"
+                onClick={() => onToggleLinkBilling(link)}
+                // The badge above carries the state for sighted users; an
+                // icon-only button has to say the same thing out loud.
+                aria-label={link.bill_under_project === false
+                  ? linkT('billingOffTooltip', "Bill this ticket's time as project time")
+                  : linkT('billingOnTooltip', "Stop billing this ticket's time as project time")}
+                title={link.bill_under_project === false
+                  ? linkT('billingOffTooltip', "Bill this ticket's time as project time")
+                  : linkT('billingOnTooltip', "Stop billing this ticket's time as project time")}
+                className="flex items-center text-sm"
+              >
+                <Wallet className={`h-4 w-4 ${link.bill_under_project === false ? 'text-gray-400' : ''}`} />
+              </Button>
               {!link.restricted && (
                 <Button
                   id={`view-ticket-${link.ticket_id}-button`}
@@ -833,6 +898,15 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
                       )}
                     </div>
                     
+                    {/* Billing choice — pre-ticked: the ticket's time bills as project time */}
+                    <Checkbox
+                      id="bill-under-project-checkbox"
+                      checked={billUnderProject}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBillUnderProject(e.target.checked)}
+                      label={linkT('billUnderProjectLabel', "Bill this ticket's time as project time")}
+                      containerClassName="mt-4"
+                    />
+
                     {/* Tickets Dropdown */}
                     <div className="mt-6">
                       <label className="block text-sm font-medium text-gray-700 mb-1">

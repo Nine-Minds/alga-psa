@@ -25,7 +25,8 @@ import {
   resolvePaymentBillingProfileId,
 } from '@alga-psa/shared/billingClients/billingProfilePayments';
 import { auditLog } from '../../logging/auditLog';
-import { TaxService } from '@alga-psa/billing/services/taxService';
+import { TaxService, normalizeTaxCapAmount } from '@alga-psa/billing/services/taxService';
+import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
@@ -91,6 +92,8 @@ import {
   CreateTaxRateRequest,
   UpdateTaxRateRequest,
   TaxRateResponse,
+  TaxRateListQuery,
+  taxRateResponseSchema,
   
   // Reporting types
   AccountBalanceReport,
@@ -291,6 +294,49 @@ export class FinancialService extends BaseService<ITransaction> {
     }
   }
 
+  /** List the tax resource, with API financial permission checked by the controller. */
+  async listTaxRates(query: TaxRateListQuery, context: ServiceContext): Promise<ListResult<TaxRateResponse>> {
+    await this.validatePermissions('read', 'billing', context);
+    try {
+      await assertPsaOnlyTenantAccess(context.tenant, 'billing_actions');
+    } catch (error) {
+      if (error instanceof ProductAccessError) throw new ForbiddenError('Billing tax rates are not available for this tenant.');
+      throw error;
+    }
+    const { knex } = await this.getKnex();
+    const { page = 1, limit = 25, sort = 'created_at', order = 'desc' } = query;
+    const rates = tenantDb(knex, context.tenant).table('tax_rates');
+    if (query.region_code !== undefined) rates.where('region_code', query.region_code);
+    if (query.is_active !== undefined) rates.where('is_active', query.is_active);
+    if (query.effective_date !== undefined) {
+      rates.where('start_date', '<=', query.effective_date)
+        .where(builder => builder.whereNull('end_date').orWhere('end_date', '>', query.effective_date!));
+    }
+    if (query.search) {
+      rates.where(builder => builder.whereILike('region_code', `%${query.search}%`).orWhereILike('description', `%${query.search}%`));
+    }
+    for (const [field, value, operator] of [
+      ['created_at', query.created_from, '>='], ['created_at', query.created_to, '<='],
+      ['updated_at', query.updated_from, '>='], ['updated_at', query.updated_to, '<='],
+    ] as const) {
+      if (value !== undefined) rates.where(field, operator, value);
+    }
+    const count = await rates.clone().count('* as total').first();
+    const rows = await rates.orderBy(sort, order).orderBy('tax_rate_id', 'asc').limit(limit).offset((page - 1) * limit).select('*');
+    const dateValue = (value: unknown) => value instanceof Date ? value.toISOString() : value;
+    return {
+      total: Number(count?.total ?? 0),
+      data: rows.map(row => taxRateResponseSchema.parse({
+        ...row,
+        tax_percentage: Number(row.tax_percentage),
+        cap_amount: normalizeTaxCapAmount(row.cap_amount),
+        currency_code: row.currency_code ?? null,
+        start_date: dateValue(row.start_date), end_date: dateValue(row.end_date),
+        created_at: dateValue(row.created_at), updated_at: dateValue(row.updated_at),
+      })),
+    };
+  }
+
   // ============================================================================
   // TRANSACTION MANAGEMENT
   // ============================================================================
@@ -449,6 +495,21 @@ export class FinancialService extends BaseService<ITransaction> {
       });
     }
 
+    // transactions has created_at but no updated_at, so created_* maps and
+    // updated_* is declared unsupported (null) and rejected.
+    this.applyRangeFilters(dataQuery, query, {
+      created_from: 't.created_at',
+      created_to: 't.created_at',
+      updated_from: null,
+      updated_to: null,
+    });
+    this.applyRangeFilters(countQuery, query, {
+      created_from: 'created_at',
+      created_to: 'created_at',
+      updated_from: null,
+      updated_to: null,
+    });
+
     // Sorting and pagination
     dataQuery = dataQuery
       .select(
@@ -491,8 +552,6 @@ export class FinancialService extends BaseService<ITransaction> {
       client_id,
       status,
       billing_cycle_id,
-      due_date_from,
-      due_date_to,
       amount_min,
       amount_max,
       is_manual,
@@ -534,15 +593,18 @@ export class FinancialService extends BaseService<ITransaction> {
       countQuery = countQuery.where('i.billing_cycle_id', billing_cycle_id);
     }
 
-    if (due_date_from) {
-      dataQuery = dataQuery.where('i.due_date', '>=', due_date_from);
-      countQuery = countQuery.where('i.due_date', '>=', due_date_from);
-    }
-
-    if (due_date_to) {
-      dataQuery = dataQuery.where('i.due_date', '<=', due_date_to);
-      countQuery = countQuery.where('i.due_date', '<=', due_date_to);
-    }
+    // Common created_/updated_ plus the due-date window; unsupported range keys
+    // throw rather than returning unfiltered invoices.
+    const invoiceRangeColumns = {
+      created_from: 'i.created_at',
+      created_to: 'i.created_at',
+      updated_from: 'i.updated_at',
+      updated_to: 'i.updated_at',
+      due_date_from: 'i.due_date',
+      due_date_to: 'i.due_date',
+    };
+    this.applyRangeFilters(dataQuery, query, invoiceRangeColumns);
+    this.applyRangeFilters(countQuery, query, invoiceRangeColumns);
 
     if (amount_min !== undefined) {
       dataQuery = dataQuery.where('i.total_amount', '>=', amount_min);
@@ -871,6 +933,14 @@ export class FinancialService extends BaseService<ITransaction> {
       baseQuery = baseQuery.where('credit_tracking.is_expired', false);
     }
 
+    // Common created_/updated_ range filters; unsupported keys throw.
+    baseQuery = this.applyRangeFilters(baseQuery, query, {
+      created_from: 'credit_tracking.created_at',
+      created_to: 'credit_tracking.created_at',
+      updated_from: 'credit_tracking.updated_at',
+      updated_to: 'credit_tracking.updated_at',
+    });
+
     // Count
     const [{ count }] = (await baseQuery.clone().count('credit_id as count')) as Array<{ count: string }>;
     const total = parseInt(count as string);
@@ -1101,6 +1171,15 @@ export class FinancialService extends BaseService<ITransaction> {
       });
       countQuery = countQuery.whereILike('pm.last4', `%${search}%`);
     }
+
+    const paymentMethodRangeColumns = {
+      created_from: 'pm.created_at',
+      created_to: 'pm.created_at',
+      updated_from: 'pm.updated_at',
+      updated_to: 'pm.updated_at',
+    };
+    this.applyRangeFilters(dataQuery, query, paymentMethodRangeColumns);
+    this.applyRangeFilters(countQuery, query, paymentMethodRangeColumns);
 
     const [paymentMethods, [{ count }]] = await Promise.all([
       dataQuery

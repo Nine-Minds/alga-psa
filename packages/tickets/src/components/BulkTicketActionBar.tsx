@@ -60,7 +60,7 @@ export default function BulkTicketActionBar({
 }: BulkTicketActionBarProps) {
   const { t } = useTranslation(['features/tickets', 'common']);
 
-  const bundleEnabled = count >= 2;
+  const bundleEnabled = count >= 1;
 
   const actions: BulkActionBarAction[] = [];
   if (showAssign) {
@@ -79,7 +79,7 @@ export default function BulkTicketActionBar({
       onClick: onBundle,
       disabled: !bundleEnabled,
       title: !bundleEnabled
-        ? t('bulk.actionBar.bundleNeedsTwo', 'Select at least 2 tickets to bundle')
+        ? t('bulk.actionBar.bundleNeedsOne', 'Select at least 1 ticket to bundle')
         : undefined,
     });
   }

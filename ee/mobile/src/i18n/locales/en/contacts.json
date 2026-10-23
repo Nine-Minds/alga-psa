@@ -12,9 +12,11 @@
     "noContactsDescription": "Contacts will show up here once they are added.",
     "noResults": "No matching contacts",
     "noResultsDescription": "Try a different name, email, or client.",
-    "contactAccessibility": "Contact {{name}}"
+    "contactAccessibility": "Contact {{name}}",
+    "create": "New contact"
   },
   "detail": {
+    "phoneExtension": "ext.",
     "title": "Contact",
     "loadingContact": "Loading contact…",
     "unableToLoad": "Unable to load contact",
@@ -39,11 +41,69 @@
       "fax": "Fax",
       "other": "Other",
       "personal": "Personal",
-      "billing": "Billing"
-    }
+      "billing": "Billing",
+      "custom": "Custom"
+    },
+    "edit": "Edit contact",
+    "updated": "Contact updated"
   },
   "ticketsFilter": {
     "chip": "Contact: {{name}}",
     "clear": "Clear contact filter"
+  },
+  "form": {
+    "createTitle": "New contact",
+    "editTitle": "Edit contact",
+    "fullName": "Full name",
+    "fullNamePlaceholder": "e.g. Jane Doe",
+    "email": "Email",
+    "emailPlaceholder": "jane@acme.com",
+    "client": "Client",
+    "selectClient": "Select client",
+    "searchClients": "Search clients…",
+    "noClients": "No clients found.",
+    "unableToLoadClients": "Unable to load clients.",
+    "role": "Role / title",
+    "notes": "Notes",
+    "phones": "Phone numbers",
+    "phoneNumber": "Phone number",
+    "extension": "Ext.",
+    "phoneType": "Type",
+    "defaultPhone": "Default",
+    "addPhone": "Add phone number",
+    "removePhone": "Remove phone number",
+    "inactive": "Inactive",
+    "inactiveHint": "Inactive contacts are hidden from pickers and lists.",
+    "create": "Create contact",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "created": "Contact created",
+    "errors": {
+      "nameRequired": "Full name is required.",
+      "permission": "You do not have permission to save contacts.",
+      "generic": "Unable to save the contact. Try again.",
+      "customTypeRequired": "Enter a label for the custom type.",
+      "additionalEmailMatchesPrimary": "Additional email cannot match the primary email.",
+      "additionalEmailDuplicate": "Additional email addresses must be unique.",
+      "photoFailed": "Unable to update the photo. Try again.",
+      "cameraPermission": "Camera access is needed to take a photo.",
+      "photosPermission": "Photo library access is needed to choose a photo."
+    },
+    "additionalEmails": "Additional emails",
+    "addEmail": "Add email",
+    "removeEmail": "Remove email",
+    "emailType": "Type",
+    "customTypeLabel": "Label",
+    "tags": "Tags",
+    "addTags": "Add tags",
+    "noTags": "No tags",
+    "removeTag": "Remove tag {{tag}}",
+    "photo": "Photo",
+    "changePhoto": "Change photo",
+    "removePhoto": "Remove photo",
+    "takePhoto": "Take photo",
+    "choosePhoto": "Choose from library",
+    "photoUpdated": "Photo updated",
+    "photoRemoved": "Photo removed"
   }
 }

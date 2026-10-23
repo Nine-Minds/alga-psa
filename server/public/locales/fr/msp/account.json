@@ -58,7 +58,8 @@
     "cipp": "Intégration CIPP — connectez votre instance CIPP pour la gestion multi-tenant Entra",
     "teamsIntegration": "Microsoft Teams — intégration des réunions et bot Teams pour les notifications de tickets",
     "advancedAuthorizationBundles": "Ensembles d'autorisation avancés — créez et gérez des ensembles de restriction ABAC réutilisables",
-    "scimProvisioning": "Provisionnement des utilisateurs SCIM — synchronisez l'activation des utilisateurs depuis votre fournisseur d'identité"
+    "scimProvisioning": "Provisionnement des utilisateurs SCIM — synchronisez l'activation des utilisateurs depuis votre fournisseur d'identité",
+    "pbxTelephony": "Téléphonie PBX — connectez un PBX 3CX pour la reconnaissance des appelants et la journalisation des appels"
   },
   "summary": {
     "licensesUsed": "Licences utilisées",
@@ -426,5 +427,12 @@
       "loading": "Chargement…",
       "loadMore": "Charger plus"
     }
+  },
+  "communityEdition": {
+    "hostedDescription": "Les fonctionnalités de gestion de compte et de facturation sont disponibles dans Pro pour les déploiements hébergés.",
+    "selfHostedDescription": "La Community Edition auto-hébergée offre un nombre illimité d’utilisateurs, sans restrictions de licence ni facturation."
+  },
+  "page": {
+    "title": "Gestion du compte"
   }
 }

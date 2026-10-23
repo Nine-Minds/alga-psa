@@ -28,7 +28,6 @@ const DEFAULT_BOOLEAN_FLAGS: Record<string, boolean> = {
   'enable_jira_sync': false,
   'enable_salesforce_sync': false,
   'quoting-enabled': false,
-  'release-v1-6-feature': false,
 };
 
 const DEFAULT_VARIANT_FLAGS: Record<string, string> = {
@@ -37,6 +36,18 @@ const DEFAULT_VARIANT_FLAGS: Record<string, string> = {
   invoice_template: 'standard',
   email_composer: 'rich_text',
 };
+
+// Mirrors isPostHogEnabled() in @alga-psa/analytics: off when explicitly disabled,
+// and off under NODE_ENV=test unless a suite opts in with ALGA_USAGE_STATS=true.
+function usageStatsEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  if (env.ALGA_USAGE_STATS === 'false' || env.NEXT_PUBLIC_ALGA_USAGE_STATS === 'false') {
+    return false;
+  }
+  if (env.NODE_ENV === 'test') {
+    return env.ALGA_USAGE_STATS === 'true';
+  }
+  return true;
+}
 
 export function featureFlagsAreDisabled(env: NodeJS.ProcessEnv = process.env): boolean {
   const raw = env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS ?? env.DISABLE_FEATURE_FLAGS;
@@ -247,7 +258,7 @@ export class FeatureFlags {
     }
 
     this.clientInitialized = true;
-    if (process.env.ALGA_USAGE_STATS === 'false' || process.env.NEXT_PUBLIC_ALGA_USAGE_STATS === 'false') {
+    if (!usageStatsEnabled()) {
       this.client = null;
       return this.client;
     }

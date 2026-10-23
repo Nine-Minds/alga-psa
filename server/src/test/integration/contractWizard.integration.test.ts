@@ -3,12 +3,14 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
 import { tenantDb } from '@alga-psa/db';
+import { getContractMonthlyFixedValuesByContract } from '@alga-psa/shared/billingClients/contractMonthlyValue';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { setupCommonMocks } from '../../../test-utils/testMocks';
 
 let db: Knex;
 let tenantId: string;
 let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createClientContractFromWizard;
+let getDraftContractForResume: typeof import('@alga-psa/billing/actions/contractWizardActions').getDraftContractForResume;
 type CreatedIds = {
   serviceTypeId?: string;
   serviceId?: string;
@@ -16,6 +18,8 @@ type CreatedIds = {
   clientId?: string;
   contractId?: string;
   contractLineId?: string;
+  /** Extra lines for multi-line drafts, cleaned up alongside contractLineId. */
+  contractLineIds?: string[];
   clientContractId?: string;
 };
 let createdIds: CreatedIds = {};
@@ -66,8 +70,9 @@ vi.mock('@alga-psa/db', async () => {
   return {
     ...actual,
     createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
+    // A real transaction (a savepoint when already inside one) so rollback assertions mean something.
     withTransaction: vi.fn(async (knexOrTrx: Knex, callback: (trx: Knex.Transaction) => Promise<unknown>) =>
-      callback(knexOrTrx as unknown as Knex.Transaction),
+      knexOrTrx.transaction((trx) => callback(trx)),
     ),
     requireTenantId: vi.fn(async () => tenantId),
     runWithTenant: vi.fn(async (_tenant: string, fn: () => Promise<any>) => fn()),
@@ -112,7 +117,7 @@ describe('createClientContractFromWizard', () => {
     await db.migrate.latest();
     tenantId = await ensureTenant(db);
     setupCommonMocks({ tenantId, permissionCheck: () => true });
-    ({ createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
+    ({ createClientContractFromWizard, getDraftContractForResume } = await import('@alga-psa/billing/actions/contractWizardActions'));
   }, 120_000);
 
   afterAll(async () => {
@@ -793,6 +798,440 @@ describe('createClientContractFromWizard', () => {
     expect(await readHourlyRate(db, tenantId, lineIdByType.get('Hourly')!, hourlyServiceId)).toBe(8888);
     expect(await readUsageRate(db, tenantId, lineIdByType.get('Usage')!, usageServiceId)).toBe(9999);
   });
+
+  // alga0002268: finalizing a draft rebuilds its lines, which deletes the old
+  // contract_line_service_configuration rows. Three child tables were never cleared first —
+  // contract_line_service_fixed_config, contract_line_service_hourly_configs and
+  // contract_line_service_rate_tiers — so production (which carries NO ACTION FKs on all
+  // three) raised 23503 and the wizard refused to finish. The orphan assertion below is what
+  // catches a regression on CI schemas that still lack those FKs.
+  it('T027: finalizing a draft clears every config child table before rebuilding its lines', async () => {
+    createdIds = {};
+    const serviceTypeId = await insertServiceType(db, tenantId, 'fixed');
+    createdIds.serviceTypeId = serviceTypeId;
+
+    const fixedServiceId = await insertCatalogItem(db, tenantId, {
+      serviceTypeId,
+      serviceName: 'Rivermark Managed Fixed',
+      billingMethod: 'fixed',
+      itemKind: 'service',
+      defaultRate: 5000,
+      unitOfMeasure: 'month',
+    });
+    const hourlyServiceId = await insertCatalogItem(db, tenantId, {
+      serviceTypeId,
+      serviceName: 'Rivermark Managed Hourly',
+      billingMethod: 'hourly',
+      itemKind: 'service',
+      defaultRate: 15000,
+      unitOfMeasure: 'hour',
+    });
+    const usageServiceId = await insertCatalogItem(db, tenantId, {
+      serviceTypeId,
+      serviceName: 'Rivermark Managed Usage',
+      billingMethod: 'usage',
+      itemKind: 'service',
+      defaultRate: 250,
+      unitOfMeasure: 'unit',
+    });
+    createdIds.serviceId = fixedServiceId;
+    createdIds.additionalServiceIds = [hourlyServiceId, usageServiceId];
+
+    const clientId = await insertClient(db, tenantId, 'Rivermark Credit Union');
+    createdIds.clientId = clientId;
+
+    const submission = {
+      contract_name: 'Managed services agreement',
+      description: 'converted from quote',
+      client_id: clientId,
+      start_date: '2025-10-01',
+      end_date: null,
+      billing_frequency: 'monthly',
+      enable_proration: true,
+      fixed_base_rate: 5000,
+      fixed_services: [{ service_id: fixedServiceId, quantity: 1 }],
+      hourly_services: [{ service_id: hourlyServiceId, hourly_rate: 15000 }],
+      usage_services: [{ service_id: usageServiceId, unit_rate: 250, unit_of_measure: 'unit' }],
+      minimum_billable_time: 15,
+      round_up_to_nearest: 15,
+      po_required: false,
+    } as any;
+
+    // Seed the draft the way a quote conversion leaves it.
+    const draft = await createClientContractFromWizard(submission, { isDraft: true });
+    expect('contract_id' in draft).toBe(true);
+    const contractId = (draft as { contract_id: string }).contract_id;
+    createdIds.contractId = contractId;
+
+    const draftLineIds = await tenantTable(db, tenantId, 'contract_lines')
+      .where({ tenant: tenantId, contract_id: contractId })
+      .pluck('contract_line_id');
+    expect(draftLineIds.length).toBeGreaterThan(1);
+    createdIds.contractLineIds = draftLineIds;
+
+    const draftConfigs = await tenantTable(db, tenantId, 'contract_line_service_configuration')
+      .whereIn('contract_line_id', draftLineIds)
+      .select('config_id', 'configuration_type');
+    const draftConfigIds = draftConfigs.map((row) => row.config_id as string);
+    expect(draftConfigIds.length).toBeGreaterThan(0);
+
+    // A quote-converted draft carries an active assignment, unlike a wizard-saved draft.
+    await tenantTable(db, tenantId, 'client_contracts')
+      .where({ tenant: tenantId, contract_id: contractId })
+      .update({ is_active: true });
+
+    // Tiers only exist on usage configs, and the wizard does not author them, so the
+    // quote-conversion shape has to be seeded explicitly.
+    const usageConfigId = draftConfigs.find((row) => row.configuration_type === 'Usage')?.config_id;
+    expect(usageConfigId).toBeTruthy();
+    await tenantTable(db, tenantId, 'contract_line_service_rate_tiers').insert({
+      tier_id: uuidv4(),
+      tenant: tenantId,
+      config_id: usageConfigId,
+      min_quantity: 1,
+      max_quantity: 100,
+      rate: 250,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+
+    // All three previously-missed tables must be populated, or the test proves nothing.
+    const seededCounts = await Promise.all(
+      ['contract_line_service_fixed_config', 'contract_line_service_hourly_configs', 'contract_line_service_rate_tiers']
+        .map(async (table) => (await tenantTable(db, tenantId, table).whereIn('config_id', draftConfigIds)).length)
+    );
+    for (const count of seededCounts) {
+      expect(count).toBeGreaterThan(0);
+    }
+
+    // Finish Setup: same submission, now carrying the draft's contract_id.
+    // Without the child-table deletes this returns the 23503 action error instead of a
+    // contract, which is the toast the ticket reported.
+    const finalized = await createClientContractFromWizard({ ...submission, contract_id: contractId });
+    expect(
+      'contract_id' in finalized ? null : finalized,
+      'finalize returned an action error instead of a contract',
+    ).toBeNull();
+    expect((finalized as { contract_id: string }).contract_id).toBe(contractId);
+
+    const finalLineIds = await tenantTable(db, tenantId, 'contract_lines')
+      .where({ tenant: tenantId, contract_id: contractId })
+      .pluck('contract_line_id');
+    createdIds.contractLineIds = [...new Set([...draftLineIds, ...finalLineIds])];
+
+    const contract = await tenantTable(db, tenantId, 'contracts')
+      .where({ tenant: tenantId, contract_id: contractId })
+      .first('status', 'is_active');
+    expect(contract?.status).toBe('active');
+    expect(contract?.is_active).toBe(true);
+
+    const clientContract = await tenantTable(db, tenantId, 'client_contracts')
+      .where({ tenant: tenantId, contract_id: contractId })
+      .first('client_contract_id');
+    expect(clientContract).toBeTruthy();
+    createdIds.clientContractId = clientContract?.client_contract_id;
+
+    // No child row may outlive its deleted parent configuration.
+    for (const table of [
+      'contract_line_service_configuration',
+      'contract_line_service_fixed_config',
+      'contract_line_service_hourly_configs',
+      'contract_line_service_hourly_config',
+      'contract_line_service_rate_tiers',
+      'contract_line_service_bucket_config',
+      'contract_line_service_usage_config',
+    ]) {
+      const leftovers = await tenantTable(db, tenantId, table).whereIn('config_id', draftConfigIds);
+      expect(leftovers, `${table} kept rows for the draft's old config_ids`).toHaveLength(0);
+    }
+  });
+
+  describe('finalize preserves recurring totals', () => {
+    // Lines are rebuilt with new ids on every finalize, so sweep whatever the contract holds now.
+    afterEach(async () => {
+      if (createdIds.contractId) {
+        createdIds.contractLineIds = await tenantTable(db, tenantId, 'contract_lines')
+          .where({ tenant: tenantId, contract_id: createdIds.contractId })
+          .pluck('contract_line_id');
+      }
+    });
+
+    const monthlyOf = async (contractId: string) =>
+      (await getContractMonthlyFixedValuesByContract(db, tenantId, [contractId])).get(contractId)?.monthlyValueCents ?? 0;
+
+    const linesOf = (contractId: string) =>
+      tenantTable<any>(db, tenantId, 'contract_lines')
+        .where({ tenant: tenantId, contract_id: contractId, contract_line_type: 'Fixed' })
+        .orderBy('custom_rate', 'desc');
+
+    const seedServices = async (names: string[], defaultRate = 1000) => {
+      const serviceTypeId = await insertServiceType(db, tenantId, 'fixed');
+      createdIds.serviceTypeId = serviceTypeId;
+      const ids: string[] = [];
+      for (const name of names) {
+        ids.push(
+          await insertCatalogItem(db, tenantId, {
+            serviceTypeId,
+            serviceName: `${name} ${serviceTypeId.slice(0, 6)}`,
+            billingMethod: 'fixed',
+            itemKind: 'service',
+            defaultRate,
+            unitOfMeasure: 'month',
+          }),
+        );
+      }
+      createdIds.serviceId = ids[0];
+      createdIds.additionalServiceIds = ids.slice(1);
+      createdIds.clientId = await insertClient(db, tenantId, 'Recurring Totals');
+      return ids;
+    };
+
+    const baseSubmission = () => ({
+      contract_name: 'Recurring totals',
+      client_id: createdIds.clientId!,
+      start_date: '2025-10-01',
+      end_date: null,
+      billing_frequency: 'monthly',
+      enable_proration: false,
+      hourly_services: [],
+      usage_services: [],
+      po_required: false,
+    });
+
+    const seedDraft = async (fixed_lines: any[]) => {
+      const draft = await createClientContractFromWizard(
+        { ...baseSubmission(), fixed_lines } as any,
+        { isDraft: true },
+      );
+      expect('contract_id' in draft).toBe(true);
+      const contractId = (draft as { contract_id: string }).contract_id;
+      createdIds.contractId = contractId;
+      return contractId;
+    };
+
+    const resumeAsSubmission = async (contractId: string, overrides: Record<string, unknown> = {}) => {
+      const resumed: any = await getDraftContractForResume(contractId);
+      expect(resumed.is_draft).toBe(true);
+      const { is_draft, recurring_baseline, template_id, ...rest } = resumed;
+      return { submission: { ...rest, contract_id: contractId, ...overrides } as any, resumed };
+    };
+
+    it('1: two bundle lines at different rates resume and finalize with the same total and lines', async () => {
+      const [a, b, c] = await seedServices(['Bundle A', 'Bundle B', 'Bundle C']);
+      const contractId = await seedDraft([
+        { line_key: 'l1', contract_line_name: 'Core', enable_proration: false, base_rate: 300000,
+          services: [{ service_id: a, quantity: 1, pricing_basis: 'bundle' }, { service_id: b, quantity: 1, pricing_basis: 'bundle' }] },
+        { line_key: 'l2', contract_line_name: 'Extras', enable_proration: false, base_rate: 105000,
+          services: [{ service_id: c, quantity: 1, pricing_basis: 'bundle' }] },
+      ]);
+      expect(await monthlyOf(contractId)).toBe(405000);
+
+      const { submission, resumed } = await resumeAsSubmission(contractId);
+      expect(resumed.fixed_lines).toHaveLength(2);
+      expect(resumed.recurring_baseline.monthly_cents).toBe(405000);
+
+      const result = await createClientContractFromWizard(submission, { isDraft: true });
+      expect('contract_id' in result).toBe(true);
+
+      const lines = await linesOf(contractId);
+      expect(lines.map((l: any) => Number(l.custom_rate))).toEqual([300000, 105000]);
+      expect(await monthlyOf(contractId)).toBe(405000);
+      const members = await tenantTable(db, tenantId, 'contract_line_services')
+        .whereIn('contract_line_id', lines.map((l: any) => l.contract_line_id))
+        .select('contract_line_id', 'service_id');
+      expect(members.filter((m: any) => m.contract_line_id === lines[0].contract_line_id)).toHaveLength(2);
+      expect(members.filter((m: any) => m.contract_line_id === lines[1].contract_line_id)).toHaveLength(1);
+
+      // Finish (non-draft) on the same unchanged resume: no prompt, same lines' rates and total.
+      const finished: any = await createClientContractFromWizard(submission);
+      expect(finished.confirmation_required).toBeUndefined();
+      expect('contract_id' in finished).toBe(true);
+      const finishedLines = await linesOf(contractId);
+      expect(finishedLines.map((l: any) => Number(l.custom_rate))).toEqual([300000, 105000]);
+      expect(await monthlyOf(contractId)).toBe(405000);
+    });
+
+    it('2: a service-less custom line is refused on Finish (rolled back) and kept by Save Draft', async () => {
+      await seedServices(['Unused']);
+      const contractId = await seedDraft([
+        { line_key: 'custom', contract_line_name: 'Custom retainer', enable_proration: false, base_rate: 70000, services: [] },
+      ]);
+      const before = await linesOf(contractId);
+      expect(before).toHaveLength(1);
+      expect(Number(before[0].custom_rate)).toBe(70000);
+
+      const { submission, resumed } = await resumeAsSubmission(contractId);
+      expect(resumed.fixed_lines[0].services).toEqual([]);
+      expect(resumed.fixed_lines[0].base_rate).toBe(70000);
+
+      const refused: any = await createClientContractFromWizard(submission);
+      expect(JSON.stringify(refused)).toMatch(/Custom retainer/);
+      const afterRefusal = await linesOf(contractId);
+      expect(afterRefusal.map((l: any) => l.contract_line_id)).toEqual(before.map((l: any) => l.contract_line_id));
+
+      const saved = await createClientContractFromWizard(submission, { isDraft: true });
+      expect('contract_id' in saved).toBe(true);
+      const afterSave = await linesOf(contractId);
+      expect(afterSave).toHaveLength(1);
+      expect(Number(afterSave[0].custom_rate)).toBe(70000);
+      expect(await monthlyOf(contractId)).toBe(70000);
+    });
+
+    it('3: a mixed unit + bundle line plus a second bundle line keep their totals', async () => {
+      const [seat, bundle, other] = await seedServices(['Seat', 'Bundle', 'Other']);
+      const contractId = await seedDraft([
+        { line_key: 'mix', contract_line_name: 'Mixed', enable_proration: false, base_rate: 50000,
+          services: [
+            { service_id: seat, quantity: 5, pricing_basis: 'unit', unit_rate: 15000 },
+            { service_id: bundle, quantity: 1, pricing_basis: 'bundle' },
+          ] },
+        { line_key: 'o', contract_line_name: 'Other', enable_proration: false, base_rate: 20000,
+          services: [{ service_id: other, quantity: 1, pricing_basis: 'bundle' }] },
+      ]);
+      const total = await monthlyOf(contractId);
+      expect(total).toBe(145000);
+
+      const { submission } = await resumeAsSubmission(contractId);
+      const result = await createClientContractFromWizard(submission, { isDraft: true });
+      expect('contract_id' in result).toBe(true);
+      expect(await monthlyOf(contractId)).toBe(total);
+      const draftLines = await linesOf(contractId);
+      expect(draftLines.map((l: any) => Number(l.custom_rate))).toEqual([50000, 20000]);
+
+      const finished: any = await createClientContractFromWizard(submission);
+      expect(finished.confirmation_required).toBeUndefined();
+      expect('contract_id' in finished).toBe(true);
+      expect(await monthlyOf(contractId)).toBe(total);
+      expect((await linesOf(contractId)).map((l: any) => Number(l.custom_rate))).toEqual([50000, 20000]);
+    });
+
+    it('4: a Rivermark per-seat shape (3 unit lines, $4,200/mo) is unchanged after resume + finalize', async () => {
+      const [x, y, z] = await seedServices(['Seat X', 'Seat Y', 'Seat Z']);
+      const contractId = await seedDraft([
+        { line_key: 'a', contract_line_name: 'Seats X', enable_proration: false, base_rate: null,
+          services: [{ service_id: x, quantity: 10, pricing_basis: 'unit', unit_rate: 20000 }] },
+        { line_key: 'b', contract_line_name: 'Seats Y', enable_proration: false, base_rate: null,
+          services: [{ service_id: y, quantity: 8, pricing_basis: 'unit', unit_rate: 10000 }] },
+        { line_key: 'c', contract_line_name: 'Seats Z', enable_proration: false, base_rate: null,
+          services: [{ service_id: z, quantity: 4, pricing_basis: 'unit', unit_rate: 35000 }] },
+      ]);
+      expect(await monthlyOf(contractId)).toBe(420000);
+
+      const { submission, resumed } = await resumeAsSubmission(contractId);
+      expect(resumed.fixed_lines).toHaveLength(3);
+      const result = await createClientContractFromWizard(submission);
+      expect('contract_id' in result).toBe(true);
+      expect(await linesOf(contractId)).toHaveLength(3);
+      expect(await monthlyOf(contractId)).toBe(420000);
+    });
+
+    it('7: a legacy fixed_services + fixed_base_rate draft with an hourly line resumes and finalizes unchanged', async () => {
+      const [a] = await seedServices(['Legacy fixed']);
+      const hourlyServiceId = await insertCatalogItem(db, tenantId, {
+        serviceTypeId: createdIds.serviceTypeId!,
+        serviceName: `Legacy hourly ${createdIds.serviceTypeId!.slice(0, 6)}`,
+        billingMethod: 'hourly',
+        itemKind: 'service',
+        defaultRate: 6300,
+        unitOfMeasure: 'hour',
+      });
+      createdIds.additionalServiceIds = [...(createdIds.additionalServiceIds ?? []), hourlyServiceId];
+
+      const draft: any = await createClientContractFromWizard(
+        {
+          ...baseSubmission(),
+          fixed_base_rate: 40000,
+          fixed_services: [{ service_id: a, quantity: 1 }],
+          hourly_services: [{ service_id: hourlyServiceId, hourly_rate: 6300 }],
+          minimum_billable_time: 15,
+          round_up_to_nearest: 15,
+        } as any,
+        { isDraft: true },
+      );
+      expect('contract_id' in draft).toBe(true);
+      const contractId = draft.contract_id as string;
+      createdIds.contractId = contractId;
+      expect(await monthlyOf(contractId)).toBe(40000);
+
+      const { submission, resumed } = await resumeAsSubmission(contractId);
+      expect(resumed.resumeUnsupportedShape).toBeUndefined();
+      expect(resumed.fixed_lines).toHaveLength(1);
+      expect(resumed.hourly_services).toHaveLength(1);
+      expect(resumed.recurring_baseline.monthly_cents).toBe(40000);
+
+      const saved: any = await createClientContractFromWizard(submission, { isDraft: true });
+      expect(saved.confirmation_required).toBeUndefined();
+      expect(await monthlyOf(contractId)).toBe(40000);
+
+      const finished: any = await createClientContractFromWizard(submission);
+      expect(finished.confirmation_required).toBeUndefined();
+      expect('contract_id' in finished).toBe(true);
+      expect(await monthlyOf(contractId)).toBe(40000);
+      expect((await linesOf(contractId)).map((l: any) => Number(l.custom_rate))).toEqual([40000]);
+      const hourlyLines = await tenantTable<any>(db, tenantId, 'contract_lines')
+        .where({ tenant: tenantId, contract_id: contractId, contract_line_type: 'Hourly' });
+      expect(hourlyLines).toHaveLength(1);
+    });
+
+    it('5: the guard asks for confirmation on a changed total, commits with a matching ack, refuses a stale one', async () => {
+      const [a] = await seedServices(['Guarded']);
+      const contractId = await seedDraft([
+        { line_key: 'l1', contract_line_name: 'Guarded', enable_proration: false, base_rate: 100000,
+          services: [{ service_id: a, quantity: 1, pricing_basis: 'bundle' }] },
+      ]);
+      const { submission, resumed } = await resumeAsSubmission(contractId);
+      const lowered = { ...submission, fixed_lines: [{ ...resumed.fixed_lines[0], base_rate: 80000 }] };
+      const originalLineIds = (await linesOf(contractId)).map((l: any) => l.contract_line_id);
+
+      const asked: any = await createClientContractFromWizard(lowered, { isDraft: true });
+      expect(asked).toEqual({
+        confirmation_required: 'recurring_total_change',
+        baseline_monthly_cents: 100000,
+        resulting_monthly_cents: 80000,
+      });
+      // Rolled back: same line ids, same total.
+      expect((await linesOf(contractId)).map((l: any) => l.contract_line_id)).toEqual(originalLineIds);
+      expect(await monthlyOf(contractId)).toBe(100000);
+
+      const stale: any = await createClientContractFromWizard(
+        { ...lowered, recurring_change_ack: { baseline_monthly_cents: 90000 } },
+        { isDraft: true },
+      );
+      expect(stale.confirmation_required).toBe('recurring_total_change');
+      expect(await monthlyOf(contractId)).toBe(100000);
+
+      const ok: any = await createClientContractFromWizard(
+        { ...lowered, recurring_change_ack: { baseline_monthly_cents: 100000 } },
+        { isDraft: true },
+      );
+      expect('contract_id' in ok).toBe(true);
+      expect(await monthlyOf(contractId)).toBe(80000);
+    });
+
+    it('6: the legacy fixed_services + fixed_base_rate shape still creates one line; supplying both shapes is rejected', async () => {
+      const [a] = await seedServices(['Legacy']);
+      const legacy: any = await createClientContractFromWizard(
+        { ...baseSubmission(), fixed_base_rate: 40000, fixed_services: [{ service_id: a, quantity: 1 }] } as any,
+        { isDraft: true },
+      );
+      expect('contract_id' in legacy).toBe(true);
+      createdIds.contractId = legacy.contract_id;
+      expect(await linesOf(legacy.contract_id)).toHaveLength(1);
+      expect(await monthlyOf(legacy.contract_id)).toBe(40000);
+
+      const both: any = await createClientContractFromWizard(
+        {
+          ...baseSubmission(),
+          fixed_base_rate: 40000,
+          fixed_services: [{ service_id: a, quantity: 1 }],
+          fixed_lines: [{ line_key: 'x', enable_proration: false, base_rate: 1, services: [{ service_id: a, quantity: 1, pricing_basis: 'bundle' }] }],
+        } as any,
+        { isDraft: true },
+      );
+      expect('contract_id' in both).toBe(false);
+      expect(JSON.stringify(both)).toMatch(/not both/);
+    });
+  });
 });
 
 // The wizard persists resolved hourly rates on contract_line_service_hourly_configs
@@ -938,6 +1377,42 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
       tenant: tenantId,
       client_contract_id: ids.clientContractId
     });
+  }
+
+  // Config children are keyed by config_id, not contract_line_id, so they have to be cleared
+  // through their parent configuration rows — otherwise the composite FKs block the parent
+  // delete and the rows survive the suite.
+  const allLineIds = [
+    ...(ids.contractLineId ? [ids.contractLineId] : []),
+    ...(ids.contractLineIds ?? []),
+  ];
+  if (allLineIds.length > 0) {
+    let configIds: string[] = [];
+    try {
+      configIds = await tenantTable(db, tenantId, 'contract_line_service_configuration')
+        .whereIn('contract_line_id', allLineIds)
+        .pluck('config_id');
+    } catch {
+      // ignore cleanup issues
+    }
+    for (const table of [
+      'contract_line_service_rate_tiers',
+      'contract_line_service_fixed_config',
+      'contract_line_service_hourly_configs',
+      'contract_line_service_hourly_config',
+      'contract_line_service_bucket_config',
+      'contract_line_service_usage_config',
+    ]) {
+      await safeDeleteIn(table, 'config_id', configIds);
+    }
+    for (const table of [
+      'contract_line_service_configuration',
+      'contract_line_service_defaults',
+      'contract_line_services',
+      'contract_lines',
+    ]) {
+      await safeDeleteIn(table, 'contract_line_id', allLineIds);
+    }
   }
 
   if (ids.contractLineId) {

@@ -86,22 +86,33 @@ describe('DesignerSchemaInspector spacing controls', () => {
     useInvoiceDesignerStore.getState().resetWorkspace();
   });
 
-  it('renders numeric gap and padding steppers with unit dropdowns instead of raw text inputs', () => {
+  it('renders a numeric gap stepper and per-side padding inputs with unit dropdowns instead of raw text inputs', () => {
     renderInspector();
 
     const gapValue = document.querySelector('[data-automation-id="designer-inspector-layout-gap-value"]') as HTMLInputElement | null;
     const gapUnit = document.getElementById('designer-inspector-layout-gap-unit');
-    const paddingValue = document.querySelector('[data-automation-id="designer-inspector-layout-padding-value"]') as HTMLInputElement | null;
-    const paddingUnit = document.getElementById('designer-inspector-layout-padding-unit');
+    const paddingSides = ['top', 'right', 'bottom', 'left'].map(
+      (side) => document.querySelector(`[data-automation-id="designer-inspector-appearance-containerPadding-${side}"]`) as HTMLInputElement | null
+    );
+    const paddingUnit = document.getElementById('designer-inspector-appearance-containerPadding-unit');
 
     // The unit dropdown is a Radix CustomSelect: a combobox button trigger,
     // not a native <select>.
     expect(gapValue?.type).toBe('number');
     expect(gapUnit?.tagName).toBe('BUTTON');
     expect(gapUnit?.getAttribute('role')).toBe('combobox');
-    expect(paddingValue?.type).toBe('number');
+    paddingSides.forEach((input) => expect(input?.type).toBe('number'));
     expect(paddingUnit?.tagName).toBe('BUTTON');
     expect(paddingUnit?.getAttribute('role')).toBe('combobox');
+  });
+
+  it('writes per-side padding as a CSS shorthand so values like "14px 16px" can be authored', () => {
+    renderInspector({ layout: { padding: '14px 16px' } });
+
+    const top = document.querySelector('[data-automation-id="designer-inspector-appearance-containerPadding-top"]') as HTMLInputElement;
+    const right = document.querySelector('[data-automation-id="designer-inspector-appearance-containerPadding-right"]') as HTMLInputElement;
+    expect(top.value).toBe('14');
+    expect(right.value).toBe('16');
   });
 
   it('shows px, %, and rem unit options for spacing steppers', async () => {
@@ -160,27 +171,43 @@ describe('DesignerSchemaInspector spacing controls', () => {
     expect(document.querySelector('[data-automation-id="designer-inspector-appearance-margin-link-all"]')).toBeTruthy();
   });
 
-  it('syncs all four margin sides when Link all is active', () => {
+  it('edits one margin side at a time by default', () => {
     renderInspector({ style: { margin: '8px' } });
 
     const topInput = document.querySelector('[data-automation-id="designer-inspector-appearance-margin-top"]') as HTMLInputElement;
     fireEvent.change(topInput, { target: { value: '10' } });
 
     const style = (useInvoiceDesignerStore.getState().nodesById['section-1'].props as any)?.style ?? {};
-    expect(style.margin).toBe('10px');
+    expect(style.margin).toBe('10px 8px 8px');
   });
 
-  it('lets margin sides diverge independently when Link all is turned off', () => {
-    renderInspector({ style: { margin: '8px' } });
+  it('sets every side from one visible input while "Same on all sides" is pressed', () => {
+    renderInspector({ style: { margin: '8px 16px' } });
 
     const linkToggle = document.querySelector('[data-automation-id="designer-inspector-appearance-margin-link-all"]') as HTMLButtonElement;
+    expect(linkToggle.getAttribute('aria-pressed')).toBe('false');
     fireEvent.click(linkToggle);
+    expect(linkToggle.getAttribute('aria-pressed')).toBe('true');
+    expect(document.querySelector('[data-automation-id="designer-inspector-appearance-margin-right"]')).toBeNull();
+
+    const allInput = document.querySelector('[data-automation-id="designer-inspector-appearance-margin-all"]') as HTMLInputElement;
+    fireEvent.change(allInput, { target: { value: '12' } });
+    expect((useInvoiceDesignerStore.getState().nodesById['section-1'].props as any)?.style?.margin).toBe('12px');
+
+    fireEvent.click(linkToggle);
+    expect(document.querySelector('[data-automation-id="designer-inspector-appearance-margin-right"]')).toBeTruthy();
+  });
+
+  it('clearing one side leaves the other sides alone and commits that side as zero', () => {
+    renderInspector({ style: { margin: '8px 16px' } });
 
     const rightInput = document.querySelector('[data-automation-id="designer-inspector-appearance-margin-right"]') as HTMLInputElement;
-    fireEvent.change(rightInput, { target: { value: '16' } });
+    fireEvent.change(rightInput, { target: { value: '' } });
+    expect((useInvoiceDesignerStore.getState().nodesById['section-1'].props as any)?.style?.margin).toBe('8px 16px');
+    expect(rightInput.value).toBe('');
 
-    const style = (useInvoiceDesignerStore.getState().nodesById['section-1'].props as any)?.style ?? {};
-    expect(style.margin).toBe('8px 16px 8px 8px');
+    fireEvent.blur(rightInput, { target: { value: '' } });
+    expect((useInvoiceDesignerStore.getState().nodesById['section-1'].props as any)?.style?.margin).toBe('8px 0px 8px 16px');
   });
 
   it('keeps dark-theme class hooks on the spacing steppers and linked margin controls', () => {

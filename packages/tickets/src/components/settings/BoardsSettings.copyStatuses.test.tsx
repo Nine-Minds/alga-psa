@@ -5,6 +5,7 @@ import React from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import BoardsSettings from './BoardsSettings';
+import { toast } from 'react-hot-toast';
 
 const getAllBoardsMock = vi.fn();
 const createBoardMock = vi.fn();
@@ -38,6 +39,12 @@ vi.mock('@alga-psa/tickets/actions', () => ({
   updateBoardAutoCloseRule: vi.fn(),
   deleteBoardAutoCloseRule: vi.fn(),
 }));
+
+const listEmailSendersMock = vi.fn(async () => ({ senders: [], routes: [] }));
+const listSelectableSendersMock = vi.fn(async () => ({ effectiveSenderAddress: 'provider@example.test', effectiveSenderDisplayName: 'Support' }));
+const setEmailSenderRouteMock = vi.fn();
+const clearEmailSenderRouteMock = vi.fn();
+const renderBoardsSettings = () => render(<BoardsSettings listEmailSenders={listEmailSendersMock} listSelectableSenders={listSelectableSendersMock} setEmailSenderRoute={setEmailSenderRouteMock} clearEmailSenderRoute={clearEmailSenderRouteMock} />);
 
 vi.mock('@alga-psa/tickets/actions/board-actions/boardActions', () => ({
   getAllBoards: (...args: unknown[]) => getAllBoardsMock(...args),
@@ -317,6 +324,7 @@ describe('BoardsSettings ticket status copy flow', () => {
     getAllUsersMock.mockResolvedValue([]);
     getSlaPoliciesMock.mockResolvedValue([]);
     getTeamsMock.mockResolvedValue([]);
+    listSelectableSendersMock.mockResolvedValue({ effectiveSenderAddress: 'provider@example.test', effectiveSenderDisplayName: 'Support' });
   });
 
   it('loads copied board statuses into the embedded editor and saves edited statuses', async () => {
@@ -343,7 +351,7 @@ describe('BoardsSettings ticket status copy flow', () => {
       return [];
     });
 
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -418,7 +426,7 @@ describe('BoardsSettings ticket status copy flow', () => {
       return [];
     });
 
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -456,7 +464,7 @@ describe('BoardsSettings ticket status copy flow', () => {
   });
 
   it('passes inline-authored ticket statuses when creating a board from a new inline lifecycle', async () => {
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -508,7 +516,7 @@ describe('BoardsSettings ticket status copy flow', () => {
       },
     ]);
 
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -570,7 +578,7 @@ describe('BoardsSettings ticket status copy flow', () => {
   });
 
   it('T020: blocks board save when inline ticket statuses do not contain exactly one open default', async () => {
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -632,7 +640,7 @@ describe('BoardsSettings ticket status copy flow', () => {
       },
     ]);
 
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -658,7 +666,7 @@ describe('BoardsSettings ticket status copy flow', () => {
   });
 
   it('opens the create editor with General and the required Statuses section expanded', async () => {
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -693,7 +701,7 @@ describe('BoardsSettings ticket status copy flow', () => {
       },
     ]);
 
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -714,6 +722,34 @@ describe('BoardsSettings ticket status copy flow', () => {
 
     // Editor opened in edit mode with the clicked board's name loaded.
     expect(screen.getByDisplayValue('Support')).toBeInTheDocument();
+    expandSection('inbound');
+    expect(screen.getByText('ticketing.boards.emailSender.label')).toBeInTheDocument();
+    expect(screen.getByText('ticketing.boards.emailSender.inboundWarning')).toBeInTheDocument();
+    expect(listSelectableSendersMock).toHaveBeenCalledWith({ mailClass: 'ticket', ignoreBoardRoute: true, boardName: 'Support' });
+    expect(screen.getByRole('option', { name: 'ticketing.boards.emailSender.useDefault (provider@example.test · Support)' })).toBeInTheDocument();
+
+    fireEvent.change(document.getElementById('board-ticket-email-sender-name') as HTMLInputElement, { target: { value: 'Support desk' } });
+    fireEvent.click(screen.getByTestId('board-ticket-email-sender-save'));
+    await waitFor(() => expect(setEmailSenderRouteMock).toHaveBeenCalledWith(expect.objectContaining({
+      routeType: 'board', boardId: 'board-source', senderId: null, displayName: 'Support desk',
+    })));
+    expect(clearEmailSenderRouteMock).not.toHaveBeenCalled();
+  });
+
+  it('shows a sender route error without showing a success toast', async () => {
+    setEmailSenderRouteMock.mockResolvedValue({ success: false, error: 'The SMTP sender needs confirmation.' });
+    getBoardTicketStatusesMock.mockResolvedValue([]);
+
+    renderBoardsSettings();
+    await waitFor(() => expect(document.querySelector('[id^="board-row-"]')).toBeTruthy());
+    fireEvent.click(document.getElementById('board-row-board-source') as HTMLElement);
+    await waitFor(() => expect(screen.getByDisplayValue('Support')).toBeInTheDocument());
+    expandSection('inbound');
+    fireEvent.change(document.getElementById('board-ticket-email-sender-name') as HTMLInputElement, { target: { value: 'Support desk' } });
+    fireEvent.click(screen.getByTestId('board-ticket-email-sender-save'));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('The SMTP sender needs confirmation.'));
+    expect(toast.success).not.toHaveBeenCalledWith('Ticket sender saved');
   });
 
   it('keeps the editor open after saving changes to an existing board', async () => {
@@ -727,7 +763,7 @@ describe('BoardsSettings ticket status copy flow', () => {
       },
     ]);
 
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -793,7 +829,7 @@ describe('BoardsSettings ticket status copy flow', () => {
       },
     ]);
 
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -835,7 +871,7 @@ describe('BoardsSettings ticket status copy flow', () => {
     }));
     getAllBoardsMock.mockResolvedValue(manyBoards);
 
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -871,7 +907,7 @@ describe('BoardsSettings ticket status copy flow', () => {
     }));
     getAllBoardsMock.mockResolvedValue(manyBoards);
 
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);

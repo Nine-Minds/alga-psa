@@ -91,6 +91,7 @@ export default class ContractLineFixedConfig {
 
     if (data.base_rate !== undefined) {
       updateData.custom_rate = data.base_rate;
+      updateData.rate_provenance = data.base_rate == null ? 'inherited' : 'custom';
     }
     if (data.enable_proration !== undefined) {
       updateData.enable_proration = data.enable_proration;
@@ -124,12 +125,18 @@ export default class ContractLineFixedConfig {
       })
       .first(['enable_proration', 'billing_cycle_alignment']);
 
+    // `contract_lines.rate_provenance` must stay consistent with `custom_rate`:
+    // a stored line-level rate is `custom`, clearing it re-links the line to
+    // the catalog (`inherited`). Writing the rate without the label violates
+    // the CHECK and silently shadows the catalog.
+    const resolvedCustomRate = base_rate ?? null;
     const result = await this.table(this.tableName)
       .where({
         contract_line_id,
       })
       .update({
-        custom_rate: base_rate ?? null,
+        custom_rate: resolvedCustomRate,
+        rate_provenance: resolvedCustomRate === null ? 'inherited' : 'custom',
         enable_proration: enable_proration ?? false,
         billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
           billingCycleAlignment: billing_cycle_alignment,
@@ -154,6 +161,7 @@ export default class ContractLineFixedConfig {
       })
       .update({
         custom_rate: null,
+        rate_provenance: 'inherited',
         enable_proration: false,
         billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
           enableProration: false,

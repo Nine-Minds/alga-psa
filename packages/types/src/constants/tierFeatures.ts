@@ -24,6 +24,7 @@ export enum TIER_FEATURES {
   TEAMS_INTEGRATION = 'TEAMS_INTEGRATION',
   SCIM_PROVISIONING = 'SCIM_PROVISIONING',
   ADVANCED_AUTHORIZATION_BUNDLES = 'ADVANCED_AUTHORIZATION_BUNDLES',
+  PBX_TELEPHONY = 'PBX_TELEPHONY',
 }
 
 // Namespace member instead of an enum member so older exhaustive UI label maps
@@ -43,7 +44,7 @@ export type TierFeature = TIER_FEATURES;
  * Reverse mapping: minimum tier required for each feature.
  */
 export const FEATURE_MINIMUM_TIER: Record<TIER_FEATURES, TenantTier> = {
-  [TIER_FEATURES.INTEGRATIONS]: 'solo',
+  [TIER_FEATURES.INTEGRATIONS]: 'pro',
   [TIER_FEATURES.EXTENSIONS]: 'solo',
   [TIER_FEATURES.SSO]: 'solo',
   [TIER_FEATURES.ADVANCED_ASSETS]: 'solo',
@@ -56,14 +57,13 @@ export const FEATURE_MINIMUM_TIER: Record<TIER_FEATURES, TenantTier> = {
   [TIER_FEATURES.TEAMS_INTEGRATION]: 'pro',
   [TIER_FEATURES.SCIM_PROVISIONING]: 'pro',
   [TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES]: 'pro',
+  [TIER_FEATURES.PBX_TELEPHONY]: 'pro',
   [TIER_FEATURES.OPPORTUNITY_MANAGEMENT]: 'pro',
   [TIER_FEATURES.CONTRACT_SIMULATOR]: 'pro',
   [TIER_FEATURES.CREDENTIALS]: 'pro',
 } as const;
 
-const ADD_ON_ONLY_FEATURES = new Set<TIER_FEATURES>([
-  TIER_FEATURES.TEAMS_INTEGRATION,
-]);
+const ADD_ON_ONLY_FEATURES = new Set<TIER_FEATURES>();
 
 const ALL_TIER_FEATURES = (Object.values(TIER_FEATURES) as TIER_FEATURES[]).filter(
   (feature) => !ADD_ON_ONLY_FEATURES.has(feature)

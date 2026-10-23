@@ -1,0 +1,640 @@
+import React, { useCallback, useMemo, useState } from 'react';
+
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { Input } from '@alga-psa/ui/components/Input';
+import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
+import type { ColumnDefinition } from '@alga-psa/types';
+import type { ExternalEntityMapping } from '@alga-psa/integrations/actions';
+
+import { suggestMappingTargets } from './suggestMappingTargets';
+import type {
+  AccountingMappingBulkCreateInput,
+  AccountingMappingBulkCreateResult,
+  AccountingMappingEntityOption,
+  AccountingMappingModule
+} from './types';
+
+/**
+ * Preferred width and shrink floor per column. Preferred total 1224px, minimum total 824px.
+ * Status has no minWidth, so it stays fixed; Xero Target takes most of the shrink (and of the
+ * stretch at wide widths).
+ */
+export const BULK_GRID_COLUMN_SIZES = {
+  selected: { width: '72px', minWidth: '72px' },
+  name: { width: '220px', minWidth: '160px' },
+  kindId: { width: '200px', minWidth: '140px' },
+  externalId: { width: '520px', minWidth: '240px' },
+  metadataField: { width: '280px', minWidth: '180px' },
+  ignored: { width: '72px', minWidth: '72px' },
+  id: { width: '140px' }
+} as const;
+
+/**
+ * Whether bulk mapping types the target instead of picking it from a catalog.
+ * Explicit per module: a catalog-backed module whose catalog happens to be
+ * empty (a new company, nothing of that kind yet) keeps the picker, so a
+ * free-text value can never be saved where a provider id is expected.
+ */
+export function isManualEntryModule(module: Pick<AccountingMappingModule, 'manualExternalEntry' | 'externalTarget'>): boolean {
+  return module.manualExternalEntry === true && !module.externalTarget;
+}
+
+type MappedRow = ExternalEntityMapping & { externalName?: string };
+
+type RowEdit = {
+  ignored?: boolean;
+  selected?: boolean;
+  kindId?: string;
+  /** Present (even as '') once the user has touched the target picker or kind. */
+  externalId?: string;
+  /** Values typed into the module's metadata fields, keyed by field key. */
+  fields?: Record<string, string>;
+};
+
+type MappedFilter = 'unmapped' | 'mapped' | 'all';
+
+type GridRow = {
+  id: string;
+  name: string;
+  mappedTo: string | null;
+  kindId: string;
+  externalId: string;
+  /** Metadata field values: typed values for unmapped rows, stored values for mapped rows. */
+  fieldValues: Record<string, string>;
+  /** Label of the first required metadata field still empty, if any. */
+  missingField: string | null;
+  suggested: boolean;
+  /** Fuzzy suggestions are prefilled but never preselected for save. */
+  fuzzy: boolean;
+  ignored: boolean;
+  selected: boolean;
+  toSave: boolean;
+  searchText: string;
+};
+
+type AccountingMappingBulkGridProps = {
+  module: AccountingMappingModule;
+  algaEntities: AccountingMappingEntityOption[];
+  externalEntities: AccountingMappingEntityOption[];
+  /** Existing (realm-scoped) mappings, already enriched with their external names. */
+  mappings: MappedRow[];
+  /**
+   * Persists the rows and resolves with one result per input. Row-level
+   * failures come back as `ok: false`; a rejection is treated as every row
+   * failing with that message.
+   */
+  onSave: (inputs: AccountingMappingBulkCreateInput[]) => Promise<AccountingMappingBulkCreateResult[]>;
+};
+
+export function AccountingMappingBulkGrid({
+  module,
+  algaEntities,
+  externalEntities,
+  mappings,
+  onSave
+}: AccountingMappingBulkGridProps) {
+  const { t } = useTranslation('msp/integrations');
+  const targetConfig = module.externalTarget;
+  const idPrefix = `${module.id}-bulk`;
+  // File-based modules (no provider catalog) type the target, exactly as it
+  // appears in the accounting system.
+  const manualEntry = isManualEntryModule(module);
+  // Named metadata inputs a module declares (e.g. the QuickBooks Desktop item
+  // name next to the account): edited per row and saved with the mapping.
+  const metadataFields = useMemo(() => module.metadata?.fields ?? [], [module.metadata]);
+
+  const [filter, setFilter] = useState<MappedFilter>('unmapped');
+  const [search, setSearch] = useState('');
+  const [edits, setEdits] = useState<Record<string, RowEdit>>({});
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [isSaving, setIsSaving] = useState(false);
+
+  const mappedByAlga = useMemo(
+    () => new Map(mappings.map((mapping) => [mapping.alga_entity_id, mapping])),
+    [mappings]
+  );
+
+  const unmappedAlga = useMemo(
+    () => algaEntities.filter((entity) => !mappedByAlga.has(entity.id)),
+    [algaEntities, mappedByAlga]
+  );
+
+  // Catalog options an existing mapping holds exclusively, i.e. targets the
+  // server's unique index would reject a second mapping to. Only those are
+  // withheld from suggestions; targets the server lets several mappings share
+  // (Xero revenue accounts) stay suggestable. Multi-catalog modules compare by
+  // option id (`item:200` and `account:200` are different targets); modules
+  // without a target config compare the bare external id (one-to-one).
+  const unavailableExternalIds = useMemo(() => {
+    const held = new Set<string>();
+    for (const mapping of mappings) {
+      if (!targetConfig) {
+        held.add(mapping.external_entity_id);
+      } else if (targetConfig.isExclusiveKind(targetConfig.kindForMapping(mapping))) {
+        held.add(targetConfig.optionIdForMapping(mapping));
+      }
+    }
+    return new Set(externalEntities.filter((entity) => held.has(entity.id)).map((entity) => entity.id));
+  }, [mappings, externalEntities, targetConfig]);
+
+  // Suggestions cover unmapped rows only and never offer a target an existing
+  // mapping holds; recomputed after a save reload so fresh mappings exclude theirs.
+  const suggestions = useMemo(
+    () =>
+      suggestMappingTargets(unmappedAlga, externalEntities, {
+        preferredKind: targetConfig?.defaultKindId,
+        unavailableExternalIds
+      }),
+    [unmappedAlga, externalEntities, targetConfig?.defaultKindId, unavailableExternalIds]
+  );
+
+  const externalById = useMemo(
+    () => new Map(externalEntities.map((entity) => [entity.id, entity])),
+    [externalEntities]
+  );
+
+  const rows = useMemo<GridRow[]>(
+    () =>
+      algaEntities.map((entity) => {
+        const edit = edits[entity.id] ?? {};
+        const mapped = mappedByAlga.get(entity.id);
+        const suggestion = mapped ? undefined : suggestions.get(entity.id);
+        const touchedTarget = edit.externalId !== undefined;
+
+        const kindId = targetConfig
+          ? edit.kindId ?? suggestion?.kind ?? targetConfig.defaultKindId
+          : '';
+        const externalId = mapped
+          ? ''
+          : touchedTarget
+            ? edit.externalId ?? ''
+            : suggestion?.externalId ?? '';
+        const suggested = !mapped && !touchedTarget && Boolean(suggestion);
+        const ignored = Boolean(edit.ignored);
+        const fuzzy = suggested && suggestion?.matchedBy === 'fuzzy';
+        // Exact (code/name) suggestions are preselected; near-misses need an
+        // explicit tick so a variant is never saved without review.
+        const selected = edit.selected ?? (suggested && !fuzzy);
+        const externalName = mapped?.externalName ?? externalById.get(externalId)?.name ?? (manualEntry ? externalId : '');
+        const storedMetadata = (mapped?.metadata ?? {}) as Record<string, unknown>;
+        const fieldValues: Record<string, string> = {};
+        for (const field of metadataFields) {
+          const value = mapped ? storedMetadata[field.key] : edit.fields?.[field.key];
+          fieldValues[field.key] = typeof value === 'string' ? value : '';
+        }
+        const missingField = mapped
+          ? null
+          : metadataFields.find((field) => field.required && !fieldValues[field.key].trim())?.label ?? null;
+
+        return {
+          id: entity.id,
+          name: entity.name,
+          mappedTo: mapped ? mapped.externalName ?? mapped.alga_entity_id : null,
+          kindId,
+          externalId,
+          fieldValues,
+          missingField,
+          suggested,
+          fuzzy,
+          ignored,
+          selected,
+          toSave: !mapped && selected && !ignored && Boolean(externalId.trim()) && missingField === null,
+          searchText: `${entity.name} ${externalName} ${Object.values(fieldValues).join(' ')}`.toLowerCase()
+        };
+      }),
+    [algaEntities, edits, mappedByAlga, suggestions, externalById, targetConfig, manualEntry, metadataFields]
+  );
+
+  const visibleRows = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return rows.filter((row) => {
+      if (filter === 'unmapped' && row.mappedTo !== null) return false;
+      if (filter === 'mapped' && row.mappedTo === null) return false;
+      return !needle || row.searchText.includes(needle);
+    });
+  }, [rows, filter, search]);
+
+  // Bulk header controls act on rows that are visible AND editable (unmapped).
+  const editableVisible = useMemo(() => visibleRows.filter((row) => row.mappedTo === null), [visibleRows]);
+  // Save acts on what the user can see: rows hidden by the search/filter keep
+  // their edits in state and save the next time they are visible.
+  const visibleToSave = useMemo(() => visibleRows.filter((row) => row.toSave), [visibleRows]);
+  const toSaveCount = visibleToSave.length;
+
+  const patchRow = useCallback((id: string, patch: RowEdit) => {
+    setEdits((current) => ({ ...current, [id]: { ...current[id], ...patch } }));
+  }, []);
+
+  const patchMany = useCallback((ids: string[], patch: RowEdit) => {
+    setEdits((current) => {
+      const next = { ...current };
+      for (const id of ids) next[id] = { ...next[id], ...patch };
+      return next;
+    });
+  }, []);
+
+  // Only rows with a target and not ignored can ever be "selected to save".
+  const selectableVisible = useMemo(
+    () => editableVisible.filter((row) => row.externalId.trim() && !row.ignored),
+    [editableVisible]
+  );
+  const allSelected = selectableVisible.length > 0 && selectableVisible.every((row) => row.selected);
+  const someSelected = selectableVisible.some((row) => row.selected);
+  const allIgnored = editableVisible.length > 0 && editableVisible.every((row) => row.ignored);
+  const someIgnored = editableVisible.some((row) => row.ignored);
+
+  const handleSaveAll = async () => {
+    const pending = visibleToSave;
+    if (pending.length === 0 || isSaving) return;
+
+    // The option id is sent exactly as picked. For multi-catalog modules it
+    // carries the kind (`item:200` vs `account:200`); nothing here strips or
+    // infers it, and the module's createMany rejects an unprefixed id per row.
+    const inputs: AccountingMappingBulkCreateInput[] = pending.map((row) => {
+      const metadata: Record<string, unknown> = {};
+      for (const field of metadataFields) {
+        const value = row.fieldValues[field.key]?.trim();
+        if (value) metadata[field.key] = value;
+      }
+      return {
+        algaEntityId: row.id,
+        externalEntityId: manualEntry ? row.externalId.trim() : row.externalId,
+        ...(Object.keys(metadata).length > 0 ? { metadata } : {})
+      };
+    });
+
+    setIsSaving(true);
+    setRowErrors({});
+    let results: AccountingMappingBulkCreateResult[];
+    try {
+      results = await onSave(inputs);
+    } catch (saveError) {
+      const message = getErrorMessage(saveError);
+      results = inputs.map((input) => ({ algaEntityId: input.algaEntityId, ok: false, error: message }));
+    } finally {
+      setIsSaving(false);
+    }
+
+    const failed: Record<string, string> = {};
+    const succeeded: string[] = [];
+    for (const input of inputs) {
+      const result = results.find((r) => r.algaEntityId === input.algaEntityId);
+      if (result?.ok) {
+        succeeded.push(input.algaEntityId);
+      } else {
+        failed[input.algaEntityId] =
+          result?.error ??
+          t('integrations.accounting.bulk.status.noResult', { defaultValue: 'No result was returned for this row.' });
+      }
+    }
+    setRowErrors(failed);
+    setSavedIds((current) => new Set([...current, ...succeeded]));
+    setEdits((current) => {
+      const next = { ...current };
+      for (const id of succeeded) delete next[id];
+      return next;
+    });
+  };
+
+  const kindOptions = useMemo(
+    () => (targetConfig ? targetConfig.kinds.map((kind) => ({ value: kind.id, label: kind.label })) : []),
+    [targetConfig]
+  );
+
+  const columns = useMemo<ColumnDefinition<GridRow>[]>(() => {
+    const cols: ColumnDefinition<GridRow>[] = [
+      {
+        title: t('integrations.accounting.bulk.columns.select', { defaultValue: 'Save' }),
+        dataIndex: 'selected',
+        sortable: false,
+        // Widths are px preferences (a % width is only a floor in DataTable). Columns with a
+        // minWidth are shrunk by the table, in proportion to their slack, before any column
+        // is hidden: preferred total 1224px, minimum total 824px, so every column stays
+        // visible down to an 824px container. See BULK_GRID_COLUMN_SIZES.
+        ...BULK_GRID_COLUMN_SIZES.selected,
+        render: (_value, row) => (
+          <Checkbox
+            id={`${idPrefix}-select-${row.id}`}
+            aria-label={t('integrations.accounting.bulk.rowSelectAria', {
+              defaultValue: 'Include {{name}} in save',
+              name: row.name
+            })}
+            checked={row.selected && !row.ignored}
+            disabled={row.mappedTo !== null || row.ignored || isSaving}
+            onChange={(event) => patchRow(row.id, { selected: event.target.checked })}
+          />
+        )
+      },
+      {
+        title: module.labels.algaColumn,
+        dataIndex: 'name',
+        sortable: false,
+        ...BULK_GRID_COLUMN_SIZES.name,
+        render: (_value, row) => <span>{row.name}</span>
+      }
+    ];
+
+    if (targetConfig) {
+      cols.push({
+        title: targetConfig.label,
+        dataIndex: 'kindId',
+        sortable: false,
+        ...BULK_GRID_COLUMN_SIZES.kindId,
+        render: (_value, row) =>
+          row.mappedTo !== null ? null : (
+            <CustomSelect
+              id={`${idPrefix}-kind-${row.id}`}
+              options={kindOptions}
+              value={row.kindId}
+              disabled={row.ignored || isSaving}
+              onValueChange={(value: string) =>
+                // A kind names a different catalog; a pick under the old kind
+                // is meaningless under the new one (same rule as the dialog).
+                patchRow(row.id, { kindId: value || targetConfig.defaultKindId, externalId: '', selected: false })
+              }
+              className="w-full min-w-0"
+            />
+          )
+      });
+    }
+
+    cols.push(
+      {
+        title: module.labels.externalColumn,
+        dataIndex: 'externalId',
+        sortable: false,
+        ...BULK_GRID_COLUMN_SIZES.externalId,
+        render: (_value, row) => {
+          if (row.mappedTo !== null) return <span>{row.mappedTo}</span>;
+          if (manualEntry) {
+            return (
+              // The cell clips its content to truncate text, and the field fills
+              // it edge to edge, so the focus ring is drawn outside the clip and
+              // sliced off. The 2px inset is exactly the ring's width.
+              <div className="p-0.5">
+                <Input
+                  id={`${idPrefix}-external-${row.id}`}
+                  value={row.externalId}
+                  disabled={row.ignored || isSaving}
+                  onChange={(event) =>
+                    patchRow(row.id, { externalId: event.target.value, selected: Boolean(event.target.value.trim()) })
+                  }
+                  placeholder={t('integrations.accounting.dialog.enterPlaceholder', {
+                    defaultValue: 'Enter {{field}}...',
+                    field: module.labels.dialog.externalField
+                  })}
+                  aria-label={`${module.labels.dialog.externalField}: ${row.name}`}
+                  // Ignored rows read as disabled here the same way the picker
+                  // rows do.
+                  className="w-full min-w-0 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+            );
+          }
+          const options = externalEntities
+            .filter((entity) => !targetConfig || !entity.kind || entity.kind === row.kindId)
+            .map((entity) => ({ value: entity.id, label: entity.name }));
+          return (
+            <div className="flex flex-col gap-1">
+              <SearchableSelect
+                id={`${idPrefix}-external-${row.id}`}
+                options={options}
+                value={row.externalId}
+                disabled={row.ignored || isSaving}
+                onChange={(value: string) =>
+                  patchRow(row.id, { externalId: value || '', selected: Boolean(value) })
+                }
+                placeholder={t('integrations.accounting.dialog.selectPlaceholder', {
+                  defaultValue: 'Select {{field}}...',
+                  field: module.labels.dialog.externalField
+                })}
+                className="w-full min-w-0"
+                dropdownMode="overlay"
+              />
+              {row.suggested ? (
+                <Badge
+                  className="self-start"
+                  variant={row.fuzzy ? 'warning' : 'secondary'}
+                  data-testid={`${idPrefix}-${row.fuzzy ? 'possible' : 'suggested'}-${row.id}`}
+                >
+                  {row.fuzzy
+                    ? t('integrations.accounting.bulk.possibleMatch', { defaultValue: 'Possible match' })
+                    : t('integrations.accounting.bulk.suggested', { defaultValue: 'Suggested' })}
+                </Badge>
+              ) : null}
+            </div>
+          );
+        }
+      },
+      ...metadataFields.map((field): ColumnDefinition<GridRow> => ({
+        title: field.columnLabel ?? field.label,
+        dataIndex: `field:${field.key}`,
+        id: `field-${field.key}`,
+        sortable: false,
+        ...BULK_GRID_COLUMN_SIZES.metadataField,
+        render: (_value, row) => {
+          if (row.mappedTo !== null) {
+            return <span>{row.fieldValues[field.key] || '—'}</span>;
+          }
+          return (
+            <Input
+              id={`${idPrefix}-field-${field.key}-${row.id}`}
+              value={row.fieldValues[field.key] ?? ''}
+              disabled={row.ignored || isSaving}
+              onChange={(event) =>
+                setEdits((current) => ({
+                  ...current,
+                  [row.id]: {
+                    ...current[row.id],
+                    fields: { ...current[row.id]?.fields, [field.key]: event.target.value }
+                  }
+                }))
+              }
+              placeholder={field.placeholder ?? t('integrations.accounting.dialog.enterPlaceholder', {
+                defaultValue: 'Enter {{field}}...',
+                field: field.label
+              })}
+              aria-label={`${field.label}: ${row.name}`}
+              className="w-full min-w-0"
+            />
+          );
+        }
+      })),
+      {
+        title: t('integrations.accounting.bulk.columns.ignore', { defaultValue: 'Ignore' }),
+        dataIndex: 'ignored',
+        sortable: false,
+        ...BULK_GRID_COLUMN_SIZES.ignored,
+        render: (_value, row) => (
+          <Checkbox
+            id={`${idPrefix}-ignore-${row.id}`}
+            aria-label={t('integrations.accounting.bulk.rowIgnoreAria', {
+              defaultValue: 'Ignore {{name}}',
+              name: row.name
+            })}
+            checked={row.ignored}
+            disabled={row.mappedTo !== null || isSaving}
+            onChange={(event) => patchRow(row.id, { ignored: event.target.checked })}
+          />
+        )
+      },
+      {
+        title: t('integrations.accounting.bulk.columns.status', { defaultValue: 'Status' }),
+        dataIndex: 'id',
+        sortable: false,
+        ...BULK_GRID_COLUMN_SIZES.id,
+        render: (_value, row) => {
+          const error = rowErrors[row.id];
+          let content: React.ReactNode;
+          if (error) {
+            content = (
+              // DataTable cells force nowrap and reset .break-words, so wrap via
+              // an arbitrary overflow-wrap property and !whitespace-normal.
+              <span
+                className="block text-xs text-destructive !whitespace-normal [overflow-wrap:anywhere]"
+                title={error}
+                data-testid={`${idPrefix}-error-${row.id}`}
+              >
+                {error}
+              </span>
+            );
+          } else if (row.mappedTo !== null) {
+            content = savedIds.has(row.id)
+              ? t('integrations.accounting.bulk.status.saved', { defaultValue: 'Saved' })
+              : t('integrations.accounting.bulk.status.mapped', { defaultValue: 'Mapped' });
+          } else if (row.ignored) {
+            content = t('integrations.accounting.bulk.status.ignored', { defaultValue: 'Ignored' });
+          } else if (row.toSave) {
+            content = t('integrations.accounting.bulk.status.pending', { defaultValue: 'Pending' });
+          } else if (row.selected && row.externalId.trim() && row.missingField) {
+            content = (
+              <Badge variant="warning" data-testid={`${idPrefix}-missing-field-${row.id}`}>
+                {t('integrations.accounting.bulk.status.missingField', {
+                  defaultValue: 'Needs {{field}}',
+                  field: row.missingField
+                })}
+              </Badge>
+            );
+          } else {
+            content = '—';
+          }
+          return <span data-testid={`${idPrefix}-status-${row.id}`}>{content}</span>;
+        }
+      }
+    );
+    return cols;
+  }, [
+    t,
+    idPrefix,
+    module.labels,
+    targetConfig,
+    kindOptions,
+    externalEntities,
+    rowErrors,
+    savedIds,
+    isSaving,
+    patchRow,
+    manualEntry,
+    metadataFields
+  ]);
+
+  const filterOptions = useMemo(
+    () => [
+      { value: 'unmapped', label: t('integrations.accounting.bulk.filter.unmapped', { defaultValue: 'Unmapped' }) },
+      { value: 'mapped', label: t('integrations.accounting.bulk.filter.mapped', { defaultValue: 'Mapped' }) },
+      { value: 'all', label: t('integrations.accounting.bulk.filter.all', { defaultValue: 'All' }) }
+    ],
+    [t]
+  );
+
+  return (
+    <div className="space-y-3" data-testid={`${idPrefix}-grid`}>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="w-64">
+          <Input
+            id={`${idPrefix}-search`}
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={t('integrations.accounting.bulk.searchPlaceholder', {
+              defaultValue: 'Search services and targets...'
+            })}
+          />
+        </div>
+        <div className="w-40">
+          <CustomSelect
+            id={`${idPrefix}-filter`}
+            options={filterOptions}
+            value={filter}
+            onValueChange={(value: string) => setFilter((value as MappedFilter) || 'unmapped')}
+          />
+        </div>
+        <Checkbox
+          id={`${idPrefix}-select-all`}
+          label={t('integrations.accounting.bulk.selectAll', { defaultValue: 'Select all' })}
+          checked={allSelected}
+          indeterminate={!allSelected && someSelected}
+          disabled={selectableVisible.length === 0 || isSaving}
+          onChange={(event) =>
+            patchMany(
+              selectableVisible.map((row) => row.id),
+              { selected: event.target.checked }
+            )
+          }
+        />
+        <Checkbox
+          id={`${idPrefix}-ignore-all`}
+          label={t('integrations.accounting.bulk.ignoreAll', { defaultValue: 'Ignore all' })}
+          checked={allIgnored}
+          indeterminate={!allIgnored && someIgnored}
+          disabled={editableVisible.length === 0 || isSaving}
+          onChange={(event) =>
+            patchMany(
+              editableVisible.map((row) => row.id),
+              { ignored: event.target.checked }
+            )
+          }
+        />
+        <div className="ml-auto flex items-center gap-3">
+          <span className="text-sm text-muted-foreground" data-testid={`${idPrefix}-count`}>
+            {t('integrations.accounting.bulk.toSave', {
+              defaultValue: '{{total}} to save',
+              total: toSaveCount
+            })}
+          </span>
+          <Button
+            id={`${idPrefix}-save-all`}
+            disabled={toSaveCount === 0 || isSaving}
+            onClick={() => void handleSaveAll()}
+          >
+            {isSaving
+              ? t('integrations.accounting.dialog.saving', { defaultValue: 'Saving…' })
+              : t('integrations.accounting.bulk.saveAll', { defaultValue: 'Save all' })}
+          </Button>
+        </div>
+      </div>
+
+      {manualEntry ? (
+        <p className="text-xs text-muted-foreground" id={`${idPrefix}-manual-entry-help`}>
+          {t('integrations.accounting.dialog.manualEntryHelp', {
+            defaultValue: 'Enter the identifier exactly as it appears in your accounting system.'
+          })}
+        </p>
+      ) : null}
+
+      {visibleRows.length === 0 ? (
+        <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+          {t('integrations.accounting.bulk.noRows', { defaultValue: 'No rows match the current filter.' })}
+        </div>
+      ) : (
+        <DataTable id={`${idPrefix}-table`} data={visibleRows} columns={columns} pagination pageSize={50} />
+      )}
+    </div>
+  );
+}

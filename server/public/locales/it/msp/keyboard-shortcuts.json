@@ -283,6 +283,38 @@
       "moveRight": {
         "label": "Sposta a destra",
         "description": "Sposta a destra l’elemento selezionato nell’editor."
+      },
+      "moveOut": {
+        "label": "Sposta fuori dal contenitore",
+        "description": "Sposta il blocco selezionato fuori dal suo contenitore."
+      },
+      "moveInto": {
+        "label": "Sposta nel contenitore",
+        "description": "Sposta il blocco selezionato nel contenitore precedente."
+      },
+      "copy": {
+        "label": "Copia",
+        "description": "Copia il blocco selezionato."
+      },
+      "cut": {
+        "label": "Taglia",
+        "description": "Taglia il blocco selezionato."
+      },
+      "paste": {
+        "label": "Incolla",
+        "description": "Incolla il blocco copiato."
+      },
+      "duplicate": {
+        "label": "Duplica",
+        "description": "Duplica il blocco selezionato."
+      },
+      "copyStyle": {
+        "label": "Copia stile",
+        "description": "Copia colori, bordi, spaziature e stile del testo del blocco selezionato."
+      },
+      "pasteStyle": {
+        "label": "Incolla stile",
+        "description": "Applica lo stile copiato al blocco selezionato."
       }
     },
     "scroll": {

@@ -24,7 +24,8 @@ const mocks = vi.hoisted(() => ({
   resolveInboundTicketDefaults: vi.fn(),
   resolveEffectiveInboundTicketDefaults: vi.fn(),
   findContactByEmail: vi.fn(),
-  findClientIdByInboundEmailDomain: vi.fn(),
+  findInboundEmailDomainMapping: vi.fn(),
+  createContactForInboundSender: vi.fn(),
   findValidClientPrimaryContactId: vi.fn(),
   findEmailProviderMailboxAddress: vi.fn(),
   upsertTicketWatchListRecipients: vi.fn(),
@@ -59,6 +60,12 @@ vi.mock('@alga-psa/db', () => ({
 // so this round-trip test doesn't reach the real event bus.
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn(async () => {}),
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/shared/workflow/actions/emailWorkflowActions', () => ({
@@ -69,8 +76,10 @@ vi.mock('@alga-psa/shared/workflow/actions/emailWorkflowActions', () => ({
   resolveEffectiveInboundTicketDefaults: (...args: unknown[]) =>
     mocks.resolveEffectiveInboundTicketDefaults(...args),
   findContactByEmail: (...args: unknown[]) => mocks.findContactByEmail(...args),
-  findClientIdByInboundEmailDomain: (...args: unknown[]) =>
-    mocks.findClientIdByInboundEmailDomain(...args),
+  findInboundEmailDomainMapping: (...args: unknown[]) =>
+    mocks.findInboundEmailDomainMapping(...args),
+  createContactForInboundSender: (...args: unknown[]) =>
+    mocks.createContactForInboundSender(...args),
   findValidClientPrimaryContactId: (...args: unknown[]) =>
     mocks.findValidClientPrimaryContactId(...args),
   findEmailProviderMailboxAddress: (...args: unknown[]) =>
@@ -278,7 +287,7 @@ describe('email thread outbound/inbound round trip', () => {
       source: 'provider_default',
     });
     mocks.findContactByEmail.mockResolvedValue(null);
-    mocks.findClientIdByInboundEmailDomain.mockResolvedValue(null);
+    mocks.findInboundEmailDomainMapping.mockResolvedValue(null);
     mocks.findValidClientPrimaryContactId.mockResolvedValue(null);
     mocks.findEmailProviderMailboxAddress.mockResolvedValue('support@example.com');
     mocks.upsertTicketWatchListRecipients.mockResolvedValue({ updated: true, watchList: [] });

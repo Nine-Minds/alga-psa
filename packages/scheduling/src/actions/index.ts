@@ -3,6 +3,8 @@
  */
 
 export * from './timeEntryActions';
+export * from './stopwatchActions';
+export * from './workTrailActions';
 export * from './timeEntryChangeRequestActions';
 export * from './timeEntrySchemas';
 export * from './timePeriodsActions';
@@ -26,6 +28,7 @@ export * from './onlineMeetingArtifactActions';
 export * from './availabilitySettingsActions';
 export * from './resourceCapacityActions';
 export * from './scheduleActions';
+export * from './calendarSharingActions';
 export * from './scheduleActivityActions';
 export * from './serviceCatalogActions';
 export * from './workItemActions';

@@ -173,6 +173,11 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(async () => {}),
   publishWorkflowEvent: vi.fn(async () => {}),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 const HOOK_TIMEOUT = 180_000;
@@ -391,7 +396,9 @@ async function buildGoldenSnapshot(): Promise<Record<string, unknown>> {
 
   const chargeLines = sortBy(charges, (row) => String(row.description)).map((row) => ({
     description: String(row.description),
-    quantity: String(row.quantity),
+    // Serialised at the numeric(10,2) scale the baseline was captured with;
+    // the column later widened to numeric(14,6) without changing any value.
+    quantity: Number(row.quantity).toFixed(2),
     unit_price: toMoney(row.unit_price),
     total_price: toMoney(row.total_price),
     net_amount: toMoney(row.net_amount),

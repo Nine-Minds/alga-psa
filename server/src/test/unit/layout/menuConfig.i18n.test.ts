@@ -75,6 +75,9 @@ describe('menuConfig i18n metadata', () => {
       .flatMap((item) => item.subItems ?? []);
 
     expect(keyedSubItems.map((item) => item.translationKey)).toEqual([
+      'nav.ticketsAll',
+      'nav.ticketsRecurring',
+      'nav.ticketsTemplates',
       'nav.projectsAll',
       'nav.projectsTemplates',
       'nav.marketing.calendar',
@@ -169,6 +172,7 @@ describe('menuConfig i18n metadata', () => {
       'nav.billing.quoteBusinessTemplates',
       'nav.billing.quoteLayouts',
       'nav.billing.serviceTypes',
+      'nav.billing.serviceCategories',
       'nav.billing.serviceCatalog',
       'nav.billing.products',
       'nav.billing.taxRates',

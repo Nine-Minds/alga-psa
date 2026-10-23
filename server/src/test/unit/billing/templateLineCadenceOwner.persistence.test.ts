@@ -155,7 +155,8 @@ describe('template line cadence_owner persistence', () => {
         contract_id: 'contract-live-1',
         contract_line_id: expect.any(String),
         cadence_owner: 'contract',
-        billing_timing: 'advance',
+        // The template is a legacy Hourly line stored as advance; the clone bills in arrears.
+        billing_timing: 'arrears',
       }),
     });
   });

@@ -100,6 +100,7 @@ export default async function SalesOrdersPage({ searchParams }: SalesOrdersPageP
       service_id: s.service_id,
       service_name: s.service_name,
       sku: s.sku ?? null,
+      product_category: s.product_category ?? null,
       default_rate: s.default_rate ?? null,
       is_kit: kitByServiceId.has(s.service_id),
       kit_pricing_mode: kitByServiceId.get(s.service_id)?.kit_pricing_mode ?? null,

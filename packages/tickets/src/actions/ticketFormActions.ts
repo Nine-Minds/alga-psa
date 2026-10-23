@@ -88,67 +88,55 @@ export const getTicketFormData = withAuth(async (_user, _ctx, prefilledClientId?
   }
 });
 
+/**
+ * Boards a client portal user may file tickets on, ordered with the tenant
+ * default first so the picker can preselect it. Hidden and group-excluded
+ * boards are already subtracted by the visibility context.
+ */
+async function getClientPortalBoards(
+  trx: Knex.Transaction,
+  tenant: string,
+  userId: string
+): Promise<IBoard[]> {
+  const userRecord = await tenantDb(trx, tenant).table('users')
+    .where({ user_id: userId })
+    .first();
+
+  if (!userRecord?.contact_id) {
+    throw new Error('User not associated with a contact');
+  }
+
+  const visibility = await getClientContactVisibilityContext(trx, tenant, userRecord.contact_id);
+
+  if (visibility.visibleBoardIds !== null && visibility.visibleBoardIds.length === 0) {
+    return [];
+  }
+
+  return tenantDb(trx, tenant).table<IBoard>('boards')
+    .where('is_inactive', false)
+    .modify((query) => {
+      if (visibility.visibleBoardIds !== null) {
+        query.whereIn('board_id', visibility.visibleBoardIds);
+      }
+    })
+    .orderBy([{ column: 'is_default', order: 'desc' }, 'display_order', 'board_name']);
+}
+
 export const getClientTicketFormData = withAuth(async (_user, { tenant }): Promise<Partial<TicketFormData>> => {
   try {
     const { knex: db } = await createTenantKnex();
 
-    const boards = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const tenantScopedTable = <Row extends object = Record<string, any>>(table: string) =>
-        tenantDb(trx, tenant).table<Row>(table);
+    const boards = await withTransaction(db, (trx: Knex.Transaction) =>
+      getClientPortalBoards(trx, tenant, _user.user_id)
+    );
 
-      const userRecord = await tenantScopedTable('users')
-        .where({ user_id: _user.user_id })
-        .first();
-
-      if (!userRecord?.contact_id) {
-        throw new Error('User not associated with a contact');
-      }
-
-      const visibility = await getClientContactVisibilityContext(
-        trx,
-        tenant,
-        userRecord.contact_id
-      );
-
-      const allowedBoards = visibility.visibleBoardIds === null
-        ? await tenantScopedTable<IBoard>('boards')
-          .andWhere('is_inactive', false)
-        : visibility.visibleBoardIds.length === 0
-          ? []
-          : await tenantScopedTable<IBoard>('boards')
-            .andWhere('is_inactive', false)
-            .whereIn('board_id', visibility.visibleBoardIds);
-
-      return allowedBoards;
-    });
-
-    if (boards.length === 0) {
-      return {
-        priorities: [],
-        users: [],
-        boards,
-        statuses: [],
-        clients: [],
-      };
-    }
-
-    const defaultBoard = boards[0];
-    const defaultBoardId = defaultBoard.board_id;
-    if (!defaultBoardId) {
-      return {
-        priorities: [],
-        users: [],
-        boards,
-        statuses: [],
-        clients: [],
-      };
-    }
-
-    // Get priorities filtered by the default board's priority type
-    const priorities = await getPrioritiesByBoardType(defaultBoardId, 'ticket').catch((error: unknown) => {
-      console.error('Error fetching priorities for default board:', error);
-      return [];
-    });
+    const defaultBoardId = boards[0]?.board_id;
+    const priorities = defaultBoardId
+      ? await getPrioritiesByBoardType(defaultBoardId, 'ticket').catch((error: unknown) => {
+          console.error('Error fetching priorities for default board:', error);
+          return [];
+        })
+      : [];
 
     return {
       priorities,
@@ -169,3 +157,17 @@ export const getClientTicketFormData = withAuth(async (_user, { tenant }): Promi
     };
   }
 });
+
+/** Priorities for a board the portal user picked; refuses boards outside their visible set. */
+export const getClientTicketPrioritiesForBoard = withAuth(
+  async (_user, { tenant }, boardId: string): Promise<IPriority[]> => {
+    const { knex: db } = await createTenantKnex();
+    const boards = await withTransaction(db, (trx: Knex.Transaction) =>
+      getClientPortalBoards(trx, tenant, _user.user_id)
+    );
+    if (!boards.some((board) => board.board_id === boardId)) {
+      return [];
+    }
+    return getPrioritiesByBoardType(boardId, 'ticket');
+  }
+);

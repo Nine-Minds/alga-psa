@@ -276,7 +276,10 @@
       "heading": "Usługi z opłatą stałą",
       "itemLabel": "Pozycja {{index}}",
       "selectItemPlaceholder": "Wybierz element",
-      "servicesAndProducts": "Usługi i produkty"
+      "servicesAndProducts": "Usługi i produkty",
+      "recurringQuantity": "Ilość cykliczna",
+      "unitRateOptional": "Opcjonalnie. Pozostaw stawkę jednostkową pustą, aby przy tworzeniu linii z tego presetu użyć ceny katalogowej usługi w walucie klienta.",
+      "alertUnits": "Aby zamiast tego rozliczać usługę za stanowisko lub jednostkę, wybierz dla niej cennik według ilości cyklicznej: jest rozliczana jako ilość × stawka jednostkowa w każdym okresie i nie wchodzi w skład stawki bazowej."
     },
     "hourly": {
       "addHourlyService": "Dodaj usługę godzinową",
@@ -333,7 +336,8 @@
       "serviceSelectRequired": "Usługa {{index}}: Proszę wybrać usługę",
       "unitOfMeasureRequired": "Usługa {{index}}: Wymagana jest jednostka miary",
       "unitRateRequired": "Usługa {{index}}: Wymagana jest stawka jednostkowa",
-      "usageServiceRequired": "Wymagana jest co najmniej jedna usługa oparta na użytkowaniu"
+      "usageServiceRequired": "Wymagana jest co najmniej jedna usługa oparta na użytkowaniu",
+      "recurringQuantityInvalid": "Usługa {{index}}: ilość cykliczna musi być liczbą całkowitą równą zero lub większą"
     }
   },
   "forms": {
@@ -455,7 +459,8 @@
         "defaultRatePerUnit": "Stawka za jednostkę (stosowana, jeśli ceny warstwowe są wyłączone).",
         "minimumUsage": "Minimalna liczba jednostek podlegających rozliczeniu w okresie.",
         "unitOfMeasure": "np. GB, Użytkownik, Urządzenie."
-      }
+      },
+      "catalogUnitPrecedence": "Jednostka z katalogu ma pierwszeństwo przed jednostką z tej konfiguracji użycia."
     }
   },
   "list": {
@@ -694,7 +699,10 @@
       "allServicesAssociated": "Wszystkie dostępne usługi są już powiązane z tą linią kontraktu.",
       "badges": {
         "billingMismatch": "Niezgodność rozliczeń",
-        "defaultConfigType": "Domyślny"
+        "defaultConfigType": "Domyślny",
+        "standard": "Standardowa",
+        "custom": "Niestandardowa",
+        "unreviewed": "Niezweryfikowana"
       },
       "billingMethod": {
         "fixed": "Stała cena",
@@ -724,7 +732,8 @@
         "enterRatePlaceholder": "Wprowadź stawkę",
         "metadata": "Typ usługi: {{type}} | Metoda: {{method}}",
         "noCurrencyPrice": "Brak ceny {{currency}}",
-        "rateDetail": "Stawka: {{symbol}}{{amount}}"
+        "rateDetail": "Stawka: {{symbol}}{{amount}}",
+        "catalogDefaultRateDetail": "Domyślna stawka katalogowa: {{symbol}}{{amount}}"
       },
       "unknownService": "Nieznana usługa"
     },
@@ -812,7 +821,8 @@
       "conflict": "Ta zmiana linii umowy jest sprzeczna z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
       "notAllowed": "Jedna z wartości linii umowy jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
       "missingField": "Brakuje wymaganego pola linii umowy.",
-      "missingFieldNamed": "Brakuje wymaganego pola linii umowy: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola linii umowy: {{field}}.",
+      "advanceTimingNotAllowed": "Rozliczanie z góry jest dostępne tylko dla stałych pozycji umowy. Pozycje godzinowe i rozliczane według zużycia są zawsze rozliczane z dołu, po wykonaniu pracy."
     },
     "templateLine": {
       "unavailable": "Wybrany wiersz szablonu nie jest już dostępny. Odśwież stronę i spróbuj ponownie."

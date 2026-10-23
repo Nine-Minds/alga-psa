@@ -696,8 +696,23 @@ describe('Time Entries API E2E Tests', () => {
         work_item_type: 'ticket',
         service_id: service.service_id,
         start_time: expect.any(String),
-        status: 'active'
+        end_time: null,
+        status: 'active',
+        elapsed_minutes: expect.any(Number)
       });
+      // Legacy adapter over the server-side stopwatch: the session id is the stopwatch session id.
+      const active = await env.apiClient.get(`${API_BASE}/active-session`);
+      assertSuccess(active);
+      expect(active.data.data.session_id).toBe(response.data.data.session_id);
+      expect(active.data.data.start_time).toBe(response.data.data.start_time);
+
+      // A second start conflicts with the open session.
+      const second = await env.apiClient.post(`${API_BASE}/start-tracking`, {
+        work_item_id: ticket.ticket_id,
+        work_item_type: 'ticket',
+        service_id: service.service_id
+      });
+      assertError(second, 409);
     });
 
     it('should stop a tracking session', async () => {
@@ -730,8 +745,13 @@ describe('Time Entries API E2E Tests', () => {
         work_item_type: 'ticket',
         service_id: service.service_id,
         notes: 'Completed work',
-        billable_duration: expect.any(Number)
+        billable_duration: expect.any(Number),
+        time_sheet_id: expect.any(String)
       });
+      // Stopping logs the stopwatch session: nothing is left running.
+      const active = await env.apiClient.get(`${API_BASE}/active-session`);
+      assertSuccess(active);
+      expect(active.data.data).toBeNull();
     });
   });
 

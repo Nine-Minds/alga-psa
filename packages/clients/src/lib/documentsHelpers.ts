@@ -8,12 +8,17 @@
 import {
   getClientLogoUrl,
   getClientLogoUrlsBatch,
+  getEntityImageUrl,
   getContactAvatarUrl,
   getContactAvatarUrlsBatch,
 } from '@alga-psa/formatting/avatarUtils';
 
 export async function getClientLogoUrlAsync(clientId: string, tenant: string): Promise<string | null> {
   return getClientLogoUrl(clientId, tenant);
+}
+
+export async function getClientWideLogoUrlAsync(clientId: string, tenant: string): Promise<string | null> {
+  return getEntityImageUrl('client', clientId, tenant, 'wide');
 }
 
 export async function getClientLogoUrlsBatchAsync(clientIds: string[], tenant: string): Promise<Map<string, string | null>> {

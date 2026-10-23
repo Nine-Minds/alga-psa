@@ -363,14 +363,14 @@ test('E2E: TICKET_CREATED triggers workflow that adds a ticket comment', async (
       .getByRole('option', { name: /ticket_id/i })
       .getByRole('button', { name: /^Fill$/i })
       .click();
-    await selectCustomSelectOption(page, `mapping-${stepId}-ticket_id-reference-scope`, /^Payload$/i);
-    await selectCustomSelectOption(page, `mapping-${stepId}-ticket_id-reference-field`, /^ticketId$/i);
+    // One source control: picking a trigger field makes the input read it.
+    await selectCustomSelectOption(page, `mapping-${stepId}-ticket_id-value-source`, /ticketId/i);
 
     await page
       .getByRole('option', { name: /body/i })
       .getByRole('button', { name: /^Fill$/i })
       .click();
-    await selectCustomSelectOption(page, `mapping-${stepId}-body-source-mode`, /^Fixed value$/i);
+    // Free-text inputs start in the Text editor.
     await page.locator(`#mapping-${stepId}-body-literal-str`).fill(commentBody);
 
     await workflowPage.saveDraft();
@@ -383,7 +383,7 @@ test('E2E: TICKET_CREATED triggers workflow that adds a ticket comment', async (
     expect(workflowIdFromUrl).toBeTruthy();
     const workflowId = workflowIdFromUrl as string;
 
-    await workflowPage.publishButton.click();
+    await workflowPage.publish();
     // No global toast surface in EE app layout; wait on button state + DB to confirm publish.
     await expect(workflowPage.publishButton).toHaveText(/Publishing\.\.\./, { timeout: 30_000 });
     await expect(workflowPage.publishButton).toHaveText(/Publish/, { timeout: 90_000 });

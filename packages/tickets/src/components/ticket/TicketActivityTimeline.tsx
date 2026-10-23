@@ -8,6 +8,9 @@ import {
   CheckCircle,
   ChevronDown,
   ChevronRight,
+  Copy,
+  LayoutTemplate,
+  Link2,
   Lock,
   Mail,
   MessageSquare,
@@ -123,10 +126,16 @@ function eventIcon(eventType: string): React.ReactElement {
   switch (eventType) {
     case 'TICKET_CREATED':
       return <PlayCircle className="h-4 w-4" />;
+    case 'TICKET_DUPLICATED_FROM':
+    case 'TICKET_DUPLICATED_TO':
+      return <Copy className="h-4 w-4" />;
+    case 'TICKET_CREATED_FROM_TEMPLATE':
+      return <LayoutTemplate className="h-4 w-4" />;
     case 'TICKET_CLOSED':
       return <CheckCircle className="h-4 w-4" />;
     case 'TICKET_REOPENED':
     case 'TICKET_BUNDLE_REOPENED':
+    case 'TICKET_BUNDLE_STATUS_PROPAGATED':
       return <RefreshCcw className="h-4 w-4" />;
     case 'TICKET_STATUS_CHANGED':
       return <ArrowRightCircle className="h-4 w-4" />;
@@ -151,9 +160,23 @@ function eventIcon(eventType: string): React.ReactElement {
       return <Paperclip className="h-4 w-4" />;
     case 'TICKET_INBOUND_EMAIL_RECEIVED':
       return <Mail className="h-4 w-4" />;
+    case 'TICKET_EXTERNAL_LINK_ADDED':
+    case 'TICKET_EXTERNAL_LINK_UPDATED':
+    case 'TICKET_EXTERNAL_LINK_REMOVED':
+      return <Link2 className="h-4 w-4" />;
     default:
       return <Activity className="h-4 w-4" />;
   }
+}
+
+function externalLinkReference(activity: TicketActivityRow): string {
+  const details = (activity.details ?? {}) as {
+    system?: string;
+    system_label?: string;
+    external_id?: string;
+  };
+  const system = details.system_label ?? details.system ?? 'an external system';
+  return details.external_id ? `${system} #${details.external_id}` : system;
 }
 
 function notificationSuppressionAnnotation(activity: TicketActivityRow): string | undefined {
@@ -175,13 +198,38 @@ function notificationSuppressionAnnotation(activity: TicketActivityRow): string 
   return undefined;
 }
 
-function describeActivity(activity: TicketActivityRow): { title: string; annotation?: string; subtitle?: string } {
+function describeActivity(activity: TicketActivityRow, visibilityLabel: (visible: boolean) => string): { title: string; annotation?: string; subtitle?: string } {
   const actor = actorLabel(activity);
   const annotation = notificationSuppressionAnnotation(activity);
 
   switch (activity.event_type) {
     case 'TICKET_CREATED':
       return { title: `${actor} created the ticket` };
+    case 'TICKET_CREATED_FROM_TEMPLATE': {
+      // The name is a snapshot taken at creation, so it survives the template being renamed or deleted.
+      const details = (activity.details ?? {}) as { template_name?: string };
+      return {
+        title: details.template_name
+          ? `${actor} created this ticket from template "${details.template_name}"`
+          : `${actor} created this ticket from a template`,
+      };
+    }
+    case 'TICKET_DUPLICATED_FROM': {
+      const details = (activity.details ?? {}) as { source_ticket_number?: string };
+      return {
+        title: details.source_ticket_number
+          ? `${actor} created this ticket as a duplicate of #${details.source_ticket_number}`
+          : `${actor} created this ticket as a duplicate of another ticket`,
+      };
+    }
+    case 'TICKET_DUPLICATED_TO': {
+      const details = (activity.details ?? {}) as { duplicate_ticket_number?: string };
+      return {
+        title: details.duplicate_ticket_number
+          ? `${actor} duplicated this ticket as #${details.duplicate_ticket_number}`
+          : `${actor} duplicated this ticket`,
+      };
+    }
     case 'TICKET_CLOSED':
       return { title: `${actor} closed the ticket`, annotation };
     case 'TICKET_REOPENED':
@@ -197,6 +245,19 @@ function describeActivity(activity: TicketActivityRow): { title: string; annotat
         title: 'Bundle master reopened',
         subtitle: 'Triggered by a child-ticket reply',
       };
+    case 'TICKET_BUNDLE_STATUS_PROPAGATED': {
+      const details = (activity.details ?? {}) as {
+        action?: string;
+        propagated?: boolean;
+        child_ticket_ids?: string[];
+      };
+      if (details.propagated === false) {
+        return { title: `${actor} changed the bundle master status (children not updated)` };
+      }
+      const count = details.child_ticket_ids?.length ?? 0;
+      const action = details.action === 'reopen' ? 'reopened' : 'closed';
+      return { title: `${actor} ${action} the bundle master and ${count} child ticket(s)` };
+    }
     case 'TICKET_STATUS_CHANGED': {
       const c = activity.changes?.status_id;
       const detail = c ? changeLine('status_id', c) : 'Status changed';
@@ -274,15 +335,29 @@ function describeActivity(activity: TicketActivityRow): { title: string; annotat
         subtitle: fields.length > 0 ? fields.map(fieldLabel).join(', ') : undefined,
       };
     }
+    case 'TICKET_EXTERNAL_LINK_ADDED':
+      return { title: `${actor} linked ${externalLinkReference(activity)}` };
+    case 'TICKET_EXTERNAL_LINK_UPDATED':
+      return {
+        title: `${actor} updated the ${externalLinkReference(activity)} link`,
+        subtitle: activity.changes?.portal_visible
+          ? `${visibilityLabel(activity.changes.portal_visible.old === true)} → ${visibilityLabel(activity.changes.portal_visible.new === true)}`
+          : undefined,
+      };
+    case 'TICKET_EXTERNAL_LINK_REMOVED':
+      return { title: `${actor} unlinked ${externalLinkReference(activity)}` };
     default:
       return { title: `${actor} • ${activity.event_type}` };
   }
 }
 
-export function formatEntries(entries: TicketTimelineEntry[]): FormattedEntry[] {
+export function formatEntries(
+  entries: TicketTimelineEntry[],
+  visibilityLabel: (visible: boolean) => string = (visible: boolean) => visible ? 'Visible in client portal' : 'Internal only',
+): FormattedEntry[] {
   return entries.map((entry) => {
     if (entry.type === 'activity' && entry.activity) {
-      const desc = describeActivity(entry.activity);
+      const desc = describeActivity(entry.activity, visibilityLabel);
       return {
         key: `activity-${entry.sortId}`,
         occurredAt: entry.occurredAt,
@@ -328,11 +403,23 @@ export function formatEntries(entries: TicketTimelineEntry[]): FormattedEntry[] 
   });
 }
 
-function formatTimestamp(value: string, locale: string): string {
+type FormatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
+
+// A bare toLocaleString() lets the language pick BOTH the digit order and the
+// 12/24h clock; both belong to the country, so this runs through the central
+// formatter with the parts spelled out.
+function formatTimestamp(value: string, formatDate: FormatDate): string {
   try {
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return value;
-    return d.toLocaleString(locale);
+    return formatDate(d, {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+    });
   } catch {
     return value;
   }
@@ -360,7 +447,11 @@ const EVENT_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: 'TICKET_DOCUMENT_ATTACHED', label: 'Document attached' },
   { value: 'TICKET_DOCUMENT_REMOVED', label: 'Document removed' },
   { value: 'TICKET_INBOUND_EMAIL_RECEIVED', label: 'Inbound email' },
+  { value: 'TICKET_CREATED_FROM_TEMPLATE', label: 'Created from template' },
+  { value: 'TICKET_DUPLICATED_FROM', label: 'Duplicated from' },
+  { value: 'TICKET_DUPLICATED_TO', label: 'Duplicated to' },
   { value: 'TICKET_BUNDLE_REOPENED', label: 'Bundle reopened' },
+  { value: 'TICKET_BUNDLE_STATUS_PROPAGATED', label: 'Bundle status propagated' },
 ];
 
 const SOURCE_OPTIONS: { value: string; label: string }[] = [
@@ -410,7 +501,8 @@ function sourceBadge(source: string): { label: string; className: string } {
 
 export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActivityTimelineProps) {
   const { t: tCommon } = useTranslation('common');
-  const { locale } = useFormatters();
+  const { t: tTickets } = useTranslation('features/tickets');
+  const { formatDate } = useFormatters();
   const [entries, setEntries] = useState<TicketTimelineEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -449,7 +541,9 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
 
   // All hooks must run unconditionally on every render — keep useMemo/etc.
   // above the loading/error early returns to satisfy the rules of hooks.
-  const formatted = useMemo(() => formatEntries(entries ?? []), [entries]);
+  const formatted = useMemo(() => formatEntries(entries ?? [], (visible) => visible
+    ? tTickets('externalLinks.visibility.shared', 'Visible in client portal')
+    : tTickets('externalLinks.visibility.internal', 'Internal only')), [entries, tTickets]);
 
   const filtered = useMemo(() => {
     return formatted.filter((entry) => {
@@ -491,7 +585,7 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
             dateTime={typeof value === 'string' ? value : undefined}
             title={typeof value === 'string' ? value : undefined}
           >
-            {formatTimestamp(String(value), locale)}
+            {formatTimestamp(String(value), formatDate)}
           </time>
         ),
       },
@@ -579,7 +673,7 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
         },
       },
     ],
-    [expandedKey],
+    [expandedKey, formatDate],
   );
 
   const filterBar = (

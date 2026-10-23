@@ -1,12 +1,16 @@
 import { z } from 'zod';
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import type { ActionContext } from '../../registries/actionRegistry';
 
 export type TenantTxContext = {
   tenantId: string;
   actorUserId: string;
+  /** The workflow definition this run executes. */
+  workflowId: string;
+  /** Workflow ids that caused this run (from its trigger metadata), oldest first. */
+  lineage: string[];
   trx: Knex.Transaction;
 };
 
@@ -128,7 +132,19 @@ export async function setTenantContext(trx: Knex.Transaction, tenantId: string):
   await trx.raw(`select set_config('app.current_tenant', ?, true)`, [tenantId]);
 }
 
-export async function resolveRunActorUserId(trx: Knex.Transaction, tenantId: string, runId: string): Promise<string | null> {
+export type RunContext = {
+  actorUserId: string;
+  workflowId: string;
+  lineage: string[];
+};
+
+/**
+ * Resolves who a run acts as and where it sits in a workflow-triggered chain.
+ * The actor is the publisher (else the creator) of the run's workflow; the
+ * lineage is `trigger_metadata_json.workflowLineage`, stamped by the event-stream
+ * worker when an event published by another workflow launched this run.
+ */
+export async function resolveRunContext(trx: Knex.Transaction, tenantId: string, runId: string): Promise<RunContext | null> {
   const db = tenantDb(trx, tenantId);
   const query = db.table('workflow_runs as wr');
   db.tenantJoin(query, 'workflow_definition_versions as wdv', 'wr.workflow_id', 'wdv.workflow_id', {
@@ -143,16 +159,34 @@ export async function resolveRunActorUserId(trx: Knex.Transaction, tenantId: str
     .select(
       'wd.workflow_id as matched_workflow_id',
       'wdv.published_by as published_by',
-      'wd.created_by as created_by'
+      'wd.created_by as created_by',
+      'wr.trigger_metadata_json as trigger_metadata'
     )
     .where('wr.run_id', runId)
     .first() as {
       matched_workflow_id?: string | null;
       published_by?: string | null;
       created_by?: string | null;
+      trigger_metadata?: unknown;
     } | undefined;
   if (!row?.matched_workflow_id) return null;
-  return (row?.published_by as string | null) ?? (row?.created_by as string | null) ?? null;
+  const actorUserId = (row.published_by as string | null) ?? (row.created_by as string | null) ?? null;
+  if (!actorUserId) return null;
+
+  let metadata = row.trigger_metadata;
+  if (typeof metadata === 'string') {
+    try {
+      metadata = JSON.parse(metadata);
+    } catch {
+      metadata = null;
+    }
+  }
+  const rawLineage = (metadata as { workflowLineage?: unknown } | null | undefined)?.workflowLineage;
+  const lineage = Array.isArray(rawLineage)
+    ? rawLineage.filter((id): id is string => typeof id === 'string' && id.length > 0)
+    : [];
+
+  return { actorUserId, workflowId: row.matched_workflow_id, lineage };
 }
 
 export async function hasPermissionByUserId(
@@ -238,13 +272,17 @@ export async function withTenantTransaction<T>(
     throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'Database connection unavailable' });
   }
 
-  return await knex.transaction(async (trx) => {
+  // An owning withTransaction frame (not a raw knex.transaction) so that
+  // registerAfterCommit hooks registered by an action - such as the ticket
+  // events from createTicketWithSideEffects - flush after the commit instead of
+  // being dropped. ctx.knex is a root connection, never an outer transaction.
+  return await withTransaction(knex, async (trx) => {
     await setTenantContext(trx, tenantId);
-    const actorUserId = await resolveRunActorUserId(trx, tenantId, ctx.runId);
-    if (!actorUserId) {
+    const run = await resolveRunContext(trx, tenantId, ctx.runId);
+    if (!run) {
       throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'Workflow actor user not found' });
     }
-    return await fn({ tenantId, actorUserId, trx });
+    return await fn({ tenantId, actorUserId: run.actorUserId, workflowId: run.workflowId, lineage: run.lineage, trx });
   });
 }
 
@@ -329,8 +367,23 @@ export async function attachDocumentToTicket(
     if (typeof fileRecord.file_size === 'number' && fileRecord.file_size > MAX_ATTACHMENT_BYTES) {
       throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Attachment too large' });
     }
-    if (!isAllowedAttachmentMimeType(fileRecord.mime_type ?? null)) {
-      throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Attachment mime_type not allowed' });
+    // Unify with the same MIME/size policy manual upload uses so workflow
+    // attachments (including audio) accept exactly what a tenant may upload.
+    // Import the narrow subpath (not the barrel): StorageService delegates to
+    // this same function and the barrel drags in a validation module that the
+    // native workflow-worker runtime cannot resolve.
+    try {
+      const { validateFileUpload } = await import('@alga-psa/storage/config/storage');
+      await validateFileUpload(
+        fileRecord.mime_type ?? 'application/octet-stream',
+        Number(fileRecord.file_size ?? 0)
+      );
+    } catch (error) {
+      throwActionError(ctx, {
+        category: 'ValidationError',
+        code: 'VALIDATION_ERROR',
+        message: error instanceof Error ? error.message : 'Attachment mime_type not allowed'
+      });
     }
   } else if (input.source.url) {
     const url = new URL(input.source.url);
@@ -360,11 +413,19 @@ export async function attachDocumentToTicket(
     if (buffer.length > MAX_ATTACHMENT_BYTES) {
       throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Attachment too large' });
     }
-    if (!isAllowedAttachmentMimeType(contentType)) {
-      throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Attachment mime_type not allowed' });
+    // Same shared policy as manual upload (see the file_id branch above).
+    try {
+      const { validateFileUpload } = await import('@alga-psa/storage/config/storage');
+      await validateFileUpload(contentType ?? 'application/octet-stream', buffer.length);
+    } catch (error) {
+      throwActionError(ctx, {
+        category: 'ValidationError',
+        code: 'VALIDATION_ERROR',
+        message: error instanceof Error ? error.message : 'Attachment mime_type not allowed'
+      });
     }
 
-    const { StorageProviderFactory, generateStoragePath } = await import('@alga-psa/storage');
+    const { StorageProviderFactory, generateStoragePath } = await import('@alga-psa/storage/StorageProviderFactory');
     const provider = await StorageProviderFactory.createProvider();
     const filename = input.filename ?? new URL(input.source.url).pathname.split('/').filter(Boolean).pop() ?? 'attachment.bin';
     const storagePath = generateStoragePath(tx.tenantId, '', filename);

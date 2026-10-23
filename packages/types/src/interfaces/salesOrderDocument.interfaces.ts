@@ -31,6 +31,10 @@ export interface SalesOrderViewModelLineItem {
   fulfillment_type?: string | null;
   /** Convenience flag for templates: true when fulfillment_type === 'drop_ship'. */
   is_drop_ship: boolean;
+  /** Serial numbers still allocated to this line, ordered as fulfillment preselection. */
+  allocated_serials: string[];
+  /** Printable serial list; empty when the line has no allocated serialized units. */
+  allocated_serials_display: string;
 }
 
 /**

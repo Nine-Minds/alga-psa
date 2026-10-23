@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react';
 import type { IBoard } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { PortalBillingProfileAccess } from './PortalBillingProfileAccess';
+import { ContactBillingProfileAssociations } from './ContactBillingProfileAssociations';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Mail, Shield, User, Info, RefreshCw } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -17,6 +19,7 @@ import type { IContact } from '@alga-psa/types';
 import {
   updateContactPortalAdminStatus,
   getUserByContactId,
+  getContactReportCount,
   getClientPortalVisibilityBoardsByClient,
   getClientPortalVisibilityGroupById,
   getClientPortalVisibilityGroupsForContact,
@@ -79,6 +82,9 @@ const isReturnedActionError = (value: unknown): value is ActionMessageError | Ac
 const FULL_ACCESS_VALUE = '__full_access__';
 
 interface VisibilityGroup {
+  ticket_scope: 'client' | 'contact';
+  asset_scope: 'client' | 'contact';
+  project_scope: 'client' | 'contact';
   group_id: string;
   name: string;
   description: string | null;
@@ -134,6 +140,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
   const [invitationHistory, setInvitationHistory] = useState<InvitationHistoryItem[]>([]);
   const [resendingInvitationId, setResendingInvitationId] = useState<string | null>(null);
   const [isRefreshingInvitationHistory, setIsRefreshingInvitationHistory] = useState(false);
+  const [reportCount, setReportCount] = useState(0);
   const [visibilityGroups, setVisibilityGroups] = useState<VisibilityGroup[]>([]);
   const [visibilityBoards, setVisibilityBoards] = useState<IBoard[]>([]);
   const [selectedVisibilityGroupId, setSelectedVisibilityGroupId] = useState<string | null>(
@@ -141,6 +148,9 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
   );
   const [visibilityGroupName, setVisibilityGroupName] = useState('');
   const [visibilityGroupDescription, setVisibilityGroupDescription] = useState('');
+  const [ticketScope, setTicketScope] = useState<'client' | 'contact'>('client');
+  const [assetScope, setAssetScope] = useState<'client' | 'contact'>('client');
+  const [projectScope, setProjectScope] = useState<'client' | 'contact'>('client');
   const [visibilityGroupBoardIds, setVisibilityGroupBoardIds] = useState<string[]>([]);
   const [editingVisibilityGroupId, setEditingVisibilityGroupId] = useState<string | null>(null);
   const { toast } = useToast();
@@ -230,6 +240,9 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
     setVisibilityGroupName('');
     setVisibilityGroupDescription('');
     setVisibilityGroupBoardIds([]);
+    setTicketScope('client');
+    setAssetScope('client');
+    setProjectScope('client');
   };
 
   const handleVisibilityGroupSelect = async (selectedValue: string) => {
@@ -287,7 +300,10 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
         const result = await updateClientPortalVisibilityGroupForContact(contact.contact_name_id, editingVisibilityGroupId, {
           name: trimmedName,
           description: visibilityGroupDescription.trim() || null,
-          boardIds: visibilityGroupBoardIds
+          boardIds: visibilityGroupBoardIds,
+          ticketScope,
+          assetScope,
+          projectScope
         });
         if (isReturnedActionError(result)) {
           showReturnedActionError(result);
@@ -298,7 +314,10 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
         const result = await createClientPortalVisibilityGroupForContact(contact.contact_name_id, {
           name: trimmedName,
           description: visibilityGroupDescription.trim() || null,
-          boardIds: visibilityGroupBoardIds
+          boardIds: visibilityGroupBoardIds,
+          ticketScope,
+          assetScope,
+          projectScope
         });
         if (isReturnedActionError(result)) {
           showReturnedActionError(result);
@@ -337,6 +356,9 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       setVisibilityGroupName(group.name);
       setVisibilityGroupDescription(group.description || '');
       setVisibilityGroupBoardIds(group.board_ids || []);
+      setTicketScope(group.ticket_scope);
+      setAssetScope(group.asset_scope ?? 'client');
+      setProjectScope(group.project_scope ?? 'client');
     } catch (error) {
       console.error('Failed to load visibility group:', error);
       toast({
@@ -533,6 +555,32 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
     }
   };
 
+  const selectedGroup = visibilityGroups.find((group) => group.group_id === selectedVisibilityGroupId);
+  // The reports-to tree drives tickets, devices and projects alike.
+  const selectedGroupIsContactScoped =
+    selectedGroup?.ticket_scope === 'contact' ||
+    selectedGroup?.asset_scope === 'contact' ||
+    selectedGroup?.project_scope === 'contact';
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedGroupIsContactScoped || !contact.client_id) {
+      setReportCount(0);
+      return;
+    }
+    (async () => {
+      try {
+        const count = await getContactReportCount(contact.contact_name_id);
+        if (!cancelled) setReportCount(typeof count === 'number' ? count : 0);
+      } catch (err) {
+        if (!cancelled) setReportCount(0);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedGroupIsContactScoped, contact.client_id, contact.contact_name_id, contact.manager_contact_id]);
+
   const visibilityGroupSelectOptions = [
     { value: FULL_ACCESS_VALUE, label: 'Full access' },
     ...visibilityGroups.map((group) => ({
@@ -721,7 +769,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
           {!existingUser ? (
             <div className="space-y-6">
               {/* Portal Admin Setting - Only shows when no user exists */}
-              <div className="flex items-center justify-between">
+              {contact.contact_kind !== 'shared_mailbox' && <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="portal-admin" className="text-base">
                     {t('contactPortalTab.portalAdmin.label', { defaultValue: 'Portal Administrator' })}
@@ -736,9 +784,9 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                   onCheckedChange={handlePortalAdminToggle}
                   disabled={!currentUserPermissions.canUpdateRoles || isUpdating}
                 />
-              </div>
+              </div>}
 
-              <div className="border-t pt-6">
+              {contact.contact_kind !== 'shared_mailbox' && <div className="border-t pt-6">
                 <div className="space-y-4">
                 <Alert className="mb-4">
                   <Info className="h-4 w-4" />
@@ -769,7 +817,11 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                     </Button>
                   </div>
                 </div>
-              </div>
+              </div>}
+            </div>
+          ) : contact.contact_kind === 'shared_mailbox' ? (
+            <div className="rounded-md border p-3 text-sm text-muted-foreground">
+              <Badge variant="default-muted">{t('contactsPage.sharedMailbox')}</Badge>
             </div>
           ) : (
             <div className="border-t pt-6">
@@ -842,6 +894,11 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                   clientId={contact.client_id}
                   canEdit={currentUserPermissions.canUpdateRoles}
                 />
+
+                {/* Which segments this contact belongs to, and whether that
+                    comes with the profile's tickets. Read-only: membership is
+                    edited on the profile. */}
+                <ContactBillingProfileAssociations contactNameId={contact.contact_name_id} />
 
                 {/* Last Login Info */}
                 {existingUser.last_login_at && (
@@ -932,7 +989,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
               <div>
                 <Label className="text-sm font-medium">Ticket visibility group</Label>
                 <p className="text-sm text-muted-foreground">
-                  Assign a visibility group for this contact, or keep full access.
+                  {t('portal.visibilityGroups.assignmentHelp')}
                 </p>
               </div>
               <CustomSelect
@@ -943,6 +1000,14 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                 options={visibilityGroupSelectOptions}
                 placeholder="Select visibility assignment"
               />
+              {selectedGroupIsContactScoped && !isPortalAdmin && reportCount > 0 && (
+                <p className="text-sm text-muted-foreground" id="visibility-group-report-count">
+                  {t('portal.visibilityGroups.managerScopeNote', {
+                    count: reportCount,
+                    defaultValue: 'Their view also includes records of {{count}} people who report to them.'
+                  })}
+                </p>
+              )}
 
               <div>
                 <Label className="text-sm font-medium">Visibility groups for client</Label>
@@ -1005,6 +1070,45 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                   )}
                 </div>
 
+                <RadioGroup
+                  id="contact-visibility-ticket-scope"
+                  name="contact-visibility-ticket-scope"
+                  label={t('portal.visibilityGroups.scopeLabel')}
+                  value={ticketScope}
+                  onChange={(value) => setTicketScope(value as 'client' | 'contact')}
+                  disabled={isUpdating}
+                  orientation="vertical"
+                  options={[
+                    { value: 'client', label: t('portal.visibilityGroups.scopeClient'), description: t('portal.visibilityGroups.scopeClientDescription') },
+                    { value: 'contact', label: t('portal.visibilityGroups.scopeContact'), description: t('portal.visibilityGroups.scopeContactDescription') },
+                  ]}
+                />
+                <RadioGroup
+                  id="contact-visibility-asset-scope"
+                  name="contact-visibility-asset-scope"
+                  label={t('portal.visibilityGroups.assetScopeLabel')}
+                  value={assetScope}
+                  onChange={(value) => setAssetScope(value as 'client' | 'contact')}
+                  disabled={isUpdating}
+                  orientation="vertical"
+                  options={[
+                    { value: 'client', label: t('portal.visibilityGroups.assetScopeClient'), description: t('portal.visibilityGroups.assetScopeClientDescription') },
+                    { value: 'contact', label: t('portal.visibilityGroups.assetScopeContact'), description: t('portal.visibilityGroups.assetScopeContactDescription') },
+                  ]}
+                />
+                <RadioGroup
+                  id="contact-visibility-project-scope"
+                  name="contact-visibility-project-scope"
+                  label={t('portal.visibilityGroups.projectScopeLabel')}
+                  value={projectScope}
+                  onChange={(value) => setProjectScope(value as 'client' | 'contact')}
+                  disabled={isUpdating}
+                  orientation="vertical"
+                  options={[
+                    { value: 'client', label: t('portal.visibilityGroups.projectScopeClient'), description: t('portal.visibilityGroups.projectScopeClientDescription') },
+                    { value: 'contact', label: t('portal.visibilityGroups.projectScopeContact'), description: t('portal.visibilityGroups.projectScopeContactDescription') },
+                  ]}
+                />
                 <div className="flex items-end justify-end gap-2">
                   {editingVisibilityGroupId && (
                     <Button
@@ -1037,7 +1141,12 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                       <div className="space-y-1">
                         <p className="text-sm font-medium">{group.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {t('contactPortalTab.boardCount', { defaultValue: '{{count}} boards', count: group.board_count })}
+                          {t('portal.visibilityGroups.scopeSummary', {
+                            defaultValue: 'Tickets: {{tickets}} · Devices: {{devices}} · Projects: {{projects}}',
+                            tickets: t(group.ticket_scope === 'contact' ? 'portal.visibilityGroups.scopeSummaryOwn' : 'portal.visibilityGroups.scopeSummaryAll'),
+                            devices: t(group.asset_scope === 'contact' ? 'portal.visibilityGroups.scopeSummaryOwn' : 'portal.visibilityGroups.scopeSummaryAll'),
+                            projects: t(group.project_scope === 'contact' ? 'portal.visibilityGroups.scopeSummaryOwn' : 'portal.visibilityGroups.scopeSummaryAll'),
+                          })} · {t('contactPortalTab.boardCount', { defaultValue: '{{count}} boards', count: group.board_count })}
                         </p>
                         {group.description ? (
                           <p className="text-xs text-muted-foreground">{group.description}</p>

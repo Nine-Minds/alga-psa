@@ -14,6 +14,10 @@ import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
 import { buildContactAvatarUri, getContactReachLine, listContacts, type ContactListItem } from "../api/contacts";
+import { useCapabilities } from "../capabilities/CapabilitiesContext";
+import { ContactFormModal } from "../features/contacts/components/ContactFormModal";
+import { HeaderTimerChip } from "../features/timer/components/HeaderTimerChip";
+import { HeaderAddButton } from "../ui/components/HeaderAddButton";
 import { useTheme } from "../ui/ThemeContext";
 import type { Theme } from "../ui/themes";
 import { logger } from "../logging/logger";
@@ -57,6 +61,8 @@ export function ContactsListScreen({ navigation }: Props) {
   const [noAccess, setNoAccess] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const { features } = useCapabilities();
 
   useEffect(() => {
     return () => {
@@ -64,6 +70,20 @@ export function ContactsListScreen({ navigation }: Props) {
       if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        // The drawer header adds no trailing inset of its own; keep the same gutter as the stack headers.
+        <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm, marginRight: theme.spacing.md }}>
+          <HeaderTimerChip />
+          {features.contactsCreate ? (
+            <HeaderAddButton testID="contacts-create" onPress={() => setCreateOpen(true)} accessibilityLabel={t("list.create")} />
+          ) : null}
+        </View>
+      ),
+    });
+  }, [features.contactsCreate, navigation, t, theme.spacing.md, theme.spacing.sm]);
 
   const handleSearchChange = useCallback((text: string) => {
     setSearchInput(text);
@@ -226,6 +246,18 @@ export function ContactsListScreen({ navigation }: Props) {
 
   return (
     <View style={{ flex: 1 }}>
+      <ContactFormModal
+        visible={createOpen}
+        mode="create"
+        client={client}
+        apiKey={session.accessToken}
+        baseUrl={config.baseUrl}
+        onClose={() => setCreateOpen(false)}
+        onSaved={(created) => {
+          void refresh();
+          navigation.navigate("ContactDetail", { contactId: created.contact_name_id, contactName: created.full_name });
+        }}
+      />
       <FlatList
         data={items}
         keyExtractor={keyExtractor}

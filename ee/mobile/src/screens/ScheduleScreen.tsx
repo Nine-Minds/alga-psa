@@ -299,6 +299,22 @@ export function ScheduleScreen({ navigation }: Props) {
     [navigation],
   );
 
+  const openClient = useCallback(
+    (clientId: string, clientName: string) => {
+      setDetailEntry(null);
+      navigation.navigate("ClientDetail", { clientId, clientName });
+    },
+    [navigation],
+  );
+
+  const openContact = useCallback(
+    (contactId: string, contactName: string) => {
+      setDetailEntry(null);
+      navigation.navigate("ContactDetail", { contactId, contactName });
+    },
+    [navigation],
+  );
+
   const renderEntry = useCallback(
     ({ item }: { item: ScheduleEntry }) => (
       <Pressable
@@ -533,6 +549,10 @@ export function ScheduleScreen({ navigation }: Props) {
         busy={deleting}
         error={detailError}
         onOpenTicket={openTicket}
+        onOpenClient={openClient}
+        onOpenContact={openContact}
+        client={client}
+        apiKey={session?.accessToken ?? null}
         onEdit={openEdit}
         onDelete={(entry) => void handleDelete(entry)}
         onClose={() => {

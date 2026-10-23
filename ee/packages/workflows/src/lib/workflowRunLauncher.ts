@@ -31,18 +31,28 @@ export type WorkflowRunLaunchRequest = {
   tenantId: string | null;
   payload: Record<string, unknown>;
   workflowVersion?: number | null;
-  triggerType?: 'event' | 'schedule' | 'recurring' | null;
+  triggerType?: 'event' | 'schedule' | 'recurring' | 'date' | null;
   triggerMetadata?: Record<string, unknown> | null;
   triggerFireKey?: string | null;
   eventType?: string | null;
   sourcePayloadSchemaRef?: string | null;
   triggerMappingApplied?: boolean;
   executionKey?: string;
+  /**
+   * How long to wait for the workflow engine connection. Interactive starts pass
+   * INTERACTIVE_ENGINE_CONNECT_TIMEOUT_MS so an unreachable engine is reported in seconds;
+   * background triggers keep the client default.
+   */
+  engineConnectTimeoutMs?: number;
 };
+
+/** Engine connect deadline for runs someone is waiting on (an in-cluster connect takes well under 1s). */
+export const INTERACTIVE_ENGINE_CONNECT_TIMEOUT_MS = 3000;
 
 export type WorkflowRunLaunchResult = {
   runId: string;
   workflowVersion: number;
+  created: boolean;
 };
 
 type WorkflowRunLaunchFailureRequest = {
@@ -50,7 +60,7 @@ type WorkflowRunLaunchFailureRequest = {
   workflowVersion: number;
   tenantId: string | null;
   payload: Record<string, unknown>;
-  triggerType?: 'event' | 'schedule' | 'recurring' | null;
+  triggerType?: 'event' | 'schedule' | 'recurring' | 'date' | null;
   triggerMetadata?: Record<string, unknown> | null;
   triggerFireKey?: string | null;
   eventType?: string | null;
@@ -62,15 +72,67 @@ type WorkflowRunLaunchFailureRequest = {
   details?: unknown;
 };
 
+export type WorkflowRunLaunchFailureReason = 'runtime_unavailable' | 'launch_failed';
+
+// Connection-level failures from the Temporal client (gRPC UNAVAILABLE/DEADLINE_EXCEEDED,
+// DNS resolution, refused sockets). They mean the workflow engine could not be reached,
+// not that the workflow itself is wrong.
+const RUNTIME_UNAVAILABLE_PATTERNS: RegExp[] = [
+  /failed to connect before the deadline/i,
+  /\bUNAVAILABLE\b/,
+  /\bDEADLINE_EXCEEDED\b/,
+  /\bECONNREFUSED\b/,
+  /\bECONNRESET\b/,
+  /\bETIMEDOUT\b/,
+  /\bENOTFOUND\b/,
+  /\bEAI_AGAIN\b/,
+  /getaddrinfo/i,
+  /name resolution failed/i,
+  /no connection established/i,
+];
+
+export const classifyWorkflowRunLaunchFailure = (error: unknown): WorkflowRunLaunchFailureReason => {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+  return RUNTIME_UNAVAILABLE_PATTERNS.some((pattern) => pattern.test(message))
+    ? 'runtime_unavailable'
+    : 'launch_failed';
+};
+
+/**
+ * Thrown when a run record was created but the workflow engine did not accept it.
+ * The run is already marked FAILED; `runId` lets callers point people at it.
+ * Keeps the underlying error's message so existing callers and logs see the same text.
+ */
+export class WorkflowRunLaunchError extends Error {
+  readonly runId: string;
+  readonly workflowVersion: number;
+  readonly reason: WorkflowRunLaunchFailureReason;
+
+  constructor(params: { runId: string; workflowVersion: number; cause: unknown }) {
+    const causeMessage = params.cause instanceof Error
+      ? params.cause.message
+      : 'Failed to start Temporal workflow runtime';
+    super(causeMessage, { cause: params.cause });
+    this.name = 'WorkflowRunLaunchError';
+    this.runId = params.runId;
+    this.workflowVersion = params.workflowVersion;
+    this.reason = classifyWorkflowRunLaunchFailure(params.cause);
+  }
+}
+
+export const isWorkflowRunLaunchError = (error: unknown): error is WorkflowRunLaunchError =>
+  error instanceof WorkflowRunLaunchError;
+
 async function resolveVersionRecord(
   knex: Knex,
+  tenant: string,
   workflowId: string,
   workflowVersion?: number | null
 ): Promise<WorkflowDefinitionVersionRecord | null> {
   if (workflowVersion) {
-    return WorkflowDefinitionVersionModelV2.getByWorkflowAndVersion(knex, workflowId, workflowVersion);
+    return WorkflowDefinitionVersionModelV2.getByWorkflowAndVersion(knex, workflowId, workflowVersion, tenant);
   }
-  const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflowId);
+  const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflowId, tenant);
   return versions[0] ?? null;
 }
 
@@ -84,11 +146,12 @@ export async function recordFailedWorkflowRunLaunch(
   request: WorkflowRunLaunchFailureRequest
 ): Promise<WorkflowRunLaunchResult> {
   if (request.triggerFireKey) {
-    const existingRun = await WorkflowRunModelV2.getByTriggerFireKey(knex, request.triggerFireKey);
+    const existingRun = await WorkflowRunModelV2.getByTriggerFireKey(knex, request.triggerFireKey, request.tenantId);
     if (existingRun) {
       return {
         runId: existingRun.run_id,
-        workflowVersion: existingRun.workflow_version
+        workflowVersion: existingRun.workflow_version,
+        created: false,
       };
     }
   }
@@ -120,7 +183,8 @@ export async function recordFailedWorkflowRunLaunch(
 
   return {
     runId: run.run_id,
-    workflowVersion: run.workflow_version
+    workflowVersion: run.workflow_version,
+    created: true,
   };
 }
 
@@ -149,7 +213,12 @@ export async function launchPublishedWorkflowRun(
     }
   }
 
-  const versionRecord = await resolveVersionRecord(knex, request.workflowId, request.workflowVersion);
+  // Every lookup below is tenant-scoped so Citus routes it to one shard; an
+  // unscoped workflow_id/run_id lookup fans out to every shard and opens
+  // internal connections against the shared connection budget.
+  const tenant = workflow.tenant;
+
+  const versionRecord = await resolveVersionRecord(knex, tenant, request.workflowId, request.workflowVersion);
   if (!versionRecord) {
     throw new Error('Workflow has no published versions');
   }
@@ -189,11 +258,12 @@ export async function launchPublishedWorkflowRun(
   }
 
   if (request.triggerFireKey) {
-    const existingRun = await WorkflowRunModelV2.getByTriggerFireKey(knex, request.triggerFireKey);
+    const existingRun = await WorkflowRunModelV2.getByTriggerFireKey(knex, request.triggerFireKey, tenant);
     if (existingRun) {
       return {
         runId: existingRun.run_id,
-        workflowVersion: existingRun.workflow_version
+        workflowVersion: existingRun.workflow_version,
+        created: false,
       };
     }
   }
@@ -221,14 +291,15 @@ export async function launchPublishedWorkflowRun(
       throw error;
     }
 
-    const existingRun = await WorkflowRunModelV2.getByTriggerFireKey(knex, request.triggerFireKey);
+    const existingRun = await WorkflowRunModelV2.getByTriggerFireKey(knex, request.triggerFireKey, tenant);
     if (!existingRun) {
       throw error;
     }
 
     return {
       runId: existingRun.run_id,
-      workflowVersion: existingRun.workflow_version
+      workflowVersion: existingRun.workflow_version,
+      created: false,
     };
   }
 
@@ -241,11 +312,11 @@ export async function launchPublishedWorkflowRun(
       workflowVersion: versionRecord.version,
       triggerType: request.triggerType ?? null,
       executionKey,
-    });
+    }, { connectTimeoutMs: request.engineConnectTimeoutMs });
     await WorkflowRunModelV2.update(knex, runId, {
       temporal_workflow_id: temporalStart.workflowId,
       temporal_run_id: temporalStart.firstExecutionRunId,
-    });
+    }, tenant);
   } catch (error) {
     await WorkflowRunModelV2.update(knex, runId, {
       status: 'FAILED',
@@ -257,12 +328,13 @@ export async function launchPublishedWorkflowRun(
           ? { name: error.name, stack: error.stack }
           : { raw: error }
       }
-    });
-    throw error;
+    }, tenant);
+    throw new WorkflowRunLaunchError({ runId, workflowVersion: versionRecord.version, cause: error });
   }
 
   return {
     runId,
-    workflowVersion: versionRecord.version
+    workflowVersion: versionRecord.version,
+    created: true,
   };
 }

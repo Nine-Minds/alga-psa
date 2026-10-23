@@ -11,10 +11,30 @@ export default defineConfig({
     include: [
       'tests/**/*.test.ts',
       'tests/**/*.test.tsx',
+      'src/lib/invoice-template-ast/printSettings.test.ts',
+      'src/lib/invoice-template-ast/previewSheet.test.ts',
+      'src/components/invoice-designer/preview/previewSheetScale.test.ts',
+      'src/components/invoice-designer/ast/workspaceAst.roundtrip.nodes.test.ts',
+      'src/lib/invoice-template-ast/barcode/barcode.test.ts',
+      'src/lib/invoice-template-ast/barcode/clientBundle.test.ts',
+      'src/lib/document-templates/registry.test.ts',
+      'src/lib/label-template-ast/**/*.test.ts',
+      'src/lib/label-batch/**/*.test.ts',
+      'src/components/invoice-designer/utils/documentKind.test.ts',
+      'src/components/invoice-designer/fields/documentBindingCatalog.test.ts',
       'src/actions/projectBillingActions.contract.test.ts',
+      'src/actions/invoiceEmailBrandLogo.contract.test.ts',
       'src/lib/prepaidBalanceAlerts.test.ts',
+      'src/lib/contractRecurringShape.test.ts',
+      'src/lib/taxRateApplicability.test.ts',
       'src/lib/billing/compute/**/*.test.ts',
+      'src/lib/billing/pricing/**/*.test.ts',
+      // Preview/generation consistency for scheduled recurring quantity/price
+      // revisions — listed explicitly so this package's own `npm test` target
+      // covers the stale-source comparison, not only the server-wide glob.
+      'src/lib/billing/recurringPricingIdentity.test.ts',
       'src/schemas/**/*.test.ts',
+      'src/constants/billingQuoteValidity.test.ts',
       // Colocated suites for the document-preview tenant-branding seam. Most
       // src/ tests are reached only through server/vitest.config.ts (which globs
       // ../packages/**), but this package's own `npm test` target is a separate
@@ -24,6 +44,27 @@ export default defineConfig({
       'src/actions/documentTemplateActions.existingDocument.test.ts',
       'src/components/billing-dashboard/documents/DocumentTemplateEditor.existingDocument.test.tsx',
       'src/components/billing-dashboard/LineItem.test.tsx',
+      'src/components/billing-dashboard/ManualInvoices.expandedSave.test.tsx',
+      'src/components/billing-dashboard/invoicing/DraftInvoiceAdjustmentsCard.authRecovery.test.tsx',
+      'src/components/billing-dashboard/invoicing/InvoicePreviewPanel.test.tsx',
+      'src/components/billing-dashboard/invoicing/DraftInvoiceDetailsCard.billingProfile.test.tsx',
+      // Manual invoice total arithmetic must be selected by the billing
+      // package's own test command as well as the server's monorepo glob.
+      'src/components/billing-dashboard/manualInvoiceTotals.test.ts',
+      // Catalog-price rollout reachability and the effective-date serialisation
+      // regression — listed explicitly so this package's own `npm test` target
+      // (the `nx affected -t test` lane) selects them, not only the server
+      // coverage run that globs ../packages/**.
+      'src/components/settings/billing/ServiceCatalogManager.rollout.contract.test.tsx',
+      'src/components/settings/billing/DefaultTimeEntryServiceSettings.test.tsx',
+      'src/components/settings/billing/PriceChangeRolloutDialog.contract.test.tsx',
+      // Multi-select bulk actions on the catalog and product lists — listed for
+      // the same reason as the suites above.
+      'src/components/settings/billing/ServiceCatalogManager.bulkActions.contract.test.tsx',
+      // Server-side search + filters on the Service Catalog list — listed for the
+      // same reason as the suites above.
+      'src/components/settings/billing/ServiceCatalogManager.search.contract.test.tsx',
+      'src/components/settings/billing/ProductsManager.bulkActions.contract.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.tenantBranding.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.existingQuote.test.tsx',
       'src/components/invoice-designer/DesignerVisualWorkspace.test.tsx',
@@ -31,21 +72,52 @@ export default defineConfig({
       // Behavioral coverage for realm-exact QBO mapping resolution — listed
       // explicitly for the same reason as the suites above.
       'src/services/accountingSync/realmScopedOperations.test.ts',
+      // Project billing-currency drift notices and cap re-pinning — listed for
+      // the same reason as the suites above.
+      'src/components/project-billing/projectBillingCurrency.test.tsx',
       // Ticket-level billed-time detail: snapshot aggregation, standard-template
       // bindings, and render parity — listed for the same reason as above.
       'src/lib/adapters/invoiceAdapters.test.ts',
+      'src/lib/adapters/salesOrderAdapters.test.ts',
+      'src/lib/sales-order-template-ast/standardTemplates.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.byTicket.test.ts',
+      // Rich Terms & Conditions: write-path projection + designer richText
+      // round-trip. Listed so this package's own `npm test` target covers them
+      // alongside the server-wide glob.
+      'src/lib/quoteTermsContent.test.ts',
+      'src/components/invoice-designer/ast/workspaceAst.richText.test.ts',
+      'src/components/billing-dashboard/quotes/QuoteForm.terms.test.tsx',
       // Timezone-safe date-only rendering: the renderer and field formatting
       // share one UTC-pinned formatter — listed for the same reason as above.
       'src/lib/invoice-template-ast/fieldFormatting.test.ts',
       'src/lib/invoice-template-ast/react-renderer.test.tsx',
+      // Country-driven date shape: a document is dated the way its recipient
+      // writes dates, whatever language it is written in.
+      'src/lib/invoice-template-ast/fieldFormatting.country.test.ts',
+      'src/lib/invoice-template-ast/react-renderer.country.test.tsx',
+      'src/services/pdfGenerationService.renderCountry.test.ts',
+      // Per-seat unit-rate rendering on the template detail page and the
+      // currency-neutral template review step — listed for the same reason as above.
+      'src/components/billing-dashboard/contracts/ContractTemplateDetail.unitRate.test.tsx',
+      'src/components/billing-dashboard/contracts/template-wizard/steps/TemplateReviewContractStep.unitRate.test.tsx',
+      // Contract-line service rates are stored in minor units; the services list
+      // must not re-scale them. Listed for the same reason as above.
+      'src/components/billing-dashboard/contract-lines/GenericContractLineServicesList.customRate.test.tsx',
+      // Wizard quantity input draft/commit behavior.
+      'src/components/billing-dashboard/contracts/QuantityInput.test.tsx',
+      // Template saves must stay valid upserts on Citus distributed tables.
+      'src/models/templateSaveUpsert.citus.test.ts',
+      // Client AR must stay a single-shard, co-located join on Citus.
+      'src/actions/billingProfileArActions.citus.test.ts',
     ],
-    testTimeout: 20000,
+    // Above vitest.setup.ts's 20s asyncUtilTimeout, so a stalled waitFor fails
+    // as itself rather than as a test timeout.
+    testTimeout: 30000,
     // Match testTimeout. The default hookTimeout is 10s, so a beforeAll doing
     // setup work had half the budget of a test doing the same work — which is
     // how hoisting a module compile out of a test made it fail sooner.
-    hookTimeout: 20000,
+    hookTimeout: 30000,
     // Inline next-auth/@auth/core/next so vite transforms them and the next/server
     // alias below applies to next-auth's internal `import "next/server"`. Without it
     // the contract-wizard / automatic-invoices component suites render-crash on a
@@ -93,8 +165,19 @@ export default defineConfig({
         replacement: `${path.resolve(__dirname, '../../ee/packages/workflows/src')}/$1`,
       },
       {
+        find: /^@alga-psa\/core\/fileNames$/,
+        replacement: `${path.resolve(__dirname, '../core/src/lib/fileNames.ts')}`,
+      },
+      {
         find: /^@alga-psa\/core\/logger$/,
         replacement: `${path.resolve(__dirname, '../core/src/lib/logger.ts')}`,
+      },
+      // Same shape as the logger rule: core's i18n exports sit under src/lib, so
+      // the generic @alga-psa/<pkg>/<path> rule below misses them. Reached here
+      // through @alga-psa/ui's date formatter.
+      {
+        find: /^@alga-psa\/core\/i18n\/(.*)$/,
+        replacement: `${path.resolve(__dirname, '../core/src/lib/i18n')}/$1`,
       },
       {
         find: /^@alga-psa\/db\/(admin|connection|tenant|workDate)$/,

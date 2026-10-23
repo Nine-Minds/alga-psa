@@ -31,9 +31,11 @@ import {
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
 import { renderTemplateAstHtmlDocument } from '../lib/invoice-template-ast/server-render';
+import { resolveTemplatePreviewSheetFromAst } from '../lib/invoice-template-ast/printSettings';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { mapDbSalesOrderToViewModel } from '../lib/adapters/salesOrderAdapters';
 import { overlaySalesOrderSampleTenant } from '../components/invoice-designer/preview/tenantBrandingOverlay';
+import { createPDFGenerationService } from '../services/pdfGenerationService';
 
 /**
  * Generic, document-type-keyed template management (Approach C). One set of actions serves every
@@ -291,10 +293,18 @@ export const runAuthoritativeTemplatePreview = withAuth(
     const evaluation = evaluateTemplateAst(templateAst, previewModel, {
       bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES,
     });
+    // Same seam the PDF path uses: a real document is dated by its recipient's
+    // country, a sample by the tenant's default.
+    const dateFormat = await createPDFGenerationService(tenant).resolveRenderCountry(
+      existingDocumentId ? { salesOrderId: existingDocumentId } : {}
+    );
     const html = await renderTemplateAstHtmlDocument(templateAst, evaluation, {
       title: 'Preview',
       knex,
       locale: normalizeLocale(locale) ?? undefined,
+      dateFormat,
+      // A label is drawn on the cell it prints in (same size, margin and clipping); documents stay unframed.
+      previewSheet: resolveTemplatePreviewSheetFromAst(templateAst, getDocumentTypeRegistryEntry(type).printGeometry) ?? undefined,
     });
     return { html };
   },

@@ -7,7 +7,7 @@
  *
  * Auth templates manage their own full HTML (no shared emailLayout wrapper).
  * Locales match the full set supported elsewhere in the product
- * (en, de, es, fr, it, nl, pl, pt) — see @alga-psa/core/i18n/config.
+ * (en, de, es, fr, it, nl, pl, pt, sv) — see @alga-psa/core/i18n/config.
  */
 
 const TEMPLATE_NAME = 'team-invitation';
@@ -27,6 +27,7 @@ const TEAM_INVITATION_CSS = `
       background-color: #f8fafc;
     }
     .header {
+      background-color:#8A4DEA;
       background: linear-gradient(135deg, #8A4DEA, #40CFF9);
       color: white;
       padding: 32px 24px;
@@ -318,6 +319,25 @@ const COPY = {
     footerSent: 'Este e-mail foi enviado para {{teamMemberName}} como parte da configuração da sua conta {{tenantName}}.',
     footerUnexpected: 'Se você não esperava este convite, pode ignorar este e-mail com segurança.',
     footerCopyright: '© {{currentYear}} {{tenantName}}. Todos os direitos reservados.',
+  },
+  sv: {
+    subject: 'Du har bjudits in till {{tenantName}} på AlgaPSA',
+    title: 'Teaminbjudan',
+    headerTitle: 'Välkommen till teamet',
+    headerSubtitle: 'Du har bjudits in att gå med i {{tenantName}}',
+    greeting: 'Hej {{teamMemberName}},',
+    intro: '{{invitedByName}} har bjudit in dig till <strong>{{tenantName}}</strong> som <strong>{{roleName}}</strong>. Konfigurera ditt konto för att komma igång.',
+    infoBoxTitle: 'Nästa steg',
+    feature1: '✓ Klicka på knappen nedan för att ange ditt eget lösenord',
+    feature2: '✓ Logga in med din e-postadress på jobbet och ditt nya lösenord',
+    feature3: '✓ Börja hantera ärenden, kunder och projekt direkt',
+    buttonLabel: 'Konfigurera ditt konto',
+    copyLinkHint: 'Eller kopiera och klistra in den här länken i din webbläsare:',
+    warningTitle: '⏰ Tidsbegränsad inbjudan',
+    warningText: 'Den här inbjudningslänken slutar gälla om <strong>{{expirationTime}}</strong>. Slutför konfigurationen av ditt konto innan dess.',
+    footerSent: 'Det här e-postmeddelandet har skickats till {{teamMemberName}} som en del av konfigurationen av ditt konto hos {{tenantName}}.',
+    footerUnexpected: 'Om du inte förväntade dig den här inbjudan kan du lugnt ignorera det här e-postmeddelandet.',
+    footerCopyright: '© {{currentYear}} {{tenantName}}. Alla rättigheter förbehållna.',
   },
 };
 

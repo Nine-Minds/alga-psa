@@ -14,8 +14,8 @@ import {
 } from './common';
 
 // Asset type schema — any registry slug (built-in or custom tenant type), not a
-// fixed enum. Validation against the tenant's asset_type_registry happens in the
-// action layer (resolveWritableAssetType).
+// fixed enum. Validation against the tenant's asset_type_registry happens in
+// the shared asset attribute write layer.
 export const assetTypeSchema = z.string().min(1, 'Asset type is required').max(255);
 
 // Base asset schema
@@ -26,14 +26,29 @@ export const createAssetSchema = z.object({
   name: z.string().min(1, 'Asset name is required').max(255),
   status: z.string().min(1, 'Status is required'),
   location_id: uuidSchema.nullable().optional(),
+  contact_name_id: uuidSchema.nullable().optional(),
   location: z.string().optional(),
   serial_number: z.string().optional(),
   purchase_date: dateSchema.optional(),
-  warranty_end_date: dateSchema.optional()
+  warranty_end_date: dateSchema.optional(),
+  manufacturer: z.string().max(255).nullable().optional(),
+  model: z.string().max(255).nullable().optional(),
+  vendor_id: uuidSchema.nullable().optional(),
+  /** Minor units (cents). */
+  purchase_cost: z.coerce.number().int().nullable().optional(),
+  purchase_cost_currency: z.string().length(3).nullable().optional(),
+  order_number: z.string().max(255).nullable().optional(),
+  billing_profile_id: uuidSchema.nullable().optional(),
+  attributes: z.record(z.unknown()).optional()
 });
 
+// Checked per asset type in AssetService: an untagged union matched workstation first and stripped other types' fields.
+const assetExtensionDataInputSchema = z.record(z.unknown());
+
 // Update asset schema (all fields optional)
-export const updateAssetSchema = createUpdateSchema(createAssetSchema);
+export const updateAssetSchema = createAssetSchema.partial().extend({
+  extension_data: assetExtensionDataInputSchema.optional()
+});
 
 // Asset extension schemas for different types
 export const workstationAssetSchema = z.object({
@@ -99,15 +114,23 @@ export const printerAssetSchema = z.object({
   supply_levels: z.record(z.number()).optional()
 });
 
+const assetExtensionSchemas: Record<string, z.AnyZodObject> = {
+  workstation: workstationAssetSchema,
+  network_device: networkDeviceAssetSchema,
+  server: serverAssetSchema,
+  mobile_device: mobileDeviceAssetSchema,
+  printer: printerAssetSchema
+};
+
+/** Validates extension_data against the schema of the asset type; null when the type has no extension table. */
+export function parseAssetExtensionData(assetType: string, data: unknown) {
+  const schema = assetExtensionSchemas[assetType];
+  return schema ? schema.safeParse(data) : null;
+}
+
 // Combined asset creation schema with extension data
 export const createAssetWithExtensionSchema = createAssetSchema.extend({
-  extension_data: z.union([
-    workstationAssetSchema,
-    networkDeviceAssetSchema,
-    serverAssetSchema,
-    mobileDeviceAssetSchema,
-    printerAssetSchema
-  ]).optional()
+  extension_data: assetExtensionDataInputSchema.optional()
 });
 
 // Asset filter schema
@@ -116,9 +139,14 @@ export const assetFilterSchema = baseFilterSchema.extend({
   name: z.string().optional(),
   client_id: uuidSchema.optional(),
   location_id: uuidSchema.optional(),
+  contact_name_id: uuidSchema.optional(),
   asset_type: assetTypeSchema.optional(),
   status: z.string().optional(),
   location: z.string().optional(),
+  manufacturer: z.string().optional(),
+  model: z.string().optional(),
+  vendor_id: uuidSchema.optional(),
+  billing_profile_id: uuidSchema.optional(),
   client_name: z.string().optional(),
   has_warranty: booleanTransform.optional(),
   warranty_expired: booleanTransform.optional(),
@@ -141,16 +169,38 @@ export const assetResponseSchema = z.object({
   name: z.string(),
   status: z.string(),
   location_id: uuidSchema.nullable().optional(),
+  contact_name_id: uuidSchema.nullable().optional(),
   location: z.string().nullable(),
   serial_number: z.string().nullable(),
   purchase_date: dateSchema.nullable(),
   warranty_end_date: dateSchema.nullable(),
+  manufacturer: z.string().nullable().optional(),
+  model: z.string().nullable().optional(),
+  vendor_id: uuidSchema.nullable().optional(),
+  vendor_name: z.string().nullable().optional(),
+  purchase_cost: z.coerce.number().int().nullable().optional(),
+  purchase_cost_currency: z.string().nullable().optional(),
+  order_number: z.string().nullable().optional(),
+  billing_profile_id: uuidSchema.nullable().optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,
-  
+  attributes: z.record(z.unknown()).nullable().optional(),
+
   // Computed/joined fields
   client_name: z.string().optional(),
+  // FR-C6: the assignee's display name, joined from contacts.
+  contact_name: z.string().nullable().optional(),
+  // FR-E3: the group this asset belongs to, if any.
+  group: z.object({
+    group_id: uuidSchema,
+    name: z.string(),
+    kind: z.enum(['bundle', 'shared_workspace']),
+    location_id: uuidSchema.nullable(),
+    location_name: z.string().nullable(),
+    member_count: z.number().int(),
+    user_count: z.number().int()
+  }).nullable().optional(),
   warranty_status: z.string().optional(),
   maintenance_status: z.string().optional()
 });
@@ -356,6 +406,8 @@ export const bulkAssetStatusSchema = z.object({
 // Asset statistics schema
 export const assetStatsResponseSchema = z.object({
   total_assets: z.number(),
+  /** Assets whose status kind is `deployable` (FR-B5). */
+  deployed_assets: z.number().optional(),
   assets_by_type: z.record(z.number()),
   assets_by_status: z.record(z.number()),
   assets_by_client: z.record(z.number()),

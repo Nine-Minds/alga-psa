@@ -104,19 +104,19 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
     'ContractLineAddServiceBody',
     zOpenApi.object({
       service_id: zOpenApi.string().uuid(),
-      quantity: zOpenApi.number().min(1).optional(),
+      quantity: zOpenApi.number().min(0).optional().describe('Seat/unit count. Must be at least 1 for a bundle service; zero or more (whole number) when type_config.pricing_basis is "unit" (zero bills zero).'),
       custom_rate: zOpenApi.number().min(0).optional(),
       configuration_type: ConfigurationType.optional(),
-      type_config: zOpenApi.record(zOpenApi.unknown()).optional(),
+      type_config: zOpenApi.record(zOpenApi.unknown()).optional().describe('Type-specific configuration. For a Fixed service, set pricing_basis to "unit" to bill quantity x base_rate every period (base_rate is the unit rate in minor units of the contract currency; omit or null to follow the catalog price in the contract currency). The default "bundle" keeps the line total authoritative. Per-unit pricing is not available for products or non-Fixed lines.'),
     }),
   );
 
   const UpdateServiceBody = registry.registerSchema(
     'ContractLineUpdateServiceBody',
     zOpenApi.object({
-      quantity: zOpenApi.number().min(1).optional(),
+      quantity: zOpenApi.number().min(0).optional().describe('New seat/unit count (zero or more, whole number, for a per-unit service; at least 1 for a bundle service). On a per-unit service the change is scheduled as a dated revision effective at the next unbilled period boundary; already-invoiced periods keep their price.'),
       custom_rate: zOpenApi.number().min(0).optional(),
-      type_config: zOpenApi.record(zOpenApi.unknown()).optional(),
+      type_config: zOpenApi.record(zOpenApi.unknown()).optional().describe('For a per-unit Fixed service, base_rate is the new unit rate (scheduled like a quantity change). pricing_basis may be sent only if it equals the stored basis; it cannot be changed after the service is added.'),
       rate_tiers: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())).optional(),
       user_type_rates: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())).optional(),
     }),

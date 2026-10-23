@@ -32,6 +32,20 @@ export const contractStatusSchema = z.enum(['active', 'draft', 'terminated', 'ex
 // CORE CONTRACT LINE SCHEMAS
 // ============================================================================
 
+// Prepaid Block config overlay for Hourly lines (contract_line_prepaid_blocks).
+// block_price is in minor units of the contract's currency.
+export const prepaidBlockConfigSchema = z.object({
+  block_minutes: z.number().int().min(1),
+  block_price: z.number().int().min(0),
+  sold_as_service_id: uuidSchema.nullable().optional(),
+  expiry_months: z.number().int().min(1).max(120).nullable().optional(),
+  trigger_on_exhaustion: z.boolean().optional(),
+  trigger_threshold_percent: z.number().int().min(1).max(99).nullable().optional(),
+  trigger_on_expiry: z.boolean().optional(),
+  trigger_on_renewal: z.boolean().optional(),
+  replenishment_tier: z.enum(['draft', 'auto_issue']).optional(),
+});
+
 // Base contract line schema (without refinements)
 const baseContractLineSchema = z.object({
   contract_line_name: z.string().min(1, 'Plan name is required').max(255),
@@ -40,6 +54,9 @@ const baseContractLineSchema = z.object({
   service_category: z.string().optional(),
   contract_line_type: planTypeSchema,
   cadence_owner: cadenceOwnerSchema.optional(),
+  // Advance is only valid for Fixed lines; the service rejects it for Hourly/Usage with a 400
+  // (ContractLineTimingNotAllowedError). Without this key zod would silently drop the field.
+  billing_timing: z.enum(['arrears', 'advance']).optional(),
   
   // Hourly plan specific fields (deprecated for Hourly type)
   hourly_rate: z.number().min(0).optional(),
@@ -56,7 +73,10 @@ const baseContractLineSchema = z.object({
   // Additional features and settings
   is_active: z.boolean().optional().default(true),
   features: z.array(z.string()).optional(),
-  location_id: uuidSchema.optional().nullable()
+  location_id: uuidSchema.optional().nullable(),
+
+  // Optional Prepaid Block overlay (Hourly lines only). On update: object = upsert, null = remove.
+  prepaid_block: prepaidBlockConfigSchema.nullable().optional()
 });
 
 // Create contract line schema
@@ -96,6 +116,8 @@ export const contractLineResponseSchema = z.object({
   after_hours_multiplier: z.number().nullable(),
   is_active: z.boolean().optional(),
   features: z.array(z.string()).optional(),
+  prepaid_block: prepaidBlockConfigSchema.nullable().optional(),
+  display_kind: z.enum(['Fixed', 'Hourly', 'Usage', 'PrepaidBlock']).optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,
@@ -139,6 +161,11 @@ export const combinedFixedPlanConfigResponseSchema = z.object({
 // SERVICE CONFIGURATION SCHEMAS
 // ============================================================================
 
+export const pricingBasisSchema = z.enum(['bundle', 'unit']);
+
+// What a stored fixed-member base_rate means (see shared/billingClients/fixedMemberRate.ts).
+export const fixedBaseRateBasisSchema = z.enum(['per_unit', 'share']);
+
 // Base service configuration
 export const planServiceConfigurationSchema = z.object({
   config_id: uuidSchema,
@@ -146,7 +173,7 @@ export const planServiceConfigurationSchema = z.object({
   service_id: uuidSchema,
   configuration_type: configurationTypeSchema,
   custom_rate: z.number().min(0).optional(),
-  quantity: z.number().min(1).optional(),
+  quantity: z.number().min(0).optional(),
   instance_name: z.string().optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
@@ -157,13 +184,27 @@ export const planServiceConfigurationSchema = z.object({
 export const planServiceFixedConfigSchema = z.object({
   config_id: uuidSchema,
   base_rate: z.number().min(0).optional(),
+  base_rate_basis: fixedBaseRateBasisSchema.nullable().optional(),
+  pricing_basis: pricingBasisSchema.nullable().optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema
 });
 
+// 'unit': quantity x base_rate (the unit rate, in cents) is billed every
+// period; a null/absent base_rate follows the catalog price in the contract
+// currency. 'bundle' (default): the line total is authoritative and the
+// quantity only allocates a share of it. The basis is chosen when the service
+// is added and cannot be changed by an update.
+//
+// base_rate_basis states what a stored base_rate means for a bundle member:
+// 'per_unit' (rate x quantity; the default when absent, the API's documented
+// unit-rate sense) or 'share' (the member's slice of the line total, quantity
+// ignored). Per-unit services are always per_unit.
 export const createPlanServiceFixedConfigSchema = z.object({
-  base_rate: z.number().min(0).optional()
+  base_rate: z.number().min(0).nullable().optional(),
+  base_rate_basis: fixedBaseRateBasisSchema.optional(),
+  pricing_basis: pricingBasisSchema.optional()
 });
 
 // Hourly service configuration
@@ -269,7 +310,9 @@ export const createUserTypeRateSchema = z.object({
 // Add service to plan
 export const addServiceToPlanSchema = z.object({
   service_id: uuidSchema,
-  quantity: z.number().min(1).optional().default(1),
+  // Zero is a legitimate seat count for a per-unit service; bundle services
+  // still require at least 1 (checked by the service, which knows the basis).
+  quantity: z.number().min(0).optional().default(1),
   custom_rate: z.number().min(0).optional(),
   configuration_type: configurationTypeSchema.optional(),
   type_config: z.union([
@@ -282,14 +325,20 @@ export const addServiceToPlanSchema = z.object({
 
 // Update service in plan
 export const updatePlanServiceSchema = z.object({
-  quantity: z.number().min(1).optional(),
+  quantity: z.number().min(0).optional(),
   custom_rate: z.number().min(0).optional(),
   type_config: z.union([
     createPlanServiceFixedConfigSchema.partial(),
     createPlanServiceHourlyConfigSchema.partial(),
     createPlanServiceUsageConfigSchema.partial(),
     createPlanServiceBucketConfigSchema.partial()
-  ]).optional(),
+  ]).and(
+    // The partial branches above strip unknown keys and the hourly/usage/bucket
+    // partials accept an empty object, so an invalid base_rate_basis would be
+    // silently dropped. Validate it explicitly whenever it is present (default
+    // strip: the right side contributes no keys other than base_rate_basis).
+    z.object({ base_rate_basis: fixedBaseRateBasisSchema.optional() })
+  ).optional(),
   rate_tiers: z.array(createRateTierSchema).optional(),
   user_type_rates: z.array(createUserTypeRateSchema).optional()
 });

@@ -1,18 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { ApiClient } from "../../../api";
 import { getServices, type ServiceOption } from "../../../api/timeEntries";
-import type { ActiveTimeSession } from "../../../api/timeTracking";
+import type { StopwatchSession } from "../../../api/stopwatch";
 import { useTheme } from "../../../ui/ThemeContext";
 import { PrimaryButton } from "../../../ui/components/PrimaryButton";
 import { DatePickerField } from "../../../ui/components/DatePickerField";
 import { TimePickerField } from "../../../ui/components/TimePickerField";
 import { formatDateTimeWithRelative } from "../../../ui/formatters/dateTime";
-import { elapsedMsAt, formatElapsedClock, formatMinutesDuration } from "../timerLogic";
+import { toEntrySpan } from "../stopwatchMath";
+import { formatMinutesDuration } from "../timerLogic";
 
 export type TimerStopOverrides = {
+  /** Only sent when the user adjusted the end; the server derives the rest from the session. */
+  start_time?: string;
   end_time?: string;
   notes?: string;
   service_id?: string;
@@ -44,9 +47,10 @@ export function StopTimerModal({
   willStartNext,
   onClose,
   onSubmit,
+  onDiscard,
 }: {
   visible: boolean;
-  session: ActiveTimeSession | null;
+  session: StopwatchSession | null;
   offsetMs: number;
   client: ApiClient | null;
   apiKey: string | null;
@@ -55,6 +59,7 @@ export function StopTimerModal({
   willStartNext: boolean;
   onClose: () => void;
   onSubmit: (overrides: TimerStopOverrides) => void;
+  onDiscard?: () => void;
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("timeEntries");
@@ -73,8 +78,14 @@ export function StopTimerModal({
 
   const [nowMs, setNowMs] = useState(() => Date.now());
 
-  const startTimeMs = session ? Date.parse(session.start_time) : 0;
-  const startLocalMs = startTimeMs - offsetMs;
+  // D5: prefill from the shared span math. Segment instants are server time; the
+  // device clock differs by offsetMs, so local = server - offsetMs.
+  const span = useMemo(
+    () => (session ? toEntrySpan(session.segments, nowMs + offsetMs) : null),
+    [session, nowMs, offsetMs],
+  );
+  const startServerMs = span ? span.start.getTime() : 0;
+  const startLocalMs = startServerMs - offsetMs;
 
   useEffect(() => {
     if (!visible || !session) return;
@@ -82,20 +93,20 @@ export function StopTimerModal({
     setIsBillable(true);
     setServiceId(session.service_id);
     setAdjustingEnd(false);
-    const now = new Date();
-    setEndDate(now);
-    setEndTime(toHHMM(now));
+    const initialEnd = new Date(toEntrySpan(session.segments, Date.now() + offsetMs).end.getTime() - offsetMs);
+    setEndDate(initialEnd);
+    setEndTime(toHHMM(initialEnd));
     setLocalError(null);
     setServicePickerOpen(false);
     // Reset applies per opening, not per session field change.
   }, [visible, session?.session_id]);
 
   useEffect(() => {
-    if (!visible || adjustingEnd) return;
+    if (!visible || adjustingEnd || session?.status !== "running") return;
     setNowMs(Date.now());
     const handle = setInterval(() => setNowMs(Date.now()), 1000);
     return () => clearInterval(handle);
-  }, [visible, adjustingEnd]);
+  }, [visible, adjustingEnd, session?.status]);
 
   useEffect(() => {
     if (!visible || !client || !apiKey || services.length > 0) return;
@@ -121,13 +132,13 @@ export function StopTimerModal({
   );
 
   const durationMinutes = useMemo(() => {
-    if (!session) return 0;
+    if (!span) return 0;
     if (adjustingEnd) {
       if (!adjustedEnd) return null;
       return Math.round((adjustedEnd.getTime() - startLocalMs) / 60_000);
     }
-    return Math.floor(elapsedMsAt(nowMs, startTimeMs, offsetMs) / 60_000);
-  }, [adjustedEnd, adjustingEnd, nowMs, offsetMs, session, startLocalMs, startTimeMs]);
+    return span.billableMinutes;
+  }, [adjustedEnd, adjustingEnd, span, startLocalMs]);
 
   if (!session) return null;
 
@@ -141,6 +152,7 @@ export function StopTimerModal({
       setLocalError(t("timer.stopModal.errors.noService"));
       return;
     }
+    let startIso: string | undefined;
     let endIso: string | undefined;
     if (adjustingEnd) {
       if (!adjustedEnd) {
@@ -157,10 +169,13 @@ export function StopTimerModal({
         setLocalError(t("timer.stopModal.errors.endInFuture"));
         return;
       }
-      endIso = adjustedEnd.toISOString();
+      // The picker is device-local; the server wants server-clock instants.
+      startIso = new Date(startServerMs).toISOString();
+      endIso = new Date(adjustedEnd.getTime() + offsetMs).toISOString();
     }
     setLocalError(null);
     onSubmit({
+      start_time: startIso,
       end_time: endIso,
       notes: notes.trim() || undefined,
       service_id: serviceId,
@@ -199,12 +214,17 @@ export function StopTimerModal({
             })}
           </Text>
           <Text style={{ ...typography.title, color: colors.text, marginTop: spacing.sm }}>
-            {durationMinutes === null
-              ? "—"
-              : adjustingEnd
-                ? formatMinutesDuration(durationMinutes)
-                : formatElapsedClock(elapsedMsAt(nowMs, startTimeMs, offsetMs))}
+            {durationMinutes === null ? "—" : formatMinutesDuration(durationMinutes)}
           </Text>
+          {span && span.pausedMs > 0 ? (
+            <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 2 }}>
+              {t("timer.stopModal.pausedNotice", {
+                count: span.segmentCount,
+                tracked: formatMinutesDuration(span.billableMinutes),
+                paused: formatMinutesDuration(Math.round(span.pausedMs / 60_000)),
+              })}
+            </Text>
+          ) : null}
           {durationMinutes !== null && durationMinutes < 1 ? (
             <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 2 }}>
               {t("timer.stopModal.zeroDurationHint")}
@@ -410,8 +430,24 @@ export function StopTimerModal({
           </PrimaryButton>
           <View style={{ height: spacing.sm }} />
           <PrimaryButton onPress={onClose} disabled={submitting}>
-            {t("timer.stopModal.keepRunning")}
+            {session.status === "paused" ? t("timer.stopModal.keepPaused") : t("timer.stopModal.keepRunning")}
           </PrimaryButton>
+          {onDiscard ? (
+            <>
+              <View style={{ height: spacing.sm }} />
+              <PrimaryButton
+                onPress={() =>
+                  Alert.alert(t("timer.discard.title"), t("timer.discard.message"), [
+                    { text: t("timer.discard.cancel"), style: "cancel" },
+                    { text: t("timer.discard.confirm"), style: "destructive", onPress: onDiscard },
+                  ])
+                }
+                disabled={submitting}
+              >
+                {t("timer.stopModal.discard")}
+              </PrimaryButton>
+            </>
+          ) : null}
         </View>
       </ScrollView>
     </Modal>

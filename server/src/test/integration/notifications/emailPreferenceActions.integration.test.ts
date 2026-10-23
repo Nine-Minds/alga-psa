@@ -222,7 +222,7 @@ describe('authenticated personal email preferences with real database transactio
     });
     const service = new EmailNotificationService();
     vi.spyOn(service, 'getEffectiveTemplate').mockResolvedValue({ subject: 'Synthetic preference check', html_content: '<p>Local delivery</p>' } as any);
-    const send = (subtypeId = subtypeA) => service.sendNotification({ tenant, userId, subtypeId, emailAddress: 'recipient@example.test', templateName: 'synthetic', data: {} });
+    const send = (subtypeId = subtypeA) => service.sendNotification({ mailClass: 'general', tenant, userId, subtypeId, emailAddress: 'recipient@example.test', templateName: 'synthetic', data: {} });
     try {
       await send(); // absent preference delivers
       expect(received).toHaveLength(1);

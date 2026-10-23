@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Drawer from '@alga-psa/ui/components/Drawer';
+import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -209,11 +210,24 @@ export default function AppointmentRequestsPanel({
     setRescheduleDateTime(null);
   };
 
+  // Each highlightedRequestId is consumed once: after approve/decline/cancel (or
+  // the back button) clears the selection, the stale entry still in `requests`
+  // must not be re-selected. A different id (new deep link) fires again.
+  const consumedHighlightIdRef = useRef<string | null>(null);
+
   // Auto-select highlighted request when requests are loaded
   useEffect(() => {
-    if (highlightedRequestId && requests.length > 0 && !selectedRequest) {
+    if (
+      highlightedRequestId &&
+      consumedHighlightIdRef.current !== highlightedRequestId &&
+      requests.length > 0 &&
+      // A new deep link (an earlier id was already consumed) replaces the open
+      // selection; the first one only fills an empty pane.
+      (!selectedRequest || consumedHighlightIdRef.current !== null)
+    ) {
       const requestToHighlight = requests.find(r => r.appointment_request_id === highlightedRequestId);
       if (requestToHighlight) {
+        consumedHighlightIdRef.current = highlightedRequestId;
         // Set status filter to show the request (switch to 'all' or the request's status)
         if (requestToHighlight.status !== statusFilter && statusFilter !== 'all') {
           setStatusFilter('all');
@@ -663,9 +677,7 @@ export default function AppointmentRequestsPanel({
                   <div>
                     <div className="font-semibold text-gray-700">{t('requests.detail.labels.phone', { defaultValue: 'Phone' })}</div>
                     <div>
-                      <a href={`tel:${selectedRequest.requester_phone}`} className="text-blue-600 hover:underline">
-                        {selectedRequest.requester_phone}
-                      </a>
+                      <PhoneText value={selectedRequest.requester_phone} />
                     </div>
                   </div>
                 )}

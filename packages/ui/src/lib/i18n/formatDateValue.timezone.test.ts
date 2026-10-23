@@ -5,7 +5,13 @@
 process.env.TZ = 'America/New_York';
 
 import { describe, expect, it } from 'vitest';
+import { countryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import { formatDateValue, isDateOnlyString } from './formatDateValue';
+
+const AU = countryDateFormat('AU');
+// Zero padding stays the language's business; the country only decides order
+// and separator, so the suite asks for it explicitly where it compares strings.
+const PADDED: Intl.DateTimeFormatOptions = { year: 'numeric', month: '2-digit', day: '2-digit' };
 
 describe('formatDateValue date-only handling (TZ=America/New_York)', () => {
   it('runs under the intended ambient timezone', () => {
@@ -14,39 +20,39 @@ describe('formatDateValue date-only handling (TZ=America/New_York)', () => {
     );
   });
 
-  it('renders a date-only string as the written calendar day in en-AU', () => {
-    expect(formatDateValue('2026-09-30', 'en-AU')).toBe('30/09/2026');
+  it('renders a date-only string as the written calendar day under AU', () => {
+    expect(formatDateValue('2026-09-30', 'en', PADDED, AU)).toBe('30/09/2026');
   });
 
-  it('renders a date-only string as the written calendar day in en', () => {
-    expect(formatDateValue('2026-09-30', 'en')).toBe('9/30/2026');
+  it('renders a date-only string as the written calendar day under the default', () => {
+    expect(formatDateValue('2026-09-30', 'en', PADDED)).toBe('09/30/2026');
   });
 
   it('preserves the calendar day even when caller options carry a timezone', () => {
     expect(
-      formatDateValue('2026-09-30', 'en-AU', { timeZone: 'America/New_York' }),
+      formatDateValue('2026-09-30', 'en', { ...PADDED, timeZone: 'America/New_York' }, AU),
     ).toBe('30/09/2026');
   });
 
   it('handles month boundaries: the 1st does not become the prior month', () => {
-    expect(formatDateValue('2026-10-01', 'en-AU')).toBe('01/10/2026');
+    expect(formatDateValue('2026-10-01', 'en', PADDED, AU)).toBe('01/10/2026');
   });
 
   it('handles leap day', () => {
-    expect(formatDateValue('2028-02-29', 'en-AU')).toBe('29/02/2028');
+    expect(formatDateValue('2028-02-29', 'en', PADDED, AU)).toBe('29/02/2028');
   });
 
   it('still formats datetime strings as instants in the viewer timezone', () => {
     // Midnight UTC is the prior evening in New York — correct for an instant.
-    expect(formatDateValue('2026-09-30T00:00:00.000Z', 'en-AU')).toBe(
+    expect(formatDateValue('2026-09-30T00:00:00.000Z', 'en', PADDED, AU)).toBe(
       '29/09/2026',
     );
   });
 
   it('still formats Date objects as instants in the viewer timezone', () => {
-    expect(formatDateValue(new Date('2026-09-30T00:00:00.000Z'), 'en-AU')).toBe(
-      '29/09/2026',
-    );
+    expect(
+      formatDateValue(new Date('2026-09-30T00:00:00.000Z'), 'en', PADDED, AU),
+    ).toBe('29/09/2026');
   });
 
   it('recognizes only bare YYYY-MM-DD strings as date-only', () => {

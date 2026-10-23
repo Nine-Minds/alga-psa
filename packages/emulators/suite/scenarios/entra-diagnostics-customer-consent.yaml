@@ -1,0 +1,9 @@
+name: entra-diagnostics-customer-consent
+description: Entra diagnostic fault; apply after the green fixture is connected
+steps:
+  - disarm: msgraph/operation-fault
+  - arm: msgraph/operation-fault
+    params:
+      operation: "token:bbbbbbbb-1111-4111-8111-111111111111"
+      status: 400
+      body: { error: invalid_grant, suberror: consent_required, error_description: "AADSTS65001: Customer consent missing" }

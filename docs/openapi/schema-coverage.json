@@ -5960,6 +5960,91 @@
     ]
   },
   {
+    "route_path": "/api/v1/stopwatch",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiStopwatchController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/stopwatch.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/stopwatch.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/stopwatch/active",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiStopwatchController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/stopwatch.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/stopwatch.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/stopwatch/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "PATCH"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiStopwatchController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/stopwatch.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/stopwatch.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/stopwatch/{id}/log",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiStopwatchController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/stopwatch.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/stopwatch.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/stopwatch/{id}/pause",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiStopwatchController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/stopwatch.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/stopwatch.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/stopwatch/{id}/resume",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiStopwatchController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/stopwatch.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/stopwatch.ts"
+    ]
+  },
+  {
     "route_path": "/api/v1/storage/namespaces/{namespace}/records",
     "edition": "CE",
     "methods": [

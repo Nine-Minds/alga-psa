@@ -62,8 +62,9 @@ export function buildMetaToolDefinitions(options: BuildMetaToolOptions): MetaToo
       name: SEARCH_API_REGISTRY_TOOL,
       description:
         'Search the AlgaPSA API catalog for relevant endpoints. Use this before calling an endpoint to ' +
-        'find the most appropriate entry. Returns ranked descriptors (id, name, method, path, parameters, ' +
-        'schema, examples). Query with a natural-language description of the task.',
+        'find the most appropriate entry. Returns ranked endpoint descriptors (entryId, method, path, parameters, ' +
+        'requestBodySchema for write endpoints, and an example). Use requestBodySchema to build ' +
+        'call_api_endpoint bodies. Query with a natural-language description of the task.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -74,7 +75,7 @@ export function buildMetaToolDefinitions(options: BuildMetaToolOptions): MetaToo
           },
           limit: {
             type: 'integer',
-            description: 'Maximum number of results to return (default 5).',
+            description: 'Maximum number of results to return (default 5, max 25).',
           },
         },
         required: ['query'],

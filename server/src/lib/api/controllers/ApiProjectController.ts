@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController } from './ApiBaseController';
 import { ProjectService } from '../services/ProjectService';
+import { uuidSchema } from '../schemas/common';
 import {
   createProjectSchema,
   updateProjectSchema,
@@ -14,7 +15,9 @@ import {
   projectExportQuerySchema,
   updateProjectTaskSchema,
   createProjectPhaseSchema,
-  createProjectTaskSchema
+  createProjectTaskSchema,
+  createTaskChecklistItemSchema,
+  updateTaskChecklistItemSchema,
 } from '../schemas/project';
 import { 
   ApiKeyServiceForApi 
@@ -45,6 +48,7 @@ import {
   handleApiError
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
+import type { Knex } from 'knex';
 
 export class ApiProjectController extends ApiBaseController {
   private projectService: ProjectService;
@@ -805,6 +809,68 @@ export class ApiProjectController extends ApiBaseController {
             page,
             limit
           );
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * The project tasks a ticket is linked to, with each task's status:
+   * GET /api/v1/tickets/{id}/project-links. Needs read on the ticket and on
+   * each linked project; links to projects the caller can't read are left out.
+   */
+  getTicketProjectLinks() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          const { tenant, user } = apiRequest.context;
+          const knex = await getConnection(tenant);
+          await this.checkPermission(apiRequest, 'read');
+          if (!(await hasPermission(user, 'ticket', 'read', knex))) {
+            throw new ForbiddenError('Permission denied: Cannot read ticket');
+          }
+
+          const pathParts = new URL(req.url).pathname.split('/');
+          const parsedId = uuidSchema.safeParse(pathParts[pathParts.indexOf('tickets') + 1]);
+          if (!parsedId.success) {
+            throw new ValidationError('Invalid ticket ID format');
+          }
+          const ticketId = parsedId.data;
+
+          const ticket = await tenantDb(knex, tenant).table('tickets').where({ ticket_id: ticketId }).first();
+          if (!ticket) {
+            throw new NotFoundError('Ticket not found');
+          }
+          const ticketAllowed = await authorizeApiResourceRead({
+            knex,
+            tenant,
+            user,
+            apiKeyId: apiRequest.context.apiKeyId,
+            resource: 'ticket',
+            recordContext: this.buildTicketRecordContext(ticket),
+          });
+          if (!ticketAllowed) {
+            throw new ForbiddenError('Permission denied: Cannot read ticket');
+          }
+
+          const links = await this.projectService.getTicketProjectLinks(ticketId, apiRequest.context);
+          const projects = [...new Map(links.map((l) => [l.project_id, {
+            project_id: l.project_id,
+            assigned_to: l.project_assigned_to,
+            client_id: l.project_client_id,
+            status: l.project_status,
+            is_closed: l.project_is_closed,
+          }])).values()];
+          const readable = new Set((await this.filterAuthorizedProjects(apiRequest, projects, knex)).map((p) => p.project_id));
+
+          const data = links
+            .filter((l) => readable.has(l.project_id))
+            .map(({ project_assigned_to, project_client_id, project_status, project_is_closed, ...link }) => link);
+          return createSuccessResponse(data, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1968,8 +2034,16 @@ export class ApiProjectController extends ApiBaseController {
 
           await this.assertTaskProjectAllowed(apiRequest as AuthenticatedApiRequest, taskId, knex);
 
-          // Parse body
-          const data = await req.json();
+          // Parse body (accepts the legacy item_text / is_completed spellings too)
+          let data;
+          try {
+            data = createTaskChecklistItemSchema.parse(await req.json());
+          } catch (error) {
+            if (error instanceof ZodError) {
+              throw new ValidationError('Validation failed', error.errors);
+            }
+            throw error;
+          }
 
           const checklistItem = await this.projectService.createChecklistItem(
             taskId,
@@ -1984,4 +2058,104 @@ export class ApiProjectController extends ApiBaseController {
       }
     };
   }
+  /** The `/tasks/{taskId}/checklist/{itemId}` segments of the request path. */
+  private checklistPathIds(req: NextRequest): { taskId: string; checklistItemId: string } {
+    const pathParts = new URL(req.url).pathname.split('/');
+    const tasksIndex = pathParts.findIndex(part => part === 'tasks');
+    const taskId = pathParts[tasksIndex + 1];
+    const checklistItemId = pathParts[pathParts.indexOf('checklist', tasksIndex) + 1];
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!taskId || !uuid.test(taskId)) throw new ValidationError('Invalid task ID format');
+    if (!checklistItemId || !uuid.test(checklistItemId)) throw new ValidationError('Invalid checklist item ID format');
+    return { taskId, checklistItemId };
+  }
+
+  /** Same auth and task-access checks as the checklist create route. */
+  private async authenticateChecklistWrite(req: NextRequest): Promise<{ apiRequest: AuthenticatedApiRequest; tenantId: string; knex: Knex }> {
+    const apiKey = req.headers.get('x-api-key');
+    if (!apiKey) {
+      throw new UnauthorizedError('API key required');
+    }
+    let tenantId = req.headers.get('x-tenant-id');
+    let keyRecord;
+    if (tenantId) {
+      keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+    } else {
+      keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+      if (keyRecord) {
+        tenantId = keyRecord.tenant;
+      }
+    }
+    if (!keyRecord) {
+      throw new UnauthorizedError('Invalid API key');
+    }
+    const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+    assertInternalApiUser(user);
+    const apiRequest = req as ApiRequest;
+    apiRequest.context = {
+      userId: keyRecord.user_id,
+      tenant: keyRecord.tenant,
+      user,
+      apiKeyId: keyRecord.api_key_id,
+    };
+    await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
+    const knex = await getConnection(tenantId!);
+    const hasAccess = await hasPermission(user, 'project', 'update', knex);
+    if (!hasAccess) {
+      throw new ForbiddenError('Permission denied: Cannot update project');
+    }
+    return { apiRequest: apiRequest as AuthenticatedApiRequest, tenantId: tenantId!, knex };
+  }
+
+  /**
+   * Update checklist item (e.g. tick it done)
+   */
+  updateChecklistItem() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const { taskId, checklistItemId } = this.checklistPathIds(req);
+        const { apiRequest, tenantId, knex } = await this.authenticateChecklistWrite(req);
+
+        return await runWithTenant(tenantId, async () => {
+          await this.assertTaskProjectAllowed(apiRequest, taskId, knex);
+
+          let data;
+          try {
+            data = updateTaskChecklistItemSchema.parse(await req.json());
+          } catch (error) {
+            if (error instanceof ZodError) {
+              throw new ValidationError('Validation failed', error.errors);
+            }
+            throw error;
+          }
+
+          const item = await this.projectService.updateChecklistItem(taskId, checklistItemId, data, apiRequest.context!);
+          return createSuccessResponse(item);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Delete checklist item
+   */
+  deleteChecklistItem() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const { taskId, checklistItemId } = this.checklistPathIds(req);
+        const { apiRequest, tenantId, knex } = await this.authenticateChecklistWrite(req);
+
+        return await runWithTenant(tenantId, async () => {
+          await this.assertTaskProjectAllowed(apiRequest, taskId, knex);
+          await this.projectService.deleteChecklistItem(taskId, checklistItemId, apiRequest.context!);
+          return new NextResponse(null, { status: 204 });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
 }

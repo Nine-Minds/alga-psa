@@ -35,6 +35,7 @@
     "title": "Strona kontaktów",
     "description": "Główna strona zarządzania kontaktami z wyszukiwaniem, filtrami, widokiem listy i akcjami zbiorczymi",
     "heading": "Kontakty",
+    "sharedMailbox": "Skrzynka współdzielona",
     "addContact": "+ Dodaj kontakt",
     "actions": "Akcje",
     "searchPlaceholder": "Szukaj kontaktów, notatek i interakcji",
@@ -553,7 +554,11 @@
       "notes": "Notatki:",
       "notesPlaceholder": "Dodaj dodatkowe notatki o kontakcie...",
       "tags": "Tagi:",
-      "emailAddresses": "Adresy e-mail:"
+      "emailAddresses": "Adresy e-mail:",
+      "reportsTo": "Podlega:",
+      "reportsToPlaceholder": "Brak przełożonego",
+      "reportsToClear": "Wyczyść",
+      "reportsToHelp": "Musi to być osoba z tego samego klienta. Używane do widoczności w portalu („mój zespół”) zgłoszeń, urządzeń i projektów."
     },
     "loading": {
       "destinations": "Ładowanie miejsc docelowych..."
@@ -571,7 +576,8 @@
     },
     "empty": {
       "notSet": "Nie ustawiono",
-      "unknownClient": "Nieznany klient"
+      "unknownClient": "Nieznany klient",
+      "noManager": "Brak przełożonego"
     },
     "phoneTypes": {
       "work": "Służbowy",
@@ -594,7 +600,8 @@
       "notes": "Notatki:",
       "tags": "Tagi:",
       "emailAddresses": "Adresy e-mail:",
-      "defaultEmail": "Domyślny"
+      "defaultEmail": "Domyślny",
+      "reportsTo": "Podlega"
     },
     "status": {
       "active": "Aktywny",
@@ -731,7 +738,116 @@
       "visibilityDuplicate": "Grupa widoczności o takich danych już istnieje dla tego klienta.",
       "visibilityInvalidData": "Podano nieprawidłowe dane grupy widoczności. Sprawdź dane grupy i wybrane tablice.",
       "groupNameRequired": "Nazwa grupy jest wymagana",
-      "readPermission": "Odmowa uprawnień: nie można odczytywać kontaktów"
+      "readPermission": "Odmowa uprawnień: nie można odczytywać kontaktów",
+      "idRequired": "Identyfikator kontaktu jest wymagany",
+      "schemaError": "Błąd schematu bazy danych — skontaktuj się z pomocą techniczną",
+      "readFailed": "Wystąpił nieoczekiwany błąd podczas pobierania informacji o kontakcie",
+      "deleteRecordFailed": "Nie znaleziono rekordu kontaktu lub nie można go usunąć",
+      "updateIdRequired": "Identyfikator kontaktu jest wymagany do aktualizacji",
+      "clientMissing": "Wybrany klient już nie istnieje",
+      "destinationMissing": "Wybrane miejsce docelowe zgłoszeń przychodzących już nie istnieje",
+      "updateMissing": "Kontakt, który próbujesz zaktualizować, już nie istnieje",
+      "updateRecordMissing": "Aktualizacja kontaktu zakończyła się bez zwrócenia zaktualizowanego rekordu",
+      "clientIdRequired": "Identyfikator klienta jest wymagany",
+      "specifiedClientMissing": "Wskazany klient nie istnieje",
+      "updateDataRequired": "Nie podano danych do aktualizacji",
+      "emailInvalid": "Podaj prawidłowy adres e-mail",
+      "bulkUpdateFailed": "Aktualizacja kontaktów klienta zakończyła się bez zmiany żadnego rekordu",
+      "updateFailed": "Wystąpił nieoczekiwany błąd podczas aktualizacji kontaktów klienta",
+      "importMultipleMatches": "Importowane adresy e-mail pasują do wielu istniejących kontaktów",
+      "updatePermission": "Nie można zaktualizować kontaktów",
+      "importDataRequired": "Nie podano danych kontaktów",
+      "fullNameRequired": "Imię i nazwisko jest wymagane",
+      "importFailed": "Wystąpił nieoczekiwany błąd podczas importowania kontaktów",
+      "emailsRequired": "Nie podano adresów e-mail",
+      "validEmailsRequired": "Nie podano prawidłowych adresów e-mail",
+      "checkEmailsFailed": "Wystąpił nieoczekiwany błąd podczas sprawdzania istniejących adresów e-mail",
+      "portalAdminRequired": "Wymagany jest dostęp administratora portalu klienta",
+      "assignedGroupInvalid": "Przypisana grupa widoczności jest nieprawidłowa dla tego kontaktu",
+      "groupNotFound": "Nie znaleziono grupy widoczności",
+      "boardsInvalid": "Co najmniej jedna tablica jest nieprawidłowa dla tej organizacji",
+      "groupCreateFailed": "Tworzenie grupy widoczności zakończyło się bez zwrócenia identyfikatora grupy",
+      "groupInUse": "Nie można usunąć grupy widoczności, dopóki jest przypisana do kontaktów",
+      "importEmailInvalid": "Nieprawidłowy format adresu e-mail kontaktu: {{name}}",
+      "importClientMissing": "Nie znaleziono klienta dla kontaktu: {{name}}",
+      "invalidEmailValue": "Nieprawidłowy format adresu e-mail: {{email}}",
+      "invalidData": "Nieprawidłowe dane kontaktu",
+      "phoneExtensionInvalid": "Telefon {{index}}: wprowadź prawidłowy numer wewnętrzny",
+      "phoneNumberInvalid": "Telefon {{index}}: wprowadź prawidłowy numer telefonu",
+      "phoneCountryRequired": "Telefon {{index}}: podaj numer kierunkowy kraju zaczynający się od +",
+      "tenantEmailExists": "Adres e-mail kontaktu już istnieje w tej organizacji",
+      "importRowFailed": "Nie można zaimportować tego kontaktu. Sprawdź wymagane pola i odwołania do klientów.",
+      "deleteMissing": "Kontakt, który próbujesz usunąć, już nie istnieje.",
+      "deleteFailed": "Nie można usunąć kontaktu. Spróbuj ponownie.",
+      "deleteDependencies": "Nie można usunąć kontaktu, ponieważ ma powiązane rekordy",
+      "connectionFailed": "Problem z połączeniem z bazą danych. Spróbuj ponownie.",
+      "deleteUnexpected": "Wystąpił nieoczekiwany błąd podczas usuwania kontaktu",
+      "importFileFailed": "Nie można zaimportować kontaktów. Sprawdź plik i spróbuj ponownie.",
+      "portalAdminUpdateFailed": "Nie można zaktualizować statusu administratora portalu. Odśwież stronę i spróbuj ponownie.",
+      "userLoadFailed": "Nie udało się pobrać użytkownika",
+      "sharedMailboxAdmin": "Kontakty współdzielonych skrzynek pocztowych nie mogą być administratorami klientów.",
+      "createFailed": "Wystąpił nieoczekiwany błąd podczas tworzenia kontaktu",
+      "importDuplicateEmail": "Kontakt z tym adresem e-mail już istnieje: {{value}}",
+      "importDuplicateName": "Kontakt o tej nazwie już istnieje: {{value}}",
+      "permissions": {
+        "readContacts": "Nie można odczytać kontaktów",
+        "deleteContacts": "Nie można usunąć kontaktów",
+        "createContacts": "Nie można utworzyć kontaktów",
+        "updateContacts": "Nie można zaktualizować kontaktów",
+        "managePhoneTypes": "Nie można zarządzać typami telefonów",
+        "updateClientUsers": "Nie masz uprawnień do aktualizowania użytkowników klientów",
+        "viewClientUsers": "Nie masz uprawnień do wyświetlania użytkowników klientów"
+      },
+      "field": "pole"
     }
+  },
+  "portal": {
+    "visibilityGroups": {
+      "scopeLabel": "Widoczność zgłoszeń",
+      "scopeClient": "Wszystkie zgłoszenia tego klienta",
+      "scopeContact": "Tylko własne zgłoszenia",
+      "scopeClientDescription": "Członkowie widzą wszystkie zgłoszenia tego klienta na wybranych tablicach.",
+      "scopeContactDescription": "Członkowie widzą zgłoszenia, w których są kontaktem, zgłoszenia osób im podlegających oraz zgłoszenia, które obserwują. Administratorzy klienta zawsze widzą wszystko na wybranych tablicach, także zgłoszenia bez kontaktu.",
+      "assignmentHelp": "Przypisz grupę, aby ograniczyć tablice oraz zgłoszenia, urządzenia i projekty widoczne dla tej osoby, albo zachowaj pełny dostęp do klienta.",
+      "assetScopeLabel": "Widoczność urządzeń",
+      "assetScopeClient": "Wszystkie urządzenia tego klienta",
+      "assetScopeContact": "Tylko własne urządzenia",
+      "assetScopeClientDescription": "Członkowie widzą wszystkie urządzenia tego klienta, także nieprzypisane.",
+      "assetScopeContactDescription": "Członkowie widzą tylko urządzenia przypisane do nich lub do osób im podlegających. Nieprzypisane urządzenia są ukryte. Administratorzy klienta zawsze widzą wszystko.",
+      "projectScopeLabel": "Widoczność projektów",
+      "projectScopeClient": "Wszystkie projekty tego klienta",
+      "projectScopeContact": "Tylko własne projekty",
+      "projectScopeClientDescription": "Członkowie widzą wszystkie projekty tego klienta.",
+      "projectScopeContactDescription": "Członkowie widzą tylko projekty, w których kontaktem są oni sami lub osoba im podlegająca. Projekty bez kontaktu są ukryte. Administratorzy klienta zawsze widzą wszystko.",
+      "scopeSummary": "Zgłoszenia: {{tickets}} · Urządzenia: {{devices}} · Projekty: {{projects}}",
+      "scopeSummaryAll": "Wszystkie",
+      "scopeSummaryOwn": "Własne",
+      "managerScopeNote_one": "Jego widok obejmuje także dane {{count}} podlegającej mu osoby.",
+      "managerScopeNote_few": "Jego widok obejmuje także dane {{count}} podlegających mu osób.",
+      "managerScopeNote_many": "Jego widok obejmuje także dane {{count}} podlegających mu osób.",
+      "managerScopeNote_other": "Jego widok obejmuje także dane {{count}} podlegających mu osób."
+    }
+  },
+  "messages": {
+    "success": {
+      "updated": "Pomyślnie zaktualizowano kontakt",
+      "created": "Kontakt został utworzony"
+    }
+  },
+  "csvTemplate": {
+    "explorerRole": "Główna odkrywczyni",
+    "explorerNotes": "Wpadła do króliczej nory i odkryła zupełnie nowy świat",
+    "explorerTags": "Ciekawa, Żądna przygód, Odważna",
+    "teaRole": "Główny ekspert ceremonii herbacianej",
+    "teaNotes": "Wie, dlaczego kruk jest podobny do biurka",
+    "teaTags": "Kreatywny, Ekscentryczny, Ekspert od herbaty"
+  },
+  "entraContactBadge": {
+    "lastSyncedTitle": "Microsoft Entra · ostatnia synchronizacja: {{date}}",
+    "description": "Ten kontakt jest synchronizowany z kontem w katalogu.",
+    "signInName": "Nazwa logowania: {{name}}",
+    "lastSynced": "Ostatnia synchronizacja: {{date}}",
+    "deleted": "Nieaktywny — konto Microsoft zostało usunięte.",
+    "disabled": "Nieaktywny — konto Microsoft jest wyłączone."
   }
 }

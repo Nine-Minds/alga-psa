@@ -1,0 +1,25 @@
+name: Install poppler-utils
+description: >-
+  Install poppler-utils (pdftoppm, pdftotext) for unit suites that rasterize or
+  read generated PDFs. The label PDF end-to-end suite
+  (packages/billing/src/lib/label-batch/labelBatch.e2e.test.ts) shells out to
+  `pdftoppm` and fails, by design, when it is absent; the hosted runner image
+  does not ship it. Poppler has no static release binary, so this goes through
+  apt — bounded, because the hosted runners' Ubuntu mirror has stalled jobs for
+  hours before (see install-ripgrep): every apt call is retried by apt itself
+  and hard-capped with `timeout`.
+runs:
+  using: composite
+  steps:
+    - name: Install poppler-utils
+      shell: bash
+      run: |
+        set -euo pipefail
+        if command -v pdftoppm >/dev/null 2>&1; then
+          echo "poppler already present: $(pdftoppm -v 2>&1 | head -1)"
+          exit 0
+        fi
+        apt_opts=(-o Acquire::Retries=3 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60)
+        sudo timeout 300 apt-get "${apt_opts[@]}" update
+        sudo timeout 300 apt-get "${apt_opts[@]}" install -y --no-install-recommends poppler-utils
+        pdftoppm -v 2>&1 | head -1

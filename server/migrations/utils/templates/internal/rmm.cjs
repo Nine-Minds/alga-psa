@@ -14,6 +14,7 @@ const TEMPLATES = [
       it: { title: 'Avviso RMM ({{severity}}): {{deviceName}}', message: '{{message}}' },
       pl: { title: 'Alert RMM ({{severity}}): {{deviceName}}', message: '{{message}}' },
       pt: { title: 'Alerta de RMM ({{severity}}): {{deviceName}}', message: '{{message}}' },
+      sv: { title: 'RMM-larm ({{severity}}): {{deviceName}}', message: '{{message}}' },
     },
   },
 ];

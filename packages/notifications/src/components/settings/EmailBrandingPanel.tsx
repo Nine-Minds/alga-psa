@@ -10,7 +10,14 @@ import { Switch } from "@alga-psa/ui/components/Switch";
 import { useRegisterUnsavedChanges } from "@alga-psa/ui/context";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import { getErrorMessage } from "@alga-psa/ui/lib/errorHandling";
-import { applyEmailPalette, decorateBrandedHtml, STOCK_EMAIL_PALETTE } from "@alga-psa/email/branding";
+import {
+  applyEmailPalette,
+  decorateBrandedHtml,
+  isDarkEmailHeader,
+  pickBrandLogoVariant,
+  STOCK_EMAIL_PALETTE,
+  type EmailBrandingLogoArtwork,
+} from "@alga-psa/email/branding";
 import {
   getEmailBrandingStatusAction,
   removeEmailBrandingAction,
@@ -34,7 +41,15 @@ import {
   type OverridableToken,
 } from "./emailBrandingPanelState";
 
-const PREFERRED_PREVIEW_TEMPLATES = ['ticket-created', 'invoice-email'];
+/** Tried in order for the single panel preview; every template gets its own preview in the apply dialog. */
+const PREFERRED_PREVIEW_TEMPLATE_NAMES = ['ticket-created', 'invoice-email'];
+
+/** The artwork pin, in the order the panel offers it; auto follows the header color. */
+const LOGO_ARTWORK_OPTIONS: Array<{ value: EmailBrandingLogoArtwork; key: string; fallback: string }> = [
+  { value: 'auto', key: 'logoArtworkAuto', fallback: 'Match the header' },
+  { value: 'light', key: 'logoArtworkLight', fallback: 'Light-background logo' },
+  { value: 'dark', key: 'logoArtworkDark', fallback: 'Dark-background logo' },
+];
 
 /** Client-side edition check; the server enforces it again with isEnterprise. */
 const isEnterpriseEdition = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
@@ -139,15 +154,15 @@ export function EmailBrandingPanel({
 
   const resolved = useMemo(() => (draft ? resolveDraft(draft) : STOCK_EMAIL_PALETTE), [draft]);
 
-  const previewTemplates = useMemo(() => {
+  const previewTemplate = useMemo(() => {
     const language = selectedLanguages.size > 0 ? [...selectedLanguages][0] : 'en';
     const inLanguage = systemTemplates.filter((template) => template.language_code === language);
     const pool = inLanguage.length > 0 ? inLanguage : systemTemplates;
-    const preferred = PREFERRED_PREVIEW_TEMPLATES
+    const preferred = PREFERRED_PREVIEW_TEMPLATE_NAMES
       .map((name) => pool.find((template) => template.name === name))
-      .filter((template): template is SystemEmailTemplate & { category: string } => !!template);
+      .find((template): template is SystemEmailTemplate & { category: string } => !!template);
 
-    return preferred.length === 2 ? preferred : pool.slice(0, 2);
+    return preferred ?? pool[0] ?? null;
   }, [systemTemplates, selectedLanguages]);
 
   const update = useCallback((patch: Partial<EmailBrandingDraft>) => {
@@ -173,7 +188,9 @@ export function EmailBrandingPanel({
         primary: draft.primary,
         secondary: draft.singleColor ? null : draft.secondary,
         overrides: draft.overrides,
-        logo: draft.logoVariant ? { variant: draft.logoVariant } : null,
+        logo: draft.logoVariant
+          ? { variant: draft.logoVariant, ...(draft.logoArtwork !== 'auto' ? { artwork: draft.logoArtwork } : {}) }
+          : null,
         hideAttribution: draft.hideAttribution,
       });
       setSavedDraft(draft);
@@ -206,19 +223,27 @@ export function EmailBrandingPanel({
     : t(`notifications.emailBranding.source.${status.suggestion.source}`, SOURCE_FALLBACKS[status.suggestion.source]);
 
   const showNewTemplateBanner = shouldShowNewTemplateBanner(status, dismissedNewCount);
-  const hasAnyLogo = !!(status.logoOptions.logoWideUrl || status.logoOptions.logoUrl);
+  // A tenant may have uploaded only the dark artwork of a shape, which is still
+  // a logo this palette can use.
+  const hasWideLogo = !!(status.logoOptions.logoWideUrl || status.logoOptions.logoWideDarkUrl);
+  const hasSquareLogo = !!(status.logoOptions.logoUrl || status.logoOptions.logoDarkUrl);
+  const hasAnyLogo = hasWideLogo || hasSquareLogo;
 
-  // Preview exactly what an apply would write, brand assets included.
+  // Preview exactly what an apply would write, brand assets included — same
+  // chooser, same header-darkness rule, same pin. The row references the logo
+  // by content-id, so the preview swaps it back for the branding URL the iframe
+  // can actually load.
+  const headerIsDark = isDarkEmailHeader(resolved);
   const previewHtml = (html: string) => {
     const recolored = applyEmailPalette(html, STOCK_EMAIL_PALETTE, resolved);
     if (!isEnterpriseEdition || !status.isEnterprise) return recolored;
 
-    const logoUrl = draft.logoVariant === 'wide'
-      ? status.logoOptions.logoWideUrl || status.logoOptions.logoUrl
-      : status.logoOptions.logoUrl;
+    const variant = draft.logoVariant
+      ? pickBrandLogoVariant(draft.logoVariant, headerIsDark, status.logoOptions, draft.logoArtwork)
+      : null;
 
     return decorateBrandedHtml(recolored, {
-      logo: draft.logoVariant && logoUrl ? { url: logoUrl, alt: status.logoOptions.clientName ?? '' } : undefined,
+      logo: variant ? { variant, alt: status.logoOptions.clientName ?? '' } : undefined,
       hideAttribution: draft.hideAttribution,
     });
   };
@@ -344,7 +369,7 @@ export function EmailBrandingPanel({
                     checked={!!draft.logoVariant}
                     disabled={!status.canEdit || !hasAnyLogo}
                     onCheckedChange={(checked) => update({
-                      logoVariant: checked ? (status.logoOptions.logoWideUrl ? 'wide' : 'default') : null,
+                      logoVariant: checked ? (hasWideLogo ? 'wide' : 'default') : null,
                     })}
                   />
                   <Label htmlFor="email-branding-use-logo">
@@ -354,29 +379,54 @@ export function EmailBrandingPanel({
 
                 {hasAnyLogo ? (
                   draft.logoVariant && (
-                    <div className="flex gap-2">
-                      {status.logoOptions.logoWideUrl && (
-                        <Button
-                          id="email-branding-logo-variant-wide"
-                          size="sm"
-                          variant={draft.logoVariant === 'wide' ? 'default' : 'outline'}
-                          disabled={!status.canEdit}
-                          onClick={() => update({ logoVariant: 'wide' })}
-                        >
-                          {t('notifications.emailBranding.enterprise.logoWide', 'Wide logo')}
-                        </Button>
-                      )}
-                      {status.logoOptions.logoUrl && (
-                        <Button
-                          id="email-branding-logo-variant-default"
-                          size="sm"
-                          variant={draft.logoVariant === 'default' ? 'default' : 'outline'}
-                          disabled={!status.canEdit}
-                          onClick={() => update({ logoVariant: 'default' })}
-                        >
-                          {t('notifications.emailBranding.enterprise.logoDefault', 'Square logo')}
-                        </Button>
-                      )}
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        {hasWideLogo && (
+                          <Button
+                            id="email-branding-logo-variant-wide"
+                            size="sm"
+                            variant={draft.logoVariant === 'wide' ? 'default' : 'outline'}
+                            disabled={!status.canEdit}
+                            onClick={() => update({ logoVariant: 'wide' })}
+                          >
+                            {t('notifications.emailBranding.enterprise.logoWide', 'Wide logo')}
+                          </Button>
+                        )}
+                        {hasSquareLogo && (
+                          <Button
+                            id="email-branding-logo-variant-default"
+                            size="sm"
+                            variant={draft.logoVariant === 'default' ? 'default' : 'outline'}
+                            disabled={!status.canEdit}
+                            onClick={() => update({ logoVariant: 'default' })}
+                          >
+                            {t('notifications.emailBranding.enterprise.logoDefault', 'Square logo')}
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label>{t('notifications.emailBranding.enterprise.logoArtwork', 'Logo artwork')}</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {LOGO_ARTWORK_OPTIONS.map(({ value, key, fallback }) => (
+                            <Button
+                              key={value}
+                              id={`email-branding-logo-artwork-${value}`}
+                              size="sm"
+                              variant={draft.logoArtwork === value ? 'default' : 'outline'}
+                              disabled={!status.canEdit}
+                              onClick={() => update({ logoArtwork: value })}
+                            >
+                              {t(`notifications.emailBranding.enterprise.${key}`, fallback)}
+                            </Button>
+                          ))}
+                        </div>
+                        <p id="email-branding-logo-artwork-hint" className="text-xs text-gray-500">
+                          {headerIsDark
+                            ? t('notifications.emailBranding.enterprise.logoArtworkAutoDark', 'Automatic reads this header as dark and uses the dark-background logo.')
+                            : t('notifications.emailBranding.enterprise.logoArtworkAutoLight', 'Automatic reads this header as light and uses the light-background logo.')}
+                        </p>
+                      </div>
                     </div>
                   )
                 ) : (
@@ -442,14 +492,15 @@ export function EmailBrandingPanel({
 
           <div className="space-y-3">
             <Label>{t('notifications.emailBranding.preview.title', 'Preview')}</Label>
-            {previewTemplates.map((template) => (
+            {previewTemplate && (
               <EmailTemplatePreview
-                key={`${template.name}-${template.language_code}`}
-                id={`email-branding-preview-${template.name}`}
-                htmlContent={previewHtml(template.html_content)}
-                templateName={template.name}
+                key={`${previewTemplate.name}-${previewTemplate.language_code}`}
+                id={`email-branding-preview-${previewTemplate.name}`}
+                htmlContent={previewHtml(previewTemplate.html_content)}
+                brandLogoUrls={status.logoOptions}
+                templateName={previewTemplate.name}
               />
-            ))}
+            )}
           </div>
         </div>
 

@@ -1,0 +1,59 @@
+{
+  "mappings": [
+    {
+      "name": "Google Calendar fixture token refresh",
+      "priority": 1,
+      "request": { "method": "POST", "urlPath": "/token", "bodyPatterns": [{ "contains": "grant_type=refresh_token" }] },
+      "response": {
+        "status": 200,
+        "jsonBody": { "access_token": "fixture-google-calendar-access", "expires_in": 3600, "token_type": "Bearer" },
+        "headers": { "Content-Type": "application/json" }
+      }
+    },
+    {
+      "name": "Google Calendar fixture create event",
+      "request": { "method": "POST", "urlPath": "/calendar/v3/calendars/alga-smoke-fixture/events" },
+      "response": {
+        "status": 200,
+        "jsonBody": {
+          "id": "alga-smoke-fixture-event",
+          "summary": "{{jsonPath request.body '$.summary'}}",
+          "description": "{{jsonPath request.body '$.description'}}",
+          "start": { "dateTime": "{{jsonPath request.body '$.start.dateTime'}}", "timeZone": "{{jsonPath request.body '$.start.timeZone'}}" },
+          "end": { "dateTime": "{{jsonPath request.body '$.end.dateTime'}}", "timeZone": "{{jsonPath request.body '$.end.timeZone'}}" },
+          "status": "confirmed"
+        },
+        "headers": { "Content-Type": "application/json" }
+      }
+    },
+    {
+      "name": "Google Calendar fixture read event",
+      "request": { "method": "GET", "urlPath": "/calendar/v3/calendars/alga-smoke-fixture/events/alga-smoke-fixture-event" },
+      "response": {
+        "status": 200,
+        "jsonBody": {
+          "id": "alga-smoke-fixture-event", "summary": "Calendar emulator fixture event",
+          "description": "Fixture response for smoke validation",
+          "start": { "dateTime": "2026-09-29T10:00:00Z", "timeZone": "UTC" },
+          "end": { "dateTime": "2026-09-29T11:00:00Z", "timeZone": "UTC" }, "status": "confirmed"
+        },
+        "headers": { "Content-Type": "application/json" }
+      }
+    },
+    {
+      "name": "Google Calendar fixture update event",
+      "request": { "method": "PUT", "urlPath": "/calendar/v3/calendars/alga-smoke-fixture/events/alga-smoke-fixture-event" },
+      "response": {
+        "status": 200,
+        "jsonBody": {
+          "id": "alga-smoke-fixture-event",
+          "summary": "{{jsonPath request.body '$.summary'}}",
+          "description": "{{jsonPath request.body '$.description'}}",
+          "start": { "dateTime": "{{jsonPath request.body '$.start.dateTime'}}", "timeZone": "{{jsonPath request.body '$.start.timeZone'}}" },
+          "end": { "dateTime": "{{jsonPath request.body '$.end.dateTime'}}", "timeZone": "{{jsonPath request.body '$.end.timeZone'}}" }, "status": "confirmed"
+        },
+        "headers": { "Content-Type": "application/json" }
+      }
+    }
+  ]
+}

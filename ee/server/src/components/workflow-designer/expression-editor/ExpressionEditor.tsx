@@ -22,7 +22,8 @@ import { registerHoverProvider } from './hoverProvider';
 import { registerSignatureHelpProvider } from './signatureHelpProvider';
 import { createDiagnosticsProvider, validateExpression } from './diagnosticsProvider';
 import { insertTextIntoMonacoEditor } from '@alga-psa/workflows/expression-authoring';
-import { normalizeInsertedText } from './insertionText';
+import { getPathInsertionStart, normalizeInsertedText } from './insertionText';
+import { useCaretIntent } from '../caretIntent';
 
 /**
  * Props for the ExpressionEditor component
@@ -175,6 +176,7 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
     const isDark = resolvedTheme === 'dark';
     const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
     const plainTextAreaRef = useRef<HTMLTextAreaElement | null>(null);
+    const { intent: caretIntent, handlers: caretHandlers } = useCaretIntent(plainTextAreaRef);
     const monacoRef = useRef<typeof monaco | null>(null);
     const contextRef = useRef<ExpressionContext>(context);
     const diagnosticsProviderRef = useRef<ReturnType<typeof createDiagnosticsProvider> | null>(null);
@@ -213,8 +215,12 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
           const ta = plainTextAreaRef.current;
           const insert = normalizeInsertedText(text);
           const current = value ?? '';
-          const start = ta?.selectionStart ?? current.length;
-          const end = ta?.selectionEnd ?? current.length;
+          // At the caret the author placed, otherwise at the end of the expression.
+          const { start: selectionStart, end } = caretIntent.insertionRange(ta, current.length);
+          // Complete a partly typed path instead of appending a second copy of it.
+          const start = selectionStart === end
+            ? getPathInsertionStart(current.slice(0, selectionStart), insert)
+            : selectionStart;
           const next = current.slice(0, start) + insert + current.slice(end);
           onChange(next);
           requestAnimationFrame(() => {
@@ -222,6 +228,7 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
               const caret = start + insert.length;
               ta.focus();
               ta.setSelectionRange(caret, caret);
+              caretIntent.onInserted();
             }
           });
           return;
@@ -554,8 +561,10 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
             id={idPrefix ? `${idPrefix}-expr` : undefined}
             value={value}
             onChange={(e) => handleChange(e.target.value)}
-            onFocus={() => { setIsFocused(true); onFocus?.(); }}
+            onFocus={() => { caretHandlers.onFocus(); setIsFocused(true); onFocus?.(); }}
             onBlur={() => { setIsFocused(false); onBlur?.(); }}
+            onMouseUp={caretHandlers.onMouseUp}
+            onKeyDown={caretHandlers.onKeyDown}
             placeholder={placeholder}
             disabled={disabled || readOnly}
             spellCheck={false}

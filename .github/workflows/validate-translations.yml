@@ -95,7 +95,7 @@ jobs:
 
       - name: Check translated template parity
         run: |
-          for locale in de es fr it nl pl pt; do
+          for locale in de es fr it nl pl pt sv; do
             node tools/i18n/ci-gate.mjs "Template parity ($locale)" \
               node tools/i18n/check-template-parity.cjs --locale "$locale"
           done

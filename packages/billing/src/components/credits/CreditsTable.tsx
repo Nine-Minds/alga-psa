@@ -24,7 +24,6 @@ export type CreditRow = ICreditTracking & {
   client_name?: string;
 };
 
-const PAGE_SIZE = 20;
 const EXPIRING_SOON_DAYS = 7;
 
 function getStatusLabel(
@@ -173,6 +172,7 @@ export default function CreditsTable() {
   const [credits, setCredits] = useState<CreditRow[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [selectedClient, setSelectedClient] = useState<string>(() => searchParams?.get('client') ?? '');
   const [selectedStatus, setSelectedStatus] = useState<CreditStatusFilter | ''>('');
   const [clientOptions, setClientOptions] = useState<{ value: string; label: string }[]>([]);
@@ -206,7 +206,7 @@ export default function CreditsTable() {
         clientId: selectedClient || undefined,
         status: selectedStatus || undefined,
         page,
-        pageSize: PAGE_SIZE,
+        pageSize,
       });
 
       if (result.success && result.data && !('actionError' in result.data) && !('permissionError' in result.data)) {
@@ -225,7 +225,7 @@ export default function CreditsTable() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedClient, selectedStatus, page, t]);
+  }, [selectedClient, selectedStatus, page, pageSize, t]);
 
   useEffect(() => {
     loadCredits();
@@ -305,7 +305,8 @@ export default function CreditsTable() {
           pagination={true}
           currentPage={page}
           onPageChange={setPage}
-          pageSize={PAGE_SIZE}
+          pageSize={pageSize}
+          onItemsPerPageChange={(nextPageSize) => { setPageSize(nextPageSize); setPage(1); }}
           totalItems={totalItems}
           onRowClick={(record: CreditRow) => setViewCredit(record)}
         />

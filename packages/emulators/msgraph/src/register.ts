@@ -25,6 +25,22 @@ const directoryUserParams = {
 };
 
 export function register(reg: ControlRegistry, core: MsGraphCore): void {
+  reg.seeder({
+    name: 'mailbox-folder-permission',
+    description: 'Set delegated mailbox access for an OAuth client, with full access or specific folder ids/well-known names',
+    params: z.object({ mailbox: z.string(), delegate: z.string(), fullAccess: z.boolean().default(false), folders: z.array(z.string()).default([]) }),
+    run: ({ mailbox, delegate, fullAccess, folders }) => {
+      core.setMailboxFolderPermissions(mailbox, delegate, { fullAccess, folders });
+      return { mailbox, delegate, fullAccess, folders };
+    },
+  });
+  reg.seeder({
+    name: 'directory-group',
+    description: 'Add an Entra group and its membership for read-only access diagnostics',
+    params: z.object({ id: z.string(), displayName: z.string(),
+      securityEnabled: z.boolean().default(true), memberIds: z.array(z.string()).default([]) }),
+    run: (group) => { core.directoryGroups.set(group.id, group); return group; },
+  });
   reg.action({
     name: 'deliver-message',
     description: 'Redeliver an existing mailbox message notification and report each callback outcome without creating another message',
@@ -102,6 +118,19 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
     description: 'Add an Entra directory user returned by Graph /users',
     params: z.object(directoryUserParams),
     run: (input) => core.addDirectoryUser(input),
+  });
+
+  reg.seeder({
+    name: 'signed-in-user',
+    description:
+      'Set the identity Graph /me reports for the signed-in account. Seed mail and userPrincipalName apart to emulate the Entra account whose mail is an .onmicrosoft.com address while the app login is a vanity domain',
+    params: z.object({
+      id: z.string().optional(),
+      mail: z.string().optional(),
+      userPrincipalName: z.string().optional(),
+      displayName: z.string().optional(),
+    }),
+    run: (input) => core.setSignedInUser(input),
   });
 
   reg.seeder({
@@ -486,10 +515,11 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
 
   reg.stateView({
     name: 'config',
-    description: 'Token behavior and inbound bot activity configuration',
+    description: 'Token behavior, signed-in identity and inbound bot activity configuration',
     get: () => ({
       accessTokenTtlSeconds: core.accessTokenTtlSeconds,
       rotateRefreshTokens: core.rotateRefreshTokens,
+      signedInUser: { ...core.signedInUser },
       bot: { ...core.botConfig },
       defaultActor: { ...core.defaultActor },
     }),

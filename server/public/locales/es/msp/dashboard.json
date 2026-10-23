@@ -1,6 +1,7 @@
 {
   "welcome": {
     "title": "Bienvenido a su centro de mando MSP",
+    "titleBranded": "Bienvenido al centro de mando de {{companyName}}",
     "description": "Siga el progreso de la incorporación, configure servicios críticos y mantenga consistente la experiencia de cada cliente.",
     "titleCommunity": "Bienvenido de nuevo",
     "descriptionCommunity": "Acceda rápidamente a tickets, programación, proyectos e informes desde su panel."
@@ -110,7 +111,9 @@
       "hiding": "Ocultando...",
       "hide": "Ocultar",
       "dismiss": "Ocultar {{title}}",
-      "restoring": "Restaurando..."
+      "restoring": "Restaurando...",
+      "hideSection": "Ocultar sección",
+      "hidingSection": "Ocultando sección…"
     },
     "hidden": {
       "title": "Tarjetas de configuración ocultas ({{count}})",
@@ -179,7 +182,14 @@
     },
     "errors": {
       "dismissFailed": "No se pudo ocultar el paso de incorporación.",
-      "restoreFailed": "No se pudo restaurar el paso de incorporación."
+      "restoreFailed": "No se pudo restaurar el paso de incorporación.",
+      "dismissSectionFailed": "No se pudo ocultar la sección de incorporación.",
+      "restoreSectionFailed": "No se pudo restaurar la sección de incorporación."
+    },
+    "preferences": {
+      "title": "Preferencias del panel",
+      "description": "La sección de incorporación completada está oculta en su panel.",
+      "restoreSection": "Restaurar sección de incorporación"
     }
   },
   "greeting": {

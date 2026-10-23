@@ -1,0 +1,26 @@
+{
+  "name": "@alga-psa/list-views",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/list-views/src",
+  "projectType": "library",
+  "tags": [
+    "scope:list-views",
+    "type:horizontal"
+  ],
+  "targets": {
+    "build": {
+      "executor": "nx:noop"
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": [
+        "{options.outputFile}"
+      ],
+      "options": {
+        "lintFilePatterns": [
+          "packages/list-views/**/*.{ts,tsx}"
+        ]
+      }
+    }
+  }
+}

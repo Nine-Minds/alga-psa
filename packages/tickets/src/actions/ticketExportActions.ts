@@ -26,6 +26,7 @@ const CSV_FIELDS = [
   'closed_by',
   'entered_at',
   'updated_at',
+  'latest_activity_at',
   'closed_at',
   'due_date',
   'response_state',
@@ -51,6 +52,7 @@ const CSV_HEADERS: Record<string, string> = {
   closed_by: 'Closed By',
   entered_at: 'Entered At',
   updated_at: 'Updated At',
+  latest_activity_at: 'Last Activity',
   closed_at: 'Closed At',
   due_date: 'Due Date',
   response_state: 'Response State',
@@ -80,6 +82,7 @@ function formatTicketOrigin(origin: string | null | undefined): string {
     case 'email': return 'Email';
     case 'client_portal': return 'Client Portal';
     case 'manual': return 'Manual';
+    case 'recurring': return 'Recurring';
     default: return origin;
   }
 }
@@ -146,6 +149,7 @@ function ticketToRow(
     closed_by: closedByName,
     entered_at: formatDate(ticket.entered_at),
     updated_at: formatDate(ticket.updated_at),
+    latest_activity_at: formatDate(ticket.latest_activity_at),
     closed_at: formatDate(ticket.closed_at),
     due_date: formatDate(ticket.due_date),
     response_state: formatResponseState(ticket.response_state),

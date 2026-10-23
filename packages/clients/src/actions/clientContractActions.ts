@@ -14,9 +14,11 @@ import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
 import {
   checkAndReactivateExpiredContract,
   createClientContractAssignment,
+  getTenantLocalToday,
 } from '@alga-psa/shared/billingClients';
 import { withAuth } from '@alga-psa/auth';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishNonCatalogWorkflowEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { emitDateDomainEventOnce, normalizeDateDomainKeyDate } from '@alga-psa/event-bus/workflow/dateDomainEvents';
 import {
   buildContractCreatedPayload,
   buildContractRenewalUpcomingPayload,
@@ -35,6 +37,12 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+
+// Tenant-local "today" for workflow status derivation (UTC fallback when no tenant timezone is set).
+const getWorkflowToday = async (tenant: string): Promise<string> => {
+  const { knex } = await createTenantKnex(tenant);
+  return getTenantLocalToday(knex, tenant);
+};
 
 const assertCanReadClientContracts = (user: any) =>
   assertMspPermission(
@@ -236,6 +244,7 @@ export const assignContractToClient = withAuth(async (
   await assertCanCreateClientContracts(_user);
 
   try {
+    const { knex } = await createTenantKnex();
     const clientContract = await ClientContract.assignContractToClient(
       clientId,
       contractId,
@@ -247,6 +256,7 @@ export const assignContractToClient = withAuth(async (
 
     const createdAt = clientContract.created_at ?? new Date().toISOString();
     const status = deriveClientContractWorkflowStatus({
+      now: await getWorkflowToday(tenant),
       isActive: clientContract.is_active,
       startDate: clientContract.start_date,
       endDate: clientContract.end_date,
@@ -271,7 +281,7 @@ export const assignContractToClient = withAuth(async (
       idempotencyKey: `contract_created:${clientContract.contract_id}:${clientContract.client_id}`,
     });
 
-    await publishWorkflowEvent({
+    await publishNonCatalogWorkflowEvent({
       eventType: 'CLIENT_CONTRACT_CREATED',
       payload: {
         clientContractId: clientContract.client_contract_id,
@@ -296,13 +306,15 @@ export const assignContractToClient = withAuth(async (
         })
       : null;
     if (renewal) {
-      await publishWorkflowEvent({
-        eventType: 'CONTRACT_RENEWAL_UPCOMING',
+      await emitDateDomainEventOnce(knex, tenant, {
+        eventType: 'CONTRACT_RENEWAL_UPCOMING', entityId: clientContract.client_contract_id,
+        cycleKey: renewal.renewalCycleKey ?? normalizeDateDomainKeyDate(renewal.decisionDueDate ?? renewal.renewalAt),
+        occursOn: normalizeDateDomainKeyDate(renewal.decisionDueDate),
         payload: buildContractRenewalUpcomingPayload({
           contractId: clientContract.contract_id,
           clientId: clientContract.client_id,
-          renewalAt: renewal.renewalAt,
-          decisionDueDate: renewal.decisionDueDate,
+          renewalAt: normalizeDateDomainKeyDate(renewal.renewalAt),
+          decisionDueDate: normalizeDateDomainKeyDate(renewal.decisionDueDate),
           daysUntilRenewal: renewal.daysUntilRenewal,
           daysUntilDecisionDue: renewal.daysUntilDecisionDue,
           renewalCycleKey: renewal.renewalCycleKey,
@@ -312,7 +324,6 @@ export const assignContractToClient = withAuth(async (
           occurredAt: createdAt,
           actor: maybeUserActor(_user),
         },
-        idempotencyKey: `contract_renewal_upcoming:${clientContract.contract_id}:${clientContract.client_id}:${renewal.renewalCycleKey ?? renewal.decisionDueDate ?? renewal.renewalAt}`,
       });
     }
 
@@ -394,6 +405,7 @@ export const createClientContract = withAuth(async (
   if (createdForEvent) {
     const createdAt = createdForEvent.created_at ?? new Date().toISOString();
     const status = deriveClientContractWorkflowStatus({
+      now: await getWorkflowToday(tenant),
       isActive: createdForEvent.is_active,
       startDate: createdForEvent.start_date,
       endDate: createdForEvent.end_date,
@@ -418,7 +430,7 @@ export const createClientContract = withAuth(async (
       idempotencyKey: `contract_created:${createdForEvent.contract_id}:${createdForEvent.client_id}`,
     });
 
-    await publishWorkflowEvent({
+    await publishNonCatalogWorkflowEvent({
       eventType: 'CLIENT_CONTRACT_CREATED',
       payload: {
         clientContractId: createdForEvent.client_contract_id,
@@ -443,13 +455,15 @@ export const createClientContract = withAuth(async (
         })
       : null;
     if (renewal) {
-      await publishWorkflowEvent({
-        eventType: 'CONTRACT_RENEWAL_UPCOMING',
+      await emitDateDomainEventOnce(knex, tenant, {
+        eventType: 'CONTRACT_RENEWAL_UPCOMING', entityId: createdForEvent.client_contract_id,
+        cycleKey: renewal.renewalCycleKey ?? normalizeDateDomainKeyDate(renewal.decisionDueDate ?? renewal.renewalAt),
+        occursOn: normalizeDateDomainKeyDate(renewal.decisionDueDate),
         payload: buildContractRenewalUpcomingPayload({
           contractId: createdForEvent.contract_id,
           clientId: createdForEvent.client_id,
-          renewalAt: renewal.renewalAt,
-          decisionDueDate: renewal.decisionDueDate,
+          renewalAt: normalizeDateDomainKeyDate(renewal.renewalAt),
+          decisionDueDate: normalizeDateDomainKeyDate(renewal.decisionDueDate),
           daysUntilRenewal: renewal.daysUntilRenewal,
           daysUntilDecisionDue: renewal.daysUntilDecisionDue,
           renewalCycleKey: renewal.renewalCycleKey,
@@ -459,7 +473,6 @@ export const createClientContract = withAuth(async (
           occurredAt: createdAt,
           actor: maybeUserActor(_user),
         },
-        idempotencyKey: `contract_renewal_upcoming:${createdForEvent.contract_id}:${createdForEvent.client_id}:${renewal.renewalCycleKey ?? renewal.decisionDueDate ?? renewal.renewalAt}`,
       });
     }
   }
@@ -603,7 +616,7 @@ export const updateClientContract = withAuth(async (
       });
     }
 
-    await publishWorkflowEvent({
+    await publishNonCatalogWorkflowEvent({
       eventType: 'CLIENT_CONTRACT_UPDATED',
       payload: {
         clientContractId,
@@ -622,11 +635,13 @@ export const updateClientContract = withAuth(async (
     });
 
     const previousStatus = deriveClientContractWorkflowStatus({
+      now: await getWorkflowToday(tenant),
       isActive: beforeContract.is_active,
       startDate: beforeContract.start_date,
       endDate: beforeContract.end_date,
     });
     const newStatus = deriveClientContractWorkflowStatus({
+      now: await getWorkflowToday(tenant),
       isActive: updatedClientContract.is_active,
       startDate: updatedClientContract.start_date,
       endDate: updatedClientContract.end_date,
@@ -668,13 +683,15 @@ export const updateClientContract = withAuth(async (
         })
       : null;
     if (nextRenewal && !previousRenewal) {
-      await publishWorkflowEvent({
-        eventType: 'CONTRACT_RENEWAL_UPCOMING',
+      await emitDateDomainEventOnce(db, tenant, {
+        eventType: 'CONTRACT_RENEWAL_UPCOMING', entityId: updatedClientContract.client_contract_id,
+        cycleKey: nextRenewal.renewalCycleKey ?? normalizeDateDomainKeyDate(nextRenewal.decisionDueDate ?? nextRenewal.renewalAt),
+        occursOn: normalizeDateDomainKeyDate(nextRenewal.decisionDueDate),
         payload: buildContractRenewalUpcomingPayload({
           contractId: updatedClientContract.contract_id,
           clientId: updatedClientContract.client_id,
-          renewalAt: nextRenewal.renewalAt,
-          decisionDueDate: nextRenewal.decisionDueDate,
+          renewalAt: normalizeDateDomainKeyDate(nextRenewal.renewalAt),
+          decisionDueDate: normalizeDateDomainKeyDate(nextRenewal.decisionDueDate),
           daysUntilRenewal: nextRenewal.daysUntilRenewal,
           daysUntilDecisionDue: nextRenewal.daysUntilDecisionDue,
           renewalCycleKey: nextRenewal.renewalCycleKey,
@@ -684,7 +701,6 @@ export const updateClientContract = withAuth(async (
           occurredAt: updatedAt,
           actor: maybeUserActor(_user),
         },
-        idempotencyKey: `contract_renewal_upcoming:${updatedClientContract.contract_id}:${updatedClientContract.client_id}:${nextRenewal.renewalCycleKey ?? nextRenewal.decisionDueDate ?? nextRenewal.renewalAt}:${updatedAt}`,
       });
     }
 
@@ -727,6 +743,7 @@ export const deactivateClientContract = withAuth(async (
 
     const changedAt = deactivatedContract.updated_at ?? new Date().toISOString();
     const previousStatus = deriveClientContractWorkflowStatus({
+      now: await getWorkflowToday(tenant),
       isActive: beforeContract.is_active,
       startDate: beforeContract.start_date,
       endDate: beforeContract.end_date,
@@ -751,7 +768,7 @@ export const deactivateClientContract = withAuth(async (
       });
     }
 
-    await publishWorkflowEvent({
+    await publishNonCatalogWorkflowEvent({
       eventType: 'CLIENT_CONTRACT_UPDATED',
       payload: {
         clientContractId,
@@ -836,6 +853,7 @@ export const applyContractToClient = withAuth(async (
       }
 
       for (const line of contractLines) {
+        // LEVERAGE: pattern template-clone-substrate — legacy clone path; see cloneTemplateLineToContract (alga-2026-0002371).
         // Clone services and configuration from template to this contract line
         await cloneTemplateContractLineAsync(trx, {
           tenant,

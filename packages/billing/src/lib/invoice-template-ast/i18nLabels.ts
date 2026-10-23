@@ -40,6 +40,9 @@ const resolveExpression = (
   if (expression.type === 'i18n') {
     return { type: 'literal', value: t(expression.i18nKey, { defaultValue: expression.defaultValue }) };
   }
+  if (expression.type === 'binding' && expression.fallback) {
+    return { ...expression, fallback: isTemplateI18nRef(expression.fallback) ? resolveText(expression.fallback, t) : expression.fallback };
+  }
   return expression;
 };
 
@@ -71,7 +74,8 @@ const resolveNode = (node: TemplateNode, t: TemplateLabelTranslator): TemplateNo
         children: node.children.map((child) => resolveNode(child, t)),
       };
     case 'text':
-      return node.content.type === 'i18n'
+    case 'richText':
+      return node.content.type === 'i18n' || (node.content.type === 'binding' && !!node.content.fallback)
         ? { ...node, content: resolveExpression(node.content, t) }
         : node;
     case 'field':

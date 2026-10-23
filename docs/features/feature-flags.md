@@ -206,32 +206,21 @@ Controls discovery of the Contract Simulator while it is being rolled out.
 - Simulator routes, APIs, server actions, and all other entry points remain unchanged. This
   flag controls only the Contract Details tab and is not an authorization boundary.
 
-### 14. `release-v1-6-feature`
-Controls discovery of the v1.6 UI options. Defaults to false.
+### 14. `release-v2-0-feature`
+Gates the project Timeline (Gantt) view while the 2.0 release is prepared.
 
-**Flag-off behavior:**
-- Fixed/Usage configuration panels hide new pricing/measurement choices for legacy
-  configurations; existing unit-priced and period-total configurations remain editable.
-- Contract overview hides the legacy quantity conversion shortcuts. Recorded usage,
-  existing period totals, billing reports and calculations remain available.
-- Invoice Layouts, invoice-preview selectors and client billing settings hide the new
-  standard by-ticket layout, retaining existing/default selections and saved custom layouts.
-- Designer source selectors, billed-time presets and ticket-time sample choices hide
-  new billed-time options. Saved bindings and rendering continue to work.
-- MSP and portal ticket comment editors hide the Attach files toolbar. Existing files,
-  inline images, email delivery, downloads and cleanup continue to work.
-- Schedule entries hide Create Teams meeting; existing Join, reschedule and delete work.
-- Automatic Invoices hides the manual month-end close action and confirmation. Australian
-  date formatting, ordinary generation and recurring-period claims are unchanged.
-- Service-request editor options hide Store Only unless the definition already uses it.
-  This replaces `service-request-store-only`; the old flag is no longer evaluated.
+**Affected Areas:**
+- **MSP Portal:**
+  - Project Details → view switcher → Timeline
 
-**Flag-on behavior:** all these options are available subject to existing permissions and
-capability checks. Xero account-code exports are not part of this release gate.
-
-This is UI-only rollout control, not an authorization or execution boundary. No new API,
-route, migration or runtime restrictions are introduced. The previous store-only action
-restrictions are removed; publishing, duplication and submission execution remain available.
+**Behavior:**
+- When disabled (default): The Timeline option is not offered in the project view switcher.
+  A saved Timeline preference or a `?view=gantt` link falls back to the Kanban view; the
+  preference itself is left untouched, so it applies again once the flag is on.
+- When enabled: The Timeline option is available alongside Kanban, List and Billing.
+- Task start dates, the dependency warnings, CSV, API, templates, mobile and client portal
+  changes that shipped with the timeline are not gated. This flag controls only the view's
+  entry point and is not an authorization boundary.
 
 ## Implementation Details
 

@@ -18,12 +18,39 @@ export interface IContractLineServiceConfiguration extends TenantEntity {
 }
 
 /**
+ * What a stored fixed-member `base_rate` means (same values as
+ * `FixedRateBasis` in `@alga-psa/shared/billingClients/fixedMemberRate`, which
+ * owns the interpretation).
+ *  - 'per_unit': the member contributes base_rate × quantity
+ *  - 'share': the member contributes base_rate (its slice of the line fee)
+ */
+export type FixedBaseRateBasis = 'per_unit' | 'share';
+
+/**
+ * A fixed-member rate write: clearing the rate states no basis; a stored rate
+ * always states its meaning (`base_rate IS NULL` ⇔ `base_rate_basis IS NULL`).
+ */
+export type FixedMemberRateWrite =
+  | { base_rate: null; base_rate_basis?: null }
+  | { base_rate: number; base_rate_basis: FixedBaseRateBasis };
+
+/**
  * Interface for fixed price service configuration
  */
 export interface IContractLineServiceFixedConfig extends TenantEntity {
   effective_period_start?: string;
   config_id: string;
   base_rate?: number | null; // Added base_rate field
+  /**
+   * What `base_rate` means. NULL exactly when `base_rate` is NULL. Interpret it
+   * through `fixedRateBasisOf` / `fixedMemberContributionCents`, never by hand.
+   */
+  base_rate_basis?: FixedBaseRateBasis | null;
+  /**
+   * Who owns this base_rate. `inherited` (base_rate NULL) follows the catalog;
+   * `custom`/`unreviewed` take the stored number. See the rate-provenance plan.
+   */
+  rate_provenance?: 'custom' | 'inherited' | 'unreviewed' | null;
   /**
    * Explicit pricing basis for the fixed service configuration.
    *
@@ -35,6 +62,14 @@ export interface IContractLineServiceFixedConfig extends TenantEntity {
    *   precedence and no quantity fallback to 1 (zero means zero).
    */
   pricing_basis?: 'unit' | 'bundle' | null;
+  /**
+   * Effective price policy at a requested service-period boundary. `override`
+   * means base_rate/custom_rate is an explicit contract price (zero is real);
+   * `catalog` means the item inherits the currency- and period-effective
+   * catalog price and the stored base_rate is not authoritative. Populated only
+   * by dated reads; not a persisted column on this table.
+   */
+  price_policy?: 'override' | 'catalog' | null;
   // enable_proration: boolean; // Removed: Moved to contract_line_fixed_config
   // billing_cycle_alignment: 'start' | 'end' | 'prorated'; // Removed: Moved to contract_line_fixed_config
   tenant: string;
@@ -63,6 +98,8 @@ export interface IContractLineServiceUsageConfig extends TenantEntity {
   effective_period_start?: string;
   config_id: string;
   unit_of_measure: string;
+  /** UN/ECE Rec 20 code for `unit_of_measure`; derived from the label on write when omitted. */
+  unit_code?: string | null;
   enable_tiered_pricing: boolean;
   minimum_usage?: number | null; // Make nullable to match DB and input
   base_rate?: number | null; // Add the new base_rate field

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import type { ApiClient } from "../../../api";
+import type { ProjectTaskServiceSource } from "../../../api/projectTasks";
 import { getServices, type ServiceOption } from "../../../api/timeEntries";
 import { sanitizeNumericText } from "../../../ui/components/TextInput";
 import { useTheme } from "../../../ui/ThemeContext";
@@ -150,6 +151,7 @@ export function TimeEntryModal({
   onChangeNotes,
   serviceId,
   onChangeServiceId,
+  serviceSource = null,
   client,
   apiKey,
   updating,
@@ -168,6 +170,8 @@ export function TimeEntryModal({
   onChangeNotes: (value: string) => void;
   serviceId: string | null;
   onChangeServiceId: (value: string | null) => void;
+  /** Where a prefilled service came from; marks the field while it still holds it. */
+  serviceSource?: ProjectTaskServiceSource | null;
   client: ApiClient | null;
   apiKey: string | null;
   updating: boolean;
@@ -211,9 +215,27 @@ export function TimeEntryModal({
       <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xl }}>
         <Text style={{ ...typography.title, color: colors.text }}>{t("timeEntry.title")}</Text>
 
-        <Text style={{ ...typography.caption, marginTop: spacing.lg, color: colors.textSecondary }}>
-          {t("timeEntry.serviceLabel")}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.lg }}>
+          <Text style={{ ...typography.caption, color: colors.textSecondary }}>
+            {t("timeEntry.serviceLabel")}
+          </Text>
+          {serviceSource ? (
+            <Text
+              testID="time-entry-service-source"
+              style={{
+                ...typography.caption,
+                color: colors.textSecondary,
+                backgroundColor: colors.borderLight,
+                borderRadius: 999,
+                paddingHorizontal: spacing.sm,
+                paddingVertical: 2,
+                overflow: "hidden",
+              }}
+            >
+              {t(`timeEntry.serviceSource.${serviceSource}`)}
+            </Text>
+          ) : null}
+        </View>
         {servicesLoading ? (
           <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.sm }}>
             {t("timeEntry.loadingServices")}

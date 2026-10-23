@@ -12,7 +12,20 @@ export type TicketDocument = {
   created_by_full_name?: string | null;
   updated_at?: string | null;
   file_id?: string | null;
+  thumbnail_file_id?: string | null;
+  preview_file_id?: string | null;
 };
+
+export type TicketDocumentVariant = "thumbnail" | "preview";
+
+export function isImageDocument(document: Pick<TicketDocument, "mime_type">): boolean {
+  return (document.mime_type ?? "").startsWith("image/");
+}
+
+export function ticketDocumentUrl(baseUrl: string, ticketId: string, documentId: string, variant?: TicketDocumentVariant): string {
+  const base = `${baseUrl.replace(/\/+$/, "")}/api/v1/tickets/${ticketId}/documents/${documentId}`;
+  return variant ? `${base}/${variant}` : base;
+}
 
 export type TicketDocumentUpload = {
   uri: string;

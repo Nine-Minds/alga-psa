@@ -43,6 +43,7 @@ export function TemplateProductsStep({ data, updateData }: TemplateProductsStepP
     updateData({ product_services: next });
   };
 
+  // LEVERAGE: pattern clamped-number-input — the input's onChange clamps to min, so the field can't be cleared while typing; use QuantityInput
   const handleQuantityChange = (index: number, quantity: number) => {
     const next = [...data.product_services];
     next[index] = { ...next[index], quantity };

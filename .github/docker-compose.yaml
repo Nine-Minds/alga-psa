@@ -1,12 +1,14 @@
 services:
   postgres:
-    image: ankane/pgvector:latest
+    extends:
+      file: ../docker-compose.images.yaml
+      service: pgvector
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: abcd1234!
       POSTGRES_DB: postgres
     ports:
-      - 5433:5432
+      - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -34,6 +36,30 @@ services:
       DB_TYPE: postgres
       NODE_OPTIONS: --experimental-vm-modules
       KNEXFILE: /app/knexfile.cjs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      postgres-extension-update:
+        condition: service_completed_successfully
+    networks:
+      - test-network
+
+  # One-shot reconciliation of an existing data directory with the pinned image.
+  postgres-extension-update:
+    extends:
+      file: ../docker-compose.images.yaml
+      service: pgvector
+    entrypoint: ["/bin/sh", "/opt/alga/update-extensions.sh"]
+    environment:
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: abcd1234!
+    volumes:
+      - type: bind
+        source: ../helm/files/postgres/update-extensions.sh
+        target: /opt/alga/update-extensions.sh
+        read_only: true
+    restart: "no"
     depends_on:
       postgres:
         condition: service_healthy

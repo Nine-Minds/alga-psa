@@ -74,8 +74,11 @@ import { decryptXeroVerifier } from '../../../../lib/xero/xeroOAuthVerifierCiphe
 
 const REDIRECT_URI = 'https://example.com/api/integrations/xero/callback';
 
-function connectRequest(cookieHeader?: string): NextRequest {
+function connectRequest(cookieHeader?: string, accept?: string): NextRequest {
   const headers: Record<string, string> = {};
+  if (accept) {
+    headers.accept = accept;
+  }
   if (cookieHeader) {
     headers.cookie = cookieHeader;
   }
@@ -209,5 +212,41 @@ describe('Xero OAuth connect route', () => {
     expect(text).not.toContain(challenge);
     expect(text).not.toContain(verifier);
     expect(text).not.toContain(attempt.verifier);
+  });
+  describe('failures', () => {
+    const BROWSER_ACCEPT = 'text/html,application/xhtml+xml';
+
+    function failureCode(res: Response): string | null {
+      const location = new URL(res.headers.get('location')!);
+      expect(location.pathname).toBe('/msp/settings');
+      expect(location.searchParams.get('xero_status')).toBe('failure');
+      return location.searchParams.get('xero_error');
+    }
+
+    it('redirects a browser navigation back to settings with a config_missing code', async () => {
+      mocks.resolveXeroOAuthCredentials.mockRejectedValue(new Error('no credentials'));
+      const res = await GET(connectRequest(undefined, BROWSER_ACCEPT));
+      expect(res.status).toBe(307);
+      expect(failureCode(res)).toBe('config_missing');
+    });
+
+    it('redirects a browser navigation with a forbidden code when the user cannot manage connections', async () => {
+      mocks.hasPermission.mockResolvedValue(false);
+      const res = await GET(connectRequest(undefined, BROWSER_ACCEPT));
+      expect(failureCode(res)).toBe('forbidden');
+    });
+
+    it('redirects a browser navigation with an oauth_failed code on an unexpected error', async () => {
+      mocks.getSecretProviderInstance.mockRejectedValue(new Error('boom'));
+      const res = await GET(connectRequest(undefined, BROWSER_ACCEPT));
+      expect(failureCode(res)).toBe('oauth_failed');
+    });
+
+    it('keeps the JSON error contract for non-browser callers', async () => {
+      mocks.resolveXeroOAuthCredentials.mockRejectedValue(new Error('no credentials'));
+      const res = await GET(connectRequest());
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: 'Xero connection is not configured for this workspace.' });
+    });
   });
 });

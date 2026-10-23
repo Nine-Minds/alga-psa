@@ -108,6 +108,29 @@ export function filterNavigationSectionsByFeatureAccess(
     .filter((section) => section.items.length > 0);
 }
 
+export function filterMenuItemsByPermission(
+  items: readonly MenuItem[],
+  permissions: readonly string[],
+): MenuItem[] {
+  return items.reduce<MenuItem[]>((visibleItems, item) => {
+    if (item.requiredPermission && !permissions.includes(item.requiredPermission)) {
+      return visibleItems;
+    }
+
+    const filteredSubItems = item.subItems
+      ? filterMenuItemsByPermission(item.subItems, permissions)
+      : undefined;
+
+    // A group whose children were all hidden has nothing left to open.
+    if (item.subItems && filteredSubItems?.length === 0 && !item.href) {
+      return visibleItems;
+    }
+
+    visibleItems.push(filteredSubItems ? { ...item, subItems: filteredSubItems } : item);
+    return visibleItems;
+  }, []);
+}
+
 export function filterNavigationSectionsByPermission(
   sections: readonly NavigationSection[],
   permissions: readonly string[],
@@ -115,9 +138,7 @@ export function filterNavigationSectionsByPermission(
   return sections
     .map((section) => ({
       ...section,
-      items: section.items.filter(
-        (item) => !item.requiredPermission || permissions.includes(item.requiredPermission),
-      ),
+      items: filterMenuItemsByPermission(section.items, permissions),
     }))
     .filter((section) => section.items.length > 0);
 }
@@ -212,9 +233,12 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
 
     return filterMenuSectionsByProduct(
       productCode,
-      filterNavigationSectionsByFeatureAccess(editionSections, hasFeature),
+      filterNavigationSectionsByPermission(
+        filterNavigationSectionsByFeatureAccess(editionSections, hasFeature),
+        userPermissions,
+      ),
     );
-  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, edition, marketingEnabled, credentialsVaultEnabled]);
+  }, [canWorkflowAdmin, userPermissions, useNavigationSections, hasFeature, productCode, edition, marketingEnabled, credentialsVaultEnabled]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
     const editionSections = filterNavigationSectionsByEdition(settingsNavigationSections, edition);

@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Tabs, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
@@ -225,14 +224,14 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
         <div className="flex items-center gap-2">
           {record.source === 'standard' ? (
             <>
-              <FileTextIcon className="w-4 h-4" /> {t('documentTemplates.values.nameWithStandardSuffix', {
+              <FileTextIcon className="w-4 h-4 shrink-0" /> {t('documentTemplates.values.nameWithStandardSuffix', {
                 defaultValue: '{{name}} (Standard)',
                 name: value,
               })}
             </>
           ) : (
             <div className="flex items-center gap-1">
-              <Settings className="w-4 h-4" />
+              <Settings className="w-4 h-4 shrink-0" />
               {value}
             </div>
           )}
@@ -335,13 +334,15 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
     );
   }
 
+  // Page chrome matches the other Inventory list pages (Sales Orders, RMA): p-6 page margin,
+  // h1 title with the primary action on the right, and the DataTable as the only card.
   return (
-    <div className="space-y-4">
+    <div className="p-6 space-y-4" id="document-templates-page">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-foreground">
+          <h1 className="text-2xl font-semibold">
             {t('documentTemplates.title', { defaultValue: '{{type}} Layouts', type: typeLabel })}
-          </h2>
+          </h1>
           <p className="text-sm text-muted-foreground">
             {t('documentTemplates.description', {
               defaultValue: 'Design the layouts used to render {{type}} PDFs and previews.',
@@ -349,29 +350,24 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
             })}
           </p>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Tabs
-            value={documentType}
-            onValueChange={handleDocumentTypeChange}
-            className="w-auto"
-          >
-            <TabsList>
-              {documentTypeOptions.map((option) => (
-                <TabsTrigger
-                  key={option.type}
-                  id={`document-template-type-${option.type}`}
-                  value={option.type}
-                >
-                  {option.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-          <Button id="document-templates-new" onClick={openNewTemplate} disabled={!registryEntry}>
-            {t('documentTemplates.actions.newLayout', { defaultValue: 'New Layout' })}
-          </Button>
-        </div>
+        <Button id="document-templates-new" onClick={openNewTemplate} disabled={!registryEntry}>
+          {t('documentTemplates.actions.newLayout', { defaultValue: 'New Layout' })}
+        </Button>
       </div>
+
+      <Tabs value={documentType} onValueChange={handleDocumentTypeChange}>
+        <TabsList>
+          {documentTypeOptions.map((option) => (
+            <TabsTrigger
+              key={option.type}
+              id={`document-template-type-${option.type}`}
+              value={option.type}
+            >
+              {option.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       {error ? (
         <Alert variant="destructive">
@@ -380,20 +376,13 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
         </Alert>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('documentTemplates.availableLayouts', { defaultValue: 'Available Layouts' })}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DataTable
-            data={templates}
-            columns={columns}
-            pagination
-            onRowClick={(record) => openEditTemplate(record)}
-            rowClassName={() => 'cursor-pointer'}
-          />
-        </CardContent>
-      </Card>
+      <DataTable id="billing-document-templates-table"
+        data={templates}
+        columns={columns}
+        pagination
+        onRowClick={(record) => openEditTemplate(record)}
+        rowClassName={() => 'cursor-pointer'}
+      />
 
       <ConfirmationDialog
         id="delete-document-template-dialog"

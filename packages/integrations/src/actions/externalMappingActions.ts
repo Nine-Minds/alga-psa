@@ -24,16 +24,29 @@ import {
 } from '../lib/externalMappingWorkflowEvents';
 import {
   actionError,
+  isActionMessageError,
   permissionError,
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { mapUniqueViolation } from '../lib/externalMappingUniqueViolation';
 import { getStoredQboCredentialsMap, QboClientService } from '../lib/qbo/qboClientService';
+import { isQboAutomatedSalesTaxEnabled } from '../lib/qbo/qboTaxSettings';
+import { QBO_AST_PSEUDO_TAX_CODES } from '../lib/qbo/types';
 import { getStoredXeroConnections, XeroClientService } from '../lib/xero/xeroClientService';
+import {
+  normalizeXeroConnectionSelection,
+  resolveXeroRealmAliasIds,
+} from '../lib/xero/xeroRealmIdentity';
 import {
   readXeroServiceTargetKind,
   XERO_SALES_ACCOUNT_TYPES,
+  XERO_TARGET_KIND_METADATA_KEY,
 } from '../lib/xero/xeroServiceMappingTarget';
+import {
+  AUTOMATIC_DISCOUNT_MAPPING_ID,
+  DISCOUNT_MAPPING_ENTITY_TYPE,
+} from '@alga-psa/types';
 
 const MAPPING_CACHE_TTL_MS = 30_000;
 
@@ -129,6 +142,7 @@ const CATALOG_ENTITY_TYPES = new Set([
   'tax_code',
   'payment_term',
   'client',
+  DISCOUNT_MAPPING_ENTITY_TYPE,
 ]);
 
 /**
@@ -143,7 +157,7 @@ const MUTABLE_MAPPING_ENTITY_TYPES = new Set([...CATALOG_ENTITY_TYPES, 'invoice'
 const REALM_BASED_INTEGRATION_TYPES = new Set(['quickbooks_online', 'xero']);
 
 /** CSV providers export to a file, not a connected realm. */
-const CSV_INTEGRATION_TYPES = new Set(['quickbooks_csv', 'xero_csv']);
+const CSV_INTEGRATION_TYPES = new Set(['quickbooks_csv', 'xero_csv', 'quickbooks_desktop']);
 
 const KNOWN_INTEGRATION_TYPES = new Set([
   ...REALM_BASED_INTEGRATION_TYPES,
@@ -251,6 +265,14 @@ async function assertLocalEntityOwnership(
       if (!PAYMENT_TERM_IDS.has(entityId)) {
         throw new ExpectedExternalMappingError(
           `Cannot map payment term ${entityId}: unknown payment term.`
+        );
+      }
+      return;
+    }
+    case DISCOUNT_MAPPING_ENTITY_TYPE: {
+      if (entityId !== AUTOMATIC_DISCOUNT_MAPPING_ID) {
+        throw new ExpectedExternalMappingError(
+          `Cannot map discount ${entityId}: unknown discount.`
         );
       }
       return;
@@ -368,6 +390,7 @@ const QBO_REMOTE_ENTITY_TYPE: Record<string, string> = {
   payment_term: 'Term',
   client: 'Customer',
   invoice: 'Invoice',
+  [DISCOUNT_MAPPING_ENTITY_TYPE]: 'Item',
 };
 
 /**
@@ -388,13 +411,65 @@ type XeroCatalogKind = 'item' | 'taxRate' | 'account';
 const XERO_CATALOG_KIND: Record<string, XeroCatalogKind> = {
   service: 'item',
   tax_code: 'taxRate',
+  [DISCOUNT_MAPPING_ENTITY_TYPE]: 'item',
 };
+
+/** Entity types whose Xero target may be an Item or a revenue Account. */
+const XERO_ITEM_OR_ACCOUNT_ENTITY_TYPES = new Set(['service', DISCOUNT_MAPPING_ENTITY_TYPE]);
 
 /** A Xero catalog record in DELETED/ARCHIVED state is treated as non-existent. */
 function isXeroRecordUsable(status: string | undefined): boolean {
   if (!status) return true;
   const normalized = status.toUpperCase();
   return normalized !== 'DELETED' && normalized !== 'ARCHIVED';
+}
+
+/**
+ * Per-call provider lookups behind the remote-existence checks. The single
+ * create/update paths use a fresh instance per call (always a live fetch). The
+ * bulk action shares ONE instance across a batch so each provider client and
+ * each Xero catalog (per realm and kind) is fetched at most once per request
+ * instead of once per row — Xero rate-limits at 60 calls/minute/org.
+ * Rejections are memoised too: a failing catalog fails its rows without
+ * being re-hit once per row.
+ */
+interface RemoteCatalogs {
+  qboClient(tenant: string, realm: string): Promise<QboClientService>;
+  qboAstEnabled(tenant: string, realm: string): Promise<boolean>;
+  xeroList(
+    tenant: string,
+    realm: string,
+    kind: 'item' | 'account' | 'tax_rate'
+  ): Promise<any[]>;
+}
+
+function createRemoteCatalogs(memoize = false): RemoteCatalogs {
+  const memo = new Map<string, Promise<any>>();
+  const once = <T,>(key: string, load: () => Promise<T>): Promise<T> => {
+    if (!memoize) return load();
+    let hit = memo.get(key);
+    if (!hit) {
+      hit = load();
+      memo.set(key, hit);
+    }
+    return hit;
+  };
+  return {
+    qboClient: (tenant, realm) =>
+      once(JSON.stringify(['qbo', tenant, realm]), () => QboClientService.create(tenant, realm)),
+    qboAstEnabled: (tenant, realm) =>
+      once(JSON.stringify(['qbo-ast', tenant, realm]), async () => {
+        const { knex } = await createTenantKnex();
+        return isQboAutomatedSalesTaxEnabled(knex, tenant, realm);
+      }),
+    xeroList: (tenant, realm, kind) =>
+      once(JSON.stringify(['xero', tenant, realm, kind]), async () => {
+        const client = await XeroClientService.create(tenant, realm);
+        if (kind === 'item') return client.listItems();
+        if (kind === 'account') return client.listAccounts();
+        return client.listTaxRates();
+      }),
+  };
 }
 
 /**
@@ -406,7 +481,8 @@ async function assertQboRemoteEntityExists(
   tenant: string,
   algaEntityType: string,
   externalEntityId: string,
-  realm: string
+  realm: string,
+  catalogs: RemoteCatalogs
 ): Promise<void> {
   const remoteType = QBO_REMOTE_ENTITY_TYPE[algaEntityType];
   if (!remoteType) {
@@ -415,7 +491,18 @@ async function assertQboRemoteEntityExists(
     );
   }
 
-  const qboClient = await QboClientService.create(tenant, realm);
+  // The pseudo codes are not readable TaxCode records (`GET /taxcode/NON`
+  // 404s), so the realm's AST setting proves them instead of a read-by-id.
+  if (algaEntityType === 'tax_code' && QBO_AST_PSEUDO_TAX_CODES.has(externalEntityId)) {
+    if (!(await catalogs.qboAstEnabled(tenant, realm))) {
+      throw new ExpectedExternalMappingError(
+        `QuickBooks tax code ${externalEntityId} is only accepted when "QuickBooks calculates sales tax" is enabled for this company. Turn it on for this QuickBooks company, or map the region to a tax code from the company's own tax-code list.`
+      );
+    }
+    return;
+  }
+
+  const qboClient = await catalogs.qboClient(tenant, realm);
   const entity = await qboClient.read<unknown>(remoteType, externalEntityId);
   if (!entity) {
     throw new ExpectedExternalMappingError(
@@ -437,7 +524,8 @@ async function assertXeroRemoteEntityExists(
   algaEntityType: string,
   externalEntityId: string,
   realm: string,
-  metadata?: Record<string, unknown> | null
+  metadata: Record<string, unknown> | null | undefined,
+  catalogs: RemoteCatalogs
 ): Promise<void> {
   let kind = XERO_CATALOG_KIND[algaEntityType];
   if (!kind) {
@@ -446,7 +534,7 @@ async function assertXeroRemoteEntityExists(
     );
   }
 
-  if (algaEntityType === 'service') {
+  if (XERO_ITEM_OR_ACCOUNT_ENTITY_TYPES.has(algaEntityType)) {
     // The declared target kind decides which catalog proves existence. It is
     // read from explicit metadata only — a present-but-unrecognised value is
     // rejected rather than defaulted, so garbage can never save as item mode.
@@ -460,10 +548,9 @@ async function assertXeroRemoteEntityExists(
   }
 
   const wanted = externalEntityId.trim();
-  const client = await XeroClientService.create(tenant, realm);
 
   if (kind === 'item') {
-    const items = await client.listItems();
+    const items = await catalogs.xeroList(tenant, realm, 'item');
     const match = items.find(
       (item) => (item.code ?? '').trim() === wanted || (item.itemId ?? '').trim() === wanted
     );
@@ -482,7 +569,7 @@ async function assertXeroRemoteEntityExists(
     if (!wanted) {
       throw new ExpectedExternalMappingError('Xero account mappings require an account code.');
     }
-    const accounts = await client.listAccounts();
+    const accounts = await catalogs.xeroList(tenant, realm, 'account');
     const match = accounts.find((account) => (account.code ?? '').trim() === wanted);
     if (!match) {
       throw new ExpectedExternalMappingError(
@@ -505,7 +592,7 @@ async function assertXeroRemoteEntityExists(
     return;
   }
 
-  const rates = await client.listTaxRates();
+  const rates = await catalogs.xeroList(tenant, realm, 'tax_rate');
   const match = rates.find(
     (rate) => (rate.taxType ?? '').trim() === wanted || (rate.taxRateId ?? '').trim() === wanted
   );
@@ -530,14 +617,15 @@ async function assertRemoteEntityExists(
   algaEntityType: string,
   externalEntityId: string,
   realm: string,
-  metadata?: Record<string, unknown> | null
+  metadata?: Record<string, unknown> | null,
+  catalogs: RemoteCatalogs = createRemoteCatalogs()
 ): Promise<void> {
   if (integrationType === 'quickbooks_online') {
-    await assertQboRemoteEntityExists(tenant, algaEntityType, externalEntityId, realm);
+    await assertQboRemoteEntityExists(tenant, algaEntityType, externalEntityId, realm, catalogs);
     return;
   }
   if (integrationType === 'xero') {
-    await assertXeroRemoteEntityExists(tenant, algaEntityType, externalEntityId, realm, metadata);
+    await assertXeroRemoteEntityExists(tenant, algaEntityType, externalEntityId, realm, metadata, catalogs);
     return;
   }
 }
@@ -708,6 +796,18 @@ export const getExternalEntityMappings = withAuth(async (
           query.andWhere(function () {
             this.whereNull('external_realm_id').orWhere('external_realm_id', '');
           });
+        } else if (integrationType === 'xero') {
+          // The UI addresses the canonical connection id, but pre-unification
+          // rows persist the organisation id. Accept the organisation id the
+          // connection uniquely owns so historical mappings stay visible and
+          // editable — never another organisation's rows. Exact key first.
+          const connections = await getStoredXeroConnections(tenant);
+          const aliasIds = resolveXeroRealmAliasIds(connections, externalRealmId);
+          const accepted = aliasIds.length > 0 ? aliasIds : [externalRealmId];
+          query.andWhere((builder) => builder.whereIn('external_realm_id', accepted));
+          if (accepted.length > 1) {
+            query.orderByRaw('CASE WHEN external_realm_id = ? THEN 0 ELSE 1 END', [externalRealmId]);
+          }
         } else {
           query.andWhere({ external_realm_id: externalRealmId });
         }
@@ -737,6 +837,11 @@ export const getExternalEntityMappings = withAuth(async (
 
 // ─── Create ──────────────────────────────────────────────────────────────────
 
+const MAPPINGS_MANAGE_DENIED = {
+  message: 'Permission denied: You do not have permission to manage accounting mappings.',
+  key: 'msp/integrations:errors.mappings.managePermission',
+} as const;
+
 export const createExternalEntityMapping = withAuth(async (
   user,
   { tenant },
@@ -745,12 +850,37 @@ export const createExternalEntityMapping = withAuth(async (
   const { knex } = await createTenantKnex();
   const allowed = await hasPermission(user, 'accounting_integrations', 'mappings_manage', knex);
   if (!allowed) {
-    return permissionError(
-      'Permission denied: You do not have permission to manage accounting mappings.',
-      'msp/integrations:errors.mappings.managePermission'
-    );
+    return permissionError(MAPPINGS_MANAGE_DENIED.message, MAPPINGS_MANAGE_DENIED.key);
   }
 
+  return createMappingRow({ knex, user, tenant, mappingData, validateRealm: true });
+});
+
+/**
+ * The per-row create path shared by the single and bulk actions: validation,
+ * insert-or-relink inside its OWN transaction, audit, workflow event, cache
+ * invalidation, and error mapping. Because each call owns its transaction, a
+ * failure here rolls back only this row.
+ *
+ * `validateRealm: false` is for the bulk action, which has already run
+ * `assertRealmAllowed` once for the (shared) realm.
+ */
+async function createMappingRow({
+  knex,
+  user,
+  tenant,
+  mappingData,
+  validateRealm,
+  catalogs,
+}: {
+  knex: Knex;
+  user: IUserWithRoles;
+  tenant: string;
+  mappingData: CreateMappingData;
+  validateRealm: boolean;
+  /** Shared across a bulk batch; omitted = fresh fetch per call. */
+  catalogs?: RemoteCatalogs;
+}): Promise<ExternalEntityMapping | ActionMessageError> {
   const {
     integration_type,
     alga_entity_type,
@@ -788,7 +918,9 @@ export const createExternalEntityMapping = withAuth(async (
         await lockInvoiceForExternalSync(trx, tenant, alga_entity_id);
       }
 
-      await assertRealmAllowed(tenant, integration_type, external_realm_id);
+      if (validateRealm) {
+        await assertRealmAllowed(tenant, integration_type, external_realm_id);
+      }
       await assertLocalEntityOwnership(trx, tenant, alga_entity_type, alga_entity_id);
 
       const normalizedRealm =
@@ -803,13 +935,41 @@ export const createExternalEntityMapping = withAuth(async (
           alga_entity_type,
           external_entity_id,
           normalizedRealm,
-          metadata ?? null
+          metadata ?? null,
+          catalogs
         );
       }
 
+      // A Xero mapping's identity group is the canonical connection id plus the
+      // organisation id it uniquely owns. Both the live-conflict check and the
+      // tombstone relink must consider the whole group: a canonical tombstone
+      // must never be relinked alongside a live historical sibling, and another
+      // organisation's tombstones must be left untouched.
+      let xeroAliasIds: string[] | null = null;
+      if (integration_type === 'xero' && normalizedRealm) {
+        const connections = await getStoredXeroConnections(tenant);
+        const resolved = resolveXeroRealmAliasIds(connections, normalizedRealm);
+        xeroAliasIds = resolved.length > 0 ? resolved : [normalizedRealm];
+      }
+
+      if (xeroAliasIds) {
+        const liveConflict = await tenantDb(trx, tenant)
+          .table<ExternalEntityMapping>('tenant_external_entity_mappings')
+          .where({ tenant, integration_type, alga_entity_type, alga_entity_id })
+          .whereNull('deleted_at')
+          .whereIn('external_realm_id', xeroAliasIds)
+          .first();
+        if (liveConflict) {
+          throw new ExpectedExternalMappingError(
+            'A mapping for this entity already exists for the connected Xero organisation. Edit the existing mapping instead.'
+          );
+        }
+      }
+
       // Relink: an earlier unlink tombstones the row; creating the same mapping
-      // again is the explicit relink choice, so restore the row in place.
-      const tombstoned = await tenantDb(trx, tenant)
+      // again is the explicit relink choice, so restore the row in place. The
+      // tombstone must belong to the requested organisation's identity group.
+      const tombstoneQuery = tenantDb(trx, tenant)
         .table<ExternalEntityMapping>('tenant_external_entity_mappings')
         .where({
           tenant,
@@ -817,8 +977,11 @@ export const createExternalEntityMapping = withAuth(async (
           alga_entity_type,
           alga_entity_id,
         })
-        .whereNotNull('deleted_at')
-        .first();
+        .whereNotNull('deleted_at');
+      if (xeroAliasIds) {
+        tombstoneQuery.whereIn('external_realm_id', xeroAliasIds);
+      }
+      const tombstoned = await tombstoneQuery.first();
 
       if (tombstoned) {
         const patch: Partial<ExternalEntityMapping> = {
@@ -941,11 +1104,9 @@ export const createExternalEntityMapping = withAuth(async (
       error,
     });
 
-    if (error?.code === '23505') {
-      return actionError(
-        'A mapping already exists for this entity. Edit the existing mapping instead.',
-        'msp/integrations:errors.mappings.duplicate'
-      );
+    const uniqueViolation = mapUniqueViolation(error, { integration_type, alga_entity_type });
+    if (uniqueViolation) {
+      return uniqueViolation;
     }
 
     if (error?.code === ACCOUNTING_EXPORT_INVOICE_CANCELLED) {
@@ -970,6 +1131,108 @@ export const createExternalEntityMapping = withAuth(async (
       'msp/integrations:errors.mappings.saveFailed'
     );
   }
+}
+
+function integrationRequiresExplicitKind(row: CreateMappingData): boolean {
+  if (row.integration_type !== 'xero' || row.alga_entity_type !== 'service') return false;
+  const kind = row.metadata?.[XERO_TARGET_KIND_METADATA_KEY];
+  return kind !== 'item' && kind !== 'account';
+}
+
+export interface BulkCreateMappingRowResult {
+  alga_entity_id: string;
+  ok: boolean;
+  mapping?: ExternalEntityMapping;
+  error?: string;
+}
+
+/**
+ * Bulk create: permission and realm are checked ONCE, then every row runs
+ * through the same `createMappingRow` as the single create, each in its own
+ * transaction so one bad row (duplicate, stale catalog entry) cannot abort or
+ * roll back the others. Row-level failures are returned as results — only a
+ * permission failure is returned as a top-level error.
+ */
+export const createExternalEntityMappings = withAuth(async (
+  user,
+  { tenant },
+  rows: CreateMappingData[]
+): Promise<BulkCreateMappingRowResult[] | ActionPermissionError> => {
+  const { knex } = await createTenantKnex();
+  const allowed = await hasPermission(user, 'accounting_integrations', 'mappings_manage', knex);
+  if (!allowed) {
+    return permissionError(MAPPINGS_MANAGE_DENIED.message, MAPPINGS_MANAGE_DENIED.key);
+  }
+
+  if (rows.length === 0) return [];
+
+  // The batch shares one realm check per distinct (integration, realm) pair —
+  // the UI sends a single pair, so this is one check in practice.
+  const realmFailures = new Map<string, string>();
+  const checked = new Set<string>();
+  for (const row of rows) {
+    const key = JSON.stringify([row.integration_type, row.external_realm_id ?? null]);
+    if (checked.has(key)) continue;
+    checked.add(key);
+    try {
+      assertKnownIntegrationType(row.integration_type);
+      await assertRealmAllowed(tenant, row.integration_type, row.external_realm_id);
+    } catch (error: unknown) {
+      realmFailures.set(
+        key,
+        error instanceof ExpectedExternalMappingError
+          ? error.message
+          : 'Unable to validate the connected organisation. Please try again.'
+      );
+    }
+  }
+
+  // One snapshot per batch: each client/catalog is fetched at most once.
+  const catalogs = createRemoteCatalogs(true);
+  const results: BulkCreateMappingRowResult[] = [];
+  for (const row of rows) {
+    const key = JSON.stringify([row.integration_type, row.external_realm_id ?? null]);
+    const realmFailure = realmFailures.get(key);
+    if (realmFailure) {
+      results.push({ alga_entity_id: row.alga_entity_id, ok: false, error: realmFailure });
+      continue;
+    }
+    // Bulk rows never rely on the single-create legacy rule ("no kind means
+    // item"): a Xero service row must carry an explicit, recognised kind.
+    if (integrationRequiresExplicitKind(row)) {
+      results.push({
+        alga_entity_id: row.alga_entity_id,
+        ok: false,
+        error: 'Xero service mappings must declare xeroTargetKind as "item" or "account".',
+      });
+      continue;
+    }
+    try {
+      const result = await createMappingRow({
+        knex,
+        user,
+        tenant,
+        mappingData: row,
+        validateRealm: false,
+        catalogs,
+      });
+      if (isActionMessageError(result)) {
+        results.push({ alga_entity_id: row.alga_entity_id, ok: false, error: result.actionError });
+      } else {
+        results.push({ alga_entity_id: row.alga_entity_id, ok: true, mapping: result });
+      }
+    } catch (error: unknown) {
+      // createMappingRow maps its own errors; this is a last-resort guard so a
+      // surprise never turns into a top-level throw for the whole batch.
+      logger.error('Unexpected failure in bulk mapping row', { tenantId: tenant, error });
+      results.push({
+        alga_entity_id: row.alga_entity_id,
+        ok: false,
+        error: 'Unable to save mapping. Please try again.',
+      });
+    }
+  }
+  return results;
 });
 
 // ─── Update ──────────────────────────────────────────────────────────────────
@@ -1012,6 +1275,7 @@ export const updateExternalEntityMapping = withAuth(async (
     hasExternalEntityIdUpdate: updates.external_entity_id !== undefined,
   });
 
+  let updateScope: { integration_type?: string; alga_entity_type?: string } | null = null;
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant);
@@ -1028,6 +1292,11 @@ export const updateExternalEntityMapping = withAuth(async (
           'Mapping is unlinked. Create it again to relink the entity.'
         );
       }
+
+      updateScope = {
+        integration_type: before.integration_type,
+        alga_entity_type: before.alga_entity_type,
+      };
 
       // Realm, provider and entity-type fields are not editable here. The
       // persisted entity type determines whether the invoice lock is required.
@@ -1074,6 +1343,19 @@ export const updateExternalEntityMapping = withAuth(async (
         }
         await assertLocalEntityOwnership(trx, tenant, before.alga_entity_type, updatePayload.alga_entity_id);
       }
+
+      // Progressive identity migration: editing a pre-unification
+      // organisation-keyed mapping rewrites its realm to the owning connection
+      // id, so the canonical identity converges. A collision with an existing
+      // canonical row surfaces as the duplicate error below.
+      if (before.integration_type === 'xero' && before.external_realm_id) {
+        const connections = await getStoredXeroConnections(tenant);
+        const canonicalRealm = normalizeXeroConnectionSelection(connections, before.external_realm_id);
+        if (canonicalRealm && canonicalRealm !== before.external_realm_id) {
+          updatePayload.external_realm_id = canonicalRealm;
+        }
+      }
+
       updatePayload.updated_at = new Date().toISOString();
 
       const [after] = await db
@@ -1158,7 +1440,7 @@ export const updateExternalEntityMapping = withAuth(async (
     }
     const updateError = error as { code?: string } | null;
     if (updateError?.code === '23505') {
-      return actionError(
+      return mapUniqueViolation(error, updateScope ?? {}) ?? actionError(
         'A mapping already exists for this entity. Edit the existing mapping instead.',
         'msp/integrations:errors.mappings.duplicate'
       );
@@ -1223,15 +1505,44 @@ export const deleteExternalEntityMapping = withAuth(async (
       }
 
       const now = new Date().toISOString();
-      const [after] = await db
+
+      // Unlink the whole canonical identity group for this entity, not just the
+      // selected row. A Xero entity can have a canonical connection-keyed row
+      // and a pre-unification organisation-keyed row at once; tombstoning only
+      // one would let the other resurface as a hidden export fallback.
+      let realmIds: string[] | null = before.external_realm_id
+        ? [before.external_realm_id]
+        : null;
+      if (before.integration_type === 'xero' && before.external_realm_id) {
+        const connections = await getStoredXeroConnections(tenant);
+        const resolved = resolveXeroRealmAliasIds(connections, before.external_realm_id);
+        realmIds = resolved.length > 0 ? resolved : [before.external_realm_id];
+      }
+
+      const tombstoneQuery = db
         .table<ExternalEntityMapping>('tenant_external_entity_mappings')
-        .where({ id: mappingId })
+        .where({
+          tenant,
+          integration_type: before.integration_type,
+          alga_entity_type: before.alga_entity_type,
+          alga_entity_id: before.alga_entity_id,
+        })
+        .whereNull('deleted_at');
+      if (realmIds && realmIds.length > 0) {
+        tombstoneQuery.whereIn('external_realm_id', realmIds);
+      } else {
+        tombstoneQuery.whereNull('external_realm_id');
+      }
+
+      const rows = await tombstoneQuery
         .update({
           deleted_at: now,
           sync_status: 'unlinked',
           updated_at: now,
         })
         .returning('*');
+
+      const after = rows.find((row) => row.id === mappingId) ?? rows[0];
 
       if (!after) {
         throw new ExpectedExternalMappingError('Unable to unlink mapping. Please try again.');

@@ -66,7 +66,8 @@
       "createTicket": "Créer un ticket",
       "requestAppointment": "Demander un rendez-vous",
       "viewLatestInvoice": "Voir la dernière facture",
-      "newServiceRequest": "Nouvelle demande de service"
+      "newServiceRequest": "Nouvelle demande de service",
+      "createSupportTicket": "Créer un ticket d’assistance"
     },
     "appointments": {
       "title": "Rendez-vous à venir",
@@ -140,10 +141,7 @@
       "viewAll": "Voir tout",
       "countLabel": "{{count}} gérés",
       "emptyShort": "Aucun appareil",
-      "emptyBody": "Les appareils gérés par votre fournisseur apparaîtront ici.",
-      "healthy": "Sain",
-      "inactive": "Inactif",
-      "active": "Actif"
+      "emptyBody": "Les appareils gérés par votre fournisseur apparaîtront ici."
     },
     "timeAgo": {
       "justNow": "à l'instant",
@@ -283,6 +281,8 @@
     },
     "captchaRequired": "Veuillez compléter la vérification ci-dessous, puis connectez-vous à nouveau.",
     "tooManyAttempts": "Trop de tentatives de connexion échouées. Veuillez patienter quelques minutes avant de réessayer.",
+    "tenantRequiredMessage": "Votre adresse e-mail est associée à plusieurs organisations — choisissez votre organisation pour continuer.",
+    "tenantRequiredLink": "Choisir votre organisation",
     "tenantDiscovery": {
       "title": "Trouvez votre organisation",
       "description": "Saisissez votre adresse e-mail et nous vous enverrons des liens de connexion pour toutes les organisations auxquelles vous avez accès.",
@@ -320,6 +320,34 @@
         "verifiedContact": "E-mail de contact vérifié",
         "validPassword": "Mot de passe valide"
       }
+    },
+    "ssoNoMatchTitle": "Échec de la connexion SSO",
+    "ssoNoMatch": {
+      "no_matching_user": "Aucun compte du portail client ne correspond à {{providerEmail}}. Connectez-vous avec votre mot de passe ou contactez votre prestataire de services.",
+      "missing_email": "Votre fournisseur d'identité n'a renvoyé aucune adresse e-mail, aucun compte du portail client n'a donc pu être identifié. Connectez-vous avec votre mot de passe ou contactez votre prestataire de services.",
+      "inactive_user": "Le compte du portail client correspondant à {{providerEmail}} est inactif. Contactez votre prestataire de services pour le réactiver.",
+      "user_type_mismatch": "{{providerEmail}} n'est pas un compte du portail client. Contactez votre prestataire de services.",
+      "tenant_mismatch": "{{providerEmail}} appartient au portail d'une autre organisation. Connectez-vous avec votre mot de passe ou contactez votre prestataire de services."
+    },
+    "configurationTitle": "Échec de la connexion",
+    "configurationMessage": "La connexion a échoué. Veuillez réessayer ou contacter votre prestataire de services.",
+    "registration": {
+      "messages": {
+        "verified": "Utilisateur vérifié et inscrit avec succès"
+      },
+      "errors": {
+        "verifyFailed": "Impossible de vérifier et d’inscrire l’utilisateur",
+        "invalidToken": "Jeton non valide",
+        "tokenExpired": "Jeton expiré",
+        "tokenNotActive": "Le jeton n’est pas encore actif",
+        "unknown": "Erreur inconnue"
+      },
+      "user": "Utilisateur",
+      "clientPortalUser": "Utilisateur du portail client",
+      "mspUser": "Utilisateur MSP",
+      "resetExpiration": "1 heure",
+      "verificationExpiration": "24 heures",
+      "superadminRole": "Rôle de superadministrateur"
     }
   },
   "account": {
@@ -426,6 +454,30 @@
         "expMonth": "Veuillez saisir un mois valide (01-12)",
         "expYear": "Veuillez saisir une année valide (2024-2099)",
         "cvv": "Veuillez saisir un code CVV valide"
+      },
+      "methodUpdateError": "Impossible de mettre à jour ce moyen de paiement. Veuillez réessayer.",
+      "cardSetup": {
+        "success": "Carte enregistrée en toute sécurité.",
+        "error": "Nous n'avons pas pu enregistrer la carte. Veuillez réessayer."
+      },
+      "autopay": {
+        "title": "Moyens de paiement et prélèvement automatique",
+        "loading": "Chargement des moyens de paiement…",
+        "profileUnavailable": "Les moyens de paiement et les paramètres de prélèvement automatique ne sont pas disponibles pour ce profil de facturation.",
+        "cardFallback": "Carte",
+        "enrolled": "Le prélèvement automatique est activé.",
+        "disable": "Désactiver le prélèvement automatique",
+        "consent": "J'autorise des débits récurrents sur cette carte pour les factures finalisées.",
+        "enable": "Activer le prélèvement automatique",
+        "noCards": "Ajoutez une carte pour activer le prélèvement automatique.",
+        "changeCard": "Utiliser cette carte pour le prélèvement automatique",
+        "updateError": "Impossible de mettre à jour le prélèvement automatique. Veuillez réessayer."
+      },
+      "publicCardSetup": {
+        "saved": "Carte enregistrée",
+        "failed": "Nous n'avons pas pu enregistrer votre carte",
+        "savedDescription": "Votre carte est prête pour vos prochains paiements.",
+        "failedDescription": "La configuration n'a pas pu être vérifiée. Demandez un nouveau lien à votre prestataire de facturation."
       }
     }
   },
@@ -522,7 +574,9 @@
       "invoices": "Notifications de factures",
       "announcements": "Annonces système",
       "emailPreferences": "E-mail",
-      "internalPreferences": "Internes"
+      "internalPreferences": "Internes",
+      "unreadCount_few": "{{count}} notifications non lues",
+      "unreadCount_many": "{{count}} notifications non lues"
     },
     "actions": {
       "save": "Enregistrer les modifications",
@@ -542,7 +596,8 @@
       "avatarDescription": "Cet avatar est affiché au personnel MSP lorsqu'il consulte vos informations de contact.",
       "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà",
       "reportsToSelf": "Un utilisateur ne peut pas être son propre responsable",
-      "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire"
+      "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire",
+      "invalidTimezone": "Choisissez un fuseau horaire basé sur une ville, comme America/New_York."
     },
     "imageUpload": {
       "uploadAvatar": "Téléverser un avatar",
@@ -566,7 +621,19 @@
       "deleteError": "Échec de la suppression.",
       "deleteConfirm": "Voulez-vous vraiment supprimer ceci ? Cette action est irréversible.",
       "linking": "Liaison...",
-      "linkDocument": "Associer un document"
+      "linkDocument": "Associer un document",
+      "cropTitle": "Choisir le symbole carré",
+      "cropHelp": "Faites glisser le logo et zoomez pour choisir la partie affichée dans les petits espaces carrés. Dézoomez pour laisser de l'espace autour. Le logo complet est également conservé.",
+      "zoom": "Zoom",
+      "zoomOut": "Zoom arrière",
+      "zoomIn": "Zoom avant",
+      "cropPreview": "Aperçu",
+      "applyCrop": "Utiliser ce cadrage",
+      "adjustMark": "Ajuster le symbole",
+      "cropFromWide": "Découper depuis le logo large",
+      "recropSuccess": "Symbole mis à jour.",
+      "recropError": "Impossible de mettre à jour le symbole.",
+      "fileNameLabel": "Fichier stocké"
     },
     "validation": {
       "clientNameRequired": "Le nom de l'entreprise est obligatoire",
@@ -646,7 +713,10 @@
       "deleteError": "Échec de la suppression de l'utilisateur",
       "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà",
       "reportsToSelf": "Un utilisateur ne peut pas être son propre responsable",
-      "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire"
+      "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire",
+      "reportsTo": "Rattaché à",
+      "noManager": "Aucun responsable",
+      "reportsToHelp": "Un responsable peut voir les tickets, appareils et projets des personnes qui lui sont rattachées lorsque son groupe de visibilité est limité à ses propres éléments."
     },
     "visibilityGroups": {
       "title": "Groupes de visibilité",
@@ -681,7 +751,27 @@
       "fullAccess": "Accès complet",
       "cancel": "Annuler",
       "assignSuccess": "Affectation de visibilité du contact mise à jour",
-      "assignError": "Impossible d'attribuer le groupe de visibilité"
+      "assignError": "Impossible d'attribuer le groupe de visibilité",
+      "scopeLabel": "Visibilité des tickets",
+      "scopeClient": "Tous les tickets de ce client",
+      "scopeContact": "Uniquement leurs propres tickets",
+      "scopeClientDescription": "Les membres voient tous les tickets de ce client sur les tableaux sélectionnés.",
+      "scopeContactDescription": "Les membres voient les tickets dont ils sont le contact, ceux des personnes qui leur sont rattachées et ceux qu’ils suivent. Les administrateurs du client voient toujours tout sur les tableaux sélectionnés, y compris les tickets sans contact.",
+      "assignmentHelp": "Attribuez un groupe pour limiter les tableaux ainsi que les tickets, appareils et projets visibles par cette personne, ou conservez l’accès complet au client.",
+      "boardHiddenFromPortal": "Masqué du portail client",
+      "assetScopeLabel": "Visibilité des appareils",
+      "assetScopeClient": "Tous les appareils de ce client",
+      "assetScopeContact": "Uniquement leurs propres appareils",
+      "assetScopeClientDescription": "Les membres voient tous les appareils de ce client, y compris ceux qui ne sont pas attribués.",
+      "assetScopeContactDescription": "Les membres ne voient que les appareils qui leur sont attribués ou qui sont attribués aux personnes qui leur sont rattachées. Les appareils non attribués sont masqués. Les administrateurs du client voient toujours tout.",
+      "projectScopeLabel": "Visibilité des projets",
+      "projectScopeClient": "Tous les projets de ce client",
+      "projectScopeContact": "Uniquement leurs propres projets",
+      "projectScopeClientDescription": "Les membres voient tous les projets de ce client.",
+      "projectScopeContactDescription": "Les membres ne voient que les projets dont le contact est eux-mêmes ou une personne qui leur est rattachée. Les projets sans contact sont masqués. Les administrateurs du client voient toujours tout.",
+      "scopeSummary": "Tickets : {{tickets}} · Appareils : {{devices}} · Projets : {{projects}}",
+      "scopeSummaryAll": "Tous",
+      "scopeSummaryOwn": "Propres"
     },
     "messages": {
       "saveChanges": "Enregistrer les modifications",
@@ -764,7 +854,9 @@
     "card": {
       "unread": "Non lue",
       "noMessage": "Aucun message"
-    }
+    },
+    "unreadCount_few": "{{count}} notifications non lues",
+    "unreadCount_many": "{{count}} notifications non lues"
   },
   "sidebar": {
     "goToDashboard": "Aller au tableau de bord",
@@ -789,12 +881,9 @@
       "network": "Réseau",
       "unknown": "Autres"
     },
-    "statusWarnTitle": "Certains appareils inactifs",
-    "statusWarnBody": "{{active}} actifs · {{inactive}} inactifs",
-    "status": {
-      "active": "Actif",
-      "inactive": "Inactif"
-    },
+    "statusAttentionTitle": "Certains appareils nécessitent une attention",
+    "statusAttentionBody": "{{active}} appareils actifs sur {{total}}",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Rechercher par nom, étiquette ou série",
     "filters": {
       "allTypes": "Tous les types",
@@ -932,14 +1021,18 @@
   },
   "assets": {
     "columns": {
-      "name": "Nom",
-      "type": "Type",
-      "status": "Statut",
-      "location": "Emplacement",
-      "lastUpdated": "Dernière mise à jour"
+      "assignedTo": "Attribué à"
     },
-    "notAvailable": "N/D",
-    "detailsTitle": "Détails de l'actif"
+    "statuses": {
+      "active": "Actif",
+      "in_stock": "En stock",
+      "maintenance": "En maintenance",
+      "inactive": "Inactif",
+      "retired": "Retiré"
+    },
+    "unassigned": "Non attribué",
+    "sharedWorkspace": "Espace partagé : {{name}}",
+    "sharedWorkspaceLabel": "Espace partagé"
   },
   "errors": {
     "account": {
@@ -976,7 +1069,8 @@
     },
     "tickets": {
       "notFoundOrDenied": "Ticket introuvable ou accès refusé",
-      "invalidData": "Données du ticket non valides"
+      "invalidData": "Données du ticket non valides",
+      "statusNotPortalSelectable": "Ce statut ne peut pas être sélectionné depuis le portail client"
     },
     "visibilityGroups": {
       "checkDetails": "Veuillez vérifier les informations du groupe de visibilité et réessayer.",
@@ -992,5 +1086,11 @@
       "duplicate": "Un groupe de visibilité avec ces informations existe déjà pour ce client.",
       "invalidData": "Données de groupe de visibilité non valides. Vérifiez les informations du groupe et les tableaux sélectionnés."
     }
+  },
+  "tabs": {
+    "paymentMethods": "Moyens de paiement et prélèvement automatique"
+  },
+  "invoice": {
+    "autopayWillCharge": "Sera débité le {{date}} sur {{brand}} •••• {{last4}}"
   }
 }

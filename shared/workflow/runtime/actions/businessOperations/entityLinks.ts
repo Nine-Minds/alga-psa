@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import WorkflowEntityLinkModel, { type WorkflowEntityRef } from '../../../persistence/workflowEntityLinkModel';
-import { withWorkflowJsonSchemaMetadata, type WorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
+import { withWorkflowJsonSchemaMetadata, type WorkflowJsonSchemaMetadata } from '@alga-psa/event-schemas';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import {
   actionProvidedKey,

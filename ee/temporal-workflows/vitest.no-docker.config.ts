@@ -7,5 +7,6 @@ export default {
   test: {
     ...baseConfig.test,
     setupFiles: [],
+    globalSetup: [],
   },
 };

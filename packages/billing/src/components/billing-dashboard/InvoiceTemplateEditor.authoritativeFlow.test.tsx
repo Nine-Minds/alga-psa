@@ -240,14 +240,51 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
       version: 1,
     });
     expect(JSON.stringify(payload.templateAst)).toContain('field-flow');
-    await waitFor(() => expect(pushMock).toHaveBeenCalled());
-    expect((document.getElementById('save-template-button') as HTMLButtonElement).disabled).toBe(true);
+    // Saving keeps the author in the editor: no navigation, and editing (with
+    // its live preview) carries on.
+    await waitFor(() =>
+      expect((document.getElementById('save-template-button') as HTMLButtonElement).disabled).toBe(false)
+    );
+    expect(pushMock).not.toHaveBeenCalled();
     const callsAfterSave = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length;
     await act(async () => {
       useInvoiceDesignerStore.getState().loadWorkspace(createWorkspaceWithField('field-after-save'));
-      await new Promise(resolve => setTimeout(resolve, 200));
     });
-    expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalledTimes(callsAfterSave);
+    await waitFor(() =>
+      expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBeGreaterThan(callsAfterSave)
+    , { timeout: 2500 });
+  });
+
+  it('turns a new layout into the saved one on first save, so saving again updates it instead of duplicating', async () => {
+    const replaceStateSpy = vi.spyOn(window.history, 'replaceState');
+    // After the first save the editor reloads the layout by its new id.
+    getInvoiceTemplateMock.mockImplementation(async (id: string) => ({
+      template_id: id,
+      name: 'Fresh Layout',
+      templateAst: { kind: 'invoice-template-ast', version: 1, layout: { id: 'root', type: 'document', children: [] } },
+      isStandard: false,
+    }));
+    saveInvoiceTemplateMock.mockResolvedValue({
+      success: true,
+      template: { template_id: 'tpl-new', name: 'Fresh Layout', updated_at: '2026-09-30T12:00:00.000Z' },
+    });
+
+    render(<InvoiceTemplateEditor templateId={null} />);
+    fireEvent.change(document.getElementById('templateName') as HTMLInputElement, { target: { value: 'Fresh Layout' } });
+
+    const save = await screen.findByRole('button', { name: 'Save Template' }) as HTMLButtonElement;
+    fireEvent.click(save);
+    await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalledTimes(1));
+    expect(saveInvoiceTemplateMock.mock.calls[0][0].template_id).toBeUndefined();
+
+    await waitFor(() => expect(screen.getByText('Edit Layout: Fresh Layout')).toBeTruthy());
+    expect(String(replaceStateSpy.mock.calls.at(-1)?.[2])).toContain('templateId=tpl-new');
+    expect(pushMock).not.toHaveBeenCalled();
+
+    await waitFor(() => expect(save.disabled).toBe(false));
+    fireEvent.click(save);
+    await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalledTimes(2));
+    expect(saveInvoiceTemplateMock.mock.calls[1][0].template_id).toBe('tpl-new');
   });
 
   it('resumes editing and preview when saving fails', async () => {

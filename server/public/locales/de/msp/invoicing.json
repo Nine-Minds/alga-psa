@@ -98,6 +98,20 @@
         "assignedContractLine": "Zugewiesene Vertragszeile",
         "assignedWorkItem": "Zugewiesenes Arbeitselement",
         "unresolvedWork": "Ungelöste Arbeit"
+      },
+      "prepaidBlock": {
+        "due": "{{trigger}} · fällig am {{date}}",
+        "trigger": {
+          "contract_start": "Prepaid-Block: Vertragsbeginn",
+          "exhaustion": "Prepaid-Block: aufgebraucht",
+          "threshold": "Prepaid-Block: Verbrauchsschwelle",
+          "expiry": "Prepaid-Block: Ablauf",
+          "renewal": "Prepaid-Block: Verlängerung",
+          "manual": "Prepaid-Block: manuell ausgestellt"
+        },
+        "stalePendingWarning": "{{count}} ausstehende Prepaid-Blöcke warten seit mehr als 14 Tagen auf die Finalisierung und halten Zeiteinträge zurück. Finalisieren oder löschen Sie die Rechnungsentwürfe, damit die zurückgehaltene Zeit abgerechnet werden kann.",
+        "stalePendingWarning_one": "{{count}} ausstehender Prepaid-Block wartet seit mehr als 14 Tagen auf die Finalisierung und hält Zeiteinträge zurück. Finalisieren oder löschen Sie die Rechnungsvorlage, damit die zurückgehaltene Zeit abgerechnet werden kann.",
+        "stalePendingWarning_other": "{{count}} ausstehende Prepaid-Blöcke warten seit mehr als 14 Tagen auf die Finalisierung und halten Zeiteinträge zurück. Finalisieren oder löschen Sie die Rechnungsentwürfe, damit die zurückgehaltene Zeit abgerechnet werden kann."
       }
     },
     "actions": {
@@ -147,6 +161,7 @@
       "preview": {
         "title": "Rechnungsvorschau",
         "description": "Dies ist eine Vorschau, wie die Rechnung nach Fertigstellung aussehen wird.",
+        "noBillingEmailWarning": "{{clientName}} hat keine Rechnungs-E-Mail-Adresse. Die Rechnung kann erstellt werden, aber sie kann erst per E-Mail versendet oder online bezahlt werden, wenn Sie einen Rechnungskontakt, eine Rechnungs-E-Mail-Adresse des Kunden oder eine E-Mail-Adresse am Rechnungs- oder Standardstandort festlegen.",
         "summary_one": "{{count}}-Rechnung ausgewählt",
         "summary_other": "{{count}}-Rechnungen ausgewählt",
         "summaryCombined": "Durch diese Auswahl wird eine kombinierte Rechnung generiert.",
@@ -238,7 +253,8 @@
       "fixAllResult": "{{schedules}} Zeitplan/Zeitpläne über {{clients}} Kunde(n) neu aufgebaut.",
       "fixAllNoop": "Alle Abrechnungspläne sind bereits aktuell. Alles, was unten noch aufgeführt ist, muss einzeln geprüft werden.",
       "fixAllError": "Leistungszeiträume konnten nicht neu aufgebaut werden. Bitte versuchen Sie es erneut.",
-      "fixAllDenied": "Sie haben keine Berechtigung, Leistungszeiträume neu aufzubauen."
+      "fixAllDenied": "Sie haben keine Berechtigung, Leistungszeiträume neu aufzubauen.",
+      "fixAllManualReview": "{{count}} Stunden- oder Nutzungszeitraum/-zeiträume müssen einzeln geprüft werden."
     },
     "errors": {
       "title": "Beim Abschluss der Rechnungen sind Fehler aufgetreten:",
@@ -271,7 +287,8 @@
       "fixed": "FIX",
       "hourly": "T&M",
       "usage": "USE",
-      "bucket": "BKT"
+      "bucket": "BKT",
+      "prepaidBlock": "PRE"
     },
     "summary": {
       "selected": "{{count}} ausgewählt",
@@ -317,20 +334,23 @@
       "client": "Kunde",
       "invoiceNumber": "Rechnungsnummer",
       "invoiceNumberOptional": "Rechnungsnummer (optional)",
-      "sourceSalesOrder": "Quellkundenauftrag (optional)"
+      "sourceSalesOrder": "Quellkundenauftrag (optional)",
+      "billingProfile": "Abrechnungsprofil"
     },
     "placeholders": {
       "selectClient": "Wählen Sie einen Kunden aus",
       "invoiceNumberOptional": "Für die automatische Generierung leer lassen",
       "sourceSalesOrder": "Ausgelieferten oder manuell abrechenbaren Kundenauftrag auswählen",
       "searchSalesOrders": "Kundenaufträge suchen…",
-      "noInvoiceableSalesOrders": "Keine abrechenbaren Kundenaufträge gefunden."
+      "noInvoiceableSalesOrders": "Keine abrechenbaren Kundenaufträge gefunden.",
+      "selectBillingProfile": "Abrechnungsprofil auswählen"
     },
     "automatedItems": {
       "title": "Automatisierte Werbebuchungen",
       "service": "Dienst",
       "total": "Gesamt",
-      "unknownService": "Unbekannter Dienst"
+      "unknownService": "Unbekannter Dienst",
+      "period": "Zeitraum"
     },
     "lineItems": {
       "manual": "Manuelle Einzelposten",
@@ -343,10 +363,14 @@
       "saveChanges": "Änderungen speichern",
       "processing": "Wird verarbeitet...",
       "generateSalesOrderInvoice": "Kundenauftragsrechnung erstellen",
-      "clearSalesOrderSource": "Kundenauftrag als Quelle entfernen"
+      "clearSalesOrderSource": "Kundenauftrag als Quelle entfernen",
+      "addPartialPeriodCharge": "Gebühr für Teilzeitraum hinzufügen",
+      "reauthenticate": "Erneut anmelden",
+      "retrySave": "Speichern erneut versuchen"
     },
     "labels": {
-      "total": "Gesamt"
+      "total": "Gesamt",
+      "defaultBillingProfile": "{{name}} (Standard)"
     },
     "prepayment": {
       "label": "Dies ist eine Vorauszahlungsrechnung (erstellt Gutschrift)",
@@ -381,10 +405,24 @@
       "salesOrderNotInvoiceable": "Dieser Kundenauftrag kann nicht mehr abgerechnet werden.",
       "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Dieses Rechnungsfenster enthält abrechenbare Positionen, aber für {{services}} wurde im Leistungszeitraum {{periodStart}} bis {{periodEnd}} kein Verbrauch gemeldet. Erfasse zuerst den Verbrauch oder bestätige ausdrücklich die Erstellung ohne ihn – die nicht gemeldeten Dienste bleiben später abrechenbar.",
       "USAGE_PERIOD_TOTAL_STALE": "Die Vorschau ist veraltet: {{details}}. Führe die Vorschau erneut aus, um die aktuellen Zahlen zu sehen, und erstelle die Rechnung dann erneut.",
-      "USAGE_CALCULATION_ERROR": "Der Verbrauch für {{services}} im Leistungszeitraum {{periodStart}} bis {{periodEnd}} ist erfasst, konnte aber nicht bepreist werden. Korrigiere die Dienstpreise (Katalogpreis in der Vertragswährung, ein individueller Satz oder Preisstaffeln) und versuche es erneut. Erfasse keinen Ersatzverbrauch."
+      "USAGE_CALCULATION_ERROR": "Der Verbrauch für {{services}} im Leistungszeitraum {{periodStart}} bis {{periodEnd}} ist erfasst, konnte aber nicht bepreist werden. Korrigiere die Dienstpreise (Katalogpreis in der Vertragswährung, ein individueller Satz oder Preisstaffeln) und versuche es erneut. Erfasse keinen Ersatzverbrauch.",
+      "RECURRING_PERIODS_NOT_MATERIALIZED": "Für dieses Abrechnungsfenster wurden noch keine Leistungszeiträume erzeugt. Nutzen Sie auf der Seite „Automatische Rechnungen“ die Aktion „Alle beheben“ oder erzeugen Sie die Zeiträume unter Abrechnung > Leistungszeiträume neu und starten Sie die Vorschau erneut.",
+      "NO_ACTIVE_CONTRACT_LINES": "Für diesen Abrechnungszeitraum ist keine Vertragsposition aktiv. Prüfen Sie Start- und Enddatum des Vertrags und ob der Vertrag aktiv ist.",
+      "NOTHING_TO_BILL": "Für dieses Fenster ist nichts abrechenbar. Positionen mit nachträglicher Abrechnung können erst nach Ende ihres Leistungszeitraums abgerechnet werden. Prüfen Sie daher den Abrechnungszeitpunkt und die Daten.",
+      "FIXED_LINE_RATE_UNRESOLVED": "Für die Festpreis-Vertragsposition {{lines}} ist kein Preis hinterlegt. Lege einen Preis für die Vertragsposition fest (oder einen Preis für ihre Dienste in der Vertragswährung) und versuche es erneut.",
+      "FIXED_LINE_NO_SERVICES": "Die Festpreis-Position {{lines}} hat einen Preis, aber keine Leistung, auf die er abgerechnet werden kann. Fügen Sie der Vertragsposition eine Leistung hinzu und versuchen Sie es erneut.",
+      "SOURCE_ALREADY_BILLED": "Einige ausgewählte Positionen sind nicht mehr abrechenbar (bereits abgerechnet, nicht genehmigt oder entfernt). Aktualisieren und erneut versuchen.",
+      "SOURCE_NOT_ELIGIBLE": "Eine ausgewählte Position gehört nicht zu den abrechenbaren Positionen dieses Tickets oder ist nicht mehr zulässig. Aktualisieren und erneut versuchen.",
+      "SOURCE_CURRENCY_MISMATCH": "Einige ausgewählte Produkte sind in einer anderen Währung bepreist als die Rechnungswährung dieses Kunden. Sie können nicht hinzugefügt werden. Rechnen Sie sie in ihrer eigenen Währung getrennt ab.",
+      "CLIENT_CONTRACT_NOT_FOUND": "Der ausgewählte Vertrag gehört nicht zum Kunden dieser Rechnung.",
+      "SERVICE_REQUIRED": "Weisen Sie dieser Position vor dem Speichern einen Dienst zu.",
+      "RECURRING_PRICING_STALE": "Die Vorschau ist veraltet: {{details}}. Führen Sie die Vorschau erneut aus, um die aktuellen Zahlen zu sehen, und erstellen Sie die Rechnung dann erneut.",
+      "BILLING_PROFILE_NOT_FOUND": "Das ausgewählte Abrechnungsprofil ist für diesen Kunden nicht verfügbar. Aktualisiere die Seite und versuche es erneut.",
+      "sessionExpired": "Ihre Sitzung ist abgelaufen. Ihre Änderungen sind noch hier, wurden aber nicht gespeichert. Melden Sie sich in einem neuen Tab wieder an und versuchen Sie anschließend erneut zu speichern.",
+      "saveRefreshFailed": "Ihre Änderungen wurden gespeichert, aber die Rechnungsseite konnte nicht vollständig aktualisiert werden. Laden Sie die Seite neu, um die gespeicherte Rechnung anzuzeigen."
     },
     "warnings": {
-      "noBillingEmail": "Für diesen Kunden ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege vor dem Generieren der Rechnung einen Rechnungskontakt, eine Rechnungs-E-Mail-Adresse des Kunden oder eine E-Mail-Adresse am Rechnungs- oder Standardstandort fest."
+      "noBillingEmail": "Für diesen Kunden ist keine Rechnungs-E-Mail-Adresse hinterlegt. Die Rechnung kann erstellt werden, aber sie kann erst per E-Mail versendet oder online bezahlt werden, wenn Sie einen Rechnungskontakt, eine Rechnungs-E-Mail-Adresse des Kunden oder eine E-Mail-Adresse am Rechnungs- oder Standardstandort festlegen."
     },
     "errorFallback": {
       "title": "Etwas ist schief gelaufen",
@@ -392,6 +430,72 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} Artikel aus {{lineCount}} Positionen können abgerechnet werden. Dieser Entwurf wird mit dem Kundenauftrag verknüpft."
+    },
+    "draftAdjustments": {
+      "title": "Rechnungsanpassungen",
+      "description": "Fügen Sie einmalige Gebühren, Rabatte oder Gutschriften hinzu. Generierte Vertragsgebühren bleiben schreibgeschützt; korrigieren Sie den Quellvertrag oder fügen Sie eine Anpassung hinzu."
+    },
+    "partialPeriod": {
+      "title": "Teilzeitraum-Gebühr",
+      "help": "Berechnet als Einheiten × Einzelpreis des Zeitraums × abgedeckte Tage / Tage des Gesamtzeitraums. Die Eingaben bleiben bei der Position erhalten, damit sie verständlich bleibt.",
+      "direction": "Richtung",
+      "increase": "Erhöhung",
+      "decrease": "Verringerung (Gutschrift)",
+      "units": "Einheiten",
+      "unitPrice": "Einzelpreis",
+      "coveredDays": "Abgedeckte Tage",
+      "fullPeriodDays": "Tage des Gesamtzeitraums",
+      "description": "Beschreibung (optional)",
+      "reason": "Grund (optional)",
+      "previewUnavailable": "Geben Sie eine gültige Berechnung ein.",
+      "resolvedAmount": "Aufgelöster Betrag: {{amount}}",
+      "addCharge": "Gebühr hinzufügen",
+      "creditDescription": "Gutschrift: {{proration}}",
+      "errors": {
+        "units": "Die Einheiten müssen größer als null sein.",
+        "unitPrice": "Der Einzelpreis muss eine Zahl sein.",
+        "invalid": "Geben Sie einen gültigen Teilzeitraum ein.",
+        "source": "Wählen Sie eine abgerechnete Leistung mit eindeutigem Leistungszeitraum."
+      },
+      "source": "Abgerechnete Leistung auswählen",
+      "effectiveDate": "Wirksam ab",
+      "sourceRate": "Satz {{rate}}",
+      "permanentChangeNudge": "Ist dies eine dauerhafte Änderung? Erfassen Sie sie stattdessen im Vertrag.",
+      "overlapConfirm": "Eine automatische Vertragsänderungsanpassung überschneidet diesen Zeitraum bereits. Diese separate manuelle Anpassung trotzdem hinzufügen?",
+      "invoiceDescription": {
+        "increase": "{{description}} — zusätzlich {{units}} {{unitLabel}}, {{period}} — {{calculation}}",
+        "decrease": "{{description}} — Gutschrift für {{units}} weniger {{unitLabel}}, {{period}} — {{calculation}}"
+      },
+      "sourceDescriptionFallback": "Serviceanpassung"
+    },
+    "exportWarnings": {
+      "discount": "{{adapter}}: Konfigurieren Sie die Rabattzuordnung vor dem Export von {{description}}.",
+      "service": "{{adapter}}: Weisen Sie {{description}} vor dem Export einen zugeordneten Dienst zu.",
+      "unavailable": "Die Exportbereitschaft konnte nicht geprüft werden. Prüfen Sie die Zuordnungen vor dem Export."
+    },
+    "hints": {
+      "billingProfile": "Die Rechnung und ihre Positionen werden diesem Profil zugeordnet."
+    }
+  },
+  "quickInvoice": {
+    "currencyExcluded": "{{count}} Produkt(e) ausgeschlossen, da ihre Währung von {{currency}} abweicht.",
+    "action": "Schnellrechnung",
+    "title": "Dieses Ticket schnell abrechnen",
+    "loading": "Abrechenbare Positionen werden geladen…",
+    "empty": "Für dieses Ticket gibt es keine nicht abgerechneten Positionen.",
+    "billableTime": "Abrechenbare Zeit",
+    "products": "Produkte",
+    "selectedTotal": "Ausgewählte Summe",
+    "create": "Rechnung erstellen",
+    "creating": "Wird erstellt…",
+    "done": "Fertig",
+    "viewInvoice": "Rechnung anzeigen",
+    "created": "Rechnung erstellt",
+    "createdDetail": "Die Rechnung wurde erstellt und mit diesem Ticket verknüpft.",
+    "existingInvoices": "Rechnungen für dieses Ticket",
+    "unknownService": "Abrechenbare Position",
+    "errors": {
+      "ticketNotFound": "Dieses Ticket existiert nicht mehr."
     }
   },
   "draftsTab": {
@@ -465,7 +569,8 @@
       "finalizedDate": "Endgültiges Datum",
       "status": "Status",
       "actions": "Aktionen",
-      "quickbooks": "QuickBooks"
+      "quickbooks": "QuickBooks",
+      "autopay": "Automatische Zahlung"
     },
     "actions": {
       "downloadPdfs": "PDFs herunterladen",
@@ -497,6 +602,9 @@
         "selectedCount": "{{count}} ausgewählt",
         "clear": "Auswahl aufheben"
       }
+    },
+    "autopay": {
+      "scheduled": "Automatische Zahlung {{status}}"
     }
   },
   "recurringServicePeriods": {
@@ -698,10 +806,13 @@
     }
   },
   "invoicePreview": {
+    "sessionExpired": "Ihre Sitzung ist beim Laden dieser Rechnung abgelaufen. Melden Sie sich erneut an und laden Sie anschließend die Vorschau erneut.",
     "title": "Rechnungsvorschau",
     "templatePlaceholder": "Rechnungsvorlage auswählen...",
     "labels": {
-      "standard": "(Standard)"
+      "standard": "(Standard)",
+      "billingProfile": "Abrechnungsprofil: {{name}}",
+      "billingProfileDefault": "das Standardprofil des Kunden"
     },
     "actions": {
       "finalizeInvoice": "Rechnung abschließen",
@@ -716,7 +827,8 @@
       "driftReexport": "Erneut nach QuickBooks exportieren",
       "syncNow": "Mit QuickBooks synchronisieren",
       "viewInQbo": "In QuickBooks anzeigen",
-      "voidInvoice": "Rechnung stornieren"
+      "voidInvoice": "Rechnung stornieren",
+      "viewInXero": "In Xero anzeigen"
     },
     "loading": "Vorschau wird geladen...",
     "empty": "Wählen Sie eine Rechnung zur Vorschau aus",
@@ -752,7 +864,8 @@
       "back": "Zurück zu Rechnungslayouts",
       "cancel": "Abbrechen",
       "save": "Vorlage speichern",
-      "saving": "Wird gespeichert..."
+      "saving": "Wird gespeichert...",
+      "close": "Schließen"
     },
     "titles": {
       "create": "Erstellen Sie ein neues Rechnungslayout",
@@ -762,7 +875,9 @@
       "templateName": "Vorlagenname",
       "templateAst": "Vorlage AST (JSON)",
       "created": "Erstellt",
-      "lastUpdated": "Zuletzt aktualisiert"
+      "lastUpdated": "Zuletzt aktualisiert",
+      "savedAt": "Gespeichert {{time}}",
+      "notSaved": "Noch nicht gespeichert"
     },
     "tabs": {
       "visual": "Visuell",
@@ -778,6 +893,9 @@
       "templateNameRequired": "Der Name der Vorlage ist erforderlich",
       "astExportFailed": "Die AST-Vorlage konnte nicht aus dem visuellen Arbeitsbereich exportiert werden: {{message}}",
       "unknownAstExport": "Unbekannter AST-Exportfehler"
+    },
+    "toast": {
+      "saved": "Layout „{{name}}“ gespeichert."
     }
   },
   "templates": {
@@ -955,12 +1073,17 @@
       "billingEmail": "Rechnungs-E-Mail",
       "clientEmail": "Kunden-E-Mail",
       "noEmailFound": "Keine E-Mail gefunden",
-      "notConfigured": "Für diesen Client ist keine E-Mail-Adresse konfiguriert."
+      "notConfigured": "Für diesen Client ist keine E-Mail-Adresse konfiguriert.",
+      "billingProfile": "Abrechnungsprofil",
+      "billingProfileNamed": "Abrechnungsprofil: {{name}}",
+      "billingProfileDefault": "das Standardprofil des Kunden"
     },
     "fields": {
       "due": "Fällig",
       "additionalMessage": "Zusätzliche Nachricht",
-      "additionalMessagePlaceholder": "Fügen Sie eine persönliche Notiz hinzu, die Sie in die E-Mail einfügen möchten..."
+      "additionalMessagePlaceholder": "Fügen Sie eine persönliche Notiz hinzu, die Sie in die E-Mail einfügen möchten...",
+      "from": "Von",
+      "useDefault": "Standardabsender verwenden"
     },
     "preview": "E-Mails werden von {{fromEmail}} im Namen von {{companyName}} gesendet. Jede Rechnung wird als PDF beigefügt.",
     "values": {
@@ -1071,7 +1194,9 @@
     "tooltip": {
       "qboNumberPrefix": "QBO #",
       "lastSynced": "Zuletzt synchronisiert:",
-      "viewInQuickBooks": "In QuickBooks anzeigen"
+      "viewInQuickBooks": "In QuickBooks anzeigen",
+      "viewInXero": "In Xero anzeigen",
+      "xeroNumberPrefix": "Xero-Nr. "
     }
   },
   "templateManager": {
@@ -1167,7 +1292,10 @@
         "drags": "Ziehen: {{count}}",
         "success": "Erfolg: {{count}}",
         "invalid": "Ungültig: {{count}}"
-      }
+      },
+      "zoomOut": "Verkleinern",
+      "zoomIn": "Vergrößern",
+      "zoomFit": "Einpassen"
     },
     "palette": {
       "tabs": {
@@ -1208,6 +1336,15 @@
         "content": "Inhalt",
         "media": "Medien",
         "dynamic": "Dynamisch"
+      },
+      "insertTarget": {
+        "page": "Neue Blöcke werden am Seitenende eingefügt.",
+        "inside": "Neue Blöcke werden in {{name}} eingefügt.",
+        "after": "Neue Blöcke werden direkt nach {{name}} eingefügt.",
+        "label": "Wo neue Blöcke eingefügt werden",
+        "insideOption": "Darin",
+        "afterOption": "Danach",
+        "shiftHint": "Shift+click auf +, um stattdessen danach einzufügen."
       }
     },
     "inspector": {
@@ -1227,7 +1364,77 @@
       "fitSectionToContents": "Abschnitt an Inhalt anpassen",
       "sectionNoChildContent": "Abschnitt hat keinen Inhalt zum Anpassen.",
       "apply": "Anwenden",
-      "emptyHelp": "Wählen Sie eine Komponente aus, um ihre Eigenschaften zu bearbeiten."
+      "emptyHelp": "Wählen Sie eine Komponente aus, um ihre Eigenschaften zu bearbeiten.",
+      "size": "Größe",
+      "width": "Breite",
+      "widthValue": "Breitenwert",
+      "minWidth": "Min.-Breite",
+      "maxWidth": "Max.-Breite",
+      "height": "Höhe",
+      "heightValue": "Höhenwert",
+      "minHeight": "Min.-Höhe",
+      "maxHeight": "Max.-Höhe",
+      "mediaSource": "Bildquelle",
+      "mediaSourceLogo": "Firmenlogo",
+      "mediaSourceCustom": "Eigenes Bild",
+      "mediaSourceLogoHint": "Zeigt auf jedem Dokument das Logo aus den Branding-Einstellungen Ihres Unternehmens.",
+      "mediaSourceUrl": "Quell-URL",
+      "renameInner": "Auch {{count}} innere Ebenen umbenennen ({{from}} → {{to}}…)?",
+      "renameInnerApply": "Umbenennen",
+      "renameInnerDismiss": "Nein",
+      "tabsLabel": "Inspektor-Bereiche",
+      "insertDataField": "+ Datenfeld einfügen…",
+      "searchDataFields": "Datenfelder suchen…",
+      "dataFields": "Datenfelder",
+      "box": {
+        "top": "Oben",
+        "right": "Rechts",
+        "bottom": "Unten",
+        "left": "Links",
+        "all": "Alle Seiten",
+        "sameOnAllSides": "Auf allen Seiten gleich",
+        "unit": "Einheit",
+        "customValue": "Benutzerdefinierter CSS-Wert bleibt erhalten, bis Sie eine Seite bearbeiten: {{value}}"
+      },
+      "examplePlaceholder": "z. B. {{value}}",
+      "setCount": "{{count}} festgelegt",
+      "overrides": {
+        "none": "Nur Standardwerte.",
+        "jump": "Im Tab {{tab}} bearbeiten",
+        "title": "In diesem Block festgelegt ({{count}}):"
+      },
+      "tabs": {
+        "content": "Inhalt",
+        "style": "Stil",
+        "layout": "Layout & Größe"
+      },
+      "sizeModes": {
+        "auto": {
+          "label": "Auto",
+          "widthTooltip": "Der Container entscheidet (wird in einem vertikalen Stapel gestreckt)",
+          "heightTooltip": "Mit dem Inhalt mitwachsen"
+        },
+        "fill": {
+          "label": "Füllen",
+          "widthTooltip": "Die volle Breite des Containers ausfüllen"
+        },
+        "fit": {
+          "label": "Anpassen",
+          "widthTooltip": "Auf die Größe des Inhalts verkleinern"
+        },
+        "fixed": {
+          "label": "Fest",
+          "widthTooltip": "Die unten eingegebene exakte Breite verwenden",
+          "heightTooltip": "Die unten eingegebene exakte Höhe verwenden"
+        }
+      },
+      "barcode": "Barcode",
+      "barcodeSymbology": "Typ",
+      "barcodeQr": "QR-Code",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Wert",
+      "barcodeHintWorkTag": "Text oder ein Feld wie {{example}} (der Link zum Datensatz). Der Code sollte mindestens etwa 20 mm breit sein, damit er sich scannen lässt.",
+      "barcodeHint": "Der zu codierende Text. Der Code sollte mindestens etwa 20 mm breit sein, damit er sich scannen lässt."
     },
     "shell": {
       "selectedLabel": "Ausgewählt:",
@@ -1240,7 +1447,11 @@
       "title": "Seiteneinrichtung",
       "description": "Papierformat und Seitenrand wählen, ohne den versteckten Seiten-Knoten auszuwählen.",
       "paperPreset": "Papierformat",
-      "marginMm": "Rand (mm)"
+      "marginMm": "Rand (mm)",
+      "customSize": "Benutzerdefinierte Größe…",
+      "customWidth": "Breite",
+      "customHeight": "Höhe",
+      "customUnit": "Einheit"
     },
     "breadcrumbs": {
       "emptyHelp": "Wählen Sie eine Komponente auf der Leinwand aus, um ihre Hierarchie anzuzeigen.",
@@ -1271,7 +1482,13 @@
         "noQuotesFound": "Keine Angebote gefunden.",
         "selectQuote": "Angebot wählen",
         "loadingQuoteDetails": "Angebotsdetails werden geladen…",
-        "loadingDocumentDetails": "Dokumentdetails werden geladen…"
+        "loadingDocumentDetails": "Dokumentdetails werden geladen…",
+        "zoom": {
+          "fit": "Einpassen",
+          "actual": "100 %",
+          "label": "Vorschau-Zoom",
+          "fitWithScale": "Einpassen ({{percent}} %)"
+        }
       },
       "tabs": {
         "design": "Entwurf",
@@ -1519,6 +1736,12 @@
             },
             "margin": {
               "label": "Rand"
+            },
+            "padding": {
+              "label": "Innenabstand"
+            },
+            "containerPadding": {
+              "label": "Innenabstand"
             }
           }
         },
@@ -1606,6 +1829,84 @@
         },
         "totals-rows": {
           "title": "Summenzeilen"
+        },
+        "typography": {
+          "title": "Typografie",
+          "fields": {
+            "fontSize": {
+              "label": "Größe"
+            },
+            "fontWeight": {
+              "label": "Schriftstärke",
+              "options": {
+                "400": "Normal (400)",
+                "500": "Mittel (500)",
+                "600": "Halbfett (600)",
+                "700": "Fett (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Zeilenhöhe"
+            },
+            "textAlign": {
+              "label": "Ausrichtung",
+              "options": {
+                "left": "Links",
+                "center": "Zentriert",
+                "right": "Rechts",
+                "justify": "Blocksatz"
+              }
+            },
+            "fontStyle": {
+              "label": "Stil",
+              "options": {
+                "normal": "Normal",
+                "italic": "Kursiv"
+              }
+            },
+            "color": {
+              "label": "Farbe"
+            }
+          }
+        },
+        "value-typography": {
+          "title": "Werttext",
+          "fields": {
+            "fontSize": {
+              "label": "Größe"
+            },
+            "fontWeight": {
+              "label": "Schriftstärke",
+              "options": {
+                "400": "Normal (400)",
+                "500": "Mittel (500)",
+                "600": "Halbfett (600)",
+                "700": "Fett (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Zeilenhöhe"
+            },
+            "textAlign": {
+              "label": "Ausrichtung",
+              "options": {
+                "left": "Links",
+                "center": "Zentriert",
+                "right": "Rechts",
+                "justify": "Blocksatz"
+              }
+            },
+            "fontStyle": {
+              "label": "Stil",
+              "options": {
+                "normal": "Normal",
+                "italic": "Kursiv"
+              }
+            },
+            "color": {
+              "label": "Farbe"
+            }
+          }
         }
       }
     },
@@ -1705,10 +2006,80 @@
     },
     "canvas": {
       "templateBoundary": "Vorlagenbegrenzung",
-      "translatableHint": "Wird automatisch in die Sprache des Empfängers übersetzt. Wenn Sie den Text bearbeiten, gilt stattdessen Ihr eigener fester Text."
+      "translatableHint": "Wird automatisch in die Sprache des Empfängers übersetzt. Wenn Sie den Text bearbeiten, gilt stattdessen Ihr eigener fester Text.",
+      "noLineItems": "Keine Positionen",
+      "moreRows": "+{{count}} weitere Zeilen",
+      "subtotal": "Zwischensumme",
+      "tax": "Steuer",
+      "total": "Gesamt",
+      "buttonLabel": "Schaltfläche",
+      "signatureLabel": "Unterschrift",
+      "attachmentsLabel": "Anhänge",
+      "spacerLabel": "Abstandshalter",
+      "companyLogo": "Firmenlogo",
+      "insertionMarker": "Der nächste Block, den Sie hinzufügen, wird hier eingefügt",
+      "emptyContainer": "Leer – auswählen und Blöcke aus dem linken Bereich hinzufügen",
+      "localeChip": "Übersetzte Beschriftungen werden auf {{language}} angezeigt (Vorschausprache)",
+      "badgeDragHint": "Ziehen, um diesen Block zu verschieben"
     },
     "dragOverlay": {
       "component": "Komponente"
+    },
+    "arrange": {
+      "up": "Hoch",
+      "upHint": "Im Container nach oben verschieben (↑)",
+      "down": "Runter",
+      "downHint": "Im Container nach unten verschieben (↓)",
+      "out": "Heraus",
+      "outHint": "Aus dem Container herausnehmen und direkt dahinter platzieren (Alt+←)",
+      "into": "Hinein",
+      "intoHint": "In den direkt davor liegenden Container verschieben (Alt+→)",
+      "copy": "Kopieren",
+      "copyHint": "Kopieren (Ctrl/⌘+C). Wählen Sie das Ziel aus und fügen Sie mit Ctrl/⌘+V ein.",
+      "paste": "Einfügen",
+      "pasteHint": "In den ausgewählten Container oder nach dem ausgewählten Block einfügen (Ctrl/⌘+V)",
+      "duplicate": "Duplizieren",
+      "duplicateHint": "Direkt dahinter duplizieren (Ctrl/⌘+D)",
+      "copyStyle": "Stil kopieren",
+      "copyStyleHint": "Farben, Rahmen, Abstände und Textstil kopieren (Ctrl/⌘+Alt+C)",
+      "pasteStyle": "Stil einfügen",
+      "pasteStyleHint": "Kopierten Stil auf diesen Block anwenden (Ctrl/⌘+Alt+V)",
+      "delete": "Löschen",
+      "deleteHint": "Löschen (Entf-Taste)",
+      "title": "Anordnen"
+    },
+    "feedback": {
+      "cannotInsert": "{{block}} kann hier nicht hinzugefügt werden.",
+      "insertedOnPage": "{{block}} zur Seite hinzugefügt.",
+      "insertedInto": "{{block}} zu {{parent}} hinzugefügt.",
+      "fieldRebound": "{{name}} zeigt jetzt {{path}}."
+    },
+    "translation": {
+      "translatedAs": "Standardbezeichnung „{{name}}“, für jeden Empfänger übersetzt",
+      "useFixedText": "Festen Text verwenden",
+      "pickStandardLabel": "Fester Text. Automatisch übersetzen…",
+      "searchStandardLabels": "Standardbezeichnungen suchen…",
+      "standardLabels": "Standardbezeichnungen",
+      "noMatches": "Keine Standardbezeichnung gefunden.",
+      "cancel": "Abbrechen"
+    },
+    "outline": {
+      "collapse": "{{name}} einklappen",
+      "expand": "{{name}} ausklappen",
+      "title": "Gliederung"
+    },
+    "dragPreview": {
+      "noTarget": "Außerhalb der Seite – zum Abbrechen loslassen",
+      "noChange": "Bleibt an seiner Position",
+      "before": "Vor {{block}}",
+      "after": "Nach {{block}}",
+      "inside": "In {{container}}",
+      "dropOnPage": "Auf der Seite ablegen, um diesen Block hinzuzufügen.",
+      "cancelled": "Nicht verschoben – zum Ablegen über der Seite oder der Gliederung loslassen."
+    },
+    "resize": {
+      "handleHint": "Ziehen zum Ändern der Größe · Doppelklick passt an den Inhalt an",
+      "autoValue": "Automatisch ({{value}})"
     }
   },
   "projectBilling": {
@@ -1774,7 +2145,8 @@
         "selectedCount": "{{count}} ausgewählt",
         "clear": "Auswahl aufheben"
       }
-    }
+    },
+    "emptyTimeHint": "Freigegebene Zeiten und Materialien warten nie hier — sie werden über den normalen Rechnungslauf oder die Schaltfläche „Projektrechnung erstellen“ des Projekts abgerechnet."
   },
   "invoiceDesigner": {
     "transforms": {
@@ -1963,7 +2335,9 @@
         "addLine": "+ Zeile",
         "clearLines": "Einzelne Zeile",
         "stackedLinesHint": "Jede nicht leere Zeile wird in einer eigenen Zeile dargestellt. Wenn alle Zeilen leer sind, wird der oben stehende Bindungsschlüssel der Spalte angezeigt.",
-        "removeLine": "Zeile {{index}} entfernen"
+        "removeLine": "Zeile {{index}} entfernen",
+        "align": "Ausrichtung",
+        "widthPlaceholder": "auto | 50% | 120px"
       },
       "columnTypes": {
         "text": "Text",
@@ -1998,6 +2372,12 @@
         "groupedRowKey": "Schlüssel der gruppierten Zeile",
         "groupedRowItems": "Elemente der gruppierten Zeile",
         "availableBinding": "Verfügbare Bindung"
+      },
+      "columnAlign": {
+        "default": "Standard",
+        "left": "Links",
+        "center": "Zentriert",
+        "right": "Rechts"
       }
     },
     "imagePicker": {
@@ -2016,10 +2396,18 @@
       "clearRowBackground": "Zeilenhintergrundfarbe löschen",
       "clearRowTextColor": "Textfarbe der Zeile löschen",
       "labelColorOverrideNote": "Diese Beschriftung behält ihre eigene gespeicherte Farbe und übernimmt nicht die oben festgelegte Textfarbe der Zeile. Der Betrag folgt weiterhin der Textfarbe der Zeile.",
-      "noRows": "Dieser Summenblock hat noch keine gespeicherten Zeilen. Speichern Sie die Vorlage und öffnen Sie sie erneut, um Zeilenfarben zu bearbeiten."
+      "noRows": "Dieser Summenblock hat noch keine gespeicherten Zeilen. Speichern Sie die Vorlage und öffnen Sie sie erneut, um Zeilenfarben zu bearbeiten.",
+      "addRow": "Zeile hinzufügen:",
+      "empty": "Noch keine Zeilen. Fügen Sie unten eine hinzu.",
+      "moveUp": "{{row}} nach oben verschieben",
+      "moveDown": "{{row}} nach unten verschieben",
+      "remove": "{{row}} entfernen",
+      "label": "Bezeichnung",
+      "emphasize": "Hervorheben (Stil der Gesamtsumme)"
     }
   },
   "draftInvoiceDetails": {
+    "sessionExpired": "Ihre Sitzung ist beim Laden der Rechnungsdetails abgelaufen. Melden Sie sich erneut an und laden Sie die Details erneut.",
     "title": "Rechnungsdetails",
     "description": "Bearbeiten Sie vor dem Abschluss die Metadaten des Rechnungsentwurfs.",
     "actions": {
@@ -2028,6 +2416,13 @@
     "errors": {
       "invoiceNumberRequired": "Die Rechnungsnummer ist erforderlich.",
       "invoiceDateRequired": "Das Rechnungsdatum ist erforderlich."
+    },
+    "labels": {
+      "billingProfile": "Abrechnungsprofil",
+      "billingProfileDefault": "Das Standardprofil des Kunden"
+    },
+    "hints": {
+      "billingProfile": "Die Rechnung, ihre Positionen und die per E-Mail versendete Kopie folgen diesem Profil."
     }
   },
   "documentTemplates": {
@@ -2109,7 +2504,8 @@
     "types": {
       "salesOrder": "Verkaufsauftrag",
       "packingSlip": "Lieferschein",
-      "pickList": "Kommissionierliste"
+      "pickList": "Kommissionierliste",
+      "workTag": "Arbeitsetikett / Label"
     }
   },
   "errors": {
@@ -2138,7 +2534,8 @@
       "referenceMissing": "Die ausgewählte Rechnung, der Kunde, Vertrag oder Abrechnungsdatensatz existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "duplicate": "Es existiert bereits eine widersprüchliche Rechnung. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "missingField": "Erforderliches Rechnungsfeld fehlt.",
-      "missingFieldNamed": "Erforderliches Rechnungsfeld fehlt: {{field}}."
+      "missingFieldNamed": "Erforderliches Rechnungsfeld fehlt: {{field}}.",
+      "billingProfileUnavailable": "Das ausgewählte Abrechnungsprofil ist für diesen Kunden nicht verfügbar."
     },
     "billingCycle": {
       "notFoundRefresh": "Abrechnungszeitraum nicht gefunden. Er wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
@@ -2178,5 +2575,15 @@
     "saving": "Wird gespeichert …",
     "saveCorrection": "Korrektur speichern",
     "save": "Speichern"
+  },
+  "draftInvoiceAdjustments": {
+    "sessionExpired": "Ihre Sitzung ist beim Laden der Rechnungsanpassungen abgelaufen. Melden Sie sich erneut an und laden Sie diese Rechnung anschließend erneut.",
+    "signIn": "Anmelden",
+    "retry": "Erneut laden",
+    "blockedTitle": "Rechnungsanpassungen nicht verfügbar",
+    "blocked": {
+      "exported": "Diese Rechnung ist mit einem Buchhaltungssystem synchronisiert. Stornieren Sie sie oder stellen Sie eine separate Gutschrift aus, anstatt ihre Positionen zu bearbeiten.",
+      "exporting": "Ein Buchhaltungsexport für diese Rechnung wird vorbereitet. Warten Sie, bis er abgeschlossen ist, bevor Sie die Rechnung ändern."
+    }
   }
 }

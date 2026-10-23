@@ -8,9 +8,13 @@ import type { IClient, IContact, ITicketLinkedTask, SurveyTicketSatisfactionSumm
 import CreateTaskFromTicketDialog from '@alga-psa/projects/components/CreateTaskFromTicketDialog';
 import LinkTicketToTaskDialog from '@alga-psa/projects/components/LinkTicketToTaskDialog';
 import TicketLinkedTasksBadge from '@alga-psa/projects/components/TicketLinkedTasksBadge';
-import { IntervalManagement } from '@alga-psa/scheduling/components/time-management/interval-tracking/IntervalManagement';
+import QuickInvoiceTicketDialog from '@alga-psa/billing/components/ticket/QuickInvoiceTicketDialog';
 import { TicketIntegrationProvider } from '@alga-psa/projects/context/TicketIntegrationContext';
 import { useTicketIntegrationValue } from '../projects/useTicketIntegrationValue';
+import {
+  CreateWorkflowFromTicketDialog,
+  createWorkflowFromTicketEnabled,
+} from '@alga-psa/workflows/ticket-actions';
 import TicketSurveySummaryCard from '@alga-psa/surveys/components/TicketSurveySummaryCard';
 import { MspClientCrossFeatureProvider } from '../clients/MspClientCrossFeatureProvider';
 import {
@@ -21,7 +25,7 @@ import { resolveTicketAttachmentViewUrl } from './ticketAttachmentViewUrl';
 
 type MspTicketDetailsContainerClientProps = Omit<
   React.ComponentProps<typeof TicketDetailsContainer>,
-  'renderContactDetails' | 'renderClientDetails' | 'renderIntervalManagement' | 'surveySummaryCard'
+  'renderContactDetails' | 'renderClientDetails' | 'surveySummaryCard' | 'renderQuickInvoice' | 'renderCreateWorkflowFromTicket'
 > & {
   surveySummary?: SurveyTicketSatisfactionSummary | null;
   isAlgaDeskMode?: boolean;
@@ -69,6 +73,20 @@ export default function MspTicketDetailsContainerClient({
     [linkedTasksStream]
   );
 
+  const renderQuickInvoice = useCallback(
+    ({ ticket }: { ticket: { ticket_id?: string; ticket_number?: string | null; title?: string | null } }) => (
+      <QuickInvoiceTicketDialog ticket={ticket} />
+    ),
+    []
+  );
+
+  const renderCreateWorkflowFromTicket = useCallback(
+    (args: React.ComponentProps<typeof CreateWorkflowFromTicketDialog>) => (
+      <CreateWorkflowFromTicketDialog {...args} />
+    ),
+    []
+  );
+
   const renderClientDetails = useCallback(
     ({ id, client }: { id: string; client: IClient }) => {
       return (
@@ -77,13 +95,6 @@ export default function MspTicketDetailsContainerClient({
         </MspClientCrossFeatureProvider>
       );
     },
-    []
-  );
-
-  const renderIntervalManagement = useCallback(
-    ({ ticketId, userId }: { ticketId: string; userId: string }) => (
-      <IntervalManagement ticketId={ticketId} userId={userId} />
-    ),
     []
   );
 
@@ -98,8 +109,12 @@ export default function MspTicketDetailsContainerClient({
         }
         renderContactDetails={renderContactDetails}
         renderCreateProjectTask={isAlgaDeskMode ? undefined : renderCreateProjectTask}
+        renderQuickInvoice={isAlgaDeskMode ? undefined : renderQuickInvoice}
+        renderCreateWorkflowFromTicket={
+          createWorkflowFromTicketEnabled && !isAlgaDeskMode ? renderCreateWorkflowFromTicket : undefined
+        }
         renderClientDetails={renderClientDetails}
-        renderIntervalManagement={isAlgaDeskMode ? undefined : renderIntervalManagement}
+        isAlgaDeskMode={isAlgaDeskMode}
         hideSlaStatus={isAlgaDeskMode}
         hideBilling={isAlgaDeskMode}
         hideScheduling={isAlgaDeskMode}

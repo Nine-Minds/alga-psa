@@ -10,4 +10,10 @@ describe('workflow run trigger presentation', () => {
   it('T042: workflow runs list labels recurring schedule runs distinctly', () => {
     expect(getWorkflowRunTriggerLabel('recurring')).toBe('Recurring schedule');
   });
+
+  it('labels manual runs that carry a sample event as test runs, not as event-fired or plain manual', () => {
+    expect(getWorkflowRunTriggerLabel(null, 'TICKET_CUSTOMER_REPLIED')).toBe('Manual test with event: TICKET_CUSTOMER_REPLIED');
+    expect(getWorkflowRunTriggerLabel(null)).toBe('Manual test');
+    expect(getWorkflowRunTriggerLabel('event', 'TICKET_CREATED')).toBe('Event: TICKET_CREATED');
+  });
 });

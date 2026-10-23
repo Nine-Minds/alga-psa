@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '../../workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   projectTaskAssignedEventPayloadSchema,
   projectTaskCompletedEventPayloadSchema,
@@ -7,7 +7,7 @@ import {
   projectTaskDependencyBlockedEventPayloadSchema,
   projectTaskDependencyUnblockedEventPayloadSchema,
   projectTaskStatusChangedEventPayloadSchema,
-} from '../../../runtime/schemas/projectEventSchemas';
+} from '@alga-psa/event-schemas';
 import {
   buildProjectTaskAssignedPayload,
   buildProjectTaskCompletedPayload,

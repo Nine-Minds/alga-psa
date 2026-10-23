@@ -223,7 +223,6 @@ describe('contract line cadence owner persistence', () => {
     expect(writer.updates[0]).toEqual({
       table: 'contract_lines',
       payload: {
-        custom_rate: null,
         display_order: undefined,
         billing_timing: 'advance',
         cadence_owner: 'contract',

@@ -10,6 +10,7 @@ import {
   declaredOpportunityEvidenceApiSchema,
   loseOpportunityApiSchema,
   opportunityListQuerySchema,
+  setOpportunityStageApiSchema,
   updateOpportunityApiSchema,
   acceptOpportunitySuggestionApiSchema,
   opportunitySuggestionListQuerySchema,
@@ -243,6 +244,23 @@ export class ApiOpportunityController extends ApiBaseController {
           const id = await this.extractIdFromPath(apiRequest);
           const data = await this.validateData(apiRequest, loseOpportunityApiSchema);
           const opportunity = await this.opportunityService.lose(id, data, apiRequest.context);
+          return createSuccessResponse(opportunity);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  setStage() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, 'update');
+          const id = await this.extractIdFromPath(apiRequest);
+          const data = await this.validateData(apiRequest, setOpportunityStageApiSchema);
+          const opportunity = await this.opportunityService.setStage(id, data, apiRequest.context);
           return createSuccessResponse(opportunity);
         });
       } catch (error) {

@@ -24,6 +24,11 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 import { getScopedProjectStatusMappings, ProjectStatusMappingDetails } from '../lib/projectStatusMappingUtils';
+import {
+  bucketProjectStatusRenameImpact,
+  type ProjectStatusRenameImpact,
+  type ProjectStatusRenameImpactRow,
+} from '../lib/projectStatusRenameImpact';
 
 export type ProjectTaskStatusActionError = ActionMessageError | ActionPermissionError;
 
@@ -438,6 +443,110 @@ export const getProjectStatusMappings = withAuth(async (
     await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
     return await getScopedProjectStatusMappings(trx, tenant, projectId, phaseId);
   });
+});
+
+/**
+ * How many phase-scoped status columns each phase of a project owns, resolved
+ * in one query. A phase with zero rows is inheriting the project defaults; any
+ * other count means it has forked. Boards and phase lists use this to show
+ * which phases are forked instead of making the user open every Configure
+ * dialog one by one.
+ */
+export const getPhaseCustomStatusCounts = withAuth(async (
+  user,
+  { tenant },
+  projectId: string
+): Promise<Record<string, number> | ProjectTaskStatusActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    return await withTransaction(knex, async (trx) => {
+      if (!await hasPermission(user, 'project', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read project');
+      }
+      await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+
+      const rows = (await tenantScopedTable(trx, 'project_status_mappings', tenant)
+        .where({ project_id: projectId })
+        .whereNotNull('phase_id')
+        .groupBy('phase_id')
+        .select('phase_id')
+        .count('* as count')) as unknown as Array<{ phase_id: string; count: string | number }>;
+
+      const counts: Record<string, number> = {};
+      for (const row of rows) {
+        counts[row.phase_id] = Number(row.count) || 0;
+      }
+      return counts;
+    });
+  } catch (error) {
+    const expected = projectTaskStatusActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
+});
+
+/**
+ * Read-only: where a rename of one library status actually lands. The match set
+ * is every column linked to the status plus every column that renders the same
+ * label today; `bucketProjectStatusRenameImpact` splits it into the columns
+ * that follow the rename and the ones that silently keep the old name, so the
+ * Edit Status dialog can name the projects that will diverge before the rename
+ * is committed. No data is changed.
+ */
+export const getProjectStatusRenameImpact = withAuth(async (
+  user,
+  { tenant },
+  statusId: string
+): Promise<ProjectStatusRenameImpact | ProjectTaskStatusActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    return await withTransaction(knex, async (trx) => {
+      if (!await hasPermission(user, 'project', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read project');
+      }
+
+      const status = await tenantScopedTable(trx, 'statuses', tenant)
+        .where({ status_id: statusId })
+        .first<IStatus | undefined>();
+
+      if (!status) {
+        throw new Error('Project task status not found');
+      }
+
+      const query = tenantScopedTable(trx, 'project_status_mappings as psm', tenant);
+      const scoped = tenantDb(trx, tenant);
+      scoped.tenantJoin(query, 'projects as p', 'psm.project_id', 'p.project_id', { type: 'left' });
+      scoped.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+      scoped.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
+
+      const rows = await query
+        .where((builder) => {
+          builder
+            .where('psm.status_id', statusId)
+            .orWhereRaw('lower(trim(COALESCE(psm.custom_name, s.name, ss.name))) = ?', [
+              status.name.trim().toLowerCase(),
+            ]);
+        })
+        .select<ProjectStatusRenameImpactRow[]>(
+          'psm.status_id as status_id',
+          'psm.custom_name as custom_name',
+          'psm.project_id as project_id',
+          'p.project_name as project_name'
+        );
+
+      return bucketProjectStatusRenameImpact(rows, statusId, status.name);
+    });
+  } catch (error) {
+    const expected = projectTaskStatusActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**

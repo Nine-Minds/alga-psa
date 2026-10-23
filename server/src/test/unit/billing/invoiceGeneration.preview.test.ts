@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Temporal } from '@js-temporal/polyfill';
 import {
   buildClientCadenceDueSelectionInput,
   buildContractCadenceDueSelectionInput,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
+import { ManualInvoiceError } from '../../../../../packages/billing/src/errors/manualInvoiceErrors';
 
 // Step 5 of the charge-attribution chain reads the client's default billing
 // profile from the database. These suites mock knex, so the read is stubbed —
@@ -15,6 +17,26 @@ vi.mock('@alga-psa/shared/billingClients/billingProfileSettings', async (importO
 
 
 type Row = Record<string, any>;
+
+const adjustmentPreview = vi.hoisted(() => vi.fn());
+vi.mock('../../../../../packages/billing/src/services/invoiceAutomaticAdjustments', () => ({
+  previewAutomaticInvoiceDiscounts: adjustmentPreview,
+  reconcileAutomaticInvoiceAdjustments: vi.fn(),
+}));
+
+// Unknown preview failures surface only a coded UNEXPECTED result whose message
+// carries a short support reference; the raw cause stays in the server log.
+const UNEXPECTED_PREVIEW_FAILURE = {
+  error: expect.stringMatching(
+    /^Something went wrong generating the invoice\. Quote reference [0-9a-f]{8} when contacting support\.$/,
+  ),
+  code: 'UNEXPECTED',
+  params: { ref: expect.stringMatching(/^[0-9a-f]{8}$/) },
+};
+
+function expectReferenceInMessage(result: any): void {
+  expect(result.error).toContain(result.params.ref);
+}
 
 function normalizeTableName(tableName: string): string {
   return tableName.split(/\s+as\s+/i)[0].trim();
@@ -46,9 +68,11 @@ function buildClientCadenceServicePeriodRow(overrides: Row = {}): Row {
     record_id: 'rsp-client-1',
     tenant: 'tenant-1',
     cadence_owner: 'client',
-    obligation_type: 'client_contract_line',
+    obligation_id: 'line-1',
+    // This query stub supplies joined rows, including the contract owner.
+    owner_client_id: 'client-1',
     client_id: 'client-1',
-    schedule_key: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+    schedule_key: 'schedule:tenant-1:line-1:client:arrears',
     period_key: 'period:2025-01-01:2025-02-01',
     service_period_start: '2025-01-01',
     service_period_end: '2025-02-01',
@@ -66,11 +90,10 @@ function buildContractCadenceServicePeriodRow(overrides: Row = {}): Row {
     record_id: 'rsp-contract-1',
     tenant: 'tenant-1',
     cadence_owner: 'contract',
-    obligation_type: 'contract_line',
     obligation_id: 'line-1',
     client_id: 'client-1',
     contract_id: 'contract-1',
-    schedule_key: 'schedule:tenant-1:contract_line:line-1:contract:arrears',
+    schedule_key: 'schedule:tenant-1:line-1:contract:arrears',
     period_key: 'period:2025-01-01:2025-02-01',
     service_period_start: '2025-01-01',
     service_period_end: '2025-02-01',
@@ -93,8 +116,9 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
           where: vi.fn(() => scopedWhere),
           orWhere: vi.fn(() => scopedWhere),
           orWhereNull: vi.fn(() => scopedWhere),
+          orWhereNotNull: vi.fn(() => scopedWhere),
         };
-        columnOrCriteria.call(scopedWhere);
+        columnOrCriteria.call(scopedWhere, scopedWhere);
         return builder;
       }
 
@@ -135,6 +159,8 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
     first: vi.fn(async () => resultRows[0]),
     join: vi.fn(() => builder),
     leftJoin: vi.fn(() => builder),
+    // The ticket→project resolver is joined as raw SQL (alga-2026-0002622).
+    joinRaw: vi.fn(() => builder),
     orderBy: vi.fn(() => builder),
     raw,
     then: (resolve: (value: Row[]) => unknown, reject?: (reason: unknown) => unknown) =>
@@ -147,6 +173,13 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
 const mocks = vi.hoisted(() => {
   const missingTables = new Set<string>();
   const rowsByTable: Record<string, Row[]> = {
+    client_billing_profiles: [{
+      billing_profile_id: 'unit-test-default-billing-profile',
+      tenant: 'tenant-1',
+      client_id: 'client-1',
+      is_default: true,
+      is_active: true,
+    }],
     client_billing_cycles: [
       {
         billing_cycle_id: 'cycle-1',
@@ -175,6 +208,15 @@ const mocks = vi.hoisted(() => {
         client_id: 'tenant-client-1',
       },
     ],
+    // Joined contract-line / client-assignment row for selection ownership checks.
+    contract_lines: [{
+      contract_line_id: 'line-1',
+      contract_id: 'contract-1',
+      tenant: 'tenant-1',
+      client_id: 'client-1',
+      line_profile_id: null,
+      contract_profile_id: null,
+    }],
     recurring_service_periods: [buildClientCadenceServicePeriodRow()],
   };
 
@@ -334,6 +376,7 @@ vi.mock('@alga-psa/shared/billingClients', () => ({
 
 vi.mock('@alga-psa/formatting/avatarUtils', () => ({
   getClientLogoUrl: mocks.getClientLogoUrl,
+  getClientDocumentLogoUrl: mocks.getClientLogoUrl,
 }));
 
 vi.mock('../../../../../packages/billing/src/services/purchaseOrderService', () => ({
@@ -377,6 +420,7 @@ const {
 describe('invoice preview recurring timing', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    adjustmentPreview.mockResolvedValue({ discounts: [] });
     mocks.missingTables.clear();
     mocks.hasPermission.mockReturnValue(true);
     mocks.validateClientBillingEmail.mockResolvedValue({ valid: true });
@@ -477,6 +521,32 @@ describe('invoice preview recurring timing', () => {
     });
   });
 
+  it('renders shared automatic settlements instead of the legacy engine discount estimate', async () => {
+    const calculated = await mocks.calculateBillingForExecutionWindow();
+    mocks.calculateBillingForExecutionWindow.mockResolvedValue({
+      ...calculated,
+      discounts: [{ discount_id: 'legacy', discount_name: 'Wrong legacy base', amount: 3200 }],
+    } as any);
+    adjustmentPreview.mockResolvedValue({ discounts: [
+      { discount_id: 'line-term', discount_name: 'Line 10%', discount_type: 'percentage', value: 10, amount: 400 },
+      { discount_id: 'contract-term', discount_name: 'Contract fixed', discount_type: 'fixed', value: 2500, amount: 2500 },
+    ] });
+    const result = await previewInvoice('cycle-1');
+    expect(result.success).toBe(true);
+    if (!result.success) throw new Error(result.error);
+    expect(result.data.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ description: 'Line 10%', total: -400 }),
+      expect.objectContaining({ description: 'Contract fixed', total: -2500 }),
+    ]));
+    expect(result.data.items.some((item) => item.description === 'Wrong legacy base')).toBe(false);
+    expect(result.data.subtotal).toBe(1100);
+    expect(result.data.tax).toBe(200);
+    expect(result.data.total).toBe(1300);
+    expect(adjustmentPreview).toHaveBeenCalledWith(
+      expect.anything(), 'tenant-1', 'client-1', calculated.charges, expect.any(String),
+    );
+  });
+
   it('T076: one-cycle invoice preview uses canonical service periods and still matches expected recurring totals', async () => {
     const result = await previewInvoice('cycle-1');
 
@@ -508,9 +578,12 @@ describe('invoice preview recurring timing', () => {
     );
     expect(result).toEqual({
       success: true,
+      expectedRecurringPricingSources: [],
       data: expect.objectContaining({
         invoiceNumber: 'PREVIEW',
-        dueDate: '2025-03-15',
+        // The stubbed profile identity sets no payment terms, so the preview
+        // is due on Net 30 from today.
+        dueDate: Temporal.Now.plainDateISO().add({ days: 30 }).toString(),
         currencyCode: 'USD',
         subtotal: 4000,
         tax: 200,
@@ -656,12 +729,43 @@ describe('invoice preview recurring timing', () => {
     expect(invalidResult).not.toHaveProperty('billingCycleId');
   });
 
+  it.each([
+    ['client_billing_profiles', 'client_id'],
+    ['client_billing_profiles', 'tenant'],
+    ['contract_lines', 'client_id'],
+    ['contract_lines', 'tenant'],
+  ])('rejects preview when %s has a foreign %s', async (table, column) => {
+    const row = mocks.rowsByTable[table][0];
+    const original = row[column];
+    row[column] = 'foreign-owner';
+    const selectorInput = buildContractCadenceDueSelectionInput({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+
+    try {
+      const result = await previewInvoiceForSelectionInput(selectorInput);
+      expect(result).toMatchObject({
+        success: false,
+        ...UNEXPECTED_PREVIEW_FAILURE,
+        executionIdentityKey: selectorInput.executionWindow.identityKey,
+      });
+      expectReferenceInMessage(result);
+      expect(mocks.calculateBillingForExecutionWindow).not.toHaveBeenCalled();
+    } finally {
+      row[column] = original;
+    }
+  });
+
   it('T005: selector-input preview action resolves a client-cadence execution window without `client_contract_lines`', async () => {
     mocks.missingTables.add('client_contract_lines');
 
     const selectorInput = buildClientCadenceDueSelectionInput({
       clientId: 'client-1',
-      scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+      scheduleKey: 'schedule:tenant-1:line-1:client:arrears',
       periodKey: 'period:2025-01-01:2025-02-01',
       windowStart: '2025-02-01',
       windowEnd: '2025-03-01',
@@ -672,6 +776,7 @@ describe('invoice preview recurring timing', () => {
 
     expect(selectorResult).toEqual({
       success: true,
+      expectedRecurringPricingSources: [],
       data: expect.objectContaining({
         dueDate: legacyResult.success ? legacyResult.data.dueDate : undefined,
         subtotal: legacyResult.success ? legacyResult.data.subtotal : undefined,
@@ -711,7 +816,7 @@ describe('invoice preview recurring timing', () => {
 
     const selectorInput = buildClientCadenceDueSelectionInput({
       clientId: 'client-1',
-      scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+      scheduleKey: 'schedule:tenant-1:line-1:client:arrears',
       periodKey: 'period:2025-01-01:2025-02-01',
       windowStart: '2025-02-01',
       windowEnd: '2025-03-01',
@@ -818,11 +923,41 @@ describe('invoice preview recurring timing', () => {
 
     expect(result).toMatchObject({
       success: false,
-      error:
-        'Recurring service periods were not materialized for this recurring execution window.',
+      code: 'RECURRING_PERIODS_NOT_MATERIALIZED',
+      error: expect.stringContaining("Service periods haven't been generated"),
       executionIdentityKey: selectorInput.executionWindow.identityKey,
     });
+    expect(JSON.stringify(result)).not.toContain('were not materialized');
     expect(mocks.calculateBillingForExecutionWindow).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      'No active contract lines found for this client in the selected billing period.',
+      'NO_ACTIVE_CONTRACT_LINES',
+      'No contract line is active for this billing period',
+    ],
+    ['Nothing to bill', 'NOTHING_TO_BILL', 'Nothing is ready to invoice for this window'],
+  ])('returns a stable code and actionable message when the engine refuses with "%s"', async (engineMessage, code, fallback) => {
+    mocks.calculateBillingForExecutionWindow.mockRejectedValueOnce(new Error(engineMessage));
+
+    const selectorInput = buildContractCadenceDueSelectionInput({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+
+    const result = await previewInvoiceForSelectionInput(selectorInput);
+
+    expect(result).toMatchObject({
+      success: false,
+      code,
+      error: expect.stringContaining(fallback),
+      executionIdentityKey: selectorInput.executionWindow.identityKey,
+    });
+    expect((result as { error: string }).error).not.toBe(engineMessage);
   });
 
   it('T044: selector-input PO-overage action returns null when the preview spans no PO-governed client contract', async () => {
@@ -927,14 +1062,12 @@ describe('invoice preview recurring timing', () => {
     });
   });
 
-  it('T045: selector-input preview and generation validation failures map back to canonical execution-window identity only', async () => {
-    mocks.validateClientBillingEmail.mockResolvedValueOnce({
+  it('T045: a missing billing email is advisory for selector-input preview and never gates generation', async () => {
+    mocks.validateClientBillingEmail.mockResolvedValue({
       valid: false,
+      code: 'NO_BILLING_EMAIL',
       error: 'Billing email is required before generating recurring invoices.',
-    });
-    mocks.validateClientBillingEmail.mockResolvedValueOnce({
-      valid: false,
-      error: 'Billing email is required before generating recurring invoices.',
+      params: { clientName: 'Acme Corp' },
     });
 
     const selectorInput = buildContractCadenceDueSelectionInput({
@@ -945,25 +1078,24 @@ describe('invoice preview recurring timing', () => {
       windowEnd: '2025-03-08',
     });
 
+    // The address is only consumed when the invoice is emailed or a payment
+    // link is created, so the preview renders and carries a warning instead.
     const previewResult = await previewInvoiceForSelectionInput(selectorInput);
-
-    const generationError = await generateInvoiceForSelectionInput(selectorInput).catch((error) => error);
-
     expect(previewResult).toMatchObject({
-      success: false,
-      error: 'Billing email is required before generating recurring invoices.',
-      executionIdentityKey: selectorInput.executionWindow.identityKey,
+      success: true,
+      billingEmailWarning: { code: 'NO_BILLING_EMAIL', params: { clientName: 'Acme Corp' } },
     });
+    expect(previewResult).not.toHaveProperty('error');
     expect(previewResult).not.toHaveProperty('billingCycleId');
-    // The coded validation failure is returned (not re-thrown) as a keyed action
-    // error so the recurring run can recover the structured failure after the
-    // localization boundary rewrites the sentence.
-    expect(generationError).toMatchObject({
-      actionError: 'Billing email is required before generating recurring invoices.',
+    expect(mocks.validateClientBillingEmail).toHaveBeenCalledTimes(1);
+
+    // Generation does not consult the address at all.
+    const generationResult = await generateInvoiceForSelectionInput(selectorInput).catch((error) => error);
+    expect(mocks.validateClientBillingEmail).toHaveBeenCalledTimes(1);
+    expect(generationResult).not.toMatchObject({
       messageKey: 'msp/invoicing:manualInvoices.errors.NO_BILLING_EMAIL',
-      messageParams: { clientName: 'Acme Corp' },
     });
-    expect(generationError).not.toHaveProperty('billingCycleId');
+    expect(JSON.stringify(generationResult ?? null)).not.toContain('Billing email is required');
   });
 
   it('keeps unknown preview failures generic instead of exposing the raw internal message', async () => {
@@ -986,10 +1118,10 @@ describe('invoice preview recurring timing', () => {
 
     expect(result).toMatchObject({
       success: false,
-      error: 'An error occurred while previewing the invoice',
+      ...UNEXPECTED_PREVIEW_FAILURE,
       executionIdentityKey: selectorInput.executionWindow.identityKey,
     });
-    expect(result).not.toHaveProperty('code');
+    expectReferenceInMessage(result);
     const serialized = JSON.stringify(result);
     expect(serialized).not.toContain('client_contract_id');
     expect(serialized).not.toContain('TypeError');
@@ -999,17 +1131,22 @@ describe('invoice preview recurring timing', () => {
     const [, , loggedError] = consoleErrorSpy.mock.calls[0] as [string, unknown, unknown];
     expect(loggedError).toBeInstanceOf(Error);
     expect((loggedError as Error).message).toContain('client_contract_id');
+    // The reference shown to the operator is logged next to that cause.
+    const refLog = consoleErrorSpy.mock.calls.find(
+      ([, context]) => (context as { ref?: string } | undefined)?.ref === (result as any).params.ref,
+    );
+    expect(refLog?.[2]).toBe(loggedError);
 
     consoleErrorSpy.mockRestore();
   });
 
   it('routes unsupported coded validation errors to the generic path instead of surfacing them raw', async () => {
-    mocks.validateClientBillingEmail.mockResolvedValue({
-      valid: false,
-      code: 'SERVICE_NOT_FOUND',
-      error: 'Service "service-9" could not be found.',
-      params: { serviceId: 'service-9' },
-    });
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    mocks.calculateBillingForExecutionWindow.mockRejectedValue(
+      new ManualInvoiceError('SERVICE_NOT_FOUND', 'Service "service-9" could not be found.', { serviceId: 'service-9' }),
+    );
 
     const selectorInput = buildContractCadenceDueSelectionInput({
       clientId: 'client-1',
@@ -1022,9 +1159,9 @@ describe('invoice preview recurring timing', () => {
     const previewResult = await previewInvoiceForSelectionInput(selectorInput);
     expect(previewResult).toMatchObject({
       success: false,
-      error: 'An error occurred while previewing the invoice',
+      ...UNEXPECTED_PREVIEW_FAILURE,
     });
-    expect(previewResult).not.toHaveProperty('code');
+    expectReferenceInMessage(previewResult);
     expect(JSON.stringify(previewResult)).not.toContain('service-9');
 
     // The generation boundary must not return the raw coded message as an action
@@ -1033,6 +1170,8 @@ describe('invoice preview recurring timing', () => {
     expect(generationError).toBeInstanceOf(Error);
     expect(generationError).not.toHaveProperty('actionError');
     expect(generationError).not.toHaveProperty('messageKey');
+
+    consoleErrorSpy.mockRestore();
   });
 
   it('T050: selector-input recurring generation still enforces PO-required contract validation', async () => {

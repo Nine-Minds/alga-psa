@@ -1,14 +1,15 @@
 import { z } from 'zod';
-import { BaseDomainEventPayloadSchema, changesSchema, updatedFieldsSchema, uuidSchema } from './commonEventPayloadSchemas';
+import { BaseDomainEventPayloadSchema, changesSchema, dateOnlySchema, updatedFieldsSchema, uuidSchema, entityIdSchema } from './commonEventPayloadSchemas';
 
-const clientIdSchema = uuidSchema('Client ID');
-const contactIdSchema = uuidSchema('Contact ID');
-const userIdSchema = uuidSchema('User ID');
+// Mirrors CONTACT_*_CANONICAL_TYPES in shared/interfaces/contact.interfaces.ts (this package cannot import from shared).
+const CONTACT_EMAIL_CANONICAL_TYPES = ['work', 'personal', 'billing', 'other'] as const;
+const CONTACT_PHONE_CANONICAL_TYPES = ['work', 'mobile', 'home', 'fax', 'other'] as const;
+const clientIdSchema = entityIdSchema('Client ID', 'client');
+const contactIdSchema = entityIdSchema('Contact ID', 'contact');
+const userIdSchema = entityIdSchema('User ID', 'user');
 const interactionIdSchema = uuidSchema('Interaction ID');
 const noteIdSchema = uuidSchema('Note ID');
 const tagIdSchema = uuidSchema('Tag ID');
-const CONTACT_EMAIL_CANONICAL_TYPES = ['work', 'personal', 'billing', 'other'] as const;
-const CONTACT_PHONE_CANONICAL_TYPES = ['work', 'mobile', 'home', 'fax', 'other'] as const;
 const contactEmailCanonicalTypeSchema = z.enum(CONTACT_EMAIL_CANONICAL_TYPES);
 const contactPhoneCanonicalTypeSchema = z.enum(CONTACT_PHONE_CANONICAL_TYPES);
 const contactEmailAddressSchema = z.object({
@@ -32,6 +33,11 @@ const contactPhoneNumberSchema = z.object({
   is_default: z.boolean(),
   display_order: z.number().int().min(0),
 });
+
+export const clientAnniversaryUpcomingEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  clientId: clientIdSchema, clientName: z.string().min(1), anniversaryDate: dateOnlySchema('Anniversary date'), yearsAsClient: z.number().int().positive(), daysUntilAnniversary: z.number().int().nonnegative(),
+}).describe('Payload for CLIENT_ANNIVERSARY_UPCOMING');
+export type ClientAnniversaryUpcomingEventPayload = z.infer<typeof clientAnniversaryUpcomingEventPayloadSchema>;
 
 export const clientCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   clientId: clientIdSchema,
@@ -91,14 +97,6 @@ export const clientArchivedEventPayloadSchema = BaseDomainEventPayloadSchema.ext
 
 export type ClientArchivedEventPayload = z.infer<typeof clientArchivedEventPayloadSchema>;
 
-export const clientDeletedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  clientId: clientIdSchema,
-  deletedByUserId: userIdSchema.optional(),
-  deletedAt: z.string().datetime().optional(),
-}).describe('Payload for CLIENT_DELETED');
-
-export type ClientDeletedEventPayload = z.infer<typeof clientDeletedEventPayloadSchema>;
-
 export const contactCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   contactId: contactIdSchema,
   clientId: clientIdSchema.optional(),
@@ -147,15 +145,6 @@ export const contactArchivedEventPayloadSchema = BaseDomainEventPayloadSchema.ex
 }).describe('Payload for CONTACT_ARCHIVED');
 
 export type ContactArchivedEventPayload = z.infer<typeof contactArchivedEventPayloadSchema>;
-
-export const contactDeletedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  contactId: contactIdSchema,
-  clientId: clientIdSchema.optional(),
-  deletedByUserId: userIdSchema.optional(),
-  deletedAt: z.string().datetime().optional(),
-}).describe('Payload for CONTACT_DELETED');
-
-export type ContactDeletedEventPayload = z.infer<typeof contactDeletedEventPayloadSchema>;
 
 export const contactMergedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   sourceContactId: contactIdSchema,
@@ -234,3 +223,20 @@ export const tagRemovedEventPayloadSchema = BaseDomainEventPayloadSchema.extend(
 }).describe('Payload for TAG_REMOVED');
 
 export type TagRemovedEventPayload = z.infer<typeof tagRemovedEventPayloadSchema>;
+
+export const clientDeletedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  clientId: clientIdSchema,
+  deletedByUserId: userIdSchema.optional(),
+  deletedAt: z.string().datetime().optional(),
+}).describe('Payload for CLIENT_DELETED');
+
+export type ClientDeletedEventPayload = z.infer<typeof clientDeletedEventPayloadSchema>;
+
+export const contactDeletedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  contactId: contactIdSchema,
+  clientId: clientIdSchema.optional(),
+  deletedByUserId: userIdSchema.optional(),
+  deletedAt: z.string().datetime().optional(),
+}).describe('Payload for CONTACT_DELETED');
+
+export type ContactDeletedEventPayload = z.infer<typeof contactDeletedEventPayloadSchema>;

@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSWRConfig } from 'swr';
 import Link from 'next/link';
 import type {
   Asset,
   CreateAssetRequest,
   IClient,
   IClientLocation,
+  IContact,
   MobileDeviceAsset,
   NetworkDeviceAsset,
   PrinterAsset,
@@ -20,15 +22,27 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getAsset, updateAsset } from '../actions/assetActions';
-import { unwrapAssetActionResult } from '../actions/assetActionErrors';
+import {
+  assetActionErrorFrom,
+  assetActionErrorMessage,
+  unwrapAssetActionResult,
+  isAssetValidationError,
+} from '../actions/assetActionErrors';
 import { formatClientLocation } from '../lib/formatClientLocation';
+import { minorUnitsToInputValue, parseMoneyToMinorUnits } from '../lib/money';
+import { parseNumberInput } from '../lib/numberInput';
+import { calendarDateToLocalDate } from '../lib/calendarDate';
+import { matchAssetCacheKeys } from '../lib/assetCacheKeys';
+import { toCalendarDateString } from '@alga-psa/core';
 import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
-import { buildAssetTypeOptions, findCustomAssetType, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
+import { buildAssetTypeOptions, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
+import { buildAssetStatusOptions, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
 import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
-import { getAllClientsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
+import { getAllClientsForAssets, getClientBillingProfilesForAssets, getClientContactsForAssets, getClientLocationsForAssets, getVendorOptionsForAssets } from '../actions/clientLookupActions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Monitor, Network, Server, Smartphone, Printer as PrinterIcon, Router, Shield, Radio, Scale, MapPin, ExternalLink } from 'lucide-react';
@@ -45,6 +59,18 @@ interface AssetFormProps {
    * passes a handler so saving closes the drawer without leaving the page.
    */
   onSaved?: () => void;
+  /**
+   * Called instead of `router.back()` when Cancel is pressed. In a drawer,
+   * going back navigates away from the page behind it.
+   */
+  onCancel?: () => void;
+  /**
+   * The edit drawer pins Save and Cancel in its own footer, so the form drops
+   * its trailing action row and reports its saving state through
+   * `onSavingChange` instead.
+   */
+  hideActions?: boolean;
+  onSavingChange?: (saving: boolean) => void;
 }
 
 type AssetFormData = Omit<CreateAssetRequest, 'workstation' | 'network_device' | 'server' | 'mobile_device' | 'printer'> & {
@@ -58,12 +84,11 @@ type AssetFormData = Omit<CreateAssetRequest, 'workstation' | 'network_device' |
 type ClientOptionSummary = { id: string; name: string };
 
 
-const STATUS_OPTION_VALUES = ['active', 'inactive', 'maintenance'] as const;
 const NETWORK_DEVICE_TYPE_VALUES = ['switch', 'router', 'firewall', 'access_point', 'load_balancer'] as const;
 const STORAGE_TYPE_VALUES = ['ssd', 'hdd', 'nvme'] as const;
 const OS_TYPE_VALUES = ['windows', 'macos', 'linux'] as const;
 
-export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
+export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onSavingChange }: AssetFormProps) {
   const { t } = useTranslation('msp/assets');
   const [asset, setAsset] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
@@ -80,10 +105,18 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
   const [locationsError, setLocationsError] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [customLocation, setCustomLocation] = useState('');
+  const [clientContacts, setClientContacts] = useState<IContact[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const [contactsError, setContactsError] = useState<string | null>(null);
   // F309: custom-type schema field values (assets.attributes[key]); kept
   // across type switches per PRD D4 so re-selecting a type restores values.
   const [customAttributes, setCustomAttributes] = useState<Record<string, unknown>>({});
   const [attributeErrors, setAttributeErrors] = useState<Record<string, string>>({});
+  const [vendors, setVendors] = useState<Array<{ vendor_id: string; vendor_name: string }>>([]);
+  // FR-F4: only offered when the client actually has a choice to make.
+  const [billingProfiles, setBillingProfiles] = useState<Array<{ billing_profile_id: string; name: string }>>([]);
+  // Purchase cost is stored in minor units but typed as a decimal amount.
+  const [purchaseCostInput, setPurchaseCostInput] = useState('');
   const clientDrawer = useClientDrawer();
 
   useRegisterUIComponent({
@@ -92,6 +125,17 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
     label: t('assetForm.heading', { defaultValue: 'Edit Asset' }),
     disabled: saving
   });
+  // The drawer's pinned footer owns the Save button, so it has to know when
+  // the form is busy.
+  useEffect(() => {
+    onSavingChange?.(saving);
+  }, [saving, onSavingChange]);
+  // A save failure reports itself at the foot of the form; with the buttons
+  // lifted into the footer the user may be nowhere near it.
+  const saveErrorRef = React.useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (saveError) saveErrorRef.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [saveError]);
   const [formData, setFormData] = useState<AssetFormData>({
     asset_type: 'unknown',
     client_id: '',
@@ -100,12 +144,20 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
     serial_number: '',
     status: '',
     location_id: null,
+    contact_name_id: null,
     location: '',
     purchase_date: '',
-    warranty_end_date: ''
+    warranty_end_date: '',
+    manufacturer: '',
+    model: '',
+    vendor_id: null,
+    order_number: '',
+    billing_profile_id: null
   });
-  
+
+
   const router = useRouter();
+  const { mutate: mutateCache } = useSWRConfig();
 
   // F308: type select sources the tenant registry (built-ins first with their
   // existing labels, then custom types by registry name).
@@ -114,20 +166,19 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
     () => buildAssetTypeOptions(registryEntries, t, { includeUnknown: true }),
     [registryEntries, t]
   );
-  const selectedCustomType = useMemo(
-    () => findCustomAssetType(registryEntries, formData.asset_type),
+  const selectedTypeEntry = useMemo(
+    () => registryEntries?.find((entry) => entry.slug === formData.asset_type) ?? null,
     [registryEntries, formData.asset_type]
   );
-  const customTypeFields = selectedCustomType?.fields_schema ?? [];
+  const customTypeFields = selectedTypeEntry?.fields_schema ?? [];
 
-  const statusOptions = useMemo(() => (
-    STATUS_OPTION_VALUES.map((value) => ({
-      value,
-      label: t(`assetForm.statusOptions.${value}`, {
-        defaultValue: value.charAt(0).toUpperCase() + value.slice(1)
-      })
-    }))
-  ), [t]);
+  // F020: the select lists the tenant's asset_statuses, grouped by kind. An
+  // archived status the asset already carries stays selectable.
+  const { statuses: assetStatuses } = useAssetStatusRegistry(true, { includeArchived: true });
+  const statusOptions = useMemo(
+    () => buildAssetStatusOptions(assetStatuses, t, formData.status),
+    [assetStatuses, t, formData.status]
+  );
 
   const networkDeviceTypeOptions = useMemo(() => (
     NETWORK_DEVICE_TYPE_VALUES.map((value) => ({
@@ -197,27 +248,34 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           serial_number: data.serial_number || '',
           status: data.status || 'active',
           location_id: data.location_id ?? null,
+          contact_name_id: data.contact_name_id ?? null,
           location: data.location || '',
           purchase_date: purchaseDate,
           warranty_end_date: warrantyEndDate,
+          manufacturer: data.manufacturer ?? '',
+          model: data.model ?? '',
+          vendor_id: data.vendor_id ?? null,
+          purchase_cost_currency: data.purchase_cost_currency ?? null,
+          billing_profile_id: data.billing_profile_id ?? null,
+          order_number: data.order_number ?? '',
           workstation: data.workstation ? {
             os_type: data.workstation.os_type || '',
             os_version: data.workstation.os_version || '',
             cpu_model: data.workstation.cpu_model || '',
-            cpu_cores: data.workstation.cpu_cores || 0,
-            ram_gb: data.workstation.ram_gb || 0,
+            cpu_cores: data.workstation.cpu_cores ?? null,
+            ram_gb: data.workstation.ram_gb ?? null,
             storage_type: data.workstation.storage_type || '',
-            storage_capacity_gb: data.workstation.storage_capacity_gb || 0,
+            storage_capacity_gb: data.workstation.storage_capacity_gb ?? null,
             gpu_model: data.workstation.gpu_model || '',
             installed_software: data.workstation.installed_software || []
           } : undefined,
           network_device: data.network_device ? {
             device_type: data.network_device.device_type || '',
             management_ip: data.network_device.management_ip || '',
-            port_count: data.network_device.port_count || 0,
+            port_count: data.network_device.port_count ?? null,
             firmware_version: data.network_device.firmware_version || '',
             supports_poe: data.network_device.supports_poe || false,
-            power_draw_watts: data.network_device.power_draw_watts || 0,
+            power_draw_watts: data.network_device.power_draw_watts ?? null,
             vlan_config: data.network_device.vlan_config || {},
             port_config: data.network_device.port_config || {}
           } : undefined,
@@ -225,8 +283,8 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
             os_type: data.server.os_type || '',
             os_version: data.server.os_version || '',
             cpu_model: data.server.cpu_model || '',
-            cpu_cores: data.server.cpu_cores || 0,
-            ram_gb: data.server.ram_gb || 0,
+            cpu_cores: data.server.cpu_cores ?? null,
+            ram_gb: data.server.ram_gb ?? null,
             storage_config: data.server.storage_config || [],
             raid_config: data.server.raid_config || '',
             is_virtual: data.server.is_virtual || false,
@@ -251,13 +309,14 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
             is_network_printer: data.printer.is_network_printer || false,
             supports_color: data.printer.supports_color || false,
             supports_duplex: data.printer.supports_duplex || false,
-            max_paper_size: data.printer.max_paper_size || 0,
+            max_paper_size: data.printer.max_paper_size ?? null,
             supported_paper_types: data.printer.supported_paper_types || [],
-            monthly_duty_cycle: data.printer.monthly_duty_cycle || 0,
+            monthly_duty_cycle: data.printer.monthly_duty_cycle ?? null,
             supply_levels: data.printer.supply_levels || {}
           } : undefined
         });
         setCustomLocation(data.location || '');
+        setPurchaseCostInput(minorUnitsToInputValue(data.purchase_cost));
         setSelectedLocationId(data.location_id ?? (data.location ? 'custom' : ''));
         setCustomAttributes(
           data.attributes && typeof data.attributes === 'object' && !Array.isArray(data.attributes)
@@ -310,6 +369,60 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
       isMounted = false;
     };
   }, [t]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadVendors = async () => {
+      try {
+        const list = await getVendorOptionsForAssets(asset?.vendor_id ?? null);
+        if (isMounted) setVendors(list);
+      } catch (err) {
+        // A missing supplier list must never block saving the rest of the form.
+        console.error('Error loading vendors:', err);
+      }
+    };
+
+    void loadVendors();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [asset?.vendor_id]);
+
+  useEffect(() => {
+    if (!formData.client_id) {
+      setBillingProfiles([]);
+      return;
+    }
+    let isMounted = true;
+    void (async () => {
+      try {
+        const list = await getClientBillingProfilesForAssets(formData.client_id);
+        if (isMounted) setBillingProfiles(list);
+      } catch (error) {
+        console.error('Error loading billing profiles:', error);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, [formData.client_id]);
+
+  const vendorOptions = useMemo(() => ([
+    { value: '', label: t('assetForm.placeholders.noVendor', { defaultValue: 'No vendor' }) },
+    ...vendors.map((vendor) => ({ value: vendor.vendor_id, label: vendor.vendor_name })),
+  ]), [vendors, t]);
+
+  /**
+   * FR-F1: whether the stored billing profile is still a choice the client
+   * offers. The select only renders for a client with more than one active
+   * profile, so a profile deactivated later would otherwise be re-submitted
+   * from an invisible field and rejected on every save.
+   */
+  const billingProfileSelectable = billingProfiles.length > 1
+    && (!formData.billing_profile_id
+      || billingProfiles.some((profile) => profile.billing_profile_id === formData.billing_profile_id));
 
   useEffect(() => {
     let isMounted = true;
@@ -371,6 +484,46 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
     };
   }, [formData.client_id, t]);
 
+  // Contacts for the selected client. The assigned contact is passed along so
+  // an inactive assignee still renders instead of looking unassigned.
+  const savedContactId = asset?.contact_name_id ?? null;
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadContacts = async () => {
+      if (!formData.client_id) {
+        setClientContacts([]);
+        return;
+      }
+
+      try {
+        setContactsLoading(true);
+        setContactsError(null);
+        const contacts = await getClientContactsForAssets(formData.client_id, savedContactId);
+        if (!isMounted) return;
+        setClientContacts(contacts);
+      } catch (err) {
+        console.error('Error loading client contacts:', err);
+        if (isMounted) {
+          setContactsError(t('assetForm.errors.contactsLoadFailed', {
+            defaultValue: 'Unable to load contacts for this client'
+          }));
+          setClientContacts([]);
+        }
+      } finally {
+        if (isMounted) {
+          setContactsLoading(false);
+        }
+      }
+    };
+
+    void loadContacts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [formData.client_id, savedContactId, t]);
+
   const getAssetTypeIcon = () => {
     const iconClass = "h-16 w-16 text-primary-500 mb-4";
     
@@ -421,11 +574,17 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
       ...prev,
       client_id: clientId,
       location_id: null,
+      // The assignee belongs to the previous client.
+      contact_name_id: null,
+      // FR-F1: so does the billing profile — keeping it would make the save
+      // fail validation rather than quietly move the device.
+      billing_profile_id: null,
       location: ''
     }));
     setSelectedLocationId('custom');
     setCustomLocation('');
     setClientLocations([]);
+    setClientContacts([]);
   };
 
   const handleLocationSelect = (value: string) => {
@@ -458,6 +617,10 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
       location_id: null,
       location: value
     }));
+  };
+
+  const handleContactSelect = (value: string) => {
+    setFormData(prev => ({ ...prev, contact_name_id: value || null }));
   };
 
   const handleOpenClientDrawer = (initialPanel?: 'locations') => {
@@ -519,6 +682,18 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
     }));
   };
 
+  // Inline server-side validation message for a field path such as
+  // `network_device.power_draw_watts`, so a highlighted field is never invisible.
+  const renderFieldError = (path: string) => {
+    const message = fieldErrors[path];
+    if (!message) return null;
+    return (
+      <p id={`field-error-${path.replace(/[^a-zA-Z0-9]+/g, '-')}`} role="alert" className="mt-1 text-sm text-red-600">
+        {message}
+      </p>
+    );
+  };
+
   const renderWorkstationFields = () => {
     if (!asset?.workstation) return null;
     if (!formData.workstation) return null;
@@ -562,10 +737,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.workstation.cpu_cores || ''}
-            onChange={(e) => handleTypeSpecificChange('workstation', 'cpu_cores', parseInt(e.target.value))}
+            value={formData.workstation.cpu_cores ?? ''}
+            onChange={(e) => handleTypeSpecificChange('workstation', 'cpu_cores', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
+          {renderFieldError('workstation.cpu_cores')}
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
@@ -573,10 +749,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.workstation.ram_gb || ''}
-            onChange={(e) => handleTypeSpecificChange('workstation', 'ram_gb', parseInt(e.target.value))}
+            value={formData.workstation.ram_gb ?? ''}
+            onChange={(e) => handleTypeSpecificChange('workstation', 'ram_gb', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
+          {renderFieldError('workstation.ram_gb')}
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
@@ -595,10 +772,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.workstation.storage_capacity_gb || ''}
-            onChange={(e) => handleTypeSpecificChange('workstation', 'storage_capacity_gb', parseInt(e.target.value))}
+            value={formData.workstation.storage_capacity_gb ?? ''}
+            onChange={(e) => handleTypeSpecificChange('workstation', 'storage_capacity_gb', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
+          {renderFieldError('workstation.storage_capacity_gb')}
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
@@ -647,10 +825,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.network_device.port_count || ''}
-            onChange={(e) => handleTypeSpecificChange('network_device', 'port_count', parseInt(e.target.value))}
+            value={formData.network_device.port_count ?? ''}
+            onChange={(e) => handleTypeSpecificChange('network_device', 'port_count', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
+          {renderFieldError('network_device.port_count')}
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
@@ -668,10 +847,12 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.network_device.power_draw_watts || ''}
-            onChange={(e) => handleTypeSpecificChange('network_device', 'power_draw_watts', parseInt(e.target.value))}
+            step="0.01"
+            value={formData.network_device.power_draw_watts ?? ''}
+            onChange={(e) => handleTypeSpecificChange('network_device', 'power_draw_watts', parseNumberInput(e.target.value, { integer: false }))}
             className="mt-1"
           />
+          {renderFieldError('network_device.power_draw_watts')}
         </div>
         <div className="flex items-center">
           <Checkbox
@@ -728,10 +909,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.server.cpu_cores || ''}
-            onChange={(e) => handleTypeSpecificChange('server', 'cpu_cores', parseInt(e.target.value))}
+            value={formData.server.cpu_cores ?? ''}
+            onChange={(e) => handleTypeSpecificChange('server', 'cpu_cores', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
+          {renderFieldError('server.cpu_cores')}
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
@@ -739,10 +921,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.server.ram_gb || ''}
-            onChange={(e) => handleTypeSpecificChange('server', 'ram_gb', parseInt(e.target.value))}
+            value={formData.server.ram_gb ?? ''}
+            onChange={(e) => handleTypeSpecificChange('server', 'ram_gb', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
+          {renderFieldError('server.ram_gb')}
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
@@ -903,10 +1086,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.printer.monthly_duty_cycle || ''}
-            onChange={(e) => handleTypeSpecificChange('printer', 'monthly_duty_cycle', parseInt(e.target.value))}
+            value={formData.printer.monthly_duty_cycle ?? ''}
+            onChange={(e) => handleTypeSpecificChange('printer', 'monthly_duty_cycle', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
+          {renderFieldError('printer.monthly_duty_cycle')}
         </div>
         <div className="flex items-center space-x-6">
           <Checkbox
@@ -937,7 +1121,7 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
     if (!asset) return;
 
     // F309: required enforcement for custom-type schema fields, inline.
-    const attributeIssues = selectedCustomType
+    const attributeIssues = customTypeFields.length > 0
       ? validateAttributesAgainstSchema(customTypeFields, customAttributes, { requireAll: true })
       : [];
     if (attributeIssues.length > 0) {
@@ -969,9 +1153,20 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
         // Ensure optional fields are undefined instead of empty strings
         location: formData.location?.trim() || undefined,
         serial_number: formData.serial_number?.trim() || undefined,
+        // Procurement fields: an emptied input means "clear", so send null
+        // (cleanedData drops undefined and '' but keeps null).
+        manufacturer: formData.manufacturer?.trim() || null,
+        model: formData.model?.trim() || null,
+        vendor_id: formData.vendor_id || null,
+        // Only ever send a profile the client still offers. When a client is
+        // left with one active profile the select disappears, and sending the
+        // stored id anyway made the asset unsaveable for good.
+        billing_profile_id: billingProfileSelectable ? formData.billing_profile_id || null : null,
+        purchase_cost: parseMoneyToMinorUnits(purchaseCostInput),
+        order_number: formData.order_number?.trim() || null,
         // F309/F310: submit only schema-declared keys — the server merges into
         // assets.attributes so sibling namespaces (e.g. hudu_fields) survive.
-        attributes: selectedCustomType
+        attributes: customTypeFields.length > 0
           ? pickSchemaAttributes(customTypeFields, customAttributes)
           : undefined,
       };
@@ -1069,7 +1264,38 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
         )
       ) as UpdateAssetRequest;
 
-      unwrapAssetActionResult(await updateAsset(assetId, cleanedData));
+      // updateAsset RETURNS expected failures (validation, permission, not found)
+      // rather than throwing: Next.js masks thrown messages in production builds.
+      const result = await updateAsset(assetId, cleanedData);
+
+      if (isAssetValidationError(result)) {
+        const nextFieldErrors: Record<string, string> = {};
+        for (const issue of result.validationIssues) {
+          const key = issue.path.join('.');
+          if (key && !nextFieldErrors[key]) nextFieldErrors[key] = issue.message;
+        }
+        setFieldErrors(nextFieldErrors);
+        const summary = t('assetForm.errors.validation', {
+          defaultValue: 'Please fix the highlighted fields before saving.',
+        });
+        setSaveError(summary);
+        toast.error(summary);
+        return;
+      }
+
+      const expectedError = assetActionErrorFrom(result);
+      if (expectedError) {
+        const message = assetActionErrorMessage(expectedError);
+        setSaveError(message);
+        toast.error(message);
+        return;
+      }
+
+      // The detail page renders from the client-side asset cache, so
+      // router.refresh() alone leaves its tiles on the pre-save values until a
+      // reload — saving a new status kept showing the old one.
+      await mutateCache(matchAssetCacheKeys([assetId]));
+
       if (onSaved) {
         onSaved();
         router.refresh();
@@ -1078,29 +1304,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
         router.refresh();
       }
     } catch (error) {
+      // Only an unexpected failure (network, server crash) lands here.
       console.error('Error updating asset:', error);
-
-      const message = error instanceof Error ? error.message : '';
-      let parsed: { kind?: string; issues?: Array<{ path?: unknown; message?: string }> } | null = null;
-      try { parsed = JSON.parse(message); } catch { /* not a structured error */ }
-
-      if (parsed?.kind === 'validation' && Array.isArray(parsed.issues)) {
-        const nextFieldErrors: Record<string, string> = {};
-        for (const issue of parsed.issues) {
-          const key = Array.isArray(issue.path) ? issue.path.join('.') : String(issue.path ?? '');
-          if (key) nextFieldErrors[key] = issue.message || 'Invalid';
-        }
-        setFieldErrors(nextFieldErrors);
-        const summary = t('assetForm.errors.validation', {
-          defaultValue: 'Please fix the highlighted fields before saving.',
-        });
-        setSaveError(summary);
-        toast.error(summary);
-      } else {
-        const summary = t('assetForm.errors.updateFailed', { defaultValue: 'Failed to update asset' });
-        setSaveError(summary);
-        toast.error(summary);
-      }
+      const summary = t('assetForm.errors.updateFailed', { defaultValue: 'Failed to update asset' });
+      setSaveError(summary);
+      toast.error(summary);
     } finally {
       setSaving(false);
     }
@@ -1273,6 +1481,37 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
                     )
                   )}
                 </div>
+
+                <div>
+                  <label htmlFor="asset-contact-select" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                    {t('assetForm.fields.assignedTo', { defaultValue: 'Assigned to' })}
+                  </label>
+                  <ContactPicker
+                    id="asset-contact-select"
+                    label={t('assetForm.fields.assignedTo', { defaultValue: 'Assigned to' })}
+                    contacts={clientContacts}
+                    value={formData.contact_name_id ?? ''}
+                    onValueChange={handleContactSelect}
+                    clientId={formData.client_id || undefined}
+                    placeholder={formData.client_id
+                      ? (contactsLoading
+                        ? t('assetForm.placeholders.loadingContacts', { defaultValue: 'Loading contacts…' })
+                        : t('assetForm.placeholders.selectContact', { defaultValue: 'Select a contact' }))
+                      : t('assetForm.placeholders.selectClientFirst', {
+                        defaultValue: 'Select a client first'
+                      })}
+                    disabled={!formData.client_id || contactsLoading || saving}
+                    buttonWidth="full"
+                  />
+                  {contactsError && (
+                    <p className="mt-2 text-sm text-red-600">{contactsError}</p>
+                  )}
+                  <p className="mt-2 text-sm text-[rgb(var(--color-text-600))]">
+                    {t('assetForm.help.assignedTo', {
+                      defaultValue: 'In the client portal, people with limited visibility see this device only if it is assigned to them or to someone who reports to them.'
+                    })}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -1355,11 +1594,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
                   </label>
                   <DatePicker
                     id="purchase_date"
-                    value={formData.purchase_date ? new Date(formData.purchase_date) : undefined}
+                    value={calendarDateToLocalDate(formData.purchase_date)}
                     onChange={(date) => {
                       setFormData(prev => ({
                         ...prev,
-                        purchase_date: date ? date.toISOString().split('T')[0] : ''
+                        purchase_date: toCalendarDateString(date) ?? ''
                       }));
                     }}
                     placeholder={t('assetForm.placeholders.selectPurchaseDate', {
@@ -1375,11 +1614,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
                   </label>
                   <DatePicker
                     id="warranty_end_date"
-                    value={formData.warranty_end_date ? new Date(formData.warranty_end_date) : undefined}
+                    value={calendarDateToLocalDate(formData.warranty_end_date)}
                     onChange={(date) => {
                       setFormData(prev => ({
                         ...prev,
-                        warranty_end_date: date ? date.toISOString().split('T')[0] : ''
+                        warranty_end_date: toCalendarDateString(date) ?? ''
                       }));
                     }}
                     placeholder={t('assetForm.placeholders.selectWarrantyEndDate', {
@@ -1389,16 +1628,121 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
                 </div>
               </div>
             </div>
+
+            <div className="border-t border-[rgb(var(--color-border-200))] pt-6">
+              <Text size="4" weight="medium" className="text-[rgb(var(--color-text-900))]">
+                {t('assetForm.sections.procurement', { defaultValue: 'Make & Purchase' })}
+              </Text>
+              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                <div>
+                  <label htmlFor="asset-manufacturer-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                    {t('assetForm.fields.manufacturer', { defaultValue: 'Manufacturer' })}
+                  </label>
+                  <Input
+                    id="asset-manufacturer-input"
+                    name="manufacturer"
+                    value={formData.manufacturer ?? ''}
+                    onChange={handleInputChange}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="asset-model-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                    {t('assetForm.fields.model', { defaultValue: 'Model' })}
+                  </label>
+                  <Input
+                    id="asset-model-input"
+                    name="model"
+                    value={formData.model ?? ''}
+                    onChange={handleInputChange}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="asset-vendor-select" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                    {t('assetForm.fields.vendor', { defaultValue: 'Vendor' })}
+                  </label>
+                  <CustomSelect
+                    id="asset-vendor-select"
+                    value={formData.vendor_id ?? ''}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, vendor_id: value || null }))}
+                    options={vendorOptions}
+                    placeholder={t('assetForm.placeholders.selectVendor', { defaultValue: 'Select a vendor' })}
+                    disabled={saving}
+                    className="mt-1"
+                  />
+                  <Link
+                    id="asset-form-create-vendor"
+                    href="/msp/inventory?tab=vendors"
+                    className="mt-2 inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-500"
+                  >
+                    {t('assetForm.actions.createVendor', { defaultValue: 'Create vendor' })}
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+                <div>
+                  <label htmlFor="asset-purchase-cost-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                    {t('assetForm.fields.purchaseCost', { defaultValue: 'Purchase cost' })}
+                  </label>
+                  <Input
+                    id="asset-purchase-cost-input"
+                    name="purchase_cost_display"
+                    inputMode="decimal"
+                    value={purchaseCostInput}
+                    onChange={(e) => setPurchaseCostInput(e.target.value)}
+                    placeholder={t('assetForm.placeholders.purchaseCost', { defaultValue: '0.00' })}
+                    className="mt-1"
+                  />
+                  {formData.purchase_cost_currency && (
+                    <p className="mt-1 text-sm text-[rgb(var(--color-text-600))]">
+                      {formData.purchase_cost_currency}
+                    </p>
+                  )}
+                </div>
+                {billingProfiles.length > 1 ? (
+                  <div>
+                    <label htmlFor="asset-billing-profile-select" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                      {t('assetForm.fields.billingProfile', { defaultValue: 'Billing profile' })}
+                    </label>
+                    <CustomSelect
+                      id="asset-billing-profile-select"
+                      value={formData.billing_profile_id ?? ''}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, billing_profile_id: value || null }))}
+                      options={[
+                        { value: '', label: t('assetForm.placeholders.clientDefaultProfile', { defaultValue: 'Client default' }) },
+                        ...billingProfiles.map((profile) => ({ value: profile.billing_profile_id, label: profile.name })),
+                      ]}
+                      disabled={saving}
+                      className="mt-1"
+                    />
+                  </div>
+                ) : null}
+                <div>
+                  <label htmlFor="asset-order-number-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                    {t('assetForm.fields.orderNumber', { defaultValue: 'Order no.' })}
+                  </label>
+                  <Input
+                    id="asset-order-number-input"
+                    name="order_number"
+                    value={formData.order_number ?? ''}
+                    onChange={handleInputChange}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </Card>
 
-        {selectedCustomType && customTypeFields.length > 0 && (
+        {customTypeFields.length > 0 && (
           <Card id="custom-type-details" className="p-4 border border-[rgb(var(--color-border-200))]">
             <Text size="5" weight="medium" className="block mb-3 text-[rgb(var(--color-text-900))]">
-              {t('assetForm.typeDetails.custom', {
-                defaultValue: '{{typeName}} Details',
-                typeName: selectedCustomType.name
-              })}
+              {selectedTypeEntry?.is_builtin
+                ? t('assetForm.additionalFields', { defaultValue: 'Additional fields' })
+                : t('assetForm.typeDetails.custom', {
+                    defaultValue: '{{typeName}} Details',
+                    typeName: selectedTypeEntry?.name,
+                  })}
             </Text>
             <CustomTypeFieldsPanel
               fields={customTypeFields}
@@ -1445,29 +1789,31 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </Card>
         )}
 
-        <div id="form-actions" className="flex justify-end gap-2">
-          <Button
-            id="cancel-button"
-            type="button"
-            variant="outline" 
-            onClick={() => router.back()}
-            disabled={saving}
-          >
-            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
-          </Button>
-          <Button
-            id="save-button"
-            type="submit"
-            disabled={saving}
-          >
-            {saving
-              ? t('common.actions.saving', { defaultValue: 'Saving...' })
-              : t('assetForm.actions.saveChanges', { defaultValue: 'Save Changes' })}
-          </Button>
-        </div>
+        {!hideActions && (
+          <div id="form-actions" className="flex justify-end gap-2">
+            <Button
+              id="cancel-button"
+              type="button"
+              variant="outline"
+              onClick={() => (onCancel ? onCancel() : router.back())}
+              disabled={saving}
+            >
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button
+              id="save-button"
+              type="submit"
+              disabled={saving}
+            >
+              {saving
+                ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                : t('assetForm.actions.saveChanges', { defaultValue: 'Save Changes' })}
+            </Button>
+          </div>
+        )}
 
         {saveError && (
-          <div id="form-error" className="mt-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <div ref={saveErrorRef} id="form-error" className="mt-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             <div className="font-medium">{saveError}</div>
             {Object.keys(fieldErrors).length > 0 && (
               <ul id="form-field-errors" className="mt-1 list-disc pl-5">

@@ -226,10 +226,17 @@ export const formatActor = (user: ActorUserRow | null | undefined): string => {
   return 'Unresolved user';
 };
 
+/** A person's name for on-screen lists (email when they have no name); null when there's neither. */
+export const formatActorName = (user: ActorUserRow): string | null => {
+  const fullName = `${(user.first_name ?? '').trim()} ${(user.last_name ?? '').trim()}`.trim();
+  return fullName || (user.email ?? '').trim() || null;
+};
+
 export const buildActorMap = async (
   knex: Knex,
   userIds: string[],
-  tenant?: string | null
+  tenant?: string | null,
+  format: (user: ActorUserRow) => string | null = formatActor
 ): Promise<Map<string, string>> => {
   const ids = Array.from(new Set(userIds.filter(Boolean)));
   if (!ids.length) return new Map();
@@ -239,7 +246,8 @@ export const buildActorMap = async (
 
   const map = new Map<string, string>();
   for (const user of users) {
-    map.set(user.user_id, formatActor(user));
+    const label = format(user);
+    if (label) map.set(user.user_id, label);
   }
   return map;
 };

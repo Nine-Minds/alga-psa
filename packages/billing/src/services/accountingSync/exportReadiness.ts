@@ -69,7 +69,7 @@ export async function assertInvoiceExportReady(
   if (blockers.length > 0) {
     throw new InvoiceExportReadinessError(
       `This invoice can't be finalized because it would fail QuickBooks export: ${blockers.join('; ')}. ` +
-        'Assign services and QuickBooks item mappings to these lines, or turn off auto-sync, then finalize again.'
+        'Assign services and QuickBooks item mappings to these lines, configure the discount mapping, or turn off auto-sync, then finalize again.'
     );
   }
 }
@@ -109,30 +109,33 @@ async function collectExportBlockers(knex: Knex, tenant: string, invoiceId: stri
     return [];
   }
 
-  const charges: Array<{ item_id: string; service_id: string | null; description: string | null }> =
-    await knex('invoice_charges')
-      .where({ invoice_id: invoiceId, tenant })
-      .select('item_id', 'service_id', 'description');
+  const charges: Array<{
+    item_id: string;
+    service_id: string | null;
+    description: string | null;
+    is_discount: boolean | null;
+  }> = await knex('invoice_charges')
+    .where({ invoice_id: invoiceId, tenant })
+    .select('item_id', 'service_id', 'description', 'is_discount');
 
   // Consolidated fixed-plan parent charges intentionally carry no service_id —
   // their services live in invoice_charge_details children. Only a serviceless
   // charge with no children is a user-fixable gap (a manual/discount line
   // someone forgot to classify).
   const chargeIdsForDetailLookup = charges.filter((c) => !c.service_id).map((c) => c.item_id);
-  const consolidatedParents = new Set<string>(
-    chargeIdsForDetailLookup.length > 0
-      ? (
-          await knex('invoice_charge_details')
-            .whereIn('item_id', chargeIdsForDetailLookup)
-            .andWhere({ tenant })
-            .select('item_id')
-        ).map((row: { item_id: string }) => row.item_id)
-      : []
-  );
+  const detailServices: Array<{ item_id: string; service_id: string }> = chargeIdsForDetailLookup.length > 0
+    ? await knex('invoice_charge_details').whereIn('item_id', chargeIdsForDetailLookup)
+      .andWhere({ tenant }).select('item_id', 'service_id') : [];
+  const consolidatedParents = new Set(detailServices.filter(row => row.service_id).map(row => row.item_id));
 
   const blockers: string[] = [];
 
-  const serviceless = charges.filter((charge) => !charge.service_id && !consolidatedParents.has(charge.item_id));
+  // Discount lines never carry a service; they export through the realm's
+  // discount mapping instead.
+  const servicelessDiscounts = charges.filter((charge) => !charge.service_id && charge.is_discount);
+  const serviceless = charges.filter(
+    (charge) => !charge.service_id && !charge.is_discount && !consolidatedParents.has(charge.item_id)
+  );
   if (serviceless.length > 0) {
     const samples = serviceless.slice(0, 3).map((charge) => `"${truncateDescription(charge.description)}"`);
     blockers.push(
@@ -141,7 +144,20 @@ async function collectExportBlockers(knex: Knex, tenant: string, invoiceId: stri
   }
 
   const resolver = new AccountingMappingResolver(knex);
-  const serviceIds = [...new Set(charges.map((charge) => charge.service_id).filter((id): id is string => Boolean(id)))];
+  if (servicelessDiscounts.length > 0) {
+    const discountMapping = await resolver.resolveDiscountMapping({ adapterType: SYNC_ADAPTER_TYPE, targetRealm: realm });
+    if (!discountMapping) {
+      blockers.push(
+        `${servicelessDiscounts.length} discount line${servicelessDiscounts.length === 1 ? ' has' : 's have'} no QuickBooks item mapping (map it under Settings → Integrations → Accounting → Discounts)`
+      );
+    }
+  }
+  const serviceIds = [
+    ...new Set(
+      [...charges.map((charge) => charge.service_id), ...detailServices.map((row) => row.service_id)]
+        .filter((id): id is string => Boolean(id))
+    )
+  ];
   const unmappedServiceIds: string[] = [];
   for (const serviceId of serviceIds) {
     const mapping = await resolver.resolveServiceMapping({

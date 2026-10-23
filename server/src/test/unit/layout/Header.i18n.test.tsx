@@ -118,8 +118,17 @@ vi.mock('@alga-psa/notifications/components/NotificationBell', () => ({
   NotificationBell: () => <div>Notifications</div>,
 }));
 
+vi.mock('../../../components/layout/StopwatchHeaderIndicator', () => ({
+  default: () => null,
+}));
+
 vi.mock('../../../components/layout/QuickCreateDialog', () => ({
   QuickCreateDialog: () => <div>Quick create dialog</div>,
+}));
+
+vi.mock('../../../components/layout/VendorSupportDialog', () => ({
+  VendorSupportDialog: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div>Vendor support dialog</div> : null,
 }));
 
 vi.mock('../../../components/layout/TrialBanner', () => ({
@@ -219,6 +228,7 @@ describe('Header i18n wiring', () => {
       'header.breadcrumb.home': 'Accueil fil',
       'header.breadcrumb.dashboard': 'Tableau de bord FR',
       'nav.tickets': 'Tickets traduits',
+      'nav.ticketsAll': 'Tous les tickets traduits',
       'header.tenantBadge.ariaLabel': 'Locataire actif {{tenant}}',
       'header.themeToggle.ariaLabel': 'Basculer le theme',
       'header.themeToggle.light': 'Clair',
@@ -234,6 +244,7 @@ describe('Header i18n wiring', () => {
       'header.resources.title': 'Ressources FR',
       'header.resources.documentation': 'Documentation FR',
       'header.resources.support': 'Contacter assistance FR',
+      'header.resources.submitTicket': 'Envoyer un ticket FR',
     };
   });
 
@@ -266,7 +277,7 @@ describe('Header i18n wiring', () => {
     expect(screen.getByText('Ajouter un produit au catalogue')).toBeInTheDocument();
   });
 
-  it('opens documentation and support from the header resources menu in new tabs', () => {
+  it('opens documentation and support in new tabs and the Nine Minds ticket dialog in place', () => {
     render(
       <Header
         sidebarOpen={true}
@@ -289,6 +300,13 @@ describe('Header i18n wiring', () => {
     expect(support).toHaveAttribute('href', 'https://www.nineminds.com/support');
     expect(support).toHaveAttribute('target', '_blank');
     expect(support).toHaveAttribute('rel', 'noopener noreferrer');
+
+    const submitTicket = screen.getByRole('button', { name: 'Envoyer un ticket FR' });
+    expect(submitTicket).toHaveAttribute('id', 'resources-submit-ticket-menu-item');
+    expect(screen.queryByText('Vendor support dialog')).not.toBeInTheDocument();
+
+    fireEvent.click(submitTicket);
+    expect(screen.getByText('Vendor support dialog')).toBeInTheDocument();
   });
 
   it('shows the workflow Quick Ask trigger in the header when AI is available on workflow editor routes', () => {
@@ -363,7 +381,7 @@ describe('Header i18n wiring', () => {
     );
 
     expect(screen.getByRole('link', { name: 'Accueil fil' })).toBeInTheDocument();
-    expect(screen.getByText('Tickets traduits')).toBeInTheDocument();
+    expect(screen.getByText('Tous les tickets traduits')).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByLabelText('Locataire actif Acme MSP')).toBeInTheDocument();

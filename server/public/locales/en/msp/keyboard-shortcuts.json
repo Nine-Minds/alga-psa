@@ -283,6 +283,38 @@
       "moveRight": {
         "label": "Move right",
         "description": "Move the selected editor item right."
+      },
+      "moveOut": {
+        "label": "Move out of container",
+        "description": "Move the selected block out of its container."
+      },
+      "moveInto": {
+        "label": "Move into container",
+        "description": "Move the selected block into the container before it."
+      },
+      "copy": {
+        "label": "Copy",
+        "description": "Copy the selected block."
+      },
+      "cut": {
+        "label": "Cut",
+        "description": "Cut the selected block."
+      },
+      "paste": {
+        "label": "Paste",
+        "description": "Paste the copied block."
+      },
+      "duplicate": {
+        "label": "Duplicate",
+        "description": "Duplicate the selected block."
+      },
+      "copyStyle": {
+        "label": "Copy style",
+        "description": "Copy the selected block's colors, borders, spacing and text style."
+      },
+      "pasteStyle": {
+        "label": "Paste style",
+        "description": "Apply the copied style to the selected block."
       }
     },
     "scroll": {

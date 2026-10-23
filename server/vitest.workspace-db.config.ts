@@ -12,6 +12,10 @@ export default defineConfig({
       path.resolve(__dirname, 'vitest.globalSetup.js'),
       path.resolve(__dirname, 'test-utils/workspaceDbGlobalSetup.ts'),
     ],
+    // The DB lane keeps the per-file docblocks it has always run on; drop the
+    // server lane's inherited jsdom/node projects so this include list is the
+    // one vitest resolves.
+    projects: undefined,
     include: [
       'src/{app,components,lib,services}/**/*.{db,integration}.{test,spec}.?(c|m)[jt]s?(x)',
       'migrations/__tests__/**/*.{test,spec}.?(c|m)[jt]s?(x)',
@@ -20,8 +24,9 @@ export default defineConfig({
       '../shared/**/*.db.test.?(c|m)[jt]s?(x)',
       '../ee/packages/**/*.db.test.?(c|m)[jt]s?(x)',
       '../ee/server/src/__tests__/unit/**/*.db.test.?(c|m)[jt]s?(x)',
+      '../services/workflow-worker/**/*.db.test.?(c|m)[jt]s?(x)',
     ],
-    exclude: ['**/node_modules/**'],
+    exclude: ['**/node_modules/**', '../**/node_modules/**', '**/dist/**', '../**/dist/**'],
     coverage: { enabled: false },
     // Existing DB harnesses recreate test_database. Each CI shard/job owns
     // its own service; files inside it must remain serial.

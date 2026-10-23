@@ -69,9 +69,10 @@
       "servicePeriods": "Períodos de serviço",
       "credits": "Créditos",
       "serviceTypes": "Tipos de serviço",
+      "serviceCategories": "Categorias de serviço",
       "serviceCatalog": "Serviços",
       "products": "Produtos",
-      "taxRates": "Taxas de imposto",
+      "taxRates": "Impostos",
       "usageTracking": "Rastreamento de uso",
       "reports": "Relatórios",
       "accountingExports": "Exportações Contábeis"
@@ -101,7 +102,10 @@
       "forms": "Formulários",
       "channels": "Canais"
     },
-    "passwords": "Senhas"
+    "passwords": "Senhas",
+    "ticketsAll": "Todos os tickets",
+    "ticketsRecurring": "Tickets recorrentes",
+    "ticketsTemplates": "Modelos de tickets"
   },
   "sidebar": {
     "backToMain": "Voltar ao principal",
@@ -210,7 +214,35 @@
       "ariaLabel": "Recursos e ajuda",
       "title": "Recursos",
       "documentation": "Documentação",
-      "support": "Falar com o suporte"
+      "support": "Falar com o suporte",
+      "submitTicket": "Enviar um ticket para a Nine Minds"
+    },
+    "supportDialog": {
+      "title": "Enviar um ticket para a Nine Minds",
+      "intro": "O suporte da Nine Minds recebe isso como ticket e responde por email.",
+      "categoryLabel": "Com o que você precisa de ajuda?",
+      "categories": {
+        "bug": "Algo não está funcionando",
+        "question": "Dúvida",
+        "billing": "Faturamento",
+        "feature": "Solicitação de recurso"
+      },
+      "subjectLabel": "Assunto",
+      "descriptionLabel": "O que aconteceu?",
+      "descriptionPlaceholder": "Informe o que você esperava, o que aconteceu e qual cliente ou fatura está envolvido.",
+      "replyTo": "As respostas vão para {{email}}",
+      "success": "Enviado ao suporte da Nine Minds. As respostas vão para {{email}}.",
+      "submit": "Enviar para a Nine Minds",
+      "sending": "Enviando…",
+      "cancel": "Cancelar",
+      "close": "Fechar",
+      "fallbackLink": "Falar com o suporte em nineminds.com",
+      "errors": {
+        "invalidInput": "Informe um assunto com pelo menos 3 caracteres e uma descrição com pelo menos 20 caracteres.",
+        "rateLimited": "Você acabou de enviar uma solicitação. Aguarde um minuto antes de enviar outra.",
+        "emailNotConfigured": "Esta instalação não tem email de saída configurado, por isso a solicitação não foi enviada.",
+        "sendFailed": "Falha ao enviar a solicitação. Tente novamente."
+      }
     },
     "jobs": {
       "ariaLabel": "Ver atividade de trabalho em segundo plano",
@@ -236,7 +268,20 @@
       "system": "Sistema",
       "selected": "Selecionado"
     },
-    "openUserMenu": "Abrir menu do usuário"
+    "openUserMenu": "Abrir menu do usuário",
+    "stopwatch": {
+      "untitled": "Sem título",
+      "ariaLabelPaused": "Cronômetro pausado: {{label}} em {{clock}}",
+      "ariaLabelRunning": "Cronômetro em andamento: {{label}} em {{clock}}",
+      "paused": "Cronômetro pausado",
+      "running": "Cronômetro em andamento",
+      "resume": "Retomar",
+      "pause": "Pausar",
+      "stop": "Parar e registrar",
+      "discard": "Descartar",
+      "pausedNoDrawer": "Cronômetro pausado em {{clock}}. Abra o item de trabalho para registrar o tempo.",
+      "openTicket": "Abrir ticket"
+    }
   },
   "dialogs": {
     "aiInterrupt": {
@@ -267,6 +312,18 @@
     "platformNotification": {
       "learnMore": "Saber mais",
       "dismiss": "Ignorar notificação"
+    },
+    "integrationHealth": {
+      "inboundEmail": {
+        "authFailure": "O e-mail de entrada de {{mailbox}} está pausado porque suas credenciais não funcionam mais.",
+        "error": "O e-mail de entrada de {{mailbox}} relatou um erro e pode não estar recebendo mensagens."
+      },
+      "calendar": {
+        "error": "A sincronização de calendário de {{providerName}} relatou um erro e não está sincronizando.",
+        "disconnected": "A sincronização de calendário de {{providerName}} está desconectada e não está sincronizando."
+      },
+      "review": "Revisar",
+      "dismiss": "Ignorar alerta de integração"
     }
   },
   "quickCreate": {
@@ -754,5 +811,37 @@
   "githubStar": {
     "label": "Marcar com estrela",
     "ariaLabel": "Marcar {{repository}} com estrela no GitHub"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "Portal MSP",
+      "dashboard": "Painel",
+      "ticketDetails": "Detalhes do ticket",
+      "tickets": "Tickets",
+      "projectDetails": "Detalhes do projeto",
+      "projects": "Projetos",
+      "clientDetails": "Detalhes do cliente",
+      "clients": "Clientes",
+      "contactDetails": "Detalhes do contato",
+      "contacts": "Contatos",
+      "assetDetails": "Detalhes do ativo",
+      "assets": "Ativos",
+      "billing": "Faturamento",
+      "settings": "Configurações",
+      "settingsSection": "Configurações: {{section}}",
+      "chat": "Bate-papo"
+    }
+  },
+  "chat": {
+    "page": {
+      "title": "Recurso Pro",
+      "description": "Os recursos de bate-papo com IA exigem o Pro. Faça upgrade para acessar este recurso."
+    },
+    "messages": {
+      "proRequired": "Os recursos de mensagens exigem o Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Os recursos de bate-papo estão disponíveis apenas na Enterprise Edition"
+    }
   }
 }

@@ -6,6 +6,7 @@ import type {
   TicketMobileEditorNativeToWebMessage,
   TicketMobileEditorRequest,
   TicketMobileEditorStatePayload,
+  TicketMobileEditorThemePayload,
   TicketMobileEditorWebToNativeMessage,
 } from "./types";
 
@@ -117,6 +118,14 @@ export class TicketMobileEditorBridgeClient {
   initialize(payload: TicketMobileEditorInitPayload): void {
     this.post({
       type: "init",
+      payload,
+    });
+  }
+
+  /** Repaints the web view from the active theme; safe before and after init. */
+  sendTheme(payload: TicketMobileEditorThemePayload): void {
+    this.post({
+      type: "set-theme",
       payload,
     });
   }

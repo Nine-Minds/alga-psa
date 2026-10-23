@@ -182,11 +182,14 @@ const AssetTypesManager: React.FC = () => {
     }
 
     if (editingType?.is_builtin) {
+      const schemaValidation = validateFieldsSchema(toFieldsSchema(editorFields));
+      if (!schemaValidation.valid) { setSchemaIssues(schemaValidation.issues); return; }
       setIsSaving(true);
       try {
         const result = await updateAssetTypeAction(editingType.slug, {
           name: trimmedName,
           icon: icon || null,
+          fields_schema: schemaValidation.fields,
         });
         if (isActionPermissionError(result)) {
           setSaveError(getErrorMessage(result));
@@ -556,15 +559,17 @@ const AssetTypesManager: React.FC = () => {
 
           {editingType?.is_builtin ? (
             <div className="space-y-2" id="assets-types-builtin-schema-note">
-              <Label className="text-sm font-medium">
-                {t('settings.assetTypes.editor.title', { defaultValue: 'Fields' })}
-              </Label>
               <p className="text-sm text-muted-foreground">
                 {t('settings.assetTypes.dialog.builtinSchemaHint', {
-                  defaultValue:
-                    'Built-in types use fixed forms managed by AlgaPSA, so their field schema cannot be edited. You can still rename the type or change its icon.',
+                  defaultValue: 'The standard built-in form stays fixed. These additional fields are tenant-defined.',
                 })}
               </p>
+              <AssetTypeSchemaEditor
+                fields={editorFields}
+                onChange={setEditorFields}
+                issues={schemaIssues}
+                title={t('settings.assetTypes.additionalFields', { defaultValue: 'Additional fields' })}
+              />
             </div>
           ) : (
             <AssetTypeSchemaEditor

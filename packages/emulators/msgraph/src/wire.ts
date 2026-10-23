@@ -1,4 +1,5 @@
 import express from 'express';
+import { randomUUID } from 'node:crypto';
 import type { NextFunction, Request, Response, Router } from 'express';
 import { route } from '@alga-psa/emulator-host';
 import type { HostEnv } from '@alga-psa/emulator-host';
@@ -9,6 +10,7 @@ import { deliverCalendarNotifications, deliverNotifications, validateNotificatio
 
 interface Authed {
   clientId: string;
+  tenantId: string;
 }
 
 function authed(res: Response): Authed {
@@ -20,6 +22,40 @@ function decodePath(path: string): string {
     return decodeURIComponent(path);
   } catch {
     return path;
+  }
+}
+
+/**
+ * Microsoft's token endpoint takes client credentials either in the form body
+ * (client_secret_post) or as an HTTP Basic header (client_secret_basic, RFC 6749
+ * 2.3.1, form-urlencoded halves). Auth.js sends the header by default and omits
+ * the body fields entirely, so a simulator that only read the body would 401
+ * every browser sign-in. Body fields still win where a client sends both.
+ */
+function clientSecretBasicCredentials(req: Request): { client_id?: string; client_secret?: string } {
+  const header = String(req.headers.authorization ?? '');
+  const encoded = /^Basic\s+(.+)$/i.exec(header)?.[1];
+  if (!encoded) {
+    return {};
+  }
+
+  const decoded = Buffer.from(encoded, 'base64').toString('utf8');
+  const separator = decoded.indexOf(':');
+  if (separator < 0) {
+    return {};
+  }
+
+  return {
+    client_id: formUrlDecode(decoded.slice(0, separator)),
+    client_secret: formUrlDecode(decoded.slice(separator + 1)),
+  };
+}
+
+function formUrlDecode(value: string): string {
+  try {
+    return decodeURIComponent(value.replace(/\+/g, '%20'));
+  } catch {
+    return value;
   }
 }
 
@@ -69,12 +105,18 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   });
 
   router.post('/:tenant/oauth2/v2.0/token', (req, res) => {
-    const fault = core.consumeFault('token');
+    const fault = core.consumeFault(`token:${req.params.tenant}`) ?? core.consumeFault('token');
     if (fault) {
       res.status(fault.status).json(fault.body);
       return;
     }
-    res.json(core.grantToken(req.body ?? {}));
+    res.json(
+      core.grantToken({
+        ...clientSecretBasicCredentials(req),
+        ...req.body,
+        authorityTenant: String(req.params.tenant),
+      }),
+    );
   });
 
   router.get('/:tenant/v2.0/adminconsent', (req, res) => {
@@ -141,15 +183,15 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     res.json({ id: captured.id });
   });
 
-  // --- Graph v1.0 surface ---
+  // --- Graph API surfaces: shared authentication, versioned routes ---
 
-  const graph = express.Router();
-  router.use('/v1.0', graph);
-
-  graph.use((req, res, next) => {
+  router.use(['/v1.0', '/beta'], (req, res, next) => {
     const bearer = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
     res.locals.access = core.authenticate(bearer);
-    const fault = core.consumeFault(`${req.method} ${req.path}`);
+    res.set('request-id', randomUUID());
+    if (req.get('client-request-id')) res.set('client-request-id', req.get('client-request-id')!);
+    const fault = core.consumeFault(`${authed(res).tenantId}:${req.method} ${req.path}`)
+      ?? core.consumeFault(`${req.method} ${req.path}`);
     if (fault) {
       res.status(fault.status).json(fault.body);
       return;
@@ -157,8 +199,16 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     next();
   });
 
-  const mailboxUser = { id: 'emulated-user', userPrincipalName: 'support@example.test', mail: 'support@example.test' };
-  graph.get('/me', (_req, res) => res.json(mailboxUser));
+  const graph = express.Router();
+  const graphBeta = express.Router();
+  router.use('/beta', graphBeta);
+  router.use('/v1.0', graph);
+  router.use('/beta', graph);
+
+  // Read through to core state: the `signed-in-user` seeder can change the
+  // identity Graph reports mid-run, exactly as another account signing in does.
+  const mailboxUser = () => core.signedInUser;
+  graph.get('/me', (_req, res) => res.json(mailboxUser()));
 
   // Graph simulator only: capture the send request for adapter smoke tests.
   // It does not model Entra consent, Exchange Send As, or real mail delivery.
@@ -188,8 +238,32 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     res.json({ value: core.listOrganizations() });
   });
 
-  graph.get('/users', (_req, res) => {
-    res.json({ value: core.listDirectoryUsers() });
+  const page = (req: Request, values: unknown[]) => {
+    const top = Math.max(1, Math.min(999, Number(req.query.$top) || 100));
+    const skip = Math.max(0, Number(req.query.$skip) || 0);
+    const next = new URL(req.originalUrl, `${req.protocol}://${req.get('host')}`);
+    next.searchParams.set('$skip', String(skip + top));
+    return { value: values.slice(skip, skip + top),
+      ...(skip + top < values.length ? { '@odata.nextLink': next.toString() } : {}) };
+  };
+  graphBeta.get('/tenantRelationships/managedTenants/tenants', (req, res) => {
+    res.json(page(req, core.listOrganizations().map(org => ({
+      tenantId: org.id, displayName: org.displayName,
+      defaultDomainName: org.verifiedDomains.find(domain => domain.isDefault)?.name,
+    }))));
+  });
+  graph.get('/users', (req, res) => {
+    res.json(page(req, core.listDirectoryUsers()));
+  });
+  graph.get('/groups', (req, res) => res.json(page(req, [...core.directoryGroups.values()])));
+  graph.get('/groups/:groupId', (req, res) => {
+    const group = core.directoryGroups.get(String(req.params.groupId));
+    if (!group) throw new GraphApiError(404, { error: { code: 'Request_ResourceNotFound', message: 'Group not found' } });
+    res.json(group);
+  });
+  graph.post('/users/:userId/checkMemberGroups', (req, res) => {
+    res.json({ value: (req.body.groupIds ?? []).filter((id: string) =>
+      core.directoryGroups.get(id)?.memberIds.includes(String(req.params.userId))) });
   });
 
   graph.get('/users/:userId', (req, res) => {
@@ -203,8 +277,8 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     // Real Graph 404s unknown ids. Only the emulated mailbox identity keeps
     // resolving un-seeded, for the email module's fixed test principal —
     // answering every id used to mask lookup-failure handling bugs.
-    if (userId === mailboxUser.id || userId.toLowerCase() === mailboxUser.userPrincipalName.toLowerCase()) {
-      res.json(mailboxUser);
+    if (userId === mailboxUser().id || userId.toLowerCase() === mailboxUser().userPrincipalName.toLowerCase()) {
+      res.json(mailboxUser());
       return;
     }
     throw new GraphApiError(404, { error: { code: 'Request_ResourceNotFound', message: `Resource '${userId}' does not exist.` } });
@@ -243,6 +317,23 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
 
   // Delegated primary-calendar surface used by CalendarAdapter. The emulator
   // currently has one delegated mailbox; this is not Entra user isolation.
+  graph.get('/me/outlook/masterCategories', (req, res) => {
+    const filter = String(req.query.$filter || '').match(/^displayName eq '((?:[^']|'')*)'$/);
+    const name = filter?.[1].replace(/''/g, "'").toLowerCase();
+    res.json({ value: [...core.masterCategories.values()].filter(category => !name || category.displayName.toLowerCase() === name) });
+  });
+  graph.post('/me/outlook/masterCategories', (req, res) => {
+    const { displayName, color } = req.body;
+    if (typeof displayName !== 'string' || !displayName.trim() || !/^preset(?:[0-9]|1[0-9]|2[0-4])$/.test(color)) {
+      res.status(400).json({ error: { code: 'ErrorInvalidRequest', message: 'Expected a displayName and preset0 through preset24 color.' } }); return;
+    }
+    if ([...core.masterCategories.values()].some(category => category.displayName.toLowerCase() === displayName.toLowerCase())) {
+      res.status(409).json({ error: { code: 'ErrorNameAlreadyExists' } }); return;
+    }
+    const category = { id: randomUUID(), displayName, color };
+    core.masterCategories.set(category.id, category);
+    res.status(201).json(category);
+  });
   const primaryCalendar = { id: 'calendar', name: 'Calendar', isDefaultCalendar: true };
   graph.get('/me/calendar', (_req, res) => res.json(primaryCalendar));
   graph.get('/me/calendars', (_req, res) => res.json({ value: [primaryCalendar] }));
@@ -258,7 +349,7 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     if (prefer && !/^odata\.maxpagesize=\d+$/.test(prefer)) {
       throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery' } });
     }
-    const result = core.calendarDelta(authed(res).clientId, mailboxUser.id, {
+    const result = core.calendarDelta(authed(res).clientId, mailboxUser().id, {
       start: req.query.startDateTime ? String(req.query.startDateTime) : undefined,
       end: req.query.endDateTime ? String(req.query.endDateTime) : undefined,
       deltaToken: req.query.$deltatoken ? String(req.query.$deltatoken) : undefined,
@@ -272,13 +363,13 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   });
   const ownedEvent = (id: string) => {
     const event = core.getCalendarEvent(id);
-    if (event.organizerUserId !== mailboxUser.id) {
+    if (event.organizerUserId !== mailboxUser().id) {
       throw new GraphApiError(404, { error: { code: 'ErrorItemNotFound' } });
     }
     return event;
   };
   graph.get('/me/calendar/events', (req, res) => {
-    let events = [...core.calendarEvents.values()].filter(event => event.organizerUserId === mailboxUser.id);
+    let events = [...core.calendarEvents.values()].filter(event => event.organizerUserId === mailboxUser().id);
     if (req.query.$filter) {
       const range = String(req.query.$filter).match(/^start\/dateTime ge '([^']+)' and end\/dateTime le '([^']+)'$/);
       if (!range || !Number.isFinite(Date.parse(range[1])) || !Number.isFinite(Date.parse(range[2]))) {
@@ -303,7 +394,7 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     res.json({ value: events.map(publicEvent) });
   });
   graph.post('/me/calendar/events', route(async (req, res) => {
-    const event = core.createCalendarEvent(mailboxUser.id, req.body ?? {});
+    const event = core.createCalendarEvent(mailboxUser().id, req.body ?? {});
     await deliverCalendarNotifications(core, event, 'created', env);
     res.status(201).json(publicEvent(event));
   }));
@@ -466,15 +557,27 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
 
   const mailboxRoots = ['/me', '/users/:userId'];
   for (const root of mailboxRoots) {
-    graph.get(`${root}/mailFolders`, (_req, res) => {
+    graph.get(`${root}/mailFolders`, (req, res) => {
+      if (root.startsWith('/users/') && !String((req.params as any).userId).startsWith('me')) {
+        const access = core.canAccessMailboxFolder(String((req.params as any).userId), authed(res).clientId, 'inbox', true);
+        if (access === false) throw new GraphApiError(404, { error: { code: 'ErrorItemNotFound', message: 'Default folder Root not found' } });
+      }
       res.json({ value: [core.getMailFolder('inbox')] });
     });
 
     graph.get(`${root}/mailFolders/:folderId`, (req, res) => {
+      if (root.startsWith('/users/')) {
+        const access = core.canAccessMailboxFolder(String((req.params as any).userId), authed(res).clientId, String((req.params as any).folderId));
+        if (access === false) throw new GraphApiError(404, { error: { code: 'ErrorItemNotFound', message: 'Mail folder not found' } });
+      }
       res.json(core.getMailFolder(String(req.params.folderId)));
     });
 
     graph.get(`${root}/mailFolders/:folderId/messages`, (req, res) => {
+      if (root.startsWith('/users/')) {
+        const access = core.canAccessMailboxFolder(String((req.params as any).userId), authed(res).clientId, String((req.params as any).folderId));
+        if (access === false) throw new GraphApiError(404, { error: { code: 'ErrorItemNotFound', message: 'Mail folder not found' } });
+      }
       core.getMailFolder(String(req.params.folderId));
       const filter = String(req.query.$filter ?? '');
       const match = filter.match(/receivedDateTime ge (.+)$/);

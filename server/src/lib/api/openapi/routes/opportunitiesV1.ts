@@ -8,6 +8,7 @@ import {
   declaredOpportunityEvidenceApiSchema,
   loseOpportunityApiSchema,
   opportunityListQuerySchema,
+  setOpportunityStageApiSchema,
   updateOpportunityApiSchema,
   acceptOpportunitySuggestionApiSchema,
   opportunitySuggestionListQuerySchema,
@@ -68,6 +69,7 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
   const ListQuery = registry.registerSchema('OpportunityListQueryV1', opportunityListQuerySchema);
   const CreateBody = registry.registerSchema('CreateOpportunityBodyV1', createOpportunityApiSchema);
   const UpdateBody = registry.registerSchema('UpdateOpportunityBodyV1', updateOpportunityApiSchema);
+  const SetStageBody = registry.registerSchema('SetOpportunityStageBodyV1', setOpportunityStageApiSchema);
   const WinBody = registry.registerSchema('WinOpportunityBodyV1', winOpportunityApiSchema);
   const LoseBody = registry.registerSchema('LoseOpportunityBodyV1', loseOpportunityApiSchema);
   const CompleteActionBody = registry.registerSchema('CompleteOpportunityActionBodyV1', completeOpportunityActionApiSchema);
@@ -166,7 +168,7 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
   );
 
   type Def = {
-    method: 'get' | 'post' | 'put' | 'delete';
+    method: 'get' | 'post' | 'put' | 'patch' | 'delete';
     path: string;
     summary: string;
     description: string;
@@ -195,8 +197,10 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/opportunities/{id}/timeline', summary: 'List opportunity timeline', description: 'Lists interactions linked to the opportunity, newest first.', params: OpportunityIdParam },
     { method: 'get', path: '/api/v1/opportunities/{id}/steps', summary: 'List opportunity steps', description: 'Lists the current opportunity plan, including done, current, and planned steps.', params: OpportunityIdParam },
     { method: 'post', path: '/api/v1/opportunities/{id}/steps/{stepId}/complete', summary: 'Complete opportunity step', description: 'Completes a current step and promotes an existing planned successor or creates a replacement action.', body: CompleteStepBody, params: OpportunityStepParams },
-    { method: 'put', path: '/api/v1/opportunities/{id}', summary: 'Update opportunity', description: 'Updates editable opportunity fields; status and stage use dedicated flows.', body: UpdateBody, params: OpportunityIdParam },
+    { method: 'put', path: '/api/v1/opportunities/{id}', summary: 'Update opportunity', description: 'Updates editable opportunity fields. status, stage, client_id, and the next-action mirror columns may be echoed back unchanged but never reassigned here: changing them answers 400 naming the dedicated endpoint.', body: UpdateBody, params: OpportunityIdParam },
+    { method: 'patch', path: '/api/v1/opportunities/{id}', summary: 'Partially update opportunity', description: 'Applies a partial update using the same contract as PUT; every field is optional.', body: UpdateBody, params: OpportunityIdParam },
     { method: 'delete', path: '/api/v1/opportunities/{id}', summary: 'Delete opportunity', description: 'Deletes an open opportunity after linked quotes are removed.', successStatus: 204, params: OpportunityIdParam },
+    { method: 'post', path: '/api/v1/opportunities/{id}/stage', summary: 'Set opportunity stage', description: 'Sets an open-pipeline stage through the declared-evidence flow the board drag uses; won and lost answer 400 pointing at /win and /lose.', body: SetStageBody, params: OpportunityIdParam },
     { method: 'post', path: '/api/v1/opportunities/{id}/win', summary: 'Win opportunity', description: 'Marks an open opportunity won, optionally converting an accepted linked quote to a draft agreement.', body: WinBody, params: OpportunityIdParam },
     { method: 'post', path: '/api/v1/opportunities/{id}/lose', summary: 'Lose opportunity', description: 'Marks an open opportunity lost with a required loss reason.', body: LoseBody, params: OpportunityIdParam },
     { method: 'post', path: '/api/v1/opportunities/{id}/complete-action', summary: 'Complete next action', description: 'Records the completed action as an interaction and installs the replacement action.', body: CompleteActionBody, params: OpportunityIdParam },

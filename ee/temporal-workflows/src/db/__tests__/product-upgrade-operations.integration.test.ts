@@ -78,6 +78,7 @@ const seededTables = [
   "project_template_checklist_items",
   "document_default_folders",
   "asset_type_registry",
+  "asset_statuses",
   "workflow_definitions",
   "workflow_definition_versions",
   "tenant_workflow_schedule",
@@ -103,6 +104,7 @@ const engineCleanupTables = [
   "workflow_definition_versions",
   "workflow_definitions",
   "asset_type_registry",
+  "asset_statuses",
   "document_default_folders",
   "project_template_checklist_items",
   "project_template_tasks",
@@ -392,6 +394,7 @@ describe.sequential("AlgaDesk to PSA product upgrade engine (real DB)", () => {
         "08_document_folder_templates.cjs",
         "09_asset_type_registry.cjs",
         "10_opportunity_workflows.cjs",
+        "11_asset_statuses.cjs",
       ]);
       await expect(
         db
@@ -463,6 +466,16 @@ describe.sequential("AlgaDesk to PSA product upgrade engine (real DB)", () => {
           "printer",
           "unknown",
         ]),
+      );
+      expect(
+        new Set(
+          await db
+            .table("asset_statuses")
+            .where({ tenant: fixture.tenantId, is_builtin: true })
+            .pluck("slug"),
+        ),
+      ).toEqual(
+        new Set(["active", "in_stock", "maintenance", "inactive", "retired"]),
       );
       expect(
         new Set(

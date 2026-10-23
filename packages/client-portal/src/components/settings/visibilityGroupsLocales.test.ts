@@ -46,9 +46,18 @@ describe('client portal visibility group locale coverage', () => {
   it('T036: non-English client portal locales contain the same visibility-group keys as English', () => {
     const englishKeys = collectKeys(loadLocale('en')?.clientSettings?.visibilityGroups).sort();
 
-    for (const locale of ['de', 'es', 'fr', 'it', 'nl', 'pl', 'xx', 'yy']) {
+    for (const locale of ['de', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'xx', 'yy']) {
       const localeKeys = collectKeys(loadLocale(locale)?.clientSettings?.visibilityGroups).sort();
       expect(localeKeys, locale).toEqual(englishKeys);
     }
   });
+});
+
+
+it('has matching MSP scope keys in every locale', () => {
+  const keys = ['scopeLabel', 'scopeClient', 'scopeContact', 'scopeClientDescription', 'scopeContactDescription', 'assignmentHelp'];
+  for (const locale of ['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'xx', 'yy']) {
+    const data = JSON.parse(fs.readFileSync(path.join(localeRoot, locale, 'msp/contacts.json'), 'utf8'));
+    for (const key of keys) expect(data.portal.visibilityGroups[key], `${locale}: ${key}`).toEqual(expect.any(String));
+  }
 });

@@ -14,6 +14,7 @@ export {
   getQboTaxCodes,
   getQboAutomatedSalesTaxMode,
   setQboAutomatedSalesTaxMode,
+  getQboCompanyCountryInfo,
   getQboTerms,
   getQboCustomers,
   resetQboCatalogCacheForTenant,
@@ -45,10 +46,21 @@ export {
   retryMicrosoftCalendarSubscriptionRenewal
 } from './calendarActions';
 export {
+  getIntegrationHealthAlerts
+} from './integrationHealthActions';
+export type {
+  IntegrationHealthAlert,
+  IntegrationHealthIntegration,
+  IntegrationHealthReason,
+  IntegrationHealthSeverity
+} from './integrationHealthActions';
+export {
   getExternalEntityMappings,
   createExternalEntityMapping,
+  createExternalEntityMappings,
   updateExternalEntityMapping,
   deleteExternalEntityMapping,
+  type BulkCreateMappingRowResult,
   type CreateMappingData,
   type ExternalEntityMapping,
   type UpdateMappingData
@@ -84,12 +96,23 @@ export {
   getEmailSettings,
   getMicrosoftOutboundMailboxes,
   updateEmailSettings,
-  testOutboundEmail
+  testOutboundEmail,
+  runOutboundEmailDiagnostics
 } from './email-actions/emailSettingsActions';
 export type {
   EmailSettingsView,
   MicrosoftOutboundMailboxOption,
 } from './email-actions/emailSettingsActions';
+export {
+  listEmailSenders,
+  listSelectableSenders,
+  createEmailSender,
+  updateEmailSender,
+  deleteEmailSender,
+  verifyEmailSender,
+  setEmailSenderRoute,
+  clearEmailSenderRoute,
+} from './email-actions/emailSenderActions';
 export {
   getInboundTicketDefaults,
   createInboundTicketDefaults,
@@ -211,6 +234,7 @@ export {
   disconnectEntraIntegration,
   getEntraSyncRunHistory,
   getEntraSyncRunDetail,
+  getEntraSyncWorkerAvailability,
   discoverEntraManagedTenants,
   getEntraMappingPreview,
   listEntraMappingGroups,
@@ -222,6 +246,7 @@ export {
   startEntraSync,
   type EntraConnectionType,
   type EntraSyncScope,
+  type EntraSyncWorkerEvidence,
   type EntraStatusResponse,
   type EntraMappingPreviewResponse,
   type EntraMappingGroupOption,
@@ -238,7 +263,15 @@ export {
   type EntraPreflightIdentity,
   type EntraPreflightResponse,
   type EntraSyncScheduleSettings,
+  getEntraUserFilterDefaults,
+  updateEntraUserFilterDefaults,
+  getEntraManagedTenantUserFilter,
+  updateEntraManagedTenantUserFilter,
 } from './integrations/entraActions';
+export {
+  runEntraConnectionDiagnostics,
+  runEntraClientAccessDiagnostics,
+} from './integrations/entraDiagnosticsActions';
 export {
   getTacticalRmmSettings,
   saveTacticalRmmConfiguration,
@@ -306,5 +339,6 @@ export {
   triggerRmmReboot,
   triggerRmmScript,
   getAssetRemoteControlUrl,
+  getAssetRemoteControlTypes,
   type RmmCommandResult,
 } from './integrations/assetRmmActions';

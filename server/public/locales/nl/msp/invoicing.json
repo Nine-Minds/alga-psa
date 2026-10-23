@@ -98,6 +98,20 @@
         "assignedContractLine": "Toegewezen contractregel",
         "assignedWorkItem": "Toegewezen werkitem",
         "unresolvedWork": "Onopgelost werk"
+      },
+      "prepaidBlock": {
+        "due": "{{trigger}} · vervalt op {{date}}",
+        "trigger": {
+          "contract_start": "Prepaid blok: contractstart",
+          "exhaustion": "Prepaid blok: uitgeput",
+          "threshold": "Prepaid blok: gebruiksdrempel",
+          "expiry": "Prepaid blok: verval",
+          "renewal": "Prepaid blok: verlenging",
+          "manual": "Prepaid blok: handmatig uitgegeven"
+        },
+        "stalePendingWarning": "{{count}} openstaande prepaid blokken wachten al meer dan 14 dagen op afronding en houden tijdregistraties vast. Rond de conceptfacturen af of verwijder ze zodat de vastgehouden tijd gefactureerd kan worden.",
+        "stalePendingWarning_one": "{{count}} openstaand prepaid blok wacht al meer dan 14 dagen op afronding en houdt tijdregistraties vast. Rond de conceptfactuur af of verwijder deze zodat de vastgehouden tijd gefactureerd kan worden.",
+        "stalePendingWarning_other": "{{count}} openstaande prepaid blokken wachten al meer dan 14 dagen op afronding en houden tijdregistraties vast. Rond de conceptfacturen af of verwijder ze zodat de vastgehouden tijd gefactureerd kan worden."
       }
     },
     "actions": {
@@ -147,6 +161,7 @@
       "preview": {
         "title": "Factuurvoorbeeld",
         "description": "Dit is een voorbeeld van hoe de factuur eruit zal zien als deze is voltooid.",
+        "noBillingEmailWarning": "{{clientName}} heeft geen factuur-e-mailadres. De factuur kan worden gegenereerd, maar kan pas per e-mail worden verzonden of online worden betaald als u een factuurcontact, een factuur-e-mailadres van de klant of een e-mailadres op de factuur- of standaardlocatie instelt.",
         "summary_one": "{{count}}-factuur geselecteerd",
         "summary_other": "{{count}} facturen geselecteerd",
         "summaryCombined": "Deze selectie genereert één gecombineerde factuur.",
@@ -238,7 +253,8 @@
       "fixAllResult": "{{schedules}} planning(en) opnieuw opgebouwd voor {{clients}} klant(en).",
       "fixAllNoop": "Alle factureringsplanningen zijn al bijgewerkt. Alles wat hieronder nog staat, moet afzonderlijk worden gecontroleerd.",
       "fixAllError": "Kan serviceperioden niet opnieuw opbouwen. Probeer het opnieuw.",
-      "fixAllDenied": "U heeft geen toestemming om serviceperioden opnieuw op te bouwen."
+      "fixAllDenied": "U heeft geen toestemming om serviceperioden opnieuw op te bouwen.",
+      "fixAllManualReview": "{{count}} uur- of gebruiksperiode(s) moeten afzonderlijk worden beoordeeld."
     },
     "errors": {
       "title": "Er zijn fouten opgetreden bij het finaliseren van facturen:",
@@ -271,7 +287,8 @@
       "fixed": "FIX",
       "hourly": "T&M",
       "usage": "USE",
-      "bucket": "BKT"
+      "bucket": "BKT",
+      "prepaidBlock": "PRE"
     },
     "summary": {
       "selected": "{{count}} geselecteerd",
@@ -317,20 +334,23 @@
       "client": "Klant",
       "invoiceNumber": "Factuurnummer",
       "invoiceNumberOptional": "Factuurnummer (optioneel)",
-      "sourceSalesOrder": "Bronverkooporder (optioneel)"
+      "sourceSalesOrder": "Bronverkooporder (optioneel)",
+      "billingProfile": "Facturatieprofiel"
     },
     "placeholders": {
       "selectClient": "Selecteer een klant",
       "invoiceNumberOptional": "Laat dit leeg om automatisch te genereren",
       "sourceSalesOrder": "Selecteer een afgehandelde of handmatig factureerbare verkooporder",
       "searchSalesOrders": "Verkooporders zoeken...",
-      "noInvoiceableSalesOrders": "Geen factureerbare verkooporders gevonden."
+      "noInvoiceableSalesOrders": "Geen factureerbare verkooporders gevonden.",
+      "selectBillingProfile": "Selecteer een facturatieprofiel"
     },
     "automatedItems": {
       "title": "Geautomatiseerde regelitems",
       "service": "Dienst",
       "total": "Totaal",
-      "unknownService": "Onbekende dienst"
+      "unknownService": "Onbekende dienst",
+      "period": "Periode"
     },
     "lineItems": {
       "manual": "Handmatige regelitems",
@@ -343,10 +363,14 @@
       "saveChanges": "Wijzigingen opslaan",
       "processing": "Verwerken...",
       "generateSalesOrderInvoice": "Verkooporderfactuur genereren",
-      "clearSalesOrderSource": "Bronverkooporder wissen"
+      "clearSalesOrderSource": "Bronverkooporder wissen",
+      "addPartialPeriodCharge": "Kosten voor deelperiode toevoegen",
+      "reauthenticate": "Opnieuw aanmelden",
+      "retrySave": "Opslaan opnieuw proberen"
     },
     "labels": {
-      "total": "Totaal"
+      "total": "Totaal",
+      "defaultBillingProfile": "{{name}} (standaard)"
     },
     "prepayment": {
       "label": "Dit is een vooruitbetalingsfactuur (creëert krediet)",
@@ -381,10 +405,24 @@
       "salesOrderNotInvoiceable": "Deze verkooporder is niet meer beschikbaar voor facturering.",
       "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Dit factuurvenster bevat factureerbare regels, maar voor {{services}} is geen verbruik gemeld voor de serviceperiode {{periodStart}} tot {{periodEnd}}. Registreer eerst het verbruik, of bevestig uitdrukkelijk het genereren zonder dit verbruik — de niet-gemelde services blijven later factureerbaar.",
       "USAGE_PERIOD_TOTAL_STALE": "De voorvertoning is verouderd: {{details}}. Voer de voorvertoning opnieuw uit om de actuele cijfers te zien en genereer daarna opnieuw.",
-      "USAGE_CALCULATION_ERROR": "Het verbruik voor {{services}} in de serviceperiode {{periodStart}} tot {{periodEnd}} is geregistreerd maar kon niet worden geprijsd. Corrigeer de serviceprijzen (catalogusprijs in de contractvaluta, een aangepast tarief of tariefschijven) en probeer het opnieuw. Registreer geen vervangend verbruik."
+      "USAGE_CALCULATION_ERROR": "Het verbruik voor {{services}} in de serviceperiode {{periodStart}} tot {{periodEnd}} is geregistreerd maar kon niet worden geprijsd. Corrigeer de serviceprijzen (catalogusprijs in de contractvaluta, een aangepast tarief of tariefschijven) en probeer het opnieuw. Registreer geen vervangend verbruik.",
+      "RECURRING_PERIODS_NOT_MATERIALIZED": "Voor dit factureringsvenster zijn nog geen serviceperioden aangemaakt. Gebruik Alles herstellen op de pagina Automatische facturen of maak ze opnieuw aan onder Facturatie > Serviceperioden en bekijk daarna opnieuw het voorbeeld.",
+      "NO_ACTIVE_CONTRACT_LINES": "Er is geen contractregel actief in deze factureringsperiode. Controleer de start- en einddatum van het contract en of het contract actief is.",
+      "NOTHING_TO_BILL": "Er is niets klaar om te factureren voor dit venster. Regels die achteraf worden gefactureerd kunnen pas na afloop van hun serviceperiode worden gefactureerd. Controleer het factureringsmoment en de data.",
+      "FIXED_LINE_RATE_UNRESOLVED": "Voor de vastetariefregel {{lines}} is geen tarief ingesteld. Stel een tarief in op de contractregel (of een prijs voor de bijbehorende services in de contractvaluta) en probeer het opnieuw.",
+      "FIXED_LINE_NO_SERVICES": "Vaste-tariefregel {{lines}} heeft een tarief maar geen dienst om het op te factureren. Voeg een dienst toe aan de contractregel en probeer het opnieuw.",
+      "SOURCE_ALREADY_BILLED": "Sommige geselecteerde items zijn niet meer factureerbaar (al gefactureerd, niet goedgekeurd of verwijderd). Vernieuw en probeer opnieuw.",
+      "SOURCE_NOT_ELIGIBLE": "Een geselecteerd item hoort niet bij dit ticket of is niet langer in aanmerking komend. Vernieuw en probeer opnieuw.",
+      "SOURCE_CURRENCY_MISMATCH": "Sommige geselecteerde producten zijn geprijsd in een andere valuta dan de factuurvaluta van deze klant en kunnen niet worden toegevoegd. Factureer ze apart in hun eigen valuta.",
+      "CLIENT_CONTRACT_NOT_FOUND": "Het geselecteerde contract hoort niet bij de klant van deze factuur.",
+      "SERVICE_REQUIRED": "Wijs een dienst toe aan deze kostenpost voordat u opslaat.",
+      "RECURRING_PRICING_STALE": "Het voorbeeld is verouderd: {{details}}. Voer het voorbeeld opnieuw uit om de actuele bedragen te zien en genereer daarna opnieuw.",
+      "BILLING_PROFILE_NOT_FOUND": "Het geselecteerde facturatieprofiel is niet beschikbaar voor deze klant. Vernieuw de pagina en probeer het opnieuw.",
+      "sessionExpired": "Uw sessie is verlopen. Uw wijzigingen staan hier nog, maar zijn niet opgeslagen. Meld u opnieuw aan in een nieuw tabblad en probeer daarna opnieuw op te slaan.",
+      "saveRefreshFailed": "Uw wijzigingen zijn opgeslagen, maar de factuurpagina kon niet volledig worden vernieuwd. Herlaad de pagina om de opgeslagen factuur te bekijken."
     },
     "warnings": {
-      "noBillingEmail": "Deze klant heeft geen facturatie-e-mailadres. Stel een contactpersoon voor facturering, een facturatie-e-mailadres van de klant of een e-mailadres op de facturatielocatie of standaardlocatie in voordat u de factuur genereert."
+      "noBillingEmail": "Deze klant heeft geen factuur-e-mailadres. De factuur kan worden gegenereerd, maar kan pas per e-mail worden verzonden of online worden betaald als u een factuurcontact, een factuur-e-mailadres van de klant of een e-mailadres op de factuur- of standaardlocatie instelt."
     },
     "errorFallback": {
       "title": "Er is iets misgegaan",
@@ -392,6 +430,72 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} artikelen uit {{lineCount}} regels gereed voor facturering. Dit concept wordt aan de verkooporder gekoppeld."
+    },
+    "draftAdjustments": {
+      "title": "Factuuraanpassingen",
+      "description": "Voeg eenmalige kosten, kortingen of kredieten toe. Gegenereerde contractkosten blijven alleen-lezen; corrigeer het broncontract of voeg een aanpassing toe."
+    },
+    "partialPeriod": {
+      "title": "Kosten voor deelperiode",
+      "help": "Berekend als eenheden × stukprijs van de periode × gedekte dagen / dagen van de volledige periode. De invoer blijft bij de regel bewaard zodat die begrijpelijk blijft.",
+      "direction": "Richting",
+      "increase": "Verhoging",
+      "decrease": "Verlaging (krediet)",
+      "units": "Eenheden",
+      "unitPrice": "Stukprijs",
+      "coveredDays": "Gedekte dagen",
+      "fullPeriodDays": "Dagen van de volledige periode",
+      "description": "Beschrijving (optioneel)",
+      "reason": "Reden (optioneel)",
+      "previewUnavailable": "Voer een geldige berekening in.",
+      "resolvedAmount": "Berekend bedrag: {{amount}}",
+      "addCharge": "Kosten toevoegen",
+      "creditDescription": "Krediet: {{proration}}",
+      "errors": {
+        "units": "Eenheden moeten groter dan nul zijn.",
+        "unitPrice": "Stukprijs moet een getal zijn.",
+        "invalid": "Voer een geldige deelperiode in.",
+        "source": "Kies een gefactureerde service met een eenduidige serviceperiode."
+      },
+      "source": "Gefactureerde service selecteren",
+      "effectiveDate": "Ingangsdatum",
+      "sourceRate": "Tarief {{rate}}",
+      "permanentChangeNudge": "Is dit een permanente wijziging? Leg deze dan vast in het contract.",
+      "overlapConfirm": "Een automatische contractaanpassing overlapt deze periode al. Deze afzonderlijke handmatige aanpassing toch toevoegen?",
+      "invoiceDescription": {
+        "increase": "{{description}} — {{units}} extra {{unitLabel}}, {{period}} — {{calculation}}",
+        "decrease": "{{description}} — tegoed voor {{units}} minder {{unitLabel}}, {{period}} — {{calculation}}"
+      },
+      "sourceDescriptionFallback": "Serviceaanpassing"
+    },
+    "exportWarnings": {
+      "discount": "{{adapter}}: configureer de kortingskoppeling voordat u {{description}} exporteert.",
+      "service": "{{adapter}}: wijs vóór export een gekoppelde dienst toe aan {{description}}.",
+      "unavailable": "De boekhoudgereedheid kon niet worden gecontroleerd. Controleer de koppelingen vóór export."
+    },
+    "hints": {
+      "billingProfile": "De factuur en de factuurregels worden aan dit profiel toegerekend."
+    }
+  },
+  "quickInvoice": {
+    "currencyExcluded": "{{count}} product(en) uitgesloten omdat hun valuta afwijkt van {{currency}}.",
+    "action": "Snelfactuur",
+    "title": "Dit ticket snel factureren",
+    "loading": "Factureerbare items laden…",
+    "empty": "Er zijn geen onfactureerde items op dit ticket.",
+    "billableTime": "Factureerbare tijd",
+    "products": "Producten",
+    "selectedTotal": "Geselecteerd totaal",
+    "create": "Factuur aanmaken",
+    "creating": "Aanmaken…",
+    "done": "Klaar",
+    "viewInvoice": "Factuur bekijken",
+    "created": "Factuur aangemaakt",
+    "createdDetail": "De factuur is aangemaakt en aan dit ticket gekoppeld.",
+    "existingInvoices": "Facturen voor dit ticket",
+    "unknownService": "Factureerbaar item",
+    "errors": {
+      "ticketNotFound": "Dit ticket bestaat niet meer."
     }
   },
   "draftsTab": {
@@ -465,7 +569,8 @@
       "finalizedDate": "Definitieve datum",
       "status": "Status",
       "actions": "Acties",
-      "quickbooks": "QuickBooks"
+      "quickbooks": "QuickBooks",
+      "autopay": "Automatische betaling"
     },
     "actions": {
       "downloadPdfs": "PDF's downloaden",
@@ -497,6 +602,9 @@
         "selectedCount": "{{count}} geselecteerd",
         "clear": "Selectie wissen"
       }
+    },
+    "autopay": {
+      "scheduled": "Automatische betaling {{status}}"
     }
   },
   "recurringServicePeriods": {
@@ -698,10 +806,13 @@
     }
   },
   "invoicePreview": {
+    "sessionExpired": "Uw sessie is verlopen tijdens het laden van deze factuur. Meld u opnieuw aan en laad daarna het voorbeeld opnieuw.",
     "title": "Factuurvoorbeeld",
     "templatePlaceholder": "Factuursjabloon selecteren...",
     "labels": {
-      "standard": "(Standaard)"
+      "standard": "(Standaard)",
+      "billingProfile": "Factureringsprofiel: {{name}}",
+      "billingProfileDefault": "het standaardprofiel van de klant"
     },
     "actions": {
       "finalizeInvoice": "Factuur finaliseren",
@@ -716,7 +827,8 @@
       "driftReexport": "Opnieuw exporteren naar QuickBooks",
       "syncNow": "Synchroniseren met QuickBooks",
       "viewInQbo": "Bekijken in QuickBooks",
-      "voidInvoice": "Factuur ongeldig maken"
+      "voidInvoice": "Factuur ongeldig maken",
+      "viewInXero": "Bekijken in Xero"
     },
     "loading": "Voorbeeld laden...",
     "empty": "Selecteer een factuur waarvan u een voorbeeld wilt bekijken",
@@ -752,7 +864,8 @@
       "back": "Terug naar Factuurlay-outs",
       "cancel": "Annuleren",
       "save": "Sjabloon opslaan",
-      "saving": "Opslaan..."
+      "saving": "Opslaan...",
+      "close": "Sluiten"
     },
     "titles": {
       "create": "Maak een nieuwe factuurlay-out",
@@ -762,7 +875,9 @@
       "templateName": "Sjabloonnaam",
       "templateAst": "Sjabloon AST (JSON)",
       "created": "Gemaakt",
-      "lastUpdated": "Laatst bijgewerkt"
+      "lastUpdated": "Laatst bijgewerkt",
+      "savedAt": "Opgeslagen {{time}}",
+      "notSaved": "Nog niet opgeslagen"
     },
     "tabs": {
       "visual": "Visueel",
@@ -778,6 +893,9 @@
       "templateNameRequired": "Sjabloonnaam is vereist",
       "astExportFailed": "Kan sjabloon AST niet exporteren uit de visuele werkruimte: {{message}}",
       "unknownAstExport": "Onbekende AST-exportfout"
+    },
+    "toast": {
+      "saved": "Lay-out \"{{name}}\" opgeslagen."
     }
   },
   "templates": {
@@ -955,12 +1073,17 @@
       "billingEmail": "Facturerings-e-mailadres",
       "clientEmail": "Klant-e-mail",
       "noEmailFound": "Geen e-mailadres gevonden",
-      "notConfigured": "Er is geen e-mailadres geconfigureerd voor deze client."
+      "notConfigured": "Er is geen e-mailadres geconfigureerd voor deze client.",
+      "billingProfile": "Factureringsprofiel",
+      "billingProfileNamed": "Factureringsprofiel: {{name}}",
+      "billingProfileDefault": "het standaardprofiel van de klant"
     },
     "fields": {
       "due": "Vervaldatum",
       "additionalMessage": "Aanvullend bericht",
-      "additionalMessagePlaceholder": "Voeg een persoonlijke notitie toe om in de e-mail op te nemen..."
+      "additionalMessagePlaceholder": "Voeg een persoonlijke notitie toe om in de e-mail op te nemen...",
+      "from": "Van",
+      "useDefault": "Standaardafzender gebruiken"
     },
     "preview": "E-mails worden verzonden vanuit {{fromEmail}} namens {{companyName}}. Elke factuur wordt als PDF bijgevoegd.",
     "values": {
@@ -1071,7 +1194,9 @@
     "tooltip": {
       "qboNumberPrefix": "QBO #",
       "lastSynced": "Laatst gesynchroniseerd:",
-      "viewInQuickBooks": "Bekijken in QuickBooks"
+      "viewInQuickBooks": "Bekijken in QuickBooks",
+      "viewInXero": "Bekijken in Xero",
+      "xeroNumberPrefix": "Xero-nr. "
     }
   },
   "templateManager": {
@@ -1167,7 +1292,10 @@
         "drags": "Slepen: {{count}}",
         "success": "Gelukt: {{count}}",
         "invalid": "Ongeldig: {{count}}"
-      }
+      },
+      "zoomOut": "Uitzoomen",
+      "zoomIn": "Inzoomen",
+      "zoomFit": "Passend maken"
     },
     "palette": {
       "tabs": {
@@ -1208,6 +1336,15 @@
         "content": "Inhoud",
         "media": "Media",
         "dynamic": "Dynamisch"
+      },
+      "insertTarget": {
+        "page": "Nieuwe blokken komen aan het einde van de pagina.",
+        "inside": "Nieuwe blokken komen in {{name}}.",
+        "after": "Nieuwe blokken komen direct na {{name}}.",
+        "label": "Waar nieuwe blokken komen",
+        "insideOption": "Erin",
+        "afterOption": "Erna",
+        "shiftHint": "Shift+click op + om het in plaats daarvan erna toe te voegen."
       }
     },
     "inspector": {
@@ -1227,7 +1364,77 @@
       "fitSectionToContents": "Sectie op inhoud aanpassen",
       "sectionNoChildContent": "Sectie heeft geen inhoud om op aan te passen.",
       "apply": "Toepassen",
-      "emptyHelp": "Selecteer een component om de eigenschappen te bewerken."
+      "emptyHelp": "Selecteer een component om de eigenschappen te bewerken.",
+      "size": "Grootte",
+      "width": "Breedte",
+      "widthValue": "Breedtewaarde",
+      "minWidth": "Min. breedte",
+      "maxWidth": "Max. breedte",
+      "height": "Hoogte",
+      "heightValue": "Hoogtewaarde",
+      "minHeight": "Min. hoogte",
+      "maxHeight": "Max. hoogte",
+      "mediaSource": "Afbeeldingsbron",
+      "mediaSourceLogo": "Bedrijfslogo",
+      "mediaSourceCustom": "Eigen afbeelding",
+      "mediaSourceLogoHint": "Toont op elk document het logo uit de huisstijlinstellingen van uw bedrijf.",
+      "mediaSourceUrl": "Bron-URL",
+      "renameInner": "Ook {{count}} onderliggende lagen hernoemen ({{from}} → {{to}}…)?",
+      "renameInnerApply": "Hernoemen",
+      "renameInnerDismiss": "Nee",
+      "tabsLabel": "Inspecteursecties",
+      "insertDataField": "+ Gegevensveld invoegen…",
+      "searchDataFields": "Gegevensvelden zoeken…",
+      "dataFields": "Gegevensvelden",
+      "box": {
+        "top": "Boven",
+        "right": "Rechts",
+        "bottom": "Onder",
+        "left": "Links",
+        "all": "Alle zijden",
+        "sameOnAllSides": "Gelijk aan alle zijden",
+        "unit": "Eenheid",
+        "customValue": "Aangepaste CSS-waarde blijft behouden tot u een zijde bewerkt: {{value}}"
+      },
+      "examplePlaceholder": "bijv. {{value}}",
+      "setCount": "{{count}} ingesteld",
+      "overrides": {
+        "none": "Gebruikt alleen standaardwaarden.",
+        "jump": "Bewerken op het tabblad {{tab}}",
+        "title": "Ingesteld op dit blok ({{count}}):"
+      },
+      "tabs": {
+        "content": "Inhoud",
+        "style": "Stijl",
+        "layout": "Lay-out en grootte"
+      },
+      "sizeModes": {
+        "auto": {
+          "label": "Auto",
+          "widthTooltip": "De container bepaalt het (rekt uit in een verticale stapel)",
+          "heightTooltip": "Meegroeien met de inhoud"
+        },
+        "fill": {
+          "label": "Vullen",
+          "widthTooltip": "De volledige breedte van de container vullen"
+        },
+        "fit": {
+          "label": "Passend",
+          "widthTooltip": "Verkleinen tot de grootte van de inhoud"
+        },
+        "fixed": {
+          "label": "Vast",
+          "widthTooltip": "De hieronder ingevoerde exacte breedte gebruiken",
+          "heightTooltip": "De hieronder ingevoerde exacte hoogte gebruiken"
+        }
+      },
+      "barcode": "Streepjescode",
+      "barcodeSymbology": "Type",
+      "barcodeQr": "QR-code",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Waarde",
+      "barcodeHintWorkTag": "Tekst, of een veld zoals {{example}} (de link naar het record). Houd de code minstens ongeveer 20 mm breed zodat hij scanbaar blijft.",
+      "barcodeHint": "De tekst die wordt gecodeerd. Houd de code minstens ongeveer 20 mm breed zodat hij scanbaar blijft."
     },
     "shell": {
       "selectedLabel": "Geselecteerd:",
@@ -1240,7 +1447,11 @@
       "title": "Pagina-instelling",
       "description": "Kies een papierpreset en paginamarge zonder het verborgen pagina-knooppunt te selecteren.",
       "paperPreset": "Papierpreset",
-      "marginMm": "Marge (mm)"
+      "marginMm": "Marge (mm)",
+      "customSize": "Aangepast formaat…",
+      "customWidth": "Breedte",
+      "customHeight": "Hoogte",
+      "customUnit": "Eenheid"
     },
     "breadcrumbs": {
       "emptyHelp": "Selecteer een component in het canvas om de hiërarchie te zien.",
@@ -1271,7 +1482,13 @@
         "noQuotesFound": "Geen offertes gevonden.",
         "selectQuote": "Offerte kiezen",
         "loadingQuoteDetails": "Offertedetails worden geladen…",
-        "loadingDocumentDetails": "Documentdetails worden geladen…"
+        "loadingDocumentDetails": "Documentdetails worden geladen…",
+        "zoom": {
+          "fit": "Passend",
+          "actual": "100%",
+          "label": "Zoom voorbeeld",
+          "fitWithScale": "Passend ({{percent}}%)"
+        }
       },
       "tabs": {
         "design": "Ontwerp",
@@ -1519,6 +1736,12 @@
             },
             "margin": {
               "label": "Marge"
+            },
+            "padding": {
+              "label": "Opvulling"
+            },
+            "containerPadding": {
+              "label": "Opvulling"
             }
           }
         },
@@ -1606,6 +1829,84 @@
         },
         "totals-rows": {
           "title": "Totaalrijen"
+        },
+        "typography": {
+          "title": "Typografie",
+          "fields": {
+            "fontSize": {
+              "label": "Grootte"
+            },
+            "fontWeight": {
+              "label": "Dikte",
+              "options": {
+                "400": "Normaal (400)",
+                "500": "Gemiddeld (500)",
+                "600": "Halfvet (600)",
+                "700": "Vet (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Regelhoogte"
+            },
+            "textAlign": {
+              "label": "Uitlijning",
+              "options": {
+                "left": "Links",
+                "center": "Midden",
+                "right": "Rechts",
+                "justify": "Uitvullen"
+              }
+            },
+            "fontStyle": {
+              "label": "Stijl",
+              "options": {
+                "normal": "Normaal",
+                "italic": "Cursief"
+              }
+            },
+            "color": {
+              "label": "Kleur"
+            }
+          }
+        },
+        "value-typography": {
+          "title": "Waardetekst",
+          "fields": {
+            "fontSize": {
+              "label": "Grootte"
+            },
+            "fontWeight": {
+              "label": "Dikte",
+              "options": {
+                "400": "Normaal (400)",
+                "500": "Gemiddeld (500)",
+                "600": "Halfvet (600)",
+                "700": "Vet (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Regelhoogte"
+            },
+            "textAlign": {
+              "label": "Uitlijning",
+              "options": {
+                "left": "Links",
+                "center": "Midden",
+                "right": "Rechts",
+                "justify": "Uitvullen"
+              }
+            },
+            "fontStyle": {
+              "label": "Stijl",
+              "options": {
+                "normal": "Normaal",
+                "italic": "Cursief"
+              }
+            },
+            "color": {
+              "label": "Kleur"
+            }
+          }
         }
       }
     },
@@ -1705,10 +2006,80 @@
     },
     "canvas": {
       "templateBoundary": "Sjabloongrens",
-      "translatableHint": "Wordt automatisch vertaald naar de taal van de ontvanger. Als u de tekst bewerkt, wordt uw eigen vaste tekst gebruikt."
+      "translatableHint": "Wordt automatisch vertaald naar de taal van de ontvanger. Als u de tekst bewerkt, wordt uw eigen vaste tekst gebruikt.",
+      "noLineItems": "Geen regels",
+      "moreRows": "+{{count}} extra rijen",
+      "subtotal": "Subtotaal",
+      "tax": "Btw",
+      "total": "Totaal",
+      "buttonLabel": "Knop",
+      "signatureLabel": "Handtekening",
+      "attachmentsLabel": "Bijlagen",
+      "spacerLabel": "Tussenruimte",
+      "companyLogo": "Bedrijfslogo",
+      "insertionMarker": "Het volgende blok dat u toevoegt, komt hier",
+      "emptyContainer": "Leeg — selecteer het en voeg blokken toe vanuit het linkerpaneel",
+      "localeChip": "Vertaalde labels worden getoond in {{language}} (Voorvertoningstaal)",
+      "badgeDragHint": "Sleep om dit blok te verplaatsen"
     },
     "dragOverlay": {
       "component": "Component"
+    },
+    "arrange": {
+      "up": "Omhoog",
+      "upHint": "Eerder plaatsen in de container (↑)",
+      "down": "Omlaag",
+      "downHint": "Later plaatsen in de container (↓)",
+      "out": "Eruit",
+      "outHint": "Uit de container halen en er direct na plaatsen (Alt+←)",
+      "into": "Erin",
+      "intoHint": "Verplaatsen naar de container direct ervoor (Alt+→)",
+      "copy": "Kopiëren",
+      "copyHint": "Kopiëren (Ctrl/⌘+C). Selecteer waar het moet komen en plak met Ctrl/⌘+V.",
+      "paste": "Plakken",
+      "pasteHint": "Plakken in de geselecteerde container of na het geselecteerde blok (Ctrl/⌘+V)",
+      "duplicate": "Dupliceren",
+      "duplicateHint": "Direct erna dupliceren (Ctrl/⌘+D)",
+      "copyStyle": "Stijl kopiëren",
+      "copyStyleHint": "Kleuren, randen, afstanden en tekststijl kopiëren (Ctrl/⌘+Alt+C)",
+      "pasteStyle": "Stijl plakken",
+      "pasteStyleHint": "Gekopieerde stijl op dit blok toepassen (Ctrl/⌘+Alt+V)",
+      "delete": "Verwijderen",
+      "deleteHint": "Verwijderen (Delete-toets)",
+      "title": "Schikken"
+    },
+    "feedback": {
+      "cannotInsert": "{{block}} kan hier niet worden toegevoegd.",
+      "insertedOnPage": "{{block}} aan de pagina toegevoegd.",
+      "insertedInto": "{{block}} aan {{parent}} toegevoegd.",
+      "fieldRebound": "{{name}} toont nu {{path}}."
+    },
+    "translation": {
+      "translatedAs": "Standaardlabel \"{{name}}\", vertaald voor elke ontvanger",
+      "useFixedText": "Vaste tekst gebruiken",
+      "pickStandardLabel": "Vaste tekst. Automatisch vertalen…",
+      "searchStandardLabels": "Standaardlabels zoeken…",
+      "standardLabels": "Standaardlabels",
+      "noMatches": "Geen standaardlabels gevonden.",
+      "cancel": "Annuleren"
+    },
+    "outline": {
+      "collapse": "{{name}} samenvouwen",
+      "expand": "{{name}} uitvouwen",
+      "title": "Overzicht"
+    },
+    "dragPreview": {
+      "noTarget": "Buiten de pagina — laat los om te annuleren",
+      "noChange": "Blijft waar het is",
+      "before": "Vóór {{block}}",
+      "after": "Na {{block}}",
+      "inside": "In {{container}}",
+      "dropOnPage": "Zet neer op de pagina om dit blok toe te voegen.",
+      "cancelled": "Niet verplaatst — laat los boven de pagina of het Overzicht om neer te zetten."
+    },
+    "resize": {
+      "handleHint": "Sleep om het formaat te wijzigen · dubbelklik om aan de inhoud aan te passen",
+      "autoValue": "Automatisch ({{value}})"
     }
   },
   "projectBilling": {
@@ -1774,7 +2145,8 @@
         "selectedCount": "{{count}} geselecteerd",
         "clear": "Selectie wissen"
       }
-    }
+    },
+    "emptyTimeHint": "Goedgekeurde tijd en materialen komen hier nooit in de wachtrij — ze worden gefactureerd via de normale factuurrun of via de knop Projectfactuur genereren."
   },
   "invoiceDesigner": {
     "transforms": {
@@ -1963,7 +2335,9 @@
         "addLine": "+ Regel",
         "clearLines": "Enkele regel",
         "stackedLinesHint": "Elke niet-lege regel wordt op een eigen rij weergegeven. Wanneer alle regels leeg zijn, wordt de hierboven vermelde bindingssleutel van de kolom weergegeven.",
-        "removeLine": "Regel {{index}} verwijderen"
+        "removeLine": "Regel {{index}} verwijderen",
+        "align": "Uitlijning",
+        "widthPlaceholder": "auto | 50% | 120px"
       },
       "columnTypes": {
         "text": "Tekst",
@@ -1998,6 +2372,12 @@
         "groupedRowKey": "Sleutel van gegroepeerde rij",
         "groupedRowItems": "Items van gegroepeerde rij",
         "availableBinding": "Beschikbare binding"
+      },
+      "columnAlign": {
+        "default": "Standaard",
+        "left": "Links",
+        "center": "Midden",
+        "right": "Rechts"
       }
     },
     "imagePicker": {
@@ -2016,10 +2396,18 @@
       "clearRowBackground": "Rij-achtergrondkleur wissen",
       "clearRowTextColor": "Rij-tekstkleur wissen",
       "labelColorOverrideNote": "Dit label behoudt zijn eigen opgeslagen kleur en erft niet de hierboven ingestelde rij-tekstkleur. Het bedrag volgt nog steeds de rij-tekstkleur.",
-      "noRows": "Dit totalenblok heeft nog geen opgeslagen rijen. Sla de sjabloon op en open deze opnieuw om rijkleuren te bewerken."
+      "noRows": "Dit totalenblok heeft nog geen opgeslagen rijen. Sla de sjabloon op en open deze opnieuw om rijkleuren te bewerken.",
+      "addRow": "Rij toevoegen:",
+      "empty": "Nog geen rijen. Voeg hieronder een rij toe.",
+      "moveUp": "{{row}} omhoog verplaatsen",
+      "moveDown": "{{row}} omlaag verplaatsen",
+      "remove": "{{row}} verwijderen",
+      "label": "Label",
+      "emphasize": "Benadrukken (stijl van eindtotaal)"
     }
   },
   "draftInvoiceDetails": {
+    "sessionExpired": "Uw sessie is verlopen tijdens het laden van de factuurgegevens. Meld u opnieuw aan en laad de gegevens opnieuw.",
     "title": "Factuurgegevens",
     "description": "Bewerk de metagegevens van de conceptfactuur voordat u deze definitief maakt.",
     "actions": {
@@ -2028,6 +2416,13 @@
     "errors": {
       "invoiceNumberRequired": "Het factuurnummer is verplicht.",
       "invoiceDateRequired": "De factuurdatum is verplicht."
+    },
+    "labels": {
+      "billingProfile": "Factureringsprofiel",
+      "billingProfileDefault": "Het standaardprofiel van de klant"
+    },
+    "hints": {
+      "billingProfile": "De factuur, de regels en de gemailde kopie volgen dit profiel."
     }
   },
   "documentTemplates": {
@@ -2109,7 +2504,8 @@
     "types": {
       "salesOrder": "Verkooporder",
       "packingSlip": "Pakbon",
-      "pickList": "Picklijst"
+      "pickList": "Picklijst",
+      "workTag": "Werklabel / Label"
     }
   },
   "errors": {
@@ -2138,7 +2534,8 @@
       "referenceMissing": "De geselecteerde factuur, klant, het contract of de factuurregistratie bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
       "duplicate": "Er bestaat al een conflicterende factuur. Vernieuw de pagina en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht factuurveld.",
-      "missingFieldNamed": "Er ontbreekt een verplicht factuurveld: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht factuurveld: {{field}}.",
+      "billingProfileUnavailable": "Het geselecteerde factureringsprofiel is niet beschikbaar voor deze klant."
     },
     "billingCycle": {
       "notFoundRefresh": "Factuurcyclus niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
@@ -2178,5 +2575,15 @@
     "saving": "Opslaan…",
     "saveCorrection": "Correctie opslaan",
     "save": "Opslaan"
+  },
+  "draftInvoiceAdjustments": {
+    "sessionExpired": "Uw sessie is verlopen tijdens het laden van factuuraanpassingen. Meld u opnieuw aan en laad deze factuur opnieuw.",
+    "signIn": "Aanmelden",
+    "retry": "Opnieuw laden",
+    "blockedTitle": "Factuuraanpassingen niet beschikbaar",
+    "blocked": {
+      "exported": "Deze factuur is gesynchroniseerd met een boekhoudsysteem. Maak haar ongeldig of geef een apart krediet uit in plaats van de regels te bewerken.",
+      "exporting": "Er wordt een boekhoudingsexport voor deze factuur voorbereid. Wacht tot deze is voltooid voordat u de factuur wijzigt."
+    }
   }
 }

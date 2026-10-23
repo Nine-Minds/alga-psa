@@ -5,6 +5,7 @@ import Handlebars from 'handlebars';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth/withAuth';
+import { withSerializableAuth } from './serializableAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { TenantEmailService } from '@alga-psa/email';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -14,6 +15,7 @@ import Quote, { type QuoteListOptions } from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
 import QuoteItem from '../models/quoteItem';
 import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
+import { resolveInvoiceBillingRecipient } from '../services/invoiceBillingRecipientService';
 import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate, formatQuoteDate } from '../lib/quote-email-templates';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { mapLoadedQuoteToViewModel } from '../lib/adapters/quoteAdapters';
@@ -26,14 +28,19 @@ import {
   BundleAuthorizationKernelProvider,
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
+  isSelfApprovalAttempt,
+  isSelfApprovalBlocked,
   type AuthorizationRecord,
   type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
+import { SELF_APPROVAL_AUDIT_METADATA, allowSelfQuoteApproval, resolveAllowSelfApprovalFlag } from '@alga-psa/authorization/quoteSelfApproval';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { formatCurrency } from '@alga-psa/core/lib/formatters';
+import { getQuotePdfFileName } from '../lib/quoteFileNames';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { onQuoteAccepted, onQuoteSent } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
+import { QUOTE_ACTIVITY_TYPES, buildApprovalChangesRequestedActivity } from '../lib/quoteActivityTypes';
 
 type CreateQuoteInput = Omit<
   IQuote,
@@ -69,6 +76,7 @@ interface SendQuoteInput {
   email_addresses?: string[];
   subject?: string;
   message?: string;
+  senderId?: string;
 }
 
 const requireBillingCreatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
@@ -156,6 +164,13 @@ function quoteActionErrorFrom(error: unknown): QuoteActionError | null {
       'Quote templates cannot receive reminders',
       'Only sent quotes can receive reminders',
     ]);
+
+    if (error.message === 'Quote templates cannot be marked as accepted') {
+      return actionError(error.message, 'msp/quotes:errors.quote.templateCannotBeAccepted');
+    }
+    if (error.message === 'Only sent quotes can be marked as accepted') {
+      return actionError(error.message, 'msp/quotes:errors.quote.onlySentCanBeAccepted');
+    }
 
     if (expectedMessages.has(error.message) || /^Quote .+ is not a template$/.test(error.message)) {
       return actionError(error.message);
@@ -278,7 +293,9 @@ function createQuoteAuthorizationKernel(knex: Knex | Knex.Transaction, includeAp
       mutationGuards: includeApproveGuard
         ? [
             (input) => {
-              if (input.mutation?.kind === 'approve' && input.record?.ownerUserId === input.subject.userId) {
+              // Shared decision: denies self-approval unless the caller established the
+              // subject is the sole approver (mutation.allowSelfApproval).
+              if (isSelfApprovalBlocked(input)) {
                 return {
                   allowed: false,
                   reasons: [
@@ -417,6 +434,8 @@ const getQuoteRecipients = async (
   quote: IQuote,
   emailAddresses: string[] = []
 ): Promise<string[]> => {
+  // The client's address is whoever its invoices go to (billing contact,
+  // billing email, billing/default location), not the raw billing_email column.
   const [contactRecipient, clientRecipient] = await Promise.all([
     quote.contact_id
       ? tenantDb(knex, tenant).table('contacts')
@@ -425,10 +444,7 @@ const getQuoteRecipients = async (
         .first<{ email?: string | null }>()
       : Promise.resolve(null),
     quote.client_id
-      ? tenantDb(knex, tenant).table('clients')
-        .select('billing_email')
-        .where({ client_id: quote.client_id })
-        .first<{ billing_email?: string | null }>()
+      ? resolveInvoiceBillingRecipient({ knexOrTrx: knex, tenantId: tenant, clientId: quote.client_id })
       : Promise.resolve(null),
   ]);
 
@@ -437,7 +453,7 @@ const getQuoteRecipients = async (
       [
         ...emailAddresses,
         contactRecipient?.email ?? '',
-        clientRecipient?.billing_email ?? '',
+        clientRecipient?.recipientEmail ?? '',
       ]
         .map((email) => email.trim())
         .filter((email) => email.length > 0)
@@ -555,8 +571,9 @@ const renderQuoteEmail = async ({
   const templateContext = {
     quote: {
       number: quote.quote_number ?? quote.quote_id,
+      // LEVERAGE: pattern currency-minor-units — hard-coded /100 assumes a 2-digit currency; display/compute formatting should go through formatCurrencyFromMinorUnits (alga0002091 follow-up)
       amount: formatCurrency((quote.total_amount ?? 0) / 100, locale ?? 'en', quote.currency_code || 'USD'),
-      validUntil: formatQuoteDate(quote.valid_until ?? null),
+      validUntil: formatQuoteDate(quote.valid_until ?? null, locale),
     },
     company: {
       name: companyName,
@@ -582,6 +599,7 @@ const sendQuoteEmailWithAttachment = async ({
   subject,
   html,
   text,
+  senderId,
 }: {
   tenant: string;
   quote: IQuote;
@@ -590,12 +608,13 @@ const sendQuoteEmailWithAttachment = async ({
   subject: string;
   html: string;
   text: string;
+  senderId?: string;
 }) => {
   const actorId = getActorUserId(user);
   const pdfBuffer = await createPDFGenerationService(tenant).generatePDF({ quoteId: quote.quote_id, userId: actorId ?? '' });
-  const resolvedQuoteNumber = quote.quote_number ?? quote.quote_id;
-
   return await TenantEmailService.getInstance(tenant).sendEmail({
+    mailClass: 'sales',
+    senderId,
     tenantId: tenant,
     to: recipients,
     subject,
@@ -603,7 +622,7 @@ const sendQuoteEmailWithAttachment = async ({
     text,
     attachments: [
       {
-        filename: `Quote_${resolvedQuoteNumber}.pdf`,
+        filename: getQuotePdfFileName(quote),
         content: pdfBuffer,
         contentType: 'application/pdf',
       },
@@ -1103,6 +1122,21 @@ export const createQuoteFromTemplate = withAuth(async (
     }
 
     const actorUserId = getActorUserId(user);
+
+    // Resolve the two terms fields together. `undefined` means "not supplied"
+    // (inherit from the template); `null` means an explicit clear. Resolving
+    // them independently would let a plain-text override silently inherit the
+    // template's block (which then wins during normalization), and would turn
+    // an explicit clear back into the template's terms.
+    const termsSupplied =
+      input.terms_and_conditions !== undefined || input.terms_and_conditions_block !== undefined;
+    const resolvedTermsAndConditions = termsSupplied
+      ? (input.terms_and_conditions !== undefined ? (input.terms_and_conditions ?? null) : null)
+      : (template.terms_and_conditions ?? null);
+    const resolvedTermsAndConditionsBlock = termsSupplied
+      ? (input.terms_and_conditions_block !== undefined ? (input.terms_and_conditions_block ?? null) : null)
+      : (template.terms_and_conditions_block ?? null);
+
     const parsedQuote = normalizeQuoteDates(createQuoteSchema.parse({
       client_id: input.client_id,
       contact_id: input.contact_id ?? null,
@@ -1111,10 +1145,17 @@ export const createQuoteFromTemplate = withAuth(async (
       quote_date: input.quote_date,
       valid_until: input.valid_until,
       po_number: input.po_number ?? null,
+      recurring_section_title: input.recurring_section_title !== undefined
+        ? input.recurring_section_title
+        : template.recurring_section_title ?? null,
+      onetime_section_title: input.onetime_section_title !== undefined
+        ? input.onetime_section_title
+        : template.onetime_section_title ?? null,
       opportunity_id: input.opportunity_id ?? null,
       internal_notes: input.internal_notes ?? template.internal_notes ?? null,
       client_notes: input.client_notes ?? template.client_notes ?? null,
-      terms_and_conditions: input.terms_and_conditions ?? template.terms_and_conditions ?? null,
+      terms_and_conditions: resolvedTermsAndConditions,
+      terms_and_conditions_block: resolvedTermsAndConditionsBlock,
       currency_code: input.currency_code ?? template.currency_code,
       is_template: false,
       created_by: input.created_by ?? actorUserId,
@@ -1174,9 +1215,12 @@ export const duplicateQuote = withAuth(async (
       quote_date: sourceQuote.quote_date ?? null,
       valid_until: sourceQuote.valid_until ?? null,
       po_number: sourceQuote.po_number ?? null,
+      recurring_section_title: sourceQuote.recurring_section_title?.trim() || null,
+      onetime_section_title: sourceQuote.onetime_section_title?.trim() || null,
       internal_notes: sourceQuote.internal_notes ?? null,
       client_notes: sourceQuote.client_notes ?? null,
       terms_and_conditions: sourceQuote.terms_and_conditions ?? null,
+      terms_and_conditions_block: sourceQuote.terms_and_conditions_block ?? null,
       currency_code: sourceQuote.currency_code,
       tax_source: sourceQuote.tax_source ?? 'internal',
       is_template: false,
@@ -1246,9 +1290,12 @@ export const saveQuoteAsTemplate = withAuth(async (
       quote_date: null,
       valid_until: null,
       po_number: null,
+      recurring_section_title: sourceQuote.recurring_section_title?.trim() || null,
+      onetime_section_title: sourceQuote.onetime_section_title?.trim() || null,
       internal_notes: sourceQuote.internal_notes ?? null,
       client_notes: sourceQuote.client_notes ?? null,
       terms_and_conditions: sourceQuote.terms_and_conditions ?? null,
+      terms_and_conditions_block: sourceQuote.terms_and_conditions_block ?? null,
       currency_code: sourceQuote.currency_code,
       tax_source: sourceQuote.tax_source ?? 'internal',
       is_template: true,
@@ -1360,17 +1407,36 @@ export const listQuoteVersions = withAuth(async (
   return await Quote.listVersions(knex, tenant, quoteId);
 });
 
+/**
+ * Approval workflow settings plus whether the current user is the tenant's only
+ * possible quote approver. `currentUserIsSoleApprover` is only computed while approval
+ * is required (that is the only time the UI shows it) and means: the user holds
+ * `quotes:approve` and no other active MSP user does, so they may approve their own
+ * quotes (alga-2026-0002597).
+ */
+export type QuoteApprovalSettingsView = QuoteApprovalWorkflowSettings & {
+  currentUserIsSoleApprover: boolean;
+};
+
 export const getQuoteApprovalSettings = withAuth(async (
   user,
   { tenant }
-): Promise<QuoteApprovalWorkflowSettings | ActionPermissionError> => {
+): Promise<QuoteApprovalSettingsView | ActionPermissionError> => {
   const denied = await requireBillingReadPermission(user);
   if (denied) {
     return denied;
   }
 
   const { knex } = await createTenantKnex();
-  return await loadQuoteApprovalWorkflowSettings(knex, tenant);
+  const settings = await loadQuoteApprovalWorkflowSettings(knex, tenant);
+
+  const currentUserIsSoleApprover =
+    settings.approvalRequired &&
+    (user as any).user_type !== 'client' &&
+    await hasPermission(user as any, 'quotes', 'approve') &&
+    await allowSelfQuoteApproval(knex, tenant, (user as any).user_id);
+
+  return { ...settings, currentUserIsSoleApprover };
 });
 
 export const updateQuoteApprovalSettings = withAuth(async (
@@ -1419,24 +1485,34 @@ export const approveQuote = withAuth(async (
 
   const subject = await resolveAuthorizationSubjectForUser(knex, tenant, user as BillingAuthUser);
   const authorizationKernel = createQuoteAuthorizationKernel(knex, true);
-  const mutationDecision = await authorizationKernel.authorizeMutation({
+  const quoteRecord = toQuoteAuthorizationRecord(quote);
+  // Self-approval is allowed only when no OTHER active approver exists in the tenant
+  // (alga-2026-0002597). Computed here, not in the kernel, so the kernel stays DB-free.
+  const allowSelfApproval = await resolveAllowSelfApprovalFlag(knex, tenant, subject.userId, quoteRecord.ownerUserId);
+  const mutationInput = {
     subject,
     resource: {
       type: 'billing',
       action: 'approve',
       id: quote.quote_id,
     },
-    record: toQuoteAuthorizationRecord(quote),
+    record: quoteRecord,
     mutation: {
       kind: 'approve',
-      record: toQuoteAuthorizationRecord(quote),
+      record: quoteRecord,
+      allowSelfApproval,
     },
     requestCache: new RequestLocalAuthorizationCache(),
     knex,
-  });
+  };
+  const mutationDecision = await authorizationKernel.authorizeMutation(mutationInput);
   if (!mutationDecision.allowed) {
+    // Defers to the shared kernel decision above -- same answer the bundle
+    // not_self_approver rule and the EE guard give for this input.
     throw new Error('Permission denied: Cannot approve your own quote');
   }
+
+  const selfApproved = isSelfApprovalAttempt(mutationInput);
 
   const updatedQuote = await Quote.update(knex, tenant, quoteId, {
     status: 'approved',
@@ -1445,10 +1521,13 @@ export const approveQuote = withAuth(async (
 
   await QuoteActivity.create(knex, tenant, {
     quote_id: quoteId,
-    activity_type: 'approved',
+    activity_type: QUOTE_ACTIVITY_TYPES.approved,
     description: comment?.trim() ? `Quote approved: ${comment.trim()}` : 'Quote approved',
     performed_by: getActorUserId(user),
-    metadata: { comment: comment?.trim() || null },
+    metadata: {
+      comment: comment?.trim() || null,
+      ...(selfApproved ? SELF_APPROVAL_AUDIT_METADATA : {}),
+    },
   });
 
   return updatedQuote;
@@ -1492,13 +1571,91 @@ export const requestQuoteApprovalChanges = withAuth(async (
 
   await QuoteActivity.create(knex, tenant, {
     quote_id: quoteId,
-    activity_type: 'approval_changes_requested',
-    description: `Approval changes requested: ${trimmedComment}`,
+    ...buildApprovalChangesRequestedActivity(trimmedComment),
     performed_by: getActorUserId(user),
-    metadata: { comment: trimmedComment },
   });
 
   return updatedQuote;
+  });
+});
+
+/**
+ * MSP-side "Mark as accepted": records that the client accepted a sent quote outside
+ * the client portal (verbal / email acceptance). Moves sent -> accepted through the
+ * normal transition map, stamps who/when, keeps an optional note, and runs the same
+ * accepted-quote hook as portal acceptance so it flows into the Accepted ->
+ * invoice/contract conversion path. Gated by billing:update like send/resend and the
+ * generic status update.
+ */
+export const markQuoteAccepted = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string,
+  note?: string
+): Promise<IQuote | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
+  if ((user as any).user_type === 'client') {
+    throw new Error('Permission denied: operation not available in client portal');
+  }
+
+  const denied = await requireBillingUpdatePermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  const quote = await assertQuoteReadAllowedForMutation(
+    knex,
+    tenant,
+    user as BillingAuthUser,
+    quoteId,
+    'Permission denied: Cannot update quote'
+  );
+
+  if (quote.is_template) {
+    throw new Error('Quote templates cannot be marked as accepted');
+  }
+
+  if (quote.status !== 'sent') {
+    throw new Error('Only sent quotes can be marked as accepted');
+  }
+
+  const trimmedNote = note?.trim() || null;
+  const actorUserId = getActorUserId(user);
+  const acceptedAt = new Date().toISOString();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await Quote.update(trx, tenant, quoteId, {
+      status: 'accepted',
+      accepted_at: acceptedAt,
+      accepted_by: actorUserId,
+      updated_by: actorUserId,
+    });
+
+    await QuoteActivity.create(trx, tenant, {
+      quote_id: quoteId,
+      activity_type: QUOTE_ACTIVITY_TYPES.accepted,
+      description: trimmedNote
+        ? `Quote marked as accepted by MSP on behalf of the client: ${trimmedNote}`
+        : 'Quote marked as accepted by MSP on behalf of the client',
+      performed_by: actorUserId,
+      metadata: {
+        accepted_via: 'msp',
+        accepted_by: actorUserId,
+        accepted_at: acceptedAt,
+        note: trimmedNote,
+      },
+    });
+
+    const acceptedQuote = await Quote.getById(trx, tenant, quoteId);
+    if (!acceptedQuote) {
+      throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+    }
+
+    await onQuoteAccepted(trx, acceptedQuote);
+
+    return acceptedQuote;
+  });
   });
 });
 
@@ -1595,6 +1752,7 @@ export const sendQuote = withAuth(async (
         subject,
         html: renderedEmail.html,
         text: renderedEmail.text,
+        senderId: input.senderId,
       });
 
       emailSent = emailResult.success;
@@ -1695,6 +1853,7 @@ export const resendQuote = withAuth(async (
         subject,
         html: renderedEmail.html,
         text: renderedEmail.text,
+        senderId: input.senderId,
       });
 
       emailSent = emailResult.success;
@@ -1791,6 +1950,7 @@ export const sendQuoteReminder = withAuth(async (
         subject,
         html: renderedEmail.html,
         text: renderedEmail.text,
+        senderId: input.senderId,
       });
 
       emailSent = emailResult.success;
@@ -2057,7 +2217,7 @@ export const getQuoteByConvertedContractId = withAuth(async (
   return applyQuoteRedactions(quote, decision.redactedFields);
 });
 
-export const getQuoteByConvertedInvoiceId = withAuth(async (
+export const getQuoteByConvertedInvoiceId = withSerializableAuth(withAuth(async (
   user,
   { tenant },
   invoiceId: string,
@@ -2077,7 +2237,7 @@ export const getQuoteByConvertedInvoiceId = withAuth(async (
     return null;
   }
   return applyQuoteRedactions(quote, decision.redactedFields);
-});
+}));
 
 /**
  * Get the most recent stored PDF file_id for a quote.
@@ -2149,7 +2309,7 @@ export const downloadQuotePdf = withAuth(async (
   user,
   { tenant },
   quoteId: string,
-): Promise<{ pdfData: number[]; quoteNumber: string } | QuoteActionError> => {
+): Promise<{ pdfData: number[]; fileName: string } | QuoteActionError> => {
   return withQuoteActionErrors(async () => {
   const denied = await requireBillingReadPermission(user);
   if (denied) {
@@ -2167,7 +2327,7 @@ export const downloadQuotePdf = withAuth(async (
 
   return {
     pdfData: Array.from(pdfBuffer),
-    quoteNumber: quote.quote_number ?? quote.quote_id,
+    fileName: getQuotePdfFileName(quote),
   };
   });
 });

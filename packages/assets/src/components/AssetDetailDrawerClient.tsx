@@ -1,10 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { formatCpuSummary } from '../lib/extensionDisplay';
+import { calendarDateToLocalDate } from '../lib/calendarDate';
 import Drawer from '@alga-psa/ui/components/Drawer';
+import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { useClientDrawer } from '@alga-psa/ui';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@alga-psa/ui/components/Tabs';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -35,11 +38,13 @@ import { CustomTypeDetailsPanel } from './panels/CustomTypeDetailsPanel';
 import CreateTicketFromAssetButton from './CreateTicketFromAssetButton';
 import DeleteAssetButton from './DeleteAssetButton';
 import { RemoteAccessButton } from './RemoteAccessButton';
+import { hasRemoteAccessLinks } from '../actions/remoteAccessLinkActions';
 import { AssetAlertsSection } from './AssetAlertsSection';
 import { AssetPatchStatusSection } from './AssetPatchStatusSection';
 import { AssetTimeline } from './AssetTimeline';
 import { AssetSoftwareInventory } from './AssetSoftwareInventory';
 import { ASSET_DRAWER_TABS, type AssetDrawerTab } from './AssetDetailDrawer.types';
+import { resolveAssetStatusLabel, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
 
 interface AssetDetailDrawerClientProps {
   isOpen: boolean;
@@ -98,6 +103,8 @@ export function AssetDetailDrawerClient({
   const router = useRouter();
   const clientDrawer = useClientDrawer();
   const desiredTab = activeTab;
+  const [hasTemplateLinks, setHasTemplateLinks] = useState(false);
+  useEffect(() => { void hasRemoteAccessLinks().then((result) => setHasTemplateLinks(result === true)).catch(() => setHasTemplateLinks(false)); }, []);
 
   const tabLabels = useMemo(() => ({
     [ASSET_DRAWER_TABS.OVERVIEW]: t('assetDetailDrawer.tabs.overview', { defaultValue: 'Overview' }),
@@ -107,9 +114,11 @@ export function AssetDetailDrawerClient({
     [ASSET_DRAWER_TABS.DOCUMENTS]: t('assetDetailDrawer.tabs.documents', { defaultValue: 'Documents' }),
   } satisfies Record<AssetDrawerTab, string>), [t]);
 
+  // F021: a custom status reads as its registry label, not its slug.
+  const { statuses: assetStatuses } = useAssetStatusRegistry();
   const translateStatus = useCallback(
-    (status: string) => t(`assetDetailDrawer.statuses.${status}`, { defaultValue: formatTitleCase(status) }),
-    [t]
+    (status: string) => resolveAssetStatusLabel(t, status, assetStatuses) || formatTitleCase(status),
+    [assetStatuses, t]
   );
 
   const handleTabChange = useCallback(
@@ -190,12 +199,14 @@ export function AssetDetailDrawerClient({
           maintenanceReport: maintenanceReport ?? null,
           router,
           statusBadge,
+          statusLabel: translateStatus(asset.status),
           onClose,
           defaultBoardId,
           t,
           onClientClick: asset.client_id && clientDrawer
             ? () => clientDrawer.openClientDrawer(asset.client_id)
             : undefined,
+          hasTemplateLinks,
         });
       case ASSET_DRAWER_TABS.MAINTENANCE:
         return renderMaintenanceTab({
@@ -230,6 +241,7 @@ export function AssetDetailDrawerClient({
     statusBadge,
     tickets,
     t,
+    translateStatus,
     visibleAssetId,
   ]);
 
@@ -284,13 +296,15 @@ type OverviewTabProps = {
   history: AssetHistory[];
   router: ReturnType<typeof useRouter>;
   statusBadge: ReactNode;
+  statusLabel: string;
   onClose: () => void;
   defaultBoardId?: string;
   t: TranslationFn;
   onClientClick?: () => void;
+  hasTemplateLinks: boolean;
 };
 
-function renderOverviewTab({ asset, maintenanceReport, history, router, statusBadge, onClose, defaultBoardId, t, onClientClick }: OverviewTabProps) {
+function renderOverviewTab({ asset, maintenanceReport, history, router, statusBadge, statusLabel, onClose, defaultBoardId, t, onClientClick, hasTemplateLinks }: OverviewTabProps) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -329,9 +343,7 @@ function renderOverviewTab({ asset, maintenanceReport, history, router, statusBa
             <FileText className="h-4 w-4" />
             {t('assetDetailDrawer.actions.openAssetRecord', { defaultValue: 'Open asset record' })}
           </Button>
-          {asset.rmm_provider && asset.rmm_device_id && (
-            <RemoteAccessButton asset={asset} variant="default" size="sm" />
-          )}
+          <RemoteAccessButton asset={asset} variant="default" size="sm" hasTemplateLinks={hasTemplateLinks} surface="asset-drawer" />
           <CreateTicketFromAssetButton asset={asset} defaultBoardId={defaultBoardId} variant="default" size="sm" />
           <DeleteAssetButton
             assetId={asset.asset_id}
@@ -391,7 +403,7 @@ function renderOverviewTab({ asset, maintenanceReport, history, router, statusBa
 
       <Card className="space-y-4 p-4" {...withDataAutomationId({ id: 'asset-drawer-overview-info' })}>
         <SectionTitle icon={<Settings2 className="h-4 w-4" />} title={t('assetDetailDrawer.overview.assetSummary', { defaultValue: 'Asset summary' })} />
-        <InfoGrid asset={asset} onClientClick={onClientClick} statusLabel={t(`assetDetailDrawer.statuses.${asset.status}`, { defaultValue: formatTitleCase(asset.status) })} t={t} />
+        <InfoGrid asset={asset} onClientClick={onClientClick} statusLabel={statusLabel} t={t} />
       </Card>
 
       {/* RMM Alerts Section - Shows active alerts for RMM-managed assets */}
@@ -544,8 +556,10 @@ function renderConfigurationTab({ asset, t }: ConfigurationTabProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-700">
           <ConfigurationRow label={t('assetDetailDrawer.configuration.serialNumber', { defaultValue: 'Serial number' })} value={asset.serial_number || t('assetDetailDrawer.configuration.notProvided', { defaultValue: 'Not provided' })} />
           <ConfigurationRow label={t('assetDetailDrawer.configuration.location', { defaultValue: 'Location' })} value={asset.location || t('assetDetailDrawer.configuration.notProvided', { defaultValue: 'Not provided' })} />
-          <ConfigurationRow label={t('assetDetailDrawer.configuration.purchaseDate', { defaultValue: 'Purchase date' })} value={asset.purchase_date ? formatDate(asset.purchase_date) : t('assetDetailDrawer.configuration.notProvided', { defaultValue: 'Not provided' })} />
-          <ConfigurationRow label={t('assetDetailDrawer.configuration.warrantyEnd', { defaultValue: 'Warranty end' })} value={asset.warranty_end_date ? formatDate(asset.warranty_end_date) : t('assetDetailDrawer.configuration.notProvided', { defaultValue: 'Not provided' })} />
+          {/* Calendar days, not instants: formatDate would show the previous
+              day west of UTC, with a meaningless midnight time beside it. */}
+          <ConfigurationRow label={t('assetDetailDrawer.configuration.purchaseDate', { defaultValue: 'Purchase date' })} value={calendarDateToLocalDate(asset.purchase_date)?.toLocaleDateString() ?? t('assetDetailDrawer.configuration.notProvided', { defaultValue: 'Not provided' })} />
+          <ConfigurationRow label={t('assetDetailDrawer.configuration.warrantyEnd', { defaultValue: 'Warranty end' })} value={calendarDateToLocalDate(asset.warranty_end_date)?.toLocaleDateString() ?? t('assetDetailDrawer.configuration.notProvided', { defaultValue: 'Not provided' })} />
         </div>
       </Card>
 
@@ -648,6 +662,30 @@ function InfoGrid({
       )}
       <InfoRow label={t('assetDetailDrawer.info.assetTag', { defaultValue: 'Asset tag' })} value={asset.asset_tag} />
       <InfoRow label={t('assetDetailDrawer.info.status', { defaultValue: 'Status' })} value={statusLabel} />
+      <InfoRow
+        label={t('assetDetailDrawer.info.assignedTo', { defaultValue: 'Assigned to' })}
+        value={asset.contact_name || t('assetDetailDrawer.info.unassigned', { defaultValue: 'Unassigned' })}
+      />
+      {asset.manufacturer ? (
+        <InfoRow label={t('assetDetailDrawer.info.manufacturer', { defaultValue: 'Manufacturer' })} value={asset.manufacturer} />
+      ) : null}
+      {asset.model ? (
+        <InfoRow label={t('assetDetailDrawer.info.model', { defaultValue: 'Model' })} value={asset.model} />
+      ) : null}
+      {asset.group ? (
+        <InfoRow
+          label={t('assetDetailDrawer.info.group', { defaultValue: 'Group' })}
+          value={asset.group.kind === 'shared_workspace'
+            ? t('assetDetailDrawer.info.groupSharedWorkspace', {
+                defaultValue: '{{name}} · shared workspace',
+                name: asset.group.name,
+              })
+            : t('assetDetailDrawer.info.groupBundle', {
+                defaultValue: '{{name}} · bundle',
+                name: asset.group.name,
+              })}
+        />
+      ) : null}
       <InfoRow label={t('assetDetailDrawer.info.created', { defaultValue: 'Created' })} value={formatDate(asset.created_at)} />
       <InfoRow label={t('assetDetailDrawer.info.updated', { defaultValue: 'Updated' })} value={formatRelative(asset.updated_at, t)} />
       <InfoRow label={t('assetDetailDrawer.info.tenant', { defaultValue: 'Tenant' })} value={asset.tenant} />
@@ -657,7 +695,7 @@ function InfoGrid({
 
 type InfoRowProps = {
   label: string;
-  value: string | number;
+  value: ReactNode;
 };
 
 function InfoRow({ label, value }: InfoRowProps) {
@@ -679,6 +717,7 @@ function ConfigurationRow({ label, value }: InfoRowProps) {
 }
 
 function renderTypeSpecificConfiguration(asset: Asset, t: TranslationFn) {
+  const notProvided = t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' });
   switch (asset.asset_type) {
     case 'workstation':
       if (asset.workstation && isWorkstationAssetGuard(asset.workstation)) {
@@ -687,9 +726,9 @@ function renderTypeSpecificConfiguration(asset: Asset, t: TranslationFn) {
             <SectionTitle icon={<Settings2 className="h-4 w-4" />} title={t('assetDetailDrawer.typeDetails.workstation', { defaultValue: 'Workstation details' })} />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-700">
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.operatingSystem', { defaultValue: 'Operating system' })} value={`${asset.workstation.os_type} ${asset.workstation.os_version}`} />
-              <ConfigurationRow label={t('assetDetailDrawer.typeDetails.cpu', { defaultValue: 'CPU' })} value={`${asset.workstation.cpu_model} (${asset.workstation.cpu_cores} cores)`} />
-              <ConfigurationRow label={t('assetDetailDrawer.typeDetails.ram', { defaultValue: 'RAM' })} value={`${asset.workstation.ram_gb} GB`} />
-              <ConfigurationRow label={t('assetDetailDrawer.typeDetails.storage', { defaultValue: 'Storage' })} value={`${asset.workstation.storage_type} • ${asset.workstation.storage_capacity_gb} GB`} />
+              <ConfigurationRow label={t('assetDetailDrawer.typeDetails.cpu', { defaultValue: 'CPU' })} value={formatCpuSummary(asset.workstation.cpu_model, asset.workstation.cpu_cores) ?? notProvided} />
+              <ConfigurationRow label={t('assetDetailDrawer.typeDetails.ram', { defaultValue: 'RAM' })} value={asset.workstation.ram_gb != null ? `${asset.workstation.ram_gb} GB` : notProvided} />
+              <ConfigurationRow label={t('assetDetailDrawer.typeDetails.storage', { defaultValue: 'Storage' })} value={asset.workstation.storage_capacity_gb != null ? `${asset.workstation.storage_type} • ${asset.workstation.storage_capacity_gb} GB` : (asset.workstation.storage_type || notProvided)} />
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.gpu', { defaultValue: 'GPU' })} value={asset.workstation.gpu_model || t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })} />
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.lastLogin', { defaultValue: 'Last login' })} value={asset.workstation.last_login ? formatRelative(asset.workstation.last_login, t) : t('assetDetailDrawer.typeDetails.never', { defaultValue: 'Never' })} />
             </div>
@@ -705,10 +744,10 @@ function renderTypeSpecificConfiguration(asset: Asset, t: TranslationFn) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-700">
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.deviceType', { defaultValue: 'Device type' })} value={asset.network_device.device_type} />
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.managementIp', { defaultValue: 'Management IP' })} value={asset.network_device.management_ip || t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })} />
-              <ConfigurationRow label={t('assetDetailDrawer.typeDetails.portCount', { defaultValue: 'Port count' })} value={asset.network_device.port_count} />
+              <ConfigurationRow label={t('assetDetailDrawer.typeDetails.portCount', { defaultValue: 'Port count' })} value={asset.network_device.port_count ?? notProvided} />
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.firmwareVersion', { defaultValue: 'Firmware version' })} value={asset.network_device.firmware_version} />
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.poeSupport', { defaultValue: 'PoE support' })} value={asset.network_device.supports_poe ? t('common.yes', { defaultValue: 'Yes' }) : t('common.no', { defaultValue: 'No' })} />
-              <ConfigurationRow label={t('assetDetailDrawer.typeDetails.powerDraw', { defaultValue: 'Power draw' })} value={`${asset.network_device.power_draw_watts} W`} />
+              <ConfigurationRow label={t('assetDetailDrawer.typeDetails.powerDraw', { defaultValue: 'Power draw' })} value={asset.network_device.power_draw_watts != null ? `${asset.network_device.power_draw_watts} W` : notProvided} />
             </div>
           </Card>
         );
@@ -721,8 +760,8 @@ function renderTypeSpecificConfiguration(asset: Asset, t: TranslationFn) {
             <SectionTitle icon={<Settings2 className="h-4 w-4" />} title={t('assetDetailDrawer.typeDetails.server', { defaultValue: 'Server details' })} />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-700">
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.operatingSystem', { defaultValue: 'Operating system' })} value={`${asset.server.os_type} ${asset.server.os_version}`} />
-              <ConfigurationRow label={t('assetDetailDrawer.typeDetails.cpu', { defaultValue: 'CPU' })} value={`${asset.server.cpu_model} (${asset.server.cpu_cores} cores)`} />
-              <ConfigurationRow label={t('assetDetailDrawer.typeDetails.ram', { defaultValue: 'RAM' })} value={`${asset.server.ram_gb} GB`} />
+              <ConfigurationRow label={t('assetDetailDrawer.typeDetails.cpu', { defaultValue: 'CPU' })} value={formatCpuSummary(asset.server.cpu_model, asset.server.cpu_cores) ?? notProvided} />
+              <ConfigurationRow label={t('assetDetailDrawer.typeDetails.ram', { defaultValue: 'RAM' })} value={asset.server.ram_gb != null ? `${asset.server.ram_gb} GB` : notProvided} />
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.virtualized', { defaultValue: 'Virtualized' })} value={asset.server.is_virtual ? t('common.yes', { defaultValue: 'Yes' }) : t('common.no', { defaultValue: 'No' })} />
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.primaryIp', { defaultValue: 'Primary IP' })} value={asset.server.primary_ip || t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })} />
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.hypervisor', { defaultValue: 'Hypervisor' })} value={asset.server.hypervisor || t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })} />
@@ -740,7 +779,7 @@ function renderTypeSpecificConfiguration(asset: Asset, t: TranslationFn) {
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.os', { defaultValue: 'OS' })} value={`${asset.mobile_device.os_type} ${asset.mobile_device.os_version}`} />
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.model', { defaultValue: 'Model' })} value={asset.mobile_device.model} />
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.imei', { defaultValue: 'IMEI' })} value={asset.mobile_device.imei || t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })} />
-              <ConfigurationRow label={t('assetDetailDrawer.typeDetails.phoneNumber', { defaultValue: 'Phone number' })} value={asset.mobile_device.phone_number || t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })} />
+              <ConfigurationRow label={t('assetDetailDrawer.typeDetails.phoneNumber', { defaultValue: 'Phone number' })} value={<PhoneText value={asset.mobile_device.phone_number} fallback={t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })} />} />
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.carrier', { defaultValue: 'Carrier' })} value={asset.mobile_device.carrier || t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })} />
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.lastCheckIn', { defaultValue: 'Last check-in' })} value={asset.mobile_device.last_check_in ? formatRelative(asset.mobile_device.last_check_in, t) : t('assetDetailDrawer.typeDetails.notReported', { defaultValue: 'Not reported' })} />
             </div>

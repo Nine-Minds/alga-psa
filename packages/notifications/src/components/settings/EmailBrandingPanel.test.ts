@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { STOCK_EMAIL_PALETTE } from '@alga-psa/email/branding';
+import {
+  decorateBrandedHtml,
+  isDarkEmailHeader,
+  pickBrandLogoVariant,
+  resolveBrandLogoForPreview,
+  resolveEmailPalette,
+  STOCK_EMAIL_PALETTE,
+} from '@alga-psa/email/branding';
 import {
   OVERRIDABLE_TOKENS,
   TOKEN_IDS,
@@ -15,6 +22,16 @@ import type { EmailBrandingStatus } from '../../lib/emailBranding';
 const panelSource = readFileSync(resolve(__dirname, 'EmailBrandingPanel.tsx'), 'utf8');
 const templatesSource = readFileSync(resolve(__dirname, 'EmailTemplates.tsx'), 'utf8');
 const tabHostSource = readFileSync(resolve(__dirname, 'EmailBrandingTab.tsx'), 'utf8');
+const previewSource = readFileSync(resolve(__dirname, 'EmailTemplatePreview.tsx'), 'utf8');
+const actionsSource = readFileSync(
+  resolve(__dirname, '../../actions/notification-actions/emailBrandingActions.ts'),
+  'utf8',
+);
+
+const LOGO_OPTIONS = {
+  logoUrl: '/api/documents/view/square-file?t=1',
+  logoWideUrl: '/api/documents/view/wide-file?t=2',
+};
 
 const repoRoot = resolve(__dirname, '../../../../..');
 const settingsHostSource = readFileSync(
@@ -80,7 +97,16 @@ describe('email branding draft', () => {
     }));
 
     expect(draft.logoVariant).toBe('wide');
+    expect(draft.logoArtwork).toBe('auto');
     expect(draft.hideAttribution).toBe(true);
+  });
+
+  it('carries a pinned logo artwork into the draft', () => {
+    const draft = draftFromStatus(status({
+      palette: { primary: '#6b7280', secondary: null, logo: { variant: 'wide', artwork: 'dark' } },
+    }));
+
+    expect(draft.logoArtwork).toBe('dark');
   });
 });
 
@@ -91,12 +117,11 @@ describe('email branding panel markup', () => {
     expect(templatesSource).not.toContain('EmailBrandingPanel');
   });
 
-  it('is gated behind the release-v1-6-feature flag in both settings hosts', () => {
+  it('is hidden for AlgaDesk in both settings hosts, with no feature flag', () => {
     for (const host of [settingsHostSource, pageHostSource]) {
-      expect(host).toContain("useFeatureFlag('release-v1-6-feature')");
       expect(host).toContain("id: 'email-branding'");
-      expect(host).toContain('!emailBrandingEnabled ? [] :');
-      expect(host).toContain("emailBrandingEnabled ? ['email-branding'] : []");
+      expect(host).toContain("isAlgaDesk ? [] : ['email-branding']");
+      expect(host).not.toContain('useFeatureFlag');
     }
   });
 
@@ -125,11 +150,18 @@ describe('email branding panel markup', () => {
     expect(panelSource).toContain('id={`email-branding-override-${TOKEN_IDS[token]}`}');
   });
 
-  it('renders previews client-side from the system HTML with no server call', () => {
+  it('renders the preview client-side from the system HTML with no server call', () => {
     expect(panelSource).toContain('applyEmailPalette(html, STOCK_EMAIL_PALETTE, resolved)');
-    expect(panelSource).toContain('htmlContent={previewHtml(template.html_content)}');
-    const previewBlock = panelSource.slice(panelSource.indexOf('previewTemplates.map'));
+    expect(panelSource).toContain('htmlContent={previewHtml(previewTemplate.html_content)}');
+    const previewBlock = panelSource.slice(panelSource.indexOf('{previewTemplate && ('));
     expect(previewBlock.slice(0, previewBlock.indexOf('</div>'))).not.toContain('Action(');
+  });
+
+  it('shows exactly one template preview, since the apply dialog previews each one', () => {
+    expect(panelSource).toContain('const previewTemplate = useMemo');
+    expect(panelSource).toContain('return preferred ?? pool[0] ?? null;');
+    expect(panelSource).not.toContain('previewTemplates');
+    expect(panelSource.match(/<EmailTemplatePreview/g)).toHaveLength(1);
   });
 
   it('registers with the unsaved-changes provider while dirty', () => {
@@ -187,9 +219,14 @@ describe('enterprise logo and attribution', () => {
     expect(panelSource).toContain('id="email-branding-use-logo"');
     expect(panelSource).toContain('id="email-branding-logo-variant-wide"');
     expect(panelSource).toContain('id="email-branding-logo-variant-default"');
-    expect(panelSource).toContain('{status.logoOptions.logoWideUrl && (');
-    expect(panelSource).toContain('{status.logoOptions.logoUrl && (');
+    // A shape whose only upload is the dark artwork is still on offer.
+    expect(panelSource).toContain('{hasWideLogo && (');
+    expect(panelSource).toContain('{hasSquareLogo && (');
+    expect(panelSource).toContain('status.logoOptions.logoWideDarkUrl');
+    expect(panelSource).toContain('status.logoOptions.logoDarkUrl');
     expect(panelSource).toContain('id="email-branding-show-attribution"');
+    expect(panelSource).toContain('id={`email-branding-logo-artwork-${value}`}');
+    expect(panelSource).toContain("{ value: 'dark', key: 'logoArtworkDark'");
     expect(panelSource).toContain('checked={!draft.hideAttribution}');
   });
 
@@ -201,5 +238,66 @@ describe('enterprise logo and attribution', () => {
   it('previews the brand assets exactly as an apply would write them', () => {
     expect(panelSource).toContain('decorateBrandedHtml(recolored, {');
     expect(panelSource).toContain('hideAttribution: draft.hideAttribution,');
+    // The same chooser the apply decorator runs, over the same resolved palette,
+    // so the preview can never show a variant the apply would not write.
+    expect(panelSource).toContain(
+      'pickBrandLogoVariant(draft.logoVariant, headerIsDark, status.logoOptions, draft.logoArtwork)',
+    );
+    expect(actionsSource).toContain('pickBrandLogoVariant(palette.logo.variant, isDarkEmailHeader(target), {');
+  });
+
+  it('decorates a dark header with the dark artwork of the chosen shape', () => {
+    const darkHeader = { primary: '#3b1c6b', secondary: '#1f1147' };
+    const lightHeader = { primary: '#fde68a', secondary: '#fcd34d' };
+    const uploads = { ...LOGO_OPTIONS, logoWideDarkUrl: '/api/documents/view/wide-dark-file?t=4' };
+
+    const variantFor = (palette: { primary: string; secondary: string }) =>
+      pickBrandLogoVariant('wide', isDarkEmailHeader(resolveEmailPalette(palette)), uploads);
+
+    expect(variantFor(darkHeader)).toBe('wide-dark');
+    expect(variantFor(lightHeader)).toBe('wide');
+
+    const decorated = decorateBrandedHtml('<body><h1>Hi</h1></body>', {
+      logo: { variant: variantFor(darkHeader)!, alt: 'Acme MSP' },
+    });
+
+    expect(decorated).toContain('src="cid:alga-brand-logo-wide-dark"');
+    expect(resolveBrandLogoForPreview(decorated, uploads)).toContain(`src="${uploads.logoWideDarkUrl}"`);
+  });
+
+  it('writes the logo as a content-id and resolves it to a URL only for the preview', () => {
+    const decorated = decorateBrandedHtml('<body><h1>Hi</h1></body>', {
+      logo: { variant: 'wide', alt: 'Acme MSP' },
+    });
+
+    // What an apply persists: no origin, no URL — the send attaches the bytes.
+    expect(decorated).toContain('src="cid:alga-brand-logo-wide"');
+    expect(decorated).not.toContain('/api/documents/view/');
+
+    // What the iframe renders instead.
+    expect(resolveBrandLogoForPreview(decorated, LOGO_OPTIONS)).toContain(
+      `src="${LOGO_OPTIONS.logoWideUrl}"`,
+    );
+
+    // The panel and the template list hand the URLs to the preview frame, which
+    // substitutes them after the source annotation.
+    expect(panelSource).toContain('brandLogoUrls={status.logoOptions}');
+    expect(templatesSource).toContain('brandLogoUrls={brandingStatus?.logoOptions}');
+    expect(previewSource).toContain(
+      'resolveBrandLogoForPreview(annotated, { logoUrl, logoDarkUrl, logoWideUrl, logoWideDarkUrl })',
+    );
+    // The URLs, not the object a parent may rebuild on every render.
+    expect(previewSource).toContain(
+      '[htmlContent, sampleData, sourceMap, logoUrl, logoDarkUrl, logoWideUrl, logoWideDarkUrl]',
+    );
+  });
+
+  it('tells the editor the cid reference is embedded at send time', () => {
+    expect(templatesSource).toContain('notifications.emailTemplates.editor.inlineLogoHint');
+    expect(templatesSource).toContain('formData.html_content?.includes(BRAND_LOGO_MARKER)');
+    // A wide-variant row travels under its own content-id, so the hint reads
+    // the one this template carries instead of naming the square one.
+    expect(templatesSource).toContain('cid: findBrandLogoCid(formData.html_content) ?? BRAND_LOGO_CIDS.default');
+    expect(templatesSource).toContain('src="cid:{{cid}}"');
   });
 });

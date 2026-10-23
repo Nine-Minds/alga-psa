@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -11,6 +11,7 @@ import type { OnboardingStepServerState } from '@alga-psa/onboarding/actions';
 
 const dismissDashboardOnboardingStep = vi.fn();
 const restoreDashboardOnboardingStep = vi.fn();
+const dismissDashboardOnboardingSectionAction = vi.fn();
 
 const translations: Record<string, string> = {
   'onboarding.completeTitle': 'Termine FR',
@@ -69,6 +70,7 @@ vi.mock('next/link', () => ({
     </a>
   ),
 }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 vi.mock('posthog-js/react', () => ({
   usePostHog: () => ({
@@ -96,6 +98,7 @@ vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({
 vi.mock('@alga-psa/onboarding/actions', () => ({
   dismissDashboardOnboardingStep: (...args: unknown[]) => dismissDashboardOnboardingStep(...args),
   restoreDashboardOnboardingStep: (...args: unknown[]) => restoreDashboardOnboardingStep(...args),
+  dismissDashboardOnboardingSectionAction: (...args: unknown[]) => dismissDashboardOnboardingSectionAction(...args),
 }));
 
 const mixedSteps: OnboardingStepServerState[] = [
@@ -144,6 +147,7 @@ describe('DashboardOnboardingSection i18n wiring', () => {
   beforeEach(() => {
     dismissDashboardOnboardingStep.mockReset();
     restoreDashboardOnboardingStep.mockReset();
+    dismissDashboardOnboardingSectionAction.mockReset().mockResolvedValue({ success: true, data: { dismissed: true } });
   });
 
   afterEach(() => {
@@ -187,6 +191,20 @@ describe('DashboardOnboardingSection i18n wiring', () => {
     expect(screen.getByText('Description complete FR')).toBeInTheDocument();
     expect(screen.getByText('Fini FR')).toBeInTheDocument();
     expect(screen.getByText('Complete FR')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hide section' })).toBeInTheDocument();
+  });
+
+  it('does not offer section hide while onboarding is incomplete', () => {
+    render(<DashboardOnboardingSection steps={mixedSteps} />);
+    expect(screen.queryByRole('button', { name: 'Hide section' })).not.toBeInTheDocument();
+  });
+
+  it('hides the completed section immediately after a successful dismissal', async () => {
+    render(<DashboardOnboardingSection steps={allComplete} />);
+    const button = screen.getByRole('button', { name: 'Hide section' });
+    await act(async () => { button.click(); });
+    expect(dismissDashboardOnboardingSectionAction).toHaveBeenCalledOnce();
+    expect(screen.queryByText('Termine FR')).not.toBeInTheDocument();
   });
 
   it('translates keyed substep titles and blocker text', () => {

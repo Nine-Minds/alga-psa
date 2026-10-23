@@ -1,0 +1,11 @@
+packages/billing/src/actions/profitabilityReportActions.ts(363,29): error TS2769: No overload matches this call.
+packages/billing/src/actions/profitabilityReportActions.ts(677,29): error TS2769: No overload matches this call.
+packages/billing/src/actions/profitabilityReportActions.ts(832,29): error TS2769: No overload matches this call.
+packages/billing/src/actions/profitabilityReportActions.ts(912,29): error TS2769: No overload matches this call.
+packages/billing/src/actions/profitabilityReportActions.ts(999,29): error TS2769: No overload matches this call.
+packages/billing/src/actions/profitabilityReportActions.ts(1072,29): error TS2769: No overload matches this call.
+packages/ui/src/editor/AiResponseBlock.tsx(53,3): error TS2322: Type '(this: { name: string; options: any; storage: any; editor: Editor; type: NodeType; parent: ((this: ...) => NodeViewRenderer | null) | null | undefined; }) => NodeViewRenderer' is not assignable to type '(this: { name: string; options: any; storage: any; editor: Editor; type: NodeType; parent: ... | null | undefined; }) => NodeViewRenderer | null'.
+packages/ui/src/editor/MentionSuggestion.tsx(133,3): error TS2322: Type '(this: { name: string; options: any; storage: any; editor: Editor; type: NodeType; parent: ((this: ...) => NodeViewRenderer | null) | null | undefined; }) => NodeViewRenderer' is not assignable to type '(this: { name: string; options: any; storage: any; editor: Editor; type: NodeType; parent: ... | null | undefined; }) => NodeViewRenderer | null'.
+packages/ui/src/editor/TextEditor.tsx(259,20): error TS2322: Type 'Extension<EmoticonOptions, any>' is not assignable to type 'AnyExtension'.
+packages/ui/src/editor/TextEditor.tsx(399,17): error TS2322: Type '"mention"' is not assignable to type '"link" | "text"'.
+packages/ui/src/editor/TextEditor.tsx(419,15): error TS2322: Type '"mention"' is not assignable to type '"link" | "text"'.

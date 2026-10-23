@@ -3,8 +3,10 @@ import {
   ITimeEntry,
   ITimeEntryWithWorkItemString,
   ITimePeriodView,
+  ProjectServiceSource,
   TaxRegion,
 } from '@alga-psa/types';
+import type { CatalogPeriod } from '../../../../lib/timeEntryPeriodSelection';
 
 export interface Service {
   id: string;
@@ -25,6 +27,7 @@ export interface ITimeEntryWithNew extends Omit<ITimeEntry, 'tenant'> {
   _isServicePrefilled?: boolean; // True if service was auto-filled from work item
   _originalServiceId?: string | null; // Original prefilled service ID
   _serviceOverridden?: boolean; // True if user changed the prefilled service
+  _serviceSource?: ProjectServiceSource; // Which level the prefill came from (task/phase/project)
 }
 
 export interface TimeInputs {
@@ -46,7 +49,20 @@ export interface TimeEntryFormProps {
   onUpdateTimeInputs: (inputs: TimeInputs) => void;
   lastNoteInputRef?: React.RefObject<HTMLTextAreaElement | null>;
   timePeriod?: ITimePeriodView;
+  /**
+   * The subject user's periods with sheet statuses. When set (instead of
+   * `timePeriod`), the date field spans every editable period, disables days on
+   * locked or uncovered sheets, and names the sheet the chosen day lands on.
+   */
+  periodCatalog?: readonly CatalogPeriod[];
   date?: Date;
+  /**
+   * IANA timezone the entry's work_date is derived in (the subject user's).
+   * When set, the date field, period bounds, and time pickers operate on that
+   * calendar day so the edited entry matches the saved subject work_date; when
+   * omitted they keep the historical browser-local behavior.
+   */
+  workTimeZone?: string;
   isNewEntry?: boolean;
   isSaving?: boolean;
   disableSave?: boolean;
@@ -80,6 +96,8 @@ export interface TimeEntrySelectionRequest {
   entries: ITimeEntryWithWorkItemString[];
   defaultStartTime?: string;
   defaultEndTime?: string;
+  /** Explanation shown above the form, e.g. that the times are estimated from activity. */
+  notice?: string;
 }
 
 export interface TimeSheetListFocusFilter {

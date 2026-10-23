@@ -47,7 +47,7 @@ export default async function MspSignInPage({
       if (isRevoked) {
         // Session was revoked, don't redirect - show signin form
         return (
-          <I18nWrapper portal="msp" initialLocale={locale}>
+          <I18nWrapper portal="msp" initialLocale={locale} renderChildrenWhileLoading>
             <MspSignIn initialEmail={initialEmail} />
           </I18nWrapper>
         );
@@ -57,7 +57,7 @@ export default async function MspSignInPage({
     if (session.user.user_type === 'client') {
       // Client user trying to access MSP portal - show portal switch prompt
       return (
-        <I18nWrapper portal="msp" initialLocale={locale}>
+        <I18nWrapper portal="msp" initialLocale={locale} renderChildrenWhileLoading>
           <PortalSwitchPrompt
             currentPortal="client"
             targetPortal="msp"
@@ -72,7 +72,7 @@ export default async function MspSignInPage({
     redirect(callbackUrl);
   }
   return (
-    <I18nWrapper portal="msp" initialLocale={locale}>
+    <I18nWrapper portal="msp" initialLocale={locale} renderChildrenWhileLoading>
       <MspSignIn initialEmail={initialEmail} />
     </I18nWrapper>
   );

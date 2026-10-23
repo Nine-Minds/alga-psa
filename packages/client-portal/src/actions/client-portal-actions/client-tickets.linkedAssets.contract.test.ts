@@ -40,4 +40,12 @@ describe('TicketDetails renders linked-asset pills', () => {
     expect(detailsSource).toContain('getClientAssetById');
     expect(detailsSource).toContain('<AssetDetails');
   });
+
+  it('falls back to the ticket\'s own linked-asset data when the device is not openable by this viewer', () => {
+    // A contact-scoped user may see a ticket linked to a device that is assigned
+    // to someone else; getClientAssetById returns null for it, and the pill must
+    // not dead-end on "Asset not found".
+    expect(detailsSource).toContain('ticket-linked-asset-summary');
+    expect(detailsSource).toMatch(/error: asset \|\| summary \? null/);
+  });
 });

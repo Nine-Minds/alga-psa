@@ -1,0 +1,8 @@
+name: entra-diagnostics-empty
+description: Synthetic Entra diagnostics fixture; reset then seed and reconnect the local application
+steps:
+  - reset: msgraph
+  - seed: msgraph/client
+    params: { clientId: aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee, clientSecret: northwind-synthetic-app-secret }
+  - action: msgraph/configure
+    params: { rotateRefreshTokens: false }

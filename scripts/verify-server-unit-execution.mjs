@@ -5,7 +5,14 @@ import { fileURLToPath } from 'node:url';
 import { reconcileExecution } from './lib/test-execution-evidence.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 
-export function verifyServerUnitExecution({ root, revision, outcome, sourceDirty = false, candidateRevision, sourceError, sourceAfter }) {
+// `shard` marks one partition of the full suite: { index, total, allFiles }
+// where allFiles is the complete sorted inventory every shard partitioned.
+// scripts/merge-server-unit-shards.mjs reconciles those partitions back into
+// the single full-selection bundle the aggregate gate consumes.
+// `extraFailures` carries verdicts the caller already reached — today the
+// retry-only-pass policy — so status and evidence.json stay computed here.
+export function verifyServerUnitExecution({ root, revision, outcome, sourceDirty = false, candidateRevision, sourceError, sourceAfter,
+  reportPath = 'server/test-results.json', shard, extraFailures = [] }) {
   const directory = path.join(root, 'test-results/server-coverage');
   let evidence;
   try {
@@ -14,7 +21,7 @@ export function verifyServerUnitExecution({ root, revision, outcome, sourceDirty
       exitCode: outcome === 'success' ? 0 : 1,
       collected: read(path.join(directory, 'collected.json')),
       collectedTests: read(path.join(directory, 'collected-tests.json')),
-      report: read(path.join(root, 'server/test-results.json')),
+      report: read(path.resolve(root, reportPath)),
     });
   } catch (error) {
     evidence = { schemaVersion: 1, suite: 'server-unit', revision, status: 'failed', failures: [error.message] };
@@ -26,6 +33,10 @@ export function verifyServerUnitExecution({ root, revision, outcome, sourceDirty
   evidence.source = { before, after };
   evidence.workingTreeDirty = before?.dirty !== false || after.dirty !== false;
   evidence.selection = { mode: 'full', filters: [] };
+  if (shard) {
+    evidence.selection.allFiles = shard.allFiles;
+    evidence.selection.shard = { index: shard.index, total: shard.total };
+  }
   for (const [phase, source] of Object.entries(evidence.source)) {
     if (source?.revision !== candidateRevision || source?.dirty !== false || !Array.isArray(source?.changes) || source.changes.length) {
       evidence.failures.push(`Unit source ${phase} is missing, stale or dirty`);
@@ -34,6 +45,7 @@ export function verifyServerUnitExecution({ root, revision, outcome, sourceDirty
   if (sourceError) evidence.failures.push(`Cannot inspect unit checkout: ${sourceError}`);
   if (sourceDirty) evidence.failures.push('Unit checkout changed before execution verification');
   if (!candidateRevision || revision !== candidateRevision) evidence.failures.push('Unit checkout does not match candidate revision');
+  for (const failure of Array.isArray(extraFailures) ? extraFailures : []) evidence.failures.push(failure);
   evidence.status = evidence.failures.length ? 'failed' : 'passed';
   mkdirSync(directory, { recursive: true });
   writeFileSync(path.join(directory, 'evidence.json'), JSON.stringify(evidence, null, 2) + '\n');

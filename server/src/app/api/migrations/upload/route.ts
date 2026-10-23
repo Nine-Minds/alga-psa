@@ -11,6 +11,10 @@ import { StorageService } from '@alga-psa/storage/StorageService';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '@alga-psa/auth';
 import { MigrationStager } from '@/lib/migrations/MigrationStager';
+import {
+  logMigrationUploadFailure,
+  migrationUploadErrorCode,
+} from '@/lib/migrations/migrationUploadErrors';
 
 export const runtime = 'nodejs';
 export const AMP_MAX_PACKAGE_BYTES = 250 * 1024 * 1024;
@@ -53,9 +57,12 @@ export async function POST(request: Request) {
       }
       // No `metadata` option: external_files has no metadata column; package
       // provenance (source name, sha256) lives on the migration_jobs row.
+      // The AMP MIME type is stated in code, never echoed from the request's
+      // content-type: the extension was already checked and this artifact is
+      // ours, so a bypass must not become user-controlled.
       const upload = StorageService.uploadStream(user.tenant, storageInput, fileName, {
-        mime_type: request.headers.get('content-type') || 'application/vnd.sqlite3', uploaded_by_id: user.user_id,
-        size: declaredSize,
+        mime_type: 'application/vnd.sqlite3', uploaded_by_id: user.user_id,
+        size: declaredSize, origin: 'system-artifact',
       });
       const [stored] = await Promise.all([upload, pipeline(createReadStream(packagePath), storageInput)]);
       const sha256 = digest.digest('hex');
@@ -69,7 +76,11 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     storageInput.destroy(error as Error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'AMP_UPLOAD_FAILED' }, { status: 400 });
+    const code = migrationUploadErrorCode(error, 'AMP_UPLOAD_FAILED');
+    if (code === 'AMP_UPLOAD_FAILED' || code === 'AMP_STORAGE_REJECTED') {
+      logMigrationUploadFailure('/api/migrations/upload', user.tenant, error);
+    }
+    return NextResponse.json({ error: code }, { status: 400 });
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

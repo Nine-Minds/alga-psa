@@ -21,9 +21,8 @@ const mockPreviewGroupedInvoicesForSelectionInputs = vi.fn();
 const mockGenerateGroupedInvoicesAsRecurringBillingRun = vi.fn(async () => ({ failures: [] }));
 const mockGenerateInvoicesAsRecurringBillingRun = vi.fn(async () => ({ failures: [] }));
 
-const releaseFlag = vi.hoisted(() => ({ enabled: true }));
 vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
-  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -33,7 +32,14 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/ui/lib/i18n/client', () => {
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  // The explained preview failures render the real English locale copy, so the
+  // test proves each code has a shipped, actionable translation.
+  const { readFileSync } = await import('node:fs');
+  const { resolve } = await import('node:path');
+  const invoicingLocale = JSON.parse(
+    readFileSync(resolve(__dirname, '../../../server/public/locales/en/msp/invoicing.json'), 'utf8'),
+  );
   const NO_BILLING_EMAIL_COPY =
     '{{clientName}} has no billing email. Set a billing contact, a client billing email, or an email on the billing or default location, then try again.';
   const interpolate = (template: string, vars: Record<string, unknown>) =>
@@ -42,10 +48,15 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
       return value === undefined ? match : String(value);
     });
   return {
+    useOptionalI18n: () => null,
     useTranslation: () => ({
       t: (key: string, opts?: { defaultValue?: string } & Record<string, unknown>) => {
         if (key === 'manualInvoices.errors.NO_BILLING_EMAIL') {
           return interpolate(NO_BILLING_EMAIL_COPY, opts ?? {});
+        }
+        const explainedCode = key.match(/^manualInvoices\.errors\.(RECURRING_PERIODS_NOT_MATERIALIZED|NO_ACTIVE_CONTRACT_LINES|NOTHING_TO_BILL)$/)?.[1];
+        if (explainedCode) {
+          return invoicingLocale.manualInvoices.errors[explainedCode];
         }
         return (opts && typeof opts.defaultValue === 'string' ? opts.defaultValue : key);
       },
@@ -280,7 +291,7 @@ function buildSinglePreviewSuccess() {
   };
 }
 
-async function selectSingleChildAndOpenPreview() {
+async function selectSingleChildAndOpenPreview(previewResponse: unknown = buildSinglePreviewSuccess()) {
   render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
   const toggle = await waitFor(() => {
@@ -301,7 +312,7 @@ async function selectSingleChildAndOpenPreview() {
   }, { timeout: 5000 });
   fireEvent.click(childCheckbox);
 
-  mockPreviewGroupedInvoicesForSelectionInputs.mockResolvedValueOnce(buildSinglePreviewSuccess());
+  mockPreviewGroupedInvoicesForSelectionInputs.mockResolvedValueOnce(previewResponse);
   const previewButton = await screen.findByText('Preview Selected');
   fireEvent.click(previewButton);
 
@@ -316,7 +327,6 @@ describe('AutomaticInvoices PO overage dialog', () => {
   });
 
   beforeEach(() => {
-    releaseFlag.enabled = true;
     cleanup();
     mockGetAvailableRecurringDueWork.mockReset();
     mockGetPurchaseOrderOverageForSelectionInput.mockReset();
@@ -353,6 +363,27 @@ describe('AutomaticInvoices PO overage dialog', () => {
     };
     mockRecurringInvoiceHistoryResponse = { rows: [], total: 0, page: 1, pageSize: 10 };
     mockGetAvailableRecurringDueWork.mockResolvedValue(mockDueWorkResponse);
+  });
+
+  it('previews an invoice for a client without a billing email and warns instead of failing', async () => {
+    const previewSuccess = buildSinglePreviewSuccess();
+    await selectSingleChildAndOpenPreview({
+      ...previewSuccess,
+      previews: previewSuccess.previews.map((preview) => ({
+        ...preview,
+        billingEmailWarning: { code: 'NO_BILLING_EMAIL', params: { clientName: 'Acme Co' } },
+      })),
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Acme Co has no billing email\. The invoice can be generated, but it cannot be emailed or paid online/),
+      ).toBeInTheDocument();
+    });
+    // The preview still rendered and the invoice can be generated.
+    expect(screen.getByText('Managed services')).toBeInTheDocument();
+    const generateButton = screen.getByRole('button', { name: 'Generate Invoice' });
+    expect(generateButton).not.toBeDisabled();
   });
 
   it('formats overage_cents as minor units — a 61250-cent overage renders as $612.50, not $61,250.00 (Defect B)', async () => {
@@ -450,7 +481,7 @@ describe('AutomaticInvoices PO overage dialog', () => {
             billingCycleId: null,
             executionIdentityKey: 'exec-1',
             executionWindowKind: 'contract_cadence_window' as const,
-            errorMessage: 'Failed to generate invoice for this billing cycle.',
+            errorMessage: 'Invoice generation did not complete.',
           },
         ],
       });
@@ -459,7 +490,7 @@ describe('AutomaticInvoices PO overage dialog', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText(/Failed to generate invoice for this billing cycle\./),
+          screen.getByText(/Invoice generation did not complete\./),
         ).toBeInTheDocument();
       });
       expect(screen.queryByText(/has no billing email/i)).toBeNull();
@@ -484,6 +515,51 @@ describe('AutomaticInvoices PO overage dialog', () => {
             /Acme Co has no billing email\. Set a billing contact, a client billing email, or an email on the billing or default location, then try again\./,
           ).length,
         ).toBeGreaterThan(0);
+      });
+    });
+
+    it.each([
+      [
+        'RECURRING_PERIODS_NOT_MATERIALIZED',
+        'Recurring service periods were not materialized for this recurring execution window.',
+        /Service periods haven't been generated for this billing window yet\. Use Fix all/,
+      ],
+      [
+        'NO_ACTIVE_CONTRACT_LINES',
+        'No active contract lines found for this client in the selected billing period.',
+        /No contract line is active for this billing period\. Check the contract's start and end dates/,
+      ],
+      [
+        'NOTHING_TO_BILL',
+        'Nothing to bill',
+        /Nothing is ready to invoice for this window\. Arrears lines can only be invoiced after their service period ends/,
+      ],
+    ])('renders the localized, actionable message for the coded %s preview failure', async (code, rawMessage, expected) => {
+      mockPreviewGroupedInvoicesForSelectionInputs.mockResolvedValue({
+        success: false,
+        error: 'Server fallback wording that the locale copy must override',
+        code,
+      });
+
+      await selectParentAndClickPreview();
+
+      await waitFor(() => {
+        expect(screen.getAllByText(expected).length).toBeGreaterThan(0);
+      });
+      expect(screen.queryByText(/Server fallback wording/)).toBeNull();
+      expect(screen.queryByText(rawMessage)).toBeNull();
+    });
+
+    it('falls back to the server message when a preview failure code has no shipped translation', async () => {
+      mockPreviewGroupedInvoicesForSelectionInputs.mockResolvedValue({
+        success: false,
+        error: 'Billing cycle not found',
+      });
+
+      await selectParentAndClickPreview();
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/Billing cycle not found/).length).toBeGreaterThan(0);
       });
     });
 

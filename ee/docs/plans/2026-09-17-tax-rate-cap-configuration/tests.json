@@ -1,0 +1,308 @@
+[
+  {
+    "id": "T001",
+    "description": "Table-driven exact conversion tests cover localized ungrouped decimal input, whitespace, null/blank, zero, USD two digits, JPY zero digits, BHD three digits, and each currency's maximum-safe value.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003"
+    ],
+    "kind": "unit",
+    "verification": "taxCapForm.test.ts: exact USD/JPY/BHD and locale conversion."
+  },
+  {
+    "id": "T002",
+    "description": "Reject negatives including -0, excess fraction digits including trailing zeros, grouping/mixed separators, exponent/hex notation, symbols, embedded whitespace, malformed suffixes, NaN/Infinity, and one minor unit above MAX_SAFE_INTEGER without rounding.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F021"
+    ],
+    "kind": "unit",
+    "verification": "taxCapForm.test.ts plus rendered TaxRates invalid-input matrix."
+  },
+  {
+    "id": "T003",
+    "description": "Round-trip maximum-safe minor amounts through edit text and currency-coded list/detail formatting in dot- and comma-decimal locales without losing a final digit.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F014",
+      "F023"
+    ],
+    "kind": "unit",
+    "verification": "taxCapForm.test.ts: maximum-safe dot/comma edit and display; TaxCapFields exact hydration."
+  },
+  {
+    "id": "T004",
+    "description": "Strict cap normalization accepts PostgreSQL digit strings and safe numbers including zero; rejects unsafe, fractional numeric strings that Number would round, booleans, malformed notation, non-finite values, and negative values.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F008"
+    ],
+    "kind": "unit",
+    "verification": "taxCapInvoiceCompute.test.ts: strict numeric/string/boolean boundaries."
+  },
+  {
+    "id": "T005",
+    "description": "Rendered add/edit form tests prove blank submits null, zero submits 0, stored bigint-derived values hydrate exactly, cancel/reopen resets state, failed saves retain text, and duplicate save clicks produce one request.",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F017",
+      "F018",
+      "F026"
+    ],
+    "kind": "component",
+    "verification": "TaxRates.test.tsx: rendered real screen/action payloads, reopen, cancellation, failure, duplicate submission."
+  },
+  {
+    "id": "T006",
+    "description": "Rendered edit tests assert an untouched cap/currency pair is omitted, formatting-only changes are not dirty, changing then clearing sends null, zero is distinct from blank, and ordinary field changes preserve the cap.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F017",
+      "F018"
+    ],
+    "kind": "component",
+    "verification": "TaxRates.test.tsx and taxCapForm.test.ts: canonical dirty checks and omitted/null/zero payloads."
+  },
+  {
+    "id": "T007",
+    "description": "Currency interaction tests require a code for a new cap including zero, preserve an existing code, refuse silent reinterpretation on currency change, show applicability guidance, and keep the code when clearing the cap.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F015",
+      "F016",
+      "F019"
+    ],
+    "kind": "component",
+    "verification": "TaxCapFields.test.tsx, TaxRates.test.tsx and taxCapForm.test.ts: currency selection, reentry and clear."
+  },
+  {
+    "id": "T008",
+    "description": "Legacy capped-universal form tests cover nonzero and zero: show exact raw minor units rather than No cap, preserve on unrelated save, require explicit resolution with a monetary preview, and allow clear without selecting currency.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F014",
+      "F020"
+    ],
+    "kind": "component",
+    "verification": "TaxCapFields.test.tsx: both legacy zero and 500, explicit resolution; form/actions preserve/clear tests."
+  },
+  {
+    "id": "T009",
+    "description": "Validation tests use actual field events to produce each localized error class, assert no action call on invalid input, associate labels/help/errors, and focus the invalid cap or currency control.",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F026",
+      "F027"
+    ],
+    "kind": "component",
+    "verification": "TaxRates.test.tsx: localized error keys and invalid-control focus; live USD precision feedback."
+  },
+  {
+    "id": "T010",
+    "description": "Schema matrix covers create/update/response/advanced shapes, safe integer maximum, zero, null, omitted properties, currency codes, string/fractional/unsafe input rejection, and normalized PostgreSQL response values; no partial-update default may add a missing cap.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F004",
+      "F009"
+    ],
+    "kind": "schema",
+    "verification": "taxRateSchemas.test.ts and migrated-DB GET response normalization tests."
+  },
+  {
+    "id": "T011",
+    "description": "DB-backed action lifecycle on migrated schema creates a capped explicit-currency rate, reads the normalized response, updates its amount, preserves it on omitted update, clears to SQL NULL, sets numeric zero, and verifies each persisted row.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005",
+      "F006"
+    ],
+    "kind": "database",
+    "verification": "taxRateCaps.db.test.ts: action lifecycle and SQL bigint/null assertions."
+  },
+  {
+    "id": "T012",
+    "description": "DB-backed action guard matrix rejects invalid caps/currencies and attempts to unset currency while retaining a cap, accepts simultaneous clear, confirms no mutation after rejection, and verifies the parent negative-cap database constraint.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F006",
+      "F008",
+      "F029"
+    ],
+    "kind": "database",
+    "verification": "taxRateCaps.db.test.ts: action rejection and actual PostgreSQL check constraint/savepoint."
+  },
+  {
+    "id": "T013",
+    "description": "DB-backed legacy-pair tests preserve existing universal caps on omitted and identical explicit payloads, allow clear and explicit currency resolution, reject a changed cap without currency, and prove tenant-default-currency changes do not reinterpret explicit caps.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F007"
+    ],
+    "kind": "database",
+    "verification": "taxRateCaps.db.test.ts: legacy pair rules and unchanged GBP cap after tenant base currency change."
+  },
+  {
+    "id": "T014",
+    "description": "Authorization and tenant tests run real action queries for billing-read-only, missing create/update/read, unauthenticated, product-restricted, and cross-tenant requests; forged tenant fields and foreign rate IDs must not expose or mutate caps.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F008",
+      "F025"
+    ],
+    "kind": "database",
+    "verification": "taxRateCaps.db.test.ts: controlled auth/permission boundaries with real tenant queries; live dedicated billing-read-only user. Authentication itself remains the existing shared wrapper."
+  },
+  {
+    "id": "T015",
+    "description": "Tax-rates GET integration proves the body contains rate IDs and normalized cap/currency values rather than transactions; exercise pagination/filters, zero/null/legacy/max-safe responses, authentication, API/billing permissions, product access, and tenant isolation.",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F010",
+      "F011"
+    ],
+    "kind": "api-integration",
+    "verification": "taxRateCaps.db.test.ts: real GET handler/controller/service/SQL and pagination with controlled authentication boundary, 401/403 and scoped response matrix."
+  },
+  {
+    "id": "T016",
+    "description": "Rendered list/detail/composite tests show No cap, explicit-currency zero/amount, and unresolved legacy values; composite help states that regional contributions use the cap while component totals do not; no project/per-component controls are introduced.",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F022",
+      "F023",
+      "F024"
+    ],
+    "kind": "component",
+    "verification": "TaxCapFields.test.tsx: actual shared list/detail readout and composite messages; live read-only detail navigation."
+  },
+  {
+    "id": "T017",
+    "description": "Invoice integration creates/updates a cap through the same action contract used by the UI and generates real migrated-DB draft invoices through the manual flow: 100.00 at 10% produces 5.00, then 3.00, then 10.00 after clear, then 0.00 after zero.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F006",
+      "F012",
+      "F030"
+    ],
+    "kind": "database",
+    "verification": "Executed headed browser automation through actual manual UI and persisted drafts, backed by read-only SQL verification; see VALIDATION.md. The durable checked-in DB regression additionally exercises the same action-to-tax contract."
+  },
+  {
+    "id": "T018",
+    "description": "Automated-billing integration loads the persisted cap into the compute context and generates a draft through that path, comparing previews and persisted tax; test an explicit non-default invoice currency, a cap binding at 5.00, clear, and zero without substituting a mocked calculator.",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F013"
+    ],
+    "kind": "database",
+    "verification": "taxRateCaps.db.test.ts: real recurring previewInvoice + generateInvoice + persisted header/charge assertions, GBP contract vs USD client default, 500/null/zero. Only auth/analytics boundaries mocked."
+  },
+  {
+    "id": "T019",
+    "description": "Shared regional-calculator parity tests compare the parent and preloaded paths for binding and nonbinding caps, multiple rate contributions, zero, and the parent 325 at 1.1% plus 2.9% uncapped rounding regression.",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ],
+    "kind": "unit",
+    "verification": "taxCapInvoiceCompute.test.ts: shared parent/preloaded regional parity, binding caps and uncapped rounding."
+  },
+  {
+    "id": "T020",
+    "description": "Retain and run parent default/simple/progressive/regional/period suites: per-rate and per-segment caps, exempt/reverse-charge behavior, coverage gaps, exact arithmetic, and unchanged uncapped outputs; separately assert composite default totals remain uncapped while regional row contributions cap.",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F013",
+      "F024",
+      "F028"
+    ],
+    "kind": "regression",
+    "verification": "Parent calculateTax, calculateTaxForPeriod, thresholdsAndComposite and rateSelection suites passed."
+  },
+  {
+    "id": "T021",
+    "description": "Currency-selection integration proves matching explicit-currency rates apply, other currencies do not select them under existing default/regional rules, universal uncapped rates remain unchanged, and 0-/3-digit values reach tax in the intended minor units.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F005",
+      "F012",
+      "F013"
+    ],
+    "kind": "database",
+    "verification": "taxRateCaps.db.test.ts: JPY/BHD form units through persisted rate and TaxService; parent default/regional selection matrix."
+  },
+  {
+    "id": "T022",
+    "description": "Keyboard and viewport smoke exercises Tab/Enter/Escape, focus restoration, helper disclosure, Clear tax cap, sticky footer, 360px/desktop layouts, light/dark themes, long translations, and read-only row/detail behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F018",
+      "F022",
+      "F025",
+      "F026"
+    ],
+    "kind": "browser",
+    "verification": "Headed live 360px/desktop light/dark, pseudo yy, keyboard/clear/disclosure, read-only and focus-restoration retests; see evidence directory."
+  },
+  {
+    "id": "T023",
+    "description": "Locale/documentation contract checks cover all new keys in en/de/es/fr/it/nl/pl/pt/xx/yy, parameter parity, localized server errors, API minor-unit/null examples, no-UI statement removal, and accurate currency/composite/project distinctions.",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F011",
+      "F027",
+      "F028"
+    ],
+    "kind": "documentation",
+    "verification": "All ten locale namespaces and parameter parity validated; configuration/API/calculation documents reviewed."
+  },
+  {
+    "id": "T024",
+    "description": "Verify migrated CE and EE schemas have the inherited currency_code and cap_amount columns/constraint and can execute rate create/read/update; do not use source-only checks as schema evidence.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F029"
+    ],
+    "kind": "database",
+    "verification": "Actual migrated PostgreSQL columns/constraint/action tests passed under separate community and EE environment processes, using the same shared migrated test_database. Independent CE/EE stack deployments were not run."
+  },
+  {
+    "id": "T025",
+    "description": "Live smoke uses real Tax Rates controls to set 5.00, edit 3.00, clear, and set zero, reloads/reopens each state, and captures fresh draft totals 5.00/3.00/10.00/0.00 on a 100.00 taxable amount at 10%, plus read-only denial and a second calculation proving the cap is not invoice-wide; no direct DB cap writes.",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F015",
+      "F017",
+      "F018",
+      "F023",
+      "F025",
+      "F030"
+    ],
+    "kind": "live-smoke",
+    "verification": "Headed actual Tax Rates/invoice UI: set/edit/clear/zero, reload/reopen, read-only, and distinct-region invoice tax 10.00 with two 5.00 caps. No direct DB cap writes. See VALIDATION.md."
+  }
+]

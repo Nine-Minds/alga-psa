@@ -4,8 +4,10 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { IContact } from '@alga-psa/types';
 import { Flex, Text, Heading } from '@radix-ui/themes';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { QuickAddInteraction } from '../interactions/QuickAddInteraction';
 import { Button } from '@alga-psa/ui/components/Button';
+import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { Pen, Plus, ArrowLeft, ExternalLink } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useDrawer, useClientDrawer } from '@alga-psa/ui';
@@ -17,7 +19,7 @@ import InteractionsFeed from '../interactions/InteractionsFeed';
 import { IInteraction } from '@alga-psa/types';
 import { TagManager } from '@alga-psa/tags/components';
 import { getClientById } from '@alga-psa/clients/actions';
-import { updateContact } from '@alga-psa/clients/actions';
+import { updateContact, getContactsByClient } from '@alga-psa/clients/actions';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import type { IDocument } from '@alga-psa/types';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
@@ -96,6 +98,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
   const [error, setError] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [managerName, setManagerName] = useState<string | null>(null);
   const [isEditingClient, setIsEditingClient] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(contact.client_id || null);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('all');
@@ -227,6 +230,26 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   };
 
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!contact.manager_contact_id || !contact.client_id) {
+      setManagerName(null);
+      return;
+    }
+    (async () => {
+      try {
+        const rows = await getContactsByClient(contact.client_id as string, 'all');
+        if (cancelled || !Array.isArray(rows)) return;
+        setManagerName(rows.find((row) => row.contact_name_id === contact.manager_contact_id)?.full_name ?? null);
+      } catch (err) {
+        if (!cancelled) setManagerName(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [contact.manager_contact_id, contact.client_id]);
+
   const getClientName = (clientId: string) => {
     const client = clients.find(c => c.client_id === clientId);
     return client ? client.client_name : t('contactDetailsView.empty.unknownClient', { defaultValue: 'Unknown Client' });
@@ -345,6 +368,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                 </div>
               )}
               <Heading size="6">{contact.full_name}</Heading>
+              {contact.contact_kind === 'shared_mailbox' && <Badge variant="default-muted">{t('contactsPage.sharedMailbox')}</Badge>}
             </div>
             <div className="flex items-center space-x-2">
               {(!quickView || isInDrawer) && (
@@ -432,7 +456,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                   <div className="space-y-2">
                     {contact.phone_numbers.map((phone) => (
                       <div key={phone.contact_phone_number_id} className="rounded-md border border-gray-200 px-3 py-2">
-                        <div className="text-sm font-medium text-gray-900">{phone.phone_number}</div>
+                        <div className="text-sm font-medium text-gray-900"><PhoneText value={phone.phone_number} extension={phone.extension} defaultCountry={clients.find((client) => client.client_id === contact.client_id)?.location_country_code} /></div>
                         <div className="text-xs text-gray-500">
                           {getPhoneTypeLabel(phone)}
                           {phone.is_default ? ` • ${t('contactDetailsView.fields.defaultPhone', { defaultValue: 'Default' })}` : ''}
@@ -487,6 +511,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                 )}
               </td>
             </tr>
+            <TableRow label={t('contactDetailsView.fields.reportsTo', { defaultValue: 'Reports to' })} value={contact.manager_contact_id ? (managerName ?? '…') : t('contactDetailsView.empty.noManager', { defaultValue: 'No manager' })} />
             <TableRow label={t('contactDetailsView.fields.role', { defaultValue: 'Role' })} value={contact.role || t('contactDetailsView.empty.notSet', { defaultValue: 'Not set' })} />
             <TableRow label={t('contactDetailsView.fields.status', { defaultValue: 'Status' })} value={contact.is_inactive ? t('contactDetailsView.status.inactive', { defaultValue: 'Inactive' }) : t('contactDetailsView.status.active', { defaultValue: 'Active' })} />
             <TableRow label={t('contactDetailsView.fields.createdAt', { defaultValue: 'Created At' })} value={new Date(contact.created_at).toLocaleString()} />

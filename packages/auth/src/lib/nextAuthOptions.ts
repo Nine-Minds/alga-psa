@@ -23,10 +23,20 @@ import { isEnterprise } from "@alga-psa/core/features";
 import { getLicenseStateRow, resolveSelfHostTier } from "@alga-psa/licensing";
 import { getSSORegistry, registerSSOProvider } from "./sso/registry";
 import { loadEnterpriseSsoProviderRegistryImpl } from "./sso/enterpriseRegistryEntry";
-import type { OAuthProfileMappingInput, OAuthProfileMappingResult, OAuthLinkProvider } from "./sso/types";
-import { OAuthAccountLinkConflictError } from "./sso/types";
+import type {
+    OAuthProfileMappingInput,
+    OAuthProfileMappingResult,
+    OAuthLinkProvider,
+    OAuthMappingFailure,
+} from "./sso/types";
+import { isOAuthMappingFailure, OAuthAccountLinkConflictError } from "./sso/types";
+import { SSO_LINK_STATE_COOKIE, SSO_PROFILE_TAB_URL } from "./sso/linkStateCookie";
+import {
+    getMicrosoftSsoEmulatorEndpoints,
+    isMicrosoftSsoEmulatorEnabled,
+} from "./sso/microsoftSsoEmulator";
 import { mapCeOAuthProfileToExtendedUser } from "./sso/ceOAuthProfileMapper";
-import { cookies } from "next/headers.js";
+import { cookies, headers } from "next/headers.js";
 import {
     MSP_SSO_RESOLUTION_COOKIE,
     getMspSsoSigningSecret,
@@ -129,12 +139,34 @@ async function isKnownClientPortalHandoffRedirect(url: string, baseUrl: string):
 const SESSION_MAX_AGE = getSessionMaxAge();
 const SESSION_COOKIE = getSessionCookieConfig();
 
-async function rejectRevokedOrUnverifiableSession(
+/**
+ * What the sessions table had to say about a token.
+ *
+ * `unverified` is deliberately separate from `revoked`: returning null from the
+ * jwt callback does not merely deny a request, it deletes the session cookie,
+ * and a connection-pool timeout on this one lookup would then sign a working
+ * tenant out of the product. Authorization is unaffected by keeping the token —
+ * requireLiveSession and the express session gate each repeat this lookup and
+ * deny the request when it fails, so an unverified session reaches nothing.
+ */
+type TrackedSessionVerdict = 'live' | 'revoked' | 'unverified';
+
+async function logTrackedSessionRejection(reason: string): Promise<void> {
+    let requestId = 'unavailable';
+    try {
+        const requestHeaders = await headers();
+        const candidate = requestHeaders.get('x-request-id') || requestHeaders.get('x-correlation-id') || '';
+        if (/^[A-Za-z0-9._:-]{1,128}$/.test(candidate)) requestId = candidate;
+    } catch { /* Auth callbacks can also run outside a request context. */ }
+    console.warn('[auth] session_rejected', { reason, requestId });
+}
+
+async function checkTrackedSession(
     tenant: unknown,
     sessionId: unknown,
     userId: unknown,
     userType: unknown,
-): Promise<boolean> {
+): Promise<TrackedSessionVerdict> {
     if (
         typeof tenant !== 'string'
         || tenant.length === 0
@@ -144,18 +176,23 @@ async function rejectRevokedOrUnverifiableSession(
         || userId.length === 0
         || (userType !== 'internal' && userType !== 'client')
     ) {
-        console.error('[auth] Tracked session is missing required identity claims.');
-        return true;
+        await logTrackedSessionRejection('missing_identity_claims');
+        return 'revoked';
     }
 
     try {
-        return await UserSession.isRevokedOrIdentityMismatch(tenant, sessionId, {
+        const rejectionReason = await UserSession.getRejectionReason(tenant, sessionId, {
             userId,
             userType,
         });
-    } catch (error) {
-        console.error('[auth] Session revocation check failed closed:', error);
-        return true;
+        if (rejectionReason) {
+            await logTrackedSessionRejection(`durable_session_${rejectionReason}`);
+            return 'revoked';
+        }
+        return 'live';
+    } catch {
+        await logTrackedSessionRejection('durable_session_lookup_unavailable');
+        return 'unverified';
     }
 }
 
@@ -394,6 +431,53 @@ function buildGoogleProvider(clientId: string, clientSecret: string) {
     });
 }
 
+/**
+ * Microsoft sign-in, against Entra or — when the simulator gate is on — against
+ * the algasim Microsoft simulator. The simulator issues no signed id_token, so
+ * that branch runs as plain OAuth2 and resolves the account from Graph `/me`,
+ * which carries the same `mail`/`userPrincipalName` pair `profile()` reads.
+ */
+function buildAzureADProvider(config: {
+    clientId: string;
+    clientSecret: string;
+    authority: string;
+    checks?: Array<'pkce' | 'state'>;
+    profile: (profile: Record<string, any>) => Promise<ExtendedUser>;
+}) {
+    if (isMicrosoftSsoEmulatorEnabled()) {
+        const endpoints = getMicrosoftSsoEmulatorEndpoints(config.authority);
+        return {
+            id: 'azure-ad',
+            name: 'Microsoft',
+            type: 'oauth' as const,
+            clientId: config.clientId,
+            clientSecret: config.clientSecret,
+            checks: (config.checks ?? ['pkce', 'state']) as Array<'pkce' | 'state'>,
+            authorization: {
+                url: endpoints.authorization,
+                params: {
+                    scope: 'openid email profile https://graph.microsoft.com/User.Read',
+                },
+            },
+            token: {
+                url: endpoints.token,
+            },
+            userinfo: {
+                url: endpoints.userinfo,
+            },
+            profile: config.profile,
+        };
+    }
+
+    return AzureADProvider({
+        clientId: config.clientId,
+        clientSecret: config.clientSecret,
+        issuer: `https://login.microsoftonline.com/${config.authority}/v2.0`,
+        ...(config.checks ? { checks: config.checks } : {}),
+        profile: config.profile,
+    });
+}
+
 let enterpriseSsoRegistryInitPromise: Promise<void> | null = null;
 
 async function ensureEnterpriseSsoRegistryInitialized(): Promise<void> {
@@ -613,6 +697,7 @@ interface ExtendedUser {
     user_type: string;
     clientId?: string;
     contactId?: string;
+    authFailure?: OAuthMappingFailure;
     plan?: string;
     product_code?: 'psa' | 'algadesk';
     deviceInfo?: {
@@ -784,7 +869,7 @@ function parseStateValue(rawState: unknown, key: string): string | undefined {
 }
 
 const LINK_SIGNATURE_TTL_MS = 5 * 60 * 1000;
-const LINK_STATE_COOKIE = 'sso-link-state';
+const LINK_STATE_COOKIE = SSO_LINK_STATE_COOKIE;
 
 // Recompute the client-issued signature so we can validate the callback payload without reaching for shared code.
 function computeLinkSignature(secret: string, userId: string, nonce: string, issuedAt: number): string {
@@ -1047,6 +1132,34 @@ async function finalizePendingRememberedEmailCookie(): Promise<void> {
     }
 }
 
+// The client-portal sign-in page falls back to the tenant-discovery form when no
+// tenant is named, and that form shows no error — a mapping failure redirected
+// there without a tenant loses its message. The still-live SSO resolution cookie
+// names the tenant, so recover the public slug from it before it is cleared.
+async function readClientPortalSsoTenantSlug(): Promise<string | undefined> {
+    try {
+        const signingSecret = await getMspSsoSigningSecret();
+        if (!signingSecret) {
+            return undefined;
+        }
+
+        const store = await cookies();
+        const resolution = parseAndVerifyClientPortalSsoResolutionCookie({
+            value: store.get(CLIENT_PORTAL_SSO_RESOLUTION_COOKIE)?.value,
+            secret: signingSecret,
+        });
+        if (!resolution?.tenantId) {
+            return undefined;
+        }
+
+        const slug = buildTenantPortalSlug(resolution.tenantId);
+        return isValidTenantSlug(slug) ? slug : undefined;
+    } catch (error) {
+        console.warn('[client-portal-sso] failed to read tenant from resolution cookie', { error });
+        return undefined;
+    }
+}
+
 async function clearClientPortalSsoStateCookies(): Promise<void> {
     try {
         const store = await cookies();
@@ -1059,6 +1172,73 @@ async function clearClientPortalSsoStateCookies(): Promise<void> {
     } catch (error) {
         console.warn('[client-portal-sso] failed to clear state cookies', { error });
     }
+}
+
+// Auth.js swallows anything thrown from `profile()` into the unreadable
+// `error=Configuration` page, but it honours a string returned from
+// `callbacks.signIn` as a redirect target. Expected mapping failures therefore
+// arrive as a sentinel user and leave on an app page that can name the email the
+// provider presented.
+async function resolveOAuthFailureRedirect(
+    user: ExtendedUser | undefined,
+    providerId?: string | null,
+): Promise<string | null> {
+    if (!providerId || providerId === 'credentials' || !isOAuthMappingFailure(user)) {
+        return null;
+    }
+
+    const { code, providerEmail, userType } = user.authFailure;
+    // Reading the cookie also deletes it, so a failed attempt cannot reuse the
+    // signed link authorization; its presence is what marks profile link mode.
+    const linkState = await consumeLinkStateCookie(undefined);
+    const clientPortalTenantSlug =
+        userType === 'client' ? await readClientPortalSsoTenantSlug() : undefined;
+    await clearClientPortalSsoStateCookies();
+
+    console.warn('[auth] OAuth profile did not resolve to an AlgaPSA user', {
+        providerId,
+        code,
+        providerEmail,
+        userType,
+        linkMode: Boolean(linkState),
+    });
+
+    if (linkState) {
+        const linkParams = new URLSearchParams({ linkError: code });
+        if (providerEmail) {
+            linkParams.set('providerEmail', providerEmail);
+        }
+        // `tab` must be the tab *id* resolveUserProfileTab() knows; a label like
+        // "Single Sign-On" silently falls back to the Profile tab and the banner
+        // below never renders.
+        return `${SSO_PROFILE_TAB_URL}&${linkParams.toString()}`;
+    }
+
+    const params = new URLSearchParams({ error: 'AccessDenied', reason: code });
+    if (providerEmail) {
+        params.set('providerEmail', providerEmail);
+    }
+    // Without the slug the portal page renders tenant discovery instead of the
+    // branded sign-in form that carries the message.
+    if (clientPortalTenantSlug) {
+        params.set('tenant', clientPortalTenantSlug);
+    }
+
+    // Target the concrete sign-in pages rather than the /auth/signin dispatcher
+    // so the params survive the redirect chain.
+    const signInPath = userType === 'client' ? '/auth/client-portal/signin' : '/auth/msp/signin';
+    return `${signInPath}?${params.toString()}`;
+}
+
+// Defense in depth for the jwt callback: returning a redirect string from
+// `callbacks.signIn` already stops Auth.js before it mints a token, so a
+// sentinel user (or any user without an AlgaPSA id) reaching this point must
+// never become a session.
+function isUnresolvedOAuthUser(user: ExtendedUser | null | undefined): boolean {
+    if (!user) {
+        return false;
+    }
+    return isOAuthMappingFailure(user) || typeof user.id !== 'string' || user.id.length === 0;
 }
 
 function extractProviderAccountId(
@@ -1374,10 +1554,10 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
             : []),
         ...(secrets.microsoftClientId && secrets.microsoftClientSecret
             ? [
-                AzureADProvider({
+                buildAzureADProvider({
                     clientId: secrets.microsoftClientId,
                     clientSecret: secrets.microsoftClientSecret,
-                    issuer: `https://login.microsoftonline.com/${secrets.microsoftTenantId || 'common'}/v2.0`,
+                    authority: secrets.microsoftTenantId || 'common',
                     checks: ['pkce', 'state'],
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
                         const clientPortalHints = await getClientPortalSsoProfileHints('azure-ad');
@@ -1423,6 +1603,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 twoFactorCode: { label: "2FA Code", type: "text" },
                 userType: { label: "User Type", type: "text" },
                 tenant: { label: "Tenant", type: "text" },
+                portalDomain: { label: "Portal Domain", type: "text" },
                 captchaToken: { label: "Captcha Token", type: "text" },
             },
             async authorize(credentials, request): Promise<ExtendedUser | null> {
@@ -1445,6 +1626,12 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 try {
                     const tenantSlug = typeof credentials?.tenant === 'string'
                         ? credentials.tenant.trim().toLowerCase()
+                        : undefined;
+                    // Vanity sign-in that round-tripped through the query string has
+                    // the portal host but no slug; authenticateUser resolves the
+                    // tenant from it so the lookup is never unscoped.
+                    const portalDomainHint = typeof credentials?.portalDomain === 'string'
+                        ? credentials.portalDomain.trim().toLowerCase() || undefined
                         : undefined;
 
                     if (tenantSlug && !isValidTenantSlug(tenantSlug)) {
@@ -1489,6 +1676,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         credentials.userType as string,
                         {
                             tenantSlug,
+                            portalDomain: portalDomainHint,
                             requireTenantMatch: Boolean(tenantSlug),
                         }
                     );
@@ -1688,6 +1876,9 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
     pages: {
         signIn: '/auth/signin', // This will redirect to the appropriate page
         signOut: '/auth/signin', // After sign out, go to the redirect page
+        // Keep residual non-client-safe failures (error=Configuration) on an
+        // app-styled page instead of the raw Auth.js error page.
+        error: '/auth/signin',
     },
     session: {
         strategy: "jwt",
@@ -1699,6 +1890,11 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
             const providerId = account?.provider;
             const extendedUser = user as ExtendedUser | undefined;
             const request = (context as any).request; // NextAuth v5 runtime provides request
+
+            const failureRedirect = await resolveOAuthFailureRedirect(extendedUser, providerId);
+            if (failureRedirect) {
+                return failureRedirect;
+            }
 
             if (extendedUser && providerId && providerId !== 'credentials') {
                 // NextAuth v5 can sometimes override the user.id with a random UUID.
@@ -1890,6 +2086,14 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
 	                hasUser: !!user
 	            });
 
+            if (isUnresolvedOAuthUser(user as ExtendedUser | undefined)) {
+                console.warn('[auth] refusing to mint a token for an unresolved OAuth profile', {
+                    email: (user as ExtendedUser)?.email,
+                    code: (user as ExtendedUser)?.authFailure?.code,
+                });
+                return token;
+            }
+
 	            if (user) {
 	                const extendedUser = user as ExtendedUser;
 	                console.log('JWT callback - new user login:', {
@@ -2010,14 +2214,20 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
 
             // Check durable revocation and canonical identity state on every
             // authenticated request. Missing, untracked, or mismatched sessions
-            // fail closed.
-            if (await rejectRevokedOrUnverifiableSession(
+            // fail closed. A lookup that could not be completed leaves the
+            // cookie alone and skips the writes below; the request itself is
+            // still denied downstream, where the same check is repeated.
+            const trackedSession = await checkTrackedSession(
                 token.tenant,
                 token.session_id,
                 token.id || token.sub,
                 token.user_type,
-            )) {
+            );
+            if (trackedSession === 'revoked') {
                 return null;
+            }
+            if (trackedSession === 'unverified') {
+                return token;
             }
 
             // Slide the DB session expiry to track the rolling JWT so an active session
@@ -2096,6 +2306,19 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
         async session({ session, token }: any) {
             if (token.error === "TokenValidationError") {
                 // If there was an error during token validation, return a special session
+                return { expires: "0" };
+            }
+
+            // A token with no AlgaPSA user id never belonged to a resolved user
+            // (e.g. an OAuth profile that matched nobody); present it as signed out
+            // instead of a session whose user.id is an empty string.
+            const tokenUserId = typeof token.id === 'string' && token.id.length > 0
+                ? token.id
+                : typeof token.sub === 'string' && token.sub.length > 0
+                    ? token.sub
+                    : '';
+            if (!tokenUserId) {
+                console.warn('[auth] session requested for a token without a user id; treating as unauthenticated');
                 return { expires: "0" };
             }
 
@@ -2192,10 +2415,10 @@ export const options: NextAuthConfig = {
         ...(process.env.MICROSOFT_OAUTH_CLIENT_ID &&
         process.env.MICROSOFT_OAUTH_CLIENT_SECRET
             ? [
-                AzureADProvider({
+                buildAzureADProvider({
                     clientId: process.env.MICROSOFT_OAUTH_CLIENT_ID as string,
                     clientSecret: process.env.MICROSOFT_OAUTH_CLIENT_SECRET as string,
-                    issuer: `https://login.microsoftonline.com/${process.env.MICROSOFT_OAUTH_TENANT_ID || 'common'}/v2.0`,
+                    authority: process.env.MICROSOFT_OAUTH_TENANT_ID || 'common',
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
                         const emailCandidate =
                             profile.email ??
@@ -2237,6 +2460,7 @@ export const options: NextAuthConfig = {
                 twoFactorCode: { label: "2FA Code", type: "text" },
                 userType: { label: "User Type", type: "text" },
                 tenant: { label: "Tenant", type: "text" },
+                portalDomain: { label: "Portal Domain", type: "text" },
                 captchaToken: { label: "Captcha Token", type: "text" },
             },
             async authorize(credentials, request): Promise<ExtendedUser | null> {
@@ -2259,6 +2483,12 @@ export const options: NextAuthConfig = {
                 try {
                     const tenantSlug = typeof credentials?.tenant === 'string'
                         ? credentials.tenant.trim().toLowerCase()
+                        : undefined;
+                    // Vanity sign-in that round-tripped through the query string has
+                    // the portal host but no slug; authenticateUser resolves the
+                    // tenant from it so the lookup is never unscoped.
+                    const portalDomainHint = typeof credentials?.portalDomain === 'string'
+                        ? credentials.portalDomain.trim().toLowerCase() || undefined
                         : undefined;
 
                     if (tenantSlug && !isValidTenantSlug(tenantSlug)) {
@@ -2300,6 +2530,7 @@ export const options: NextAuthConfig = {
                         credentials.userType as string,
                         {
                             tenantSlug,
+                            portalDomain: portalDomainHint,
                             requireTenantMatch: Boolean(tenantSlug),
                         }
                     );
@@ -2499,6 +2730,9 @@ export const options: NextAuthConfig = {
     pages: {
         signIn: '/auth/signin', // This will redirect to the appropriate page
         signOut: '/auth/signin', // After sign out, go to the redirect page
+        // Keep residual non-client-safe failures (error=Configuration) on an
+        // app-styled page instead of the raw Auth.js error page.
+        error: '/auth/signin',
     },
     session: {
         strategy: "jwt",
@@ -2517,6 +2751,11 @@ export const options: NextAuthConfig = {
             // }, extendedUser.id);
             const providerId = account?.provider;
             const extendedUser = user as ExtendedUser | undefined;
+
+            const failureRedirect = await resolveOAuthFailureRedirect(extendedUser, providerId);
+            if (failureRedirect) {
+                return failureRedirect;
+            }
 
             if (extendedUser && providerId && providerId !== 'credentials') {
                 if (account?.providerAccountId) {
@@ -2657,6 +2896,14 @@ export const options: NextAuthConfig = {
                 hasUser: !!user
             });
 
+            if (isUnresolvedOAuthUser(user as ExtendedUser | undefined)) {
+                console.warn('[auth] refusing to mint a token for an unresolved OAuth profile', {
+                    email: (user as ExtendedUser)?.email,
+                    code: (user as ExtendedUser)?.authFailure?.code,
+                });
+                return token;
+            }
+
 	            if (user) {
 	                const extendedUser = user as ExtendedUser;
 	                console.log('JWT callback - new user login:', {
@@ -2777,14 +3024,20 @@ export const options: NextAuthConfig = {
 
             // Check durable revocation and canonical identity state on every
             // authenticated request. Missing, untracked, or mismatched sessions
-            // fail closed.
-            if (await rejectRevokedOrUnverifiableSession(
+            // fail closed. A lookup that could not be completed leaves the
+            // cookie alone and skips the writes below; the request itself is
+            // still denied downstream, where the same check is repeated.
+            const trackedSession = await checkTrackedSession(
                 token.tenant,
                 token.session_id,
                 token.id || token.sub,
                 token.user_type,
-            )) {
+            );
+            if (trackedSession === 'revoked') {
                 return null;
+            }
+            if (trackedSession === 'unverified') {
+                return token;
             }
 
             // Slide the DB session expiry to track the rolling JWT so an active session
@@ -2862,6 +3115,19 @@ export const options: NextAuthConfig = {
         async session({ session, token }: any) {
             if (token.error === "TokenValidationError") {
                 // If there was an error during token validation, return a special session
+                return { expires: "0" };
+            }
+
+            // A token with no AlgaPSA user id never belonged to a resolved user
+            // (e.g. an OAuth profile that matched nobody); present it as signed out
+            // instead of a session whose user.id is an empty string.
+            const tokenUserId = typeof token.id === 'string' && token.id.length > 0
+                ? token.id
+                : typeof token.sub === 'string' && token.sub.length > 0
+                    ? token.sub
+                    : '';
+            if (!tokenUserId) {
+                console.warn('[auth] session requested for a token without a user id; treating as unauthenticated');
                 return { expires: "0" };
             }
 

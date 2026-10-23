@@ -1,6 +1,7 @@
 {
   "welcome": {
     "title": "Benvenuto nel tuo centro di comando MSP",
+    "titleBranded": "Benvenuto nel centro di comando di {{companyName}}",
     "description": "Monitora l'avanzamento dell'onboarding, configura i servizi critici e mantieni coerente l'esperienza di ogni cliente.",
     "titleCommunity": "Bentornato",
     "descriptionCommunity": "Accedi rapidamente a ticket, pianificazione, progetti e report dalla dashboard."
@@ -110,7 +111,9 @@
       "hiding": "Nascondimento...",
       "hide": "Nascondi",
       "dismiss": "Nascondi {{title}}",
-      "restoring": "Ripristino..."
+      "restoring": "Ripristino...",
+      "hideSection": "Nascondi sezione",
+      "hidingSection": "Sezione in fase di occultamento…"
     },
     "hidden": {
       "title": "Schede di configurazione nascoste ({{count}})",
@@ -179,7 +182,14 @@
     },
     "errors": {
       "dismissFailed": "Impossibile nascondere il passaggio di onboarding.",
-      "restoreFailed": "Impossibile ripristinare il passaggio di onboarding."
+      "restoreFailed": "Impossibile ripristinare il passaggio di onboarding.",
+      "dismissSectionFailed": "Impossibile nascondere la sezione di configurazione.",
+      "restoreSectionFailed": "Impossibile ripristinare la sezione di configurazione."
+    },
+    "preferences": {
+      "title": "Preferenze della dashboard",
+      "description": "La sezione di configurazione completata è nascosta dalla dashboard.",
+      "restoreSection": "Ripristina la sezione di configurazione"
     }
   },
   "greeting": {

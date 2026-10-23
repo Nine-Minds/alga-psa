@@ -7,7 +7,7 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { useContentCardVariant } from '@alga-psa/ui/components';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
-import { formatMinutesAsHoursAndMinutes, getUserTimeZone } from '@alga-psa/core';
+import { formatMinutesAsHoursAndMinutes, getUserTimeZone, workedMinutes } from '@alga-psa/core';
 import { formatTicketDateTime } from '../../lib/ticketDateTimeFormat';
 import type {
   TicketTimeEntriesSummary,
@@ -18,7 +18,7 @@ interface TicketTimeEntriesProps {
   id?: string;
   ticketId: string;
   currentUserId: string;
-  dateTimeFormat?: string;
+  showWeekday?: boolean;
   /**
    * Increment this value to force the panel to re-fetch (e.g. after a new entry is saved).
    */
@@ -60,7 +60,7 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
   id,
   ticketId,
   currentUserId,
-  dateTimeFormat = 'MMM d, yyyy h:mm a',
+  showWeekday = false,
   refreshKey = 0,
   onEditEntry,
   onDeleteEntry,
@@ -232,7 +232,7 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
                   key={entry.entry_id}
                   id={`${id}-mine-${entry.entry_id}`}
                   entry={entry}
-                  dateTimeFormat={dateTimeFormat}
+                  showWeekday={showWeekday}
                   timeZone={userTimeZone}
                   showUserName={false}
                   durationLabels={durationLabels}
@@ -275,7 +275,7 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
                   key={entry.entry_id}
                   id={`${id}-other-${entry.entry_id}`}
                   entry={entry}
-                  dateTimeFormat={dateTimeFormat}
+                  showWeekday={showWeekday}
                   timeZone={userTimeZone}
                   showUserName
                   durationLabels={durationLabels}
@@ -311,7 +311,7 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
 interface TimeEntryRowProps {
   id?: string;
   entry: TicketTimeEntrySummaryEntry;
-  dateTimeFormat: string;
+  showWeekday: boolean;
   timeZone: string;
   showUserName: boolean;
   durationLabels?: { hr?: string; hrs?: string; min?: string };
@@ -322,7 +322,7 @@ interface TimeEntryRowProps {
 const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
   id,
   entry,
-  dateTimeFormat,
+  showWeekday,
   timeZone,
   showUserName,
   durationLabels,
@@ -330,14 +330,14 @@ const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
   onDelete,
 }) => {
   const { t } = useTranslation('features/tickets');
-  const { locale } = useFormatters();
+  const { locale, dateFormat } = useFormatters();
   const startLabel = useMemo(() => {
     try {
-      return formatTicketDateTime(entry.start_time, dateTimeFormat, locale, timeZone);
+      return formatTicketDateTime(entry.start_time, locale, timeZone, dateFormat, showWeekday);
     } catch {
       return entry.start_time;
     }
-  }, [entry.start_time, timeZone, dateTimeFormat, locale]);
+  }, [entry.start_time, timeZone, dateFormat, showWeekday, locale]);
 
   const statusKey = entry.approval_status ?? 'DRAFT';
   const statusLabel = t(
@@ -346,6 +346,8 @@ const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
   );
   const canEdit = entry.is_own && Boolean(onEdit) && (statusKey === 'DRAFT' || statusKey === 'CHANGES_REQUESTED');
   const canDelete = entry.is_own && Boolean(onDelete) && (statusKey === 'DRAFT' || statusKey === 'CHANGES_REQUESTED');
+  // Billability is the persisted billing value, independent of worked duration.
+  const isBillable = entry.billable_duration > 0;
 
   return (
     <li
@@ -389,8 +391,13 @@ const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
+          <Badge variant={isBillable ? 'success' : 'default-muted'} size="sm">
+            {isBillable
+              ? t('timeEntries.billable', 'Billable')
+              : t('timeEntries.nonBillable', 'Non-billable')}
+          </Badge>
           <span className="font-semibold text-[rgb(var(--color-text-800))]">
-            {formatMinutesAsHoursAndMinutes(entry.billable_duration, durationLabels)}
+            {formatMinutesAsHoursAndMinutes(workedMinutes(entry), durationLabels)}
           </span>
         </div>
       </div>

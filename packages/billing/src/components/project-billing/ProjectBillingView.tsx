@@ -77,7 +77,7 @@ export default function ProjectBillingView({
     );
   }
 
-  const { config, entries, rollup, cap_usage, economics, overrides } = overview;
+  const { config, entries, rollup, cap_usage, economics, overrides, invoice_billing_currency } = overview;
 
   if (!config) {
     return (
@@ -169,7 +169,12 @@ export default function ProjectBillingView({
         </>
       ) : (
         <>
-          <CapPanel config={config} canManage={canManage} onChanged={onChanged} />
+          <CapPanel
+            config={config}
+            canManage={canManage}
+            invoiceCurrency={invoice_billing_currency}
+            onChanged={onChanged}
+          />
           <PhaseRateOverridesEditor
             overrides={overrides}
             phases={phases}
@@ -187,7 +192,12 @@ export default function ProjectBillingView({
       />
 
       <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
-        <BudgetVsActualCard config={config} rollup={rollup} capUsage={cap_usage} />
+        <BudgetVsActualCard
+          config={config}
+          rollup={rollup}
+          capUsage={cap_usage}
+          invoiceCurrency={invoice_billing_currency}
+        />
         <DeliveryEconomicsCard economics={economics} currency={config.currency} billingModel={config.billing_model} />
       </div>
 

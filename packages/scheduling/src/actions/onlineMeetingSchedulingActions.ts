@@ -4,12 +4,14 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { hasPermission, withAuth } from '@alga-psa/auth';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildScheduleEntryCreatedPayload } from '@alga-psa/workflow-streams';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import { IEditScope } from '@alga-psa/types';
 import type { IRecurrencePattern, IScheduleEntry, IUserWithRoles } from '@alga-psa/types';
 import { resolveTeamsMeetingService, type TeamsMeetingAttendee } from '../lib/teamsMeetingService';
 import { ensureCreatorAttendee } from '../lib/teamsMeetingContent';
+import { appendJoinUrlToInteractionNotes, appendJoinUrlToScheduleNotes } from '../lib/teamsJoinLinkNotes';
 
 export interface ScheduleTeamsMeetingInput {
   /** Required in create mode; ignored in existing-entry mode, where the entry's title is the subject. */
@@ -25,6 +27,8 @@ export interface ScheduleTeamsMeetingInput {
   contact_id?: string | null;
   ticket_id?: string | null;
   ticketId?: string | null;
+  opportunity_id?: string | null;
+  opportunityId?: string | null;
   notes?: string | null;
   attendees?: TeamsMeetingAttendee[];
   /** Who owns the logged interaction. Defaults to the creator. */
@@ -106,17 +110,6 @@ function capabilityError(reason?: string): string {
     default:
       return 'Microsoft Teams meeting was not created because Teams is not configured for this tenant.';
   }
-}
-
-function appendJoinUrlToNotes(notes: string | null | undefined, joinUrl: string): string {
-  const baseNotes = notes?.trim() ?? '';
-  if (!baseNotes) {
-    return `Join Teams Meeting: ${joinUrl}`;
-  }
-  if (baseNotes.includes(joinUrl)) {
-    return baseNotes;
-  }
-  return `${baseNotes}\n\nJoin Teams Meeting: ${joinUrl}`;
 }
 
 function teamsSchedulingActionErrorMessage(error: unknown): string {
@@ -376,7 +369,7 @@ async function scheduleTeamsMeetingForExistingEntry(
           throw new Error(OCCURRENCE_NOT_AVAILABLE_ERROR);
         }
 
-        notes = appendJoinUrlToNotes(sourceEntry.notes, createdMeeting.joinWebUrl);
+        notes = appendJoinUrlToScheduleNotes(sourceEntry.notes, createdMeeting.joinWebUrl);
         // The engine's SINGLE scope is the occurrence-materialization path:
         // it extracts the occurrence into a standalone entry, copies the
         // master's assignments, and adds the exception to the master.
@@ -405,7 +398,7 @@ async function scheduleTeamsMeetingForExistingEntry(
           throw new Error(ENTRY_ALREADY_HAS_MEETING_ERROR);
         }
 
-        notes = appendJoinUrlToNotes(target.entry.notes, createdMeeting.joinWebUrl);
+        notes = appendJoinUrlToScheduleNotes(target.entry.notes, createdMeeting.joinWebUrl);
         await scopedDb.table('schedule_entries')
           .where({ entry_id: scheduleEntryId })
           .update({ notes, updated_at: new Date() });
@@ -553,8 +546,9 @@ export const scheduleTeamsMeeting = withAuth(async (
             // the dialog's choice, and falls back to whoever booked the meeting.
             user_id: input.interactionUserId?.trim() || user.user_id,
             ticket_id: input.ticket_id ?? input.ticketId ?? null,
+            opportunity_id: input.opportunity_id ?? input.opportunityId ?? null,
             title: `Online Meeting: ${subject}`,
-            notes: appendJoinUrlToNotes(input.notes, createdMeeting.joinWebUrl),
+            notes: appendJoinUrlToInteractionNotes(input.notes, createdMeeting.joinWebUrl),
             start_time: start,
             end_time: end,
             duration: Math.ceil((end.getTime() - start.getTime()) / 60000),
@@ -571,7 +565,8 @@ export const scheduleTeamsMeeting = withAuth(async (
               : input.assignedUserIds?.length
                 ? input.assignedUserIds
                 : [user.user_id];
-          const scheduleNotes = appendJoinUrlToNotes(input.scheduleEntry?.notes ?? input.notes, createdMeeting.joinWebUrl);
+          // The calendar textarea is plain text; QuickAddInteraction hands us BlockNote JSON.
+          const scheduleNotes = appendJoinUrlToScheduleNotes(input.scheduleEntry?.notes ?? input.notes, createdMeeting.joinWebUrl);
           const entry = await ScheduleEntry.create(
             trx,
             tenant,
@@ -640,18 +635,10 @@ export const scheduleTeamsMeeting = withAuth(async (
 
       for (const scheduleEvent of scheduleEvents) {
         try {
-          await publishEvent({
-            eventType: 'SCHEDULE_ENTRY_CREATED',
-            payload: {
-              tenantId: tenant,
-              userId: user.user_id,
-              entryId: scheduleEvent.entry.entry_id,
-              changes: {
+          await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_CREATED', payload: buildScheduleEntryCreatedPayload({ userId: user.user_id, entryId: scheduleEvent.entry.entry_id, changes: {
                 after: scheduleEvent.entry,
                 assignedUserIds: scheduleEvent.assignedUserIds,
-              },
-            },
-          });
+              } }), ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } } });
         } catch (eventError) {
           console.error('[scheduleTeamsMeeting] Failed to publish SCHEDULE_ENTRY_CREATED event', eventError);
         }

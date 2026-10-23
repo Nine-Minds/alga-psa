@@ -8,24 +8,45 @@ import React, {
   useTransition,
 } from "react";
 import dynamic from "next/dynamic";
-import type { ContractDraftSimulationInput } from "@alga-psa/types";
+import { v4 as uuidv4 } from "uuid";
+import type {
+  ContractDraftDiscount,
+  ContractDraftSimulationInput,
+  ContractWizardFixedLine,
+  FixedPricingBasis,
+} from "@alga-psa/types";
 import { Dialog } from "@alga-psa/ui/components/Dialog";
 import { WizardProgress } from "@alga-psa/ui/components/onboarding/WizardProgress";
 import { WizardNavigation } from "@alga-psa/ui/components/onboarding/WizardNavigation";
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
+import { Button } from "@alga-psa/ui/components/Button";
 import { ContractBasicsStep } from "./wizard-steps/ContractBasicsStep";
 import { FixedFeeServicesStep } from "./wizard-steps/FixedFeeServicesStep";
 import { ProductsStep } from "./wizard-steps/ProductsStep";
 import { HourlyServicesStep } from "./wizard-steps/HourlyServicesStep";
+import {
+  prepaidLineDraftFromSubmission,
+  prepaidLineDraftsToSubmission,
+  type PrepaidBlockLineDraft,
+  type PrepaidBlockLineSubmission,
+} from "./prepaidBlockConfigDraft";
 import { UsageBasedServicesStep } from "./wizard-steps/UsageBasedServicesStep";
 import { ReviewContractStep } from "./wizard-steps/ReviewContractStep";
+import { ContractDiscountsPanel } from "./wizard-steps/ContractDiscountsPanel";
+import { ContractCreatedConfirmation } from "./wizard-steps/ContractCreatedConfirmation";
+import {
+  TemplateLinesStep,
+  TemplateLinesReview,
+} from "./wizard-steps/TemplateLinesStep";
 import {
   createClientContractFromWizard,
   listContractTemplatesForWizard,
-  getContractTemplateSnapshotForClientWizard,
+  getContractTemplateLinesForClientWizard,
   ClientContractWizardSubmission,
-  ClientTemplateSnapshot,
+  ClientTemplateLineEditInput,
+  ClientTemplateLinesView,
 } from "@alga-psa/billing/actions/contractWizardActions";
+import { isRecurringChangeConfirmation } from "@alga-psa/billing/actions/contractWizardActionErrors";
 import { getDefaultBillingSettings } from "@alga-psa/billing/actions/billingSettingsActions";
 import { getClientByIdForBilling } from "@alga-psa/billing/actions/billingClientsActions";
 import {
@@ -38,7 +59,18 @@ import {
   getUnsupportedRecurringAuthoringCombination,
   getUnsupportedRecurringAuthoringCombinationMessage,
 } from "@shared/billingClients/recurringAuthoringValidation";
-import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import { useFormatters, useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import type { ContractAuthoringRateSource } from "../../../lib/contractAuthoringRate";
+import {
+  createEmptyFixedLine,
+  isServicelessFixedLine,
+  meaningfulFixedLines,
+  projectFixedLinesForSubmission,
+} from "../../../lib/contractWizardFixedLines";
+import {
+  getFixedServiceBasisIssue,
+  hasBundleFixedService,
+} from "../../../lib/fixedServiceBasis";
 
 const REQUIRED_STEPS = [0, 5];
 const MIN_NOTICE_PERIOD_DAYS = 0;
@@ -143,6 +175,8 @@ export interface BucketPoolDraft {
 
 export interface ContractWizardData {
   client_id: string;
+  /** Billing profile the contract bills to; null falls back to the client default. */
+  billing_profile_id?: string | null;
   contract_name: string;
   start_date: string;
   end_date?: string;
@@ -158,12 +192,10 @@ export interface ContractWizardData {
   po_number?: string;
   po_amount?: number;
   po_required?: boolean;
-  fixed_services: Array<{
-    service_id: string;
-    service_name?: string;
-    quantity: number;
-    bucket_overlay?: BucketOverlayInput | null;
-  }>;
+  /** One entry per recurring Fixed contract line; a new wizard starts with one empty placeholder. */
+  fixed_lines: ContractWizardFixedLine[];
+  /** Server monthly fixed value of the saved draft being resumed; acknowledged on finalize if it changes. */
+  recurring_baseline?: { monthly_cents: number };
   product_services: Array<{
     service_id: string;
     service_name?: string;
@@ -171,8 +203,6 @@ export interface ContractWizardData {
     /** Optional per-unit override in cents (contract currency). */
     custom_rate?: number;
   }>;
-  fixed_base_rate?: number;
-  fixed_billing_frequency?: string;
   enable_proration: boolean;
   hourly_services: Array<{
     service_id: string;
@@ -191,15 +221,34 @@ export interface ContractWizardData {
     bucket_overlay?: BucketOverlayInput | null;
   }>;
   usage_billing_frequency?: string;
+  /** Prepaid Block lines being authored (each becomes its own Hourly line plus block config). */
+  prepaid_block_drafts?: PrepaidBlockLineDraft[];
+  /**
+   * Server-shaped Prepaid Block lines of a resumed draft contract. Only read by
+   * `buildInitialContractWizardData`, which turns them into `prepaid_block_drafts`.
+   */
+  prepaid_block_lines?: PrepaidBlockLineSubmission[];
   /** Flag-on line-level bucket pools (weighted-burn model), materialized after the line is created. */
   bucket_pools?: BucketPoolDraft[];
+  /**
+   * Contract-wide automatic discounts authored here. They are written with the
+   * contract on Finish Setup; a saved draft keeps its lines only.
+   */
+  discounts?: ContractDraftDiscount[];
   contract_id?: string;
   is_draft?: boolean;
+  /**
+   * Template the contract is created from. When set the server clones every
+   * template line; the flat `*_services` arrays above are unused in this mode.
+   */
   template_id?: string;
+  /** Per-line edits (keyed by template line id) applied on top of the clone. */
+  template_lines?: ClientTemplateLineEditInput[];
 }
 
 export const createDefaultContractWizardData = (): ContractWizardData => ({
   client_id: "",
+  billing_profile_id: null,
   contract_name: "",
   start_date: "",
   end_date: undefined,
@@ -212,16 +261,18 @@ export const createDefaultContractWizardData = (): ContractWizardData => ({
   billing_timing: "arrears",
   billing_frequency: "monthly",
   currency_code: "USD",
-  fixed_services: [],
+  fixed_lines: [createEmptyFixedLine(true)],
   product_services: [],
-  fixed_base_rate: undefined,
   enable_proration: true,
   hourly_services: [],
   minimum_billable_time: undefined,
   round_up_to_nearest: undefined,
   usage_services: [],
+  prepaid_block_drafts: [],
   bucket_pools: [],
+  discounts: [],
   template_id: undefined,
+  template_lines: undefined,
 });
 
 const normalizeRenewalMode = (
@@ -275,6 +326,17 @@ export const buildInitialContractWizardData = (
       editingContract.use_tenant_renewal_defaults;
   }
 
+  if (!initial.fixed_lines || initial.fixed_lines.length === 0) {
+    initial.fixed_lines = [createEmptyFixedLine(initial.enable_proration)];
+  }
+
+  if (editingContract?.prepaid_block_lines?.length) {
+    initial.prepaid_block_drafts = editingContract.prepaid_block_lines.map(
+      prepaidLineDraftFromSubmission,
+    );
+  }
+  delete initial.prepaid_block_lines;
+
   return initial;
 };
 
@@ -301,6 +363,12 @@ export function ContractWizard({
   initialClientId,
 }: ContractWizardProps) {
   const { t } = useTranslation("msp/contracts");
+  const { formatCurrency } = useFormatters();
+  const money = (minorUnits: number, currencyCode: string) =>
+    formatCurrency(minorUnits / 100, currencyCode || "USD", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   const initialWizardDataRef = useRef<ContractWizardData | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -308,6 +376,21 @@ export function ContractWizard({
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] =
     useState(false);
+  // Set when Save as Draft is pressed while wizard discounts are authored.
+  const [showDraftDiscountsDialog, setShowDraftDiscountsDialog] =
+    useState(false);
+  // Set once a contract with fixed-fee lines is created; the wizard then shows
+  // when it first invoices and only reports completion when that is dismissed.
+  const [createdContract, setCreatedContract] =
+    useState<ContractWizardData | null>(null);
+
+  // Set when the server reports that finishing/saving would change the draft's
+  // monthly recurring value; the operator must confirm before it is resubmitted.
+  const [pendingRecurringChange, setPendingRecurringChange] = useState<{
+    mode: "finish" | "draft";
+    baselineMonthlyCents: number;
+    resultingMonthlyCents: number;
+  } | null>(null);
 
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
@@ -315,7 +398,16 @@ export function ContractWizard({
     null,
   );
   const [templateError, setTemplateError] = useState<string | null>(null);
-  const [isTemplateLoading, startTemplateTransition] = useTransition();
+  const [isTemplateLoading] = useTransition();
+  const [templateView, setTemplateView] =
+    useState<ClientTemplateLinesView | null>(null);
+  const [isTemplateViewLoading, setIsTemplateViewLoading] = useState(false);
+  const [templateViewError, setTemplateViewError] = useState<string | null>(
+    null,
+  );
+  // Template whose name/description/frequency should seed the basics once its
+  // per-line view has loaded (set on an explicit pick, not on draft resume).
+  const applyTemplateDefaultsFor = useRef<string | null>(null);
 
   const [wizardData, setWizardData] = useState<ContractWizardData>(() => ({
     ...buildInitialContractWizardData(editingContract),
@@ -326,8 +418,17 @@ export function ContractWizard({
     [],
   );
 
+  const isTemplateMode = Boolean(wizardData.template_id);
+
   const stepLabels = useMemo(
-    () => [
+    () =>
+      isTemplateMode
+        ? [
+            t("wizard.steps.contractBasics", { defaultValue: "Contract Basics" }),
+            t("wizard.steps.templateLines", { defaultValue: "Template Lines" }),
+            t("wizard.steps.reviewCreate", { defaultValue: "Review & Create" }),
+          ]
+        : [
       t("wizard.steps.contractBasics", { defaultValue: "Contract Basics" }),
       t("wizard.steps.fixedFeeServices", {
         defaultValue: "Fixed Fee Services",
@@ -339,8 +440,13 @@ export function ContractWizard({
       }),
       t("wizard.steps.reviewCreate", { defaultValue: "Review & Create" }),
     ],
-    [t],
+    [t, isTemplateMode],
   );
+
+  // In template mode the per-type steps (fixed/products/hourly/usage) collapse
+  // into the single per-line template step; `activeStep` maps the visible
+  // position back to the logical step id the validation/rendering switch on.
+  const activeStep = isTemplateMode ? [0, 1, 5][currentStep] ?? 0 : currentStep;
 
   useEffect(() => {
     if (!open) {
@@ -353,6 +459,7 @@ export function ContractWizard({
     setErrors({});
     setCompletedSteps(new Set());
     setCurrentStep(0);
+    setCreatedContract(null);
 
     const initialWizardData = buildInitialContractWizardData(editingContract);
     if (!editingContract && initialClientId) {
@@ -419,10 +526,15 @@ export function ContractWizard({
     setErrors({});
     setCompletedSteps(new Set());
     setCurrentStep(0);
+    setCreatedContract(null);
   };
 
-  const updateData = (data: Partial<ContractWizardData>) => {
-    setWizardData((prev) => ({ ...prev, ...data }));
+  // A function update is resolved against the latest state inside the setter, so
+  // async callers (e.g. catalog-price prefill) never write back a stale snapshot.
+  const updateData = (
+    data: Partial<ContractWizardData> | ((prev: ContractWizardData) => Partial<ContractWizardData>),
+  ) => {
+    setWizardData((prev) => ({ ...prev, ...(typeof data === 'function' ? data(prev) : data) }));
   };
 
   const hasUnsavedChanges = useMemo(() => {
@@ -431,7 +543,38 @@ export function ContractWizard({
     return !isEqual(wizardData, initialWizardDataRef.current);
   }, [open, wizardData]);
 
+  // The simulator reloads its scenario whenever this input changes, so it is
+  // tied to the draft itself: a re-render that leaves the draft alone (a step
+  // change, a save in flight) must not disturb a projection on screen.
+  const draftSimulationInput = useMemo(
+    () =>
+      ({
+        ...wizardData,
+        fixed_lines: meaningfulFixedLines(wizardData.fixed_lines),
+        discounts: wizardData.discounts ?? [],
+        // Complete prepaid block lines only; incomplete drafts are not simulated (as on submit).
+        prepaid_block_lines: (() => {
+          const parsed = prepaidLineDraftsToSubmission(wizardData.prepaid_block_drafts);
+          return "lines" in parsed ? parsed.lines : [];
+        })(),
+      }) as ContractDraftSimulationInput,
+    [wizardData],
+  );
+
+  const handleConfirmationDone = () => {
+    const created = createdContract;
+    setCreatedContract(null);
+    if (created) {
+      onComplete?.(created);
+    }
+    onOpenChange(false);
+  };
+
   const handleCloseRequest = () => {
+    if (createdContract) {
+      handleConfirmationDone();
+      return;
+    }
     if (hasUnsavedChanges) {
       setShowUnsavedChangesDialog(true);
       return;
@@ -439,66 +582,90 @@ export function ContractWizard({
     onOpenChange(false);
   };
 
-  const applyTemplateSnapshot = (
-    snapshot: ClientTemplateSnapshot,
-    templateId: string,
-  ) => {
-    setWizardData((prev) => ({
-      ...prev,
-      template_id: templateId,
-      contract_name: snapshot.contract_name ?? prev.contract_name,
-      description: snapshot.description ?? prev.description,
-      billing_frequency: snapshot.billing_frequency ?? prev.billing_frequency,
-      cadence_owner: snapshot.cadence_owner ?? prev.cadence_owner,
-      billing_timing: snapshot.billing_timing ?? prev.billing_timing,
-      // currency_code is inherited from client, not from template (templates are currency-neutral)
-      fixed_services: snapshot.fixed_services ?? [],
-      product_services: snapshot.product_services ?? [],
-      fixed_base_rate: snapshot.fixed_base_rate,
-      enable_proration: snapshot.enable_proration ?? prev.enable_proration,
-      hourly_services: snapshot.hourly_services ?? [],
-      usage_services: snapshot.usage_services ?? [],
-      minimum_billable_time:
-        snapshot.minimum_billable_time ?? prev.minimum_billable_time,
-      round_up_to_nearest:
-        snapshot.round_up_to_nearest ?? prev.round_up_to_nearest,
-    }));
-  };
-
   const handleTemplateSelect = (templateId: string | null) => {
     setSelectedTemplateId(templateId);
+    setTemplateError(null);
+    setTemplateViewError(null);
     if (!templateId) {
-      setTemplateError(null);
-      updateData({ template_id: undefined });
+      applyTemplateDefaultsFor.current = null;
+      setTemplateView(null);
+      updateData({ template_id: undefined, template_lines: undefined });
       return;
     }
 
-    setTemplateError(null);
-    startTemplateTransition(async () => {
-      try {
-        const snapshot =
-          await getContractTemplateSnapshotForClientWizard(templateId);
-        if (
-          isActionMessageError(snapshot) ||
-          isActionPermissionError(snapshot)
-        ) {
-          setTemplateError(getErrorMessage(snapshot));
-          return;
-        }
-        applyTemplateSnapshot(snapshot, templateId);
-      } catch (error) {
-        console.error("Failed to load template snapshot", error);
-        setTemplateError(
-          t("wizard.errors.failedToLoadTemplateDetails", {
-            defaultValue: "Failed to load template details",
-          }),
-        );
-      }
+    // The template is cloned server-side line by line, so the flat per-type
+    // wizard state is cleared: it must not also be submitted.
+    applyTemplateDefaultsFor.current = templateId;
+    updateData({
+      template_id: templateId,
+      template_lines: [],
+      fixed_lines: [createEmptyFixedLine(wizardData.enable_proration)],
+      product_services: [],
+      hourly_services: [],
+      usage_services: [],
+      prepaid_block_drafts: [],
+      bucket_pools: [],
     });
   };
 
+  // Load the template's per-line view whenever the template or the client
+  // (hence the contract currency) changes.
+  useEffect(() => {
+    const templateId = wizardData.template_id;
+    if (!open || !templateId) {
+      setTemplateView(null);
+      return;
+    }
+    let cancelled = false;
+    setIsTemplateViewLoading(true);
+    setTemplateViewError(null);
+    getContractTemplateLinesForClientWizard(
+      templateId,
+      wizardData.client_id || undefined,
+    )
+      .then((view) => {
+        if (cancelled) return;
+        if (isActionMessageError(view) || isActionPermissionError(view)) {
+          const message = getErrorMessage(view);
+          setTemplateView(null);
+          setTemplateViewError(message);
+          setTemplateError(message);
+          return;
+        }
+        setTemplateView(view);
+        if (applyTemplateDefaultsFor.current === templateId) {
+          applyTemplateDefaultsFor.current = null;
+          setWizardData((prev) => ({
+            ...prev,
+            contract_name: view.contract_name ?? prev.contract_name,
+            description: view.description ?? prev.description,
+            billing_frequency: view.billing_frequency ?? prev.billing_frequency,
+          }));
+        }
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error("Failed to load template lines", error);
+        const message = t("wizard.errors.failedToLoadTemplateDetails", {
+          defaultValue: "Failed to load template details",
+        });
+        setTemplateView(null);
+        setTemplateViewError(message);
+        setTemplateError(message);
+      })
+      .finally(() => {
+        if (!cancelled) setIsTemplateViewLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, wizardData.template_id, wizardData.client_id, t]);
+
   const buildSubmissionData =
-    async (): Promise<ClientContractWizardSubmission> => {
+    async (
+      recurringChangeAck?: { baseline_monthly_cents: number },
+      options?: { includeDiscounts?: boolean },
+    ): Promise<ClientContractWizardSubmission> => {
       const useTenantDefaults = wizardData.use_tenant_renewal_defaults ?? true;
 
       let tenantDefaultRenewalMode:
@@ -536,6 +703,7 @@ export function ContractWizard({
         contract_name: wizardData.contract_name.trim(),
         description: wizardData.description?.trim() || undefined,
         client_id: wizardData.client_id || "",
+        billing_profile_id: wizardData.billing_profile_id ?? null,
         start_date: wizardData.start_date,
         renewal_mode: resolvedRenewalMode,
         notice_period_days: resolvedNoticePeriodDays,
@@ -547,12 +715,13 @@ export function ContractWizard({
         po_required: wizardData.po_required,
         po_number: wizardData.po_number,
         po_amount: wizardData.po_amount,
-        fixed_base_rate: wizardData.fixed_base_rate,
-        fixed_billing_frequency: wizardData.fixed_billing_frequency,
         enable_proration: wizardData.enable_proration,
         hourly_services: (wizardData.hourly_services ?? []).map(withoutLegacyBucketOverlay),
         hourly_billing_frequency: wizardData.hourly_billing_frequency,
-        fixed_services: wizardData.fixed_services ?? [],
+        // Explicitly project the public fixed-line fields so draft-only
+        // rate/source metadata never reaches the persisted submission.
+        // In template mode the template's lines are cloned server-side.
+        fixed_lines: wizardData.template_id ? [] : projectFixedLinesForSubmission(wizardData.fixed_lines ?? []),
         product_services: wizardData.product_services ?? [],
         usage_services: (wizardData.usage_services ?? []).map(withoutLegacyBucketOverlay),
         usage_billing_frequency: wizardData.usage_billing_frequency,
@@ -561,26 +730,45 @@ export function ContractWizard({
         billing_frequency: wizardData.billing_frequency,
         currency_code: wizardData.currency_code,
         template_id: wizardData.template_id,
+        template_lines: wizardData.template_id
+          ? (wizardData.template_lines ?? [])
+          : undefined,
+        // Standing discount terms are written only by Finish Setup; a draft
+        // keeps its lines, so Save as Draft submits none (the operator
+        // confirms that before it happens).
+        discounts: options?.includeDiscounts
+          ? (wizardData.discounts ?? [])
+          : undefined,
       };
+
+      // Prepaid Block lines are not cloned from a template; drafts with no service are dropped and
+      // invalid ones block Next/Finish (see the step-5 validation), so only valid entries get here.
+      if (!wizardData.template_id) {
+        const prepaid = prepaidLineDraftsToSubmission(wizardData.prepaid_block_drafts);
+        if ("lines" in prepaid && prepaid.lines.length > 0) {
+          submission.prepaid_block_lines = prepaid.lines;
+        }
+      }
 
       // Bucket authoring is line-level pools; conflicting legacy
       // bucket_overlay fields are stripped from every service above.
       submission.bucket_pools = wizardData.bucket_pools ?? [];
+      if (recurringChangeAck) {
+        submission.recurring_change_ack = recurringChangeAck;
+      }
       return submission;
     };
 
   const getRecurringAuthoringValidationError = (): string | null => {
     const unsupportedCombination = [
-      wizardData.fixed_services.length > 0
-        ? getUnsupportedRecurringAuthoringCombination({
-            lineType: "Fixed",
-            cadenceOwner: wizardData.cadence_owner,
-            billingTiming: wizardData.billing_timing,
-            billingFrequency:
-              wizardData.fixed_billing_frequency ??
-              wizardData.billing_frequency,
-          })
-        : null,
+      ...meaningfulFixedLines(wizardData.fixed_lines).map((line) =>
+        getUnsupportedRecurringAuthoringCombination({
+          lineType: "Fixed",
+          cadenceOwner: wizardData.cadence_owner,
+          billingTiming: line.billing_timing ?? wizardData.billing_timing,
+          billingFrequency: line.billing_frequency ?? wizardData.billing_frequency,
+        }),
+      ),
       wizardData.product_services.length > 0
         ? getUnsupportedRecurringAuthoringCombination({
             lineType: "Product",
@@ -589,11 +777,15 @@ export function ContractWizard({
             billingFrequency: wizardData.billing_frequency,
           })
         : null,
-      wizardData.hourly_services.length > 0
+      wizardData.hourly_services.length > 0 ||
+      (wizardData.prepaid_block_drafts ?? []).some((line) =>
+        line.services.some((service) => service.service_id),
+      )
         ? getUnsupportedRecurringAuthoringCombination({
             lineType: "Hourly",
             cadenceOwner: wizardData.cadence_owner,
-            billingTiming: wizardData.billing_timing,
+            // Hourly lines always bill in arrears, whatever the contract-wide timing says.
+            billingTiming: "arrears",
             billingFrequency:
               wizardData.hourly_billing_frequency ??
               wizardData.billing_frequency,
@@ -603,7 +795,8 @@ export function ContractWizard({
         ? getUnsupportedRecurringAuthoringCombination({
             lineType: "Usage",
             cadenceOwner: wizardData.cadence_owner,
-            billingTiming: wizardData.billing_timing,
+            // Usage lines always bill in arrears, whatever the contract-wide timing says.
+            billingTiming: "arrears",
             billingFrequency:
               wizardData.usage_billing_frequency ??
               wizardData.billing_frequency,
@@ -745,21 +938,51 @@ export function ContractWizard({
         }
         return true;
       case 1:
-        if (
-          wizardData.fixed_services.length > 0 &&
-          !wizardData.fixed_base_rate
-        ) {
-          setErrors((prev) => ({
-            ...prev,
-            [stepIndex]: t(
-              "wizard.validation.baseRateRequiredWhenFixedServices",
-              {
-                defaultValue:
-                  "Base rate is required when fixed services are included",
-              },
-            ),
-          }));
-          return false;
+        {
+          const lines = meaningfulFixedLines(wizardData.fixed_lines);
+          const basisIssue = lines
+            .flatMap((line) => line.services)
+            .filter((service) => service.service_id)
+            .map((service) => getFixedServiceBasisIssue(service))
+            .find((issue) => issue !== null);
+          if (basisIssue) {
+            const message =
+              basisIssue === "unit_rate_required"
+                ? t("wizard.validation.recurringUnitRateRequired", {
+                    defaultValue: "Enter a unit rate for each recurring service.",
+                  })
+                : basisIssue === "unit_quantity_not_whole"
+                  ? t("wizard.validation.recurringQuantityWholeNumber", {
+                      defaultValue: "Recurring quantity must be a whole number.",
+                    })
+                  : t("wizard.validation.fixedQuantityInvalid", {
+                      defaultValue: "Quantity must be zero or greater.",
+                    });
+            setErrors((prev) => ({ ...prev, [stepIndex]: message }));
+            return false;
+          }
+          // Each line's base rate is its bundle total: required only when that
+          // line has an allocation (bundle) member. Per-unit services bill
+          // quantity × unit rate and carry no share of it.
+          const lineMissingBaseRate = lines.find(
+            (line) =>
+              line.services.some((service) => service.service_id) &&
+              hasBundleFixedService(line.services.filter((service) => service.service_id)) &&
+              !line.base_rate,
+          );
+          if (lineMissingBaseRate) {
+            setErrors((prev) => ({
+              ...prev,
+              [stepIndex]: t(
+                "wizard.validation.baseRateRequiredWhenFixedServices",
+                {
+                  defaultValue:
+                    "Base rate is required when fixed services are included",
+                },
+              ),
+            }));
+            return false;
+          }
         }
         return true;
       case 2: {
@@ -778,10 +1001,32 @@ export function ContractWizard({
         return true;
       }
       case 5: {
+        if (wizardData.template_id) {
+          // Template mode: the lines (and their services) come from the
+          // template; recurring-combination checks were applied when the
+          // template was authored and are not re-derived from flat state.
+          if (
+            !templateView ||
+            !templateView.lines.some((line) => line.services.length > 0)
+          ) {
+            setErrors((prev) => ({
+              ...prev,
+              [stepIndex]: t("wizard.validation.addAtLeastOneService", {
+                defaultValue:
+                  "Add at least one service before creating the contract",
+              }),
+            }));
+            return false;
+          }
+          return true;
+        }
         const hasServices =
-          wizardData.fixed_services.length > 0 ||
+          meaningfulFixedLines(wizardData.fixed_lines).length > 0 ||
           wizardData.product_services.length > 0 ||
           wizardData.hourly_services.length > 0 ||
+          (wizardData.prepaid_block_drafts ?? []).some((line) =>
+            line.services.some((service) => service.service_id),
+          ) ||
           !!(wizardData.usage_services && wizardData.usage_services.length > 0);
         if (!hasServices) {
           setErrors((prev) => ({
@@ -789,6 +1034,45 @@ export function ContractWizard({
             [stepIndex]: t("wizard.validation.addAtLeastOneService", {
               defaultValue:
                 "Add at least one service before creating the contract",
+            }),
+          }));
+          return false;
+        }
+        const prepaidParsed = prepaidLineDraftsToSubmission(wizardData.prepaid_block_drafts);
+        if ("errors" in prepaidParsed) {
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: t("wizardPrepaidBlock.validation.invalidBlock", {
+              defaultValue:
+                "Complete the block size, price and trigger settings for every prepaid block line before finishing.",
+            }),
+          }));
+          return false;
+        }
+        const unpricedPrepaid = prepaidParsed.lines
+          .flatMap((line) => line.services)
+          .find((service) => !(service.hourly_rate && service.hourly_rate > 0));
+        if (unpricedPrepaid) {
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: t("wizardPrepaidBlock.validation.rateRequired", {
+              defaultValue:
+                'Prepaid block service "{{serviceName}}" needs an hourly rate above zero (hours beyond the block bill at that rate).',
+              serviceName: unpricedPrepaid.service_name || unpricedPrepaid.service_id,
+            }),
+          }));
+          return false;
+        }
+        // A line with a recurring amount but no service cannot be billed, so it
+        // blocks Finish. Save Draft keeps such a line as-is.
+        const servicelessLine = wizardData.fixed_lines.find(isServicelessFixedLine);
+        if (servicelessLine) {
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: t("wizard.validation.fixedLineNoService", {
+              defaultValue:
+                'Fixed line "{{lineName}}" has a recurring amount but no service to bill it on. Add a service before finishing.',
+              lineName: servicelessLine.contract_line_name?.trim() || wizardData.contract_name,
             }),
           }));
           return false;
@@ -809,7 +1093,7 @@ export function ContractWizard({
   };
 
   const handleNext = () => {
-    if (!validateStep(currentStep)) {
+    if (!validateStep(activeStep)) {
       return;
     }
     if (currentStep < stepLabels.length - 1) {
@@ -827,7 +1111,7 @@ export function ContractWizard({
   const handleSkip = () => {
     if (
       currentStep < stepLabels.length - 1 &&
-      !REQUIRED_STEPS.includes(currentStep)
+      !REQUIRED_STEPS.includes(activeStep)
     ) {
       setCurrentStep((prev) => prev + 1);
     }
@@ -844,8 +1128,10 @@ export function ContractWizard({
     }
   };
 
-  const handleFinish = async () => {
-    if (!validateStep(currentStep)) {
+  const handleFinish = async (
+    recurringChangeAck?: { baseline_monthly_cents: number },
+  ) => {
+    if (!validateStep(activeStep)) {
       return;
     }
 
@@ -860,9 +1146,19 @@ export function ContractWizard({
 
     setIsLoading(true);
     try {
-      const submission = await buildSubmissionData();
+      const submission = await buildSubmissionData(recurringChangeAck, {
+        includeDiscounts: true,
+      });
       const result = await createClientContractFromWizard(submission);
 
+      if (isRecurringChangeConfirmation(result)) {
+        setPendingRecurringChange({
+          mode: "finish",
+          baselineMonthlyCents: result.baseline_monthly_cents,
+          resultingMonthlyCents: result.resulting_monthly_cents,
+        });
+        return;
+      }
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
         return;
@@ -881,6 +1177,10 @@ export function ContractWizard({
       };
 
       setWizardData(completedData);
+      if (meaningfulFixedLines(completedData.fixed_lines).length > 0) {
+        setCreatedContract(completedData);
+        return;
+      }
       onComplete?.(completedData);
       onOpenChange(false);
     } catch (error) {
@@ -896,7 +1196,19 @@ export function ContractWizard({
     }
   };
 
-  const handleSaveDraft = async () => {
+  // Save as Draft is requested with discounts authored: the draft cannot hold
+  // them, so the operator confirms dropping them before anything is written.
+  const requestSaveDraft = () => {
+    if ((wizardData.discounts?.length ?? 0) > 0) {
+      setShowDraftDiscountsDialog(true);
+      return;
+    }
+    void handleSaveDraft();
+  };
+
+  const handleSaveDraft = async (
+    recurringChangeAck?: { baseline_monthly_cents: number },
+  ) => {
     if (!validateStep(0)) {
       setCurrentStep(0);
       return;
@@ -922,13 +1234,36 @@ export function ContractWizard({
       return;
     }
 
+    // An incomplete prepaid block line would be dropped from the draft, losing the author's work.
+    if (
+      !wizardData.template_id &&
+      "errors" in prepaidLineDraftsToSubmission(wizardData.prepaid_block_drafts)
+    ) {
+      setErrors((prev) => ({
+        ...prev,
+        [currentStep]: t("wizardPrepaidBlock.validation.invalidBlock", {
+          defaultValue:
+            "Complete the block size, price and trigger settings for every prepaid block line before finishing.",
+        }),
+      }));
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const submission = await buildSubmissionData();
+      const submission = await buildSubmissionData(recurringChangeAck);
       const result = await createClientContractFromWizard(submission, {
         isDraft: true,
       });
 
+      if (isRecurringChangeConfirmation(result)) {
+        setPendingRecurringChange({
+          mode: "draft",
+          baselineMonthlyCents: result.baseline_monthly_cents,
+          resultingMonthlyCents: result.resulting_monthly_cents,
+        });
+        return;
+      }
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
         return;
@@ -965,7 +1300,7 @@ export function ContractWizard({
   };
 
   const renderStep = () => {
-    switch (currentStep) {
+    switch (activeStep) {
       case 0:
         return (
           <ContractBasicsStep
@@ -975,11 +1310,22 @@ export function ContractWizard({
             isLoadingTemplates={isLoadingTemplates}
             selectedTemplateId={selectedTemplateId}
             onTemplateSelect={handleTemplateSelect}
-            isTemplateLoading={isTemplateLoading}
+            isTemplateLoading={isTemplateLoading || isTemplateViewLoading}
             templateError={templateError}
           />
         );
       case 1:
+        if (isTemplateMode) {
+          return (
+            <TemplateLinesStep
+              view={templateView}
+              isLoading={isTemplateViewLoading}
+              loadError={templateViewError}
+              edits={wizardData.template_lines ?? []}
+              onChange={(edits) => updateData({ template_lines: edits })}
+            />
+          );
+        }
         return (
           <FixedFeeServicesStep data={wizardData} updateData={updateData} />
         );
@@ -992,9 +1338,41 @@ export function ContractWizard({
           <UsageBasedServicesStep data={wizardData} updateData={updateData} />
         );
       case 5:
+        if (isTemplateMode) {
+          // Simulation of a template-derived draft is deferred: the simulator
+          // consumes the flat per-type payload, which template mode no longer builds.
+          return (
+            <div className="space-y-6">
+              <div className="space-y-1">
+                <h3 className="text-base font-semibold">
+                  {wizardData.contract_name}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {wizardData.start_date} · {wizardData.currency_code}
+                </p>
+              </div>
+              {templateView && (
+                <TemplateLinesReview
+                  view={templateView}
+                  edits={wizardData.template_lines ?? []}
+                />
+              )}
+              <ContractDiscountsPanel
+                discounts={wizardData.discounts ?? []}
+                currencyCode={wizardData.currency_code}
+                onChange={(discounts) => updateData({ discounts })}
+              />
+            </div>
+          );
+        }
         return (
           <div className="space-y-6">
             <ReviewContractStep data={wizardData} />
+            <ContractDiscountsPanel
+              discounts={wizardData.discounts ?? []}
+              currencyCode={wizardData.currency_code}
+              onChange={(discounts) => updateData({ discounts })}
+            />
             <section
               aria-labelledby="draft-simulation-heading"
               className="space-y-3 border-t pt-6"
@@ -1013,9 +1391,7 @@ export function ContractWizard({
                     "Test this unsaved draft with assumed activity. Simulation does not save or issue anything.",
                 })}
               </p>
-              <ContractDraftSimulator
-                draft={wizardData as ContractDraftSimulationInput}
-              />
+              <ContractDraftSimulator draft={draftSimulationInput} />
             </section>
           </div>
         );
@@ -1024,17 +1400,27 @@ export function ContractWizard({
     }
   };
 
-  const wizardFooter = (
+  const wizardFooter = createdContract ? (
+    <div className="flex justify-end">
+      <Button
+        id="contract-wizard-created-done"
+        variant="default"
+        onClick={handleConfirmationDone}
+      >
+        {t("wizardCreated.done", { defaultValue: "Done" })}
+      </Button>
+    </div>
+  ) : (
     <WizardNavigation
       currentStep={currentStep}
       totalSteps={stepLabels.length}
       onBack={handleBack}
       onNext={handleNext}
       onSkip={handleSkip}
-      onFinish={handleFinish}
-      onSaveDraft={handleSaveDraft}
+      onFinish={() => handleFinish()}
+      onSaveDraft={() => requestSaveDraft()}
       isNextDisabled={isLoading}
-      isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
+      isSkipDisabled={REQUIRED_STEPS.includes(activeStep)}
       isLoading={isLoading}
       showSaveDraft
       backLabel={t("wizard.nav.back", { defaultValue: "Back" })}
@@ -1057,28 +1443,40 @@ export function ContractWizard({
         isOpen={open}
         onClose={handleCloseRequest}
         title={
-          editingContract
-            ? t("wizard.title.editContract", { defaultValue: "Edit Contract" })
-            : t("wizard.title.createNewContract", {
-                defaultValue: "Create New Contract",
-              })
+          createdContract
+            ? t("wizardCreated.title", { defaultValue: "Contract Created" })
+            : editingContract
+              ? t("wizard.title.editContract", {
+                  defaultValue: "Edit Contract",
+                })
+              : t("wizard.title.createNewContract", {
+                  defaultValue: "Create New Contract",
+                })
         }
         className="max-w-4xl max-h-[90vh]"
         disableFocusTrap
         footer={wizardFooter}
       >
         <div className="flex flex-col h-full">
-          <div className="flex-shrink-0 px-6 pt-6">
-            <WizardProgress
-              steps={stepLabels as unknown as string[]}
-              currentStep={currentStep}
-              completedSteps={completedSteps}
-              onStepClick={handleStepClick}
-            />
-          </div>
+          {!createdContract && (
+            <div className="flex-shrink-0 px-6 pt-6">
+              <WizardProgress
+                steps={stepLabels as unknown as string[]}
+                currentStep={currentStep}
+                completedSteps={completedSteps}
+                onStepClick={handleStepClick}
+              />
+            </div>
+          )}
 
           <div className="flex-1 overflow-y-auto px-6 py-6">
-            <div className="mb-4">{renderStep()}</div>
+            <div className="mb-4">
+              {createdContract ? (
+                <ContractCreatedConfirmation data={createdContract} />
+              ) : (
+                renderStep()
+              )}
+            </div>
 
             {errors[currentStep] && (
               <div className="mb-4 p-3 bg-[rgb(var(--color-destructive)/0.1)] border border-[rgb(var(--color-destructive)/0.3)] rounded-md">
@@ -1090,6 +1488,67 @@ export function ContractWizard({
           </div>
         </div>
       </Dialog>
+
+      <ConfirmationDialog
+        id="recurring-total-change-confirm"
+        isOpen={pendingRecurringChange !== null}
+        onClose={() => setPendingRecurringChange(null)}
+        onConfirm={() => {
+          const pending = pendingRecurringChange;
+          setPendingRecurringChange(null);
+          if (!pending) return;
+          const ack = { baseline_monthly_cents: pending.baselineMonthlyCents };
+          if (pending.mode === "draft") {
+            void handleSaveDraft(ack);
+          } else {
+            void handleFinish(ack);
+          }
+        }}
+        title={t("wizard.recurringChange.title", {
+          defaultValue: "Confirm recurring total change",
+        })}
+        message={t("wizard.recurringChange.message", {
+          defaultValue:
+            "This changes the contract's estimated monthly recurring value from {{before}} to {{after}}.",
+          before: money(
+            pendingRecurringChange?.baselineMonthlyCents ?? 0,
+            wizardData.currency_code,
+          ),
+          after: money(
+            pendingRecurringChange?.resultingMonthlyCents ?? 0,
+            wizardData.currency_code,
+          ),
+        })}
+        confirmLabel={t("wizard.recurringChange.confirm", {
+          defaultValue: "Confirm and continue",
+        })}
+        cancelLabel={t("wizard.recurringChange.cancel", {
+          defaultValue: "Go back",
+        })}
+      />
+
+      <ConfirmationDialog
+        id="contract-wizard-draft-discounts"
+        isOpen={showDraftDiscountsDialog}
+        onClose={() => setShowDraftDiscountsDialog(false)}
+        onConfirm={() => {
+          setShowDraftDiscountsDialog(false);
+          void handleSaveDraft();
+        }}
+        title={t("wizard.discounts.draftDialog.title", {
+          defaultValue: "Save draft without discounts?",
+        })}
+        message={t("wizard.discounts.draftDialog.message", {
+          defaultValue:
+            "A saved draft keeps its lines only, so the discounts added here are not saved with it. Finish setup to create them with the contract, or add them later on the contract's Discounts tab.",
+        })}
+        confirmLabel={t("wizard.discounts.draftDialog.confirm", {
+          defaultValue: "Save draft anyway",
+        })}
+        cancelLabel={t("wizard.dialogs.unsavedChanges.cancel", {
+          defaultValue: "Stay",
+        })}
+      />
 
       <ConfirmationDialog
         id="contract-wizard-unsaved-changes"

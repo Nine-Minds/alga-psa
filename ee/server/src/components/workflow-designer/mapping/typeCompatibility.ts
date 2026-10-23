@@ -231,8 +231,9 @@ export function getTypeCompatibility(
     return TypeCompatibility.EXACT;
   }
 
-  // Array to any array is exact if both are arrays
-  if (normalizedSource === 'array' && normalizedTarget === 'array') {
+  // Array to any array is exact if both are arrays; an untyped list matches a typed one.
+  const isArrayType = (type: string) => type === 'array' || type.startsWith('array<');
+  if (isArrayType(normalizedSource) && isArrayType(normalizedTarget)) {
     return TypeCompatibility.EXACT;
   }
 
@@ -422,4 +423,22 @@ export function groupByCompatibility<T extends { type?: string }>(
   }
 
   return groups;
+}
+
+const SINGLE_VALUE_TYPES = new Set(['string', 'number', 'boolean']);
+
+/**
+ * True when a single value of `sourceType` can feed a list input of `targetType` by sending it as a
+ * one-item list (e.g. a ticket's assigned user id into a list of recipient user ids). The designer
+ * writes such references as `[path]`.
+ */
+export function canSendAsOneItemList(sourceType: string | undefined, targetType: string | undefined): boolean {
+  const target = normalizeType(targetType?.split('|')[0]);
+  const source = normalizeType(sourceType?.split('|').map((part) => part.trim()).find((part) => part && part !== 'null'));
+  if (!target || !source || !SINGLE_VALUE_TYPES.has(source)) return false;
+  if (target === 'array') return true;
+  if (target.startsWith('array<')) {
+    return getTypeCompatibility(source, target.slice(6, -1)) !== TypeCompatibility.INCOMPATIBLE;
+  }
+  return false;
 }

@@ -62,9 +62,20 @@ test('receipt requires actual matching archive bytes', async t => {
 });
 test('validator rejects stale execution identity and registry claims', async t => {
   const f = await fixture(t), manifest = build(f);
-  for (const expected of [{ ...f.expected, runAttempt: 3 }, { ...f.expected, runId: '9' }, { ...f.expected, revision: 'd'.repeat(40) }])
+  for (const expected of [{ ...f.expected, runId: '9' }, { ...f.expected, revision: 'd'.repeat(40) }])
     assert.throws(() => validateBrowserArtifactManifest(manifest, expected));
   assert.throws(() => validateBrowserArtifactManifest({ ...manifest, registryPublication: true }, f.expected));
+});
+test('validator accepts an earlier-attempt artifact reused by a partial re-run but rejects a future attempt', async t => {
+  // A "re-run failed jobs" that regenerates only the consuming gate leaves a
+  // successful browser job's attempt-2 manifest to be validated against the
+  // current, higher attempt. runId and revision still pin the run and code, so
+  // the earlier attempt is accepted while a manifest claiming a future attempt
+  // (which cannot yet exist) is rejected.
+  const f = await fixture(t), manifest = build(f); // manifest.runAttempt === 2
+  assert.deepEqual(validateBrowserArtifactManifest(manifest, { ...f.expected, runAttempt: 3 }), manifest);
+  assert.deepEqual(validateBrowserArtifactManifest(manifest, { ...f.expected, runAttempt: 5 }), manifest);
+  assert.throws(() => validateBrowserArtifactManifest(manifest, { ...f.expected, runAttempt: 1 }));
 });
 test('CLI creates receipt and manifest, then removes stale output on verification failure', async t => {
   const f = await fixture(t), cli = path.resolve('scripts/browser-artifact-manifest.mjs');

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Building2, Code2, Mail, Monitor } from 'lucide-react';
+import { Building2, Code2, Mail, Monitor, Repeat } from 'lucide-react';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { TICKET_ORIGINS } from '@alga-psa/types';
@@ -15,6 +15,7 @@ export interface TicketOriginLabels {
   clientPortal: string;
   inboundEmail: string;
   api: string;
+  recurring: string;
   other: string;
 }
 
@@ -23,6 +24,8 @@ interface TicketOriginBadgeProps {
   labels?: Partial<TicketOriginLabels>;
   size?: 'sm' | 'md';
   className?: string;
+  /** Readable external system name to append to the badge tooltip. */
+  systemLabel?: string | null;
 }
 
 function normalizeOrigin(origin: TicketOriginBadgeProps['origin']): ResolvedTicketOrigin {
@@ -51,6 +54,10 @@ function normalizeOrigin(origin: TicketOriginBadgeProps['origin']): ResolvedTick
     return TICKET_ORIGINS.API;
   }
 
+  if (normalized === TICKET_ORIGINS.RECURRING) {
+    return TICKET_ORIGINS.RECURRING;
+  }
+
   if (normalized === TICKET_ORIGIN_OTHER) {
     return TICKET_ORIGIN_OTHER;
   }
@@ -71,6 +78,10 @@ function TicketOriginIcon({ origin }: { origin: ResolvedTicketOrigin }) {
     return <Code2 className="h-3 w-3" />;
   }
 
+  if (origin === TICKET_ORIGINS.RECURRING) {
+    return <Repeat className="h-3 w-3" />;
+  }
+
   return <Monitor className="h-3 w-3" />;
 }
 
@@ -88,6 +99,10 @@ function getLabel(
 
   if (origin === TICKET_ORIGINS.API) {
     return labels.api;
+  }
+
+  if (origin === TICKET_ORIGINS.RECURRING) {
+    return labels.recurring;
   }
 
   if (origin === TICKET_ORIGIN_OTHER) {
@@ -110,6 +125,10 @@ function getOriginVariant(origin: ResolvedTicketOrigin): BadgeVariant {
     return 'success';
   }
 
+  if (origin === TICKET_ORIGINS.RECURRING) {
+    return 'secondary';
+  }
+
   return 'default-muted';
 }
 
@@ -118,6 +137,7 @@ export default function TicketOriginBadge({
   labels = {},
   size = 'sm',
   className,
+  systemLabel,
 }: TicketOriginBadgeProps) {
   const { t } = useTranslation('features/tickets');
   const normalizedOrigin = normalizeOrigin(origin);
@@ -126,8 +146,10 @@ export default function TicketOriginBadge({
     clientPortal: labels.clientPortal ?? t('origin.clientPortal', 'Created via Client Portal'),
     inboundEmail: labels.inboundEmail ?? t('origin.inboundEmail', 'Created via Inbound Email'),
     api: labels.api ?? t('origin.api', 'Created via API'),
+    recurring: labels.recurring ?? t('origin.recurring', 'Created by Recurring Schedule'),
     other: labels.other ?? t('origin.other', 'Created via Other'),
   };
+  const label = getLabel(normalizedOrigin, resolvedLabels);
 
   return (
     <Badge
@@ -138,7 +160,9 @@ export default function TicketOriginBadge({
       data-ticket-origin={normalizedOrigin}
     >
       <TicketOriginIcon origin={normalizedOrigin} />
-      <span className="ml-1">{getLabel(normalizedOrigin, resolvedLabels)}</span>
+      <span className="ml-1" title={systemLabel ? `${label} · ${systemLabel}` : label}>
+        {label}
+      </span>
     </Badge>
   );
 }

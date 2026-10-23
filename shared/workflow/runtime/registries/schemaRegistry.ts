@@ -1,5 +1,5 @@
 import { ZodSchema } from 'zod';
-import { zodToWorkflowJsonSchema } from '../jsonSchemaMetadata';
+import { zodToWorkflowJsonSchema } from '@alga-psa/event-schemas';
 
 export type JsonSchema = Record<string, unknown>;
 

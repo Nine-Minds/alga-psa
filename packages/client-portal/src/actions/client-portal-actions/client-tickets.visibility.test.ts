@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const TICKET_1 = '00000000-0000-4000-8000-000000000001';
+const TICKET_HIDDEN = '00000000-0000-4000-8000-000000000002';
+const SIBLING_TICKET = '00000000-0000-4000-8000-000000000003';
+
+vi.mock('../../lib/portalTicketExternalLinks', () => ({ loadPortalTicketExternalLinks: vi.fn(async () => []) }));
+
 let currentUser: any;
 
 const hasPermissionMock = vi.fn();
@@ -7,7 +13,7 @@ const getConnectionMock = vi.fn();
 const withTransactionMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 const getVisibilityContextMock = vi.fn();
-const applyVisibilityBoardFilterMock = vi.fn((query) => query);
+const applyTicketVisibilityFilterMock = vi.fn((query) => query);
 const createTicketWithRetryMock = vi.fn();
 const getDefaultStatusIdMock = vi.fn();
 const publishEventMock = vi.fn();
@@ -35,7 +41,7 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('@alga-psa/tickets/lib', () => ({
-  applyVisibilityBoardFilter: (...args: any[]) => applyVisibilityBoardFilterMock(...args),
+  applyTicketVisibilityFilter: (...args: any[]) => applyTicketVisibilityFilterMock(...args),
   getClientContactVisibilityContext: (...args: any[]) => getVisibilityContextMock(...args),
   getTicketOrigin: (ticket: any) => ticket?.ticket_origin ?? 'internal',
   // Mirrors @alga-psa/tickets/lib/ticketStatusFilter parseTicketStatusFilterValue.
@@ -83,10 +89,17 @@ vi.mock('@alga-psa/analytics', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: (...args: any[]) => publishEventMock(...args),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: vi.fn(),
+  revertBundlePropagationForChild: vi.fn(),
 }));
 
 vi.mock('@alga-psa/tickets/lib/liveUpdates', () => ({
@@ -102,6 +115,21 @@ function makeConnection() {
   return Object.assign(vi.fn(), {
     raw: vi.fn(),
   });
+}
+
+/** Board lookup chain used by createClientTicket: where → modify → orderBy → first. */
+function makeBoardQuery(row: Record<string, unknown> | undefined) {
+  const builder: any = {
+    where: vi.fn(() => builder),
+    whereIn: vi.fn(() => builder),
+    modify: vi.fn((callback: (query: any) => void) => {
+      callback(builder);
+      return builder;
+    }),
+    orderBy: vi.fn(() => builder),
+    first: vi.fn().mockResolvedValue(row),
+  };
+  return builder;
 }
 
 function makeUserQuery(contactId = 'contact-1') {
@@ -123,7 +151,7 @@ function makeListBuilder(rows: any[]) {
 
 // Generic chain-/thenable query-builder stand-in. Every builder method returns the
 // same builder (so the SUT can chain arbitrarily), `modify` invokes its callback so
-// applyVisibilityBoardFilter is still recorded, and awaiting the builder resolves to
+// applyTicketVisibilityFilter is still recorded, and awaiting the builder resolves to
 // `result`. Used for the ticket_resources/comments/users subqueries the refactored
 // SUT builds via tenantDb(trx, tenant).table(...) and then awaits directly.
 function makeChainable(result: any = []) {
@@ -155,6 +183,7 @@ function makeDetailBuilder(ticket: any) {
 describe('client portal ticket visibility enforcement', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    applyTicketVisibilityFilterMock.mockImplementation((query) => query);
     currentUser = {
       user_id: 'client-user-1',
       user_type: 'client',
@@ -170,7 +199,7 @@ describe('client portal ticket visibility enforcement', () => {
   it('T008: client portal ticket list applies the assigned visibility group boards', async () => {
     const ticketsBuilder = makeListBuilder([
       {
-        ticket_id: 'ticket-1',
+        ticket_id: TICKET_1,
         entered_at: '2026-03-15T00:00:00.000Z',
         updated_at: '2026-03-15T00:00:00.000Z',
         closed_at: null,
@@ -203,6 +232,9 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     getVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'client',
+      effectiveTicketScope: 'client',
+      isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
       visibilityGroupId: 'group-1',
@@ -212,9 +244,10 @@ describe('client portal ticket visibility enforcement', () => {
     const { getClientTickets } = await import('./client-tickets');
     await getClientTickets('all');
 
-    expect(applyVisibilityBoardFilterMock).toHaveBeenCalledWith(
+    expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       ticketsBuilder,
-      ['board-1']
+      expect.objectContaining({ visibleBoardIds: ['board-1'] }),
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant', closedColumn: 't.is_closed' } }
     );
   });
 
@@ -247,6 +280,9 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     getVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'client',
+      effectiveTicketScope: 'client',
+      isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
       visibilityGroupId: null,
@@ -256,15 +292,16 @@ describe('client portal ticket visibility enforcement', () => {
     const { getClientTickets } = await import('./client-tickets');
     await getClientTickets('all');
 
-    expect(applyVisibilityBoardFilterMock).toHaveBeenCalledWith(
+    expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       ticketsBuilder,
-      null
+      expect.objectContaining({ visibleBoardIds: null }),
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant', closedColumn: 't.is_closed' } }
     );
   });
 
   it('T010: client portal ticket detail succeeds for a ticket on a visible board', async () => {
     const ticketBuilder = makeDetailBuilder({
-      ticket_id: 'ticket-1',
+      ticket_id: TICKET_1,
       ticket_number: 'T-1',
       title: 'Visible ticket',
       board_id: 'board-1',
@@ -329,6 +366,9 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     getVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'client',
+      effectiveTicketScope: 'client',
+      isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
       visibilityGroupId: 'group-1',
@@ -336,12 +376,13 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     const { getClientTicketDetails } = await import('./client-tickets');
-    const ticket = await getClientTicketDetails('ticket-1');
+    const ticket = await getClientTicketDetails(TICKET_1);
 
-    expect(ticket.ticket_id).toBe('ticket-1');
-    expect(applyVisibilityBoardFilterMock).toHaveBeenCalledWith(
+    expect(ticket.ticket_id).toBe(TICKET_1);
+    expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       expect.any(Object),
-      ['board-1']
+      expect.objectContaining({ visibleBoardIds: ['board-1'] }),
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant', closedColumn: 't.is_closed' } }
     );
   });
 
@@ -400,6 +441,9 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     getVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'client',
+      effectiveTicketScope: 'client',
+      isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
       visibilityGroupId: 'group-1',
@@ -408,7 +452,7 @@ describe('client portal ticket visibility enforcement', () => {
 
     const { getClientTicketDetails } = await import('./client-tickets');
 
-    await expect(getClientTicketDetails('ticket-hidden')).resolves.toEqual({
+    await expect(getClientTicketDetails(TICKET_HIDDEN)).resolves.toEqual({
       actionError: 'Ticket not found or access denied',
       messageKey: 'client-portal:errors.tickets.notFoundOrDenied',
     });
@@ -416,7 +460,7 @@ describe('client portal ticket visibility enforcement', () => {
 
   it('T018: client portal ticket detail excludes internal comments and internal-only commenters', async () => {
     const ticketBuilder = makeDetailBuilder({
-      ticket_id: 'ticket-1',
+      ticket_id: TICKET_1,
       ticket_number: 'T-1',
       title: 'Visible ticket',
       board_id: 'board-1',
@@ -481,6 +525,9 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     getVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'client',
+      effectiveTicketScope: 'client',
+      isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
       visibilityGroupId: 'group-1',
@@ -488,7 +535,7 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     const { getClientTicketDetails } = await import('./client-tickets');
-    await getClientTicketDetails('ticket-1');
+    await getClientTicketDetails(TICKET_1);
 
     // The serialized conversation list filters out internal comments at the
     // query (not just in the client component) and joins comment_threads so
@@ -496,7 +543,7 @@ describe('client portal ticket visibility enforcement', () => {
     // MSP-only draft state, so the query also restricts to published comments and
     // portal callers cannot infer a pending one.
     expect(conversationsBuilder.where).toHaveBeenCalledWith({
-      'comments.ticket_id': 'ticket-1',
+      'comments.ticket_id': TICKET_1,
       'comments.is_internal': false,
       'comments.publish_state': 'published',
     });
@@ -537,6 +584,9 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     getVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'client',
+      effectiveTicketScope: 'client',
+      isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
       visibilityGroupId: 'group-1',
@@ -545,7 +595,7 @@ describe('client portal ticket visibility enforcement', () => {
 
     const { getClientTicketDocuments } = await import('./client-tickets');
 
-    await expect(getClientTicketDocuments('ticket-hidden')).resolves.toEqual({
+    await expect(getClientTicketDocuments(TICKET_HIDDEN)).resolves.toEqual({
       actionError: 'Ticket not found or access denied',
       messageKey: 'client-portal:errors.tickets.notFoundOrDenied',
     });
@@ -567,11 +617,7 @@ describe('client portal ticket visibility enforcement', () => {
         }
 
         if (table === 'boards') {
-          return {
-            where: vi.fn().mockReturnValue({
-              first: vi.fn().mockResolvedValue({ board_id: 'board-allowed' }),
-            }),
-          };
+          return makeBoardQuery({ board_id: 'board-allowed' });
         }
 
         if (table === 'tickets') {
@@ -592,6 +638,9 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     getVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'client',
+      effectiveTicketScope: 'client',
+      isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
       visibilityGroupId: 'group-1',
@@ -620,11 +669,7 @@ describe('client portal ticket visibility enforcement', () => {
         }
 
         if (table === 'boards') {
-          return {
-            where: vi.fn().mockReturnValue({
-              first: vi.fn().mockResolvedValue(undefined),
-            }),
-          };
+          return makeBoardQuery(undefined);
         }
 
         if (table === 'statuses') {
@@ -642,6 +687,9 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     getVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'client',
+      effectiveTicketScope: 'client',
+      isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
       visibilityGroupId: 'group-1',
@@ -670,17 +718,23 @@ describe('client portal ticket visibility enforcement', () => {
         }
 
         if (table === 'boards') {
-          return {
-            where: vi.fn().mockReturnValue({
-              first: vi.fn().mockResolvedValue({ board_id: 'board-open' }),
-            }),
-          };
+          return makeBoardQuery({ board_id: 'board-open' });
         }
 
         if (table === 'statuses') {
           return {
             where: vi.fn().mockReturnValue({
               first: vi.fn().mockResolvedValue({ status_id: 'status-1' }),
+            }),
+          };
+        }
+
+        // The creating contact belongs to no billing profile, so the ticket is
+        // left for the model's location → client-default chain to attribute.
+        if (table === 'billing_profile_contacts as bpc') {
+          return {
+            where: vi.fn().mockReturnValue({
+              select: vi.fn().mockResolvedValue([]),
             }),
           };
         }
@@ -704,6 +758,9 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     getVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'client',
+      effectiveTicketScope: 'client',
+      isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
       visibilityGroupId: null,
@@ -737,3 +794,139 @@ describe('client portal ticket visibility enforcement', () => {
     expect(ticket.ticket_id).toBe('ticket-new');
   });
 });
+
+// Exercise the real predicate, not just its invocation, against sibling and
+// unassigned rows. The DB suite separately verifies the same column aliases.
+describe('contact-scoped portal enforcement', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    applyTicketVisibilityFilterMock.mockImplementation((query) => query);
+    currentUser = { user_id: 'u', user_type: 'client', email: 'u@example.com', tenant: 'tenant-1', contact_id: 'contact-1' };
+    hasPermissionMock.mockResolvedValue(true);
+    getConnectionMock.mockResolvedValue({ raw: vi.fn() });
+    createTenantKnexMock.mockResolvedValue({ knex: {} });
+  });
+
+  it.each(['client', 'contact'] as const)('list enforces %s scope, including NULL contacts', async (scope) => {
+    const { applyTicketVisibilityFilter } = await import('../../../../tickets/src/lib/clientPortalVisibility');
+    applyTicketVisibilityFilterMock.mockImplementation(applyTicketVisibilityFilter as any);
+    const rows = [
+      { ticket_id: 'own', client_id: 'client-1', contact_name_id: 'contact-1', board_id: 'board-1' },
+      { ticket_id: 'sibling', client_id: 'client-1', contact_name_id: 'contact-2', board_id: 'board-1' },
+      { ticket_id: 'null', client_id: 'client-1', contact_name_id: null, board_id: 'board-1' },
+      { ticket_id: 'other-board', client_id: 'client-1', contact_name_id: 'contact-1', board_id: 'board-2' },
+    ];
+    getVisibilityContextMock.mockResolvedValue({ ticketScope: scope, effectiveTicketScope: scope, isClientAdmin: false, contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: 'g', visibleBoardIds: ['board-1'] });
+    withTransactionMock.mockImplementation(async (_db, callback) => callback(Object.assign((table: string) => {
+      if (table === 'users') return makeUserQuery();
+      if (table === 'tickets as t') return filteredTickets(rows);
+      return makeChainable([]);
+    }, { raw: vi.fn() })));
+    const { getClientTickets } = await import('./client-tickets');
+    const result = await getClientTickets('__status_filter__:all');
+    expect((result as any[]).map((ticket) => ticket.ticket_id)).toEqual(scope === 'contact' ? ['own'] : ['own', 'sibling', 'null']);
+  });
+
+  it.each(['detail', 'documents', 'comment', 'edit-comment', 'delete-comment', 'status'])('denies sibling direct-ID %s access before reading content or writing', async (path) => {
+    const { applyTicketVisibilityFilter } = await import('../../../../tickets/src/lib/clientPortalVisibility');
+    applyTicketVisibilityFilterMock.mockImplementation(applyTicketVisibilityFilter as any);
+    getVisibilityContextMock.mockResolvedValue({ ticketScope: 'contact', effectiveTicketScope: 'contact', isClientAdmin: false, contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: 'g', visibleBoardIds: ['board-1'] });
+    const touched: string[] = [];
+    withTransactionMock.mockImplementation(async (_db, callback) => callback(Object.assign((table: string) => {
+      touched.push(table);
+      if (table === 'comments' && (path === 'edit-comment' || path === 'delete-comment')) return filteredTickets([{ comment_id: 'comment-1', ticket_id: SIBLING_TICKET, user_id: 'u' }]);
+      if (table === 'users') return makeUserQuery();
+      if (table === 'tickets as t' || table === 'tickets') return filteredTickets([{ ticket_id: SIBLING_TICKET, client_id: 'client-1', contact_name_id: 'contact-2', board_id: 'board-1' }]);
+      return makeChainable([]);
+    }, { raw: vi.fn() })));
+    const actions = await import('./client-tickets');
+    const result = path === 'detail' ? await actions.getClientTicketDetails(SIBLING_TICKET)
+      : path === 'documents' ? await actions.getClientTicketDocuments(SIBLING_TICKET)
+      : path === 'comment' ? await actions.addClientTicketComment(SIBLING_TICKET, 'private')
+      : path === 'edit-comment' ? await actions.updateClientTicketComment('comment-1', { note: 'changed' })
+      : path === 'delete-comment' ? await actions.deleteClientTicketComment('comment-1')
+      : await actions.updateTicketStatus(SIBLING_TICKET, 'status-2');
+    expect(result).toMatchObject({ actionError: 'Ticket not found or access denied' });
+    if (path === 'documents') expect(touched).not.toContain('documents as d');
+    expect(touched).not.toContain('statuses');
+  });
+
+  // T156 / FR-E7b: a shared-workspace colleague reads the ticket but must not
+  // be able to comment on it, edit or delete a comment, or close it. That is
+  // decided by whether the gate for each path passes `sharedWorkspaceTickets`.
+  it.each([
+    ['comment', false],
+    ['edit-comment', false],
+    ['delete-comment', false],
+    ['status', false],
+    // The detail and list read paths are asserted by call shape in T008-T010
+    // above; `documents` is the read path this harness can drive to the end.
+    ['documents', true],
+  ] as Array<[string, boolean]>)('%s gate includes workspace tickets: %s', async (path, expectsWorkspace) => {
+    getVisibilityContextMock.mockResolvedValue({ ticketScope: 'contact', effectiveTicketScope: 'contact', isClientAdmin: false, contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: 'g', visibleBoardIds: ['board-1'] });
+    withTransactionMock.mockImplementation(async (_db: any, callback: any) => callback(Object.assign((table: string) => {
+      if (table === 'comments') return filteredTickets([{ comment_id: 'comment-1', ticket_id: TICKET_1, user_id: 'u' }]);
+      if (table === 'users') return makeUserQuery();
+      if (table === 'tickets as t' || table === 'tickets') return filteredTickets([]);
+      return makeChainable([]);
+    }, { raw: vi.fn() })));
+
+    const actions = await import('./client-tickets');
+    if (path === 'comment') await actions.addClientTicketComment(TICKET_1, 'note');
+    else if (path === 'edit-comment') await actions.updateClientTicketComment('comment-1', { note: 'changed' });
+    else if (path === 'delete-comment') await actions.deleteClientTicketComment('comment-1');
+    else if (path === 'status') await actions.updateTicketStatus(TICKET_1, 'status-2');
+    else await actions.getClientTicketDocuments(TICKET_1);
+
+    expect(applyTicketVisibilityFilterMock).toHaveBeenCalled();
+    const sawWorkspace = applyTicketVisibilityFilterMock.mock.calls.some(
+      (call: any[]) => Boolean(call[2]?.sharedWorkspaceTickets)
+    );
+    expect(sawWorkspace).toBe(expectsWorkspace);
+  });
+});
+
+function filteredTickets(initial: any[]) {
+  let rows = initial;
+  let first = false;
+  const builder = makeChainable();
+  const field = (name: string) => name.split('.').pop()!;
+  builder.where = vi.fn((column: any, value?: any) => {
+    // applyTicketVisibilityFilter uses a nested `where(callback)` as soon as it
+    // has more than the plain contact predicate (profiles, watchers, shared
+    // workspaces). Apply the callback's base predicates and ignore its `or*`
+    // branches: this harness has no join data to satisfy them, so ignoring
+    // them keeps the fake conservative rather than accidentally widening.
+    if (typeof column === 'function') {
+      const nested: any = {
+        where: (nestedColumn: any, nestedValue?: any) => {
+          const conditions = typeof nestedColumn === 'string' ? { [nestedColumn]: nestedValue } : nestedColumn;
+          if (conditions && typeof conditions === 'object') {
+            rows = rows.filter((row) => Object.entries(conditions).every(([key, val]) => row[field(key)] === val));
+          }
+          return nested;
+        },
+        whereIn: (nestedColumn: string, values: any[]) => {
+          rows = rows.filter((row) => values.includes(row[field(nestedColumn)]));
+          return nested;
+        },
+        whereRaw: () => nested,
+        orWhere: () => nested,
+        orWhereIn: () => nested,
+        orWhereNull: () => nested,
+        orWhereRaw: () => nested,
+      };
+      column(nested);
+      return builder;
+    }
+    const conditions = typeof column === 'string' ? { [column]: value } : column;
+    if (conditions && typeof conditions === 'object') {
+      rows = rows.filter((row) => Object.entries(conditions).every(([key, val]) => row[field(key)] === val));
+    }
+    return builder;
+  });
+  builder.whereIn = vi.fn((column: string, values: any[]) => { rows = rows.filter((row) => values.includes(row[field(column)])); return builder; });
+  builder.first = vi.fn(() => { first = true; return builder; });
+  builder.then = (resolve: any, reject?: any) => Promise.resolve(first ? rows[0] : rows).then(resolve, reject);
+  return builder;
+}

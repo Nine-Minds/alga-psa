@@ -44,6 +44,9 @@ export function TextInput({
   autoCorrect,
   accessibilityLabel,
   rightElement,
+  onBlur,
+  onFocus,
+  testID,
 }: {
   value: string;
   onChangeText: (text: string) => void;
@@ -61,6 +64,10 @@ export function TextInput({
   autoCorrect?: boolean;
   accessibilityLabel?: string;
   rightElement?: ReactNode;
+  /** Forms validate a field when the user leaves it, as the web forms do. */
+  onBlur?: () => void;
+  onFocus?: () => void;
+  testID?: string;
 }) {
   const theme = useTheme();
   const hasError = Boolean(error);
@@ -89,7 +96,7 @@ export function TextInput({
           borderWidth: 1,
           borderColor: hasError ? theme.colors.danger : theme.colors.border,
           borderRadius: theme.borderRadius.md,
-          backgroundColor: disabled ? theme.colors.borderLight : theme.colors.card,
+          backgroundColor: disabled ? theme.colors.disabled.bg : theme.colors.card,
           paddingHorizontal: theme.spacing.md,
         }}
       >
@@ -103,12 +110,15 @@ export function TextInput({
           keyboardType={effectiveKeyboardType}
           autoCapitalize={autoCapitalize}
           autoCorrect={autoCorrect}
+          onBlur={onBlur}
+          onFocus={onFocus}
+          testID={testID}
           accessibilityLabel={accessibilityLabel ?? label}
           style={[
             {
               flex: 1,
               ...theme.typography.body,
-              color: disabled ? theme.colors.textSecondary : theme.colors.text,
+              color: disabled ? theme.colors.disabled.text : theme.colors.text,
               paddingVertical: theme.spacing.md,
             },
             multiline && minHeight ? { minHeight, textAlignVertical: "top" } : undefined,

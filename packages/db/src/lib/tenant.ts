@@ -19,13 +19,13 @@ type PoolConfig = KnexType.PoolConfig & {
 let sharedKnexInstance: KnexType | null = null;
 let sharedKnexInitialization: Promise<KnexType> | null = null;
 let sharedKnexDestruction: Promise<void> | null = null;
-const tenantContext: AsyncLocalStorage<string> = (() => {
+const tenantContext: AsyncLocalStorage<string | undefined> = (() => {
   const globalAny = globalThis as unknown as {
-    __ALGA_PSA_TENANT_CONTEXT__?: AsyncLocalStorage<string>;
+    __ALGA_PSA_TENANT_CONTEXT__?: AsyncLocalStorage<string | undefined>;
   };
 
   if (!globalAny.__ALGA_PSA_TENANT_CONTEXT__) {
-    globalAny.__ALGA_PSA_TENANT_CONTEXT__ = new AsyncLocalStorage<string>();
+    globalAny.__ALGA_PSA_TENANT_CONTEXT__ = new AsyncLocalStorage<string | undefined>();
   }
 
   return globalAny.__ALGA_PSA_TENANT_CONTEXT__;
@@ -37,6 +37,15 @@ export function getTenantContext(): string | undefined {
 
 export async function runWithTenant<T>(tenant: string, fn: () => Promise<T>): Promise<T> {
   return tenantContext.run(tenant, fn);
+}
+
+/**
+ * Runs `fn` with no tenant in context, whatever tenant the caller inherited.
+ * The context is process-global, so a tenant entered elsewhere (e.g. via
+ * createTenantKnex's enterWith) can otherwise reach code that never set one.
+ */
+export async function runWithoutTenant<T>(fn: () => Promise<T>): Promise<T> {
+  return tenantContext.run(undefined, fn);
 }
 
 export async function getConnection(_tenantId?: string | null): Promise<KnexType> {
@@ -83,7 +92,16 @@ async function initializeTenantPool(): Promise<KnexType> {
     destroyTimeoutMillis: 5000,
     afterCreate: (conn, done) => {
       conn.on('error', (err: Error) => {
-        logger.error('[db/tenant] DB Connection Error:', err);
+        // A pool client can emit 'error' during shutdown (e.g. the test
+        // database container stopping) after a test suite has swapped the
+        // logger module. Logging is diagnostic here; never let it — or a
+        // malformed logger binding — become an unhandled exception that
+        // aborts the process.
+        try {
+          logger.error('[db/tenant] DB Connection Error:', err);
+        } catch {
+          // Connection errors are already surfaced by the pool's caller.
+        }
       });
       done(null, conn);
     },

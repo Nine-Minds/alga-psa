@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { ClientPortalSignIn, PortalSwitchPrompt } from '@alga-psa/auth/client';
+import { ClientPortalSignIn, ClientPortalSsoFailureNotice, PortalSwitchPrompt } from '@alga-psa/auth/client';
 import { ClientPortalTenantDiscovery } from '@alga-psa/client-portal/components';
 import { I18nWrapper } from '@alga-psa/tenancy/components';
 import {
@@ -7,6 +7,7 @@ import {
   getTenantBrandingBySlug,
   getTenantLocaleByDomain,
   getTenantLocaleBySlug,
+  getTenantSlugByDomain,
 } from '@alga-psa/tenancy/actions';
 import { getSession } from '@alga-psa/auth';
 import { isValidTenantSlug } from '@shared/utils/tenantSlug';
@@ -44,7 +45,14 @@ export default async function ClientSignInPage({
 
   // Get tenant slug from query parameter
   const tenantParam = typeof params?.tenant === 'string' ? params.tenant : '';
-  const tenantSlug = isValidTenantSlug(tenantParam) ? tenantParam.toLowerCase() : undefined;
+  const slugFromQuery = isValidTenantSlug(tenantParam) ? tenantParam.toLowerCase() : undefined;
+
+  // A vanity sign-in arrives here as `?portalDomain=<host>` with no slug, and the
+  // credentials call it feeds would then look the email up across every tenant —
+  // an email present in two client portals signs in to an arbitrary one. The
+  // domain names its tenant, so resolve it and carry it into the form.
+  const tenantSlug = slugFromQuery
+    ?? (portalDomain ? (await getTenantSlugByDomain(portalDomain)) ?? undefined : undefined);
 
   const session = await getSession();
   if (session?.user) {
@@ -91,14 +99,18 @@ export default async function ClientSignInPage({
     }
   }
 
-  // If no tenant slug and no vanity domain, show tenant discovery form. There is
-  // no tenant to resolve a locale from here, so fall back to the anonymous
-  // resolution the MSP sign-in page uses.
-  if (!tenantSlug && !portalDomain) {
+  // No tenant to sign in against — either nothing identified one, or the vanity
+  // host has no active portal_domains row. Show the tenant discovery form, which
+  // emails per-tenant login links, rather than an unscoped credentials form.
+  // There is no tenant to resolve a locale from here, so fall back to the
+  // anonymous resolution the MSP sign-in page uses.
+  if (!tenantSlug) {
     const discoveryLocale = await getServerLocale();
     return (
       <I18nWrapper portal="client" initialLocale={discoveryLocale}>
-        <ClientPortalTenantDiscovery callbackUrl={callbackUrl} />
+        {/* An SSO mapping failure can land here with no tenant to brand against;
+            discovery renders no error of its own, so say why sign-in failed. */}
+        <ClientPortalTenantDiscovery callbackUrl={callbackUrl} notice={<ClientPortalSsoFailureNotice />} />
       </I18nWrapper>
     );
   }
@@ -112,17 +124,19 @@ export default async function ClientSignInPage({
         getTenantBrandingByDomain(portalDomain),
         getTenantLocaleByDomain(portalDomain),
       ])
-    : tenantSlug
-      ? await Promise.all([
-          getTenantBrandingBySlug(tenantSlug),
-          getTenantLocaleBySlug(tenantSlug),
-        ])
-      : [null, null];
+    : await Promise.all([
+        getTenantBrandingBySlug(tenantSlug),
+        getTenantLocaleBySlug(tenantSlug),
+      ]);
 
   return (
     <I18nWrapper portal="client" initialLocale={locale || undefined}>
       <PortalBrandingStyles branding={branding} />
-      <ClientPortalSignIn branding={branding} portalDomain={portalDomain || undefined} />
+      <ClientPortalSignIn
+        branding={branding}
+        portalDomain={portalDomain || undefined}
+        tenantSlug={tenantSlug}
+      />
     </I18nWrapper>
   );
 }

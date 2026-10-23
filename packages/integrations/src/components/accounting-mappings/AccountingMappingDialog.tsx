@@ -35,6 +35,12 @@ type AccountingMappingDialogProps = {
   existingMapping?: DisplayMapping | null;
   algaEntities: AccountingMappingEntityOption[];
   externalEntities: AccountingMappingEntityOption[];
+  /**
+   * Alga entity ids that already have a mapping in the loaded (realm-scoped)
+   * mappings. In add mode they are HIDDEN from the Alga picker; in edit mode
+   * the mapping's own entity stays visible, other mapped ones are hidden.
+   */
+  mappedAlgaIds?: ReadonlySet<string>;
   realmLabel?: string;
 };
 
@@ -47,6 +53,7 @@ export function AccountingMappingDialog({
   existingMapping,
   algaEntities,
   externalEntities,
+  mappedAlgaIds,
   realmLabel
 }: AccountingMappingDialogProps) {
   const { t } = useTranslation('msp/integrations');
@@ -60,6 +67,8 @@ export function AccountingMappingDialog({
   const [selectedKindId, setSelectedKindId] = useState<string>('');
   const [staleTarget, setStaleTarget] = useState(false);
   const [metadataInput, setMetadataInput] = useState<string>('');
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const metadataFields = useMemo(() => module.metadata?.fields ?? [], [module.metadata]);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const initializedDraft = useRef<string | null>(null);
@@ -107,12 +116,18 @@ export function AccountingMappingDialog({
       } else {
         setMetadataInput('');
       }
+      const storedMetadata = (existingMapping.metadata ?? {}) as Record<string, unknown>;
+      setFieldValues(Object.fromEntries((module.metadata?.fields ?? []).map((field) => {
+        const stored = storedMetadata[field.key];
+        return [field.key, typeof stored === 'string' ? stored : ''];
+      })));
     } else {
       setSelectedAlgaId('');
       setSelectedExternalId('');
       setSelectedKindId(targetConfig?.defaultKindId ?? '');
       setStaleTarget(false);
       setMetadataInput('');
+      setFieldValues({});
     }
     setError(null);
     setIsSaving(false);
@@ -129,9 +144,17 @@ export function AccountingMappingDialog({
   const cancelButtonId = `${dialogId}-cancel-button`;
   const saveButtonId = `${dialogId}-save-button`;
 
+  const ownAlgaId = existingMapping?.alga_entity_id;
   const algaOptions = useMemo(
-    () => algaEntities.map((entity) => ({ value: entity.id, label: entity.name })),
-    [algaEntities]
+    () =>
+      algaEntities
+        .filter(
+          (entity) =>
+            !mappedAlgaIds?.has(entity.id) ||
+            (isEditing && entity.id === ownAlgaId)
+        )
+        .map((entity) => ({ value: entity.id, label: entity.name })),
+    [algaEntities, mappedAlgaIds, isEditing, ownAlgaId]
   );
 
   const externalOptions = useMemo(
@@ -181,6 +204,29 @@ export function AccountingMappingDialog({
       );
       setIsSaving(false);
       return;
+    }
+
+    const missingField = metadataFields.find((field) => field.required && !(fieldValues[field.key] ?? '').trim());
+    if (missingField) {
+      setError(t('integrations.accounting.dialog.errors.enterExternal', { defaultValue: 'Please enter {{field}}.', field: missingField.label.toLowerCase() }));
+      setIsSaving(false);
+      return;
+    }
+    if (metadataFields.length > 0) {
+      // Fields own only their keys; everything else the mapping carries (set by
+      // exports or other modules) is kept.
+      const merged: Record<string, unknown> = {
+        ...((parsedMetadata ?? existingMapping?.metadata ?? {}) as Record<string, unknown>)
+      };
+      for (const field of metadataFields) {
+        const value = (fieldValues[field.key] ?? '').trim();
+        if (value) {
+          merged[field.key] = value;
+        } else {
+          delete merged[field.key];
+        }
+      }
+      parsedMetadata = merged;
     }
 
     try {
@@ -328,6 +374,25 @@ export function AccountingMappingDialog({
             ) : null}
             {renderExternalFieldHelpText()}
           </div>
+
+          {metadataFields.map((field) => (
+            <div key={field.key} className="space-y-2">
+              <Label htmlFor={`${module.id}-field-${field.key}`} className="text-sm font-medium text-foreground">
+                {field.label}
+              </Label>
+              <Input
+                id={`${module.id}-field-${field.key}`}
+                value={fieldValues[field.key] ?? ''}
+                onChange={(event) => setFieldValues((previous) => ({ ...previous, [field.key]: event.target.value }))}
+                placeholder={field.placeholder}
+                className="w-full"
+                required={field.required}
+              />
+              {field.helpText ? (
+                <p className="text-xs text-muted-foreground">{field.helpText}</p>
+              ) : null}
+            </div>
+          ))}
 
           {context.realmId || context.realmDisplayValue ? (
             <div className="space-y-2">

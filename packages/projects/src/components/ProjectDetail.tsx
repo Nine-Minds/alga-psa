@@ -7,7 +7,7 @@ import { IPriority, IStandardPriority } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { ITaskResource } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
-import { extractTaskDescriptionText } from '../lib/taskRichText';
+import { filterTasks, type TaskFilterCriteria } from '../lib/taskFilters';
 import { useTaskTypeLabel } from '../lib/useTaskTypeLabel';
 import {
   projectKanbanHiddenStatusesKey,
@@ -32,14 +32,21 @@ import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
 import TaskListView from './TaskListView';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useDependencyGuard } from './useDependencyGuard';
+import { useUrlTaskOpenGuard } from './useUrlTaskOpenGuard';
+import { addDependencyToMap, removeDependencyFromMap } from '../lib/taskDependencyMap';
+import ProjectGanttView, { DEFAULT_GANTT_SETTINGS, type GanttSettings } from './ProjectGanttView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deletePhase, getProjectTreeData, reorderPhase, markPhaseComplete, reopenPhase } from '../actions/projectActions';
+import { getPhaseCustomStatusCounts } from '../actions/projectTaskStatusActions';
+import { PhaseStatusScopeChip } from './status-columns';
 import { checkCurrentUserPermissions } from '@alga-psa/auth/actions';
 import type { ProjectBillingOverview } from '@alga-psa/types';
 import { useProjectBillingIntegration } from '../context/ProjectBillingIntegrationContext';
 import { derivePhaseBillingBadges, getCurrentDateInUserTimeZone } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
-import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getProjectTaskData, assignTeamToProjectTask, removeTeamFromProjectTask, bulkAddTagsToTasks } from '../actions/projectTaskActions';
+import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getProjectTaskData, addTaskDependency, removeTaskDependency, assignTeamToProjectTask, removeTeamFromProjectTask, bulkAddTagsToTasks } from '../actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { toast } from 'react-hot-toast';
 import {
@@ -65,7 +72,7 @@ import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
 import { IClient } from '@alga-psa/types';
-import { HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3, Plus, EyeOff, Eye, Receipt } from 'lucide-react';
+import { HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3, Plus, EyeOff, Eye, Receipt, GanttChart } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Popover, PopoverTrigger, PopoverContent } from '@alga-psa/ui/components/Popover';
@@ -89,6 +96,7 @@ const PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING = 'project_kanban_sticky_status
 // Purely visual (does not change the admin `is_visible` config) — it just
 // declutters the board to make dragging across columns easier.
 const PROJECT_LIST_DENSITY_LEVEL_SETTING = 'project_list_density_level';
+const PROJECT_GANTT_SETTINGS_SETTING = 'project_gantt_settings';
 const PROJECT_LIST_COLUMN_WIDTHS_SETTING = 'project_list_column_widths';
 // Legacy localStorage key previously used by TaskListView; reused for one-time
 // hydration so existing per-project widths survive the move to server prefs.
@@ -222,8 +230,14 @@ interface ProjectDetailProps {
   onTagsUpdate?: (tags: ITag[], allTagTexts: string[]) => void;
   initialTaskId?: string | null;
   initialPhaseId?: string | null;
-  initialViewMode?: 'kanban' | 'list' | 'billing' | null;
+  initialViewMode?: 'kanban' | 'list' | 'billing' | 'gantt' | null;
   onUrlUpdate?: (phaseId: string | null, taskId: string | null) => void;
+  /**
+   * Bumped by the host when status columns were edited somewhere else (the
+   * project edit drawer), so the board re-reads its statuses and tasks instead
+   * of waiting for a page reload.
+   */
+  statusRefreshKey?: number;
 }
 
 export default function ProjectDetail({
@@ -238,7 +252,8 @@ export default function ProjectDetail({
   initialTaskId,
   initialPhaseId,
   initialViewMode,
-  onUrlUpdate
+  onUrlUpdate,
+  statusRefreshKey
 }: ProjectDetailProps) {
   const { t } = useTranslation(['features/projects', 'common']);
   const taskTypeLabel = useTaskTypeLabel();
@@ -252,7 +267,7 @@ export default function ProjectDetail({
   const isDark = resolvedTheme === 'dark';
 
   // Batch-load all user preferences in a single server action (instead of 5 separate calls)
-  type ProjectViewMode = 'kanban' | 'list' | 'billing';
+  type ProjectViewMode = 'kanban' | 'list' | 'billing' | 'gantt';
   // Column widths are scoped per project (each project can show different
   // columns), so the preference key includes the project id.
   const columnWidthsPrefKey = `${PROJECT_LIST_COLUMN_WIDTHS_SETTING}:${project.project_id}`;
@@ -269,6 +284,7 @@ export default function ProjectDetail({
     { key: PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING, defaultValue: false, debounceMs: 300 },
     { key: hiddenStatusesPrefKey, defaultValue: [] as string[], debounceMs: 300 },
     { key: PROJECT_LIST_DENSITY_LEVEL_SETTING, defaultValue: PROJECT_LIST_DENSITY_DEFAULT, debounceMs: 300 },
+    { key: PROJECT_GANTT_SETTINGS_SETTING, defaultValue: DEFAULT_GANTT_SETTINGS as GanttSettings, debounceMs: 300 },
     {
       key: columnWidthsPrefKey,
       defaultValue: {} as Record<string, number>,
@@ -276,7 +292,11 @@ export default function ProjectDetail({
       debounceMs: 500,
     },
   ]);
-  const { value: viewMode, setValue: setViewMode, isLoading: isViewModeLoading } = prefs[PROJECT_VIEW_MODE_SETTING];
+  const { value: storedViewMode, setValue: setViewMode, isLoading: isViewModeLoading } = prefs[PROJECT_VIEW_MODE_SETTING];
+  // The timeline ships dark behind the 2.0 release flag. Only its entry point is
+  // gated: a saved preference or ?view=gantt falls back to kanban while it is off.
+  const { enabled: timelineEnabled } = useFeatureFlag('release-v2-0-feature', { defaultValue: false });
+  const viewMode: ProjectViewMode = storedViewMode === 'gantt' && !timelineEnabled ? 'kanban' : storedViewMode;
   const { value: isPhasesPanelVisible, setValue: setIsPhasesPanelVisible } = prefs[PROJECT_PHASES_PANEL_VISIBLE_SETTING];
   const { value: kanbanZoomLevel, setValue: setKanbanZoomLevel } = prefs[PROJECT_KANBAN_ZOOM_LEVEL_SETTING];
   const { value: isHeaderPinned, setValue: setIsHeaderPinned } = prefs[PROJECT_HEADER_PINNED_SETTING];
@@ -284,6 +304,7 @@ export default function ProjectDetail({
   const { value: hiddenKanbanStatusIds, setValue: setHiddenKanbanStatusIds } = prefs[hiddenStatusesPrefKey];
   const { value: listDensityLevel, setValue: setListDensityLevel } = prefs[PROJECT_LIST_DENSITY_LEVEL_SETTING];
   const { value: listColumnWidths, setValue: setListColumnWidths } = prefs[columnWidthsPrefKey];
+  const { value: ganttSettings, setValue: setGanttSettings } = prefs[PROJECT_GANTT_SETTINGS_SETTING];
   const listDensity = useMemo(() => {
     const index = Math.min(
       PROJECT_LIST_DENSITY_PRESETS.length - 1,
@@ -298,6 +319,9 @@ export default function ProjectDetail({
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showPhaseQuickAdd, setShowPhaseQuickAdd] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  // A partial import persists some rows; the refresh is deferred until the user
+  // dismisses the dialog so the per-row error list stays readable.
+  const partialImportNeedsRefresh = useRef(false);
   const [currentPhase, setCurrentPhase] = useState<IProjectPhase | null>(null);
   const [selectedPhase, setSelectedPhase] = useState<IProjectPhase | null>(null);
 
@@ -317,7 +341,16 @@ export default function ProjectDetail({
   const [isTeamSwitchDialogOpen, setIsTeamSwitchDialogOpen] = useState(false);
   const [projectPhases, setProjectPhases] = useState<IProjectPhase[]>(phases);
   const [projectStatuses, setProjectStatuses] = useState<ProjectStatus[]>(initialStatuses);
-  const [statusVersion, setStatusVersion] = useState(0);
+  const [localStatusVersion, setLocalStatusVersion] = useState(0);
+  // Status columns are also edited in the project edit drawer, which lives
+  // outside this component; the host bumps `statusRefreshKey` there. Both
+  // sources feed the one value the status/task re-reads watch.
+  const statusVersion = localStatusVersion + (statusRefreshKey ?? 0);
+  // Per-phase count of phase-scoped status columns; 0 means the phase still
+  // inherits the project defaults. Drives the inheritance chip on the phase
+  // list and the kanban header so forked phases are visible without opening
+  // every Configure dialog.
+  const [phaseCustomStatusCounts, setPhaseCustomStatusCounts] = useState<Record<string, number> | undefined>(undefined);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [defaultStatus, setDefaultStatus] = useState<ProjectStatus | null>(null);
@@ -326,6 +359,7 @@ export default function ProjectDetail({
   const [editingStartDate, setEditingStartDate] = useState<Date | undefined>(undefined);
   const [editingEndDate, setEditingEndDate] = useState<Date | undefined>(undefined);
   const [editingPhaseDescription, setEditingPhaseDescription] = useState<string | null>(null);
+  const [editingPhaseServiceId, setEditingPhaseServiceId] = useState<string | null>(null);
   const [phaseDropTarget, setPhaseDropTarget] = useState<{
     phaseId: string;
     position: 'before' | 'after';
@@ -399,7 +433,8 @@ export default function ProjectDetail({
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
   const { tags: allTags } = useTags();
   const hasNotifiedParent = useRef(false);
-  const hasOpenedInitialTask = useRef(false);
+  // Opens a task named in the URL once; a task opened by a click counts as handled.
+  const urlTaskOpenGuard = useUrlTaskOpenGuard();
 
   // Auto-select phase based on URL param or default to first phase
   useEffect(() => {
@@ -458,6 +493,21 @@ export default function ProjectDetail({
     fetchStatusesForPhase();
     return () => { stale = true; };
   }, [initialStatuses, project.project_id, selectedPhase?.phase_id, statusVersion]);
+
+  // One query per project resolves which phases have forked onto their own
+  // status columns; re-read whenever a status edit bumps statusVersion.
+  useEffect(() => {
+    let stale = false;
+
+    getPhaseCustomStatusCounts(project.project_id)
+      .then((counts) => {
+        if (stale || !counts || 'actionError' in counts || 'permissionError' in counts) return;
+        setPhaseCustomStatusCounts(counts);
+      })
+      .catch(() => { /* chip simply stays hidden */ });
+
+    return () => { stale = true; };
+  }, [project.project_id, statusVersion]);
 
   // Fetch tags when component mounts
   useEffect(() => {
@@ -525,91 +575,30 @@ export default function ProjectDetail({
   const [taskDocumentCounts, setTaskDocumentCounts] = useState<Map<string, number>>(new Map());
   const [taskCommentCounts, setTaskCommentCounts] = useState<Record<string, number>>({});
 
-  const matchesSearch = useCallback((task: IProjectTask): boolean => {
-    if (!searchQuery.trim()) return true;
-    const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
-    const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
-    const descText = extractTaskDescriptionText(task.description_rich_text ?? task.description);
-    const taskDescription = searchCaseSensitive ? descText : descText.toLowerCase();
-
-    if (searchWholeWord) {
-      const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const wordRegex = new RegExp(`\\b${escapedQuery}\\b`, searchCaseSensitive ? '' : 'i');
-      return wordRegex.test(task.task_name) || wordRegex.test(descText);
-    }
-    return taskName.includes(query) || taskDescription.includes(query);
-  }, [searchQuery, searchCaseSensitive, searchWholeWord]);
+  // One criteria object drives the list, board, Gantt and every derived count
+  // through the shared predicate in lib/taskFilters.
+  const taskFilterCriteria = useMemo<TaskFilterCriteria>(() => ({
+    searchQuery,
+    searchWholeWord,
+    searchCaseSensitive,
+    priorityId: selectedPriorityFilter,
+    taskTypeKey: selectedTaskTypeFilter,
+    tags: selectedTaskTags,
+    agentIds: selectedAgentFilter,
+    teamIds: selectedTeamFilter,
+    includeUnassigned: includeUnassignedAgents,
+    primaryAgentOnly,
+  }), [searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, selectedAgentFilter, selectedTeamFilter, includeUnassignedAgents, primaryAgentOnly]);
 
   const filteredTasks = useMemo(() => {
     if (!selectedPhase) return [];
-    let tasks = projectTasks.filter(task => task.wbs_code.startsWith(selectedPhase.wbs_code + '.'));
+    const phaseTasks = projectTasks.filter(task => task.wbs_code.startsWith(selectedPhase.wbs_code + '.'));
 
-    // Apply search filter
-    if (searchQuery.trim()) {
-      tasks = tasks.filter(matchesSearch);
-    }
-
-    // Apply priority filter
-    if (selectedPriorityFilter !== 'all') {
-      tasks = tasks.filter(task => task.priority_id === selectedPriorityFilter);
-    }
-
-    // Apply task type filter
-    if (selectedTaskTypeFilter !== 'all') {
-      tasks = tasks.filter(task => task.task_type_key === selectedTaskTypeFilter);
-    }
-
-    // Apply tag filter
-    if (selectedTaskTags.length > 0) {
-      tasks = tasks.filter(task => {
-        const tags = taskTags[task.task_id] || [];
-        const tagTexts = tags.map(tag => tag.tag_text);
-        return selectedTaskTags.some(selectedTag => tagTexts.includes(selectedTag));
-      });
-    }
-
-    // Apply agent / team filter
-    if (selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents) {
-      tasks = tasks.filter(task => {
-        // Check if task is unassigned (no primary assignee)
-        const isUnassigned = !task.assigned_to;
-
-        // If includeUnassignedAgents is selected and task is unassigned, include it
-        if (includeUnassignedAgents && isUnassigned) {
-          return true;
-        }
-
-        // If specific agents are selected, check if task matches
-        if (selectedAgentFilter.length > 0) {
-          // Check primary assignee
-          if (task.assigned_to && selectedAgentFilter.includes(task.assigned_to)) {
-            return true;
-          }
-
-          // Check additional agents from task resources (only if not filtering for primary only)
-          // Primary only filter is only applicable when exactly one agent is selected
-          if (!(primaryAgentOnly && selectedAgentFilter.length === 1)) {
-            const resources = phaseTaskResources[task.task_id] || [];
-            const hasMatchingAdditionalAgent = resources.some(
-              resource => resource.additional_user_id && selectedAgentFilter.includes(resource.additional_user_id)
-            );
-            if (hasMatchingAdditionalAgent) {
-              return true;
-            }
-          }
-        }
-
-        // If specific teams are selected, match by the task's assigned team
-        if (selectedTeamFilter.length > 0 && task.assigned_team_id && selectedTeamFilter.includes(task.assigned_team_id)) {
-          return true;
-        }
-
-        return false;
-      });
-    }
-
-    return tasks;
-  }, [projectTasks, selectedPhase, matchesSearch, searchQuery, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, taskTags, selectedAgentFilter, selectedTeamFilter, includeUnassignedAgents, primaryAgentOnly, phaseTaskResources]);
+    return filterTasks(phaseTasks, taskFilterCriteria, {
+      tags: taskTags,
+      resources: phaseTaskResources,
+    });
+  }, [projectTasks, selectedPhase, taskFilterCriteria, taskTags, phaseTaskResources]);
 
   const phaseStatusLookup = useMemo(
     () => new Map(projectStatuses.map((status) => [status.project_status_mapping_id, status])),
@@ -774,11 +763,14 @@ export default function ProjectDetail({
       { value: 'kanban', label: t('kanbanView', 'Kanban'), icon: LayoutGrid },
       { value: 'list', label: t('listView', 'List'), icon: List },
     ];
+    if (timelineEnabled) {
+      options.push({ value: 'gantt', label: t('ganttView', 'Timeline'), icon: GanttChart });
+    }
     if (canViewBilling && billingIntegration) {
       options.push({ value: 'billing', label: t('billingView', 'Billing'), icon: Receipt });
     }
     return options;
-  }, [t, canViewBilling, billingIntegration]);
+  }, [t, timelineEnabled, canViewBilling, billingIntegration]);
 
   const readyEntryCount = useMemo(
     () => (billingOverview?.entries ?? []).filter((entry) => entry.status === 'ready').length,
@@ -792,7 +784,12 @@ export default function ProjectDetail({
     return () => clearTimeout(timer);
   }, [billingHighlightEntryId]);
 
-  // Fetch all project task data on mount (shared by list view, sidebar counts, and filtering)
+  // Fetch all project task data (shared by list view, sidebar counts, and
+  // filtering). It re-reads on statusVersion too: the list view buckets tasks
+  // by `statusesByPhase` and offers that phase's columns in its row status
+  // picker, so a status column added or deleted elsewhere would otherwise keep
+  // listing a column that no longer exists — and keep its tasks under it —
+  // until a page reload.
   useEffect(() => {
     let stale = false;
     const fetchAllTaskData = async () => {
@@ -823,71 +820,48 @@ export default function ProjectDetail({
     };
     fetchAllTaskData();
     return () => { stale = true; };
-  }, [project.project_id]);
+  }, [project.project_id, statusVersion]);
 
-  // Filter all project tasks (same logic as list view) for phase count calculation
-  const allFilteredTasks = useMemo(() => {
-    let filtered = allProjectTasks;
+  // Filter all project tasks (same predicate as the list view) for phase counts
+  const allFilteredTasks = useMemo(
+    () => filterTasks(allProjectTasks, taskFilterCriteria, {
+      tags: allProjectTaskTags,
+      resources: allProjectTaskResources,
+    }),
+    [allProjectTasks, taskFilterCriteria, allProjectTaskTags, allProjectTaskResources]
+  );
 
-    // Apply search filter
-    if (searchQuery.trim()) {
-      filtered = filtered.filter(matchesSearch);
+  const hasActiveTaskFilters = Boolean(
+    searchQuery.trim() ||
+    selectedTaskTags.length > 0 ||
+    selectedAgentFilter.length > 0 ||
+    selectedTeamFilter.length > 0 ||
+    includeUnassignedAgents ||
+    selectedPriorityFilter !== 'all' ||
+    selectedTaskTypeFilter !== 'all'
+  );
+  const ganttVisibleTaskIds = useMemo(
+    () => new Set(allFilteredTasks.map(task => task.task_id)),
+    [allFilteredTasks]
+  );
+  const ganttChecklistSummary = useMemo(() => {
+    const summary: Record<string, { total: number; completed: number }> = {};
+    for (const [taskId, items] of Object.entries(allChecklistItems)) {
+      summary[taskId] = {
+        total: items.length,
+        completed: items.filter((item: any) => item.completed).length,
+      };
     }
+    return summary;
+  }, [allChecklistItems]);
 
-    // Apply priority filter
-    if (selectedPriorityFilter !== 'all') {
-      filtered = filtered.filter(task => task.priority_id === selectedPriorityFilter);
-    }
-
-    // Apply task type filter
-    if (selectedTaskTypeFilter !== 'all') {
-      filtered = filtered.filter(task => task.task_type_key === selectedTaskTypeFilter);
-    }
-
-    // Apply tag filter
-    if (selectedTaskTags.length > 0) {
-      filtered = filtered.filter(task => {
-        const tags = allProjectTaskTags[task.task_id] || [];
-        const tagTexts = tags.map(tag => tag.tag_text);
-        return selectedTaskTags.some(selectedTag => tagTexts.includes(selectedTag));
-      });
-    }
-
-    // Apply agent / team filter
-    if (selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents) {
-      filtered = filtered.filter(task => {
-        const isUnassigned = !task.assigned_to;
-
-        if (includeUnassignedAgents && isUnassigned) {
-          return true;
-        }
-
-        if (selectedAgentFilter.length > 0) {
-          if (task.assigned_to && selectedAgentFilter.includes(task.assigned_to)) {
-            return true;
-          }
-
-          if (!(primaryAgentOnly && selectedAgentFilter.length === 1)) {
-            const resources = allProjectTaskResources[task.task_id] || [];
-            const hasMatchingAdditionalAgent = resources.some(
-              resource => resource.additional_user_id && selectedAgentFilter.includes(resource.additional_user_id)
-            );
-            if (hasMatchingAdditionalAgent) {
-              return true;
-            }
-          }
-        }
-
-        if (selectedTeamFilter.length > 0 && task.assigned_team_id && selectedTeamFilter.includes(task.assigned_team_id)) {
-          return true;
-        }
-
-        return false;
-      });
-    }
-
-    return filtered;
-  }, [allProjectTasks, matchesSearch, searchQuery, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, allProjectTaskTags, selectedAgentFilter, selectedTeamFilter, includeUnassignedAgents, primaryAgentOnly, allProjectTaskResources]);
+  const { confirmTaskChanges, dependencyGuardDialog } = useDependencyGuard({
+    tasks: allProjectTasks,
+    phases: projectPhases,
+    taskDependencies: allTaskDependencies,
+    statuses: projectStatuses,
+    statusesByPhase,
+  });
 
   // Calculate filtered phase task counts (like list view's phaseGroups)
   // Falls back to server-fetched counts while allProjectTasks is loading
@@ -1425,6 +1399,11 @@ export default function ProjectDetail({
     beforeTaskId: string | null,
     afterTaskId: string | null
   ) => {
+    const movedTaskIds = selectedTaskIds.has(taskId) && selectedTaskIds.size > 1 ? [...selectedTaskIds] : [taskId];
+    if (!(await confirmTaskChanges(movedTaskIds.map(id => ({ taskId: id, change: { project_status_mapping_id: newStatusMappingId } }))))) {
+      return;
+    }
+
     // Bulk move: when the dragged task is part of a multi-selection, move them all
     if (selectedTaskIds.has(taskId) && selectedTaskIds.size > 1) {
       // Sort selected tasks by current order_key so they land in their existing
@@ -1505,7 +1484,7 @@ export default function ProjectDetail({
           }
           return t;
         }));
-        setStatusVersion(v => v + 1);
+        setLocalStatusVersion(v => v + 1);
       } else {
         // Pure same-phase reorder/status change — apply server-returned
         // order_key/status so the list reflects the exact drop position.
@@ -1827,10 +1806,9 @@ export default function ProjectDetail({
   // Handle opening task from URL parameter (e.g., from notifications)
   // First effect: Fetch task and select its phase
   useEffect(() => {
-    if (!initialTaskId || projectPhases.length === 0) return;
-
-    // Reset the flag when initialTaskId changes
-    hasOpenedInitialTask.current = false;
+    // Skip when the URL has no task, or names the one already open.
+    if (!urlTaskOpenGuard.arm(initialTaskId) || !initialTaskId) return;
+    if (projectPhases.length === 0) return;
 
     const loadTaskAndSelectPhase = async () => {
       try {
@@ -1871,7 +1849,7 @@ export default function ProjectDetail({
 
   // Second effect: Once tasks are loaded, open the specific task
   useEffect(() => {
-    if (!initialTaskId || projectTasks.length === 0 || hasOpenedInitialTask.current) return;
+    if (!initialTaskId || projectTasks.length === 0 || !urlTaskOpenGuard.canOpen()) return;
 
     // Find the task in the loaded tasks
     const taskToOpen = projectTasks.find(task => task.task_id === initialTaskId);
@@ -1881,7 +1859,7 @@ export default function ProjectDetail({
       setSelectedTask(taskToOpen);
       setCurrentPhase(selectedPhase);
       setShowQuickAdd(true);
-      hasOpenedInitialTask.current = true; // Mark that we've opened the task
+      urlTaskOpenGuard.markOpened(initialTaskId);
     }
   }, [initialTaskId, projectTasks]);
 
@@ -1994,6 +1972,9 @@ export default function ProjectDetail({
     // Selected tasks across every phase (not just the current board)
     const allSelected = allProjectTasks.filter(t => selectedTaskIds.has(t.task_id));
     if (allSelected.length === 0) return;
+    if (!(await confirmTaskChanges(allSelected.map(t => ({ taskId: t.task_id, change: { project_status_mapping_id: targetStatusId } }))))) {
+      return;
+    }
 
     const samePhaseTasks = allSelected
       .filter(t => t.phase_id === currentPhaseId)
@@ -2058,7 +2039,7 @@ export default function ProjectDetail({
           }
           return t;
         }));
-        setStatusVersion(v => v + 1);
+        setLocalStatusVersion(v => v + 1);
         playTaskLayoutAnimation(beforeLayout, movedTaskIds);
       } else {
         // Pure same-phase status change — update in place to avoid a reload flicker
@@ -2124,6 +2105,13 @@ export default function ProjectDetail({
 
     if (!task) {
       console.error('Task not found');
+      return;
+    }
+
+    if (
+      task.project_status_mapping_id !== targetStatusId &&
+      !(await confirmTaskChanges([{ taskId: draggedTaskId, change: { project_status_mapping_id: targetStatusId } }]))
+    ) {
       return;
     }
 
@@ -2756,6 +2744,7 @@ export default function ProjectDetail({
     // Log that we're using the cached project tree data for editing
     console.log('Using cached project tree data for edit task dialog');
 
+    urlTaskOpenGuard.markOpened(task.task_id);
     setSelectedTask(task);
     const taskPhase = phases.find(phase => phase.phase_id === task.phase_id) || null;
     setCurrentPhase(taskPhase);
@@ -2814,6 +2803,15 @@ export default function ProjectDetail({
   // due date, hours). Mirrors handleAssigneeChange: spread the existing task,
   // apply the partial, persist, then sync both task arrays.
   const handleListTaskUpdate = async (taskId: string, updates: Partial<IProjectTask>) => {
+    // Inline status and date edits, and timeline drags, all save through here.
+    if ('project_status_mapping_id' in updates || 'start_date' in updates || 'due_date' in updates) {
+      const change: Parameters<typeof confirmTaskChanges>[0][number]['change'] = {};
+      if ('project_status_mapping_id' in updates) change.project_status_mapping_id = updates.project_status_mapping_id;
+      if ('start_date' in updates) change.start_date = updates.start_date ?? null;
+      if ('due_date' in updates) change.due_date = updates.due_date ?? null;
+      if (!(await confirmTaskChanges([{ taskId, change }]))) return;
+    }
+
     try {
       const task = projectTasks.find(t => t.task_id === taskId) || allProjectTasks.find(t => t.task_id === taskId);
       if (!task) {
@@ -2842,6 +2840,35 @@ export default function ProjectDetail({
       }
     } catch (error) {
       handleError(error, 'Failed to update task. Please try again.');
+    }
+  };
+
+  // Timeline: a dependency drawn from one bar to another is a blocking link.
+  const handleGanttAddDependency = async (predecessorTaskId: string, successorTaskId: string) => {
+    try {
+      const dependency = await addTaskDependency(predecessorTaskId, successorTaskId, 'blocks');
+      if (isReturnedActionError(dependency)) {
+        toast.error(getErrorMessage(dependency));
+        return;
+      }
+      setAllTaskDependencies(prev => addDependencyToMap(prev, dependency));
+      toast.success(t('gantt.dependencyAdded', 'Dependency added'));
+    } catch (error) {
+      handleError(error, 'Failed to add dependency. Please try again.');
+    }
+  };
+
+  const handleGanttRemoveDependency = async (dependencyId: string) => {
+    try {
+      const result = await removeTaskDependency(dependencyId);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setAllTaskDependencies(prev => removeDependencyFromMap(prev, dependencyId));
+      toast.success(t('gantt.dependencyRemoved', 'Dependency removed'));
+    } catch (error) {
+      handleError(error, 'Failed to remove dependency. Please try again.');
     }
   };
 
@@ -2918,6 +2945,7 @@ export default function ProjectDetail({
     setEditingPhaseId(phase.phase_id);
     setEditingPhaseName(phase.phase_name);
     setEditingPhaseDescription(phase.description);
+    setEditingPhaseServiceId(phase.service_id ?? null);
     // Always create new Date objects from the timestamps to ensure consistent format
     setEditingStartDate(phase.start_date ? new Date(phase.start_date) : undefined);
     setEditingEndDate(phase.end_date ? new Date(phase.end_date) : undefined);
@@ -2934,7 +2962,8 @@ export default function ProjectDetail({
         phase_name: editingPhaseName,
         description: editingPhaseDescription,
         start_date: editingStartDate || null,
-        end_date: editingEndDate || null
+        end_date: editingEndDate || null,
+        service_id: editingPhaseServiceId
       });
       if (isReturnedActionError(updatedPhase)) {
         handleError(getErrorMessage(updatedPhase));
@@ -2949,7 +2978,8 @@ export default function ProjectDetail({
                 phase_name: editingPhaseName,
                 description: updatedPhase.description,
                 start_date: updatedPhase.start_date,
-                end_date: updatedPhase.end_date
+                end_date: updatedPhase.end_date,
+                service_id: updatedPhase.service_id
               }
             : p
         )
@@ -2962,6 +2992,7 @@ export default function ProjectDetail({
       setEditingPhaseId(null);
       setEditingPhaseName('');
       setEditingPhaseDescription(null);
+      setEditingPhaseServiceId(null);
       setEditingStartDate(undefined);
       setEditingEndDate(undefined);
       toast.success(t('projectDetail.phaseUpdatedSuccess', 'Phase updated successfully!'));
@@ -2974,6 +3005,7 @@ export default function ProjectDetail({
     setEditingPhaseId(null);
     setEditingPhaseName('');
     setEditingPhaseDescription(null);
+    setEditingPhaseServiceId(null);
     setEditingStartDate(undefined);
     setEditingEndDate(undefined);
   };
@@ -3498,14 +3530,18 @@ export default function ProjectDetail({
       );
     }
 
-    if (viewMode === 'list') {
+    // The timeline shares the list view's search and filters; its own scale and
+    // display controls live inside the chart toolbar.
+    if (viewMode === 'list' || viewMode === 'gantt') {
       return (
         <div className="mb-4 space-y-3 flex-shrink-0">
           {/* Top row: Title + Density + Pin + View Switcher */}
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold">{t('projectDetail.taskList', 'Task List')}</h2>
+            <h2 className="text-xl font-bold">
+              {viewMode === 'gantt' ? t('projectDetail.timeline', 'Timeline') : t('projectDetail.taskList', 'Task List')}
+            </h2>
             <div className="flex items-center gap-4">
-              <ViewDensityControl
+              {viewMode === 'list' && <ViewDensityControl
                 idPrefix="project-task-list-density"
                 value={listDensityLevel ?? PROJECT_LIST_DENSITY_DEFAULT}
                 onChange={setListDensityLevel}
@@ -3516,7 +3552,7 @@ export default function ProjectDetail({
                 decreaseTitle={t('projectDetail.spacing.decrease', 'Decrease list spacing')}
                 increaseTitle={t('projectDetail.spacing.increase', 'Increase list spacing')}
                 resetTitle={t('projectDetail.spacing.reset', 'Reset list spacing')}
-              />
+              />}
               <Tooltip content={isHeaderPinned ? t('projectDetail.unpinHeader', 'Unpin header') : t('projectDetail.pinHeader', 'Pin header to top')}>
                 <Button
                   id="pin-header-toggle-list"
@@ -3716,6 +3752,16 @@ export default function ProjectDetail({
                 ? t('projectDetail.kanbanBoardWithPhase', 'Kanban Board: {{phaseName}}', { phaseName: selectedPhase.phase_name })
                 : t('projectDetail.kanbanBoard', 'Kanban Board')}
             </h2>
+            {selectedPhase && (
+              <div className="mt-1">
+                <PhaseStatusScopeChip
+                  customStatusCount={phaseCustomStatusCounts
+                    ? phaseCustomStatusCounts[selectedPhase.phase_id] ?? 0
+                    : undefined}
+                  id={`kanban-phase-status-scope-${selectedPhase.phase_id}`}
+                />
+              </div>
+            )}
             {selectedPhase?.description && (
               <p className="text-sm text-gray-600 mt-0.5">{selectedPhase.description}</p>
             )}
@@ -4044,6 +4090,48 @@ export default function ProjectDetail({
       );
     }
 
+    // Timeline (Gantt) rendering: same project-wide task/dependency data the
+    // list view already loaded.
+    if (viewMode === 'gantt') {
+      if (!projectTaskDataLoaded) {
+        return (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-gray-500">{t('projectDetail.loadingTimeline', 'Loading timeline...')}</div>
+          </div>
+        );
+      }
+
+      return (
+        <ProjectGanttView
+          projectName={project.project_name}
+          phases={projectPhases}
+          tasks={allProjectTasks}
+          visibleTaskIds={hasActiveTaskFilters ? ganttVisibleTaskIds : undefined}
+          hasActiveFilters={hasActiveTaskFilters}
+          statuses={projectStatuses}
+          statusesByPhase={statusesByPhase}
+          taskDependencies={allTaskDependencies}
+          checklistSummary={ganttChecklistSummary}
+          users={users}
+          settings={ganttSettings}
+          onSettingsChange={setGanttSettings}
+          canEdit={canCompletePhase}
+          onTaskClick={handleTaskSelected}
+          onTaskDatesChange={handleListTaskUpdate}
+          onAddDependency={handleGanttAddDependency}
+          onRemoveDependency={handleGanttRemoveDependency}
+          onAddPhase={() => setShowPhaseQuickAdd(true)}
+          onAddTask={(phaseId) => {
+            const phase = projectPhases.find(p => p.phase_id === phaseId);
+            if (phase) {
+              setCurrentPhase(phase);
+              setShowQuickAdd(true);
+            }
+          }}
+        />
+      );
+    }
+
     // List view rendering
     if (viewMode === 'list') {
       if (!projectTaskDataLoaded) {
@@ -4108,6 +4196,7 @@ export default function ProjectDetail({
           teamNames={teamNames}
           teamAvatarUrls={teamAvatarUrls}
           selectedPriorityFilter={selectedPriorityFilter}
+          selectedTaskTypeFilter={selectedTaskTypeFilter}
           selectedTaskTags={selectedTaskTags}
           selectedAgentFilter={selectedAgentFilter}
           selectedTeamFilter={selectedTeamFilter}
@@ -4258,6 +4347,7 @@ export default function ProjectDetail({
                   editingPhaseDescription={editingPhaseDescription}
                   editingStartDate={editingStartDate}
                   editingEndDate={editingEndDate}
+                  editingPhaseServiceId={editingPhaseServiceId}
                   phaseTaskCounts={filteredPhaseTaskCounts}
                   phaseDropTarget={phaseDropTarget}
                   taskDraggingOverPhaseId={taskDraggingOverPhaseId}
@@ -4280,15 +4370,17 @@ export default function ProjectDetail({
                   onEditingPhaseDescriptionChange={setEditingPhaseDescription}
                   onEditingStartDateChange={setEditingStartDate}
                   onEditingEndDateChange={setEditingEndDate}
+                  onEditingPhaseServiceChange={setEditingPhaseServiceId}
                   onDragOver={handlePhaseDragOver}
                   onDragLeave={handlePhaseDragLeave}
                   onDrop={handlePhaseDropZone}
                   onDragStart={handlePhaseDragStart}
                   onDragEnd={handlePhaseDragEnd}
-                  onStatusesChanged={() => setStatusVersion(v => v + 1)}
+                  onStatusesChanged={() => setLocalStatusVersion(v => v + 1)}
                   onImport={() => setShowImportDialog(true)}
                   phaseBillingBadges={phaseBillingBadges}
                   phaseAllTasksClosed={phaseAllTasksClosed}
+                  phaseCustomStatusCounts={phaseCustomStatusCounts}
                   canCompletePhase={canCompletePhase}
                   onMarkPhaseComplete={handleMarkPhaseComplete}
                   onReopenPhase={handleReopenPhase}
@@ -4407,6 +4499,7 @@ export default function ProjectDetail({
             phases={projectPhases}
             onClose={handleCloseQuickAdd}
             onTaskUpdated={handleTaskUpdated}
+            confirmBeforeSave={(taskId, change) => confirmTaskChanges([{ taskId, change }])}
             projectStatuses={projectStatuses}
             users={users}
             projectTreeData={projectTreeData}
@@ -4658,29 +4751,40 @@ export default function ProjectDetail({
       {/* Phase/Task Import Dialog */}
       <PhaseTaskImportDialog
         isOpen={showImportDialog}
-        onClose={() => setShowImportDialog(false)}
+        onClose={() => {
+          setShowImportDialog(false);
+          if (partialImportNeedsRefresh.current) {
+            partialImportNeedsRefresh.current = false;
+            window.location.reload();
+          }
+        }}
         projectId={project.project_id}
         onImportComplete={(result) => {
-          setShowImportDialog(false);
-          if (result.success || result.tasksCreated > 0) {
-            toast.success(
-              t('projectDetail.importSuccess', 'Imported {{phases}} phases and {{tasks}} tasks', {
-                phases: result.phasesCreated,
-                tasks: result.tasksCreated,
-              }),
-            );
-            // Refresh the page to show imported data
-            window.location.reload();
-          } else if (result.errors.length > 0) {
+          if (result.errors.length > 0) {
+            // Keep the dialog open on its own completion step: it lists the failed
+            // rows with their CSV row numbers. Reloading here would throw them away.
+            partialImportNeedsRefresh.current = result.phasesCreated > 0 || result.tasksCreated > 0;
             toast.error(
               t('projectDetail.importFailed', 'Import failed: {{error}}', {
                 error: result.errors[0],
               }),
             );
+            return;
           }
+
+          setShowImportDialog(false);
+          toast.success(
+            t('projectDetail.importSuccess', 'Imported {{phases}} phases and {{tasks}} tasks', {
+              phases: result.phasesCreated,
+              tasks: result.tasksCreated,
+            }),
+          );
+          // Refresh the page to show imported data
+          window.location.reload();
         }}
       />
 
+      {dependencyGuardDialog}
       <RemoveTeamDialog
         id="project-detail-team-switch-dialog"
         isOpen={isTeamSwitchDialogOpen}

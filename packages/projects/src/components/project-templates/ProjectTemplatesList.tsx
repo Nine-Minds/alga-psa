@@ -318,6 +318,7 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
       ) : (
         <DataTable
           id="project-templates-table"
+          persistPageSize={false}
           data={templates}
           columns={columns}
           pagination={true}

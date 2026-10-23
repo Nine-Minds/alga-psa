@@ -168,7 +168,8 @@
       "expandGroup": "Développer le groupe",
       "collapseGroup": "Réduire le groupe",
       "renameGroup": "Renommer le groupe",
-      "deleteGroup": "Supprimer le groupe"
+      "deleteGroup": "Supprimer le groupe",
+      "groupMenu": "Actions du groupe"
     },
     "dropActivitiesHere": "Déposez les activités ici",
     "ungroupedHeading": "Sans groupe",
@@ -178,6 +179,16 @@
       "status": "Statut",
       "priority": "Priorité",
       "dueDate": "Date d'échéance"
+    },
+    "defaultBadge": "Par défaut",
+    "defaultBadgeHint": "Les activités que vous n'avez placées dans aucun groupe apparaissent ici, y compris le travail nouvellement assigné.",
+    "defaultGroupEmpty": "Le nouveau travail qui vous est assigné apparaîtra ici",
+    "menu": {
+      "setDefault": "Définir par défaut pour le nouveau travail",
+      "unsetDefault": "Ne plus utiliser par défaut"
+    },
+    "errors": {
+      "setDefaultFailed": "Impossible de mettre à jour le groupe par défaut"
     }
   },
   "printable": {
@@ -190,13 +201,10 @@
       "title": "Tâches de projet",
       "actions": {
         "refresh": "Actualiser",
-        "filter": "Filtrer",
-        "reset": "Réinitialiser",
         "viewAll": "Tout afficher"
       },
       "ariaLabels": {
-        "refresh": "Actualiser les tâches de projet",
-        "filter": "Filtrer les tâches de projet"
+        "refresh": "Actualiser les tâches de projet"
       },
       "states": {
         "loading": "Chargement des activités de projet...",
@@ -204,47 +212,16 @@
       },
       "errors": {
         "loadFailed": "Échec du chargement des activités de projet. Veuillez réessayer plus tard."
-      },
-      "filterDialog": {
-        "title": "Filtrer les tâches de projet",
-        "description": "Sélectionnez des critères pour filtrer les activités de tâches de projet.",
-        "fields": {
-          "search": "Rechercher",
-          "searchPlaceholder": "Rechercher titre, description",
-          "project": "Projet",
-          "projectPlaceholder": "Sélectionner un projet...",
-          "allProjects": "Tous les projets",
-          "phase": "Phase",
-          "phasePlaceholder": "Sélectionner une phase...",
-          "phaseLoadingPlaceholder": "Chargement des phases...",
-          "phaseSelectFirstPlaceholder": "Sélectionnez d'abord un projet",
-          "allPhases": "Toutes les phases",
-          "priority": "Priorité",
-          "priorityPlaceholder": "Sélectionner une priorité...",
-          "allPriorities": "Toutes les priorités",
-          "dueDateRange": "Plage de dates d'échéance",
-          "createdDateRange": "Plage de dates de création",
-          "showClosedTasks": "Afficher les tâches fermées"
-        },
-        "actions": {
-          "reset": "Réinitialiser",
-          "cancel": "Annuler",
-          "apply": "Appliquer les filtres",
-          "clearDates": "Effacer"
-        }
       }
     },
     "tickets": {
       "title": "Tickets",
       "actions": {
         "refresh": "Actualiser",
-        "filter": "Filtrer",
-        "reset": "Réinitialiser",
         "viewAll": "Tout afficher"
       },
       "ariaLabels": {
-        "refresh": "Actualiser les tickets",
-        "filter": "Filtrer les tickets"
+        "refresh": "Actualiser les tickets"
       },
       "states": {
         "loading": "Chargement des activités de tickets...",
@@ -252,31 +229,6 @@
       },
       "errors": {
         "loadFailed": "Échec du chargement des activités de tickets. Veuillez réessayer plus tard."
-      },
-      "filterDialog": {
-        "title": "Filtrer les tickets",
-        "description": "Sélectionnez des critères pour filtrer les activités de tickets.",
-        "fields": {
-          "search": "Rechercher",
-          "searchPlaceholder": "Rechercher titre, description, n° de ticket",
-          "client": "Client",
-          "contact": "Contact",
-          "status": "Statut",
-          "statusPlaceholder": "Sélectionner un statut...",
-          "allStatuses": "Tous les statuts",
-          "priority": "Priorité",
-          "priorityPlaceholder": "Sélectionner une priorité...",
-          "allPriorities": "Toutes les priorités",
-          "dueDateRange": "Plage de dates d'échéance",
-          "createdDateRange": "Plage de dates de création",
-          "showClosedTickets": "Afficher les tickets fermés"
-        },
-        "actions": {
-          "reset": "Réinitialiser",
-          "cancel": "Annuler",
-          "apply": "Appliquer les filtres",
-          "clearDates": "Effacer"
-        }
       }
     },
     "workflowTasks": {
@@ -284,13 +236,10 @@
       "drawerTitle": "Tâches de workflow",
       "actions": {
         "refresh": "Actualiser",
-        "filter": "Filtrer",
-        "reset": "Réinitialiser",
         "viewAll": "Tout afficher"
       },
       "ariaLabels": {
-        "refresh": "Actualiser les tâches de workflow",
-        "filter": "Filtrer les tâches de workflow"
+        "refresh": "Actualiser les tâches de workflow"
       },
       "states": {
         "loading": "Chargement des activités de tâches de workflow...",
@@ -298,33 +247,6 @@
       },
       "errors": {
         "loadFailed": "Échec du chargement des activités de tâches de workflow. Veuillez réessayer plus tard."
-      },
-      "filterDialog": {
-        "title": "Filtrer les tâches de workflow",
-        "description": "Sélectionnez des critères pour filtrer les activités de tâches de workflow.",
-        "fields": {
-          "search": "Rechercher",
-          "searchPlaceholder": "Rechercher titre, description",
-          "workflowExecution": "Exécution de workflow",
-          "workflowExecutionPlaceholder": "Sélectionner une exécution de workflow...",
-          "allExecutions": "Toutes les exécutions",
-          "priority": "Priorité",
-          "priorityPlaceholder": "Sélectionner une priorité...",
-          "allPriorities": "Toutes les priorités",
-          "priorityHigh": "Élevée",
-          "priorityMedium": "Moyenne",
-          "priorityLow": "Faible",
-          "dueDateRange": "Plage de dates d'échéance",
-          "createdDateRange": "Plage de dates de création",
-          "showClosedTasks": "Afficher les tâches fermées",
-          "includeHiddenTasks": "Inclure les tâches masquées"
-        },
-        "actions": {
-          "reset": "Réinitialiser",
-          "cancel": "Annuler",
-          "apply": "Appliquer les filtres",
-          "clearDates": "Effacer"
-        }
       },
       "listDrawer": {
         "searchPlaceholder": "Rechercher des tâches...",
@@ -352,8 +274,6 @@
       "title": "Calendrier",
       "actions": {
         "refresh": "Actualiser",
-        "filter": "Filtrer",
-        "reset": "Réinitialiser",
         "viewAll": "Tout afficher"
       },
       "states": {
@@ -364,41 +284,17 @@
         "loadFailed": "Échec du chargement des activités de calendrier. Veuillez réessayer plus tard.",
         "refreshFailed": "Échec de l'actualisation des activités de calendrier. Veuillez réessayer plus tard.",
         "addAdHocFailed": "Échec de l'ajout de l'activité. Veuillez réessayer."
-      },
-      "filterDialog": {
-        "title": "Filtrer les entrées du calendrier",
-        "description": "Sélectionnez des critères pour filtrer les activités du calendrier.",
-        "fields": {
-          "search": "Rechercher",
-          "searchPlaceholder": "Rechercher titre, description",
-          "dateRange": "Plage de dates",
-          "workItemType": "Type d'élément de travail associé",
-          "workItemTypePlaceholder": "Sélectionner un type d'élément de travail...",
-          "allTypes": "Tous les types",
-          "ticket": "Ticket",
-          "projectTask": "Tâche de projet",
-          "workflowTask": "Tâche de workflow",
-          "showClosedEntries": "Afficher les entrées fermées",
-          "showRecurringOnly": "Afficher uniquement les récurrentes"
-        },
-        "actions": {
-          "reset": "Réinitialiser",
-          "cancel": "Annuler",
-          "apply": "Appliquer les filtres"
-        }
       }
     },
     "notifications": {
       "title": "Notifications",
       "actions": {
         "refresh": "Actualiser",
-        "filter": "Filtrer",
         "reset": "Réinitialiser",
         "viewAll": "Tout afficher"
       },
       "ariaLabels": {
-        "refresh": "Actualiser les notifications",
-        "filter": "Filtrer les notifications"
+        "refresh": "Actualiser les notifications"
       },
       "tabs": {
         "unread": "Non lues",
@@ -413,12 +309,7 @@
         "loadFailed": "Échec du chargement des activités de notification. Veuillez réessayer plus tard."
       },
       "filterDialog": {
-        "title": "Filtrer les notifications",
-        "description": "Sélectionnez des critères pour filtrer les activités de notification.",
         "fields": {
-          "status": "Statut",
-          "unreadOnly": "Non lues uniquement",
-          "showRead": "Afficher les lues",
           "category": "Catégorie",
           "categoryPlaceholder": "Sélectionner une catégorie...",
           "allCategories": "Toutes les catégories",
@@ -429,11 +320,6 @@
             "system": "Système"
           },
           "dateRange": "Plage de dates"
-        },
-        "actions": {
-          "reset": "Réinitialiser",
-          "cancel": "Annuler",
-          "apply": "Appliquer les filtres"
         }
       },
       "priority": {
@@ -533,5 +419,32 @@
   "actions": {
     "print": "Imprimer",
     "printOptions": "Options d'impression"
+  },
+  "actionMenu": {
+    "moveToGroup": "Déplacer vers le groupe",
+    "loadingGroups": "Chargement…",
+    "newGroupTitle": "Nouveau groupe"
+  },
+  "deepLink": {
+    "notInView": "Cet élément n'est pas dans votre vue actuelle.",
+    "notOnList": "Cet élément ne figure plus dans votre liste d'activités.",
+    "clearFilters": "Effacer les filtres"
+  },
+  "myGroup": {
+    "label": "Mon groupe",
+    "chip": "Mon groupe : {{name}}",
+    "ungrouped": "Non groupé",
+    "privacyHint": "Vous seul pouvez le voir. Cela organise votre liste d'activités.",
+    "selectPlaceholder": "Choisir un groupe",
+    "newGroup": "Nouveau groupe…",
+    "newGroupPlaceholder": "Nom du groupe",
+    "create": "Créer",
+    "cancel": "Annuler",
+    "showOnBoard": "Afficher dans mes activités",
+    "errors": {
+      "load": "Impossible de charger vos groupes.",
+      "move": "Impossible de changer votre groupe. Réessayez.",
+      "create": "Impossible de créer le groupe. Réessayez."
+    }
   }
 }

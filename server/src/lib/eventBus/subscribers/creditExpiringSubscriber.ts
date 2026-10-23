@@ -172,6 +172,7 @@ async function handleCreditExpiringEvent(event: unknown): Promise<void> {
         // Send notification to each contact
         for (const contact of contacts) {
           await notificationService.sendNotification({
+            mailClass: 'billing',
             tenant: tenantId,
             userId: contact.user_id,
             subtypeId: subtype.id,

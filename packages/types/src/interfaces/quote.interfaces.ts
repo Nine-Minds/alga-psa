@@ -47,6 +47,7 @@ export interface IQuoteItem extends TenantEntity {
   tax_amount: number;
   net_amount: number;
   unit_of_measure?: string | null;
+  unit_code?: string | null;
   display_order: number;
   phase?: string | null;
   is_optional: boolean;
@@ -78,6 +79,13 @@ export interface IQuoteActivity extends TenantEntity {
   created_at?: ISO8601String;
 }
 
+/**
+ * Authored BlockNote block array backing rich Terms & Conditions.
+ * `quotes.terms_and_conditions` remains the flattened plain-text projection
+ * rendered when this is NULL.
+ */
+export type QuoteTermsBlockContent = Array<Record<string, unknown>>;
+
 export interface IQuote extends TenantEntity {
   quote_id: string;
   quote_number?: string | null;
@@ -91,6 +99,8 @@ export interface IQuote extends TenantEntity {
   version: number;
   parent_quote_id?: string | null;
   po_number?: string | null;
+  recurring_section_title?: string | null;
+  onetime_section_title?: string | null;
   subtotal: number;
   discount_total: number;
   tax: number;
@@ -100,6 +110,7 @@ export interface IQuote extends TenantEntity {
   internal_notes?: string | null;
   client_notes?: string | null;
   terms_and_conditions?: string | null;
+  terms_and_conditions_block?: QuoteTermsBlockContent | null;
   is_template: boolean;
   template_id?: string | null;
   converted_contract_id?: string | null;
@@ -160,6 +171,10 @@ export interface QuoteConversionPreview {
   available_actions: Array<'contract' | 'invoice' | 'both'>;
   /** An existing sales order must be reconciled before creating the remaining invoice. */
   invoice_error?: string | null;
+  /** Set when a recurring item cannot become a billable contract line; contract conversion is unavailable. */
+  contract_blocked_reason?: string | null;
+  /** Description of the service-less recurring item behind `contract_blocked_reason`, for localized display. */
+  contract_blocked_item_description?: string | null;
   contract_items: QuoteConversionPreviewItem[];
   /** One-time items an invoice conversion would bill right now — mirrors the
    *  runtime exclusion of product lines already claimed by a sales order. */
@@ -214,9 +229,16 @@ export interface QuoteViewModelLineItem {
   tax_amount: number;
   net_amount: number;
   unit_of_measure?: string | null;
+  unit_code?: string | null;
   phase?: string | null;
   is_optional: boolean;
   is_selected: boolean;
+  /**
+   * Row marker for optional lines — "Optional (included)" for a selected
+   * add-on that counts toward the total, "Optional (if selected)" for a
+   * pending one; null for required rows. Localized by the PDF service.
+   */
+  optional_label?: string | null;
   is_recurring: boolean;
   billing_frequency?: string | null;
   is_discount?: boolean;
@@ -248,6 +270,40 @@ export interface QuoteViewModelLocationGroup {
   total: number;
 }
 
+/**
+ * One cadence band of a quote (Monthly / Quarterly / Semi-annually / Annually /
+ * any other recurring cadence / One-time). `items` are the rows that count
+ * toward the total (required rows and selected optional add-ons) with their
+ * per-band subtotal/tax/total; `optional_items` and `optional_*` carry the
+ * pending "if selected" add-ons that are excluded from every total.
+ */
+export interface QuoteViewModelCadenceGroup {
+  cadence_key: string;
+  /** Localized band label; English fallback is emitted by the adapter. */
+  name?: string | null;
+  /**
+   * Set when `name` came from the quote's own `recurring_section_title` /
+   * `onetime_section_title` instead of the cadence vocabulary, so the document
+   * label localization leaves the author's wording alone.
+   */
+  name_is_custom?: boolean;
+  /**
+   * Localized "{{cadence}} Total" band-footer label (e.g. "Monthly Total").
+   * English fallback (`${name} Total`) is emitted by the adapter and replaced
+   * with the localized template by the PDF service.
+   */
+  total_label?: string | null;
+  is_recurring: boolean;
+  items: QuoteViewModelLineItem[];
+  subtotal: number;
+  tax: number;
+  total: number;
+  optional_items: QuoteViewModelLineItem[];
+  optional_subtotal: number;
+  optional_tax: number;
+  optional_total: number;
+}
+
 export interface QuoteViewModel {
   quote_id: string;
   quote_number: string;
@@ -259,12 +315,17 @@ export interface QuoteViewModel {
   status?: QuoteStatus | null;
   version: number;
   po_number?: string | null;
+  recurring_section_title?: string | null;
+  onetime_section_title?: string | null;
   currency_code: string;
   subtotal: number;
   discount_total: number;
   tax: number;
   total_amount: number;
   terms_and_conditions?: string | null;
+  terms_and_conditions_block?: QuoteTermsBlockContent | null;
+  /** Structured block when authored, otherwise the plain-text projection. */
+  terms_and_conditions_rich?: string | QuoteTermsBlockContent | null;
   client_notes?: string | null;
   client_id?: string | null;
   contact_id?: string | null;
@@ -294,6 +355,23 @@ export interface QuoteViewModel {
    * bands. When items span only one location (or none), this may be empty.
    */
   groups_by_location?: QuoteViewModelLocationGroup[];
+  /**
+   * Pre-computed cadence bands for templates that want per-cadence sections.
+   * Only non-empty bands are emitted, in canonical cadence order (monthly →
+   * quarterly → semi-annually → annually → other → one-time). Band
+   * `subtotal/tax/total` are required-only; `optional_*` carry the add-ons.
+   */
+  groups_by_cadence?: QuoteViewModelCadenceGroup[];
+  /**
+   * The subset of `groups_by_cadence` that actually carries optional items.
+   * Templates render the "Optional (if selected)" sections from this so empty
+   * optional sections are omitted without a node-level conditional.
+   */
+  groups_by_cadence_with_optionals?: QuoteViewModelCadenceGroup[];
+  /** Optional (if-selected) add-on totals, excluded from `subtotal`/`total_amount`. */
+  optional_subtotal?: number;
+  optional_tax?: number;
+  optional_total?: number;
   /**
    * True when items span ≥2 distinct locations — a convenience flag for
    * templates that auto-branch between flat and grouped layouts.

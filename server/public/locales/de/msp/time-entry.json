@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Zeiteintrag hinzufügen"
+    }
+  },
   "common": {
     "actions": {
       "view": "Anzeigen",
@@ -127,12 +132,14 @@
       "billable": "Abrechnungsfähig",
       "notes": "Notizen",
       "deleteTimeEntry": "Zeiteintrag löschen",
-      "unsavedChanges": "Nicht gespeicherte Änderungen"
+      "unsavedChanges": "Nicht gespeicherte Änderungen",
+      "contractLine": "Vertragsposition"
     },
     "placeholders": {
       "selectService": "Wählen Sie einen Dienst aus",
       "selectDate": "Datum auswählen",
-      "addNotes": "Notizen hinzufügen"
+      "addNotes": "Notizen hinzufügen",
+      "selectContractLine": "Vertragsposition auswählen"
     },
     "validation": {
       "startBeforeEnd": "Die Startzeit muss vor der Endzeit liegen",
@@ -145,6 +152,14 @@
       "durationSameDay": "Die Dauer muss am selben Tag enden",
       "endSameDay": "Die Endzeit muss am selben Tag wie die Startzeit liegen",
       "invalidTimeRange": "Geben Sie einen gültigen Zeitraum ein"
+    },
+    "serviceSource": {
+      "task": "Standard aus Aufgabe",
+      "phase": "Standard aus Phase",
+      "project": "Standard aus Projekt"
+    },
+    "options": {
+      "resolveContractLineLater": "Keine Position - später zuordnen"
     }
   },
   "workItemPicker": {
@@ -208,9 +223,9 @@
     },
     "labels": {
       "status": "Status:",
-      "showIntervals": "Intervalle anzeigen",
       "grid": "Raster",
-      "list": "Liste"
+      "list": "Liste",
+      "showSuggestions": "Vorschläge"
     }
   },
   "approval": {
@@ -391,57 +406,11 @@
     "noContract": "Für diesen Service wurde keine Vertragszeile gefunden. Die Zeit wird an den systemverwalteten Standardvertrag weitergeleitet.",
     "contract": "Vertrag: {{name}}",
     "defaultContract": "Systemverwalteter Standardvertrag",
-    "multipleLines": "Mehrere Vertragszeilen verfügbar – Standardauswahl verwenden"
+    "multipleEligible": "Für dieses Datum kommen mehrere Vertragspositionen infrage. Wählen Sie eine Vertragsposition, um die Zuordnung zu speichern."
   },
   "billableLegend": {
     "title": "Abrechnungsfähige Legende",
     "description": "Farbindikatoren für abrechnungsfähige Zeitverhältnisse"
-  },
-  "intervalItem": {
-    "now": "Jetzt",
-    "autoClosed": "Automatisch geschlossen",
-    "active": "Aktiv"
-  },
-  "intervals": {
-    "createdFromNote_one": "Aus {{count}} Intervall erstellt",
-    "createdFromNote_other": "Aus {{count}} Intervallen erstellt",
-    "selectedCount_one": "{{count}} Intervall ausgewählt",
-    "selectedCount_other": "{{count}} Intervalle ausgewählt",
-    "title": "Ticketzeitintervalle",
-    "hideShortIntervals": "Intervalle unter 1 Minute ausblenden",
-    "totalTime": "Gesamtzeit: {{value}}",
-    "selectedOne": "{{count}} Intervall ausgewählt",
-    "selectedOther": "{{count}} Intervalle ausgewählt",
-    "tooltips": {
-      "createTimeEntry": "Zeiteintrag aus ausgewählten Intervallen erstellen",
-      "deleteSelected": "Ausgewählte Intervalle löschen",
-      "mergeSelected": "Ausgewählte Intervalle zusammenführen"
-    },
-    "actions": {
-      "selectAll": "Wählen Sie „Alle“ aus",
-      "deselectAll": "Alle abwählen",
-      "merge": "Verschmelzen"
-    },
-    "states": {
-      "loading": "Ladeintervalle...",
-      "noIntervalsThisPeriod": "Für diesen Zeitraum wurden keine Intervalle gefunden",
-      "noIntervalsThisTicket": "Für dieses Ticket wurden keine Intervalle gefunden",
-      "noIntervalsLongerThanMinute": "Es wurden keine Intervalle gefunden, die länger als 1 Minute sind"
-    },
-    "entryName": "Ticketzeiteintrag",
-    "messages": {
-      "cannotFindTimeSheet": "Zeiteintrag kann nicht erstellt werden – Arbeitszeitnachweis konnte nicht gefunden oder erstellt werden",
-      "mergeFirst": "Bitte führen Sie zunächst Intervalle zusammen, bevor Sie einen Zeiteintrag erstellen",
-      "sameTicketOnly": "Es können nur Zeiteinträge aus Intervallen desselben Tickets erstellt werden",
-      "mergeSameTicketOnly": "Es können nur Intervalle desselben Tickets zusammengeführt werden",
-      "mergeSuccess": "Intervalle erfolgreich zusammengeführt",
-      "failedMerge": "Intervalle konnten nicht zusammengeführt werden",
-      "noActivePeriod": "Kein aktiver Zeitraum gefunden",
-      "failedFetchTimeSheet": "Zeitnachweis konnte nicht erstellt oder abgerufen werden",
-      "failedPrepareTimeEntry": "Zeiteintrag konnte nicht vorbereitet werden",
-      "savedSuccess": "Zeiteintrag erfolgreich gespeichert",
-      "failedSave": "Zeiteintrag konnte nicht gespeichert werden"
-    }
   },
   "addWorkItemDialog": {
     "title": "Arbeitselement hinzufügen",
@@ -480,7 +449,8 @@
       "onlyDraftRemovable": "Nur Stundenzettel im Entwurf können entfernt werden.",
       "removeEntriesFirst": "Entfernen Sie die Zeiteinträge, bevor Sie diesen Stundenzettel entfernen.",
       "onlyApprovedReopenable": "Nur genehmigte Stundenzettel können wieder geöffnet werden.",
-      "invoicedCannotReopen": "Dieser Stundenzettel enthält abgerechnete Zeit und kann nicht wieder geöffnet werden."
+      "invoicedCannotReopen": "Dieser Stundenzettel enthält abgerechnete Zeit und kann nicht wieder geöffnet werden.",
+      "notEditable": "Dieser Stundenzettel ist gesperrt. Wählen Sie einen Entwurf oder einen Stundenzettel mit angeforderten Änderungen."
     },
     "timeEntry": {
       "notFoundRefresh": "Zeiteintrag nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
@@ -497,14 +467,111 @@
       "missingFieldNamed": "Erforderliches Feld des Stundenzettels oder Zeiteintrags fehlt: {{field}}."
     },
     "timePeriod": {
-      "datesRequired": "Geben Sie gültige Start- und Enddaten ein."
+      "datesRequired": "Geben Sie gültige Start- und Enddaten ein.",
+      "closed": "Dieser Zeitraum ist geschlossen. Öffnen Sie ihn erneut, bevor Sie Änderungen vornehmen.",
+      "permissions": {
+        "read": "Berechtigung verweigert: Zeiträume können nicht angezeigt werden.",
+        "create": "Berechtigung verweigert: Zeiträume können nicht erstellt werden.",
+        "update": "Berechtigung verweigert: Zeiträume können nicht aktualisiert werden.",
+        "delete": "Berechtigung verweigert: Zeiträume können nicht gelöscht werden."
+      }
     },
     "timePeriodSettings": {
       "invalidValue": "Einer der Werte der Zeitraumeinstellung ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "referenceMissing": "Die ausgewählte Zeitraumeinstellung ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "duplicate": "Es existiert bereits eine widersprüchliche Zeitraumeinstellung.",
       "missingField": "Erforderliches Feld der Zeitraumeinstellung fehlt.",
-      "missingFieldNamed": "Erforderliches Feld der Zeitraumeinstellung fehlt: {{field}}."
+      "missingFieldNamed": "Erforderliches Feld der Zeitraumeinstellung fehlt: {{field}}.",
+      "permissions": {
+        "read": "Berechtigung verweigert: Abrechnungszeitraum-Einstellungen können nicht angezeigt werden.",
+        "manage": "Berechtigung verweigert: Abrechnungszeitraum-Einstellungen können nicht verwaltet werden."
+      }
+    },
+    "stopwatch": {
+      "notFound": "Stoppuhr-Sitzung nicht gefunden. Sie wurde möglicherweise bereits gebucht oder verworfen. Bitte aktualisieren Sie die Seite.",
+      "notOpen": "Diese Stoppuhr-Sitzung ist bereits geschlossen.",
+      "workItemNotFound": "Das Arbeitselement dieser Stoppuhr wurde nicht gefunden.",
+      "unsupportedWorkItem": "Die Stoppuhr kann nur für Tickets und Projektaufgaben gestartet werden.",
+      "boardDisabled": "Die Stoppuhr ist für das Board dieses Tickets deaktiviert.",
+      "alreadyOpen": "Es läuft bereits eine Stoppuhr. Beenden oder verwerfen Sie sie zuerst.",
+      "serviceRequired": "Wählen Sie vor dem Erfassen dieser Stoppuhr-Sitzung eine Leistung aus."
     }
+  },
+  "workItemEntry": {
+    "sheetStatus": {
+      "DRAFT": "Entwurf",
+      "SUBMITTED": "Eingereicht",
+      "APPROVED": "Genehmigt",
+      "CHANGES_REQUESTED": "Änderungen angefordert",
+      "UNKNOWN": "Unbekannt"
+    },
+    "sheetHint": "Stundenzettel: {{range}} · {{status}}",
+    "defaultMoved": {
+      "supplied": "Die Zeiten des Timers fallen auf einen Tag, der keine neue Zeit annimmt, daher beginnt der Eintrag am {{date}} um 08:00.",
+      "todayLocked": "Der heutige Stundenzettel hat den Status „{{status}}“, daher beginnt der Eintrag am {{date}}, dem nächsten Tag, der Zeit annimmt.",
+      "todayUncovered": "Kein Zeitraum umfasst den heutigen Tag, daher beginnt der Eintrag am {{date}}, dem nächsten Tag, der Zeit annimmt."
+    },
+    "save": {
+      "noPeriod": "Kein Zeitraum umfasst den {{date}}. Wählen Sie einen Tag innerhalb eines Zeitraums.",
+      "sheetLocked": "Der Stundenzettel für den {{date}} hat den Status „{{status}}“. Wählen Sie einen Tag auf einem Entwurf oder einem Stundenzettel mit angeforderten Änderungen."
+    }
+  },
+  "launch": {
+    "noUser": "Der aktuelle Benutzer für den Zeiteintrag konnte nicht geladen werden.",
+    "entryNotFound": "Zeiteintrag nicht gefunden.",
+    "entryMissingSheet": "Dieser Zeiteintrag ist keinem Stundenzettel zugeordnet und kann hier nicht bearbeitet werden.",
+    "entryMissingPeriod": "Dem Stundenzettel dieses Eintrags fehlt der Zeitraum und er kann nicht geöffnet werden.",
+    "noPeriods": "Es sind noch keine Zeiträume eingerichtet, daher kann keine Zeit erfasst werden. Bitten Sie einen Administrator, unter Einstellungen → Zeiterfassung Zeiträume anzulegen.",
+    "noEditablePeriods": "Alle Stundenzettel sind eingereicht oder genehmigt, daher gibt es keinen Tag, an dem Zeit erfasst werden kann. Bitten Sie einen Genehmiger, einen Stundenzettel wieder zu öffnen, oder einen Administrator, einen Zeitraum anzulegen.",
+    "prepareFailed": "Beim Vorbereiten des Zeiteintrags ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+    "periodRange": "{{start}} – {{end}}"
+  },
+  "suggestions": {
+    "title": "Vorschläge",
+    "description": "Tickets, an denen Sie in diesem Zeitraum gearbeitet haben und für die noch keine Zeit erfasst ist. Es wird nichts erfasst, bis Sie Zeit erfassen wählen.",
+    "loading": "Vorschläge werden geladen...",
+    "empty": "Keine Vorschläge für diesen Zeitraum",
+    "dismissAllForDay": "Alle für diesen Tag verwerfen",
+    "logTime": "Zeit erfassen",
+    "dismiss": "Verwerfen",
+    "estimatedNotice": "Diese Zeiten wurden anhand Ihrer Aktivität an diesem Ticket geschätzt. Passen Sie sie an die tatsächlich gearbeitete Zeit an.",
+    "dismissFailed": "Vorschlag konnte nicht verworfen werden",
+    "activitySummary_one": "erste Aktivität {{first}} · letzte {{last}} · {{count}} Aktion ({{kinds}})",
+    "activitySummary_other": "erste Aktivität {{first}} · letzte {{last}} · {{count}} Aktionen ({{kinds}})",
+    "kinds": {
+      "created": "erstellt",
+      "commented": "kommentiert",
+      "internalNote": "interne Notiz",
+      "statusChanged": "Status geändert",
+      "priorityChanged": "Priorität geändert",
+      "assignmentChanged": "Zuweisung geändert",
+      "documentsChanged": "Dokumente geändert",
+      "checklistChanged": "Checkliste geändert",
+      "linksChanged": "Links geändert",
+      "updated": "aktualisiert"
+    },
+    "activitySummary_few": "erste Aktivität {{first}} · letzte {{last}} · {{count}} Aktionen ({{kinds}})",
+    "activitySummary_many": "erste Aktivität {{first}} · letzte {{last}} · {{count}} Aktionen ({{kinds}})"
+  },
+  "stopwatch": {
+    "pausedNotice_one": "{{active}} in {{count}} Abschnitt erfasst (pausiert {{paused}})",
+    "pausedNotice_other": "{{active}} in {{count}} Abschnitten erfasst (pausiert {{paused}})",
+    "discardDialog": {
+      "title": "Diese Stoppuhr verwerfen?",
+      "message": "Die auf {{workItem}} erfassten {{duration}} werden gelöscht und es wird kein Zeiteintrag erstellt. Dies kann nicht rückgängig gemacht werden.",
+      "confirm": "Verwerfen",
+      "cancel": "Stoppuhr behalten"
+    },
+    "conflictDialog": {
+      "title": "Es ist bereits eine Stoppuhr geöffnet",
+      "message": "Sie erfassen bereits {{duration}} auf {{workItem}}. Es kann nur eine Stoppuhr gleichzeitig geöffnet sein.",
+      "stopAndLog": "Aktuelle stoppen und erfassen, dann starten",
+      "discard": "Aktuelle verwerfen, dann starten (die erfasste Zeit wird gelöscht)",
+      "confirm": "Weiter",
+      "cancel": "Abbrechen"
+    },
+    "ticketFallbackName": "Ticket {{number}}",
+    "pausedNotice_few": "{{active}} in {{count}} Abschnitten erfasst (pausiert {{paused}})",
+    "pausedNotice_many": "{{active}} in {{count}} Abschnitten erfasst (pausiert {{paused}})"
   }
 }

@@ -16,6 +16,7 @@ export const createStatusSchema = z.object({
   order_number: z.number().int().min(0).optional(),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Color must be a hex code (e.g. #3B82F6)').optional(),
   icon: z.string().max(50).optional(),
+  portal_selectable: z.boolean().optional(),
 }).superRefine((value, ctx) => {
   if (value.status_type === 'ticket' && !value.board_id) {
     ctx.addIssue({
@@ -35,6 +36,7 @@ export const updateStatusSchema = createUpdateSchema(
     order_number: z.number().int().min(0),
     color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Color must be a hex code (e.g. #3B82F6)'),
     icon: z.string().max(50),
+    portal_selectable: z.boolean(),
   })
 );
 
@@ -49,6 +51,7 @@ export const statusResponseSchema = z.object({
   item_type: z.string().nullable(),
   standard_status_id: z.string().nullable(),
   is_custom: z.boolean().nullable(),
+  portal_selectable: z.boolean().nullable(),
   tenant: uuidSchema
 });
 

@@ -22,7 +22,7 @@ const env = {
   ...process.env,
   REQUIRE_DB: '1', SKIP_DB_TESTS: '', REAL_REDIS: '1',
   // These opt-in suites use an explicit connection contract rather than the
-  // regular DB_* helpers. Point both at the same isolated migrated database.
+  // regular DB_* helpers. Point them at the same isolated migrated database.
   HOUR_BLOCK_DB_TESTS: '1',
   HOUR_BLOCK_DB_HOST: process.env.DB_HOST || '127.0.0.1',
   HOUR_BLOCK_DB_PORT: process.env.DB_PORT || '5432',
@@ -40,6 +40,12 @@ const env = {
   ACCOUNTING_SYNC_DB_USER: process.env.DB_USER_SERVER || 'app_user',
   ACCOUNTING_SYNC_DB_PASSWORD: process.env.DB_PASSWORD_SERVER || '',
   ACCOUNTING_SYNC_DB_NAME: 'test_database',
+  OUTBOUND_DIAG_DB_TESTS: '1',
+  OUTBOUND_DIAG_DB_HOST: process.env.DB_HOST || '127.0.0.1',
+  OUTBOUND_DIAG_DB_PORT: process.env.DB_PORT || '5432',
+  OUTBOUND_DIAG_DB_USER: process.env.DB_USER_SERVER || 'app_user',
+  OUTBOUND_DIAG_DB_PASSWORD: process.env.DB_PASSWORD_SERVER || '',
+  OUTBOUND_DIAG_DB_NAME: 'test_database',
 };
 const args = ['--config', 'vitest.workspace-db.config.ts', ...process.argv.slice(2)];
 const run = (args) => spawnSync(process.execPath, [path.join(cwd, 'node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });

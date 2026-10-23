@@ -283,6 +283,38 @@
       "moveRight": {
         "label": "Naar rechts verplaatsen",
         "description": "Verplaats het geselecteerde editoritem naar rechts."
+      },
+      "moveOut": {
+        "label": "Uit container halen",
+        "description": "Haal het geselecteerde blok uit zijn container."
+      },
+      "moveInto": {
+        "label": "In container plaatsen",
+        "description": "Plaats het geselecteerde blok in de vorige container."
+      },
+      "copy": {
+        "label": "Kopiëren",
+        "description": "Kopieer het geselecteerde blok."
+      },
+      "cut": {
+        "label": "Knippen",
+        "description": "Knip het geselecteerde blok."
+      },
+      "paste": {
+        "label": "Plakken",
+        "description": "Plak het gekopieerde blok."
+      },
+      "duplicate": {
+        "label": "Dupliceren",
+        "description": "Dupliceer het geselecteerde blok."
+      },
+      "copyStyle": {
+        "label": "Stijl kopiëren",
+        "description": "Kopieer de kleuren, randen, afstanden en tekststijl van het geselecteerde blok."
+      },
+      "pasteStyle": {
+        "label": "Stijl plakken",
+        "description": "Pas de gekopieerde stijl toe op het geselecteerde blok."
       }
     },
     "scroll": {

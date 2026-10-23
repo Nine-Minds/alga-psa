@@ -13,6 +13,13 @@ import { useTranslation } from '../lib/i18n/client';
 export interface SelectOption {
   value: string;
   label: string;
+  /** Muted second line under the label; omit to keep the row single-line. */
+  secondaryLabel?: string;
+  disabled?: boolean;
+  /** Native tooltip for the row (e.g. why it is disabled). */
+  title?: string;
+  /** Leading visual (avatar, logo) rendered before the label. */
+  icon?: React.ReactNode;
   badge?: {
     text: string;
     variant?: 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'danger';
@@ -46,6 +53,12 @@ interface AsyncSearchableSelectProps {
   showMoreIndicator?: boolean;
   /** Content rendered below the scrollable list, always visible (sticky footer). */
   footerContent?: (args: { search: string; close: () => void }) => React.ReactNode;
+  /** Content rendered between the search input and the list (e.g. filter controls). Mounted only while open. */
+  headerContent?: React.ReactNode;
+  /** Overrides the DOM id of the trigger button (defaults to the registered automation id). */
+  triggerId?: string;
+  /** Leading visual shown on the trigger next to the selected label. */
+  selectedIcon?: React.ReactNode;
 }
 
 export function AsyncSearchableSelect({
@@ -69,6 +82,9 @@ export function AsyncSearchableSelect({
   debounceMs = 300,
   showMoreIndicator = true,
   footerContent,
+  headerContent,
+  selectedIcon,
+  triggerId,
 }: AsyncSearchableSelectProps & AutomationProps): React.JSX.Element {
   const { t } = useTranslation();
   const resolvedPlaceholder = placeholder ?? t('form.selectPlaceholder', { defaultValue: 'Select...' });
@@ -82,6 +98,7 @@ export function AsyncSearchableSelect({
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const pageRef = useRef(1);
+  const requestGenerationRef = useRef(0);
   const listRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -166,6 +183,13 @@ export function AsyncSearchableSelect({
 
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
+      // Radix selects/popovers rendered in headerContent portal outside contentRef.
+      if (
+        target instanceof Element &&
+        target.closest('[data-radix-select-content], [data-radix-popper-content-wrapper]')
+      ) {
+        return;
+      }
       if (
         triggerRef.current &&
         !triggerRef.current.contains(target) &&
@@ -180,6 +204,27 @@ export function AsyncSearchableSelect({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open, disabled]);
 
+  // Escape belongs to the top-most layer: while this dropdown is open it must
+  // dismiss the list only. Radix dismissable layers (Dialog, Drawer) listen for
+  // Escape on `document` in the capture phase, so a React handler on the input
+  // or the trigger cannot stop them and the surrounding dialog closes too -
+  // taking any unsaved edits with it. A window-capture listener runs first.
+  useEffect(() => {
+    if (!open || disabled) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      setOpen(false);
+      triggerRef.current?.focus();
+    };
+
+    window.addEventListener('keydown', handleEscape, true);
+    return () => window.removeEventListener('keydown', handleEscape, true);
+  }, [open, disabled]);
+
   useEffect(() => {
     if (open) return;
     setSearch('');
@@ -188,6 +233,7 @@ export function AsyncSearchableSelect({
 
   const fetchOptions = useCallback(
     async (term: string, page: number) => {
+      const generation = ++requestGenerationRef.current;
       if (page === 1) {
         setLoading(true);
       } else {
@@ -196,6 +242,7 @@ export function AsyncSearchableSelect({
       setLoadError(null);
       try {
         const result = await loadOptions({ search: term, page, limit });
+        if (generation !== requestGenerationRef.current) return;
         if (page === 1) {
           setOptions(result.options);
         } else {
@@ -204,6 +251,7 @@ export function AsyncSearchableSelect({
         setTotal(result.total);
         pageRef.current = page;
       } catch (e) {
+        if (generation !== requestGenerationRef.current) return;
         console.error('[AsyncSearchableSelect] Failed to load options:', e);
         if (page === 1) {
           setOptions([]);
@@ -211,8 +259,10 @@ export function AsyncSearchableSelect({
         }
         setLoadError('Failed to load results');
       } finally {
-        setLoading(false);
-        setLoadingMore(false);
+        if (generation === requestGenerationRef.current) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     },
     [loadOptions, limit]
@@ -273,17 +323,13 @@ export function AsyncSearchableSelect({
             autoFocus={autoFocusSearch}
             value={search}
             onValueChange={setSearch}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                e.stopPropagation();
-                setOpen(false);
-              }
-            }}
             className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-[rgb(var(--color-text-400))]"
             placeholder={resolvedSearchPlaceholder}
           />
           {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin text-[rgb(var(--color-text-300))]" />}
         </div>
+
+        {headerContent}
 
         <Command.List ref={listRef} className="overflow-y-auto overscroll-contain p-1" style={{ maxHeight: maxListHeight }}>
           {loadError ? (
@@ -293,19 +339,26 @@ export function AsyncSearchableSelect({
               {options.map((option) => (
                 <Command.Item
                   key={option.value}
+                  id={id ? `${id}-option-${option.value}` : undefined}
                   value={option.value}
+                  title={option.title}
+                  disabled={option.disabled}
                   onSelect={() => {
+                    if (option.disabled) return;
                     onChange(option.value, option);
                     setOpen(false);
                   }}
+                  aria-disabled={option.disabled || undefined}
                   className={cn(
-                    'flex items-center px-2 py-1.5 text-sm rounded-sm cursor-pointer',
+                    'flex items-center px-2 py-1.5 text-sm rounded-sm',
+                    option.disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
                     'hover:bg-[rgb(var(--color-border-100))]',
                     'aria-selected:bg-[rgb(var(--color-border-100))]',
                     value === option.value && 'bg-[rgb(var(--color-border-100))]'
                   )}
                 >
-                  <span className="flex-1 flex items-center gap-2">
+                  <span className="flex-1 flex items-center gap-2 min-w-0">
+                    {option.icon}
                     {option.badge && (
                       <span className={cn(
                         'inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium',
@@ -319,7 +372,14 @@ export function AsyncSearchableSelect({
                         {option.badge.text}
                       </span>
                     )}
-                    {option.label}
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate">{option.label}</span>
+                      {option.secondaryLabel && (
+                        <span className="block truncate text-xs text-[rgb(var(--color-text-400))]">
+                          {option.secondaryLabel}
+                        </span>
+                      )}
+                    </span>
                   </span>
                   {value === option.value && <Check className="w-4 h-4 text-primary-600" />}
                 </Command.Item>
@@ -376,11 +436,22 @@ export function AsyncSearchableSelect({
           aria-expanded={open}
           className={cn('w-full justify-between', disabled && 'opacity-50 cursor-not-allowed', className)}
           onClick={() => !disabled && setOpen(!open)}
+          onKeyDown={(e) => {
+            if (disabled) return;
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+              e.preventDefault();
+              setOpen(true);
+            }
+          }}
           disabled={disabled}
           {...automationIdProps}
+          {...(triggerId ? { id: triggerId } : {})}
         >
-          <span className={cn('truncate', !value && 'text-[rgb(var(--color-text-300))]')}>
-            {selectedOption?.label ?? selectedLabel ?? (value ? value : resolvedPlaceholder)}
+          <span className="flex items-center gap-2 min-w-0">
+            {value ? selectedIcon : null}
+            <span className={cn('truncate', !value && 'text-[rgb(var(--color-text-300))]')}>
+              {selectedOption?.label ?? selectedLabel ?? (value ? value : resolvedPlaceholder)}
+            </span>
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>

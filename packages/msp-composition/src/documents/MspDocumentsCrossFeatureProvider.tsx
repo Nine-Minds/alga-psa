@@ -25,6 +25,7 @@ import Documents from '@alga-psa/documents/components/Documents';
 import DocumentUpload from '@alga-psa/documents/components/DocumentUpload';
 import FolderSelectorModal from '@alga-psa/documents/components/FolderSelectorModal';
 import DocumentStorageCard from '@alga-psa/documents/components/DocumentStorageCard';
+import { DocumentViewer } from '@alga-psa/documents/components/DocumentViewer';
 import { downloadDocument, getDocumentDownloadUrl } from '@alga-psa/documents/lib/documentUtils';
 
 export function MspDocumentsCrossFeatureProvider({ children }: { children: ReactNode }) {
@@ -56,6 +57,7 @@ export function MspDocumentsCrossFeatureProvider({ children }: { children: React
   const value = useMemo<DocumentsCrossFeatureCallbacks>(
     () => ({
       renderDocuments,
+      renderDocumentViewer: ({ content }: { content: unknown }) => <DocumentViewer content={content} />,
       renderDocumentUpload,
       renderDocumentSelector,
       renderFolderSelectorModal,

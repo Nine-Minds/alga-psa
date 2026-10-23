@@ -4,7 +4,8 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 const getStoredXeroConnectionsMock = vi.hoisted(() => vi.fn(async () => ({})));
 
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
-  getDefaultQboRealmId: vi.fn(async () => 'realm-1')
+  getDefaultQboRealmId: vi.fn(async () => 'realm-1'),
+  getStoredQboCredentialsMap: vi.fn(async () => ({ 'realm-1': {} }))
 }));
 
 vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
@@ -78,6 +79,7 @@ function makeVoidKnex(hasMapping: boolean | { mappingRealm: string | null } = tr
       }
       return query;
     }),
+    whereNull: vi.fn(() => query),
     first: vi.fn(async (..._args: any[]) => {
       if (!seeded) return null;
       if ('external_realm_id' in criteria && criteria.external_realm_id !== seeded.mappingRealm) {
@@ -344,7 +346,7 @@ describe('enqueueCreditApplication', () => {
   it('enqueues apply_credit op with correct payload when the decision allows', async () => {
     vi.stubEnv('EDITION', 'ee');
 
-    await enqueueCreditApplication({} as any, 't1', {
+    await enqueueCreditApplication(makeVoidKnex() as any, 't1', {
       allocationId: 'alloc-1',
       creditNoteInvoiceId: 'inv-cn-99',
       targetInvoiceId: 'inv-target-99',
@@ -375,7 +377,7 @@ describe('enqueueCreditApplication', () => {
     vi.stubEnv('EDITION', 'ee');
     // The decision is authoritative: even with EE on and the settings mocks
     // reporting auto-sync enabled, a decision of "no" must not enqueue.
-    await enqueueCreditApplication({} as any, 't1', {
+    await enqueueCreditApplication(makeVoidKnex() as any, 't1', {
       allocationId: 'alloc-2',
       creditNoteInvoiceId: 'inv-cn-1',
       targetInvoiceId: 'inv-target-1',
@@ -396,7 +398,7 @@ describe('enqueueCreditApplication', () => {
   it('does nothing when the decision allowed but pinned no realm', async () => {
     vi.stubEnv('EDITION', 'ee');
 
-    await enqueueCreditApplication({} as any, 't1', {
+    await enqueueCreditApplication(makeVoidKnex() as any, 't1', {
       allocationId: 'alloc-3',
       creditNoteInvoiceId: 'inv-cn-2',
       targetInvoiceId: 'inv-target-2',
@@ -416,7 +418,7 @@ describe('enqueueCreditApplication', () => {
     vi.stubEnv('EDITION', 'ee');
 
     await expect(
-      enqueueCreditApplication({} as any, 't1', {
+      enqueueCreditApplication(makeVoidKnex() as any, 't1', {
         allocationId: 'alloc-4',
         creditNoteInvoiceId: 'inv-cn-3',
         targetInvoiceId: 'inv-target-3',

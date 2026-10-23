@@ -108,21 +108,6 @@ vi.mock('@alga-psa/ui/context', () => ({
 
 vi.mock('@alga-psa/ui/hooks', () => ({
   useFeatureFlag: () => ({ enabled: false }),
-  useTicketTimeTracking: () => ({
-    isTracking: false,
-    currentIntervalId: null,
-    isLockedByOther: false,
-    startTracking: vi.fn().mockResolvedValue(false),
-    stopTracking: vi.fn().mockResolvedValue(undefined),
-    refreshLockState: vi.fn().mockResolvedValue(undefined),
-  }),
-}));
-
-vi.mock('@alga-psa/ui/services', () => ({
-  IntervalTrackingService: class {
-    endInterval = vi.fn().mockResolvedValue(undefined);
-    getOpenInterval = vi.fn().mockResolvedValue(null);
-  },
 }));
 
 vi.mock('@alga-psa/ui/components', () => ({
@@ -249,7 +234,7 @@ vi.mock('@alga-psa/teams/actions', () => ({
 vi.mock('../../../actions/ticketDisplaySettings', () => ({
   getTicketingDisplaySettings: vi
     .fn()
-    .mockResolvedValue({ dateTimeFormat: 'MMM d, yyyy h:mm a', responseStateTrackingEnabled: true }),
+    .mockResolvedValue({ showWeekday: false, responseStateTrackingEnabled: true }),
 }));
 
 vi.mock('../../../actions/clientLookupActions', () => ({

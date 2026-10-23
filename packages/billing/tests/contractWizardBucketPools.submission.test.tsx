@@ -103,7 +103,7 @@ vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/ReviewContra
 vi.mock('@alga-psa/billing/actions/contractWizardActions', () => ({
   createClientContractFromWizard: (...args: unknown[]) => mocks.createClientContractFromWizard(...args),
   listContractTemplatesForWizard: vi.fn(async () => []),
-  getContractTemplateSnapshotForClientWizard: vi.fn(),
+  getContractTemplateLinesForClientWizard: vi.fn(),
 }));
 
 vi.mock('@alga-psa/billing/actions/billingSettingsActions', () => ({
@@ -176,7 +176,7 @@ describe('ContractWizard bucket-authoring submission', () => {
           billing_frequency: 'monthly',
           currency_code: 'USD',
           enable_proration: false,
-          fixed_services: [],
+          fixed_lines: [],
           product_services: [],
           hourly_services: [LEGACY_HOURLY_SERVICE],
           usage_services: [],

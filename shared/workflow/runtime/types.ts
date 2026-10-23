@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { DATE_TRIGGER_SOURCE_IDS, getDateTriggerSourceDefinition } from '@alga-psa/event-schemas';
+import { validateDateTriggerParams } from './dateTriggerParams';
 
 export const exprSchema = z.object({
   // Allow empty expressions for drafts, but require the `$expr` key to be present so we can
@@ -440,10 +442,39 @@ export const workflowRecurringScheduleTriggerSchema = z.object({
   timezone: z.string().min(1)
 }).strict();
 
+export const workflowDateTriggerSchema = z.object({
+  type: z.literal('date'),
+  source: z.enum(DATE_TRIGGER_SOURCE_IDS),
+  offsetDays: z.number().int().min(-365).max(365),
+  // Per-source parameters (validated by workflowDateTriggerWithParamsSchema / publish validation).
+  // Optional, so definitions stored before sources took parameters still validate.
+  params: z.record(z.unknown()).optional(),
+  localTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default('08:00'),
+  timezone: z.string().min(1).optional(),
+}).strict();
+
+/**
+ * The date trigger with its per-source rules applied: sources that take params require valid ones,
+ * and sources without an offset control (condition sources) store offsetDays 0. Kept separate from
+ * workflowDateTriggerSchema because that one sits inside a discriminated union (which needs a plain
+ * object) and is parsed for drafts, which may be mid-edit; publish validation applies this one.
+ */
+export const workflowDateTriggerWithParamsSchema = workflowDateTriggerSchema.superRefine((trigger, ctx) => {
+  const result = validateDateTriggerParams(trigger.source, trigger.params);
+  if (!result.ok) {
+    for (const message of result.issues) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['params'], message: `Date trigger ${message}` });
+  }
+  const definition = getDateTriggerSourceDefinition(trigger.source);
+  if (definition && !definition.usesOffset && trigger.offsetDays !== 0) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['offsetDays'], message: `Date trigger source "${trigger.source}" does not use an offset; offsetDays must be 0.` });
+  }
+});
+
 export const workflowTriggerSchema = z.discriminatedUnion('type', [
   workflowEventTriggerSchema,
   workflowOneTimeScheduleTriggerSchema,
-  workflowRecurringScheduleTriggerSchema
+  workflowRecurringScheduleTriggerSchema,
+  workflowDateTriggerSchema
 ]);
 
 export const workflowDefinitionSchema = z.object({
@@ -493,6 +524,7 @@ export type Envelope = z.infer<typeof envelopeSchema>;
 export type WorkflowEventTrigger = z.infer<typeof workflowEventTriggerSchema>;
 export type WorkflowOneTimeScheduleTrigger = z.infer<typeof workflowOneTimeScheduleTriggerSchema>;
 export type WorkflowRecurringScheduleTrigger = z.infer<typeof workflowRecurringScheduleTriggerSchema>;
+export type WorkflowDateTrigger = z.infer<typeof workflowDateTriggerSchema>;
 export type WorkflowTrigger = z.infer<typeof workflowTriggerSchema>;
 export type WorkflowTimeTrigger = WorkflowOneTimeScheduleTrigger | WorkflowRecurringScheduleTrigger;
 

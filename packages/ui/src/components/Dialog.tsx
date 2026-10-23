@@ -6,11 +6,14 @@ import * as RadixDialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 import { ReflectionParentContext } from '../ui-reflection/ReflectionParentContext';
-import { ModalityContext, InsideDialogContext, useInsideDialog } from './ModalityContext';
+import { ModalityContext, InsideDialogContext, useInsideDialog, useForceModal } from './ModalityContext';
 import { useRadixEscapeOwner } from '../keyboard-shortcuts';
+import { editorPopupOwnsEscape } from '../keyboard-shortcuts/editable';
+import { DismissGuardProvider, useDismissGuard } from './DismissGuard';
 import { DialogComponent, AutomationProps } from '../ui-reflection/types';
 import { withDataAutomationId } from '../ui-reflection/withDataAutomationId';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
+import { useTranslation } from '../lib/i18n/client';
 
 function containsDialogDescription(node: ReactNode): boolean {
   if (node === null || node === undefined || typeof node === 'boolean') return false;
@@ -86,8 +89,22 @@ interface DialogProps {
   allowOverflow?: boolean;
   /** Disable focus trapping to allow interaction with portaled elements outside the dialog */
   disableFocusTrap?: boolean;
+  /**
+   * When this dialog is nested inside a Drawer or another Dialog, render it as a
+   * true top-level modal (Radix portal, centered on the viewport) instead of the
+   * inline variant that is confined to the parent panel. Large forms opened from a
+   * focus-view Drawer use this so they are not squeezed into the panel. No effect
+   * when the dialog is not nested.
+   */
+  forceModal?: boolean;
   /** Content rendered in a sticky footer below the scrollable body */
   footer?: ReactNode;
+  /**
+   * When true, every dismiss path (Escape, overlay click, the X button) asks
+   * "Discard unsaved changes?" before calling `onClose`. Content rendered inside
+   * the dialog can report the same state with `useRegisterDismissGuard`.
+   */
+  hasUnsavedChanges?: boolean;
 }
 
 export function Dialog({
@@ -105,11 +122,20 @@ export function Dialog({
   initialPosition,
   constrainToViewport = false,
   allowOverflow = false,
-  disableFocusTrap = false,
-  footer
+  disableFocusTrap: disableFocusTrapProp = false,
+  forceModal: forceModalProp = false,
+  footer,
+  hasUnsavedChanges = false
 }: DialogProps & AutomationProps): React.ReactElement {
+  const { t } = useTranslation('common');
   // Auto-detect when this Dialog is nested inside a Drawer or another Dialog.
-  const isInsideDialog = useInsideDialog();
+  const insideDialogContext = useInsideDialog();
+  const inheritedForceModal = useForceModal();
+  // `forceModal` only changes behaviour for nested dialogs: it opts out of the
+  // inline nested rendering so the dialog pops to the viewport as a real modal.
+  const forceModal = (forceModalProp || inheritedForceModal) && insideDialogContext;
+  const isInsideDialog = insideDialogContext && !forceModal;
+  const disableFocusTrap = forceModal ? false : disableFocusTrapProp;
 
   const { automationIdProps: updateDialog, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
     id: `${id}-dialog`,
@@ -127,6 +153,13 @@ export function Dialog({
   const [dialogSize, setDialogSize] = useState({ width: 0, height: 0 });
 
   useRadixEscapeOwner(isOpen);
+
+  const dismissGuard = useDismissGuard({ id, isOpen, onClose, hasUnsavedChanges });
+  const requestClose = dismissGuard.requestClose;
+  // Escape that arrives while an editor popup is open belongs to the popup. The
+  // bubbling Escape handlers below run after the editor already closed it, so
+  // the state is captured on the way down.
+  const escapeOwnedByEditorPopupRef = useRef(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -336,7 +369,7 @@ export function Dialog({
 
       if (isInsidePortaledContent) return;
 
-      onClose();
+      requestClose();
     };
 
     const handleMouseDownOutside = (e: MouseEvent) => {
@@ -351,7 +384,7 @@ export function Dialog({
       document.removeEventListener('mousedown', handleMouseDownOutside, true);
       if (selectCloseTimeout) clearTimeout(selectCloseTimeout);
     };
-  }, [isOpen, disableFocusTrap, isInsideDialog, onClose]);
+  }, [isOpen, disableFocusTrap, isInsideDialog, requestClose]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!draggable) return;
@@ -429,18 +462,23 @@ export function Dialog({
     return (
       <div
         className="fixed inset-0 z-[70] flex items-center justify-center"
-        onKeyDown={(e) => {
+        onKeyDownCapture={(e) => {
           if (e.key === 'Escape') {
+            escapeOwnedByEditorPopupRef.current = editorPopupOwnsEscape();
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape' && !escapeOwnedByEditorPopupRef.current) {
             e.stopPropagation();
-            onClose();
+            requestClose();
           }
           handleDialogKeyDown(e);
         }}
       >
         {/* Overlay */}
         <div
-          className="absolute inset-0 bg-black/50"
-          onClick={onClose}
+          className="absolute inset-0 bg-black/60"
+          onClick={requestClose}
         />
         {/* Dialog content */}
         <div
@@ -448,14 +486,14 @@ export function Dialog({
           {...withDataAutomationId(updateDialog)}
           role="dialog"
           aria-modal="true"
-          aria-label={title || 'Dialog'}
+          aria-label={title || t('dialogs.defaultTitle', { defaultValue: 'Dialog' })}
           tabIndex={-1}
           className={`relative bg-[rgb(var(--color-card))] rounded-lg shadow-lg border border-[rgb(var(--color-primary-200))] w-full ${className || 'max-w-3xl'} max-h-[90%] flex flex-col focus:outline-none`}
         >
           {/* Title bar */}
           {title ? (
             <div className="px-6 pt-6 pb-4 border-b border-[rgb(var(--color-border-100))] rounded-t-lg">
-              <h2 className="text-xl font-semibold select-none">{title}</h2>
+              <h2 className="text-xl font-semibold select-none break-words">{title}</h2>
             </div>
           ) : draggable ? (
             <div className="p-2 rounded-t-lg" />
@@ -464,13 +502,15 @@ export function Dialog({
           <div
             className={`px-6 pt-3 pb-6 flex-1 min-h-0 ${allowOverflow ? 'overflow-visible' : 'overflow-y-auto'} ${contentClassName || ''}`}
           >
-            <ReflectionParentContext.Provider value={updateDialog.id}>
-              <InsideDialogContext.Provider value={true}>
-                <ModalityContext.Provider value={{ modal: false }}>
-                  {children}
-                </ModalityContext.Provider>
-              </InsideDialogContext.Provider>
-            </ReflectionParentContext.Provider>
+            <DismissGuardProvider value={dismissGuard.registry}>
+              <ReflectionParentContext.Provider value={updateDialog.id}>
+                <InsideDialogContext.Provider value={true}>
+                  <ModalityContext.Provider value={{ modal: false }}>
+                    {children}
+                  </ModalityContext.Provider>
+                </InsideDialogContext.Provider>
+              </ReflectionParentContext.Provider>
+            </DismissGuardProvider>
           </div>
           {/* Sticky footer — rendered outside the scrollable body */}
           {footer && (
@@ -481,14 +521,17 @@ export function Dialog({
           {/* Close button */}
           {!hideCloseButton && (
             <button
-              onClick={onClose}
+              onClick={requestClose}
               data-dialog-close-button="true"
               className="absolute top-2 right-2 text-muted-foreground hover:text-[rgb(var(--color-text-600))] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
-              aria-label="Close"
+              aria-label={t('actions.close', { defaultValue: 'Close' })}
             >
               <X className="h-4 w-4" />
             </button>
           )}
+          <InsideDialogContext.Provider value={true}>
+            {dismissGuard.confirmElement}
+          </InsideDialogContext.Provider>
         </div>
       </div>
     );
@@ -504,7 +547,7 @@ export function Dialog({
       onOpenChange={(open) => {
         // Don't close if it's due to a select interaction
         if (!open && !disableFocusTrap && !preventCloseRef.current) {
-          onClose();
+          requestClose();
         }
         // Reset the flag after a brief moment
         if (!open && preventCloseRef.current) {
@@ -523,12 +566,31 @@ export function Dialog({
           {...(!hasDescription ? { 'aria-describedby': undefined } : {})}
           className={`fixed top-1/2 left-1/2 bg-[rgb(var(--color-card))] rounded-lg shadow-lg border border-[rgb(var(--color-primary-200))] w-full ${className || 'max-w-3xl'} z-50 max-h-[90vh] flex flex-col`}
           style={dialogStyle}
+          onKeyDownCapture={(e) => {
+            if (e.key === 'Escape') {
+              escapeOwnedByEditorPopupRef.current = editorPopupOwnsEscape();
+            }
+          }}
           onKeyDown={(e) => {
             // Handle Escape key manually when focus trap is disabled
-            if (disableFocusTrap && e.key === 'Escape') {
-              onClose();
+            if (disableFocusTrap && e.key === 'Escape' && !escapeOwnedByEditorPopupRef.current) {
+              requestClose();
             }
             handleDialogKeyDown(e);
+          }}
+          onEscapeKeyDown={(event) => {
+            // A nested dialog renders inline inside this content. Radix listens
+            // for Escape on the document in the capture phase, so the nested
+            // dialog cannot stop it — let it keep its own Escape instead.
+            if (dialogRef.current?.querySelector('[role="dialog"]')) {
+              event.preventDefault();
+              return;
+            }
+            // Same for an open editor popup (slash menu, mentions, emoji): the
+            // first Escape closes the popup, not the dialog and its text.
+            if (editorPopupOwnsEscape()) {
+              event.preventDefault();
+            }
           }}
           onOpenAutoFocus={(event) => {
             if (onOpenAutoFocus) {
@@ -573,11 +635,11 @@ export function Dialog({
               onMouseDown={handleMouseDown}
             >
               {title ? (
-                <RadixDialog.Title className="text-xl font-semibold select-none">{title}</RadixDialog.Title>
+                <RadixDialog.Title className="text-xl font-semibold select-none break-words">{title}</RadixDialog.Title>
               ) : (
                 <>
                   <VisuallyHidden.Root>
-                    <RadixDialog.Title>Dialog</RadixDialog.Title>
+                    <RadixDialog.Title>{t('dialogs.defaultTitle', { defaultValue: 'Dialog' })}</RadixDialog.Title>
                   </VisuallyHidden.Root>
                   <div className="flex items-center justify-center">
                     <div className="w-12 h-1 bg-[rgb(var(--color-border-300))] rounded-full" /> {/* Visual drag indicator */}
@@ -587,19 +649,21 @@ export function Dialog({
             </div>
           ) : (
             <VisuallyHidden.Root>
-              <RadixDialog.Title>Dialog</RadixDialog.Title>
+              <RadixDialog.Title>{t('dialogs.defaultTitle', { defaultValue: 'Dialog' })}</RadixDialog.Title>
             </VisuallyHidden.Root>
           )}
           <div
             className={`px-6 pt-3 pb-6 flex-1 min-h-0 ${allowOverflow ? 'overflow-visible' : 'overflow-y-auto'} ${contentClassName || ''}`}
           >
-            <ReflectionParentContext.Provider value={updateDialog.id}>
-              <InsideDialogContext.Provider value={true}>
-                <ModalityContext.Provider value={{ modal: !disableFocusTrap }}>
-                  {children}
-                </ModalityContext.Provider>
-              </InsideDialogContext.Provider>
-            </ReflectionParentContext.Provider>
+            <DismissGuardProvider value={dismissGuard.registry}>
+              <ReflectionParentContext.Provider value={updateDialog.id}>
+                <InsideDialogContext.Provider value={true}>
+                  <ModalityContext.Provider value={{ modal: !disableFocusTrap }}>
+                    {children}
+                  </ModalityContext.Provider>
+                </InsideDialogContext.Provider>
+              </ReflectionParentContext.Provider>
+            </DismissGuardProvider>
           </div>
           {/* Sticky footer — rendered outside the scrollable body */}
           {footer && (
@@ -610,10 +674,10 @@ export function Dialog({
           {!hideCloseButton && (
             disableFocusTrap ? (
               <button
-                onClick={onClose}
+                onClick={requestClose}
                 data-dialog-close-button="true"
                 className="absolute top-2 right-2 text-muted-foreground hover:text-[rgb(var(--color-text-600))] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
-                aria-label="Close"
+                aria-label={t('actions.close', { defaultValue: 'Close' })}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -622,13 +686,16 @@ export function Dialog({
                 <button
                   data-dialog-close-button="true"
                   className="absolute top-2 right-2 text-muted-foreground hover:text-[rgb(var(--color-text-600))] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
-                  aria-label="Close"
+                  aria-label={t('actions.close', { defaultValue: 'Close' })}
                 >
                   <X className="h-4 w-4" />
                 </button>
               </RadixDialog.Close>
             )
           )}
+          <InsideDialogContext.Provider value={true}>
+            {dismissGuard.confirmElement}
+          </InsideDialogContext.Provider>
         </RadixDialog.Content>
       </RadixDialog.Portal>
     </RadixDialog.Root>

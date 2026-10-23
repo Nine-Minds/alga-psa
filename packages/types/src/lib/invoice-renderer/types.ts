@@ -31,6 +31,8 @@ export interface WasmInvoiceLocationGroup {
 
 export interface WasmInvoiceLineItem {
   id: string;
+  unit_code?: string | null;
+  unit_label?: string | null;
   description: string;
   quantity: number;
   unitPrice: number;
@@ -54,6 +56,15 @@ export interface WasmInvoiceLineItem {
   location_id?: string | null;
   /** Resolved location object, when available. */
   location?: WasmInvoiceLineItemLocation | null;
+  /** True for discount/adjustment rows so renderers can style them distinctly. */
+  isDiscount?: boolean;
+  discountType?: 'percentage' | 'fixed' | null;
+  /** Provenance for automatic discounts/true-ups and manual adjustments. */
+  adjustmentSourceKind?: 'discount' | 'contract_change' | 'manual_adjustment' | null;
+  adjustmentScope?: 'invoice' | 'contract' | 'service' | 'item' | null;
+  adjustmentReason?: string | null;
+  /** Authoring facts for manually entered adjustment lines (e.g. partial period). */
+  manualLineMetadata?: Record<string, unknown> | null;
 }
 
 /**
@@ -170,6 +181,11 @@ export interface WasmInvoiceViewModel {
   dueDate: string; // Consider using ISO8601String or a specific date format
   currencyCode: string; // Added for multi-currency support
   poNumber?: string | null;
+  /**
+   * Display label of the payment method snapshotted on the invoice when it was
+   * generated (e.g. "Check"); null when none was recorded.
+   */
+  paymentMethod?: string | null;
   projectName?: string | null;
   projectNumber?: string | null;
   recurringServicePeriodStart?: string | null;

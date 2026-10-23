@@ -33,7 +33,7 @@ const isDocumentActionError = (value: unknown): value is ActionMessageError | Ac
 interface DocumentSelectorProps {
     id: string;
     entityId?: string;  // Optional - when not provided, documents are returned without creating associations
-    entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract';
+    entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract' | 'opportunity';
     onDocumentSelected?: (document: IDocument) => Promise<void>;
     onDocumentsSelected?: (documents?: IDocument[]) => Promise<void>;  // Now optionally receives selected documents
     singleSelect?: boolean;

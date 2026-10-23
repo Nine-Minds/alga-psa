@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import { tenantDb } from './tenantDb';
 
+// LEVERAGE: pattern iana-zone-catalog — lenient read-path zone check; storable-zone validation lives in @alga-psa/core/timeZones (validateStorableTimeZone)
 export function normalizeIanaTimeZone(timeZone: string | null | undefined): string {
   if (!timeZone) return 'UTC';
   try {

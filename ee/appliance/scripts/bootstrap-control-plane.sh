@@ -16,8 +16,8 @@ Usage:
 
 Bootstraps the new-install Kubernetes substrate and hands setup to the
 Kubernetes-hosted appliance control plane. This script is intentionally limited
-to k3s readiness, baked image import, local manifest apply, and setup/fallback
-handoff reporting.
+to k3s readiness, baked image import, local manifest apply, resolver ownership,
+and setup/fallback handoff reporting.
 
 Options:
   --appliance-root <path>  Installed appliance root (default: /opt/alga-appliance)
@@ -25,7 +25,8 @@ Options:
   --token-file <path>      Setup token file (default: /var/lib/alga-appliance/setup-token)
   --port <port>            Setup UI host port (default: 8080)
   --control-plane-only     Re-apply only the control plane (channel upgrade): re-resolve
-                           the channel-pinned image and apply it; skip k3s/import/storage
+                           the channel-pinned image, reconcile the cluster resolver, and
+                           apply it; skip k3s/import/storage
   --dry-run                Print the planned operations without mutating the host
   --help                   Show this help
 EOF
@@ -74,6 +75,7 @@ IMAGE_DIR="$CONTROL_PLANE_DIR/images"
 CONTROL_PLANE_MANIFESTS="$CONTROL_PLANE_DIR/manifests"
 LOCAL_STORAGE_MANIFEST="$APPLIANCE_ROOT/manifests/local-path-storage.yaml"
 STORAGE_INSTALL_SCRIPT="$APPLIANCE_ROOT/scripts/install-storage.sh"
+DNS_CONFIGURE_SCRIPT="$APPLIANCE_ROOT/scripts/configure-k3s-dns.sh"
 FALLBACK_COMMAND="$APPLIANCE_ROOT/bin/alga-control-plane-reapply"
 BUNDLED_K3S_BINARY="$APPLIANCE_ROOT/bin/k3s"
 CONTROL_PLANE_NAMESPACE="alga-appliance-control-plane"
@@ -145,6 +147,23 @@ detect_ip() {
   printf '%s\n' "$ip"
 }
 
+# k3s is Type=notify: systemd's default 90s TimeoutStartSec kills it if the
+# apiserver is not ready by then, and Restart=always starts it over. On a slow
+# disk with a large datastore startup can take minutes, so that turns any k3s
+# restart into an endless crash loop. Upstream's installer sets no limit
+# either. The drop-in also covers units written by older appliance images.
+K3S_START_TIMEOUT_DROPIN="/etc/systemd/system/k3s.service.d/10-start-timeout.conf"
+
+ensure_k3s_start_timeout() {
+  local desired=$'[Service]\nTimeoutStartSec=0'
+  if [ -f "$K3S_START_TIMEOUT_DROPIN" ] && [ "$(cat "$K3S_START_TIMEOUT_DROPIN")" = "$desired" ]; then
+    return 0
+  fi
+  mkdir -p "$(dirname "$K3S_START_TIMEOUT_DROPIN")"
+  printf '%s\n' "$desired" > "$K3S_START_TIMEOUT_DROPIN"
+  systemctl daemon-reload
+}
+
 ensure_k3s_started() {
   log "Substrate: ensuring k3s is installed and running"
   if [ "$DRY_RUN" = "true" ]; then
@@ -153,6 +172,7 @@ ensure_k3s_started() {
   fi
 
   if command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files k3s.service >/dev/null 2>&1; then
+    ensure_k3s_start_timeout
     systemctl enable --now k3s
     return 0
   fi
@@ -179,6 +199,7 @@ KillMode=process
 Delegate=yes
 Restart=always
 RestartSec=5s
+TimeoutStartSec=0
 LimitNOFILE=1048576
 LimitNPROC=infinity
 LimitCORE=infinity
@@ -223,6 +244,25 @@ EOF
     sed -i 's/--disable servicelb/--disable servicelb --disable local-storage/' /etc/systemd/system/k3s.service
     systemctl daemon-reload
   fi
+}
+
+# Own the cluster resolver so a hostile DHCP search domain cannot reach pods.
+# On initial boot the two files are written and activation is recorded before
+# k3s starts (k3s reads them on the way up; no restart). On an already-running
+# cluster the helper restarts k3s once and recreates the affected pods, resuming
+# a killed activation without a second restart.
+configure_k3s_dns() {
+  local activation="${1:---initial}"
+  log "Substrate: owning the cluster resolver configuration"
+  if [ ! -f "$DNS_CONFIGURE_SCRIPT" ]; then
+    log "DNS configuration helper not staged; skipping (existing hosts reconcile via the control-plane Job)."
+    return 0
+  fi
+  if [ "$DRY_RUN" = "true" ]; then
+    plan "write the nameserver-only k3s resolver and config.yaml.d/30-alga-dns.yaml (${activation})"
+    return 0
+  fi
+  bash "$DNS_CONFIGURE_SCRIPT" "$activation"
 }
 
 wait_for_kubernetes_api() {
@@ -460,10 +500,12 @@ if [ "$CONTROL_PLANE_ONLY" = "true" ]; then
   # is already applied, so skip those steps. apply_control_plane pulls the new
   # digest and applies the kustomize overlay, which triggers the Recreate.
   wait_for_kubernetes_api
+  configure_k3s_dns --activate
   apply_control_plane
   log "control-plane upgrade applied"
 else
   configure_k3s_storage_owner
+  configure_k3s_dns --initial
   ensure_k3s_started
   wait_for_kubernetes_api
   import_control_plane_images

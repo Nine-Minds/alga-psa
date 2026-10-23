@@ -1,0 +1,86 @@
+[
+  {
+    "id": "F001",
+    "description": "A client-safe workedMinutes utility in @alga-psa/core returns rounded end_time minus start_time and falls back to billable_duration only when a usable interval is unavailable",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional requirements 1-5"]
+  },
+  {
+    "id": "F002",
+    "description": "ticketBentoActions uses the shared workedMinutes utility for totalMinutes while preserving billableMinutes and uninvoicedBillableMinutes semantics",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional requirements 6"]
+  },
+  {
+    "id": "F003",
+    "description": "Ticket time-entry own totals use worked minutes rather than billable_duration",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional requirements 7"]
+  },
+  {
+    "id": "F004",
+    "description": "Ticket time-entry other, visible-other, hidden-other, and overall totals use worked minutes without changing authorization decisions",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional requirements 7", "Security / permissions"]
+  },
+  {
+    "id": "F005",
+    "description": "TimeLoggedSummary headline totals each entry with workedMinutes",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional requirements 8"]
+  },
+  {
+    "id": "F006",
+    "description": "TimeLoggedSummary per-day chart buckets and accessible labels use worked minutes",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional requirements 8"]
+  },
+  {
+    "id": "F007",
+    "description": "Each detailed TicketTimeEntries row displays worked duration instead of billable_duration",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional requirements 9"]
+  },
+  {
+    "id": "F008",
+    "description": "Each detailed TicketTimeEntries row displays a Billable or Non-billable badge derived separately from billable_duration",
+    "implemented": true,
+    "prdRefs": ["UX / UI notes > Detailed ticket time-entry row", "Requirements > Functional requirements 9, 11"]
+  },
+  {
+    "id": "F009",
+    "description": "Each bento timeline time-entry duration chip displays worked duration instead of billable_duration",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional requirements 10"]
+  },
+  {
+    "id": "F010",
+    "description": "Each bento timeline time-entry row displays a Billable or Non-billable badge derived separately from billable_duration",
+    "implemented": true,
+    "prdRefs": ["UX / UI notes > Timeline row", "Requirements > Functional requirements 10-11"]
+  },
+  {
+    "id": "F011",
+    "description": "Ticket timeline and ticket summary read models continue carrying original start_time, end_time, and billable_duration values with no API or schema change",
+    "implemented": true,
+    "prdRefs": ["Data / API / integrations"]
+  },
+  {
+    "id": "F012",
+    "description": "Billable and Non-billable ticket time-entry labels exist in all eight maintained feature/tickets locale files",
+    "implemented": true,
+    "prdRefs": ["UX / UI notes > Localization"]
+  },
+  {
+    "id": "F013",
+    "description": "The xx and yy pseudo-locales are regenerated after the ticket time-entry label additions",
+    "implemented": true,
+    "prdRefs": ["UX / UI notes > Localization"]
+  },
+  {
+    "id": "F014",
+    "description": "Existing tenant scoping, permission checks, redaction, ordering, refresh, and edit/delete behavior remain unchanged",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional requirements 12", "Security / permissions"]
+  }
+]

@@ -6,6 +6,7 @@ import {
   createSuccessResponse,
   handleApiError,
 } from '@/lib/api/middleware/apiMiddleware';
+import { BundlePropagationConfirmationRequiredError } from '@alga-psa/tickets/lib/ticketBundlePropagation';
 
 describe('apiMiddleware response headers', () => {
   it('merges ApiError.headers into error responses', async () => {
@@ -39,6 +40,33 @@ describe('apiMiddleware response headers', () => {
       message: 'Connect QuickBooks before syncing invoices',
       details: { realmId: 'realm-1' },
     });
+  });
+
+  it('maps a bundle propagation confirmation error to 409 with the affected children', async () => {
+    const error = new BundlePropagationConfirmationRequiredError({
+      mode: 'sync_updates',
+      masterTicketId: 'master-1',
+      newStatusId: 'closed-1',
+      crossesBoundary: 'close',
+      affectedChildren: [
+        { ticket_id: 'child-1', ticket_number: 'T-1', title: 'Child one', is_closed: false },
+      ],
+      unaffectedChildren: [
+        { ticket_id: 'child-2', ticket_number: 'T-2', title: 'Child two', is_closed: true, reason: 'already_closed' },
+      ],
+    });
+
+    const response = handleApiError(error);
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.error.code).toBe('CONFLICT');
+    expect(body.error.details.reason).toBe('bundle_propagation_confirmation_required');
+    expect(body.error.details.crossesBoundary).toBe('close');
+    expect(body.error.details.affectedChildren).toEqual([
+      { ticket_id: 'child-1', ticket_number: 'T-1', title: 'Child one', is_closed: false },
+    ]);
+    expect(body.error.details.unaffectedChildren[0]).toMatchObject({ ticket_id: 'child-2', reason: 'already_closed' });
   });
 
   it('adds extra headers to success responses', () => {

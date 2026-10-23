@@ -39,4 +39,31 @@ describe('DelayedEmailQueue.calculateDelay', () => {
   it('exposes the default retry ceiling', () => {
     expect(DelayedEmailQueue.MAX_RETRIES).toBe(5);
   });
+
+  it('preserves sender routing fields in the delayed retry payload', async () => {
+    const stored = new Map<string, string>();
+    const redis = {
+      get: async (key: string) => stored.get(key) ?? null,
+      set: async (key: string, value: string) => { stored.set(key, value); },
+      del: async () => 0,
+      zAdd: async () => 1,
+      zRem: async () => 1,
+      zRangeByScore: async () => [],
+      zCard: async () => 0,
+    };
+    const queue = DelayedEmailQueue.getInstance({ checkIntervalMs: 1_000_000 });
+    await queue.initialize(async () => redis, async () => undefined);
+    const params = {
+      mailClass: 'ticket' as const,
+      boardId: 'board-1',
+      senderId: 'sender-1',
+      to: 'client@example.test',
+      subject: 'Ticket update',
+      html: '<p>Ticket update</p>',
+    };
+    await queue.enqueue('tenant-1', params);
+    const entry = [...stored.values()].map((value) => JSON.parse(value)).find((value) => value.params);
+    expect(entry.params).toMatchObject({ mailClass: 'ticket', boardId: 'board-1', senderId: 'sender-1' });
+    await queue.shutdown();
+  });
 });

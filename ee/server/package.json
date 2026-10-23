@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest",
     "test:unit": "vitest run src/__tests__/unit",
+    "test:operator-auth": "MASTER_BILLING_TENANT_ID=00000000-0000-4000-8000-0000000000aa vitest run src/__tests__/unit/operatorRoutes src/__tests__/unit/applianceConsole/auth.test.ts",
     "test:integration": "vitest run src/__tests__/integration --exclude '**/*.playwright.*'",
     "test:playwright": "nx e2e",
     "test:e2e": "nx e2e",
@@ -33,14 +34,15 @@
     "fzstd": "^0.1.1",
     "gm": "^1.25.0",
     "lucide-react": "^0.475.0",
-    "next": "16.2.12",
+    "next": "16.3.8",
     "openai": "^4.59.0",
     "react": "^19",
     "react-dom": "^19",
-    "sharp": "^0.35.3",
+    "sharp": "^0.35.4",
     "tar-stream": "^3.1.7",
     "uuid": "^11.0.5",
-    "@alga-psa/workflow-inference": "*"
+    "@alga-psa/workflow-inference": "*",
+    "@typesafe-ai/sdk": "^0.6.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",
@@ -67,6 +69,6 @@
     "type-detect": "^4.1.0",
     "typescript": "^5.0.0",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^4.0.18"
+    "vitest": "^4.1.11"
   }
 }

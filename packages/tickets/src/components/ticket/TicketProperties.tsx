@@ -10,15 +10,13 @@ import { ITicketResource } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { TagManager } from '@alga-psa/tags/components';
 import { Button } from '@alga-psa/ui/components/Button';
+import Spinner from '@alga-psa/ui/components/Spinner';
 import { CallLink } from '@alga-psa/ui/components/CallLink';
-import { Label } from '@alga-psa/ui/components/Label';
-import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
-import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, Calendar as CalendarIcon, Building, Users, CalendarCheck } from 'lucide-react';
+import { Clock, Edit2, UserPlus, X, Calendar as CalendarIcon, Building, Users, CalendarCheck } from 'lucide-react';
 import { ContentCard } from '@alga-psa/ui/components';
 import { formatMinutesAsHoursAndMinutes } from '@alga-psa/core';
-import styles from './TicketDetails.module.css';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
@@ -33,11 +31,13 @@ import { getContactAvatarUrlAction, getUserAvatarUrlsBatchAction } from '@alga-p
 import { getUserContactId } from '@alga-psa/user-composition/actions';
 import { getUserTimeZone } from '@alga-psa/core';
 import { formatTicketDateTime } from '../../lib/ticketDateTimeFormat';
+import { formatTicketLocationDisplay } from '../../lib/formatTicketLocation';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import type { TicketWatchListEntry } from '@shared/lib/tickets/watchList';
 import TicketMaterialsCard from './TicketMaterialsCard';
 import TicketWatchListCard from './TicketWatchListCard';
 import TicketTimeEntries from './TicketTimeEntries';
+import { TicketStopwatchControls } from './TicketStopwatchControls';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { useDrawer } from '@alga-psa/ui';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -60,9 +60,6 @@ interface TicketPropertiesProps {
   createdByUser: any;
   board: any;
   isLiveTicketTimerEnabled?: boolean;
-  elapsedTime: number;
-  isRunning: boolean;
-  isTimerLocked?: boolean;
   timeDescription: string;
   team: ITeam | null;
   teams?: ITeam[];
@@ -77,11 +74,12 @@ interface TicketPropertiesProps {
   locations?: IClientLocation[];
   clientFilterState: 'all' | 'active' | 'inactive';
   clientTypeFilter: 'all' | 'company' | 'individual';
-  onStart: () => void;
-  onPause: () => void;
-  onStop: () => void;
   onTimeDescriptionChange: (value: string) => void;
+  /** Called after a stopwatch Stop saved its time entry, so the time list refreshes. */
+  onTimeEntryLogged?: () => void;
   onAddTimeEntry: () => void;
+  /** True while the time-entry launch chain is in flight; disables the button. */
+  isLaunchingTimeEntry?: boolean;
   onClientClick: () => void;
   onContactClick: () => void;
   onAgentClick: (userId: string) => void;
@@ -107,7 +105,6 @@ interface TicketPropertiesProps {
   allContactsForWatchListLoading?: boolean;
   onLoadAllContactsForWatchList?: () => Promise<void>;
   surveySummaryCard?: React.ReactNode;
-  renderIntervalManagement?: (args: { ticketId: string; userId: string }) => React.ReactNode;
   onRemoveTeamAssignment?: (mode: 'remove_all' | 'keep_all' | 'selective', keepUserIds?: string[]) => Promise<void>;
   onAssignTeam?: (teamId: string) => Promise<void>;
   timeEntriesRefreshKey?: number;
@@ -131,32 +128,8 @@ interface TicketPropertiesProps {
 // surfaces that live in packages which must not depend on one another.
 const loadClientBillingProfiles = (clientId: string) => getClientBillingProfiles(clientId);
 
-// Helper function to format location display
-const formatLocationDisplay = (location: IClientLocation, unnamedLocationLabel: string): string => {
-  const parts: string[] = [];
-  
-  if (location.location_name) {
-    parts.push(location.location_name);
-  }
-  
-  if (location.address_line1) {
-    parts.push(location.address_line1);
-  }
-  
-  if (location.city && location.state_province) {
-    parts.push(`${location.city}, ${location.state_province}`);
-  } else if (location.city) {
-    parts.push(location.city);
-  } else if (location.state_province) {
-    parts.push(location.state_province);
-  }
-  
-  if (location.postal_code) {
-    parts.push(location.postal_code);
-  }
-  
-  return parts.join(' - ') || unnamedLocationLabel;
-};
+// Shared with the grid layout's Location row so both views read alike.
+const formatLocationDisplay = formatTicketLocationDisplay;
 
 const TicketProperties: React.FC<TicketPropertiesProps> = ({
   id = 'ticket-properties',
@@ -166,9 +139,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   createdByUser,
   board,
   isLiveTicketTimerEnabled,
-  elapsedTime,
-  isRunning,
-  isTimerLocked = false,
   timeDescription,
   team,
   teams = [],
@@ -183,11 +153,10 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   locations = [],
   clientFilterState,
   clientTypeFilter,
-  onStart,
-  onPause,
-  onStop,
   onTimeDescriptionChange,
+  onTimeEntryLogged,
   onAddTimeEntry,
+  isLaunchingTimeEntry = false,
   onClientClick,
   onContactClick,
   onAgentClick,
@@ -209,7 +178,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   allContactsForWatchListLoading = false,
   onLoadAllContactsForWatchList,
   surveySummaryCard,
-  renderIntervalManagement,
   onRemoveTeamAssignment,
   onAssignTeam,
   timeEntriesRefreshKey = 0,
@@ -231,7 +199,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const { renderQuickAddContact } = useQuickAddClient();
   const { t } = useTranslation('features/tickets');
   // These read 'en-US' outright, so they stayed American in every locale.
-  const { formatDate, locale } = useFormatters();
+  const { formatDate, locale, dateFormat } = useFormatters();
   const liveTicketTimerEnabled = isLiveTicketTimerEnabled ?? isBoardLiveTicketTimerEnabled(board);
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [showClientPicker, setShowClientPicker] = useState(false);
@@ -250,7 +218,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [primaryAgentAvatarUrl, setPrimaryAgentAvatarUrl] = useState<string | null>(null);
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
   const [contactAvatarUrl, setContactAvatarUrl] = useState<string | null>(null);
-  const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
+  const [showWeekday, setShowWeekday] = useState<boolean>(false);
   const [appointmentRequests, setAppointmentRequests] = useState<any[]>([]);
   const [showAppointmentTooltip, setShowAppointmentTooltip] = useState(false);
   const [isRemoveTeamDialogOpen, setIsRemoveTeamDialogOpen] = useState(false);
@@ -549,19 +517,12 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
     return schedule ? schedule.minutes : 0;
   };
 
-  const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainingSeconds = seconds % 60;
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
   // Load ticket display settings (date/time format)
   useEffect(() => {
     const loadDisplay = async () => {
       try {
         const s = await getTicketingDisplaySettings();
-        if (s?.dateTimeFormat) setDateTimeFormat(s.dateTimeFormat);
+        setShowWeekday(s?.showWeekday ?? false);
       } catch (e) {
         console.error('Failed to load ticketing display settings', e);
       }
@@ -599,70 +560,33 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         headerIcon={<Clock className="w-5 h-5" />}
       >
         <div className="space-y-4">
-          {liveTicketTimerEnabled && (
-            <>
-              <div className="flex items-center justify-between">
-                <span>{t('properties.ticketTimer', 'Ticket Timer - #{{ticketNumber}}', { ticketNumber: ticket.ticket_number })}</span>
-              </div>
-              <div className={`${styles['digital-clock']} text-2xl flex items-center justify-between px-4`}>
-                <span>{formatTime(elapsedTime)}</span>
-                <div className='pl-5'>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="17" height="21" viewBox="0 0 17 21" fill="none">
-                    <path d="M0.625 20.2V1L15.825 10.2571L0.625 20.2Z" fill="#000" stroke="#000" strokeWidth="0.8" />
-                  </svg>
-                </div>
-              </div>
-              <div className="flex justify-center space-x-2">
-                {!isRunning ? (
-                  <Button
-                    {...withDataAutomationId({ id: `${id}-start-timer-btn` })}
-                    onClick={onStart}
-                    className={`w-24 ${isTimerLocked ? 'opacity-60' : ''}`}
-                    variant='soft'
-                    aria-disabled={isTimerLocked}
-                    title={isTimerLocked ? t('properties.timerActiveElsewhere', 'Timer active in another window') : undefined}
-                  >
-                    <Play className="mr-2 h-4 w-4" /> {t('properties.start', 'Start')}
-                  </Button>
-                ) : (
-                  <Button {...withDataAutomationId({ id: `${id}-pause-timer-btn` })} onClick={onPause} className={`w-24`} variant='soft'>
-                    <Pause className="mr-2 h-4 w-4" /> {t('properties.pause', 'Pause')}
-                  </Button>
-                )}
-                <Button {...withDataAutomationId({ id: `${id}-stop-timer-btn` })} onClick={onStop} className={`w-24`} variant='soft'>
-                  <StopCircle className="mr-2 h-4 w-4" /> {t('properties.reset', 'Reset')}
-                </Button>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">{t('fields.description', 'Description')}</Label>
-                <Input
-                  {...withDataAutomationId({ id: `${id}-description-input` })}
-                  id="description"
-                  value={timeDescription}
-                  onChange={(e) => onTimeDescriptionChange(e.target.value)}
-                  placeholder={t('properties.enterWorkDescription', 'Enter work description')}
-                  className={styles['custom-input']}
-                />
-              </div>
-            </>
+          {ticket.ticket_id && (
+            <TicketStopwatchControls
+              id={`${id}-timer`}
+              ticketId={ticket.ticket_id}
+              variant="card"
+              enabled={liveTicketTimerEnabled}
+              timeDescription={timeDescription}
+              onTimeDescriptionChange={onTimeDescriptionChange}
+              masterTicketId={ticket.master_ticket_id ?? null}
+              onTimeEntryLogged={onTimeEntryLogged}
+            />
           )}
-          <div className="space-y-2">
-            {!liveTicketTimerEnabled && (
-              <p className="text-sm text-muted-foreground" data-testid={`${id}-live-timer-disabled-message`}>
-                {t('properties.liveTimerDisabled', 'Live ticket timer is disabled for this board.')}
-              </p>
-            )}
-          </div>
           <Button
             {...withDataAutomationId({ id: `${id}-add-time-entry-btn` })}
             type="button"
             className={`w-full mt-4 flex items-center justify-center`}
             onClick={onAddTimeEntry}
+            disabled={isLaunchingTimeEntry}
           >
             <span className="mr-2">{t('properties.addTimeEntry', 'Add Time Entry')}</span>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="#D6BBFB">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
+            {isLaunchingTimeEntry ? (
+              <Spinner size="button" variant="inverted" />
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="#D6BBFB">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            )}
           </Button>
 
           {ticket.ticket_id && userId && (
@@ -670,19 +594,11 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               id={id}
               ticketId={ticket.ticket_id}
               currentUserId={userId}
-              dateTimeFormat={dateTimeFormat}
+              showWeekday={showWeekday}
               refreshKey={timeEntriesRefreshKey}
               onEditEntry={onEditTimeEntry}
               onDeleteEntry={onDeleteTimeEntry}
             />
-          )}
-
-          {/* Interval Management Section */}
-          {liveTicketTimerEnabled && ticket.ticket_id && userId && renderIntervalManagement && (
-            <div className="mt-2 border-t pt-4" {...withDataAutomationId({ id: `${id}-interval-management` })}>
-              <h3 className="text-sm font-medium mb-2">{t('properties.trackedIntervals', 'Tracked Intervals')}</h3>
-              {renderIntervalManagement({ ticketId: ticket.ticket_id, userId })}
-            </div>
           )}
 
         </div>
@@ -835,7 +751,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               {(() => {
                 if (!ticket.entered_at) return t('properties.notAvailable', 'N/A');
                 try {
-                  return formatTicketDateTime(ticket.entered_at, dateTimeFormat, locale, getUserTimeZone());
+                  return formatTicketDateTime(ticket.entered_at, locale, getUserTimeZone(), dateFormat, showWeekday);
                 } catch (e) {
                   return ticket.entered_at;
                 }
@@ -1399,6 +1315,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               size="sm"
               placeholder={t('properties.selectAdditionalAgents', 'Select additional agents...')}
               onUserClick={disableAgentSchedule ? undefined : onAgentClick}
+              userClickLabel={t('bento.hero.viewSchedule', 'View schedule')}
             />
           </div>
         </div>

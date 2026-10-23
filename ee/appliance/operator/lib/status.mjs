@@ -19,6 +19,21 @@ function parseJsonOutput(output) {
   }
 }
 
+// LEVERAGE: pattern appliance-status-triplicate — same /status interpretation exists in
+// host-service/status-engine.mjs and the pod script in flux/base/platform/appliance-status.yaml.
+function interpretEmailServiceStatus(stdout) {
+  const body = parseJsonOutput(stdout || '');
+  if (!body || body.version !== 1 || !['ok', 'degraded', 'down'].includes(body.status)) {
+    return { state: 'unavailable', reasons: [] };
+  }
+  const reasons = (Array.isArray(body.reasons) ? body.reasons : [])
+    .filter((r) => r && r.severity !== 'info')
+    .map((r) => String(r.message || r.code || '').slice(0, 200))
+    .filter(Boolean)
+    .slice(0, 5);
+  return { state: body.status, reasons };
+}
+
 function readinessStatus(ready, total) {
   if (total === 0) {
     return 'unknown';
@@ -811,6 +826,22 @@ export async function collectStatus(env, options = {}) {
         status: readiness.status,
         message: fetched.ok ? '' : 'Resource not found or unavailable',
       });
+    }
+    const emailComponent = workloads.components.find((entry) => entry.name === 'email-service');
+    if (emailComponent && emailComponent.status === 'healthy') {
+      const emailResult = await shell.runCapture('kubectl', [
+        '--kubeconfig',
+        kubeconfig,
+        'get',
+        '--raw',
+        '/api/v1/namespaces/msp/services/http:email-service:http/proxy/status',
+      ]);
+      const email = emailResult.ok ? interpretEmailServiceStatus(emailResult.output) : { state: 'unavailable', reasons: [] };
+      emailComponent.emailHealth = email.state;
+      if (email.state === 'degraded' || email.state === 'down') {
+        emailComponent.status = 'degraded';
+        emailComponent.message = `Inbound email is ${email.state}: ${email.reasons.join('; ')}`.slice(0, 500);
+      }
     }
     workloads.status = mapRollupStatus(workloads.components, 'unknown');
   }

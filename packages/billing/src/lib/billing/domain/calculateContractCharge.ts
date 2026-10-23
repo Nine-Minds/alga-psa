@@ -138,6 +138,7 @@ export function normalizeResolvedContractCharge(input: {
           serviceId: service.service_id,
           serviceName: service.service_name,
           defaultRate: service.default_rate,
+          currencyRate: service.currency_rate,
           taxRateId: service.tax_rate_id,
           configurationId: service.config_id,
           serviceQuantity: service.service_quantity,
@@ -145,6 +146,7 @@ export function normalizeResolvedContractCharge(input: {
           configurationQuantity: service.configuration_quantity,
           configurationCustomRate: service.configuration_custom_rate,
           baseRate: service.service_base_rate,
+          baseRateBasis: service.base_rate_basis,
           enableProration: service.enable_proration,
           quantity: service.quantity,
           pricingBasis: service.pricing_basis,
@@ -157,6 +159,7 @@ export function normalizeResolvedContractCharge(input: {
               configurationId: charge.inputs.fallbackService.config_id,
             }
           : null,
+        hasProductMembers: charge.inputs.hasProductMembers ?? false,
       };
       break;
     case "hourly":
@@ -301,6 +304,7 @@ export function normalizeResolvedContractCharge(input: {
           configurationQuantity: service.configuration_quantity,
           configurationCustomRate: service.configuration_custom_rate,
           priceRate: service.price_rate,
+          effectivePricing: service.effective_pricing ?? null,
         })),
       };
   }
@@ -388,6 +392,7 @@ export function calculateNormalizedContractCharge(
             service_id: service.serviceId,
             service_name: service.serviceName,
             default_rate: service.defaultRate,
+            currency_rate: service.currencyRate,
             tax_rate_id: service.taxRateId,
             config_id: service.configurationId,
             service_quantity: service.serviceQuantity,
@@ -395,6 +400,7 @@ export function calculateNormalizedContractCharge(
             configuration_quantity: service.configurationQuantity,
             configuration_custom_rate: service.configurationCustomRate,
             service_base_rate: service.baseRate,
+            base_rate_basis: service.baseRateBasis,
             enable_proration: service.enableProration,
             quantity: service.quantity,
             pricing_basis: service.pricingBasis,
@@ -407,6 +413,7 @@ export function calculateNormalizedContractCharge(
                 config_id: facts.fallbackService.configurationId,
               }
             : null,
+          hasProductMembers: facts.hasProductMembers ?? false,
           billingProfile: facts.billingProfile,
         },
       };
@@ -596,6 +603,7 @@ export function calculateNormalizedContractCharge(
             configuration_quantity: service.configurationQuantity,
             configuration_custom_rate: service.configurationCustomRate,
             price_rate: service.priceRate,
+            effective_pricing: service.effectivePricing ?? null,
           })),
           contractCurrency: facts.line.currencyCode,
           billingProfile: facts.billingProfile,

@@ -11,10 +11,12 @@ import type {
   ActivityEntryPopupRenderProps,
   ActivityTimeEntryDialogRenderProps,
   ActivityConvertAdHocRenderProps,
+  ActivityGroupControlRenderProps,
 } from '@alga-psa/ui/context';
 
 // Ticket imports
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
+import { ticketDetailsInitialProps } from '../tickets/ticketDetailsInitialProps';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 
@@ -35,6 +37,12 @@ import TimeEntryDialog from '@alga-psa/scheduling/components/time-management/tim
 
 // Document imports
 import { getBlockContent, updateBlockContent } from '@alga-psa/documents/actions/documentBlockContentActions';
+
+// "My group" control (ticket / project-task detail screens) and the workspace-wide store that
+// backs it and the activities board. Hosts reach the control only through the cross-feature
+// context, so tickets/projects/scheduling never depend on user-activities.
+import { ActivityGroupControl } from '@alga-psa/user-activities/components/ActivityGroupControl';
+import { MyActivityGroupsProvider } from '@alga-psa/user-activities/components/MyActivityGroupsProvider';
 
 // Workflow-task (EE-only) cross-feature members. Resolves to a CE stub that supplies
 // nothing, and in the EE app build to the real TaskForm + task-inbox actions. Keeping
@@ -60,7 +68,7 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
         initialClient={d.client}
         initialContacts={d.contacts}
         initialContactInfo={d.contactInfo}
-        initialCreatedByUser={d.createdByUser}
+        {...ticketDetailsInitialProps(d)}
         initialAdditionalAgents={d.additionalAgents}
         statusOptions={d.options.status}
         agentOptions={d.options.agent}
@@ -74,6 +82,7 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
         initialUserMap={d.userMap}
         initialAvailableAgents={d.availableAgents}
         onClose={props.onClose}
+        onSaved={props.onSaved}
       />
     );
   };
@@ -167,6 +176,10 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
     (props: ActivityEntryPopupRenderProps) => renderEntryPopupRef.current!(props),
     []
   );
+  const renderActivityGroupControl = useCallback(
+    (props: ActivityGroupControlRenderProps) => <ActivityGroupControl {...props} />,
+    []
+  );
   const renderTimeEntryDialog = useCallback(
     (props: ActivityTimeEntryDialogRenderProps) => renderTimeEntryDialogRef.current!(props),
     []
@@ -184,6 +197,7 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
       renderTimeEntryDialog,
       renderConvertAdHocToTicket,
       renderConvertAdHocToProjectTask,
+      renderActivityGroupControl,
       getConsolidatedTicketData,
       getTaskWithDetails,
       getScheduleEntries,
@@ -197,12 +211,14 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
       getAllContacts,
       ...workflowTaskMembers,
     }),
-    [renderTicketDetails, renderTaskEdit, renderEntryPopup, renderTimeEntryDialog, renderConvertAdHocToTicket, renderConvertAdHocToProjectTask, workflowTaskMembers]
+    [renderTicketDetails, renderTaskEdit, renderEntryPopup, renderTimeEntryDialog, renderConvertAdHocToTicket, renderConvertAdHocToProjectTask, renderActivityGroupControl, workflowTaskMembers]
   );
 
   return (
     <ActivityCrossFeatureProvider value={value}>
-      {children}
+      <MyActivityGroupsProvider>
+        {children}
+      </MyActivityGroupsProvider>
     </ActivityCrossFeatureProvider>
   );
 }

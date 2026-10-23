@@ -157,6 +157,45 @@ export interface IJobRunner {
   ): Promise<ScheduleJobResult>;
 
   /**
+   * Schedule a recurring job that is not scoped to a tenant (for example a
+   * global sweep that enumerates tenants itself). Unlike scheduleRecurringJob,
+   * this does not create a tenant-attributed tracker row; the schedule is
+   * persisted durably by the backend and survives restarts. Backends that do
+   * not support global schedules may omit this method.
+   *
+   * @param jobName The name of the job type (must have a registered handler)
+   * @param interval Cron expression (e.g., "0 4 * * *")
+   * @param options Optional schedule id, timezone, and payload
+   */
+  scheduleGlobalRecurringJob?(
+    jobName: string,
+    interval: string,
+    options?: {
+      scheduleId?: string;
+      timezone?: string;
+      data?: Record<string, unknown>;
+      /** pg-boss queue policy for the schedule's queue; 'stately' allows one queued + one active job. */
+      queuePolicy?: 'standard' | 'stately';
+      /** Seconds before an active job is considered expired (pg-boss default is 900). */
+      expireInSeconds?: number;
+    }
+  ): Promise<{ scheduleId: string }>;
+
+  /**
+   * List the global recurring schedules whose id starts with `prefix`.
+   * Optional: only backends with durable schedules implement it.
+   */
+  listGlobalRecurringJobs?(
+    prefix: string
+  ): Promise<Array<{ scheduleId: string; cron: string; timezone: string }>>;
+
+  /**
+   * Remove a global recurring schedule created by scheduleGlobalRecurringJob.
+   * Optional: only backends with durable schedules implement it.
+   */
+  unscheduleGlobalRecurringJob?(scheduleId: string): Promise<void>;
+
+  /**
    * Cancel a scheduled or running job
    *
    * @param jobId The job ID (from our database)

@@ -2,10 +2,13 @@ import Link from "next/link";
 import { displayAddressField, displayCountry } from '@alga-psa/core';
 import type { IClient } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 
 interface ClientSideDetailsProps {
     client: IClient & {
         location_phone?: string;
+        location_phone_extension?: string | null;
+        location_country_code?: string | null;
         location_email?: string;
         address_line1?: string;
         address_line2?: string;
@@ -52,7 +55,12 @@ const ClientSideDetails = ({ client }: ClientSideDetailsProps) => {
                 <div className="space-y-4 text-sm">
                     <div>
                         <p className="font-semibold text-gray-700">{t('clientSideDetails.phone', { defaultValue: 'Phone:' })}</p>
-                        <p>{client.location_phone || t('common.states.na', { defaultValue: 'N/A' })}</p>
+                        <PhoneText
+                            value={client.location_phone}
+                            extension={client.location_phone_extension}
+                            defaultCountry={client.location_country_code}
+                            fallback={t('common.states.na', { defaultValue: 'N/A' })}
+                        />
                     </div>
                     <div>
                         <p className="font-semibold text-gray-700">{t('clientSideDetails.url', { defaultValue: 'URL:' })}</p>

@@ -1,11 +1,13 @@
 import { faker } from '@faker-js/faker';
+import { randomUUID } from 'node:crypto';
 
 /**
  * Create test client data
  */
 export function createClientTestData(overrides: Partial<any> = {}) {
   return {
-    client_name: faker.company.name(),
+    // Company names can repeat; the API enforces uniqueness within a tenant.
+    client_name: `${faker.company.name()} ${randomUUID()}`,
     email: faker.internet.email(),
     phone_no: faker.phone.number(),
     address: faker.location.streetAddress(),

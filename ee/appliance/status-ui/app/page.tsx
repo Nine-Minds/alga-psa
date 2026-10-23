@@ -23,8 +23,17 @@ type Blocker = {
   severity?: string;
   component?: string;
   layer?: string;
+  step?: string | null;
   reason?: string;
+  details?: string | null;
   nextAction?: string;
+  autoRetry?: {
+    attempts?: number;
+    maxAttempts?: number;
+    exhausted?: boolean;
+    nextAttemptInSeconds?: number;
+  } | null;
+  pending?: boolean;
   loginBlocking?: boolean;
 };
 type EventItem = {
@@ -51,9 +60,33 @@ type ManageSummary = {
 };
 type StatusResponse = {
   status?: string;
-  // True when setup is blocked on a correctable install code; the UI offers a
-  // "re-enter your install code" action and the /setup form is reachable again.
+  // True when setup is blocked on an install code the operator can act on — a
+  // bad/expired/used code or a network/DNS/TLS failure while redeeming; the UI
+  // offers a "re-enter your install code" action and the /setup form is
+  // reachable again.
   setupReEditable?: boolean;
+  // Classification of the blocked redemption and the recovery copy/diagnostic
+  // to render, so the UI blames the code only for a confirmed code error and
+  // shows transport diagnostics (or neutral guidance) otherwise.
+  setupRecovery?: {
+    reEditable?: boolean;
+    kind?: "code" | "network" | "other" | string;
+    confirmedCodeError?: boolean;
+    hasNetworkEvidence?: boolean;
+    step?: string | null;
+    message?: string | null;
+    details?: string | null;
+    hostname?: string | null;
+    dnsServers?: string[];
+    lookupAddresses?: string[];
+    resolvedAddresses?: string[];
+    dnsOk?: boolean | null;
+    dnsError?: string | null;
+    socketCode?: string | null;
+    title?: string | null;
+    body?: string | null;
+    diagnostic?: string | null;
+  } | null;
   rollup?: { state?: string; message?: string; nextAction?: string } | null;
   currentPhase?: string;
   urls?: { statusUrl?: string | null; loginUrl?: string | null };
@@ -69,8 +102,18 @@ type StatusResponse = {
   failures?: Array<{
     category?: string;
     phase?: string;
+    step?: string | null;
+    details?: string | null;
     suspectedCause?: string;
     suggestedNextStep?: string;
+    retrySafe?: boolean;
+    pending?: boolean;
+    autoRetry?: {
+      attempts?: number;
+      maxAttempts?: number;
+      exhausted?: boolean;
+      nextAttemptInSeconds?: number;
+    };
   }>;
   bootstrap?: {
     job?: {
@@ -87,7 +130,29 @@ type StatusResponse = {
     phase?: string;
     lastAction?: string;
     updatedAt?: string;
+    failure?: {
+      step?: string | null;
+      message?: string;
+      details?: string | null;
+      retrySafe?: boolean;
+      suspectedCause?: string;
+      suggestedNextStep?: string;
+    } | null;
   };
+  engineLog?: { file?: string | null; error?: string | null } | null;
+  dnsReconcile?: {
+    ok?: boolean | null;
+    state?: string | null;
+    error?: string | null;
+    activation?: { stage?: string | null; error?: string | null } | null;
+    at?: string | null;
+    logFile?: string | null;
+  } | null;
+  releaseAutoRecovery?: {
+    lastCheck?: { at?: string; outcome?: string; detail?: string } | null;
+    recent?: AutoRecoveryAttempt[];
+    deferred?: Array<{ release: string; reason: string }>;
+  } | null;
   kubernetes?: {
     nodes?: Array<{ name?: string; ready?: boolean }>;
     podCount?: number;
@@ -104,6 +169,33 @@ type StatusResponse = {
     stderr?: string;
   }>;
 };
+
+type AutoRecoveryAttempt = {
+  release: string;
+  failedRevision: number;
+  at: string;
+  failure?: string;
+  verified?: string[];
+  outcome: "pending" | "recovered" | "failed-again" | "unresolved" | "error";
+  outcomeAt?: string;
+  outcomeMessage?: string;
+  recoveredRevision?: number;
+};
+
+function autoRecoveryOutcome(attempt: AutoRecoveryAttempt): string {
+  switch (attempt.outcome) {
+    case "recovered":
+      return `Recovered (revision ${attempt.recoveredRevision ?? "?"} deployed).`;
+    case "pending":
+      return "Flux is re-running the upgrade.";
+    case "failed-again":
+      return `The re-run failed again: ${attempt.outcomeMessage || "see the release status"}. Use Recover releases once the pods are healthy, or collect a support bundle.`;
+    case "unresolved":
+      return "The re-run has not finished; check the release status.";
+    default:
+      return `Could not start the re-run: ${attempt.outcomeMessage || "unknown error"}.`;
+  }
+}
 
 type NamespaceItem = { name: string; phase?: string };
 type Deployment = {
@@ -241,15 +333,42 @@ function tierEntries(status: StatusResponse | null) {
 
 function blockers(status: StatusResponse | null): Blocker[] {
   if (status?.topBlockers?.length) return status.topBlockers;
-  return (status?.failures || []).map((failure) => ({
+  const fromFailures = (status?.failures || []).map((failure) => ({
     severity:
       failure.category === "background-services" ? "background" : "critical",
     component: failure.category,
     layer: failure.phase,
+    step: failure.step,
     reason: failure.suspectedCause,
+    details: failure.details,
     nextAction: failure.suggestedNextStep,
-    loginBlocking: failure.category !== "background-services",
+    autoRetry: failure.autoRetry,
+    pending: failure.pending,
+    loginBlocking:
+      failure.category !== "background-services" && failure.pending !== true,
   }));
+  if (fromFailures.length > 0) return fromFailures;
+  // A retained install-state failure must always read as a blocker, even when
+  // the derived failure list is momentarily empty.
+  const retained = status?.installState?.failure;
+  if (retained) {
+    return [
+      {
+        severity: "critical",
+        component: retained.step || status?.installState?.phase || "setup",
+        layer: status?.installState?.phase,
+        step: retained.step,
+        reason: retained.message || retained.suspectedCause || "Setup failed.",
+        details: retained.details,
+        nextAction:
+          retained.suggestedNextStep ||
+          retained.details ||
+          "Review the setup engine log and retry setup.",
+        loginBlocking: true,
+      },
+    ];
+  }
+  return [];
 }
 
 function ageFrom(date?: string | null) {
@@ -344,6 +463,10 @@ export default function StatusPage() {
   const [recovering, setRecovering] = useState(false);
   const [recoverMsg, setRecoverMsg] = useState<string | null>(null);
   const [confirmRecover, setConfirmRecover] = useState(false);
+  const [recoveringReleases, setRecoveringReleases] = useState(false);
+  const [recoverReleasesMsg, setRecoverReleasesMsg] = useState<string | null>(
+    null,
+  );
   const [namespaces, setNamespaces] = useState<NamespaceItem[]>([]);
   const [namespace, setNamespace] = useState("msp");
   const [deployments, setDeployments] = useState<Deployment[]>([]);
@@ -372,6 +495,36 @@ export default function StatusPage() {
   }>(null);
   const statusRequestInFlight = useRef(false);
   const statusAbortController = useRef<AbortController | null>(null);
+  // One in-flight request per data view. A newer request for the same view (or
+  // leaving the page) aborts the older one, so the server can drop work nobody
+  // will read instead of finishing it ahead of the request the user is
+  // actually waiting for.
+  const viewRequests = useRef<Record<string, AbortController>>({});
+  const beginViewRequest = useCallback((key: string) => {
+    viewRequests.current[key]?.abort();
+    const controller = new AbortController();
+    viewRequests.current[key] = controller;
+    return controller;
+  }, []);
+  const isCurrentViewRequest = useCallback(
+    (key: string, controller: AbortController) =>
+      viewRequests.current[key] === controller,
+    [],
+  );
+  useEffect(() => {
+    const requests = viewRequests.current;
+    return () => {
+      for (const controller of Object.values(requests)) controller.abort();
+    };
+  }, []);
+  // Read by loadPods without making it depend on the selection: depending on
+  // selectedPod re-created loadPods on first load (it sets the selection), which
+  // re-ran the tab effect and fetched the pod list twice, then again on every
+  // pod click.
+  const selectedPodRef = useRef(selectedPod);
+  useEffect(() => {
+    selectedPodRef.current = selectedPod;
+  }, [selectedPod]);
 
   const loadStatus = useCallback(async () => {
     if (statusRequestInFlight.current) return;
@@ -410,10 +563,10 @@ export default function StatusPage() {
   // (60s-cached server-side), and availability changes rarely.
   const loadManageSummary = useCallback(async () => {
     try {
-      const response = await fetch(apiPath("/api/manage/status"), {
-        credentials: "same-origin",
-        cache: "no-store",
-      });
+      const response = await fetch(
+        apiPath("/api/manage/status", { scope: "updates" }),
+        { credentials: "same-origin", cache: "no-store" },
+      );
       if (!response.ok) return; // keep the last snapshot; banner is best-effort
       setManageSummary((await response.json()) as ManageSummary);
     } catch {
@@ -442,59 +595,87 @@ export default function StatusPage() {
     }
   }, [recovering, loadStatus]);
 
+  const recoverReleases = useCallback(async () => {
+    if (recoveringReleases) return;
+    setRecoveringReleases(true);
+    setRecoverReleasesMsg(null);
+    try {
+      const response = await fetch(apiPath("/api/recover-releases"), {
+        method: "POST",
+        cache: "no-store",
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok)
+        throw new Error(data.error || "Failed to recover releases.");
+      setRecoverReleasesMsg(data.message || "Recovery triggered.");
+      loadStatus();
+    } catch (err) {
+      setRecoverReleasesMsg(err instanceof Error ? err.message : String(err));
+    } finally {
+      setRecoveringReleases(false);
+    }
+  }, [recoveringReleases, loadStatus]);
+
   const loadNamespaces = useCallback(async () => {
+    const controller = beginViewRequest("namespaces");
     setLoadingNamespaces(true);
     try {
       const response = await fetch(apiPath("/api/k8s/namespaces"), {
         cache: "no-store",
+        signal: controller.signal,
       });
       if (!response.ok) return;
       const data = await response.json();
       setNamespaces(data.namespaces || []);
     } catch {
-      /* cluster may not exist yet */
+      /* cluster may not exist yet, or the request was superseded */
     } finally {
-      setLoadingNamespaces(false);
+      if (isCurrentViewRequest("namespaces", controller))
+        setLoadingNamespaces(false);
     }
-  }, []);
+  }, [beginViewRequest, isCurrentViewRequest]);
 
   const loadPods = useCallback(async () => {
+    const controller = beginViewRequest("pods");
     setLoadingPods(true);
     try {
       const response = await fetch(apiPath("/api/k8s/pods", { namespace }), {
         cache: "no-store",
+        signal: controller.signal,
       });
       if (!response.ok) return;
       const data = await response.json();
       const nextPods = data.pods || [];
       setPods(nextPods);
-      if (!selectedPod && nextPods.length) {
+      if (!selectedPodRef.current && nextPods.length) {
         setSelectedPod(nextPods[0].name);
         setSelectedContainer(nextPods[0].containers?.[0]?.name || "");
       }
     } catch {
-      /* ignore transient Kubernetes failures */
+      /* ignore transient Kubernetes failures and superseded requests */
     } finally {
-      setLoadingPods(false);
+      if (isCurrentViewRequest("pods", controller)) setLoadingPods(false);
     }
-  }, [namespace, selectedPod]);
+  }, [namespace, beginViewRequest, isCurrentViewRequest]);
 
   const loadDeployments = useCallback(async () => {
+    const controller = beginViewRequest("deployments");
     setLoadingDeployments(true);
     try {
       const response = await fetch(
         apiPath("/api/k8s/deployments", { namespace }),
-        { cache: "no-store" },
+        { cache: "no-store", signal: controller.signal },
       );
       if (!response.ok) return;
       const data = await response.json();
       setDeployments(data.deployments || []);
     } catch {
-      /* ignore transient Kubernetes failures */
+      /* ignore transient Kubernetes failures and superseded requests */
     } finally {
-      setLoadingDeployments(false);
+      if (isCurrentViewRequest("deployments", controller))
+        setLoadingDeployments(false);
     }
-  }, [namespace]);
+  }, [namespace, beginViewRequest, isCurrentViewRequest]);
 
   function applyPendingLogScroll() {
     const pending = pendingLogScroll.current;
@@ -517,6 +698,7 @@ export default function StatusPage() {
       const pane = logPaneRef.current;
       const previousScrollHeight = pane?.scrollHeight || 0;
       const previousScrollTop = pane?.scrollTop || 0;
+      const controller = beginViewRequest("logs");
       setLoadingLogs(true);
       try {
         setLogError(null);
@@ -527,7 +709,7 @@ export default function StatusPage() {
             container: selectedContainer,
             tail,
           }),
-          { cache: "no-store" },
+          { cache: "no-store", signal: controller.signal },
         );
         if (!response.ok)
           throw new Error(
@@ -552,12 +734,20 @@ export default function StatusPage() {
         window.setTimeout(applyPendingLogScroll, 50);
         window.setTimeout(applyPendingLogScroll, 250);
       } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
         setLogError(err instanceof Error ? err.message : String(err));
       } finally {
-        setLoadingLogs(false);
+        if (isCurrentViewRequest("logs", controller)) setLoadingLogs(false);
       }
     },
-    [logTail, namespace, selectedContainer, selectedPod],
+    [
+      logTail,
+      namespace,
+      selectedContainer,
+      selectedPod,
+      beginViewRequest,
+      isCurrentViewRequest,
+    ],
   );
 
   useEffect(() => {
@@ -652,6 +842,12 @@ export default function StatusPage() {
     status?.installState?.status ||
     "loading";
   const blockerList = blockers(status);
+  const releaseBlocker = blockerList.find(
+    (blocker) => blocker.component === "flux",
+  );
+  // The server classifies the blocked redemption and supplies the matching copy
+  // and diagnostic; the UI only renders it.
+  const setupRecovery = status?.setupRecovery || null;
   const runningOperations = status?.activeOperations || [];
   const primaryOperation = runningOperations[0];
   const currentPhase =
@@ -786,16 +982,18 @@ export default function StatusPage() {
           </div>
         ) : null}
 
-        {status?.setupReEditable ? (
+        {status?.setupReEditable && setupRecovery ? (
           <div className={styles.setupCta} role="alert">
             <div>
-              <strong>Install code needs attention</strong>
-              <p>
-                The install code could not be redeemed — it may be invalid,
-                expired, or already used. Re-issue a fresh code at{" "}
-                <strong>nineminds.com/order/appliance/reissue</strong> and we
-                will email it to you, then re-enter it to continue.
-              </p>
+              <strong>
+                {setupRecovery.title || "Install code could not be redeemed"}
+              </strong>
+              <p>{setupRecovery.body}</p>
+              {setupRecovery.diagnostic ? (
+                <small className={styles.muted}>
+                  {setupRecovery.diagnostic}
+                </small>
+              ) : null}
             </div>
             <a className={styles.primaryButton} href="/setup/">
               Re-enter install code
@@ -937,8 +1135,21 @@ export default function StatusPage() {
                     key={index}
                   >
                     <strong>{blocker.component || blocker.layer}</strong>
+                    {blocker.step ? (
+                      <p className={styles.muted}>Failed step: {blocker.step}</p>
+                    ) : null}
                     <p>{blocker.reason}</p>
+                    {blocker.details ? (
+                      <small className={styles.muted}>{blocker.details}</small>
+                    ) : null}
                     <small>{blocker.nextAction}</small>
+                    {typeof blocker.autoRetry?.attempts === "number" ? (
+                      <small>
+                        {blocker.autoRetry.exhausted
+                          ? `Automatic retries exhausted after ${blocker.autoRetry.attempts} of ${blocker.autoRetry.maxAttempts} attempts.`
+                          : `Automatic retry attempt ${blocker.autoRetry.attempts} of ${blocker.autoRetry.maxAttempts}.`}
+                      </small>
+                    ) : null}
                   </div>
                 ))
               )}
@@ -985,12 +1196,70 @@ export default function StatusPage() {
 
             <article className={styles.panel}>
               <h2>Recovery</h2>
+              {(status?.releaseAutoRecovery?.recent || []).length > 0 ? (
+                <div id="appliance-auto-recovery">
+                  <p className={styles.muted}>
+                    Releases the control plane re-ran automatically in the last
+                    24 hours. Each had stalled after an upgrade that timed out
+                    waiting for its pods, and its workloads had become healthy
+                    since.
+                  </p>
+                  {(status?.releaseAutoRecovery?.recent || []).map((attempt) => (
+                    <div className={styles.operation} key={`${attempt.release}-${attempt.failedRevision}-${attempt.at}`}>
+                      <strong>{attempt.release}</strong>
+                      <p>
+                        Revision {attempt.failedRevision} failed
+                        {attempt.verified?.length ? ` while ${attempt.verified.join(", ")} was still rolling out` : " on a rollout timeout"};
+                        re-run automatically at {new Date(attempt.at).toLocaleString()}.{" "}
+                        {autoRecoveryOutcome(attempt)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {releaseBlocker && (status?.releaseAutoRecovery?.deferred || []).length > 0 ? (
+                <div>
+                  {(status?.releaseAutoRecovery?.deferred || []).map((entry) => (
+                    <p className={styles.helpText} key={entry.release}>
+                      <strong>{entry.release}</strong> was not re-run automatically: {entry.reason}.
+                    </p>
+                  ))}
+                </div>
+              ) : null}
+              {releaseBlocker || recoverReleasesMsg ? (
+                <>
+                  <p className={styles.muted}>
+                    Re-runs the upgrade of each Helm release that stopped after a
+                    failed attempt (for example when its pods were slow to start
+                    during an update). Healthy releases are left alone, and the
+                    application bootstrap is not re-run. Check that the
+                    release&rsquo;s pods are running first.
+                  </p>
+                  <div className={styles.toolbar}>
+                    <button
+                      id="appliance-recover-releases-btn"
+                      type="button"
+                      className={styles.actionButton}
+                      disabled={recoveringReleases}
+                      onClick={() => recoverReleases()}
+                    >
+                      {recoveringReleases ? "Triggering…" : "Recover releases"}
+                    </button>
+                  </div>
+                  {recoverReleasesMsg ? (
+                    <p className={styles.helpText}>{recoverReleasesMsg}</p>
+                  ) : null}
+                </>
+              ) : null}
               <p className={styles.muted}>
                 Re-runs the application bootstrap — database migrations,
                 onboarding seeds, and creation of the initial tenant and admin
-                user (only when no user exists yet). Use this if setup finished
-                but you cannot log in because the initial account was never
-                created.
+                user (only when no user exists yet). It also clears a stalled
+                application release (for example an update that stopped at
+                &ldquo;retries exceeded&rdquo;) and restarts its upgrade. Use this
+                if setup finished but you cannot log in because the initial
+                account was never created, or if an update never finished
+                rolling out.
               </p>
               <div className={styles.toolbar}>
                 <button

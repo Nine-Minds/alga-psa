@@ -16,7 +16,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm ci
+      - name: Install Temporal engine dependencies with bounded download recovery
+        env:
+          FFMPEG_STATIC_DOWNLOAD_RETRY: 'true'
+        run: node scripts/install-api-test-dependencies.mjs
       - name: Collect and execute isolated Temporal engine workflows
         run: node scripts/run-additional-workspace-tests.mjs temporal-engine
       - name: Preserve Temporal engine execution evidence
@@ -61,7 +64,7 @@ jobs:
           name: temporal-readiness-execution
           path: test-results/temporal-readiness/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
   docker-parity:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'

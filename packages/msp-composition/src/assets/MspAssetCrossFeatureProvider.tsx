@@ -7,8 +7,9 @@ import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { createTicketFromAsset } from '@alga-psa/tickets/actions/ticketActions';
 import { getAllBoards } from '@alga-psa/reference-data/actions/boardActions';
-import { getAssetRmmData, refreshAssetRmmData, triggerRmmReboot } from '@alga-psa/integrations/actions/integrations/assetRmmActions';
+import { getAssetRmmData, refreshAssetRmmData, triggerRmmReboot, getAssetRemoteControlTypes, getAssetRemoteControlUrl } from '@alga-psa/integrations/actions/integrations/assetRmmActions';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
+import { ticketDetailsInitialProps } from '../tickets/ticketDetailsInitialProps';
 import { useDrawer } from '@alga-psa/ui';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
@@ -56,7 +57,7 @@ export function MspAssetCrossFeatureProvider({ children }: { children: ReactNode
             initialBoard={ticketData.board}
             initialClient={ticketData.client}
             initialContactInfo={ticketData.contactInfo}
-            initialCreatedByUser={ticketData.createdByUser}
+            {...ticketDetailsInitialProps(ticketData)}
             initialAdditionalAgents={ticketData.additionalAgents}
             initialAvailableAgents={ticketData.availableAgents}
             initialUserMap={ticketData.userMap}
@@ -85,7 +86,7 @@ export function MspAssetCrossFeatureProvider({ children }: { children: ReactNode
       openTicketDetailsDrawer,
       createTicketFromAsset,
       getAllBoards,
-      rmm: { getAssetRmmData, refreshAssetRmmData, triggerRmmReboot },
+      rmm: { getAssetRmmData, refreshAssetRmmData, triggerRmmReboot, getAssetRemoteControlTypes, getAssetRemoteControlUrl },
     }),
     [renderQuickAddTicket, openTicketDetailsDrawer]
   );

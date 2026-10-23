@@ -234,4 +234,91 @@ describe('InteractionService', () => {
       { type_id: 'tenant-demo', type_name: 'Demo', icon: null, is_system: false },
     ]);
   });
+
+  it('filters by a specific interaction status', async () => {
+    const dataQuery = queryResolving([]);
+    const countQuery = queryResolving(undefined);
+    countQuery.first.mockResolvedValue({ count: '0' });
+    const table = vi.fn().mockReturnValueOnce(dataQuery).mockReturnValueOnce(countQuery);
+    mocks.tenantDb.mockReturnValue({ table, tenantJoin: vi.fn((q: unknown) => q) });
+
+    await new InteractionService().list({ status_id: 'status-1', page: 1, page_size: 10 }, context);
+
+    expect(dataQuery.where).toHaveBeenCalledWith('i.status_id', 'status-1');
+    expect(countQuery.where).toHaveBeenCalledWith('i.status_id', 'status-1');
+  });
+
+  it('filters open interactions by closure via the tenant statuses table, treating no status as open', async () => {
+    const dataQuery = queryResolving([]);
+    dataQuery.whereIn = vi.fn().mockReturnValue(dataQuery);
+    const countQuery = queryResolving(undefined);
+    countQuery.first.mockResolvedValue({ count: '0' });
+    countQuery.whereIn = vi.fn().mockReturnValue(countQuery);
+    const statusSubquery = { select: vi.fn().mockReturnThis(), where: vi.fn().mockReturnThis() };
+    let interactionTableCalls = 0;
+    // Each list() call asks for 'interactions as i' twice: data first, then count.
+    const table = vi.fn((name: string) => {
+      if (name === 'statuses') return statusSubquery;
+      interactionTableCalls += 1;
+      return interactionTableCalls % 2 === 1 ? dataQuery : countQuery;
+    });
+    mocks.tenantDb.mockReturnValue({ table, tenantJoin: vi.fn((q: unknown) => q) });
+
+    await new InteractionService().list({ is_closed: false, page: 1, page_size: 10 }, context);
+
+    expect(statusSubquery.where).toHaveBeenCalledWith({ status_type: 'interaction', is_closed: false });
+    // Open = null status OR an open status; the grouped where receives a builder callback.
+    const grouped = dataQuery.where.mock.calls.find((call) => typeof call[0] === 'function');
+    expect(grouped).toBeTruthy();
+    const inner = { whereNull: vi.fn().mockReturnThis(), orWhereIn: vi.fn().mockReturnThis() };
+    (grouped![0] as (qb: unknown) => void)(inner);
+    expect(inner.whereNull).toHaveBeenCalledWith('i.status_id');
+    expect(inner.orWhereIn).toHaveBeenCalledWith('i.status_id', statusSubquery);
+    expect(dataQuery.whereIn).not.toHaveBeenCalled();
+
+    await new InteractionService().list({ is_closed: true, page: 1, page_size: 10 }, context);
+    expect(dataQuery.whereIn).toHaveBeenCalledWith('i.status_id', statusSubquery);
+  });
+
+  it('updates status/notes only after validating the interaction and the status type, then returns the hydrated row', async () => {
+    const interactionsTable = {
+      where: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      first: vi.fn().mockResolvedValue({ interaction_id: 'interaction-1' }),
+      update: vi.fn().mockResolvedValue(1),
+    };
+    const statusesTable = { where: vi.fn().mockReturnThis(), select: vi.fn().mockReturnThis(), first: vi.fn().mockResolvedValue({ status_id: 'status-closed' }) };
+    const hydrated = queryResolving(undefined);
+    hydrated.first.mockResolvedValue({ interaction_id: 'interaction-1', type_name: 'Call', status_name: 'Done' });
+    const table = vi.fn((name: string) => (name === 'statuses' ? statusesTable : name === 'interactions as i' ? hydrated : interactionsTable));
+    mocks.tenantDb.mockReturnValue({ table, tenantJoin: vi.fn((q: unknown) => q) });
+
+    const result = await new InteractionService().updateStatusOrNotes('interaction-1', { status_id: 'status-closed', notes: 'done' }, context);
+
+    expect(statusesTable.where).toHaveBeenCalledWith({ status_id: 'status-closed', status_type: 'interaction' });
+    expect(interactionsTable.update).toHaveBeenCalledWith({ status_id: 'status-closed', notes: 'done' });
+    expect(result).toEqual({ interaction_id: 'interaction-1', type_name: 'call', status_name: 'Done' });
+
+    statusesTable.first.mockResolvedValue(undefined);
+    await expect(new InteractionService().updateStatusOrNotes('interaction-1', { status_id: 'not-a-status' }, context))
+      .rejects.toThrow('status_id is not an interaction status');
+
+    interactionsTable.first.mockResolvedValue(undefined);
+    await expect(new InteractionService().updateStatusOrNotes('missing', { notes: 'x' }, context))
+      .rejects.toThrow('Interaction not found');
+  });
+
+  it('lists interaction statuses in display order', async () => {
+    const rows = [{ status_id: 's1', name: 'Open', is_closed: false, is_default: true, order_number: 1 }, { status_id: 's2', name: 'Done', is_closed: true, is_default: null, order_number: 2 }];
+    const statusesTable = queryResolving(rows);
+    mocks.tenantDb.mockReturnValue({ table: vi.fn(() => statusesTable), tenantJoin: vi.fn() });
+
+    const result = await new InteractionService().listStatuses(context);
+
+    expect(statusesTable.where).toHaveBeenCalledWith({ status_type: 'interaction' });
+    expect(result).toEqual([
+      { status_id: 's1', name: 'Open', is_closed: false, is_default: true, order_number: 1 },
+      { status_id: 's2', name: 'Done', is_closed: true, is_default: null, order_number: 2 },
+    ]);
+  });
 });

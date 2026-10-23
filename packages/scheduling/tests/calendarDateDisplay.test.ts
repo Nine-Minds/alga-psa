@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calendarDisplayDates, calendarStoredDates, hasAllDayDates } from '../src/lib/calendarDateDisplay';
+import { calendarDisplayDates, calendarStoredDates, hasAllDayDates, occupiesAllDayRow } from '../src/lib/calendarDateDisplay';
 
 describe('calendar date semantics', () => {
   const boundaries = {
@@ -30,5 +30,32 @@ describe('calendar date semantics', () => {
   it('does not convert a timed editor range at local midnight into all-day storage', () => {
     const edited = { scheduled_start: new Date(2026, 9, 25), scheduled_end: new Date(2026, 9, 26) };
     expect(calendarStoredDates(edited, { ...boundaries, is_all_day: false })).toEqual({ ...edited, is_all_day: false });
+  });
+
+  describe('occupiesAllDayRow', () => {
+    it('routes explicit all-day entries to the header row', () => {
+      expect(occupiesAllDayRow({ ...boundaries, is_all_day: true })).toBe(true);
+    });
+
+    it('routes a timed entry crossing midnight to the header row', () => {
+      expect(occupiesAllDayRow({
+        scheduled_start: new Date(2026, 8, 15, 23, 30),
+        scheduled_end: new Date(2026, 8, 16, 0, 30),
+      })).toBe(true);
+    });
+
+    it('routes a multi-day timed entry to the header row', () => {
+      expect(occupiesAllDayRow({
+        scheduled_start: new Date(2026, 8, 14, 23, 0),
+        scheduled_end: new Date(2026, 8, 16, 1, 0),
+      })).toBe(true);
+    });
+
+    it('leaves a same-day timed entry in the time grid', () => {
+      expect(occupiesAllDayRow({
+        scheduled_start: new Date(2026, 8, 15, 9, 0),
+        scheduled_end: new Date(2026, 8, 15, 10, 0),
+      })).toBe(false);
+    });
   });
 });

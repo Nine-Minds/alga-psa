@@ -249,7 +249,7 @@ The MSP dashboard surfaces a persistent onboarding drawer and quick-start cards 
 
 | Step | Server signal | Completion logic |
 | --- | --- | --- |
-| Identity & SSO | `server/src/lib/actions/onboarding-progress.ts` pulls provider state from `@ee/lib/auth/providerConfig` and counts linked accounts via `user_auth_accounts` in the admin DB. | Complete when at least one OAuth provider is configured **and** any MSP user has a linked Google/Microsoft identity. |
+| Identity & SSO | `server/src/lib/actions/onboarding-progress.ts` pulls provider state from `@ee/lib/auth/providerConfig` and counts linked accounts via `user_auth_accounts` in the admin DB. | Complete when at least one OAuth provider is configured **and** any MSP user has a linked Google, Microsoft, or Keycloak identity. Keycloak / OpenID Connect is available in all editions; Google and Microsoft are Enterprise Edition only. |
 | Client portal domain | `getPortalDomainStatusAction` (`server/src/lib/actions/tenant-actions/portalDomainActions.ts`). | Complete when the returned status is `active`; DNS/certificate failures set the step to `blocked` with the upstream status message. |
 | Data import | `listImportJobs` (`server/src/lib/actions/import-actions/importActions.ts`). | Complete after any import job reaches `completed`. Preview/processing jobs surface `in_progress`, while failed/cancelled jobs populate the blocker message. |
 | Calendar sync | `getCalendarProviders` (`server/src/lib/actions/calendarActions.ts`). | Complete when any provider is `active` and `connection_status === 'connected'`. Errors bubble up via `provider.error_message`. |

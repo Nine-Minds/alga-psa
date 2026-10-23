@@ -212,7 +212,138 @@
       "historyOperations": {
         "service_request_submission_created": "Invio creato",
         "service_request_submission_execution_succeeded": "Esecuzione riuscita",
-        "service_request_submission_execution_failed": "Esecuzione non riuscita"
+        "service_request_submission_execution_failed": "Esecuzione non riuscita",
+        "service_request_submission_mapping_applied": "Mappatura delle risposte applicata",
+        "service_request_submission_mapping_field_applied": "Campo mappato aggiornato",
+        "service_request_submission_mapping_field_failed": "Campo mappato non riuscito"
+      },
+      "mapping": {
+        "title": "Mappatura delle risposte",
+        "description": "Applica la mappatura pubblicata per aggiornare l’account e i suoi asset a partire da questo invio. La risposta originale non viene mai modificata.",
+        "noPublishedMapping": "Nessuna mappatura pubblicata per questa definizione. Pubblicane una nella sezione «Mappatura delle risposte» qui sopra.",
+        "preview": "Anteprima",
+        "previewing": "Anteprima in corso…",
+        "apply": "Applica mappatura",
+        "applying": "Applicazione…",
+        "previewTitle": "Anteprima (nessuna modifica scritta) · mappatura v{{version}}",
+        "resultsTitle": "Esecuzioni applicate",
+        "noRuns": "A questo invio non è ancora stata applicata alcuna mappatura.",
+        "runLabel": "Esecuzione {{date}} · {{status}}",
+        "runActor": "di {{actor}}",
+        "replayed": "Questa esecuzione era già stata applicata; viene mostrato il risultato registrato.",
+        "summary": "{{applied}} applicati · {{skipped}} saltati · {{failed}} non riusciti",
+        "columns": {
+          "question": "Domanda",
+          "destination": "Destinazione",
+          "target": "Obiettivo",
+          "before": "Prima",
+          "after": "Dopo",
+          "status": "Esito",
+          "detail": "Dettaglio"
+        },
+        "emptyValue": "—",
+        "unresolvedTarget": "Non risolto",
+        "status": {
+          "applied": "Applicato",
+          "skipped_answer_absent": "Saltato — nessuna risposta",
+          "skipped_no_change": "Saltato — già aggiornato",
+          "failed_validation": "Non riuscito — valore non valido",
+          "failed_type_conversion": "Non riuscito — tipo errato",
+          "failed_permission": "Non riuscito — permesso negato",
+          "failed_asset_unresolved": "Non riuscito — asset non trovato",
+          "failed_asset_ambiguous": "Non riuscito — più asset corrispondono"
+        },
+        "runStatus": {
+          "pending": "In corso",
+          "applied": "Applicato",
+          "partially_applied": "Applicato parzialmente",
+          "failed": "Non riuscito",
+          "no_op": "Nessuna modifica"
+        }
+      }
+    },
+    "answerMapping": {
+      "title": "Mappatura delle risposte",
+      "description": "Associa le domande ai campi dell’account e degli asset. Applicare un invio aggiorna solo i campi mappati e non modifica mai le risposte salvate.",
+      "loading": "Caricamento mappatura…",
+      "noQuestions": "Aggiungi campi al modulo prima di mappare le risposte.",
+      "noRules": "Nessuna regola di mappatura.",
+      "addRule": "Aggiungi regola",
+      "editRule": "Modifica",
+      "removeRule": "Rimuovi",
+      "actionsFor": "Azioni per {{question}}",
+      "selection": {
+        "selectPage": "Seleziona le regole in questa pagina",
+        "selectRule": "Seleziona {{question}}",
+        "selectedCount": "{{count}} selezionate",
+        "removeSelected": "Rimuovi selezionate",
+        "clear": "Cancella selezione",
+        "confirmTitle": "Rimuovere le regole selezionate?",
+        "confirmMessage": "Rimuovere {{count}} regole selezionate dalla bozza? Le versioni pubblicate resteranno invariate fino alla prossima pubblicazione."
+      },
+      "save": "Salva regola",
+      "cancel": "Annulla",
+      "publish": "Pubblica mappatura",
+      "publishing": "Pubblicazione…",
+      "state": {
+        "neverPublished": "Mai pubblicata",
+        "published": "Pubblicata v{{version}}",
+        "unpublishedChanges": "Modifiche non pubblicate",
+        "upToDate": "La versione pubblicata è aggiornata"
+      },
+      "fields": {
+        "question": "Domanda",
+        "destinationKind": "Destinazione",
+        "targetField": "Campo",
+        "assetStrategy": "Come trovare l’asset",
+        "assetRefQuestion": "Domanda la cui risposta identifica l’asset",
+        "matchAttribute": "Confronta su",
+        "matchQuestion": "Domanda la cui risposta viene confrontata",
+        "attributeKey": "Chiave dell’attributo personalizzato"
+      },
+      "placeholders": {
+        "question": "Seleziona una domanda",
+        "destinationKind": "Seleziona una destinazione",
+        "targetField": "Seleziona un campo",
+        "attributeKey": "es. rack_position"
+      },
+      "targetFieldGroups": {
+        "attribute": "Attributo personalizzato…"
+      },
+      "strategies": {
+        "answer-asset-ref": "La risposta è l’asset",
+        "match-attribute": "Confronta una risposta con un attributo dell’asset"
+      },
+      "matchAttributes": {
+        "asset_tag": "Tag asset",
+        "serial_number": "Numero di serie",
+        "name": "Nome asset"
+      },
+      "columns": {
+        "question": "Domanda",
+        "destination": "Destinazione",
+        "field": "Campo",
+        "selector": "Selezione asset",
+        "actions": "Azioni"
+      },
+      "selectorSummary": {
+        "account": "Account dell’invio",
+        "answerAssetRef": "Asset da «{{question}}»",
+        "matchAttribute": "{{attribute}} = «{{question}}»"
+      },
+      "unknownQuestion": "Domanda mancante ({{key}})",
+      "messages": {
+        "ruleSaved": "Regola di mappatura salvata",
+        "ruleRemoved": "Regola di mappatura rimossa",
+        "rulesRemoved_one": "Regola di mappatura rimossa",
+        "rulesRemoved_other": "{{count}} regole di mappatura rimosse",
+        "published": "Mappatura delle risposte pubblicata",
+        "saveFailed": "Impossibile salvare la regola",
+        "removeFailed": "Impossibile rimuovere la regola",
+        "publishFailed": "Impossibile pubblicare la mappatura",
+        "previewFailed": "Impossibile generare l’anteprima",
+        "applyFailed": "Impossibile applicare la mappatura",
+        "applied": "Mappatura delle risposte applicata"
       }
     }
   },

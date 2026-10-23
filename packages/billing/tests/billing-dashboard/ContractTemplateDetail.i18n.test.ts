@@ -92,6 +92,8 @@ describe('ContractTemplateDetail i18n wiring contract', () => {
       'templateDetail.composition.manageTemplateServices',
       'templateDetail.composition.addContractLinesBeforeManaging',
       'templateDetail.composition.fixedFeeRate',
+      'templateDetail.composition.hourlyRateLabel',
+      'templateDetail.composition.unitRateLabel',
       'templateDetail.composition.editRate',
       'templateDetail.composition.notSet',
     ];
@@ -125,14 +127,28 @@ describe('ContractTemplateDetail i18n wiring contract', () => {
     const billingTimingKeyChecks = [
       'contractLineEdit.sections.billingTiming',
       'contractLineEdit.fields.billingTimingQuestion',
-      'contractLineEdit.timingOptions.arrears',
-      'contractLineEdit.timingOptions.advance',
       'contractLineEdit.timingDescriptions.arrears',
       'contractLineEdit.timingDescriptions.advance',
+      'billingTimingField.nonFixedHelp',
     ];
 
     for (const key of billingTimingKeyChecks) {
       expectTCall(lineEditSource, key);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+
+    // Template detail shows Hourly/Usage timing as read-only arrears via BillingTimingField,
+    // which owns the option and help keys.
+    expect(templateSource).toContain('<BillingTimingField');
+    const timingSource = read('../../src/components/billing-dashboard/contracts/BillingTimingField.tsx');
+    for (const key of [
+      'billingTimingField.arrears',
+      'billingTimingField.nonFixedHelp',
+      'billingTimingField.fixedHelp',
+      'billingTimingField.options.arrears',
+      'billingTimingField.options.advance',
+    ]) {
+      expectTCall(timingSource, key);
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
@@ -154,5 +170,23 @@ describe('ContractTemplateDetail i18n wiring contract', () => {
       expect(typeof value).toBe('string');
       expect(value).toMatch(pseudoPattern('xx'));
     }
+  });
+
+  it('bucketSummary formats overage via {{overage}} only, with no hardcoded currency symbol in any locale', () => {
+    const locales = ['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'xx', 'yy'];
+
+    for (const locale of locales) {
+      const contracts = readJson<Record<string, unknown>>(
+        `../../../../server/public/locales/${locale}/msp/contracts.json`
+      );
+      const value = getLeaf(contracts, 'templateDetail.composition.bucketSummary');
+
+      expect(typeof value, `${locale} bucketSummary`).toBe('string');
+      expect(value as string, `${locale} bucketSummary`).toContain('{{overage}}');
+      expect(value as string, `${locale} bucketSummary`).not.toContain('${{');
+    }
+
+    const source = read('../../src/components/billing-dashboard/contracts/ContractTemplateDetail.tsx');
+    expect(source).not.toContain('Overage ${{overage}}');
   });
 });

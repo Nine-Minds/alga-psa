@@ -1,7 +1,7 @@
 {
   "section": {
     "title": "Blocos de horas",
-    "description": "Blocos de horas pré-pagos avulsos. O tempo que não é coberto por uma linha de contrato consome esses blocos, começando pelo que expira primeiro.",
+    "description": "Blocos de horas pré-pagos avulsos. Recebem apenas o tempo que nenhuma linha de contrato cobre. Os blocos emitidos por uma linha de contrato de Bloco pré-pago são consumidos somente pelo tempo dessa própria linha.",
     "availableBalance": "{{hours}} h disponíveis",
     "noBlocks": "Ainda não há blocos de horas. Venda um bloco para este cliente ou conceda horas de cortesia.",
     "loadFailed": "Falha ao carregar os blocos de horas. Tente novamente."
@@ -126,7 +126,8 @@
     "autoExpired": "Expirado automaticamente",
     "voidedLabel": "Anulado",
     "purchaseReversed": "Compra revertida (fatura desfinalizada)",
-    "unknownUser": "Sistema"
+    "unknownUser": "Sistema",
+    "sourceContract": "Contrato: {{contract}}"
   },
   "expire": {
     "error": "Não foi possível expirar o bloco de horas.",
@@ -154,5 +155,16 @@
       "missingField": "Falta um campo obrigatório do bloco de horas. Revise o formulário e tente novamente.",
       "referenceMissing": "O cliente, serviço ou fatura selecionado não existe mais. Atualize a página e tente novamente."
     }
+  },
+  "coverage": {
+    "oneLine": "O tempo em {{service}} é faturado por {{contract}} / {{line}} e não será descontado deste bloco de horas.",
+    "manyLines": "O tempo em {{service}} atribuído a uma linha de contrato não será descontado deste bloco de horas.",
+    "linesLabel": "Linhas de contrato que cobrem {{service}}:",
+    "unscopedIntro": "Este bloco de horas cobre todo o trabalho, mas o tempo nestes serviços é faturado por uma linha de contrato e não será descontado dele:",
+    "unscopedService": "{{service}} — {{contract}} / {{line}}",
+    "unscopedServiceAssigned": "{{service}} — quando atribuído a uma linha de contrato",
+    "more": "e mais {{count}}",
+    "badge": "Sobreposição de contrato",
+    "viewContract": "Ver contrato"
   }
 }

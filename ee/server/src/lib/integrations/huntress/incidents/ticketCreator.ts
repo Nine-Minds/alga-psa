@@ -10,6 +10,7 @@ import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { resolveRmmTicketContactId } from '@alga-psa/shared/rmm/alerts';
 import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
+import { applyBoardDefaultWatchers } from '@alga-psa/shared/lib/tickets/boardDefaultWatchers';
 
 export interface CreateHuntressTicketParams {
   clientId: string;
@@ -60,6 +61,12 @@ export async function createHuntressTicket(
   });
   const now = new Date().toISOString();
 
+  // LEVERAGE: pattern ticket-create-composition — raw ticket insert bypasses TicketModel.createTicket, so board default watchers must be seeded by hand
+  const attributes = await applyBoardDefaultWatchers(trx, tenantId, params.boardId, {
+    description: params.body,
+    source_reference: params.sourceReference,
+  });
+
   const [ticket] = await db.table('tickets')
     .insert({
       tenant: tenantId,
@@ -75,10 +82,7 @@ export async function createHuntressTicket(
       // The live tickets schema has no description/source_reference/created_at
       // columns: the body and provenance live in the attributes JSONB, and
       // entered_at is the creation timestamp.
-      attributes: JSON.stringify({
-        description: params.body,
-        source_reference: params.sourceReference,
-      }),
+      attributes: JSON.stringify(attributes),
       source: 'huntress',
       entered_at: now,
       updated_at: now,

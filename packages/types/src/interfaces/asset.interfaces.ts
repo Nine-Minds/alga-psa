@@ -23,6 +23,11 @@ export interface AssetRelationship {
 // RMM Provider types
 export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'tanium' | 'levelio' | 'datto' | 'connectwise_automate' | 'huntress';
 export type RmmAgentStatus = 'online' | 'offline' | 'overdue' | 'unknown';
+export interface AssetRemoteAccessLink {
+  link_id: string;
+  label: string;
+  url_template: string;
+}
 export type AssetFactSourceType = 'integration' | 'manual' | 'system';
 
 export interface AssetFact {
@@ -57,9 +62,31 @@ export interface Asset {
   name: string;
   status: string;
   location_id?: string | null;
+  /** The one contact this asset is assigned to (portal asset scope). */
+  contact_name_id?: string | null;
+  /** Display name of the assigned contact; read-only, joined on read. */
+  contact_name?: string | null;
+  /** The group this asset belongs to, when it has one; read-only. */
+  group?: AssetGroupSummary | null;
   location?: string;
   purchase_date?: string;
   warranty_end_date?: string;
+  /** Hardware make, a first-class column (RMM sync and imports fill it). */
+  manufacturer?: string | null;
+  /** Hardware model, a first-class column (no system_info fallback). */
+  model?: string | null;
+  /** Supplier, an inventory `vendors` row. */
+  vendor_id?: string | null;
+  /** Supplier name; read-only, joined on read. */
+  vendor_name?: string | null;
+  /** Purchase cost in minor units (cents). */
+  purchase_cost?: number | null;
+  purchase_cost_currency?: string | null;
+  order_number?: string | null;
+  /** Billing profile this device's work is attributed to (FR-F1). */
+  billing_profile_id?: string | null;
+  /** Profile name; read-only, joined on read. */
+  billing_profile_name?: string | null;
   created_at: string;
   updated_at: string;
   tenant: string;
@@ -96,10 +123,10 @@ export interface WorkstationAsset {
   os_type: string;
   os_version: string;
   cpu_model: string;
-  cpu_cores: number;
-  ram_gb: number;
+  cpu_cores: number | null;
+  ram_gb: number | null;
   storage_type: string;
-  storage_capacity_gb: number;
+  storage_capacity_gb: number | null;
   gpu_model?: string;
   last_login?: string;
   installed_software: unknown[];
@@ -130,10 +157,10 @@ export interface NetworkDeviceAsset {
   asset_id: string;
   device_type: 'switch' | 'router' | 'firewall' | 'access_point' | 'load_balancer';
   management_ip: string;
-  port_count: number;
+  port_count: number | null;
   firmware_version: string;
   supports_poe: boolean;
-  power_draw_watts: number;
+  power_draw_watts: number | null;
   vlan_config: Record<string, unknown>;
   port_config: Record<string, unknown>;
 }
@@ -144,8 +171,8 @@ export interface ServerAsset {
   os_type: string;
   os_version: string;
   cpu_model: string;
-  cpu_cores: number;
-  ram_gb: number;
+  cpu_cores: number | null;
+  ram_gb: number | null;
   storage_config: unknown[];
   raid_config?: string;
   is_virtual: boolean;
@@ -188,8 +215,10 @@ export interface DiskUsageInfo {
 export interface RmmStorageInfo {
   name: string;
   total_gb: number;
-  free_gb: number;
-  utilization_percent: number;
+  /** Absent when the provider reports capacity only (e.g. Level.io `disks`). */
+  free_gb?: number | null;
+  /** Absent when free space is unknown; never substitute 0. */
+  utilization_percent?: number | null;
 }
 
 // Cached RMM data structure (returned by getAssetRmmData)
@@ -246,9 +275,9 @@ export interface PrinterAsset {
   is_network_printer: boolean;
   supports_color: boolean;
   supports_duplex: boolean;
-  max_paper_size?: number;
+  max_paper_size?: number | null;
   supported_paper_types: unknown[];
-  monthly_duty_cycle?: number;
+  monthly_duty_cycle?: number | null;
   supply_levels: Record<string, unknown>;
 }
 
@@ -471,10 +500,18 @@ export interface CreateAssetRequest {
   name: string;
   status: string;
   location_id?: string | null;
+  contact_name_id?: string | null;
   location?: string;
   serial_number?: string;
   purchase_date?: string;
   warranty_end_date?: string;
+  manufacturer?: string | null;
+  model?: string | null;
+  vendor_id?: string | null;
+  purchase_cost?: number | null;
+  purchase_cost_currency?: string | null;
+  order_number?: string | null;
+  billing_profile_id?: string | null;
   workstation?: Omit<WorkstationAsset, 'tenant' | 'asset_id'>;
   network_device?: Omit<NetworkDeviceAsset, 'tenant' | 'asset_id'>;
   server?: Omit<ServerAsset, 'tenant' | 'asset_id'>;
@@ -532,9 +569,14 @@ export interface AssetQueryParams {
   client_id?: string;
   client_name?: string;
   location_id?: string;
+  contact_name_id?: string;
   /** Built-in slug or tenant asset_type_registry slug (custom type). */
   asset_type?: string;
   status?: string;
+  vendor_id?: string;
+  group_id?: string;
+  /** Only assets that are not in any group. */
+  ungrouped_only?: boolean;
   search?: string;
   agent_status?: RmmAgentStatus;
   rmm_managed?: boolean;
@@ -608,6 +650,137 @@ export interface AssetTypeRegistryEntry {
   display_order: number;
   created_at: string;
   updated_at: string;
+}
+
+// Asset groups: bundles and shared workspaces
+/**
+ * A `bundle` travels and is assigned as one unit (one owner, no users); a
+ * `shared_workspace` is a place plus the people who use it (users, no owner,
+ * members carry no single assignee).
+ */
+export type AssetGroupKind = 'bundle' | 'shared_workspace';
+export type AssetGroupContactRole = 'owner' | 'user';
+
+export interface AssetGroup {
+  tenant: string;
+  group_id: string;
+  client_id: string;
+  name: string;
+  kind: AssetGroupKind;
+  location_id?: string | null;
+  description?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  /** Joined on read. */
+  client_name?: string | null;
+  location_name?: string | null;
+  member_count?: number;
+  people_count?: number;
+  members?: AssetGroupMember[];
+  contacts?: AssetGroupContact[];
+}
+
+export interface AssetGroupMember {
+  tenant: string;
+  group_id: string;
+  asset_id: string;
+  added_at: string;
+  added_by?: string | null;
+  /** Joined on read. */
+  asset_name?: string | null;
+  asset_type?: string | null;
+  asset_tag?: string | null;
+  asset_status?: string | null;
+}
+
+export interface AssetGroupContact {
+  tenant: string;
+  group_id: string;
+  contact_name_id: string;
+  role: AssetGroupContactRole;
+  added_at: string;
+  /** Joined on read. */
+  contact_name?: string | null;
+  email?: string | null;
+}
+
+/** The group summary an asset read carries (FR-E12). */
+export interface AssetGroupSummary {
+  group_id: string;
+  name: string;
+  kind: AssetGroupKind;
+  location_id?: string | null;
+  location_name?: string | null;
+  member_count?: number;
+  user_count?: number;
+}
+
+// Assignment history
+/**
+ * Where an assignment came from. `manual` is a person in the MSP UI, `api` the
+ * REST API, `rmm` auto-assignment from a signed-in user, `bundle` propagation
+ * from a group, `import` the migration importer, `merge` a client merge and
+ * `system` an automatic clear (client move, contact deletion).
+ */
+export type AssetAssignmentSource = 'manual' | 'api' | 'rmm' | 'bundle' | 'import' | 'merge' | 'system';
+
+export interface AssetAssignment {
+  tenant: string;
+  assignment_id: string;
+  asset_id: string;
+  contact_name_id: string;
+  assigned_at: string;
+  assigned_by_user_id?: string | null;
+  /** Null while the assignment is the current one. */
+  unassigned_at?: string | null;
+  unassigned_by_user_id?: string | null;
+  source: AssetAssignmentSource;
+  note?: string | null;
+  /** Joined on read. */
+  contact_name?: string | null;
+  assigned_by_name?: string | null;
+  unassigned_by_name?: string | null;
+  asset_name?: string | null;
+  asset_tag?: string | null;
+  asset_type?: string | null;
+  asset_status?: string | null;
+}
+
+// Asset status registry (tenant-managed lifecycle list)
+/**
+ * Lifecycle bucket a status belongs to. Metrics that mean "deployed" use
+ * `deployable` rather than the literal `active` slug, so a tenant's custom
+ * "In use" status counts too.
+ */
+export type AssetStatusKind = 'deployable' | 'pending' | 'undeployable' | 'archived';
+
+export interface AssetStatus {
+  tenant: string;
+  status_id: string;
+  /** What `assets.status` stores. */
+  slug: string;
+  label: string;
+  kind: AssetStatusKind;
+  is_builtin: boolean;
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+  /** Assets currently on this status; only populated by the settings list. */
+  in_use_count?: number;
+}
+
+export interface CreateAssetStatusInput {
+  label: string;
+  kind: AssetStatusKind;
+  display_order?: number;
+}
+
+export interface UpdateAssetStatusInput {
+  label?: string;
+  kind?: AssetStatusKind;
+  display_order?: number;
 }
 
 export interface CreateAssetTypeInput {

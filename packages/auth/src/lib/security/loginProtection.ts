@@ -56,6 +56,16 @@ export class CaptchaRequiredError extends CredentialsSignin {
   code = 'CAPTCHA_REQUIRED';
 }
 
+/**
+ * Sign-in refused because the email belongs to client users in more than one
+ * tenant and the request named none of them. Picking one would be a coin flip
+ * that can drop a visitor into the wrong MSP's portal, so the form asks which
+ * organization was meant instead.
+ */
+export class TenantRequiredError extends CredentialsSignin {
+  code = 'TENANT_REQUIRED';
+}
+
 export interface LoginAttemptContext {
   /** Normalized (trimmed, lowercased) email the attempt is for. */
   email: string;

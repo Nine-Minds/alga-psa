@@ -11,7 +11,11 @@ const registerHandlersSource = read('server/src/lib/jobs/registerAllHandlers.ts'
 const jobsIndexSource = read('server/src/lib/jobs/index.ts');
 const jobActivitiesSource = read('ee/temporal-workflows/src/activities/job-activities.ts');
 const maintenanceFanoutSource = read('packages/jobs/src/lib/maintenanceJobFanout.ts');
-const setupSchedulesSource = read('ee/temporal-workflows/src/schedules/setupSchedules.ts');
+// setupSchedules applies the schedule policies; the maintenance cron catalog is shared from @alga-psa/types.
+const setupSchedulesSource = [
+  read('ee/temporal-workflows/src/schedules/setupSchedules.ts'),
+  read('packages/types/src/constants/maintenanceFanoutSchedules.ts'),
+].join('\n');
 const schedulingAppointmentActionsSource = read(
   'packages/scheduling/src/actions/appointmentRequestManagementActions.ts'
 );
@@ -50,12 +54,12 @@ describe('Teams meeting job wiring', () => {
 
   it('T037: jobs index registers both teams meeting handlers on the legacy scheduler inside the EE workflow-edition block', () => {
     // The first `if (isEnterpriseWorkflowEdition()) {` in the handler
-    // registration section opens the EE-only block; the CE-only sla-timer
+    // registration section opens the EE-only block; the workflow-quota-resume-scan
     // registration follows it, so the slice covers exactly that block.
     const eeHandlerBlock = sliceBetween(
       jobsIndexSource,
       'if (isEnterpriseWorkflowEdition()) {',
-      "'sla-timer',"
+      "jobScheduler.registerJobHandler<WorkflowQuotaResumeScanJobData>("
     );
     expect(eeHandlerBlock).toContain('jobScheduler.registerJobHandler<TeamsMeetingCleanupJobData>(');
     expect(eeHandlerBlock).toContain('TEAMS_MEETING_CLEANUP_JOB,');
@@ -110,7 +114,7 @@ describe('Teams meeting job wiring', () => {
     const fnBody = sliceBetween(
       jobsIndexSource,
       'export const scheduleTeamsMeetingSweepJob = async (',
-      'export const scheduleGoogleGmailWatchRenewalJob = async ('
+      'export const scheduleDateTriggerScanJob = async ('
     );
     expect(fnBody).toContain('const runner = await getJobRunnerInstance();');
     expect(fnBody).toContain("if (runner.getRunnerType() === 'temporal') {");

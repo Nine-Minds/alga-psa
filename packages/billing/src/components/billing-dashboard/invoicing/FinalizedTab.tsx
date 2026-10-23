@@ -40,11 +40,14 @@ import {
 import { useRangeSelection } from '@alga-psa/ui/hooks';
 import { InvoiceSyncBadge } from '../../invoices/InvoiceSyncBadge';
 import { useInvoiceSyncStatuses } from '../../invoices/useInvoiceSyncStatuses';
+import { getInvoiceAutopayContexts } from '@alga-psa/billing/actions/paymentActions';
 
 interface FinalizedTabProps {
   onRefreshNeeded: () => void;
   refreshTrigger: number;
 }
+
+export const FINALIZED_AUTOPAY_DATA_INDEX = 'autopay_status';
 
 const isInvoiceMutationError = (
   result: InvoiceMutationActionResult,
@@ -121,6 +124,14 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
 
   const invoiceIds = filteredInvoices.map((inv) => inv.invoice_id);
   const { statuses: syncStatuses, hidden: syncHidden } = useInvoiceSyncStatuses(invoiceIds);
+  const [autopayStatuses, setAutopayStatuses] = useState<Record<string, { scheduledFor: string; brand: string | null; last4: string; status: string }>>({});
+
+  useEffect(() => {
+    let active = true;
+    if (invoiceIds.length === 0) { setAutopayStatuses({}); return; }
+    void getInvoiceAutopayContexts(invoiceIds).then((result) => { if (active) setAutopayStatuses(result); }).catch(() => { if (active) setAutopayStatuses({}); });
+    return () => { active = false; };
+  }, [invoiceIds.join('|')]);
 
   const selectedInvoice = selectedInvoiceId ? invoices.find(inv => inv.invoice_id === selectedInvoiceId) || null : null;
 
@@ -260,8 +271,11 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
   };
 
   const handleEmail = async () => {
-    if (!selectedInvoice) return;
-    setEmailDialogInvoiceIds([selectedInvoice.invoice_id]);
+    // The detail pane can be opened from a deep link while server-side
+    // pagination leaves its invoice outside the currently displayed page.
+    // The URL is the source of truth for the invoice shown in that pane.
+    if (!selectedInvoiceId) return;
+    setEmailDialogInvoiceIds([selectedInvoiceId]);
     setEmailDialogOpen(true);
   };
 
@@ -388,16 +402,29 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     },
     {
       title: t('finalizedTab.columns.status', { defaultValue: 'Status' }),
+      id: 'finalized_status',
       dataIndex: 'finalized_at',
+      sortable: false,
       render: () => (
         <Badge variant="success">
           {t('finalizedTab.status.finalized', { defaultValue: 'Finalized' })}
         </Badge>
       ),
     },
+    {
+      title: t('finalizedTab.columns.autopay', { defaultValue: 'Auto-pay' }),
+      dataIndex: FINALIZED_AUTOPAY_DATA_INDEX,
+      width: '150px',
+      render: (_: unknown, record: DbInvoiceViewModel) => {
+        const attempt = autopayStatuses[record.invoice_id];
+        return attempt ? <Badge variant="warning">{t('finalizedTab.autopay.scheduled', { defaultValue: 'Auto-pay {{status}}', status: attempt.status })}</Badge> : null;
+      },
+    },
     ...(syncHidden ? [] : [{
       title: t('finalizedTab.columns.quickbooks', { defaultValue: 'QuickBooks' }),
+      id: 'quickbooks_sync',
       dataIndex: 'invoice_id' as const,
+      sortable: false,
       render: (_: unknown, record: DbInvoiceViewModel) => {
         const syncStatus = syncStatuses[record.invoice_id];
         if (!syncStatus) return null;
@@ -406,7 +433,9 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     }]),
     {
       title: t('finalizedTab.columns.actions', { defaultValue: 'Actions' }),
+      id: 'actions',
       dataIndex: 'invoice_id',
+      sortable: false,
       width: '5%',
       render: (_, record) => (
         <div onClick={(e) => e.stopPropagation()}>
@@ -601,6 +630,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
                 onEmail={handleEmail}
                 onUnfinalize={handleUnfinalize}
                 isFinalized={true}
+                invoiceSummary={selectedInvoice}
                 creditApplied={selectedInvoice?.credit_applied || 0}
                 clientId={selectedInvoice?.client_id ?? null}
                 invoiceTotal={selectedInvoice?.total_amount ?? 0}

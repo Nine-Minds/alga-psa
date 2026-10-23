@@ -24,13 +24,25 @@ import {
   getColumnId,
   getColumnLayout,
   getColumnSizeConfig,
+  withUniqueColumnIds,
 } from './dataTableColumnFit';
+import { applyColumnVisibilityAndOrder } from './dataTableColumnState';
 import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
 import { cn } from '../lib/utils';
 import Pagination from './Pagination';
 import { Alert, AlertDescription } from './Alert';
 import { Tooltip } from './Tooltip';
 import { useTranslation } from '../lib/i18n/client';
+import { useDataTablePageSizePreference } from './DataTablePreferences';
+
+const DEFAULT_ITEMS_PER_PAGE_VALUES = ['10', '25', '50', '100'];
+
+const isValidPageSizePreference = (
+  value: unknown,
+  options?: Array<{ value: string }>
+): value is number => Number.isInteger(value) && (value as number) > 0 &&
+  (options || DEFAULT_ITEMS_PER_PAGE_VALUES.map(value => ({ value })))
+    .some(option => Number(option.value) === value);
 
 // Helper function to get nested property value
 const getNestedValue = (obj: unknown, path: string | string[]): unknown => {
@@ -141,8 +153,14 @@ const hasOverflow = (element: HTMLElement): boolean => {
     return true;
   }
 
-  return Array.from(element.querySelectorAll<HTMLElement>('*')).some(isElementOverflowing);
+  // sr-only labels are clipped 1px boxes by design, not truncated content.
+  return Array.from(element.querySelectorAll<HTMLElement>('*'))
+    .some((child) => !child.closest('.sr-only') && isElementOverflowing(child));
 };
+
+const isEditableElement = (element: HTMLElement): boolean => (
+  element.tagName === 'INPUT' || element.tagName === 'TEXTAREA' || element.isContentEditable
+);
 
 // Shows the custom Tooltip only when the content is actually truncated. The open state is
 // controlled and vetoed in onOpenChange so overflow is measured lazily (on hover) — no tooltip
@@ -157,24 +175,29 @@ const OverflowTooltip = ({ text, children, className }: OverflowTooltipProps) =>
       return;
     }
     const element = contentRef.current;
-    if (text && element && hasOverflow(element)) {
+    if (!text || !element) {
+      return;
+    }
+    // A cell the user is typing in owns its surface: never cover the field.
+    const active = document.activeElement as HTMLElement | null;
+    if (active && element.contains(active) && isEditableElement(active)) {
+      return;
+    }
+    if (hasOverflow(element)) {
       setOpen(true);
     }
   };
 
-  const content = (
-    <div ref={contentRef} className={className}>
-      {children}
-    </div>
-  );
-
-  if (!text) {
-    return content;
-  }
-
+  // The wrapper is unconditional, even with nothing to show. Swapping between a
+  // bare div and a Tooltip-wrapped one when the text appears or disappears is a
+  // change of element type at that slot, so React remounts the cell's children:
+  // an editable cell lost its input — and the caret with it — on the keystroke
+  // that first gave the cell any text.
   return (
-    <Tooltip content={text} open={open} onOpenChange={handleOpenChange}>
-      {content}
+    <Tooltip content={text ?? ''} open={open} onOpenChange={handleOpenChange}>
+      <div ref={contentRef} className={className}>
+        {children}
+      </div>
     </Tooltip>
   );
 };
@@ -262,13 +285,15 @@ const ReflectedTableCell = ({
 export interface ExtendedDataTableProps<T extends object> extends DataTableProps<T> {
   /** Unique identifier for UI reflection system */
   id?: string;
+  /** Set false for tables whose id is not a stable table identity. */
+  persistPageSize?: boolean;
 }
 
 export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): React.ReactElement => {
   const {
     id,
     data,
-    columns,
+    columns: rawColumns,
     pagination = true,
     onRowClick,
     currentPage = 1,
@@ -281,12 +306,26 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     sortDirection,
     onSortChange,
     rowClassName,
+    rowProps,
     initialSorting,
     onVisibleRowsChange,
     onItemsPerPageChange,
     itemsPerPageOptions,
     expandedRowRender,
+    persistPageSize = true,
+    columnSizing: controlledColumnSizing,
+    onColumnSizingChange,
+    columnVisibility,
+    columnOrder,
   } = props;
+  // Every downstream lookup (cells, sizing, sorting, visibility) is keyed by column id.
+  const inputColumns = useMemo(() => withUniqueColumnIds(rawColumns), [rawColumns]);
+  // Caller-controlled visibility and order are applied first, so everything
+  // below (auto-fit, sizing, reflection) sees only the columns the caller wants.
+  const columns = useMemo(
+    () => applyColumnVisibilityAndOrder(inputColumns, columnVisibility, columnOrder),
+    [inputColumns, columnVisibility, columnOrder]
+  );
   const { t } = useTranslation('common');
   const defaultItemsPerPageOptions = useMemo(() => [
     { value: '10', label: t('pagination.itemsPerPageOption', { count: 10, defaultValue: '10 per page' }) },
@@ -294,7 +333,21 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     { value: '50', label: t('pagination.itemsPerPageOption', { count: 50, defaultValue: '50 per page' }) },
     { value: '100', label: t('pagination.itemsPerPageOption', { count: 100, defaultValue: '100 per page' }) },
   ], [t]);
+  const pageSizeOptions = useMemo(() => {
+    const options = [...(itemsPerPageOptions || defaultItemsPerPageOptions)];
+    if (!options.some(option => Number(option.value) === pageSize)) {
+      options.push({
+        value: String(pageSize),
+        label: t('pagination.itemsPerPageOption', { count: pageSize, defaultValue: `${pageSize} per page` }),
+      });
+    }
+    return options.sort((a, b) => Number(a.value) - Number(b.value));
+  }, [itemsPerPageOptions, defaultItemsPerPageOptions, pageSize, t]);
   const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
+  const generatedTableId = React.useId();
+  // LEVERAGE: pattern datatable-page-size-state — callers with legacy per-table persistence opt out here to keep one source of truth.
+  const supportsPageSizeChange = totalItems === undefined || !!onItemsPerPageChange;
+  const pageSizePreference = useDataTablePageSizePreference(persistPageSize && supportsPageSizeChange ? id : undefined);
 
   // Reference to the table container for measuring available width
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -320,7 +373,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   
   // State to track which columns should be visible
   const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>(
-    columns.map(col => getColumnId(col.dataIndex))
+    columns.map(col => getColumnId(col))
   );
   // When true, every column renders and the table scrolls horizontally; otherwise only the
   // columns that fully fit the container are shown (no horizontal overflow).
@@ -355,7 +408,28 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     [columns, containerWidth]
   );
 
-  const columnIds = useMemo(() => columns.map(col => getColumnId(col.dataIndex)), [columns]);
+  // Every column the caller defined, hidden or not: a width remembered for a
+  // column a view hides must survive until the column is shown again.
+  const columnIds = useMemo(() => inputColumns.map(col => getColumnId(col)), [inputColumns]);
+
+  // Duplicates are suffixed by withUniqueColumnIds, but those ids shift when columns are
+  // reordered (and saved widths with them), so callers should still set a unique id.
+  const declaredColumnIdsKey = rawColumns.map(col => getColumnId(col)).join('\u0000');
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    const seen = new Set<string>();
+    const duplicates = new Set<string>();
+    for (const columnId of declaredColumnIdsKey.split('\u0000')) {
+      if (seen.has(columnId)) duplicates.add(columnId);
+      seen.add(columnId);
+    }
+    if (duplicates.size > 0) {
+      console.warn(
+        `DataTable${id ? ` "${id}"` : ''}: multiple columns share the same column id (dataIndex): ${[...duplicates].map((d) => `"${d}"`).join(', ')}. ` +
+        'Give each column a unique id (or dataIndex).'
+      );
+    }
+  }, [declaredColumnIdsKey, id]);
   const columnSizingStorageKey = id ? `datatable-column-sizing:${id}` : null;
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
   const [hasLoadedColumnSizing, setHasLoadedColumnSizing] = useState(false);
@@ -388,11 +462,36 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     window.localStorage.setItem(columnSizingStorageKey, JSON.stringify(columnSizing));
   }, [columnSizing, columnSizingStorageKey, hasLoadedColumnSizing]);
 
+  // Controlled widths win while they are given, and are mirrored into the
+  // remembered state so that dropping back to uncontrolled keeps the last
+  // widths on screen (and in localStorage) instead of jumping.
+  useEffect(() => {
+    if (controlledColumnSizing !== undefined) {
+      setColumnSizing(controlledColumnSizing);
+    }
+  }, [controlledColumnSizing]);
+
+  const effectiveColumnSizing: ColumnSizingState = controlledColumnSizing ?? columnSizing;
+  const effectiveColumnSizingRef = useRef(effectiveColumnSizing);
+  effectiveColumnSizingRef.current = effectiveColumnSizing;
+  const onColumnSizingChangeRef = useRef(onColumnSizingChange);
+  onColumnSizingChangeRef.current = onColumnSizingChange;
+
+  const handleColumnSizingChange = React.useCallback(
+    (updater: ColumnSizingState | ((old: ColumnSizingState) => ColumnSizingState)) => {
+      const next = typeof updater === 'function' ? updater(effectiveColumnSizingRef.current) : updater;
+      effectiveColumnSizingRef.current = next;
+      setColumnSizing(next);
+      onColumnSizingChangeRef.current?.(next);
+    },
+    []
+  );
+
   // Recalculate which columns fit the container (see computeColumnFit for the algorithm).
   // `showAllColumns` bypasses this and renders everything with horizontal scroll.
   useEffect(() => {
     if (showAllColumns) {
-      setVisibleColumnIds(columns.map(col => getColumnId(col.dataIndex)));
+      setVisibleColumnIds(columns.map(col => getColumnId(col)));
       setFittedSizeOverrides({});
       return;
     }
@@ -408,7 +507,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   // Memoize the initial column configuration to prevent loops
   const columnConfig = useMemo(() => {
     return columns.map((col): { id: string; title: string; dataIndex: string | string[]; hasCustomRender: boolean; visible: boolean } => {
-      const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
+      const colId = getColumnId(col);
       return {
         id: colId,
         title: String(col.title), // Convert ReactNode to string
@@ -444,11 +543,11 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     () =>
       columns
         .filter(col => {
-          const colId = getColumnId(col.dataIndex);
+          const colId = getColumnId(col);
           return visibleColumnIds.includes(colId);
         })
         .map((col): ColumnDef<T> => {
-          const colId = getColumnId(col.dataIndex);
+          const colId = getColumnId(col);
           const sizing = getColumnSizeConfig(col, columnLayout);
           return {
             id: colId,
@@ -473,15 +572,32 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     pageIndex: currentPage - 1,
     pageSize,
   });
+  const pageSizeChangedRef = useRef(false);
+  const appliedSavedSizeRef = useRef(false);
+
+  React.useEffect(() => {
+    const savedPageSize = pageSizePreference.pageSize;
+    if (!pageSizePreference.hasLoaded || pageSizeChangedRef.current || appliedSavedSizeRef.current || !isValidPageSizePreference(savedPageSize, pageSizeOptions)) return;
+    appliedSavedSizeRef.current = true;
+    if (onItemsPerPageChange && savedPageSize !== pageSize) {
+      onItemsPerPageChange(savedPageSize);
+      if (currentPage !== 1) onPageChange?.(1);
+    } else if (!onItemsPerPageChange) {
+      setPagination(prev => ({ ...prev, pageIndex: 0, pageSize: savedPageSize }));
+    }
+  }, [pageSizePreference.hasLoaded, pageSizePreference.pageSize, pageSizeOptions, onItemsPerPageChange, onPageChange, pageSize, currentPage]);
 
   // Keep internal pagination state synced with props
+  const previousPageSizePropRef = useRef(pageSize);
   React.useEffect(() => {
+    const pageSizePropChanged = previousPageSizePropRef.current !== pageSize;
+    previousPageSizePropRef.current = pageSize;
     setPagination(prev => ({
       ...prev,
       pageIndex: currentPage - 1,
-      pageSize: pageSize
+      pageSize: onItemsPerPageChange || pageSizePropChanged ? pageSize : prev.pageSize
     }));
-  }, [currentPage, pageSize]);
+  }, [currentPage, pageSize, onItemsPerPageChange]);
 
   // Calculate total pages based on totalItems if provided, otherwise use data length
   const total = totalItems ?? safeData.length;
@@ -553,11 +669,11 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
         pageSize: currentPageSize,
       },
       sorting: validSorting,
-      columnSizing,
+      columnSizing: effectiveColumnSizing,
     },
     enableColumnResizing: true,
     columnResizeMode: 'onChange',
-    onColumnSizingChange: setColumnSizing,
+    onColumnSizingChange: handleColumnSizingChange,
     onPaginationChange: setPagination,
     onSortingChange: (updater) => {
       if (manualSorting && onSortChange) {
@@ -567,7 +683,14 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
           onSortChange(id, desc ? 'desc' : 'asc');
         }
       } else {
-        setSorting(updater);
+        const newSorting = typeof updater === 'function' ? updater(sorting) : updater;
+        setSorting(newSorting);
+        // Client-side sorting stays the table's; the callback only reports it
+        // (e.g. so a saved list view can capture the sort).
+        if (onSortChange && newSorting.length > 0) {
+          const { id, desc } = newSorting[0];
+          onSortChange(id, desc ? 'desc' : 'asc');
+        }
       }
     },
     manualPagination: totalItems !== undefined,
@@ -723,7 +846,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                   {headerGroup.headers.map((header, headerIndex): React.JSX.Element => {
                     const columnId = header.column.columnDef.id || header.id;
                   const colDef = columns.find(col => {
-                    const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
+                    const colId = getColumnId(col);
                     return colId === header.column.id;
                   });
                   const isSortable = header.column.getCanSort();
@@ -827,6 +950,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                 // Use the id property if it exists in the data, otherwise use row.id
                 const rowId = ('id' in row.original) ? (row.original as { id: string }).id : row.id;
                 const extraRowClass = typeof rowClassName === 'function' ? rowClassName(row.original as any) : '';
+                const extraRowProps = typeof rowProps === 'function' ? rowProps(row.original as any, rowIndex) : undefined;
                 const expanded = expandedRowRender
                   ? expandedRowRender(row.original as T, rowIndex)
                   : null;
@@ -834,6 +958,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                 return (
                   <React.Fragment key={`row_group_${rowId}`}>
                   <tr
+                    {...extraRowProps}
                     onClick={(e) => handleRowClick(e, row)}
                     className={`
                     bg-[rgb(var(--color-card))]
@@ -848,7 +973,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                       
                       // For columns with custom renders, use the raw value; for others, convert to string
                       const columnDef = columns.find(col => {
-                        const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
+                        const colId = getColumnId(col);
                         return colId === columnId;
                       });
                       
@@ -901,10 +1026,10 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
             </tbody>
           </table>
         </div>
-        {pagination && safeData.length > 0 && (totalPages > 1 || onItemsPerPageChange) && (
+        {pagination && safeData.length > 0 && (totalPages > 1 || onItemsPerPageChange || pageSizePreference.enabled) && (
           <div className="border-t border-[rgb(var(--color-border-200)/0.7)]">
             <Pagination
-              id={id ? `${id}-pagination` : 'datatable-pagination'}
+              id={`${id || generatedTableId}-pagination`}
               currentPage={pageIndex + 1}
               totalItems={total}
               itemsPerPage={currentPageSize}
@@ -920,9 +1045,16 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                   onPageChange(page);
                 }
               }}
-              onItemsPerPageChange={onItemsPerPageChange}
-              itemsPerPageOptions={itemsPerPageOptions || defaultItemsPerPageOptions}
-              variant={onItemsPerPageChange ? "clients" : "compact"}
+              onItemsPerPageChange={(nextSize) => {
+                pageSizeChangedRef.current = true;
+                if (supportsPageSizeChange) pageSizePreference.savePageSize(nextSize);
+                setPagination(prev => ({ ...prev, pageIndex: 0, pageSize: nextSize }));
+                onItemsPerPageChange?.(nextSize);
+                if (currentPage !== 1) onPageChange?.(1);
+              }}
+              showItemsPerPage={supportsPageSizeChange && (!pageSizePreference.enabled || total > Math.max(10, Math.min(...pageSizeOptions.map(option => Number(option.value)))))}
+              itemsPerPageOptions={pageSizeOptions}
+              variant={onItemsPerPageChange || pageSizePreference.enabled ? "clients" : "compact"}
             />
           </div>
         )}

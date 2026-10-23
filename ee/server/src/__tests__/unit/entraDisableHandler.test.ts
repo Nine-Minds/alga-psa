@@ -26,19 +26,23 @@ function buildDbMocks() {
               linkTableCalls += 1;
               return linkTableCalls === 1
                 ? { select: linksSelectMock, del: linksDeleteMock, delete: linksDeleteMock }
-                : { update: linkUpdateMock, del: linksDeleteMock, delete: linksDeleteMock };
+                : { whereIn: vi.fn(function(this: any) { return this; }), update: linkUpdateMock, del: linksDeleteMock, delete: linksDeleteMock };
             }),
           });
         }
 
         if (table === 'contacts') {
           // tenantDb already scoped the builder, so the handler calls whereIn on it directly.
+          const query: any = {
+            whereRaw: vi.fn(() => query),
+            select: vi.fn(async () => [{ contact_name_id: 'contact-103' }]),
+            update: contactsUpdateMock,
+          };
           return withTenantScope({
-            whereIn: vi.fn(() => ({
-              update: contactsUpdateMock,
-              del: contactsDeleteMock,
-              delete: contactsDeleteMock,
-            })),
+            whereIn: vi.fn(() => query),
+            where: vi.fn(() => query),
+            del: contactsDeleteMock,
+            delete: contactsDeleteMock,
           });
         }
 

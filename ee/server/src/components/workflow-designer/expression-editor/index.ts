@@ -7,6 +7,12 @@
 // Main components
 export { ExpressionEditor, type ExpressionEditorProps, type ExpressionEditorHandle } from './ExpressionEditor';
 export { ExpressionEditorField, type ExpressionEditorFieldProps, type DataContextInfo } from './ExpressionEditorField';
+export {
+  ExpressionSyntaxHelp,
+  EXPRESSION_SYNTAX_EXAMPLES,
+  type ExpressionSyntaxHelpProps,
+  type ExpressionSyntaxExample,
+} from './ExpressionSyntaxHelp';
 export type { ExpressionContext, JsonSchema } from './completionProvider';
 
 // Language definition

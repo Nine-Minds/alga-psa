@@ -26,6 +26,33 @@ describe('resolveQuickAddBehavior', () => {
     });
   });
 
+  // The work item's service_id is already the effective one (task → phase →
+  // project), resolved server side, so quick add inherits phase/project
+  // defaults without knowing where they came from.
+  it('saves against a phase-inherited work item service', () => {
+    expect(
+      resolveQuickAddBehavior(
+        { service_id: 'phase-service', service_source: 'phase' } as any,
+        undefined,
+      )
+    ).toEqual({
+      mode: 'save',
+      serviceId: 'phase-service',
+    });
+  });
+
+  it('saves against a project-inherited work item service', () => {
+    expect(
+      resolveQuickAddBehavior(
+        { service_id: 'project-service', service_source: 'project' } as any,
+        undefined,
+      )
+    ).toEqual({
+      mode: 'save',
+      serviceId: 'project-service',
+    });
+  });
+
   it('routes quick add to the full dialog when no service can be inferred', () => {
     expect(
       resolveQuickAddBehavior(

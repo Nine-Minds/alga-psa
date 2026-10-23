@@ -1,3 +1,4 @@
+import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 type ScheduleEntryLike = {
   entry_id: string;
   work_item_type?: string | null;
@@ -39,14 +40,14 @@ export function buildTechnicianDispatchedPayload(params: {
   ticketId?: string;
   technicianUserId: string;
   dispatchedByUserId?: string;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'TECHNICIAN_DISPATCHED'> {
+  return builtWorkflowPayload('TECHNICIAN_DISPATCHED', {
     appointmentId: params.appointmentId,
     ...(params.ticketId ? { ticketId: params.ticketId } : {}),
     technicianUserId: params.technicianUserId,
     ...(params.dispatchedByUserId ? { dispatchedByUserId: params.dispatchedByUserId } : {}),
     dispatchedAt: new Date().toISOString(),
-  };
+  });
 }
 
 export function buildTechnicianEnRoutePayload(params: {
@@ -54,14 +55,14 @@ export function buildTechnicianEnRoutePayload(params: {
   ticketId?: string;
   technicianUserId: string;
   eta?: string;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'TECHNICIAN_EN_ROUTE'> {
+  return builtWorkflowPayload('TECHNICIAN_EN_ROUTE', {
     appointmentId: params.appointmentId,
     ...(params.ticketId ? { ticketId: params.ticketId } : {}),
     technicianUserId: params.technicianUserId,
     startedAt: new Date().toISOString(),
     ...(params.eta ? { eta: params.eta } : {}),
-  };
+  });
 }
 
 export function buildTechnicianArrivedPayload(params: {
@@ -69,14 +70,14 @@ export function buildTechnicianArrivedPayload(params: {
   ticketId?: string;
   technicianUserId: string;
   location?: string;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'TECHNICIAN_ARRIVED'> {
+  return builtWorkflowPayload('TECHNICIAN_ARRIVED', {
     appointmentId: params.appointmentId,
     ...(params.ticketId ? { ticketId: params.ticketId } : {}),
     technicianUserId: params.technicianUserId,
     arrivedAt: new Date().toISOString(),
     ...(params.location ? { location: params.location } : {}),
-  };
+  });
 }
 
 export function buildTechnicianCheckedOutPayload(params: {
@@ -84,13 +85,13 @@ export function buildTechnicianCheckedOutPayload(params: {
   ticketId?: string;
   technicianUserId: string;
   workSummary?: string;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'TECHNICIAN_CHECKED_OUT'> {
+  return builtWorkflowPayload('TECHNICIAN_CHECKED_OUT', {
     appointmentId: params.appointmentId,
     ...(params.ticketId ? { ticketId: params.ticketId } : {}),
     technicianUserId: params.technicianUserId,
     checkedOutAt: new Date().toISOString(),
     ...(params.workSummary ? { workSummary: params.workSummary } : {}),
-  };
+  });
 }
 

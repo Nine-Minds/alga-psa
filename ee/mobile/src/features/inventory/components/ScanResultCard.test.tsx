@@ -28,7 +28,7 @@ const unit = {
   warranty_expires_at: "2027-01-01T00:00:00.000Z",
 };
 
-function render(result: InventoryLookupResult, handlers: Partial<Record<string, ReturnType<typeof vi.fn>>> = {}) {
+function render(result: InventoryLookupResult, handlers: Partial<Record<string, (...args: any[]) => void>> = {}) {
   let tree!: ReactTestRenderer;
   act(() => {
     tree = create(

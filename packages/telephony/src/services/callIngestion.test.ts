@@ -127,7 +127,13 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: async () => ({ knex: hoisted.knexMock }),
   withTransaction: async (_knex: any, fn: (trx: any) => Promise<unknown>) => fn(hoisted.knexMock),
   tenantDb: (conn: any, tenant: string) => ({
-    table: (expression: string) => conn(expression).where({ tenant }),
+    // `countries` is registered 'global' in tenantTableMetadata, so the real
+    // tenantDb returns it unscoped; scoping it here would hide that.
+    table: (expression: string) => (
+      expression.split(' ')[0] === 'countries'
+        ? conn(expression)
+        : conn(expression).where({ tenant })
+    ),
     tenantJoin: (builder: any) => builder,
   }),
 }));
@@ -175,6 +181,13 @@ function setTenantCountry(countryCode: string): void {
     is_active: true,
     country_code: countryCode,
     phone: null,
+  });
+  // The shared tenancy resolver validates the code against the countries
+  // reference table, which is populated in every real deployment.
+  table('countries').push({
+    code: countryCode,
+    name: countryCode,
+    is_active: true,
   });
 }
 
@@ -283,6 +296,49 @@ describe('ingestCanonicalCall', () => {
       matched_contact_id: 'contact-london',
       matched_client_id: 'client-london',
     });
+  });
+
+  // Deliberate widening from the query this replaced, which required the
+  // strictly is_default location: the shared tenancy resolver falls back to the
+  // billing address, so a tenant whose only active location is their billing
+  // address now gets a numbering context instead of none.
+  it('falls back to the billing-address location for the numbering context', async () => {
+    table('tenant_companies').push({
+      tenant: TENANT,
+      client_id: 'client-own-company',
+      is_default: true,
+      deleted_at: null,
+    });
+    table('client_locations').push({
+      tenant: TENANT,
+      client_id: 'client-own-company',
+      is_default: false,
+      is_billing_address: true,
+      is_active: true,
+      country_code: 'GB',
+      phone: null,
+    });
+    table('countries').push({ code: 'GB', name: 'United Kingdom', is_active: true });
+    table('contact_phone_numbers').push({
+      tenant: TENANT,
+      contact_name_id: 'contact-london',
+      full_name: 'London Contact',
+      client_id: 'client-london',
+      normalized_phone_number: '442079460958',
+      phone_number: '+44 20 7946 0958',
+    });
+
+    const outcome = await ingestCanonicalCall({
+      tenantId: TENANT,
+      call: {
+        ...inboundCall,
+        providerCallId: 'graph-call-gb-billing-only',
+        callerNumber: { raw: '020 7946 0958', e164: null },
+      },
+    });
+
+    expect(outcome).toMatchObject({ status: 'ingested', matchStatus: 'matched' });
+    expect(table('telephony_call_records')[0].caller_number_e164).toBe('+442079460958');
   });
 
   it('leaves a national number unmatched when the tenant country is not configured', async () => {
@@ -497,6 +553,78 @@ describe('ingestCanonicalCall', () => {
     expect(outcome).toMatchObject({ status: 'ingested', matchStatus: 'matched' });
     expect(table('interactions')[0]).toMatchObject({ client_id: 'client-emerald' });
     expect(table('interactions')[0].contact_name_id).toBeUndefined();
+  });
+});
+
+describe('ingestCanonicalCall preferredContactId', () => {
+  beforeEach(() => {
+    for (const name of Object.keys(hoisted.tables)) {
+      hoisted.tables[name].length = 0;
+    }
+    hoisted.interactionCreate.mockClear();
+    seedTenantBasics();
+  });
+
+  it('T178: an active preferred contact is the match even when the number points elsewhere', async () => {
+    knownContact();
+    table('contacts').push({
+      tenant: TENANT,
+      contact_name_id: 'contact-scarecrow',
+      client_id: 'client-emerald',
+      is_inactive: false,
+    });
+
+    const outcome = await ingestCanonicalCall({
+      tenantId: TENANT,
+      call: inboundCall,
+      preferredContactId: 'contact-scarecrow',
+    });
+
+    expect(outcome).toMatchObject({ status: 'ingested', matchStatus: 'matched', created: true });
+    expect(table('telephony_call_records')[0]).toMatchObject({
+      matched_contact_id: 'contact-scarecrow',
+      matched_client_id: 'client-emerald',
+      match_candidates: '[]',
+    });
+    expect(table('interactions')[0]).toMatchObject({
+      contact_name_id: 'contact-scarecrow',
+      client_id: 'client-emerald',
+    });
+  });
+
+  it('T179: an inactive preferred contact falls back to number matching', async () => {
+    knownContact();
+    table('contacts').push({
+      tenant: TENANT,
+      contact_name_id: 'contact-scarecrow',
+      client_id: 'client-emerald',
+      is_inactive: true,
+    });
+
+    await ingestCanonicalCall({ tenantId: TENANT, call: inboundCall, preferredContactId: 'contact-scarecrow' });
+
+    expect(table('telephony_call_records')[0]).toMatchObject({
+      match_status: 'matched',
+      matched_contact_id: 'contact-dorothy',
+      matched_client_id: 'client-oz',
+    });
+  });
+
+  it('T179: a preferred contact that does not exist in the tenant falls back to number matching', async () => {
+    table('contacts').push({
+      tenant: 'tenant-other',
+      contact_name_id: 'contact-foreign',
+      client_id: 'client-foreign',
+      is_inactive: false,
+    });
+
+    await ingestCanonicalCall({ tenantId: TENANT, call: inboundCall, preferredContactId: 'contact-foreign' });
+
+    expect(table('telephony_call_records')[0]).toMatchObject({
+      match_status: 'unmatched',
+      matched_contact_id: null,
+    });
+    expect(table('interactions')).toHaveLength(0);
   });
 });
 

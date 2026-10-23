@@ -7,6 +7,7 @@ import { ITaskResource } from '@alga-psa/types';
 import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, Ban, GitBranch, Calendar, GripVertical, Plus, CheckSquare, Paperclip, Zap, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, CheckCircle2, RotateCcw } from 'lucide-react';
 import { phaseBadgeClasses, type PhaseBillingBadge } from '@alga-psa/core';
 import { extractTaskDescriptionText } from '../lib/taskRichText';
+import { filterTasks } from '../lib/taskFilters';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Button } from '@alga-psa/ui/components/Button';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
@@ -66,6 +67,7 @@ const COLUMN_CONFIG: TaskColumn[] = [
   { key: 'priority',     priority: 4,                    defaultWidth: 130, minWidth: 90,  maxWidth: 200, resizable: true,  align: 'left'  },
   { key: 'task_type',    priority: 5,                    defaultWidth: 140, minWidth: 100, maxWidth: 220, resizable: true,  align: 'left'  },
   { key: 'assignee',     priority: 6,                    defaultWidth: 240, minWidth: 150, maxWidth: 440, resizable: true,  align: 'left'  },
+  { key: 'start_date',   priority: 7.5,                  defaultWidth: 150, minWidth: 110, maxWidth: 260, resizable: true,  align: 'left'  },
   { key: 'due_date',     priority: 7,                    defaultWidth: 150, minWidth: 110, maxWidth: 260, resizable: true,  align: 'left'  },
   { key: 'tags',         priority: 8,                    defaultWidth: 180, minWidth: 120, maxWidth: 360, resizable: true,  align: 'left'  },
   { key: 'est_hours',    priority: 9,                    defaultWidth: 110, minWidth: 80,  maxWidth: 200, resizable: true,  align: 'left'  },
@@ -219,6 +221,7 @@ interface TaskListViewProps {
   teamAvatarUrls?: Record<string, string | null>;
   // Filter props
   selectedPriorityFilter?: string;
+  selectedTaskTypeFilter?: string;
   selectedTaskTags?: string[];
   selectedAgentFilter?: string[];
   selectedTeamFilter?: string[];
@@ -277,6 +280,7 @@ export default function TaskListView({
   teamNames = {},
   teamAvatarUrls = {},
   selectedPriorityFilter = 'all',
+  selectedTaskTypeFilter = 'all',
   selectedTaskTags = [],
   selectedAgentFilter = [],
   selectedTeamFilter = [],
@@ -543,6 +547,7 @@ export default function TaskListView({
     assignee: t('tasks.assignee', 'Assignee'),
     est_hours: t('tasks.estHours', 'Est. Hours'),
     actual_hours: t('tasks.actualHours', 'Actual Hours'),
+    start_date: t('startDate', 'Start Date'),
     due_date: t('tasks.dueDate', 'Due Date'),
     attachments: t('tasks.attachments', 'Attachments'),
   }), [t]);
@@ -580,87 +585,28 @@ export default function TaskListView({
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const scrollSpeedRef = useRef<number>(0);
 
-  // Filter tasks based on search, priority and tags
-  const filteredTasks = useMemo(() => {
-    let filtered = tasks;
-
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
-      filtered = filtered.filter(task => {
-        const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
-        const descText = taskDescriptionTextMap.get(task.task_id) ?? '';
-        const taskDescription = searchCaseSensitive
-          ? descText
-          : descText.toLowerCase();
-
-        if (searchWholeWord) {
-          // Use word boundary regex for whole word matching
-          const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const wordRegex = new RegExp(`\\b${escapedQuery}\\b`, searchCaseSensitive ? '' : 'i');
-          return wordRegex.test(task.task_name) || wordRegex.test(descText);
-        } else {
-          return taskName.includes(query) || taskDescription.includes(query);
-        }
-      });
-    }
-
-    // Apply priority filter
-    if (selectedPriorityFilter !== 'all') {
-      filtered = filtered.filter(task => task.priority_id === selectedPriorityFilter);
-    }
-
-    // Apply tag filter
-    if (selectedTaskTags.length > 0) {
-      filtered = filtered.filter(task => {
-        const tags = taskTags[task.task_id] || [];
-        const tagTexts = tags.map(tag => tag.tag_text);
-        return selectedTaskTags.some(selectedTag => tagTexts.includes(selectedTag));
-      });
-    }
-
-    // Apply agent / team filter
-    if (selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents) {
-      filtered = filtered.filter(task => {
-        // Check if task is unassigned (no primary assignee)
-        const isUnassigned = !task.assigned_to;
-
-        // If includeUnassignedAgents is selected and task is unassigned, include it
-        if (includeUnassignedAgents && isUnassigned) {
-          return true;
-        }
-
-        // If specific agents are selected, check if task matches
-        if (selectedAgentFilter.length > 0) {
-          // Check primary assignee
-          if (task.assigned_to && selectedAgentFilter.includes(task.assigned_to)) {
-            return true;
-          }
-
-          // Check additional agents from task resources (only if not filtering for primary only)
-          // Primary only filter is only applicable when exactly one agent is selected
-          if (!(primaryAgentOnly && selectedAgentFilter.length === 1)) {
-            const resources = taskResources[task.task_id] || [];
-            const hasMatchingAdditionalAgent = resources.some(
-              resource => resource.additional_user_id && selectedAgentFilter.includes(resource.additional_user_id)
-            );
-            if (hasMatchingAdditionalAgent) {
-              return true;
-            }
-          }
-        }
-
-        // If specific teams are selected, match by the task's assigned team
-        if (selectedTeamFilter.length > 0 && task.assigned_team_id && selectedTeamFilter.includes(task.assigned_team_id)) {
-          return true;
-        }
-
-        return false;
-      });
-    }
-
-    return filtered;
-  }, [tasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags, selectedAgentFilter, selectedTeamFilter, includeUnassignedAgents, primaryAgentOnly, taskResources, taskDescriptionTextMap]);
+  // Filter tasks with the shared predicate, so this list, the board and every
+  // derived count agree on what a filter leaves visible.
+  const filteredTasks = useMemo(() => filterTasks(
+    tasks,
+    {
+      searchQuery,
+      searchWholeWord,
+      searchCaseSensitive,
+      priorityId: selectedPriorityFilter,
+      taskTypeKey: selectedTaskTypeFilter,
+      tags: selectedTaskTags,
+      agentIds: selectedAgentFilter,
+      teamIds: selectedTeamFilter,
+      includeUnassigned: includeUnassignedAgents,
+      primaryAgentOnly,
+    },
+    {
+      tags: taskTags,
+      resources: taskResources,
+      descriptionText: (task) => taskDescriptionTextMap.get(task.task_id) ?? '',
+    },
+  ), [tasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, taskTags, selectedAgentFilter, selectedTeamFilter, includeUnassignedAgents, primaryAgentOnly, taskResources, taskDescriptionTextMap]);
 
   // Group tasks by phase and status - include ALL phases and ALL statuses for drag-and-drop
   const phaseGroups = useMemo((): PhaseGroup[] => {
@@ -736,6 +682,7 @@ export default function TaskListView({
   const hasActiveFilter = Boolean(
     searchQuery.trim() ||
     selectedPriorityFilter !== 'all' ||
+    selectedTaskTypeFilter !== 'all' ||
     selectedTaskTags.length > 0 ||
     selectedAgentFilter.length > 0 ||
     selectedTeamFilter.length > 0 ||
@@ -1234,6 +1181,14 @@ export default function TaskListView({
       header: t('tasks.actualHours', 'Actual Hours'),
       render: ({ task }) => task.actual_hours != null
         ? (task.actual_hours / 60).toFixed(1)
+        : t('projectPrint.tasks.emptyValue', '-'),
+    },
+    {
+      key: 'startDate',
+      label: t('startDate', 'Start Date'),
+      header: t('startDate', 'Start Date'),
+      render: ({ task }) => task.start_date
+        ? format(new Date(task.start_date), 'PP')
         : t('projectPrint.tasks.emptyValue', '-'),
     },
     {
@@ -1943,6 +1898,29 @@ export default function TaskListView({
                                               </Tooltip>
                                             )}
                                           </div>
+                                        </td>
+                                      );
+                                    case 'start_date':
+                                      if (onTaskUpdate) {
+                                        return (
+                                          <td key="start_date" className={`py-2.5 px-3 align-middle ${tdBorder}`} onClick={(e) => e.stopPropagation()}>
+                                            <DatePicker
+                                              value={task.start_date ? new Date(task.start_date) : undefined}
+                                              onChange={(date) => onTaskUpdate(task.task_id, { start_date: date ?? null })}
+                                              maxDate={task.due_date ? new Date(task.due_date) : undefined}
+                                              clearable
+                                              placeholder={t('startDate', 'Start Date')}
+                                            />
+                                          </td>
+                                        );
+                                      }
+                                      return (
+                                        <td key="start_date" className={`py-2.5 px-3 align-middle ${tdBorder}`}>
+                                          {task.start_date && (
+                                            <span className="text-[13px] text-[rgb(var(--color-text-700))]">
+                                              {format(new Date(task.start_date), 'MMM d, yyyy')}
+                                            </span>
+                                          )}
                                         </td>
                                       );
                                     case 'due_date':

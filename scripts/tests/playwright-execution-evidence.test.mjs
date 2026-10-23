@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { readRunnerCollection } from '../lib/read-runner-collection.mjs';
-import { reconcilePlaywrightExecution, playwrightTests } from '../lib/playwright-execution-evidence.mjs';
+import { flakyPlaywrightTests, reconcilePlaywrightExecution, playwrightTests } from '../lib/playwright-execution-evidence.mjs';
 
 function report() {
   return {
@@ -86,6 +86,25 @@ test('retry-only passes remain flaky even when runner exit or outcome is mislead
     assert.equal(result.status, 'failed');
     assert.equal(result.counts.flaky, 1);
   }
+});
+
+test('retry-only passes are extracted as flaky identities, stable passes are not', () => {
+  assert.deepEqual(flakyPlaywrightTests(report(), '/repo'), []);
+  const data = report();
+  one(data).results = [{ status: 'failed', retry: 0 }, { status: 'passed', retry: 1 }];
+  data.stats = { expected: 0, unexpected: 0, skipped: 0, flaky: 1 };
+  assert.deepEqual(flakyPlaywrightTests(data, '/repo'), [{
+    testId: 'e2e-tests/tests/invoice.spec.ts > invoice > retains balance [community]',
+    file: 'e2e-tests/tests/invoice.spec.ts', name: 'invoice > retains balance',
+    projectId: 'ce', projectName: 'community', titles: ['invoice', 'retains balance'], retryCount: 1,
+  }]);
+  // The gate keeps failing on the same report the flaky list is built from.
+  assert.equal(check({ report: data }).status, 'failed');
+  // A case that never passed is a failure, not a flake.
+  one(data).results = [{ status: 'failed', retry: 0 }, { status: 'failed', retry: 1 }];
+  one(data).status = 'unexpected';
+  assert.deepEqual(flakyPlaywrightTests(data, '/repo'), []);
+  assert.throws(() => flakyPlaywrightTests(null, '/repo'), /invalid Playwright report/);
 });
 
 test('absent, empty, cancelled and malformed browser reports fail explicitly', () => {

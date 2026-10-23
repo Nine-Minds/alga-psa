@@ -41,18 +41,32 @@ export class EmailProviderManager implements IEmailProviderManager {
       }
     }
     
-    // Find the first enabled provider
-    const enabledConfig = tenantSettings.providerConfigs.find(config => config.isEnabled);
+    // Microsoft senders may be backed by different connected mailboxes. Keep
+    // one initialized provider per enabled mailbox and retain the first as default.
+    const enabledConfigs = tenantSettings.providerConfigs.filter(config => config.isEnabled);
+    const enabledConfig = enabledConfigs[0];
     
     if (enabledConfig) {
       try {
         logger.debug(`[EmailProviderManager] Initializing provider: ${enabledConfig.providerId} (${enabledConfig.providerType})`);
 
-        const configToInitialize = await this.resolveProviderConfig(tenantId, enabledConfig);
-        const provider = await this.createProvider(enabledConfig);
-        await provider.initialize(configToInitialize);
-        this.providers.set(tenantId, provider);
-        this.providerCache.set(enabledConfig.providerId, provider);
+        const configsToInitialize = enabledConfig.providerType === 'microsoft' ? enabledConfigs : [enabledConfig];
+        for (const config of configsToInitialize) {
+          const inboundProviderId = config.config?.inboundProviderId;
+          const configToInitialize = await this.resolveProviderConfig(
+            tenantId,
+            config,
+            config.providerType === 'microsoft' && typeof inboundProviderId === 'string' ? inboundProviderId : config.providerId
+          );
+          const provider = await this.createProvider(config);
+          await provider.initialize(configToInitialize);
+          this.providerCache.set(config.providerId, provider);
+          if (config.providerType === 'microsoft' && typeof inboundProviderId === 'string') {
+            this.providerCache.set(inboundProviderId, provider);
+          }
+          if (!this.providers.has(tenantId)) this.providers.set(tenantId, provider);
+        }
+        const provider = this.providers.get(tenantId)!;
         
         logger.info(`[EmailProviderManager] Initialized provider: ${provider.providerId} (${provider.providerType}) for tenant ${tenantId}`);
       } catch (error: any) {
@@ -66,7 +80,21 @@ export class EmailProviderManager implements IEmailProviderManager {
   }
 
   async sendEmail(message: EmailMessage, tenantId: string): Promise<EmailSendResult> {
-    const provider = this.providers.get(tenantId);
+    const activeTransport = this.tenantSettings.get(tenantId)?.emailProvider?.toLowerCase();
+    const requestedProviderId = activeTransport === 'microsoft' ? message.microsoftProviderId : undefined;
+    if (requestedProviderId && !this.providerCache.has(requestedProviderId)) {
+      const microsoftConfig = this.tenantSettings.get(tenantId)?.providerConfigs.find(config => config.providerType === 'microsoft' && config.isEnabled);
+      if (microsoftConfig) {
+        const provider = await this.createProvider(microsoftConfig);
+        const resolvedConfig = await this.resolveProviderConfig(tenantId, microsoftConfig, requestedProviderId);
+        await provider.initialize(resolvedConfig);
+        this.providerCache.set(requestedProviderId, provider);
+      }
+    }
+    const provider = (requestedProviderId && this.providerCache.get(requestedProviderId)) || this.providers.get(tenantId);
+    if (requestedProviderId && !this.providerCache.has(requestedProviderId)) {
+      throw new EmailProviderError(`Microsoft sender provider ${requestedProviderId} is not configured`, requestedProviderId, 'microsoft', false, 'MICROSOFT_PROVIDER_NOT_CONFIGURED');
+    }
     
     if (!provider) {
       throw new EmailProviderError(
@@ -102,6 +130,12 @@ export class EmailProviderManager implements IEmailProviderManager {
             true
           );
     }
+  }
+
+  async validateMicrosoftProvider(providerId: string, tenantId: string): Promise<void> {
+    const config = this.tenantSettings.get(tenantId)?.providerConfigs.find((item) => item.providerType === 'microsoft' && item.isEnabled);
+    if (!config) throw new EmailProviderError('No Microsoft mailbox is configured for this tenant.', providerId, 'microsoft', false, 'MICROSOFT_PROVIDER_NOT_CONFIGURED');
+    await this.resolveMicrosoftProviderConfig(tenantId, config, providerId);
   }
 
   async sendBulkEmails(messages: EmailMessage[], tenantId: string): Promise<EmailSendResult[]> {
@@ -209,11 +243,17 @@ export class EmailProviderManager implements IEmailProviderManager {
     logger.info(`[EmailProviderManager] Updated settings for tenant: ${tenantId}`);
   }
 
-  private async resolveProviderConfig(tenantId: string, config: EmailProviderConfig): Promise<Record<string, any>> {
+  /**
+   * Resolve the runtime config for a saved provider config using the same
+   * secret/vendor lookups as real sending (Microsoft inbound provider binding,
+   * Resend secret fallback). Exposed so diagnostics dispatch through production
+   * selection instead of re-deriving it.
+   */
+  public async resolveProviderConfig(tenantId: string, config: EmailProviderConfig, providerId?: string): Promise<Record<string, any>> {
     const originalConfig = typeof config.config === 'object' && config.config !== null ? config.config : {};
 
     if (config.providerType === 'microsoft') {
-      return this.resolveMicrosoftProviderConfig(tenantId, config);
+      return this.resolveMicrosoftProviderConfig(tenantId, config, providerId ?? config.providerId);
     }
 
     if (config.providerType !== 'resend') {
@@ -241,10 +281,10 @@ export class EmailProviderManager implements IEmailProviderManager {
 
   private async resolveMicrosoftProviderConfig(
     tenantId: string,
-    config: EmailProviderConfig
+    config: EmailProviderConfig,
+    providerId: string
   ): Promise<Record<string, any>> {
-    const requestedProviderId = this.normalizeSecretValue(config.config?.inboundProviderId)
-      || config.providerId;
+    const requestedProviderId = providerId;
     const knex = await getConnection(tenantId);
     const db = tenantDb(knex, tenantId);
     const provider = await db.table('email_providers')

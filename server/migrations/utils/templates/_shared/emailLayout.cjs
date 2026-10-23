@@ -2,7 +2,8 @@
  * Shared email HTML layout wrapper.
  *
  * Generates the outer HTML structure common to table-based email templates:
- * brand gradient header, white content card, purple footer.
+ * brand gradient header (with a flat primary fallback for the Outlooks, which
+ * drop CSS gradients), white content card, purple footer.
  *
  * Not all templates use this wrapper -- auth templates (password-reset,
  * portal-invitation, etc.) use a class-based CSS approach with <style> blocks.
@@ -12,6 +13,7 @@
 
 const {
   BRAND_GRADIENT,
+  BRAND_PRIMARY,
   BRAND_DARK,
   FOOTER_BG,
   OUTER_BG,
@@ -50,7 +52,7 @@ function wrapEmailLayout(opts) {
   <tr><td align="center">
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid ${CARD_BORDER};box-shadow:${CARD_SHADOW};">
       <tr>
-        <td style="padding:32px;background:${BRAND_GRADIENT};color:#ffffff;">
+        <td bgcolor="${BRAND_PRIMARY}" style="padding:32px;background-color:${BRAND_PRIMARY};background:${BRAND_GRADIENT};color:#ffffff;">
           <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:12px;font-weight:600;opacity:0.85;">${headerLabel}</div>
           ${headerTitle ? `<div style="font-size:22px;font-weight:600;margin-top:8px;">${headerTitle}</div>` : ''}
           ${headerMeta ? `<div style="margin-top:12px;font-size:14px;opacity:0.85;">${headerMeta}</div>` : ''}

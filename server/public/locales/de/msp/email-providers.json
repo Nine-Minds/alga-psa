@@ -727,6 +727,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Pro-Funktion",
+      "domainsDescription": "Verwaltete Domains erfordern Pro.",
+      "settingsDescription": "Einstellungen für verwaltete E-Mails erfordern Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Verwaltete Domänen konnten nicht geladen werden",
       "loadOutboundSettingsFailed": "Einstellungen für ausgehende E-Mails konnten nicht geladen werden",
@@ -748,7 +753,7 @@
       "domainRemovalScheduledWithClear": "Domainentfernung geplant und Ticketing-Absenderadresse gelöscht",
       "removeDomainFailed": "Domain konnte nicht entfernt werden",
       "testOutboundFailed": "Test der ausgehenden E-Mail fehlgeschlagen",
-      "senderIdentitiesUpdated": "Absenderidentitäten aktualisiert."
+      "senderSettingsUpdated": "Absenderidentitäten aktualisiert."
     },
     "tabs": {
       "inboundEmail": "Eingehende E-Mail",
@@ -803,7 +808,8 @@
           "recipientPlaceholder": "sie@beispiel.com",
           "testingButton": "Wird getestet...",
           "runButton": "Verbindung testen"
-        }
+        },
+        "ticketIdentityRequired": "Wählen Sie unten eine Ticket-E-Mail-Identität aus, um die Absenderdomain festzulegen."
       },
       "ticketingFrom": {
         "title": "Absenderadresse für Ticketing",
@@ -843,39 +849,17 @@
         "loadFailed": "Microsoft 365-Postfächer konnten nicht geladen werden.",
         "saved": "Sendepostfach aktualisiert."
       },
-      "senderIdentities": {
-        "ticket": {
-          "title": "Absenderidentität für Ticket-E-Mails",
-          "description": "Antworten auf Ticket-E-Mails müssen an diese Adresse zurückgesendet werden, damit sie zugeordnet und dem Ticket hinzugefügt werden können. Verwenden Sie ein verbundenes, überwachtes Postfach.",
-          "connectedInboxLabel": "Verbundenes Postfach",
-          "connectedInboxHelp": "Ein verbundenes Postfach sorgt dafür, dass Kundenantworten in der Ticket-Konversation bleiben.",
-          "customAddressOption": "Andere Adresse verwenden",
-          "addressLabel": "Absenderadresse",
-          "addressPlaceholder": "support@example.com",
-          "addressHelp": "Diese Adresse steuert ausschließlich das Antwort-Routing für Ticket-E-Mails.",
-          "microsoftAddressHelp": "Microsoft 365 erfordert, dass Ticket-E-Mails das ausgewählte Sendepostfach ({{mailbox}}) verwenden.",
-          "nameLabel": "Anzeigename des Absenders",
-          "namePlaceholder": "Support",
-          "nameHelp": "Leer lassen, um den Namen des verbundenen Postfachs oder des Ticket-Boards zu verwenden."
-        },
-        "notification": {
-          "title": "Absenderidentität für alle anderen E-Mails",
-          "description": "Versehen Sie Portal-Einladungen, Passwortrücksetzungen, Rechnungen, Projektaktualisierungen und allgemeine Benachrichtigungen unabhängig vom Ticket-Routing mit Ihrem Branding.",
-          "addressLabel": "Absenderadresse",
-          "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Wird durch die Absenderadresse in der SMTP-Konfiguration oben festgelegt. Alle E-Mails ohne Ticketbezug werden von dieser Adresse gesendet.",
-          "lockedAddressHelp": "Diese Adresse wird durch die aktive verwaltete Domain oder das ausgewählte Microsoft 365-Postfach bestimmt.",
-          "nameLabel": "Anzeigename des Absenders",
-          "namePlaceholder": "Name Ihres Unternehmens",
-          "nameHelp": "Leer lassen, um automatisch {{company}} zu verwenden.",
-          "companyFallback": "Ihr Mandantenunternehmen"
-        },
-        "warningTitle": "Antwort-Routing prüfen",
-        "errorTitle": "Absenderidentität für Tickets korrigieren",
-        "clearButton": "Absenderidentität für Tickets löschen",
-        "savingButton": "Wird gespeichert...",
-        "saveButton": "Absenderidentitäten speichern"
-      }
+      "diagnosticsButton": "Ausgehende E-Mail-Diagnose ausführen",
+      "saveSettings": "Einstellungen für ausgehende E-Mails speichern",
+      "discardChanges": "Änderungen verwerfen",
+      "unsaved": "Nicht gespeicherte Änderungen",
+      "noPendingChanges": "Keine nicht gespeicherten Änderungen",
+      "saving": "Einstellungen für ausgehende E-Mails werden gespeichert…",
+      "saved": "Einstellungen für ausgehende E-Mails gespeichert.",
+      "saveFailed": "Die Einstellungen für ausgehende E-Mails konnten nicht gespeichert werden. Ihre Änderungen sind noch vorhanden. Versuchen Sie es erneut.",
+      "diagnosticsSaveHelp": "Speichern oder verwerfen Sie Ihre Änderungen, bevor Sie die Einstellungen für ausgehende E-Mails prüfen.",
+      "saveBeforeDomainRemoval": "Speichern oder verwerfen Sie Ihre Änderungen für ausgehende E-Mails, bevor Sie eine Domain entfernen.",
+      "senderAddressAfterSave": "Wird nach dem Speichern angezeigt."
     },
     "inbound": {
       "intro": "Konfigurieren Sie eingehendes E-Mail-Routing und anbieterspezifische Automatisierung."
@@ -951,6 +935,12 @@
       "copyHostAriaLabel": "Host kopieren",
       "copyFqdnAriaLabel": "Vollständigen Namen kopieren",
       "hostHint": "Tipp: Geben Sie bei Ihrem DNS-Anbieter nur den oben angezeigten Host ein. Die meisten Anbieter (Namecheap, GoDaddy, Cloudflare und andere) fügen „{{domain}}“ automatisch hinzu. Wenn Sie stattdessen den vollständigen Namen einfügen, wird die Domain wiederholt (…{{domain}}.{{domain}}) und der Eintrag wird nie verifiziert."
+    },
+    "dnsRecordInstructions": {
+      "proFeature": {
+        "title": "Pro-Funktion",
+        "description": "Anleitungen für DNS-Einträge erfordern Pro."
+      }
     }
   },
   "inboundRules": {
@@ -1032,7 +1022,12 @@
       "saving": "Wird gespeichert…",
       "startDelimiter": "Start-Trennzeichen",
       "update": "Regel aktualisieren",
-      "valuePlaceholder": "Wert"
+      "valuePlaceholder": "Wert",
+      "matchTargets": "Extrahierten Wert abgleichen mit",
+      "matchClientName": "Kundenname oder Alias",
+      "matchContactEmail": "Kontakt-E-Mail",
+      "matchAssetName": "Geräte- (Asset-)Name",
+      "matchTargetRequired": "Wählen Sie mindestens ein Abgleichziel aus."
     },
     "header": {
       "description": "Gleichen Sie eingehende E-Mails anhand von Absender oder Betreff ab, um Störmeldungen zu überspringen, den richtigen Kunden zuzuweisen oder an ein Ziel weiterzuleiten. Regeln werden der Reihe nach ausgeführt; der erste Treffer gewinnt.",
@@ -1090,7 +1085,10 @@
       "running": "Wird getestet…",
       "subject": "Betreff",
       "title": "Diese Regel testen",
-      "to": "An"
+      "to": "An",
+      "contactEmail": "Kontakt-E-Mail",
+      "deviceName": "Gerätename",
+      "ambiguous": "{{target}} stimmt bei {{count}} Kunden überein — keine Zuordnung"
     }
   },
   "errors": {
@@ -1144,7 +1142,10 @@
       "duplicateShortName": "Eine Konfiguration mit diesem Kurznamen existiert bereits",
       "createFailed": "Die Standardwerte für eingehende Tickets konnten nicht erstellt werden. Bitte versuchen Sie es erneut.",
       "notFound": "Standardkonfiguration nicht gefunden",
-      "updateFailed": "Die Standardwerte für eingehende Tickets konnten nicht aktualisiert werden. Bitte versuchen Sie es erneut."
+      "updateFailed": "Die Standardwerte für eingehende Tickets konnten nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
+      "locationRequiresClient": "Wählen Sie zuerst eine Firma aus, bevor Sie einen Standort auswählen",
+      "locationClientMismatch": "Der ausgewählte Standort gehört nicht zur ausgewählten Firma",
+      "referencedByProviders": "Diese Konfiguration wird noch von folgenden E-Mail-Anbietern verwendet: {{providers}}. Wählen Sie bei diesen Anbietern andere Standardwerte für eingehende Tickets aus, bevor Sie sie löschen."
     },
     "ticketFieldOptions": {
       "permissionDenied": "Berechtigung verweigert: Ticketfeldoptionen können nicht gelesen werden",

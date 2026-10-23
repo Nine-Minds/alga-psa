@@ -29,6 +29,8 @@ export interface CreateTicketFromAssetData {
   board_id: string;
   asset_id: string;
   client_id: string;
+  /** FR-E8: a shared workspace's single user, or the asset's assignee. */
+  contact_name_id?: string | null;
 }
 
 export interface AssetRmmCommandResult {
@@ -36,6 +38,9 @@ export interface AssetRmmCommandResult {
   message: string;
   jobId?: string;
 }
+
+// LEVERAGE: provider connection types currently cross the feature boundary as a parallel union.
+export type AssetRemoteConnectionType = 'splashtop' | 'teamviewer' | 'vnc' | 'rdp' | 'shell';
 
 /**
  * RMM device actions for the asset page. Implemented by @alga-psa/integrations
@@ -46,6 +51,8 @@ export interface AssetRmmCallbacks {
   getAssetRmmData: (assetId: string) => Promise<RmmCachedData | null>;
   refreshAssetRmmData: (assetId: string) => Promise<RmmCachedData | null>;
   triggerRmmReboot: (assetId: string) => Promise<AssetRmmCommandResult>;
+  getAssetRemoteControlTypes: (assetId: string) => Promise<AssetRemoteConnectionType[]>;
+  getAssetRemoteControlUrl: (assetId: string, connectionType: AssetRemoteConnectionType) => Promise<string | null>;
 }
 
 export interface AssetCrossFeatureCallbacks {

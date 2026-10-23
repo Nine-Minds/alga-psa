@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getEligibleContractLinesForUI, getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
 import { BillingAttributionInspector } from '@alga-psa/ui/components/BillingAttributionInspector';
 import { getSchedulingClientById } from '../../../../actions/clientInteractionLookupActions';
@@ -17,31 +17,57 @@ import { MinusCircle, XCircle, Info, AlertTriangle } from 'lucide-react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { TimeEntryFormProps } from './types';
-import { calculateDuration, clampDurationToSameDay, formatTimeForInput, parseTimeToDate, getDurationParts } from './utils';
-import { ISO8601String } from '@alga-psa/types';
-import ContractInfoBanner from './ContractInfoBanner';
+import { resolvePrefilledServiceSource } from './serviceSourceBadge';
+import { calculateDuration, clampDurationToSameDay, clampDurationToZonedSameDay, formatTimeForInput, parseTimeToDate, getDurationParts } from './utils';
+import {
+  dateOnlyToLocalDate,
+  dateToPlainDate,
+  editableDateRange,
+  formatZonedTime,
+  formatZonedTimeSeconds,
+  instantAtZonedTime,
+  isEditableWorkDate,
+  periodForWorkDate,
+  periodLastInclusiveDay,
+  workDateInTimeZone,
+} from '../../../../lib/timeEntryPeriodSelection';
+import ContractInfoBanner, { type EligiblePlanUI } from './ContractInfoBanner';
 import { TimeEntryChangeRequestPanel } from './TimeEntryChangeRequestFeedback';
-
-// Define the expected structure returned by getEligibleContractLinesForUI,
-// including the date fields needed for filtering.
-// Type matching the apparent return structure of getEligibleContractLinesForUI
-interface EligiblePlanUI {
-  client_contract_line_id: string;
-  contract_line_name: string;
-  contract_line_type: string;
-  start_date: ISO8601String; // Required for filtering
-  end_date?: ISO8601String | null; // Required for filtering
-  contract_name?: string; // Contract name for display
-  has_bucket_overlay: boolean;
-}
 
 // Parse a 'YYYY-MM-DD' (or ISO) date string into a local midnight Date, avoiding the UTC shift
 // that `new Date(str)`/`parseISO` introduce for date-only values.
-// LEVERAGE: pattern date-only-local-parse — 4th site (also TimeSheet.tsx, IntervalSection.tsx,
+// LEVERAGE: pattern date-only-local-parse — 4th site (also TimeSheet.tsx,
 // timeSheetOperations.ts). Candidate for a shared scheduling date util.
+const SHEET_STATUS_FALLBACKS: Record<string, string> = {
+  DRAFT: 'Draft',
+  SUBMITTED: 'Submitted',
+  APPROVED: 'Approved',
+  CHANGES_REQUESTED: 'Changes Requested',
+};
+
 const parseDateOnlyLocal = (value: string): Date => {
   const [year, month, day] = value.slice(0, 10).split('-').map(Number);
   return new Date(year, month - 1, day);
+};
+
+// Build the instant for an HH:mm wall clock on a subject-timezone calendar day.
+// Returns null for unparseable/invalid input so callers can ignore it rather
+// than throw inside Temporal.PlainTime.from.
+const buildZonedTimeInstant = (
+  value: string,
+  subjectDate: string,
+  timeZone: string,
+): Date | null => {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) return null;
+  return instantAtZonedTime(
+    subjectDate,
+    `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`,
+    timeZone,
+  );
 };
 
 const TimeEntryEditForm = memo(function TimeEntryEditForm({
@@ -59,12 +85,26 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   onUpdateTimeInputs,
   lastNoteInputRef,
   timePeriod,
+  periodCatalog,
   date,
+  workTimeZone,
   isNewEntry = false,
   isSaving = false,
   disableSave = false
 }: TimeEntryFormProps) {
   const { t } = useTranslation('msp/time-entry');
+  const { formatDate } = useFormatters();
+  // When a subject timezone is supplied, the date field, bounds, and time
+  // pickers all operate on that user's calendar day so they line up with the
+  // work_date the server derives. Without it, keep browser-local behavior.
+  const useSubjectZone = Boolean(workTimeZone);
+  const formatInputTime = useCallback(
+    (value: string | Date) =>
+      useSubjectZone
+        ? formatZonedTime(value, workTimeZone)
+        : formatTimeForInput(value instanceof Date ? value : parseISO(value)),
+    [useSubjectZone, workTimeZone],
+  );
   const latestEntry = useRef(entry);
   latestEntry.current = entry;
   // Use work item times for ad-hoc entries - only update if values actually changed
@@ -73,8 +113,8 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       const start = parseISO(entry.start_time);
       const end = parseISO(entry.end_time);
 
-      const newStartInput = formatTimeForInput(start);
-      const newEndInput = formatTimeForInput(end);
+      const newStartInput = formatInputTime(start);
+      const newEndInput = formatInputTime(end);
 
       // Only update if the formatted times are different from current inputs
       if (timeInputs[`start-${index}`] !== newStartInput ||
@@ -85,7 +125,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
         });
       }
     }
-  }, [entry?.work_item_type, entry?.start_time, entry?.end_time, index, onUpdateTimeInputs, timeInputs]);
+  }, [entry?.work_item_type, entry?.start_time, entry?.end_time, index, onUpdateTimeInputs, timeInputs, formatInputTime]);
   const { hours: durationHours, minutes: durationMinutes } = useMemo(
     () => entry?.start_time && entry?.end_time
       ? getDurationParts(calculateDuration(parseISO(entry.start_time), parseISO(entry.end_time)))
@@ -106,6 +146,17 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     [services, entry?.service_id] // Added services dependency
   );
 
+  const serviceSourceLabel = useMemo(() => {
+    const source = resolvePrefilledServiceSource(entry);
+    if (!source) return null;
+    const defaults: Record<typeof source, string> = {
+      task: 'Default from task',
+      phase: 'Default from phase',
+      project: 'Default from project',
+    };
+    return t(`timeEntryForm.serviceSource.${source}`, { defaultValue: defaults[source] });
+  }, [entry, t]);
+
   const [validationErrors, setValidationErrors] = useState<{
     startTime?: string;
     endTime?: string;
@@ -115,28 +166,90 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   }>({});
 
   const [showErrors, setShowErrors] = useState(false);
-  const [eligibleContractLines, setEligibleContractLines] = useState<EligiblePlanUI[]>([]);
-  const [showContractLineSelector, setShowContractLineSelector] = useState(false);
+  // null = eligibility still loading (or nothing to look up yet).
+  const [eligibleContractLines, setEligibleContractLines] = useState<EligiblePlanUI[] | null>(null);
   const [clientId, setClientId] = useState<string | null>(null);
-  const prevServiceIdRef = useRef<string | undefined | null>(undefined);
+  // Provenance (decision A): the picker shows only when the choice is ambiguous
+  // (several eligible lines, no single bucket-overlay line), or when the entry
+  // already carries a user-picked ('explicit') line among several. When the
+  // choice is unambiguous the form sends no contract_line_id and the server
+  // resolver records the real auto_* source; sending an id would stamp it
+  // 'explicit'. The form never auto-fills contract_line_id.
+  const contractLineAmbiguous = useMemo(() => {
+    if (!eligibleContractLines || eligibleContractLines.length < 2) return false;
+    return eligibleContractLines.filter(line => line.has_bucket_overlay).length !== 1;
+  }, [eligibleContractLines]);
+  const showContractLineSelector =
+    contractLineAmbiguous ||
+    ((eligibleContractLines?.length ?? 0) > 1 && entry?.contract_line_source === 'explicit');
+  // What the chosen contract line was chosen under. A saved line is only dropped
+  // when one of these genuinely changes AFTER the first load of this entry; the
+  // first eligibility load and clientId resolving (null -> id) never clear it.
+  const lineBasisRef = useRef<{ key: string; serviceId: string | null; workDate: string | null; clientId: string | null } | null>(null);
+  // Set when a basis change is seen; survives superseded (cancelled) loads and is
+  // consumed only by a load that completes and can check the new list.
+  const lineNeedsRevalidationRef = useRef(false);
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     if (entry?.start_time) {
-      return parseISO(entry.start_time);
+      // Represent the entry's subject calendar day as a local-midnight Date so
+      // the DatePicker renders that calendar day regardless of browser TZ.
+      return useSubjectZone
+        ? dateOnlyToLocalDate(workDateInTimeZone(entry.start_time, workTimeZone))
+        : parseISO(entry.start_time);
     }
-    return date || new Date();
+    if (date) {
+      return useSubjectZone
+        ? dateOnlyToLocalDate(workDateInTimeZone(date, workTimeZone))
+        : date;
+    }
+    return new Date();
   });
 
   // Keep the entry inside its time sheet's period. The period is a half-open interval
   // [start_date, end_date), so the last selectable day is end_date - 1. This mirrors the
   // backend guard in saveTimeEntry (work_date >= start && work_date < end), so any date the
   // picker allows will also pass server-side validation.
+  // With a period catalog, the field instead spans every editable period and
+  // rules out the days in between that sit on locked or uncovered sheets.
   const periodBounds = useMemo(() => {
+    if (periodCatalog) {
+      const range = editableDateRange(periodCatalog);
+      if (!range) return undefined;
+      return { minDate: parseDateOnlyLocal(range.firstDay), maxDate: parseDateOnlyLocal(range.lastDay) };
+    }
     if (!timePeriod?.start_date || !timePeriod?.end_date) return undefined;
     const minDate = parseDateOnlyLocal(timePeriod.start_date);
     const maxDate = parseDateOnlyLocal(timePeriod.end_date);
     maxDate.setDate(maxDate.getDate() - 1);
     return { minDate, maxDate };
-  }, [timePeriod?.start_date, timePeriod?.end_date]);
+  }, [periodCatalog, timePeriod?.start_date, timePeriod?.end_date]);
+
+  const isDateDisabled = useMemo(
+    () =>
+      periodCatalog
+        ? (day: Date) => !isEditableWorkDate(periodCatalog, dateToPlainDate(day))
+        : undefined,
+    [periodCatalog],
+  );
+
+  // Which sheet the chosen day lands on. selectedDate is a local-midnight
+  // marker for the subject calendar day, so its plain date is the work date.
+  const sheetForSelectedDate = useMemo(() => {
+    if (!periodCatalog) return null;
+    const period = periodForWorkDate(periodCatalog, dateToPlainDate(selectedDate));
+    if (!period) return null;
+    const range = `${formatDate(dateOnlyToLocalDate(period.start_date), { dateStyle: 'medium' })} – ${formatDate(
+      dateOnlyToLocalDate(periodLastInclusiveDay(period.end_date)),
+      { dateStyle: 'medium' },
+    )}`;
+    const statusKey = period.timeSheetStatus ?? 'UNKNOWN';
+    return {
+      range,
+      status: t(`workItemEntry.sheetStatus.${statusKey}`, {
+        defaultValue: SHEET_STATUS_FALLBACKS[statusKey] ?? 'Unknown',
+      }),
+    };
+  }, [periodCatalog, selectedDate, formatDate, t]);
 
   const validateTimes = useCallback(() => {
     if (!entry?.start_time || !entry?.end_time) return false;
@@ -149,7 +262,11 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       newErrors.duration = t('timeEntryForm.validation.invalidTimeRange', {
         defaultValue: 'Enter a valid time range'
       });
-    } else if (!isSameDay(startTime, endTime)) {
+    } else if (
+      useSubjectZone
+        ? workDateInTimeZone(entry.start_time, workTimeZone) !== workDateInTimeZone(entry.end_time, workTimeZone)
+        : !isSameDay(startTime, endTime)
+    ) {
       newErrors.duration = t('timeEntryForm.validation.durationSameDay', {
         defaultValue: 'Duration must end on the same day'
       });
@@ -179,7 +296,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
 
     setValidationErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [entry?.start_time, entry?.end_time, t]);
+  }, [entry?.start_time, entry?.end_time, t, useSubjectZone, workTimeZone]);
 
   // Get client ID from entry or work item
   useEffect(() => {
@@ -212,6 +329,18 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     fetchClientId();
   }, [entry?.client_id, entry?.work_item_id, clientId]); // Added work_item_id and clientId dependencies
 
+  // Subject-zone calendar day of the entry (YYYY-MM-DD), the unit eligibility is judged in.
+  const workDate = useMemo(() => {
+    if (!entry?.start_time) return null;
+    try {
+      return useSubjectZone
+        ? workDateInTimeZone(entry.start_time, workTimeZone)
+        : formatISO(parseISO(entry.start_time), { representation: 'date' });
+    } catch {
+      return null;
+    }
+  }, [entry?.start_time, useSubjectZone, workTimeZone]);
+
   // Load eligible contract lines and set default tax region when service or client ID changes
   useEffect(() => {
     let cancelled = false;
@@ -219,9 +348,6 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       // --- Removed Tax Region / Default Rate Logic ---
       // Tax details are now determined by the backend based on service_id's tax_rate_id
       // --- End Removed Logic ---
-
-      // Always show the plan selector
-      setShowContractLineSelector(true);
 
       let clientDetails: any | null = null;
       let currentEligiblePlans: EligiblePlanUI[] = [];
@@ -241,6 +367,25 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
 
       // 2. Load Eligible Contract Lines (dependent on service and client)
       if (cancelled) return;
+      const basisKey = String(entry?.entry_id ?? entry?.tempId ?? '');
+      const prevBasis = lineBasisRef.current;
+      if (prevBasis && prevBasis.key === basisKey) {
+        const serviceChanged = prevBasis.serviceId !== (entry?.service_id ?? null);
+        const dateChanged = prevBasis.workDate !== workDate;
+        // clientId resolving asynchronously (null -> id) is not a change.
+        const clientChanged = Boolean(prevBasis.clientId && clientId && prevBasis.clientId !== clientId);
+        if (serviceChanged || dateChanged || clientChanged) {
+          lineNeedsRevalidationRef.current = true;
+        }
+      } else {
+        lineNeedsRevalidationRef.current = false; // first load of this entry
+      }
+      lineBasisRef.current = {
+        key: basisKey,
+        serviceId: entry?.service_id ?? null,
+        workDate,
+        clientId: clientId ?? prevBasis?.clientId ?? null,
+      };
       if (!entry?.service_id) {
         console.log('No service ID available, cannot load contract lines');
         setEligibleContractLines([]);
@@ -249,6 +394,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
         setEligibleContractLines([]);
       } else {
         // Fetch and filter plans only if service and client are known
+        setEligibleContractLines(null);
         try {
           const plans = await getEligibleContractLinesForUI(
             clientId,
@@ -256,51 +402,45 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
             entry.start_time ?? selectedDate.toISOString()
           ) as EligiblePlanUI[];
           if (cancelled) return;
-          const entryDate = entry.start_time ? new Date(entry.start_time) : new Date(); // Use current date if start_time not set yet
-
+          // Date-only, inclusive window: the work date against YYYY-MM-DD
+          // start/end. (new Date('2026-03-31') is UTC midnight and would drop a
+          // line on its last day.)
           const filteredPlans = plans.filter(plan => {
-            const start = new Date(plan.start_date as string);
-            const end = plan.end_date ? new Date(plan.end_date as string) : null;
-            // Ensure entryDate is valid before comparison
-            return !isNaN(entryDate.getTime()) && start <= entryDate && (!end || end >= entryDate);
+            const start = String(plan.start_date).slice(0, 10);
+            const end = plan.end_date ? String(plan.end_date).slice(0, 10) : null;
+            return !workDate || (start <= workDate && (!end || end >= workDate));
           });
 
           currentEligiblePlans = filteredPlans;
           setEligibleContractLines(currentEligiblePlans);
           console.log('Eligible contract lines loaded:', currentEligiblePlans);
 
-          // 3. Set Default Contract Line (only if lines were loaded)
-          const currentContractLineId = latestEntry.current?.contract_line_id;
-          if (!currentContractLineId && currentEligiblePlans.length > 0) {
-            let defaultPlanId: string | null = null;
-            if (currentEligiblePlans.length === 1) {
-              defaultPlanId = currentEligiblePlans[0].client_contract_line_id;
-              console.log('Setting default contract line (only one eligible):', defaultPlanId);
-            } else {
-              const overlayPlans = currentEligiblePlans.filter(plan => plan.has_bucket_overlay);
-              if (overlayPlans.length === 1) {
-                defaultPlanId = overlayPlans[0].client_contract_line_id;
-                console.log('Setting default contract line (single bucket line):', defaultPlanId);
-              } else {
-                console.log('Multiple eligible contract lines, no single default determined.');
-              }
-            }
-
-            if (defaultPlanId) {
-              const entryWithUpdatedPlan = {
-                ...latestEntry.current, // Preserve edits made while the lookup was pending.
-                contract_line_id: defaultPlanId
-              };
-              onUpdateEntry(index, entryWithUpdatedPlan);
-            }
-          } else {
-            console.log('Contract line already set or no eligible lines found, skipping default selection.');
+          // 3. Drop a stale choice. If the service/date/client changed and the chosen
+          // line is no longer eligible, clear it so it can't be saved against a
+          // line that doesn't cover this entry. We deliberately do NOT auto-fill a
+          // default here: a line the form sends is stamped 'explicit' by
+          // timeEntryWriteCore, so auto-picks are left to the server resolver
+          // (auto_unique_service / auto_bucket_overlay / auto_billing_profile).
+          const current = latestEntry.current;
+          const needsRevalidation = lineNeedsRevalidationRef.current;
+          lineNeedsRevalidationRef.current = false;
+          if (
+            needsRevalidation &&
+            current?.contract_line_id &&
+            !currentEligiblePlans.some(plan => plan.client_contract_line_id === current.contract_line_id)
+          ) {
+            onUpdateEntry(index, {
+              ...current, // Preserve edits made while the lookup was pending.
+              contract_line_id: null,
+              contract_line_source: undefined,
+              ...(current.entry_id ? { isDirty: true } : {}),
+            });
           }
 
         } catch (error) {
           if (cancelled) return;
           console.error('Error loading eligible contract lines:', error);
-          setEligibleContractLines([]); // Reset on error
+          setEligibleContractLines([]); // Reset on error (keep any existing choice)
         }
       }
     }
@@ -310,7 +450,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       loadDataAndSetDefaults();
     }
     return () => { cancelled = true; };
-  }, [entry?.entry_id, entry?.tempId, entry?.work_item_id, entry?.service_id, clientId, entry?.start_time, entry?.contract_line_id, index, onUpdateEntry]);
+  }, [entry?.entry_id, entry?.tempId, entry?.work_item_id, entry?.service_id, clientId, entry?.start_time, workDate, index, onUpdateEntry]);
 
 const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDuration: number) => {
   const durationToSet = Math.max(0, newDuration);
@@ -366,13 +506,16 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
     // Call parent's onSave with the current entry
     onSave(index);
-  }, [onSave, validateTimes, entry?.service_id, entry?.work_item_type, showContractLineSelector, eligibleContractLines.length, entry?.contract_line_id, index, setShowErrors, t]);
+  }, [onSave, validateTimes, entry?.service_id, index, setShowErrors, t]);
 
   const handleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
     if (!isEditable || !entry) return;
 
     const currentDate = parseISO(entry.start_time);
-    const newTime = parseTimeToDate(value, currentDate);
+    const newTime = useSubjectZone
+      ? buildZonedTimeInstant(value, workDateInTimeZone(entry.start_time, workTimeZone), workTimeZone as string)
+      : parseTimeToDate(value, currentDate);
+    if (!newTime) return;
 
     const updatedEntry = markEntryAsDirty(updateBillableDuration(
       {
@@ -394,7 +537,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
     if (showErrors) {
       validateTimes();
     }
-  }, [isEditable, entry, index, markEntryAsDirty, onUpdateEntry, onUpdateTimeInputs, showErrors, updateBillableDuration, validateTimes]);
+  }, [isEditable, entry, index, markEntryAsDirty, onUpdateEntry, onUpdateTimeInputs, showErrors, updateBillableDuration, validateTimes, useSubjectZone, workTimeZone]);
 
 
 
@@ -433,7 +576,9 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
       endTime: newEndTime,
       maxDurationMinutes,
       wasClampedToSameDay,
-    } = clampDurationToSameDay(startTime, requestedTotalMinutes);
+    } = useSubjectZone
+      ? clampDurationToZonedSameDay(startTime, requestedTotalMinutes, workTimeZone as string)
+      : clampDurationToSameDay(startTime, requestedTotalMinutes);
 
     const newBillableDuration = entry.billable_duration === 0 ? 0 : totalMinutes;
 
@@ -455,7 +600,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
     onUpdateEntry(index, updatedEntry);
     onUpdateTimeInputs({
-      [`end-${index}`]: formatTimeForInput(newEndTime),
+      [`end-${index}`]: formatInputTime(newEndTime),
     });
 
     const durationError = wasClampedToSameDay
@@ -473,7 +618,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
     if (showErrors && !durationError) {
       validateTimes();
     }
-  }, [durationHours, durationMinutes, entry, index, isEditable, markEntryAsDirty, onUpdateEntry, onUpdateTimeInputs, parseDurationInputValue, showErrors, t, validateTimes]);
+  }, [durationHours, durationMinutes, entry, index, isEditable, markEntryAsDirty, onUpdateEntry, onUpdateTimeInputs, parseDurationInputValue, showErrors, t, validateTimes, useSubjectZone, workTimeZone, formatInputTime]);
 
   return (
     <div className="space-y-5">
@@ -503,8 +648,17 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
       )}
 
       <div className="space-y-1.5">
-        <label className="block text-sm font-medium text-gray-700">
-          {t('timeEntryForm.labels.service', { defaultValue: 'Service' })} <span className="text-red-500">*</span>
+        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+          <span>
+            {t('timeEntryForm.labels.service', { defaultValue: 'Service' })} <span className="text-red-500">*</span>
+          </span>
+          {/* Where the prefilled service came from (task → phase → project).
+              Disappears as soon as the value no longer matches the prefill. */}
+          {serviceSourceLabel && (
+            <span className="chip-primary inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium">
+              {serviceSourceLabel}
+            </span>
+          )}
         </label>
         <CustomSelect
           value={entry?.service_id || ''}
@@ -535,13 +689,48 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
       {/* Contract Info Banner - shows which contract will be used */}
       {entry?.work_item_id && entry?.service_id && (
-        <ContractInfoBanner
-          workItemId={entry.work_item_id}
-          workItemType={entry.work_item_type}
-          serviceId={entry.service_id}
-          entryDate={entry.start_time ? parseISO(entry.start_time) : undefined}
-          clientId={clientId}
-        />
+        <ContractInfoBanner eligibleContractLines={eligibleContractLines} />
+      )}
+
+      {showContractLineSelector && eligibleContractLines && (
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`contract-line-${index}`}>
+            {t('timeEntryForm.labels.contractLine', { defaultValue: 'Contract line' })}
+          </label>
+          <CustomSelect
+            id={`contract-line-${index}`}
+            value={entry?.contract_line_id ?? ''}
+            disabled={!isEditable}
+            className="w-full"
+            placeholder={t('timeEntryForm.placeholders.selectContractLine', {
+              defaultValue: 'Select a contract line',
+            })}
+            options={[
+              {
+                value: '',
+                label: t('timeEntryForm.options.resolveContractLineLater', {
+                  defaultValue: 'No line - resolve later',
+                }),
+              },
+              ...eligibleContractLines.map((line) => ({
+                value: line.client_contract_line_id,
+                label: line.contract_name
+                  ? `${line.contract_name} — ${line.contract_line_name}`
+                  : line.contract_line_name,
+              })),
+            ]}
+            onValueChange={(value: string) => {
+              if (!entry) return;
+              // A picked line is 'explicit'; blank sends no id so the server
+              // resolver runs (and records 'unresolved' if it can't decide).
+              onUpdateEntry(index, markEntryAsDirty({
+                ...entry,
+                contract_line_id: value || null,
+                contract_line_source: value ? 'explicit' : undefined,
+              }));
+            }}
+          />
+        </div>
       )}
 
       {/* How this entry's contract line was chosen (F066). Renders nothing when
@@ -551,7 +740,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
         <BillingAttributionInspector
           contractLineSource={entry.contract_line_source}
           contractLineName={
-            eligibleContractLines.find(
+            (eligibleContractLines ?? []).find(
               (line) => line.client_contract_line_id === entry.contract_line_id,
             )?.contract_line_name ?? null
           }
@@ -560,8 +749,8 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
       {/*
         Date field — shown for both new and existing entries so a saved entry can be moved to a
-        different day. Bounded to the current time period (when known) so the entry stays in the
-        same time sheet; see periodBounds above.
+        different day. Bounded to the entry's time period (when known) so it stays in the same time
+        sheet, or, with a period catalog, to the days on editable sheets; see periodBounds above.
       */}
       <div className="space-y-1.5">
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -580,20 +769,28 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
             const startTime = parseISO(entry.start_time);
             const endTime = parseISO(entry.end_time);
 
-            const newStartTime = setSeconds(
-              setMinutes(
-                setHours(newDate, startTime.getHours()),
-                startTime.getMinutes()
-              ),
-              startTime.getSeconds()
-            );
+            const newStartTime = useSubjectZone
+              ? instantAtZonedTime(
+                  dateToPlainDate(newDate),
+                  formatZonedTimeSeconds(entry.start_time, workTimeZone),
+                  workTimeZone as string,
+                )
+              : setSeconds(
+                  setMinutes(
+                    setHours(newDate, startTime.getHours()),
+                    startTime.getMinutes()
+                  ),
+                  startTime.getSeconds()
+                );
 
             const originalDuration = calculateDuration(startTime, endTime);
             const {
               durationMinutes,
               endTime: newEndTime,
               wasClampedToSameDay,
-            } = clampDurationToSameDay(newStartTime, originalDuration);
+            } = useSubjectZone
+              ? clampDurationToZonedSameDay(newStartTime, originalDuration, workTimeZone as string)
+              : clampDurationToSameDay(newStartTime, originalDuration);
 
             onUpdateEntry(index, markEntryAsDirty({
               ...entry,
@@ -602,8 +799,8 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               billable_duration: entry.billable_duration === 0 ? 0 : durationMinutes,
             }));
             onUpdateTimeInputs({
-              [`start-${index}`]: formatTimeForInput(newStartTime),
-              [`end-${index}`]: formatTimeForInput(newEndTime),
+              [`start-${index}`]: formatInputTime(newStartTime),
+              [`end-${index}`]: formatInputTime(newEndTime),
             });
             setValidationErrors(prev => ({
               ...prev,
@@ -617,7 +814,17 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           placeholder={t('timeEntryForm.placeholders.selectDate', { defaultValue: 'Select date' })}
           disabled={!isEditable}
           clearable={false}
+          isDateDisabled={isDateDisabled}
         />
+        {sheetForSelectedDate && (
+          <p id={`${id}-sheet-hint`} className="text-xs text-[rgb(var(--color-text-500))]">
+            {t('workItemEntry.sheetHint', {
+              range: sheetForSelectedDate.range,
+              status: sheetForSelectedDate.status,
+              defaultValue: 'Time sheet: {{range}} · {{status}}',
+            })}
+          </p>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -627,7 +834,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           </label>
           <TimePicker
             id={`${id}-start-time-${index}`}
-            value={timeInputs[`start-${index}`] || (entry?.start_time ? formatTimeForInput(parseISO(entry.start_time)) : '')}
+            value={timeInputs[`start-${index}`] || (entry?.start_time ? formatInputTime(entry.start_time) : '')}
             onChange={(value) => handleTimeChange('start', value)}
             allowManualInput
             disabled={!isEditable}
@@ -643,7 +850,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           </label>
           <TimePicker
             id={`${id}-end-time-${index}`}
-            value={timeInputs[`end-${index}`] || (entry?.end_time ? formatTimeForInput(parseISO(entry.end_time)) : '')}
+            value={timeInputs[`end-${index}`] || (entry?.end_time ? formatInputTime(entry.end_time) : '')}
             onChange={(value) => handleTimeChange('end', value)}
             allowManualInput
             disabled={!isEditable}

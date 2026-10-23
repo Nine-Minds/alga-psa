@@ -16,6 +16,8 @@ vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => async (...args: any[]) => fn({ id: 'user-1' }, { tenant: 'tenant-123' }, ...args),
 }));
 
+vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
+
 vi.mock('@alga-psa/email', () => ({
   TenantEmailService: {
     getTenantEmailSettings: getTenantEmailSettingsMock,
@@ -50,25 +52,28 @@ describe('updateEmailSettings clear behavior', () => {
     invalidateTenantSettingsMock.mockResolvedValue(undefined);
   });
 
-  it('persists null when clearing the ticketing From address', async () => {
+  it('updates tenant email settings without persisting sender identities', async () => {
     const updateMock = vi.fn(async () => 1);
     const firstMock = vi.fn(async () => ({ tenant: 'tenant-123' }));
     const whereMock = vi.fn(() => ({
       first: firstMock,
       update: updateMock,
+      whereNotNull: vi.fn(() => ({ update: updateMock })),
+      select: vi.fn(async () => []),
     }));
 
     const knexMock = vi.fn((_table: string) => ({
       where: whereMock,
       insert: vi.fn(async () => 1),
+      select: vi.fn(async () => []),
     })) as any;
+    knexMock.transaction = async (callback: (trx: any) => Promise<unknown>) => callback(knexMock);
 
     createTenantKnexMock.mockResolvedValue({ knex: knexMock, tenant: 'tenant-123' });
     getTenantEmailSettingsMock
       .mockResolvedValueOnce({
         tenantId: 'tenant-123',
         defaultFromDomain: 'acme.com',
-        ticketingFromEmail: 'support@acme.com',
         customDomains: [],
         emailProvider: 'resend',
         providerConfigs: [],
@@ -79,7 +84,6 @@ describe('updateEmailSettings clear behavior', () => {
       .mockResolvedValueOnce({
         tenantId: 'tenant-123',
         defaultFromDomain: 'acme.com',
-        ticketingFromEmail: null,
         customDomains: [],
         emailProvider: 'resend',
         providerConfigs: [],
@@ -89,37 +93,38 @@ describe('updateEmailSettings clear behavior', () => {
       });
 
     const { updateEmailSettings } = await import('./emailSettingsActions');
-    const updated = await updateEmailSettings({ ticketingFromEmail: null });
+    const updated = await updateEmailSettings({ defaultFromDomain: 'acme.com' });
 
     expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({
-      ticketing_from_email: null,
       default_from_domain: 'acme.com',
     }));
     expect('actionError' in updated).toBe(false);
     if ('actionError' in updated) return;
-    expect(updated.ticketingFromEmail).toBeNull();
+    expect(updated.defaultFromDomain).toBe('acme.com');
   });
 
-  it('persists the normalized ticketing sender display name', async () => {
+  it('does not persist sender identities in tenant email settings', async () => {
     const updateMock = vi.fn(async () => 1);
     const firstMock = vi.fn(async () => ({ tenant: 'tenant-123' }));
     const whereMock = vi.fn(() => ({
       first: firstMock,
       update: updateMock,
+      whereNotNull: vi.fn(() => ({ update: updateMock })),
+      select: vi.fn(async () => []),
     }));
 
     const knexMock = vi.fn((_table: string) => ({
       where: whereMock,
       insert: vi.fn(async () => 1),
+      select: vi.fn(async () => []),
     })) as any;
+    knexMock.transaction = async (callback: (trx: any) => Promise<unknown>) => callback(knexMock);
 
     createTenantKnexMock.mockResolvedValue({ knex: knexMock, tenant: 'tenant-123' });
     getTenantEmailSettingsMock
       .mockResolvedValueOnce({
         tenantId: 'tenant-123',
         defaultFromDomain: 'acme.com',
-        ticketingFromEmail: 'support@acme.com',
-        ticketingFromName: null,
         customDomains: [],
         emailProvider: 'resend',
         providerConfigs: [],
@@ -130,8 +135,6 @@ describe('updateEmailSettings clear behavior', () => {
       .mockResolvedValueOnce({
         tenantId: 'tenant-123',
         defaultFromDomain: 'acme.com',
-        ticketingFromEmail: 'support@acme.com',
-        ticketingFromName: 'Support Team',
         customDomains: [],
         emailProvider: 'resend',
         providerConfigs: [],
@@ -141,16 +144,8 @@ describe('updateEmailSettings clear behavior', () => {
       });
 
     const { updateEmailSettings } = await import('./emailSettingsActions');
-    const updated = await updateEmailSettings({
-      ticketingFromName: ' Support Team ',
-    });
-
-    expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({
-      ticketing_from_email: 'support@acme.com',
-      ticketing_from_name: 'Support Team',
-    }));
+    const updated = await updateEmailSettings({ trackingEnabled: true });
+    expect(updateMock).toHaveBeenCalledWith(expect.not.objectContaining({ ticketing_from_email: expect.anything(), ticketing_from_name: expect.anything() }));
     expect('actionError' in updated).toBe(false);
-    if ('actionError' in updated) return;
-    expect(updated.ticketingFromName).toBe('Support Team');
   });
 });

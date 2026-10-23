@@ -6,11 +6,16 @@
  */
 
 import { revalidatePath } from 'next/cache';
+import type { Knex } from 'knex';
+import { moveRmmOrganizationAssets } from '@alga-psa/shared/rmm/moveRmmOrganizationAssets';
+import { resolveMappingBillingProfileId } from '@alga-psa/shared/rmm/mappingBillingProfile';
+import { isRmmContactAssignmentMode } from '@alga-psa/shared/rmm/userMatching';
 import axios from 'axios';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { tenantDb } from '@alga-psa/db';
+import { withTransaction } from '@alga-psa/db';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { createTenantKnex } from '@/lib/db';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
@@ -112,7 +117,8 @@ export const connectHuntress = withHuntressAccess(
 
     const apiKey = input.apiKey?.trim();
     const apiSecret = input.apiSecret?.trim();
-    const baseUrl = input.baseUrl?.trim() || HUNTRESS_DEFAULT_BASE_URL;
+    const baseUrl =
+      input.baseUrl?.trim() || process.env.HUNTRESS_API_BASE_URL || HUNTRESS_DEFAULT_BASE_URL;
     if (!apiKey || !apiSecret) {
       return { success: false, error: 'API key and secret are required' };
     }
@@ -226,7 +232,9 @@ export const getHuntressConnectionStatus = withHuntressAccess(
         .first(),
       db.table('rmm_alerts')
         .where({ integration_id: row.integration_id })
-        .whereIn('status', ['sent', 'auto_remediating'])
+        // Open incidents (sent, auto_remediating) and open escalations
+        // (open, overdue); the two status sets don't overlap.
+        .whereIn('status', ['sent', 'auto_remediating', 'open', 'overdue'])
         .count('* as n')
         .first(),
     ]);
@@ -261,6 +269,7 @@ export interface HuntressSettingsUpdate {
   closedStatusId?: string | null;
   pollIntervalMinutes?: number;
   backfillDays?: number;
+  ingestEscalations?: boolean;
 }
 
 export const updateHuntressSettings = withHuntressAccess(
@@ -301,8 +310,18 @@ export const updateHuntressSettings = withHuntressAccess(
         ? { pollIntervalMinutes: updates.pollIntervalMinutes }
         : {}),
       ...(updates.backfillDays !== undefined ? { backfillDays: updates.backfillDays } : {}),
+      ...(updates.ingestEscalations !== undefined
+        ? { ingestEscalations: updates.ingestEscalations }
+        : {}),
     });
     merged.incidentCursor = current.incidentCursor;
+    // Turning escalations (back) on starts from the backfill window rather
+    // than a cursor left over from an earlier enabled period, which could be
+    // months old and flood the board with stale open escalations.
+    merged.escalationCursor =
+      merged.ingestEscalations && !current.ingestEscalations
+        ? undefined
+        : current.escalationCursor;
 
     await db.table('rmm_integrations')
       .where({ integration_id: row.integration_id })
@@ -385,7 +404,15 @@ export const updateHuntressOrganizationMapping = withHuntressAccess(
     user,
     { tenant },
     mappingId: string,
-    updates: { client_id?: string | null; default_contact_id?: string | null; auto_create_tickets?: boolean }
+    updates: {
+      client_id?: string | null;
+      default_contact_id?: string | null;
+      auto_create_tickets?: boolean;
+      /** FR-D3: off | suggest | auto. */
+      contact_assignment_mode?: string;
+      /** FR-F1: the organization's billing profile, or null. */
+      billing_profile_id?: string | null;
+    }
   ): Promise<{ success: boolean; error?: string }> => {
     await requireSettingsUpdatePermission(user);
 
@@ -412,10 +439,44 @@ export const updateHuntressOrganizationMapping = withHuntressAccess(
     if (updates.default_contact_id !== undefined) {
       changes.default_contact_id = updates.default_contact_id;
     }
+    if (updates.contact_assignment_mode !== undefined) {
+      if (!isRmmContactAssignmentMode(updates.contact_assignment_mode)) {
+        return { success: false, error: 'Invalid people mode' };
+      }
+      changes.contact_assignment_mode = updates.contact_assignment_mode;
+    }
+    // FR-G4: a client change moves the organization's assets in the same
+    // transaction as the mapping update, so the two can never disagree.
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const trxDb = tenantDb(trx, tenant);
+      const existing = await trxDb.table('rmm_organization_mappings')
+        .where({ mapping_id: mappingId })
+        .first('client_id', 'integration_id', 'external_organization_id');
 
-    await db.table('rmm_organization_mappings')
-      .where({ mapping_id: mappingId })
-      .update(changes);
+      // FR-F1: validated against the client the mapping ends up on, and
+      // cleared by a client change whatever else the patch carries.
+      const billingProfileId = await resolveMappingBillingProfileId(trx, tenant, {
+        existingClientId: existing?.client_id ?? null,
+        nextClientId: updates.client_id,
+        billingProfileId: updates.billing_profile_id,
+      });
+      if (typeof billingProfileId !== 'undefined') changes.billing_profile_id = billingProfileId;
+
+      await trxDb.table('rmm_organization_mappings')
+        .where({ mapping_id: mappingId })
+        .update({ ...changes, updated_at: trx.fn.now() });
+
+      const nextClientId = changes.client_id as string | null | undefined;
+      if (nextClientId && existing && String(existing.client_id ?? '') !== String(nextClientId)) {
+        await moveRmmOrganizationAssets(trx, tenant, {
+          integrationId: String(existing.integration_id),
+          provider: 'huntress',
+          externalOrganizationId: String(existing.external_organization_id),
+          newClientId: String(nextClientId),
+          actorUserId: (user as { user_id?: string }).user_id ?? null,
+        });
+      }
+    });
 
     revalidatePath(SETTINGS_PATH);
     return { success: true };

@@ -2,6 +2,7 @@ import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { AccountingAdapterType } from '../services/companySync/companySync.types';
+import { resolveXeroRealmAliases } from '../services/accountingSync/xeroRealmIdentity';
 
 const TABLE_NAME = 'tenant_external_entity_mappings';
 
@@ -65,14 +66,10 @@ export class KnexInvoiceMappingRepository {
       });
 
     // Exact tenant + provider + type + realm match, no NULL-realm fallback:
-    // a live mapping in another company is not this company's document.
-    if (params.targetRealm) {
-      query.andWhere('external_realm_id', params.targetRealm);
-    } else {
-      query.andWhere((builder) => {
-        builder.whereNull('external_realm_id');
-      });
-    }
+    // a live mapping in another company is not this company's document. A
+    // Xero target additionally accepts the organisation id the connection
+    // uniquely owns (historical alias), never another organisation.
+    await this.applyRealmScope(query, params);
 
     const row = await query.first();
     if (!row) {
@@ -109,14 +106,9 @@ export class KnexInvoiceMappingRepository {
 
     // Realm-exact: external entity ids are provider-company-local, so a
     // mapping from another realm — or a legacy realm-less row — must never
-    // resolve for a realm-scoped export or write.
-    if (params.targetRealm) {
-      query.andWhere('external_realm_id', params.targetRealm);
-    } else {
-      query.andWhere((builder) => {
-        builder.whereNull('external_realm_id');
-      });
-    }
+    // resolve for a realm-scoped export or write. A Xero target also accepts
+    // the organisation id the connection uniquely owns (historical alias).
+    await this.applyRealmScope(query, params);
 
     const row = await query.first();
     if (!row) {
@@ -124,6 +116,37 @@ export class KnexInvoiceMappingRepository {
     }
 
     return this.normalizeRow(row);
+  }
+
+  /**
+   * Realm-scope a lookup query. When `targetRealm` is set, only rows in that
+   * realm resolve; for Xero the connection's uniquely-owned organisation id is
+   * accepted as a historical alias with the exact connection id preferred. A
+   * missing target realm resolves only realm-less rows, as before.
+   */
+  private async applyRealmScope(
+    query: Knex.QueryBuilder,
+    params: FindInvoiceMappingParams
+  ): Promise<void> {
+    if (!params.targetRealm) {
+      query.andWhere((builder) => {
+        builder.whereNull('external_realm_id');
+      });
+      return;
+    }
+
+    const accepted =
+      params.adapterType === 'xero'
+        ? await resolveXeroRealmAliases(params.tenantId, params.targetRealm)
+        : [params.targetRealm];
+    const realmIds = accepted.length > 0 ? accepted : [params.targetRealm];
+
+    if (realmIds.length > 1) {
+      query.andWhere((builder) => builder.whereIn('external_realm_id', realmIds));
+      query.orderByRaw('CASE WHEN external_realm_id = ? THEN 0 ELSE 1 END', [params.targetRealm]);
+    } else {
+      query.andWhere('external_realm_id', params.targetRealm);
+    }
   }
 
   async upsertInvoiceMapping(params: UpsertInvoiceMappingParams): Promise<void> {

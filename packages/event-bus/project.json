@@ -9,7 +9,18 @@
   ],
   "targets": {
     "build": {
-      "executor": "nx:noop",
+      "executor": "nx:run-commands",
+      "outputs": [
+        "{projectRoot}/dist"
+      ],
+      "options": {
+        "command": "tsup",
+        "cwd": "{projectRoot}"
+      },
+      "inputs": [
+        "production",
+        "^production"
+      ],
       "dependsOn": [
         "@alga-psa/event-schemas:build"
       ]

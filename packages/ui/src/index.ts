@@ -12,6 +12,8 @@ export { useFeatureFlag } from './hooks/useFeatureFlag';
 // Note: useTagPermissions has been moved to @alga-psa/tags/hooks
 export { useTenant } from './components/providers/TenantProvider';
 export { DrawerProvider, DrawerOutlet, useDrawer } from './context/DrawerContext';
+export { DrawerFooter } from './components/Drawer';
+export type { DrawerFooterProps } from './components/Drawer';
 export { EmptyState } from './components/EmptyState';
 export type { EmptyStateProps } from './components/EmptyState';
 
@@ -28,7 +30,7 @@ export * from './context';
 // editor (BlockNote) is intentionally NOT re-exported from the barrel — it would pull
 // the ~1MB rich-text bundle into every @alga-psa/ui consumer (incl. signin / tickets
 // list). Import it directly from '@alga-psa/ui/editor'.
-export * from './services';
 export { DeleteEntityDialog } from './components/DeleteEntityDialog';
 
 export { type ClientDrawerOptions } from './context/ClientDrawerContext';
+export { type ContactDrawerOptions } from './context/ContactDrawerContext';

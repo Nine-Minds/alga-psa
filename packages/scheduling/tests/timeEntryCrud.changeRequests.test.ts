@@ -82,6 +82,9 @@ function createDbStub(config: DbStubConfig) {
         state.criteria = criteria;
         return builder;
       },
+      forUpdate() {
+        return builder;
+      },
       select(...columns: string[]) {
         state.selectColumns = columns;
         return builder;
@@ -100,7 +103,12 @@ function createDbStub(config: DbStubConfig) {
         }
 
         if (table === 'time_sheets') {
-          return Promise.resolve({ approval_status: config.timeSheetStatus ?? 'CHANGES_REQUESTED' });
+          return Promise.resolve({
+            approval_status: config.timeSheetStatus ?? 'CHANGES_REQUESTED',
+            user_id: 'user-1',
+            start_date: '2026-03-01',
+            end_date: '2026-04-01',
+          });
         }
         if (table === 'tickets') {
           return Promise.resolve({ client_id: 'client-1' });
@@ -401,7 +409,7 @@ describe('time entry change-request action integration', () => {
         service_id: 'service-1',
         tenant: 'tenant-1',
       },
-      timeSheetStatus: 'SUBMITTED',
+      timeSheetStatus: 'DRAFT',
       initialBillableDuration: 0,
     });
     createTenantKnexMock.mockResolvedValue({ knex: db });
@@ -464,7 +472,7 @@ describe('time entry change-request action integration', () => {
           service_id: 'service-1',
           tenant: 'tenant-1',
         },
-        timeSheetStatus: 'SUBMITTED',
+        timeSheetStatus: 'DRAFT',
         initialBillableDuration: 60,
       });
       createTenantKnexMock.mockResolvedValue({ knex: db });
@@ -551,5 +559,73 @@ describe('time entry change-request action integration', () => {
     expect(result[0].latest_change_request?.change_request_id).toBe('cr-1');
     expect(result[0].change_request_state).toBe('unresolved');
     expect(result[0].change_requests?.[0].comment).toBe('Please split out the admin block.');
+  });
+
+  it('rejects creating an entry on a locked target sheet without writing', async () => {
+    const { db, calls } = createDbStub({ timeSheetStatus: 'SUBMITTED' });
+    createTenantKnexMock.mockResolvedValue({ knex: db });
+
+    const { saveTimeEntry } = await import('../src/actions/timeEntryCrudActions');
+
+    const result = await (saveTimeEntry as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      {
+        work_item_id: 'ticket-1',
+        work_item_type: 'ticket',
+        start_time: '2026-03-10T09:00:00.000Z',
+        end_time: '2026-03-10T10:00:00.000Z',
+        billable_duration: 60,
+        notes: 'Should not persist',
+        user_id: 'user-1',
+        approval_status: 'DRAFT',
+        created_at: '2026-03-10T09:00:00.000Z',
+        updated_at: '2026-03-10T09:00:00.000Z',
+        service_id: 'service-1',
+        time_sheet_id: 'sheet-1',
+      },
+    );
+
+    expect(result.actionError).toBeDefined();
+    expect(result.actionError).toContain('locked');
+    expect(calls.entryUpdates).toHaveLength(0);
+  });
+
+  it('rejects updating an entry whose original sheet is locked', async () => {
+    const { db, calls } = createDbStub({
+      existingEntry: {
+        entry_id: 'entry-1',
+        user_id: 'user-1',
+        invoiced: false,
+        time_sheet_id: 'sheet-1',
+      },
+      timeSheetStatus: 'APPROVED',
+    });
+    createTenantKnexMock.mockResolvedValue({ knex: db });
+
+    const { saveTimeEntry } = await import('../src/actions/timeEntryCrudActions');
+
+    const result = await (saveTimeEntry as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      {
+        entry_id: 'entry-1',
+        work_item_id: 'non-billable',
+        work_item_type: 'non_billable_category',
+        start_time: '2026-03-10T09:00:00.000Z',
+        end_time: '2026-03-10T10:00:00.000Z',
+        billable_duration: 0,
+        notes: 'Should not persist',
+        user_id: 'user-1',
+        approval_status: 'DRAFT',
+        created_at: '2026-03-10T09:00:00.000Z',
+        updated_at: '2026-03-10T09:00:00.000Z',
+        service_id: 'service-1',
+      },
+    );
+
+    expect(result.actionError).toBeDefined();
+    expect(result.actionError).toContain('locked');
+    expect(calls.entryUpdates).toHaveLength(0);
   });
 });

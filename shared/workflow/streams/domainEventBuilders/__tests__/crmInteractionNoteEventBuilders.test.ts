@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '../../workflowEventPublishHelpers';
-import { interactionLoggedEventPayloadSchema, noteCreatedEventPayloadSchema } from '../../../runtime/schemas/crmEventSchemas';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
+import { interactionLoggedEventPayloadSchema, noteCreatedEventPayloadSchema } from '@alga-psa/event-schemas';
 import {
   buildInteractionLoggedPayload,
   buildNoteCreatedPayload,

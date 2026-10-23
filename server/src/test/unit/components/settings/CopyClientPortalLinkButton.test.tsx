@@ -42,6 +42,7 @@ describe('CopyClientPortalLinkButton', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    document.execCommand = vi.fn(() => true);
   });
 
   it('copies the vanity address when the tenant has a live portal domain', async () => {
@@ -82,7 +83,7 @@ describe('CopyClientPortalLinkButton', () => {
     expect(writeText).not.toHaveBeenCalled();
   });
 
-  it('reports a browser without clipboard access instead of failing silently', async () => {
+  it('falls back to execCommand when clipboard access is unavailable', async () => {
     Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
     getTenantPortalLoginLink.mockResolvedValue({
       success: true,
@@ -91,7 +92,54 @@ describe('CopyClientPortalLinkButton', () => {
 
     await userEvent.click(await renderButton());
 
+    await waitFor(() => expect(document.execCommand).toHaveBeenCalledWith('copy'));
+    expect(toastSuccess).toHaveBeenCalledWith('users.messages.success.copiedVanityLink');
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it('falls back to execCommand when writeText rejects', async () => {
+    writeText.mockRejectedValueOnce(new Error('Clipboard denied'));
+    getTenantPortalLoginLink.mockResolvedValue({
+      success: true,
+      data: { url: 'https://portal.acme.com/auth/client-portal/signin', source: 'vanity', tenantSlug: 'acme' },
+    });
+
+    await userEvent.click(await renderButton());
+
+    await waitFor(() => expect(document.execCommand).toHaveBeenCalledWith('copy'));
+    expect(toastSuccess).toHaveBeenCalledWith('users.messages.success.copiedVanityLink');
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it('shows an error without success when execCommand reports failure', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+    vi.mocked(document.execCommand).mockReturnValue(false);
+    getTenantPortalLoginLink.mockResolvedValue({
+      success: true,
+      data: { url: 'https://portal.acme.com/auth/client-portal/signin', source: 'vanity', tenantSlug: 'acme' },
+    });
+
+    await userEvent.click(await renderButton());
+
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('users.messages.error.clipboardUnavailable'));
+    expect(toastSuccess).not.toHaveBeenCalled();
+  });
+
+  it('removes the fallback textarea when execCommand throws', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+    vi.mocked(document.execCommand).mockImplementation(() => {
+      throw new Error('Copy command failed');
+    });
+    getTenantPortalLoginLink.mockResolvedValue({
+      success: true,
+      data: { url: 'https://portal.acme.com/auth/client-portal/signin', source: 'vanity', tenantSlug: 'acme' },
+    });
+
+    await userEvent.click(await renderButton());
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('users.messages.error.clipboardUnavailable'));
+    expect(document.querySelectorAll('textarea')).toHaveLength(0);
+    expect(toastSuccess).not.toHaveBeenCalled();
   });
 });
 

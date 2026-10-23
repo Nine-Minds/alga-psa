@@ -1,8 +1,9 @@
 'use client';
 
 import React, { createContext, useContext } from 'react';
-import { Phone } from 'lucide-react';
+import { Phone, PhoneOutgoing } from 'lucide-react';
 import { useTranslation } from '../lib/i18n/client';
+import { formatPhoneForDisplay, formatPhoneLabel } from '@alga-psa/validation';
 import { Tooltip } from './Tooltip';
 
 /**
@@ -17,30 +18,48 @@ export interface CallIntentTarget {
   ticketId: string;
 }
 
+export interface ThreecxCallLinkState {
+  connected: boolean;
+  extension: string | null;
+}
+
+export type PlaceThreecxCall = (
+  input: { phoneNumber: string; ticketId?: string | null },
+) => void | Promise<void>;
+
 interface CallLinkContextValue {
   teamsCallEnabled: boolean;
   teamsPhoneConnected: boolean;
   recordCallIntent?: (input: CallIntentTarget & { phoneNumber: string }) => void | Promise<void>;
+  threecx: ThreecxCallLinkState;
+  placeThreecxCall?: PlaceThreecxCall;
 }
+
+const NO_THREECX: ThreecxCallLinkState = { connected: false, extension: null };
 
 const CallLinkContext = createContext<CallLinkContextValue>({
   teamsCallEnabled: false,
   teamsPhoneConnected: false,
+  threecx: NO_THREECX,
 });
 
 export function CallLinkProvider({
   teamsCallEnabled,
   teamsPhoneConnected = false,
   recordCallIntent,
+  threecx = NO_THREECX,
+  placeThreecxCall,
   children,
 }: {
   teamsCallEnabled: boolean;
   teamsPhoneConnected?: boolean;
   recordCallIntent?: CallLinkContextValue['recordCallIntent'];
+  threecx?: ThreecxCallLinkState;
+  placeThreecxCall?: PlaceThreecxCall;
   children: React.ReactNode;
 }) {
   return (
-    <CallLinkContext.Provider value={{ teamsCallEnabled, teamsPhoneConnected, recordCallIntent }}>
+    <CallLinkContext.Provider value={{ teamsCallEnabled, teamsPhoneConnected, recordCallIntent, threecx, placeThreecxCall }}>
       {children}
     </CallLinkContext.Provider>
   );
@@ -74,28 +93,55 @@ export function CallLink({
   className,
   children,
   callIntent,
+  extension,
+  defaultCountry,
 }: {
   phoneNumber: string | null | undefined;
   id: string;
   className?: string;
   children?: React.ReactNode;
   callIntent?: CallIntentTarget;
+  extension?: string | null;
+  defaultCountry?: string | null;
 }) {
   const { t } = useTranslation('common');
-  const { teamsCallEnabled, recordCallIntent } = useCallLinkContext();
-  const telHref = buildTelHref(phoneNumber);
-  const teamsHref = teamsCallEnabled ? buildTeamsCallDeepLink(phoneNumber) : null;
+  const { teamsCallEnabled, recordCallIntent, threecx, placeThreecxCall } = useCallLinkContext();
+  const formatted = formatPhoneForDisplay(phoneNumber, extension, defaultCountry);
+  const displayText = formatPhoneLabel(formatted, t('phone.extension', { defaultValue: 'ext.' }));
+  const dialPhoneNumber = formatted.e164 || phoneNumber;
+  const telHrefBase = buildTelHref(dialPhoneNumber);
+  const telHref = telHrefBase && formatted.extension ? `${telHrefBase};ext=${formatted.extension}` : telHrefBase;
+  const teamsHref = teamsCallEnabled ? buildTeamsCallDeepLink(dialPhoneNumber) : null;
   const teamsCallLabel = t('callLink.teamsCall', { defaultValue: 'Call in Microsoft Teams' });
+  const threecxCallLabel = t('callLink.threecxCall', { defaultValue: 'Call via 3CX' });
+  const threecxEnabled = threecx.connected && Boolean(threecx.extension) && Boolean(placeThreecxCall);
 
   if (!telHref) {
-    return <span className={className}>{children ?? phoneNumber ?? ''}</span>;
+    return <span className={className}>{(children ?? displayText) || phoneNumber || ''}</span>;
   }
 
   return (
     <span className={`inline-flex items-center gap-1 ${className ?? ''}`}>
       <a id={id} href={telHref} className="hover:underline">
-        {children ?? phoneNumber}
+        {children ?? displayText}
       </a>
+      {threecxEnabled ? (
+        <Tooltip content={threecxCallLabel}>
+          <button
+            type="button"
+            id={`${id}-threecx`}
+            aria-label={threecxCallLabel}
+            className="text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-primary-600))]"
+            onClick={() => {
+              if (phoneNumber) {
+                void placeThreecxCall?.({ phoneNumber: dialPhoneNumber ?? phoneNumber, ticketId: callIntent?.ticketId ?? null });
+              }
+            }}
+          >
+            <PhoneOutgoing className="h-3.5 w-3.5" />
+          </button>
+        </Tooltip>
+      ) : null}
       {teamsHref ? (
         <Tooltip content={teamsCallLabel}>
           <a
@@ -107,7 +153,7 @@ export function CallLink({
             className="text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-primary-600))]"
             onClick={() => {
               if (callIntent && phoneNumber) {
-                void recordCallIntent?.({ ...callIntent, phoneNumber });
+                void recordCallIntent?.({ ...callIntent, phoneNumber: dialPhoneNumber ?? phoneNumber });
               }
             }}
           >

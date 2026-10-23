@@ -35,7 +35,6 @@ export interface JobData {
 export interface IJobScheduler {
   scheduleImmediateJob<T extends Record<string, unknown>>(jobName: string, data: T): Promise<string | null>;
   scheduleScheduledJob<T extends Record<string, unknown>>(jobName: string, runAt: Date, data: T): Promise<string | null>;
-  scheduleRecurringJob<T extends Record<string, unknown>>(jobName: string, interval: string, data: T): Promise<string | null>;
   registerJobHandler<T extends Record<string, unknown>>(jobName: string, handler: (job: Job<T>) => Promise<void>): void;
   registerGenericJobHandler<T extends Record<string, unknown>>(jobType: string, handler: (jobId: string, data: T) => Promise<void>): void;
   getJobs(filter: JobFilter): Promise<PgBoss.Job<unknown>[]>;
@@ -63,11 +62,6 @@ export class DummyJobScheduler implements IJobScheduler {
 
   public async scheduleScheduledJob<T extends Record<string, unknown>>(jobName: string, runAt: Date, data: T): Promise<string | null> {
     console.warn(`DummyJobScheduler: Attempted to schedule job "${jobName}" for ${runAt}`, data);
-    return null;
-  }
-
-  public async scheduleRecurringJob<T extends Record<string, unknown>>(jobName: string, interval: string, data: T): Promise<string | null> {
-    console.warn(`DummyJobScheduler: Attempted to schedule recurring job "${jobName}" with interval ${interval}`, data);
     return null;
   }
 
@@ -179,60 +173,6 @@ export class JobScheduler implements IJobScheduler {
     }
 
     return await this.boss.send(jobName, data, { startAfter: runAt });
-  }
-
-  public async scheduleRecurringJob<T extends Record<string, unknown>>(
-    jobName: string,
-    interval: string,
-    data: T
-  ): Promise<string | null> {
-    await this.ensureQueue(jobName);
-
-    // Convert a cron-ish input into a coarse interval, since we're using delayed send()
-    let pgBossInterval: string = interval;
-    if (/(^|\s)\*/.test(interval)) {
-      // Any cron expression is coerced to daily interval here
-      pgBossInterval = '24 hours';
-    }
-
-    if (!data.tenantId) {
-      throw new Error('tenantId is required in job data');
-    }
-    const tenantId = String((data as Record<string, unknown>).tenantId);
-    const key = `${jobName}:${tenantId}`;
-
-    logger.debug('Scheduling recurring job via delayed send', {
-      jobName,
-      tenantId,
-      requestedInterval: interval,
-      effectiveInterval: pgBossInterval,
-      singletonKey: key,
-    });
-
-    const id = await this.boss.send(jobName, data, {
-      startAfter: pgBossInterval,
-      retryLimit: 3,
-      retryBackoff: true,
-      // Make singleton per-tenant, not global across all tenants
-      singletonKey: key,
-      // Extend singleton protection to 24 hours after job creation
-      // This prevents duplicate jobs even after the previous job completes
-      // (singletonKey alone only blocks duplicates while job is in created/active state)
-      singletonHours: 24,
-    });
-
-    if (!id) {
-      logger.info('Recurring job send returned null (singleton already queued)', {
-        jobName,
-        tenantId,
-        singletonKey: key,
-        effectiveInterval: pgBossInterval,
-      });
-    } else {
-      logger.debug('Recurring job scheduled', { jobName, tenantId, id });
-    }
-
-    return id; // null means identical singleton already exists
   }
 
   public registerJobHandler<T extends Record<string, unknown>>(

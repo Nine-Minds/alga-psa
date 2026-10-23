@@ -71,6 +71,7 @@ export async function billingProfileSettingsModuleStub(
       invoiceTemplateId: null,
       billingCycle: null,
       paymentTerms: null,
+      preferredPaymentMethod: null,
       billsSeparately: false,
       // Nothing overridden: the profile inherits the client wholesale, which is
       // what an unsegmented client means.

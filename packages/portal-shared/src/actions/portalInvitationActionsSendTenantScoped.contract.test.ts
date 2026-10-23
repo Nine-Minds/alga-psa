@@ -40,4 +40,11 @@ describe('portal invitation send flow tenant-scoped query contract', () => {
 
     expect(section).toContain('fromName: `${tenantDefaultClient.client_name} Portal`');
   });
+
+  it('rejects shared mailbox contacts in every portal invitation entry point', () => {
+    expect(source).toContain('isSharedMailboxContact(knex, tenant, params.contactId)');
+    expect(source).toContain('isSharedMailboxContact(knex, tenant, contactId)');
+    expect(source).toContain("contact.contact_kind === 'shared_mailbox'");
+    expect(source).toContain('isSharedMailboxContact(knex, tenant, contact.contact_name_id)');
+  });
 });

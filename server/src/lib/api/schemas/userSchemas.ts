@@ -5,6 +5,7 @@
 
 import { z } from 'zod';
 import { passwordSchema as sharedPasswordSchema } from '@alga-psa/validation';
+import { validateStorableTimeZone } from '@alga-psa/core/timeZones';
 import {
   uuidSchema,
   emailSchema,
@@ -38,9 +39,23 @@ export const passwordCriteriaSchema = z.object({
 // User type enum
 export const userTypeSchema = z.enum(['internal', 'client', 'admin', 'contractor']);
 
-// Timezone schema with common timezone validation
+// Timezone schema: accepts "UTC" or an Area/Location IANA zone (UTC aliases are
+// stored as "UTC"); rejects non-city IDs such as EST, Etc/GMT+5 and US/Eastern.
 export const timezoneSchema = z.string()
-  .regex(/^[A-Za-z]+\/[A-Za-z_\/]+$/, 'Invalid timezone format')
+  .min(1, 'Invalid timezone format')
+  .transform((value, ctx): string => {
+    const result = validateStorableTimeZone(value);
+    if (!result.ok || result.timeZone === null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: result.ok || result.reason === 'unrecognized'
+          ? 'Invalid timezone format'
+          : 'Timezone must be a city-based zone such as America/New_York',
+      });
+      return z.NEVER;
+    }
+    return result.timeZone;
+  })
   .optional();
 
 // Base user schema for creation

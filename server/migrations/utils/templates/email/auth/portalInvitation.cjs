@@ -24,6 +24,7 @@ const PORTAL_INVITATION_CSS = `
       background-color: #f8fafc;
     }
     .header {
+      background-color:#8A4DEA;
       background: linear-gradient(135deg, #8A4DEA, #40CFF9);
       color: white;
       padding: 32px 24px;
@@ -377,6 +378,31 @@ COPY.pt = {
   footerSent: 'Este email foi enviado para {{contactName}} como parte da configuração do seu acesso ao portal.',
   footerUnexpected: 'Se você não esperava este convite, entre em contato conosco em {{supportEmail}}.',
   footerCopyright: '© {{currentYear}} {{tenantName}}. Todos os direitos reservados.',
+};
+
+COPY.sv = {
+  subject: 'Inbjudan till kundportalen – {{tenantName}}',
+  title: 'Inbjudan till portalåtkomst',
+  headerTitle: 'Välkommen till din kundportal',
+  headerSubtitle: 'Du har bjudits in till kundportalen',
+  greeting: 'Hej {{contactName}},',
+  intro: 'Du har bjudits in till kundportalen för <strong>{{clientName}}</strong>. I den här säkra portalen kan du direkt:',
+  infoBoxTitle: '🎯 Det här får du tillgång till',
+  feature1: '✓ Visa och följa dina supportärenden',
+  feature2: '✓ Granska projektuppdateringar och dokumentation',
+  feature3: '✓ Kommunicera direkt med ditt supportteam',
+  tagline: 'Hantera dina tjänster smidigt med vår lättanvända portal. Här finns allt du behöver för att hålla dig informerad och hålla kontakten, samlat på en säker plats.',
+  buttonLabel: 'Aktivera ditt portalkonto',
+  copyLinkHint: 'Eller kopiera och klistra in den här länken i din webbläsare:',
+  warningTitle: '⏰ Tidsbegränsad inbjudan',
+  warningText: 'Den här inbjudningslänken slutar gälla om <strong>{{expirationTime}}</strong>. Slutför konfigurationen av ditt konto innan dess för att säkerställa åtkomst utan avbrott.',
+  contactTitle: 'Behöver du hjälp?',
+  emailLabel: 'E-post',
+  phoneLabel: 'Telefon',
+  contactHelp: 'Vårt supportteam hjälper dig gärna att komma igång.',
+  footerSent: 'Det här e-postmeddelandet har skickats till {{contactName}} som en del av konfigurationen av din portalåtkomst.',
+  footerUnexpected: 'Om du inte förväntade dig den här inbjudan kan du kontakta oss på {{supportEmail}}.',
+  footerCopyright: '© {{currentYear}} {{tenantName}}. Alla rättigheter förbehållna.',
 };
 
 /* eslint-enable max-len */

@@ -53,6 +53,8 @@
   },
   "status": {
     "active": "Active",
+    "scheduled": "Scheduled",
+    "startsOn": "Starts {{date}}",
     "draft": "Draft",
     "expired": "Expired",
     "terminated": "Terminated"
@@ -118,6 +120,9 @@
       "renewalHandling": "Renewal Handling"
     },
     "clientAssignment": {
+      "billingProfile": "Billing Profile",
+      "billingProfileLabel": "Assignment billing profile",
+      "billingProfileNone": "Use the client's default profile",
       "clientContractId": "Client Contract ID: {{id}}",
       "creditDrawdownOptOut": "Exclude from credit draw-down",
       "empty": "This contract is not assigned to a client yet.",
@@ -174,6 +179,7 @@
     },
     "headerCard": {
       "assignmentLifecycleHint": "Live client status is controlled by the assignment lifecycle below.",
+      "scheduledExplanation": "This contract is active and begins billing on {{date}}.",
       "assignmentStatus": "Assignment Status",
       "billingFrequencyLabel": "Billing Frequency *",
       "billingFrequencyPlaceholder": "Select billing frequency",
@@ -261,7 +267,8 @@
       "lines": "Contract Lines",
       "overview": "Overview",
       "pricing": "Pricing Schedules",
-      "simulator": "Simulate"
+      "simulator": "Simulate",
+      "discounts": "Discounts"
     },
     "validation": {
       "billingFrequencyRequired": "Billing frequency is required.",
@@ -294,6 +301,7 @@
     },
     "status": {
       "active": "Active",
+      "scheduled": "Scheduled",
       "draft": "Draft",
       "expired": "Expired",
       "terminated": "Terminated"
@@ -325,7 +333,8 @@
       "serviceCountOther": "{{count}} services",
       "previouslyConfiguredQuantity": "Previously configured quantity: {{count}} — not used for billing",
       "billedOnPeriodCount": "Billed on the count reported for each period",
-      "recurringSeats": "{{count}} × {{rate}} (recurring seats)",
+      "recurringSeats": "{{count}} × {{rate}} = {{amount}} (recurring seats)",
+      "recurringSeatsCatalogRate": "{{count}} × catalog price (recurring seats)",
       "bundleAllocation": "Allocation of the bundle price — not billable seats",
       "setUpRecurringSeats": "Set up recurring seats",
       "reportPeriodCount": "Report a period count"
@@ -399,7 +408,10 @@
       "selectClientFirst": "Select a client first",
       "startDateLabel": "Start Date *",
       "useTenantDefaultsDescription": "Apply organization-level renewal mode and notice period settings.",
-      "useTenantDefaultsLabel": "Use Tenant Renewal Defaults"
+      "useTenantDefaultsLabel": "Use Tenant Renewal Defaults",
+      "billingProfileLabel": "Billing Profile",
+      "billingProfileNone": "Use the client's default profile",
+      "billingProfileHint": "Charges from this contract are billed to this profile."
     },
     "po": {
       "amountLabel": "PO Amount (Optional)",
@@ -504,7 +516,8 @@
       "addFromPresets": "Add from Presets",
       "collapseLine": "Collapse contract line",
       "createCustom": "Create Custom",
-      "expandLine": "Expand contract line"
+      "expandLine": "Expand contract line",
+      "resetToStandard": "Reset to standard"
     },
     "billingProfile": {
       "hint": "Charges from this line are billed to this profile, overriding the contract.",
@@ -531,7 +544,8 @@
       "name": "Name",
       "rate": "Rate",
       "services": "Services",
-      "type": "Type"
+      "type": "Type",
+      "dates": "Dates"
     },
     "configuration": {
       "description": "Settings that apply to this contract line",
@@ -542,7 +556,15 @@
       "minutesValue": "{{count}} minutes",
       "roundUpToNearest": "Round Up To Nearest (minutes)",
       "title": "Contract Line Configuration",
-      "usageInfo": "Usage-based contract lines are configured per service with unit rates."
+      "usageInfo": "Usage-based contract lines are configured per service with unit rates.",
+      "invoiceText": "Invoice line text",
+      "invoiceTextPlaceholder": "Printed on the invoice; defaults to the line name",
+      "invoiceTextDefault": "Uses the line name",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "inheritsContract": "Contract start",
+      "inheritsContractEnd": "Contract end",
+      "billedEditExplanation": "After a line has billed, invoice text and line dates remain editable. Start and end dates cannot exclude service periods already billed or claimed; rates and quantities use prospective changes."
     },
     "customRate": "Custom",
     "description": {
@@ -550,19 +572,23 @@
       "readOnly": "This system-managed default contract is attribution-only. Contract line authoring is disabled."
     },
     "dialogs": {
-      "confirmRemove": "Remove contract line \"{{name}}\"?"
+      "confirmRemove": "Remove contract line \"{{name}}\"?",
+      "confirmResetRate": "Reset this line to the standard catalog rate? The stored custom rate will be removed."
     },
     "empty": {
       "noneAdded": "No contract lines added yet.",
       "selectAbove": "Select a contract line above to get started."
     },
     "errors": {
-      "cannotEditWithInvoices": "Cannot edit contract line: This contract has associated invoices. Contract lines cannot be edited once invoices have been generated.",
       "failedToCheckEditable": "Failed to check if contract can be edited",
       "failedToLoad": "Failed to load contract lines",
       "failedToRefresh": "Failed to refresh contract lines",
       "failedToRemove": "Failed to remove contract line",
-      "failedToUpdate": "Failed to update contract line"
+      "failedToUpdate": "Failed to update contract line",
+      "failedToResetRate": "Failed to reset the line rate",
+      "protectedStartDate": "Start date must be on or before {{boundary}} to include protected service history.",
+      "protectedEndDate": "End date must be on or after {{boundary}} to include protected service history.",
+      "cannotEditWithInvoices": "Cannot edit contract line: This contract has associated invoices. Contract lines cannot be edited once invoices have been generated."
     },
     "loading": {
       "contractLines": "Loading contract lines",
@@ -590,6 +616,7 @@
       "quantityShort": "Qty: {{quantity}}",
       "quantityTaxAllocation": "Quantity (for tax allocation)",
       "rateTaxAllocation": "Rate (for tax allocation)",
+      "shareOfLineFee": "Share of line fee",
       "title": "Services ({{count}})",
       "typeLabel": "{{type}} Service",
       "unitOfMeasure": "Unit of Measure",
@@ -601,7 +628,77 @@
       "semanticsEffectiveFrom": "Service pricing and measurement changes effective from",
       "prospectiveSemanticsHelp": "Changes apply at this service-period boundary; earlier quantities, measurement and pricing are preserved. Changing the date reloads the applicable settings for review."
     },
-    "title": "Contract Lines"
+    "title": "Contract Lines",
+    "rateProvenance": {
+      "standard": "Standard",
+      "custom": "Custom",
+      "unreviewed": "Unreviewed"
+    },
+    "recurringSchedule": {
+      "openPanel": "Schedule recurring change & history",
+      "systemActor": "System",
+      "unknownActor": "Unknown user",
+      "midPeriodToggle": "Apply a one-time mid-period true-up",
+      "midPeriodToggleHelp": "Quantity-only. The new standing quantity starts at the boundary above, and one prorated charge or credit covers the days from the change date to that boundary. Leave off to change only at the boundary.",
+      "midPeriodDate": "Quantity changes on",
+      "midPeriodQuantityOnly": "A mid-period true-up may only change the quantity. Schedule a unit price change at a service-period boundary instead.",
+      "midPeriodAffected": "Affected period {{start}} to {{end}} changes by {{delta}} units.",
+      "midPeriodMath": "{{delta}} units × {{rate}} × {{covered}}/{{full}} days = {{amount}} {{effect}}.",
+      "credit": "credit",
+      "charge": "charge",
+      "midPeriodStanding": "From {{boundary}} the standing quantity is {{quantity}}. The true-up lands on the next eligible editable draft (with applicable discounts and tax).",
+      "midPeriodNote": "Mid-period true-up: the new standing quantity starts at the boundary shown, and one prorated charge or credit covers the partial period. Earlier billed amounts are never rewritten.",
+      "midPeriodDateRequired": "Choose a date inside an upcoming unbilled period for the one-time mid-period true-up.",
+      "midPeriodFrom": "true-up from {{date}}",
+      "previewImpact": "Preview invoice impact",
+      "invoiceWindowMidPeriod": "Estimated client invoice for {{start}} to {{end}}. Includes other items in this billing window and the one-time mid-period true-up.",
+      "invoiceWindowBoundaryOnly": "Estimated client invoice for {{start}} to {{end}}. Includes other items in this billing window; no mid-period adjustment.",
+      "invoiceTotals": "Subtotal after discounts: {{subtotal}}. Tax: {{tax}}. Total: {{before}} → {{after}}.",
+      "olderUnbilled": "This boundary is in the past. Pending billing from this date onward will use the scheduled values; earlier billed periods stay unchanged.",
+      "catalogPriceMissing": "No {{currency}} catalog price covers this boundary, so a positive quantity cannot bill. Add a {{currency}} catalog price or choose \"Override unit price\" before saving.",
+      "invoiceImpact": "From {{date}} the recurring subtotal for this item changes by {{delta}} to {{total}} (before discounts and tax). Earlier billed periods are unchanged.",
+      "discardDirty": "Changing the effective date reloads the values in force and discards your unsaved edit. Continue?",
+      "discardDirtyTitle": "Discard unsaved edit?",
+      "discardDirtyConfirm": "Discard and reload",
+      "invalidQuantity": "Quantity must be a whole number of 0 or more.",
+      "invalidRate": "Enter a unit price of 0 or more, or switch to catalog pricing.",
+      "saved": "Scheduled: {{quantity}} effective {{date}}.",
+      "openPeriod": "next boundary",
+      "title": "Recurring quantity & pricing schedule",
+      "kindProduct": "Product",
+      "kindService": "Unit service",
+      "historyLoadError": "Could not load the scheduled history: {{error}}",
+      "protectedPeriod": "This period is already {{state}} and is protected. Choose a later, unbilled service-period boundary; billed invoice amounts are never rewritten.",
+      "existingRevisionNotice": "A scheduled change is already in force from {{date}}. Saving again at this same boundary replaces it (version {{version}}); earlier periods stay unchanged.",
+      "boundaryOnly": "Changes take effect only at a service-period boundary. There is no mid-period proration, true-up or credit: earlier billed amounts stay unchanged and the new quantity/price applies from the boundary shown.",
+      "stopHelp": "Zero stops recurring billing from this period. The item, its history and other contract items are kept; add a later revision to resume.",
+      "pricingSource": "Unit price source",
+      "useCatalog": "Use catalog price",
+      "override": "Override unit price",
+      "inherited": "Inherited from catalog",
+      "currentEffective": "In force for periods from {{date}}: {{quantity}} × {{rate}} ({{source}}).",
+      "sourceCatalog": "catalog price",
+      "sourceOverride": "explicit override",
+      "coverage": "Covers {{start}} to {{end}} ({{currency}}).",
+      "catalogSource": "Catalog price {{priceId}} effective {{effectiveDate}}; inherited, so a later catalog change follows automatically.",
+      "baselineRow": "Baseline (no revision): {{quantity}} × {{rate}}.",
+      "replace": "Replace scheduled change",
+      "schedule": "Schedule change",
+      "scheduledPeriods": "Scheduled periods",
+      "effectiveDate": "Effective from",
+      "quantity": "Quantity",
+      "unitPrice": "Unit price",
+      "version": "Version",
+      "status": "Status",
+      "actor": "Actor",
+      "baselineLabel": "Baseline",
+      "catalogLabel": "Catalog",
+      "statusInForce": "In force",
+      "statusScheduled": "Scheduled",
+      "statusSuperseded": "Superseded",
+      "supersededHistory": "Superseded pending edits ({{count}})",
+      "supersededBy": "Superseded by"
+    }
   },
   "contractLineEdit": {
     "actions": {
@@ -614,7 +711,10 @@
     },
     "fields": {
       "billingTimingQuestion": "When should this line be billed?",
-      "rate": "Rate"
+      "rate": "Rate",
+      "invoiceText": "Invoice line text",
+      "invoiceTextPlaceholder": "Printed on the invoice; defaults to the line name",
+      "invoiceTextHelp": "This text prints verbatim on the recurring invoice line."
     },
     "sections": {
       "billingTiming": "Billing Timing",
@@ -733,13 +833,15 @@
       "hourlyTitle": "Hourly",
       "usageDescription": "Invoice for units consumed.",
       "usageTitle": "Usage-Based",
-      "fixedSemantics": "Bill a bundle price or recurring quantity × unit rate every period."
+      "fixedSemantics": "Bill a bundle price or recurring quantity × unit rate every period.",
+      "prepaidBlockTitle": "Prepaid Block",
+      "prepaidBlockDescription": "Invoice a block of hours up front; time logged draws it down and the next block is invoiced when it runs out."
     },
     "billingTiming": {
       "advance": "Advance (bill at start of period)",
       "arrears": "Arrears (bill at end of period)"
     },
-    "billingTimingHelp": "Advance billing is typical for fixed fees; arrears for time/usage-based services.",
+    "billingTimingHelp": "Fixed lines can bill in advance or in arrears. Hourly and usage lines always bill in arrears, after the work happens.",
     "chooseBillingModel": "Choose a Billing Model *",
     "chooseBillingModelDescription": "Select the billing behavior that fits this offering.",
     "contractLineNameLabel": "Contract Line Name *",
@@ -801,13 +903,21 @@
       "usageServiceRequired": "At least one usage-based service is required",
       "usageServiceSelectRequired": "Service {{index}}: Please select a service",
       "invalidQuantity": "Quantity must be zero or greater.",
-      "recurringUnitRateRequired": "Enter a unit rate for each recurring service."
+      "recurringUnitRateRequired": "Enter a unit rate for each recurring service.",
+      "prepaidBlockCurrencyRequired": "The contract needs a currency before a prepaid block can be priced."
     },
     "fixedServicesPricingIntent": "Choose a bundle price or recurring seats/units for each service.",
     "fixedServicesPricingExplanation": "Bundle allocations share the line base rate. Recurring seats bill the agreed quantity × unit rate each period without usage records.",
     "recurringQuantity": "Recurring quantity",
     "allocationQuantity": "Allocation quantity",
-    "bundleBaseRateHelp": "Recurring fee for bundle-priced services. Recurring seats are billed separately at quantity × unit rate."
+    "bundleBaseRateHelp": "Recurring fee for bundle-priced services. Recurring seats are billed separately at quantity × unit rate.",
+    "invoiceTextLabel": "Invoice line text",
+    "invoiceTextPlaceholder": "Printed on the invoice; defaults to the line name",
+    "invoiceTextHelp": "This text prints verbatim on the recurring invoice line.",
+    "startDateLabel": "Line start date",
+    "endDateLabel": "Line end date",
+    "prepaidBlockTitle": "Prepaid Block",
+    "prepaidBlockDescription": "Set the block size and price. The price defaults to hours x the service rate and is saved as an explicit amount."
   },
   "pricingSchedules": {
     "list": {
@@ -968,6 +1078,7 @@
       "published": "Published"
     },
     "toasts": {
+      "contractActivated": "Contract activated",
       "draftDiscarded": "Draft discarded",
       "failedToActivateContract": "Failed to activate contract",
       "failedToDeleteContract": "Failed to delete contract",
@@ -1124,7 +1235,7 @@
     "composition": {
       "addContractLinesBeforeManaging": "Add contract lines to this template before managing services.",
       "additionalPlans": "Additional Plans",
-      "bucketSummary": "Bucket: {{minutes}} min • Overage ${{overage}}",
+      "bucketSummary": "Bucket: {{minutes}} min • Overage {{overage}}",
       "closeManager": "Close Manager",
       "editRate": "Edit Rate",
       "fixedFeeBundles": "Fixed Fee Bundles",
@@ -1146,7 +1257,14 @@
       "serviceFallback": "Service",
       "title": "Template Composition",
       "unitLabel": "Unit:",
-      "usageBasedPlans": "Usage-Based Plans"
+      "usageBasedPlans": "Usage-Based Plans",
+      "recurringQuantityLabel": "Recurring quantity:",
+      "unitRateLabel": "Unit rate:",
+      "hourlyRateLabel": "Hourly rate:",
+      "unitRateFromCatalog": "Catalog price in the client's currency",
+      "unitAmountLabel": "Recurring amount:",
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}",
+      "prepaidBlockKind": "Prepaid Block"
     },
     "editBasicsTitle": "Edit Template Basics",
     "editGuidanceTitle": "Edit Template Guidance",
@@ -1173,6 +1291,9 @@
     },
     "loadingTemplate": "Loading template...",
     "servicesLabel": "Services",
+    "summary": {
+      "clientCurrency": "Client's currency"
+    },
     "templateBadge": "Template",
     "templateNotFound": "Contract template not found",
     "templateSnapshotTitle": "Template Snapshot",
@@ -1217,6 +1338,25 @@
       "hypothetical": "Hypothetical client profile",
       "open": "Simulate",
       "title": "Template simulation"
+    },
+    "discounts": {
+      "title": "Default contract discounts",
+      "help": "Each client contract receives an independent editable copy. Contract-wide discounts apply across its eligible lines.",
+      "invalid": "Enter a name, positive value, and start date.",
+      "remove": "Remove",
+      "name": "Discount name",
+      "percentage": "Percentage",
+      "fixed": "Fixed amount",
+      "value": "Value",
+      "startDate": "Starts on",
+      "endDate": "Ends on (optional)",
+      "add": "Add default discount",
+      "chooseLine": "Choose a template line",
+      "chooseService": "Choose a service"
+    },
+    "prepaidBlock": {
+      "setup": "Sell as a prepaid block",
+      "blockNeutral": "{{hours}} h / {{price}} (in the client's currency)"
     }
   },
   "quickStart": {
@@ -1337,6 +1477,7 @@
       "hourlyServices": "Hourly Services",
       "products": "Products",
       "reviewCreate": "Review & Create",
+      "templateLines": "Template Lines",
       "usageBasedServices": "Usage-Based Services"
     },
     "title": {
@@ -1372,7 +1513,11 @@
       "selectClientBeforeDraft": "Select a client before saving as draft",
       "selectProductForEachLine": "Please select a product for each product line",
       "startDateRequired": "Start date is required",
-      "unsupportedRecurringAuthoringCombination": "Unsupported recurring authoring combination for {{lineType}} services: contract anniversary cadence currently supports {{supportedFrequencies}} billing frequencies. {{billingFrequency}} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead."
+      "unsupportedRecurringAuthoringCombination": "Unsupported recurring authoring combination for {{lineType}} services: contract anniversary cadence currently supports {{supportedFrequencies}} billing frequencies. {{billingFrequency}} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead.",
+      "recurringUnitRateRequired": "Enter a unit rate for each recurring service.",
+      "recurringQuantityWholeNumber": "Recurring quantity must be a whole number.",
+      "fixedQuantityInvalid": "Quantity must be zero or greater.",
+      "fixedLineNoService": "Fixed line \"{{lineName}}\" has a recurring amount but no service to bill it on. Add a service before finishing."
     },
     "nav": {
       "back": "Back",
@@ -1386,6 +1531,27 @@
     "simulation": {
       "description": "Test this unsaved draft with assumed activity. Simulation does not save or issue anything.",
       "title": "Simulate before creating"
+    },
+    "fixedLines": {
+      "addLine": "Add fixed line",
+      "nameLabel": "Line name (optional)",
+      "namePlaceholder": "Fixed line {{number}}",
+      "removeLine": "Remove fixed line",
+      "noServiceWarning": "This line has a recurring amount but no service to bill it on. Add a service before finishing; you can still save it as a draft."
+    },
+    "recurringChange": {
+      "title": "Confirm recurring total change",
+      "message": "This changes the contract's estimated monthly recurring value from {{before}} to {{after}}.",
+      "confirm": "Confirm and continue",
+      "cancel": "Go back"
+    },
+    "discounts": {
+      "help": "Contract-wide discounts apply to every eligible charge this contract bills. They are created with the contract when you finish setup, and the simulation below prices them.",
+      "draftDialog": {
+        "title": "Save draft without discounts?",
+        "message": "A saved draft keeps its lines only, so the discounts added here are not saved with it. Finish setup to create them with the contract, or add them later on the contract's Discounts tab.",
+        "confirm": "Save draft anyway"
+      }
     }
   },
   "wizardBasics": {
@@ -1512,6 +1678,11 @@
       },
       "selectTemplateOptional": "Select a template (optional)",
       "startFromTemplate": "Start From Template"
+    },
+    "billingProfile": {
+      "label": "Billing profile",
+      "none": "Use the client's default profile",
+      "hint": "Charges from this contract are billed to this profile unless a line overrides it."
     }
   },
   "wizardFixed": {
@@ -1519,7 +1690,8 @@
     "baseRate": {
       "hint": "Total recurring fee for all fixed services combined.",
       "label": "Recurring Base Rate",
-      "placeholder": "0.00"
+      "placeholder": "0.00",
+      "hintWithUnits": "Total recurring fee for the bundle services. Recurring seats/units bill quantity × unit rate separately and are not part of this rate."
     },
     "description": "Configure services that are billed at a fixed rate each billing cycle. You can still track time, but billing is based on this flat amount.",
     "emptyState": "No fixed fee services added yet. Click “Add Service” above or “Skip” to move on.",
@@ -1536,12 +1708,15 @@
         "invoiceWindow": "Invoice window:",
         "recurringRate": "Recurring Rate:",
         "service": "Service:",
-        "services": "Services:"
+        "services": "Services:",
+        "recurringUnits": "Recurring seats/units:",
+        "recurringTotal": "Total per period:"
       },
       "materializedPeriods": {
         "tooltip": "A preview of the next few service periods and the invoice windows that would be generated for them based on the current settings. These help you sanity-check the cadence before saving — actual invoices are produced later by the billing run."
       },
-      "title": "Recurring Preview Before Save"
+      "title": "Recurring Preview Before Save",
+      "unitRow": "{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}"
     },
     "proration": {
       "label": "Adjust for Partial Periods",
@@ -1552,7 +1727,15 @@
       "label": "Services",
       "quantityLabel": "Quantity",
       "selectServicePlaceholder": "Select a service",
-      "serviceItemLabel": "Service {{index}}"
+      "serviceItemLabel": "Service {{index}}",
+      "catalogDefaultHint": "No {{currency}} catalog price; using the catalog default rate.",
+      "recurringQuantityLabel": "Recurring quantity",
+      "allocationQuantityLabel": "Allocation quantity",
+      "noCurrencyPrice": "No {{currency}} price in the catalog. Enter a unit rate."
+    },
+    "advanceSuggestion": {
+      "message": "Billed in arrears, this line can't be invoiced until its first service period ends. Billing in advance on the contract's cadence invoices it on the start date instead.",
+      "action": "Bill in advance on the contract's cadence"
     }
   },
   "wizardProducts": {
@@ -1600,7 +1783,8 @@
       "serviceItem": "Service {{index}}",
       "setBucketOfHours": "Set bucket of hours",
       "noCurrencyPriceEnterRate": "No {{currency}} price in the catalog. Enter an hourly rate.",
-      "noCurrencyPriceWithLegacyHint": "No {{currency}} price in the catalog. Legacy default rate: {{rate}}. Enter an hourly rate in {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "No {{currency}} price in the catalog. Legacy default rate: {{rate}}. Enter an hourly rate in {{currency}}.",
+      "catalogDefaultRateHint": "No {{currency}} catalog price; using the catalog default rate."
     },
     "minimumBillableTime": {
       "hint": "e.g., 15 minutes - any time entry less than this will be rounded up",
@@ -1660,7 +1844,8 @@
       "unitOfMeasureHint": "Choose the unit this service bills on.",
       "unitOfMeasurePlaceholder": "e.g., GB, API call, user",
       "noCurrencyPriceEnterRate": "No {{currency}} price in the catalog. Enter a unit rate.",
-      "noCurrencyPriceWithLegacyHint": "No {{currency}} price in the catalog. Legacy default rate: {{rate}}. Enter a unit rate in {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "No {{currency}} price in the catalog. Legacy default rate: {{rate}}. Enter a unit rate in {{currency}}.",
+      "catalogDefaultRateHint": "No {{currency}} catalog price; using the catalog default rate."
     },
     "summary": {
       "labels": {
@@ -1680,10 +1865,13 @@
       "fixedFeeServices": "Fixed Fee Services",
       "products": "Products",
       "hourlyServices": "Hourly Services",
-      "usageBasedServices": "Usage-Based Services"
+      "usageBasedServices": "Usage-Based Services",
+      "fixedFeeServicesNumbered": "Fixed Fee Services ({{number}})",
+      "prepaidBlocks": "Prepaid Block Lines"
     },
     "fields": {
       "client": "Client",
+      "billingProfile": "Billing Profile",
       "contractName": "Contract Name",
       "billingFrequency": "Billing Frequency",
       "currency": "Currency",
@@ -1692,6 +1880,9 @@
       "renewalMode": "Renewal Mode",
       "noticePeriod": "Notice Period",
       "renewalTerm": "Renewal Term"
+    },
+    "billingProfile": {
+      "clientDefault": "The client's default profile"
     },
     "fallback": {
       "notSelected": "Not selected",
@@ -1745,23 +1936,14 @@
         "other": "{{count}} services"
       },
       "monthlyBaseRate": "Monthly Base Rate:",
-      "partialPeriodAdjustment": "Partial-Period Adjustment:"
+      "partialPeriodAdjustment": "Partial-Period Adjustment:",
+      "recurringUnitRow": "{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}"
     },
     "recurring": {
       "cadenceOwner": {
         "label": "Cadence owner:",
         "contractAnniversary": "Contract anniversary",
         "clientBillingSchedule": "Client billing schedule"
-      },
-      "firstInvoice": {
-        "contract": {
-          "advance": "First invoice: bill on the contract anniversary window that opens the first covered service period.",
-          "arrears": "First invoice: bill on the next contract anniversary window after the first covered service period closes."
-        },
-        "client": {
-          "advance": "First invoice: bill on the first client billing schedule window covering the service period.",
-          "arrears": "First invoice: bill on the next client billing schedule window after the first covered service period closes."
-        }
       },
       "partialPeriod": {
         "enabled": "Partial periods adjust the recurring fee to the covered portion of the service period.",
@@ -1805,7 +1987,8 @@
     "total": {
       "title": "Estimated Monthly Total",
       "description": "Fixed charges only. Hourly and usage services bill separately based on actual usage.",
-      "perMonth": "per month"
+      "perMonth": "per month",
+      "savedDraftValue": "Saved draft value: {{amount}}"
     },
     "finalChecklist": {
       "title": "Before you finish:",
@@ -1813,7 +1996,38 @@
       "itemPo": "Confirm PO requirements (if any)",
       "itemDates": "Verify the start and end dates",
       "itemEditLater": "Remember: you can edit the contract later if needed"
+    },
+    "prepaid": {
+      "badgeCount_one": "{{count}} line",
+      "badgeCount_other": "{{count}} lines",
+      "blockSummary": "{{hours}} hours for {{price}}",
+      "expiresAfter_one": "expires after {{count}} month",
+      "expiresAfter_other": "expires after {{count}} months",
+      "neverExpires": "never expires"
     }
+  },
+  "wizardTemplateLines": {
+    "title": "Template Lines",
+    "description": "Every line of the template is created on the contract with its own name, billing frequency, services and rates. Change anything below to override it for this contract only; untouched values are copied from the template. Rates are in {{currency}}.",
+    "loading": "Loading template lines...",
+    "noTemplate": "Select a template on the first step.",
+    "emptyTemplate": "This template has no lines, so there is nothing to create.",
+    "bucketPools_one": "{{count}} bucket pool copied from the template",
+    "bucketPools_other": "{{count}} bucket pools copied from the template",
+    "lineName": "Line name",
+    "billingFrequency": "Billing frequency",
+    "fixedBaseRate": "Fixed base rate",
+    "fixedBaseRateHint": "Template rate {{rate}}. Leave empty to keep it.",
+    "fixedBaseRateNone": "The template sets no line rate; services follow their catalog prices.",
+    "minimumBillableTime": "Minimum billable time (minutes)",
+    "roundUpToNearest": "Round up to nearest (minutes)",
+    "quantity": "Quantity",
+    "hourlyRate": "Hourly rate",
+    "unitRate": "Unit rate",
+    "serviceRate": "Service rate",
+    "noCurrencyPrice": "No {{currency}} price for this service. Enter a rate or the contract cannot be created.",
+    "templateRateNote": "From the template (amount is not currency-tagged).",
+    "reviewTitle": "Lines created from the template"
   },
   "templateWizard": {
     "title": {
@@ -1856,7 +2070,8 @@
           "hourly": "Hourly",
           "usage": "Usage"
         }
-      }
+      },
+      "recurringQuantityInvalid": "Recurring quantity for \"{{serviceName}}\" must be a whole number of zero or more, and any unit rate must be a valid amount."
     }
   },
   "templateBasics": {
@@ -1902,11 +2117,12 @@
       "advance": "Advance - invoice at the start of the period"
     },
     "fields": {
-      "billingTiming": "Billing Timing",
+      "billingTiming": "Billing timing for fixed-fee lines",
       "adjustPartialPeriods": "Adjust for Partial Periods",
       "services": "Services",
       "serviceNumber": "Service {{index}}",
-      "quantityOptional": "Quantity (Optional)"
+      "quantityOptional": "Quantity (Optional)",
+      "recurringQuantity": "Recurring quantity"
     },
     "placeholders": {
       "billingTiming": "Select billing timing",
@@ -1914,7 +2130,9 @@
     },
     "help": {
       "adjustPartialPeriods": "Use this when contracts created from the template should scale the recurring fee if service starts or ends inside a period.",
-      "quantity": "Suggested quantity when creating contracts"
+      "quantity": "Suggested quantity when creating contracts",
+      "recurringQuantity": "Starting seat/unit count. It can be adjusted when a contract is created from this template.",
+      "unitRateOptional": "Optional. Leave the unit rate empty to use this service's catalog price in the client's currency when a contract is created."
     },
     "preview": {
       "unknownService": "Unknown Service",
@@ -2013,7 +2231,8 @@
       "fixedFeeServices": "Fixed Fee Services",
       "products": "Products",
       "hourlyServices": "Hourly Services",
-      "usageBasedServices": "Usage-Based Services"
+      "usageBasedServices": "Usage-Based Services",
+      "prepaidBlocks": "Prepaid Block Lines"
     },
     "fields": {
       "templateName": "Template Name",
@@ -2036,7 +2255,8 @@
       "quantity": "Quantity:",
       "bucket": "Bucket:",
       "enabled": "Enabled",
-      "disabled": "Disabled"
+      "disabled": "Disabled",
+      "recurringQuantity": "Recurring quantity:"
     },
     "fixed": {
       "cadenceOwnerLabel": "Cadence owner:",
@@ -2051,7 +2271,10 @@
       },
       "partialPeriodLabel": "Partial-period adjustment:",
       "serviceLabel": "Service:",
-      "invoiceWindowLabel": "Invoice window:"
+      "invoiceWindowLabel": "Invoice window:",
+      "unitRateLabel": "Unit rate:",
+      "unitRateFromCatalog": "Catalog price in the client's currency",
+      "unitRateNeutral": "{{rate}} in the client's currency"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Minimum billable time:",
@@ -2070,6 +2293,9 @@
       "unitSingular": "unit",
       "rolloverEnabled": "Rollover enabled",
       "period": "Period: {{period}}"
+    },
+    "prepaid": {
+      "blockSummaryNeutral": "{{hours}} hours for {{price}} (in the client's currency)"
     }
   },
   "templatePreview": {
@@ -2081,7 +2307,8 @@
     },
     "selectedHeading": "Selected {{type}} Services ({{count}})",
     "labels": {
-      "qty": "Qty:"
+      "qty": "Qty:",
+      "recurringUnits": "Recurring seats/units"
     },
     "removeDialog": {
       "title": "Remove Contract Line Preset",
@@ -2342,7 +2569,8 @@
       "tieredPricing": "tiered pricing",
       "timing": {
         "advance": "Bill in advance",
-        "arrears": "Bill in arrears"
+        "arrears": "Bill in arrears",
+        "arrearsOnly": "Billed in arrears"
       },
       "types": {
         "bucket": "Bucket overlay",
@@ -2437,7 +2665,8 @@
       "conflict": "This contract change conflicts with an existing record. Please refresh and try again.",
       "notAllowed": "One of the contract values is not allowed. Please review the form and try again.",
       "missingField": "Missing required contract field.",
-      "missingFieldNamed": "Missing required contract field: {{field}}."
+      "missingFieldNamed": "Missing required contract field: {{field}}.",
+      "deleteFailed": "Something went wrong deleting this contract. Quote reference {{ref}} when contacting support."
     },
     "wizard": {
       "permissions": {
@@ -2453,7 +2682,10 @@
       "missingClient": "Draft contract is missing client assignment",
       "invalidStartDate": "Draft contract has an invalid start date",
       "recordInvalid": "One of the selected contract wizard records is no longer valid. Please refresh and try again.",
-      "duplicate": "A matching contract wizard record already exists."
+      "duplicate": "A matching contract wizard record already exists.",
+      "resumeUnsupportedShape": "This draft can't be resumed in the wizard without changing its pricing: {{lines}}",
+      "fixedLineNoService": "Fixed line \"{{lineName}}\" has a recurring amount but no service to bill it on. Add a service before finishing.",
+      "standingTerms": "This draft has standing discount terms. Edit its Lines and Discounts tabs to preserve those terms."
     },
     "pricingSchedule": {
       "endAfterEffective": "End date must be after effective date",
@@ -2478,6 +2710,233 @@
       "activatedContractIdRequired": "Activated renewal contract id is required.",
       "contractNotActive": "The activated renewal contract is no longer active. Please refresh and try again.",
       "manualRetryDueOnly": "Manual retry is only available for due renewal cycles."
+    }
+  },
+  "wizardFirstInvoice": {
+    "loading": "Checking the client's billing schedule…",
+    "arrearsPreviewNote": "Until then, an invoice preview for this client has nothing to bill for this line.",
+    "unavailable": {
+      "missingStartDate": "Choose a start date to see when this contract first invoices.",
+      "unsupportedFrequency": "No first invoice date is shown because contract-cadence billing doesn't support this frequency. Pick a supported frequency or bill on the client's schedule.",
+      "clientSchedule": "This line bills on the client's billing schedule. That schedule couldn't be loaded, so no date is shown."
+    },
+    "contract": {
+      "arrears": "Billed in arrears on the contract's cadence: the first invoice becomes available on {{date}}, when the first service period ends.",
+      "advance": "Billed in advance on the contract's cadence: the first invoice is available from {{date}}, the contract start date."
+    },
+    "client": {
+      "arrears": "Billed in arrears on the client's billing schedule: the first invoice becomes available on {{date}}, when the client's current billing period ends.",
+      "advance": "Billed in advance on the client's billing schedule: the first invoice is available from {{date}}, the start of the client's billing period that contains the contract start date."
+    }
+  },
+  "wizardCreated": {
+    "title": "Contract Created",
+    "heading": "{{contractName}} was created",
+    "firstInvoiceHeading": "First invoice",
+    "done": "Done"
+  },
+  "sellHourBlockNote": {
+    "text": "A contract hour bucket bills only the overage. To charge for a block of hours up front, add a Prepaid Block line to this contract."
+  },
+  "billingTimingField": {
+    "arrears": "In Arrears",
+    "fixedHelp": "Fixed lines can bill in advance or in arrears.",
+    "nonFixedHelp": "Hourly and usage lines always bill in arrears, after the work happens.",
+    "options": {
+      "advance": "In Advance (bill at start of period)",
+      "arrears": "In Arrears (bill at end of period)"
+    }
+  },
+  "contractDiscounts": {
+    "title": "Discounts",
+    "description": "Each client contract owns an editable copy. Contract-wide discounts apply to eligible charges across its represented lines.",
+    "loading": "Loading discounts…",
+    "empty": "No discounts are configured for this contract yet.",
+    "sharedEditNotice": "Changes affect only this client contract. Editing the template does not change existing contract copies.",
+    "dialog": {
+      "contractAttachmentLineScopeLocked": "This discount is attached to this client contract. To make it line-scoped, detach it and create a line-scoped discount.",
+      "createTitle": "Add discount",
+      "editTitle": "Edit discount"
+    },
+    "actions": {
+      "add": "Add Discount",
+      "attach": "Attach",
+      "detach": "Detach from this contract",
+      "toggleActive": "Change discount status",
+      "pickShared": "Attach existing discount",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…"
+    },
+    "columns": {
+      "name": "Name",
+      "value": "Value",
+      "scope": "Scope",
+      "line": "Contract line",
+      "dates": "Dates",
+      "status": "Status"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "attachment": {
+      "shared": "Contract attachment",
+      "line": "Line attachment"
+    },
+    "scopes": {
+      "invoice": "All eligible charges",
+      "contract": "This contract",
+      "service": "A service",
+      "line": "A contract line"
+    },
+    "values": {
+      "unnamedLine": "Unnamed line"
+    },
+    "types": {
+      "percentage": "Percentage",
+      "fixed": "Fixed amount"
+    },
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "e.g. Loyalty 10%",
+      "type": "Type",
+      "percentValue": "Percent (0–100)",
+      "fixedValue": "Amount",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "line": "Contract line",
+      "linePlaceholder": "Optional: keep this discount line-scoped",
+      "scope": "Scope",
+      "priority": "Priority",
+      "priorityPlaceholder": "Optional",
+      "service": "Service",
+      "servicePlaceholder": "Select a service",
+      "active": "Active"
+    },
+    "errors": {
+      "loadFailed": "Failed to load discounts.",
+      "saveFailed": "Failed to save the discount."
+    }
+  },
+  "prepaidBlock": {
+    "errors": {
+      "hoursInvalid": "Enter a block size greater than zero (fractions of an hour are allowed).",
+      "priceInvalid": "Enter a block price of zero or more.",
+      "expiryInvalid": "Expiry must be a whole number of months from 1 to 120, or empty.",
+      "thresholdInvalid": "The usage threshold must be a whole percentage from 1 to 99, or empty.",
+      "serviceRequired": "The line needs at least one hourly service."
+    },
+    "hoursValue": "{{hours}} h",
+    "trigger": {
+      "initial": "Initial block",
+      "exhaustion": "Block ran out",
+      "threshold": "Usage threshold",
+      "expiry": "Block expired",
+      "renewal": "Contract renewal",
+      "manual": "Issued manually"
+    },
+    "loading": "Loading prepaid block details...",
+    "heading": "Prepaid Block",
+    "actions": {
+      "edit": "Edit",
+      "remove": "Remove block config",
+      "cancel": "Cancel",
+      "save": "Save",
+      "issueNext": "Issue next block"
+    },
+    "warnings": {
+      "coveredServiceOnOtherLine": "{{service}} is also on another active line ({{line}}). Time for it may bill there instead of drawing from this block."
+    },
+    "summary": {
+      "block": "Block",
+      "expiry": "Expiry",
+      "neverExpires": "Never expires",
+      "expiresAfterMonths": "{{months}} months",
+      "soldAs": "Sold as",
+      "triggers": "Next block is invoiced when",
+      "onExhaustion": "The block runs out",
+      "onThreshold": "{{percent}}% used",
+      "onExpiry": "The block expires",
+      "onRenewal": "The contract renews",
+      "tierAutoIssue": "Finalized automatically",
+      "tierDraft": "Draft for review"
+    },
+    "balance": {
+      "label": "Active balance",
+      "value": "{{remaining}} of {{total}} remaining",
+      "none": "No active block yet. A block activates when its invoice is finalized.",
+      "contractEnded": "Contract ended; remaining hours were forfeited."
+    },
+    "pending": {
+      "heading": "Pending block awaiting invoice finalization",
+      "draftInvoice": "Draft invoice",
+      "noInvoice": "No invoice linked",
+      "ageDays": "{{days}} days old",
+      "held": "{{hours}} of logged time is held until this block activates."
+    },
+    "next": {
+      "label": "Next scheduled issuance",
+      "none": "None"
+    },
+    "history": {
+      "heading": "Block history",
+      "empty": "No blocks have been issued yet.",
+      "columns": {
+        "issued": "Issued",
+        "reason": "Reason",
+        "status": "Status",
+        "hours": "Remaining",
+        "amount": "Amount",
+        "invoice": "Invoice"
+      }
+    },
+    "fields": {
+      "blockHours": "Block size (hours)",
+      "blockHoursHelp": "Fractions are fine, for example 1.5 for 90 minutes.",
+      "blockPrice": "Block price ({{currency}})",
+      "blockPriceManualHelp": "Set explicitly. It is stored as entered and does not follow the hourly rate.",
+      "blockPriceDefaultHelp": "Defaults to hours x the service rate. It is saved as an explicit price.",
+      "useRateTimesHours": "Use hours x rate",
+      "soldAs": "Invoice line is sold as",
+      "soldAsHelp": "Drives tax, GL and accounting export mapping for the block invoice line.",
+      "expiryMonths": "Expires after (months)",
+      "neverExpires": "Never expires",
+      "expiryMonthsHelp": "Leave empty for hours that never expire. Unused hours are forfeited at expiry.",
+      "thresholdPercent": "Issue next block at usage (%)",
+      "noThreshold": "No threshold",
+      "triggersHeading": "Invoice the next block when",
+      "triggerExhaustion": "The block runs out",
+      "triggerExpiry": "The block expires",
+      "triggerRenewal": "The contract renews",
+      "triggerRenewalHint": "Invoices a new block on each renewal (evergreen anniversary or activated renewal contract). Existing blocks keep their own expiry.",
+      "tier": "Follow-on invoice",
+      "tierDraft": "Create a draft for review",
+      "tierAutoIssue": "Finalize and send automatically",
+      "blockPriceNeutral": "Block price (in the client's currency)"
+    },
+    "status": {
+      "pending": "Pending",
+      "active": "Active",
+      "expired": "Expired",
+      "voided": "Voided"
+    }
+  },
+  "wizardPrepaidBlock": {
+    "heading": "Prepaid block lines",
+    "description": "Sell hours in advance. Each line invoices a block of hours at a fixed price, and tracked time draws the block down; hours beyond the block bill at the hourly rate.",
+    "templateDescription": "Sell hours in advance. Each line invoices a block of hours at a fixed price, and tracked time draws the block down. The price takes the client's currency when a contract is created from this template.",
+    "lineName": "Line name (optional)",
+    "lineNamePlaceholder": "Prepaid Block",
+    "removeLine": "Remove prepaid block line",
+    "serviceItem": "Service {{index}}",
+    "overageRate": "Hourly rate",
+    "removeService": "Remove service",
+    "addService": "Add service to this line",
+    "addLine": "Add Prepaid Block Line",
+    "validation": {
+      "invalidBlock": "Complete the block size, price and trigger settings for every prepaid block line before finishing.",
+      "rateRequired": "Prepaid block service \"{{serviceName}}\" needs an hourly rate above zero (hours beyond the block bill at that rate)."
     }
   }
 }

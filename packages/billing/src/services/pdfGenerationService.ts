@@ -3,10 +3,16 @@ import type { Page } from 'puppeteer';
 import type { Knex } from 'knex';
 
 import { createTenantKnex, runWithTenant, tenantDb, withTransaction } from '@alga-psa/db';
-import type { DocumentAssociationEntityType, IDocument, TemplateAst } from '@alga-psa/types';
+import { countryDateFormat, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
+import { buildDocumentFileName } from '@alga-psa/core/fileNames';
+import {
+  resolveClientCountry,
+  resolveTenantDefaultCountry,
+} from '@alga-psa/tenancy/lib/tenantDefaultCountry';
+import type { DocumentAssociationEntityType, IDocument, QuoteViewModel, QuoteViewModelCadenceGroup, QuoteViewModelLineItem, TemplateAst } from '@alga-psa/types';
 import type { FileStore } from '@alga-psa/storage/types/storage';
 import { StorageProviderFactory, generateStoragePath, FileStoreModel } from '@alga-psa/storage';
-import { convertBlockContentToHTML } from '@alga-psa/formatting/blocknoteUtils';
+import { convertBlockContentToHTML, getMeaningfulBlockContentMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildDocumentGeneratedPayload } from '@alga-psa/workflow-streams';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- filing a generated PDF is a documents write; direct model access, as quoteActions did before this moved here
@@ -17,14 +23,16 @@ import {
   resolveEmailLocale,
 } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 
+import { enrichContractChangeDescriptions } from '../lib/billing/contractChangeInvoiceProjection.server';
 import { mapDbInvoiceToWasmViewModel } from '../lib/adapters/invoiceAdapters';
 import { enrichInvoiceViewModelWithLocations } from '../lib/adapters/invoiceAdapters.server';
-import { mapDbQuoteToViewModel } from '../lib/adapters/quoteAdapters';
+import { OPTIONAL_INCLUDED_LABEL, OPTIONAL_PENDING_LABEL, mapDbQuoteToViewModel } from '../lib/adapters/quoteAdapters';
 import { mapDbSalesOrderToViewModel } from '../lib/adapters/salesOrderAdapters';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
-import { localizeTemplateAstForLocale } from '../lib/invoice-template-ast/i18nLabels';
+import { localizeTemplateAstForLocale, DOCUMENT_LABEL_NAMESPACE } from '../lib/invoice-template-ast/i18nLabels';
+import { cadenceI18nKey } from '../lib/quoteItemCadence';
 import { resolvePdfPrintOptionsFromAst } from '../lib/invoice-template-ast/printSettings';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { renderTemplateAstHtmlDocument } from '../lib/invoice-template-ast/server-render';
@@ -39,6 +47,100 @@ import { resolveQuoteTemplateAst } from '../lib/quote-template-ast/templateSelec
 import { getStandardSalesOrderTemplateAstByCode } from '../lib/sales-order-template-ast/standardTemplates';
 import { resolveSalesOrderTemplateAst } from '../lib/sales-order-template-ast/templateSelection';
 import { browserPoolService } from './browserPoolService';
+
+/**
+ * Localize the data-driven cadence band names and footer totals on a quote
+ * view model.
+ *
+ * The band headers bind a `path 'name'` and the band footers bind a
+ * `path 'total_label'` rather than AST i18n keys (the set of cadences is not
+ * known when the template is authored), so the PDF service resolves each band's
+ * `labels.cadence.*` and `labels.cadenceTotal` keys from the same `documents`
+ * namespace `localizeTemplateAstForLocale` uses. Unknown cadences keep their
+ * English fallback name and `${name} Total`.
+ */
+async function localizeQuoteCadenceGroups(
+  viewModel: QuoteViewModel,
+  locale?: string | null,
+): Promise<void> {
+  const groups = viewModel.groups_by_cadence ?? [];
+  const optionalGroups = viewModel.groups_by_cadence_with_optionals ?? [];
+  if (!locale || (groups.length === 0 && optionalGroups.length === 0)) {
+    return;
+  }
+
+  try {
+    const { getServerTranslation } = await import('@alga-psa/ui/lib/i18n/serverOnly');
+    const { t } = await getServerTranslation(locale as never, DOCUMENT_LABEL_NAMESPACE);
+    const cache = new Map<string, string>();
+    // The "{{cadence}} Total" template is cached per band label so a quote with
+    // monthly + annual bands interpolates each band's own name once.
+    const localizeTotal = (group: QuoteViewModelCadenceGroup, label: string): void => {
+      const totalKey = `total::${label}`;
+      let totalLabel = cache.get(totalKey);
+      if (totalLabel === undefined) {
+        totalLabel = String(
+          t('labels.cadenceTotal', { cadence: label, defaultValue: `${label} Total` }),
+        );
+        cache.set(totalKey, totalLabel);
+      }
+      group.total_label = totalLabel;
+    };
+
+    const localize = (group: QuoteViewModelCadenceGroup): void => {
+      // A quote's own section title replaces the cadence vocabulary outright:
+      // the author wrote that heading, so only its footer template is localized.
+      if (group.name_is_custom) {
+        localizeTotal(group, group.name ?? '');
+        return;
+      }
+      const key = cadenceI18nKey(group.cadence_key);
+      if (!key) {
+        group.total_label = group.total_label ?? `${group.name ?? ''} Total`;
+        return;
+      }
+      let label = cache.get(key);
+      if (label === undefined) {
+        label = String(t(key, { defaultValue: group.name ?? '' }));
+        cache.set(key, label);
+      }
+      group.name = label;
+      localizeTotal(group, label);
+    };
+    groups.forEach(localize);
+    optionalGroups.forEach(localize);
+
+    // Per-row optional markers: the adapter emits the English fallback; every
+    // collection shares the same line-item objects, so localize each once.
+    const includedLabel = String(t('labels.optionalIncluded', { defaultValue: OPTIONAL_INCLUDED_LABEL }));
+    const pendingLabel = String(t('labels.optionalSection', { defaultValue: OPTIONAL_PENDING_LABEL }));
+    const seen = new Set<QuoteViewModelLineItem>();
+    const localizeItem = (item: QuoteViewModelLineItem): void => {
+      if (seen.has(item) || !item.optional_label) return;
+      seen.add(item);
+      item.optional_label = item.optional_label === OPTIONAL_INCLUDED_LABEL ? includedLabel : pendingLabel;
+    };
+    const collections: Array<QuoteViewModelLineItem[] | undefined> = [
+      viewModel.line_items,
+      viewModel.recurring_items,
+      viewModel.onetime_items,
+      viewModel.service_items,
+      viewModel.product_items,
+      ...groups.map((group) => group.items),
+      ...groups.map((group) => group.optional_items),
+      ...optionalGroups.map((group) => group.items),
+      ...optionalGroups.map((group) => group.optional_items),
+      ...(viewModel.groups_by_location ?? []).map((group) => group.items),
+      ...(viewModel.phases ?? []).map((phase) => phase.items),
+    ];
+    for (const collection of collections) {
+      (collection ?? []).forEach(localizeItem);
+    }
+  } catch (error) {
+    // Never fail a render over a label: fall back to the English band names.
+    console.error('Failed to localize quote cadence labels:', error);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -159,24 +261,26 @@ export class PDFGenerationService {
     let templateVersion: number | null = null;
 
     // Resolved once, up front: the recipient's language decides the labels and
-    // the number/date/currency formatting in the same document, and is the
-    // locale recorded against the filed artifact.
+    // the number/currency formatting in the same document, and is the locale
+    // recorded against the filed artifact. Their COUNTRY decides how the dates
+    // in it are written, which is a different question with a different answer.
     const renderedLocale = await this.resolveRenderLocale(options);
+    const renderedDateFormat = await this.resolveRenderCountry(options);
 
     if (options.invoiceId) {
-      const result = await this.getInvoiceHtml(options.invoiceId, options.templateId, renderedLocale);
+      const result = await this.getInvoiceHtml(options.invoiceId, options.templateId, renderedLocale, renderedDateFormat);
       htmlContent = result.htmlContent;
       templateAst = result.templateAst;
       templateId = result.templateId;
       templateVersion = result.templateVersion;
     } else if (options.quoteId) {
-      const result = await this.getQuoteHtml({ quoteId: options.quoteId, templateAst: options.templateAst }, renderedLocale);
+      const result = await this.getQuoteHtml({ quoteId: options.quoteId, templateAst: options.templateAst }, renderedLocale, renderedDateFormat);
       htmlContent = result.htmlContent;
       templateAst = result.templateAst;
       templateId = result.templateId;
       templateVersion = result.templateVersion;
     } else if (options.salesOrderId) {
-      const result = await this.getSalesOrderHtml({ salesOrderId: options.salesOrderId, documentType: options.salesOrderDocumentType, templateAst: options.templateAst }, renderedLocale);
+      const result = await this.getSalesOrderHtml({ salesOrderId: options.salesOrderId, documentType: options.salesOrderDocumentType, templateAst: options.templateAst }, renderedLocale, renderedDateFormat);
       htmlContent = result.htmlContent;
       templateAst = result.templateAst;
       templateId = result.templateId;
@@ -365,7 +469,11 @@ export class PDFGenerationService {
     }
 
     if (options.quoteId) {
-      const quoteNumber = options.quoteNumber || options.quoteId;
+      const quote = await tenantDb(knex, this.tenant).table('quotes')
+        .where({ quote_id: options.quoteId })
+        .first<{ title?: string | null; quote_number?: string | null } | undefined>('title', 'quote_number');
+      const quoteNumber = options.quoteNumber || quote?.quote_number || options.quoteId;
+      const fileName = buildDocumentFileName(quote?.title, `Quote_${quoteNumber}`);
       return {
         sourceType: 'quote',
         entityId: options.quoteId,
@@ -373,8 +481,8 @@ export class PDFGenerationService {
         clientId: null,
         folderPath: '/Quotes/Generated',
         isClientVisible: true,
-        documentName: `Quote_${quoteNumber}.pdf`,
-        fileBaseName: quoteNumber,
+        documentName: fileName,
+        fileBaseName: fileName.replace(/\.pdf$/i, ''),
         // A quote is re-rendered on every send, and each send is its own artifact.
         mode: 'append',
       };
@@ -648,6 +756,45 @@ export class PDFGenerationService {
   }
 
   /**
+   * The date shape a document is written in: digit order, separator and clock.
+   *
+   * Deliberately a separate resolution from the locale. The language a document
+   * speaks and the way its dates are written answer to different things — a UK
+   * client of a US MSP reads 30/09/2026 whether the invoice arrives in English
+   * or French — so the recipient client's own country decides, falling back to
+   * the tenant's, and finally to the fixed system default.
+   *
+   * Public for the same reason `resolveRenderLocale` is: the on-screen previews
+   * go through this exact seam, so what an MSP approves is what the client gets.
+   */
+  async resolveRenderCountry(options: {
+    invoiceId?: string;
+    quoteId?: string;
+    salesOrderId?: string;
+  }): Promise<CountryDateFormat> {
+    try {
+      return await runWithTenant(this.tenant, async () => {
+        const { knex } = await createTenantKnex();
+        const clientId =
+          options.invoiceId || options.quoteId || options.salesOrderId
+            ? await this.resolveRecipientClientId(knex, options)
+            : null;
+
+        const country = clientId
+          ? (await resolveClientCountry(knex, this.tenant, clientId))
+            ?? (await resolveTenantDefaultCountry(knex, this.tenant))
+          : await resolveTenantDefaultCountry(knex, this.tenant);
+
+        return countryDateFormat(country?.code ?? null);
+      });
+    } catch {
+      // A document dated in the wrong order is recoverable; one that fails to
+      // render is not.
+      return countryDateFormat(null);
+    }
+  }
+
+  /**
    * The locale this document was issued in: the billing contact's, else the
    * client's, else the tenant's. Recorded against the stored document so every
    * artifact answers "what language was this?".
@@ -720,8 +867,11 @@ export class PDFGenerationService {
         throw new Error('No invoice template AST available');
       }
 
+      const renderLocale = await this.resolveRenderLocale({ invoiceId: options.invoiceId });
       const enrichedData = await this.enrichWithTenantClient(knex, dbInvoiceData);
-      const invoiceViewModel = mapDbInvoiceToWasmViewModel(enrichedData);
+      // The service-period label is built here, in named months, so the mapper
+      // needs the recipient's language too.
+      const invoiceViewModel = mapDbInvoiceToWasmViewModel(enrichedData, renderLocale);
       if (!invoiceViewModel) {
         throw new Error(`Failed to map invoice ${options.invoiceId} to view model`);
       }
@@ -731,11 +881,13 @@ export class PDFGenerationService {
         invoiceViewModel as unknown as Record<string, unknown>,
         { bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES }
       );
-      const localized = await localizeTemplateAstForLocale(
-        templateAst,
-        await this.resolveRenderLocale({ invoiceId: options.invoiceId })
-      );
-      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, { locale: localized.locale, t: localized.t });
+      const localized = await localizeTemplateAstForLocale(templateAst, renderLocale);
+      const dateFormat = await this.resolveRenderCountry({ invoiceId: options.invoiceId });
+      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, {
+        locale: localized.locale,
+        dateFormat,
+        t: localized.t,
+      });
       return { html: rendered.html, css: rendered.css, templateAst };
     });
   }
@@ -751,6 +903,9 @@ export class PDFGenerationService {
         throw new Error(`Quote ${options.quoteId} not found`);
       }
 
+      const renderLocale = await this.resolveRenderLocale({ quoteId: options.quoteId });
+      await localizeQuoteCadenceGroups(quoteViewModel, renderLocale);
+
       const templateAst = options.templateAst
         ?? (options.templateCode
           ? getStandardQuoteTemplateAstByCode(options.templateCode)
@@ -764,11 +919,13 @@ export class PDFGenerationService {
         templateAst,
         quoteViewModel as unknown as Record<string, unknown>
       );
-      const localized = await localizeTemplateAstForLocale(
-        templateAst,
-        await this.resolveRenderLocale({ quoteId: options.quoteId })
-      );
-      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, { locale: localized.locale, t: localized.t });
+      const localized = await localizeTemplateAstForLocale(templateAst, renderLocale);
+      const dateFormat = await this.resolveRenderCountry({ quoteId: options.quoteId });
+      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, {
+        locale: localized.locale,
+        dateFormat,
+        t: localized.t,
+      });
       return { html: rendered.html, css: rendered.css, templateAst };
     });
   }
@@ -801,7 +958,8 @@ export class PDFGenerationService {
   private async getInvoiceHtml(
     invoiceId: string,
     overrideTemplateId?: string,
-    locale?: string
+    locale?: string,
+    dateFormat?: CountryDateFormat
   ): Promise<{ htmlContent: string; templateAst: TemplateAst | null; templateId: string | null; templateVersion: number | null }> {
     return runWithTenant(this.tenant, async () => {
       const { knex } = await createTenantKnex();
@@ -835,7 +993,8 @@ export class PDFGenerationService {
       }
 
       const enrichedData = await this.enrichWithTenantClient(knex, dbInvoiceData);
-      const invoiceViewModel = mapDbInvoiceToWasmViewModel(enrichedData);
+      // Named-month service periods follow the recipient's language.
+      const invoiceViewModel = mapDbInvoiceToWasmViewModel(enrichedData, locale);
 
       if (!invoiceViewModel) {
         throw new Error(`Failed to map invoice ${invoiceId} to view model`);
@@ -875,6 +1034,7 @@ export class PDFGenerationService {
         title: 'Invoice',
         knex,
         locale,
+        dateFormat,
       });
 
       return {
@@ -908,7 +1068,8 @@ export class PDFGenerationService {
   }
 
   private async getInvoiceForRendering(knex: Knex | Knex.Transaction, invoiceId: string): Promise<any> {
-    return Invoice.getFullInvoiceById(knex, this.tenant, invoiceId);
+    const invoice = await Invoice.getFullInvoiceById(knex, this.tenant, invoiceId);
+    return invoice ? enrichContractChangeDescriptions(knex, this.tenant, invoiceId, invoice) : invoice;
   }
 
   private async getInvoiceTemplates(knex: Knex | Knex.Transaction): Promise<any[]> {
@@ -924,7 +1085,8 @@ export class PDFGenerationService {
 
   private async getQuoteHtml(
     options: QuotePDFOptions,
-    locale?: string
+    locale?: string,
+    dateFormat?: CountryDateFormat
   ): Promise<{ htmlContent: string; templateAst: TemplateAst | null; templateId: string | null; templateVersion: number | null }> {
     return runWithTenant(this.tenant, async () => {
       const { knex } = await createTenantKnex();
@@ -933,6 +1095,8 @@ export class PDFGenerationService {
       if (!quoteViewModel) {
         throw new Error(`Quote ${options.quoteId} not found`);
       }
+
+      await localizeQuoteCadenceGroups(quoteViewModel, locale);
 
       let templateAst = options.templateAst ?? null;
       let templateId: string | null = null;
@@ -959,6 +1123,7 @@ export class PDFGenerationService {
         title: `Quote ${quoteViewModel.quote_number ?? ''}`.trim(),
         knex,
         locale,
+        dateFormat,
       });
 
       return { htmlContent, templateAst, templateId, templateVersion: null };
@@ -969,7 +1134,8 @@ export class PDFGenerationService {
 
   private async getSalesOrderHtml(
     options: SalesOrderPDFOptions,
-    locale?: string
+    locale?: string,
+    dateFormat?: CountryDateFormat
   ): Promise<{ htmlContent: string; templateAst: TemplateAst | null; templateId: string | null; templateVersion: number | null }> {
     return runWithTenant(this.tenant, async () => {
       const { knex } = await createTenantKnex();
@@ -1008,6 +1174,7 @@ export class PDFGenerationService {
         title: `Sales Order ${viewModel.so_number ?? ''}`.trim(),
         knex,
         locale,
+        dateFormat,
       });
 
       return { htmlContent, templateAst, templateId, templateVersion };
@@ -1032,9 +1199,11 @@ export class PDFGenerationService {
         .where({ document_id: documentId })
         .first();
 
-      if (blockContent && blockContent.block_data) {
+      if (blockContent && getMeaningfulBlockContentMarkdown(blockContent.block_data)) {
         htmlContent = convertBlockContentToHTML(blockContent.block_data);
-      } else {
+      }
+
+      if (!htmlContent.trim()) {
         const textContent = await db.table('document_content')
           .where({ document_id: documentId })
           .first();

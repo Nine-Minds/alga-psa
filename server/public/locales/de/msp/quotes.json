@@ -27,7 +27,8 @@
       "sendToClient": "An den Kunden senden",
       "setAsDefault": "Als Standard festlegen",
       "submitForApproval": "Zur Genehmigung einreichen",
-      "done": "Fertig"
+      "done": "Fertig",
+      "markAccepted": "Als angenommen markieren"
     },
     "badges": {
       "standard": "Standard"
@@ -107,7 +108,9 @@
         "message": "Nachricht",
         "messageOptional": "Nachricht (optional)",
         "messagePlaceholder": "Fügen Sie eine persönliche Notiz für den Empfänger hinzu...",
-        "title": "Angebot senden"
+        "title": "Angebot senden",
+        "from": "Von",
+        "useDefault": "Standardabsender verwenden"
       }
     },
     "errors": {
@@ -156,7 +159,8 @@
       "backToQuotes": "Zurück zu den Angeboten",
       "backToTemplates": "Zurück zu den Angebotsvorlagen",
       "convertToSalesOrder": "In Kundenauftrag umwandeln",
-      "convert": "Umwandeln in…"
+      "convert": "Umwandeln in…",
+      "markAccepted": "Als angenommen markieren"
     },
     "headings": {
       "editQuote": "Angebot bearbeiten",
@@ -212,7 +216,15 @@
         "description": "Dadurch wird das Angebot per E-Mail an die Rechnungskontakte des Kunden gesendet und sein Status in „Gesendet“ geändert.",
         "title": "Angebot an den Kunden senden",
         "additionalEmails": "Zusätzliche Empfänger",
-        "message": "Nachricht"
+        "message": "Nachricht",
+        "from": "Von",
+        "useDefault": "Standardabsender verwenden"
+      },
+      "markAccepted": {
+        "title": "Angebot als angenommen markieren",
+        "description": "Halten Sie fest, dass der Kunde dieses Angebot außerhalb des Kundenportals angenommen hat (z. B. telefonisch oder per E-Mail). Das Angebot wechselt zu Angenommen und kann wie jedes angenommene Angebot umgewandelt werden. Ihr Name und die Uhrzeit werden erfasst.",
+        "note": "Notiz (optional)",
+        "notePlaceholder": "Zum Beispiel: Am 3. per E-Mail angenommen"
       }
     },
     "errorActions": {
@@ -222,7 +234,8 @@
       "resendQuote": "Angebot erneut senden",
       "sendQuote": "Angebot senden",
       "sendReminder": "Erinnerung senden",
-      "submitForApproval": "zur Genehmigung einreichen"
+      "submitForApproval": "zur Genehmigung einreichen",
+      "markAccepted": "Angebot als angenommen markieren"
     },
     "errors": {
       "convert": "Das Angebot konnte nicht konvertiert werden",
@@ -248,7 +261,8 @@
       "requestedChanges": "Das Angebot wurde mit den gewünschten Änderungen in den Entwurf zurückversetzt.",
       "resent": "Angebot erneut gesendet.",
       "sent": "Angebot an den Kunden gesendet.",
-      "submittedForApproval": "Angebot zur internen Genehmigung eingereicht."
+      "submittedForApproval": "Angebot zur internen Genehmigung eingereicht.",
+      "markedAccepted": "Angebot als angenommen markiert."
     },
     "readOnlyNotice": "Dieses Angebot ist schreibgeschützt. Um Änderungen vorzunehmen, erstellen Sie eine neue Revision.",
     "validation": {
@@ -299,7 +313,15 @@
       "currencyPlaceholder": "Währung auswählen",
       "quoteDate": "Angebotsdatum",
       "validUntil": "Gültig bis",
-      "validUntilHelp": "Angebot läuft an diesem Datum automatisch ab."
+      "validUntilHelp": "Angebot läuft an diesem Datum automatisch ab.",
+      "currencySource": {
+        "tenant": "Mandantenstandard",
+        "client": "Kundenstandard für {{clientName}}",
+        "template": "Aus Angebotsvorlage {{templateTitle}}",
+        "saved": "In diesem Angebot gespeichert",
+        "savedTemplate": "In dieser Vorlage gespeichert",
+        "manual": "Manuell ausgewählt"
+      }
     },
     "lineItems": {
       "title": "Positionen",
@@ -315,7 +337,8 @@
       "title": "Kundensichtbarer Text",
       "subtitle": "Erscheint im PDF unter den Summen.",
       "notes": "Notizen an den Kunden (optional)",
-      "terms": "Geschäftsbedingungen (optional)"
+      "terms": "Geschäftsbedingungen (optional)",
+      "termsPlaceholder": "Bedingungen, Links und Absätze hinzufügen…"
     },
     "moreDetails": {
       "title": "Weitere Details",
@@ -338,6 +361,14 @@
       "subtotal": "Zwischensumme",
       "discounts": "Rabatte",
       "tax": "Steuer",
+      "optionalIfSelected": "Optional falls ausgewählt",
+      "cadence": {
+        "monthly": "Monatlich",
+        "quarterly": "Vierteljährlich",
+        "semiAnnually": "Halbjährlich",
+        "annually": "Jährlich",
+        "oneTime": "Einmalig"
+      },
       "statusLabel": "Status",
       "approvalLabel": "Genehmigung",
       "approvalMessage": "Angebote benötigen vor dem Versand die Genehmigung durch den Vertriebsleiter.",
@@ -347,6 +378,14 @@
       "customLayout": "Benutzerdefiniert",
       "tenantDefault": "Mandanten-Standard",
       "changeLayout": "Ändern"
+    },
+    "sectionTitles": {
+      "title": "Abschnittstitel für gruppierte Angebote",
+      "description": "Optionale Überschriften für das Layout „Standardangebot gruppiert“.",
+      "monthlyLabel": "Titel des Monatsabschnitts",
+      "oneTimeLabel": "Titel des einmaligen Abschnitts",
+      "monthlyPlaceholder": "Monatlich",
+      "oneTimePlaceholder": "Einmalig"
     }
   },
   "quoteDetail": {
@@ -420,7 +459,8 @@
       "saveAsTemplate": "Das Angebot konnte nicht als Vorlage gespeichert werden",
       "send": "Angebot konnte nicht gesendet werden",
       "sendReminder": "Angebotserinnerung konnte nicht gesendet werden",
-      "submitForApproval": "Das Angebot konnte nicht zur Genehmigung eingereicht werden"
+      "submitForApproval": "Das Angebot konnte nicht zur Genehmigung eingereicht werden",
+      "markAccepted": "Das Angebot konnte nicht als angenommen markiert werden"
     },
     "labels": {
       "phase": "Phase: {{phase}}",
@@ -439,7 +479,8 @@
       "submittedForApproval": "Angebot zur internen Genehmigung eingereicht.",
       "templateAssigned": "Dokumentvorlage zugewiesen.",
       "templateCleared": "Dokumentvorlage gelöscht (Standardeinstellung).",
-      "createdSalesOrder": "Kundenauftragsentwurf {{number}} erstellt. Produktpositionen werden bei Erfüllung abgerechnet."
+      "createdSalesOrder": "Kundenauftragsentwurf {{number}} erstellt. Produktpositionen werden bei Erfüllung abgerechnet.",
+      "markedAccepted": "Angebot als angenommen markiert."
     },
     "preview": {
       "loading": "Vorschau wird geladen..."
@@ -492,6 +533,7 @@
       "noPriceInCurrency": "Kein Preis in {{currencyCode}}",
       "optional": "Optional",
       "phaseSection": "Phase / Abschnitt",
+      "preselected": "Vorausgewählt",
       "recurring": "Wiederkehrend",
       "service": "Service",
       "setPrice": "Preis festlegen",
@@ -642,7 +684,8 @@
       "openSalesOrders": "Kundenaufträge öffnen",
       "successBody": "Produktpositionen werden bei Erfüllung abgerechnet.",
       "successTitle": "Kundenauftrag {{number}} erstellt"
-    }
+    },
+    "contractBlockedServiceless": "Die wiederkehrende Position „{{description}}\" muss vor der Vertragsumwandlung auf einen Katalogservice verweisen"
   },
   "quoteApproval": {
     "title": "Angebotsfreigaben",
@@ -669,7 +712,14 @@
       "load": "Angebotsgenehmigungen konnten nicht geladen werden",
       "settings": "Die Einstellungen für die Angebotsgenehmigung konnten nicht aktualisiert werden"
     },
-    "loading": "Genehmigungswarteschlange wird geladen..."
+    "loading": "Genehmigungswarteschlange wird geladen...",
+    "soleApprover": {
+      "title": "Sie sind der einzige Angebotsgenehmiger",
+      "description": "Kein anderer aktiver Benutzer kann Angebote genehmigen, daher können Sie Ihre eigenen Angebote genehmigen. Selbstgenehmigungen werden in der Angebotsaktivität erfasst.",
+      "draftDescription": "Sie sind der einzige Benutzer, der Angebote genehmigen kann. Nachdem Sie dieses Angebot zur Genehmigung eingereicht haben, können Sie es selbst genehmigen und anschließend senden.",
+      "pendingDescription": "Sie sind der einzige Benutzer, der Angebote genehmigen kann, daher können Sie dieses Angebot selbst genehmigen. Wählen Sie Genehmigen, um es versandbereit zu machen.",
+      "dialogNote": "Sie sind der einzige Genehmiger, daher ist die Genehmigung Ihres eigenen Angebots erlaubt. Die Genehmigung wird als Selbstgenehmigung erfasst."
+    }
   },
   "quoteTemplates": {
     "title": "Vorlagen",
@@ -835,7 +885,9 @@
       "conflict": "Diese Angebotsänderung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "notAllowed": "Einer der Angebotswerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
       "missingField": "Erforderliches Angebotsfeld fehlt.",
-      "missingFieldNamed": "Erforderliches Angebotsfeld fehlt: {{field}}."
+      "missingFieldNamed": "Erforderliches Angebotsfeld fehlt: {{field}}.",
+      "templateCannotBeAccepted": "Angebotsvorlagen können nicht als angenommen markiert werden",
+      "onlySentCanBeAccepted": "Nur gesendete Angebote können als angenommen markiert werden"
     }
   }
 }

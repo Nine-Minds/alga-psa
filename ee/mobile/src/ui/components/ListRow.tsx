@@ -32,6 +32,9 @@ export function ListRow({
         paddingHorizontal: theme.spacing.lg,
         borderLeftWidth: selected ? 3 : 0,
         borderLeftColor: selected ? theme.colors.primary : "transparent",
+        // High contrast divides rows explicitly instead of relying on spacing.
+        borderBottomWidth: theme.highContrast ? 1 : 0,
+        borderBottomColor: theme.colors.borderStrong,
         backgroundColor: selected ? theme.colors.borderLight : "transparent",
       }}
     >
@@ -42,7 +45,7 @@ export function ListRow({
         <Text
           style={{
             ...theme.typography.body,
-            color: disabled ? theme.colors.textSecondary : theme.colors.text,
+            color: disabled ? theme.colors.disabled.text : theme.colors.text,
           }}
           numberOfLines={1}
         >

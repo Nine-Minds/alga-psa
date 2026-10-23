@@ -12,11 +12,14 @@
   "phasesAndTasks": "Phasen & Aufgaben",
   "kanbanView": "Kanban",
   "listView": "Liste",
+  "ganttView": "Zeitplan",
   "task": "Aufgabe",
   "tasks": {
     "title": "Aufgaben",
     "noTasks": "Keine Aufgaben anzuzeigen",
     "taskName": "Name",
+    "startDate": "Startdatum",
+    "startsOn": "Beginnt am {{date}}",
     "dueDate": "Fälligkeitsdatum",
     "status": "Status",
     "assignedTo": "Zugewiesen an",
@@ -77,7 +80,14 @@
     "markedComplete": "Phase als abgeschlossen markiert",
     "reopened": "Phase wieder geöffnet",
     "completeReadyToast": "{{description}} ist abrechnungsbereit",
-    "viewInBilling": "Anzeigen"
+    "viewInBilling": "Anzeigen",
+    "serviceLabel": "Standard-Service (für Zeiterfassung)",
+    "noService": "Kein Service",
+    "servicePlaceholder": "Standard-Service auswählen",
+    "serviceHelp": "Wird für Zeiteinträge auf Aufgaben dieser Phase verwendet, wenn die Aufgabe selbst keinen Service festlegt.",
+    "serviceDisplayLabel": "Dienst",
+    "taskCount_few": "{{count}} Aufgaben",
+    "taskCount_many": "{{count}} Aufgaben"
   },
   "projectList": {
     "addProject": "Projekt hinzufügen",
@@ -122,7 +132,8 @@
       "taskType": "Typ",
       "actions": "Aktionen"
     },
-    "unknownUser": "Unbekannt"
+    "unknownUser": "Unbekannt",
+    "searchSmart": "Projekte, Aufgaben und Kommentare durchsuchen… Enter für intelligente Suche"
   },
   "quickAdd": {
     "title": "Neues Projekt hinzufügen",
@@ -137,6 +148,10 @@
     "projectManagerPlaceholder": "Verantwortlichen auswählen",
     "budgetedHoursLabel": "Budgetierte Stunden",
     "budgetedHoursPlaceholder": "Budgetierte Stunden eingeben",
+    "serviceLabel": "Standard-Service (für Zeiterfassung)",
+    "noService": "Kein Service",
+    "servicePlaceholder": "Standard-Service auswählen",
+    "serviceHelp": "Wird für Zeiteinträge in diesem Projekt verwendet, wenn weder die Aufgabe noch ihre Phase einen Service festlegt.",
     "startDateLabel": "Startdatum",
     "startDatePlaceholder": "Startdatum auswählen",
     "endDateLabel": "Enddatum",
@@ -177,7 +192,11 @@
     "continueEditing": "Weiter bearbeiten",
     "discardChanges": "Änderungen verwerfen",
     "saveAndClose": "Speichern und schließen",
-    "saving": "Wird gespeichert..."
+    "saving": "Wird gespeichert...",
+    "serviceLabel": "Standard-Service (für Zeiterfassung)",
+    "noService": "Kein Service",
+    "servicePlaceholder": "Standard-Service auswählen",
+    "serviceHelp": "Wird für Zeiteinträge in diesem Projekt verwendet, wenn weder die Aufgabe noch ihre Phase einen Service festlegt."
   },
   "projectDetail": {
     "allAgents": "Alle Agenten",
@@ -272,6 +291,7 @@
     "taskActions": "Aufgabenaktionen",
     "priorityLevel": "Prioritätsstufe: {{priority}}",
     "dueLabel": "Fällig",
+    "startsLabel": "Beginnt",
     "noDueDate": "Kein Fälligkeitsdatum",
     "hideTags": "Tags ausblenden",
     "criticalPath": "Kritischer Pfad",
@@ -294,7 +314,11 @@
     "bulkTagsSuccess_other": "Tags zu {{count}} Aufgaben hinzugefügt",
     "bulkTagsPartial": "Tags konnten zu einigen Aufgaben nicht hinzugefügt werden",
     "bulkTagsFailure": "Tags konnten nicht zu den ausgewählten Aufgaben hinzugefügt werden",
-    "taskTypeFallback": "Aufgabe"
+    "taskTypeFallback": "Aufgabe",
+    "timeline": "Zeitplan",
+    "loadingTimeline": "Zeitplan wird geladen...",
+    "bulkTagsSuccess_few": "Tags zu {{count}} Aufgaben hinzugefügt",
+    "bulkTagsSuccess_many": "Tags zu {{count}} Aufgaben hinzugefügt"
   },
   "taskForm": {
     "addTitle": "Aufgabe hinzufügen",
@@ -408,7 +432,20 @@
     "movedSuccess": "Aufgabe erfolgreich verschoben",
     "duplicatedSuccess": "Aufgabe \"{{taskName}}\" erfolgreich dupliziert!",
     "willBeSetOnCreate": "Wird bei der Erstellung gesetzt",
-    "unknownPhase": "Unbekannte Phase"
+    "unknownPhase": "Unbekannte Phase",
+    "serviceInheritedFromPhase": "Übernimmt {{service}} von der Phase.",
+    "serviceInheritedFromProject": "Übernimmt {{service}} vom Projekt.",
+    "startDateLabel": "Startdatum",
+    "taskStartDateLabel": "Startdatum der Aufgabe",
+    "startDatePlaceholder": "Startdatum auswählen",
+    "createdTicketsIntro_few": "Sie haben in dieser Sitzung {{count}} Tickets erstellt:",
+    "createdTicketsIntro_many": "Sie haben in dieser Sitzung {{count}} Tickets erstellt:",
+    "documentCleanupFailure_few": "{{count}} Dokumente konnten nicht gelöscht werden und verbleiben in Dokumente",
+    "documentCleanupFailure_many": "{{count}} Dokumente konnten nicht gelöscht werden und verbleiben in Dokumente",
+    "documentsCleanupIntro_few": "Sie haben {{count}} Dokumente, die {{cleanupType}} wurden:",
+    "documentsCleanupIntro_many": "Sie haben {{count}} Dokumente, die {{cleanupType}} wurden:",
+    "ticketCleanupFailure_few": "{{count}} Tickets konnten nicht gelöscht werden",
+    "ticketCleanupFailure_many": "{{count}} Tickets konnten nicht gelöscht werden"
   },
   "taskDependencies": {
     "title": "Abhängigkeiten",
@@ -508,7 +545,14 @@
     "linkedToTaskSuccess": "Ticket erfolgreich mit Aufgabe verknüpft",
     "failedLoadTask": "Aufgabe konnte nicht geladen werden",
     "clientFallback": "Kunde",
-    "defaultNewStatus": "Neu"
+    "defaultNewStatus": "Neu",
+    "billUnderProjectLabel": "Zeit dieses Tickets als Projektzeit abrechnen",
+    "billingOffBadge": "Auf Kundenebene abgerechnet",
+    "billingOnTooltip": "Zeit dieses Tickets nicht mehr als Projektzeit abrechnen",
+    "billingOffTooltip": "Zeit dieses Tickets als Projektzeit abrechnen",
+    "billingOnSuccess": "Die Zeit dieses Tickets wird als Projektzeit abgerechnet",
+    "billingOffSuccess": "Die Zeit dieses Tickets wird auf Kundenebene abgerechnet",
+    "billingUpdateFailed": "Abrechnung des Tickets konnte nicht aktualisiert werden"
   },
   "materials": {
     "title": "Projektmaterialien",
@@ -601,6 +645,7 @@
       "priority": "Priorität",
       "assignedTo": "Zugewiesen an",
       "assignedTeam": "Zugewiesenes Team",
+      "startDate": "Startdatum",
       "dueDate": "Fälligkeitsdatum",
       "estimatedHours": "Geschätzte Stunden",
       "actualHours": "Ist-Stunden",
@@ -611,7 +656,13 @@
     },
     "exportSelected": "{{count}} ausgewählte exportieren",
     "selectedTasksNotice_one": "{{count}} ausgewählte Aufgabe wird exportiert.",
-    "selectedTasksNotice_other": "{{count}} ausgewählte Aufgaben werden exportiert."
+    "selectedTasksNotice_other": "{{count}} ausgewählte Aufgaben werden exportiert.",
+    "phasesSelected_few": "{{selected}} von {{total}} Phasen ausgewählt",
+    "phasesSelected_many": "{{selected}} von {{total}} Phasen ausgewählt",
+    "selectedTasksNotice_few": "{{count}} ausgewählte Aufgaben werden exportiert.",
+    "selectedTasksNotice_many": "{{count}} ausgewählte Aufgaben werden exportiert.",
+    "success_few": "{{count}} Aufgaben erfolgreich als CSV exportiert.",
+    "success_many": "{{count}} Aufgaben erfolgreich als CSV exportiert."
   },
   "import": {
     "title": "Phasen und Aufgaben importieren",
@@ -619,7 +670,7 @@
     "requiredFields": "Erforderlich:",
     "requiredFieldsList": "task_name",
     "optionalFields": "Optional:",
-    "optionalFieldsList": "phase_name, task_description, assigned_to, estimated_hours, due_date, priority, service, task_type, status, tags",
+    "optionalFieldsList": "phase_name, task_description, assigned_to, estimated_hours, start_date, due_date, priority, service, task_type, status, tags",
     "noteLabel": "Hinweis:",
     "defaultPhaseNote": "Aufgaben ohne phase_name werden in \"{{phaseName}}\" gruppiert",
     "downloadTemplate": "CSV-Vorlage herunterladen",
@@ -708,6 +759,7 @@
       "assigned_to": "Zugewiesen an",
       "estimated_hours": "Geschätzte Stunden",
       "actual_hours": "Ist-Stunden",
+      "start_date": "Startdatum",
       "due_date": "Fälligkeitsdatum",
       "priority": "Priorität",
       "service": "Dienst",
@@ -731,7 +783,9 @@
     "statusUnmatchedTooltip": "Der Status entspricht keinem vorhandenen Status für diese Phase. Bitte vor dem Import in den Zuordnungsschritten lösen.",
     "statusFallbackSuffix": "Standard",
     "statusFallbackTooltip": "Verwendung des Standard-Ersatzstatus für diese Phase.",
-    "inPhaseBadge": "Phase {{phase}}"
+    "inPhaseBadge": "Phase {{phase}}",
+    "taskCountLabel_few": "({{count}} Aufgaben)",
+    "taskCountLabel_many": "({{count}} Aufgaben)"
   },
   "dialogs": {
     "moveTask": {
@@ -803,7 +857,11 @@
       "task": "Aufgabe",
       "tasks": "Aufgaben",
       "badgeCount_other": "{{count}} Aufgaben",
-      "badgeCount_one": "{{count}} Aufgabe"
+      "badgeCount_one": "{{count}} Aufgabe",
+      "billsToProject": "Zeit wird als Projektzeit abgerechnet",
+      "billsToClient": "Zeit wird auf Kundenebene abgerechnet",
+      "badgeCount_few": "{{count}} Aufgaben",
+      "badgeCount_many": "{{count}} Aufgaben"
     },
     "bulkMoveTask": {
       "title": "Aufgaben verschieben",
@@ -907,7 +965,7 @@
       "choose_status": "Status wählen",
       "no_statuses_available": "Keine Status verfügbar",
       "no_statuses_available_hint": "Erstellen Sie zuerst Status unter Einstellungen → Projekte → Status.",
-      "task_status_library_title": "Projektaufgaben-Statusbibliothek",
+      "task_status_library_title": "Aufgaben-Statusbibliothek",
       "task_status_library_description": "Verwalten Sie die Projekt-Aufgabenstatus Ihrer Organisation. Diese Status können in allen Projekten verwendet werden.",
       "task_status_library_empty": "Keine Projektaufgabenstatus gefunden",
       "task_status_library_empty_hint": "Erstellen Sie Ihren ersten Status, um zu beginnen",
@@ -947,12 +1005,33 @@
       "last_closed_error": "Mindestens ein Status muss als geschlossen markiert bleiben",
       "last_closed_delete_error": "Der letzte geschlossene Status für diesen Typ kann nicht gelöscht werden.",
       "addStatus": "Neuen Status hinzufügen",
-      "add_from_library": "Status hinzufügen"
+      "add_from_library": "Status hinzufügen",
+      "closed_badge": "(Geschlossen)",
+      "drag_to_reorder": "Zum Umsortieren ziehen",
+      "refresh_library": "Statusbibliothek aktualisieren",
+      "all_library_statuses_used": "Jeder Status aus der Bibliothek ist hier schon eine Spalte. Verwenden Sie „Neu erstellen“, um einen weiteren hinzuzufügen.",
+      "delete_no_move_target": "Es gibt keine andere Statusspalte, in die diese Aufgaben verschoben werden können. Fügen Sie zuerst eine weitere Spalte hinzu.",
+      "delete_scope_help": "Dies entfernt die Spalte nur in diesem Bereich. Der Status bleibt in Ihrer Aufgaben-Statusbibliothek.",
+      "fork_title": "Benutzerdefinierte Statusspalten für diese Phase verwenden?",
+      "fork_message": "Diese Phase erbt dann die Standardspalten des Projekts nicht mehr. Statusspalten, die Sie später zu den Projektstandards hinzufügen, erscheinen hier erst, wenn Sie die Phase zurückschalten.",
+      "fork_confirm": "Benutzerdefinierte Status verwenden",
+      "phase_uses_custom": "Diese Phase hat eigene Statusspalten und erbt die Projektstandards nicht mehr.",
+      "pending_title": "Nicht gespeicherte Änderungen an Statusspalten",
+      "pending_apply_hint": "Es ändert sich nichts, bis Sie speichern.",
+      "pending_fork": "{{phase}} wechselt zu eigenen Statusspalten.",
+      "pending_revert": "{{phase}} kehrt zu den Standardspalten des Projekts zurück.",
+      "pending_order": "Neue Spaltenreihenfolge für {{scope}}.",
+      "pending_preview_hint": "Die Standardspalten des Projekts werden als Vorschau angezeigt. Speichern Sie, um den Wechsel zu übernehmen; danach können Sie hier Spalten hinzufügen oder entfernen.",
+      "rename_impact_title": "Wohin diese Umbenennung wirkt",
+      "rename_impact_following": "Übernimmt diese Umbenennung sofort: {{columns}} Spalte(n) in {{projects}}.",
+      "rename_impact_keeping": "Behält den Namen „{{name}}“: {{columns}} Spalte(n) in {{projects}}. Diese Spalten sind nicht mit diesem Status aus Ihrer Aufgaben-Statusbibliothek verknüpft, daher melden diese Projekte weiterhin den alten Namen, bis Sie die Spalte dort umbenennen.",
+      "rename_impact_more": "und {{remaining}} weitere",
+      "rename_impact_none": "Dieser Status wird noch in keinem Projekt als Spalte verwendet."
     }
   },
   "templates": {
     "statuses": {
-      "manage_title": "Statusspalten verwalten",
+      "manage_title": "Aufgaben-Statusspalten",
       "manage_description": "Definieren Sie die Statusspalten für Aufgaben in dieser Vorlage. Ziehen zum Neuanordnen.",
       "template_defaults": "Vorlagenstandards",
       "added": "Statusspalte hinzugefügt",
@@ -978,7 +1057,8 @@
       "replaced": "Statusspalte ersetzt",
       "replace_failed": "Statusspalte konnte nicht ersetzt werden",
       "repair_status_columns": "Statusspalten reparieren",
-      "unresolved_apply_guard": "Statusspalten müssen repariert werden ({{count}})"
+      "unresolved_apply_guard": "Statusspalten müssen repariert werden ({{count}})",
+      "pending_row_hint": "Füllen Sie die leere Statusspalte aus, bevor Sie eine weitere hinzufügen."
     },
     "list": {
       "title": "Projektvorlagen",
@@ -1157,7 +1237,9 @@
       "taskCount_other": "{{count}} Aufgaben",
       "unknownUser": "Unbekannt",
       "unknownTask": "Unbekannte Aufgabe",
-      "checklistCountTitle": "{{count}} Checklistenpunkt"
+      "checklistCountTitle": "{{count}} Checklistenpunkt",
+      "taskCount_few": "{{count}} Aufgaben",
+      "taskCount_many": "{{count}} Aufgaben"
     },
     "taskForm": {
       "addTitle": "Aufgabe hinzufügen",
@@ -1195,6 +1277,9 @@
       "statusColumnLabel": "Statusspalte",
       "estimatedHoursLabel": "Geschätzte Stunden",
       "durationLabel": "Dauer (Tage)",
+      "startOffsetLabel": "Startversatz (Tage)",
+      "startOffsetPlaceholder": "Kein Startdatum",
+      "phaseRelativeHint": "Startversatz und Dauer zählen Tage ab Phasenbeginn: Die Aufgabe beginnt nach dem Versatz und ist nach der Dauer fällig.",
       "taskTypeLabel": "Aufgabentyp",
       "priorityLabel": "Priorität",
       "primaryAgentLabel": "Primärer Agent",
@@ -1263,6 +1348,7 @@
         "service": "Service (für Zeiterfassung)",
         "estimatedHours": "Geschätzte Stunden",
         "duration": "Dauer (Tage)",
+        "startOffset": "Startversatz (Tage)",
         "durationSummaryShort": "{{days}} Tage",
         "taskType": "Aufgabentyp",
         "priority": "Priorität",
@@ -1409,22 +1495,14 @@
     "addPhase": "Phase hinzufügen",
     "phaseNamePlaceholder": "Phasenname… *",
     "descriptionPlaceholder": "Beschreibung",
+    "serviceLabel": "Standard-Service (für Zeiterfassung)",
+    "noService": "Kein Service",
+    "servicePlaceholder": "Standard-Service auswählen",
+    "serviceHelp": "Wird für Zeiteinträge auf Aufgaben dieser Phase verwendet, wenn die Aufgabe selbst keinen Service festlegt.",
     "adding": "Wird hinzugefügt…",
     "addError": "Phase konnte nicht hinzugefügt werden. Bitte erneut versuchen.",
     "title": "Projektphasen",
     "import": "Importieren"
-  },
-  "addStatusDialog": {
-    "phaseTitle": "Phasenstatus aus Bibliothek hinzufügen",
-    "projectTitle": "Status aus Bibliothek hinzufügen",
-    "selectLabel": "Aus Statusbibliothek auswählen",
-    "placeholder": "Status wählen",
-    "helpText": "Wählen Sie einen Status aus der Statusbibliothek Ihres Mandanten, um ihn zu diesem Projekt hinzuzufügen.",
-    "noStatusesTitle": "Keine Status verfügbar",
-    "noStatusesDescription": "Erstellen Sie Status unter Einstellungen → Projekte → Status.",
-    "adding": "Wird hinzugefügt...",
-    "addStatus": "Status hinzufügen",
-    "addFailed": "Status konnte nicht hinzugefügt werden. Bitte versuchen Sie es erneut."
   },
   "taskStatusSelect": {
     "ariaLabel": "Aufgabenstatus",
@@ -1475,6 +1553,7 @@
       "fields": {
         "taskNames": "Aufgabennamen",
         "descriptions": "Beschreibungen",
+        "startDates": "Startdaten",
         "dueDates": "Fälligkeitsdaten",
         "status": "Status",
         "assignees": "Zugewiesene",
@@ -1489,6 +1568,7 @@
     "fieldLabels": {
       "task_name": "Aufgabenname",
       "description": "Beschreibung",
+      "start_date": "Startdatum",
       "due_date": "Fälligkeitsdatum",
       "status": "Status",
       "assigned_to": "Zugewiesen an",
@@ -1508,7 +1588,7 @@
     "statusColor": "Statusfarbe",
     "changeColor": "Farbe ändern",
     "markClosed": "Als geschlossenen Status markieren",
-    "markClosedDescription": "Aufgaben in geschlossenen Status gelten als abgeschlossen",
+    "markClosedDescription": "Aufgaben mit diesem Status gelten als abgeschlossen",
     "creating": "Wird erstellt...",
     "createButton": "Status erstellen",
     "nameRequired": "Statusname ist erforderlich",
@@ -1569,7 +1649,9 @@
       "submitting": "Tags werden hinzugefügt...",
       "confirm_one": "Tags zu {{count}} Aufgabe hinzufügen",
       "confirm_other": "Tags zu {{count}} Aufgaben hinzufügen",
-      "failedHeading": "Tags konnten zu den folgenden Aufgaben nicht hinzugefügt werden:"
+      "failedHeading": "Tags konnten zu den folgenden Aufgaben nicht hinzugefügt werden:",
+      "confirm_few": "Tags zu {{count}} Aufgaben hinzufügen",
+      "confirm_many": "Tags zu {{count}} Aufgaben hinzufügen"
     }
   },
   "common:actions": {
@@ -1632,7 +1714,9 @@
       "lockedSummary_other": "{{count}} Einträge mit insgesamt {{amount}} sind gesperrt und ändern sich nicht.",
       "edit": "Konditionen bearbeiten",
       "saved": "Abrechnungskonditionen aktualisiert",
-      "dialogTitle": "Abrechnungskonditionen bearbeiten"
+      "dialogTitle": "Abrechnungskonditionen bearbeiten",
+      "lockedSummary_few": "{{count}} Einträge mit insgesamt {{amount}} sind gesperrt und ändern sich nicht.",
+      "lockedSummary_many": "{{count}} Einträge mit insgesamt {{amount}} sind gesperrt und ändern sich nicht."
     },
     "setup": {
       "title": "Dieses Projekt abrechnen",
@@ -1747,6 +1831,7 @@
     "cap": {
       "title": "Budgetobergrenze",
       "hint": "Zeit und Material wird nach Sätzen bis zu einer optionalen Höchstgrenze abgerechnet.",
+      "currencyStale": "Die gespeicherte Obergrenze lautet auf {{projectCurrency}}, worin die Rechnungen dieses Projekts nicht ausgestellt werden. Geben Sie die Obergrenze in {{invoiceCurrency}} ein, um dieses Projekt auf {{invoiceCurrency}} umzustellen; bis dahin wird keine Obergrenze angewendet. Die neue Obergrenze zählt ab null: bereits abgerechnete Beträge werden nicht übernommen.",
       "amount": "Höchstbetrag ({{currency}})",
       "behavior": "Bei Erreichen",
       "notify": "Nur benachrichtigen",
@@ -1797,7 +1882,8 @@
       "tmHardHint": "Harte Obergrenze {{cap}} — die Abrechnung endet an der Obergrenze",
       "tmNotifyHint": "Budgetobergrenze {{cap}} — nur benachrichtigen",
       "thresholdMarker": "Benachrichtigungsschwelle {{pct}} %",
-      "writtenDown": "Über der Obergrenze abgeschrieben: {{amount}}"
+      "writtenDown": "Über der Obergrenze abgeschrieben: {{amount}}",
+      "currencyStale": "Die Beträge hier lauten auf {{projectCurrency}}, die Rechnungen dieses Projekts werden jedoch in {{invoiceCurrency}} ausgestellt, sodass eine hier erfasste Budgetobergrenze nicht angewendet wird."
     },
     "economics": {
       "title": "Projektwirtschaftlichkeit",
@@ -1870,6 +1956,131 @@
     "errors": {
       "loadRecipient": "Empfängerinformationen konnten nicht geladen werden",
       "sendFailed": "Statusupdate konnte nicht gesendet werden"
+    }
+  },
+  "gantt": {
+    "title": "Zeitplan",
+    "taskColumn": "Phase / Aufgabe",
+    "zoomLabel": "Zeitskala",
+    "zoomDay": "Tag",
+    "zoomWeek": "Woche",
+    "zoomMonth": "Monat",
+    "today": "Heute",
+    "dragHint": "Balken ziehen, um neu zu planen, oder die Ränder ziehen, um die Dauer zu ändern.",
+    "displayOptions": "Anzeigeoptionen",
+    "showBlocking": "Blockierende Verknüpfungen",
+    "showBlockingHint": "Pfeile zwischen Aufgaben, die nacheinander abgeschlossen werden müssen",
+    "showRelated": "Verwandte Verknüpfungen",
+    "showRelatedHint": "Gepunktete Linien zwischen verwandten Aufgaben",
+    "showCriticalPath": "Kritischer Pfad",
+    "showCriticalPathHint": "Aufgaben hervorheben, die den Endtermin bestimmen",
+    "hideClosed": "Abgeschlossene Aufgaben ausblenden",
+    "hideClosedHint": "Nur noch offene Arbeit anzeigen",
+    "legend": "Legende",
+    "legendScheduled": "Termine an der Aufgabe festgelegt",
+    "legendInferred": "Geschätzte Termine (keine Termine festgelegt)",
+    "legendProgress": "Der dunklere Teil zeigt den Fortschritt",
+    "legendOverdue": "Überfällig",
+    "legendClosed": "Abgeschlossen",
+    "legendCritical": "Kritischer Pfad: Eine Verzögerung hier verzögert den Abschluss",
+    "legendBlocking": "Blockierend: muss zuerst abgeschlossen sein",
+    "legendViolated": "Abhängigkeitskonflikt: beginnt, bevor die blockierende Aufgabe endet",
+    "legendRelated": "Verwandt: keine Auswirkung auf Termine",
+    "keyboardHint": "Tastatur: Balken fokussieren, dann verschiebt Alt + ← / → ihn um einen Tag und Umschalt + ← / → ändert das Fälligkeitsdatum.",
+    "export": "Bild exportieren",
+    "exportedAsSvg": "Der Zeitplan war zu groß für ein PNG und wurde stattdessen als SVG gespeichert.",
+    "exportFailed": "Der Zeitplan konnte nicht exportiert werden. Bitte erneut versuchen.",
+    "emptyNoPhasesTitle": "Noch keine Phasen",
+    "emptyNoPhasesDescription": "Fügen Sie eine Phase und anschließend Aufgaben hinzu. Jede Aufgabe erscheint hier als Balken.",
+    "emptyNoTasksTitle": "Noch keine Aufgaben darstellbar",
+    "emptyNoTasksDescription": "Fügen Sie eine Aufgabe hinzu, um sie hier zu sehen. Mit Start- und Fälligkeitsdatum wird der Balken fixiert, mit einer Schätzung berechnet der Zeitplan die Termine.",
+    "emptyFiltered": "Keine Aufgaben entsprechen den aktuellen Filtern.",
+    "emptyAllClosed": "Alle Aufgaben sind abgeschlossen. Deaktivieren Sie „Abgeschlossene Aufgaben ausblenden“, um sie zu sehen.",
+    "addPhase": "Phase hinzufügen",
+    "addTask": "Aufgabe hinzufügen",
+    "addTaskToPhase": "Aufgabe zu dieser Phase hinzufügen",
+    "expandAll": "Alle Phasen aufklappen",
+    "collapseAll": "Alle Phasen zuklappen",
+    "phaseProgress": "{{closed}} von {{total}} Aufgaben abgeschlossen",
+    "blockedBy": "Wartet auf: {{tasks}}",
+    "assignee": "Zugewiesen an",
+    "phaseOverrun": "Endet nach der Phasenfrist am {{date}}",
+    "inferredHint": "Geschätzte Termine. Legen Sie Start- und Fälligkeitsdatum fest, um sie zu fixieren.",
+    "tooltipStatus": "Status: {{status}}",
+    "tooltipAssignee": "Zugewiesen an: {{name}}",
+    "tooltipProgress": "Fortschritt: {{percent}} %",
+    "tooltipEstimate": "Schätzung: {{hours}} Std.",
+    "tooltipOverdue": "Überfällig",
+    "tooltipConflict": "Beginnt, bevor eine blockierende Aufgabe fertig sein soll",
+    "tooltipCritical": "Auf dem kritischen Pfad",
+    "barLabel": "{{task}}, {{range}}",
+    "linkHandle": "Auf eine Aufgabe ziehen, die auf diese warten muss",
+    "dependencyAdded": "Abhängigkeit hinzugefügt",
+    "tooltipBlocks": "Blockiert: {{tasks}}",
+    "edgeBlockingTitle": "Blockierende Abhängigkeit",
+    "edgeRelatedTitle": "Verwandte Aufgaben",
+    "edgeBlockingText": "„{{from}}“ muss abgeschlossen sein, bevor „{{to}}“ beginnen kann.",
+    "edgeRelatedText": "„{{from}}“ und „{{to}}“ sind verwandt. Das hat keine Auswirkung auf Termine.",
+    "edgeConflictText": "Die aktuellen Termine stehen im Konflikt mit dieser Abhängigkeit.",
+    "removeDependency": "Abhängigkeit entfernen",
+    "dependencyRemoved": "Abhängigkeit entfernt",
+    "legendPhase": "Phasentermine; der dunklere Teil ist der Anteil abgeschlossener Aufgaben",
+    "legendPhaseOverrun": "Aufgaben, die über das Phasenende hinausgehen",
+    "phaseBandLabel": "{{range}} · {{percent}} % abgeschlossen",
+    "phaseStartsOn": "Beginnt am {{date}} · kein Enddatum",
+    "phaseEndsOn": "Endet am {{date}} · kein Startdatum",
+    "phaseNoDates": "Keine Phasentermine festgelegt"
+  },
+  "smartSearch": {
+    "run": "Intelligente Suche",
+    "runTitle": "Gefilterte Projekte anhand dieser Anfrage bewerten",
+    "relevanceColumn": "Treffer",
+    "relevance": "{{percent}} % Übereinstimmung",
+    "strong": "Starke Treffer",
+    "possible": "Mögliche Treffer",
+    "unlikely": "Unwahrscheinliche Treffer",
+    "emptyBucketRunning": "Noch keine",
+    "emptyBucket": "Keine",
+    "scoring": "{{scored}} von {{total}} Projekte bewertet",
+    "summary": "{{total}} Projekte bewertet · {{strong}} stark · {{possible}} möglich",
+    "cancelled": "Suche nach {{scored}} von {{total}} Projekte abgebrochen",
+    "errorTitle": "Intelligente Suche gestoppt",
+    "starting": "Intelligente Suche wird gestartet…",
+    "rerun": "Filter geändert. Erneut ausführen",
+    "retry": "Erneut versuchen",
+    "cancel": "Abbrechen",
+    "exit": "Zurück zur Liste",
+    "notConfigured": "Die intelligente Suche ist auf diesem Server nicht konfiguriert",
+    "failedCount": "{{count}} Projekte konnten nicht bewertet werden",
+    "unscored": "Nicht bewertet",
+    "addOnRequired": "Die intelligente Suche erfordert das KI-Assistent-Add-on"
+  },
+  "dependencyGuard": {
+    "blockedTitle": "Diese Aufgabe ist blockiert",
+    "conflictTitle": "Abhängigkeitskonflikt",
+    "blockedStatus": "„{{task}}“ wartet noch auf: {{blockers}}.",
+    "startsBeforeBlocker": "„{{task}}“ würde beginnen, bevor „{{other}}“ fertig sein soll.",
+    "endsAfterDependent": "„{{task}}“ würde enden, nachdem „{{other}}“ beginnen soll.",
+    "more": "Und {{remaining}} weitere.",
+    "question": "Abhängigkeiten werden nicht erzwungen, Sie können also fortfahren. Möchten Sie das?",
+    "proceed": "Trotzdem fortfahren",
+    "cancel": "Abbrechen"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "Kompakt"
+    },
+    "spacious": {
+      "label": "Geräumig"
+    },
+    "decrease": {
+      "title": "Spaltenbreite verringern"
+    },
+    "increase": {
+      "title": "Spaltenbreite erhöhen"
+    },
+    "reset": {
+      "title": "Auf Standard zurücksetzen"
     }
   }
 }

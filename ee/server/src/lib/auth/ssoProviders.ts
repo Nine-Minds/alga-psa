@@ -80,6 +80,22 @@ export interface OAuthProfileMappingInput {
   userTypeHint?: string | null;
 }
 
+// Expected reasons an OAuth profile never resolves to an AlgaPSA user. Auth.js
+// swallows anything thrown from `profile()` into `error=Configuration`, so these
+// travel back as data and `callbacks.signIn` turns them into a readable redirect.
+export type OAuthMappingFailureCode =
+  | 'no_matching_user'
+  | 'missing_email'
+  | 'inactive_user'
+  | 'user_type_mismatch'
+  | 'tenant_mismatch';
+
+export interface OAuthMappingFailure {
+  code: OAuthMappingFailureCode;
+  providerEmail?: string;
+  userType: InternalUserType;
+}
+
 export interface OAuthProfileMappingResult {
   id: string;
   email: string;
@@ -92,6 +108,29 @@ export interface OAuthProfileMappingResult {
   user_type: InternalUserType;
   clientId?: string;
   contactId?: string;
+  authFailure?: OAuthMappingFailure;
+}
+
+export function isOAuthMappingFailure<
+  T extends { authFailure?: OAuthMappingFailure | null },
+>(user: T | null | undefined): user is T & { authFailure: OAuthMappingFailure } {
+  return Boolean(user && user.authFailure && typeof user.authFailure.code === 'string');
+}
+
+function buildAuthFailureResult(
+  code: OAuthMappingFailureCode,
+  userType: InternalUserType,
+  providerEmail?: string,
+): OAuthProfileMappingResult {
+  return {
+    id: '',
+    email: '',
+    name: '',
+    username: '',
+    proToken: '',
+    user_type: userType,
+    authFailure: { code, providerEmail, userType },
+  };
 }
 
 function pickUserType(userType: string | undefined | null): InternalUserType {
@@ -269,7 +308,7 @@ export async function mapOAuthProfileToExtendedUser(
 
   if (!email || typeof email !== 'string') {
     logger.warn(`[auth] ${provider} profile missing email`, { profile });
-    throw new Error('User not found');
+    return buildAuthFailureResult('missing_email', requestedUserType);
   }
 
   const normalizedEmail = email.toLowerCase();
@@ -277,12 +316,12 @@ export async function mapOAuthProfileToExtendedUser(
   const user = await locateUser(normalizedEmail, tenantHint, userTypeHint);
   if (!user || !user.user_id) {
     logger.warn(`[auth] User not found during ${provider} OAuth`, { email: normalizedEmail });
-    throw new Error('User not found');
+    return buildAuthFailureResult('no_matching_user', requestedUserType, normalizedEmail);
   }
 
   if (user.is_inactive) {
     logger.warn(`[auth] Inactive user attempted ${provider} OAuth`, { email: normalizedEmail });
-    throw new Error('User not found');
+    return buildAuthFailureResult('inactive_user', requestedUserType, normalizedEmail);
   }
 
   if (user.user_type !== requestedUserType) {
@@ -291,7 +330,7 @@ export async function mapOAuthProfileToExtendedUser(
       requestedUserType,
       storedUserType: user.user_type,
     });
-    throw new Error('User not found');
+    return buildAuthFailureResult('user_type_mismatch', requestedUserType, normalizedEmail);
   }
 
   let tenantId = user.tenant;
@@ -326,7 +365,7 @@ export async function mapOAuthProfileToExtendedUser(
         expectedTenantId,
         resolvedTenantId: tenantId,
       });
-      throw new Error('User not found');
+      return buildAuthFailureResult('tenant_mismatch', requestedUserType, normalizedEmail);
     }
   }
 

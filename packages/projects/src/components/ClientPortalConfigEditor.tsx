@@ -56,6 +56,7 @@ export default function ClientPortalConfigEditor({
       const fieldLabels: string[] = [];
       if (fields.includes('task_name')) fieldLabels.push(t('clientPortal.summary.fields.taskNames', 'task names'));
       if (fields.includes('description')) fieldLabels.push(t('clientPortal.summary.fields.descriptions', 'descriptions'));
+      if (fields.includes('start_date')) fieldLabels.push(t('clientPortal.summary.fields.startDates', 'start dates'));
       if (fields.includes('due_date')) fieldLabels.push(t('clientPortal.summary.fields.dueDates', 'due dates'));
       if (fields.includes('status')) fieldLabels.push(t('clientPortal.summary.fields.status', 'status'));
       if (fields.includes('assigned_to')) fieldLabels.push(t('clientPortal.summary.fields.assignees', 'assignees'));

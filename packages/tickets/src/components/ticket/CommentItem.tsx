@@ -6,6 +6,7 @@ import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { Pencil, Trash, Lock, CheckCircle, Check, Cog, Copy, CornerUpLeft, MessageCircle } from 'lucide-react';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
+import SystemAvatar from '@alga-psa/ui/components/SystemAvatar';
 import { IComment } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
@@ -21,7 +22,9 @@ import { getCommentResponseSource } from '../../lib/responseSource';
 import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { resolveCommentAuthor } from '../../lib/commentAuthorResolution';
 import ResponseSourceBadge from '../ResponseSourceBadge';
+import type { ITicketExternalLinkView } from '../../actions/externalLinks/externalLinkActions';
 import { normalizeEmailAddress } from '@shared/lib/email/addressUtils';
+import { readCommentEmailRecipients } from '@shared/lib/tickets/commentEmailRecipientsCore';
 import { parseTicketRichTextContent } from '../../lib/ticketRichText';
 import { extractTicketRichTextPlainText } from '../../lib/ticketRichText';
 import { extractTicketRichTextHtml } from '../../lib/ticketRichTextHtml';
@@ -44,8 +47,9 @@ interface CommentItemProps {
   onContentChange: (content: PartialBlock[]) => void;
   onSave: (updates: Partial<IComment>) => void;
   onClose: () => void;
-  onEdit: (conversation: IComment) => void;
-  onDelete: (comment: IComment) => void;
+  /** Omitted on a read-only thread: no edit control is rendered. */
+  onEdit?: (conversation: IComment) => void;
+  onDelete?: (comment: IComment) => void;
   onReply?: (comment: IComment) => void;
   hideInternalTab?: boolean;
   uploadFile?: (file: File, blockId?: string) => Promise<string>;
@@ -66,6 +70,12 @@ interface CommentItemProps {
    * 1px border width and radius — only the color changes.
    */
   accentBorderClassName?: string;
+  /**
+   * Read-only external-system references attached to this comment (comment-level
+   * links). Rendered as link-out chips; the manual writer only creates
+   * ticket-level links, so these come from the API/integration path.
+   */
+  externalLinks?: ITicketExternalLinkView[];
 }
 
 function getInboundSenderIdentity(
@@ -169,6 +179,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   canViewCommentMetadataDebug = false,
   variant = 'default',
   accentBorderClassName,
+  externalLinks = [],
 }) => {
   const isCompact = variant === 'compact';
   const { t } = useTranslation('features/tickets');
@@ -214,8 +225,14 @@ const CommentItem: React.FC<CommentItemProps> = ({
     [conversation.metadata]
   );
 
+  const isBundleMirror = Boolean(conversation.bundle_mirror_source);
+  const isSystemAuthor = resolvedAuthor.source === 'system';
+
+  // LEVERAGE: pattern comment-author-label — same author-label rules as resolveLatestActivityActor (lib/latestActivityActor.ts)
   const getAuthorName = () => {
-    if (conversation.is_system_generated) return t('conversation.bundledUpdate');
+    if (isSystemAuthor) {
+      return isBundleMirror ? t('conversation.bundledUpdate') : t('conversation.systemAuthor', 'System');
+    }
     if (resolvedAuthor.source === 'user') {
       return `${resolvedAuthor.displayName}${resolvedAuthor.userType === 'client' ? t('conversation.clientSuffix') : ''}`;
     }
@@ -227,15 +244,12 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   // An unmatched inbound email still names its sender, so the avatar shows those
   // initials; the Unknown User placeholder is kept only when nothing identifies
-  // the author.
+  // the author. System-authored comments never reach this branch.
   const inboundSenderLabel = inboundSenderIdentity.fromName || inboundSenderIdentity.fromAddress;
-  const unknownAuthorAvatarName =
-    !conversation.is_system_generated && inboundSenderLabel
-      ? inboundSenderLabel
-      : t('conversation.unknownUser');
+  const unknownAuthorAvatarName = inboundSenderLabel || t('conversation.unknownUser');
 
   const getAuthorEmail = () => {
-    if (conversation.is_system_generated) return null;
+    if (isSystemAuthor) return null;
     if (resolvedAuthor.source === 'unknown' && inboundSenderIdentity.fromAddress) {
       return inboundSenderIdentity.fromAddress;
     }
@@ -247,14 +261,32 @@ const CommentItem: React.FC<CommentItemProps> = ({
     [conversation]
   );
   const authorEmail = getAuthorEmail();
+
+  // One-off Cc/Bcc for this single comment. Bcc is MSP-only: the client-portal
+  // loaders and actions strip it before the comment ever reaches this render.
+  const emailRecipientLines = useMemo(() => {
+    const recipients = readCommentEmailRecipients(conversation.metadata);
+    if (!recipients) return [] as Array<{ label: string; names: string }>;
+    const describe = (entry: { email: string; name?: string }) => entry.name || entry.email;
+    const lines: Array<{ label: string; names: string }> = [];
+    if (recipients.cc.length > 0) {
+      lines.push({ label: t('conversation.cc', 'Cc'), names: recipients.cc.map(describe).join(', ') });
+    }
+    if (recipients.bcc.length > 0) {
+      lines.push({ label: t('conversation.bcc', 'Bcc'), names: recipients.bcc.map(describe).join(', ') });
+    }
+    return lines;
+  }, [conversation.metadata, t]);
   const isDeleted = Boolean(conversation.deleted_at);
 
   // Only allow users to edit their own comments
   const canEdit = useMemo(() => {
     if (isDeleted) return false;
     if (conversation.is_system_generated) return false;
+    // No handler means the host is showing the thread read-only.
+    if (!onEdit || !onDelete) return false;
     return currentUserId === conversation.user_id;
-  }, [conversation.user_id, currentUserId, isDeleted]);
+  }, [conversation.user_id, currentUserId, isDeleted, onEdit, onDelete]);
 
   const plainTextForCopy = useMemo(
     () => extractTicketRichTextPlainText(conversation.note),
@@ -463,8 +495,15 @@ const CommentItem: React.FC<CommentItemProps> = ({
     >
       <div className={`flex items-start min-w-0 max-w-full ${isCompact ? 'mb-0.5' : 'mb-1'}`}>
         <div className={isCompact ? 'mr-2' : 'mr-2'}>
-          {/* Conditionally render UserAvatar or ContactAvatar */}
-          {conversation.is_system_generated || resolvedAuthor.source === 'unknown' ? (
+          {/* Conditionally render SystemAvatar, UserAvatar or ContactAvatar */}
+          {isSystemAuthor ? (
+            <SystemAvatar
+              {...withDataAutomationId({ id: `${commentId}-avatar` })}
+              glyph={isBundleMirror ? 'bundle' : 'system'}
+              label={isBundleMirror ? t('conversation.bundledUpdate') : t('conversation.systemAuthor', 'System')}
+              size={isCompact ? 'sm' : 'md'}
+            />
+          ) : resolvedAuthor.source === 'unknown' ? (
             <UserAvatar
               {...withDataAutomationId({ id: `${commentId}-avatar` })}
               userId=""
@@ -505,6 +544,28 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 <p {...withDataAutomationId({ id: `${commentId}-author-name` })} className="font-semibold text-gray-800 dark:text-[rgb(var(--color-text-900))] break-words min-w-0">
                   {getAuthorName()}
                 </p>
+                {isBundleMirror && (
+                  conversation.bundle_mirror_source?.master_ticket_id ? (
+                    <a
+                      {...withDataAutomationId({ id: `${commentId}-bundled-update-badge` })}
+                      href={`/msp/tickets/${conversation.bundle_mirror_source.master_ticket_id}`}
+                      className="inline-flex shrink-0 items-center rounded-full border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-2 py-0.5 text-xs font-medium text-[rgb(var(--color-text-600))] hover:underline"
+                    >
+                      {conversation.bundle_mirror_source.master_ticket_number
+                        ? t('conversation.bundledUpdateFrom', { number: conversation.bundle_mirror_source.master_ticket_number })
+                        : t('conversation.bundledUpdate')}
+                    </a>
+                  ) : (
+                    <span
+                      {...withDataAutomationId({ id: `${commentId}-bundled-update-badge` })}
+                      className="inline-flex shrink-0 items-center rounded-full border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-2 py-0.5 text-xs font-medium text-[rgb(var(--color-text-600))]"
+                    >
+                      {conversation.bundle_mirror_source?.master_ticket_number
+                        ? t('conversation.bundledUpdateFrom', { number: conversation.bundle_mirror_source.master_ticket_number })
+                        : t('conversation.bundledUpdate')}
+                    </span>
+                  )
+                )}
                 {conversation.is_internal && (
                   <Tooltip content={t('conversation.internalCommentTooltip')}>
                     <span {...withDataAutomationId({ id: `${commentId}-internal-badge` })}>
@@ -546,6 +607,29 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     }}
                   />
                 )}
+                {externalLinks.map((link) => (
+                  <span
+                    key={link.link_id}
+                    id={`${commentId}-external-link-${link.link_id}`}
+                    className="inline-flex items-center gap-1 rounded-full border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-2 py-0.5 text-xs text-[rgb(var(--color-text-600))]"
+                    title={link.display.label}
+                  >
+                    {link.display.href ? (
+                      <a
+                        href={link.display.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                      >
+                        {link.display.label} · {link.external_id}
+                      </a>
+                    ) : (
+                      <span>
+                        {link.display.label} · {link.external_id}
+                      </span>
+                    )}
+                  </span>
+                ))}
                 {canViewCommentMetadataDebug && isNonEmptyCommentMetadata(conversation.metadata) && (
                   <>
                     <Tooltip content={t('conversation.metadataDebug', 'View metadata (debug)')}>
@@ -611,6 +695,18 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   </p>
                 </div>
               )}
+              {emailRecipientLines.length > 0 && (
+                <div
+                  {...withDataAutomationId({ id: `${commentId}-email-recipients` })}
+                  className="flex flex-col min-w-0 text-xs text-gray-500 dark:text-[rgb(var(--color-text-400))]"
+                >
+                  {emailRecipientLines.map((line) => (
+                    <span key={line.label} className="break-words min-w-0">
+                      {line.label}: {line.names}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
             {(canCopy || (onReply && !isDeleted) || canEdit) && (
               <div className="c-actions space-x-2">
@@ -658,7 +754,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       id={`edit-comment-${conversation.comment_id}-button`}
                       variant="ghost"
                       size="sm"
-                      onClick={() => onEdit(conversation)}
+                      onClick={() => onEdit?.(conversation)}
                       aria-label={t('conversation.editCommentAriaLabel')}
                     >
                       <Pencil className="w-4 h-4" />
@@ -667,7 +763,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       id={`delete-comment-${conversation.comment_id}-button`}
                       variant="ghost"
                       size="sm"
-                      onClick={() => onDelete(conversation)}
+                      onClick={() => onDelete?.(conversation)}
                       aria-label={t('conversation.deleteCommentAriaLabel')}
                     >
                       <Trash className="w-4 h-4" />
@@ -692,10 +788,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   className={`prose max-w-none w-full min-w-0 overflow-hidden break-words ${
                     isCompact
                       ? // Compact: shrink the editor's side-menu horizontal padding to the 4px
-                        // node-selection ring width (offset by -mx-1 so text keeps its x), and
-                        // hide BlockNote's always-appended trailing empty block (identified by
-                        // its ProseMirror trailing break) so a one-line comment reads as one line.
-                        'prose-sm mt-0.5 -mx-1 text-sm leading-snug [&_.bn-editor]:!px-1 [&_.bn-block-outer:last-child:has(br.ProseMirror-trailingBreak)]:hidden'
+                        // node-selection ring width (offset by -mx-1 so text keeps its x).
+                        'prose-sm mt-0.5 -mx-1 text-sm leading-snug [&_.bn-editor]:!px-1'
                       : 'mt-1'
                   }`}
                   style={{ overflowWrap: 'anywhere' }}

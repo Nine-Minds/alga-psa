@@ -52,6 +52,7 @@
         "fillRequiredFields": "Vul alle verplichte velden in",
         "loadFailed": "Kan profiel niet laden",
         "saveFailed": "Kan profiel niet opslaan",
+        "invalidTimezone": "Kies een tijdzone op basis van een stad, zoals America/New_York.",
         "errorPrefix": "Fout: {{error}}"
       }
     },
@@ -499,6 +500,8 @@
         "sending": "Verzenden…",
         "rotateSecret": "Geheim roteren",
         "rotating": "Roteren…",
+        "retryFailed": "Mislukte leveringen opnieuw proberen",
+        "retryingFailed": "Opnieuw proberen…",
         "back": "Terug naar webhooks"
       },
       "deliveries": {
@@ -540,6 +543,8 @@
         "stateChangeFailed": "Webhookstatus kon niet worden bijgewerkt.",
         "retryQueued": "Opnieuw proberen in wachtrij voor gebeurtenis {{eventId}}.",
         "retryFailed": "Kon levering niet opnieuw proberen.",
+        "retryFailedQueued": "{{queued}} leveringen in wachtrij om opnieuw te proberen, {{skipped}} overgeslagen.",
+        "retryFailedFailed": "Kon mislukte leveringen niet opnieuw proberen.",
         "invalidHeaderLine": "Ongeldige headerregel: \"{{line}}\"",
         "invalidRetryConfig": "De retry-configuratie moet een JSON-object zijn"
       },
@@ -726,6 +731,19 @@
     }
   },
   "connectSso": {
+    "proFeature": {
+      "description": "Het koppelen van SSO-accounts is beschikbaar in Pro. Upgrade om uw Google Workspace- of Microsoft 365-account te verbinden voor naadloze authenticatie."
+    },
+    "linkError": {
+      "title": "SSO-koppeling mislukt.",
+      "no_matching_user": "Het account waarmee u bent aangemeld is {{providerEmail}}, maar uw AlgaPSA-aanmelding is {{accountEmail}}. Koppel een account dat {{accountEmail}} gebruikt, of vraag de beheerder van uw identiteitsprovider om {{accountEmail}} als primair e-mailadres van dat account in te stellen.",
+      "missing_email": "Uw identiteitsprovider heeft geen e-mailadres voor dat account geretourneerd, waardoor het niet aan uw AlgaPSA-aanmelding {{accountEmail}} kan worden gekoppeld. Vraag de beheerder van uw identiteitsprovider om een e-mailadres voor het account te publiceren en probeer het opnieuw.",
+      "inactive_user": "De AlgaPSA-gebruiker voor {{providerEmail}} is inactief en kan daarom niet worden gekoppeld. Vraag uw beheerder om deze te heractiveren en probeer het opnieuw.",
+      "user_type_mismatch": "{{providerEmail}} hoort bij een gebruiker van het klantenportaal en niet bij een interne AlgaPSA-gebruiker. Koppel in plaats daarvan een account dat {{accountEmail}} gebruikt.",
+      "tenant_mismatch": "{{providerEmail}} hoort bij een andere organisatie dan {{accountEmail}}. Koppel een account van uw eigen organisatie.",
+      "generic": "We konden dat account niet aan {{accountEmail}} koppelen. Probeer het opnieuw of neem contact op met uw beheerder.",
+      "unknownProviderEmail": "een account zonder e-mailadres"
+    },
     "verify": {
       "title": "Beveilig uw account met SSO",
       "description": "Koppel Azure AD of Google Workspace om organisatiebeleid te hergebruiken en lokale tweefactor-prompts over te slaan.",

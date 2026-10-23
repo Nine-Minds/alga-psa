@@ -16,7 +16,7 @@ const sources = {
   commentReactionActions: readRepoFile('packages/tickets/src/actions/comment-actions/commentReactionActions.ts'),
   clipboardImageDraftActions: readRepoFile('packages/tickets/src/actions/comment-actions/clipboardImageDraftActions.ts'),
   deleteTicketChildRecords: readRepoFile('packages/tickets/src/lib/deleteTicketChildRecords.ts'),
-  clientPortalVisibilityServer: readRepoFile('packages/tickets/src/lib/clientPortalVisibility.server.ts'),
+  clientPortalVisibilityServer: readRepoFile('packages/authorization/src/portal/visibility.server.ts'),
 };
 
 const metadataSource = readRepoFile('packages/db/src/lib/tenantTableMetadata.ts');

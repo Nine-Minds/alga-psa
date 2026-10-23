@@ -14,11 +14,13 @@ import { toPlainDate, displayAddressField, displayCountry } from '@alga-psa/core
 import Invoice from '@alga-psa/billing/models/invoice';
 import { getClientContractPurchaseOrderContext, getPurchaseOrderConsumedCents } from '@alga-psa/billing/services/purchaseOrderService';
 import { withAuth } from '@alga-psa/auth';
+import { withSerializableAuth } from './serializableAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   permissionError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { enrichContractChangeDescriptions } from '../lib/billing/contractChangeInvoiceProjection.server';
 
 type InvoiceQueryUser = {
   user_id: string;
@@ -119,6 +121,22 @@ function buildInvoiceDetailServicePeriodSubquery(
   return db.tenantWhereColumn(subquery, 'ic.tenant', `${outerInvoiceAlias}.tenant`);
 }
 
+/**
+ * How many billing profiles the invoice's client holds — the D6 invisibility
+ * rule, resolved in the listing query so a single-profile client's invoice
+ * carries no profile UI at all.
+ */
+function buildClientBillingProfileCountSubquery(
+  db: ReturnType<typeof tenantDb>,
+  outerInvoiceAlias: string,
+): Knex.QueryBuilder {
+  const subquery = db.subquery('client_billing_profiles as cbp')
+    .whereRaw('?? = ??', ['cbp.client_id', `${outerInvoiceAlias}.client_id`])
+    .count('cbp.billing_profile_id');
+
+  return db.tenantWhereColumn(subquery, 'cbp.tenant', `${outerInvoiceAlias}.tenant`);
+}
+
 async function enrichInvoiceWithProjectRenderingData(
   knex: Knex | Knex.Transaction,
   tenant: string,
@@ -126,6 +144,10 @@ async function enrichInvoiceWithProjectRenderingData(
   invoice: InvoiceViewModel,
 ): Promise<InvoiceViewModel> {
   const db = tenantDb(knex, tenant);
+  // Delivered rows are never rewritten for a presentation repair. Where the
+  // canonical companion ledger still exists, derive their display text at read
+  // time; legacy rows without source data keep their honest stored wording.
+  invoice = await enrichContractChangeDescriptions(knex, tenant, invoiceId, invoice);
   const projectQuery = db.table('invoices as invoice');
   db.tenantJoin(projectQuery, 'projects as project', 'invoice.project_id', 'project.project_id', { type: 'left' });
   const project = await projectQuery
@@ -228,12 +250,19 @@ async function getBasicInvoiceViewModel(invoice: IInvoice, client: any): Promise
     invoice_number: invoice.invoice_number,
     client_id: invoice.client_id,
     po_number: invoice.po_number ?? null,
+    payment_method: invoice.payment_method ?? null,
     client_contract_id: invoice.client_contract_id ?? null,
     client: {
       name: client.client_name,
       logo: client.logo || '',
       address: client.address || ''
     },
+    // Present only on the listings that select them; a listing that does not
+    // ask leaves every profile surface hidden, as it was before profiles.
+    billing_profile_id: (invoice as any).billing_profile_id ?? null,
+    billing_profile_name: (invoice as any).billing_profile_name ?? null,
+    client_has_multiple_billing_profiles:
+      Number((invoice as any).client_billing_profile_count ?? 0) > 1,
     contact: {
       name: '',  // Contact info not stored in invoice
       address: ''
@@ -257,6 +286,7 @@ async function getBasicInvoiceViewModel(invoice: IInvoice, client: any): Promise
       : null,
     credit_applied: Number(invoice.credit_applied || 0),
     is_manual: invoice.is_manual,
+    draft_adjustment_revision: Number(invoice.draft_adjustment_revision ?? 0),
     invoice_type: invoice.invoice_type ?? null,
     is_prepayment: Boolean(invoice.is_prepayment),
     finalized_at: invoice.finalized_at ? (typeof invoice.finalized_at === 'string' ? toPlainDate(invoice.finalized_at) : invoice.finalized_at) : undefined,
@@ -445,6 +475,15 @@ export const fetchInvoicesPaginated = withAuth(async (
           }
         }
       );
+      // Which profile each invoice bills, by name — the listing is where an
+      // operator looks to confirm the pick they made when generating it.
+      db.tenantJoin(
+        invoicesQuery,
+        'client_billing_profiles',
+        'invoices.billing_profile_id',
+        'client_billing_profiles.billing_profile_id',
+        { type: 'left' }
+      );
       const invoices = await invoicesQuery
         .whereIn('invoices.invoice_id', ids)
         .select(
@@ -453,10 +492,16 @@ export const fetchInvoicesPaginated = withAuth(async (
           'invoices.invoice_number',
           'invoices.po_number',
           'invoices.client_contract_id',
+          'invoices.billing_profile_id',
+          'client_billing_profiles.name as billing_profile_name',
+          {
+            client_billing_profile_count: buildClientBillingProfileCountSubquery(db, 'invoices'),
+          },
           'invoices.invoice_date',
           'invoices.due_date',
           'invoices.status',
           'invoices.is_manual',
+          'invoices.draft_adjustment_revision',
           'invoices.finalized_at',
           'invoices.billing_cycle_id',
           'invoices.currency_code',
@@ -608,11 +653,13 @@ export const fetchInvoicesByClient = withAuth(async (
           'invoices.due_date',
           'invoices.status',
           'invoices.is_manual',
+          'invoices.draft_adjustment_revision',
           'invoices.finalized_at',
           'invoices.billing_cycle_id',
           'invoices.currency_code',
           'invoices.invoice_type',
           'invoices.is_prepayment',
+          'invoices.payment_method',
           trx.raw('CAST(invoices.subtotal AS BIGINT) as subtotal'),
           trx.raw('CAST(invoices.tax AS BIGINT) as tax'),
           trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
@@ -729,6 +776,7 @@ export const fetchInvoicesByContract = withAuth(async (
           'invoices.due_date',
           'invoices.status',
           'invoices.is_manual',
+          'invoices.draft_adjustment_revision',
           'invoices.finalized_at',
           'invoices.billing_cycle_id',
           'invoices.currency_code',
@@ -799,7 +847,7 @@ export const getInvoiceForRendering = withAuth(async (
   }
 });
 
-export const getEnrichedInvoiceViewModel = withAuth(async (
+export const getEnrichedInvoiceViewModel = withSerializableAuth(withAuth(async (
   user,
   { tenant },
   invoiceId: string
@@ -851,15 +899,43 @@ export const getEnrichedInvoiceViewModel = withAuth(async (
 
   await enrichInvoiceViewModelWithLocations(knex, tenant, viewModel, invoiceId);
   return viewModel;
-});
+}));
 
-export const getResolvedInvoiceTemplateId = withAuth(async (
+/**
+ * Read the draft invoice header and its charges from one MVCC snapshot for the
+ * manual adjustment editor. A list projection plus getInvoiceLineItems can
+ * combine different invoice revisions after a save/reselection.
+ */
+export const getInvoiceAdjustmentSnapshot = withSerializableAuth(withAuth(async (
   user,
   { tenant },
   invoiceId: string
-): Promise<string | null> => {
+): Promise<InvoiceViewModel | null | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return null;
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
+  }
+
+  const { knex } = await createTenantKnex();
+  return knex.transaction(async (trx) => {
+    await trx.raw('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+    const denied = await assertClientPortalInvoiceAccess(trx, tenant, user, invoiceId);
+    if (denied) return denied;
+    try {
+      return await Invoice.getFullInvoiceById(trx, tenant, invoiceId);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Invoice not found') return null;
+      throw error;
+    }
+  });
+}));
+
+export const getResolvedInvoiceTemplateId = withSerializableAuth(withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string
+): Promise<string | null | ActionPermissionError> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
 
   const { knex } = await createTenantKnex();
@@ -868,7 +944,7 @@ export const getResolvedInvoiceTemplateId = withAuth(async (
   // portal caller probe invoices outside their own client.
   const denied = await assertClientPortalInvoiceAccess(knex, tenant, user, invoiceId);
   if (denied) {
-    return null;
+    return denied;
   }
 
   const db = tenantDb(knex, tenant);
@@ -904,7 +980,7 @@ export const getResolvedInvoiceTemplateId = withAuth(async (
   const templates = await Invoice.getAllTemplates(knex, tenant);
   const defaultTemplate = templates.find((template) => template.is_default || template.isTenantDefault) ?? templates[0];
   return defaultTemplate?.template_id ?? null;
-});
+}));
 
 export type InvoicePurchaseOrderSummary = {
   invoice_id: string;
@@ -915,7 +991,7 @@ export type InvoicePurchaseOrderSummary = {
   remaining_cents: number | null;
 };
 
-export const getInvoicePurchaseOrderSummary = withAuth(async (
+export const getInvoicePurchaseOrderSummary = withSerializableAuth(withAuth(async (
   user,
   { tenant },
   invoiceId: string
@@ -969,10 +1045,10 @@ export const getInvoicePurchaseOrderSummary = withAuth(async (
     consumed_cents: consumed,
     remaining_cents: remaining,
   };
-});
+}));
 
 // New function to get invoice items on demand
-export const getInvoiceLineItems = withAuth(async (
+export const getInvoiceLineItems = withSerializableAuth(withAuth(async (
   user,
   { tenant },
   invoiceId: string
@@ -995,4 +1071,4 @@ export const getInvoiceLineItems = withAuth(async (
     console.error('Error fetching invoice items:', error);
     throw new Error('Error fetching invoice items');
   }
-});
+}));

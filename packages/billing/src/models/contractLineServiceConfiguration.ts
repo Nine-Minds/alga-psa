@@ -141,16 +141,23 @@ export default class ContractLineServiceConfiguration {
   async delete(configId: string): Promise<boolean> {
     await this.initKnex();
     
-    // Use a transaction to ensure both operations succeed or fail together
+    // Refuse to erase issued-invoice provenance. The previous implementation
+    // silently set invoice_charge_details.config_id = NULL and then deleted the
+    // configuration, which broke the link between a persisted charge and the
+    // item that produced it. Items with billing history are stopped by
+    // scheduling a zero quantity, not by deletion.
     return await this.knex.transaction(async (trx) => {
-      const updatedDetails = await tenantDb(trx, this.tenant).table('invoice_charge_details')
+      const billedDetail = await tenantDb(trx, this.tenant).table('invoice_charge_details')
         .where({
           config_id: configId
         })
-        .update({
-          config_id: null
-        });
-      
+        .first('item_detail_id');
+      if (billedDetail) {
+        throw new Error(
+          'This item appears on an issued invoice. Removing it would erase billing history; stop it by scheduling a zero quantity instead.',
+        );
+      }
+
       // Then delete the configuration
       const result = await tenantDb(trx, this.tenant).table('contract_line_service_configuration')
         .where({

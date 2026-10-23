@@ -81,18 +81,18 @@ describe('tenant display settings list merge', () => {
   it('leaves the whole list alone when a writer does not mention it', () => {
     const merged = mergeDisplaySettings(
       { list: savedFromViewMenu },
-      { dateTimeFormat: 'yyyy-MM-dd' },
+      { showWeekday: true },
     );
     expect(merged.list).toEqual(savedFromViewMenu);
-    expect(merged.dateTimeFormat).toBe('yyyy-MM-dd');
+    expect(merged.showWeekday).toBe(true);
   });
 
   it('still replaces non-list keys wholesale', () => {
     const merged = mergeDisplaySettings(
-      { dateTimeFormat: 'a', responseStateTrackingEnabled: true },
-      { dateTimeFormat: 'b' },
+      { showWeekday: false, responseStateTrackingEnabled: true },
+      { showWeekday: true },
     );
-    expect(merged.dateTimeFormat).toBe('b');
+    expect(merged.showWeekday).toBe(true);
     expect(merged.responseStateTrackingEnabled).toBe(true);
   });
 

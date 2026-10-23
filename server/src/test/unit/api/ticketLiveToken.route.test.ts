@@ -34,7 +34,7 @@ describe('ticket live-token route', () => {
     vi.clearAllMocks();
     getHocuspocusJwtSecretMock.mockResolvedValue('live-ticket-secret');
     authMock.mockResolvedValue(null);
-    getUserWithRolesMock.mockResolvedValue(null);
+    getUserWithRolesMock.mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-1', user_type: 'internal' });
   });
 
   it('T008: returns 401 when the session user is missing', async () => {
@@ -96,6 +96,7 @@ describe('ticket live-token route', () => {
       },
     });
     getUserWithRolesMock.mockResolvedValue({
+      user_type: 'internal',
       user_id: 'user-2',
       tenant: 'tenant-2',
     });
@@ -130,4 +131,16 @@ describe('ticket live-token route', () => {
 
     expect(response.status).toBe(403);
   });
+});
+
+
+it('rejects client sessions before ticket lookup or token signing, including client admins', async () => {
+  vi.clearAllMocks();
+  authMock.mockResolvedValue({ user: { id: 'client-user', tenant: 'tenant-1' } });
+  getUserWithRolesMock.mockResolvedValue({ user_id: 'client-user', tenant: 'tenant-1', user_type: 'client' });
+  const { GET } = await import('../../../app/api/tickets/[id]/live-token/route');
+  const response = await GET(new Request('http://localhost/api/tickets/sibling/live-token') as any, { params: Promise.resolve({ id: 'sibling' }) });
+  expect(response.status).toBe(403);
+  expect(getTicketByIdMock).not.toHaveBeenCalled();
+  expect(getHocuspocusJwtSecretMock).not.toHaveBeenCalled();
 });

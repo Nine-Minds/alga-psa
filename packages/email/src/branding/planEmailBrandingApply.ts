@@ -27,6 +27,11 @@ export interface EmailBrandingApplyScope {
   languages: string[];
   /** Names in the "customized" group the user explicitly ticked. */
   includeCustomized?: string[];
+  /**
+   * Names the user asked to rebuild from the standard template, edits and all.
+   * The escape hatch for a row whose own colors the palette cannot reach.
+   */
+  overwrite?: string[];
 }
 
 export type EmailBrandingSkipReason = 'customized' | 'nothing-to-replace' | 'unchanged';
@@ -45,6 +50,9 @@ export interface PlannedTemplateUpdate {
   name: string;
   language: string;
   html: string;
+  /** Only set by an overwrite, which restores the standard subject and body. */
+  subject?: string;
+  text?: string;
 }
 
 export interface PlannedTemplateSkip {
@@ -86,6 +94,9 @@ const rowKey = (name: string, language: string) => `${name}::${language}`;
  *   only their remaining stock or previously applied tokens change, so the
  *   tenant's own edits survive.
  * - `no-stock-colors` rows are never written; there is nothing to replace.
+ * - a name in `scope.overwrite` overrules the two rules above: the row is
+ *   rebuilt from the standard template, subject and plain text included, which
+ *   is the only way to repaint colors a tenant chose themselves.
  */
 export function planEmailBrandingApply(input: EmailBrandingApplyPlanInput): EmailBrandingApplyPlan {
   const { systemRows, tenantRows, target, appliedPalette, scope, decorate } = input;
@@ -93,6 +104,7 @@ export function planEmailBrandingApply(input: EmailBrandingApplyPlanInput): Emai
   const names = new Set(scope.names);
   const languages = new Set(scope.languages);
   const ticked = new Set(scope.includeCustomized ?? []);
+  const overwritten = new Set(scope.overwrite ?? []);
   const tenantByKey = new Map(tenantRows.map((row) => [rowKey(row.name, row.language_code), row]));
 
   const plan: EmailBrandingApplyPlan = { inserts: [], updates: [], skipped: [] };
@@ -104,13 +116,14 @@ export function planEmailBrandingApply(input: EmailBrandingApplyPlanInput): Emai
     const tenantRow = tenantByKey.get(rowKey(systemRow.name, systemRow.language_code));
     const { state } = classifyTenantTemplate({ tenantRow, systemRow, appliedPalette: appliedPalette ?? null });
     const language = systemRow.language_code;
+    const forced = overwritten.has(systemRow.name);
 
-    if (state === 'no-stock-colors') {
+    if (state === 'no-stock-colors' && !forced) {
       plan.skipped.push({ name: systemRow.name, language, state, reason: 'nothing-to-replace' });
       continue;
     }
 
-    if (state === 'customized' && !ticked.has(systemRow.name)) {
+    if (state === 'customized' && !forced && !ticked.has(systemRow.name)) {
       plan.skipped.push({ name: systemRow.name, language, state, reason: 'customized' });
       continue;
     }
@@ -129,16 +142,25 @@ export function planEmailBrandingApply(input: EmailBrandingApplyPlanInput): Emai
     }
 
     const sourceMaps = appliedPalette ? [appliedPalette, STOCK_EMAIL_PALETTE] : [STOCK_EMAIL_PALETTE];
-    const html = state === 'branded'
+    // An overwrite is a re-clone, exactly like a branded row: the tenant asked
+    // for the standard template in their colors, not for their row recolored.
+    const rebuild = state === 'branded' || forced;
+    const html = rebuild
       ? decorateHtml(applyEmailPalette(systemRow.html_content, STOCK_EMAIL_PALETTE, target))
       : decorateHtml(applyEmailPalette(tenantRow!.html_content, sourceMaps, target));
+    const restored = forced
+      ? { subject: systemRow.subject, text: systemRow.text_content }
+      : null;
 
-    if (html === tenantRow!.html_content) {
+    if (
+      html === tenantRow!.html_content
+      && (!restored || (restored.subject === tenantRow!.subject && restored.text === tenantRow!.text_content))
+    ) {
       plan.skipped.push({ name: systemRow.name, language, state, reason: 'unchanged' });
       continue;
     }
 
-    plan.updates.push({ id: tenantRow!.id, name: systemRow.name, language, html });
+    plan.updates.push({ id: tenantRow!.id, name: systemRow.name, language, html, ...(restored ?? {}) });
   }
 
   return plan;

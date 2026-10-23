@@ -471,6 +471,50 @@ describe('Ticket API E2E Tests', () => {
       const sortedDates = [...dates].sort((a, b) => b - a);
       expect(dates).toEqual(sortedDates);
     });
+
+    it('should keep accepting created_at as an alias for entered_at', async () => {
+      // `tickets` has no created_at column; the alias predates the allowlist and
+      // existing integrations still send it.
+      const query = buildQueryString({ sort: 'created_at', order: 'desc' });
+      const response = await env.apiClient.get(`${API_BASE}${query}`);
+      assertSuccess(response);
+
+      const dates = response.data.data.map((t: any) => new Date(t.entered_at).getTime());
+      expect(dates).toEqual([...dates].sort((a, b) => b - a));
+    });
+
+    for (const order of ['asc', 'desc'] as const) {
+      it(`should sort tickets by latest activity ${order}`, async () => {
+        const query = buildQueryString({ sort: 'latest_activity_at', order });
+        const response = await env.apiClient.get(`${API_BASE}${query}`);
+        assertSuccess(response);
+
+        const values = response.data.data.map((t: any) => {
+          expect(t.latest_activity_at).toBeTruthy();
+          return new Date(t.latest_activity_at).getTime();
+        });
+        const expected = [...values].sort((a, b) => (order === 'asc' ? a - b : b - a));
+        expect(values).toEqual(expected);
+      });
+    }
+
+    it('should return latest_activity_at when requested through fields', async () => {
+      const query = buildQueryString({ fields: 'ticket_id,latest_activity_at', limit: 5 });
+      const response = await env.apiClient.get(`${API_BASE}${query}`);
+      assertSuccess(response);
+
+      for (const ticket of response.data.data) {
+        expect(ticket.latest_activity_at).toBeTruthy();
+        expect(new Date(ticket.latest_activity_at).toISOString()).toBe(ticket.latest_activity_at);
+      }
+    });
+
+    it('should reject an unknown sort value with 400, not 500', async () => {
+      // Before the allowlist this reached orderBy('t.<value>') and came back as
+      // a database error.
+      const response = await env.apiClient.get(`${API_BASE}${buildQueryString({ sort: 'nope' })}`);
+      assertError(response, 400, 'VALIDATION_ERROR');
+    });
   });
 
   describe('Search Tickets (GET /api/v1/tickets/search)', () => {

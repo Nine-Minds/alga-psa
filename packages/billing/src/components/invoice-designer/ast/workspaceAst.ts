@@ -1,6 +1,7 @@
 import type {
   TemplateAst,
   TemplateFieldBorderStyle,
+  TemplateImageNode,
   TemplateNode,
   TemplatePrintSettings,
   TemplateNodeStyleRef,
@@ -33,11 +34,15 @@ import type {
 import { createEmptyDesignerTransformWorkspace, DOCUMENT_NODE_ID } from '../state/designerStore';
 import {
   getDocumentTokenPaths,
+  isDocumentLogoRenderPath,
+  resolveDocumentCanonicalBindings,
   resolveDocumentDisplayPath,
+  resolveDocumentLogoRenderPath,
   resolveDocumentRenderPath,
 } from '../fields/documentBindingCatalog';
 import { resolveDocumentKindFromBindingCatalog, type DesignerDocumentKind } from '../utils/documentKind';
 import { getDefinition } from '../constants/componentCatalog';
+import { createPageLayout } from '../schema/componentSchema';
 import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
 import { resolveMediaFrameSize } from '../utils/mediaSizing';
 import {
@@ -84,7 +89,9 @@ const isTemplateValueExpression = (value: unknown): value is TemplateValueExpres
     return 'value' in value;
   }
   if (value.type === 'binding') {
-    return typeof value.bindingId === 'string';
+    return typeof value.bindingId === 'string' &&
+      (value.fallback === undefined || typeof value.fallback === 'string' ||
+        (isRecord(value.fallback) && typeof value.fallback.i18nKey === 'string' && typeof value.fallback.defaultValue === 'string'));
   }
   if (value.type === 'path') {
     return typeof value.path === 'string';
@@ -393,6 +400,23 @@ const resolveTextNodeContentExpression = (
   return parsedExpression ?? { type: 'literal', value: currentText };
 };
 
+/** Barcode value: the typed text (with `{{path}}` interpolation) unless an imported expression is unchanged. */
+const resolveBarcodeValueExpression = (
+  node: WorkspaceNode,
+  documentKind: DesignerDocumentKind
+): TemplateValueExpression => {
+  const metadata = getWorkspaceNodeMetadata(node);
+  const currentValue = asTrimmedString(metadata.value);
+  const parsedExpression = parseTemplateInterpolationExpression(currentValue, documentKind);
+  const preservedExpression = isTemplateValueExpression(metadata.astValueExpression)
+    ? metadata.astValueExpression
+    : null;
+  if (preservedExpression && currentValue === asTrimmedString(metadata.__astValuePreviewValue)) {
+    return preservedExpression;
+  }
+  return parsedExpression ?? { type: 'literal', value: currentValue };
+};
+
 const createNodeStyle = (node: WorkspaceNode): TemplateNode['style'] | undefined => {
   const inline: Record<string, unknown> = {};
   const style = getWorkspaceNodeStyle(node);
@@ -449,6 +473,9 @@ const createNodeStyle = (node: WorkspaceNode): TemplateNode['style'] | undefined
   if (style.fontStyle) inline.fontStyle = style.fontStyle;
   if (style.lineHeight !== undefined) inline.lineHeight = style.lineHeight;
   if (style.textAlign) inline.textAlign = style.textAlign;
+  if (style.tableLayout) inline.tableLayout = style.tableLayout;
+  if (style.whiteSpace) inline.whiteSpace = style.whiteSpace;
+  if (style.overflowWrap) inline.overflowWrap = style.overflowWrap;
   if (style.display) inline.display = style.display;
   if (style.flexDirection) inline.flexDirection = style.flexDirection;
   if (style.justifyContent) inline.justifyContent = style.justifyContent;
@@ -630,6 +657,23 @@ const coerceTextAlign = (value: unknown): DesignerNodeStyle['textAlign'] | undef
   return undefined;
 };
 
+const coerceTableLayout = (value: unknown): DesignerNodeStyle['tableLayout'] | undefined =>
+  value === 'auto' || value === 'fixed' ? value : undefined;
+
+const coerceWhiteSpace = (value: unknown): DesignerNodeStyle['whiteSpace'] | undefined => {
+  if (value === 'normal' || value === 'nowrap' || value === 'pre' || value === 'pre-line' || value === 'pre-wrap') {
+    return value;
+  }
+  return undefined;
+};
+
+const coerceOverflowWrap = (value: unknown): DesignerNodeStyle['overflowWrap'] | undefined => {
+  if (value === 'normal' || value === 'break-word' || value === 'anywhere') {
+    return value;
+  }
+  return undefined;
+};
+
 const coerceJustifyContent = (value: unknown): DesignerContainerLayout['justifyContent'] | undefined => {
   if (
     value === 'flex-start' ||
@@ -794,6 +838,15 @@ const coerceNodeStyleFromInlineStyle = (inline: Record<string, unknown> | undefi
   const textAlign = coerceTextAlign(inline.textAlign);
   if (textAlign) style.textAlign = textAlign;
 
+  const tableLayout = coerceTableLayout(inline.tableLayout);
+  if (tableLayout) style.tableLayout = tableLayout;
+
+  const whiteSpace = coerceWhiteSpace(inline.whiteSpace);
+  if (whiteSpace) style.whiteSpace = whiteSpace;
+
+  const overflowWrap = coerceOverflowWrap(inline.overflowWrap);
+  if (overflowWrap) style.overflowWrap = overflowWrap;
+
   const display = inline.display === 'flex' || inline.display === 'grid' ? inline.display : undefined;
   if (display) style.display = display;
 
@@ -872,6 +925,9 @@ const mapWorkspaceColumnLines = (
     const style = mapTemplateNodeStyleRef(entry.style);
     if (style) {
       line.style = style;
+    }
+    if (entry.supplemental === true) {
+      line.supplemental = true;
     }
     mapped.push(line);
   }
@@ -965,10 +1021,27 @@ const getAstNodeId = (node: WorkspaceNode): string => {
   return originalId.length > 0 ? originalId : node.id;
 };
 
-const createBaseNode = (node: WorkspaceNode): Pick<TemplateNode, 'id' | 'style'> => ({
-  id: getAstNodeId(node),
-  style: createNodeStyle(node),
-});
+// The layer name travels only when it says something the id does not; imported
+// nodes are named after their id, so unrenamed layers export byte-identically.
+const resolveAstNodeName = (node: WorkspaceNode, astId: string): string | undefined => {
+  // Document and page names are designer scaffolding, not authored layers.
+  if (node.type === 'document' || node.type === 'page') {
+    return undefined;
+  }
+  const props = isRecord(node.props) ? node.props : {};
+  const name = asTrimmedString(props.name);
+  return name.length > 0 && name !== astId ? name.slice(0, 200) : undefined;
+};
+
+const createBaseNode = (node: WorkspaceNode): Pick<TemplateNode, 'id' | 'name' | 'style'> => {
+  const id = getAstNodeId(node);
+  const name = resolveAstNodeName(node, id);
+  return {
+    id,
+    ...(name ? { name } : {}),
+    style: createNodeStyle(node),
+  };
+};
 
 const getWorkspaceNodeSize = (node: WorkspaceNode | undefined): { width?: number; height?: number } => {
   if (!node || !isRecord(node.props)) {
@@ -1147,6 +1220,13 @@ const mapDesignerNodeToAstNode = (
         content: resolveTextNodeContentExpression(node, documentKind),
       };
     }
+    case 'richText': {
+      return {
+        ...createBaseNode(node),
+        type: 'richText',
+        content: resolveTextNodeContentExpression(node, documentKind),
+      };
+    }
     case 'field':
     case 'subtotal':
     case 'tax':
@@ -1321,9 +1401,17 @@ const mapDesignerNodeToAstNode = (
         ...createBaseNode(node),
         type: 'divider',
       };
+    case 'barcode': {
+      const metadata = getWorkspaceNodeMetadata(node);
+      return {
+        ...createBaseNode(node),
+        type: 'barcode',
+        symbology: metadata.symbology === 'code128' ? 'code128' : 'qr',
+        value: resolveBarcodeValueExpression(node, documentKind),
+      };
+    }
     case 'image':
-    case 'logo':
-    case 'qr': {
+    case 'logo': {
       const metadata = getWorkspaceNodeMetadata(node);
       const src = asTrimmedString(metadata.src) || asTrimmedString(metadata.url) || '';
       const alt = asTrimmedString(metadata.alt);
@@ -1367,10 +1455,20 @@ const mapDesignerNodeToAstNode = (
           })()
         : false;
 
+      // A logo-bound image keeps its imported binding verbatim, or binds the
+      // document's logo path when it was authored in the designer.
+      const boundToLogo = metadata.srcBinding === 'tenantLogo';
+      const logoSrcExpression: TemplateValueExpression | null = boundToLogo
+        ? preservedSrcExpression && preservedSrcExpression.type !== 'literal'
+          ? preservedSrcExpression
+          : { type: 'path', path: resolveDocumentLogoRenderPath(documentKind) }
+        : null;
+
       return {
         ...createBaseNode(node),
         type: 'image',
-        src: (!srcChanged && preservedSrcExpression) ? preservedSrcExpression : { type: 'literal', value: src },
+        src: logoSrcExpression
+          ?? ((!srcChanged && preservedSrcExpression) ? preservedSrcExpression : { type: 'literal', value: src }),
         alt: (!altChanged && preservedAltExpression) ? preservedAltExpression : { type: 'literal', value: alt },
       };
     }
@@ -1485,11 +1583,32 @@ export const exportWorkspaceToTemplateAst = (
     return `${preferredId}_${index}`;
   };
 
+  // New bindings take the document catalog's id (and fallback) for a known path, so
+  // a designed layout binds exactly like a shipped one.
+  const canonicalBindings = resolveDocumentCanonicalBindings(documentKind);
+  const canonicalValueByPath = new Map(
+    Object.values(canonicalBindings.values ?? {}).map((binding) => [binding.path, binding] as const)
+  );
+  const canonicalCollectionByPath = new Map(
+    Object.values(canonicalBindings.collections ?? {}).map((binding) => [binding.path, binding] as const)
+  );
+
   const registerValueBinding = (path: string): string => {
     const normalizedPath = normalizeInvoiceBindingPath(path, documentKind);
     const existingBindingId = valueBindingPathToId.get(normalizedPath);
     if (existingBindingId) {
       return existingBindingId;
+    }
+    const canonical = canonicalValueByPath.get(normalizedPath);
+    if (canonical && !valueBindings[canonical.id]) {
+      valueBindings[canonical.id] = {
+        id: canonical.id,
+        kind: 'value',
+        path: canonical.path,
+        ...(Object.prototype.hasOwnProperty.call(canonical, 'fallback') ? { fallback: canonical.fallback } : {}),
+      };
+      valueBindingPathToId.set(normalizedPath, canonical.id);
+      return canonical.id;
     }
     const preferredBindingId = sanitizeId(`value.${normalizedPath}`) || `value.${Object.keys(valueBindings).length + 1}`;
     const bindingId = createUniqueBindingId(preferredBindingId, valueBindings);
@@ -1509,6 +1628,12 @@ export const exportWorkspaceToTemplateAst = (
     const existingBindingId = collectionBindingPathToId.get(normalizedPath);
     if (existingBindingId) {
       return existingBindingId;
+    }
+    const canonical = canonicalCollectionByPath.get(normalizedPath);
+    if (canonical && !collectionBindings[canonical.id]) {
+      collectionBindings[canonical.id] = { id: canonical.id, kind: 'collection', path: canonical.path };
+      collectionBindingPathToId.set(normalizedPath, canonical.id);
+      return canonical.id;
     }
     const preferredBindingId =
       sanitizeId(`collection.${normalizedPath}`) || `collection.${Object.keys(collectionBindings).length + 1}`;
@@ -1552,6 +1677,7 @@ export const exportWorkspaceToTemplateAst = (
     nextTemplateMetadata.printSettings = {
       paperPreset: resolvedPrintSettings.paperPreset,
       marginMm: resolvedPrintSettings.marginMm,
+      ...(resolvedPrintSettings.customPageSize ? { customPageSize: resolvedPrintSettings.customPageSize } : {}),
     };
   } else {
     delete nextTemplateMetadata.printSettings;
@@ -1699,6 +1825,7 @@ export const importTemplateAstToWorkspace = (
                   printSettings: {
                     paperPreset: resolvedPrintSettings.paperPreset,
                     marginMm: resolvedPrintSettings.marginMm,
+                    ...(resolvedPrintSettings.customPageSize ? { customPageSize: resolvedPrintSettings.customPageSize } : {}),
                   },
                 }
               : {}),
@@ -1731,14 +1858,7 @@ export const importTemplateAstToWorkspace = (
       // Always materialize a page node as the canvas root so sizing/margins are stable and consistent.
       // If the AST uses a single top-level section wrapper, treat it as the page node.
       const pageLayoutBase =
-        coerceContainerLayoutFromInlineStyle(pageSectionInline) ?? {
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '32px',
-          padding: '40px',
-          justifyContent: 'flex-start',
-          alignItems: 'stretch',
-        };
+        coerceContainerLayoutFromInlineStyle(pageSectionInline) ?? createPageLayout('40px');
       const pageLayout =
         resolvedPrintSettings.source === 'legacy-unresolved'
           ? pageLayoutBase
@@ -1806,14 +1926,7 @@ export const importTemplateAstToWorkspace = (
         const isFixedFrame = designerType === 'document' || designerType === 'page';
         const defaultContainerLayout: DesignerContainerLayout | undefined =
           designerType === 'page'
-            ? {
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '32px',
-                padding: '40px',
-                justifyContent: 'flex-start',
-                alignItems: 'stretch',
-              }
+            ? createPageLayout('40px')
             : designerType === 'document'
               ? {
                   display: 'flex',
@@ -1859,7 +1972,7 @@ export const importTemplateAstToWorkspace = (
           id: inputNode.id,
           type: designerType,
           props: {
-            name: inputNode.id,
+            name: typeof inputNode.name === 'string' && inputNode.name.trim().length > 0 ? inputNode.name : inputNode.id,
             metadata: { ...(def?.defaultMetadata ?? {}) },
             layout: resolvedLayout,
             style: styleFromInline,
@@ -1881,16 +1994,35 @@ export const importTemplateAstToWorkspace = (
           section: 'section',
           stack: 'container',
           text: 'text',
+          richText: 'richText',
           field: 'field',
           image: 'image',
           divider: 'divider',
+          barcode: 'barcode',
           table: 'table',
           'dynamic-table': 'dynamic-table',
           totals: 'totals',
         };
 
-        const designerType = typeMap[inputNode.type];
-        if (!designerType) return;
+        // An image bound to the company logo is what the designer calls a Logo block,
+        // so it reopens as the block it was built from.
+        const resolveImageSrcPath = (node: TemplateImageNode): string =>
+          node.src.type === 'path'
+            ? node.src.path
+            : node.src.type === 'binding'
+              ? astInput.bindings?.values?.[node.src.bindingId]?.path ?? ''
+              : '';
+        const designerType =
+          inputNode.type === 'image' && isDocumentLogoRenderPath(resolveImageSrcPath(inputNode))
+            ? 'logo'
+            : typeMap[inputNode.type];
+        if (!designerType) {
+          // Fail loudly: silently dropping an unrecognized node would delete
+          // content when a layout is opened and saved in the designer.
+          throw new Error(
+            `Unsupported template node type "${String(inputNode.type)}" (node id "${String((inputNode as { id?: unknown }).id ?? 'unknown')}")`,
+          );
+        }
 
         const nextNode = buildWorkspaceNode(inputNode, designerType, depthIndex, depth);
 
@@ -1906,7 +2038,7 @@ export const importTemplateAstToWorkspace = (
           ? inputNode.style.tokenIds.filter((tokenId): tokenId is string => typeof tokenId === 'string' && tokenId.trim().length > 0)
           : undefined;
 
-        if (inputNode.type === 'text') {
+        if (inputNode.type === 'text' || inputNode.type === 'richText') {
           metadata.astContentExpression = inputNode.content;
           const resolvedText = resolveExpressionPreviewText(inputNode.content, astInput, documentKind);
           metadata.text = resolvedText;
@@ -1932,7 +2064,11 @@ export const importTemplateAstToWorkspace = (
           } else {
             metadata.fieldBorderStyle = 'none';
           }
+          // The label is exactly what the AST says: a new field's default label must
+          // not appear on a field that was saved without one.
           const importedLabel = importI18nText(inputNode.label);
+          delete metadata.label;
+          delete metadata.__astLabelI18n;
           if (importedLabel.text) {
             metadata.label = importedLabel.text;
           }
@@ -2000,6 +2136,9 @@ export const importTemplateAstToWorkspace = (
                 if (line.style) {
                   mappedLine.style = { ...line.style } as Record<string, unknown>;
                 }
+                if (line.supplemental) {
+                  mappedLine.supplemental = true;
+                }
                 return mappedLine;
               });
             }
@@ -2041,6 +2180,12 @@ export const importTemplateAstToWorkspace = (
               ...(row.labelStyle ? { labelStyle: cloneJson(row.labelStyle) } : {}),
             };
           });
+        } else if (inputNode.type === 'barcode') {
+          metadata.symbology = inputNode.symbology;
+          metadata.astValueExpression = inputNode.value;
+          const resolvedValue = resolveExpressionPreviewText(inputNode.value, astInput, documentKind);
+          metadata.value = resolvedValue;
+          metadata.__astValuePreviewValue = resolvedValue;
         } else if (inputNode.type === 'image') {
           metadata.astSrcExpression = inputNode.src;
           if (inputNode.src.type === 'literal') {
@@ -2053,6 +2198,9 @@ export const importTemplateAstToWorkspace = (
             // record an empty sentinel so the export can detect when the user
             // replaces the dynamic expression with a typed URL.
             metadata.__astSrcPreviewValue = '';
+            if (designerType === 'logo') {
+              metadata.srcBinding = 'tenantLogo';
+            }
           }
           if (inputNode.alt) {
             metadata.astAltExpression = inputNode.alt;

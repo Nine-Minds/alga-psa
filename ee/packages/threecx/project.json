@@ -1,0 +1,26 @@
+{
+  "name": "@alga-psa/ee-threecx",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "ee/packages/threecx/src",
+  "projectType": "library",
+  "tags": [
+    "scope:ee-threecx",
+    "type:vertical"
+  ],
+  "targets": {
+    "build": {
+      "executor": "nx:noop"
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": [
+        "{options.outputFile}"
+      ],
+      "options": {
+        "lintFilePatterns": [
+          "ee/packages/threecx/**/*.{ts,tsx}"
+        ]
+      }
+    }
+  }
+}

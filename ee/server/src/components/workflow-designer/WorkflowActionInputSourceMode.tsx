@@ -1,17 +1,20 @@
 'use client';
 
-import React from 'react';
-
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { useWorkflowInputSourceModeOptions } from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
 import type { Expr, MappingValue } from '@alga-psa/workflows/runtime';
 
 export type WorkflowActionInputSourceModeValue = 'reference' | 'fixed' | 'expression';
 export type WorkflowActionInputFieldLike = {
+  name?: string;
   type?: string;
+  required?: boolean;
   enum?: Array<string | number | boolean | null>;
   default?: unknown;
+  constraints?: { minimum?: number; maximum?: number };
+  children?: WorkflowActionInputFieldLike[];
+  /** The author must pick an option themselves; nothing is prefilled (e.g. comment visibility). */
+  explicitChoice?: unknown;
   editor?: {
+    kind?: string;
     allowsDynamicReference?: boolean;
   };
   picker?: {
@@ -27,10 +30,11 @@ export type WorkflowActionInputPreservedModeValues = {
 
 export function isSimpleFieldReferenceExpression(expression: string | undefined): boolean {
   if (!expression) return false;
-  const trimmed = expression.trim();
+  // A single field sent as a one-item list (`[vars.x.y]`) is still a plain reference.
+  const trimmed = expression.trim().replace(/^\[\s*(.*?)\s*\]$/u, '$1');
   if (!trimmed) return false;
 
-  return /^(payload|vars|meta|error|[A-Za-z_][A-Za-z0-9_]*|\$index)(\.[A-Za-z_$][A-Za-z0-9_$]*|\[\d+\])*$/u.test(trimmed);
+  return /^(payload|vars|meta|error|[A-Za-z_][A-Za-z0-9_]*|\$index)(\.[A-Za-z_$][A-Za-z0-9_$]*|\[-?\d+\])*$/u.test(trimmed);
 }
 
 export function deriveWorkflowActionInputSourceMode(
@@ -63,17 +67,54 @@ export function getDefaultWorkflowActionInputSourceMode(
   if (field.type === 'boolean' || field.type === 'number' || field.type === 'integer') {
     return 'fixed';
   }
+  // Entity ids have pickers, objects and lists have structured editors, and text has the
+  // text-with-fields editor, so they all start with their own editor. A same-name source is applied
+  // as a reference by the caller when one exists (see autoMappingSuggestions).
+  if (field.editor?.kind === 'picker' || field.editor?.kind === 'custom' || field.picker) {
+    return 'fixed';
+  }
+  if (field.type === 'string' || field.type === 'object' || field.type === 'array') {
+    return 'fixed';
+  }
   return 'reference';
 }
 
+/**
+ * The value an input starts with when it gets a fixed value. `chosen` means the author asked for
+ * this input (Fill, + Set); otherwise it is being filled in as part of a larger value (a required
+ * sub-field of a new object or list row).
+ * - The schema default, when there is one.
+ * - A yes/no the author chose to set starts at yes: setting it implies wanting it on.
+ * - A number starts at 0, moved into the allowed range when 0 is outside it.
+ * - A choice starts at its first option, unless the schema asks for an explicit choice: then it
+ *   starts empty so nothing is chosen for the author.
+ * - Objects get their required sub-fields; lists start empty.
+ */
 export function buildDefaultWorkflowActionInputLiteralValue(
-  field: WorkflowActionInputFieldLike
+  field: WorkflowActionInputFieldLike,
+  options: { chosen?: boolean } = {}
 ): MappingValue {
-  if (field.default !== undefined) return field.default as MappingValue;
-  if (field.type === 'boolean') return false;
-  if (field.type === 'number' || field.type === 'integer') return 0;
+  if (field.default !== undefined && !field.explicitChoice) return field.default as MappingValue;
+  if (field.explicitChoice) return '';
+  if (field.type === 'boolean') return options.chosen === true;
+  if (field.type === 'number' || field.type === 'integer') {
+    const { minimum, maximum } = field.constraints ?? {};
+    let start = 0;
+    if (typeof minimum === 'number' && start < minimum) start = minimum;
+    if (typeof maximum === 'number' && start > maximum) start = maximum;
+    return field.type === 'integer' ? Math.ceil(start) : start;
+  }
   if (field.type === 'array') return [];
-  if (field.type === 'object') return {};
+  if (field.type === 'object') {
+    const next: Record<string, MappingValue> = {};
+    for (const child of field.children ?? []) {
+      // Optional sub-fields stay unset: the runtime applies their defaults, and "+ Set" adds one.
+      if (child.name && child.required && !child.explicitChoice) {
+        next[child.name] = buildDefaultWorkflowActionInputLiteralValue(child);
+      }
+    }
+    return next;
+  }
   if (field.enum?.length) return field.enum[0] as MappingValue;
   return '';
 }
@@ -115,7 +156,7 @@ export function createWorkflowActionInputValueForMode(
     return currentValue;
   }
 
-  return buildDefaultWorkflowActionInputLiteralValue(field);
+  return buildDefaultWorkflowActionInputLiteralValue(field, { chosen: true });
 }
 
 export function transitionWorkflowActionInputMode(
@@ -178,36 +219,3 @@ export function isWorkflowActionInputLegacyValue(value: MappingValue | undefined
   }
   return false;
 }
-
-export const WorkflowActionInputSourceMode: React.FC<{
-  idPrefix: string;
-  value: MappingValue | undefined;
-  onModeChange: (mode: WorkflowActionInputSourceModeValue) => void;
-  disabled?: boolean;
-  /** Explicit mode override (used when an empty `{ $expr: '' }` is ambiguous). */
-  mode?: WorkflowActionInputSourceModeValue;
-}> = ({
-  idPrefix,
-  value,
-  onModeChange,
-  disabled,
-  mode,
-}) => {
-  const sourceMode = mode ? { mode } : deriveWorkflowActionInputSourceMode(value);
-  const sourceModeOptions = useWorkflowInputSourceModeOptions();
-
-  return (
-    <div className="flex flex-col items-end gap-1">
-      <div className="flex items-center gap-2">
-        <CustomSelect
-          id={`${idPrefix}-source-mode`}
-          options={sourceModeOptions}
-          value={sourceMode.mode}
-          onValueChange={(nextMode) => onModeChange(nextMode as WorkflowActionInputSourceModeValue)}
-          disabled={disabled}
-          className="w-36"
-        />
-      </div>
-    </div>
-  );
-};

@@ -7,6 +7,8 @@ import { getTenantBrandingByTenantId } from "@alga-psa/tenancy/actions";
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
 import { getCurrentTenantProduct } from "@/lib/productAccess";
 import { getTenantDefaultCurrencyCode } from "@alga-psa/billing/actions/billingCurrencyActions";
+import { getDateFormatPreference } from "@alga-psa/clients/actions/countryActions";
+import { SYSTEM_DATE_FORMAT } from "@alga-psa/core/i18n/countryDateFormat";
 import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getClientPortalFeatureSettings } from '@alga-psa/client-portal/actions/client-portal-actions/clientPortalFeatureSettingsActions';
@@ -82,6 +84,8 @@ export default async function Layout({
     cookieStore.get(CLIENT_SIDEBAR_COOKIE)?.value === 'true';
   const productCode = await getCurrentTenantProduct();
   const currencyCode = await getTenantDefaultCurrencyCode().catch(() => 'USD');
+  // The portal writes dates the way the CLIENT does, falling back to the tenant.
+  const dateFormat = await getDateFormatPreference().catch(() => SYSTEM_DATE_FORMAT);
   const portalFeatureSettings = await getClientPortalFeatureSettings();
 
   return (
@@ -91,6 +95,7 @@ export default async function Layout({
       productCode={productCode}
       appointmentsEnabled={portalFeatureSettings.appointmentsEnabled}
       currencyCode={currencyCode}
+      dateFormat={dateFormat}
       initialLocale={locale}
       initialSidebarCollapsed={initialSidebarCollapsed}
     >

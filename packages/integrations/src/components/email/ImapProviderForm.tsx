@@ -15,6 +15,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Eye, EyeOff } from 'lucide-react';
 import type { EmailProvider } from './types';
@@ -453,7 +454,7 @@ export function ImapProviderForm({
         </Alert>
       )}
 
-      <div className="flex justify-end space-x-3">
+      <DrawerFooter className="gap-3">
         <Button id="imap-provider-cancel-btn" type="button" variant="outline" onClick={onCancel} disabled={loading}>
           {t('forms.common.actions.cancel', { defaultValue: 'Cancel' })}
         </Button>
@@ -464,7 +465,7 @@ export function ImapProviderForm({
             ? t('forms.common.actions.updateProvider', { defaultValue: 'Update Provider' })
             : t('forms.common.actions.createProvider', { defaultValue: 'Create Provider' })}
         </Button>
-      </div>
+      </DrawerFooter>
     </form>
   );
 }

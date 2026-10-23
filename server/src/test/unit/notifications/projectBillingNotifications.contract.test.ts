@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { LOCALE_CONFIG } from '../../../../../packages/email/src/lib/localeConfig';
 
 const require = createRequire(import.meta.url);
 const milestoneTemplate = require('../../../../migrations/utils/templates/email/projects/projectMilestoneReady.cjs');
@@ -24,9 +25,11 @@ describe('project billing notification contracts (T026)', () => {
     expect(milestone.templateName).toBe('project-milestone-ready');
     expect(budget.templateName).toBe('project-budget-threshold-reached');
     expect(exceeded.templateName).toBe('project-budget-exceeded');
-    expect(milestone.translations).toHaveLength(8);
-    expect(budget.translations).toHaveLength(8);
-    expect(exceeded.translations).toHaveLength(8);
+    const supportedLocales = [...LOCALE_CONFIG.supportedLocales].sort();
+    for (const template of [milestone, budget, exceeded]) {
+      expect(template.translations.map((translation: { language: string }) => translation.language).sort())
+        .toEqual(supportedLocales);
+    }
 
     for (const translation of milestone.translations) {
       const renderedSource = `${translation.subject}\n${translation.htmlContent}\n${translation.textContent}`;

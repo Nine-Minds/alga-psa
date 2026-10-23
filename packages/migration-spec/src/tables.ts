@@ -170,3 +170,11 @@ export const AMP_ENTITY_REFERENCES: Record<
 };
 
 export const AMP_DIAGNOSTIC_SEVERITIES = ['info', 'warning'] as const;
+
+/**
+ * Reserved `extension_json` key carrying the source client/company name from a
+ * single-sheet contacts import. AMP v1 contacts have no client-name column and
+ * references must resolve inside the package, so the name travels as bounded
+ * data and the contacts applier resolves it against existing tenant clients.
+ */
+export const AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY = '__contact_client_name';

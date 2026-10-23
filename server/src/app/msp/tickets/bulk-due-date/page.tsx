@@ -1,15 +1,8 @@
-import type { Metadata } from 'next';
-import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
-import BulkSetDueDateRouteClient from '../_components/BulkSetDueDateRouteClient';
+import { redirect } from 'next/navigation';
 
-export async function generateMetadata(): Promise<Metadata> {
-  const { t } = await getServerTranslation(undefined, 'metadata');
-
-  return {
-    title: t('msp.tickets.bulkDueDate.title', { defaultValue: 'Set Due Date' }),
-  };
-}
-
+// There is no standalone page behind the intercepted bulk modal: a hard load or refresh of
+// this URL renders this route instead of the @modal slot, and re-opening the dialog on top
+// of the rehydrated selection is what made it survive a refresh. Go back to the list.
 export default function BulkSetDueDatePage() {
-  return <BulkSetDueDateRouteClient closeMode="replace" />;
+  redirect('/msp/tickets');
 }

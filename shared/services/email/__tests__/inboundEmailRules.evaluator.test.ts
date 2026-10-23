@@ -8,6 +8,8 @@ import {
   extractValue,
   extractionToRegexSource,
   normalizeExtractedValue,
+  resolveMatchTargets,
+  extractEmailCandidate,
 } from '../inboundEmailRules/evaluator';
 import type {
   InboundEmailRuleCondition,
@@ -255,6 +257,22 @@ describe('inboundEmailRules evaluator: extraction', () => {
 });
 
 describe('inboundEmailRules evaluator: normalization', () => {
+  it('defaults match targets, deduplicates, and returns canonical order while ignoring unknown targets', () => {
+    expect(resolveMatchTargets({})).toEqual(['client_name']);
+    expect(resolveMatchTargets({ match_by: ['asset_name', 'contact_email', 'asset_name', 'future_target'] as any }))
+      .toEqual(['contact_email', 'asset_name']);
+  });
+
+  it.each([
+    ['jane@acme.com', 'jane@acme.com'],
+    ['Jane Doe <jane@acme.com>', 'jane@acme.com'],
+    ['jane@acme.com.,', 'jane@acme.com'],
+    ['mailto:jane@acme.com', 'jane@acme.com'],
+    ['no address here', null],
+  ])('extracts email candidate from %s', (raw, expected) => {
+    expect(extractEmailCandidate(raw)).toBe(expected);
+  });
+
   it('trims, collapses whitespace, and lowercases', () => {
     expect(normalizeExtractedValue('  Acme   Corp  ')).toBe('acme corp');
   });

@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 (globalThis as unknown as { React?: typeof React }).React = React;
 
+// The detail route answers notFound() for any segment that is not uuid-shaped, so the
+// fixture id has to look like a real ticket id or the page never renders.
+const TICKET_ID = '6f1b0e3c-6a4f-4d5e-9b2a-7c8d9e0f1a2b';
+
 const getCurrentUserMock = vi.fn();
 const getCurrentUserPermissionsMock = vi.fn();
 const getCurrentTenantProductMock = vi.fn();
@@ -64,7 +68,7 @@ describe('MSP ticket details page product composition', () => {
   };
 
   const getRenderedDetailProps = async () => {
-    const result = await TicketDetailsPage({ params: Promise.resolve({ id: 'ticket-1' }) });
+    const result = await TicketDetailsPage({ params: Promise.resolve({ id: TICKET_ID }) });
     const detailsContainer = findElementByType(result, MspTicketDetailsContainerClientMock);
     if (!detailsContainer) {
       throw new Error('Expected ticket details client element in render tree');
@@ -78,7 +82,7 @@ describe('MSP ticket details page product composition', () => {
     getCurrentUserPermissionsMock.mockResolvedValue(null);
     getConsolidatedTicketDataMock.mockResolvedValue({
       ticket: {
-        ticket_id: 'ticket-1',
+        ticket_id: TICKET_ID,
         client_id: 'client-1',
         board_id: 'board-1',
       },

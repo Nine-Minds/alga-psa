@@ -29,8 +29,8 @@ spec:
               mountPath: /data    
       containers:
       - name: db
-        image: "{{ .Values.db.image.repository }}:{{ .Values.db.image.tag }}"
-        imagePullPolicy: Always
+        image: {{ include "sebastian.imageRef" .Values.db.image | quote }}
+        imagePullPolicy: {{ .Values.db.image.pullPolicy }}
         ports:
         - containerPort: {{ .Values.db.service.port }}
           name: cql

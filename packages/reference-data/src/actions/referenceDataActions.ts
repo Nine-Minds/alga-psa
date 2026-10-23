@@ -458,6 +458,10 @@ export const importReferenceData = withAuth(async (
       let nameField = 'name';
       if (item.priority_name !== undefined) nameField = 'priority_name';
       else if (item.type_name !== undefined) nameField = 'type_name';
+      // Service and ticket categories carry `category_name`, not `name`; writing
+      // the wrong field would insert an unknown column and abort the whole
+      // import transaction (Postgres poisons the tx on any error).
+      else if (item.category_name !== undefined) nameField = 'category_name';
       mappedData[nameField] = resolution.newName;
     }
     

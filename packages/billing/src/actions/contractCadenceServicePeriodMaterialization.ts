@@ -1,16 +1,31 @@
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import logger from '@alga-psa/core/logger';
+import { getConnection, tenantDb, withTransaction } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
-import type {
-  DuePosition,
-  IRecurringServicePeriodRecord,
-  ISO8601String,
-  RecurringChargeFamily,
+import {
+  CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME,
+  type DuePosition,
+  type IRecurringServicePeriodRecord,
+  type ISO8601String,
+  type RecurringChargeFamily,
 } from '@alga-psa/types';
 import { ensureUtcMidnightIsoDate } from '../lib/billing/billingCycleAnchors';
+import { normalizeCadenceBillingCycle } from '../lib/cadenceVocabulary';
 import { materializeContractCadenceServicePeriods } from '@shared/billingClients/materializeContractCadenceServicePeriods';
+import { whereLiveRecurringContractLine } from '@shared/billingClients/liveClientCadenceRecurringLine';
 import { backfillRecurringServicePeriods } from '@shared/billingClients/backfillRecurringServicePeriods';
 import { clipRecurringCandidatesToObligationBounds } from '@shared/billingClients/clipRecurringCandidatesToObligationBounds';
+import {
+  buildRecurringServicePeriodCoverageIndex,
+  findUncoveredRecurringServicePeriodCandidates,
+  isRecurringServicePeriodCandidateCovered,
+} from '@shared/billingClients/regenerateRecurringServicePeriods';
+import {
+  resolveEffectiveBillingTiming,
+  resolveRecurringChargeFamily,
+} from '@alga-psa/shared/billingClients/contractLineTimingRule';
+
+export { CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME };
 
 type ContractCadenceBillingCycle = 'monthly' | 'quarterly' | 'semi-annually' | 'annually';
 
@@ -24,6 +39,9 @@ type ContractCadenceObligationRow = {
   billing_timing: string | null;
   assignment_start_date: unknown;
   assignment_end_date: unknown;
+  /** Authored line bounds, intersected with the assignment below. */
+  line_start_date?: unknown;
+  line_end_date?: unknown;
 };
 
 // LEVERAGE: pattern recurring-period-row-mapping
@@ -34,7 +52,6 @@ type RecurringServicePeriodDbRow = {
   period_key: string;
   revision: number | string;
   obligation_id: string;
-  obligation_type: string;
   charge_family: RecurringChargeFamily;
   cadence_owner: 'client' | 'contract';
   due_position: DuePosition;
@@ -129,26 +146,6 @@ function maxIsoDateOnly(left: ISO8601String, right: ISO8601String) {
   return compareIsoDateOnly(left, right) >= 0 ? left : right;
 }
 
-function resolveRecurringChargeFamily(contractLineType: string | null): RecurringChargeFamily {
-  switch ((contractLineType ?? 'fixed').toLowerCase()) {
-    case 'fixed':
-      return 'fixed';
-    case 'time':
-    case 'hourly':
-      return 'hourly';
-    case 'usage':
-      return 'usage';
-    case 'bucket':
-      return 'bucket';
-    case 'product':
-      return 'product';
-    case 'license':
-      return 'license';
-    default:
-      return 'fixed';
-  }
-}
-
 function mapRecurringServicePeriodRow(row: RecurringServicePeriodDbRow): IRecurringServicePeriodRecord {
   return {
     kind: 'persisted_service_period_record',
@@ -159,7 +156,6 @@ function mapRecurringServicePeriodRow(row: RecurringServicePeriodDbRow): IRecurr
     sourceObligation: {
       tenant: row.tenant,
       obligationId: row.obligation_id,
-      obligationType: row.obligation_type as IRecurringServicePeriodRecord['sourceObligation']['obligationType'],
       chargeFamily: row.charge_family,
     },
     cadenceOwner: row.cadence_owner,
@@ -213,7 +209,6 @@ function serializeRecurringServicePeriodRecord(record: IRecurringServicePeriodRe
     period_key: record.periodKey,
     revision: record.revision,
     obligation_id: record.sourceObligation.obligationId,
-    obligation_type: record.sourceObligation.obligationType,
     charge_family: record.sourceObligation.chargeFamily,
     cadence_owner: record.cadenceOwner,
     due_position: record.duePosition,
@@ -241,20 +236,7 @@ function serializeRecurringServicePeriodRecord(record: IRecurringServicePeriodRe
 }
 
 function normalizeContractCadenceBillingCycle(value: string | null): ContractCadenceBillingCycle | null {
-  switch ((value ?? '').toLowerCase()) {
-    case 'monthly':
-      return 'monthly';
-    case 'quarterly':
-      return 'quarterly';
-    case 'semi-annually':
-    case 'semiannually':
-      return 'semi-annually';
-    case 'annually':
-    case 'annual':
-      return 'annually';
-    default:
-      return null;
-  }
+  return normalizeCadenceBillingCycle(value) as ContractCadenceBillingCycle | null;
 }
 
 async function loadExistingRecurringServicePeriodRecords(
@@ -265,7 +247,6 @@ async function loadExistingRecurringServicePeriodRecords(
     .where({
       tenant: params.tenant,
       obligation_id: params.contractLineId,
-      obligation_type: 'contract_line',
       cadence_owner: 'contract',
     })
     .orderBy('service_period_start', 'asc')
@@ -277,7 +258,6 @@ async function loadExistingRecurringServicePeriodRecords(
       'period_key',
       'revision',
       'obligation_id',
-      'obligation_type',
       'charge_family',
       'cadence_owner',
       'due_position',
@@ -316,12 +296,23 @@ async function persistRecurringServicePeriodRegeneration(
   const db = tenantDb(trx, params.tenant);
 
   for (const record of params.recordsToSupersede) {
-    await db.table('recurring_service_periods')
+    // Invoicing and manual edits do not take the sweep's advisory lock. Recheck
+    // protection on the write so a concurrent state change rolls back this line.
+    const updated = await db.table('recurring_service_periods')
       .where({ record_id: record.recordId })
+      .where('lifecycle_state', 'generated')
+      .whereNotIn('provenance_kind', ['user_edited', 'repair'])
+      .whereNull('invoice_id')
+      .whereNull('invoice_charge_id')
+      .whereNull('invoice_charge_detail_id')
+      .whereNull('invoice_linked_at')
       .update({
         lifecycle_state: record.lifecycleState,
         updated_at: record.updatedAt,
       });
+    if (updated !== 1) {
+      throw new Error(`Recurring service period ${record.recordId} changed during replenishment; retry after the current billing or editing operation completes.`);
+    }
   }
 
   if (params.recordsToInsert.length > 0) {
@@ -339,7 +330,6 @@ async function retireFutureContractCadenceRowsForLine(
     .where({
       tenant: params.tenant,
       obligation_id: params.contractLineId,
-      obligation_type: 'contract_line',
       cadence_owner: 'contract',
     })
     .whereNotIn('lifecycle_state', ['archived', 'superseded', 'billed'])
@@ -357,8 +347,10 @@ async function loadContractCadenceObligations(
   const query = db.table('contract_lines as cl');
   db.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'cl.contract_id');
   db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+  // LEVERAGE: friction live-recurring-line-predicate — eligibility re-derived per reader; see whereLiveClientCadenceRecurringLine
   query
     .where('cc.is_active', true)
+    .where('cl.is_active', true)
     .where((builder) =>
       builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
     )
@@ -371,6 +363,8 @@ async function loadContractCadenceObligations(
       'cl.billing_timing',
       'cc.start_date as assignment_start_date',
       'cc.end_date as assignment_end_date',
+      'cl.start_date as line_start_date',
+      'cl.end_date as line_end_date',
     );
 
   if (params.contractId) {
@@ -385,14 +379,73 @@ async function loadContractCadenceObligations(
   return rows as ContractCadenceObligationRow[];
 }
 
+export interface ContractCadenceObligationSyncResult {
+  changed: boolean;
+  periodsGenerated: number;
+  periodsRealigned: number;
+  periodsSuperseded: number;
+  hitPeriodCap: boolean;
+  /** True when the line's active coverage was already short of the run date. */
+  wasExhaustedBeforeRun: boolean;
+  /** Preserved-override/candidate mismatches surfaced instead of discarded. */
+  overrideConflicts: number;
+  furthestServicePeriodEnd: ISO8601String | null;
+  expectedCoverageEnd: ISO8601String | null;
+  meetsExpectedCoverage: boolean;
+  /** Eligible candidates the active ledger still does not cover or protect. */
+  unresolvedGapCount: number;
+}
+
+function emptyObligationSyncResult(changed: boolean): ContractCadenceObligationSyncResult {
+  return {
+    changed,
+    periodsGenerated: 0,
+    periodsRealigned: 0,
+    periodsSuperseded: 0,
+    hitPeriodCap: false,
+    wasExhaustedBeforeRun: false,
+    overrideConflicts: 0,
+    furthestServicePeriodEnd: null,
+    expectedCoverageEnd: null,
+    meetsExpectedCoverage: false,
+    unresolvedGapCount: 0,
+  };
+}
+
+function resolveFurthestServicePeriodEnd(
+  records: IRecurringServicePeriodRecord[],
+): ISO8601String | null {
+  let furthest: ISO8601String | null = null;
+  for (const record of records) {
+    if (!furthest || compareIsoDateOnly(record.servicePeriod.end, furthest) > 0) {
+      furthest = record.servicePeriod.end;
+    }
+  }
+  return furthest;
+}
+
+/**
+ * Upper bound on the number of capped batches a single run will walk while
+ * looking for the true resumption point. Guards against a pathological ledger
+ * that never advances; at 200 periods per batch this is well past any real
+ * assignment history.
+ */
+const MAX_CONTINUATION_SCAN_BATCHES = 500;
+
 async function syncContractCadenceObligation(
   trx: Knex.Transaction,
   params: {
     tenant: string;
     obligation: ContractCadenceObligationRow;
     sourceRunPrefix: string;
+    /**
+     * Run date for the rolling coverage horizon. Defaults to the wall clock.
+     * Generation still starts at the assignment/billed boundary so historical
+     * gaps are recovered; this only moves the future target forward.
+     */
+    asOf?: ISO8601String;
   },
-) {
+): Promise<ContractCadenceObligationSyncResult> {
   const materializedAt = new Date().toISOString();
   const assignmentStart = normalizeDateOnlyValue(params.obligation.assignment_start_date);
   if (!assignmentStart) {
@@ -401,7 +454,7 @@ async function syncContractCadenceObligation(
       contractLineId: params.obligation.contract_line_id,
       retiredAt: materializedAt,
     });
-    return;
+    return emptyObligationSyncResult(true);
   }
 
   const frequency = normalizeContractCadenceBillingCycle(params.obligation.billing_frequency);
@@ -416,21 +469,34 @@ async function syncContractCadenceObligation(
       contractLineId: params.obligation.contract_line_id,
       retiredAt: materializedAt,
     });
-    return;
+    return emptyObligationSyncResult(true);
   }
 
   const assignmentEnd = normalizeDateOnlyValue(params.obligation.assignment_end_date);
-  if (assignmentEnd && compareIsoDateOnly(assignmentEnd, assignmentStart) <= 0) {
+  // The authored line window narrows the assignment window. The cadence anchor
+  // stays at the assignment start so period boundaries do not shift; clipping
+  // trims coverage to the line bounds instead.
+  const lineStart = normalizeDateOnlyValue(params.obligation.line_start_date);
+  const lineEnd = normalizeDateOnlyValue(params.obligation.line_end_date);
+  const obligationStart = lineStart && compareIsoDateOnly(lineStart, assignmentStart) > 0
+    ? lineStart
+    : assignmentStart;
+  const obligationEnd = assignmentEnd && lineEnd
+    ? (compareIsoDateOnly(lineEnd, assignmentEnd) < 0 ? lineEnd : assignmentEnd)
+    : (lineEnd ?? assignmentEnd);
+  if (obligationEnd && compareIsoDateOnly(obligationEnd, obligationStart) <= 0) {
     await retireFutureContractCadenceRowsForLine(trx, {
       tenant: params.tenant,
       contractLineId: params.obligation.contract_line_id,
       retiredAt: materializedAt,
     });
-    return;
+    return emptyObligationSyncResult(true);
   }
 
-  const duePosition: DuePosition =
-    params.obligation.billing_timing === 'advance' ? 'advance' : 'arrears';
+  const duePosition: DuePosition = resolveEffectiveBillingTiming(
+    params.obligation.contract_line_type,
+    params.obligation.billing_timing,
+  );
   const sourceRuleVersion = [
     'contract_cadence',
     `billing_cycle:${frequency}`,
@@ -447,38 +513,156 @@ async function syncContractCadenceObligation(
     .map((record) => record.servicePeriod.end)
     .sort((left, right) => compareIsoDateOnly(right, left))[0] ?? null;
   const regenerationStart = billedBoundaryEnd
-    ? maxIsoDateOnly(assignmentStart, billedBoundaryEnd)
-    : assignmentStart;
+    ? maxIsoDateOnly(obligationStart, billedBoundaryEnd)
+    : obligationStart;
 
-  const materialized = materializeContractCadenceServicePeriods({
-    asOf: regenerationStart,
+  // Generation begins at the historical boundary (so the first missing period is
+  // recovered), but the rolling 180-day target is anchored to the run date so a
+  // stale assignment start or billed boundary cannot pin the future horizon in
+  // the past.
+  const runDateOnly = (params.asOf ?? materializedAt).slice(0, 10);
+  const coverageAnchorDate = maxIsoDateOnly(
+    regenerationStart,
+    `${runDateOnly}T00:00:00Z` as ISO8601String,
+  );
+
+  // Whether the bug had already bitten this line: active coverage stopped short
+  // of the run date before this sweep. This is the recovery signal that
+  // distinguishes "kept the horizon moving" from "recovered a silent gap".
+  const furthestActiveBeforeRun = resolveFurthestServicePeriodEnd(
+    existingRecords.filter(
+      (record) => record.lifecycleState !== 'superseded' && record.lifecycleState !== 'archived',
+    ),
+  );
+  const wasExhaustedBeforeRun =
+    !furthestActiveBeforeRun || compareIsoDateOnly(furthestActiveBeforeRun, coverageAnchorDate) < 0;
+
+  const materializeInputBase = {
     materializedAt,
     billingCycle: frequency,
     anchorDate: assignmentStart,
+    coverageAnchorDate,
     sourceObligation: {
       tenant: params.tenant,
       obligationId: params.obligation.contract_line_id,
-      obligationType: 'contract_line',
       chargeFamily: resolveRecurringChargeFamily(params.obligation.contract_line_type),
     },
     duePosition,
     sourceRuleVersion,
     sourceRunKey,
     recordIdFactory: recurringServicePeriodRecordIdFactory,
+  };
+
+  let materialized = materializeContractCadenceServicePeriods({
+    ...materializeInputBase,
+    asOf: regenerationStart,
   });
+
+  // A capped generation stops before the rolling horizon. Re-running from the
+  // historical boundary would regenerate the same initial batch forever, so walk
+  // the already-covered batches forward to find the true resumption point: the
+  // earliest candidate the active ledger does not cover (an interior gap), or
+  // the end of the covered prefix (plain continuation). Scanning every covered
+  // batch — not just the first — lets one run advance past arbitrarily many
+  // fully-covered batches without skipping a gap. The retained boundary floor
+  // keeps every already-covered row untouched.
+  const horizonEnd = `${materialized.coverage.targetHorizonEnd}T00:00:00Z` as ISO8601String;
+  let historicalBoundaryFloor = billedBoundaryEnd;
+
+  if (materialized.hitPeriodCap) {
+    const coverage = buildRecurringServicePeriodCoverageIndex(existingRecords);
+    let continuationStart: ISO8601String = regenerationStart;
+
+    for (let batchIndex = 0; batchIndex < MAX_CONTINUATION_SCAN_BATCHES; batchIndex += 1) {
+      const missingCandidate = materialized.records.find(
+        (candidate) => !isRecurringServicePeriodCandidateCovered(candidate, coverage),
+      );
+      const lastRecord = materialized.records[materialized.records.length - 1];
+
+      if (missingCandidate) {
+        continuationStart = missingCandidate.servicePeriod.start;
+        break;
+      }
+      if (
+        !lastRecord
+        || !materialized.hitPeriodCap
+        || compareIsoDateOnly(lastRecord.servicePeriod.end, horizonEnd) >= 0
+      ) {
+        continuationStart = lastRecord?.servicePeriod.end ?? regenerationStart;
+        break;
+      }
+      if (compareIsoDateOnly(lastRecord.servicePeriod.end, continuationStart) <= 0) {
+        // Safety: the generator stopped advancing; do not loop forever.
+        continuationStart = lastRecord.servicePeriod.end;
+        break;
+      }
+      continuationStart = lastRecord.servicePeriod.end;
+      materialized = materializeContractCadenceServicePeriods({
+        ...materializeInputBase,
+        asOf: continuationStart,
+      });
+    }
+
+    if (compareIsoDateOnly(continuationStart, regenerationStart) > 0) {
+      historicalBoundaryFloor = continuationStart;
+      if (compareIsoDateOnly(continuationStart, horizonEnd) < 0) {
+        materialized = materializeContractCadenceServicePeriods({
+          ...materializeInputBase,
+          asOf: continuationStart,
+        });
+      } else {
+        // The ledger already reaches the horizon: nothing left to generate.
+        materialized = {
+          ...materialized,
+          records: [],
+          hitPeriodCap: false,
+        };
+      }
+    }
+  }
+
   const candidateRecords = clipRecurringCandidatesToObligationBounds(
     materialized.records,
-    assignmentStart,
-    assignmentEnd,
+    obligationStart,
+    obligationEnd,
   );
+
+  const targetHorizonEnd = `${materialized.coverage.targetHorizonEnd}T00:00:00Z` as ISO8601String;
+  const expectedCoverageEnd = obligationEnd
+    && compareIsoDateOnly(obligationEnd, targetHorizonEnd) < 0
+    ? obligationEnd
+    : targetHorizonEnd;
+
+  // Generation limits and assignment bounds mean different things. Beyond a
+  // generated batch, valid rows remain untouched. Once generation has reached
+  // the assignment end, mutable rows beyond that end must retire, even when the
+  // final period was billed and clipping leaves no candidates at all.
+  const generatedCoverageEnd = materialized.records.at(-1)?.servicePeriod.end
+    ?? historicalBoundaryFloor
+    ?? targetHorizonEnd;
+  const assignmentCovered = obligationEnd != null
+    && compareIsoDateOnly(obligationEnd, generatedCoverageEnd) <= 0;
+  const candidateCoverageEnd = assignmentCovered ? undefined : generatedCoverageEnd;
+
+  if (
+    assignmentCovered && historicalBoundaryFloor
+    && compareIsoDateOnly(historicalBoundaryFloor, obligationEnd) > 0
+  ) {
+    // Continuation may scan rows beyond a newly shortened assignment. Those
+    // rows are not billed history; only the actual billed floor can protect them.
+    historicalBoundaryFloor = billedBoundaryEnd
+      ? maxIsoDateOnly(billedBoundaryEnd, obligationEnd)
+      : obligationEnd;
+  }
 
   const regenerationPlan = backfillRecurringServicePeriods({
     candidateRecords,
     existingRecords,
+    candidateCoverageEnd,
     backfilledAt: materializedAt,
     sourceRuleVersion,
     sourceRunKey,
-    legacyBilledThroughEnd: billedBoundaryEnd,
+    legacyBilledThroughEnd: historicalBoundaryFloor,
     regenerationReasonCode: 'source_rule_changed',
     recordIdFactory: recurringServicePeriodRecordIdFactory,
   });
@@ -491,6 +675,339 @@ async function syncContractCadenceObligation(
       ...regenerationPlan.realignedRecords,
     ],
   });
+
+  const furthestServicePeriodEnd = resolveFurthestServicePeriodEnd(regenerationPlan.activeRecords);
+
+  // Reaching the horizon is not enough: a capped or otherwise-truncated batch
+  // can leave an interior quarter uncovered while still ending at the horizon.
+  // Assess continuity with the same candidate/protection semantics the
+  // regeneration and capped continuation use, so a gap that is suppressed only
+  // by a protected override is not reported as missing while a genuinely absent
+  // eligible period is.
+  const unresolvedGapCount = findUncoveredRecurringServicePeriodCandidates(
+    candidateRecords,
+    regenerationPlan.activeRecords,
+    regenerationPlan.historicalBoundaryEnd,
+  ).length;
+
+  const meetsExpectedCoverage = !materialized.hitPeriodCap
+    && furthestServicePeriodEnd != null
+    && compareIsoDateOnly(furthestServicePeriodEnd, expectedCoverageEnd) >= 0
+    && unresolvedGapCount === 0;
+
+  return {
+    changed:
+      regenerationPlan.backfilledRecords.length > 0
+      || regenerationPlan.realignedRecords.length > 0
+      || regenerationPlan.supersededRecords.length > 0,
+    periodsGenerated: regenerationPlan.backfilledRecords.length,
+    periodsRealigned: regenerationPlan.realignedRecords.length,
+    periodsSuperseded: regenerationPlan.supersededRecords.length,
+    hitPeriodCap: materialized.hitPeriodCap,
+    wasExhaustedBeforeRun,
+    overrideConflicts: regenerationPlan.conflicts.length,
+    furthestServicePeriodEnd,
+    expectedCoverageEnd,
+    meetsExpectedCoverage,
+    unresolvedGapCount,
+  };
+}
+
+async function loadEligibleContractCadenceObligationsForReplenishment(
+  trx: Knex.Transaction,
+  params: { tenant: string; asOf: ISO8601String },
+): Promise<ContractCadenceObligationRow[]> {
+  const db = tenantDb(trx, params.tenant);
+  const asOfDate = params.asOf.slice(0, 10);
+  const query = db.table('contract_lines as cl');
+  db.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'cl.contract_id');
+  db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+  whereLiveRecurringContractLine(query, { excludeSystemManagedDefault: true }, { cc: 'cc', ct: 'ct', cl: 'cl' });
+  const rows = await query
+    .where('cl.cadence_owner', 'contract')
+    .whereIn('cl.billing_timing', ['advance', 'arrears'])
+    // Keep eligibility identical to CONTRACT_CADENCE_COVERAGE_AUDIT_SQL. An
+    // unsupported frequency or timing is not a contract-cadence obligation, so
+    // it must not enter the sweep: sync would otherwise fall through to
+    // retireFutureContractCadenceRowsForLine and supersede its protected
+    // locked/edited/skipped periods.
+    .whereRaw(
+      "lower(cl.billing_frequency) in ('monthly', 'quarterly', 'semi-annually', 'semiannually', 'annually', 'annual')",
+    )
+    .whereNotNull('cc.start_date')
+    .andWhere('cc.start_date', '<=', asOfDate)
+    .andWhere((builder) => builder.whereNull('cc.end_date').orWhere('cc.end_date', '>', asOfDate))
+    .select(
+      'cl.contract_line_id',
+      'cl.contract_line_type',
+      'cl.cadence_owner',
+      'cl.billing_frequency',
+      'cl.billing_timing',
+      'cc.start_date as assignment_start_date',
+      'cc.end_date as assignment_end_date',
+      'cl.start_date as line_start_date',
+      'cl.end_date as line_end_date',
+    ) as ContractCadenceObligationRow[];
+
+  // A contract assigned to more than one client produces duplicate line rows.
+  // Sync each line once, deterministically choosing the earliest assignment so
+  // a multi-profile/multi-assignment client cannot trigger duplicate passes.
+  const deduped = new Map<string, ContractCadenceObligationRow>();
+  for (const row of rows) {
+    const existing = deduped.get(row.contract_line_id);
+    if (!existing) {
+      deduped.set(row.contract_line_id, row);
+      continue;
+    }
+    const existingStart = normalizeDateOnlyValue(existing.assignment_start_date);
+    const candidateStart = normalizeDateOnlyValue(row.assignment_start_date);
+    if (candidateStart && (!existingStart || compareIsoDateOnly(candidateStart, existingStart) < 0)) {
+      deduped.set(row.contract_line_id, row);
+    }
+  }
+
+  return [...deduped.values()];
+}
+
+export interface ContractCadenceReplenishmentLineFailure {
+  contractLineId: string;
+  error: string;
+}
+
+export interface ContractCadenceReplenishmentSummary {
+  tenant: string;
+  /** Run date the coverage horizon was measured from (UTC). */
+  asOf: ISO8601String;
+  linesExamined: number;
+  linesReplenished: number;
+  periodsGenerated: number;
+  periodsRealigned: number;
+  periodsSuperseded: number;
+  linesAtPeriodCap: number;
+  linesAwaitingCoverage: number;
+  /** Lines whose active coverage was already short of the run date. */
+  linesExhaustedBeforeRun: number;
+  /** Preserved-override/candidate mismatches surfaced instead of discarded. */
+  overrideConflicts: number;
+  /** Eligible candidates the active ledger still does not cover or protect. */
+  unresolvedGapCount: number;
+  failures: ContractCadenceReplenishmentLineFailure[];
+}
+
+/**
+ * Nightly-capable, tenant-scoped sweep over eligible contract-cadence lines.
+ *
+ * Reuses the canonical synchronization path for every line (no forked
+ * regeneration rules). Each line runs inside its own savepoint so one bad line
+ * cannot roll back the tenant's other repairs; the caller owns the outer
+ * transaction and the per-tenant advisory lock.
+ *
+ * Historical boundary policy (shared with authoring/repair):
+ * - The catch-up floor is `max(assignmentStart, latest billed/invoice-linked
+ *   service-period end)`. Candidates at or before that floor are treated as
+ *   intentional history and skipped; a candidate that overlaps it is rejected.
+ * - Locked, billed, edited, skipped, deferred, and user-edited/repair records
+ *   are preserved in place; the sweep never recreates or overwrites them.
+ * - Superseded and archived rows (for example the earlier client-cadence
+ *   operator repair) stay excluded and are never revived.
+ * - Candidates are clipped to assignment start/end, so ended assignments and
+ *   assignment boundaries are respected.
+ * A gap therefore is only auto-recovered when it sits after the billed floor
+ * and inside the assignment window; anything before the floor is reported as
+ * history rather than silently recreated.
+ */
+export async function replenishContractCadenceServicePeriodsForTenant(
+  trx: Knex.Transaction,
+  params: { tenant: string; sourceRunPrefix: string; asOf?: ISO8601String },
+): Promise<ContractCadenceReplenishmentSummary> {
+  const asOf = params.asOf ?? (new Date().toISOString() as ISO8601String);
+  const obligations = await loadEligibleContractCadenceObligationsForReplenishment(trx, {
+    tenant: params.tenant,
+    asOf,
+  });
+
+  const summary: ContractCadenceReplenishmentSummary = {
+    tenant: params.tenant,
+    asOf,
+    linesExamined: obligations.length,
+    linesReplenished: 0,
+    periodsGenerated: 0,
+    periodsRealigned: 0,
+    periodsSuperseded: 0,
+    linesAtPeriodCap: 0,
+    linesAwaitingCoverage: 0,
+    linesExhaustedBeforeRun: 0,
+    overrideConflicts: 0,
+    unresolvedGapCount: 0,
+    failures: [],
+  };
+
+  for (const obligation of obligations) {
+    try {
+      // Savepoint per line: a failure rolls back only this line's writes while
+      // the outer per-tenant transaction (and advisory lock) survives.
+      const result = await trx.transaction(async (lineTrx) =>
+        syncContractCadenceObligation(lineTrx, {
+          tenant: params.tenant,
+          obligation,
+          sourceRunPrefix: params.sourceRunPrefix,
+          asOf,
+        }),
+      );
+
+      if (result.changed) {
+        summary.linesReplenished += 1;
+      }
+      summary.periodsGenerated += result.periodsGenerated;
+      summary.periodsRealigned += result.periodsRealigned;
+      summary.periodsSuperseded += result.periodsSuperseded;
+      if (result.wasExhaustedBeforeRun) {
+        summary.linesExhaustedBeforeRun += 1;
+      }
+      summary.overrideConflicts += result.overrideConflicts;
+      summary.unresolvedGapCount += result.unresolvedGapCount;
+      if (result.hitPeriodCap) {
+        summary.linesAtPeriodCap += 1;
+      }
+      if (!result.meetsExpectedCoverage) {
+        summary.linesAwaitingCoverage += 1;
+      }
+    } catch (error) {
+      summary.failures.push({
+        contractLineId: obligation.contract_line_id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  return summary;
+}
+
+export const CONTRACT_CADENCE_REPLENISHMENT_LOCK_SUFFIX = ':contract-cadence-replenishment';
+
+/**
+ * Wraps the tenant sweep in the transaction + advisory lock the nightly job
+ * needs. The xact lock serialises concurrent application pods for the tenant
+ * and is released at commit/rollback.
+ */
+export async function runContractCadenceReplenishmentForTenant(
+  knex: Knex,
+  params: { tenant: string; sourceRunPrefix: string; asOf?: ISO8601String },
+): Promise<ContractCadenceReplenishmentSummary> {
+  return withTransaction(knex, async (trx) => {
+    await trx.raw('select pg_advisory_xact_lock(hashtextextended(? || ?, 0))', [
+      params.tenant,
+      CONTRACT_CADENCE_REPLENISHMENT_LOCK_SUFFIX,
+    ]);
+    return replenishContractCadenceServicePeriodsForTenant(trx, params);
+  });
+}
+
+export const CONTRACT_CADENCE_REPLENISHMENT_TENANT_ENUMERATION =
+  '__contract_cadence_replenishment_tenant_enumeration__';
+
+export const CONTRACT_CADENCE_REPLENISHMENT_SOURCE_RUN_PREFIX =
+  'nightly-contract-cadence-replenishment';
+
+export type TenantConnectionResolver = (tenant: string | null) => Promise<Knex>;
+
+export interface ContractCadenceReplenishmentSweepOptions {
+  asOf?: ISO8601String;
+  /**
+   * Test seam: production resolves a pooled connection per tenant, while
+   * DB-backed tests inject the active transaction so the sweep joins the
+   * fixture's rollback scope.
+   */
+  resolveConnection?: TenantConnectionResolver;
+  sourceRunPrefix?: string;
+}
+
+export interface ContractCadenceReplenishmentSweepResult {
+  tenantsProcessed: number;
+  tenantsFailed: number;
+  summaries: ContractCadenceReplenishmentSummary[];
+}
+
+export function summarizeContractCadenceReplenishment(
+  summary: ContractCadenceReplenishmentSummary,
+): Record<string, unknown> {
+  return {
+    tenant: summary.tenant,
+    asOf: summary.asOf,
+    linesExamined: summary.linesExamined,
+    linesReplenished: summary.linesReplenished,
+    periodsGenerated: summary.periodsGenerated,
+    periodsRealigned: summary.periodsRealigned,
+    periodsSuperseded: summary.periodsSuperseded,
+    linesExhaustedBeforeRun: summary.linesExhaustedBeforeRun,
+    linesAtPeriodCap: summary.linesAtPeriodCap,
+    remainingCoverageGaps: summary.linesAwaitingCoverage,
+    remainingEligibleGaps: summary.unresolvedGapCount,
+    overrideConflicts: summary.overrideConflicts,
+    failedObligations: summary.failures.length,
+    failures: summary.failures.slice(0, 20),
+  };
+}
+
+/**
+ * Nightly sweep over every non-suspended tenant. Each tenant runs in its own
+ * transaction behind a per-tenant advisory lock; one tenant failing never stops
+ * the rest, and failures are logged with the tenant and obligation scope so an
+ * exhausted or broken schedule is discoverable rather than silently skipped.
+ */
+export async function replenishContractCadenceServicePeriodsSweep(
+  options: ContractCadenceReplenishmentSweepOptions = {},
+): Promise<ContractCadenceReplenishmentSweepResult> {
+  const resolveConnection: TenantConnectionResolver =
+    options.resolveConnection ?? ((tenant: string | null) => getConnection(tenant));
+  const sourceRunPrefix =
+    options.sourceRunPrefix ?? CONTRACT_CADENCE_REPLENISHMENT_SOURCE_RUN_PREFIX;
+
+  const rootKnex = await resolveConnection(null);
+  const tenants = await tenantDb(rootKnex, CONTRACT_CADENCE_REPLENISHMENT_TENANT_ENUMERATION)
+    .unscoped(
+      'tenants',
+      'contract cadence replenishment scheduler enumerates all tenants to run per-tenant jobs',
+    )
+    .whereNull('suspended_at')
+    .select('tenant');
+
+  const result: ContractCadenceReplenishmentSweepResult = {
+    tenantsProcessed: 0,
+    tenantsFailed: 0,
+    summaries: [],
+  };
+
+  for (const { tenant } of tenants) {
+    try {
+      const tenantKnex = await resolveConnection(tenant);
+      const summary = await runContractCadenceReplenishmentForTenant(tenantKnex, {
+        tenant,
+        sourceRunPrefix,
+        asOf: options.asOf,
+      });
+      result.tenantsProcessed += 1;
+      result.summaries.push(summary);
+
+      const payload = summarizeContractCadenceReplenishment(summary);
+      if (
+        summary.failures.length > 0 || summary.linesAwaitingCoverage > 0
+        || summary.linesAtPeriodCap > 0 || summary.overrideConflicts > 0
+      ) {
+        logger.warn(
+          'Contract-cadence service-period replenishment completed with unresolved coverage or failures',
+          payload,
+        );
+      } else {
+        logger.info('Contract-cadence service-period replenishment completed', payload);
+      }
+    } catch (error) {
+      result.tenantsFailed += 1;
+      logger.error(`Error replenishing contract-cadence service periods for tenant ${tenant}:`, error);
+    }
+  }
+
+  return result;
 }
 
 export async function materializeContractCadenceServicePeriodsForContract(

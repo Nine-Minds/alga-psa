@@ -3,7 +3,10 @@ import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { tenantDb } from '@alga-psa/db';
 import { getEntraProviderAdapter } from '../providers';
 import { getActiveEntraPartnerConnection } from '../connectionRepository';
-import { filterEntraUsersForTenant } from '../settingsService';
+import { filterEntraUsersForManagedTenant } from '../settingsService';
+import type { EntraUserFilterConfig } from './userFilterConfig';
+import { DEACTIVATABLE_EXCLUSION_REASONS } from './userFilterPipeline';
+import { excludeSharedMailboxEntraIdentities } from './disableHandler';
 import {
   executeEntraSync,
   type EntraSyncPreviewBucket,
@@ -41,6 +44,10 @@ export interface EntraPreflightResult {
   clientId: string;
   checkedAt: string;
   totalIdentities: number;
+  excludedByReason: Record<string, number>;
+  unknownFieldCounts: { userType: number; assignedLicenseCount: number };
+  warnings: string[];
+  excludedContactsOutOfScope: number;
   counters: {
     created: number;
     linked: number;
@@ -166,6 +173,7 @@ export async function runEntraPreflight(params: {
    * on do?" can be answered before saving it.
    */
   fieldSyncConfigOverride?: Record<string, unknown> | null;
+  userFilterConfigOverride?: EntraUserFilterConfig | null;
 }): Promise<EntraPreflightResult> {
   const mapping = await loadMappingForPreflight(params.tenantId, {
     managedTenantId: params.managedTenantId,
@@ -186,7 +194,7 @@ export async function runEntraPreflight(params: {
     tenant: params.tenantId,
     managedTenantId: mapping.entraTenantId,
   });
-  const filtered = await filterEntraUsersForTenant(params.tenantId, users);
+  const filtered = await filterEntraUsersForManagedTenant({ tenant: params.tenantId, managedTenantId: mapping.managedTenantId, entraTenantId: mapping.entraTenantId, adapter, users, configOverride: params.userFilterConfigOverride ?? undefined });
 
   const fieldSyncConfig = params.fieldSyncConfigOverride
     ? params.fieldSyncConfigOverride
@@ -200,7 +208,7 @@ export async function runEntraPreflight(params: {
         : {};
     });
 
-  const disabledIdentities = filtered.excluded
+  const disabledCandidates = filtered.excluded
     .filter((entry) => entry.reason === 'account_disabled')
     .map((entry) => ({
       entraTenantId: entry.user.entraTenantId,
@@ -209,6 +217,13 @@ export async function runEntraPreflight(params: {
       email: entry.user.email,
       userPrincipalName: entry.user.userPrincipalName,
     }));
+  const disabledIdentities = filtered.sharedMailboxIds === null
+    ? await excludeSharedMailboxEntraIdentities(params.tenantId, disabledCandidates)
+    : disabledCandidates;
+  const excludedIdentities = filtered.deactivateExcludedContacts ? filtered.excluded
+    .filter((entry) => DEACTIVATABLE_EXCLUSION_REASONS.includes(entry.reason as typeof DEACTIVATABLE_EXCLUSION_REASONS[number]))
+    .map(({ user, reason }) => ({ reason, entraTenantId: user.entraTenantId, entraObjectId: user.entraObjectId, displayName: user.displayName, email: user.email, userPrincipalName: user.userPrincipalName })) : [];
+  const excludedByReason = filtered.excluded.reduce<Record<string, number>>((counts, entry) => { counts[entry.reason] = (counts[entry.reason] || 0) + 1; return counts; }, {});
 
   const result = await executeEntraSync({
     tenantId: params.tenantId,
@@ -218,6 +233,10 @@ export async function runEntraPreflight(params: {
     fieldSyncConfig,
     dryRun: true,
     disabledIdentities,
+    excludedIdentities,
+    deactivateExcludedContacts: filtered.deactivateExcludedContacts,
+    enabledSourceUserCount: users.filter((user) => user.accountEnabled && user.mailboxKind !== 'shared').length,
+    entraTenantId: mapping.entraTenantId,
   });
 
   const preview = result.preview || [];
@@ -236,6 +255,15 @@ export async function runEntraPreflight(params: {
     clientId: mapping.clientId,
     checkedAt: new Date().toISOString(),
     totalIdentities: preview.length,
+    excludedByReason,
+    unknownFieldCounts: filtered.unknownFieldCounts,
+    warnings: [
+      ...(result.warnings || []),
+      ...(filtered.warnings || []),
+      ...(filtered.unknownFieldCounts.userType > 0 ? [`User type data unavailable for ${filtered.unknownFieldCounts.userType} users; unknown users were kept.`] : []),
+      ...(filtered.unknownFieldCounts.assignedLicenseCount > 0 ? [`License data unavailable for ${filtered.unknownFieldCounts.assignedLicenseCount} users; unknown users were kept.`] : []),
+    ],
+    excludedContactsOutOfScope: result.excludedContactsOutOfScope ?? 0,
     counters: result.counters,
     buckets: bucketize(preview, params.sampleLimit ?? DEFAULT_SAMPLE_LIMIT),
   };

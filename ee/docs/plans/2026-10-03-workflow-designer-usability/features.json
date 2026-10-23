@@ -1,0 +1,578 @@
+[
+  {
+    "id": "F001",
+    "description": "Trigger panel lists the fields the selected event's payload already carries (excluding envelope and actor fields).",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Trigger panel offers a one-click lookup step (e.g. Add 'Find Ticket') for payload ids that have a lookup action, with the id input pre-wired.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Event-specific trigger tips (e.g. where a customer reply's text lives) resolve to the real path once the lookup step exists.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Event picker searches across all categories by name, code and synonyms; event category is searchable; synonyms expand only from name and code.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Palette search ranks exact, prefix, phrase and word label matches before synonyms, descriptions and nested field names, drops weak matches, and ranks business actions above generic transforms within a tier.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "While searching, the palette lists individual actions inside groups as a full-name list; an empty search shows a No matches state with tips.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Curated MSP synonym groups (e.g. note→comment, reply→customer replied, counter→increment) power palette and event search.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "The generic transform.assign node is labelled Set variables everywhere.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "New steps insert after the selected step, or at the end of the selected container's first or chosen branch; the palette header states where the next step lands, with Reset.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Always-visible + insertion points and clickable empty branches (Add a step to this branch) with a New steps go here marker.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "If and Try/Catch start with empty branches (no auto-added Return steps).",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Default step output names are unique across the workflow (numeric suffix on collision).",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "One reachability computation (buildDataContext) decides which data a step can read: sibling If branches and loop-body outputs after the loop are excluded; both branches' outputs are readable after the If.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-model--api--integrations"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "If steps offer a condition builder (match all/any; field / operator / value) that round-trips through the stored expression and falls back to Expression mode for unsupported shapes.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Condition values use the entity picker for the field's kind and selects for enums and booleans; Add condition opens the field picker with nothing preselected.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "If cards show a plain-English summary with ids resolved to record names, a loading placeholder instead of raw ids, and a tooltip with the full source path.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "tickets.find returns client, board, contact, status, priority, category, subcategory and assignee names plus client_id (company_id kept as alias).",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-model--api--integrations"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "tickets.find always returns latest_comment and latest_customer_comment using the shared customer-comment rule.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-model--api--integrations"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Output schema fields carry friendly descriptions; unlabelled fields are humanized (snake/camel case, acronyms) and shown as Label (path), with duplicates qualified by path.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Schema metadata marks entity ids on action outputs and on event and date-trigger payloads through one picker-kind registry (adds role, contract and asset kinds).",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-model--api--integrations"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Each input has a single Value from control that selects the source and mode: a field, a specific record, text, a fixed value, or an expression; it shows the current source compactly.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "One searchable, grouped field picker (trigger, steps, loop item, caught error, workflow run; meta last) serves Value from, Insert field (text and expression editors) and condition fields.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Free-text inputs (single- or multi-line, including email bodies, AI prompts and notes) get Text mode with {{field}} placeholders, field chips, Expand dialog and sample-data preview.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Text mode scope matches Expression and Reference modes: loop item and index, caught error and all runtime roots are insertable and resolve.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#goals"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Switching between Text, Expression and Reference converts the value instead of wiping it; expressions that are not plain text-plus-fields stay in Expression mode with a note.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Insert field inserts at a deliberately placed caret and otherwise appends at the end.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "A single-value reference into a list input is wrapped as a one-item list and reopens in Reference mode with an explanatory note.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Reference picking offers first and last items of record lists and an Entire result entry for a step's whole output.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Expression editors auto-grow, open in an Expand dialog, and preview results against sample data (first loop item inside For Each).",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Syntax help lists every catalog function, list literals and pointers to Transform steps, laid out for the narrow panel.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Expression type inference parses the JSONata tree so concatenation reads as text and comparisons as true/false; MAPPING_TYPE_UNKNOWN is phrased in plain language.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-model--api--integrations"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Default fill mode is chosen per field: pickers for entity ids, text entry for strings, Reference only for a same-name type-matched source.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Suggestions are type-, entity-kind- and role-aware (actor/by fields never fill other roles; meta.* and error.* never suggested); free-text inputs get no automatic suggestions.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#goals"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Apply suggestions bulk-fills only required, empty inputs with same-name type-matched sources and lists every pair in its tooltip; side-effectful optional inputs are never bulk-filled.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#goals"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Structured object editors set only the sub-fields the author adds; booleans the author sets start true; numbers start inside their allowed range; required choices start at their first option.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Card badges, graph badges and the panel's N required missing count come from one mapping-state source, treating empty lists and blank objects as unset.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Comment visibility on Add Comment, Create Ticket initial comment and Add Attachment is an explicit Internal/Public choice in the designer; the runtime default is unchanged.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-model--api--integrations"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Not-found choices carry plain-language option labels; inside a Try, steps left at a non-failing value offer Fail so Catch can handle it.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Option labels from schema metadata render in all choice selects.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Fixed pickers resolve dependencies by value, so parent re-renders no longer reload options and swallow selections.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#problem"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Ticket assignment has a flat editor (Assign to user or team, team mode, also assign) with a fallback to individual fields when parts are references or expressions.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "In-app notification recipients use Notify users / Notify everyone with these roles pickers; email to/cc/bcc use an address chip editor accepting Name <address>.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Array inputs of any supported entity kind get a multi-picker; multi-user pickers show a focused search box on long lists.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Generic pickers (priority, status, role…) use the real SearchableSelect; popovers are wider than their trigger and stay in the viewport.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Trigger timezone is a searchable select with the tenant default first.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "CustomSelect drops Radix scroll buttons so the first click on a long list commits the option under the pointer.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#problem"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Designer and runtime read one expression function catalog; contains, startsWith, endsWith, lower, upper, truncate and substring are available and bounded.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-model--api--integrations"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "The loop index is offered as index (bound by the runtime), not $index.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#problem"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Caught-error fields come from one definition (category, message, nodePath, at, code, details); vars.<captureErrorAs> is offered first inside Catch and not after the Try/Catch.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-model--api--integrations"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Wait for Time defaults to Duration with empty units, shows only the selected mode's fields, and summarizes the wait in words.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Save status shows Saved · time / Unsaved changes / Not saved yet next to Save Draft.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Publish shows a toast and a Published vN / Not published chip; the version field reads Next version to publish with an explanation.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "First publish asks for confirmation describing what will start the workflow (event, date, or manual).",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Header Active/Paused switch applies immediately, rolls back on failure, uses trigger-aware wording, and is read-only without edit rights.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Workflow settings accept an empty concurrency limit as unlimited, roll toggles back on failure, and phrase validation errors in plain language.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#problem"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Browser tab title follows the workflow name; saving keeps the selected step; the config panel scrolls to top on step change and shows step config before workflow settings.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Workflow loading is keyed on the route id (mount, popstate, bfcache) so Back after the first save never shows an empty New Workflow.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#problem"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "Session expiry opens a Your session ended dialog that keeps the in-memory draft; a per-workflow local backup is offered on reload when newer than the last save.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "The config panel resize handle is visible, double-click toggles wide, and the width is remembered per browser.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Run dialog defaults to Form Builder with blank payloads, readable field labels, a picker for every entity id kind, and date / date-time pickers.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Picking a real record fills related payload fields the author has not edited (replacing sample values), including ticket reply fields and contract client and end date.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Date-trigger test payloads derive offsetDays, occursOn and fireDate from the trigger and the picked record via the shared occurrence rule used by the scheduler.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-model--api--integrations"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "Contract and asset pickers show end and warranty dates, a visible client filter, and say which promised fields a picked record lacks.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Payload validation issues come back structured and render inline under each field in plain language; errors show after interaction or a start attempt.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "UUID id fields without a picker offer Generate test id.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "The Run dialog keeps a draft payload per workflow across close and reopen, with Start over.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "Run start feedback: success toast with View run; engine-unreachable failures explained in plain language with View failed run and technical details; 3 s connect deadline with progress text.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "Run is disabled while paused with a tooltip explaining why.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "Run Studio shows step names, non-crossing then/else edges, Run source: Manual test, a breadcrumb and Back to workflow, and explains runs that never reached the engine.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "Workflow list has a row menu (Open, Run…, Pause/Resume, View Runs, Delete) and an Unpublished changes badge computed from the real draft/published difference.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "Designer audit shows user names in a stacked list without horizontal scroll.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "Re-registering nodes and actions during dev hot reload replaces them instead of throwing.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-model--api--integrations"
+    ]
+  }
+]

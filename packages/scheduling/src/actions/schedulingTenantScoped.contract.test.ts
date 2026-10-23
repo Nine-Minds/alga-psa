@@ -44,7 +44,9 @@ describe('scheduling tenant-scoped query contract', () => {
   });
 
   it('uses tenantDb roots and tenant joins for time sheet operations', () => {
-    expect(timeSheetOperationsSource).toContain("import { createTenantKnex, tenantDb } from '@alga-psa/db'");
+    expect(timeSheetOperationsSource).toContain("import { createTenantKnex, tenantDb, resolveUserTimeZone } from '@alga-psa/db'");
+    expect(timeSheetOperationsSource).toContain('await resolveUserTimeZone(db, tenant, validatedParams.userId)');
+    expect(timeSheetOperationsSource).toContain('await ensureTimePeriodCoversDate(db, tenant, Temporal.Now.plainDateISO(subjectTimeZone))');
     expect(timeSheetOperationsSource).toContain("tenantScopedTable(trx, 'time_sheets', tenant)");
     expect(timeSheetOperationsSource).toContain("tenantScopedTable(trx, 'time_entries', tenant)");
     expect(timeSheetOperationsSource).toContain("tenantScopedTable(trx, 'time_sheet_comments', tenant)");

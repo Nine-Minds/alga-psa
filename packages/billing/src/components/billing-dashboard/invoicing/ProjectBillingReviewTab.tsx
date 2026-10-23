@@ -378,7 +378,9 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
     },
     {
       title: t('projectBilling.columns.actions', { defaultValue: 'Actions' }),
+      id: 'actions',
       dataIndex: ['entry', 'schedule_entry_id'],
+      sortable: false,
       width: '5%',
       render: (_, record) => (
         <div onClick={(e) => e.stopPropagation()}>
@@ -499,6 +501,10 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
           <div className="p-8 text-center text-sm text-muted-foreground">
             {t('projectBilling.empty', {
               defaultValue: 'Nothing is waiting for review. Ready milestones and deposits will appear here.',
+            })}
+            {' '}
+            {t('projectBilling.emptyTimeHint', {
+              defaultValue: "Approved time and materials are never queued here — they bill through the normal invoice run or the project's Generate project invoice button.",
             })}
           </div>
         </Card>

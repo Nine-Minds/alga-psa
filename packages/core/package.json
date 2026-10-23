@@ -1,6 +1,6 @@
 {
   "name": "@alga-psa/core",
-  "version": "1.5.4",
+  "version": "1.6.16",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -22,9 +22,21 @@
       "import": "./dist/lib/formatters.js",
       "types": "./src/lib/formatters.ts"
     },
+    "./fileNames": {
+      "import": "./dist/lib/fileNames.js",
+      "types": "./src/lib/fileNames.ts"
+    },
     "./workSchedule": {
       "import": "./dist/lib/workSchedule.js",
       "types": "./src/lib/workSchedule.ts"
+    },
+    "./timeZones": {
+      "import": "./dist/lib/timeZones.js",
+      "types": "./src/lib/timeZones.ts"
+    },
+    "./unitOfMeasure": {
+      "import": "./dist/lib/unitOfMeasure.js",
+      "types": "./src/lib/unitOfMeasure.ts"
     },
     "./secrets": {
       "import": "./dist/lib/secrets/index.js",
@@ -49,6 +61,10 @@
     "./i18n/config": {
       "import": "./dist/lib/i18n/config.js",
       "types": "./src/lib/i18n/config.ts"
+    },
+    "./i18n/countryDateFormat": {
+      "import": "./dist/lib/i18n/countryDateFormat.js",
+      "types": "./src/lib/i18n/countryDateFormat.ts"
     },
     "./config/deletion": {
       "import": "./dist/config/deletion/index.js",

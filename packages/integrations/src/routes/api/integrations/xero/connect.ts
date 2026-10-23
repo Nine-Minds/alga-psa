@@ -34,6 +34,29 @@ import { encryptXeroVerifier } from '../../../../lib/xero/xeroOAuthVerifierCiphe
 const XERO_AUTHORIZE_URL =
   process.env.XERO_OAUTH_AUTHORIZE_URL ?? 'https://login.xero.com/identity/connect/authorize';
 
+const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+
+const FAILURE_PATH =
+  '/msp/settings?tab=integrations&category=accounting&accounting_integration=xero&xero_status=failure';
+
+// The Connect button navigates the browser here, so a JSON error body would
+// replace the settings page with raw text. Browser navigations (Accept:
+// text/html) go back to the settings page with a coarse xero_error code the
+// panel renders; API callers keep the JSON contract.
+function connectFailure(
+  request: NextRequest,
+  code: string,
+  message: string,
+  status: number
+): NextResponse {
+  if (request.headers.get('accept')?.includes('text/html')) {
+    const url = new URL(FAILURE_PATH, NEXTAUTH_URL);
+    url.searchParams.set('xero_error', code);
+    return NextResponse.redirect(url);
+  }
+  return NextResponse.json({ error: message }, { status });
+}
+
 const CSRF_TOKEN_PATTERN = /^[a-f0-9]{64}$/;
 
 function isEnterpriseEdition(): boolean {
@@ -64,41 +87,42 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     logger.error('[xeroOAuth] Unexpected failure while starting Xero OAuth', {
       errorCode: error instanceof Error ? error.constructor.name : 'unknown_error'
     });
-    return NextResponse.json(
-      { error: 'Unable to start the Xero connection. Please refresh and try again.' },
-      { status: 503 }
+    return connectFailure(
+      request,
+      'oauth_failed',
+      'Unable to start the Xero connection. Please refresh and try again.',
+      503
     );
   }
 }
 
 async function handleConnectRequest(request: NextRequest): Promise<NextResponse> {
   if (!isEnterpriseEdition()) {
-    return NextResponse.json(
-      { error: 'Xero integration is only available in Enterprise Edition.' },
-      { status: 501 }
-    );
+    return connectFailure(request, 'oauth_failed', 'Xero integration is only available in Enterprise Edition.', 501);
   }
 
   const sessionUser = await getAccountingConnectionSessionUser();
   if (!sessionUser) {
-    return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+    return connectFailure(request, 'session_expired', 'Authentication required.', 401);
   }
   const canManageBilling = await canManageAccountingConnections(sessionUser);
   if (!canManageBilling) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return connectFailure(request, 'forbidden', 'Forbidden', 403);
   }
   const { knex, tenant } = await createTenantKnex(sessionUser.tenant);
 
   if (!tenant) {
-    return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+    return connectFailure(request, 'session_expired', 'Authentication required.', 401);
   }
 
   const disconnectActive = await isProviderDisconnectActive(knex, tenant, PROVIDER_XERO).catch(() => false);
   if (disconnectActive) {
     logger.info('[xeroOAuth] Connect blocked: Xero disconnect in progress', { tenantId: tenant });
-    return NextResponse.json(
-      { error: 'Xero is being disconnected. Finish or finalize the disconnect before connecting again.' },
-      { status: 409 }
+    return connectFailure(
+      request,
+      'disconnect_in_progress',
+      'Xero is being disconnected. Finish or finalize the disconnect before connecting again.',
+      409
     );
   }
 
@@ -145,9 +169,11 @@ async function handleConnectRequest(request: NextRequest): Promise<NextResponse>
       };
     });
     if (!oauthState) {
-      return NextResponse.json(
-        { error: 'Xero is being disconnected. Finish or finalize the disconnect before connecting again.' },
-        { status: 409 }
+      return connectFailure(
+        request,
+        'disconnect_in_progress',
+        'Xero is being disconnected. Finish or finalize the disconnect before connecting again.',
+        409
       );
     }
     const { csrfToken, challenge, state } = oauthState;
@@ -192,9 +218,11 @@ async function handleConnectRequest(request: NextRequest): Promise<NextResponse>
       tenantId: tenant,
       error: message
     });
-    return NextResponse.json(
-      { error: 'Xero connection is not configured for this workspace.' },
-      { status: 400 }
+    return connectFailure(
+      request,
+      'config_missing',
+      'Xero connection is not configured for this workspace.',
+      400
     );
   }
 }

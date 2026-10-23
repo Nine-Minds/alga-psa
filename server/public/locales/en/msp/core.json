@@ -80,9 +80,10 @@
       "servicePeriods": "Service Periods",
       "credits": "Credits",
       "serviceTypes": "Service Types",
+      "serviceCategories": "Service Categories",
       "serviceCatalog": "Services",
       "products": "Products",
-      "taxRates": "Tax Rates",
+      "taxRates": "Tax",
       "usageTracking": "Usage Tracking",
       "reports": "Reports",
       "accountingExports": "Accounting Exports"
@@ -101,7 +102,10 @@
     "jobMonitoring": "Job Monitoring",
     "jobs": "Jobs",
     "emailLogs": "Email Logs",
-    "extensions": "Extensions"
+    "extensions": "Extensions",
+    "ticketsAll": "All Tickets",
+    "ticketsRecurring": "Recurring Tickets",
+    "ticketsTemplates": "Ticket Templates"
   },
   "marketing": {
     "dialogs": {
@@ -562,7 +566,35 @@
       "ariaLabel": "Resources and help",
       "title": "Resources",
       "documentation": "Documentation",
-      "support": "Contact Support"
+      "support": "Contact Support",
+      "submitTicket": "Submit a ticket to Nine Minds"
+    },
+    "supportDialog": {
+      "title": "Submit a ticket to Nine Minds",
+      "intro": "Nine Minds support receives this as a ticket and replies by email.",
+      "categoryLabel": "What do you need help with?",
+      "categories": {
+        "bug": "Something is broken",
+        "question": "Question",
+        "billing": "Billing",
+        "feature": "Feature request"
+      },
+      "subjectLabel": "Subject",
+      "descriptionLabel": "What happened?",
+      "descriptionPlaceholder": "Include what you expected, what happened, and any client or invoice involved.",
+      "replyTo": "Replies go to {{email}}",
+      "success": "Sent to Nine Minds support. Replies go to {{email}}.",
+      "submit": "Send to Nine Minds",
+      "sending": "Sending…",
+      "cancel": "Cancel",
+      "close": "Close",
+      "fallbackLink": "Contact support on nineminds.com",
+      "errors": {
+        "invalidInput": "Add a subject of at least 3 characters and a description of at least 20 characters.",
+        "rateLimited": "You just sent a request. Please wait a minute before sending another.",
+        "emailNotConfigured": "This install has no outbound email configured, so the request could not be sent.",
+        "sendFailed": "Sending the request failed. Please try again."
+      }
     },
     "jobs": {
       "ariaLabel": "View background job activity",
@@ -588,7 +620,20 @@
       "system": "System",
       "selected": "Selected"
     },
-    "openUserMenu": "Open user menu"
+    "openUserMenu": "Open user menu",
+    "stopwatch": {
+      "untitled": "Untitled",
+      "ariaLabelPaused": "Stopwatch paused: {{label}} at {{clock}}",
+      "ariaLabelRunning": "Stopwatch running: {{label}} at {{clock}}",
+      "paused": "Stopwatch paused",
+      "running": "Stopwatch running",
+      "resume": "Resume",
+      "pause": "Pause",
+      "stop": "Stop and log",
+      "discard": "Discard",
+      "pausedNoDrawer": "Stopwatch paused at {{clock}}. Open the work item to log the time.",
+      "openTicket": "Open ticket"
+    }
   },
   "dialogs": {
     "aiInterrupt": {
@@ -619,6 +664,18 @@
     "platformNotification": {
       "learnMore": "Learn More",
       "dismiss": "Dismiss notification"
+    },
+    "integrationHealth": {
+      "inboundEmail": {
+        "authFailure": "Inbound email for {{mailbox}} is paused — its credentials no longer work.",
+        "error": "Inbound email for {{mailbox}} reported an error and may not be receiving messages."
+      },
+      "calendar": {
+        "error": "Calendar sync for {{providerName}} reported an error and is not syncing.",
+        "disconnected": "Calendar sync for {{providerName}} is disconnected and is not syncing."
+      },
+      "review": "Review",
+      "dismiss": "Dismiss integration alert"
     }
   },
   "quickCreate": {
@@ -754,5 +811,37 @@
   "githubStar": {
     "label": "Star",
     "ariaLabel": "Star {{repository}} on GitHub"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "MSP Portal",
+      "dashboard": "Dashboard",
+      "ticketDetails": "Ticket Details",
+      "tickets": "Tickets",
+      "projectDetails": "Project Details",
+      "projects": "Projects",
+      "clientDetails": "Client Details",
+      "clients": "Clients",
+      "contactDetails": "Contact Details",
+      "contacts": "Contacts",
+      "assetDetails": "Asset Details",
+      "assets": "Assets",
+      "billing": "Billing",
+      "settings": "Settings",
+      "settingsSection": "Settings: {{section}}",
+      "chat": "Chat"
+    }
+  },
+  "chat": {
+    "page": {
+      "title": "Pro Feature",
+      "description": "AI Chat features require Pro. Please upgrade to access this feature."
+    },
+    "messages": {
+      "proRequired": "Message features require Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Chat features are only available in Enterprise Edition"
+    }
   }
 }

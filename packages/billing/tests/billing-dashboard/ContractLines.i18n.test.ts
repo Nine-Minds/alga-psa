@@ -48,7 +48,12 @@ describe('ContractLines i18n wiring contract', () => {
       'contractLines.columns.actions',
       'contractLines.serviceCountSingle',
       'contractLines.serviceCountPlural',
-      'contractLines.customRate',
+      'contractLines.rateProvenance.standard',
+      'contractLines.rateProvenance.custom',
+      'contractLines.rateProvenance.unreviewed',
+      'contractLines.actions.resetToStandard',
+      'contractLines.dialogs.confirmResetRate',
+      'contractLines.errors.failedToResetRate',
       'contractLines.empty.noneAdded',
       'contractLines.empty.selectAbove',
       'contractLines.loading.contractLines',
@@ -87,7 +92,7 @@ describe('ContractLines i18n wiring contract', () => {
       'contractLines.services.quantityTaxAllocation',
       'contractLines.services.hourlyRate',
       'contractLines.services.unitRate',
-      'contractLines.services.rateTaxAllocation',
+      'contractLines.services.shareOfLineFee',
       // Unit-of-measure editing moved into UsageServiceConfigPanel, which uses the
       // 'msp/service-catalog' namespace ('usageConfig.*' keys) instead of this component.
       'contractLines.bucket.enableTracking',
@@ -110,13 +115,15 @@ describe('ContractLines i18n wiring contract', () => {
       'common.actions.save',
       'common.actions.saving',
       'common.actions.cancel',
-      'contractLines.errors.cannotEditWithInvoices',
+      'contractLines.configuration.billedEditExplanation',
     ];
 
     for (const key of keyChecks) {
       expect(source).toContain(`t('${key}'`);
       expect(getLeaf(en, key)).toBeDefined();
     }
+    expect(getLeaf(en, 'contractLines.errors.protectedStartDate')).toBeDefined();
+    expect(getLeaf(en, 'contractLines.errors.protectedEndDate')).toBeDefined();
   });
 
   it('T022: ContractLines translation keys resolve to pseudo-locale values in xx', () => {

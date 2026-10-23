@@ -7,6 +7,7 @@
 
 import logger from '@alga-psa/core/logger';
 import { getPortalDomainStatusForTenant } from '@alga-psa/tenancy/server';
+import { isOfflinePaymentMethod } from '@alga-psa/shared/billingClients/paymentPreferences';
 import { getPaymentService, expireInvoicePaymentLinksForTerminalStatus } from './paymentActions';
 
 export interface InvoiceEmailLinkContext {
@@ -23,6 +24,21 @@ export interface InvoiceLinkEligibilityFields {
   invoice_type?: string | null;
   total_amount?: number | null;
   credit_applied?: number | null;
+  /** The invoice's payment-method snapshot (`invoices.payment_method`). */
+  payment_method?: string | null;
+}
+
+/**
+ * Whether an invoice may carry an online "Pay now" link at all. An invoice
+ * whose billing profile pays by check or bank transfer was issued asking for
+ * that method, so it offers no card checkout. Credit card and invoices with
+ * no recorded method (everything generated before the snapshot existed) keep
+ * the link.
+ */
+export function isInvoiceOnlinePaymentAllowed(
+  invoice: Pick<InvoiceLinkEligibilityFields, 'payment_method'> | null | undefined,
+): boolean {
+  return !isOfflinePaymentMethod(invoice?.payment_method);
 }
 
 /**
@@ -138,6 +154,12 @@ export async function getInvoiceEmailLinkContext(
   const portalUrl = await buildPortalInvoiceUrl(tenantId, invoice.invoice_id);
   if (portalUrl) {
     context.portalUrl = portalUrl;
+  }
+
+  // Offline methods get the portal link only. No Checkout session is created,
+  // so the email cannot carry (or later append) a payment URL.
+  if (!isInvoiceOnlinePaymentAllowed(invoice)) {
+    return context;
   }
 
   try {

@@ -151,7 +151,8 @@
     "tryAgain": "Intentar de nuevo",
     "backToBilling": "Volver a facturación",
     "retryFailed": "Aún no pudimos iniciar el pago. Inténtelo de nuevo en un momento.",
-    "loading": "Cargando..."
+    "loading": "Cargando...",
+    "offlinePaymentMethod": "Esta factura se paga con cheque o transferencia bancaria, por lo que no se puede pagar en línea. Siga las instrucciones de pago de la factura."
   },
   "quotes": {
     "pendingQuotes": "Cotizaciones pendientes",
@@ -240,7 +241,8 @@
     "contractLineType": {
       "Fixed": "Fijo",
       "Hourly": "Por hora",
-      "Usage": "Basado en uso"
+      "Usage": "Basado en uso",
+      "PrepaidBlock": "Bloque prepagado"
     },
     "quoteStatus": {
       "draft": "Borrador",
@@ -441,6 +443,14 @@
     "hoursLeft": "Quedan {{hours}} h",
     "expires": "Vence el {{date}}",
     "recentBurn": "Consumo reciente",
-    "timeEntry": "Entrada de tiempo"
+    "timeEntry": "Entrada de tiempo",
+    "contractLabel": "Contrato: {{contract}}"
+  },
+  "bucketUsage": {
+    "contractLine": "Línea de contrato de bolsa de horas",
+    "usage": "Uso",
+    "hoursUsed": "{{hours}} horas utilizadas",
+    "hoursTotal": "{{hours}} horas en total",
+    "rolloverHours": "Incluye {{hours}} horas transferidas"
   }
 }

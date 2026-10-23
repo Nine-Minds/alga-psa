@@ -56,7 +56,23 @@ import { ADAPTER_EXPORT_CAPABILITIES } from '../../adapters/accounting/registry'
 /** Overlap subtracted from the stored cursor to absorb clock skew. */
 export const CURSOR_OVERLAP_MS = 5 * 60 * 1000;
 
-const AUTH_ERROR_CODES = new Set(['QBO_AUTH_ERROR', 'QBO_REFRESH_FAILED', 'QBO_SETUP_INCOMPLETE']);
+const AUTH_ERROR_CODES = new Set([
+  'QBO_AUTH_ERROR',
+  'QBO_REFRESH_FAILED',
+  'QBO_SETUP_INCOMPLETE',
+  // Xero: expired refresh token (terminal re-auth required), 401s, and a
+  // missing/removed connection all mean "reconnect required", not a generic
+  // cycle failure.
+  'XERO_REFRESH_EXPIRED',
+  'XERO_REFRESH_FAILED',
+  'XERO_UNAUTHORIZED',
+  // A connection authorized without the payment read scope cannot poll
+  // Payments; reauthorization (reconnect) is required and the grant is
+  // unchanged by a token refresh.
+  'XERO_SCOPE_INSUFFICIENT',
+  'XERO_CONNECTION_NOT_FOUND',
+  'XERO_NOT_CONFIGURED'
+]);
 
 function adapterSupportsExportType(adapterType: string, exportType: string): boolean {
   const capabilities = ADAPTER_EXPORT_CAPABILITIES as Record<string, readonly string[] | undefined>;
@@ -94,9 +110,11 @@ export async function runAccountingSyncCycle(params: RunCycleParams): Promise<Ru
   const now = params.now ?? (() => new Date());
   const { knex, tenantId, adapterType, targetRealm } = params;
 
-  if (!params.adapter.capabilities().supportsChangePolling || !params.adapter.fetchChanges) {
-    return { ran: false, status: 'skipped', error: 'adapter does not support change polling' };
-  }
+  // A missing change-polling capability only disables the inbound half of the
+  // cycle. Queued outbound work (exports, payments, credits, voids) still
+  // drains, so an export-only adapter is never stranded by its lack of polling.
+  const supportsPolling =
+    Boolean(params.adapter.capabilities().supportsChangePolling) && Boolean(params.adapter.fetchChanges);
 
   const settings = await getAccountingSyncSettings(knex, tenantId);
   if (!settings.autoSyncEnabled && !params.force) {
@@ -112,16 +130,20 @@ export async function runAccountingSyncCycle(params: RunCycleParams): Promise<Ru
 
   // First run starts at "now": connecting must never import history — the
   // onboarding wizard (slice 3) is the deliberate path for that.
+  //
+  // The resume base is the un-overlapped boundary. It is what `cursor_before`
+  // records, so a failed first cycle's fallback reuses the SAME base instead of
+  // subtracting the overlap again on every retry (which walked the cursor
+  // backward).
   const lastCursor = await cycles.getLastSuccessfulCursor(tenantId, adapterType, targetRealm);
-  const since = lastCursor
-    ? new Date(new Date(lastCursor).getTime() - CURSOR_OVERLAP_MS).toISOString()
-    : new Date(now().getTime() - CURSOR_OVERLAP_MS).toISOString();
+  const resumeBase = lastCursor ? new Date(lastCursor).toISOString() : now().toISOString();
+  const since = new Date(new Date(resumeBase).getTime() - CURSOR_OVERLAP_MS).toISOString();
 
   const cycleId = await cycles.startCycle({
     tenant: tenantId,
     adapterType,
     targetRealm,
-    cursorBefore: since
+    cursorBefore: resumeBase
   });
 
   // Token expiry countdown (14/7/2 days, each announced once).
@@ -149,68 +171,100 @@ export async function runAccountingSyncCycle(params: RunCycleParams): Promise<Ru
   }
 
   // ── Inbound ────────────────────────────────────────────────────────────
-  let changeSet: AccountingChangeSet;
-  try {
-    changeSet = await params.adapter.fetchChanges(tenantId, since, targetRealm);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'change polling failed';
+  // Cursor advances ONLY after every change in the poll has been durably
+  // handled under the documented strategy. A truncated change set keeps the
+  // pre-poll cursor (never skips); a failed fetch/apply leaves the stored
+  // cursor untouched. Idempotent appliers make the overlap re-poll safe.
+  let cursorAfter: string | undefined;
+  if (supportsPolling) {
+    let changeSet: AccountingChangeSet;
+    try {
+      changeSet = await params.adapter.fetchChanges!(tenantId, since, targetRealm);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'change polling failed';
 
-    if (isAuthError(error)) {
-      const result = await exceptions.createOrUpdate({
-        type: 'accounting_connection_expired',
-        entityType: 'connection',
-        entityId: `${adapterType}:${targetRealm}`,
-        title: 'Accounting connection failed authentication',
-        context: { adapter_type: adapterType, realm: targetRealm, message, details: message }
-      });
-      if (result.created) {
-        stats.exceptionsCreated += 1;
-        await notifications.notifyConnectionExpired(targetRealm, message);
+      if (isAuthError(error)) {
+        const result = await exceptions.createOrUpdate({
+          type: 'accounting_connection_expired',
+          entityType: 'connection',
+          entityId: `${adapterType}:${targetRealm}`,
+          title: 'Accounting connection failed authentication',
+          context: { adapter_type: adapterType, realm: targetRealm, message, details: message }
+        });
+        if (result.created) {
+          stats.exceptionsCreated += 1;
+          await notifications.notifyConnectionExpired(targetRealm, message);
+        }
+        await cycles.finishCycle(tenantId, cycleId, { status: 'aborted', stats, error: message });
+        return { ran: true, status: 'aborted', cycleId, stats, error: message };
       }
-      await cycles.finishCycle(tenantId, cycleId, { status: 'aborted', stats, error: message });
-      return { ran: true, status: 'aborted', cycleId, stats, error: message };
+
+      await cycles.finishCycle(tenantId, cycleId, { status: 'failed', stats, error: message });
+      return { ran: true, status: 'failed', cycleId, stats, error: message };
     }
 
-    await cycles.finishCycle(tenantId, cycleId, { status: 'failed', stats, error: message });
-    return { ran: true, status: 'failed', cycleId, stats, error: message };
-  }
+    stats.truncated = changeSet.truncated;
 
-  stats.truncated = changeSet.truncated;
+    try {
+      const byType = (entityType: AccountingExternalChange['entityType']) =>
+        changeSet.changes.filter((change) => change.entityType === entityType);
 
-  try {
-    const byType = (entityType: AccountingExternalChange['entityType']) =>
-      changeSet.changes.filter((change) => change.entityType === entityType);
+      for (const change of byType('Customer')) {
+        await applyExternalCustomerChange({ tenantId, targetRealm, ledger, exceptions, stats }, change);
+      }
 
-    for (const change of byType('Customer')) {
-      await applyExternalCustomerChange({ tenantId, targetRealm, ledger, exceptions, stats }, change);
+      // Reversals must run before applications. A credit/ payment replacement
+      // arrives as a deletion plus a new allocation in the same poll: applying
+      // the replacement first would be refused by the already-settled guard
+      // (the invoice is still settled by the old allocation), and then the old
+      // allocation would be reversed — netting the invoice back to unpaid. With
+      // deletions first, the balance is freed before the replacement lands.
+      const paymentChanges = byType('Payment');
+      const orderedPaymentChanges = [
+        ...paymentChanges.filter((change) => change.deleted),
+        ...paymentChanges.filter((change) => !change.deleted)
+      ];
+
+      for (const change of orderedPaymentChanges) {
+        await applyExternalPaymentChange(
+          { knex, tenantId, adapterType, targetRealm, ledger, exceptions, stats, adapter: params.adapter },
+          change
+        );
+      }
+
+      for (const change of [...byType('Invoice'), ...byType('CreditMemo')]) {
+        await applyExternalDocumentChange(
+          { tenantId, targetRealm, ledger, exceptions, stats, adapterType },
+          change
+        );
+      }
+
+      stats.refundReceiptsSeen += byType('RefundReceipt').length;
+    } catch (error) {
+      // Inbound application failed: do not advance the cursor; the overlap +
+      // idempotent appliers make the retry safe next cycle.
+      const message = error instanceof Error ? error.message : 'inbound application failed';
+      await cycles.finishCycle(tenantId, cycleId, { status: 'failed', stats, error: message });
+      logger.error('[accountingSync] Cycle inbound failed', { tenantId, targetRealm, error: message });
+      return { ran: true, status: 'failed', cycleId, stats, error: message };
     }
 
-    for (const change of byType('Payment')) {
-      await applyExternalPaymentChange(
-        { knex, tenantId, adapterType, targetRealm, ledger, exceptions, stats },
-        change
-      );
+    // Advance only after the poll durably covered everything. A truncated poll
+    // has NO safe single-timestamp resume boundary: the unread records can be
+    // anywhere in the window, and a newer timestamp from a different, completed
+    // feed would skip them. So a truncated poll leaves the cursor untouched —
+    // the next cycle re-polls the same window (idempotent appliers make the
+    // reprocessing safe), and once the source stops truncating it advances.
+    if (!changeSet.truncated) {
+      cursorAfter = changeSet.fetchedAt;
     }
-
-    for (const change of [...byType('Invoice'), ...byType('CreditMemo')]) {
-      await applyExternalDocumentChange({ tenantId, targetRealm, ledger, exceptions, stats }, change);
-    }
-
-    stats.refundReceiptsSeen += byType('RefundReceipt').length;
-  } catch (error) {
-    // Inbound application failed: do not advance the cursor; the overlap +
-    // idempotent appliers make the retry safe next cycle.
-    const message = error instanceof Error ? error.message : 'inbound application failed';
-    await cycles.finishCycle(tenantId, cycleId, { status: 'failed', stats, error: message });
-    logger.error('[accountingSync] Cycle inbound failed', { tenantId, targetRealm, error: message });
-    return { ran: true, status: 'failed', cycleId, stats, error: message };
   }
 
   // ── Outbound ───────────────────────────────────────────────────────────
   try {
-    await drainExportInvoiceOps({ knex, tenantId, adapterType, targetRealm, ops, ledger, exceptions, stats });
+    await drainExportInvoiceOps({ knex, tenantId, adapterType, targetRealm, ops, ledger, exceptions, stats, adapter: params.adapter });
     if (adapterSupportsExportType(adapterType, 'vendor_bill')) {
-      await drainExportVendorBillOps({ knex, tenantId, adapterType, targetRealm, ops, ledger, exceptions, stats });
+      await drainExportVendorBillOps({ knex, tenantId, adapterType, targetRealm, ops, ledger, exceptions, stats, adapter: params.adapter });
     }
   } catch (error) {
     // Outbound problems never block the cursor; per-op state handles retries.
@@ -224,7 +278,7 @@ export async function runAccountingSyncCycle(params: RunCycleParams): Promise<Ru
   // ── Credit application (runs after exports so both CreditMemo and Invoice ──
   // ── mappings are available for the Payment-linking step)               ──
   try {
-    await drainApplyCreditOps({ knex, tenantId, adapterType, targetRealm, ops, ledger, exceptions, stats });
+    await drainApplyCreditOps({ knex, tenantId, adapterType, targetRealm, ops, ledger, exceptions, stats, adapter: params.adapter });
   } catch (error) {
     logger.error('[accountingSync] Credit-application drain error', {
       tenantId,
@@ -235,7 +289,7 @@ export async function runAccountingSyncCycle(params: RunCycleParams): Promise<Ru
 
   // ── Void invoice ops ────────────────────────────────────────────────────
   try {
-    await drainVoidInvoiceOps({ knex, tenantId, adapterType, targetRealm, ops, ledger, exceptions, stats });
+    await drainVoidInvoiceOps({ knex, tenantId, adapterType, targetRealm, ops, ledger, exceptions, stats, adapter: params.adapter });
   } catch (error) {
     logger.error('[accountingSync] Void-invoice drain error', {
       tenantId,
@@ -246,7 +300,7 @@ export async function runAccountingSyncCycle(params: RunCycleParams): Promise<Ru
 
   // ── Outbound payment push (Stripe → QBO) ────────────────────────────────
   try {
-    await drainRecordPaymentOps({ knex, tenantId, adapterType, targetRealm, ops, ledger, exceptions, stats });
+    await drainRecordPaymentOps({ knex, tenantId, adapterType, targetRealm, ops, ledger, exceptions, stats, adapter: params.adapter });
   } catch (error) {
     logger.error('[accountingSync] Record-payment drain error', {
       tenantId,
@@ -268,7 +322,7 @@ export async function runAccountingSyncCycle(params: RunCycleParams): Promise<Ru
 
   await cycles.finishCycle(tenantId, cycleId, {
     status: 'succeeded',
-    cursorAfter: changeSet.fetchedAt,
+    cursorAfter,
     stats
   });
 
@@ -285,6 +339,7 @@ interface DrainDeps {
   ledger: SyncMappingLedger;
   exceptions: SyncExceptionService;
   stats: AccountingSyncCycleStats;
+  adapter?: AccountingExportAdapter;
 }
 
 /**

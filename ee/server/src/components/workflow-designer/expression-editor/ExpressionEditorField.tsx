@@ -12,12 +12,31 @@
  * This component bridges the old ExpressionTextArea API to the new Monaco-based editor.
  */
 
-import React, { useCallback, useMemo, useRef } from 'react';
+import { WORKFLOW_CAUGHT_ERROR_SCHEMA } from '@alga-psa/workflows/authoring';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { Maximize2 } from 'lucide-react';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema } from './ExpressionEditor';
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { WorkflowInsertFieldPicker } from '../mapping/WorkflowFieldPicker';
 import { Label } from '@alga-psa/ui/components/Label';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { ExpressionSyntaxHelp } from './ExpressionSyntaxHelp';
+import { ExpressionPreview } from './ExpressionPreview';
+
+const LINE_HEIGHT_PX = 18;
+const EDITOR_PADDING_PX = 24;
+const MAX_INLINE_HEIGHT_PX = 320;
+const APPROX_CHARS_PER_LINE = 40;
+
+/** Inline editor height that grows with the expression, from `minHeight` up to a cap. */
+export const getAutoGrowEditorHeight = (value: string, minHeight: number): number => {
+  const visualLines = value
+    .split('\n')
+    .reduce((count, line) => count + Math.max(1, Math.ceil(line.length / APPROX_CHARS_PER_LINE)), 0);
+  return Math.min(MAX_INLINE_HEIGHT_PX, Math.max(minHeight, EDITOR_PADDING_PX + visualLines * LINE_HEIGHT_PX));
+};
 
 /**
  * Data context for building schema from SelectOptions
@@ -69,6 +88,12 @@ export interface ExpressionEditorFieldProps {
   className?: string;
   /** Show the field picker dropdown */
   showFieldPicker?: boolean;
+  /** Show the collapsible syntax cheat-sheet under the editor */
+  showSyntaxHelp?: boolean;
+  /** Sample workflow data; when given, a preview of the result is shown */
+  sampleContext?: Record<string, unknown>;
+  /** Offer a larger editor in a dialog (multi-line editors only) */
+  expandable?: boolean;
 }
 
 /**
@@ -90,15 +115,7 @@ function buildExpressionContext(dataContext?: DataContextInfo): ExpressionContex
         tags: { type: 'object', description: 'Workflow tags' },
       },
     },
-    errorSchema: dataContext.inCatchBlock ? {
-      type: 'object',
-      properties: {
-        name: { type: 'string', description: 'Error name' },
-        message: { type: 'string', description: 'Error message' },
-        stack: { type: 'string', description: 'Stack trace' },
-        nodePath: { type: 'string', description: 'Error location in workflow' },
-      },
-    } : undefined,
+    errorSchema: dataContext.inCatchBlock ? (WORKFLOW_CAUGHT_ERROR_SCHEMA as unknown as JsonSchema) : undefined,
     inCatchBlock: dataContext.inCatchBlock,
     forEachItemVar: dataContext.forEachItemVar,
     forEachItemSchema: dataContext.forEachItemSchema ?? undefined,
@@ -126,9 +143,18 @@ export const ExpressionEditorField: React.FC<ExpressionEditorFieldProps> = ({
   disabled = false,
   className = '',
   showFieldPicker = true,
+  showSyntaxHelp = true,
+  sampleContext,
+  expandable = true,
 }) => {
   const { t } = useTranslation('msp/workflows');
   const editorRef = useRef<ExpressionEditorHandle>(null);
+  const expandedEditorRef = useRef<ExpressionEditorHandle>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const canExpand = expandable && !singleLine;
+  const inlineHeight = singleLine
+    ? height
+    : getAutoGrowEditorHeight(value, typeof height === 'number' ? height : 96);
   const resolvedPlaceholder = placeholder ?? t('expressionEditor.field.placeholder', { defaultValue: 'Enter expression...' });
 
   // Build expression context from data context
@@ -137,30 +163,54 @@ export const ExpressionEditorField: React.FC<ExpressionEditorFieldProps> = ({
     [dataContext]
   );
 
+  const localNames = useMemo(
+    () => [dataContext?.forEachItemVar, dataContext?.forEachIndexVar].filter((name): name is string => Boolean(name)),
+    [dataContext?.forEachIndexVar, dataContext?.forEachItemVar]
+  );
+
   // Handle field picker selection
   const handleInsert = useCallback((path: string) => {
     if (!path) return;
     editorRef.current?.insertAtCursor(path);
   }, []);
+  const handleExpandedInsert = useCallback((path: string) => {
+    if (!path) return;
+    expandedEditorRef.current?.insertAtCursor(path);
+  }, []);
 
   return (
     <div className={`space-y-2 ${className}`}>
       {/* Header with label and field picker */}
-      {(label || showFieldPicker) && (
-        <div className="flex items-center justify-between">
+      {(label || showFieldPicker || canExpand) && (
+        <div className="flex items-center justify-between gap-2">
           {label && (
             <Label htmlFor={`${idPrefix}-expr`}>{label}</Label>
           )}
+          {canExpand && (
+            <Button
+              id={`${idPrefix}-expand`}
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => setIsExpanded(true)}
+              disabled={disabled}
+              title={t('expressionEditor.field.expand', { defaultValue: 'Open a larger editor' })}
+            >
+              <Maximize2 className="mr-1 h-3.5 w-3.5" />
+              {t('expressionEditor.field.expandShort', { defaultValue: 'Expand' })}
+            </Button>
+          )}
           {showFieldPicker && (
-            <CustomSelect
-              id={`${idPrefix}-picker`}
-              options={fieldOptions}
-              value=""
-              placeholder={t('expressionEditor.field.insertFieldPlaceholder', { defaultValue: 'Insert field' })}
-              onValueChange={handleInsert}
-              allowClear
-              className="w-44"
-            />
+            <div className="w-56">
+              <WorkflowInsertFieldPicker
+                id={`${idPrefix}-picker`}
+                fieldOptions={fieldOptions}
+                localNames={localNames}
+                onInsert={handleInsert}
+                disabled={disabled}
+              />
+            </div>
           )}
         </div>
       )}
@@ -172,7 +222,7 @@ export const ExpressionEditorField: React.FC<ExpressionEditorFieldProps> = ({
         onChange={onChange}
         context={expressionContext}
         singleLine={singleLine}
-        height={height}
+        height={inlineHeight}
         placeholder={resolvedPlaceholder}
         disabled={disabled}
         hasError={!!error}
@@ -188,6 +238,62 @@ export const ExpressionEditorField: React.FC<ExpressionEditorFieldProps> = ({
       {/* Description */}
       {description && !error && (
         <div className="text-xs text-gray-500">{description}</div>
+      )}
+
+      {!isExpanded && <ExpressionPreview idPrefix={idPrefix} expression={value} sampleContext={sampleContext} />}
+
+      {showSyntaxHelp && <ExpressionSyntaxHelp idPrefix={idPrefix} />}
+
+      {canExpand && (
+        <Dialog
+          id={`${idPrefix}-expanded-dialog`}
+          isOpen={isExpanded}
+          onClose={() => setIsExpanded(false)}
+          title={label || t('expressionEditor.field.expandedTitle', { defaultValue: 'Edit expression' })}
+          className="max-w-4xl"
+          allowOverflow
+          footer={(
+            <div className="flex justify-end">
+              <Button id={`${idPrefix}-expanded-done`} type="button" onClick={() => setIsExpanded(false)}>
+                {t('expressionEditor.field.done', { defaultValue: 'Done' })}
+              </Button>
+            </div>
+          )}
+        >
+          <DialogContent>
+            <div className="space-y-3">
+              {showFieldPicker && (
+                <div className="flex justify-end">
+                  <div className="w-64">
+                    <WorkflowInsertFieldPicker
+                      id={`${idPrefix}-expanded-picker`}
+                      fieldOptions={fieldOptions}
+                      localNames={localNames}
+                      onInsert={handleExpandedInsert}
+                      disabled={disabled}
+                    />
+                  </div>
+                </div>
+              )}
+              <ExpressionEditor
+                ref={expandedEditorRef}
+                value={value}
+                onChange={onChange}
+                context={expressionContext}
+                singleLine={false}
+                height={320}
+                placeholder={resolvedPlaceholder}
+                disabled={disabled}
+                hasError={!!error}
+                ariaLabel={label}
+                idPrefix={`${idPrefix}-expanded`}
+              />
+              {error && <div className="text-xs text-destructive">{error}</div>}
+              <ExpressionPreview idPrefix={`${idPrefix}-expanded`} expression={value} sampleContext={sampleContext} />
+              {showSyntaxHelp && <ExpressionSyntaxHelp idPrefix={`${idPrefix}-expanded`} defaultOpen />}
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

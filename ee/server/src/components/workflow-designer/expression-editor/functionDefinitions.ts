@@ -5,7 +5,7 @@
  * for all available functions in workflow expressions.
  */
 
-import { WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from '@alga-psa/workflows/authoring';
+import { getWorkflowExpressionExampleSource, listWorkflowExpressionFunctions } from '@alga-psa/workflows/authoring';
 
 export interface FunctionParameter {
   name: string;
@@ -25,54 +25,24 @@ export interface FunctionDefinition {
 }
 
 /**
- * All built-in JSONata functions available in workflow expressions
+ * The workflow runtime's own functions, straight from the runtime catalog, so completion,
+ * signature help, hover and diagnostics always match what the runtime accepts.
  */
-export const builtinFunctions: FunctionDefinition[] = [
-  // Runtime allowlisted workflow helper functions
-  {
-    name: '$nowIso',
-    signature: '$nowIso()',
-    description: 'Returns the current timestamp as an ISO-8601 string',
-    parameters: [],
-    returnType: 'string',
-    category: 'Date',
-    examples: ['$nowIso() → "2026-03-04T13:10:00.000Z"'],
-  },
-  {
-    name: '$coalesce',
-    signature: '$coalesce(value1, value2, ...)',
-    description: 'Returns the first non-null and non-undefined value',
-    parameters: [
-      { name: 'value1', type: 'any', description: 'First candidate value' },
-      { name: 'value2', type: 'any', description: 'Second candidate value' },
-    ],
-    returnType: 'any',
-    category: 'Misc',
-    examples: ['$coalesce(payload.primaryEmail, payload.fallbackEmail, "unknown")'],
-  },
-  {
-    name: '$len',
-    signature: '$len(value)',
-    description: 'Returns length for strings/arrays; returns 0 for other types',
-    parameters: [
-      { name: 'value', type: 'string | array | any', description: 'Value to measure' },
-    ],
-    returnType: 'number',
-    category: 'Array',
-    examples: ['$len(payload.items) → 3', '$len("hello") → 5'],
-  },
-  {
-    name: '$toString',
-    signature: '$toString(value)',
-    description: 'Converts a value to string (null/undefined become empty string)',
-    parameters: [
-      { name: 'value', type: 'any', description: 'Value to convert' },
-    ],
-    returnType: 'string',
-    category: 'String',
-    examples: ['$toString(123) → "123"'],
-  },
+export const runtimeBuiltinFunctions: FunctionDefinition[] = listWorkflowExpressionFunctions().map((fn) => ({
+  name: `$${fn.name}`,
+  signature: `$${fn.name}(${fn.parameters.map((parameter) => (parameter.optional ? `${parameter.name}?` : parameter.name)).join(', ')})`,
+  description: fn.description,
+  parameters: fn.parameters.map((parameter) => ({ ...parameter })),
+  returnType: fn.returns,
+  category: fn.category,
+  examples: [getWorkflowExpressionExampleSource(fn)],
+}));
 
+/**
+ * JSONata's built-in functions. Only the ones the runtime catalog also defines can be used in
+ * workflows; the rest are documented for reference and flagged by diagnostics.
+ */
+const jsonataBuiltinFunctions: FunctionDefinition[] = [
   // String functions
   {
     name: '$string',
@@ -761,6 +731,14 @@ export const builtinFunctions: FunctionDefinition[] = [
   },
 ];
 
+const runtimeFunctionNames = new Set(runtimeBuiltinFunctions.map((fn) => fn.name));
+
+/** Every documented function: the runtime's own, then JSONata built-ins it doesn't redefine. */
+export const builtinFunctions: FunctionDefinition[] = [
+  ...runtimeBuiltinFunctions,
+  ...jsonataBuiltinFunctions.filter((fn) => !runtimeFunctionNames.has(fn.name)),
+];
+
 /**
  * Get functions by category
  */
@@ -780,14 +758,6 @@ export function getFunctionsByCategory(): Map<string, FunctionDefinition[]> {
 export function findFunction(name: string): FunctionDefinition | undefined {
   return builtinFunctions.find(fn => fn.name === name);
 }
-
-const runtimeAllowedFunctionNames = new Set(
-  WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS.map((name) => `$${name}`)
-);
-
-export const runtimeBuiltinFunctions: FunctionDefinition[] = builtinFunctions.filter((fn) =>
-  runtimeAllowedFunctionNames.has(fn.name)
-);
 
 export function getRuntimeFunctionsByCategory(): Map<string, FunctionDefinition[]> {
   const categories = new Map<string, FunctionDefinition[]>();

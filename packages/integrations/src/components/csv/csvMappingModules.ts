@@ -21,6 +21,10 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { getIntegrationClients } from '../../actions/clientLookupActions';
+import {
+  AUTOMATIC_DISCOUNT_MAPPING_ID,
+  DISCOUNT_MAPPING_ENTITY_TYPE
+} from '@alga-psa/types';
 
 const ADAPTER_TYPE = 'quickbooks_csv';
 
@@ -36,13 +40,22 @@ type PaymentTermOption = {
   name: string;
 };
 
-const PAYMENT_TERMS: PaymentTermOption[] = [
+export const PAYMENT_TERMS: PaymentTermOption[] = [
   { id: 'net_30', name: 'Net 30' },
   { id: 'net_15', name: 'Net 15' },
   { id: 'due_on_receipt', name: 'Due on receipt' }
 ];
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
+
+type DiscountOption = {
+  id: string;
+  name: string;
+};
+
+const DISCOUNT_OPTIONS: DiscountOption[] = [
+  { id: AUTOMATIC_DISCOUNT_MAPPING_ID, name: 'Automatic contract discounts' }
+];
 
 function throwIfActionError(value: unknown): void {
   if (isActionMessageError(value) || isActionPermissionError(value)) {
@@ -57,7 +70,8 @@ export function createCsvMappingModules(t?: TFn): AccountingMappingModule[] {
     createCustomerModule(tab('clients', 'Clients')),
     createServiceModule(tab('itemsServices', 'Items / Services')),
     createTaxCodeModule(tab('taxCodes', 'Tax Codes')),
-    createPaymentTermModule(tab('paymentTerms', 'Payment Terms'))
+    createPaymentTermModule(tab('paymentTerms', 'Payment Terms')),
+    createDiscountModule(tab('discounts', 'Discounts'))
   ];
 }
 
@@ -65,6 +79,7 @@ function createCustomerModule(tabLabel: string): AccountingMappingModule {
   return {
     id: 'qbcsv-customer-mappings',
     adapterType: ADAPTER_TYPE,
+    manualExternalEntry: true,
     algaEntityType: 'client',
     externalEntityType: 'Customer',
     labels: {
@@ -130,6 +145,7 @@ function createServiceModule(tabLabel: string): AccountingMappingModule {
   return {
     id: 'qbcsv-service-mappings',
     adapterType: ADAPTER_TYPE,
+    manualExternalEntry: true,
     algaEntityType: 'service',
     externalEntityType: 'Item',
     overridesKey: 'itemMappingOverrides',
@@ -204,10 +220,71 @@ function createServiceModule(tabLabel: string): AccountingMappingModule {
   };
 }
 
+function createDiscountModule(tabLabel: string): AccountingMappingModule {
+  return {
+    id: 'qbcsv-discount-mappings',
+    adapterType: ADAPTER_TYPE,
+    manualExternalEntry: true,
+    algaEntityType: DISCOUNT_MAPPING_ENTITY_TYPE,
+    externalEntityType: 'Item',
+    labels: {
+      tab: tabLabel,
+      description: 'Choose the QuickBooks item that automatic contract discounts post to. Discount lines have no Alga service, so they need their own item.',
+      addButton: 'Add Discount Mapping',
+      algaColumn: 'Alga Discount',
+      externalColumn: 'QuickBooks Item',
+      dialog: {
+        addTitle: 'Add QuickBooks Discount Mapping',
+        editTitle: 'Edit QuickBooks Discount Mapping',
+        algaField: 'Alga Discount',
+        externalField: 'QuickBooks Item Name',
+        helpText: 'Enter the QuickBooks item name that discount lines should be exported as.'
+      },
+      deleteConfirmation: {
+        title: 'Delete Discount Mapping',
+        message: ({ externalName }) =>
+          `Delete the discount mapping${externalName ? ` ↔ ${externalName}` : ''}? Invoices with automatic discounts will not export until a new one is added.`,
+        confirmLabel: 'Delete',
+        cancelLabel: 'Cancel'
+      }
+    },
+    elements: {
+      addButton: 'add-qbcsv-discount-mapping-button',
+      table: 'qbcsv-discount-mappings-table',
+      dialog: 'qbcsv-discount-mapping-dialog',
+      deleteDialogPrefix: 'confirm-delete-qbcsv-discount-mapping-dialog',
+      editMenuPrefix: 'edit-qbcsv-discount-mapping-menu-item-',
+      deleteMenuPrefix: 'delete-qbcsv-discount-mapping-menu-item-'
+    },
+    load(context) {
+      return loadMappings<DiscountOption>({
+        context,
+        algaEntityType: DISCOUNT_MAPPING_ENTITY_TYPE,
+        loadAlgaEntities: async () => DISCOUNT_OPTIONS,
+        mapAlga: (discount) => discount
+      });
+    },
+    create(context, input) {
+      return createMapping({
+        context,
+        input,
+        algaEntityType: DISCOUNT_MAPPING_ENTITY_TYPE
+      });
+    },
+    update(_context, mappingId, input) {
+      return updateMapping(mappingId, input);
+    },
+    async remove(_context, mappingId) {
+      throwIfActionError(await deleteExternalEntityMapping(mappingId));
+    }
+  };
+}
+
 function createTaxCodeModule(tabLabel: string): AccountingMappingModule {
   return {
     id: 'qbcsv-tax-code-mappings',
     adapterType: ADAPTER_TYPE,
+    manualExternalEntry: true,
     algaEntityType: 'tax_code',
     externalEntityType: 'TaxCode',
     labels: {
@@ -273,6 +350,7 @@ function createPaymentTermModule(tabLabel: string): AccountingMappingModule {
   return {
     id: 'qbcsv-term-mappings',
     adapterType: ADAPTER_TYPE,
+    manualExternalEntry: true,
     algaEntityType: 'payment_term',
     externalEntityType: 'Term',
     labels: {

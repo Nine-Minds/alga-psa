@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { DndContext } from '@dnd-kit/core';
-import { act, render, cleanup, screen } from '@testing-library/react';
+import { act, render, cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { DesignCanvas } from './DesignCanvas';
@@ -66,12 +66,14 @@ describe('DesignCanvas (media aspect-ratio integration)', () => {
         allowedChildren: [],
       },
     ];
+    // The canvas shows the designer's own document (hover state lives in the store).
+    useInvoiceDesignerStore.getState().loadNodes(nodes);
 
     render(
       <DndContext>
         <DesignCanvas
           nodes={nodes}
-          selectedNodeId={null}
+          selectedNodeId="image-1"
           showGuides={false}
           showRulers={false}
           gridSize={8}
@@ -95,6 +97,8 @@ describe('DesignCanvas (media aspect-ratio integration)', () => {
 
     expect(imageEl.style.aspectRatio).toBe('16 / 9');
     expect(imageEl.style.overflow).toBe('hidden');
+    // The name badge labels the hovered block.
+    fireEvent.pointerOver(imageEl);
     expect(screen.getByText('Image · image')).toBeTruthy();
 
     const img = imageEl.querySelector('img') as HTMLImageElement | null;

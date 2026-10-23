@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { applyRmmSignedInUserAssignment } from './autoAssignFromSignedInUser';
 import type {
   NormalizedRmmDeviceType,
   NormalizedRmmExternalDeviceSnapshot,
@@ -40,27 +41,45 @@ function normalizeAssetType(assetType: NormalizedRmmDeviceType): SupportedAssetT
   return 'unknown';
 }
 
+/**
+ * Hardware identity columns the provider owns (FR-A3). A thin payload must
+ * never blank a value a richer run — or a technician — already filled, so an
+ * empty manufacturer/model is omitted from the patch entirely.
+ */
+function buildHardwareIdentityPatch(
+  snapshot: NormalizedRmmExternalDeviceSnapshot
+): Record<string, string> {
+  const ext = snapshot.extension ?? {};
+  const patch: Record<string, string> = {};
+  const manufacturer = typeof ext.manufacturer === 'string' ? ext.manufacturer.trim() : '';
+  const model = typeof ext.model === 'string' ? ext.model.trim() : '';
+  if (manufacturer) patch.manufacturer = manufacturer;
+  if (model) patch.model = model;
+  return patch;
+}
+
 function pickExtensionTable(assetType: SupportedAssetType): 'workstation_assets' | 'server_assets' | null {
   if (assetType === 'server') return 'server_assets';
   if (assetType === 'workstation') return 'workstation_assets';
   return null;
 }
 
-async function resolveClientIdForScope(
+/** The organization mapping's people mode and client, in one read (FR-D4). */
+async function loadScopeMapping(
   trx: Knex.Transaction,
-  args: { tenant: string; integrationId: string; externalScopeId: string; resolvedClientId?: string | null; }
-): Promise<string | null> {
-  if (args.resolvedClientId) return args.resolvedClientId;
-
+  args: { tenant: string; integrationId: string; externalScopeId: string }
+): Promise<{ client_id?: string | null; contact_assignment_mode?: string | null } | null> {
   const db = tenantDb(trx, args.tenant);
   const mapping = await db.table('rmm_organization_mappings')
     .where({
       integration_id: args.integrationId,
       external_organization_id: args.externalScopeId,
     })
-    .first<{ client_id?: string | null }>('client_id');
-
-  return mapping?.client_id ? String(mapping.client_id) : null;
+    .first<{ client_id?: string | null; contact_assignment_mode?: string | null }>(
+      'client_id',
+      'contact_assignment_mode'
+    );
+  return mapping ?? null;
 }
 
 async function upsertAssetExtension(
@@ -139,7 +158,9 @@ async function markMappedAssetDeleted(
   await db.table('assets')
     .where({ asset_id: args.assetId })
     .update({
-      status: 'inactive',
+      // FR-B6: a deleted/tombstoned device is retired; connectivity lives in
+      // agent_status.
+      status: 'retired',
       agent_status: 'offline',
       last_rmm_sync_at: trx.fn.now(),
       updated_at: now,
@@ -250,22 +271,34 @@ export async function ingestNormalizedRmmDeviceSnapshot(
     }
 
     const lastSeenAt = parseIsoDate(snapshot.lastSeenAt);
-    const assetStatus = snapshot.status || (snapshot.lifecycleState === 'offline' ? 'inactive' : 'active');
+    // FR-B6: ingestion owns exactly two lifecycle slugs, `active` and
+    // `inactive`, and writes them only on create. `snapshot.status` is a loose
+    // `string`, so a provider that invents its own word would otherwise land a
+    // slug no asset_statuses row defines; anything else falls back to the
+    // connectivity reading instead.
+    const snapshotStatus = snapshot.status === 'active' || snapshot.status === 'inactive'
+      ? snapshot.status
+      : null;
+    const assetStatus = snapshotStatus ?? (snapshot.lifecycleState === 'offline' ? 'inactive' : 'active');
     const agentStatus = snapshot.agentStatus ?? (snapshot.lifecycleState === 'offline' ? 'offline' : 'online');
-    const resolvedClientId = await resolveClientIdForScope(trx, {
+    const scopeMapping = await loadScopeMapping(trx, {
       tenant,
       integrationId: snapshot.integrationId,
       externalScopeId: snapshot.externalScopeId,
-      resolvedClientId: input.resolvedClientId,
     });
+    const resolvedClientId = input.resolvedClientId
+      ?? (scopeMapping?.client_id ? String(scopeMapping.client_id) : null);
+    const assignmentMode = scopeMapping?.contact_assignment_mode ?? 'suggest';
 
     if (existingAsset?.asset_id) {
       const assetId = String(existingAsset.asset_id);
+      // FR-B6: `status` is the human lifecycle state and is set only on
+      // create. Sync owns `agent_status` (connectivity), not `status`, so an
+      // MSP's "In repair" survives every run.
       const assetPatch: Record<string, unknown> = {
         asset_type: assetType,
         name: snapshot.displayName,
         serial_number: snapshot.serialNumber ?? '',
-        status: assetStatus,
         location: snapshot.location ?? '',
         rmm_provider: snapshot.provider,
         rmm_device_id: snapshot.externalDeviceId,
@@ -273,12 +306,13 @@ export async function ingestNormalizedRmmDeviceSnapshot(
         agent_status: agentStatus,
         last_seen_at: lastSeenAt,
         last_rmm_sync_at: trx.fn.now(),
+        ...buildHardwareIdentityPatch(snapshot),
       };
 
-      if (resolvedClientId) {
-        assetPatch.client_id = resolvedClientId;
-      }
-
+      // FR-G5: sync no longer re-stamps `client_id` on update. A manual client
+      // change on an RMM-synced asset now survives every run, and re-pointing
+      // an RMM organization moves its devices immediately through
+      // moveRmmOrganizationAssets instead of drifting back on the next sync.
       await db.table('assets')
         .where({ asset_id: assetId })
         .update(assetPatch);
@@ -289,6 +323,23 @@ export async function ingestNormalizedRmmDeviceSnapshot(
         assetType,
         snapshot,
       });
+
+      // FR-D4: assignment from the signed-in user runs after the extension row
+      // so the matcher sees the value this run reported.
+      // The asset's own client, not the mapping's: sync no longer moves it
+      // (FR-G5), so a manually moved device matches against where it is now.
+      const assignmentClientId = existingAsset.client_id ? String(existingAsset.client_id) : resolvedClientId;
+      if (assignmentClientId) {
+        await applyRmmSignedInUserAssignment(trx, {
+          tenant,
+          assetId,
+          clientId: assignmentClientId,
+          integrationId: snapshot.integrationId,
+          provider: snapshot.provider,
+          mode: assignmentMode,
+          currentUser: snapshot.extension?.currentUser ?? null,
+        });
+      }
 
       if (mappingId) {
         await db.table('tenant_external_entity_mappings')
@@ -345,6 +396,7 @@ export async function ingestNormalizedRmmDeviceSnapshot(
         agent_status: agentStatus,
         last_seen_at: lastSeenAt,
         last_rmm_sync_at: now,
+        ...buildHardwareIdentityPatch(snapshot),
         created_at: now,
         updated_at: now,
       })
@@ -357,6 +409,16 @@ export async function ingestNormalizedRmmDeviceSnapshot(
       assetId: createdAssetId,
       assetType,
       snapshot,
+    });
+
+    await applyRmmSignedInUserAssignment(trx, {
+      tenant,
+      assetId: createdAssetId,
+      clientId: resolvedClientId,
+      integrationId: snapshot.integrationId,
+      provider: snapshot.provider,
+      mode: assignmentMode,
+      currentUser: snapshot.extension?.currentUser ?? null,
     });
 
     await db.table('tenant_external_entity_mappings').insert({

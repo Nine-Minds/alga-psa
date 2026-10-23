@@ -1,0 +1,50 @@
+name: Browser metrics retention
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Print the archive and delete plan without writing
+        type: boolean
+        default: true
+  # Sunday 06:10 UTC: outside the weekday regression traffic that appends to the
+  # tab, so a delete never races a busy hour.
+  schedule:
+    - cron: '10 6 * * 0'
+
+permissions:
+  contents: read
+
+# Two retention runs would compute their deletion ranges from the same grid and
+# the second would delete rows the first had already shifted.
+concurrency:
+  group: browser-metrics-retention
+  cancel-in-progress: false
+
+jobs:
+  retain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Archive and trim browser_readiness
+        run: node scripts/browser-metrics-retention.mjs "$RETENTION_MODE"
+        env:
+          # Manual dispatch defaults to a dry run; the schedule always applies.
+          RETENTION_MODE: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '--apply' }}
+          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
+          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
+      # A retention job that stops running lets the tab grow back until the
+      # collector's index-scan cap refuses it, so a failure must be visible the
+      # same week rather than at the next reconcile breakage. It is recorded in
+      # the test-metrics sheet (workflow_health tab), not as a GitHub issue.
+      - name: Record the failure in the test-metrics sheet
+        if: failure()
+        run: node scripts/record-workflow-health.mjs
+        env:
+          WORKFLOW_HEALTH_CONCLUSION: ${{ job.status }}
+          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
+          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}

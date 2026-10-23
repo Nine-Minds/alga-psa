@@ -57,7 +57,7 @@ test('consumer provider requirements reconcile actual archive-bound reports and 
     x => { x.requirements[0].providers[0].provider = 'qbo'; },
     x => { x.requirements[0].identity[1] = 'other-project'; },
     x => { x.artifactManifest = null; },
-    x => { x.runAttempt = 3; },
+    x => { x.runAttempt = 1; }, // manifest attempt 2 cannot come from an earlier run attempt
     x => { x.evidence.source.after.dirty = true; },
     x => { x.report.suites = []; },
     x => { x.report.suites[0].specs.push(structuredClone(x.report.suites[0].specs[0])); },

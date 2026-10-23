@@ -813,7 +813,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await workflowPage.waitForWorkflowInList(workflowName);
 
       // Step 4: Publish the workflow
-      await workflowPage.publishButton.click();
+      await workflowPage.publish();
       // Wait for publish to complete
       await expect(workflowPage.publishButton).toBeEnabled({ timeout: 30_000 });
 
@@ -857,7 +857,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       const publishDisabled = await workflowPage.publishButton.isDisabled();
       // If not disabled, clicking should show an error
       if (!publishDisabled) {
-        await workflowPage.publishButton.click();
+        await workflowPage.publish();
         // Should show validation error or toast
         await expect(page.getByText(/cannot publish|missing schema|validation/i)).toBeVisible({ timeout: 5_000 });
       } else {

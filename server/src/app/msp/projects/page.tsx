@@ -7,6 +7,7 @@ import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { ProjectListFilters } from '@alga-psa/projects/components/Projects';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
+import { getSmartSearchAvailability } from '@enterprise/lib/actions/smartSearchActions';
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getServerTranslation(undefined, 'metadata');
@@ -26,10 +27,15 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
     return boundary;
   }
 
-  const [projectsResult, clientsData, params] = await Promise.all([
+  const [projectsResult, clientsData, params, smartSearchAvailable] = await Promise.all([
     getProjects(),
     getAllClientsForProjects() as Promise<IClient[]>,
-    searchParams
+    searchParams,
+    // Decided on the server so the Smart search affordance is right on first
+    // paint. The CE stub answers false; any failure hides it.
+    getSmartSearchAvailability('project')
+      .then((result) => result?.available === true)
+      .catch(() => false),
   ]);
 
   const projectsData: IProject[] = isActionPermissionError(projectsResult) ? [] : projectsResult;
@@ -127,6 +133,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
       initialFilters={initialFilters}
       initialProjectTags={initialProjectTags}
       initialAllUniqueTags={allProjectTags}
+      smartSearchAvailable={smartSearchAvailable}
     />
   );
 }

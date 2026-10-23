@@ -140,3 +140,40 @@ test('setup state is outside the app-update guard', () => {
   assert.equal(result.status, 202);
   assert.equal(JSON.parse(fs.readFileSync(stateFile, 'utf8')).status, 'update-queued');
 });
+
+// A hard-killed engine (eviction, OOM, reboot) leaves the application
+// HelmReleases suspended. Marking the update interrupted must hand them back
+// to Flux, otherwise the box looks healthy but never updates again.
+test('marking an update interrupted runs the onInterrupted recovery once with the interrupted state', async () => {
+  const calls = [];
+  const { coordinator, stateFile } = fixture({
+    status: 'update-running',
+    phase: 'flux',
+    update: { requestedChannel: 'stable', scope: 'application-only', owner: { pid: 4242, startedAt: '2026-08-03T19:00:00.000Z' } }
+  }, { onInterrupted: async (state) => { calls.push(state); } });
+  const result = coordinator.reconcile();
+  assert.equal(result.state.failure.category, 'update-interrupted');
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].failure.category, 'update-interrupted');
+  assert.equal(JSON.parse(fs.readFileSync(stateFile, 'utf8')).status, 'update-blocked');
+
+  // Nothing to interrupt -> no recovery call.
+  coordinator.reconcile();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(calls.length, 1);
+});
+
+test('a failing onInterrupted recovery is logged and does not break reconcile', async () => {
+  const warnings = [];
+  const { coordinator } = fixture({
+    status: 'update-running',
+    phase: 'flux',
+    update: { requestedChannel: 'stable', scope: 'application-only', owner: { pid: 4242, startedAt: '2026-08-03T19:00:00.000Z' } }
+  }, { logger: { info() {}, warn: (m) => warnings.push(m) }, onInterrupted: async () => { throw new Error('kube down'); } });
+  const result = coordinator.reconcile();
+  assert.equal(result.state.failure.category, 'update-interrupted');
+  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.ok(warnings.some((w) => /Post-interruption recovery failed: kube down/.test(w)), JSON.stringify(warnings));
+});

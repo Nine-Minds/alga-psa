@@ -36,7 +36,7 @@ interface CreateBlockDocumentInput extends BlockContentInput {
   user_id: string;
   type_id?: string;
   entityId?: string;
-  entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract';
+  entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract' | 'opportunity';
   folder_path?: string | null;
 }
 

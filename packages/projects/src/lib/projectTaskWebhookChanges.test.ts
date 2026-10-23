@@ -17,6 +17,7 @@ function task(overrides: Partial<IProjectTask> = {}): IProjectTask {
     created_at: new Date('2026-01-01T00:00:00.000Z'),
     updated_at: new Date('2026-01-01T00:00:00.000Z'),
     wbs_code: '1.1',
+    start_date: null,
     due_date: new Date('2026-01-10T00:00:00.000Z'),
     priority_id: null,
     service_id: null,

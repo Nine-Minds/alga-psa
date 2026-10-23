@@ -135,6 +135,24 @@ export function ContactPreflightReport({
     >
 
       <div className="mt-4 space-y-2">
+        {Object.entries(report.excludedByReason ?? {}).filter(([, count]) => count > 0).length > 0 ? (
+          <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm" id="entra-preflight-filter-exclusions">
+            <p className="font-medium">{t('integrations.entra.userImportFilter.exclusions')}</p>
+            <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+              {Object.entries(report.excludedByReason ?? {}).filter(([, count]) => count > 0).map(([reason, count]) => (
+                <li key={reason}>{reason === 'shared_mailbox' ? t('integrations.entra.userImportFilter.sharedMailboxReason') : reason.replaceAll('_', ' ')}: <span className="font-semibold tabular-nums">{count}</span></li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {(report.unknownFieldCounts?.userType || report.unknownFieldCounts?.assignedLicenseCount) ? (
+          <p className="text-sm text-warning-700 dark:text-warning-300" id="entra-preflight-unknown-filter-fields">
+            {t('integrations.entra.userImportFilter.unknown')}
+            {report.unknownFieldCounts.userType ? ` ${t('integrations.entra.userImportFilter.userType', { count: report.unknownFieldCounts.userType })}` : ''}
+            {report.unknownFieldCounts.assignedLicenseCount ? ` ${t('integrations.entra.userImportFilter.license', { count: report.unknownFieldCounts.assignedLicenseCount })}` : ''}
+          </p>
+        ) : null}
+        {report.warnings?.filter(warning => !warning.startsWith('User type data unavailable') && !warning.startsWith('License data unavailable')).map((warning, index) => <p key={`${index}-${warning}`} className="text-sm text-warning-700 dark:text-warning-300">{warning}</p>)}
         {BUCKET_ORDER.map((bucketId) => {
           const bucket = bucketsById.get(bucketId);
           const count = bucket?.count ?? 0;
@@ -186,9 +204,16 @@ export function ContactPreflightReport({
 
               {isExpanded ? (
                 <div className="mt-1 rounded-md border border-border/50 bg-muted/30 p-3">
-                  <p className="text-sm text-muted-foreground">
-                    {t(BUCKET_DESCRIPTION_KEYS[bucketId])}
-                  </p>
+                  {bucketId === 'mark_inactive' && samples.some(identity => identity.reason === 'excluded_by_filter') ? (
+                    <>
+                      {samples.some(identity => identity.reason !== 'excluded_by_filter') && (
+                        <p className="text-sm text-muted-foreground">{t(BUCKET_DESCRIPTION_KEYS[bucketId])}</p>
+                      )}
+                      <p className="text-sm text-muted-foreground">{t('integrations.entra.userImportFilter.excludedContactInactive')}</p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{t(BUCKET_DESCRIPTION_KEYS[bucketId])}</p>
+                  )}
                   {samples.length > 0 ? (
                     <ul
                       className="mt-2 flex flex-wrap gap-x-4 gap-y-1"

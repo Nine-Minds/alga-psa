@@ -57,7 +57,13 @@ class Q {
 }
 
 function buildKnex(tables: Record<string, Record<string, unknown>[]>) {
-  return (name: string) => new Q(tables[name] ?? []);
+  const knex = (name: string) => {
+    if (!(name in tables)) throw new Error(`relation "${name}" does not exist`);
+    return new Q(tables[name]);
+  };
+  return Object.assign(knex, {
+    schema: { hasTable: async (name: string) => name in tables },
+  });
 }
 
 function buildHarness() {
@@ -88,6 +94,13 @@ function buildHarness() {
 }
 
 describe('repair renewal clock payload migration', () => {
+  it('is a no-op when the EE-only schedule table is missing (CE)', async () => {
+    const workflowDefinitions = [{ workflow_id: 'renewal-workflow', key: RENEWAL_KEY, tenant: 'tenant-a' }];
+    const knex = buildKnex({ tenants: [{ tenant: 'tenant-a' }], workflow_definitions: workflowDefinitions });
+
+    await expect(migration.up(knex)).resolves.toBeUndefined();
+  });
+
   it('repairs the seeded renewal payload, clears failure residue, leaves unrelated schedules untouched', async () => {
     const { knex, tenantWorkflowSchedule } = buildHarness();
 

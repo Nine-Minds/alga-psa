@@ -1,5 +1,6 @@
 'use server';
 
+import { buildInventoryRmaCreatedPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/inventoryEventBuilders';
 import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
@@ -293,14 +294,14 @@ export const openRma = withAuth(
       const rma = row as IRmaCase;
       return {
         rma,
-        event: {
+        event: buildInventoryRmaCreatedPayload({
           tenant,
-          rma_id: rma.rma_id,
-          rma_reference: rma.rma_reference ?? null,
-          client_id: rma.client_id ?? null,
-          service_id: rma.service_id ?? null,
-          serial_number: unit.serial_number ?? null,
-        },
+          rmaId: rma.rma_id,
+          rmaReference: rma.rma_reference ?? null,
+          clientId: rma.client_id ?? null,
+          serviceId: rma.service_id ?? null,
+          serialNumber: unit.serial_number ?? null,
+        }),
       };
     });
 
@@ -564,14 +565,14 @@ export const openAdvanceRma = withAuth(
       const rma = row as IRmaCase;
       return {
         rma,
-        event: {
+        event: buildInventoryRmaCreatedPayload({
           tenant,
-          rma_id: rma.rma_id,
-          rma_reference: rma.rma_reference ?? null,
-          client_id: rma.client_id ?? null,
-          service_id: rma.service_id ?? null,
-          serial_number: unit.serial_number ?? null,
-        },
+          rmaId: rma.rma_id,
+          rmaReference: rma.rma_reference ?? null,
+          clientId: rma.client_id ?? null,
+          serviceId: rma.service_id ?? null,
+          serialNumber: unit.serial_number ?? null,
+        }),
       };
     });
 

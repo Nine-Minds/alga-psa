@@ -10,7 +10,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 TAG="${1:-algasim:dev}"
-PACKAGES=(host msgraph qbo webhook-sink smtp-sink stripe xero suite)
+PACKAGES=(host msgraph qbo webhook-sink smtp-sink stripe xero threecx levelio huntress suite)
 
 for pkg in "${PACKAGES[@]}"; do
   (cd "$pkg" && npx tsup)

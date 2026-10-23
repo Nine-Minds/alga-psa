@@ -6,9 +6,10 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Flex, Text, Heading } from '@radix-ui/themes';
-import { updateContact, listInboundTicketDestinationOptions, getAllCountries, getTenantDefaultCountry, type ICountry, listContactPhoneTypeSuggestions, getCustomPhoneTypeUsageCount, deleteOrphanedPhoneTypes } from '@alga-psa/clients/actions';
+import { updateContact, getContactsByClient, listInboundTicketDestinationOptions, getAllCountries, getTenantDefaultCountry, type ICountry, listContactPhoneTypeSuggestions, getCustomPhoneTypeUsageCount, deleteOrphanedPhoneTypes } from '@alga-psa/clients/actions';
 import { findTagsByEntityIds, isTagActionError } from '@alga-psa/tags/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { TagManager } from '@alga-psa/tags/components';
 import { useTags } from '@alga-psa/tags/context';
 import { ArrowLeft } from 'lucide-react';
@@ -17,6 +18,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { usePageSaveShortcut, usePanelSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { useInsideDrawer } from '@alga-psa/ui/components/ModalityContext';
+import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
@@ -31,6 +33,7 @@ import ContactEmailAddressesEditor, {
   validateContactEmailAddresses,
 } from './ContactEmailAddressesEditor';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { collectReportContactIds } from '../../lib/managerSubtree';
 import { parseContactActionError } from '../../lib/contactActionErrorCodes';
 import {
   getErrorMessage,
@@ -83,6 +86,38 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
   const [customPhoneTypeSuggestions, setCustomPhoneTypeSuggestions] = useState<string[]>([]);
   const [phoneValidationErrors, setPhoneValidationErrors] = useState<string[]>([]);
   const [emailValidationErrors, setEmailValidationErrors] = useState<string[]>([]);
+  // Reports-to candidates: same-client contacts (all statuses), excluding this contact and anyone who reports up to it.
+  const [clientContacts, setClientContacts] = useState<IContact[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!contact.client_id) {
+      setClientContacts([]);
+      return;
+    }
+    (async () => {
+      try {
+        const rows = await getContactsByClient(contact.client_id as string, 'all');
+        if (!cancelled && Array.isArray(rows)) setClientContacts(rows);
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Error loading reports-to candidates:', err);
+          setClientContacts([]);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [contact.client_id]);
+
+  const managerCandidates = React.useMemo(() => {
+    const excluded = new Set<string>([
+      contact.contact_name_id,
+      ...collectReportContactIds(clientContacts, contact.contact_name_id),
+    ]);
+    return clientContacts.filter((c) => !excluded.has(c.contact_name_id) && c.contact_kind !== 'shared_mailbox');
+  }, [clientContacts, contact.contact_name_id]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -146,10 +181,12 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
     let cancelled = false;
     (async () => {
       try {
+        // The preselected dial country is a nicety; it must not take the country
+        // list and the phone types down with it.
         const [countryRows, phoneTypeLabels, tenantCountry] = await Promise.all([
           getAllCountries(),
           listContactPhoneTypeSuggestions(),
-          getTenantDefaultCountry(),
+          getTenantDefaultCountry().catch(() => null),
         ]);
         if (cancelled) return;
         setCountries(countryRows);
@@ -175,7 +212,12 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
   };
 
   const handleClientSelect = (clientId: string | null) => {
-    setContact(prev => ({ ...prev, client_id: clientId || '' }));
+    // The manager must belong to the same client, so a client change drops it.
+    setContact(prev => ({
+      ...prev,
+      client_id: clientId || '',
+      manager_contact_id: clientId === prev.client_id ? prev.manager_contact_id : null,
+    }));
   };
 
   const handleSave = async () => {
@@ -414,6 +456,41 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
             </tr>
             <tr>
               <td className="py-2 font-semibold">
+                {t('contactDetailsEdit.fields.reportsTo', { defaultValue: 'Reports to:' })}
+              </td>
+              <td className="py-2">
+                <div className="flex items-center gap-2">
+                  <ContactPicker
+                    id={`${id}-reports-to-picker`}
+                    contacts={managerCandidates}
+                    value={contact.manager_contact_id || ''}
+                    onValueChange={(value) => handleInputChange('manager_contact_id', value || null)}
+                    clientId={contact.client_id || undefined}
+                    disabled={!contact.client_id}
+                    placeholder={t('contactDetailsEdit.fields.reportsToPlaceholder', { defaultValue: 'No manager' })}
+                    buttonWidth="full"
+                  />
+                  {contact.manager_contact_id && (
+                    <Button
+                      id={`${id}-reports-to-clear`}
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleInputChange('manager_contact_id', null)}
+                    >
+                      {t('contactDetailsEdit.fields.reportsToClear', { defaultValue: 'Clear' })}
+                    </Button>
+                  )}
+                </div>
+                <Text size="1" className="text-gray-500 mt-1 block">
+                  {t('contactDetailsEdit.fields.reportsToHelp', {
+                    defaultValue: 'Must be someone at the same client. Used for portal "my staff" visibility of tickets, devices and projects.'
+                  })}
+                </Text>
+              </td>
+            </tr>
+            <tr>
+              <td className="py-2 font-semibold">
                 {t('contactDetailsEdit.fields.status', { defaultValue: 'Status:' })}
               </td>
               <td className="py-2">
@@ -464,7 +541,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
             </tr>
           </tbody>
         </table>
-        <div className="mt-6 flex justify-end space-x-4">
+        <DrawerFooter className="gap-4">
           <Button
             id={`${id}-cancel-button`}
             variant="soft"
@@ -479,7 +556,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
           >
             {t('common.actions.save', { defaultValue: 'Save' })}
           </Button>
-        </div>
+        </DrawerFooter>
       </div>
     </ReflectionContainer>
   );

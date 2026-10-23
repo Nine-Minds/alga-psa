@@ -59,12 +59,9 @@
       "network": "Rede",
       "unknown": "Outro"
     },
-    "statusWarnTitle": "Alguns dispositivos inativos",
-    "statusWarnBody": "{{active}} ativo · {{inactive}} inativo",
-    "status": {
-      "active": "Ativo",
-      "inactive": "Inativo"
-    },
+    "statusAttentionTitle": "Alguns dispositivos precisam de atenção",
+    "statusAttentionBody": "{{active}} de {{total}} dispositivos ativos",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Pesquise por nome, tag ou série",
     "filters": {
       "allTypes": "Todos os tipos",
@@ -169,17 +166,15 @@
       "viewAll": "Ver tudo",
       "countLabel": "{{count}} gerenciado",
       "emptyShort": "Nenhum dispositivo ainda",
-      "emptyBody": "Os dispositivos gerenciados pelo seu provedor aparecerão aqui.",
-      "healthy": "Saudável",
-      "inactive": "Inativo",
-      "active": "Ativo"
+      "emptyBody": "Os dispositivos gerenciados pelo seu provedor aparecerão aqui."
     },
     "quickActions": {
       "title": "Ações rápidas",
       "createTicket": "Criar ticket",
       "requestAppointment": "Solicitar agendamento",
       "viewLatestInvoice": "Ver última fatura",
-      "newServiceRequest": "Nova solicitação de serviço"
+      "newServiceRequest": "Nova solicitação de serviço",
+      "createSupportTicket": "Criar ticket de suporte"
     },
     "appointments": {
       "title": "Próximos compromissos",
@@ -332,6 +327,8 @@
     },
     "captchaRequired": "Conclua a verificação abaixo e faça login novamente.",
     "tooManyAttempts": "Muitas tentativas de login malsucedidas. Aguarde alguns minutos antes de tentar novamente.",
+    "tenantRequiredMessage": "Seu e-mail está vinculado a mais de uma organização — escolha sua organização para continuar.",
+    "tenantRequiredLink": "Escolher sua organização",
     "tenantDiscovery": {
       "title": "Encontre sua organização",
       "description": "Digite seu e-mail e enviaremos links de login para todas as organizações às quais você tem acesso.",
@@ -369,6 +366,34 @@
         "verifiedContact": "E-mail de contato verificado",
         "validPassword": "Senha válida"
       }
+    },
+    "ssoNoMatchTitle": "Falha no login com SSO",
+    "ssoNoMatch": {
+      "no_matching_user": "Nenhuma conta do portal do cliente corresponde a {{providerEmail}}. Faça login com sua senha ou fale com seu prestador de serviços.",
+      "missing_email": "Seu provedor de identidade não retornou um e-mail, portanto nenhuma conta do portal do cliente pôde ser identificada. Faça login com sua senha ou fale com seu prestador de serviços.",
+      "inactive_user": "A conta do portal do cliente para {{providerEmail}} está inativa. Fale com seu prestador de serviços para reativá-la.",
+      "user_type_mismatch": "{{providerEmail}} não é uma conta do portal do cliente. Fale com seu prestador de serviços.",
+      "tenant_mismatch": "{{providerEmail}} pertence ao portal de outra organização. Faça login com sua senha ou fale com seu prestador de serviços."
+    },
+    "configurationTitle": "Falha no login",
+    "configurationMessage": "O login falhou. Tente novamente ou fale com seu prestador de serviços.",
+    "registration": {
+      "messages": {
+        "verified": "Usuário verificado e registrado com sucesso"
+      },
+      "errors": {
+        "verifyFailed": "Falha ao verificar e registrar o usuário",
+        "invalidToken": "Token inválido",
+        "tokenExpired": "Token expirado",
+        "tokenNotActive": "O token ainda não está ativo",
+        "unknown": "Erro desconhecido"
+      },
+      "user": "Usuário",
+      "clientPortalUser": "Usuário do portal do cliente",
+      "mspUser": "Usuário MSP",
+      "resetExpiration": "1 hora",
+      "verificationExpiration": "24 horas",
+      "superadminRole": "Função de superadministrador"
     }
   },
   "account": {
@@ -475,6 +500,30 @@
         "expMonth": "Insira um mês válido (01-12)",
         "expYear": "Insira um ano válido (2024-2099)",
         "cvv": "Por favor insira um CVV válido"
+      },
+      "methodUpdateError": "Não foi possível atualizar este método de pagamento. Tente novamente.",
+      "cardSetup": {
+        "success": "Cartão salvo com segurança.",
+        "error": "Não foi possível salvar o cartão. Tente novamente."
+      },
+      "autopay": {
+        "title": "Métodos de pagamento e pagamento automático",
+        "loading": "Carregando métodos de pagamento…",
+        "profileUnavailable": "Os métodos de pagamento e as configurações de pagamento automático não estão disponíveis para este perfil de faturamento.",
+        "cardFallback": "Cartão",
+        "enrolled": "O pagamento automático está ativado.",
+        "disable": "Desativar o pagamento automático",
+        "consent": "Autorizo cobranças recorrentes neste cartão para faturas finalizadas.",
+        "enable": "Ativar o pagamento automático",
+        "noCards": "Adicione um cartão para ativar o pagamento automático.",
+        "changeCard": "Usar este cartão para o pagamento automático",
+        "updateError": "Não foi possível atualizar o pagamento automático. Tente novamente."
+      },
+      "publicCardSetup": {
+        "saved": "Cartão salvo",
+        "failed": "Não foi possível salvar o seu cartão",
+        "savedDescription": "O seu cartão está pronto para pagamentos futuros.",
+        "failedDescription": "Não foi possível verificar a configuração. Peça um novo link ao seu fornecedor de faturamento."
       }
     }
   },
@@ -571,7 +620,9 @@
       "invoices": "Notificações de fatura",
       "announcements": "Anúncios do sistema",
       "emailPreferences": "E-mail",
-      "internalPreferences": "Interno"
+      "internalPreferences": "Interno",
+      "unreadCount_few": "Notificações não lidas {{count}}",
+      "unreadCount_many": "Notificações não lidas {{count}}"
     },
     "actions": {
       "save": "Salvar alterações",
@@ -586,6 +637,7 @@
       "emailAlreadyExists": "Já existe um usuário com este endereço de e-mail",
       "reportsToSelf": "Um usuário não pode reportar a si mesmo",
       "reportsToCycle": "Isto criaria uma cadeia circular de relatórios",
+      "invalidTimezone": "Escolha um fuso horário baseado em uma cidade, como America/New_York.",
       "photoUploaded": "Foto enviada com sucesso",
       "photoRemoved": "Foto removida com sucesso",
       "userNotFound": "Usuário não encontrado",
@@ -615,7 +667,19 @@
       "deleteError": "Falha ao excluir.",
       "deleteConfirm": "Tem certeza de que deseja excluir isto? Esta ação não pode ser desfeita.",
       "linking": "Vinculando...",
-      "linkDocument": "Vincular documento"
+      "linkDocument": "Vincular documento",
+      "cropTitle": "Escolher a marca quadrada",
+      "cropHelp": "Arraste o logotipo e amplie para escolher a parte mostrada em espaços pequenos e quadrados. Reduza o zoom para deixar espaço à volta. O logotipo completo também é mantido.",
+      "zoom": "Zoom",
+      "zoomOut": "Reduzir zoom",
+      "zoomIn": "Ampliar zoom",
+      "cropPreview": "Pré-visualização",
+      "applyCrop": "Usar este recorte",
+      "adjustMark": "Ajustar marca",
+      "cropFromWide": "Recortar do logotipo largo",
+      "recropSuccess": "Marca atualizada.",
+      "recropError": "Não foi possível atualizar a marca.",
+      "fileNameLabel": "Arquivo armazenado"
     },
     "validation": {
       "clientNameRequired": "O nome do cliente é obrigatório",
@@ -695,7 +759,10 @@
       "reportsToSelf": "Um usuário não pode reportar a si mesmo",
       "reportsToCycle": "Isto criaria uma cadeia circular de relatórios",
       "createError": "Falha ao criar usuário",
-      "deleteError": "Falha ao excluir usuário"
+      "deleteError": "Falha ao excluir usuário",
+      "reportsTo": "Reporta a",
+      "noManager": "Sem gestor",
+      "reportsToHelp": "Um gestor pode ver os tickets, dispositivos e projetos das pessoas que se reportam a ele, quando o grupo de visibilidade dele está limitado aos próprios registros."
     },
     "messages": {
       "saveChanges": "Salvar alterações",
@@ -742,7 +809,27 @@
       "fullAccess": "Acesso total",
       "cancel": "Cancelar",
       "assignSuccess": "Atribuição de visibilidade de contato atualizada",
-      "assignError": "Não foi possível atribuir o grupo de visibilidade"
+      "assignError": "Não foi possível atribuir o grupo de visibilidade",
+      "scopeLabel": "Visibilidade dos tickets",
+      "scopeClient": "Todos os tickets deste cliente",
+      "scopeContact": "Apenas os seus próprios tickets",
+      "scopeClientDescription": "Os membros veem todos os tickets deste cliente nos quadros selecionados.",
+      "scopeContactDescription": "Os membros veem os tickets em que são o contato, os tickets das pessoas que se reportam a eles e os tickets que acompanham. Os administradores do cliente sempre veem tudo nos quadros selecionados, incluindo tickets sem contato.",
+      "assignmentHelp": "Atribua um grupo para limitar os quadros e o que esta pessoa vê de tickets, dispositivos e projetos, ou mantenha o acesso completo ao cliente.",
+      "boardHiddenFromPortal": "Oculto no portal do cliente",
+      "assetScopeLabel": "Visibilidade dos dispositivos",
+      "assetScopeClient": "Todos os dispositivos deste cliente",
+      "assetScopeContact": "Somente os próprios dispositivos",
+      "assetScopeClientDescription": "Os membros veem todos os dispositivos deste cliente, incluindo os não atribuídos.",
+      "assetScopeContactDescription": "Os membros veem somente os dispositivos atribuídos a eles ou às pessoas que se reportam a eles. Os dispositivos não atribuídos ficam ocultos. Os administradores do cliente sempre veem tudo.",
+      "projectScopeLabel": "Visibilidade dos projetos",
+      "projectScopeClient": "Todos os projetos deste cliente",
+      "projectScopeContact": "Somente os próprios projetos",
+      "projectScopeClientDescription": "Os membros veem todos os projetos deste cliente.",
+      "projectScopeContactDescription": "Os membros veem somente os projetos cujo contato são eles próprios ou alguém que se reporta a eles. Os projetos sem contato ficam ocultos. Os administradores do cliente sempre veem tudo.",
+      "scopeSummary": "Tickets: {{tickets}} · Dispositivos: {{devices}} · Projetos: {{projects}}",
+      "scopeSummaryAll": "Todos",
+      "scopeSummaryOwn": "Próprios"
     },
     "domain": {
       "title": "Domínio personalizado",
@@ -813,7 +900,9 @@
     "card": {
       "unread": "Não lida",
       "noMessage": "Nenhuma mensagem"
-    }
+    },
+    "unreadCount_few": "{{count}} notificações não lidas",
+    "unreadCount_many": "{{count}} notificações não lidas"
   },
   "billing": {
     "columns": {
@@ -932,14 +1021,18 @@
   },
   "assets": {
     "columns": {
-      "name": "Nome",
-      "type": "Tipo",
-      "status": "Status",
-      "location": "Local",
-      "lastUpdated": "Última atualização"
+      "assignedTo": "Atribuído a"
     },
-    "notAvailable": "N/D",
-    "detailsTitle": "Detalhes do ativo"
+    "statuses": {
+      "active": "Ativo",
+      "in_stock": "Em estoque",
+      "maintenance": "Em manutenção",
+      "inactive": "Inativo",
+      "retired": "Desativado"
+    },
+    "unassigned": "Não atribuído",
+    "sharedWorkspace": "Espaço compartilhado: {{name}}",
+    "sharedWorkspaceLabel": "Espaço compartilhado"
   },
   "errors": {
     "account": {
@@ -976,7 +1069,8 @@
     },
     "tickets": {
       "notFoundOrDenied": "Ticket não encontrado ou acesso negado",
-      "invalidData": "Dados do ticket inválidos"
+      "invalidData": "Dados do ticket inválidos",
+      "statusNotPortalSelectable": "Este status não pode ser selecionado no portal do cliente"
     },
     "visibilityGroups": {
       "checkDetails": "Verifique os dados do grupo de visibilidade e tente novamente.",
@@ -992,5 +1086,11 @@
       "duplicate": "Já existe um grupo de visibilidade com estes dados para este cliente.",
       "invalidData": "Dados do grupo de visibilidade inválidos. Verifique os dados do grupo e os quadros selecionados."
     }
+  },
+  "tabs": {
+    "paymentMethods": "Métodos de pagamento e pagamento automático"
+  },
+  "invoice": {
+    "autopayWillCharge": "Será cobrado em {{date}} no {{brand}} •••• {{last4}}"
   }
 }

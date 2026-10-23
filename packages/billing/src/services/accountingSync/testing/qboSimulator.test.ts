@@ -18,6 +18,56 @@ describe('QboSimulator — QBO semantics the sync engine depends on', () => {
     expect(invoice.SyncToken).toBe('0');
   });
 
+  it('rejects a sales line whose Qty × UnitPrice does not round to its Amount (6070)', async () => {
+    const sim = new QboSimulator();
+    const line = (qty: number) => ({
+      DetailType: 'SalesItemLineDetail',
+      Amount: 10.42,
+      SalesItemLineDetail: { ItemRef: { value: 'i-1' }, Qty: qty, UnitPrice: 125 }
+    });
+
+    // 5 min at $125/h stored as 0.08 h: 0.08 × 125 = 10.00, not 10.42
+    await expect(
+      sim.client.create('Invoice', { CustomerRef: { value: 'c-1' }, Line: [line(0.08)] })
+    ).rejects.toMatchObject({ code: '6070' } satisfies Partial<QboSimError>);
+
+    const invoice = await sim.client.create('Invoice', { CustomerRef: { value: 'c-1' }, Line: [line(0.083333)] });
+    expect(invoice.TotalAmt).toBe(10.42);
+  });
+
+  it('subtracts DiscountLineDetail magnitudes from the total on create and sparse update', async () => {
+    const sim = new QboSimulator();
+    const discount = (amount: number) => ({
+      DetailType: 'DiscountLineDetail',
+      Amount: amount,
+      DiscountLineDetail: { PercentBased: false, DiscountAmount: amount, DiscountAccountRef: { value: 'DISCOUNT' } }
+    });
+    const invoice = await sim.client.create('Invoice', {
+      CustomerRef: { value: 'c-1' },
+      Line: [
+        { DetailType: 'SalesItemLineDetail', Amount: 3000.0 },
+        { DetailType: 'SalesItemLineDetail', Amount: 1050.0 },
+        discount(500.0),
+        discount(200.0),
+        discount(100.0),
+        discount(12.0)
+      ]
+    });
+
+    expect(invoice.TotalAmt).toBe(3238);
+    expect(invoice.Balance).toBe(3238);
+
+    const updated = await sim.client.update('Invoice', {
+      Id: invoice.Id,
+      SyncToken: invoice.SyncToken,
+      sparse: true,
+      Line: [{ DetailType: 'SalesItemLineDetail', Amount: 100.0 }, discount(25.0)]
+    });
+
+    expect(updated.TotalAmt).toBe(75);
+    expect(updated.Balance).toBe(75);
+  });
+
   it('taxAdjustmentCents models AST changing the total at create time', async () => {
     const sim = new QboSimulator({ taxAdjustmentCents: 825 });
     const invoice = await sim.client.create('Invoice', {

@@ -27,6 +27,7 @@ import {
   registerProjectBillingPaymentStatusSubscriber,
   unregisterProjectBillingPaymentStatusSubscriber,
 } from './projectBillingPaymentStatusSubscriber';
+import { registerThreecxPhonebookSubscriber, unregisterThreecxPhonebookSubscriber } from './threecxPhonebookSubscriber';
 
 type SubscriberRegistration = {
   name: string;
@@ -54,6 +55,7 @@ const REGISTRATIONS: SubscriberRegistration[] = [
   { name: 'maintenanceJob', register: registerMaintenanceJobSubscriber },
   { name: 'inboundAuthPauseNotification', register: registerInboundAuthPauseNotificationSubscriber },
   { name: 'projectBillingPaymentStatus', register: registerProjectBillingPaymentStatusSubscriber },
+  { name: 'threecxPhonebook', register: registerThreecxPhonebookSubscriber },
 ];
 
 const UNREGISTRATIONS: SubscriberRegistration[] = [
@@ -77,6 +79,7 @@ const UNREGISTRATIONS: SubscriberRegistration[] = [
   { name: 'rmmAlertTicketClosed', register: unregisterRmmAlertTicketClosedSubscriber },
   { name: 'rmmAlertNotification', register: unregisterRmmAlertNotificationSubscriber },
   { name: 'projectBillingPaymentStatus', register: unregisterProjectBillingPaymentStatusSubscriber },
+  { name: 'threecxPhonebook', register: unregisterThreecxPhonebookSubscriber },
 ];
 
 // Each subscriber registers in its own try/catch. A transient failure (e.g. a

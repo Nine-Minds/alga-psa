@@ -2,7 +2,7 @@ import { test, expect } from '../fixtures/emulators';
 import { signIn } from '../fixtures/auth';
 import { createAccountingFixture } from '../fixtures/accounting';
 
-type Organisation = { tenantId: string; tenantName: string };
+type Organisation = { id: string; tenantId: string; tenantName: string };
 type Invoice = { InvoiceID: string; xeroTenantId: string; InvoiceNumber: string;
   Contact: { ContactID: string }; LineItems: Array<{ LineAmount: number; ItemCode?: string }> };
 const settingsURL = '/msp/settings?tab=integrations&category=accounting&accounting_integration=xero';
@@ -22,6 +22,8 @@ if (process.env.E2E_EDITION !== 'enterprise') {
         process.env.E2E_BASE_URL || 'http://localhost:3000').toString()] });
     const [unselected] = await emulators.state('xero', 'organisations') as Organisation[];
     const organisation = await emulators.seed('xero', 'organisation', { tenantName: 'Browser selected organisation' }) as Organisation;
+    expect(organisation.id).toBeTruthy();
+    expect(organisation.id).not.toBe(organisation.tenantId);
     // The shipped integration uses the first connected organisation. Choose
     // that provider response before OAuth; Alga must persist and display it.
     await emulators.action('xero', 'set-connections', { clientId: 'browser-xero-client', xeroTenantIds: [unselected.tenantId, organisation.tenantId] });
@@ -35,7 +37,9 @@ if (process.env.E2E_EDITION !== 'enterprise') {
     });
     const { tenant, service, invoice } = accounting;
     const scope = { tenant: tenant.tenantId };
-    const mappingScope = { ...scope, integration_type: 'xero', external_realm_id: organisation.tenantId };
+    // New mappings and export batches use the connection id. The customer
+    // fixture retains its historical organisation id to exercise alias lookup.
+    const mappingScope = { ...scope, integration_type: 'xero', external_realm_id: organisation.id };
     await signIn(page, { email: tenant.admin.email, password: credentials.password });
     await page.goto(settingsURL);
     await page.locator('#xero-client-id').fill('browser-xero-client');
@@ -74,7 +78,7 @@ if (process.env.E2E_EDITION !== 'enterprise') {
     const batches = await database('accounting_export_batches').where({ ...scope, adapter_type: 'xero' });
     expect(batches).toHaveLength(1);
     const batch = batches[0];
-    expect(batch.target_realm).toBe(organisation.tenantId);
+    expect(batch.target_realm).toBe(organisation.id);
     expect(await database('accounting_export_lines').where({ ...scope, batch_id: batch.batch_id })
       .select('document_id', 'document_line_id')).toEqual([{ document_id: invoice.id, document_line_id: invoice.chargeId }]);
     const batchStatus = async () => (await database('accounting_export_batches').where({ ...scope, batch_id: batch.batch_id }).first())?.status;

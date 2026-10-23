@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import type { TemplateAst } from '@alga-psa/types';
 import {
+  CUSTOM_PAGE_SIZE_UNITS,
   INVOICE_PRINT_MARGIN_MM_RANGE,
   INVOICE_PAPER_PRESET_IDS,
   TEMPLATE_AST_VERSION,
+  validateCustomPageSize,
 } from '@alga-psa/types';
 
 // Conservative allowlist for any identifier we emit into CSS selectors or custom property names.
@@ -29,9 +31,20 @@ const valueFormatSchema = z.enum(['text', 'number', 'currency', 'date']);
 const fieldDisplayFormatSchema = z.enum(['single-line', 'multiline', 'raw']);
 const fieldBorderStyleSchema = z.enum(['underline', 'box', 'none']);
 const paperPresetSchema = z.enum(INVOICE_PAPER_PRESET_IDS);
+const customPageSizeSchema = z.object({
+  width: z.number().positive(),
+  height: z.number().positive(),
+  unit: z.enum(CUSTOM_PAGE_SIZE_UNITS),
+}).strict().superRefine((size, ctx) => {
+  const problem = validateCustomPageSize(size);
+  if (problem) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: problem });
+  }
+});
 const printSettingsSchema = z.object({
   paperPreset: paperPresetSchema,
   marginMm: z.number().min(INVOICE_PRINT_MARGIN_MM_RANGE.min).max(INVOICE_PRINT_MARGIN_MM_RANGE.max),
+  customPageSize: customPageSizeSchema.optional(),
 }).strict();
 
 const styleDeclarationSchema = z.object({
@@ -69,6 +82,15 @@ const styleDeclarationSchema = z.object({
   fontStyle: z.string().optional(),
   lineHeight: z.union([z.string(), z.number()]).optional(),
   textAlign: z.enum(['left', 'center', 'right', 'justify']).optional(),
+  // Table/text fitting: fixed layout lets column widths hold on the page, nowrap
+  // keeps numeric cells on one line, overflow-wrap lets long tokens break.
+  tableLayout: z.enum(['auto', 'fixed']).optional(),
+  whiteSpace: z.enum(['normal', 'nowrap', 'pre', 'pre-line', 'pre-wrap']).optional(),
+  overflow: z.enum(['visible', 'hidden', 'clip']).optional(),
+  overflowWrap: z.enum(['normal', 'break-word', 'anywhere']).optional(),
+  breakInside: z.enum(['auto', 'avoid', 'avoid-page']).optional(),
+  breakAfter: z.enum(['auto', 'avoid', 'avoid-page', 'page']).optional(),
+  breakBefore: z.enum(['auto', 'avoid', 'avoid-page', 'page']).optional(),
 }).strict();
 
 const nodeStyleRefSchema = z.object({
@@ -97,7 +119,7 @@ type I18nTextInput = string | { i18nKey: string; defaultValue: string };
 
 type ValueExpressionInput =
   | { type: 'literal'; value: string | number | boolean | null }
-  | { type: 'binding'; bindingId: string }
+  | { type: 'binding'; bindingId: string; fallback?: I18nTextInput }
   | { type: 'path'; path: string }
   | { type: 'template'; template: string; args?: Record<string, ValueExpressionInput> }
   | { type: 'i18n'; i18nKey: string; defaultValue: string };
@@ -126,6 +148,7 @@ const valueExpressionSchema: z.ZodTypeAny = z.lazy(() =>
     z.object({
       type: z.literal('binding'),
       bindingId: z.string().min(1),
+      fallback: i18nTextSchema.optional(),
     }).strict(),
     z.object({
       type: z.literal('path'),
@@ -153,6 +176,7 @@ const tableColumnLineSchema: z.ZodTypeAny = z.lazy(() =>
     value: valueExpressionSchema,
     format: valueFormatSchema.optional(),
     style: nodeStyleRefSchema.optional(),
+    supplemental: z.boolean().optional(),
   }).strict()
 );
 
@@ -334,6 +358,12 @@ type NodeInput =
     }
   | {
       id: string;
+      type: 'richText';
+      style?: z.infer<typeof nodeStyleRefSchema>;
+      content: ValueExpressionInput;
+    }
+  | {
+      id: string;
       type: 'field';
       style?: z.infer<typeof nodeStyleRefSchema>;
       binding: z.infer<typeof bindingRefSchema>;
@@ -356,6 +386,13 @@ type NodeInput =
       id: string;
       type: 'divider';
       style?: z.infer<typeof nodeStyleRefSchema>;
+    }
+  | {
+      id: string;
+      type: 'barcode';
+      style?: z.infer<typeof nodeStyleRefSchema>;
+      symbology: 'qr' | 'code128';
+      value: ValueExpressionInput;
     }
   | {
       id: string;
@@ -393,16 +430,20 @@ type NodeInput =
       }>;
     };
 
+const nodeNameSchema = z.string().min(1).max(200).optional();
+
 const nodeSchema: z.ZodTypeAny = z.lazy(() =>
   z.discriminatedUnion('type', [
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('document'),
       style: nodeStyleRefSchema.optional(),
       children: z.array(nodeSchema),
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('section'),
       title: i18nTextSchema.optional(),
       style: nodeStyleRefSchema.optional(),
@@ -410,6 +451,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('stack'),
       direction: z.enum(['row', 'column']).optional(),
       style: nodeStyleRefSchema.optional(),
@@ -422,12 +464,21 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('text'),
       style: nodeStyleRefSchema.optional(),
       content: valueExpressionSchema,
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
+      type: z.literal('richText'),
+      style: nodeStyleRefSchema.optional(),
+      content: valueExpressionSchema,
+    }).strict(),
+    z.object({
+      id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('field'),
       style: nodeStyleRefSchema.optional(),
       binding: bindingRefSchema,
@@ -441,6 +492,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('image'),
       style: nodeStyleRefSchema.optional(),
       src: valueExpressionSchema,
@@ -448,11 +500,21 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('divider'),
       style: nodeStyleRefSchema.optional(),
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
+      type: z.literal('barcode'),
+      style: nodeStyleRefSchema.optional(),
+      symbology: z.enum(['qr', 'code128']),
+      value: valueExpressionSchema,
+    }).strict(),
+    z.object({
+      id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('table'),
       style: nodeStyleRefSchema.optional(),
       headerStyle: nodeStyleRefSchema.optional(),
@@ -463,6 +525,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('dynamic-table'),
       style: nodeStyleRefSchema.optional(),
       headerStyle: nodeStyleRefSchema.optional(),
@@ -476,6 +539,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('totals'),
       style: nodeStyleRefSchema.optional(),
       sourceBinding: bindingRefSchema,
@@ -485,6 +549,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
         value: valueExpressionSchema,
         format: valueFormatSchema.optional(),
         emphasize: z.boolean().optional(),
+        hideWhenZero: z.boolean().optional(),
         style: nodeStyleRefSchema.optional(),
         labelStyle: nodeStyleRefSchema.optional(),
       }).strict()).min(1),

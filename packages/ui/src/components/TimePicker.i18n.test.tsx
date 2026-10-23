@@ -4,6 +4,7 @@ import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { TimePicker } from './TimePicker';
+import { DateFormatProvider } from '../lib/dateFormat/useDateFormat';
 
 /**
  * The due-date row puts DatePicker and TimePicker side by side. DatePicker
@@ -12,7 +13,8 @@ import { TimePicker } from './TimePicker';
  *
  * The previous sweep missed it because it searched for date formatters, and
  * this component never formats a date: it defaulted a `timeFormat` prop to
- * '12h'. These tests pin the clock convention to the locale.
+ * '12h'. These tests pin the clock convention to the country, which is what
+ * decides it — a German-speaking user in the US still reads 7:05 PM.
  */
 
 let mockLocale: string | null = 'en';
@@ -31,35 +33,45 @@ vi.mock('../ui-reflection/useAutomationIdAndRegister', () => ({
   }),
 }));
 
-describe('TimePicker clock convention follows the locale', () => {
+describe('TimePicker clock convention follows the country', () => {
   afterEach(() => {
     cleanup();
     mockLocale = 'en';
   });
 
-  it('renders 24-hour time for locales that use a 24-hour clock', () => {
-    for (const locale of ['fr', 'de', 'pt', 'nl', 'it', 'pl', 'es']) {
-      mockLocale = locale;
-      const { unmount } = render(<TimePicker value="19:05" onChange={() => {}} />);
+  it('renders 24-hour time for countries that use a 24-hour clock', () => {
+    for (const country of ['FR', 'DE', 'PT', 'NL', 'IT', 'PL', 'ES']) {
+      const { unmount } = render(
+        <DateFormatProvider countryCode={country}>
+          <TimePicker value="19:05" onChange={() => {}} />
+        </DateFormatProvider>
+      );
       expect(screen.getByDisplayValue('19:05')).toBeTruthy();
       expect(screen.queryByDisplayValue(/PM/)).toBeNull();
       unmount();
     }
   });
 
-  it('keeps 12-hour time with a meridiem for en', () => {
-    mockLocale = 'en';
-    render(<TimePicker value="19:05" onChange={() => {}} />);
+  it('keeps 12-hour time with a meridiem for the US', () => {
+    mockLocale = 'de';
+    render(
+      <DateFormatProvider countryCode="US">
+        <TimePicker value="19:05" onChange={() => {}} />
+      </DateFormatProvider>
+    );
     expect(screen.getByDisplayValue('7:05 PM')).toBeTruthy();
   });
 
   it('still honours an explicit timeFormat override', () => {
-    mockLocale = 'fr';
-    render(<TimePicker value="19:05" onChange={() => {}} timeFormat="12h" />);
+    render(
+      <DateFormatProvider countryCode="FR">
+        <TimePicker value="19:05" onChange={() => {}} timeFormat="12h" />
+      </DateFormatProvider>
+    );
     expect(screen.getByDisplayValue('7:05 PM')).toBeTruthy();
   });
 
-  it('falls back to the default locale with no provider above it', () => {
+  it('falls back to the fixed system default with no provider above it', () => {
     mockLocale = null;
     render(<TimePicker value="19:05" onChange={() => {}} />);
     expect(screen.getByDisplayValue('7:05 PM')).toBeTruthy();

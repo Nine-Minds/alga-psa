@@ -33,13 +33,10 @@ describe('designerStore addNodeFromPalette', () => {
     expect(section.props.layout).toEqual(sectionSchema.defaults.layout);
     expect(section.props.metadata).toMatchObject(sectionSchema.defaults.metadata ?? {});
 
-    // Base sizing style comes from the schema size defaults (and is mirrored into props.style).
-    const schemaSize = sectionSchema.defaults.size;
-    expect(schemaSize).toBeTruthy();
-    if (!schemaSize) return;
+    // A section is a flow container: it starts content-sized, not at its schema frame size.
     expect(section.props.style).toMatchObject({
-      width: `${Math.round(schemaSize.width)}px`,
-      height: `${Math.round(schemaSize.height)}px`,
+      width: 'auto',
+      height: 'auto',
     });
   });
 

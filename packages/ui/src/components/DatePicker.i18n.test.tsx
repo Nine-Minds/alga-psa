@@ -3,11 +3,10 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
-import { format as formatDateFns } from 'date-fns';
-import { de as deLocale } from 'date-fns/locale/de';
 import { DatePicker } from './DatePicker';
 import { DateTimePicker } from './DateTimePicker';
 import { Calendar } from './Calendar';
+import { DateFormatProvider } from '../lib/dateFormat/useDateFormat';
 
 let mockLocale: string | null = 'en';
 
@@ -27,69 +26,90 @@ vi.mock('../ui-reflection/useAutomationIdAndRegister', () => ({
 
 const date = new Date(2026, 5, 10, 14, 30); // 2026-06-10 14:30 local
 
-describe('DatePicker locale display', () => {
+describe('DatePicker country display', () => {
   afterEach(() => {
     cleanup();
     mockLocale = 'en';
   });
 
-  it('renders short date per locale (fr 10/06/2026, de 10.06.2026, en 06/10/2026, en-AU 10/06/2026)', () => {
-    const cases: Array<[string, string]> = [
-      ['fr', '10/06/2026'],
-      ['de', '10.06.2026'],
-      ['en', '06/10/2026'],
-      ['en-AU', '10/06/2026'],
+  it('renders the short date per country, whatever the language', () => {
+    const cases: Array<[string, string, string]> = [
+      ['FR', 'en', '10/06/2026'],
+      ['DE', 'en', '10.06.2026'],
+      ['US', 'fr', '06/10/2026'],
+      ['AU', 'de', '10/06/2026'],
     ];
-    for (const [locale, expected] of cases) {
+    for (const [country, locale, expected] of cases) {
       mockLocale = locale;
-      const { unmount } = render(<DatePicker value={date} onChange={() => {}} />);
+      const { unmount } = render(
+        <DateFormatProvider countryCode={country}>
+          <DatePicker value={date} onChange={() => {}} />
+        </DateFormatProvider>
+      );
       expect(screen.getByDisplayValue(expected)).toBeTruthy();
       unmount();
     }
   });
 
-  it('honors displayFormat override regardless of locale', () => {
-    mockLocale = 'fr';
-    render(<DatePicker value={date} onChange={() => {}} displayFormat="yyyy-MM-dd" />);
+  it('honors displayFormat override regardless of country', () => {
+    render(
+      <DateFormatProvider countryCode="DE">
+        <DatePicker value={date} onChange={() => {}} displayFormat="yyyy-MM-dd" />
+      </DateFormatProvider>
+    );
     expect(screen.getByDisplayValue('2026-06-10')).toBeTruthy();
   });
 
-  it('renders without an I18nProvider (auth-page scenario), defaulting to en', () => {
+  it('renders without either provider (auth-page scenario), on the system default', () => {
     mockLocale = null;
     render(<DatePicker value={date} onChange={() => {}} />);
     expect(screen.getByDisplayValue('06/10/2026')).toBeTruthy();
   });
 });
 
-describe('DateTimePicker locale display', () => {
+describe('DateTimePicker country display', () => {
   afterEach(() => {
     cleanup();
     mockLocale = 'en';
   });
 
-  it('explicit timeFormat=24h renders 24h time with locale date under fr', () => {
-    mockLocale = 'fr';
-    render(<DateTimePicker value={date} onChange={() => {}} timeFormat="24h" />);
+  it('explicit timeFormat=24h overrides the country dial', () => {
+    render(
+      <DateFormatProvider countryCode="FR">
+        <DateTimePicker value={date} onChange={() => {}} timeFormat="24h" />
+      </DateFormatProvider>
+    );
     expect(screen.getByDisplayValue('10/06/2026')).toBeTruthy();
     expect(screen.getByDisplayValue('14:30')).toBeTruthy();
   });
 
-  it('explicit timeFormat=12h renders 12h time with locale date under de', () => {
-    mockLocale = 'de';
-    render(<DateTimePicker value={date} onChange={() => {}} timeFormat="12h" />);
-    expect(screen.getByDisplayValue(formatDateFns(date, 'P', { locale: deLocale }))).toBeTruthy();
+  it('explicit timeFormat=12h overrides the country dial', () => {
+    render(
+      <DateFormatProvider countryCode="DE">
+        <DateTimePicker value={date} onChange={() => {}} timeFormat="12h" />
+      </DateFormatProvider>
+    );
+    expect(screen.getByDisplayValue('10.06.2026')).toBeTruthy();
     expect(screen.getByDisplayValue('2:30 PM')).toBeTruthy();
   });
 
-  it('unset timeFormat renders locale-derived date+time under en and de', () => {
-    mockLocale = 'en';
-    const first = render(<DateTimePicker value={date} onChange={() => {}} />);
+  it('unset timeFormat takes date and dial from the country, not the language', () => {
+    mockLocale = 'de';
+    const first = render(
+      <DateFormatProvider countryCode="US">
+        <DateTimePicker value={date} onChange={() => {}} />
+      </DateFormatProvider>
+    );
     expect(screen.getByDisplayValue('06/10/2026')).toBeTruthy();
     expect(screen.getByDisplayValue('2:30 PM')).toBeTruthy();
     first.unmount();
 
-    mockLocale = 'de';
-    render(<DateTimePicker value={date} onChange={() => {}} />);
+    mockLocale = 'en';
+    render(
+      <DateFormatProvider countryCode="DE">
+        <DateTimePicker value={date} onChange={() => {}} />
+      </DateFormatProvider>
+    );
     expect(screen.getByDisplayValue('10.06.2026')).toBeTruthy();
     expect(screen.getByDisplayValue('14:30')).toBeTruthy();
   });

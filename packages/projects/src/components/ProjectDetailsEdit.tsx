@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { IProject } from '@alga-psa/types';
 import { IStatus } from '@alga-psa/types';
 import { IClient } from '@alga-psa/types';
@@ -16,6 +16,8 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { TagManager } from '@alga-psa/tags/components';
 import { updateProject, getProjectStatuses } from '../actions/projectActions';
+import { getServices } from '../actions/serviceCatalogActions';
+import { timeEntryServiceChoices, type TimeEntryServiceChoice } from '@alga-psa/core';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { useClientIntegration } from '../context/ClientIntegrationContext';
 import { findTagsByEntityId, isTagActionError } from '@alga-psa/tags/actions';
@@ -28,8 +30,12 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { ProjectTaskStatusSettings } from './settings/projects/ProjectTaskStatusSettings';
+import {
+  ProjectTaskStatusSettings,
+  type ProjectTaskStatusSettingsHandle,
+} from './settings/projects/ProjectTaskStatusSettings';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import ClientPortalConfigEditor from './ClientPortalConfigEditor';
 import { DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
 import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
@@ -75,23 +81,28 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   const [contacts, setContacts] = useState<{ value: string; label: string }[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
   const [statuses, setStatuses] = useState<IStatus[]>([]);
+  const [services, setServices] = useState<TimeEntryServiceChoice[]>([]);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
   const [showClientPortalConfig, setShowClientPortalConfig] = useState(false);
-  
+  // Status column edits are staged inside the editor and written by Save Changes.
+  const statusSettingsRef = useRef<ProjectTaskStatusSettingsHandle>(null);
+
   // TagContext is available if needed for tag-related features in the future
   // const { tags } = useTags();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [allUsers, projectStatusesResult, projectTagsData] = await Promise.all([
+        const [allUsers, projectStatusesResult, projectTagsData, servicesResponse] = await Promise.all([
           getAllUsersBasic(),
           getProjectStatuses(),
-          initialProject.project_id ? findTagsByEntityId(initialProject.project_id, 'project') : Promise.resolve([])
+          initialProject.project_id ? findTagsByEntityId(initialProject.project_id, 'project') : Promise.resolve([]),
+          getServices(1, 999)
         ]);
         setUsers(allUsers);
+        setServices(servicesResponse.services);
         if (isActionPermissionError(projectStatusesResult)) {
           handleError(projectStatusesResult.permissionError);
           return;
@@ -159,6 +170,13 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
     setIsSubmitting(true);
 
     try {
+      // Staged status column changes first: a failure there keeps the drawer
+      // open with its toast instead of silently dropping them on close.
+      const statusesCommitted = await statusSettingsRef.current?.commitPendingChanges();
+      if (statusesCommitted === false) {
+        return;
+      }
+
       // Convert budgeted_hours to a number or null
       const budgetedHours = project.budgeted_hours ? Number(project.budgeted_hours) : null;
       
@@ -174,6 +192,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
         status: project.status,
         budgeted_hours: budgetedHours,
         client_portal_config: project.client_portal_config,
+        service_id: project.service_id ?? null,
       });
       if (isReturnedActionError(updatedProject)) {
         handleError(getErrorMessage(updatedProject));
@@ -378,6 +397,32 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {t('projectEdit.serviceLabel', 'Default Service (for time entries)')}
+            </label>
+            <CustomSelect
+              id="project-service-select"
+              value={project.service_id || ''}
+              onValueChange={(value) => {
+                setProject(prev => ({ ...prev, service_id: value || null }));
+                setHasChanges(true);
+                clearErrorIfSubmitted();
+              }}
+              options={[
+                { value: '', label: t('projectEdit.noService', 'No service') },
+                ...timeEntryServiceChoices(services, project.service_id).map((service): SelectOption => ({
+                  value: service.service_id,
+                  label: service.service_name
+                }))
+              ]}
+              placeholder={t('projectEdit.servicePlaceholder', 'Select default service')}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {t('projectEdit.serviceHelp', 'Used for time entries on this project when neither the task nor its phase sets a service.')}
+            </p>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('projectEdit.tagsLabel', 'Tags')}</label>
             <TagManager
               id="project-tags-edit"
@@ -452,7 +497,11 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
 
           <div>
             <ProjectTaskStatusSettings
+              ref={statusSettingsRef}
               projectId={project.project_id}
+              onPendingChangesChange={(pending) => {
+                if (pending) setHasChanges(true);
+              }}
             />
           </div>
 
@@ -486,7 +535,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
           </div>
         </div>
 
-        <div className="flex justify-end space-x-3 mt-4">
+        <DrawerFooter className="gap-3">
           <Dialog
             isOpen={showCancelConfirm}
             onClose={() => setShowCancelConfirm(false)}
@@ -579,7 +628,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               ? t('projectEdit.saving', 'Saving...')
               : t('projectEdit.saveTitle', 'Save Changes')}
           </Button>
-        </div>
+        </DrawerFooter>
       </form>
     </div>
   );

@@ -15,9 +15,9 @@ import {
   SupportedLocale,
   isSupportedLocale,
   filterPseudoLocales,
-  getTranslationLanguageCode,
 } from './config';
 import { formatDateValue } from './formatDateValue';
+import { useDateFormat } from '../dateFormat/useDateFormat';
 
 /**
  * Initialize i18next on the client side.
@@ -30,16 +30,21 @@ import { formatDateValue } from './formatDateValue';
  * server text rendered in one language and client text in another.
  */
 let i18nInitialized = false;
+type I18nInitializationAttempt = {
+  promise: Promise<void>;
+  state: 'pending' | 'timed-out' | 'ready' | 'failed';
+};
+let i18nInitialization: I18nInitializationAttempt | null = null;
+let i18nReconciliation: Promise<void> = Promise.resolve();
+// A fallback deadline for the UI readiness gate; it is not a diagnosis that
+// this timeout caused any particular browser bootstrap failure.
+const I18N_READINESS_TIMEOUT_MS = 10_000;
 
 const BOOTSTRAP_LOADING_TEXT: Record<
   SupportedLocale,
   { translations: string; languagePreferences: string }
 > = {
   en: {
-    translations: 'Loading translations...',
-    languagePreferences: 'Loading language preferences...',
-  },
-  'en-AU': {
     translations: 'Loading translations...',
     languagePreferences: 'Loading language preferences...',
   },
@@ -71,6 +76,10 @@ const BOOTSTRAP_LOADING_TEXT: Record<
     translations: 'Carregando traduções...',
     languagePreferences: 'Carregando preferências de idioma...',
   },
+  sv: {
+    translations: 'Laddar översättningar...',
+    languagePreferences: 'Laddar språkinställningar...',
+  },
   // Mirrors scripts/generate-pseudo-locales.cjs; these two never reach a pack.
   xx: {
     translations: '⟦Ŀȯȧḓīƞɠ ŧřȧƞşŀȧŧīȯƞş...⟧',
@@ -101,20 +110,16 @@ export type PreloadedNamespaceResources = Record<string, Record<string, unknown>
  * never fetches them. Safe to call before or after init (addResourceBundle is
  * idempotent with the merge flag).
  *
- * Bundles are keyed by the locale's translation-language code: packs are
- * language-only and i18next runs with `load: 'languageOnly'`, so a regional
- * locale (`en-AU`) resolves its resources from `en`. Seeding under the full
- * tag instead would strand the data where lookups never read it.
+ * Locales are language codes, so a bundle is keyed by the locale itself.
  */
 function applyPreloadedResources(
   locale: SupportedLocale,
   preloaded?: PreloadedNamespaceResources,
 ) {
   if (!preloaded) return;
-  const resourcesLocale = getTranslationLanguageCode(locale);
   for (const [namespace, resources] of Object.entries(preloaded)) {
-    if (!i18next.hasResourceBundle(resourcesLocale, namespace)) {
-      i18next.addResourceBundle(resourcesLocale, namespace, resources, true, true);
+    if (!i18next.hasResourceBundle(locale, namespace)) {
+      i18next.addResourceBundle(locale, namespace, resources, true, true);
     }
   }
 }
@@ -135,9 +140,8 @@ async function ensureNamespacesLoaded(
 ) {
   if (!namespaces || namespaces.length === 0) return;
 
-  const resourcesLocale = getTranslationLanguageCode(locale);
   const missing = namespaces.filter(
-    (namespace) => !i18next.hasResourceBundle(resourcesLocale, namespace)
+    (namespace) => !i18next.hasResourceBundle(locale, namespace)
   );
   if (missing.length === 0) return;
 
@@ -150,48 +154,109 @@ async function ensureNamespacesLoaded(
   }
 }
 
+async function reconcileProviderI18n(
+  locale: SupportedLocale,
+  preloaded: PreloadedNamespaceResources | undefined,
+  namespaces: string[] | undefined,
+  isProviderActive: () => boolean,
+) {
+  // Keep provider-specific locale/resource work ordered. If an old provider's
+  // language change is already in flight when it unmounts, the current
+  // provider's reconciliation runs after it and becomes the final state.
+  const reconciliation = i18nReconciliation.then(async () => {
+    if (!isProviderActive()) return;
+
+    applyPreloadedResources(locale, preloaded);
+    if (i18next.language !== locale) {
+      await i18next.changeLanguage(locale);
+    }
+  });
+  i18nReconciliation = reconciliation.catch(() => undefined);
+  await reconciliation;
+
+  // Namespace loads do not mutate the active language, so do not keep the
+  // locale-reconciliation queue locked while a stale provider's load is
+  // pending. Cleanup skips loads that have not started yet.
+  if (!isProviderActive()) return;
+  await ensureNamespacesLoaded(locale, namespaces);
+}
+
 async function initI18n(
   locale?: SupportedLocale,
   preloaded?: PreloadedNamespaceResources,
   namespaces?: string[],
+  isProviderActive: () => boolean = () => true,
 ) {
   const resolvedLocale = (locale || LOCALE_CONFIG.defaultLocale) as SupportedLocale;
-  if (i18nInitialized) {
-    applyPreloadedResources(resolvedLocale, preloaded);
-    if (locale && i18next.language !== locale) {
-      await i18next.changeLanguage(locale);
+  if (!i18nInitialized) {
+    if (i18nInitialization?.state === 'timed-out') {
+      // Render the provider's fallback immediately, but keep its current
+      // inputs attached to the shared attempt for reconciliation on settlement.
+      const attempt = i18nInitialization;
+      void attempt.promise
+        .then(() => reconcileProviderI18n(
+          resolvedLocale,
+          preloaded,
+          namespaces,
+          isProviderActive,
+        ))
+        .catch((error) => {
+          if (isProviderActive()) {
+            console.error('Failed to initialize translations:', error);
+          }
+        });
+      return;
     }
-    await ensureNamespacesLoaded(resolvedLocale, namespaces);
-    return;
+
+    // React StrictMode mounts effects twice in development. Share the in-flight
+    // init so concurrent effects/providers cannot call i18next.init twice.
+    if (!i18nInitialization) {
+      // Seed only when the server actually embedded namespace data — an empty
+      // seed would mark the bundle as loaded and mask fetched translations.
+      const hasPreloadedContent = preloaded && Object.keys(preloaded).length > 0;
+      const seededResources = hasPreloadedContent
+        ? { [resolvedLocale]: preloaded }
+        : undefined;
+
+      const attempt: I18nInitializationAttempt = {
+        state: 'pending',
+        // The promise is assigned synchronously before its work starts so
+        // another provider cannot enter i18next.init in the same tick.
+        promise: Promise.resolve(),
+      };
+      i18nInitialization = attempt;
+      const initialization = i18next
+        .use(HttpBackend)
+        .use(initReactI18next)
+        .init({
+          ...I18N_CONFIG,
+          lng: resolvedLocale,
+          react: { useSuspense: false },
+          resources: seededResources,
+          partialBundledLanguages: true,
+          backend: {
+            loadPath: '/locales/{{lng}}/{{ns}}.json',
+          },
+        });
+      attempt.promise = Promise.resolve(initialization)
+        .then(() => {
+          if (i18nInitialization === attempt) {
+            attempt.state = 'ready';
+            i18nInitialized = true;
+          }
+        })
+        .catch((error) => {
+          attempt.state = 'failed';
+          // Only the attempt that owns the slot may release it. A stale
+          // completion cannot clear a newer initialization.
+          if (i18nInitialization === attempt) i18nInitialization = null;
+          throw error;
+        });
+    }
+    await i18nInitialization.promise;
   }
 
-  // Seed resources under the translation-language code the regional tag will
-  // actually resolve (see applyPreloadedResources), and only when the server
-  // actually embedded namespace data — an empty seed would mark the bundle as
-  // loaded and mask the real (fetched) translations with missing keys.
-  const resourcesLocale = getTranslationLanguageCode(resolvedLocale);
-  const hasPreloadedContent = preloaded && Object.keys(preloaded).length > 0;
-  const seededResources = hasPreloadedContent
-    ? { [resourcesLocale]: preloaded }
-    : undefined;
-
-  await i18next
-    .use(HttpBackend)
-    .use(initReactI18next)
-    .init({
-      ...I18N_CONFIG,
-      lng: resolvedLocale,
-      // Seed the route's namespaces so useTranslation() resolves them without a
-      // network round-trip; the HTTP backend still covers anything not seeded.
-      resources: seededResources,
-      partialBundledLanguages: true,
-      backend: {
-        loadPath: '/locales/{{lng}}/{{ns}}.json',
-      },
-    });
-
-  i18nInitialized = true;
-  await ensureNamespacesLoaded(resolvedLocale, namespaces);
+  await reconcileProviderI18n(resolvedLocale, preloaded, namespaces, isProviderActive);
 }
 
 /**
@@ -217,6 +282,8 @@ interface I18nProviderProps {
   namespaces?: string[];
   /** Server-embedded namespace resources for the current route (no HTTP fetch). */
   preloadedResources?: PreloadedNamespaceResources;
+  /** Render auth children while i18next initializes in the background. */
+  renderChildrenWhileLoading?: boolean;
 }
 
 export function I18nProvider({
@@ -225,6 +292,7 @@ export function I18nProvider({
   portal = 'client',
   namespaces,
   preloadedResources,
+  renderChildrenWhileLoading = false,
 }: I18nProviderProps) {
   const [locale, setLocaleState] = useState<SupportedLocale>(
     initialLocale || (LOCALE_CONFIG.defaultLocale as SupportedLocale)
@@ -235,18 +303,63 @@ export function I18nProvider({
   // this array inline would otherwise reload namespaces on every render.
   const namespaceKey = namespaces ? namespaces.join(',') : '';
 
+  // Auth pages can render their forms while the backend loads. Install the
+  // shared i18next instance synchronously so useTranslation is ready before
+  // those children render; the effect below still owns the readiness fallback.
+  if (renderChildrenWhileLoading && typeof window !== 'undefined' && !i18nInitialization) {
+    void initI18n(
+      locale,
+      preloadedResources,
+      namespaceKey ? namespaceKey.split(',') : undefined,
+    ).catch(() => undefined);
+  }
+
   useEffect(() => {
     let cancelled = false;
+    let readinessTimer: ReturnType<typeof setTimeout> | undefined;
     // The route's namespaces are awaited as part of initialization rather than
-    // in a follow-up effect, so `isInitialized` means "translations are ready"
-    // and not merely "i18next exists". Children used to render in the gap.
-    initI18n(locale, preloadedResources, namespaceKey ? namespaceKey.split(',') : undefined).then(
-      () => {
-        if (!cancelled) setIsInitialized(true);
-      }
+    // in a follow-up effect. The readiness deadline below is a fallback for a
+    // request that never settles; it does not mean translations are ready.
+    const readiness = initI18n(
+      locale,
+      preloadedResources,
+      namespaceKey ? namespaceKey.split(',') : undefined,
+      () => !cancelled,
     );
+    const initializationAttempt = i18nInitialization;
+    const readinessDeadline = new Promise<never>((_, reject) => {
+      readinessTimer = setTimeout(() => {
+        if (
+          initializationAttempt &&
+          i18nInitialization === initializationAttempt &&
+          initializationAttempt.state === 'pending'
+        ) {
+          // Keep ownership of the singleton while its init promise is pending.
+          // This prevents a timed-out provider remount from overlapping init.
+          i18nInitialization.state = 'timed-out';
+        }
+        reject(new Error(`Translation initialization exceeded ${I18N_READINESS_TIMEOUT_MS}ms`));
+      }, I18N_READINESS_TIMEOUT_MS);
+    });
+
+    Promise.race([readiness, readinessDeadline])
+      .then(() => {
+        if (!cancelled) setIsInitialized(true);
+      })
+      .catch((error) => {
+        // Initialization failures must not strand sign-in or other pages behind
+        // the bootstrap screen. i18next can still render keys/default values.
+        if (!cancelled) {
+          console.error('Failed to initialize translations:', error);
+          setIsInitialized(true);
+        }
+      })
+      .finally(() => {
+        if (readinessTimer) clearTimeout(readinessTimer);
+      });
     return () => {
       cancelled = true;
+      if (readinessTimer) clearTimeout(readinessTimer);
     };
   }, [locale, preloadedResources, namespaceKey]);
 
@@ -302,7 +415,7 @@ export function I18nProvider({
     isRTL: LOCALE_CONFIG.rtlLocales.includes(locale),
   };
 
-  if (!isInitialized) {
+  if (!isInitialized && !renderChildrenWhileLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-gray-500">{getBootstrapLoadingText(locale, 'translations')}</div>
@@ -336,8 +449,8 @@ export function useOptionalI18n() {
 /**
  * Hook for translations (wrapper around react-i18next)
  */
-export function useTranslation(namespace?: string | string[]) {
-  return useI18nextTranslation(namespace as any);
+export function useTranslation(namespace?: string | string[], options?: any) {
+  return useI18nextTranslation(namespace as any, options);
 }
 
 /**
@@ -394,13 +507,20 @@ export function detectClientLocale(
  * default locale, which at least stays deterministic rather than following
  * whatever the browser happens to be set to. `locale` is returned so callers
  * can pass it to module-scope helpers that have no hook of their own.
+ *
+ * `dateFormat` comes from the country, not the locale: digit order, separator
+ * and the 12/24h clock are the tenant's (or client's) country's, while the
+ * locale still supplies month and weekday names. Outside a DateFormatProvider
+ * it is the fixed system default, so provider-less trees stay deterministic.
  */
 export function useFormatters() {
   const context = useOptionalI18n();
   const locale = context?.locale ?? (LOCALE_CONFIG.defaultLocale as SupportedLocale);
+  const dateFormat = useDateFormat();
 
   return useMemo(() => ({
     locale,
+    dateFormat,
 
     formatDate: (
       date: Date | string,
@@ -408,7 +528,7 @@ export function useFormatters() {
     ) => {
       // Date-only strings are calendar dates and must not shift through the
       // browser timezone; see formatDateValue.
-      return formatDateValue(date, locale, options);
+      return formatDateValue(date, locale, options, dateFormat);
     },
 
     formatNumber: (value: number, options?: Intl.NumberFormatOptions) => {
@@ -445,5 +565,28 @@ export function useFormatters() {
       }
       return rtf.format(Math.trunc(diff / 1000), 'second');
     },
-  }), [locale]);
+  }), [locale, dateFormat]);
+}
+
+/**
+ * Translate outside a React tree (server-action launchers, imperative toasts).
+ *
+ * Uses the same module-level i18next instance the hooks do, and relies on the
+ * caller's `defaultValue` until the namespace is loaded. Prefer `useTranslation`
+ * inside components.
+ */
+export function translate(
+  namespace: string,
+  key: string,
+  options?: Record<string, unknown>,
+): string {
+  // Before i18next.init() resolves (no provider mounted yet, or a standalone
+  // consumer that never mounts one — an extension sandbox, a unit test),
+  // i18next.t() returns undefined outright instead of honoring defaultValue
+  // the way the hook-based `t()` does. Fall back explicitly so callers outside
+  // a React tree get the same defaultValue guarantee documented above.
+  const result = i18next.t(key, { ns: namespace, ...(options ?? {}) }) as string | undefined;
+  if (result !== undefined) return result;
+  const fallback = (options as { defaultValue?: string } | undefined)?.defaultValue;
+  return fallback ?? key;
 }

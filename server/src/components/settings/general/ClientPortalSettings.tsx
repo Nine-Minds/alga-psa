@@ -30,7 +30,16 @@ import { Input } from '@alga-psa/ui/components/Input';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { deleteTenantLogo, uploadTenantLogo } from '@alga-psa/tenancy/actions/tenant-actions/tenantLogoActions';
+import {
+  deleteTenantLogo,
+  getTenantLogoInfoAction,
+  linkDocumentAsTenantLogo,
+  recropTenantLogo,
+  uploadTenantLogo,
+  type TenantLogoInfo,
+} from '@alga-psa/tenancy/actions/tenant-actions/tenantLogoActions';
+import DocumentSelector from '@alga-psa/documents/components/DocumentSelector';
+import type { IDocument, LogoCropRect } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getTenantThemeAction } from '@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions';
 import { customThemePresetFor, type CustomThemeTokens } from '@alga-psa/tenancy/lib/customTheme';
@@ -122,7 +131,19 @@ const ClientPortalSettings = () => {
   const [appointmentsEnabled, setAppointmentsEnabled] = useState(true);
   const [portalFeaturesLoading, setPortalFeaturesLoading] = useState(true);
   const [portalFeaturesSaving, setPortalFeaturesSaving] = useState(false);
+  // File names and crop sources behind each slot; branding only holds the URLs.
+  const [logoInfo, setLogoInfo] = useState<TenantLogoInfo | null>(null);
   const { refreshBranding } = useBranding();
+
+  // The names are a convenience next to the previews, so a failure here is
+  // logged and the slots simply stay nameless.
+  const refreshLogoInfo = useCallback(async () => {
+    try {
+      setLogoInfo(await getTenantLogoInfoAction());
+    } catch (error) {
+      console.error('Failed to load tenant logo details', error);
+    }
+  }, []);
 
   const visibleLocales = useMemo(
     () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales),
@@ -166,6 +187,7 @@ const ClientPortalSettings = () => {
           getTenantLocaleSettingsAction(),
           getTenantClientPortalLocaleAction(),
           getClientPortalFeatureSettings(),
+          refreshLogoInfo(),
         ]);
 
         if (user) {
@@ -372,6 +394,7 @@ const ClientPortalSettings = () => {
     async (entityId: string, formData: FormData) => {
       const result = await uploadTenantLogo(entityId, formData, variant);
       if (result.success) {
+        await refreshLogoInfo();
         await refreshBranding();
       }
       return result;
@@ -381,10 +404,72 @@ const ClientPortalSettings = () => {
     async (entityId: string) => {
       const result = await deleteTenantLogo(entityId, variant);
       if (result.success) {
+        await refreshLogoInfo();
         await refreshBranding();
       }
       return result;
     };
+
+  // Re-cuts a square mark from the image it came from: the square upload when
+  // there was one, otherwise the matching wide logo.
+  const handleLogoRecrop = (variant: EntityLogoVariant) =>
+    async (entityId: string, crop: LogoCropRect) => {
+      const result = await recropTenantLogo(entityId, variant, crop);
+      if (result.success) {
+        await refreshLogoInfo();
+        await refreshBranding();
+      }
+      return result;
+    };
+
+  const handleLogoLink = (variant: EntityLogoVariant) =>
+    async ({ entityId, documentId }: { entityId: string; documentId: string }) => {
+      const result = await linkDocumentAsTenantLogo(entityId, documentId, variant);
+      if (result.success) {
+        await refreshLogoInfo();
+        await refreshBranding();
+      }
+      return result;
+    };
+
+  const renderLogoDocumentSelector = (variant: EntityLogoVariant) =>
+    ({ isOpen, onClose, onSelectDocumentId }: {
+      isOpen: boolean;
+      onClose: () => void;
+      onSelectDocumentId: (documentId: string) => void;
+    }) => (
+      <DocumentSelector
+        id={`client-portal-logo-${variant}-document-selector`}
+        isOpen={isOpen}
+        onClose={onClose}
+        singleSelect
+        typeFilter="image"
+        title={t('appearance.whiteLabel.linkDocument.title', { defaultValue: 'Use an uploaded image' })}
+        description={t('appearance.whiteLabel.linkDocument.description', {
+          defaultValue:
+            'Pick an image you have already uploaded to Documents. The document itself is left as it is.',
+        })}
+        onDocumentSelected={async (document: IDocument) => {
+          onSelectDocumentId(document.document_id);
+        }}
+      />
+    );
+
+  /** A mark cut from the wide logo leaves that logo alone — say so only then. */
+  const marksWideSource = (variant: 'default' | 'dark') => {
+    const mark = logoInfo?.[variant];
+    const wide = logoInfo?.[variant === 'dark' ? 'wide-dark' : 'wide'];
+    return !mark?.cropSourceUrl || (!!wide?.url && mark.cropSourceUrl === wide.url);
+  };
+  const markCropHelp = (variant: 'default' | 'dark') => (marksWideSource(variant)
+    ? t('clientPortal.branding.cropHelp', {
+        defaultValue:
+          'Drag and zoom to choose the part shown in the portal side panel and every circular frame. Your wide logo is not changed.',
+      })
+    : t('clientPortal.branding.cropHelpFromSquare', {
+        defaultValue:
+          'Drag and zoom to choose the part shown in the portal side panel and every circular frame. Only the mark is changed, so you can adjust it again later.',
+      }));
 
   const squareWarning = t('clientPortal.branding.warnings.expectSquare', {
     defaultValue:
@@ -568,8 +653,16 @@ const ClientPortalSettings = () => {
                     entityId={tenantId}
                     entityName={clientName || 'Client Portal'}
                     imageUrl={logoUrl}
+                    wideImageUrl={logoWideUrl || null}
+                    cropSourceUrl={logoInfo?.default.cropSourceUrl ?? null}
+                    imageFileName={logoInfo?.default.fileName ?? null}
                     uploadAction={handleLogoUpload('default')}
                     deleteAction={handleLogoDelete('default')}
+                    recropAction={handleLogoRecrop('default')}
+                    linkDocumentAsAvatar={handleLogoLink('default')}
+                    renderDocumentSelector={renderLogoDocumentSelector('default')}
+                    cropWideToSquare
+                    cropHelpText={markCropHelp('default')}
                     onImageChange={(newLogoUrl) => {
                       setLogoUrl(newLogoUrl || '');
                     }}
@@ -595,8 +688,16 @@ const ClientPortalSettings = () => {
                     entityId={tenantId}
                     entityName={clientName || 'Client Portal'}
                     imageUrl={logoDarkUrl}
+                    wideImageUrl={logoWideDarkUrl || null}
+                    cropSourceUrl={logoInfo?.dark.cropSourceUrl ?? null}
+                    imageFileName={logoInfo?.dark.fileName ?? null}
                     uploadAction={handleLogoUpload('dark')}
                     deleteAction={handleLogoDelete('dark')}
+                    recropAction={handleLogoRecrop('dark')}
+                    linkDocumentAsAvatar={handleLogoLink('dark')}
+                    renderDocumentSelector={renderLogoDocumentSelector('dark')}
+                    cropWideToSquare
+                    cropHelpText={markCropHelp('dark')}
                     onImageChange={(newLogoUrl) => {
                       setLogoDarkUrl(newLogoUrl || '');
                     }}
@@ -628,8 +729,11 @@ const ClientPortalSettings = () => {
                         entityId={tenantId}
                         entityName={clientName || 'Client Portal'}
                         imageUrl={logoWideUrl}
+                        imageFileName={logoInfo?.wide.fileName ?? null}
                         uploadAction={handleLogoUpload('wide')}
                         deleteAction={handleLogoDelete('wide')}
+                        linkDocumentAsAvatar={handleLogoLink('wide')}
+                        renderDocumentSelector={renderLogoDocumentSelector('wide')}
                         onImageChange={(newLogoUrl) => {
                           setLogoWideUrl(newLogoUrl || '');
                         }}
@@ -658,8 +762,11 @@ const ClientPortalSettings = () => {
                         entityId={tenantId}
                         entityName={clientName || 'Client Portal'}
                         imageUrl={logoWideDarkUrl}
+                        imageFileName={logoInfo?.['wide-dark'].fileName ?? null}
                         uploadAction={handleLogoUpload('wide-dark')}
                         deleteAction={handleLogoDelete('wide-dark')}
+                        linkDocumentAsAvatar={handleLogoLink('wide-dark')}
+                        renderDocumentSelector={renderLogoDocumentSelector('wide-dark')}
                         onImageChange={(newLogoUrl) => {
                           setLogoWideDarkUrl(newLogoUrl || '');
                         }}

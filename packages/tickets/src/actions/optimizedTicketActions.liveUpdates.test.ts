@@ -19,6 +19,11 @@ const ticketUpdates: Record<string, unknown>[] = [];
 // transaction resolves, matching production's flush-after-commit semantics.
 const afterCommitHooksQueue: Array<() => unknown | Promise<unknown>> = [];
 
+vi.mock('@alga-psa/shared/lib/tickets/ticketLifecycleEvents', () => ({
+  publishTicketTransitionsAfterCommit: vi.fn(async () => []),
+  captureTicketTransitionSnapshot: vi.fn(async () => null),
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),
@@ -75,6 +80,12 @@ vi.mock('@alga-psa/formatting/blocknoteUtils', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: (...args: any[]) => publishEventMock(...args),
   publishWorkflowEvent: (...args: any[]) => publishWorkflowEventMock(...args),
+  // Comment-publication outbox replay (persisted intent, dispatched after commit).
+  publishStoredWorkflowEvent: (...args: any[]) => publishEventMock(...args),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/event-bus', () => ({
@@ -119,8 +130,16 @@ vi.mock('../lib/workflowTicketCommunicationEvents', () => ({
   buildTicketCommunicationWorkflowEvents: vi.fn(() => []),
 }));
 
-vi.mock('../lib/workflowTicketSlaStageEvents', () => ({
+vi.mock('@alga-psa/shared/services/tickets/ticketSlaStageEvents', () => ({
   buildTicketResolutionSlaStageCompletionEvent: vi.fn(() => null),
+  // The real helper publishes through publishWorkflowEvent with the event's own idempotency key.
+  publishWorkflowTicketSlaStageEvent: (event: any, ctx: any) =>
+    publishWorkflowEventMock({
+      eventType: event.eventType,
+      payload: event.payload,
+      ctx,
+      idempotencyKey: event.idempotencyKey,
+    }),
 }));
 
 vi.mock('../lib/validateTicketClosure', () => ({
@@ -129,6 +148,74 @@ vi.mock('../lib/validateTicketClosure', () => ({
 
 vi.mock('./ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: vi.fn(async () => undefined),
+  revertBundlePropagationForChild: vi.fn(async () => undefined),
+  previewBundleStatusPropagation: vi.fn(async () => ({
+    mode: 'sync_updates',
+    masterTicketId: '',
+    newStatusId: '',
+    crossesBoundary: null,
+    affectedChildren: [],
+    unaffectedChildren: [],
+  })),
+  // Non-boundary propagation is the legacy mirror-to-all-children path; mirror
+  // it here so the live-update fan-out assertions keep exercising the shared
+  // registry contract without a real database.
+  propagateBundleMasterStatus: vi.fn(
+    async (
+      trx: any,
+      ctx: { tenant: string; user: { user_id: string } },
+      masterId: string,
+      updateData: Record<string, unknown>,
+    ) => {
+      const { registerAfterCommit } = await import('@alga-psa/db');
+      const { publishTicketUpdate, diffTicketFields } = await import('../lib/liveUpdates');
+
+      const propagateFields: Record<string, unknown> = {};
+      for (const key of ['status_id', 'assigned_to', 'priority_id', 'closed_by', 'closed_at']) {
+        if (Object.prototype.hasOwnProperty.call(updateData, key)) {
+          propagateFields[key] = updateData[key];
+        }
+      }
+      if (Object.keys(propagateFields).length === 0) {
+        return { propagated: false, action: null, affectedChildIds: [] };
+      }
+
+      const childRows = await trx('tickets')
+        .where({ master_ticket_id: masterId })
+        .select(['ticket_id', 'status_id', 'assigned_to', 'priority_id', 'closed_at', 'closed_by']);
+
+      const childPublishes = childRows
+        .map((child: Record<string, unknown>) => ({
+          ticketId: child.ticket_id as string,
+          updatedFields: diffTicketFields(child, propagateFields),
+        }))
+        .filter((publish: { updatedFields: string[] }) => publish.updatedFields.length > 0);
+
+      const propagate = { ...propagateFields, updated_by: ctx.user.user_id, updated_at: new Date().toISOString() };
+      await trx('tickets').where({ master_ticket_id: masterId }).update(propagate);
+
+      for (const publish of childPublishes) {
+        registerAfterCommit(
+          trx,
+          () =>
+            publishTicketUpdate({
+              tenantId: ctx.tenant,
+              ticketId: publish.ticketId,
+              updatedFields: publish.updatedFields,
+              updatedBy: { userId: ctx.user.user_id, displayName: 'Test User' },
+              updatedAt: propagate.updated_at as string,
+            }),
+          `ticket-live-update ticket=${publish.ticketId}`,
+        );
+      }
+
+      return {
+        propagated: false,
+        action: null,
+        affectedChildIds: childRows.map((child: Record<string, unknown>) => child.ticket_id as string),
+      };
+    },
+  ),
 }));
 
 import {
@@ -388,6 +475,31 @@ describe('updateTicketWithCache live updates', () => {
     );
   });
 
+  it('status clock: a status change includes the status_changed_at CASE patch in the tickets UPDATE', async () => {
+    let capturedTrx: any;
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
+      capturedTrx = buildTrx({ currentTicket: makeTicket({ status_id: 'status-1' }) });
+      return callback(capturedTrx);
+    });
+
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+    await expect(updateTicketWithCache('ticket-1', { status_id: 'status-2' })).resolves.toBe('success');
+
+    expect(ticketUpdates[0]).toHaveProperty('status_changed_at');
+    expect(capturedTrx.raw).toHaveBeenCalledWith(
+      expect.stringContaining('CASE WHEN status_id IS DISTINCT FROM ?::uuid THEN ?::timestamptz ELSE status_changed_at END'),
+      ['status-2', expect.any(String)]
+    );
+  });
+
+  it('status clock: an update that does not write status_id never touches status_changed_at', async () => {
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+    await expect(updateTicketWithCache('ticket-1', { title: 'Renamed' })).resolves.toBe('success');
+
+    expect(ticketUpdates[0]).toMatchObject({ title: 'Renamed' });
+    expect(ticketUpdates[0]).not.toHaveProperty('status_changed_at');
+  });
+
   it('T005: permission failure results in zero live-update publishes', async () => {
     hasPermissionMock.mockResolvedValue(false);
 
@@ -399,6 +511,19 @@ describe('updateTicketWithCache live updates', () => {
     );
 
     expect(publishRedisMock).not.toHaveBeenCalled();
+  });
+
+  it('T007: rejects a client-portal caller before any permission check or ticket access', async () => {
+    currentUser = { ...currentUser, user_id: 'client-user-1', user_type: 'client' };
+
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+    const result = await updateTicketWithCache('ticket-1', { status_id: 'status-2' });
+
+    expect(result).toEqual(
+      expect.objectContaining({ permissionError: 'Permission denied: operation not available in client portal' })
+    );
+    expect(hasPermissionMock).not.toHaveBeenCalled();
+    expect(createTenantKnexMock).not.toHaveBeenCalled();
   });
 
   it('T006: bundled child sync publishes one live update per affected child', async () => {
@@ -638,7 +763,7 @@ describe('updateTicketWithCache live updates', () => {
 
   it('publishes suppression flags on TICKET_CLOSED', async () => {
     const { updateTicketWithCache } = await import('./optimizedTicketActions');
-    const slaEvents = await import('../lib/workflowTicketSlaStageEvents');
+    const slaEvents = await import('@alga-psa/shared/services/tickets/ticketSlaStageEvents');
     (slaEvents.buildTicketResolutionSlaStageCompletionEvent as any).mockReturnValueOnce({
       eventType: 'TICKET_SLA_STAGE_MET',
       payload: {
@@ -746,17 +871,23 @@ describe('updateTicketWithCache live updates', () => {
 
     expect(ticketUpdates[0]).toEqual({
       status_id: 'closed-status-1',
+      status_changed_at: expect.anything(),
       response_state: null,
+      updated_at: expect.anything(),
+      updated_by: 'user-1',
     });
     expect(publishRedisMock).toHaveBeenCalledWith(
       'alga-psa:ticket-updates:tenant-1:ticket-1',
       expect.stringContaining('"updatedFields":["status_id","response_state"]')
     );
-    expect(publishEventMock).toHaveBeenCalledWith({
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith({
       eventType: 'TICKET_RESPONSE_STATE_CHANGED',
-      payload: {
+      ctx: expect.objectContaining({
         tenantId: 'tenant-1',
         occurredAt: expect.any(String),
+        actor: { actorType: 'USER', actorUserId: 'user-1' },
+      }),
+      payload: {
         ticketId: 'ticket-1',
         userId: 'user-1',
         previousResponseState: 'awaiting_client',

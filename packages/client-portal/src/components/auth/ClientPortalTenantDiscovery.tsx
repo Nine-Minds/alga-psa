@@ -12,9 +12,11 @@ import toast from 'react-hot-toast';
 
 interface ClientPortalTenantDiscoveryProps {
   callbackUrl?: string;
+  /** Rendered above the card — used to explain a sign-in failure that redirected here. */
+  notice?: React.ReactNode;
 }
 
-export default function ClientPortalTenantDiscovery({ callbackUrl }: ClientPortalTenantDiscoveryProps) {
+export default function ClientPortalTenantDiscovery({ callbackUrl, notice }: ClientPortalTenantDiscoveryProps) {
   const { t } = useTranslation('client-portal');
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,7 +94,8 @@ export default function ClientPortalTenantDiscovery({ callbackUrl }: ClientPorta
   }
 
   return (
-    <div className="min-h-screen auth-page-surface flex items-center justify-center p-8">
+    <div className="min-h-screen auth-page-surface flex flex-col items-center justify-center p-8 gap-4">
+      {notice}
       <Card className="max-w-md w-full bg-white shadow-xl">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">

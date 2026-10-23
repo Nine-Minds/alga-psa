@@ -12,6 +12,8 @@ import { loadEnterpriseInactiveLoginWinbackHook } from '../lib/winback/enterpris
 interface AuthenticateUserOptions {
     tenantId?: string;
     tenantSlug?: string;
+    /** Vanity client-portal host the attempt arrived on, when no slug came with it. */
+    portalDomain?: string;
     requireTenantMatch?: boolean;
 }
 
@@ -28,6 +30,81 @@ async function triggerInactiveLoginWinback(user: IUser): Promise<void> {
     await hook({ tenantId: user.tenant });
 }
 
+/** Tenant that owns an active portal domain, or null. */
+async function resolveTenantFromPortalDomain(portalDomain: string): Promise<string | null> {
+    const normalized = portalDomain.trim().toLowerCase();
+    if (!normalized) {
+        return null;
+    }
+
+    try {
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
+        const { getPortalDomainByHostname } = await import('../lib/PortalDomainModel');
+        const knex = await getAdminConnection();
+
+        const candidates = normalized.includes(':')
+            ? [normalized, normalized.replace(/:\d+$/, '')]
+            : [normalized];
+
+        for (const candidate of candidates) {
+            const record = await getPortalDomainByHostname(knex, candidate);
+            if (record?.status === 'active') {
+                return record.tenant;
+            }
+        }
+
+        logger.warn('[authenticateUser] No active portal domain for host', { portalDomain: normalized });
+        return null;
+    } catch (error) {
+        logger.warn('[authenticateUser] Failed to resolve tenant from portal domain', {
+            portalDomain: normalized,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        return null;
+    }
+}
+
+/**
+ * Client sign-in with no tenant in hand. The old `.first()` lookup answered an
+ * arbitrary tenant here, so an email with client users in two portals could be
+ * authenticated against — and handed off to — the wrong MSP. Look at every
+ * match instead, and when the credentials prove out in more than one tenant,
+ * refuse and let the form ask which organization was meant. Only an attempt
+ * that already knows the password learns that the email spans tenants.
+ */
+async function resolveUnscopedClientUser(
+    normalizedEmail: string,
+    password: string,
+): Promise<IUser | undefined> {
+    const candidates = await User.findUsersByEmailAndType(normalizedEmail, 'client');
+
+    if (candidates.length <= 1) {
+        return candidates[0];
+    }
+
+    const authenticated: IUser[] = [];
+    for (const candidate of candidates) {
+        if (candidate.is_inactive || !candidate.hashed_password) {
+            continue;
+        }
+        if (await verifyPassword(password, candidate.hashed_password)) {
+            authenticated.push(candidate);
+        }
+    }
+
+    const tenants = new Set(authenticated.map((candidate) => candidate.tenant));
+    if (tenants.size > 1) {
+        logger.warn('[authenticateUser] Email resolves to client users in multiple tenants', {
+            email: normalizedEmail,
+            tenantCount: tenants.size,
+        });
+        const { TenantRequiredError } = await import('../lib/security/loginProtection');
+        throw new TenantRequiredError();
+    }
+
+    return authenticated[0];
+}
+
 export async function authenticateUser(
     email: string,
     password: string,
@@ -39,6 +116,7 @@ export async function authenticateUser(
         userType,
         hasTenantId: Boolean(options.tenantId),
         hasTenantSlug: Boolean(options.tenantSlug),
+        hasPortalDomain: Boolean(options.portalDomain),
     });
 
     if (!email || !password) {
@@ -68,10 +146,20 @@ export async function authenticateUser(
         }
     }
 
+    // A vanity client-portal host identifies its tenant just as well as a slug,
+    // and is all the handoff round-trip carries.
+    let tenantFromPortalDomain = false;
+    if (!resolvedTenantId && options.portalDomain && userType === 'client') {
+        resolvedTenantId = await resolveTenantFromPortalDomain(options.portalDomain);
+        tenantFromPortalDomain = Boolean(resolvedTenantId);
+    }
+
     let user: IUser | undefined;
     if (userType === 'client' || userType === 'internal') {
         if (resolvedTenantId) {
             user = await User.findUserByEmailTenantAndType(normalizedEmail, resolvedTenantId, userType);
+        } else if (userType === 'client') {
+            user = await resolveUnscopedClientUser(normalizedEmail, password);
         } else {
             user = await User.findUserByEmailAndType(normalizedEmail, userType);
         }
@@ -85,7 +173,7 @@ export async function authenticateUser(
     }
 
     if (
-        (options.requireTenantMatch || Boolean(options.tenantSlug)) &&
+        (options.requireTenantMatch || Boolean(options.tenantSlug) || tenantFromPortalDomain) &&
         resolvedTenantId &&
         user.tenant !== resolvedTenantId
     ) {

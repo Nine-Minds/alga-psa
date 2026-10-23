@@ -12,11 +12,14 @@
   "phasesAndTasks": "Fases y Tareas",
   "kanbanView": "Kanban",
   "listView": "Lista",
+  "ganttView": "Cronograma",
   "task": "tarea",
   "tasks": {
     "title": "Tareas",
     "noTasks": "No hay tareas para mostrar",
     "taskName": "Nombre",
+    "startDate": "Fecha de inicio",
+    "startsOn": "Inicia el {{date}}",
     "dueDate": "Fecha de vencimiento",
     "status": "Estado",
     "assignedTo": "Asignado a",
@@ -77,7 +80,14 @@
     "markedComplete": "Fase marcada como completada",
     "reopened": "Fase reabierta",
     "completeReadyToast": "{{description}} está listo para facturar",
-    "viewInBilling": "Ver"
+    "viewInBilling": "Ver",
+    "serviceLabel": "Servicio predeterminado (para partes de tiempo)",
+    "noService": "Sin servicio",
+    "servicePlaceholder": "Seleccionar servicio predeterminado",
+    "serviceHelp": "Se usa en los partes de tiempo de las tareas de esta fase cuando la propia tarea no define un servicio.",
+    "serviceDisplayLabel": "Servicio",
+    "taskCount_few": "{{count}} tareas",
+    "taskCount_many": "{{count}} tareas"
   },
   "projectList": {
     "addProject": "Agregar proyecto",
@@ -122,7 +132,8 @@
       "taskType": "Tipo",
       "actions": "Acciones"
     },
-    "unknownUser": "Desconocido"
+    "unknownUser": "Desconocido",
+    "searchSmart": "Buscar proyectos, tareas y comentarios… Intro para búsqueda inteligente"
   },
   "quickAdd": {
     "title": "Agregar nuevo proyecto",
@@ -137,6 +148,10 @@
     "projectManagerPlaceholder": "Seleccionar responsable",
     "budgetedHoursLabel": "Horas presupuestadas",
     "budgetedHoursPlaceholder": "Ingresar horas presupuestadas",
+    "serviceLabel": "Servicio predeterminado (para partes de tiempo)",
+    "noService": "Sin servicio",
+    "servicePlaceholder": "Seleccionar servicio predeterminado",
+    "serviceHelp": "Se usa en los partes de tiempo de este proyecto cuando ni la tarea ni su fase definen un servicio.",
     "startDateLabel": "Fecha de inicio",
     "startDatePlaceholder": "Seleccionar fecha de inicio",
     "endDateLabel": "Fecha de fin",
@@ -177,7 +192,11 @@
     "continueEditing": "Seguir editando",
     "discardChanges": "Descartar cambios",
     "saveAndClose": "Guardar y cerrar",
-    "saving": "Guardando..."
+    "saving": "Guardando...",
+    "serviceLabel": "Servicio predeterminado (para partes de tiempo)",
+    "noService": "Sin servicio",
+    "servicePlaceholder": "Seleccionar servicio predeterminado",
+    "serviceHelp": "Se usa en los partes de tiempo de este proyecto cuando ni la tarea ni su fase definen un servicio."
   },
   "projectDetail": {
     "allAgents": "Todos los agentes",
@@ -272,6 +291,7 @@
     "taskActions": "Acciones de tarea",
     "priorityLevel": "Nivel de prioridad: {{priority}}",
     "dueLabel": "Vencimiento",
+    "startsLabel": "Inicio",
     "noDueDate": "Sin fecha de vencimiento",
     "hideTags": "Ocultar etiquetas",
     "criticalPath": "Ruta crítica",
@@ -294,7 +314,11 @@
     "bulkTagsSuccess_other": "Etiquetas añadidas a {{count}} tareas",
     "bulkTagsPartial": "No se pudieron añadir etiquetas a algunas tareas",
     "bulkTagsFailure": "No se pudieron añadir etiquetas a las tareas seleccionadas",
-    "taskTypeFallback": "Tarea"
+    "taskTypeFallback": "Tarea",
+    "timeline": "Cronograma",
+    "loadingTimeline": "Cargando cronograma...",
+    "bulkTagsSuccess_few": "Etiquetas añadidas a {{count}} tareas",
+    "bulkTagsSuccess_many": "Etiquetas añadidas a {{count}} tareas"
   },
   "taskForm": {
     "addTitle": "Agregar tarea",
@@ -408,7 +432,20 @@
     "movedSuccess": "Tarea movida correctamente",
     "duplicatedSuccess": "¡La tarea \"{{taskName}}\" se duplicó correctamente!",
     "willBeSetOnCreate": "Se establecerá al crearla",
-    "unknownPhase": "Fase desconocida"
+    "unknownPhase": "Fase desconocida",
+    "serviceInheritedFromPhase": "Hereda {{service}} de la fase.",
+    "serviceInheritedFromProject": "Hereda {{service}} del proyecto.",
+    "startDateLabel": "Fecha de inicio",
+    "taskStartDateLabel": "Fecha de inicio de la tarea",
+    "startDatePlaceholder": "Seleccionar fecha de inicio",
+    "createdTicketsIntro_few": "Has creado {{count}} tickets durante esta sesión:",
+    "createdTicketsIntro_many": "Has creado {{count}} tickets durante esta sesión:",
+    "documentCleanupFailure_few": "No se pudieron eliminar {{count}} documentos y permanecerán en Documentos",
+    "documentCleanupFailure_many": "No se pudieron eliminar {{count}} documentos y permanecerán en Documentos",
+    "documentsCleanupIntro_few": "Tiene {{count}} documentos que fueron {{cleanupType}}:",
+    "documentsCleanupIntro_many": "Tiene {{count}} documentos que fueron {{cleanupType}}:",
+    "ticketCleanupFailure_few": "No se pudieron eliminar {{count}} tickets",
+    "ticketCleanupFailure_many": "No se pudieron eliminar {{count}} tickets"
   },
   "taskDependencies": {
     "title": "Dependencias",
@@ -508,7 +545,14 @@
     "linkedToTaskSuccess": "Ticket vinculado a la tarea correctamente",
     "failedLoadTask": "No se pudo cargar la tarea",
     "clientFallback": "Cliente",
-    "defaultNewStatus": "Nuevo"
+    "defaultNewStatus": "Nuevo",
+    "billUnderProjectLabel": "Facturar el tiempo de este ticket como tiempo del proyecto",
+    "billingOffBadge": "Facturado a nivel de cliente",
+    "billingOnTooltip": "Dejar de facturar el tiempo de este ticket como tiempo del proyecto",
+    "billingOffTooltip": "Facturar el tiempo de este ticket como tiempo del proyecto",
+    "billingOnSuccess": "El tiempo de este ticket se facturará como tiempo del proyecto",
+    "billingOffSuccess": "El tiempo de este ticket se facturará a nivel de cliente",
+    "billingUpdateFailed": "No se pudo actualizar la facturación del ticket"
   },
   "materials": {
     "title": "Materiales del proyecto",
@@ -601,6 +645,7 @@
       "priority": "Prioridad",
       "assignedTo": "Asignado a",
       "assignedTeam": "Equipo asignado",
+      "startDate": "Fecha de inicio",
       "dueDate": "Fecha de vencimiento",
       "estimatedHours": "Horas estimadas",
       "actualHours": "Horas reales",
@@ -611,7 +656,13 @@
     },
     "exportSelected": "Exportar {{count}} seleccionada(s)",
     "selectedTasksNotice_one": "Exportando {{count}} tarea seleccionada.",
-    "selectedTasksNotice_other": "Exportando {{count}} tareas seleccionadas."
+    "selectedTasksNotice_other": "Exportando {{count}} tareas seleccionadas.",
+    "phasesSelected_few": "{{selected}} de {{total}} fases seleccionadas",
+    "phasesSelected_many": "{{selected}} de {{total}} fases seleccionadas",
+    "selectedTasksNotice_few": "Exportando {{count}} tareas seleccionadas.",
+    "selectedTasksNotice_many": "Exportando {{count}} tareas seleccionadas.",
+    "success_few": "Se exportaron {{count}} tareas correctamente a CSV.",
+    "success_many": "Se exportaron {{count}} tareas correctamente a CSV."
   },
   "import": {
     "title": "Importar fases y tareas",
@@ -619,7 +670,7 @@
     "requiredFields": "Obligatorio:",
     "requiredFieldsList": "task_name",
     "optionalFields": "Opcional:",
-    "optionalFieldsList": "phase_name, task_description, assigned_to, estimated_hours, due_date, priority, service, task_type, status, tags",
+    "optionalFieldsList": "phase_name, task_description, assigned_to, estimated_hours, start_date, due_date, priority, service, task_type, status, tags",
     "noteLabel": "Nota:",
     "defaultPhaseNote": "Las tareas sin phase_name se agruparán en \"{{phaseName}}\"",
     "downloadTemplate": "Descargar plantilla CSV",
@@ -708,6 +759,7 @@
       "assigned_to": "Asignado a",
       "estimated_hours": "Horas estimadas",
       "actual_hours": "Horas reales",
+      "start_date": "Fecha de inicio",
       "due_date": "Fecha de vencimiento",
       "priority": "Prioridad",
       "service": "Servicio",
@@ -731,7 +783,9 @@
     "statusUnmatchedTooltip": "El estado no coincide con ningún estado existente para esta fase. Resuélvalo en los pasos de mapeo antes de importar.",
     "statusFallbackSuffix": "Predeterminado",
     "statusFallbackTooltip": "Usando el estado predeterminado de respaldo para esta fase.",
-    "inPhaseBadge": "en {{phase}}"
+    "inPhaseBadge": "en {{phase}}",
+    "taskCountLabel_few": "({{count}} tareas)",
+    "taskCountLabel_many": "({{count}} tareas)"
   },
   "dialogs": {
     "moveTask": {
@@ -803,7 +857,11 @@
       "task": "Tarea",
       "tasks": "Tareas",
       "badgeCount_other": "{{count}} Tareas",
-      "badgeCount_one": "{{count}} Tarea"
+      "badgeCount_one": "{{count}} Tarea",
+      "billsToProject": "El tiempo se factura como tiempo del proyecto",
+      "billsToClient": "El tiempo se factura a nivel de cliente",
+      "badgeCount_few": "{{count}} Tareas",
+      "badgeCount_many": "{{count}} Tareas"
     },
     "bulkMoveTask": {
       "title": "Mover tareas",
@@ -907,7 +965,7 @@
       "choose_status": "Elegir un estado",
       "no_statuses_available": "No hay estados disponibles",
       "no_statuses_available_hint": "Primero cree estados en Configuración → Proyectos → Estados.",
-      "task_status_library_title": "Biblioteca de estados de tareas del proyecto",
+      "task_status_library_title": "Biblioteca de estados de tareas",
       "task_status_library_description": "Administre los estados de las tareas de los proyectos de su organización. Estos estados se pueden usar en todos los proyectos.",
       "task_status_library_empty": "No se encontraron estados de tareas del proyecto",
       "task_status_library_empty_hint": "Cree su primer estado para comenzar",
@@ -947,12 +1005,33 @@
       "last_closed_error": "Al menos un estado debe permanecer marcado como cerrado",
       "last_closed_delete_error": "No se puede eliminar el último estado cerrado para este tipo.",
       "addStatus": "Agregar nuevo estado",
-      "add_from_library": "Agregar estado"
+      "add_from_library": "Agregar estado",
+      "closed_badge": "(Cerrado)",
+      "drag_to_reorder": "Arrastre para reordenar",
+      "refresh_library": "Actualizar la biblioteca de estados",
+      "all_library_statuses_used": "Todos los estados de la biblioteca ya son una columna aquí. Use «Crear nuevo» para agregar otro.",
+      "delete_no_move_target": "No hay otra columna de estado a la que mover estas tareas. Agregue primero otra columna.",
+      "delete_scope_help": "Esto elimina la columna solo en este alcance. El estado permanece en su Biblioteca de estados de tareas.",
+      "fork_title": "¿Usar columnas de estado personalizadas para esta fase?",
+      "fork_message": "Esta fase dejará de heredar las columnas predeterminadas del proyecto. Las columnas de estado que agregue más adelante a los Valores predeterminados del proyecto no aparecerán aquí hasta que vuelva a cambiar la fase.",
+      "fork_confirm": "Usar estados personalizados",
+      "phase_uses_custom": "Esta fase tiene sus propias columnas de estado y ya no hereda los valores predeterminados del proyecto.",
+      "pending_title": "Cambios sin guardar en las columnas de estado",
+      "pending_apply_hint": "Nada cambia hasta que guarde.",
+      "pending_fork": "{{phase}} pasará a tener sus propias columnas de estado.",
+      "pending_revert": "{{phase}} volverá a las columnas predeterminadas del proyecto.",
+      "pending_order": "Nuevo orden de columnas para {{scope}}.",
+      "pending_preview_hint": "Se muestran las columnas predeterminadas del proyecto como vista previa. Guarde para aplicar el cambio y después podrá añadir o quitar columnas aquí.",
+      "rename_impact_title": "Dónde se aplica este cambio de nombre",
+      "rename_impact_following": "Adopta este cambio de nombre de inmediato: {{columns}} columna(s) en {{projects}}.",
+      "rename_impact_keeping": "Conserva el nombre «{{name}}»: {{columns}} columna(s) en {{projects}}. Estas columnas no están vinculadas a este estado de su Biblioteca de estados de tareas, por lo que esos proyectos seguirán informando el nombre anterior hasta que cambie el nombre de la columna allí.",
+      "rename_impact_more": "y {{remaining}} más",
+      "rename_impact_none": "Este estado todavía no se usa como columna en ningún proyecto."
     }
   },
   "templates": {
     "statuses": {
-      "manage_title": "Gestionar columnas de estado",
+      "manage_title": "Columnas de estado de tareas",
       "manage_description": "Defina las columnas de estado para las tareas en esta plantilla. Arrastre para reordenar.",
       "template_defaults": "Valores predeterminados de la plantilla",
       "added": "Columna de estado agregada",
@@ -978,7 +1057,8 @@
       "replaced": "Columna de estado reemplazada",
       "replace_failed": "No se pudo reemplazar la columna de estado",
       "repair_status_columns": "Reparar columnas de estado",
-      "unresolved_apply_guard": "Las columnas de estado requieren reparación ({{count}})"
+      "unresolved_apply_guard": "Las columnas de estado requieren reparación ({{count}})",
+      "pending_row_hint": "Complete la columna de estado vacía antes de agregar otra."
     },
     "list": {
       "title": "Plantillas de proyecto",
@@ -1157,7 +1237,9 @@
       "taskCount_other": "{{count}} tareas",
       "unknownUser": "Desconocido",
       "unknownTask": "Tarea desconocida",
-      "checklistCountTitle": "{{count}} elemento de lista"
+      "checklistCountTitle": "{{count}} elemento de lista",
+      "taskCount_few": "{{count}} tareas",
+      "taskCount_many": "{{count}} tareas"
     },
     "taskForm": {
       "addTitle": "Agregar tarea",
@@ -1195,6 +1277,9 @@
       "statusColumnLabel": "Columna de estado",
       "estimatedHoursLabel": "Horas estimadas",
       "durationLabel": "Duración (días)",
+      "startOffsetLabel": "Desfase de inicio (días)",
+      "startOffsetPlaceholder": "Sin fecha de inicio",
+      "phaseRelativeHint": "El desfase de inicio y la duración se cuentan en días desde el inicio de la fase: la tarea empieza después del desfase y vence después de la duración.",
       "taskTypeLabel": "Tipo de tarea",
       "priorityLabel": "Prioridad",
       "primaryAgentLabel": "Agente principal",
@@ -1263,6 +1348,7 @@
         "service": "Servicio (para partes de tiempo)",
         "estimatedHours": "Horas estimadas",
         "duration": "Duración (días)",
+        "startOffset": "Desfase de inicio (días)",
         "durationSummaryShort": "{{days}} días",
         "taskType": "Tipo de tarea",
         "priority": "Prioridad",
@@ -1409,22 +1495,14 @@
     "addPhase": "Añadir fase",
     "phaseNamePlaceholder": "Nombre de la fase… *",
     "descriptionPlaceholder": "Descripción",
+    "serviceLabel": "Servicio predeterminado (para partes de tiempo)",
+    "noService": "Sin servicio",
+    "servicePlaceholder": "Seleccionar servicio predeterminado",
+    "serviceHelp": "Se usa en los partes de tiempo de las tareas de esta fase cuando la propia tarea no define un servicio.",
     "adding": "Añadiendo…",
     "addError": "Error al añadir la fase. Inténtelo de nuevo.",
     "title": "Fases del proyecto",
     "import": "Importar"
-  },
-  "addStatusDialog": {
-    "phaseTitle": "Agregar estado de fase desde la biblioteca",
-    "projectTitle": "Agregar estado desde la biblioteca",
-    "selectLabel": "Seleccionar de la biblioteca de estados",
-    "placeholder": "Elegir un estado",
-    "helpText": "Seleccione un estado de la biblioteca de su inquilino para agregar a este proyecto.",
-    "noStatusesTitle": "No hay estados disponibles",
-    "noStatusesDescription": "Cree estados en Configuración → Proyectos → Estados.",
-    "adding": "Agregando...",
-    "addStatus": "Agregar estado",
-    "addFailed": "Error al agregar el estado. Inténtelo de nuevo."
   },
   "taskStatusSelect": {
     "ariaLabel": "Estado de la tarea",
@@ -1475,6 +1553,7 @@
       "fields": {
         "taskNames": "nombres de tareas",
         "descriptions": "descripciones",
+        "startDates": "fechas de inicio",
         "dueDates": "fechas de vencimiento",
         "status": "estado",
         "assignees": "asignados",
@@ -1489,6 +1568,7 @@
     "fieldLabels": {
       "task_name": "Nombre de tarea",
       "description": "Descripción",
+      "start_date": "Fecha de inicio",
       "due_date": "Fecha de vencimiento",
       "status": "Estado",
       "assigned_to": "Asignado a",
@@ -1508,7 +1588,7 @@
     "statusColor": "Color del estado",
     "changeColor": "Cambiar color",
     "markClosed": "Marcar como estado cerrado",
-    "markClosedDescription": "Las tareas en estados cerrados se consideran completadas",
+    "markClosedDescription": "Las tareas con este estado se considerarán completadas",
     "creating": "Creando...",
     "createButton": "Crear estado",
     "nameRequired": "El nombre del estado es obligatorio",
@@ -1569,7 +1649,9 @@
       "submitting": "Añadiendo etiquetas...",
       "confirm_one": "Añadir etiquetas a {{count}} tarea",
       "confirm_other": "Añadir etiquetas a {{count}} tareas",
-      "failedHeading": "No se pudieron añadir etiquetas a las siguientes tareas:"
+      "failedHeading": "No se pudieron añadir etiquetas a las siguientes tareas:",
+      "confirm_few": "Añadir etiquetas a {{count}} tareas",
+      "confirm_many": "Añadir etiquetas a {{count}} tareas"
     }
   },
   "common:actions": {
@@ -1632,7 +1714,9 @@
       "lockedSummary_other": "{{count}} entradas por un total de {{amount}} están bloqueadas y no cambiarán.",
       "edit": "Editar condiciones",
       "saved": "Condiciones de facturación actualizadas",
-      "dialogTitle": "Editar condiciones de facturación"
+      "dialogTitle": "Editar condiciones de facturación",
+      "lockedSummary_few": "{{count}} entradas por un total de {{amount}} están bloqueadas y no cambiarán.",
+      "lockedSummary_many": "{{count}} entradas por un total de {{amount}} están bloqueadas y no cambiarán."
     },
     "setup": {
       "title": "Facturar este proyecto",
@@ -1747,6 +1831,7 @@
     "cap": {
       "title": "Límite presupuestario",
       "hint": "El tiempo y los materiales se facturan según las tarifas hasta un límite máximo opcional.",
+      "currencyStale": "El límite guardado está en {{projectCurrency}}, moneda en la que no se emiten las facturas de este proyecto. Introduzca el límite en {{invoiceCurrency}} para pasar este proyecto a {{invoiceCurrency}}; hasta entonces no se aplica ningún límite. El nuevo límite cuenta desde cero: los importes ya facturados no se trasladan.",
       "amount": "Importe del límite ({{currency}})",
       "behavior": "Al alcanzarlo",
       "notify": "Solo notificar",
@@ -1797,7 +1882,8 @@
       "tmHardHint": "Límite estricto de {{cap}} — la facturación se detiene en el límite",
       "tmNotifyHint": "Límite presupuestario de {{cap}} — solo notificar",
       "thresholdMarker": "Umbral de notificación del {{pct}} %",
-      "writtenDown": "Dado de baja por encima del límite: {{amount}}"
+      "writtenDown": "Dado de baja por encima del límite: {{amount}}",
+      "currencyStale": "Los importes aquí están en {{projectCurrency}}, pero las facturas de este proyecto se emiten en {{invoiceCurrency}}, por lo que un límite presupuestario contabilizado aquí no se aplica."
     },
     "economics": {
       "title": "Rentabilidad de la prestación",
@@ -1870,6 +1956,131 @@
     "errors": {
       "loadRecipient": "No se pudo cargar la información del destinatario",
       "sendFailed": "No se pudo enviar la actualización de estado"
+    }
+  },
+  "gantt": {
+    "title": "Cronograma",
+    "taskColumn": "Fase / Tarea",
+    "zoomLabel": "Escala del cronograma",
+    "zoomDay": "Día",
+    "zoomWeek": "Semana",
+    "zoomMonth": "Mes",
+    "today": "Hoy",
+    "dragHint": "Arrastre una barra para reprogramarla o sus bordes para cambiar la duración.",
+    "displayOptions": "Opciones de visualización",
+    "showBlocking": "Vínculos de bloqueo",
+    "showBlockingHint": "Flechas entre tareas que deben terminar en orden",
+    "showRelated": "Vínculos relacionados",
+    "showRelatedHint": "Líneas punteadas entre tareas relacionadas",
+    "showCriticalPath": "Ruta crítica",
+    "showCriticalPathHint": "Resalte las tareas que determinan la fecha de finalización",
+    "hideClosed": "Ocultar tareas completadas",
+    "hideClosedHint": "Mostrar solo el trabajo que sigue abierto",
+    "legend": "Leyenda",
+    "legendScheduled": "Fechas definidas en la tarea",
+    "legendInferred": "Fechas estimadas (sin fechas definidas)",
+    "legendProgress": "La parte más oscura muestra el progreso",
+    "legendOverdue": "Vencida",
+    "legendClosed": "Completada",
+    "legendCritical": "Ruta crítica: un retraso aquí retrasa la finalización",
+    "legendBlocking": "Bloqueo: debe terminar primero",
+    "legendViolated": "Conflicto de dependencia: empieza antes de que termine la tarea que la bloquea",
+    "legendRelated": "Relacionada: sin efecto en las fechas",
+    "keyboardHint": "Teclado: enfoque una barra; Alt + ← / → la mueve un día y Mayús + ← / → cambia su fecha de vencimiento.",
+    "export": "Exportar imagen",
+    "exportedAsSvg": "El cronograma era demasiado grande para un PNG, así que se guardó como SVG.",
+    "exportFailed": "No se pudo exportar el cronograma. Inténtelo de nuevo.",
+    "emptyNoPhasesTitle": "Aún no hay fases",
+    "emptyNoPhasesDescription": "Agregue una fase y luego agréguele tareas. Cada tarea aparece aquí como una barra.",
+    "emptyNoTasksTitle": "Aún no hay tareas que mostrar",
+    "emptyNoTasksDescription": "Agregue una tarea para verla aquí. Asígnele una fecha de inicio y una de vencimiento para fijar su barra, o una estimación y el cronograma calculará las fechas.",
+    "emptyFiltered": "Ninguna tarea coincide con los filtros actuales.",
+    "emptyAllClosed": "Todas las tareas están completadas. Desactive «Ocultar tareas completadas» para verlas.",
+    "addPhase": "Agregar fase",
+    "addTask": "Agregar tarea",
+    "addTaskToPhase": "Agregar tarea a esta fase",
+    "expandAll": "Expandir todas las fases",
+    "collapseAll": "Contraer todas las fases",
+    "phaseProgress": "{{closed}} de {{total}} tareas completadas",
+    "blockedBy": "En espera de: {{tasks}}",
+    "assignee": "Asignado a",
+    "phaseOverrun": "Termina después de la fecha límite de la fase ({{date}})",
+    "inferredHint": "Fechas estimadas. Defina una fecha de inicio y una de vencimiento para fijarlas.",
+    "tooltipStatus": "Estado: {{status}}",
+    "tooltipAssignee": "Asignado a: {{name}}",
+    "tooltipProgress": "Progreso: {{percent}} %",
+    "tooltipEstimate": "Estimación: {{hours}} h",
+    "tooltipOverdue": "Vencida",
+    "tooltipConflict": "Empieza antes de que termine una tarea que la bloquea",
+    "tooltipCritical": "En la ruta crítica",
+    "barLabel": "{{task}}, {{range}}",
+    "linkHandle": "Arrastre hasta una tarea que deba esperar a esta",
+    "dependencyAdded": "Dependencia agregada",
+    "tooltipBlocks": "Bloquea: {{tasks}}",
+    "edgeBlockingTitle": "Dependencia de bloqueo",
+    "edgeRelatedTitle": "Tareas relacionadas",
+    "edgeBlockingText": "«{{from}}» debe terminar antes de que «{{to}}» pueda empezar.",
+    "edgeRelatedText": "«{{from}}» y «{{to}}» están relacionadas. Esto no afecta las fechas.",
+    "edgeConflictText": "Las fechas actuales entran en conflicto con esta dependencia.",
+    "removeDependency": "Quitar dependencia",
+    "dependencyRemoved": "Dependencia eliminada",
+    "legendPhase": "Fechas de la fase; la parte más oscura es la proporción de tareas completadas",
+    "legendPhaseOverrun": "Tareas que superan la fecha de fin de la fase",
+    "phaseBandLabel": "{{range}} · {{percent}} % completado",
+    "phaseStartsOn": "Empieza el {{date}} · sin fecha de fin",
+    "phaseEndsOn": "Termina el {{date}} · sin fecha de inicio",
+    "phaseNoDates": "Sin fechas de fase definidas"
+  },
+  "smartSearch": {
+    "run": "Búsqueda inteligente",
+    "runTitle": "Puntuar los proyectos filtrados según esta consulta",
+    "relevanceColumn": "Coincidencia",
+    "relevance": "{{percent}}% relevante",
+    "strong": "Coincidencias fuertes",
+    "possible": "Coincidencias posibles",
+    "unlikely": "Coincidencias improbables",
+    "emptyBucketRunning": "Ninguna todavía",
+    "emptyBucket": "Ninguna",
+    "scoring": "{{scored}} de {{total}} proyectos puntuados",
+    "summary": "{{total}} proyectos puntuados · {{strong}} fuertes · {{possible}} posibles",
+    "cancelled": "Búsqueda cancelada tras {{scored}} de {{total}} proyectos",
+    "errorTitle": "La búsqueda inteligente se detuvo",
+    "starting": "Iniciando búsqueda inteligente…",
+    "rerun": "Los filtros cambiaron. Ejecutar de nuevo",
+    "retry": "Reintentar",
+    "cancel": "Cancelar",
+    "exit": "Volver a la lista",
+    "notConfigured": "La búsqueda inteligente no está configurada en este servidor",
+    "failedCount": "No se pudieron puntuar {{count}} proyectos",
+    "unscored": "Sin puntuar",
+    "addOnRequired": "La búsqueda inteligente requiere el complemento Asistente de IA"
+  },
+  "dependencyGuard": {
+    "blockedTitle": "Esta tarea está bloqueada",
+    "conflictTitle": "Conflicto de dependencia",
+    "blockedStatus": "«{{task}}» sigue esperando a: {{blockers}}.",
+    "startsBeforeBlocker": "«{{task}}» empezaría antes de que «{{other}}» deba terminar.",
+    "endsAfterDependent": "«{{task}}» terminaría después de que «{{other}}» deba empezar.",
+    "more": "Y {{remaining}} más.",
+    "question": "Las dependencias no son obligatorias, así que puede continuar. ¿Desea hacerlo?",
+    "proceed": "Continuar de todos modos",
+    "cancel": "Cancelar"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "Compacto"
+    },
+    "spacious": {
+      "label": "Espacioso"
+    },
+    "decrease": {
+      "title": "Reducir el ancho de las columnas"
+    },
+    "increase": {
+      "title": "Aumentar el ancho de las columnas"
+    },
+    "reset": {
+      "title": "Restablecer el valor predeterminado"
     }
   }
 }

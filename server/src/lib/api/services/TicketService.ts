@@ -1,22 +1,51 @@
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishTicketTransitionsAfterCommit, ticketCreatedPublishedByCaller } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
+import {
+  buildApiTicketCreatedPayload,
+  buildTicketClosedPayload,
+  buildTicketCommentAddedPayload,
+  buildTicketMergedPayload,
+  buildTicketSplitPayload,
+  buildTicketTeamAssignedPayload,
+  buildTicketUpdatedPayload,
+} from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
+import { applyCommentResponseState, publishResponseStateChange, resolveCommentAuthor } from '@alga-psa/shared/lib/tickets/responseState';
 /**
  * Ticket Service
  * Business logic for ticket-related operations
  */
 
-import { reconcileCommentAttachments, canReadCommentAttachment, filterReadableCommentAttachments, canAccessAttachmentTicket } from '@shared/lib/ticketCommentAttachments';
+import { reconcileCommentAttachments, canReadCommentAttachment, filterReadableCommentAttachments, canAccessAttachmentTicket, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import {
-  BaseService, ServiceContext, ListResult, withTransaction, tenantDb } from '@alga-psa/db';
-import { applyVisibilityBoardFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
+  BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit } from '@alga-psa/db';
+import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
+import { applyTicketVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
-import { TICKET_ORIGINS } from '@alga-psa/types';
-import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
+import { TICKET_ORIGINS, type IExternalEntityLink } from '@alga-psa/types';
+import {
+  attachChildrenToBundle,
+  maybeReopenBundleMasterFromChildReply,
+  previewBundleStatusPropagation,
+  propagateBundleMasterStatus,
+  revertBundlePropagationForChild,
+  revertBundlePropagationsForMaster,
+  type BundleAfterCommitPublication,
+  type BundleAttachFailure,
+} from '@alga-psa/tickets/actions/ticketBundleUtils';
+import { BundlePropagationConfirmationRequiredError } from '@alga-psa/tickets/lib/ticketBundlePropagation';
+import {
+  BundleConcurrentModificationError,
+  type ClosedMasterChoice,
+} from '@alga-psa/tickets/lib/ticketBundlePolicy';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
+import {
+  ticketLatestActivitySql,
+} from '@alga-psa/tickets/actions/ticketListSortSql';
 import { enforceTicketCloseRules, TicketCloseValidationError } from '@alga-psa/tickets/lib/validateTicketClosure';
 import { prepareTicketResourceReassignment } from '@alga-psa/db/reassignTicketResources';
 import {
@@ -25,18 +54,34 @@ import {
   getTicketResourcesCore,
   publishTicketResourceEvent,
   removeTicketResourceCore,
-} from '@alga-psa/tickets/lib/ticketResourceCore';
+} from '@alga-psa/shared/services/tickets/ticketResourceCore';
 import {
   TeamAssignmentError,
   assignTeamToTicketCore,
   removeTeamFromTicketCore,
   type RemoveTeamFromTicketOptions,
-} from '@alga-psa/tickets/lib/teamAssignmentCore';
+} from '@alga-psa/shared/services/tickets/teamAssignmentCore';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
-import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { publishNonCatalogWorkflowEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
+import { publishBundleAfterCommitPublication } from '@alga-psa/tickets/lib/ticketBundlePublication';
+import {
+  persistExternalLinksForCreate,
+  publishExternalLinkEvent,
+} from '@alga-psa/tickets/actions/externalLinks/externalLinkPersistence';
 import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from '../middleware/apiMiddleware';
+import { locationAddressSql } from './locationAddressSql';
+import { inboundSenderLabel } from './ticketCommentAuthor';
 import { hasPermission } from '../../auth/rbac';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
+import { resolveAssetTicketContactOptions } from '@alga-psa/shared/models/assetTicketContactModel';
+import { ticketStatusClockPatch } from '@shared/lib/ticketStatusClock';
+import {
+  CommentEmailRecipientsError,
+  prepareCommentEmailRecipients,
+  readCommentEmailRecipients,
+  stripCommentBccFromMetadata,
+} from '@shared/lib/tickets/commentEmailRecipients';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -69,6 +114,7 @@ import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketR
 import { getClientLogoUrl, getContactAvatarUrl, getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { aggregateReactions } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/storage/StorageService';
+import { generateDocumentPreviews, type PreviewGenerationResult } from '@alga-psa/documents/lib/documentPreviewGenerator';
 import { addMaterial, InsufficientStockError, MaterialValidationError } from '@alga-psa/inventory/lib';
 import { v4 as uuidv4 } from 'uuid';
 // import { performanceTracker } from '../../analytics/performanceTracking';
@@ -88,12 +134,72 @@ const TICKET_MOBILE_LIST_FIELDS = [
   'entered_at',
   'closed_at',
   'tags',
+  'master_ticket_id',
+  'bundle_master_ticket_number',
+  'bundle_child_count',
 ];
+
+// Shared with packages/tickets/src/actions/optimizedTicketActions.ts: the
+// fields a bundled child cannot change directly, and the fields a
+// sync_updates master pushes down to its children.
+const BUNDLE_CHILD_LOCKED_FIELDS = ['status_id', 'assigned_to', 'priority_id'] as const;
 
 const TICKET_LIST_FIELD_ALLOWLIST = new Set<string>([
   ...TICKET_MOBILE_LIST_FIELDS,
   'mobile_list',
+  // Selectable on its own; deliberately not part of the mobile_list preset, so
+  // that payload (and its cost) is unchanged for existing mobile callers.
+  'latest_activity_at',
 ]);
+
+/**
+ * The sort keys `GET /api/v1/tickets` accepts, mapped to the physical ORDER BY
+ * term under this service's own join aliases (comp/stat/pri, not the web list's
+ * comp/s/p). This is an allowlist on purpose: the query schema only checks that
+ * `sort` is a string, so before this map an unknown value reached
+ * `orderBy('t.<value>')` and surfaced as a 500 from Postgres instead of a 400.
+ *
+ * `latest_activity_at` carries no fixed SQL — the expression depends on the
+ * tenant and on whether the caller is a client-portal contact (see
+ * ticketLatestActivitySql).
+ */
+type TicketApiSortSpec = { column?: string; activity?: true };
+
+const TICKET_LIST_API_SORT_SQL: Record<string, TicketApiSortSpec> = {
+  ticket_number: { column: 't.ticket_number' },
+  title: { column: 't.title' },
+  entered_at: { column: 't.entered_at' },
+  updated_at: { column: 't.updated_at' },
+  closed_at: { column: 't.closed_at' },
+  due_date: { column: 't.due_date' },
+  client_name: { column: 'comp.client_name' },
+  status_name: { column: 'stat.name' },
+  priority_name: { column: 'pri.priority_name' },
+  latest_activity_at: { activity: true },
+};
+
+/** Long-standing API alias: tickets have no created_at column. */
+const TICKET_LIST_API_SORT_ALIASES: Record<string, string> = {
+  created_at: 'entered_at',
+};
+
+export const TICKET_LIST_API_SORT_KEYS = Object.keys(TICKET_LIST_API_SORT_SQL).sort();
+
+export function resolveTicketListApiSort(sort: string): { field: string; spec: TicketApiSortSpec } {
+  const field = TICKET_LIST_API_SORT_ALIASES[sort] ?? sort;
+  const spec = TICKET_LIST_API_SORT_SQL[field];
+  if (!spec) {
+    throw new ValidationError(
+      `Unknown sort field: ${sort}. Supported values: ${[
+        ...TICKET_LIST_API_SORT_KEYS,
+        ...Object.keys(TICKET_LIST_API_SORT_ALIASES),
+      ]
+        .sort()
+        .join(', ')}`
+    );
+  }
+  return { field, spec };
+}
 
 type TicketNotificationSuppressionInput = {
   suppressContactNotifications?: boolean;
@@ -229,6 +335,43 @@ export interface BundleView {
   settings: { mode: BundleMode; reopen_on_child_reply: boolean } | null;
 }
 
+export type TicketDocumentVariant = 'thumbnail' | 'preview';
+
+// Same job the web composer arms; publishScheduledCommentHandler flips the row
+// to 'published' and dispatches the withheld TICKET_COMMENT_ADDED event.
+const SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
+
+type ScheduledCommentPublication = { publishAt: Date; timeZone: string };
+
+function resolveScheduledCommentPublication(
+  data: { scheduled_publish_at?: string; scheduled_publish_tz?: string },
+  isInternal: boolean,
+): ScheduledCommentPublication | null {
+  if (!data.scheduled_publish_at) return null;
+  const publishAt = new Date(data.scheduled_publish_at);
+  if (Number.isNaN(publishAt.getTime()) || publishAt.getTime() <= Date.now()) {
+    throw new ValidationError('Validation failed', [
+      { path: ['scheduled_publish_at'], message: 'Scheduled publication time must be in the future' },
+    ]);
+  }
+  if (isInternal) {
+    throw new ValidationError('Validation failed', [
+      { path: ['scheduled_publish_at'], message: 'Only client-visible comments can be scheduled' },
+    ]);
+  }
+  if (!data.scheduled_publish_tz) {
+    throw new ValidationError('Validation failed', [
+      { path: ['scheduled_publish_tz'], message: 'A valid IANA time zone is required for scheduled comments' },
+    ]);
+  }
+  return { publishAt, timeZone: data.scheduled_publish_tz };
+}
+
+function isPreviewableMime(mimeType: string | null | undefined): boolean {
+  const mime = (mimeType ?? '').toLowerCase();
+  return mime.startsWith('image/') || mime === 'application/pdf' || mime.startsWith('video/');
+}
+
 export class TicketService extends BaseService<ITicket> {
   constructor() {
     super({
@@ -286,7 +429,12 @@ export class TicketService extends BaseService<ITicket> {
     visibility: ContactVisibilityContext
   ): Knex.QueryBuilder {
     query = query.where('t.client_id', visibility.clientId);
-    return applyVisibilityBoardFilter(query, visibility.visibleBoardIds, 't.board_id');
+    return applyTicketVisibilityFilter(query, visibility, {
+      boardColumn: 't.board_id',
+      contactColumn: 't.contact_name_id',
+      billingProfileColumn: 't.billing_profile_id',
+      watchListColumn: 't.attributes',
+    });
   }
 
   /**
@@ -339,7 +487,7 @@ export class TicketService extends BaseService<ITicket> {
     // Mirror the MSP server-action delete path: notify downstream consumers
     // (e.g. the search indexer removes the ticket from the index) once the
     // delete has committed. Publishing is best-effort and never fails the request.
-    await this.safePublishEvent('TICKET_DELETED', context, {
+    await this.safePublishNonCatalogEvent('TICKET_DELETED', context, {
       ticketId: id,
       userId: context.userId,
     });
@@ -389,11 +537,17 @@ export class TicketService extends BaseService<ITicket> {
       options.applyAuthorization(countScopedQuery.withBuilder(countQuery));
     }
 
-    // Apply sorting
+    // Apply sorting. Unknown keys are rejected here (400) rather than
+    // interpolated into `t.<key>` and failing as a database error (500).
     const sortField = sort || this.defaultSort;
-    const sortOrder = order || this.defaultOrder;
-    // Map created_at to entered_at for tickets table
-    const mappedSortField = sortField === 'created_at' ? 'entered_at' : sortField;
+    const sortDirection = (order || this.defaultOrder) === 'asc' ? 'asc' : 'desc';
+    const { field: mappedSortField, spec: sortSpec } = resolveTicketListApiSort(sortField);
+
+    // Client-portal callers must not be able to read the timing of internal
+    // notes off this column, nor have them reorder the portal list.
+    const latestActivity = ticketLatestActivitySql(context.tenant, {
+      publicOnly: Boolean(clientVisibility),
+    });
 
     const wants = (field: string) => Boolean(selectedFields && selectedFields.includes(field));
 
@@ -402,6 +556,17 @@ export class TicketService extends BaseService<ITicket> {
     const needsStatuses = !selectedFields || wants('status_name') || wants('status_is_closed') || mappedSortField === 'status_name';
     const needsPriorities = !selectedFields || wants('priority_name') || mappedSortField === 'priority_name';
     const needsAssignedUser = !selectedFields || wants('assigned_to_name');
+    const needsBundleMaster = !selectedFields || wants('bundle_master_ticket_number');
+    const needsBundleChildCount = !selectedFields || wants('bundle_child_count');
+
+    // Correlated on t.tenant so the count stays inside the ticket's shard.
+    const bundleChildCountSelect = knex.raw(
+      '(SELECT COUNT(*)::int FROM tickets tc WHERE tc.tenant = t.tenant AND tc.master_ticket_id = t.ticket_id) AS bundle_child_count'
+    );
+
+    if (needsBundleMaster) {
+      dataQuery = scopedDb.tenantJoin(dataQuery, 'tickets as mt', 't.master_ticket_id', 'mt.ticket_id', { type: 'left' });
+    }
 
     if (needsClients) {
       dataQuery = scopedDb.tenantJoin(dataQuery, 'clients as comp', 't.client_id', 'comp.client_id', { type: 'left' });
@@ -423,16 +588,14 @@ export class TicketService extends BaseService<ITicket> {
       dataQuery = scopedDb.tenantJoin(dataQuery, 'users as assigned_user', 't.assigned_to', 'assigned_user.user_id', { type: 'left' });
     }
 
-    // Handle sorting by related fields
-    if (mappedSortField === 'client_name') {
-      dataQuery = dataQuery.orderBy('comp.client_name', sortOrder);
-    } else if (mappedSortField === 'status_name') {
-      dataQuery = dataQuery.orderBy('stat.name', sortOrder);
-    } else if (mappedSortField === 'priority_name') {
-      dataQuery = dataQuery.orderBy('pri.priority_name', sortOrder);
+    // Order by the allowlisted term, then ticket_id desc so pages stay stable
+    // across a tie (parity with applyTicketListSort on the web list).
+    if (sortSpec.activity) {
+      dataQuery = dataQuery.orderByRaw(`${latestActivity.sql} ${sortDirection}`, latestActivity.bindings);
     } else {
-      dataQuery = dataQuery.orderBy(`t.${mappedSortField}`, sortOrder);
+      dataQuery = dataQuery.orderBy(sortSpec.column!, sortDirection);
     }
+    dataQuery = dataQuery.orderBy('t.ticket_id', 'desc');
 
     // Apply pagination
     const offset = (page - 1) * limit;
@@ -456,6 +619,8 @@ export class TicketService extends BaseService<ITicket> {
           'cat.category_name',
           'subcat.category_name as subcategory_name',
           'board.board_name as board_name',
+          'mt.ticket_number as bundle_master_ticket_number',
+          bundleChildCountSelect,
           knex.raw(`CASE 
             WHEN entered_user.first_name IS NOT NULL AND entered_user.last_name IS NOT NULL 
             THEN CONCAT(entered_user.first_name, ' ', entered_user.last_name) 
@@ -466,6 +631,9 @@ export class TicketService extends BaseService<ITicket> {
             THEN CONCAT(assigned_user.first_name, ' ', assigned_user.last_name) 
             ELSE NULL 
           END as assigned_to_name`),
+          // Same expression the latest_activity_at sort orders by, so the
+          // reported value is exactly the one the ordering used.
+          knex.raw(`${latestActivity.sql} as latest_activity_at`, latestActivity.bindings),
         );
     } else {
       const selectParts: any[] = [];
@@ -482,6 +650,12 @@ export class TicketService extends BaseService<ITicket> {
       if (selectedFields.includes('updated_at')) selectParts.push('t.updated_at');
       if (selectedFields.includes('entered_at')) selectParts.push('t.entered_at');
       if (selectedFields.includes('closed_at')) selectParts.push('t.closed_at');
+      if (selectedFields.includes('master_ticket_id')) selectParts.push('t.master_ticket_id');
+      if (selectedFields.includes('latest_activity_at')) {
+        selectParts.push(knex.raw(`${latestActivity.sql} as latest_activity_at`, latestActivity.bindings));
+      }
+      if (needsBundleMaster) selectParts.push('mt.ticket_number as bundle_master_ticket_number');
+      if (needsBundleChildCount) selectParts.push(bundleChildCountSelect);
 
       if (selectedFields.includes('assigned_to_name')) {
         selectParts.push(
@@ -509,6 +683,14 @@ export class TicketService extends BaseService<ITicket> {
       dataQuery,
       countQuery.count('* as count')
     ]);
+
+    // GREATEST() comes back as a Date; the list contract is an ISO string
+    // (same normalization as mapTicketListItems on the web list).
+    for (const ticket of tickets as Array<Record<string, unknown>>) {
+      if (ticket.latest_activity_at instanceof Date) {
+        ticket.latest_activity_at = ticket.latest_activity_at.toISOString();
+      }
+    }
 
     if (wants('tags')) {
       await this.attachTicketTags(knex, context.tenant, tickets as Array<Record<string, unknown>>);
@@ -615,11 +797,18 @@ export class TicketService extends BaseService<ITicket> {
     scopedDb.tenantJoin(ticketQuery, 'priorities as pri', 't.priority_id', 'pri.priority_id', { type: 'left' });
     scopedDb.tenantJoin(ticketQuery, 'categories as cat', 't.category_id', 'cat.category_id', { type: 'left' });
     scopedDb.tenantJoin(ticketQuery, 'users as assigned_user', 't.assigned_to', 'assigned_user.user_id', { type: 'left' });
+    scopedDb.tenantJoin(ticketQuery, 'tickets as mt', 't.master_ticket_id', 'mt.ticket_id', { type: 'left' });
     const ticket = await ticketQuery
       .select(
         't.*',
+        'mt.ticket_number as bundle_master_ticket_number',
+        knex.raw(
+          '(SELECT COUNT(*)::int FROM tickets tc WHERE tc.tenant = t.tenant AND tc.master_ticket_id = t.ticket_id) AS bundle_child_count'
+        ),
         'comp.client_name',
         'cl.location_name as location_name',
+        // One-line postal address for map links; the name alone is a poor geocoding query.
+        knex.raw(`${locationAddressSql('cl')} as location_address`),
         'cl.email as client_email',
         'cl.phone as client_phone',
         'cont.full_name as contact_name',
@@ -845,6 +1034,7 @@ export class TicketService extends BaseService<ITicket> {
           data.user_id,
           data.role ?? 'support',
           notificationSuppression,
+          'api',
         );
       } catch (error) {
         if (error instanceof TicketResourceError) {
@@ -887,7 +1077,7 @@ export class TicketService extends BaseService<ITicket> {
         throw new NotFoundError('Additional agent not found on this ticket');
       }
 
-      await removeTicketResourceCore(trx, context.tenant, resource.assignment_id);
+      await removeTicketResourceCore(trx, context.tenant, context.userId, resource.assignment_id, 'api');
     });
   }
 
@@ -922,13 +1112,13 @@ export class TicketService extends BaseService<ITicket> {
       return { ticket: updated as ITicket, assignedTo: resolvedAssignedTo };
     });
 
-    await this.safePublishEvent('TICKET_ASSIGNED', context, {
+    await this.safePublishEvent('TICKET_ASSIGNED', context, buildTicketTeamAssignedPayload({
       ticketId,
-      userId: assignedTo,
+      assignedToUserId: assignedTo,
       assignedByUserId: context.userId,
-      changes: { assigned_team_id: data.team_id },
+      teamId: data.team_id,
       ...notificationSuppression,
-    });
+    }));
 
     return this.withDescriptionHtml(ticket);
   }
@@ -1124,6 +1314,7 @@ export class TicketService extends BaseService<ITicket> {
     });
 
     documentCommitted = true;
+    await this.persistDocumentPreviews(knex, document, buffer, context.tenant);
     const createdDocument = await this.getDocumentById(documentId, context);
     if (!createdDocument) {
       throw new Error('Uploaded document could not be loaded');
@@ -1176,6 +1367,85 @@ export class TicketService extends BaseService<ITicket> {
       fileName: doc.document_name || result.metadata.original_name,
       mimeType: doc.mime_type || result.metadata.mime_type,
     };
+  }
+
+  /**
+   * Serve the cached thumbnail (200x200) or preview (800x600) image for a
+   * ticket document. Images and PDFs uploaded before previews existed get
+   * their previews generated on first request and persisted.
+   */
+  async downloadTicketDocumentVariant(
+    ticketId: string,
+    documentId: string,
+    variant: TicketDocumentVariant,
+    context: ServiceContext
+  ): Promise<{ buffer: Buffer; fileId: string; mimeType: string }> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const scopedDb = tenantDb(knex, context.tenant);
+    const docQuery = tenantScopedTable(knex, 'documents as d', context.tenant);
+    scopedDb.tenantJoin(docQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
+
+    const clientVisibility = await this.resolveClientTicketVisibility(context);
+    if (clientVisibility) {
+      docQuery.where('d.is_client_visible', true);
+    }
+
+    const doc = await docQuery
+      .where({
+        'da.entity_id': ticketId,
+        'da.entity_type': 'ticket',
+        'd.document_id': documentId,
+      })
+      .select('d.*')
+      .first() as IDocument | undefined;
+
+    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, context.userId, documentId)) {
+      throw new NotFoundError('Document not found');
+    }
+
+    const column = variant === 'thumbnail' ? 'thumbnail_file_id' : 'preview_file_id';
+    let fileId = doc[column] ?? null;
+
+    if (!fileId && !doc.preview_generated_at && isPreviewableMime(doc.mime_type)) {
+      const original = await StorageService.downloadFile(doc.file_id);
+      const generated = await this.persistDocumentPreviews(knex, doc, original.buffer, context.tenant);
+      fileId = generated?.[column] ?? null;
+    }
+
+    if (!fileId) {
+      throw new NotFoundError(`Document ${variant} not available`);
+    }
+
+    const result = await StorageService.downloadFile(fileId);
+    return {
+      buffer: result.buffer,
+      fileId,
+      mimeType: result.metadata.mime_type || 'image/jpeg',
+    };
+  }
+
+  private async persistDocumentPreviews(
+    knex: Knex,
+    document: IDocument,
+    buffer: Buffer,
+    tenant: string,
+  ): Promise<PreviewGenerationResult | null> {
+    try {
+      const result = await generateDocumentPreviews(document, buffer);
+      await tenantScopedTable(knex, 'documents', tenant)
+        .where({ document_id: document.document_id })
+        .update({
+          thumbnail_file_id: result.thumbnail_file_id,
+          preview_file_id: result.preview_file_id,
+          preview_generated_at: result.preview_generated_at,
+        });
+      return result;
+    } catch (error) {
+      console.error(`[TicketService] Preview generation failed for document ${document.document_id}:`, error);
+      return null;
+    }
   }
 
   async deleteTicketDocument(
@@ -1442,7 +1712,7 @@ export class TicketService extends BaseService<ITicket> {
     private async createTicket(data: CreateTicketData, context: ServiceContext): Promise<ITicket> {
       const { knex } = await this.getKnex();
   
-      const fullTicket = await withTransaction(knex, async (trx) => {
+      const { fullTicket, externalLinks } = await withTransaction(knex, async (trx) => {
         // Validate status belongs to the specified board before proceeding
         const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
           data.status_id,
@@ -1470,6 +1740,9 @@ export class TicketService extends BaseService<ITicket> {
           entered_by: context.userId,
           assigned_to: data.assigned_to,
           priority_id: data.priority_id,
+          severity_id: data.severity_id,
+          urgency_id: data.urgency_id,
+          impact_id: data.impact_id,
           attributes: data.attributes,
           source: 'api',
           ticket_origin: TICKET_ORIGINS.API,
@@ -1485,7 +1758,7 @@ export class TicketService extends BaseService<ITicket> {
           context.tenant,
           trx,
           {}, // validation options
-          undefined,
+          ticketCreatedPublishedByCaller('TicketService publishes TICKET_CREATED after the transaction commits'),
           analyticsTracker,
           context.userId,
           3 // max retries
@@ -1495,6 +1768,18 @@ export class TicketService extends BaseService<ITicket> {
         if (data.tags && data.tags.length > 0) {
           await this.handleTags(ticketResult.ticket_id, data.tags, context, trx);
         }
+
+        // Persist ticket-level external links in the same transaction so a bot's
+        // create-with-links is atomic. Any invalid link — a second origin, a
+        // duplicate external record, or an unusable destination — throws and
+        // rolls back the whole ticket create.
+        const externalLinks = await persistExternalLinksForCreate(
+          trx,
+          context.tenant,
+          ticketResult.ticket_id,
+          data.external_links ?? null,
+          context.userId,
+        );
 
         // Get the full ticket data for return
         const fullTicket = await tenantScopedTable(trx, 'tickets', context.tenant)
@@ -1533,21 +1818,27 @@ export class TicketService extends BaseService<ITicket> {
           },
         });
 
-        return fullTicket as ITicket;
+        return { fullTicket, externalLinks };
       });
 
-      await this.safePublishEvent('TICKET_CREATED', context, {
+      await this.safePublishEvent('TICKET_CREATED', context, buildApiTicketCreatedPayload({
         ticketId: fullTicket.ticket_id,
         userId: context.userId,
-        createdByUserId: context.userId,
         createdAt: fullTicket.entered_at
           ? new Date(fullTicket.entered_at as unknown as string).toISOString()
           : new Date().toISOString(),
-        source: 'api',
-        board_id: fullTicket.board_id,
-        priority_id: fullTicket.priority_id,
-        client_id: fullTicket.client_id,
-      });
+        boardId: fullTicket.board_id,
+        priorityId: fullTicket.priority_id,
+        clientId: fullTicket.client_id,
+        externalLinks,
+      }));
+
+      // Post-commit: announce each inline ticket link so subscribers see the
+      // same events as links added through the dedicated endpoint. Publishing
+      // here (not inside the transaction) means a rollback emits nothing.
+      for (const link of externalLinks) {
+        await publishExternalLinkEvent('TICKET_EXTERNAL_LINK_ADDED', context.tenant, link, context.userId ?? null);
+      }
 
       return fullTicket;
     }
@@ -1586,6 +1877,34 @@ export class TicketService extends BaseService<ITicket> {
       delete (cleanedData as any).override_close_rules_reason;
       delete (cleanedData as any).suppressContactNotifications;
       delete (cleanedData as any).suppressInternalNotifications;
+      // Create-only field: never a `tickets` column, so it must not reach the
+      // UPDATE statement. Inline links are written by the create paths only.
+      delete (cleanedData as any).external_links;
+
+      // Bundled child tickets lock workflow fields, same as the in-app
+      // update action: status, assignment and priority flow down from the
+      // master (sync_updates) or are managed there (link_only). Adopted from
+      // main: a direct REST write to a bundled child's workflow fields is
+      // rejected, so a child can never be reopened behind the master's back.
+      if (currentTicket.master_ticket_id) {
+        const attempted = BUNDLE_CHILD_LOCKED_FIELDS.filter(
+          (field) => (cleanedData as Record<string, unknown>)[field] !== undefined
+            && (cleanedData as Record<string, unknown>)[field] !== (currentTicket as Record<string, unknown>)[field]
+        );
+        if (attempted.length > 0) {
+          throw new ValidationError('Validation failed', attempted.map((field) => ({
+            path: [field],
+            message: `This ticket is bundled; workflow fields are locked (${attempted.join(', ')}). Update the master ticket instead.`,
+          })));
+        }
+      }
+
+      // Sync-mode bundle propagation choice: a request option, not a column.
+      const propagateToChildren =
+        typeof (cleanedData as any).propagateToChildren === 'boolean'
+          ? ((cleanedData as any).propagateToChildren as boolean)
+          : undefined;
+      delete (cleanedData as any).propagateToChildren;
 
       const isBoardChange =
         cleanedData.board_id !== undefined &&
@@ -1618,16 +1937,29 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
       
+      const statusChanged =
+        !!cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id;
+
+      // Resolve the old/new status rows once, up front. The statuses table is
+      // not mutated by this method, so hoisting these reads above the write is
+      // safe; it lets the denormalized close fields be folded into the same
+      // UPDATE that produces the returned row. Mirrors the "keep is_closed in
+      // sync" handling in updateTicketWithCache / ticketBundleUtils.
+      const nextStatus = statusChanged
+        ? await tenantScopedTable(trx, 'statuses', context.tenant)
+          .where({ status_id: cleanedData.status_id })
+          .first()
+        : null;
+      const previousStatus = statusChanged
+        ? await tenantScopedTable(trx, 'statuses', context.tenant)
+          .where({ status_id: currentTicket.status_id })
+          .first()
+        : null;
+
       // Pre-close validation gates: when this update flips the ticket from an
       // open to a closed status, enforce the board's close rules before any
       // writes. Surfaces as a 422 with structured failure details.
-      if (cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id) {
-        const nextStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
-          .where({ status_id: cleanedData.status_id })
-          .first();
-        const previousStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
-          .where({ status_id: currentTicket.status_id })
-          .first();
+      if (statusChanged) {
         if (nextStatus?.is_closed && !previousStatus?.is_closed) {
           const merged = { ...currentTicket, ...cleanedData };
           try {
@@ -1667,11 +1999,63 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
 
-      const updateData = {
+      // Sync-mode bundle masters require an explicit propagation choice before a
+      // boundary-crossing status write. Nothing is written when we bail here.
+      if (statusChanged && cleanedData.status_id) {
+        const propagationPreview = await previewBundleStatusPropagation(
+          trx,
+          context.tenant,
+          id,
+          cleanedData.status_id as string
+        );
+        if (
+          propagationPreview.crossesBoundary !== null &&
+          propagationPreview.affectedChildren.length > 0 &&
+          propagateToChildren === undefined
+        ) {
+          throw new BundlePropagationConfirmationRequiredError(propagationPreview);
+        }
+      }
+
+      const updateData: Record<string, unknown> = {
         ...cleanedData,
         updated_by: context.userId,
         updated_at: knex.raw('now()')
       };
+
+      // Fold the denormalized close fields into the same write whose result is
+      // returned, so the response cannot report a stale is_closed / closed_at.
+      // Derived values are applied after the spread so they win when the status
+      // crosses the closed boundary; a caller-supplied closed_by / closed_at
+      // still applies on a status change that does not cross it.
+      // LEVERAGE: pattern close-denormalization — the same set-or-clear
+      // is_closed/closed_at/closed_by shape is duplicated in
+      // optimizedTicketActions.updateTicketWithCache and
+      // ticketBundleUtils.maybeReopenBundleMasterFromChildReply.
+      let closedAt: Date | null = null;
+      if (statusChanged) {
+        updateData.is_closed = !!nextStatus?.is_closed;
+        if (nextStatus?.is_closed && !previousStatus?.is_closed) {
+          closedAt = new Date();
+          updateData.closed_at = closedAt;
+          updateData.closed_by = context.userId;
+        } else if (!nextStatus?.is_closed && previousStatus?.is_closed) {
+          updateData.closed_at = null;
+          updateData.closed_by = null;
+        }
+      }
+
+      // Closing clears the response state in the same write, matching the UI
+      // close path, so a closed ticket never reads as awaiting a response.
+      const clearsResponseStateOnClose = Boolean(
+        statusChanged
+        && nextStatus?.is_closed
+        && !previousStatus?.is_closed
+        && currentTicket.response_state
+      );
+      if (clearsResponseStateOnClose) {
+        updateData.response_state = null;
+      }
 
       // Changing the primary assignee requires clearing the ticket_resources
       // rows that reference the old one, then re-keying them afterwards.
@@ -1690,13 +2074,25 @@ export class TicketService extends BaseService<ITicket> {
         : null;
 
       // Update ticket
+      // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
       const [ticket] = await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ ticket_id: id })
-        .update(updateData)
+        .update({ ...updateData, ...ticketStatusClockPatch(trx, updateData.status_id as string | null | undefined) })
         .returning('*');
 
       if (finalizeResourceReassignment) {
         await finalizeResourceReassignment();
+      }
+
+      if (clearsResponseStateOnClose) {
+        publishResponseStateChange(trx, {
+          tenant: context.tenant,
+          ticketId: id,
+          userId: context.userId ?? null,
+          previousState: currentTicket.response_state,
+          newState: null,
+          trigger: 'close',
+        });
       }
 
       // Handle tags if provided
@@ -1704,42 +2100,82 @@ export class TicketService extends BaseService<ITicket> {
         await this.handleTags(id, data.tags, context, trx);
       }
 
+      // Sync-mode bundle propagation (FR5): REST shares the single propagation
+      // engine with the server-action path. main's older inline
+      // propagateBundleMasterUpdate ran first and mirrored every synced field
+      // (including is_closed) to all children unconditionally, which made the
+      // engine's affected-set derivation observe children as already closed and
+      // silently skip the confirmation/ledger. The engine below is the
+      // authority. Boundary-crossing choices were gated above.
+      // The service context carries only a userId, but the propagation audit
+      // row stores the acting user's display name. Resolve the name fields in
+      // the same transaction (mirrors the comment-author lookup below) so the
+      // persisted actor_display_name is the real name, not "Unknown User".
+      const propagationActor = await tenantScopedTable(trx, 'users', context.tenant)
+        .select('first_name', 'last_name', 'username')
+        .where({ user_id: context.userId })
+        .first();
+
+      await propagateBundleMasterStatus(
+        trx,
+        {
+          tenant: context.tenant,
+          user: {
+            user_id: context.userId,
+            first_name: propagationActor?.first_name ?? null,
+            last_name: propagationActor?.last_name ?? null,
+            username: propagationActor?.username ?? null,
+          },
+          source: TICKET_ACTIVITY_SOURCE.API,
+          previousMasterStatusId: currentTicket.status_id,
+        },
+        id,
+        cleanedData as Record<string, unknown>,
+        { propagateToChildren }
+      );
+
+      // A bundled child can no longer be reopened through this REST path: the
+      // BUNDLE_CHILD_LOCKED_FIELDS gate above rejects any change to a child's
+      // status_id/assigned_to/priority_id, so the ledger can never disagree
+      // with tickets.is_closed via this surface. (The former independent-close
+      // revert hook is intentionally gone; only bundle detach/remove reverts
+      // rows now.)
+
       // Publish appropriate events
-      if (data.status_id && data.status_id !== currentTicket.status_id) {
-        // Check if ticket is being closed or reopened
-        const newStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
-          .where({ status_id: data.status_id })
-          .first();
-        const oldStatus = await tenantScopedTable(trx, 'statuses', context.tenant)
-          .where({ status_id: currentTicket.status_id })
-          .first();
-
-        // Keep the ticket row's denormalized close flag aligned with the selected status.
-        await tenantScopedTable(trx, 'tickets', context.tenant)
-          .where({ ticket_id: id })
-          .update({ is_closed: !!newStatus?.is_closed });
-
-        // Record closed_at / closed_by when transitioning to/from closed status
-        if (newStatus?.is_closed && !oldStatus?.is_closed) {
-          await tenantScopedTable(trx, 'tickets', context.tenant)
-            .where({ ticket_id: id })
-            .update({ closed_at: new Date(), closed_by: context.userId });
-        } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
-          await tenantScopedTable(trx, 'tickets', context.tenant)
-            .where({ ticket_id: id })
-            .update({ closed_at: null, closed_by: null });
-        }
-
-        if (newStatus?.is_closed) {
-          await this.safePublishEvent('TICKET_CLOSED', context, {
+      if (statusChanged) {
+        if (nextStatus?.is_closed) {
+          await this.safePublishEvent('TICKET_CLOSED', context, buildTicketClosedPayload({
             ticketId: ticket.ticket_id,
             closedByUserId: context.userId,
-            closedAt: new Date().toISOString(),
+            closedAt: (closedAt ?? new Date()).toISOString(),
             suppressContactNotifications,
             suppressInternalNotifications,
-          });
+          }));
         }
       }
+
+      // Transition events (TICKET_STATUS_CHANGED etc.), published after commit.
+      await publishTicketTransitionsAfterCommit(trx, {
+        tenant: context.tenant,
+        before: {
+          ticketId: id,
+          statusId: currentTicket.status_id,
+          priorityId: currentTicket.priority_id ?? null,
+          assignedTo: currentTicket.assigned_to ?? null,
+          boardId: currentTicket.board_id,
+          escalated: currentTicket.escalated,
+        },
+        after: {
+          ticketId: id,
+          statusId: ticket.status_id,
+          priorityId: ticket.priority_id ?? null,
+          assignedTo: ticket.assigned_to ?? null,
+          boardId: ticket.board_id,
+          escalated: ticket.escalated,
+        },
+        actorUserId: context.userId,
+        statusChangedPayloadExtras: { suppressContactNotifications, suppressInternalNotifications },
+      });
 
       const structuredChanges: Record<string, { old: unknown; new: unknown }> = {};
       const trackedChangeFields: Array<keyof ITicket> = [
@@ -1764,13 +2200,13 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
 
-      await this.safePublishEvent('TICKET_UPDATED', context, {
+      await this.safePublishEvent('TICKET_UPDATED', context, buildTicketUpdatedPayload({
         ticketId: ticket.ticket_id,
         updatedByUserId: context.userId,
         changes: structuredChanges,
         suppressContactNotifications,
         suppressInternalNotifications,
-      });
+      }));
 
       // Activity-timeline row for REST API updates. Uses curated diff so
       // only user-meaningful field changes produce a timeline entry; no-op
@@ -1856,6 +2292,16 @@ export class TicketService extends BaseService<ITicket> {
       // read the newly-created ticket on their own connections.
       const analyticsTracker = new ServerAnalyticsTracker();
 
+      // FR-E8: a caller that named nobody (the mobile modal, any API client)
+      // gets the asset's person when the asset names exactly one — its
+      // assignee, or a shared workspace with a single user. Several users stay
+      // ambiguous and the ticket keeps no contact.
+      let contactNameId = data.contact_name_id ?? null;
+      if (!contactNameId) {
+        const options = await resolveAssetTicketContactOptions(trx, context.tenant, data.asset_id);
+        if (options.length === 1) contactNameId = options[0].contact_name_id;
+      }
+
       // Use shared TicketModel for asset ticket creation
       const ticketResult = await TicketModel.createTicketFromAsset(
         {
@@ -1865,12 +2311,15 @@ export class TicketService extends BaseService<ITicket> {
           status_id: data.status_id,
           board_id: data.board_id,
           asset_id: data.asset_id,
-          client_id: data.client_id
+          client_id: data.client_id,
+          contact_name_id: contactNameId,
+          // FR-F2: omitted lets the model inherit the asset's profile.
+          billing_profile_id: data.billing_profile_id ?? null
         },
         context.userId,
         context.tenant,
         trx,
-        undefined,
+        ticketCreatedPublishedByCaller('TicketService publishes TICKET_CREATED after the transaction commits'),
         analyticsTracker
       );
 
@@ -1899,18 +2348,16 @@ export class TicketService extends BaseService<ITicket> {
       return fullTicket as ITicket;
     });
 
-    await this.safePublishEvent('TICKET_CREATED', context, {
-      ticketId: fullTicket.ticket_id,
+    await this.safePublishEvent('TICKET_CREATED', context, buildApiTicketCreatedPayload({
+      ticketId: fullTicket.ticket_id!,
       userId: context.userId,
-      createdByUserId: context.userId,
       createdAt: fullTicket.entered_at
         ? new Date(fullTicket.entered_at as unknown as string).toISOString()
         : new Date().toISOString(),
-      source: 'api',
-      board_id: fullTicket.board_id,
-      priority_id: fullTicket.priority_id,
-      client_id: fullTicket.client_id,
-    });
+      boardId: fullTicket.board_id,
+      priorityId: fullTicket.priority_id,
+      clientId: fullTicket.client_id,
+    }));
 
     return fullTicket;
   }
@@ -1929,6 +2376,8 @@ export class TicketService extends BaseService<ITicket> {
     const commentsQuery = tenantScopedTable(knex, 'comments as tc', context.tenant);
     scopedDb.tenantJoin(commentsQuery, 'users as u', 'tc.user_id', 'u.user_id', { type: 'left' });
     scopedDb.tenantJoin(commentsQuery, 'contacts as c', 'tc.contact_id', 'c.contact_name_id', { type: 'left' });
+    // Client-portal comments carry only user_id; the user's contact names them when the user row has no name.
+    scopedDb.tenantJoin(commentsQuery, 'contacts as uc', 'u.contact_id', 'uc.contact_name_id', { type: 'left' });
 
     const clientVisibility = await this.resolveClientTicketVisibility(context);
     if (clientVisibility) {
@@ -1950,11 +2399,11 @@ export class TicketService extends BaseService<ITicket> {
     const comments = await commentsQuery
       .select(
         'tc.*',
-        knex.raw(`CASE 
-          WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL 
-          THEN CONCAT(u.first_name, ' ', u.last_name) 
-          ELSE NULL 
-        END as created_by_name`),
+        knex.raw(`COALESCE(
+          NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
+          NULLIF(TRIM(uc.full_name), ''),
+          NULLIF(TRIM(u.email), '')
+        ) as created_by_name`),
         'c.contact_name_id as author_contact_id',
         'c.full_name as author_contact_name',
         'c.email as author_contact_email'
@@ -2020,7 +2469,7 @@ export class TicketService extends BaseService<ITicket> {
           created_at: comment.created_at,
           updated_at: comment.updated_at,
           created_by: comment.user_id ?? null,
-          created_by_name: comment.created_by_name || comment.author_contact_name || null,
+          created_by_name: comment.created_by_name || comment.author_contact_name || inboundSenderLabel(comment.metadata),
           author_contact_id: comment.author_contact_id || comment.contact_id || null,
           author_contact_name: comment.author_contact_name || null,
           // Threading fields (mobile threaded comments) — explicitly enumerated
@@ -2031,21 +2480,31 @@ export class TicketService extends BaseService<ITicket> {
         };
       }
 
+      // Bcc is MSP-only. The raw row is spread below, so a client-visible
+      // caller gets the metadata with the bcc list emptied before anything
+      // reads it — the mask lives here rather than at the route so no future
+      // client-facing caller of this service can leak it.
+      const metadata = clientVisibility
+        ? stripCommentBccFromMetadata(comment.metadata)
+        : comment.metadata;
+
       // Full branch: select('tc.*') above means ...comment already carries
       // thread_id / parent_comment_id / deleted_at — no explicit mapping needed.
       return {
         ...comment,
+        metadata,
         comment_text: comment.note,
         markdown_content: comment.markdown_content || null,
         comment_html: renderTicketRichTextHtml(comment.note),
         created_by: comment.user_id ?? null,
-        created_by_name: comment.created_by_name || comment.author_contact_name || null,
+        created_by_name: comment.created_by_name || comment.author_contact_name || inboundSenderLabel(comment.metadata),
         created_by_avatar_url: comment.user_id ? (avatarMap[comment.user_id] ?? null) : null,
         author_contact_id: comment.author_contact_id || comment.contact_id || null,
         author_contact_name: comment.author_contact_name || null,
         author_contact_email: comment.author_contact_email || null,
         reactions: reactionsMap[comment.comment_id] ?? [],
         reaction_user_names: reactionUserNames,
+        email_recipients: readCommentEmailRecipients(metadata),
       };
     });
   }
@@ -2060,6 +2519,7 @@ export class TicketService extends BaseService<ITicket> {
   ): Promise<any> {
     const { knex } = await this.getKnex();
     const notificationSuppression = resolveTicketNotificationSuppression(data);
+    let createdExternalLinks: IExternalEntityLink[] = [];
 
     const result = await withTransaction(knex, async (trx) => {
       // Verify ticket exists
@@ -2147,6 +2607,36 @@ export class TicketService extends BaseService<ITicket> {
         });
       }
 
+      // A reply into an internal thread inherits is_internal=true, so this
+      // check runs after visibility is resolved rather than on the raw body.
+      const scheduledPublication = resolveScheduledCommentPublication(data, apiIsInternal);
+
+      // One-off Cc/Bcc for this comment only. The schema already rejects them
+      // on an explicitly internal body; this also catches a reply that
+      // inherits internal visibility from its thread.
+      let emailRecipients: Awaited<ReturnType<typeof prepareCommentEmailRecipients>> = null;
+      try {
+        emailRecipients = await prepareCommentEmailRecipients(trx, context.tenant, {
+          cc: data.cc,
+          bcc: data.bcc,
+          isInternal: apiIsInternal,
+        });
+      } catch (error) {
+        if (error instanceof CommentEmailRecipientsError) {
+          throw new ValidationError('Validation failed', [
+            { path: [error.field], message: error.message },
+          ]);
+        }
+        throw error;
+      }
+
+      // author_type comes from the authenticated key's user, via the same
+      // resolver the UI action uses; a client user also records its contact.
+      const apiAuthor = await resolveCommentAuthor(trx, context.tenant, context.userId);
+      if (apiIsInternal && apiAuthor.authorType !== 'internal') {
+        throw new ForbiddenError('Only MSP users can create internal comments');
+      }
+
       const commentData = {
         comment_id: apiCommentId,
         thread_id: apiThreadId,
@@ -2156,15 +2646,42 @@ export class TicketService extends BaseService<ITicket> {
         is_internal: apiIsInternal,
         is_resolution: data.is_resolution || false,
         user_id: context.userId,
+        author_type: apiAuthor.authorType,
+        contact_id: apiAuthor.contactId,
         tenant: context.tenant,
         created_at: apiNowIso,
         updated_at: apiNowIso,
-        metadata: data.metadata,
+        metadata: emailRecipients
+          ? { ...(data.metadata ?? {}), email_recipients: emailRecipients }
+          : data.metadata,
+        ...(scheduledPublication
+          ? {
+              publish_state: 'scheduled',
+              scheduled_publish_at: scheduledPublication.publishAt.toISOString(),
+              scheduled_publish_tz: scheduledPublication.timeZone,
+            }
+          : {}),
       };
 
       const [comment] = await tenantScopedTable(trx, 'comments', context.tenant).insert(commentData).returning('*');
 
       await reconcileCommentAttachments(trx, context.tenant, comment.comment_id, context.userId);
+
+      // Persist comment-level external links in the same transaction as the
+      // comment they describe. Invalid links roll back the comment create.
+      if (data.external_links && data.external_links.length > 0) {
+        createdExternalLinks = await persistExternalLinksForCreate(
+          trx,
+          context.tenant,
+          ticketId,
+          data.external_links.map((link) => ({
+            ...link,
+            entity_type: 'comment' as const,
+            comment_id: comment.comment_id,
+          })),
+          context.userId,
+        );
+      }
 
       if (apiIsReply) {
         await tenantScopedTable(trx, 'comment_threads', context.tenant)
@@ -2175,7 +2692,19 @@ export class TicketService extends BaseService<ITicket> {
           });
       }
 
-      if (!comment.is_internal) {
+      // A scheduled public comment is not a client reply until publication
+      // (the scheduled-publish worker applies the state then).
+      if (!scheduledPublication) {
+        await applyCommentResponseState(trx, {
+          tenant: context.tenant,
+          ticketId,
+          authorType: apiAuthor.authorType,
+          isInternal: Boolean(comment.is_internal),
+          userId: context.userId ?? null,
+        });
+      }
+
+      if (!comment.is_internal && !scheduledPublication) {
         await maybeReopenBundleMasterFromChildReply(trx, context.tenant, ticketId, context.userId);
       }
 
@@ -2203,21 +2732,100 @@ export class TicketService extends BaseService<ITicket> {
         created_by: comment.user_id ?? null,
         author_contact_id: comment.contact_id ?? null,
         author_contact_name: null,
-        author_contact_email: null
+        author_contact_email: null,
+        email_recipients: readCommentEmailRecipients(comment.metadata),
       };
 
-      const eventPayload = {
-        tenantId: context.tenant, ticketId, commentId: comment.comment_id, userId: context.userId,
-        comment: { id: comment.comment_id, content: comment.note, author: authorName, isInternal: comment.is_internal },
+      const eventPayload = buildTicketCommentAddedPayload({
+        tenantId: context.tenant, occurredAt: new Date().toISOString(), ticketId, commentId: comment.comment_id, userId: context.userId,
+        comment: { content: comment.note, author: authorName, isInternal: comment.is_internal },
         ...notificationSuppression,
-      };
-      await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishEvent);
-      return { response };
+      });
+      if (scheduledPublication) {
+        // Never arm the worker before the row is committed; the boot
+        // reconciler repairs a post-commit scheduling failure.
+        registerAfterCommit(trx, async () => {
+          const scheduled = await scheduleBackgroundJobAt(
+            SCHEDULED_COMMENT_JOB,
+            { tenantId: context.tenant, ticketId, commentId: comment.comment_id },
+            scheduledPublication.publishAt,
+            { singletonKey: `publish-comment:${comment.comment_id}`, metadata: { scheduledPublishTz: scheduledPublication.timeZone } },
+          );
+          await tenantScopedTable(knex, 'comments', context.tenant)
+            .where({ comment_id: comment.comment_id, publish_state: 'scheduled' })
+            .update({ schedule_job_id: scheduled.jobId });
+        }, `schedule comment publication ${comment.comment_id}`);
+      } else {
+        await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishStoredWorkflowEvent);
+      }
+      return { response, externalLinks: createdExternalLinks };
     });
 
     // Intent is persisted; after-commit dispatch and recurring recovery deliver it.
 
+    // Post-commit: announce comment-level inline links. A rolled-back comment
+    // create never reaches this point, so no event is emitted for it.
+    for (const link of result.externalLinks) {
+      await publishExternalLinkEvent('TICKET_EXTERNAL_LINK_ADDED', context.tenant, link, context.userId ?? null);
+    }
+
     return result.response;
+  }
+
+  /**
+   * Cancel a scheduled (not yet published) comment. Mirrors the web
+   * cancelScheduledComment action: cancellation is a retained audit state and
+   * the compare-and-set on publish_state races safely against the worker.
+   */
+  async cancelScheduledComment(
+    ticketId: string,
+    commentId: string,
+    context: ServiceContext
+  ): Promise<{ comment_id: string; publish_state: 'canceled' }> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    return withTransaction(knex, async (trx) => {
+      const existing = await tenantScopedTable(trx, 'comments', context.tenant)
+        .where({ comment_id: commentId, ticket_id: ticketId })
+        .first();
+
+      if (!existing) {
+        throw new NotFoundError('Comment not found');
+      }
+      if (existing.publish_state !== 'scheduled') {
+        throw new ValidationError('Only scheduled comments can be canceled');
+      }
+      if (existing.user_id !== context.userId && context.user?.user_type !== 'internal') {
+        throw new ForbiddenError('You can only cancel your own scheduled comments');
+      }
+
+      await tenantScopedTable(trx, 'comments', context.tenant)
+        .where({ comment_id: commentId, publish_state: 'scheduled' })
+        .update({
+          publish_state: 'canceled',
+          deleted_at: trx.fn.now(),
+          schedule_job_id: null,
+          updated_at: trx.fn.now(),
+        });
+      await withdrawCommentAttachments(trx, context.tenant, commentId);
+      if (existing.schedule_job_id) {
+        await cancelScheduledJob(existing.schedule_job_id, context.tenant);
+      }
+
+      await writeTicketActivity(trx, {
+        tenant: context.tenant,
+        ticketId,
+        eventType: 'TICKET_COMMENT_SCHEDULE_CANCELED',
+        entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
+        entityId: commentId,
+        actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId },
+        source: TICKET_ACTIVITY_SOURCE.API,
+        details: { canceled: true },
+      });
+
+      return { comment_id: commentId, publish_state: 'canceled' as const };
+    });
   }
 
   /**
@@ -2523,8 +3131,31 @@ export class TicketService extends BaseService<ITicket> {
    */
   private applyTicketFilters(query: Knex.QueryBuilder, filters: TicketFilterData, knex: Knex, tenant: string): Knex.QueryBuilder {
     const scopedDb = tenantDb(knex, tenant);
+
+    // external_system + external_id must match the SAME external-link row when
+    // both are supplied; separate EXISTS clauses would let a ticket with
+    // github/42 and jira/99 match github + 99.
+    const externalSystem = filters.external_system;
+    const externalId = filters.external_id;
+    if (externalSystem || externalId) {
+      const externalLinkSubquery = scopedDb.subquery('external_entity_links as eel')
+        .select('*')
+        .whereRaw('eel.tenant = t.tenant')
+        .whereRaw('eel.ticket_id = t.ticket_id')
+        .andWhere('eel.entity_type', 'ticket');
+      if (externalSystem) {
+        externalLinkSubquery.andWhere('eel.system', externalSystem);
+      }
+      if (externalId) {
+        externalLinkSubquery.andWhere('eel.external_id', externalId);
+      }
+      query.whereExists(externalLinkSubquery);
+    }
+    const handledExternalFilters = new Set(['external_system', 'external_id']);
+
     Object.entries(filters).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
+      if (handledExternalFilters.has(key)) return;
 
       switch (key) {
         case 'title':
@@ -2557,6 +3188,7 @@ export class TicketService extends BaseService<ITicket> {
             query.whereExists(
               scopedDb.subquery('statuses as s')
                 .select('*')
+                .whereRaw('s.tenant = t.tenant')
                 .whereRaw('s.status_id = t.status_id')
                 .andWhere('s.is_closed', false)
             );
@@ -2567,10 +3199,14 @@ export class TicketService extends BaseService<ITicket> {
             query.whereExists(
               scopedDb.subquery('statuses as s')
                 .select('*')
+                .whereRaw('s.tenant = t.tenant')
                 .whereRaw('s.status_id = t.status_id')
                 .andWhere('s.is_closed', true)
             );
           }
+          break;
+        case 'response_state':
+          query.where('t.response_state', value);
           break;
         case 'has_assignment':
           if (value) {
@@ -2583,6 +3219,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('clients as c')
               .select('*')
+              .whereRaw('c.tenant = t.tenant')
               .whereRaw('c.client_id = t.client_id')
               .andWhere('c.client_name', value)
           );
@@ -2591,6 +3228,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('contacts as cn')
               .select('*')
+              .whereRaw('cn.tenant = t.tenant')
               .whereRaw('cn.contact_name_id = t.contact_name_id')
               .andWhere('cn.full_name', value)
           );
@@ -2599,6 +3237,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('boards as b')
               .select('*')
+              .whereRaw('b.tenant = t.tenant')
               .whereRaw('b.board_id = t.board_id')
               .andWhere('b.board_name', value)
           );
@@ -2607,6 +3246,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('categories as cat')
               .select('*')
+              .whereRaw('cat.tenant = t.tenant')
               .whereRaw('cat.category_id = t.category_id')
               .andWhere('cat.category_name', value)
           );
@@ -2616,6 +3256,7 @@ export class TicketService extends BaseService<ITicket> {
             const tagTexts = (value as string[]).map(tag => tag.toLowerCase());
             const tagSubquery = scopedDb.subquery('tag_mappings as tm')
               .select('*')
+              .whereRaw('tm.tenant = t.tenant')
               .whereRaw('tm.tagged_id = t.ticket_id')
               .andWhere('tm.tagged_type', 'ticket')
               .whereRaw(
@@ -2641,6 +3282,7 @@ export class TicketService extends BaseService<ITicket> {
               subQuery.orWhereExists(
                 scopedDb.subquery('clients as c')
                   .select('*')
+                  .whereRaw('c.tenant = t.tenant')
                   .whereRaw('c.client_id = t.client_id')
                   .andWhereILike('c.client_name', `%${value}%`)
               );
@@ -2657,6 +3299,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('priorities as p')
               .select('*')
+              .whereRaw('p.tenant = t.tenant')
               .whereRaw('p.priority_id = t.priority_id')
               .andWhere('p.priority_name', value)
           );
@@ -2665,6 +3308,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('statuses as s')
               .select('*')
+              .whereRaw('s.tenant = t.tenant')
               .whereRaw('s.status_id = t.status_id')
               .andWhere('s.name', value)
           );
@@ -2686,6 +3330,11 @@ export class TicketService extends BaseService<ITicket> {
           break;
         case 'created_to':
           query.where('t.entered_at', '<=', value);
+          break;
+        case 'bundle_view':
+          if (value === 'bundled') {
+            query.whereNull('t.master_ticket_id');
+          }
           break;
       }
     });
@@ -2711,22 +3360,44 @@ export class TicketService extends BaseService<ITicket> {
   /**
    * Safely publish events
    */
-  private async safePublishEvent(eventType: string, context: ServiceContext, payload: Record<string, unknown>): Promise<void> {
+  private async safePublishEvent<T extends WorkflowCatalogEventType>(
+    eventType: T,
+    context: ServiceContext,
+    payload: BuiltWorkflowPayload<T>,
+    idempotencyKey?: string
+  ): Promise<void> {
+    await this.safePublish(eventType, () =>
+      publishWorkflowEvent({ eventType, payload, ctx: this.publishContext(context), idempotencyKey })
+    );
+  }
+
+  /** Events with no workflow catalog entry (TICKET_DELETED). */
+  private async safePublishNonCatalogEvent(
+    eventType: 'TICKET_DELETED',
+    context: ServiceContext,
+    payload: Record<string, unknown>
+  ): Promise<void> {
+    await this.safePublish(eventType, () =>
+      publishNonCatalogWorkflowEvent({ eventType, payload, ctx: this.publishContext(context) })
+    );
+  }
+
+  private publishContext(context: ServiceContext) {
+    return {
+      tenantId: context.tenant,
+      actor: context.userId
+        ? ({ actorType: 'USER', actorUserId: context.userId } as const)
+        : ({ actorType: 'SYSTEM' } as const),
+    };
+  }
+
+  private async safePublish(eventType: string, publish: () => Promise<void>): Promise<void> {
     if (process.env.E2E_SKIP_APP_INIT === 'true') {
       return;
     }
 
     try {
-      await publishWorkflowEvent({
-        eventType: eventType as any,
-        payload,
-        ctx: {
-          tenantId: context.tenant,
-          actor: context.userId
-            ? { actorType: 'USER', actorUserId: context.userId }
-            : { actorType: 'SYSTEM' },
-        },
-      });
+      await publish();
     } catch (error) {
       console.error(`Failed to publish ${eventType} event:`, error);
     }
@@ -2749,28 +3420,93 @@ export class TicketService extends BaseService<ITicket> {
     return rows.map((r: any) => r.master_ticket_id).filter(Boolean);
   }
 
-  private async assertChildrenAreNotMasters(trx: Knex.Transaction, tenant: string, childIds: string[]): Promise<void> {
-    const offending = await this.findBundleMasterIds(trx, tenant, childIds);
-    if (offending.length === 0) return;
+  private throwBundleAttachFailure(
+    failure: BundleAttachFailure,
+    options?: { masterIsChildMessage?: string }
+  ): never {
+    switch (failure.code) {
+      case 'no_children':
+        throw new ValidationError('No child tickets provided.');
+      case 'master_not_found':
+        throw new NotFoundError('Master ticket not found.');
+      case 'child_not_found':
+        throw new NotFoundError(`Child ticket not found: ${failure.childTicketId}`);
+      case 'master_is_child':
+        throw new ValidationError(
+          options?.masterIsChildMessage ?? 'Cannot select a child ticket as the master.'
+        );
+      case 'already_bundled': {
+        const label = failure.childTicketNumber || failure.childTicketId || '';
+        throw new ConflictError(`Ticket is already bundled: ${label}`);
+      }
+      case 'children_are_masters': {
+        const numbers = failure.ticketNumbers ?? [];
+        const listText = numbers.length > 0 ? numbers.join(', ') : '';
+        const prefix = numbers.length === 1
+          ? `Ticket ${listText} is already a bundle master`
+          : `Tickets ${listText} are already bundle masters`;
+        throw new ConflictError(
+          `${prefix} and cannot be added as children. Unbundle them first, or use one of them as the master.`
+        );
+      }
+      case 'choice_required': {
+        const choices = (failure.allowedChoices ?? []).join(', ');
+        throw new ConflictError(
+          `The bundle master is closed. Retry with on_closed_master set to one of: ${choices}.`,
+        );
+      }
+      case 'choice_not_allowed': {
+        const choices = (failure.allowedChoices ?? []).join(', ');
+        throw new ValidationError(
+          `The requested on_closed_master choice is not allowed for this master. Use one of: ${choices}.`,
+        );
+      }
+      case 'choice_on_open_master':
+        throw new ValidationError(
+          'on_closed_master only applies when the bundle master is closed.',
+        );
+      case 'close_rule_failed': {
+        const details = (failure.closeRuleFailures ?? []).map((f) => ({
+          path: ['on_closed_master'],
+          message: f.message,
+        }));
+        throw new ValidationError(
+          'The bundled child cannot be closed because the board close rules are not satisfied.',
+          details,
+        );
+      }
+      case 'reopen_unavailable':
+        throw new ConflictError(
+          'The master cannot be reopened because no open ticket status is configured.',
+        );
+    }
+  }
 
-    const rows = await tenantScopedTable(trx, 'tickets', tenant)
-      .select('ticket_number')
-      .whereIn('ticket_id', offending);
-    const labels = rows
-      .map((r: any) => r.ticket_number)
-      .filter((n: any): n is string => typeof n === 'string' && n.length > 0);
-    const listText = labels.length > 0 ? labels.join(', ') : offending.join(', ');
-    const prefix = offending.length === 1
-      ? `Ticket ${listText} is already a bundle master`
-      : `Tickets ${listText} are already bundle masters`;
-    throw new ConflictError(
-      `${prefix} and cannot be added as children. Unbundle them first, or use one of them as the master.`
-    );
+  private registerBundlePublications(
+    trx: Knex.Transaction,
+    context: ServiceContext,
+    publications: BundleAfterCommitPublication[]
+  ): void {
+    for (const publication of publications) {
+      registerAfterCommit(
+        trx,
+        () =>
+          publishBundleAfterCommitPublication(publication, (event) =>
+            this.safePublishEvent(event.eventType, context, event.payload, event.idempotencyKey)
+          ),
+        `${publication.eventType} bundle-attach`
+      );
+    }
   }
 
   async bundleTickets(
     context: ServiceContext,
-    params: { masterTicketId: string; childTicketIds: string[]; mode: BundleMode }
+    params: {
+      masterTicketId: string;
+      childTicketIds: string[];
+      mode: BundleMode;
+      onClosedMaster?: ClosedMasterChoice;
+    }
   ): Promise<{ masterTicketId: string; childTicketIds: string[]; mode: BundleMode }> {
     const uniqueChildIds = Array.from(new Set(params.childTicketIds)).filter((id) => id !== params.masterTicketId);
     if (uniqueChildIds.length === 0) {
@@ -2778,76 +3514,46 @@ export class TicketService extends BaseService<ITicket> {
     }
 
     const { knex } = await this.getKnex();
-    const result = await withTransaction(knex, async (trx) => {
-      const tickets = await tenantScopedTable(trx, 'tickets', context.tenant)
-        .select('ticket_id', 'ticket_number', 'master_ticket_id')
-        .whereIn('ticket_id', [params.masterTicketId, ...uniqueChildIds]);
-
-      const byId = new Map<string, any>(tickets.map((t: any) => [t.ticket_id, t]));
-      if (!byId.has(params.masterTicketId)) {
-        throw new NotFoundError('Master ticket not found.');
-      }
-      for (const childId of uniqueChildIds) {
-        if (!byId.has(childId)) {
-          throw new NotFoundError(`Child ticket not found: ${childId}`);
-        }
-      }
-
-      const master = byId.get(params.masterTicketId);
-      if (master.master_ticket_id) {
-        throw new ValidationError('Cannot select a child ticket as the master.');
-      }
-
-      await this.assertChildrenAreNotMasters(trx, context.tenant, uniqueChildIds);
-
-      for (const childId of uniqueChildIds) {
-        const child = byId.get(childId);
-        if (child.master_ticket_id) {
-          throw new ConflictError(`Ticket is already bundled: ${child.ticket_number || childId}`);
-        }
-      }
-
-      const updatedChildrenCount = await tenantScopedTable(trx, 'tickets', context.tenant)
-        .whereIn('ticket_id', uniqueChildIds)
-        .whereNull('master_ticket_id')
-        .update({
-          master_ticket_id: params.masterTicketId,
-          updated_by: context.userId,
-          updated_at: new Date().toISOString(),
-        });
-      if (updatedChildrenCount !== uniqueChildIds.length) {
-        throw new ConflictError('One or more selected tickets were bundled concurrently. Please refresh and try again.');
-      }
-
-      await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
-        .insert({
-          tenant: context.tenant,
-          master_ticket_id: params.masterTicketId,
-          mode: params.mode,
-          reopen_on_child_reply: false,
-        })
-        .onConflict(['tenant', 'master_ticket_id'])
-        .merge({ mode: params.mode });
-
-      return { masterTicketId: params.masterTicketId, childTicketIds: uniqueChildIds, mode: params.mode };
-    });
-
     const occurredAt = new Date().toISOString();
-    for (const childTicketId of result.childTicketIds) {
-      await this.safePublishEvent('TICKET_MERGED', context, {
-        sourceTicketId: childTicketId,
-        targetTicketId: result.masterTicketId,
-        mergedAt: occurredAt,
-        reason: `bundle:${result.mode}`,
+    try {
+      return await withTransaction(knex, async (trx) => {
+        const attached = await attachChildrenToBundle(trx, context.tenant, {
+          masterTicketId: params.masterTicketId,
+          childTicketIds: uniqueChildIds,
+          mode: params.mode,
+          choice: params.onClosedMaster ?? null,
+          actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId },
+          source: TICKET_ACTIVITY_SOURCE.API,
+          occurredAt,
+          mergedReason: `bundle:${params.mode}`,
+        });
+        if (!attached.ok) {
+          this.throwBundleAttachFailure(attached, {
+            masterIsChildMessage: 'Cannot select a child ticket as the master.',
+          });
+        }
+        this.registerBundlePublications(trx, context, attached.value.publications);
+        return {
+          masterTicketId: attached.value.masterTicketId,
+          childTicketIds: attached.value.childTicketIds,
+          mode: params.mode,
+        };
       });
+    } catch (error) {
+      if (error instanceof BundleConcurrentModificationError) {
+        throw new ConflictError(error.message);
+      }
+      throw error;
     }
-
-    return result;
   }
 
   async addBundleChildren(
     context: ServiceContext,
-    params: { masterTicketId: string; childTicketIds: string[] }
+    params: {
+      masterTicketId: string;
+      childTicketIds: string[];
+      onClosedMaster?: ClosedMasterChoice;
+    }
   ): Promise<{ masterTicketId: string; childTicketIds: string[] }> {
     const childIds = Array.from(new Set(params.childTicketIds)).filter((id) => id !== params.masterTicketId);
     if (childIds.length === 0) {
@@ -2855,52 +3561,35 @@ export class TicketService extends BaseService<ITicket> {
     }
 
     const { knex } = await this.getKnex();
-    const result = await withTransaction(knex, async (trx) => {
-      const master = await tenantScopedTable(trx, 'tickets', context.tenant)
-        .select('ticket_id', 'master_ticket_id')
-        .where({ ticket_id: params.masterTicketId })
-        .first();
-      if (!master) throw new NotFoundError('Master ticket not found.');
-      if (master.master_ticket_id) throw new ValidationError('Cannot add children to a bundled child ticket.');
-
-      const children = await tenantScopedTable(trx, 'tickets', context.tenant)
-        .select('ticket_id', 'ticket_number', 'master_ticket_id')
-        .whereIn('ticket_id', childIds);
-      const byId = new Map<string, any>(children.map((t: any) => [t.ticket_id, t]));
-      for (const childId of childIds) {
-        const child = byId.get(childId);
-        if (!child) throw new NotFoundError(`Child ticket not found: ${childId}`);
-        if (child.master_ticket_id) throw new ConflictError(`Ticket is already bundled: ${child.ticket_number || childId}`);
-      }
-
-      await this.assertChildrenAreNotMasters(trx, context.tenant, childIds);
-
-      const updatedChildrenCount = await tenantScopedTable(trx, 'tickets', context.tenant)
-        .whereIn('ticket_id', childIds)
-        .whereNull('master_ticket_id')
-        .update({
-          master_ticket_id: params.masterTicketId,
-          updated_by: context.userId,
-          updated_at: new Date().toISOString(),
-        });
-      if (updatedChildrenCount !== childIds.length) {
-        throw new ConflictError('One or more selected tickets were bundled concurrently. Please refresh and try again.');
-      }
-
-      return { masterTicketId: params.masterTicketId, childTicketIds: childIds };
-    });
-
     const occurredAt = new Date().toISOString();
-    for (const childTicketId of result.childTicketIds) {
-      await this.safePublishEvent('TICKET_MERGED', context, {
-        sourceTicketId: childTicketId,
-        targetTicketId: result.masterTicketId,
-        mergedAt: occurredAt,
-        reason: 'bundle:added_children',
+    try {
+      return await withTransaction(knex, async (trx) => {
+        const attached = await attachChildrenToBundle(trx, context.tenant, {
+          masterTicketId: params.masterTicketId,
+          childTicketIds: childIds,
+          choice: params.onClosedMaster ?? null,
+          actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId },
+          source: TICKET_ACTIVITY_SOURCE.API,
+          occurredAt,
+          mergedReason: 'bundle:added_children',
+        });
+        if (!attached.ok) {
+          this.throwBundleAttachFailure(attached, {
+            masterIsChildMessage: 'Cannot add children to a bundled child ticket.',
+          });
+        }
+        this.registerBundlePublications(trx, context, attached.value.publications);
+        return {
+          masterTicketId: attached.value.masterTicketId,
+          childTicketIds: attached.value.childTicketIds,
+        };
       });
+    } catch (error) {
+      if (error instanceof BundleConcurrentModificationError) {
+        throw new ConflictError(error.message);
+      }
+      throw error;
     }
-
-    return result;
   }
 
   async promoteBundleMaster(
@@ -2965,12 +3654,12 @@ export class TicketService extends BaseService<ITicket> {
       return { oldMasterTicketId: params.oldMasterTicketId, newMasterTicketId: params.newMasterTicketId };
     });
 
-    await this.safePublishEvent('TICKET_MERGED', context, {
+    await this.safePublishEvent('TICKET_MERGED', context, buildTicketMergedPayload({
       sourceTicketId: result.oldMasterTicketId,
       targetTicketId: result.newMasterTicketId,
       mergedAt: new Date().toISOString(),
       reason: 'bundle:promote_master',
-    });
+    }));
 
     return result;
   }
@@ -3028,6 +3717,8 @@ export class TicketService extends BaseService<ITicket> {
         .where({ ticket_id: params.childTicketId })
         .update({ master_ticket_id: null, updated_by: context.userId, updated_at: new Date().toISOString() });
 
+      await revertBundlePropagationForChild(trx, context.tenant, params.childTicketId, context.userId);
+
       const [{ count }] = await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ master_ticket_id: masterTicketId })
         .count('ticket_id as count');
@@ -3041,12 +3732,12 @@ export class TicketService extends BaseService<ITicket> {
       return { masterTicketId, childTicketId: params.childTicketId, remainingChildren: remaining };
     });
 
-    await this.safePublishEvent('TICKET_SPLIT', context, {
+    await this.safePublishEvent('TICKET_SPLIT', context, buildTicketSplitPayload({
       originalTicketId: result.masterTicketId,
       newTicketIds: [result.childTicketId],
       splitAt: new Date().toISOString(),
       reason: 'bundle:remove_child',
-    });
+    }));
 
     return result;
   }
@@ -3073,6 +3764,8 @@ export class TicketService extends BaseService<ITicket> {
         .where({ master_ticket_id: params.masterTicketId })
         .update({ master_ticket_id: null, updated_by: context.userId, updated_at: new Date().toISOString() });
 
+      await revertBundlePropagationsForMaster(trx, context.tenant, params.masterTicketId, context.userId);
+
       await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
         .where({ master_ticket_id: params.masterTicketId })
         .delete();
@@ -3081,12 +3774,12 @@ export class TicketService extends BaseService<ITicket> {
     });
 
     if (result.childTicketIds.length > 0) {
-      await this.safePublishEvent('TICKET_SPLIT', context, {
+      await this.safePublishEvent('TICKET_SPLIT', context, buildTicketSplitPayload({
         originalTicketId: result.masterTicketId,
         newTicketIds: result.childTicketIds,
         splitAt: new Date().toISOString(),
         reason: 'bundle:unbundle_master',
-      });
+      }));
     }
 
     return result;

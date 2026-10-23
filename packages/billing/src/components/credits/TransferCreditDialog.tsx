@@ -186,7 +186,7 @@ export default function TransferCreditDialog({ credit, onClose }: TransferCredit
                 <span className="text-[rgb(var(--color-text-500))]">
                   {t('transferDialog.impact.after', { defaultValue: 'Remaining After Transfer' })}:
                 </span>
-                <span className="font-medium text-right">{formatCurrencyFromMinorUnits(Math.max(0, newRemaining))}</span>
+                <span className="font-medium text-right">{formatCurrencyFromMinorUnits(Math.max(0, newRemaining), undefined, creditCurrency)}</span>
               </div>
             </div>
 

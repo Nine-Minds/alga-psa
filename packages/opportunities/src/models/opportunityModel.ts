@@ -26,7 +26,7 @@ function normalize(row: Record<string, unknown>): IOpportunity {
     mrr_cents: Number(row.mrr_cents ?? 0),
     nrr_cents: Number(row.nrr_cents ?? 0),
     hardware_cents: Number(row.hardware_cents ?? 0),
-    expected_close_date: normalizeOptionalIso(row.expected_close_date),
+    expected_close_date: normalizeOptionalDateOnly(row.expected_close_date),
     next_action_due: normalizeOptionalIso(row.next_action_due),
     last_activity_at: normalizeOptionalIso(row.last_activity_at),
     won_at: normalizeOptionalIso(row.won_at),
@@ -40,6 +40,23 @@ function normalizeOptionalIso(value: unknown): string | null | undefined {
   if (value === null) return null;
   if (value === undefined) return undefined;
   return value instanceof Date ? value.toISOString() : String(value);
+}
+
+/**
+ * expected_close_date is a calendar date, and the write side only ever accepts
+ * YYYY-MM-DD. The pg driver hands back a Date for a `date` column, so reading it
+ * as an instant used to shift the day across a timezone and hand callers a value
+ * their own PUT would reject. Local date parts keep the day the user picked.
+ */
+function normalizeOptionalDateOnly(value: unknown): string | null | undefined {
+  if (value === null) return null;
+  if (value === undefined) return undefined;
+  if (value instanceof Date) {
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${value.getFullYear()}-${month}-${day}`;
+  }
+  return String(value).slice(0, 10);
 }
 
 function normalizeListItem(row: Record<string, unknown>): IOpportunityListItem {
@@ -61,7 +78,7 @@ function normalizeListItem(row: Record<string, unknown>): IOpportunityListItem {
     hardware_cents: Number(row.hardware_cents ?? 0),
     currency_code: String(row.currency_code),
     values_locked_by_quote: Boolean(row.values_locked_by_quote),
-    expected_close_date: normalizeOptionalIso(row.expected_close_date),
+    expected_close_date: normalizeOptionalDateOnly(row.expected_close_date),
     next_action: row.next_action as IOpportunityListItem['next_action'],
     next_action_due: normalizeOptionalIso(row.next_action_due),
     days_since_activity: Number(row.days_since_activity ?? 0),

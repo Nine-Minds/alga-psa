@@ -17,6 +17,7 @@ import {
 import type { TemplateAst, WasmInvoiceViewModel, RenderOutput } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { withAuth } from '@alga-psa/auth';
+import { withSerializableAuth } from './serializableAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
     actionError,
@@ -389,7 +390,7 @@ export const addInvoiceAnnotation = withAuth(async (
     return newAnnotation;
 });
 
-export const getInvoiceAnnotations = withAuth(async (
+export const getInvoiceAnnotations = withSerializableAuth(withAuth(async (
     user,
     { tenant },
     invoiceId: string
@@ -398,7 +399,7 @@ export const getInvoiceAnnotations = withAuth(async (
     return tenantDb(knex, tenant).table('invoice_annotations')
         .where({ invoice_id: invoiceId })
         .orderBy('created_at', 'asc');
-});
+}));
 // --- Server-Side Rendering Action ---
 
 /**
@@ -463,12 +464,17 @@ export const renderTemplateOnServer = withAuth(async (
         );
         // Same seam the PDF path uses, so the on-screen preview is authoritative.
         const invoiceId = options?.invoiceId ?? null;
+        const pdfService = createPDFGenerationService(tenant);
         const recipientLocale = invoiceId
-          ? await createPDFGenerationService(tenant).resolveRenderLocale({ invoiceId })
+          ? await pdfService.resolveRenderLocale({ invoiceId })
           : null;
+        // With no concrete invoice this resolves the tenant default, which is
+        // what an unsent document would be dated in.
+        const dateFormat = await pdfService.resolveRenderCountry(invoiceId ? { invoiceId } : {});
         const localized = await localizeTemplateAstForLocale(templateAst, recipientLocale);
         const { html, css } = await renderEvaluatedTemplateAst(localized.ast, evaluation, {
           locale: localized.locale,
+          dateFormat,
           t: localized.t,
         });
 

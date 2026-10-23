@@ -49,6 +49,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useOptionalI18n: () => null,
   useTranslation: () => ({
     t: (key: string, opts?: { defaultValue?: string } & Record<string, unknown>) =>
       (opts && typeof opts.defaultValue === 'string' ? opts.defaultValue : key),
@@ -595,7 +596,12 @@ describe('AutomaticInvoices grouped parent rows', () => {
       expect(checkbox).not.toBeChecked();
       expect(screen.queryByRole('button', { name: 'Preview Selected' })).not.toBeInTheDocument();
       fireEvent.change(screen.getByPlaceholderText('Filter by client'), { target: { value: 'Other client' } });
-      expect(screen.getByTestId('automatic-invoices-table-row-count')).toHaveTextContent('0');
+      // The filter is applied by the server, so the debounced value is sent as clientName.
+      mockGetAvailableRecurringDueWork.mockClear();
+      await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+      expect(mockGetAvailableRecurringDueWork).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 1, clientName: 'Other client' }),
+      );
     } finally {
       cleanup();
       vi.useRealTimers();
@@ -615,10 +621,15 @@ describe('AutomaticInvoices grouped parent rows', () => {
     vi.useFakeTimers();
     try {
       fireEvent.change(screen.getByPlaceholderText('Filter by client'), { target: { value: 'Acme Co' } });
-      fireEvent.click(checkbox);
-      expect(checkbox).toBeChecked();
+      // The debounce commits the new filter (and clears stale selection) before
+      // the filtered rows reload, so select again once the reload has settled.
       await act(async () => { await vi.advanceTimersByTimeAsync(300); });
-      expect(checkbox).toBeChecked();
+      const filteredCheckbox = document.getElementById('select-parent-group:client-1:2026-03-01:2026-04-01') as HTMLInputElement;
+      expect(filteredCheckbox).not.toBeNull();
+      fireEvent.click(filteredCheckbox);
+      expect(filteredCheckbox).toBeChecked();
+      await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+      expect(filteredCheckbox).toBeChecked();
       expect(new URL(window.location.href).searchParams.get('automaticClientFilter')).toBe('Acme Co');
       expect(new URL(window.location.href).searchParams.get('tab')).toBe('invoicing');
       expect(window.location.hash).toBe('#ready');

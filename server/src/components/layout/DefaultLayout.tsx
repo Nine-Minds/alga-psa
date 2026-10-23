@@ -9,6 +9,7 @@ import Header from "./Header";
 import Body from "./Body";
 import RightSidebar from "./RightSidebar";
 import { DrawerProvider } from "@alga-psa/ui";
+import { StopwatchProvider } from '@alga-psa/scheduling/providers/StopwatchProvider';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { savePreference } from '@alga-psa/ui/lib';
@@ -20,6 +21,7 @@ import { QuickAskProvider } from './QuickAskContext';
 // surveys…) without it; this lightweight, fetch-on-demand provider fills that gap.
 import { MspClientTagsProvider } from '@alga-psa/msp-composition/clients/MspClientTagsProvider';
 import { PlatformNotificationBanner } from './PlatformNotificationBanner';
+import { IntegrationHealthBanner } from '@alga-psa/integrations/components/IntegrationHealthBanner';
 import GlobalShortcutLayer from './GlobalShortcutLayer';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 import { useTier } from 'server/src/context/TierContext';
@@ -433,6 +435,8 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   return (
     <MspClientTagsProvider>
     <DrawerProvider>
+      {/* Mounted in the shell (not the per-route workspace stack): the header indicator sits above it. */}
+      <StopwatchProvider>
       <div className="fixed inset-0 flex overflow-hidden app-shell-ground">
         <SidebarWithFeatureFlags
           sidebarOpen={sidebarOpen}
@@ -451,6 +455,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
               setRightSidebarOpen={setRightSidebarOpen}
             />
             <PlatformNotificationBanner />
+            <IntegrationHealthBanner />
             <StaleActionBanner />
             <main className={`flex-1 overflow-hidden flex ${sidebarMode !== 'main' ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
               <Body>{children}</Body>
@@ -534,6 +539,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
           }
         />
       )}
+      </StopwatchProvider>
     </DrawerProvider>
     </MspClientTagsProvider>
   );

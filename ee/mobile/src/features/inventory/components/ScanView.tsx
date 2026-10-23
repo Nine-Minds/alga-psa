@@ -211,12 +211,12 @@ export function ScanView() {
               <IconButton
                 onPress={() => setTorchOn((value) => !value)}
                 accessibilityLabel={torchOn ? t("scan.torchOff", "Turn flashlight off") : t("scan.torchOn", "Turn flashlight on")}
-                icon={<MaterialCommunityIcons name={torchOn ? "flashlight-off" : "flashlight"} size={22} color="#ffffff" />}
+                icon={<MaterialCommunityIcons name={torchOn ? "flashlight-off" : "flashlight"} size={22} color={theme.colors.overlayText} />}
               />
               <IconButton
                 onPress={() => setManualMode(true)}
                 accessibilityLabel={t("scan.manualEntry", "Enter code manually")}
-                icon={<MaterialCommunityIcons name="keyboard-outline" size={22} color="#ffffff" />}
+                icon={<MaterialCommunityIcons name="keyboard-outline" size={22} color={theme.colors.overlayText} />}
               />
             </View>
             {/* Always-visible manual-entry affordance, styled so it reads on any feed. */}
@@ -226,7 +226,7 @@ export function ScanView() {
                 testID="inventory-scan-enter-manually"
                 style={{
                   ...theme.typography.body,
-                  color: "#ffffff",
+                  color: theme.colors.overlayText,
                   backgroundColor: "rgba(0,0,0,0.6)",
                   paddingHorizontal: theme.spacing.lg,
                   paddingVertical: theme.spacing.sm,

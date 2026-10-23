@@ -1,12 +1,22 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { infrastructureFloor } from '../lib/infrastructure-selection.mjs';
 
 const source = fileURLToPath(new URL('../../', import.meta.url));
+// The fixture repo must contain every mandatory floor file, or the runner
+// correctly refuses to collect. Derive the file set from the real floor list so
+// this self-test stays in sync when the floor grows, plus one non-floor
+// "extra" repository test that only full mode runs.
+const floorRelative = infrastructureFloor.map(file =>
+  file.replace('server/src/test/infrastructure/', ''));
+// Round-robin partition (position % total) shard size, derived independently of
+// the sharding implementation under test.
+const shardFileCount = (totalFiles, index, total) => Math.ceil((totalFiles - (index - 1)) / total);
 test('actual infrastructure runner partitions, executes and rejects missing or stale shard evidence', { timeout: 120_000 }, t => {
   const root = mkdtempSync(path.join(tmpdir(), 'alga-infrastructure-runner-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
@@ -16,19 +26,13 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   };
   for (const file of ['scripts/run-infrastructure-tests.mjs', 'scripts/verify-infrastructure-shards.mjs',
     'scripts/lib/test-discovery.mjs', 'scripts/lib/test-execution-evidence.mjs', 'scripts/lib/test-revision.mjs', 'scripts/lib/test-sharding.mjs',
-    'scripts/lib/infrastructure-selection.mjs', 'scripts/lib/integration-selection.mjs']) {
+    'scripts/lib/infrastructure-selection.mjs', 'scripts/lib/integration-selection.mjs',
+    'scripts/lib/flaky-policy.mjs', 'scripts/lib/vitest-flaky-reporter.mjs']) {
     write(file, readFileSync(path.join(source, file), 'utf8'));
   }
   write('.gitignore', 'node_modules/\ntest-results/\n');
   write('server/vitest.config.mjs', `export default ${JSON.stringify({ test: { globals: true, include: ['src/test/infrastructure/**/*.test.ts'], fileParallelism: false, maxWorkers: 1 } })};`);
-  // Mirrors infrastructureFloor: the floor is a mandatory-presence check, so
-  // every file it names must exist here. 'extra.test.ts' stands in for a
-  // repository test outside the floor, which only the full mode picks up.
-  const floor = ['billing/invoices/invoiceDueDate.test.ts', 'billing/invoices/manualInvoice.test.ts',
-    'billing/invoices/billingInvoiceGeneration_tax.test.ts',
-    'billing/tax/taxRoundingBehavior.test.ts', 'billing/credits/creditApplication.test.ts',
-    'billing/quotes/quoteInfrastructure.test.ts', 'billing/quotes/quoteConversion.test.ts'];
-  const files = [...floor, 'extra.test.ts'];
+  const files = [...floorRelative, 'extra.test.ts'];
   for (const file of files) write(`server/src/test/infrastructure/${file}`, "test('observes the result', () => expect(2 + 3).toBe(5));\n");
   symlinkSync(path.join(source, 'server/node_modules'), path.join(root, 'server/node_modules'), 'dir');
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
@@ -36,25 +40,23 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   git('add', '.'); git('commit', '-qm', 'fixture');
   const run = (script, index = 1, mode = 'full', total = 3, environment = {}) => spawnSync(process.execPath, [path.join(root, 'scripts', script)], {
     cwd: root, encoding: 'utf8', timeout: 30_000,
+    // GITHUB_EVENT_NAME drives the retry-only-pass policy, so it is pinned here
+    // rather than inherited from whatever run executes this test.
     env: { ...process.env, CI: '1', GITHUB_SHA: git('rev-parse', 'HEAD').trim(), TIER1_BASE_SHA: git('rev-parse', 'HEAD').trim(),
+      GITHUB_EVENT_NAME: 'pull_request', GITHUB_HEAD_REF: 'feature/flakes', GITHUB_REF_NAME: '',
       INFRA_SELECTION_RESULT: 'success', INFRA_EVENT: 'pull_request', INFRA_JOB_RESULT: 'success', INFRA_MODE: mode,
       INFRA_SHARD_INDEX: String(index), INFRA_SHARD_TOTAL: String(total), ...environment },
   });
   const read = file => JSON.parse(readFileSync(path.join(root, file), 'utf8'));
-  let partitioned = 0;
   for (const index of [1, 2, 3]) {
     const result = run('run-infrastructure-tests.mjs', index);
     assert.equal(result.status, 0, result.stdout + result.stderr);
     const evidence = read('test-results/infrastructure/evidence.json');
     assert.equal(evidence.status, 'passed');
     assert.equal(evidence.workingTreeDirty, false);
-    // The file count need not divide evenly across shards; what must hold is
-    // that no shard is empty and the shards together cover the set exactly once.
-    assert.ok(evidence.expectedFiles.length > 0);
-    partitioned += evidence.expectedFiles.length;
+    assert.equal(evidence.expectedFiles.length, shardFileCount(files.length, index, 3));
     cpSync(path.join(root, 'test-results/infrastructure'), path.join(root, `test-results/infrastructure-shards/shard-${index}`), { recursive: true });
   }
-  assert.equal(partitioned, files.length);
   let combined = run('verify-infrastructure-shards.mjs');
   assert.equal(combined.status, 0, combined.stdout + combined.stderr);
   assert.equal(read('test-results/infrastructure/aggregate.json').counts.passed, files.length);
@@ -87,12 +89,9 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
 
   const tier1 = run('run-infrastructure-tests.mjs', 1, 'tier1', 1);
   assert.equal(tier1.status, 0, tier1.stdout + tier1.stderr);
-  assert.equal(read('test-results/infrastructure/evidence.json').counts.passed, floor.length);
-  for (const file of ['billing/invoices/billingInvoiceGeneration_tax.test.ts',
-    'billing/quotes/quoteInfrastructure.test.ts', 'billing/quotes/quoteConversion.test.ts']) {
-    assert.ok(read('test-results/infrastructure/evidence.json').expectedFiles.includes(
-      `server/src/test/infrastructure/${file}`));
-  }
+  assert.equal(read('test-results/infrastructure/evidence.json').counts.passed, infrastructureFloor.length);
+  assert.ok(read('test-results/infrastructure/evidence.json').expectedFiles.includes(
+    'server/src/test/infrastructure/billing/invoices/billingInvoiceGeneration_tax.test.ts'));
   // These are genuine passing reports for every Tier-1 file. Relabelling the
   // set as "full" must not let its own manifest hide the extra repository test.
   rmSync(path.join(root, 'test-results/infrastructure-shards'), { recursive: true, force: true });
@@ -161,4 +160,57 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   git('add', '.'); git('commit', '-qm', 'runtime change');
   assert.equal(run('verify-infrastructure-shards.mjs', 1, 'tier1', 1,
     { ...skipped, TIER1_BASE_SHA: beforeRuntime }).status, 1);
+
+  // The runner owns --retry=1 and the flaky reporter, so a fail-then-pass is
+  // recorded instead of vanishing into a rerun: a warning on a pull request, a
+  // failure on a push, and an upload copy only when something retried.
+  const marker = JSON.stringify(path.join(root, 'test-results/infrastructure-marker'));
+  write('server/src/test/infrastructure/recovers.test.ts', [
+    "import { existsSync, mkdirSync, writeFileSync } from 'node:fs';",
+    "import nodePath from 'node:path';",
+    "test('recovers on retry', () => {",
+    `  if (!existsSync(${marker})) {`,
+    `    mkdirSync(nodePath.dirname(${marker}), { recursive: true });`,
+    `    writeFileSync(${marker}, 'attempted');`,
+    "    throw new Error('deliberate first-attempt failure');",
+    '  }',
+    '  expect(2 + 3).toBe(5);',
+    '});',
+  ].join('\n') + '\n');
+  git('add', '.'); git('commit', '-qm', 'add a deliberately flaky infrastructure suite');
+  const flakyId = 'src/test/infrastructure/recovers.test.ts > recovers on retry';
+  const onPullRequest = run('run-infrastructure-tests.mjs', 1, 'full', 1);
+  assert.equal(onPullRequest.status, 0, onPullRequest.stdout + onPullRequest.stderr);
+  assert.ok(onPullRequest.stderr.includes(`::warning::Flaky test passed only on retry: ${flakyId}`), onPullRequest.stderr);
+  const document = read('test-results/infrastructure/flaky-tests.json');
+  assert.deepEqual([document.suite, document.job, document.eventName, document.branch],
+    ['infrastructure', 'infrastructure shard 1/1', 'pull_request', 'feature/flakes']);
+  assert.deepEqual(document.tests.map(entry => entry.testId), [flakyId]);
+  assert.deepEqual(read('test-results/infrastructure-flaky/flaky-tests.json'), document);
+
+  rmSync(path.join(root, 'test-results/infrastructure-marker'));
+  const onPush = run('run-infrastructure-tests.mjs', 1, 'full', 1,
+    { GITHUB_EVENT_NAME: 'push', GITHUB_HEAD_REF: '', GITHUB_REF_NAME: 'main' });
+  assert.equal(onPush.status, 1, onPush.stdout);
+  const pushEvidence = read('test-results/infrastructure/evidence.json');
+  assert.equal(pushEvidence.status, 'failed');
+  assert.ok(pushEvidence.failures.includes(`retry-only pass on push run: ${flakyId}`), pushEvidence.failures.join('\n'));
+
+  const stable = run('run-infrastructure-tests.mjs', 1, 'full', 1);
+  assert.equal(stable.status, 0, stable.stdout + stable.stderr);
+  assert.deepEqual(read('test-results/infrastructure/flaky-tests.json').tests, []);
+  assert.equal(existsSync(path.join(root, 'test-results/infrastructure-flaky')), false);
+  rmSync(path.join(root, 'server/src/test/infrastructure/recovers.test.ts'));
+  git('add', '.'); git('commit', '-qm', 'remove the deliberately flaky suite');
+
+  // Reproduce the CI failure: omitting a mandatory catalog-pricing suite must
+  // still fail collection even when every remaining fixture test passes.
+  const missingFloorFile = 'server/src/test/infrastructure/billing/catalogPricing/catalogPriceResolution.test.ts';
+  assert.ok(infrastructureFloor.includes(missingFloorFile));
+  rmSync(path.join(root, missingFloorFile));
+  git('add', '.'); git('commit', '-qm', 'omit mandatory catalog pricing test');
+  const missingFloor = run('run-infrastructure-tests.mjs', 1, 'tier1', 1);
+  assert.equal(missingFloor.status, 1);
+  assert.ok((missingFloor.stdout + missingFloor.stderr).includes(
+    `Mandatory infrastructure floor was not collected: ${missingFloorFile}`));
 });

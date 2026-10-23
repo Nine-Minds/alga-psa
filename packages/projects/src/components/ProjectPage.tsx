@@ -37,13 +37,16 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const taskIdFromUrl = searchParams?.get('taskId') ?? null;
   const phaseIdFromUrl = searchParams?.get('phaseId') ?? null;
   const viewFromUrlRaw = searchParams?.get('view') ?? null;
-  const viewFromUrl = viewFromUrlRaw === 'kanban' || viewFromUrlRaw === 'list' || viewFromUrlRaw === 'billing'
+  const viewFromUrl = viewFromUrlRaw === 'kanban' || viewFromUrlRaw === 'list' || viewFromUrlRaw === 'billing' || viewFromUrlRaw === 'gantt'
     ? viewFromUrlRaw
     : null;
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projectMetadata, setProjectMetadata] = useState<ProjectMetadata | null>(null);
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
   const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
+  // The edit drawer deletes status columns (moving their tasks) without the
+  // board knowing; this counter is how it asks the board to re-read.
+  const [statusRefreshKey, setStatusRefreshKey] = useState(0);
 
   useEffect(() => {
     const initializeParams = async () => {
@@ -134,6 +137,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     }
   };
   
+  const handleStatusesChanged = useCallback(() => {
+    setStatusRefreshKey(key => key + 1);
+  }, []);
+
   const handleTagsUpdate = (tags: ITag[], allTags: string[]) => {
     setProjectTags(tags);
     setAllTagTexts(allTags);
@@ -179,6 +186,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         onAssignedUserChange={handleAssignedUserChange}
         onContactChange={handleContactChange}
         onProjectUpdate={handleProjectUpdate}
+        onStatusesChanged={handleStatusesChanged}
         projectTags={projectTags}
         allTagTexts={allTagTexts}
         onTagsChange={setProjectTags}
@@ -194,6 +202,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         initialPhaseId={phaseIdFromUrl}
         initialViewMode={viewFromUrl}
         onUrlUpdate={handleUrlUpdate}
+        statusRefreshKey={statusRefreshKey}
       />
     </div>
     </TaskSelectionProvider>

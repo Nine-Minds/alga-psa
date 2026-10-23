@@ -7,6 +7,7 @@ export {
   AMP_TABLE_COLUMNS,
   AMP_ENTITY_REFERENCES,
   AMP_DIAGNOSTIC_SEVERITIES,
+  AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY,
 } from './tables';
 export type { AmpEntityType, AmpAuxiliaryTable, AmpTable } from './tables';
 

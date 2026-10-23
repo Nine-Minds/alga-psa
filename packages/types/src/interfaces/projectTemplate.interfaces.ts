@@ -33,7 +33,10 @@ export interface IProjectTemplateTask extends TenantEntity {
   description?: string;
   description_rich_text?: string;
   estimated_hours?: number;
+  /** Days from the phase start to the task's due date. */
   duration_days?: number;
+  /** Days from the phase start to the task's start date; null leaves the start undated. */
+  start_offset_days?: number | null;
   task_type_key?: string;
   priority_id?: string;
   assigned_to?: string;

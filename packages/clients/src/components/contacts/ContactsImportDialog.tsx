@@ -540,6 +540,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
           },
           {
             title: t('contactsImportDialog.table.email', { defaultValue: 'Email' }),
+            id: 'original_email',
             dataIndex: 'originalData',
             render: (value: Record<string, string>) => value.email,
           },
@@ -766,7 +767,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
               <div className="max-h-96 overflow-x-auto overflow-y-auto">
                 <DataTable
                   key={`${currentPage}-${pageSize}`}
-                  id="contacts-import-preview-table"
+                  id="contacts-import-validation-preview-table"
                   pagination={true}
                   currentPage={currentPage}
                   onPageChange={setCurrentPage}

@@ -87,7 +87,7 @@ describe('validate-direct route', () => {
     expect(axiosGetMock).toHaveBeenCalledWith(
       'https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?$top=1',
       expect.objectContaining({
-        headers: { Authorization: 'Bearer access-token-38' },
+        headers: { Authorization: 'Bearer access-token-38', 'client-request-id': expect.any(String) },
       })
     );
     expect(updateEntraConnectionValidationMock).toHaveBeenCalledWith({

@@ -26,6 +26,9 @@ This starts every emulator on its default port and the console at
 | `smtp-sink` | `@alga-psa/emulator-smtp-sink` | 4040 | SMTP capture (MailHog stand-in) |
 | `stripe` | `@alga-psa/emulator-stripe` | 4050 | Stripe /v1 API (customers, Checkout sessions) + simulated hosted Checkout with signed webhooks |
 | `xero` | `@alga-psa/emulator-xero` | 4060 | Xero identity OAuth + connections list + api.xro/2.0 accounting API (invoices, contacts, settings) |
+| `levelio` | `@alga-psa/emulator-levelio` | 4080 | Level v2 REST API (groups, devices, alerts, updates) with API-key auth and cursor pagination; sends Level's native webhooks (signed envelopes, retries, re-run) and monitor-automation HTTP Request actions rendered with Level's system variables |
+| `huntress` | `@alga-psa/emulator-huntress` | 4090 | Huntress v1 API (account, organizations, agents, incident reports, escalations + escalation resolution) with HTTP Basic auth, `page_token` pagination and the documented `sort_field`/`sort_direction` ordering |
+| `threecx` | `@alga-psa/emulator-threecx` | 4070 | 3CX both ways: the CRM engine client that dials the AlgaPSA 3CX routes (lookup, search, report-call, contacts, report-chat) with the bearer key, and the PBX that AlgaPSA dials back — `/connect/token`, XAPI (users, contacts, call history, recordings), call control with its WebSocket event feed |
 
 The control API and console share port 9500. Override ports with
 `ALGASIM_CONTROL_PORT` and `ALGASIM_PORT_<ID>` (e.g. `ALGASIM_PORT_SMTP_SINK`).
@@ -56,12 +59,16 @@ Emulators implement the vendor protocol subsets listed in this guide and the
 | Vendor | Env vars |
 | --- | --- |
 | Microsoft | `MICROSOFT_LOGIN_BASE_URL=http://localhost:4010`, `MICROSOFT_GRAPH_BASE_URL=http://localhost:4010/v1.0` |
+| Microsoft sign-in (SSO) | `MICROSOFT_SSO_EMULATOR_MODE=true`, the two Microsoft vars above, plus `MICROSOFT_OAUTH_CLIENT_ID` / `MICROSOFT_OAUTH_CLIENT_SECRET` seeded into the simulator with `seed/client` |
 | Teams / Bot Framework | `TEAMS_EMULATOR_MODE=true`, the two Microsoft vars above, plus `TEAMS_BOT_OPENID_CONFIG_URL=http://localhost:4010/v1/.well-known/openidconfiguration` and `TEAMS_BOT_SERVICE_URL_ALLOWLIST=http://localhost:4010` |
 | QBO | `QBO_OAUTH_AUTHORIZE_URL=http://localhost:4020/connect/oauth2`, `QBO_OAUTH_TOKEN_URL=http://localhost:4020/oauth2/v1/tokens/bearer`, `QBO_OAUTH_REVOKE_URL=http://localhost:4020/v2/oauth2/tokens/revoke`, `QBO_API_BASE_URL=http://localhost:4020/v3/company` |
 | Stripe | `STRIPE_API_BASE_URL=http://localhost:4050`, `STRIPE_SECRET_KEY=sk_test_algasim`, `STRIPE_PAYMENT_WEBHOOK_SECRET=whsec_algasim`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_algasim` |
 | Xero | `XERO_OAUTH_AUTHORIZE_URL=http://localhost:4060/identity/connect/authorize`, `XERO_OAUTH_TOKEN_URL=http://localhost:4060/connect/token`, `XERO_OAUTH_REVOKE_URL=http://localhost:4060/connect/revocation`, `XERO_REVOCATION_URL=http://localhost:4060/connect/revocation`, `XERO_CONNECTIONS_URL=http://localhost:4060/connections`, `XERO_API_BASE_URL=http://localhost:4060/api.xro/2.0` |
 | Webhooks | Point the integration's webhook/notification URL at `http://localhost:4030/<any path>` |
 | SMTP | Configure the SMTP provider with host `localhost`, port `4040`, no TLS |
+| 3CX | `THREECX_EMULATOR_MODE=true`, then enter `http://localhost:4070` as the PBX base URL on the 3CX integration card |
+| Level | `LEVELIO_API_BASE_URL=http://localhost:4080`, then save `algasim-level-key` as the Level API key. Webhooks and automations go outbound: register their target URL in the emulator (see [Level](#level)) |
+| Huntress | `HUNTRESS_API_BASE_URL=http://localhost:4090`, then connect with API key `algasim-huntress-key` and secret `algasim-huntress-secret`. No env var is needed either way: the connect card's **Base URL** field is stored as `rmm_integrations.instance_url` and wins over the env default (see [Huntress](#huntress)) |
 
 `TEAMS_EMULATOR_MODE` is the single gate for every Teams override, and it is
 deny-by-default: unless it is explicitly `true` (or `1`), the Teams surface
@@ -75,6 +82,29 @@ the Teams integration specifically — `MICROSOFT_LOGIN_BASE_URL` and
 credentials, the Graph client secret, and activity-notification tokens are
 sent. (The email module honors those two Microsoft vars unconditionally; that
 is pre-existing behavior, unchanged here.)
+
+`MICROSOFT_SSO_EMULATOR_MODE` is the separate, equally deny-by-default gate for
+Microsoft **sign-in** (the `azure-ad` NextAuth provider behind the "Sign in with
+Microsoft" button and the Profile → Single Sign-On link flow). It decides where
+the browser is sent to authenticate and whose profile may become a session, so
+it is never implied by the two base-URL vars alone, and `NODE_ENV=production`
+locks it out. With it on, the provider runs as plain OAuth2 against the
+simulator — authorize, token, then Graph `/me` for the profile — because the
+simulator mints no signed id_token. Seed the client id/secret the app is
+configured with (`seed/client`) or `/authorize` answers `invalid_client`, and
+seed the account the browser should come back as:
+
+```bash
+curl -sX POST localhost:9500/control/msgraph/seed/signed-in-user \
+  -H 'content-type: application/json' \
+  -d '{"mail":"nd@computerbutlereurope.onmicrosoft.com",
+       "userPrincipalName":"nd@computerbutlereurope.onmicrosoft.com"}'
+```
+
+`mail` and `userPrincipalName` are seeded separately on purpose: an Entra
+account whose mail is on the tenant's `.onmicrosoft.com` domain while the
+AlgaPSA login uses a vanity domain is what produces the "no AlgaPSA account
+matches" surface, and that is the mismatch to stage when exercising it.
 
 `TEAMS_BOT_OPENID_CONFIG_URL` moves *discovery only*: the emulator generates
 an RSA keypair, publishes a JWKS, and RS256-signs the activities it injects,
@@ -410,6 +440,230 @@ The transcript is filed as a document on the matched client/contact and, when
 the call is linked to a ticket and the AI Assistant add-on is active, summarized
 onto that ticket. Recording bytes are only stored when the tenant turned on
 recording downloads in the Teams settings.
+
+### 3CX PBX and CRM engine
+
+The `threecx` emulator plays both sides of the integration on port 4070.
+
+**CRM engine (client).** The actions `crm-configure`, `crm-inbound-call`,
+`crm-outbound-call`, `crm-search`, `crm-create-contact` and `crm-report-chat`
+dial the AlgaPSA 3CX routes exactly as the PBX's CRM engine does — bearer key,
+route paths from the shared constants, request bodies matching the template's
+`[Variable]` posts — and record every request/response pair in the
+`exchanges` state view.
+
+**PBX (server).** AlgaPSA's own PBX client talks back to the same port:
+
+| Route | Behaviour |
+| --- | --- |
+| `POST /connect/token` | Form body `client_id` / `client_secret` / `grant_type`; answers `{ access_token, expires_in: 3600, token_type }` for a seeded `pbx-app`, 401 otherwise. Tokens expire on the virtual clock |
+| everything else | Requires `Authorization: Bearer <issued token>` (401 otherwise); `/xapi/*` needs the app's `xapi` capability and `/callcontrol*` its `callControl` one (403 otherwise) |
+| `GET /xapi/v1/Defs` | The capability probe; `{ value: [{ Id: 1 }] }` |
+| `GET /xapi/v1/Users` | Seeded extensions as `{ Id, Number, FirstName, LastName, EmailAddress, Enabled }` with `$select`, `$top`, `$skip` |
+| `GET\|POST /xapi/v1/Contacts`, `GET\|PATCH\|DELETE /xapi/v1/Contacts(<id>)`, `POST /xapi/v1/Contacts/Pbx.DeleteContactsById` | The phonebook; `POST` answers 201 with the entity's `Id`, unknown ids answer 404 |
+| `GET /xapi/v1/CallHistoryView` | Seeded `cdr-segment` rows with `$filter` (`SegmentStartTime ge … and SegmentStartTime le …`), `$orderby=SegmentStartTime asc\|desc`, `$top`, `$skip` |
+| `GET /xapi/v1/Recordings` | Seeded recordings with `$filter` on `StartTime`, `$top`, `$skip` |
+| `GET /xapi/v1/Recordings/Pbx.DownloadRecording(recId=<n>)` | Streams the seeded bytes (a short WAV header by default) as `audio/wav` |
+| `POST /xapi/v1/Users/Pbx.MakeCall { dn, destination }`, `POST /callcontrol/<dn>/makecall { destination }` | Record the request in `makecalls`, create a `Dialing` participant and answer `{ finalstatus: 'Success', result: <participant> }` |
+| `GET /callcontrol` | The extensions the app may observe (`[{ dn, type }]`) |
+| `GET /callcontrol/<dn>/participants/<id>` | A live participant, or 404 |
+| `ws://…/callcontrol/ws` | The call-control event feed. The handshake needs the same bearer header; each push is `{ sequence, event: { event_type, entity, attached_data } }` with `event_type` 0 for Upsert and 1 for Remove and `entity` the participant path above |
+
+Seeds: `pbx-app { clientId, clientSecret, callControl?, xapi? }`,
+`pbx-user { dn, email, firstName, lastName, enabled? }`,
+`pbx-contact { FirstName, LastName, CompanyName, Email, PhoneNumber, Business, Business2, Mobile2, Home, Other, Tag, ContactType }`,
+`cdr-segment { SegmentId?, SegmentStartTime, SegmentEndTime, CallTime, CallAnswered, SrcDn, SrcCallerNumber, SrcDisplayName, SrcExternal, DstDn, DstCallerNumber, DstDisplayName, DstExternal }`
+and `recording { Id?, StartTime, EndTime, FromCallerNumber, ToCallerNumber, FromDn, ToDn, IsTranscribed, Transcription, Summary, RecordingUrl, bytesBase64? }`.
+
+Call-control actions: `pbx-ring { dn, callerNumber, callerName?, did? }`
+creates a `Ringing` participant and pushes an Upsert; `pbx-answer
+{ participantId }` moves it to `Connected` with another Upsert; `pbx-hangup
+{ participantId }` removes it and pushes a Remove.
+
+State views: `exchanges`, `pbx-users`, `pbx-contacts`, `cdr-segments`,
+`recordings`, `makecalls`, `participants`, `tokens` (masked).
+
+Faults: `token-invalid` makes `/connect/token` answer 401 while armed (tokens
+already issued keep working, so you can test refresh separately from use);
+`ws-drop` closes every open WebSocket once at arm time — the next connect
+succeeds, so it exercises the consumer's reconnect path.
+
+Alga's PBX client only accepts an `https://` base URL unless
+`THREECX_EMULATOR_MODE=true` is set on the server and Temporal worker (never in
+production, where the flag is ignored). With it set, the walkthrough is:
+
+```bash
+algasim seed threecx pbx-app  -p '{"clientId":"alga","clientSecret":"alga-secret"}'
+algasim seed threecx pbx-user -p '{"dn":"100","email":"<an Alga user email>","firstName":"Ada","lastName":"Lovelace"}'
+# On the 3CX integration card: PBX base URL http://localhost:4070, client id/secret as seeded,
+# then Test connection (both capabilities granted) and Sync extensions (100 maps to that user).
+algasim action threecx pbx-ring -p '{"dn":"100","callerNumber":"+15550001111","callerName":"Caller"}'
+algasim state  threecx participants
+algasim action threecx pbx-hangup -p '{"participantId":1}'
+```
+
+Click-to-call from a ticket lands in `algasim state threecx makecalls`; call
+history import reads whatever `cdr-segment` rows you seeded; phonebook push
+shows up in `pbx-contacts`.
+
+### Level
+
+The `levelio` emulator on port 4080 covers both directions of the Level
+integration.
+
+**REST API (inbound).** Alga's `LevelIoApiClient` talks to it unmodified once
+`LEVELIO_API_BASE_URL` points here. The key goes in the `Authorization` header
+with no scheme prefix, as Level documents. A missing, unknown or
+`Bearer`-prefixed key answers `401 {"error":"Access denied"}`.
+
+| Route | Behaviour |
+| --- | --- |
+| `GET /v2/groups`, `GET /v2/groups/:id` | Groups with `parent_id`, `child_ids`, `device_count`, `descendent_device_count`. `parent_id=null` lists roots |
+| `GET /v2/devices`, `GET /v2/devices/:id` | Filters `group_id` (`null` = ungrouped), `ancestor_group_id` (the group and everything below it), `tag_id`, `hostname`, `serial_number`. Detail sections (`operating_system`, `cpus`, `memory`, `disks`, `network_interfaces`, `motherboard`, `security`) appear only when their `include_*` flag is `true` |
+| `GET /v2/alerts`, `GET /v2/alerts/:id` | Filters `device_id` and `status` (`active` / `resolved`) |
+| `POST /v2/alerts/:id/resolve` | Resolves the alert and emits `alert_resolved` |
+| `GET /v2/updates`, `GET /v2/updates/:id` | Filters `device_id`, `status` (`available` / `installed`), `category` |
+| any other `/v2` route | `501` with `code: EmulatorUnsupportedOperation` |
+
+Every list is cursor-paginated: `limit` 1–100 (default 20), `starting_after`
+or `ending_before` an item id, `{ data, has_more }` back. Ids use Level's form,
+unpadded base64 of `gid://level/<Type>/<n>`. An online device reports
+`last_seen_at` as the current (virtual) time, as Level does. Use
+`device-offline` to freeze it, which is what Alga's incremental device sync
+filters on.
+
+**Native webhooks (outbound).** `seed webhook` registers what a Level admin
+sets up under Settings → Webhooks: a URL, an optional secret and the selected
+event types (`alert_active`, `alert_resolved`, `device_created/updated/deleted`,
+`group_created/updated/deleted`; all of them by default). Each delivery is a
+JSON POST of `{ event_type, event_id, occurred_at, data }`. With a secret it
+carries `X-Level-Signature: sha256=<hex HMAC-SHA256 of the raw body>`; without
+one there is no signature header. There is no way to add other headers. A
+non-2xx answer, a redirect, a network error or a 10-second timeout is a failed
+delivery. Level then retries up to 3 times with exponential backoff and
+jitter, starting at 2 minutes, and the `event_id` and bytes stay the same.
+Retries run on the virtual clock: `clock advance 10m` and the background pump
+(or `action levelio deliver-due-retries`) sends whatever is due.
+`rerun-delivery { deliveryId }` is the request log's "Re-run request".
+
+The lifecycle controls emit the matching events: the `group` and `device`
+seeders, `update-group`, `delete-group`, `update-device`, `delete-device`,
+`fire-alert` and `resolve-alert`. `device-checkin` and `device-offline` change
+`last_seen_at` without a webhook.
+
+**Automation HTTP Request action (outbound).** `seed automation` creates a
+monitor automation: a URL, method, content type, header rows and a body, plus
+optional automation `variables`, `alertNames` and `groupIds` filters and a
+`retries` count. When `fire-alert` raises a matching alert, the action runs
+for that device. URL, header keys and values, and body render
+`{{level_device_id}}`, `{{level_group_name}}` and the rest of Level's
+[system variables](https://docs.level.io/en/articles/11321970-system-variables).
+A `{{token}}` that names no variable is sent as literal text. That is what
+Level does in production: Alga's old `{{alert_id}}` template reached the route
+unrendered. `run-automation` runs an action by hand.
+
+```bash
+algasim seed levelio group -p '{"name":"Acme Corp"}'
+algasim seed levelio device -p '{"hostname":"WS-01","groupId":"<group id>"}'
+algasim seed levelio webhook -p '{"url":"http://localhost:3000/api/webhooks/levelio?tenant=<tenant>","secret":"s3cret","eventTypes":["alert_active","alert_resolved"]}'
+algasim action levelio fire-alert -p '{"deviceId":"<device id>","name":"CPU","severity":"critical"}'
+algasim state levelio webhook-deliveries     # status, attempt, signature, response excerpt
+algasim state levelio automation-runs        # rendered request + unresolved {{tokens}}
+```
+
+Faults: `rate-limit { remaining, retryAfterSeconds }` answers 429 with
+`Retry-After`; `operation-fault { operation, status, remaining }` fails one
+route (`"GET /v2/devices"`, `"*"` for all). The transport faults apply too.
+
+State views: `config`, `groups`, `devices`, `alerts`, `updates`, `webhooks`
+(secrets masked), `events`, `webhook-deliveries`, `pending-retries`,
+`automations`, `automation-runs`, `operation-faults`.
+
+Two scenarios reproduce the alert-ingestion failures seen in production on
+2026-10-15. Both send to `http://localhost:4030/api/webhooks/levelio?tenant=algasim-tenant`
+(webhook-sink) by default:
+
+- `levelio-native-webhook-signed`: a native webhook with a secret. The route of
+  that date accepts only `X-Alga-Webhook-Secret`, so every delivery is a 401.
+- `levelio-automation-alga-template`: an automation posting the template Alga's
+  settings screen handed out. Three different alerts arrive byte-identical, so
+  the route records one alert and creates no ticket.
+
+`retargetScenario` (exported by the package) rewrites those URLs.
+[levelioEmulatorRoute.integration.test.ts](../../ee/server/src/__tests__/integration/levelioEmulatorRoute.integration.test.ts)
+uses it to run both scenarios against the real route and database. The
+failure assertions in that test describe the route as of 2026-10-15 and are
+meant to flip to ticket-creation assertions once the route is fixed.
+
+### Huntress
+
+The `huntress` emulator on port 4090 serves the Huntress v1 API Alga's
+`HuntressClient` polls. Auth is HTTP Basic:
+`Authorization: Basic base64(algasim-huntress-key:algasim-huntress-secret)`.
+A missing, malformed or unknown credential answers
+`403 {"error":"There was an issue with your API credential or permissions."}` —
+the status every documented operation declares.
+
+| Route | Behaviour |
+| --- | --- |
+| `GET /v1/account` | `{ account: { id, name, subdomain, status, support_type, neighborhood_watch, billing_address, shipping_address } }` — note the documented wrapper |
+| `GET /v1/organizations`, `GET /v1/organizations/:id` | Filters `name`, `key`; sort `id`/`created_at`/`updated_at`/`name`/`key`. The detail response is `OrganizationWithActualProductUsages`, so `actual_usages` (when seeded) appears there only |
+| `GET /v1/agents`, `GET /v1/agents/:id` | Filters `organization_id`, `platform`, `hostname`, `os`, `version`; sort `id`/`created_at`/`updated_at`. `ipv4_address` is the primary entry of `ipv4_addresses` |
+| `GET /v1/incident_reports`, `GET /v1/incident_reports/:id` | Filters `indicator_type`, `status`, `severity`, `platform`, `organization_id`, `agent_id`, `psa_ticket_eid`; sort `id`/`created_at`/`updated_at`. `remediations` carries the first 10 items plus `total_count`/`has_more`. A `draft` report is served by the by-id route only, as documented |
+| `GET /v1/escalations`, `GET /v1/escalations/:id` | Filters `status`, `severity`, `subtype`, `organization_id`, `psa_ticket_eid`; sort `id`/`severity`/`due_at`/`created_at`/`updated_at`. The list serves `Escalation`; only the by-id route adds `entities` |
+| `POST /v1/escalations/:id/resolution` | 201 `{ escalation, resolution_method: rule\|dismiss\|direct }`; 400 invalid parameters, 403 read-only credential, 409 already resolved, 422 not API-resolvable |
+| any other `/v1` route | `501` with `code: EmulatorUnsupportedOperation` |
+
+Every list is cursor-paginated: `limit` 1–500 (clamped, default 10), an opaque
+`page_token`, and a `pagination` object whose `next_page_token` is `null` on the
+last page (`next_page_url` only appears while another page exists). Ties on the
+sort field break on `id`, so a `updated_at desc` walk never repeats or skips a
+row — which is what Alga's `cursorWalk` depends on. Every mutation moves
+`updated_at` on the virtual clock, so `clock advance` plus `touch-incident` is
+the "updated but unchanged" path.
+
+Seeders: `account`, `credential { key, secret, escalationsWrite }`,
+`organization` (`count` seeds that many numbered organizations for multi-page
+walks), `agent`, `incident` (with `remediations`), `escalation` (zero, one or
+many `organization_ids`, `Agent`/`Identity` `entities`, `type`/`type_code`/
+`subtype`, `due_at`, `api_resolvable`).
+
+Actions: `configure` (credential pairs, account name/subdomain/status),
+`update-incident` (status change: stamps `status_updated_at`, sets `closed_at`
+for `closed`), `touch-incident` (bump `updated_at` only), `update-agent`,
+`update-escalation` (status, add/remove/replace organizations, replace
+entities), `resolve-escalation`, `delete-agent`, `delete-organization` (the
+"host/org dropped off" paths that make a by-id call answer 404).
+
+```bash
+algasim seed huntress organization -p '{"name":"Acme Inc.","key":"acme"}'
+algasim seed huntress agent -p '{"hostname":"laptop01","organization_id":1,"ipv4_address":"10.0.0.5"}'
+algasim seed huntress incident -p '{"organization_id":1,"agent_id":1,"severity":"high","subject":"HIGH - Incident on laptop01"}'
+algasim clock advance 1h
+algasim action huntress update-incident -p '{"incidentId":1,"status":"closed"}'
+algasim state huntress incidents            # including drafts the list endpoint hides
+algasim state huntress auth-failures        # every 403, with method, path and reason
+```
+
+Faults: `rate-limit { remaining, retryAfterSeconds }` answers 429 with
+`Retry-After` (Huntress limits every account to 60 requests/minute on a sliding
+window); `operation-fault { operation, status, message, retryAfterSeconds,
+remaining }` fails one operation (`"GET /v1/incident_reports"`, a trailing-`*`
+prefix, or `"*"`). The transport faults apply too.
+
+State views: `config` (secrets masked), `organizations`, `agents`, `incidents`,
+`escalations`, `auth-failures`, `operation-faults`.
+
+Two bundled scenarios: `huntress-incident-lifecycle` (the poll-twice
+ticket-then-close walk: seed org/agent/incident, advance the clock, close the
+incident) and `huntress-escalation-multi-org` (one escalation across two
+organizations with `Agent` and `Identity` entities, moved to `overdue` and then
+resolved). Wire-contract coverage lives in
+[huntress/tests/](huntress/tests/); Alga's own client and poller run against
+this emulator in
+[huntressEmulatorApiClient.integration.test.ts](../../ee/server/src/__tests__/integration/huntressEmulatorApiClient.integration.test.ts)
+and
+[huntressEmulatorPoller.integration.test.ts](../../ee/server/src/__tests__/integration/huntressEmulatorPoller.integration.test.ts).
 
 ### Living with the emulator
 

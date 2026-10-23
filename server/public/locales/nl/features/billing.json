@@ -151,7 +151,8 @@
     "tryAgain": "Opnieuw proberen",
     "backToBilling": "Terug naar facturering",
     "retryFailed": "We konden de betaling nog steeds niet starten. Probeer het over een moment opnieuw.",
-    "loading": "Laden..."
+    "loading": "Laden...",
+    "offlinePaymentMethod": "Deze factuur wordt betaald per cheque of bankoverschrijving, dus online betalen is niet mogelijk. Volg de betalingsinstructies op de factuur."
   },
   "quotes": {
     "pendingQuotes": "Openstaande offertes",
@@ -240,7 +241,8 @@
     "contractLineType": {
       "Fixed": "Vast",
       "Hourly": "Per uur",
-      "Usage": "Op verbruik"
+      "Usage": "Op verbruik",
+      "PrepaidBlock": "Prepaid blok"
     },
     "quoteStatus": {
       "draft": "Concept",
@@ -441,6 +443,14 @@
     "hoursLeft": "Nog {{hours}}u",
     "expires": "Vervalt op {{date}}",
     "recentBurn": "Recent verbruik",
-    "timeEntry": "Tijdsvermelding"
+    "timeEntry": "Tijdsvermelding",
+    "contractLabel": "Contract: {{contract}}"
+  },
+  "bucketUsage": {
+    "contractLine": "Contractregel voor urenbundel",
+    "usage": "Verbruik",
+    "hoursUsed": "{{hours}} uur gebruikt",
+    "hoursTotal": "{{hours}} uur in totaal",
+    "rolloverHours": "Inclusief {{hours}} overgedragen uren"
   }
 }

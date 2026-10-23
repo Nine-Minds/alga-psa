@@ -72,10 +72,18 @@ export function CurrencyInput({
   const { symbol } = useCurrencyFormat();
   const [displayValue, setDisplayValue] = useState('');
 
+  // Only sync from `value` when the change is external. While the user types,
+  // the parent echoes back what we just parsed, and reformatting here would
+  // rewrite the text mid-keystroke ("1" → "1.00"). Blur does the formatting.
   useEffect(() => {
+    const parsed = parseCurrencyValue(displayValue, locale);
     if (value === undefined || value === null || isNaN(value)) {
-      setDisplayValue('');
-    } else {
+      if (displayValue !== '' && !isNaN(parsed)) {
+        setDisplayValue('');
+      }
+      return;
+    }
+    if (parsed !== value) {
       setDisplayValue(formatCurrencyValue(value, locale, currencyCode));
     }
   }, [currencyCode, value, locale]);

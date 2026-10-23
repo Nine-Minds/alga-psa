@@ -83,6 +83,8 @@ vi.mock('@alga-psa/db', () => ({
       o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
     tenantJoinSubquery: (q: any, sub: any, _l?: any, _r?: any, o: any = {}) =>
       o?.type === 'left' ? (q.leftJoin?.(sub) ?? q) : (q.join?.(sub) ?? q),
+    tenantJoinFirstMatching: (q: any, t: string, _alias?: any, _l?: any, _c?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
   }),
 }));
 
@@ -179,5 +181,22 @@ describe('Workflow definition list trigger filters', () => {
 
     expect(result.items[0]?.trigger?.type).toBe('recurring');
     expect(countQueryBuilder.andWhereRaw).toHaveBeenCalledWith("coalesce(wd.trigger->>'type', '') = ?", ['recurring']);
+  });
+
+  it('reports unpublished changes only when the draft differs from the latest published definition', async () => {
+    (itemsQueryBuilder.offset as any).mockResolvedValue([
+      { workflow_id: 'wf-same', name: 'Just published', status: 'published', draft_version: 2, published_version: '1', has_unpublished_changes: false, trigger: null, created_at: '2026-03-07T00:00:00.000Z', updated_at: '2026-03-07T00:00:00.000Z' },
+      { workflow_id: 'wf-edited', name: 'Edited after publish', status: 'published', draft_version: 2, published_version: '1', has_unpublished_changes: true, trigger: null, created_at: '2026-03-07T00:00:00.000Z', updated_at: '2026-03-07T00:00:00.000Z' },
+      { workflow_id: 'wf-draft', name: 'Never published', status: 'draft', draft_version: 1, published_version: null, has_unpublished_changes: null, trigger: null, created_at: '2026-03-07T00:00:00.000Z', updated_at: '2026-03-07T00:00:00.000Z' },
+    ]);
+
+    const result = await listWorkflowDefinitionsPagedAction({ page: 1, pageSize: 20 });
+
+    expect(result.items.map((item: any) => [item.workflow_id, item.published_version, item.has_unpublished_changes])).toEqual([
+      ['wf-same', 1, false],
+      ['wf-edited', 1, true],
+      ['wf-draft', null, null],
+    ]);
+    expect(knexMock.raw).toHaveBeenCalledWith(expect.stringContaining("(wd.draft_definition - 'id' - 'version') is distinct from (pv.definition_json - 'id' - 'version')"));
   });
 });

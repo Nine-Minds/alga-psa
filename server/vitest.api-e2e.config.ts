@@ -9,6 +9,9 @@ export default defineConfig({
   ...serverConfig,
   test: {
     ...serverConfig.test,
+    // HTTP suites are node-only; drop the server lane's inherited jsdom/node
+    // projects so this include list is the one vitest resolves.
+    projects: undefined,
     include: ['src/test/e2e/api/**/*.e2e.test.ts', 'src/test/e2e/serverRenderedLocale.e2e.test.ts', 'src/test/e2e/utils/utilities.test.ts'],
     exclude: ['**/node_modules/**'],
     globalSetup: [],

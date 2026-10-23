@@ -2,9 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const tenantHandlerMock = vi.fn();
 const systemHandlerMock = vi.fn();
+const contractSweepMock = vi.fn();
 const listTenantsMock = vi.fn();
 // Rows returned for the per-job tenant selector tables (teams_integrations, email_providers).
 const selectTenantsMock = vi.fn();
+const configuredDateLauncherMock = vi.fn();
+const dateScanLauncherCapture = vi.fn();
 const selectorTablesSeen: string[] = [];
 
 vi.mock('@alga-psa/core/logger', () => ({
@@ -37,6 +40,7 @@ vi.mock('@alga-psa/db/admin', () => ({
 // Every handler imported by maintenanceJobFanout must be mocked or the module
 // will try to load the real (heavy) handler graph.
 vi.mock('@alga-psa/jobs/handlers/expiredCreditsHandler', () => ({ expiredCreditsHandler: (...a: unknown[]) => tenantHandlerMock('expired-credits', ...a) }));
+vi.mock('@alga-psa/jobs/handlers/dateTriggerScanHandler', () => ({ createDateTriggerScanHandler: (launcher: unknown) => { dateScanLauncherCapture(launcher); return async ({ tenantId }: { tenantId: string }) => { if (typeof launcher === 'function') await (launcher as Function)({ tenantId, today: '2026-10-01', now: new Date('2026-10-01T12:00:00Z'), timezone: 'UTC', knex: {}, sources: [] }); }; } }));
 vi.mock('@alga-psa/jobs/handlers/expiringCreditsNotificationHandler', () => ({ expiringCreditsNotificationHandler: (...a: unknown[]) => tenantHandlerMock('expiring-credits-notification', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/reconcileBucketUsageHandler', () => ({ handleReconcileBucketUsage: (...a: unknown[]) => tenantHandlerMock('reconcile-bucket-usage', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/processRenewalQueueHandler', () => ({ processRenewalQueueHandler: (...a: unknown[]) => tenantHandlerMock('process-renewal-queue', ...a) }));
@@ -53,19 +57,41 @@ vi.mock('@alga-psa/jobs/handlers/teamsMeetingSweepHandler', () => ({ TEAMS_MEETI
 vi.mock('@alga-psa/jobs/handlers/inboundEmailRecoveryHandler', () => ({ inboundEmailRecoveryHandler: (...a: unknown[]) => tenantHandlerMock('inbound-email-recovery', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/telephonyCallNotificationHandler', () => ({ renewTelephonyCallSubscriptions: (...a: unknown[]) => tenantHandlerMock('renew-telephony-call-subscriptions', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/telephonyCallArtifactHandler', () => ({ TELEPHONY_CALL_ARTIFACT_SWEEP_JOB: 'sweep-telephony-call-artifacts', telephonyCallArtifactSweepHandler: (...a: unknown[]) => tenantHandlerMock('sweep-telephony-call-artifacts', ...a) }));
+vi.mock('@alga-psa/billing/actions/contractCadenceServicePeriodMaterialization', () => ({
+  replenishContractCadenceServicePeriodsSweep: (...a: unknown[]) => contractSweepMock(...a),
+}));
 
-import { runMaintenanceJob, isKnownMaintenanceJob } from '@alga-psa/jobs/fanout';
+import {
+  runMaintenanceJob,
+  isKnownMaintenanceJob,
+  configureDateTriggerWorkflowLauncher,
+  listMaintenanceJobNames,
+  registerMaintenanceJob,
+} from '@alga-psa/jobs/fanout';
+import { MAINTENANCE_FANOUT_SCHEDULES } from '@alga-psa/types';
+import { SERVER_MAINTENANCE_JOBS, CE_MAINTENANCE_JOBS } from '../../lib/jobs/serverMaintenanceJobNames';
 
 describe('runMaintenanceJob', () => {
   beforeEach(() => {
     tenantHandlerMock.mockReset();
     systemHandlerMock.mockReset();
+    contractSweepMock.mockReset();
     listTenantsMock.mockReset();
     selectTenantsMock.mockReset();
     selectorTablesSeen.length = 0;
+    configuredDateLauncherMock.mockReset().mockResolvedValue(undefined);
+    dateScanLauncherCapture.mockReset();
+    configureDateTriggerWorkflowLauncher(configuredDateLauncherMock as any);
     tenantHandlerMock.mockResolvedValue(undefined);
     systemHandlerMock.mockResolvedValue(undefined);
+    contractSweepMock.mockResolvedValue({ tenantsProcessed: 0, tenantsFailed: 0, summaries: [] });
   });
+
+  function sweepSummary(overrides: { failures?: Array<{ contractLineId: string; error: string }> } = {}) {
+    return {
+      failures: overrides.failures ?? [],
+    };
+  }
 
   it('runs a system job once and does not list tenants', async () => {
     const result = await runMaintenanceJob('cleanup-temporary-workflow-forms');
@@ -97,6 +123,13 @@ describe('runMaintenanceJob', () => {
     listTenantsMock.mockReturnValue([{ tenant: 't1' }]);
     await runMaintenanceJob('process-renewal-queue');
     expect(tenantHandlerMock).toHaveBeenCalledWith('process-renewal-queue', { tenantId: 't1', horizonDays: 90 });
+  });
+
+  it('runs the injected date workflow launcher from the maintenance fanout', async () => {
+    listTenantsMock.mockReturnValue([{ tenant: 't-date' }]);
+    await runMaintenanceJob('date-trigger-scan');
+    expect(dateScanLauncherCapture).toHaveBeenCalledOnce();
+    expect(configuredDateLauncherMock).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 't-date', today: '2026-10-01', timezone: 'UTC' }));
   });
 
   it('does not consult a selector table for jobs that fan out to every tenant', async () => {
@@ -165,5 +198,106 @@ describe('runMaintenanceJob', () => {
   it('reports known jobs via isKnownMaintenanceJob', () => {
     expect(isKnownMaintenanceJob('search:reconcile')).toBe(true);
     expect(isKnownMaintenanceJob('sla-timer')).toBe(false);
+    expect(isKnownMaintenanceJob('replenishContractCadenceServicePeriods')).toBe(true);
+  });
+
+  it('runs contract-cadence replenishment once as a system job', async () => {
+    contractSweepMock.mockResolvedValue({
+      tenantsProcessed: 3,
+      tenantsFailed: 0,
+      summaries: [sweepSummary(), sweepSummary(), sweepSummary()],
+    });
+
+    const result = await runMaintenanceJob('replenishContractCadenceServicePeriods');
+
+    expect(listTenantsMock).not.toHaveBeenCalled();
+    expect(contractSweepMock).toHaveBeenCalledTimes(1);
+    expect(contractSweepMock).toHaveBeenCalledWith({
+      sourceRunPrefix: 'temporal-contract-cadence-replenishment',
+    });
+    expect(result).toEqual({
+      jobName: 'replenishContractCadenceServicePeriods',
+      scope: 'system',
+      total: 3,
+      succeeded: 3,
+      failed: 0,
+    });
+  });
+
+  it('reports partial contract-cadence failures instead of unconditional success', async () => {
+    contractSweepMock.mockResolvedValue({
+      tenantsProcessed: 2,
+      tenantsFailed: 1,
+      summaries: [
+        sweepSummary(),
+        sweepSummary({ failures: [{ contractLineId: 'line-1', error: 'overlap' }] }),
+      ],
+    });
+
+    const result = await runMaintenanceJob('replenishContractCadenceServicePeriods');
+
+    // One tenant-level failure plus one line-level failure, none of which the
+    // system branch may flatten into succeeded=1.
+    expect(result).toEqual({
+      jobName: 'replenishContractCadenceServicePeriods',
+      scope: 'system',
+      total: 4,
+      succeeded: 2,
+      failed: 2,
+    });
+  });
+
+  it('propagates a total contract-cadence failure', async () => {
+    contractSweepMock.mockRejectedValue(new Error('database unavailable'));
+
+    await expect(runMaintenanceJob('replenishContractCadenceServicePeriods')).rejects.toThrow(
+      'database unavailable',
+    );
+  });
+
+  it('runs a server-registered job through the same fan-out', async () => {
+    const serverJob = vi.fn().mockResolvedValue(undefined);
+    registerMaintenanceJob('test-server-registered-job', { scope: 'tenant', run: serverJob });
+    listTenantsMock.mockReturnValue([{ tenant: 't1' }, { tenant: 't2' }]);
+
+    expect(isKnownMaintenanceJob('test-server-registered-job')).toBe(true);
+    const result = await runMaintenanceJob('test-server-registered-job');
+
+    expect(serverJob).toHaveBeenCalledWith('t1');
+    expect(serverJob).toHaveBeenCalledWith('t2');
+    expect(result).toMatchObject({ scope: 'tenant', total: 2, succeeded: 2, failed: 0 });
+  });
+});
+
+// EE/appliance runs recurring work only from the worker's maintenance-fanout:*
+// schedules. A schedule without a definition fails every tick; a definition
+// without a schedule silently never runs in EE (hour-block expiry and
+// provider-disconnect retry once shipped that way).
+describe('maintenance schedule / fan-out registry parity', () => {
+  const scheduled = MAINTENANCE_FANOUT_SCHEDULES.map(({ jobName }) => jobName);
+  const serverJobs = Object.values(SERVER_MAINTENANCE_JOBS) as string[];
+
+  it('resolves every Temporal maintenance schedule to a fan-out definition', () => {
+    const unresolved = scheduled.filter(
+      (jobName) => !isKnownMaintenanceJob(jobName) && !serverJobs.includes(jobName),
+    );
+    expect(unresolved).toEqual([]);
+  });
+
+  it('schedules every fan-out definition on Temporal', () => {
+    // CE-only definitions run on pg-boss schedules, never on Temporal.
+    const ceOnly = Object.values(CE_MAINTENANCE_JOBS) as string[];
+    const definitions = [...listMaintenanceJobNames(), ...serverJobs]
+      .filter((jobName) => !jobName.startsWith('test-') && !ceOnly.includes(jobName));
+    expect(definitions.filter((jobName) => !scheduled.includes(jobName))).toEqual([]);
+  });
+
+  it('runs recurring-ticket generation every 15 minutes, matching the CE pg-boss schedule', () => {
+    expect(SERVER_MAINTENANCE_JOBS.generateRecurringTickets).toBe('generate-recurring-tickets');
+    expect(MAINTENANCE_FANOUT_SCHEDULES).toContainEqual({ jobName: 'generate-recurring-tickets', cron: '*/15 * * * *' });
+  });
+
+  it('schedules each job exactly once', () => {
+    expect(new Set(scheduled).size).toBe(scheduled.length);
   });
 });

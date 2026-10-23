@@ -18,6 +18,13 @@ spec:
       retries: 0
   upgrade:
     disableWait: true
+    # Deliberately no automatic upgrade remediation: helm-controller's upgrade
+    # remediation strategy is a Helm rollback, which would roll the app back
+    # under a database the bootstrap Job has already migrated forward. A
+    # failed upgrade therefore stalls (RetriesExceeded) and is retried by the
+    # appliance instead: the update engine clears a leftover bootstrap Job
+    # and re-runs the upgrade with reconcile.fluxcd.io/resetAt + forceAt, and
+    # the Manage page's Recover does the same (host-service/helm-release-recovery.mjs).
     remediation:
       retries: 0
   chart:

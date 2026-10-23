@@ -18,26 +18,33 @@ import {
   markAsReadAction,
   markAllAsReadAction,
 	} from '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions';
+import { reduceIncomingCall, type IncomingCallEntry } from './incomingCall';
 	
-	const getHocuspocusUrl = () => {
+	// Choose the Hocuspocus URL from the build environment, never the hostname,
+	// so a dev server reached over a LAN/tailnet address still targets the
+	// configured local Hocuspocus instance instead of deriving a same-origin URL.
+	// Development: NEXT_PUBLIC_HOCUSPOCUS_URL, defaulting to ws://localhost:1234.
+	// Production: NEXT_PUBLIC_HOCUSPOCUS_URL, otherwise ws(s)://{host}/hocuspocus.
+	export const getHocuspocusUrl = () => {
 	  const configuredUrl = process.env.NEXT_PUBLIC_HOCUSPOCUS_URL;
-	
+
+	  if (process.env.NODE_ENV !== 'production') {
+	    return configuredUrl || 'ws://localhost:1234';
+	  }
+
+	  if (configuredUrl) {
+	    return configuredUrl;
+	  }
+
 	  // This hook can be rendered on the server as part of Client Component SSR.
-	  // Avoid baking localhost defaults into the HTML, which causes client-only connection failures.
+	  // The connection is only opened from a client effect, so the SSR fallback
+	  // is never baked into the HTML.
 	  if (typeof window === 'undefined') {
 	    return configuredUrl || null;
 	  }
-	
+
 	  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-	  const host = window.location.host;
-	
-	  // In production (not localhost), use /hocuspocus path on same domain.
-	  if (!host.includes('localhost')) {
-	    return `${protocol}//${host}/hocuspocus`;
-	  }
-	
-	  // In local dev, only connect when explicitly configured.
-	  return configuredUrl || null;
+	  return `${protocol}//${window.location.host}/hocuspocus`;
 	};
 	const POLLING_INTERVAL = 30000;
 	const MAX_RECONNECT_DELAY = 30000;
@@ -61,6 +68,9 @@ interface UseInternalNotificationsReturn {
   markAsRead: (notificationId: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   refresh: () => Promise<void>;
+  /** Latest ringing call for this user, until connected/ended, dismiss, or expiry. */
+  incomingCall: IncomingCallEntry | null;
+  dismissIncomingCall: () => void;
 }
 
 export function useInternalNotifications(
@@ -74,6 +84,7 @@ export function useInternalNotifications(
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [incomingCall, setIncomingCall] = useState<IncomingCallEntry | null>(null);
 
   const providerRef = useRef<HocuspocusProvider | null>(null);
   const ydocRef = useRef<Y.Doc | null>(null);
@@ -225,6 +236,12 @@ export function useInternalNotifications(
       }
     });
 
+    const incomingCallMap = ydoc.getMap('incomingCall');
+    incomingCallMap.observe(() => {
+      const entry = incomingCallMap.get('data');
+      setIncomingCall((current) => reduceIncomingCall(current, entry));
+    });
+
     return () => {
       provider.destroy();
       ydoc.destroy();
@@ -274,6 +291,8 @@ export function useInternalNotifications(
     await fetchUnreadCount();
   }, [fetchNotifications, fetchUnreadCount]);
 
+  const dismissIncomingCall = useCallback(() => setIncomingCall(null), []);
+
   return {
     notifications,
     unreadCount,
@@ -284,5 +303,7 @@ export function useInternalNotifications(
     markAsRead,
     markAllAsRead,
     refresh,
+    incomingCall,
+    dismissIncomingCall,
   };
 }

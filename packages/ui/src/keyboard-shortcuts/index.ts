@@ -1,6 +1,7 @@
 export * from './catalog';
 export * from './command-palette-query';
 export * from './display';
+export * from './editable';
 export * from './escape';
 export * from './matcher';
 export * from './page-actions';

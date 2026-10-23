@@ -69,6 +69,7 @@ export function OpportunityDetailHost({
   drafting,
   autoOpenDraft = false,
   commitments,
+  activity,
   returnTab,
   isInDrawer = false,
 }: {
@@ -79,6 +80,8 @@ export function OpportunityDetailHost({
   autoOpenDraft?: boolean;
   /** EE commitments ledger section, injected when the management tier allows it. */
   commitments?: ReactNode;
+  /** Notes & interactions feed, injected by the server-app layer (clients package boundary). */
+  activity?: ReactNode;
   returnTab?: string;
   /** Rendered inside the shared drawer: no back-to-list escape hatch. */
   isInDrawer?: boolean;
@@ -232,6 +235,7 @@ export function OpportunityDetailHost({
           />
         }
         commitments={commitments}
+        activity={activity}
         assignees={assignees}
         onAssignOwner={(id, userId) =>
           runQuietly(() => assignOpportunityOwner(id, userId), t('opportunities.toast.ownerAssigned', 'Owner updated'))

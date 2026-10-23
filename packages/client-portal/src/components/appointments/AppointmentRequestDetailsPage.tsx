@@ -3,7 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, Calendar, Clock, User, FileText, AlertCircle, ExternalLink, Download } from 'lucide-react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
@@ -62,6 +62,9 @@ export function AppointmentRequestDetailsPage() {
   const appointmentRequestId = params?.appointmentRequestId as string;
   const { t } = useTranslation('features/appointments');
   const { t: tCommon } = useTranslation('common');
+  // Hardcoded 'en-US' ignored the client's country; the pattern is the
+  // country's job and the month/weekday names the language's.
+  const { formatDate } = useFormatters();
 
   const [appointment, setAppointment] = useState<AppointmentRequestDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -186,7 +189,7 @@ export function AppointmentRequestDetailsPage() {
     try {
       const dt = fromZonedTime(`${dateStr}T${timeStr}:00`, tz || 'UTC');
       if (isNaN(dt.getTime())) return 'N/A';
-      return dt.toLocaleString('en-US', {
+      return formatDate(dt, {
         weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
         hour: '2-digit', minute: '2-digit'
       });

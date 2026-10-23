@@ -8,6 +8,12 @@ on:
       - master
       - develop
 
+# Stop superseded PR runs from holding a runner for the full 20-minute job.
+# Keep every main run.
+concurrency:
+  group: typecheck-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   typecheck:
     name: Nx affected typecheck

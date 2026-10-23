@@ -21,7 +21,9 @@ describe('Contact phone display contracts', () => {
   it('T022: Contacts.tsx renders the derived default phone number from normalized contact phone rows', () => {
     expect(contactsListSource).toContain("dataIndex: 'default_phone_number'");
     expect(contactsListSource).toContain('record.default_phone_number');
-    expect(contactsListSource).toContain('record.phone_numbers?.find((phoneNumber: any) => phoneNumber.is_default)?.phone_number');
+    expect(contactsListSource).toContain('record.phone_numbers?.find((phoneNumber) => phoneNumber.is_default)');
+    expect(contactsListSource).toContain('value={record.default_phone_number || defaultPhone?.phone_number}');
+    expect(contactsListSource).toContain('extension={defaultPhone?.extension}');
     expect(contactsListSource).not.toMatch(/\brecord\.phone_number\b/);
   });
 

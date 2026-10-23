@@ -6,7 +6,6 @@ import type {
   IUserRole,
   IUserWithRoles,
   IRoleWithPermissions,
-  IPermission,
 } from '@alga-psa/types';
 import { getAdminConnection } from '../lib/admin';
 import { tenantDb } from '../lib/tenantDb';
@@ -24,6 +23,51 @@ const USER_DISCOVERY_BY_EMAIL_REASON = 'user discovery by email before tenant co
 const USER_DISCOVERY_BY_EMAIL_AND_TYPE_REASON = 'user discovery by email and type before tenant context exists';
 const USER_PASSWORD_VERIFY_REASON = 'password verification by user id before tenant context exists';
 const USER_REGISTRATION_LOOKUP_REASON = 'registration lookup by user id before tenant context exists';
+
+interface RoleWithPermissionRow {
+  role_id: string;
+  role_name: string;
+  description: string | null;
+  tenant: string;
+  msp: boolean;
+  client: boolean;
+  permission_id: string | null;
+  resource: string | null;
+  action: string | null;
+  permission_tenant: string | null;
+  permission_msp: boolean | null;
+  permission_client: boolean | null;
+}
+
+export function groupRolePermissionRows(rows: RoleWithPermissionRow[]): IRoleWithPermissions[] {
+  const byRole = new Map<string, IRoleWithPermissions>();
+  for (const row of rows) {
+    let role = byRole.get(row.role_id);
+    if (!role) {
+      role = {
+        role_id: row.role_id,
+        role_name: row.role_name,
+        description: row.description ?? undefined,
+        tenant: row.tenant,
+        msp: row.msp,
+        client: row.client,
+        permissions: [],
+      };
+      byRole.set(row.role_id, role);
+    }
+    if (row.permission_id) {
+      role.permissions.push({
+        permission_id: row.permission_id,
+        resource: row.resource as string,
+        action: row.action as string,
+        tenant: row.permission_tenant ?? undefined,
+        msp: Boolean(row.permission_msp),
+        client: Boolean(row.permission_client),
+      });
+    }
+  }
+  return [...byRole.values()];
+}
 
 const User = {
   getAll: async (knexOrTrx: Knex | Knex.Transaction, includeInactive = false): Promise<IUser[]> => {
@@ -72,6 +116,24 @@ const User = {
       return user;
     } catch (error) {
       logger.error(`Error finding user with email ${email} and type ${userType}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Every user of this type with this email, across tenants. The `.first()`
+   * sibling above answers an arbitrary one of them, which is wrong for sign-in
+   * when no tenant is known: callers need to see the ambiguity to refuse it.
+   */
+  findUsersByEmailAndType: async (email: string, userType: 'internal' | 'client'): Promise<IUser[]> => {
+    const db = await getAdminConnection();
+    try {
+      return await tenantDb(db, USER_MODEL_DISCOVERY_TENANT)
+        .unscoped<IUser>('users', USER_DISCOVERY_BY_EMAIL_AND_TYPE_REASON)
+        .select('*')
+        .where({ email: email.toLowerCase(), user_type: userType });
+    } catch (error) {
+      logger.error(`Error finding users with email ${email} and type ${userType}:`, error);
       throw error;
     }
   },
@@ -281,12 +343,60 @@ const User = {
   updatePassword: async (user_id: string, tenant: string, hashed_password: string): Promise<void> => {
     const db = await getAdminConnection();
     try {
-      await tenantDb(db, tenant).table<IUser>('users').where({ user_id }).update({ hashed_password });
+      const updated = await tenantDb(db, tenant).table<IUser>('users').where({ user_id }).update({ hashed_password });
+      if (updated !== 1) {
+        throw new Error(`Expected to update one password row for user ${user_id} in tenant ${tenant}; updated ${updated}`);
+      }
       logger.system(`Password updated for user ${user_id} in tenant ${tenant}`);
     } catch (error) {
       logger.error(`Error updating password for user ${user_id} in tenant ${tenant}:`, error);
       throw error;
     }
+  },
+
+  updatePasswordIfCurrent: async (
+    user_id: string,
+    tenant: string,
+    observed_hash: string | null,
+    hashed_password: string,
+  ): Promise<boolean> => {
+    const db = await getAdminConnection();
+    try {
+      let query = tenantDb(db, tenant)
+        .table<IUser>('users')
+        .where({ user_id });
+      query = observed_hash === null
+        ? query.whereNull('hashed_password')
+        : query.where({ hashed_password: observed_hash });
+      const updated = await query.update({ hashed_password });
+      return updated > 0;
+    } catch (error) {
+      logger.error(`Error conditionally updating password for user ${user_id} in tenant ${tenant}:`, error);
+      throw error;
+    }
+  },
+
+  updatePasswordIfUnchanged: async (
+    user_id: string,
+    tenant: string,
+    expectedHash: string | null,
+    hashed_password: string
+  ): Promise<boolean> => {
+    const db = await getAdminConnection();
+    const query = tenantDb(db, tenant).table<IUser>('users').where({ user_id });
+    if (expectedHash === null) query.whereNull('hashed_password');
+    else query.where('hashed_password', expectedHash);
+    const updated = await query.update({ hashed_password });
+    return updated > 0;
+  },
+
+  getPasswordHash: async (user_id: string, tenant: string): Promise<string | null> => {
+    const db = await getAdminConnection();
+    const user = await tenantDb(db, tenant).table<IUser>('users')
+      .select('hashed_password')
+      .where({ user_id })
+      .first();
+    return user?.hashed_password ?? null;
   },
 
   verifyPassword: async (user_id: string, password: string): Promise<boolean> => {
@@ -400,32 +510,31 @@ const User = {
     const tenant = await requireTenantId(knexOrTrx);
     try {
       const db = tenantDb(knexOrTrx, tenant);
+      // One round trip on one connection. The previous per-role fan-out held
+      // a pool connection per role for every permission check, which is what
+      // pushed small appliances past max_connections under a burst of API calls.
       const query = db.table<IRole>('roles')
         .where('user_roles.user_id', user_id);
       db.tenantJoin(query, 'user_roles', 'roles.role_id', 'user_roles.role_id');
+      db.tenantJoin(query, 'role_permissions', 'roles.role_id', 'role_permissions.role_id', { type: 'left' });
+      db.tenantJoin(query, 'permissions', 'role_permissions.permission_id', 'permissions.permission_id', { type: 'left' });
 
-      const roles = await query.select(['roles.role_id', 'roles.role_name', 'roles.description', 'roles.tenant', 'roles.msp', 'roles.client']);
+      const rows: RoleWithPermissionRow[] = await query.select([
+        'roles.role_id',
+        'roles.role_name',
+        'roles.description',
+        'roles.tenant',
+        'roles.msp',
+        'roles.client',
+        'permissions.permission_id',
+        'permissions.resource',
+        'permissions.action',
+        'permissions.tenant as permission_tenant',
+        'permissions.msp as permission_msp',
+        'permissions.client as permission_client',
+      ]);
 
-      const rolesWithPermissions = await Promise.all(
-        roles.map(async (role: any): Promise<IRoleWithPermissions> => {
-          const permissionQuery = db.table<IPermission>('permissions')
-            .where('role_permissions.role_id', role.role_id);
-          db.tenantJoin(permissionQuery, 'role_permissions', 'permissions.permission_id', 'role_permissions.permission_id');
-
-          const permissions = await permissionQuery.select([
-            'permissions.permission_id',
-            'permissions.resource',
-            'permissions.action',
-            'permissions.tenant',
-            'permissions.msp',
-            'permissions.client',
-          ]);
-
-          return { ...role, permissions };
-        })
-      );
-
-      return rolesWithPermissions;
+      return groupRolePermissionRows(rows);
     } catch (error) {
       logger.error(`Error getting roles with permissions for user with id ${user_id}:`, error);
       throw error;

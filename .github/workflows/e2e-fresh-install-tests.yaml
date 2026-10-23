@@ -76,7 +76,10 @@ jobs:
   build-images:
     needs: [changes, browser-collection]
     if: needs.changes.outputs.run_tests == 'true'
-    runs-on: ubuntu-latest
+    # Pinned with production-browser: the candidate identity check compares
+    # buildx's config digest against `docker image inspect` on the consumer,
+    # so both sides must run the same Docker. See production-browser below.
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -186,7 +189,6 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
           build-args: |
             NEXT_BUILD_MAX_OLD_SPACE_SIZE=12288
-            NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:true
           outputs: type=docker,dest=${{ runner.temp }}/${{ matrix.service }}.tar
           no-cache: ${{ inputs.no_cache == true }}
           # The server/email workspace layers are huge; exporting them to the
@@ -234,7 +236,11 @@ jobs:
     name: Production browser (${{ matrix.edition }})
     needs: [changes, browser-collection, build-images]
     if: always()
-    runs-on: ubuntu-latest
+    # Pinned: `ubuntu-latest` rolled to ubuntu-26.04 on 2026-10-21, whose
+    # Docker reports a different image Id for a loaded archive, so candidate
+    # identity verification failed, and whose Playwright cannot install
+    # Chromium. Unpin once both tolerate 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -468,7 +474,7 @@ jobs:
           docker-compose -p alga-e2e-test up --no-build --wait --wait-timeout 90 -d algasim test-ingress
           docker-compose -p alga-e2e-test exec -T algasim node --input-type=module -e 'const r = await fetch("https://calendar-callback:3443/probe", { signal: AbortSignal.timeout(5000) }); if (r.status !== 404) throw new Error("Calendar callback TLS routing failed")'
           curl --fail --silent http://127.0.0.1:9500/control/catalog > "$RUNNER_TEMP/algasim-catalog.json"
-          jq -e '[.result.emulators[].id] | sort == ["msgraph", "qbo", "smtp-sink", "stripe", "webhook-sink", "xero"]' "$RUNNER_TEMP/algasim-catalog.json"
+          jq -e '[.result.emulators[].id] | sort == ["huntress", "levelio", "msgraph", "qbo", "smtp-sink", "stripe", "threecx", "webhook-sink", "xero"]' "$RUNNER_TEMP/algasim-catalog.json"
           docker image inspect alga-e2e-test-algasim:latest --format '{{.Id}}' > "$RUNNER_TEMP/algasim-image-id.txt"
 
       - name: Initialize isolated shared worker state
@@ -777,25 +783,10 @@ jobs:
           mkdir -p logs
           node e2e-tests/harness/check-provider-topology.mjs > logs/provider-readiness-topology.json
 
-      - name: Trigger Login Page to Generate Credentials
-        id: login_trigger
-        if: ${{ !cancelled() && steps.server_ready.outcome == 'success' }}
-        run: |
-          echo "Attempting to trigger login page to generate credentials in server logs..."
-          APP_PORT_VALUE=$(grep APP_PORT .env | cut -d '=' -f2 | head -n 1 || echo "3000")
-          LOGIN_PAGE_URL="http://localhost:${APP_PORT_VALUE}/auth/signin"
-          # Perform a curl request to the login page. We don't need the output, just the action of hitting the page.
-          # Allow failure as the page might not return 200 immediately or might redirect,
-          # but the act of requesting it should trigger the log.
-          curl -s -o /dev/null -w "%{http_code}" "${LOGIN_PAGE_URL}" || echo "Curl to login page finished (ignore exit code here)."
-          echo "Login page triggered. Waiting a few seconds for logs to propagate..."
-          sleep 3 # Wait for server to process the request and log credentials
-        shell: bash
-
-      - name: Capture Credentials from Server Logs
+      - name: Provision isolated browser fixture credential
         id: capture_creds
-        if: ${{ !cancelled() && steps.login_trigger.outcome == 'success' }}
-        run: docker-compose -p alga-e2e-test logs --no-color server | node e2e-tests/harness/capture-server-credentials.mjs
+        if: ${{ !cancelled() && steps.server_ready.outcome == 'success' }}
+        run: node e2e-tests/harness/setup-browser-credential.mjs
 
       - name: Warm up authentication system
         if: ${{ !cancelled() && steps.capture_creds.outcome == 'success' }}
@@ -859,24 +850,23 @@ jobs:
         run: npx playwright install chromium
         shell: bash
 
+      - uses: ./.github/actions/prepare-apt
+        if: ${{ !cancelled() && steps.browser_packages.outcome == 'success' }}
+
       - name: Install Playwright system dependencies
         id: browser_system
         if: ${{ !cancelled() && steps.browser_packages.outcome == 'success' }}
         working-directory: ./e2e-tests
-        # Hard ceiling so this step can never again consume the whole job budget.
-        timeout-minutes: 12
+        # Hard ceiling so this step can never consume the whole job budget.
+        # Must fit three 240s attempts plus the pauses between them (~12.5 min);
+        # at 12 the third attempt was always cut off.
+        timeout-minutes: 14
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          # `npx playwright install-deps` shells out to `apt-get`, which has
-          # intermittently stalled for 30+ minutes on the GitHub runner (an
-          # apt/dpkg lock or a Debian mirror hang). Because the step had no
-          # timeout, a single stall consumed the entire 60-minute job budget and
-          # the run was cancelled at "Install Playwright system dependencies"
-          # before the login e2e test ever executed -- even though the build and
-          # all services were up and healthy by ~T+29m. Good runs finish this
-          # step in 35-490s, so bound each attempt and retry: a transient stall
-          # self-heals instead of killing the job.
+          # `npx playwright install-deps` shells out to `apt-get`; prepare-apt
+          # above keeps a bad mirror from hanging it. Bound each attempt anyway
+          # so a stall that gets past apt's own timeouts cannot eat the job.
           set -x
           attempt=1
           max_attempts=3
@@ -888,8 +878,10 @@ jobs:
             fi
             echo "Attempt $attempt failed/stalled (exit $code); clearing apt locks and retrying..."
             # A timed-out attempt can leave apt/dpkg holding a lock; clear it so
-            # the retry is not guaranteed to stall the same way.
-            sudo pkill -9 -f 'apt-get|dpkg' 2>/dev/null || true
+            # the retry is not guaranteed to stall the same way. The pattern is
+            # anchored so pkill does not match its own `sudo pkill ... apt-get`
+            # command line and kill itself before reaching apt.
+            sudo pkill -9 -f '^(/usr/bin/)?(apt-get|dpkg)( |$)' 2>/dev/null || true
             sudo rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock \
               /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend 2>/dev/null || true
             sudo dpkg --configure -a 2>/dev/null || true
@@ -923,7 +915,6 @@ jobs:
           E2E_EDITION: ${{ matrix.edition }}
           E2E_REVISION: ${{ github.sha }}
           E2E_ARTIFACT_MANIFEST: ${{ runner.temp }}/browser-artifact-manifest.json
-          E2E_BUILD_FEATURE_FLAGS: release-v1-6-feature:true
           E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
           E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
           E2E_DATABASE_ISOLATED: 'true'
@@ -942,6 +933,20 @@ jobs:
         run: xvfb-run --auto-servernum npm test
         shell: bash
 
+      # The server is force-recreated for the upgrade and Teams stages below, so
+      # the end-of-job container-logs artifact only holds the last incarnation.
+      # Keep the browser-stage server and worker output next to the Playwright
+      # report while it still exists.
+      - name: Preserve browser-stage service logs
+        if: always() && steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        timeout-minutes: 3
+        run: |
+          mkdir -p e2e-tests/test-results/browser-stage-logs
+          for service in server workflow-worker temporal-worker email-service; do
+            timeout --kill-after=5s 30s docker-compose -p alga-e2e-test logs --no-color "$service" > "e2e-tests/test-results/browser-stage-logs/${service}.log" 2>&1 || echo "Log capture for $service exited with $?" >> "e2e-tests/test-results/browser-stage-logs/${service}.log"
+          done
+        shell: bash
+
       # Publish completed browser evidence before the independent API lane.
       - name: Upload Playwright diagnostics
         if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
@@ -957,6 +962,21 @@ jobs:
             ${{ runner.temp }}/algasim-image-id.txt
             ${{ runner.temp }}/browser-artifact-manifest.json
           retention-days: 7
+
+      # A retry-only pass still fails the strict gate above, so this upload must
+      # survive the red job that publishes it. Reporting flakes is never itself a
+      # gate. The runner fills this directory only when something retried, so a
+      # run with no flake (or one that died before the runner wrote anything)
+      # publishes nothing and the weekly report spends no API budget on it; the
+      # always-written document rides along in the diagnostics artifact above.
+      - name: Upload browser flaky-test evidence
+        if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
+        uses: actions/upload-artifact@v4
+        with:
+          name: flaky-tests-browser-${{ matrix.edition }}
+          path: e2e-tests/execution-evidence/flaky/
+          if-no-files-found: ignore
+          retention-days: 30
 
       - name: Record browser journey readiness
         if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
@@ -1032,7 +1052,7 @@ jobs:
           name: fresh-install-api-${{ matrix.edition }}
           path: test-results/api-e2e/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       - name: Prepare populated v1.5.0 upgrade
         id: upgrade_schema
@@ -1138,7 +1158,7 @@ jobs:
           name: supported-upgrade-execution
           path: test-results/supported-upgrade/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       - name: Upload upgrade browser diagnostics
         if: ${{ always() && matrix.edition == 'enterprise' && steps.upgrade_server.outcome == 'success' && !env.ACT }}
@@ -1255,7 +1275,7 @@ jobs:
           name: supported-citus-upgrade-execution
           path: test-results/supported-upgrade/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       - name: Upload supported Citus upgrade diagnostics
         if: ${{ always() && steps.citus_upgrade_server.outcome == 'success' && !env.ACT }}
@@ -1265,9 +1285,13 @@ jobs:
           path: e2e-tests/test-results/
           retention-days: 7
 
+      # The setup chain shares the owned, expiring quarantine (scripts/lib/quarantine.json)
+      # and must not fail the job carrying other browser gates. Readiness records a missing
+      # Teams verdict as quarantined-failing and re-arms when the entry expires.
       - name: Start explicit Teams development configuration
         id: teams_development_server
         if: ${{ !cancelled() && matrix.edition == 'enterprise' && steps.api_database.outcome == 'success' }}
+        continue-on-error: true
         timeout-minutes: 10
         run: |
           set -euo pipefail
@@ -1290,7 +1314,7 @@ jobs:
           volumes.push({ type: 'bind', source: `${process.env.RUNNER_TEMP}/teams-static-chunks`, target: '/app/teams-static-chunks' });
           volumes.push({ type: 'bind', source: `${process.env.RUNNER_TEMP}/teams-webpack-cache`, target: '/app/server/node_modules/.cache/webpack' });
           const server = { entrypoint: ['node', '/app/start-teams-development-ci.mjs'], command: [], volumes,
-            environment: { NODE_ENV: 'development', TEAMS_EMULATOR_MODE: 'true', NEXT_PUBLIC_FORCE_FEATURE_FLAGS: 'release-v1-6-feature:true', NEXT_DIST_DIR: '.next/teams-development',
+            environment: { NODE_ENV: 'development', TEAMS_EMULATOR_MODE: 'true', NEXT_DIST_DIR: '.next/teams-development',
               E2E_TEAMS_DEVELOPMENT: 'true', E2E_DATABASE_ISOLATED: 'true', E2E_STATIC_CHUNK_DIAGNOSTICS_DIR: '/app/teams-static-chunks',
               DB_HOST: 'postgres', DB_PORT: '5432', DB_NAME_SERVER: 'server', REDIS_PREFIX: 'teams-development:',
               TEAMS_BOT_APP_ID: 'e2e-teams-bot', TEAMS_BOT_APP_TENANT_ID: 'e2e-bot-tenant', TEAMS_BOT_APP_PASSWORD: 'synthetic-e2e-teams-bot-secret',
@@ -1307,25 +1331,43 @@ jobs:
           docker-compose -p alga-e2e-test up --no-build --no-deps --force-recreate -d server
           docker-compose -p alga-e2e-test exec -T server node -e 'const fs = require("node:fs"); const probe = "/app/server/node_modules/.cache/webpack/.write-probe"; fs.writeFileSync(probe, "cache-writable", { flag: "wx" }); fs.unlinkSync(probe);'
           ready=false
+          mkdir -p "$RUNNER_TEMP/teams-development-probe"
+          : > "$RUNNER_TEMP/teams-development-probe/attempts.txt"
           for _attempt in $(seq 1 90); do
-            if curl --max-time 15 --fail --silent http://localhost:3000/auth/msp/signin >/dev/null; then ready=true; break; fi
+            if status=$(curl --max-time 15 --fail --silent -w '%{http_code}' -o /dev/null http://localhost:3000/auth/msp/signin); then
+              case "$status" in 2??|3??) ready=true ;; esac
+            fi
+            if [ -z "$status" ] || [ "$status" = 000 ]; then status=no-response; fi
+            printf '%s %s %s\n' "$_attempt" "$(date +%s)" "$status" >> "$RUNNER_TEMP/teams-development-probe/attempts.txt"
+            if [ "$ready" = true ]; then break; fi
             sleep 2
           done
+          if [ "$ready" != true ]; then
+            : > "$RUNNER_TEMP/teams-development-probe/last-body-full.html"
+            status=$(curl --max-time 15 --silent -w '%{http_code}' \
+              -D "$RUNNER_TEMP/teams-development-probe/last-headers.txt" \
+              -o "$RUNNER_TEMP/teams-development-probe/last-body-full.html" \
+              http://localhost:3000/auth/msp/signin) || true
+            if [ -z "$status" ] || [ "$status" = 000 ]; then status=no-response; fi
+            head -c 4096 "$RUNNER_TEMP/teams-development-probe/last-body-full.html" > "$RUNNER_TEMP/teams-development-probe/last-body.html" || true
+            rm -f "$RUNNER_TEMP/teams-development-probe/last-body-full.html"
+            timeout --kill-after=5s 30s docker-compose -p alga-e2e-test logs --no-color --tail=200 server > "$RUNNER_TEMP/teams-development-probe/server-tail.log" 2>&1 || true
+            timeout --kill-after=5s 30s docker-compose -p alga-e2e-test ps > "$RUNNER_TEMP/teams-development-probe/container-status.txt" 2>&1 || true
+            echo "::warning::Teams development server never became ready after $_attempt attempts; last status $status"
+            head -n 40 "$RUNNER_TEMP/teams-development-probe/last-body.html"
+          fi
+          printf '%s\n' "$status" > "$RUNNER_TEMP/teams-development-probe/last-status.txt"
           test "$ready" = true
-
-      - name: Capture recreated Teams server credentials
-        id: teams_creds
-        if: ${{ !cancelled() && steps.teams_development_server.outcome == 'success' }}
-        run: docker-compose -p alga-e2e-test logs --no-color server | node e2e-tests/harness/capture-server-credentials.mjs
 
       - name: Check Teams source authentication configuration
         id: teams_auth_preflight
-        if: ${{ !cancelled() && steps.teams_creds.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.teams_development_server.outcome == 'success' }}
+        continue-on-error: true
         timeout-minutes: 2
         env:
           E2E_DATABASE_ISOLATED: 'true'
-          E2E_USER_EMAIL: ${{ steps.teams_creds.outputs.e2e_user_email }}
-          E2E_USER_PASSWORD: ${{ steps.teams_creds.outputs.e2e_user_password }}
+          E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
+          E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
         run: |
           docker-compose -p alga-e2e-test exec -T \
             -e E2E_DATABASE_ISOLATED -e E2E_USER_EMAIL -e E2E_USER_PASSWORD server \
@@ -1334,21 +1376,23 @@ jobs:
       - name: Warm authenticated Teams dashboard
         id: teams_dashboard_ready
         if: ${{ !cancelled() && steps.teams_auth_preflight.outcome == 'success' && steps.browser_ready.outcome == 'success' }}
+        continue-on-error: true
         timeout-minutes: 5
         env:
           E2E_TEAMS_DEVELOPMENT: 'true'
           E2E_DATABASE_ISOLATED: 'true'
           E2E_BASE_URL: http://localhost:3000
-          E2E_USER_EMAIL: ${{ steps.teams_creds.outputs.e2e_user_email }}
-          E2E_USER_PASSWORD: ${{ steps.teams_creds.outputs.e2e_user_password }}
+          E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
+          E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
         run: node e2e-tests/harness/warm-teams-dashboard.mjs
 
       - name: Run Teams development execution gate
         id: teams_development_browser
         if: ${{ !cancelled() && steps.teams_development_server.outcome == 'success' && steps.teams_auth_preflight.outcome == 'success' && steps.browser_ready.outcome == 'success' && steps.teams_dashboard_ready.outcome == 'success' }}
-        # Owned, expiring quarantine (scripts/lib/quarantine.json). The verdict is
-        # still produced, uploaded and reported by the readiness gate; it just does
-        # not veto the job while the entry is valid. Readiness fails once it expires.
+        # No longer quarantined (scripts/lib/quarantine.json is empty). Like the
+        # Teams setup steps above, this one does not veto the browser job it shares
+        # with other requirements; the readiness gate enforces the uploaded verdict,
+        # so a failure here fails readiness on teams-development-execution alone.
         continue-on-error: true
         timeout-minutes: 10
         env:
@@ -1363,8 +1407,8 @@ jobs:
           E2E_DB_NAME: server
           E2E_DB_USER: postgres
           E2E_DB_PASSWORD: placeholder-password
-          E2E_USER_EMAIL: ${{ steps.teams_creds.outputs.e2e_user_email }}
-          E2E_USER_PASSWORD: ${{ steps.teams_creds.outputs.e2e_user_password }}
+          E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
+          E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
         run: xvfb-run --auto-servernum node e2e-tests/run-teams-development.mjs
 
       - name: Upload Teams development execution
@@ -1374,7 +1418,7 @@ jobs:
           name: teams-development-execution
           path: test-results/teams-development/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       - name: Collect bounded Teams static chunk diagnostics
         if: ${{ always() && steps.teams_development_server.outcome == 'success' }}
@@ -1390,6 +1434,15 @@ jobs:
         with:
           name: teams-development-diagnostics
           path: e2e-tests/test-results/local/
+          retention-days: 7
+
+      - name: Upload Teams development probe diagnostics
+        if: ${{ always() && steps.teams_development_server.outcome != 'skipped' && !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: teams-development-probe
+          path: ${{ runner.temp }}/teams-development-probe/
+          if-no-files-found: warn
           retention-days: 7
 
       - name: Run actual Microsoft callback against isolated authority
@@ -1413,7 +1466,7 @@ jobs:
           name: microsoft-callback-execution
           path: test-results/microsoft-callback/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       - name: Collect all container logs on failure
         if: failure() && steps.install_docker_compose.outcome == 'success'
@@ -1527,3 +1580,4 @@ jobs:
           path: test-results/fresh-install-gate/
           if-no-files-found: error
           retention-days: 30
+          overwrite: true

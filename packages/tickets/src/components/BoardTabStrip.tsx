@@ -34,7 +34,7 @@ export const BoardTabStrip: React.FC<BoardTabStripProps> = ({
           <span className="flex items-center gap-1.5 whitespace-nowrap">
             <span className={tab.isInactive ? 'italic' : undefined}>{tab.label}</span>
             {tab.openTicketCount !== null && (
-              <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[rgb(var(--color-border-100))] px-1.5 text-[11px] font-semibold text-[rgb(var(--color-text-600))]">
+              <span className="chip-neutral inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold">
                 {tab.openTicketCount}
               </span>
             )}

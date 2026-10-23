@@ -62,7 +62,10 @@ export function resolveUserProfileTab(
   isEnterpriseEdition = isCalendarEnterpriseEdition()
 ): string {
   const visibleTabs = getVisibleUserProfileTabs(isEnterpriseEdition);
-  const normalizedTab = requestedTab?.toLowerCase();
+  // Links written with the human label ("Single Sign-On", "API Keys") used to
+  // fall through to the first tab, dropping the visitor on Profile with no clue
+  // the deep link missed.
+  const normalizedTab = requestedTab?.trim().toLowerCase().replace(/[\s_]+/g, '-');
 
   if (normalizedTab && visibleTabs.includes(normalizedTab)) {
     return normalizedTab;

@@ -8,16 +8,16 @@ import {
   getDashboardMetrics,
   getMyAppointmentRequests,
   getRecentActivity,
-  getClientAssets,
+  listClientAssets,
   type RecentActivity,
   type RecentActivityType,
   type DashboardMetrics,
 } from '@alga-psa/client-portal/actions';
-import type { Asset, ProductCode } from '@alga-psa/types';
+import type { Asset, AssetStatusKind, ProductCode } from '@alga-psa/types';
 import { RequestAppointmentModal } from '../appointments/RequestAppointmentModal';
 import { ClientAddTicket } from '../tickets/ClientAddTicket';
 import { PrepaidHoursCard } from './PrepaidHoursCard';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import {
   Calendar,
   Clock,
@@ -43,6 +43,8 @@ import type { AppointmentSummary } from '../appointments/types';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useBranding } from '@alga-psa/tenancy/components';
 import type { PortalHeroGradient } from '@alga-psa/tenancy/actions';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { portalAssetStatusLabel, portalAssetStatusVariant } from '../assets/portalAssetStatus';
 
 type TranslateFn = ReturnType<typeof useTranslation>['t'];
 
@@ -188,7 +190,13 @@ function getGreeting(t: TranslateFn): string {
   return t('dashboard.greeting.evening', 'Good evening');
 }
 
-function timeAgo(value: string | Date | null | undefined, t: TranslateFn, locale?: string): string {
+type FormatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
+
+function timeAgo(
+  value: string | Date | null | undefined,
+  t: TranslateFn,
+  formatDate: FormatDate,
+): string {
   if (!value) return '';
   const dt = value instanceof Date ? value : new Date(value);
   if (isNaN(dt.getTime())) return '';
@@ -200,7 +208,9 @@ function timeAgo(value: string | Date | null | undefined, t: TranslateFn, locale
   if (hrs < 24) return t('dashboard.timeAgo.hours', { defaultValue: '{{count}} h ago', count: hrs });
   const days = Math.floor(hrs / 24);
   if (days < 7) return t('dashboard.timeAgo.days', { defaultValue: '{{count}}d ago', count: days });
-  return dt.toLocaleDateString(locale);
+  // Older activity falls back to an absolute date: digits follow the portal
+  // client's country, never the reading language.
+  return formatDate(dt, { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
 const DASHBOARD_PREVIEW_DEVICES = 4;
@@ -221,6 +231,7 @@ export function ClientDashboard({
     : '--color-primary-700';
   const isAlgaDeskPortal = productCode === 'algadesk';
   const locale = i18n.language || undefined;
+  const { formatDate } = useFormatters();
   const heroTextColor = useHeroTextColor(portalHeroGradient);
   const heroTextClass = heroTextColor === 'black' ? 'text-black' : 'text-white';
   const heroTextMutedClass = heroTextColor === 'black' ? 'text-black/70' : 'text-white/80';
@@ -231,6 +242,14 @@ export function ClientDashboard({
   const [upcomingAppointments, setUpcomingAppointments] = useState<AppointmentSummary[]>([]);
   const [activities, setActivities] = useState<RecentActivity[]>([]);
   const [devices, setDevices] = useState<Asset[]>([]);
+  const [deviceTotal, setDeviceTotal] = useState(0);
+  /**
+   * The registry kind and label for each status the client's devices are in.
+   * Without it the widget guessed the tone from the builtin slugs alone, so a
+   * tenant's own deployable status read amber here and green on the devices
+   * page.
+   */
+  const [deviceStatuses, setDeviceStatuses] = useState<Map<string, { label: string; kind: AssetStatusKind }>>(new Map());
   const [firstName, setFirstName] = useState<string>('');
   const [error, setError] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -255,6 +274,8 @@ export function ClientDashboard({
         setUpcomingAppointments([]);
         setActivities(isReturnedActionError(activityData) ? [] : (activityData || []).filter((activity) => activity.type === 'ticket'));
         setDevices([]);
+        setDeviceTotal(0);
+        setDeviceStatuses(new Map());
         return;
       }
 
@@ -265,7 +286,7 @@ export function ClientDashboard({
           ? getMyAppointmentRequests({ status: 'approved' })
           : Promise.resolve({ success: true, data: [] }),
         getRecentActivity().catch(() => [] as RecentActivity[]),
-        getClientAssets().catch(() => [] as Asset[]),
+        listClientAssets({ limit: DASHBOARD_PREVIEW_DEVICES }).catch(() => null),
       ]);
       if (isReturnedActionError(metricsData)) {
         setErrorMessage(getErrorMessage(metricsData));
@@ -284,7 +305,17 @@ export function ClientDashboard({
       }
 
       setActivities(isReturnedActionError(activityData) ? [] : activityData || []);
-      setDevices(isReturnedActionError(devicesData) ? [] : devicesData || []);
+      if (!devicesData || isReturnedActionError(devicesData)) {
+        setDevices([]);
+        setDeviceTotal(0);
+        setDeviceStatuses(new Map());
+      } else {
+        setDevices(devicesData.assets ?? []);
+        setDeviceTotal(devicesData.total ?? 0);
+        setDeviceStatuses(new Map(
+          (devicesData.by_status ?? []).map((summary) => [summary.slug, { label: summary.label, kind: summary.kind }]),
+        ));
+      }
     } catch (err) {
       console.error('Error loading dashboard:', err);
       setErrorMessage(null);
@@ -573,7 +604,7 @@ export function ClientDashboard({
                             })}
                           </div>
                           <div className="text-xs text-[rgb(var(--color-text-500))] flex-shrink-0">
-                            {timeAgo(activity.timestamp, t, locale)}
+                            {timeAgo(activity.timestamp, t, formatDate)}
                           </div>
                         </div>
                         {activity.description && (
@@ -639,10 +670,7 @@ export function ClientDashboard({
                         <div className="mt-1 flex items-center gap-1 text-xs text-[rgb(var(--color-text-600))]">
                           <Clock className="h-3 w-3" />
                           {dt
-                            ? dt.toLocaleTimeString(locale, {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })
+                            ? formatDate(dt, { hour: '2-digit', minute: '2-digit' })
                             : 'N/A'}
                           <span>· {appointment.requested_duration}m</span>
                         </div>
@@ -683,8 +711,8 @@ export function ClientDashboard({
               </Link>
             </div>
             <div className="mt-0.5 text-xs text-[rgb(var(--color-text-500))]">
-              {devices.length > 0
-                ? t('dashboard.devices.countLabel', { defaultValue: '{{count}} managed', count: devices.length })
+              {deviceTotal > 0
+                ? t('dashboard.devices.countLabel', { defaultValue: '{{count}} managed', count: deviceTotal })
                 : t('dashboard.devices.emptyShort', 'No devices yet')}
             </div>
           </CardHeader>
@@ -696,8 +724,8 @@ export function ClientDashboard({
             ) : (
               <ul className="space-y-2">
                 {devices.slice(0, DASHBOARD_PREVIEW_DEVICES).map((d) => {
+                  const statusRow = d.status ? deviceStatuses.get(d.status) : undefined;
                   const Icon = deviceIcon(d.asset_type);
-                  const isActive = d.status !== 'inactive';
                   return (
                     <li
                       key={d.asset_id}
@@ -714,18 +742,14 @@ export function ClientDashboard({
                           </div>
                         )}
                       </div>
-                      <span
-                        className={[
-                          'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                          isActive
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : 'bg-gray-100 text-gray-600',
-                        ].join(' ')}
-                      >
-                        {isActive
-                          ? t('dashboard.devices.active', 'Active')
-                          : t('dashboard.devices.inactive', 'Inactive')}
-                      </span>
+                      {/* F021: the widget called every slug that was not
+                          `inactive` "Active", so a device the MSP put in a
+                          custom status contradicted its own details panel. It
+                          reads the slug through the same helper as the device
+                          list now. */}
+                      <Badge variant={portalAssetStatusVariant(d.status, statusRow?.kind)}>
+                        {portalAssetStatusLabel(t, d.status, statusRow?.label)}
+                      </Badge>
                     </li>
                   );
                 })}

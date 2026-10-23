@@ -21,6 +21,7 @@ import {
   MicrosoftGraphAdapter,
   type MicrosoftGraphSendMailPayload,
 } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
+import { extractGraphBodyCorrelationIds } from '@alga-psa/shared/services/email/microsoftGraphDiagnostics';
 import type { EmailProviderConfig as InboundEmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 
 const SIMPLE_ATTACHMENT_LIMIT = 3 * 1024 * 1024;
@@ -106,6 +107,7 @@ export class MicrosoftGraphEmailProvider implements IEmailProvider {
         metadata,
       };
     } catch (error: any) {
+      if (error && typeof error === 'object') error.fromAddress = message.from?.email || this.mailbox;
       throw this.toProviderError(error);
     }
   }
@@ -189,6 +191,7 @@ export class MicrosoftGraphEmailProvider implements IEmailProvider {
         content: message.html || message.text || '',
       },
       toRecipients: message.to.map(address => this.toRecipient(address)),
+      from: { emailAddress: { address: message.from?.email || this.mailbox, name: message.from?.name || '' } },
     };
 
     if (message.cc?.length) graphMessage.ccRecipients = message.cc.map(address => this.toRecipient(address));
@@ -210,11 +213,11 @@ export class MicrosoftGraphEmailProvider implements IEmailProvider {
       || headers.some(name => !name.toLowerCase().startsWith('x-'));
 
     if (!requiresMime) {
-      return { kind: 'json', message: this.buildGraphMessage(message) };
+      return { kind: 'json', message: this.buildGraphMessage(message), fromAddress: message.from?.email || this.mailbox };
     }
 
     const mime = await this.buildMimeMessage(message);
-    return { kind: 'mime', content: mime.toString('base64') };
+    return { kind: 'mime', content: mime.toString('base64'), fromAddress: message.from?.email || this.mailbox };
   }
 
   private async buildMimeMessage(message: EmailMessage): Promise<Buffer> {
@@ -231,7 +234,7 @@ export class MicrosoftGraphEmailProvider implements IEmailProvider {
     const specialHeaders = this.extractSpecialHeaders(message.headers || {});
     const mail: Mail.Options = {
       from: {
-        address: this.mailbox,
+        address: message.from?.email || this.mailbox,
         name: message.from?.name || '',
       },
       to: message.to.map(address => ({ address: address.email, name: address.name || '' })),
@@ -354,7 +357,15 @@ export class MicrosoftGraphEmailProvider implements IEmailProvider {
 
     const status = Number(error?.status || error?.response?.status || 0) || undefined;
     const code = String(error?.code || error?.response?.data?.error?.code || status || 'SEND_FAILED');
-    const requestId = error?.requestId || error?.response?.headers?.['request-id'];
+    // Header/top-level ids win; fall back to a body-only Graph failure's
+    // error.innerError (native response.data or sanitized responseBody). Only
+    // the two safe id fields are read, so the raw body stays out of metadata.
+    const bodyIds = extractGraphBodyCorrelationIds(
+      error?.responseBody ?? error?.response?.data,
+    );
+    const requestId = error?.requestId || error?.response?.headers?.['request-id'] || bodyIds.requestId;
+    const clientRequestId =
+      error?.clientRequestId || error?.response?.headers?.['client-request-id'] || bodyIds.clientRequestId;
     // A named Graph code does not identify acceptance. HTTP 429 is an explicit
     // rejection; network failures and 5xx responses may follow an accepted send.
     const definitelyNotSent = Boolean(status && status >= 400 && status < 500 && status !== 408);
@@ -368,7 +379,7 @@ export class MicrosoftGraphEmailProvider implements IEmailProvider {
     if (status === 401) {
       message = 'Microsoft authorization expired. Reconnect the mailbox and try again.';
     } else if (status === 403) {
-      message = 'Microsoft rejected the send. Reconnect to grant Mail.Send and verify Send As permission for the configured mailbox.';
+      message = `Send As not granted for ${error?.fromAddress || 'the requested sender'} via ${this.mailbox}. Verify Exchange Send As permission and Mail.Send.Shared consent.`;
     } else if (status === 429) {
       message = 'Microsoft Graph throttled the send. Try again later.';
     } else if (status && status >= 500) {
@@ -388,7 +399,7 @@ export class MicrosoftGraphEmailProvider implements IEmailProvider {
       this.providerType,
       retryable,
       code,
-      { status, requestId, definitelyNotSent, requiresReconciliation: !definitelyNotSent,
+      { status, requestId, clientRequestId, definitelyNotSent, requiresReconciliation: !definitelyNotSent,
         ...(Number.isFinite(retryAfterMs) ? { retryAfterMs } : {}) }
     );
   }

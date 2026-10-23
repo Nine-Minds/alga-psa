@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { displayAddressField, displayCountry } from '@alga-psa/core';
+import { displayAddressField, displayCountry, isOptional, isQuoteItemIncluded } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useRouter } from 'next/navigation';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
@@ -14,6 +14,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { ArrowLeft, Download } from 'lucide-react';
 import type { IQuote, IQuoteItem, QuoteStatus } from '@alga-psa/types';
 import { useFormatQuoteStatus } from '@alga-psa/ui/hooks/useQuoteEnumOptions';
+import { QuoteTermsContent, hasQuoteTermsContent } from '@alga-psa/ui/editor';
 import {
   acceptClientQuote,
   downloadClientQuotePdf,
@@ -23,7 +24,7 @@ import {
   updateClientQuoteSelections,
   type ClientPortalLocationSummary,
 } from '@alga-psa/client-portal/actions';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 const STATUS_VARIANTS: Record<QuoteStatus, BadgeVariant> = {
@@ -40,9 +41,6 @@ const STATUS_VARIANTS: Record<QuoteStatus, BadgeVariant> = {
   archived: 'outline',
 };
 
-function itemIsIncluded(item: IQuoteItem): boolean {
-  return !item.is_optional || item.is_selected !== false;
-}
 
 const isBillingActionError = (
   value: unknown
@@ -139,19 +137,22 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
     return money(amountInCents, currencyCode);
   }, [money]);
 
+  // Central formatter: the client's own country sets the digit order, their
+  // language names the month. The hand-rolled 'en-US' build this replaces did
+  // neither, and pinned every portal user to US order.
+  const { formatDate: formatLocalizedDate } = useFormatters();
   const formatDate = useCallback((date: string | { toString(): string } | undefined | null) => {
     if (!date) return 'N/A';
     try {
       const dateStr = typeof date === 'string' ? date : date.toString();
-      const dateObj = new Date(dateStr);
-      const year = dateObj.getFullYear();
-      const month = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(dateObj);
-      const day = dateObj.getDate();
-      return `${month} ${day}, ${year}`;
+      if (Number.isNaN(new Date(dateStr).getTime())) {
+        return 'Invalid date';
+      }
+      return formatLocalizedDate(dateStr);
     } catch {
       return 'Invalid date';
     }
-  }, []);
+  }, [formatLocalizedDate]);
 
   useEffect(() => {
     const fetchQuote = async () => {
@@ -193,7 +194,7 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
   const optionalSelectedItemIds = useMemo(() => {
     if (!quote?.quote_items) return [];
     return quote.quote_items
-      .filter((item) => item.is_optional && item.is_selected !== false)
+      .filter((item) => isOptional(item) && isQuoteItemIncluded(item))
       .map((item) => item.quote_item_id);
   }, [quote]);
 
@@ -300,7 +301,7 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
         const downloadUrl = `/api/documents/download/${result.fileId}`;
         const link = document.createElement('a');
         link.href = downloadUrl;
-        link.download = '';
+        link.download = result.fileName ?? '';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -451,7 +452,7 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
                     </thead>
                     <tbody className="divide-y">
                       {rowItems.map((item) => {
-                        const isIncluded = itemIsIncluded(item);
+                        const isIncluded = isQuoteItemIncluded(item);
                         return (
                           <tr key={item.quote_item_id} className={!isIncluded ? 'opacity-60' : undefined}>
                             <td className="px-3 py-2">
@@ -461,7 +462,7 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
                                   <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                                     <Badge variant="outline" className="text-[10px]">{t('quotes.detail.optional', { defaultValue: 'Optional' })}</Badge>
                                     <span>
-                                      {item.is_selected !== false
+                                      {isIncluded
                                         ? t('quotes.detail.included', { defaultValue: 'Included' })
                                         : t('quotes.detail.excluded', { defaultValue: 'Excluded' })}
                                     </span>
@@ -471,11 +472,11 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
                                   <div className="pt-1">
                                     <Switch
                                       id={`quote-item-${item.quote_item_id}-selection`}
-                                      checked={item.is_selected !== false}
+                                      checked={isIncluded}
                                       disabled={!canEditSelections || isUpdatingSelections}
                                       onCheckedChange={(checked) => void handleSelectionToggle(item.quote_item_id, checked)}
                                       className="data-[state=checked]:bg-primary-500"
-                                      label={item.is_selected !== false
+                                      label={isIncluded
                                         ? t('quotes.detail.include', { defaultValue: 'Include' })
                                         : t('quotes.detail.exclude', { defaultValue: 'Exclude' })}
                                       size="sm"
@@ -506,7 +507,7 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
                     {groups.map((group) => {
                       // Live per-group subtotal honours the optional-item toggle.
                       const subtotal = group.items
-                        .filter((i) => !i.is_discount && itemIsIncluded(i))
+                        .filter((i) => !i.is_discount && isQuoteItemIncluded(i))
                         .reduce((sum, i) => sum + (Number(i.total_price) || 0), 0);
                       const addressLines = formatClientPortalLocationLines(group.location);
                       return (
@@ -647,10 +648,16 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
             </div>
           )}
 
-          {quote.terms_and_conditions && (
+          {hasQuoteTermsContent(quote.terms_and_conditions_block, quote.terms_and_conditions) && (
             <div>
               <h3 className="mb-2 text-sm font-semibold">{t('quotes.detail.termsAndConditions', { defaultValue: 'Terms & Conditions' })}</h3>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{quote.terms_and_conditions}</p>
+              <QuoteTermsContent
+                id="client-portal-quote-terms-content"
+                block={quote.terms_and_conditions_block}
+                text={quote.terms_and_conditions}
+                textClassName="text-sm text-muted-foreground"
+                richClassName="text-sm text-muted-foreground"
+              />
             </div>
           )}
         </div>

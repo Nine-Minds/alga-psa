@@ -80,6 +80,10 @@ export interface AmpAssetRecord extends AmpEntityRecordBase {
   serial_number?: string | null;
   manufacturer?: string | null;
   model?: string | null;
+  /** Source lifecycle state; mapped to an asset_statuses slug on apply (FR-B2). */
+  status?: string | null;
+  /** External identifier of the person the asset is assigned to (FR-C3). */
+  assignee_external_identifier?: string | null;
   purchase_date?: string | null;
 }
 

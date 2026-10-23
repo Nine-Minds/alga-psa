@@ -1,0 +1,466 @@
+[
+  {
+    "id": "F001",
+    "description": "Text-bearing blocks (text, rich text, field label, totals rows, totals) expose a Typography panel: size, weight (with numeric value), line height, align, style, color.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Data Fields expose a 'Value Text' typography panel for the bound value.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Canvas renders authored typography (size, weight, line height, align, style, color) on text, field values and totals.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Layer names persist across save/reopen via an optional presentation-only `name` on template AST nodes; unrenamed layers export no name.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-api-integrations"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Default layer names use the first free number per block type ('Box Container 1').",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Insertion rule: selected container receives the block; selected leaf gets it as next sibling; nothing/page selected appends to the page; climbs to the nearest accepting ancestor.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "The page accepts every block type except legacy columns, so Sections are optional.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Inserted blocks become the selection and an 'Added X to Y' message confirms where they went.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Blocks palette shows where the next block goes and an Inside it / After it switch for selected containers; Shift+click on '+' inserts after the selection.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Canvas shows an insertion marker (line or highlighted empty container) for the next insert.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Outline is always visible below the palette, keeps collapse state, scrolls only its own pane, and marks the selection with aria-selected.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Arrange toolbar: move earlier/later, move out of / into container, copy, paste, duplicate, copy style, paste style, delete, with hints.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Keyboard: arrows reorder, Alt+Left/Right move out/in, Ctrl/Cmd+C/X/V/D copy/cut/paste/duplicate, Ctrl/Cmd+Alt+C/V copy/paste style; keys from panels and open dropdowns never reach the block.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Paste and duplicate create fresh ids, drop the source AST id, and give unique layer names; focus moves to the copy's layer name.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Renaming a copied block offers to rename its inner layers sharing the old prefix/suffix.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Delete selects the next sibling, else previous, else the containing block (never the page).",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Escape in the inspector leaves the field first; Escape from a dropdown never deselects the block.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Unified Size control: width Auto/Fill/Fit/Fixed and height Auto/Fixed with one value input each, plus inline min/max; X/Y/W/H inputs and the Apply button removed.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "New flow blocks are content-sized; media keep a frame; logo height is auto with a 72px cap.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#rollout-migration"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Per-side padding and margin editor with an explicit 'Same on all sides' toggle; clearing a side never resets the others.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Padding lives in Style > Appearance for every block type (container padding included).",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Inspector tabs Content / Style / Layout & size with a sticky selection; Content tab hidden when a block has nothing to fill in; new blocks open on Content.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Inspector panels show an 'N set' count and a dot on set fields, where 'set' means different from a new block's default; designer-only fields never count.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "'Set on this block' summary lists all overrides across tabs (schema fields, container layout, size) and jumps to the editing tab.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Placeholders read 'e.g. …' in italics so empty fields do not look set.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Copy style / paste style transfers visual style (and container layout) but not size, as one undo step.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Section uses the container inspector (no duplicated layout controls).",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Live-typing an emptied field keeps it empty (no default reappearing); blur commits the unset value.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Enum fields show numeric values (e.g. imported font weight 700) and treat 'Default' as unset; the 'Select…' entry is gone from designer dropdowns.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Image/Logo source can be 'Company logo' (binding) or a custom image; Logo blocks default to the company logo and reopen as Logo blocks.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-api-integrations"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Export binds the company logo to the document kind's logo path; imported logo bindings are preserved verbatim.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-api-integrations"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Table columns: width and alignment are column inline CSS, exported and rendered; canvas uses the same widths; readable column ids.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-api-integrations"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Table column editor shows each column as a one-line summary that expands on demand; new columns open expanded.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "New Line Items and Dynamic Tables come with real Description/Qty/Rate/Amount columns (50/14/18/18%, numbers right-aligned).",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Totals rows editor edits label, emphasis, order, removal and adds standard rows; new Totals blocks carry Subtotal/Tax/Total rows.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "New Totals blocks are a 300px right-aligned summary box.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#rollout-migration"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Data Field binding picker: Enter picks the top match, arrows walk results; format follows the binding; the label follows unless the author typed one, using the standard translated label when one exists.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Data Field default label is the translated 'Invoice #'; imported fields never gain a default label.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Picking a binding, standard label or lone token renames a still-default layer (e.g. 'issue-date').",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Text blocks offer '+ Insert data field…' (searchable, Enter picks top match) and start with empty text.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Clicking a field in the FIELDS tab with a Data Field selected rebinds it.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Standard document label catalog mirrors en documents.json `labels` and is kept in step by a test.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-api-integrations"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "StandardLabelControl on text content, field labels, column headers and totals row labels: shows translated state with 'Use fixed text', or a searchable standard-label picker with readable key names.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Typing a standard label's exact text links it automatically; 'Use fixed text' opts out persistently; editing to another standard text relinks.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "New table headers and totals rows default to standard translated labels.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Canvas chip states when translated labels show in the Preview language.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Canvas shows authored background and border on the light page; dark mode keeps the designer surface.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Canvas page has no gap between top-level blocks (matches the rendered document).",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Empty containers show a visible drop zone; name badge shows on hover only; selection fade is lighter.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Image placeholders keep a minimum height.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Renderer honours authored table border-radius by switching to separate borders.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-api-integrations"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Export registers bindings under the document kind's canonical ids and fallbacks; table source options use catalog labels for every document kind.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-api-integrations"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Presets start from schema defaults (content sizing, unique names); the header preset is the standard invoice header with bindings and translated labels.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Save of a new layout adopts the saved id (no duplicate on re-save), keeps the author in the editor, updates the URL in place, and shows 'Saved <time>' plus a toast; Cancel is Close.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#requirements"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Editor header is one compact row and the designer fits the viewport so the page never scrolls while editing.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Inspector scrolls to top on selection change; field binding picker results do not truncate.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux-ui-notes"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "New shortcut catalog entries (move out/into, copy, cut, paste, duplicate, copy/paste style) with labels in all locales.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#non-functional-requirements"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "All new designer strings translated in de/es/fr/it/nl/pl/pt with regenerated xx/yy pseudo-locales; translation validation passes.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#non-functional-requirements"
+    ]
+  }
+]

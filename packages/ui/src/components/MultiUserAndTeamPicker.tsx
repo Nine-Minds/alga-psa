@@ -34,6 +34,10 @@ interface MultiUserAndTeamPickerProps {
   filterMode?: boolean;
   includeUnassigned?: boolean;
   onUnassignedChange?: (value: boolean) => void;
+  /**
+   * Show a type-ahead filter at the top of the list. Defaults to on for lists longer than a
+   * screenful, so long lists are never scroll-only.
+   */
   showSearch?: boolean;
   compactDisplay?: boolean;
   teams?: ITeam[];
@@ -42,8 +46,13 @@ interface MultiUserAndTeamPickerProps {
   teamSectionLabel?: string;
   // Click handler for viewing user details (e.g., opening schedule drawer)
   onUserClick?: (userId: string) => void;
+  /** Tooltip/accessible label for the user chip click target (e.g. "View schedule"). */
+  userClickLabel?: string;
 }
 
+
+/** Lists longer than this get a type-ahead filter unless the caller turns it off. */
+const AUTO_SEARCH_MIN_OPTIONS = 8;
 const MultiUserAndTeamPicker = ({
   id,
   label,
@@ -60,17 +69,19 @@ const MultiUserAndTeamPicker = ({
   filterMode = false,
   includeUnassigned = false,
   onUnassignedChange,
-  showSearch = false,
+  showSearch: showSearchProp,
   compactDisplay = false,
   teams = [],
   teamValues = [],
   onTeamValuesChange,
   teamSectionLabel = 'Teams',
   onUserClick,
+  userClickLabel,
   'data-automation-id': dataAutomationId
 }: MultiUserAndTeamPickerProps & AutomationProps) => {
   const { t } = useTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
+  const showSearch = showSearchProp ?? (users?.length ?? 0) + (teams?.length ?? 0) > AUTO_SEARCH_MIN_OPTIONS;
   const [searchQuery, setSearchQuery] = useState('');
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
   const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>({});
@@ -474,8 +485,19 @@ const MultiUserAndTeamPicker = ({
           >
             <div
               className={`flex items-center gap-1 ${onUserClick ? 'cursor-pointer hover:opacity-80' : ''}`}
+              role={onUserClick ? 'button' : undefined}
+              tabIndex={onUserClick ? 0 : undefined}
+              title={onUserClick ? userClickLabel : undefined}
+              aria-label={onUserClick && userClickLabel ? `${userClickLabel}: ${`${user.first_name || ''} ${user.last_name || ''}`.trim()}` : undefined}
               onClick={(e) => {
                 if (onUserClick) {
+                  e.stopPropagation();
+                  onUserClick(user.user_id);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (onUserClick && (e.key === 'Enter' || e.key === ' ')) {
+                  e.preventDefault();
                   e.stopPropagation();
                   onUserClick(user.user_id);
                 }
@@ -563,6 +585,7 @@ const MultiUserAndTeamPicker = ({
           <div className="p-2 border-b border-[rgb(var(--color-border-200))]">
             <div className="relative">
               <Input
+                id={id ? `${id}-search` : undefined}
                 ref={searchInputRef}
                 type="text"
                 placeholder={t('pickers.searchUsers', { defaultValue: 'Search users...' })}

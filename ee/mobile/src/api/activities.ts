@@ -258,6 +258,8 @@ export type CustomActivityGroup = {
   groupName: string;
   sortOrder: number;
   isCollapsed: boolean;
+  /** Unfiled activities show in this group instead of "Ungrouped" (absent on older servers) */
+  isDefault?: boolean;
   items: CustomActivityGroupItem[];
 };
 

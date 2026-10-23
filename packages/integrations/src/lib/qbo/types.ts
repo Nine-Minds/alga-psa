@@ -292,3 +292,15 @@ export interface QboTenantCredentials {
   accessTokenExpiresAt?: string; // ISO 8601 format timestamp
   refreshTokenExpiresAt?: string; // ISO 8601 format timestamp
 }
+
+/**
+ * QuickBooks' Automated Sales Tax pseudo tax codes. On a US AST company these
+ * are the only line-level TaxCodeRefs Intuit accepts; every other id faults
+ * with "Invalid Line TaxCode" (6100). They are not readable TaxCode records.
+ */
+export const QBO_PSEUDO_TAX_CODE_TAXABLE = 'TAX';
+export const QBO_PSEUDO_TAX_CODE_NON_TAXABLE = 'NON';
+export const QBO_AST_PSEUDO_TAX_CODES: ReadonlySet<string> = new Set([
+  QBO_PSEUDO_TAX_CODE_TAXABLE,
+  QBO_PSEUDO_TAX_CODE_NON_TAXABLE
+]);

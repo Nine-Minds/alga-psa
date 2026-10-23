@@ -14,17 +14,22 @@ import {
   getMigrationOutcomeRecords,
   getMigrationOutcomeSummary,
   getMigrationReportCsv,
+  getMigrationSkipProvenance,
 } from '@/lib/migrations/migrationActions';
 import type {
   MigrationJobDetails,
   MigrationOutcomeRecord,
   MigrationOutcomeSummary,
+  MigrationSkipProvenance,
 } from '@/lib/migrations/types';
 import {
   downloadTextFile,
   formatMigrationTimestamp,
+  migrationClaimLabel,
+  migrationCreatedNothing,
   migrationEntityLabel,
   migrationErrorMessage,
+  migrationSkipSentence,
 } from './migrationUi';
 
 const RECORD_LIMIT = 200;
@@ -54,6 +59,7 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
   const [records, setRecords] = useState<MigrationOutcomeRecord[]>([]);
   const [isLoadingRecords, setIsLoadingRecords] = useState(true);
   const [recordsError, setRecordsError] = useState<string | null>(null);
+  const [skipProvenance, setSkipProvenance] = useState<MigrationSkipProvenance | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
@@ -77,6 +83,25 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
         if (!cancelled) {
           setIsLoadingSummary(false);
         }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [details.migrationJobId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSkipProvenance(null);
+
+    getMigrationSkipProvenance(details.migrationJobId)
+      .then((loaded) => {
+        if (!cancelled) {
+          setSkipProvenance(loaded);
+        }
+      })
+      .catch(() => {
+        // Copy falls back to not making a provenance claim when unavailable.
       });
 
     return () => {
@@ -146,6 +171,9 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
     []
   );
 
+  const createdNothing = migrationCreatedNothing(details.state, details.entityCounts);
+  const skipSentence = migrationSkipSentence(skipProvenance, t);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -155,7 +183,7 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
             {details.completedAt
               ? `Finished ${formatMigrationTimestamp(details.completedAt)}.`
               : 'The job is no longer running.'}{' '}
-            Skipped records were already migrated by an earlier run of the same package.
+            {skipSentence ?? ''}
           </p>
         </div>
         <Button
@@ -189,6 +217,22 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
           <AlertDescription>
             The migration was cancelled at a checkpoint. Records applied before the cancellation
             remain and are listed below.
+          </AlertDescription>
+        </Alert>
+      )}
+      {createdNothing && (
+        <Alert variant="warning">
+          <AlertDescription>
+            <span className="font-medium">
+              {t('importExport.migration.results.nothingImportedTitle', {
+                defaultValue: 'Nothing was imported',
+              })}
+              :
+            </span>{' '}
+            {t('importExport.migration.results.nothingImportedBody', {
+              defaultValue:
+                'This run created no new records. Every row matched something that already existed, so nothing was changed.',
+            })}
           </AlertDescription>
         </Alert>
       )}
@@ -310,6 +354,10 @@ const MigrationResultsPanel = ({ details }: MigrationResultsPanelProps): React.J
                               <span className="break-all font-mono text-xs text-foreground">
                                 {record.targetEntityType ? `${record.targetEntityType}: ` : ''}
                                 {record.targetEntityId}
+                              </span>
+                            ) : record.action === 'skipped' && record.claimedBy ? (
+                              <span className="text-sm text-muted-foreground">
+                                {migrationClaimLabel(record.claimedBy, t)}
                               </span>
                             ) : (
                               <span className="text-sm text-muted-foreground">—</span>

@@ -57,4 +57,20 @@ describe("tickets api", () => {
       },
     }));
   });
+
+  it("forwards propagateToChildren only when supplied", async () => {
+    const client = mockClient({ ok: true, data: { data: {} } });
+
+    await updateTicketStatus(client, {
+      apiKey: "k",
+      ticketId: "tk-1",
+      status_id: "closed",
+      propagateToChildren: false,
+    });
+    expect(client.request).toHaveBeenCalledWith(expect.objectContaining({
+      method: "PUT",
+      path: "/api/v1/tickets/tk-1/status",
+      body: { status_id: "closed", propagateToChildren: false },
+    }));
+  });
 });

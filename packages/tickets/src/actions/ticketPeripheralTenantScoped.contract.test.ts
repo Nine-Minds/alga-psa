@@ -47,7 +47,7 @@ describe('ticket peripheral action tenant-scoped query contract', () => {
     expect(boardActions).toContain("tenantDb(trx, tenant).table<IBoard>('boards')");
     expect(boardActions).toContain("tenantScopedTable('status_sla_pause_config')");
     expect(exportActions).toContain('const tenantScopedDb = tenantDb(db, tenant)');
-    expect(formActions).toContain('tenantDb(trx, tenant).table<Row>(table)');
+    expect(formActions).toContain("tenantDb(trx, tenant).table<IBoard>('boards')");
     expect(importActions).toContain("tenantScopedTable('boards')");
     expect(importActions).toContain("tenantScopedTable('contacts')");
   });

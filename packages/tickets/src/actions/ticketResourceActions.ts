@@ -12,7 +12,7 @@ import {
   getTicketResourcesCore,
   publishTicketResourceEvent,
   removeTicketResourceCore,
-} from '../lib/ticketResourceCore';
+} from '@alga-psa/shared/services/tickets/ticketResourceCore';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 
 function tenantScopedTable(
@@ -66,7 +66,7 @@ export const removeTicketResource = withAuth(async (
       throw new Error('Permission denied: Cannot remove ticket resource');
     }
 
-    await removeTicketResourceCore(trx, tenant, assignmentId);
+    await removeTicketResourceCore(trx, tenant, user.user_id, assignmentId);
     });
   } catch (error) {
     const expected = ticketActionErrorFrom(error);

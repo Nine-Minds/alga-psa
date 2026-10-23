@@ -32,6 +32,9 @@ function renderHook(opts?: {
   session?: any;
   ticketId?: string;
   onCreated?: () => void;
+  workItem?: { id: string; type: "ticket" | "project_task" };
+  defaultServiceId?: string | null;
+  defaultServiceSource?: "task" | "phase" | "project" | null;
 }) {
   const showToast = vi.fn();
   const t = vi.fn((key: string, vars?: Record<string, unknown>) => {
@@ -53,7 +56,12 @@ function renderHook(opts?: {
         showToast,
         t,
       },
-      { onCreated: opts?.onCreated },
+      {
+        onCreated: opts?.onCreated,
+        workItem: opts?.workItem,
+        defaultServiceId: opts?.defaultServiceId,
+        defaultServiceSource: opts?.defaultServiceSource,
+      },
     );
     return null;
   }
@@ -370,6 +378,72 @@ describe("useTimeEntry", () => {
       });
 
       expect(onCreated).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("work items other than the ticket", () => {
+    it("logs against the given work item and starts from its service", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-05-05T14:30:00"));
+      mockCreateTimeEntry.mockResolvedValue({ ok: true, data: { data: { entry_id: "e1" } } });
+      const { latest } = renderHook({ workItem: { id: "task-7", type: "project_task" }, defaultServiceId: "svc-task" });
+
+      act(() => latest.current.openTimeEntryModal());
+      expect(latest.current.timeEntryServiceId).toBe("svc-task");
+      await act(async () => {
+        await latest.current.submitTimeEntry();
+      });
+
+      expect(mockCreateTimeEntry).toHaveBeenCalledWith(fakeClient, expect.objectContaining({
+        work_item_type: "project_task",
+        work_item_id: "task-7",
+        service_id: "svc-task",
+      }));
+    });
+  });
+
+  describe("where the prefilled service came from", () => {
+    it("reports the level a default was inherited from", () => {
+      const { latest } = renderHook({ defaultServiceId: "svc-phase", defaultServiceSource: "phase" });
+
+      act(() => latest.current.openTimeEntryModal(new Date("2026-05-05T00:00:00")));
+
+      expect(latest.current.timeEntryServiceId).toBe("svc-phase");
+      expect(latest.current.timeEntryServiceSource).toBe("phase");
+    });
+
+    it("stops claiming a source once the user picks another service", () => {
+      const { latest } = renderHook({ defaultServiceId: "svc-project", defaultServiceSource: "project" });
+
+      act(() => latest.current.openTimeEntryModal(new Date("2026-05-05T00:00:00")));
+      act(() => latest.current.setTimeEntryServiceId("svc-other"));
+
+      expect(latest.current.timeEntryServiceSource).toBeNull();
+    });
+
+    it("claims nothing when no default was prefilled", () => {
+      const { latest } = renderHook();
+
+      act(() => latest.current.openTimeEntryModal(new Date("2026-05-05T00:00:00")));
+
+      expect(latest.current.timeEntryServiceSource).toBeNull();
+    });
+
+    it("forgets the previous source when reopened without a default", () => {
+      const opts: { defaultServiceId?: string | null; defaultServiceSource?: "phase" | null } = {
+        defaultServiceId: "svc-phase",
+        defaultServiceSource: "phase",
+      };
+      const { latest, rerender } = renderHook(opts);
+
+      act(() => latest.current.openTimeEntryModal(new Date("2026-05-05T00:00:00")));
+      expect(latest.current.timeEntryServiceSource).toBe("phase");
+
+      opts.defaultServiceId = null;
+      opts.defaultServiceSource = null;
+      rerender();
+      act(() => latest.current.openTimeEntryModal(new Date("2026-05-05T00:00:00")));
+      expect(latest.current.timeEntryServiceSource).toBeNull();
     });
   });
 });

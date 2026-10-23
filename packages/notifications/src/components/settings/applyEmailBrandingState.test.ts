@@ -6,7 +6,11 @@ import {
   countSelectedRows,
   defaultSelection,
   groupTemplatesByState,
+  previewKey,
+  previewLanguagesFor,
+  shouldFetchPreview,
   summarizeApplyResult,
+  templateStatusTone,
 } from './applyEmailBrandingState';
 import type { EmailBrandingTemplateStatus } from '../../lib/emailBranding';
 
@@ -67,6 +71,8 @@ describe('groupTemplatesByState', () => {
 
     expect(groups.system[0].rows).toBe(2);
     expect(groups['no-stock-colors'][0].rows).toBe(0);
+    // An overwrite can still reach that row, so it is counted separately.
+    expect(groups['no-stock-colors'][0].allRows).toBe(1);
   });
 });
 
@@ -103,6 +109,38 @@ describe('selection', () => {
   });
 });
 
+describe('forced overwrite', () => {
+  const groups = groupTemplatesByState(templates, ['en', 'fr']);
+
+  it('sends the forced names as overwrite alongside the ticked ones', () => {
+    const scope = buildApplyScope(
+      groups,
+      new Set(['ticket-created', 'invoice-email']),
+      ['en', 'fr'],
+      new Set(['invoice-email']),
+    );
+
+    expect(scope.names.sort()).toEqual(['invoice-email', 'ticket-created']);
+    expect(scope.overwrite).toEqual(['invoice-email']);
+  });
+
+  it('is the one way a no-stock-colors template enters the scope', () => {
+    const scope = buildApplyScope(groups, new Set(), ['en'], new Set(['portal-invitation']));
+
+    expect(scope.names).toEqual(['portal-invitation']);
+    expect(scope.overwrite).toEqual(['portal-invitation']);
+  });
+
+  it('counts the rows an overwrite would reach, including the disabled ones', () => {
+    expect(countSelectedRows(groups, new Set(), new Set(['portal-invitation']))).toBe(1);
+    expect(countSelectedRows(groups, new Set(['invoice-email']), new Set(['invoice-email']))).toBe(2);
+  });
+
+  it('keys the preview cache apart from the palette-only run', () => {
+    expect(previewKey('invoice-email', 'en', true)).not.toBe(previewKey('invoice-email', 'en'));
+  });
+});
+
 describe('summarizeApplyResult', () => {
   it('counts written, skipped and failed rows', () => {
     const summary = summarizeApplyResult({
@@ -116,15 +154,73 @@ describe('summarizeApplyResult', () => {
   });
 });
 
+describe('preview language tabs', () => {
+  it('offers the ticked languages the template actually ships in', () => {
+    expect(previewLanguagesFor(templates, 'ticket-created', ['en', 'fr'])).toEqual(['en', 'fr']);
+    expect(previewLanguagesFor(templates, 'ticket-created', ['fr'])).toEqual(['fr']);
+  });
+
+  it('never leaves the eye without a language to show', () => {
+    expect(previewLanguagesFor(templates, 'portal-invitation', ['fr'])).toEqual(['en']);
+  });
+
+  it('keys the cache per name and language', () => {
+    expect(previewKey('ticket-created', 'en')).not.toBe(previewKey('ticket-created', 'fr'));
+  });
+});
+
+describe('shouldFetchPreview', () => {
+  it('fetches the row that is on screen', () => {
+    expect(shouldFetchPreview('a::en', 'a::en', new Set())).toBe(true);
+  });
+
+  it('drops a preview the tenant has already clicked past', () => {
+    expect(shouldFetchPreview('a::en', 'b::en', new Set())).toBe(false);
+  });
+
+  it('drops one that arrived in the cache while it queued', () => {
+    expect(shouldFetchPreview('a::en', 'a::en', new Set(['a::en']))).toBe(false);
+  });
+
+  it('drops everything once the preview is closed', () => {
+    expect(shouldFetchPreview('a::en', null, new Set())).toBe(false);
+  });
+});
+
+describe('templateStatusTone', () => {
+  const entry = (differs: EmailBrandingTemplateStatus['differs']) =>
+    groupTemplatesByState([row('invoice-email', 'en', 'customized', { differs })], ['en']).customized[0];
+
+  it('marks a row no apply can reach as inert', () => {
+    const inert = groupTemplatesByState(templates, ['en'])['no-stock-colors'][0];
+    expect(templateStatusTone(inert, true)).toBe('inert');
+  });
+
+  it('calls out a row whose edits differ from the palette', () => {
+    expect(templateStatusTone(entry(['colors']), false)).toBe('differs');
+  });
+
+  it('falls back to the category when nothing differs', () => {
+    expect(templateStatusTone(entry([]), false)).toBe('category');
+  });
+});
+
 describe('apply dialog markup', () => {
   it('renders as apply-email-branding-dialog with language checkboxes', () => {
-    expect(dialogSource).toContain('<Dialog id="apply-email-branding"');
+    expect(dialogSource).toContain('id="apply-email-branding"');
     expect(dialogSource).toContain('id={`apply-branding-language-${code}`}');
+  });
+
+  it('puts its heading in the drag handle, not below it', () => {
+    // A child DialogTitle leaves the handle empty and scrolls the heading away.
+    expect(dialogSource).toContain("title={t('notifications.emailBranding.apply.title'");
+    expect(dialogSource).not.toContain('<DialogTitle>');
   });
 
   it('disables the no-stock-colors group and hints why', () => {
     expect(dialogSource).toContain("const disabled = state === 'no-stock-colors'");
-    expect(dialogSource).toContain('disabled={disabled}');
+    // Disabled unless the tenant forced it: an overwrite is the one way in.
+    expect(dialogSource).toContain('disabled={disabled && !overwrite.has(entry.name)}');
     expect(dialogSource).toContain("groups.no-stock-colors.action");
   });
 
@@ -143,5 +239,74 @@ describe('apply dialog markup', () => {
 
   it('refreshes the templates list after applying', () => {
     expect(dialogSource).toContain('await onApplied()');
+  });
+});
+
+describe('per-template preview', () => {
+  it('puts an eye on every row, disabled checkbox or not', () => {
+    const button = dialogSource.slice(dialogSource.indexOf('id={`preview-branding-template-${entry.name}`}'));
+    const props = button.slice(0, button.indexOf('</Button>'));
+
+    expect(props).toContain('<Eye className="h-4 w-4" />');
+    expect(props).toContain('onClick={() => openPreview(entry.name)}');
+    // `disabled` is the no-stock-colors checkbox's business, never the eye's.
+    expect(props).not.toContain('disabled');
+  });
+
+  it('renders the planned HTML and subject through EmailTemplatePreview', () => {
+    expect(dialogSource).toContain('<Dialog\n        id="preview-branding-template"');
+    expect(dialogSource).toContain('htmlContent={entry.preview.plannedHtml}');
+    expect(dialogSource).toContain('subject={entry.preview.subject}');
+  });
+
+  it('explains the customized and skipped cases in words', () => {
+    expect(dialogSource).toContain('apply.preview.captions.customized');
+    expect(dialogSource).toContain('apply.preview.captions.skipped');
+    expect(dialogSource).toContain('reason: skipReason(preview.skipReason');
+  });
+
+  it('offers an overwrite on the groups an apply would otherwise not reach', () => {
+    expect(dialogSource).toContain('const overwritable = OVERWRITABLE_STATES.includes(state)');
+    expect(dialogSource).toContain('id={`overwrite-branding-template-${entry.name}`}');
+    expect(dialogSource).toContain('apply.overwriteHint');
+    expect(dialogSource).toContain('apply.preview.captions.overwrite');
+    // Forcing a row implies selecting it, and the scope carries both.
+    expect(dialogSource).toContain('buildApplyScope(groups, selected, languages, overwrite)');
+  });
+
+  it('fetches lazily, once per name and language', () => {
+    expect(dialogSource).toContain('previewEmailBrandingApplyAction({ name, language, overwrite: forced })');
+    expect(dialogSource).toContain('if (requestedPreviews.current.has(key)) return;');
+    expect(dialogSource).toContain("previewLanguagesFor(status.templates, name, languages)[0]");
+  });
+
+  it('asks for one preview at a time, and only for the row on screen', () => {
+    // A run down the eyes queued a server action per click, each one holding a
+    // database connection; enough of them and the session check behind the next
+    // request times out, which signs the tenant out.
+    expect(dialogSource).toContain('const previewQueue = useRef(createSerialMutationQueue());');
+    expect(dialogSource).toContain('await previewQueue.current.enqueue(async () => {');
+    expect(dialogSource).toContain('shouldFetchPreview(key, visiblePreview.current, requestedPreviews.current)');
+    // Closing the preview retires the target, so nothing queued is fetched.
+    expect(dialogSource).toContain('visiblePreview.current = null;');
+    expect(dialogSource).toContain('onClose={closePreview}');
+  });
+
+  it('states each row in a pill, never as text beside the overwrite box', () => {
+    expect(dialogSource).toContain('const tone = templateStatusTone(entry, disabled);');
+    expect(dialogSource).toContain('id={`status-branding-template-${entry.name}`}');
+    expect(dialogSource).toContain('variant={STATUS_TONE_VARIANTS[tone]}');
+    // An empty category would otherwise render as a bare dot.
+    expect(dialogSource).toContain('{statusLabel && (');
+  });
+
+  it('shows a loading and an error state instead of an empty frame', () => {
+    expect(dialogSource).toContain('id="preview-branding-template-loading"');
+    expect(dialogSource).toContain('id="preview-branding-template-error"');
+  });
+
+  it('drops the cache when the dialog reopens on a changed palette', () => {
+    expect(dialogSource).toContain('setPreviewCache({});');
+    expect(dialogSource).toContain('requestedPreviews.current = new Set();');
   });
 });

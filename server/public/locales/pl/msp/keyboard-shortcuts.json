@@ -283,6 +283,38 @@
       "moveRight": {
         "label": "Przenieś w prawo",
         "description": "Przenieś zaznaczony element edytora w prawo."
+      },
+      "moveOut": {
+        "label": "Wyjmij z kontenera",
+        "description": "Wyjmij zaznaczony blok z jego kontenera."
+      },
+      "moveInto": {
+        "label": "Przenieś do kontenera",
+        "description": "Przenieś zaznaczony blok do poprzedniego kontenera."
+      },
+      "copy": {
+        "label": "Kopiuj",
+        "description": "Kopiuj zaznaczony blok."
+      },
+      "cut": {
+        "label": "Wytnij",
+        "description": "Wytnij zaznaczony blok."
+      },
+      "paste": {
+        "label": "Wklej",
+        "description": "Wklej skopiowany blok."
+      },
+      "duplicate": {
+        "label": "Duplikuj",
+        "description": "Duplikuj zaznaczony blok."
+      },
+      "copyStyle": {
+        "label": "Kopiuj styl",
+        "description": "Kopiuj kolory, obramowania, odstępy i styl tekstu zaznaczonego bloku."
+      },
+      "pasteStyle": {
+        "label": "Wklej styl",
+        "description": "Zastosuj skopiowany styl do zaznaczonego bloku."
       }
     },
     "scroll": {

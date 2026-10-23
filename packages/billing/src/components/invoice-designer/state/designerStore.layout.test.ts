@@ -8,7 +8,7 @@ describe('designerStore CSS-first model (sizing primitives)', () => {
     useInvoiceDesignerStore.getState().resetWorkspace();
   });
 
-  it('adds nodes with CSS-like style width/height in px by default', () => {
+  it('sizes new flow blocks by their content and keeps px frames only for media', () => {
     const store = useInvoiceDesignerStore.getState();
     const pageId = store.nodes.find((node) => node.type === 'page')?.id;
     expect(pageId).toBeTruthy();
@@ -26,14 +26,22 @@ describe('designerStore CSS-first model (sizing primitives)', () => {
     expect(selected?.type).toBe('field');
     expect(selected).toBeTruthy();
     if (!selected) return;
-    // Fields hug their content since e6992dc686 (schema default width/height
-    // 'auto'); structural nodes keep px sizing.
+    // Flow blocks (fields and containers alike) take their size from the
+    // parent's layout and their content, so nothing starts at a fixed size.
     expect(getNodeStyle(selected)?.width).toBe('auto');
     expect(getNodeStyle(selected)?.height).toBe('auto');
 
     const section = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === sectionId);
-    expect(getNodeStyle(section!)?.width).toMatch(/px$/);
-    expect(getNodeStyle(section!)?.height).toMatch(/px$/);
+    expect(getNodeStyle(section!)?.width).toBe('auto');
+    expect(getNodeStyle(section!)?.height).toBe('auto');
+
+    // Media needs a concrete frame to fit the image into.
+    store.addNodeFromPalette('image', { x: 120, y: 160 }, { parentId: sectionId });
+    const imageId = useInvoiceDesignerStore.getState().selectedNodeId;
+    const image = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === imageId);
+    expect(image?.type).toBe('image');
+    expect(getNodeStyle(image!)?.width).toMatch(/px$/);
+    expect(getNodeStyle(image!)?.height).toMatch(/px$/);
   });
 
   it('clamps resizing to practical minimums and mirrors into CSS style', () => {

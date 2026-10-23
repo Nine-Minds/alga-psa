@@ -7,7 +7,7 @@ fullnameOverride: ""
 server:
   image:
     repository: temporalio/auto-setup
-    tag: 1.27.2
+    tag: 1.29.7
     pullPolicy: IfNotPresent
   replicaCount: 1
   startupProbe:

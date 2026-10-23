@@ -61,12 +61,23 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
 });
 
 vi.mock('server/src/lib/eventBus/publishers', () => ({
-  publishEvent: vi.fn(async () => Promise.resolve())
+  publishEvent: vi.fn(async () => Promise.resolve()),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(async () => Promise.resolve()),
   publishWorkflowEvent: vi.fn(async () => Promise.resolve()),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('next/cache', () => ({

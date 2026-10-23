@@ -123,7 +123,8 @@ describe('SMTPEmailProvider mail options construction', () => {
     expect(mailOptions.replyTo).toBe('reply@example.com');
     expect(mailOptions.headers).toEqual({ 'X-Custom': 'yes' });
     expect(mailOptions.attachments).toEqual([
-      { filename: 'invoice.pdf', content, contentType: 'application/pdf', cid: 'inv-1' },
+      // A cid attachment is inline, not a file Outlook lists beside the message.
+      { filename: 'invoice.pdf', content, contentType: 'application/pdf', cid: 'inv-1', contentDisposition: 'inline' },
       { filename: 'note.txt', content: 'hello' }
     ]);
   });
@@ -179,6 +180,29 @@ describe('SMTPEmailProvider mail options construction', () => {
     );
     const permanent = await provider.sendEmail(baseMessage(), 'tenant-1');
     expect(permanent.metadata).toMatchObject({ retryable: false });
+  });
+
+  it('preserves native responseCode/response/command metadata on rejection (no AUTH payload)', async () => {
+    const { provider, transporter } = await initializedProvider();
+    transporter.sendMail.mockRejectedValueOnce(
+      Object.assign(new Error('auth failed'), {
+        code: 'EAUTH',
+        responseCode: 535,
+        command: 'AUTH',
+        response: '535 5.7.8 Authentication credentials invalid',
+      })
+    );
+
+    const result = await provider.sendEmail(baseMessage(), 'tenant-1');
+
+    expect(result.success).toBe(false);
+    expect(result.metadata).toMatchObject({
+      errorCode: 'EAUTH',
+      command: 'AUTH',
+      responseCode: 535,
+      status: 535,
+      response: '535 5.7.8 Authentication credentials invalid',
+    });
   });
 });
 

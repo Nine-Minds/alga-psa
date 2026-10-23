@@ -6,6 +6,8 @@ import {
   type WeightedBurnInput,
 } from '@alga-psa/shared/billingClients/weightedBurn';
 import type { BusinessHoursScheduleInput } from '@alga-psa/shared/lib/businessHours/businessHoursSegmentation';
+import { isHoliday } from '@alga-psa/shared/lib/businessHours/businessHoursSegmentation';
+import { isHolidayDate } from '@alga-psa/shared/utils/recurrenceUtils';
 
 // A standard Mon–Fri 09:00–17:00 schedule (UTC by default).
 function standardSchedule(timezone = 'UTC'): BusinessHoursScheduleInput {
@@ -40,6 +42,30 @@ function input(
 }
 
 describe('computeWeightedMinutes', () => {
+  it('matches pg DATE holiday values returned as Date objects in both holiday helpers', () => {
+    const recurring = new Date(2026, 11, 25);
+    const oneOff = new Date(2026, 6, 13);
+    expect(() => isHoliday([{ holiday_date: recurring, is_recurring: true }], oneOff)).not.toThrow();
+    expect(isHoliday([{ holiday_date: recurring, is_recurring: true }], new Date(2025, 11, 25))).toBe(true);
+    expect(isHoliday([{ holiday_date: oneOff, is_recurring: false }], oneOff)).toBe(true);
+    expect(isHoliday([{ holiday_date: '2026-12-25', is_recurring: true }], new Date(2025, 11, 25))).toBe(true);
+    expect(isHoliday([{ holiday_date: '2026-07-13', is_recurring: false }], oneOff)).toBe(true);
+    expect(isHolidayDate(new Date(2025, 11, 25), [{ holiday_date: recurring, is_recurring: true }])).toBe(true);
+    expect(isHolidayDate(oneOff, [{ holiday_date: oneOff, is_recurring: false }])).toBe(true);
+    expect(isHolidayDate(new Date(2025, 11, 25), [{ holiday_date: '2026-12-25', is_recurring: true }])).toBe(true);
+    expect(isHolidayDate(oneOff, [{ holiday_date: '2026-07-13', is_recurring: false }])).toBe(true);
+  });
+
+  it('applies a pg DATE holiday to weighted after-hours classification', () => {
+    const schedule = standardSchedule();
+    schedule.holidays = [{ holiday_date: new Date(2026, 6, 13), is_recurring: false }];
+    const result = computeWeightedMinutes(
+      input('2026-07-13T10:00:00Z', '2026-07-13T11:00:00Z', 60),
+      1,
+      afterHoursRule(2, schedule)
+    );
+    expect(result.weightedMinutes).toBe(120);
+  });
   // Mon 2026-07-13 10:00–11:00 UTC is fully in-hours.
   it('fully in-hours span burns at member multiplier only', () => {
     const result = computeWeightedMinutes(

@@ -46,6 +46,15 @@ export {
   capReferences
 } from './BaseEmailService';
 
+// Send-time passes, for the paths that render a template and hand it straight
+// to a provider instead of going through BaseEmailService.
+export { addGradientFallback } from './branding/gradientFallback';
+export {
+  embedBrandLogo,
+  type EmbedBrandLogoOptions,
+  type EmbedBrandLogoResult,
+} from './inlineBrandLogo';
+
 // Individual email sending functions
 export { sendPasswordResetEmail } from './sendPasswordResetEmail';
 export { sendPortalInvitationEmail } from './sendPortalInvitationEmail';
@@ -53,12 +62,30 @@ export { sendTeamInvitationEmail } from './sendTeamInvitationEmail';
 export { sendTenantRecoveryEmail } from './clientPortalTenantRecoveryEmail';
 export { sendVerificationEmail } from './sendVerificationEmail';
 export { sendCancellationFeedbackEmail } from './sendCancellationFeedbackEmail';
+export { sendVendorSupportRequestEmail } from './sendVendorSupportRequestEmail';
+export type {
+  VendorSupportCategory,
+  VendorSupportRequestData,
+} from './sendVendorSupportRequestEmail';
 
 // System email provider factory
 export { SystemEmailProviderFactory } from './system/SystemEmailProviderFactory';
 
 // Tenant email provider manager
 export { EmailProviderManager } from './providers/EmailProviderManager';
+
+// Outbound email diagnostics (provider-dispatched, shared kernel)
+export {
+  runOutboundEmailDiagnostics,
+  runOutboundEmailDiagnosticsWithSettings,
+} from './diagnostics/outboundDiagnostics';
+export type {
+  OutboundDiagnosticsSummary,
+  OutboundEmailDiagnosticsOptions,
+  OutboundEmailDiagnosticsReport,
+  OutboundProviderType,
+  OutboundStep,
+} from './diagnostics/outboundTypes';
 
 export {
   applyFromNameOverride,

@@ -8,6 +8,8 @@ export { QuickAddAsset } from './QuickAddAsset';
 export { default as AssetForm } from './AssetForm';
 export { default as AssetFormClient } from './AssetFormClient';
 export { default as AssociatedAssets } from './AssociatedAssets';
+export { ClientAssetMultiSelect } from './ClientAssetMultiSelect';
+export type { ClientAssetMultiSelectProps } from './ClientAssetMultiSelect';
 
 export * from './AssetDetailDrawer.types';
 export { AssetDetailDrawerClient } from './AssetDetailDrawerClient';

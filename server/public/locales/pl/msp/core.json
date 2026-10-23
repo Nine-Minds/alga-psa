@@ -69,9 +69,10 @@
       "servicePeriods": "Okresy świadczenia usług",
       "credits": "Kredyty",
       "serviceTypes": "Typy usług",
+      "serviceCategories": "Kategorie usług",
       "serviceCatalog": "Usługi",
       "products": "Produkty",
-      "taxRates": "Stawki podatkowe",
+      "taxRates": "Podatki",
       "usageTracking": "Śledzenie użycia",
       "reports": "Raporty",
       "accountingExports": "Eksporty księgowe"
@@ -101,7 +102,10 @@
       "forms": "Formularze",
       "channels": "Kanały"
     },
-    "passwords": "Hasła"
+    "passwords": "Hasła",
+    "ticketsAll": "Wszystkie zgłoszenia",
+    "ticketsRecurring": "Zgłoszenia cykliczne",
+    "ticketsTemplates": "Szablony zgłoszeń"
   },
   "sidebar": {
     "backToMain": "Powrót do głównego",
@@ -205,7 +209,35 @@
       "ariaLabel": "Zasoby i pomoc",
       "title": "Zasoby",
       "documentation": "Dokumentacja",
-      "support": "Skontaktuj się z pomocą techniczną"
+      "support": "Skontaktuj się z pomocą techniczną",
+      "submitTicket": "Wyślij zgłoszenie do Nine Minds"
+    },
+    "supportDialog": {
+      "title": "Wyślij zgłoszenie do Nine Minds",
+      "intro": "Pomoc techniczna Nine Minds otrzyma to jako zgłoszenie i odpowie e-mailem.",
+      "categoryLabel": "W czym potrzebujesz pomocy?",
+      "categories": {
+        "bug": "Coś nie działa",
+        "question": "Pytanie",
+        "billing": "Rozliczenia",
+        "feature": "Propozycja funkcji"
+      },
+      "subjectLabel": "Temat",
+      "descriptionLabel": "Co się stało?",
+      "descriptionPlaceholder": "Podaj, czego oczekiwałeś, co się stało oraz którego klienta lub której faktury to dotyczy.",
+      "replyTo": "Odpowiedzi trafią na adres {{email}}",
+      "success": "Wysłano do pomocy technicznej Nine Minds. Odpowiedzi trafią na adres {{email}}.",
+      "submit": "Wyślij do Nine Minds",
+      "sending": "Wysyłanie…",
+      "cancel": "Anuluj",
+      "close": "Zamknij",
+      "fallbackLink": "Skontaktuj się z pomocą techniczną na nineminds.com",
+      "errors": {
+        "invalidInput": "Wpisz temat o długości co najmniej 3 znaków i opis o długości co najmniej 20 znaków.",
+        "rateLimited": "Właśnie wysłałeś zgłoszenie. Odczekaj minutę przed wysłaniem następnego.",
+        "emailNotConfigured": "Ta instalacja nie ma skonfigurowanej poczty wychodzącej, więc zgłoszenia nie udało się wysłać.",
+        "sendFailed": "Nie udało się wysłać zgłoszenia. Spróbuj ponownie."
+      }
     },
     "jobs": {
       "ariaLabel": "Wyświetl aktywność zadań w tle",
@@ -236,6 +268,19 @@
       "ariaLabel": "Zapytaj AI o ten workflow",
       "title": "Zapytaj AI",
       "shortcutHint": "Otwórz szybkie pytanie, aby uzyskać wskazówki dotyczące workflow"
+    },
+    "stopwatch": {
+      "untitled": "Bez tytułu",
+      "ariaLabelPaused": "Stoper wstrzymany: {{label}} przy {{clock}}",
+      "ariaLabelRunning": "Stoper działa: {{label}} przy {{clock}}",
+      "paused": "Stoper wstrzymany",
+      "running": "Stoper działa",
+      "resume": "Wznów",
+      "pause": "Wstrzymaj",
+      "stop": "Zatrzymaj i zapisz",
+      "discard": "Odrzuć",
+      "pausedNoDrawer": "Stoper wstrzymany na {{clock}}. Otwórz element pracy, aby zarejestrować czas.",
+      "openTicket": "Otwórz zgłoszenie"
     }
   },
   "dialogs": {
@@ -267,6 +312,18 @@
     "platformNotification": {
       "learnMore": "Dowiedz się więcej",
       "dismiss": "Odrzuć powiadomienie"
+    },
+    "integrationHealth": {
+      "inboundEmail": {
+        "authFailure": "E-mail przychodzący dla {{mailbox}} został wstrzymany, ponieważ jego dane logowania przestały działać.",
+        "error": "E-mail przychodzący dla {{mailbox}} zgłosił błąd i może nie odbierać wiadomości."
+      },
+      "calendar": {
+        "error": "Synchronizacja kalendarza dla {{providerName}} zgłosiła błąd i nie działa.",
+        "disconnected": "Synchronizacja kalendarza dla {{providerName}} jest rozłączona i nie działa."
+      },
+      "review": "Sprawdź",
+      "dismiss": "Odrzuć powiadomienie o integracji"
     }
   },
   "quickCreate": {
@@ -754,5 +811,37 @@
   "githubStar": {
     "label": "Oznacz gwiazdką",
     "ariaLabel": "Oznacz {{repository}} gwiazdką w serwisie GitHub"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "Portal MSP",
+      "dashboard": "Pulpit",
+      "ticketDetails": "Szczegóły zgłoszenia",
+      "tickets": "Zgłoszenia",
+      "projectDetails": "Szczegóły projektu",
+      "projects": "Projekty",
+      "clientDetails": "Szczegóły klienta",
+      "clients": "Klienci",
+      "contactDetails": "Szczegóły kontaktu",
+      "contacts": "Kontakty",
+      "assetDetails": "Szczegóły zasobu",
+      "assets": "Zasoby",
+      "billing": "Rozliczenia",
+      "settings": "Ustawienia",
+      "settingsSection": "Ustawienia: {{section}}",
+      "chat": "Czat"
+    }
+  },
+  "chat": {
+    "page": {
+      "title": "Funkcja Pro",
+      "description": "Funkcje czatu z AI wymagają Pro. Przejdź na wyższy plan, aby uzyskać dostęp do tej funkcji."
+    },
+    "messages": {
+      "proRequired": "Funkcje wiadomości wymagają Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Funkcje czatu są dostępne tylko w Enterprise Edition"
+    }
   }
 }

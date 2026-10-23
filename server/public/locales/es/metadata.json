@@ -26,6 +26,11 @@
         "detail": {
           "title": "Detalles de la cotización"
         }
+      },
+      "paymentMethods": {
+        "setupComplete": {
+          "title": "Configuración de tarjeta"
+        }
       }
     },
     "devices": {
@@ -280,6 +285,12 @@
       "detail": {
         "title": "Ticket n.º {{ticketNumber}} - {{ticketTitle}}",
         "fallbackTitle": "Detalles del ticket"
+      },
+      "recurring": {
+        "title": "Tickets recurrentes"
+      },
+      "templates": {
+        "title": "Plantillas de tickets"
       }
     },
     "workflowEditor": {
@@ -613,6 +624,11 @@
     },
     "tab": {
       "title": "Equipos"
+    }
+  },
+  "paymentMethods": {
+    "setupComplete": {
+      "title": "Configuración de tarjeta"
     }
   }
 }

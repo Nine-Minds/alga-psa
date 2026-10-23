@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -15,6 +15,7 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { mapWorkflowServerError } from './workflowServerErrors';
+import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import toast from 'react-hot-toast';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import {
@@ -30,14 +31,54 @@ import type { InputMapping } from '@alga-psa/workflows/runtime';
 import {
   filterEventCatalogEntries,
   getSchemaDiffSummary,
-  pickEventTemplates
+  pickEventTemplates,
+  buildWorkflowRunHref,
+  describeWorkflowRunLaunchFailure,
+  humanizeRunDialogFieldLabel,
+  applyDerivedClientScope,
+  applyDerivedTicketBoardScope,
+  buildBlankPayloadFromSchema,
+  getRunDialogDateFormat,
+  type WorkflowRunStartFailure
 } from './workflowRunDialogUtils';
+import {
+  buildRecordFill,
+  collectChangedPayloadPaths,
+  isPayloadPathEdited,
+  listRecordFillTargets,
+  payloadPathKey,
+  type RecordFillField,
+} from './workflowRunRecordFill';
+import { WORKFLOW_RUN_RECORD_SOURCES } from './workflowRunRecordResolvers';
+import {
+  DATE_TRIGGER_TIMING_FIELDS,
+  applyDateTriggerTiming,
+  describeDateTriggerPayloadField,
+  getDateTriggerRecordKind,
+  localTodayIsoDate,
+  type RunDialogDateTrigger,
+} from './workflowRunDateTrigger';
+import {
+  buildWorkflowRunDraftFormKey,
+  clearWorkflowRunDraft,
+  readWorkflowRunDraft,
+  saveWorkflowRunDraft,
+} from './workflowRunDraftStore';
+import { getTicketById } from '@alga-psa/tickets/actions/ticketActions';
 import {
   WorkflowActionInputFixedPicker,
   WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES,
   type WorkflowActionInputPickerField,
 } from './WorkflowActionInputFixedPicker';
 import { resolveWorkflowSchemaFieldEditor } from './workflowSchemaFieldEditor';
+import { DATE_TRIGGER_OCCURRENCE_RULES, type WorkflowPayloadIssue } from '@alga-psa/workflows/authoring';
+import {
+  describeRunPayloadValidationFailure,
+  describeWorkflowPayloadIssue,
+  labelRunPayloadPath,
+  pruneEmptyOptionalRunPayloadFields,
+  validateRunPayloadAgainstSchema,
+} from './workflowRunPayloadIssues';
 
 type JsonSchema = {
   type?: string | string[];
@@ -68,7 +109,10 @@ type WorkflowRunDialogProps = {
   onClose: () => void;
   workflowId: string | null;
   workflowName?: string | null;
+  /** What starts this workflow when it isn't run by hand, e.g. "Contract end date, 30 days before". */
   triggerLabel?: string | null;
+  /** The workflow's date trigger, when it has one: test payloads derive their dates from it. */
+  dateTrigger?: RunDialogDateTrigger | null;
   triggerEventName?: string | null;
   triggerSourcePayloadSchemaRef?: string | null;
   triggerPayloadMappingProvided?: boolean;
@@ -191,6 +235,16 @@ const applyImplicitRunContextFields = (
   return next;
 };
 
+/** A random UUID for a test payload's synthetic ids (message, event, correlation ids). */
+const generateTestId = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  // Older browsers: RFC 4122 version 4 from Math.random (fine for test data).
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
+    const random = Math.floor(Math.random() * 16);
+    return (char === 'x' ? random : (random & 0x3) | 0x8).toString(16);
+  });
+};
+
 const isImplicitRunContextFieldPath = (path: Array<string | number>): boolean => (
   path.length === 1 && typeof path[0] === 'string' && IMPLICIT_RUN_CONTEXT_FIELD_KEYS.has(path[0])
 );
@@ -227,8 +281,6 @@ const buildDefaultValueFromSchema = (schema: JsonSchema, root: JsonSchema): unkn
   }
 };
 
-const UUID_SAMPLE_VALUE = '00000000-0000-4000-8000-000000000001';
-
 const buildSyntheticValueFromSchema = (schema: JsonSchema, root: JsonSchema, path: Array<string | number> = []): unknown => {
   const resolved = resolveSchemaRef(schema, root);
 
@@ -259,23 +311,26 @@ const buildSyntheticValueFromSchema = (schema: JsonSchema, root: JsonSchema, pat
       const required = new Set(resolved.required ?? []);
       return Object.entries(resolved.properties ?? {}).reduce<Record<string, unknown>>((acc, [key, childSchema]) => {
         if (required.has(key) || childSchema.default !== undefined || childSchema.example !== undefined || childSchema.examples?.length || childSchema.enum?.length) {
-          acc[key] = buildSyntheticValueFromSchema(childSchema, root, [...path, key]);
+          const childValue = buildSyntheticValueFromSchema(childSchema, root, [...path, key]);
+          if (childValue !== undefined) acc[key] = childValue;
         }
         return acc;
       }, {});
     }
     case 'array': {
       if (!resolved.items) return [];
-      return [buildSyntheticValueFromSchema(resolved.items, root, [...path, 0])];
+      const item = buildSyntheticValueFromSchema(resolved.items, root, [...path, 0]);
+      return item === undefined ? [] : [item];
     }
     case 'string': {
       if (resolved.format === 'date-time') return new Date().toISOString();
       if (resolved.format === 'date') return new Date().toISOString().slice(0, 10);
       if (resolved.format === 'uuid') {
-        return UUID_SAMPLE_VALUE;
+        // A made-up id would never match a real record; leave the field for the user to fill.
+        return undefined;
       }
       if (fieldName.endsWith('id') || fieldName === 'id') {
-        return `${fieldName || 'id'}-sample-123`;
+        return undefined;
       }
       if (fieldName.includes('email')) return 'sample@example.com';
       if (fieldName.includes('name')) return 'Sample Name';
@@ -292,7 +347,7 @@ const buildSyntheticValueFromSchema = (schema: JsonSchema, root: JsonSchema, pat
   }
 };
 
-const buildInitialPayloadFromSchema = (schema: JsonSchema | null): Record<string, unknown> => {
+export const buildInitialPayloadFromSchema = (schema: JsonSchema | null): Record<string, unknown> => {
   if (!schema) return {};
   const examples = schema.examples ?? (schema.example !== undefined ? [schema.example] : []);
   const fromExample = examples.find((entry) => entry && typeof entry === 'object' && !Array.isArray(entry));
@@ -466,78 +521,6 @@ const pruneSyntheticPickerBackedFields = (
   return next;
 };
 
-const validateAgainstSchema = (schema: JsonSchema, value: unknown, root: JsonSchema, path = ''): ValidationError[] => {
-  const resolved = resolveSchemaRef(schema, root);
-  const type = Array.isArray(resolved.type) ? resolved.type[0] : resolved.type;
-  const errors: ValidationError[] = [];
-
-  if (resolved.enum && value != null && !resolved.enum.includes(value as any)) {
-    errors.push({ path, message: 'Value must be one of the allowed options.' });
-  }
-
-  if (type === 'object') {
-    if (value == null || typeof value !== 'object' || Array.isArray(value)) {
-      errors.push({ path, message: 'Expected object.' });
-      return errors;
-    }
-    const objectValue = value as Record<string, unknown>;
-    const knownProperties = resolved.properties ?? {};
-    const knownPropertyKeys = new Set(Object.keys(knownProperties));
-    const required = new Set(resolved.required ?? []);
-    for (const key of required) {
-      if ((objectValue as any)[key] === undefined || (objectValue as any)[key] === null || (objectValue as any)[key] === '') {
-        errors.push({ path: path ? `${path}.${key}` : key, message: 'Required field missing.' });
-      }
-    }
-    for (const [key, propSchema] of Object.entries(knownProperties)) {
-      if (objectValue[key] === undefined) {
-        continue;
-      }
-      errors.push(...validateAgainstSchema(propSchema, objectValue[key], root, path ? `${path}.${key}` : key));
-    }
-    if (resolved.additionalProperties === false) {
-      for (const key of Object.keys(objectValue)) {
-        if (!knownPropertyKeys.has(key)) {
-          errors.push({ path: path ? `${path}.${key}` : key, message: 'Unknown property.' });
-        }
-      }
-    } else if (resolved.additionalProperties && typeof resolved.additionalProperties === 'object') {
-      for (const [key, dynamicValue] of Object.entries(objectValue)) {
-        if (knownPropertyKeys.has(key)) continue;
-        errors.push(...validateAgainstSchema(
-          resolved.additionalProperties,
-          dynamicValue,
-          root,
-          path ? `${path}.${key}` : key
-        ));
-      }
-    }
-    return errors;
-  }
-
-  if (type === 'array') {
-    if (!Array.isArray(value)) {
-      errors.push({ path, message: 'Expected array.' });
-      return errors;
-    }
-    value.forEach((item, index) => {
-      errors.push(...validateAgainstSchema(resolved.items ?? {}, item, root, `${path}[${index}]`));
-    });
-    return errors;
-  }
-
-  if (type === 'string' && value != null && typeof value !== 'string') {
-    errors.push({ path, message: 'Expected string.' });
-  }
-  if ((type === 'number' || type === 'integer') && value != null && typeof value !== 'number') {
-    errors.push({ path, message: 'Expected number.' });
-  }
-  if (type === 'boolean' && value != null && typeof value !== 'boolean') {
-    errors.push({ path, message: 'Expected boolean.' });
-  }
-
-  return errors;
-};
 
 const CollapsibleSection: React.FC<{
   title: string;
@@ -566,6 +549,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   workflowId,
   workflowName,
   triggerLabel,
+  dateTrigger = null,
   triggerEventName,
   triggerSourcePayloadSchemaRef,
   triggerPayloadMappingProvided = false,
@@ -590,10 +574,22 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   const [runPayloadText, setRunPayloadText] = useState('');
   const [runPayloadError, setRunPayloadError] = useState<string | null>(null);
   const [formValue, setFormValue] = useState<unknown>({});
+  // Payload fields the user changed by hand. Everything else (samples, templates, record fills)
+  // may be replaced when a real record is picked.
+  const editedPathsRef = useRef<Set<string>>(new Set());
+  const markEditedPaths = (previous: unknown, next: unknown) => {
+    for (const path of collectChangedPayloadPaths(previous, next)) {
+      editedPathsRef.current.add(payloadPathKey(path));
+    }
+  };
   const [payloadTouched, setPayloadTouched] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<string>('');
   const [isStartingRun, setIsStartingRun] = useState(false);
-  const [mode, setMode] = useState<'json' | 'form'>('json');
+  const [runStartFailure, setRunStartFailure] = useState<WorkflowRunStartFailure | null>(null);
+  // Field problems the server reported for the payload last sent; cleared once the payload changes.
+  const [serverPayloadIssues, setServerPayloadIssues] = useState<WorkflowPayloadIssue[]>([]);
+  // The schema-generated form is the default; the JSON editor is for pasting or fine-tuning.
+  const [mode, setMode] = useState<'json' | 'form'>('form');
   const [schemaErrors, setSchemaErrors] = useState<ValidationError[]>([]);
   const [showValidationSummary, setShowValidationSummary] = useState(false);
   const [currentTenantId, setCurrentTenantId] = useState<string | null>(null);
@@ -609,6 +605,15 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   const [selectedEventType, setSelectedEventType] = useState<string>('');
   const [schemaWarning, setSchemaWarning] = useState<string | null>(null);
   const [showSchemaDiff, setShowSchemaDiff] = useState(false);
+  // Field problems show once the person has touched a field (typed or left it) or tried to start the
+  // run, never on a form they haven't used yet.
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [blurredPaths, setBlurredPaths] = useState<Set<string>>(() => new Set());
+  // Payload restored from the last time this dialog was used for this workflow.
+  const [restoredDraft, setRestoredDraft] = useState(false);
+  // Per picked record field: payload fields the record promised but had no value for.
+  const [recordFillGaps, setRecordFillGaps] = useState<Record<string, { fields: string[]; neverFires: boolean }>>({});
+  const today = useMemo(() => localTodayIsoDate(), [isOpen]);
   const emptyValueLabel = t('runDialog.common.emptyValue', { defaultValue: '—' });
   const invalidJsonLabel = t('runDialog.validation.invalidJson', { defaultValue: 'Invalid JSON' });
 
@@ -621,6 +626,97 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   const defaults = useMemo(() => (
     activeSchema ? buildDefaultValueFromSchema(activeSchema, activeSchema) : {}
   ), [activeSchema]);
+
+  // The date trigger applies when the form is its payload (it has the timing fields).
+  const activeDateTrigger = useMemo(() => {
+    if (!dateTrigger || !activeSchema) return null;
+    const properties = resolveSchemaRef(activeSchema, activeSchema).properties ?? {};
+    return DATE_TRIGGER_TIMING_FIELDS.every((key) => key in properties) ? dateTrigger : null;
+  }, [activeSchema, dateTrigger]);
+  // occursOn, offsetDays and fireDate as the scheduler would set them, without overwriting what the
+  // person typed; `record` is a record just picked in the form.
+  const withDateTriggerTiming = (value: unknown, record?: Record<string, unknown> | null): unknown => {
+    if (!activeDateTrigger) return value;
+    return applyDateTriggerTiming(value, {
+      trigger: activeDateTrigger,
+      record,
+      today,
+      canOverwrite: (key) => !isPayloadPathEdited(editedPathsRef.current, [key]),
+    });
+  };
+  const draftFormKey = buildWorkflowRunDraftFormKey(
+    schemaSource,
+    schemaSource === 'event' ? eventSchemaRef : schemaSource === 'schemaRef' ? customSchemaRef : payloadSchemaRef,
+    schemaSource === 'event' ? selectedEventType : null
+  );
+  const canShowFieldErrors = (path: Array<string | number>): boolean =>
+    submitAttempted || blurredPaths.has(pathToString(path)) || isPayloadPathEdited(editedPathsRef.current, path);
+
+  // The form's own label for a payload field ("Ticket › Message"), so problems name what people see.
+  const labelForPayloadPath = (path: Array<string | number>): string => {
+    if (!path.length) return t('runDialog.payload.payloadLabel', { defaultValue: 'Payload' });
+    return labelRunPayloadPath(
+      path,
+      (key, parentPath) => {
+        let parent: JsonSchema | undefined = activeSchema ? resolveSchemaRef(activeSchema, activeSchema) : undefined;
+        for (const segment of parentPath) {
+          if (!parent) break;
+          const next: JsonSchema | undefined = typeof segment === 'number' ? parent.items : parent.properties?.[segment];
+          parent = next && activeSchema ? resolveConcreteFieldSchema(next, activeSchema) : undefined;
+        }
+        const property = parent?.properties?.[key];
+        const title = property && activeSchema ? resolveSchemaRef(property, activeSchema).title : undefined;
+        return title ?? t(`runDialog.fieldLabels.${key}`, { defaultValue: humanizeRunDialogFieldLabel(key) });
+      },
+      (position) => t('runDialog.issues.item', { defaultValue: 'item {{position}}', position })
+    );
+  };
+
+  // Problems the form can show, keyed by the form's field paths; tenant context is filled in for
+  // the user, so it never needs fixing.
+  const toFieldErrors = (issues: WorkflowPayloadIssue[]): ValidationError[] =>
+    issues
+      .filter((issue) => !isImplicitRunContextFieldPath(issue.path))
+      .map((issue) => ({
+        path: pathToString(issue.path),
+        message: describeWorkflowPayloadIssue(t, issue, labelForPayloadPath(issue.path)),
+      }));
+
+  // The ticket chosen in the form (any top-level ticket picker), and its client, which narrows
+  // client-scoped pickers such as contacts.
+  const selectedTicketId = useMemo(() => {
+    if (!activeSchema || !isObjectRecord(formValue)) return null;
+    const properties = resolveSchemaRef(activeSchema, activeSchema).properties ?? {};
+    for (const [key, propertySchema] of Object.entries(properties)) {
+      const picker = resolveRunDialogPickerField(propertySchema, activeSchema, [key]);
+      const kind = picker?.editor?.picker?.resource ?? picker?.picker?.kind;
+      const candidate = formValue[key];
+      if (kind === 'ticket' && typeof candidate === 'string' && candidate.trim()) return candidate.trim();
+    }
+    return null;
+  }, [activeSchema, formValue]);
+  const [selectedTicketClientId, setSelectedTicketClientId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!selectedTicketId) {
+      setSelectedTicketClientId(null);
+      return;
+    }
+    let active = true;
+    getTicketById(selectedTicketId)
+      .then((ticket) => {
+        if (!active) return;
+        const clientId = (ticket as { client_id?: string | null } | null)?.client_id ?? null;
+        setSelectedTicketClientId(clientId);
+      })
+      .catch((error) => {
+        if (!active) return;
+        console.error('Failed to load the selected ticket for the run form:', error);
+        setSelectedTicketClientId(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [selectedTicketId]);
 
   const selectedEventEntry = useMemo(
     () => eventCatalogEntries.find((entry) => entry.event_type === selectedEventType) ?? null,
@@ -695,11 +791,15 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     if (!isOpen || !workflowId) return;
     setHasLoadedOptions(false);
     setPayloadTouched(false);
+    setSubmitAttempted(false);
+    setBlurredPaths(new Set());
+    setRestoredDraft(false);
+    setRecordFillGaps({});
     const storedOptions = window.localStorage.getItem(RUN_OPTIONS_KEY(workflowId));
     if (storedOptions) {
       try {
         const parsed = JSON.parse(storedOptions);
-        if (parsed?.payloadText) setRunPayloadText(parsed.payloadText);
+        // The payload itself is kept as a per-workflow draft (workflowRunDraftStore).
         if (parsed?.mode) setMode(parsed.mode);
         if (parsed?.selectedVersion) setSelectedVersion(String(parsed.selectedVersion));
         if (parsed?.schemaSource) setSchemaSource(parsed.schemaSource);
@@ -711,6 +811,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       setMode('form');
     } else {
       setSchemaSource('payload');
+      setMode('form');
     }
     const storedEvent = window.localStorage.getItem(RUN_EVENT_KEY(workflowId));
     if (storedEvent) {
@@ -728,6 +829,10 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     }
     setHasLoadedOptions(true);
   }, [isOpen, triggerEventName, workflowId]);
+
+  useEffect(() => {
+    if (!isOpen) setRunStartFailure(null);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -880,15 +985,61 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   useEffect(() => {
     if (!isOpen || !hasLoadedOptions) return;
     if (payloadTouched) return;
-    const initialPayload = stripImplicitRunContextFields(schemaSource === 'event' && activeSchema
+    // The payload left here last time (closing never discards it) comes back as it was.
+    const draft = workflowId && activeSchema ? readWorkflowRunDraft(workflowId, draftFormKey) : null;
+    if (draft) {
+      editedPathsRef.current = new Set(draft.editedPaths);
+      setRunPayloadText(JSON.stringify(draft.payload ?? {}, null, 2));
+      setFormValue(draft.payload ?? {});
+      setRunPayloadError(null);
+      setShowValidationSummary(false);
+      setPayloadTouched(true);
+      setRestoredDraft(true);
+      return;
+    }
+    editedPathsRef.current = new Set();
+    const initialPayload = withDateTriggerTiming(stripImplicitRunContextFields(schemaSource === 'event' && activeSchema
       ? buildInitialPayloadFromSchema(activeSchema)
-      : ((defaults ?? {}) as Record<string, unknown>));
+      : buildBlankPayloadFromSchema(activeSchema ? resolveSchemaRef(activeSchema, activeSchema) : null)));
     const text = JSON.stringify(initialPayload ?? {}, null, 2);
     setRunPayloadText(text);
     setFormValue(initialPayload ?? {});
     setRunPayloadError(null);
     setShowValidationSummary(false);
-  }, [activeSchema, defaults, hasLoadedOptions, isOpen, payloadTouched, schemaSource]);
+  // withDateTriggerTiming only reads activeDateTrigger and today.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeDateTrigger, activeSchema, defaults, draftFormKey, hasLoadedOptions, isOpen, payloadTouched, schemaSource, workflowId]);
+
+  // Keep the draft as it changes, so closing the dialog never loses it.
+  useEffect(() => {
+    if (!isOpen || !workflowId || !payloadTouched || !activeSchema) return;
+    let payload: unknown = formValue;
+    if (mode === 'json') {
+      try {
+        payload = JSON.parse(runPayloadText || '{}');
+      } catch {
+        return;
+      }
+    }
+    saveWorkflowRunDraft(workflowId, {
+      formKey: draftFormKey,
+      payload,
+      editedPaths: Array.from(editedPathsRef.current),
+    });
+  }, [activeSchema, draftFormKey, formValue, isOpen, mode, payloadTouched, runPayloadText, workflowId]);
+
+  const handleStartOver = () => {
+    if (workflowId) clearWorkflowRunDraft(workflowId);
+    editedPathsRef.current = new Set();
+    setRestoredDraft(false);
+    setSubmitAttempted(false);
+    setBlurredPaths(new Set());
+    setRecordFillGaps({});
+    setServerPayloadIssues([]);
+    setRunStartFailure(null);
+    // An untouched payload is rebuilt from the schema (and the trigger's dates).
+    setPayloadTouched(false);
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -905,8 +1056,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
 
   useEffect(() => {
     if (!workflowId || !isOpen) return;
-    const payload = mode === 'json' ? runPayloadText : JSON.stringify(formValue ?? {}, null, 2);
-    const options = { payloadText: payload, mode, selectedVersion, schemaSource, eventType: selectedEventType, customSchemaRef };
+    const options = { mode, selectedVersion, schemaSource, eventType: selectedEventType, customSchemaRef };
     window.localStorage.setItem(RUN_OPTIONS_KEY(workflowId), JSON.stringify(options));
     if (selectedEventType) {
       window.localStorage.setItem(RUN_EVENT_KEY(workflowId), selectedEventType);
@@ -926,10 +1076,36 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       isObjectRecord(value) ? value : {},
       { tenantId: currentTenantId, schema: activeSchema }
     );
-    const errors = validateAgainstSchema(activeSchema, effectiveValue, activeSchema)
-      .filter((error) => !IMPLICIT_RUN_CONTEXT_FIELD_KEYS.has(error.path));
-    setSchemaErrors(errors);
+    const issues = validateRunPayloadAgainstSchema(
+      activeSchema,
+      pruneEmptyOptionalRunPayloadFields(activeSchema, effectiveValue),
+      activeSchema
+    );
+    setSchemaErrors(toFieldErrors(issues));
+  // toFieldErrors only reads activeSchema and t.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSchema, currentTenantId, formValue, mode, runPayloadText]);
+
+  // A changed payload is checked again from scratch.
+  // The "Fix these fields" banner goes with the per-field issues: once the values change it is stale.
+  const inputIssuesBannerShownRef = useRef(false);
+  useEffect(() => {
+    setServerPayloadIssues([]);
+    if (inputIssuesBannerShownRef.current) {
+      inputIssuesBannerShownRef.current = false;
+      setRunStartFailure(null);
+    }
+  }, [formValue, runPayloadText, activeSchema]);
+
+  // Client checks plus what the server reported, one message per field.
+  const displayedSchemaErrors = useMemo(() => {
+    if (!serverPayloadIssues.length) return schemaErrors;
+    const serverErrors = toFieldErrors(serverPayloadIssues);
+    const seen = new Set(schemaErrors.map((error) => error.path));
+    return [...schemaErrors, ...serverErrors.filter((error) => !seen.has(error.path))];
+  // toFieldErrors only reads activeSchema and t.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schemaErrors, serverPayloadIssues]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -1009,6 +1185,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     setShowValidationSummary(true);
     try {
       const parsed = JSON.parse(value);
+      markEditedPaths(formValue, parsed);
       setFormValue(parsed);
       setRunPayloadError(null);
     } catch (err) {
@@ -1018,6 +1195,8 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
 
   const applyTemplate = (payload: Record<string, unknown>, options: { markTouched?: boolean } = {}) => {
     const markTouched = options.markTouched ?? true;
+    // Template and cloned values are starting points; a record pick may replace them.
+    editedPathsRef.current = new Set();
     const sanitizedPayload = stripImplicitRunContextFields(payload);
     const next = JSON.stringify(sanitizedPayload, null, 2);
     setRunPayloadText(next);
@@ -1115,29 +1294,71 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
         mode === 'json' ? JSON.parse(runPayloadText || '{}') : (formValue as Record<string, unknown>),
         { tenantId: currentTenantId, schema: activeSchema }
       );
+      // Optional fields left empty are left out rather than sent as "".
+      if (activeSchema) payload = pruneEmptyOptionalRunPayloadFields(activeSchema, payload);
     } catch (err) {
       setRunPayloadError(err instanceof Error ? err.message : invalidJsonLabel);
       return;
     }
     setShowValidationSummary(true);
+    setSubmitAttempted(true);
     setIsStartingRun(true);
+    setRunStartFailure(null);
     try {
       const result = await startWorkflowRunAction({
         workflowId,
         workflowVersion: selectedVersion ? Number(selectedVersion) : publishedVersion,
         payload,
         eventType: selectedEventType || undefined,
-        sourcePayloadSchemaRef: schemaSource === 'event' ? eventSchemaRef ?? undefined : undefined
+        sourcePayloadSchemaRef: schemaSource === 'event' ? eventSchemaRef ?? undefined : undefined,
+        reportPayloadIssues: true
       });
-      const runId = (result as { runId?: string } | undefined)?.runId;
-      onClose();
-      if (runId) {
-        window.location.assign(`/msp/workflows/runs/${runId}`);
+      if (!result?.runId) {
+        throw new Error('The server did not return a run id for the started run.');
       }
+      if (result.payloadValidation) {
+        // Say which fields to fix, and show each problem next to its field.
+        setServerPayloadIssues(result.payloadValidation.appliesTo === 'input' ? result.payloadValidation.issues : []);
+        inputIssuesBannerShownRef.current = result.payloadValidation.appliesTo === 'input';
+        setRunStartFailure(describeRunPayloadValidationFailure(
+          t,
+          result.payloadValidation,
+          labelForPayloadPath,
+          result.runId
+        ));
+        return;
+      }
+      if (result.launchFailure) {
+        // The run exists (marked failed) but never started. Keep the dialog open so the
+        // payload can be retried, and link to the failed run.
+        setRunStartFailure(describeWorkflowRunLaunchFailure(t, result.launchFailure, result.runId));
+        return;
+      }
+      const runHref = buildWorkflowRunHref(result.runId);
+      toast.success(() => (
+        <span id="run-dialog-started-toast" className="flex items-center gap-2">
+          <span>{t('runDialog.toasts.runStarted', { defaultValue: 'Run started.' })}</span>
+          <Link
+            id="run-dialog-started-view-run"
+            href={runHref}
+            className="font-medium text-[rgb(var(--color-primary-600))] underline underline-offset-2"
+          >
+            {t('runDialog.actions.viewRun', { defaultValue: 'View run' })}
+          </Link>
+        </span>
+      ), { duration: 8000 });
+      onClose();
     } catch (error) {
-      toast.error(mapWorkflowServerError(t, error, t('runDialog.toasts.startRunFailed', {
+      const rawMessage = error instanceof Error ? error.message : null;
+      const message = mapWorkflowServerError(t, error, t('runDialog.toasts.startRunFailed', {
         defaultValue: 'Failed to start run',
-      })));
+      }));
+      setRunStartFailure({
+        runId: null,
+        title: t('runDialog.startFailure.genericTitle', { defaultValue: 'The run did not start' }),
+        description: message,
+        technicalDetail: rawMessage && rawMessage !== message ? rawMessage : null,
+      });
     } finally {
       setIsStartingRun(false);
     }
@@ -1146,10 +1367,135 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   const updateFormValue = (updater: (prev: unknown) => unknown) => {
     setPayloadTouched(true);
     setShowValidationSummary(true);
-    setFormValue((prev: unknown) => updater(prev));
+    setFormValue((prev: unknown) => {
+      const next = updater(prev);
+      markEditedPaths(prev, next);
+      // Dates that follow from the edit (fire date from occurs-on and the offset) follow it.
+      return withDateTriggerTiming(next);
+    });
   };
 
+  // Payload fields beside `path` (same object), described for record fill.
+  const getSiblingFillFields = (path: Array<string | number>): RecordFillField[] => {
+    if (!activeSchema) return [];
+    let parent: JsonSchema = resolveSchemaRef(activeSchema, activeSchema);
+    for (const segment of path.slice(0, -1)) {
+      const next = typeof segment === 'string' ? parent.properties?.[segment] : parent.items;
+      if (!next) return [];
+      parent = resolveConcreteFieldSchema(next, activeSchema);
+    }
+    return Object.entries(parent.properties ?? {}).map(([key, childSchema]) => {
+      const picker = resolveRunDialogPickerField(childSchema, activeSchema, [...path.slice(0, -1), key]);
+      return {
+        key,
+        pickerKind: picker?.editor?.picker?.resource ?? picker?.picker?.kind,
+        isDateOnly: getRunDialogDateFormat(resolveConcreteFieldSchema(childSchema, activeSchema)) === 'date',
+      };
+    });
+  };
+
+  // "Fill from a real record": a picked contract, ticket, or client fills the empty fields beside it
+  // (client, names, dates, assignee) from that record.
+  const fillFromRecord = async (kind: string, recordId: string, path: Array<string | number>) => {
+    const source = WORKFLOW_RUN_RECORD_SOURCES[kind];
+    if (!source) return;
+    try {
+      const record = await source.resolve(recordId);
+      if (!record) return;
+      const pickedKey = String(path[path.length - 1]);
+      const parentPath = path.slice(0, -1);
+      const siblings = getSiblingFillFields(path);
+      // The record this date trigger is about (its contract, client or asset) sets the run's dates.
+      const setsTriggerDates = Boolean(
+        activeDateTrigger && parentPath.length === 0 && kind === getDateTriggerRecordKind(activeDateTrigger)
+      );
+      // Fields the pick promised to fill that this record has no value for, said next to the picker.
+      const promised = listRecordFillTargets(source, pickedKey, siblings);
+      const available = buildRecordFill(record, pickedKey, siblings, {}, () => true, source.kindFields);
+      const missing = promised.filter((key) => available[key] === undefined);
+      setRecordFillGaps((current) => ({
+        ...current,
+        [payloadPathKey(path)]: {
+          fields: missing,
+          neverFires: setsTriggerDates && !DATE_TRIGGER_OCCURRENCE_RULES[activeDateTrigger!.source].fromRecord(record, today, activeDateTrigger!.params),
+        },
+      }));
+      setFormValue((prev: unknown) => {
+        const parentValue = parentPath.length ? getValueAtPath(prev, parentPath) : prev;
+        const currentValues = isObjectRecord(parentValue) ? parentValue : {};
+        if (currentValues[pickedKey] !== recordId) return prev;
+        // Sample, template, and earlier record values may be replaced; values the user typed may not.
+        const fill = buildRecordFill(
+          record,
+          pickedKey,
+          siblings,
+          currentValues,
+          (key) => !isPayloadPathEdited(editedPathsRef.current, [...parentPath, key]),
+          source.kindFields
+        );
+        let next = prev;
+        for (const [key, fillValue] of Object.entries(fill)) {
+          next = setValueAtPath(next, [...parentPath, key], fillValue);
+        }
+        return setsTriggerDates ? withDateTriggerTiming(next, record) : withDateTriggerTiming(next);
+      });
+    } catch (error) {
+      console.error('Failed to fill the run payload from the picked record:', error);
+    }
+  };
+
+  // One line per top-level record picker, naming exactly the fields a pick fills.
+  const recordFillHints = useMemo(() => {
+    if (!activeSchema) return [];
+    const properties = resolveSchemaRef(activeSchema, activeSchema).properties ?? {};
+    const labelFor = (key: string): string => {
+      const propertySchema = properties[key];
+      const title = propertySchema ? resolveSchemaRef(propertySchema, activeSchema).title : undefined;
+      return title ?? t(`runDialog.fieldLabels.${key}`, { defaultValue: humanizeRunDialogFieldLabel(key) });
+    };
+    return Object.entries(properties).flatMap(([key, propertySchema]) => {
+      const picker = resolveRunDialogPickerField(propertySchema, activeSchema, [key]);
+      const kind = picker?.editor?.picker?.resource ?? picker?.picker?.kind;
+      const source = kind ? WORKFLOW_RUN_RECORD_SOURCES[kind] : undefined;
+      if (!source) return [];
+      const targets = listRecordFillTargets(source, key, getSiblingFillFields([key]));
+      // The trigger's record also sets the run's dates.
+      const dateTargets = activeDateTrigger && kind === getDateTriggerRecordKind(activeDateTrigger)
+        ? DATE_TRIGGER_TIMING_FIELDS.filter((timingKey) => timingKey !== 'offsetDays' && !targets.includes(timingKey))
+        : [];
+      const allTargets = [...targets, ...dateTargets];
+      return allTargets.length ? [{ key, field: labelFor(key), targets: allTargets.map(labelFor) }] : [];
+    });
+    // getSiblingFillFields only reads activeSchema.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeDateTrigger, activeSchema, t]);
+
+  // Each field remembers being left (blur), so its problems show from then on. Nested fields stop the
+  // event so a parent group isn't marked by its children.
   const renderField = (
+    schema: JsonSchema,
+    value: unknown,
+    path: Array<string | number>,
+    requiredSet: Set<string>
+  ): React.ReactNode => {
+    const content = renderFieldContent(schema, value, path, requiredSet);
+    if (!content) return content;
+    const fieldPath = pathToString(path);
+    return (
+      <div
+        onBlur={(event) => {
+          event.stopPropagation();
+          if (!blurredPaths.has(fieldPath)) {
+            setBlurredPaths((current) => new Set(current).add(fieldPath));
+          }
+        }}
+      >
+        {content}
+      </div>
+    );
+  };
+
+  const renderFieldContent = (
     schema: JsonSchema,
     value: unknown,
     path: Array<string | number>,
@@ -1160,7 +1506,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     const type = Array.isArray(resolved.type) ? resolved.type[0] : resolved.type;
     const fieldKey = path[path.length - 1];
     const label = resolved.title ?? (typeof fieldKey === 'string'
-      ? fieldKey
+      ? t(`runDialog.fieldLabels.${fieldKey}`, { defaultValue: humanizeRunDialogFieldLabel(fieldKey) })
       : t('runDialog.payload.payloadLabel', { defaultValue: 'Payload' }));
     const isRequired = typeof fieldKey === 'string' && requiredSet.has(fieldKey);
     const fieldPath = pathToString(path);
@@ -1168,12 +1514,18 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       return null;
     }
 
-    const fieldErrors = schemaErrors.filter((err) => err.path === fieldPath);
+    const fieldErrors = canShowFieldErrors(path)
+      ? displayedSchemaErrors.filter((err) => err.path === fieldPath)
+      : [];
     const pickerField = resolveRunDialogPickerField(resolved, rootSchema, path);
 
     const commonHeader = (
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-gray-700">
+        <label
+          className="text-sm font-medium text-gray-700"
+          htmlFor={`run-form-${fieldPath}`}
+          title={typeof fieldKey === 'string' && fieldKey !== label ? fieldKey : undefined}
+        >
           {label}{isRequired && <span className="text-destructive"> *</span>}
         </label>
         {resolved.default !== undefined && (
@@ -1360,22 +1712,52 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       );
     }
 
-    const description = resolved.description ? (
-      <div className="text-xs text-gray-500 mt-1">{resolved.description}</div>
+    // The trigger's own dates get a plain explanation instead of the schema's format note.
+    const dateTriggerHelp = activeDateTrigger && path.length === 1 && typeof fieldKey === 'string'
+      ? describeDateTriggerPayloadField(t, fieldKey, activeDateTrigger)
+      : null;
+    const descriptionText = dateTriggerHelp ?? resolved.description;
+    const description = descriptionText ? (
+      <div id={`run-form-${fieldPath}-help`} className="text-xs text-gray-500 mt-1">{descriptionText}</div>
     ) : null;
+    const fillGap = recordFillGaps[payloadPathKey(path)];
 
     if (pickerField) {
+      // A ticket picked elsewhere in the form narrows client-scoped pickers (contacts, locations).
+      const clientScoped = applyDerivedClientScope(
+        pickerField,
+        isObjectRecord(formValue) ? formValue : {},
+        selectedTicketClientId
+      );
+      // Likewise a ticket narrows status pickers to that ticket's board.
+      const scoped = applyDerivedTicketBoardScope(clientScoped.field, clientScoped.rootInputMapping, selectedTicketId);
       return (
         <div className="space-y-1">
           {commonHeader}
           <WorkflowActionInputFixedPicker
-            field={pickerField}
+            field={scoped.field}
             value={typeof value === 'string' ? value : null}
-            onChange={(nextValue) => updateFormValue((prev) => setValueAtPath(prev, path, nextValue))}
+            onChange={(nextValue) => {
+              updateFormValue((prev) => setValueAtPath(prev, path, nextValue));
+              const kind = scoped.field.editor?.picker?.resource ?? scoped.field.picker?.kind;
+              if (nextValue && kind) void fillFromRecord(kind, nextValue, path);
+            }}
             idPrefix={`run-form-${fieldPath || 'root'}`}
-            rootInputMapping={(isObjectRecord(formValue) ? formValue : {}) as InputMapping}
+            rootInputMapping={scoped.rootInputMapping as InputMapping}
+            hideLabel
           />
           {description}
+          {fillGap && (fillGap.neverFires || fillGap.fields.length > 0) && (
+            <div id={`run-form-${fieldPath}-fill-gap`} className="text-xs text-amber-700 dark:text-amber-400">
+              {fillGap.fields.length > 0 && t('runDialog.form.recordFillGap', {
+                defaultValue: 'The picked record has no {{fields}}, so that stays empty.',
+                fields: fillGap.fields.map((key) => t(`runDialog.fieldLabels.${key}`, { defaultValue: humanizeRunDialogFieldLabel(key) })).join(', '),
+              })}
+              {fillGap.neverFires && ` ${t('runDialog.form.recordNeverFires', {
+                defaultValue: 'This trigger never runs for this record: it has no date to run on. Pick another, or enter the dates yourself.',
+              })}`}
+            </div>
+          )}
           {fieldErrors.map((err) => (
             <div key={`${fieldPath}-err`} className="text-xs text-destructive">{err.message}</div>
           ))}
@@ -1432,9 +1814,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     }
 
     const isNumeric = type === 'number' || type === 'integer';
-    const dateFormat = !isNumeric && (resolved.format === 'date' || resolved.format === 'date-time')
-      ? resolved.format
-      : null;
+    const dateFormat = !isNumeric ? getRunDialogDateFormat(resolveConcreteFieldSchema(resolved, rootSchema)) : null;
 
     if (dateFormat) {
       const rawValue = typeof value === 'string' ? value : '';
@@ -1475,19 +1855,39 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       );
     }
 
+    // An id with no picker and nothing to fill it from (a message or event id) can be any UUID for
+    // a test run; offer one instead of asking people to make one up.
+    const isSyntheticId = !isNumeric && resolveConcreteFieldSchema(schema, rootSchema).format === 'uuid';
     return (
       <div className="space-y-1">
         {commonHeader}
-        <Input
-          id={`run-form-${fieldPath}`}
-          type={isNumeric ? 'number' : 'text'}
-          value={value == null ? '' : String(value)}
-          onChange={(event) => {
-            const raw = event.target.value;
-            const parsed = raw === '' ? null : (isNumeric ? Number(raw) : raw);
-            updateFormValue((prev) => setValueAtPath(prev, path, parsed));
-          }}
-        />
+        <div className="flex items-center gap-2">
+          <Input
+            id={`run-form-${fieldPath}`}
+            type={isNumeric ? 'number' : 'text'}
+            value={value == null ? '' : String(value)}
+            placeholder={isSyntheticId
+              ? t('runDialog.payload.uuidPlaceholder', { defaultValue: 'An id (UUID), e.g. 3f2c1a5e-0b7d-4c1e-9a2f-6d8e4b1c7a90' })
+              : undefined}
+            onChange={(event) => {
+              const raw = event.target.value;
+              const parsed = raw === '' ? null : (isNumeric ? Number(raw) : raw);
+              updateFormValue((prev) => setValueAtPath(prev, path, parsed));
+            }}
+          />
+          {isSyntheticId && (
+            <Button
+              id={`run-form-generate-id-${fieldPath}`}
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={() => updateFormValue((prev) => setValueAtPath(prev, path, generateTestId()))}
+            >
+              {t('runDialog.payload.generateTestId', { defaultValue: 'Generate test id' })}
+            </Button>
+          )}
+        </div>
         {description}
         {fieldErrors.map((err) => (
           <div key={`${fieldPath}-err`} className="text-xs text-destructive">{err.message}</div>
@@ -1516,9 +1916,11 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     () => SAMPLE_TEMPLATES.filter((template) => eventTemplateIds.includes(template.id)),
     [eventTemplateIds]
   );
+  // The built-in samples (inbound email, webhook) only make sense when no schema describes the
+  // payload; with a schema they'd fill fields the workflow doesn't have.
   const generalTemplates = useMemo(
-    () => SAMPLE_TEMPLATES.filter((template) => !eventTemplateIds.includes(template.id)),
-    [eventTemplateIds]
+    () => (activeSchema ? [] : SAMPLE_TEMPLATES.filter((template) => !eventTemplateIds.includes(template.id))),
+    [activeSchema, eventTemplateIds]
   );
   const segmentedButtonClass = (active: boolean) =>
     active
@@ -1534,7 +1936,45 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       title={t('runDialog.title', { defaultValue: 'Run Workflow' })}
       className="max-w-4xl"
       footer={(
-        <div className="flex justify-end space-x-2">
+        <div className="space-y-3">
+          {runStartFailure && (
+            <Alert id="run-dialog-start-failure" variant="destructive">
+              <AlertTitle>{runStartFailure.title}</AlertTitle>
+              <AlertDescription>
+                <p>{runStartFailure.description}</p>
+                {runStartFailure.runId && (
+                  <Link
+                    id="run-dialog-start-failure-view-run"
+                    href={buildWorkflowRunHref(runStartFailure.runId)}
+                    className="mt-1 inline-block font-medium text-[rgb(var(--color-primary-600))] underline underline-offset-2"
+                  >
+                    {t('runDialog.actions.viewFailedRun', { defaultValue: 'View failed run' })}
+                  </Link>
+                )}
+                {runStartFailure.technicalDetail && (
+                  <details className="mt-2 text-xs text-[rgb(var(--color-text-600))]">
+                    <summary id="run-dialog-start-failure-details" className="cursor-pointer select-none">
+                      {t('runDialog.startFailure.technicalDetails', { defaultValue: 'Technical details' })}
+                    </summary>
+                    <code className="mt-1 block whitespace-pre-wrap break-all font-mono">
+                      {runStartFailure.technicalDetail}
+                    </code>
+                  </details>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+          <div className="flex items-center justify-end gap-2">
+          {isStartingRun && (
+            <span
+              id="run-dialog-start-progress"
+              role="status"
+              aria-live="polite"
+              className="mr-auto text-xs text-[rgb(var(--color-text-500))]"
+            >
+              {t('runDialog.startProgress', { defaultValue: 'Connecting to the workflow engine…' })}
+            </span>
+          )}
           <Button id="run-dialog-close" variant="outline" onClick={onClose}>
             {t('runDialog.actions.close', { defaultValue: 'Close' })}
           </Button>
@@ -1545,8 +1985,11 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
           >
             {isStartingRun
               ? t('runDialog.actions.starting', { defaultValue: 'Starting...' })
-              : t('runDialog.actions.startRun', { defaultValue: 'Start Run' })}
+              : runStartFailure
+                ? t('runDialog.actions.tryAgain', { defaultValue: 'Try again' })
+                : t('runDialog.actions.startRun', { defaultValue: 'Start Run' })}
           </Button>
+          </div>
         </div>
       )}
     >
@@ -1605,9 +2048,15 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
               disabled={!publishedVersion}
             />
             <Input
+              id="run-dialog-run-source"
+              label={t('runDialog.fields.runSourceLabel', { defaultValue: 'Run source' })}
+              value={t('runDialog.fields.runSourceManualTest', { defaultValue: 'Manual test' })}
+              disabled
+            />
+            <Input
               id="run-dialog-trigger"
-              label={t('runDialog.fields.triggerLabel', { defaultValue: 'Trigger' })}
-              value={triggerLabel ?? t('runDialog.fields.manualTrigger', { defaultValue: 'Manual' })}
+              label={t('runDialog.fields.workflowTriggerLabel', { defaultValue: 'Workflow trigger' })}
+              value={triggerLabel ?? t('runDialog.fields.noTrigger', { defaultValue: 'None (runs only when started by hand)' })}
               disabled
             />
             <Input
@@ -2015,29 +2464,42 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             <div key={warning} className="text-xs text-yellow-700">{warning}</div>
           ))}
 
-          {showValidationSummary && schemaErrors.length > 0 && (
+          {submitAttempted && displayedSchemaErrors.length > 0 && (
             <div className="rounded border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive space-y-1">
               <div className="font-semibold">
                 {t('runDialog.validation.summaryTitle', {
-                  defaultValue: 'Payload still needs required event fields before this run can start',
+                  defaultValue: 'Some fields need attention before this run can start',
                 })}
               </div>
               <div>
                 {t('runDialog.validation.summaryDescription', {
-                  defaultValue: 'Fill the missing fields below, switch to Form Builder, or use a sample payload button.',
+                  defaultValue: 'Fix the fields below, switch to Form Builder, or use a sample payload button.',
                 })}
               </div>
-              {schemaErrors.slice(0, 6).map((err, index) => (
-                <div key={`${err.path}-${index}`}>{err.path || t('runDialog.payload.payloadLabel', { defaultValue: 'payload' })}: {err.message}</div>
+              {displayedSchemaErrors.slice(0, 6).map((err, index) => (
+                <div key={`${err.path}-${index}`}>{err.message}</div>
               ))}
-              {schemaErrors.length > 6 && (
+              {displayedSchemaErrors.length > 6 && (
                 <div>
                   {t('runDialog.validation.moreErrors', {
                     defaultValue: '+{{count}} more…',
-                    count: schemaErrors.length - 6,
+                    count: displayedSchemaErrors.length - 6,
                   })}
                 </div>
               )}
+            </div>
+          )}
+
+          {payloadTouched && (
+            <div id="run-dialog-draft" className="flex flex-wrap items-center justify-between gap-2 text-xs text-[rgb(var(--color-text-500))]">
+              <span>
+                {restoredDraft
+                  ? t('runDialog.draft.restored', { defaultValue: 'Your last test payload for this workflow is back. It stays here until you start over.' })
+                  : t('runDialog.draft.kept', { defaultValue: 'This payload is kept if you close the dialog.' })}
+              </span>
+              <Button id="run-dialog-start-over" type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={handleStartOver}>
+                {t('runDialog.draft.startOver', { defaultValue: 'Start over' })}
+              </Button>
             </div>
           )}
 
@@ -2057,6 +2519,24 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             </div>
           ) : (
             <div className="space-y-3">
+              {activeSchema && recordFillHints.length > 0 && (
+                <div id="run-dialog-record-fill-hint" className="space-y-0.5 text-xs text-[rgb(var(--color-text-500))]">
+                  {recordFillHints.map((hint) => (
+                    <p key={hint.key} id={`run-dialog-record-fill-hint-${hint.key}`}>
+                      {t('runDialog.form.recordFillHintField', {
+                        field: hint.field,
+                        targets: hint.targets.join(', '),
+                        defaultValue: 'Pick a real record in {{field}} and these fields fill in from it when empty: {{targets}}.',
+                      })}
+                    </p>
+                  ))}
+                  <p>
+                    {t('runDialog.form.recordFillKeepsTyped', {
+                      defaultValue: 'Values you typed yourself are kept; fields the record has no value for stay as they are.',
+                    })}
+                  </p>
+                </div>
+              )}
               {activeSchema ? (
                 renderField(activeSchema, formValue, [], new Set(activeSchema.required ?? []))
               ) : (

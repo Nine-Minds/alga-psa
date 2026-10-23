@@ -65,7 +65,13 @@ vi.mock('@alga-psa/db/models/user', () => ({
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishWorkflowEvent: publishWorkflowEventMock,
+  publishNonCatalogWorkflowEvent: publishWorkflowEventMock,
+  publishEvent: vi.fn(async () => undefined),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/core/encryption', () => ({
@@ -460,6 +466,12 @@ const CE_CLEANUP_TABLES: ReadonlySet<string> = new Set([
   'project_task_comments', 'project_template_task_resources', 'time_sheet_comments',
   'user_roles', 'user_preferences', 'import_jobs', 'user_invitations',
   'user_activity_group_items', 'user_activity_groups',
+  // shared calendars (grantee shares, personal calendar)
+  'calendars', 'calendar_shares',
+  // named list views: private deleted, shared handed to the actor
+  'list_views',
+  // board notification rules / default watchers (user rows deleted)
+  'board_notification_rule_recipients', 'board_default_watchers',
   // Always present in both editions:
   'users', 'clients',
 ]);
@@ -500,6 +512,9 @@ function makeFakeTrx(present: ReadonlySet<string>) {
       // Eager subquery builder (e.g. user_activity_groups.select('group_id'))
       // used inside whereIn after the tenant-scope migration.
       select: (..._cols: unknown[]) => chain,
+      whereNot: (_column: string, _value: unknown) => chain,
+      // Awaiting a bare select (list_views hand-over) reads no rows.
+      then: (resolve: (rows: unknown[]) => unknown) => resolve([]),
       update: async (values: Record<string, unknown>) => {
         ops.push({ table, op: 'update', values });
         return 0;

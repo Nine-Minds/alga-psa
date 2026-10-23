@@ -23,6 +23,7 @@ type ButtonProps = ChildrenProps & {
 const mocks = vi.hoisted(() => ({
   permissions: vi.fn(),
   users: vi.fn(),
+  contacts: vi.fn(),
   addInteraction: vi.fn(),
   teams: {
     getTeamsMeetingCapability: vi.fn(),
@@ -47,7 +48,7 @@ vi.mock('@alga-psa/clients/actions', () => ({
   ],
   getInteractionStatuses: async () => [{ status_id: 'open', name: 'Open', is_default: true }],
   getAllClients: async () => [],
-  getAllContacts: async () => [],
+  getAllContacts: mocks.contacts,
   getClientById: async () => null,
   getInteractionById: async () => ({ interaction_id: 'interaction' }),
   addInteraction: mocks.addInteraction,
@@ -59,7 +60,13 @@ vi.mock('@alga-psa/ui/components/skeletons/RichTextEditorSkeleton', () => ({ def
 vi.mock('@alga-psa/ui/components/InteractionIcon', () => ({ default: () => null }));
 vi.mock('../contacts/QuickAddContact', () => ({ default: () => null }));
 vi.mock('../clients/QuickAddClient', () => ({ default: () => null }));
-vi.mock('./MeetingAttendeesPicker', () => ({ default: () => null }));
+vi.mock('./MeetingAttendeesPicker', () => ({
+  default: ({ defaultAttendees }: { defaultAttendees?: { emailAddress: string }[] }) => (
+    <div data-testid="meeting-attendee-defaults">
+      {(defaultAttendees ?? []).map((attendee) => attendee.emailAddress).join(',')}
+    </div>
+  ),
+}));
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({ ClientPicker: () => null }));
 vi.mock('@alga-psa/ui/components/ContactPicker', () => ({ ContactPicker: () => null }));
 vi.mock('@alga-psa/ui/ui-reflection/ReflectionContainer', () => ({
@@ -144,6 +151,7 @@ describe('QuickAddInteraction scheduling lifecycle', () => {
     vi.clearAllMocks();
     mocks.permissions.mockResolvedValue(['user_schedule:update']);
     mocks.users.mockResolvedValue([]);
+    mocks.contacts.mockResolvedValue([]);
     mocks.addInteraction.mockResolvedValue({ interaction_id: 'interaction' });
     mocks.teams.getTeamsMeetingCapability.mockResolvedValue({ available: true });
     mocks.teams.scheduleTeamsMeeting.mockResolvedValue({ success: true, data: { interaction_id: 'interaction' } });
@@ -299,6 +307,52 @@ describe('QuickAddInteraction scheduling lifecycle', () => {
     expect(screen.getByPlaceholderText('Title')).toHaveValue('Follow-up');
     expect(props.onClose).not.toHaveBeenCalled();
     expect(props.onInteractionAdded).not.toHaveBeenCalled();
+    expect(mocks.addInteraction).not.toHaveBeenCalled();
+  });
+
+  it('carries the deal context through the Teams seam and invites the deal contact', async () => {
+    mocks.contacts.mockResolvedValue([
+      {
+        contact_name_id: 'deal-contact',
+        client_id: 'deal-client',
+        full_name: 'Dana Decisionmaker',
+        email: 'dana@example.com',
+      },
+    ]);
+
+    render(
+      <QuickAddInteraction
+        {...props}
+        entityId="deal-opportunity"
+        entityType="opportunity"
+        clientId="deal-client"
+        contactId="deal-contact"
+        ticketId={undefined}
+      />,
+    );
+    await screen.findByRole('option', { name: 'Online Meeting' });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Select Interaction Type' }), { target: { value: 'online' } });
+
+    // 0a00f3ad7c: the deal's contact seeds the invite instead of falling back to the client.
+    await waitFor(() =>
+      expect(screen.getByTestId('meeting-attendee-defaults')).toHaveTextContent('dana@example.com'),
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Title'), { target: { value: 'Deal review' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Start Time' }), { target: { value: '2026-10-01T12:00:00.000Z' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'End Time' }), { target: { value: '2026-10-01T12:30:00.000Z' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Interaction' }));
+
+    await waitFor(() => expect(props.onClose).toHaveBeenCalledOnce());
+    expect(mocks.teams.scheduleTeamsMeeting).toHaveBeenCalledWith(expect.objectContaining({
+      subject: 'Deal review',
+      client_id: 'deal-client',
+      contact_name_id: 'deal-contact',
+      opportunity_id: 'deal-opportunity',
+      notes: '[]',
+      interactionUserId: 'creator',
+      createScheduleEntry: true,
+    }));
     expect(mocks.addInteraction).not.toHaveBeenCalled();
   });
 });

@@ -485,7 +485,9 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
     },
     ...(syncHidden ? [] : [{
       title: t('draftsTab.columns.quickbooks', { defaultValue: 'QuickBooks' }),
+      id: 'quickbooks_sync',
       dataIndex: 'invoice_id' as const,
+      sortable: false,
       render: (_: unknown, record: DbInvoiceViewModel) => {
         const syncStatus = syncStatuses[record.invoice_id];
         if (!syncStatus) return null;
@@ -494,7 +496,9 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
     }]),
     {
       title: t('draftsTab.columns.actions', { defaultValue: 'Actions' }),
+      id: 'actions',
       dataIndex: 'invoice_id',
+      sortable: false,
       width: '5%',
       render: (_, record) => (
         <div onClick={(e) => e.stopPropagation()}>

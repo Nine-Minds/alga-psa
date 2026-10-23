@@ -47,6 +47,12 @@ vi.mock('@alga-psa/tags/actions', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: testState.publishWorkflowEventMock,
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 import {

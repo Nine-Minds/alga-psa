@@ -1,14 +1,29 @@
 import { z } from 'zod';
-import { BaseDomainEventPayloadSchema, changesSchema, currencySchema, updatedFieldsSchema, uuidSchema } from './commonEventPayloadSchemas';
+import { BaseDomainEventPayloadSchema, changesSchema, currencySchema, updatedFieldsSchema, uuidSchema, entityIdSchema } from './commonEventPayloadSchemas';
 
 const invoiceIdSchema = uuidSchema('Invoice ID');
 const paymentIdSchema = uuidSchema('Payment ID');
 const creditNoteIdSchema = uuidSchema('Credit Note ID');
-const contractIdSchema = uuidSchema('Contract ID');
-const clientIdSchema = uuidSchema('Client ID');
-const userIdSchema = uuidSchema('User ID');
+const contractIdSchema = entityIdSchema('Contract ID', 'contract');
+const clientIdSchema = entityIdSchema('Client ID', 'client');
+const userIdSchema = entityIdSchema('User ID', 'user');
 
 const deliveryMethodSchema = z.enum(['email', 'portal', 'print']).describe('Invoice delivery method');
+const invoiceRecurringProvenanceSchema = z.object({
+  authoritativePeriodSource: z.enum(['canonical_detail_rows', 'parent_charge_fields']),
+  detailBackedChargeCount: z.number().int().nonnegative(),
+  detailPeriodCount: z.number().int().nonnegative(),
+  summaryServicePeriodStart: z.string().datetime().nullable().optional(),
+  summaryServicePeriodEnd: z.string().datetime().nullable().optional(),
+  billingTimingShape: z.enum(['none', 'uniform', 'mixed']),
+});
+const recurringBillingRunSelectionModeSchema = z.enum(['due_service_periods']).describe('How recurring billing selected charge timing for the run');
+const recurringBillingRunWindowIdentitySchema = z
+  .enum(['client_cadence_window', 'contract_cadence_window', 'mixed_execution_windows'])
+  .describe('How the current recurring run identified invoice windows');
+const recurringBillingRunExecutionWindowKindSchema = z
+  .enum(['client_cadence_window', 'contract_cadence_window'])
+  .describe('Which recurring execution-window kinds the run was prepared to process');
 
 export const invoiceGeneratedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   invoiceId: invoiceIdSchema,
@@ -17,6 +32,7 @@ export const invoiceGeneratedEventPayloadSchema = BaseDomainEventPayloadSchema.e
   totalAmount: z.string().optional(),
   status: z.string().optional(),
   invoiceNumber: z.string().optional(),
+  recurringProvenance: invoiceRecurringProvenanceSchema.optional(),
 }).describe('Payload for INVOICE_GENERATED');
 
 export type InvoiceGeneratedEventPayload = z.infer<typeof invoiceGeneratedEventPayloadSchema>;
@@ -28,6 +44,7 @@ export const invoiceFinalizedEventPayloadSchema = BaseDomainEventPayloadSchema.e
   totalAmount: z.string().optional(),
   status: z.string().optional(),
   invoiceNumber: z.string().optional(),
+  recurringProvenance: invoiceRecurringProvenanceSchema.optional(),
 }).describe('Payload for INVOICE_FINALIZED');
 
 export type InvoiceFinalizedEventPayload = z.infer<typeof invoiceFinalizedEventPayloadSchema>;
@@ -38,6 +55,7 @@ export const invoiceSentEventPayloadSchema = BaseDomainEventPayloadSchema.extend
   sentByUserId: userIdSchema.optional(),
   sentAt: z.string().datetime().optional(),
   deliveryMethod: deliveryMethodSchema,
+  recurringProvenance: invoiceRecurringProvenanceSchema.optional(),
 }).describe('Payload for INVOICE_SENT');
 
 export type InvoiceSentEventPayload = z.infer<typeof invoiceSentEventPayloadSchema>;
@@ -47,6 +65,7 @@ export const invoiceStatusChangedEventPayloadSchema = BaseDomainEventPayloadSche
   previousStatus: z.string().min(1),
   newStatus: z.string().min(1),
   changedAt: z.string().datetime().optional(),
+  recurringProvenance: invoiceRecurringProvenanceSchema.optional(),
 }).describe('Payload for INVOICE_STATUS_CHANGED');
 
 export type InvoiceStatusChangedEventPayload = z.infer<typeof invoiceStatusChangedEventPayloadSchema>;
@@ -56,6 +75,7 @@ export const invoiceDueDateChangedEventPayloadSchema = BaseDomainEventPayloadSch
   previousDueDate: z.string().min(1),
   newDueDate: z.string().min(1),
   changedAt: z.string().datetime().optional(),
+  recurringProvenance: invoiceRecurringProvenanceSchema.optional(),
 }).describe('Payload for INVOICE_DUE_DATE_CHANGED');
 
 export type InvoiceDueDateChangedEventPayload = z.infer<typeof invoiceDueDateChangedEventPayloadSchema>;
@@ -68,6 +88,7 @@ export const invoiceOverdueEventPayloadSchema = BaseDomainEventPayloadSchema.ext
   amountDue: z.string().min(1),
   currency: currencySchema,
   daysOverdue: z.number().int().nonnegative(),
+  recurringProvenance: invoiceRecurringProvenanceSchema.optional(),
 }).describe('Payload for INVOICE_OVERDUE');
 
 export type InvoiceOverdueEventPayload = z.infer<typeof invoiceOverdueEventPayloadSchema>;
@@ -78,6 +99,7 @@ export const invoiceWrittenOffEventPayloadSchema = BaseDomainEventPayloadSchema.
   amountWrittenOff: z.string().min(1),
   currency: currencySchema,
   reason: z.string().optional(),
+  recurringProvenance: invoiceRecurringProvenanceSchema.optional(),
 }).describe('Payload for INVOICE_WRITTEN_OFF');
 
 export type InvoiceWrittenOffEventPayload = z.infer<typeof invoiceWrittenOffEventPayloadSchema>;
@@ -181,47 +203,6 @@ export const creditNoteVoidedEventPayloadSchema = BaseDomainEventPayloadSchema.e
 
 export type CreditNoteVoidedEventPayload = z.infer<typeof creditNoteVoidedEventPayloadSchema>;
 
-export const creditExpiringEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  clientId: z.string().describe('Client ID whose credits are expiring'),
-  daysBeforeExpiration: z.number().describe('Days remaining before the credits expire'),
-  credits: z
-    .array(
-      z.object({
-        creditId: z.string().describe('Credit tracking ID'),
-        amount: z.number().describe('Remaining credit amount'),
-        expirationDate: z.string().describe('Credit expiration date (ISO 8601)'),
-      })
-    )
-    .describe('Credits expiring on the target date'),
-}).describe('Payload for CREDIT_EXPIRING');
-
-export type CreditExpiringEventPayload = z.infer<typeof creditExpiringEventPayloadSchema>;
-
-// Emitted by the prepaid-balance-alert-scan maintenance handler to request the
-// server-side daily 09:00 UTC low-balance evaluation for one tenant. The
-// handler (Temporal worker / pg-boss) may only publish; the server subscriber
-// owns flag gating, ledger queries, alert lifecycle, and delivery draining.
-export const prepaidBalanceAlertScanRequestedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  clientId: z.string().optional().describe('Optional single-client scan for tests/backfills'),
-}).describe('Payload for PREPAID_BALANCE_ALERT_SCAN_REQUESTED');
-
-export type PrepaidBalanceAlertScanRequestedEventPayload = z.infer<typeof prepaidBalanceAlertScanRequestedEventPayloadSchema>;
-export const hourBlockExpiringEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  clientId: z.string().describe('Client ID whose hour blocks are expiring'),
-  daysBeforeExpiration: z.number().describe('Days remaining before the hour blocks expire'),
-  blocks: z
-    .array(
-      z.object({
-        blockId: z.string().describe('Hour block ID'),
-        remainingMinutes: z.number().describe('Remaining minutes on the block'),
-        expirationDate: z.string().describe('Block expiration date (ISO 8601)'),
-      })
-    )
-    .describe('Hour blocks expiring on the target date'),
-}).describe('Payload for HOUR_BLOCK_EXPIRING');
-
-export type HourBlockExpiringEventPayload = z.infer<typeof hourBlockExpiringEventPayloadSchema>;
-
 export const contractCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   contractId: contractIdSchema,
   clientId: clientIdSchema,
@@ -258,7 +239,10 @@ export const contractRenewalUpcomingEventPayloadSchema = BaseDomainEventPayloadS
   contractId: contractIdSchema,
   clientId: clientIdSchema,
   renewalAt: z.string().min(1),
+  decisionDueDate: z.string().min(1).optional(),
   daysUntilRenewal: z.number().int().nonnegative(),
+  daysUntilDecisionDue: z.number().int().nonnegative().optional(),
+  renewalCycleKey: z.string().min(1).optional(),
 }).describe('Payload for CONTRACT_RENEWAL_UPCOMING');
 
 export type ContractRenewalUpcomingEventPayload = z.infer<typeof contractRenewalUpcomingEventPayloadSchema>;
@@ -270,6 +254,11 @@ export const recurringBillingRunStartedEventPayloadSchema = BaseDomainEventPaylo
   scheduleId: z.string().uuid().optional(),
   startedAt: z.string().datetime().optional(),
   initiatedByUserId: userIdSchema.optional(),
+  selectionKey: z.string().min(1).optional(),
+  retryKey: z.string().min(1).optional(),
+  selectionMode: recurringBillingRunSelectionModeSchema,
+  windowIdentity: recurringBillingRunWindowIdentitySchema,
+  executionWindowKinds: z.array(recurringBillingRunExecutionWindowKindSchema).min(1).optional(),
 }).describe('Payload for RECURRING_BILLING_RUN_STARTED');
 
 export type RecurringBillingRunStartedEventPayload = z.infer<typeof recurringBillingRunStartedEventPayloadSchema>;
@@ -280,6 +269,11 @@ export const recurringBillingRunCompletedEventPayloadSchema = BaseDomainEventPay
   invoicesCreated: z.number().int().nonnegative(),
   failedCount: z.number().int().nonnegative(),
   warnings: z.array(z.string()).optional(),
+  selectionKey: z.string().min(1).optional(),
+  retryKey: z.string().min(1).optional(),
+  selectionMode: recurringBillingRunSelectionModeSchema,
+  windowIdentity: recurringBillingRunWindowIdentitySchema,
+  executionWindowKinds: z.array(recurringBillingRunExecutionWindowKindSchema).min(1).optional(),
 }).describe('Payload for RECURRING_BILLING_RUN_COMPLETED');
 
 export type RecurringBillingRunCompletedEventPayload = z.infer<typeof recurringBillingRunCompletedEventPayloadSchema>;
@@ -290,6 +284,67 @@ export const recurringBillingRunFailedEventPayloadSchema = BaseDomainEventPayloa
   errorCode: z.string().optional(),
   errorMessage: z.string().min(1),
   retryable: z.boolean().optional(),
+  selectionKey: z.string().min(1).optional(),
+  retryKey: z.string().min(1).optional(),
+  selectionMode: recurringBillingRunSelectionModeSchema,
+  windowIdentity: recurringBillingRunWindowIdentitySchema,
+  executionWindowKinds: z.array(recurringBillingRunExecutionWindowKindSchema).min(1).optional(),
 }).describe('Payload for RECURRING_BILLING_RUN_FAILED');
 
 export type RecurringBillingRunFailedEventPayload = z.infer<typeof recurringBillingRunFailedEventPayloadSchema>;
+
+export const creditExpiringEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  clientId: z.string().describe('Client ID whose credits are expiring'),
+  daysBeforeExpiration: z.number().describe('Days remaining before the credits expire'),
+  credits: z
+    .array(
+      z.object({
+        creditId: z.string().describe('Credit tracking ID'),
+        amount: z.number().describe('Remaining credit amount'),
+        expirationDate: z.string().describe('Credit expiration date (ISO 8601)'),
+      })
+    )
+    .describe('Credits expiring on the target date'),
+}).describe('Payload for CREDIT_EXPIRING');
+
+export type CreditExpiringEventPayload = z.infer<typeof creditExpiringEventPayloadSchema>;
+
+// Emitted by the prepaid-balance-alert-scan maintenance handler to request the
+// server-side daily 09:00 UTC low-balance evaluation for one tenant. The
+// handler (Temporal worker / pg-boss) may only publish; the server subscriber
+// owns flag gating, ledger queries, alert lifecycle, and delivery draining.
+export const prepaidBalanceAlertScanRequestedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  clientId: z.string().optional().describe('Optional single-client scan for tests/backfills'),
+}).describe('Payload for PREPAID_BALANCE_ALERT_SCAN_REQUESTED');
+
+export type PrepaidBalanceAlertScanRequestedEventPayload = z.infer<typeof prepaidBalanceAlertScanRequestedEventPayloadSchema>;
+
+// Emitted (post-commit) when a time-entry save drew minutes from a contract-issued
+// Prepaid Block. The server subscriber runs evaluate -> replenish -> deliver scoped
+// to this client; the daily scan remains the correctness backstop.
+export const prepaidBlockUsageChangedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  clientId: z.string().describe('Client whose prepaid block usage changed'),
+  contractLineId: z.string().describe('Prepaid Block contract line whose block was drawn'),
+}).describe('Payload for PREPAID_BLOCK_USAGE_CHANGED');
+
+export type PrepaidBlockUsageChangedEventPayload = z.infer<typeof prepaidBlockUsageChangedEventPayloadSchema>;
+
+export const hourBlockExpiringEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  clientId: z.string().describe('Client ID whose hour blocks are expiring'),
+  daysBeforeExpiration: z.number().describe('Days remaining before the hour blocks expire'),
+  blocks: z
+    .array(
+      z.object({
+        blockId: z.string().describe('Hour block ID'),
+        remainingMinutes: z.number().describe('Remaining minutes on the block'),
+        expirationDate: z.string().describe('Block expiration date (ISO 8601)'),
+        contractName: z
+          .string()
+          .nullish()
+          .describe('Name of the contract a Prepaid Block contract-line block belongs to (absent for client-level blocks)'),
+      })
+    )
+    .describe('Hour blocks expiring on the target date'),
+}).describe('Payload for HOUR_BLOCK_EXPIRING');
+
+export type HourBlockExpiringEventPayload = z.infer<typeof hourBlockExpiringEventPayloadSchema>;

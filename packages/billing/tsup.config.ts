@@ -9,6 +9,7 @@ export default defineConfig({
     'models/index': 'src/models/index.ts',
     'schemas/index': 'src/schemas/index.ts',
     'services/index': 'src/services/index.ts',
+    'lib/catalog/serviceCatalogPricing': 'src/lib/catalog/serviceCatalogPricing.ts',
   },
   format: ['esm'],
   dts: false,

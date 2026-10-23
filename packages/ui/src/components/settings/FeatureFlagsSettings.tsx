@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslation } from '../../lib/i18n/client';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -28,155 +29,161 @@ interface FeatureDefinition {
   dependencies?: string[];
 }
 
-const featureCategories: FeatureCategory[] = [
-  {
-    id: 'core',
-    name: 'Core Features',
-    description: 'Essential features for daily operations',
-    icon: Shield,
-    features: [
-      {
-        key: 'enable_ticket_automation',
-        name: 'Ticket Automation',
-        description: 'Automatically assign and route tickets based on rules',
-        category: 'stable',
-      },
-      {
-        key: 'enable_time_tracking',
-        name: 'Time Tracking',
-        description: 'Track time spent on tickets and projects',
-        category: 'stable',
-      },
-      {
-        key: 'enable_billing',
-        name: 'Billing System',
-        description: 'Invoice generation and payment tracking',
-        category: 'stable',
-      },
-    ],
-  },
-  {
-    id: 'ui',
-    name: 'User Interface',
-    description: 'New UI features and improvements',
-    icon: Zap,
-    features: [
-      {
-        key: 'new_ticket_ui',
-        name: 'New Ticket Interface',
-        description: 'Redesigned ticket creation and management UI',
-        category: 'beta',
-      },
-      {
-        key: 'new_dashboard_layout',
-        name: 'Modern Dashboard',
-        description: 'New dashboard with customizable widgets',
-        category: 'beta',
-      },
-    ],
-  },
-  {
-    id: 'ai',
-    name: 'AI Features',
-    description: 'Artificial intelligence powered features',
-    icon: TrendingUp,
-    features: [
-      {
-        key: 'ai_ticket_suggestions',
-        name: 'AI Ticket Suggestions',
-        description: 'AI-powered ticket categorization and priority suggestions',
-        category: 'experimental',
-      },
-      {
-        key: 'enable_ai_time_tracking',
-        name: 'AI Time Tracking',
-        description: 'Automatically track time based on activity',
-        category: 'experimental',
-      },
-      {
-        key: 'enable_predictive_analytics',
-        name: 'Predictive Analytics',
-        description: 'Predict ticket volume and resource needs',
-        category: 'experimental',
-      },
-    ],
-  },
-  {
-    id: 'integrations',
-    name: 'Integrations',
-    description: 'Third-party service integrations',
-    icon: Users,
-    features: [
-      {
-        key: 'enable_slack_integration',
-        name: 'Slack Integration',
-        description: 'Send notifications and updates to Slack',
-        category: 'stable',
-      },
-      {
-        key: 'teams-integration-ui',
-        name: 'Microsoft Teams',
-        description: 'Integrate with Microsoft Teams',
-        category: 'stable',
-      },
-      {
-        key: 'enable_jira_sync',
-        name: 'Jira Sync',
-        description: 'Sync tickets with Jira issues',
-        category: 'beta',
-      },
-    ],
-  },
-  {
-    id: 'performance',
-    name: 'Performance',
-    description: 'Performance optimization features',
-    icon: Settings,
-    features: [
-      {
-        key: 'enable_query_caching',
-        name: 'Query Caching',
-        description: 'Cache database queries for faster response times',
-        category: 'stable',
-      },
-      {
-        key: 'enable_lazy_loading',
-        name: 'Lazy Loading',
-        description: 'Load content as needed for better performance',
-        category: 'stable',
-      },
-      {
-        key: 'enable_websocket_updates',
-        name: 'Real-time Updates',
-        description: 'Use WebSockets for instant updates',
-        category: 'beta',
-        requiresRestart: true,
-      },
-    ],
-  },
-  {
-    id: 'experimental',
-    name: 'Experimental',
-    description: 'Cutting-edge features in development',
-    icon: Flask,
-    features: [
-      {
-        key: 'enable_voice_commands',
-        name: 'Voice Commands',
-        description: 'Control the app with voice commands',
-        category: 'experimental',
-      },
-      {
-        key: 'beta_mobile_app',
-        name: 'Mobile App Beta',
-        description: 'Access to beta mobile application',
-        category: 'experimental',
-      },
-    ],
-  },
-];
+function useFeatureCategories(): FeatureCategory[] {
+  const { t } = useTranslation('msp/settings');
+  return [
+    {
+      id: 'core',
+      name: t('featureFlags.categories.core.title'),
+      description: t('featureFlags.categories.core.description'),
+      icon: Shield,
+      features: [
+        {
+          key: 'enable_ticket_automation',
+          name: t('featureFlags.features.enable_ticket_automation.title'),
+          description: t('featureFlags.features.enable_ticket_automation.description'),
+          category: 'stable',
+        },
+        {
+          key: 'enable_time_tracking',
+          name: t('featureFlags.features.enable_time_tracking.title'),
+          description: t('featureFlags.features.enable_time_tracking.description'),
+          category: 'stable',
+        },
+        {
+          key: 'enable_billing',
+          name: t('featureFlags.features.enable_billing.title'),
+          description: t('featureFlags.features.enable_billing.description'),
+          category: 'stable',
+        },
+      ],
+    },
+    {
+      id: 'ui',
+      name: t('featureFlags.categories.ui.title'),
+      description: t('featureFlags.categories.ui.description'),
+      icon: Zap,
+      features: [
+        {
+          key: 'new_ticket_ui',
+          name: t('featureFlags.features.new_ticket_ui.title'),
+          description: t('featureFlags.features.new_ticket_ui.description'),
+          category: 'beta',
+        },
+        {
+          key: 'new_dashboard_layout',
+          name: t('featureFlags.features.new_dashboard_layout.title'),
+          description: t('featureFlags.features.new_dashboard_layout.description'),
+          category: 'beta',
+        },
+      ],
+    },
+    {
+      id: 'ai',
+      name: t('featureFlags.categories.ai.title'),
+      description: t('featureFlags.categories.ai.description'),
+      icon: TrendingUp,
+      features: [
+        {
+          key: 'ai_ticket_suggestions',
+          name: t('featureFlags.features.ai_ticket_suggestions.title'),
+          description: t('featureFlags.features.ai_ticket_suggestions.description'),
+          category: 'experimental',
+        },
+        {
+          key: 'enable_ai_time_tracking',
+          name: t('featureFlags.features.enable_ai_time_tracking.title'),
+          description: t('featureFlags.features.enable_ai_time_tracking.description'),
+          category: 'experimental',
+        },
+        {
+          key: 'enable_predictive_analytics',
+          name: t('featureFlags.features.enable_predictive_analytics.title'),
+          description: t('featureFlags.features.enable_predictive_analytics.description'),
+          category: 'experimental',
+        },
+      ],
+    },
+    {
+      id: 'integrations',
+      name: t('featureFlags.categories.integrations.title'),
+      description: t('featureFlags.categories.integrations.description'),
+      icon: Users,
+      features: [
+        {
+          key: 'enable_slack_integration',
+          name: t('featureFlags.features.enable_slack_integration.title'),
+          description: t('featureFlags.features.enable_slack_integration.description'),
+          category: 'stable',
+        },
+        {
+          key: 'teams-integration-ui',
+          name: 'Microsoft Teams',
+          description: t('featureFlags.features.teams-integration-ui.description'),
+          category: 'stable',
+        },
+        {
+          key: 'enable_jira_sync',
+          name: t('featureFlags.features.enable_jira_sync.title'),
+          description: t('featureFlags.features.enable_jira_sync.description'),
+          category: 'beta',
+        },
+      ],
+    },
+    {
+      id: 'performance',
+      name: t('featureFlags.categories.performance.title'),
+      description: t('featureFlags.categories.performance.description'),
+      icon: Settings,
+      features: [
+        {
+          key: 'enable_query_caching',
+          name: t('featureFlags.features.enable_query_caching.title'),
+          description: t('featureFlags.features.enable_query_caching.description'),
+          category: 'stable',
+        },
+        {
+          key: 'enable_lazy_loading',
+          name: t('featureFlags.features.enable_lazy_loading.title'),
+          description: t('featureFlags.features.enable_lazy_loading.description'),
+          category: 'stable',
+        },
+        {
+          key: 'enable_websocket_updates',
+          name: t('featureFlags.features.enable_websocket_updates.title'),
+          description: t('featureFlags.features.enable_websocket_updates.description'),
+          category: 'beta',
+          requiresRestart: true,
+        },
+      ],
+    },
+    {
+      id: 'experimental',
+      name: t('featureFlags.categories.experimental.title'),
+      description: t('featureFlags.categories.experimental.description'),
+      icon: Flask,
+      features: [
+        {
+          key: 'enable_voice_commands',
+          name: t('featureFlags.features.enable_voice_commands.title'),
+          description: t('featureFlags.features.enable_voice_commands.description'),
+          category: 'experimental',
+        },
+        {
+          key: 'beta_mobile_app',
+          name: t('featureFlags.features.beta_mobile_app.title'),
+          description: t('featureFlags.features.beta_mobile_app.description'),
+          category: 'experimental',
+        },
+      ],
+    },
+  ];
+}
 
 export function FeatureFlagsSettings() {
+  const { t } = useTranslation('msp/settings');
+  const { t: tCommon } = useTranslation('common');
+  const featureCategories = useFeatureCategories();
   const { flags, loading, error } = useFeatureFlags();
   const [localFlags, setLocalFlags] = useState<Record<string, boolean>>({});
   const [unsavedChanges, setUnsavedChanges] = useState(false);
@@ -233,23 +240,23 @@ export function FeatureFlagsSettings() {
   const getCategoryBadge = (category: FeatureDefinition['category']) => {
     switch (category) {
       case 'stable':
-        return <Badge variant="success">Stable</Badge>;
+        return <Badge variant="success">{t('featureFlags.enums.stable')}</Badge>;
       case 'beta':
-        return <Badge variant="warning">Beta</Badge>;
+        return <Badge variant="warning">{t('featureFlags.enums.beta')}</Badge>;
       case 'experimental':
-        return <Badge variant="error">Experimental</Badge>;
+        return <Badge variant="error">{t('featureFlags.enums.experimental')}</Badge>;
     }
   };
 
   if (loading) {
-    return <div>Loading feature flags...</div>;
+    return <div>{t('featureFlags.loading')}</div>;
   }
 
   if (error) {
     return (
       <Alert variant="destructive">
         <AlertDescription>
-          Error loading feature flags: {error.message}
+          {t('featureFlags.errors.loadFailed', { message: error.message })}
         </AlertDescription>
       </Alert>
     );
@@ -258,16 +265,16 @@ export function FeatureFlagsSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">Feature Flags</h2>
+        <h2 className="text-2xl font-bold">{t('featureFlags.title')}</h2>
         <p className="text-muted-foreground">
-          Enable or disable features across your application. Some features may require a restart.
+          {t('featureFlags.description')}
         </p>
       </div>
 
       {unsavedChanges && (
         <Alert>
           <AlertDescription>
-            You have unsaved changes. Click Save to apply them.
+            {t('featureFlags.unsaved')}
           </AlertDescription>
         </Alert>
       )}
@@ -312,7 +319,7 @@ export function FeatureFlagsSettings() {
                               </Label>
                               {getCategoryBadge(feature.category)}
                               {feature.requiresRestart && (
-                                <Badge variant="default">Requires restart</Badge>
+                                <Badge variant="default">{t('featureFlags.requiresRestart')}</Badge>
                               )}
                             </div>
                             <p className="text-sm text-muted-foreground">
@@ -320,7 +327,7 @@ export function FeatureFlagsSettings() {
                             </p>
                             {feature.dependencies && feature.dependencies.length > 0 && (
                               <p className="text-xs text-muted-foreground">
-                                Requires: {feature.dependencies.join(', ')}
+                                {t('featureFlags.dependencies', { dependencies: feature.dependencies.join(', ') })}
                               </p>
                             )}
                           </div>
@@ -348,14 +355,14 @@ export function FeatureFlagsSettings() {
           onClick={handleReset}
           disabled={!unsavedChanges || saving}
         >
-          Reset
+          {tCommon('actions.reset')}
         </Button>
         <Button
           id="save-feature-flags"
           onClick={handleSave}
           disabled={!unsavedChanges || saving}
         >
-          {saving ? 'Saving...' : 'Save Changes'}
+          {saving ? tCommon('actions.saving') : tCommon('actions.saveChanges')}
         </Button>
       </div>
     </div>

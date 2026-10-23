@@ -155,11 +155,16 @@ describe('MSP i18n Phase 0 - config', () => {
       'common',
       'msp/core',
       'features/tickets',
+      'msp/time-entry',
+      'msp/user-activities',
+      'msp/schedule',
+      'features/documents',
     ]);
     expect(ROUTE_NAMESPACES['/msp/settings']).toEqual([
       'common',
       'msp/core',
       'msp/settings',
+      'msp/extensions',
       'msp/keyboard-shortcuts',
       'msp/admin',
       'msp/email-providers',
@@ -170,6 +175,7 @@ describe('MSP i18n Phase 0 - config', () => {
       'features/billing',
       'msp/calendar',
       'msp/integrations',
+      'features/documents',
     ]);
 
     const hasLegacyMsp = Object.values(ROUTE_NAMESPACES).some((namespaces) =>
@@ -191,6 +197,21 @@ describe('MSP i18n Phase 0 - config', () => {
     expect(getNamespacesForRoute('/unknown/route')).toEqual(['common']);
   });
 
+  it('preloads user-activities copy for the My group control on host work-item routes', () => {
+    expect(getNamespacesForRoute('/msp/tickets/ticket-1')).toContain('msp/user-activities');
+    expect(getNamespacesForRoute('/msp/projects/project-1/tasks/task-1')).toContain(
+      'msp/user-activities'
+    );
+    expect(getNamespacesForRoute('/msp/technician-dispatch')).toContain('msp/user-activities');
+  });
+
+  it('preloads time-entry copy for the launcher on nested work-item routes', () => {
+    expect(getNamespacesForRoute('/msp/tickets/ticket-1')).toContain('msp/time-entry');
+    expect(getNamespacesForRoute('/msp/projects/project-1/tasks/task-1')).toContain(
+      'msp/time-entry'
+    );
+  });
+
   it('T033-T035/T043: pseudo locales included in config', () => {
     expect(UI_LOCALE_CONFIG.supportedLocales).toContain('xx');
     expect(UI_LOCALE_CONFIG.supportedLocales).toContain('yy');
@@ -206,17 +227,8 @@ describe('MSP i18n Phase 0 - config', () => {
 });
 
 describe('MSP i18n Phase 0 - wrapper/provider wiring', () => {
-  it('T016-T019: I18nProvider accepts namespaces and loads missing namespaces', () => {
-    const src = readRepoFile('packages/ui/src/lib/i18n/client.tsx');
-    expect(src).toContain('namespaces?: string[]');
-    expect(src).toContain('i18next.loadNamespaces');
-    expect(src).toContain('i18next.hasResourceBundle');
-    // Namespaces are loaded as part of initialization, not in a follow-up
-    // effect gated on isInitialized — that gap let children render and call
-    // t() against a namespace still in flight.
-    expect(src).toContain('await ensureNamespacesLoaded(resolvedLocale, namespaces)');
-    expect(src).not.toMatch(/\[isInitialized, locale, namespaces\]/);
-  });
+  // T016-T019 run against the provider and translation engine in
+  // i18nProviderNamespaces.test.tsx, including delayed namespace readiness.
 
   it('T020-T022: I18nWrapper uses usePathname and passes namespaces', () => {
     const src = readRepoFile('packages/tenancy/src/components/i18n/I18nWrapper.tsx');

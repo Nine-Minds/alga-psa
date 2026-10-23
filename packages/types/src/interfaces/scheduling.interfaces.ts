@@ -1,5 +1,6 @@
 import { TenantEntity } from './index';
 import { WorkItemType } from './workItem.interfaces';
+import type { ProjectServiceSource } from './project.interfaces';
 
 /**
  * Appointment Request Status
@@ -133,6 +134,11 @@ export interface TimeEntryWorkItemContext {
   taskName?: string;
   serviceId?: string | null;
   serviceName?: string | null;
-  elapsedTime?: number;
+  /** Which hierarchy level `serviceId` was inherited from (task → phase → project). */
+  serviceSource?: ProjectServiceSource;
   timeDescription?: string;
+  /** Explanation shown above the time entry form (e.g. times estimated from activity). */
+  notice?: string;
+  /** Stopwatch session this entry logs; saving the entry closes the session (D4). */
+  stopwatchSessionId?: string;
 }

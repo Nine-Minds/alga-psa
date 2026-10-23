@@ -130,6 +130,8 @@ function mapEndpointToSnapshot(args: {
       osType: endpoint.osName ?? null,
       osVersion: endpoint.osVersion ?? null,
       currentUser: endpoint.currentUser ?? null,
+      manufacturer: endpoint.manufacturer ?? null,
+      model: endpoint.model ?? null,
       uptimeSeconds: Number.isFinite(uptimeSeconds) ? uptimeSeconds : null,
       lanIp: endpoint.ipAddress ?? null,
       wanIp: endpoint.wanIpAddress ?? null,

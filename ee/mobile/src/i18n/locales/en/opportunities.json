@@ -228,13 +228,10 @@
       "selectedHint": "A schedule entry will be added to the selected users' AlgaPSA calendars.",
       "usersError": "Could not load users.",
       "you": "You"
-    }
-  },
-  "callPrompt": {
-    "title": "Log this call?",
-    "body": "You called {{name}}. Add it to the deal's record.",
-    "log": "Log the call",
-    "dismiss": "Not now"
+    },
+    "scheduleTitle": "Schedule interaction",
+    "scheduleSubmit": "Schedule",
+    "scheduleSuccess": "Interaction scheduled"
   },
   "followUp": {
     "title": "Schedule follow-up",
@@ -278,7 +275,6 @@
   "errors": {
     "unableToLoad": "Unable to load.",
     "generic": "Something went wrong. Please try again.",
-    "callUnavailable": "This device can't place phone calls.",
     "emailUnavailable": "No email app is available on this device."
   },
   "common": {

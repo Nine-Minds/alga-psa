@@ -3,6 +3,7 @@ import { initReactI18next } from "react-i18next";
 import * as Localization from "expo-localization";
 import { DEFAULT_LOCALE, DEFAULT_NS, NAMESPACES, SUPPORTED_LOCALES, type SupportedLocale } from "./config";
 import commonEn from "./locales/en/common.json";
+import { CLIENT_VALIDATION_RESOURCE_EN } from "../../../../packages/validation/src/lib/messages/clientValidationMessages.en";
 import authEn from "./locales/en/auth.json";
 import ticketsEn from "./locales/en/tickets.json";
 import settingsEn from "./locales/en/settings.json";
@@ -15,6 +16,7 @@ import userActivitiesEn from "./locales/en/userActivities.json";
 import inventoryEn from "./locales/en/inventory.json";
 import opportunitiesEn from "./locales/en/opportunities.json";
 import assetsEn from "./locales/en/assets.json";
+import interactionsEn from "./locales/en/interactions.json";
 
 function resolveDeviceLocale(): SupportedLocale {
   const tag = Localization.getLocales()[0]?.languageTag;
@@ -28,7 +30,8 @@ function resolveDeviceLocale(): SupportedLocale {
 
 const resources = {
   en: {
-    common: commonEn,
+    // The client/contact field validators' wording comes from the validation package.
+    common: { ...commonEn, ...CLIENT_VALIDATION_RESOURCE_EN },
     auth: authEn,
     tickets: ticketsEn,
     settings: settingsEn,
@@ -41,6 +44,7 @@ const resources = {
     inventory: inventoryEn,
     opportunities: opportunitiesEn,
     assets: assetsEn,
+    interactions: interactionsEn,
   },
 } as const;
 

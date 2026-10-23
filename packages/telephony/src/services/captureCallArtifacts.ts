@@ -8,7 +8,11 @@ import type {
 } from '../types';
 import { buildCallInteractionTitle } from '../lib/callInteractions';
 import { hasCallArtifactWindowElapsed, isCallArtifactFetchDue } from '../lib/callArtifactBackoff';
-import { createCallTranscriptDocument } from '../lib/callArtifactDocuments';
+import {
+  appendCallSummaryToInteraction,
+  createCallTranscriptDocument,
+  resolveCallDocumentOwner,
+} from '../lib/callArtifactDocuments';
 
 export interface CallArtifactCaptureSettings {
   /** Store the recording blob, not just the pointer (recordings are large). */
@@ -24,6 +28,26 @@ export interface CaptureCallArtifactsInput {
   knex?: any;
 }
 
+export type CallArtifactProviderFetchResult =
+  /** The tenant's provider cannot yield artifacts at all: settle to `none` now. */
+  | { status: 'unsupported' }
+  | {
+      status: 'fetched';
+      artifacts: CallArtifactPayload[];
+      /**
+       * `false` when the provider is still working on this call (a recording
+       * exists but its transcript is not ready): what was fetched is stored
+       * and the record stays `pending` for another poll inside the window.
+       */
+      complete?: boolean;
+    };
+
+/** Per-provider artifact lookup keyed by `telephony_call_records.provider`. */
+export type CallArtifactProviderFetcher = (input: {
+  tenantId: string;
+  call: TelephonyCallRecordRow;
+}) => Promise<CallArtifactProviderFetchResult>;
+
 export interface CaptureCallArtifactsDependencies {
   /** Provider fetch (Teams ad hoc call artifacts); injected so the core stays vendor-neutral. */
   fetchArtifacts?: (input: {
@@ -32,6 +56,11 @@ export interface CaptureCallArtifactsDependencies {
     organizerUserId: string;
     startedAt?: Date | string | null;
   }) => Promise<CallArtifactPayload[]>;
+  /**
+   * Providers with their own artifact lookup. A call whose provider is listed
+   * here bypasses `fetchArtifacts` (and its Entra-organizer requirement).
+   */
+  providerFetchers?: Record<string, CallArtifactProviderFetcher>;
   /** Download and store a recording blob; returns the stored file id. */
   downloadRecording?: (input: {
     tenantId: string;
@@ -51,14 +80,14 @@ export interface CaptureCallArtifactsDependencies {
     transcriptVtt: string;
     providerArtifactId?: string | null;
   }) => Promise<unknown>;
-  loadSettings?: (tenantId: string) => Promise<CallArtifactCaptureSettings>;
+  loadSettings?: (tenantId: string, provider: string) => Promise<CallArtifactCaptureSettings>;
   now?: () => Date;
 }
 
 export type CaptureCallArtifactsOutcome =
   | {
       status: 'skipped';
-      reason: 'not_found' | 'not_due' | 'no_organizer' | 'settled';
+      reason: 'not_found' | 'not_due' | 'no_organizer' | 'settled' | 'unsupported';
     }
   | { status: 'captured'; artifactStatus: CallArtifactStatus; captured: number };
 
@@ -109,25 +138,9 @@ export async function captureCallArtifacts(
     return { status: 'skipped', reason: 'not_due' };
   }
 
-  if (!call.organizer_user_id) {
-    // Artifacts hang off /users/{id}/adhocCalls — with no Entra user on the CDR
-    // there is no endpoint to ask, so this call can never yield artifacts.
-    await settle(db, call.call_record_id, 'none', call, now());
-    return { status: 'skipped', reason: 'no_organizer' };
-  }
-
-  let fetched: CallArtifactPayload[];
-  try {
-    fetched = await fetchArtifacts({
-      tenantId: input.tenantId,
-      providerCallId: call.provider_call_id,
-      organizerUserId: call.organizer_user_id,
-      // Windows the getAll enumeration to this call's lifetime.
-      startedAt: call.started_at ?? null,
-    });
-  } catch (error) {
-    // Record the attempt before rethrowing so a persistently failing tenant
-    // backs off instead of being retried on every sweep.
+  // Record the attempt before rethrowing so a persistently failing tenant
+  // backs off instead of being retried on every sweep.
+  const recordFailedAttempt = async () => {
     await db.table('telephony_call_records')
       .where({ call_record_id: call.call_record_id })
       .update({
@@ -135,14 +148,53 @@ export async function captureCallArtifacts(
         last_artifact_fetch_at: now(),
         updated_at: knex.fn.now(),
       });
-    throw error;
+  };
+
+  let fetched: CallArtifactPayload[];
+  let complete = true;
+  const providerFetcher = dependencies.providerFetchers?.[call.provider];
+
+  if (providerFetcher) {
+    let result: CallArtifactProviderFetchResult;
+    try {
+      result = await providerFetcher({ tenantId: input.tenantId, call });
+    } catch (error) {
+      await recordFailedAttempt();
+      throw error;
+    }
+    if (result.status === 'unsupported') {
+      await settle(db, call.call_record_id, 'none', call, now());
+      return { status: 'skipped', reason: 'unsupported' };
+    }
+    fetched = result.artifacts;
+    complete = result.complete !== false;
+  } else {
+    if (!call.organizer_user_id) {
+      // Artifacts hang off /users/{id}/adhocCalls — with no Entra user on the CDR
+      // there is no endpoint to ask, so this call can never yield artifacts.
+      await settle(db, call.call_record_id, 'none', call, now());
+      return { status: 'skipped', reason: 'no_organizer' };
+    }
+
+    try {
+      fetched = await fetchArtifacts({
+        tenantId: input.tenantId,
+        providerCallId: call.provider_call_id,
+        organizerUserId: call.organizer_user_id,
+        // Windows the getAll enumeration to this call's lifetime.
+        startedAt: call.started_at ?? null,
+      });
+    } catch (error) {
+      await recordFailedAttempt();
+      throw error;
+    }
   }
 
   const existing: TelephonyCallArtifactRow[] = await db.table('telephony_call_artifacts')
     .where({ call_record_id: call.call_record_id })
     .select('*');
 
-  const settings = await loadSettings(input.tenantId);
+  const settings = await loadSettings(input.tenantId, call.provider);
   const actorUserId = input.actorUserId ?? null;
   const title = buildCallInteractionTitle({
     direction: call.direction,
@@ -163,7 +215,7 @@ export async function captureCallArtifacts(
     let fileId = previous?.file_id ?? null;
 
     if (artifact.artifactType === 'transcript' && artifact.transcriptContent && !documentId) {
-      const owner = actorUserId ?? await resolveDocumentOwner(db);
+      const owner = actorUserId ?? await resolveCallDocumentOwner(db);
       if (owner) {
         documentId = await persistTranscript({
           tenantId: input.tenantId,
@@ -174,7 +226,15 @@ export async function captureCallArtifacts(
           actorUserId: owner,
           clientId: call.matched_client_id,
           contactNameId: call.matched_contact_id,
+          interactionId: call.interaction_id,
           isClientVisible: settings.exposeRecordingsInPortal,
+        });
+
+        await appendCallSummaryToInteraction({
+          db,
+          interactionId: call.interaction_id,
+          summary: artifact.summary,
+          now: now(),
         });
 
         // First capture of this transcript (the !documentId guard is the
@@ -219,7 +279,7 @@ export async function captureCallArtifacts(
         tenantId: input.tenantId,
         call,
         artifact,
-        actorUserId: actorUserId ?? (await resolveDocumentOwner(db)) ?? '',
+        actorUserId: actorUserId ?? (await resolveCallDocumentOwner(db)) ?? '',
       });
     }
 
@@ -251,9 +311,10 @@ export async function captureCallArtifacts(
   }
 
   const total = existing.length + captured;
+  const windowElapsed = hasCallArtifactWindowElapsed(call, now());
   const artifactStatus: CallArtifactStatus = total > 0
-    ? 'ready'
-    : hasCallArtifactWindowElapsed(call, now())
+    ? (complete || windowElapsed ? 'ready' : 'pending')
+    : windowElapsed
       ? 'none'
       : 'pending';
 
@@ -284,14 +345,6 @@ async function settle(
       last_artifact_fetch_at: now,
       updated_at: now,
     });
-}
-
-async function resolveDocumentOwner(db: any): Promise<string | null> {
-  const row = await db.table('users')
-    .where({ user_type: 'internal', is_inactive: false })
-    .orderBy('created_at', 'asc')
-    .first('user_id');
-  return row?.user_id ?? null;
 }
 
 /**

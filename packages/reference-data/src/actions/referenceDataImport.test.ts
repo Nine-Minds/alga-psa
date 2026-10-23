@@ -58,7 +58,7 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('@alga-psa/core/server', () => ({ deleteEntityWithValidation: vi.fn() }));
-vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: publishEventMock }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: publishEventMock, publishWorkflowEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 
 import { importReferenceData } from './referenceDataActions';
 
@@ -157,6 +157,24 @@ describe('conflict resolutions', () => {
     });
 
     expect(result.imported[0].priority_name).toBe('Critical');
+  });
+
+  it('applies a rename to category_name for service categories', async () => {
+    // Regression: the rename resolution used to write the generic `name` field,
+    // an unknown column on service_categories, which aborted the whole import
+    // transaction (Postgres poisons the tx on any error).
+    tables.set('standard_service_categories', [
+      { id: 'sc1', category_name: 'Consulting', description: 'Consulting services', display_order: 8 },
+    ]);
+    tables.set('service_categories', []);
+
+    const result: any = await importReferenceData('service_categories', ['sc1'], undefined, {
+      sc1: { action: 'rename', newName: 'Advisory' },
+    });
+
+    expect(result.imported).toHaveLength(1);
+    expect(result.imported[0].category_name).toBe('Advisory');
+    expect(result.imported[0]).not.toHaveProperty('name');
   });
 
   it('applies a reorder to the order field this kind of item uses', async () => {

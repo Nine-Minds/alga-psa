@@ -96,6 +96,7 @@ export interface ExternalCalendarEvent {
   provider: 'google' | 'microsoft';
   title: string;
   description?: string;
+  categories?: string[];
   start: {
     dateTime?: string; // ISO 8601 for timed events
     date?: string; // YYYY-MM-DD for all-day events

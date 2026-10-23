@@ -45,7 +45,7 @@ describe('Contracts integration i18n coverage', () => {
       '../../../../server/public/locales/en/msp/contracts.json'
     );
 
-    expect(configSource).toContain("'/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/quotes', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts', 'msp/invoicing']");
+    expect(configSource).toContain("'/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/quotes', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts', 'msp/invoicing', 'msp/billing-settings']");
 
     expect(contractsSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
     expect(clientContractsSource).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
@@ -217,7 +217,10 @@ describe('Contracts integration i18n coverage', () => {
     for (const key of keySet) {
       if (
         key === 'wizardBasics.summary.values.noticePeriodDays' ||
-        key === 'wizardBasics.summary.values.renewalTermMonths'
+        key === 'wizardBasics.summary.values.renewalTermMonths' ||
+        // i18next plural base key (badgeCount_one / badgeCount_other)
+        key === 'wizardReview.prepaid.badgeCount' ||
+        key === 'wizardReview.prepaid.expiresAfter'
       ) {
         expect(getLeaf(en, `${key}_one`)).toBeDefined();
         expect(getLeaf(en, `${key}_other`)).toBeDefined();

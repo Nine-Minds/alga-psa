@@ -190,7 +190,11 @@ exit 0
       FAKE_STORAGE_CLASS_POLICY: options.storageClassPolicy || 'Retain',
       ALGA_APPLIANCE_STORAGE_LOCK_PATH: path.join(tmp, 'storage-reconcile.lock'),
       ALGA_APPLIANCE_STORAGE_LOCK_ATTEMPTS: options.lockWaitAttempts || '150',
-      ALGA_APPLIANCE_STORAGE_STABILITY_SECONDS: '0'
+      ALGA_APPLIANCE_STORAGE_STABILITY_SECONDS: '0',
+      ALGA_APPLIANCE_SKIP_DNS_RECONCILE: options.dnsReconcile ? 'false' : 'true',
+      ...(options.dnsReconcileScript
+        ? { ALGA_APPLIANCE_DNS_RECONCILE_SCRIPT: options.dnsReconcileScript }
+        : {})
     }
   };
 }
@@ -308,6 +312,26 @@ test('a lock held by a live process still blocks until the wait times out', () =
     fs.readlinkSync(harness.env.ALGA_APPLIANCE_STORAGE_LOCK_PATH),
     String(process.pid)
   );
+});
+
+test('storage reconciliation invokes the DNS reconcile launcher after storage converges', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-storage-dns-'));
+  const launcher = path.join(tmp, 'reconcile-k3s-dns.sh');
+  const marker = path.join(tmp, 'dns-called.log');
+  fs.writeFileSync(
+    launcher,
+    `#!/usr/bin/env bash\nprintf '%s\\n' "$*" > ${marker}\n`,
+    { mode: 0o755 }
+  );
+
+  const harness = createHarness({ dnsReconcile: true, dnsReconcileScript: launcher });
+  const result = runInstaller(harness);
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /Storage prerequisites are ready/);
+  const called = fs.readFileSync(marker, 'utf8');
+  assert.match(called, /--kubeconfig/);
+  assert.match(called, new RegExp(harness.kubeconfig.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 });
 
 test('repeated reconciliation preserves application PVs and leaves no smoke resources or side effects', () => {

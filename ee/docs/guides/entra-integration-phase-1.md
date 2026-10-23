@@ -43,7 +43,7 @@ Choose one connection type per tenant:
 - Best when you control OAuth app registration and consent flow.
 
 2. `cipp` (CIPP API)
-- Available on Pro when the `entra-integration-cipp` flag is enabled for the tenant.
+- Available on Pro. No feature flag is involved.
 - Uses the classic CIPP API for managed tenant and user enumeration.
 - Requires the **CIPP-API function app host** (for example `my-cipp-api.azurewebsites.net`) — not
   the CIPP frontend an operator signs into — and a **CIPP API key**, taken from
@@ -125,15 +125,9 @@ Discovery and sync use the same grant differently, and their prerequisites diffe
   `https://login.microsoftonline.com/<managed-tenant-id-or-domain>/adminconsent?client_id=<app-id>`.
 
 So "mapping works but sync never does" is the expected symptom of a missing per-client
-consent, not a product fault. Decode the token-refresh failures (the AADSTS code is
-surfaced in run history and preflight since the 2026-08 fixes):
-
-| OAuth error | Meaning | Remedy |
-| --- | --- | --- |
-| `invalid_grant` + `consent_required` / `AADSTS65001` | App not consented in the managed tenant | Grant admin consent in that tenant; reconnecting the partner tenant changes nothing |
-| `AADSTS700016` | App is single-tenant, or has no service principal there | Set supported account types to multi-tenant; re-grant consent |
-| `AADSTS50076` / `AADSTS50079` | The managed tenant's Conditional Access demands MFA or a compliant device for this account | Adjust the CA policy with the client, or satisfy it interactively — silent refresh cannot |
-| `invalid_grant` with none of the above | Grant revoked or expired at the partner tenant | Reconnect from Settings > Integrations > Microsoft Entra > Connection |
+consent, not a product fault. The AADSTS code is surfaced in run history, preflight, and
+the Diagnostics dialog; **Diagnostics → Consolidated AADSTS remedy table** below is the
+single authoritative remedy table for every Entra OAuth/Graph failure.
 
 One app registration is often shared across every Alga Microsoft integration. Each flow
 has its own callback, and Microsoft validates them independently, so a shared app must
@@ -152,14 +146,33 @@ redirect URI list.)
 
 ## Feature Flags (Phase 1)
 
-Remaining flags:
+## Per managed tenant user import filters
+
+Open **Settings → Integrations → Entra → Clients** and expand a mapped managed tenant to edit its
+import filter. You can limit imports to licensed members, include or exclude security-group members,
+and add regular-expression exclusions. Group inclusion uses transitive membership with Direct Graph;
+CIPP currently checks the membership data returned by its user-group endpoint, which may be direct
+membership only.
+
+Filters are stored as per-managed-tenant overrides over tenant defaults. New settings are empty, so
+existing imports keep their current scope until you save a filter. Deactivating linked contacts that
+fall outside a filter is opt-in. Review the preflight before enabling it. A safety brake skips
+deactivation when a filter excludes every enabled user in a tenant that already has linked contacts.
+Contacts re-entering scope are reactivated only when the filter previously deactivated them.
+
+Shared mailboxes are not reliably identifiable in the current Graph/CIPP user records. Their
+Exchange recipient type requires additional Exchange data, and contacts do not have a service-contact
+type. Do not use display-name patterns as a mailbox classifier.
+
+## Feature Flags (Phase 1)
+
+Remaining flag:
 
 - `entra-integration-client-sync-action`
-- `entra-integration-cipp` — soft-launch control for the CIPP connection option
 
-Retired flags. `entra-integration-ui` (the master gate), `entra-integration-field-sync`
-and `entra-integration-ambiguous-queue` no longer exist. Access to the Entra surface is
-edition + tier + RBAC only:
+Retired flags. `entra-integration-ui` (the master gate), `entra-integration-field-sync`,
+`entra-integration-ambiguous-queue` and `entra-integration-cipp` no longer exist. Access to
+the Entra surface is edition + tier + RBAC only:
 
 ```
 EE edition  +  assertTierAccess(TIER_FEATURES.ENTRA_SYNC)  [Pro+]  +  system_settings read/update
@@ -168,6 +181,10 @@ EE edition  +  assertTierAccess(TIER_FEATURES.ENTRA_SYNC)  [Pro+]  +  system_set
 A tenant that fails the check gets the tier 403 from the API routes and an upgrade notice
 on the route — there is no "disabled" 404 any more. Field rules and the review queue
 render for every tenant that can reach the screen.
+
+The CIPP connection option follows the same rule. Only the tenant's tier controls it
+(`TIER_FEATURES.CIPP`, Pro). Tenants on Pro see CIPP next to Direct in the setup chooser
+and the console. Tenants below Pro see Direct only.
 
 Create/check default Phase 1 flag definitions through platform feature flag API:
 
@@ -289,6 +306,91 @@ and repeated failure (the second consecutive failed or partial run — one faile
 transient). An optional per-run digest is off by default. Stored in
 `entra_sync_settings.notification_config`.
 
+## Diagnostics
+
+The Connection tab (**Run diagnostics**, beside **Test connection**) and the Overview
+attention list open the same `EntraDiagnosticsDialog`. Diagnostics are **on demand only**:
+there is no scheduler, alert, history table, or feature flag. They are **read-only** — the
+only write any check can make is the same refreshed-token persistence the sync path already
+performs, and no check calls `updateEntraConnectionValidation`, writes discovery or
+mappings, upserts settings, or touches Temporal schedules/workflows. Diagnostics never
+query Graph `/applications` or request `Application.Read.All`; expected app-registration
+values are shown for manual comparison.
+
+Two explicit run scopes:
+
+- **Connection diagnostics** — Alga readiness, partner authentication, discovery, and sync
+  history. It performs no per-client fan-out.
+- **Selected-client diagnostics** — one bounded run per selected mapped client, at most
+  three clients in flight, delivered incrementally through an authenticated, expiring
+  continuation. Omitting the selection runs every confirmed mapping; an explicit empty
+  selection runs nothing; selected ids are validated against the authenticated tenant's
+  mappings. More than 20 clients requires confirmation.
+
+### Connection layers
+
+| Layer | Checks |
+| --- | --- |
+| 1. Readiness | Edition/tier/RBAC; active connection row + stored validation snapshot; app-registration binding (missing binding, missing/archived profile, missing Entra capability); client secret presence and fingerprint; expected app-registration values; Temporal/schedule readiness |
+| 2. Partner auth | Token-set presence; forced common-authority refresh; decoded claims and required-scope comparison; `/me` baseline |
+| 3. Discovery | `managedTenants` endpoint probe (or `/organization` in self-tenant smoke mode); full paged discovery with count and up-to-ten sample; confirmed mappings versus live discovery |
+| C.1–C.5 (CIPP) | Credential presence; reachability across the candidate endpoints; authentication; tenant-list count/sample; mappings versus the CIPP list |
+| 5. Sync health | Last five runs with trigger/duration/totals; per-tenant failures of the latest real run; open reconciliation count and oldest age |
+
+A failed prerequisite marks only its **dependent** steps `skip` with
+`blocked by <step id>`; independent checks still run. A worker failure does not suppress
+Graph checks, a missing binding does not suppress the informational expected values, and a
+token failure does not suppress local sync-history and queue checks.
+
+### Client layers (Direct)
+
+| Step | Check |
+| --- | --- |
+| `tenant_token_mint` | Mint a managed-tenant token; the partner access token is never overwritten |
+| `users_read` | `/users?$select=id&$top=1`; an empty directory is not an access failure |
+| `groups_read` | `/groups?$select=id&$top=1`, classified independently of the users result |
+| `entitlement_group_resolves` | Resolve the configured group (report `securityEnabled`, flag a non-security group), then a read-only `checkMemberGroups` probe for the first user |
+| `user_yield_preview` | Off by default; when enabled, reuse the existing user filter to report total/included and exclusions by `account_disabled`, `missing_identity`, `service_account`, `tenant_custom_pattern` |
+
+CIPP clients run `C.6 per_tenant_users` as a bounded one-page read, with the same optional
+yield preview.
+
+### Support export
+
+**Copy support bundle** and **Download JSON** serialize the same JSON-safe snapshot.
+Exports are identifier-redacted by default; Graph request ids are always retained and tokens
+and secrets are never present. The client table shows client and tenant **display names**;
+tenant GUIDs appear only in expanded detail and the support bundle.
+
+### Sync-off warning
+
+Automatic sync defaults to off. When it is off, the schedule check warns rather than fails;
+because disabling sync deletes the Temporal schedule, an absent schedule plus a disabled
+setting is consistent and still carries the sync-off warning. Diagnostics never
+reconciles, creates, deletes, or starts a schedule.
+
+### Consolidated AADSTS remedy table
+
+| Failure | Context | Remedy / category |
+| --- | --- | --- |
+| `AADSTS7000222` / `invalid_client` | Partner | Client secret expired or wrong; rotate in Azure and update the app registration in Alga. |
+| `AADSTS7000222` / `invalid_client` | Customer | Same app-credential remedy; other. |
+| `AADSTS700016` | Partner | App not found or single-tenant; verify the bound client id and multi-tenant configuration. |
+| `AADSTS700016` | Customer | App is single-tenant or has no service principal in this tenant; other. |
+| `AADSTS65001` / `consent_required` | Partner | Grant partner-tenant admin consent, then reconnect. |
+| `AADSTS65001` / `consent_required` | Customer | App is not consented here; **reconnecting the partner will not help**. Grant consent in the customer tenant (`https://login.microsoftonline.com/<entraTenantId>/adminconsent?client_id=<boundAppClientId>`); need consent. |
+| `AADSTS50076` / `AADSTS50079` | Both | Conditional Access requires MFA or a compliant device for the account; conditional access. |
+| `AADSTS70000` / generic `invalid_grant` | Partner | Refresh token revoked or expired; reconnect. |
+| `AADSTS70000` / generic `invalid_grant` | Customer | Reconnect the expired/revoked grant unless a more specific code is present; other. |
+| `AADSTS90002` | Both | Tenant not found; verify the tenant configuration/mapping; other. |
+| `AADSTS50020` | Both | Connecting account is not a guest/allowed user here; verify account access; other. |
+| Network failure | Both | Endpoint unreachable; DNS/TLS/timeout distinction is reported where available; other. |
+| `/users` or `/groups` HTTP 403 | Customer | Consent exists but the delegated account lacks a directory-read role via GDAP (for example Directory Readers); check GDAP role assignments; missing role. |
+| CIPP 401/403 | — | CIPP rejected the **API key** from Settings > CIPP > API access, not an Azure client secret; rotate it on the Connection tab. |
+
+Customer consent links are generated server-side from the **bound application's client id**,
+never the mapped Alga client id, and never carry tokens or secrets.
+
 ## Rollout Order (Recommended)
 
 1. Deploy schema + EE code. Entra is reachable by any Pro+ tenant with the permission,
@@ -297,12 +399,8 @@ transient). An optional per-run digest is off by default. Stored in
 3. Validate discovery and mapping quality on pilot tenants. The setup wizard's preflight
    previews contact changes for one client without writing anything, so this no longer
    requires a leap of faith.
-4. For tenants needing CIPP, enable `entra-integration-cipp`. Its retirement is an ops
-   decision — flip per tenant, then globally, then retire.
-5. Enable `entra-integration-client-sync-action` after mapping/sync operations are stable.
-6. Expand tenant targeting incrementally.
+4. Enable `entra-integration-client-sync-action` after mapping/sync operations are stable.
+5. Expand tenant targeting incrementally.
 
 Field overwrite policy is no longer a rollout step: the rules ship visible and default to
-off, so a tenant that has not opted in already has the safe behaviour. Turning
-`entra-integration-cipp` off hides the CIPP connection option without deleting
-connection/mapping/run history data.
+off, so a tenant that has not opted in already has the safe behaviour.

@@ -1,0 +1,44 @@
+{
+  "entries": [
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/clients/{id}/merge"
+      },
+      "metadata": {
+        "rbacResource": "client",
+        "approvalRequired": true
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/clients/{id}/merge/preview"
+      },
+      "metadata": {
+        "rbacResource": "client",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/clients/{id}/billing-profiles/{profileId}/contacts"
+      },
+      "metadata": {
+        "rbacResource": "client",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "put",
+        "path": "/api/v1/clients/{id}/billing-profiles/{profileId}/contacts"
+      },
+      "metadata": {
+        "rbacResource": "client",
+        "approvalRequired": false
+      }
+    }
+  ]
+}

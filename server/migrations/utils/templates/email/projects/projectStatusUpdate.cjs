@@ -14,6 +14,7 @@ const COPY = {
   it: { subject: 'Aggiornamento del progetto: {{project.name}}', label: 'Aggiornamento sullo stato del progetto', intro: 'Ecco lo stato più recente del tuo progetto.', progress: 'Avanzamento complessivo', tasks: 'Attività completate', hours: 'Ore utilizzate', recent: 'Completato di recente', message: 'Un messaggio dal tuo team', button: 'Vedi progetto', footer: 'Powered by AlgaPSA' },
   pl: { subject: 'Aktualizacja projektu: {{project.name}}', label: 'Aktualizacja statusu projektu', intro: 'Oto najnowszy status Twojego projektu.', progress: 'Ogólny postęp', tasks: 'Ukończone zadania', hours: 'Wykorzystane godziny', recent: 'Ostatnio ukończone', message: 'Wiadomość od zespołu', button: 'Zobacz projekt', footer: 'Powered by AlgaPSA' },
   pt: { subject: 'Atualização do projeto: {{project.name}}', label: 'Atualização de status do projeto', intro: 'Este é o status mais recente do seu projeto.', progress: 'Progresso geral', tasks: 'Tarefas concluídas', hours: 'Horas utilizadas', recent: 'Concluído recentemente', message: 'Um recado da sua equipe', button: 'Ver projeto', footer: 'Desenvolvido por AlgaPSA' },
+  sv: { subject: 'Projektuppdatering: {{project.name}}', label: 'Projektets statusuppdatering', intro: 'Här är den senaste statusen för ditt projekt.', progress: 'Övergripande förlopp', tasks: 'Slutförda uppgifter', hours: 'Förbrukade timmar', recent: 'Nyligen slutfört', message: 'Ett meddelande från ditt team', button: 'Visa projekt', footer: 'Drivs av AlgaPSA' },
 };
 /* eslint-enable max-len */
 

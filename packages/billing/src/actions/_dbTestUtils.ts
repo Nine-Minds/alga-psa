@@ -19,7 +19,9 @@ const repoRoot = path.resolve(__dirname, '../../../..');
 const serverRoot = path.join(repoRoot, 'server');
 
 const PRODUCTION_DB_NAMES = ['sebastian_prod', 'production', 'prod', 'server'];
-const TEST_DB_NAME = 'test_database';
+// Allow accounting suites in separate worktrees to avoid resetting each
+// other's database. Keep the existing default for local callers and CI.
+const TEST_DB_NAME = process.env.TEST_DB_NAME || 'test_database';
 
 // For suites that vi.mock the secrets provider: .env.localtest points
 // DB_PASSWORD_* at container secret paths that don't exist on the host, so
@@ -48,6 +50,9 @@ export function wireLocalTestDbEnv(): void {
 function verifyTestDatabase(dbName: string): void {
   if (PRODUCTION_DB_NAMES.includes(dbName.toLowerCase())) {
     throw new Error(`Attempting to use production database (${dbName}) for testing`);
+  }
+  if (!dbName.startsWith('test_')) {
+    throw new Error('Accounting test database names must start with test_');
   }
 }
 

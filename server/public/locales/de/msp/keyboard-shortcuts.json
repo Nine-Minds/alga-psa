@@ -283,6 +283,38 @@
       "moveRight": {
         "label": "Nach rechts bewegen",
         "description": "Das ausgewählte Editorelement nach rechts bewegen."
+      },
+      "moveOut": {
+        "label": "Aus Container verschieben",
+        "description": "Den ausgewählten Block aus seinem Container verschieben."
+      },
+      "moveInto": {
+        "label": "In Container verschieben",
+        "description": "Den ausgewählten Block in den vorherigen Container verschieben."
+      },
+      "copy": {
+        "label": "Kopieren",
+        "description": "Den ausgewählten Block kopieren."
+      },
+      "cut": {
+        "label": "Ausschneiden",
+        "description": "Den ausgewählten Block ausschneiden."
+      },
+      "paste": {
+        "label": "Einfügen",
+        "description": "Den kopierten Block einfügen."
+      },
+      "duplicate": {
+        "label": "Duplizieren",
+        "description": "Den ausgewählten Block duplizieren."
+      },
+      "copyStyle": {
+        "label": "Stil kopieren",
+        "description": "Farben, Rahmen, Abstände und Textstil des ausgewählten Blocks kopieren."
+      },
+      "pasteStyle": {
+        "label": "Stil einfügen",
+        "description": "Den kopierten Stil auf den ausgewählten Block anwenden."
       }
     },
     "scroll": {

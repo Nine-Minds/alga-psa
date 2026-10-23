@@ -11,7 +11,7 @@ describe('MSP consolidated ticket data contact authorship contract', () => {
   it('T023: returns comments path with contact_id support in consolidated payload assembly', () => {
     const source = readOptimizedTicketActionsSource();
 
-    expect(source).toContain("tenantScopedTable(trx, 'comments', tenant)");
+    expect(source).toContain('Comment.getAllbyTicketId(trx, tenant, ticketId)');
     expect(source).toContain('comments,');
     expect(source).toContain('comment.contact_id');
   });

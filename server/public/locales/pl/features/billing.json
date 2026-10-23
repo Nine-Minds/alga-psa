@@ -151,7 +151,8 @@
     "tryAgain": "Spróbuj ponownie",
     "backToBilling": "Wróć do rozliczeń",
     "retryFailed": "Nadal nie udało się rozpocząć płatności. Spróbuj ponownie za chwilę.",
-    "loading": "Ładowanie..."
+    "loading": "Ładowanie...",
+    "offlinePaymentMethod": "Ta faktura jest opłacana czekiem lub przelewem bankowym, więc płatność online jest niedostępna. Postępuj zgodnie z instrukcjami płatności na fakturze."
   },
   "quotes": {
     "pendingQuotes": "Oczekujące oferty",
@@ -240,7 +241,8 @@
     "contractLineType": {
       "Fixed": "Stała stawka",
       "Hourly": "Godzinowe",
-      "Usage": "Na podstawie zużycia"
+      "Usage": "Na podstawie zużycia",
+      "PrepaidBlock": "Blok przedpłacony"
     },
     "quoteStatus": {
       "draft": "Szkic",
@@ -441,6 +443,14 @@
     "hoursLeft": "Pozostało {{hours}} godz.",
     "expires": "Wygasa {{date}}",
     "recentBurn": "Ostatnie wykorzystanie",
-    "timeEntry": "Wpis czasu"
+    "timeEntry": "Wpis czasu",
+    "contractLabel": "Umowa: {{contract}}"
+  },
+  "bucketUsage": {
+    "contractLine": "Linia umowy z pakietem godzin",
+    "usage": "Wykorzystanie",
+    "hoursUsed": "Wykorzystane godziny: {{hours}}",
+    "hoursTotal": "Łączna liczba godzin: {{hours}}",
+    "rolloverHours": "Uwzględnione przeniesione godziny: {{hours}}"
   }
 }

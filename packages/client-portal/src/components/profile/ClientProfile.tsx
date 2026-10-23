@@ -112,6 +112,7 @@ export function ClientProfile() {
           REPORTS_TO_SELF: 'profile.messages.reportsToSelf',
           REPORTS_TO_CYCLE: 'profile.messages.reportsToCycle',
           SCIM_MANAGED_INACTIVE: 'profile.messages.scimManagedInactive',
+          INVALID_TIMEZONE: 'profile.messages.invalidTimezone',
           PERMISSION_DENIED: 'profile.messages.permissionDenied',
           USER_UPDATE_FAILED: 'profile.messages.updateFailed',
         };

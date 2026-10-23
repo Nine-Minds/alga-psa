@@ -185,6 +185,12 @@ const mocks = vi.hoisted(() => {
   };
 });
 
+// Not under test here: the stranded arrears-only line gap query has its own coverage, and the
+// hand-rolled knex mock below does not model its recurring_service_periods query shape.
+vi.mock('../../../../../packages/billing/src/actions/arrearsOnlyLineGaps', () => ({
+  fetchStrandedArrearsOnlyLineGaps: vi.fn(async () => []),
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: (...args: any[]) => Promise<unknown>) =>
     (...args: any[]) =>
@@ -420,10 +426,15 @@ describe('non-contract due-work reader', () => {
     await getAvailableRecurringDueWork({ page: 1, pageSize: 10 });
 
     expect(unresolvedSpy).toHaveBeenCalledTimes(1);
+    // The client's own currency comes from the metadata the listing already
+    // read; the engine resolves the invoice currency from the period's contract
+    // lines on top of it, so a project cap is applied here exactly when
+    // generation would apply it.
     expect(unresolvedSpy).toHaveBeenCalledWith({
       clientId: 'client-1',
       windowStart: '2025-03-01',
       windowEnd: '2025-04-01',
+      clientDefaultCurrency: 'USD',
     });
   });
 

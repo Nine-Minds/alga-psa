@@ -33,7 +33,39 @@
     "createdSuccess_one": "{{count}} ticket succesvol aangemaakt.",
     "createdSuccess_other": "{{count}} tickets succesvol aangemaakt.",
     "rowLimitExceeded": "Rijlimiet overschreden:",
-    "rowLimitDescription": "Uw CSV heeft {{original}} rijen, maar alleen de eerste {{kept}} worden geïmporteerd. Splits het bestand in kleinere batches voor de overige rijen."
+    "rowLimitDescription": "Uw CSV heeft {{original}} rijen, maar alleen de eerste {{kept}} worden geïmporteerd. Splits het bestand in kleinere batches voor de overige rijen.",
+    "createdSuccess_few": "{{count}} tickets succesvol aangemaakt.",
+    "createdSuccess_many": "{{count}} tickets succesvol aangemaakt.",
+    "errorCount_few": "{{count}} fouten:",
+    "errorCount_many": "{{count}} fouten:",
+    "importTickets_few": "{{count}} tickets importeren",
+    "importTickets_many": "{{count}} tickets importeren",
+    "skipDropped_few": "Overslaan ({{count}} tickets vervallen)",
+    "skipDropped_many": "Overslaan ({{count}} tickets vervallen)",
+    "skippedCount_few": "{{count}} tickets zijn overgeslagen.",
+    "skippedCount_many": "{{count}} tickets zijn overgeslagen.",
+    "ticketCount_few": "({{count}} tickets)",
+    "ticketCount_many": "({{count}} tickets)",
+    "unmatchedAgents_few": "{{count}} agenten",
+    "unmatchedAgents_many": "{{count}} agenten",
+    "unmatchedCategories_few": "{{count}} categorieën",
+    "unmatchedCategories_many": "{{count}} categorieën",
+    "unmatchedClients_few": "{{count}} klanten",
+    "unmatchedClients_many": "{{count}} klanten",
+    "unmatchedContacts_few": "{{count}} contacten",
+    "unmatchedContacts_many": "{{count}} contacten",
+    "unmatchedDateFormats_few": "{{count}} datumnotaties",
+    "unmatchedDateFormats_many": "{{count}} datumnotaties",
+    "unmatchedPriorities_few": "{{count}} prioriteiten",
+    "unmatchedPriorities_many": "{{count}} prioriteiten",
+    "unmatchedStatuses_few": "{{count}} statussen",
+    "unmatchedStatuses_many": "{{count}} statussen",
+    "unmatchedTeams_few": "{{count}} teams",
+    "unmatchedTeams_many": "{{count}} teams",
+    "unmatchedValuesIntro_few": "{{count}} waarden uit uw CSV konden niet automatisch worden gekoppeld.",
+    "unmatchedValuesIntro_many": "{{count}} waarden uit uw CSV konden niet automatisch worden gekoppeld.",
+    "warningCount_few": "{{count}} waarschuwingen:",
+    "warningCount_many": "{{count}} waarschuwingen:"
   },
   "title": "Supporttickets",
   "subtitle": "Bekijk en beheer uw supporttickets",
@@ -52,7 +84,6 @@
     "button": "Filters",
     "unassigned": "Niet toegewezen",
     "category": "Filter op categorie",
-    "clearFilters": "Filters wissen",
     "assignee": "Toegewezene",
     "allAssignees": "Alle toegewezen personen",
     "responseState": "Antwoordstatus",
@@ -78,7 +109,8 @@
     "paused": "Gepauzeerd",
     "allResponseStatuses": "Alle antwoordstatussen",
     "responseStatus": "Antwoordstatus",
-    "board": "Filteren op bord"
+    "board": "Filteren op bord",
+    "searchSmart": "Tickets en opmerkingen doorzoeken… Enter voor slim zoeken"
   },
   "create": {
     "title": "Supportticket aanmaken",
@@ -135,6 +167,7 @@
     "assignedTo": "Toegewezen aan",
     "requester": "Aanvrager",
     "client": "Bedrijf",
+    "contact": "Contactpersoon",
     "dueDate": "Vervaldatum",
     "resolution": "Oplossing",
     "timeSpent": "Bestede tijd",
@@ -145,6 +178,7 @@
     "assignedTeam": "Toegewezen team",
     "additionalAgents": "Extra agenten",
     "createdBy": "Aangemaakt door",
+    "lastActivity": "Laatste activiteit",
     "location": "Locatie",
     "contactPhone": "Telefoonnummer contactpersoon",
     "clientPhone": "Telefoon klant",
@@ -175,9 +209,14 @@
     "tags": "Labels",
     "sla": "SLA",
     "updated": "Bijgewerkt",
+    "updatedAtBy": "Bijgewerkt {{time}} door {{name}}",
+    "byName": "door {{name}}",
     "openInNewTab": "Openen in nieuw tabblad",
     "actions": "Acties",
-    "linkedAssets": "Gekoppelde apparaten"
+    "linkedAssets": "Gekoppelde apparaten",
+    "assetName": "Naam",
+    "assetTag": "Assettag",
+    "assetType": "Type"
   },
   "actions": {
     "view": "Bekijken",
@@ -203,7 +242,13 @@
     "export": "Exporteren",
     "reset": "Opnieuw instellen",
     "importSelected": "Selectie importeren",
-    "printOptions": "Afdrukopties"
+    "printOptions": "Afdrukopties",
+    "duplicate": "Dupliceren",
+    "rowActions": "Acties",
+    "openMenu": "Menu openen",
+    "moreActions": "Meer acties",
+    "createTemplate": "Sjabloon maken van ticket",
+    "createWorkflowFromTicket": "Workflow maken van ticket"
   },
   "messages": {
     "noTickets": "Geen tickets gevonden",
@@ -297,12 +342,23 @@
     "deleteTimeEntryFailed": "Kan tijdregistratie niet verwijderen",
     "timeEntryDeleted": "Tijdregistratie verwijderd",
     "closeFailed": "Ticket sluiten is mislukt",
-    "scheduleVisitFailed": "Kan de planner niet openen",
     "loadCommentsFailed": "Opmerkingen laden mislukt",
     "updateTicketFailed": "Ticket bijwerken mislukt",
     "errorWithMessage": "Fout: {{message}}",
     "billingProfileUpdated": "Facturatieprofiel bijgewerkt",
-    "updateBillingProfileFailed": "Bijwerken van facturatieprofiel mislukt"
+    "updateBillingProfileFailed": "Bijwerken van facturatieprofiel mislukt",
+    "scheduleOpenFailed": "De planner kon niet worden geopend",
+    "commentWithImagesDeleted_few": "Opmerking en {{count}} geplakte afbeeldingen succesvol verwijderd.",
+    "commentWithImagesDeleted_many": "Opmerking en {{count}} geplakte afbeeldingen succesvol verwijderd.",
+    "deleteCommentWithImages_few": "Deze opmerking bevat {{count}} geplakte afbeeldingen die als ticketdocumenten zijn geüpload. Alleen de opmerking verwijderen, of ook de geplakte afbeeldingen definitief verwijderen?",
+    "deleteCommentWithImages_many": "Deze opmerking bevat {{count}} geplakte afbeeldingen die als ticketdocumenten zijn geüpload. Alleen de opmerking verwijderen, of ook de geplakte afbeeldingen definitief verwijderen?",
+    "pastedImageDeleteFailed_few": "Opmerking verwijderd, maar {{count}} geplakte afbeeldingen konden niet worden verwijderd.",
+    "pastedImageDeleteFailed_many": "Opmerking verwijderd, maar {{count}} geplakte afbeeldingen konden niet worden verwijderd.",
+    "pastedImagesDeleteFailed_few": "{{count}} geplakte afbeeldingen konden niet worden verwijderd.",
+    "pastedImagesDeleteFailed_many": "{{count}} geplakte afbeeldingen konden niet worden verwijderd.",
+    "pastedImagesDeleted_few": "{{count}} geplakte afbeeldingen verwijderd.",
+    "pastedImagesDeleted_many": "{{count}} geplakte afbeeldingen verwijderd.",
+    "sharedWorkspaceReadOnly": "U ziet dit ticket omdat het over een apparaat in een gedeelde werkplek gaat. Alleen degene die het heeft gemeld, kan er iets aan toevoegen."
   },
   "conversation": {
     "comments": "Reacties",
@@ -335,6 +391,8 @@
     "deleteUploadedImages": "Afbeeldingen verwijderen",
     "keepUploadedImages": "Afbeeldingen behouden",
     "bundledUpdate": "Gebundelde update",
+    "bundledUpdateFrom": "Gebundelde update van {{number}}",
+    "systemAuthor": "Systeem",
     "clientSuffix": " (Klant)",
     "internalCommentTooltip": "Intern commentaar",
     "resolutionCommentTooltip": "Oplossingscommentaar",
@@ -366,7 +424,13 @@
     "schedule": "Plannen",
     "scheduled": "Gepland",
     "showMore": "Meer tonen",
-    "showLess": "Minder tonen"
+    "showLess": "Minder tonen",
+    "ccBcc": "Cc/Bcc",
+    "cc": "Cc",
+    "bcc": "Bcc",
+    "ccBccInvalid": "Corrigeer de gemarkeerde adressen voordat u verzendt.",
+    "ccBccTooMany": "Er kunnen maximaal {{max}} Cc- en Bcc-ontvangers op één opmerking worden gekopieerd.",
+    "ccBccNotSentOnInternal": "Cc en Bcc worden niet verzonden bij een interne notitie. Zet Intern uit om ze te gebruiken."
   },
   "responseState": {
     "awaitingYourResponse": "Wacht op uw reactie",
@@ -381,14 +445,17 @@
     "notSet": "Niet ingesteld",
     "set": "Reactiestatus instellen",
     "all": "Alle reactiestatussen",
-    "none": "Geen reactiestatus"
+    "none": "Geen reactiestatus",
+    "awaitingClientTooltip": "Wachten op een reactie van de klant",
+    "awaitingInternalTooltip": "De klant heeft gereageerd, wachten op interne actie"
   },
   "origin": {
     "internal": "Intern aangemaakt",
     "clientPortal": "Aangemaakt via Klantenportaal",
     "inboundEmail": "Aangemaakt via inkomende e-mail",
     "api": "Aangemaakt via API",
-    "other": "Aangemaakt via andere bron"
+    "other": "Aangemaakt via andere bron",
+    "recurring": "Aangemaakt door terugkerend schema"
   },
   "responseSource": {
     "clientPortal": "Ontvangen via Klantenportaal",
@@ -430,7 +497,8 @@
       "loading": "Laden...",
       "clientNotFound": "Klant niet gevonden.",
       "clientRendererMissing": "Klantgegevens zijn niet beschikbaar in deze context.",
-      "clientLoadFailed": "Kan klant niet laden."
+      "clientLoadFailed": "Kan klant niet laden.",
+      "contactRendererMissing": "Contactgegevens zijn niet beschikbaar in deze context."
     },
     "filters": {
       "allAssignees": "Alle toegewezen personen",
@@ -468,7 +536,13 @@
       "allMatchingSelected_other": "Alle {{count}} tickets die aan uw filters voldoen zijn geselecteerd.",
       "clear": "Selectie wissen",
       "selectAllMatching_one": "Selecteer alle {{count}} ticket die aan uw filters voldoen",
-      "selectAllMatching_other": "Selecteer alle {{count}} tickets die aan uw filters voldoen"
+      "selectAllMatching_other": "Selecteer alle {{count}} tickets die aan uw filters voldoen",
+      "allMatchingSelected_few": "Alle {{count}} tickets die aan uw filters voldoen zijn geselecteerd.",
+      "allMatchingSelected_many": "Alle {{count}} tickets die aan uw filters voldoen zijn geselecteerd.",
+      "pageSelected_few": "Alle {{count}} tickets op deze pagina zijn geselecteerd.",
+      "pageSelected_many": "Alle {{count}} tickets op deze pagina zijn geselecteerd.",
+      "selectAllMatching_few": "Selecteer alle {{count}} tickets die aan uw filters voldoen",
+      "selectAllMatching_many": "Selecteer alle {{count}} tickets die aan uw filters voldoen"
     },
     "spacing": {
       "compact": "Compact",
@@ -508,7 +582,13 @@
       },
       "selectedAction": "Geselecteerde afdrukken ({{count}})",
       "selectedTitle": "Geselecteerde tickets ({{count}})",
-      "subtitle": "{{count}} tickets"
+      "subtitle": "{{count}} tickets",
+      "selectedAction_few": "Geselecteerde afdrukken ({{count}})",
+      "selectedAction_many": "Geselecteerde afdrukken ({{count}})",
+      "selectedTitle_few": "Geselecteerde tickets ({{count}})",
+      "selectedTitle_many": "Geselecteerde tickets ({{count}})",
+      "subtitle_few": "{{count}} tickets",
+      "subtitle_many": "{{count}} tickets"
     },
     "exportSelectedAction": "Geselecteerde exporteren ({{count}})",
     "exportAction": "CSV exporteren",
@@ -536,7 +616,15 @@
       "saveFailed": "Opslaan van de standaardweergave is mislukt",
       "reset": "Terugzetten naar de tenantstandaard",
       "resetFailed": "Terugzetten van de weergave is mislukt"
-    }
+    },
+    "allMatchingSelected_few": "Alle {{count}} tickets die aan uw filters voldoen zijn geselecteerd.",
+    "allMatchingSelected_many": "Alle {{count}} tickets die aan uw filters voldoen zijn geselecteerd.",
+    "allPageSelected_few": "Alle {{count}} tickets op deze pagina zijn geselecteerd.",
+    "allPageSelected_many": "Alle {{count}} tickets op deze pagina zijn geselecteerd.",
+    "exportSelectedTooltip_few": "Exporteer {{count}} geselecteerde tickets naar CSV",
+    "exportSelectedTooltip_many": "Exporteer {{count}} geselecteerde tickets naar CSV",
+    "selectAllMatching_few": "Selecteer alle {{count}} tickets die aan uw filters voldoen",
+    "selectAllMatching_many": "Selecteer alle {{count}} tickets die aan uw filters voldoen"
   },
   "bulk": {
     "bundleTickets": "Tickets bundelen",
@@ -571,7 +659,7 @@
     "bundleMasterLabel": "Hoofdticket selecteren",
     "bundleMasterPlaceholder": "Hoofdticket selecteren...",
     "bundleSyncUpdates": "Wijzigingen synchroniseren van hoofd- naar onderliggende tickets (openbare reacties + workflowwijzigingen)",
-    "bundleSyncUpdatesHelp": "Onderliggende tickets behouden hun huidige status wanneer ze worden gebundeld. Workflowvelden zijn standaard vergrendeld op onderliggende tickets. Interne notities blijven op het hoofdticket.",
+    "bundleSyncUpdatesHelp": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. Daarna sluit of heropent het sluiten of heropenen van de master alle kindtickets, en wijzigingen van status, toegewezene en prioriteit op de master worden op de kinderen toegepast. Workflowvelden zijn vergrendeld op kinderen. Interne notities blijven op de master.",
     "bundleSelectAtLeastTwo": "Selecteer ten minste twee tickets om te bundelen.",
     "bundleSelectMaster": "Selecteer een hoofdticket.",
     "bundleSuccess": "Tickets gebundeld",
@@ -602,7 +690,11 @@
       "partialFailure": "Sommige tickets konden niet worden verplaatst",
       "failure": "Verplaatsen van geselecteerde tickets is mislukt",
       "confirm": "{{count}} tickets verplaatsen",
-      "success": "{{count}} tickets verplaatst"
+      "success": "{{count}} tickets verplaatst",
+      "confirm_few": "Verplaats {{count}} tickets",
+      "confirm_many": "Verplaats {{count}} tickets",
+      "success_few": "{{count}} tickets verplaatst",
+      "success_many": "{{count}} tickets verplaatst"
     },
     "delete": {
       "dialogTitle": "Geselecteerde tickets verwijderen",
@@ -619,7 +711,13 @@
       "partialFailure": "Sommige tickets konden niet worden verwijderd",
       "failure": "Verwijderen van geselecteerde tickets is mislukt",
       "confirm": "Weet u zeker dat u deze {{count}} tickets wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
-      "success": "{{count}} tickets verwijderd"
+      "success": "{{count}} tickets verwijderd",
+      "button_few": "Verwijder {{count}} tickets",
+      "button_many": "Verwijder {{count}} tickets",
+      "confirm_few": "Weet u zeker dat u deze {{count}} tickets wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "confirm_many": "Weet u zeker dat u deze {{count}} tickets wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "success_few": "{{count}} tickets verwijderd",
+      "success_many": "{{count}} tickets verwijderd"
     },
     "bundle": {
       "dialogTitle": "Tickets bundelen",
@@ -634,12 +732,30 @@
       "masterTicket": "Hoofdticket selecteren",
       "selectMasterTicket": "Hoofdticket selecteren...",
       "syncUpdates": "Wijzigingen synchroniseren van hoofd- naar onderliggende tickets (openbare reacties + workflowwijzigingen)",
-      "syncUpdatesHelp": "Onderliggende tickets behouden hun huidige status wanneer ze worden gebundeld. Workflowvelden zijn standaard vergrendeld op onderliggende tickets. Interne notities blijven op het hoofdticket.",
+      "syncUpdatesHelp": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. Daarna sluit of heropent het sluiten of heropenen van de master alle kindtickets, en wijzigingen van status, toegewezene en prioriteit op de master worden op de kinderen toegepast. Workflowvelden zijn vergrendeld op kinderen. Interne notities blijven op de master.",
       "childrenDescription": "Onderliggende behouden hun huidige status; workflowvelden zijn vergrendeld op onderliggende tickets. Inkomende reacties op onderliggende tickets worden hieronder als alleen-lezen weergegeven.",
       "checkingMasters": "Bestaande bundels controleren...",
       "existingMasterSuffix": "(bestaand hoofdticket)",
       "existingMasterLocked": "Eén geselecteerd ticket is al een hoofdticket. Dit wordt als hoofdticket gebruikt; de andere worden als onderliggende tickets toegevoegd.",
-      "multipleExistingMasters": "Meerdere geselecteerde tickets zijn al hoofdtickets ({{count}}). Ontkoppel alle op één na voordat u bundelt."
+      "multipleExistingMasters": "Meerdere geselecteerde tickets zijn al hoofdtickets ({{count}}). Ontkoppel alle op één na voordat u bundelt.",
+      "propagationSummary": "{{masters}} geselecteerde ticket(s) zijn masters in synchronisatiemodus; deze wijziging sluit/heropent {{children}} kindticket(s).",
+      "masterSummary": "{{children}} kindticket(s)",
+      "applyToChildren": "Toepassen op kinderen",
+      "mastersOnly": "Alleen masters",
+      "membersLabel": "Tickets in deze bundel",
+      "addTicketSearchPlaceholder": "Zoek tickets op nummer of titel",
+      "addTicketEmpty": "Zoek tickets om toe te voegen",
+      "badgeAdded": "Toegevoegd",
+      "badgeInBundle": "In bundel #{{number}}",
+      "badgeMaster": "Bundelhoofdticket",
+      "masterTag": "Hoofdticket",
+      "removeMember": "Verwijderen",
+      "needMoreTickets": "Voeg minstens één ticket toe aan de bundel.",
+      "unresolvedSelectedTickets_one": "Kon {{count}} geselecteerd ticket niet laden.",
+      "unresolvedSelectedTickets_other": "Kon {{count}} geselecteerde tickets niet laden.",
+      "badgeClosed": "Gesloten",
+      "unresolvedSelectedTickets_few": "Kon {{count}} geselecteerde tickets niet laden.",
+      "unresolvedSelectedTickets_many": "Kon {{count}} geselecteerde tickets niet laden."
     },
     "auth": {
       "moveRequired": "U moet zijn ingelogd om tickets te verplaatsen",
@@ -665,7 +781,10 @@
       "dueDate": "Vervaldatum",
       "statusDisabledMultiBoard": "Geselecteerde tickets staan op verschillende borden",
       "statusResolvingBoards": "Borden van geselecteerde tickets controleren…",
-      "more": "Meer"
+      "more": "Meer",
+      "bundleNeedsOne": "Selecteer minstens 1 ticket om te bundelen",
+      "selectedCount_few": "{{count}} geselecteerd",
+      "selectedCount_many": "{{count}} geselecteerd"
     },
     "assign": {
       "dialogTitle": "Geselecteerde tickets toewijzen",
@@ -679,7 +798,11 @@
       "success_other": "{{count}} tickets toegewezen",
       "partialFailure": "Sommige tickets konden niet worden toegewezen",
       "failure": "Toewijzen van geselecteerde tickets is mislukt",
-      "failedHeading": "De volgende tickets konden niet worden toegewezen:"
+      "failedHeading": "De volgende tickets konden niet worden toegewezen:",
+      "confirm_few": "{{count}} tickets toewijzen",
+      "confirm_many": "{{count}} tickets toewijzen",
+      "success_few": "{{count}} tickets toegewezen",
+      "success_many": "{{count}} tickets toegewezen"
     },
     "tags": {
       "dialogTitle": "Tags toevoegen aan geselecteerde tickets",
@@ -692,7 +815,11 @@
       "success_other": "Tags toegevoegd aan {{count}} tickets",
       "partialFailure": "Tags konden niet bij alle tickets worden toegevoegd",
       "failure": "Toevoegen van tags is mislukt",
-      "failedHeading": "Tags konden niet worden toegevoegd aan de volgende tickets:"
+      "failedHeading": "Tags konden niet worden toegevoegd aan de volgende tickets:",
+      "confirm_few": "Tags toevoegen aan {{count}} tickets",
+      "confirm_many": "Tags toevoegen aan {{count}} tickets",
+      "success_few": "Tags toegevoegd aan {{count}} tickets",
+      "success_many": "Tags toegevoegd aan {{count}} tickets"
     },
     "dueDate": {
       "dialogTitle": "Vervaldatum instellen voor geselecteerde tickets",
@@ -707,7 +834,11 @@
       "success_other": "Vervaldatum bijgewerkt op {{count}} tickets",
       "partialFailure": "Vervaldatum kon niet bij alle tickets worden bijgewerkt",
       "failure": "Bijwerken van vervaldatum is mislukt",
-      "failedHeading": "Vervaldatum kon niet worden bijgewerkt bij de volgende tickets:"
+      "failedHeading": "Vervaldatum kon niet worden bijgewerkt bij de volgende tickets:",
+      "confirm_few": "{{count}} tickets bijwerken",
+      "confirm_many": "{{count}} tickets bijwerken",
+      "success_few": "Vervaldatum bijgewerkt op {{count}} tickets",
+      "success_many": "Vervaldatum bijgewerkt op {{count}} tickets"
     },
     "status": {
       "dialogTitle": "Status wijzigen voor geselecteerde tickets",
@@ -721,7 +852,16 @@
       "success_other": "Status bijgewerkt op {{count}} tickets",
       "partialFailure": "Status kon niet bij alle tickets worden bijgewerkt",
       "failure": "Bijwerken van status is mislukt",
-      "failedHeading": "Status kon niet worden bijgewerkt bij de volgende tickets:"
+      "failedHeading": "Status kon niet worden bijgewerkt bij de volgende tickets:",
+      "resolutionLabel": "Oplossingscommentaar (optioneel)",
+      "resolutionLabelRequired": "Oplossingscommentaar",
+      "resolutionRequiredHint": "Dit bord vereist een oplossingscommentaar voordat tickets kunnen worden gesloten.",
+      "resolutionPlaceholder": "Beschrijf hoe deze tickets zijn opgelost",
+      "resolutionHelper": "Wordt opgeslagen als de oplossing op elk geselecteerd ticket en voldoet aan borden die er een vereisen voordat ze sluiten.",
+      "confirm_few": "{{count}} tickets bijwerken",
+      "confirm_many": "{{count}} tickets bijwerken",
+      "success_few": "Status bijgewerkt op {{count}} tickets",
+      "success_many": "Status bijgewerkt op {{count}} tickets"
     },
     "priority": {
       "dialogTitle": "Prioriteit wijzigen voor geselecteerde tickets",
@@ -734,8 +874,24 @@
       "success_other": "Prioriteit bijgewerkt op {{count}} tickets",
       "partialFailure": "Prioriteit kon niet bij alle tickets worden bijgewerkt",
       "failure": "Bijwerken van prioriteit is mislukt",
-      "failedHeading": "Prioriteit kon niet worden bijgewerkt bij de volgende tickets:"
-    }
+      "failedHeading": "Prioriteit kon niet worden bijgewerkt bij de volgende tickets:",
+      "confirm_few": "{{count}} tickets bijwerken",
+      "confirm_many": "{{count}} tickets bijwerken",
+      "success_few": "Prioriteit bijgewerkt op {{count}} tickets",
+      "success_many": "Prioriteit bijgewerkt op {{count}} tickets"
+    },
+    "deleteConfirm_few": "Verwijder {{count}} tickets",
+    "deleteConfirm_many": "Verwijder {{count}} tickets",
+    "deleteDialogDescription_few": "Weet u zeker dat u deze {{count}} tickets wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+    "deleteDialogDescription_many": "Weet u zeker dat u deze {{count}} tickets wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+    "deleteSuccess_few": "{{count}} tickets verwijderd",
+    "deleteSuccess_many": "{{count}} tickets verwijderd",
+    "exportSelectedTooltip_few": "Exporteer {{count}} geselecteerde tickets naar CSV",
+    "exportSelectedTooltip_many": "Exporteer {{count}} geselecteerde tickets naar CSV",
+    "moveConfirm_few": "Verplaats {{count}} tickets",
+    "moveConfirm_many": "Verplaats {{count}} tickets",
+    "moveSuccess_few": "{{count}} tickets verplaatst",
+    "moveSuccess_many": "{{count}} tickets verplaatst"
   },
   "quickAdd": {
     "dialogTitle": "Ticket toevoegen",
@@ -791,7 +947,28 @@
     "clipboardUploadPartialFailure": "Ticket aangemaakt, maar geplakte afbeeldingen konden niet aan de beschrijving worden gekoppeld.",
     "teamAssignmentPartialFailure": "Ticket aangemaakt, maar teamtoewijzing is mislukt",
     "tagCreatePartialFailure_one": "{{count}} tag kon niet worden aangemaakt",
-    "tagCreatePartialFailure_other": "{{count}} tags konden niet worden aangemaakt"
+    "tagCreatePartialFailure_other": "{{count}} tags konden niet worden aangemaakt",
+    "duplicateDialogTitle": "Ticket #{{number}} dupliceren",
+    "duplicatingPill": "#{{number}} wordt gedupliceerd",
+    "duplicateLoadFailed": "Het te dupliceren ticket kon niet worden geladen. Probeer het opnieuw.",
+    "duplicateChecklistHeading": "Checklist van #{{number}}",
+    "duplicateChecklistRequired": "(verplicht)",
+    "duplicateCopyChecklist": "Checklistitems kopiëren (niet afgevinkt)",
+    "duplicateCustomFieldsNote": "Waarden van aangepaste velden worden gekopieerd van #{{number}}.",
+    "templateLabel": "Sjabloon",
+    "templateNone": "Geen",
+    "templateLoadFailed": "Het sjabloon kon niet worden geladen. Probeer het opnieuw.",
+    "fromTemplatePill": "Uit sjabloon: {{name}}",
+    "templateChecklistHeading": "Checklist uit sjabloon: {{name}}",
+    "templateCustomFieldsNote": "Waarden van aangepaste velden worden overgenomen uit het sjabloon.",
+    "templateReplaceTitle": "Uw wijzigingen vervangen?",
+    "templateReplaceMessage": "Het toepassen van een sjabloon vervangt de titel, beschrijving en andere velden die u hebt ingevuld.",
+    "templateReplaceConfirm": "Sjabloon toepassen",
+    "templateTokenHint": "De titel vult de gekozen klant, contactpersoon en vervaldatum in, totdat u hem bewerkt.",
+    "tagCreatePartialFailure_few": "{{count}} tags konden niet worden aangemaakt",
+    "tagCreatePartialFailure_many": "{{count}} tags konden niet worden aangemaakt",
+    "tagCreationFailed_few": "{{count}} tags konden niet worden aangemaakt",
+    "tagCreationFailed_many": "{{count}} tags konden niet worden aangemaakt"
   },
   "itil": {
     "calculatedPriority": "Prioriteit (berekend)",
@@ -916,7 +1093,7 @@
     "noContact": "Geen contact",
     "closeTicketTitle": "Ticket sluiten",
     "resolveAndClose": "Oplossen en sluiten",
-    "closeTicketResolutionPrompt": "Kies een afsluitstatus en voeg een oplossing voor dit ticket toe.",
+    "closeTicketResolutionPrompt": "Kies een afsluitstatus. Voeg een oplossing toe of laat het veld leeg om zonder oplossing af te sluiten.",
     "selectCloseStatus": "Selecteer een afsluitstatus",
     "cannotCloseYet": "Dit ticket kan nog niet worden gesloten",
     "closeRulesIntro": "De sluitregels van het bord vereisen het volgende voordat dit ticket kan worden gesloten:",
@@ -925,28 +1102,27 @@
     "closeReasonPlaceholder": "Reden om toch te sluiten (optioneel, vastgelegd in het auditlogboek)",
     "closing": "Sluiten…",
     "closeAnyway": "Toch sluiten",
-    "timerActiveElsewhereTitle": "Timer actief op een andere plek",
-    "timerTakeoverMessage": "De timer van dit ticket is actief in een ander venster. Wilt u deze overnemen en hier vervangen?",
-    "replaceHere": "Hier vervangen",
+    "markResolutionInternal": "Markeren als intern",
+    "markResolutionInternalHelper": "Een interne oplossing verschijnt niet in het klantenportaal en wordt niet opgenomen in de afsluit-e-mail.",
+    "closeTicketNowTitle": "Ticket nu sluiten?",
+    "closeTicketNowPrompt": "Deze opmerking is nu de oplossing. Kies een afsluitstatus om het ticket te sluiten, of laat het open.",
+    "leaveTicketOpen": "Open laten",
     "noActiveTimePeriodTitle": "Geen actieve periode",
     "noActiveTimePeriodMessage": "Geen actieve periode gevonden. Perioden moeten in het facturatiedashboard worden ingesteld voordat u tijd kunt invoeren.",
     "goToTimePeriodsSetup": "Naar instellingen voor periodes",
     "emailNotificationLogs": "Logboek e-mailmeldingen",
     "ticketActivity": "Ticketactiviteit",
     "discardChanges": "Wijzigingen verwerpen",
-    "saved": "Opgeslagen"
+    "saved": "Opgeslagen",
+    "changeContactTitle": "Ticketcontact wijzigen?",
+    "removeContactTitle": "Ticketcontact verwijderen?",
+    "changeContactPrompt": "De contactpersoon, de toegewezen medewerker en de volgers worden over deze wijziging geïnformeerd, tenzij u hun meldingen uitschakelt.",
+    "changeContact": "Contact wijzigen",
+    "removeContact": "Contact verwijderen"
   },
   "properties": {
     "timeEntry": "Tijdregistratie",
-    "ticketTimer": "Tickettimer - #{{ticketNumber}}",
-    "timerActiveElsewhere": "Timer actief in een ander venster",
-    "start": "Starten",
-    "pause": "Pauzeren",
-    "reset": "Resetten",
-    "enterWorkDescription": "Werkbeschrijving invoeren",
-    "liveTimerDisabled": "Live ticket-timer is uitgeschakeld voor dit bord.",
     "addTimeEntry": "Tijdregistratie toevoegen",
-    "trackedIntervals": "Bijgehouden intervallen",
     "contactInfo": "Contactinformatie",
     "noContactSelected": "Geen contact geselecteerd",
     "selectOrChangeContact": "Contact selecteren of wijzigen",
@@ -1067,7 +1243,23 @@
       "selectParentCategory": "Selecteer bovenliggende categorie",
       "parentHelpWithBoard": "Selecteer een bovenliggende categorie om een subcategorie te maken, of laat leeg voor het hoogste niveau",
       "parentHelpWithoutBoard": "Selecteer eerst een bord of kies een bovenliggende categorie om het bord daarvan over te nemen",
-      "creating": "Bezig met aanmaken..."
+      "creating": "Bezig met aanmaken...",
+      "copyToBoard": "Categorieën naar een ander bord kopiëren",
+      "copyTitle": "Categorieën naar een ander bord kopiëren",
+      "copySourceLabel": "Selecteer bronbord",
+      "copyTargetLabel": "Selecteer doelbord",
+      "copySelected": "Geselecteerde kopiëren",
+      "copySuccess": "{{created}} categorieën gekopieerd; {{skipped}} bestaande categorieën overgeslagen.",
+      "copyFailed": "Categorieën kopiëren mislukt",
+      "copyEmpty": "Geen categorieën op dit bord.",
+      "copying": "Kopiëren…",
+      "copySourceBoard": "Selecteer bronbord",
+      "copyTargetBoard": "Selecteer doelbord",
+      "copyBoardTypeMismatch": "Ticketcategorieën kunnen alleen worden gekopieerd tussen borden met hetzelfde categorietype.",
+      "copyConflicts_one": "{{count}} overgeslagen categorie heeft een andere bovenliggende categorie op het doelbord.",
+      "copyConflicts_other": "{{count}} overgeslagen categorieën hebben een andere bovenliggende categorie op het doelbord.",
+      "copyConflicts_few": "{{count}} overgeslagen categorieën hebben een andere bovenliggende categorie op het doelbord.",
+      "copyConflicts_many": "{{count}} overgeslagen categorieën hebben een andere bovenliggende categorie op het doelbord."
     },
     "display": {
       "responseStateTrackingTitle": "Reactiestatusbewaking",
@@ -1076,7 +1268,8 @@
       "responseStateTrackingDisabled": "Reactiestatusbewaking uitgeschakeld",
       "title": "Ticketweergavevoorkeuren",
       "description": "Configureer hoe het ticketdashboard kolommen en tijdstempels voor uw team weergeeft.",
-      "dateTimeFormat": "Datum/tijd-notatie",
+      "showWeekday": "Weekdag in tijdstempels tonen",
+      "countryDrivesFormat": "De datum- en tijdnotatie volgt het land van uw bedrijf. Stel dit in bij Instellingen → Algemeen.",
       "ticketListColumns": "Kolommen ticketlijst",
       "showTags": "Tags tonen",
       "displayUnderTitle": "Onder titel weergeven",
@@ -1144,7 +1337,23 @@
     "appliedFiltersSummary": "(van {{count}} ticket dat aan de toegepaste filters voldoet)",
     "completeMessage": "{{count}} ticket succesvol geëxporteerd naar CSV.",
     "confirm": "{{count}} ticket exporteren",
-    "selectedTicketsSummary": "{{count}} geselecteerd ticket wordt geëxporteerd"
+    "selectedTicketsSummary": "{{count}} geselecteerd ticket wordt geëxporteerd",
+    "appliedFiltersSummary_few": "(van {{count}} tickets die aan de toegepaste filters voldoen)",
+    "appliedFiltersSummary_many": "(van {{count}} tickets die aan de toegepaste filters voldoen)",
+    "completeDescription_few": "{{count}} tickets succesvol geëxporteerd naar CSV.",
+    "completeDescription_many": "{{count}} tickets succesvol geëxporteerd naar CSV.",
+    "completeMessage_few": "{{count}} tickets succesvol geëxporteerd naar CSV.",
+    "completeMessage_many": "{{count}} tickets succesvol geëxporteerd naar CSV.",
+    "confirm_few": "Exporteer {{count}} tickets",
+    "confirm_many": "Exporteer {{count}} tickets",
+    "selectedFields_few": "{{count}} van {{total}} velden geselecteerd",
+    "selectedFields_many": "{{count}} van {{total}} velden geselecteerd",
+    "selectedTicketsSummary_few": "Bezig met exporteren van {{count}} geselecteerde tickets",
+    "selectedTicketsSummary_many": "Bezig met exporteren van {{count}} geselecteerde tickets",
+    "summaryMatching_few": "(van {{total}} tickets die aan de toegepaste filters voldoen)",
+    "summaryMatching_many": "(van {{total}} tickets die aan de toegepaste filters voldoen)",
+    "summary_few": "Bezig met exporteren van {{selected}} geselecteerde tickets",
+    "summary_many": "Bezig met exporteren van {{selected}} geselecteerde tickets"
   },
   "materials": {
     "title": "Materialen",
@@ -1267,7 +1476,15 @@
     "excludingCount_other": "exclusief {{count}} categorieën",
     "excludingPrefix": "exclusief {{name}}",
     "excludingCount": "exclusief {{count}} categorie",
-    "selectedCount": "{{count}} categorieën"
+    "selectedCount": "{{count}} categorieën",
+    "categoriesCount_few": "{{count}} categorieën",
+    "categoriesCount_many": "{{count}} categorieën",
+    "excludingCategoriesCount_few": "exclusief {{count}} categorieën",
+    "excludingCategoriesCount_many": "exclusief {{count}} categorieën",
+    "excludingCount_few": "exclusief {{count}} categorieën",
+    "excludingCount_many": "exclusief {{count}} categorieën",
+    "selectedCount_few": "{{count}} categorieën",
+    "selectedCount_many": "{{count}} categorieën"
   },
   "navigation": {
     "previousTicket": "Vorige ticket",
@@ -1374,7 +1591,13 @@
       "alreadyBundled": "Ticket is al gebundeld: {{ticket}}",
       "masterAsChild": "Het hoofdticket kan niet ook een onderliggend ticket zijn.",
       "noChildren": "Geen onderliggende tickets opgegeven.",
-      "childrenOnBundledChild": "Er kunnen geen onderliggende tickets worden toegevoegd aan een gebundeld onderliggend ticket."
+      "childrenOnBundledChild": "Er kunnen geen onderliggende tickets worden toegevoegd aan een gebundeld onderliggend ticket.",
+      "concurrent": "Een of meer geselecteerde tickets zijn gelijktijdig gebundeld. Vernieuw de pagina en probeer het opnieuw.",
+      "closedMasterChoiceRequired": "Het hoofdticket van deze bundel is gesloten. Kies hoe het onderliggende ticket wordt toegevoegd: {{choices}}.",
+      "closedMasterChoiceNotAllowed": "Die keuze is niet toegestaan voor dit hoofdticket. Kies een van de volgende opties: {{choices}}.",
+      "choiceOnOpenMaster": "Die keuze geldt alleen wanneer het hoofdticket van de bundel gesloten is.",
+      "closeRuleFailed": "Dit ticket kan nog niet worden gesloten: {{reason}}",
+      "reopenUnavailable": "Het hoofdticket kan niet worden heropend omdat er geen open ticketstatus is geconfigureerd."
     },
     "ticket": {
       "validationDetails": "Corrigeer de ticketgegevens: {{details}}",
@@ -1440,7 +1663,14 @@
       "missingField": "Er ontbreekt een verplicht checklistveld.",
       "missingFieldNamed": "Er ontbreekt een verplicht checklistveld: {{field}}.",
       "referenceInvalid": "Het geselecteerde ticket, de checklistsjabloon of het regelfilter is niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
-      "invalidValue": "Een van de checklistwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw."
+      "invalidValue": "Een van de checklistwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "ruleCategoryBoardMismatch": "De geselecteerde categorie hoort bij een ander bord dan de regel.",
+      "ruleCategoryInvalid": "De geselecteerde categorie is geen categorie op het hoogste niveau.",
+      "ruleSubcategoryInvalid": "De geselecteerde subcategorie hoort niet bij de geselecteerde categorie.",
+      "ruleSubcategoryRequiresCategory": "Selecteer een categorie voordat u een subcategorie kiest.",
+      "ruleTooManyKeywords": "Gebruik maximaal {{max}} trefwoorden per regel.",
+      "ruleKeywordTooLong": "Elk trefwoord mag maximaal {{max}} tekens bevatten.",
+      "ruleOriginInvalid": "Een van de geselecteerde ticketbronnen is ongeldig."
     }
   },
   "ticketSection": {
@@ -1469,7 +1699,7 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Onderliggende tickets gebundeld in dit hoofdticket",
+      "childrenDescription": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. Daarna sluit of heropent het sluiten of heropenen van de master alle kindtickets, en wijzigingen van status, toegewezene en prioriteit op de master worden op de kinderen toegepast. Workflowvelden zijn vergrendeld op kinderen. Interne notities blijven op de master.",
       "title": "Bundel",
       "masterBanner": "Dit ticket is het hoofdticket van een bundel ({{count}} onderliggende tickets). Modus: {{mode}}.",
       "multipleClients": "Meerdere klanten",
@@ -1481,10 +1711,38 @@
       "remove": "Verwijderen",
       "noChildren": "Geen onderliggende tickets in deze bundel.",
       "addChildMultiClientMessage": "Hiermee wordt {{ticket}} van een andere klant aan de bundel toegevoegd. Bevestig dat u wilt doorgaan.",
-      "thisTicket": "dit ticket"
+      "thisTicket": "dit ticket",
+      "propagation": {
+        "closeTitle": "Ook {{count}} kindtickets sluiten?",
+        "reopenTitle": "Ook {{count}} kindtickets heropenen?",
+        "closeBody": "Deze master staat in synchronisatiemodus. Sluiten sluit ook de {{count}} hieronder vermelde open kindtickets.",
+        "reopenBody": "Deze master staat in synchronisatiemodus. Heropenen heropent de {{count}} kindtickets die hij heeft gesloten. Onafhankelijk gesloten kinderen blijven gesloten.",
+        "stayClosedHeading": "Blijven gesloten (onafhankelijk gesloten)",
+        "boardRulesNote": "Sluitregels van het bord worden niet gecontroleerd op kinderen.",
+        "closeConfirm": "Master en {{count}} kinderen sluiten",
+        "reopenConfirm": "Master en {{count}} kinderen heropenen",
+        "masterOnlyClose": "Alleen master sluiten",
+        "masterOnlyReopen": "Alleen master heropenen"
+      },
+      "openChildrenBadge": "{{count}} open onderliggende tickets",
+      "openChildrenBadgeShort": "{{count}} open",
+      "childOpenStatus": "Open",
+      "childClosedStatus": "Gesloten",
+      "closedMasterDialogTitle": "Het hoofdticket van deze bundel is gesloten",
+      "closedMasterDialogIntro": "Het hoofdticket is gesloten. Kies wat er met het onderliggende ticket moet gebeuren wanneer het wordt toegevoegd.",
+      "keepClosedLabel": "Toevoegen en hoofdticket gesloten houden",
+      "keepClosedHelp": "Het onderliggende ticket blijft open met een eigen SLA-klok. De bundel wordt als inconsistent weergegeven totdat het onderliggende ticket is opgelost.",
+      "applyResolutionLabel": "Toevoegen en de oplossing van het hoofdticket op dit onderliggende ticket toepassen",
+      "applyResolutionHelp": "Sluit het onderliggende ticket met status {{status}} en plaatst de oplossing van het hoofdticket als openbare opmerking bij het onderliggende ticket.",
+      "applyResolutionHelpNoComment": "Sluit het onderliggende ticket met status {{status}}. Het hoofdticket heeft geen openbare oplossingsopmerking om te plaatsen.",
+      "reopenMasterLabel": "Toevoegen en hoofdticket heropenen",
+      "reopenMasterHelp": "Heropent alleen het hoofdticket. Al gesloten onderliggende tickets in deze bundel blijven gesloten; heropeningsmeldingen en SLA gelden voor het hoofdticket.",
+      "closedMasterGating": "De sluitregels van het bord staan geen open onderliggende tickets onder een gesloten hoofdticket toe, dus het hoofdticket gesloten houden is geen optie."
     },
     "autoClose": "Wordt automatisch gesloten op {{date}}, tenzij er nieuwe activiteit is.",
-    "autoCloseWarned": "De klant is gewaarschuwd."
+    "autoCloseWarned": "De klant is gewaarschuwd.",
+    "duplicatedFrom": "Gedupliceerd van #{{number}}",
+    "fromTemplate": "Uit sjabloon: {{name}}"
   },
   "invalidTicketData": "Ongeldige ticketgegevens",
   "timeEntries": {
@@ -1509,6 +1767,8 @@
     "deleteConfirmTitle": "Tijdsregistratie verwijderen?",
     "deleteConfirmMessage": "De tijdsregistratie wordt permanent verwijderd. Deze actie kan niet ongedaan worden gemaakt.",
     "deleteConfirmAction": "Verwijderen",
+    "billable": "Factureerbaar",
+    "nonBillable": "Niet-factureerbaar",
     "duration": {
       "hr": "uur",
       "hrs": "uur",
@@ -1519,7 +1779,9 @@
     "editing": {
       "single": "{{name}} is aan het bewerken",
       "multiple_one": "{{name}} en {{count}} andere persoon zijn aan het bewerken",
-      "multiple_other": "{{name}} en {{count}} andere personen zijn aan het bewerken"
+      "multiple_other": "{{name}} en {{count}} andere personen zijn aan het bewerken",
+      "multiple_few": "{{name}} en {{count}} andere personen zijn aan het bewerken",
+      "multiple_many": "{{name}} en {{count}} andere personen zijn aan het bewerken"
     },
     "remoteFieldUpdated": "{{name}} heeft {{field}} bijgewerkt",
     "connection": {
@@ -1547,7 +1809,11 @@
     "selectedCount": "{{count}} borden",
     "statusActive": "Actief",
     "statusAll": "Alle",
-    "statusInactive": "Inactief"
+    "statusInactive": "Inactief",
+    "excludingCount_few": "met uitzondering van {{count}} borden",
+    "excludingCount_many": "met uitzondering van {{count}} borden",
+    "selectedCount_few": "{{count}} borden",
+    "selectedCount_many": "{{count}} borden"
   },
   "checklist": {
     "addFailed": "Kan checklistitem niet toevoegen",
@@ -1603,7 +1869,8 @@
       "additionalAgentsTooltip": "Extra medewerkers:",
       "unknownAgent": "Onbekende medewerker",
       "category": "Categorie",
-      "selectDestinationStatus": "Selecteer een status voor het nieuwe bord voordat u opslaat."
+      "selectDestinationStatus": "Selecteer een status voor het nieuwe bord voordat u opslaat.",
+      "viewSchedule": "Agenda bekijken"
     },
     "layout": {
       "grid": "Raster",
@@ -1631,15 +1898,12 @@
       "showLess": "Minder weergeven",
       "contact": "Contact",
       "client": "Klant",
-      "nextVisit": "Volgend bezoek",
       "callsAndEmails": "Gesprekken en e-mails",
       "call": "Bellen",
       "viewAll": "Alles weergeven",
       "viewAllCount": "Alle {{count}} weergeven",
       "timeLogged": "Geregistreerde tijd",
-      "workDescription": "Werkomschrijving",
       "addTimeEntry": "Tijdregistratie toevoegen",
-      "trackedIntervals": "Bijgehouden intervallen",
       "teamAndWatchers": "Team en volgers",
       "addAgent": "Medewerker toevoegen…",
       "timeline": "Tijdlijn",
@@ -1650,14 +1914,12 @@
       "opened": "Geopend",
       "viaSource": "via {{source}}",
       "noContactOnTicket": "Geen contact op dit ticket",
-      "whatAreYouWorkingOn": "Waaraan werkt u?",
       "agentFallback": "Medewerker",
       "removeAgent": "{{name}} verwijderen",
       "noAdditionalAgents": "Geen extra medewerkers",
       "billing": "Facturatie",
       "couldNotLoad": "Kan deze tegel niet laden",
       "nothingScheduled": "Niets gepland",
-      "scheduleVisit": "Een bezoek plannen",
       "scheduledWork": "Gepland werk",
       "scheduleDone": "voltooid",
       "noCallsOrEmails": "Geen gesprekken of e-mails geregistreerd",
@@ -1678,8 +1940,6 @@
       "acrossEntries_one": "over {{count}} registratie",
       "acrossEntries_other": "over {{count}} registraties",
       "team": "Team",
-      "startTimer": "Timer starten",
-      "timerLockedHint": "Er loopt al een andere timer",
       "billable": "Factureerbaar",
       "nothingBillable": "Nog niets factureerbaar",
       "editContact": "Contact bewerken",
@@ -1703,7 +1963,12 @@
         "approved": "Goedgekeurd",
         "declined": "Afgewezen",
         "cancelled": "Geannuleerd"
-      }
+      },
+      "scheduleTime": "Tijd inplannen",
+      "openScheduleEntry": "Agenda-item openen",
+      "acrossEntries_few": "over {{count}} registraties",
+      "acrossEntries_many": "over {{count}} registraties",
+      "changeLocation": "Locatie wijzigen"
     },
     "timeline": {
       "subtitle": "Reacties, tijd en systeemwijzigingen op één plek",
@@ -1717,7 +1982,6 @@
       "replyTo": "Beantwoorden aan {{name}}",
       "writeReply": "Schrijf een reactie",
       "modeInternal": "Intern",
-      "modeResolution": "Oplossing",
       "sending": "Verzenden…",
       "send": "Verzenden",
       "systemActor": "Systeem",
@@ -1726,6 +1990,11 @@
       "fieldChanged": "{{actor}} heeft {{field}} gewijzigd: {{from}} → {{to}}",
       "fieldSet": "{{field}} ingesteld op {{to}}",
       "actorEvent": "{{actor}} · {{eventName}}",
+      "bundleStatusNotPropagated": "{{actor}} heeft de masterstatus van de bundel gewijzigd (kindtickets niet bijgewerkt)",
+      "bundleStatusClosed": "{{actor}} heeft de bundelmaster en {{count}} kindtickets gesloten",
+      "bundleStatusReopened": "{{actor}} heeft de bundelmaster en {{count}} kindtickets heropend",
+      "duplicatedFrom": "{{actor}} heeft dit ticket aangemaakt als duplicaat van #{{number}}",
+      "duplicatedTo": "{{actor}} heeft dit ticket gedupliceerd als #{{number}}",
       "title": "Tijdlijn",
       "replyVisibility": "Zichtbaarheid van reactie",
       "modeClient": "Klant",
@@ -1786,13 +2055,15 @@
         "checklist_template_applied": "checklistsjabloon toegepast",
         "close_rules_overridden": "afsluitregels overschreven",
         "close_rules_bypassed": "afsluitregels omzeild",
-        "auto_close_warning_sent": "waarschuwing voor automatisch afsluiten verzonden"
+        "auto_close_warning_sent": "waarschuwing voor automatisch afsluiten verzonden",
+        "bundle_child_added": "onderliggend ticket toegevoegd aan bundel"
       },
       "closeStatus": "Sluitstatus",
       "noStatusChange": "Status niet wijzigen",
       "showAllActivity": "Alle activiteit tonen",
       "collapseActivity": "Oudere activiteit inklappen",
-      "replyingToComment": "Reageren op {{name}}"
+      "replyingToComment": "Reageren op {{name}}",
+      "createdFromTemplate": "{{actor}} heeft dit ticket gemaakt uit sjabloon \"{{name}}\""
     }
   },
   "notifications": {
@@ -1801,6 +2072,553 @@
       "contactHelper": "Slaat de e-mail aan de klant, de enquête-uitnodiging en de klantportaalmelding over",
       "internalLabel": "Ook agenten en volgers niet informeren",
       "internalHelper": "Slaat ook hun e-mails en in-app-meldingen over"
+    }
+  },
+  "externalLinks": {
+    "title": "Externe koppelingen",
+    "empty": "Geen externe koppelingen",
+    "loading": "Externe koppelingen laden...",
+    "noUrl": "Geen URL beschikbaar voor deze referentie",
+    "customSystemOption": "{{label}} (aangepast)",
+    "actions": {
+      "add": "Koppeling toevoegen",
+      "edit": "Bewerken",
+      "remove": "Verwijderen",
+      "cancel": "Annuleren",
+      "save": "Opslaan",
+      "menu": "Koppelingsacties",
+      "openRecord": "Extern record openen"
+    },
+    "relationship": {
+      "origin": "Oorsprong",
+      "mirror": "Spiegel",
+      "reference": "Referentie"
+    },
+    "relationshipDescription": {
+      "origin": "Waar dit ticket begon. Elk ticket kan één oorsprongskoppeling hebben, die de oorsprongsbadge bepaalt.",
+      "mirror": "Een ander record dat hetzelfde werk als dit ticket bijhoudt.",
+      "reference": "Aanvullende informatie voor dit ticket."
+    },
+    "dialog": {
+      "addTitle": "Externe koppeling toevoegen",
+      "editTitle": "Externe koppeling bewerken",
+      "intro": "Een koppeling toevoegen synchroniseert geen gegevens tussen systemen."
+    },
+    "removeDialog": {
+      "title": "Externe koppeling verwijderen",
+      "message": "Deze externe koppeling van het ticket verwijderen?"
+    },
+    "fields": {
+      "system": "Systeem",
+      "loadingSystems": "Systemen laden...",
+      "selectSystem": "Kies een systeem",
+      "externalId": "Externe ID",
+      "externalIdPlaceholder": "bv. 42 of 1234567890",
+      "realm": "Domein",
+      "url": "URL",
+      "urlOptional": "Optionele overschrijving",
+      "urlRequired": "https://...",
+      "relationship": "Relatie",
+      "originExistsHint": "Dit ticket heeft al een oorsprongskoppeling.",
+      "actorGroup": "Persoon of account (optioneel)",
+      "actorHint": "De persoon of het account dat bij het gekoppelde record in het externe systeem hoort.",
+      "actorHandle": "Gebruikersnaam of handle",
+      "actorDisplay": "Weergavenaam",
+      "builtInGroup": "Ingebouwde systemen",
+      "customGroup": "Aangepaste systemen",
+      "urlPreview": "Opent:",
+      "urlPreviewIncomplete": "Vul de velden hierboven in om de link te bekijken."
+    },
+    "errors": {
+      "ticketNotFound": "Ticket niet gevonden",
+      "commentNotFound": "Opmerking niet gevonden op dit ticket",
+      "linkNotFound": "Externe koppeling niet gevonden",
+      "systemNotFound": "Onbekend extern systeem",
+      "externalIdRequired": "Externe ID is vereist",
+      "invalidUrl": "URL moet een geldige http(s)-URL zijn",
+      "invalidRelationship": "Ongeldige relatie",
+      "invalidEntityType": "Ongeldig entiteitstype",
+      "originExists": "Deze entiteit heeft al een oorsprongskoppeling",
+      "duplicateExternalLink": "Dat externe record is al gekoppeld",
+      "systemInUse": "Dit externe systeem wordt gebruikt door bestaande koppelingen",
+      "systemInUseCount": "Dit externe systeem wordt gebruikt door {{count}} koppeling(en)",
+      "invalidSystemKey": "Aangepaste systeemsleutels moeten overeenkomen met custom:<slug>",
+      "systemLabelRequired": "Systeemlabel is vereist",
+      "permissionDenied": "Toegang geweigerd",
+      "systemRequired": "Kies een extern systeem.",
+      "urlRequired": "Voor systemen zonder URL-sjabloon is een URL vereist.",
+      "invalidVisibility": "Alleen ticketlinks kunnen worden gedeeld; zichtbaarheid moet een booleaanse waarde zijn"
+    },
+    "visibility": {
+      "label": "Zichtbaarheid",
+      "internal": "Alleen intern",
+      "shared": "Zichtbaar in het klantenportaal",
+      "help": "Klanten met toegang tot dit ticket kunnen deze link zien. Het delen van de link geeft geen toegang tot het externe systeem."
+    }
+  },
+  "smartSearch": {
+    "run": "Slim zoeken",
+    "runTitle": "Gefilterde tickets beoordelen op deze zoekopdracht",
+    "relevanceColumn": "Overeenkomst",
+    "relevance": "{{percent}}% overeenkomst",
+    "strong": "Sterke matches",
+    "possible": "Mogelijke matches",
+    "unlikely": "Onwaarschijnlijke matches",
+    "emptyBucketRunning": "Nog geen",
+    "emptyBucket": "Geen",
+    "scoring": "{{scored}} van {{total}} tickets beoordeeld",
+    "summary": "{{total}} tickets beoordeeld · {{strong}} sterk · {{possible}} mogelijk",
+    "cancelled": "Zoeken geannuleerd na {{scored}} van {{total}} tickets",
+    "errorTitle": "Slim zoeken gestopt",
+    "starting": "Slim zoeken wordt gestart…",
+    "rerun": "Filters gewijzigd. Opnieuw uitvoeren",
+    "retry": "Opnieuw proberen",
+    "cancel": "Annuleren",
+    "exit": "Terug naar lijst",
+    "notConfigured": "Slim zoeken is niet geconfigureerd op deze server",
+    "failedCount": "{{count}} tickets konden niet worden beoordeeld",
+    "unscored": "Niet beoordeeld",
+    "addOnRequired": "Slim zoeken vereist de AI-assistent-add-on"
+  },
+  "recurring": {
+    "actions": {
+      "done": "Gereed",
+      "cancel": "Annuleren",
+      "saving": "Opslaan…",
+      "save": "Opslaan",
+      "pause": "Pauzeren",
+      "resume": "Hervatten",
+      "archive": "Archiveren"
+    },
+    "clients": {
+      "addTitle": "Klanten toevoegen",
+      "addHelp": "Kies een klant om deze toe te voegen. Het dialoogvenster blijft open, zodat u er meer kunt toevoegen.",
+      "alreadyAdded": "Al toegevoegd",
+      "pickerPlaceholder": "Selecteer een klant om toe te voegen",
+      "addedHeading": "Toegevoegd in dit dialoogvenster",
+      "columns": {
+        "client": "Klant",
+        "overrides": "Afwijkingen",
+        "contact": "Contactpersoon",
+        "location": "Locatie",
+        "assets": "Assets",
+        "nextDue": "Volgende vervaldatum",
+        "active": "Actief"
+      },
+      "inheritsAll": "Neemt alles over",
+      "set": "Ingesteld",
+      "actions": "Klantacties",
+      "editOverrides": "Afwijkingen bewerken",
+      "remove": "Verwijderen",
+      "add": "Klanten toevoegen",
+      "empty": "Nog geen klanten. Er worden alleen tickets aangemaakt voor de klanten die u hier toevoegt.",
+      "removeTitle": "Klant verwijderen",
+      "removeMessage": "Stoppen met het aanmaken van tickets voor {{client}}? Reeds aangemaakte tickets en de geschiedenis blijven bewaard."
+    },
+    "errors": {
+      "clientNotFound": "Klant niet gevonden bij dit terugkerende ticket",
+      "definitionNotFound": "Terugkerend ticket niet gevonden",
+      "unknownTitleTokens": "Onbekende titeltoken(s) {{tokens}}. Beschikbare tokens: {{available}}",
+      "subcategoryNeedsCategory": "Voor een subcategorie is een categorie vereist",
+      "definitionArchived": "Gearchiveerde terugkerende tickets zijn alleen-lezen",
+      "clientAlreadyAdded": "Die klant maakt al deel uit van dit terugkerende ticket",
+      "invalidReferences": "{{problems}}"
+    },
+    "overrides": {
+      "noneValue": "Geen",
+      "inherited": "Gebruikt de instelling van het terugkerende ticket: {{value}}",
+      "title": "Instellingen voor {{client}}",
+      "intro": "Kies de ticketvelden die deze klant anders instelt dan het terugkerende ticket. Al het overige wordt overgenomen en volgt latere wijzigingen aan het terugkerende ticket.",
+      "groups": {
+        "board": "Bord en status overschrijven",
+        "priority": "Prioriteit overschrijven",
+        "category": "Categorie overschrijven",
+        "assignment": "Toewijzing overschrijven"
+      },
+      "attachedTo": "Gekoppeld aan het gegenereerde ticket",
+      "contact": "Contactpersoon",
+      "contactPlaceholder": "Geen contactpersoon",
+      "location": "Locatie",
+      "noLocation": "Geen locatie",
+      "assets": "Assets",
+      "groupNames": {
+        "board": "Bord en status",
+        "priority": "Prioriteit",
+        "category": "Categorie",
+        "assignment": "Toewijzing"
+      }
+    },
+    "sections": {
+      "clients": "Klanten",
+      "history": "Geschiedenis",
+      "details": "Details",
+      "template": "Ticketsjabloon",
+      "schedule": "Planning",
+      "behaviour": "Gedrag",
+      "overrides": "Overschrijvingen voor dit schema",
+      "dispatch": "Toewijzing"
+    },
+    "fields": {
+      "board": "Bord",
+      "boardPlaceholder": "Selecteer een bord",
+      "status": "Status",
+      "statusBoardDefault": "Standaard van het bord",
+      "priority": "Prioriteit",
+      "priorityPlaceholder": "Selecteer een prioriteit",
+      "category": "Categorie",
+      "categoryPlaceholder": "Geen categorie",
+      "assignedTo": "Toegewezen aan",
+      "additionalAgents": "Extra agents",
+      "name": "Naam",
+      "title": "Tickettitel",
+      "titleTokens": "Invoegen:",
+      "description": "Beschrijving",
+      "descriptionPlaceholder": "Beschrijving",
+      "checklistTemplate": "Checklistsjabloon",
+      "noChecklist": "Geen"
+    },
+    "history": {
+      "columns": {
+        "due": "Vervaldatum",
+        "client": "Klant",
+        "status": "Status",
+        "ticket": "Ticket",
+        "reason": "Reden"
+      },
+      "allStatuses": "Alle statussen",
+      "allClients": "Alle klanten",
+      "empty": "Er is nog niets gegenereerd.",
+      "reasons": {
+        "clientInactive": "De klant was inactief",
+        "previousOpen": "Ticket {{number}} van de vorige keer staat nog open"
+      },
+      "status": {
+        "created": "Aangemaakt",
+        "skipped": "Overgeslagen",
+        "missed": "Gemist",
+        "failed": "Mislukt"
+      }
+    },
+    "editor": {
+      "created": "Terugkerend ticket aangemaakt. Voeg de klanten toe waarvoor het moet worden uitgevoerd.",
+      "saved": "Terugkerend ticket opgeslagen",
+      "back": "Terugkerende tickets",
+      "newTitle": "Nieuw terugkerend ticket",
+      "archivedNotice": "Dit terugkerende ticket is gearchiveerd en kan niet meer worden gewijzigd.",
+      "clientsAfterSave": "Sla het terugkerende ticket eerst op en voeg daarna de klanten toe waarvoor het moet worden uitgevoerd.",
+      "archiveTitle": "Terugkerend ticket archiveren",
+      "archiveMessage": "Archiveren stopt alle toekomstige tickets en kan niet ongedaan worden gemaakt. Reeds aangemaakte tickets en de geschiedenis blijven bewaard.",
+      "viewOnly": "U kunt dit terugkerende ticket bekijken, maar niet wijzigen."
+    },
+    "loading": "Laden…",
+    "schedule": {
+      "policy": {
+        "keep": "Datum behouden",
+        "previous": "Verplaatsen naar de vorige werkdag",
+        "next": "Verplaatsen naar de volgende werkdag"
+      },
+      "startDate": "Begint op",
+      "createTime": "Aanmaken om",
+      "dueTime": "Vervalt om",
+      "leadDays": "Dagen vóór vervaldatum aanmaken",
+      "policyLabel": "Als de vervaldatum geen werkdag is",
+      "calendarFallback": "Er is geen standaardwerktijdenschema ingesteld, dus werkdagen zijn maandag tot en met vrijdag plus de feestdagen die voor uw hele bedrijf gelden.",
+      "calendarNote": "Werkdagen volgen uw standaardwerktijdenschema ({{name}}), inclusief de feestdagen."
+    },
+    "status": {
+      "archived": "Gearchiveerd",
+      "active": "Actief",
+      "paused": "Gepauzeerd"
+    },
+    "preview": {
+      "heading": "Volgende 5 vervaldatums",
+      "none": "Geen komende vervaldatums."
+    },
+    "behaviour": {
+      "openPrevious": "Als het vorige ticket nog open is",
+      "alwaysCreate": "Toch het volgende ticket aanmaken",
+      "skip": "Deze keer overslaan",
+      "notifyClient": "Klant e-mailen wanneer een ticket wordt aangemaakt",
+      "notifyClientHelp": "Standaard uitgeschakeld. Interne meldingen worden altijd verzonden."
+    },
+    "list": {
+      "columns": {
+        "name": "Naam",
+        "schedule": "Planning",
+        "nextDue": "Volgende vervaldatum",
+        "status": "Status",
+        "clients": "Klanten"
+      },
+      "new": "Nieuw terugkerend ticket",
+      "hasFailure": "De laatste uitvoering is mislukt. Open het item om te zien waarom.",
+      "title": "Terugkerende tickets",
+      "empty": "Hier zijn nog geen terugkerende tickets.",
+      "filter": {
+        "active": "Actief",
+        "paused": "Gepauzeerd",
+        "archived": "Gearchiveerd",
+        "all": "Alle"
+      }
+    },
+    "clientTab": {
+      "clientPaused": "Gepauzeerd voor deze klant",
+      "pickDefinition": "Kies een terugkerend ticket",
+      "add": "Toevoegen aan terugkerend ticket",
+      "empty": "Deze klant maakt geen deel uit van een terugkerend ticket.",
+      "removeTitle": "Verwijderen uit terugkerend ticket",
+      "removeMessage": "Stoppen met het aanmaken van tickets voor deze klant vanuit {{name}}? Reeds aangemaakte tickets en de geschiedenis blijven bewaard."
+    },
+    "badge": {
+      "source": "Terugkerend: {{name}}"
+    },
+    "rule": {
+      "editor": {
+        "unit": {
+          "days": "dag(en)",
+          "weeks": "we(e)k(en)",
+          "months": "maand(en)",
+          "years": "jaar/jaren"
+        },
+        "lastDay": "Laatste dag",
+        "repeats": "Herhaalt",
+        "every": "Elke",
+        "weekdaysOnly": "Alleen weekdagen (maandag tot en met vrijdag)",
+        "onDays": "Op",
+        "monthlyOn": "Op",
+        "mode": {
+          "dayOfMonth": "Dag van de maand",
+          "nthWeekday": "N-de weekdag"
+        },
+        "day": "Dag",
+        "nth": "Welke",
+        "weekday": "Weekdag",
+        "clampHint": "In maanden met minder dagen wordt het ticket op de laatste dag van de maand aangemaakt.",
+        "month": "Maand",
+        "ends": "Eindigt",
+        "end": {
+          "never": "Nooit",
+          "onDate": "Op een datum",
+          "afterCount": "Na een aantal tickets"
+        },
+        "endDate": "Laatste datum",
+        "endCount": "Aantal keren",
+        "frequency": {
+          "daily": "Dagelijks",
+          "weekly": "Wekelijks",
+          "monthly": "Maandelijks",
+          "yearly": "Jaarlijks"
+        }
+      },
+      "weekdays": {
+        "mon": "maandag",
+        "tue": "dinsdag",
+        "wed": "woensdag",
+        "thu": "donderdag",
+        "fri": "vrijdag",
+        "sat": "zaterdag",
+        "sun": "zondag"
+      },
+      "weekdaysShort": {
+        "mon": "ma",
+        "tue": "di",
+        "wed": "wo",
+        "thu": "do",
+        "fri": "vr",
+        "sat": "za",
+        "sun": "zo"
+      },
+      "months": {
+        "1": "januari",
+        "2": "februari",
+        "3": "maart",
+        "4": "april",
+        "5": "mei",
+        "6": "juni",
+        "7": "juli",
+        "8": "augustus",
+        "9": "september",
+        "10": "oktober",
+        "11": "november",
+        "12": "december"
+      },
+      "ordinals": {
+        "1": "eerste",
+        "2": "tweede",
+        "3": "derde",
+        "4": "vierde",
+        "last": "laatste"
+      },
+      "listSeparator": ", ",
+      "endOnDate": ", tot {{date}}",
+      "endAfterCount": ", {{n}} keer",
+      "dailyWeekdays": "Elke weekdag",
+      "daily": "Elke dag",
+      "dailyEvery": "Elke {{n}} dagen",
+      "weekly": "Elke week op {{days}}",
+      "weeklyEvery": "Elke {{n}} weken op {{days}}",
+      "everyMonth": "Elke maand",
+      "everyNMonths": "Elke {{n}} maanden",
+      "lastDay": "de laatste dag",
+      "dayOfMonth": "dag {{day}}",
+      "monthlyOnDay": "{{every}} op {{day}}",
+      "monthlyOnNthWeekday": "{{every}} op de {{ordinal}} {{weekday}}",
+      "yearly": "Elk jaar op {{day}} {{month}}"
+    },
+    "template": {
+      "intro": "Hoe het ticket eruitziet komt uit een gedeelde tickettemplate. Een wijziging van de sjabloon wijzigt elk schema dat deze gebruikt, vanaf het volgende ticket.",
+      "select": "Tickettemplate",
+      "placeholder": "Selecteer een tickettemplate",
+      "inactiveOption": "{{name}} (inactief)",
+      "summary": "{{checklist}} checklistitem(s), {{tags}} tag(s)",
+      "inactiveNotice": "Deze sjabloon is inactief: verborgen in de sjabloonkiezer; wordt nog gebruikt door {{count}} schema's.",
+      "sharedNotice": "In gebruik door {{count}} schema's. Het bewerken van de sjabloon wijzigt ze allemaal.",
+      "edit": "Sjabloon bewerken",
+      "new": "Nieuwe sjabloon",
+      "sampleTitle": "Titel van het eerste ticket:",
+      "tokensHelp": "Sjabloontitels kunnen {{tokens}} gebruiken; ze worden per ticket ingevuld."
+    },
+    "overridesSection": {
+      "intro": "Laat een groep uit om de sjabloon te gebruiken. Elke klant kan deze opnieuw overschrijven."
+    }
+  },
+  "stopwatch": {
+    "boardDisabled": "De stopwatch is uitgeschakeld voor dit bord.",
+    "pausedElsewhereTicket": "Gepauzeerd op een ander ticket: {{label}}",
+    "runningElsewhereTicket": "Loopt op een ander ticket: {{label}}",
+    "pausedElsewhereTask": "Gepauzeerd op een andere taak: {{label}}",
+    "runningElsewhereTask": "Loopt op een andere taak: {{label}}",
+    "switch": "Hier naartoe wisselen",
+    "start": "Stopwatch starten",
+    "resume": "Stopwatch hervatten",
+    "pause": "Stopwatch pauzeren",
+    "stop": "Stoppen en tijd registreren",
+    "discard": "Stopwatch verwijderen",
+    "pausedHint": "Gepauzeerd. Hervat om door te gaan, of stop om de tijd te registreren.",
+    "workDescription": "Werkbeschrijving",
+    "whatAreYouWorkingOn": "Waar werkt u aan?"
+  },
+  "templates": {
+    "loading": "Laden…",
+    "list": {
+      "title": "Ticketsjablonen",
+      "new": "Nieuw sjabloon",
+      "empty": "Nog geen ticketsjablonen. Open een ticket en kies \"Sjabloon maken van ticket\", of maak er een vanaf nul.",
+      "showInactive": "Inactieve tonen",
+      "deleted": "Sjabloon verwijderd",
+      "deleteTitle": "Sjabloon verwijderen",
+      "deleteMessage": "\"{{name}}\" verwijderen? Tickets die er al mee zijn gemaakt, blijven ongewijzigd.",
+      "columns": {
+        "name": "Naam",
+        "title": "Tickettitel",
+        "board": "Bord",
+        "checklist": "Checklistitems",
+        "status": "Status",
+        "schedules": "Schema's"
+      },
+      "deleteBlocked": "In gebruik door {{count}} terugkerend(e) schema('s). Wijs ze eerst naar een andere sjabloon of archiveer ze."
+    },
+    "status": {
+      "active": "Actief",
+      "inactive": "Inactief",
+      "scheduledOnly": "Alleen gepland"
+    },
+    "actions": {
+      "edit": "Bewerken",
+      "newTicket": "Nieuw ticket op basis van sjabloon",
+      "activate": "Activeren",
+      "deactivate": "Deactiveren",
+      "delete": "Verwijderen",
+      "cancel": "Annuleren"
+    },
+    "sections": {
+      "details": "Sjabloon",
+      "ticket": "Ticket",
+      "checklist": "Controlelijst",
+      "customFields": "Aangepaste velden"
+    },
+    "fields": {
+      "name": "Sjabloonnaam",
+      "notes": "Notities",
+      "notesHelp": "Alleen voor uw team. Wordt niet naar tickets gekopieerd.",
+      "title": "Tickettitel",
+      "description": "Beschrijving",
+      "descriptionPlaceholder": "Beschrijving",
+      "offerForManualUse": "Aanbieden in de kiezer voor nieuwe tickets",
+      "offerForManualUseHelp": "Uitschakelen voor sjablonen die alleen door terugkerende schema's worden gebruikt.",
+      "titleTokens": "U kunt {{tokens}} in de titel gebruiken; ze worden per ticket ingevuld."
+    },
+    "checklist": {
+      "empty": "Geen checklistitems.",
+      "itemName": "Checklistitem",
+      "required": "Verplicht",
+      "moveUp": "Omhoog",
+      "moveDown": "Omlaag",
+      "remove": "Item verwijderen",
+      "add": "Item toevoegen"
+    },
+    "customFields": {
+      "empty": "Geen waarden voor aangepaste velden.",
+      "name": "Veldnaam",
+      "value": "Waarde",
+      "remove": "Veld verwijderen",
+      "add": "Veld toevoegen"
+    },
+    "editor": {
+      "back": "Ticketsjablonen",
+      "newTitle": "Nieuw ticketsjabloon",
+      "created": "Sjabloon gemaakt",
+      "saved": "Sjabloon opgeslagen",
+      "saving": "Opslaan…",
+      "save": "Opslaan",
+      "fromTicket": "Vooraf ingevuld vanuit ticket #{{number}}. Er wordt niets opgeslagen tot u op Opslaan klikt.",
+      "inlineImages": "De beschrijving bevat afbeeldingen die bij het brionticket horen. Ze worden mogelijk niet meer getoond als dat ticket wordt verwijderd. Verwijder ze of upload ze opnieuw als het sjabloon het ticket moet overleven.",
+      "viewOnly": "U kunt dit sjabloon bekijken maar niet wijzigen.",
+      "referenceProblems": "Sommige velden in dit sjabloon verwijzen naar dingen die niet meer bestaan. Ze blijven leeg wanneer het sjabloon wordt gebruikt. Corrigeer ze en sla op:",
+      "inactiveWarning": "Inactief: verborgen in de sjabloonkiezer; wordt nog gebruikt door {{count}} schema's.",
+      "sharedWarning": "Wijzigingen gelden voor elk terugkerend schema dat deze sjabloon gebruikt, vanaf het volgende ticket dat het aanmaakt.",
+      "boardChangeWarning": "Het wijzigen van het bord wist prioriteit en categorie en kan de status van schema's met deze sjabloon ongeldig maken. Die schema's mislukken totdat u ze bewerkt. Betrokken schema's: {{schedules}}."
+    },
+    "errors": {
+      "notFound": "Ticketsjabloon niet gevonden",
+      "duplicateName": "Er bestaat al een sjabloon met de naam {{name}}",
+      "invalidReferences": "Het sjabloon verwijst naar een bord, categorie of prioriteit die niet beschikbaar is",
+      "notAvailable": "Ticketsjablonen zijn niet beschikbaar",
+      "subcategoryNeedsCategory": "Een subcategorie vereist een categorie",
+      "inUseBySchedules": "In gebruik door {{count}} terugkerend(e) schema('s): {{schedules}}. Wijs ze eerst naar een andere sjabloon of archiveer ze."
+    },
+    "usage": {
+      "schedules": "In gebruik door {{count}} schema's",
+      "paused": "gepauzeerd",
+      "tickets": "{{count}} tickets aangemaakt met deze sjabloon",
+      "scheduleThis": "Deze sjabloon inplannen…"
+    }
+  },
+  "enums": {
+    "slaStatus": {
+      "paused": "Gepauzeerd",
+      "on_track": "Op schema",
+      "at_risk": "In gevaar",
+      "breached": "Overschreden",
+      "unknown": "Onbekend",
+      "response_breached": "Reactie-SLA overschreden",
+      "resolution_breached": "Oplossings-SLA overschreden"
+    }
+  },
+  "sla": {
+    "tooltip": {
+      "paused": "SLA-timer: gepauzeerd",
+      "status": "SLA-status: {{status}}",
+      "responseBreached": "Reactie: met {{time}} overschreden",
+      "responseRemaining": "Reactie: {{time}} resterend",
+      "resolutionBreached": "Oplossing: met {{time}} overschreden",
+      "resolutionRemaining": "Oplossing: {{time}} resterend"
+    },
+    "time": {
+      "minutes": "{{minutes}} min",
+      "hoursMinutes": "{{hours}} u {{minutes}} min",
+      "hours": "{{hours}} u",
+      "daysHours": "{{days}} d {{hours}} u",
+      "days": "{{days}} d"
     }
   }
 }

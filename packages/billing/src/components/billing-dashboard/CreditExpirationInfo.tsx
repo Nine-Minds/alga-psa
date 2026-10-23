@@ -3,15 +3,17 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { formatCurrency } from '@alga-psa/core';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { ICreditTracking } from '@alga-psa/types';
 import CreditExpirationBadge from '@alga-psa/ui/components/CreditExpirationBadge';
 import { formatDateOnly } from '@alga-psa/core';
 import { getCreditDetails } from '@alga-psa/billing/actions/creditActions';
 
 interface CreditExpirationInfoProps {
+  /** Minor units of the invoice currency. */
   creditApplied: number;
   invoiceId: string;
+  currencyCode?: string;
 }
 
 function getReturnedActionError(value: unknown): string | null {
@@ -26,8 +28,9 @@ function getReturnedActionError(value: unknown): string | null {
       : null;
 }
 
-const CreditExpirationInfo: React.FC<CreditExpirationInfoProps> = ({ creditApplied, invoiceId }) => {
+const CreditExpirationInfo: React.FC<CreditExpirationInfoProps> = ({ creditApplied, invoiceId, currencyCode }) => {
   const { t } = useTranslation('msp/credits');
+  const { money } = useCurrencyFormat();
   const [creditDetails, setCreditDetails] = React.useState<ICreditTracking[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -88,7 +91,7 @@ const CreditExpirationInfo: React.FC<CreditExpirationInfoProps> = ({ creditAppli
         <CardTitle>{t('expiration.appliedCredits', { defaultValue: 'Applied Credits' })}</CardTitle>
         <CardDescription>
           {t('expiration.creditsAppliedToInvoice', {
-            amount: formatCurrency(creditApplied),
+            amount: money(creditApplied, currencyCode),
             defaultValue: 'Credits applied to this invoice: {{amount}}',
           })}
         </CardDescription>
@@ -113,7 +116,7 @@ const CreditExpirationInfo: React.FC<CreditExpirationInfoProps> = ({ creditAppli
                   <span className="font-medium">
                     {t('expiration.creditAmount', { defaultValue: 'Credit Amount:' })}
                   </span>
-                  <span>{formatCurrency(credit.amount)}</span>
+                  <span>{money(credit.amount, credit.currency_code || currencyCode)}</span>
                 </div>
                 <div className="flex justify-between mb-1">
                   <span className="font-medium">

@@ -1,5 +1,6 @@
 'use client'
 
+/* global process */
 
 import React from 'react';
 import { Card, CardContent } from "@alga-psa/ui/components/Card";
@@ -8,6 +9,8 @@ import { Button } from "@alga-psa/ui/components/Button";
 import { Label } from "@alga-psa/ui/components/Label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@alga-psa/ui/components/Table";
 import { Badge } from "@alga-psa/ui/components/Badge";
+import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
+import { Switch } from "@alga-psa/ui/components/Switch";
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
 import { Plus, Trash } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -18,14 +21,26 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { getTenantDetails, updateTenantName, addClientToTenant, removeClientFromTenant, setDefaultClient } from "@alga-psa/tenancy/actions/coreTenantActions";
 import { getTenantTimezoneAuth, setTenantTimezone } from "@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions";
+import {
+  getDashboardWelcomeSettingsAction,
+  setDashboardWelcomeUseCompanyNameAction,
+} from "@alga-psa/tenancy/actions/tenant-settings-actions/dashboardWelcomeActions";
 import { getAllClients } from "@alga-psa/clients/actions/queryActions";
+import {
+  getClientCountryDefaultsPreview,
+  type IClientCountryDefaultsPreview,
+} from "@alga-psa/clients/actions/countryActions";
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
 import { IClient } from "@alga-psa/types";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { describeCountryDefaults } from './countryDefaultsPreview';
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
+
+/** Only Enterprise renders the branded welcome banner, so only it offers the opt-in. */
+const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
 const GeneralSettings = () => {
   const { t } = useTranslation('msp/settings');
@@ -41,19 +56,26 @@ const GeneralSettings = () => {
   const [filterState, setFilterState] = React.useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = React.useState<'all' | 'company' | 'individual'>('all');
   const [pendingDefaultClient, setPendingDefaultClient] = React.useState<{ id: string; name: string } | null>(null);
+  const [welcomeUsesCompanyName, setWelcomeUsesCompanyName] = React.useState(false);
+  const [welcomeSaving, setWelcomeSaving] = React.useState(false);
+  const [countryDefaults, setCountryDefaults] = React.useState<Record<string, IClientCountryDefaultsPreview | null>>({});
+  const requestedCountryDefaults = React.useRef<Set<string>>(new Set());
 
   const defaultClient = clients.find(c => c.isDefault) ?? null;
   const selectableClients = allClients.filter(c => !clients.some(tc => tc.id === c.client_id));
 
   const loadTenantData = async () => {
     try {
-      const [tenant, tz] = await Promise.all([
+      const [tenant, tz, welcome] = await Promise.all([
         getTenantDetails(),
-        getTenantTimezoneAuth()
+        getTenantTimezoneAuth(),
+        // The banner opt-in is a nicety; it must not take the page down.
+        getDashboardWelcomeSettingsAction().catch(() => null)
       ]);
       const safeTenantName = typeof tenant?.client_name === 'string' ? tenant.client_name : '';
       setTenantName(safeTenantName);
       setTenantTimezoneState(tz || '');
+      setWelcomeUsesCompanyName(welcome?.useCompanyName === true);
       setClients((tenant.clients ?? []).map(c => ({
         id: c.client_id,
         name: c.client_name,
@@ -61,6 +83,41 @@ const GeneralSettings = () => {
       })));
     } catch (error) {
       handleError(error, t('general.messages.error.loadTenantData'));
+    }
+  };
+
+  // One fetch per client, kept so the dialog can show the current defaults and
+  // the ones being considered side by side.
+  const ensureCountryDefaults = React.useCallback((clientId?: string | null) => {
+    if (!clientId || requestedCountryDefaults.current.has(clientId)) return;
+    requestedCountryDefaults.current.add(clientId);
+    getClientCountryDefaultsPreview(clientId)
+      .then((preview) => setCountryDefaults(current => ({ ...current, [clientId]: preview })))
+      .catch(() => setCountryDefaults(current => ({ ...current, [clientId]: null })));
+  }, []);
+
+  React.useEffect(() => {
+    ensureCountryDefaults(defaultClient?.id);
+    ensureCountryDefaults(pendingDefaultClient?.id);
+  }, [defaultClient?.id, pendingDefaultClient?.id, ensureCountryDefaults]);
+
+  const handleToggleWelcomeCompanyName = async (checked: boolean) => {
+    setWelcomeSaving(true);
+    const previous = welcomeUsesCompanyName;
+    setWelcomeUsesCompanyName(checked);
+    try {
+      const result = await setDashboardWelcomeUseCompanyNameAction(checked);
+      if (isReturnedActionError(result)) {
+        setWelcomeUsesCompanyName(previous);
+        handleError(result, t('dashboardWelcome.messages.saveFailed'));
+        return;
+      }
+      toast.success(t('dashboardWelcome.messages.saved'));
+    } catch (error) {
+      setWelcomeUsesCompanyName(previous);
+      handleError(error, t('dashboardWelcome.messages.saveFailed'));
+    } finally {
+      setWelcomeSaving(false);
     }
   };
 
@@ -161,6 +218,19 @@ const GeneralSettings = () => {
     }
   };
 
+  const translate = React.useCallback(
+    (key: string, options?: Record<string, unknown>) => t(key, options) as string,
+    [t]
+  );
+  const currentDefaultsPreview = defaultClient ? countryDefaults[defaultClient.id] : null;
+  const currentDefaults = currentDefaultsPreview
+    ? describeCountryDefaults(currentDefaultsPreview, translate)
+    : null;
+  const pendingDefaultsPreview = pendingDefaultClient ? countryDefaults[pendingDefaultClient.id] : null;
+  const pendingDefaults = pendingDefaultsPreview
+    ? describeCountryDefaults(pendingDefaultsPreview, translate)
+    : null;
+
   return (
     <Card>
       <CardContent className="space-y-6">
@@ -211,6 +281,33 @@ const GeneralSettings = () => {
               {t('general.clients.currentDefault', { name: defaultClient.name })}
             </p>
           )}
+          {isEEAvailable && (
+            <div className="flex items-center justify-between gap-4 rounded-md border border-[rgb(var(--color-border-200))] p-4">
+              <div>
+                <p className="text-sm font-medium">{t('dashboardWelcome.label')}</p>
+                <p className="text-sm text-muted-foreground">
+                  {defaultClient ? t('dashboardWelcome.help') : t('dashboardWelcome.noCompany')}
+                </p>
+                {defaultClient && (
+                  <p className="mt-1 text-sm">
+                    {t('dashboardWelcome.previewLabel')}{' '}
+                    <span className="font-medium">
+                      {welcomeUsesCompanyName
+                        ? t('dashboardWelcome.preview', { companyName: defaultClient.name })
+                        : t('dashboardWelcome.previewDefault')}
+                    </span>
+                  </p>
+                )}
+              </div>
+              <Switch
+                id="dashboard-welcome-company-name-toggle"
+                checked={welcomeUsesCompanyName}
+                disabled={welcomeSaving || !defaultClient}
+                onCheckedChange={handleToggleWelcomeCompanyName}
+                aria-label={t('dashboardWelcome.label')}
+              />
+            </div>
+          )}
           <Table>
             <TableHeader>
               <TableRow>
@@ -258,6 +355,29 @@ const GeneralSettings = () => {
             </TableBody>
           </Table>
 
+          {defaultClient && currentDefaults && (
+            <Alert variant="info" id="tenant-company-defaults-alert" data-automation-id="tenant-company-defaults-alert">
+              <AlertDescription>
+                <p className="font-medium">{t('general.clients.defaults.title')}</p>
+                <p className="mt-1">{t('general.clients.defaults.intro', { name: defaultClient.name })}</p>
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  <li>{currentDefaults.country}</li>
+                  <li>{currentDefaults.phoneCode}</li>
+                  <li>{currentDefaults.dateFormat}</li>
+                </ul>
+                {!currentDefaults.hasCountry && (
+                  <p className="mt-2">
+                    {t('general.clients.defaults.noCountry', {
+                      name: defaultClient.name,
+                      pattern: currentDefaults.pattern,
+                    })}
+                  </p>
+                )}
+                <p className="mt-2">{t('general.clients.defaults.portalNote')}</p>
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-4">
             <ClientPicker
               id="tenant-client-picker"
@@ -292,14 +412,32 @@ const GeneralSettings = () => {
             setPendingDefaultClient(null);
           }}
           title={t('general.clients.confirmDialog.title')}
-          message={defaultClient
-            ? t('general.clients.confirmDialog.message', {
-                current: defaultClient.name,
-                next: pendingDefaultClient?.name ?? ''
-              })
-            : t('general.clients.confirmDialog.messageInitial', {
-                next: pendingDefaultClient?.name ?? ''
-              })}
+          message={
+            <div className="space-y-3">
+              <p>
+                {defaultClient
+                  ? t('general.clients.confirmDialog.message', {
+                      current: defaultClient.name,
+                      next: pendingDefaultClient?.name ?? ''
+                    })
+                  : t('general.clients.confirmDialog.messageInitial', {
+                      next: pendingDefaultClient?.name ?? ''
+                    })}
+              </p>
+              {pendingDefaults && pendingDefaultClient && (
+                <div>
+                  <p className="font-medium">
+                    {t('general.clients.defaults.changeIntro', { name: pendingDefaultClient.name })}
+                  </p>
+                  <ul className="mt-1 list-disc space-y-1 pl-5">
+                    <li>{pendingDefaults.country}</li>
+                    <li>{pendingDefaults.phoneCode}</li>
+                    <li>{pendingDefaults.dateFormat}</li>
+                  </ul>
+                </div>
+              )}
+            </div>
+          }
           confirmLabel={t('general.clients.confirmDialog.confirm')}
           cancelLabel={t('general.clients.confirmDialog.cancel')}
         />

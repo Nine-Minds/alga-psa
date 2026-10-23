@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '../../workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   scheduleBlockCreatedEventPayloadSchema,
   scheduleBlockDeletedEventPayloadSchema,
-} from '../../../runtime/schemas/schedulingEventSchemas';
+} from '@alga-psa/event-schemas';
 import { buildScheduleBlockCreatedPayload, buildScheduleBlockDeletedPayload } from '../scheduleBlockEventBuilders';
 
 describe('scheduleBlockEventBuilders', () => {

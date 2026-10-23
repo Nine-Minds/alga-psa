@@ -51,12 +51,30 @@ describe('expoPushService', () => {
         data: {
           ticketId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
           url: 'alga://ticket/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
-          // Payload metadata only (task 29.8.46): defaults to 'normal' when the
-          // caller does not supply the configured priority.
+          // Defaults to 'normal' when the caller does not supply the configured priority.
           priority: 'normal',
         },
         priority: 'high',
+        interruptionLevel: 'active',
+        channelId: 'alga-priority-normal',
       });
+    });
+
+    it('maps the configured priority to OS delivery (task 35.9.2)', () => {
+      const base = {
+        expoPushToken: 'ExponentPushToken[abc]',
+        title: 'T',
+        body: 'B',
+        ticketId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+        tenant: 'tenant-1',
+      };
+      const high = buildTicketPushMessage({ ...base, priority: 'high' });
+      expect(high).toMatchObject({ priority: 'high', interruptionLevel: 'time-sensitive', channelId: 'alga-priority-high', sound: 'default' });
+      expect(high.data.priority).toBe('high');
+
+      const low = buildTicketPushMessage({ ...base, priority: 'low' });
+      expect(low).toMatchObject({ priority: 'normal', interruptionLevel: 'passive', channelId: 'alga-priority-low', sound: null });
+      expect(low.data.priority).toBe('low');
     });
 
     it('carries the configured priority as payload metadata (task 29.8.46)', () => {
@@ -69,8 +87,6 @@ describe('expoPushService', () => {
         priority: 'high',
       });
 
-      // The in-app priority rides in data as metadata; Expo/OS delivery priority
-      // stays 'high' regardless.
       expect(msg.data.priority).toBe('high');
       expect(msg.priority).toBe('high');
 
@@ -83,7 +99,6 @@ describe('expoPushService', () => {
         priority: 'low',
       });
       expect(low.data.priority).toBe('low');
-      expect(low.priority).toBe('high');
     });
   });
 
@@ -136,6 +151,52 @@ describe('expoPushService', () => {
         [{ to: 'ExponentPushToken[abc]', title: 'Test', body: 'Hello' }],
         'tenant-1',
       );
+    });
+
+    it('reports a per-device outcome so the test endpoint can explain failures', async () => {
+      mockSendPushNotificationsAsync.mockResolvedValue([
+        { status: 'ok', id: 'receipt-1' },
+        { status: 'error', message: 'nope', details: { error: 'DeviceNotRegistered' } },
+      ]);
+      mockDeactivateInvalidTokens.mockResolvedValue(undefined);
+
+      const results = await sendPushNotifications(
+        [
+          { to: 'ExponentPushToken[good]', title: 'T', body: 'B' },
+          { to: 'ExponentPushToken[gone]', title: 'T', body: 'B' },
+          { to: 'garbage', title: 'T', body: 'B' },
+        ],
+        'tenant-1',
+      );
+
+      expect(results).toEqual([
+        { to: 'garbage', status: 'error', error: 'InvalidExpoPushToken' },
+        { to: 'ExponentPushToken[good]', status: 'ok' },
+        { to: 'ExponentPushToken[gone]', status: 'error', error: 'DeviceNotRegistered' },
+      ]);
+    });
+
+    it('names an unreachable Expo service in the outcome', async () => {
+      mockSendPushNotificationsAsync.mockRejectedValue(new Error('getaddrinfo ENOTFOUND exp.host'));
+
+      const results = await sendPushNotifications(
+        [{ to: 'ExponentPushToken[abc]', title: 'T', body: 'B' }],
+        'tenant-1',
+      );
+
+      expect(results).toEqual([
+        { to: 'ExponentPushToken[abc]', status: 'error', error: 'ExpoUnreachable: getaddrinfo ENOTFOUND exp.host' },
+      ]);
+    });
+  });
+
+  describe('buildTestPushMessage', () => {
+    it('addresses the device and names the server it came from', async () => {
+      const { buildTestPushMessage } = await import('../../../lib/pushNotifications/expoPushService');
+      const msg = buildTestPushMessage('ExponentPushToken[abc]', 'alga.local');
+      expect(msg.to).toBe('ExponentPushToken[abc]');
+      expect(msg.body).toContain('alga.local');
+      expect(msg.data).toEqual({ kind: 'push-test', priority: 'normal' });
     });
   });
 });

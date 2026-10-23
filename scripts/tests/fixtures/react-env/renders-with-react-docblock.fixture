@@ -1,0 +1,12 @@
+/**
+ * @vitest-environment jsdom
+ */
+import { renderToString } from 'react-dom/server';
+import { describe, expect, it } from 'vitest';
+import { TicketPanel } from './TicketPanel';
+
+describe('TicketPanel', () => {
+  it('serialises the ticket title', () => {
+    expect(renderToString(TicketPanel({ title: 'Off with their heads' }))).toContain('heads');
+  });
+});

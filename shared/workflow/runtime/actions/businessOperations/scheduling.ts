@@ -1,10 +1,11 @@
 import type { Knex } from 'knex';
 import { z } from 'zod';
+import type { BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import ScheduleEntry from '../../../../models/scheduleEntry';
 import { IEditScope } from '@alga-psa/types';
-import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
+import { withWorkflowPicker } from '@alga-psa/event-schemas';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import {
   buildAppointmentAssignedPayload,
@@ -28,23 +29,6 @@ import {
   type TenantTxContext,
 } from './shared';
 
-const WORKFLOW_PICKER_HINTS = {
-  user: 'Search users',
-} as const;
-
-const withWorkflowPicker = <T extends z.ZodTypeAny>(
-  schema: T,
-  description: string,
-  kind: keyof typeof WORKFLOW_PICKER_HINTS,
-  dependencies?: string[]
-): T =>
-  withWorkflowJsonSchemaMetadata(schema, description, {
-    'x-workflow-picker-kind': kind,
-    'x-workflow-picker-dependencies': dependencies,
-    'x-workflow-picker-fixed-value-hint': WORKFLOW_PICKER_HINTS[kind],
-    'x-workflow-picker-allow-dynamic-reference': true,
-  });
-
 const scheduleEntryRefSchema = z.string().trim().min(1).describe('Schedule entry id or recurring occurrence id like <entry_id>_<timestamp>');
 const recurrenceScopeSchema = z.enum(['single', 'future', 'all']);
 const conflictModeSchema = z.enum(['fail', 'shift', 'override']);
@@ -61,7 +45,7 @@ const schedulingEntrySummarySchema = z.object({
   work_item_type: z.string().nullable().optional(),
   is_private: z.boolean(),
   is_recurring: z.boolean(),
-  assigned_user_ids: z.array(uuidSchema),
+  assigned_user_ids: withWorkflowPicker(z.array(uuidSchema), 'Assigned user ids', 'user'),
 });
 
 type SchedulingEntrySummary = {
@@ -352,30 +336,21 @@ async function ensureTechnicianEligibility(
 const maybeWorkflowActor = (userId: string): { actorType: 'USER'; actorUserId: string } =>
   ({ actorType: 'USER', actorUserId: userId });
 
-async function publishWorkflowDomainEvent(params: {
-  eventType: 'APPOINTMENT_RESCHEDULED' | 'APPOINTMENT_ASSIGNED' | 'APPOINTMENT_CANCELED' | 'APPOINTMENT_COMPLETED';
-  payload: Record<string, unknown>;
+async function publishWorkflowDomainEvent<
+  T extends 'APPOINTMENT_RESCHEDULED' | 'APPOINTMENT_ASSIGNED' | 'APPOINTMENT_CANCELED' | 'APPOINTMENT_COMPLETED',
+>(params: {
+  eventType: T;
+  payload: BuiltWorkflowPayload<T>;
   tenantId: string;
   occurredAt: string;
   actorUserId: string;
   idempotencyKey: string;
 }): Promise<void> {
   try {
-    const publishers = (await import('@alga-psa/event-bus/publishers')) as unknown as {
-      publishWorkflowEvent?: (value: {
-        eventType: string;
-        payload: Record<string, unknown>;
-        ctx: {
-          tenantId: string;
-          occurredAt: string;
-          actor: { actorType: 'USER'; actorUserId: string };
-        };
-        idempotencyKey: string;
-      }) => Promise<unknown>;
-    };
-    if (!publishers.publishWorkflowEvent) return;
+    // Dynamic import keeps the runtime free of a static event-bus dependency; the binding stays fully typed.
+    const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
 
-    await publishers.publishWorkflowEvent({
+    await publishWorkflowEvent({
       eventType: params.eventType,
       payload: params.payload,
       ctx: {
@@ -400,7 +375,7 @@ export function registerSchedulingActions(): void {
     id: 'scheduling.assign_user',
     version: 1,
     inputSchema: z.object({
-      user_id: uuidSchema.describe('Assigned user id'),
+      user_id: withWorkflowPicker(uuidSchema, 'Assigned user id', 'user'),
       window: z.object({
         start: isoDateTimeSchema.describe('Start time (ISO)'),
         end: isoDateTimeSchema.describe('End time (ISO)'),
@@ -416,7 +391,7 @@ export function registerSchedulingActions(): void {
     }),
     outputSchema: z.object({
       schedule_event_id: uuidSchema,
-      assigned_user_id: uuidSchema,
+      assigned_user_id: withWorkflowPicker(uuidSchema, 'Assigned user id', 'user'),
       start: isoDateTimeSchema,
       end: isoDateTimeSchema,
     }),
@@ -562,7 +537,7 @@ export function registerSchedulingActions(): void {
     }),
     outputSchema: z.object({
       entry_id: uuidSchema,
-      assigned_user_ids: z.array(uuidSchema),
+      assigned_user_ids: withWorkflowPicker(z.array(uuidSchema), 'Assigned user ids', 'user'),
       start: isoDateTimeSchema,
       end: isoDateTimeSchema,
       work_item_id: uuidSchema.nullable(),
@@ -892,7 +867,7 @@ export function registerSchedulingActions(): void {
       previous_end: isoDateTimeSchema,
       new_start: isoDateTimeSchema,
       new_end: isoDateTimeSchema,
-      assigned_user_ids: z.array(uuidSchema),
+      assigned_user_ids: withWorkflowPicker(z.array(uuidSchema), 'Assigned user ids', 'user'),
       conflict_mode: conflictModeSchema,
       conflicts_detected: z.number().int().min(0),
       recurrence_scope: recurrenceScopeSchema,
@@ -1099,8 +1074,8 @@ export function registerSchedulingActions(): void {
     outputSchema: z.object({
       entry_id: z.string().min(1),
       updated_entry_id: z.string().min(1),
-      previous_assigned_user_ids: z.array(uuidSchema),
-      assigned_user_ids: z.array(uuidSchema),
+      previous_assigned_user_ids: withWorkflowPicker(z.array(uuidSchema), 'Previously assigned user ids', 'user'),
+      assigned_user_ids: withWorkflowPicker(z.array(uuidSchema), 'Assigned user ids', 'user'),
       changed: z.boolean(),
       recurrence_scope: recurrenceScopeSchema,
       events_emitted: z.number().int().min(0),

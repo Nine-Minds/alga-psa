@@ -19,6 +19,10 @@ export default defineConfig({
       // alias scheduling and billing already use.
       { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../core/src/index.ts') },
       { find: /^@alga-psa\/core\/(.*)$/, replacement: path.resolve(__dirname, '../core/src/lib/$1') },
+      { find: /^@alga-psa\/shared\/(.*)$/, replacement: path.resolve(__dirname, '../../shared/$1') },
+      // Same reason for the UI lib helpers the action error shapes come from:
+      // their exports map points at ui/dist, which this lane never builds.
+      { find: /^@alga-psa\/ui\/lib\/(.*)$/, replacement: path.resolve(__dirname, '../ui/src/lib/$1') },
     ],
   },
 });

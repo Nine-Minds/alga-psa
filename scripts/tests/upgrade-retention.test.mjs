@@ -79,3 +79,24 @@ for (const field of ['minutes_used', 'overage_minutes', 'rolled_over_minutes']) 
   const after = await fixture.capture();
   assert.throws(() => verifyUpgradeRetention(before, after, ledger, ledger));
 });
+
+// v1.5.0 recurring_service_periods rows carry the labelled legacy schedule key
+// that the obligation_type collapse migration rewrites to the canonical shape.
+const legacyKey = 'schedule:t1:client_contract_line:line-1:client:arrears';
+const periods = schedule_key => ({ tenant: { recurring_service_periods: [{ record_id: 'r1', obligation_id: 'line-1', schedule_key,
+  period_key: 'period:2026-08-01:2026-09-01', lifecycle_state: 'generated' }] } });
+test('retention accepts the legacy schedule-key collapse to the canonical key', () => {
+  verifyUpgradeRetention(periods(legacyKey), periods('schedule:t1:line-1:client:arrears'), ledger, ledger);
+});
+for (const [label, key] of [
+  ['an uncollapsed legacy key', legacyKey],
+  ['a key rewritten to another obligation', 'schedule:t1:line-2:client:arrears'],
+  ['a key rewritten to another cadence owner', 'schedule:t1:line-1:contract:arrears'],
+]) test(`retention rejects ${label}`, () => {
+  assert.throws(() => verifyUpgradeRetention(periods(legacyKey), periods(key), ledger, ledger));
+});
+test('retention still rejects other recurring service-period changes alongside the key collapse', () => {
+  const after = periods('schedule:t1:line-1:client:arrears');
+  after.tenant.recurring_service_periods[0].lifecycle_state = 'billed';
+  assert.throws(() => verifyUpgradeRetention(periods(legacyKey), after, ledger, ledger));
+});

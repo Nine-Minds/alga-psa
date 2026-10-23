@@ -85,10 +85,14 @@ export async function warmTeamsDashboard({ env = process.env, timeoutMs = 240_00
     assert.doesNotMatch(await page.locator('body').innerText({ timeout: remaining() }), /Application error:/);
     remaining();
     return { schemaVersion: 1, scope: 'teams-development-dashboard-warmup', status: 'passed', authenticated: true };
-  } catch {
+  } catch (cause) {
     const error = new Error('Authenticated Teams dashboard warmup failed');
+    // Every Playwright call receives the whole remaining budget, so its timeout
+    // means the deadline was reached even when that timer fires a millisecond
+    // before the wall clock agrees.
+    const deadlineExceeded = Date.now() >= deadline || cause?.name === 'TimeoutError';
     error.diagnostics = { ...diagnostics, elapsedMs: Date.now() - startedAt,
-      ...(Date.now() >= deadline ? { code: 'deadline-exceeded' } : {}) };
+      ...(deadlineExceeded ? { code: 'deadline-exceeded' } : {}) };
     throw error;
   } finally {
     try { await browser?.close(); } finally { await context.dispose(); }

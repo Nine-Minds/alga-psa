@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { useInvoiceDesignerStore } from '../state/designerStore';
+
 import type { DesignerNode } from '../state/designerStore';
 import { __designCanvasSelectionTestUtils } from './DesignCanvas';
 
@@ -66,16 +68,23 @@ describe('DesignCanvas renderable selection state', () => {
     ).toBe(true);
   });
 
-  it('does not toggle selection off when pointer down started on an unselected node', () => {
-    expect(__designCanvasSelectionTestUtils.shouldToggleSelectionOff(false, false)).toBe(false);
-  });
-
-  it('toggles selection off for click on already selected node', () => {
-    expect(__designCanvasSelectionTestUtils.shouldToggleSelectionOff(true, false)).toBe(true);
-  });
-
-  it('does not toggle selection off after drag movement even if node was selected', () => {
-    expect(__designCanvasSelectionTestUtils.shouldToggleSelectionOff(true, true)).toBe(false);
+  it('treats a press inside the selected container as a press on the container', () => {
+    const store = useInvoiceDesignerStore.getState();
+    store.resetWorkspace();
+    const pageId = store.nodes.find((node) => node.type === 'page')!.id;
+    useInvoiceDesignerStore.getState().loadNodes([
+      ...useInvoiceDesignerStore.getState().nodes.map((node) =>
+        node.id === pageId ? { ...node, children: ['box'] } : node
+      ),
+      { id: 'box', type: 'container', props: { name: 'box' }, position: { x: 0, y: 0 }, size: { width: 100, height: 100 }, parentId: pageId, children: ['inner'], allowedChildren: ['text'] },
+      { id: 'inner', type: 'text', props: { name: 'inner' }, position: { x: 0, y: 0 }, size: { width: 50, height: 20 }, parentId: 'box', children: [], allowedChildren: [] },
+    ] as any);
+    useInvoiceDesignerStore.getState().selectNode('box');
+    expect(__designCanvasSelectionTestUtils.isInsideSelectedContainer('inner')).toBe(true);
+    expect(__designCanvasSelectionTestUtils.isInsideSelectedContainer('box')).toBe(false);
+    // A selected page does not capture presses on its blocks.
+    useInvoiceDesignerStore.getState().selectNode(pageId);
+    expect(__designCanvasSelectionTestUtils.isInsideSelectedContainer('inner')).toBe(false);
   });
 
   it('keeps selected node context (ancestors and descendants) out of deemphasis', () => {

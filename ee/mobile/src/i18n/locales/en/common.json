@@ -12,13 +12,13 @@
   "expand": "Expand",
   "collapse": "Collapse",
   "refresh": "Refresh",
-  "loading": "Loading\u2026",
-  "saving": "Saving\u2026",
-  "sending": "Sending\u2026",
+  "loading": "Loading…",
+  "saving": "Saving…",
+  "sending": "Sending…",
   "unknown": "Unknown",
   "unassigned": "Unassigned",
   "unavailable": "Unavailable",
-  "search": "Search\u2026",
+  "search": "Search…",
   "noResults": "No results found.",
   "create": "Create",
   "menu": "Menu",
@@ -30,6 +30,9 @@
   "configurationError": "Configuration error",
   "signedOut": "Signed out",
   "signInAgain": "Please sign in again.",
-  "loadingEllipsis": "Loading\u2026",
-  "restoringState": "Restoring state\u2026"
+  "loadingEllipsis": "Loading…",
+  "restoringState": "Restoring state…",
+  "phone": {
+    "countryCodeHint": "Include the country calling code, starting with +."
+  }
 }

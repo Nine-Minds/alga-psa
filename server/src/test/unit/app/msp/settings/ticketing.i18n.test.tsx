@@ -2,6 +2,8 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { cleanup, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -31,7 +33,7 @@ const translations = {
       'settings.display.columns.actions': 'Aktionen',
       'settings.display.responseStateTrackingTitle': 'Antwortstatus-Tracking',
       'settings.display.preferencesTitle': 'Darstellungseinstellungen für Tickets',
-      'settings.display.dateTimeFormat': 'Datum-/Zeitformat',
+      'settings.display.showWeekday': 'Wochentag in Zeitstempeln anzeigen',
       'settings.display.columnsTitle': 'Spalten der Ticketliste',
       'settings.display.showTags': 'Tags anzeigen',
       'settings.display.tagsUnderTitle': 'Unter dem Titel anzeigen',
@@ -198,6 +200,18 @@ vi.mock('@alga-psa/ui/components/CustomTabs', () => ({
 }));
 
 vi.mock('@alga-psa/tickets/actions/ticketActions', () => ({}));
+vi.mock('@alga-psa/integrations/emailSenderActions', () => ({
+  clearEmailSenderRoute: vi.fn(),
+  listEmailSenders: vi.fn(async () => ({ senders: [], routes: [] })),
+  listSelectableSenders: vi.fn(async () => ({
+    senders: [],
+    effectiveSenderId: null,
+    effectiveSenderAddress: 'notifications@example.test',
+    effectiveSenderDisplayName: 'Test Notifications',
+    allowOverride: false,
+  })),
+  setEmailSenderRoute: vi.fn(),
+}));
 
 const ticketingSettingsComponentMocks = vi.hoisted(() => async () => {
   const ReactModule = await import('react');
@@ -224,7 +238,7 @@ const ticketingSettingsComponentMocks = vi.hoisted(() => async () => {
         <div data-testid="display-settings">
           <span>{t('settings.display.responseStateTrackingTitle', 'Response State Tracking')}</span>
           <span>{t('settings.display.preferencesTitle', 'Ticket Display Preferences')}</span>
-          <span>{t('settings.display.dateTimeFormat', 'Date/Time Format')}</span>
+          <span>{t('settings.display.showWeekday', 'Show weekday in timestamps')}</span>
           <span>{t('settings.display.columnsTitle', 'Ticket List Columns')}</span>
           <span>{t('settings.display.showTags', 'Show Tags')}</span>
           <span>{t('settings.display.tagsUnderTitle', 'Display under Title')}</span>
@@ -290,7 +304,7 @@ describe('/msp/settings ticketing i18n integration', () => {
     expect(screen.getByText('Aktionen')).toBeInTheDocument();
     expect(screen.getByText('Antwortstatus-Tracking')).toBeInTheDocument();
     expect(screen.getByText('Darstellungseinstellungen für Tickets')).toBeInTheDocument();
-    expect(screen.getByText('Datum-/Zeitformat')).toBeInTheDocument();
+    expect(screen.getByText('Wochentag in Zeitstempeln anzeigen')).toBeInTheDocument();
     expect(screen.getByText('Spalten der Ticketliste')).toBeInTheDocument();
     expect(screen.getByText('Tags anzeigen')).toBeInTheDocument();
     expect(screen.getByText('Unter dem Titel anzeigen')).toBeInTheDocument();
@@ -309,5 +323,19 @@ describe('/msp/settings ticketing i18n integration', () => {
     expect(screen.queryByText('Display under Title')).not.toBeInTheDocument();
     expect(screen.queryByText('Display in separate column')).not.toBeInTheDocument();
     expect(screen.queryByText('Save')).not.toBeInTheDocument();
+  });
+
+  it('keeps outbound sender route labels in the admin namespace', () => {
+    const locales = ['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'xx', 'yy'];
+    const keys = ['default', 'ticket', 'project', 'billing', 'sales', 'scheduling', 'survey', 'account', 'general'];
+    for (const locale of locales) {
+      const adminFile = path.resolve(__dirname, `../../../../../../public/locales/${locale}/msp/admin.json`);
+      const messages = JSON.parse(readFileSync(adminFile, 'utf8'));
+      for (const key of keys) {
+        expect(messages.email.senderIdentities.routing[key], `${locale}/admin: ${key}`).toBeTruthy();
+      }
+      const providersFile = path.resolve(__dirname, `../../../../../../public/locales/${locale}/msp/email-providers.json`);
+      expect(readFileSync(providersFile, 'utf8')).not.toContain('senderIdentities');
+    }
   });
 });

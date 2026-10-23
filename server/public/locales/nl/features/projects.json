@@ -12,11 +12,14 @@
   "phasesAndTasks": "Fasen & Taken",
   "kanbanView": "Kanban",
   "listView": "Lijst",
+  "ganttView": "Tijdlijn",
   "task": "taak",
   "tasks": {
     "title": "Taken",
     "noTasks": "Geen taken om weer te geven",
     "taskName": "Naam",
+    "startDate": "Startdatum",
+    "startsOn": "Start op {{date}}",
     "dueDate": "Vervaldatum",
     "status": "Status",
     "assignedTo": "Toegewezen aan",
@@ -77,7 +80,14 @@
     "markedComplete": "Fase gemarkeerd als voltooid",
     "reopened": "Fase heropend",
     "completeReadyToast": "{{description}} is klaar voor facturering",
-    "viewInBilling": "Bekijken"
+    "viewInBilling": "Bekijken",
+    "serviceLabel": "Standaardservice (voor tijdinvoer)",
+    "noService": "Geen service",
+    "servicePlaceholder": "Standaardservice selecteren",
+    "serviceHelp": "Wordt gebruikt voor tijdinvoer op taken in deze fase wanneer de taak zelf geen service instelt.",
+    "serviceDisplayLabel": "Service",
+    "taskCount_few": "{{count}} taken",
+    "taskCount_many": "{{count}} taken"
   },
   "projectList": {
     "addProject": "Project toevoegen",
@@ -122,7 +132,8 @@
       "taskType": "Type",
       "actions": "Acties"
     },
-    "unknownUser": "Onbekend"
+    "unknownUser": "Onbekend",
+    "searchSmart": "Projecten, taken en opmerkingen doorzoeken… Enter voor slim zoeken"
   },
   "quickAdd": {
     "title": "Nieuw project toevoegen",
@@ -137,6 +148,10 @@
     "projectManagerPlaceholder": "Selecteer Toegewezen",
     "budgetedHoursLabel": "Gebudgetteerde uren",
     "budgetedHoursPlaceholder": "Voer gebudgetteerde uren in",
+    "serviceLabel": "Standaardservice (voor tijdinvoer)",
+    "noService": "Geen service",
+    "servicePlaceholder": "Standaardservice selecteren",
+    "serviceHelp": "Wordt gebruikt voor tijdinvoer op dit project wanneer noch de taak noch de fase een service instelt.",
     "startDateLabel": "Startdatum",
     "startDatePlaceholder": "Selecteer startdatum",
     "endDateLabel": "Einddatum",
@@ -177,7 +192,11 @@
     "continueEditing": "Ga door met bewerken",
     "discardChanges": "Wijzigingen negeren",
     "saveAndClose": "Opslaan en sluiten",
-    "saving": "Opslaan..."
+    "saving": "Opslaan...",
+    "serviceLabel": "Standaardservice (voor tijdinvoer)",
+    "noService": "Geen service",
+    "servicePlaceholder": "Standaardservice selecteren",
+    "serviceHelp": "Wordt gebruikt voor tijdinvoer op dit project wanneer noch de taak noch de fase een service instelt."
   },
   "projectDetail": {
     "allAgents": "Alle agenten",
@@ -272,6 +291,7 @@
     "taskActions": "Taakacties",
     "priorityLevel": "Prioriteitsniveau: {{priority}}",
     "dueLabel": "Vervaldatum",
+    "startsLabel": "Start",
     "noDueDate": "Geen vervaldatum",
     "hideTags": "Tags verbergen",
     "criticalPath": "Kritiek pad",
@@ -294,7 +314,11 @@
     "bulkTagsSuccess_other": "Labels toegevoegd aan {{count}} taken",
     "bulkTagsPartial": "Labels konden niet aan sommige taken worden toegevoegd",
     "bulkTagsFailure": "Labels konden niet aan de geselecteerde taken worden toegevoegd",
-    "taskTypeFallback": "Taak"
+    "taskTypeFallback": "Taak",
+    "timeline": "Tijdlijn",
+    "loadingTimeline": "Tijdlijn laden...",
+    "bulkTagsSuccess_few": "Labels toegevoegd aan {{count}} taken",
+    "bulkTagsSuccess_many": "Labels toegevoegd aan {{count}} taken"
   },
   "taskForm": {
     "addTitle": "Nieuwe taak toevoegen",
@@ -408,7 +432,20 @@
     "movedSuccess": "Taak is succesvol verplaatst",
     "duplicatedSuccess": "Taak \"{{taskName}}\" is succesvol gedupliceerd!",
     "willBeSetOnCreate": "Wordt ingesteld op de schepping",
-    "unknownPhase": "Onbekende fase"
+    "unknownPhase": "Onbekende fase",
+    "serviceInheritedFromPhase": "Neemt {{service}} over van de fase.",
+    "serviceInheritedFromProject": "Neemt {{service}} over van het project.",
+    "startDateLabel": "Startdatum",
+    "taskStartDateLabel": "Startdatum van taak",
+    "startDatePlaceholder": "Selecteer startdatum",
+    "createdTicketsIntro_few": "U heeft in deze sessie {{count}} tickets aangemaakt:",
+    "createdTicketsIntro_many": "U heeft in deze sessie {{count}} tickets aangemaakt:",
+    "documentCleanupFailure_few": "{{count}} documenten konden niet worden verwijderd en blijven in Documenten staan",
+    "documentCleanupFailure_many": "{{count}} documenten konden niet worden verwijderd en blijven in Documenten staan",
+    "documentsCleanupIntro_few": "U heeft {{count}} documenten die {{cleanupType}} zijn:",
+    "documentsCleanupIntro_many": "U heeft {{count}} documenten die {{cleanupType}} zijn:",
+    "ticketCleanupFailure_few": "{{count}} tickets konden niet worden verwijderd",
+    "ticketCleanupFailure_many": "{{count}} tickets konden niet worden verwijderd"
   },
   "taskDependencies": {
     "title": "Afhankelijkheden",
@@ -508,7 +545,14 @@
     "linkedToTaskSuccess": "Ticket gekoppeld aan taak",
     "failedLoadTask": "Kan taak niet laden",
     "clientFallback": "Klant",
-    "defaultNewStatus": "Nieuw"
+    "defaultNewStatus": "Nieuw",
+    "billUnderProjectLabel": "Tijd van dit ticket als projecttijd factureren",
+    "billingOffBadge": "Gefactureerd op klantniveau",
+    "billingOnTooltip": "Tijd van dit ticket niet meer als projecttijd factureren",
+    "billingOffTooltip": "Tijd van dit ticket als projecttijd factureren",
+    "billingOnSuccess": "De tijd van dit ticket wordt als projecttijd gefactureerd",
+    "billingOffSuccess": "De tijd van dit ticket wordt op klantniveau gefactureerd",
+    "billingUpdateFailed": "Facturatie van het ticket kon niet worden bijgewerkt"
   },
   "materials": {
     "title": "Projectmaterialen",
@@ -601,6 +645,7 @@
       "priority": "Prioriteit",
       "assignedTo": "Toegewezen aan",
       "assignedTeam": "Toegewezen team",
+      "startDate": "Startdatum",
       "dueDate": "Deadline",
       "estimatedHours": "Geschatte uren",
       "actualHours": "Werkelijke uren",
@@ -611,7 +656,13 @@
     },
     "exportSelected": "{{count}} geselecteerde exporteren",
     "selectedTasksNotice_one": "{{count}} geselecteerde taak wordt geëxporteerd.",
-    "selectedTasksNotice_other": "{{count}} geselecteerde taken worden geëxporteerd."
+    "selectedTasksNotice_other": "{{count}} geselecteerde taken worden geëxporteerd.",
+    "phasesSelected_few": "{{selected}} van {{total}} fasen geselecteerd",
+    "phasesSelected_many": "{{selected}} van {{total}} fasen geselecteerd",
+    "selectedTasksNotice_few": "{{count}} geselecteerde taken worden geëxporteerd.",
+    "selectedTasksNotice_many": "{{count}} geselecteerde taken worden geëxporteerd.",
+    "success_few": "{{count}} taken naar CSV geëxporteerd.",
+    "success_many": "{{count}} taken naar CSV geëxporteerd."
   },
   "import": {
     "title": "Fasen en taken importeren",
@@ -619,7 +670,7 @@
     "requiredFields": "Vereist:",
     "requiredFieldsList": "task_name",
     "optionalFields": "Optioneel:",
-    "optionalFieldsList": "phase_name, task_description, assigned_to, estimated_hours, due_date, priority, service, task_type, status, tags",
+    "optionalFieldsList": "phase_name, task_description, assigned_to, estimated_hours, start_date, due_date, priority, service, task_type, status, tags",
     "noteLabel": "Opmerking:",
     "defaultPhaseNote": "Taken zonder fasenaam worden gegroepeerd in \"{{phaseName}}\"",
     "downloadTemplate": "CSV-sjabloon downloaden",
@@ -708,6 +759,7 @@
       "assigned_to": "Toegewezen aan",
       "estimated_hours": "Geschatte uren",
       "actual_hours": "Werkelijke uren",
+      "start_date": "Startdatum",
       "due_date": "Vervaldatum",
       "priority": "Prioriteit",
       "service": "Service",
@@ -731,7 +783,9 @@
     "statusUnmatchedTooltip": "Status komt niet overeen met een bestaande status voor deze fase. Los op in de mappingstappen voor de import.",
     "statusFallbackSuffix": "Standaard",
     "statusFallbackTooltip": "De standaard fallback-status voor deze fase wordt gebruikt.",
-    "inPhaseBadge": "binnen {{phase}}"
+    "inPhaseBadge": "binnen {{phase}}",
+    "taskCountLabel_few": "({{count}} taken)",
+    "taskCountLabel_many": "({{count}} taken)"
   },
   "dialogs": {
     "moveTask": {
@@ -803,7 +857,11 @@
       "task": "Taak",
       "tasks": "Taken",
       "badgeCount_other": "{{count}} Taken",
-      "badgeCount_one": "{{count}} Taak"
+      "badgeCount_one": "{{count}} Taak",
+      "billsToProject": "Tijd wordt als projecttijd gefactureerd",
+      "billsToClient": "Tijd wordt op klantniveau gefactureerd",
+      "badgeCount_few": "{{count}} Taken",
+      "badgeCount_many": "{{count}} Taken"
     },
     "bulkMoveTask": {
       "title": "Taken verplaatsen",
@@ -907,7 +965,7 @@
       "choose_status": "Kies een status",
       "no_statuses_available": "Geen statussen beschikbaar",
       "no_statuses_available_hint": "Maak eerst statussen aan in Instellingen → Projecten → Statussen.",
-      "task_status_library_title": "Statusbibliotheek van projecttaak",
+      "task_status_library_title": "Taakstatusbibliotheek",
       "task_status_library_description": "Beheer de projecttaakstatussen van uw organisatie. Deze statussen kunnen in alle projecten worden gebruikt.",
       "task_status_library_empty": "Geen projecttaakstatussen gevonden",
       "task_status_library_empty_hint": "Maak uw eerste status aan om aan de slag te gaan",
@@ -947,12 +1005,33 @@
       "last_closed_error": "Er moet ten minste één status gemarkeerd blijven als gesloten",
       "last_closed_delete_error": "Kan de laatste gesloten status voor dit type niet verwijderen.",
       "addStatus": "Nieuwe status toevoegen",
-      "add_from_library": "Status toevoegen"
+      "add_from_library": "Status toevoegen",
+      "closed_badge": "(Gesloten)",
+      "drag_to_reorder": "Sleep om te herschikken",
+      "refresh_library": "Statusbibliotheek vernieuwen",
+      "all_library_statuses_used": "Elke status uit de bibliotheek is hier al een kolom. Gebruik ‘Nieuw maken’ om er een toe te voegen.",
+      "delete_no_move_target": "Er is geen andere statuskolom om deze taken naartoe te verplaatsen. Voeg eerst een kolom toe.",
+      "delete_scope_help": "Dit verwijdert de kolom alleen binnen dit bereik. De status blijft in de Taakstatusbibliotheek.",
+      "fork_title": "Aangepaste statuskolommen voor deze fase gebruiken?",
+      "fork_message": "Deze fase erft dan niet langer de standaardkolommen van het project. Statuskolommen die u later aan de projectstandaarden toevoegt, verschijnen hier pas als u de fase terugzet.",
+      "fork_confirm": "Aangepaste statussen gebruiken",
+      "phase_uses_custom": "Deze fase heeft eigen statuskolommen en erft de projectstandaarden niet meer.",
+      "pending_title": "Niet-opgeslagen wijzigingen in statuskolommen",
+      "pending_apply_hint": "Er verandert niets totdat u opslaat.",
+      "pending_fork": "{{phase}} krijgt eigen statuskolommen.",
+      "pending_revert": "{{phase}} gaat terug naar de standaardkolommen van het project.",
+      "pending_order": "Nieuwe kolomvolgorde voor {{scope}}.",
+      "pending_preview_hint": "De standaardkolommen van het project worden als voorbeeld weergegeven. Sla op om de wijziging toe te passen; daarna kunt u hier kolommen toevoegen of verwijderen.",
+      "rename_impact_title": "Waar deze naamswijziging terechtkomt",
+      "rename_impact_following": "Neemt deze naamswijziging direct over: {{columns}} kolom(men) in {{projects}}.",
+      "rename_impact_keeping": "Houdt de naam ‘{{name}}’: {{columns}} kolom(men) in {{projects}}. Deze kolommen zijn niet gekoppeld aan deze status uit de Taakstatusbibliotheek, dus die projecten blijven de oude naam rapporteren totdat u de kolom daar hernoemt.",
+      "rename_impact_more": "en {{remaining}} meer",
+      "rename_impact_none": "Deze status wordt nog in geen enkel project als kolom gebruikt."
     }
   },
   "templates": {
     "statuses": {
-      "manage_title": "Statuskolommen beheren",
+      "manage_title": "Taakstatuskolommen",
       "manage_description": "Definieer de statuskolommen voor taken in dit sjabloon. Sleep om te herordenen.",
       "template_defaults": "Sjabloonstandaarden",
       "added": "Statuskolom toegevoegd",
@@ -978,7 +1057,8 @@
       "replaced": "Statuskolom vervangen",
       "replace_failed": "Statuskolom vervangen mislukt",
       "repair_status_columns": "Statuskolommen repareren",
-      "unresolved_apply_guard": "Statuskolommen moeten worden gerepareerd ({{count}})"
+      "unresolved_apply_guard": "Statuskolommen moeten worden gerepareerd ({{count}})",
+      "pending_row_hint": "Vul de lege statuskolom in voordat u er een toevoegt."
     },
     "list": {
       "title": "Projectsjablonen",
@@ -1157,7 +1237,9 @@
       "taskCount_other": "{{count}} taken",
       "unknownUser": "Onbekend",
       "unknownTask": "Onbekende taak",
-      "checklistCountTitle": "{{count}} checklist-item"
+      "checklistCountTitle": "{{count}} checklist-item",
+      "taskCount_few": "{{count}} taken",
+      "taskCount_many": "{{count}} taken"
     },
     "taskForm": {
       "addTitle": "Taak toevoegen",
@@ -1195,6 +1277,9 @@
       "statusColumnLabel": "Statuskolom",
       "estimatedHoursLabel": "Geschatte uren",
       "durationLabel": "Duur (dagen)",
+      "startOffsetLabel": "Startverschuiving (dagen)",
+      "startOffsetPlaceholder": "Geen startdatum",
+      "phaseRelativeHint": "Startverschuiving en duur tellen dagen vanaf de start van de fase: de taak start na de verschuiving en vervalt na de duur.",
       "taskTypeLabel": "Taaktype",
       "priorityLabel": "Prioriteit",
       "primaryAgentLabel": "Primaire agent",
@@ -1263,6 +1348,7 @@
         "service": "Service (voor tijdinvoer)",
         "estimatedHours": "Geschatte uren",
         "duration": "Duur (dagen)",
+        "startOffset": "Startverschuiving (dagen)",
         "durationSummaryShort": "{{days}} dagen",
         "taskType": "Taaktype",
         "priority": "Prioriteit",
@@ -1409,22 +1495,14 @@
     "addPhase": "Fase toevoegen",
     "phaseNamePlaceholder": "Fasenaam… *",
     "descriptionPlaceholder": "Beschrijving",
+    "serviceLabel": "Standaardservice (voor tijdinvoer)",
+    "noService": "Geen service",
+    "servicePlaceholder": "Standaardservice selecteren",
+    "serviceHelp": "Wordt gebruikt voor tijdinvoer op taken in deze fase wanneer de taak zelf geen service instelt.",
     "adding": "Toevoegen…",
     "addError": "Kon fase niet toevoegen. Probeer opnieuw.",
     "title": "Projectfasen",
     "import": "Importeren"
-  },
-  "addStatusDialog": {
-    "phaseTitle": "Fasestatus toevoegen vanuit bibliotheek",
-    "projectTitle": "Status toevoegen vanuit bibliotheek",
-    "selectLabel": "Selecteer uit statusbibliotheek",
-    "placeholder": "Kies een status",
-    "helpText": "Selecteer een status uit de statusbibliotheek van uw tenant om aan dit project toe te voegen.",
-    "noStatusesTitle": "Geen statussen beschikbaar",
-    "noStatusesDescription": "Maak statussen aan in Instellingen → Projecten → Statussen.",
-    "adding": "Toevoegen...",
-    "addStatus": "Status toevoegen",
-    "addFailed": "Kan status niet toevoegen. Probeer het opnieuw."
   },
   "taskStatusSelect": {
     "ariaLabel": "Taakstatus",
@@ -1475,6 +1553,7 @@
       "fields": {
         "taskNames": "taaknamen",
         "descriptions": "beschrijvingen",
+        "startDates": "startdatums",
         "dueDates": "vervaldata",
         "status": "status",
         "assignees": "toegewezenen",
@@ -1489,6 +1568,7 @@
     "fieldLabels": {
       "task_name": "Taaknaam",
       "description": "Beschrijving",
+      "start_date": "Startdatum",
       "due_date": "Vervaldatum",
       "status": "Status",
       "assigned_to": "Toegewezen aan",
@@ -1508,7 +1588,7 @@
     "statusColor": "Statuskleur",
     "changeColor": "Kleur wijzigen",
     "markClosed": "Markeren als gesloten status",
-    "markClosedDescription": "Taken in gesloten statussen worden als voltooid beschouwd",
+    "markClosedDescription": "Taken met deze status worden als voltooid beschouwd",
     "creating": "Aanmaken...",
     "createButton": "Status aanmaken",
     "nameRequired": "Statusnaam is verplicht",
@@ -1569,7 +1649,9 @@
       "submitting": "Labels toevoegen...",
       "confirm_one": "Labels toevoegen aan {{count}} taak",
       "confirm_other": "Labels toevoegen aan {{count}} taken",
-      "failedHeading": "Labels konden niet aan de volgende taken worden toegevoegd:"
+      "failedHeading": "Labels konden niet aan de volgende taken worden toegevoegd:",
+      "confirm_few": "Labels toevoegen aan {{count}} taken",
+      "confirm_many": "Labels toevoegen aan {{count}} taken"
     }
   },
   "common:actions": {
@@ -1632,7 +1714,9 @@
       "lockedSummary_other": "{{count}} items met een totaal van {{amount}} zijn vergrendeld en veranderen niet.",
       "edit": "Voorwaarden bewerken",
       "saved": "Factureringsvoorwaarden bijgewerkt",
-      "dialogTitle": "Factureringsvoorwaarden bewerken"
+      "dialogTitle": "Factureringsvoorwaarden bewerken",
+      "lockedSummary_few": "{{count}} items met een totaal van {{amount}} zijn vergrendeld en veranderen niet.",
+      "lockedSummary_many": "{{count}} items met een totaal van {{amount}} zijn vergrendeld en veranderen niet."
     },
     "setup": {
       "title": "Dit project factureren",
@@ -1747,6 +1831,7 @@
     "cap": {
       "title": "Budgetlimiet",
       "hint": "Tijd en materialen worden tegen tarieven gefactureerd tot een optionele maximumlimiet.",
+      "currencyStale": "De opgeslagen limiet staat in {{projectCurrency}}, de valuta waarin de facturen van dit project niet worden opgemaakt. Voer de limiet in {{invoiceCurrency}} in om dit project naar {{invoiceCurrency}} over te zetten; tot die tijd wordt geen limiet toegepast. De nieuwe limiet telt vanaf nul: reeds gefactureerde bedragen worden niet meegenomen.",
       "amount": "Limietbedrag ({{currency}})",
       "behavior": "Bij bereiken",
       "notify": "Alleen melden",
@@ -1797,7 +1882,8 @@
       "tmHardHint": "Harde limiet {{cap}} — facturering stopt bij de limiet",
       "tmNotifyHint": "Budgetlimiet {{cap}} — alleen melden",
       "thresholdMarker": "Meldingsdrempel {{pct}}%",
-      "writtenDown": "Boven limiet afgeboekt: {{amount}}"
+      "writtenDown": "Boven limiet afgeboekt: {{amount}}",
+      "currencyStale": "De bedragen hier staan in {{projectCurrency}}, maar de facturen van dit project worden in {{invoiceCurrency}} opgemaakt, dus een hier getelde budgetlimiet wordt niet toegepast."
     },
     "economics": {
       "title": "Projectrendement",
@@ -1870,6 +1956,131 @@
     "errors": {
       "loadRecipient": "Ontvangersgegevens konden niet worden geladen",
       "sendFailed": "Statusupdate kon niet worden verstuurd"
+    }
+  },
+  "gantt": {
+    "title": "Tijdlijn",
+    "taskColumn": "Fase / Taak",
+    "zoomLabel": "Tijdschaal",
+    "zoomDay": "Dag",
+    "zoomWeek": "Week",
+    "zoomMonth": "Maand",
+    "today": "Vandaag",
+    "dragHint": "Sleep een balk om opnieuw te plannen, of de randen om de duur te wijzigen.",
+    "displayOptions": "Weergaveopties",
+    "showBlocking": "Blokkerende koppelingen",
+    "showBlockingHint": "Pijlen tussen taken die in volgorde klaar moeten zijn",
+    "showRelated": "Gerelateerde koppelingen",
+    "showRelatedHint": "Stippellijnen tussen gerelateerde taken",
+    "showCriticalPath": "Kritiek pad",
+    "showCriticalPathHint": "Markeer de taken die de einddatum bepalen",
+    "hideClosed": "Voltooide taken verbergen",
+    "hideClosedHint": "Alleen werk tonen dat nog openstaat",
+    "legend": "Legenda",
+    "legendScheduled": "Datums ingesteld op de taak",
+    "legendInferred": "Geschatte datums (geen datums ingesteld)",
+    "legendProgress": "Het donkere deel toont de voortgang",
+    "legendOverdue": "Te laat",
+    "legendClosed": "Voltooid",
+    "legendCritical": "Kritiek pad: vertraging hier vertraagt de oplevering",
+    "legendBlocking": "Blokkerend: moet eerst klaar zijn",
+    "legendViolated": "Afhankelijkheidsconflict: start voordat de blokkerende taak eindigt",
+    "legendRelated": "Gerelateerd: geen effect op datums",
+    "keyboardHint": "Toetsenbord: focus een balk, daarna verplaatst Alt + ← / → hem een dag en wijzigt Shift + ← / → de einddatum.",
+    "export": "Afbeelding exporteren",
+    "exportedAsSvg": "De tijdlijn was te groot voor een PNG en is daarom als SVG opgeslagen.",
+    "exportFailed": "De tijdlijn kon niet worden geëxporteerd. Probeer het opnieuw.",
+    "emptyNoPhasesTitle": "Nog geen fasen",
+    "emptyNoPhasesDescription": "Voeg een fase toe en voeg er daarna taken aan toe. Elke taak verschijnt hier als balk.",
+    "emptyNoTasksTitle": "Nog geen taken om te tonen",
+    "emptyNoTasksDescription": "Voeg een taak toe om die hier te zien. Geef een startdatum en einddatum om de balk vast te leggen, of een schatting en de tijdlijn berekent de datums.",
+    "emptyFiltered": "Geen taken komen overeen met de huidige filters.",
+    "emptyAllClosed": "Alle taken zijn voltooid. Schakel 'Voltooide taken verbergen' uit om ze te zien.",
+    "addPhase": "Fase toevoegen",
+    "addTask": "Taak toevoegen",
+    "addTaskToPhase": "Taak aan deze fase toevoegen",
+    "expandAll": "Alle fasen uitklappen",
+    "collapseAll": "Alle fasen inklappen",
+    "phaseProgress": "{{closed}} van {{total}} taken voltooid",
+    "blockedBy": "Wacht op: {{tasks}}",
+    "assignee": "Toegewezen aan",
+    "phaseOverrun": "Eindigt na de deadline van de fase ({{date}})",
+    "inferredHint": "Geschatte datums. Stel een start- en einddatum in om ze vast te leggen.",
+    "tooltipStatus": "Status: {{status}}",
+    "tooltipAssignee": "Toegewezen aan: {{name}}",
+    "tooltipProgress": "Voortgang: {{percent}}%",
+    "tooltipEstimate": "Schatting: {{hours}} u",
+    "tooltipOverdue": "Te laat",
+    "tooltipConflict": "Start voordat een blokkerende taak klaar hoort te zijn",
+    "tooltipCritical": "Op het kritieke pad",
+    "barLabel": "{{task}}, {{range}}",
+    "linkHandle": "Sleep naar een taak die op deze moet wachten",
+    "dependencyAdded": "Afhankelijkheid toegevoegd",
+    "tooltipBlocks": "Blokkeert: {{tasks}}",
+    "edgeBlockingTitle": "Blokkerende afhankelijkheid",
+    "edgeRelatedTitle": "Gerelateerde taken",
+    "edgeBlockingText": "'{{from}}' moet klaar zijn voordat '{{to}}' kan starten.",
+    "edgeRelatedText": "'{{from}}' en '{{to}}' zijn gerelateerd. Dit heeft geen effect op datums.",
+    "edgeConflictText": "De huidige datums zijn in strijd met deze afhankelijkheid.",
+    "removeDependency": "Afhankelijkheid verwijderen",
+    "dependencyRemoved": "Afhankelijkheid verwijderd",
+    "legendPhase": "Fasedatums; het donkere deel is het aandeel voltooide taken",
+    "legendPhaseOverrun": "Taken die over de einddatum van de fase heen gaan",
+    "phaseBandLabel": "{{range}} · {{percent}}% voltooid",
+    "phaseStartsOn": "Start op {{date}} · geen einddatum",
+    "phaseEndsOn": "Eindigt op {{date}} · geen startdatum",
+    "phaseNoDates": "Geen fasedatums ingesteld"
+  },
+  "smartSearch": {
+    "run": "Slim zoeken",
+    "runTitle": "Gefilterde projecten beoordelen op deze zoekopdracht",
+    "relevanceColumn": "Overeenkomst",
+    "relevance": "{{percent}}% overeenkomst",
+    "strong": "Sterke matches",
+    "possible": "Mogelijke matches",
+    "unlikely": "Onwaarschijnlijke matches",
+    "emptyBucketRunning": "Nog geen",
+    "emptyBucket": "Geen",
+    "scoring": "{{scored}} van {{total}} projecten beoordeeld",
+    "summary": "{{total}} projecten beoordeeld · {{strong}} sterk · {{possible}} mogelijk",
+    "cancelled": "Zoeken geannuleerd na {{scored}} van {{total}} projecten",
+    "errorTitle": "Slim zoeken gestopt",
+    "starting": "Slim zoeken wordt gestart…",
+    "rerun": "Filters gewijzigd. Opnieuw uitvoeren",
+    "retry": "Opnieuw proberen",
+    "cancel": "Annuleren",
+    "exit": "Terug naar lijst",
+    "notConfigured": "Slim zoeken is niet geconfigureerd op deze server",
+    "failedCount": "{{count}} projecten konden niet worden beoordeeld",
+    "unscored": "Niet beoordeeld",
+    "addOnRequired": "Slim zoeken vereist de AI-assistent-add-on"
+  },
+  "dependencyGuard": {
+    "blockedTitle": "Deze taak is geblokkeerd",
+    "conflictTitle": "Afhankelijkheidsconflict",
+    "blockedStatus": "'{{task}}' wacht nog op: {{blockers}}.",
+    "startsBeforeBlocker": "'{{task}}' zou starten voordat '{{other}}' klaar hoort te zijn.",
+    "endsAfterDependent": "'{{task}}' zou eindigen nadat '{{other}}' hoort te starten.",
+    "more": "En nog {{remaining}}.",
+    "question": "Afhankelijkheden worden niet afgedwongen, dus u kunt doorgaan. Wilt u dat?",
+    "proceed": "Toch doorgaan",
+    "cancel": "Annuleren"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "Compact"
+    },
+    "spacious": {
+      "label": "Ruim"
+    },
+    "decrease": {
+      "title": "Kolombreedte verkleinen"
+    },
+    "increase": {
+      "title": "Kolombreedte vergroten"
+    },
+    "reset": {
+      "title": "Standaardwaarde herstellen"
     }
   }
 }

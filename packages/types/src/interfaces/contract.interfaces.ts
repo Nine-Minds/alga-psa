@@ -6,6 +6,12 @@ import type { CadenceOwner } from './recurringTiming.interfaces';
  * Contract status types
  */
 export type ContractStatus = 'active' | 'draft' | 'terminated' | 'expired' | 'published' | 'archived';
+/**
+ * Derived (never stored) assignment lifecycle status: ContractStatus plus `scheduled`, a confirmed
+ * contract whose assignment starts after today. See shared/billingClients/clientContractStatus.ts.
+ * Kept out of ContractStatus so the contracts.status column/enum is unaffected.
+ */
+export type ClientContractDerivedStatus = ContractStatus | 'scheduled';
 export type RenewalWorkItemStatus = 'pending' | 'renewing' | 'non_renewing' | 'snoozed' | 'completed';
 
 /**
@@ -39,7 +45,7 @@ export interface IContractWithClient extends IContract {
   logoUrl?: string | null;
   owner_client_name?: string | null;
   client_contract_id?: string;
-  assignment_status?: ContractStatus;
+  assignment_status?: ClientContractDerivedStatus;
   contract_header_status?: ContractStatus;
   start_date?: ISO8601String;
   end_date?: ISO8601String | null;
@@ -57,6 +63,11 @@ export interface IContractLineMapping extends TenantEntity {
   contract_line_id: string;
   display_order?: number;
   custom_rate?: number | null;
+  /**
+   * Who owns `custom_rate`. `inherited` (custom_rate NULL) follows the catalog;
+   * `custom`/`unreviewed` take the stored number. See the rate-provenance plan.
+   */
+  rate_provenance?: 'custom' | 'inherited' | 'unreviewed' | null;
   billing_timing?: 'arrears' | 'advance';
   cadence_owner?: CadenceOwner;
   location_id?: string | null;
@@ -71,7 +82,7 @@ export interface IClientContract extends TenantEntity {
   client_contract_id: string;
   client_id: string;
   contract_id: string;
-  assignment_status?: ContractStatus;
+  assignment_status?: ClientContractDerivedStatus;
   contract_status?: ContractStatus;
   /** Provenance-only metadata for template origin; not a runtime identity key. */
   template_contract_id?: string | null;
@@ -96,9 +107,16 @@ export interface IClientContract extends TenantEntity {
   renewal_cycle_key?: string;
   days_until_due?: number;
   is_active: boolean;
+  /**
+   * Billing profile this contract bills to — step 3 of the charge-attribution
+   * chain. NULL falls through to the client default, the pre-profile behaviour.
+   */
+  billing_profile_id?: string | null;
   po_required?: boolean;
   po_number?: string | null;
   po_amount?: number | null;
+  /** The assigned contract's own currency (the PO amount is denominated in it). */
+  currency_code?: string | null;
   /** true = this contract's charges are excluded from credit draw-down. */
   credit_drawdown_opt_out?: boolean | null;
   created_at?: ISO8601String;
@@ -137,7 +155,10 @@ export interface IContractAssignmentSummary extends TenantEntity {
   client_contract_id: string;
   client_id: string;
   client_name?: string | null;
-  assignment_status?: ContractStatus;
+  /** Profile this assignment bills; NULL falls back to the client default. */
+  billing_profile_id?: string | null;
+  billing_profile_name?: string | null;
+  assignment_status?: ClientContractDerivedStatus;
   start_date: ISO8601String | null;
   end_date: ISO8601String | null;
   renewal_mode?: 'none' | 'manual' | 'auto';
@@ -167,6 +188,12 @@ export interface IContractAssignmentSummary extends TenantEntity {
 export interface IContractPricingSchedule extends TenantEntity {
   schedule_id: string;
   contract_id: string;
+  /**
+   * Optional line scope. NULL keeps the original contract-wide meaning (the
+   * schedule applies to every line on the contract); a line id scopes the
+   * override to that line only.
+   */
+  contract_line_id?: string | null;
   effective_date: ISO8601String;
   end_date?: ISO8601String | null;
   duration_value?: number;

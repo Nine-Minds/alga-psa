@@ -60,14 +60,12 @@ describe('T002: static i18n wiring audit', () => {
     'project-templates/wizard-steps/TemplateReviewStep.tsx',
     'project-templates/wizard-steps/TemplatePhasesStep.tsx',
     'project-templates/CreateTemplateForm.tsx',
-    'project-templates/TemplateDetail.tsx',
     'project-templates/wizard-steps/TemplateClientPortalStep.tsx',
     'project-templates/TemplateCreationWizard.tsx',
     'project-templates/wizard-steps/TemplateBasicsStep.tsx',
     // Sub-batch C: settings + small
     'settings/projects/TenantProjectTaskStatusSettings.tsx',
     'settings/projects/ProjectStatusSettings.tsx',
-    'ProjectTaskStatusEditor.tsx',
     'CreateTaskFromTicketDialog.tsx',
     'LinkTicketToTaskDialog.tsx',
     'DeadlineFilter.tsx',
@@ -77,7 +75,10 @@ describe('T002: static i18n wiring audit', () => {
     'ProjectInfo.tsx',
     'DuplicateTaskDialog.tsx',
     'TicketLinkedTasksBadge.tsx',
-    'settings/projects/AddStatusDialog.tsx',
+    'settings/projects/ProjectTaskStatusSettings.tsx',
+    'status-columns/StatusColumnsEditor.tsx',
+    'status-columns/AddStatusColumnControls.tsx',
+    'status-columns/DeleteStatusColumnDialog.tsx',
     'ProjectPhases.tsx',
     'TaskStatusSelect.tsx',
     'TicketSelect.tsx',
@@ -125,7 +126,9 @@ describe('T002: static i18n wiring audit', () => {
 describe('T002: confirmed zero-string components', () => {
   const zeroStringFiles = [
     'KanbanBoard.tsx',
-    'KanbanZoomControl.tsx',
+    // KanbanZoomControl.tsx was reclassified: it passes real button/title
+    // strings (compact/spacious labels, zoom titles) and is now wired with
+    // useTranslation('features/projects') — it belongs in the wired list above.
     'DonutChart.tsx',
     'TaskQuickAdd.tsx',
     'HoursProgressBar.tsx',
@@ -207,6 +210,30 @@ describe('T010: /msp/projects list page i18n coverage', () => {
     expect(getLeaf(pseudo, 'title')).toMatch(pseudoPattern('xx'));
   });
 
+  it('Projects.tsx wires the smart search affordance through features/projects translations', () => {
+    const source = read('./Projects.tsx');
+    expect(source).toContain("projectListT('searchSmart', 'Search projects, tasks, and comments… Enter for smart search')");
+    expect(source).toContain("t('smartSearch.run', 'Smart search')");
+    expect(source).toContain("t('smartSearch.runTitle', 'Score the filtered projects against this query')");
+    expect(getLeaf(pseudo, 'projectList.searchSmart')).toMatch(pseudoPattern('xx'));
+    // The shared results panel reads these from the page's namespace.
+    for (const key of [
+      'smartSearch.run',
+      'smartSearch.strong',
+      'smartSearch.possible',
+      'smartSearch.unlikely',
+      'smartSearch.scoring',
+      'smartSearch.cancel',
+      'smartSearch.exit',
+      'smartSearch.rerun',
+      'smartSearch.unscored',
+      'smartSearch.notConfigured',
+      'smartSearch.addOnRequired',
+    ]) {
+      expect(getLeaf(pseudo, key), key).toMatch(pseudoPattern('xx'));
+    }
+  });
+
   it('DeadlineFilter.tsx wires keys backed by xx pseudo-locale', () => {
     const source = read('./DeadlineFilter.tsx');
     expect(source).toContain("useTranslation");
@@ -277,6 +304,61 @@ describe('T011: /msp/projects/[id] detail page i18n coverage', () => {
     expect(source).toContain("useTranslation");
     expect(getLeaf(pseudo, 'taskTicketLinks.title')).toMatch(pseudoPattern('xx'));
   });
+
+  it('the ticket-time billing choice is translated on both the task and the ticket side', () => {
+    const taskSide = read('./TaskTicketLinks.tsx');
+    // Pre-ticked: linking a ticket to a task means its time is project work.
+    expect(taskSide).toContain('id="bill-under-project-checkbox"');
+    expect(taskSide).toContain("linkT('billUnderProjectLabel'");
+    expect(taskSide).toContain("linkT('billingOffBadge'");
+    expect(taskSide).toContain('setTicketLinkBillingAction(link.link_id, nextValue)');
+
+    const ticketSide = read('./TicketLinkedTasksBadge.tsx');
+    expect(ticketSide).toContain("t('dialogs.ticketLinkedTasks.billsToProject'");
+    expect(ticketSide).toContain("t('dialogs.ticketLinkedTasks.billsToClient'");
+
+    for (const key of [
+      'taskTicketLinks.billUnderProjectLabel',
+      'taskTicketLinks.billingOffBadge',
+      'taskTicketLinks.billingOnTooltip',
+      'taskTicketLinks.billingOffTooltip',
+      'taskTicketLinks.billingOnSuccess',
+      'taskTicketLinks.billingOffSuccess',
+      'taskTicketLinks.billingUpdateFailed',
+      'dialogs.ticketLinkedTasks.billsToProject',
+      'dialogs.ticketLinkedTasks.billsToClient',
+    ]) {
+      expect(getLeaf(pseudo, key), key).toMatch(pseudoPattern('xx'));
+    }
+  });
+
+  it('the stranded-currency notices on the project billing cards are translated', () => {
+    const budgetCard = read(
+      '../../../billing/src/components/project-billing/BudgetVsActualCard.tsx'
+    );
+    expect(budgetCard).toContain("'billing.budget.currencyStale'");
+    expect(budgetCard).toContain('id="project-billing-currency-mismatch"');
+
+    const capPanel = read('../../../billing/src/components/project-billing/CapPanel.tsx');
+    expect(capPanel).toContain("'billing.cap.currencyStale'");
+    expect(capPanel).toContain('id="project-billing-cap-currency-stale"');
+
+    for (const key of ['billing.budget.currencyStale', 'billing.cap.currencyStale']) {
+      expect(getLeaf(pseudo, key), key).toMatch(pseudoPattern('xx'));
+    }
+  });
+
+  it("the project billing queue says approved time is not reviewed there", () => {
+    const reviewTab = read(
+      '../../../billing/src/components/billing-dashboard/invoicing/ProjectBillingReviewTab.tsx'
+    );
+    expect(reviewTab).toContain("t('projectBilling.emptyTimeHint'");
+
+    const invoicingPseudo = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/xx/msp/invoicing.json'
+    );
+    expect(getLeaf(invoicingPseudo, 'projectBilling.emptyTimeHint')).toMatch(pseudoPattern('xx'));
+  });
 });
 
 // ── T012: /msp/projects/templates routes pseudo-locale coverage ─────────────
@@ -335,11 +417,14 @@ describe('T013: /msp/settings/project-settings i18n coverage', () => {
     expect(source).toContain("useTranslation");
   });
 
-  it('AddStatusDialog.tsx wires add-status dialog keys backed by xx pseudo-locale', () => {
-    const source = read('./settings/projects/AddStatusDialog.tsx');
-    expect(source).toContain("useTranslation");
-    expect(getLeaf(pseudo, 'addStatusDialog.addStatus')).toMatch(pseudoPattern('xx'));
-    expect(getLeaf(pseudo, 'addStatusDialog.placeholder')).toMatch(pseudoPattern('xx'));
+  it('the shared status-columns editor wires its keys backed by xx pseudo-locale', () => {
+    expect(read('./status-columns/StatusColumnsEditor.tsx')).toContain("useTranslation");
+    expect(read('./status-columns/AddStatusColumnControls.tsx')).toContain("useTranslation");
+    expect(read('./status-columns/DeleteStatusColumnDialog.tsx')).toContain("useTranslation");
+    expect(getLeaf(pseudo, 'settings.statuses.add_existing')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'settings.statuses.choose_status')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'settings.statuses.closed_badge')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'settings.statuses.fork_message')).toMatch(pseudoPattern('xx'));
   });
 });
 

@@ -16,7 +16,9 @@ import type {
   DateValue,
 } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
+import { blockNoteToPlainText } from '@alga-psa/formatting/blocknoteUtils';
 import { displayAddressField, displayCountry } from '@alga-psa/core';
+import { paymentMethodDisplayLabel } from '@alga-psa/shared/billingClients/paymentPreferences';
 // toPlainDate is likely not needed here as we format to string for Wasm
 
 // Helper function to convert DateValue (Date or ISO string or Temporal) to ISO string for Wasm
@@ -139,12 +141,16 @@ const resolveTenantClientSnapshot = (source: Record<string, unknown>): WasmInvoi
   };
 };
 
-const recurringServicePeriodDateFormatter = new Intl.DateTimeFormat('en-US', {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
+// A NAMED month, so the reading language names and orders it; the country rule
+// governs numeric dates, which this label is not. UTC stays pinned so the
+// written period never shifts with the server timezone.
+const recurringServicePeriodDateFormatter = (locale?: string): Intl.DateTimeFormat =>
+  new Intl.DateTimeFormat(locale || 'en', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
 
 const parseRecurringServicePeriodDate = (value: unknown): Date | null => {
   if (value instanceof Date) {
@@ -166,17 +172,18 @@ const parseRecurringServicePeriodDate = (value: unknown): Date | null => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-const buildRecurringServicePeriodLabel = (start: unknown, end: unknown): string | null => {
+const buildRecurringServicePeriodLabel = (start: unknown, end: unknown, locale?: string): string | null => {
   const parsedStart = parseRecurringServicePeriodDate(start);
   const parsedEnd = parseRecurringServicePeriodDate(end);
   if (!parsedStart || !parsedEnd) {
     return null;
   }
 
-  return `${recurringServicePeriodDateFormatter.format(parsedStart)} - ${recurringServicePeriodDateFormatter.format(parsedEnd)}`;
+  const formatter = recurringServicePeriodDateFormatter(locale);
+  return `${formatter.format(parsedStart)} - ${formatter.format(parsedEnd)}`;
 };
 
-const resolveRecurringServicePeriodSummary = (source: Record<string, unknown>) => {
+const resolveRecurringServicePeriodSummary = (source: Record<string, unknown>, locale?: string) => {
   const recurringServicePeriodStart =
     normalizeDateLikeValue(source.recurringServicePeriodStart) ||
     normalizeDateLikeValue(source.recurring_service_period_start) ||
@@ -191,7 +198,7 @@ const resolveRecurringServicePeriodSummary = (source: Record<string, unknown>) =
     recurringServicePeriodEnd,
     recurringServicePeriodLabel:
       recurringServicePeriodStart && recurringServicePeriodEnd
-        ? buildRecurringServicePeriodLabel(recurringServicePeriodStart, recurringServicePeriodEnd)
+        ? buildRecurringServicePeriodLabel(recurringServicePeriodStart, recurringServicePeriodEnd, locale)
         : null,
   };
 };
@@ -256,8 +263,26 @@ export function buildInvoiceLocationGroups(items: WasmInvoiceLineItem[]): WasmIn
   return order.map((key) => grouped.get(key)!);
 }
 
-/** Round minor-unit minutes to display hours (2dp, minutes stay authoritative). */
-const minutesToHours = (minutes: number): number => Math.round((minutes / 60) * 100) / 100;
+/** Round minutes to display hours (6dp, like invoice_charges.quantity; minutes stay authoritative). */
+const minutesToHours = (minutes: number): number => Math.round((minutes / 60) * 1e6) / 1e6;
+
+/**
+ * Display rounding for invoice quantities (2dp, integers untouched — the same
+ * rule as the `formatQuantity` helpers in billing/compute). Applied to the
+ * by-ticket presentation rows only; the 6dp stored/derived hours and the
+ * authoritative minutes are never altered.
+ */
+// LEVERAGE: pattern invoice-quantity-format — formatQuantity is copy-pasted in computeBucketCharges, computeUsageBasedCharges and computeRecurringQuantityCharges; this is a 4th variant. Extract one shared invoice quantity formatter.
+const roundInvoiceQuantity = (quantity: number): number =>
+  Number.isInteger(quantity) ? quantity : Math.round(quantity * 100) / 100;
+
+/**
+ * Read-time description for a by-ticket row: plain text of the ticket description
+ * (snapshots written before the write-time fix still hold BlockNote JSON), else
+ * the ticket title, else an empty cell. Never JSON.
+ */
+const ticketRowDescription = (description: unknown, title: unknown): string =>
+  blockNoteToPlainText(description) || blockNoteToPlainText(title);
 
 /** Snapshot input for the billed-time collections: entry + owning charge id. */
 export type InvoiceTimeCollectionSource = IInvoiceChargeTimeEntrySnapshot & {
@@ -283,7 +308,14 @@ const AD_HOC_GROUP_LABEL = '';
 export function buildInvoiceTimeCollections(
   sources: InvoiceTimeCollectionSource[],
 ): { timeEntries: WasmInvoiceTimeEntry[]; ticketGroups: WasmInvoiceTicketGroup[] } {
-  const timeEntries: WasmInvoiceTimeEntry[] = sources
+  // Segment links of one overtime entry share id and date; order them
+  // regular-then-overtime (then by item) so output never depends on input order.
+  const segmentRank = (source: InvoiceTimeCollectionSource): number =>
+    source.segment === 'regular' ? 0 : source.segment === 'overtime' ? 1 : 2;
+  const timeEntries: WasmInvoiceTimeEntry[] = [...sources]
+    .sort((left, right) =>
+      segmentRank(left) - segmentRank(right) || String(left.itemId ?? '').localeCompare(String(right.itemId ?? ''))
+    )
     .filter(isValidInvoiceTimeSnapshot)
     .map((source): WasmInvoiceTimeEntry => ({
       timePresentation: true,
@@ -293,7 +325,7 @@ export function buildInvoiceTimeCollections(
       workItemId: source.workItemId ?? null,
       ticketNumber: source.ticketNumber ?? null,
       title: source.title ?? null,
-      description: source.description ?? null,
+      description: source.description == null ? null : (blockNoteToPlainText(source.description) || null),
       date: source.entryDate ?? null,
       billedMinutes: Math.round(toFiniteNumber(source.billedMinutes)),
       hours: minutesToHours(Math.round(toFiniteNumber(source.billedMinutes))),
@@ -357,7 +389,7 @@ export function buildInvoiceTimeCollections(
         workItemId: isTicket || isTask ? first.workItemId : null,
         ticketNumber: isTicket ? first.ticketNumber : null,
         title: isTicket || isTask ? first.title : null,
-        description: isTicket ? first.description : null,
+        description: isTicket ? first.description : null, // already plain text (see timeEntries mapping)
         label,
         labelKey: !label ? `time.${isTicket ? 'ticket' : isTask ? 'task' : 'other'}` : undefined,
         rateKind,
@@ -430,23 +462,31 @@ function attachTicketPresentation(
 ): void {
   const byId = new Map(charges.map((charge) => [charge.item_id, charge]));
   const conflicts = new Set<string>();
-  const owners = new Map<string, string[]>();
+  const owners = new Map<string, Array<{ itemId: string; segment: string | null }>>();
   for (const charge of charges) {
     for (const link of charge.time_entry_links ?? []) {
       const prior = owners.get(link.entryId) ?? [];
-      prior.push(charge.item_id);
+      const segment = (link.snapshot as { segment?: unknown } | null)?.segment;
+      prior.push({ itemId: charge.item_id, segment: typeof segment === 'string' ? segment : null });
       owners.set(link.entryId, prior);
     }
   }
-  for (const ids of owners.values()) if (ids.length > 1) ids.forEach((id) => conflicts.add(id));
-  const eligible = new Set<string>();
-  const sources: InvoiceTimeCollectionSource[] = [];
+  // An overtime entry is billed as two charges, each linking the entry with
+  // its own segment snapshot (regular + overtime). Anything else claiming one
+  // entry from several charges is a conflict.
+  const isSegmentPair = (links: Array<{ segment: string | null }>): boolean =>
+    links.length === 2 && new Set(links.map((link) => link.segment)).size === 2 && links.every((link) => link.segment !== null);
+  for (const links of owners.values()) {
+    if (links.length > 1 && !isSegmentPair(links)) links.forEach((link) => conflicts.add(link.itemId));
+  }
   const isTime = (id: string): boolean => {
     const charge = byId.get(id);
     return charge?.billing_charge_type != null
       ? charge.billing_charge_type === 'time'
       : Boolean(charge?.time_entry_links?.length);
   };
+  const eligible = new Set<string>();
+  const sources: InvoiceTimeCollectionSource[] = [];
   const canonicalRow = (item: WasmInvoiceViewModel['items'][number]): InvoiceTicketPresentationRow => ({
     ...item, timePresentation: true, label: '', rate: isTime(item.id) ? null : item.unitPrice,
     ...(isTime(item.id) ? { rateKind: 'unknown' as const } : {}),
@@ -468,7 +508,7 @@ function attachTicketPresentation(
   let rows: InvoiceTicketPresentationRow[] = [
     ...groups.map((group) => ({
       timePresentation: true as const, id: group.key, label: group.label, labelKey: group.labelKey,
-      description: group.description ?? '', quantity: group.totalHours,
+      description: ticketRowDescription(group.description, group.title), quantity: roundInvoiceQuantity(group.totalHours),
       rate: group.rate, rateKind: group.rateKind, rateDisplay: group.rate,
       amount: group.totalAmount,
       contributions: group.entries.map((entry) => ({ itemId: entry.itemId!, entryId: entry.id, amount: entry.amount })),
@@ -538,7 +578,7 @@ export function enrichWithGroupedItems(vm: WasmInvoiceViewModel): WasmInvoiceVie
  * @returns An InvoiceViewModel suitable for template rendering, or null if input is null.
  */
 // Change input type to 'any' as the actual input structure seems to be WasmInvoiceViewModel based on logs
-export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | WasmInvoiceViewModel | any): WasmInvoiceViewModel | null {
+export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | WasmInvoiceViewModel | any, locale?: string): WasmInvoiceViewModel | null {
   console.log('[mapDbInvoiceToWasmViewModel] Received Data:', JSON.stringify(inputData, null, 2));
 
   if (!inputData) {
@@ -572,6 +612,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
         if (!useLegacyMajorUnits) {
           return Math.trunc(numeric);
         }
+        // LEVERAGE: pattern currency-minor-units — local *100 parser assumes a 2-digit currency; should use core toMinorUnits keyed on the invoice currency (alga0002091 follow-up)
         return Math.round(numeric * 100);
       };
 
@@ -604,6 +645,8 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
 
         return {
           id: String(item.item_id ?? ''),
+          unit_code: item.unit_code ?? null,
+          unit_label: item.unit_label ?? null,
           description: String(item.description ?? ''),
           quantity: toFiniteNumber(item.quantity),
           unitPrice: toMinorUnits(item.unit_price),
@@ -622,13 +665,19 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
             : {}),
           location_id: item.location_id ?? null,
           location: null,
+          isDiscount: Boolean(item.is_discount),
+          discountType: item.is_discount ? (item.discount_type ?? 'fixed') : null,
+          adjustmentSourceKind: item.adjustment_source_kind ?? null,
+          adjustmentScope: item.adjustment_scope ?? null,
+          adjustmentReason: item.adjustment_reason ?? null,
+          manualLineMetadata: item.manual_line_metadata ?? null,
         };
       });
       const computedSubtotal = normalizedItems.reduce((sum, item) => sum + item.total, 0);
       const subtotal = toMinorUnits(rawSubtotal);
       const tax = toMinorUnits(rawTax);
       const total = toMinorUnits(rawTotal);
-      const recurringServicePeriodSummary = resolveRecurringServicePeriodSummary(dbRecord);
+      const recurringServicePeriodSummary = resolveRecurringServicePeriodSummary(dbRecord, locale);
 
       viewModel = {
         invoiceNumber: String(dbData.invoice_number ?? 'N/A'),
@@ -639,6 +688,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
           address: String(dbData.client?.address ?? 'N/A'),
         },
         poNumber: (dbData as any).po_number ?? null,
+        paymentMethod: paymentMethodDisplayLabel((dbData as any).payment_method),
         ...((dbData as any).project_name
           ? {
               projectName: String((dbData as any).project_name),
@@ -678,7 +728,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
         viewModel.subtotal = Number(viewModel.subtotal ?? 0);
         viewModel.tax = Number(viewModel.tax ?? 0);
         viewModel.total = Number(viewModel.total ?? 0);
-        const recurringServicePeriodSummary = resolveRecurringServicePeriodSummary(wasmRecord);
+        const recurringServicePeriodSummary = resolveRecurringServicePeriodSummary(wasmRecord, locale);
         viewModel.recurringServicePeriodStart = recurringServicePeriodSummary.recurringServicePeriodStart;
         viewModel.recurringServicePeriodEnd = recurringServicePeriodSummary.recurringServicePeriodEnd;
         viewModel.recurringServicePeriodLabel = recurringServicePeriodSummary.recurringServicePeriodLabel;

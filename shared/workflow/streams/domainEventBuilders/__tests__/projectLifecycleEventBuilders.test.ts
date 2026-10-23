@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '../../workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   projectStatusChangedEventPayloadSchema,
   projectUpdatedEventPayloadSchema,
-} from '../../../runtime/schemas/projectEventSchemas';
+} from '@alga-psa/event-schemas';
 import { buildProjectStatusChangedPayload, buildProjectUpdatedPayload } from '../projectLifecycleEventBuilders';
 
 describe('projectLifecycleEventBuilders', () => {

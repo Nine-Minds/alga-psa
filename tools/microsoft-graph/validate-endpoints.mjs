@@ -379,9 +379,13 @@ export function discoverPackagedEmulatorRoutes() {
 
   const routes = [];
   const functionRoutes = new Set();
-  for (const match of source.matchAll(/graph\.(get|post|patch|delete|put)\((?:`([^`]+)`|'([^']+)'|"([^"]+)")/g)) {
-    const template = match[2] || match[3] || match[4];
-    const method = match[1].toUpperCase();
+  for (const match of source.matchAll(/(graph|graphBeta)\.(get|post|patch|delete|put)\((?:`([^`]+)`|'([^']+)'|"([^"]+)")/g)) {
+    const template = match[3] || match[4] || match[5];
+    const method = match[2].toUpperCase();
+    const version = match[1] === 'graphBeta' ? 'beta' : 'v1.0';
+    if (!source.includes(`router.use('/${version}', ${match[1]})`)) {
+      throw new Error(`Graph emulator router ${match[1]} must be mounted at /${version}`);
+    }
     let expansions = [template];
     for (const { token, values } of PACKAGED_ROUTE_LITERALS) {
       if (!expansions.some((path) => path.includes(token))) continue;
@@ -401,11 +405,11 @@ export function discoverPackagedEmulatorRoutes() {
             + ' — update PACKAGED_ROUTE_FUNCTIONS in tools/microsoft-graph/validate-endpoints.mjs');
         }
         for (const value of declared.values) {
-          routes.push({ version: 'v1.0', method, path: expanded.replace(declared.param, value) });
+          routes.push({ version, method, path: expanded.replace(declared.param, value) });
         }
         continue;
       }
-      routes.push({ version: 'v1.0', method, path: expanded.endsWith('/:variant') ? expanded.replace('/:variant', '/$value') : expanded });
+      routes.push({ version, method, path: expanded.endsWith('/:variant') ? expanded.replace('/:variant', '/$value') : expanded });
     }
   }
 

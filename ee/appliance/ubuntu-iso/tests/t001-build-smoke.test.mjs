@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { parse, parseAllDocuments } from 'yaml';
+import { pinnedImage } from '../../../../scripts/lib/pinned-images.mjs';
 
 const repoRoot = path.resolve(path.join(import.meta.dirname, '..', '..', '..', '..'));
 const buildScript = path.join(repoRoot, 'ee', 'appliance', 'ubuntu-iso', 'scripts', 'build-ubuntu-appliance-iso.sh');
@@ -193,6 +194,11 @@ test('T004 Temporal chart waits for schema-safe startup and creates the default 
   assert.equal(env.SKIP_ADD_CUSTOM_SEARCH_ATTRIBUTES, 'true');
   assert.equal(temporalContainer.livenessProbe.initialDelaySeconds, 300);
   assert.ok(temporalContainer.startupProbe.failureThreshold >= 60);
+  // 512Mi OOMKilled temporal-server on field appliances; GOMEMLIMIT keeps the Go
+  // heap under whatever limit is set.
+  assert.equal(temporalContainer.resources.limits.memory, '1Gi');
+  const goMemLimit = temporalContainer.env.find((entry) => entry.name === 'GOMEMLIMIT');
+  assert.deepEqual(goMemLimit?.valueFrom?.resourceFieldRef, { containerName: 'temporal', resource: 'limits.memory' });
 
   assert.equal(job.metadata.annotations['helm.sh/hook'], 'post-install,post-upgrade');
   assert.match(job.spec.template.spec.containers[0].command.join('\n'), /temporal operator namespace create/);
@@ -243,8 +249,27 @@ test('T006b appliance bootstrap runs concurrently and refuses fresh setup over e
   assert.ok(deployment);
   const waitInit = deployment.spec.template.spec.initContainers.find((container) => container.name === 'wait-for-bootstrap');
   assert.ok(waitInit);
-  assert.equal(waitInit.image, 'ankane/pgvector:latest');
+  // The profile carries no wait image of its own: it resolves to the pinned DB image.
+  assert.equal(waitInit.image, pinnedImage('pgvector'));
   assert.equal(waitInit.imagePullPolicy, 'IfNotPresent');
+
+  const dbStatefulSet = docs.find((doc) => doc.kind === 'StatefulSet' && doc.metadata?.name === 'db');
+  assert.ok(dbStatefulSet);
+  const dbContainer = dbStatefulSet.spec.template.spec.containers.find((container) => container.name === 'db');
+  assert.equal(dbContainer.image, pinnedImage('pgvector'));
+  assert.equal(dbContainer.imagePullPolicy, 'IfNotPresent');
+
+  // Existing data directories are reconciled by a plain Job (not a hook, so a
+  // failure cannot fail the Helm upgrade).
+  const updateJobs = docs.filter((doc) => doc.kind === 'Job' && /^db-extension-update-/.test(doc.metadata?.name ?? ''));
+  assert.equal(updateJobs.length, 1);
+  const [updateJob] = updateJobs;
+  assert.equal(updateJob.metadata.annotations?.['helm.sh/hook'], undefined);
+  const updateContainer = updateJob.spec.template.spec.containers[0];
+  assert.equal(updateContainer.image, pinnedImage('pgvector'));
+  const updateEnv = Object.fromEntries(updateContainer.env.map((entry) => [entry.name, entry]));
+  assert.equal(updateEnv.PGHOST.value, 'db');
+  assert.deepEqual(updateEnv.PGPASSWORD.valueFrom.secretKeyRef, { name: 'db-credentials', key: 'DB_PASSWORD_SUPERUSER' });
   assert.equal(deployment.spec.template.spec.containers[0].imagePullPolicy, 'IfNotPresent');
 
   assert.ok(configMap);

@@ -564,7 +564,7 @@ describe('QboIntegrationSettings contracts', () => {
       expect(document.getElementById('qbo-credential-source-alert')).not.toBeNull();
     });
 
-    expect(screen.getByText(/shared Intuit app/i)).toBeInTheDocument();
+    expect(screen.getByText(/provides a shared Intuit app/i)).toBeInTheDocument();
     // Provenance only. The shared app's own credentials are never sent to the
     // browser, so nothing renders a mask of them.
     expect(screen.queryByText(/Stored client id:/i)).not.toBeInTheDocument();
@@ -611,7 +611,63 @@ describe('QboIntegrationSettings contracts', () => {
 
     expect(document.getElementById('qbo-setup-guide-link')).toHaveAttribute(
       'href',
-      expect.stringContaining('docs/integrations/quickbooks.md')
+      expect.stringContaining('nineminds.com/documentation/connect-quickbooks-online')
     );
+  });
+
+  // --- Hosted (shared app) vs self-managed (own app) presentation ---
+
+  it('T075: with a shared app, the credential fields stay hidden until the admin opts into their own app', async () => {
+    getQboConnectionStatusMock.mockResolvedValue({
+      ...disconnectedStatus,
+      credentials: { ...disconnectedStatus.credentials, ready: true, source: 'app' as const }
+    });
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+    render(<QboIntegrationSettings />);
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-credential-source-alert')).not.toBeNull();
+    });
+
+    // Nothing asks for keys: no fields, no redirect URI, no save button.
+    expect(document.getElementById('qbo-client-id')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Save QuickBooks Credentials' })).not.toBeInTheDocument();
+    expect(screen.queryByText('https://example.com/api/integrations/qbo/callback')).not.toBeInTheDocument();
+    expect(screen.getByText(/No credentials needed/i)).toBeInTheDocument();
+    expect(screen.getByText('Shared Intuit App')).toBeInTheDocument();
+    // Connect is live without any credential work.
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: 'Connect QuickBooks' })[0]).not.toBeDisabled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use your own Intuit app instead (advanced)' }));
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-client-id')).not.toBeNull();
+    });
+    expect(screen.getByRole('button', { name: 'Save QuickBooks Credentials' })).toBeInTheDocument();
+    expect(screen.getByText('https://example.com/api/integrations/qbo/callback')).toBeInTheDocument();
+  });
+
+  it('T076: with no Intuit app, the card gives literal registration steps and links to the Intuit developer portal', async () => {
+    getQboConnectionStatusMock.mockResolvedValue({
+      ...disconnectedStatus,
+      credentials: { ...disconnectedStatus.credentials, source: null }
+    });
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+    render(<QboIntegrationSettings />);
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-register-app-steps')).not.toBeNull();
+    });
+
+    expect(document.getElementById('qbo-register-app-steps')!.querySelectorAll('li')).toHaveLength(5);
+    expect(document.getElementById('qbo-intuit-developer-link')).toHaveAttribute('href', 'https://developer.intuit.com/');
+    expect(screen.getByText(/Keys & credentials/i)).toBeInTheDocument();
+    // No toggle: there is no shared app to fall back to, so the fields are simply shown.
+    expect(screen.queryByRole('button', { name: /Use your own Intuit app/i })).not.toBeInTheDocument();
+    expect(document.getElementById('qbo-client-id')).not.toBeNull();
   });
 });

@@ -27,17 +27,32 @@ vi.mock('../actions/assetActions', () => ({
   getClientMaintenanceSummaries: (...args: unknown[]) => mockGetClientMaintenanceSummaries(...args),
 }));
 
+vi.mock('../actions/assetGroupActions', () => ({
+  addAssetsToGroup: vi.fn(),
+  createAssetGroup: vi.fn(),
+  listAssetGroups: vi.fn(async () => []),
+  getAssetTicketContactOptions: vi.fn(async () => ({ options: [], preselect: null })),
+}));
+
 vi.mock('../actions/assetDrawerActions', () => ({
   loadAssetDetailDrawerData: vi.fn(async () => ({ data: { asset: null } })),
 }));
 
 vi.mock('../actions/clientLookupActions', () => ({
+  getVendorOptionsForAssets: vi.fn(async () => []),
   getAllClientsForAssets: vi.fn(async () => []),
   getClientLocationsForAssets: vi.fn(async () => []),
 }));
 
 vi.mock('../actions/assetTypeRegistryActions', () => ({
   getAssetTypes: (...args: unknown[]) => mockGetAssetTypes(...args),
+}));
+
+vi.mock('../actions/assetStatusActions', () => ({
+  listAssetStatuses: vi.fn(async () => [
+    { tenant: 't', status_id: 'st-active', slug: 'active', label: 'Active', kind: 'deployable', is_builtin: true, is_active: true, display_order: 0, created_at: '', updated_at: '' },
+    { tenant: 't', status_id: 'st-inactive', slug: 'inactive', label: 'Inactive', kind: 'undeployable', is_builtin: true, is_active: true, display_order: 1, created_at: '', updated_at: '' },
+  ]),
 }));
 
 vi.mock('../actions/assetStatisticsActions', () => ({
@@ -48,6 +63,12 @@ vi.mock('../context/AssetCrossFeatureContext', () => ({
   useAssetCrossFeature: () => ({ renderQuickAddTicket: () => null }),
 }));
 
+// Named views have their own tests; here they only need to stay out of the way
+// (the real hook reaches the server actions and the auth stack).
+vi.mock('@alga-psa/list-views/hooks', () => ({
+  useListViews: () => ({}),
+}));
+vi.mock('@alga-psa/list-views/components', () => ({ ListViewPicker: () => null }));
 vi.mock('./QuickAddAsset', () => ({ QuickAddAsset: () => null }));
 vi.mock('./AssetCommandPalette', () => ({ AssetCommandPalette: () => null }));
 vi.mock('./AssetDetailDrawerClient', () => ({ AssetDetailDrawerClient: () => null }));
@@ -134,6 +155,10 @@ vi.mock('@alga-psa/ui/components/Checkbox', () => ({
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
   Dialog: ({ isOpen, children, footer }: any) => (isOpen ? <div>{children}{footer}</div> : null),
   DialogContent: ({ children }: any) => <div>{children}</div>,
+}));
+
+vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
+  ConfirmationDialog: ({ isOpen, message }: any) => (isOpen ? <div>{message}</div> : null),
 }));
 
 vi.mock('@alga-psa/ui/components/DataTable', () => ({

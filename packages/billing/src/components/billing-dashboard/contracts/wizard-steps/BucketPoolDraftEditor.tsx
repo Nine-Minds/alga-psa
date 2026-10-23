@@ -9,6 +9,7 @@ import { NumericInput } from '@alga-psa/ui/components/NumericInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import type { BucketPoolDraft } from '../ContractWizard';
+import { SellHourBlockNote } from '../SellHourBlockNote';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export interface BucketPoolDraftEditorProps {
@@ -91,6 +92,8 @@ export function BucketPoolDraftEditor({
           {t('bucketPools.actions.addPool', { defaultValue: 'Add Pool' })}
         </Button>
       </div>
+
+      <SellHourBlockNote id="wizard-bucket-pools-sell-hour-block-note" />
 
       {pools.map((pool, index) => (
         <DraftPoolCard

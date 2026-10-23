@@ -49,9 +49,11 @@ export type TemplateNodeType =
   | 'section'
   | 'stack'
   | 'text'
+  | 'richText'
   | 'field'
   | 'image'
   | 'divider'
+  | 'barcode'
   | 'table'
   | 'dynamic-table'
   | 'totals';
@@ -59,6 +61,12 @@ export type TemplateNodeType =
 export interface TemplateNodeBase {
   id: string;
   type: TemplateNodeType;
+  /**
+   * Author-facing layer name shown in the designer's outline and canvas. It is
+   * presentation metadata only: rendering never reads it, and `id` stays the
+   * stable identity.
+   */
+  name?: string;
   style?: TemplateNodeStyleRef;
   children?: TemplateNode[];
 }
@@ -96,6 +104,18 @@ export interface TemplateTextNode extends TemplateNodeBase {
   children?: never;
 }
 
+/**
+ * A node whose resolved content may be structured BlockNote/ProseMirror JSON.
+ * Structured content is emitted as sanitized HTML; a plain-string value (the
+ * legacy terms projection) renders as pre-line text so existing layouts are
+ * unchanged.
+ */
+export interface TemplateRichTextNode extends TemplateNodeBase {
+  type: 'richText';
+  content: TemplateValueExpression;
+  children?: never;
+}
+
 export interface TemplateFieldNode extends TemplateNodeBase {
   type: 'field';
   binding: TemplateBindingRef;
@@ -121,6 +141,21 @@ export interface TemplateDividerNode extends TemplateNodeBase {
   children?: never;
 }
 
+export type TemplateBarcodeSymbology = 'qr' | 'code128';
+
+/**
+ * A machine-readable code. `value` is encoded as-is; rendering is an async server prepass into an
+ * SVG string keyed by node id (the synchronous shared renderer only inlines it). Quiet zone
+ * (QR >= 4 modules, Code 128 >= 10) and a minimum module size are enforced there, and a value that
+ * cannot be encoded or cannot fit at the node's width fails the render with a clear error.
+ */
+export interface TemplateBarcodeNode extends TemplateNodeBase {
+  type: 'barcode';
+  symbology: TemplateBarcodeSymbology;
+  value: TemplateValueExpression;
+  children?: never;
+}
+
 /**
  * One stacked line inside a table cell. A column that carries `lines` renders
  * each resolved line on its own styled row inside the cell instead of the flat
@@ -134,6 +169,13 @@ export interface TemplateTableColumnLine {
   value: TemplateValueExpression;
   format?: TemplateValueFormat;
   style?: TemplateNodeStyleRef;
+  /**
+   * An annotation line (e.g. an "Optional (included)" marker). It renders
+   * beneath whatever the cell shows but never, on its own, replaces the
+   * column's flat `value`: when no primary line resolves, the flat value
+   * still renders and the supplemental lines follow it.
+   */
+  supplemental?: boolean;
 }
 
 export interface TemplateTableColumn {
@@ -193,6 +235,12 @@ export interface TemplateTotalsRow {
   value: TemplateValueExpression;
   format?: TemplateValueFormat;
   emphasize?: boolean;
+  /**
+   * Omit the row entirely when its value resolves to zero or nothing, so an
+   * informational row (e.g. "Optional if selected") never prints as $0.00 on
+   * a document that has nothing to report.
+   */
+  hideWhenZero?: boolean;
   style?: TemplateNodeStyleRef;
 }
 
@@ -201,9 +249,11 @@ export type TemplateNode =
   | TemplateSectionNode
   | TemplateStackNode
   | TemplateTextNode
+  | TemplateRichTextNode
   | TemplateFieldNode
   | TemplateImageNode
   | TemplateDividerNode
+  | TemplateBarcodeNode
   | TemplateTableNode
   | TemplateDynamicTableNode
   | TemplateTotalsNode;
@@ -245,6 +295,9 @@ export interface TemplateStyleDeclaration {
   fontFamily?: string;
   lineHeight?: string | number;
   textAlign?: 'left' | 'center' | 'right' | 'justify';
+  tableLayout?: 'auto' | 'fixed';
+  whiteSpace?: 'normal' | 'nowrap' | 'pre' | 'pre-line' | 'pre-wrap';
+  overflowWrap?: 'normal' | 'break-word' | 'anywhere';
   flex?: string;
   // Longhand flex has been part of the runtime contract since the AST cutover:
   // the designer export emits it and the zod styleDeclarationSchema accepts it.
@@ -256,6 +309,16 @@ export interface TemplateStyleDeclaration {
   objectPosition?: string;
   borderColor?: string;
   fontStyle?: string;
+  // Fixed-size cells (labels) pair `overflowWrap: 'anywhere'` (declared above), which lets an
+  // unbroken identifier wrap inside its column, with `overflow`, which clips a capped (maxHeight) block.
+  overflow?: 'visible' | 'hidden' | 'clip';
+  // Print fragmentation hints (CSS Fragmentation Level 3). The PDF renderer
+  // prints through Chromium, which honours these on block and flex children:
+  // `breakAfter: 'avoid'` keeps a heading with what follows it,
+  // `breakInside: 'avoid'` keeps a block (a totals card) on one page.
+  breakInside?: 'auto' | 'avoid' | 'avoid-page';
+  breakAfter?: 'auto' | 'avoid' | 'avoid-page' | 'page';
+  breakBefore?: 'auto' | 'avoid' | 'avoid-page' | 'page';
 }
 
 export interface TemplateBindingCatalog {
@@ -284,7 +347,7 @@ export interface TemplateBindingRef {
 
 export type TemplateValueExpression =
   | { type: 'literal'; value: string | number | boolean | null }
-  | { type: 'binding'; bindingId: string }
+  | { type: 'binding'; bindingId: string; fallback?: TemplateI18nText }
   | { type: 'path'; path: string }
   | { type: 'template'; template: string; args?: Record<string, TemplateValueExpression> }
   // Standing headings authored as text nodes ("Bill To", "From",

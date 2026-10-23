@@ -1,5 +1,5 @@
 import { assertNonNegativeCents, percentageAsScaledInteger, FULL_PERCENTAGE_SCALED } from '../lib/billing/compute/projectCapMath';
-export { computeCapWriteDown, detectThresholdCrossings, isFirstProjectCapOverage } from '../lib/billing/compute/projectCapMath';
+export { capAppliesToInvoiceCurrency, computeCapWriteDown, detectThresholdCrossings, isFirstProjectCapOverage, resolveInvoiceCurrency } from '../lib/billing/compute/projectCapMath';
 export type { CapWriteDownResult } from '../lib/billing/compute/projectCapMath';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';

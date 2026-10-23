@@ -3,7 +3,23 @@
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
-import { checklistActionErrorFrom, type ChecklistActionError } from './checklistActionErrors';
+import {
+  APPLY_RULE_CATEGORY_BOARD_MISMATCH,
+  APPLY_RULE_CATEGORY_INVALID,
+  APPLY_RULE_SUBCATEGORY_INVALID,
+  APPLY_RULE_SUBCATEGORY_REQUIRES_CATEGORY,
+  checklistActionErrorFrom,
+  type ChecklistActionError,
+} from './checklistActionErrors';
+import {
+  uniqueIdsOrNull,
+  validateRuleKeywords,
+  validateRuleOrigins,
+} from './applyRuleMatcherValidation';
+import type {
+  ChecklistKeywordMode,
+  ChecklistKeywordTarget,
+} from '@alga-psa/shared/lib/ticketChecklists';
 
 /**
  * Admin-managed checklist templates, their items, and auto-apply matcher
@@ -36,6 +52,14 @@ export interface IChecklistTemplateApplyRule {
   category_id: string | null;
   subcategory_id: string | null;
   priority_id: string | null;
+  client_ids: string[] | null;
+  ticket_origins: string[] | null;
+  /** Ticket must come from a service request (implied when a definition is named). */
+  from_service_request: boolean;
+  service_request_definition_id: string | null;
+  keywords: string[] | null;
+  keyword_mode: ChecklistKeywordMode;
+  keyword_target: ChecklistKeywordTarget;
   is_enabled: boolean;
 }
 
@@ -56,7 +80,39 @@ export interface ChecklistTemplateApplyRuleInput {
   category_id?: string | null;
   subcategory_id?: string | null;
   priority_id?: string | null;
+  client_ids?: string[] | null;
+  ticket_origins?: string[] | null;
+  from_service_request?: boolean;
+  service_request_definition_id?: string | null;
+  keywords?: string[] | null;
+  keyword_mode?: ChecklistKeywordMode;
+  keyword_target?: ChecklistKeywordTarget;
   is_enabled?: boolean;
+}
+
+/**
+ * Columns written for a rule's matchers. Normalises + validates the new
+ * matcher fields; naming a definition implies "from service request".
+ */
+function applyRuleMatcherColumns(input: ChecklistTemplateApplyRuleInput) {
+  const keywordMode = input.keyword_mode ?? 'any';
+  const keywordTarget = input.keyword_target ?? 'title_and_description';
+  // Out-of-range mode/target values are rejected by the table's CHECK constraints (23514).
+  const definitionId = input.service_request_definition_id || null;
+  return {
+    board_id: input.board_id || null,
+    category_id: input.category_id || null,
+    subcategory_id: input.subcategory_id || null,
+    priority_id: input.priority_id || null,
+    client_ids: uniqueIdsOrNull(input.client_ids),
+    ticket_origins: validateRuleOrigins(input.ticket_origins),
+    from_service_request: Boolean(input.from_service_request) || definitionId !== null,
+    service_request_definition_id: definitionId,
+    keywords: validateRuleKeywords(input.keywords),
+    keyword_mode: keywordMode,
+    keyword_target: keywordTarget,
+    is_enabled: input.is_enabled ?? true,
+  };
 }
 
 async function requireSettingsPermission(user: Parameters<Parameters<typeof withAuth>[0]>[0]) {
@@ -71,6 +127,44 @@ function tenantScopedTable(
   tenant: string
 ): Knex.QueryBuilder {
   return tenantDb(conn, tenant).table(table);
+}
+
+/**
+ * Categories are board-scoped, so an apply rule can only match tickets when its
+ * category (and subcategory) sit on the rule's board. Reject combinations that
+ * could never fire instead of saving a silently dead rule.
+ */
+async function assertApplyRuleScopeIsConsistent(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  input: ChecklistTemplateApplyRuleInput
+): Promise<void> {
+  const boardId = input.board_id || null;
+  const categoryId = input.category_id || null;
+  const subcategoryId = input.subcategory_id || null;
+
+  if (subcategoryId && !categoryId) {
+    throw new Error(APPLY_RULE_SUBCATEGORY_REQUIRES_CATEGORY);
+  }
+  if (!categoryId) return;
+
+  const category = await tenantScopedTable(conn, 'categories', tenant)
+    .where({ category_id: categoryId })
+    .first('category_id', 'board_id', 'parent_category');
+  if (!category || category.parent_category) {
+    throw new Error(APPLY_RULE_CATEGORY_INVALID);
+  }
+  if (boardId && category.board_id && category.board_id !== boardId) {
+    throw new Error(APPLY_RULE_CATEGORY_BOARD_MISMATCH);
+  }
+
+  if (!subcategoryId) return;
+  const subcategory = await tenantScopedTable(conn, 'categories', tenant)
+    .where({ category_id: subcategoryId })
+    .first('category_id', 'parent_category');
+  if (!subcategory || subcategory.parent_category !== categoryId) {
+    throw new Error(APPLY_RULE_SUBCATEGORY_INVALID);
+  }
 }
 
 export const getChecklistTemplates = withAuth(
@@ -310,6 +404,13 @@ export const getChecklistTemplateApplyRules = withAuth(
         'category_id',
         'subcategory_id',
         'priority_id',
+        'client_ids',
+        'ticket_origins',
+        'from_service_request',
+        'service_request_definition_id',
+        'keywords',
+        'keyword_mode',
+        'keyword_target',
         'is_enabled'
       );
   }
@@ -326,16 +427,13 @@ export const createChecklistTemplateApplyRule = withAuth(
           .where({ template_id: templateId })
           .first();
         if (!template) throw new Error('Checklist template not found');
+        await assertApplyRuleScopeIsConsistent(trx, tenant, input);
 
         const [row] = await tenantScopedTable(trx, 'checklist_template_apply_rules', tenant)
           .insert({
             tenant,
             template_id: templateId,
-            board_id: input.board_id || null,
-            category_id: input.category_id || null,
-            subcategory_id: input.subcategory_id || null,
-            priority_id: input.priority_id || null,
-            is_enabled: input.is_enabled ?? true,
+            ...applyRuleMatcherColumns(input),
           })
           .returning('*');
         return row;
@@ -356,14 +454,11 @@ export const updateChecklistTemplateApplyRule = withAuth(
       await requireSettingsPermission(user);
 
       const { knex: db } = await createTenantKnex();
+      await assertApplyRuleScopeIsConsistent(db, tenant, input);
       const [row] = await tenantScopedTable(db, 'checklist_template_apply_rules', tenant)
         .where({ apply_rule_id: applyRuleId })
         .update({
-          board_id: input.board_id || null,
-          category_id: input.category_id || null,
-          subcategory_id: input.subcategory_id || null,
-          priority_id: input.priority_id || null,
-          is_enabled: input.is_enabled ?? true,
+          ...applyRuleMatcherColumns(input),
           updated_at: db.fn.now(),
         })
         .returning('*');
@@ -393,6 +488,47 @@ export const deleteChecklistTemplateApplyRule = withAuth(
       if (expected) {
         return expected;
       }
+      throw error;
+    }
+  }
+);
+
+export interface ChecklistRuleServiceRequestDefinitionOption {
+  definition_id: string;
+  name: string;
+}
+
+/** Service request definitions a rule can be narrowed to (tenant-scoped, not archived). */
+export const getChecklistRuleServiceRequestDefinitions = withAuth(
+  async (user, { tenant }): Promise<ChecklistRuleServiceRequestDefinitionOption[] | ChecklistActionError> => {
+    try {
+      await requireSettingsPermission(user);
+      const { knex: db } = await createTenantKnex();
+      return await tenantScopedTable(db, 'service_request_definitions', tenant)
+        .whereNot({ lifecycle_state: 'archived' })
+        .orderBy('name', 'asc')
+        .select('definition_id', 'name');
+    } catch (error) {
+      const expected = checklistActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
+    }
+  }
+);
+
+/** Display names for the clients a rule lists (tenant-scoped lookup by id). */
+export const getChecklistRuleClientNames = withAuth(
+  async (user, { tenant }, clientIds: string[]): Promise<Array<{ client_id: string; client_name: string }> | ChecklistActionError> => {
+    try {
+      await requireSettingsPermission(user);
+      if (!clientIds?.length) return [];
+      const { knex: db } = await createTenantKnex();
+      return await tenantScopedTable(db, 'clients', tenant)
+        .whereIn('client_id', clientIds)
+        .select('client_id', 'client_name');
+    } catch (error) {
+      const expected = checklistActionErrorFrom(error);
+      if (expected) return expected;
       throw error;
     }
   }

@@ -3,6 +3,18 @@ import type { RmmAssetDeviceActions, RmmAssetDeviceRef, RmmRemoteConnectionType 
 import { createNinjaOneClient } from './ninjaOneClient';
 import { syncSingleDeviceByAssetId } from './sync/syncEngine';
 
+const REMOTE_CONTROL_TYPES: RmmRemoteConnectionType[] = [
+  'splashtop',
+  'teamviewer',
+  'vnc',
+  'rdp',
+  'shell',
+];
+
+function isRemoteControlType(value: string): value is RmmRemoteConnectionType {
+  return REMOTE_CONTROL_TYPES.includes(value as RmmRemoteConnectionType);
+}
+
 function numericDeviceId(ref: RmmAssetDeviceRef): number {
   const id = parseInt(ref.deviceId, 10);
   if (!Number.isFinite(id)) throw new Error('Asset is not managed by NinjaOne');
@@ -10,6 +22,14 @@ function numericDeviceId(ref: RmmAssetDeviceRef): number {
 }
 
 export const ninjaOneAssetDeviceActions: RmmAssetDeviceActions = {
+  async remoteControlTypes(ref) {
+    const client = await createNinjaOneClient(ref.tenant);
+    const links = await client.getDeviceLinks(numericDeviceId(ref));
+    return links.flatMap((link: { type: string }) => {
+      const type = link.type.toLowerCase();
+      return isRemoteControlType(type) ? [type] : [];
+    });
+  },
   async refresh(ref) {
     await syncSingleDeviceByAssetId(ref.tenant, ref.assetId);
   },
@@ -24,10 +44,10 @@ export const ninjaOneAssetDeviceActions: RmmAssetDeviceActions = {
     return client.runScript(numericDeviceId(ref), scriptId);
   },
 
-  async remoteControlUrl(ref, connectionType: RmmRemoteConnectionType) {
+  async remoteControlUrl(ref, connectionType) {
     const client = await createNinjaOneClient(ref.tenant);
-    const links = await client.getDeviceLinks(numericDeviceId(ref));
-    const wanted = connectionType.toUpperCase();
-    return links.find((l: { type: string }) => l.type === wanted)?.url ?? null;
+    const id = numericDeviceId(ref);
+    const links = await client.getDeviceLinks(id);
+    return links.find((link: { type: string }) => link.type.toLowerCase() === connectionType)?.url ?? null;
   },
 };

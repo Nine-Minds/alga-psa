@@ -38,6 +38,10 @@ const TEMPLATES = [
         title: 'Estoque baixo em {{locationName}}',
         message: '{{productCount}} produto(s) em {{locationName}} estão no ponto de reposição ou abaixo dele: {{summary}}',
       },
+      sv: {
+        title: 'Lågt lagerbestånd på {{locationName}}',
+        message: 'Produkter på {{locationName}} med lagersaldo vid eller under beställningspunkten ({{productCount}}): {{summary}}',
+      },
     },
   },
   {
@@ -75,6 +79,10 @@ const TEMPLATES = [
       pt: {
         title: 'Pedido de compra {{poNumber}} recebido',
         message: '{{receivedLineCount}} linha(s) recebida(s) de {{vendorName}}.',
+      },
+      sv: {
+        title: 'Inköpsorder {{poNumber}} mottagen',
+        message: 'Mottagna rader från {{vendorName}}: {{receivedLineCount}}.',
       },
     },
   },

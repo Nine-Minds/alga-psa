@@ -31,3 +31,35 @@ it('cleans background job dependencies without deleting another tenant’s jobs 
     await observer.cleanup();
   }
 }, 120_000);
+
+it('cleans stopwatch sessions and suggestion dismissals before deleting the fixture users', async () => {
+  const target = await setupE2ETestEnvironment();
+  const { db, tenant, userId } = target;
+  let cleanupAttempted = false;
+  try {
+    const sessionId = randomUUID();
+    await db('time_tracking_sessions').insert({ tenant, session_id: sessionId, user_id: userId,
+      work_item_type: 'ad_hoc', status: 'running' });
+    await db('time_tracking_session_segments').insert({ tenant, session_id: sessionId,
+      started_at: new Date().toISOString() });
+    await db('time_entry_suggestion_dismissals').insert({ tenant, user_id: userId,
+      work_item_type: 'ticket', work_item_id: randomUUID(), work_date: '2026-10-10' });
+
+    // Before the fix this threw: users still referenced by time_tracking_sessions.
+    cleanupAttempted = true;
+    await target.cleanup();
+
+    const observer = await setupE2ETestEnvironment();
+    try {
+      for (const table of ['time_tracking_session_segments', 'time_tracking_sessions',
+        'time_entry_suggestion_dismissals', 'users', 'tenants']) {
+        expect(await observer.db(table).where({ tenant })).toEqual([]);
+      }
+    } finally {
+      await observer.cleanup();
+    }
+  } finally {
+    // cleanup() closes its connection either way; only fall back if it never ran.
+    if (!cleanupAttempted) await target.cleanup();
+  }
+}, 120_000);

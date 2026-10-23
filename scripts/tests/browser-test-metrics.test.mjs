@@ -60,7 +60,7 @@ test('the actual browser runner emits incomplete metrics when execution cannot s
   mkdirSync(path.join(root, 'e2e-tests'), { recursive: true });
   mkdirSync(path.join(root, 'scripts/lib'), { recursive: true });
   for (const file of ['e2e-tests/run.mjs', 'scripts/verify-docker-archive-build.mjs', ...['browser-test-metrics', 'browser-artifact-manifest', 'test-discovery', 'test-revision',
-    'test-execution-evidence', 'playwright-execution-evidence'].map(name => `scripts/lib/${name}.mjs`)]) {
+    'test-execution-evidence', 'playwright-execution-evidence', 'flaky-policy'].map(name => `scripts/lib/${name}.mjs`)]) {
     cpSync(path.join(repository, file), path.join(root, file));
   }
   const result = spawnSync(process.execPath, ['e2e-tests/run.mjs', '--unsupported-filter'], { cwd: root, encoding: 'utf8' });
@@ -156,7 +156,7 @@ test('provider observations bind real-format attachments to verified archives wi
   }
   assert.equal(execute([]).journeys[0].attempts[0].providerObservations.reason, 'missing-observations');
   assert.equal(execute([attachment(data()), attachment(data())]).journeys[0].attempts[0].providerObservations.reason, 'duplicate-observations');
-  for (const override of [{ artifactManifest: null }, { runAttempt: 3 }, { evidence: { ...cleanEvidence(), workingTreeDirty: true } }, { revision: 'b'.repeat(40) }]) {
+  for (const override of [{ artifactManifest: null }, { runAttempt: 1 }, { evidence: { ...cleanEvidence(), workingTreeDirty: true } }, { revision: 'b'.repeat(40) }]) {
     assert.equal(execute([attachment(data())], override).journeys[0].attempts[0].providerObservations.reason, 'unverified-candidate-context');
   }
   const aborted = data(); aborted.requests.xero.requests[0].status = null; aborted.requests.xero.requests[0].aborted = true;

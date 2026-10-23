@@ -104,16 +104,24 @@ export interface AiAutoTopupSettings {
 }
 
 /**
+ * Result of an AI usage server action. Actions return `unavailable` instead of
+ * throwing when the AI gateway is not configured for this deployment, so
+ * callers can hide the AI billing UI without producing a server-action 500.
+ */
+export type AiGatewayUnavailable = { status: 'unavailable'; reason: 'not_configured' };
+export type AiGatewayResult<T> = { status: 'ok'; data: T } | AiGatewayUnavailable;
+
+/**
  * Server-action surface consumed by the AI Usage UI.
  * Implemented in ee/server/src/lib/actions/aiUsageActions.ts against the
  * gateway client lib; the UI imports only these signatures.
  */
 export interface AiUsageActions {
-  getAiAccountSummary(): Promise<AiAccountSummary>;
-  getAiUsageHistory(query: AiUsageQuery): Promise<AiUsagePage>;
-  setAiAutoTopup(settings: AiAutoTopupSettings): Promise<AiAccountSummary>;
+  getAiAccountSummary(): Promise<AiGatewayResult<AiAccountSummary>>;
+  getAiUsageHistory(query: AiUsageQuery): Promise<AiGatewayResult<AiUsagePage>>;
+  setAiAutoTopup(settings: AiAutoTopupSettings): Promise<AiGatewayResult<AiAccountSummary>>;
   /** Returns a Stripe Checkout URL for the AI add-on subscription. */
-  startAiAddonCheckout(): Promise<{ checkoutUrl: string }>;
+  startAiAddonCheckout(): Promise<AiGatewayResult<{ checkoutUrl: string }>>;
   /** Returns a Stripe Checkout URL for a one-time top-up pack. */
-  startAiTopupCheckout(packPriceId: string): Promise<{ checkoutUrl: string }>;
+  startAiTopupCheckout(packPriceId: string): Promise<AiGatewayResult<{ checkoutUrl: string }>>;
 }

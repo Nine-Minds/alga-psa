@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import type { TicketVisibilityScope } from '../portal/visibility';
 
 export type AuthorizationDecisionStage = 'rbac' | 'builtin' | 'bundle' | 'mutation' | 'redaction';
 
@@ -54,6 +55,14 @@ export interface AuthorizationRecord {
   assignedUserIds?: string[];
   clientId?: string | null;
   boardId?: string | null;
+  contactId?: string | null;
+  /**
+   * The ticket's billing profile (`undefined` = not loaded, which can never
+   * satisfy a profile grant; `null` = the ticket has none).
+   */
+  billingProfileId?: string | null;
+  /** Contact ids of the ticket's active contact watchers. */
+  watcherContactIds?: string[];
   teamIds?: string[];
   [key: string]: unknown;
 }
@@ -62,9 +71,21 @@ export interface AuthorizationMutationInput {
   kind: string;
   record?: AuthorizationRecord;
   next?: Record<string, unknown>;
+  /**
+   * `approve` mutations only: the caller has determined that the subject is the sole
+   * possible approver (no other active approver exists), so the not-self-approver
+   * rules must not deny an approval of a record the subject owns. Computed at the
+   * call site (see `allowSelfQuoteApproval`) because the kernel must not query the DB.
+   * Omitted/false keeps the strict behaviour.
+   */
+  allowSelfApproval?: boolean;
 }
 
+/** Trusted, resolved portal scope; null context means resolution failed (deny). */
+export type ContactVisibilityScope = TicketVisibilityScope;
+
 export interface AuthorizationEvaluationInput {
+  contactVisibility?: ContactVisibilityScope | null;
   subject: AuthorizationSubject;
   resource: AuthorizationResourceRef;
   record?: AuthorizationRecord;
@@ -106,7 +127,8 @@ export type RelationshipTemplateKey =
   | 'client_portfolio'
   | 'selected_clients'
   | 'same_team'
-  | 'selected_boards';
+  | 'selected_boards'
+  | 'contact_visibility';
 
 export interface RelationshipRule {
   template: RelationshipTemplateKey;

@@ -3,8 +3,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Plus, MoreVertical, HelpCircle, ChevronDown, ArrowLeft, AlertTriangle, CheckCircle2, Settings2, Users, ListChecks, Mail, Zap, Clock, Search, Inbox, Star, LayoutGrid } from "lucide-react";
-import { IBoard, ITeam, CategoryType, PriorityType, IPriority, IUser, DeletionValidationResult, DeletionDependency } from '@alga-psa/types';
+import { Plus, MoreVertical, HelpCircle, ChevronDown, ArrowLeft, AlertTriangle, CheckCircle2, Settings2, Users, ListChecks, Mail, Zap, Clock, Search, Inbox, Star, LayoutGrid, EyeOff, Bell, Trash2 } from "lucide-react";
+import { IBoard, ITeam, CategoryType, PriorityType, IPriority, IUser, DeletionValidationResult, DeletionDependency, isSenderActionFailure, type SenderActionFailure } from '@alga-psa/types';
 import {
   getAllBoards,
   getBoardListStats,
@@ -27,6 +27,10 @@ import {
   deleteBoardAutoCloseRule,
 } from '../../actions/close-rules/closeRuleActions';
 import type { IBoardAutoCloseRule } from '../../actions/close-rules/closeRuleActions';
+import {
+  getBoardNotificationSettings,
+  saveBoardNotificationSettings,
+} from '../../actions/board-actions/boardNotificationActions';
 import type { BoardListStats } from '../../actions/board-actions/boardActions';
 import { CLOSE_RULE_REQUIRED_FIELDS, CLOSE_RULE_REQUIRED_FIELD_LABELS } from '@alga-psa/tickets/lib';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions/referenceDataActions';
@@ -35,6 +39,8 @@ import { getAllUsers } from '@alga-psa/user-composition/actions/userQueryActions
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
+import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
+import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { getTeams } from '@alga-psa/teams/actions/team-actions/teamActions';
@@ -68,6 +74,7 @@ import {
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { DEFAULT_BOARD_STOPWATCH_ENABLED, resolveBoardStopwatchEnabled } from '../../lib/boardLiveTicketTimer';
 
 type TicketStatusSeedMode = 'copy_existing' | 'create_inline';
 
@@ -83,6 +90,7 @@ type ManagedTicketStatus = {
   order_number: number;
   color?: string | null;
   icon?: string | null;
+  portal_selectable: boolean;
 };
 
 function createManagedTicketStatus(index: number): ManagedTicketStatus {
@@ -94,6 +102,7 @@ function createManagedTicketStatus(index: number): ManagedTicketStatus {
     order_number: (index + 1) * 10,
     color: null,
     icon: null,
+    portal_selectable: true,
   };
 }
 
@@ -113,6 +122,27 @@ function createEmptyCloseRulesForm(): CloseRulesFormState {
     require_checklist_complete: false,
     require_no_open_children: false,
     required_fields: [],
+    is_enabled: true,
+  };
+}
+
+interface EditableNotificationRule {
+  temp_id: string;
+  rule_id?: string;
+  notify_on_create: boolean;
+  status_ids: string[];
+  user_ids: string[];
+  team_ids: string[];
+  is_enabled: boolean;
+}
+
+function createEmptyNotificationRule(index: number): EditableNotificationRule {
+  return {
+    temp_id: `notification-rule-${Date.now()}-${index}`,
+    notify_on_create: true,
+    status_ids: [],
+    user_ids: [],
+    team_ids: [],
     is_enabled: true,
   };
 }
@@ -151,6 +181,7 @@ function mapBoardStatusesToManagedStatuses(
     order_number?: number;
     color?: string | null;
     icon?: string | null;
+    portal_selectable?: boolean;
   }>
 ): ManagedTicketStatus[] {
   return statuses.map((status, index) => ({
@@ -162,6 +193,7 @@ function mapBoardStatusesToManagedStatuses(
     order_number: status.order_number || ((index + 1) * 10),
     color: status.color || null,
     icon: status.icon || null,
+    portal_selectable: status.portal_selectable ?? true,
   }));
 }
 
@@ -175,8 +207,32 @@ function normalizeManagedTicketStatuses(statuses: ManagedTicketStatus[]) {
       order_number: (index + 1) * 10,
       color: status.color || null,
       icon: status.icon || null,
+      portal_selectable: status.portal_selectable,
     }))
     .filter((status) => status.name.length > 0);
+}
+
+// Maps the status ids the editor held before create (source-board ids in copy mode) onto the
+// freshly created board's statuses. createBoard recreates statuses from the submitted list with
+// new ids, preserving name and order (index * 10), so match by normalized name first (names are
+// validated unique) and fall back to position in the submitted list.
+function buildStatusIdRemap(
+  submitted: Array<{ status_id?: string; name: string }>,
+  created: Array<{ status_id?: string; name: string; order_number?: number }>
+): Map<string, string> {
+  const normalize = (name: string) => name.trim().toLowerCase();
+  const createdByName = new Map<string, string>();
+  for (const status of created) {
+    if (status.status_id) createdByName.set(normalize(status.name), status.status_id);
+  }
+  const createdByPosition = [...created].sort((a, b) => (a.order_number ?? 0) - (b.order_number ?? 0));
+  const remap = new Map<string, string>();
+  submitted.forEach((status, index) => {
+    if (!status.status_id) return;
+    const match = createdByName.get(normalize(status.name)) ?? createdByPosition[index]?.status_id;
+    if (match) remap.set(status.status_id, match);
+  });
+  return remap;
 }
 
 type ManagedTicketStatusValidationCode =
@@ -372,7 +428,7 @@ const BoardLoadBar: React.FC<{ open: number; total: number }> = ({ open, total }
 
 // Editor accordion: rendered top-to-bottom in this order. Only the first
 // section (General) is expanded when the editor opens; the rest start collapsed.
-const EDITOR_SECTION_IDS = ['general', 'assignment', 'inbound', 'close', 'automation', 'statuses', 'display'] as const;
+const EDITOR_SECTION_IDS = ['general', 'assignment', 'notifications', 'inbound', 'close', 'automation', 'statuses', 'display'] as const;
 const collapsedExceptFirstSection = (): Set<string> => new Set<string>(EDITOR_SECTION_IDS.slice(1));
 // When creating a board, also expand 'statuses' up front — ticket statuses are
 // required and otherwise hidden inside a collapsed section.
@@ -391,14 +447,40 @@ interface BoardSlaPolicyOption {
   is_default?: boolean;
 }
 
+interface BoardEmailSender {
+  sender_id: string;
+  email_address: string;
+  display_name?: string | null;
+  verification_status: string;
+}
+
+interface BoardEmailSenderRoute {
+  route_type: string;
+  board_id?: string | null;
+  sender_id?: string | null;
+  display_name?: string | null;
+}
+
+interface BoardEmailSenderRouteInput {
+  routeType: 'board';
+  boardId: string;
+  senderId?: string | null;
+  displayName?: string | null;
+}
+
 interface BoardsSettingsProps {
   /** Hide SLA configuration in AlgaDesk edition. Passed by the host page from useProduct(). */
   isAlgaDesk?: boolean;
   /** Loads SLA policies for the board picker. Injected by the host (server can import @alga-psa/sla). */
   getSlaPolicies?: () => Promise<BoardSlaPolicyOption[]>;
+  /** Email sender actions are injected by the host to keep tickets independent of integrations. */
+  listEmailSenders?: () => Promise<{ senders: BoardEmailSender[]; routes: BoardEmailSenderRoute[] }>;
+  listSelectableSenders?: (input: { mailClass: 'ticket'; ignoreBoardRoute: true; boardName?: string }) => Promise<{ effectiveSenderAddress: string; effectiveSenderDisplayName: string }>;
+  setEmailSenderRoute?: (input: BoardEmailSenderRouteInput) => Promise<{ success: true } | SenderActionFailure>;
+  clearEmailSenderRoute?: (input: Pick<BoardEmailSenderRouteInput, 'routeType' | 'boardId'>) => Promise<{ success: true } | SenderActionFailure>;
 }
 
-const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, getSlaPolicies }) => {
+const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, getSlaPolicies, listEmailSenders, listSelectableSenders, setEmailSenderRoute, clearEmailSenderRoute }) => {
   const { t } = useTranslation('msp/settings');
   // BoardHeader is a ticket-list component and asks for dashboard.boardHeader.*
   // and bulk.move.unnamedBoard, which live in features/tickets. Handing it this
@@ -423,7 +505,8 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     inbound_reply_reopen_cutoff_hours: 168,
     inbound_reply_reopen_status_id: '',
     inbound_reply_ai_ack_suppression_enabled: false,
-    enable_live_ticket_timer: true,
+    enable_live_ticket_timer: DEFAULT_BOARD_STOPWATCH_ENABLED,
+    client_portal_visible: true,
     is_pinned: true,
     status_seed_mode: 'copy_existing' as TicketStatusSeedMode,
     copy_ticket_statuses_from_board_id: '',
@@ -501,6 +584,11 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
   const [showAddEditDialog, setShowAddEditDialog] = useState(false);
   const [editingBoard, setEditingBoard] = useState<IBoard | null>(null);
   const [formData, setFormData] = useState(createEmptyFormData);
+  const [ticketSenderOptions, setTicketSenderOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [ticketSenderId, setTicketSenderId] = useState('');
+  const [ticketSenderName, setTicketSenderName] = useState('');
+  const [ticketDefaultAddress, setTicketDefaultAddress] = useState('');
+  const [ticketSenderSaving, setTicketSenderSaving] = useState(false);
   const [isLoadingBoardStatuses, setIsLoadingBoardStatuses] = useState(false);
   // Tracks the close-rules / auto-close fetch on edit so the dirty baseline is
   // captured only after those values land (otherwise both sections show as dirty on open).
@@ -508,9 +596,62 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
   const [closeRulesForm, setCloseRulesForm] = useState<CloseRulesFormState>(createEmptyCloseRulesForm);
   const [autoCloseRulesForm, setAutoCloseRulesForm] = useState<EditableAutoCloseRule[]>([]);
   const [removedAutoCloseRuleIds, setRemovedAutoCloseRuleIds] = useState<string[]>([]);
+  const [notificationRules, setNotificationRules] = useState<EditableNotificationRule[]>([]);
+  const [defaultWatcherUserIds, setDefaultWatcherUserIds] = useState<string[]>([]);
   // Accordion editor: per-section collapse state + dirty tracking against an on-open baseline
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(collapsedExceptFirstSection);
   const [formSnapshot, setFormSnapshot] = useState<Record<string, string> | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    if (!editingBoard?.board_id || !listEmailSenders) {
+      setTicketSenderOptions([]);
+      setTicketSenderId('');
+      setTicketSenderName('');
+      setTicketDefaultAddress('');
+      return;
+    }
+    void Promise.all([
+      listEmailSenders(),
+      listSelectableSenders?.({ mailClass: 'ticket', ignoreBoardRoute: true, boardName: editingBoard.board_name }),
+    ]).then(([{ senders, routes }, ticketDefault]) => {
+      if (!active) return;
+      setTicketSenderOptions(senders.filter((sender: any) => sender.verification_status === 'verified').map((sender: any) => ({ value: sender.sender_id, label: sender.email_address })));
+      const route = routes.find((item: any) => item.route_type === 'board' && item.board_id === editingBoard.board_id);
+      setTicketSenderId(route?.sender_id ?? '');
+      setTicketSenderName(route?.display_name ?? '');
+      const ticketRoute = routes.find((item: any) => item.route_type === 'mail_class' && item.mail_class === 'ticket')
+        ?? routes.find((item: any) => item.route_type === 'default');
+      const fallbackSender = senders.find((sender: any) => sender.sender_id === ticketRoute?.sender_id);
+      const defaultAddress = ticketDefault?.effectiveSenderAddress ?? fallbackSender?.email_address ?? '';
+      const defaultName = ticketDefault?.effectiveSenderDisplayName ?? fallbackSender?.display_name ?? editingBoard.board_name;
+      setTicketDefaultAddress(defaultName ? `${defaultAddress} · ${defaultName}` : defaultAddress);
+    }).catch((error) => toast.error(error instanceof Error ? error.message : 'Could not load ticket senders.'));
+    return () => { active = false; };
+  }, [editingBoard?.board_id, listEmailSenders, listSelectableSenders]);
+
+  const saveTicketSenderRoute = async () => {
+    if (!editingBoard?.board_id || !setEmailSenderRoute || !clearEmailSenderRoute) return;
+    setTicketSenderSaving(true);
+    try {
+      const result = !ticketSenderId && !ticketSenderName.trim()
+        ? await clearEmailSenderRoute({ routeType: 'board', boardId: editingBoard.board_id })
+        : await setEmailSenderRoute({ routeType: 'board', boardId: editingBoard.board_id, senderId: ticketSenderId || null, displayName: ticketSenderName });
+      if (isSenderActionFailure(result)) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(t('ticketing.boards.emailSender.saved', 'Ticket sender saved'));
+    } catch (error) {
+      const code = (error as any)?.code ?? (error as any)?.cause?.code;
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error(code === '23505' || /unique constraint|duplicate key|already exists/i.test(message)
+        ? t('ticketing.boards.emailSender.duplicateRoute', 'That sender route already exists.')
+        : t('ticketing.boards.emailSender.saveFailed', 'Could not save ticket sender. Please try again.'));
+    } finally {
+      setTicketSenderSaving(false);
+    }
+  };
   
   // State for Import Dialog
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -700,6 +841,29 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     } catch (loadError) {
       console.error('Error loading board close rules:', loadError);
       setDialogError(loadError instanceof Error ? loadError.message : t('ticketing.boards.closeRules.messages.fetchFailed'));
+    }
+
+    try {
+      const notificationSettings = await getBoardNotificationSettings(board.board_id!);
+      if (isReturnedActionError(notificationSettings)) {
+        setDialogError(getErrorMessage(notificationSettings));
+      } else {
+        setNotificationRules(
+          notificationSettings.rules.map((rule) => ({
+            temp_id: rule.rule_id,
+            rule_id: rule.rule_id,
+            notify_on_create: rule.notify_on_create,
+            status_ids: rule.status_ids,
+            user_ids: rule.user_ids,
+            team_ids: rule.team_ids,
+            is_enabled: rule.is_enabled,
+          }))
+        );
+        setDefaultWatcherUserIds(notificationSettings.default_watcher_user_ids);
+      }
+    } catch (loadError) {
+      console.error('Error loading board notification settings:', loadError);
+      setDialogError(loadError instanceof Error ? loadError.message : t('ticketing.boards.editor.sections.notificationsFetchFailed', 'Failed to load notification settings'));
     } finally {
       setIsLoadingCloseRules(false);
     }
@@ -726,7 +890,8 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       inbound_reply_reopen_cutoff_hours: board.inbound_reply_reopen_cutoff_hours ?? 168,
       inbound_reply_reopen_status_id: board.inbound_reply_reopen_status_id || '',
       inbound_reply_ai_ack_suppression_enabled: board.inbound_reply_ai_ack_suppression_enabled ?? false,
-      enable_live_ticket_timer: board.enable_live_ticket_timer ?? true,
+      enable_live_ticket_timer: resolveBoardStopwatchEnabled(board.enable_live_ticket_timer),
+      client_portal_visible: board.client_portal_visible ?? true,
       is_pinned: board.is_pinned ?? false,
       ticket_statuses: [],
     });
@@ -736,6 +901,8 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     setCollapsedSections(collapsedExceptFirstSection());
     setCloseRulesForm(createEmptyCloseRulesForm());
     setAutoCloseRulesForm([]);
+    setNotificationRules([]);
+    setDefaultWatcherUserIds([]);
 
     await reloadBoardEditorData(board);
   };
@@ -912,6 +1079,19 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     }
   };
 
+  const persistNotificationSettings = (boardId: string, rulesToSave: EditableNotificationRule[] = notificationRules) =>
+    saveBoardNotificationSettings(boardId, {
+      rules: rulesToSave.map((rule) => ({
+        rule_id: rule.rule_id,
+        notify_on_create: rule.notify_on_create,
+        status_ids: rule.status_ids,
+        user_ids: rule.user_ids,
+        team_ids: rule.team_ids,
+        is_enabled: rule.is_enabled,
+      })),
+      default_watcher_user_ids: defaultWatcherUserIds,
+    });
+
   const handleSaveBoard = async () => {
     try {
       setDialogError(null);
@@ -947,6 +1127,17 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
         // The statuses section already renders an inline validation error; just reveal it.
         failInSection('statuses');
         return;
+      }
+
+      for (const rule of notificationRules) {
+        if (!rule.notify_on_create && rule.status_ids.length === 0) {
+          failInSection('notifications', t('ticketing.boards.editor.sections.notificationsTriggerRequired', 'Each notification rule needs at least one trigger: ticket creation or a status.'));
+          return;
+        }
+        if (rule.user_ids.length === 0 && rule.team_ids.length === 0) {
+          failInSection('notifications', t('ticketing.boards.editor.sections.notificationsRecipientRequired', 'Each notification rule needs at least one user or team to notify.'));
+          return;
+        }
       }
 
       if (editingBoard) {
@@ -994,6 +1185,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           inbound_reply_reopen_status_id: formData.inbound_reply_reopen_status_id || null,
           inbound_reply_ai_ack_suppression_enabled: formData.inbound_reply_ai_ack_suppression_enabled,
           enable_live_ticket_timer: formData.enable_live_ticket_timer,
+          client_portal_visible: formData.client_portal_visible,
           is_pinned: formData.is_pinned,
           ticket_statuses: normalizedTicketStatuses,
         });
@@ -1040,6 +1232,17 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           }
         }
 
+        // Only when the notifications section changed: re-saving untouched settings would
+        // re-validate stored users that may have been deactivated since, and fail every
+        // unrelated board save.
+        if (isSectionDirty('notifications')) {
+          const notificationResult = await persistNotificationSettings(editingBoard.board_id!);
+          if (isReturnedActionError(notificationResult)) {
+            failInSection('notifications', getErrorMessage(notificationResult));
+            return;
+          }
+        }
+
         toast.success(t('ticketing.boards.messages.success.updated'));
 
         // Stay in the editor after saving. Reflect the saved name in the header,
@@ -1072,6 +1275,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           inbound_reply_reopen_status_id: null,
           inbound_reply_ai_ack_suppression_enabled: formData.inbound_reply_ai_ack_suppression_enabled,
           enable_live_ticket_timer: formData.enable_live_ticket_timer,
+          client_portal_visible: formData.client_portal_visible,
           // The pin toggle renders during creation too, so it has to be sent:
           // createBoard defaults is_pinned to true, which would silently ignore
           // an admin turning it off on the way in.
@@ -1084,6 +1288,68 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
         if (isReturnedActionError(createdBoard)) {
           setDialogError(getErrorMessage(createdBoard));
           return;
+        }
+
+        // The board exists now, so its notification settings can be saved.
+        if (notificationRules.length > 0 || defaultWatcherUserIds.length > 0) {
+          // The board is already created: on any failure keep editing it (so a retry updates
+          // instead of creating a duplicate) and reload what is actually persisted, which also
+          // drops copy/seed mode and the source-board status ids from the form and rules.
+          const recoverIntoCreatedBoard = async (message: string) => {
+            setEditingBoard(createdBoard);
+            setFormData((prev) => ({
+              ...prev,
+              status_seed_mode: 'copy_existing' as TicketStatusSeedMode,
+              copy_ticket_statuses_from_board_id: '',
+            }));
+            setFormSnapshot(null);
+            await fetchBoards();
+            await reloadBoardEditorData(createdBoard);
+            failInSection('notifications', message);
+          };
+
+          try {
+            // Rule status ids were picked from the editor's statuses (the source board's ids in
+            // copy mode); createBoard recreated them with fresh ids, so remap to the new board.
+            let rulesToSave = notificationRules;
+            if (notificationRules.some((rule) => rule.status_ids.length > 0)) {
+              const createdStatuses = await getBoardTicketStatuses(createdBoard.board_id!);
+              if (isReturnedActionError(createdStatuses)) {
+                await recoverIntoCreatedBoard(getErrorMessage(createdStatuses));
+                return;
+              }
+              const remap = buildStatusIdRemap(normalizedTicketStatuses, createdStatuses);
+              const unmatched = notificationRules.some((rule) =>
+                rule.status_ids.some((id) => !remap.has(id))
+              );
+              if (unmatched) {
+                // Never silently drop a status trigger: surface it so the rule can be re-added.
+                await recoverIntoCreatedBoard(
+                  t(
+                    'ticketing.boards.editor.sections.notificationsStatusRemapFailed',
+                    'The board was created, but a notification rule status could not be matched to the new board. Re-add the notification rules.'
+                  )
+                );
+                return;
+              }
+              rulesToSave = notificationRules.map((rule) => ({
+                ...rule,
+                status_ids: rule.status_ids.map((id) => remap.get(id)!),
+              }));
+            }
+
+            const notificationResult = await persistNotificationSettings(createdBoard.board_id!, rulesToSave);
+            if (isReturnedActionError(notificationResult)) {
+              await recoverIntoCreatedBoard(getErrorMessage(notificationResult));
+              return;
+            }
+          } catch (postCreateError) {
+            console.error('Error saving notification settings for new board:', postCreateError);
+            await recoverIntoCreatedBoard(
+              postCreateError instanceof Error ? postCreateError.message : t('ticketing.boards.messages.error.saveFailed')
+            );
+            return;
+          }
         }
         toast.success(t('ticketing.boards.messages.success.created'));
       }
@@ -1152,7 +1418,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             is_inactive: board.is_inactive || false,
             category_type: 'itil',
             priority_type: 'itil',
-            enable_live_ticket_timer: true,
+            enable_live_ticket_timer: DEFAULT_BOARD_STOPWATCH_ENABLED,
           });
           if (isReturnedActionError(createdBoard)) {
             allResults.skipped.push({
@@ -1195,6 +1461,8 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     setSectionErrors({});
     setIsLoadingBoardStatuses(false);
     setIsLoadingCloseRules(false);
+    setNotificationRules([]);
+    setDefaultWatcherUserIds([]);
     setCollapsedSections(collapsedExceptFirstSection());
     setFormSnapshot(null);
   };
@@ -1220,6 +1488,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       copy_ticket_statuses_from_board_id: formData.copy_ticket_statuses_from_board_id,
       ticket_statuses: formData.ticket_statuses,
     }),
+    notifications: JSON.stringify({ rules: notificationRules, watchers: defaultWatcherUserIds }),
     close: JSON.stringify(closeRulesForm),
     automation: JSON.stringify({ rules: autoCloseRulesForm, removed: removedAutoCloseRuleIds }),
     inbound: JSON.stringify({
@@ -1230,6 +1499,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     }),
     display: JSON.stringify({
       enable_live_ticket_timer: formData.enable_live_ticket_timer,
+      client_portal_visible: formData.client_portal_visible,
       is_itil_compliant: formData.is_itil_compliant,
     }),
     appearance: JSON.stringify({
@@ -1298,6 +1568,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                 {board.is_default && <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />}
                 {isItil && <ListPill tone="violet">ITIL</ListPill>}
                 {board.is_inactive && <ListPill tone="gray">{t('ticketing.boards.statusLabels.inactive')}</ListPill>}
+                {board.client_portal_visible === false && <ListPill tone="gray"><EyeOff className="h-3 w-3" />{t('ticketing.boards.statusLabels.hiddenFromPortal')}</ListPill>}
               </div>
               {board.description && <p className="truncate text-xs text-gray-500 max-w-[260px]">{board.description}</p>}
             </div>
@@ -1444,6 +1715,8 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                   return nextFormData;
                 });
                 setCollapsedSections(collapsedForCreate());
+                setNotificationRules([]);
+                setDefaultWatcherUserIds([]);
                 setShowAddEditDialog(true);
                 setIsLoadingBoardStatuses(false);
                 setIsLoadingCloseRules(false);
@@ -1873,6 +2146,170 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           </EditorAccordionSection>
 
           <EditorAccordionSection
+            id="notifications"
+            error={sectionErrors['notifications']}
+            title={t('ticketing.boards.editor.sections.notifications', 'Notifications')}
+            description={t('ticketing.boards.editor.sections.notificationsHelp', 'Notify technicians about new tickets and status changes, and set default watchers')}
+            icon={<Bell className="h-4 w-4" />}
+            open={!collapsedSections.has('notifications')}
+            dirty={isSectionDirty('notifications')}
+            onToggle={() => toggleSection('notifications')}
+            onSave={handleSaveBoard}
+            saveLabel={t('ticketing.boards.editor.saveChanges', 'Save Changes')}
+            unsavedLabel={t('ticketing.boards.editor.unsaved', 'Unsaved')}
+            saveDisabled={saveDisabled}
+          >
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>{t('ticketing.boards.editor.sections.notificationsRulesLabel', 'Notification rules')}</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t('ticketing.boards.editor.sections.notificationsRulesHelp', 'Recipients get one notification per event. They are not added as watchers.')}
+                </p>
+              </div>
+              <Button
+                id="add-board-notification-rule-button"
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setNotificationRules((prev) => [...prev, createEmptyNotificationRule(prev.length)])
+                }
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                {t('ticketing.boards.editor.sections.notificationsAddRule', 'Add rule')}
+              </Button>
+            </div>
+
+            {notificationRules.map((rule, index) => {
+              const boardStatuses = formData.ticket_statuses.filter((status) => status.status_id);
+              const updateRule = (updates: Partial<EditableNotificationRule>) =>
+                setNotificationRules((prev) =>
+                  prev.map((r) => (r.temp_id === rule.temp_id ? { ...r, ...updates } : r))
+                );
+              return (
+                <div
+                  key={rule.temp_id}
+                  id={`board-notification-rule-${index}`}
+                  className="space-y-3 rounded-md border border-gray-100 bg-gray-50 p-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-900">
+                      {t('ticketing.boards.editor.sections.notificationsRuleTitle', { defaultValue: 'Rule {{number}}', number: index + 1 })}
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor={`board-notification-rule-${index}-enabled`}>
+                          {t('ticketing.boards.editor.sections.notificationsRuleEnabled', 'Enabled')}
+                        </Label>
+                        <Switch
+                          id={`board-notification-rule-${index}-enabled`}
+                          checked={rule.is_enabled}
+                          onCheckedChange={(checked) => updateRule({ is_enabled: checked })}
+                        />
+                      </div>
+                      <Button
+                        id={`board-notification-rule-${index}-remove`}
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        aria-label={t('ticketing.boards.editor.sections.notificationsRemoveRule', 'Remove rule')}
+                        onClick={() =>
+                          setNotificationRules((prev) => prev.filter((r) => r.temp_id !== rule.temp_id))
+                        }
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id={`board-notification-rule-${index}-create`}
+                        checked={rule.notify_on_create}
+                        onChange={(e) => updateRule({ notify_on_create: (e.target as HTMLInputElement).checked })}
+                      />
+                      <Label htmlFor={`board-notification-rule-${index}-create`}>
+                        {t('ticketing.boards.editor.sections.notificationsOnCreate', 'When a ticket is created on this board')}
+                      </Label>
+                    </div>
+                    <div>
+                      <Label>{t('ticketing.boards.editor.sections.notificationsOnStatus', 'When a ticket enters')}</Label>
+                      {boardStatuses.length === 0 ? (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {t('ticketing.boards.editor.sections.notificationsNoStatuses', 'Statuses can be selected once the board has been saved.')}
+                        </p>
+                      ) : (
+                        <div className="mt-1 grid grid-cols-2 gap-1">
+                          {boardStatuses.map((status) => (
+                            <div key={status.status_id} className="flex items-center gap-2">
+                              <Checkbox
+                                id={`board-notification-rule-${index}-status-${status.status_id}`}
+                                checked={rule.status_ids.includes(status.status_id!)}
+                                onChange={(e) => {
+                                  const checked = (e.target as HTMLInputElement).checked;
+                                  updateRule({
+                                    status_ids: checked
+                                      ? [...rule.status_ids.filter((id) => id !== status.status_id), status.status_id!]
+                                      : rule.status_ids.filter((id) => id !== status.status_id),
+                                  });
+                                }}
+                              />
+                              <Label htmlFor={`board-notification-rule-${index}-status-${status.status_id}`}>
+                                {status.name}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor={`board-notification-rule-${index}-recipients`}>
+                      {t('ticketing.boards.editor.sections.notificationsRecipients', 'Notify')}
+                    </Label>
+                    <MultiUserAndTeamPicker
+                      id={`board-notification-rule-${index}-recipients`}
+                      values={rule.user_ids}
+                      onValuesChange={(values) => updateRule({ user_ids: values })}
+                      teamValues={rule.team_ids}
+                      onTeamValuesChange={(values) => updateRule({ team_ids: values })}
+                      users={users}
+                      teams={teams}
+                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                      getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                      placeholder={t('ticketing.boards.editor.sections.notificationsRecipientsPlaceholder', 'Select users and teams...')}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {t('ticketing.boards.editor.sections.notificationsRecipientsHelp', 'Team members are looked up each time a notification is sent.')}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+
+            <div>
+              <Label htmlFor="board-default-watchers-picker">
+                {t('ticketing.boards.editor.sections.notificationsDefaultWatchers', 'Default watchers')}
+              </Label>
+              <MultiUserPicker
+                id="board-default-watchers-picker"
+                values={defaultWatcherUserIds}
+                onValuesChange={setDefaultWatcherUserIds}
+                users={users}
+                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                placeholder={t('ticketing.boards.editor.sections.notificationsDefaultWatchersPlaceholder', 'Select users...')}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('ticketing.boards.editor.sections.notificationsDefaultWatchersHelp', 'Added to the watch list of every new ticket on this board, and notified of every later update.')}
+              </p>
+            </div>
+          </div>
+          </EditorAccordionSection>
+
+          <EditorAccordionSection
             id="inbound"
             error={sectionErrors['inbound']}
             title={t('ticketing.boards.editor.sections.inbound', 'Email & inbound replies')}
@@ -1952,6 +2389,24 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                   disabled={!formData.inbound_reply_reopen_enabled}
                 />
               </div>
+              )}
+
+              {editingBoard && listEmailSenders && setEmailSenderRoute && clearEmailSenderRoute && (
+                <div className="space-y-2 border-t border-border pt-4">
+                  <Label htmlFor="board-ticket-email-sender">{t('ticketing.boards.emailSender.label', 'Send ticket email from')}</Label>
+                  <p className="text-xs text-muted-foreground">{t('ticketing.boards.emailSender.inboundWarning', 'Changing this From address does not change where inbound replies are received.')}</p>
+                  <CustomSelect
+                    id="board-ticket-email-sender"
+                    value={ticketSenderId}
+                    onValueChange={setTicketSenderId}
+                    options={[{ value: '', label: t('ticketing.boards.emailSender.useDefault', 'Use ticket default') + (ticketDefaultAddress ? ` (${ticketDefaultAddress})` : '') }, ...ticketSenderOptions]}
+                  />
+                  <Label htmlFor="board-ticket-email-sender-name">{t('ticketing.boards.emailSender.displayName', 'Display name override (optional)')}</Label>
+                  <Input id="board-ticket-email-sender-name" value={ticketSenderName} onChange={(event) => setTicketSenderName(event.target.value)} />
+                  <Button id="board-ticket-email-sender-save" type="button" variant="outline" disabled={ticketSenderSaving} onClick={() => void saveTicketSenderRoute()}>
+                    {ticketSenderSaving ? t('common.saving', 'Saving...') : t('ticketing.boards.emailSender.save', 'Save sender')}
+                  </Button>
+                </div>
               )}
 
               <div className="flex items-center justify-between">
@@ -2380,7 +2835,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                 {isLoadingBoardStatuses ? (
                   <p className="text-sm text-muted-foreground">{t('ticketing.boards.fields.ticketStatuses.loading')}</p>
                 ) : formData.ticket_statuses.map((status, index) => (
-                  <div key={status.temp_id} className="grid gap-3 rounded-md border border-gray-200 p-3 md:grid-cols-[minmax(0,1fr)_auto_auto_auto] md:items-center">
+                  <div key={status.temp_id} className="grid gap-3 rounded-md border border-gray-200 p-3 md:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto] md:items-center">
                     <div>
                       <Label htmlFor={`inline-ticket-status-name-${index}`}>{t('ticketing.boards.fields.ticketStatuses.statusName')}</Label>
                       <Input
@@ -2408,6 +2863,14 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                             setManagedDefaultStatus(status.temp_id);
                           }
                         }}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={`inline-ticket-status-portal-selectable-${index}`}>{t('ticketing.boards.fields.ticketStatuses.portalSelectable')}</Label>
+                      <Switch
+                        id={`inline-ticket-status-portal-selectable-${index}`}
+                        checked={status.portal_selectable}
+                        onCheckedChange={(checked) => updateManagedTicketStatus(status.temp_id, { portal_selectable: checked })}
                       />
                     </div>
                     <div className="flex gap-2">
@@ -2464,7 +2927,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             id="display"
             error={sectionErrors['display']}
             title={t('ticketing.boards.editor.sections.display', 'Display & behaviour')}
-            description={t('ticketing.boards.editor.sections.displayHelp', 'Live timer and board type')}
+            description={t('ticketing.boards.editor.sections.displayHelp', 'Stopwatch and board type')}
             icon={<Clock className="h-4 w-4" />}
             open={!collapsedSections.has('display')}
             dirty={isSectionDirty('display')}
@@ -2487,6 +2950,20 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                   id="enable_live_ticket_timer"
                   checked={formData.enable_live_ticket_timer}
                   onCheckedChange={(checked) => setFormData({ ...formData, enable_live_ticket_timer: checked })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="client_portal_visible">{t('ticketing.boards.fields.clientPortalVisible.label')}</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t('ticketing.boards.fields.clientPortalVisible.help')}
+                  </p>
+                </div>
+                <Switch
+                  id="client_portal_visible"
+                  checked={formData.client_portal_visible}
+                  onCheckedChange={(checked) => setFormData({ ...formData, client_portal_visible: checked })}
                 />
               </div>
 

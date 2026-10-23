@@ -1,5 +1,6 @@
 import { addMinutes, formatISO, isSameDay, parseISO, setHours, setMinutes } from 'date-fns';
 import { ITimeEntryWithNew } from './types';
+import { endOfZonedDay, workDateInTimeZone } from '../../../../lib/timeEntryPeriodSelection';
 
 export function formatTimeForInput(date: Date): string {
   const hours = date.getHours().toString().padStart(2, '0');
@@ -21,15 +22,23 @@ export function calculateDuration(startTime: Date, endTime: Date): number {
   return Math.max(0, Math.round((endTime.getTime() - startTime.getTime()) / 60000));
 }
 
-export function validateTimeEntry(timeEntry: ITimeEntryWithNew): boolean {
+export function validateTimeEntry(timeEntry: ITimeEntryWithNew, workTimeZone?: string): boolean {
   const startTime = parseISO(timeEntry.start_time);
   const endTime = parseISO(timeEntry.end_time);
 
+  if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
+    return false;
+  }
   if (startTime >= endTime) {
     alert('Start time must be before end time');
     return false;
   }
-  if (!isSameDay(startTime, endTime)) {
+  // Match the calendar day shown by the entry form; fixed-sheet callers that
+  // omit a subject timezone retain their browser-local validation.
+  const sameWorkDay = workTimeZone
+    ? workDateInTimeZone(startTime, workTimeZone) === workDateInTimeZone(endTime, workTimeZone)
+    : isSameDay(startTime, endTime);
+  if (!sameWorkDay) {
     alert('Time entry must end on the same day');
     return false;
   }
@@ -80,6 +89,43 @@ export function clampDurationToSameDay(startTime: Date, requestedDurationMinutes
     return {
       durationMinutes: 0,
       endTime: getLatestSameDayEndTime(startTime),
+      maxDurationMinutes,
+      wasClampedToSameDay: true,
+    };
+  }
+
+  const durationMinutes = Math.min(normalizedDurationMinutes, maxDurationMinutes);
+
+  return {
+    durationMinutes,
+    endTime: addMinutes(startTime, durationMinutes),
+    maxDurationMinutes,
+    wasClampedToSameDay: normalizedDurationMinutes > maxDurationMinutes,
+  };
+}
+
+/**
+ * Same clamp as clampDurationToSameDay, but the "same day" is the subject
+ * user's calendar day, not the browser's. The saved work_date is derived in the
+ * subject timezone, so an end time that crosses the browser's midnight can
+ * still stay on the subject day (and vice versa).
+ */
+export function clampDurationToZonedSameDay(
+  startTime: Date,
+  requestedDurationMinutes: number,
+  timeZone: string,
+) {
+  const subjectDay = workDateInTimeZone(startTime, timeZone);
+  const latestEndTime = endOfZonedDay(subjectDay, timeZone);
+  const maxDurationMinutes = Math.max(0, calculateDuration(startTime, latestEndTime));
+  const normalizedDurationMinutes = Number.isFinite(requestedDurationMinutes)
+    ? Math.max(1, Math.floor(requestedDurationMinutes))
+    : Number.POSITIVE_INFINITY;
+
+  if (maxDurationMinutes < 1) {
+    return {
+      durationMinutes: 0,
+      endTime: latestEndTime,
       maxDurationMinutes,
       wasClampedToSameDay: true,
     };
@@ -181,4 +227,29 @@ export function getTimeEntryWorkDate(entry: TimeEntryDateSource): string {
 
 export function isTimeEntryOnWorkDate(entry: TimeEntryDateSource, dateKey: string): boolean {
   return getTimeEntryWorkDate(entry) === dateKey;
+}
+
+/**
+ * Which contract_line_id a write may carry. timeEntryWriteCore stamps ANY supplied
+ * id as contract_line_source='explicit' and only runs the resolver when none is
+ * sent, so an id the server picked itself (auto_*) must never be echoed back.
+ *
+ * - Re-saving the same entry: omit the id only for auto_* lines (legacy entries
+ *   with an id but no recorded source keep theirs).
+ * - Copying onto a NEW entry (quick add): carry the id only when a person chose
+ *   it ('explicit'); the line was valid for another entry/date, not necessarily
+ *   this one, so anything else is left to the resolver.
+ */
+export function contractLineFieldsForWrite(
+  entry: { contract_line_id?: string | null; contract_line_source?: string | null },
+  mode: 'resave' | 'copy-to-new-entry',
+): { contract_line_id?: string | null; contract_line_source?: undefined } {
+  const source = entry.contract_line_source ?? null;
+  const carry = mode === 'copy-to-new-entry' ? source === 'explicit' : !source?.startsWith('auto_');
+  // Resave: an explicit null (person chose "No line") must reach the UPDATE as
+  // null; undefined makes knex omit the column and the old id would survive.
+  // Copy: null has no meaning on a new row, so it collapses to undefined.
+  return carry
+    ? { contract_line_id: mode === 'resave' ? entry.contract_line_id : entry.contract_line_id ?? undefined }
+    : { contract_line_id: mode === 'resave' ? null : undefined, contract_line_source: undefined };
 }

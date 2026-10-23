@@ -5,8 +5,8 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
+import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -19,6 +19,8 @@ import type {
   QboItemImportResult,
 } from '../../services/accountingSync/qboItemImportService';
 import { getServiceTypesForSelection } from '../../actions/serviceActions';
+import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
+import { labelForUnitCode } from '@alga-psa/core/unitOfMeasure';
 
 /**
  * Optional wizard step: bulk import of QBO Products & Services into the
@@ -28,6 +30,8 @@ import { getServiceTypesForSelection } from '../../actions/serviceActions';
  */
 
 type BillingMethod = 'fixed' | 'hourly' | 'usage';
+
+const DEFAULT_IMPORT_UNIT = labelForUnitCode('C62');
 
 const ACTION_LABELS: Record<QboItemImportPreviewRow['action'], string> = {
   create: 'Will create',
@@ -118,7 +122,7 @@ export function QboItemImportStep() {
   const [serviceTypeId, setServiceTypeId] = React.useState('');
   const [serviceBillingMethod, setServiceBillingMethod] = React.useState<BillingMethod>('fixed');
   const [productBillingMethod, setProductBillingMethod] = React.useState<BillingMethod>('fixed');
-  const [unitOfMeasure, setUnitOfMeasure] = React.useState('Unit');
+  const [unitOfMeasure, setUnitOfMeasure] = React.useState(DEFAULT_IMPORT_UNIT);
   const [includeInactive, setIncludeInactive] = React.useState(true);
 
   const [previewing, setPreviewing] = React.useState(false);
@@ -156,7 +160,7 @@ export function QboItemImportStep() {
       serviceTypeId,
       serviceBillingMethod,
       productBillingMethod,
-      unitOfMeasure: unitOfMeasure.trim() || 'Unit',
+      unitOfMeasure: unitOfMeasure.trim() || DEFAULT_IMPORT_UNIT,
     },
   });
 
@@ -234,10 +238,12 @@ export function QboItemImportStep() {
             <Label htmlFor="qbo-item-import-uom">
               {t('integrations.qbo.itemImport.defaults.unitOfMeasure', { defaultValue: 'Unit of measure' })}
             </Label>
-            <Input
+            <UnitOfMeasureInput
               id="qbo-item-import-uom"
               value={unitOfMeasure}
-              onChange={(e) => setUnitOfMeasure(e.target.value)}
+              onChange={setUnitOfMeasure}
+              loadCustomUnits={listTenantUnitsOfMeasure}
+              registerCustomUnit={registerTenantUnitOfMeasure}
             />
           </div>
 

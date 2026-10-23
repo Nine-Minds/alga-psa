@@ -42,7 +42,7 @@ const Feedback: React.FC<FeedbackProps> = ({ messageId, role }) => {
   const updateFeedback = async (thumbNew: string|null|undefined, feedbackNew: string|null|undefined) => {
     if (messageId) {
       try {
-        const res = updateMessageAction(messageId, { thumb: thumbNew, feedback: feedbackNew });
+        const res = await updateMessageAction(messageId, { thumb: thumbNew, feedback: feedbackNew });
         return res;
       } catch (error) {
         console.log("Error submitting feedback", error);

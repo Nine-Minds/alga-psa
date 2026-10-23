@@ -28,6 +28,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
+  const [tenantRequired, setTenantRequired] = useState(false);
   const captcha = useLoginCaptcha();
 
   // Register the form component
@@ -83,6 +84,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true)
+    setTenantRequired(false)
 
     try {
       const signInPayload: Record<string, unknown> = {
@@ -95,6 +97,13 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
 
       if (tenantSlug) {
         signInPayload.tenant = tenantSlug;
+      }
+
+      // Belt and braces for the handoff round-trip, where the form knows the
+      // vanity host but no slug: the server resolves the tenant from the active
+      // portal_domains row rather than searching every tenant for the email.
+      if (portalDomain) {
+        signInPayload.portalDomain = portalDomain;
       }
 
       if (captcha.token) {
@@ -111,6 +120,11 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
           onError(t('auth.captchaRequired', 'Please complete the verification below, then sign in again.'))
         } else if (result.code === 'RATE_LIMITED') {
           onError(t('auth.tooManyAttempts', 'Too many failed sign-in attempts. Please wait a few minutes before trying again.'))
+        } else if (result.code === 'TENANT_REQUIRED') {
+          // The credentials were right, but the email belongs to client users in
+          // more than one tenant and nothing named which one. Not a failed
+          // attempt, so leave the captcha challenge alone.
+          setTenantRequired(true)
         } else {
           if (captcha.required) {
             captcha.refreshChallenge();
@@ -202,6 +216,21 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
       {lookupError && (
         <Alert variant="destructive">
           <AlertDescription>{lookupError}</AlertDescription>
+        </Alert>
+      )}
+
+      {tenantRequired && (
+        <Alert variant="warning">
+          <AlertDescription>
+            {t('auth.tenantRequiredMessage', 'Your email is linked to more than one organization — choose your organization to continue.')}{' '}
+            <Link
+              href="/auth/client-portal/signin"
+              className="underline font-medium"
+              {...withDataAutomationId({ id: 'client-tenant-required-link' })}
+            >
+              {t('auth.tenantRequiredLink', 'Choose your organization')}
+            </Link>
+          </AlertDescription>
         </Alert>
       )}
 

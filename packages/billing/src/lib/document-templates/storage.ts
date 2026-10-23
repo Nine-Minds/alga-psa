@@ -96,11 +96,13 @@ export async function saveCustomDocumentTemplate(
       updated_at: knex.fn.now(),
     })
     .onConflict(['tenant', 'template_id'])
+    // Citus rejects STABLE functions (knex.fn.now() → CURRENT_TIMESTAMP) inside
+    // ON CONFLICT DO UPDATE SET on distributed tables — must pass a literal.
     .merge({
       name: input.name,
       version: input.version,
       templateAst: JSON.stringify(input.templateAst),
-      updated_at: knex.fn.now(),
+      updated_at: new Date().toISOString(),
     })
     .returning('*');
   return row as CustomDocumentTemplateRow;

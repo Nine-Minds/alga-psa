@@ -205,6 +205,19 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
 
   // Update display label to show both selected and excluded categories
   const currentValue = selectedCategories[0] || '';
+  const selectedDisplayLabel = useMemo(() => {
+    if (!multiSelect && selectedCategories.length === 1) {
+      const selectedCategory = categories.find(c => c.category_id === selectedCategories[0]);
+      if (selectedCategory?.parent_category) {
+        const parentCategory = categories.find(c => c.category_id === selectedCategory.parent_category);
+        if (parentCategory) {
+          return <><strong className="font-semibold">{parentCategory.category_name}</strong> → {selectedCategory.category_name}</>;
+        }
+      }
+    }
+    return undefined;
+  }, [categories, multiSelect, selectedCategories]);
+
   const displayLabel = useMemo(() => {
     const parts: string[] = [];
 
@@ -300,6 +313,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
           disabled={disabled}
           modal={modal}
           showSearch={true}
+          selectedDisplayLabel={selectedDisplayLabel}
           searchPlaceholder={t('categoryPicker.searchPlaceholder', 'Search categories...')}
           searchInputId={`${id}-search-input`}
           onAddNew={onAddNew}

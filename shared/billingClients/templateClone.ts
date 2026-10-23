@@ -3,6 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import type { IContractTemplateLine } from '@alga-psa/types';
 
+// LEVERAGE: pattern template-clone-substrate — older, divergent template->contract clone (drops hourly/usage rates and fixed config detail). The faithful one is cloneTemplateLineToContract in packages/billing/src/repositories/contractLineRepository.ts (alga-2026-0002371).
 interface CloneTemplateOptions {
   tenant: string;
   templateContractLineId: string;
@@ -48,18 +49,20 @@ export async function cloneTemplateContractLine(
   // schedule, after-hours rule) and skip the legacy per-config bucket clone.
   const hasTemplatePools = await cloneTemplateLinePools(trx, tenant, templateContractLineId, contractLineId);
   await cloneServices(trx, tenant, templateContractLineId, contractLineId, hasTemplatePools);
+  await cloneTemplateLinePrepaidBlock(trx, tenant, templateContractLineId, contractLineId);
 
   const templateCustomRate = await resolveTemplateCustomRate(trx, tenant, templateContractId, templateContractLineId);
   const appliedCustomRate = overrideRate ?? templateCustomRate;
 
-  if (appliedCustomRate !== null) {
-    await db.table('contract_lines')
-      .where({ contract_line_id: contractLineId })
-      .update({
-        custom_rate: appliedCustomRate,
-        updated_at: trx.fn.now()
-      });
-  }
+  // A template rate is a clone-time snapshot source; a null one follows the
+  // live catalog. Template edits stay provenance-only for live lines.
+  await db.table('contract_lines')
+    .where({ contract_line_id: contractLineId })
+    .update({
+      custom_rate: appliedCustomRate,
+      rate_provenance: appliedCustomRate === null ? 'inherited' : 'custom',
+      updated_at: trx.fn.now()
+    });
 
   return { appliedCustomRate };
 }
@@ -128,6 +131,132 @@ export async function cloneTemplateLinePools(
     }
   }
 
+  return true;
+}
+
+const PREPAID_BLOCK_CONFIG_COLUMNS = [
+  'block_minutes',
+  'block_price',
+  'expiry_months',
+  'trigger_on_exhaustion',
+  'trigger_threshold_percent',
+  'trigger_on_expiry',
+  'trigger_on_renewal',
+  'replenishment_tier',
+] as const;
+
+/**
+ * Clone a template line's Prepaid Block config (contract_template_line_prepaid_blocks)
+ * onto a live contract line (contract_line_prepaid_blocks). A Prepaid Block line is an
+ * Hourly line plus this one overlay row, so every template clone path must call this
+ * AFTER the line's services exist (the sold-as service must be one of them).
+ *
+ * `block_price` is minor units and is copied as-is: the template is currency-neutral,
+ * the resulting line takes its currency from the contract (the block invoice charge
+ * passes contracts.currency_code explicitly). A template without the row, or a
+ * non-Hourly line, copies nothing.
+ *
+ * Does NOT sync block issuances: callers that attach the line to an active client
+ * contract run the prepaid issuance sync afterwards.
+ *
+ * Returns true when a config row was written.
+ *
+ * LEVERAGE: pattern template-pool-roundtrip — same rule as the pools above: this module
+ * owns the prepaid block copy so every clone path stays in lockstep.
+ */
+export async function cloneTemplateLinePrepaidBlock(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  templateContractLineId: string,
+  contractLineId: string
+): Promise<boolean> {
+  const db = tenantDb(trx, tenant);
+  const templateConfig = await db.table('contract_template_line_prepaid_blocks')
+    .where('template_line_id', templateContractLineId)
+    .first();
+  if (!templateConfig) {
+    return false;
+  }
+
+  const targetLine = await db.table('contract_lines')
+    .where('contract_line_id', contractLineId)
+    .first('contract_line_type');
+  if (!targetLine || targetLine.contract_line_type !== 'Hourly') {
+    return false;
+  }
+
+  // The sold-as service must be one of the line's services; fall back to the first
+  // template service (display order) when the template has none chosen or it is gone.
+  const lineServiceIds: string[] = await db.table('contract_line_services')
+    .where('contract_line_id', contractLineId)
+    .pluck('service_id');
+  const templateServiceOrder: string[] = await db.table('contract_template_line_services')
+    .where('template_line_id', templateContractLineId)
+    .orderBy('display_order', 'asc')
+    .pluck('service_id');
+  const firstCovered = templateServiceOrder.find((id) => lineServiceIds.includes(id)) ?? lineServiceIds[0] ?? null;
+  const soldAs =
+    templateConfig.sold_as_service_id && lineServiceIds.includes(templateConfig.sold_as_service_id)
+      ? templateConfig.sold_as_service_id
+      : firstCovered;
+
+  const values: Record<string, unknown> = {};
+  for (const column of PREPAID_BLOCK_CONFIG_COLUMNS) {
+    values[column] = templateConfig[column] ?? null;
+  }
+  // Bound timestamp: Citus rejects non-IMMUTABLE functions in the DO UPDATE SET of distributed upserts.
+  const now = new Date().toISOString();
+  await db.table('contract_line_prepaid_blocks')
+    .insert({
+      tenant,
+      contract_line_id: contractLineId,
+      sold_as_service_id: soldAs,
+      ...values,
+      created_at: now,
+      updated_at: now,
+    })
+    .onConflict(['tenant', 'contract_line_id'])
+    .merge({ sold_as_service_id: soldAs, ...values, updated_at: now });
+  return true;
+}
+
+/**
+ * Contract -> template snapshot of a line's Prepaid Block config (the counterpart of
+ * {@link cloneTemplateLinePrepaidBlock}); used by both ensureTemplateLineSnapshot copies.
+ * Replaces any existing template config row so repeated snapshots stay in sync, and
+ * removes a stale one when the line no longer carries a config.
+ */
+export async function snapshotContractLinePrepaidBlockToTemplateLine(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  contractLineId: string,
+  templateLineId: string
+): Promise<boolean> {
+  const db = tenantDb(trx, tenant);
+  const lineConfig = await db.table('contract_line_prepaid_blocks')
+    .where('contract_line_id', contractLineId)
+    .first();
+  if (!lineConfig) {
+    await db.table('contract_template_line_prepaid_blocks').where('template_line_id', templateLineId).delete();
+    return false;
+  }
+
+  const values: Record<string, unknown> = {};
+  for (const column of PREPAID_BLOCK_CONFIG_COLUMNS) {
+    values[column] = lineConfig[column] ?? null;
+  }
+  const now = new Date().toISOString();
+  await db.table('contract_template_line_prepaid_blocks')
+    .insert({
+      tenant,
+      template_line_id: templateLineId,
+      sold_as_service_id: lineConfig.sold_as_service_id ?? null,
+      ...values,
+      created_at: now,
+      updated_at: now,
+    })
+    .onConflict(['tenant', 'template_line_id'])
+    .merge({ sold_as_service_id: lineConfig.sold_as_service_id ?? null, ...values, updated_at: now });
   return true;
 }
 
@@ -216,7 +345,7 @@ async function cloneServiceConfiguration(
     }
 
     if (configuration.configuration_type === 'Fixed') {
-      await cloneFixedConfig(trx, tenant, configuration.config_id, newConfigId);
+      await cloneTemplateServiceFixedConfig(trx, tenant, configuration.config_id, newConfigId);
     }
   }
 }
@@ -330,18 +459,47 @@ async function cloneUsageConfig(trx: Knex.Transaction, tenant: string, sourceCon
   });
 }
 
-async function cloneFixedConfig(trx: Knex.Transaction, tenant: string, sourceConfigId: string, targetConfigId: string) {
+/**
+ * Copy a template service's fixed-config row (pricing basis + optional default
+ * unit rate) onto the contract line's service configuration. Shared by every
+ * template → contract copy path so a per-seat service can never silently
+ * demote to a bundle allocation because one path forgot the row.
+ *
+ * Templates carry no provenance column: a stored template base_rate is an
+ * intentional clone-time snapshot (`custom`); a null one follows the live
+ * catalog in the contract's currency (`inherited`). Never copy a template-row
+ * provenance verbatim.
+ *
+ * LEVERAGE: pattern template-pool-roundtrip — third template → contract copy
+ * that must remember a template-side table (pools, fixed config); a single
+ * "clone everything hanging off a template service config" layer would stop
+ * each path from having to enumerate them.
+ */
+export async function cloneTemplateServiceFixedConfig(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  sourceConfigId: string,
+  targetConfigId: string
+): Promise<void> {
   const db = tenantDb(trx, tenant);
-  const fixedConfig = await db.table('contract_template_line_service_fixed_config')
+  const fixedConfig = await db.table<{ base_rate: number | string | null; pricing_basis: string | null }>(
+    'contract_template_line_service_fixed_config'
+  )
     .where('config_id', sourceConfigId)
-    .first();
+    .first('base_rate', 'pricing_basis');
 
   if (!fixedConfig) return;
 
+  const templateBaseRate = normalizeNumeric(fixedConfig.base_rate);
+
   await db.table('contract_line_service_fixed_config').insert({
-    ...fixedConfig,
     tenant,
     config_id: targetConfigId,
+    base_rate: templateBaseRate,
+    // Template fixed-config rows exist only for per-unit services, whose rate is per unit.
+    base_rate_basis: templateBaseRate === null ? null : 'per_unit',
+    pricing_basis: fixedConfig.pricing_basis ?? null,
+    rate_provenance: templateBaseRate === null ? 'inherited' : 'custom',
     created_at: trx.fn.now(),
     updated_at: trx.fn.now()
   });

@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { copyTextToClipboard } from '@alga-psa/ui/lib/clipboard';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -278,25 +279,10 @@ export default function KeyboardShortcutsPanel(): React.JSX.Element {
       for (const r of rows) lines.push(`- ${r.name}: ${r.binding}`);
       lines.push('');
     }
-    const text = lines.join('\n');
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-      } else {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.setAttribute('readonly', '');
-        ta.style.position = 'fixed';
-        ta.style.opacity = '0';
-        document.body.appendChild(ta);
-        ta.select();
-        const ok = document.execCommand('copy');
-        document.body.removeChild(ta);
-        if (!ok) throw new Error('execCommand copy failed');
-      }
+    if (await copyTextToClipboard(lines.join('\n'))) {
       toast.success(t('settings.messages.cheatsheetCopied', { defaultValue: 'Cheatsheet copied to clipboard' }));
-    } catch (e) {
-      handleError(e, t('settings.errors.copyFailed', { defaultValue: 'Failed to copy cheatsheet' }));
+    } else {
+      handleError(new Error('clipboard copy failed'), t('settings.errors.copyFailed', { defaultValue: 'Failed to copy cheatsheet' }));
     }
   }, [buildCheatsheetGroups, t]);
 

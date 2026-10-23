@@ -73,6 +73,37 @@ vi.mock('@alga-psa/reference-data/actions', () => ({
   getPrioritiesByBoardType: vi.fn().mockResolvedValue([]),
 }), { virtual: true });
 
+vi.mock('@alga-psa/ui/components/SearchableSelect', () => {
+  const SearchableSelect = ({
+    id,
+    options,
+    value,
+    onChange,
+    disabled,
+  }: {
+    id?: string;
+    options: Array<{ value: string; label: string }>;
+    value?: string;
+    onChange?: (value: string) => void;
+    disabled?: boolean;
+  }) => (
+    <select
+      data-testid={id}
+      value={value ?? ''}
+      disabled={disabled}
+      onChange={(event) => onChange?.(event.target.value)}
+    >
+      <option value="">--</option>
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+  return { __esModule: true, default: SearchableSelect, SearchableSelect };
+});
+
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   __esModule: true,
   default: ({
@@ -190,24 +221,21 @@ describe('transform action input editor', () => {
       );
     });
 
-    expect(screen.getByTestId('mapping-step-transform-inputs-text-source-mode')).toBeInTheDocument();
-    expect(screen.getByTestId('mapping-step-transform-inputs-maxLength-source-mode')).toBeInTheDocument();
-    expect(screen.getByTestId('mapping-step-transform-inputs-text-reference-field')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-step-transform-inputs-text-value-source')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-step-transform-inputs-maxLength-value-source')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-step-transform-inputs-text-value-source')).toBeInTheDocument();
 
     expect(screen.getByText('maxLength')).toBeInTheDocument();
     expect(screen.getByText('strategy')).toBeInTheDocument();
-    expect(screen.getByTestId('mapping-step-transform-inputs-maxLength-source-mode')).toHaveValue(
-      'fixed'
+    expect(screen.getByTestId('mapping-step-transform-inputs-maxLength-value-source')).toHaveValue(
+      '__workflow-value-source:fixed'
     );
-    expect(screen.getByTestId('mapping-step-transform-inputs-strategy-source-mode')).toHaveValue(
-      'fixed'
+    expect(screen.getByTestId('mapping-step-transform-inputs-strategy-value-source')).toHaveValue(
+      '__workflow-value-source:fixed'
     );
 
     await act(async () => {
-      fireEvent.change(screen.getByTestId('mapping-step-transform-inputs-text-reference-scope'), {
-        target: { value: 'payload' },
-      });
-      fireEvent.change(screen.getByTestId('mapping-step-transform-inputs-text-reference-field'), {
+      fireEvent.change(screen.getByTestId('mapping-step-transform-inputs-text-value-source'), {
         target: { value: 'payload.ticket.id' },
       });
     });
@@ -363,7 +391,9 @@ describe('transform action input editor', () => {
     );
 
     expect(promptControl?.tagName).toBe('TEXTAREA');
-    expect(subjectControl?.tagName).toBe('INPUT');
+    expect(Number(promptControl?.getAttribute('rows'))).toBeGreaterThan(1);
+    // One-line text wraps and grows but starts a single row tall.
+    expect(subjectControl?.getAttribute('rows')).toBe('1');
   });
 
   it('T263/T274/T275: build-object supports user-defined keys plus structured references and fixed literals for each field source', async () => {
@@ -415,13 +445,10 @@ describe('transform action input editor', () => {
     expect(
       document.getElementById('mapping-step-build-object-fields[1].key-literal-str')
     ).toHaveValue('ticketSummary');
+    expect(screen.getByTestId('mapping-step-build-object-fields[0].value-value-source')).toBeInTheDocument();
     expect(
-      screen.getByTestId('mapping-step-build-object-fields[0].value-source-mode')
-    ).toHaveValue('reference');
-    expect(screen.getByTestId('mapping-step-build-object-fields[0].value-reference-field')).toBeInTheDocument();
-    expect(
-      screen.getByTestId('mapping-step-build-object-fields[1].value-source-mode')
-    ).toHaveValue('fixed');
+      screen.getByTestId('mapping-step-build-object-fields[1].value-value-source')
+    ).toHaveValue('__workflow-value-source:fixed');
     expect(
       document.getElementById('mapping-step-build-object-fields[1].value-literal-str')
     ).toBeInTheDocument();
@@ -430,10 +457,7 @@ describe('transform action input editor', () => {
       fireEvent.change(screen.getByDisplayValue('ticketId'), {
         target: { value: 'ticketSummary' },
       });
-      fireEvent.change(screen.getByTestId('mapping-step-build-object-fields[0].value-reference-scope'), {
-        target: { value: 'payload' },
-      });
-      fireEvent.change(screen.getByTestId('mapping-step-build-object-fields[0].value-reference-field'), {
+      fireEvent.change(screen.getByTestId('mapping-step-build-object-fields[0].value-value-source'), {
         target: { value: 'payload.ticket.summary' },
       });
       fireEvent.change(screen.getByDisplayValue('Escalate printer issue'), {
@@ -445,7 +469,7 @@ describe('transform action input editor', () => {
       document.getElementById('mapping-step-build-object-fields[0].key-literal-str')
     ).toHaveValue('ticketSummary');
     expect(
-      screen.getByTestId('mapping-step-build-object-fields[0].value-reference-field')
+      screen.getByTestId('mapping-step-build-object-fields[0].value-value-source')
     ).toHaveValue('payload.ticket.summary');
     expect(screen.getByDisplayValue('Escalate again')).toBeInTheDocument();
   });
@@ -492,13 +516,13 @@ describe('transform action input editor', () => {
     expect(screen.getByDisplayValue('ticket_id')).toBeInTheDocument();
     expect(screen.getByDisplayValue('ticketId')).toBeInTheDocument();
     expect(
-      screen.getByTestId('mapping-step-rename-fields-renames[0].from-source-mode')
-    ).toHaveValue('fixed');
+      screen.getByTestId('mapping-step-rename-fields-renames[0].from-value-source')
+    ).toHaveValue('__workflow-value-source:fixed');
     expect(
-      screen.getByTestId('mapping-step-rename-fields-renames[0].to-source-mode')
-    ).toHaveValue('fixed');
+      screen.getByTestId('mapping-step-rename-fields-renames[0].to-value-source')
+    ).toHaveValue('__workflow-value-source:fixed');
     expect(
-      screen.getByTestId('mapping-step-rename-fields-source-reference-field')
+      screen.getByTestId('mapping-step-rename-fields-source-value-source')
     ).toHaveValue('vars.ticketResult');
     expect(
       screen.queryByTestId('mapping-step-rename-fields-renames[0].from-picker')
@@ -540,8 +564,8 @@ describe('transform action input editor', () => {
     expect(listEditor.value).toContain('ticket_id');
     expect(listEditor.value).toContain('updated');
     expect(
-      screen.getByTestId('mapping-step-pick-fields-fields-source-mode')
-    ).toHaveValue('fixed');
+      screen.getByTestId('mapping-step-pick-fields-fields-value-source')
+    ).toHaveValue('__workflow-value-source:fixed');
     expect(
       document.getElementById('mapping-step-pick-fields-fields-literal-json')
     ).not.toBeInTheDocument();
@@ -574,17 +598,10 @@ describe('transform action input editor', () => {
         />
       );
     });
-
-    expect(
-      screen.getByTestId('mapping-step-coalesce-candidates[0]-source-mode')
-    ).toHaveValue('reference');
-    expect(screen.getByTestId('mapping-step-coalesce-candidates[0]-reference-field')).toBeInTheDocument();
-    expect(
-      screen.getByTestId('mapping-step-coalesce-candidates[1]-source-mode')
-    ).toHaveValue('reference');
-    expect(screen.getByTestId('mapping-step-coalesce-candidates[1]-reference-field')).toBeInTheDocument();
-    expect(screen.getByTestId('mapping-step-coalesce-candidates[0]-reference-field')).toHaveValue('payload.ticket.id');
-    expect(screen.getByTestId('mapping-step-coalesce-candidates[1]-reference-field')).toHaveValue('payload.ticket.summary');
+    expect(screen.getByTestId('mapping-step-coalesce-candidates[0]-value-source')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-step-coalesce-candidates[1]-value-source')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-step-coalesce-candidates[0]-value-source')).toHaveValue('payload.ticket.id');
+    expect(screen.getByTestId('mapping-step-coalesce-candidates[1]-value-source')).toHaveValue('payload.ticket.summary');
     expect(
       document.getElementById('mapping-step-coalesce-candidates-literal-json')
     ).not.toBeInTheDocument();
@@ -617,17 +634,10 @@ describe('transform action input editor', () => {
         />
       );
     });
-
-    expect(screen.getByTestId('mapping-step-build-array-items[0]-source-mode')).toHaveValue(
-      'reference'
-    );
-    expect(screen.getByTestId('mapping-step-build-array-items[1]-source-mode')).toHaveValue(
-      'reference'
-    );
-    expect(screen.getByTestId('mapping-step-build-array-items[0]-reference-field')).toBeInTheDocument();
-    expect(screen.getByTestId('mapping-step-build-array-items[1]-reference-field')).toBeInTheDocument();
-    expect(screen.getByTestId('mapping-step-build-array-items[0]-reference-field')).toHaveValue('payload.ticket.id');
-    expect(screen.getByTestId('mapping-step-build-array-items[1]-reference-field')).toHaveValue(
+    expect(screen.getByTestId('mapping-step-build-array-items[0]-value-source')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-step-build-array-items[1]-value-source')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-step-build-array-items[0]-value-source')).toHaveValue('payload.ticket.id');
+    expect(screen.getByTestId('mapping-step-build-array-items[1]-value-source')).toHaveValue(
       'vars.ticketResult.updated'
     );
     expect(

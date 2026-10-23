@@ -5,11 +5,13 @@ let currentUser: any;
 const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
 const getVisibilityContextMock = vi.fn();
-const applyVisibilityBoardFilterMock = vi.fn((query) => query);
+const applyTicketVisibilityFilterMock = vi.fn((query) => query);
+const hasPermissionMock = vi.fn(async () => true);
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),
+  hasPermission: (...args: any[]) => hasPermissionMock(...args),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -26,7 +28,7 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('@alga-psa/tickets/lib', () => ({
-  applyVisibilityBoardFilter: (...args: any[]) => applyVisibilityBoardFilterMock(...args),
+  applyTicketVisibilityFilter: (...args: any[]) => applyTicketVisibilityFilterMock(...args),
 }));
 
 // The dashboard now imports the visibility context resolver from the `.server` subpath
@@ -38,6 +40,8 @@ vi.mock('@alga-psa/tickets/lib/clientPortalVisibility.server', () => ({
 describe('client portal dashboard visibility enforcement', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    applyTicketVisibilityFilterMock.mockImplementation((query) => query);
+    hasPermissionMock.mockImplementation(async () => true);
     currentUser = {
       user_id: 'client-user-1',
       user_type: 'client',
@@ -70,6 +74,13 @@ describe('client portal dashboard visibility enforcement', () => {
           return ticketsQuery;
         }
 
+        // The active-devices count asks the registry which slugs are deployable.
+        if (table === 'asset_statuses') {
+          return {
+            where: vi.fn().mockReturnValue({ pluck: vi.fn().mockResolvedValue(['active', 'in_stock']) }),
+          };
+        }
+
         if (
           table === 'projects' ||
           table === 'invoices' ||
@@ -80,6 +91,7 @@ describe('client portal dashboard visibility enforcement', () => {
             where: vi.fn().mockReturnThis(),
             whereNull: vi.fn().mockReturnThis(),
             andWhere: vi.fn().mockReturnThis(),
+            whereIn: vi.fn().mockReturnThis(),
             count: vi.fn().mockResolvedValue([{ count: 1 }]),
           };
         }
@@ -100,11 +112,95 @@ describe('client portal dashboard visibility enforcement', () => {
     const { getDashboardMetrics } = await import('./dashboard');
     const metrics = await getDashboardMetrics();
 
-    expect(applyVisibilityBoardFilterMock).toHaveBeenCalledWith(
+    expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       ticketsQuery,
-      ['board-1'],
-      'tickets.board_id'
+      expect.objectContaining({ visibleBoardIds: ['board-1'] }),
+      { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id', watchListColumn: 'tickets.attributes' }
     );
     expect(metrics.openTickets).toBe(4);
   });
+
+  it('skips the project count and project activity when the role lacks project:read', async () => {
+    hasPermissionMock.mockImplementation(async (_user: any, resource: string) => resource !== 'project');
+
+    const tablesQueried: string[] = [];
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
+      callback(Object.assign((table: string) => {
+        tablesQueried.push(table);
+        if (table === 'contacts') {
+          return chain([{ client_id: 'client-1', contact_name_id: 'contact-1' }]);
+        }
+        if (table === 'projects') {
+          return chain([{ name: 'Hidden rollout', timestamp: '2026-10-01T00:00:00Z' }]);
+        }
+        return chain([]);
+      }, { raw: vi.fn() }))
+    );
+
+    getVisibilityContextMock.mockResolvedValue({
+      contactId: 'contact-1',
+      clientId: 'client-1',
+      visibilityGroupId: 'group-1',
+      visibleBoardIds: ['board-1'],
+    });
+
+    const { getDashboardMetrics, getRecentActivity } = await import('./dashboard');
+
+    expect(await getDashboardMetrics()).toMatchObject({ activeProjects: 0 });
+    // Fails closed before the query runs, not by filtering rows afterwards.
+    expect(tablesQueried).not.toContain('projects');
+
+    const activity = await getRecentActivity();
+    expect(JSON.stringify(activity)).not.toContain('Hidden rollout');
+    expect(tablesQueried).not.toContain('projects');
+  });
 });
+
+it.each([false, true])('dashboard count and activity exclude sibling/NULL tickets unless admin=%s', async (admin) => {
+  vi.clearAllMocks();
+  currentUser = { user_id: 'u', user_type: 'client', contact_id: 'contact-1', tenant: 'tenant-1' };
+  createTenantKnexMock.mockResolvedValue({ knex: {} });
+  const { applyTicketVisibilityFilter } = await import('../../../../tickets/src/lib/clientPortalVisibility');
+  applyTicketVisibilityFilterMock.mockImplementation(applyTicketVisibilityFilter as any);
+  getVisibilityContextMock.mockResolvedValue({ ticketScope: 'contact', effectiveTicketScope: admin ? 'client' : 'contact', isClientAdmin: admin, contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: 'g', visibleBoardIds: ['board-1'] });
+  withTransactionMock.mockImplementation(async (_db, callback) => callback(Object.assign((table: string) => {
+    if (table === 'contacts') return chain([{ client_id: 'client-1', contact_name_id: 'contact-1' }]);
+    if (table === 'tickets') return chain([
+      { title: 'Own', client_id: 'client-1', contact_name_id: 'contact-1', board_id: 'board-1', is_closed: false, timestamp: '2026-09-12T00:00:00Z' },
+      { title: 'Sibling secret', client_id: 'client-1', contact_name_id: 'contact-2', board_id: 'board-1', is_closed: false, timestamp: '2026-09-12T00:00:00Z' },
+      { title: 'Unassigned', client_id: 'client-1', contact_name_id: null, board_id: 'board-1', is_closed: false, timestamp: '2026-09-12T00:00:00Z' },
+      { title: 'Other board', client_id: 'client-1', contact_name_id: 'contact-1', board_id: 'board-2', is_closed: false, timestamp: '2026-09-12T00:00:00Z' },
+    ]);
+    return chain([]);
+  }, { raw: vi.fn() })));
+  const { getDashboardMetrics, getRecentActivity } = await import('./dashboard');
+  expect(await getDashboardMetrics()).toMatchObject({ openTickets: admin ? 3 : 1 });
+  const activity = await getRecentActivity();
+  expect(Array.isArray(activity)).toBe(true);
+  expect(JSON.stringify(activity)).not.toContain('Other board');
+  if (admin) expect(JSON.stringify(activity)).toContain('Sibling secret');
+  else {
+    expect(JSON.stringify(activity)).not.toContain('Sibling secret');
+    expect(JSON.stringify(activity)).not.toContain('Unassigned');
+  }
+});
+
+function chain(initial: any[]) {
+  let rows = initial;
+  let first = false;
+  let count = false;
+  const query: any = {};
+  for (const key of ['select', 'leftJoin', 'join', 'whereNull', 'whereNotNull', 'orWhere', 'orderBy', 'limit', 'groupBy', 'andWhere']) query[key] = vi.fn(() => query);
+  query.where = vi.fn((column: any, value: any) => {
+    const conditions = typeof column === 'string' ? { [column]: value } : column;
+    if (conditions && typeof conditions === 'object') rows = rows.filter((row) => Object.entries(conditions).every(([key, val]) => row[key.split('.').pop()!] === val));
+    return query;
+  });
+  query.whereIn = vi.fn((column: string, values: any[]) => { rows = rows.filter((row) => values.includes(row[column.split('.').pop()!])); return query; });
+  query.pluck = (column: string) => Promise.resolve(rows.map((row) => row[column.split('.').pop()!]));
+  query.modify = (fn: any) => { fn(query); return query; };
+  query.first = () => { first = true; return query; };
+  query.count = () => { count = true; return query; };
+  query.then = (resolve: any, reject: any) => Promise.resolve(count ? [{ count: rows.length }] : first ? rows[0] : rows).then(resolve, reject);
+  return query;
+}

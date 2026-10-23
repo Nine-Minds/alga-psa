@@ -180,13 +180,15 @@ async function createPublishedDefinition(args: {
   versionId: string;
   executionProvider: 'store-only' | 'ticket-only';
   executionConfig?: Record<string, unknown>;
+  formSchema?: Record<string, unknown>;
 }) {
   const executionConfig = args.executionConfig ?? {};
+  const formSchema = args.formSchema ?? REPRESENTATIVE_FORM_SCHEMA;
   await tenantTable(args.tenant, 'service_request_definitions').insert({
     tenant: args.tenant,
     definition_id: args.definitionId,
     name: 'Onboarding Questionnaire',
-    form_schema: REPRESENTATIVE_FORM_SCHEMA,
+    form_schema: formSchema,
     execution_provider: args.executionProvider,
     execution_config: executionConfig,
     form_behavior_provider: 'basic',
@@ -202,7 +204,7 @@ async function createPublishedDefinition(args: {
     definition_id: args.definitionId,
     version_number: 1,
     name: 'Onboarding Questionnaire',
-    form_schema_snapshot: REPRESENTATIVE_FORM_SCHEMA,
+    form_schema_snapshot: formSchema,
     execution_provider: args.executionProvider,
     execution_config: executionConfig,
     form_behavior_provider: 'basic',
@@ -409,6 +411,35 @@ describe('service request store-only submissions', () => {
       file_id: fileId,
       file_name: 'evidence.pdf',
     });
+  });
+
+  it('rejects whitespace-only required long-text answers before creating a submission', async () => {
+    const fixture = await createSubmissionFixture();
+    const definitionId = uuidv4();
+    const versionId = uuidv4();
+
+    await createPublishedDefinition({
+      tenant: fixture.tenant,
+      definitionId,
+      versionId,
+      executionProvider: 'store-only',
+      formSchema: {
+        fields: [{ key: 'details', type: 'long-text', label: 'Details', required: true }],
+      },
+    });
+
+    await expect(
+      submitPortalServiceRequest({
+        knex: db,
+        tenant: fixture.tenant,
+        definitionId,
+        requesterUserId: fixture.requesterUserId,
+        clientId: fixture.clientId,
+        payload: { details: '  \n  ' },
+      })
+    ).rejects.toThrow('Submission validation failed: Required field missing: "details"');
+
+    expect(await countRows(fixture.tenant, 'service_request_submissions')).toBe(0);
   });
 
   it('the same representative questionnaire in ticket-only mode retains the response and creates exactly one ticket', async () => {

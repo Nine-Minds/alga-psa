@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Knex } from 'knex';
 import { createInvoiceTicketSourceFixture } from '../../server/test-utils/invoiceTicketProductionFixtures';
-import { buildRecurringServicePeriodPeriodKey, buildRecurringServicePeriodScheduleKey } from '../../shared/billingClients/recurringServicePeriodKeys';
+import { buildRecurringServicePeriodPeriodKey } from '../../shared/billingClients/recurringServicePeriodKeys';
 
 /** Run against v1.5.0 before candidate migrations. Only synthetic rows are created. */
 export async function seedUpgradeV150(db: Knex, hashedPassword: string, baselineRoot: string) {
@@ -42,9 +42,10 @@ export async function seedUpgradeV150(db: Knex, hashedPassword: string, baseline
         title: `Retained ${label} ticket`, board_id: boardId, status_id: statusId, priority_id: priorityId, entered_by: userId });
       const billing = await createInvoiceTicketSourceFixture(tx, { tenant, userId }, undefined, { materializeServicePeriods: false });
       for (const [lineId, chargeFamily] of [[billing.lineId, 'hourly'], [billing.usageLineId, 'usage']] as const) {
+        // v1.5.0 rows carry obligation_type (NOT NULL) and the labelled legacy
+        // schedule key; the candidate's collapse migration rewrites both.
         await tx('recurring_service_periods').insert({ tenant, record_id: randomUUID(),
-          schedule_key: buildRecurringServicePeriodScheduleKey({ tenant, obligationType: 'client_contract_line',
-            obligationId: lineId, cadenceOwner: 'client', duePosition: 'arrears' }),
+          schedule_key: `schedule:${tenant}:client_contract_line:${lineId}:client:arrears`,
           period_key: buildRecurringServicePeriodPeriodKey({ start: '2026-08-01', end: '2026-09-01' }),
           revision: 1, obligation_id: lineId, obligation_type: 'client_contract_line', charge_family: chargeFamily,
           cadence_owner: 'client', due_position: 'arrears', lifecycle_state: 'generated',

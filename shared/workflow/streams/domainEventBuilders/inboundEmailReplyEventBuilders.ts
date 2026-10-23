@@ -1,3 +1,5 @@
+import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
+
 import { normalizeEmailAddress } from '../../../lib/email/addressUtils';
 
 /**
@@ -29,7 +31,7 @@ export function buildInboundEmailReplyReceivedPayload(params: {
   receivedAt?: string;
   provider: string;
   matchedBy: string;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'INBOUND_EMAIL_REPLY_RECEIVED'> {
   if (!params.tenantId) throw new Error('tenantId is required');
   if (!params.occurredAt) throw new Error('occurredAt is required');
   if (!params.messageId) throw new Error('messageId is required');
@@ -46,7 +48,7 @@ export function buildInboundEmailReplyReceivedPayload(params: {
   if (!from) throw new Error('from must be a valid bare email address');
   if (to.length === 0) throw new Error('to must contain at least one valid bare email address');
 
-  return {
+  return builtWorkflowPayload('INBOUND_EMAIL_REPLY_RECEIVED', {
     tenantId: params.tenantId,
     occurredAt: params.occurredAt,
     messageId: params.messageId,
@@ -58,5 +60,5 @@ export function buildInboundEmailReplyReceivedPayload(params: {
     ...(params.receivedAt ? { receivedAt: params.receivedAt } : {}),
     provider: params.provider,
     matchedBy: params.matchedBy,
-  };
+  });
 }

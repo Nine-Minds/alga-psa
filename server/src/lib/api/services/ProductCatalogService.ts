@@ -1,9 +1,12 @@
 import type { IService } from '@/interfaces/billing.interfaces';
 import { normalizeGtin } from '@alga-psa/core';
-import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
+import { resolveCatalogUnitForCreate, resolveCatalogUnitForUpdate } from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
+import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
+import { splitServicePricesByEffectiveDate } from '@alga-psa/billing/models/service';
+import { resolveCatalogTaxRateIdForCreate } from '@alga-psa/shared/billingClients/defaultTaxRate';
 import { ListOptions } from '../controllers/types';
-import { publishServiceCatalogSearchEvent } from './ServiceCatalogService';
-import { ConflictError, NotFoundError } from '../middleware/apiMiddleware';
+import { publishServiceCatalogSearchEvent, writePricing } from './ServiceCatalogService';
+import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
 type SortField = 'service_name' | 'billing_method' | 'default_rate';
 
@@ -39,7 +42,7 @@ export class ProductCatalogService extends BaseService<IService> {
       tableName: 'service_catalog',
       primaryKey: 'service_id',
       tenantColumn: 'tenant',
-      searchableFields: ['service_name', 'description', 'sku', 'barcode'],
+      searchableFields: ['service_name', 'description', 'sku', 'barcode', 'product_category'],
       defaultSort: 'service_name',
       defaultOrder: 'asc'
     });
@@ -82,7 +85,8 @@ export class ProductCatalogService extends BaseService<IService> {
             .whereILike('sc.service_name', term)
             .orWhereILike('sc.description', term)
             .orWhereILike('sc.sku', term)
-            .orWhereILike('sc.barcode', barcodeTerm);
+            .orWhereILike('sc.barcode', barcodeTerm)
+            .orWhereILike('sc.product_category', term);
         });
       }
       return query;
@@ -149,6 +153,7 @@ export class ProductCatalogService extends BaseService<IService> {
       ? await db.table('service_prices')
           .whereIn('service_id', serviceIds)
           .select('*')
+          .orderBy([{ column: 'display_order' }, { column: 'currency_code' }])
       : [];
 
     const pricesByService: Record<string, any[]> = {};
@@ -159,10 +164,15 @@ export class ProductCatalogService extends BaseService<IService> {
       pricesByService[price.service_id].push(price);
     }
 
-    let products = productsData.map((service: any) => ({
-      ...service,
-      prices: pricesByService[service.service_id] || []
-    }));
+    // Current price per currency in `prices`; future-dated rows in
+    // `scheduled_prices` (same split as the service catalog and the model read
+    // paths) so an API consumer cannot read a not-yet-effective rate.
+    let products = productsData.map((service: any) => {
+      const { current, scheduled } = splitServicePricesByEffectiveDate(
+        pricesByService[service.service_id] || [],
+      );
+      return { ...service, prices: current, scheduled_prices: scheduled };
+    });
 
     // Post-filter by is_license if specified
     if (filters.is_license !== undefined) {
@@ -196,9 +206,11 @@ export class ProductCatalogService extends BaseService<IService> {
 
     const prices = await db.table('service_prices')
       .where('service_id', id)
-      .select('*');
+      .select('*')
+      .orderBy([{ column: 'display_order' }, { column: 'currency_code' }]);
 
-    return { ...product, prices } as IService;
+    const { current, scheduled } = splitServicePricesByEffectiveDate(prices);
+    return { ...product, prices: current, scheduled_prices: scheduled } as IService;
   }
 
   async create(data: Partial<IService>, context: ServiceContext): Promise<IService> {
@@ -206,12 +218,32 @@ export class ProductCatalogService extends BaseService<IService> {
     const tenant = context.tenant;
 
     const rawData = data as any;
+    // Keys with no service_catalog column (currency_code, prices, scheduled_prices)
+    // are destructured out here so `...rest` can never leak them into the insert
+    // (Postgres 42703). billing_method is re-set canonically below.
     const {
-      prices,
+      currency_code: currencyCode,
+      prices: explicitPrices,
+      scheduled_prices: scheduledPrices,
       billing_method: _billing_method,
       unit_of_measure,
       ...rest
     } = rawData;
+    if (currencyCode !== undefined && explicitPrices !== undefined) {
+      throw new ValidationError('currency_code cannot be combined with prices; send either the currency_code + default_rate shorthand or prices[]');
+    }
+    // currency_code + default_rate is shorthand for one price. default_rate and
+    // prices[].rate are both integer minor units, so no conversion. An omitted
+    // default_rate is a 400 (same rule as update), never an implicit 0-rate price.
+    if (currencyCode !== undefined && rest.default_rate === undefined) {
+      throw new ValidationError('default_rate is required when currency_code is sent');
+    }
+    const prices = currencyCode !== undefined
+      ? [{ currency_code: currencyCode, rate: Number(rest.default_rate) }]
+      : explicitPrices;
+    // default_rate mirrors the primary price (prices[0]); with no prices and no
+    // default_rate the row is created with 0.
+    rest.default_rate = rest.default_rate ?? 0;
 
     // DD-2/F-2: resolve the product cost currency when not explicitly provided.
     // Products are tenant-scoped (no client_id), so precedence is:
@@ -228,86 +260,168 @@ export class ProductCatalogService extends BaseService<IService> {
       costCurrency = billingSettings?.default_currency_code || 'USD';
     }
 
-    const productData = {
-      ...rest,
-      cost_currency: costCurrency,
-      item_kind: 'product',
-      billing_method: 'usage',
-      unit_of_measure: unit_of_measure ?? 'each',
-      tenant,
-      default_rate: typeof rest.default_rate === 'string'
-        ? parseFloat(rest.default_rate) || 0
-        : rest.default_rate,
-      tax_rate_id: rest.tax_rate_id || null,
-      category_id: rest.category_id ?? null,
-      barcode: normalizeGtin(rest.barcode ?? '') || null,
-    };
+    // Resolve inherited defaults and units in the transaction, holding the
+    // documented rate/region locks until the catalog row is persisted.
+    // Publication happens only after commit so search consumers can read it.
+    const createdResult = await withTransaction(knex, async (trx) => {
+      const productData = {
+        ...rest,
+        cost_currency: costCurrency,
+        item_kind: 'product',
+        billing_method: 'usage',
+        ...(await resolveCatalogUnitForCreate(trx, tenant, { unit_of_measure, unit_code: rest.unit_code, item_kind: 'product' })),
+        tenant,
+        default_rate: typeof rest.default_rate === 'string'
+          ? parseFloat(rest.default_rate) || 0
+          : rest.default_rate,
+        // Omitted inherits the tenant default; explicit null stays non-taxable.
+        tax_rate_id: await resolveCatalogTaxRateIdForCreate(
+          trx,
+          tenant,
+          rest.tax_rate_id,
+          undefined,
+          { lock: true },
+        ),
+        category_id: rest.category_id ?? null,
+        barcode: normalizeGtin(rest.barcode ?? '') || null,
+      };
 
-    let created: IService;
-    try {
-      [created] = await tenantDb(knex, tenant).table<IService>('service_catalog')
-        .insert(productData)
-        .returning('*');
-    } catch (error) {
-      rethrowProductUniqueViolation(error);
-    }
+      let created: IService;
+      try {
+        [created] = await tenantDb(trx, tenant).table<IService>('service_catalog')
+          .insert(productData)
+          .returning('*');
+      } catch (error) {
+        rethrowProductUniqueViolation(error);
+      }
 
-    // Set prices if provided
-    if (prices && prices.length > 0) {
-      await this.setServicePrices(knex, created.service_id, tenant, prices);
-    }
+      // Prices go through the shared catalog pricing writer (billing lock,
+      // validation, display order, default_rate mirror) in this transaction.
+      if (prices !== undefined || scheduledPrices !== undefined) {
+        const { servicePatch } = await writePricing(trx, tenant, created.service_id, {
+          current: prices,
+          scheduled: scheduledPrices,
+        });
+        if (servicePatch.default_rate !== undefined) {
+          await tenantDb(trx, tenant).table('service_catalog')
+            .where('service_id', created.service_id)
+            .update(servicePatch);
+        }
+      }
 
-    await publishServiceCatalogSearchEvent('SERVICE_CATALOG_CREATED', tenant, created.service_id, {
-      userId: context.userId,
-      itemKind: 'product',
-      changedFields: Object.keys(productData),
+      return {
+        serviceId: created.service_id,
+        itemKind: 'product' as const,
+        changedFields: [
+          ...Object.keys(productData),
+          ...(prices !== undefined ? ['prices'] : []),
+          ...(scheduledPrices !== undefined ? ['scheduled_prices'] : []),
+        ],
+      };
     });
 
-    return this.getById(created.service_id, context) as Promise<IService>;
+    await publishServiceCatalogSearchEvent('SERVICE_CATALOG_CREATED', tenant, createdResult.serviceId, {
+      userId: context.userId,
+      itemKind: createdResult.itemKind,
+      changedFields: createdResult.changedFields,
+    });
+
+    return this.getById(createdResult.serviceId, context) as Promise<IService>;
   }
 
   async update(id: string, data: Partial<IService>, context: ServiceContext): Promise<IService> {
     const { knex } = await this.getKnex();
     const tenant = context.tenant;
 
-    // Verify it's a product
-    const existing = await tenantDb(knex, tenant).table('service_catalog')
-      .where('service_id', id)
-      .select('item_kind')
-      .first();
-    if (!existing || existing.item_kind !== 'product') {
-      throw new NotFoundError('Resource not found or permission denied');
+    // Keys with no service_catalog column (currency_code, prices, scheduled_prices)
+    // are destructured out so `...updateData` can never leak them into the update.
+    const {
+      currency_code: currencyCode,
+      prices: explicitPrices,
+      scheduled_prices: scheduledPrices,
+      billing_method: _billing_method,
+      service_type_name: _,
+      ...updateData
+    } = data as any;
+    if (currencyCode !== undefined && explicitPrices !== undefined) {
+      throw new ValidationError('currency_code cannot be combined with prices; send either the currency_code + default_rate shorthand or prices[]');
+    }
+    if (currencyCode !== undefined && updateData.default_rate === undefined) {
+      throw new ValidationError('default_rate is required when currency_code is sent');
     }
 
-    const { prices, billing_method: _billing_method, service_type_name: _, ...updateData } = data as any;
-    const normalizedUpdateData = {
-      ...updateData,
-      ...(updateData.barcode !== undefined
-        ? { barcode: normalizeGtin(updateData.barcode ?? '') || null }
-        : {}),
-    };
-
-    try {
-      await tenantDb(knex, tenant).table('service_catalog')
+    // One transaction for the catalog row and its prices: a failure after the
+    // catalog write leaves no partial state.
+    const changedFields = await withTransaction(knex, async (trx) => {
+      // Verify it's a product
+      const existing = await tenantDb(trx, tenant).table('service_catalog')
         .where('service_id', id)
-        .update({
-          ...normalizedUpdateData,
-          item_kind: 'product',
-          billing_method: 'usage'
-        });
-    } catch (error) {
-      rethrowProductUniqueViolation(error);
-    }
+        .select('item_kind')
+        .first();
+      if (!existing || existing.item_kind !== 'product') {
+        throw new NotFoundError('Resource not found or permission denied');
+      }
 
-    // Update prices if provided
-    if (prices) {
-      await this.setServicePrices(knex, id, tenant, prices);
-    }
+      // Shorthand: upsert one currency as the primary price and keep the rest of
+      // the current window (the writer replaces the whole window, so the full
+      // list must be passed). default_rate and rates are both integer minor units.
+      let prices = explicitPrices;
+      if (currencyCode !== undefined) {
+        const currentRows = await tenantDb(trx, tenant).table('service_prices')
+          .where('service_id', id)
+          .select('*')
+          .orderBy([{ column: 'display_order' }, { column: 'currency_code' }]);
+        const { current } = splitServicePricesByEffectiveDate(currentRows);
+        prices = [
+          { currency_code: currencyCode, rate: Number(updateData.default_rate) },
+          ...current
+            .filter((price: any) => price.currency_code !== currencyCode)
+            .map((price: any) => ({ currency_code: price.currency_code, rate: Number(price.rate) })),
+        ];
+      }
+
+      const normalizedUpdateData = {
+        ...updateData,
+        ...(await resolveCatalogUnitForUpdate(trx, tenant, updateData)),
+        ...(updateData.barcode !== undefined
+          ? { barcode: normalizeGtin(updateData.barcode ?? '') || null }
+          : {}),
+      };
+
+      if (prices !== undefined || scheduledPrices !== undefined || normalizedUpdateData.default_rate !== undefined) {
+        const { servicePatch } = await writePricing(trx, tenant, id, {
+          current: prices,
+          scheduled: scheduledPrices,
+          defaultRate: normalizedUpdateData.default_rate === undefined
+            ? undefined
+            : Number(normalizedUpdateData.default_rate),
+        });
+        Object.assign(normalizedUpdateData, servicePatch);
+      }
+
+      try {
+        await tenantDb(trx, tenant).table('service_catalog')
+          .where('service_id', id)
+          .update({
+            ...normalizedUpdateData,
+            item_kind: 'product',
+            billing_method: 'usage'
+          });
+      } catch (error) {
+        rethrowProductUniqueViolation(error);
+      }
+
+      return [
+        ...Object.keys(normalizedUpdateData),
+        ...(prices !== undefined ? ['prices'] : []),
+        ...(scheduledPrices !== undefined ? ['scheduled_prices'] : []),
+      ];
+    });
 
     await publishServiceCatalogSearchEvent('SERVICE_CATALOG_UPDATED', tenant, id, {
       userId: context.userId,
       itemKind: 'product',
-      changedFields: Object.keys(normalizedUpdateData),
+      changedFields,
     });
 
     return this.getById(id, context) as Promise<IService>;
@@ -325,29 +439,6 @@ export class ProductCatalogService extends BaseService<IService> {
       userId: context.userId,
       itemKind: 'product',
     });
-  }
-
-  private async setServicePrices(
-    knex: any,
-    serviceId: string,
-    tenant: string,
-    prices: Array<{ currency_code: string; rate: number }>
-  ): Promise<void> {
-    // Delete existing prices and insert new ones
-    await tenantDb(knex, tenant).table('service_prices')
-      .where('service_id', serviceId)
-      .delete();
-
-    if (prices.length > 0) {
-      await tenantDb(knex, tenant).table('service_prices').insert(
-        prices.map((p) => ({
-          service_id: serviceId,
-          tenant,
-          currency_code: p.currency_code,
-          rate: p.rate
-        }))
-      );
-    }
   }
 
   private normalizeSortField(sort?: string | null): SortField {

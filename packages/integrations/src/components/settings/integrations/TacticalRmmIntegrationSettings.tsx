@@ -1,5 +1,6 @@
 'use client';
 
+import { rmmMappingErrorMessage } from './rmmMappingErrors';
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -7,6 +8,9 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from './RmmUserContactMappingPanel';
+import { RmmOrganizationClientChangeDialog } from './RmmOrganizationClientChangeDialog';
+import { RmmOrganizationBillingProfileSelect } from './RmmOrganizationBillingProfileSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -305,16 +309,22 @@ export function TacticalRmmIntegrationSettings() {
     }
   };
 
-  const handleUpdateMapping = async (mappingId: string, patch: { clientId?: string | null; defaultContactId?: string | null; autoSyncAssets?: boolean }) => {
+  const handleUpdateMapping = async (mappingId: string, patch: { clientId?: string | null; defaultContactId?: string | null; autoSyncAssets?: boolean; contactAssignmentMode?: string; billingProfileId?: string | null }) => {
     setError(null);
     const res = await updateTacticalRmmOrganizationMapping({
       mappingId,
       clientId: patch.clientId,
       defaultContactId: patch.defaultContactId,
       autoSyncAssets: patch.autoSyncAssets,
+      contactAssignmentMode: patch.contactAssignmentMode,
+      billingProfileId: patch.billingProfileId,
     });
     if (!res.success) {
-      const message = getActionFailureMessage(res, t('integrations.rmm.tactical.errors.updateMapping', { defaultValue: 'Failed to update mapping' }));
+      const message = rmmMappingErrorMessage(
+        t,
+        res.error,
+        t('integrations.rmm.tactical.errors.updateMapping', { defaultValue: 'Failed to update mapping' }),
+      );
       setError(message);
       toast({ title: t('integrations.rmm.tactical.toasts.updateFailedTitle', { defaultValue: 'Update failed' }), description: message, variant: 'destructive' });
       return;
@@ -322,8 +332,19 @@ export function TacticalRmmIntegrationSettings() {
     await loadOrgMappings();
   };
 
-  const handleClientChange = (mappingId: string, clientId: string | null) =>
-    handleUpdateMapping(mappingId, { clientId, defaultContactId: null });
+  const peopleModeOptions = buildRmmPeopleModeOptions(t);
+
+  // FR-G4: re-pointing an organization moves its devices, so confirm first.
+  const [pendingClientChange, setPendingClientChange] = React.useState<{ mappingId: string; clientId: string | null } | null>(null);
+
+  const handleClientChange = (mappingId: string, clientId: string | null) => {
+    const current = orgMappings.find((m) => m.mapping_id === mappingId);
+    if (clientId && current?.client_id && current.client_id !== clientId) {
+      setPendingClientChange({ mappingId, clientId });
+      return;
+    }
+    void handleUpdateMapping(mappingId, { clientId, defaultContactId: null });
+  };
 
   const handleDefaultContactChange = (mappingId: string, contactId: string) =>
     handleUpdateMapping(mappingId, { defaultContactId: contactId || null });
@@ -437,6 +458,35 @@ export function TacticalRmmIntegrationSettings() {
       ),
     },
     {
+      // FR-D8: what sync does with the device's signed-in user.
+      title: t('integrations.rmm.peopleMode.label', { defaultValue: 'People' }),
+      dataIndex: 'contact_assignment_mode',
+      sortable: false,
+      render: (_v, m) => (
+        <CustomSelect
+          id={`rmm-org-people-mode-${m.mapping_id}`}
+          value={m.contact_assignment_mode ?? 'suggest'}
+          onValueChange={(mode) => handleUpdateMapping(m.mapping_id, { contactAssignmentMode: mode })}
+          options={peopleModeOptions}
+          className="min-w-[160px]"
+        />
+      ),
+    },
+    {
+      // F090: which profile this organization's alert tickets bill to.
+      title: t('integrations.rmm.billingProfile.label', { defaultValue: 'Billing profile' }),
+      dataIndex: 'billing_profile_id',
+      sortable: false,
+      render: (_v, m) => (
+        <RmmOrganizationBillingProfileSelect
+          mappingId={m.mapping_id}
+          clientId={m.client_id}
+          value={m.billing_profile_id}
+          onChange={(billingProfileId) => handleUpdateMapping(m.mapping_id, { billingProfileId })}
+        />
+      ),
+    },
+    {
       title: t('integrations.rmm.tactical.autoSync', { defaultValue: 'Auto-sync' }),
       dataIndex: 'auto_sync_assets',
       sortable: false,
@@ -452,6 +502,17 @@ export function TacticalRmmIntegrationSettings() {
 
   return (
     <>
+    <RmmOrganizationClientChangeDialog
+      mappingId={pendingClientChange?.mappingId ?? null}
+      pendingClientName={clients.find((c) => c.client_id === pendingClientChange?.clientId)?.client_name ?? null}
+      isOpen={Boolean(pendingClientChange)}
+      onCancel={() => setPendingClientChange(null)}
+      onConfirm={() => {
+        const pending = pendingClientChange;
+        setPendingClientChange(null);
+        if (pending) void handleUpdateMapping(pending.mappingId, { clientId: pending.clientId, defaultContactId: null });
+      }}
+    />
     <Card id="tacticalrmm-integration-settings-card">
       <CardHeader>
         <CardTitle>{t('integrations.rmm.tactical.title', { defaultValue: 'Tactical RMM' })}</CardTitle>
@@ -766,6 +827,23 @@ export function TacticalRmmIntegrationSettings() {
                 pagination
               />
             )}
+
+            {/* FR-D8: one Signed-in users panel per mapped organization. */}
+            {orgMappings
+                  .filter((m) => m.client_id)
+                  .map((m) => (
+                    <div key={`signed-in-${m.mapping_id}`} className="mt-4 border-t pt-4">
+                      <div className="mb-2 text-sm font-medium">
+                        {m.external_organization_name || m.external_organization_id}
+                      </div>
+                      <RmmUserContactMappingPanel
+                        mappingId={m.mapping_id}
+                        clientId={m.client_id}
+                        contacts={contacts}
+                        idPrefix={`tacticalrmm-signed-in-${m.mapping_id}`}
+                      />
+                    </div>
+                  ))}
           </div>
 
           <div className="rounded-md border bg-background p-4">

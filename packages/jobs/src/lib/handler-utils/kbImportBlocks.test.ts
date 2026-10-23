@@ -1,11 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { Lexer } from 'marked';
 import {
+  INLINE_CHUNK_SIZE,
   KbImportParseTimeoutError,
   fileContentToBlocks,
   htmlToBlocks,
   markdownToBlocks,
+  splitInlineChunks,
   titleFromFilename,
   type BlockNoteBlock,
   type InlineSegment,
@@ -445,19 +448,134 @@ describe('kbImportBlocks link sanitization', () => {
   });
 });
 
+// The split-point search used to be String#lastIndexOf from the window end,
+// which scans back to the start of the source when a run holds no whitespace:
+// quadratic in exactly the input chunking exists to protect. Its output was
+// identical, so only the work differs. A wall-clock ratio could not tell the
+// two apart on a loaded CI runner (an 8MB parse is dominated by the linear
+// lexer and GC), so count the characters the search inspects instead.
+// The masking-work guard parses ~255KB of code spans twice under a spy; that
+// is ~11s on a loaded CI runner, past the package's 10s default.
+describe('kbImportBlocks inline chunk splitting', { timeout: 20_000 }, () => {
+  // Stands in for the source string and tallies every character a search
+  // reads. Any other access throws, so a rewrite that reads the source some
+  // new way fails loudly here instead of going uncounted.
+  const countingSource = (text: string) => {
+    let inspected = 0;
+    const scanned = (from: number, found: number) => {
+      inspected += found === -1 ? from + 1 : from - found + 1;
+      return found;
+    };
+    const methods: Record<string, unknown> = {
+      length: text.length,
+      charCodeAt: (index: number) => {
+        inspected++;
+        return text.charCodeAt(index);
+      },
+      charAt: (index: number) => {
+        inspected++;
+        return text.charAt(index);
+      },
+      lastIndexOf: (search: string, from = text.length - 1) =>
+        scanned(Math.min(from, text.length - 1), text.lastIndexOf(search, from)),
+      slice: (start?: number, end?: number) => text.slice(start, end),
+    };
+    const source = new Proxy(methods, {
+      get(target, key) {
+        if (typeof key === 'string' && key in target) return target[key];
+        throw new Error(`countingSource does not model ${String(key)}; extend it to count that access`);
+      },
+    }) as unknown as string;
+    return { source, inspected: () => inspected };
+  };
+
+  it('inspects each character at most once while hard-splitting a whitespace-free run', () => {
+    const text = 'x'.repeat(INLINE_CHUNK_SIZE * 64 + 123);
+    const { source, inspected } = countingSource(text);
+
+    const chunks = splitInlineChunks(source);
+
+    // Linear: each window searches only its latter half for a break. The
+    // lastIndexOf regression inspects ~32x the source length at this size.
+    expect(inspected()).toBeLessThanOrEqual(text.length);
+    expect(chunks.join('')).toBe(text);
+    expect(chunks.slice(0, -1).every((chunk) => chunk.length === INLINE_CHUNK_SIZE)).toBe(true);
+    expect(chunks.at(-1)).toHaveLength(123);
+  });
+
+  it('breaks after the last whitespace in the latter half of each window', () => {
+    const late = INLINE_CHUNK_SIZE - 10;
+    const text = `${'x'.repeat(late)} ${'x'.repeat(INLINE_CHUNK_SIZE * 2)}`;
+    const chunks = splitInlineChunks(text);
+    expect(chunks[0]).toHaveLength(late + 1);
+    expect(chunks[0].endsWith(' ')).toBe(true);
+    expect(chunks.join('')).toBe(text);
+  });
+
+  it('hard-cuts rather than break at whitespace in the first half of a window', () => {
+    const text = `${'x'.repeat(100)}\n${'x'.repeat(INLINE_CHUNK_SIZE * 2)}`;
+    const chunks = splitInlineChunks(text);
+    expect(chunks[0]).toHaveLength(INLINE_CHUNK_SIZE);
+    expect(chunks.join('')).toBe(text);
+  });
+
+  it('round-trips a whitespace-free run larger than one chunk through the parser', () => {
+    const text = 'x'.repeat(INLINE_CHUNK_SIZE * 3 + 7);
+    const blocks = markdownToBlocks(text);
+    expect(types(blocks)).toEqual(['paragraph']);
+    expect(plainText(blocks[0])).toBe(text);
+  });
+
+  // Records the length of every source marked's own inline pass is handed.
+  // DeadlineLexer overrides inlineTokens and reaches the real one through
+  // `super`, so this sees the chunks and nothing else.
+  const maskedRuns = (parse: () => unknown): number[] => {
+    const spy = vi.spyOn(Lexer.prototype, 'inlineTokens');
+    try {
+      parse();
+      return spy.mock.calls.map(([src]) => src.length);
+    } finally {
+      spy.mockRestore();
+    }
+  };
+
+  // Replaces a wall-clock ratio across a doubling of the same input. marked's
+  // masking is quadratic in the source it receives, but a whole parse is
+  // dominated by the linear lexer and by GC, so the ratio moved too little to
+  // separate the two: it measured ~2.5x per doubling against a 4x bound, and a
+  // loaded CI runner crossed it on correct code (2509ms vs 614ms). The work
+  // itself is deterministic, so assert it instead. The assertions no longer
+  // read the clock, but the two parses still cost seconds of real CPU: a runner
+  // sharing a core with the rest of the matrix stretched them past the default
+  // per-test timeout, so budget them like the pathological cases below.
+  it('keeps the inline pass linear as one inline-dense block grows', { timeout: 120_000 }, () => {
+    // Code spans with no whitespace to split on: the densest shape we know of,
+    // and the one that grew ~12x per doubling while the inline pass was quadratic.
+    for (const repeats of [42_500, 85_000]) {
+      const markdown = '`a`'.repeat(repeats);
+      const runs = maskedRuns(() => markdownToBlocks(markdown));
+
+      // Each masking pass is capped at one chunk and the passes partition the
+      // source, so total cost is (length / chunk) x chunk^2: linear in the
+      // document. The regression hands the whole run over in a single pass,
+      // which is length^2 and fails the first two assertions outright.
+      expect(Math.max(...runs)).toBeLessThanOrEqual(INLINE_CHUNK_SIZE);
+      expect(runs).toHaveLength(Math.ceil(markdown.length / INLINE_CHUNK_SIZE));
+      expect(runs.reduce((total, length) => total + length, 0)).toBe(markdown.length);
+    }
+  });
+});
+
 // Guards against reintroducing the quadratic/backtracking parser: every case
 // below used to be minutes of blocked event loop (or an OOM) on a web pod.
 // Multi-MB inputs on a CI runner shared with dozens of other projects overrun
 // the default 10s per-test timeout that a dev laptop never notices.
 describe('kbImportBlocks pathological input stays linear', { timeout: 120_000 }, () => {
-  const timed = (fn: () => BlockNoteBlock[]): number => {
+  const timed = (fn: () => unknown): number => {
     const startedAt = Date.now();
     fn();
     return Date.now() - startedAt;
   };
-
-  const fastestOf = (runs: number, fn: () => BlockNoteBlock[]): number =>
-    Math.min(...Array.from({ length: runs }, () => timed(fn)));
 
   // A hard millisecond budget is not portable -- CI parses several times slower
   // than a laptop, so a bound tight enough to catch the regression flakes there.
@@ -527,19 +645,6 @@ describe('kbImportBlocks pathological input stays linear', { timeout: 120_000 },
       );
       expect(Date.now() - startedAt).toBeLessThan(PARSE_BUDGET_MS);
     }
-  });
-
-  it('scales linearly as one inline-dense block grows', () => {
-    // Code spans with no whitespace to split on: the densest shape we know of,
-    // and the one that grew ~12x per doubling while the inline pass was quadratic.
-    // Chunking holds this at ~2.5x per doubling (hard-splitting a window costs a
-    // little more than splitting on whitespace), so bound it at 4x: clear of the
-    // measured cost, and still an order of magnitude under the regression. Both
-    // sizes take the fastest of two samples so one stalled run cannot skew the
-    // ratio on a loaded runner.
-    const half = fastestOf(2, () => markdownToBlocks('`a`'.repeat(42_500)));
-    const full = fastestOf(2, () => markdownToBlocks('`a`'.repeat(85_000)));
-    expect(full).toBeLessThan(Math.max(half, 20) * 4);
   });
 
   it('costs the same whether inline constructs sit in one block or many', () => {

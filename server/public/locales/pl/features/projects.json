@@ -12,11 +12,14 @@
   "phasesAndTasks": "Fazy i zadania",
   "kanbanView": "Kanban",
   "listView": "Lista",
+  "ganttView": "Harmonogram",
   "task": "zadanie",
   "tasks": {
     "title": "Zadania",
     "noTasks": "Brak zadań do wyświetlenia",
     "taskName": "Nazwa",
+    "startDate": "Data rozpoczęcia",
+    "startsOn": "Początek: {{date}}",
     "dueDate": "Termin",
     "status": "Status",
     "assignedTo": "Przypisane do",
@@ -79,7 +82,12 @@
     "markedComplete": "Faza oznaczona jako ukończona",
     "reopened": "Faza otwarta ponownie",
     "completeReadyToast": "{{description}} jest gotowe do rozliczenia",
-    "viewInBilling": "Wyświetl"
+    "viewInBilling": "Wyświetl",
+    "serviceLabel": "Domyślna usługa (dla wpisów czasu)",
+    "noService": "Brak usługi",
+    "servicePlaceholder": "Wybierz domyślną usługę",
+    "serviceHelp": "Używana we wpisach czasu dla zadań tej fazy, gdy samo zadanie nie ustawia usługi.",
+    "serviceDisplayLabel": "Usługa"
   },
   "projectList": {
     "addProject": "Dodaj projekt",
@@ -124,7 +132,8 @@
       "taskType": "Typ",
       "actions": "Akcje"
     },
-    "unknownUser": "Nieznany"
+    "unknownUser": "Nieznany",
+    "searchSmart": "Szukaj projektów, zadań i komentarzy… Enter dla inteligentnego wyszukiwania"
   },
   "quickAdd": {
     "title": "Dodaj nowy projekt",
@@ -139,6 +148,10 @@
     "projectManagerPlaceholder": "Wybierz osobę przypisaną",
     "budgetedHoursLabel": "Budżetowe godziny",
     "budgetedHoursPlaceholder": "Wprowadź godziny budżetowe",
+    "serviceLabel": "Domyślna usługa (dla wpisów czasu)",
+    "noService": "Brak usługi",
+    "servicePlaceholder": "Wybierz domyślną usługę",
+    "serviceHelp": "Używana we wpisach czasu tego projektu, gdy ani zadanie, ani jego faza nie ustawia usługi.",
     "startDateLabel": "Data rozpoczęcia",
     "startDatePlaceholder": "Wybierz datę rozpoczęcia",
     "endDateLabel": "Data zakończenia",
@@ -179,7 +192,11 @@
     "continueEditing": "Kontynuuj edycję",
     "discardChanges": "Odrzuć zmiany",
     "saveAndClose": "Zapisz i zamknij",
-    "saving": "Zapisywanie..."
+    "saving": "Zapisywanie...",
+    "serviceLabel": "Domyślna usługa (dla wpisów czasu)",
+    "noService": "Brak usługi",
+    "servicePlaceholder": "Wybierz domyślną usługę",
+    "serviceHelp": "Używana we wpisach czasu tego projektu, gdy ani zadanie, ani jego faza nie ustawia usługi."
   },
   "projectDetail": {
     "allAgents": "Wszyscy agenci",
@@ -274,6 +291,7 @@
     "taskActions": "Akcje zadania",
     "priorityLevel": "Poziom priorytetu: {{priority}}",
     "dueLabel": "Termin",
+    "startsLabel": "Początek",
     "noDueDate": "Brak terminu",
     "hideTags": "Ukryj tagi",
     "criticalPath": "Ścieżka krytyczna",
@@ -298,7 +316,9 @@
     "bulkTagsFailure": "Nie udało się dodać tagów do wybranych zadań",
     "bulkTagsSuccess_few": "Dodano tagi do {{count}} zadań",
     "bulkTagsSuccess_many": "Dodano tagi do {{count}} zadań",
-    "taskTypeFallback": "Zadanie"
+    "taskTypeFallback": "Zadanie",
+    "timeline": "Harmonogram",
+    "loadingTimeline": "Ładowanie harmonogramu..."
   },
   "taskForm": {
     "addTitle": "Dodaj nowe zadanie",
@@ -420,7 +440,12 @@
     "movedSuccess": "Zadanie zostało pomyślnie przeniesione",
     "duplicatedSuccess": "Zadanie „{{taskName}}” zostało pomyślnie zduplikowane!",
     "willBeSetOnCreate": "Zostanie ustawiony podczas tworzenia",
-    "unknownPhase": "Nieznana faza"
+    "unknownPhase": "Nieznana faza",
+    "serviceInheritedFromPhase": "Dziedziczy {{service}} z fazy.",
+    "serviceInheritedFromProject": "Dziedziczy {{service}} z projektu.",
+    "startDateLabel": "Data rozpoczęcia",
+    "taskStartDateLabel": "Data rozpoczęcia zadania",
+    "startDatePlaceholder": "Wybierz datę rozpoczęcia"
   },
   "taskDependencies": {
     "title": "Zależności",
@@ -520,7 +545,14 @@
     "linkedToTaskSuccess": "Pomyślnie powiązano zgłoszenie z zadaniem",
     "failedLoadTask": "Nie udało się załadować zadania",
     "clientFallback": "Klient",
-    "defaultNewStatus": "Nowy"
+    "defaultNewStatus": "Nowy",
+    "billUnderProjectLabel": "Rozliczaj czas tego zgłoszenia jako czas projektu",
+    "billingOffBadge": "Rozliczane na poziomie klienta",
+    "billingOnTooltip": "Przestań rozliczać czas tego zgłoszenia jako czas projektu",
+    "billingOffTooltip": "Rozliczaj czas tego zgłoszenia jako czas projektu",
+    "billingOnSuccess": "Czas tego zgłoszenia będzie rozliczany jako czas projektu",
+    "billingOffSuccess": "Czas tego zgłoszenia będzie rozliczany na poziomie klienta",
+    "billingUpdateFailed": "Nie udało się zaktualizować rozliczenia zgłoszenia"
   },
   "materials": {
     "title": "Materiały projektowe",
@@ -617,6 +649,7 @@
       "priority": "Priorytet",
       "assignedTo": "Przypisany do",
       "assignedTeam": "Przydzielony zespół",
+      "startDate": "Data rozpoczęcia",
       "dueDate": "Termin",
       "estimatedHours": "Szacowane godziny",
       "actualHours": "Rzeczywiste godziny",
@@ -637,7 +670,7 @@
     "requiredFields": "Wymagane:",
     "requiredFieldsList": "task_name",
     "optionalFields": "Opcjonalne:",
-    "optionalFieldsList": "phase_name, task_description, assigned_to, estimated_hours, due_date, priority, service, task_type, status, tags",
+    "optionalFieldsList": "phase_name, task_description, assigned_to, estimated_hours, start_date, due_date, priority, service, task_type, status, tags",
     "noteLabel": "Notatka:",
     "defaultPhaseNote": "Zadania bez nazwy fazy zostaną pogrupowane w „{{phaseName}}”",
     "downloadTemplate": "Pobierz szablon CSV",
@@ -728,6 +761,7 @@
       "assigned_to": "Przypisano do",
       "estimated_hours": "Szacowane godziny",
       "actual_hours": "Godziny faktyczne",
+      "start_date": "Data rozpoczęcia",
       "due_date": "Termin płatności",
       "priority": "Priorytet",
       "service": "Usługa",
@@ -825,7 +859,9 @@
       "badgeCount_other": "{{count}} Zadania",
       "badgeCount_one": "{{count}} Zadanie",
       "badgeCount_few": "{{count}} Zadania",
-      "badgeCount_many": "{{count}} Zadań"
+      "badgeCount_many": "{{count}} Zadań",
+      "billsToProject": "Czas rozliczany jako czas projektu",
+      "billsToClient": "Czas rozliczany na poziomie klienta"
     },
     "bulkMoveTask": {
       "title": "Przenieś zadania",
@@ -929,7 +965,7 @@
       "choose_status": "Wybierz status",
       "no_statuses_available": "Brak dostępnych statusów",
       "no_statuses_available_hint": "Najpierw utwórz statusy w Ustawieniach → Projekty → Statusy.",
-      "task_status_library_title": "Biblioteka stanu zadań projektu",
+      "task_status_library_title": "Biblioteka statusów zadań",
       "task_status_library_description": "Zarządzaj statusami zadań projektowych swojej organizacji. Te statusy mogą być używane we wszystkich projektach.",
       "task_status_library_empty": "Nie znaleziono statusów zadań projektu",
       "task_status_library_empty_hint": "Aby rozpocząć, utwórz swój pierwszy status",
@@ -969,12 +1005,33 @@
       "last_closed_error": "Przynajmniej jeden status musi pozostać oznaczony jako zamknięty",
       "last_closed_delete_error": "Nie można usunąć ostatniego statusu zamkniętego dla tego typu.",
       "addStatus": "Dodaj nowy status",
-      "add_from_library": "Dodaj status"
+      "add_from_library": "Dodaj status",
+      "closed_badge": "(Zamknięty)",
+      "drag_to_reorder": "Przeciągnij, aby zmienić kolejność",
+      "refresh_library": "Odśwież bibliotekę statusów",
+      "all_library_statuses_used": "Każdy status z biblioteki jest już tutaj kolumną. Użyj „Utwórz nowy”, aby dodać kolejny.",
+      "delete_no_move_target": "Nie ma innej kolumny statusu, do której można przenieść te zadania. Najpierw dodaj kolejną kolumnę.",
+      "delete_scope_help": "To usuwa kolumnę tylko w tym zakresie. Status pozostaje w Bibliotece statusów zadań.",
+      "fork_title": "Użyć niestandardowych kolumn statusów dla tej fazy?",
+      "fork_message": "Ta faza przestanie dziedziczyć domyślne kolumny projektu. Kolumny statusów dodane później do domyślnych ustawień projektu nie pojawią się tutaj, dopóki nie przełączysz fazy z powrotem.",
+      "fork_confirm": "Użyj niestandardowych statusów",
+      "phase_uses_custom": "Ta faza ma własne kolumny statusów i nie dziedziczy już domyślnych ustawień projektu.",
+      "pending_title": "Niezapisane zmiany kolumn statusów",
+      "pending_apply_hint": "Nic się nie zmieni, dopóki nie zapiszesz.",
+      "pending_fork": "{{phase}} będzie mieć własne kolumny statusów.",
+      "pending_revert": "{{phase}} wróci do domyślnych kolumn projektu.",
+      "pending_order": "Nowa kolejność kolumn dla {{scope}}.",
+      "pending_preview_hint": "Domyślne kolumny projektu są pokazane jako podgląd. Zapisz, aby zastosować zmianę, a potem dodawaj lub usuwaj tutaj kolumny.",
+      "rename_impact_title": "Gdzie zadziała ta zmiana nazwy",
+      "rename_impact_following": "Od razu przejmuje tę zmianę nazwy: {{columns}} kolumn(y) w {{projects}}.",
+      "rename_impact_keeping": "Zachowuje nazwę „{{name}}”: {{columns}} kolumn(y) w {{projects}}. Te kolumny nie są powiązane z tym statusem z Biblioteki statusów zadań, więc te projekty będą nadal raportować dawną nazwę, dopóki nie zmienisz tam nazwy kolumny.",
+      "rename_impact_more": "i {{remaining}} więcej",
+      "rename_impact_none": "Ten status nie jest jeszcze używany jako kolumna w żadnym projekcie."
     }
   },
   "templates": {
     "statuses": {
-      "manage_title": "Zarządzaj kolumnami statusów",
+      "manage_title": "Kolumny statusów zadań",
       "manage_description": "Zdefiniuj kolumny statusów dla zadań w tym szablonie. Przeciągnij, aby zmienić kolejność.",
       "template_defaults": "Domyślne ustawienia szablonu",
       "added": "Kolumna statusu dodana",
@@ -1000,7 +1057,8 @@
       "replaced": "Kolumna statusu zastąpiona",
       "replace_failed": "Nie udało się zastąpić kolumny statusu",
       "repair_status_columns": "Napraw kolumny statusu",
-      "unresolved_apply_guard": "Kolumny statusu wymagają naprawy ({{count}})"
+      "unresolved_apply_guard": "Kolumny statusu wymagają naprawy ({{count}})",
+      "pending_row_hint": "Wypełnij pustą kolumnę statusu, zanim dodasz kolejną."
     },
     "list": {
       "title": "Szablony projektów",
@@ -1219,6 +1277,9 @@
       "statusColumnLabel": "Kolumna statusu",
       "estimatedHoursLabel": "Szacowane godziny",
       "durationLabel": "Czas trwania (dni)",
+      "startOffsetLabel": "Przesunięcie startu (dni)",
+      "startOffsetPlaceholder": "Brak daty rozpoczęcia",
+      "phaseRelativeHint": "Przesunięcie startu i czas trwania liczą dni od początku fazy: zadanie zaczyna się po przesunięciu, a termin przypada po czasie trwania.",
       "taskTypeLabel": "Typ zadania",
       "priorityLabel": "Priorytet",
       "primaryAgentLabel": "Główny agent",
@@ -1287,6 +1348,7 @@
         "service": "Serwis (dla wpisów czasowych)",
         "estimatedHours": "Szacowane godziny",
         "duration": "Czas trwania (dni)",
+        "startOffset": "Przesunięcie startu (dni)",
         "durationSummaryShort": "{{days}} dni",
         "taskType": "Typ zadania",
         "priority": "Priorytet",
@@ -1433,22 +1495,14 @@
     "addPhase": "Dodaj fazę",
     "phaseNamePlaceholder": "Nazwa fazy… *",
     "descriptionPlaceholder": "Opis",
+    "serviceLabel": "Domyślna usługa (dla wpisów czasu)",
+    "noService": "Brak usługi",
+    "servicePlaceholder": "Wybierz domyślną usługę",
+    "serviceHelp": "Używana we wpisach czasu dla zadań tej fazy, gdy samo zadanie nie ustawia usługi.",
     "adding": "Dodawanie…",
     "addError": "Nie udało się dodać fazy. Spróbuj ponownie.",
     "title": "Fazy projektu",
     "import": "Importuj"
-  },
-  "addStatusDialog": {
-    "phaseTitle": "Dodaj status fazy z biblioteki",
-    "projectTitle": "Dodaj status z biblioteki",
-    "selectLabel": "Wybierz z biblioteki statusów",
-    "placeholder": "Wybierz status",
-    "helpText": "Wybierz status z biblioteki statusów swojej organizacji, aby dodać go do tego projektu.",
-    "noStatusesTitle": "Brak dostępnych statusów",
-    "noStatusesDescription": "Utwórz statusy w Ustawienia → Projekty → Statusy.",
-    "adding": "Dodawanie...",
-    "addStatus": "Dodaj status",
-    "addFailed": "Nie udało się dodać statusu. Spróbuj ponownie."
   },
   "taskStatusSelect": {
     "ariaLabel": "Status zadania",
@@ -1499,6 +1553,7 @@
       "fields": {
         "taskNames": "nazwy zadań",
         "descriptions": "opisy",
+        "startDates": "daty rozpoczęcia",
         "dueDates": "terminy",
         "status": "status",
         "assignees": "przypisani",
@@ -1513,6 +1568,7 @@
     "fieldLabels": {
       "task_name": "Nazwa zadania",
       "description": "Opis",
+      "start_date": "Data rozpoczęcia",
       "due_date": "Termin",
       "status": "Status",
       "assigned_to": "Przypisany do",
@@ -1532,7 +1588,7 @@
     "statusColor": "Kolor statusu",
     "changeColor": "Zmień kolor",
     "markClosed": "Oznacz jako status zamknięty",
-    "markClosedDescription": "Zadania w zamkniętych statusach są uważane za ukończone",
+    "markClosedDescription": "Zadania z tym statusem będą uznawane za ukończone",
     "creating": "Tworzenie...",
     "createButton": "Utwórz status",
     "nameRequired": "Nazwa statusu jest wymagana",
@@ -1775,6 +1831,7 @@
     "cap": {
       "title": "Limit budżetu",
       "hint": "Czas i materiały są rozliczane według stawek do opcjonalnego limitu maksymalnego.",
+      "currencyStale": "Zapisany limit jest w {{projectCurrency}}, w której nie są wystawiane faktury tego projektu. Wpisz limit w {{invoiceCurrency}}, aby przenieść ten projekt na {{invoiceCurrency}}; do tego czasu żaden limit nie jest stosowany. Nowy limit liczy się od zera: kwoty już zafakturowane nie są przenoszone.",
       "amount": "Kwota limitu ({{currency}})",
       "behavior": "Po osiągnięciu",
       "notify": "Tylko powiadom",
@@ -1825,7 +1882,8 @@
       "tmHardHint": "Twardy limit {{cap}} — rozliczanie zatrzymuje się na limicie",
       "tmNotifyHint": "Limit budżetu {{cap}} — tylko powiadomienie",
       "thresholdMarker": "Próg powiadomienia {{pct}}%",
-      "writtenDown": "Odpisano ponad limit: {{amount}}"
+      "writtenDown": "Odpisano ponad limit: {{amount}}",
+      "currencyStale": "Kwoty tutaj są w {{projectCurrency}}, ale faktury tego projektu są wystawiane w {{invoiceCurrency}}, więc limit budżetu liczony tutaj nie jest stosowany."
     },
     "economics": {
       "title": "Rentowność realizacji",
@@ -1898,6 +1956,131 @@
     "errors": {
       "loadRecipient": "Nie udało się załadować informacji o odbiorcy",
       "sendFailed": "Nie udało się wysłać aktualizacji statusu"
+    }
+  },
+  "gantt": {
+    "title": "Oś czasu",
+    "taskColumn": "Faza / Zadanie",
+    "zoomLabel": "Skala osi czasu",
+    "zoomDay": "Dzień",
+    "zoomWeek": "Tydzień",
+    "zoomMonth": "Miesiąc",
+    "today": "Dzisiaj",
+    "dragHint": "Przeciągnij pasek, aby zmienić termin, lub jego krawędzie, aby zmienić czas trwania.",
+    "displayOptions": "Opcje wyświetlania",
+    "showBlocking": "Powiązania blokujące",
+    "showBlockingHint": "Strzałki między zadaniami, które muszą zakończyć się po kolei",
+    "showRelated": "Powiązania pokrewne",
+    "showRelatedHint": "Kropkowane linie między powiązanymi zadaniami",
+    "showCriticalPath": "Ścieżka krytyczna",
+    "showCriticalPathHint": "Wyróżnij zadania wyznaczające datę zakończenia",
+    "hideClosed": "Ukryj ukończone zadania",
+    "hideClosedHint": "Pokaż tylko otwartą pracę",
+    "legend": "Legenda",
+    "legendScheduled": "Daty ustawione w zadaniu",
+    "legendInferred": "Daty szacowane (brak ustawionych dat)",
+    "legendProgress": "Ciemniejsza część pokazuje postęp",
+    "legendOverdue": "Po terminie",
+    "legendClosed": "Ukończone",
+    "legendCritical": "Ścieżka krytyczna: opóźnienie tutaj opóźnia zakończenie",
+    "legendBlocking": "Blokujące: musi zakończyć się najpierw",
+    "legendViolated": "Konflikt zależności: zaczyna się przed końcem zadania blokującego",
+    "legendRelated": "Pokrewne: bez wpływu na daty",
+    "keyboardHint": "Klawiatura: zaznacz pasek, a Alt + ← / → przesunie go o dzień, Shift + ← / → zmieni termin.",
+    "export": "Eksportuj obraz",
+    "exportedAsSvg": "Oś czasu była zbyt duża na PNG, więc zapisano ją jako SVG.",
+    "exportFailed": "Nie udało się wyeksportować osi czasu. Spróbuj ponownie.",
+    "emptyNoPhasesTitle": "Brak faz",
+    "emptyNoPhasesDescription": "Dodaj fazę, a następnie dodaj do niej zadania. Każde zadanie pojawi się tutaj jako pasek.",
+    "emptyNoTasksTitle": "Brak zadań do pokazania",
+    "emptyNoTasksDescription": "Dodaj zadanie, aby je tu zobaczyć. Podaj datę rozpoczęcia i termin, aby ustalić pasek, albo szacunek, a oś czasu wyliczy daty.",
+    "emptyFiltered": "Żadne zadanie nie pasuje do bieżących filtrów.",
+    "emptyAllClosed": "Wszystkie zadania są ukończone. Wyłącz „Ukryj ukończone zadania”, aby je zobaczyć.",
+    "addPhase": "Dodaj fazę",
+    "addTask": "Dodaj zadanie",
+    "addTaskToPhase": "Dodaj zadanie do tej fazy",
+    "expandAll": "Rozwiń wszystkie fazy",
+    "collapseAll": "Zwiń wszystkie fazy",
+    "phaseProgress": "Ukończono {{closed}} z {{total}} zadań",
+    "blockedBy": "Oczekuje na: {{tasks}}",
+    "assignee": "Przypisany",
+    "phaseOverrun": "Kończy się po terminie fazy ({{date}})",
+    "inferredHint": "Daty szacowane. Ustaw datę rozpoczęcia i termin, aby je ustalić.",
+    "tooltipStatus": "Status: {{status}}",
+    "tooltipAssignee": "Przypisany: {{name}}",
+    "tooltipProgress": "Postęp: {{percent}}%",
+    "tooltipEstimate": "Szacunek: {{hours}} godz.",
+    "tooltipOverdue": "Po terminie",
+    "tooltipConflict": "Zaczyna się, zanim zadanie blokujące ma się zakończyć",
+    "tooltipCritical": "Na ścieżce krytycznej",
+    "barLabel": "{{task}}, {{range}}",
+    "linkHandle": "Przeciągnij do zadania, które musi poczekać na to",
+    "dependencyAdded": "Dodano zależność",
+    "tooltipBlocks": "Blokuje: {{tasks}}",
+    "edgeBlockingTitle": "Zależność blokująca",
+    "edgeRelatedTitle": "Zadania powiązane",
+    "edgeBlockingText": "„{{from}}” musi się zakończyć, zanim „{{to}}” będzie mogło się rozpocząć.",
+    "edgeRelatedText": "„{{from}}” i „{{to}}” są powiązane. Nie wpływa to na daty.",
+    "edgeConflictText": "Bieżące daty są sprzeczne z tą zależnością.",
+    "removeDependency": "Usuń zależność",
+    "dependencyRemoved": "Usunięto zależność",
+    "legendPhase": "Daty fazy; ciemniejsza część to udział ukończonych zadań",
+    "legendPhaseOverrun": "Zadania wykraczające poza datę zakończenia fazy",
+    "phaseBandLabel": "{{range}} · ukończono {{percent}}%",
+    "phaseStartsOn": "Początek: {{date}} · brak daty zakończenia",
+    "phaseEndsOn": "Koniec: {{date}} · brak daty rozpoczęcia",
+    "phaseNoDates": "Nie ustawiono dat fazy"
+  },
+  "smartSearch": {
+    "run": "Inteligentne wyszukiwanie",
+    "runTitle": "Oceń przefiltrowane projekty względem tego zapytania",
+    "relevanceColumn": "Dopasowanie",
+    "relevance": "{{percent}}% trafności",
+    "strong": "Silne dopasowania",
+    "possible": "Możliwe dopasowania",
+    "unlikely": "Mało prawdopodobne dopasowania",
+    "emptyBucketRunning": "Jeszcze brak",
+    "emptyBucket": "Brak",
+    "scoring": "Oceniono {{scored}} z {{total}} projektów",
+    "summary": "Oceniono {{total}} projektów · {{strong}} silnych · {{possible}} możliwych",
+    "cancelled": "Wyszukiwanie anulowano po {{scored}} z {{total}} projektów",
+    "errorTitle": "Inteligentne wyszukiwanie zatrzymane",
+    "starting": "Uruchamianie inteligentnego wyszukiwania…",
+    "rerun": "Filtry się zmieniły. Uruchom ponownie",
+    "retry": "Ponów",
+    "cancel": "Anuluj",
+    "exit": "Wróć do listy",
+    "notConfigured": "Inteligentne wyszukiwanie nie jest skonfigurowane na tym serwerze",
+    "failedCount": "Nie udało się ocenić {{count}} projektów",
+    "unscored": "Nieocenione",
+    "addOnRequired": "Inteligentne wyszukiwanie wymaga dodatku Asystent AI"
+  },
+  "dependencyGuard": {
+    "blockedTitle": "To zadanie jest zablokowane",
+    "conflictTitle": "Konflikt zależności",
+    "blockedStatus": "„{{task}}” nadal czeka na: {{blockers}}.",
+    "startsBeforeBlocker": "„{{task}}” zaczęłoby się, zanim „{{other}}” ma się zakończyć.",
+    "endsAfterDependent": "„{{task}}” skończyłoby się po planowanym rozpoczęciu „{{other}}”.",
+    "more": "I jeszcze {{remaining}}.",
+    "question": "Zależności nie są wymuszane, więc możesz kontynuować. Czy chcesz to zrobić?",
+    "proceed": "Kontynuuj mimo to",
+    "cancel": "Anuluj"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "Kompaktowy"
+    },
+    "spacious": {
+      "label": "Przestronny"
+    },
+    "decrease": {
+      "title": "Zmniejsz szerokość kolumn"
+    },
+    "increase": {
+      "title": "Zwiększ szerokość kolumn"
+    },
+    "reset": {
+      "title": "Przywróć wartość domyślną"
     }
   }
 }

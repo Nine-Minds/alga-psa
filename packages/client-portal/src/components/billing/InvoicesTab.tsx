@@ -1,9 +1,12 @@
 'use client';
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal invoices intentionally read the billing feature's auto-pay context for each invoice row. */
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import type { InvoiceViewModel } from '@alga-psa/types';
+import { isOfflinePaymentMethod } from '@alga-psa/shared/billingClients/paymentPreferences';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -26,6 +29,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import toast from 'react-hot-toast';
 import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getRecurringServicePeriodSummary } from './recurringServicePeriodSummary';
+import { getInvoiceAutopayContexts } from '@alga-psa/billing/actions/paymentActions';
 
 interface InvoicesTabProps {
   formatCurrency: (amount: number, currencyCode?: string) => string;
@@ -42,6 +46,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
   formatDate
 }) => {
   const { t } = useTranslation('features/billing');
+  const { t: tPortal } = useTranslation('client-portal');
   const { t: tCommon } = useTranslation('common');
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -54,6 +59,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceViewModel | null>(null);
   const [downloadingInvoices, setDownloadingInvoices] = useState<Set<string>>(new Set());
   const [sendingEmails, setSendingEmails] = useState<Set<string>>(new Set());
+  const [autopayContexts, setAutopayContexts] = useState<Record<string, { scheduledFor: string; brand: string | null; last4: string; status: string }>>({});
 
   const selectedInvoiceId = searchParams?.get('invoiceId');
   const selectedInvoiceServicePeriodSummary = useMemo(() => {
@@ -90,6 +96,13 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
           return;
         }
         setInvoices(fetchedInvoices);
+        try {
+          const contexts = await getInvoiceAutopayContexts(fetchedInvoices.map((invoice) => invoice.invoice_id));
+          setAutopayContexts(contexts);
+        } catch (contextError) {
+          console.warn('Unable to load invoice auto-pay context:', contextError);
+          setAutopayContexts({});
+        }
       } catch (err) {
         console.error('Error loading invoices:', err);
         setError(t('failedToLoad'));
@@ -186,11 +199,13 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
   const isCreditNote = (invoice: InvoiceViewModel): boolean =>
     invoice.invoice_type === 'credit_note' || invoice.total < 0;
 
-  // Check if invoice can be paid (finalized, not a credit note, not fully covered)
+  // Check if invoice can be paid online (finalized, not a credit note, not
+  // fully covered, and not issued for payment by check or bank transfer)
   const canPayInvoice = (invoice: InvoiceViewModel): boolean => {
     // Must be finalized
     if (!invoice.finalized_at) return false;
     if (isCreditNote(invoice)) return false;
+    if (isOfflinePaymentMethod(invoice.payment_method)) return false;
     // Check if already paid (total matches credit_applied or has paid status)
     if (invoice.credit_applied >= invoice.total) return false;
     return true;
@@ -203,7 +218,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
       dataIndex: 'invoice_number',
       render: (value, record) => (
         <span className="inline-flex items-center gap-2">
-          {value}
+          <span>{value}{autopayContexts[record.invoice_id] && <span className="block text-xs text-muted-foreground">{tPortal('invoice.autopayWillCharge', { date: formatDate(autopayContexts[record.invoice_id].scheduledFor), brand: autopayContexts[record.invoice_id].brand ?? tPortal('account.billing.autopay.cardFallback'), last4: autopayContexts[record.invoice_id].last4 })}</span>}</span>
           {isCreditNote(record) && (
             <Badge variant="secondary">{t('invoice.creditNote', 'Credit Note')}</Badge>
           )}
@@ -253,19 +268,21 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              id={`pay-invoice-${record.invoice_number}-menu-item`}
-              disabled={!canPayInvoice(record)}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (canPayInvoice(record)) {
-                  handlePayInvoice(record.invoice_id);
-                }
-              }}
-            >
-              <CreditCard className="mr-2 h-4 w-4" />
-              {t('invoice.pay', 'Pay Now')}
-            </DropdownMenuItem>
+            {!isOfflinePaymentMethod(record.payment_method) && (
+              <DropdownMenuItem
+                id={`pay-invoice-${record.invoice_number}-menu-item`}
+                disabled={!canPayInvoice(record)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (canPayInvoice(record)) {
+                    handlePayInvoice(record.invoice_id);
+                  }
+                }}
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                {t('invoice.pay', 'Pay Now')}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               id={`view-invoice-${record.invoice_number}-menu-item`}
               onClick={(e) => {
@@ -300,7 +317,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
         </DropdownMenu>
       )
     }
-  ], [formatDate, formatCurrency, t]);
+  ], [formatDate, formatCurrency, t, autopayContexts, tPortal]);
 
   // Loading state with skeleton
   if (isLoading) {
@@ -409,14 +426,16 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
                 <Download className="mr-2 h-4 w-4" />
                 {downloadingInvoices.has(selectedInvoice.invoice_id) ? 'Preparing...' : 'Download PDF'}
               </Button>
-              <Button
-                id={`pay-invoice-${selectedInvoice.invoice_number}`}
-                disabled={!canPayInvoice(selectedInvoice)}
-                onClick={() => handlePayInvoice(selectedInvoice.invoice_id)}
-              >
-                <CreditCard className="mr-2 h-4 w-4" />
-                Pay Now
-              </Button>
+              {!isOfflinePaymentMethod(selectedInvoice.payment_method) && (
+                <Button
+                  id={`pay-invoice-${selectedInvoice.invoice_number}`}
+                  disabled={!canPayInvoice(selectedInvoice)}
+                  onClick={() => handlePayInvoice(selectedInvoice.invoice_id)}
+                >
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Pay Now
+                </Button>
+              )}
             </div>
           </div>
         </div>

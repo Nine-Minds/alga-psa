@@ -29,12 +29,19 @@ interface MultiUserPickerProps {
   filterMode?: boolean;
   includeUnassigned?: boolean;
   onUnassignedChange?: (value: boolean) => void;
+  /**
+   * Show a type-ahead filter at the top of the list. Defaults to on for lists longer than a
+   * screenful, so long lists are never scroll-only.
+   */
   showSearch?: boolean;
   compactDisplay?: boolean;
   // Click handler for viewing user details (e.g., opening schedule drawer)
   onUserClick?: (userId: string) => void;
 }
 
+
+/** Lists longer than this get a type-ahead filter unless the caller turns it off. */
+const AUTO_SEARCH_MIN_OPTIONS = 8;
 const MultiUserPicker = ({
   id,
   label,
@@ -50,13 +57,14 @@ const MultiUserPicker = ({
   filterMode = false,
   includeUnassigned = false,
   onUnassignedChange,
-  showSearch = false,
+  showSearch: showSearchProp,
   compactDisplay = false,
   onUserClick,
   'data-automation-id': dataAutomationId
 }: MultiUserPickerProps & AutomationProps) => {
   const { t } = useTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
+  const showSearch = showSearchProp ?? (users?.length ?? 0) > AUTO_SEARCH_MIN_OPTIONS;
   const [searchQuery, setSearchQuery] = useState('');
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
   const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom');
@@ -429,6 +437,7 @@ const MultiUserPicker = ({
           <div className="p-2 border-b border-[rgb(var(--color-border-200))]">
             <div className="relative">
               <Input
+                id={id ? `${id}-search` : undefined}
                 ref={searchInputRef}
                 type="text"
                 placeholder={t('pickers.searchUsers', { defaultValue: 'Search users...' })}

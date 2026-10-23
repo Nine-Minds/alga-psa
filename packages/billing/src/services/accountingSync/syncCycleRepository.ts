@@ -17,19 +17,37 @@ export class SyncCycleRepository {
     return tenantDb(this.knex, tenant).table<Row>(TABLE);
   }
 
-  /** cursor_after of the most recent succeeded cycle, or null on first run. */
+  /**
+   * Resume cursor for the next cycle.
+   *
+   * Prefers the `cursor_after` of the most recent succeeded cycle. When no
+   * cycle has succeeded yet (e.g. every run so far failed before applying),
+   * falls back to the most recent cycle's `cursor_before` so a failed first
+   * poll does not restart at "now − overlap" and skip the window it never
+   * processed.
+   */
   async getLastSuccessfulCursor(
     tenant: string,
     adapterType: string,
     targetRealm: string
   ): Promise<string | null> {
-    const row = await this.table<AccountingSyncCycleRecord>(tenant)
+    const succeeded = await this.table<AccountingSyncCycleRecord>(tenant)
       .where({ adapter_type: adapterType, target_realm: targetRealm, status: 'succeeded' })
       .whereNotNull('cursor_after')
       .orderBy('started_at', 'desc')
       .first();
 
-    return row?.cursor_after ?? null;
+    if (succeeded?.cursor_after) {
+      return succeeded.cursor_after;
+    }
+
+    const latest = await this.table<AccountingSyncCycleRecord>(tenant)
+      .where({ adapter_type: adapterType, target_realm: targetRealm })
+      .whereNotNull('cursor_before')
+      .orderBy('started_at', 'desc')
+      .first();
+
+    return latest?.cursor_before ?? null;
   }
 
   async startCycle(params: {

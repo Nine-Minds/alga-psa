@@ -17,7 +17,7 @@ export { default as Knex } from './lib/knex-turbopack';
 export { getAdminConnection, destroyAdminConnection, refreshAdminConnection, withAdminTransactionRetryReadOnly, retryOnAdminReadOnly } from './lib/admin';
 
 // Tenant Connection
-export { getConnection, withTransaction, createTenantKnex, runWithTenant, getTenantContext, setTenantContext, resetTenantConnectionPool, destroyTenantConnection, refreshTenantConnection, withTenantTransactionRetryReadOnly, retryOnTenantReadOnly } from './lib/tenant';
+export { getConnection, withTransaction, createTenantKnex, runWithTenant, runWithoutTenant, getTenantContext, setTenantContext, resetTenantConnectionPool, destroyTenantConnection, refreshTenantConnection, withTenantTransactionRetryReadOnly, retryOnTenantReadOnly } from './lib/tenant';
 export { isTenantScopedQuery } from './lib/tenantScopedQuery';
 export type { TenantScopedQuery } from './lib/tenantScopedQuery';
 export { tenantDb } from './lib/tenantDb';
@@ -143,3 +143,5 @@ export async function withAdminTransaction<T>(
 
 // Re-export Knex types (for consumers that need type-only imports)
 export type { Knex as KnexInstance } from 'knex';
+
+export { ensureMiscellaneousService } from './lib/ensureMiscellaneousService';

@@ -3,7 +3,7 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceGeneration';
-import { InvoiceViewModel, DiscountType } from '@alga-psa/types';
+import { InvoiceViewModel, DiscountType, ManualInvoiceSourceLink } from '@alga-psa/types';
 import { TaxService } from '../services/taxService';
 import { BillingEngine } from '../lib/billing/billingEngine';
 import * as invoiceService from '../services/invoiceService';
@@ -15,7 +15,8 @@ import { getAnalyticsAsync } from '../lib/authHelpers';
 
 import { tenantDb } from '@alga-psa/db';
 import { getInitialInvoiceTaxSource } from './taxSourceActions';
-import { getDueDate } from './billingAndTax';
+import { resolveEffectiveBillingIdentity } from '@alga-psa/shared/billingClients/billingProfileSettings';
+import { dueDateForPaymentTerms } from '../lib/billing/invoiceDueDate';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import logger from '@alga-psa/core/logger';
 import {
@@ -29,6 +30,8 @@ export interface ManualInvoiceItem { // Add export
   quantity: number;
   description: string;
   rate: number;
+  /** Per-line profile override; defaults to the invoice's billing profile. */
+  billing_profile_id?: string | null;
   is_discount?: boolean;
   discount_type?: DiscountType;
   applies_to_item_id?: string;
@@ -38,15 +41,25 @@ export interface ManualInvoiceItem { // Add export
   so_line_id?: string | null;
   /** Per-line tax override (SO lines carry their own tax_rate_id — F045). */
   tax_rate_id?: string | null;
+  /** Ticket source record this line claims (quick-invoice-a-ticket). */
+  source_link?: ManualInvoiceSourceLink;
 }
 
 interface ManualInvoiceRequest {
   clientId: string;
+  /**
+   * Which of the client's billing profiles this invoice bills. Omitted means
+   * the client's default profile, so a client nobody has segmented keeps the
+   * behaviour it had before profiles existed.
+   */
+  billingProfileId?: string | null;
   invoiceNumber?: string;
   items: ManualInvoiceItem[];
   expirationDate?: string; // Add expiration date for prepayments
   isPrepayment?: boolean;
   currency_code?: string;
+  /** Support ticket this manual invoice is raised from (quick-invoice-a-ticket). */
+  ticket_id?: string;
 }
 
 export type ManualInvoiceResult =
@@ -116,14 +129,27 @@ function isInvoiceNumberConflict(error: unknown): boolean {
     databaseError.constraint === 'unique_invoice_number_per_tenant';
 }
 
+/**
+ * Whether the manual-invoice form should warn that the selected client (and
+ * profile) has no address to email the invoice to. Advisory: generation no
+ * longer refuses; sending and payment links do.
+ */
 export const getClientBillingEmailStatus = withAuth(async (
   _user,
   { tenant },
   clientId: string,
+  billingProfileId?: string | null,
 ): Promise<{ hasBillingEmail: boolean }> => {
   const { knex } = await invoiceService.validateSessionAndTenant();
-  const billingEmail = await invoiceService.getClientBillingEmail(knex, tenant, clientId);
-  return { hasBillingEmail: Boolean(billingEmail) };
+  const client = await invoiceService.getClientDetails(knex, tenant, clientId);
+  const validation = await invoiceService.validateClientBillingEmail(
+    knex,
+    tenant,
+    clientId,
+    client.client_name,
+    billingProfileId?.trim() || null,
+  );
+  return { hasBillingEmail: validation.valid };
 });
 
 export const generateManualInvoice = withAuth(async (
@@ -150,20 +176,6 @@ export const generateManualInvoice = withAuth(async (
     const { session, knex } = await invoiceService.validateSessionAndTenant();
     context.userId = session.user.id;
     const client = await invoiceService.getClientDetails(knex, tenant, clientId);
-    const emailValidation = await invoiceService.validateClientBillingEmail(
-      knex,
-      tenant,
-      clientId,
-      client.client_name,
-    );
-    if (!emailValidation.valid) {
-      return handledManualInvoiceFailure(
-        emailValidation.code ?? 'NO_BILLING_EMAIL',
-        emailValidation.error ?? 'Client billing email is required',
-        context,
-        emailValidation.params ?? { clientName: client.client_name },
-      );
-    }
 
     let currencyCode = request.currency_code || client.default_currency_code;
     if (!currencyCode) {
@@ -174,10 +186,29 @@ export const generateManualInvoice = withAuth(async (
     }
 
     const currentDate = Temporal.Now.plainDateISO().toString();
-    const dueDate = await getDueDate(clientId, currentDate);
-    if (isActionMessageError(dueDate) || isActionPermissionError(dueDate)) {
-      throw new Error(getErrorMessage(dueDate));
+    // Which profile this invoice bills (F095). The pick is validated against the
+    // client so a profile that moved in with a merged client can never be billed
+    // under the wrong customer. No pick leaves the invoice unattributed and its
+    // charges falling through to the client default, exactly as before.
+    const billingProfileId = request.billingProfileId?.trim() || null;
+    if (billingProfileId) {
+      const profile = await tenantDb(knex, tenant).table('client_billing_profiles')
+        .where({ billing_profile_id: billingProfileId })
+        .first('client_id', 'is_active');
+      if (!profile || profile.client_id !== clientId || profile.is_active === false) {
+        return handledManualInvoiceFailure(
+          'BILLING_PROFILE_NOT_FOUND',
+          'The selected billing profile is not available for this client',
+          context,
+          { billingProfileId },
+        );
+      }
     }
+
+    // Resolve preferences only after validating the selected profile. An omitted
+    // selection inherits the client's default profile.
+    const billingIdentity = await resolveEffectiveBillingIdentity(knex, tenant, clientId, billingProfileId);
+    const dueDate = dueDateForPaymentTerms(currentDate, billingIdentity.paymentTerms);
 
     const invoiceNumber = request.invoiceNumber?.trim() || await generateInvoiceNumber();
     const invoiceId = uuidv4();
@@ -190,8 +221,10 @@ export const generateManualInvoice = withAuth(async (
       invoice_id: invoiceId,
       tenant,
       client_id: clientId,
+      billing_profile_id: billingProfileId,
       invoice_date: currentDate,
       due_date: dueDate,
+      payment_method: billingIdentity.preferredPaymentMethod,
       invoice_number: invoiceNumber,
       status: 'draft',
       currency_code: currencyCode,
@@ -207,6 +240,7 @@ export const generateManualInvoice = withAuth(async (
         ? new Date(expirationDate).toISOString()
         : null,
       tax_source: taxSource,
+      ticket_id: request.ticket_id ?? null,
     };
 
     return await knex.transaction(async (trx) => {
@@ -214,7 +248,12 @@ export const generateManualInvoice = withAuth(async (
       await invoiceService.persistManualInvoiceCharges(
         trx,
         invoiceId,
-        items,
+        billingProfileId
+          ? items.map((item) => ({
+            ...item,
+            billing_profile_id: item.billing_profile_id ?? billingProfileId,
+          }))
+          : items,
         client,
         session,
         tenant,

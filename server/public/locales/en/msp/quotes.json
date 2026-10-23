@@ -27,7 +27,8 @@
       "sendToClient": "Send to Client",
       "setAsDefault": "Set as Default",
       "submitForApproval": "Submit for Approval",
-      "done": "Done"
+      "done": "Done",
+      "markAccepted": "Mark as accepted"
     },
     "badges": {
       "standard": "Standard"
@@ -107,7 +108,9 @@
         "message": "Message",
         "messageOptional": "Message (optional)",
         "messagePlaceholder": "Add a personal note for the recipient...",
-        "title": "Send Quote"
+        "title": "Send Quote",
+        "from": "From",
+        "useDefault": "Use default sender"
       }
     },
     "errors": {
@@ -156,7 +159,8 @@
       "backToQuotes": "Back to Quotes",
       "backToTemplates": "Back to Quote Templates",
       "convertToSalesOrder": "Convert to Sales Order",
-      "convert": "Convert to…"
+      "convert": "Convert to…",
+      "markAccepted": "Mark as accepted"
     },
     "headings": {
       "editQuote": "Edit Quote",
@@ -212,7 +216,15 @@
         "description": "This will email the quote to the client's billing contacts and change its status to \"Sent\".",
         "title": "Send Quote to Client",
         "additionalEmails": "Additional Recipients",
-        "message": "Message"
+        "message": "Message",
+        "from": "From",
+        "useDefault": "Use default sender"
+      },
+      "markAccepted": {
+        "title": "Mark Quote as Accepted",
+        "description": "Record that the client accepted this quote outside the client portal (for example by phone or email). The quote moves to Accepted and can be converted like any accepted quote. Your name and the time are recorded.",
+        "note": "Note (optional)",
+        "notePlaceholder": "For example: Accepted by email on the 3rd"
       }
     },
     "errorActions": {
@@ -222,7 +234,8 @@
       "resendQuote": "resend quote",
       "sendQuote": "send quote",
       "sendReminder": "send reminder",
-      "submitForApproval": "submit for approval"
+      "submitForApproval": "submit for approval",
+      "markAccepted": "mark quote as accepted"
     },
     "errors": {
       "convert": "Failed to convert quote",
@@ -248,7 +261,8 @@
       "requestedChanges": "Quote returned to draft with requested changes.",
       "resent": "Quote resent.",
       "sent": "Quote sent to the client.",
-      "submittedForApproval": "Quote submitted for internal approval."
+      "submittedForApproval": "Quote submitted for internal approval.",
+      "markedAccepted": "Quote marked as accepted."
     },
     "readOnlyNotice": "This quote is read-only. To make changes, create a new revision.",
     "validation": {
@@ -299,7 +313,15 @@
       "currencyPlaceholder": "Select currency",
       "quoteDate": "Quote date",
       "validUntil": "Valid until",
-      "validUntilHelp": "Quote auto-expires on this date."
+      "validUntilHelp": "Quote auto-expires on this date.",
+      "currencySource": {
+        "tenant": "Tenant default",
+        "client": "Client default for {{clientName}}",
+        "template": "From quote template {{templateTitle}}",
+        "saved": "Saved on this quote",
+        "savedTemplate": "Saved on this template",
+        "manual": "Selected manually"
+      }
     },
     "lineItems": {
       "title": "Line items",
@@ -315,7 +337,8 @@
       "title": "Client-facing text",
       "subtitle": "Appears on the PDF, below the totals.",
       "notes": "Notes to client (Optional)",
-      "terms": "Terms & conditions (Optional)"
+      "terms": "Terms & conditions (Optional)",
+      "termsPlaceholder": "Add terms, links and paragraphs…"
     },
     "moreDetails": {
       "title": "More details",
@@ -338,6 +361,14 @@
       "subtotal": "Subtotal",
       "discounts": "Discounts",
       "tax": "Tax",
+      "optionalIfSelected": "Optional if selected",
+      "cadence": {
+        "monthly": "Monthly",
+        "quarterly": "Quarterly",
+        "semiAnnually": "Semi-annually",
+        "annually": "Annually",
+        "oneTime": "One-time"
+      },
       "statusLabel": "Status",
       "approvalLabel": "Approval",
       "approvalMessage": "Quotes need sales lead approval before sending.",
@@ -347,6 +378,14 @@
       "customLayout": "Custom",
       "tenantDefault": "Tenant default",
       "changeLayout": "Change"
+    },
+    "sectionTitles": {
+      "title": "Grouped quote section titles",
+      "description": "Optional headings used by the Standard Quote Grouped layout.",
+      "monthlyLabel": "Monthly section title",
+      "oneTimeLabel": "One-time section title",
+      "monthlyPlaceholder": "Monthly",
+      "oneTimePlaceholder": "One-time"
     }
   },
   "quoteDetail": {
@@ -420,7 +459,8 @@
       "saveAsTemplate": "Failed to save quote as template",
       "send": "Failed to send quote",
       "sendReminder": "Failed to send quote reminder",
-      "submitForApproval": "Failed to submit quote for approval"
+      "submitForApproval": "Failed to submit quote for approval",
+      "markAccepted": "Failed to mark quote as accepted"
     },
     "labels": {
       "phase": "Phase: {{phase}}",
@@ -439,7 +479,8 @@
       "submittedForApproval": "Quote submitted for internal approval.",
       "templateAssigned": "Document template assigned.",
       "templateCleared": "Document template cleared (using default).",
-      "createdSalesOrder": "Created draft sales order {{number}}. Product lines will bill on fulfillment."
+      "createdSalesOrder": "Created draft sales order {{number}}. Product lines will bill on fulfillment.",
+      "markedAccepted": "Quote marked as accepted."
     },
     "preview": {
       "loading": "Loading preview..."
@@ -492,6 +533,7 @@
       "noPriceInCurrency": "No price in {{currencyCode}}",
       "optional": "Optional",
       "phaseSection": "Phase / Section",
+      "preselected": "Pre-selected",
       "recurring": "Recurring",
       "service": "service",
       "setPrice": "Set price",
@@ -642,7 +684,8 @@
       "openSalesOrders": "Open sales orders",
       "successBody": "Product lines will bill on fulfillment.",
       "successTitle": "Sales order {{number}} created"
-    }
+    },
+    "contractBlockedServiceless": "Recurring item \"{{description}}\" must reference a catalog service before contract conversion"
   },
   "quoteApproval": {
     "title": "Quote Approvals",
@@ -669,7 +712,14 @@
       "load": "Failed to load quote approvals",
       "settings": "Failed to update quote approval settings"
     },
-    "loading": "Loading approval queue..."
+    "loading": "Loading approval queue...",
+    "soleApprover": {
+      "title": "You are the only quote approver",
+      "description": "No other active user can approve quotes, so you can approve your own quotes. Self-approvals are recorded in the quote activity.",
+      "draftDescription": "You are the only user who can approve quotes. After you submit this quote for approval, you can approve it yourself and then send it.",
+      "pendingDescription": "You are the only user who can approve quotes, so you can approve this quote yourself. Choose Approve to make it ready to send.",
+      "dialogNote": "You are the only approver, so approving your own quote is allowed. The approval is recorded as a self-approval."
+    }
   },
   "quoteTemplates": {
     "title": "Templates",
@@ -835,7 +885,9 @@
       "conflict": "This quote change conflicts with an existing record. Please refresh and try again.",
       "notAllowed": "One of the quote values is not allowed. Please review the form and try again.",
       "missingField": "Missing required quote field.",
-      "missingFieldNamed": "Missing required quote field: {{field}}."
+      "missingFieldNamed": "Missing required quote field: {{field}}.",
+      "templateCannotBeAccepted": "Quote templates cannot be marked as accepted",
+      "onlySentCanBeAccepted": "Only sent quotes can be marked as accepted"
     }
   }
 }

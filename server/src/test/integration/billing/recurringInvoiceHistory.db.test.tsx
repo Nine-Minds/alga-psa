@@ -10,6 +10,7 @@ import {
   createTestDbConnection,
   wireLocalTestDbEnv,
 } from '@alga-psa/billing/actions/_dbTestUtils';
+import { DateFormatProvider } from '@alga-psa/ui/lib';
 import invoicing from '../../../../public/locales/en/msp/invoicing.json';
 import common from '../../../../public/locales/en/common.json';
 
@@ -21,9 +22,8 @@ const mocks = vi.hoisted(() => ({
 
 // Keep the SQL, tenant facade, transaction, row mapper, and UI formatter real.
 // Only supply the authenticated test tenant and isolate unrelated actions.
-const releaseFlag = vi.hoisted(() => ({ enabled: true }));
 vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
-  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -90,7 +90,7 @@ beforeAll(async () => {
   });
   await db('recurring_service_periods').insert({
     tenant, schedule_key: `history:${invoiceId}`, period_key: 'period:2026-09-01:2026-10-01',
-    revision: 1, obligation_id: randomUUID(), obligation_type: 'client_contract_line',
+    revision: 1, obligation_id: randomUUID(),
     charge_family: 'fixed', cadence_owner: 'client', due_position: 'arrears', lifecycle_state: 'billed',
     service_period_start: '2026-09-01', service_period_end: '2026-10-01',
     invoice_window_start: '2026-10-01', invoice_window_end: '2026-11-01',
@@ -130,13 +130,15 @@ describe('recurring history database-to-action-to-UI calendar dates', () => {
     }] });
   });
 
-  it('renders the real history action result as 30/09/2026 in en-AU / New York', async () => {
+  it('renders the real history action result as 30/09/2026 for an AU tenant in New York', async () => {
     process.env.TZ = 'America/New_York';
     expect(Intl.DateTimeFormat().resolvedOptions().timeZone).toBe('America/New_York');
     render(
-      <I18nProvider initialLocale="en-AU" namespaces={['common', 'msp/invoicing']} preloadedResources={resources}>
-        <AutomaticInvoices onGenerateSuccess={() => undefined} />
-        <TimestampProbe />
+      <I18nProvider initialLocale="en" namespaces={['common', 'msp/invoicing']} preloadedResources={resources}>
+        <DateFormatProvider countryCode="AU">
+          <AutomaticInvoices onGenerateSuccess={() => undefined} />
+          <TimestampProbe />
+        </DateFormatProvider>
       </I18nProvider>,
     );
     const invoice = await screen.findByText('INV-HISTORY-DATE', {}, { timeout: 10000 });

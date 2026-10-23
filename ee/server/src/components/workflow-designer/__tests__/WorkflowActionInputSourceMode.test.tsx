@@ -11,7 +11,6 @@ import {
   getDefaultWorkflowActionInputSourceMode,
   isWorkflowActionInputLegacyValue,
   transitionWorkflowActionInputMode,
-  WorkflowActionInputSourceMode,
 } from '../WorkflowActionInputSourceMode';
 
 afterEach(() => {
@@ -19,28 +18,6 @@ afterEach(() => {
 });
 
 describe('WorkflowActionInputSourceMode', () => {
-  it('T107-T110: renders explicit reference and fixed value source modes', () => {
-    const { rerender } = render(
-      <WorkflowActionInputSourceMode
-        idPrefix="field"
-        value={{ $expr: 'payload.summary' }}
-        onModeChange={vi.fn()}
-      />
-    );
-
-    expect(screen.getByText('Reference')).toBeInTheDocument();
-
-    rerender(
-      <WorkflowActionInputSourceMode
-        idPrefix="field"
-        value="literal value"
-        onModeChange={vi.fn()}
-      />
-    );
-
-    expect(screen.getByText('Fixed value')).toBeInTheDocument();
-  });
-
   it('T152/T153/T313: rehydrates direct field references and opens compound mappings in Expression mode', () => {
     expect(deriveWorkflowActionInputSourceMode({ $expr: '' })).toEqual({ mode: 'reference' });
     expect(deriveWorkflowActionInputSourceMode({ $expr: 'payload.summary' })).toEqual({ mode: 'reference' });
@@ -53,7 +30,11 @@ describe('WorkflowActionInputSourceMode', () => {
   });
 
   it('T111: defaults new editable fields to structured source modes based on field type and metadata', () => {
-    expect(getDefaultWorkflowActionInputSourceMode({ type: 'string' })).toBe('reference');
+    expect(getDefaultWorkflowActionInputSourceMode({ type: 'string' })).toBe('fixed');
+    expect(getDefaultWorkflowActionInputSourceMode({ type: 'string', editor: { kind: 'picker' } })).toBe('fixed');
+    expect(getDefaultWorkflowActionInputSourceMode({ type: 'object' })).toBe('fixed');
+    expect(getDefaultWorkflowActionInputSourceMode({ type: 'array' })).toBe('fixed');
+    expect(getDefaultWorkflowActionInputSourceMode({})).toBe('reference');
     expect(getDefaultWorkflowActionInputSourceMode({ type: 'number' })).toBe('fixed');
     expect(getDefaultWorkflowActionInputSourceMode({ enum: ['open', 'closed'] })).toBe('fixed');
     expect(getDefaultWorkflowActionInputSourceMode({

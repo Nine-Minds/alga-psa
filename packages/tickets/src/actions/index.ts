@@ -28,6 +28,7 @@ export {
 // BoardsSettings -> the whole client-portal ticket UI). Its only consumer imports
 // it directly from '@alga-psa/tickets/services/itilStandardsService'.
 export * from './ticketBundleActions';
+export * from './recurringTicketActions';
 export * from './ticketBundleUtils';
 export * from './ticketDisplaySettings';
 export * from './ticketFormActions';

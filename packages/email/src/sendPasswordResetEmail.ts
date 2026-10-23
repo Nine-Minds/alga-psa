@@ -64,6 +64,7 @@ export async function sendPasswordResetEmail({
       const templateProcessor = new DatabaseTemplateProcessor(knex, 'password-reset');
 
       const emailParams = {
+        mailClass: 'account' as const,
         to: email,
         templateProcessor,
         templateData,

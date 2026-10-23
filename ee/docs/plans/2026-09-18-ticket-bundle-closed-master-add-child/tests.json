@@ -1,0 +1,128 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit (packages/tickets): resolveClosedMasterChoices table test — open master -> []; closed + rule off -> [keep_closed, apply_resolution, reopen_master]; closed + require_no_open_children -> [apply_resolution, reopen_master].",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Integration: adding an open child to a closed master through addChildrenToBundleAction with no choice returns the choice-required error naming all three choices and writes nothing (child master_ticket_id stays null); the same call on an open master succeeds without a choice.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F011",
+      "F012"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Integration: keep_closed links the child, leaves master closed and child open (own status/closed_at untouched), and writes TICKET_BUNDLE_CHILD_ADDED activities on both child and master with closed_master_choice = keep_closed.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F010",
+      "F025"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Integration: apply_resolution with a public resolution comment on the master closes the child with the master's status_id, sets is_closed/closed_at/closed_by, creates a public system-generated is_resolution comment on the child with a ticket_bundle_mirrors row, leaves the master untouched, and re-running the add for another child does not duplicate the mirror.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F006",
+      "F008"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Integration: apply_resolution when the master has only an internal resolution comment (or none) closes the child and creates no mirrored comment; getBundleMasterClosedContext reports hasResolutionComment = false.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F008"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Integration: reopen_master on a sync_updates bundle whose existing children were closed by the master close reopens only the master (status open, is_closed false, closed_at null, TICKET_REOPENED activity with reopen_trigger add_child and USER actor); the previously closed children stay closed and the newly added child stays open.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F006",
+      "F009"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Integration regression: reopen-on-child-reply still reopens the master with the SYSTEM actor and child_reply trigger after the reopenBundleMasterOnly extraction (existing test continues to pass).",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Integration: with require_no_open_children enabled on the master's board, keep_closed is rejected (not-allowed error, no writes) and apply_resolution succeeds; getBundleMasterClosedContext excludes keep_closed from allowedChoices.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F011",
+      "F016"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Integration: bundleTicketsAction (create path, as used by the list dialog) with a closed master requires the same choice and honours keep_closed / apply_resolution identically to addChildrenToBundleAction.",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F012"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Integration (API): TicketService.addBundleChildren on a closed master without on_closed_master throws ConflictError (409) whose message names the allowed choices; with on_closed_master = keep_closed it succeeds; on an open master a supplied on_closed_master throws ValidationError.",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F014"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Integration: fetchTicketsWithPagination returns bundle_open_child_count = N for a closed master with N open children and 0 once they are closed; getConsolidatedTicketData returns bundle.openChildrenCount and is_closed on each child.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F020",
+      "F022"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Integration: apply_resolution on a child whose board requires a time entry (and has none) fails the whole add with the close-rule failure and leaves the child unlinked and open.",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F011"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Manual smoke (algadev, port 3312): ticket detail Add on a closed master shows the dialog with the right defaults and helpers, list bulk dialog shows the choice group, list and detail badges appear for a closed master with an open child and disappear after the child is closed.",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F018",
+      "F019",
+      "F021",
+      "F023",
+      "F024"
+    ]
+  }
+]

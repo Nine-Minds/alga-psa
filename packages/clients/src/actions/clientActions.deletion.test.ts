@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
 const tenantDbMock = vi.hoisted(() => vi.fn((conn: any) => ({
@@ -78,12 +78,15 @@ vi.mock('../lib/billingHelpers', () => ({
 
 vi.mock('../lib/documentsHelpers', () => ({
   getClientLogoUrlAsync: vi.fn(),
+  getClientWideLogoUrlAsync: vi.fn(),
   getClientLogoUrlsBatchAsync: vi.fn(),
 }));
 
 vi.mock('@alga-psa/storage', () => ({
   uploadEntityImage: vi.fn(),
   deleteEntityImage: vi.fn(),
+  recropEntityLogo: vi.fn(),
+  parseLogoCrop: vi.fn(() => null),
 }));
 
 vi.mock('@alga-psa/tags/actions', () => ({
@@ -100,6 +103,12 @@ vi.mock('@alga-psa/shared/models/clientModel', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn(),
+  publishNonCatalogWorkflowEvent: vi.fn(),
+  publishEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/workflow-streams', () => ({
@@ -155,6 +164,11 @@ function primeClientLookup(input: {
 }
 
 describe('client deletion actions', () => {
+  // Warm the heavy dynamic import so the first test does not hit the 5s default timeout under parallel CI load.
+  beforeAll(async () => {
+    await import('./clientActions');
+  }, 60_000);
+
   beforeEach(() => {
     vi.clearAllMocks();
     authUserRef.value = {
@@ -200,7 +214,7 @@ describe('client deletion actions', () => {
           website: 'https://old.example',
           industry: 'Original Industry',
           status: 'active',
-          tax_id: 'server-tax-id',
+          type: 'server-type',
         },
         created_at: '2026-01-01T00:00:00.000Z',
         updated_at: '2026-01-01T00:00:00.000Z',
@@ -243,7 +257,7 @@ describe('client deletion actions', () => {
           website: 'https://new.example',
           industry: 'New Industry',
           status: 'inactive',
-          tax_id: 'attacker-tax-id',
+          type: 'attacker-type',
         },
       } as any);
 
@@ -255,13 +269,31 @@ describe('client deletion actions', () => {
           website: 'https://new.example',
           industry: 'New Industry',
           status: 'active',
-          tax_id: 'server-tax-id',
+          type: 'server-type',
         },
       });
       expect(updateCalls[0]).not.toHaveProperty('is_inactive');
       expect(updateCalls[0]).not.toHaveProperty('billing_contact_id');
       expect(updateCalls[0]).not.toHaveProperty('billing_email');
     });
+  });
+
+  it('persists top-level tax_id_number without adding it to properties', async () => {
+      const updateCalls: Record<string, unknown>[] = [];
+      // A real `select *` row carries every column (null when unset); updateClient only writes keys present on it.
+      const currentClient = { client_id: 'client-1', client_name: 'Client', tenant: 'tenant-1', url: '', is_inactive: false, properties: {}, tax_id_number: null, created_at: '2026-01-01', updated_at: '2026-01-01' };
+      createTenantKnexMock.mockResolvedValue({ knex: {} });
+      withTransactionMock.mockImplementation(async (_db: unknown, callback: TransactionCallback) => {
+        const trx = ((table: string) => ({ where: vi.fn(() => ({
+          first: vi.fn(async () => currentClient),
+          update: vi.fn((value: Record<string, unknown>) => { updateCalls.push(value); return { returning: vi.fn(async () => [{ ...currentClient, ...value }]) }; }),
+        })) })) as LookupTransaction;
+        return callback(trx);
+      });
+      const { updateClient } = await import('./clientActions');
+      await updateClient('client-1', { tax_id_number: '12345' } as any);
+      expect(updateCalls[0]).toHaveProperty('tax_id_number', '12345');
+      expect(updateCalls[0]).not.toHaveProperty('properties');
   });
 
   describe('validateClientDeletion', () => {

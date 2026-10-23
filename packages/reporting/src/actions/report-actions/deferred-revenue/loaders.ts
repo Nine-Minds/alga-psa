@@ -6,6 +6,12 @@
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+// The schedule-selection semantics live in one place now (plan §0.5 / §2.3):
+// the deferred-revenue report and the billing engine cannot disagree about
+// which pricing schedule is active, including the null-rate-latest case.
+import { selectActivePricingSchedule, selectEffectiveServicePrice } from '@alga-psa/shared/billingClients/resolveFixedLineRate';
+import type { ServicePriceRateRow } from '@alga-psa/shared/billingClients/resolveFixedLineRate';
+import { fixedMemberContributionCents, fixedRateBasisOf } from '@alga-psa/shared/billingClients/fixedMemberRate';
 
 import { resolvePeriodFee, type BilledFeeCandidate } from './fee';
 import { classifyCreditSource, type CreditSourceInvoice } from './creditSource';
@@ -65,12 +71,20 @@ export interface RawBucketPeriodRow {
   currencyCode: string;
   /** contract_lines.custom_rate in cents, when set. */
   lineCustomRate: number | null;
+  /**
+   * Effective `service_prices` rate for the contract's currency at the period
+   * start, when a row exists. Billing prefers this over the legacy
+   * currency-untagged `default_rate`; the report must too (correction #5).
+   */
+  catalogCurrencyRate?: number | null;
   /** service_catalog.default_rate in cents, when set. */
   catalogDefaultRate: number | null;
 }
 
 export interface RawPricingScheduleRow {
   contractId: string;
+  /** NULL = contract-wide; otherwise the schedule is scoped to this line. */
+  contractLineId: string | null;
   effectiveDate: string;
   endDate: string | null;
   customRate: number | null;
@@ -242,32 +256,53 @@ export async function loadBucketPeriods(
     'sc.default_rate',
   );
 
-  return rows.map((row) => ({
-    usageId: row.usage_id,
-    contractLineId: row.contract_line_id,
-    contractId: row.contract_id,
-    contractLineName: row.contract_line_name ?? 'Unnamed contract line',
-    clientId: row.client_id,
-    serviceId: row.service_catalog_id,
-    serviceName: row.service_name ?? 'Unnamed service',
-    periodStart: toStringValue(row.period_start).slice(0, 10),
-    periodEnd: toStringValue(row.period_end).slice(0, 10),
-    minutesUsed: toNumber(row.minutes_used),
-    rolledOverMinutes: toNumber(row.rolled_over_minutes),
-    totalMinutes: toNumber(row.total_minutes),
-    allowRollover: Boolean(row.allow_rollover),
-    currencyCode: row.currency_code || 'USD',
-    lineCustomRate: row.custom_rate !== null && row.custom_rate !== undefined ? toNumber(row.custom_rate) : null,
-    catalogDefaultRate: row.default_rate !== null && row.default_rate !== undefined ? toNumber(row.default_rate) : null,
-  }));
+  const serviceIds = Array.from(
+    new Set(rows.map((row) => String(row.service_catalog_id)).filter(Boolean)),
+  );
+  const priceRows = serviceIds.length > 0
+    ? await db
+        .table('service_prices')
+        .whereIn('service_id', serviceIds)
+        .select('price_id', 'service_id', 'currency_code', 'rate', 'effective_date')
+    : [];
+
+  return rows.map((row) => {
+    const periodStart = toStringValue(row.period_start).slice(0, 10);
+    const currencyCode = row.currency_code || 'USD';
+    const effectivePrice = selectEffectiveServicePrice(
+      priceRows as ServicePriceRateRow[],
+      String(row.service_catalog_id),
+      currencyCode,
+      periodStart,
+    );
+    return {
+      usageId: row.usage_id,
+      contractLineId: row.contract_line_id,
+      contractId: row.contract_id,
+      contractLineName: row.contract_line_name ?? 'Unnamed contract line',
+      clientId: row.client_id,
+      serviceId: row.service_catalog_id,
+      serviceName: row.service_name ?? 'Unnamed service',
+      periodStart,
+      periodEnd: toStringValue(row.period_end).slice(0, 10),
+      minutesUsed: toNumber(row.minutes_used),
+      rolledOverMinutes: toNumber(row.rolled_over_minutes),
+      totalMinutes: toNumber(row.total_minutes),
+      allowRollover: Boolean(row.allow_rollover),
+      currencyCode,
+      lineCustomRate: row.custom_rate !== null && row.custom_rate !== undefined ? toNumber(row.custom_rate) : null,
+      catalogCurrencyRate: effectivePrice?.rateCents ?? null,
+      // Legacy currency-untagged mirror. Kept only as the fallback for the
+      // tenant default currency when no `service_prices` row exists.
+      catalogDefaultRate: row.default_rate !== null && row.default_rate !== undefined ? toNumber(row.default_rate) : null,
+    };
+  });
 }
 
 /**
- * Active pricing-schedule custom rates per contract. Mirrors the billing
- * engine's override lookup (billingEngine.ts): the schedule with the latest
- * effective_date that starts before the period's end (exclusive) and ends
- * after the period's start (exclusive) wins, and its custom_rate — in cents —
- * takes precedence over the contract-line custom rate.
+ * Pricing-schedule rows per contract, in the shape the shared resolver reads.
+ * Selection semantics are NOT re-implemented here — see
+ * {@link resolvePricingScheduleRate}, which delegates to the resolver.
  */
 export async function loadPricingScheduleRates(
   conn: Knex | Knex.Transaction,
@@ -280,10 +315,11 @@ export async function loadPricingScheduleRates(
   const rows = await tenantDb(conn, tenant)
     .table('contract_pricing_schedules')
     .whereIn('contract_id', distinct)
-    .select('contract_id', 'effective_date', 'end_date', 'custom_rate');
+    .select('contract_id', 'contract_line_id', 'effective_date', 'end_date', 'custom_rate');
 
   return rows.map((row) => ({
     contractId: row.contract_id,
+    contractLineId: row.contract_line_id ?? null,
     effectiveDate: toStringValue(row.effective_date).slice(0, 10),
     endDate: row.end_date ? toStringValue(row.end_date).slice(0, 10) : null,
     customRate: row.custom_rate !== null && row.custom_rate !== undefined ? toNumber(row.custom_rate) : null,
@@ -299,27 +335,40 @@ function addDays(dateString: string, days: number): string {
 /**
  * Resolve the pricing-schedule custom rate in effect for an inclusive bucket
  * period, or null when no schedule overrides it.
+ *
+ * Delegates to the shared resolver's `selectActivePricingSchedule`, which
+ * preserves the billing engine's ordering: the latest active schedule wins and
+ * its null rate is checked *after* selection. A null-rate latest schedule
+ * therefore blocks older schedules here exactly as it does in billing (plan
+ * §2.3, test T21) — the previous implementation skipped null-rate rows before
+ * choosing a winner and so silently fell back to an older schedule.
  */
 export function resolvePricingScheduleRate(
   periodStart: string,
   periodEnd: string,
   contractId: string,
   schedules: RawPricingScheduleRow[],
+  contractLineId: string | null = null,
 ): number | null {
-  const startExclusive = periodStart;
-  const endExclusive = addDays(periodEnd, 1);
+  const forContract = schedules.filter((schedule) => schedule.contractId === contractId);
+  if (forContract.length === 0) return null;
 
-  let best: RawPricingScheduleRow | null = null;
-  for (const schedule of schedules) {
-    if (schedule.contractId !== contractId) continue;
-    if (schedule.customRate === null) continue;
-    if (schedule.effectiveDate >= endExclusive) continue;
-    if (schedule.endDate !== null && schedule.endDate <= startExclusive) continue;
-    if (best === null || schedule.effectiveDate > best.effectiveDate) {
-      best = schedule;
-    }
+  const active = selectActivePricingSchedule(
+    forContract.map((schedule) => ({
+      schedule_id: null,
+      contract_line_id: schedule.contractLineId,
+      effective_date: schedule.effectiveDate,
+      end_date: schedule.endDate,
+      custom_rate: schedule.customRate,
+    })),
+    contractLineId ?? '',
+    { start: periodStart, end: addDays(periodEnd, 1) },
+  );
+
+  if (!active || active.custom_rate === null || active.custom_rate === undefined) {
+    return null;
   }
-  return best?.customRate ?? null;
+  return toNumber(active.custom_rate);
 }
 
 /**
@@ -360,7 +409,8 @@ export async function loadBilledBucketFees(
 
 /**
  * Configured base rate per bucket line×service from the line's Fixed config
- * (contract_line_service_fixed_config.base_rate × quantity), in cents. The
+ * (contract_line_service_fixed_config.base_rate read through its basis: a
+ * share as-is, a per-unit rate × quantity), in cents. The
  * report's fee fallback resolves: contract-line custom rate → this →
  * service-catalog default rate.
  */
@@ -380,14 +430,26 @@ export async function loadFixedConfigBaseRates(
   );
   const fixedConfigs = await fixedConfigsQuery
     .where('clsc.configuration_type', 'Fixed')
-    .select('clsc.contract_line_id', 'clsc.service_id', 'clsc.quantity as config_quantity', 'fc.base_rate');
+    .select(
+      'clsc.contract_line_id',
+      'clsc.service_id',
+      'clsc.quantity as config_quantity',
+      'fc.base_rate',
+      'fc.base_rate_basis',
+      'fc.pricing_basis',
+    );
 
   const byLineService = new Map<string, number | null>();
 
   for (const row of fixedConfigs) {
     const quantity = Math.max(1, toNumber(row.config_quantity) || 1);
     const baseRate = row.base_rate !== null && row.base_rate !== undefined ? toNumber(row.base_rate) : null;
-    byLineService.set(`${row.contract_line_id}\u0000${row.service_id}`, baseRate !== null ? baseRate * quantity : null);
+    // A share is the member's slice of the line fee and is never scaled;
+    // a per-unit rate is multiplied by quantity (clamped to at least 1).
+    byLineService.set(
+      `${row.contract_line_id}\u0000${row.service_id}`,
+      baseRate !== null ? fixedMemberContributionCents(baseRate, fixedRateBasisOf(row), quantity) : null,
+    );
   }
 
   return byLineService;
@@ -453,7 +515,7 @@ export async function loadDeferredRevenueData(
  * Resolve the fallback (not-yet-billed) period fee for a bucket line×service
  * in the billing engine's rate-resolution order: pricing-schedule custom rate
  * → contract-line custom rate → fixed-config base rate × quantity →
- * service-catalog default rate.
+ * effective service-price in the contract currency → legacy catalog default.
  */
 export function resolveConfiguredFee(
   period: RawBucketPeriodRow,
@@ -463,6 +525,7 @@ export function resolveConfiguredFee(
   if (pricingScheduleRate !== null) return pricingScheduleRate;
   if (period.lineCustomRate !== null) return period.lineCustomRate;
   if (baseRateCents !== null) return baseRateCents;
+  if (period.catalogCurrencyRate != null) return period.catalogCurrencyRate;
   if (period.catalogDefaultRate !== null) return period.catalogDefaultRate;
   return null;
 }
@@ -477,6 +540,7 @@ export function buildBucketPeriodInputs(
       period.periodEnd,
       period.contractId,
       data.pricingSchedules,
+      period.contractLineId,
     );
     const configuredFee = resolveConfiguredFee(
       period,

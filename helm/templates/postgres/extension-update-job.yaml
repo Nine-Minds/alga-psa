@@ -1,0 +1,48 @@
+{{- if .Values.db.enabled }}
+{{- /*
+  Brings extensions and catalog views of an existing bundled data directory in
+  line with the image the DB runs. Plain Job, not a hook: a failing hook would
+  fail the Helm upgrade. The name carries a hash of the image ref and script, so
+  a new image or script creates a fresh Job (Job templates are immutable) and
+  Helm deletes the old one. Never rendered for managed databases (db.enabled=false).
+*/}}
+{{- $image := include "sebastian.imageRef" .Values.db.image }}
+{{- $script := .Files.Get "files/postgres/update-extensions.sh" }}
+{{- $hash := printf "%s\n%s" $image $script | sha256sum | trunc 10 }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-extension-update-{{ $hash }}
+  namespace: {{ include "sebastian.namespace" . }}
+  labels:
+    app: db-extension-update
+spec:
+  backoffLimit: 6
+  activeDeadlineSeconds: 1800
+  template:
+    metadata:
+      labels:
+        app: db-extension-update
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: update-extensions
+          image: {{ $image | quote }}
+          imagePullPolicy: {{ .Values.db.image.pullPolicy }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              {{- $script | nindent 14 }}
+          env:
+            - name: PGHOST
+              value: db
+            - name: PGPORT
+              value: {{ .Values.db.service.port | quote }}
+            - name: PGUSER
+              value: postgres
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DB_PASSWORD_SUPERUSER
+{{- end }}

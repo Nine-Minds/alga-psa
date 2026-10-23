@@ -61,7 +61,18 @@ export function buildBrowserArtifactManifest({ components, ...expected }) {
     scope: 'candidate-built-archives-only', ...context, components: selected };
 }
 export function validateBrowserArtifactManifest(manifest, expected) {
-  const context = identity(expected);
+  const current = identity(expected);
+  // A partial "re-run failed jobs" reuses a successful upstream browser job's
+  // artifact from an earlier attempt of the same run; its manifest keeps that
+  // earlier attempt while the consuming gate runs at the current attempt. runId
+  // and revision already pin the run and the code, so — mirroring the build
+  // record rule (attempt <= current) in verifyBuildRecord — accept an earlier
+  // browser-execution attempt and reject only a future (forged) one.
+  const attempt = manifest?.runAttempt;
+  if (!Number.isSafeInteger(attempt) || attempt < 1 || attempt > current.runAttempt) {
+    throw new Error('Browser artifact manifest identity mismatch');
+  }
+  const context = { ...current, runAttempt: attempt };
   if (manifest?.schemaVersion !== 1 || manifest.kind !== 'browser-ci-docker-archives' || manifest.registryPublication !== false
     || manifest.scope !== 'candidate-built-archives-only'
     || Object.entries(context).some(([key, value]) => manifest[key] !== value)) throw new Error('Browser artifact manifest identity mismatch');

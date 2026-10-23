@@ -33,7 +33,39 @@
     "createdSuccess_one": "Successfully created {{count}} ticket.",
     "createdSuccess_other": "Successfully created {{count}} tickets.",
     "rowLimitExceeded": "Row limit exceeded:",
-    "rowLimitDescription": "Your CSV has {{original}} rows, but only the first {{kept}} rows will be imported. Please split your file into smaller batches for the remaining rows."
+    "rowLimitDescription": "Your CSV has {{original}} rows, but only the first {{kept}} rows will be imported. Please split your file into smaller batches for the remaining rows.",
+    "createdSuccess_few": "Successfully created {{count}} tickets.",
+    "createdSuccess_many": "Successfully created {{count}} tickets.",
+    "errorCount_few": "{{count}} errors:",
+    "errorCount_many": "{{count}} errors:",
+    "importTickets_few": "Import {{count}} Tickets",
+    "importTickets_many": "Import {{count}} Tickets",
+    "skipDropped_few": "Skip ({{count}} tickets dropped)",
+    "skipDropped_many": "Skip ({{count}} tickets dropped)",
+    "skippedCount_few": "{{count}} tickets were skipped.",
+    "skippedCount_many": "{{count}} tickets were skipped.",
+    "ticketCount_few": "({{count}} tickets)",
+    "ticketCount_many": "({{count}} tickets)",
+    "unmatchedAgents_few": "{{count}} agents",
+    "unmatchedAgents_many": "{{count}} agents",
+    "unmatchedCategories_few": "{{count}} categories",
+    "unmatchedCategories_many": "{{count}} categories",
+    "unmatchedClients_few": "{{count}} clients",
+    "unmatchedClients_many": "{{count}} clients",
+    "unmatchedContacts_few": "{{count}} contacts",
+    "unmatchedContacts_many": "{{count}} contacts",
+    "unmatchedDateFormats_few": "{{count}} date formats",
+    "unmatchedDateFormats_many": "{{count}} date formats",
+    "unmatchedPriorities_few": "{{count}} priorities",
+    "unmatchedPriorities_many": "{{count}} priorities",
+    "unmatchedStatuses_few": "{{count}} statuses",
+    "unmatchedStatuses_many": "{{count}} statuses",
+    "unmatchedTeams_few": "{{count}} teams",
+    "unmatchedTeams_many": "{{count}} teams",
+    "unmatchedValuesIntro_few": "{{count}} values from your CSV couldn't be automatically matched.",
+    "unmatchedValuesIntro_many": "{{count}} values from your CSV couldn't be automatically matched.",
+    "warningCount_few": "{{count}} warnings:",
+    "warningCount_many": "{{count}} warnings:"
   },
   "title": "Support Tickets",
   "subtitle": "View and manage your support tickets",
@@ -60,7 +92,6 @@
     "button": "Filters",
     "unassigned": "Unassigned",
     "category": "Filter by category",
-    "clearFilters": "Clear filters",
     "assignee": "Assignee",
     "allAssignees": "All Assignees",
     "responseState": "Response State",
@@ -86,7 +117,8 @@
     "paused": "Paused",
     "allResponseStatuses": "All Response Statuses",
     "responseStatus": "Response Status",
-    "board": "Filter by board"
+    "board": "Filter by board",
+    "searchSmart": "Search tickets and comments… Enter for smart search"
   },
   "create": {
     "title": "Create Support Ticket",
@@ -143,6 +175,7 @@
     "assignedTo": "Assigned To",
     "requester": "Requester",
     "client": "Client",
+    "contact": "Contact",
     "dueDate": "Due Date",
     "resolution": "Resolution",
     "timeSpent": "Time Spent",
@@ -153,6 +186,7 @@
     "assignedTeam": "Assigned Team",
     "additionalAgents": "Additional Agents",
     "createdBy": "Created By",
+    "lastActivity": "Last Activity",
     "location": "Location",
     "contactPhone": "Contact Phone",
     "clientPhone": "Client Phone",
@@ -183,9 +217,14 @@
     "tags": "Tags",
     "sla": "SLA",
     "updated": "Updated",
+    "updatedAtBy": "Updated {{time}} by {{name}}",
+    "byName": "by {{name}}",
     "openInNewTab": "Open in new tab",
     "actions": "Actions",
-    "linkedAssets": "Linked assets"
+    "linkedAssets": "Linked assets",
+    "assetName": "Name",
+    "assetTag": "Asset tag",
+    "assetType": "Type"
   },
   "actions": {
     "view": "View",
@@ -211,7 +250,13 @@
     "export": "Export",
     "reset": "Reset",
     "importSelected": "Import Selected",
-    "printOptions": "Print options"
+    "printOptions": "Print options",
+    "duplicate": "Duplicate",
+    "rowActions": "Actions",
+    "openMenu": "Open menu",
+    "moreActions": "More actions",
+    "createTemplate": "Create template from ticket",
+    "createWorkflowFromTicket": "Create workflow from ticket"
   },
   "messages": {
     "noTickets": "No tickets found",
@@ -283,7 +328,6 @@
     "saveCommentFailed": "Failed to save comment changes",
     "updateDescriptionFailed": "Failed to update description",
     "prepareTimeEntryFailed": "An error occurred while preparing the time entry. Please try again.",
-    "scheduleVisitFailed": "Failed to open the scheduler",
     "updateContactFailed": "Failed to update contact",
     "updateClientFailed": "Failed to update client",
     "updateLocationFailed": "Failed to update location",
@@ -310,7 +354,19 @@
     "updateTicketFailed": "Failed to update ticket",
     "errorWithMessage": "Error: {{message}}",
     "billingProfileUpdated": "Billing profile updated",
-    "updateBillingProfileFailed": "Failed to update billing profile"
+    "updateBillingProfileFailed": "Failed to update billing profile",
+    "scheduleOpenFailed": "Failed to open the scheduler",
+    "commentWithImagesDeleted_few": "Comment and {{count}} pasted images deleted successfully.",
+    "commentWithImagesDeleted_many": "Comment and {{count}} pasted images deleted successfully.",
+    "deleteCommentWithImages_few": "This comment includes {{count}} pasted images that were uploaded as ticket documents. Delete the comment only, or also delete the pasted images permanently?",
+    "deleteCommentWithImages_many": "This comment includes {{count}} pasted images that were uploaded as ticket documents. Delete the comment only, or also delete the pasted images permanently?",
+    "pastedImageDeleteFailed_few": "Comment deleted, but could not delete {{count}} pasted images.",
+    "pastedImageDeleteFailed_many": "Comment deleted, but could not delete {{count}} pasted images.",
+    "pastedImagesDeleteFailed_few": "Could not delete {{count}} pasted images.",
+    "pastedImagesDeleteFailed_many": "Could not delete {{count}} pasted images.",
+    "pastedImagesDeleted_few": "Deleted {{count}} pasted images.",
+    "pastedImagesDeleted_many": "Deleted {{count}} pasted images.",
+    "sharedWorkspaceReadOnly": "You can see this ticket because it is about a device in a workspace you share. Only the person who raised it can add to it."
   },
   "conversation": {
     "comments": "Comments",
@@ -343,6 +399,8 @@
     "deleteUploadedImages": "Delete Images",
     "keepUploadedImages": "Keep Images",
     "bundledUpdate": "Bundled update",
+    "bundledUpdateFrom": "Bundled update from {{number}}",
+    "systemAuthor": "System",
     "clientSuffix": " (Client)",
     "internalCommentTooltip": "Internal Comment",
     "resolutionCommentTooltip": "Resolution Comment",
@@ -374,7 +432,13 @@
     "schedule": "Schedule",
     "scheduled": "Scheduled",
     "showMore": "Show more",
-    "showLess": "Show less"
+    "showLess": "Show less",
+    "ccBcc": "Cc/Bcc",
+    "cc": "Cc",
+    "bcc": "Bcc",
+    "ccBccInvalid": "Fix the highlighted addresses before sending.",
+    "ccBccTooMany": "At most {{max}} Cc and Bcc recipients can be copied on one comment.",
+    "ccBccNotSentOnInternal": "Cc and Bcc are not sent with an internal note. Turn Internal off to use them."
   },
   "responseState": {
     "awaitingYourResponse": "Awaiting Your Response",
@@ -389,14 +453,17 @@
     "notSet": "Not set",
     "set": "Set Response State",
     "all": "All Response States",
-    "none": "No Response State"
+    "none": "No Response State",
+    "awaitingClientTooltip": "Waiting for client to respond",
+    "awaitingInternalTooltip": "Client has responded, waiting for internal action"
   },
   "origin": {
     "internal": "Created Internally",
     "clientPortal": "Created via Client Portal",
     "inboundEmail": "Created via Inbound Email",
     "api": "Created via API",
-    "other": "Created via Other"
+    "other": "Created via Other",
+    "recurring": "Created by Recurring Schedule"
   },
   "responseSource": {
     "clientPortal": "Received via Client Portal",
@@ -438,7 +505,8 @@
       "loading": "Loading...",
       "clientNotFound": "Client not found.",
       "clientRendererMissing": "Client details are unavailable in this context.",
-      "clientLoadFailed": "Failed to load client."
+      "clientLoadFailed": "Failed to load client.",
+      "contactRendererMissing": "Contact details are unavailable in this context."
     },
     "filters": {
       "allAssignees": "All Assignees",
@@ -476,7 +544,13 @@
       "allMatchingSelected_other": "All {{count}} tickets matching your filters are selected.",
       "clear": "Clear selection",
       "selectAllMatching_one": "Select all {{count}} ticket matching your filters",
-      "selectAllMatching_other": "Select all {{count}} tickets matching your filters"
+      "selectAllMatching_other": "Select all {{count}} tickets matching your filters",
+      "allMatchingSelected_few": "All {{count}} tickets matching your filters are selected.",
+      "allMatchingSelected_many": "All {{count}} tickets matching your filters are selected.",
+      "pageSelected_few": "All {{count}} tickets on this page are selected.",
+      "pageSelected_many": "All {{count}} tickets on this page are selected.",
+      "selectAllMatching_few": "Select all {{count}} tickets matching your filters",
+      "selectAllMatching_many": "Select all {{count}} tickets matching your filters"
     },
     "spacing": {
       "compact": "Compact",
@@ -516,7 +590,13 @@
       },
       "selectedAction": "Print selected ({{count}})",
       "selectedTitle": "Selected Tickets ({{count}})",
-      "subtitle": "{{count}} tickets"
+      "subtitle": "{{count}} tickets",
+      "selectedAction_few": "Print selected ({{count}})",
+      "selectedAction_many": "Print selected ({{count}})",
+      "selectedTitle_few": "Selected Tickets ({{count}})",
+      "selectedTitle_many": "Selected Tickets ({{count}})",
+      "subtitle_few": "{{count}} tickets",
+      "subtitle_many": "{{count}} tickets"
     },
     "exportSelectedAction": "Export selected ({{count}})",
     "exportAction": "Export CSV",
@@ -544,7 +624,15 @@
       "saveFailed": "Failed to save the default view",
       "reset": "Reset to tenant default",
       "resetFailed": "Failed to reset the view"
-    }
+    },
+    "allMatchingSelected_few": "All {{count}} tickets matching your filters are selected.",
+    "allMatchingSelected_many": "All {{count}} tickets matching your filters are selected.",
+    "allPageSelected_few": "All {{count}} tickets on this page are selected.",
+    "allPageSelected_many": "All {{count}} tickets on this page are selected.",
+    "exportSelectedTooltip_few": "Export {{count}} selected tickets to CSV",
+    "exportSelectedTooltip_many": "Export {{count}} selected tickets to CSV",
+    "selectAllMatching_few": "Select all {{count}} tickets matching your filters",
+    "selectAllMatching_many": "Select all {{count}} tickets matching your filters"
   },
   "bulk": {
     "bundleTickets": "Bundle Tickets",
@@ -563,7 +651,10 @@
       "dueDate": "Due Date",
       "statusDisabledMultiBoard": "Selected tickets are on different boards",
       "statusResolvingBoards": "Checking the boards of selected tickets…",
-      "more": "More"
+      "more": "More",
+      "bundleNeedsOne": "Select at least 1 ticket to bundle",
+      "selectedCount_few": "{{count}} selected",
+      "selectedCount_many": "{{count}} selected"
     },
     "moveDialogTitle": "Move Selected Tickets",
     "moveDialogDescription": "Select a destination board and status, then confirm moving the selected tickets.",
@@ -596,7 +687,7 @@
     "bundleMasterLabel": "Select Master Ticket",
     "bundleMasterPlaceholder": "Select master ticket...",
     "bundleSyncUpdates": "Sync updates from master to children (public replies + workflow changes)",
-    "bundleSyncUpdatesHelp": "Child tickets keep their current status when bundled. Workflow fields are locked on children by default. Internal notes stay on the master.",
+    "bundleSyncUpdatesHelp": "Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children, and status, assignee and priority changes on the master apply to children. Workflow fields are locked on children. Internal notes stay on the master.",
     "bundleSelectAtLeastTwo": "Select at least two tickets to bundle.",
     "bundleSelectMaster": "Select a master ticket.",
     "bundleSuccess": "Tickets bundled",
@@ -627,7 +718,11 @@
       "partialFailure": "Some tickets could not be moved",
       "failure": "Failed to move selected tickets",
       "confirm": "Move {{count}} tickets",
-      "success": "{{count}} tickets moved"
+      "success": "{{count}} tickets moved",
+      "confirm_few": "Move {{count}} Tickets",
+      "confirm_many": "Move {{count}} Tickets",
+      "success_few": "{{count}} tickets moved",
+      "success_many": "{{count}} tickets moved"
     },
     "delete": {
       "dialogTitle": "Delete Selected Tickets",
@@ -644,7 +739,13 @@
       "partialFailure": "Some tickets could not be deleted",
       "failure": "Failed to delete selected tickets",
       "confirm": "Are you sure you want to delete these {{count}} tickets? This action cannot be undone.",
-      "success": "{{count}} tickets deleted"
+      "success": "{{count}} tickets deleted",
+      "button_few": "Delete {{count}} Tickets",
+      "button_many": "Delete {{count}} Tickets",
+      "confirm_few": "Are you sure you want to delete these {{count}} tickets? This action cannot be undone.",
+      "confirm_many": "Are you sure you want to delete these {{count}} tickets? This action cannot be undone.",
+      "success_few": "{{count}} tickets deleted",
+      "success_many": "{{count}} tickets deleted"
     },
     "bundle": {
       "dialogTitle": "Bundle Tickets",
@@ -659,12 +760,30 @@
       "masterTicket": "Select Master Ticket",
       "selectMasterTicket": "Select master ticket...",
       "syncUpdates": "Sync updates from master to children (public replies + workflow changes)",
-      "syncUpdatesHelp": "Child tickets keep their current status when bundled. Workflow fields are locked on children by default. Internal notes stay on the master.",
+      "syncUpdatesHelp": "Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children, and status, assignee and priority changes on the master apply to children. Workflow fields are locked on children. Internal notes stay on the master.",
       "childrenDescription": "Children keep their current status; workflow fields are locked on children. Inbound child replies are surfaced below as view-only.",
       "checkingMasters": "Checking existing bundles...",
       "existingMasterSuffix": "(existing master)",
       "existingMasterLocked": "One selected ticket is already a bundle master. It will be used as the master; the others will be added as children.",
-      "multipleExistingMasters": "Multiple selected tickets are already bundle masters ({{count}}). Unbundle all but one before bundling."
+      "multipleExistingMasters": "Multiple selected tickets are already bundle masters ({{count}}). Unbundle all but one before bundling.",
+      "propagationSummary": "{{masters}} selected ticket(s) are sync-mode bundle masters; this change will close/reopen {{children}} child ticket(s).",
+      "masterSummary": "{{children}} child ticket(s)",
+      "applyToChildren": "Apply to children",
+      "mastersOnly": "Masters only",
+      "membersLabel": "Tickets in this bundle",
+      "addTicketSearchPlaceholder": "Search tickets by number or title",
+      "addTicketEmpty": "Search for tickets to add",
+      "badgeAdded": "Added",
+      "badgeInBundle": "In bundle #{{number}}",
+      "badgeMaster": "Bundle master",
+      "masterTag": "Master",
+      "removeMember": "Remove",
+      "needMoreTickets": "Add at least one more ticket to bundle.",
+      "unresolvedSelectedTickets_one": "Could not load {{count}} selected ticket.",
+      "unresolvedSelectedTickets_other": "Could not load {{count}} selected tickets.",
+      "badgeClosed": "Closed",
+      "unresolvedSelectedTickets_few": "Could not load {{count}} selected tickets.",
+      "unresolvedSelectedTickets_many": "Could not load {{count}} selected tickets."
     },
     "auth": {
       "moveRequired": "You must be logged in to move tickets",
@@ -687,7 +806,11 @@
       "success_other": "{{count}} tickets reassigned",
       "partialFailure": "Some tickets could not be reassigned",
       "failure": "Failed to reassign selected tickets",
-      "failedHeading": "The following tickets could not be reassigned:"
+      "failedHeading": "The following tickets could not be reassigned:",
+      "confirm_few": "Reassign {{count}} Tickets",
+      "confirm_many": "Reassign {{count}} Tickets",
+      "success_few": "{{count}} tickets reassigned",
+      "success_many": "{{count}} tickets reassigned"
     },
     "tags": {
       "dialogTitle": "Add Tags to Selected Tickets",
@@ -700,7 +823,11 @@
       "success_other": "Tags added to {{count}} tickets",
       "partialFailure": "Tags could not be added to some tickets",
       "failure": "Failed to add tags to selected tickets",
-      "failedHeading": "Tags could not be added to the following tickets:"
+      "failedHeading": "Tags could not be added to the following tickets:",
+      "confirm_few": "Add Tags to {{count}} Tickets",
+      "confirm_many": "Add Tags to {{count}} Tickets",
+      "success_few": "Tags added to {{count}} tickets",
+      "success_many": "Tags added to {{count}} tickets"
     },
     "dueDate": {
       "dialogTitle": "Set Due Date for Selected Tickets",
@@ -715,7 +842,11 @@
       "success_other": "Due date updated on {{count}} tickets",
       "partialFailure": "Due date could not be updated on some tickets",
       "failure": "Failed to update due date on selected tickets",
-      "failedHeading": "Due date could not be updated on the following tickets:"
+      "failedHeading": "Due date could not be updated on the following tickets:",
+      "confirm_few": "Update {{count}} Tickets",
+      "confirm_many": "Update {{count}} Tickets",
+      "success_few": "Due date updated on {{count}} tickets",
+      "success_many": "Due date updated on {{count}} tickets"
     },
     "status": {
       "dialogTitle": "Change Status for Selected Tickets",
@@ -729,7 +860,16 @@
       "success_other": "Status updated on {{count}} tickets",
       "partialFailure": "Status could not be updated on some tickets",
       "failure": "Failed to update status on selected tickets",
-      "failedHeading": "Status could not be updated on the following tickets:"
+      "failedHeading": "Status could not be updated on the following tickets:",
+      "resolutionLabel": "Resolution comment (optional)",
+      "resolutionLabelRequired": "Resolution comment",
+      "resolutionRequiredHint": "This board requires a resolution comment before tickets can be closed.",
+      "resolutionPlaceholder": "Describe how these tickets were resolved",
+      "resolutionHelper": "Saved as the resolution on each selected ticket, satisfying boards that require one before closing.",
+      "confirm_few": "Update {{count}} Tickets",
+      "confirm_many": "Update {{count}} Tickets",
+      "success_few": "Status updated on {{count}} tickets",
+      "success_many": "Status updated on {{count}} tickets"
     },
     "priority": {
       "dialogTitle": "Change Priority for Selected Tickets",
@@ -742,8 +882,24 @@
       "success_other": "Priority updated on {{count}} tickets",
       "partialFailure": "Priority could not be updated on some tickets",
       "failure": "Failed to update priority on selected tickets",
-      "failedHeading": "Priority could not be updated on the following tickets:"
-    }
+      "failedHeading": "Priority could not be updated on the following tickets:",
+      "confirm_few": "Update {{count}} Tickets",
+      "confirm_many": "Update {{count}} Tickets",
+      "success_few": "Priority updated on {{count}} tickets",
+      "success_many": "Priority updated on {{count}} tickets"
+    },
+    "deleteConfirm_few": "Delete {{count}} Tickets",
+    "deleteConfirm_many": "Delete {{count}} Tickets",
+    "deleteDialogDescription_few": "Are you sure you want to delete these {{count}} tickets? This action cannot be undone.",
+    "deleteDialogDescription_many": "Are you sure you want to delete these {{count}} tickets? This action cannot be undone.",
+    "deleteSuccess_few": "{{count}} tickets deleted",
+    "deleteSuccess_many": "{{count}} tickets deleted",
+    "exportSelectedTooltip_few": "Export {{count}} selected tickets to CSV",
+    "exportSelectedTooltip_many": "Export {{count}} selected tickets to CSV",
+    "moveConfirm_few": "Move {{count}} Tickets",
+    "moveConfirm_many": "Move {{count}} Tickets",
+    "moveSuccess_few": "{{count}} tickets moved",
+    "moveSuccess_many": "{{count}} tickets moved"
   },
   "quickAdd": {
     "dialogTitle": "Quick Add Ticket",
@@ -799,7 +955,28 @@
     "clipboardUploadPartialFailure": "Ticket created, but pasted images could not be attached to the description.",
     "teamAssignmentPartialFailure": "Ticket created but team assignment failed",
     "tagCreatePartialFailure_one": "{{count}} tag could not be created",
-    "tagCreatePartialFailure_other": "{{count}} tags could not be created"
+    "tagCreatePartialFailure_other": "{{count}} tags could not be created",
+    "duplicateDialogTitle": "Duplicate ticket #{{number}}",
+    "duplicatingPill": "Duplicating #{{number}}",
+    "duplicateLoadFailed": "The ticket to duplicate could not be loaded. Please try again.",
+    "duplicateChecklistHeading": "Checklist from #{{number}}",
+    "duplicateChecklistRequired": "(required)",
+    "duplicateCopyChecklist": "Copy checklist items (unchecked)",
+    "duplicateCustomFieldsNote": "Custom field values are copied from #{{number}}.",
+    "templateLabel": "Template",
+    "templateNone": "None",
+    "templateLoadFailed": "The template could not be loaded. Please try again.",
+    "fromTemplatePill": "From template: {{name}}",
+    "templateChecklistHeading": "Checklist from template: {{name}}",
+    "templateCustomFieldsNote": "Custom field values are copied from the template.",
+    "templateReplaceTitle": "Replace your changes?",
+    "templateReplaceMessage": "Applying a template replaces the title, description and other fields you have entered.",
+    "templateReplaceConfirm": "Apply template",
+    "templateTokenHint": "The title fills in the client, contact and due date you pick, until you edit it.",
+    "tagCreatePartialFailure_few": "{{count}} tags could not be created",
+    "tagCreatePartialFailure_many": "{{count}} tags could not be created",
+    "tagCreationFailed_few": "{{count}} tags could not be created",
+    "tagCreationFailed_many": "{{count}} tags could not be created"
   },
   "itil": {
     "calculatedPriority": "Priority (Calculated)",
@@ -924,7 +1101,7 @@
     "noContact": "No contact",
     "closeTicketTitle": "Close ticket",
     "resolveAndClose": "Resolve and close",
-    "closeTicketResolutionPrompt": "Choose a close status and add a resolution for this ticket.",
+    "closeTicketResolutionPrompt": "Choose a close status. Add a resolution, or leave it blank to close without one.",
     "selectCloseStatus": "Select a close status",
     "cannotCloseYet": "This ticket can't be closed yet",
     "closeRulesIntro": "The board's close rules require the following before this ticket can be closed:",
@@ -933,28 +1110,27 @@
     "closeReasonPlaceholder": "Reason for closing anyway (optional, recorded in the audit log)",
     "closing": "Closing…",
     "closeAnyway": "Close anyway",
-    "timerActiveElsewhereTitle": "Timer Active Elsewhere",
-    "timerTakeoverMessage": "This ticket's timer is active in another window. Do you want to take over and replace it here?",
-    "replaceHere": "Replace Here",
+    "markResolutionInternal": "Mark as Internal",
+    "markResolutionInternalHelper": "An internal resolution stays out of the client portal and is left out of the close email.",
+    "closeTicketNowTitle": "Close the ticket now?",
+    "closeTicketNowPrompt": "This comment is now the resolution. Pick a close status to close the ticket, or leave it open.",
+    "leaveTicketOpen": "Leave open",
     "noActiveTimePeriodTitle": "No Active Time Period",
     "noActiveTimePeriodMessage": "No active time period found. Time periods need to be set up in the billing dashboard before adding time entries.",
     "goToTimePeriodsSetup": "Go to Time Periods Setup",
     "emailNotificationLogs": "Email Notification Logs",
     "ticketActivity": "Ticket Activity",
     "discardChanges": "Discard Changes",
-    "saved": "Saved"
+    "saved": "Saved",
+    "changeContactTitle": "Change the ticket contact?",
+    "removeContactTitle": "Remove the ticket contact?",
+    "changeContactPrompt": "The contact, assignee and watchers are told about this update unless you turn their notifications off.",
+    "changeContact": "Change contact",
+    "removeContact": "Remove contact"
   },
   "properties": {
     "timeEntry": "Time Entry",
-    "ticketTimer": "Ticket Timer - #{{ticketNumber}}",
-    "timerActiveElsewhere": "Timer active in another window",
-    "start": "Start",
-    "pause": "Pause",
-    "reset": "Reset",
-    "enterWorkDescription": "Enter work description",
-    "liveTimerDisabled": "Live ticket timer is disabled for this board.",
     "addTimeEntry": "Add Time Entry",
-    "trackedIntervals": "Tracked Intervals",
     "contactInfo": "Contact Info",
     "noContactSelected": "No contact selected",
     "selectOrChangeContact": "Select or change contact",
@@ -1016,6 +1192,13 @@
       "filterByBoard": "Filter by board",
       "addCategory": "Add Category",
       "importStandardCategories": "Import from Standard Categories",
+      "copyToBoard": "Copy categories to another board",
+      "copyTitle": "Copy categories to another board",
+      "copySourceBoard": "Select source board",
+      "copyTargetBoard": "Select target board",
+      "copySelected": "Copy selected",
+      "copySuccess": "Copied {{created}} categories; skipped {{skipped}} already present.",
+      "copyFailed": "Failed to copy categories",
       "editCategory": "Edit Category",
       "categoryName": "Category Name *",
       "enterCategoryName": "Enter category name",
@@ -1075,7 +1258,16 @@
       "selectParentCategory": "Select parent category",
       "parentHelpWithBoard": "Select a parent to create a subcategory, or leave empty for top-level",
       "parentHelpWithoutBoard": "Select a board first, or pick a parent category to inherit its board",
-      "creating": "Creating..."
+      "creating": "Creating...",
+      "copySourceLabel": "Source board",
+      "copyTargetLabel": "Target board",
+      "copyEmpty": "No categories on this board.",
+      "copying": "Copying…",
+      "copyBoardTypeMismatch": "Ticket categories can only be copied between boards with the same category type.",
+      "copyConflicts_one": "{{count}} skipped category has a different parent on the target board.",
+      "copyConflicts_other": "{{count}} skipped categories have a different parent on the target board.",
+      "copyConflicts_few": "{{count}} skipped categories have a different parent on the target board.",
+      "copyConflicts_many": "{{count}} skipped categories have a different parent on the target board."
     },
     "display": {
       "responseStateTrackingTitle": "Response State Tracking",
@@ -1084,7 +1276,8 @@
       "responseStateTrackingDisabled": "Response state tracking disabled",
       "title": "Ticket Display Preferences",
       "description": "Configure how your Ticketing dashboard displays columns and timestamps for your team.",
-      "dateTimeFormat": "Date/Time Format",
+      "showWeekday": "Show weekday in timestamps",
+      "countryDrivesFormat": "Date and time format follows your company country. Set it under Settings → General.",
       "ticketListColumns": "Ticket List Columns",
       "showTags": "Show Tags",
       "displayUnderTitle": "Display under Title",
@@ -1152,7 +1345,23 @@
     "appliedFiltersSummary": "(of {{count}} ticket matching applied filters)",
     "completeMessage": "Successfully exported {{count}} ticket to CSV.",
     "confirm": "Export {{count}} Ticket",
-    "selectedTicketsSummary": "Exporting {{count}} selected ticket"
+    "selectedTicketsSummary": "Exporting {{count}} selected ticket",
+    "appliedFiltersSummary_few": "(of {{count}} tickets matching applied filters)",
+    "appliedFiltersSummary_many": "(of {{count}} tickets matching applied filters)",
+    "completeDescription_few": "Successfully exported {{count}} tickets to CSV.",
+    "completeDescription_many": "Successfully exported {{count}} tickets to CSV.",
+    "completeMessage_few": "Successfully exported {{count}} tickets to CSV.",
+    "completeMessage_many": "Successfully exported {{count}} tickets to CSV.",
+    "confirm_few": "Export {{count}} Tickets",
+    "confirm_many": "Export {{count}} Tickets",
+    "selectedFields_few": "{{count}} of {{total}} fields selected",
+    "selectedFields_many": "{{count}} of {{total}} fields selected",
+    "selectedTicketsSummary_few": "Exporting {{count}} selected tickets",
+    "selectedTicketsSummary_many": "Exporting {{count}} selected tickets",
+    "summaryMatching_few": "(of {{total}} tickets matching applied filters)",
+    "summaryMatching_many": "(of {{total}} tickets matching applied filters)",
+    "summary_few": "Exporting {{selected}} selected tickets",
+    "summary_many": "Exporting {{selected}} selected tickets"
   },
   "materials": {
     "title": "Materials",
@@ -1275,7 +1484,15 @@
     "excludingCount_other": "excluding {{count}} categories",
     "excludingPrefix": "excluding {{name}}",
     "excludingCount": "excluding {{count}} category",
-    "selectedCount": "{{count}} categories"
+    "selectedCount": "{{count}} categories",
+    "categoriesCount_few": "{{count}} categories",
+    "categoriesCount_many": "{{count}} categories",
+    "excludingCategoriesCount_few": "excluding {{count}} categories",
+    "excludingCategoriesCount_many": "excluding {{count}} categories",
+    "excludingCount_few": "excluding {{count}} categories",
+    "excludingCount_many": "excluding {{count}} categories",
+    "selectedCount_few": "{{count}} categories",
+    "selectedCount_many": "{{count}} categories"
   },
   "navigation": {
     "previousTicket": "Previous ticket",
@@ -1382,7 +1599,13 @@
       "alreadyBundled": "Ticket is already bundled: {{ticket}}",
       "masterAsChild": "Master ticket cannot also be a child ticket.",
       "noChildren": "No child tickets provided.",
-      "childrenOnBundledChild": "Cannot add children to a bundled child ticket."
+      "childrenOnBundledChild": "Cannot add children to a bundled child ticket.",
+      "concurrent": "One or more selected tickets were bundled concurrently. Please refresh and try again.",
+      "closedMasterChoiceRequired": "This bundle's master is closed. Choose how to add the child: {{choices}}.",
+      "closedMasterChoiceNotAllowed": "That choice is not allowed for this master. Choose one of: {{choices}}.",
+      "choiceOnOpenMaster": "That choice only applies when the bundle master is closed.",
+      "closeRuleFailed": "This ticket cannot be closed yet: {{reason}}",
+      "reopenUnavailable": "The master cannot be reopened because no open ticket status is configured."
     },
     "ticket": {
       "validationDetails": "Please fix the ticket details: {{details}}",
@@ -1448,7 +1671,14 @@
       "missingField": "Missing required checklist field.",
       "missingFieldNamed": "Missing required checklist field: {{field}}.",
       "referenceInvalid": "The selected ticket, checklist template, or rule filter is no longer valid. Please refresh and try again.",
-      "invalidValue": "One of the checklist values is invalid. Please refresh and try again."
+      "invalidValue": "One of the checklist values is invalid. Please refresh and try again.",
+      "ruleCategoryBoardMismatch": "The selected category belongs to a different board than the rule.",
+      "ruleCategoryInvalid": "The selected category is not a top-level category.",
+      "ruleSubcategoryInvalid": "The selected subcategory does not belong to the selected category.",
+      "ruleSubcategoryRequiresCategory": "Select a category before choosing a subcategory.",
+      "ruleTooManyKeywords": "Use at most {{max}} keywords per rule.",
+      "ruleKeywordTooLong": "Keep each keyword to {{max}} characters or fewer.",
+      "ruleOriginInvalid": "One of the selected ticket sources is not valid."
     }
   },
   "ticketSection": {
@@ -1477,7 +1707,7 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Child tickets bundled in this master ticket",
+      "childrenDescription": "Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children, and status, assignee and priority changes on the master apply to children. Workflow fields are locked on children. Internal notes stay on the master.",
       "title": "Bundle",
       "masterBanner": "This ticket is the master of a bundle ({{count}} children). Mode: {{mode}}.",
       "multipleClients": "Multiple clients",
@@ -1489,10 +1719,38 @@
       "remove": "Remove",
       "noChildren": "No children in this bundle.",
       "addChildMultiClientMessage": "This will add {{ticket}} from a different client into the bundle. Confirm you want to proceed.",
-      "thisTicket": "this ticket"
+      "thisTicket": "this ticket",
+      "propagation": {
+        "closeTitle": "Close {{count}} child tickets too?",
+        "reopenTitle": "Reopen {{count}} child tickets too?",
+        "closeBody": "This master is in sync mode. Closing it will also close the {{count}} open child ticket(s) listed below.",
+        "reopenBody": "This master is in sync mode. Reopening it will reopen the {{count}} child ticket(s) it closed. Children closed independently stay closed.",
+        "stayClosedHeading": "Stay closed (closed independently)",
+        "boardRulesNote": "Board close rules are not checked on children.",
+        "closeConfirm": "Close master and {{count}} children",
+        "reopenConfirm": "Reopen master and {{count}} children",
+        "masterOnlyClose": "Close master only",
+        "masterOnlyReopen": "Reopen master only"
+      },
+      "openChildrenBadge": "{{count}} open children",
+      "openChildrenBadgeShort": "{{count}} open",
+      "childOpenStatus": "Open",
+      "childClosedStatus": "Closed",
+      "closedMasterDialogTitle": "This bundle's master is closed",
+      "closedMasterDialogIntro": "The master is closed. Choose what should happen to the child when it is added.",
+      "keepClosedLabel": "Add and keep master closed",
+      "keepClosedHelp": "The child stays open with its own SLA clock. The bundle will show as inconsistent until the child is resolved.",
+      "applyResolutionLabel": "Add and apply the master's resolution to this child",
+      "applyResolutionHelp": "Closes the child with status {{status}} and posts the master's resolution to the child as a public comment.",
+      "applyResolutionHelpNoComment": "Closes the child with status {{status}}. The master has no public resolution comment to post.",
+      "reopenMasterLabel": "Add and reopen master",
+      "reopenMasterHelp": "Reopens only the master. Already-closed children in this bundle stay closed; reopen notifications and SLA apply to the master.",
+      "closedMasterGating": "The board's close rules do not allow open children under a closed master, so keeping the master closed is not an option."
     },
     "autoClose": "Will close automatically on {{date}} unless there's new activity.",
-    "autoCloseWarned": "The customer has been warned."
+    "autoCloseWarned": "The customer has been warned.",
+    "duplicatedFrom": "Duplicated from #{{number}}",
+    "fromTemplate": "From template: {{name}}"
   },
   "invalidTicketData": "Invalid ticket data",
   "timeEntries": {
@@ -1517,6 +1775,8 @@
     "deleteConfirmTitle": "Delete time entry?",
     "deleteConfirmMessage": "This will permanently delete the time entry. This action cannot be undone.",
     "deleteConfirmAction": "Delete",
+    "billable": "Billable",
+    "nonBillable": "Non-billable",
     "duration": {
       "hr": "hr",
       "hrs": "hrs",
@@ -1527,7 +1787,9 @@
     "editing": {
       "single": "{{name}} is editing",
       "multiple_one": "{{name}} and {{count}} other are editing",
-      "multiple_other": "{{name}} and {{count}} others are editing"
+      "multiple_other": "{{name}} and {{count}} others are editing",
+      "multiple_few": "{{name}} and {{count}} others are editing",
+      "multiple_many": "{{name}} and {{count}} others are editing"
     },
     "remoteFieldUpdated": "{{name}} updated {{field}}",
     "connection": {
@@ -1555,7 +1817,11 @@
     "selectedCount": "{{count}} boards",
     "statusActive": "Active",
     "statusAll": "All",
-    "statusInactive": "Inactive"
+    "statusInactive": "Inactive",
+    "excludingCount_few": "excluding {{count}} boards",
+    "excludingCount_many": "excluding {{count}} boards",
+    "selectedCount_few": "{{count}} boards",
+    "selectedCount_many": "{{count}} boards"
   },
   "checklist": {
     "addFailed": "Failed to add checklist item",
@@ -1611,7 +1877,8 @@
       "responseWaitingOnClient": "Waiting on client",
       "responseNone": "No reply needed",
       "category": "Category",
-      "selectDestinationStatus": "Select a status for the new board before saving."
+      "selectDestinationStatus": "Select a status for the new board before saving.",
+      "viewSchedule": "View schedule"
     },
     "layout": {
       "grid": "Grid",
@@ -1639,7 +1906,6 @@
       "showLess": "Show less",
       "contact": "Contact",
       "client": "Client",
-      "nextVisit": "Next visit",
       "callsAndEmails": "Calls and emails",
       "call": "Call",
       "viewAll": "View all",
@@ -1647,9 +1913,7 @@
       "timeLogged": "Time logged",
       "acrossEntries_one": "across {{count}} entry",
       "acrossEntries_other": "across {{count}} entries",
-      "workDescription": "Work description",
       "addTimeEntry": "Add time entry",
-      "trackedIntervals": "Tracked intervals",
       "teamAndWatchers": "Team and watchers",
       "addAgent": "Add an agent…",
       "timeline": "Timeline",
@@ -1660,14 +1924,12 @@
       "opened": "Opened",
       "viaSource": "via {{source}}",
       "noContactOnTicket": "No contact on this ticket",
-      "whatAreYouWorkingOn": "What are you working on?",
       "agentFallback": "Agent",
       "removeAgent": "Remove {{name}}",
       "noAdditionalAgents": "No additional agents",
       "billing": "Billing",
       "couldNotLoad": "Could not load this tile",
       "nothingScheduled": "Nothing scheduled",
-      "scheduleVisit": "Schedule a visit",
       "scheduledWork": "Scheduled work",
       "scheduleDone": "done",
       "noCallsOrEmails": "No calls or emails logged",
@@ -1686,8 +1948,6 @@
       "addDocument": "Add a document",
       "timeLoggedPerDay": "Time logged per day: {{details}}",
       "team": "Team",
-      "startTimer": "Start timer",
-      "timerLockedHint": "Another timer is already running",
       "billable": "Billable",
       "nothingBillable": "Nothing billable yet",
       "editContact": "Edit contact",
@@ -1711,7 +1971,12 @@
         "approved": "Approved",
         "declined": "Declined",
         "cancelled": "Cancelled"
-      }
+      },
+      "scheduleTime": "Schedule time",
+      "openScheduleEntry": "Open schedule entry",
+      "acrossEntries_few": "across {{count}} entries",
+      "acrossEntries_many": "across {{count}} entries",
+      "changeLocation": "Change location"
     },
     "timeline": {
       "subtitle": "Replies, time, and system changes in one place",
@@ -1759,7 +2024,8 @@
         "checklist_template_applied": "checklist template applied",
         "close_rules_overridden": "close rules overridden",
         "close_rules_bypassed": "close rules bypassed",
-        "auto_close_warning_sent": "auto-close warning sent"
+        "auto_close_warning_sent": "auto-close warning sent",
+        "bundle_child_added": "bundle child added"
       },
       "filterEverything": "Everything",
       "filterReplies": "Replies",
@@ -1771,7 +2037,6 @@
       "replyTo": "Reply to {{name}}",
       "writeReply": "Write a reply",
       "modeInternal": "Internal",
-      "modeResolution": "Resolution",
       "sending": "Sending…",
       "send": "Send",
       "systemActor": "System",
@@ -1780,6 +2045,11 @@
       "fieldChanged": "{{actor}} changed {{field}}: {{from}} → {{to}}",
       "fieldSet": "{{field}} set to {{to}}",
       "actorEvent": "{{actor}} · {{eventName}}",
+      "bundleStatusNotPropagated": "{{actor}} changed the bundle master status (children not updated)",
+      "bundleStatusClosed": "{{actor}} closed the bundle master and {{count}} child ticket(s)",
+      "bundleStatusReopened": "{{actor}} reopened the bundle master and {{count}} child ticket(s)",
+      "duplicatedFrom": "{{actor}} created this ticket as a duplicate of #{{number}}",
+      "duplicatedTo": "{{actor}} duplicated this ticket as #{{number}}",
       "title": "Timeline",
       "replyVisibility": "Reply visibility",
       "modeClient": "Client",
@@ -1800,7 +2070,555 @@
       "noStatusChange": "Do not change status",
       "showAllActivity": "Show all activity",
       "collapseActivity": "Collapse older activity",
-      "replyingToComment": "Replying to {{name}}"
+      "replyingToComment": "Replying to {{name}}",
+      "createdFromTemplate": "{{actor}} created this ticket from template \"{{name}}\""
+    }
+  },
+  "externalLinks": {
+    "title": "External links",
+    "empty": "No external links",
+    "loading": "Loading external links...",
+    "noUrl": "No URL available for this reference",
+    "customSystemOption": "{{label}} (custom)",
+    "actions": {
+      "add": "Add link",
+      "edit": "Edit",
+      "remove": "Remove",
+      "cancel": "Cancel",
+      "save": "Save",
+      "menu": "Link actions",
+      "openRecord": "Open external record"
+    },
+    "relationship": {
+      "origin": "Origin",
+      "mirror": "Mirror",
+      "reference": "Reference"
+    },
+    "relationshipDescription": {
+      "origin": "Where this ticket started. Each ticket can have one origin link, which sets its origin badge.",
+      "mirror": "Another record tracking the same work as this ticket.",
+      "reference": "Supporting information for this ticket."
+    },
+    "dialog": {
+      "addTitle": "Add external link",
+      "editTitle": "Edit external link",
+      "intro": "Adding a link does not sync data between systems."
+    },
+    "removeDialog": {
+      "title": "Remove external link",
+      "message": "Remove this external link from the ticket?"
+    },
+    "fields": {
+      "system": "System",
+      "loadingSystems": "Loading systems...",
+      "selectSystem": "Select a system",
+      "externalId": "External ID",
+      "externalIdPlaceholder": "e.g. 42 or 1234567890",
+      "realm": "Realm",
+      "url": "URL",
+      "urlOptional": "Optional override",
+      "urlRequired": "https://...",
+      "relationship": "Relationship",
+      "originExistsHint": "This ticket already has an origin link.",
+      "actorGroup": "Person or account (optional)",
+      "actorHint": "The person or account associated with the linked record in the external system.",
+      "actorHandle": "Username or handle",
+      "actorDisplay": "Display name",
+      "builtInGroup": "Built-in systems",
+      "customGroup": "Custom systems",
+      "urlPreview": "Opens:",
+      "urlPreviewIncomplete": "Fill in the fields above to preview the link."
+    },
+    "errors": {
+      "ticketNotFound": "Ticket not found",
+      "commentNotFound": "Comment not found on this ticket",
+      "linkNotFound": "External link not found",
+      "systemNotFound": "Unknown external system",
+      "externalIdRequired": "External ID is required",
+      "invalidUrl": "URL must be a valid http(s) URL",
+      "invalidRelationship": "Invalid relationship",
+      "invalidEntityType": "Invalid entity type",
+      "originExists": "This entity already has an origin link",
+      "duplicateExternalLink": "That external record is already linked",
+      "systemInUse": "This external system is used by existing links",
+      "systemInUseCount": "This external system is used by {{count}} link(s)",
+      "invalidSystemKey": "Custom system keys must match custom:<slug> with lowercase letters, digits, or underscores",
+      "systemLabelRequired": "System label is required",
+      "permissionDenied": "Permission denied: Cannot manage external systems",
+      "systemRequired": "Choose an external system.",
+      "urlRequired": "A URL is required for systems without a URL template.",
+      "invalidVisibility": "Only ticket links can be shared, using a boolean visibility value"
+    },
+    "visibility": {
+      "label": "Visibility",
+      "internal": "Internal only",
+      "shared": "Visible in client portal",
+      "help": "Customers with access to this ticket can see this link. Sharing the link does not grant access to the external system."
+    }
+  },
+  "smartSearch": {
+    "run": "Smart search",
+    "runTitle": "Score the filtered tickets against this query",
+    "relevanceColumn": "Match",
+    "relevance": "{{percent}}% relevant",
+    "strong": "Strong matches",
+    "possible": "Possible matches",
+    "unlikely": "Unlikely matches",
+    "emptyBucketRunning": "None yet",
+    "emptyBucket": "None",
+    "scoring": "Scored {{scored}} of {{total}} tickets",
+    "summary": "Scored {{total}} tickets · {{strong}} strong · {{possible}} possible",
+    "cancelled": "Search cancelled after {{scored}} of {{total}} tickets",
+    "errorTitle": "Smart search stopped",
+    "starting": "Starting smart search…",
+    "rerun": "Filters changed. Run again",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "exit": "Back to list",
+    "notConfigured": "Smart search is not configured on this server",
+    "failedCount": "{{count}} tickets could not be scored",
+    "unscored": "Could not be scored",
+    "addOnRequired": "Smart search requires the AI Assistant add-on"
+  },
+  "recurring": {
+    "actions": {
+      "done": "Done",
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "save": "Save",
+      "pause": "Pause",
+      "resume": "Resume",
+      "archive": "Archive"
+    },
+    "clients": {
+      "addTitle": "Add clients",
+      "addHelp": "Pick a client to add it. The dialog stays open so you can add more.",
+      "alreadyAdded": "Already added",
+      "pickerPlaceholder": "Select a client to add",
+      "addedHeading": "Added in this dialog",
+      "columns": {
+        "client": "Client",
+        "overrides": "Overrides",
+        "contact": "Contact",
+        "location": "Location",
+        "assets": "Assets",
+        "nextDue": "Next due",
+        "active": "Active"
+      },
+      "inheritsAll": "Inherits everything",
+      "set": "Set",
+      "actions": "Client actions",
+      "editOverrides": "Edit overrides",
+      "remove": "Remove",
+      "add": "Add clients",
+      "empty": "No clients yet. Tickets are only created for the clients you add here.",
+      "removeTitle": "Remove client",
+      "removeMessage": "Stop creating tickets for {{client}}? Tickets already created and the history are kept."
+    },
+    "errors": {
+      "clientNotFound": "Client not found on this recurring ticket",
+      "definitionNotFound": "Recurring ticket not found",
+      "unknownTitleTokens": "Unknown title token(s) {{tokens}}. Available tokens: {{available}}",
+      "subcategoryNeedsCategory": "A subcategory requires a category",
+      "definitionArchived": "Archived recurring tickets are read-only",
+      "clientAlreadyAdded": "That client is already part of this recurring ticket",
+      "invalidReferences": "{{problems}}"
+    },
+    "overrides": {
+      "noneValue": "None",
+      "inherited": "Uses the recurring ticket setting: {{value}}",
+      "title": "Settings for {{client}}",
+      "intro": "Choose the ticket fields this client sets differently from the recurring ticket. Everything else is inherited and follows later changes to the recurring ticket.",
+      "groups": {
+        "board": "Override board and status",
+        "priority": "Override priority",
+        "category": "Override category",
+        "assignment": "Override assignment"
+      },
+      "attachedTo": "Attached to the generated ticket",
+      "contact": "Contact",
+      "contactPlaceholder": "No contact",
+      "location": "Location",
+      "noLocation": "No location",
+      "assets": "Assets",
+      "groupNames": {
+        "board": "Board and status",
+        "priority": "Priority",
+        "category": "Category",
+        "assignment": "Assignment"
+      }
+    },
+    "sections": {
+      "clients": "Clients",
+      "history": "History",
+      "details": "Details",
+      "template": "Ticket template",
+      "schedule": "Schedule",
+      "behaviour": "Behaviour",
+      "overrides": "Overrides for this schedule",
+      "dispatch": "Dispatch"
+    },
+    "fields": {
+      "board": "Board",
+      "boardPlaceholder": "Select a board",
+      "status": "Status",
+      "statusBoardDefault": "Board default",
+      "priority": "Priority",
+      "priorityPlaceholder": "Select a priority",
+      "category": "Category",
+      "categoryPlaceholder": "No category",
+      "assignedTo": "Assigned to",
+      "additionalAgents": "Additional agents",
+      "name": "Name",
+      "title": "Ticket title",
+      "titleTokens": "Insert:",
+      "description": "Description",
+      "descriptionPlaceholder": "Description",
+      "checklistTemplate": "Checklist template",
+      "noChecklist": "None"
+    },
+    "history": {
+      "columns": {
+        "due": "Due",
+        "client": "Client",
+        "status": "Status",
+        "ticket": "Ticket",
+        "reason": "Reason"
+      },
+      "allStatuses": "All statuses",
+      "allClients": "All clients",
+      "empty": "Nothing has been generated yet.",
+      "reasons": {
+        "clientInactive": "The client was inactive",
+        "previousOpen": "Ticket {{number}} from the previous occurrence is still open"
+      },
+      "status": {
+        "created": "Created",
+        "skipped": "Skipped",
+        "missed": "Missed",
+        "failed": "Failed"
+      }
+    },
+    "editor": {
+      "created": "Recurring ticket created. Add the clients it should run for.",
+      "saved": "Recurring ticket saved",
+      "back": "Recurring tickets",
+      "newTitle": "New recurring ticket",
+      "archivedNotice": "This recurring ticket is archived and can no longer be changed.",
+      "clientsAfterSave": "Save the recurring ticket first, then add the clients it should run for.",
+      "archiveTitle": "Archive recurring ticket",
+      "archiveMessage": "Archiving stops all future tickets and cannot be undone. Tickets already created and the history are kept.",
+      "viewOnly": "You can view this recurring ticket but not change it."
+    },
+    "loading": "Loading…",
+    "schedule": {
+      "policy": {
+        "keep": "Keep the date",
+        "previous": "Move to the previous business day",
+        "next": "Move to the next business day"
+      },
+      "startDate": "Starts on",
+      "createTime": "Create at",
+      "dueTime": "Due at",
+      "leadDays": "Create days before due",
+      "policyLabel": "When the due date is not a business day",
+      "calendarFallback": "No default business-hours schedule is set, so business days are Monday to Friday plus your company-wide holidays.",
+      "calendarNote": "Business days follow your default business-hours schedule ({{name}}), including its holidays."
+    },
+    "status": {
+      "archived": "Archived",
+      "active": "Active",
+      "paused": "Paused"
+    },
+    "preview": {
+      "heading": "Next 5 due dates",
+      "none": "No upcoming due dates."
+    },
+    "behaviour": {
+      "openPrevious": "If the previous ticket is still open",
+      "alwaysCreate": "Create the next ticket anyway",
+      "skip": "Skip this occurrence",
+      "notifyClient": "Email the client when a ticket is created",
+      "notifyClientHelp": "Off by default. Internal notifications are always sent."
+    },
+    "list": {
+      "columns": {
+        "name": "Name",
+        "schedule": "Schedule",
+        "nextDue": "Next due",
+        "status": "Status",
+        "clients": "Clients"
+      },
+      "new": "New recurring ticket",
+      "hasFailure": "The latest run failed. Open it to see why.",
+      "title": "Recurring tickets",
+      "empty": "No recurring tickets here yet.",
+      "filter": {
+        "active": "Active",
+        "paused": "Paused",
+        "archived": "Archived",
+        "all": "All"
+      }
+    },
+    "clientTab": {
+      "clientPaused": "Paused for this client",
+      "pickDefinition": "Choose a recurring ticket",
+      "add": "Add to recurring ticket",
+      "empty": "This client is not part of any recurring ticket.",
+      "removeTitle": "Remove from recurring ticket",
+      "removeMessage": "Stop creating tickets for this client from {{name}}? Tickets already created and the history are kept."
+    },
+    "badge": {
+      "source": "Recurring: {{name}}"
+    },
+    "rule": {
+      "editor": {
+        "unit": {
+          "days": "day(s)",
+          "weeks": "week(s)",
+          "months": "month(s)",
+          "years": "year(s)"
+        },
+        "lastDay": "Last day",
+        "repeats": "Repeats",
+        "every": "Every",
+        "weekdaysOnly": "Weekdays only (Monday to Friday)",
+        "onDays": "On",
+        "monthlyOn": "On",
+        "mode": {
+          "dayOfMonth": "Day of the month",
+          "nthWeekday": "Nth weekday"
+        },
+        "day": "Day",
+        "nth": "Which",
+        "weekday": "Weekday",
+        "clampHint": "In months with fewer days, the ticket is created on the last day of the month.",
+        "month": "Month",
+        "ends": "Ends",
+        "end": {
+          "never": "Never",
+          "onDate": "On a date",
+          "afterCount": "After a number of tickets"
+        },
+        "endDate": "Last date",
+        "endCount": "Occurrences",
+        "frequency": {
+          "daily": "Daily",
+          "weekly": "Weekly",
+          "monthly": "Monthly",
+          "yearly": "Yearly"
+        }
+      },
+      "weekdays": {
+        "mon": "Monday",
+        "tue": "Tuesday",
+        "wed": "Wednesday",
+        "thu": "Thursday",
+        "fri": "Friday",
+        "sat": "Saturday",
+        "sun": "Sunday"
+      },
+      "weekdaysShort": {
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat",
+        "sun": "Sun"
+      },
+      "months": {
+        "1": "January",
+        "2": "February",
+        "3": "March",
+        "4": "April",
+        "5": "May",
+        "6": "June",
+        "7": "July",
+        "8": "August",
+        "9": "September",
+        "10": "October",
+        "11": "November",
+        "12": "December"
+      },
+      "ordinals": {
+        "1": "first",
+        "2": "second",
+        "3": "third",
+        "4": "fourth",
+        "last": "last"
+      },
+      "listSeparator": ", ",
+      "endOnDate": ", until {{date}}",
+      "endAfterCount": ", {{n}} times",
+      "dailyWeekdays": "Every weekday",
+      "daily": "Every day",
+      "dailyEvery": "Every {{n}} days",
+      "weekly": "Every week on {{days}}",
+      "weeklyEvery": "Every {{n}} weeks on {{days}}",
+      "everyMonth": "Every month",
+      "everyNMonths": "Every {{n}} months",
+      "lastDay": "the last day",
+      "dayOfMonth": "day {{day}}",
+      "monthlyOnDay": "{{every}} on {{day}}",
+      "monthlyOnNthWeekday": "{{every}} on the {{ordinal}} {{weekday}}",
+      "yearly": "Every year on {{month}} {{day}}"
+    },
+    "template": {
+      "intro": "What the ticket looks like comes from a shared ticket template. Changing the template changes every schedule that uses it, from the next ticket on.",
+      "select": "Ticket template",
+      "placeholder": "Select a ticket template",
+      "inactiveOption": "{{name}} (inactive)",
+      "summary": "{{checklist}} checklist item(s), {{tags}} tag(s)",
+      "inactiveNotice": "This template is inactive: hidden from the template picker; still used by {{count}} schedules.",
+      "sharedNotice": "Used by {{count}} schedules. Editing the template changes all of them.",
+      "edit": "Edit template",
+      "new": "New template",
+      "sampleTitle": "First ticket title:",
+      "tokensHelp": "Template titles can use {{tokens}}; they are filled in per ticket."
+    },
+    "overridesSection": {
+      "intro": "Leave a group off to use the template. Each client can override these again."
+    }
+  },
+  "stopwatch": {
+    "boardDisabled": "The stopwatch is turned off for this board.",
+    "pausedElsewhereTicket": "Paused on another ticket: {{label}}",
+    "runningElsewhereTicket": "Running on another ticket: {{label}}",
+    "pausedElsewhereTask": "Paused on another task: {{label}}",
+    "runningElsewhereTask": "Running on another task: {{label}}",
+    "switch": "Switch here",
+    "start": "Start stopwatch",
+    "resume": "Resume stopwatch",
+    "pause": "Pause stopwatch",
+    "stop": "Stop and log time",
+    "discard": "Discard stopwatch",
+    "pausedHint": "Paused. Resume to keep tracking, or stop to log the time.",
+    "workDescription": "Work description",
+    "whatAreYouWorkingOn": "What are you working on?"
+  },
+  "templates": {
+    "loading": "Loading…",
+    "list": {
+      "title": "Ticket templates",
+      "new": "New template",
+      "empty": "No ticket templates yet. Open a ticket and choose \"Create template from ticket\", or create one from scratch.",
+      "showInactive": "Show inactive",
+      "deleted": "Template deleted",
+      "deleteTitle": "Delete template",
+      "deleteMessage": "Delete \"{{name}}\"? Tickets already created from it are not changed.",
+      "columns": {
+        "name": "Name",
+        "title": "Ticket title",
+        "board": "Board",
+        "checklist": "Checklist items",
+        "status": "Status",
+        "schedules": "Schedules"
+      },
+      "deleteBlocked": "Used by {{count}} recurring schedule(s). Point them at another template or archive them first."
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "scheduledOnly": "Scheduled only"
+    },
+    "actions": {
+      "edit": "Edit",
+      "newTicket": "New ticket from template",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "delete": "Delete",
+      "cancel": "Cancel"
+    },
+    "sections": {
+      "details": "Template",
+      "ticket": "Ticket",
+      "checklist": "Checklist",
+      "customFields": "Custom fields"
+    },
+    "fields": {
+      "name": "Template name",
+      "notes": "Notes",
+      "notesHelp": "For your team only. Not copied to tickets.",
+      "title": "Ticket title",
+      "description": "Description",
+      "descriptionPlaceholder": "Description",
+      "offerForManualUse": "Offer in the new ticket picker",
+      "offerForManualUseHelp": "Turn off for templates that only recurring schedules use.",
+      "titleTokens": "You can use {{tokens}} in the title; they are filled in per ticket."
+    },
+    "checklist": {
+      "empty": "No checklist items.",
+      "itemName": "Checklist item",
+      "required": "Required",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "remove": "Remove item",
+      "add": "Add item"
+    },
+    "customFields": {
+      "empty": "No custom field values.",
+      "name": "Field name",
+      "value": "Value",
+      "remove": "Remove field",
+      "add": "Add field"
+    },
+    "editor": {
+      "back": "Ticket templates",
+      "newTitle": "New ticket template",
+      "created": "Template created",
+      "saved": "Template saved",
+      "saving": "Saving…",
+      "save": "Save",
+      "fromTicket": "Prefilled from ticket #{{number}}. Nothing is saved until you click Save.",
+      "inlineImages": "The description contains images that belong to the source ticket. They may stop displaying if that ticket is deleted. Remove them or re-upload them if the template should outlive the ticket.",
+      "viewOnly": "You can view this template but not change it.",
+      "referenceProblems": "Some fields in this template point at things that no longer exist. They are left blank when the template is used. Fix them and save:",
+      "inactiveWarning": "Inactive: hidden from the template picker; still used by {{count}} schedules.",
+      "sharedWarning": "Changes here apply to every recurring schedule that uses this template, from the next ticket each one creates.",
+      "boardChangeWarning": "Changing the board clears priority and category, and can make the status of schedules that use this template invalid. Those schedules fail until you edit them. Affected schedules: {{schedules}}."
+    },
+    "errors": {
+      "notFound": "Ticket template not found",
+      "duplicateName": "A template named {{name}} already exists",
+      "invalidReferences": "The template refers to a board, category or priority that is not available",
+      "notAvailable": "Ticket templates are not available",
+      "subcategoryNeedsCategory": "A subcategory requires a category",
+      "inUseBySchedules": "Used by {{count}} recurring schedule(s): {{schedules}}. Point them at another template or archive them first."
+    },
+    "usage": {
+      "schedules": "Used by {{count}} schedules",
+      "paused": "paused",
+      "tickets": "{{count}} tickets created from this template",
+      "scheduleThis": "Schedule this template…"
+    }
+  },
+  "enums": {
+    "slaStatus": {
+      "paused": "Paused",
+      "on_track": "On Track",
+      "at_risk": "At Risk",
+      "breached": "Breached",
+      "unknown": "Unknown",
+      "response_breached": "Response SLA Breached",
+      "resolution_breached": "Resolution SLA Breached"
+    }
+  },
+  "sla": {
+    "tooltip": {
+      "paused": "SLA Timer: Paused",
+      "status": "SLA Status: {{status}}",
+      "responseBreached": "Response: Breached by {{time}}",
+      "responseRemaining": "Response: {{time}} remaining",
+      "resolutionBreached": "Resolution: Breached by {{time}}",
+      "resolutionRemaining": "Resolution: {{time}} remaining"
+    },
+    "time": {
+      "minutes": "{{minutes}}m",
+      "hoursMinutes": "{{hours}}h {{minutes}}m",
+      "hours": "{{hours}}h",
+      "daysHours": "{{days}}d {{hours}}h",
+      "days": "{{days}}d"
     }
   }
 }

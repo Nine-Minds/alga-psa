@@ -63,6 +63,7 @@ type SubjectRow = {
   title: string | null;
   client_id: string | null;
   contact_name_id: string | null;
+  board_id?: string | null;
   assigned_to: string | null;
   client_name?: string | null;
   technician_first_name?: string | null;
@@ -286,6 +287,8 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
 
       // TODO: Queue invitation delivery through Temporal survey workflow once available.
       const sendResult = await emailService.sendEmail({
+        mailClass: 'survey',
+        ...(!isProject && subject.board_id ? { boardId: subject.board_id } : {}),
         to: contact.email,
         tenantId: params.tenantId,
         templateProcessor: processor,
@@ -435,6 +438,7 @@ async function loadSubject(
       `t.${isProject ? 'project_name' : 'title'} as title`,
       't.client_id',
       't.contact_name_id',
+      ...(!isProject ? ['t.board_id'] : []),
       't.assigned_to',
       isProject ? knex.raw('NULL as closed_at') : 't.closed_at',
       'c.client_name',

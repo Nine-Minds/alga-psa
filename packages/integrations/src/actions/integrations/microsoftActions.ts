@@ -26,6 +26,7 @@ import {
   type MicrosoftProfileConsumer,
 } from './microsoftShared';
 import { invalidateEntraDirectConnectionOnRebind } from '../../lib/entraBindingInvalidation';
+import { computeEntraCallbackUrl } from '@alga-psa/shared/services/entra/entraCallbackUrl';
 import { resolveMicrosoftBindingCandidateProfile } from '../../lib/microsoftConsumerProfileResolution';
 import {
   backfillMicrosoftEmailProviderIssuerMetadata,
@@ -806,7 +807,7 @@ function getMicrosoftIntegrationMetadata(baseUrl: string): NonNullable<
       teamsTab: `${baseUrl}/api/teams/auth/callback/tab`,
       teamsBot: `${baseUrl}/api/teams/auth/callback/bot`,
       teamsMessageExtension: `${baseUrl}/api/teams/auth/callback/message-extension`,
-      entra: `${baseUrl}/api/auth/microsoft/entra/callback`,
+      entra: computeEntraCallbackUrl(baseUrl),
     },
     scopes: {
       email: [

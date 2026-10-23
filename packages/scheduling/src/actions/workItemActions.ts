@@ -10,6 +10,11 @@ import User from '@alga-psa/db/models/user';
 import { parseWorkItemStatusNameFilterValue } from '@alga-psa/reference-data/actions/status-actions/workItemStatusFilter';
 import { workItemDescriptionText } from '../lib/workItemDescription';
 import {
+  effectiveServiceIdSql,
+  effectiveServiceNameSql,
+  effectiveServiceSourceSql,
+} from '@alga-psa/core';
+import {
   actionError,
   isActionMessageError,
   isActionPermissionError,
@@ -17,6 +22,10 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+
+/** Aliases used by the project-task branch of the work-item picker union. */
+const PICKER_SERVICE_ALIASES = { task: 'pt', phase: 'pp', project: 'p' };
+const GET_BY_ID_SERVICE_CATALOG_ALIASES = { task: 'task_service', phase: 'phase_service', project: 'project_service' };
 
 export interface BaseSearchOptions {
   searchTerm?: string;
@@ -449,7 +458,8 @@ export const searchPickerWorkItems = withAuth(async (
          db.raw("u_assignee.first_name || ' ' || u_assignee.last_name as assigned_to_name"),
          db.raw('ARRAY[t.assigned_to] as assigned_user_ids'),
          'tr.additional_user_ids as additional_user_ids',
-         db.raw('NULL::uuid as service_id')
+         db.raw('NULL::uuid as service_id'),
+         db.raw('NULL::text as service_source')
        );
       tenantScopedDb.tenantJoin(ticketsQuery, 'clients as c', 't.client_id', 'c.client_id');
       tenantScopedDb.tenantJoin(ticketsQuery, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
@@ -551,7 +561,8 @@ export const searchPickerWorkItems = withAuth(async (
          db.raw("u_assignee.first_name || ' ' || u_assignee.last_name as assigned_to_name"),
          db.raw('ARRAY[pt.assigned_to] as assigned_user_ids'),
          'tr.additional_user_ids as additional_user_ids',
-         'pt.service_id'
+         db.raw(`${effectiveServiceIdSql(PICKER_SERVICE_ALIASES)} as service_id`),
+         db.raw(`${effectiveServiceSourceSql(PICKER_SERVICE_ALIASES)} as service_source`)
        );
       tenantScopedDb.tenantJoin(projectTasksQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
       tenantScopedDb.tenantJoin(projectTasksQuery, 'projects as p', 'pp.project_id', 'p.project_id');
@@ -629,7 +640,8 @@ export const searchPickerWorkItems = withAuth(async (
           db.raw("u_adhoc_assignee.first_name || ' ' || u_adhoc_assignee.last_name as assigned_to_name"),
           'sea.assigned_user_ids as assigned_user_ids',
           db.raw('NULL::uuid[] as additional_user_ids'),
-          db.raw('NULL::uuid as service_id')
+          db.raw('NULL::uuid as service_id'),
+          db.raw('NULL::text as service_source')
         );
       tenantScopedDb.tenantJoin(adHocQuery, 'users as u_adhoc_assignee', 'sea.first_assigned_user_id', 'u_adhoc_assignee.user_id', {
         type: 'left',
@@ -663,7 +675,8 @@ export const searchPickerWorkItems = withAuth(async (
           db.raw("u_interaction_assignee.first_name || ' ' || u_interaction_assignee.last_name as assigned_to_name"),
           db.raw('ARRAY[i.user_id] as assigned_user_ids'),
           db.raw('ARRAY[]::uuid[] as additional_user_ids'),
-          db.raw('NULL::uuid as service_id')
+          db.raw('NULL::uuid as service_id'),
+          db.raw('NULL::text as service_source')
         );
       tenantScopedDb.tenantJoin(interactionsQuery, 'clients as c', 'i.client_id', 'c.client_id', { type: 'left' });
       tenantScopedDb.tenantJoin(interactionsQuery, 'interaction_types as it', 'i.type_id', 'it.type_id', { type: 'left' });
@@ -777,7 +790,8 @@ export const searchPickerWorkItems = withAuth(async (
         assigned_user_ids: item.assigned_user_ids || [],
         scheduled_start: item.scheduled_start,
         scheduled_end: item.scheduled_end,
-        service_id: item.service_id
+        service_id: item.service_id,
+        service_source: item.service_source ?? undefined
       };
 
       // Add interaction type if it's an interaction
@@ -932,10 +946,17 @@ export const getWorkItemById = withAuth(async (
           'pp.phase_name',
           'pt.task_name',
           db.raw('ARRAY[pt.assigned_to] as assigned_user_ids'),
-          'tr.additional_user_ids as additional_user_ids'
+          'tr.additional_user_ids as additional_user_ids',
+          db.raw(`${effectiveServiceIdSql(PICKER_SERVICE_ALIASES)} as service_id`),
+          db.raw(`${effectiveServiceSourceSql(PICKER_SERVICE_ALIASES)} as service_source`),
+          db.raw(`${effectiveServiceNameSql(GET_BY_ID_SERVICE_CATALOG_ALIASES)} as service_name`)
         );
       tenantScopedDb.tenantJoin(projectTaskQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
       tenantScopedDb.tenantJoin(projectTaskQuery, 'projects as p', 'pp.project_id', 'p.project_id');
+      // One catalog join per level so the name matches the id the COALESCE picked.
+      tenantScopedDb.tenantJoin(projectTaskQuery, 'service_catalog as task_service', 'pt.service_id', 'task_service.service_id', { type: 'left' });
+      tenantScopedDb.tenantJoin(projectTaskQuery, 'service_catalog as phase_service', 'pp.service_id', 'phase_service.service_id', { type: 'left' });
+      tenantScopedDb.tenantJoin(projectTaskQuery, 'service_catalog as project_service', 'p.service_id', 'project_service.service_id', { type: 'left' });
       workItem = await projectTaskQuery.first();
     } else if (workItemType === 'ad_hoc') {
       workItem = await tenantScopedDb.table('schedule_entries as se')
@@ -1088,6 +1109,14 @@ export const getWorkItemById = withAuth(async (
       // Add interaction type for interactions
       if (workItem.type === 'interaction' && workItem.interaction_type) {
         result.interaction_type = workItem.interaction_type;
+      }
+
+      // Effective service (task → phase → project) so the time entry can prefill
+      // it and show where it came from.
+      if (workItem.type === 'project_task' && workItem.service_id) {
+        result.service_id = workItem.service_id;
+        result.service_name = workItem.service_name;
+        result.service_source = workItem.service_source ?? undefined;
       }
 
       // A deal step's detail view is the opportunity it belongs to.

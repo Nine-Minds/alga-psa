@@ -24,7 +24,7 @@ function getLeaf(record: Record<string, unknown>, dottedPath: string): unknown {
 
 describe('ticketing dashboard i18n wiring contract', () => {
   it('T010: wires the dashboard shell and primary filter chrome through features/tickets translations', () => {
-    const source = read('./TicketingDashboard.tsx');
+    const source = read('./TicketingDashboard.tsx') + read('./BulkBundleDialog.tsx');
 
     expect(source).toContain("const { t } = useTranslation('features/tickets');");
     expect(source).toContain("t('dashboard.title', 'Ticketing Dashboard')");
@@ -42,6 +42,35 @@ describe('ticketing dashboard i18n wiring contract', () => {
     expect(source).toContain("t('filters.search', 'Search tickets and comments...')");
     expect(source).toContain("t('resetFilters', 'Reset')");
     expect(source).toContain("t('dashboard.bundledToggle', 'Bundled')");
+  });
+
+  it('T010d: wires the smart search affordance through features/tickets translations', () => {
+    const source = read('./TicketingDashboard.tsx');
+    const en = readJson<Record<string, unknown>>('../../../../server/public/locales/en/features/tickets.json');
+    const pseudo = readJson<Record<string, unknown>>('../../../../server/public/locales/xx/features/tickets.json');
+
+    expect(source).toContain("t('filters.searchSmart', 'Search tickets and comments… Enter for smart search')");
+    expect(source).toContain("t('smartSearch.run', 'Smart search')");
+    expect(source).toContain("t('smartSearch.runTitle', 'Score the filtered tickets against this query')");
+
+    for (const key of [
+      'filters.searchSmart',
+      'smartSearch.run',
+      'smartSearch.strong',
+      'smartSearch.possible',
+      'smartSearch.unlikely',
+      'smartSearch.scoring',
+      'smartSearch.cancel',
+      'smartSearch.exit',
+      'smartSearch.rerun',
+      'smartSearch.unscored',
+      'smartSearch.notConfigured',
+    ]) {
+      expect(typeof getLeaf(en, key), key).toBe('string');
+      const pseudoValue = getLeaf(pseudo, key);
+      expect(typeof pseudoValue, key).toBe('string');
+      expect(pseudoValue as string, key).toMatch(pseudoPattern('xx'));
+    }
   });
 
   it('T010b: wires the View menu chrome through features/tickets translations', () => {
@@ -74,7 +103,7 @@ describe('ticketing dashboard i18n wiring contract', () => {
   });
 
   it('T011: keeps the dashboard shell/bulk chrome backed by xx pseudo-locale strings instead of raw English', () => {
-    const source = read('./TicketingDashboard.tsx');
+    const source = read('./TicketingDashboard.tsx') + read('./BulkBundleDialog.tsx');
     const pseudo = readJson<Record<string, unknown>>('../../../../server/public/locales/xx/features/tickets.json');
 
     const pseudoKeys = [
@@ -89,6 +118,9 @@ describe('ticketing dashboard i18n wiring contract', () => {
       'bulk.move.dialogTitle',
       'bulk.delete.dialogTitle',
       'bulk.bundle.dialogTitle',
+      'bulk.bundle.membersLabel',
+      'bulk.bundle.addTicketSearchPlaceholder',
+      'bulk.bundle.needMoreTickets',
     ];
 
     for (const key of pseudoKeys) {

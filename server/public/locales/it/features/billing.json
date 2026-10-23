@@ -151,7 +151,8 @@
     "tryAgain": "Riprova",
     "backToBilling": "Torna alla fatturazione",
     "retryFailed": "Non è ancora stato possibile avviare il pagamento. Riprova tra un momento.",
-    "loading": "Caricamento..."
+    "loading": "Caricamento...",
+    "offlinePaymentMethod": "Questa fattura si paga con assegno o bonifico bancario, quindi il pagamento online non è disponibile. Segui le istruzioni di pagamento riportate in fattura."
   },
   "quotes": {
     "pendingQuotes": "Preventivi in sospeso",
@@ -240,7 +241,8 @@
     "contractLineType": {
       "Fixed": "Fisso",
       "Hourly": "A ore",
-      "Usage": "A consumo"
+      "Usage": "A consumo",
+      "PrepaidBlock": "Blocco prepagato"
     },
     "quoteStatus": {
       "draft": "Bozza",
@@ -441,6 +443,14 @@
     "hoursLeft": "{{hours}} h rimanenti",
     "expires": "Scade il {{date}}",
     "recentBurn": "Utilizzo recente",
-    "timeEntry": "Inserimento ore"
+    "timeEntry": "Inserimento ore",
+    "contractLabel": "Contratto: {{contract}}"
+  },
+  "bucketUsage": {
+    "contractLine": "Linea contrattuale per pacchetto ore",
+    "usage": "Utilizzo",
+    "hoursUsed": "{{hours}} ore utilizzate",
+    "hoursTotal": "{{hours}} ore totali",
+    "rolloverHours": "Include {{hours}} ore riportate"
   }
 }

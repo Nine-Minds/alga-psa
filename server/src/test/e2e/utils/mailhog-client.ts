@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+import nodemailer, { type Transporter, type SendMailOptions } from 'nodemailer';
 import axios from 'axios';
 
 export interface EmailMessage {
@@ -59,7 +59,7 @@ export class MailHogClient {
     baseUrl: 'http://localhost:8025'
   };
 
-  private transporter: nodemailer.Transporter;
+  private transporter: Transporter;
   private lastTestId: string | null = null;
 
   constructor() {
@@ -78,7 +78,7 @@ export class MailHogClient {
     
     const testId = Date.now().toString();
     
-    const mailOptions: nodemailer.SendMailOptions = {
+    const mailOptions: SendMailOptions = {
       from: emailData.from,
       to: emailData.to,
       subject: emailData.subject,

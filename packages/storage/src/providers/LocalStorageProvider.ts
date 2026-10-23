@@ -18,7 +18,7 @@ export class LocalStorageProvider extends BaseStorageProvider {
     async upload(
         file: Buffer | Readable,
         storagePath: string,
-        options?: { mime_type?: string; metadata?: Record<string, string> }
+        options?: { mime_type?: string; metadata?: Record<string, string>; size?: number }
     ): Promise<UploadResult> {
         try {
             const fullPath = path.join(this.basePath, storagePath);

@@ -15,6 +15,13 @@ function sectionBetween(startMarker: string, endMarker: string): string {
 }
 
 describe('contactActions tenant-scoped query contract', () => {
+  it('rejects a shared mailbox when granting client admin access on the server', () => {
+    expect(source).toContain('assertContactIsNotSharedMailbox(trx, tenant, contactId');
+    // The message is now localized (server-side translation path) rather than
+    // passed as a hardcoded default inside the shared helper.
+    expect(source).toContain("await contactText('errors.contact.sharedMailboxAdmin')");
+  });
+
   it('uses structural tenant scoping for contact deletion roots', () => {
     const cleanupSection = sectionBetween('async function cleanupEntraReferencesBeforeContactDelete', 'export const getContactByContactNameId');
     const deleteSection = sectionBetween('export const deleteContact', 'type ContactFilterStatus');
@@ -31,6 +38,8 @@ describe('contactActions tenant-scoped query contract', () => {
     expect(deleteSection).toContain("tenantScopedTable(trx, 'contact_additional_email_addresses', tenantId)");
     expect(deleteSection).toContain("tenantScopedTable(trx, 'comments', tenantId)");
     expect(deleteSection).toContain("tenantScopedTable(trx, 'portal_invitations', tenantId)");
+    // manager_contact_id / assets.contact_name_id are NO ACTION FKs: cleared via the shared helper before the delete.
+    expect(deleteSection).toContain('clearContactLinksBeforeDelete(trx, tenantId, contactId)');
     expect(deleteSection).toContain("tenantScopedTable(trx, 'rmm_organization_mappings', tenantId)");
     expect(deleteSection).toContain("tenantScopedTable(trx, 'contacts', tenantId)");
     expect(deleteSection).toContain("tenantScopedTable(trx, 'document_block_content', tenantId)");

@@ -34,6 +34,8 @@ function reasonKey(code: ClientPaymentErrorCode): string {
       return 'paymentUnavailable.invoiceUnavailable';
     case 'access_denied':
       return 'paymentUnavailable.accessDenied';
+    case 'offline_payment_method':
+      return 'paymentUnavailable.offlinePaymentMethod';
     default:
       return 'paymentUnavailable.generic';
   }

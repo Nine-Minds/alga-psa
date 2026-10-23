@@ -1,9 +1,20 @@
-import { ReactNode } from 'react';
+import { HTMLAttributes, ReactNode } from 'react';
 
 export interface BaseColumnDefinition<T> {
   title: string | ReactNode;
   dataIndex: string | string[];
+  /**
+   * Column id; defaults to the dataIndex (joined with '_'). Must be unique per table — set it
+   * when two columns read the same field (e.g. an actions column keyed by the row id).
+   */
+  id?: string;
   width?: string;
+  /**
+   * Narrowest width (px or rem) the table may give this column when space is short.
+   * Columns that declare one shrink toward it before any column is hidden.
+   * It also replaces the default 96px floor for that column.
+   */
+  minWidth?: string;
   /** Optional class for header th */
   headerClassName?: string;
   /** Optional class for body td */
@@ -39,6 +50,12 @@ export interface DataTableProps<T> {
   editableConfig?: EditableConfig;
   /** Custom class name for table rows */
   rowClassName?: (record: T) => string;
+  /**
+   * Extra attributes spread onto each row's `<tr>` — drag handlers for a
+   * reorderable table, for instance. The table keeps its own `className` and
+   * row click handler; use `rowClassName` for classes.
+   */
+  rowProps?: (record: T, index: number) => Omit<HTMLAttributes<HTMLTableRowElement>, 'className' | 'onClick'>;
   /** Callback invoked when the set of visible rows (current page) changes */
   onVisibleRowsChange?: (rows: T[]) => void;
   /** Initial sorting configuration */
@@ -49,8 +66,29 @@ export interface DataTableProps<T> {
   sortBy?: string;
   /** Current sort direction for server-side sorting */
   sortDirection?: 'asc' | 'desc';
-  /** Callback invoked when sort configuration changes */
+  /**
+   * Callback invoked when sort configuration changes. With `manualSorting` the
+   * caller owns the sort; without it the table sorts itself and this only reports.
+   */
   onSortChange?: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
+  /**
+   * Controlled column widths in px, keyed by column id. When provided it wins
+   * over the widths the table remembers per `id` in localStorage (which still
+   * record the last-used widths). Omit it to leave widths to the table.
+   */
+  columnSizing?: Record<string, number>;
+  /** Reports every column width change, controlled or not. */
+  onColumnSizingChange?: (columnSizing: Record<string, number>) => void;
+  /**
+   * Controlled column visibility by column id. `false` removes the column
+   * before the auto-fit runs; columns absent from the map stay visible.
+   */
+  columnVisibility?: Record<string, boolean>;
+  /**
+   * Controlled column order by column id. Sparse: listed columns come first in
+   * the given order, unlisted ones follow in their `columns` order.
+   */
+  columnOrder?: string[];
   /** Callback invoked when items per page changes */
   onItemsPerPageChange?: (itemsPerPage: number) => void;
   /**

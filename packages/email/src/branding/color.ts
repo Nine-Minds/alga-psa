@@ -104,3 +104,49 @@ export function rgbaString(hex: string, alpha: number): string {
   if (!rgb) return hex;
   return `rgba(${clampByte(rgb.r)},${clampByte(rgb.g)},${clampByte(rgb.b)},${alpha})`;
 }
+
+/**
+ * Luminance at which white artwork stops out-contrasting black artwork, i.e.
+ * where a surface flips from "dark" to "light" for whatever is drawn on it.
+ * Mirrors packages/ui/src/lib/surfaceColor.ts, which the app shell uses for the
+ * same choice — copied rather than imported so this package keeps resolving for
+ * Node consumers such as the Temporal worker.
+ */
+const LIGHT_SURFACE_LUMINANCE = 0.179;
+
+/** WCAG relative luminance of a hex color; null when it cannot be read. */
+export function relativeLuminance(hex: string | null | undefined): number | null {
+  const rgb = hex ? hexToRgb(hex) : null;
+  if (!rgb) return null;
+
+  const [r, g, b] = [rgb.r, rgb.g, rgb.b].map((channel) => {
+    const scaled = Math.min(Math.max(channel, 0), 255) / 255;
+    return scaled <= 0.03928 ? scaled / 12.92 : ((scaled + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** True when artwork on this surface should be drawn for a dark background. */
+export function isDarkSurface(hex: string | null | undefined): boolean {
+  const luminance = relativeLuminance(hex);
+  return luminance !== null && luminance <= LIGHT_SURFACE_LUMINANCE;
+}
+
+/**
+ * Whether the gradient header of a branded template is a dark surface.
+ *
+ * Judged on the mean of the two stops, which is both the middle of the gradient
+ * and near the flat `bgcolor` the clients that drop `linear-gradient` paint
+ * instead. Single-color mode carries no secondary, so the primary stands alone.
+ */
+export function isDarkEmailHeader(palette: { primary: string; secondary?: string | null }): boolean {
+  const primary = hexToRgb(palette.primary);
+  if (!primary) return false;
+
+  const secondary = palette.secondary ? hexToRgb(palette.secondary) : null;
+  const mean = secondary
+    ? { r: (primary.r + secondary.r) / 2, g: (primary.g + secondary.g) / 2, b: (primary.b + secondary.b) / 2 }
+    : primary;
+
+  return isDarkSurface(rgbToHex(mean));
+}

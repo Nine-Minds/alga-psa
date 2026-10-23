@@ -1,6 +1,7 @@
 import logger from '@alga-psa/core/logger';
 import { runWithTenant } from '@alga-psa/db';
 import { captureTelephonyCallArtifacts } from './telephonyCallArtifactHandler';
+import { runTelephonyAutoTicketTail } from './telephonyPostIngest';
 
 export interface TelephonyCallSubscriptionRenewalJobData extends Record<string, unknown> {
   tenantId: string;
@@ -107,7 +108,7 @@ export async function processTelephonyCallNotification(
       return;
     }
 
-    const { autoCreateTicketForCall, ingestCanonicalCall } = await import('@alga-psa/telephony');
+    const { ingestCanonicalCall } = await import('@alga-psa/telephony');
     const outcome = await ingestCanonicalCall({ tenantId: data.tenantId, call: canonical });
     logger.info('[Telephony] Call notification processed', {
       tenantId: data.tenantId,
@@ -135,26 +136,13 @@ export async function processTelephonyCallNotification(
       });
     }
 
-    if (!outcome.created || outcome.matchStatus !== 'matched') {
-      return;
-    }
-
     // Per-tenant auto-ticket policy, off by default: only a freshly ingested,
-    // confidently matched call may mint a ticket without a human.
-    const provider = await eeModule.getTeamsPhoneProviderState(data.tenantId);
-    if (!provider.autoCreateTickets) {
-      return;
-    }
-
-    const defaults = await eeModule.getTeamsTicketCreationDefaults({ tenantId: data.tenantId });
-    const priorityId = defaults.boardId
-      ? await eeModule.resolveDefaultPriorityIdForBoard(data.tenantId, defaults.boardId)
-      : null;
-
-    await autoCreateTicketForCall({
-      tenantId: data.tenantId,
-      callRecordId: outcome.callRecordId,
-      defaults: { boardId: defaults.boardId, statusId: defaults.statusId, priorityId },
+    // confidently matched call may mint a ticket without a human. The tail is
+    // shared with the 3CX canonical-call handler.
+    await runTelephonyAutoTicketTail(data.tenantId, outcome, {
+      getAutoCreateTickets: async () => (await eeModule.getTeamsPhoneProviderState(data.tenantId)).autoCreateTickets,
+      getTicketDefaults: () => eeModule.getTeamsTicketCreationDefaults({ tenantId: data.tenantId }),
+      getPriorityForBoard: (boardId) => eeModule.resolveDefaultPriorityIdForBoard(data.tenantId, boardId),
     });
   });
 }

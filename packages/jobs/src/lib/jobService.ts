@@ -55,11 +55,10 @@ export interface JobData {
   [key: string]: any;
 }
 
-export type ScheduleType = 'immediate' | 'scheduled' | 'recurring';
+export type ScheduleType = 'immediate' | 'scheduled';
 
 export interface ScheduleOptions {
   runAt?: Date;
-  interval?: string;
 }
 
 export interface JobStatusUpdate {
@@ -127,12 +126,6 @@ export class JobService {
             throw new Error('runAt is required for scheduled jobs');
           }
           scheduledJobId = await scheduler.scheduleScheduledJob(jobName, options.runAt, jobData);
-          break;
-        case 'recurring':
-          if (!options?.interval) {
-            throw new Error('interval is required for recurring jobs');
-          }
-          scheduledJobId = await scheduler.scheduleRecurringJob(jobName, options.interval, jobData);
           break;
       }
 

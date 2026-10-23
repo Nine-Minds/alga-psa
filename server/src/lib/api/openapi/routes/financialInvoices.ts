@@ -1,4 +1,5 @@
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
+import { taxRateListQuerySchema, taxRateListResponseSchema } from '../../schemas/financialSchemas';
 
 export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   const billingAnalyticsTag = 'Billing Analytics';
@@ -791,25 +792,24 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'get',
     path: '/api/v1/financial/tax/rates',
-    summary: 'List financial tax rates (transaction list wiring)',
+    summary: 'List tax rates',
     description:
-      'Route file currently maps to ApiFinancialController.list(), so the response is the generic financial transaction list rather than a tax-rate list.',
+      'Returns tenant-scoped tax rates. cap_amount is a safe integer in currency_code minor units, or null for no cap; zero is intentional. A null currency applies to all invoice currencies, including unresolved legacy caps. Caps apply per rate contribution and per period segment, not to component-based composite calculations. Requires financial:read, billing:read and PSA product access. This route exposes GET only; no tax-rate mutation endpoints are added.',
     tags: [financialTag],
     security: [{ ApiKeyAuth: [] }],
-    request: { query: FinancialListQuery },
+    request: { query: registry.registerSchema('TaxRateListQuery', taxRateListQuerySchema) },
     responses: {
-      200: { description: 'Paginated list returned.', schema: ApiPaginated },
+      200: { description: 'Paginated list returned.', schema: registry.registerSchema('TaxRateListResponse', taxRateListResponseSchema) },
       400: { description: 'Invalid query parameters.', schema: ApiError },
       401: { description: 'API key missing/invalid.', schema: ApiError },
-      403: { description: 'financial:read permission denied.', schema: ApiError },
+      403: { description: 'financial:read, billing:read or PSA product access denied.', schema: ApiError },
       500: { description: 'Unexpected list failure.', schema: ApiError },
     },
     extensions: {
       ...commonExtensions,
       'x-rbac-resource': 'financial',
       'x-rbac-action': 'read',
-      'x-route-to-controller-mismatch': true,
-      'x-controller-method': 'ApiFinancialController.list()',
+      'x-controller-method': 'ApiFinancialController.listTaxRates()',
     },
     edition: 'both',
   });

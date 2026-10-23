@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const TICKET_1 = '00000000-0000-4000-8000-000000000001';
+
 let currentUser: any;
 
 const hasPermissionMock = vi.fn();
@@ -9,7 +11,7 @@ const withTransactionMock = vi.fn();
 // Row the shared Comment model and publication intent read back after insert.
 const storedComment = {
   comment_id: 'comment-1',
-  ticket_id: 'ticket-1',
+  ticket_id: TICKET_1,
   thread_id: 'thread-1',
   user_id: 'user-1',
   note: '[]',
@@ -85,11 +87,18 @@ vi.mock('@alga-psa/formatting/blocknoteUtils', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: (...args: any[]) => publishEventMock(...args),
+  publishStoredWorkflowEvent: (...args: any[]) => publishEventMock(...args),
+  publishWorkflowEvent: vi.fn(),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: (...args: any[]) =>
     maybeReopenBundleMasterFromChildReplyMock(...args),
+  revertBundlePropagationForChild: vi.fn(),
 }));
 
 vi.mock('@alga-psa/tickets/lib/liveUpdates', () => ({
@@ -130,6 +139,10 @@ describe('addClientTicketComment response source metadata', () => {
               return usersBuilder();
             }
 
+            if (table === 'boards') {
+              return { select: async () => [] };
+            }
+
             if (table === 'contacts') {
               return {
                 where: () => ({
@@ -151,7 +164,7 @@ describe('addClientTicketComment response source metadata', () => {
                   return builder;
                 }),
                 first: vi.fn().mockResolvedValue({
-                  ticket_id: 'ticket-1',
+                  ticket_id: TICKET_1,
                   board_id: 'board-1',
                   client_id: 'client-1',
                 }),
@@ -198,7 +211,7 @@ describe('addClientTicketComment response source metadata', () => {
     const { addClientTicketComment } = await import('./client-tickets');
 
     const result = await addClientTicketComment(
-      'ticket-1',
+      TICKET_1,
       '[{"type":"paragraph","content":[{"type":"text","text":"Hello","styles":{}}]}]',
       false,
       false
@@ -233,6 +246,10 @@ describe('addClientTicketComment response source metadata', () => {
               return usersBuilder();
             }
 
+            if (table === 'boards') {
+              return { select: async () => [] };
+            }
+
             if (table === 'contacts') {
               return {
                 where: () => ({
@@ -254,7 +271,7 @@ describe('addClientTicketComment response source metadata', () => {
                   return builder;
                 }),
                 first: vi.fn().mockResolvedValue({
-                  ticket_id: 'ticket-1',
+                  ticket_id: TICKET_1,
                   board_id: 'board-1',
                   client_id: 'client-1',
                 }),
@@ -301,7 +318,7 @@ describe('addClientTicketComment response source metadata', () => {
     const { addClientTicketComment } = await import('./client-tickets');
 
     const result = await addClientTicketComment(
-      'ticket-1',
+      TICKET_1,
       '[{"type":"paragraph","content":[{"type":"text","text":"Hello","styles":{}}]}]',
       true,
       false
@@ -321,6 +338,10 @@ describe('addClientTicketComment response source metadata', () => {
           (table: string) => {
             if (table === 'users') {
               return usersBuilder();
+            }
+
+            if (table === 'boards') {
+              return { select: async () => [] };
             }
 
             if (table === 'contacts') {
@@ -344,7 +365,7 @@ describe('addClientTicketComment response source metadata', () => {
                   return builder;
                 }),
                 first: vi.fn().mockResolvedValue({
-                  ticket_id: 'ticket-1',
+                  ticket_id: TICKET_1,
                   board_id: 'board-1',
                   client_id: 'client-1',
                 }),
@@ -360,7 +381,7 @@ describe('addClientTicketComment response source metadata', () => {
                     return {
                       first: vi.fn().mockResolvedValue({
                         comment_id: 'comment-1',
-                        ticket_id: 'ticket-1',
+                        ticket_id: TICKET_1,
                         user_id: 'user-1',
                       }),
                     };

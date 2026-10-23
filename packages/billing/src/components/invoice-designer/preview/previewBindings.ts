@@ -3,6 +3,7 @@ import { evaluateTemplateAst } from '../../../lib/invoice-template-ast/evaluator
 import { buildInvoiceTemplateBindings } from '../../../lib/invoice-template-ast/standardTemplates';
 import type { TemplateAst, TemplateNode } from '@alga-psa/types';
 import type { TemplateFieldDisplayFormat, WasmInvoiceViewModel } from '@alga-psa/types';
+import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import {
   formatTemplateFieldValue,
   normalizeFieldFormat as normalizeTemplateFieldFormat,
@@ -21,6 +22,7 @@ const flattenInvoiceBindingMap = (invoice: WasmInvoiceViewModel): Record<string,
   'invoice.issueDate': invoice.issueDate,
   'invoice.dueDate': invoice.dueDate,
   'invoice.poNumber': invoice.poNumber,
+  'invoice.paymentMethod': invoice.paymentMethod,
   'invoice.subtotal': invoice.subtotal,
   'invoice.tax': invoice.tax,
   'invoice.total': invoice.total,
@@ -91,13 +93,15 @@ export const formatBoundValue = (
   value: unknown,
   format: unknown,
   currencyCode: string,
-  locale?: string
+  locale?: string,
+  dateFormat?: CountryDateFormat
 ): string | null =>
   formatTemplateFieldValue({
     value,
     format,
     currencyCode,
     locale,
+    dateFormat,
   }).text;
 
 export const resolveFieldPreviewValue = (params: {
@@ -106,6 +110,8 @@ export const resolveFieldPreviewValue = (params: {
   format: unknown;
   displayFormat?: TemplateFieldDisplayFormat | null;
   locale?: string;
+  /** The recipient country's date shape; the fixed system default when omitted. */
+  dateFormat?: CountryDateFormat;
   scope?: Record<string, unknown>;
 }): { text: string | null; multiline: boolean } => {
   const raw = resolveInvoiceBindingRawValue(params.invoice, params.bindingKey, params.scope);
@@ -116,6 +122,7 @@ export const resolveFieldPreviewValue = (params: {
     value: raw,
     format: params.format,
     locale: params.locale,
+    dateFormat: params.dateFormat,
     currencyCode: params.invoice?.currencyCode ?? 'USD',
     displayFormat: supportsAddressDisplayFormat(params.bindingKey) ? params.displayFormat : undefined,
   });

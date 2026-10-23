@@ -46,6 +46,7 @@ interface Task {
   project_status_mapping_id: string;
   task_name?: string;
   description?: string;
+  start_date?: Date | null;
   due_date?: Date | null;
   status_name?: string;
   custom_name?: string;

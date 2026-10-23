@@ -13,6 +13,7 @@ import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { boardActionErrorFrom, type BoardActionError } from './boardActionErrors';
 import { parseTicketViewSettings } from './boardViewSettingsSchema';
 import { ticketSlaBreachedBindings, ticketSlaBreachedSql } from '../../lib/ticketSlaSql';
+import { normalizeBoardStopwatchSetting, resolveBoardStopwatchEnabled } from '../../lib/boardLiveTicketTimer';
 import type { TicketViewSettings } from '../../lib/ticketViewSettings';
 import { permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -31,17 +32,6 @@ export interface CreateBoardInput extends Omit<IBoard, 'board_id' | 'tenant'> {
 
 export interface UpdateBoardInput extends Partial<Omit<IBoard, 'tenant'>> {
   ticket_statuses?: BoardTicketStatusInput[];
-}
-
-function normalizeBoardLiveTimerSetting<T extends Record<string, any>>(board: T): T {
-  if (!board || board.enable_live_ticket_timer !== null && board.enable_live_ticket_timer !== undefined) {
-    return board;
-  }
-
-  return {
-    ...board,
-    enable_live_ticket_timer: true,
-  };
 }
 
 function stripStatusIdsForNewBoard(
@@ -141,6 +131,7 @@ export async function copyBoardTicketStatuses(
     ...(hasStatusColumn('is_custom') ? { is_custom: status.is_custom } : {}),
     ...(hasStatusColumn('color') ? { color: status.color || null } : {}),
     ...(hasStatusColumn('icon') ? { icon: status.icon || null } : {}),
+    ...(hasStatusColumn('portal_selectable') ? { portal_selectable: status.portal_selectable ?? true } : {}),
     ...(hasStatusColumn('created_at') ? { created_at: status.created_at || now } : {}),
     ...(hasStatusColumn('updated_at') ? { updated_at: now } : {}),
   }));
@@ -154,7 +145,7 @@ export const findBoardById = withAuth(async (_user, { tenant }, id: string): Pro
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const board = await Board.get(trx, tenant, id);
-      return board ? normalizeBoardLiveTimerSetting(board) : board;
+      return board ? normalizeBoardStopwatchSetting(board) : board;
     });
   } catch (error) {
     const expected = boardActionErrorFrom(error);
@@ -174,7 +165,7 @@ export const getAllBoards = withAuth(async (_user, { tenant }, includeAll: boole
         .where(includeAll ? {} : { is_inactive: false })
         .orderBy('display_order', 'asc')
         .orderBy('board_name', 'asc');
-      return boards.map(normalizeBoardLiveTimerSetting);
+      return boards.map((board) => normalizeBoardStopwatchSetting(board));
     });
   } catch (error) {
     console.error('Failed to fetch boards:', error);
@@ -406,7 +397,8 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
           inbound_reply_reopen_cutoff_hours: boardData.inbound_reply_reopen_cutoff_hours ?? 168,
           inbound_reply_reopen_status_id: boardData.inbound_reply_reopen_status_id || null,
           inbound_reply_ai_ack_suppression_enabled: boardData.inbound_reply_ai_ack_suppression_enabled ?? false,
-          enable_live_ticket_timer: boardData.enable_live_ticket_timer ?? true,
+          enable_live_ticket_timer: resolveBoardStopwatchEnabled(boardData.enable_live_ticket_timer),
+          client_portal_visible: boardData.client_portal_visible ?? true,
           // A new board is pinned by default: it was just created deliberately,
           // so it earns a tab until an admin decides otherwise. list_view_settings
           // starts NULL — a new board inherits the tenant view rather than
@@ -466,7 +458,7 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
         },
       });
 
-      return normalizeBoardLiveTimerSetting(newBoard);
+      return normalizeBoardStopwatchSetting(newBoard);
     });
   } catch (error) {
     const expected = boardActionErrorFrom(error);
@@ -512,6 +504,13 @@ async function cleanupBoardStatuses(
   // 2. Remove SLA pause config rows that reference these statuses
   await tenantScopedTable('status_sla_pause_config')
     .whereIn('status_id', statusIds)
+    .delete();
+
+  // 2b. Remove the board's notification rules: their status rows reference these
+  // statuses with no cascade, so they would block step 3. Recipients and rule
+  // statuses cascade from the rule rows; the board is going away with them.
+  await tenantScopedTable('board_notification_rules')
+    .where({ board_id: boardId })
     .delete();
 
   // 3. Delete the statuses themselves
@@ -851,6 +850,22 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
         throw new Error('Board not found');
       }
 
+      // updateBoard is a second write path to the same two columns that
+      // saveBoardDefaultView/clearBoardDefaultView guard, and it is a write path
+      // to the board's ticket statuses (including portal_selectable). It has to
+      // enforce the same permission or the gates on those actions are
+      // decorative and a client-portal caller could re-enable a restricted
+      // status. Checked before ANY board or status mutation, including the
+      // unset-other-defaults step below.
+      const touchesViewConfig = 'is_pinned' in boardData || 'list_view_settings' in boardData;
+      const touchesTicketStatusConfig = Array.isArray(boardData.ticket_statuses);
+      if (
+        (touchesViewConfig || touchesTicketStatusConfig) &&
+        !await hasPermission(user, 'ticket_settings', 'update', trx)
+      ) {
+        throw new Error('Permission denied: Cannot update ticket settings');
+      }
+
       // If setting as default, unset all other defaults first
       if (boardData.is_default === true) {
         await tenantScopedTable('boards')
@@ -893,20 +908,13 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
         );
       }
       if ('enable_live_ticket_timer' in sanitizedData) {
-        sanitizedData.enable_live_ticket_timer = sanitizedData.enable_live_ticket_timer ?? true;
+        sanitizedData.enable_live_ticket_timer = resolveBoardStopwatchEnabled(sanitizedData.enable_live_ticket_timer);
+      }
+      if ('client_portal_visible' in sanitizedData) {
+        sanitizedData.client_portal_visible = sanitizedData.client_portal_visible ?? true;
       }
       if ('is_pinned' in sanitizedData) {
         sanitizedData.is_pinned = Boolean(sanitizedData.is_pinned);
-      }
-
-      // updateBoard is a second write path to the same two columns that
-      // saveBoardDefaultView/clearBoardDefaultView guard, so it has to enforce
-      // the same permission — otherwise the gate on those actions is decorative.
-      // Scoped to the new fields deliberately: this action's existing lack of a
-      // permission check covers pre-existing fields and is its own change.
-      const touchesViewConfig = 'is_pinned' in sanitizedData || 'list_view_settings' in sanitizedData;
-      if (touchesViewConfig && !await hasPermission(user, 'ticket_settings', 'update', trx)) {
-        throw new Error('Permission denied: Cannot update ticket settings');
       }
 
       const { ticket_statuses: ticketStatuses, list_view_settings: listViewSettings, ...rest } =
@@ -970,7 +978,7 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
         },
       });
 
-      return normalizeBoardLiveTimerSetting(updatedBoard);
+      return normalizeBoardStopwatchSetting(updatedBoard);
     });
   } catch (error) {
     const expected = boardActionErrorFrom(error);

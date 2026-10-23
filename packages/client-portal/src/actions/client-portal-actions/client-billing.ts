@@ -4,6 +4,7 @@
 
 import { getConnection, createTenantKnex, withTransaction, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { toCalendarDateString, toCalendarDateStringInTimeZone } from '@alga-psa/core';
+import { buildDocumentFileName } from '@alga-psa/core/fileNames';
 import { Knex } from 'knex';
 import {
   IClientContractLine,
@@ -233,6 +234,7 @@ export const getClientContractLine = withAuth(async (user, { tenant }): Promise<
       const planQuery = scopedDb.table('client_contracts as cc')
         .where({
           'cc.client_id': clientId,
+          'cc.is_active': true,
         })
         .select(
           'cl.contract_line_id',
@@ -243,12 +245,17 @@ export const getClientContractLine = withAuth(async (user, { tenant }): Promise<
           'cl.service_category',
           'cl.custom_rate',
           'cl.contract_id',
+          'cl.is_active',
           'cl.tenant',
           'cc.client_id',
           'cc.start_date',
           'cc.end_date',
           'sc.category_name as service_category_name'
         )
+        .orderBy([
+          { column: 'cl.is_active', order: 'desc' },
+          { column: 'cc.start_date', order: 'desc' },
+        ])
         .first();
       scopedDb.tenantJoin(planQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');
       scopedDb.tenantJoin(planQuery, 'contract_lines as cl', 'c.contract_id', 'cl.contract_id');
@@ -852,6 +859,7 @@ export interface DownloadPdfResult {
   fileId?: string;
   pdfData?: number[];
   invoiceNumber?: string;
+  fileName?: string;
   error?: string;
 }
 
@@ -1215,13 +1223,18 @@ export const downloadClientQuotePdf = withAuth(async (
       })
       .whereNotNull('d.file_id')
       .orderBy('da.created_at', 'desc')
-      .select('d.file_id')
-      .first<{ file_id: string } | undefined>();
+      .select('d.file_id', 'd.document_name')
+      .first<{ file_id: string; document_name: string } | undefined>();
     scopedDb.tenantJoin(docQuery, 'documents as d', 'da.document_id', 'd.document_id');
     const doc = await docQuery;
 
-    if (doc?.file_id) {
-      return { success: true, fileId: doc.file_id };
+    const expectedFileName = buildDocumentFileName(quote.title, `Quote_${quote.quote_number ?? quote.quote_id}`);
+    if (doc?.file_id && doc.document_name === expectedFileName) {
+      return {
+        success: true,
+        fileId: doc.file_id,
+        fileName: expectedFileName,
+      };
     }
 
     // No stored PDF yet — generate one on the fly
@@ -1233,7 +1246,11 @@ export const downloadClientQuotePdf = withAuth(async (
       userId: user.user_id,
     });
 
-    return { success: true, fileId: fileRecord.file_id };
+    return {
+      success: true,
+      fileId: fileRecord.file_id,
+      fileName: expectedFileName,
+    };
   } catch (error) {
     const expected = billingActionErrorFrom(error);
     if (expected) {
@@ -1343,6 +1360,8 @@ export interface ClientPortalHourBlock {
   expiration_date: string | null;
   status: string;
   currency_code: string | null;
+  /** Owning contract's name for contract-issued (Prepaid Block) blocks; null for ad-hoc blocks. */
+  contract_name: string | null;
   expiring_soon_days: number | null;
 }
 
@@ -1352,10 +1371,14 @@ export interface ClientPortalHourBlockBurnEntry {
   hours: number;
   entry_date: string | null;
   work_item_title: string | null;
+  /** Owning contract's name when the drawn block is contract-issued; null otherwise. */
+  contract_name: string | null;
 }
 
 /**
- * The signed-in client's hour blocks (active or expiring), newest first. Rows
+ * The signed-in client's active hour blocks (non-zero balance, including those
+ * expiring soon), oldest purchase first. Contract-issued blocks carry the owning
+ * contract's name; pending blocks (draft invoice) are never shown. Rows
  * are scoped to the portal user's client and gated by the client billing read
  * permission. No cross-client or MSP-internal fields leak through.
  */
@@ -1383,6 +1406,8 @@ export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<Cl
       const today = toCalendarDateStringInTimeZone(new Date(), timeZone);
       const query = db.table('hour_blocks as hb');
       db.tenantJoin(query, 'service_catalog as sc', 'hb.service_id', 'sc.service_id', { type: 'left' });
+      db.tenantJoin(query, 'contract_lines as cl', 'hb.contract_line_id', 'cl.contract_line_id', { type: 'left' });
+      db.tenantJoin(query, 'contracts as ct', 'cl.contract_id', 'ct.contract_id', { type: 'left' });
       const rows = await query
         .where({ 'hb.client_id': clientId, 'hb.status': 'active' })
         .where('hb.remaining_minutes', '>', 0)
@@ -1394,6 +1419,7 @@ export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<Cl
           'hb.status',
           'hb.currency_code',
           { service_name: 'sc.service_name' },
+          { contract_name: 'ct.contract_name' },
         )
         .orderBy('hb.purchased_at', 'asc')
         .orderBy('hb.created_at', 'asc');
@@ -1426,6 +1452,7 @@ export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<Cl
           expiration_date: expirationDate,
           status: String(row.status),
           currency_code: (row.currency_code as string) ?? null,
+          contract_name: (row.contract_name as string | null) ?? null,
           expiring_soon_days: expiringSoonDays,
         };
       });
@@ -1465,9 +1492,14 @@ export const getClientHourBlockBurnHistory = withAuth(async (user, { tenant }): 
       db.tenantJoin(query, 'time_entries as te', 'hba.time_entry_id', 'te.entry_id', { type: 'left' });
       db.tenantJoin(query, 'tickets as tk', 'te.work_item_id', 'tk.ticket_id', { type: 'left' });
       db.tenantJoin(query, 'project_tasks as pt', 'te.work_item_id', 'pt.task_id', { type: 'left' });
+      db.tenantJoin(query, 'contract_lines as cl', 'hb.contract_line_id', 'cl.contract_line_id', { type: 'left' });
+      db.tenantJoin(query, 'contracts as ct', 'cl.contract_id', 'ct.contract_id', { type: 'left' });
       const rows = await query
         .where({ 'hb.client_id': clientId })
+        // Pending blocks (draft invoice) hold allocations that clients must not see yet.
+        .whereNot({ 'hb.status': 'pending' })
         .select(
+          'ct.contract_name',
           'hba.allocation_id',
           'hba.minutes',
           'hba.created_at',
@@ -1484,6 +1516,7 @@ export const getClientHourBlockBurnHistory = withAuth(async (user, { tenant }): 
         hours: Math.round((Number(row.minutes ?? 0) / 60) * 10) / 10,
         entry_date: toCalendarDateString(row.work_date as string | Date | null),
         work_item_title: (row.ticket_title as string) ?? (row.task_title as string) ?? null,
+        contract_name: (row.contract_name as string | null) ?? null,
       }));
     });
   } catch (error) {

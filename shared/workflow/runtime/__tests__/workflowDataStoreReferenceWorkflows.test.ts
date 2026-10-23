@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { workflowEventPayloadSchemas } from '../schemas/workflowEventPayloadSchemas';
+import { workflowEventPayloadSchemas } from '@alga-psa/event-schemas';
 
 type ReferenceStep = {
   id?: string;
