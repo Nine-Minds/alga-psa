@@ -27,6 +27,11 @@ import {
 } from './microsoftShared';
 import { invalidateEntraDirectConnectionOnRebind } from '../../lib/entraBindingInvalidation';
 import { computeEntraCallbackUrl } from '@alga-psa/shared/services/entra/entraCallbackUrl';
+import {
+  buildMicrosoftCalendarRedirectUri,
+  buildMicrosoftEmailRedirectUri,
+  buildMicrosoftEmailSetupRedirectUri,
+} from '@alga-psa/shared/services/email/microsoftRedirectUris';
 import { resolveMicrosoftBindingCandidateProfile } from '../../lib/microsoftConsumerProfileResolution';
 import {
   backfillMicrosoftEmailProviderIssuerMetadata,
@@ -170,6 +175,7 @@ export interface MicrosoftProfileStatusResponse {
   redirectUris?: {
     sso: string;
     email?: string;
+    emailSetup?: string;
     calendar?: string;
     teamsTab?: string;
     teamsBot?: string;
@@ -801,8 +807,9 @@ function getMicrosoftIntegrationMetadata(baseUrl: string): NonNullable<
 > {
   return {
     redirectUris: {
-      email: `${baseUrl}/api/auth/microsoft/callback`,
-      calendar: `${baseUrl}/api/auth/microsoft/calendar/callback`,
+      email: buildMicrosoftEmailRedirectUri(baseUrl),
+      emailSetup: buildMicrosoftEmailSetupRedirectUri(baseUrl),
+      calendar: buildMicrosoftCalendarRedirectUri(baseUrl),
       sso: `${baseUrl}/api/auth/callback/azure-ad`,
       teamsTab: `${baseUrl}/api/teams/auth/callback/tab`,
       teamsBot: `${baseUrl}/api/teams/auth/callback/bot`,
@@ -843,7 +850,7 @@ function getVisibleMicrosoftIntegrationMetadata(
   return {
     redirectUris: {
       sso: redirectUris.sso,
-      ...(visibleConsumers.has('email') ? { email: redirectUris.email } : {}),
+      ...(visibleConsumers.has('email') ? { email: redirectUris.email, emailSetup: redirectUris.emailSetup } : {}),
       ...(visibleConsumers.has('calendar') ? { calendar: redirectUris.calendar } : {}),
       ...(visibleConsumers.has('teams')
         ? {
@@ -1248,8 +1255,8 @@ export async function getMicrosoftEmailSetupMetadataInternal(): Promise<{
   const baseUrl = await getDeploymentBaseUrl();
   return {
     baseUrl,
-    mailboxRedirectUri: `${baseUrl}/api/auth/microsoft/callback`,
-    setupRedirectUri: `${baseUrl}/api/auth/microsoft/email-setup/callback`,
+    mailboxRedirectUri: buildMicrosoftEmailRedirectUri(baseUrl),
+    setupRedirectUri: buildMicrosoftEmailSetupRedirectUri(baseUrl),
     returnTo: `${baseUrl}/msp/settings/integrations?category=providers`,
   };
 }
