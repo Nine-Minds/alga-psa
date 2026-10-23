@@ -45,6 +45,7 @@ import type { JSX } from 'react';
 import { v4 as uuidv4, v5 as uuidv5 } from 'uuid';
 import { PlusIcon, MinusCircleIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRouter } from 'next/navigation';
@@ -202,7 +203,7 @@ const AutomatedItemsTable: React.FC<{
   currencyCode?: string;
 }> = ({ items, currencyCode = 'USD' }) => {
   const { t } = useTranslation('msp/invoicing');
-  const { formatCurrency } = useFormatters();
+  const { locale } = useFormatters();
   console.log('[Render] Rendering automated items table:', {
     count: items.length,
     items: items.map(item => ({
@@ -248,7 +249,7 @@ const AutomatedItemsTable: React.FC<{
               </td>
               {/* Display total_price */}
               <td className={`text-right ${item.isDiscount ? 'text-[rgb(var(--color-text-600))]' : ''}`}>
-                {formatCurrency(item.total / 100, currencyCode)}
+                {formatCurrencyFromMinorUnits(item.total, locale, currencyCode)}
               </td>
             </tr>
           ))}
