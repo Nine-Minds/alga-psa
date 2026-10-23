@@ -53,6 +53,8 @@
   },
   "status": {
     "active": "Actief",
+    "scheduled": "Gepland",
+    "startsOn": "Begint op {{date}}",
     "draft": "Voorlopige versie",
     "expired": "Verlopen",
     "terminated": "Beëindigd"
@@ -177,6 +179,7 @@
     },
     "headerCard": {
       "assignmentLifecycleHint": "De live klantstatus wordt beheerd door de onderstaande toewijzingslevenscyclus.",
+      "scheduledExplanation": "Dit contract is actief en begint met factureren op {{date}}.",
       "assignmentStatus": "Toewijzingsstatus",
       "billingFrequencyLabel": "Factureerfrequentie *",
       "billingFrequencyPlaceholder": "Selecteer factureerfrequentie",
@@ -298,6 +301,7 @@
     },
     "status": {
       "active": "Actief",
+      "scheduled": "Gepland",
       "draft": "Concept",
       "expired": "Verlopen",
       "terminated": "Beëindigd"
@@ -612,6 +616,7 @@
       "quantityShort": "Aantal: {{quantity}}",
       "quantityTaxAllocation": "Hoeveelheid (voor belastingtoewijzing)",
       "rateTaxAllocation": "Tarief (voor belastingtoewijzing)",
+      "shareOfLineFee": "Aandeel in het regeltarief",
       "title": "Services ({{count}})",
       "typeLabel": "{{type}}-service",
       "unitOfMeasure": "Meeteenheid",

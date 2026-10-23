@@ -15,6 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import {
   deriveClientContractStatus,
+  getTenantLocalToday,
   checkAndReactivateExpiredContract as checkAndReactivateExpiredContractShared,
 } from '@alga-psa/shared/billingClients';
 
@@ -345,8 +346,10 @@ const Contract = {
         )
         .orderBy('cc.created_at', 'desc');
 
+      const tenantToday = await getTenantLocalToday(knexOrTrx, tenant);
       return rows.map((row: any) => {
         const assignmentStatus = deriveClientContractStatus({
+          now: tenantToday,
           isActive: Boolean(row.assignment_is_active),
           startDate: row.start_date,
           endDate: row.end_date,

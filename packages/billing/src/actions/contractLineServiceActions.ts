@@ -462,12 +462,23 @@ async function addServiceToLiveContractLine(
     }
   }
 
-  const { configurationType, typeConfig: resolvedTypeConfig } = resolveContractLineServiceConfig(
+  const { configurationType, typeConfig: policyTypeConfig } = resolveContractLineServiceConfig(
     contractLine.contract_line_type,
     configType,
     service,
     typeConfig,
   );
+
+  let resolvedTypeConfig = policyTypeConfig;
+  if (configurationType === 'Fixed') {
+    // A stored fixed-member rate states its meaning. A per-unit service is
+    // always per_unit; a bundle member's caller must say (the shared add-service
+    // UIs snapshot a catalog unit price, so they stamp per_unit).
+    const fixedTypeConfig = resolvedTypeConfig as Partial<IContractLineServiceFixedConfig>;
+    if (fixedTypeConfig.base_rate != null && fixedTypeConfig.base_rate_basis == null && fixedTypeConfig.pricing_basis === 'unit') {
+      resolvedTypeConfig = { ...fixedTypeConfig, base_rate_basis: 'per_unit' };
+    }
+  }
 
   const existingMembership = await tenantScopedTable(trx, tenant, 'contract_line_services')
     .where({ contract_line_id: contractLineId, service_id: serviceId })

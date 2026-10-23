@@ -53,6 +53,8 @@
   },
   "status": {
     "active": "⟦Ȧƈŧīṽḗ⟧",
+    "scheduled": "⟦Şƈħḗḓŭŀḗḓ⟧",
+    "startsOn": "⟦Şŧȧřŧş {{date}}⟧",
     "draft": "⟦Ḓřȧƒŧ⟧",
     "expired": "⟦Ḗẋƥīřḗḓ⟧",
     "terminated": "⟦Ŧḗřḿīƞȧŧḗḓ⟧"
@@ -177,6 +179,7 @@
     },
     "headerCard": {
       "assignmentLifecycleHint": "⟦Ŀīṽḗ ƈŀīḗƞŧ şŧȧŧŭş īş ƈȯƞŧřȯŀŀḗḓ ƀẏ ŧħḗ ȧşşīɠƞḿḗƞŧ ŀīƒḗƈẏƈŀḗ ƀḗŀȯẇ.⟧",
+      "scheduledExplanation": "⟦Ŧħīş ƈȯƞŧřȧƈŧ īş ȧƈŧīṽḗ ȧƞḓ ƀḗɠīƞş ƀīŀŀīƞɠ ȯƞ {{date}}.⟧",
       "assignmentStatus": "⟦Ȧşşīɠƞḿḗƞŧ Şŧȧŧŭş⟧",
       "billingFrequencyLabel": "⟦Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ *⟧",
       "billingFrequencyPlaceholder": "⟦Şḗŀḗƈŧ ƀīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ⟧",
@@ -298,6 +301,7 @@
     },
     "status": {
       "active": "⟦Ȧƈŧīṽḗ⟧",
+      "scheduled": "⟦Şƈħḗḓŭŀḗḓ⟧",
       "draft": "⟦Ḓřȧƒŧ⟧",
       "expired": "⟦Ḗẋƥīřḗḓ⟧",
       "terminated": "⟦Ŧḗřḿīƞȧŧḗḓ⟧"
@@ -612,6 +616,7 @@
       "quantityShort": "⟦Ɋŧẏ: {{quantity}}⟧",
       "quantityTaxAllocation": "⟦Ɋŭȧƞŧīŧẏ (ƒȯř ŧȧẋ ȧŀŀȯƈȧŧīȯƞ)⟧",
       "rateTaxAllocation": "⟦Řȧŧḗ (ƒȯř ŧȧẋ ȧŀŀȯƈȧŧīȯƞ)⟧",
+      "shareOfLineFee": "⟦Şħȧřḗ ȯƒ ŀīƞḗ ƒḗḗ⟧",
       "title": "⟦Şḗřṽīƈḗş ({{count}})⟧",
       "typeLabel": "⟦{{type}} Şḗřṽīƈḗ⟧",
       "unitOfMeasure": "⟦Ŭƞīŧ ȯƒ Ḿḗȧşŭřḗ⟧",
