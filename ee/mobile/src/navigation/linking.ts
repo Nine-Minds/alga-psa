@@ -113,7 +113,7 @@ function rejectUrl(url: string, message: string): void {
 }
 
 export const linking: LinkingOptions<RootStackParamList> = {
-  prefixes: [EXPO_PREFIX, "alga://", "https://algapsa.com"],
+  prefixes: [EXPO_PREFIX, "alga://"],
   getInitialURL: async () => {
     if (pendingUrl && signedIn) {
       const url = pendingUrl;

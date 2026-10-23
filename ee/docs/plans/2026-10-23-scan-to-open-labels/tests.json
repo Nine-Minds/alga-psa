@@ -11,7 +11,7 @@
   },
   {
     "id": "T003",
-    "description": "linking.ts normalisation and regression of notification deep link",
+    "description": "linking.ts normalisation and regression of notification deep link (adds push-notification alga://ticket url + no algapsa.com prefix)",
     "implemented": true
   },
   {

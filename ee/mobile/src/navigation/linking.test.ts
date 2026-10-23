@@ -68,6 +68,19 @@ describe("hosted ticket links", () => {
     }
   });
 
+  it("still opens TicketDetail for the push notification url (alga://ticket/:id)", async () => {
+    // Shape produced by server/src/lib/pushNotifications/expoPushService.ts.
+    const url = "alga://ticket/541b5b63-9e14-47b6-a8f0-0b664f079ed4";
+    const ExpoLinking = await import("expo-linking");
+    (ExpoLinking.getInitialURL as any).mockResolvedValueOnce(url);
+    vi.resetModules();
+    const { linking, setDeepLinkSignedIn } = await import("./linking");
+    setDeepLinkSignedIn(true);
+    await expect(linking.getInitialURL?.()).resolves.toBe(url);
+    expect((linking as any).config.screens.TicketDetail).toBe("ticket/:ticketId");
+    expect((linking as any).prefixes).not.toContain("https://algapsa.com");
+  });
+
   it("opens a hosted ticket link directly when signed in", async () => {
     const ExpoLinking = await import("expo-linking");
     const url = "https://algapsa.com/msp/tickets/541b5b63-9e14-47b6-a8f0-0b664f079ed4";
