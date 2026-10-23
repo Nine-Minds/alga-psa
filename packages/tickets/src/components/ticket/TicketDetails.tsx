@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } fr
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getUserTimeZone } from '@alga-psa/core';
+import { deriveWorkReason } from '../../lib/deriveWorkReason';
 import { formatTicketDateTime, formatTicketRelativeToNow } from '../../lib/ticketDateTimeFormat';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
@@ -565,6 +566,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         ticket.subcategory_id,
         ticket.priority_id,
     ]);
+
+    // Reason prefill: subcategory name, else category name (same rule as the server provider). The dialog
+    // sends an override only if the user edits the field.
+    const printWorkReason = useMemo(() => {
+        const nameOf = (categoryId?: string | null) =>
+            categoryId ? initialCategories.find((c) => c.category_id === categoryId)?.category_name : undefined;
+        return deriveWorkReason(nameOf(ticket.subcategory_id), nameOf(ticket.category_id)) ?? '';
+    }, [initialCategories, ticket.category_id, ticket.subcategory_id]);
 
     const checklistSummary = useMemo(
         () => summarizeChecklist(checklistItems ?? []),
@@ -4761,6 +4770,7 @@ const handleClose = () => {
                     labelClass="ticket-work-tag"
                     ids={[ticket.ticket_id as string]}
                     defaultTitle={ticket.title ?? ''}
+                    defaultDetail={printWorkReason}
                     idPrefix={`${id}-print-work-tag`}
                 />
             )}

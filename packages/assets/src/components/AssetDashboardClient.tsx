@@ -88,7 +88,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { MAX_LABELS_PER_REQUEST } from '@alga-psa/types';
-import { LabelPrintDialog } from '@alga-psa/ui/components';
+import { LabelPrintDialog } from '@alga-psa/ui/components/labels/LabelPrintDialog';
 import { useListViews } from '@alga-psa/list-views/hooks';
 import { ListViewPicker } from '@alga-psa/list-views/components';
 import {

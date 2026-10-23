@@ -7,6 +7,7 @@ import {
   type LabelViewModelProvider,
 } from '@alga-psa/types';
 
+import { deriveWorkReason } from './deriveWorkReason';
 import { authorizeTicketRecordAccess } from './ticketRecordAuthorization';
 
 /**
@@ -24,13 +25,7 @@ import { authorizeTicketRecordAccess } from './ticketRecordAuthorization';
  * record-level check, and tickets must not import assets; the composition root merges those parts.
  */
 
-/** Subcategory if set, else category, else null. */
-export function deriveWorkReason(subcategoryName: string | null | undefined, categoryName: string | null | undefined): string | null {
-  const sub = subcategoryName?.trim();
-  if (sub) return sub;
-  const cat = categoryName?.trim();
-  return cat ? cat : null;
-}
+export { deriveWorkReason };
 
 const NOT_VISIBLE = /^(Ticket not found|Permission denied)/;
 

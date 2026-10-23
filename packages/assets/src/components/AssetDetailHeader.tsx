@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { PrintButton } from '@alga-psa/ui/components/PrintButton';
-import { LabelPrintDialog } from '@alga-psa/ui/components';
+import { LabelPrintDialog } from '@alga-psa/ui/components/labels/LabelPrintDialog';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';

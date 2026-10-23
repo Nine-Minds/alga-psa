@@ -1,38 +1,85 @@
 /**
  * alga-2026-0002683 C2 - T-noside: printing labels writes nothing and publishes nothing.
  *
- * Runs the real composition (`printLabels` with the real ticket / asset providers, the linked-asset
- * merge and the template resolver) against a seeded database, with a knex query listener that fails on
- * any statement that is not a SELECT, and before/after row counts + max(updated_at) for every table a
- * print could plausibly touch (stock, billing, time, assets, tickets, documents).
+ * Everything is real except the Puppeteer page-to-PDF step: real RBAC and record-level authorization, real
+ * providers, real linked-asset query, real template resolution, and the real tenant-party + logo read path
+ * of `labelPdfService` (the logo is a stored file read back through the local storage provider and inlined
+ * as a data URL into the HTML that the stubbed browser receives).
  *
- * Needs a seeded Postgres (createTestDbConnection) with at least one ticket and one asset in a tenant.
- * It FAILS (does not skip) if the fixtures are missing.
+ * Every knex instance the code under test opens is listened on: the `knex` factory is wrapped so each
+ * instance created through it (tenant pool, admin pool, connection helper) records its statements, and the
+ * test's own pool points at the same throwaway database through DB_NAME_SERVER. The test FAILS if no
+ * statement was observed on any of them, and fails on any statement that is not a read.
+ *
+ * Fixtures are seeded inside the test (labelsFixtures.ts); nothing relies on the first row of a table.
  */
+import os from 'node:os';
+import path from 'node:path';
+import fs from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { asRequest, buildRealLabelDeps, seedLabelWorld, type LabelWorld } from './labelsFixtures';
 
+const env = vi.hoisted(() => {
+  const dir = `${process.env.TMPDIR ?? '/tmp'}/c2-label-storage-${process.pid}`;
+  // The pools the product code opens must reach the throwaway database, never the dev 'server' one.
+  process.env.DB_NAME_SERVER = process.env.TEST_DB_NAME || 'test_database';
+  process.env.STORAGE_DEFAULT_PROVIDER = 'local';
+  process.env.STORAGE_LOCAL_BASE_PATH = dir;
+  return { dir };
+});
+const rec = vi.hoisted(() => ({
+  on: false,
+  statements: [] as Array<{ sql: string; instance: number }>,
+  instances: 0,
+  pages: [] as string[],
+}));
 const published = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
-const auth = vi.hoisted(() => ({ tenant: '' }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: published, publishWorkflowEvent: published }));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
-vi.mock('@alga-psa/auth/rbac', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@alga-psa/auth/rbac')>()),
-  hasPermission: vi.fn().mockResolvedValue(true),
-}));
-vi.mock('@alga-psa/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/db')>();
-  return { ...actual, createTenantKnex: async () => ({ knex: db, tenant: auth.tenant }) };
+
+// Wrap the knex factory: every instance created anywhere gets a statement recorder.
+vi.mock('knex', async (importOriginal) => {
+  const actual = await importOriginal<{ default: any; knex?: any }>();
+  const base = actual.default ?? actual.knex;
+  const wrapped: any = (config: unknown) => {
+    const instance = base(config);
+    const id = ++rec.instances;
+    instance.on('query', (q: { sql: string }) => {
+      if (rec.on) rec.statements.push({ sql: q.sql, instance: id });
+    });
+    return instance;
+  };
+  Object.assign(wrapped, base);
+  return { ...actual, default: wrapped, knex: wrapped };
 });
 
+// The ONLY stub: the browser. It receives the real HTML and returns bytes.
+vi.mock('../../../../packages/billing/src/services/browserPoolService', () => ({
+  browserPoolService: {
+    getBrowser: async () => ({
+      newPage: async () => ({
+        setContent: async (html: string) => {
+          rec.pages.push(html);
+        },
+        pdf: async () => Buffer.from('%PDF-1.4 stub'),
+        close: async () => undefined,
+      }),
+    }),
+    releaseBrowser: async () => undefined,
+  },
+}));
+
 let db: Knex;
+let world: LabelWorld;
 
 const WATCHED_TABLES = [
   'stock_levels', 'stock_units', 'stock_movements', 'invoices', 'invoice_charges', 'time_entries',
-  'assets', 'asset_history', 'tickets', 'documents',
+  'assets', 'asset_history', 'asset_associations', 'tickets', 'documents', 'document_associations',
+  'document_templates', 'document_template_assignments', 'external_files', 'audit_logs',
 ];
 
 async function snapshot(): Promise<Record<string, { count: number; maxUpdatedAt: string | null }>> {
@@ -54,64 +101,125 @@ async function snapshot(): Promise<Record<string, { count: number; maxUpdatedAt:
   return out;
 }
 
+// Transaction control is not a write; everything else must be a read.
+const READ_ONLY = /^\s*(select|with|begin|commit|rollback|savepoint|release|set\s+(local\s+)?(search_path|statement_timeout|app\.))/i;
+
 describe('T-noside: printing is read-only', () => {
   beforeAll(async () => {
     db = await createTestDbConnection({ runSeeds: true });
-  }, 180_000);
+    world = await seedLabelWorld(db, env.dir);
+  }, 240_000);
   afterAll(async () => {
     await db?.destroy();
+    fs.rmSync(env.dir, { recursive: true, force: true });
   });
 
-  it('issues only SELECTs, changes no watched table and publishes no event', async () => {
-    const ticket = await db('tickets').select('tenant', 'ticket_id').first();
-    const asset = await db('assets').select('tenant', 'asset_id').first();
-    if (!ticket || !asset) {
-      throw new Error('T-noside needs a seeded tenant with at least one ticket and one asset');
-    }
-    auth.tenant = ticket.tenant;
-    const user = await db('users').where({ tenant: ticket.tenant, user_type: 'internal' }).first();
-    if (!user) throw new Error('T-noside needs an internal user in the seeded tenant');
-
+  it('issues only reads, changes no watched table and publishes no event', async () => {
+    const deps = await buildRealLabelDeps();
     const { printLabels } = await import('../../lib/labels/printLabels');
-    const { ticketLabelViewModelProvider } = await import('@alga-psa/tickets/lib/labelViewModelProvider');
-    const { assetLabelViewModelProvider } = await import('@alga-psa/assets/lib/labelViewModelProvider');
-    const { getTicketLinkedAssetLabelParts } = await import('@alga-psa/assets/lib/ticketLinkedAssetLabels');
-    const { resolveLabelTemplateForTenant } = await import('@alga-psa/billing/services');
-
-    const deps = {
-      providers: {
-        'ticket-work-tag': ticketLabelViewModelProvider,
-        'asset-identity': assetLabelViewModelProvider,
-        'stock-unit-identity': undefined,
-      },
-      // The renderer is stubbed: the PDF step needs a browser, and it reads (tenant party) only.
-      renderPdf: async () => ({ pdf: Buffer.from('%PDF'), labels: 1, sheets: 1 }),
-      resolveTemplate: resolveLabelTemplateForTenant,
-      getLinkedAssetParts: getTicketLinkedAssetLabelParts,
-      describeClientError: () => null,
-    };
-    const caller = { user: user as never, tenant: ticket.tenant as string, baseUrl: 'https://psa.test' };
+    const caller = { user: world.tech, tenant: world.tenant, baseUrl: 'https://psa.test' };
+    const t = world.tickets;
+    const a = world.assets;
 
     const before = await snapshot();
-    const statements: string[] = [];
-    const listener = (query: { sql: string }) => statements.push(query.sql);
-    db.on('query', listener);
+    rec.statements.length = 0;
+    rec.pages.length = 0;
+    rec.on = true;
+    let ticketBatch;
+    let ticketSingle;
+    let assetBatch;
+    let assetSingle;
+    let mixed;
+    const restrictedCaller = { user: world.restricted, tenant: world.tenant, baseUrl: 'https://psa.test' };
     try {
-      const t = await printLabels(deps as never, caller, {
-        labelClass: 'ticket-work-tag', ids: [ticket.ticket_id], overrides: { title: 'Edited at print time' },
-      });
-      const a = await printLabels(deps as never, caller, { labelClass: 'asset-identity', ids: [asset.asset_id] });
-      expect(t.ok).toBe(true);
-      expect(a.ok).toBe(true);
+      // Ticket batch of 3 including a ticket with a linked asset (the linked-asset query runs).
+      ticketBatch = await asRequest(world.tenant, () =>
+        printLabels(deps, caller, { labelClass: 'ticket-work-tag', ids: [t.a1, t.withOneAsset, t.a2] })
+      );
+      // Single ticket with a print-time edit and an explicit linked asset choice.
+      ticketSingle = await asRequest(world.tenant, () =>
+        printLabels(deps, caller, {
+          labelClass: 'ticket-work-tag',
+          ids: [t.withTwoAssets],
+          overrides: { title: 'Edited at print time', detail: 'Edited reason' },
+          linkedAssetId: a.a3,
+        })
+      );
+      // Asset batch of 3.
+      assetBatch = await asRequest(world.tenant, () =>
+        printLabels(deps, caller, { labelClass: 'asset-identity', ids: [a.a1, a.a2, a.a3] })
+      );
+      // Single asset print.
+      assetSingle = await asRequest(world.tenant, () =>
+        printLabels(deps, caller, { labelClass: 'asset-identity', ids: [a.a2] })
+      );
+      // Mixed batch with unreadable records (record-level deny, missing, cross-tenant): skipped 3.
+      mixed = await asRequest(world.tenant, () =>
+        printLabels(deps, restrictedCaller, {
+          labelClass: 'ticket-work-tag',
+          ids: [t.a1, t.b1, '00000000-0000-4000-8000-000000000000', t.foreign, t.a2],
+        })
+      );
     } finally {
-      db.removeListener('query', listener);
+      rec.on = false;
     }
     const after = await snapshot();
 
-    expect(statements.length).toBeGreaterThan(0);
-    const writes = statements.filter((sql) => !/^\s*(select|with)\b/i.test(sql));
+    for (const result of [ticketBatch, ticketSingle, assetBatch, assetSingle]) {
+      expect(result).toMatchObject({ ok: true, skipped: 0 });
+    }
+    expect(mixed).toMatchObject({ ok: true, labels: 2, skipped: 3 });
+    expect((ticketBatch as { labels: number }).labels).toBe(3);
+    expect((assetBatch as { labels: number }).labels).toBe(3);
+
+    // The real renderer ran: the browser stub got HTML with the real logo inlined as a data URL.
+    expect(rec.pages).toHaveLength(5);
+    for (const html of rec.pages) {
+      expect(html).toContain('data:image/png;base64,');
+    }
+    // The linked asset's suffix (last 4 of an 8+ char serial) reached the batch, the full serial did not.
+    expect(rec.pages[0]).toContain('TAG-A1');
+    expect(rec.pages[0]).toContain('5678');
+    expect(rec.pages.join('\n')).not.toContain('SN-ALPHA-12345678');
+
+    // At least the tenant-party, logo, linked-asset and provider reads were observed...
+    const sqls = rec.statements.map((s) => s.sql);
+    expect(sqls.some((s) => /asset_associations/.test(s))).toBe(true);
+    expect(sqls.some((s) => /tenant_companies/.test(s))).toBe(true);
+    expect(sqls.some((s) => /document_associations/.test(s))).toBe(true);
+    expect(sqls.some((s) => /external_files/.test(s))).toBe(true);
+    expect(sqls.some((s) => /document_template_assignments/.test(s))).toBe(true);
+    // ...across every knex instance the code opened, and none of it was a write.
+    expect(rec.statements.length).toBeGreaterThan(0);
+    const writes = rec.statements.filter((s) => !READ_ONLY.test(s.sql));
     expect(writes).toEqual([]);
+
     expect(after).toEqual(before);
     expect(published).not.toHaveBeenCalled();
-  }, 120_000);
+  }, 180_000);
+
+  it('negative control: a write through each product pool (tenant, admin) is observed by the recorder', async () => {
+    const { createTenantKnex, getAdminConnection } = await import('@alga-psa/db');
+    const { knex: tenantPool } = await createTenantKnex(world.tenant);
+    const adminPool = await getAdminConnection();
+    rec.statements.length = 0;
+    rec.on = true;
+    try {
+      await tenantPool.raw('update tickets set updated_at = updated_at where tenant = ? and ticket_id = ?', [world.tenant, world.tickets.a1]);
+      await adminPool.raw('update tickets set updated_at = updated_at where tenant = ? and ticket_id = ?', [world.tenant, world.tickets.a1]);
+    } finally {
+      rec.on = false;
+    }
+    const writes = rec.statements.filter((s) => !READ_ONLY.test(s.sql));
+    expect(writes).toHaveLength(2);
+    expect(new Set(writes.map((w) => w.instance)).size).toBe(2); // two different pools, both listened on
+  });
+
+  it('the harness pool and the product pools are the throwaway database', async () => {
+    const { rows } = await db.raw('select current_database() as name');
+    expect(rows[0].name).toBe(process.env.TEST_DB_NAME || 'test_database');
+    expect(process.env.DB_NAME_SERVER).toBe(rows[0].name);
+    expect(os.tmpdir()).toBeTruthy();
+    expect(path.isAbsolute(env.dir)).toBe(true);
+  });
 });

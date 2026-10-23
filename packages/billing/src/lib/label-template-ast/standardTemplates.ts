@@ -161,7 +161,6 @@ const buildTicketWorkTag = (): TemplateAst =>
   label(
     'Standard Ticket Work Tag',
     [
-      logo('logo', 8),
       brandLine(),
       text('client', 'clientName', { ...lines(1, 13, 1.15), fontWeight: 700 }),
       text('item', 'title', lines(2, 11, 1.2)),
@@ -170,7 +169,8 @@ const buildTicketWorkTag = (): TemplateAst =>
       text('asset', 'assetLine', { fontSize: '10px', lineHeight: 1.2, fontFamily: 'monospace' }),
       text('serial', 'serialLine', { ...lines(1, 9, 1.2), color: '#4b5563', fontFamily: 'monospace' }),
     ],
-    [qr('qr', '34mm')],
+    // Logo above the QR (like the asset label) so the worst-case text column keeps its full height.
+    [logo('logo', 6, { objectPosition: 'center' }), qr('qr', '34mm')],
     [],
     '0.5mm',
   );

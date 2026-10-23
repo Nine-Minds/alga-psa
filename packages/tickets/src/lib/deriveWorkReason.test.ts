@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deriveWorkReason } from './labelViewModelProvider';
+import { deriveWorkReason } from './deriveWorkReason';
 
 describe('deriveWorkReason (design §9: subcategory, then category, else null; no board fallback)', () => {
   it('prefers the subcategory', () => expect(deriveWorkReason('Printer', 'Hardware')).toBe('Printer'));
