@@ -32,6 +32,7 @@ import {
 import { createDirectProviderAdapter } from '../providers/direct/directProviderAdapter';
 import { CippProviderAdapter, type CippTenantProbe } from '../providers/cipp/cippProviderAdapter';
 import { getEntraCippCredentials } from '../providers/cipp/cippSecretStore';
+import { getCippTokenService, isCippApiClientCredentials, isCippTokenError } from '../providers/cipp/cippTokenService';
 import { listConfirmedEntraMappings } from '../mapping/confirmedMappingsService';
 import { getEntraSyncSchedule } from '../scheduleService';
 import { getEntraSyncRunProgress } from '../entraWorkflowClient';
@@ -1034,24 +1035,81 @@ export async function runEntraConnectionDiagnostics(
       return { status: 'skip' as const, data: { reason: 'Not a CIPP connection.' } };
     }
     const credentials = await getEntraCippCredentials(tenant);
-    if (!credentials?.baseUrl || !credentials?.apiToken) {
+    if (!credentials?.baseUrl) {
       collect([
         {
           code: 'cipp_credentials_missing',
           severity: 'fail',
-          text: 'CIPP base URL and API token are required. Configure them on the Connection tab.',
+          text: 'CIPP base URL and credentials are required. Configure them on the Connection tab.',
           messageKey: 'cippCredentialsMissing',
         },
       ]);
       return { status: 'fail' as const, error: { message: 'CIPP credentials are not configured.' } };
     }
+    if (isCippApiClientCredentials(credentials)) {
+      // Never a fingerprint of the client secret: whether it is set is all a
+      // reader needs, and the client id/directory id are identifiers.
+      return {
+        status: 'pass' as const,
+        data: {
+          baseUrl: credentials.baseUrl,
+          authType: credentials.authType,
+          clientId: credentials.clientId,
+          directoryId: credentials.directoryId,
+          clientSecretPresent: true,
+        },
+      };
+    }
     return {
       status: 'pass' as const,
       data: {
         baseUrl: credentials.baseUrl,
+        authType: credentials.authType,
         apiTokenFingerprint: buildTokenFingerprint(credentials.apiToken),
       },
     };
+  });
+
+  // API-client connections trade a client id + secret for a short-lived token
+  // before any CIPP call. That exchange can fail on its own (wrong secret,
+  // wrong tenant, broken identifier URI), and it fails at Microsoft, not CIPP,
+  // so it is reported before — and separately from — CIPP reachability.
+  // Legacy connections have no exchange: the step is not applicable.
+  let cippTokenMintFailed = false;
+  await runStep('cipp_token_mint', 'CIPP API token mint', {}, async () => {
+    if (!isCipp) {
+      return { status: 'skip' as const, data: { reason: 'Not a CIPP connection.' } };
+    }
+    const credentials = await getEntraCippCredentials(tenant).catch(() => null);
+    if (!credentials || !isCippApiClientCredentials(credentials)) {
+      return {
+        status: 'skip' as const,
+        data: { reason: 'Not applicable: this CIPP connection uses a static API key.' },
+      };
+    }
+    try {
+      const minted = await getCippTokenService().mint(credentials);
+      return {
+        status: 'pass' as const,
+        data: { expiresInSeconds: Math.max(0, Math.round((minted.expiresAt - Date.now()) / 1000)) },
+      };
+    } catch (error: any) {
+      cippTokenMintFailed = true;
+      const scope = isCippTokenError(error) && error.code === 'token-scope-rejected';
+      const rec: DiagnosticsRecommendation = {
+        code: scope ? 'cipp_token_scope_rejected' : 'cipp_token_mint_failed',
+        severity: 'fail',
+        text: error?.message || 'Could not mint a CIPP API token.',
+        messageKey: scope ? 'cippTokenScopeRejected' : 'cippTokenMintFailed',
+      };
+      collect([rec]);
+      return {
+        status: 'fail' as const,
+        error: { message: rec.text, code: error?.code },
+        data: isCippTokenError(error) ? { category: error.category, aadstsCode: error.aadstsCode } : undefined,
+        recommendations: [rec],
+      };
+    }
   });
 
   await runStep(
@@ -1061,6 +1119,12 @@ export async function runEntraConnectionDiagnostics(
     async () => {
       if (!isCipp) {
         return { status: 'skip' as const, data: { reason: 'Not a CIPP connection.' } };
+      }
+      if (cippTokenMintFailed) {
+        return {
+          status: 'skip' as const,
+          data: { reason: 'Blocked: no CIPP API token could be minted (see the token mint check).' },
+        };
       }
       try {
         cippProbe = await new CippProviderAdapter().probeTenantList(tenant);
@@ -1167,10 +1231,14 @@ export async function runEntraConnectionDiagnostics(
       return { status: 'skip' as const, data: { reason: cippProbeError ?? 'No probe result.' } };
     }
     if (cippProbe.authRejected) {
+      // For an API client the probe carries its own, more specific wording
+      // (allowlist 403 vs rejected token); the legacy text names an API key
+      // that such a connection does not have.
       const rec: DiagnosticsRecommendation = {
         code: 'cipp_auth_rejected',
         severity: 'fail',
-        text: 'CIPP rejected the API credential. Rotate it from the Connection tab. This is the CIPP API key from Settings > CIPP > API access in CIPP itself, not an Azure client secret.',
+        text: cippProbe.error
+          ?? 'CIPP rejected the API credential. Rotate it from the Connection tab. This is the CIPP API key from Settings > CIPP > API access in CIPP itself, not an Azure client secret.',
         messageKey: 'cippAuthRejected',
       };
       collect([rec]);

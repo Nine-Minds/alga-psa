@@ -756,7 +756,10 @@ async function runCippClient(options: {
           data: { sampledUserCount: users.length, bounded: true },
         };
       } catch (error: any) {
-        const isCredential = error?.code === 'credential-rejected';
+        // API-client failures carry a `reason` and an already-specific
+        // message (allowlist, role, token mint); only the legacy key
+        // rejection gets the "rotate the key" text.
+        const isCredential = error?.code === 'credential-rejected' && !error?.reason;
         const rec: DiagnosticsRecommendation = isCredential
           ? {
               code: 'cipp_auth_rejected',

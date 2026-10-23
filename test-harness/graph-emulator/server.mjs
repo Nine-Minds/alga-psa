@@ -2,6 +2,7 @@ import http from 'node:http';
 import { randomUUID } from 'node:crypto';
 import {
   handleCippApi,
+  issueCippClientToken,
   handleEntraControl,
   handleEntraGraph,
   resetEntra,
@@ -215,6 +216,12 @@ async function handler(req, res) {
     if (fault) return json(res, fault.status, fault.body);
     const authorityTenant = (url.pathname.match(/^\/([^/]+)\/oauth2\/v2\.0\/token$/) || [])[1] || 'common';
     const input = await body(req);
+    // A CIPP API client is not one of the registered OAuth clients: its own
+    // id/secret/tenant are validated by the CIPP-API-client emulation.
+    if (input.grant_type === 'client_credentials') {
+      const result = issueCippClientToken(authorityTenant, input);
+      return json(res, result.status, result.body);
+    }
     if (state.clients.get(String(input.client_id)) !== String(input.client_secret)) {
       return json(res, 401, { error: 'invalid_client' });
     }
