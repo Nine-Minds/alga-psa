@@ -280,6 +280,8 @@ export function QuickAddTicket({
   const [statusId, setStatusId] = useState('');
   const [priorityId, setPriorityId] = useState('');
   const [clientId, setClientId] = useState(prefilledClient?.id || '');
+  // Name of the selected client, used for the {{client}} template title token (no full client list is loaded).
+  const [selectedClientName, setSelectedClientName] = useState<string | null>(prefilledClient?.name ?? null);
   const [contactId, setContactId] = useState(prefilledContact?.id || null);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
@@ -416,6 +418,7 @@ export function QuickAddTicket({
         if (formData.selectedClient) {
           setIsPrefilledClient(true);
           setClientId(formData.selectedClient.client_id);
+          setSelectedClientName(formData.selectedClient.client_name ?? null);
           setSelectedClientType(formData.selectedClient.client_type as 'company' | 'individual');
           if (formData.contacts) {
             setContacts(formData.contacts);
@@ -690,6 +693,7 @@ export function QuickAddTicket({
 
     latestClientSelectionRef.current = newClientId;
     setClientId(newClientId || '');
+    setSelectedClientName(null);
     setContactId(null);
     // The location belongs to the client that was selected before.
     setLocationId(null);
@@ -704,6 +708,7 @@ export function QuickAddTicket({
         const selectedClient = await getClientById(requestedId);
         // Ignore stale responses if the user picked another client meanwhile.
         if (latestClientSelectionRef.current !== requestedId) return;
+        setSelectedClientName(selectedClient?.client_name ?? null);
         setSelectedClientType(
           selectedClient?.client_type === 'company' || selectedClient?.client_type === 'individual'
             ? selectedClient.client_type
@@ -806,6 +811,7 @@ export function QuickAddTicket({
       })),
     });
     setClientId(source.client.id);
+    setSelectedClientName(source.client.name || null);
     setSelectedClientType((source.client.type as 'company' | 'individual' | null) ?? null);
     setContactId(source.contact?.id ?? null);
     setLocationId(source.location_id ?? null);
@@ -852,7 +858,7 @@ export function QuickAddTicket({
   // Tokens are filled from the client, contact and due date picked so far; a missing one renders empty.
   // The due date is a calendar date taken from the picked Date's local parts (not toISOString).
   function templateTitleContext(): TitleTokenContext {
-    const clientName = clients.find((candidate) => candidate.client_id === clientId)?.client_name ?? null;
+    const clientName = clientId ? selectedClientName : null;
     const contactName = contacts.find((candidate) => candidate.contact_name_id === contactId)?.full_name ?? null;
     return { clientName, contactName, dueDate: dueDate ? toCalendarDate(dueDate) : null };
   }
@@ -941,6 +947,7 @@ export function QuickAddTicket({
     setStatusId('');
     setPriorityId('');
     setClientId(prefilledClient?.id || '');
+    setSelectedClientName(prefilledClient?.name ?? null);
     setContactId(prefilledContact?.id || null);
     setLocationId(null);
     setLocations([]);
@@ -1000,7 +1007,7 @@ export function QuickAddTicket({
     if (next !== title) setTitle(next);
     // Only a client, contact or due date change re-renders; title edits must not loop back through here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clientId, contactId, dueDate, templateSource, clients, contacts]);
+  }, [clientId, contactId, dueDate, templateSource, selectedClientName, contacts]);
 
   // A template prefill is a baseline too: an untouched template-filled draft is not dirty.
   const draftBaselineTitle = duplicateSource ? duplicateSource.title : templateSource ? lastRenderedTitleRef.current ?? templateSource.title : prefilledTitle;

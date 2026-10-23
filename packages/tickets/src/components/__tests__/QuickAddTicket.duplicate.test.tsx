@@ -708,10 +708,6 @@ describe('QuickAddTicket duplicate mode', () => {
       ],
       boards: [{ board_id: 'board-1', board_name: 'Support' }],
       priorities: [{ priority_id: 'priority-1', priority_name: 'High' }],
-      clients: [
-        { client_id: 'client-1', client_name: 'Acme', client_type: 'company' },
-        { client_id: 'client-2', client_name: 'Globex', client_type: 'company' },
-      ],
       statuses: [{ status_id: 'status-1', name: 'Open' }],
       // No selectedClient: duplicate mode must not lock the client.
     });
