@@ -27,6 +27,7 @@ describe('emulator suite', () => {
   it('boots all emulators with distinct ports and a full catalog', async () => {
     const catalog = ((await (await fetch(`${control}/control/catalog`)).json()) as any).result;
     expect(catalog.emulators.map((emu: any) => emu.id).sort()).toEqual([
+      'huntress',
       'levelio',
       'msgraph',
       'qbo',
@@ -59,6 +60,8 @@ describe('emulator suite', () => {
       'entra-diagnostics-expired-secret',
       'entra-diagnostics-green',
       'entra-diagnostics-partner-consent',
+      'huntress-escalation-multi-org',
+      'huntress-incident-lifecycle',
       'levelio-automation-alga-template',
       'levelio-native-webhook-signed',
       'token-trouble',
@@ -95,7 +98,7 @@ describe('emulator suite', () => {
     expect(await state('directory-users')).toEqual([]);
   });
 
-  describe('Level prod-failure scenarios, aimed at webhook-sink', () => {
+  describe('Level alert-ingestion scenarios, aimed at webhook-sink', () => {
     const scenario = (name: string) =>
       retargetScenario(loadScenarioFile(new URL(`../scenarios/${name}.yaml`, import.meta.url).pathname), {
         'http://localhost:4030': `http://127.0.0.1:${ports['webhook-sink']}`,
@@ -103,7 +106,7 @@ describe('emulator suite', () => {
     const sinkRequests = async () =>
       ((await (await fetch(`${control}/control/webhook-sink/state/requests`)).json()) as any).result;
 
-    it('native webhook: signed envelopes with no Alga header, so the current route has nothing to check', async () => {
+    it('native webhook: signed envelopes with no custom Alga header', async () => {
       await host.reset('webhook-sink');
       await runScenario(host, scenario('levelio-native-webhook-signed'));
       const requests = await sinkRequests();
@@ -112,19 +115,26 @@ describe('emulator suite', () => {
         expect(request.path).toBe('/api/webhooks/levelio');
         expect(request.headers['x-level-signature']).toMatch(/^sha256=[0-9a-f]{64}$/);
         expect(request.headers['x-alga-webhook-secret']).toBeUndefined();
-        expect(request.body.device_id).toBeUndefined(); // the route requires a top-level device_id
+        expect(request.body.data.device_id).toBeTruthy(); // device id lives in the envelope's data
       }
     });
 
-    it('automation template: three alerts on two devices arrive byte-identical with literal placeholders', async () => {
+    it('automation template: system variables render, so the three alerts arrive distinct', async () => {
       await host.reset('webhook-sink');
       await runScenario(host, scenario('levelio-automation-alga-template'));
       const requests = await sinkRequests();
       expect(requests).toHaveLength(3);
       expect(requests[0].headers['x-alga-webhook-secret']).toBe('algasim-alga-webhook-secret');
-      expect(requests[0].body).toMatchObject({ alert_id: '{{alert_id}}', device_id: '{{device_id}}', name: '{{alert_name}}' });
-      expect(requests[1].body).toEqual(requests[0].body);
-      expect(requests[2].body).toEqual(requests[0].body);
+      for (const request of requests) {
+        expect(JSON.stringify(request.body)).not.toContain('{{');
+      }
+      expect(requests.map((r: any) => r.body.device_id)).toEqual([
+        'Z2lkOi8vbGV2ZWwvRGV2aWNlLzE',
+        'Z2lkOi8vbGV2ZWwvRGV2aWNlLzI',
+        'Z2lkOi8vbGV2ZWwvRGV2aWNlLzE',
+      ]);
+      // WS-01 sits in the unmapped Branch Office child group.
+      expect(requests[0].body.group_id).toBe('Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMg');
     });
   });
 });

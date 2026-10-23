@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Funzionalità Pro"
+    },
     "accounting": {
       "bulk": {
         "button": "Mappatura in blocco",
@@ -27,7 +30,8 @@
           "mapped": "Mappato",
           "noResult": "Nessun risultato restituito per questa riga.",
           "pending": "In sospeso",
-          "saved": "Salvato"
+          "saved": "Salvato",
+          "missingField": "Manca {{field}}"
         },
         "suggested": "Suggerito",
         "toSave": "{{total}} da salvare"
@@ -79,7 +83,8 @@
           "instant": "Istantaneo",
           "live": "In tempo reale",
           "manual": "Manuale",
-          "twoWay": "Bidirezionale"
+          "twoWay": "Bidirezionale",
+          "iif": "IIF"
         },
         "highlights": {
           "delivery": "Consegna",
@@ -99,6 +104,9 @@
           },
           "xeroCsv": {
             "description": "Esporta le fatture in CSV per l'importazione manuale in Xero e importa i dati fiscali dai report Xero."
+          },
+          "qbd": {
+            "description": "Esporta le fatture come file IIF da importare in QuickBooks Desktop."
           }
         },
         "selected": "{{title}} selezionato",
@@ -126,13 +134,22 @@
         }
       },
       "adjustmentMappings": {
-        "desktopServices": "Conti servizi Desktop",
-        "desktopDiscounts": "Sconti Desktop",
         "desktopAccount": "Nome conto ricavi Desktop",
         "description": "Associa sconti e crediti prima di esportare. L’associazione appartiene a questa azienda contabile.",
         "add": "Aggiungi associazione",
         "remove": "Rimuovi associazione",
-        "removeConfirm": "Rimuovere questa associazione contabile?"
+        "removeConfirm": "Rimuovere questa associazione contabile?",
+        "desktopTaxAccount": "Nome conto imposta sulle vendite Desktop",
+        "desktopCustomer": "Nome cliente Desktop",
+        "desktopTerms": "Nome termini Desktop",
+        "descriptionTaxCodes": "Ogni regione fiscale indica l’articolo o il gruppo dell’imposta sulle vendite addebitato da QuickBooks Desktop e il conto passivo su cui viene registrato.",
+        "descriptionServices": "Ogni servizio indica l’articolo QuickBooks Desktop usato dalle sue righe di fattura e il conto ricavi su cui vengono registrate.",
+        "descriptionClients": "Il cliente QuickBooks Desktop con cui viene fatturato ogni cliente. I clienti non mappati bloccano l’esportazione.",
+        "descriptionPaymentTerms": "I termini di QuickBooks Desktop stampati su ogni fattura. I termini non mappati restano vuoti.",
+        "desktopItem": "Nome articolo Desktop",
+        "desktopItemHelp": "L’articolo esattamente come appare nell’elenco articoli di QuickBooks Desktop. Ogni riga di fattura indica un articolo, quindi le esportazioni sono bloccate finché non viene impostato.",
+        "desktopSalesTaxItem": "Articolo o gruppo dell’imposta sulle vendite",
+        "desktopSalesTaxItemHelp": "Lascia vuoto per usare l’articolo imposta sulle vendite predefinito delle impostazioni di QuickBooks Desktop."
       }
     },
     "calendar": {
@@ -1232,7 +1249,12 @@
         "recommendedUnsaved": "Consigliato — non salvato",
         "unsavedChange": "Modifica non salvata",
         "unsavedNotice": "Questi filtri non saranno applicati finché non li salvi."
-      }
+      },
+      "proFeature": {
+        "description": "L’integrazione con Microsoft Entra è disponibile in AlgaPSA Pro.",
+        "notice": "L’integrazione delle identità di Microsoft Entra è una funzionalità Pro."
+      },
+      "loading": "Caricamento dell’integrazione con Microsoft Entra…"
     },
     "google": {
       "settings": {
@@ -1303,6 +1325,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "L’integrazione della documentazione IT di Hudu è disponibile in AlgaPSA Pro."
+      },
       "clientTab": {
         "source": "Origine: Hudu",
         "openInHudu": "Apri in Hudu",
@@ -2323,6 +2348,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "L’integrazione RMM di NinjaOne è disponibile in AlgaPSA Pro."
+        },
         "loading": "Caricamento delle impostazioni di integrazione NinjaOne...",
         "card": {
           "title": "Integrazione NinjaOne RMM",
@@ -2600,6 +2628,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "L’integrazione RMM di Tanium è disponibile in AlgaPSA Pro."
+        },
         "loading": "Caricamento impostazioni integrazione Tanium...",
         "actions": {
           "discoverScopes": "Scopri ambiti",
@@ -2670,6 +2701,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "L’integrazione RMM di Level.io è disponibile in AlgaPSA Pro."
+        },
         "actions": {
           "backfillAlerts": "Recupera avvisi",
           "disconnect": "Disconnetti",
@@ -2742,16 +2776,35 @@
           "copied": "Copiato",
           "copy": "Copia",
           "description": "Level non può registrare webhook tramite la sua API. In Level, crea un'automazione con un'azione HTTP POST usando l'URL, l'header e il payload qui sotto per inviare gli avvisi ad Alga in tempo reale.",
+          "fallbackDescription": "Usa questa alternativa solo quando i webhook nativi in Impostazioni → Webhooks di Level non sono utilizzabili. Crea un'automazione con un'azione HTTP POST usando l'URL, l'intestazione e il payload qui sotto per inviare gli avvisi ad Alga.",
+          "fallbackNameHint": "Modifica il valore \"name\" in ogni automazione. Insieme al dispositivo identifica l'avviso, quindi le ripetizioni con lo stesso nome sullo stesso dispositivo sono un solo avviso.",
+          "fallbackTitle": "Alternativa: richiesta HTTP di automazione",
           "header": "Intestazione: {{name}}",
           "hideSecret": "Nascondi segreto",
           "loading": "I dettagli del webhook vengono caricati dopo la configurazione dell'integrazione.",
+          "nativeDescription": "In Level apri Impostazioni → Webhooks, aggiungi un webhook con l'URL e la chiave di firma qui sotto e abilita gli eventi elencati. Level firma ogni consegna e Alga verifica la firma.",
+          "nativeEvents": "Eventi da abilitare",
+          "nativeEventsHelp": "Abilita alert_active e alert_resolved. Gli altri eventi vengono confermati e ignorati.",
+          "nativeSigningSecret": "Chiave di firma",
+          "nativeTitle": "Webhook nativo (consigliato)",
           "payload": "Modello di payload",
+          "regenerateCancel": "Annulla",
+          "regenerateConfirmLabel": "Rigenera",
+          "regenerateConfirmMessage": "I webhook Level esistenti falliranno con 401 finché non incolli la nuova chiave di firma nelle impostazioni webhook di Level. Level ritenta le consegne, ma potrebbero andare perse se la chiave non viene aggiornata.",
+          "regenerateConfirmTitle": "Rigenerare la chiave di firma?",
+          "regenerateConfirmed": "Chiave di firma rigenerata. Aggiornala nelle impostazioni webhook di Level.",
+          "regenerateFailed": "Impossibile rigenerare la chiave di firma",
+          "regenerateSecret": "Rigenera chiave",
           "showSecret": "Mostra segreto",
           "title": "Webhook avvisi",
           "url": "URL webhook"
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Integrazione Huntress",
+          "description": "L’integrazione di sicurezza Huntress è una funzionalità Pro."
+        },
         "columns": {
           "organization": "Organizzazione Huntress",
           "client": "Cliente Alga",
@@ -2792,7 +2845,7 @@
         },
         "connection": {
           "title": "Connesso a {{account}}",
-          "summary": "{{organizations}} organizzazioni ({{unmapped}} non mappate) · {{openIncidents}} incidenti aperti · ultimo polling: {{lastPoll}}",
+          "summary": "{{organizations}} organizzazioni ({{unmapped}} non mappate) · {{openAlerts}} avvisi aperti · ultimo polling: {{lastPoll}}",
           "neverPolled": "mai",
           "lastPollFailed": "Ultimo polling non riuscito: {{error}}",
           "routingIncompleteWarning": "Il polling degli incidenti è sospeso finché la configurazione di instradamento seguente non è completa (bacheca di sicurezza, cliente e bacheca di riserva e tutte e tre le priorità di gravità).",
@@ -2815,6 +2868,8 @@
           "selectPriority": "Priorità",
           "pollInterval": "Intervallo di polling (minuti)",
           "autoClose": "Chiudi i ticket quando Huntress chiude l’incidente",
+          "ingestEscalations": "Crea ticket dalle escalation di Huntress",
+          "ingestEscalationsHelp": "Le escalation usano le stesse impostazioni di bacheca, categoria, mappatura delle priorità e chiusura automatica degli incidenti. Un’escalation che riguarda più organizzazioni crea un ticket per ogni organizzazione.",
           "closedStatus": "Stato di chiusura",
           "selectStatus": "Seleziona stato",
           "save": "Salva configurazione di instradamento",
@@ -3511,6 +3566,11 @@
           "regenerate": "Rigenera pacchetto",
           "regenerating": "Rigenerazione..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Accesso a Teams non disponibile",
+        "tabTitle": "Scheda Teams non disponibile",
+        "description": "L’integrazione con Microsoft Teams è disponibile solo in Pro."
       }
     },
     "xero": {
@@ -4010,6 +4070,59 @@
           "providers": "Oggi Teams Phone; lo stesso nucleo per le chiamate accoglierà i futuri fornitori."
         }
       }
+    },
+    "qbd": {
+      "settings": {
+        "title": "Integrazione QuickBooks Desktop (IIF)",
+        "description": "Esporta le fatture come file IIF per File → Utilità → Importa → File IIF in QuickBooks Desktop.",
+        "loading": "Caricamento delle impostazioni di QuickBooks Desktop...",
+        "savedMessage": "Impostazioni salvate correttamente",
+        "save": "Salva impostazioni",
+        "connectionsPermissionNotice": "Puoi visualizzare le impostazioni di QuickBooks Desktop, ma per modificarle serve la capacità di gestione delle connessioni. Chiedi a un amministratore di concedertela.",
+        "errors": {
+          "load": "Impossibile caricare le impostazioni di QuickBooks Desktop",
+          "save": "Impossibile salvare le impostazioni di QuickBooks Desktop"
+        },
+        "warning": {
+          "title": "Esegui prima un backup del file aziendale",
+          "description": "Durante l'importazione di un file IIF, QuickBooks Desktop crea qualsiasi nome di cliente, articolo, conto o termine che non riconosce, e le importazioni IIF non possono essere annullate. Verifica che ogni nome qui e nelle mappature corrisponda esattamente al tuo file aziendale e prova la prima importazione su una copia di backup."
+        },
+        "exportSettings": {
+          "title": "Impostazioni di esportazione IIF",
+          "description": "Inserisci i nomi di conti e articoli di QuickBooks Desktop esattamente come compaiono nel piano dei conti e nell'elenco articoli."
+        },
+        "fields": {
+          "arAccount": "Conto crediti verso clienti",
+          "arAccountHelp": "Il conto crediti su cui viene registrata ogni fattura.",
+          "defaultIncomeAccount": "Conto ricavi predefinito",
+          "defaultIncomeAccountHelp": "Il conto ricavi per gli articoli mappati da un’esportazione e per ogni mappatura di Servizi o Sconti senza conto.",
+          "salesTaxPayableAccount": "Conto debiti per imposta sulle vendite",
+          "salesTaxPayableAccountHelp": "Il conto su cui viene registrata la riga dell’imposta sulle vendite, salvo che la mappatura dei codici fiscali della regione ne indichi un altro.",
+          "defaultSalesTaxItem": "Articolo imposta sulle vendite predefinito",
+          "defaultSalesTaxItemHelp": "Articolo o gruppo dell’imposta sulle vendite per le fatture tassate la cui mappatura dei codici fiscali non ne indica uno.",
+          "newProductItemType": "Tipo di articolo per i nuovi prodotti",
+          "inventoryWarning": "I carichi di magazzino di Alga non vengono esportati, quindi le giacenze in QuickBooks diventeranno negative a meno che tu non registri le scorte anche in QuickBooks.",
+          "nonInventoryHelp": "Consigliato: Alga resta il sistema di riferimento per il magazzino e QuickBooks registra solo la vendita.",
+          "inventoryAssetAccount": "Conto attività di magazzino",
+          "cogsAccount": "Conto costo del venduto"
+        },
+        "mappings": {
+          "title": "Mappature QuickBooks",
+          "description": "Mappa clienti, servizi, sconti, codici fiscali e termini di pagamento di Alga ai nomi nel file aziendale di QuickBooks Desktop. Ogni servizio e sconto richiede un articolo Desktop; i termini di pagamento non mappati restano vuoti.",
+          "permissionNotice": "Per modificare le mappature di QuickBooks Desktop è necessaria l’autorizzazione alla gestione delle mappature. Chiedi a un amministratore di concederla."
+        },
+        "exports": {
+          "description": "Crea un batch di esportazione QuickBooks Desktop, eseguilo e poi scarica il file IIF dai dettagli del batch."
+        },
+        "newItems": {
+          "title": "Articoli creati dalle esportazioni",
+          "description": "Quando un'esportazione crea un nuovo articolo QuickBooks per un prodotto Alga, usa questo tipo di articolo. I servizi vengono sempre creati come articoli di servizio."
+        },
+        "itemTypes": {
+          "nonInventory": "Articolo non di magazzino",
+          "inventory": "Articolo di magazzino"
+        }
+      }
     }
   },
   "errors": {
@@ -4129,6 +4242,10 @@
       "contactWithoutClient": "Nel sistema esiste già un contatto con questo indirizzo email senza assegnazione a un cliente",
       "emailOnAnotherClient": "Questa email è già associata a un altro cliente",
       "emailOnAnotherClientNamed": "Questa email è già associata a {{clientName}}"
+    },
+    "quickbooksDesktop": {
+      "viewSettingsPermission": "L'utente non ha l'autorizzazione per visualizzare le impostazioni di integrazione",
+      "manageIntegrationsPermission": "L'utente non ha l'autorizzazione per gestire le impostazioni di integrazione"
     }
   },
   "telephony": {

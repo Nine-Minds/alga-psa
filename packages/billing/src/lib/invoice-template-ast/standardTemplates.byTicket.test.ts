@@ -46,3 +46,20 @@ describe('standard by-ticket complete presentation', () => {
     expect(JSON.stringify(vm.items)).toBe(original);
   });
 });
+
+describe('standard by-ticket table layout (alga-2026-0002771)', () => {
+  it('uses a fixed table layout with explicit widths and no-wrap numeric columns', async () => {
+    const vm = getPreviewSampleScenarioById('sample-ticket-time-detail')!.data;
+    const html = await render(vm);
+    expect(html).toMatch(/<table id="ticket-time-summary"[^>]*style="[^"]*table-layout:fixed/);
+    const widths: Record<string, string> = { Ticket: '27%', Description: '33%', 'Qty / Hours': '14%', Rate: '12%', Amount: '14%' };
+    for (const [header, width] of Object.entries(widths)) {
+      expect(html).toMatch(new RegExp(`<th[^>]*style="[^"]*width:${width}[^"]*"[^>]*>${header.replace('/', '\\/')}</th>`));
+    }
+    const total = Object.values(widths).reduce((sum, w) => sum + parseInt(w, 10), 0);
+    expect(total).toBe(100);
+    // Numeric columns never wrap; description breaks long tokens.
+    expect(html.match(/white-space:nowrap/g)!.length).toBeGreaterThanOrEqual(3);
+    expect(html).toMatch(/overflow-wrap:anywhere/);
+  });
+});

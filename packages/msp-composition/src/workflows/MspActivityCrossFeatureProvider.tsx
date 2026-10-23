@@ -81,6 +81,7 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
         initialUserMap={d.userMap}
         initialAvailableAgents={d.availableAgents}
         onClose={props.onClose}
+        onSaved={props.onSaved}
       />
     );
   };

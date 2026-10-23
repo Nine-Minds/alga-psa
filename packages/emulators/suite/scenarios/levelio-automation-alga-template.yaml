@@ -1,14 +1,17 @@
 name: levelio-automation-alga-template
 description: >-
   A Level monitor automation whose HTTP Request action posts the payload
-  template Alga's settings screen hands out (getLevelIoWebhookInfo, as of
-  2026-10-15) with the X-Alga-Webhook-Secret header. Level does not know
-  {{alert_id}}, {{device_id}} and the rest, so it sends them as literal text:
-  three different alerts on two devices arrive byte-identical. Against the
-  2026-10-15 route each gets a 200, but all three collapse into one
-  rmm_alerts row and no ticket is created. The target defaults to
-  webhook-sink; point it at Alga's /api/webhooks/levelio?tenant=<id> to
-  reproduce live.
+  template Alga's settings screen hands out as the fallback path
+  (getLevelIoWebhookInfo) with the X-Alga-Webhook-Secret header. The template
+  uses only Level's documented system variables ({{level_device_id}},
+  {{level_device_hostname}}, {{level_group_id}}, {{level_time}}); the alert
+  name is customer-supplied text: the first automation is the pristine
+  template, the other two are copies with name/description/severity edited
+  the way a customer sets up one automation per monitor. Three alerts on two devices arrive as three
+  distinct alerts and each creates a ticket for Acme Corp (WS-01 sits in the
+  unmapped Branch Office and is canonicalized to its mapped parent). The
+  target defaults to webhook-sink; point it at Alga's
+  /api/webhooks/levelio?tenant=<id> to reproduce live.
 steps:
   - reset: levelio
   - seed: levelio/group
@@ -32,6 +35,7 @@ steps:
     params:
       id: alga-alert-forwarder
       name: Forward alerts to Alga
+      alertNames: [CPU]
       url: http://localhost:4030/api/webhooks/levelio?tenant=algasim-tenant
       method: POST
       contentType: application/json
@@ -40,12 +44,55 @@ steps:
       body: |-
         {
           "event": "alert.triggered",
-          "alert_id": "{{alert_id}}",
-          "device_id": "{{device_id}}",
-          "hostname": "{{hostname}}",
-          "name": "{{alert_name}}",
-          "severity": "{{severity}}",
-          "description": "{{description}}"
+          "name": "Replace with a name for this alert",
+          "severity": "warning",
+          "description": "Replace with a description",
+          "device_id": "{{level_device_id}}",
+          "hostname": "{{level_device_hostname}}",
+          "group_id": "{{level_group_id}}",
+          "alert_time": "{{level_time}}"
+        }
+  - seed: levelio/automation
+    params:
+      id: alga-forward-disk
+      name: Forward low disk alerts to Alga
+      alertNames: [Low disk space]
+      url: http://localhost:4030/api/webhooks/levelio?tenant=algasim-tenant
+      method: POST
+      contentType: application/json
+      headers:
+        - { key: X-Alga-Webhook-Secret, value: algasim-alga-webhook-secret }
+      body: |-
+        {
+          "event": "alert.triggered",
+          "name": "Low disk space",
+          "severity": "warning",
+          "description": "Disk free < 5.0%",
+          "device_id": "{{level_device_id}}",
+          "hostname": "{{level_device_hostname}}",
+          "group_id": "{{level_group_id}}",
+          "alert_time": "{{level_time}}"
+        }
+  - seed: levelio/automation
+    params:
+      id: alga-forward-memory
+      name: Forward memory alerts to Alga
+      alertNames: [Memory]
+      url: http://localhost:4030/api/webhooks/levelio?tenant=algasim-tenant
+      method: POST
+      contentType: application/json
+      headers:
+        - { key: X-Alga-Webhook-Secret, value: algasim-alga-webhook-secret }
+      body: |-
+        {
+          "event": "alert.triggered",
+          "name": "Memory",
+          "severity": "critical",
+          "description": "Memory usage above 95%",
+          "device_id": "{{level_device_id}}",
+          "hostname": "{{level_device_hostname}}",
+          "group_id": "{{level_group_id}}",
+          "alert_time": "{{level_time}}"
         }
   - action: levelio/fire-alert
     params:

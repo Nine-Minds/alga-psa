@@ -119,6 +119,7 @@ export function AssetBentoLayout({
   const { statuses: assetStatuses } = useAssetStatusRegistry();
 
   const ext = asset.workstation ?? asset.server;
+  const networkDevice = asset.network_device;
   const isRmmManaged = Boolean(asset.rmm_provider || rmmData?.provider);
   const agentTone = AGENT_TONE[asset.agent_status ?? 'unknown'] ?? 'neutral';
   const disk = worstStorage(rmmData?.storage);
@@ -341,6 +342,27 @@ export function AssetBentoLayout({
                   <BentoLabelValue label={t('assetBento.ram', { defaultValue: 'RAM' })} value={ext.ram_gb != null ? `${ext.ram_gb} GB` : undefined} />
                   <BentoLabelValue label={t('assetBento.ip', { defaultValue: 'IP' })} value={rmmData?.lan_ip ?? asset.workstation?.lan_ip} mono />
                 </div>
+              ) : networkDevice ? (
+                <div id="asset-bento-network-device" className="space-y-1.5 text-sm">
+                  <BentoLabelValue
+                    id="asset-bento-network-device-type"
+                    label={t('assetForm.fields.deviceType', { defaultValue: 'Device Type' })}
+                    value={networkDevice.device_type
+                      ? t(`assetDetails.deviceTypes.${networkDevice.device_type}`, { defaultValue: networkDevice.device_type })
+                      : undefined}
+                  />
+                  <BentoLabelValue label={t('assetDetails.fields.managementIp', { defaultValue: 'Management IP' })} value={networkDevice.management_ip || undefined} mono />
+                  <BentoLabelValue label={t('assetDetails.fields.portCount', { defaultValue: 'Port Count' })} value={networkDevice.port_count ?? undefined} />
+                  <BentoLabelValue label={t('assetDetails.fields.firmwareVersion', { defaultValue: 'Firmware Version' })} value={networkDevice.firmware_version || undefined} />
+                  <BentoLabelValue
+                    label={t('assetDetails.fields.powerDraw', { defaultValue: 'Power Draw' })}
+                    value={networkDevice.power_draw_watts != null ? `${networkDevice.power_draw_watts} W` : undefined}
+                  />
+                  <BentoLabelValue
+                    label={t('assetDetails.fields.poeSupport', { defaultValue: 'PoE Support' })}
+                    value={networkDevice.supports_poe ? t('common.yes', { defaultValue: 'Yes' }) : t('common.no', { defaultValue: 'No' })}
+                  />
+                </div>
               ) : (
                 <BentoTileEmpty id="asset-bento-hardware-empty">
                   {t('assetBento.noHardware', { defaultValue: 'No hardware details recorded.' })}
@@ -468,7 +490,7 @@ export function AssetBentoLayout({
                   <BentoGauge
                     percent={disk?.utilization_percent}
                     label={disk ? `${t('assetBento.disk', { defaultValue: 'Disk' })} ${disk.name}` : t('assetBento.disk', { defaultValue: 'Disk' })}
-                    caption={disk ? `${disk.free_gb} GB free of ${disk.total_gb} GB` : undefined}
+                    caption={disk ? (disk.free_gb != null ? `${disk.free_gb} GB free of ${disk.total_gb} GB` : `${disk.total_gb} GB`) : undefined}
                   />
                 </div>
                 <div className="mt-3 space-y-1.5 border-t border-[rgb(var(--color-border-100))] pt-3 text-sm">

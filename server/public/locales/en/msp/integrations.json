@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Pro Feature"
+    },
     "accounting": {
       "bulk": {
         "button": "Bulk map",
@@ -27,7 +30,8 @@
           "mapped": "Mapped",
           "noResult": "No result was returned for this row.",
           "pending": "Pending",
-          "saved": "Saved"
+          "saved": "Saved",
+          "missingField": "Needs {{field}}"
         },
         "suggested": "Suggested",
         "toSave": "{{total}} to save"
@@ -81,7 +85,8 @@
           "instant": "Instant",
           "live": "Live",
           "manual": "Manual",
-          "twoWay": "2-way"
+          "twoWay": "2-way",
+          "iif": "IIF"
         },
         "highlights": {
           "delivery": "Delivery",
@@ -101,6 +106,9 @@
           },
           "xeroCsv": {
             "description": "Export invoices and import Xero tax reports."
+          },
+          "qbd": {
+            "description": "Export invoices as an IIF file for import into QuickBooks Desktop."
           }
         },
         "selected": "{{title}} selected",
@@ -126,13 +134,22 @@
         }
       },
       "adjustmentMappings": {
-        "desktopServices": "Desktop service accounts",
-        "desktopDiscounts": "Desktop discounts",
         "desktopAccount": "Desktop income account name",
         "description": "Map invoice discounts and credits before exporting. The mapping belongs to this accounting company.",
         "add": "Add mapping",
         "remove": "Remove mapping",
-        "removeConfirm": "Remove this accounting mapping?"
+        "removeConfirm": "Remove this accounting mapping?",
+        "desktopTaxAccount": "Desktop sales tax account name",
+        "desktopCustomer": "Desktop customer name",
+        "desktopTerms": "Desktop terms name",
+        "descriptionTaxCodes": "Each tax region names the sales tax item or group QuickBooks Desktop charges and the liability account it posts to.",
+        "descriptionServices": "Each service names the QuickBooks Desktop item its invoice lines use and the income account they post to.",
+        "descriptionClients": "The QuickBooks Desktop customer each client is invoiced as. Unmapped clients block the export.",
+        "descriptionPaymentTerms": "The QuickBooks Desktop terms printed on each invoice. Unmapped terms are left blank.",
+        "desktopItem": "Desktop item name",
+        "desktopItemHelp": "The item exactly as it appears in your QuickBooks Desktop Item List. Every invoice line names an item, so exports are blocked until it is set.",
+        "desktopSalesTaxItem": "Sales tax item or group",
+        "desktopSalesTaxItemHelp": "Leave blank to use the default sales tax item from the QuickBooks Desktop settings."
       }
     },
     "calendar": {
@@ -1232,7 +1249,12 @@
         "recommendedUnsaved": "Recommended – not saved",
         "unsavedChange": "Unsaved change",
         "unsavedNotice": "These filter settings are not in effect until you save them."
-      }
+      },
+      "proFeature": {
+        "description": "Microsoft Entra integration is available in AlgaPSA Pro.",
+        "notice": "Microsoft Entra Identity Integration is a Pro Feature."
+      },
+      "loading": "Loading Microsoft Entra integration…"
     },
     "google": {
       "settings": {
@@ -1303,6 +1325,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "The Hudu IT documentation integration is available in AlgaPSA Pro."
+      },
       "clientTab": {
         "source": "Source: Hudu",
         "openInHudu": "Open in Hudu",
@@ -2346,6 +2371,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "NinjaOne RMM integration is available in AlgaPSA Pro."
+        },
         "loading": "Loading NinjaOne integration settings...",
         "card": {
           "title": "NinjaOne RMM Integration",
@@ -2623,6 +2651,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "Tanium RMM integration is available in AlgaPSA Pro."
+        },
         "loading": "Loading Tanium integration settings...",
         "actions": {
           "discoverScopes": "Discover Scopes",
@@ -2693,6 +2724,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "Level.io RMM integration is available in AlgaPSA Pro."
+        },
         "actions": {
           "backfillAlerts": "Backfill Alerts",
           "disconnect": "Disconnect",
@@ -2765,16 +2799,35 @@
           "copied": "Copied",
           "copy": "Copy",
           "description": "Level cannot register webhooks via its API. In Level, create an automation with an HTTP POST action using the URL, header, and payload below to push alerts into Alga in real time.",
+          "fallbackDescription": "Use this fallback only when Level's native Settings → Webhooks can't be used. Create an automation with an HTTP POST action using the URL, header, and payload below to push alerts into Alga.",
+          "fallbackNameHint": "Edit the \"name\" value in each automation. Together with the device it identifies the alert, so repeats of the same name on the same device are treated as one alert.",
+          "fallbackTitle": "Fallback: Automation HTTP Request",
           "header": "Header: {{name}}",
           "hideSecret": "Hide secret",
           "loading": "Webhook details load after the integration is configured.",
+          "nativeDescription": "In Level, open Settings → Webhooks, add a webhook with the URL and signing secret below, and enable the events listed. Level signs every delivery and Alga verifies the signature.",
+          "nativeEvents": "Events to enable",
+          "nativeEventsHelp": "Enable alert_active and alert_resolved. Other events are acknowledged and ignored.",
+          "nativeSigningSecret": "Signing secret",
+          "nativeTitle": "Native Webhook (recommended)",
           "payload": "Payload template",
+          "regenerateCancel": "Cancel",
+          "regenerateConfirmLabel": "Regenerate",
+          "regenerateConfirmMessage": "Existing Level webhooks will fail with 401 until you paste the new signing secret into Level's webhook settings. Alerts sent in the meantime are retried by Level but may be lost if the secret is not updated.",
+          "regenerateConfirmTitle": "Regenerate signing secret?",
+          "regenerateConfirmed": "Signing secret regenerated. Update it in Level's webhook settings.",
+          "regenerateFailed": "Failed to regenerate the signing secret",
+          "regenerateSecret": "Regenerate secret",
           "showSecret": "Show secret",
           "title": "Alert Webhook",
           "url": "Webhook URL"
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Huntress Integration",
+          "description": "The Huntress security integration is a Pro feature."
+        },
         "columns": {
           "organization": "Huntress Organization",
           "client": "Alga Client",
@@ -2815,7 +2868,7 @@
         },
         "connection": {
           "title": "Connected to {{account}}",
-          "summary": "{{organizations}} organizations ({{unmapped}} unmapped) · {{openIncidents}} open incidents · last poll: {{lastPoll}}",
+          "summary": "{{organizations}} organizations ({{unmapped}} unmapped) · {{openAlerts}} open alerts · last poll: {{lastPoll}}",
           "neverPolled": "never",
           "lastPollFailed": "Last poll failed: {{error}}",
           "routingIncompleteWarning": "Incident polling is paused until the routing configuration below is complete (board, fallback client/board, and all three severity priorities).",
@@ -2838,6 +2891,8 @@
           "selectPriority": "Priority",
           "pollInterval": "Poll interval (minutes)",
           "autoClose": "Close tickets when Huntress closes the incident",
+          "ingestEscalations": "Create tickets from Huntress escalations",
+          "ingestEscalationsHelp": "Escalations use the same board, category, priority mapping and auto-close settings as incidents. An escalation that covers several organizations creates one ticket per organization.",
           "closedStatus": "Closed status",
           "selectStatus": "Select status",
           "save": "Save routing configuration",
@@ -3534,6 +3589,11 @@
           "regenerate": "Regenerate package",
           "regenerating": "Regenerating..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Teams sign-in unavailable",
+        "tabTitle": "Teams tab unavailable",
+        "description": "Microsoft Teams integration is only available in Pro."
       }
     },
     "xero": {
@@ -4010,6 +4070,59 @@
           "providers": "Teams Phone today; the same call core is what future providers plug into."
         }
       }
+    },
+    "qbd": {
+      "settings": {
+        "title": "QuickBooks Desktop (IIF) Integration",
+        "description": "Export invoices as an IIF file for File → Utilities → Import → IIF Files in QuickBooks Desktop.",
+        "loading": "Loading QuickBooks Desktop settings...",
+        "savedMessage": "Settings saved successfully",
+        "save": "Save settings",
+        "connectionsPermissionNotice": "You can view QuickBooks Desktop settings, but changing them requires the manage-connections capability. Ask an administrator to grant it.",
+        "errors": {
+          "load": "Failed to load QuickBooks Desktop settings",
+          "save": "Failed to save QuickBooks Desktop settings"
+        },
+        "warning": {
+          "title": "Back up your company file first",
+          "description": "QuickBooks Desktop adds any customer, item, account, or term name it does not recognise when importing an IIF file, and IIF imports cannot be undone. Make sure every name below and in the mappings matches your company file exactly, and try your first import on a backup copy."
+        },
+        "exportSettings": {
+          "title": "IIF Export Settings",
+          "description": "Enter the QuickBooks Desktop account and item names exactly as they appear in your Chart of Accounts and Item List."
+        },
+        "fields": {
+          "arAccount": "Accounts Receivable account",
+          "arAccountHelp": "The A/R account each invoice posts to.",
+          "defaultIncomeAccount": "Default income account",
+          "defaultIncomeAccountHelp": "The income account for items mapped from an export, and for any Services or Discounts mapping without an account.",
+          "salesTaxPayableAccount": "Sales tax liability account",
+          "salesTaxPayableAccountHelp": "The account the sales tax line posts to, unless the tax region's Tax Codes mapping names another.",
+          "defaultSalesTaxItem": "Default sales tax item",
+          "defaultSalesTaxItemHelp": "Sales tax item or group for taxed invoices whose Tax Codes mapping does not name one.",
+          "newProductItemType": "New product item type",
+          "inventoryWarning": "Alga stock receipts are not exported, so QuickBooks on-hand quantities will go negative unless you also enter stock in QuickBooks.",
+          "nonInventoryHelp": "Recommended: Alga stays the inventory system of record and QuickBooks only records the sale.",
+          "inventoryAssetAccount": "Inventory asset account",
+          "cogsAccount": "Cost of goods sold account"
+        },
+        "mappings": {
+          "title": "QuickBooks Mappings",
+          "description": "Map Alga clients, services, discounts, tax codes, and payment terms to the names in your QuickBooks Desktop company file. Every service and discount needs a Desktop item; unmapped payment terms are left blank.",
+          "permissionNotice": "Editing QuickBooks Desktop mappings requires the manage-mappings capability. Ask an administrator to grant it."
+        },
+        "exports": {
+          "description": "Create a QuickBooks Desktop export batch and execute it, then download the IIF file from the batch details."
+        },
+        "newItems": {
+          "title": "Items created by exports",
+          "description": "When an export creates a new QuickBooks item for an Alga product, it uses this item type. Services are always created as Service items."
+        },
+        "itemTypes": {
+          "nonInventory": "Non-inventory Part",
+          "inventory": "Inventory Part"
+        }
+      }
     }
   },
   "errors": {
@@ -4129,6 +4242,10 @@
       "contactWithoutClient": "A contact with this email address already exists in the system without a client assignment",
       "emailOnAnotherClient": "This email is already associated with another client",
       "emailOnAnotherClientNamed": "This email is already associated with {{clientName}}"
+    },
+    "quickbooksDesktop": {
+      "viewSettingsPermission": "User does not have permission to view integration settings",
+      "manageIntegrationsPermission": "User does not have permission to manage integration settings"
     }
   },
   "telephony": {

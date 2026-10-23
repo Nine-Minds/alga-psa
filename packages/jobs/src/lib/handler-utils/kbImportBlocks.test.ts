@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { Lexer } from 'marked';
 import {
   INLINE_CHUNK_SIZE,
   KbImportParseTimeoutError,
@@ -453,7 +454,9 @@ describe('kbImportBlocks link sanitization', () => {
 // identical, so only the work differs. A wall-clock ratio could not tell the
 // two apart on a loaded CI runner (an 8MB parse is dominated by the linear
 // lexer and GC), so count the characters the search inspects instead.
-describe('kbImportBlocks inline chunk splitting', () => {
+// The masking-work guard parses ~255KB of code spans twice under a spy; that
+// is ~11s on a loaded CI runner, past the package's 10s default.
+describe('kbImportBlocks inline chunk splitting', { timeout: 20_000 }, () => {
   // Stands in for the source string and tallies every character a search
   // reads. Any other access throws, so a rewrite that reads the source some
   // new way fails loudly here instead of going uncounted.
@@ -522,6 +525,52 @@ describe('kbImportBlocks inline chunk splitting', () => {
     expect(types(blocks)).toEqual(['paragraph']);
     expect(plainText(blocks[0])).toBe(text);
   });
+
+  // Records the length of every source marked's own inline pass is handed.
+  // DeadlineLexer overrides inlineTokens and reaches the real one through
+  // `super`, so this sees the chunks and nothing else.
+  const maskedRuns = (parse: () => unknown): number[] => {
+    const spy = vi.spyOn(Lexer.prototype, 'inlineTokens');
+    try {
+      parse();
+      return spy.mock.calls.map(([src]) => src.length);
+    } finally {
+      spy.mockRestore();
+    }
+  };
+
+  // Replaces a wall-clock ratio across a doubling of the same input. marked's
+  // masking is quadratic in the source it receives, but a whole parse is
+  // dominated by the linear lexer and by GC, so the ratio moved too little to
+  // separate the two: it measured ~2.5x per doubling against a 4x bound, and a
+  // loaded CI runner crossed it on correct code (2509ms vs 614ms). The work
+  // itself is deterministic, so assert it instead.
+  //
+  // The two parses below still cost ~2s of real wall-clock time on quiet
+  // hardware (two full marked lexes of a 127KB/255KB document, each spied on
+  // via vi.spyOn), same as the sibling "pathological input" describe below —
+  // and that block raises its timeout for exactly this reason: a CI runner
+  // sharing the box with dozens of other Nx projects routinely blows past the
+  // default 10s per-test timeout on work a dev laptop finishes in a blink.
+  // This test's assertions are about work linearity, not timing, so a longer
+  // timeout costs nothing: the counting checks still fail immediately (and
+  // fast) if the quadratic masking regresses.
+  it('keeps the inline pass linear as one inline-dense block grows', () => {
+    // Code spans with no whitespace to split on: the densest shape we know of,
+    // and the one that grew ~12x per doubling while the inline pass was quadratic.
+    for (const repeats of [42_500, 85_000]) {
+      const markdown = '`a`'.repeat(repeats);
+      const runs = maskedRuns(() => markdownToBlocks(markdown));
+
+      // Each masking pass is capped at one chunk and the passes partition the
+      // source, so total cost is (length / chunk) x chunk^2: linear in the
+      // document. The regression hands the whole run over in a single pass,
+      // which is length^2 and fails the first two assertions outright.
+      expect(Math.max(...runs)).toBeLessThanOrEqual(INLINE_CHUNK_SIZE);
+      expect(runs).toHaveLength(Math.ceil(markdown.length / INLINE_CHUNK_SIZE));
+      expect(runs.reduce((total, length) => total + length, 0)).toBe(markdown.length);
+    }
+  }, 60_000);
 });
 
 // Guards against reintroducing the quadratic/backtracking parser: every case
@@ -534,9 +583,6 @@ describe('kbImportBlocks pathological input stays linear', { timeout: 120_000 },
     fn();
     return Date.now() - startedAt;
   };
-
-  const fastestOf = (runs: number, fn: () => unknown): number =>
-    Math.min(...Array.from({ length: runs }, () => timed(fn)));
 
   // A hard millisecond budget is not portable -- CI parses several times slower
   // than a laptop, so a bound tight enough to catch the regression flakes there.
@@ -606,19 +652,6 @@ describe('kbImportBlocks pathological input stays linear', { timeout: 120_000 },
       );
       expect(Date.now() - startedAt).toBeLessThan(PARSE_BUDGET_MS);
     }
-  });
-
-  it('scales linearly as one inline-dense block grows', () => {
-    // Code spans with no whitespace to split on: the densest shape we know of,
-    // and the one that grew ~12x per doubling while the inline pass was quadratic.
-    // Chunking holds this at ~2.5x per doubling (hard-splitting a window costs a
-    // little more than splitting on whitespace), so bound it at 4x: clear of the
-    // measured cost, and still an order of magnitude under the regression. Both
-    // sizes take the fastest of three samples so one stalled run cannot skew the
-    // ratio on a loaded runner.
-    const half = fastestOf(3, () => markdownToBlocks('`a`'.repeat(42_500)));
-    const full = fastestOf(3, () => markdownToBlocks('`a`'.repeat(85_000)));
-    expect(full).toBeLessThan(Math.max(half, 20) * 4);
   });
 
   it('costs the same whether inline constructs sit in one block or many', () => {

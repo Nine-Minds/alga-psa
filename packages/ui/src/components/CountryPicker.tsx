@@ -6,6 +6,7 @@ import { AutomationProps, FormFieldComponent } from '../ui-reflection/types';
 import { Input } from './Input';
 import { Button } from './Button';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
+import { useTranslation } from '../lib/i18n/client';
 
 interface Country {
   code: string;
@@ -64,9 +65,10 @@ const CountryPicker = ({
   className,
   labelStyle = 'bold',
   buttonWidth = 'fit',
-  placeholder = 'Select Country',
+  placeholder,
   'data-automation-id': dataAutomationId
 }: CountryPickerProps & AutomationProps) => {
+  const { t } = useTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom');
@@ -209,7 +211,7 @@ const CountryPicker = ({
 
   const selectedCountryName = currentCountry 
     ? `${currentCountry.name} (${currentCountry.code})`
-    : placeholder;
+    : placeholder === undefined ? t('countryPicker.placeholder') : placeholder;
 
   return (
     <div className={`relative inline-block ${buttonWidth === 'full' ? 'w-full' : ''} ${className || ''}`} ref={dropdownRef} onClick={(e) => e.stopPropagation()}>
@@ -265,7 +267,7 @@ const CountryPicker = ({
                   ref={searchInputRef}
                   data-automation-id={dataAutomationId ? `${dataAutomationId}-search` : undefined}
                   type="text"
-                  placeholder="Search countries..."
+                  placeholder={t('countryPicker.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onClick={(e) => e.stopPropagation()}
@@ -288,7 +290,7 @@ const CountryPicker = ({
                   <div key={country.code}>
                     {isFirstOther && (
                       <div className="px-3 py-1 text-xs font-medium text-gray-500 border-t border-[rgb(var(--color-border-200))]">
-                        Other Countries
+                        {t('countryPicker.otherCountries')}
                       </div>
                     )}
                     <div
@@ -306,7 +308,7 @@ const CountryPicker = ({
               })}
 
               {filteredCountries.length === 0 && searchQuery && (
-                <div className="px-3 py-2 text-sm text-gray-500">No countries found</div>
+                <div className="px-3 py-2 text-sm text-gray-500">{t('countryPicker.empty')}</div>
               )}
             </div>
           </div>

@@ -352,10 +352,16 @@ vi.mock('../TicketResolutionDialog', () => ({
       <button
         type="button"
         onClick={() =>
-          void onConfirm('status-closed', [], {
-            suppressContactNotifications: false,
-            suppressInternalNotifications: false,
-          })
+          void onConfirm(
+            'status-closed',
+            // Non-empty: keeps this spec on the path that saves a resolution
+            // comment before the propagation prompt.
+            [{ type: 'paragraph', content: [{ type: 'text', text: 'Fixed.', styles: {} }] }],
+            {
+              suppressContactNotifications: false,
+              suppressInternalNotifications: false,
+            },
+          )
         }
       >
         confirm-resolution

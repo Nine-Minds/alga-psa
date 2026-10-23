@@ -59,6 +59,30 @@ type InternalUpdateProjectTaskData = UpdateProjectTaskData & {
   description_rich_text?: string | null;
 };
 
+/** One project task a ticket is linked to, as GET /tickets/{id}/project-links lists it. */
+export interface TicketProjectLink {
+  link_id: string;
+  project_id: string;
+  project_name: string;
+  project_number: string | null;
+  phase_id: string;
+  phase_name: string | null;
+  task_id: string;
+  task_name: string | null;
+  project_status_mapping_id: string | null;
+  /** The task's status: custom mapping name, then project status, then standard. */
+  status_name: string | null;
+  is_closed: boolean;
+  task_updated_at: Date | null;
+  bill_under_project: boolean;
+  created_at: Date;
+  /** For record-level project authorization; not returned to API callers. */
+  project_assigned_to: string | null;
+  project_client_id: string | null;
+  project_status: string | null;
+  project_is_closed: boolean;
+}
+
 type DeferredTaskEventType =
   | 'PROJECT_TASK_CREATED'
   | 'PROJECT_TASK_ASSIGNED'
@@ -164,9 +188,30 @@ export class ProjectService extends BaseService<IProject> {
     });
   }
 
+  /**
+   * Range keys the projects list accepts. `created_*`/`updated_*` come from the
+   * base map (created_at/updated_at); the start/end windows map to the project
+   * date columns. Any other `_from`/`_to` key is rejected by `applyRangeFilters`.
+   */
+  protected rangeFilterColumns(): Record<string, string> {
+    return {
+      ...super.rangeFilterColumns(),
+      start_date_from: `${this.tableName}.start_date`,
+      start_date_to: `${this.tableName}.start_date`,
+      end_date_from: `${this.tableName}.end_date`,
+      end_date_to: `${this.tableName}.end_date`,
+    };
+  }
+
   async list(options: ListOptions, context: ServiceContext, filters?: ProjectFilterData): Promise<ListResult<IProject>> {
       const { knex } = await this.getKnex();
       const query = scopedTable<IProject>(knex, context.tenant, this.tableName);
+
+      // Common + project-specific range filters (created_*, updated_*,
+      // start_date_*, end_date_*). Unsupported range keys fail loudly.
+      if (filters) {
+        this.applyRangeFilters(query, filters);
+      }
   
       // Apply filters
       if (filters) {
@@ -178,18 +223,6 @@ export class ProjectService extends BaseService<IProject> {
         }
         if (filters.status) {
           query.where(`${this.tableName}.status`, filters.status);
-        }
-        if (filters.start_date_from) {
-          query.where(`${this.tableName}.start_date`, '>=', filters.start_date_from);
-        }
-        if (filters.start_date_to) {
-          query.where(`${this.tableName}.start_date`, '<=', filters.start_date_to);
-        }
-        if (filters.end_date_from) {
-          query.where(`${this.tableName}.end_date`, '>=', filters.end_date_from);
-        }
-        if (filters.end_date_to) {
-          query.where(`${this.tableName}.end_date`, '<=', filters.end_date_to);
         }
         if (filters.is_inactive !== undefined) {
           query.where(`${this.tableName}.is_inactive`, filters.is_inactive);
@@ -985,6 +1018,51 @@ export class ProjectService extends BaseService<IProject> {
 
 
   // Project ticket links
+
+  /**
+   * The project tasks a ticket is linked to, from the ticket's side, with each
+   * task's resolved status so a caller can tell when the work it waits on has
+   * moved. The project's owner, client and state come along for record-level
+   * authorization.
+   */
+  async getTicketProjectLinks(ticketId: string, context: ServiceContext): Promise<TicketProjectLink[]> {
+    const { knex } = await this.getKnex();
+    const db = tenantDb(knex, context.tenant);
+
+    const query = db.table('project_ticket_links');
+    db.tenantJoin(query, 'projects', 'project_ticket_links.project_id', 'projects.project_id');
+    db.tenantJoin(query, 'project_phases', 'project_ticket_links.phase_id', 'project_phases.phase_id', { type: 'left' });
+    db.tenantJoin(query, 'project_tasks', 'project_ticket_links.task_id', 'project_tasks.task_id', { type: 'left' });
+    db.tenantJoin(query, 'project_status_mappings as psm', 'project_tasks.project_status_mapping_id', 'psm.project_status_mapping_id', { type: 'left' });
+    db.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+    db.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
+    db.tenantJoin(query, 'statuses as ps', 'projects.status', 'ps.status_id', { type: 'left' });
+
+    return query
+      .where('project_ticket_links.ticket_id', ticketId)
+      .select(
+        'project_ticket_links.link_id',
+        'project_ticket_links.project_id',
+        'projects.project_name',
+        'projects.project_number',
+        'project_ticket_links.phase_id',
+        'project_phases.phase_name',
+        'project_ticket_links.task_id',
+        'project_tasks.task_name',
+        'project_tasks.project_status_mapping_id',
+        knex.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
+        knex.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed'),
+        'project_tasks.updated_at as task_updated_at',
+        'project_ticket_links.bill_under_project',
+        'project_ticket_links.created_at',
+        'projects.assigned_to as project_assigned_to',
+        'projects.client_id as project_client_id',
+        'projects.status as project_status',
+        knex.raw('COALESCE(ps.is_closed, false) as project_is_closed')
+      )
+      .orderBy('project_ticket_links.created_at');
+  }
+
   async getProjectTicketLinks(projectId: string, context: ServiceContext): Promise<IProjectTicketLink[]> {
       const { knex } = await this.getKnex();
       

@@ -360,7 +360,8 @@
     "contractLineType": {
       "Fixed": "Fixo",
       "Hourly": "De hora em hora",
-      "Usage": "Baseado no uso"
+      "Usage": "Baseado no uso",
+      "PrepaidBlock": "Bloco pré-pago"
     },
     "quoteStatus": {
       "draft": "Rascunho",
@@ -442,6 +443,14 @@
     "hoursLeft": "{{hours}}h restantes",
     "expires": "Expira em {{date}}",
     "recentBurn": "Uso recente",
-    "timeEntry": "Lançamento de horas"
+    "timeEntry": "Lançamento de horas",
+    "contractLabel": "Contrato: {{contract}}"
+  },
+  "bucketUsage": {
+    "contractLine": "Linha de contrato de banco de horas",
+    "usage": "Uso",
+    "hoursUsed": "{{hours}} horas utilizadas",
+    "hoursTotal": "{{hours}} horas no total",
+    "rolloverHours": "Inclui {{hours}} horas transferidas"
   }
 }

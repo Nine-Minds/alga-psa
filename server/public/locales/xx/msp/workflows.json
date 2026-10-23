@@ -1397,7 +1397,9 @@
         "summary_one": "⟦Şķīƥƥḗḓ {{count}} ḗṽḗƞŧ īƞ ŧħḗ ŀȧşŧ {{days}} ḓȧẏş — {{reasons}}⟧",
         "summary_other": "⟦Şķīƥƥḗḓ {{count}} ḗṽḗƞŧş īƞ ŧħḗ ŀȧşŧ {{days}} ḓȧẏş — {{reasons}}⟧",
         "lastSkipped": "⟦Ŀȧşŧ şķīƥƥḗḓ {{when}}⟧",
-        "view": "⟦Ṽīḗẇ şķīƥƥḗḓ ḗṽḗƞŧş⟧"
+        "view": "⟦Ṽīḗẇ şķīƥƥḗḓ ḗṽḗƞŧş⟧",
+        "summary_few": "⟦Şķīƥƥḗḓ {{count}} ḗṽḗƞŧş īƞ ŧħḗ ŀȧşŧ {{days}} ḓȧẏş — {{reasons}}⟧",
+        "summary_many": "⟦Şķīƥƥḗḓ {{count}} ḗṽḗƞŧş īƞ ŧħḗ ŀȧşŧ {{days}} ḓȧẏş — {{reasons}}⟧"
       },
       "drawer": {
         "title": "⟦Şķīƥƥḗḓ ḗṽḗƞŧş⟧",
@@ -1740,7 +1742,9 @@
     "insertionPointLabel": "⟦Ƞḗẇ şŧḗƥş ɠȯ ħḗřḗ⟧",
     "emptyBranchPrompt": "⟦Ȧḓḓ ȧ şŧḗƥ ŧȯ ŧħīş ƀřȧƞƈħ⟧",
     "emptyActivePrompt": "⟦Ƞḗẇ şŧḗƥş ɠȯ ħḗřḗ. Ƥīƈķ ȯƞḗ ƒřȯḿ ŧħḗ ƥȧŀḗŧŧḗ.⟧",
-    "stepCount": "⟦({{count}} şŧḗƥş)⟧"
+    "stepCount": "⟦({{count}} şŧḗƥş)⟧",
+    "stepCount_few": "⟦({{count}} şŧḗƥş)⟧",
+    "stepCount_many": "⟦({{count}} şŧḗƥş)⟧"
   },
   "expressionEditor": {
     "ariaLabel": "⟦Ḗẋƥřḗşşīȯƞ ḗḓīŧȯř⟧",
@@ -2253,7 +2257,12 @@
       "currentRun": "⟦Řŭƞ {{id}}⟧",
       "backToWorkflow": "⟦Ɓȧƈķ ŧȯ ẇȯřķƒŀȯẇ⟧"
     },
-    "title": "⟦Ẇȯřķƒŀȯẇ Řŭƞ Şŧŭḓīȯ⟧"
+    "title": "⟦Ẇȯřķƒŀȯẇ Řŭƞ Şŧŭḓīȯ⟧",
+    "communityEdition": {
+      "title": "⟦Ƥřȯ Ƒḗȧŧŭřḗ⟧",
+      "description": "⟦Ẇȯřķƒŀȯẇ řŭƞ şŧŭḓīȯ īş ȯƞŀẏ ȧṽȧīŀȧƀŀḗ īƞ Ƥřȯ.⟧",
+      "runId": "⟦Řŭƞ īḓ: {{runId}}⟧"
+    }
   },
   "schedules": {
     "common": {
@@ -3026,6 +3035,10 @@
         "selectBoard": "⟦Şḗŀḗƈŧ ȯř ḗƞŧḗř ȧ ƀȯȧřḓ⟧",
         "selectPriority": "⟦Şḗŀḗƈŧ ȯř ḗƞŧḗř ȧ ƥřīȯřīŧẏ⟧"
       }
+    },
+    "proFeature": {
+      "title": "⟦Ƥřȯ Ƒḗȧŧŭřḗ⟧",
+      "description": "⟦Ŧħḗ ẇȯřķƒŀȯẇ şẏşŧḗḿ īş ȯƞŀẏ ȧṽȧīŀȧƀŀḗ īƞ Ƥřȯ. Ƥŀḗȧşḗ ŭƥɠřȧḓḗ ẏȯŭř īƞşŧȧŀŀȧŧīȯƞ ŧȯ ȧƈƈḗşş ŧħīş ƒḗȧŧŭřḗ.⟧"
     }
   },
   "toggle": {

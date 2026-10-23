@@ -7,6 +7,7 @@ import type { Activity, ActivityType } from '@alga-psa/types';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from '../components/Button';
 import { useCatalogShortcut, useShortcutScope } from '../keyboard-shortcuts';
+import { useTranslation } from '../lib/i18n/client';
 
 // Define the drawer history entry type
 interface DrawerHistoryEntry {
@@ -204,7 +205,7 @@ function drawerReducer(state: DrawerState, action: DrawerAction): DrawerState {
         type: 'form',
         activityType: activity.type,
         activityId: activity.id,
-        title: title || `${activity.title} - Form`,
+        title: title || '',
         content,
         onMount,
         metadata: { activity, formId },
@@ -369,9 +370,13 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
  * Place this inside all context providers so drawer content inherits the full provider tree.
  */
 export const DrawerOutlet: React.FC = () => {
+  const { t } = useTranslation('common');
   const { closeDrawer, goBack, goForward, canGoBack, canGoForward, currentEntry, history, registerOutlet } = useDrawer();
   useEffect(() => registerOutlet?.(), [registerOutlet]);
   const isOpen = history.length > 0 && currentEntry !== null;
+  const title = currentEntry?.type === 'form' && !currentEntry.title
+    ? t('drawer.formTitle', { title: currentEntry.metadata?.activity.title, defaultValue: `${currentEntry.metadata?.activity.title} - Form` })
+    : currentEntry?.title;
 
   return (
     <Drawer
@@ -384,7 +389,7 @@ export const DrawerOutlet: React.FC = () => {
     >
       {currentEntry && (
         <div className="flex flex-col h-full relative">
-          {(currentEntry.title || canGoBack || canGoForward) ? (
+          {(title || canGoBack || canGoForward) ? (
             <div className="flex items-center justify-between mb-4 border-b pb-3">
               <div className="flex items-center">
                 {canGoBack && (
@@ -394,12 +399,12 @@ export const DrawerOutlet: React.FC = () => {
                     size="sm"
                     onClick={() => guardActiveDismiss(goBack)}
                     className="mr-2"
-                    aria-label="Go back"
+                    aria-label={t('drawer.actions.goBack', { defaultValue: 'Go back' })}
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                 )}
-                {currentEntry.title && <h2 className="text-xl font-semibold">{currentEntry.title}</h2>}
+                {title && <h2 className="text-xl font-semibold">{title}</h2>}
               </div>
               <div className="flex items-center">
                 {canGoForward && (
@@ -409,7 +414,7 @@ export const DrawerOutlet: React.FC = () => {
                     size="sm"
                     onClick={() => guardActiveDismiss(goForward)}
                     className="mr-2"
-                    aria-label="Go forward"
+                    aria-label={t('drawer.actions.goForward', { defaultValue: 'Go forward' })}
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>
@@ -419,7 +424,7 @@ export const DrawerOutlet: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => guardActiveDismiss(closeDrawer)}
-                  aria-label="Close drawer"
+                  aria-label={t('drawer.actions.close', { defaultValue: 'Close drawer' })}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -432,7 +437,7 @@ export const DrawerOutlet: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => guardActiveDismiss(closeDrawer)}
-                aria-label="Close drawer"
+                aria-label={t('drawer.actions.close', { defaultValue: 'Close drawer' })}
                 className="hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))]"
               >
                 <X className="h-4 w-4" />

@@ -121,6 +121,7 @@ const ContractLine = {
       ...contractLineCore
     } = plan;
     const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+      lineType: contractLineCore.contract_line_type ?? null,
       cadenceOwner: contractLineCore.cadence_owner,
       defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
       billingTiming: billing_timing,
@@ -148,9 +149,10 @@ const ContractLine = {
         .where({
           contract_line_id: planId
         })
-        .first(['billing_timing', 'cadence_owner']);
+        .first(['billing_timing', 'cadence_owner', 'contract_line_type']);
 
       const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+        lineType: dataToUpdate.contract_line_type ?? existingPlan?.contract_line_type ?? null,
         cadenceOwner: dataToUpdate.cadence_owner,
         fallbackCadenceOwner: existingPlan?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
         billingTiming: dataToUpdate.billing_timing,

@@ -144,6 +144,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Prepaid hour blocks. The three child tables FK to hour_blocks, so they go
   // first; hour_blocks itself FKs to time_entries, service_catalog, invoices and
   // clients, so the whole group has to precede time tracking below.
+  // Prepaid Block issuances soft-reference hour_blocks, invoices and alerts
+  // (SET NULL) and hour_blocks references them back (SET NULL), so the ledger
+  // goes with the hour-block group ahead of contract lines.
+  'contract_line_block_issuances',
   'hour_block_audit', 'hour_block_service_scopes', 'hour_block_time_allocations',
   'hour_blocks',
 
@@ -271,12 +275,14 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Recurring tickets. Client asset links FK to definition clients and assets;
   // definition clients FK to definitions and clients; occurrences FK to
-  // definitions only. All four go before assets and clients.
+  // definitions only. All four go before assets and clients. Definitions also hold a
+  // RESTRICT FK to ticket_templates, so they must stay ahead of the template tables below.
   'recurring_ticket_client_assets', 'recurring_ticket_occurrences',
   'recurring_ticket_definition_clients', 'recurring_ticket_definitions',
 
   // Ticket templates. Both FK to tenants; items FK to templates (ON DELETE CASCADE),
-  // so items go first. Neither references tickets or clients.
+  // so items go first. Neither references tickets or clients. Must come AFTER
+  // recurring_ticket_definitions (ON DELETE RESTRICT on ticket_template_id).
   'ticket_template_checklist_items', 'ticket_templates',
 
   // Asset details
@@ -305,7 +311,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'software_catalog',
 
   // RMM
-  'rmm_maintenance_windows', 'rmm_alert_rules', 'rmm_alerts', 'rmm_organization_mappings', 'rmm_integrations',
+  'rmm_webhook_events', 'rmm_maintenance_windows', 'rmm_alert_rules', 'rmm_alerts', 'rmm_organization_mappings', 'rmm_integrations',
 
   // Survey
   'survey_responses', 'survey_invitations', 'survey_triggers', 'survey_templates',
@@ -375,15 +381,16 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'service_catalog_mode_defaults',
   'service_rate_tiers', 'service_prices', 'contract_line_discounts', 'contract_discount_assignments', 'discounts',
   'client_billing_cycles', 'client_billing_settings',
-  'contract_line_services', 'contract_lines', 'contracts',
+  'contract_line_prepaid_blocks', 'contract_line_services', 'contract_lines', 'contracts',
 
   // Contract line presets
-  'contract_line_preset_fixed_config', 'contract_line_preset_services', 'contract_line_presets',
+  'contract_line_preset_prepaid_blocks', 'contract_line_preset_fixed_config', 'contract_line_preset_services', 'contract_line_presets',
 
   // Contract templates (must be deleted before contracts)
   // Hourly/usage configs reference contract_template_line_service_configuration
   // with NO ACTION and must be deleted before it.
   'contract_template_line_defaults',
+  'contract_template_line_prepaid_blocks',
   'contract_template_line_bucket_services', 'contract_template_line_buckets',
   'contract_template_line_fixed_config', 'contract_template_line_service_bucket_config',
   'contract_template_line_service_fixed_config',

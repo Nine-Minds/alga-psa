@@ -23,10 +23,15 @@ describe('time sheet service list tenant-scoped query contract', () => {
     expect(listSection).toContain('this.buildTenantScopedQuery(knex, context)');
     expect(listSection).toContain('const db = tenantDb(knex, context.tenant);');
     expect(listSection).toContain(".table('time_entries')");
-    expect(listSection).toContain("db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id')");
     expect(listSection).toContain("db.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id', { type: 'left' })");
     expect(listSection).toContain("db.tenantJoin(query, 'users as approvers', 'time_sheets.approved_by', 'approvers.user_id', { type: 'left' })");
     expect(listSection).toContain("db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id', { type: 'left' })");
+    // Range filters (submitted_*/approved_*/period_*) all run through the shared
+    // applyRangeFilters, so no hand-rolled period join should remain.
+    expect(listSection).toContain('this.applyRangeFilters(query, effectiveFilters');
+
+    // time_periods is joined exactly once (a second join raises 42712)
+    expect(listSection.match(/tenantJoin\(query, 'time_periods'/g)).toHaveLength(1);
 
     expect(listSection).not.toMatch(/knex\(this\.tableName\)\s*[\r\n]+\s*\.where\(`\$\{this\.tableName\}\.tenant`, context\.tenant\)/);
     expect(listSection).not.toMatch(/knex\('time_entries'\)\s*\./);

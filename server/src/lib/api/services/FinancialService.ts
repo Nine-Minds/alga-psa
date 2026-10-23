@@ -495,6 +495,21 @@ export class FinancialService extends BaseService<ITransaction> {
       });
     }
 
+    // transactions has created_at but no updated_at, so created_* maps and
+    // updated_* is declared unsupported (null) and rejected.
+    this.applyRangeFilters(dataQuery, query, {
+      created_from: 't.created_at',
+      created_to: 't.created_at',
+      updated_from: null,
+      updated_to: null,
+    });
+    this.applyRangeFilters(countQuery, query, {
+      created_from: 'created_at',
+      created_to: 'created_at',
+      updated_from: null,
+      updated_to: null,
+    });
+
     // Sorting and pagination
     dataQuery = dataQuery
       .select(
@@ -537,8 +552,6 @@ export class FinancialService extends BaseService<ITransaction> {
       client_id,
       status,
       billing_cycle_id,
-      due_date_from,
-      due_date_to,
       amount_min,
       amount_max,
       is_manual,
@@ -580,15 +593,18 @@ export class FinancialService extends BaseService<ITransaction> {
       countQuery = countQuery.where('i.billing_cycle_id', billing_cycle_id);
     }
 
-    if (due_date_from) {
-      dataQuery = dataQuery.where('i.due_date', '>=', due_date_from);
-      countQuery = countQuery.where('i.due_date', '>=', due_date_from);
-    }
-
-    if (due_date_to) {
-      dataQuery = dataQuery.where('i.due_date', '<=', due_date_to);
-      countQuery = countQuery.where('i.due_date', '<=', due_date_to);
-    }
+    // Common created_/updated_ plus the due-date window; unsupported range keys
+    // throw rather than returning unfiltered invoices.
+    const invoiceRangeColumns = {
+      created_from: 'i.created_at',
+      created_to: 'i.created_at',
+      updated_from: 'i.updated_at',
+      updated_to: 'i.updated_at',
+      due_date_from: 'i.due_date',
+      due_date_to: 'i.due_date',
+    };
+    this.applyRangeFilters(dataQuery, query, invoiceRangeColumns);
+    this.applyRangeFilters(countQuery, query, invoiceRangeColumns);
 
     if (amount_min !== undefined) {
       dataQuery = dataQuery.where('i.total_amount', '>=', amount_min);
@@ -917,6 +933,14 @@ export class FinancialService extends BaseService<ITransaction> {
       baseQuery = baseQuery.where('credit_tracking.is_expired', false);
     }
 
+    // Common created_/updated_ range filters; unsupported keys throw.
+    baseQuery = this.applyRangeFilters(baseQuery, query, {
+      created_from: 'credit_tracking.created_at',
+      created_to: 'credit_tracking.created_at',
+      updated_from: 'credit_tracking.updated_at',
+      updated_to: 'credit_tracking.updated_at',
+    });
+
     // Count
     const [{ count }] = (await baseQuery.clone().count('credit_id as count')) as Array<{ count: string }>;
     const total = parseInt(count as string);
@@ -1147,6 +1171,15 @@ export class FinancialService extends BaseService<ITransaction> {
       });
       countQuery = countQuery.whereILike('pm.last4', `%${search}%`);
     }
+
+    const paymentMethodRangeColumns = {
+      created_from: 'pm.created_at',
+      created_to: 'pm.created_at',
+      updated_from: 'pm.updated_at',
+      updated_to: 'pm.updated_at',
+    };
+    this.applyRangeFilters(dataQuery, query, paymentMethodRangeColumns);
+    this.applyRangeFilters(countQuery, query, paymentMethodRangeColumns);
 
     const [paymentMethods, [{ count }]] = await Promise.all([
       dataQuery

@@ -811,5 +811,37 @@
   "githubStar": {
     "label": "Oznacz gwiazdką",
     "ariaLabel": "Oznacz {{repository}} gwiazdką w serwisie GitHub"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "Portal MSP",
+      "dashboard": "Pulpit",
+      "ticketDetails": "Szczegóły zgłoszenia",
+      "tickets": "Zgłoszenia",
+      "projectDetails": "Szczegóły projektu",
+      "projects": "Projekty",
+      "clientDetails": "Szczegóły klienta",
+      "clients": "Klienci",
+      "contactDetails": "Szczegóły kontaktu",
+      "contacts": "Kontakty",
+      "assetDetails": "Szczegóły zasobu",
+      "assets": "Zasoby",
+      "billing": "Rozliczenia",
+      "settings": "Ustawienia",
+      "settingsSection": "Ustawienia: {{section}}",
+      "chat": "Czat"
+    }
+  },
+  "chat": {
+    "page": {
+      "title": "Funkcja Pro",
+      "description": "Funkcje czatu z AI wymagają Pro. Przejdź na wyższy plan, aby uzyskać dostęp do tej funkcji."
+    },
+    "messages": {
+      "proRequired": "Funkcje wiadomości wymagają Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Funkcje czatu są dostępne tylko w Enterprise Edition"
+    }
   }
 }

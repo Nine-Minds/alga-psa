@@ -2,10 +2,9 @@ name: levelio-native-webhook-signed
 description: >-
   Level Settings → Webhooks with a secret, the way ~99% of Level clients
   configure it: signed alert_active/alert_resolved envelopes, no custom
-  headers. Against the 2026-10-15 Alga route every delivery is a 401 (it only
-  accepts X-Alga-Webhook-Secret) and Level retries each one three times.
-  The target defaults to webhook-sink; point it at Alga's
-  /api/webhooks/levelio?tenant=<id> to reproduce live.
+  headers. Alga verifies X-Level-Signature over the raw body and answers 2xx;
+  the alerts create tickets. The target defaults to webhook-sink; point it at
+  Alga's /api/webhooks/levelio?tenant=<id> to reproduce live.
 steps:
   - reset: levelio
   - seed: levelio/group

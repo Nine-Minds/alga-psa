@@ -15,7 +15,8 @@ current revision passed the full CI or browser matrix.
 | Actual accounting cleanup consumers | Real `revokeAccountingOAuthGrant` for each provider reaches the journaled vendor route. Success rejects credentials; Xero also verifies connection removal after fresh authorization. Failed cleanup logs without throwing and preserves usable credentials. | [QBO consumer](qbo/tests/accountingCleanupConsumer.test.ts), [Xero consumer](xero/tests/accountingCleanup.test.ts). Native HTTP with guards against external destinations; auth/state/logger seams are isolated. This is the cleanup helper, not the entire denied OAuth callback, database rollback, disconnect UI, or a running worker. |
 | Stripe callback redirects | HTTP 302/307 count as delivery failures; redirect destination receives no request and independent callbacks still receive valid signed payloads. | [Redirect tests](stripe/tests/webhookRedirect.test.ts). SDK verification covers signatures and delivery time; no live sandbox capture, exhaustive event schema, or automatic retry/backoff parity is implied. |
 | Level REST consumer | Alga's real `LevelIoApiClient` over HTTP: `testConnection`, group hierarchy across pages, devices with `include_*` sections and `ancestor_group_id`, alerts by device/status, resolve, updates, 401 envelope, 429 retry on `Retry-After`, persistent 429/5xx errors. | [Consumer tests](levelio/tests/restConsumer.test.ts). Shapes follow the OpenAPI definition only; no live Level capture. The incremental-sync check applies the sync engine's `last_seen_at` filter by hand, not `runLevelIoFullSync`. |
-| Level outbound (route) | Both 2026-10-15 production failures reproduced through the real EE route and a migrated database: signed native webhooks get 401 on all four attempts; Alga's pasted automation template returns 200 three times but records one `{{alert_id}}` alert and no ticket. A system-variable template creates the ticket. | [Route integration test](../../ee/server/src/__tests__/integration/levelioEmulatorRoute.integration.test.ts), [webhook tests](levelio/tests/webhooks.test.ts), [automation tests](levelio/tests/automation.test.ts). Secrets and event publishing are stubbed. Level-side delivery behavior beyond the documented points below is modeled, not observed. |
+| Level outbound (route) | Alga's fixed route exercised through the real EE route and a migrated database: signed native webhooks (`X-Level-Signature` over the raw body) are accepted, create tickets, reset on `alert_resolved` and no-op on a re-run of the same `event_id`; Alga's fallback automation template (documented system variables only) produces distinct alerts and tickets; the old literal `{{alert_id}}` template is rejected. Fixed 2026-10-15; no emulator behavior was changed for the fix. | [Route integration test](../../ee/server/src/__tests__/integration/levelioEmulatorRoute.integration.test.ts), [webhook tests](levelio/tests/webhooks.test.ts), [automation tests](levelio/tests/automation.test.ts). Secrets and event publishing are stubbed. Level-side delivery behavior beyond the documented points below is modeled, not observed. |
+| Huntress REST consumer and poll cycle | Alga's real `HuntressClient` over HTTP: the documented `{ account }` envelope, `listOrganizations` across pages with `limit=500` + `page_token`, `getOrganization`/`getAgent` 404 → null, the exact `listIncidentReportsPage` query string with `updated_at desc` ordering, 429 retried twice on `Retry-After` and the third propagated, 5xx propagated. `pollHuntressIncidents` then runs end to end on a migrated database: backfill window, mapped-board routing with the severity→priority map, fallback routing plus on-demand organization discovery, hostname asset match, status-change note, auto-close, cursor advancing only past successes, list failure leaving the cursor and `last_incremental_sync_at` untouched, and a retried 429. | [Client consumer test](../../ee/server/src/__tests__/integration/huntressEmulatorApiClient.integration.test.ts), [poller test](../../ee/server/src/__tests__/integration/huntressEmulatorPoller.integration.test.ts), [wire tests](huntress/tests/rest.test.ts), [escalation wire tests](huntress/tests/escalations.test.ts). Shapes follow the published OpenAPI document only; no live Huntress account was used. Secrets, the tenant Knex handle and event publishing are stubbed. Escalation ingestion is not on this branch (PR #3814), so the escalation surface has vendor-contract coverage only, no consumer coverage. Org sync (`runHuntressOrgSync`) and the settings UI are not exercised here. |
 | Temporal Stripe routing | Actual subscription-metadata POST and tenant-deletion DELETE use the configured SDK endpoint; missing override retains production default and malformed overrides fail. | [Native consumer tests](../../ee/temporal-workflows/src/config/__tests__/stripe-client-routing.test.ts). Two of five migrated constructors have individual HTTP journeys. DB/secrets/activity context are mocked; no running Temporal worker or workflow-engine routing proof. |
 
 ## Independent references and deliberate model choices
@@ -168,7 +169,136 @@ and custom-field REST endpoints (all answer 501); custom-field references and
 any alert-specific variables in automations (Level documents none); webhook
 endpoint management through the API; Level's own request-log UI.
 
-Consumer drift found while building the emulator: Level's device schema has
-`disks` (`disk_type`, `model`, `serial_number`, `size`), while Alga's
-`LevelIoDevice` type and device mapper read `disk_partitions`. Against the
-documented API, Alga maps no disks. The emulator serves the documented field.
+Consumer drift (resolved): Level's device schema carries `disks` (`disk_type`,
+`model`, `serial_number`, `size`) and no `disk_partitions`. Alga's
+`LevelIoDevice` type and device mapper read the documented `disks` field, so
+the emulator's payload and Alga's mapping agree. Level reports physical
+capacity only; mapped storage entries carry `total_gb` without `free_gb` or
+`utilization_percent`. `ee/server/src/__tests__/integration/levelioEmulatorApiClient.integration.test.ts` runs the mapper against the
+emulator's `disks` payload.
+
+## Huntress
+
+Reviewed 2026-10-20 against the live Huntress API reference at
+[api.huntress.io/docs](https://api.huntress.io/docs) and its OpenAPI document
+[api.huntress.io/v1/swagger_doc.json](https://api.huntress.io/v1/swagger_doc.json)
+(fetched 2026-10-20), cross-read against the third-party mirror at
+[github.com/api-evangelist/huntress](https://github.com/api-evangelist/huntress)
+(`openapi/huntress-*-api-openapi.yml`). No live Huntress account, credential or
+request was used; only the public documents above.
+
+Documented and modeled:
+
+- HTTP Basic auth, `Authorization: Basic base64(api_key:api_secret)`. Every
+  operation documents a single auth failure response: `403` "There was an issue
+  with your API credential or permissions."
+- `GET /v1/account` → `{ account: {...} }` with `id`, `name`, `subdomain`,
+  `status` (`enabled|disabled`), `support_type`
+  (`huntress_supported|partner_supported|not_applicable`),
+  `neighborhood_watch`, `billing_address`, `shipping_address`.
+- Singular/plural response wrappers: `{ organization }`, `{ agent }`,
+  `{ incident_report }`, `{ escalation }`; `{ organizations|agents|
+  incident_reports|escalations, pagination }`.
+- Pagination: `limit` 1–500 default 10, opaque `page_token`, and a `pagination`
+  object of `next_page_token` / `next_page_url` ("Only displays when another
+  page can be accessed").
+- Sorting: `sort_direction` `asc|desc` default `desc`, `sort_field` default
+  `id` with the per-resource enums — organizations `id|created_at|updated_at|
+  name|key`, agents and incident reports `id|created_at|updated_at`,
+  escalations `id|severity|due_at|created_at|updated_at`.
+- Filters: organizations `name|key`; agents `organization_id|platform
+  (windows|darwin|linux)|hostname|os|version`; incident reports
+  `indicator_type` (the 13-value enum) `|status|severity|platform|
+  organization_id|agent_id|psa_ticket_eid`; escalations `status|severity|
+  subtype|organization_id|psa_ticket_eid`.
+- Organization, Agent, IncidentReport, Escalation and EscalationWithEntities
+  field names and types, including `Agent.ipv4_address` as "the primary address
+  from" `ipv4_addresses`, `IncidentReport.remediations` as the first 10 items
+  with `total_count`/`has_more`, and `psa_ticket_eids` on incident reports and
+  escalations.
+- `GET /v1/incident_reports/{id}` serves reports whose `status` is `draft`;
+  the list endpoint does not, and `draft` is not a documented `status` filter
+  value.
+- The list endpoint serves `Escalation` (no `entities`); only
+  `GET /v1/escalations/{id}` serves `EscalationWithEntities`.
+- `POST /v1/escalations/{id}/resolution`: 201 `{ escalation,
+  resolution_method }` with `resolution_method` `rule` (determination + scope
+  supplied), `dismiss` (both omitted on an Unwanted Access escalation) or
+  `direct` (a type that takes no parameters); 400 invalid parameters, 403
+  credential/permission ("the default account API key is read-only"), 409
+  already resolved, 422 not resolvable through the API. `determination`
+  (`expected|unauthorized`), `scope` (`account|organization|identity`),
+  `expiration_date`, `ip_address` and `revoke_and_disable_identities` follow
+  the documented parameter rules.
+- Rate limiting: 60 requests/minute per account on a sliding window, answered
+  with 429.
+
+Emulator choices, not confirmed against Huntress:
+
+- The JSON body of an error. The docs give statuses and descriptions only, so
+  every failure is `{"error":"<the documented description>"}`.
+- `Retry-After` on a 429. The header is not documented, but Alga's client
+  honours it, so the `rate-limit` fault sets it.
+- `next_page_token: null` on the last page. The docs describe only presence or
+  absence of a token; Alga's client treats both the same way.
+- `page_token` contents: unpadded base64 of `<sort value>|<id>`, resumed by
+  keyset comparison. The documented example token is base64 of a timestamp, so
+  the shape matches; the semantics are ours. An undecodable token answers 400.
+- An out-of-range `limit` is clamped to 1–500 and a non-numeric one falls back
+  to the default 10; Huntress documents the bounds but no rejection. An unknown
+  `sort_field`, `sort_direction` or filter enum value, and a non-integer path
+  id, answer 400 ("there is an unexpected value in the API request").
+- `severity` sorting ranks `low < high < critical`.
+- 404 bodies for `GET`-by-id on an unknown record. Huntress documents 404 only
+  in its general status table (the `PATCH`/`DELETE` operations describe one);
+  the `GET` operations list 200 and 403 alone.
+- Incident status transitions. The statuses are documented but no transition
+  graph is, so `update-incident` accepts any documented status, stamps
+  `status_updated_at` on a change and sets `closed_at` only for `closed`.
+- Deleting an organization or agent leaves `organization_id`/`agent_id` on
+  existing incident reports and escalation `organizations` entries (the
+  escalation then reports the org id with a placeholder name) — that is the
+  "dropped off" path Alga has to survive, not an observed Huntress behavior.
+- `Identity` entity `details` on an escalation. The schema example shows an
+  `Agent` entity only (`hostname`, `platform`, `os`, `last_callback_at`);
+  identity details are whatever the seeder supplies.
+- `actual_usages` contents on the organization detail response: present only
+  when seeded, with no modeled sub-schema.
+- 501 `EmulatorUnsupportedOperation` for the documented `/v1` surface that is
+  not modeled (identities, signals, reports, SIEM, remote access, invoices,
+  memberships, reseller, comments, remediation writes, agent isolation,
+  unwanted-access rules, known VPNs, and the `/v1/accounts/{account_id}/*`
+  reseller-scoped mirrors). That is an emulator diagnostic, not a Huntress
+  response.
+
+Unverified / documentation conflicts recorded rather than resolved:
+
+- `due_at` is a documented escalation `sort_field` with no corresponding field
+  in the Escalation schema. The emulator keeps a seedable `due_at` for sorting
+  and never serializes it.
+- Escalation `status`: the live schema and the `status` filter both say
+  `open|overdue|resolved`, but the mirrored spec's `Escalation` /
+  `EscalationWithEntities` schemas say `open|sent|resolved` while its filter
+  says `open|overdue|resolved`. The emulator follows the live spec; `sent` is
+  rejected as a filter value.
+- `type_code` and `psa_ticket_eids` (escalations and incident reports) and
+  `Agent.ipv4_addresses` are in the live spec but absent from the mirror, which
+  is the older snapshot. Modeled from the live spec.
+- IncidentReport `status`: the model documents `sent|closed|dismissed|draft`
+  while the list filter documents `sent|closed|dismissed|auto_remediating|
+  deleting|partner_dismissed`. The emulator accepts the union (and Alga's
+  `HuntressIncidentStatus` covers the six filter values, not `draft`).
+- The docs' general status table lists both 401 ("your request could not be
+  authenticated") and 403 (permissions), but no operation declares a 401. The
+  emulator always answers 403, which is what the per-operation contract says.
+- Whether Huntress enforces the rate limit per credential or per account IP
+  pair, and what body accompanies a real 429, is not documented.
+
+Consumer drift (open): Alga's `HuntressClient.getAccount()` reads
+`GET /v1/account` **unwrapped**, while the live spec and this emulator return
+`{ "account": {...} }`. Against real Huntress that leaves `accountName` and
+`accountSubdomain` undefined in `rmm_integrations.settings`, which degrades the
+portal deep links `buildPortalUrl` writes into tickets and the connect toast.
+`ee/server/src/__tests__/integration/huntressEmulatorApiClient.integration.test.ts`
+asserts the documented wrapped body and names the client fix; that assertion
+flips when the client unwraps it.
