@@ -15,10 +15,8 @@ describe('apply template client creation wiring contract', () => {
     expect(source).toContain('onAddNew={() => setIsQuickAddClientOpen(true)}');
     expect(source).toContain('open: isQuickAddClientOpen,');
     expect(source).toContain('onOpenChange: setIsQuickAddClientOpen,');
-    expect(source).toContain(
-      '(client) => client.client_id === newClient.client_id,',
-    );
-    expect(source).toContain('nextClients[existingIndex] = newClient;');
+    expect(source).not.toContain('setClients');
+    expect(source).not.toContain('getAllClientsForProjects');
     expect(source).toContain(
       'setFormData((current) => ({ ...current, client_id: newClient.client_id }));',
     );

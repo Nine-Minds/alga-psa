@@ -2001,7 +2001,6 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
     users: IUserWithRoles[];
     contact?: { full_name: string };
     assignedUser: IUserWithRoles | null;
-    clients: IClient[];
 }> => {
     try {
         const { knex } = await createTenantKnex();
@@ -2014,10 +2013,9 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
         });
 
         // Fetch data that doesn't need to be in a transaction
-        const [statuses, users, clients] = await Promise.all([
+        const [statuses, users] = await Promise.all([
             getProjectTaskStatusesInternal2(tenant, projectId, user),
-            getAllUsers(),
-            getAllClientsForProjectsInternal(tenant)
+            getAllUsers()
         ]);
 
         // Fetch project-specific data within a transaction
@@ -2060,8 +2058,7 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
             statuses,
             users,
             contact,
-            assignedUser,
-            clients
+            assignedUser
         };
     } catch (error) {
         console.error('Error getting project metadata:', error);
@@ -2072,15 +2069,6 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
         throw error;
     }
 });
-
-// Internal helper for getAllClientsForProjects
-async function getAllClientsForProjectsInternal(tenant: string): Promise<IClient[]> {
-    const { knex: db } = await createTenantKnex();
-    const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
-        return tenantScopedTable(trx, 'clients', tenant).select('*').orderBy('client_name', 'asc');
-    });
-    return clients as IClient[];
-}
 
 // Internal helper for getProjectTaskStatuses
 async function getProjectTaskStatusesInternal2(
@@ -2222,7 +2210,6 @@ export const getProjectDetails = withAuth(async (user, { tenant }, projectId: st
     users: IUserWithRoles[];
     contact?: { full_name: string };
     assignedUser: IUserWithRoles | null;
-    clients: IClient[];
 }> => {
     try {
         const { knex } = await createTenantKnex();
@@ -2235,10 +2222,9 @@ export const getProjectDetails = withAuth(async (user, { tenant }, projectId: st
         });
 
         // Fetch data that doesn't need to be in a transaction
-        const [statuses, users, clients] = await Promise.all([
+        const [statuses, users] = await Promise.all([
             getProjectTaskStatusesInternal2(tenant, projectId, user),
-            getAllUsers(),
-            getAllClientsForProjectsInternal(tenant)
+            getAllUsers()
         ]);
 
         // Fetch project-specific data within a transaction
@@ -2299,8 +2285,7 @@ export const getProjectDetails = withAuth(async (user, { tenant }, projectId: st
             statuses,
             users,
             contact,
-            assignedUser: project.assigned_user || null,
-            clients
+            assignedUser: project.assigned_user || null
         };
     } catch (error) {
         console.error('Error fetching project details:', error);
