@@ -456,6 +456,9 @@ const createNodeStyle = (node: WorkspaceNode): TemplateNode['style'] | undefined
   if (style.fontStyle) inline.fontStyle = style.fontStyle;
   if (style.lineHeight !== undefined) inline.lineHeight = style.lineHeight;
   if (style.textAlign) inline.textAlign = style.textAlign;
+  if (style.tableLayout) inline.tableLayout = style.tableLayout;
+  if (style.whiteSpace) inline.whiteSpace = style.whiteSpace;
+  if (style.overflowWrap) inline.overflowWrap = style.overflowWrap;
   if (style.display) inline.display = style.display;
   if (style.flexDirection) inline.flexDirection = style.flexDirection;
   if (style.justifyContent) inline.justifyContent = style.justifyContent;
@@ -637,6 +640,23 @@ const coerceTextAlign = (value: unknown): DesignerNodeStyle['textAlign'] | undef
   return undefined;
 };
 
+const coerceTableLayout = (value: unknown): DesignerNodeStyle['tableLayout'] | undefined =>
+  value === 'auto' || value === 'fixed' ? value : undefined;
+
+const coerceWhiteSpace = (value: unknown): DesignerNodeStyle['whiteSpace'] | undefined => {
+  if (value === 'normal' || value === 'nowrap' || value === 'pre' || value === 'pre-line' || value === 'pre-wrap') {
+    return value;
+  }
+  return undefined;
+};
+
+const coerceOverflowWrap = (value: unknown): DesignerNodeStyle['overflowWrap'] | undefined => {
+  if (value === 'normal' || value === 'break-word' || value === 'anywhere') {
+    return value;
+  }
+  return undefined;
+};
+
 const coerceJustifyContent = (value: unknown): DesignerContainerLayout['justifyContent'] | undefined => {
   if (
     value === 'flex-start' ||
@@ -800,6 +820,15 @@ const coerceNodeStyleFromInlineStyle = (inline: Record<string, unknown> | undefi
 
   const textAlign = coerceTextAlign(inline.textAlign);
   if (textAlign) style.textAlign = textAlign;
+
+  const tableLayout = coerceTableLayout(inline.tableLayout);
+  if (tableLayout) style.tableLayout = tableLayout;
+
+  const whiteSpace = coerceWhiteSpace(inline.whiteSpace);
+  if (whiteSpace) style.whiteSpace = whiteSpace;
+
+  const overflowWrap = coerceOverflowWrap(inline.overflowWrap);
+  if (overflowWrap) style.overflowWrap = overflowWrap;
 
   const display = inline.display === 'flex' || inline.display === 'grid' ? inline.display : undefined;
   if (display) style.display = display;

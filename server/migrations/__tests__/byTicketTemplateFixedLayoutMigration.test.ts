@@ -4,7 +4,7 @@ import path from 'node:path';
 import { getStandardTemplateAstByCode } from '@alga-psa/billing/lib/invoice-template-ast/standardTemplates';
 
 const require = createRequire(import.meta.url);
-const migration = require(path.resolve(__dirname, '../20261022120000_by_ticket_template_fixed_layout.cjs'));
+const migration = require(path.resolve(__dirname, '../20261022210000_by_ticket_template_fixed_layout.cjs'));
 
 const findNode = (node: any, id: string): any =>
   node?.id === id ? node : (node?.children ?? []).map((c: any) => findNode(c, id)).find(Boolean);

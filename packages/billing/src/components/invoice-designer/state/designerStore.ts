@@ -128,6 +128,9 @@ export interface DesignerNodeStyle {
   fontStyle?: string;
   lineHeight?: string | number;
   textAlign?: CssTextAlign;
+  tableLayout?: 'auto' | 'fixed';
+  whiteSpace?: 'normal' | 'nowrap' | 'pre' | 'pre-line' | 'pre-wrap';
+  overflowWrap?: 'normal' | 'break-word' | 'anywhere';
 
   // Non-container layout-like style declarations that can be attached directly
   // to nodes such as fields in template AST inline styles.
