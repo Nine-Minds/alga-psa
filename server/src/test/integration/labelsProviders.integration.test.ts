@@ -160,7 +160,8 @@ describe('C2 label integration (real providers, real storage)', () => {
     };
 
     it('explicit template beats the class default, which beats the standard template', async () => {
-      expect(await resolve('ticket-work-tag')).toMatchObject({ ok: true, templateCode: 'standard-ticket-work-tag', source: 'standard' });
+      // Test order is shuffled: a standard default may already be set, so only the template is asserted here.
+      expect(await resolve('ticket-work-tag')).toMatchObject({ ok: true, templateCode: 'standard-ticket-work-tag' });
 
       const defaultId = await saveCustom('Ticket default', 'ticket-work-tag');
       const explicitId = await saveCustom('Ticket explicit', 'ticket-work-tag');
@@ -196,6 +197,10 @@ describe('C2 label integration (real providers, real storage)', () => {
     });
 
     it('setting the asset default leaves ticket printing unchanged; a class default writes no tenant-scope assignment', async () => {
+      // Self-contained: vitest shuffles test order, so do not rely on another test having set the ticket default.
+      expect(await setDefault({ templateSource: 'standard', standardTemplateCode: 'standard-ticket-work-tag' })).toMatchObject({
+        success: true,
+      });
       const ticketBefore = await resolve('ticket-work-tag');
       expect(await setDefault({ templateSource: 'standard', standardTemplateCode: 'standard-asset-label-code128' })).toMatchObject({
         success: true,
