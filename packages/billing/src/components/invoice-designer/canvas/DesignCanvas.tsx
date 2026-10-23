@@ -1169,9 +1169,27 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
 	      };
 	    case 'container':
 	      return { content: null }; // Container renders children directly
+      case 'barcode': {
+        const symbology = metadata.symbology === 'code128' ? 'code128' : 'qr';
+        const valueText = asTrimmedString(metadata.value);
+        return {
+          content: (
+            <div
+              className="w-full h-full min-h-[48px] flex flex-col items-center justify-center gap-0.5 text-[10px] text-slate-500 dark:text-slate-400 bg-slate-50/50 dark:bg-slate-800/50 border border-dashed border-slate-300 dark:border-slate-600"
+              data-barcode-symbology={symbology}
+            >
+              <span className="font-semibold">
+                {symbology === 'qr'
+                  ? (t?.('designer.blocks.qr.label', { defaultValue: 'QR code' }) ?? 'QR code')
+                  : (t?.('designer.blocks.code128.label', { defaultValue: 'Code 128' }) ?? 'Code 128')}
+              </span>
+              {valueText ? <span className="max-w-full truncate px-1">{valueText}</span> : null}
+            </div>
+          ),
+        };
+      }
       case 'image':
-      case 'logo':
-      case 'qr': {
+      case 'logo': {
         const boundToLogo = metadata.srcBinding === 'tenantLogo';
         const boundLogoSrc = boundToLogo
           ? ['tenantClient.logoUrl', 'tenantClient.logo_url', 'tenant.logo_url']
@@ -1192,8 +1210,6 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
         if (!src) {
           const label = boundToLogo
             ? (t?.('designer.canvas.companyLogo', { defaultValue: 'Company logo' }) ?? 'Company logo')
-            : node.type === 'qr'
-            ? (t?.('designer.blocks.qr.label', { defaultValue: 'QR Code' }) ?? 'QR Code')
             : node.type === 'logo'
               ? (t?.('designer.blocks.logo.label', { defaultValue: 'Logo' }) ?? 'Logo')
               : (t?.('designer.blocks.image.label', { defaultValue: 'Image' }) ?? 'Image');
@@ -1273,7 +1289,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const astHadHeight = metadata.__astHadHeight === true;
   const allowInferredFlowMinWidth = !astImported || astHadWidth;
   const allowInferredFlowMinHeight = !astImported || astHadHeight;
-  const isMediaNode = node.type === 'image' || node.type === 'logo' || node.type === 'qr';
+  const isMediaNode = node.type === 'image' || node.type === 'logo' || node.type === 'barcode';
   const mediaFrameSize = isMediaNode ? resolveMediaFrameSize(resolvedBoxStyle) : {};
   const resolvedMediaWidth = mediaFrameSize.width;
   const resolvedMediaHeight = mediaFrameSize.height;

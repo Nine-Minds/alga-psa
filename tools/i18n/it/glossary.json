@@ -2360,7 +2360,8 @@
       "Auto",
       "auto | 50% | 120px",
       "Cc",
-      "{{size}} GB"
+      "{{size}} GB",
+      "Code 128"
     ],
     "caseInsensitive": [
       "account",
