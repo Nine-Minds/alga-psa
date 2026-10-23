@@ -2576,7 +2576,9 @@
       "referenceProblems": "Vissa fält i den här mallen pekar på sådant som inte längre finns. De lämnas tomma när mallen används. Rätta dem och spara:",
       "inactiveWarning": "Inaktiv: dold i mallväljaren; används fortfarande av {{count}} scheman.",
       "sharedWarning": "Ändringar gäller alla återkommande scheman som använder mallen, från nästa ärende de skapar.",
-      "boardChangeWarning": "Att byta tavla rensar prioritet och kategori och kan göra status ogiltig för scheman som använder mallen. Dessa scheman misslyckas tills du redigerar dem. Berörda scheman: {{schedules}}."
+      "boardChangeWarning": "Att byta tavla rensar prioritet och kategori och kan göra status ogiltig för scheman som använder mallen. Dessa scheman misslyckas tills du redigerar dem. Berörda scheman: {{schedules}}.",
+      "priorityTypeMismatchItil": "Prioriteten ‘{{priority}}’ är en ITIL-prioritet, men tavlan ‘{{board}}’ använder anpassade prioriteter. Det går inte att spara förrän du ändrar prioriteten eller tavlan.",
+      "priorityTypeMismatchCustom": "Prioriteten ‘{{priority}}’ är en anpassad prioritet, men tavlan ‘{{board}}’ använder ITIL-prioriteter. Det går inte att spara förrän du ändrar prioriteten eller tavlan."
     },
     "errors": {
       "notFound": "Ärendemallen hittades inte",

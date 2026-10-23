@@ -2576,7 +2576,9 @@
       "referenceProblems": "Sommige velden in dit sjabloon verwijzen naar dingen die niet meer bestaan. Ze blijven leeg wanneer het sjabloon wordt gebruikt. Corrigeer ze en sla op:",
       "inactiveWarning": "Inactief: verborgen in de sjabloonkiezer; wordt nog gebruikt door {{count}} schema's.",
       "sharedWarning": "Wijzigingen gelden voor elk terugkerend schema dat deze sjabloon gebruikt, vanaf het volgende ticket dat het aanmaakt.",
-      "boardChangeWarning": "Het wijzigen van het bord wist prioriteit en categorie en kan de status van schema's met deze sjabloon ongeldig maken. Die schema's mislukken totdat u ze bewerkt. Betrokken schema's: {{schedules}}."
+      "boardChangeWarning": "Het wijzigen van het bord wist prioriteit en categorie en kan de status van schema's met deze sjabloon ongeldig maken. Die schema's mislukken totdat u ze bewerkt. Betrokken schema's: {{schedules}}.",
+      "priorityTypeMismatchItil": "Prioriteit ‘{{priority}}’ is een ITIL-prioriteit, maar bord ‘{{board}}’ gebruikt aangepaste prioriteiten. Opslaan wordt geweigerd totdat u de prioriteit of het bord wijzigt.",
+      "priorityTypeMismatchCustom": "Prioriteit ‘{{priority}}’ is een aangepaste prioriteit, maar bord ‘{{board}}’ gebruikt ITIL-prioriteiten. Opslaan wordt geweigerd totdat u de prioriteit of het bord wijzigt."
     },
     "errors": {
       "notFound": "Ticketsjabloon niet gevonden",

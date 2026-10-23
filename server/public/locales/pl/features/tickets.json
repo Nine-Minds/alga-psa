@@ -2576,7 +2576,9 @@
       "referenceProblems": "Niektóre pola tego szablonu wskazują elementy, które już nie istnieją. Przy użyciu szablonu pozostaną puste. Popraw je i zapisz:",
       "inactiveWarning": "Nieaktywny: ukryty w selektorze szablonów; nadal używany przez {{count}} harmonogramów.",
       "sharedWarning": "Zmiany dotyczą każdego cyklicznego harmonogramu używającego tego szablonu, od następnego utworzonego zgłoszenia.",
-      "boardChangeWarning": "Zmiana tablicy czyści priorytet i kategorię i może unieważnić status harmonogramów używających tego szablonu. Te harmonogramy kończą się błędem, dopóki ich nie edytujesz. Dotknięte harmonogramy: {{schedules}}."
+      "boardChangeWarning": "Zmiana tablicy czyści priorytet i kategorię i może unieważnić status harmonogramów używających tego szablonu. Te harmonogramy kończą się błędem, dopóki ich nie edytujesz. Dotknięte harmonogramy: {{schedules}}.",
+      "priorityTypeMismatchItil": "Priorytet ‘{{priority}}’ jest priorytetem ITIL, ale tablica ‘{{board}}’ używa priorytetów niestandardowych. Zapis zostanie odrzucony, dopóki nie zmienisz priorytetu lub tablicy.",
+      "priorityTypeMismatchCustom": "Priorytet ‘{{priority}}’ jest priorytetem niestandardowym, ale tablica ‘{{board}}’ używa priorytetów ITIL. Zapis zostanie odrzucony, dopóki nie zmienisz priorytetu lub tablicy."
     },
     "errors": {
       "notFound": "Nie znaleziono szablonu zgłoszenia",

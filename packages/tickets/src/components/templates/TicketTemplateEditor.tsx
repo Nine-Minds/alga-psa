@@ -31,6 +31,7 @@ import {
   listSchedulesForTemplate,
   updateTicketTemplate,
 } from '../../actions/ticketTemplateActions';
+import { getAllPriorities } from '@alga-psa/reference-data/actions/priorityActions';
 import { getTicketTemplateDraftFromTicket } from '../../actions/ticketActions';
 import { TICKET_TITLE_TOKENS } from '../../lib/ticketTitleTokens';
 import { ticketTemplateInputSchema } from '../../lib/ticketTemplateSchema';
@@ -212,6 +213,28 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
+
+  // The stored priority's family and the board's priority_type. A mismatch is shown, never auto-cleared:
+  // the picker only lists the board's own family, so a stored priority of the other family would
+  // otherwise look like a blank picker, and the server refuses the save with its own message.
+  const [allPriorities, setAllPriorities] = useState<Array<{ priority_id: string; priority_name: string; is_from_itil_standard?: boolean | null }>>([]);
+  useEffect(() => {
+    if (!form.priority_id || allPriorities.some((priority) => priority.priority_id === form.priority_id)) return;
+    let cancelled = false;
+    void getAllPriorities('ticket')
+      .then((rows) => { if (!cancelled && Array.isArray(rows)) setAllPriorities(rows); })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [form.priority_id, allPriorities]);
+  const priorityTypeMismatch = useMemo(() => {
+    const board = reference.boards.find((candidate) => candidate.board_id === form.board_id);
+    const priority = allPriorities.find((candidate) => candidate.priority_id === form.priority_id);
+    if (!board || !priority) return null;
+    const boardIsItil = (board.priority_type ?? 'custom') === 'itil';
+    const priorityIsItil = Boolean(priority.is_from_itil_standard);
+    if (boardIsItil === priorityIsItil) return null;
+    return { priorityName: priority.priority_name, boardName: board.board_name, priorityIsItil };
+  }, [reference.boards, allPriorities, form.board_id, form.priority_id]);
 
   // Until the permission check resolves nothing is locked, so a permitted user never sees a flash of
   // disabled fields; the server actions enforce the permission either way.
@@ -515,6 +538,15 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
             value={form.priority_id || null}
             onChange={(priorityId) => patch({ priority_id: priorityId })}
           />
+          {priorityTypeMismatch && (
+            <Alert id={`${ID}-priority-type-warning`} variant="warning" className="md:col-span-2">
+              <AlertDescription>
+                {priorityTypeMismatch.priorityIsItil
+                  ? t('templates.editor.priorityTypeMismatchItil', 'Priority ‘{{priority}}’ is an ITIL priority but board ‘{{board}}’ uses custom priorities. Saving is refused until you change the priority or the board.', { priority: priorityTypeMismatch.priorityName, board: priorityTypeMismatch.boardName })
+                  : t('templates.editor.priorityTypeMismatchCustom', 'Priority ‘{{priority}}’ is a custom priority but board ‘{{board}}’ uses ITIL priorities. Saving is refused until you change the priority or the board.', { priority: priorityTypeMismatch.priorityName, board: priorityTypeMismatch.boardName })}
+              </AlertDescription>
+            </Alert>
+          )}
           <CategoryField
             idPrefix={`${ID}-category-field`}
             reference={reference}

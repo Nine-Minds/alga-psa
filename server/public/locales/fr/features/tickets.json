@@ -2576,7 +2576,9 @@
       "referenceProblems": "Certains champs de ce modèle pointent vers des éléments qui n'existent plus. Ils restent vides lors de l'utilisation du modèle. Corrigez-les et enregistrez :",
       "inactiveWarning": "Inactif : masqué dans le sélecteur de modèles ; toujours utilisé par {{count}} planifications.",
       "sharedWarning": "Les modifications s'appliquent à chaque planification récurrente utilisant ce modèle, à partir du prochain ticket créé.",
-      "boardChangeWarning": "Changer de tableau efface la priorité et la catégorie, et peut invalider le statut des planifications utilisant ce modèle. Ces planifications échouent tant que vous ne les modifiez pas. Planifications concernées : {{schedules}}."
+      "boardChangeWarning": "Changer de tableau efface la priorité et la catégorie, et peut invalider le statut des planifications utilisant ce modèle. Ces planifications échouent tant que vous ne les modifiez pas. Planifications concernées : {{schedules}}.",
+      "priorityTypeMismatchItil": "La priorité ‘{{priority}}’ est une priorité ITIL, mais le tableau ‘{{board}}’ utilise des priorités personnalisées. L’enregistrement est refusé tant que vous ne changez pas la priorité ou le tableau.",
+      "priorityTypeMismatchCustom": "La priorité ‘{{priority}}’ est une priorité personnalisée, mais le tableau ‘{{board}}’ utilise des priorités ITIL. L’enregistrement est refusé tant que vous ne changez pas la priorité ou le tableau."
     },
     "errors": {
       "notFound": "Modèle de ticket introuvable",

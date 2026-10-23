@@ -2576,7 +2576,9 @@
       "referenceProblems": "Alcuni campi di questo modello puntano a elementi che non esistono più. Restano vuoti quando il modello viene usato. Correggili e salva:",
       "inactiveWarning": "Inattivo: nascosto nel selettore dei modelli; ancora usato da {{count}} pianificazioni.",
       "sharedWarning": "Le modifiche si applicano a ogni pianificazione ricorrente che usa questo modello, a partire dal prossimo ticket creato.",
-      "boardChangeWarning": "Cambiare la bacheca azzera priorità e categoria e può rendere non valido lo stato delle pianificazioni che usano questo modello. Tali pianificazioni falliscono finché non le modifichi. Pianificazioni interessate: {{schedules}}."
+      "boardChangeWarning": "Cambiare la bacheca azzera priorità e categoria e può rendere non valido lo stato delle pianificazioni che usano questo modello. Tali pianificazioni falliscono finché non le modifichi. Pianificazioni interessate: {{schedules}}.",
+      "priorityTypeMismatchItil": "La priorità ‘{{priority}}’ è una priorità ITIL, ma la bacheca ‘{{board}}’ usa priorità personalizzate. Il salvataggio verrà rifiutato finché non cambi la priorità o la bacheca.",
+      "priorityTypeMismatchCustom": "La priorità ‘{{priority}}’ è una priorità personalizzata, ma la bacheca ‘{{board}}’ usa priorità ITIL. Il salvataggio verrà rifiutato finché non cambi la priorità o la bacheca."
     },
     "errors": {
       "notFound": "Modello di ticket non trovato",

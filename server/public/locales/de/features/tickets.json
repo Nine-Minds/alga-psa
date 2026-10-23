@@ -2576,7 +2576,9 @@
       "referenceProblems": "Einige Felder dieser Vorlage verweisen auf nicht mehr vorhandene Elemente. Sie bleiben leer, wenn die Vorlage verwendet wird. Korrigieren Sie sie und speichern Sie:",
       "inactiveWarning": "Inaktiv: in der Vorlagenauswahl ausgeblendet; wird weiterhin von {{count}} Zeitplänen verwendet.",
       "sharedWarning": "Änderungen gelten für jeden wiederkehrenden Zeitplan, der diese Vorlage verwendet, ab dem nächsten erstellten Ticket.",
-      "boardChangeWarning": "Beim Ändern des Boards werden Priorität und Kategorie zurückgesetzt, und der Status von Zeitplänen mit dieser Vorlage kann ungültig werden. Diese Zeitpläne schlagen fehl, bis Sie sie bearbeiten. Betroffene Zeitpläne: {{schedules}}."
+      "boardChangeWarning": "Beim Ändern des Boards werden Priorität und Kategorie zurückgesetzt, und der Status von Zeitplänen mit dieser Vorlage kann ungültig werden. Diese Zeitpläne schlagen fehl, bis Sie sie bearbeiten. Betroffene Zeitpläne: {{schedules}}.",
+      "priorityTypeMismatchItil": "Die Priorität ‘{{priority}}’ ist eine ITIL-Priorität, aber das Board ‘{{board}}’ verwendet benutzerdefinierte Prioritäten. Speichern wird abgelehnt, bis Sie die Priorität oder das Board ändern.",
+      "priorityTypeMismatchCustom": "Die Priorität ‘{{priority}}’ ist eine benutzerdefinierte Priorität, aber das Board ‘{{board}}’ verwendet ITIL-Prioritäten. Speichern wird abgelehnt, bis Sie die Priorität oder das Board ändern."
     },
     "errors": {
       "notFound": "Ticket-Vorlage nicht gefunden",
