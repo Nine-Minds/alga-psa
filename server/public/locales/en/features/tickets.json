@@ -472,6 +472,7 @@
   "originalEmail": {
     "text": "Text",
     "original": "Original email",
+    "emailShort": "Email",
     "loading": "Loading the original email…",
     "error": "The original email could not be loaded.",
     "group": "Message view"

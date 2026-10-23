@@ -464,6 +464,7 @@
   "originalEmail": {
     "text": "Texto",
     "original": "Correo original",
+    "emailShort": "Correo",
     "loading": "Cargando el correo original…",
     "error": "No se pudo cargar el correo original.",
     "group": "Vista del mensaje"

@@ -464,6 +464,7 @@
   "originalEmail": {
     "text": "Texte",
     "original": "E-mail d’origine",
+    "emailShort": "E-mail",
     "loading": "Chargement de l’e-mail d’origine…",
     "error": "Impossible de charger l’e-mail d’origine.",
     "group": "Affichage du message"

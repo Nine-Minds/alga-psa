@@ -464,6 +464,7 @@
   "originalEmail": {
     "text": "Tekst",
     "original": "Originele e-mail",
+    "emailShort": "E-mail",
     "loading": "Originele e-mail wordt geladen…",
     "error": "De originele e-mail kan niet worden geladen.",
     "group": "Berichtweergave"

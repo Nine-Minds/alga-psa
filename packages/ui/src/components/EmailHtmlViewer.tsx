@@ -1,7 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { AlignLeft, Mail } from 'lucide-react';
 import { cn } from '../lib/utils';
+import ViewSwitcher from './ViewSwitcher';
+import { useInboundEmailViewMode, type InboundEmailViewMode } from '../lib/inboundEmailViewMode';
 
 /**
  * Formatted view of an archived inbound email.
@@ -196,6 +199,8 @@ export interface InboundEmailBodyProps {
   labels: {
     text: string;
     originalEmail: string;
+    /** Compact switcher label for the original; falls back to `originalEmail`. */
+    emailShort?: string;
     loading: string;
     error: string;
     /** Group label for assistive technology. */
@@ -207,45 +212,45 @@ export interface InboundEmailBodyProps {
 
 /**
  * Pairs a stored comment/description body with the archived original behind a
- * two-state toggle. The original is fetched on the first switch only.
+ * compact view switcher. The original is fetched on the first switch only.
+ *
+ * The switcher is bound to the shared view-mode preference rather than to local
+ * state, so the choice carries to every other message and every other ticket.
+ * A body whose archive turned out to be missing drops its own switcher without
+ * disturbing that preference.
  */
 export function InboundEmailBody({ id, src, labels, children }: InboundEmailBodyProps) {
-  const [mode, setMode] = useState<'text' | 'email'>('text');
+  const [mode, setMode] = useInboundEmailViewMode();
   const [unavailable, setUnavailable] = useState(htmlCache.get(src) === null);
 
   const handleUnavailable = useCallback(() => {
     setUnavailable(true);
-    setMode('text');
   }, []);
-
-  const option = (value: 'text' | 'email', label: string) => (
-    <button
-      id={id ? `${id}-${value}-toggle` : undefined}
-      type="button"
-      aria-pressed={mode === value}
-      onClick={() => setMode(value)}
-      className={cn(
-        'rounded px-2 py-0.5 transition-colors',
-        mode === value
-          ? 'bg-[rgb(var(--color-border-100))] font-semibold text-[rgb(var(--color-text-700))]'
-          : 'text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-700))]'
-      )}
-    >
-      {label}
-    </button>
-  );
 
   return (
     <div id={id} className="min-w-0">
       {!unavailable && (
-        <div
-          role="group"
+        <ViewSwitcher<InboundEmailViewMode>
+          currentView={mode}
+          onChange={setMode}
+          size="sm"
+          className="mb-1 w-fit"
           aria-label={labels.group ?? labels.originalEmail}
-          className="mb-1 inline-flex items-center gap-0.5 text-xs"
-        >
-          {option('text', labels.text)}
-          {option('email', labels.originalEmail)}
-        </div>
+          options={[
+            {
+              value: 'text',
+              label: labels.text,
+              icon: AlignLeft,
+              id: id ? `${id}-text-toggle` : 'inbound-email-text-toggle',
+            },
+            {
+              value: 'email',
+              label: labels.emailShort ?? labels.originalEmail,
+              icon: Mail,
+              id: id ? `${id}-email-toggle` : 'inbound-email-original-toggle',
+            },
+          ]}
+        />
       )}
       {mode === 'email' && !unavailable ? (
         <EmailHtmlViewer

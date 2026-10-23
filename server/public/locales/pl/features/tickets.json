@@ -464,6 +464,7 @@
   "originalEmail": {
     "text": "Tekst",
     "original": "Oryginalny e-mail",
+    "emailShort": "E-mail",
     "loading": "Wczytywanie oryginalnego e-maila…",
     "error": "Nie można wczytać oryginalnego e-maila.",
     "group": "Widok wiadomości"

@@ -49,18 +49,20 @@ export function originalEmailSourceForTicket(
 export interface OriginalEmailToggleLabels {
   text: string;
   originalEmail: string;
+  emailShort: string;
   loading: string;
   error: string;
   group: string;
 }
 
-/** The four toggle strings, so all four hosts stay on the same wording. */
+/** The switcher strings, so all four hosts stay on the same wording. */
 export function originalEmailToggleLabels(
   t: (key: string, defaultValue: string) => string
 ): OriginalEmailToggleLabels {
   return {
     text: t('originalEmail.text', 'Text'),
     originalEmail: t('originalEmail.original', 'Original email'),
+    emailShort: t('originalEmail.emailShort', 'Email'),
     loading: t('originalEmail.loading', 'Loading the original email…'),
     error: t('originalEmail.error', 'The original email could not be loaded.'),
     group: t('originalEmail.group', 'Message view'),
