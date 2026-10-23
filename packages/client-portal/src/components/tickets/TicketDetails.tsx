@@ -22,6 +22,7 @@ import {
   originalEmailSourceForTicket,
   originalEmailToggleLabels,
 } from '@alga-psa/tickets/lib/inboundEmailOriginalView';
+import { useInboundEmailViewPreference } from '@alga-psa/tickets/hooks/useInboundEmailViewPreference';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
@@ -108,6 +109,9 @@ export function TicketDetails({
    */
   const canInteract = (ticket as { can_interact?: boolean }).can_interact !== false;
   const originalEmailSrc = useMemo(() => originalEmailSourceForTicket(ticket), [ticket]);
+  // Same stored per-user preference as the MSP screen drives the Text / Email
+  // switcher on every inbound-email body below.
+  useInboundEmailViewPreference();
   // Re-derive on every current-status change: the server seeds the initial list
   // with the ticket's current restricted status, but once the ticket moves the
   // restricted status must stop being offered as a target without a reload.
