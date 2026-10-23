@@ -1,0 +1,42 @@
+[
+  {
+    "id": "T001",
+    "description": "Asset API: no asset:read 403; denied and missing identical 404; cross-tenant 404; allowed 200; sub-resources 404",
+    "implemented": false
+  },
+  {
+    "id": "T002",
+    "description": "classifyScannedCode matrix",
+    "implemented": false
+  },
+  {
+    "id": "T003",
+    "description": "linking.ts normalisation and regression of notification deep link",
+    "implemented": false
+  },
+  {
+    "id": "T004",
+    "description": "ScanView navigation / foreign message / no lookup call",
+    "implemented": false
+  },
+  {
+    "id": "T005",
+    "description": "Detail screens 403/404 unavailable vs network Retry",
+    "implemented": false
+  },
+  {
+    "id": "T006",
+    "description": "AASA components and app.json parity",
+    "implemented": false
+  },
+  {
+    "id": "T007",
+    "description": "getRmaCase integration: shape parity, null, permission; no-side-effect row counts",
+    "implemented": false
+  },
+  {
+    "id": "T008",
+    "description": "Web dialog component tests (unit, RMA, close removes param, History opens same)",
+    "implemented": false
+  }
+]

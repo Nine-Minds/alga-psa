@@ -332,6 +332,39 @@ export class AssetService extends BaseService<any> {
     return asset;
   }
 
+  /**
+   * The record context the authorization kernel evaluates for an asset read.
+   * Mirrors `resolveAssetAuthorizationRecords` in the assets package (assignees
+   * and teams come from asset_associations). Tenant-scoped: another tenant's id
+   * resolves to null.
+   */
+  async getAuthorizationRecord(id: string, context: ServiceContext): Promise<Record<string, any> | null> {
+    const knex = await this.getDbForContext(context);
+    const asset = await scopedTable(knex, context.tenant, this.tableName)
+      .where({ asset_id: id })
+      .select('asset_id', 'client_id')
+      .first();
+    if (!asset) return null;
+
+    const associations: Array<{ entity_type: string; entity_id: string }> = await scopedTable(
+      knex,
+      context.tenant,
+      'asset_associations',
+    )
+      .where({ asset_id: id })
+      .select('entity_type', 'entity_id');
+
+    const assignedUserIds = associations.filter((a) => a.entity_type === 'user').map((a) => a.entity_id);
+    const teamIds = associations.filter((a) => a.entity_type === 'team').map((a) => a.entity_id);
+    return {
+      id: asset.asset_id,
+      ownerUserId: assignedUserIds[0] ?? null,
+      assignedUserIds,
+      clientId: asset.client_id ?? null,
+      teamIds,
+    };
+  }
+
   async getWithDetails(id: string, context: ServiceContext): Promise<any | null> {
     const asset = await this.getById(id, context);
     if (!asset) return null;
