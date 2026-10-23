@@ -296,7 +296,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const isDraftAdjustments = variant === 'draftAdjustments';
   const { t } = useTranslation('msp/invoicing');
   const router = useRouter();
-  const { formatCurrency } = useFormatters();
+  // formatCurrency stays for buildPartialPeriodInvoiceDescription, whose callback
+  // contract is major units; every amount rendered here is in minor units.
+  const { formatCurrency, locale } = useFormatters();
   const { renderQuickAddClient } = useQuickAddClient();
   const [clientOptions, setClientOptions] = useState<IClient[]>(clients);
   const [selectedClient, setSelectedClient] = useState<string | null>(
@@ -487,10 +489,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         label: [
           so.so_number,
           so.client_name ?? so.client_id,
-          formatCurrency(so.billable_amount / 100, so.currency_code || 'USD'),
+          formatCurrencyFromMinorUnits(so.billable_amount, locale, so.currency_code || 'USD'),
         ].join(' · '),
       })),
-    [formatCurrency, invoiceableSalesOrders],
+    [invoiceableSalesOrders, locale],
   );
   const hasSalesOrderSource = !currentInvoiceData && Boolean(selectedSalesOrder);
 
@@ -1682,8 +1684,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                           </div>
                         </div>
                         <div className="text-right font-semibold text-[rgb(var(--color-text-900))]">
-                          {formatCurrency(
-                            selectedSalesOrder.billable_amount / 100,
+                          {formatCurrencyFromMinorUnits(
+                            selectedSalesOrder.billable_amount,
+                            locale,
                             selectedSalesOrder.currency_code || 'USD',
                           )}
                         </div>
@@ -2002,7 +2005,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                       />
                       <Input id="partial-period-effective-date" label={t('manualInvoices.partialPeriod.effectiveDate', { defaultValue: 'Effective date' })} type="date" value={partialEffectiveDate} onChange={(event) => setPartialEffectiveDate(event.target.value)} required />
                     </div>
-                    {partialPeriodSource && <div className="space-y-1"><p className="text-xs text-muted-foreground">{partialPeriodSource.description}: {partialPeriodSource.service_period_start} – {partialPeriodSource.service_period_end} · {t('manualInvoices.partialPeriod.sourceRate', { defaultValue: 'Rate {{rate}}', rate: formatCurrency(Number(partialPeriodSource.unit_price) / 100, currencyCode) })} · {partialEffectiveDate && partialPeriodPreview !== null ? `${partialUnits} × ${formatCurrency(Math.abs(partialPeriodCalculation?.unitPrice ?? 0) / 100, currencyCode)} = ${formatCurrency((partialPeriodPreview ?? 0) / 100, currencyCode)} (${formatCurrency(Math.abs(Number(partialPeriodSource.unit_price)) / 100, currencyCode)} × ${partialPeriodCalculation?.coveredDays ?? 0}/${partialPeriodCalculation?.fullPeriodDays ?? 0}, rounded per unit)` : ''}</p>{partialPeriodSource.contract_line_id && partialPeriodSource.client_contract_id && <a className="text-xs text-primary-600 underline" href={`/msp/billing?tab=client-contracts&clientContractId=${encodeURIComponent(partialPeriodSource.client_contract_id)}&contractView=lines&contractLineId=${encodeURIComponent(partialPeriodSource.contract_line_id)}`}>{t('manualInvoices.partialPeriod.permanentChangeNudge', { defaultValue: 'Is this a permanent change? Record it on the contract instead.' })}</a>}</div>}
+                    {partialPeriodSource && <div className="space-y-1"><p className="text-xs text-muted-foreground">{partialPeriodSource.description}: {partialPeriodSource.service_period_start} – {partialPeriodSource.service_period_end} · {t('manualInvoices.partialPeriod.sourceRate', { defaultValue: 'Rate {{rate}}', rate: formatCurrencyFromMinorUnits(Number(partialPeriodSource.unit_price), locale, currencyCode) })} · {partialEffectiveDate && partialPeriodPreview !== null ? `${partialUnits} × ${formatCurrencyFromMinorUnits(Math.abs(partialPeriodCalculation?.unitPrice ?? 0), locale, currencyCode)} = ${formatCurrencyFromMinorUnits(partialPeriodPreview ?? 0, locale, currencyCode)} (${formatCurrencyFromMinorUnits(Math.abs(Number(partialPeriodSource.unit_price)), locale, currencyCode)} × ${partialPeriodCalculation?.coveredDays ?? 0}/${partialPeriodCalculation?.fullPeriodDays ?? 0}, rounded per unit)` : ''}</p>{partialPeriodSource.contract_line_id && partialPeriodSource.client_contract_id && <a className="text-xs text-primary-600 underline" href={`/msp/billing?tab=client-contracts&clientContractId=${encodeURIComponent(partialPeriodSource.client_contract_id)}&contractView=lines&contractLineId=${encodeURIComponent(partialPeriodSource.contract_line_id)}`}>{t('manualInvoices.partialPeriod.permanentChangeNudge', { defaultValue: 'Is this a permanent change? Record it on the contract instead.' })}</a>}</div>}
                     <Input
                       id="partial-period-description-input"
                       label={t('manualInvoices.partialPeriod.description', { defaultValue: 'Description (optional)' })}
@@ -2022,7 +2025,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                           ? t('manualInvoices.partialPeriod.previewUnavailable', { defaultValue: 'Enter a valid calculation.' })
                           : t('manualInvoices.partialPeriod.resolvedAmount', {
                             defaultValue: 'Resolved amount: {{amount}}',
-                            amount: formatCurrency(partialPeriodPreview / 100, currencyCode),
+                            amount: formatCurrencyFromMinorUnits(partialPeriodPreview, locale, currencyCode),
                           })}
                       </span>
                       <Button
@@ -2060,7 +2063,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                 <div className="text-lg font-semibold">
                   {/* Always use the calculated total for consistency */}
                   <>
-                    {t('manualInvoices.labels.total', { defaultValue: 'Total' })}: {formatCurrency(calculatedGrandTotal / 100, currencyCode)}
+                    {t('manualInvoices.labels.total', { defaultValue: 'Total' })}: {formatCurrencyFromMinorUnits(calculatedGrandTotal, locale, currencyCode)}
                   </>
                 </div>
               </div>

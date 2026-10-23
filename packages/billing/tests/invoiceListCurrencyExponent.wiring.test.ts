@@ -69,12 +69,18 @@ describe('invoice list amounts honour the currency exponent', () => {
 
   it('keeps the manual invoice amounts on the minor-unit formatter', () => {
     expect(manualInvoicesSource).toContain('formatCurrencyFromMinorUnits(item.total, locale, currencyCode)');
+    // The grand total sits directly under the generated line items: it has to be
+    // scaled the same way, or the screen disagrees with itself.
+    expect(manualInvoicesSource).toContain(
+      'formatCurrencyFromMinorUnits(calculatedGrandTotal, locale, currencyCode)'
+    );
   });
 
-  it('leaves no hardcoded minor-unit division in the invoice lists', () => {
+  it('leaves no hardcoded minor-unit division in the invoice lists or manual invoice screen', () => {
     for (const [name, text] of [
       ['DraftsTab.tsx', draftsTabSource],
       ['FinalizedTab.tsx', finalizedTabSource],
+      ['ManualInvoices.tsx', manualInvoicesSource],
     ] as const) {
       expect(`${name}: ${text.match(/\/ ?100\b/g)?.length ?? 0}`).toBe(`${name}: 0`);
     }
