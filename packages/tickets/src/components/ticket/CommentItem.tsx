@@ -13,7 +13,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { ClampedContent } from '@alga-psa/ui/components/ClampedContent';
-import { InboundEmailBody } from '@alga-psa/ui/components/EmailHtmlViewer';
+import { useInboundEmailView } from '@alga-psa/ui/components/EmailHtmlViewer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
@@ -288,6 +288,16 @@ const CommentItem: React.FC<CommentItemProps> = ({
     return lines;
   }, [conversation.metadata, t]);
   const isDeleted = Boolean(conversation.deleted_at);
+  const isEditingThisComment = isEditing && currentComment?.comment_id === conversation.comment_id;
+
+  // The switcher joins the badge row beside the "via inbound email" badge that
+  // explains it, instead of spending a line of its own above every message. A
+  // deleted or open-in-the-editor comment has no body to read as mail.
+  const emailView = useInboundEmailView({
+    id: `${commentId}-original-email`,
+    src: isDeleted || isEditingThisComment ? null : originalEmailSrc,
+    labels: originalEmailToggleLabels(t),
+  });
 
   // Only allow users to edit their own comments
   const canEdit = useMemo(() => {
@@ -617,6 +627,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     }}
                   />
                 )}
+                {emailView.switcher}
                 {externalLinks.map((link) => (
                   <span
                     key={link.link_id}
@@ -790,7 +801,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               >
                 [deleted]
               </div>
-            ) : isEditing && currentComment?.comment_id === conversation.comment_id ? (
+            ) : isEditingThisComment ? (
               editorContent
             ) : (
               <div
@@ -810,27 +821,13 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     showMoreLabel={t('conversation.showMore', 'Show more')}
                     showLessLabel={t('conversation.showLess', 'Show less')}
                   >
-                    {(() => {
-                      const storedBody = (
-                        <RichTextViewer
-                          key={`${conversation.comment_id}-${conversation.updated_at || conversation.created_at}`}
-                          content={displayContent as any}
-                          className="w-full min-w-0 max-w-full"
-                        />
-                      );
-
-                      return originalEmailSrc ? (
-                        <InboundEmailBody
-                          id={`${commentId}-original-email`}
-                          src={originalEmailSrc}
-                          labels={originalEmailToggleLabels(t)}
-                        >
-                          {storedBody}
-                        </InboundEmailBody>
-                      ) : (
-                        storedBody
-                      );
-                    })()}
+                    {emailView.body(
+                      <RichTextViewer
+                        key={`${conversation.comment_id}-${conversation.updated_at || conversation.created_at}`}
+                        content={displayContent as any}
+                        className="w-full min-w-0 max-w-full"
+                      />
+                    )}
                   </ClampedContent>
               </div>
           )}

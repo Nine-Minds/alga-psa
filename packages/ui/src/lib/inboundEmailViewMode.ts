@@ -6,12 +6,12 @@
  *
  * The choice is a user preference, not per-message state: a reader who asks for
  * the original on one comment wants it on the next ticket too. Every
- * `InboundEmailBody` on the page therefore shares this one module-level store,
- * seeded from `localStorage` so the choice survives a reload before the server
- * preference arrives. Server persistence is layered on top by
- * `useInboundEmailViewPreference` (in `@alga-psa/tickets`), which writes the
- * same key through the normal user-preference actions; this module stays free
- * of server imports so `@alga-psa/ui` keeps no dependency on them.
+ * `useInboundEmailView` caller on the page therefore shares this one
+ * module-level store, seeded from `localStorage` so the choice survives a
+ * reload before the server preference arrives. Server persistence is layered
+ * on top by `useInboundEmailViewPreference` (in `@alga-psa/tickets`), which
+ * writes the same key through the normal user-preference actions; this module
+ * stays free of server imports so `@alga-psa/ui` keeps no dependency on them.
  */
 
 import { useCallback, useSyncExternalStore } from 'react';

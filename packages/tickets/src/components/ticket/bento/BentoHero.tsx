@@ -27,7 +27,7 @@ import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossF
 import { computeSlaClocks, formatSlaLabel, type TicketSlaFields } from './slaClocks';
 import { useTeamAvatarUrl } from './useTeamAvatarUrl';
 import type { TicketLiveConflictState } from '../ticketLiveFields';
-import { InboundEmailBody } from '@alga-psa/ui/components/EmailHtmlViewer';
+import { useInboundEmailView } from '@alga-psa/ui/components/EmailHtmlViewer';
 import {
   originalEmailSourceForTicket,
   originalEmailToggleLabels,
@@ -369,6 +369,15 @@ export function BentoHero({
       ),
     [descriptionContent],
   );
+
+  // The switcher rides the heading row, so the clamped box below measures only
+  // the body; the editor owns the stored text, so no original is offered there.
+  const emailView = useInboundEmailView({
+    id: `${id}-description-original-email`,
+    src: !isEditingDescription && hasDescription ? originalEmailSrc : null,
+    labels: originalEmailToggleLabels(t),
+    switcherClassName: 'ml-auto',
+  });
 
   useEffect(() => {
     const el = descriptionBodyRef.current;
@@ -1246,6 +1255,7 @@ export function BentoHero({
                 <Pencil className="h-3.5 w-3.5" />
               </button>
             ) : null}
+            {emailView.switcher}
           </div>
 
           {isEditingDescription ? (
@@ -1271,16 +1281,8 @@ export function BentoHero({
                 ref={descriptionBodyRef}
                 className={`text-sm ${descriptionExpanded ? '' : 'max-h-40 overflow-hidden'}`}
               >
-                {originalEmailSrc ? (
-                  <InboundEmailBody
-                    id={`${id}-description-original-email`}
-                    src={originalEmailSrc}
-                    labels={originalEmailToggleLabels(t)}
-                  >
-                    <RichTextViewer id={`${id}-description-view`} content={descriptionContent} />
-                  </InboundEmailBody>
-                ) : (
-                  <RichTextViewer id={`${id}-description-view`} content={descriptionContent} />
+                {emailView.body(
+                  <RichTextViewer id={`${id}-description-view`} content={descriptionContent} />,
                 )}
               </div>
               {descriptionOverflows || descriptionExpanded ? (

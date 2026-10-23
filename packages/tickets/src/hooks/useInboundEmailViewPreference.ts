@@ -8,7 +8,7 @@
  * a ticket's messages switch together without prop drilling); this hook is the
  * one place per ticket screen that marries that store to the stored
  * preference. Mount it once — the MSP and portal ticket details do — and every
- * `InboundEmailBody` below it inherits the reader's standing choice.
+ * `useInboundEmailView` body below it inherits the reader's standing choice.
  */
 
 import { useEffect, useRef } from 'react';

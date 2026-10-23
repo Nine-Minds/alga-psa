@@ -122,6 +122,17 @@ describe('CommentItem original-email switcher', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('keeps the switcher in the heading row, out of the body', () => {
+    renderComment(buildComment('comment-row', inboundMetadata));
+
+    const switcher = screen.getByRole('group', { name: 'Message view' });
+    const body = screen.getByTestId('stored-body');
+    // Above the body it would cost every inbound message a line of its own, and
+    // inside the clamped body it would eat part of the clamp.
+    expect(switcher.closest('[data-automation-id="comment-row-content"]')).toBeNull();
+    expect(switcher.compareDocumentPosition(body) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('fetches and renders the original email only once the reader switches to it', async () => {
     fetchMock.mockResolvedValue({
       ok: true,

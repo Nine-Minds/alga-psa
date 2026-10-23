@@ -192,80 +192,106 @@ export function EmailHtmlViewer({
   );
 }
 
-export interface InboundEmailBodyProps {
+export interface InboundEmailViewLabels {
+  text: string;
+  originalEmail: string;
+  /** Compact switcher label for the original; falls back to `originalEmail`. */
+  emailShort?: string;
+  loading: string;
+  error: string;
+  /** Group label for assistive technology. */
+  group?: string;
+}
+
+export interface InboundEmailViewOptions {
   id?: string;
-  /** Endpoint for the formatted view; the toggle disappears when it 404s. */
-  src: string;
-  labels: {
-    text: string;
-    originalEmail: string;
-    /** Compact switcher label for the original; falls back to `originalEmail`. */
-    emailShort?: string;
-    loading: string;
-    error: string;
-    /** Group label for assistive technology. */
-    group?: string;
-  };
-  /** The stored rich-text body, shown until the reader asks for the original. */
-  children: React.ReactNode;
+  /** Endpoint for the formatted view, or `null` for a record that is not from mail. */
+  src: string | null;
+  labels: InboundEmailViewLabels;
+  /** Placement classes for the switcher inside the caller's heading row. */
+  switcherClassName?: string;
+}
+
+export interface InboundEmailView {
+  /** Compact switcher for the heading row; `null` when there is no original to offer. */
+  switcher: React.ReactNode;
+  /** Wraps the stored body, swapping in the archived original on demand. */
+  body: (storedBody: React.ReactNode) => React.ReactNode;
 }
 
 /**
  * Pairs a stored comment/description body with the archived original behind a
  * compact view switcher. The original is fetched on the first switch only.
  *
- * The switcher is bound to the shared view-mode preference rather than to local
- * state, so the choice carries to every other message and every other ticket.
- * A body whose archive turned out to be missing drops its own switcher without
- * disturbing that preference.
+ * Switcher and body come back separately because they belong in different
+ * places: the switcher rides the heading row the record already has, where it
+ * costs no vertical space, while the body stays where the stored text was —
+ * often inside a clamp or a `prose` container that the switcher must stay out
+ * of. The reader's choice comes from the shared view-mode preference rather
+ * than local state, so it carries to every other message and every other
+ * ticket; a record whose archive turns out to be missing withdraws its own
+ * switcher without disturbing that preference.
  */
-export function InboundEmailBody({ id, src, labels, children }: InboundEmailBodyProps) {
+export function useInboundEmailView({
+  id,
+  src,
+  labels,
+  switcherClassName,
+}: InboundEmailViewOptions): InboundEmailView {
   const [mode, setMode] = useInboundEmailViewMode();
-  const [unavailable, setUnavailable] = useState(htmlCache.get(src) === null);
+  const [missing, setMissing] = useState<string | null>(null);
 
-  const handleUnavailable = useCallback(() => {
-    setUnavailable(true);
-  }, []);
+  const markUnavailable = useCallback(() => {
+    setMissing(src);
+  }, [src]);
 
-  return (
-    <div id={id} className="min-w-0">
-      {!unavailable && (
-        <ViewSwitcher<InboundEmailViewMode>
-          currentView={mode}
-          onChange={setMode}
-          size="sm"
-          className="mb-1 w-fit"
-          aria-label={labels.group ?? labels.originalEmail}
-          options={[
-            {
-              value: 'text',
-              label: labels.text,
-              icon: AlignLeft,
-              id: id ? `${id}-text-toggle` : 'inbound-email-text-toggle',
-            },
-            {
-              value: 'email',
-              label: labels.emailShort ?? labels.originalEmail,
-              icon: Mail,
-              id: id ? `${id}-email-toggle` : 'inbound-email-original-toggle',
-            },
-          ]}
-        />
-      )}
-      {mode === 'email' && !unavailable ? (
-        <EmailHtmlViewer
-          id={id ? `${id}-frame` : undefined}
-          src={src}
-          title={labels.originalEmail}
-          loadingLabel={labels.loading}
-          errorLabel={labels.error}
-          onUnavailable={handleUnavailable}
-        />
-      ) : (
-        children
-      )}
-    </div>
-  );
+  const available = src !== null && missing !== src && htmlCache.get(src) !== null;
+
+  const switcher = available ? (
+    <ViewSwitcher<InboundEmailViewMode>
+      currentView={mode}
+      onChange={setMode}
+      size="sm"
+      className={cn('w-fit shrink-0', switcherClassName)}
+      aria-label={labels.group ?? labels.originalEmail}
+      options={[
+        {
+          value: 'text',
+          label: labels.text,
+          icon: AlignLeft,
+          id: id ? `${id}-text-toggle` : 'inbound-email-text-toggle',
+        },
+        {
+          value: 'email',
+          label: labels.emailShort ?? labels.originalEmail,
+          icon: Mail,
+          id: id ? `${id}-email-toggle` : 'inbound-email-original-toggle',
+        },
+      ]}
+    />
+  ) : null;
+
+  const body = (storedBody: React.ReactNode): React.ReactNode => {
+    if (src === null) return storedBody;
+    return (
+      <div id={id} className="min-w-0">
+        {available && mode === 'email' ? (
+          <EmailHtmlViewer
+            id={id ? `${id}-frame` : undefined}
+            src={src}
+            title={labels.originalEmail}
+            loadingLabel={labels.loading}
+            errorLabel={labels.error}
+            onUnavailable={markUnavailable}
+          />
+        ) : (
+          storedBody
+        )}
+      </div>
+    );
+  };
+
+  return { switcher, body };
 }
 
 export default EmailHtmlViewer;
