@@ -1606,7 +1606,9 @@
       "missingFieldNamed": "Falta un campo obligatorio del ticket: {{field}}.",
       "referenceMissing": "Uno de los registros de ticket seleccionados ya no existe. Actualice la página e inténtelo de nuevo.",
       "conflict": "Este cambio del ticket entra en conflicto con un registro existente. Actualice la página e inténtelo de nuevo.",
-      "valueNotAllowed": "Uno de los valores del ticket no está permitido. Revise el formulario e inténtelo de nuevo."
+      "valueNotAllowed": "Uno de los valores del ticket no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "priorityItilBoardCustom": "La prioridad ‘{{priority}}’ es una prioridad ITIL, pero el tablero ‘{{board}}’ usa prioridades personalizadas.",
+      "priorityCustomBoardItil": "La prioridad ‘{{priority}}’ es una prioridad personalizada, pero el tablero ‘{{board}}’ usa prioridades ITIL."
     },
     "board": {
       "invalidReference": "El tablero, el estado o la regla seleccionados no son válidos. Actualice la página e inténtelo de nuevo.",
@@ -2573,15 +2575,17 @@
       "fromTicket": "Rellenado desde el ticket #{{number}}. No se guarda nada hasta que haga clic en Guardar.",
       "inlineImages": "La descripción contiene imágenes que pertenecen al ticket de origen. Pueden dejar de mostrarse si ese ticket se elimina. Quítelas o vuelva a subirlas si la plantilla debe sobrevivir al ticket.",
       "viewOnly": "Puede ver esta plantilla pero no modificarla.",
-      "referenceProblems": "Algunos campos de esta plantilla apuntan a elementos que ya no existen. Se dejan en blanco al usar la plantilla. Corríjalos y guarde:",
+      "referenceProblems": "Algunos campos de esta plantilla no son válidos: hacen referencia a elementos que ya no existen o no son compatibles entre sí (por ejemplo, una prioridad que no coincide con el tablero). Corríjalos y guarde:",
       "inactiveWarning": "Inactiva: oculta en el selector de plantillas; todavía la usan {{count}} programaciones.",
       "sharedWarning": "Los cambios se aplican a cada programación recurrente que use esta plantilla, a partir del siguiente ticket que cree.",
-      "boardChangeWarning": "Cambiar el tablero borra la prioridad y la categoría, y puede invalidar el estado de las programaciones que usan esta plantilla. Esas programaciones fallan hasta que las edite. Programaciones afectadas: {{schedules}}."
+      "boardChangeWarning": "Cambiar el tablero borra la prioridad y la categoría, y puede invalidar el estado de las programaciones que usan esta plantilla. Esas programaciones fallan hasta que las edite. Programaciones afectadas: {{schedules}}.",
+      "priorityTypeMismatchItil": "La prioridad ‘{{priority}}’ es una prioridad ITIL, pero el tablero ‘{{board}}’ usa prioridades personalizadas. No se podrá guardar hasta que cambie la prioridad o el tablero.",
+      "priorityTypeMismatchCustom": "La prioridad ‘{{priority}}’ es una prioridad personalizada, pero el tablero ‘{{board}}’ usa prioridades ITIL. No se podrá guardar hasta que cambie la prioridad o el tablero."
     },
     "errors": {
       "notFound": "Plantilla de ticket no encontrada",
       "duplicateName": "Ya existe una plantilla llamada {{name}}",
-      "invalidReferences": "La plantilla hace referencia a un tablero, una categoría o una prioridad que no está disponible",
+      "invalidReferences": "{{problems}}",
       "notAvailable": "Las plantillas de tickets no están disponibles",
       "subcategoryNeedsCategory": "Una subcategoría requiere una categoría",
       "inUseBySchedules": "Usada por {{count}} programación(es) recurrente(s): {{schedules}}. Asígneles otra plantilla o archívelas primero."

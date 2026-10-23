@@ -36,6 +36,7 @@ import {
   type TenantScopedQuery,
 } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { findTicketUpdatePriorityBoardTypeProblem, PriorityBoardTypeError } from '../lib/ticketFieldReferences';
 import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
@@ -576,32 +577,13 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       tenantScopedTable(trx, 'boards', tenant)
         .orderBy('board_name', 'asc'),
       
-      // Priorities for the ticket's current board. Mirrors the categories fetch
-      // below: a board only offers the priority family its priority_type declares,
-      // so a custom board never lists leftover ITIL priorities.
-      (async () => {
-        const boardPriorities = () => tenantScopedTable(trx, 'priorities', tenant)
-          .where({ item_type: 'ticket' })
-          .orderBy('priority_name', 'asc');
-
-        if (!ticket.board_id) {
-          return boardPriorities();
-        }
-
-        const ticketBoard = await tenantScopedTable(trx, 'boards', tenant)
-          .where({ board_id: ticket.board_id })
-          .select('priority_type')
-          .first();
-
-        if (ticketBoard?.priority_type === 'itil') {
-          return boardPriorities().where('is_from_itil_standard', true);
-        }
-
-        return boardPriorities()
-          .where((builder: Knex.QueryBuilder) => {
-            builder.where('is_from_itil_standard', false).orWhereNull('is_from_itil_standard');
-          });
-      })(),
+      // All ticket priorities, both families. The client filters by the effective
+      // board's priority_type (the ticket's board can change before saving, and a
+      // cross-family move must offer the destination board's family).
+      tenantScopedTable(trx, 'priorities', tenant)
+        .where({ item_type: 'ticket' })
+        .select('*')
+        .orderBy('priority_name', 'asc'),
 
       // Categories for the ticket's current board. This must match
       // getTicketCategoriesByBoard so the hydrated dropdown doesn't briefly
@@ -2803,6 +2785,10 @@ export async function updateTicketInTransaction(
       'board_id' in updateData &&
       !!updateData.board_id &&
       updateData.board_id !== currentTicket.board_id;
+
+    // Priority family must match the board's priority_type; only checked when the patch changes either.
+    const priorityProblem = await findTicketUpdatePriorityBoardTypeProblem(trx, tenant, currentTicket, updateData);
+    if (priorityProblem) throw new PriorityBoardTypeError(priorityProblem);
 
     if (isBoardChange && !updateData.status_id) {
       throw new Error('Changing the board requires selecting a status for the destination board');

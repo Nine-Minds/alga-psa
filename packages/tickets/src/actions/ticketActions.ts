@@ -54,6 +54,7 @@ import {
 } from '@alga-psa/event-bus/events';
 
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
+import { findPriorityBoardTypeProblem, findTicketUpdatePriorityBoardTypeProblem, PriorityBoardTypeError } from '../lib/ticketFieldReferences';
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
 import { resolveAssetBillingProfileIdForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
 import {
@@ -470,6 +471,9 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
                 throw new Error('Permission denied: Cannot create ticket');
             }
 
+            const assetPriorityProblem = await findPriorityBoardTypeProblem(trx, tenant, data.board_id, data.priority_id);
+            if (assetPriorityProblem) throw new PriorityBoardTypeError(assetPriorityProblem);
+
             // Server-specific: Create adapters for dependency injection.
             // Passing trx defers event publishing until the commit.
             const eventPublisher = new TicketModelEventPublisher(trx);
@@ -607,6 +611,12 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         if (itilPriorityRecord) {
           finalPriorityId = itilPriorityRecord.priority_id;
         }
+      }
+
+      const addBoardId = data.get('board_id') as string;
+      if (addBoardId && finalPriorityId) {
+        const priorityProblem = await findPriorityBoardTypeProblem(trx, tenant, addBoardId, finalPriorityId);
+        if (priorityProblem) throw new PriorityBoardTypeError(priorityProblem);
       }
 
       // Convert FormData to CreateTicketInput format
@@ -1279,6 +1289,11 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           }
         }
       }
+
+      // The priority family must match the board's priority_type. Checked only when this patch changes
+      // the priority or board, so an unrelated update still works on legacy mismatched tickets.
+      const priorityProblem = await findTicketUpdatePriorityBoardTypeProblem(trx, tenant, currentTicket, updateData);
+      if (priorityProblem) throw new PriorityBoardTypeError(priorityProblem);
 
       // Validate location belongs to the client if provided
       if ('location_id' in updateData && updateData.location_id) {
