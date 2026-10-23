@@ -4,7 +4,6 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { IClient, IClientContract } from '@alga-psa/types';
 import {
-  getAllClients,
   getAllClientsPaginated,
   getClientsWithBillingCycleRangePaginated,
   getClientById,
@@ -142,22 +141,6 @@ async function requireClientReadPermission(user: IUserWithRoles): Promise<void> 
     throw new Error('Permission denied: Cannot read clients');
   }
 }
-
-export const getAllClientsForBilling = withAuth(async (
-  user,
-  { tenant },
-  includeInactive: boolean = true
-): Promise<IClient[] | BillingClientsActionError> => {
-  return withBillingClientsActionErrors(async () => {
-    await requireClientReadPermission(user);
-  const { knex } = await createTenantKnex();
-  const clients = await getAllClients(knex, tenant, includeInactive);
-  return attachClientLogos(clients, tenant);
-  });
-});
-
-/** Same read for the draft adjustment loader, with auth rejection kept serializable. */
-export const getAllClientsForBillingRecoverable = withSerializableAuth(getAllClientsForBilling);
 
 export const getAllClientsPaginatedForBilling = withAuth(async (
   user,

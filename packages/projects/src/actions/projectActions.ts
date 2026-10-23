@@ -4,7 +4,6 @@ import { Knex } from 'knex';
 import ProjectModel from '../models/project';
 import ProjectTaskModel from '../models/projectTask';
 import type {
-  IClient,
   IProject,
   IProjectPhase,
   IProjectStatusMapping,
@@ -471,26 +470,6 @@ async function resolveProjectIdsForStatus(
 
   return Array.from(new Set(rows.map((row) => row.project_id)));
 }
-
-export const getAllClientsForProjects = withAuth(async (_user, { tenant }): Promise<IClient[]> => {
-  const { knex: db } = await createTenantKnex();
-
-  const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
-    return tenantScopedTable(trx, 'clients', tenant).select('*').orderBy('client_name', 'asc');
-  });
-
-  if (clients.length === 0) {
-    return [];
-  }
-
-  // Batch-resolve logo URLs once (no N+1) so the projects table can show real logos.
-  const logoUrlsMap = await getClientLogoUrlsBatch(clients.map((c: any) => c.client_id), tenant);
-
-  return clients.map((c: any) => ({
-    ...c,
-    logoUrl: logoUrlsMap.get(c.client_id) ?? null,
-  })) as IClient[];
-});
 
 export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[] | ActionPermissionError> => {
     try {
