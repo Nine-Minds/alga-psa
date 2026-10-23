@@ -45,6 +45,7 @@ const source = (relativePath: string) => readFileSync(new URL(relativePath, impo
 const draftsTabSource = source('../src/components/billing-dashboard/invoicing/DraftsTab.tsx');
 const finalizedTabSource = source('../src/components/billing-dashboard/invoicing/FinalizedTab.tsx');
 const manualInvoicesSource = source('../src/components/billing-dashboard/ManualInvoices.tsx');
+const lineItemSource = source('../src/components/billing-dashboard/LineItem.tsx');
 
 describe('invoice list amounts honour the currency exponent', () => {
   // INV001001 in the review slot is JPY 200: the list used to read ¥2.00.
@@ -76,13 +77,21 @@ describe('invoice list amounts honour the currency exponent', () => {
     );
   });
 
-  it('leaves no hardcoded minor-unit division in the invoice lists or manual invoice screen', () => {
+  it('keeps the manual line editor on the currency exponent both ways', () => {
+    // The editor writes the rate the invoice is billed from, so a fixed multiplier here
+    // is the same bug as a fixed divisor in a list: ¥50 typed, ¥5,000 billed.
+    expect(lineItemSource).toContain('toMinorUnits(major, undefined, currencyCode)');
+    expect(lineItemSource).toContain('fromMinorUnits(minor, undefined, currencyCode)');
+  });
+
+  it('leaves no hardcoded minor-unit scaling in the invoice lists, manual invoice screen or line editor', () => {
     for (const [name, text] of [
       ['DraftsTab.tsx', draftsTabSource],
       ['FinalizedTab.tsx', finalizedTabSource],
       ['ManualInvoices.tsx', manualInvoicesSource],
+      ['LineItem.tsx', lineItemSource],
     ] as const) {
-      expect(`${name}: ${text.match(/\/ ?100\b/g)?.length ?? 0}`).toBe(`${name}: 0`);
+      expect(`${name}: ${text.match(/[*/] ?100\b/g)?.length ?? 0}`).toBe(`${name}: 0`);
     }
   });
 });
