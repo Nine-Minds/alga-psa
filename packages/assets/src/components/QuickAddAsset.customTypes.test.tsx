@@ -23,7 +23,6 @@ vi.mock('../actions/assetActions', () => ({
 
 vi.mock('../actions/clientLookupActions', () => ({
   getVendorOptionsForAssets: vi.fn(async () => []),
-  getAllClientsForAssets: vi.fn(async () => []),
   getClientLocationsForAssets: vi.fn(async () => []),
   getClientContactsForAssets: vi.fn(async () => [
     { contact_name_id: '11000000-0000-4000-8000-000000000001', client_id: 'b0000000-0000-4000-8000-00000000000b', full_name: 'Pat Person', email: null },
