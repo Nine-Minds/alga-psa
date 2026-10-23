@@ -390,6 +390,7 @@ export class ClientService extends BaseService<IClient> {
         billing_email: data.billing_email,
         account_manager_id: data.account_manager_id,
         is_inactive: data.is_inactive || false,
+        lifecycle_status: (data as any).lifecycle_status ?? 'active',
         client_since: data.client_since ?? null,
         tenant: context.tenant,
         created_at: knex.raw('now()'),
@@ -667,7 +668,7 @@ export class ClientService extends BaseService<IClient> {
         'payment_terms', 'billing_cycle', 'credit_limit', 'default_currency_code',
         'preferred_payment_method', 'auto_invoice', 'invoice_delivery_method', 'region_code',
         'is_tax_exempt', 'tax_exemption_certificate', 'timezone', 'invoice_template_id', 'client_since',
-        'billing_contact_id', 'billing_email', 'account_manager_id', 'is_inactive',
+        'billing_contact_id', 'billing_email', 'account_manager_id', 'is_inactive', 'lifecycle_status',
       ] as const;
       const updateData: Record<string, unknown> = { updated_at: knex.raw('now()') };
       for (const column of clientColumns) {
@@ -764,6 +765,28 @@ export class ClientService extends BaseService<IClient> {
         }),
         ctx: { tenantId: context.tenant, occurredAt, actor },
         idempotencyKey: `client_status_changed:${id}:${occurredAt}`,
+      });
+    }
+
+    // Lifecycle column transitions (prospect → active → former) emit the same event
+    // the web action publishes, under its own key so both can change in one request.
+    const previousClientLifecycleStatus = (result.before as any)?.lifecycle_status;
+    const newClientLifecycleStatus = (result.after as any)?.lifecycle_status;
+    if (
+      typeof previousClientLifecycleStatus === 'string' &&
+      typeof newClientLifecycleStatus === 'string' &&
+      previousClientLifecycleStatus !== newClientLifecycleStatus
+    ) {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_STATUS_CHANGED',
+        payload: buildClientStatusChangedPayload({
+          clientId: id,
+          previousStatus: previousClientLifecycleStatus,
+          newStatus: newClientLifecycleStatus,
+          changedAt: occurredAt,
+        }),
+        ctx: { tenantId: context.tenant, occurredAt, actor },
+        idempotencyKey: `client_lifecycle_status_changed:${id}:${occurredAt}`,
       });
     }
 
@@ -1136,6 +1159,8 @@ export class ClientService extends BaseService<IClient> {
       }>;
       pinPortalGrants?: boolean;
       externalRemapChoices?: Array<{ mappingId: string; apply: boolean }>;
+      /** FR-G2: source_profile (default) | target_default. */
+      billingStrategy?: 'source_profile' | 'target_default';
     },
     context: ServiceContext
   ): Promise<ClientMergeResult> {
@@ -1150,6 +1175,7 @@ export class ClientService extends BaseService<IClient> {
           contractDecisions: input.contractDecisions,
           pinPortalGrants: input.pinPortalGrants,
           externalRemapChoices: input.externalRemapChoices,
+          billingStrategy: input.billingStrategy,
         })
       );
     } catch (error) {

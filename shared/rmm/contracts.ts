@@ -30,6 +30,10 @@ export interface NormalizedRmmDeviceExtensionSnapshot {
   pendingSoftwarePatches?: number | null;
   failedPatches?: number | null;
   lastPatchScanAt?: string | null;
+  /** Hardware make, written to assets.manufacturer (FR-A3). */
+  manufacturer?: string | null;
+  /** Hardware model, written to assets.model (FR-A3). */
+  model?: string | null;
   cpuModel?: string | null;
   cpuCores?: number | null;
   ramGb?: number | null;

@@ -584,11 +584,15 @@ export class WorkflowRuntimeV2EventStreamWorker {
           message: selfTriggerReason === 'causation_depth_exceeded'
             ? 'Workflow causation depth limit exceeded'
             : 'Event was caused by this workflow chain (self-trigger guard)',
+          legacyMessage: selfTrigger.reason === 'self_trigger'
+            ? `Skipped ${skipLabel}: event was published by a run of this same workflow (trigger loop guard)`
+            : `Skipped ${skipLabel}: event chain is deeper than the causation limit (depth ${selfTrigger.causationDepth}, trigger loop guard)`,
           details: {
             guardReason: selfTrigger.reason,
             causationDepth: selfTrigger.causationDepth,
             originExecutionId: event.execution_id ?? null,
           },
+          errorMessageSection: 'diagnostic',
         });
         continue;
       }
@@ -704,39 +708,32 @@ export class WorkflowRuntimeV2EventStreamWorker {
       },
     });
 
-    // Legacy event-row error_message: validation messages first, then the other
-    // diagnostics, each in collection order (paused / self-trigger / launch
-    // failures never contributed here).
+    // Legacy event-row error_message, combined in a fixed order so no reason masks another:
+    //   delivery errors, then payload validation messages, then other skip diagnostics
+    //   (each in collection order; paused and launch-failure skips never contribute).
+    // Skip messages are stamped only when nothing launched or signaled: every skip is already
+    // persisted per workflow, and an event that matched another workflow must not read as an error.
     const validationMessages = skips.filter((s) => s.errorMessageSection === 'validation').map((s) => s.legacyMessage);
     const diagnosticMessages = skips.filter((s) => s.errorMessageSection === 'diagnostic').map((s) => s.legacyMessage);
 
     const matchedRunId = Array.from(signaledRuns)[0] ?? startedRuns[0] ?? null;
-    if (matchedRunId) {
-      await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
-        matched_run_id: matchedRunId,
-        processed_at: processedAt,
-      });
+    const nothingLaunchedOrSignaled = startedRuns.length === 0 && signaledRuns.size === 0;
+
+    const messageParts: string[] = [...deliveryErrors];
+    if (nothingLaunchedOrSignaled) {
+      messageParts.push(...validationMessages, ...diagnosticMessages);
+    }
+    if (messageParts.length === 0 && missingCorrelationWarning && nothingLaunchedOrSignaled) {
+      messageParts.push(missingCorrelationWarning);
     }
 
-    if (deliveryErrors.length > 0) {
+    // A single update carries matched_run_id, processed_at and error_message together.
+    if (matchedRunId || messageParts.length > 0) {
       await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
-        error_message: deliveryErrors.join('\n'),
-        processed_at: processedAt,
-      });
-    } else if (
-      (validationMessages.length > 0 || diagnosticMessages.length > 0) &&
-      startedRuns.length === 0 &&
-      signaledRuns.size === 0
-    ) {
-      await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
-        error_message: [...validationMessages, ...diagnosticMessages].join('\n'),
+        ...(matchedRunId ? { matched_run_id: matchedRunId } : {}),
+        ...(messageParts.length > 0 ? { error_message: messageParts.join('\n') } : {}),
         processed_at: processedAt,
       }, event.tenant);
-    } else if (missingCorrelationWarning && startedRuns.length === 0 && signaledRuns.size === 0) {
-      await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
-        error_message: missingCorrelationWarning,
-        processed_at: processedAt,
-      });
     }
   }
 

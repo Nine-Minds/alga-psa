@@ -18,6 +18,7 @@ import {
     DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
     resolveRecurringAuthoringPolicy,
 } from '@shared/billingClients/recurringAuthoringPolicy';
+import { isContractLineTimingNotAllowedError } from '@shared/billingClients/contractLineTimingRule';
 
 
 
@@ -27,12 +28,20 @@ import ContractLineFixedConfig from '../models/contractLineFixedConfig';
 import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
 import { IContractLineServiceConfiguration } from '@alga-psa/types';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
+import { syncPrepaidBlockIssuancesForContractLine } from '../services/prepaidBlockIssuanceSync';
+import {
+    copyPresetPrepaidBlockToLine,
+    upsertContractLinePrepaidBlockInTransaction,
+    upsertPresetPrepaidBlockInTransaction,
+    type PrepaidBlockConfigInput,
+} from '../services/prepaidBlockConfigService';
 import {
     getFixedServiceBasisIssue,
     hasBundleFixedService,
     isUnitFixedService,
 } from '../lib/fixedServiceBasis';
 import { upsertBucketOverlayInTransaction } from './bucketOverlayActions';
+import { validateContractLineWindow, normalizeContractLineDate } from '../lib/billing/contractLineWindow';
 import {
     actionError,
     permissionError,
@@ -49,7 +58,25 @@ class ContractLinePresetDomainError extends Error {
     }
 }
 
+/**
+ * Recurring rates are never negative. A negative fixed rate is not a discount
+ * (credits are authored as configured discounts or manual invoice adjustments),
+ * so it is rejected here before it can reach a stored charge and silently get
+ * zero tax and no discount-base inclusion.
+ */
+function assertNonNegativeRate(value: number | string | null | undefined, label: string): void {
+    if (value === null || value === undefined) return;
+    const numericValue = typeof value === 'string' && value.trim() === '' ? Number.NaN : Number(value);
+    if (!Number.isFinite(numericValue) || numericValue < 0) {
+        throw new ContractLinePresetDomainError(`${label} must be zero or greater.`);
+    }
+}
+
 function contractLinePresetActionErrorFrom(error: unknown): ContractLinePresetActionError | null {
+    if (isContractLineTimingNotAllowedError(error)) {
+        return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
+    }
+
     if (error instanceof ContractLinePresetDomainError) {
         if (error.message.startsWith('Permission denied:')) {
             return permissionError(error.message);
@@ -59,6 +86,11 @@ function contractLinePresetActionErrorFrom(error: unknown): ContractLinePresetAc
 
     if (error instanceof Error && error.message.startsWith('Permission denied:')) {
         return permissionError(error.message);
+    }
+
+    // Validation failures from the shared prepaid block config service.
+    if (error instanceof Error && error.message.startsWith('Cannot save prepaid block')) {
+        return actionError(error.message);
     }
 
     const dbError = error as { code?: string; column?: string; constraint?: string };
@@ -140,7 +172,10 @@ export const getContractLinePresetById = withAuth(async (user, { tenant }, prese
 export const createContractLinePreset = withAuth(async (
     user,
     { tenant },
-    presetData: Omit<IContractLinePreset, 'preset_id' | 'tenant' | 'created_at' | 'updated_at'>
+    presetData: Omit<IContractLinePreset, 'preset_id' | 'tenant' | 'created_at' | 'updated_at'> & {
+        /** Hourly presets only: stores contract_line_preset_prepaid_blocks so lines copied from the preset are Prepaid Block lines. */
+        prepaid_block?: PrepaidBlockConfigInput | null;
+    }
 ): Promise<IContractLinePreset | ContractLinePresetActionError> => {
     try {
         const { knex } = await createTenantKnex();
@@ -150,9 +185,15 @@ export const createContractLinePreset = withAuth(async (
                 throw new ContractLinePresetDomainError('Permission denied: Cannot create contract line presets');
             }
 
-            const { tenant: _, ...safePresetData } = presetData as any;
+            const { tenant: _, prepaid_block: prepaidBlock, ...safePresetData } = presetData as any;
+            if (prepaidBlock && safePresetData.contract_line_type !== 'Hourly') {
+                throw new ContractLinePresetDomainError('Only Hourly presets can be sold as prepaid blocks.');
+            }
             safePresetData.cadence_owner = safePresetData.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER;
             const preset = await ContractLinePreset.create(trx, tenant, safePresetData);
+            if (prepaidBlock) {
+                await upsertPresetPrepaidBlockInTransaction(trx, tenant, preset.preset_id, prepaidBlock);
+            }
 
             // Track analytics
             const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
@@ -459,6 +500,9 @@ export const copyPresetToContractLine = withAuth(async (
         minimum_billable_time?: number;
         round_up_to_nearest?: number;
         cadence_owner?: CadenceOwner;
+        invoice_line_description?: string | null;
+        start_date?: string | null;
+        end_date?: string | null;
     }
 ): Promise<string | ContractLinePresetActionError> => {
     try {
@@ -470,6 +514,22 @@ export const copyPresetToContractLine = withAuth(async (
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(user, 'billing', 'create', trx)) {
                 throw new ContractLinePresetDomainError('Permission denied: Cannot create contract lines from presets');
+            }
+
+            // Recurring rates come from overrides, preset services and the preset
+            // fixed config; reject a negative value at any of those sources.
+            assertNonNegativeRate(overrides?.base_rate, 'Base rate');
+            if (overrides?.services) {
+                for (const override of Object.values(overrides.services)) {
+                    assertNonNegativeRate(override?.custom_rate, 'Service rate');
+                }
+            }
+            const overrideWindowError = await validateContractLineWindow(trx, tenantId, contractId, {
+                start_date: overrides?.start_date,
+                end_date: overrides?.end_date,
+            });
+            if (overrideWindowError) {
+                throw new ContractLinePresetDomainError(overrideWindowError);
             }
 
             // 1. Fetch the preset
@@ -490,8 +550,11 @@ export const copyPresetToContractLine = withAuth(async (
                     ? await ContractLinePresetFixedConfig.getByPresetId(trx, presetId)
                     : null;
             const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+                lineType: preset.contract_line_type ?? null,
                 cadenceOwner: overrides?.cadence_owner ?? preset.cadence_owner,
-                billingTiming: preset.billing_timing,
+                // The preset's timing is a stored value being copied, not a user choice:
+                // a stale advance on an Hourly/Usage preset normalizes to arrears.
+                fallbackBillingTiming: preset.billing_timing,
                 enableProration: presetFixedConfig?.enable_proration,
                 billingCycleAlignment: presetFixedConfig?.billing_cycle_alignment,
             });
@@ -552,6 +615,9 @@ export const copyPresetToContractLine = withAuth(async (
                     contract_id: contractId,
                     display_order: existingCount,
                     custom_rate: null,
+                    invoice_line_description: overrides?.invoice_line_description?.trim() || null,
+                    start_date: normalizeContractLineDate(overrides?.start_date),
+                    end_date: normalizeContractLineDate(overrides?.end_date),
                     updated_at: trx.fn.now()
                 });
 
@@ -564,6 +630,7 @@ export const copyPresetToContractLine = withAuth(async (
 
                 for (const presetService of presetServices) {
                     const serviceOverride = overrides?.services?.[presetService.service_id];
+                    assertNonNegativeRate(serviceOverride?.custom_rate ?? presetService.custom_rate, 'Service rate');
                     console.log(`[copyPresetToContractLine] Copying service ${presetService.service_id}, override:`, serviceOverride);
 
                     // Insert into contract_line_services table
@@ -637,6 +704,7 @@ export const copyPresetToContractLine = withAuth(async (
                         typeConfig = {
                             pricing_basis: 'unit',
                             base_rate: presetUnitRate,
+                            base_rate_basis: presetUnitRate == null ? undefined : 'per_unit',
                         };
                     }
 
@@ -706,11 +774,18 @@ export const copyPresetToContractLine = withAuth(async (
                 contract_id: contractId
             }, user.user_id);
 
+            // Presets with a contract_line_preset_prepaid_blocks row produce a Prepaid Block line.
+            if (preset.contract_line_type === 'Hourly') {
+                await copyPresetPrepaidBlockToLine(trx, tenantId, presetId, contractLineId);
+            }
+
+            // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
             await syncRecurringServicePeriodsForContractLine(trx, {
                 tenant: tenantId,
                 contractLineId,
                 sourceRunPrefix: 'contract_line_preset_copy',
             });
+            await syncPrepaidBlockIssuancesForContractLine(trx, tenantId, contractLineId);
 
             return contractLineId;
         });
@@ -754,6 +829,11 @@ export interface CreateCustomContractLineInput {
     billing_frequency: string;
     billing_timing?: 'arrears' | 'advance';
     cadence_owner?: CadenceOwner;
+    /** Verbatim invoice line text; falls back to the line name when null. */
+    invoice_line_description?: string | null;
+    /** Authored line window (half-open), constrained to the client contract. */
+    start_date?: string | null;
+    end_date?: string | null;
     services: CustomContractLineServiceConfig[];
     // Fixed-specific config
     base_rate?: number | null;  // For Fixed type, overall base rate
@@ -762,6 +842,11 @@ export interface CreateCustomContractLineInput {
     // Hourly-specific config
     minimum_billable_time?: number;
     round_up_to_nearest?: number;
+    /**
+     * Hourly only. Creates a Prepaid Block line: the Hourly line plus its block
+     * config in one transaction. Money is minor units of the contract currency.
+     */
+    prepaid_block?: PrepaidBlockConfigInput | null;
 }
 
 /**
@@ -793,6 +878,15 @@ export const createCustomContractLine = withAuth(async (
                 throw new ContractLinePresetDomainError('At least one service is required');
             }
 
+            if (input.prepaid_block) {
+                if (input.contract_line_type !== 'Hourly') {
+                    throw new ContractLinePresetDomainError('Only Hourly contract lines can be sold as prepaid blocks.');
+                }
+                if (input.services.some((service) => service.bucket_overlay)) {
+                    throw new ContractLinePresetDomainError('A Prepaid Block line cannot also carry bucket pools.');
+                }
+            }
+
             for (const service of input.services) {
                 if (service.measurement_mode != null && !['additive', 'period_total'].includes(service.measurement_mode)) {
                     throw new ContractLinePresetDomainError('Choose additive consumption or a period total.');
@@ -800,6 +894,7 @@ export const createCustomContractLine = withAuth(async (
                 if (service.pricing_basis != null && !['bundle', 'unit'].includes(service.pricing_basis)) {
                     throw new ContractLinePresetDomainError('Choose bundle or recurring unit pricing.');
                 }
+                assertNonNegativeRate(service.custom_rate, 'Service rate');
                 if (input.contract_line_type === 'Fixed' && service.pricing_basis === 'unit' &&
                     (service.quantity == null || !Number.isFinite(service.quantity) || service.quantity < 0 ||
                      service.custom_rate == null || !Number.isSafeInteger(service.custom_rate) || service.custom_rate < 0)) {
@@ -808,6 +903,15 @@ export const createCustomContractLine = withAuth(async (
                 if (service.minimum_usage != null && (!Number.isFinite(service.minimum_usage) || service.minimum_usage < 0)) {
                     throw new ContractLinePresetDomainError('Usage minimum must be zero or greater.');
                 }
+            }
+            assertNonNegativeRate(input.base_rate, 'Base rate');
+
+            const windowError = await validateContractLineWindow(trx, tenantId, contractId, {
+                start_date: input.start_date,
+                end_date: input.end_date,
+            });
+            if (windowError) {
+                throw new ContractLinePresetDomainError(windowError);
             }
 
             // 2. Create the contract line
@@ -819,6 +923,7 @@ export const createCustomContractLine = withAuth(async (
                 ? (input.round_up_to_nearest ?? 15)
                 : undefined;
             const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+                lineType: input.contract_line_type ?? null,
                 cadenceOwner: input.cadence_owner,
                 defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
                 billingTiming: input.billing_timing,
@@ -866,6 +971,9 @@ export const createCustomContractLine = withAuth(async (
                     contract_id: contractId,
                     display_order: existingCount,
                     custom_rate: null,
+                    invoice_line_description: input.invoice_line_description?.trim() || null,
+                    start_date: normalizeContractLineDate(input.start_date),
+                    end_date: normalizeContractLineDate(input.end_date),
                     updated_at: trx.fn.now()
                 });
 
@@ -911,9 +1019,16 @@ export const createCustomContractLine = withAuth(async (
                 }
 
                 if (input.contract_line_type === 'Fixed') {
+                    // Only a per-unit service stores a rate here (its unit price). A bundle
+                    // member's custom_rate can be stale (the dialog keeps the unit-rate field
+                    // when the user switches back to bundle), and a bundle member's stored
+                    // base_rate would be read as a share/per-unit price on the invoice.
+                    const isUnitService = (serviceConfig.pricing_basis ?? 'bundle') === 'unit';
+                    const unitRate = isUnitService ? serviceConfig.custom_rate ?? null : null;
                     typeConfig = {
                         pricing_basis: serviceConfig.pricing_basis ?? 'bundle',
-                        base_rate: serviceConfig.custom_rate ?? null,
+                        base_rate: unitRate,
+                        ...(unitRate === null ? {} : { base_rate_basis: 'per_unit' }),
                     };
                 }
 
@@ -947,6 +1062,11 @@ export const createCustomContractLine = withAuth(async (
                 }
             }
 
+            // Prepaid Block overlay: same transaction as the line and its services.
+            if (input.prepaid_block) {
+                await upsertContractLinePrepaidBlockInTransaction(trx, tenantId, contractLineId, input.prepaid_block);
+            }
+
             // 5. Create type-specific config for Fixed type
             if (input.contract_line_type === 'Fixed') {
                 const fixedConfigData: Omit<IContractLineFixedConfig, 'created_at' | 'updated_at'> = {
@@ -970,11 +1090,13 @@ export const createCustomContractLine = withAuth(async (
                 contract_id: contractId
             }, user.user_id);
 
+            // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
             await syncRecurringServicePeriodsForContractLine(trx, {
                 tenant: tenantId,
                 contractLineId,
                 sourceRunPrefix: 'contract_line_custom_create',
             });
+            await syncPrepaidBlockIssuancesForContractLine(trx, tenantId, contractLineId);
 
             return contractLineId;
         });

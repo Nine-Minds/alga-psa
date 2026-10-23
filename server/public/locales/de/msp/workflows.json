@@ -565,7 +565,8 @@
       "exportCsv": "CSV exportieren",
       "exportJson": "JSON exportieren",
       "close": "Schließen",
-      "viewRunDetails": "Ausführungsdetails anzeigen"
+      "viewRunDetails": "Ausführungsdetails anzeigen",
+      "backToEvents": "Zurück zu Ereignissen"
     },
     "table": {
       "schemaConflict": "Katalog ≠ Einreichung",
@@ -627,7 +628,8 @@
     },
     "actions": {
       "refresh": "Aktualisieren",
-      "loadMore": "Mehr laden"
+      "loadMore": "Mehr laden",
+      "backToList": "Zurück zur Dead-Letter-Liste"
     },
     "table": {
       "columns": {
@@ -1517,7 +1519,9 @@
         "summary_one": "{{count}} Ereignis in den letzten {{days}} Tagen übersprungen — {{reasons}}",
         "summary_other": "{{count}} Ereignisse in den letzten {{days}} Tagen übersprungen — {{reasons}}",
         "lastSkipped": "Zuletzt übersprungen {{when}}",
-        "view": "Übersprungene Ereignisse anzeigen"
+        "view": "Übersprungene Ereignisse anzeigen",
+        "summary_few": "{{count}} Ereignisse in den letzten {{days}} Tagen übersprungen — {{reasons}}",
+        "summary_many": "{{count}} Ereignisse in den letzten {{days}} Tagen übersprungen — {{reasons}}"
       },
       "drawer": {
         "title": "Übersprungene Ereignisse",
@@ -1860,7 +1864,9 @@
     "insertionPointLabel": "Neue Schritte kommen hierhin",
     "emptyBranchPrompt": "Fügen Sie diesem Zweig einen Schritt hinzu",
     "emptyActivePrompt": "Neue Schritte kommen hierhin. Wählen Sie einen aus der Palette.",
-    "stepCount": "({{count}} Schritte)"
+    "stepCount": "({{count}} Schritte)",
+    "stepCount_few": "({{count}} Schritte)",
+    "stepCount_many": "({{count}} Schritte)"
   },
   "expressionEditor": {
     "ariaLabel": "Ausdruckseditor",
@@ -2373,7 +2379,12 @@
       "currentRun": "Ausführung {{id}}",
       "backToWorkflow": "Zurück zum Workflow"
     },
-    "title": "Workflow-Ausführungsstudio"
+    "title": "Workflow-Ausführungsstudio",
+    "communityEdition": {
+      "title": "Pro-Funktion",
+      "description": "Das Studio für Workflow-Ausführungen ist nur in Pro verfügbar.",
+      "runId": "Ausführungs-ID: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3146,6 +3157,10 @@
         "selectBoard": "Board auswählen oder eingeben",
         "selectPriority": "Priorität auswählen oder eingeben"
       }
+    },
+    "proFeature": {
+      "title": "Pro-Funktion",
+      "description": "Das Workflow-System ist nur in Pro verfügbar. Führen Sie ein Upgrade Ihrer Installation durch, um auf diese Funktion zuzugreifen."
     }
   },
   "toggle": {
@@ -3284,5 +3299,29 @@
       "label": "Verursachungstiefe überschritten",
       "hint": "Die Kette verursachter Ereignisse überschritt die maximale Tiefe; übersprungen, um Endlosschleifen zu verhindern."
     }
+  },
+  "createFromTicket": {
+    "title": "Workflow aus Ticket erstellen",
+    "description": "Erstellt einen Workflow-Entwurf, dessen erster Schritt ein Ticket wie #{{number}} anlegt. Es wird nichts veröffentlicht.",
+    "cancel": "Abbrechen",
+    "creating": "Wird erstellt…",
+    "submit": "Entwurf erstellen & Designer öffnen",
+    "nameLabel": "Workflow-Name",
+    "triggerLabel": "Auslöser",
+    "triggerManual": "Manuell (bei Bedarf ausführen)",
+    "ticketCreatedWarning": "Dieser Workflow erstellt ein Ticket, und ein neues Ticket löst diesen Auslöser erneut aus. Fügen Sie vor der Veröffentlichung eine Bedingung hinzu, um eine Schleife zu vermeiden.",
+    "includeLegend": "Aus dem Ticket übernehmen",
+    "propertiesAlways": "Titel, Beschreibung, Kunde, Kontakt, Board, Kategorie und Priorität werden immer übernommen.",
+    "includeAssignment": "Zuweisung",
+    "includeTags": "Tags",
+    "includeCustomFields": "Benutzerdefinierte Felder",
+    "includeChecklist": "Checkliste",
+    "errors": {
+      "nameRequired": "Workflow-Name ist erforderlich",
+      "generic": "Workflow-Entwurf konnte nicht erstellt werden"
+    },
+    "includeCustomFieldsCount": "Benutzerdefinierte Felder ({{n}})",
+    "includeChecklistCount": "Checkliste ({{total}} Elemente: {{templates}} aus Vorlagen / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Elemente aus Vorlagen werden aus der aktuellen Vorlage neu angewendet; Änderungen an diesem Ticket werden nicht übernommen."
   }
 }

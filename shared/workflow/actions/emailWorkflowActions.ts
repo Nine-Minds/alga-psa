@@ -1322,6 +1322,23 @@ export async function createTicketFromEmail(
             )
           : eventPublisher;
 
+      // A stale defaults location from another client would fail ticket
+      // validation and drop the whole email; prefer a ticket without location.
+      let locationId = ticketData.location_id;
+      if (locationId && ticketData.client_id) {
+        const ownedLocation = await tenantDb(trx, tenant).table('client_locations')
+          .where({ location_id: locationId, client_id: ticketData.client_id })
+          .first('location_id');
+        if (!ownedLocation) {
+          console.warn('createTicketFromEmail: location does not belong to ticket client; creating ticket without location', {
+            tenant,
+            clientId: ticketData.client_id,
+            locationId,
+          });
+          locationId = undefined;
+        }
+      }
+
       // Use enhanced TicketModel with events and analytics
       const result = await TicketModel.createTicketWithRetry({
         title: ticketData.title,
@@ -1334,7 +1351,7 @@ export async function createTicketFromEmail(
         priority_id: ticketData.priority_id,
         category_id: ticketData.category_id,
         subcategory_id: ticketData.subcategory_id,
-        location_id: ticketData.location_id,
+        location_id: locationId,
         entered_by: ticketData.entered_by || undefined,
         assigned_to: assignedTo,
         email_metadata: ticketData.email_metadata,

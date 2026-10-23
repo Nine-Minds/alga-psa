@@ -11,6 +11,17 @@ export default defineConfig({
     include: [
       'tests/**/*.test.ts',
       'tests/**/*.test.tsx',
+      'src/lib/invoice-template-ast/printSettings.test.ts',
+      'src/lib/invoice-template-ast/previewSheet.test.ts',
+      'src/components/invoice-designer/preview/previewSheetScale.test.ts',
+      'src/components/invoice-designer/ast/workspaceAst.roundtrip.nodes.test.ts',
+      'src/lib/invoice-template-ast/barcode/barcode.test.ts',
+      'src/lib/invoice-template-ast/barcode/clientBundle.test.ts',
+      'src/lib/document-templates/registry.test.ts',
+      'src/lib/label-template-ast/**/*.test.ts',
+      'src/lib/label-batch/**/*.test.ts',
+      'src/components/invoice-designer/utils/documentKind.test.ts',
+      'src/components/invoice-designer/fields/documentBindingCatalog.test.ts',
       'src/actions/projectBillingActions.contract.test.ts',
       'src/actions/invoiceEmailBrandLogo.contract.test.ts',
       'src/lib/prepaidBalanceAlerts.test.ts',
@@ -33,6 +44,13 @@ export default defineConfig({
       'src/actions/documentTemplateActions.existingDocument.test.ts',
       'src/components/billing-dashboard/documents/DocumentTemplateEditor.existingDocument.test.tsx',
       'src/components/billing-dashboard/LineItem.test.tsx',
+      'src/components/billing-dashboard/ManualInvoices.expandedSave.test.tsx',
+      'src/components/billing-dashboard/invoicing/DraftInvoiceAdjustmentsCard.authRecovery.test.tsx',
+      'src/components/billing-dashboard/invoicing/InvoicePreviewPanel.test.tsx',
+      'src/components/billing-dashboard/invoicing/DraftInvoiceDetailsCard.billingProfile.test.tsx',
+      // Manual invoice total arithmetic must be selected by the billing
+      // package's own test command as well as the server's monorepo glob.
+      'src/components/billing-dashboard/manualInvoiceTotals.test.ts',
       // Catalog-price rollout reachability and the effective-date serialisation
       // regression — listed explicitly so this package's own `npm test` target
       // (the `nx affected -t test` lane) selects them, not only the server
@@ -83,16 +101,23 @@ export default defineConfig({
       // currency-neutral template review step — listed for the same reason as above.
       'src/components/billing-dashboard/contracts/ContractTemplateDetail.unitRate.test.tsx',
       'src/components/billing-dashboard/contracts/template-wizard/steps/TemplateReviewContractStep.unitRate.test.tsx',
+      // Contract-line service rates are stored in minor units; the services list
+      // must not re-scale them. Listed for the same reason as above.
+      'src/components/billing-dashboard/contract-lines/GenericContractLineServicesList.customRate.test.tsx',
       // Wizard quantity input draft/commit behavior.
       'src/components/billing-dashboard/contracts/QuantityInput.test.tsx',
       // Template saves must stay valid upserts on Citus distributed tables.
       'src/models/templateSaveUpsert.citus.test.ts',
+      // Client AR must stay a single-shard, co-located join on Citus.
+      'src/actions/billingProfileArActions.citus.test.ts',
     ],
-    testTimeout: 20000,
+    // Above vitest.setup.ts's 20s asyncUtilTimeout, so a stalled waitFor fails
+    // as itself rather than as a test timeout.
+    testTimeout: 30000,
     // Match testTimeout. The default hookTimeout is 10s, so a beforeAll doing
     // setup work had half the budget of a test doing the same work — which is
     // how hoisting a module compile out of a test made it fail sooner.
-    hookTimeout: 20000,
+    hookTimeout: 30000,
     // Inline next-auth/@auth/core/next so vite transforms them and the next/server
     // alias below applies to next-auth's internal `import "next/server"`. Without it
     // the contract-wizard / automatic-invoices component suites render-crash on a

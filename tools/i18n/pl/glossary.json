@@ -2247,6 +2247,7 @@
       "Entra ID",
       "Excel",
       "Folder",
+      "{{size}} GB",
       "Gmail",
       "Google",
       "Google OAuth",
@@ -2350,7 +2351,8 @@
       "TeamViewer",
       "Kilogram",
       "Auto",
-      "auto | 50% | 120px"
+      "auto | 50% | 120px",
+      "Code 128"
     ],
     "caseInsensitive": [
       "api",

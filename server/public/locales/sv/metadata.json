@@ -549,6 +549,9 @@
       },
       "recurring": {
         "title": "Återkommande ärenden"
+      },
+      "templates": {
+        "title": "Ärendemallar"
       }
     },
     "timeEntry": {

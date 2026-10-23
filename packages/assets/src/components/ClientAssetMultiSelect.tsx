@@ -17,6 +17,8 @@ export interface ClientAssetMultiSelectProps {
   id?: string;
   label?: string;
   disabled?: boolean;
+  /** FR-E12: the group drawer only offers assets that are not already grouped. */
+  excludeGrouped?: boolean;
 }
 
 interface AssetLabel {
@@ -31,7 +33,7 @@ const PAGE_SIZE = 10;
  * (`AssociatedAssets` is bound to a ticket or project). A client-scoped search picker adds assets one at
  * a time into a removable chip list, so the parent just holds `string[]` and saves it with its own form.
  */
-export function ClientAssetMultiSelect({ clientId, value, onChange, id = 'client-asset-multi-select', label, disabled }: ClientAssetMultiSelectProps) {
+export function ClientAssetMultiSelect({ clientId, value, onChange, id = 'client-asset-multi-select', label, disabled, excludeGrouped }: ClientAssetMultiSelectProps) {
   const { t } = useTranslation('msp/assets');
   const [labels, setLabels] = useState<Record<string, AssetLabel>>({});
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -63,6 +65,7 @@ export function ClientAssetMultiSelect({ clientId, value, onChange, id = 'client
     const response = unwrapAssetActionResult(await listAssets({
       client_id: clientId,
       search: search || undefined,
+      ...(excludeGrouped ? { ungrouped_only: true } : {}),
       page,
       limit,
     }));
@@ -76,7 +79,7 @@ export function ClientAssetMultiSelect({ clientId, value, onChange, id = 'client
       options: assets.map((asset) => ({ value: asset.asset_id, label: asset.name, secondaryLabel: asset.asset_tag })),
       total: Math.max(0, response.total - (response.assets.length - assets.length)),
     };
-  }, [clientId, value]);
+  }, [clientId, value, excludeGrouped]);
 
   const add = (assetId: string) => {
     if (!assetId || value.includes(assetId)) return;

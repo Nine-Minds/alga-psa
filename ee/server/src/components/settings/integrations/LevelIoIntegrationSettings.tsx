@@ -1,6 +1,11 @@
 'use client';
 
+import { rmmMappingErrorMessage } from '@alga-psa/integrations/components/settings/integrations/rmmMappingErrors';
 import React, { useCallback, useEffect, useState, useTransition } from 'react';
+import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from '@alga-psa/integrations/components/settings/integrations/RmmUserContactMappingPanel';
+import { RmmOrganizationClientChangeDialog } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationClientChangeDialog';
+import { RmmOrganizationBillingProfileSelect } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationBillingProfileSelect';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Copy, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -10,6 +15,7 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
@@ -21,6 +27,7 @@ import {
   getLevelIoSettings,
   getLevelIoWebhookInfo,
   listLevelIoOrganizationMappings,
+  regenerateLevelIoWebhookSigningSecret,
   saveLevelIoConfiguration,
   syncLevelIoOrganizations,
   testLevelIoConnection,
@@ -37,6 +44,7 @@ type MappingRow = {
   client_id?: string | null;
   client_name?: string | null;
   default_contact_id?: string | null;
+  contact_assignment_mode?: string | null;
   auto_sync_assets: boolean;
   metadata?: { path?: string } | null;
 };
@@ -46,6 +54,8 @@ type WebhookInfo = {
   headerName: string;
   secret: string;
   payloadTemplate: string;
+  signingSecret: string;
+  eventTypes: string[];
 };
 
 export default function LevelIoIntegrationSettings() {
@@ -71,9 +81,12 @@ export default function LevelIoIntegrationSettings() {
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showWebhookSecret, setShowWebhookSecret] = useState(false);
+  const [showSigningSecret, setShowSigningSecret] = useState(false);
+  const [confirmRegenerateOpen, setConfirmRegenerateOpen] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const [isSaving, startSaving] = useTransition();
+  const [isRegenerating, startRegenerating] = useTransition();
   const [isTesting, startTesting] = useTransition();
   const [isDisconnecting, startDisconnecting] = useTransition();
   const [isGroupSyncing, startGroupSyncing] = useTransition();
@@ -152,7 +165,7 @@ export default function LevelIoIntegrationSettings() {
         setSuccess(t('integrations.rmm.levelio.success.configurationSaved', { defaultValue: 'Level configuration saved' }));
         await refresh(true);
       } else {
-        setError(result.error || t('integrations.rmm.levelio.errors.saveConfiguration', { defaultValue: 'Failed to save Level configuration' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.levelio.errors.saveConfiguration', { defaultValue: 'Failed to save Level configuration' })));
       }
     });
   };
@@ -165,7 +178,7 @@ export default function LevelIoIntegrationSettings() {
       if (result.success) {
         setSuccess(t('integrations.rmm.levelio.success.connectionTestSucceeded', { defaultValue: 'Connection to Level succeeded' }));
       } else {
-        setError(result.error || t('integrations.rmm.levelio.errors.testConnectionFailed', { defaultValue: 'Connection test failed' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.levelio.errors.testConnectionFailed', { defaultValue: 'Connection test failed' })));
       }
       await refresh(true);
     });
@@ -179,7 +192,7 @@ export default function LevelIoIntegrationSettings() {
       if (result.success) {
         setSuccess(t('integrations.rmm.levelio.success.disconnected', { defaultValue: 'Level integration disconnected' }));
       } else {
-        setError(result.error || t('integrations.rmm.levelio.errors.disconnectFailed', { defaultValue: 'Failed to disconnect Level integration' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.levelio.errors.disconnectFailed', { defaultValue: 'Failed to disconnect Level integration' })));
       }
       await refresh(true);
     });
@@ -246,7 +259,10 @@ export default function LevelIoIntegrationSettings() {
     });
   };
 
-  const handleMappingClientChange = (mappingId: string, clientId: string | null) => {
+  // FR-G4: re-pointing an organization moves its devices, so confirm first.
+  const [pendingClientChange, setPendingClientChange] = useState<{ mappingId: string; clientId: string | null } | null>(null);
+
+  const handleMappingClientChangeConfirmed = (mappingId: string, clientId: string | null) => {
     void (async () => {
       const result = await updateLevelIoOrganizationMapping({
         mappingId,
@@ -254,7 +270,7 @@ export default function LevelIoIntegrationSettings() {
         defaultContactId: null,
       });
       if (!result.success) {
-        setError(result.error || t('integrations.rmm.levelio.errors.updateMappingFailed', { defaultValue: 'Failed to update mapping' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.levelio.errors.updateMappingFailed', { defaultValue: 'Failed to update mapping' })));
         return;
       }
       await refresh(true);
@@ -268,7 +284,7 @@ export default function LevelIoIntegrationSettings() {
         defaultContactId: contactId || null,
       });
       if (!result.success) {
-        setError(result.error || t('integrations.rmm.levelio.errors.updateMappingFailed', { defaultValue: 'Failed to update mapping' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.levelio.errors.updateMappingFailed', { defaultValue: 'Failed to update mapping' })));
         return;
       }
       await refresh(true);
@@ -282,10 +298,65 @@ export default function LevelIoIntegrationSettings() {
     });
   };
 
+  const handleRegenerateSigningSecret = () => {
+    setConfirmRegenerateOpen(false);
+    startRegenerating(async () => {
+      setError(null);
+      setSuccess(null);
+      const result = await regenerateLevelIoWebhookSigningSecret();
+      if (result.success && 'signingSecret' in result && result.signingSecret) {
+        const signingSecret = result.signingSecret;
+        setWebhook((prev) => (prev ? { ...prev, signingSecret } : prev));
+        setShowSigningSecret(true);
+        setSuccess(t('integrations.rmm.levelio.webhook.regenerateConfirmed', {
+          defaultValue: "Signing secret regenerated. Update it in Level's webhook settings.",
+        }));
+      } else {
+        setError(('error' in result && result.error) || t('integrations.rmm.levelio.webhook.regenerateFailed', {
+          defaultValue: 'Failed to regenerate the signing secret',
+        }));
+      }
+    });
+  };
+
   const copyLabel = (field: string) =>
     copiedField === field
       ? t('integrations.rmm.levelio.webhook.copied', { defaultValue: 'Copied' })
       : t('integrations.rmm.levelio.webhook.copy', { defaultValue: 'Copy' });
+
+  const handlePeopleModeChange = (mappingId: string, mode: string) => {
+    void (async () => {
+      const result = await updateLevelIoOrganizationMapping({ mappingId, contactAssignmentMode: mode });
+      if (!result.success) {
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.levelio.errors.updateMappingFailed', { defaultValue: 'Failed to update mapping' })));
+        return;
+      }
+      await refresh(true);
+    })();
+  };
+
+  // F090: the profile this organization's alert tickets are attributed to.
+  const handleBillingProfileChange = (mappingId: string, billingProfileId: string | null) => {
+    void (async () => {
+      const result = await updateLevelIoOrganizationMapping({ mappingId, billingProfileId });
+      if (!result.success) {
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.billingProfile.updateFailed', { defaultValue: 'Failed to update the billing profile' })));
+        return;
+      }
+      await refresh(true);
+    })();
+  };
+
+  const peopleModeOptions = buildRmmPeopleModeOptions(t);
+
+  const handleMappingClientChange = (mappingId: string, clientId: string | null) => {
+    const current = mappings.find((m) => m.mapping_id === mappingId);
+    if (clientId && current?.client_id && current.client_id !== clientId) {
+      setPendingClientChange({ mappingId, clientId });
+      return;
+    }
+    handleMappingClientChangeConfirmed(mappingId, clientId);
+  };
 
   const columns: ColumnDefinition<MappingRow>[] = [
     {
@@ -320,6 +391,35 @@ export default function LevelIoIntegrationSettings() {
       ),
     },
     {
+      // FR-D8: what sync does with the device's signed-in user.
+      title: t('integrations.rmm.peopleMode.label', { defaultValue: 'People' }),
+      dataIndex: 'contact_assignment_mode',
+      sortable: false,
+      render: (_v, mapping) => (
+        <CustomSelect
+          id={`rmm-org-people-mode-${mapping.mapping_id}`}
+          value={mapping.contact_assignment_mode ?? 'suggest'}
+          onValueChange={(mode) => handlePeopleModeChange(mapping.mapping_id, mode)}
+          options={peopleModeOptions}
+          className="min-w-[160px]"
+        />
+      ),
+    },
+    {
+      // F090: which profile this organization's alert tickets bill to.
+      title: t('integrations.rmm.billingProfile.label', { defaultValue: 'Billing profile' }),
+      dataIndex: 'billing_profile_id',
+      sortable: false,
+      render: (_v, mapping) => (
+        <RmmOrganizationBillingProfileSelect
+          mappingId={mapping.mapping_id}
+          clientId={mapping.client_id}
+          value={(mapping as { billing_profile_id?: string | null }).billing_profile_id}
+          onChange={(billingProfileId) => handleBillingProfileChange(mapping.mapping_id, billingProfileId)}
+        />
+      ),
+    },
+    {
       title: t('integrations.rmm.levelio.mappings.defaultContact', { defaultValue: 'Default Contact' }),
       dataIndex: 'default_contact_id',
       sortable: false,
@@ -350,6 +450,17 @@ export default function LevelIoIntegrationSettings() {
 
   return (
     <div className="space-y-6" id="levelio-integration-settings">
+      <RmmOrganizationClientChangeDialog
+        mappingId={pendingClientChange?.mappingId ?? null}
+        pendingClientName={clients.find((c) => c.client_id === pendingClientChange?.clientId)?.client_name ?? null}
+        isOpen={Boolean(pendingClientChange)}
+        onCancel={() => setPendingClientChange(null)}
+        onConfirm={() => {
+          const pending = pendingClientChange;
+          setPendingClientChange(null);
+          if (pending) handleMappingClientChangeConfirmed(pending.mappingId, pending.clientId);
+        }}
+      />
       {error ? (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -457,17 +568,35 @@ export default function LevelIoIntegrationSettings() {
           ) : null}
 
           <div className="overflow-x-auto rounded-md border">
-            <DataTable id="levelio-org-mappings" data={mappings} columns={columns} pagination />
+            <>
+              <DataTable id="levelio-org-mappings" data={mappings} columns={columns} pagination />
+              {/* FR-D8: one Signed-in users panel per mapped organization. */}
+              {mappings
+                .filter((m) => m.client_id)
+                .map((m) => (
+                  <div key={`signed-in-${m.mapping_id}`} className="mt-4 border-t pt-4">
+                    <div className="mb-2 text-sm font-medium">
+                      {m.external_organization_name || m.external_organization_id}
+                    </div>
+                    <RmmUserContactMappingPanel
+                      mappingId={m.mapping_id}
+                      clientId={m.client_id ?? null}
+                      contacts={contacts}
+                      idPrefix={`levelio-signed-in-${m.mapping_id}`}
+                    />
+                  </div>
+                ))}
+            </>
           </div>
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="levelio-native-webhook-card">
         <CardHeader>
-          <CardTitle>{t('integrations.rmm.levelio.webhook.title', { defaultValue: 'Alert Webhook' })}</CardTitle>
+          <CardTitle>{t('integrations.rmm.levelio.webhook.nativeTitle', { defaultValue: 'Native Webhook (recommended)' })}</CardTitle>
           <CardDescription>
-            {t('integrations.rmm.levelio.webhook.description', {
-              defaultValue: 'Level cannot register webhooks via its API. In Level, create an automation with an HTTP POST action using the URL, header, and payload below to push alerts into Alga in real time.',
+            {t('integrations.rmm.levelio.webhook.nativeDescription', {
+              defaultValue: 'In Level, open Settings → Webhooks, add a webhook with the URL and signing secret below, and enable the events listed. Level signs every delivery and Alga verifies the signature.',
             })}
           </CardDescription>
         </CardHeader>
@@ -486,6 +615,74 @@ export default function LevelIoIntegrationSettings() {
                   </Button>
                 </div>
               </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium" htmlFor="levelio-webhook-signing-secret">
+                  {t('integrations.rmm.levelio.webhook.nativeSigningSecret', { defaultValue: 'Signing secret' })}
+                </label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="levelio-webhook-signing-secret"
+                    type={showSigningSecret ? 'text' : 'password'}
+                    value={webhook.signingSecret}
+                    readOnly
+                    containerClassName="flex-1"
+                    className="font-mono text-xs"
+                  />
+                  <Button
+                    id="levelio-toggle-webhook-signing-secret"
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    aria-label={showSigningSecret
+                      ? t('integrations.rmm.levelio.webhook.hideSecret', { defaultValue: 'Hide secret' })
+                      : t('integrations.rmm.levelio.webhook.showSecret', { defaultValue: 'Show secret' })}
+                    onClick={() => setShowSigningSecret((current) => !current)}
+                  >
+                    {showSigningSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                  <Button id="levelio-copy-webhook-signing-secret" type="button" variant="outline" size="sm" onClick={() => handleCopy('signingSecret', webhook.signingSecret)}>
+                    <Copy className="mr-1 h-4 w-4" />
+                    {copyLabel('signingSecret')}
+                  </Button>
+                  <Button id="levelio-regenerate-webhook-signing-secret" type="button" variant="outline" size="sm" onClick={() => setConfirmRegenerateOpen(true)} disabled={isRegenerating}>
+                    {t('integrations.rmm.levelio.webhook.regenerateSecret', { defaultValue: 'Regenerate secret' })}
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm font-medium">{t('integrations.rmm.levelio.webhook.nativeEvents', { defaultValue: 'Events to enable' })}</div>
+                <ul id="levelio-webhook-event-types" className="list-disc pl-5 font-mono text-xs">
+                  {webhook.eventTypes.map((eventType) => (
+                    <li key={eventType}>{eventType}</li>
+                  ))}
+                </ul>
+                <p className="text-xs text-muted-foreground">
+                  {t('integrations.rmm.levelio.webhook.nativeEventsHelp', {
+                    defaultValue: 'Enable alert_active and alert_resolved. Other events are acknowledged and ignored.',
+                  })}
+                </p>
+              </div>
+            </>
+          ) : (
+            <div className="text-sm text-muted-foreground">
+              {t('integrations.rmm.levelio.webhook.loading', { defaultValue: 'Webhook details load after the integration is configured.' })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card id="levelio-automation-webhook-card">
+        <CardHeader>
+          <CardTitle>{t('integrations.rmm.levelio.webhook.fallbackTitle', { defaultValue: 'Fallback: Automation HTTP Request' })}</CardTitle>
+          <CardDescription>
+            {t('integrations.rmm.levelio.webhook.fallbackDescription', {
+              defaultValue: "Use this fallback only when Level's native Settings → Webhooks can't be used. Create an automation with an HTTP POST action using the URL, header, and payload below to push alerts into Alga.",
+            })}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {webhook ? (
+            <>
               <div className="space-y-1">
                 <label className="text-sm font-medium" htmlFor="levelio-webhook-secret">
                   {t('integrations.rmm.levelio.webhook.header', { defaultValue: 'Header: {{name}}', name: webhook.headerName })}
@@ -526,6 +723,11 @@ export default function LevelIoIntegrationSettings() {
                   </Button>
                 </div>
                 <pre className="overflow-x-auto rounded bg-muted px-2 py-1 text-xs">{webhook.payloadTemplate}</pre>
+                <p className="text-xs text-muted-foreground">
+                  {t('integrations.rmm.levelio.webhook.fallbackNameHint', {
+                    defaultValue: 'Edit the "name" value in each automation. Together with the device it identifies the alert, so repeats of the same name on the same device are treated as one alert.',
+                  })}
+                </p>
               </div>
             </>
           ) : (
@@ -535,6 +737,19 @@ export default function LevelIoIntegrationSettings() {
           )}
         </CardContent>
       </Card>
+      <ConfirmationDialog
+        id="levelio-regenerate-signing-secret-dialog"
+        isOpen={confirmRegenerateOpen}
+        onClose={() => setConfirmRegenerateOpen(false)}
+        onConfirm={handleRegenerateSigningSecret}
+        title={t('integrations.rmm.levelio.webhook.regenerateConfirmTitle', { defaultValue: 'Regenerate signing secret?' })}
+        message={t('integrations.rmm.levelio.webhook.regenerateConfirmMessage', {
+          defaultValue: "Existing Level webhooks will fail with 401 until you paste the new signing secret into Level's webhook settings. Alerts sent in the meantime are retried by Level but may be lost if the secret is not updated.",
+        })}
+        confirmLabel={t('integrations.rmm.levelio.webhook.regenerateConfirmLabel', { defaultValue: 'Regenerate' })}
+        cancelLabel={t('integrations.rmm.levelio.webhook.regenerateCancel', { defaultValue: 'Cancel' })}
+        isConfirming={isRegenerating}
+      />
       {isActive && (
         <RmmDeviceSyncSettings provider="levelio" onSaved={() => void refresh(true)} />
       )}

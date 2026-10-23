@@ -273,7 +273,7 @@ export function InboundTicketDefaultsForm({
         client_id: formData.client_id || undefined,
         category_id: formData.category_id || undefined,
         subcategory_id: formData.subcategory_id || undefined,
-        location_id: formData.location_id || undefined,
+        location_id: formData.location_id || null,
         entered_by: formData.entered_by || null
       };
 

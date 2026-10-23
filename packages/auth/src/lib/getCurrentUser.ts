@@ -1,7 +1,7 @@
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getUserWithRoles, getUserWithRolesByEmail, createTenantKnex } from '@alga-psa/db';
 import { getApiKeyUserOverride } from './apiKeyUserContext';
-import { getSession, getSessionWithRevocationCheck } from './getSession';
+import { getSession, getSessionWithRevocationCheck, logSessionRejection } from './getSession';
 import logger from '@alga-psa/core/logger';
 import type { Session } from 'next-auth';
 // Note: Avatar URLs are NOT fetched here to avoid circular dependency with @alga-psa/documents.
@@ -51,6 +51,8 @@ async function resolveCurrentUser(
         sessionUser.id,
         sessionUser.tenant
       );
+
+      if (!userWithRoles) await logSessionRejection('user_missing');
 
       return activeUserOrNull(userWithRoles);
     }

@@ -66,10 +66,10 @@ test('current first-attempt pass joins exact run and is deterministic without mu
 const cases = [
   ['CI success without export',x=>x.exportedRows.rows=[],'missing-export'],
   ['journey cannot substitute for run',x=>x.exportedRows.rows.shift(),'missing-export'],
-  ['cancelled before recorder',x=>{x.expectedExecutions[0].conclusion='cancelled';x.exportedRows.rows=[]},'cancelled'],
+  ['cancelled before recorder',x=>{x.expectedExecutions[0].conclusion='cancelled';x.exportedRows.rows=[]},'cancelled','lane-unsuccessful'],
   ['pending missing job',x=>{x.expectedExecutions[0].runStatus='pending';x.expectedExecutions[0].conclusion=null;x.exportedRows.rows=[]},'pending'],
-  ['failed job with passed rows',x=>x.expectedExecutions[0].conclusion='failure','failed'],
-  ['skipped job',x=>x.expectedExecutions[0].conclusion='skipped','failed'],
+  ['failed job with passed rows',x=>x.expectedExecutions[0].conclusion='failure','failed','lane-unsuccessful'],
+  ['skipped job',x=>x.expectedExecutions[0].conclusion='skipped','failed','lane-unsuccessful'],
   ['older passed attempt',x=>x.exportedRows.rows.forEach((_,i)=>set(x,i,'run_attempt',1)),'missing-export'],
   ['duplicate run export',x=>x.exportedRows.rows.push([...x.exportedRows.rows[0]]),'conflicting-export'],
   ['wrong tested revision',x=>set(x,0,'tested_sha','b'.repeat(40)),'conflicting-export'],
@@ -79,7 +79,7 @@ const cases = [
   ['duplicate journey identity',x=>{x.exportedRows.rows.push([...x.exportedRows.rows[1]]);set(x,0,'collected',2);set(x,0,'executed',2)},'incomplete'],
   ['unknown counts',x=>set(x,0,'collected',''),'incomplete'],
 ];
-for(const [name,mutate,status] of cases) test(name,()=>{const input=fixture();mutate(input);const result=reconcile(input);assert.equal(result.records[0].status,status);assert.equal(result.status,'incomplete')});
+for(const [name,mutate,status,overall='incomplete'] of cases) test(name,()=>{const input=fixture();mutate(input);const result=reconcile(input);assert.equal(result.records[0].status,status);assert.equal(result.status,overall);assert.equal(result.records[0].blocking,overall==='incomplete')});
 // Collection now hands reconcile only the rows whose run_url names the run being
 // reconciled. Padding the same input with rows it used to receive must leave the
 // report byte-identical; that is what proves no reconcile logic moved.
@@ -142,7 +142,46 @@ test('missing job after completed workflow remains unknown, even with old succes
 });
 test('failed job retains independent passed-export evidence without claiming readiness',()=>{
  const input=fixture();input.expectedExecutions[0].conclusion='failure';const result=reconcile(input);
- assert.equal(result.records[0].status,'failed');assert.equal(result.records[0].exportStatus,'observed-pass');assert.equal(result.status,'incomplete');
+ assert.equal(result.records[0].status,'failed');assert.equal(result.records[0].exportStatus,'observed-pass');assert.equal(result.status,'lane-unsuccessful');
+});
+// The lane-unsuccessful policy: a red browser job is the gate's finding, so its
+// expected missing export does not fail reconciliation; export anomalies still do.
+function failedLaneFixture(change={}){
+ const input=fixture();input.exportedRows.rows=[];
+ Object.assign(input.expectedExecutions[0],{conclusion:'failure',revision:null,revisionEvidence:'unavailable',revisionDiagnostics:['artifact-missing'],
+  recorderStatus:'completed',recorderConclusion:'skipped',...change});
+ return input;
+}
+test('a lane that failed before its recorder is reported but does not fail reconciliation',()=>{
+ const result=reconcile(failedLaneFixture());
+ assert.equal(result.status,'lane-unsuccessful');assert.equal(result.records[0].status,'failed');assert.equal(result.records[0].blocking,false);
+ assert.deepEqual(result.records[0].issues,['tested-revision-unknown','artifact-missing','export-not-attempted']);
+});
+test('a cancelled run is lane-unsuccessful, not a reconciliation failure',()=>{
+ const result=reconcile(failedLaneFixture({conclusion:'cancelled'}));
+ assert.equal(result.status,'lane-unsuccessful');assert.equal(result.records[0].status,'cancelled');
+});
+test('a failed lane whose recorder reported success but exported nothing still blocks',()=>{
+ const result=reconcile(failedLaneFixture({revision:'a'.repeat(40),revisionEvidence:'candidate-artifact',revisionDiagnostics:[],recorderConclusion:'success'}));
+ assert.equal(result.status,'incomplete');assert.equal(result.records[0].blocking,true);
+ assert.ok(result.records[0].issues.includes('export-attempted-but-missing'));
+});
+test('a successful lane with unknown revision still blocks',()=>{
+ const result=reconcile(failedLaneFixture({conclusion:'success'}));
+ assert.equal(result.status,'incomplete');assert.equal(result.records[0].blocking,true);
+});
+test('one green edition and one early-failed edition reconcile as lane-unsuccessful',()=>{
+ const input=fixture();const failed=failedLaneFixture().expectedExecutions[0];
+ input.expectedExecutions.push({...failed,edition:'community'});
+ const result=reconcile(input);
+ assert.equal(result.status,'lane-unsuccessful');
+ assert.deepEqual(result.records.map(r=>[r.edition,r.status,r.blocking]).sort(),[['community','failed',false],['enterprise','observed-pass',false]]);
+});
+test('CLI exits successfully for lane-unsuccessful and keeps the report',async t=>{
+ const dir=await mkdtemp(path.join(tmpdir(),'metric-lane-failed-'));t.after(()=>rm(dir,{recursive:true,force:true}));
+ const input=path.join(dir,'input.json'),output=path.join(dir,'output.json');await writeFile(input,JSON.stringify(failedLaneFixture()));
+ const result=spawnSync(process.execPath,['scripts/reconcile-browser-metric-executions.mjs',input,output]);
+ assert.equal(result.status,0);assert.equal(JSON.parse(await readFile(output,'utf8')).status,'lane-unsuccessful');
 });
 test('wrong repository URL cannot satisfy the numeric run identity',()=>{
  const input=fixture();input.exportedRows.rows.forEach((_,i)=>set(input,i,'run_url','https://github.com/foreign/repository/actions/runs/123'));
@@ -202,13 +241,15 @@ test('unverified historical run row does not invalidate a complete current expor
  const input=fixture(),legacy=[...input.exportedRows.rows[0]];legacy[BROWSER_HEADER.indexOf('run_attempt')]='unknown';input.exportedRows.rows.push(legacy);
  const result=reconcile(input);assert.equal(result.records[0].legacyRunExportCount,1);assert.equal(result.records[0].exportStatus,'observed-pass');
 });
-for(const [runStatus,conclusion,status] of [['completed','cancelled','cancelled'],['completed','success','incomplete'],['completed','failure','failed'],['pending',null,'pending']])
+// Unverified rows on an unsuccessful lane are reported, never trusted, and do
+// not block: the lane's own failure is the gate's finding.
+for(const [runStatus,conclusion,status,overall] of [['completed','cancelled','cancelled','lane-unsuccessful'],['completed','success','incomplete','incomplete'],['completed','failure','failed','lane-unsuccessful'],['pending',null,'pending','incomplete']])
  test(`unknown revision preserves ${runStatus}/${conclusion} without trusting Sheets`,()=>{
   const input=fixture();Object.assign(input.expectedExecutions[0],{revision:null,revisionEvidence:'unavailable',revisionDiagnostics:['artifact-missing'],runStatus,conclusion});
   const result=reconcile(input),record=result.records[0];assert.equal(record.revision,null);assert.equal(record.status,status);
   assert.equal(record.exportStatus,'tested-revision-unknown');assert.equal(record.runExportCount,0);
   assert.equal(record.unverifiedCurrentAttemptRunExportCount,1);assert.ok(record.issues.includes('tested-revision-unknown'));
-  assert.match(record.key,/:unknown:/);assert.equal(result.status,'incomplete');
+  assert.match(record.key,/:unknown:/);assert.equal(result.status,overall);assert.equal(record.blocking,overall==='incomplete');
  });
 test('conflicting artifact revisions never select a tempting exported SHA',()=>{
  const input=fixture();Object.assign(input.expectedExecutions[0],{revision:null,revisionEvidence:'conflicting',revisionDiagnostics:['revision-conflicting']});
@@ -225,4 +266,50 @@ for(const fields of [{revision:null},{revision:null,revisionEvidence:'operator',
 test('cancelled before source artifacts and export remains a visible unknown cancellation',()=>{
  const input=fixture();Object.assign(input.expectedExecutions[0],{revision:null,revisionEvidence:'unavailable',revisionDiagnostics:['artifact-missing'],conclusion:'cancelled'});
  input.exportedRows.rows=[];const record=reconcile(input).records[0];assert.equal(record.status,'cancelled');assert.equal(record.exportStatus,'tested-revision-unknown');assert.equal(record.unverifiedCurrentAttemptRunExportCount,0);
+});
+// A fork pull request runs without repository secrets, so its recorder cannot
+// export rows. That absence is not a reporting gap; a present export is.
+function forkFixture(change = {}) {
+  const input = fixture(); input.exportedRows.rows = [];
+  Object.assign(input.expectedExecutions[0], { credentialsAvailable: false, credentialsEvidence: 'fork-pull-request',
+    recorderStatus: 'completed', recorderConclusion: 'success', ...change });
+  return input;
+}
+test('a green fork pull request without an export is not-required, not missing-export', () => {
+  const result = reconcile(forkFixture());
+  assert.equal(result.status, 'not-required');
+  assert.equal(result.records[0].exportStatus, 'credentials-unavailable');
+  assert.equal(result.records[0].blocking, false);
+  assert.deepEqual(result.records[0].issues, ['metrics-credentials-unavailable']);
+  assert.equal(result.records[0].credentialsAvailable, false);
+});
+test('a fork pull request that somehow exported rows is a conflict', () => {
+  const input = forkFixture(); input.exportedRows.rows = fixture().exportedRows.rows;
+  const result = reconcile(input);
+  assert.equal(result.status, 'incomplete'); assert.equal(result.records[0].blocking, true);
+  assert.deepEqual(result.records[0].issues, ['unexpected-export-without-credentials']);
+});
+for (const [conclusion, status] of [['failure', 'failed'], ['cancelled', 'cancelled']])
+  test(`a ${conclusion} fork lane stays the gate's finding: ${status}, lane-unsuccessful`, () => {
+    const result = reconcile(forkFixture({ conclusion }));
+    assert.equal(result.records[0].status, status); assert.equal(result.records[0].blocking, false);
+    assert.equal(result.status, 'lane-unsuccessful');
+  });
+for (const change of [{ credentialsEvidence: undefined }, { credentialsEvidence: 'operator' }, { eventName: 'push' }, { credentialsAvailable: 'no' }])
+  test(`rejects invalid credentials evidence: ${JSON.stringify(change)}`, () => {
+    assert.throws(() => reconcile(forkFixture(change)), /Invalid credentials/);
+  });
+test('explicit non-selection on a fork keeps the selection verdict', () => {
+  const input = notSelectedFixture();
+  Object.assign(input.expectedExecutions[0], { credentialsAvailable: false, credentialsEvidence: 'fork-pull-request' });
+  assert.deepEqual(reconcile(input).records[0].issues, ['browser-tests-not-selected']);
+});
+test('CLI exits successfully for a fork pull request without exports', async t => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'metric-fork-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const input = path.join(dir, 'input.json'), output = path.join(dir, 'output.json');
+  await writeFile(input, JSON.stringify(forkFixture()));
+  const result = spawnSync(process.execPath, ['scripts/reconcile-browser-metric-executions.mjs', input, output]);
+  assert.equal(result.status, 0);
+  assert.equal(JSON.parse(await readFile(output, 'utf8')).status, 'not-required');
 });

@@ -204,7 +204,7 @@ export function QuickAddStatus({
                   {t('quickAddStatus.markClosed', 'Mark as closed status')}
                 </Label>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {t('quickAddStatus.markClosedDescription', 'Tasks in closed statuses are considered complete')}
+                  {t('quickAddStatus.markClosedDescription', 'Tasks with this status will be considered complete')}
                 </p>
               </div>
             </div>

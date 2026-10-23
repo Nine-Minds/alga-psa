@@ -178,6 +178,13 @@ vi.mock(
 );
 
 vi.mock(
+  "../src/components/billing-dashboard/contracts/ContractDiscounts",
+  () => ({
+    default: () => null,
+  }),
+);
+
+vi.mock(
   "../src/components/billing-dashboard/invoicing/InvoicePreviewPanel",
   () => ({
     default: () => null,

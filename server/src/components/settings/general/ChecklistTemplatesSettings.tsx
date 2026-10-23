@@ -23,6 +23,9 @@ import {
   createChecklistTemplateApplyRule,
   updateChecklistTemplateApplyRule,
   deleteChecklistTemplateApplyRule,
+  getChecklistRuleServiceRequestDefinitions,
+  getChecklistRuleClientNames,
+  type ChecklistRuleServiceRequestDefinitionOption,
   IChecklistTemplate,
   IChecklistTemplateItem,
   IChecklistTemplateApplyRule,
@@ -52,6 +55,10 @@ import {
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import ChecklistRuleMatchers, {
+  ruleHasNoMatchers,
+  type ChecklistRuleMatcherPatch,
+} from './ChecklistRuleMatchers';
 
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -82,6 +89,8 @@ const ChecklistTemplatesSettings: React.FC = () => {
   const [items, setItems] = useState<IChecklistTemplateItem[]>([]);
   const [newItemName, setNewItemName] = useState('');
   const [applyRules, setApplyRules] = useState<IChecklistTemplateApplyRule[]>([]);
+  const [clientNames, setClientNames] = useState<Record<string, string>>({});
+  const [serviceRequestDefinitions, setServiceRequestDefinitions] = useState<ChecklistRuleServiceRequestDefinitionOption[]>([]);
 
   // State for Delete Dialog
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -95,7 +104,32 @@ const ChecklistTemplatesSettings: React.FC = () => {
     fetchBoards();
     fetchCategories();
     fetchPriorities();
+    fetchServiceRequestDefinitions();
   }, []);
+
+  const fetchServiceRequestDefinitions = async () => {
+    try {
+      const definitions = await getChecklistRuleServiceRequestDefinitions();
+      setServiceRequestDefinitions(isReturnedActionError(definitions) ? [] : definitions);
+    } catch (error) {
+      console.error('Error fetching service request definitions:', error);
+    }
+  };
+
+  const loadClientNames = async (clientIds: string[]) => {
+    const missing = clientIds.filter((id) => !(id in clientNames));
+    if (!missing.length) return;
+    try {
+      const rows = await getChecklistRuleClientNames(missing);
+      if (isReturnedActionError(rows)) return;
+      setClientNames((prev) => ({
+        ...prev,
+        ...Object.fromEntries(rows.map((row) => [row.client_id, row.client_name])),
+      }));
+    } catch (error) {
+      console.error('Error fetching client names:', error);
+    }
+  };
 
   const fetchTemplates = async () => {
     try {
@@ -176,6 +210,7 @@ const ChecklistTemplatesSettings: React.FC = () => {
     try {
       const rules = await getChecklistTemplateApplyRules(template.template_id);
       setApplyRules(rules);
+      void loadClientNames(Array.from(new Set(rules.flatMap((rule) => rule.client_ids ?? []))));
     } catch (error) {
       console.error('Error fetching apply rules:', error);
       setDialogError(t('ticketing.checklistTemplates.messages.error.fetchRulesFailed'));
@@ -313,6 +348,7 @@ const ChecklistTemplatesSettings: React.FC = () => {
     }
   };
 
+  // LEVERAGE: pattern checklist-item-list-editor — add/reorder/remove list of checklist items is also written by TicketTemplateEditor; both should share one editor component
   const moveItem = async (templateItemId: string, direction: 'up' | 'down') => {
     if (!editingTemplate) return;
 
@@ -360,6 +396,48 @@ const ChecklistTemplatesSettings: React.FC = () => {
     }
   };
 
+  const ruleToInput = (rule: IChecklistTemplateApplyRule) => ({
+    board_id: rule.board_id,
+    category_id: rule.category_id,
+    subcategory_id: rule.subcategory_id,
+    priority_id: rule.priority_id,
+    client_ids: rule.client_ids,
+    ticket_origins: rule.ticket_origins,
+    from_service_request: rule.from_service_request,
+    service_request_definition_id: rule.service_request_definition_id,
+    keywords: rule.keywords,
+    keyword_mode: rule.keyword_mode,
+    keyword_target: rule.keyword_target,
+    is_enabled: rule.is_enabled,
+  });
+
+  /** Optimistically apply a rule edit, persist it, and roll back on failure. */
+  const persistRule = async (rule: IChecklistTemplateApplyRule, nextRule: IChecklistTemplateApplyRule) => {
+    setApplyRules((prev) => prev.map((r) =>
+      r.apply_rule_id === rule.apply_rule_id ? nextRule : r
+    ));
+
+    try {
+      const result = await updateChecklistTemplateApplyRule(rule.apply_rule_id, ruleToInput(nextRule));
+      if (isReturnedActionError(result)) {
+        setApplyRules((prev) => prev.map((r) =>
+          r.apply_rule_id === rule.apply_rule_id ? rule : r
+        ));
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      // Keep what the server normalised (trimmed / de-duplicated keywords).
+      setApplyRules((prev) => prev.map((r) =>
+        r.apply_rule_id === rule.apply_rule_id ? { ...nextRule, ...result } : r
+      ));
+    } catch (error) {
+      setApplyRules((prev) => prev.map((r) =>
+        r.apply_rule_id === rule.apply_rule_id ? rule : r
+      ));
+      handleError(error, t('ticketing.checklistTemplates.messages.error.ruleSaveFailed'));
+    }
+  };
+
   const handleRuleChange = async (
     rule: IChecklistTemplateApplyRule,
     field: 'board_id' | 'category_id' | 'subcategory_id' | 'priority_id',
@@ -377,31 +455,14 @@ const ChecklistTemplatesSettings: React.FC = () => {
         nextRule.subcategory_id = null;
       }
     }
-    setApplyRules((prev) => prev.map((r) =>
-      r.apply_rule_id === rule.apply_rule_id ? nextRule : r
-    ));
+    await persistRule(rule, nextRule);
+  };
 
-    try {
-      const result = await updateChecklistTemplateApplyRule(rule.apply_rule_id, {
-        board_id: nextRule.board_id,
-        category_id: nextRule.category_id,
-        subcategory_id: nextRule.subcategory_id,
-        priority_id: nextRule.priority_id,
-        is_enabled: nextRule.is_enabled,
-      });
-      if (isReturnedActionError(result)) {
-        setApplyRules((prev) => prev.map((r) =>
-          r.apply_rule_id === rule.apply_rule_id ? rule : r
-        ));
-        toast.error(getErrorMessage(result));
-        return;
-      }
-    } catch (error) {
-      setApplyRules((prev) => prev.map((r) =>
-        r.apply_rule_id === rule.apply_rule_id ? rule : r
-      ));
-      handleError(error, t('ticketing.checklistTemplates.messages.error.ruleSaveFailed'));
-    }
+  const handleRuleMatcherChange = async (
+    rule: IChecklistTemplateApplyRule,
+    patch: ChecklistRuleMatcherPatch
+  ) => {
+    await persistRule(rule, { ...rule, ...patch });
   };
 
   const handleDeleteRule = async (applyRuleId: string) => {
@@ -781,7 +842,8 @@ const ChecklistTemplatesSettings: React.FC = () => {
                 )}
 
                 {applyRules.map((rule, index) => (
-                  <div key={rule.apply_rule_id} className="grid gap-3 rounded-md border border-gray-200 p-3 md:grid-cols-[1fr_1fr_1fr_1fr_auto] md:items-end">
+                  <div key={rule.apply_rule_id} className="space-y-3 rounded-md border border-gray-200 p-3">
+                  <div className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_1fr_auto] md:items-end">
                     <div>
                       <Label htmlFor={`checklist-template-rule-board-${index}`}>{t('ticketing.checklistTemplates.fields.rules.board')}</Label>
                       <CustomSelect
@@ -835,6 +897,20 @@ const ChecklistTemplatesSettings: React.FC = () => {
                     >
                       {t('ticketing.checklistTemplates.actions.remove')}
                     </Button>
+                  </div>
+                  <ChecklistRuleMatchers
+                    rule={rule}
+                    index={index}
+                    clientNames={clientNames}
+                    definitions={serviceRequestDefinitions}
+                    onClientPicked={(clientId) => void loadClientNames([clientId])}
+                    onChange={(patch) => handleRuleMatcherChange(rule, patch)}
+                  />
+                  {ruleHasNoMatchers(rule) && (
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {t('ticketing.checklistTemplates.fields.rules.appliesToAll')}
+                    </p>
+                  )}
                   </div>
                 ))}
 

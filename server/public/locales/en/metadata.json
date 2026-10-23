@@ -549,6 +549,9 @@
       },
       "recurring": {
         "title": "Recurring tickets"
+      },
+      "templates": {
+        "title": "Ticket templates"
       }
     },
     "timeEntry": {

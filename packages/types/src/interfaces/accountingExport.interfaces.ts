@@ -63,6 +63,9 @@ export interface AccountingExportLinePayload {
   service_period_source?: AccountingExportServicePeriodSource | null;
   recurring_detail_periods?: AccountingExportRecurringDetailPeriod[] | null;
   metadata?: {
+    /** Fixed-plan export split lineage; retains parent identity for tax import while the detail remains the provider line identity. */
+    allocation_parent_charge_id?: string;
+    allocation_detail_id?: string;
     manual_invoice?: boolean;
     manual_charge?: boolean;
     multi_period?: boolean;

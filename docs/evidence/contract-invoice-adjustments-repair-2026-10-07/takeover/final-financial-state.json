@@ -1,0 +1,248 @@
+[
+  [
+    {
+      "description": "Product: SMOKE Prod Endpoints",
+      "quantity": "30.00",
+      "unit_price": "5000",
+      "net_amount": "150000",
+      "total_price": "150000",
+      "tax_amount": "0",
+      "is_manual": false,
+      "is_discount": false,
+      "discount_type": null,
+      "discount_percentage": null,
+      "service_id": "6bfde3c1-8634-45bb-92f7-df226aceac5b",
+      "adjustment_source_kind": null,
+      "adjustment_source_id": null
+    },
+    {
+      "description": "Product: SMOKE Prod Locations",
+      "quantity": "2.00",
+      "unit_price": "20000",
+      "net_amount": "40000",
+      "total_price": "40000",
+      "tax_amount": "0",
+      "is_manual": false,
+      "is_discount": false,
+      "discount_type": null,
+      "discount_percentage": null,
+      "service_id": "3303caac-a4fe-4263-9e45-4172b1dcc676",
+      "adjustment_source_kind": null,
+      "adjustment_source_id": null
+    },
+    {
+      "description": "Product: SMOKE Prod Users",
+      "quantity": "20.00",
+      "unit_price": "10000",
+      "net_amount": "200000",
+      "total_price": "200000",
+      "tax_amount": "0",
+      "is_manual": false,
+      "is_discount": false,
+      "discount_type": null,
+      "discount_percentage": null,
+      "service_id": "f1d99d01-380c-4e1f-94a2-a8830227cf18",
+      "adjustment_source_kind": null,
+      "adjustment_source_id": null
+    },
+    {
+      "description": "Takeover 10% discount",
+      "quantity": "1.00",
+      "unit_price": "0",
+      "net_amount": "-40510",
+      "total_price": "-40510",
+      "tax_amount": "0",
+      "is_manual": true,
+      "is_discount": true,
+      "discount_type": "percentage",
+      "discount_percentage": "10.0000",
+      "service_id": null,
+      "adjustment_source_kind": "manual_adjustment",
+      "adjustment_source_id": null
+    },
+    {
+      "description": "Takeover export support",
+      "quantity": "1.00",
+      "unit_price": "15000",
+      "net_amount": "15000",
+      "total_price": "15000",
+      "tax_amount": "0",
+      "is_manual": true,
+      "is_discount": false,
+      "discount_type": null,
+      "discount_percentage": null,
+      "service_id": "15d9bc90-562e-5cda-b765-940c014a3782",
+      "adjustment_source_kind": "manual_adjustment",
+      "adjustment_source_id": null
+    },
+    {
+      "description": "Takeover later dollar",
+      "quantity": "1.00",
+      "unit_price": "100",
+      "net_amount": "100",
+      "total_price": "100",
+      "tax_amount": "0",
+      "is_manual": true,
+      "is_discount": false,
+      "discount_type": null,
+      "discount_percentage": null,
+      "service_id": "15d9bc90-562e-5cda-b765-940c014a3782",
+      "adjustment_source_kind": "manual_adjustment",
+      "adjustment_source_id": null
+    }
+  ],
+  [
+    {
+      "type": "invoice_generated",
+      "amount": "390000",
+      "status": "completed",
+      "description": "Owned takeover initial principal"
+    },
+    {
+      "type": "invoice_adjustment",
+      "amount": "15000",
+      "status": "completed",
+      "description": "Adjusted invoice TAKEOVER-POSTED-20261007"
+    },
+    {
+      "type": "invoice_adjustment",
+      "amount": "15000",
+      "status": "completed",
+      "description": "Adjusted invoice TAKEOVER-POSTED-20261007"
+    },
+    {
+      "type": "invoice_adjustment",
+      "amount": "-30000",
+      "status": "completed",
+      "description": "Adjusted invoice TAKEOVER-POSTED-20261007"
+    },
+    {
+      "type": "invoice_adjustment",
+      "amount": "15483",
+      "status": "completed",
+      "description": "Adjusted invoice TAKEOVER-POSTED-20261007"
+    },
+    {
+      "type": "invoice_adjustment",
+      "amount": "-15483",
+      "status": "completed",
+      "description": "Adjusted invoice TAKEOVER-POSTED-20261007"
+    },
+    {
+      "type": "invoice_adjustment",
+      "amount": "-15483",
+      "status": "completed",
+      "description": "Adjusted invoice TAKEOVER-POSTED-20261007"
+    },
+    {
+      "type": "invoice_adjustment",
+      "amount": "15483",
+      "status": "completed",
+      "description": "Adjusted invoice TAKEOVER-POSTED-20261007"
+    },
+    {
+      "type": "invoice_adjustment",
+      "amount": "15000",
+      "status": "completed",
+      "description": "Adjusted invoice TAKEOVER-POSTED-20261007"
+    },
+    {
+      "type": "invoice_adjustment",
+      "amount": "100",
+      "status": "completed",
+      "description": "Adjusted invoice TAKEOVER-POSTED-20261007"
+    },
+    {
+      "type": "invoice_adjustment",
+      "amount": "-40510",
+      "status": "completed",
+      "description": "Adjusted invoice TAKEOVER-POSTED-20261007"
+    },
+    {
+      "type": "invoice_adjustment",
+      "amount": "-90",
+      "status": "completed",
+      "description": "Adjusted invoice TAKEOVER-POSTED-20261007"
+    },
+    {
+      "type": "invoice_adjustment",
+      "amount": "90",
+      "status": "completed",
+      "description": "Adjusted invoice TAKEOVER-POSTED-20261007"
+    }
+  ],
+  [
+    {
+      "adapter_type": "quickbooks_csv",
+      "document_id": "5a1e0000-0000-4000-8000-202610079001",
+      "status": "delivered",
+      "external_document_ref": "csv:TAKEOVER-POSTED-20261007"
+    },
+    {
+      "adapter_type": "quickbooks_csv",
+      "document_id": "5a1e0000-0000-4000-8000-202610079001",
+      "status": "delivered",
+      "external_document_ref": "csv:TAKEOVER-POSTED-20261007"
+    },
+    {
+      "adapter_type": "quickbooks_csv",
+      "document_id": "5a1e0000-0000-4000-8000-202610079001",
+      "status": "delivered",
+      "external_document_ref": "csv:TAKEOVER-POSTED-20261007"
+    },
+    {
+      "adapter_type": "xero_csv",
+      "document_id": "5a1e0000-0000-4000-8000-202610079001",
+      "status": "delivered",
+      "external_document_ref": "csv:TAKEOVER-POSTED-20261007"
+    },
+    {
+      "adapter_type": "xero_csv",
+      "document_id": "5a1e0000-0000-4000-8000-202610079001",
+      "status": "delivered",
+      "external_document_ref": "csv:TAKEOVER-POSTED-20261007"
+    },
+    {
+      "adapter_type": "xero_csv",
+      "document_id": "5a1e0000-0000-4000-8000-202610079001",
+      "status": "delivered",
+      "external_document_ref": "csv:TAKEOVER-POSTED-20261007"
+    },
+    {
+      "adapter_type": "xero_csv",
+      "document_id": "5a1e0000-0000-4000-8000-202610079001",
+      "status": "delivered",
+      "external_document_ref": "csv:TAKEOVER-POSTED-20261007"
+    },
+    {
+      "adapter_type": "xero_csv",
+      "document_id": "5a1e0000-0000-4000-8000-202610079001",
+      "status": "delivered",
+      "external_document_ref": "csv:TAKEOVER-POSTED-20261007"
+    },
+    {
+      "adapter_type": "xero_csv",
+      "document_id": "5a1e0000-0000-4000-8000-202610079001",
+      "status": "delivered",
+      "external_document_ref": "csv:TAKEOVER-POSTED-20261007"
+    },
+    {
+      "adapter_type": "quickbooks_csv",
+      "document_id": "5a1e0000-0000-4000-8000-202610079001",
+      "status": "delivered",
+      "external_document_ref": "csv:TAKEOVER-POSTED-20261007"
+    },
+    {
+      "adapter_type": "quickbooks_csv",
+      "document_id": "5a1e0000-0000-4000-8000-202610079001",
+      "status": "delivered",
+      "external_document_ref": "csv:TAKEOVER-POSTED-20261007"
+    },
+    {
+      "adapter_type": "quickbooks_csv",
+      "document_id": "5a1e0000-0000-4000-8000-202610079001",
+      "status": "delivered",
+      "external_document_ref": "csv:TAKEOVER-POSTED-20261007"
+    }
+  ]
+]

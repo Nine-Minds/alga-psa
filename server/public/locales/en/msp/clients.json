@@ -25,6 +25,7 @@
     },
     "states": {
       "active": "Active",
+      "scheduled": "Scheduled",
       "inactive": "Inactive",
       "loading": "Loading...",
       "na": "N/A",
@@ -1605,7 +1606,8 @@
         "warrantyEnd": "Warranty End",
         "agent": "Agent",
         "patching": "Patching",
-        "coverage": "Coverage"
+        "coverage": "Coverage",
+        "assignedTo": "Assigned to"
       },
       "details": {
         "local": "Local",
@@ -1652,7 +1654,28 @@
         "workstation": "Workstation"
       },
       "loadError": "Unable to load assets right now.",
-      "retry": "Retry"
+      "retry": "Retry",
+      "views": {
+        "assets": "Assets",
+        "groups": "Groups"
+      },
+      "groups": {
+        "newGroup": "New group",
+        "drawerTitle": "Asset group",
+        "name": "Name",
+        "kind": "Kind",
+        "kinds": {
+          "bundle": "Bundle",
+          "shared_workspace": "Shared workspace"
+        },
+        "columns": {
+          "name": "Name",
+          "kind": "Kind",
+          "location": "Location",
+          "members": "Members",
+          "people": "People"
+        }
+      }
     },
     "tickets": {
       "addTicket": "Add Ticket",
@@ -1982,7 +2005,15 @@
     "accountingApply": "Apply selected",
     "accountingSkip": "Skip for now",
     "accountingRemapped": "Accounting mappings re-pointed",
-    "accountingSkipped": "{{count}} mapping(s) could not be re-pointed and need a manual re-link."
+    "accountingSkipped": "{{count}} mapping(s) could not be re-pointed and need a manual re-link.",
+    "assetsDescription": "These devices and RMM organizations move to the destination client. Sync keeps them there afterwards.",
+    "assetsTotal": "Assets",
+    "assetGroups": "Asset groups",
+    "deviceCount": "{{count}} devices",
+    "billingStrategyHeading": "Bill merged work and devices under",
+    "billingStrategySource": "{{source}} billing profile, kept as a separate profile on {{target}}",
+    "billingStrategyTarget": "{{target}} default billing profile",
+    "billingStrategyHelp": "Applies to {{tickets}} ticket(s), {{projects}} project(s), {{assets}} asset(s) and {{mappings}} RMM device group(s) that have no billing profile of their own. Rows with an explicit profile keep it, and invoices, billing cycles, payments and credits always stay on the merged profile."
   },
   "billingProfileContacts": {
     "title": "Profile contacts",

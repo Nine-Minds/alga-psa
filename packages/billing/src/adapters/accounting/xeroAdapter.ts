@@ -1,3 +1,4 @@
+import { expandAccountingExportCharges } from '../../services/accountingExportChargeExpansion';
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Accounting export adapter - intentionally bridges billing and Xero integration APIs */
 import logger from '@alga-psa/core/logger';
 import { Knex } from 'knex';
@@ -35,6 +36,7 @@ import { CompanyAccountingSyncService } from '../../services/companySync/company
 import { KnexCompanyMappingRepository } from '../../services/companySync/companyMappingRepository';
 import { buildNormalizedCompanyPayload } from '../../services/companySync/companySyncNormalizer';
 import { XeroCompanyAdapter } from '../../services/companySync/adapters/xeroCompanyAdapter';
+import { resolveClientExportEmail } from './exportRecipientEmails';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { resolveXeroRealmAliases } from '../../services/accountingSync/xeroRealmIdentity';
 import { AppError, fromMinorUnits, toMinorUnits } from '@alga-psa/core';
@@ -125,6 +127,8 @@ interface XeroDocumentPayload {
   invoice: XeroInvoicePayload;
   /** Charge IDs in same order as invoice.lines[] for mapping after delivery */
   chargeIds: string[];
+  /** Original invoice parent and fixed-detail identities parallel to chargeIds. */
+  chargeLineage: Array<{ parentChargeId: string; allocationDetailId?: string }>;
   mapping: {
     clientId: string;
     source?: string;
@@ -360,7 +364,10 @@ export class XeroAdapter implements AccountingExportAdapter {
     const invoiceMappingRepository = new KnexInvoiceMappingRepository(knex);
 
     const invoicesById = await this.loadInvoices(knex, tenantId, context);
-    const chargesById = await this.loadCharges(knex, tenantId, context);
+    const loadedCharges = await this.loadCharges(knex, tenantId, context);
+    const expanded = await expandAccountingExportCharges(knex, tenantId, loadedCharges, context.lines);
+    const chargesById = expanded.charges;
+    context = { ...context, lines: expanded.lines };
     const clientData = await this.loadClients(knex, tenantId, context, invoicesById);
 
     const linesByInvoice = groupBy(context.lines, (line) => line.document_id);
@@ -466,6 +473,7 @@ export class XeroAdapter implements AccountingExportAdapter {
 
       const lineItems: XeroInvoiceLinePayload[] = [];
       const chargeIds: string[] = []; // Track charge IDs in same order as lineItems
+      const chargeLineage: XeroDocumentPayload['chargeLineage'] = [];
       let invoiceTotal = 0;
       let detectedLineAmountType: LineAmountType | undefined;
 
@@ -658,6 +666,10 @@ export class XeroAdapter implements AccountingExportAdapter {
 
         lineItems.push(payload);
         chargeIds.push(line.document_line_id);
+        chargeLineage.push({
+          parentChargeId: line.payload?.metadata?.allocation_parent_charge_id ?? line.document_line_id,
+          allocationDetailId: line.payload?.metadata?.allocation_detail_id,
+        });
         invoiceTotal += netAmountCents;
       }
 
@@ -695,6 +707,7 @@ export class XeroAdapter implements AccountingExportAdapter {
         connectionId: context.batch.target_realm ?? null,
         invoice: invoicePayload,
         chargeIds, // Alga charge IDs in same order as invoice.lines[]
+        chargeLineage,
         mapping: {
           clientId,
           source: extractMappingSource(clientMapping.metadata)
@@ -703,7 +716,7 @@ export class XeroAdapter implements AccountingExportAdapter {
 
       documents.push({
         documentId: invoiceId,
-        lineIds: exportLines.map((line) => line.line_id),
+        lineIds: [...new Set(exportLines.map((line) => line.line_id))],
         payload: documentPayload as unknown as Record<string, unknown>
       });
     }
@@ -789,13 +802,15 @@ export class XeroAdapter implements AccountingExportAdapter {
         // Xero may return line IDs in the raw response - extract if available
         const rawInvoice = result.raw as Record<string, any> | undefined;
         const xeroLines = rawInvoice?.LineItems ?? [];
-        const chargeLineMappings: Array<{ chargeId: string; xeroLineItemId: string }> = [];
+        const chargeLineMappings: Array<{ chargeId: string; parentChargeId: string; allocationDetailId?: string; xeroLineItemId: string }> = [];
 
         for (let j = 0; j < payload.chargeIds.length && j < xeroLines.length; j++) {
           const xeroLineItemId = xeroLines[j]?.LineItemID;
           if (xeroLineItemId) {
             chargeLineMappings.push({
               chargeId: payload.chargeIds[j],
+              parentChargeId: payload.chargeLineage[j]?.parentChargeId ?? payload.chargeIds[j],
+              allocationDetailId: payload.chargeLineage[j]?.allocationDetailId,
               xeroLineItemId
             });
           }
@@ -890,6 +905,7 @@ export class XeroAdapter implements AccountingExportAdapter {
         'item_id',
         'invoice_id',
         'service_id',
+        'is_manual',
         'description',
         'quantity',
         'unit_price',
@@ -897,7 +913,8 @@ export class XeroAdapter implements AccountingExportAdapter {
         'net_amount',
         'tax_amount',
         'tax_region',
-        'is_discount'
+        'is_discount',
+        'adjustment_source_kind'
       )
       .whereIn('item_id', chargeIds);
 
@@ -932,6 +949,11 @@ export class XeroAdapter implements AccountingExportAdapter {
       .select('client_id', 'client_name', 'billing_email')
       .whereIn('client_id', Array.from(clientIds));
 
+    // The contact's email is the address the client's invoices are emailed to
+    // (billing contact, billing email, billing/default location), not the raw column.
+    for (const client of clients) {
+      client.billing_email = await resolveClientExportEmail(knex, tenantId, client.client_id);
+    }
     const clientMap = new Map(clients.map((client) => [client.client_id, client]));
 
     const targetRealm = context.batch.target_realm;
@@ -1024,13 +1046,13 @@ export class XeroAdapter implements AccountingExportAdapter {
         })
         .first();
 
-      const chargeLineMappings: Array<{ chargeId: string; xeroLineItemId: string }> =
+      const chargeLineMappings: Array<{ chargeId: string; parentChargeId?: string; allocationDetailId?: string; xeroLineItemId: string }> =
         (mappingRow?.metadata as any)?.chargeLineMappings ?? [];
 
-      // Build reverse map: Xero lineItemId -> Alga charge ID
-      const xeroLineToChargeId = new Map<string, string>();
+      // Keep provider split identity and original invoice parent identity together.
+      const xeroLineToCharge = new Map<string, { chargeId: string; parentChargeId?: string; allocationDetailId?: string }>();
       for (const mapping of chargeLineMappings) {
-        xeroLineToChargeId.set(mapping.xeroLineItemId, mapping.chargeId);
+        xeroLineToCharge.set(mapping.xeroLineItemId, mapping);
       }
 
       // Map Xero line items to external invoice charges with full tax component details
@@ -1050,11 +1072,13 @@ export class XeroAdapter implements AccountingExportAdapter {
 
         // Use stored charge ID if available, otherwise fall back to Xero lineItemId or positional index
         const xeroLineItemId = line.lineItemId;
-        const chargeId = xeroLineItemId ? xeroLineToChargeId.get(xeroLineItemId) : undefined;
-        const lineId = chargeId ?? xeroLineItemId ?? `line-${index}`;
+        const chargeMapping = xeroLineItemId ? xeroLineToCharge.get(xeroLineItemId) : undefined;
+        const lineId = chargeMapping?.chargeId ?? xeroLineItemId ?? `line-${index}`;
 
         return {
           lineId,
+          parentChargeId: chargeMapping?.parentChargeId,
+          allocationDetailId: chargeMapping?.allocationDetailId,
           externalLineId: xeroLineItemId,
           taxAmount: line.taxAmount,
           taxCode: line.taxType,

@@ -25,7 +25,9 @@
       "inactive": "Inaktiv",
       "loading": "Läser in…",
       "na": "Saknas",
-      "none": "Ingen"
+      "none": "Ingen",
+      "yes": "Ja",
+      "no": "Nej"
     },
     "no": "Nej",
     "yes": "Ja"
@@ -36,6 +38,20 @@
       "offline": "Offline",
       "overdue": "Försenad",
       "unknown": "Okänd"
+    },
+    "rmaStatus": {
+      "open": "Öppet",
+      "awaiting_return": "Väntar på retur",
+      "returned": "Returnerat",
+      "sent_to_vendor": "Skickat till leverantör",
+      "replacement_received": "Ersättningsenhet mottagen",
+      "replacement_deployed": "Ersättningsenhet driftsatt",
+      "dead_unit_owed": "Trasig enhet ska återlämnas",
+      "dead_unit_returned": "Trasig enhet återlämnad",
+      "replaced": "Ersatt",
+      "credited": "Krediterat",
+      "charged": "Debiterat",
+      "closed": "Stängt"
     }
   },
   "assetAlertsSection": {
@@ -104,7 +120,9 @@
       "selectedAssets_one": "{{count}} tillgång markerad",
       "selectedAssets_other": "{{count}} tillgångar markerade",
       "clearSelection": "Avmarkera alla",
-      "bulkActionsComingSoon": "Massåtgärder kommer snart"
+      "bulkActionsComingSoon": "Massåtgärder kommer snart",
+      "selectedAssets_few": "{{count}} tillgångar markerade",
+      "selectedAssets_many": "{{count}} tillgångar markerade"
     },
     "actions": {
       "openActionsForAsset": "Öppna åtgärder för tillgången {{name}}",
@@ -125,7 +143,10 @@
       "actions": "Åtgärder",
       "patching": "Patchning",
       "coverage": "Täckning",
-      "assignedTo": "Tilldelad till"
+      "assignedTo": "Tilldelad till",
+      "manufacturer": "Tillverkare",
+      "model": "Modell",
+      "group": "Grupp"
     },
     "metrics": {
       "totalAssets": {
@@ -170,18 +191,14 @@
       "rmmManaged": {
         "managed": "Hanterad via RMM",
         "unmanaged": "Inte hanterad"
-      }
+      },
+      "allGroups": "Alla grupper"
     },
     "activeFilters": {
       "status": "Status: {{value}}",
       "type": "Typ: {{value}}",
       "client": "Kund: {{value}}",
       "agent": "Agent: {{value}}"
-    },
-    "statuses": {
-      "active": "Aktiv",
-      "inactive": "Inaktiv",
-      "maintenance": "Underhåll"
     },
     "types": {
       "workstation": "Arbetsstation",
@@ -227,7 +244,9 @@
         "delete": "Radera",
         "selectedCount": "Markerade: {{count}}",
         "setLocation": "Ange plats",
-        "setStatus": "Ange status"
+        "setStatus": "Ange status",
+        "assignContact": "Tilldela till kontakt",
+        "addToGroup": "Lägg till i grupp"
       },
       "actions": {
         "apply": "Tillämpa",
@@ -235,7 +254,8 @@
         "deleteAssets": "Radera",
         "deleting": "Raderar…",
         "updateLocation": "Platsuppdatering",
-        "updateStatus": "Statusuppdatering"
+        "updateStatus": "Statusuppdatering",
+        "assignContact": "Tilldelning"
       },
       "deleteDialog": {
         "description": "Radera markerade tillgångar ({{count}}). Tillgångar med beroenden kan hoppas över.",
@@ -244,7 +264,8 @@
       "errors": {
         "deleteFailed": "Det gick inte att radera de markerade tillgångarna.",
         "updateLocationFailed": "Det gick inte att uppdatera platserna för de markerade tillgångarna.",
-        "updateStatusFailed": "Det gick inte att uppdatera de markerade tillgångarna."
+        "updateStatusFailed": "Det gick inte att uppdatera de markerade tillgångarna.",
+        "assignFailed": "Kunde inte tilldela de valda tillgångarna."
       },
       "locationDialog": {
         "clearLocation": "Rensa plats",
@@ -262,7 +283,16 @@
         "description": "Uppdatera markerade tillgångar ({{count}}).",
         "title": "Ange tillgångens status"
       },
-      "success": "{{action}} slutfördes. Antal tillgångar: {{count}}."
+      "success": "{{action}} slutfördes. Antal tillgångar: {{count}}.",
+      "assignDialog": {
+        "title": "Tilldela till kontakt",
+        "description": "Tilldela {{count}} valda tillgångar till en kontakt hos den här kunden."
+      },
+      "groupDialog": {
+        "title": "Lägg till i grupp",
+        "description": "Lägg till {{count}} valda tillgångar i en grupp hos den här kunden, eller skapa en ny.",
+        "newGroup": "Skapa en ny grupp"
+      }
     }
   },
   "assetDashboardGrid": {
@@ -287,11 +317,6 @@
     "helper": {
       "awaitingSelection": "Väntar på att en tillgång väljs",
       "selectedAsset": "{{name}} • {{tab}}"
-    },
-    "statuses": {
-      "active": "Aktiv",
-      "inactive": "Inaktiv",
-      "maintenance": "Underhåll"
     },
     "empty": {
       "selectAsset": "Välj en tillgång för att visa detaljer",
@@ -347,7 +372,13 @@
       "status": "Status",
       "created": "Skapad",
       "updated": "Uppdaterad",
-      "tenant": "Organisation"
+      "tenant": "Organisation",
+      "manufacturer": "Tillverkare",
+      "model": "Modell",
+      "assignedTo": "Tilldelad till",
+      "group": "Grupp",
+      "groupSharedWorkspace": "{{name}} · delad arbetsplats",
+      "groupBundle": "{{name}} · paket"
     },
     "typeDetails": {
       "workstation": "Arbetsstationsdetaljer",
@@ -393,7 +424,13 @@
       "hoursAgo_one": "för {{count}} timme sedan",
       "hoursAgo_other": "för {{count}} timmar sedan",
       "daysAgo_one": "för {{count}} dag sedan",
-      "daysAgo_other": "för {{count}} dagar sedan"
+      "daysAgo_other": "för {{count}} dagar sedan",
+      "minutesAgo_few": "för {{count}} minuter sedan",
+      "minutesAgo_many": "för {{count}} minuter sedan",
+      "hoursAgo_few": "för {{count}} timmar sedan",
+      "hoursAgo_many": "för {{count}} timmar sedan",
+      "daysAgo_few": "för {{count}} dagar sedan",
+      "daysAgo_many": "för {{count}} dagar sedan"
     }
   },
   "assetDetailHeader": {
@@ -571,7 +608,8 @@
     "actions": {
       "viewClient": "Visa kund",
       "manageClientLocations": "Hantera kundplatser",
-      "saveChanges": "Spara ändringar"
+      "saveChanges": "Spara ändringar",
+      "createVendor": "Skapa leverantör"
     },
     "alerts": {
       "noLocationsSaved": "Den här kunden har inga sparade platser än. Ange en anpassad plats eller skapa en från kundposten."
@@ -579,7 +617,8 @@
     "sections": {
       "basicInformation": "Grundläggande information",
       "clientAndLocation": "Kund och plats",
-      "assetBasics": "Grunduppgifter om tillgången"
+      "assetBasics": "Grunduppgifter om tillgången",
+      "procurement": "Tillverkare och inköp"
     },
     "fields": {
       "customLocationOption": "Anpassad plats",
@@ -620,7 +659,12 @@
       "purchaseDate": "Inköpsdatum",
       "warrantyEndDate": "Garantins slutdatum",
       "assetType": "Typ",
-      "assignedTo": "Tilldelad till"
+      "assignedTo": "Tilldelad till",
+      "manufacturer": "Tillverkare",
+      "vendor": "Leverantör",
+      "purchaseCost": "Inköpskostnad",
+      "orderNumber": "Ordernr.",
+      "billingProfile": "Faktureringsprofil"
     },
     "placeholders": {
       "loadingClients": "Läser in kunder…",
@@ -632,7 +676,11 @@
       "selectPurchaseDate": "Välj inköpsdatum",
       "selectWarrantyEndDate": "Välj garantins slutdatum",
       "loadingContacts": "Läser in kontakter…",
-      "selectContact": "Välj en kontakt"
+      "selectContact": "Välj en kontakt",
+      "noVendor": "Ingen leverantör",
+      "selectVendor": "Välj en leverantör",
+      "purchaseCost": "0,00",
+      "clientDefaultProfile": "Kundens standard"
     },
     "statusOptions": {
       "active": "Aktiv",
@@ -783,7 +831,8 @@
       "save": "Spara",
       "label": "Knapptext",
       "template": "URL-mall",
-      "tokens": "Använd {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} och {field.<key>} med anpassade fältnycklar som definieras under Inställningar → Tillgångar → Tillgångstyper.",
+      "ninjaExample": "Exempel på NinjaOne-enhetsinstrumentpanel: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Byt ut värden mot din NinjaOne-region: app, eu, ca, oc eller us2 .ninjarmm.com.",
+      "tokens": "Använd {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} och {field.<key>} med anpassade fältnycklar som definieras under Inställningar → Tillgångar → Tillgångstyper.",
       "errors": {
         "load": "Det gick inte att läsa in länkar för fjärråtkomst.",
         "save": "Det gick inte att spara länken för fjärråtkomst.",
@@ -825,7 +874,9 @@
       "addAsset": "Lägg till tillgång",
       "showLess": "Visa färre",
       "moreAssets_one": "{{count}} tillgång till",
-      "moreAssets_other": "{{count}} tillgångar till"
+      "moreAssets_other": "{{count}} tillgångar till",
+      "moreAssets_few": "{{count}} tillgångar till",
+      "moreAssets_many": "{{count}} tillgångar till"
     },
     "errors": {
       "loadAvailableAssets": "Det gick inte att läsa in tillgängliga tillgångar",
@@ -841,7 +892,11 @@
       "associated_other": "{{count}} tillgångar har kopplats",
       "associatedPartial_one": "{{count}} tillgång har kopplats, {{failed}} misslyckades (kan redan vara kopplade)",
       "associatedPartial_other": "{{count}} tillgångar har kopplats, {{failed}} misslyckades (kan redan vara kopplade)",
-      "removed": "Tillgångskopplingen har tagits bort"
+      "removed": "Tillgångskopplingen har tagits bort",
+      "associated_few": "{{count}} tillgångar har kopplats",
+      "associated_many": "{{count}} tillgångar har kopplats",
+      "associatedPartial_few": "{{count}} tillgångar har kopplats, {{failed}} misslyckades (kan redan vara kopplade)",
+      "associatedPartial_many": "{{count}} tillgångar har kopplats, {{failed}} misslyckades (kan redan vara kopplade)"
     },
     "empty": {
       "noneAssociated": "Inga tillgångar är kopplade till det här ärendet.",
@@ -864,7 +919,9 @@
       },
       "actions": {
         "addAssets_one": "Lägg till tillgång",
-        "addAssets_other": "Lägg till tillgångar"
+        "addAssets_other": "Lägg till tillgångar",
+        "addAssets_few": "Lägg till tillgångar",
+        "addAssets_many": "Lägg till tillgångar"
       }
     },
     "table": {
@@ -908,7 +965,9 @@
       "description": "Beskrivning",
       "board": "Tavla",
       "status": "Status",
-      "priority": "Prioritet"
+      "priority": "Prioritet",
+      "contact": "Kontakt",
+      "unnamedContact": "Namnlös kontakt"
     },
     "placeholders": {
       "title": "Ange ärendets titel",
@@ -919,7 +978,8 @@
       "loadingStatuses": "Läser in statusar…",
       "selectStatus": "Välj status…",
       "loadingPriorities": "Läser in prioriteter…",
-      "selectPriority": "Välj prioritet…"
+      "selectPriority": "Välj prioritet…",
+      "selectContact": "Välj kontakt..."
     },
     "errors": {
       "loadPriorities": "Det gick inte att läsa in prioriteter",
@@ -977,7 +1037,11 @@
       "serialNumber": "Serienummer",
       "customLocationOption": "Anpassad plats",
       "location": "Plats",
-      "assignedTo": "Tilldelad till"
+      "assignedTo": "Tilldelad till",
+      "manufacturer": "Tillverkare",
+      "vendor": "Leverantör",
+      "purchaseCost": "Inköpskostnad",
+      "orderNumber": "Ordernr."
     },
     "placeholders": {
       "workstationOsType": "t.ex. Windows, macOS, Linux",
@@ -999,7 +1063,13 @@
       "selectClientFirst": "Välj en kund först",
       "selectLocation": "Välj plats",
       "loadingContacts": "Läser in kontakter...",
-      "selectContact": "Välj kontakt"
+      "selectContact": "Välj kontakt",
+      "manufacturer": "t.ex. Lenovo",
+      "modelName": "t.ex. ThinkPad T14",
+      "noVendor": "Ingen leverantör",
+      "selectVendor": "Välj leverantör",
+      "purchaseCost": "0,00",
+      "orderNumber": "Ange ordernummer"
     },
     "sections": {
       "typeSpecificDetails": "Typspecifika detaljer"
@@ -1094,7 +1164,8 @@
       "unknown": "Okänd",
       "unifiedMemory": "{{size}} GB enhetligt minne",
       "memoryUsed": " ({{size}} GB använt)",
-      "freeStorage": "{{size}} GB ledigt"
+      "freeStorage": "{{size}} GB ledigt",
+      "totalStorage": "{{size}} GB"
     },
     "empty": "Inga maskinvarudata tillgängliga",
     "emptyStorage": "Inga lagringsenheter upptäcktes"
@@ -1267,8 +1338,20 @@
         "quarterly_one": "kvartal",
         "quarterly_other": "kvartal",
         "yearly_one": "år",
-        "yearly_other": "år"
-      }
+        "yearly_other": "år",
+        "daily_few": "dagar",
+        "daily_many": "dagar",
+        "weekly_few": "veckor",
+        "weekly_many": "veckor",
+        "monthly_few": "månader",
+        "monthly_many": "månader",
+        "quarterly_few": "kvartal",
+        "quarterly_many": "kvartal",
+        "yearly_few": "år",
+        "yearly_many": "år"
+      },
+      "every_few": "Intervall: {{count}} {{frequency}}",
+      "every_many": "Intervall: {{count}} {{frequency}}"
     },
     "status": {
       "active": "Aktivt",
@@ -1484,7 +1567,28 @@
     "compliance": "Efterlevnad",
     "lastDone": "Senast utfört",
     "noMaintenance": "Inget schemalagt.",
-    "docsHint": "Bilagor och inloggningsuppgifter för den här tillgången."
+    "docsHint": "Bilagor och inloggningsuppgifter för den här tillgången.",
+    "rmmUser": {
+      "looksLike": "· Verkar vara {{contact}}",
+      "mapDialogDescription": "”{{user}}” kommer att kommas ihåg för den här RMM-organisationen.",
+      "mapDialogTitle": "Koppla inloggad användare till en kontakt",
+      "mapFailed": "Kunde inte spara kopplingen.",
+      "mapToContact": "Koppla till kontakt…"
+    },
+    "manufacturer": "Tillverkare",
+    "model": "Modell",
+    "vendor": "Leverantör",
+    "purchaseCost": "Inköpskostnad",
+    "orderNumber": "Ordernr.",
+    "assignedTo": "Tilldelad till",
+    "unassigned": "Ej tilldelad",
+    "assign": "Tilldela",
+    "unassign": "Ta bort tilldelning",
+    "aContact": "Kontakt",
+    "assignDialogTitle": "Tilldela den här tillgången",
+    "sharedWorkspace": "Delad arbetsplats",
+    "sharedWorkspaceValue": "{{name}} · {{count}} personer",
+    "billingProfile": "Faktureringsprofil"
   },
   "assetTimeline": {
     "title": "Tidslinje",
@@ -1503,7 +1607,18 @@
       "lastReboot": "Senaste omstart",
       "patchScan": "Patchsökning",
       "patchScanDetail": "{{pending}} väntande, {{failed}} misslyckade",
-      "purchased": "Inköpt"
+      "purchased": "Inköpt",
+      "assignedTo": "Tilldelad till {{contact}}",
+      "unassigned": "Tilldelning borttagen",
+      "autoAssigned": "Automatiskt tilldelad till {{contact}} utifrån inloggad användare",
+      "assignedViaBundle": "Tilldelad till {{contact}} via paketet {{group}}",
+      "aContact": "en kontakt",
+      "groupAdded": "Tillagd i {{group}}",
+      "groupRemoved": "Borttagen från {{group}}",
+      "aGroup": "en grupp",
+      "autoAssignedFrom": "Tilldelades automatiskt {{contact}} från {{provider}}",
+      "groupLocationMoved": "Flyttad till {{location}} med {{group}}",
+      "groupLocationCleared": "Plats rensad med {{group}}"
     },
     "changeTypes": {
       "created": "Skapad",
@@ -1557,11 +1672,6 @@
     },
     "coverage": {
       "noWarrantyDate": "inget garantidatum"
-    },
-    "status": {
-      "active": "aktiv",
-      "inactive": "inaktiv",
-      "maintenance": "underhåll"
     }
   },
   "errors": {
@@ -1571,7 +1681,10 @@
       "manageAssetTypes": "Behörighet saknas: Du kan inte hantera tillgångstyper",
       "readDocuments": "Behörighet saknas: Du kan inte läsa tillgångsdokument",
       "associateDocuments": "Behörighet saknas: Du kan inte koppla dokument till tillgångar",
-      "removeDocuments": "Behörighet saknas: Du kan inte ta bort dokument från tillgångar"
+      "removeDocuments": "Behörighet saknas: Du kan inte ta bort dokument från tillgångar",
+      "readAssetStatuses": "Åtkomst nekad: kan inte läsa tillgångsstatusar",
+      "manageAssetStatuses": "Åtkomst nekad: kan inte hantera tillgångsstatusar",
+      "updateAssets": "Åtkomst nekad: kan inte uppdatera tillgångar"
     },
     "asset": {
       "notFoundRefresh": "Tillgången hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
@@ -1591,7 +1704,21 @@
       "notAllowed": "Ett av tillgångsvärdena är inte tillåtet. Granska formuläret och försök igen.",
       "missingField": "Ett obligatoriskt tillgångsfält saknas.",
       "missingFieldNamed": "Obligatoriskt tillgångsfält saknas: {{field}}.",
-      "contactUnavailable": "Den valda kontakten är inte tillgänglig för den här kunden."
+      "contactUnavailable": "Den valda kontakten är inte tillgänglig för den här kunden.",
+      "vendorUnavailable": "Den valda leverantören är inte tillgänglig.",
+      "workspaceMember": "Den här tillgången hör till en delad arbetsplats och kan därför inte tilldelas en enskild person.",
+      "billingProfileUnavailable": "Den valda faktureringsprofilen är inte tillgänglig för den här kunden."
+    },
+    "assetGroup": {
+      "not_found": "Tillgångsgruppen hittades inte.",
+      "invalid_kind": "Den gruppstypen är inte tillgänglig.",
+      "invalid_name": "Ett gruppnamn krävs.",
+      "client_mismatch": "Den tillgången eller kontakten hör till en annan kund.",
+      "already_grouped": "Den tillgången finns redan i en annan grupp.",
+      "users_on_bundle": "Ett paket har en ägare, inte en lista med användare.",
+      "owner_on_workspace": "En delad arbetsplats har användare, inte en ägare.",
+      "users_present": "Ta bort arbetsplatsens användare innan du gör den till ett paket.",
+      "invalid_location": "Den platsen är inte tillgänglig för den här kunden."
     }
   },
   "clientAssetMultiSelect": {
@@ -1603,5 +1730,133 @@
     "empty": "Inga matchande tillgångar för den här kunden",
     "loading": "Läser in...",
     "remove": "Ta bort tillgång"
+  },
+  "inventoryProvenance": {
+    "title": "Lagerursprung",
+    "fields": {
+      "product": {
+        "label": "Produkt"
+      },
+      "serial": {
+        "label": "Serienummer"
+      },
+      "mac": {
+        "label": "MAC"
+      },
+      "originSalesOrder": {
+        "label": "Ursprunglig försäljningsorder"
+      },
+      "delivered": {
+        "label": "Levererad"
+      }
+    },
+    "rmaHistory": {
+      "title": "RMA-historik"
+    },
+    "emptyValue": "—",
+    "rmaLabel": "RMA"
+  },
+  "skeletons": {
+    "assetForm": {
+      "loading": "Läser in tillgångsformuläret..."
+    }
+  },
+  "assetStatuses": {
+    "active": "Aktiv",
+    "in_stock": "I lager",
+    "maintenance": "Under underhåll",
+    "inactive": "Inaktiv",
+    "retired": "Utfasad"
+  },
+  "assetStatusKinds": {
+    "deployable": "Driftsättningsbar",
+    "pending": "Väntande",
+    "undeployable": "Ej driftsättningsbar",
+    "archived": "Arkiverad"
+  },
+  "assetStatusSettings": {
+    "title": "Tillgångsstatusar",
+    "description": "Tillgångarnas livscykeltillstånd. RMM-synkroniseringen skriver aldrig över dem efter att en enhet har skapats.",
+    "empty": "Inga tillgångsstatusar än.",
+    "addTitle": "Lägg till status",
+    "editTitle": "Redigera status",
+    "columns": {
+      "label": "Status",
+      "kind": "Livscykel",
+      "builtin": "Inbyggd",
+      "inUse": "Används",
+      "actions": "Åtgärder"
+    },
+    "fields": {
+      "label": "Etikett",
+      "kind": "Livscykel"
+    },
+    "actions": {
+      "add": "Lägg till status",
+      "rename": "Byt namn",
+      "archive": "Arkivera",
+      "openMenu": "Öppna meny",
+      "restore": "Återställ",
+      "archiveBlocked": "Arkivera · {{count}} tillgång(ar) använder den fortfarande",
+      "reorder": "Ändra ordning på {{label}} — dra, eller använd upp- och nedpiltangenterna",
+      "dragToReorder": "Dra för att ändra ordning"
+    },
+    "confirmArchiveTitle": "Arkivera denna status?",
+    "confirmArchiveMessage": "Arkivera \"{{label}}\"? Den erbjuds inte längre i tillgångsformulären. Du kan återställa den senare.",
+    "errors": {
+      "load": "Kunde inte läsa in tillgångsstatusar",
+      "inUse": "Används fortfarande av {{count}} tillgång(ar). Flytta dem till en annan status först.",
+      "duplicate": "En status med det namnet finns redan.",
+      "invalidKind": "Välj en livscykel för denna status.",
+      "invalidLabel": "Ange ett namn med minst en bokstav eller siffra.",
+      "notFound": "Statusen finns inte längre. Uppdatera sidan och försök igen.",
+      "save": "Det gick inte att spara statusen."
+    }
+  },
+  "contactAssets": {
+    "title": "Tillgångar",
+    "empty": "Inga tillgångar är tilldelade den här kontakten.",
+    "sharedWorkspaces": "Delade arbetsplatser",
+    "memberCount_one": "{{count}} tillgång",
+    "memberCount_other": "{{count}} tillgångar"
+  },
+  "assetGroups": {
+    "kinds": {
+      "bundle": "Paket",
+      "shared_workspace": "Delad arbetsplats"
+    },
+    "drawerTitle": "Grupp",
+    "fields": {
+      "name": "Namn",
+      "kind": "Typ",
+      "location": "Plats",
+      "owner": "Ägare",
+      "users": "Användare",
+      "members": "Medlemmar"
+    },
+    "sections": {
+      "people": "Personer",
+      "members": "Medlemmar"
+    },
+    "addAssets": "Lägg till tillgångar",
+    "addUser": "Lägg till en person",
+    "noLocation": "Ingen plats",
+    "locationHelp": "Att ändra platsen flyttar alla medlemmar i gruppen.",
+    "deleteHelp": "Medlemmarna behåller sin nuvarande tilldelning och plats.",
+    "actions": {
+      "manage": "Hantera",
+      "delete": "Ta bort grupp",
+      "addToGroup": "Lägg till i grupp"
+    },
+    "confirmUnassignTitle": "Ta bort tilldelningen för dessa tillgångar?",
+    "confirmUnassignMessage": "En delad arbetsplats har användare i stället för en enskild tilldelad, så {{count}} tillgång(ar) blir otilldelade.",
+    "confirmKindTitle": "Gör om till delad arbetsplats?",
+    "confirmKindMessage": "En delad arbetsplats har användare i stället för en ägare, så alla medlemmar blir otilldelade.",
+    "confirmDeleteTitle": "Ta bort den här gruppen?",
+    "confirmDeleteMessage": "Ta bort \"{{name}}\"? Medlemmarna behåller sin nuvarande tilldelning och plats.",
+    "errors": {
+      "createFailed": "Kunde inte skapa gruppen.",
+      "addFailed": "Kunde inte lägga till de valda tillgångarna."
+    }
   }
 }

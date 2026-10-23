@@ -33,6 +33,7 @@ import {
   listClientAssets,
   type ClientAssetType,
   type ClientAssetSortField,
+  type ClientAssetStatusSummary,
   type ListClientAssetsResponse,
 } from '@alga-psa/client-portal/actions';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
@@ -40,6 +41,11 @@ import { getErrorMessage, isActionMessageError, isActionPermissionError } from '
 import { useSetClientPortalHeader } from '../layout/ClientPortalPageContext';
 import { AssetDetails } from './AssetDetails';
 import { ClientAddTicket } from '../tickets/ClientAddTicket';
+import {
+  portalAssetStatusLabel,
+  portalAssetStatusVariant,
+  tallyPortalDeviceStatuses,
+} from './portalAssetStatus';
 
 const isReturnedActionError = (
   value: unknown
@@ -97,7 +103,9 @@ export function ClientDevicesPage() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<ClientAssetType | 'all'>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  // A status slug, or 'all'. The options come from the statuses the client's
+  // devices are actually in, so a tenant status is filterable too (FR-B5).
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [sortBy, setSortBy] = useState<ClientAssetSortField>('updated_at');
@@ -159,6 +167,16 @@ export function ClientDevicesPage() {
     })();
   }, [page, pageSize, debouncedSearch, typeFilter, statusFilter, sortBy, sortDirection]);
 
+  // One reading of a status for every row, the filter and the details dialog:
+  // the tenant's label for the slug, localized for the builtins.
+  const statusSummaries = useMemo<ClientAssetStatusSummary[]>(() => response?.by_status ?? [], [response]);
+  const statusBySlug = useMemo(
+    () => new Map(statusSummaries.map((summary) => [summary.slug, summary])),
+    [statusSummaries],
+  );
+  const statusLabel = (slug: string | null | undefined) =>
+    portalAssetStatusLabel(t, slug, slug ? statusBySlug.get(slug)?.label : undefined);
+
   const summaryTiles = useMemo(() => {
     if (!response) return [];
     // by_type is computed server-side across the entire client, so the tile
@@ -190,16 +208,30 @@ export function ClientDevicesPage() {
     {
       title: t('devices.columns.status', 'Status'),
       dataIndex: 'status',
-      render: (value: string) => {
-        const isInactive = value === 'inactive';
-        return (
-          <Badge variant={isInactive ? 'default' : 'success'}>
-            {isInactive
-              ? t('devices.status.inactive', 'Inactive')
-              : t('devices.status.active', 'Active')}
-          </Badge>
-        );
-      },
+      // F021: the column said "Active" for every slug that was not `inactive`,
+      // so a device the MSP put in a custom status contradicted its own
+      // details panel. Both read the slug through the same helper now, and the
+      // tone follows the kind the tenant gave the status.
+      render: (value: string) => (
+        <Badge variant={portalAssetStatusVariant(value, statusBySlug.get(value)?.kind)}>
+          {statusLabel(value)}
+        </Badge>
+      ),
+    },
+    {
+      // FR-C6 / FR-E7b: who has the device — the contact name only, or the
+      // shared workspace it belongs to. The `assets.*` keys are shared with
+      // AssetDetails, which says the same thing about the same row.
+      title: t('assets.columns.assignedTo', 'Assigned to'),
+      dataIndex: 'contact_name',
+      sortable: false,
+      render: (value: string | null | undefined, record: Asset) =>
+        record.group?.kind === 'shared_workspace'
+          ? t('assets.sharedWorkspace', {
+              defaultValue: 'Shared workspace: {{name}}',
+              name: record.group.name,
+            })
+          : value || t('assets.unassigned', 'Unassigned'),
     },
     {
       title: t('devices.columns.location', 'Location'),
@@ -266,16 +298,15 @@ export function ClientDevicesPage() {
 
   const assets = response?.assets ?? [];
   const total = response?.total ?? 0;
-  const activeCount = response?.active ?? 0;
-  const inactiveCount = response?.inactive ?? 0;
-  const allActive = inactiveCount === 0 && activeCount > 0;
+  // FR-B5: "active" is the deployable kind, not "anything but inactive".
+  const { deviceCount, activeCount, allActive, attention } = tallyPortalDeviceStatuses(statusSummaries);
 
   const showEmptyState = !loading && total === 0 && !debouncedSearch && typeFilter === 'all' && statusFilter === 'all';
 
   return (
     <div className="space-y-6">
       {/* Status banner */}
-      {response && activeCount + inactiveCount > 0 && (
+      {response && deviceCount > 0 && (
         allActive ? (
           <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
             <CheckCircle2 className="h-5 w-5 text-emerald-600" />
@@ -293,14 +324,25 @@ export function ClientDevicesPage() {
             <AlertTriangle className="h-5 w-5 text-amber-600" />
             <div className="min-w-0">
               <div className="text-sm font-medium text-amber-900">
-                {t('devices.statusWarnTitle', 'Some devices inactive')}
+                {t('devices.statusAttentionTitle', 'Some devices need attention')}
               </div>
+              {/* Naming the statuses beats calling an in-repair device
+                  "inactive", which is a status of its own. */}
               <div className="text-xs text-amber-700">
-                {t('devices.statusWarnBody', {
-                  defaultValue: '{{active}} active · {{inactive}} inactive',
-                  active: activeCount,
-                  inactive: inactiveCount,
-                })}
+                {[
+                  t('devices.statusAttentionBody', {
+                    defaultValue: '{{active}} of {{total}} devices active',
+                    active: activeCount,
+                    total: deviceCount,
+                  }),
+                  ...attention.map((summary) =>
+                    t('devices.statusCount', {
+                      defaultValue: '{{count}} {{status}}',
+                      count: summary.count,
+                      status: statusLabel(summary.slug),
+                    }),
+                  ),
+                ].join(' · ')}
               </div>
             </div>
           </div>
@@ -361,11 +403,15 @@ export function ClientDevicesPage() {
             <CustomSelect
               data-automation-id="devices-status-filter"
               value={statusFilter}
-              onValueChange={(v) => setStatusFilter(v as 'all' | 'active' | 'inactive')}
+              onValueChange={setStatusFilter}
+              // The tenant's own statuses, not a hardcoded Active/Inactive
+              // pair that left a device in repair unfindable.
               options={[
                 { value: 'all', label: t('devices.filters.allStatuses', 'All statuses') },
-                { value: 'active', label: t('devices.status.active', 'Active') },
-                { value: 'inactive', label: t('devices.status.inactive', 'Inactive') },
+                ...statusSummaries.map((summary) => ({
+                  value: summary.slug,
+                  label: statusLabel(summary.slug),
+                })),
               ]}
             />
             {(search || typeFilter !== 'all' || statusFilter !== 'all') && (
@@ -437,6 +483,8 @@ export function ClientDevicesPage() {
         {selectedAsset && (
           <AssetDetails
             asset={selectedAsset}
+            statusLabel={statusLabel(selectedAsset.status)}
+            statusKind={statusBySlug.get(selectedAsset.status)?.kind}
             onCreateTicket={(asset) => {
               setSelectedAsset(null);
               setTicketAsset(asset);

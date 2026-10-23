@@ -22,10 +22,14 @@ import {
   ReverseApprovalData,
   TimeSheetSearchData,
   TimeSheetExportQuery,
-  GenerateTimePeriodsData,
   CreateScheduleEntryData,
   UpdateScheduleEntryData
 } from '../schemas/timeSheet';
+import {
+  TIME_SHEET_LIST_DEFAULT_SORT,
+  TIME_SHEET_LIST_SORT_ALIASES,
+  TIME_SHEET_LIST_SORT_KEYS,
+} from '../schemas/timeSheetSort';
 import { publishUnregisteredEventType } from 'server/src/lib/eventBus/publishers';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildScheduleEntryCreatedPayload, buildScheduleEntryDeletedPayload, buildScheduleEntryUpdatedPayload } from '@alga-psa/workflow-streams';
@@ -39,7 +43,53 @@ import {
   resolveCalendarAccess,
   type CalendarAccess,
 } from '@alga-psa/scheduling/lib/calendarAccess';
-import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../middleware/apiMiddleware';
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
+
+/**
+ * Normalize a DATE column value to YYYY-MM-DD.
+ * pg has no DATE (1082) parser, so the driver builds a Date at *server-local* midnight; local getters reverse that.
+ * If a 1082 parser returning strings is ever added, the string branch handles it.
+ */
+// LEVERAGE: friction pg-date-parsing — DATE columns arrive as local-midnight Dates, so every reader re-derives the
+// calendar date by hand. A global 1082 type parser would remove this (and the same bug in the TimePeriod model).
+export function formatDbDate(value: string | Date): string {
+  if (value instanceof Date) {
+    const y = String(value.getFullYear()).padStart(4, '0');
+    const m = String(value.getMonth() + 1).padStart(2, '0');
+    const d = String(value.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  return String(value).slice(0, 10);
+}
+
+/** Shape a time_periods row for the API: YYYY-MM-DD dates, derived is_current and computed fields. */
+export function toApiTimePeriod(row: any, today: string): any {
+  const start = formatDbDate(row.start_date);
+  const end = formatDbDate(row.end_date);
+  const startDate = Temporal.PlainDate.from(start);
+  const endDate = Temporal.PlainDate.from(end);
+  const pastDaysOfYear = startDate.dayOfYear - 1;
+  const firstDayOfWeek = startDate.with({ month: 1, day: 1 }).dayOfWeek % 7; // 0 = Sunday
+  return {
+    ...row,
+    start_date: start,
+    end_date: end,
+    is_current: start <= today && today < end,
+    is_closed: !!row.is_closed,
+    duration_days: startDate.until(endDate, { largestUnit: 'days' }).days,
+    week_number: Math.ceil((pastDaysOfYear + firstDayOfWeek + 1) / 7),
+    month_name: new Intl.DateTimeFormat('en-US', { month: 'long', timeZone: 'UTC' }).format(
+      new Date(Date.UTC(startDate.year, startDate.month - 1, startDate.day))
+    ),
+    year: startDate.year,
+  };
+}
+
+function todayUtc(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+const CLOSED_TIME_PERIOD_MESSAGE = 'Time period is closed; reopen it first';
 
 function throwTimePeriodSettingsApiError(error: unknown): never {
   const dbError = error as { code?: string; column?: string };
@@ -60,6 +110,37 @@ function throwTimePeriodSettingsApiError(error: unknown): never {
   throw error;
 }
 
+type TimeSheetSortSpec = { column: string; nullable?: boolean };
+
+// LEVERAGE: pattern api-list-sort-allowlist — fifth hand-rolled list-sort allowlist (Ticket, Financial, ContractLine, Team, TimeSheet); a shared per-resource sort declaration is missing below.
+const TIME_SHEET_LIST_SORT_SQL: Record<string, TimeSheetSortSpec> = {
+  period_start: { column: 'time_periods.start_date' },
+  period_end: { column: 'time_periods.end_date' },
+  submitted_at: { column: 'time_sheets.submitted_at', nullable: true },
+  approved_at: { column: 'time_sheets.approved_at', nullable: true },
+  approval_status: { column: 'time_sheets.approval_status' },
+};
+
+export { TIME_SHEET_LIST_SORT_KEYS, TIME_SHEET_LIST_DEFAULT_SORT };
+
+/**
+ * Resolve a caller-supplied sort key to SQL. time_sheets has no created_at column, so
+ * the shared list layer's injected 'created_at' is accepted as an alias of the default.
+ */
+export function resolveTimeSheetListSort(sort: string | undefined): { field: string; spec: TimeSheetSortSpec } {
+  const requested = sort ?? TIME_SHEET_LIST_DEFAULT_SORT;
+  const field = TIME_SHEET_LIST_SORT_ALIASES[requested] ?? requested;
+  const spec = Object.prototype.hasOwnProperty.call(TIME_SHEET_LIST_SORT_SQL, field)
+    ? TIME_SHEET_LIST_SORT_SQL[field]
+    : undefined;
+  if (!spec) {
+    throw new ValidationError(
+      `Unknown sort field: ${requested}. Supported values: ${[...TIME_SHEET_LIST_SORT_KEYS, ...Object.keys(TIME_SHEET_LIST_SORT_ALIASES)].join(', ')}`
+    );
+  }
+  return { field, spec };
+}
+
 export class TimeSheetService extends BaseService<any> {
   constructor() {
     super({
@@ -67,7 +148,7 @@ export class TimeSheetService extends BaseService<any> {
       primaryKey: 'id',
       tenantColumn: 'tenant',
       searchableFields: ['user_id', 'period_id', 'approval_status'],
-      defaultSort: 'created_at',
+      defaultSort: TIME_SHEET_LIST_DEFAULT_SORT,
       defaultOrder: 'desc',
       auditFields: {
         createdBy: 'created_by',
@@ -78,66 +159,66 @@ export class TimeSheetService extends BaseService<any> {
     });
   }
 
+  /**
+   * time_sheets has no created_at/updated_at, so the common created_ and
+   * updated_ range keys are unsupported and rejected by `applyRangeFilters`. The
+   * supported ranges map to the sheet's submitted/approved timestamps and, via
+   * the time_periods join, the period window.
+   */
+  protected rangeFilterColumns(): Record<string, string | null> {
+    return {
+      // time_sheets has no created_at/updated_at: declare the common keys as
+      // unsupported so they are rejected instead of silently ignored.
+      created_from: null,
+      created_to: null,
+      updated_from: null,
+      updated_to: null,
+      submitted_from: `${this.tableName}.submitted_at`,
+      submitted_to: `${this.tableName}.submitted_at`,
+      approved_from: `${this.tableName}.approved_at`,
+      approved_to: `${this.tableName}.approved_at`,
+      period_start_from: 'time_periods.start_date',
+      period_start_to: 'time_periods.start_date',
+      period_end_from: 'time_periods.end_date',
+      period_end_to: 'time_periods.end_date',
+    };
+  }
+
   async list(options: ListOptions, context: ServiceContext, filters?: TimeSheetFilterData): Promise<ListResult<any>> {
       const { knex } = await this.getKnex();
       const db = tenantDb(knex, context.tenant);
       
+      // Resolve the sort first so a bad key is rejected before touching the database.
+      const { spec: sortSpec } = resolveTimeSheetListSort(options.sort);
+
+      // The controller passes filters as options.filters; direct callers use the third argument.
+      const effectiveFilters = filters ?? (options.filters as TimeSheetFilterData | undefined);
+
       let query = this.buildTenantScopedQuery(knex, context);
-  
+
+      // time_periods is joined exactly once: filters and ORDER BY both reference it.
+      db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id', { type: 'left' });
+
       // Apply filters
-      if (filters) {
-        if (filters.user_id) {
-          query.where(`${this.tableName}.user_id`, filters.user_id);
+      if (effectiveFilters) {
+        if (effectiveFilters.user_id) {
+          query.where(`${this.tableName}.user_id`, effectiveFilters.user_id);
         }
-        if (filters.period_id) {
-          query.where(`${this.tableName}.period_id`, filters.period_id);
+        if (effectiveFilters.period_id) {
+          query.where(`${this.tableName}.period_id`, effectiveFilters.period_id);
         }
-        if (filters.approval_status) {
-          query.where(`${this.tableName}.approval_status`, filters.approval_status);
+        if (effectiveFilters.approval_status) {
+          query.where(`${this.tableName}.approval_status`, effectiveFilters.approval_status);
         }
-        if (filters.submitted_from) {
-          query.where(`${this.tableName}.submitted_at`, '>=', filters.submitted_from);
+        if (effectiveFilters.approved_by) {
+          query.where(`${this.tableName}.approved_by`, effectiveFilters.approved_by);
         }
-        if (filters.submitted_to) {
-          query.where(`${this.tableName}.submitted_at`, '<=', filters.submitted_to);
-        }
-        if (filters.approved_from) {
-          query.where(`${this.tableName}.approved_at`, '>=', filters.approved_from);
-        }
-        if (filters.approved_to) {
-          query.where(`${this.tableName}.approved_at`, '<=', filters.approved_to);
-        }
-        if (filters.approved_by) {
-          query.where(`${this.tableName}.approved_by`, filters.approved_by);
-        }
-        if (filters.period_start_from) {
-          db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id')
-            .where('time_periods.start_date', '>=', filters.period_start_from);
-        }
-        if (filters.period_start_to) {
-          if (!query.toString().includes('time_periods')) {
-            db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id');
-          }
-          query.where('time_periods.start_date', '<=', filters.period_start_to);
-        }
-        if (filters.period_end_from) {
-          if (!query.toString().includes('time_periods')) {
-            db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id');
-          }
-          query.where('time_periods.end_date', '>=', filters.period_end_from);
-        }
-        if (filters.period_end_to) {
-          if (!query.toString().includes('time_periods')) {
-            db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id');
-          }
-          query.where('time_periods.end_date', '<=', filters.period_end_to);
-        }
-        if (filters.has_entries !== undefined) {
+        if (effectiveFilters.has_entries !== undefined) {
           const subquery = tenantDb(knex, context.tenant).table('time_entries')
             .where('time_entries.time_sheet_id', knex.raw(`${this.tableName}.id`))
             .select(knex.raw('1'));
           
-          if (filters.has_entries) {
+          if (effectiveFilters.has_entries) {
             query.whereExists(subquery);
           } else {
             query.whereNotExists(subquery);
@@ -148,7 +229,12 @@ export class TimeSheetService extends BaseService<any> {
       // Add joins for additional data
       db.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id', { type: 'left' });
       db.tenantJoin(query, 'users as approvers', 'time_sheets.approved_by', 'approvers.user_id', { type: 'left' });
-      db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id', { type: 'left' });
+
+      // Range filters (submitted_*, approved_*, period_*) after the time_periods
+      // join; unsupported keys such as created_from throw.
+      if (effectiveFilters) {
+        this.applyRangeFilters(query, effectiveFilters as Record<string, unknown>);
+      }
 
       query.select(
           `${this.tableName}.*`,
@@ -159,29 +245,27 @@ export class TimeSheetService extends BaseService<any> {
       );
   
       // Add computed fields
-      const timeEntrySubquery = tenantDb(knex, context.tenant).table('time_entries')
-        .where('time_entries.time_sheet_id', knex.raw(`${this.tableName}.id`))
-        .select([
-          knex.raw('SUM(billable_duration) / 60.0 as total_hours'),
-          knex.raw('SUM(CASE WHEN billable_duration > 0 THEN billable_duration ELSE 0 END) / 60.0 as billable_hours'),
-          knex.raw('COUNT(*) as entry_count')
-        ])
-        .first();
-  
+      // One correlated scalar subquery per aggregate (each selects exactly one column).
+      const entryAggregate = (expression: string) =>
+        tenantDb(knex, context.tenant).table('time_entries')
+          .where('time_entries.time_sheet_id', knex.raw(`${this.tableName}.id`))
+          .select(knex.raw(expression))
+          .toQuery();
+
       query.select([
-        knex.raw(`(${timeEntrySubquery.clone().select('total_hours').toQuery()}) as total_hours`),
-        knex.raw(`(${timeEntrySubquery.clone().select('billable_hours').toQuery()}) as billable_hours`),
-        knex.raw(`(${timeEntrySubquery.clone().select('entry_count').toQuery()}) as entry_count`)
+        knex.raw(`(${entryAggregate('SUM(billable_duration) / 60.0')}) as total_hours`),
+        knex.raw(`(${entryAggregate('SUM(CASE WHEN billable_duration > 0 THEN billable_duration ELSE 0 END) / 60.0')}) as billable_hours`),
+        knex.raw(`(${entryAggregate('COUNT(*)')}) as entry_count`)
       ]);
   
       // Get total count for pagination
       const countQuery = query.clone().clearSelect().clearOrder().count('* as count');
   
       // Apply sorting
-      const sortField = options.sort || 'created_at';
-      const sortOrder = options.order || 'desc';
-      query.orderBy(`${this.tableName}.${sortField}`, sortOrder);
-  
+      const direction = options.order === 'asc' ? 'asc' : 'desc';
+      query.orderBy(sortSpec.column, direction, sortSpec.nullable ? 'last' : undefined);
+      query.orderBy('time_sheets.id', direction); // unique tie-break for stable pagination
+
       // Apply pagination
       const page = options.page || 1;
       const limit = options.limit || 25;
@@ -681,16 +765,18 @@ export class TimeSheetService extends BaseService<any> {
   // Time periods management
   async getTimePeriods(context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
-      
-      return tenantDb(knex, context.tenant).table('time_periods')
+      const today = todayUtc();
+
+      const rows = await tenantDb(knex, context.tenant).table('time_periods')
         .orderBy('start_date', 'desc');
+      return rows.map((row: any) => toApiTimePeriod(row, today));
     }
 
 
   async getCurrentTimePeriod(context: ServiceContext, date?: string): Promise<any | null> {
       const { knex } = await this.getKnex();
 
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayUtc();
       const targetDate = date ?? today;
       let period = await TimePeriod.findByDate(knex, context.tenant, targetDate);
 
@@ -704,121 +790,81 @@ export class TimeSheetService extends BaseService<any> {
     }
 
 
-  async getTimePeriod(id: string, context: ServiceContext): Promise<any | null> {
-      const { knex } = await this.getKnex();
-      
-      const period = await tenantDb(knex, context.tenant).table('time_periods')
+  async getTimePeriod(id: string, context: ServiceContext, db?: Knex | Knex.Transaction): Promise<any | null> {
+      const conn = db ?? (await this.getKnex()).knex;
+
+      const period = await tenantDb(conn, context.tenant).table('time_periods')
         .where({ period_id: id })
         .first();
-  
-      if (period && period.start_date && period.end_date) {
-        const startDate = new Date(period.start_date);
-        const endDate = new Date(period.end_date);
-        const durationMs = endDate.getTime() - startDate.getTime();
-        const durationDays = Math.ceil(durationMs / (1000 * 60 * 60 * 24));
-  
-        return {
-          ...period,
-          duration_days: durationDays,
-          week_number: this.getWeekNumber(startDate),
-          month_name: startDate.toLocaleString('default', { month: 'long' }),
-          year: startDate.getFullYear()
-        };
-      }
-  
-      return period || null;
+
+      return period ? toApiTimePeriod(period, todayUtc()) : null;
     }
 
 
   async createTimePeriod(data: CreateTimePeriodData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
-      
-      return withTransaction(knex, async (trx) => {
-        const startDate = data.start_date ? new Date(data.start_date) : null;
-        const endDate = data.end_date ? new Date(data.end_date) : null;
 
-        if (!startDate || !endDate || Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-          throw new BadRequestError('Start date and end date must be valid dates');
-        }
+      return withTransaction(knex, async (trx) => {
+        // Dates are already normalized to YYYY-MM-DD by the schema; is_current is ignored (derived on read).
+        const { start_date: startDate, end_date: endDate } = data;
 
         if (startDate >= endDate) {
           throw new BadRequestError('Start date must be before end date');
         }
 
-        const overlappingPeriod = await tenantDb(trx, context.tenant).table('time_periods')
-          .whereRaw('start_date < ?', [data.end_date])
-          .whereRaw('end_date > ?', [data.start_date])
-          .first();
-
+        const overlappingPeriod = await TimePeriod.findOverlapping(trx, context.tenant, startDate, endDate);
         if (overlappingPeriod) {
           throw new ConflictError('Cannot create time period: overlaps with existing period');
         }
 
-        const periodData = {
-          ...data,
-          tenant: context.tenant,
-          created_at: new Date(),
-          updated_at: new Date()
-        };
-  
-        const [period] = await tenantDb(trx, context.tenant).table('time_periods')
-          .insert(periodData)
-          .returning('*');
-  
-        return this.getTimePeriod(period.period_id, context);
+        const period = await TimePeriod.create(trx, context.tenant, { start_date: startDate, end_date: endDate });
+
+        return this.getTimePeriod(period.period_id, context, trx);
       });
     }
 
 
   async updateTimePeriod(id: string, data: UpdateTimePeriodData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
-      
+
       return withTransaction(knex, async (trx) => {
-        const existingPeriod = await tenantDb(trx, context.tenant).table('time_periods')
-          .where({ period_id: id })
-          .first();
+        const existingPeriod = await TimePeriod.findById(trx, context.tenant, id);
 
         if (!existingPeriod) {
           throw new NotFoundError('Time period not found');
         }
 
-        const nextStartDate = data.start_date ?? existingPeriod.start_date;
-        const nextEndDate = data.end_date ?? existingPeriod.end_date;
-        const startDate = new Date(nextStartDate);
-        const endDate = new Date(nextEndDate);
-
-        if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-          throw new BadRequestError('Start date and end date must be valid dates');
+        if (existingPeriod.is_closed) {
+          throw new ConflictError(CLOSED_TIME_PERIOD_MESSAGE);
         }
 
-        if (startDate >= endDate) {
+        // is_current is ignored; only the dates are editable.
+        if (data.start_date === undefined && data.end_date === undefined) {
+          return this.getTimePeriod(id, context, trx);
+        }
+
+        const nextStartDate = data.start_date ?? formatDbDate(existingPeriod.start_date as string | Date);
+        const nextEndDate = data.end_date ?? formatDbDate(existingPeriod.end_date as string | Date);
+
+        if (nextStartDate >= nextEndDate) {
           throw new BadRequestError('Start date must be before end date');
         }
 
-        const overlappingPeriod = await tenantDb(trx, context.tenant).table('time_periods')
-          .whereNot('period_id', id)
-          .where('start_date', '<', nextEndDate)
-          .where('end_date', '>', nextStartDate)
-          .first();
+        if (!(await TimePeriod.isEditable(trx, context.tenant, id))) {
+          throw new ConflictError('Cannot change the dates of a time period that has associated time sheets');
+        }
 
+        const overlappingPeriod = await TimePeriod.findOverlapping(trx, context.tenant, nextStartDate, nextEndDate, id);
         if (overlappingPeriod) {
           throw new ConflictError('Cannot update time period: overlaps with existing period');
         }
 
-        const updateData = {
-          ...data,
-          updated_at: new Date()
-        };
-  
-        const updatedCount = await tenantDb(trx, context.tenant).table('time_periods')
-          .where({ period_id: id })
-          .update(updateData);
+        await TimePeriod.update(trx, context.tenant, id, {
+          ...(data.start_date !== undefined ? { start_date: data.start_date } : {}),
+          ...(data.end_date !== undefined ? { end_date: data.end_date } : {}),
+        });
 
-        if (updatedCount === 0) {
-          throw new NotFoundError('Time period not found');
-        }
-  
-        return this.getTimePeriod(id, context);
+        return this.getTimePeriod(id, context, trx);
       });
     }
 
@@ -827,12 +873,14 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
-        const period = await tenantDb(trx, context.tenant).table('time_periods')
-          .where({ period_id: id })
-          .first();
+        const period = await TimePeriod.findById(trx, context.tenant, id);
 
         if (!period) {
           throw new NotFoundError('Time period not found');
+        }
+
+        if (period.is_closed) {
+          throw new ConflictError(CLOSED_TIME_PERIOD_MESSAGE);
         }
 
         // Check if period has time sheets
@@ -855,33 +903,25 @@ export class TimeSheetService extends BaseService<any> {
     }
 
 
-  async generateTimePeriods(data: GenerateTimePeriodsData, context: ServiceContext): Promise<any[]> {
+  async closeTimePeriod(id: string, context: ServiceContext): Promise<any> {
+      return this.setTimePeriodClosed(id, true, context);
+    }
+
+
+  async reopenTimePeriod(id: string, context: ServiceContext): Promise<any> {
+      return this.setTimePeriodClosed(id, false, context);
+    }
+
+
+  private async setTimePeriodClosed(id: string, closed: boolean, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
-      
+
       return withTransaction(knex, async (trx) => {
-        const periods: any[] = [];
-        const startDate = new Date(data.start_date!);
-        const endDate = new Date(data.end_date!);
-        let currentDate = new Date(startDate);
-  
-        while (currentDate <= endDate) {
-          const periodEnd = this.calculatePeriodEnd(currentDate, data.frequency, data.frequency_unit);
-          
-          if (periodEnd <= endDate) {
-            const period = await this.createTimePeriod({
-              start_date: currentDate.toISOString().split('T')[0],
-              end_date: periodEnd.toISOString().split('T')[0],
-              is_current: false
-            }, context);
-            
-            periods.push(period);
-          }
-  
-          currentDate = new Date(periodEnd);
-          currentDate.setDate(currentDate.getDate() + 1);
+        const period = await TimePeriod.setClosed(trx, context.tenant, id, closed);
+        if (!period) {
+          throw new NotFoundError('Time period not found');
         }
-  
-        return periods;
+        return this.getTimePeriod(id, context, trx);
       });
     }
 
@@ -1485,39 +1525,6 @@ export class TimeSheetService extends BaseService<any> {
   private async getWorkItemForSchedule(workItemId: string, workItemType: string, context: ServiceContext): Promise<any> {
     // Similar to TimeEntryService implementation
     return { id: workItemId, title: 'Unknown Work Item', type: workItemType };
-  }
-
-  private getWeekNumber(date: Date): number {
-    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-    const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
-    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
-  }
-
-  private calculatePeriodEnd(startDate: Date, frequency: string, interval: number = 1): Date {
-    const endDate = new Date(startDate);
-    
-    switch (frequency) {
-      case 'daily':
-        endDate.setDate(endDate.getDate() + interval - 1);
-        break;
-      case 'weekly':
-        endDate.setDate(endDate.getDate() + (interval * 7) - 1);
-        break;
-      case 'monthly':
-        endDate.setMonth(endDate.getMonth() + interval);
-        endDate.setDate(endDate.getDate() - 1);
-        break;
-      case 'quarterly':
-        endDate.setMonth(endDate.getMonth() + (interval * 3));
-        endDate.setDate(endDate.getDate() - 1);
-        break;
-      case 'yearly':
-        endDate.setFullYear(endDate.getFullYear() + interval);
-        endDate.setDate(endDate.getDate() - 1);
-        break;
-    }
-    
-    return endDate;
   }
 }
 

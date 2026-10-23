@@ -15,18 +15,21 @@ import {
   createClientContractAssignment,
   updateClientContractAssignment,
   activateClientContractAssignment,
+  ContractAlreadyActiveScheduledError,
   checkAndReactivateExpiredContract,
   type ClientPaginationParams,
   type ClientContractAssignmentCreateInput,
   type PaginatedClientsResponse,
 } from '@alga-psa/shared/billingClients';
 import { withAuth } from '@alga-psa/auth';
+import { withSerializableAuth } from './serializableAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getClientLogoUrl, getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildContractCreatedPayload } from '@alga-psa/workflow-streams';
 import { syncRecurringServicePeriodsForContract } from './recurringServicePeriodSync';
+import { syncPrepaidBlockIssuancesForContract } from '../services/prepaidBlockIssuanceSync';
 import {
   actionError,
   permissionError,
@@ -37,6 +40,13 @@ import {
 export type BillingClientsActionError = ActionMessageError | ActionPermissionError;
 
 function billingClientsActionErrorFrom(error: unknown): BillingClientsActionError | null {
+  if (error instanceof ContractAlreadyActiveScheduledError) {
+    return actionError(
+      error.message,
+      'msp/billing:errors.clientContract.alreadyActiveScheduled',
+      { startDate: error.startDate },
+    );
+  }
   if (error instanceof Error) {
     if (error.message.startsWith('Permission denied')) {
       return permissionError(error.message);
@@ -145,6 +155,9 @@ export const getAllClientsForBilling = withAuth(async (
   return attachClientLogos(clients, tenant);
   });
 });
+
+/** Same read for the draft adjustment loader, with auth rejection kept serializable. */
+export const getAllClientsForBillingRecoverable = withSerializableAuth(getAllClientsForBilling);
 
 export const getAllClientsPaginatedForBilling = withAuth(async (
   user,
@@ -262,11 +275,13 @@ export const createClientContractForBilling = withAuth(async (
 
     const created = await createClientContractAssignment(trx, tenant, input);
     if (created.is_active) {
+      // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
       await syncRecurringServicePeriodsForContract(trx, {
         tenant,
         contractId: created.contract_id,
         sourceRunPrefix: 'client_contract_assignment_create',
       });
+      await syncPrepaidBlockIssuancesForContract(trx, tenant, created.contract_id);
     }
     return created;
   });
@@ -288,11 +303,13 @@ export const updateClientContractForBilling = withAuth(async (
   const updated = await withTransaction(knex, async (trx: Knex.Transaction) => {
     await assertClientContractAssignmentIsAuthorable(trx, tenant, clientContractId);
     const updatedAssignment = await updateClientContractAssignment(trx, tenant, clientContractId, updateData);
+    // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
     await syncRecurringServicePeriodsForContract(trx, {
       tenant,
       contractId: updatedAssignment.contract_id,
       sourceRunPrefix: 'client_contract_assignment_update',
     });
+    await syncPrepaidBlockIssuancesForContract(trx, tenant, updatedAssignment.contract_id);
     return updatedAssignment;
   });
 
@@ -315,11 +332,13 @@ export const activateClientContractForBilling = withAuth(async (
   const activated = await withTransaction(knex, async (trx: Knex.Transaction) => {
     await assertClientContractAssignmentIsAuthorable(trx, tenant, clientContractId);
     const activatedAssignment = await activateClientContractAssignment(trx, tenant, clientContractId);
+    // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
     await syncRecurringServicePeriodsForContract(trx, {
       tenant,
       contractId: activatedAssignment.contract_id,
       sourceRunPrefix: 'client_contract_activate',
     });
+    await syncPrepaidBlockIssuancesForContract(trx, tenant, activatedAssignment.contract_id);
     return activatedAssignment;
   });
 

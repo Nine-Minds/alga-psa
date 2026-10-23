@@ -48,11 +48,22 @@ export const TaskStatusSelect: React.FC<TaskStatusSelectProps> = ({
     [statuses]
   );
 
+  // All statuses in display order — a hidden status can still be the selected one,
+  // and it has no index in visibleStatuses to cycle a fallback color from.
+  const sortedStatuses = useMemo(() =>
+    [...statuses].sort((a, b) => a.display_order - b.display_order),
+    [statuses]
+  );
+
   // Get the color for a status, using fallback cycle if no color configured
   const getStatusColor = (status: ProjectStatus): string => {
     if (status.color) return status.color;
     // Use index in visible statuses for consistent cycling with KanbanBoard
-    const index = visibleStatuses.findIndex(s => s.project_status_mapping_id === status.project_status_mapping_id);
+    const visibleIndex = visibleStatuses.findIndex(s => s.project_status_mapping_id === status.project_status_mapping_id);
+    const index = visibleIndex >= 0
+      ? visibleIndex
+      : sortedStatuses.findIndex(s => s.project_status_mapping_id === status.project_status_mapping_id);
+    if (index < 0) return CYCLE_COLORS[0];
     return CYCLE_COLORS[index % CYCLE_COLORS.length];
   };
 

@@ -33,6 +33,23 @@ function closeWebSocket(candidate) {
   try { socket.close(); } catch { /* already closed */ }
 }
 
+// In-cluster (the control-plane pod), use the library's own service-account
+// flow instead of the entrypoint's kubeconfig file. client-node's kubeconfig
+// parser only understands `token`/`token-file` — it silently ignores kubectl's
+// `tokenFile:` spelling, so loading that file authenticated NOTHING and every
+// exec/port-forward/access probe got a 401. loadFromCluster() also re-reads
+// the projected token as it rotates (~hourly), which a one-shot file read
+// would not.
+export function loadKubeConfig(k8s, { kubeconfigPath, serviceAccountTokenPath = SERVICE_ACCOUNT_TOKEN_PATH } = {}) {
+  const config = new k8s.KubeConfig();
+  if (process.env.KUBERNETES_SERVICE_HOST && existsSync(serviceAccountTokenPath)) {
+    config.loadFromCluster();
+  } else {
+    config.loadFromFile(kubeconfigPath);
+  }
+  return config;
+}
+
 export function createNativeKubernetesAdapter({
   kubeconfigPath,
   moduleLoader = () => import('@kubernetes/client-node'),
@@ -43,19 +60,7 @@ export function createNativeKubernetesAdapter({
   async function clients() {
     if (!clientsPromise) {
       clientsPromise = moduleLoader().then((k8s) => {
-        const config = new k8s.KubeConfig();
-        // In-cluster (the control-plane pod), use the library's own
-        // service-account flow instead of the entrypoint's kubeconfig file.
-        // client-node's kubeconfig parser only understands `token`/`token-file`
-        // — it silently ignores kubectl's `tokenFile:` spelling, so loading
-        // that file authenticated NOTHING and every exec/port-forward/access
-        // probe got a 401. loadFromCluster() also re-reads the projected token
-        // as it rotates (~hourly), which a one-shot file read would not.
-        if (process.env.KUBERNETES_SERVICE_HOST && existsSync(serviceAccountTokenPath)) {
-          config.loadFromCluster();
-        } else {
-          config.loadFromFile(kubeconfigPath);
-        }
+        const config = loadKubeConfig(k8s, { kubeconfigPath, serviceAccountTokenPath });
         return {
           config,
           core: config.makeApiClient(k8s.CoreV1Api),

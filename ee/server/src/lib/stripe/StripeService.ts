@@ -47,6 +47,21 @@ export class AppleIapBillingError extends Error {
   }
 }
 
+/**
+ * Thrown when appliance-subscription lifecycle handling (alga-license mirror /
+ * revoke / seat sync) fails. The webhook route detects it by duck-typing
+ * (`retryable === true`) and answers 5xx so Stripe redelivers the event.
+ */
+export class ApplianceLifecycleSyncError extends Error {
+  readonly retryable = true as const;
+  readonly cause: unknown;
+  constructor(message: string, cause?: unknown) {
+    super(message);
+    this.name = 'ApplianceLifecycleSyncError';
+    this.cause = cause;
+  }
+}
+
 type IapSubscriptionContext = {
   originalTransactionId: string;
   status: string;
@@ -1349,6 +1364,10 @@ export class StripeService {
           const { updateApplianceEntitlementSeats } = await import('@ee/lib/applianceConsole/algaLicenseAdminClient');
           return updateApplianceEntitlementSeats(applianceTenantId, seats);
         },
+        syncState: async (stripeSubId, state) => {
+          const { syncApplianceSubscriptionState } = await import('@ee/lib/applianceConsole/algaLicenseAdminClient');
+          return syncApplianceSubscriptionState(stripeSubId, state);
+        },
         audit: masterTenantId
           ? async (details) => {
               const { PlatformReportAuditService } = await import('@ee/lib/platformReports');
@@ -1367,9 +1386,13 @@ export class StripeService {
       }
       return outcome.handled;
     } catch (error) {
-      // A C4 failure must surface as a webhook failure so Stripe retries it.
+      // A C4 failure must surface as a retryable webhook failure: the route maps
+      // ApplianceLifecycleSyncError to HTTP 5xx so Stripe redelivers the event.
       logger.error(`[StripeService] Appliance lifecycle handling failed for ${event.id}:`, error);
-      throw error;
+      throw new ApplianceLifecycleSyncError(
+        `Appliance lifecycle handling failed for ${event.id}: ${error instanceof Error ? error.message : String(error)}`,
+        error,
+      );
     }
   }
 

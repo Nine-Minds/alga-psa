@@ -25,7 +25,9 @@
       "inactive": "Inactive",
       "loading": "Loading...",
       "na": "N/A",
-      "none": "None"
+      "none": "None",
+      "yes": "Yes",
+      "no": "No"
     },
     "no": "No",
     "yes": "Yes"
@@ -36,6 +38,20 @@
       "offline": "Offline",
       "overdue": "Overdue",
       "unknown": "Unknown"
+    },
+    "rmaStatus": {
+      "open": "Open",
+      "awaiting_return": "Awaiting return",
+      "returned": "Returned",
+      "sent_to_vendor": "Sent to vendor",
+      "replacement_received": "Replacement received",
+      "replacement_deployed": "Replacement deployed",
+      "dead_unit_owed": "Dead unit owed",
+      "dead_unit_returned": "Dead unit returned",
+      "replaced": "Replaced",
+      "credited": "Credited",
+      "charged": "Charged",
+      "closed": "Closed"
     }
   },
   "assetAlertsSection": {
@@ -127,7 +143,10 @@
       "actions": "Actions",
       "patching": "Patching",
       "coverage": "Coverage",
-      "assignedTo": "Assigned to"
+      "assignedTo": "Assigned to",
+      "manufacturer": "Manufacturer",
+      "model": "Model",
+      "group": "Group"
     },
     "metrics": {
       "totalAssets": {
@@ -172,18 +191,14 @@
       "rmmManaged": {
         "managed": "RMM Managed",
         "unmanaged": "Not Managed"
-      }
+      },
+      "allGroups": "All groups"
     },
     "activeFilters": {
       "status": "Status: {{value}}",
       "type": "Type: {{value}}",
       "client": "Client: {{value}}",
       "agent": "Agent: {{value}}"
-    },
-    "statuses": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "maintenance": "Maintenance"
     },
     "types": {
       "workstation": "Workstation",
@@ -229,7 +244,9 @@
         "delete": "Delete",
         "selectedCount": "{{count}} selected",
         "setLocation": "Set location",
-        "setStatus": "Set status"
+        "setStatus": "Set status",
+        "assignContact": "Assign to contact",
+        "addToGroup": "Add to group"
       },
       "actions": {
         "apply": "Apply",
@@ -237,7 +254,8 @@
         "deleteAssets": "Delete",
         "deleting": "Deleting...",
         "updateLocation": "Location update",
-        "updateStatus": "Status update"
+        "updateStatus": "Status update",
+        "assignContact": "Assignment"
       },
       "deleteDialog": {
         "description": "Delete {{count}} selected asset(s). Assets with dependencies may be skipped.",
@@ -246,7 +264,8 @@
       "errors": {
         "deleteFailed": "Unable to delete selected assets.",
         "updateLocationFailed": "Unable to update selected asset locations.",
-        "updateStatusFailed": "Unable to update selected assets."
+        "updateStatusFailed": "Unable to update selected assets.",
+        "assignFailed": "Unable to assign selected assets."
       },
       "locationDialog": {
         "clearLocation": "Clear location",
@@ -264,7 +283,16 @@
         "description": "Update {{count}} selected asset(s).",
         "title": "Set asset status"
       },
-      "success": "{{action}} completed for {{count}} asset(s)."
+      "success": "{{action}} completed for {{count}} asset(s).",
+      "assignDialog": {
+        "title": "Assign to contact",
+        "description": "Assign {{count}} selected asset(s) to one of this client’s contacts."
+      },
+      "groupDialog": {
+        "title": "Add to group",
+        "description": "Add {{count}} selected asset(s) to one of this client’s groups, or create a new one.",
+        "newGroup": "Create a new group"
+      }
     }
   },
   "assetDashboardGrid": {
@@ -289,11 +317,6 @@
     "helper": {
       "awaitingSelection": "Awaiting asset selection",
       "selectedAsset": "{{name}} • {{tab}}"
-    },
-    "statuses": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "maintenance": "Maintenance"
     },
     "empty": {
       "selectAsset": "Select an asset to view details",
@@ -349,7 +372,13 @@
       "status": "Status",
       "created": "Created",
       "updated": "Updated",
-      "tenant": "Tenant"
+      "tenant": "Tenant",
+      "manufacturer": "Manufacturer",
+      "model": "Model",
+      "assignedTo": "Assigned to",
+      "group": "Group",
+      "groupSharedWorkspace": "{{name}} · shared workspace",
+      "groupBundle": "{{name}} · bundle"
     },
     "typeDetails": {
       "workstation": "Workstation details",
@@ -578,7 +607,8 @@
     "actions": {
       "viewClient": "View client",
       "manageClientLocations": "Manage client locations",
-      "saveChanges": "Save Changes"
+      "saveChanges": "Save Changes",
+      "createVendor": "Create vendor"
     },
     "alerts": {
       "noLocationsSaved": "This client doesn’t have any saved locations yet. Use custom entry or create one from the client record."
@@ -586,7 +616,8 @@
     "sections": {
       "basicInformation": "Basic Information",
       "clientAndLocation": "Client & Location",
-      "assetBasics": "Asset Basics"
+      "assetBasics": "Asset Basics",
+      "procurement": "Make & Purchase"
     },
     "fields": {
       "customLocationOption": "Custom location",
@@ -627,7 +658,12 @@
       "purchaseDate": "Purchase Date",
       "warrantyEndDate": "Warranty End Date",
       "assetType": "Type",
-      "assignedTo": "Assigned to"
+      "assignedTo": "Assigned to",
+      "manufacturer": "Manufacturer",
+      "vendor": "Vendor",
+      "purchaseCost": "Purchase cost",
+      "orderNumber": "Order no.",
+      "billingProfile": "Billing profile"
     },
     "placeholders": {
       "loadingClients": "Loading clients…",
@@ -639,7 +675,11 @@
       "selectPurchaseDate": "Select purchase date",
       "selectWarrantyEndDate": "Select warranty end date",
       "loadingContacts": "Loading contacts…",
-      "selectContact": "Select a contact"
+      "selectContact": "Select a contact",
+      "noVendor": "No vendor",
+      "selectVendor": "Select a vendor",
+      "purchaseCost": "0.00",
+      "clientDefaultProfile": "Client default"
     },
     "statusOptions": {
       "active": "Active",
@@ -791,7 +831,8 @@
       "save": "Save",
       "label": "Button label",
       "template": "URL template",
-      "tokens": "Use {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name}, and {field.<key>} with custom field keys defined in Settings → Assets → Asset types.",
+      "ninjaExample": "NinjaOne device dashboard example: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Replace the host with your NinjaOne region: app, eu, ca, oc or us2 .ninjarmm.com.",
+      "tokens": "Use {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name}, and {field.<key>} with custom field keys defined in Settings → Assets → Asset types.",
       "errors": {
         "load": "Failed to load remote access links.",
         "save": "Failed to save the remote access link.",
@@ -924,7 +965,9 @@
       "description": "Description",
       "board": "Board",
       "status": "Status",
-      "priority": "Priority"
+      "priority": "Priority",
+      "contact": "Contact",
+      "unnamedContact": "Unnamed contact"
     },
     "placeholders": {
       "title": "Enter ticket title",
@@ -935,7 +978,8 @@
       "loadingStatuses": "Loading statuses...",
       "selectStatus": "Select status...",
       "loadingPriorities": "Loading priorities...",
-      "selectPriority": "Select priority..."
+      "selectPriority": "Select priority...",
+      "selectContact": "Select contact..."
     },
     "errors": {
       "loadPriorities": "Failed to load priorities",
@@ -993,7 +1037,11 @@
       "serialNumber": "Serial Number",
       "customLocationOption": "Custom location",
       "location": "Location",
-      "assignedTo": "Assigned to"
+      "assignedTo": "Assigned to",
+      "manufacturer": "Manufacturer",
+      "vendor": "Vendor",
+      "purchaseCost": "Purchase cost",
+      "orderNumber": "Order no."
     },
     "placeholders": {
       "workstationOsType": "e.g., Windows, macOS, Linux",
@@ -1015,7 +1063,13 @@
       "selectClientFirst": "Select a client first",
       "selectLocation": "Select location",
       "loadingContacts": "Loading contacts...",
-      "selectContact": "Select contact"
+      "selectContact": "Select contact",
+      "manufacturer": "e.g., Lenovo",
+      "modelName": "e.g., ThinkPad T14",
+      "noVendor": "No vendor",
+      "selectVendor": "Select vendor",
+      "purchaseCost": "0.00",
+      "orderNumber": "Enter order number"
     },
     "sections": {
       "typeSpecificDetails": "Type-specific Details"
@@ -1110,7 +1164,8 @@
       "unknown": "Unknown",
       "unifiedMemory": "{{size}}GB Unified Memory",
       "memoryUsed": " ({{size}}GB Used)",
-      "freeStorage": "{{size}} GB Free"
+      "freeStorage": "{{size}} GB Free",
+      "totalStorage": "{{size}} GB"
     },
     "empty": "No hardware data available",
     "emptyStorage": "No storage drives detected"
@@ -1512,7 +1567,28 @@
     "compliance": "Compliance",
     "lastDone": "Last done",
     "noMaintenance": "Nothing scheduled.",
-    "docsHint": "Attachments and credentials for this asset."
+    "docsHint": "Attachments and credentials for this asset.",
+    "rmmUser": {
+      "looksLike": "· Looks like {{contact}}",
+      "mapDialogDescription": "“{{user}}” will be remembered for this RMM organization.",
+      "mapDialogTitle": "Map signed-in user to a contact",
+      "mapFailed": "Unable to save the mapping.",
+      "mapToContact": "Map to contact…"
+    },
+    "manufacturer": "Manufacturer",
+    "model": "Model",
+    "vendor": "Vendor",
+    "purchaseCost": "Purchase cost",
+    "orderNumber": "Order no.",
+    "assignedTo": "Assigned to",
+    "unassigned": "Unassigned",
+    "assign": "Assign",
+    "unassign": "Unassign",
+    "aContact": "Contact",
+    "assignDialogTitle": "Assign this asset",
+    "sharedWorkspace": "Shared workspace",
+    "sharedWorkspaceValue": "{{name}} · {{count}} people",
+    "billingProfile": "Billing profile"
   },
   "assetTimeline": {
     "title": "Timeline",
@@ -1531,7 +1607,18 @@
       "lastReboot": "Last reboot",
       "patchScan": "Patch scan",
       "patchScanDetail": "{{pending}} pending, {{failed}} failed",
-      "purchased": "Purchased"
+      "purchased": "Purchased",
+      "assignedTo": "Assigned to {{contact}}",
+      "unassigned": "Unassigned",
+      "autoAssigned": "Auto-assigned to {{contact}} from the signed-in user",
+      "assignedViaBundle": "Assigned to {{contact}} via bundle {{group}}",
+      "aContact": "a contact",
+      "groupAdded": "Added to {{group}}",
+      "groupRemoved": "Removed from {{group}}",
+      "aGroup": "a group",
+      "autoAssignedFrom": "Auto-assigned to {{contact}} from {{provider}}",
+      "groupLocationMoved": "Moved to {{location}} with {{group}}",
+      "groupLocationCleared": "Location cleared with {{group}}"
     },
     "changeTypes": {
       "created": "Created",
@@ -1585,11 +1672,6 @@
     },
     "coverage": {
       "noWarrantyDate": "no warranty date"
-    },
-    "status": {
-      "active": "active",
-      "inactive": "inactive",
-      "maintenance": "maintenance"
     }
   },
   "errors": {
@@ -1599,7 +1681,10 @@
       "manageAssetTypes": "Permission denied: Cannot manage asset types",
       "readDocuments": "Permission denied: Cannot read asset documents",
       "associateDocuments": "Permission denied: Cannot associate documents with assets",
-      "removeDocuments": "Permission denied: Cannot remove documents from assets"
+      "removeDocuments": "Permission denied: Cannot remove documents from assets",
+      "readAssetStatuses": "Permission denied: Cannot read asset statuses",
+      "manageAssetStatuses": "Permission denied: Cannot manage asset statuses",
+      "updateAssets": "Permission denied: Cannot update assets"
     },
     "asset": {
       "notFoundRefresh": "Asset not found. It may have been deleted. Please refresh and try again.",
@@ -1619,7 +1704,21 @@
       "notAllowed": "One of the asset values is not allowed. Please review the form and try again.",
       "missingField": "Missing required asset field.",
       "missingFieldNamed": "Missing required asset field: {{field}}.",
-      "contactUnavailable": "Selected contact is not available for this client."
+      "contactUnavailable": "Selected contact is not available for this client.",
+      "vendorUnavailable": "Selected vendor is not available.",
+      "workspaceMember": "This asset belongs to a shared workspace, so it cannot be assigned to one person.",
+      "billingProfileUnavailable": "Selected billing profile is not available for this client."
+    },
+    "assetGroup": {
+      "not_found": "Asset group not found.",
+      "invalid_kind": "That group kind is not available.",
+      "invalid_name": "Group name is required.",
+      "client_mismatch": "That asset or contact belongs to another client.",
+      "already_grouped": "That asset is already in another group.",
+      "users_on_bundle": "A bundle has one owner, not a list of users.",
+      "owner_on_workspace": "A shared workspace has users, not an owner.",
+      "users_present": "Remove the workspace users before turning this into a bundle.",
+      "invalid_location": "That location is not available for this client."
     }
   },
   "clientAssetMultiSelect": {
@@ -1631,5 +1730,133 @@
     "empty": "No matching assets for this client",
     "loading": "Loading...",
     "remove": "Remove asset"
+  },
+  "inventoryProvenance": {
+    "title": "Inventory provenance",
+    "fields": {
+      "product": {
+        "label": "Product"
+      },
+      "serial": {
+        "label": "Serial"
+      },
+      "mac": {
+        "label": "MAC"
+      },
+      "originSalesOrder": {
+        "label": "Origin sales order"
+      },
+      "delivered": {
+        "label": "Delivered"
+      }
+    },
+    "rmaHistory": {
+      "title": "RMA history"
+    },
+    "emptyValue": "—",
+    "rmaLabel": "RMA"
+  },
+  "skeletons": {
+    "assetForm": {
+      "loading": "Loading asset form..."
+    }
+  },
+  "assetStatuses": {
+    "active": "Active",
+    "in_stock": "In stock",
+    "maintenance": "In maintenance",
+    "inactive": "Inactive",
+    "retired": "Retired"
+  },
+  "assetStatusKinds": {
+    "deployable": "Deployable",
+    "pending": "Pending",
+    "undeployable": "Undeployable",
+    "archived": "Archived"
+  },
+  "assetStatusSettings": {
+    "title": "Asset statuses",
+    "description": "The lifecycle states assets can be in. RMM sync never overwrites them after a device is created.",
+    "empty": "No asset statuses yet.",
+    "addTitle": "Add status",
+    "editTitle": "Edit status",
+    "columns": {
+      "label": "Status",
+      "kind": "Lifecycle",
+      "builtin": "Built-in",
+      "inUse": "In use",
+      "actions": "Actions"
+    },
+    "fields": {
+      "label": "Label",
+      "kind": "Lifecycle"
+    },
+    "actions": {
+      "add": "Add status",
+      "rename": "Rename",
+      "archive": "Archive",
+      "openMenu": "Open menu",
+      "restore": "Restore",
+      "archiveBlocked": "Archive · {{count}} asset(s) still on it",
+      "reorder": "Reorder {{label}} — drag, or press the up and down arrow keys",
+      "dragToReorder": "Drag to reorder"
+    },
+    "confirmArchiveTitle": "Archive this status?",
+    "confirmArchiveMessage": "Archive \"{{label}}\"? It stops being offered on every asset form. You can restore it later.",
+    "errors": {
+      "load": "Unable to load asset statuses",
+      "inUse": "Still used by {{count}} asset(s). Move them to another status first.",
+      "duplicate": "A status with that name already exists.",
+      "invalidKind": "Choose a lifecycle for this status.",
+      "invalidLabel": "Enter a name with at least one letter or digit.",
+      "notFound": "That status no longer exists. Refresh and try again.",
+      "save": "Unable to save the status."
+    }
+  },
+  "contactAssets": {
+    "title": "Assets",
+    "empty": "No assets assigned to this contact.",
+    "sharedWorkspaces": "Shared workspaces",
+    "memberCount_one": "{{count}} asset",
+    "memberCount_other": "{{count}} assets"
+  },
+  "assetGroups": {
+    "kinds": {
+      "bundle": "Bundle",
+      "shared_workspace": "Shared workspace"
+    },
+    "drawerTitle": "Group",
+    "fields": {
+      "name": "Name",
+      "kind": "Kind",
+      "location": "Location",
+      "owner": "Owner",
+      "users": "Users",
+      "members": "Members"
+    },
+    "sections": {
+      "people": "People",
+      "members": "Members"
+    },
+    "addAssets": "Add assets",
+    "addUser": "Add a person",
+    "noLocation": "No location",
+    "locationHelp": "Changing the location moves every member of the group.",
+    "deleteHelp": "Members keep their current assignee and location.",
+    "actions": {
+      "manage": "Manage",
+      "delete": "Delete group",
+      "addToGroup": "Add to group"
+    },
+    "confirmUnassignTitle": "Unassign these assets?",
+    "confirmUnassignMessage": "A shared workspace has users rather than one assignee, so {{count}} asset(s) will be unassigned.",
+    "confirmKindTitle": "Turn this into a shared workspace?",
+    "confirmKindMessage": "A shared workspace has users rather than one owner, so every member will be unassigned.",
+    "confirmDeleteTitle": "Delete this group?",
+    "confirmDeleteMessage": "Delete \"{{name}}\"? Members keep their current assignee and location.",
+    "errors": {
+      "createFailed": "Unable to create the group.",
+      "addFailed": "Unable to add the selected assets."
+    }
   }
 }

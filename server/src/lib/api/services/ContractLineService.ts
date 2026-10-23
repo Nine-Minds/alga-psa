@@ -12,6 +12,10 @@ import { IContractLineServiceConfiguration } from 'server/src/interfaces/contrac
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { cloneTemplateContractLine } from '@alga-psa/billing/lib/billing/utils/templateClone';
+import {
+  upsertContractLinePrepaidBlockInTransaction,
+  removeContractLinePrepaidBlockInTransaction,
+} from '@alga-psa/billing/services/prepaidBlockConfigService';
 import { getFixedServiceBasisIssue, isUnitFixedService } from '@alga-psa/billing/lib/fixedServiceBasis';
 
 // Import existing models and actions for integration
@@ -27,7 +31,8 @@ import {
   DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
   resolveRecurringAuthoringPolicy,
 } from '@shared/billingClients/recurringAuthoringPolicy';
-import { normalizeTemplateRecurringStorage } from '@shared/billingClients/recurrenceStorageModel';
+import { normalizeRecurringStorageForLineType } from '@shared/billingClients/recurrenceStorageModel';
+import { resolveEffectiveBillingTiming } from '@shared/billingClients/contractLineTimingRule';
 import { resolveCadenceOwner } from '@shared/billingClients/recurringTiming';
 import { resolveBillingCycleAlignmentForCompatibility } from '@shared/billingClients/billingCycleAlignmentCompatibility';
 
@@ -83,6 +88,62 @@ function normalizeContractLineCompatibility<T extends { service_category?: unkno
     service_category: plan.service_category || undefined,
     cadence_owner: resolveCadenceOwner(plan.cadence_owner),
   };
+}
+
+const PREPAID_BLOCK_API_COLUMNS = [
+  'block_minutes',
+  'block_price',
+  'sold_as_service_id',
+  'expiry_months',
+  'trigger_on_exhaustion',
+  'trigger_threshold_percent',
+  'trigger_on_expiry',
+  'trigger_on_renewal',
+  'replenishment_tier',
+] as const;
+
+/**
+ * Attach the optional Prepaid Block overlay (`prepaid_block`, null when absent) and the
+ * derived `display_kind` to Hourly lines. Never persisted; the stored type stays unchanged.
+ */
+async function attachPrepaidBlocks<T extends { contract_line_id?: string; contract_line_type?: string }>(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  plans: T[],
+): Promise<Array<T & { prepaid_block: Record<string, unknown> | null; display_kind: string | undefined }>> {
+  const hourlyIds = plans
+    .filter((p) => p.contract_line_type === 'Hourly' && p.contract_line_id)
+    .map((p) => p.contract_line_id as string);
+  const byLine = new Map<string, Record<string, unknown>>();
+  if (hourlyIds.length > 0) {
+    const rows = await tenantDb(trx, tenant).table('contract_line_prepaid_blocks')
+      .whereIn('contract_line_id', hourlyIds)
+      .select('contract_line_id', ...PREPAID_BLOCK_API_COLUMNS);
+    for (const row of rows) {
+      const { contract_line_id, ...config } = row as Record<string, unknown>;
+      byLine.set(contract_line_id as string, config);
+    }
+  }
+  return plans.map((p) => {
+    const prepaid_block = p.contract_line_id ? byLine.get(p.contract_line_id) ?? null : null;
+    return {
+      ...p,
+      prepaid_block,
+      display_kind: prepaid_block ? 'PrepaidBlock' : p.contract_line_type,
+    };
+  });
+}
+
+/** Run a config-service call and surface its rule violations as API validation errors. */
+async function runPrepaidBlockWrite<R>(fn: () => Promise<R>): Promise<R> {
+  try {
+    return await fn();
+  } catch (error) {
+    if (error instanceof Error && !(error instanceof NotFoundError) && !(error instanceof ConflictError)) {
+      throw new ValidationError(error.message);
+    }
+    throw error;
+  }
 }
 
 function throwPlanServiceConfigurationApiError(error: unknown): never {
@@ -260,7 +321,11 @@ export class ContractLineService extends BaseService<IContractLine> {
       ]);
   
       // Transform null to undefined for compatibility
-      const transformedPlans = plans.map((plan: any) => normalizeContractLineCompatibility(plan));
+      const transformedPlans = await attachPrepaidBlocks(
+        knex,
+        context.tenant,
+        plans.map((plan: any) => normalizeContractLineCompatibility(plan)),
+      );
   
       // Add HATEOAS links
       const plansWithLinks = transformedPlans.map((plan: any) => 
@@ -316,7 +381,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         }
     
         // Transform null to undefined for compatibility
-        const transformedPlan = normalizeContractLineCompatibility(plan);
+        const [transformedPlan] = await attachPrepaidBlocks(knex, context.tenant, [normalizeContractLineCompatibility(plan)]);
     
         // Add HATEOAS links
         return addHateoasLinks(transformedPlan, this.generatePlanLinks(id, context)) as ContractLineResponse;
@@ -334,7 +399,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       const { knex } = await this.getKnex();
       
       const result = await withTransaction(knex, async (trx) => {
-        const planData = this.addCreateAuditFields(data, context);
+        const planData = await this.addCreateAuditFields(trx, data, context);
         planData.contract_line_id = uuidv4();
 
         const baseRate = (data as any).base_rate ?? planData.custom_rate ?? null;
@@ -344,6 +409,7 @@ export class ContractLineService extends BaseService<IContractLine> {
           enableProration,
         });
         const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+          lineType: (data as any).contract_line_type ?? planData.contract_line_type ?? null,
           cadenceOwner: data.cadence_owner ?? planData.cadence_owner,
           defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
           billingTiming: (data as { billing_timing?: 'arrears' | 'advance' }).billing_timing,
@@ -359,7 +425,15 @@ export class ContractLineService extends BaseService<IContractLine> {
 
         delete (planData as any).base_rate;
 
-        const [contractLine] = await tenantDb(trx, context.tenant).table('contract_lines').insert(planData).returning('*');
+        // Prepaid Block config needs the line's services, which do not exist yet at creation.
+        if ((data as any).prepaid_block) {
+          throw new ValidationError(
+            'prepaid_block cannot be set when creating a contract line: add the line\'s services first, then PUT the line with prepaid_block.',
+          );
+        }
+        delete (planData as any).prepaid_block;
+
+        const [contractLine] = await tenantDb(trx, context.tenant).table('contract_lines').insert(await this.filterAuditFields(trx, planData)).returning('*');
 
         return {
           contractLineId: contractLine.contract_line_id,
@@ -401,8 +475,9 @@ export class ContractLineService extends BaseService<IContractLine> {
         const existingPlan = await this.getExistingPlan(id, context, trx);
         
         // Prepare update data
-        const updateData = this.addUpdateAuditFields(data, context);
+        const updateData = await this.addUpdateAuditFields(trx, data, context);
         const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+          lineType: (data as any).contract_line_type ?? existingPlan.contract_line_type ?? null,
           cadenceOwner: data.cadence_owner,
           fallbackCadenceOwner: existingPlan.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
           billingTiming: (data as { billing_timing?: 'arrears' | 'advance' }).billing_timing,
@@ -419,18 +494,34 @@ export class ContractLineService extends BaseService<IContractLine> {
           delete updateData.round_up_to_nearest;
         }
         
+        // prepaid_block is an overlay table, never a contract_lines column.
+        const prepaidBlockInput = (data as any).prepaid_block as Record<string, unknown> | null | undefined;
+        delete (updateData as any).prepaid_block;
+        if (prepaidBlockInput !== undefined && existingPlan.contract_line_type !== 'Hourly') {
+          throw new ValidationError('prepaid_block is only supported on Hourly contract lines.');
+        }
+
         // Update the plan
         const [updatedPlan] = await tenantDb(trx, context.tenant).table('contract_lines')
           .where('contract_line_id', id)
-          .update(updateData)
+          .update(await this.filterAuditFields(trx, updateData))
           .returning('*');
         
         if (!updatedPlan) {
           throw new NotFoundError('Plan not found');
         }
+
+        if (prepaidBlockInput === null) {
+          await runPrepaidBlockWrite(() => removeContractLinePrepaidBlockInTransaction(trx, context.tenant, id));
+        } else if (prepaidBlockInput) {
+          await runPrepaidBlockWrite(() =>
+            upsertContractLinePrepaidBlockInTransaction(trx, context.tenant, id, prepaidBlockInput as any),
+          );
+        }
         
         // Transform null to undefined for compatibility
-        return normalizeContractLineCompatibility(updatedPlan) as IContractLine;
+        const [withBlock] = await attachPrepaidBlocks(trx, context.tenant, [normalizeContractLineCompatibility(updatedPlan)]);
+        return withBlock as unknown as IContractLine;
       });
     }
   
@@ -452,8 +543,9 @@ export class ContractLineService extends BaseService<IContractLine> {
         await this.validatePlanUpdate(id, data, existingPlan, context, trx);
         
         // Prepare update data
-        const updateData = this.addUpdateAuditFields(data, context);
+        const updateData = await this.addUpdateAuditFields(trx, data, context);
         const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+          lineType: (data as any).contract_line_type ?? existingPlan.contract_line_type ?? null,
           cadenceOwner: data.cadence_owner,
           fallbackCadenceOwner: existingPlan.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
           billingTiming: data.billing_timing,
@@ -470,18 +562,33 @@ export class ContractLineService extends BaseService<IContractLine> {
           delete updateData.round_up_to_nearest;
         }
         
+        // prepaid_block is an overlay table, never a contract_lines column.
+        const prepaidBlockInput = (data as any).prepaid_block as Record<string, unknown> | null | undefined;
+        delete (updateData as any).prepaid_block;
+        if (prepaidBlockInput !== undefined && existingPlan.contract_line_type !== 'Hourly') {
+          throw new ValidationError('prepaid_block is only supported on Hourly contract lines.');
+        }
+
         // Update the plan
         const [updatedPlan] = await tenantDb(trx, context.tenant).table('contract_lines')
           .where('contract_line_id', id)
-          .update(updateData)
+          .update(await this.filterAuditFields(trx, updateData))
           .returning('*');
         
         if (!updatedPlan) {
           throw new NotFoundError('Plan not found');
         }
+
+        if (prepaidBlockInput === null) {
+          await runPrepaidBlockWrite(() => removeContractLinePrepaidBlockInTransaction(trx, context.tenant, id));
+        } else if (prepaidBlockInput) {
+          await runPrepaidBlockWrite(() =>
+            upsertContractLinePrepaidBlockInTransaction(trx, context.tenant, id, prepaidBlockInput as any),
+          );
+        }
         
         // Transform null to undefined for compatibility
-        const transformedPlan = normalizeContractLineCompatibility(updatedPlan);
+        const [transformedPlan] = await attachPrepaidBlocks(trx, context.tenant, [normalizeContractLineCompatibility(updatedPlan)]);
         
         return addHateoasLinks(transformedPlan, this.generatePlanLinks(id, context)) as ContractLineResponse;
       });
@@ -655,12 +762,16 @@ export class ContractLineService extends BaseService<IContractLine> {
             throw new ValidationError('custom_rate and type_config.base_rate disagree; provide the unit rate once');
           }
           const unitRate = explicitBaseRate ?? data.custom_rate ?? null;
-          typeConfig = { ...requestedTypeConfig, pricing_basis: 'unit', base_rate: unitRate };
+          typeConfig = { ...requestedTypeConfig, pricing_basis: 'unit', base_rate: unitRate, base_rate_basis: 'per_unit' };
           // A second, conflicting price on the base configuration would be
           // ambiguous; the per-unit rate is the only price.
           customRate = undefined;
         } else if (pricingBasis !== undefined && pricingBasis !== 'bundle') {
           throw new ValidationError(`Unsupported pricing basis: ${pricingBasis}`);
+        } else if (configurationType === 'Fixed' && typeConfig.base_rate != null && typeConfig.base_rate_basis == null) {
+          // A bundle member's stored rate must state its meaning. The API's
+          // documented sense of base_rate is the unit rate.
+          typeConfig = { ...typeConfig, base_rate_basis: 'per_unit' };
         }
 
         if (configurationType === 'Fixed') {
@@ -777,6 +888,10 @@ export class ContractLineService extends BaseService<IContractLine> {
           typeConfig = restTypeConfig;
           // custom_rate is the unit-rate alias for a per-unit service (see addServiceToPlan).
           const isUnit = isUnitFixedService({ pricing_basis: storedBasis });
+          if (typeConfig.base_rate != null && typeConfig.base_rate_basis == null && !fixed?.base_rate_basis) {
+            // Nothing stored and nothing stated: the API's documented unit-rate sense.
+            typeConfig = { ...typeConfig, base_rate_basis: 'per_unit' };
+          }
           if (isUnit && typeConfig.base_rate != null && data.custom_rate != null && typeConfig.base_rate !== data.custom_rate) {
             throw new ValidationError('custom_rate and type_config.base_rate disagree; provide the unit rate once');
           }
@@ -981,24 +1096,22 @@ export class ContractLineService extends BaseService<IContractLine> {
       // `client_id` is the public alias for the owning client; it maps onto
       // `owner_client_id` below and must not re-enter the insert via `...rest`.
       const { contract_description, client_id: _clientId, ...rest } = data as any;
-      const contractData = await this.filterAuditFields(
+      const contractData = await this.addCreateAuditFields(
         trx,
-        this.addCreateAuditFields(
-          {
-            contract_id: uuidv4(),
-            ...rest,
-            contract_description,
-            owner_client_id: ownerClientId,
-            start_date: data.start_date,
-            end_date: data.end_date,
-            // The owning client is enforced, so this is a non-template contract.
-            // Explicitly flag it (the column defaults to true) so non-template
-            // listings/reports that filter on is_template don't silently drop it.
-            is_template: false,
-            status: data.status ?? 'draft',
-          },
-          context
-        ),
+        {
+          contract_id: uuidv4(),
+          ...rest,
+          contract_description,
+          owner_client_id: ownerClientId,
+          start_date: data.start_date,
+          end_date: data.end_date,
+          // The owning client is enforced, so this is a non-template contract.
+          // Explicitly flag it (the column defaults to true) so non-template
+          // listings/reports that filter on is_template don't silently drop it.
+          is_template: false,
+          status: data.status ?? 'draft',
+        },
+        context,
         'contracts'
       );
 
@@ -1183,12 +1296,13 @@ export class ContractLineService extends BaseService<IContractLine> {
       // The template link stays as provenance on the assignment/response, but
       // recurring cadence fields are copied onto the live line and do not keep
       // following future template edits.
-      const templateRecurringStorage = normalizeTemplateRecurringStorage({
+      // LEVERAGE: pattern recurring-storage-copy — copy sites each re-derive (billing_timing, cadence_owner) from the source row; a shared copy helper would remove the repeated per-site normalization
+      const templateRecurringStorage = normalizeRecurringStorageForLineType({
         billing_timing: templateLine.billing_timing,
         cadence_owner: templateLine.cadence_owner,
-      });
+      }, templateLine.contract_line_type);
       const newContractLineId = uuidv4();
-      const contractLineData = this.addCreateAuditFields({
+      const contractLineData = await this.addCreateAuditFields(trx, {
         contract_line_id: newContractLineId,
         contract_id: targetContractId,
         contract_line_name: templateLine.contract_line_name,
@@ -1211,7 +1325,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       }, context);
 
       const [newContractLine] = await tenantDb(trx, context.tenant).table('contract_lines')
-        .insert(contractLineData)
+        .insert(await this.filterAuditFields(trx, contractLineData))
         .returning('*');
 
       // LEVERAGE: pattern template-clone-substrate — legacy clone path; see cloneTemplateLineToContract (alga-2026-0002371).
@@ -1265,13 +1379,13 @@ export class ContractLineService extends BaseService<IContractLine> {
       // Check if there are pending invoices or active usage
       await this.validateSafeUnassignment(clientContractLineId, assignment.client_id, context, trx);
 
-      const updateData = this.addUpdateAuditFields({
+      const updateData = await this.addUpdateAuditFields(trx, {
         is_active: false
       }, context);
 
       await tenantDb(trx, context.tenant).table('contract_lines')
         .where('contract_line_id', clientContractLineId)
-        .update(updateData);
+        .update(await this.filterAuditFields(trx, updateData));
     });
   }
 
@@ -1301,14 +1415,14 @@ export class ContractLineService extends BaseService<IContractLine> {
       }
       
       // Update plan activation status
-      const updateData = this.addUpdateAuditFields({
+      const updateData = await this.addUpdateAuditFields(trx, {
         is_active: data.is_active
       }, context);
       updateData.cadence_owner = resolveCadenceOwner(plan.cadence_owner);
       
       const [updatedPlan] = await tenantDb(trx, context.tenant).table('contract_lines')
         .where('contract_line_id', planId)
-        .update(updateData)
+        .update(await this.filterAuditFields(trx, updateData))
         .returning('*');
       
       return addHateoasLinks(
@@ -1336,8 +1450,10 @@ export class ContractLineService extends BaseService<IContractLine> {
       const sourcePlan = await this.getExistingPlan(data.source_contract_line_id, context, trx);
       
       // Create new plan
+// LEVERAGE: pattern recurring-storage-copy — copy sites each re-derive (billing_timing, cadence_owner) from the source row; a shared copy helper would remove the repeated per-site normalization
       const newPlanData = {
         ...sourcePlan,
+        billing_timing: resolveEffectiveBillingTiming(sourcePlan.contract_line_type, sourcePlan.billing_timing),
         contract_line_id: uuidv4(),
         contract_line_name: data.new_contract_line_name,
         is_custom: true,
@@ -1348,9 +1464,9 @@ export class ContractLineService extends BaseService<IContractLine> {
       };
       
       delete newPlanData.tenant; // Will be set by addCreateAuditFields
-      const auditedData = this.addCreateAuditFields(newPlanData, context);
+      const auditedData = await this.addCreateAuditFields(trx, newPlanData, context);
       
-      const [newPlan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(auditedData).returning('*');
+      const [newPlan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(await this.filterAuditFields(trx, auditedData)).returning('*');
       
       // Copy services if requested
       if (data.copy_services) {
@@ -1376,11 +1492,11 @@ export class ContractLineService extends BaseService<IContractLine> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      const templateData = this.addCreateAuditFields({
+      const templateData = await this.addCreateAuditFields(trx, {
         template_id: uuidv4(),
         ...data,
         created_by: context.userId
-      }, context);
+      }, context, 'plan_templates');
       
       const [template] = await tenantDb(trx, context.tenant).table('plan_templates').insert(templateData).returning('*');
       
@@ -1423,7 +1539,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       }
       
       // Create plan from template
-      const planData = this.addCreateAuditFields({
+      const planData = await this.addCreateAuditFields(trx, {
         contract_line_id: uuidv4(),
         contract_line_name: data.contract_line_name,
         contract_line_type: template.contract_line_type,
@@ -1431,7 +1547,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         is_custom: true
       }, context);
       
-      const [newPlan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(planData).returning('*');
+      const [newPlan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(await this.filterAuditFields(trx, planData)).returning('*');
       
       // Add template services
       const templateServices = await tenantDb(trx, context.tenant).table('template_services')
@@ -1567,12 +1683,12 @@ export class ContractLineService extends BaseService<IContractLine> {
           await this.validatePlanCreation(planData, context, trx);
           
           // Create plan
-          const auditedData = this.addCreateAuditFields({
+          const auditedData = await this.addCreateAuditFields(trx, {
             contract_line_id: uuidv4(),
             ...planData
           }, context);
           
-          const [plan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(auditedData).returning('*');
+          const [plan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(await this.filterAuditFields(trx, auditedData)).returning('*');
           results.push(addHateoasLinks(plan, this.generatePlanLinks(plan.contract_line_id, context)) as ContractLineResponse);
         }
         
@@ -2039,10 +2155,10 @@ export class ContractLineService extends BaseService<IContractLine> {
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
-    const templateRecurringStorage = normalizeTemplateRecurringStorage({
+    const templateRecurringStorage = normalizeRecurringStorageForLineType({
       billing_timing: templateLine.billing_timing,
       cadence_owner: templateLine.cadence_owner,
-    });
+    }, templateLine.contract_line_type);
     const clonedCustomRate = data.custom_rate ?? templateLine.custom_rate ?? null;
     const overlapping = await tenantDb(trx, context.tenant).table('contract_lines')
       .where('contract_id', targetContractId)
@@ -2138,7 +2254,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       // A per-unit service must stay per-unit in the copy: without its fixed
       // config it would be re-created as a bundle allocation and the seats
       // would silently stop billing.
-      let typeConfig: { pricing_basis: 'unit'; base_rate: number | null } | undefined;
+      let typeConfig: { pricing_basis: 'unit'; base_rate: number | null; base_rate_basis: 'per_unit' } | undefined;
       if (sourceService.configuration_type === 'Fixed') {
         const sourceFixed = await tenantDb(trx, context.tenant).table('contract_line_service_fixed_config')
           .where('config_id', sourceService.config_id)
@@ -2147,6 +2263,7 @@ export class ContractLineService extends BaseService<IContractLine> {
           const sourceRate = sourceFixed.base_rate == null ? null : Number(sourceFixed.base_rate);
           typeConfig = {
             pricing_basis: 'unit',
+            base_rate_basis: 'per_unit',
             base_rate: sourceRate === null ? null : Math.round(modifyRates ? adjust(sourceRate) : sourceRate),
           };
         }

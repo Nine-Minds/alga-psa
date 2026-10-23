@@ -58,6 +58,7 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
     createTenantKnex: vi.fn(async () => {
       const knex: any = {};
       knex.transaction = async (cb: any) => cb(knex);
+      knex.schema = { hasTable: async () => false };
       return { knex, tenant: 'tenant-qbo-spec' };
     }),
   };
@@ -81,6 +82,9 @@ const CLIENT_ID = 'client-qbo-spec';
 function makeKnexMock(): any {
   const knex: any = {};
   knex.transaction = async (cb: any) => cb(knex);
+  // Charge expansion probes for the mid-period adjustments table before it
+  // projects contract-change descriptions; these batches carry none.
+  knex.schema = { hasTable: async () => false };
   return knex;
 }
 

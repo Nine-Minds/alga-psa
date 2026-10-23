@@ -41,6 +41,12 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
   const searchParams = useSearchParams();
   const contractId = searchParams?.get('contractId') ?? null;
   const clientContractId = searchParams?.get('clientContractId') ?? null;
+  const routerRef = useRef(router);
+  routerRef.current = router;
+  const searchParamsRef = useRef(searchParams);
+  searchParamsRef.current = searchParams;
+  const translateRef = useRef(t);
+  translateRef.current = t;
 
   const [viewMode, setViewMode] = useState<ViewMode>('loading');
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +74,7 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
       if (!contractId && !clientContractId) {
         if (isMounted) {
           setViewMode('error');
-          setError(t('detailSwitcher.errors.missingContractIdentifier', { defaultValue: 'Missing contract identifier' }));
+          setError(translateRef.current('detailSwitcher.errors.missingContractIdentifier', { defaultValue: 'Missing contract identifier' }));
         }
         return;
       }
@@ -92,16 +98,14 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
           if (clientContract) {
             setResolvedContractId(clientContract.contract_id);
             if (!contractId) {
-              const params = new URLSearchParams(
-                typeof window === 'undefined' ? '' : window.location.search
-              );
+              const params = new URLSearchParams(searchParamsRef.current?.toString() ?? '');
               params.set('tab', 'client-contracts');
               params.set('clientContractId', clientContractId);
               params.set('contractId', clientContract.contract_id);
               // The redirect only adds the resolved contractId, so treat it as
               // already resolved and skip the re-run it would otherwise trigger.
               lastResolvedRef.current = { contractId: clientContract.contract_id, clientContractId };
-              router.replace(`/msp/billing?${params.toString()}`, { scroll: false });
+              routerRef.current.replace(`/msp/billing?${params.toString()}`, { scroll: false });
             }
             setViewMode('client');
             return;
@@ -110,7 +114,7 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
 
         if (!contractId) {
           setViewMode('error');
-          setError(t('detailSwitcher.errors.contractNotFound', { defaultValue: 'Contract not found' }));
+          setError(translateRef.current('detailSwitcher.errors.contractNotFound', { defaultValue: 'Contract not found' }));
           return;
         }
 
@@ -127,7 +131,7 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
 
         if (!contract) {
           setViewMode('error');
-          setError(t('detailSwitcher.errors.contractNotFound', { defaultValue: 'Contract not found' }));
+          setError(translateRef.current('detailSwitcher.errors.contractNotFound', { defaultValue: 'Contract not found' }));
           return;
         }
 
@@ -137,7 +141,7 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
         console.error('Failed to determine contract type', contractError);
         if (isMounted) {
           setViewMode('error');
-          setError(t('detailSwitcher.errors.unableToLoadContractDetails', {
+          setError(translateRef.current('detailSwitcher.errors.unableToLoadContractDetails', {
             defaultValue: 'Unable to load contract details',
           }));
         }
@@ -149,7 +153,7 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [clientContractId, contractId, router]);
+  }, [clientContractId, contractId]);
 
   if (!contractId && !clientContractId) {
     return (

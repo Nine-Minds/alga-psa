@@ -9,6 +9,7 @@ import { formatPhoneForDisplay, formatPhoneLabel } from '@alga-psa/validation';
 import { getAllContacts, getContactsByClient, getAllClients, searchContactListIds } from '@alga-psa/clients/actions';
 import { exportContactsToCSV, deleteContact, updateContact, getContactLastUsagePhoneTypes, deleteOrphanedPhoneTypes } from '@alga-psa/clients/actions';
 import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
+import { contactMatchesPhoneDigits, phoneSearchDigits } from '../../lib/contactSearchMatch';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
@@ -902,21 +903,26 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
   }, [searchTerm]);
 
   const filteredContacts = useMemo(() => {
+    const searchTermLower = searchTerm.toLowerCase();
+    // Mirrors the server legs in buildContactListSearchQuery so instant results
+    // match what the indexed search returns a moment later.
+    const searchDigits = phoneSearchDigits(searchTerm);
+    const matchesLocally = (contact: IContact): boolean => Boolean(
+      contact.full_name.toLowerCase().includes(searchTermLower) ||
+      (contact.email && contact.email.toLowerCase().includes(searchTermLower)) ||
+      contact.additional_email_addresses?.some((emailAddress) =>
+        emailAddress.email_address.toLowerCase().includes(searchTermLower)
+      ) ||
+      (contact.client_name && String(contact.client_name).toLowerCase().includes(searchTermLower)) ||
+      (contact.notes && contact.notes.toLowerCase().includes(searchTermLower)) ||
+      (searchDigits && contactMatchesPhoneDigits(contact, searchDigits))
+    );
+
     return contacts.filter(contact => {
-      const searchTermLower = searchTerm.toLowerCase();
       const matchesSearch = !searchTermLower ||
                           (indexedSearchContactIds
-                            ? indexedSearchContactIds.has(contact.contact_name_id) ||
-                              contact.full_name.toLowerCase().includes(searchTermLower) ||
-                              (contact.email && contact.email.toLowerCase().includes(searchTermLower)) ||
-                              contact.additional_email_addresses?.some((emailAddress) =>
-                                emailAddress.email_address.toLowerCase().includes(searchTermLower)
-                              )
-                            : contact.full_name.toLowerCase().includes(searchTermLower) ||
-                              (contact.email && contact.email.toLowerCase().includes(searchTermLower)) ||
-                              contact.additional_email_addresses?.some((emailAddress) =>
-                                emailAddress.email_address.toLowerCase().includes(searchTermLower)
-                              ));
+                            ? indexedSearchContactIds.has(contact.contact_name_id) || matchesLocally(contact)
+                            : matchesLocally(contact));
       const matchesStatus = filterStatus === 'all' ||
         (filterStatus === 'active' && !contact.is_inactive) ||
         (filterStatus === 'inactive' && contact.is_inactive);

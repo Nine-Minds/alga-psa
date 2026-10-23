@@ -378,6 +378,14 @@
       "customLayout": "Anpassad",
       "tenantDefault": "Organisationens standardinställning",
       "changeLayout": "Ändra"
+    },
+    "sectionTitles": {
+      "title": "Avsnittsrubriker för grupperad offert",
+      "description": "Valfria rubriker för layouten Standardoffert grupperad.",
+      "monthlyLabel": "Rubrik för månadsavsnitt",
+      "oneTimeLabel": "Rubrik för engångsavsnitt",
+      "monthlyPlaceholder": "Månadsvis",
+      "oneTimePlaceholder": "Engångsdebitering"
     }
   },
   "quoteDetail": {

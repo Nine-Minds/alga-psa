@@ -38,8 +38,7 @@ describe('ContractLineEditDialog i18n wiring contract', () => {
       'contractLineEdit.fields.rate',
       'contractLineEdit.sections.billingTiming',
       'contractLineEdit.fields.billingTimingQuestion',
-      'contractLineEdit.timingOptions.arrears',
-      'contractLineEdit.timingOptions.advance',
+      'billingTimingField.nonFixedHelp',
       'contractLineEdit.timingDescriptions.arrears',
       'contractLineEdit.timingDescriptions.advance',
       'contractLineEdit.validation.validRateRequired',
@@ -51,6 +50,14 @@ describe('ContractLineEditDialog i18n wiring contract', () => {
 
     for (const key of keyChecks) {
       expect(source).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+
+    // Timing options now come from the shared BillingTimingField.
+    expect(source).toContain('<BillingTimingField');
+    const timingSource = read('../../src/components/billing-dashboard/contracts/BillingTimingField.tsx');
+    for (const key of ['billingTimingField.options.arrears', 'billingTimingField.options.advance']) {
+      expect(timingSource).toContain(`t('${key}'`);
       expect(getLeaf(en, key)).toBeDefined();
     }
   });

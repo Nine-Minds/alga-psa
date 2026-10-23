@@ -1,0 +1,3 @@
+INV-000039|390000|0
+SMOKE-ADJ-1|371400|63
+owned_takeover_invoices|0

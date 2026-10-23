@@ -43,6 +43,7 @@ import {
   listWebhookDeliveries,
   listWebhookEvents,
   listWebhooks,
+  retryFailedWebhookDeliveries,
   retryWebhookDelivery,
   rotateWebhookSecret,
   sendWebhookTest,
@@ -2111,6 +2112,7 @@ function OutboundWebhooksSetup() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [rotating, setRotating] = useState(false);
+  const [retryingFailed, setRetryingFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
@@ -2442,6 +2444,34 @@ function OutboundWebhooksSetup() {
     }
   }, [selectedWebhook, t]);
 
+  const handleRetryFailedDeliveries = useCallback(async () => {
+    if (!selectedWebhook) {
+      return;
+    }
+
+    try {
+      setRetryingFailed(true);
+      const result = await retryFailedWebhookDeliveries(selectedWebhook.webhookId);
+      if (isServerActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
+      setStatusMessage(t('security.webhooks.messages.retryFailedQueued', {
+        queued: result.queued,
+        skipped: result.skipped,
+      }));
+      await loadDeliveries(selectedWebhook.webhookId, deliveryPage);
+      setError(null);
+    } catch (retryError) {
+      console.error('Failed to retry failed deliveries:', retryError);
+      setError(retryError instanceof Error
+        ? retryError.message
+        : t('security.webhooks.messages.retryFailedFailed'));
+    } finally {
+      setRetryingFailed(false);
+    }
+  }, [deliveryPage, loadDeliveries, selectedWebhook, t]);
+
   const totalDeliveryPages = deliveries ? Math.max(1, Math.ceil(deliveries.total / deliveries.limit)) : 1;
 
   const webhookColumns = useMemo<ColumnDefinition<WebhookSettingsView>[]>(() => [
@@ -2704,12 +2734,14 @@ function OutboundWebhooksSetup() {
             testing={testing}
             rotating={rotating}
             saving={saving}
+            retryingFailed={retryingFailed}
             neverLabel={neverLabel}
             noResponseCodeLabel={noResponseCodeLabel}
             onSendTest={handleSendTest}
             onRotateSecret={handleRotateSecret}
             onToggleActive={handleToggleActive}
             onRetry={handleRetryDelivery}
+            onRetryFailed={handleRetryFailedDeliveries}
             onLoadDeliveries={(webhookId, page) => {
               void loadDeliveries(webhookId, page);
             }}
@@ -2996,21 +3028,27 @@ function DeliveriesTabBody(props: {
   testing: boolean;
   rotating: boolean;
   saving: boolean;
+  retryingFailed: boolean;
   neverLabel: string;
   noResponseCodeLabel: string;
   onSendTest: () => void | Promise<void>;
   onRotateSecret: () => void | Promise<void>;
   onToggleActive: () => void | Promise<void>;
   onRetry: (delivery: WebhookDeliveryView) => void | Promise<void>;
+  onRetryFailed: () => void | Promise<void>;
   onLoadDeliveries: (webhookId: string, page?: number) => void | Promise<void>;
   t: TFunc;
 }) {
   const {
     selectedWebhook, deliveries, deliveryPage, totalDeliveryPages,
-    testing, rotating, saving, neverLabel, noResponseCodeLabel,
-    onSendTest, onRotateSecret, onToggleActive, onRetry, onLoadDeliveries, t,
+    testing, rotating, saving, retryingFailed, neverLabel, noResponseCodeLabel,
+    onSendTest, onRotateSecret, onToggleActive, onRetry, onRetryFailed, onLoadDeliveries, t,
   } = props;
   const { locale } = useFormatters();
+
+  const hasRetryableDeliveries = (deliveries?.data ?? []).some(
+    (delivery) => !delivery.isTest && (delivery.status === 'failed' || delivery.status === 'abandoned'),
+  );
 
   if (!selectedWebhook) return null;
 
@@ -3039,6 +3077,17 @@ function DeliveriesTabBody(props: {
             {testing
               ? t('security.webhooks.detail.sending')
               : t('security.webhooks.detail.sendTest')}
+          </Button>
+          <Button
+            id="webhook-retry-failed"
+            size="sm"
+            variant="ghost"
+            onClick={() => void onRetryFailed()}
+            disabled={retryingFailed || !hasRetryableDeliveries}
+          >
+            {retryingFailed
+              ? t('security.webhooks.detail.retryingFailed')
+              : t('security.webhooks.detail.retryFailed')}
           </Button>
           <Button
             id="webhook-rotate-secret"

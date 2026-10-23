@@ -8,7 +8,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { HelpCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { Link2, Copy } from 'lucide-react';
+import { Link2, Copy, LayoutTemplate } from 'lucide-react';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import Spinner from '@alga-psa/ui/components/Spinner';
@@ -20,8 +20,10 @@ import { searchUsersForMentions } from '@alga-psa/user-composition/actions/searc
 import { getContactsByClient, getClientLocations } from '../actions/clientLookupActions';
 import { getTicketFormData } from '../actions/ticketFormActions';
 import { getTicketDuplicateSource } from '../actions/ticketActions';
+import { getTicketTemplateForCreate, listTicketTemplatesForCreate } from '../actions/ticketTemplateActions';
 import type { TicketDuplicateSource } from '../lib/ticketDuplicate';
 import { getTicketCategoriesByBoard, BoardCategoryData } from '../actions/ticketCategoryActions';
+import type { TicketTemplateForCreate, TicketTemplateOption } from '@alga-psa/types';
 import { IUser, IBoard, ITicketStatus, IPriority, IStandardPriority, IClient, IClientLocation, IContact, ITicket, ITicketCategory } from '@alga-psa/types';
 import { IUserWithRoles } from '@alga-psa/types';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
@@ -62,6 +64,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { nextTemplateTitle, renderTitleTemplate, titleHasTokens, toCalendarDate, type TitleTokenContext } from '../lib/ticketTitleTokens';
 import {
   extractTicketRichTextPlainText,
   parseTicketRichTextContent,
@@ -201,6 +204,11 @@ interface QuickAddTicketProps {
    * with prefilledClient).
    */
   duplicateFromTicketId?: string;
+  /**
+   * Template mode: prefill the form from this ticket template (`/msp/create-ticket?template=<id>`).
+   * Ignored when `duplicateFromTicketId` is set; a request names a duplicate source or a template, never both.
+   */
+  templateId?: string;
 }
 
 export function QuickAddTicket({
@@ -222,6 +230,7 @@ export function QuickAddTicket({
   renderBeforeFooter,
   isAlgaDeskMode = false,
   duplicateFromTicketId,
+  templateId,
 }: QuickAddTicketProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -308,6 +317,15 @@ export function QuickAddTicket({
   const [duplicateSource, setDuplicateSource] = useState<TicketDuplicateSource | null>(null);
   const [duplicateLoadError, setDuplicateLoadError] = useState<string | null>(null);
   const [copyChecklist, setCopyChecklist] = useState(true);
+  // Template mode: the applied template, the picker options, a load failure, and the checklist opt-out.
+  const [templateSource, setTemplateSource] = useState<TicketTemplateForCreate | null>(null);
+  const [templateOptions, setTemplateOptions] = useState<TicketTemplateOption[]>([]);
+  const [templateLoadError, setTemplateLoadError] = useState<string | null>(null);
+  const [copyTemplateChecklist, setCopyTemplateChecklist] = useState(true);
+  // The title last produced from the template's tokens. While the title still equals it (or is empty) the
+  // operator has not edited it, so a client or contact change re-renders it (R8).
+  const lastRenderedTitleRef = useRef<string | null>(null);
+  const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
   const effectiveAssetId = isAlgaDeskMode ? undefined : assetId;
   const titleInputRef = useRef<HTMLInputElement>(null);
 
@@ -376,10 +394,16 @@ export function QuickAddTicket({
       try {
         // Duplicate mode loads the source alongside the form data. No client argument is
         // passed to getTicketFormData, so the client stays editable.
-        const [formData, duplicateResult] = await Promise.all([
+        // Template mode (preload) and the picker's options load alongside; a user who cannot read
+        // templates simply gets no picker.
+        const preloadTemplateId = duplicateFromTicketId ? undefined : templateId;
+        const [formData, duplicateResult, templateResult, optionsResult] = await Promise.all([
           getTicketFormData(prefilledClient?.id),
           duplicateFromTicketId ? getTicketDuplicateSource(duplicateFromTicketId) : Promise.resolve(null),
+          preloadTemplateId ? getTicketTemplateForCreate(preloadTemplateId) : Promise.resolve(null),
+          duplicateFromTicketId ? Promise.resolve(null) : listTicketTemplatesForCreate().catch(() => null),
         ]);
+        setTemplateOptions(Array.isArray(optionsResult) ? optionsResult : []);
 
         setUsers(formData.users);
         setBoards(formData.boards);
@@ -426,8 +450,21 @@ export function QuickAddTicket({
             applyDuplicateSource(duplicateResult);
           }
         }
+
+        if (templateResult) {
+          if (isReturnedActionError(templateResult)) {
+            setTemplateLoadError(getErrorMessage(templateResult));
+          } else {
+            applyTemplateSource(templateResult);
+          }
+        }
       } catch (error) {
         console.error('Error fetching form data:', error);
+        if (templateId && !duplicateFromTicketId) {
+          setTemplateLoadError(
+            t('quickAdd.templateLoadFailed', 'The template could not be loaded. Please try again.')
+          );
+        }
         if (duplicateFromTicketId) {
           setDuplicateLoadError(
             t('quickAdd.duplicateLoadFailed', 'The ticket to duplicate could not be loaded. Please try again.')
@@ -439,7 +476,7 @@ export function QuickAddTicket({
     };
 
     fetchData();
-  }, [open, prefilledClient?.id, duplicateFromTicketId]);
+  }, [open, prefilledClient?.id, duplicateFromTicketId, templateId]);
 
   useEffect(() => {
     if (!open) {
@@ -642,10 +679,19 @@ export function QuickAddTicket({
   };
 
   const handleClientChange = async (newClientId: string | null) => {
-    if (isPrefilledClient) return;
+    // A prefilled client is a default, not a lock — the picker stays enabled,
+    // so swallowing the choice just snapped the dialog back to the client it
+    // was opened with. Honour it and let the effect load that client's
+    // contacts, which the prefilled branch skips.
+    if (isPrefilledClient) {
+      if (newClientId === clientId) return;
+      setIsPrefilledClient(false);
+    }
 
     setClientId(newClientId || '');
     setContactId(null);
+    // The location belongs to the client that was selected before.
+    setLocationId(null);
     clearErrorIfSubmitted();
 
     if (newClientId !== null) {
@@ -736,20 +782,27 @@ export function QuickAddTicket({
   function applyDuplicateSource(source: TicketDuplicateSource) {
     setDuplicateSource(source);
     setCopyChecklist(true);
-    setTitle(source.title);
-    setDescriptionContent(parseTicketRichTextContent(source.description || ''));
-    setDescriptionEditorInstanceKey((current) => current + 1);
+    applyCopiedTicketFields({
+      title: source.title,
+      description: source.description || '',
+      board_id: source.board_id,
+      priority_id: source.priority_id,
+      itil_impact: source.itil_impact,
+      itil_urgency: source.itil_urgency,
+      category_id: source.category_id,
+      subcategory_id: source.subcategory_id,
+      tags: source.tags.map((tag) => ({
+        tag_id: tag.tag_id,
+        tag_text: tag.tag_text,
+        background_color: tag.background_color,
+        text_color: tag.text_color,
+        isNew: false,
+      })),
+    });
     setClientId(source.client.id);
     setSelectedClientType((source.client.type as 'company' | 'individual' | null) ?? null);
     setContactId(source.contact?.id ?? null);
     setLocationId(source.location_id ?? null);
-    setBoardId(source.board_id ?? '');
-    setPriorityId(source.priority_id ?? '');
-    setItilImpact(source.itil_impact ?? undefined);
-    setItilUrgency(source.itil_urgency ?? undefined);
-    setSelectedCategories(
-      [source.subcategory_id ?? source.category_id].filter((categoryId): categoryId is string => Boolean(categoryId))
-    );
     setAssignedTo(source.assigned_to ?? '');
     setAssignedTeamId(source.assigned_team_id ?? null);
     setTempAdditionalAgents(
@@ -760,15 +813,101 @@ export function QuickAddTicket({
         temp_id: `temp-${Date.now()}-${agent.user_id}`,
       }))
     );
-    setPendingTags(
-      source.tags.map((tag) => ({
-        tag_id: tag.tag_id,
-        tag_text: tag.tag_text,
-        background_color: tag.background_color,
-        text_color: tag.text_color,
-        isNew: false,
-      }))
+  }
+
+  // The ticket fields a duplicate and a template have in common. Same rule as above: state is set
+  // directly, never through handleBoardChange, so the copied priority / category survive and the
+  // status effect picks the board's default status. A template never touches client, contact,
+  // location or assignees.
+  function applyCopiedTicketFields(fields: {
+    title: string;
+    description: string;
+    board_id: string | null;
+    priority_id: string | null;
+    itil_impact: number | null;
+    itil_urgency: number | null;
+    category_id: string | null;
+    subcategory_id: string | null;
+    tags: PendingTag[];
+  }) {
+    setTitle(fields.title);
+    setDescriptionContent(parseTicketRichTextContent(fields.description));
+    setDescriptionEditorInstanceKey((current) => current + 1);
+    setBoardId(fields.board_id ?? '');
+    setPriorityId(fields.priority_id ?? '');
+    setItilImpact(fields.itil_impact ?? undefined);
+    setItilUrgency(fields.itil_urgency ?? undefined);
+    setSelectedCategories(
+      [fields.subcategory_id ?? fields.category_id].filter((categoryId): categoryId is string => Boolean(categoryId))
     );
+    setPendingTags(fields.tags);
+  }
+
+  // Tokens are filled from the client, contact and due date picked so far; a missing one renders empty.
+  // The due date is a calendar date taken from the picked Date's local parts (not toISOString).
+  function templateTitleContext(): TitleTokenContext {
+    const clientName = clients.find((candidate) => candidate.client_id === clientId)?.client_name ?? null;
+    const contactName = contacts.find((candidate) => candidate.contact_name_id === contactId)?.full_name ?? null;
+    return { clientName, contactName, dueDate: dueDate ? toCalendarDate(dueDate) : null };
+  }
+
+  function renderTemplateTitle(rawTitle: string): string {
+    return renderTitleTemplate(rawTitle, templateTitleContext());
+  }
+
+  function applyTemplateSource(source: TicketTemplateForCreate) {
+    setTemplateSource(source);
+    setCopyTemplateChecklist(true);
+    setTemplateLoadError(null);
+    const renderedTitle = renderTemplateTitle(source.title);
+    lastRenderedTitleRef.current = titleHasTokens(source.title) ? renderedTitle : null;
+    applyCopiedTicketFields({
+      title: renderedTitle,
+      description: source.description,
+      board_id: source.board_id,
+      priority_id: source.priority_id,
+      itil_impact: source.itil_impact,
+      itil_urgency: source.itil_urgency,
+      category_id: source.category_id,
+      subcategory_id: source.subcategory_id,
+      tags: source.tags.map((tag) => ({
+        tag_id: tag.tag_id ?? undefined,
+        tag_text: tag.tag_text,
+        background_color: tag.background_color ?? undefined,
+        text_color: tag.text_color ?? undefined,
+        isNew: tag.is_new,
+      })),
+    });
+  }
+
+  async function loadAndApplyTemplate(nextTemplateId: string) {
+    try {
+      const result = await getTicketTemplateForCreate(nextTemplateId);
+      if (isReturnedActionError(result)) {
+        setTemplateLoadError(getErrorMessage(result));
+      } else {
+        applyTemplateSource(result);
+      }
+    } catch (loadError) {
+      console.error('Error loading ticket template:', loadError);
+      setTemplateLoadError(t('quickAdd.templateLoadFailed', 'The template could not be loaded. Please try again.'));
+    }
+  }
+
+  // The picker. Applying a template replaces the draft, so a dirty draft asks first. "None" only
+  // detaches the template: fields the operator already has stay.
+  function handleTemplateSelect(nextTemplateId: string) {
+    if (!nextTemplateId) {
+      setTemplateSource(null);
+      setTemplateLoadError(null);
+      return;
+    }
+    if (nextTemplateId === templateSource?.template_id) return;
+    if (hasUnsavedDraftText) {
+      setPendingTemplateId(nextTemplateId);
+      return;
+    }
+    void loadAndApplyTemplate(nextTemplateId);
   }
 
   function resetForm() {
@@ -817,6 +956,10 @@ export function QuickAddTicket({
     setDuplicateSource(null);
     setDuplicateLoadError(null);
     setCopyChecklist(true);
+    setTemplateSource(null);
+    setTemplateLoadError(null);
+    setCopyTemplateChecklist(true);
+    setPendingTemplateId(null);
     setIsQuickAddContactOpen(false);
     if (prefilledDueDate) {
       setDueDate(toPrefilledDueDate(prefilledDueDate));
@@ -847,8 +990,21 @@ export function QuickAddTicket({
   // round trip can finish, and isSubmitting stays true until the same batch that has
   // ticketCreated/isNavigatingToTicket set, so there is no window where all three are false
   // for a saved ticket. A failed create clears isSubmitting without latching, so the guard returns.
-  const draftBaselineTitle = duplicateSource ? duplicateSource.title : prefilledTitle;
-  const draftBaselineDescription = duplicateSource ? duplicateSource.description : prefilledDescription;
+  useEffect(() => {
+    if (!templateSource) return;
+    const next = nextTemplateTitle(templateSource.title, templateTitleContext(), title, lastRenderedTitleRef.current);
+    if (next === null) return;
+    lastRenderedTitleRef.current = next;
+    if (next !== title) setTitle(next);
+    // Only a client, contact or due date change re-renders; title edits must not loop back through here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId, contactId, dueDate, templateSource, clients, contacts]);
+
+  // A template prefill is a baseline too: an untouched template-filled draft is not dirty.
+  const draftBaselineTitle = duplicateSource ? duplicateSource.title : templateSource ? lastRenderedTitleRef.current ?? templateSource.title : prefilledTitle;
+  const draftBaselineDescription = duplicateSource
+    ? duplicateSource.description
+    : templateSource ? templateSource.description : prefilledDescription;
   const hasUnsavedDraftText =
     open &&
     !isSubmitting &&
@@ -1025,6 +1181,13 @@ export function QuickAddTicket({
       if (duplicateSource) {
         formData.append('duplicate_of_ticket_id', duplicateSource.ticket_id);
         formData.append('duplicate_copy_checklist', String(copyChecklist));
+      }
+
+      // Template mode: name the template; the server copies the checklist and custom fields inside
+      // addTicket's transaction. Only the id and the checklist opt-out are sent, never template content.
+      if (templateSource && !duplicateSource) {
+        formData.append('ticket_template_id', templateSource.template_id);
+        formData.append('template_copy_checklist', String(copyTemplateChecklist));
       }
 
       // ITIL categories now use the unified category system
@@ -1295,6 +1458,63 @@ export function QuickAddTicket({
                       number: duplicateSource.ticket_number,
                     })}
                   </Badge>
+                </div>
+              )}
+
+              {templateLoadError && (
+                <Alert variant="destructive" className="mb-4" data-testid="quick-add-ticket-template-error">
+                  <AlertDescription>{templateLoadError}</AlertDescription>
+                </Alert>
+              )}
+
+              {templateSource && (
+                <div className="mb-4 flex pb-2">
+                  <Badge
+                    variant="secondary"
+                    className="inline-flex items-center gap-1.5 rounded-full"
+                    data-testid="quick-add-ticket-template-pill"
+                  >
+                    <LayoutTemplate className="h-3 w-3" />
+                    {t('quickAdd.fromTemplatePill', {
+                      defaultValue: 'From template: {{name}}',
+                      name: templateSource.name,
+                    })}
+                  </Badge>
+                </div>
+              )}
+
+              {templateSource && templateSource.warnings.length > 0 && (
+                <Alert className="mb-4" data-testid="quick-add-ticket-template-warnings">
+                  <AlertDescription>
+                    <ul className="list-disc list-inside space-y-1">
+                      {templateSource.warnings.map((warning, index) => (
+                        <li key={`${index}-${warning}`}>{warning}</li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {!duplicateSource && templateOptions.length > 0 && (
+                <div className="mb-4">
+                  <label htmlFor={`${id}-template-select`} className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('quickAdd.templateLabel', 'Template')}
+                  </label>
+                  <CustomSelect
+                    id={`${id}-template-select`}
+                    value={templateSource?.template_id ?? ''}
+                    onValueChange={handleTemplateSelect}
+                    disabled={isSubmitting}
+                    options={[
+                      { value: '', label: t('quickAdd.templateNone', 'None') },
+                      ...templateOptions.map((option) => ({ value: option.template_id, label: option.name })),
+                    ]}
+                  />
+                  {templateSource && titleHasTokens(templateSource.title) && (
+                    <p className="mt-1 text-xs text-gray-500" data-testid="quick-add-ticket-template-token-hint">
+                      {t('quickAdd.templateTokenHint', 'The title fills in the client, contact and due date you pick, until you edit it.')}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -1781,6 +2001,43 @@ export function QuickAddTicket({
                     </p>
                   )}
 
+                  {templateSource && templateSource.checklist.length > 0 && (
+                    <div className="space-y-2" data-testid="quick-add-ticket-template-checklist">
+                      <div className="text-sm font-medium text-gray-700">
+                        {t('quickAdd.templateChecklistHeading', {
+                          defaultValue: 'Checklist from template: {{name}}',
+                          name: templateSource.name,
+                        })}
+                      </div>
+                      <ul className="list-disc list-inside space-y-0.5 text-sm text-gray-600">
+                        {templateSource.checklist.map((item, index) => (
+                          <li key={`${index}-${item.item_name}`}>
+                            {item.item_name}
+                            {item.is_required && (
+                              <span className="ml-1 text-xs text-gray-500">
+                                {t('quickAdd.duplicateChecklistRequired', '(required)')}
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                      <Checkbox
+                        id={`${id}-copy-template-checklist`}
+                        checked={copyTemplateChecklist}
+                        onChange={(e) => setCopyTemplateChecklist(e.target.checked)}
+                        label={t('quickAdd.duplicateCopyChecklist', 'Copy checklist items (unchecked)')}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                  )}
+                  {templateSource && templateSource.custom_field_count > 0 && (
+                    <p className="text-xs text-gray-500" data-testid="quick-add-ticket-template-custom-fields">
+                      {t('quickAdd.templateCustomFieldsNote', {
+                        defaultValue: 'Custom field values are copied from the template.',
+                      })}
+                    </p>
+                  )}
+
                   <QuickAddTagPicker
                     id="quick-add-ticket-tags"
                     entityType="ticket"
@@ -1854,6 +2111,20 @@ export function QuickAddTicket({
         confirmLabel={t('conversation.deleteUploadedImages', 'Delete Images')}
         cancelLabel={t('quickAdd.continueEditing', 'Continue Editing')}
         isConfirming={descriptionUploadSession.isDeletingDraftImages}
+      />
+      <ConfirmationDialog
+        id={`${id}-template-replace-dialog`}
+        isOpen={pendingTemplateId !== null}
+        onClose={() => setPendingTemplateId(null)}
+        onConfirm={() => {
+          const nextTemplateId = pendingTemplateId;
+          setPendingTemplateId(null);
+          if (nextTemplateId) void loadAndApplyTemplate(nextTemplateId);
+        }}
+        title={t('quickAdd.templateReplaceTitle', 'Replace your changes?')}
+        message={t('quickAdd.templateReplaceMessage', 'Applying a template replaces the title, description and other fields you have entered.')}
+        confirmLabel={t('quickAdd.templateReplaceConfirm', 'Apply template')}
+        cancelLabel={t('quickAdd.continueEditing', 'Continue Editing')}
       />
     </div>
   );

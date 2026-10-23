@@ -133,16 +133,16 @@ function ArticleCard({ article, onClick }: ArticleCardProps) {
       className="hover:shadow-md transition-shadow cursor-pointer"
       onClick={onClick}
     >
-      <CardContent className="p-4">
+      <CardContent className="p-4 !pt-4">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 p-2 bg-muted rounded-lg">
             {TYPE_ICONS[article.article_type] || <FileText className="w-5 h-5" />}
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-medium line-clamp-2">
+            <h4 className="text-sm font-medium line-clamp-2 break-words">
               {article.document_name || article.slug}
             </h4>
-            <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
               <Badge variant="secondary" className="text-xs">
                 {formatArticleType(article.article_type)}
               </Badge>
@@ -287,7 +287,7 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
             }`}
           >
             <Card className="h-full">
-              <CardContent className="p-2 h-full overflow-auto">
+              <CardContent className="p-2 !pt-2 h-full overflow-auto">
                 {isCategorySidebarCollapsed ? (
                   <CollapseToggleButton
                     id="kb-expand-categories"
@@ -395,7 +395,7 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
                 <p>{t('kb.noArticles', 'No articles found')}</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(min(18rem,100%),1fr))] gap-4">
                 {articles.map((article) => (
                   <ArticleCard
                     key={article.article_id}

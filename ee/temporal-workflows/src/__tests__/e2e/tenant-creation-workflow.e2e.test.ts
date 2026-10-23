@@ -66,7 +66,7 @@ it('creates a tenant and admin through the real workflow and persists their reco
           'sla_notification_thresholds', 'sla_policy_targets', 'boards', 'priorities', 'sla_policies',
           'client_tax_rates', 'client_tax_settings', 'client_billing_profiles',
           'tax_components', 'tax_rates', 'tax_regions', 'tenant_workflow_schedule',
-          'workflow_definition_versions', 'workflow_definitions', 'asset_type_registry',
+          'workflow_definition_versions', 'workflow_definitions', 'asset_type_registry', 'asset_statuses',
           'document_default_folders', 'project_template_checklist_items', 'project_template_tasks',
           'project_template_phases', 'project_template_status_mappings', 'project_templates', 'statuses',
         ]) await scoped.table(table).delete();

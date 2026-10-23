@@ -302,6 +302,43 @@ describe('useListViews after the list is left', () => {
     expect(toastMock.error).not.toHaveBeenCalled();
     expect(window.location.search).toBe('?view=55555555-5555-4555-8555-555555555555');
   });
+
+  /**
+   * The load paths above are not the only ones that outlive the list: every
+   * save runs through `withSaving`, whose `finally` clears the saving flag
+   * whenever the server action settles. Starring a view and leaving the list
+   * before the toast lands is the ordinary way to reach that write with the
+   * hook already gone.
+   */
+  it('does not update React state when a save settles after unmount', async () => {
+    const pending = deferred<{ defaultViewId: string | null }>();
+    actions.listListViews.mockResolvedValue(collection());
+    actions.setMyDefaultListView.mockReturnValue(pending.promise);
+    const rejections: unknown[] = [];
+    const onRejection = (reason: unknown) => rejections.push(reason);
+    process.on('unhandledRejection', onRejection);
+
+    try {
+      const { result, unmount } = renderListViews();
+      await waitFor(() => expect(result.current.views).toHaveLength(2));
+      act(() => {
+        void result.current.setDefault(VIEW_A);
+      });
+      await waitFor(() => expect(actions.setMyDefaultListView).toHaveBeenCalled());
+      unmount();
+
+      vi.stubGlobal('window', undefined);
+      pending.resolve({ defaultViewId: VIEW_A });
+      await flush();
+      vi.unstubAllGlobals();
+      await flush();
+    } finally {
+      vi.unstubAllGlobals();
+      process.off('unhandledRejection', onRejection);
+    }
+
+    expect(rejections).toEqual([]);
+  });
 });
 
 /**

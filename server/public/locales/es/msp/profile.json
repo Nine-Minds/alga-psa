@@ -500,6 +500,8 @@
         "sending": "Enviando…",
         "rotateSecret": "Rotar secreto",
         "rotating": "Rotando…",
+        "retryFailed": "Reintentar entregas fallidas",
+        "retryingFailed": "Reintentando…",
         "back": "Volver a webhooks"
       },
       "deliveries": {
@@ -541,6 +543,8 @@
         "stateChangeFailed": "No se pudo actualizar el estado del webhook.",
         "retryQueued": "Reintento en cola para el evento {{eventId}}.",
         "retryFailed": "No se pudo reintentar la entrega.",
+        "retryFailedQueued": "{{queued}} entregas en cola para reintento, {{skipped}} omitidas.",
+        "retryFailedFailed": "No se pudieron reintentar las entregas fallidas.",
         "invalidHeaderLine": "Línea de encabezado no válida: \"{{line}}\"",
         "invalidRetryConfig": "La configuración de reintentos debe ser un objeto JSON"
       },
@@ -727,6 +731,9 @@
     }
   },
   "connectSso": {
+    "proFeature": {
+      "description": "La vinculación de cuentas SSO está disponible en Pro. Actualice su plan para conectar su cuenta de Google Workspace o Microsoft 365 y disfrutar de una autenticación sin interrupciones."
+    },
     "linkError": {
       "title": "No se pudo vincular el SSO.",
       "no_matching_user": "La cuenta con la que inició sesión es {{providerEmail}}, pero su inicio de sesión de AlgaPSA es {{accountEmail}}. Vincule una cuenta que use {{accountEmail}} o pida al administrador de su proveedor de identidad que establezca {{accountEmail}} como dirección de correo electrónico principal de esa cuenta.",

@@ -727,6 +727,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Fonctionnalité Pro",
+      "domainsDescription": "Les domaines gérés nécessitent Pro.",
+      "settingsDescription": "Les paramètres des e-mails gérés nécessitent Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Échec du chargement des domaines gérés",
       "loadOutboundSettingsFailed": "Échec du chargement des paramètres d'envoi",
@@ -930,6 +935,12 @@
       "copyHostAriaLabel": "Copier l'hôte",
       "copyFqdnAriaLabel": "Copier le nom complet",
       "hostHint": "Astuce : chez votre fournisseur DNS, saisissez uniquement l'hôte indiqué ci-dessus. La plupart des fournisseurs (Namecheap, GoDaddy, Cloudflare, etc.) ajoutent « {{domain}} » automatiquement. Si vous collez le nom complet, le domaine est répété (…{{domain}}.{{domain}}) et l'enregistrement ne sera jamais vérifié."
+    },
+    "dnsRecordInstructions": {
+      "proFeature": {
+        "title": "Fonctionnalité Pro",
+        "description": "Les instructions relatives aux enregistrements DNS nécessitent Pro."
+      }
     }
   },
   "inboundRules": {
@@ -1131,7 +1142,10 @@
       "duplicateShortName": "Une configuration portant ce nom court existe déjà",
       "createFailed": "Échec de la création des valeurs par défaut des tickets entrants. Veuillez réessayer.",
       "notFound": "Configuration des valeurs par défaut introuvable",
-      "updateFailed": "Échec de la mise à jour des valeurs par défaut des tickets entrants. Veuillez réessayer."
+      "updateFailed": "Échec de la mise à jour des valeurs par défaut des tickets entrants. Veuillez réessayer.",
+      "locationRequiresClient": "Sélectionnez une société avant de sélectionner un emplacement",
+      "locationClientMismatch": "L’emplacement sélectionné n’appartient pas à la société sélectionnée",
+      "referencedByProviders": "Cette configuration est encore utilisée par les fournisseurs d’e-mail suivants : {{providers}}. Sélectionnez d’autres valeurs par défaut des tickets entrants pour ces fournisseurs avant de la supprimer."
     },
     "ticketFieldOptions": {
       "permissionDenied": "Autorisation refusée : impossible de lire les options de champ de ticket",
