@@ -10,7 +10,7 @@ import { setupCommonMocks, createMockUser } from '../../../test-utils/testMocks'
 import * as auth from '@alga-psa/auth';
 import * as rbac from '@alga-psa/auth/rbac';
 import * as ticketActions from '@alga-psa/tickets/actions/ticketActions';
-import { findTicketFieldReferenceProblems, findPriorityBoardTypeProblem } from '@alga-psa/tickets/lib/ticketFieldReferences';
+import { findTicketFieldReferenceProblems, findPriorityBoardTypeProblem, findTicketUpdatePriorityBoardTypeProblem } from '@alga-psa/tickets/lib/ticketFieldReferences';
 import * as optimizedActions from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { TicketService } from '@/lib/api/services/TicketService';
 import * as templateActions from '@alga-psa/tickets/actions/ticketTemplateActions';
@@ -455,6 +455,58 @@ describe('Priority type vs board priority_type (integration)', () => {
         { priority: customPriorityName, board: 'Service Desk' },
         'features/tickets:errors.ticket.priorityCustomBoardItil'
       );
+    });
+
+    it('cross-family board move: a patch that clears the priority passes, one that keeps it is refused', async () => {
+      await seedItilSide();
+      // Ticket on the ITIL board with an ITIL priority.
+      await tt('tickets').where({ ticket_id: sourceTicketId }).update({ board_id: itilBoardId, status_id: itilStatusId, priority_id: itilPriorityId });
+      const current = await tt('tickets').where({ ticket_id: sourceTicketId }).first();
+
+      const check = (patch: any) => findTicketUpdatePriorityBoardTypeProblem(context.db, tenantId, current, patch);
+      expect(await check({ board_id: boardId, priority_id: null })).toBeNull();
+      expect(await check({ board_id: boardId, priority_id: undefined })).not.toBeNull();
+      expect(await check({ board_id: boardId })).not.toBeNull();
+      expect(await check({ board_id: boardId, priority_id: priorityId })).toBeNull();
+      // Unchanged resend of the stored pair, and an unrelated patch.
+      expect(await check({ board_id: itilBoardId, priority_id: itilPriorityId })).toBeNull();
+      expect(await check({})).toBeNull();
+    });
+
+    it('updateTicket / TicketService.update accept {board_id, status_id, priority_id: null} across families', async () => {
+      await seedItilSide();
+      const reset = () => tt('tickets').where({ ticket_id: sourceTicketId }).update({ board_id: itilBoardId, status_id: itilStatusId, priority_id: itilPriorityId });
+
+      await reset();
+      const refused = await attempt(() => ticketActions.updateTicket(sourceTicketId, { board_id: boardId, status_id: statusId }));
+      expectReturnedActionError(
+        refused,
+        'is an ITIL priority but board ‘Tpl Board’ uses custom priorities',
+        { priority: 'P2 - High', board: 'Tpl Board' },
+        'features/tickets:errors.ticket.priorityItilBoardCustom'
+      );
+
+      const moved = await attempt(() => ticketActions.updateTicket(sourceTicketId, { board_id: boardId, status_id: statusId, priority_id: null }));
+      expect(refusalMessage(moved)).toBe('');
+      expect(moved.value).toBe('success');
+      const row = await tt('tickets').where({ ticket_id: sourceTicketId }).first();
+      expect(row.board_id).toBe(boardId);
+      expect(row.priority_id).toBeNull();
+
+      await reset();
+      const cached = await attempt(() => optimizedActions.updateTicketWithCache(sourceTicketId, { board_id: boardId, status_id: statusId, priority_id: null }));
+      expect(refusalMessage(cached)).toBe('');
+      expect((await tt('tickets').where({ ticket_id: sourceTicketId }).first()).board_id).toBe(boardId);
+
+      // REST: nulls are not stripped by cleanedData (only undefined is), so the check sees the clear.
+      // The REST update schema does not accept a null priority_id, so the service is called directly.
+      await reset();
+      const service = new TicketService();
+      vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: context.db });
+      const serviceContext = { userId: ownerUser, tenant: tenantId, user: { user_id: ownerUser, user_type: 'internal' as const, tenant: tenantId } };
+      const error: any = await service.update(sourceTicketId, { board_id: boardId, status_id: statusId, priority_id: null } as any, serviceContext as any).then(() => null, (e) => e);
+      expect(error?.name, JSON.stringify(error?.details)).not.toBe('ValidationError');
+      expect((await tt('tickets').where({ ticket_id: sourceTicketId }).first()).priority_id).toBeNull();
     });
 
     it('updateTicketWithCache (ticket detail save path) returns the refusal as an actionError', async () => {

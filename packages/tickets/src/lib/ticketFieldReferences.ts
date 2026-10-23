@@ -114,10 +114,12 @@ export async function findPriorityBoardTypeProblem(
 }
 
 /**
- * The ticket-update flavour of {@link findPriorityBoardTypeProblem}. Only a patch that actually changes
- * `priority_id` or `board_id` is checked, against the effective pair (the other field comes from the
- * existing ticket), so an unrelated update, or one that re-sends the stored values, keeps working on a
- * legacy ticket whose pair already mismatches.
+ * The ticket-update flavour of {@link findPriorityBoardTypeProblem}. Decides by key presence: a key that is
+ * in the patch (and not `undefined`) replaces the stored value, including an explicit `null`. Only a patch
+ * that changes `priority_id` or `board_id` is checked, against the effective pair (a key absent from the
+ * patch comes from the existing ticket), so an unrelated update, or one that re-sends the stored values,
+ * keeps working on a legacy ticket whose pair already mismatches. A null effective board or priority
+ * (e.g. a board move that clears the priority) has nothing to check.
  */
 export async function findTicketUpdatePriorityBoardTypeProblem(
   conn: Knex | Knex.Transaction,
@@ -125,11 +127,13 @@ export async function findTicketUpdatePriorityBoardTypeProblem(
   current: { board_id?: string | null; priority_id?: string | null },
   patch: { board_id?: string | null; priority_id?: string | null }
 ): Promise<PriorityBoardTypeProblem | null> {
-  const boardChanged = Boolean(patch.board_id) && patch.board_id !== current.board_id;
-  const priorityChanged = Boolean(patch.priority_id) && patch.priority_id !== current.priority_id;
+  const hasBoard = 'board_id' in patch && patch.board_id !== undefined;
+  const hasPriority = 'priority_id' in patch && patch.priority_id !== undefined;
+  const boardChanged = hasBoard && (patch.board_id ?? null) !== (current.board_id ?? null);
+  const priorityChanged = hasPriority && (patch.priority_id ?? null) !== (current.priority_id ?? null);
   if (!boardChanged && !priorityChanged) return null;
-  const boardId = patch.board_id || current.board_id;
-  const priorityId = patch.priority_id || current.priority_id;
+  const boardId = hasBoard ? patch.board_id : current.board_id;
+  const priorityId = hasPriority ? patch.priority_id : current.priority_id;
   if (!boardId || !priorityId) return null;
   return findPriorityBoardTypeProblem(conn, tenant, boardId, priorityId);
 }
