@@ -379,6 +379,26 @@ describe("AssetDetailScreen", () => {
     expect(mockGetNotes).toHaveBeenCalledTimes(2);
   });
 
+  it("blocks Add note and never saves when the notes read fails", async () => {
+    mockGetNotes.mockResolvedValue({
+      ok: false,
+      status: 500,
+      error: { kind: "http", status: 500, message: "Failed to get asset notes" },
+    });
+    const tree = await renderScreen();
+
+    expect(hosts(tree, "asset-detail-add-note")).toHaveLength(0);
+    expect(allText(tree)).toContain("Couldn't load notes");
+    expect(allText(tree)).not.toContain("No notes on this device yet.");
+    expect(mockSaveNotes).not.toHaveBeenCalled();
+  });
+
+  it("keeps Add note available when the notes read succeeds", async () => {
+    const tree = await renderScreen();
+    expect(hosts(tree, "asset-detail-add-note")).toHaveLength(1);
+    expect(allText(tree)).not.toContain("Couldn't load notes");
+  });
+
   describe.each([
     ["403", { kind: "permission", status: 403, message: "Permission denied: Cannot read asset" }],
     ["404", { kind: "http", status: 404, message: "Asset not found" }],
