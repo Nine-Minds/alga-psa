@@ -45,10 +45,10 @@ describe('TicketModel.updateTicket status clock', () => {
     await TicketModel.updateTicket(TICKET_ID, { status_id: NEW_STATUS }, 'tenant-1', trx);
 
     expect(updates).toHaveLength(1);
-    expect(trx.raw).toHaveBeenCalledWith(expect.stringContaining('status_changed_at'), [NEW_STATUS]);
+    expect(trx.raw).toHaveBeenCalledWith(expect.stringContaining('status_changed_at'), [NEW_STATUS, expect.any(String)]);
     expect(updates[0].status_changed_at).toEqual({
-      sql: 'CASE WHEN status_id IS DISTINCT FROM ?::uuid THEN now() ELSE status_changed_at END',
-      bindings: [NEW_STATUS],
+      sql: 'CASE WHEN status_id IS DISTINCT FROM ?::uuid THEN ?::timestamptz ELSE status_changed_at END',
+      bindings: [NEW_STATUS, expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/)],
     });
     expect(updates[0]).toMatchObject({ updated_at: 'NOW()', updated_by: null });
   });

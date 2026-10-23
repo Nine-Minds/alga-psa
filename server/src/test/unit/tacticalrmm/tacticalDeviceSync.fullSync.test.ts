@@ -49,6 +49,8 @@ function createFakeKnex(state: DbState) {
 
   class QB {
     private _where: Record<string, any>[] = [];
+    private _whereNot: Record<string, any>[] = [];
+    private _notIn: Array<{ col: string; vals: any[] }> = [];
     private _notNull: string[] = [];
     private _andWhere: Array<{ col: string; val: any }> = [];
     private _rawTextEq: { col: string; val: string } | null = null;
@@ -57,6 +59,16 @@ function createFakeKnex(state: DbState) {
 
     where(where: Record<string, any>) {
       this._where.push(where);
+      return this;
+    }
+
+    whereNot(where: Record<string, any>) {
+      this._whereNot.push(where);
+      return this;
+    }
+
+    whereNotIn(col: string, vals: any[]) {
+      this._notIn.push({ col, vals: (vals ?? []).map((v) => String(v)) });
       return this;
     }
 
@@ -83,6 +95,8 @@ function createFakeKnex(state: DbState) {
     private filtered(): any[] {
       let rows = [...tableRows(this.table)];
       for (const w of this._where) rows = rows.filter((r) => matchesWhere(r, w));
+      for (const w of this._whereNot) rows = rows.filter((r) => !matchesWhere(r, w));
+      for (const ni of this._notIn) rows = rows.filter((r) => !ni.vals.includes(String(r[ni.col])));
       for (const nn of this._notNull) rows = rows.filter((r) => r[nn] !== null && typeof r[nn] !== 'undefined');
       for (const aw of this._andWhere) rows = rows.filter((r) => r[aw.col] === aw.val);
       if (this._rawTextEq) rows = rows.filter((r) => String(r[this._rawTextEq!.col]) === this._rawTextEq!.val);
@@ -413,5 +427,55 @@ describe('Tactical device sync (full sync)', () => {
 
     const stillThere = state.assets.find((a) => a.asset_id === 'asset_missing');
     expect(stillThere?.status).toBe('active');
+  });
+
+  /**
+   * FR-B6: a device Tactical still lists proves the fleet was visible, so one
+   * it no longer lists is retired — unlike the empty listing above.
+   */
+  it('retires a vanished agent when the full sync still sees the fleet', async () => {
+    state.assets.push({
+      tenant: 'tenant_1',
+      asset_id: 'asset_gone',
+      asset_type: 'workstation',
+      name: 'gone-agent-asset',
+      status: 'active',
+      rmm_provider: 'tacticalrmm',
+      rmm_device_id: 'a_gone',
+      rmm_organization_id: '100',
+      agent_status: 'online',
+    });
+    state.tenant_external_entity_mappings.push({
+      tenant: 'tenant_1',
+      id: 'mapping_gone',
+      integration_type: 'tacticalrmm',
+      alga_entity_type: 'asset',
+      alga_entity_id: 'asset_gone',
+      external_entity_id: 'a_gone',
+      external_realm_id: '100',
+      sync_status: 'synced',
+      metadata: {},
+    });
+
+    const { syncTacticalRmmDevices } = await import(
+      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+    );
+
+    // Agent a1 is still listed; a_gone is not.
+    const res = await syncTacticalRmmDevices({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
+    expect(res.success).toBe(true);
+    expect(res.items_deleted).toBe(1);
+
+    const retired = state.assets.find((a) => a.asset_id === 'asset_gone');
+    expect(retired?.status).toBe('retired');
+    expect(retired?.agent_status).toBe('offline');
+
+    const mapping = state.tenant_external_entity_mappings.find((m) => m.id === 'mapping_gone');
+    expect(mapping?.sync_status).toBe('error');
+    expect(mapping?.metadata).toEqual(expect.objectContaining({ deleted: true }));
+
+    // The agent that is still there keeps its lifecycle status.
+    const live = state.assets.find((a) => a.rmm_device_id === 'a1');
+    expect(live?.status).not.toBe('retired');
   });
 });

@@ -11,18 +11,52 @@ import {
 type InboundTicketDefaultsActionError = ActionMessageError;
 
 class ExpectedInboundTicketDefaultsError extends Error {
-  constructor(message: string) {
+  readonly messageKey?: string;
+
+  constructor(message: string, messageKey?: string) {
     super(message);
     this.name = 'ExpectedInboundTicketDefaultsError';
+    this.messageKey = messageKey;
   }
 }
 
-function expectedInboundTicketDefaultsError(message: string): never {
-  throw new ExpectedInboundTicketDefaultsError(message);
+function expectedInboundTicketDefaultsError(message: string, messageKey?: string): never {
+  throw new ExpectedInboundTicketDefaultsError(message, messageKey);
 }
 
+type DefaultsKnex = Awaited<ReturnType<typeof createTenantKnex>>['knex'];
+
+const normalizeUuid = (v?: string | null) => (v && v !== 'no-category' ? v : null);
+
+// Inbound processing passes defaults.location_id straight into ticket creation,
+// where it is rejected if it belongs to another client. Catch that at save time.
+const assertLocationBelongsToClient = async (
+  knex: DefaultsKnex,
+  tenant: string,
+  clientId: string | null | undefined,
+  locationId: string
+): Promise<void> => {
+  if (!clientId) {
+    expectedInboundTicketDefaultsError(
+      'Select a client before selecting a location',
+      'msp/email-providers:errors.inboundDefaults.locationRequiresClient'
+    );
+  }
+
+  const location = await tenantDb(knex, tenant).table('client_locations')
+    .where({ location_id: locationId, client_id: clientId })
+    .first('location_id');
+
+  if (!location) {
+    expectedInboundTicketDefaultsError(
+      'The selected location does not belong to the selected client',
+      'msp/email-providers:errors.inboundDefaults.locationClientMismatch'
+    );
+  }
+};
+
 const assertTicketStatusBelongsToBoard = async (
-  knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
+  knex: DefaultsKnex,
   tenant: string,
   boardId: string,
   statusId: string
@@ -92,22 +126,24 @@ export const createInboundTicketDefaults = withAuth(async (
     entered_by?: string | null;
     category_id?: string;
     subcategory_id?: string;
-    location_id?: string;
+    location_id?: string | null;
     is_active?: boolean;
   }
 ): Promise<{ defaults: InboundTicketDefaults } | InboundTicketDefaultsActionError> => {
   const { knex } = await createTenantKnex();
   
   try {
-    // Normalize category/subcategory values to avoid sentinel strings
-    const normalizeUuid = (v?: string | null) => (v && v !== 'no-category' ? v : null);
-
     // Validate required defaults fields
     if (!data.board_id || !data.status_id || !data.priority_id) {
       expectedInboundTicketDefaultsError('Board, status, and priority are required');
     }
 
     await assertTicketStatusBelongsToBoard(knex, tenant, data.board_id, data.status_id);
+
+    const locationId = data.location_id || null;
+    if (locationId) {
+      await assertLocationBelongsToClient(knex, tenant, data.client_id, locationId);
+    }
 
     const [defaults] = await tenantDb(knex, tenant).table('inbound_ticket_defaults')
       .insert({
@@ -123,7 +159,7 @@ export const createInboundTicketDefaults = withAuth(async (
         entered_by: data.entered_by,
         category_id: normalizeUuid(data.category_id),
         subcategory_id: normalizeUuid(data.subcategory_id),
-        location_id: data.location_id,
+        location_id: locationId,
         is_active: data.is_active ?? true,
         created_at: knex.fn.now(),
         updated_at: knex.fn.now()
@@ -150,7 +186,7 @@ export const createInboundTicketDefaults = withAuth(async (
     return { defaults };
   } catch (error) {
     if (error instanceof ExpectedInboundTicketDefaultsError) {
-      return actionError(error.message);
+      return actionError(error.message, error.messageKey);
     }
     if (error instanceof Error && error.message.includes('unique')) {
       return actionError('A configuration with this short name already exists', 'msp/email-providers:errors.inboundDefaults.duplicateShortName');
@@ -175,26 +211,24 @@ export const updateInboundTicketDefaults = withAuth(async (
     entered_by?: string | null;
     category_id?: string;
     subcategory_id?: string;
-    location_id?: string;
+    location_id?: string | null;
     is_active?: boolean;
   }
 ): Promise<{ defaults: InboundTicketDefaults } | InboundTicketDefaultsActionError> => {
   const { knex } = await createTenantKnex();
   
   try {
-    const normalizeUuid = (v?: string | null) => (v && v !== 'no-category' ? v : null);
+    const current = await tenantDb(knex, tenant).table('inbound_ticket_defaults')
+      .where({ id })
+      .select('board_id', 'status_id', 'priority_id', 'client_id', 'location_id')
+      .first();
+
+    if (!current) {
+      return actionError('Defaults configuration not found', 'msp/email-providers:errors.inboundDefaults.notFound');
+    }
+
     // If updating defaults, validate required fields
     if (data.board_id !== undefined || data.status_id !== undefined || data.priority_id !== undefined) {
-      // Get current values to check if all required fields will be present after update
-      const current = await tenantDb(knex, tenant).table('inbound_ticket_defaults')
-        .where({ id })
-        .select('board_id', 'status_id', 'priority_id')
-        .first();
-
-      if (!current) {
-        return actionError('Defaults configuration not found', 'msp/email-providers:errors.inboundDefaults.notFound');
-      }
-      
       const finalBoardId = data.board_id !== undefined ? data.board_id : current?.board_id;
       const finalStatusId = data.status_id !== undefined ? data.status_id : current?.status_id;
       const finalPriorityId = data.priority_id !== undefined ? data.priority_id : current?.priority_id;
@@ -204,6 +238,20 @@ export const updateInboundTicketDefaults = withAuth(async (
       }
 
       await assertTicketStatusBelongsToBoard(knex, tenant, finalBoardId, finalStatusId);
+    }
+
+    const finalClientId = data.client_id !== undefined ? data.client_id : current.client_id;
+    const clientChanged = data.client_id !== undefined && data.client_id !== current.client_id;
+    // undefined = leave untouched; null = clear. A client change drops the old
+    // client's location unless the caller explicitly supplies a new one.
+    let finalLocationId: string | null | undefined;
+    if (data.location_id !== undefined) {
+      finalLocationId = data.location_id || null;
+    } else if (clientChanged) {
+      finalLocationId = null;
+    }
+    if (finalLocationId) {
+      await assertLocationBelongsToClient(knex, tenant, finalClientId, finalLocationId);
     }
 
     const updateData: any = {
@@ -220,7 +268,7 @@ export const updateInboundTicketDefaults = withAuth(async (
     if (data.entered_by !== undefined) updateData.entered_by = data.entered_by;
     if (data.category_id !== undefined) updateData.category_id = normalizeUuid(data.category_id);
     if (data.subcategory_id !== undefined) updateData.subcategory_id = normalizeUuid(data.subcategory_id);
-    if (data.location_id !== undefined) updateData.location_id = data.location_id;
+    if (finalLocationId !== undefined) updateData.location_id = finalLocationId;
     if (data.is_active !== undefined) updateData.is_active = data.is_active;
 
     const [defaults] = await tenantDb(knex, tenant).table('inbound_ticket_defaults')
@@ -252,7 +300,7 @@ export const updateInboundTicketDefaults = withAuth(async (
     return { defaults };
   } catch (error) {
     if (error instanceof ExpectedInboundTicketDefaultsError) {
-      return actionError(error.message);
+      return actionError(error.message, error.messageKey);
     }
     if (error instanceof Error && error.message.includes('unique')) {
       return actionError('A configuration with this short name already exists', 'msp/email-providers:errors.inboundDefaults.duplicateShortName');
@@ -269,16 +317,21 @@ export const deleteInboundTicketDefaults = withAuth(async (
 ): Promise<{ success: true } | InboundTicketDefaultsActionError> => {
   const { knex } = await createTenantKnex();
   
-  const deletedCount = await knex.transaction<number>(async (trx) => {
-    // Clear all known references before deleting the defaults row.
-    // This keeps delete behavior consistent with nullable destination references.
-    await tenantDb(trx, tenant).table('email_providers')
+  const outcome = await knex.transaction<
+    { referencingProviders: Array<{ provider_name: string | null; mailbox: string | null }> } | { deletedCount: number }
+  >(async (trx) => {
+    // A provider with no defaults silently skips every inbound email
+    // (missing_defaults), so refuse to orphan one instead of nulling the link.
+    const referencingProviders = await tenantDb(trx, tenant).table('email_providers')
       .where({ inbound_ticket_defaults_id: id })
-      .update({
-        inbound_ticket_defaults_id: null,
-        updated_at: trx.fn.now(),
-      });
+      .select('provider_name', 'mailbox');
 
+    if (referencingProviders.length > 0) {
+      return { referencingProviders };
+    }
+
+    // Client/contact overrides fall back to the provider defaults, so clearing
+    // them is safe.
     await tenantDb(trx, tenant).table('clients')
       .where({ inbound_ticket_defaults_id: id })
       .update({
@@ -297,10 +350,22 @@ export const deleteInboundTicketDefaults = withAuth(async (
       .where({ id })
       .delete();
 
-    return Number(rowsDeleted);
+    return { deletedCount: Number(rowsDeleted) };
   });
 
-  if (deletedCount === 0) {
+  if ('referencingProviders' in outcome) {
+    const providers = outcome.referencingProviders
+      .map((p) => p.provider_name || p.mailbox)
+      .filter((name): name is string => Boolean(name))
+      .join(', ');
+    return actionError(
+      `This configuration is still used by the following email providers: ${providers}. Select different inbound ticket defaults on those providers before deleting it.`,
+      'msp/email-providers:errors.inboundDefaults.referencedByProviders',
+      { providers }
+    );
+  }
+
+  if (outcome.deletedCount === 0) {
     return actionError('Defaults configuration not found', 'msp/email-providers:errors.inboundDefaults.notFound');
   }
 

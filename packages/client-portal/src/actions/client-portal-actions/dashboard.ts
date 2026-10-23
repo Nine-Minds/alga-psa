@@ -12,6 +12,7 @@ import {
 } from '@alga-psa/tickets/lib';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { applyAssetVisibilityFilter, applyProjectVisibilityFilter } from '@alga-psa/authorization/portal/visibility';
+import { listDeployableStatusSlugs } from '@alga-psa/assets/lib/assetStatusRegistry';
 import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
 import { hasClientProjectReadPermission } from './clientProjectPermissions';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
@@ -251,17 +252,26 @@ export const getDashboardMetrics = withAuth(async (
           .whereNull('finalized_at')
           .count('* as count') as unknown as Promise<Array<{ count: string }>>,
 
-        // Get active assets count
-        applyAssetVisibilityFilter(
-          scopedDb.table('assets')
-            .where({
-              'assets.client_id': clientId
-            }),
-          visibility,
-          { contactColumn: 'assets.contact_name_id' }
-        )
-          .andWhere('status', '!=', 'inactive')
-          .count('* as count') as unknown as Promise<Array<{ count: string }>>,
+        // Active assets: FR-B5 reads "deployed" from the status registry's
+        // `deployable` kind, not from "anything but the literal inactive" —
+        // a device in a custom "In repair" status is not out there working.
+        (async () => {
+          const deployableSlugs = await listDeployableStatusSlugs(trx, tenant);
+          return applyAssetVisibilityFilter(
+            scopedDb.table('assets')
+              .where({
+                'assets.client_id': clientId
+              }),
+            visibility,
+            {
+              contactColumn: 'assets.contact_name_id',
+              // FR-E7: shared-workspace members count for their users too.
+              sharedWorkspace: { assetIdColumn: 'assets.asset_id', tenantColumn: 'assets.tenant' },
+            }
+          )
+            .whereIn('status', deployableSlugs)
+            .count('* as count') as unknown as Promise<Array<{ count: string }>>;
+        })(),
 
         // Total service request submissions for this client (any status).
         scopedDb.table('service_request_submissions')

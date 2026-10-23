@@ -25,7 +25,9 @@
       "inactive": "Nieaktywny",
       "loading": "Ładowanie...",
       "na": "n/d",
-      "none": "Brak"
+      "none": "Brak",
+      "yes": "Tak",
+      "no": "Nie"
     },
     "no": "Nie",
     "yes": "Tak"
@@ -36,6 +38,20 @@
       "offline": "Offline",
       "overdue": "Zaległy",
       "unknown": "Nieznany"
+    },
+    "rmaStatus": {
+      "open": "Otwarte",
+      "awaiting_return": "Oczekiwanie na zwrot",
+      "returned": "Zwrócono",
+      "sent_to_vendor": "Wysłano do dostawcy",
+      "replacement_received": "Otrzymano zamiennik",
+      "replacement_deployed": "Zamiennik wdrożony",
+      "dead_unit_owed": "Uszkodzone urządzenie do zwrotu",
+      "dead_unit_returned": "Zwrócono uszkodzone urządzenie",
+      "replaced": "Wymieniono",
+      "credited": "Zaliczono",
+      "charged": "Obciążono",
+      "closed": "Zamknięte"
     }
   },
   "assetAlertsSection": {
@@ -127,7 +143,10 @@
       "actions": "Działania",
       "patching": "Poprawki",
       "coverage": "Zakres",
-      "assignedTo": "Przypisano do"
+      "assignedTo": "Przypisano do",
+      "manufacturer": "Producent",
+      "model": "Model",
+      "group": "Grupa"
     },
     "metrics": {
       "totalAssets": {
@@ -172,18 +191,14 @@
       "rmmManaged": {
         "managed": "Zarządzane RMM",
         "unmanaged": "Nie zarządzane"
-      }
+      },
+      "allGroups": "Wszystkie grupy"
     },
     "activeFilters": {
       "status": "Status: {{value}}",
       "type": "Typ: {{value}}",
       "client": "Klient: {{value}}",
       "agent": "Agent monitorujący: {{value}}"
-    },
-    "statuses": {
-      "active": "Aktywny",
-      "inactive": "Nieaktywny",
-      "maintenance": "Konserwacja"
     },
     "types": {
       "workstation": "Stacja robocza",
@@ -229,7 +244,9 @@
         "delete": "Usuń",
         "selectedCount": "Zaznaczono {{count}}",
         "setLocation": "Ustaw lokalizację",
-        "setStatus": "Ustaw status"
+        "setStatus": "Ustaw status",
+        "assignContact": "Przypisz do kontaktu",
+        "addToGroup": "Dodaj do grupy"
       },
       "actions": {
         "apply": "Zastosuj",
@@ -237,7 +254,8 @@
         "deleteAssets": "Usuń",
         "deleting": "Usuwanie...",
         "updateLocation": "Aktualizacja lokalizacji",
-        "updateStatus": "Aktualizacja statusu"
+        "updateStatus": "Aktualizacja statusu",
+        "assignContact": "Przypisanie"
       },
       "deleteDialog": {
         "description": "Usuń {{count}} zaznaczonych zasobów. Zasoby z zależnościami mogą zostać pominięte.",
@@ -246,7 +264,8 @@
       "errors": {
         "deleteFailed": "Nie można usunąć zaznaczonych zasobów.",
         "updateLocationFailed": "Nie można zaktualizować lokalizacji zaznaczonych zasobów.",
-        "updateStatusFailed": "Nie można zaktualizować zaznaczonych zasobów."
+        "updateStatusFailed": "Nie można zaktualizować zaznaczonych zasobów.",
+        "assignFailed": "Nie udało się przypisać wybranych zasobów."
       },
       "locationDialog": {
         "clearLocation": "Wyczyść lokalizację",
@@ -264,7 +283,16 @@
         "description": "Zaktualizuj {{count}} zaznaczonych zasobów.",
         "title": "Ustaw status zasobu"
       },
-      "success": "{{action}} ukończono dla {{count}} zasobów."
+      "success": "{{action}} ukończono dla {{count}} zasobów.",
+      "assignDialog": {
+        "title": "Przypisz do kontaktu",
+        "description": "Przypisz {{count}} wybrane zasoby do kontaktu tego klienta."
+      },
+      "groupDialog": {
+        "title": "Dodaj do grupy",
+        "description": "Dodaj {{count}} wybrane zasoby do grupy tego klienta lub utwórz nową.",
+        "newGroup": "Utwórz nową grupę"
+      }
     }
   },
   "assetDashboardGrid": {
@@ -289,11 +317,6 @@
     "helper": {
       "awaitingSelection": "Oczekiwanie na wybór zasobu",
       "selectedAsset": "{{name}} • {{tab}}"
-    },
-    "statuses": {
-      "active": "Aktywny",
-      "inactive": "Nieaktywny",
-      "maintenance": "Konserwacja"
     },
     "empty": {
       "selectAsset": "Wybierz zasób, aby wyświetlić szczegóły",
@@ -349,7 +372,13 @@
       "status": "Status",
       "created": "Utworzono",
       "updated": "Zaktualizowano",
-      "tenant": "Organizacja"
+      "tenant": "Organizacja",
+      "manufacturer": "Producent",
+      "model": "Model",
+      "assignedTo": "Przypisano do",
+      "group": "Grupa",
+      "groupSharedWorkspace": "{{name}} · wspólne stanowisko",
+      "groupBundle": "{{name}} · zestaw"
     },
     "typeDetails": {
       "workstation": "Szczegóły stacji roboczej",
@@ -578,7 +607,8 @@
     "actions": {
       "viewClient": "Zobacz klienta",
       "manageClientLocations": "Zarządzaj lokalizacjami klientów",
-      "saveChanges": "Zapisz zmiany"
+      "saveChanges": "Zapisz zmiany",
+      "createVendor": "Utwórz dostawcę"
     },
     "alerts": {
       "noLocationsSaved": "Ten klient nie ma jeszcze żadnych zapisanych lokalizacji. Użyj wpisu niestandardowego lub utwórz go na podstawie rekordu klienta."
@@ -586,7 +616,8 @@
     "sections": {
       "basicInformation": "Podstawowe informacje",
       "clientAndLocation": "Klient i lokalizacja",
-      "assetBasics": "Podstawy zasobu"
+      "assetBasics": "Podstawy zasobu",
+      "procurement": "Producent i zakup"
     },
     "fields": {
       "customLocationOption": "Niestandardowa lokalizacja",
@@ -627,7 +658,12 @@
       "purchaseDate": "Data zakupu",
       "warrantyEndDate": "Data zakończenia gwarancji",
       "assetType": "Typ",
-      "assignedTo": "Przypisano do"
+      "assignedTo": "Przypisano do",
+      "manufacturer": "Producent",
+      "vendor": "Dostawca",
+      "purchaseCost": "Koszt zakupu",
+      "orderNumber": "Nr zamówienia",
+      "billingProfile": "Profil rozliczeniowy"
     },
     "placeholders": {
       "loadingClients": "Ładowanie klientów…",
@@ -639,7 +675,11 @@
       "selectPurchaseDate": "Wybierz datę zakupu",
       "selectWarrantyEndDate": "Wybierz datę zakończenia gwarancji",
       "loadingContacts": "Ładowanie kontaktów…",
-      "selectContact": "Wybierz kontakt"
+      "selectContact": "Wybierz kontakt",
+      "noVendor": "Brak dostawcy",
+      "selectVendor": "Wybierz dostawcę",
+      "purchaseCost": "0,00",
+      "clientDefaultProfile": "Domyślny klienta"
     },
     "statusOptions": {
       "active": "Aktywny",
@@ -809,7 +849,8 @@
       "save": "Zapisz",
       "label": "Etykieta przycisku",
       "template": "Szablon adresu URL",
-      "tokens": "Użyj {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} i {field.<key>} z kluczami pól niestandardowych z Ustawienia → Zasoby → Typy zasobów.",
+      "ninjaExample": "Przykład pulpitu urządzenia NinjaOne: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Zastąp host swoim regionem NinjaOne: app, eu, ca, oc lub us2 .ninjarmm.com.",
+      "tokens": "Użyj {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} i {field.<key>} z kluczami pól niestandardowych z Ustawienia → Zasoby → Typy zasobów.",
       "loading": "Wczytywanie opcji dostępu zdalnego…",
       "unavailable": "Niedostępne dla tego zasobu",
       "actions": "Działania",
@@ -924,7 +965,9 @@
       "description": "Opis",
       "board": "Tablica",
       "status": "Status",
-      "priority": "Priorytet"
+      "priority": "Priorytet",
+      "contact": "Kontakt",
+      "unnamedContact": "Kontakt bez nazwy"
     },
     "placeholders": {
       "title": "Wpisz tytuł zgłoszenia",
@@ -935,7 +978,8 @@
       "loadingStatuses": "Ładowanie statusów...",
       "selectStatus": "Wybierz stan...",
       "loadingPriorities": "Ładowanie priorytetów...",
-      "selectPriority": "Wybierz priorytet..."
+      "selectPriority": "Wybierz priorytet...",
+      "selectContact": "Wybierz kontakt..."
     },
     "errors": {
       "loadPriorities": "Nie udało się załadować priorytetów",
@@ -993,7 +1037,11 @@
       "serialNumber": "Numer seryjny",
       "customLocationOption": "Niestandardowa lokalizacja",
       "location": "Lokalizacja",
-      "assignedTo": "Przypisano do"
+      "assignedTo": "Przypisano do",
+      "manufacturer": "Producent",
+      "vendor": "Dostawca",
+      "purchaseCost": "Koszt zakupu",
+      "orderNumber": "Nr zamówienia"
     },
     "placeholders": {
       "workstationOsType": "np. Windows, macOS, Linux",
@@ -1015,7 +1063,13 @@
       "selectClientFirst": "Najpierw wybierz klienta",
       "selectLocation": "Wybierz lokalizację",
       "loadingContacts": "Ładowanie kontaktów...",
-      "selectContact": "Wybierz kontakt"
+      "selectContact": "Wybierz kontakt",
+      "manufacturer": "np. Lenovo",
+      "modelName": "np. ThinkPad T14",
+      "noVendor": "Brak dostawcy",
+      "selectVendor": "Wybierz dostawcę",
+      "purchaseCost": "0,00",
+      "orderNumber": "Wpisz numer zamówienia"
     },
     "sections": {
       "typeSpecificDetails": "Szczegóły specyficzne dla typu"
@@ -1110,7 +1164,8 @@
       "unknown": "Nieznany",
       "unifiedMemory": "{{size}}GB Pamięci zunifikowanej",
       "memoryUsed": " ({{size}}GB używane)",
-      "freeStorage": "{{size}} GB wolnego miejsca"
+      "freeStorage": "{{size}} GB wolnego miejsca",
+      "totalStorage": "{{size}} GB"
     },
     "empty": "Brak dostępnych danych sprzętowych",
     "emptyStorage": "Nie wykryto dysków pamięci masowej"
@@ -1512,7 +1567,28 @@
     "compliance": "Zgodność",
     "lastDone": "Ostatnio wykonano",
     "noMaintenance": "Nic nie zaplanowano.",
-    "docsHint": "Załączniki i poświadczenia tego zasobu."
+    "docsHint": "Załączniki i poświadczenia tego zasobu.",
+    "rmmUser": {
+      "looksLike": "· Prawdopodobnie {{contact}}",
+      "mapDialogDescription": "„{{user}}” zostanie zapamiętany dla tej organizacji RMM.",
+      "mapDialogTitle": "Mapowanie zalogowanego użytkownika na kontakt",
+      "mapFailed": "Nie udało się zapisać mapowania.",
+      "mapToContact": "Mapuj na kontakt…"
+    },
+    "manufacturer": "Producent",
+    "model": "Model",
+    "vendor": "Dostawca",
+    "purchaseCost": "Koszt zakupu",
+    "orderNumber": "Nr zamówienia",
+    "assignedTo": "Przypisano do",
+    "unassigned": "Nieprzypisany",
+    "assign": "Przypisz",
+    "unassign": "Usuń przypisanie",
+    "aContact": "Kontakt",
+    "assignDialogTitle": "Przypisz ten zasób",
+    "sharedWorkspace": "Współdzielone stanowisko",
+    "sharedWorkspaceValue": "{{name}} · {{count}} osób",
+    "billingProfile": "Profil rozliczeniowy"
   },
   "assetTimeline": {
     "title": "Oś czasu",
@@ -1531,7 +1607,18 @@
       "lastReboot": "Ostatni restart",
       "patchScan": "Skanowanie poprawek",
       "patchScanDetail": "{{pending}} oczekujących, {{failed}} nieudanych",
-      "purchased": "Zakupiono"
+      "purchased": "Zakupiono",
+      "assignedTo": "Przypisano do {{contact}}",
+      "unassigned": "Usunięto przypisanie",
+      "autoAssigned": "Automatycznie przypisano do {{contact}} na podstawie zalogowanego użytkownika",
+      "assignedViaBundle": "Przypisano do {{contact}} przez zestaw {{group}}",
+      "aContact": "kontaktu",
+      "groupAdded": "Dodano do {{group}}",
+      "groupRemoved": "Usunięto z {{group}}",
+      "aGroup": "grupy",
+      "autoAssignedFrom": "Automatycznie przypisano do {{contact}} z {{provider}}",
+      "groupLocationMoved": "Przeniesiono do {{location}} wraz z {{group}}",
+      "groupLocationCleared": "Lokalizacja wyczyszczona wraz z {{group}}"
     },
     "changeTypes": {
       "created": "Utworzono",
@@ -1585,11 +1672,6 @@
     },
     "coverage": {
       "noWarrantyDate": "brak daty gwarancji"
-    },
-    "status": {
-      "active": "aktywny",
-      "inactive": "nieaktywny",
-      "maintenance": "konserwacja"
     }
   },
   "errors": {
@@ -1599,7 +1681,10 @@
       "manageAssetTypes": "Odmowa uprawnień: nie można zarządzać typami zasobów",
       "readDocuments": "Odmowa uprawnień: nie można odczytywać dokumentów zasobu",
       "associateDocuments": "Odmowa uprawnień: nie można powiązać dokumentów z zasobami",
-      "removeDocuments": "Odmowa uprawnień: nie można usuwać dokumentów z zasobów"
+      "removeDocuments": "Odmowa uprawnień: nie można usuwać dokumentów z zasobów",
+      "readAssetStatuses": "Brak uprawnień: nie można odczytać statusów zasobów",
+      "manageAssetStatuses": "Brak uprawnień: nie można zarządzać statusami zasobów",
+      "updateAssets": "Brak uprawnień: nie można aktualizować zasobów"
     },
     "asset": {
       "notFoundRefresh": "Nie znaleziono zasobu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
@@ -1619,7 +1704,21 @@
       "notAllowed": "Jedna z wartości zasobu jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
       "missingField": "Brakuje wymaganego pola zasobu.",
       "missingFieldNamed": "Brakuje wymaganego pola zasobu: {{field}}.",
-      "contactUnavailable": "Wybrany kontakt jest niedostępny dla tego klienta."
+      "contactUnavailable": "Wybrany kontakt jest niedostępny dla tego klienta.",
+      "vendorUnavailable": "Wybrany dostawca jest niedostępny.",
+      "workspaceMember": "Ten zasób należy do współdzielonego stanowiska, więc nie można przypisać go jednej osobie.",
+      "billingProfileUnavailable": "Wybrany profil rozliczeniowy jest niedostępny dla tego klienta."
+    },
+    "assetGroup": {
+      "not_found": "Nie znaleziono grupy zasobów.",
+      "invalid_kind": "Ten rodzaj grupy jest niedostępny.",
+      "invalid_name": "Nazwa grupy jest wymagana.",
+      "client_mismatch": "Ten zasób lub kontakt należy do innego klienta.",
+      "already_grouped": "Ten zasób jest już w innej grupie.",
+      "users_on_bundle": "Zestaw ma jednego właściciela, nie listę użytkowników.",
+      "owner_on_workspace": "Współdzielone stanowisko ma użytkowników, nie właściciela.",
+      "users_present": "Usuń użytkowników stanowiska, zanim zmienisz je w zestaw.",
+      "invalid_location": "Ta lokalizacja jest niedostępna dla tego klienta."
     }
   },
   "clientAssetMultiSelect": {
@@ -1631,5 +1730,135 @@
     "empty": "Brak pasujących zasobów dla tego klienta",
     "loading": "Ładowanie...",
     "remove": "Usuń zasób"
+  },
+  "inventoryProvenance": {
+    "title": "Pochodzenie magazynowe",
+    "fields": {
+      "product": {
+        "label": "Produkt"
+      },
+      "serial": {
+        "label": "Numer seryjny"
+      },
+      "mac": {
+        "label": "MAC"
+      },
+      "originSalesOrder": {
+        "label": "Źródłowe zamówienie sprzedaży"
+      },
+      "delivered": {
+        "label": "Dostarczono"
+      }
+    },
+    "rmaHistory": {
+      "title": "Historia RMA"
+    },
+    "emptyValue": "—",
+    "rmaLabel": "RMA"
+  },
+  "skeletons": {
+    "assetForm": {
+      "loading": "Ładowanie formularza zasobu..."
+    }
+  },
+  "assetStatuses": {
+    "active": "Aktywny",
+    "in_stock": "W magazynie",
+    "maintenance": "W serwisie",
+    "inactive": "Nieaktywny",
+    "retired": "Wycofany"
+  },
+  "assetStatusKinds": {
+    "deployable": "Do użycia",
+    "pending": "Oczekujący",
+    "undeployable": "Nie do użycia",
+    "archived": "Zarchiwizowany"
+  },
+  "assetStatusSettings": {
+    "title": "Statusy zasobów",
+    "description": "Stany cyklu życia zasobów. Synchronizacja RMM nigdy ich nie nadpisuje po utworzeniu urządzenia.",
+    "empty": "Brak statusów zasobów.",
+    "addTitle": "Dodaj status",
+    "editTitle": "Edytuj status",
+    "columns": {
+      "label": "Status",
+      "kind": "Cykl życia",
+      "builtin": "Wbudowany",
+      "inUse": "W użyciu",
+      "actions": "Akcje"
+    },
+    "fields": {
+      "label": "Etykieta",
+      "kind": "Cykl życia"
+    },
+    "actions": {
+      "add": "Dodaj status",
+      "rename": "Zmień nazwę",
+      "archive": "Archiwizuj",
+      "openMenu": "Otwórz menu",
+      "restore": "Przywróć",
+      "archiveBlocked": "Archiwizuj · {{count}} zasób/zasoby nadal go używają",
+      "reorder": "Zmień kolejność „{{label}}” — przeciągnij lub użyj strzałek w górę i w dół",
+      "dragToReorder": "Przeciągnij, aby zmienić kolejność"
+    },
+    "confirmArchiveTitle": "Zarchiwizować ten status?",
+    "confirmArchiveMessage": "Zarchiwizować „{{label}}”? Nie będzie już oferowany w formularzach zasobów. Można go później przywrócić.",
+    "errors": {
+      "load": "Nie udało się wczytać statusów zasobów",
+      "inUse": "Nadal używany przez {{count}} zasób/zasoby. Najpierw przenieś je na inny status.",
+      "duplicate": "Status o tej nazwie już istnieje.",
+      "invalidKind": "Wybierz cykl życia dla tego statusu.",
+      "invalidLabel": "Wpisz nazwę zawierającą co najmniej jedną literę lub cyfrę.",
+      "notFound": "Ten status już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "save": "Nie udało się zapisać statusu."
+    }
+  },
+  "contactAssets": {
+    "title": "Zasoby",
+    "empty": "Do tego kontaktu nie przypisano żadnych zasobów.",
+    "sharedWorkspaces": "Współdzielone stanowiska",
+    "memberCount_one": "{{count}} zasób",
+    "memberCount_few": "{{count}} zasoby",
+    "memberCount_many": "{{count}} zasobów",
+    "memberCount_other": "{{count}} zasobów"
+  },
+  "assetGroups": {
+    "kinds": {
+      "bundle": "Zestaw",
+      "shared_workspace": "Współdzielone stanowisko"
+    },
+    "drawerTitle": "Grupa",
+    "fields": {
+      "name": "Nazwa",
+      "kind": "Rodzaj",
+      "location": "Lokalizacja",
+      "owner": "Właściciel",
+      "users": "Użytkownicy",
+      "members": "Elementy"
+    },
+    "sections": {
+      "people": "Osoby",
+      "members": "Elementy"
+    },
+    "addAssets": "Dodaj zasoby",
+    "addUser": "Dodaj osobę",
+    "noLocation": "Brak lokalizacji",
+    "locationHelp": "Zmiana lokalizacji przenosi wszystkie elementy grupy.",
+    "deleteHelp": "Elementy zachowują bieżące przypisanie i lokalizację.",
+    "actions": {
+      "manage": "Zarządzaj",
+      "delete": "Usuń grupę",
+      "addToGroup": "Dodaj do grupy"
+    },
+    "confirmUnassignTitle": "Usunąć przypisanie tych zasobów?",
+    "confirmUnassignMessage": "Współdzielone stanowisko ma użytkowników, a nie jedno przypisanie, więc {{count}} zasób/zasoby utracą przypisanie.",
+    "confirmKindTitle": "Zmienić we współdzielone stanowisko?",
+    "confirmKindMessage": "Współdzielone stanowisko ma użytkowników, a nie właściciela, więc wszystkie elementy utracą przypisanie.",
+    "confirmDeleteTitle": "Usunąć tę grupę?",
+    "confirmDeleteMessage": "Usunąć „{{name}}”? Elementy zachowują bieżące przypisanie i lokalizację.",
+    "errors": {
+      "createFailed": "Nie udało się utworzyć grupy.",
+      "addFailed": "Nie udało się dodać wybranych zasobów."
+    }
   }
 }

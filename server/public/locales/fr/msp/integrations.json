@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Fonctionnalité Pro"
+    },
     "accounting": {
       "bulk": {
         "button": "Mappage en masse",
@@ -27,7 +30,8 @@
           "mapped": "Mappé",
           "noResult": "Aucun résultat n'a été renvoyé pour cette ligne.",
           "pending": "En attente",
-          "saved": "Enregistré"
+          "saved": "Enregistré",
+          "missingField": "{{field}} manquant"
         },
         "suggested": "Suggéré",
         "toSave": "{{total}} à enregistrer"
@@ -79,7 +83,8 @@
           "instant": "Instantané",
           "live": "En direct",
           "manual": "Manuel",
-          "twoWay": "Bidirectionnel"
+          "twoWay": "Bidirectionnel",
+          "iif": "IIF"
         },
         "highlights": {
           "delivery": "Livraison",
@@ -99,6 +104,9 @@
           },
           "xeroCsv": {
             "description": "Exportez les factures au format CSV pour un import manuel dans Xero et importez les données fiscales depuis les rapports Xero."
+          },
+          "qbd": {
+            "description": "Exportez les factures dans un fichier IIF à importer dans QuickBooks Desktop."
           }
         },
         "selected": "{{title}} sélectionné",
@@ -124,6 +132,24 @@
           "paymentTerms": "Conditions de paiement",
           "discounts": "Remises"
         }
+      },
+      "adjustmentMappings": {
+        "desktopAccount": "Nom du compte de produits Desktop",
+        "description": "Associez les remises et avoirs avant l’exportation. Cette association appartient à cette société comptable.",
+        "add": "Ajouter une association",
+        "remove": "Supprimer une association",
+        "removeConfirm": "Supprimer cette association comptable ?",
+        "desktopTaxAccount": "Nom du compte de taxe de vente Desktop",
+        "desktopCustomer": "Nom du client Desktop",
+        "desktopTerms": "Nom des conditions Desktop",
+        "descriptionTaxCodes": "Chaque région fiscale indique l’article ou le groupe de taxe de vente facturé par QuickBooks Desktop et le compte de passif sur lequel il est comptabilisé.",
+        "descriptionServices": "Chaque service indique l’article QuickBooks Desktop utilisé par ses lignes de facture et le compte de produits sur lequel elles sont comptabilisées.",
+        "descriptionClients": "Le client QuickBooks Desktop sous lequel chaque client est facturé. Les clients sans correspondance bloquent l’exportation.",
+        "descriptionPaymentTerms": "Les conditions QuickBooks Desktop imprimées sur chaque facture. Les conditions sans correspondance restent vides.",
+        "desktopItem": "Nom de l’article Desktop",
+        "desktopItemHelp": "L’article exactement tel qu’il apparaît dans votre liste d’articles QuickBooks Desktop. Chaque ligne de facture indique un article, les exportations sont donc bloquées tant qu’il n’est pas défini.",
+        "desktopSalesTaxItem": "Article ou groupe de taxe de vente",
+        "desktopSalesTaxItemHelp": "Laissez vide pour utiliser l’article de taxe de vente par défaut des paramètres QuickBooks Desktop."
       }
     },
     "calendar": {
@@ -1223,7 +1249,12 @@
         "recommendedUnsaved": "Recommandé — non enregistré",
         "unsavedChange": "Modification non enregistrée",
         "unsavedNotice": "Ces filtres ne seront appliqués qu’après leur enregistrement."
-      }
+      },
+      "proFeature": {
+        "description": "L’intégration Microsoft Entra est disponible dans AlgaPSA Pro.",
+        "notice": "L’intégration des identités Microsoft Entra est une fonctionnalité Pro."
+      },
+      "loading": "Chargement de l’intégration Microsoft Entra…"
     },
     "google": {
       "settings": {
@@ -1294,6 +1325,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "L’intégration de la documentation informatique Hudu est disponible dans AlgaPSA Pro."
+      },
       "clientTab": {
         "source": "Source : Hudu",
         "openInHudu": "Ouvrir dans Hudu",
@@ -2314,6 +2348,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "L’intégration RMM NinjaOne est disponible dans AlgaPSA Pro."
+        },
         "loading": "Chargement des paramètres d’intégration NinjaOne...",
         "card": {
           "title": "Intégration NinjaOne RMM",
@@ -2591,6 +2628,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "L’intégration RMM Tanium est disponible dans AlgaPSA Pro."
+        },
         "loading": "Chargement des paramètres d'intégration Tanium...",
         "actions": {
           "discoverScopes": "Découvrir les portées",
@@ -2661,6 +2701,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "L’intégration RMM Level.io est disponible dans AlgaPSA Pro."
+        },
         "actions": {
           "backfillAlerts": "Rattraper les alertes",
           "disconnect": "Déconnecter",
@@ -2733,16 +2776,35 @@
           "copied": "Copié",
           "copy": "Copier",
           "description": "Level ne peut pas enregistrer de webhooks via son API. Dans Level, créez une automatisation avec une action HTTP POST utilisant l'URL, l'en-tête et la charge utile ci-dessous pour pousser les alertes vers Alga en temps réel.",
+          "fallbackDescription": "Utilisez cette solution de repli uniquement si les webhooks natifs de Paramètres → Webhooks dans Level ne sont pas utilisables. Créez une automatisation avec une action HTTP POST utilisant l'URL, l'en-tête et la charge utile ci-dessous pour envoyer les alertes à Alga.",
+          "fallbackNameHint": "Modifiez la valeur \"name\" dans chaque automatisation. Avec l'appareil, elle identifie l'alerte : les répétitions du même nom sur le même appareil forment une seule alerte.",
+          "fallbackTitle": "Solution de repli : requête HTTP d'automatisation",
           "header": "En-tête : {{name}}",
           "hideSecret": "Masquer le secret",
           "loading": "Les détails du webhook se chargent une fois l'intégration configurée.",
+          "nativeDescription": "Dans Level, ouvrez Paramètres → Webhooks, ajoutez un webhook avec l'URL et la clé de signature ci-dessous, puis activez les événements indiqués. Level signe chaque envoi et Alga vérifie la signature.",
+          "nativeEvents": "Événements à activer",
+          "nativeEventsHelp": "Activez alert_active et alert_resolved. Les autres événements sont acquittés et ignorés.",
+          "nativeSigningSecret": "Clé de signature",
+          "nativeTitle": "Webhook natif (recommandé)",
           "payload": "Modèle de charge utile",
+          "regenerateCancel": "Annuler",
+          "regenerateConfirmLabel": "Régénérer",
+          "regenerateConfirmMessage": "Les webhooks Level existants échoueront avec une erreur 401 tant que vous n'aurez pas collé la nouvelle clé de signature dans les paramètres de webhook de Level. Level réessaie les envois, mais ils peuvent être perdus si la clé n'est pas mise à jour.",
+          "regenerateConfirmTitle": "Régénérer la clé de signature ?",
+          "regenerateConfirmed": "Clé de signature régénérée. Mettez-la à jour dans les paramètres de webhook de Level.",
+          "regenerateFailed": "Échec de la régénération de la clé de signature",
+          "regenerateSecret": "Régénérer la clé",
           "showSecret": "Afficher le secret",
           "title": "Webhook d'alertes",
           "url": "URL du webhook"
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Intégration Huntress",
+          "description": "L’intégration de sécurité Huntress est une fonctionnalité Pro."
+        },
         "columns": {
           "organization": "Organisation Huntress",
           "client": "Client Alga",
@@ -2783,7 +2845,7 @@
         },
         "connection": {
           "title": "Connecté au compte {{account}}",
-          "summary": "{{organizations}} organisations ({{unmapped}} non associées) · {{openIncidents}} incidents ouverts · dernière synchronisation : {{lastPoll}}",
+          "summary": "{{organizations}} organisations ({{unmapped}} non associées) · {{openAlerts}} alertes ouvertes · dernière synchronisation : {{lastPoll}}",
           "neverPolled": "jamais",
           "lastPollFailed": "Échec de la dernière synchronisation : {{error}}",
           "routingIncompleteWarning": "La synchronisation des incidents est en pause jusqu'à ce que la configuration du routage ci-dessous soit terminée (tableau, client et tableau de repli, ainsi que les trois priorités de gravité).",
@@ -2806,6 +2868,8 @@
           "selectPriority": "Sélectionner une priorité",
           "pollInterval": "Intervalle de synchronisation (minutes)",
           "autoClose": "Fermer les tickets lorsque Huntress ferme l'incident",
+          "ingestEscalations": "Créer des tickets à partir des escalades Huntress",
+          "ingestEscalationsHelp": "Les escalades utilisent les mêmes paramètres de tableau, de catégorie, de correspondance des priorités et de fermeture automatique que les incidents. Une escalade qui concerne plusieurs organisations crée un ticket par organisation.",
           "closedStatus": "Statut de fermeture",
           "selectStatus": "Sélectionner un statut",
           "save": "Enregistrer la configuration du routage",
@@ -2884,6 +2948,54 @@
         "errors": {
           "saveFailed": "Impossible d'enregistrer la planification de la synchronisation des appareils."
         }
+      },
+      "peopleMode": {
+        "label": "Personnes",
+        "options": {
+          "off": "Désactivé",
+          "suggest": "Suggérer",
+          "auto": "Attribution automatique"
+        },
+        "updateFailed": "Impossible de mettre à jour le mode Personnes"
+      },
+      "signedInUsers": {
+        "title": "Utilisateurs connectés",
+        "description": "Les noms d'utilisateur signalés par les appareils de cette organisation et le contact correspondant.",
+        "empty": "Aucun utilisateur connecté signalé pour le moment.",
+        "noClient": "Associez cette organisation à un client avant d'associer ses utilisateurs.",
+        "refresh": "Rafraîchir",
+        "selectContact": "Sélectionner un contact",
+        "loadFailed": "Impossible de charger les utilisateurs connectés.",
+        "saveFailed": "Impossible d'enregistrer l'association.",
+        "columns": {
+          "user": "Utilisateur connecté",
+          "devices": "Appareils",
+          "method": "Associé par",
+          "contact": "Contact"
+        },
+        "methods": {
+          "mapped": "Association enregistrée",
+          "email": "E-mail",
+          "username": "Nom d'utilisateur",
+          "name": "Nom complet",
+          "none": "Aucune correspondance"
+        }
+      },
+      "clientChange": {
+        "title": "Déplacer les appareils de cette organisation ?",
+        "message": "{{count}} actif(s) seront déplacés vers {{client}}. Les attributions, groupes et profils de facturation du client précédent seront effacés.",
+        "confirm": "Déplacer les appareils"
+      },
+      "billingProfile": {
+        "label": "Profil de facturation",
+        "clientDefault": "Valeur par défaut du client",
+        "updateFailed": "Échec de la mise à jour du profil de facturation"
+      },
+      "errors": {
+        "invalidPeopleMode": "Ce mode de gestion des personnes n'est pas valide.",
+        "billingProfileUnavailable": "Ce profil de facturation n'est pas disponible pour ce client.",
+        "mappingNotFound": "Cette association n'existe plus. Actualisez la page et réessayez.",
+        "forbidden": "Vous n'avez pas l'autorisation de modifier cela."
       }
     },
     "sso": {
@@ -3454,6 +3566,11 @@
           "regenerate": "Régénérer le package",
           "regenerating": "Régénération..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Connexion à Teams indisponible",
+        "tabTitle": "Onglet Teams indisponible",
+        "description": "L’intégration Microsoft Teams est uniquement disponible dans Pro."
       }
     },
     "xero": {
@@ -3953,6 +4070,59 @@
           "providers": "Teams Phone aujourd'hui ; le même noyau d'appels accueillera les futurs fournisseurs."
         }
       }
+    },
+    "qbd": {
+      "settings": {
+        "title": "Intégration QuickBooks Desktop (IIF)",
+        "description": "Exportez les factures dans un fichier IIF pour Fichier → Utilitaires → Importer → Fichiers IIF dans QuickBooks Desktop.",
+        "loading": "Chargement des paramètres QuickBooks Desktop...",
+        "savedMessage": "Paramètres enregistrés avec succès",
+        "save": "Enregistrer les paramètres",
+        "connectionsPermissionNotice": "Vous pouvez consulter les paramètres QuickBooks Desktop, mais leur modification nécessite la capacité de gestion des connexions. Demandez à un administrateur de vous l'accorder.",
+        "errors": {
+          "load": "Impossible de charger les paramètres QuickBooks Desktop",
+          "save": "Impossible d'enregistrer les paramètres QuickBooks Desktop"
+        },
+        "warning": {
+          "title": "Sauvegardez d'abord votre fichier d'entreprise",
+          "description": "QuickBooks Desktop crée tout nom de client, d'article, de compte ou de condition qu'il ne reconnaît pas lors de l'import d'un fichier IIF, et les imports IIF ne peuvent pas être annulés. Vérifiez que chaque nom ci-dessous et dans les correspondances correspond exactement à votre fichier d'entreprise, et testez votre premier import sur une copie de sauvegarde."
+        },
+        "exportSettings": {
+          "title": "Paramètres d'export IIF",
+          "description": "Saisissez les noms de comptes et d'articles QuickBooks Desktop exactement tels qu'ils apparaissent dans votre plan comptable et votre liste d'articles."
+        },
+        "fields": {
+          "arAccount": "Compte clients",
+          "arAccountHelp": "Le compte clients sur lequel chaque facture est comptabilisée.",
+          "defaultIncomeAccount": "Compte de produits par défaut",
+          "defaultIncomeAccountHelp": "Le compte de produits des articles mis en correspondance depuis une exportation, et de toute correspondance Services ou Remises sans compte.",
+          "salesTaxPayableAccount": "Compte de taxe de vente à payer",
+          "salesTaxPayableAccountHelp": "Le compte sur lequel la ligne de taxe de vente est comptabilisée, sauf si la correspondance des codes fiscaux de la région en indique un autre.",
+          "defaultSalesTaxItem": "Article de taxe de vente par défaut",
+          "defaultSalesTaxItemHelp": "Article ou groupe de taxe de vente pour les factures taxées dont la correspondance des codes fiscaux n’en indique aucun.",
+          "newProductItemType": "Type d'article pour les nouveaux produits",
+          "inventoryWarning": "Les réceptions de stock d'Alga ne sont pas exportées : les quantités en stock dans QuickBooks deviendront négatives, sauf si vous saisissez aussi le stock dans QuickBooks.",
+          "nonInventoryHelp": "Recommandé : Alga reste le système de référence pour le stock et QuickBooks n'enregistre que la vente.",
+          "inventoryAssetAccount": "Compte d'actif de stock",
+          "cogsAccount": "Compte de coût des marchandises vendues"
+        },
+        "mappings": {
+          "title": "Correspondances QuickBooks",
+          "description": "Faites correspondre les clients, services, remises, codes fiscaux et conditions de paiement d’Alga aux noms de votre fichier d’entreprise QuickBooks Desktop. Chaque service et chaque remise nécessite un article Desktop ; les conditions de paiement sans correspondance restent vides.",
+          "permissionNotice": "La modification des correspondances QuickBooks Desktop nécessite l’autorisation de gérer les correspondances. Demandez-la à un administrateur."
+        },
+        "exports": {
+          "description": "Créez un lot d’exportation QuickBooks Desktop, exécutez-le, puis téléchargez le fichier IIF depuis les détails du lot."
+        },
+        "newItems": {
+          "title": "Articles créés par les exports",
+          "description": "Lorsqu'un export crée un nouvel article QuickBooks pour un produit Alga, il utilise ce type d'article. Les services sont toujours créés comme articles de service."
+        },
+        "itemTypes": {
+          "nonInventory": "Pièce hors stock",
+          "inventory": "Pièce en stock"
+        }
+      }
     }
   },
   "errors": {
@@ -3980,6 +4150,8 @@
       "managePermission": "Autorisation refusée : vous n’avez pas l’autorisation de gérer les correspondances comptables.",
       "loadFailed": "Impossible de charger les données de correspondance. Veuillez réessayer.",
       "duplicate": "Une correspondance existe déjà pour cette entité. Modifiez plutôt la correspondance existante.",
+      "duplicateTarget": "Cette cible est déjà associée à une autre entité dans cette organisation. Choisissez une autre cible.",
+      "duplicateXeroItem": "Cet article Xero est déjà associé à un autre service. Un article ne peut être associé qu'à un seul service ; pour facturer plusieurs services avec le même code, associez-les plutôt à un compte de produits.",
       "saveFailed": "Impossible d’enregistrer la correspondance. Veuillez réessayer.",
       "idRequiredForUpdate": "L’identifiant de la correspondance est obligatoire pour la mise à jour.",
       "noUpdateData": "Aucune donnée de mise à jour fournie.",
@@ -4070,6 +4242,10 @@
       "contactWithoutClient": "Un contact avec cette adresse e-mail existe déjà dans le système sans affectation à un client",
       "emailOnAnotherClient": "Cet e-mail est déjà associé à un autre client",
       "emailOnAnotherClientNamed": "Cet e-mail est déjà associé à {{clientName}}"
+    },
+    "quickbooksDesktop": {
+      "viewSettingsPermission": "L'utilisateur n'a pas l'autorisation de consulter les paramètres d'intégration",
+      "manageIntegrationsPermission": "L'utilisateur n'a pas l'autorisation de gérer les paramètres d'intégration"
     }
   },
   "telephony": {

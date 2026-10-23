@@ -288,6 +288,9 @@
       },
       "recurring": {
         "title": "Tickets recurrentes"
+      },
+      "templates": {
+        "title": "Plantillas de tickets"
       }
     },
     "workflowEditor": {

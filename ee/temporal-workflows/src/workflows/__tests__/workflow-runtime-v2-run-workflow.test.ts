@@ -228,6 +228,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     );
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_1',
+      tenantId: 'tenant_1',
       status: 'SUCCEEDED',
     });
   });
@@ -302,6 +303,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     );
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_2',
+      tenantId: 'tenant_1',
       status: 'SUCCEEDED',
     });
   });
@@ -372,6 +374,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     );
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_2_nested_if',
+      tenantId: 'tenant_1',
       status: 'SUCCEEDED',
     });
   });
@@ -583,6 +586,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     );
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_3',
+      tenantId: 'tenant_1',
       status: 'SUCCEEDED',
     });
   });
@@ -814,6 +818,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     );
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_4',
+      tenantId: 'tenant_1',
       status: 'SUCCEEDED',
     });
   });
@@ -910,6 +915,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     );
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_5',
+      tenantId: 'tenant_1',
       status: 'SUCCEEDED',
     });
   });
@@ -994,6 +1000,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     );
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_6',
+      tenantId: 'tenant_1',
       status: 'CANCELED',
     });
   });
@@ -1068,6 +1075,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
 
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_7',
+      tenantId: 'tenant_1',
       status: 'FAILED',
     });
   });
@@ -1207,6 +1215,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     );
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_8',
+      tenantId: 'tenant_1',
       status: 'SUCCEEDED',
     });
   });
@@ -1286,6 +1295,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     );
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_8_nested_for_each',
+      tenantId: 'tenant_1',
       status: 'SUCCEEDED',
     });
   });
@@ -1394,6 +1404,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     );
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_9',
+      tenantId: 'tenant_1',
       status: 'SUCCEEDED',
     });
   });
@@ -1465,6 +1476,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
 
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_10',
+      tenantId: 'tenant_1',
       status: 'FAILED',
     });
   });
@@ -1590,6 +1602,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     );
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_11',
+      tenantId: 'tenant_1',
       status: 'SUCCEEDED',
     });
   });
@@ -1731,6 +1744,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     );
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_12b',
+      tenantId: 'tenant_1',
       status: 'CANCELED',
     });
   });
@@ -1816,6 +1830,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     expect(executeChildMock).toHaveBeenCalledTimes(2);
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_13',
+      tenantId: 'tenant_1',
       status: 'SUCCEEDED',
     });
   });
@@ -1907,6 +1922,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     );
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_14',
+      tenantId: 'tenant_1',
       status: 'SUCCEEDED',
     });
   });
@@ -1997,6 +2013,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     expect(mockActivities.projectWorkflowRuntimeV2TimeWaitResolved).toHaveBeenCalledWith({
       waitId: 'wait-15',
       runId: 'run_15',
+      tenantId: 'tenant_1',
       status: 'RESOLVED',
     });
     expect(mockActivities.executeWorkflowRuntimeV2ActionStep).toHaveBeenCalledWith(
@@ -2078,10 +2095,12 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     expect(mockActivities.projectWorkflowRuntimeV2TimeWaitResolved).toHaveBeenCalledWith({
       waitId: 'wait-16',
       runId: 'run_16',
+      tenantId: 'tenant_1',
       status: 'RESOLVED',
     });
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_16',
+      tenantId: 'tenant_1',
       status: 'SUCCEEDED',
     });
   });
@@ -2147,10 +2166,12 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     expect(mockActivities.projectWorkflowRuntimeV2TimeWaitResolved).toHaveBeenCalledWith({
       waitId: 'wait-16-cancel',
       runId: 'run_16_cancel_wait',
+      tenantId: 'tenant_1',
       status: 'CANCELED',
     });
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_16_cancel_wait',
+      tenantId: 'tenant_1',
       status: 'CANCELED',
     });
   });
@@ -2437,6 +2458,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     // absent field.
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_19',
+      tenantId: 'tenant_1',
       status: 'SUCCEEDED',
     });
   });
@@ -2797,6 +2819,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     });
     expect(mockActivities.completeWorkflowRuntimeV2Run).toHaveBeenCalledWith({
       runId: 'run_23',
+      tenantId: 'tenant_1',
       status: 'SUCCEEDED',
     });
   });

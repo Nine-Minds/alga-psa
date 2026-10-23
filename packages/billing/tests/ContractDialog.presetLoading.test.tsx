@@ -37,6 +37,8 @@ vi.mock('@alga-psa/billing/actions/serviceActions', () => ({
 vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', () => ({
   useBillingFrequencyOptions: () => [{ value: 'monthly', label: 'Monthly' }],
   useContractLineTypeOptions: () => [{ value: 'Fixed', label: 'Fixed' }],
+  useFormatContractLineType: () => (value?: string | null) => value ?? '',
+  useFormatBillingFrequency: () => (value?: string | null) => value ?? '',
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({

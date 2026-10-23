@@ -1,6 +1,11 @@
 'use client';
 
+import { rmmMappingErrorMessage } from '@alga-psa/integrations/components/settings/integrations/rmmMappingErrors';
 import React, { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
+import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from '@alga-psa/integrations/components/settings/integrations/RmmUserContactMappingPanel';
+import { RmmOrganizationClientChangeDialog } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationClientChangeDialog';
+import { RmmOrganizationBillingProfileSelect } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationBillingProfileSelect';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -33,6 +38,7 @@ type MappingRow = {
   client_name?: string | null;
   auto_sync_assets: boolean;
   default_contact_id?: string | null;
+  contact_assignment_mode?: string | null;
 };
 
 export default function TaniumIntegrationSettings() {
@@ -130,7 +136,7 @@ export default function TaniumIntegrationSettings() {
         setSuccess(t('integrations.rmm.tanium.success.configurationSaved'));
         await refresh();
       } else {
-        setError(result.error || t('integrations.rmm.tanium.errors.saveConfiguration'));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.tanium.errors.saveConfiguration')));
       }
     });
   };
@@ -143,7 +149,7 @@ export default function TaniumIntegrationSettings() {
       if (result.success) {
         setSuccess(t('integrations.rmm.tanium.success.connectionTestSucceeded'));
       } else {
-        setError(result.error || t('integrations.rmm.tanium.errors.testConnectionFailed'));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.tanium.errors.testConnectionFailed')));
       }
       await refresh();
     });
@@ -157,7 +163,7 @@ export default function TaniumIntegrationSettings() {
       if (result.success) {
         setSuccess(t('integrations.rmm.tanium.success.disconnected'));
       } else {
-        setError(result.error || t('integrations.rmm.tanium.errors.disconnectFailed'));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.tanium.errors.disconnectFailed')));
       }
       await refresh();
     });
@@ -177,7 +183,7 @@ export default function TaniumIntegrationSettings() {
           })
         );
       } else {
-        setError(result.error || t('integrations.rmm.tanium.errors.scopeDiscoveryFailed'));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.tanium.errors.scopeDiscoveryFailed')));
       }
       await refresh();
     });
@@ -204,7 +210,10 @@ export default function TaniumIntegrationSettings() {
     });
   };
 
-  const handleMappingClientChange = (mappingId: string, clientId: string | null) => {
+  // FR-G4: re-pointing an organization moves its devices, so confirm first.
+  const [pendingClientChange, setPendingClientChange] = useState<{ mappingId: string; clientId: string | null } | null>(null);
+
+  const handleMappingClientChangeConfirmed = (mappingId: string, clientId: string | null) => {
     void (async () => {
       const result = await updateTaniumOrganizationMapping({
         mappingId,
@@ -212,7 +221,7 @@ export default function TaniumIntegrationSettings() {
         defaultContactId: null,
       });
       if (!result.success) {
-        setError(result.error || t('integrations.rmm.tanium.errors.updateMappingFailed'));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.tanium.errors.updateMappingFailed')));
         return;
       }
       await refresh();
@@ -226,11 +235,45 @@ export default function TaniumIntegrationSettings() {
         defaultContactId: contactId || null,
       });
       if (!result.success) {
-        setError(result.error || t('integrations.rmm.tanium.errors.updateMappingFailed'));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.tanium.errors.updateMappingFailed')));
         return;
       }
       await refresh();
     })();
+  };
+
+  // F090: the profile this organization's alert tickets are attributed to.
+  const handleBillingProfileChange = (mappingId: string, billingProfileId: string | null) => {
+    void (async () => {
+      const result = await updateTaniumOrganizationMapping({ mappingId, billingProfileId });
+      if (!result.success) {
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.billingProfile.updateFailed', { defaultValue: 'Failed to update the billing profile' })));
+        return;
+      }
+      await refresh();
+    })();
+  };
+
+  const handlePeopleModeChange = (mappingId: string, mode: string) => {
+    void (async () => {
+      const result = await updateTaniumOrganizationMapping({ mappingId, contactAssignmentMode: mode });
+      if (!result.success) {
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.tanium.errors.updateMappingFailed')));
+        return;
+      }
+      await refresh();
+    })();
+  };
+
+  const peopleModeOptions = buildRmmPeopleModeOptions(t);
+
+  const handleMappingClientChange = (mappingId: string, clientId: string | null) => {
+    const current = mappings.find((m) => m.mapping_id === mappingId);
+    if (clientId && current?.client_id && current.client_id !== clientId) {
+      setPendingClientChange({ mappingId, clientId });
+      return;
+    }
+    handleMappingClientChangeConfirmed(mappingId, clientId);
   };
 
   const columns: ColumnDefinition<MappingRow>[] = [
@@ -279,6 +322,35 @@ export default function TaniumIntegrationSettings() {
       ),
     },
     {
+      // FR-D8: what sync does with the device's signed-in user.
+      title: t('integrations.rmm.peopleMode.label', { defaultValue: 'People' }),
+      dataIndex: 'contact_assignment_mode',
+      sortable: false,
+      render: (_v, mapping) => (
+        <CustomSelect
+          id={`rmm-org-people-mode-${mapping.mapping_id}`}
+          value={mapping.contact_assignment_mode ?? 'suggest'}
+          onValueChange={(mode) => handlePeopleModeChange(mapping.mapping_id, mode)}
+          options={peopleModeOptions}
+          className="min-w-[160px]"
+        />
+      ),
+    },
+    {
+      // F090: which profile this organization's alert tickets bill to.
+      title: t('integrations.rmm.billingProfile.label', { defaultValue: 'Billing profile' }),
+      dataIndex: 'billing_profile_id',
+      sortable: false,
+      render: (_v, mapping) => (
+        <RmmOrganizationBillingProfileSelect
+          mappingId={mapping.mapping_id}
+          clientId={mapping.client_id}
+          value={(mapping as { billing_profile_id?: string | null }).billing_profile_id}
+          onChange={(billingProfileId) => handleBillingProfileChange(mapping.mapping_id, billingProfileId)}
+        />
+      ),
+    },
+    {
       title: t('integrations.rmm.tanium.mappings.autoSync'),
       dataIndex: 'auto_sync_assets',
       sortable: false,
@@ -292,6 +364,17 @@ export default function TaniumIntegrationSettings() {
 
   return (
     <div className="space-y-6" id="tanium-integration-settings">
+      <RmmOrganizationClientChangeDialog
+        mappingId={pendingClientChange?.mappingId ?? null}
+        pendingClientName={clients.find((c) => c.client_id === pendingClientChange?.clientId)?.client_name ?? null}
+        isOpen={Boolean(pendingClientChange)}
+        onCancel={() => setPendingClientChange(null)}
+        onConfirm={() => {
+          const pending = pendingClientChange;
+          setPendingClientChange(null);
+          if (pending) handleMappingClientChangeConfirmed(pending.mappingId, pending.clientId);
+        }}
+      />
       {error ? (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -410,12 +493,30 @@ export default function TaniumIntegrationSettings() {
           </div>
 
           <div className="overflow-x-auto rounded-md border">
-            <DataTable
-              id="tanium-org-mappings"
-              data={mappings}
-              columns={columns}
-              pagination
-            />
+            <>
+              <DataTable
+                id="tanium-org-mappings"
+                data={mappings}
+                columns={columns}
+                pagination
+              />
+              {/* FR-D8: one Signed-in users panel per mapped organization. */}
+              {mappings
+                .filter((m) => m.client_id)
+                .map((m) => (
+                  <div key={`signed-in-${m.mapping_id}`} className="mt-4 border-t pt-4">
+                    <div className="mb-2 text-sm font-medium">
+                      {m.external_organization_name || m.external_organization_id}
+                    </div>
+                    <RmmUserContactMappingPanel
+                      mappingId={m.mapping_id}
+                      clientId={m.client_id ?? null}
+                      contacts={contacts}
+                      idPrefix={`tanium-signed-in-${m.mapping_id}`}
+                    />
+                  </div>
+                ))}
+            </>
           </div>
         </CardContent>
       </Card>

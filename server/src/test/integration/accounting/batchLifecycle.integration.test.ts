@@ -263,7 +263,10 @@ describe('Accounting export batch lifecycle integration', () => {
       .filter(([, payload]) => payload?.status)
       .map(([, payload]) => payload.status);
 
-    expect(transitionStatuses).toEqual(expect.arrayContaining(['validating', 'ready', 'delivered']));
+    // Reservation to `validating` is an atomic repository update, and validation
+    // preserves that reserved status. Only terminal delivery is emitted through
+    // the status-update API while the export fence is held.
+    expect(transitionStatuses).toEqual(['delivered']);
 
     const delivered = await repository.getBatch(batch.batch_id);
     expect(delivered?.status).toBe('delivered');

@@ -17,7 +17,7 @@ import {
   updateBlockContent,
 } from '@alga-psa/block-content/actions/blockContentActions';
 import type { IDocument } from '@alga-psa/types';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildNoteCreatedPayload } from '@alga-psa/workflow-streams';
 import { assertMspPermission } from '../lib/authHelpers';
 import {
@@ -46,6 +46,34 @@ function clientNoteActionErrorFrom(error: unknown): ClientNoteActionError | null
     return actionError('Client not found', 'msp/clients:errors.client.notFound');
   }
   return null;
+}
+
+/**
+ * Keep the search index in step with note edits. The block-content helpers in
+ * @alga-psa/block-content do not fire document events, so without this a note
+ * stays unsearchable until the nightly search:reconcile run.
+ */
+async function publishNoteDocumentUpdated(
+  tenant: string,
+  documentId: string,
+  userId: string,
+): Promise<void> {
+  try {
+    const occurredAt = new Date().toISOString();
+    await publishEvent({
+      eventType: 'DOCUMENT_UPDATED',
+      payload: {
+        tenantId: tenant,
+        occurredAt,
+        documentId,
+        updatedByUserId: userId,
+        updatedAt: occurredAt,
+        changedFields: ['content'],
+      },
+    });
+  } catch (eventError) {
+    console.error('[saveClientNote] Failed to publish DOCUMENT_UPDATED search event:', eventError);
+  }
 }
 
 /**
@@ -168,6 +196,8 @@ export const saveClientNote = withAuth(async (
         user_id: user.user_id,
       });
 
+      await publishNoteDocumentUpdated(tenant, client.notes_document_id, user.user_id);
+
       return { document_id: client.notes_document_id };
     } else {
       // Create new document and link to client
@@ -202,6 +232,8 @@ export const saveClientNote = withAuth(async (
         ctx: { tenantId: tenant, occurredAt, actor: { actorType: 'USER' as const, actorUserId: user.user_id } },
         idempotencyKey: `note_created:client:${clientId}:${document_id}`,
       });
+
+      await publishNoteDocumentUpdated(tenant, document_id, user.user_id);
 
       return { document_id };
     }

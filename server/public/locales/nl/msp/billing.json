@@ -230,12 +230,14 @@
       "selectService": "Selecteer Dienst",
       "taxable": "(belastbaar)",
       "nonTaxable": "(Niet-belastbaar)",
-      "calculatedOnSave": "(berekend bij opslaan)"
+      "calculatedOnSave": "(berekend bij opslaan)",
+      "credit": "Krediet"
     },
     "expanded": {
       "discount": "Korting",
       "item": "Artikel {{number}}",
-      "markedForRemoval": "Gemarkeerd voor verwijdering"
+      "markedForRemoval": "Gemarkeerd voor verwijdering",
+      "credit": "Krediet"
     },
     "fields": {
       "service": "Dienst",
@@ -247,10 +249,18 @@
       "applyDiscountTo": "Korting toepassen op",
       "entireInvoice": "Volledige factuur",
       "rate": "Tarief ({{currencySymbol}})",
-      "description": "Beschrijving"
+      "description": "Beschrijving",
+      "creditUnit": "Krediet per eenheid ({{currencySymbol}})",
+      "taxTreatment": "Fiscale behandeling",
+      "nonTaxable": "Niet-belastbaar",
+      "location": "Locatie",
+      "clientDefaultLocation": "Standaard van de klant",
+      "billingProfile": "Facturatieprofiel",
+      "clientDefaultProfile": "Standaard van de klant"
     },
     "placeholders": {
-      "discountDescription": "bijvoorbeeld korting op vroegtijdige betaling"
+      "discountDescription": "bijvoorbeeld korting op vroegtijdige betaling",
+      "creditDescription": "bijvoorbeeld krediet uit goodwill"
     },
     "actions": {
       "add": "Toevoegen",
@@ -267,11 +277,15 @@
       "invoiceTotal": "{{percentage}}% van het factuurtotaal",
       "amount": "Bedrag: -{{currencySymbol}}{{amount}}",
       "appliedTo": "Toegepast op: {{description}}",
-      "subtotal": "Subtotaal: {{currencySymbol}}{{amount}}"
+      "subtotal": "Subtotaal: {{currencySymbol}}{{amount}}",
+      "credit": "Krediet"
     },
     "options": {
       "percentage": "Percentage",
       "fixedAmount": "Vast bedrag"
+    },
+    "errors": {
+      "serviceRequired": "Wijs een dienst toe aan deze kostenpost voordat u opslaat."
     }
   },
   "contractLineServices": {
@@ -402,7 +416,8 @@
       "createBatch": "Batch maken",
       "creating": "Creëren...",
       "cancelBatch": "Batch annuleren",
-      "retry": "Opnieuw proberen"
+      "retry": "Opnieuw proberen",
+      "resolveUnmapped": "Niet-gekoppelde items oplossen"
     },
     "states": {
       "loadingBatches": "Batch laden...",
@@ -459,7 +474,8 @@
       "executeError": "Kan batch niet uitvoeren",
       "cancelled": "Batch geannuleerd",
       "cancelError": "Kan batch niet annuleren",
-      "realmRequired": "Kies een verbonden boekhoudbedrijf voordat u de export aanmaakt."
+      "realmRequired": "Kies een verbonden boekhoudbedrijf voordat u de export aanmaakt.",
+      "artifactDownloadError": "Dit exportbestand kan niet worden gedownload."
     },
     "status": {
       "pending": "In afwachting",
@@ -470,6 +486,41 @@
       "failed": "Mislukt",
       "cancelled": "Geannuleerd",
       "needsAttention": "Vereist aandacht"
+    },
+    "artifacts": {
+      "title": "Geleverde bestanden",
+      "download": "Downloaden",
+      "unavailable": "Voor deze historische batch is geen bestand opgeslagen. Herstel is alleen mogelijk door een nieuwe export uit te voeren.",
+      "storageFallback": "Opgeslagen in een databaseback-up"
+    },
+    "unmapped": {
+      "title": "Niet-gekoppelde QuickBooks-items",
+      "descriptionDesktop": "Deze hebben een QuickBooks Desktop-klant of -artikel nodig voordat ze kunnen worden geëxporteerd. Maak ze aan als nieuwe items (het IIF-bestand voegt ze toe aan QuickBooks Desktop) of koppel ze aan een bestaand QuickBooks-item met exact dezelfde naam. Uw keuzes worden opgeslagen als QuickBooks Desktop-koppelingen, zodat toekomstige exports er niet opnieuw om vragen.",
+      "descriptionCsv": "Deze items hebben nog geen QuickBooks-koppeling. Exporteer ze onder de onderstaande naam (QuickBooks voegt nieuwe namen toe bij het importeren van de CSV) of koppel ze aan een bestaande QuickBooks-vermelding met exact dezelfde naam. Uw keuzes worden als koppelingen opgeslagen, zodat volgende exports er niet opnieuw om vragen.",
+      "permissionNotice": "Voor het opslaan van QuickBooks-koppelingen is de bevoegdheid voor het beheren van koppelingen nodig. Vraag een beheerder of koppel deze items via de QuickBooks-instellingen.",
+      "kinds": {
+        "client": "Klant",
+        "service": "Dienst",
+        "product": "Product",
+        "discount": "Korting"
+      },
+      "modes": {
+        "create": "Nieuw aanmaken",
+        "existing": "Staat al in QuickBooks"
+      },
+      "nameAria": "QuickBooks-naam voor {{name}}",
+      "desktopNote": "Nieuwe producten krijgen het artikeltype uit de QuickBooks Desktop-instellingen. Kies \"Staat al in QuickBooks\" voor alles wat al in uw bedrijfsbestand staat, zodat de gegevens niet worden overschreven.",
+      "actions": {
+        "cancel": "Annuleren",
+        "goToMappings": "Naar QuickBooks-koppelingen",
+        "save": "Koppelingen opslaan en exporteren"
+      },
+      "toast": {
+        "saved": "QuickBooks-koppelingen opgeslagen",
+        "saveError": "QuickBooks-koppelingen konden niet worden opgeslagen"
+      },
+      "postsTo": "Boekt op {{account}}",
+      "postsToDefault": "Boekt op de standaard opbrengstrekening"
     }
   },
   "templateRenderer": {
@@ -633,7 +684,8 @@
       "referenceMissing": "De geselecteerde klant, het contract of de factuurregistratie bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
       "duplicate": "Deze contracttoewijzing van de klant bestaat al.",
       "missingField": "Er ontbreekt een verplicht veld van het klantcontract.",
-      "missingFieldNamed": "Er ontbreekt een verplicht veld van het klantcontract: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van het klantcontract: {{field}}.",
+      "alreadyActiveScheduled": "Dit contract is al actief en begint op {{startDate}}; er is niets om te activeren."
     },
     "cycle": {
       "cannotCreateNext": "De volgende factuurcyclus kan momenteel niet worden aangemaakt"
@@ -707,7 +759,25 @@
         "create": "Toestemming geweigerd: boekhoudexportbatches kunnen niet worden aangemaakt",
         "read": "Toestemming geweigerd: boekhoudexportbatches zijn niet toegankelijk",
         "update": "Toestemming geweigerd: boekhoudexportbatches kunnen niet worden gewijzigd",
-        "execute": "Toestemming geweigerd: boekhoudexportbatches kunnen niet worden uitgevoerd"
+        "execute": "Toestemming geweigerd: boekhoudexportbatches kunnen niet worden uitgevoerd",
+        "createMappings": "Voor het aanmaken van QuickBooks-koppelingen vanuit een export zijn de bevoegdheden voor exporteren en het beheren van koppelingen nodig"
+      },
+      "quickbooksMapping": {
+        "noDecisions": "Kies hoe ten minste één niet-gekoppeld item moet worden behandeld.",
+        "stale": "Een van de geselecteerde items is voor deze batch niet meer ongekoppeld. Vernieuw en probeer het opnieuw.",
+        "duplicateSubmission": "\"{{algaName}}\" is twee keer ingediend.",
+        "invalidMode": "Kies nieuw aanmaken of bestaand voor \"{{algaName}}\".",
+        "nameRequired": "Voer een QuickBooks-naam in voor \"{{algaName}}\".",
+        "nameInvalidCharacters": "De QuickBooks-naam voor \"{{algaName}}\" mag geen tabs, regeleinden of dubbele aanhalingstekens bevatten.",
+        "nameTooLong": "De QuickBooks-naam voor \"{{algaName}}\" is langer dan {{maxLength}} tekens.",
+        "duplicateNewName": "\"{{qbName}}\" wordt voor meer dan één nieuwe QuickBooks-vermelding gebruikt.",
+        "duplicateClientName": "\"{{qbName}}\" is gekozen voor meer dan één klant. Elke QuickBooks-naam kan maar aan één worden gekoppeld.",
+        "duplicateItemName": "\"{{qbName}}\" is gekozen voor meer dan één artikel. Elke QuickBooks-naam kan maar aan één worden gekoppeld.",
+        "nameTakenByClient": "\"{{qbName}}\" is al aan een andere klant gekoppeld en kan daarom niet ook voor \"{{algaName}}\" worden gebruikt. Kies een andere QuickBooks-naam of wijzig de bestaande koppeling in de QuickBooks-koppelingen.",
+        "nameTakenByItem": "\"{{qbName}}\" is al aan een ander artikel gekoppeld en kan daarom niet ook voor \"{{algaName}}\" worden gebruikt. Kies een andere QuickBooks-naam of wijzig de bestaande koppeling in de QuickBooks-koppelingen.",
+        "unsupportedBatch": "Deze batch is geen QuickBooks Desktop- of QuickBooks CSV-export.",
+        "nameTakenConcurrently": "Een van deze QuickBooks-namen is zojuist aan een andere vermelding gekoppeld. Vernieuw de lijst en kies een andere naam.",
+        "desktopIncomeAccountRequired": "Stel de standaard opbrengstrekening in bij de QuickBooks Desktop-instellingen voordat u artikelen vanuit een export koppelt."
       }
     },
     "vendorBill": {

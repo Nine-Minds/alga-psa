@@ -105,6 +105,15 @@ const connectedPbx = (): ThreecxCardState['pbx'] => ({
   capabilities: { xapi: true, callControl: true },
 });
 
+const idleButton = async (name: string): Promise<HTMLButtonElement> => {
+  let button: HTMLButtonElement | null = null;
+  await waitFor(() => {
+    button = screen.getByRole('button', { name }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+  });
+  return button!;
+};
+
 describe('ThreecxIntegrationSettings', () => {
   beforeEach(() => {
     cleanup();
@@ -269,10 +278,13 @@ describe('ThreecxIntegrationSettings', () => {
     await waitFor(() => expect(container.querySelector('#threecx-cdr-toggle')).toBeTruthy());
     fireEvent.click(container.querySelector('#threecx-cdr-toggle')!);
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledWith({ enabled: true, lookbackDays: 30 }));
-    fireEvent.click(screen.getByRole('button', { name: 'Push now' }));
+    // Each action holds the panel busy (buttons disabled) until its reload
+    // settles; a click landing before that is dropped, so wait for idle.
+    fireEvent.click(await idleButton('Push now'));
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledTimes(2));
-    fireEvent.click(screen.getByRole('button', { name: 'Import now' }));
+    fireEvent.click(await idleButton('Import now'));
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledTimes(3));
+    await idleButton('Import now');
     fireEvent.click(container.querySelector('#threecx-phonebook-toggle')!);
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledWith({ enabled: true, schedule: 'daily' }));
   });

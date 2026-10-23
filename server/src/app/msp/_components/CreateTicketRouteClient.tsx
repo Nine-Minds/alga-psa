@@ -87,6 +87,7 @@ export default function CreateTicketRouteClient({ closeMode, prefill }: CreateTi
       assetName={prefill.assetName}
       isAlgaDeskMode={prefill.isAlgaDeskMode}
       duplicateFromTicketId={prefill.duplicateFromTicketId}
+      templateId={prefill.templateId}
     />
   );
 }

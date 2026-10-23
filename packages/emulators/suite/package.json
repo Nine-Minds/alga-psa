@@ -23,13 +23,15 @@
   },
   "dependencies": {
     "@alga-psa/emulator-host": "*",
+    "@alga-psa/emulator-huntress": "*",
+    "@alga-psa/emulator-levelio": "*",
     "@alga-psa/emulator-msgraph": "*",
     "@alga-psa/emulator-qbo": "*",
     "@alga-psa/emulator-smtp-sink": "*",
     "@alga-psa/emulator-stripe": "*",
+    "@alga-psa/emulator-threecx": "*",
     "@alga-psa/emulator-webhook-sink": "*",
-    "@alga-psa/emulator-xero": "*",
-    "@alga-psa/emulator-threecx": "*"
+    "@alga-psa/emulator-xero": "*"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

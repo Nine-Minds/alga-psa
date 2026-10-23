@@ -1,9 +1,14 @@
+'use client';
+
+import { useTranslation } from '../../lib/i18n/client';
+
 const KanbanBoardSkeleton = () => {
+  const { t } = useTranslation('common');
   // Mock 3 status columns
   const mockStatuses = ['To Do', 'In Progress', 'Done'];
 
   return (
-    <div className="flex gap-4 min-w-min flex-1 min-h-0 h-full overflow-x-auto overflow-y-hidden pb-2">
+    <div role="status" aria-label={t('skeletons.kanbanBoard.loading')} className="flex gap-4 min-w-min flex-1 min-h-0 h-full overflow-x-auto overflow-y-hidden pb-2">
       {mockStatuses.map((status, index) => (
         <div key={status} className="flex flex-col w-[350px] min-w-[350px] max-w-[350px] flex-shrink-0 h-[calc(100vh-200px)] max-h-[calc(100vh-200px)] overflow-hidden">
           {/* Column Header */}

@@ -126,8 +126,60 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Status:** watching (1 component; revisit if it recurs in another filtered list, at which point
   it converges with `datatable-filter-paging`).
 
+---
+
+## contract-line-preset-editor — duplicate (extracted 2026-10-10)
+
+- **What:** `ContractDialog` and `AddContractLinesDialog` each held their own copy of preset
+  loading, expansion, service-rate inputs, hourly settings and override building — the 26-line
+  rate blur handler appeared four times, its 17-line change handler four times.
+- **Extracted to:** `useContractLinePresetSelection` (state, handlers, `buildPresetOverrides`,
+  `reset`) + `ContractLinePresetPicker` (list and the Fixed/Hourly/Usage editors), both in
+  `packages/billing/src/components/billing-dashboard/contracts/`.
+- **Drift repaired on the way in:** the Add dialog fetched every service of every preset just to
+  count them; both now use the batched `getContractLinePresetServiceCounts`. `reset()` clears
+  every override map, so rates can't leak into the next contract.
+- **Status:** extracted.
+
+---
+
+## unsaved-navigation-guard — duplicate (extracted 2026-10-10)
+
+- **What:** Four billing editors (`ContractDetail`, `Fixed/Hourly/UsageContractLinePresetServicesList`)
+  hand-rolled the same `beforeunload` listener plus a capture-phase anchor-click interceptor with
+  pending-href state.
+- **Extracted to:** `packages/billing/src/hooks/useUnsavedNavigationGuard.ts`; each site keeps its
+  own translated `ConfirmationDialog`.
+- **Not `UnsavedChangesContext`:** its provider is absent from the billing tree and its semantics
+  differ (router.push, untranslated dialog, different link-skip rules).
+- **Status:** extracted.
+
+---
+
+## project-task-filter — duplicate (extracted 2026-10-10)
+
+- **What:** `ProjectDetail` (phase list + all-project counts) and `TaskListView` each
+  re-implemented search / priority / tag / agent / team filtering, and the two had already drifted:
+  the list view silently ignored the task-type filter the board and counts applied.
+- **Extracted to:** `packages/projects/src/lib/taskFilters.ts` (`matchesTaskFilters`,
+  `filterTasks`), with unit tests; `TaskListView` gained a `selectedTaskTypeFilter` prop.
+- **Status:** extracted.
+
+---
+
 ## Notes
 
 - `ApiKeysSetup.tsx` and `AdminApiKeysSetup.tsx` are near-duplicate components (profile vs admin
   API keys). Worth a separate `apikeys-setup-dup` candidate if it recurs / diverges — left
   unmarked this pass to keep the table-focused ledger clean.
+
+---
+
+## calendar-provider-service-triplicate — pattern
+
+- **What:** `CalendarProviderService` is copied three times (`server/src/services/calendar`,
+  `packages/integrations/src/services/calendar`, `ee/packages/calendar/src/lib/services/calendar`).
+  Fixes (e.g. alga-2026-0002699, the `getProviders` vendor-config fan-out) must be applied 3x.
+- **Missing layer:** one shared implementation. Blocked by the CE/EE packaging boundary and differing
+  tenant semantics (server copy has `PROVIDER_TENANT_DISCOVERY`; integrations copy requires `tenant`).
+- **Where:** `// LEVERAGE: pattern calendar-provider-service-triplicate` above `getProviders` in each copy.

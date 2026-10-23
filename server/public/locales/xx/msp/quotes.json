@@ -378,6 +378,14 @@
       "customLayout": "⟦Ƈŭşŧȯḿ⟧",
       "tenantDefault": "⟦Ŧḗƞȧƞŧ ḓḗƒȧŭŀŧ⟧",
       "changeLayout": "⟦Ƈħȧƞɠḗ⟧"
+    },
+    "sectionTitles": {
+      "title": "⟦Ɠřȯŭƥḗḓ ʠŭȯŧḗ şḗƈŧīȯƞ ŧīŧŀḗş⟧",
+      "description": "⟦Ȯƥŧīȯƞȧŀ ħḗȧḓīƞɠş ŭşḗḓ ƀẏ ŧħḗ Şŧȧƞḓȧřḓ Ɋŭȯŧḗ Ɠřȯŭƥḗḓ ŀȧẏȯŭŧ.⟧",
+      "monthlyLabel": "⟦Ḿȯƞŧħŀẏ şḗƈŧīȯƞ ŧīŧŀḗ⟧",
+      "oneTimeLabel": "⟦Ȯƞḗ-ŧīḿḗ şḗƈŧīȯƞ ŧīŧŀḗ⟧",
+      "monthlyPlaceholder": "⟦Ḿȯƞŧħŀẏ⟧",
+      "oneTimePlaceholder": "⟦Ȯƞḗ-ŧīḿḗ⟧"
     }
   },
   "quoteDetail": {

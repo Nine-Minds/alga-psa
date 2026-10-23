@@ -8,6 +8,7 @@ import { dateFromString, dateToString } from "@alga-psa/ui/lib/dateInput";
 import { cn } from "@alga-psa/ui/lib/utils";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import type { ContractScenario, ScenarioAssumption } from "@alga-psa/types";
+import { resolveEffectiveBillingTiming } from "@alga-psa/shared/billingClients/contractLineTimingRule";
 
 interface AssumptionRow {
   key: string;
@@ -90,7 +91,10 @@ const AssumptionsPanel: React.FC<AssumptionsPanelProps> = ({
             configurationType === "Usage"
               ? service.configuration.unit_of_measure
               : hoursUnit,
-          billingTiming: line.billing_timing,
+          billingTiming: resolveEffectiveBillingTiming(
+            line.contract_line_type,
+            line.billing_timing,
+          ),
         };
         // Bucket is an overlay beside the primary Hourly/Usage config. Both
         // consume the same assumption, so render one control. Prefer Usage to

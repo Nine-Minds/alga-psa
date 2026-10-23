@@ -1,0 +1,30 @@
+[
+  {
+    "entity": "invoices",
+    "remaining": "0"
+  },
+  {
+    "entity": "charges",
+    "remaining": "0"
+  },
+  {
+    "entity": "transactions",
+    "remaining": "0"
+  },
+  {
+    "entity": "batches",
+    "remaining": "0"
+  },
+  {
+    "entity": "mappings",
+    "remaining": "0"
+  },
+  {
+    "entity": "user",
+    "remaining": "0"
+  },
+  {
+    "entity": "role",
+    "remaining": "0"
+  }
+]

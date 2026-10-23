@@ -33,6 +33,7 @@ export default defineConfig({
       'tests/newWorkItemTimeEntry.test.tsx',
       'tests/stopwatchProvider.test.tsx',
       'tests/timeEntryDialog.saveLifecycle.test.tsx',
+      'tests/workItemDrawer.adHocAssignees.test.tsx',
     ],
     // 20s, matching the other heavy action-layer packages (billing, tickets,
     // client-portal, integrations). Mock factories here close over module-level

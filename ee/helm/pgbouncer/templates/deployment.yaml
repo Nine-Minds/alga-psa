@@ -9,6 +9,9 @@ metadata:
     app.kubernetes.io/component: pgbouncer
 spec:
   replicas: {{ .Values.replicaCount }}
+  {{- if .Values.progressDeadlineSeconds }}
+  progressDeadlineSeconds: {{ .Values.progressDeadlineSeconds }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "pgbouncer.selectorLabels" . | nindent 6 }}

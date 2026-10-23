@@ -41,7 +41,6 @@ import {
 import { ListOptions } from '../controllers/types';
 // Removed user actions import - will query users directly
 // TeamModel removed - functionality implemented directly in service
-import { publishUnregisteredEventType } from 'server/src/lib/eventBus/publishers';
 import { 
   generateResourceLinks, 
   generateComprehensiveLinks,
@@ -400,12 +399,6 @@ export class TeamService extends BaseService<ITeam> {
           await tenantDb(trx, context.tenant).table('team_members').insert(memberInserts);
         }
   
-        // Publish team created event
-        // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
-        await publishUnregisteredEventType({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
   
         // Return the created team
         return team as ITeam;
@@ -479,13 +472,6 @@ export class TeamService extends BaseService<ITeam> {
         .where('team_id', id)
         .update(updateData);
 
-      // Publish team updated event
-      // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
-      await publishUnregisteredEventType({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
-
       // Return updated team
       const updatedTeam = await tenantDb(trx, context.tenant).table('teams')
         .where('team_id', id)
@@ -520,13 +506,6 @@ export class TeamService extends BaseService<ITeam> {
       await tenantDb(trx, context.tenant).table('teams')
         .where('team_id', id)
         .del();
-
-      // Publish team deleted event
-      // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
-      await publishUnregisteredEventType({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
     });
   }
 
@@ -584,15 +563,7 @@ export class TeamService extends BaseService<ITeam> {
       await tenantDb(trx, context.tenant).table('team_members').insert({
         team_id: teamId,
         user_id: userId,
-        tenant: context.tenant,
-        joined_at: new Date()
-      });
-
-      // Publish member added event
-      // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
-      await publishUnregisteredEventType({
-        eventType: 'PLACEHOLDER',
-        payload: {}
+        tenant: context.tenant
       });
 
       return this.getById(teamId, context) as Promise<ITeam>;
@@ -615,6 +586,11 @@ export class TeamService extends BaseService<ITeam> {
         throw new NotFoundError('Team not found or permission denied');
       }
 
+      // The team lead must be reassigned before they can be removed (same rule as the UI actions)
+      if (team.manager_id && team.manager_id === userId) {
+        throw new ValidationError('Cannot remove the team lead. Please assign a new team lead first.');
+      }
+
       // Check if user is a member
       const existingMember = await tenantDb(trx, context.tenant).table('team_members')
         .where({ team_id: teamId, user_id: userId })
@@ -628,18 +604,6 @@ export class TeamService extends BaseService<ITeam> {
       await tenantDb(trx, context.tenant).table('team_members')
         .where({ team_id: teamId, user_id: userId })
         .del();
-
-      // Remove any specific task assignments
-      await tenantDb(trx, context.tenant).table('task_assignments')
-        .where({ team_id: teamId, user_id: userId })
-        .del();
-
-      // Publish member removed event
-      // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
-      await publishUnregisteredEventType({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
 
       return this.getById(teamId, context) as Promise<ITeam>;
     });
@@ -697,18 +661,10 @@ export class TeamService extends BaseService<ITeam> {
       const memberInserts = userIds.map(userId => ({
         team_id: teamId,
         user_id: userId,
-        tenant: context.tenant,
-        joined_at: new Date()
+        tenant: context.tenant
       }));
 
       await tenantDb(trx, context.tenant).table('team_members').insert(memberInserts);
-
-      // Publish bulk members added event
-      // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
-      await publishUnregisteredEventType({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
 
       return this.getById(teamId, context) as Promise<ITeam>;
     });
@@ -730,24 +686,16 @@ export class TeamService extends BaseService<ITeam> {
         throw new NotFoundError('Team not found or permission denied');
       }
 
+      // The team lead must be reassigned before they can be removed (same rule as the UI actions)
+      if (team.manager_id && userIds.includes(team.manager_id)) {
+        throw new ValidationError('Cannot remove the team lead. Please assign a new team lead first.');
+      }
+
       // Remove members
       await tenantDb(trx, context.tenant).table('team_members')
         .whereIn('user_id', userIds)
         .where('team_id', teamId)
         .del();
-
-      // Remove any specific task assignments
-      await tenantDb(trx, context.tenant).table('task_assignments')
-        .whereIn('user_id', userIds)
-        .where('team_id', teamId)
-        .del();
-
-      // Publish bulk members removed event
-      // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
-      await publishUnregisteredEventType({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
 
       return this.getById(teamId, context) as Promise<ITeam>;
     });
@@ -800,13 +748,6 @@ export class TeamService extends BaseService<ITeam> {
           created_at: new Date()
         });
       }
-
-      // Publish manager assigned event
-      // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
-      await publishUnregisteredEventType({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
 
       // Fetch updated team using the transaction to ensure we see the changes
       const updatedTeam = await tenantDb(trx, context.tenant).table('teams')
@@ -917,12 +858,6 @@ export class TeamService extends BaseService<ITeam> {
           updated_at: new Date()
         });
 
-      // Publish hierarchy created event
-      // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
-      await publishUnregisteredEventType({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
     });
   }
 
@@ -936,12 +871,6 @@ export class TeamService extends BaseService<ITeam> {
       .where('child_team_id', childTeamId)
       .del();
 
-    // Publish hierarchy removed event
-    // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
-    await publishUnregisteredEventType({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
   }
 
   // ============================================================================
@@ -983,12 +912,6 @@ export class TeamService extends BaseService<ITeam> {
         tenant: context.tenant
       });
 
-      // Publish permission granted event
-      // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
-      await publishUnregisteredEventType({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
     });
   }
 
@@ -1014,12 +937,6 @@ export class TeamService extends BaseService<ITeam> {
         revoked_by: context.userId
       });
 
-    // Publish permission revoked event
-    // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
-    await publishUnregisteredEventType({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
   }
 
   /**
@@ -1097,12 +1014,6 @@ export class TeamService extends BaseService<ITeam> {
         tenant: context.tenant
       });
 
-      // Publish assignment event
-      // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
-      await publishUnregisteredEventType({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
     });
   }
 
@@ -1834,6 +1745,11 @@ export class TeamService extends BaseService<ITeam> {
       
       if (!team) {
         throw new NotFoundError('Team not found or permission denied');
+      }
+
+      // The team lead must be reassigned before they can be removed (same rule as the UI actions)
+      if (team.manager_id && team.manager_id === userId) {
+        throw new ValidationError('Cannot remove the team lead. Please assign a new team lead first.');
       }
 
       // Remove member

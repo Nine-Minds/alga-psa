@@ -22,7 +22,6 @@ import {
   reverseApprovalSchema,
   timeSheetSearchSchema,
   timeSheetExportQuerySchema,
-  generateTimePeriodsSchema,
   createScheduleEntrySchema,
   updateScheduleEntrySchema
 } from '../schemas/timeSheet';
@@ -51,6 +50,7 @@ import {
   handleApiError
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
+import { uuidSchema } from '../schemas/common';
 
 export class ApiTimeSheetController extends ApiBaseController {
   private timeSheetService: TimeSheetService;
@@ -1350,6 +1350,156 @@ export class ApiTimeSheetController extends ApiBaseController {
     };
   }
 
+  // LEVERAGE: pattern api-key-auth-preamble — every method in this controller repeats the same API-key, tenant,
+  // user and RBAC preamble (~25 copies); closeTimePeriod/reopenTimePeriod add two more. Extract a shared layer.
+  /**
+   * Close time period (sets is_closed = true; idempotent)
+   */
+  closeTimePeriod() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+        
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+        
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Get user
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+
+        assertInternalApiUser(user);
+
+        await this.assertManualProductAccess(req, keyRecord, user);
+
+        // Check permissions
+        const db = await getConnection(tenantId!);
+        const hasUpdatePermission = await hasPermission(
+          user,
+          'time_period',
+          'update',
+          db
+        );
+
+        if (!hasUpdatePermission) {
+          throw new ForbiddenError('Permission denied: Cannot close time periods');
+        }
+
+        // The last URL segment is "close" here, so the id must come from the route params
+        const { id: rawId } = await (req as any).params;
+        const idResult = uuidSchema.safeParse(rawId);
+        if (!idResult.success) {
+          throw new ValidationError('Invalid time period id', idResult.error.errors);
+        }
+        const id = idResult.data;
+
+        // No request body is read
+        const period = await runWithTenant(tenantId!, async () => {
+          return await this.timeSheetService.closeTimePeriod(id, {
+            userId: user.user_id,
+            user,
+            tenant: tenantId!,
+          });
+        });
+
+        return createSuccessResponse(period);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Reopen time period (sets is_closed = false; idempotent)
+   */
+  reopenTimePeriod() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+        
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+        
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Get user
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+
+        assertInternalApiUser(user);
+
+        await this.assertManualProductAccess(req, keyRecord, user);
+
+        // Check permissions
+        const db = await getConnection(tenantId!);
+        const hasUpdatePermission = await hasPermission(
+          user,
+          'time_period',
+          'update',
+          db
+        );
+
+        if (!hasUpdatePermission) {
+          throw new ForbiddenError('Permission denied: Cannot reopen time periods');
+        }
+
+        // The last URL segment is "reopen" here, so the id must come from the route params
+        const { id: rawId } = await (req as any).params;
+        const idResult = uuidSchema.safeParse(rawId);
+        if (!idResult.success) {
+          throw new ValidationError('Invalid time period id', idResult.error.errors);
+        }
+        const id = idResult.data;
+
+        // No request body is read
+        const period = await runWithTenant(tenantId!, async () => {
+          return await this.timeSheetService.reopenTimePeriod(id, {
+            userId: user.user_id,
+            user,
+            tenant: tenantId!,
+          });
+        });
+
+        return createSuccessResponse(period);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
   /**
    * Delete time period
    */
@@ -1414,87 +1564,6 @@ export class ApiTimeSheetController extends ApiBaseController {
         });
 
         return new NextResponse(null, { status: 204 });
-      } catch (error) {
-        return handleApiError(error);
-      }
-    };
-  }
-
-  /**
-   * Generate multiple time periods
-   */
-  generateTimePeriods() {
-    return async (req: NextRequest): Promise<NextResponse> => {
-      try {
-        // Authenticate
-        const apiKey = req.headers.get('x-api-key');
-        
-        if (!apiKey) {
-          throw new UnauthorizedError('API key required');
-        }
-
-        // Extract tenant ID
-        let tenantId = req.headers.get('x-tenant-id');
-        let keyRecord;
-
-        if (tenantId) {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
-        } else {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-          if (keyRecord) {
-            tenantId = keyRecord.tenant;
-          }
-        }
-        
-        if (!keyRecord) {
-          throw new UnauthorizedError('Invalid API key');
-        }
-
-        // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
-
-        // Check permissions
-        const db = await getConnection(tenantId!);
-        const hasCreatePermission = await hasPermission(
-          user,
-          'time_period',
-          'create',
-          db
-        );
-
-        if (!hasCreatePermission) {
-          throw new ForbiddenError('Permission denied: Cannot create time periods');
-        }
-
-        // Parse and validate request body
-        const body = await req.json();
-        let generateData;
-        try {
-          generateData = generateTimePeriodsSchema.parse(body);
-        } catch (error) {
-          if (error instanceof ZodError) {
-            throw new ValidationError('Invalid generate data', error.errors);
-          }
-          throw error;
-        }
-
-        // Generate time periods within tenant context
-        const periods = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.generateTimePeriods(generateData, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
-        });
-
-        return createSuccessResponse({
-          periods,
-          message: `Generated ${periods.length} time periods`
-        });
       } catch (error) {
         return handleApiError(error);
       }

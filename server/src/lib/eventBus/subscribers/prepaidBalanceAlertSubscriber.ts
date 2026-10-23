@@ -22,6 +22,7 @@ export async function registerPrepaidBalanceAlertSubscriber(): Promise<void> {
   }
 
   await getEventBus().subscribe('PREPAID_BALANCE_ALERT_SCAN_REQUESTED', handlePrepaidBalanceAlertScanRequested);
+  await getEventBus().subscribe('PREPAID_BLOCK_USAGE_CHANGED', handlePrepaidBlockUsageChanged);
 
   isRegistered = true;
   logger.info('[PrepaidBalanceAlertSubscriber] Registered');
@@ -33,9 +34,50 @@ export async function unregisterPrepaidBalanceAlertSubscriber(): Promise<void> {
   }
 
   await getEventBus().unsubscribe('PREPAID_BALANCE_ALERT_SCAN_REQUESTED', handlePrepaidBalanceAlertScanRequested);
+  await getEventBus().unsubscribe('PREPAID_BLOCK_USAGE_CHANGED', handlePrepaidBlockUsageChanged);
 
   isRegistered = false;
   logger.info('[PrepaidBalanceAlertSubscriber] Unregistered');
+}
+
+/**
+ * Event-driven path for Prepaid Block usage (plan section 6). Time entries that
+ * draw a contract block publish PREPAID_BLOCK_USAGE_CHANGED after commit; this
+ * runs evaluate, then replenish, then deliver scoped to that one client. The
+ * daily scan remains the correctness backstop, so a dropped event only delays
+ * the follow-on until the next scan.
+ */
+export async function handlePrepaidBlockUsageChanged(event: unknown): Promise<void> {
+  const validated = EventSchemas.PREPAID_BLOCK_USAGE_CHANGED.parse(event);
+  const { tenantId, clientId } = validated.payload;
+
+  try {
+    await runWithTenant(tenantId, async () => {
+      const { knex } = await createTenantKnex();
+      const evaluation = await evaluatePrepaidBalanceAlertsForTenant(knex, tenantId, clientId);
+      const replenishment = await replenishOpenPrepaidBalanceAlerts(knex, tenantId, clientId);
+      const delivery = await planAndDrainDeliveriesForTenant(knex, tenantId, clientId);
+
+      logger.info('[PrepaidBalanceAlertSubscriber] Prepaid block usage evaluation complete', {
+        tenantId,
+        clientId,
+        contractLineId: validated.payload.contractLineId,
+        prepaidBlockSubjects: evaluation.prepaidBlockSubjects,
+        prepaidBlockAlertsOpened: evaluation.prepaidBlockAlertsOpened,
+        replenishmentsCreated: replenishment.created,
+        replenishmentsAutoIssued: replenishment.autoIssued,
+        replenishmentsFailed: replenishment.failed,
+        sent: delivery.sent,
+      });
+    });
+  } catch (error) {
+    logger.error('[PrepaidBalanceAlertSubscriber] Failed to handle prepaid block usage change', {
+      tenantId,
+      clientId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
 }
 
 export async function handlePrepaidBalanceAlertScanRequested(event: unknown): Promise<void> {

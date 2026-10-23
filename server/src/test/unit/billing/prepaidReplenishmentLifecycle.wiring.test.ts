@@ -19,7 +19,8 @@ describe('prepaid replenishment pending-state lifecycle wiring', () => {
     const invoiceServiceSource = source('server/src/lib/api/services/InvoiceService.ts');
     const inboundSource = source('packages/billing/src/actions/inboundActions.ts');
     expect(modificationSource).toContain('clearPrepaidReplenishmentForInvoice(trx, tenant, invoiceId)');
-    expect(invoiceServiceSource).toContain('clearPrepaidReplenishmentForInvoice(trx, context.tenant, id)');
+    // API deletion delegates to the shared engine, which owns the clear call.
+    expect(invoiceServiceSource).toContain('deleteInvoiceWithKnex(knex, context.tenant, id');
     expect(inboundSource).toContain('settlePrepaidReplenishmentInvoice(trx, tenant, lookup.algaEntityId)');
   });
 
@@ -38,6 +39,9 @@ describe('prepaid replenishment pending-state lifecycle wiring', () => {
     const hourBlockSource = source('packages/billing/src/actions/hourBlockActions.ts');
     expect(replenishmentSource).toContain('createHourBlockPurchaseInvoiceInternal');
     expect(replenishmentSource).toContain('hours: input.amount / 60');
-    expect(hourBlockSource).toContain('source_invoice_id: invoiceId');
+    const pendingBlockSource = source('packages/billing/src/services/pendingHourBlockService.ts');
+    expect(hourBlockSource).toContain('createPendingHourBlockForInvoiceCharge');
+    expect(hourBlockSource).toContain('invoiceId,');
+    expect(pendingBlockSource).toContain('source_invoice_id: input.invoiceId');
   });
 });

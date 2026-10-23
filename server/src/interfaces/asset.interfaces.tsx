@@ -37,6 +37,17 @@ export interface Asset {
   location?: string;
   purchase_date?: string;
   warranty_end_date?: string;
+  // Procurement columns (FR-A1); mirrors packages/types.
+  manufacturer?: string | null;
+  model?: string | null;
+  vendor_id?: string | null;
+  vendor_name?: string | null;
+  purchase_cost?: number | null;
+  purchase_cost_currency?: string | null;
+  order_number?: string | null;
+  /** The one contact this asset is assigned to. */
+  contact_name_id?: string | null;
+  contact_name?: string | null;
   created_at: string;
   updated_at: string;
   tenant: string;
@@ -163,8 +174,10 @@ export interface DiskUsageInfo {
 export interface RmmStorageInfo {
   name: string;
   total_gb: number;
-  free_gb: number;
-  utilization_percent: number;
+  /** Absent when the provider reports capacity only (e.g. Level.io `disks`). */
+  free_gb?: number | null;
+  /** Absent when free space is unknown; never substitute 0. */
+  utilization_percent?: number | null;
 }
 
 // Cached RMM data structure (returned by getAssetRmmData)
@@ -365,6 +378,13 @@ export interface CreateAssetRequest {
   serial_number?: string;
   purchase_date?: string;
   warranty_end_date?: string;
+  manufacturer?: string | null;
+  model?: string | null;
+  vendor_id?: string | null;
+  purchase_cost?: number | null;
+  purchase_cost_currency?: string | null;
+  order_number?: string | null;
+  contact_name_id?: string | null;
   workstation?: Omit<WorkstationAsset, 'tenant' | 'asset_id'>;
   network_device?: Omit<NetworkDeviceAsset, 'tenant' | 'asset_id'>;
   server?: Omit<ServerAsset, 'tenant' | 'asset_id'>;

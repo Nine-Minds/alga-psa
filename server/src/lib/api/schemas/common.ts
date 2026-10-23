@@ -17,6 +17,7 @@ export const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 export const paginationQuerySchema = z.object({
   page: z.string().transform(val => parseInt(val)).pipe(z.number().min(1)).optional().default('1'),
   limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25'),
+  // LEVERAGE: friction list-default-sort-created-at — hard-codes a column not every table has (time_sheets has none); each resource should declare its own sortable keys/default.
   sort: z.string().optional().default('created_at'),
   order: z.enum(['asc', 'desc']).optional().default('desc')
 });

@@ -1,11 +1,12 @@
 'use client';
 
-import { Asset } from '@alga-psa/types';
+import { Asset, type AssetStatusKind } from '@alga-psa/types';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { PlusCircle } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { portalAssetStatusLabel, portalAssetStatusVariant } from './portalAssetStatus';
 
 // Extension numerics are nullable ("unknown", never 0) — show that instead of a bare "null cores".
 const formatCpu = (model: string | null | undefined, cores: number | null | undefined): string => {
@@ -16,10 +17,14 @@ const formatCpu = (model: string | null | undefined, cores: number | null | unde
 
 interface AssetDetailsProps {
   asset: Asset;
+  /** The tenant's label for the asset's status, when the caller knows it. */
+  statusLabel?: string;
+  /** The status's lifecycle kind, which the badge tone follows. */
+  statusKind?: AssetStatusKind;
   onCreateTicket?: (asset: Asset) => void;
 }
 
-export function AssetDetails({ asset, onCreateTicket }: AssetDetailsProps) {
+export function AssetDetails({ asset, statusLabel, statusKind, onCreateTicket }: AssetDetailsProps) {
   const { t } = useTranslation('client-portal');
   // Helper function to format dates
   const formatDate = (dateString: string | undefined) => {
@@ -131,14 +136,28 @@ export function AssetDetails({ asset, onCreateTicket }: AssetDetailsProps) {
             </div>
             <div>
               <p className="text-sm text-gray-500">Status</p>
-              <p className="mt-1">
-                <Badge variant={
-                  asset.status === 'active' ? 'success' :
-                  asset.status === 'inactive' ? 'default-muted' :
-                  'warning'
-                }>
-                  {asset.status}
+              {/* A div, not a p: Badge renders a div, and a div inside a p is
+                  invalid markup that React reports as a hydration error. */}
+              <div className="mt-1">
+                {/* A tenant's custom status must read as its label, never as
+                    the "in_repair" slug the registry stores — and it must read
+                    the same here as in the device list. */}
+                <Badge variant={portalAssetStatusVariant(asset.status, statusKind)}>
+                  {portalAssetStatusLabel(t, asset.status, statusLabel)}
                 </Badge>
+              </div>
+            </div>
+            <div>
+              {/* FR-C6: contact name only — no assignment history, no cost. */}
+              <p className="text-sm text-gray-500">
+                {asset.group?.kind === 'shared_workspace'
+                  ? t('assets.sharedWorkspaceLabel', 'Shared workspace')
+                  : t('assets.columns.assignedTo', 'Assigned to')}
+              </p>
+              <p className="mt-1">
+                {asset.group?.kind === 'shared_workspace'
+                  ? asset.group.name
+                  : asset.contact_name || t('assets.unassigned', 'Unassigned')}
               </p>
             </div>
             <div>

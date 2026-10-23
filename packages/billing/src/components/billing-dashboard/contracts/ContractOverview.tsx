@@ -107,7 +107,7 @@ const ContractLineCard: React.FC<{
             <div className="font-medium text-[rgb(var(--color-text-900))]">{line.contract_line_name}</div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Badge variant={getTypeBadgeVariant(line.contract_line_type)} className="text-xs">
-                {formatContractLineType(line.contract_line_type)}
+                {formatContractLineType(line.display_kind ?? line.contract_line_type)}
               </Badge>
               <span>•</span>
               <span>{formatFrequencyLabel(line.billing_frequency)}</span>

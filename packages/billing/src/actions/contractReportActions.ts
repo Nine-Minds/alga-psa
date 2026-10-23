@@ -4,7 +4,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
-import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
+import { deriveClientContractStatus, getTenantLocalToday } from '@alga-psa/shared/billingClients';
 import {
   aggregateCentsByCurrency,
   getContractMonthlyValuesByAssignment,
@@ -231,7 +231,9 @@ async function getContractRevenueYtdByAssignment(
 const mapAssignmentStatusToRevenueStatus = (
   status: ReturnType<typeof deriveClientContractStatus>
 ): ContractRevenue['status'] | null => {
-  if (status === 'draft') {
+  // Not billing yet: both real drafts and confirmed future-start ('scheduled') contracts keep the
+  // report's existing 'upcoming' bucket (future-start rows were 'draft' -> 'upcoming' before).
+  if (status === 'draft' || status === 'scheduled') {
     return 'upcoming';
   }
   if (status === 'terminated') {
@@ -279,6 +281,7 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
     db.tenantJoin(dataQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');
     db.tenantJoin(dataQuery, 'clients as cl', 'cc.client_id', 'cl.client_id', { type: 'left' });
     const data = (await dataQuery) as unknown as ContractRevenueAssignmentRow[];
+    const tenantToday = await getTenantLocalToday(knex, tenant);
 
     const aggregatedMap = new Map<string, any>();
 
@@ -288,7 +291,7 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
         startDate: normalizeDateOnly(row.start_date),
         endDate: normalizeDateOnly(row.end_date),
         contractStatus: row.contract_status ?? undefined,
-        now: today,
+        now: tenantToday,
       });
       const status = mapAssignmentStatusToRevenueStatus(assignmentStatus);
       if (!status) {
@@ -399,6 +402,7 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
     );
 
     const expirationMap = new Map<string, ContractExpiration>();
+    const tenantToday = await getTenantLocalToday(knex, tenant);
 
     for (const row of data) {
       const assignmentStatus = deriveClientContractStatus({
@@ -406,8 +410,9 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         startDate: normalizeDateOnly(row.start_date),
         endDate: normalizeDateOnly(row.end_date),
         contractStatus: row.contract_status ?? undefined,
-        now: today,
+        now: tenantToday,
       });
+      // Only contracts billing now can expire; 'scheduled' has not started so it is excluded.
       if (assignmentStatus !== 'active') {
         continue;
       }
@@ -576,6 +581,101 @@ export const getBucketUsageReport = withAuth(async (user, { tenant }): Promise<B
     return bucketUsages;
   } catch (error) {
     console.error('Error fetching bucket usage report:', error);
+    throw error;
+  }
+});
+
+export interface HourBlockUsage {
+  block_id: string;
+  client_id: string;
+  client_name: string;
+  logoUrl?: string | null;
+  service_name: string;
+  contract_name: string | null;
+  status: string;
+  total_hours: number;
+  used_hours: number;
+  remaining_hours: number;
+  utilization_percentage: number;
+  /** Cents per hour the block is valued at (minor units). */
+  hourly_rate: number;
+  currency_code: string;
+  purchased_at: string | null;
+  expiration_date: string | null;
+}
+
+/**
+ * Get prepaid hour-block usage report data
+ * One row per issued block (ad-hoc and contract-issued) with burn progress.
+ * Blocks with no liability (pending, or voided before issuance) are excluded.
+ */
+export const getHourBlockUsageReport = withAuth(async (user, { tenant }): Promise<HourBlockUsage[] | ActionPermissionError> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
+  }
+  try {
+    const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
+
+    const blockQuery = db.table('hour_blocks as hb')
+      .select(
+        'hb.block_id',
+        'hb.client_id',
+        'hb.status',
+        'hb.total_minutes',
+        'hb.remaining_minutes',
+        'hb.hourly_rate',
+        'hb.currency_code',
+        'hb.purchased_at',
+        'hb.expiration_date',
+        'cl.contract_line_name as line_name',
+        'c.contract_name',
+        'sc.service_name',
+        'clients.client_name'
+      );
+    db.tenantJoin(blockQuery, 'clients', 'hb.client_id', 'clients.client_id', { type: 'left' });
+    db.tenantJoin(blockQuery, 'contract_lines as cl', 'hb.contract_line_id', 'cl.contract_line_id', { type: 'left' });
+    db.tenantJoin(blockQuery, 'contracts as c', 'cl.contract_id', 'c.contract_id', { type: 'left' });
+    db.tenantJoin(blockQuery, 'service_catalog as sc', 'hb.service_id', 'sc.service_id', { type: 'left' });
+    blockQuery.whereNotNull('hb.purchased_at').andWhere('hb.status', '!=', 'pending');
+    blockQuery.orderBy('clients.client_name', 'asc').orderBy('hb.purchased_at', 'asc');
+    const rows = await blockQuery;
+
+    const minutesToHours = (minutes: number): number => Math.round((minutes / 60) * 100) / 100;
+
+    const usages: HourBlockUsage[] = rows.map((row: any) => {
+      const totalMinutes = Number(row.total_minutes ?? 0);
+      const remainingMinutes = Math.max(0, Number(row.remaining_minutes ?? 0));
+      const usedMinutes = Math.max(0, totalMinutes - remainingMinutes);
+      return {
+        block_id: row.block_id,
+        client_id: row.client_id,
+        client_name: row.client_name || 'Unknown Client',
+        service_name: row.service_name || row.line_name || '—',
+        contract_name: row.contract_name ?? null,
+        status: row.status,
+        total_hours: minutesToHours(totalMinutes),
+        used_hours: minutesToHours(usedMinutes),
+        remaining_hours: minutesToHours(remainingMinutes),
+        utilization_percentage: totalMinutes > 0 ? Math.round((usedMinutes / totalMinutes) * 100) : 0,
+        hourly_rate: Number(row.hourly_rate ?? 0),
+        currency_code: row.currency_code || 'USD',
+        purchased_at: row.purchased_at ? new Date(row.purchased_at).toISOString().slice(0, 10) : null,
+        expiration_date: row.expiration_date ? new Date(row.expiration_date).toISOString().slice(0, 10) : null,
+      };
+    });
+
+    const clientIds = Array.from(new Set(usages.map((row) => row.client_id).filter((id): id is string => Boolean(id))));
+    if (clientIds.length > 0) {
+      const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+      for (const row of usages) {
+        row.logoUrl = row.client_id ? logoUrlsMap.get(row.client_id) ?? null : null;
+      }
+    }
+
+    return usages;
+  } catch (error) {
+    console.error('Error fetching hour block usage report:', error);
     throw error;
   }
 });

@@ -104,6 +104,17 @@ export interface TicketVisibilityColumns {
    * `watch_list` array (see shared/lib/tickets/watchList.ts).
    */
   watchListColumn?: string;
+  /**
+   * FR-E7b: when given, contact scope also admits OPEN tickets linked (via
+   * `asset_associations`) to a shared workspace this contact uses. A hot desk
+   * has no single requester, so a colleague's ticket about the shared PC is
+   * the contact's business too — read-only unless they are requester or
+   * watcher, which the surface decides from `ticketMatchesVisibility`.
+   *
+   * Pass this on read paths only. A write gate that admits workspace tickets
+   * would let a colleague comment on or close a ticket that is not theirs.
+   */
+  sharedWorkspaceTickets?: { ticketIdColumn: string; tenantColumn: string; closedColumn: string };
 }
 
 /** The ids whose records this contact may see: always includes the contact. */
@@ -143,7 +154,7 @@ function assertValidTicketScope(scope: TicketVisibilityScope): void {
 export function applyTicketVisibilityFilter(
   query: Knex.QueryBuilder,
   visibility: TicketVisibilityScope,
-  { boardColumn, contactColumn, billingProfileColumn, watchListColumn }: TicketVisibilityColumns
+  { boardColumn, contactColumn, billingProfileColumn, watchListColumn, sharedWorkspaceTickets }: TicketVisibilityColumns
 ): Knex.QueryBuilder {
   assertValidTicketScope(visibility);
   const { visibleBoardIds } = visibility;
@@ -163,8 +174,9 @@ export function applyTicketVisibilityFilter(
     // portal user reads.
     const useProfiles = Boolean(billingProfileColumn) && grantedProfileIds.length > 0;
     const useWatch = Boolean(watchListColumn) && visibility.watchGrant === true;
+    const useWorkspace = Boolean(sharedWorkspaceTickets);
 
-    if (!useProfiles && !useWatch) {
+    if (!useProfiles && !useWatch && !useWorkspace) {
       // Draft OQ1 policy: NULL contacts do not satisfy equality. Admins resolve
       // to client scope, while retaining the same board restriction above.
       if (contactIds.length === 1) {
@@ -192,6 +204,28 @@ export function applyTicketVisibilityFilter(
           watchListColumn as string,
           JSON.stringify([{ entity_type: 'contact', entity_id: visibility.contactId, active: true }]),
         ]);
+      }
+      if (useWorkspace) {
+        const workspace = sharedWorkspaceTickets as { ticketIdColumn: string; tenantColumn: string; closedColumn: string };
+        const placeholders = contactIds.map(() => '?').join(', ');
+        // FR-E7b says *open* tickets: a closed ticket about the hot desk is
+        // history that belongs to its requester, not to today's occupant.
+        builder.orWhereRaw(
+          `(${workspace.closedColumn} IS NOT TRUE AND EXISTS (
+             SELECT 1
+             FROM asset_associations aa
+             JOIN asset_group_members m ON m.tenant = aa.tenant AND m.asset_id = aa.asset_id
+             JOIN asset_groups g ON g.tenant = m.tenant AND g.group_id = m.group_id
+             JOIN asset_group_contacts gc ON gc.tenant = g.tenant AND gc.group_id = g.group_id
+             WHERE aa.tenant = ${workspace.tenantColumn}
+               AND aa.entity_type = 'ticket'
+               AND aa.entity_id = ${workspace.ticketIdColumn}
+               AND g.kind = 'shared_workspace'
+               AND gc.role = 'user'
+               AND gc.contact_name_id IN (${placeholders || 'NULL'})
+           ))`,
+          contactIds
+        );
       }
     });
   }
@@ -271,6 +305,12 @@ export interface ContactOwnedColumns {
   contactColumn: string;
   /** When given, the client restriction is applied here too: one choke point. */
   clientColumn?: string;
+  /**
+   * FR-E7: when given, contact scope also admits assets that are members of a
+   * shared workspace the contact (or one of their reports) uses. Both columns
+   * are needed because the EXISTS subquery correlates on them.
+   */
+  sharedWorkspace?: { assetIdColumn: string; tenantColumn: string };
 }
 
 type ContactOwnedContext = ContactOwnedVisibilityScope & {
@@ -282,7 +322,7 @@ function applyContactOwnedFilter(
   query: Knex.QueryBuilder,
   scope: ContactOwnedVisibilityScope,
   effectiveScope: PortalVisibilityScope | undefined,
-  { contactColumn, clientColumn }: ContactOwnedColumns
+  { contactColumn, clientColumn, sharedWorkspace }: ContactOwnedColumns
 ): Knex.QueryBuilder {
   if (!scope.clientId) {
     query.whereRaw('1 = 0');
@@ -299,11 +339,35 @@ function applyContactOwnedFilter(
     return query;
   }
   const contactIds = resolveVisibleContactIds(scope);
-  if (contactIds.length === 1) {
-    query.where(contactColumn, contactIds[0]);
-  } else {
-    query.whereIn(contactColumn, contactIds);
+
+  if (!sharedWorkspace) {
+    if (contactIds.length === 1) {
+      query.where(contactColumn, contactIds[0]);
+    } else {
+      query.whereIn(contactColumn, contactIds);
+    }
+    return query;
   }
+
+  // FR-E7: a hot desk has no single assignee, so its members would otherwise be
+  // invisible to the very people who use them.
+  const placeholders = contactIds.map(() => '?').join(', ');
+  query.where(function orAssignedOrWorkspace(this: Knex.QueryBuilder) {
+    this.whereIn(contactColumn, contactIds).orWhereRaw(
+      `EXISTS (
+         SELECT 1
+         FROM asset_group_members m
+         JOIN asset_groups g ON g.tenant = m.tenant AND g.group_id = m.group_id
+         JOIN asset_group_contacts gc ON gc.tenant = g.tenant AND gc.group_id = g.group_id
+         WHERE m.tenant = ${sharedWorkspace.tenantColumn}
+           AND m.asset_id = ${sharedWorkspace.assetIdColumn}
+           AND g.kind = 'shared_workspace'
+           AND gc.role = 'user'
+           AND gc.contact_name_id IN (${placeholders || 'NULL'})
+       )`,
+      contactIds
+    );
+  });
   return query;
 }
 

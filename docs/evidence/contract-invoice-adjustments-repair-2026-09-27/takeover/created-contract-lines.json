@@ -1,0 +1,34 @@
+[
+  {
+    "contract_id": "b9d6cdd4-fca6-4f8e-885c-cac5fabc6f66",
+    "contract_name": "TAKEOVER Copy A 20260927",
+    "client_contract_id": "3c8355ba-48ec-4f76-b549-b804f6b42913",
+    "contract_line_id": "6ed7ddf6-c3de-4e64-b07d-b881d07756b8",
+    "contract_line_name": "TAKEOVER Copy A 20260927 - Takeover fixed A",
+    "contract_line_type": "Fixed"
+  },
+  {
+    "contract_id": "b9d6cdd4-fca6-4f8e-885c-cac5fabc6f66",
+    "contract_name": "TAKEOVER Copy A 20260927",
+    "client_contract_id": "3c8355ba-48ec-4f76-b549-b804f6b42913",
+    "contract_line_id": "b5407251-dab4-4fc5-9ea7-9f784a09c55d",
+    "contract_line_name": "TAKEOVER Copy A 20260927 - Takeover fixed B",
+    "contract_line_type": "Fixed"
+  },
+  {
+    "contract_id": "f9e6a54f-4ce4-44ee-9d5c-68e3ac77a055",
+    "contract_name": "TAKEOVER Copy B 20260927",
+    "client_contract_id": "725552f0-aac2-4f6e-9d69-065c04a5aca7",
+    "contract_line_id": "e3021259-56b0-4955-aa25-a4acb2a674b7",
+    "contract_line_name": "TAKEOVER Copy B 20260927 - Takeover fixed A",
+    "contract_line_type": "Fixed"
+  },
+  {
+    "contract_id": "f9e6a54f-4ce4-44ee-9d5c-68e3ac77a055",
+    "contract_name": "TAKEOVER Copy B 20260927",
+    "client_contract_id": "725552f0-aac2-4f6e-9d69-065c04a5aca7",
+    "contract_line_id": "2c736850-913a-4a4d-a694-271c0aeb41d8",
+    "contract_line_name": "TAKEOVER Copy B 20260927 - Takeover fixed B",
+    "contract_line_type": "Fixed"
+  }
+]

@@ -129,11 +129,13 @@ The following REST API groups are available in the Community Edition under the b
 - [API Rate Limiting and Webhooks](api-rate-limiting-and-webhooks.md)
 - [Unified Full-Text Search](search.md)
 - **Tickets** — Create, read, update, and close service tickets; manage comments, time entries, assignments, and files. Includes ticket bundling, asset links, and agent/team assignment sub-resources (see below). `GET /api/v1/tickets` supports a `fields` query parameter for sparse field sets; pass `fields=tags` to include each ticket's tag array in the response — each entry contains `tag_id`, `tag_text`, `background_color`, and `text_color`. The endpoint also accepts a `sort` query parameter validated against an explicit allowlist; passing an unrecognised sort key returns `400 Bad Request` rather than a database error. Pass `sort=latest_activity_at` (with optional `order=asc` or `order=desc`) to order results by the most recent visible activity on each ticket — the newest of the ticket's own timestamps and its latest non-draft, non-deleted comment. `created_at` is accepted as a sort alias for the underlying `entered_at` column. `latest_activity_at` is also available as a selectable response field (its value is an ISO timestamp string); for client-portal callers the field is computed from non-internal comments only, so internal notes do not expose their timing to portal contacts.
+- **Opportunities** — Manage sales opportunities from creation through close. Create deals with a required next action, link quotes, record qualification evidence, and mark outcomes won or lost. `PATCH /api/v1/opportunities/{id}` accepts a partial body and is an alias for `PUT`. `POST /api/v1/opportunities/{id}/stage` moves an open deal to a different stage in the same pipeline without closing it. `expected_close_date` is returned as a `YYYY-MM-DD` date string. For opportunities managed by a pipeline automation flow, `pipeline_id`, `stage_id`, and `probability` are flow-owned and are rejected on `PUT`/`PATCH` — use `/stage` to advance flow-managed deals between stages.
 - **Assets** — Register hardware assets, schedule maintenance, map relationships between devices, drive RMM actions, and link assets to tickets (see below).
 - **Users** — Create and administer user accounts, manage passwords and two-factor authentication, and read roles, teams, and effective permissions.
 - **Billing** — Access contracts, contract lines, invoices, and billing analytics.
 - **Email Templates** — Read, create, and delete per-language notification email templates. `GET /api/v1/email/templates` lists all effective templates, merging system defaults with tenant overrides, and is filterable by `name`, `language`, `category`, and `customized` (pass `customized=true` to list only templates the tenant has overridden). `GET`, `PUT`, and `DELETE` on `/api/v1/email/templates/{name}` read, upsert, and remove individual tenant overrides; on the first `PUT` the system default is cloned as the baseline. Write and delete operations require the `settings` write permission and are flagged as requiring approval in the AI/MCP tool registry.
 - **Companies (Clients)** — Create, read, update, and delete client records. `GET /api/v1/clients` and `GET /api/v1/clients/{id}` include `phone_no`, `email`, and `address` fields populated from the client's default active location, so callers do not need a separate locations fetch for basic contact display. See the Client Merge and Billing Profile Contacts sections below for new sub-resources.
+- **Label Printing** — Generate PDF labels for tickets, assets, and stock inventory units via `POST /api/labels/pdf`. See **Label Printing** below.
 - Additional endpoints: contacts, projects, boards, categories, priorities, statuses, time entries, schedules, and more.
 
 #### Ticket Bundling
@@ -185,6 +187,18 @@ Beyond the primary assignee set via `PUT /tickets/{id}/assignment`, a ticket can
 
 **Permissions:** all five routes require `ticket:update`.
 
+#### Ticket → Project Links
+
+A support ticket is often blocked on, or related to, a project task — an upgrade scheduled for next week, a hardware procurement in flight. `GET /api/v1/tickets/{id}/project-links` returns all the project tasks the ticket is linked to, so an automation watching a ticket no longer has to scan every project to find its dependencies.
+
+| Method | Path | Purpose |
+|--------|------|-------|
+| `GET` | `/tickets/{id}/project-links` | List the project tasks linked to this ticket |
+
+Each row includes the project, phase, and task the link points to, the task's resolved status (custom mapping name, then project status, then standard status), an `is_closed` flag, and the last time the task changed. Links to projects the caller does not have `project:read` access to are silently omitted from the response.
+
+**Permissions:** requires `ticket:read` and `project:read`.
+
 #### Ticket Comment Cc/Bcc
 
 Agents can Cc or Bcc one-off external email addresses when posting a public ticket comment, without adding those addresses to the ticket's ongoing watch list. Pass `cc` and/or `bcc` arrays of email strings in the request body of `POST /api/v1/tickets/{id}/comments`. Both arrays are validated: addresses are trimmed and deduplicated, a single address in both lists is promoted to `cc`, the combined count must not exceed 20 recipients, and one-off recipients are rejected on internal notes. The resolved list is persisted in the comment's `email_recipients` metadata field and returned on comment read responses; client-portal contacts can see `cc` addresses but not `bcc` entries. When the ticket has no requester email or the requester is the comment author, AlgaPSA sends a direct fallback email to the one-off recipients rather than dropping them. A one-off recipient who replies to the thread is recognized on that conversation but is never added to the ticket's permanent watch list.
@@ -218,6 +232,44 @@ After a merge, a target client may carry multiple billing profiles — one per a
 | `PUT` | `/clients/{id}/billing-profiles/{profileId}/contacts` | Replace the full contact list for a billing profile |
 
 A contact designated as a profile manager with `can_view_profile_tickets: true` gains read access to tickets attributed to that billing profile. Clients that have only one billing profile do not require profile contact management and behave exactly as before.
+
+#### Time Periods
+
+Time periods are the billing or pay windows that time sheets are filed against. The REST API lets you list, create, and manage these windows programmatically.
+
+| Method | Path | Purpose |
+|--------|------|-------|
+| `GET` | `/time-periods` | List all time periods for the tenant |
+| `GET` | `/time-periods/current` | Return the period currently in effect; pass `?date=YYYY-MM-DD` to resolve a specific date instead of today |
+| `GET` | `/time-periods/{id}` | Retrieve a single period |
+| `POST` | `/time-periods` | Create a new period |
+| `PUT` | `/time-periods/{id}` | Update a period's `start_date` or `end_date` |
+| `DELETE` | `/time-periods/{id}` | Delete a period (only when it is open) |
+| `POST` | `/time-periods/{id}/close` | Lock the period so no further time-sheet edits are accepted; subsequent `PUT` or `DELETE` return `409` |
+| `POST` | `/time-periods/{id}/reopen` | Unlock a closed period to allow corrections |
+
+**Key behaviors for `POST` and `PUT`:**
+- `is_current` is **derived and read-only**. The period whose window contains today is automatically flagged `is_current: true` in responses. Sending `is_current` in a write body is silently ignored.
+- Dates must be `YYYY-MM-DD`. Datetime strings (e.g. `2027-03-08T23:30:00Z`) are accepted and silently truncated to the calendar date as written (not converted to UTC). Invalid date strings and `start_date == end_date` return `400`.
+- A period whose date range overlaps an existing period returns `409 Conflict`. Periods that share only a boundary day (touching but not overlapping) are allowed.
+- `PUT` and `DELETE` on a closed period return `409` with the message `"Time period is closed; reopen it first"`.
+- Unknown period IDs return `404`; malformed (non-UUID) IDs return `400`. `close` is idempotent.
+
+**Permissions:** all time-period write endpoints require the `time_management` write permission.
+
+#### Label Printing
+
+Printable PDF labels can be generated for tickets, assets, and stock inventory units.
+
+| Method | Path | Purpose |
+|--------|------|-------|
+| `POST` | `/api/labels/pdf` | Generate a PDF label batch for one or more records |
+
+The request body is a JSON array of `{ "labelClass": "ticket" | "asset" | "stock_unit", "id": "<uuid>" }` objects. An optional `layout` field selects an n-up sheet format (e.g., a 2×5 Letter grid matching Avery 5163). Standard templates ship for each record type: ticket work tags (4×2 in, QR code encoding the ticket URL), asset labels (4×2 in, QR code plus a full-width Code 128 barcode for the asset tag), and stock unit labels (QR code encoding the unit URL).
+
+Any null, unauthorized, or unrecognized record in the batch returns `404 Not Found` for the entire request. A `labelClass` value outside the three above returns `400 Bad Request`.
+
+**Permissions:** `ticket:read` for ticket labels, `asset:read` for asset labels, and `inventory:read` for stock unit labels. All required permissions must be present for a mixed-type batch.
 
 ### Enterprise Edition APIs
 - **Tenant Provisioning API:** Enables partner-driven tenant management. See [tenant_provisioning_api.md](tenant_provisioning_api.md) for details.

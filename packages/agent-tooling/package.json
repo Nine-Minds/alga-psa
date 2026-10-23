@@ -19,6 +19,10 @@
       "import": "./src/registry/search.ts",
       "types": "./src/registry/search.ts"
     },
+    "./registry/searchResult": {
+      "import": "./src/registry/searchResult.ts",
+      "types": "./src/registry/searchResult.ts"
+    },
     "./invoke/buildRequest": {
       "import": "./src/invoke/buildRequest.ts",
       "types": "./src/invoke/buildRequest.ts"

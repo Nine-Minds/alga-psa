@@ -59,6 +59,8 @@ vi.mock('@alga-psa/billing/actions/contractLineServiceActions', () => ({
 
 vi.mock('@alga-psa/billing/actions/contractLineAction', () => ({
   updateContractLine: actionMocks.updateContractLine,
+  // No billed history: the lines stay editable.
+  hasContractLineProtectedHistory: vi.fn(async () => false),
 }));
 
 vi.mock('@alga-psa/billing/actions/contractLineMappingActions', () => ({
@@ -247,7 +249,9 @@ const timingSelect = () => document.getElementById('billing-timing-line-1') as H
 async function expandAndEdit() {
   fireEvent.click(await screen.findByLabelText('Expand contract line'));
   fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
-  await waitFor(() => expect(timingSelect()).not.toBeNull());
+  // Cadence owner, not billing timing: Hourly/Usage lines render timing as
+  // read-only In Arrears, so only this select proves edit mode for every type.
+  await waitFor(() => expect(document.getElementById('cadence-owner-line-1')).not.toBeNull());
 }
 
 describe('ContractLines arrears first-invoice hint', () => {

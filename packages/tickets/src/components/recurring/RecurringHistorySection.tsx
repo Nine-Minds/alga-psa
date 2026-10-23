@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { SectionCard } from '@alga-psa/ui/components/SectionCard';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { listRecurringTicketOccurrences } from '../../actions/recurringTicketActions';
@@ -108,8 +109,7 @@ export function RecurringHistorySection({ definitionId, clients, timeZone, refre
   ], [t, i18n.language, timeZone]);
 
   return (
-    <section id="recurring-history-section" className="space-y-3">
-      <h2 className="text-lg font-semibold">{t('recurring.sections.history', 'History')}</h2>
+    <SectionCard id="recurring-history-section" title={t('recurring.sections.history', 'History')} bodyClassName="space-y-3">
       <div className="flex flex-wrap gap-3">
         <div className="w-48">
           <CustomSelect
@@ -154,7 +154,7 @@ export function RecurringHistorySection({ definitionId, clients, timeZone, refre
           totalItems={total}
         />
       )}
-    </section>
+    </SectionCard>
   );
 }
 

@@ -214,7 +214,10 @@ describe('MSP contract-lines sub-batch i18n wiring contract', () => {
 
   it('T017: UsageContractLinePresetConfiguration translated save/validation error messages exist', () => {
     const source = read('../../src/components/billing-dashboard/contract-lines/UsageContractLinePresetConfiguration.tsx');
-    expectSourceHasKeys(source, ['preset.usage.errors.noChangesDetected', 'preset.usage.errors.validationErrorsInModifiedServices']);
+    expectSourceHasKeys(source, [
+      'preset.usage.errors.failedToSaveContractLinePreset',
+      'preset.usage.errors.invalidPlanTypeOrNotFound',
+    ]);
   });
 
   it('T018: HourlyContractLinePresetConfiguration basics section fields are translated', () => {
@@ -528,18 +531,6 @@ describe('MSP contract-lines sub-batch i18n wiring contract', () => {
       'typeSelector.descriptions.hourly',
       'typeSelector.descriptions.usage',
     ]);
-  });
-
-  it('T046: ContractLineTypeRouter loading/errors are translated with interpolated id/type values', () => {
-    const source = read('../../src/components/billing-dashboard/contract-lines/ContractLineTypeRouter.tsx');
-    expectSourceHasKeys(source, [
-      'router.contractLine.loading',
-      'router.contractLine.notFound',
-      'router.contractLine.loadFailed',
-      'router.contractLine.unsupportedType',
-    ]);
-    expect(getLeaf(EN, 'router.contractLine.notFound')).toBe('Contract line with ID {{id}} not found.');
-    expect(getLeaf(EN, 'router.contractLine.unsupportedType')).toBe('Unknown or unsupported contract line type: {{type}}');
   });
 
   it('T047: ContractLinePresetTypeRouter loading/errors are translated with interpolated id/type values', () => {

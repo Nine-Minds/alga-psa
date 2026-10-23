@@ -287,6 +287,13 @@ export function describeSystemEntry(entry: TicketTimelineEntry, t: Translator): 
   // LEVERAGE: pattern duplicate-event-labels — these branches duplicate the
   // TICKET_DUPLICATED_FROM/TO wording in TicketActivityTimeline.tsx; same shared
   // event-label function as propagation-event-labels would cover both.
+  if (activity.event_type === 'TICKET_CREATED_FROM_TEMPLATE') {
+    const details = (activity.details ?? {}) as { template_name?: string | null };
+    const name = details.template_name?.trim();
+    if (name) {
+      return t('bento.timeline.createdFromTemplate', '{{actor}} created this ticket from template "{{name}}"', { actor, name });
+    }
+  }
   if (activity.event_type === 'TICKET_DUPLICATED_FROM') {
     const details = (activity.details ?? {}) as { source_ticket_number?: string | number | null };
     const number = details.source_ticket_number == null ? '' : String(details.source_ticket_number).trim();

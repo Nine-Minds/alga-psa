@@ -64,6 +64,7 @@ const ContractLinePreset = {
     preset: Omit<IContractLinePreset, 'preset_id' | 'tenant' | 'created_at' | 'updated_at'>
   ): Promise<IContractLinePreset> => {
     const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+      lineType: preset.contract_line_type ?? null,
       cadenceOwner: preset.cadence_owner,
       defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
       billingTiming: preset.billing_timing,
@@ -103,6 +104,7 @@ const ContractLinePreset = {
       // Remove tenant from update data to prevent modification
       const { tenant: _, preset_id: __, ...dataToUpdate } = updateData;
       const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+        lineType: dataToUpdate.contract_line_type ?? existingPreset.contract_line_type ?? null,
         cadenceOwner: dataToUpdate.cadence_owner,
         fallbackCadenceOwner: existingPreset.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
         billingTiming: dataToUpdate.billing_timing,

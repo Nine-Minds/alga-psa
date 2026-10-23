@@ -13,7 +13,7 @@ import {
 import { createTicketWithSideEffects } from '../../../../services/tickets/createTicketWithSideEffects';
 import { auditCloseRulesBypassIfGated } from '../../../../lib/ticketCloseRules';
 import { TICKET_ACTIVITY_ACTOR, TICKET_ACTIVITY_SOURCE } from '../../../../lib/ticketActivity';
-import { applyChecklistTemplateToTicket } from '../../../../lib/ticketChecklists';
+import { addChecklistItemsToTicket, applyChecklistTemplateToTicket, type AddChecklistItemInput } from '../../../../lib/ticketChecklists';
 import {
   uuidSchema,
   isoDateTimeSchema,
@@ -1900,6 +1900,57 @@ export function registerTicketActions(): void {
         applied: applyResult.applied,
         items_added: applyResult.itemsAdded
       };
+    })
+  });
+
+  // ---------------------------------------------------------------------------
+  // tickets.add_checklist_items
+  // ---------------------------------------------------------------------------
+  registry.register({
+    id: 'tickets.add_checklist_items',
+    version: 1,
+    inputSchema: z.object({
+      ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
+      items: z.array(z.object({
+        item_name: z.string().trim().min(1).describe('Checklist item text'),
+        description: z.string().optional().describe('Optional item details'),
+        is_required: z.boolean().default(false).describe('Required items gate ticket closure')
+      })).min(1).describe('Checklist items to append, in order')
+    }),
+    outputSchema: z.object({
+      ticket_id: uuidSchema,
+      added: z.array(z.object({
+        checklist_item_id: uuidSchema,
+        item_name: z.string()
+      }))
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Add checklist items',
+      category: 'Business Operations',
+      description: 'Append ad-hoc checklist items (unchecked, unassigned) to a ticket'
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+
+      const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
+      if (!ticket) {
+        throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found', details: { ticket_id: input.ticket_id } });
+      }
+
+      const added = await addChecklistItemsToTicket(tx.trx, tx.tenantId, input.ticket_id, input.items as AddChecklistItemInput[], {
+        source: 'workflow',
+        createdBy: tx.actorUserId ?? null
+      });
+
+      await writeRunAudit(ctx, tx, {
+        operation: 'workflow_action:tickets.add_checklist_items',
+        changedData: { ticket_id: input.ticket_id, items_added: added.length },
+        details: { action_id: 'tickets.add_checklist_items', action_version: 1 }
+      });
+
+      return { ticket_id: input.ticket_id, added };
     })
   });
 }

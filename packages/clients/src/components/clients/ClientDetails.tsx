@@ -15,7 +15,6 @@ import ClientContactsList from '../contacts/ClientContactsList';
 import QuickAddContact from '../contacts/QuickAddContact';
 import { Text, Heading } from '@radix-ui/themes';
 import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
-import { Switch } from '@alga-psa/ui/components/Switch';
 import BillingConfiguration from './BillingConfiguration';
 import { getClientById } from '@alga-psa/clients/actions';
 import {
@@ -110,45 +109,6 @@ import { ClientEquipmentTab } from './ClientEquipmentTab';
 const EMPTY_CONTACTS: IContact[] = [];
 const EMPTY_DOCUMENTS: IDocument[] = [];
 
-
-const SwitchDetailItem: React.FC<{
-  value: boolean;
-  onEdit: (value: boolean) => void;
-  automationId?: string;
-  statusLabel: string;
-  helperLabel: string;
-  activeLabel: string;
-  inactiveLabel: string;
-}> = ({ value, onEdit, automationId, statusLabel, helperLabel, activeLabel, inactiveLabel }) => {
-  // Register for UI automation with meaningful label
-  const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: automationId,
-    type: 'formField',
-    fieldType: 'checkbox',
-    label: statusLabel,
-    value: value ? activeLabel : inactiveLabel,
-    helperText: helperLabel
-  });
-
-  return (
-    <div className="flex items-center justify-between py-3" {...automationIdProps}>
-      <div>
-        <div className="text-gray-900 font-medium">{statusLabel}</div>
-        <div className="text-sm text-gray-500">{helperLabel}</div>
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-700">
-          {value ? activeLabel : inactiveLabel}
-        </span>
-        <Switch
-          checked={value}
-          onCheckedChange={onEdit}
-          className="data-[state=checked]:bg-primary-500"
-        />
-      </div>
-    </div>
-  );
-};
 
 const TextDetailItem: React.FC<{
   label: string;

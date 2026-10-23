@@ -1,3 +1,4 @@
+import { ensureMiscellaneousService } from '@alga-psa/db';
 import { Context, ApplicationFailure } from '@temporalio/activity';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
@@ -452,6 +453,7 @@ export async function setupTenantDataInDB(
     const setupSteps: string[] = [];
 
     await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
+      await ensureMiscellaneousService(trx, input.tenantId);
       // Set up tenant email settings with defaults (simple insert, no ON CONFLICT to avoid distributed table issues)
       try {
         // Keep a caught SQL error from aborting other setup steps.
@@ -679,6 +681,10 @@ export async function rollbackTenantInDB(
       await db.table('tenant_notification_subtype_settings').delete();
       await db.table('tenant_internal_notification_category_settings').delete();
       await db.table('tenant_internal_notification_subtype_settings').delete();
+
+      // Setup seeds a tenant-owned default service catalog. It must be removed
+      // before the tenant row because the catalog has a tenant foreign key.
+      await db.table('service_catalog').delete();
 
       // Delete clients (references tenant)
       await db.table('clients').delete();

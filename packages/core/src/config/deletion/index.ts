@@ -249,6 +249,17 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'asset_associations',
         label: 'asset association',
         countQuery: countAssetAssociations('contact')
+      },
+      // FR-C5: the assignee link is a NO ACTION composite FK that
+      // clearContactLinksBeforeDelete nulls and whose open assignment the
+      // delete closes. Reported so the operator can see the laptop, never
+      // blocking — blocking it would stop that cleanup from ever running.
+      {
+        type: 'assigned_asset',
+        table: 'assets',
+        foreignKey: 'contact_name_id',
+        label: 'assigned asset',
+        blocking: false
       }
     ]
   },
@@ -389,9 +400,9 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     supportsInactive: false,
     supportsArchive: false,
     dependencies: [
-      // team_members is intentionally not a blocker: teams.manager_id is NOT NULL and the
-      // lead is always also a member, so a team could never reach zero members. Team.delete
-      // removes the member rows inside the deletion transaction.
+      // team_members is intentionally not a blocker: a team lead is optional (teams.manager_id
+      // is nullable), so a team can have any number of members, including none. Member rows
+      // are owned by the team; Team.delete removes them inside the deletion transaction.
       { type: 'ticket', table: 'tickets', foreignKey: 'assigned_team_id', label: 'assigned ticket' },
       { type: 'project_task', table: 'project_tasks', foreignKey: 'assigned_team_id', label: 'assigned project task' },
       { type: 'project_template_task', table: 'project_template_tasks', foreignKey: 'assigned_team_id', label: 'project template task' },

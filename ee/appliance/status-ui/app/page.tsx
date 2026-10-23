@@ -148,6 +148,11 @@ type StatusResponse = {
     at?: string | null;
     logFile?: string | null;
   } | null;
+  releaseAutoRecovery?: {
+    lastCheck?: { at?: string; outcome?: string; detail?: string } | null;
+    recent?: AutoRecoveryAttempt[];
+    deferred?: Array<{ release: string; reason: string }>;
+  } | null;
   kubernetes?: {
     nodes?: Array<{ name?: string; ready?: boolean }>;
     podCount?: number;
@@ -164,6 +169,33 @@ type StatusResponse = {
     stderr?: string;
   }>;
 };
+
+type AutoRecoveryAttempt = {
+  release: string;
+  failedRevision: number;
+  at: string;
+  failure?: string;
+  verified?: string[];
+  outcome: "pending" | "recovered" | "failed-again" | "unresolved" | "error";
+  outcomeAt?: string;
+  outcomeMessage?: string;
+  recoveredRevision?: number;
+};
+
+function autoRecoveryOutcome(attempt: AutoRecoveryAttempt): string {
+  switch (attempt.outcome) {
+    case "recovered":
+      return `Recovered (revision ${attempt.recoveredRevision ?? "?"} deployed).`;
+    case "pending":
+      return "Flux is re-running the upgrade.";
+    case "failed-again":
+      return `The re-run failed again: ${attempt.outcomeMessage || "see the release status"}. Use Recover releases once the pods are healthy, or collect a support bundle.`;
+    case "unresolved":
+      return "The re-run has not finished; check the release status.";
+    default:
+      return `Could not start the re-run: ${attempt.outcomeMessage || "unknown error"}.`;
+  }
+}
 
 type NamespaceItem = { name: string; phase?: string };
 type Deployment = {
@@ -431,6 +463,10 @@ export default function StatusPage() {
   const [recovering, setRecovering] = useState(false);
   const [recoverMsg, setRecoverMsg] = useState<string | null>(null);
   const [confirmRecover, setConfirmRecover] = useState(false);
+  const [recoveringReleases, setRecoveringReleases] = useState(false);
+  const [recoverReleasesMsg, setRecoverReleasesMsg] = useState<string | null>(
+    null,
+  );
   const [namespaces, setNamespaces] = useState<NamespaceItem[]>([]);
   const [namespace, setNamespace] = useState("msp");
   const [deployments, setDeployments] = useState<Deployment[]>([]);
@@ -459,6 +495,36 @@ export default function StatusPage() {
   }>(null);
   const statusRequestInFlight = useRef(false);
   const statusAbortController = useRef<AbortController | null>(null);
+  // One in-flight request per data view. A newer request for the same view (or
+  // leaving the page) aborts the older one, so the server can drop work nobody
+  // will read instead of finishing it ahead of the request the user is
+  // actually waiting for.
+  const viewRequests = useRef<Record<string, AbortController>>({});
+  const beginViewRequest = useCallback((key: string) => {
+    viewRequests.current[key]?.abort();
+    const controller = new AbortController();
+    viewRequests.current[key] = controller;
+    return controller;
+  }, []);
+  const isCurrentViewRequest = useCallback(
+    (key: string, controller: AbortController) =>
+      viewRequests.current[key] === controller,
+    [],
+  );
+  useEffect(() => {
+    const requests = viewRequests.current;
+    return () => {
+      for (const controller of Object.values(requests)) controller.abort();
+    };
+  }, []);
+  // Read by loadPods without making it depend on the selection: depending on
+  // selectedPod re-created loadPods on first load (it sets the selection), which
+  // re-ran the tab effect and fetched the pod list twice, then again on every
+  // pod click.
+  const selectedPodRef = useRef(selectedPod);
+  useEffect(() => {
+    selectedPodRef.current = selectedPod;
+  }, [selectedPod]);
 
   const loadStatus = useCallback(async () => {
     if (statusRequestInFlight.current) return;
@@ -497,10 +563,10 @@ export default function StatusPage() {
   // (60s-cached server-side), and availability changes rarely.
   const loadManageSummary = useCallback(async () => {
     try {
-      const response = await fetch(apiPath("/api/manage/status"), {
-        credentials: "same-origin",
-        cache: "no-store",
-      });
+      const response = await fetch(
+        apiPath("/api/manage/status", { scope: "updates" }),
+        { credentials: "same-origin", cache: "no-store" },
+      );
       if (!response.ok) return; // keep the last snapshot; banner is best-effort
       setManageSummary((await response.json()) as ManageSummary);
     } catch {
@@ -529,59 +595,87 @@ export default function StatusPage() {
     }
   }, [recovering, loadStatus]);
 
+  const recoverReleases = useCallback(async () => {
+    if (recoveringReleases) return;
+    setRecoveringReleases(true);
+    setRecoverReleasesMsg(null);
+    try {
+      const response = await fetch(apiPath("/api/recover-releases"), {
+        method: "POST",
+        cache: "no-store",
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok)
+        throw new Error(data.error || "Failed to recover releases.");
+      setRecoverReleasesMsg(data.message || "Recovery triggered.");
+      loadStatus();
+    } catch (err) {
+      setRecoverReleasesMsg(err instanceof Error ? err.message : String(err));
+    } finally {
+      setRecoveringReleases(false);
+    }
+  }, [recoveringReleases, loadStatus]);
+
   const loadNamespaces = useCallback(async () => {
+    const controller = beginViewRequest("namespaces");
     setLoadingNamespaces(true);
     try {
       const response = await fetch(apiPath("/api/k8s/namespaces"), {
         cache: "no-store",
+        signal: controller.signal,
       });
       if (!response.ok) return;
       const data = await response.json();
       setNamespaces(data.namespaces || []);
     } catch {
-      /* cluster may not exist yet */
+      /* cluster may not exist yet, or the request was superseded */
     } finally {
-      setLoadingNamespaces(false);
+      if (isCurrentViewRequest("namespaces", controller))
+        setLoadingNamespaces(false);
     }
-  }, []);
+  }, [beginViewRequest, isCurrentViewRequest]);
 
   const loadPods = useCallback(async () => {
+    const controller = beginViewRequest("pods");
     setLoadingPods(true);
     try {
       const response = await fetch(apiPath("/api/k8s/pods", { namespace }), {
         cache: "no-store",
+        signal: controller.signal,
       });
       if (!response.ok) return;
       const data = await response.json();
       const nextPods = data.pods || [];
       setPods(nextPods);
-      if (!selectedPod && nextPods.length) {
+      if (!selectedPodRef.current && nextPods.length) {
         setSelectedPod(nextPods[0].name);
         setSelectedContainer(nextPods[0].containers?.[0]?.name || "");
       }
     } catch {
-      /* ignore transient Kubernetes failures */
+      /* ignore transient Kubernetes failures and superseded requests */
     } finally {
-      setLoadingPods(false);
+      if (isCurrentViewRequest("pods", controller)) setLoadingPods(false);
     }
-  }, [namespace, selectedPod]);
+  }, [namespace, beginViewRequest, isCurrentViewRequest]);
 
   const loadDeployments = useCallback(async () => {
+    const controller = beginViewRequest("deployments");
     setLoadingDeployments(true);
     try {
       const response = await fetch(
         apiPath("/api/k8s/deployments", { namespace }),
-        { cache: "no-store" },
+        { cache: "no-store", signal: controller.signal },
       );
       if (!response.ok) return;
       const data = await response.json();
       setDeployments(data.deployments || []);
     } catch {
-      /* ignore transient Kubernetes failures */
+      /* ignore transient Kubernetes failures and superseded requests */
     } finally {
-      setLoadingDeployments(false);
+      if (isCurrentViewRequest("deployments", controller))
+        setLoadingDeployments(false);
     }
-  }, [namespace]);
+  }, [namespace, beginViewRequest, isCurrentViewRequest]);
 
   function applyPendingLogScroll() {
     const pending = pendingLogScroll.current;
@@ -604,6 +698,7 @@ export default function StatusPage() {
       const pane = logPaneRef.current;
       const previousScrollHeight = pane?.scrollHeight || 0;
       const previousScrollTop = pane?.scrollTop || 0;
+      const controller = beginViewRequest("logs");
       setLoadingLogs(true);
       try {
         setLogError(null);
@@ -614,7 +709,7 @@ export default function StatusPage() {
             container: selectedContainer,
             tail,
           }),
-          { cache: "no-store" },
+          { cache: "no-store", signal: controller.signal },
         );
         if (!response.ok)
           throw new Error(
@@ -639,12 +734,20 @@ export default function StatusPage() {
         window.setTimeout(applyPendingLogScroll, 50);
         window.setTimeout(applyPendingLogScroll, 250);
       } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
         setLogError(err instanceof Error ? err.message : String(err));
       } finally {
-        setLoadingLogs(false);
+        if (isCurrentViewRequest("logs", controller)) setLoadingLogs(false);
       }
     },
-    [logTail, namespace, selectedContainer, selectedPod],
+    [
+      logTail,
+      namespace,
+      selectedContainer,
+      selectedPod,
+      beginViewRequest,
+      isCurrentViewRequest,
+    ],
   );
 
   useEffect(() => {
@@ -739,6 +842,9 @@ export default function StatusPage() {
     status?.installState?.status ||
     "loading";
   const blockerList = blockers(status);
+  const releaseBlocker = blockerList.find(
+    (blocker) => blocker.component === "flux",
+  );
   // The server classifies the blocked redemption and supplies the matching copy
   // and diagnostic; the UI only renders it.
   const setupRecovery = status?.setupRecovery || null;
@@ -1090,6 +1196,61 @@ export default function StatusPage() {
 
             <article className={styles.panel}>
               <h2>Recovery</h2>
+              {(status?.releaseAutoRecovery?.recent || []).length > 0 ? (
+                <div id="appliance-auto-recovery">
+                  <p className={styles.muted}>
+                    Releases the control plane re-ran automatically in the last
+                    24 hours. Each had stalled after an upgrade that timed out
+                    waiting for its pods, and its workloads had become healthy
+                    since.
+                  </p>
+                  {(status?.releaseAutoRecovery?.recent || []).map((attempt) => (
+                    <div className={styles.operation} key={`${attempt.release}-${attempt.failedRevision}-${attempt.at}`}>
+                      <strong>{attempt.release}</strong>
+                      <p>
+                        Revision {attempt.failedRevision} failed
+                        {attempt.verified?.length ? ` while ${attempt.verified.join(", ")} was still rolling out` : " on a rollout timeout"};
+                        re-run automatically at {new Date(attempt.at).toLocaleString()}.{" "}
+                        {autoRecoveryOutcome(attempt)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {releaseBlocker && (status?.releaseAutoRecovery?.deferred || []).length > 0 ? (
+                <div>
+                  {(status?.releaseAutoRecovery?.deferred || []).map((entry) => (
+                    <p className={styles.helpText} key={entry.release}>
+                      <strong>{entry.release}</strong> was not re-run automatically: {entry.reason}.
+                    </p>
+                  ))}
+                </div>
+              ) : null}
+              {releaseBlocker || recoverReleasesMsg ? (
+                <>
+                  <p className={styles.muted}>
+                    Re-runs the upgrade of each Helm release that stopped after a
+                    failed attempt (for example when its pods were slow to start
+                    during an update). Healthy releases are left alone, and the
+                    application bootstrap is not re-run. Check that the
+                    release&rsquo;s pods are running first.
+                  </p>
+                  <div className={styles.toolbar}>
+                    <button
+                      id="appliance-recover-releases-btn"
+                      type="button"
+                      className={styles.actionButton}
+                      disabled={recoveringReleases}
+                      onClick={() => recoverReleases()}
+                    >
+                      {recoveringReleases ? "Triggering…" : "Recover releases"}
+                    </button>
+                  </div>
+                  {recoverReleasesMsg ? (
+                    <p className={styles.helpText}>{recoverReleasesMsg}</p>
+                  ) : null}
+                </>
+              ) : null}
               <p className={styles.muted}>
                 Re-runs the application bootstrap — database migrations,
                 onboarding seeds, and creation of the initial tenant and admin

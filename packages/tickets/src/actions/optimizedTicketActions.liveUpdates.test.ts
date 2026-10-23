@@ -487,8 +487,8 @@ describe('updateTicketWithCache live updates', () => {
 
     expect(ticketUpdates[0]).toHaveProperty('status_changed_at');
     expect(capturedTrx.raw).toHaveBeenCalledWith(
-      expect.stringContaining('CASE WHEN status_id IS DISTINCT FROM ?::uuid THEN now() ELSE status_changed_at END'),
-      ['status-2']
+      expect.stringContaining('CASE WHEN status_id IS DISTINCT FROM ?::uuid THEN ?::timestamptz ELSE status_changed_at END'),
+      ['status-2', expect.any(String)]
     );
   });
 

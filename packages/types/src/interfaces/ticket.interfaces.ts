@@ -68,6 +68,10 @@ export interface ITicket extends TenantEntity, ITaggable {
   duplicated_from_ticket_id?: string | null;
   /** Display-only: number of the source ticket, joined on read. */
   duplicated_from_ticket_number?: string | null;
+  /** Ticket template this one was created from (create-only provenance, no FK). */
+  created_from_template_id?: string | null;
+  /** Display-only: name of the source template, joined on read. */
+  created_from_template_name?: string | null;
   attributes: Record<string, unknown> | null; // Changed from any to unknown
   priority_id?: string; // Used for both custom and ITIL priorities (unified system)
   estimated_hours?: number;

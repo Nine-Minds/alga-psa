@@ -94,16 +94,10 @@ vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: async () => [],
 }));
 
-import {
-  getImportReferenceData,
-  importPhasesAndTasks,
-  validatePhaseTaskImportData,
-} from './phaseTaskImportActions';
+import { getImportReferenceData, importPhasesAndTasks } from './phaseTaskImportActions';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // The deprecated validate action runs its status lookup on the knex handle
-  // rather than a transaction, so that handle needs to behave like a builder.
   createTenantKnexMock.mockResolvedValue({ knex: stubQuery(), tenant: 'tenant-1' });
   withTransactionMock.mockImplementation(async (_db: unknown, cb: any) => cb(stubQuery()));
   authorizeResourceMock.mockResolvedValue({ allowed: true });
@@ -215,37 +209,6 @@ describe('getImportReferenceData authorization', () => {
 
     await getImportReferenceData('project-1');
 
-    expect(getPhasesMock).toHaveBeenCalled();
-  });
-});
-
-describe('validatePhaseTaskImportData authorization', () => {
-  const rows = [{ phase_name: 'Planning', task_name: 'Task', status: 'Open' }];
-
-  it('requires project:read before building lookups', async () => {
-    hasPermissionMock.mockResolvedValue(false);
-
-    await expect(validatePhaseTaskImportData(rows, 'project-1')).rejects.toThrow(/permission/i);
-    expect(createTenantKnexMock).not.toHaveBeenCalled();
-  });
-
-  it('refuses to validate against a project the caller is restricted from', async () => {
-    hasPermissionMock.mockResolvedValue(true);
-    authorizeResourceMock.mockResolvedValue({ allowed: false });
-
-    await expect(validatePhaseTaskImportData(rows, 'project-1')).rejects.toThrow(
-      /Permission denied: Cannot read project/,
-    );
-    expect(getPhasesMock).not.toHaveBeenCalled();
-  });
-
-  it('validates against a project the caller may read', async () => {
-    hasPermissionMock.mockResolvedValue(true);
-    authorizeResourceMock.mockResolvedValue({ allowed: true });
-
-    const result = await validatePhaseTaskImportData(rows, 'project-1');
-
-    expect(result.validationResults).toHaveLength(1);
     expect(getPhasesMock).toHaveBeenCalled();
   });
 });
