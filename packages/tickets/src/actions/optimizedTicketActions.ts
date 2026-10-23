@@ -510,7 +510,6 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     const [
       comments,
       documentRows,
-      clients,
       resources,
       users,
       statuses,
@@ -537,21 +536,6 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           'da.entity_type': 'ticket'
         }),
       
-      tenantLeftJoin(
-        trx,
-        tenant,
-        tenantScopedTable(trx, 'clients as c', tenant)
-        .select(
-          'c.*',
-          'da.document_id'
-        ),
-        'document_associations as da',
-        'c.client_id',
-        'da.entity_id',
-        { on: (join) => join.andOnVal('da.entity_type', '=', 'client') }
-      )
-        .orderBy('c.client_name', 'asc'),
-
       tenantScopedTable(trx, 'ticket_resources', tenant)
         .where({
           ticket_id: ticketId
@@ -634,42 +618,6 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     const documents = await hasPermission(user, 'document', 'read', trx)
       ? await authorizeAndRedactDocuments(trx, tenant, user, documentRows as IDocument[])
       : [];
-
-    // --- Add Logo URL Processing for the fetched 'clients' list ---
-    const clientsData = clients as (IClient & { document_id?: string })[];
-    const documentIds = clientsData
-      .map((c: any) => c.document_id)
-      .filter((id: any): id is string => !!id);
-
-    let fileIdMap: Record<string, string> = {};
-    if (documentIds.length > 0) {
-      const fileRecords = await tenantScopedTable(trx, 'documents', tenant)
-        .select('document_id', 'file_id')
-        .whereIn('document_id', documentIds);
-
-      fileIdMap = fileRecords.reduce((acc: Record<string, string>, record: { document_id: string; file_id?: string | null }) => {
-        if (record.file_id) {
-          acc[record.document_id] = record.file_id;
-        }
-        return acc;
-      }, {} as Record<string, string>);
-    }
-
-    // Process the full clients list to add logoUrl using batch loading
-    const clientIds = clientsData.map(c => c.client_id);
-    const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
-    
-    const clientsWithLogos = clientsData.map((clientData) => {
-      const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
-      const { document_id, ...clientResult } = clientData;
-      return {
-        ...clientResult,
-        properties: clientData.properties || {},
-        logoUrl,
-      };
-    });
-    // --- End Logo URL Processing for 'clients' list ---
-
 
     // Fetch specific client and contact data if available
     let client: any = null;
@@ -1150,7 +1098,6 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         priority: priorityOptions
       },
       categories,
-      clients: clientsWithLogos,
       locations,
       agentSchedules: agentSchedulesList
     };
@@ -2543,7 +2490,6 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         priorities,
         boards,
         categories,
-        clients,
         users,
         tags
       ] = await Promise.all([
@@ -2568,10 +2514,6 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         .orderBy('display_order', 'asc')
         .orderBy('category_name', 'asc'),
       
-      tenantScopedTable(trx, 'clients as c', tenant)
-        .select('c.*')
-        .orderBy('c.client_name', 'asc'),
-
       tenantScopedTable(trx, 'users', tenant)
         .orderBy('first_name', 'asc'),
 
@@ -2616,23 +2558,6 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         label: `${user.first_name} ${user.last_name}`
       }));
 
-      // --- Add Logo URL Processing ---
-      const clientsData = clients as IClient[];
-
-      // Process clients to add logoUrl using batch loading
-      const clientIds = clientsData.map((c: IClient) => c.client_id);
-      const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
-    
-      const clientsWithLogos = clientsData.map((clientData: IClient) => {
-        const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
-        return {
-          ...clientData,
-          properties: clientData.properties || {},
-          logoUrl,
-        };
-      });
-      // --- End Logo URL Processing ---
-
       // Use tenant categories directly (includes ITIL ones if copied)
 
       return {
@@ -2641,7 +2566,6 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         boardOptions,
         agentOptions,
         categories,
-        clients: clientsWithLogos, // Return clients with logos
         users,
         tags: (tags || []).map((tag: any) => ({
           tag_id: tag.tag_id,

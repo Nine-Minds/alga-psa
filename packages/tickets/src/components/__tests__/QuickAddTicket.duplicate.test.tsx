@@ -67,9 +67,12 @@ vi.mock('../../actions/ticketFormActions', () => ({
   getTicketFormData: (...args: unknown[]) => getTicketFormDataMock(...args)
 }));
 
+vi.mock('@alga-psa/clients/actions/clientPickerActions', () => ({ searchClientsForPicker: vi.fn() }));
+
 vi.mock('../../actions/clientLookupActions', () => ({
   getContactsByClient: (...args: unknown[]) => getContactsByClientMock(...args),
-  getClientLocations: (...args: unknown[]) => getClientLocationsMock(...args)
+  getClientLocations: (...args: unknown[]) => getClientLocationsMock(...args),
+  getClientById: vi.fn(async (id: string) => ({ client_id: id, client_name: id, client_type: 'company' })),
 }));
 
 // Lightweight non-modal Dialog: the real radix-based Dialog aria-hides sibling
@@ -92,9 +95,9 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
 
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   __esModule: true,
-  ClientPicker: function ClientPickerMock({ onSelect, selectedClientId, clients, disabled }: any) {
+  ClientPicker: function ClientPickerMock({ onSelect, selectedClientId, clients, searchClients, disabled }: any) {
     return (
-      <div data-testid="client-picker">
+      <div data-testid="client-picker" data-async={String(typeof searchClients === 'function' && clients === undefined)}>
         <div data-testid="client-picker-value">{selectedClientId}</div>
         <div data-testid="client-picker-disabled">{String(Boolean(disabled))}</div>
         <button
@@ -729,6 +732,8 @@ describe('QuickAddTicket duplicate mode', () => {
     expect(screen.getByDisplayValue('Laptop, accounts, badge')).toBeInTheDocument();
 
     expect(screen.getByTestId('client-picker-value')).toHaveTextContent('client-1');
+    // Async mode: server-searched picker, no full client list handed in.
+    expect(screen.getByTestId('client-picker')).toHaveAttribute('data-async', 'true');
     // Not locked: the client picker is enabled and can still be changed.
     expect(screen.getByTestId('client-picker-disabled')).toHaveTextContent('false');
     expect(screen.queryByTestId('client-picker-locked')).not.toBeInTheDocument();

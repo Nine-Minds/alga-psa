@@ -1,10 +1,10 @@
 'use server'
 
-import type { IUser, IBoard, ITicketStatus, IPriority, IClient, IContact } from '@alga-psa/types';
+import type { IUser, IBoard, ITicketStatus, IPriority, IContact } from '@alga-psa/types';
 import { getAllUsers } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getAllBoards } from './board-actions';
 import { getAllPriorities, getPrioritiesByBoardType } from '@alga-psa/reference-data/actions/priorityActions';
-import { getAllClients, getClientById, getContactsByClient } from './clientLookupActions';
+import { getClientById, getContactsByClient } from './clientLookupActions';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
@@ -15,7 +15,6 @@ export interface TicketFormData {
   boards: IBoard[];
   statuses: ITicketStatus[];
   priorities: IPriority[];
-  clients: IClient[];
   contacts?: IContact[];
   selectedClient?: {
     client_id: string;
@@ -27,7 +26,7 @@ export interface TicketFormData {
 export const getTicketFormData = withAuth(async (_user, _ctx, prefilledClientId?: string): Promise<TicketFormData> => {
   try {
     // Fetch required data first
-    const [users, boards, priorities, clients] = await Promise.all([
+    const [users, boards, priorities] = await Promise.all([
       getAllUsers(false).catch(error => {
         console.error('Error fetching users:', error);
         return [];
@@ -38,10 +37,6 @@ export const getTicketFormData = withAuth(async (_user, _ctx, prefilledClientId?
       }),
       getAllPriorities('ticket').catch(error => {
         console.error('Error fetching priorities:', error);
-        return [];
-      }),
-      getAllClients(false).catch(error => {
-        console.error('Error fetching clients:', error);
         return [];
       })
     ]);
@@ -67,7 +62,6 @@ export const getTicketFormData = withAuth(async (_user, _ctx, prefilledClientId?
       boards: boards || [],
       statuses: [],
       priorities: priorities || [],
-      clients: clients || [],
       contacts: contacts.length > 0 ? contacts : undefined,
       selectedClient: selectedClient && selectedClient.client_type ? {
         client_id: selectedClient.client_id,
@@ -83,7 +77,6 @@ export const getTicketFormData = withAuth(async (_user, _ctx, prefilledClientId?
       boards: [],
       statuses: [],
       priorities: [],
-      clients: [],
     };
   }
 });
@@ -144,7 +137,6 @@ export const getClientTicketFormData = withAuth(async (_user, { tenant }): Promi
       users: [],
       boards,
       statuses: [],
-      clients: [],
     };
   } catch (error) {
     console.error('Error fetching client ticket form data:', error);
@@ -153,7 +145,6 @@ export const getClientTicketFormData = withAuth(async (_user, { tenant }): Promi
       boards: [],
       statuses: [],
       priorities: [],
-      clients: [],
     };
   }
 });

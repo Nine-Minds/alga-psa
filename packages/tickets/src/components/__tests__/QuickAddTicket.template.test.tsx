@@ -74,9 +74,12 @@ vi.mock('../../actions/ticketFormActions', () => ({
   getTicketFormData: (...args: unknown[]) => getTicketFormDataMock(...args)
 }));
 
+vi.mock('@alga-psa/clients/actions/clientPickerActions', () => ({ searchClientsForPicker: vi.fn() }));
+
 vi.mock('../../actions/clientLookupActions', () => ({
   getContactsByClient: (...args: unknown[]) => getContactsByClientMock(...args),
-  getClientLocations: (...args: unknown[]) => getClientLocationsMock(...args)
+  getClientLocations: (...args: unknown[]) => getClientLocationsMock(...args),
+  getClientById: vi.fn(async (id: string) => ({ client_id: id, client_name: id, client_type: 'company' })),
 }));
 
 // Lightweight non-modal Dialog: the real radix-based Dialog aria-hides sibling
@@ -99,9 +102,9 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
 
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   __esModule: true,
-  ClientPicker: function ClientPickerMock({ onSelect, selectedClientId, clients, disabled }: any) {
+  ClientPicker: function ClientPickerMock({ onSelect, selectedClientId, clients, searchClients, disabled }: any) {
     return (
-      <div data-testid="client-picker">
+      <div data-testid="client-picker" data-async={String(typeof searchClients === 'function' && clients === undefined)}>
         <div data-testid="client-picker-value">{selectedClientId}</div>
         <div data-testid="client-picker-disabled">{String(Boolean(disabled))}</div>
         <button
@@ -714,6 +717,7 @@ describe('QuickAddTicket template mode', () => {
     expect(boardSelectSpy).not.toHaveBeenCalled();
     expect(clientSelectSpy).not.toHaveBeenCalled();
     expect(screen.getByTestId('client-picker-value')).toHaveTextContent('');
+    expect(screen.getByTestId('client-picker')).toHaveAttribute('data-async', 'true');
     expect(screen.queryByTestId('contact-picker-value')?.textContent ?? '').toBe(''); // contact is never taken from a template
     expect(screen.getByTestId('assigned-to-value')).toHaveTextContent('');
 

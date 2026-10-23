@@ -192,7 +192,6 @@ interface TicketDetailsProps {
     boardOptions?: { value: string; label: string }[];
     priorityOptions?: { value: string; label: string; color?: string | null; is_from_itil_standard?: boolean }[];
     initialCategories?: ITicketCategory[];
-    initialClients?: IClient[];
     initialLocations?: IClientLocation[];
     initialAgentSchedules?: { userId: string; minutes: number }[];
 
@@ -324,7 +323,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     boardOptions = [],
     priorityOptions = [],
     initialCategories = [],
-    initialClients = [],
     initialLocations = [],
     initialAgentSchedules = [],
     // Current user (for drawer usage)
@@ -685,7 +683,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [board, setBoard] = useState<any>(initialBoard);
     const [savedBoardId, setSavedBoardId] = useState<string | null>(initialBoard?.board_id ?? initialTicket.board_id ?? null);
     const isLiveTicketTimerEnabled = useMemo(() => isBoardLiveTicketTimerEnabled(board), [board]);
-    const [clients, setClients] = useState<IClient[]>(initialClients);
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);
     const [locations, setLocations] = useState<IClientLocation[]>(initialLocations);
     const [showWeekday, setShowWeekday] = useState<boolean>(bootstrap?.displaySettings?.showWeekday ?? false);
@@ -1633,8 +1630,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 return;
             }
 
-            const minimalClients =
-                clients.length > 0 ? clients : client ? [client] : [];
+            const minimalClients = client ? [client] : [];
 
             replaceDrawer(
                 renderContactDetails
@@ -4270,7 +4266,6 @@ const handleClose = () => {
                     client={client}
                     onContactClick={handleContactClick}
                     onClientClick={handleClientClick}
-                    clients={clients}
                     onChangeContact={handleContactChange}
                     onChangeClient={handleClientChange}
                     onChangeLocation={handleLocationChange}
@@ -4494,8 +4489,7 @@ const handleClose = () => {
                                 userId={userId || ''}
                                 tenant={tenant}
                                 contacts={contacts}
-                                clients={clients}
-                                locations={locations}
+                                            locations={locations}
                                 clientFilterState={clientFilterState}
                                 clientTypeFilter={clientTypeFilter}
                                 onChangeContact={handleContactChange}

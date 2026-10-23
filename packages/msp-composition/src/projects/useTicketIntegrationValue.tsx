@@ -48,7 +48,6 @@ export function useTicketIntegrationValue(): TicketIntegrationContextType {
           boardOptions={ticketData.options.board}
           priorityOptions={ticketData.options.priority}
           initialCategories={ticketData.categories}
-          initialClients={ticketData.clients}
           initialLocations={ticketData.locations}
           initialAgentSchedules={ticketData.agentSchedules}
           initialUserMap={ticketData.userMap}

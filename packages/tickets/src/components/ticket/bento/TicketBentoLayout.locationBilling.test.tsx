@@ -31,6 +31,7 @@ vi.mock('@alga-psa/ui/components/Label', () => ({
 
 vi.mock('@alga-psa/ui/components/ContactPicker', () => ({ ContactPicker: () => null }));
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({ ClientPicker: () => null }));
+vi.mock('@alga-psa/clients/actions/clientPickerActions', () => ({ searchClientsForPicker: vi.fn() }));
 vi.mock('@alga-psa/ui/components/ContactAvatar', () => ({ __esModule: true, default: () => null }));
 vi.mock('@alga-psa/ui/components/ClientAvatar', () => ({ __esModule: true, default: () => null }));
 vi.mock('@alga-psa/ui/components/TeamAvatar', () => ({ __esModule: true, default: () => null }));
