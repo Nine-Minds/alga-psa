@@ -18,7 +18,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
-import { Eye, EyeOff, Lightbulb, Plus, RefreshCw, Save, Unlink } from 'lucide-react';
+import { Eye, EyeOff, KeyRound, Lightbulb, Plus, RefreshCw, Save, Unlink } from 'lucide-react';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import {
@@ -31,6 +31,7 @@ import {
   ingestDattoRmmSoftwareInventory,
   listDattoRmmComponents,
   listDattoRmmSiteMappings,
+  regenerateDattoRmmWebhookSecret,
   saveDattoRmmConfiguration,
   syncDattoRmmDevices,
   syncDattoRmmSites,
@@ -65,6 +66,8 @@ export function DattoRmmIntegrationSettings() {
   const [testing, setTesting] = React.useState(false);
   const [disconnecting, setDisconnecting] = React.useState(false);
   const [confirmDisconnectOpen, setConfirmDisconnectOpen] = React.useState(false);
+  const [regeneratingSecret, setRegeneratingSecret] = React.useState(false);
+  const [confirmRegenerateSecretOpen, setConfirmRegenerateSecretOpen] = React.useState(false);
   const [syncingSites, setSyncingSites] = React.useState(false);
   const [syncingDevices, setSyncingDevices] = React.useState(false);
   const [backfillingAlerts, setBackfillingAlerts] = React.useState(false);
@@ -318,9 +321,35 @@ export function DattoRmmIntegrationSettings() {
       setApiKey('');
       setApiSecret('');
       await load();
+      // Disconnect removed the webhook secret; drop the old one and show the fresh one.
+      setWebhookInfo(null);
+      await loadWebhookInfo();
     } finally {
       setDisconnecting(false);
       setConfirmDisconnectOpen(false);
+    }
+  };
+
+  const handleRegenerateWebhookSecret = async () => {
+    setRegeneratingSecret(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await regenerateDattoRmmWebhookSecret();
+      if (!res.success || !res.webhook) {
+        const message = getActionFailureMessage(res, t('integrations.rmm.datto.errors.regenerateWebhookSecret', { defaultValue: 'Could not regenerate the webhook secret' }));
+        setError(message);
+        toast({ title: t('integrations.rmm.datto.errors.regenerateWebhookSecret', { defaultValue: 'Could not regenerate the webhook secret' }), description: message, variant: 'destructive' });
+        return;
+      }
+      setWebhookInfo(res.webhook);
+      toast({
+        title: t('integrations.rmm.datto.toasts.webhookSecretRegeneratedTitle', { defaultValue: 'Webhook secret regenerated' }),
+        description: t('integrations.rmm.datto.toasts.webhookSecretRegeneratedDescription', { defaultValue: 'Update the header value in your Datto webhook responses.' }),
+      });
+    } finally {
+      setRegeneratingSecret(false);
+      setConfirmRegenerateSecretOpen(false);
     }
   };
 
@@ -749,6 +778,19 @@ export function DattoRmmIntegrationSettings() {
       cancelLabel={t('common:actions.cancel', { defaultValue: 'Cancel' })}
     />
     <ConfirmationDialog
+      id="datto-rmm-regenerate-webhook-secret-confirm"
+      isOpen={confirmRegenerateSecretOpen}
+      onClose={() => setConfirmRegenerateSecretOpen(false)}
+      onConfirm={handleRegenerateWebhookSecret}
+      isConfirming={regeneratingSecret}
+      title={t('integrations.rmm.datto.regenerateSecretConfirm.title', { defaultValue: 'Regenerate the webhook secret?' })}
+      message={t('integrations.rmm.datto.regenerateSecretConfirm.message', {
+        defaultValue: 'The current secret stops working immediately. Webhook alerts are rejected until every Datto webhook response sends the new header value. Polling is not affected.',
+      })}
+      confirmLabel={t('integrations.rmm.datto.actions.regenerateSecret', { defaultValue: 'Regenerate secret' })}
+      cancelLabel={t('common:actions.cancel', { defaultValue: 'Cancel' })}
+    />
+    <ConfirmationDialog
       id="datto-rmm-disconnect-confirm"
       isOpen={confirmDisconnectOpen}
       onClose={() => setConfirmDisconnectOpen(false)}
@@ -756,7 +798,7 @@ export function DattoRmmIntegrationSettings() {
       isConfirming={disconnecting}
       title={t('integrations.rmm.datto.disconnectConfirm.title', { defaultValue: 'Disconnect Datto RMM?' })}
       message={t('integrations.rmm.datto.disconnectConfirm.message', {
-        defaultValue: 'The stored API key and secret are removed and scheduled syncs stop. Site mappings and synced assets are kept.',
+        defaultValue: 'The stored API key and secret are removed, the webhook secret is reset, and scheduled syncs stop. Site mappings and synced assets are kept.',
       })}
       confirmLabel={t('integrations.rmm.datto.actions.disconnect', { defaultValue: 'Disconnect' })}
       cancelLabel={t('common:actions.cancel', { defaultValue: 'Cancel' })}
@@ -1229,17 +1271,30 @@ export function DattoRmmIntegrationSettings() {
                     {t('integrations.rmm.datto.sections.webhooksDescription', { defaultValue: 'Polling is the guaranteed path. To get alerts in seconds, add a webhook response action to your Datto monitor policies using the URL, custom header, and body template below.' })}
                   </div>
                 </div>
-                <Button
-                  id="datto-rmm-refresh-webhook-info"
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={loadWebhookInfo}
-                  disabled={busy}
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  {t('integrations.rmm.datto.actions.refresh', { defaultValue: 'Refresh' })}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    id="datto-rmm-regenerate-webhook-secret"
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setConfirmRegenerateSecretOpen(true)}
+                    disabled={busy || regeneratingSecret || !webhookInfo}
+                  >
+                    <KeyRound className="h-4 w-4 mr-2" />
+                    {t('integrations.rmm.datto.actions.regenerateSecret', { defaultValue: 'Regenerate secret' })}
+                  </Button>
+                  <Button
+                    id="datto-rmm-refresh-webhook-info"
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={loadWebhookInfo}
+                    disabled={busy}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    {t('integrations.rmm.datto.actions.refresh', { defaultValue: 'Refresh' })}
+                  </Button>
+                </div>
               </div>
 
               {webhookInfo ? (

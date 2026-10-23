@@ -2630,7 +2630,8 @@
           "ingestSoftware": "Software opnemen mislukt",
           "someSoftwareFailed": "Bij sommige apparaten kon de software niet worden opgenomen: {{errors}}",
           "createClients": "Klanten voor Datto-sites konden niet worden aangemaakt",
-          "someClientsFailed": "Sommige sites zijn niet gekoppeld: {{errors}}"
+          "someClientsFailed": "Sommige sites zijn niet gekoppeld: {{errors}}",
+          "regenerateWebhookSecret": "Webhook-secret kon niet opnieuw worden gegenereerd"
         },
         "toasts": {
           "saveFailedTitle": "Opslaan mislukt",
@@ -2656,7 +2657,9 @@
           "softwareIngestedDescription": "De Datto-software-inventaris is opgenomen.",
           "optionsSavedDescription": "Datto RMM-opties bijgewerkt.",
           "createClientsFailedTitle": "Klant aanmaken mislukt",
-          "sitesSyncedWithClients": "Datto-sites zijn gesynchroniseerd. Nieuwe sites: {{created}} klanten aangemaakt, {{linked}} gekoppeld, {{failed}} mislukt."
+          "sitesSyncedWithClients": "Datto-sites zijn gesynchroniseerd. Nieuwe sites: {{created}} klanten aangemaakt, {{linked}} gekoppeld, {{failed}} mislukt.",
+          "webhookSecretRegeneratedTitle": "Webhook-secret opnieuw gegenereerd",
+          "webhookSecretRegeneratedDescription": "Werk de headerwaarde bij in uw Datto-webhookreacties."
         },
         "success": {
           "saved": "Datto RMM-configuratie opgeslagen. Voer \"Verbinding testen\" uit om deze te activeren.",
@@ -2710,7 +2713,7 @@
         },
         "disconnectConfirm": {
           "title": "Verbinding met Datto RMM verbreken?",
-          "message": "De opgeslagen API-sleutel en het secret worden verwijderd en geplande synchronisaties worden gestopt. Sitetoewijzingen en gesynchroniseerde assets blijven behouden."
+          "message": "De opgeslagen API-sleutel en het secret worden verwijderd, het webhook-secret wordt opnieuw ingesteld en geplande synchronisaties worden gestopt. Sitetoewijzingen en gesynchroniseerde assets blijven behouden."
         },
         "actions": {
           "disconnect": "Verbinding verbreken",
@@ -2727,7 +2730,8 @@
           "ingestSoftware": "Software opnemen",
           "syncAlerts": "Waarschuwingen synchroniseren",
           "createClients": "Klanten aanmaken",
-          "createClientsForUnmapped": "Klanten aanmaken voor niet-gekoppelde ({{count}})"
+          "createClientsForUnmapped": "Klanten aanmaken voor niet-gekoppelde ({{count}})",
+          "regenerateSecret": "Secret opnieuw genereren"
         },
         "title": "Datto RMM",
         "description": "Verbind Datto RMM om sites en apparaten te synchroniseren, waarschuwingen op te nemen en Web Remote te openen vanuit assets.",
@@ -2799,6 +2803,10 @@
         },
         "proFeature": {
           "description": "De integratie met Datto RMM is beschikbaar in AlgaPSA Pro."
+        },
+        "regenerateSecretConfirm": {
+          "title": "Webhook-secret opnieuw genereren?",
+          "message": "Het huidige secret werkt per direct niet meer. Webhookmeldingen worden geweigerd totdat elke Datto-webhookreactie de nieuwe headerwaarde verstuurt. Polling wordt niet beïnvloed."
         }
       },
       "tanium": {

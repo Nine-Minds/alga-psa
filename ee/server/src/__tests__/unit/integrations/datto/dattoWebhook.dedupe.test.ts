@@ -19,6 +19,19 @@ const processRmmAlertEvent = vi.fn(async () => {
 const syncDattoSingleDeviceForTenant = vi.fn(async (_args: any): Promise<any> => ({ updated: true }));
 const publishEvent = vi.fn(async () => undefined);
 
+// next/server's after() needs a live request scope; collect the tasks instead
+// so tests can check they are deferred past the response and then run them.
+let afterTasks: Array<() => Promise<unknown>> = [];
+vi.mock('next/server', async () => {
+  const actual: any = await vi.importActual('next/server');
+  return { ...actual, after: (task: () => Promise<unknown>) => void afterTasks.push(task) };
+});
+const runAfterTasks = async () => {
+  const tasks = afterTasks;
+  afterTasks = [];
+  for (const task of tasks) await task();
+};
+
 /** Just enough of the knex builder for the route's rmm_integrations / rmm_webhook_events / mapping calls. */
 class QB {
   private wheres: Record<string, any>[] = [];
@@ -127,6 +140,7 @@ describe('Datto webhook processing and dedupe', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     processError = null;
+    afterTasks = [];
     state = {
       rmm_integrations: [{ tenant: 'tenant_1', provider: 'datto', integration_id: 'int_1', is_active: true }],
       rmm_webhook_events: [],
@@ -173,6 +187,9 @@ describe('Datto webhook processing and dedupe', () => {
         alertClass: 'srvc_status_ctx',
       })
     );
+    // The refresh is deferred until after the response.
+    expect(syncDattoSingleDeviceForTenant).not.toHaveBeenCalled();
+    await runAfterTasks();
     expect(syncDattoSingleDeviceForTenant).toHaveBeenCalledWith(
       expect.objectContaining({ tenant: 'tenant_1', deviceUid: 'dev-1' })
     );
@@ -257,6 +274,21 @@ describe('Datto webhook processing and dedupe', () => {
     expect(publishEvent).not.toHaveBeenCalled();
   });
 
+  it('releases the dedupe claim when it ignores an alert, so a redelivery after mapping or unmuting is processed', async () => {
+    const unmapped = await call({ alertUid: 'alert-1', deviceUid: 'dev-1', siteUid: 'site-unmapped' });
+    expect(await unmapped.json()).toEqual(expect.objectContaining({ reason: 'site_not_mapped' }));
+    expect(state.rmm_webhook_events).toEqual([]);
+
+    client!.getAlert.mockResolvedValueOnce({ ...fetchedAlert, muted: true });
+    const muted = await call({ alertUid: 'alert-1', deviceUid: 'dev-1' });
+    expect(await muted.json()).toEqual(expect.objectContaining({ reason: 'alert_muted' }));
+    expect(state.rmm_webhook_events).toEqual([]);
+
+    const redelivered = await call({ alertUid: 'alert-1', deviceUid: 'dev-1' });
+    expect(await redelivered.json()).toEqual(expect.objectContaining({ recorded: true }));
+    expect(processRmmAlertEvent).toHaveBeenCalledTimes(1);
+  });
+
   it('still processes a resolve for a muted alert so an ingested alert can close', async () => {
     client!.getAlert.mockResolvedValue({ ...fetchedAlert, muted: true, resolved: true });
     const res = await call({ alertUid: 'alert-1', deviceUid: 'dev-1', event: 'resolve' });
@@ -336,6 +368,7 @@ describe('Datto webhook processing and dedupe', () => {
     syncDattoSingleDeviceForTenant.mockRejectedValueOnce(new Error('sync failed'));
     const res = await call({ alertUid: 'alert-1', deviceUid: 'dev-1' });
     expect(res.status).toBe(200);
+    await expect(runAfterTasks()).resolves.toBeUndefined();
   });
 
   it('releases the dedupe claim on a processing failure so a retry is processed', async () => {

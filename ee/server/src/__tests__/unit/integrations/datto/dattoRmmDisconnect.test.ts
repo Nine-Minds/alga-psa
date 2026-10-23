@@ -137,7 +137,7 @@ describe('Datto RMM disconnect', () => {
     return (disconnectDattoRmmIntegration as any)({} as any, { tenant: 'tenant_1' });
   }
 
-  it('T014: clears the credentials and cached token but keeps the webhook secret', async () => {
+  it('T014: clears the credentials, cached token and webhook secret', async () => {
     const res = await runDisconnect();
 
     expect(res).toEqual({ success: true });
@@ -145,7 +145,8 @@ describe('Datto RMM disconnect', () => {
     expect(store.has('datto_rmm_api_secret')).toBe(false);
     expect(store.has('datto_rmm_access_token')).toBe(false);
     expect(store.has('datto_rmm_access_token_expires_at')).toBe(false);
-    expect(store.get('datto_rmm_webhook_secret')).toBe('whsec');
+    // Inbound alerts signed with the old secret must not survive a reconnect.
+    expect(store.has('datto_rmm_webhook_secret')).toBe(false);
   });
 
   it('T014: deactivates the integration (which retires the scheduled jobs) and keeps the mappings', async () => {
@@ -181,5 +182,47 @@ describe('Datto RMM disconnect', () => {
 
     expect(res.success).toBe(true);
     expect(calls.find((c) => c.table === 'rmm_integrations' && c.op === 'update')).toBeDefined();
+  });
+});
+
+describe('Datto RMM webhook secret regeneration', () => {
+  beforeEach(() => {
+    hasPermissionMock.mockReset();
+    hasPermissionMock.mockResolvedValue(true);
+    knexMock = makeKnex().knex;
+  });
+
+  async function actions() {
+    return (await import('@ee/lib/actions/integrations/dattoRmmActions')) as any;
+  }
+
+  it('replaces the stored secret and returns the new one with the webhook info', async () => {
+    const { store, provider } = makeSecrets({ datto_rmm_webhook_secret: 'old-secret' });
+    secretProvider = provider as any;
+    const { regenerateDattoRmmWebhookSecret, getDattoRmmWebhookInfo } = await actions();
+
+    const res = await regenerateDattoRmmWebhookSecret({} as any, { tenant: 'tenant_1' });
+
+    expect(res.success).toBe(true);
+    expect(res.webhook.secret).toMatch(/^[0-9a-f]{48}$/);
+    expect(res.webhook.secret).not.toBe('old-secret');
+    expect(store.get('datto_rmm_webhook_secret')).toBe(res.webhook.secret);
+    expect(res.webhook.url).toContain('tenant=tenant_1');
+
+    const info = await getDattoRmmWebhookInfo({} as any, { tenant: 'tenant_1' });
+    expect(info.webhook.secret).toBe(res.webhook.secret);
+  });
+
+  it('requires system_settings update and leaves the secret alone otherwise', async () => {
+    const { store, provider } = makeSecrets({ datto_rmm_webhook_secret: 'old-secret' });
+    secretProvider = provider as any;
+    hasPermissionMock.mockResolvedValue(false);
+    const { regenerateDattoRmmWebhookSecret } = await actions();
+
+    expect(await regenerateDattoRmmWebhookSecret({} as any, { tenant: 'tenant_1' })).toEqual({
+      success: false,
+      error: 'Forbidden',
+    });
+    expect(store.get('datto_rmm_webhook_secret')).toBe('old-secret');
   });
 });

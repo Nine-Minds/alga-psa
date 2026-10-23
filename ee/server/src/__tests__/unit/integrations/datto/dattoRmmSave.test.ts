@@ -269,6 +269,39 @@ describe('Datto RMM save configuration', () => {
     expect(Object.keys(patch)).not.toContain('tokenLifecycle');
   });
 
+  it('turning on auto-create clients requires client:create, and stores nothing without it', async () => {
+    setup({
+      secrets: { datto_rmm_api_key: 'K', datto_rmm_api_secret: 'S' },
+      row: { instance_url: 'https://merlot-api.centrastage.net/api', settings: { autoCreateClientsForNewSites: false } },
+    });
+    hasPermissionMock.mockImplementation(async (_user: any, resource: string) => resource !== 'client');
+
+    const denied = await save({ platform: 'merlot', autoCreateClientsForNewSites: true });
+
+    expect(denied.success).toBe(false);
+    expect(denied.error).toMatch(/permission to create clients/);
+    expect(hasPermissionMock).toHaveBeenCalledWith(expect.anything(), 'client', 'create');
+    expect(calls).toEqual([]);
+
+    hasPermissionMock.mockResolvedValue(true);
+    const allowed = await save({ platform: 'merlot', autoCreateClientsForNewSites: true });
+    expect(allowed.success).toBe(true);
+    const patch = JSON.parse(calls.find((c) => c.op === 'merge')?.args[0].settings.bindings[0]);
+    expect(patch.autoCreateClientsForNewSites).toBe(true);
+  });
+
+  it('saving with auto-create already on, or turning it off, needs only settings access', async () => {
+    setup({
+      secrets: { datto_rmm_api_key: 'K', datto_rmm_api_secret: 'S' },
+      row: { instance_url: 'https://merlot-api.centrastage.net/api', settings: { autoCreateClientsForNewSites: true } },
+    });
+    hasPermissionMock.mockImplementation(async (_user: any, resource: string) => resource !== 'client');
+
+    expect((await save({ platform: 'merlot', autoCreateClientsForNewSites: true })).success).toBe(true);
+    expect((await save({ platform: 'merlot', autoCreateClientsForNewSites: false })).success).toBe(true);
+    expect(hasPermissionMock).not.toHaveBeenCalledWith(expect.anything(), 'client', 'create');
+  });
+
   it('requires system_settings update', async () => {
     hasPermissionMock.mockResolvedValue(false);
 

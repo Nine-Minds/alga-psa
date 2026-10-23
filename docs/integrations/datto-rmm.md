@@ -87,9 +87,11 @@ needing reconnection and the scheduled jobs skip it until you Save new
 credentials or run Test Connection successfully.
 
 **Disconnect** (it asks you to confirm) removes the stored key, secret, and token
-and marks the connection inactive. It keeps your site mappings and the assets
-already synced, so reconnecting later does not start over. Inactive connections
-stop their scheduled jobs within a few minutes.
+and marks the connection inactive. It also resets the webhook secret, so after
+reconnecting, copy the new **Header Secret** into your Datto webhooks (see
+[Webhook](#webhook-optional-fast-path)). It keeps your site mappings and the
+assets already synced, so reconnecting later does not start over. Inactive
+connections stop their scheduled jobs within a few minutes.
 
 ## Sync sites and map them to AlgaPSA clients
 
@@ -115,6 +117,12 @@ In **Site Mapping**, assign each Datto site to an AlgaPSA client:
   table.
 - **Billing profile.** Appears when the client has more than one profile; choose
   which one this site's alert tickets bill to.
+- **Create clients for unmapped sites.** Creates an AlgaPSA client for each
+  unmapped site (or links the site to an existing client with the same name) and
+  maps it. **Create clients for new sites automatically** does the same for
+  sites that later syncs find. Both need the `client` **create** permission as
+  well as settings access; turning the automatic option on is refused without
+  it, because scheduled syncs create clients with nobody present.
 
 ## Sync devices into assets
 
@@ -152,7 +160,9 @@ Alert polling runs from the **Alert automation** card that appears once the
 connection is active. Turn it on and choose an interval between 5 and 60
 minutes (default 15). Each run reads the account's open alerts for your mapped
 sites, creates or updates them in `rmm_alerts`, and resolves any AlgaPSA alert
-that no longer appears as open in Datto. Alert rules, maintenance windows, and
+that no longer appears as open in Datto. Muted alerts and alerts from unmapped
+sites are not ingested, but they still count as open: muting an alert or
+unmapping its site does not resolve the AlgaPSA alert or auto-close its ticket. Alert rules, maintenance windows, and
 ticket creation use the same automation settings as the other RMM providers.
 
 Click **Sync Alerts** to run one reconciliation immediately.
@@ -169,7 +179,9 @@ In the **Alerts** section, copy these values from AlgaPSA:
   The tenant id is not a secret.
 - **Custom Header Name**: `X-Alga-Webhook-Secret`
 - **Header Secret**: a random secret AlgaPSA generates the first time you view
-  this section and keeps until you replace it.
+  this section. **Regenerate secret** replaces it (it asks you to confirm); the
+  old value stops working at once, so update the header in Datto right after.
+  Disconnecting also resets it.
 - **Body Template (alert triggered)** and, optionally, **Body Template (alert
   resolved)**.
 
@@ -193,7 +205,11 @@ alert from the Datto API, so the diagnostics are accurate and no free text from
 the alert has to survive being embedded in JSON. Datto may redeliver a webhook;
 AlgaPSA ignores duplicates. Requests with a missing or wrong secret get `401`.
 Like polling, the webhook only handles alerts from sites that are mapped to an
-AlgaPSA client; an alert from an unmapped site is acknowledged and ignored.
+AlgaPSA client; an alert from an unmapped site, or a muted alert, is
+acknowledged and ignored. An ignored delivery is not remembered as a duplicate,
+so if Datto redelivers it after you map the site, it is processed. AlgaPSA
+answers the webhook before refreshing the alert's device from Datto, so a slow
+or rate-limited device read does not hold up the delivery.
 Even with a webhook configured, keep polling on: it is what resolves alerts whose
 resolve webhook never arrived.
 
@@ -226,8 +242,9 @@ On a synced asset's detail page you can:
 
 - **Refresh** the asset from Datto right now.
 - **Remote Access → Remote Desktop** opens the device's **Web Remote** session in
-  Datto. The link is read fresh from Datto each time and only appears if the
-  device has one.
+  Datto. The option appears when the last device sync found a Web Remote link,
+  so opening the menu makes no Datto API call; the link itself is read fresh
+  from Datto when you choose it.
 - **Reboot** runs your configured **Reboot component** on the device as a quick
   job. Choose the component under **Asset actions** in the settings. The list
   comes from Datto when the API user may read components; if it cannot, paste the
@@ -237,15 +254,23 @@ On a synced asset's detail page you can:
   returns its job id. Only components that already exist in your Datto account
   can run.
 
-Reboot and Run component execute code on the endpoint, so they require the RMM
-**execute command** permission as well as a Datto API user that is allowed to run
-quick jobs.
+Reboot, Run component, and Remote Desktop give control of the endpoint, so on
+Datto assets they require the RMM **execute command** permission
+(`rmm:execute_command`) on top of asset update, as well as a Datto API user that
+is allowed to run quick jobs.
+
+> **Note for technicians:** by default only the **Admin** role has
+> `rmm:execute_command`. Users without it do not see Reboot, Run component, or
+> Remote Desktop on Datto assets. To give technicians these actions, grant
+> the `rmm` **execute_command** permission to their role.
 
 ## Permissions
 
 Connecting, disconnecting, syncing, and editing mappings require the
 `system_settings` permission in AlgaPSA (read to view, update to change).
-Executing components from an asset requires the RMM execute-command permission.
+Creating clients for sites, by hand or by turning on automatic creation, also
+requires `client` **create**. Reboot, Run component, and Remote Desktop on a
+Datto asset require `rmm:execute_command` (Admin only by default).
 The webhook endpoint does not use a login session; it validates the
 `X-Alga-Webhook-Secret` header against the tenant's stored
 `datto_rmm_webhook_secret` in constant time.

@@ -2653,7 +2653,8 @@
           "ingestSoftware": "Software ingestion failed",
           "someSoftwareFailed": "Some devices failed to ingest software: {{errors}}",
           "createClients": "Failed to create clients for Datto sites",
-          "someClientsFailed": "Some sites were not mapped: {{errors}}"
+          "someClientsFailed": "Some sites were not mapped: {{errors}}",
+          "regenerateWebhookSecret": "Could not regenerate the webhook secret"
         },
         "toasts": {
           "saveFailedTitle": "Save failed",
@@ -2679,7 +2680,9 @@
           "softwareIngestedDescription": "Datto software inventory has been ingested.",
           "optionsSavedDescription": "Datto RMM options updated.",
           "createClientsFailedTitle": "Client creation failed",
-          "sitesSyncedWithClients": "Datto sites have been synced. New sites: {{created}} clients created, {{linked}} linked, {{failed}} failed."
+          "sitesSyncedWithClients": "Datto sites have been synced. New sites: {{created}} clients created, {{linked}} linked, {{failed}} failed.",
+          "webhookSecretRegeneratedTitle": "Webhook secret regenerated",
+          "webhookSecretRegeneratedDescription": "Update the header value in your Datto webhook responses."
         },
         "success": {
           "saved": "Datto RMM configuration saved. Run Test Connection to activate it.",
@@ -2733,7 +2736,7 @@
         },
         "disconnectConfirm": {
           "title": "Disconnect Datto RMM?",
-          "message": "The stored API key and secret are removed and scheduled syncs stop. Site mappings and synced assets are kept."
+          "message": "The stored API key and secret are removed, the webhook secret is reset, and scheduled syncs stop. Site mappings and synced assets are kept."
         },
         "actions": {
           "disconnect": "Disconnect",
@@ -2750,7 +2753,8 @@
           "ingestSoftware": "Ingest Software",
           "syncAlerts": "Sync Alerts",
           "createClients": "Create clients",
-          "createClientsForUnmapped": "Create clients for unmapped ({{count}})"
+          "createClientsForUnmapped": "Create clients for unmapped ({{count}})",
+          "regenerateSecret": "Regenerate secret"
         },
         "title": "Datto RMM",
         "description": "Connect Datto RMM to sync sites and devices, ingest alerts, and open Web Remote from assets.",
@@ -2822,6 +2826,10 @@
         },
         "proFeature": {
           "description": "Datto RMM integration is available in AlgaPSA Pro."
+        },
+        "regenerateSecretConfirm": {
+          "title": "Regenerate the webhook secret?",
+          "message": "The current secret stops working immediately. Webhook alerts are rejected until every Datto webhook response sends the new header value. Polling is not affected."
         }
       },
       "tanium": {

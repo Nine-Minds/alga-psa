@@ -11,6 +11,7 @@ import {
   DattoRmmReconnectRequiredError,
   type DattoRmmClient,
 } from './dattoApiClient';
+import { tenantScopedTable } from './db';
 import type { DattoRmmIntegrationSettingsJson } from './shared';
 import { syncDattoSingleDeviceForTenant } from './syncSingleDevice';
 
@@ -74,17 +75,44 @@ async function readRebootComponentUid(tenant: string): Promise<string | null> {
   return uid || null;
 }
 
-async function currentWebRemoteUrl(ref: RmmAssetDeviceRef, client: DattoRmmClient): Promise<string | null> {
-  const device = await client.getDevice(ref.deviceId);
-  const raw = typeof device?.webRemoteUrl === 'string' ? device.webRemoteUrl.trim() : '';
+/**
+ * The URL comes from the Datto API and is opened in the user's browser, so
+ * only an https URL is ever handed on (no javascript:, data:, or plain http).
+ */
+function httpsUrlOrNull(value: unknown): string | null {
+  const raw = typeof value === 'string' ? value.trim() : '';
   if (!raw) return null;
-  // The URL comes from the Datto API and is opened in the user's browser, so
-  // only an https URL is ever handed on (no javascript:, data:, or plain http).
   try {
     return new URL(raw).protocol === 'https:' ? raw : null;
   } catch {
     return null;
   }
+}
+
+async function currentWebRemoteUrl(ref: RmmAssetDeviceRef, client: DattoRmmClient): Promise<string | null> {
+  const device = await client.getDevice(ref.deviceId);
+  return httpsUrlOrNull(device?.webRemoteUrl);
+}
+
+/** The webRemoteUrl the last device sync stored on the asset's extension row. */
+async function storedWebRemoteUrl(ref: RmmAssetDeviceRef): Promise<string | null> {
+  const { knex } = await createTenantKnex();
+  for (const table of ['workstation_assets', 'server_assets']) {
+    const row = await tenantScopedTable(knex, table, ref.tenant)
+      .where({ asset_id: ref.assetId })
+      .first(['system_info']);
+    if (!row) continue;
+    let info: unknown = row.system_info;
+    if (typeof info === 'string') {
+      try {
+        info = JSON.parse(info);
+      } catch {
+        info = null;
+      }
+    }
+    return httpsUrlOrNull((info as { webRemoteUrl?: unknown } | null)?.webRemoteUrl);
+  }
+  return null;
 }
 
 export const dattoRmmAssetDeviceActions: RmmAssetDeviceActions = {
@@ -106,11 +134,15 @@ export const dattoRmmAssetDeviceActions: RmmAssetDeviceActions = {
 
   // Datto's Web Remote is a browser session; it reuses the 'splashtop' slot the
   // asset UI labels "Remote Desktop", the same as Tactical's MeshCentral control.
+  // Offering it reads the URL stored by device sync, so opening the menu costs
+  // no Datto API call; remoteControlUrl fetches the live URL when it is used.
+  // Building the client makes no request either: it only gates on a usable,
+  // non-reconnect-required integration.
   async remoteControlTypes(ref): Promise<RmmRemoteConnectionType[]> {
     try {
       const client = await buildDattoClientForTenant(ref.tenant, ACTION_CLIENT_OPTIONS);
       if (!client) return [];
-      return (await currentWebRemoteUrl(ref, client)) ? ['splashtop'] : [];
+      return (await storedWebRemoteUrl(ref)) ? ['splashtop'] : [];
     } catch {
       // The button simply does not render when the device cannot be read.
       return [];

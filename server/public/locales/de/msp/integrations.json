@@ -2630,7 +2630,8 @@
           "ingestSoftware": "Software-Erfassung fehlgeschlagen",
           "someSoftwareFailed": "Bei einigen Geräten konnte die Software nicht erfasst werden: {{errors}}",
           "createClients": "Kunden für Datto-Standorte konnten nicht angelegt werden",
-          "someClientsFailed": "Einige Standorte wurden nicht zugeordnet: {{errors}}"
+          "someClientsFailed": "Einige Standorte wurden nicht zugeordnet: {{errors}}",
+          "regenerateWebhookSecret": "Webhook-Secret konnte nicht neu generiert werden"
         },
         "toasts": {
           "saveFailedTitle": "Speichern fehlgeschlagen",
@@ -2656,7 +2657,9 @@
           "softwareIngestedDescription": "Das Datto-Software-Inventar wurde erfasst.",
           "optionsSavedDescription": "Datto-RMM-Optionen aktualisiert.",
           "createClientsFailedTitle": "Kundenanlage fehlgeschlagen",
-          "sitesSyncedWithClients": "Datto-Standorte wurden synchronisiert. Neue Standorte: {{created}} Kunden angelegt, {{linked}} verknüpft, {{failed}} fehlgeschlagen."
+          "sitesSyncedWithClients": "Datto-Standorte wurden synchronisiert. Neue Standorte: {{created}} Kunden angelegt, {{linked}} verknüpft, {{failed}} fehlgeschlagen.",
+          "webhookSecretRegeneratedTitle": "Webhook-Secret neu generiert",
+          "webhookSecretRegeneratedDescription": "Aktualisieren Sie den Header-Wert in Ihren Datto-Webhook-Antworten."
         },
         "success": {
           "saved": "Datto-RMM-Konfiguration gespeichert. Führen Sie „Verbindung testen“ aus, um sie zu aktivieren.",
@@ -2710,7 +2713,7 @@
         },
         "disconnectConfirm": {
           "title": "Datto RMM trennen?",
-          "message": "Der gespeicherte API-Schlüssel und das Secret werden entfernt, geplante Synchronisationen werden gestoppt. Standortzuordnungen und synchronisierte Assets bleiben erhalten."
+          "message": "Der gespeicherte API-Schlüssel und das Secret werden entfernt, das Webhook-Secret wird zurückgesetzt und geplante Synchronisationen werden gestoppt. Standortzuordnungen und synchronisierte Assets bleiben erhalten."
         },
         "actions": {
           "disconnect": "Trennen",
@@ -2727,7 +2730,8 @@
           "ingestSoftware": "Software erfassen",
           "syncAlerts": "Alarme synchronisieren",
           "createClients": "Kunden anlegen",
-          "createClientsForUnmapped": "Kunden für nicht zugeordnete anlegen ({{count}})"
+          "createClientsForUnmapped": "Kunden für nicht zugeordnete anlegen ({{count}})",
+          "regenerateSecret": "Secret neu generieren"
         },
         "title": "Datto RMM",
         "description": "Verbinden Sie Datto RMM, um Standorte und Geräte zu synchronisieren, Alarme zu erfassen und Web Remote über Assets zu öffnen.",
@@ -2799,6 +2803,10 @@
         },
         "proFeature": {
           "description": "Die Datto-RMM-Integration ist in AlgaPSA Pro verfügbar."
+        },
+        "regenerateSecretConfirm": {
+          "title": "Webhook-Secret neu generieren?",
+          "message": "Das aktuelle Secret funktioniert ab sofort nicht mehr. Webhook-Alarme werden abgelehnt, bis jede Datto-Webhook-Antwort den neuen Header-Wert sendet. Das Polling ist nicht betroffen."
         }
       },
       "tanium": {

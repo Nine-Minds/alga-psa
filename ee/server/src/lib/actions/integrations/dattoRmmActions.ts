@@ -346,6 +346,20 @@ export const saveDattoRmmConfiguration = withAdvancedAssetsAccess(async (
       .where('provider', PROVIDER)
       .first(['instance_url', 'settings']);
 
+    // Once on, the scheduled sync creates clients with no user present, so the
+    // user switching it on must be allowed to create clients themselves (as the
+    // manual create action and the Entra mapping confirm require). Saving with
+    // it already on is not a new grant and stays settings-only.
+    const enablingAutoCreate =
+      input.autoCreateClientsForNewSites === true &&
+      parseSettings(existing?.settings).autoCreateClientsForNewSites !== true;
+    if (enablingAutoCreate && !(await hasPermission(user as any, 'client', 'create'))) {
+      return {
+        success: false,
+        error: 'Forbidden: turning on automatic client creation requires permission to create clients',
+      };
+    }
+
     const [storedKey, storedSecret] = await Promise.all([
       secretProvider.getTenantSecret(tenant, DATTO_RMM_SECRET_KEYS.apiKey),
       secretProvider.getTenantSecret(tenant, DATTO_RMM_SECRET_KEYS.apiSecret),
@@ -441,10 +455,13 @@ export const disconnectDattoRmmIntegration = withAdvancedAssetsAccess(async (
   if (!permitted) return { success: false, error: 'Forbidden' };
 
   try {
-    // The webhook secret is kept (as Tactical does) so reconnecting does not
-    // force the admin to edit the webhook in Datto again.
+    // The webhook secret goes too (as Level.io and NinjaOne do): it is the only
+    // thing that authenticates inbound alerts, so a reconnect, possibly to a
+    // different Datto account, starts with a fresh one that the old account's
+    // webhooks do not hold.
     const secretProvider = await getSecretProviderInstance();
     await Promise.all([
+      secretProvider.deleteTenantSecret(tenant, DATTO_RMM_SECRET_KEYS.webhookSecret).catch(() => undefined),
       secretProvider.deleteTenantSecret(tenant, DATTO_RMM_SECRET_KEYS.apiKey).catch(() => undefined),
       secretProvider.deleteTenantSecret(tenant, DATTO_RMM_SECRET_KEYS.apiSecret).catch(() => undefined),
       secretProvider.deleteTenantSecret(tenant, DATTO_RMM_SECRET_KEYS.accessToken).catch(() => undefined),
@@ -791,20 +808,36 @@ export const syncDattoRmmSingleDevice = withAdvancedAssetsAccess(async (
   }
 });
 
+type DattoWebhookInfo = {
+  url: string;
+  headerName: string;
+  secret: string;
+  bodyTemplate: string;
+  resolveBodyTemplate: string;
+};
+
+function buildWebhookInfo(tenant: string, secret: string): DattoWebhookInfo {
+  const baseUrl = getWebhookBaseUrl();
+  const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+  // The tenant id is not a secret; the secret travels in the header only.
+  const url = `${cleanBaseUrl}${DATTO_RMM_WEBHOOK_PATH}?tenant=${encodeURIComponent(tenant)}`;
+  return {
+    url,
+    headerName: WEBHOOK_HEADER_DISPLAY_NAME,
+    secret,
+    bodyTemplate: buildDattoWebhookBodyTemplate(),
+    resolveBodyTemplate: buildDattoWebhookResolveBodyTemplate(),
+  };
+}
+
+function newWebhookSecret(): string {
+  return randomBytes(24).toString('hex');
+}
+
 export const getDattoRmmWebhookInfo = withAdvancedAssetsAccess(async (
   user,
   { tenant }
-): Promise<{
-  success: boolean;
-  error?: string;
-  webhook?: {
-    url: string;
-    headerName: string;
-    secret: string;
-    bodyTemplate: string;
-    resolveBodyTemplate: string;
-  };
-}> => {
+): Promise<{ success: boolean; error?: string; webhook?: DattoWebhookInfo }> => {
   // The secret authenticates inbound alerts (anyone holding it can open
   // tickets), and this call mints it on first use: settings-update only.
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
@@ -814,25 +847,31 @@ export const getDattoRmmWebhookInfo = withAdvancedAssetsAccess(async (
     const secretProvider = await getSecretProviderInstance();
     let secret = await secretProvider.getTenantSecret(tenant, DATTO_RMM_SECRET_KEYS.webhookSecret);
     if (!secret) {
-      secret = randomBytes(24).toString('hex');
+      secret = newWebhookSecret();
       await secretProvider.setTenantSecret(tenant, DATTO_RMM_SECRET_KEYS.webhookSecret, secret);
     }
+    return { success: true, webhook: buildWebhookInfo(tenant, secret) };
+  } catch (err) {
+    return { success: false, error: dattoErrorMessage(err) };
+  }
+});
 
-    const baseUrl = getWebhookBaseUrl();
-    const cleanBaseUrl = baseUrl.replace(/\/$/, '');
-    // The tenant id is not a secret; the secret travels in the header only.
-    const url = `${cleanBaseUrl}${DATTO_RMM_WEBHOOK_PATH}?tenant=${encodeURIComponent(tenant)}`;
+/**
+ * Replaces the webhook secret. The old one stops working immediately, so every
+ * Datto webhook response must be updated with the new header value.
+ */
+export const regenerateDattoRmmWebhookSecret = withAdvancedAssetsAccess(async (
+  user,
+  { tenant }
+): Promise<{ success: boolean; error?: string; webhook?: DattoWebhookInfo }> => {
+  const permitted = await hasPermission(user as any, 'system_settings', 'update');
+  if (!permitted) return { success: false, error: 'Forbidden' };
 
-    return {
-      success: true,
-      webhook: {
-        url,
-        headerName: WEBHOOK_HEADER_DISPLAY_NAME,
-        secret,
-        bodyTemplate: buildDattoWebhookBodyTemplate(),
-        resolveBodyTemplate: buildDattoWebhookResolveBodyTemplate(),
-      },
-    };
+  try {
+    const secretProvider = await getSecretProviderInstance();
+    const secret = newWebhookSecret();
+    await secretProvider.setTenantSecret(tenant, DATTO_RMM_SECRET_KEYS.webhookSecret, secret);
+    return { success: true, webhook: buildWebhookInfo(tenant, secret) };
   } catch (err) {
     return { success: false, error: dattoErrorMessage(err) };
   }

@@ -2653,7 +2653,8 @@
           "ingestSoftware": "Inläsningen av programvara misslyckades",
           "someSoftwareFailed": "Programvaran kunde inte läsas in för vissa enheter: {{errors}}",
           "createClients": "Det gick inte att skapa kunder för Datto-platser",
-          "someClientsFailed": "Vissa platser kopplades inte: {{errors}}"
+          "someClientsFailed": "Vissa platser kopplades inte: {{errors}}",
+          "regenerateWebhookSecret": "Det gick inte att generera en ny webhook-hemlighet"
         },
         "toasts": {
           "saveFailedTitle": "Det gick inte att spara",
@@ -2679,7 +2680,9 @@
           "softwareIngestedDescription": "Datto-programvaruinventeringen har lästs in.",
           "optionsSavedDescription": "Datto RMM-alternativen har uppdaterats.",
           "createClientsFailedTitle": "Det gick inte att skapa kunder",
-          "sitesSyncedWithClients": "Datto-platserna har synkroniserats. Nya platser: {{created}} kunder skapade, {{linked}} kopplade, {{failed}} misslyckade."
+          "sitesSyncedWithClients": "Datto-platserna har synkroniserats. Nya platser: {{created}} kunder skapade, {{linked}} kopplade, {{failed}} misslyckade.",
+          "webhookSecretRegeneratedTitle": "Ny webhook-hemlighet genererad",
+          "webhookSecretRegeneratedDescription": "Uppdatera värdet i HTTP-huvudet i dina webhook-svar i Datto."
         },
         "success": {
           "saved": "Datto RMM-konfigurationen har sparats. Kör ”Testa anslutning” för att aktivera den.",
@@ -2733,7 +2736,7 @@
         },
         "disconnectConfirm": {
           "title": "Koppla från Datto RMM?",
-          "message": "Den lagrade API-nyckeln och hemligheten tas bort och schemalagda synkroniseringar stoppas. Platsmappningar och synkroniserade tillgångar behålls."
+          "message": "Den lagrade API-nyckeln och hemligheten tas bort, webhook-hemligheten återställs och schemalagda synkroniseringar stoppas. Platsmappningar och synkroniserade tillgångar behålls."
         },
         "actions": {
           "disconnect": "Koppla från",
@@ -2750,7 +2753,8 @@
           "ingestSoftware": "Läs in programvara",
           "syncAlerts": "Synkronisera larm",
           "createClients": "Skapa kunder",
-          "createClientsForUnmapped": "Skapa kunder för okopplade ({{count}})"
+          "createClientsForUnmapped": "Skapa kunder för okopplade ({{count}})",
+          "regenerateSecret": "Generera ny hemlighet"
         },
         "title": "Datto RMM",
         "description": "Anslut Datto RMM för att synkronisera platser och enheter, läsa in larm och öppna Web Remote från tillgångar.",
@@ -2822,6 +2826,10 @@
         },
         "proFeature": {
           "description": "Integrationen med Datto RMM är tillgänglig i AlgaPSA Pro."
+        },
+        "regenerateSecretConfirm": {
+          "title": "Generera en ny webhook-hemlighet?",
+          "message": "Den nuvarande hemligheten slutar fungera direkt. Webhook-larm avvisas tills varje webhook-svar i Datto skickar det nya värdet i HTTP-huvudet. Avsökningen påverkas inte."
         }
       },
       "tanium": {

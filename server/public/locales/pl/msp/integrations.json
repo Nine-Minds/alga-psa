@@ -2630,7 +2630,8 @@
           "ingestSoftware": "Pobieranie oprogramowania nie powiodło się",
           "someSoftwareFailed": "Nie udało się pobrać oprogramowania z niektórych urządzeń: {{errors}}",
           "createClients": "Nie udało się utworzyć klientów dla lokalizacji Datto",
-          "someClientsFailed": "Niektóre lokalizacje nie zostały przypisane: {{errors}}"
+          "someClientsFailed": "Niektóre lokalizacje nie zostały przypisane: {{errors}}",
+          "regenerateWebhookSecret": "Nie udało się wygenerować nowego secretu webhooka"
         },
         "toasts": {
           "saveFailedTitle": "Zapisywanie nie powiodło się",
@@ -2656,7 +2657,9 @@
           "softwareIngestedDescription": "Inwentarz oprogramowania Datto został pobrany.",
           "optionsSavedDescription": "Zaktualizowano opcje Datto RMM.",
           "createClientsFailedTitle": "Tworzenie klientów nie powiodło się",
-          "sitesSyncedWithClients": "Zsynchronizowano lokalizacje Datto. Nowe lokalizacje: utworzono {{created}} klientów, powiązano {{linked}}, niepowodzenia: {{failed}}."
+          "sitesSyncedWithClients": "Zsynchronizowano lokalizacje Datto. Nowe lokalizacje: utworzono {{created}} klientów, powiązano {{linked}}, niepowodzenia: {{failed}}.",
+          "webhookSecretRegeneratedTitle": "Wygenerowano nowy secret webhooka",
+          "webhookSecretRegeneratedDescription": "Zaktualizuj wartość nagłówka w odpowiedziach webhooka w Datto."
         },
         "success": {
           "saved": "Zapisano konfigurację Datto RMM. Uruchom „Testuj połączenie”, aby ją aktywować.",
@@ -2710,7 +2713,7 @@
         },
         "disconnectConfirm": {
           "title": "Rozłączyć Datto RMM?",
-          "message": "Zapisany klucz API i secret zostaną usunięte, a zaplanowane synchronizacje zostaną zatrzymane. Mapowania lokalizacji i zsynchronizowane zasoby zostaną zachowane."
+          "message": "Zapisany klucz API i secret zostaną usunięte, secret webhooka zostanie zresetowany, a zaplanowane synchronizacje zostaną zatrzymane. Mapowania lokalizacji i zsynchronizowane zasoby zostaną zachowane."
         },
         "actions": {
           "disconnect": "Rozłącz",
@@ -2727,7 +2730,8 @@
           "ingestSoftware": "Pobierz oprogramowanie",
           "syncAlerts": "Synchronizuj alerty",
           "createClients": "Utwórz klientów",
-          "createClientsForUnmapped": "Utwórz klientów dla nieprzypisanych ({{count}})"
+          "createClientsForUnmapped": "Utwórz klientów dla nieprzypisanych ({{count}})",
+          "regenerateSecret": "Wygeneruj nowy secret"
         },
         "title": "Datto RMM",
         "description": "Połącz Datto RMM, aby synchronizować lokalizacje i urządzenia, pobierać alerty i otwierać Web Remote z poziomu zasobów.",
@@ -2799,6 +2803,10 @@
         },
         "proFeature": {
           "description": "Integracja z Datto RMM jest dostępna w AlgaPSA Pro."
+        },
+        "regenerateSecretConfirm": {
+          "title": "Wygenerować nowy secret webhooka?",
+          "message": "Obecny secret natychmiast przestanie działać. Alerty z webhooka będą odrzucane, dopóki każda odpowiedź webhooka w Datto nie zacznie wysyłać nowej wartości nagłówka. Nie ma to wpływu na odpytywanie."
         }
       },
       "tanium": {

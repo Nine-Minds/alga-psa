@@ -291,7 +291,7 @@ into tickets without an Enterprise license.
   server/src/app/api/webhooks/datto/route.ts
   docs/integrations/datto-rmm.md
   server/src/test/unit/dattormm/*.test.ts
-  server/src/test/e2e/integrations-datto-*.playwright.test.ts
+  ee/server/src/__tests__/integration/integrations-datto-*.playwright.test.ts
   ```
 - Server actions in `dattoRmmActions.ts` mirror the Tactical names, and each wraps `withAuth` plus
   `hasPermission(user,'system_settings',read|update)`:

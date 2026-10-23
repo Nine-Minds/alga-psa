@@ -13,9 +13,31 @@ const quickJobCalls: Array<{ deviceUid: string; args: any }> = [];
 const getDeviceCalls: string[] = [];
 const singleDeviceCalls: any[] = [];
 
+// Extension rows by table; system_info is what device sync stored.
+let extensionRows: Record<string, any> = {};
+const extensionLookups: Array<{ table: string; where: any }> = [];
+
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {} })),
+  tenantDb: (_knex: unknown, _tenant: string) => ({
+    table: (table: string) => {
+      let where: any;
+      const qb: any = {
+        where: (w: any) => { where = w; return qb; },
+        first: async () => {
+          extensionLookups.push({ table, where });
+          return extensionRows[table];
+        },
+      };
+      return qb;
+    },
+  }),
 }));
+
+const storedUrl = (webRemoteUrl: unknown, table = 'workstation_assets', asString = false) => {
+  const info = { webRemoteUrl };
+  extensionRows = { [table]: { system_info: asString ? JSON.stringify(info) : info } };
+};
 
 // This config aliases @enterprise to the CE stubs; route the seam to the EE adapter.
 vi.mock('@enterprise/lib/integrations/datto/assetDeviceActions', () =>
@@ -75,6 +97,8 @@ describe('Datto asset device actions', () => {
     getDeviceCalls.length = 0;
     singleDeviceCalls.length = 0;
     quickJobImpl = async () => ({ job: { uid: 'job-1' } });
+    storedUrl('https://concord.centrastage.net/csm/remote/dev-1');
+    extensionLookups.length = 0;
   });
 
   it('is what resolveRmmAssetDeviceActions returns for datto', async () => {
@@ -94,19 +118,35 @@ describe('Datto asset device actions', () => {
     await expect(dattoRmmAssetDeviceActions.refresh(ref)).rejects.toThrow('Asset is not mapped to a Datto RMM device');
   });
 
-  it('offers Remote Desktop only when the device has a webRemoteUrl, read fresh each time', async () => {
+  it('offers Remote Desktop from the stored webRemoteUrl without calling Datto, and opens with a fresh read', async () => {
     const { dattoRmmAssetDeviceActions } = await import('@ee/lib/integrations/datto/assetDeviceActions');
     expect(await dattoRmmAssetDeviceActions.remoteControlTypes!(ref)).toEqual(['splashtop']);
+    expect(getDeviceCalls).toEqual([]);
+    expect(extensionLookups[0]).toEqual({ table: 'workstation_assets', where: { asset_id: 'asset_1' } });
+
     expect(await dattoRmmAssetDeviceActions.remoteControlUrl!(ref, 'splashtop')).toBe(
       'https://concord.centrastage.net/csm/remote/dev-1'
     );
-    expect(getDeviceCalls).toEqual(['dev-1', 'dev-1']);
+    expect(getDeviceCalls).toEqual(['dev-1']);
 
     expect(await dattoRmmAssetDeviceActions.remoteControlUrl!(ref, 'shell')).toBeNull();
 
     device = { uid: 'dev-1', webRemoteUrl: '  ' };
-    expect(await dattoRmmAssetDeviceActions.remoteControlTypes!(ref)).toEqual([]);
     expect(await dattoRmmAssetDeviceActions.remoteControlUrl!(ref, 'splashtop')).toBeNull();
+  });
+
+  it('reads the stored URL from a server row or a JSON string, and offers nothing without one', async () => {
+    const { dattoRmmAssetDeviceActions } = await import('@ee/lib/integrations/datto/assetDeviceActions');
+    storedUrl('https://concord.centrastage.net/csm/remote/srv', 'server_assets', true);
+    expect(await dattoRmmAssetDeviceActions.remoteControlTypes!(ref)).toEqual(['splashtop']);
+
+    for (const missing of [null, '  ']) {
+      storedUrl(missing);
+      expect(await dattoRmmAssetDeviceActions.remoteControlTypes!(ref)).toEqual([]);
+    }
+    extensionRows = {};
+    expect(await dattoRmmAssetDeviceActions.remoteControlTypes!(ref)).toEqual([]);
+    expect(getDeviceCalls).toEqual([]);
   });
 
   it('reboot without a configured component throws an actionable error and calls nothing', async () => {
@@ -180,6 +220,7 @@ describe('Datto asset device actions', () => {
     const { dattoRmmAssetDeviceActions } = await import('@ee/lib/integrations/datto/assetDeviceActions');
     for (const bad of ['javascript:alert(1)', 'http://concord.centrastage.net/remote', 'data:text/html,hi', 'not a url', '//evil.example/x']) {
       device = { uid: 'dev-1', webRemoteUrl: bad };
+      storedUrl(bad);
       expect(await dattoRmmAssetDeviceActions.remoteControlUrl!(ref, 'splashtop'), bad).toBeNull();
       expect(await dattoRmmAssetDeviceActions.remoteControlTypes!(ref), bad).toEqual([]);
     }

@@ -93,11 +93,28 @@ describe('dattoRmmAlertFetcher', () => {
     expect(mappingQuery.whereNotNull).toHaveBeenCalledWith('client_id');
   });
 
-  it('returns no alerts and skips the Datto call when no site is mapped', async () => {
+  it('ingests nothing when no site is mapped but holds every open alert so none look cleared', async () => {
     mappingRows = [];
     const { dattoRmmAlertFetcher } = await import('@ee/lib/integrations/datto/alertFetcher');
-    expect(await dattoRmmAlertFetcher.fetchActiveAlerts({ tenantId: 't', integrationId: 'i' })).toEqual([]);
-    expect(client!.listOpenAlerts).not.toHaveBeenCalled();
+    const snapshot = await dattoRmmAlertFetcher.fetchActiveAlertSnapshot!({ tenantId: 't', integrationId: 'i' });
+    expect(snapshot.events).toEqual([]);
+    // a3 is resolved in Datto, so it is genuinely cleared and not held.
+    expect(snapshot.heldExternalAlertIds).toEqual(['a1', 'a2', 'a4', 'a5']);
+  });
+
+  it('holds muted and unmapped-site alerts instead of dropping them', async () => {
+    client = {
+      listOpenAlerts: vi.fn(async () => [
+        alert('m1', 'site-1', { muted: true }),
+        alert('u1', 'site-unmapped'),
+        alert('ok', 'site-1'),
+        alert('r1', 'site-unmapped', { resolved: true }),
+      ]),
+    };
+    const { dattoRmmAlertFetcher } = await import('@ee/lib/integrations/datto/alertFetcher');
+    const snapshot = await dattoRmmAlertFetcher.fetchActiveAlertSnapshot!({ tenantId: 't', integrationId: 'i' });
+    expect(snapshot.events.map((e) => e.externalAlertId)).toEqual(['ok']);
+    expect(snapshot.heldExternalAlertIds).toEqual(['m1', 'u1']);
   });
 
   it('throws rather than reporting "all clear" when the tenant has no usable Datto client', async () => {

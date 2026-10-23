@@ -11,11 +11,14 @@
  * uses (the payload alone is mapped the same way if that lookup fails).
  * Alerts from sites not mapped to an Alga client, and muted open alerts, are
  * acknowledged and ignored, as they are by the poller. Deliveries are deduped
- * on rmm_webhook_events (alertUid + event) since Datto may redeliver.
+ * on rmm_webhook_events (alertUid + event) since Datto may redeliver; an
+ * ignored delivery releases its claim, so a redelivery after the site is
+ * mapped or the alert unmuted is processed rather than treated as a duplicate.
+ * The affected device is refreshed after the response is sent.
  */
 
 import { timingSafeEqual } from 'node:crypto';
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 import { createTenantKnex, isTenantSuspended, tenantDb } from '@alga-psa/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
@@ -121,6 +124,7 @@ export async function POST(req: Request) {
       // skip the Datto API call entirely (one indexed lookup, not the full map).
       const payloadSiteUid = cleanValue(body.siteUid);
       if (payloadSiteUid && !(await isDattoSiteMapped(knex, tenant, integrationId, payloadSiteUid))) {
+        await releaseClaim(db, dedupeId);
         return NextResponse.json({ ok: true, recorded: false, reason: 'site_not_mapped' }, { status: 200 });
       }
 
@@ -157,6 +161,7 @@ export async function POST(req: Request) {
         !siteUid ||
         (siteUid !== payloadSiteUid && !(await isDattoSiteMapped(knex, tenant, integrationId, siteUid)))
       ) {
+        await releaseClaim(db, dedupeId);
         return NextResponse.json({ ok: true, recorded: false, reason: 'site_not_mapped' }, { status: 200 });
       }
 
@@ -164,6 +169,7 @@ export async function POST(req: Request) {
       // notifying", so a muted open alert raises nothing. Resolves still
       // process so an already-ingested alert can close.
       if (!isResolveEvent && alert.resolved !== true && alert.muted === true) {
+        await releaseClaim(db, dedupeId);
         return NextResponse.json({ ok: true, recorded: false, reason: 'alert_muted' }, { status: 200 });
       }
 
@@ -222,13 +228,17 @@ export async function POST(req: Request) {
 
       const result = await processRmmAlertEvent({ knex, deps: buildRmmAlertPipelineDeps() }, normalized);
 
-      // Best-effort: refresh the affected device, but don't fail the webhook response.
+      // Best-effort device refresh, after the response is sent: it makes up to
+      // two more Datto calls, and under a rate limit those can take long enough
+      // to hold Datto's delivery open. Its outcome never changes the response.
       if (deviceUid) {
-        try {
-          await syncDattoSingleDeviceForTenant({ tenant, deviceUid, clientOptions: WEBHOOK_CLIENT_OPTIONS });
-        } catch {
-          // ignore
-        }
+        after(async () => {
+          try {
+            await syncDattoSingleDeviceForTenant({ tenant, deviceUid, clientOptions: WEBHOOK_CLIENT_OPTIONS });
+          } catch {
+            // ignore
+          }
+        });
       }
 
       return NextResponse.json({ ok: true, recorded: true, outcome: result.outcome }, { status: 200 });

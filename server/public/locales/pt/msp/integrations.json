@@ -2630,7 +2630,8 @@
           "ingestSoftware": "Falha na ingestão de software",
           "someSoftwareFailed": "Alguns dispositivos tiveram falha na ingestão de software: {{errors}}",
           "createClients": "Não foi possível criar clientes para os sites do Datto",
-          "someClientsFailed": "Alguns sites não foram mapeados: {{errors}}"
+          "someClientsFailed": "Alguns sites não foram mapeados: {{errors}}",
+          "regenerateWebhookSecret": "Não foi possível regenerar o segredo do webhook"
         },
         "toasts": {
           "saveFailedTitle": "Falha ao salvar",
@@ -2656,7 +2657,9 @@
           "softwareIngestedDescription": "O inventário de software do Datto foi ingerido.",
           "optionsSavedDescription": "Opções do Datto RMM atualizadas.",
           "createClientsFailedTitle": "Falha ao criar clientes",
-          "sitesSyncedWithClients": "Os sites do Datto foram sincronizados. Novos sites: {{created}} clientes criados, {{linked}} associados, {{failed}} falhados."
+          "sitesSyncedWithClients": "Os sites do Datto foram sincronizados. Novos sites: {{created}} clientes criados, {{linked}} associados, {{failed}} falhados.",
+          "webhookSecretRegeneratedTitle": "Segredo do webhook regenerado",
+          "webhookSecretRegeneratedDescription": "Atualize o valor do cabeçalho nas suas respostas de webhook do Datto."
         },
         "success": {
           "saved": "Configuração do Datto RMM salva. Execute \"Testar conexão\" para ativá-la.",
@@ -2710,7 +2713,7 @@
         },
         "disconnectConfirm": {
           "title": "Desconectar o Datto RMM?",
-          "message": "A chave de API e o segredo armazenados são removidos e as sincronizações agendadas são interrompidas. Os mapeamentos de sites e os ativos sincronizados são mantidos."
+          "message": "A chave de API e o segredo armazenados são removidos, o segredo do webhook é redefinido e as sincronizações agendadas são interrompidas. Os mapeamentos de sites e os ativos sincronizados são mantidos."
         },
         "actions": {
           "disconnect": "Desconectar",
@@ -2727,7 +2730,8 @@
           "ingestSoftware": "Ingerir software",
           "syncAlerts": "Sincronizar alertas",
           "createClients": "Criar clientes",
-          "createClientsForUnmapped": "Criar clientes para não mapeados ({{count}})"
+          "createClientsForUnmapped": "Criar clientes para não mapeados ({{count}})",
+          "regenerateSecret": "Regenerar segredo"
         },
         "title": "Datto RMM",
         "description": "Conecte o Datto RMM para sincronizar sites e dispositivos, ingerir alertas e abrir o Web Remote a partir dos ativos.",
@@ -2799,6 +2803,10 @@
         },
         "proFeature": {
           "description": "A integração com o Datto RMM está disponível no AlgaPSA Pro."
+        },
+        "regenerateSecretConfirm": {
+          "title": "Regenerar o segredo do webhook?",
+          "message": "O segredo atual deixa de funcionar imediatamente. Os alertas do webhook são rejeitados até que cada resposta de webhook do Datto envie o novo valor do cabeçalho. A sondagem não é afetada."
         }
       },
       "tanium": {

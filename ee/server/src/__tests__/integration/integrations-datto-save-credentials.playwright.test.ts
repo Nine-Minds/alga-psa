@@ -1,18 +1,25 @@
 import { expect, test, type Page } from '@playwright/test';
-import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { createTestDbConnection } from '../../lib/testing/db-test-utils';
+import { rollbackTenant } from '../../lib/testing/tenant-creation';
+import type { TenantTestData } from '../../lib/testing/tenant-test-factory';
 import {
-  applyTestEnvDefaults,
+  applyPlaywrightAuthEnvDefaults,
   createTenantAndLogin,
-  createTestDbConnection,
-  getBaseUrl,
-  type TenantTestData,
-} from './helpers/testSetup';
+  resolvePlaywrightBaseUrl,
+} from './helpers/playwrightAuthSessionHelper';
 
-applyTestEnvDefaults();
+applyPlaywrightAuthEnvDefaults();
 
-// Datto RMM is an Enterprise Edition integration; CE builds never show it.
-test.skip(process.env.E2E_EDITION === 'community', 'Datto RMM requires the Enterprise Edition');
+const SETTINGS_PERMISSIONS = [
+  {
+    roleName: 'Admin',
+    permissions: [
+      { resource: 'system_settings', action: 'read' },
+      { resource: 'system_settings', action: 'update' },
+    ],
+  },
+];
 
 async function selectDattoRmmIfSelectorPresent(page: Page): Promise<void> {
   const btn = page.locator('#rmm-integration-row-datto');
@@ -21,74 +28,20 @@ async function selectDattoRmmIfSelectorPresent(page: Page): Promise<void> {
   }
 }
 
-async function ensureSystemSettingsPermission(
-  db: Knex,
-  tenantId: string,
-  action: 'read' | 'update'
-): Promise<void> {
-  const role = await db('roles')
-    .where({ tenant: tenantId, role_name: 'Test Admin' })
-    .first(['role_id']);
-
-  if (!role?.role_id) {
-    throw new Error('Test Admin role not found for tenant');
-  }
-
-  let permission = await db('permissions')
-    .where({
-      tenant: tenantId,
-      resource: 'system_settings',
-      action,
-      msp: true,
-      client: false,
-    })
-    .first(['permission_id']);
-
-  if (!permission) {
-    const permissionId = uuidv4();
-    await db('permissions').insert({
-      permission_id: permissionId,
-      tenant: tenantId,
-      resource: 'system_settings',
-      action,
-      msp: true,
-      client: false,
-    });
-    permission = { permission_id: permissionId };
-  }
-
-  const existingLink = await db('role_permissions')
-    .where({
-      tenant: tenantId,
-      role_id: role.role_id,
-      permission_id: permission.permission_id,
-    })
-    .first(['permission_id']);
-
-  if (!existingLink) {
-    await db('role_permissions').insert({
-      tenant: tenantId,
-      role_id: role.role_id,
-      permission_id: permission.permission_id,
-    });
-  }
-}
-
 test('Datto settings can save platform + API key/secret and shows masked credential status', async ({ page }) => {
   test.setTimeout(300_000);
 
-  const baseUrl = getBaseUrl();
+  const baseUrl = resolvePlaywrightBaseUrl();
   const db = createTestDbConnection();
   let tenantData: TenantTestData | null = null;
 
   try {
+    const clientName = `Datto credentials ${uuidv4().slice(0, 6)}`;
     tenantData = await createTenantAndLogin(db, page, {
-      companyName: `Datto credentials ${uuidv4().slice(0, 6)}`,
-      baseUrl,
+      tenantOptions: { tenantName: clientName, clientName },
+      completeOnboarding: { completedAt: new Date() },
+      permissions: SETTINGS_PERMISSIONS,
     });
-
-    await ensureSystemSettingsPermission(db, tenantData.tenant.tenantId, 'read');
-    await ensureSystemSettingsPermission(db, tenantData.tenant.tenantId, 'update');
 
     await page.goto(`${baseUrl}/msp/settings?tab=integrations&category=rmm`, {
       waitUntil: 'domcontentloaded',
@@ -127,6 +80,9 @@ test('Datto settings can save platform + API key/secret and shows masked credent
     expect(row?.is_active).toBe(false);
     expect(row?.settings?.platform).toBe('merlot');
   } finally {
+    if (tenantData) {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
+    }
     await db.destroy().catch(() => undefined);
   }
 });
