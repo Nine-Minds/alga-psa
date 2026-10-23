@@ -13,11 +13,15 @@ vi.mock('@alga-psa/ui/components/CustomTabs', () => ({
   default: ({ tabs, defaultTab }: { tabs: Array<{ id: string; content: React.ReactNode }>; defaultTab: string }) =>
     tabs.find((tab) => tab.id === defaultTab)?.content,
 }));
-vi.mock('../../../lib/calendarAvailability', () => ({
-  isCalendarEnterpriseEdition: () => true,
-  getVisibleIntegrationCategoryIds: () => ['accounting'],
-  resolveIntegrationSettingsCategory: () => 'accounting',
-}));
+vi.mock('../../../lib/calendarAvailability', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../lib/calendarAvailability')>();
+  return {
+    ...actual,
+    isCalendarEnterpriseEdition: () => true,
+    getVisibleIntegrationCategoryIds: () => ['accounting'],
+    resolveIntegrationSettingsCategory: () => 'accounting',
+  };
+});
 vi.mock('./useHuduIntegrationEnabled', () => ({ useHuduIntegrationEnabled: () => ({ enabled: false }) }));
 vi.mock('./ProviderCredentialsWorkbench', () => ({ ProviderCredentialsWorkbench: () => null }));
 vi.mock('../../email/EmailProviderConfiguration', () => ({ EmailProviderConfiguration: () => null }));
@@ -29,6 +33,7 @@ vi.mock('@alga-psa/integrations/entra/components/entry', () => ({ EntraIntegrati
 vi.mock('./CSVIntegrationSettings', () => ({ default: () => null }));
 vi.mock('./QboIntegrationSettings', () => ({ default: () => null }));
 vi.mock('./XeroCsvIntegrationSettings', () => ({ default: () => null }));
+vi.mock('./QuickBooksDesktopIntegrationSettings', () => ({ default: () => null }));
 vi.mock('../../xero/XeroLiveMappingManager', () => ({ XeroLiveMappingManager: () => null }));
 vi.mock('./useAccountingCapabilities', () => ({
   useAccountingCapabilities: () => ({ loaded: true, hasAny: true, catalogRead: true, connectionsManage: true }),

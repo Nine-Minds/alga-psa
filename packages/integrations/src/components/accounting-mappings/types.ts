@@ -131,12 +131,28 @@ export type AccountingMappingTargetConfig = {
   invalidNotice: string;
 };
 
+export type AccountingMetadataField = {
+  /** Metadata key the value is stored under. */
+  key: string;
+  label: string;
+  placeholder?: string;
+  helpText?: string;
+  /** Column heading in the mappings table; defaults to `label`. */
+  columnLabel?: string;
+  required?: boolean;
+};
+
 export type AccountingMetadataConfig = {
   /**
     * If true, allow users to edit metadata as JSON.
     * Defaults to false.
     */
   enableJsonEditor?: boolean;
+  /**
+   * Named text inputs stored in the mapping's metadata, edited in the dialog
+   * and shown as table columns. Other metadata keys are preserved on save.
+   */
+  fields?: AccountingMetadataField[];
 };
 
 export type AccountingMappingElementIds = {
