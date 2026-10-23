@@ -36,6 +36,74 @@ export interface TicketFieldReferenceTargets {
   schedule?: boolean;
 }
 
+interface PriorityBoardTypeBoard {
+  board_name: string;
+  priority_type?: string | null;
+}
+interface PriorityBoardTypePriority {
+  priority_name: string;
+  is_from_itil_standard?: boolean | null;
+}
+
+/** A null `priority_type` is `custom` (as in boardActions); a null `is_from_itil_standard` is custom. */
+function describePriorityBoardTypeMismatch(
+  board: PriorityBoardTypeBoard,
+  priority: PriorityBoardTypePriority,
+  schedule?: boolean
+): string | null {
+  const boardIsItil = (board.priority_type ?? 'custom') === 'itil';
+  const priorityIsItil = Boolean(priority.is_from_itil_standard);
+  if (boardIsItil === priorityIsItil) return null;
+  const suffix = schedule ? '; edit the schedule' : '';
+  return priorityIsItil
+    ? `Priority ‘${priority.priority_name}’ is an ITIL priority but board ‘${board.board_name}’ uses custom priorities${suffix}`
+    : `Priority ‘${priority.priority_name}’ is a custom priority but board ‘${board.board_name}’ uses ITIL priorities${suffix}`;
+}
+
+/**
+ * Returns a message when the priority's family (ITIL or custom) does not match the board's
+ * `priority_type`, otherwise null. Also null when either row does not exist: the existence problems are
+ * reported elsewhere. Used by manual ticket create/update; the shared validator applies the same rule on
+ * the rows it has already fetched.
+ */
+export async function findPriorityBoardTypeProblem(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  boardId: string,
+  priorityId: string
+): Promise<string | null> {
+  const db = tenantDb(conn, tenant);
+  const board = await db.table('boards').where({ board_id: boardId }).first('board_name', 'priority_type');
+  if (!board) return null;
+  const priority = await db
+    .table('priorities')
+    .where({ priority_id: priorityId, item_type: 'ticket' })
+    .first('priority_name', 'is_from_itil_standard');
+  if (!priority) return null;
+  return describePriorityBoardTypeMismatch(board, priority);
+}
+
+/**
+ * The ticket-update flavour of {@link findPriorityBoardTypeProblem}. Only a patch that actually changes
+ * `priority_id` or `board_id` is checked, against the effective pair (the other field comes from the
+ * existing ticket), so an unrelated update, or one that re-sends the stored values, keeps working on a
+ * legacy ticket whose pair already mismatches.
+ */
+export async function findTicketUpdatePriorityBoardTypeProblem(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  current: { board_id?: string | null; priority_id?: string | null },
+  patch: { board_id?: string | null; priority_id?: string | null }
+): Promise<string | null> {
+  const boardChanged = Boolean(patch.board_id) && patch.board_id !== current.board_id;
+  const priorityChanged = Boolean(patch.priority_id) && patch.priority_id !== current.priority_id;
+  if (!boardChanged && !priorityChanged) return null;
+  const boardId = patch.board_id || current.board_id;
+  const priorityId = patch.priority_id || current.priority_id;
+  if (!boardId || !priorityId) return null;
+  return findPriorityBoardTypeProblem(conn, tenant, boardId, priorityId);
+}
+
 /**
  * Checks that everything a ticket will reference still exists and is coherent: the board is active, the
  * status and category belong to that board, assignees are active, and the contact, location and assets
@@ -51,9 +119,12 @@ export async function findTicketFieldReferenceProblems(
   const additionalAgentIds = [...(fields.additional_agent_ids ?? [])];
   const problems: TicketFieldReferenceProblem[] = [];
 
-  let board: { board_id: string; board_name: string; is_inactive: boolean } | undefined;
+  let board: { board_id: string; board_name: string; is_inactive: boolean; priority_type?: string | null } | undefined;
   if (fields.board_id) {
-    board = await db.table('boards').where({ board_id: fields.board_id }).first('board_id', 'board_name', 'is_inactive');
+    board = await db
+      .table('boards')
+      .where({ board_id: fields.board_id })
+      .first('board_id', 'board_name', 'is_inactive', 'priority_type');
     if (!board) {
       problems.push({ field: 'board_id', message: 'The selected board no longer exists' });
     } else if (board.is_inactive) {
@@ -82,8 +153,13 @@ export async function findTicketFieldReferenceProblems(
     const priority = await db
       .table('priorities')
       .where({ priority_id: fields.priority_id, item_type: 'ticket' })
-      .first('priority_id');
-    if (!priority) problems.push({ field: 'priority_id', message: 'The selected priority no longer exists' });
+      .first('priority_id', 'priority_name', 'is_from_itil_standard');
+    if (!priority) {
+      problems.push({ field: 'priority_id', message: 'The selected priority no longer exists' });
+    } else if (board) {
+      const message = describePriorityBoardTypeMismatch(board, priority, targets.schedule);
+      if (message) problems.push({ field: 'priority_id', message });
+    }
   } else if (targets.schedule) {
     problems.push({ field: 'priority_id', message: 'A priority is required: choose one on the template or override it for this schedule' });
   }

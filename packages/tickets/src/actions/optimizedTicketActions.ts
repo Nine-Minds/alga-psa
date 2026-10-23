@@ -36,6 +36,7 @@ import {
   type TenantScopedQuery,
 } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { findTicketUpdatePriorityBoardTypeProblem } from '../lib/ticketFieldReferences';
 import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
@@ -2803,6 +2804,10 @@ export async function updateTicketInTransaction(
       'board_id' in updateData &&
       !!updateData.board_id &&
       updateData.board_id !== currentTicket.board_id;
+
+    // Priority family must match the board's priority_type; only checked when the patch changes either.
+    const priorityProblem = await findTicketUpdatePriorityBoardTypeProblem(trx, tenant, currentTicket, updateData);
+    if (priorityProblem) throw new Error(priorityProblem);
 
     if (isBoardChange && !updateData.status_id) {
       throw new Error('Changing the board requires selecting a status for the destination board');
