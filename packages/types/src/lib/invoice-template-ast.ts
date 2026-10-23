@@ -295,6 +295,9 @@ export interface TemplateStyleDeclaration {
   fontFamily?: string;
   lineHeight?: string | number;
   textAlign?: 'left' | 'center' | 'right' | 'justify';
+  tableLayout?: 'auto' | 'fixed';
+  whiteSpace?: 'normal' | 'nowrap' | 'pre' | 'pre-line' | 'pre-wrap';
+  overflowWrap?: 'normal' | 'break-word' | 'anywhere';
   flex?: string;
   // Longhand flex has been part of the runtime contract since the AST cutover:
   // the designer export emits it and the zod styleDeclarationSchema accepts it.
@@ -306,10 +309,9 @@ export interface TemplateStyleDeclaration {
   objectPosition?: string;
   borderColor?: string;
   fontStyle?: string;
-  // Fixed-size cells (labels): `overflowWrap: 'anywhere'` lets an unbroken identifier wrap
-  // inside its column instead of running past it; `overflow` clips a capped (maxHeight) block.
+  // Fixed-size cells (labels) pair `overflowWrap: 'anywhere'` (declared above), which lets an
+  // unbroken identifier wrap inside its column, with `overflow`, which clips a capped (maxHeight) block.
   overflow?: 'visible' | 'hidden' | 'clip';
-  overflowWrap?: 'normal' | 'break-word' | 'anywhere';
   // Print fragmentation hints (CSS Fragmentation Level 3). The PDF renderer
   // prints through Chromium, which honours these on block and flex children:
   // `breakAfter: 'avoid'` keeps a heading with what follows it,
