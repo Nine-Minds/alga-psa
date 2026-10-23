@@ -10,11 +10,13 @@ import { generateEntityColorAsync } from '../lib/uiHelpers';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildTicketUpdatedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import {
   buildTagAppliedPayload,
   buildTagDefinitionCreatedPayload,
   buildTagDefinitionUpdatedPayload,
   buildTagRemovedPayload,
+  buildProjectTaskUpdatedPayload,
 } from '@alga-psa/workflow-streams';
 import {
   actionError,
@@ -222,31 +224,37 @@ async function publishEntityTagUpdateEvent(params: {
       return;
     }
 
-    await publishEvent({
+    await publishWorkflowEvent({
       eventType: 'PROJECT_TASK_UPDATED',
-      payload: {
-        tenantId: params.tenant,
+      payload: buildProjectTaskUpdatedPayload({
         projectId: context.projectId,
-        // Canonical PROJECT_TASK_UPDATED shape (shared with search index):
-        // taskId/timestamp, not projectTaskId/occurredAt.
         taskId: params.taggedId,
         phaseId: context.phaseId,
         userId: params.userId,
-        timestamp: params.occurredAt,
+        updatedAt: params.occurredAt,
         changes,
+      }),
+      ctx: {
+        tenantId: params.tenant,
+        occurredAt: params.occurredAt,
+        actor: { actorType: 'USER', actorUserId: params.userId },
       },
     });
     return;
   }
 
   if (params.taggedType === 'ticket') {
-    await publishEvent({
+    await publishWorkflowEvent({
       eventType: 'TICKET_UPDATED',
-      payload: {
-        tenantId: params.tenant,
+      payload: buildTicketUpdatedPayload({
         ticketId: params.taggedId,
         userId: params.userId,
         changes,
+      }),
+      ctx: {
+        tenantId: params.tenant,
+        occurredAt: params.occurredAt,
+        actor: { actorType: 'USER', actorUserId: params.userId },
       },
     });
   }

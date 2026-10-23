@@ -11,11 +11,16 @@ class MockBaseService<T> {
     throw new Error('getKnex mock not provided');
   }
 
-  addUpdateAuditFields(data: Record<string, unknown>) {
+  // Real BaseService drops audit columns the table lacks (contract_lines has no created_by/updated_by).
+  async filterAuditFields(_conn: unknown, data: Record<string, unknown>) {
+    return data;
+  }
+
+  async addUpdateAuditFields(_conn: unknown, data: Record<string, unknown>) {
     return { ...data };
   }
 
-  addCreateAuditFields(data: Record<string, unknown>) {
+  async addCreateAuditFields(_conn: unknown, data: Record<string, unknown>) {
     return { ...data };
   }
 }
@@ -45,6 +50,12 @@ vi.mock('@alga-psa/billing/services', () => ({
 
 vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishEvent: vi.fn(),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/billing/lib/billing/utils/templateClone', () => ({

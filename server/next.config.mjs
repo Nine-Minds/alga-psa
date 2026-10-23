@@ -288,7 +288,12 @@ const nextConfig = {
       '@alga-psa/types': '../packages/types/src',
       '@alga-psa/types/': '../packages/types/src/',
       '@alga-psa/core': '../packages/core/src',
+      // core exports whose name does not mirror src/ (they live in src/lib/) need
+      // an explicit entry: the '@alga-psa/core/' prefix would send them to
+      // src/<name>, and the dist/ fallback is absent wherever packages/ is
+      // mounted from source (e.g. the Teams development browser lane).
       '@alga-psa/core/rateLimit': '../packages/core/src/lib/rateLimit/index.ts',
+      '@alga-psa/core/fileNames': '../packages/core/src/lib/fileNames.ts',
       '@alga-psa/core/': '../packages/core/src/',
       '@alga-psa/validation': '../packages/validation/src',
       '@alga-psa/validation/': '../packages/validation/src/',
@@ -444,6 +449,10 @@ const nextConfig = {
       '@alga-psa/workflows/entry': isEE
         ? '../ee/server/src/workflows/entry'
         : '../packages/ee/src/workflows/entry',
+      // Create-workflow-from-ticket seam (EE-only source; CE resolves to a disabled stub).
+      '@alga-psa/workflows/ticket-actions': isEE
+        ? '../ee/server/src/workflows/createFromTicket/entry'
+        : '../packages/ee/src/workflows/createFromTicket/entry',
       // user-activities workflow-task seam (EE-only source). CE resolves to stubs; EE to
       // the real implementations. Keeps the base user-activities package free of @alga-psa/workflows.
       '@alga-psa/user-activities/server/workflow-tasks': isEE
@@ -620,6 +629,9 @@ const nextConfig = {
       '@alga-psa/core/rateLimit': usePrebuilt
         ? path.join(prebuiltDirAbs('core'), 'lib/rateLimit/index.js')
         : path.join(__dirname, '../packages/core/src/lib/rateLimit/index.ts'),
+      '@alga-psa/core/fileNames': usePrebuilt
+        ? path.join(prebuiltDirAbs('core'), 'lib/fileNames.js')
+        : path.join(__dirname, '../packages/core/src/lib/fileNames.ts'),
       '@alga-psa/core/': `${prebuiltDirAbs('core')}/`,
       '@alga-psa/validation': prebuiltDirAbs('validation'),
       '@alga-psa/validation/': `${prebuiltDirAbs('validation')}/`,
@@ -741,6 +753,9 @@ const nextConfig = {
       '@alga-psa/workflows/entry': isEE
         ? path.join(__dirname, '../ee/server/src/workflows/entry.tsx')
         : path.join(__dirname, '../packages/ee/src/workflows/entry.tsx'),
+      '@alga-psa/workflows/ticket-actions': isEE
+        ? path.join(__dirname, '../ee/server/src/workflows/createFromTicket/entry.tsx')
+        : path.join(__dirname, '../packages/ee/src/workflows/createFromTicket/entry.tsx'),
       // user-activities workflow-task seam (EE-only source) — CE stubs / EE impls.
       '@alga-psa/user-activities/server/workflow-tasks': isEE
         ? path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.server.ts')
@@ -1072,6 +1087,7 @@ const nextConfig = {
         const cePackagesEeRegex = new RegExp(cePackagesEePrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
         const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
         const workflowsEeEntry = path.join(__dirname, '../ee/server/src/workflows/entry.tsx');
+        const workflowsCreateFromTicketEeEntry = path.join(__dirname, '../ee/server/src/workflows/createFromTicket/entry.tsx');
         const userActivitiesWorkflowTasksServerEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.server.ts');
         const userActivitiesWorkflowTaskActionsServerEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTaskActions.server.ts');
         const userActivitiesWorkflowTasksClientEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.client.tsx');
@@ -1099,6 +1115,10 @@ const nextConfig = {
             // Force consistency by rewriting the workflows entry specifier to the canonical EE source file *before* resolution.
             if (req === '@alga-psa/workflows/entry') {
               resource.request = workflowsEeEntry;
+              return;
+            }
+            if (req === '@alga-psa/workflows/ticket-actions') {
+              resource.request = workflowsCreateFromTicketEeEntry;
               return;
             }
             // user-activities workflow-task seam: it's a real package export, so without
@@ -1300,6 +1320,9 @@ const nextConfig = {
     'handlebars',
     'jsdom',
     'monaco-editor',
+    // The SDK generator transpiles with the compiler API at runtime; keep it
+    // on disk so `ts.sys` can still read the default lib .d.ts files.
+    'typescript',
     '@js-temporal/polyfill',
     'pdfkit',
     'sharp',
@@ -1333,6 +1356,8 @@ const nextConfig = {
     'bcryptjs',
     'speakeasy',
     'qrcode',
+    // Barcode node (label rendering): server-only; loaded via bwip-js/node from barcode/encode.server.ts.
+    'bwip-js',
     'pdf-lib',
     'pdf2pic',
     'marked',

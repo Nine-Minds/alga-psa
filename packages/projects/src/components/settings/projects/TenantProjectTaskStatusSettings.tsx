@@ -11,17 +11,20 @@ import {
   updateTenantProjectStatus,
   deleteTenantProjectStatus,
   validateTenantProjectStatusDeletion,
-  reorderTenantProjectStatuses
+  reorderTenantProjectStatuses,
+  getProjectStatusRenameImpact
 } from '@alga-psa/projects/actions/projectTaskStatusActions';
+import type { ProjectStatusRenameImpact } from '@alga-psa/projects/lib/projectStatusRenameImpact';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions/referenceDataActions';
 import type { DeletionValidationResult, IStatus, IStandardStatus } from '@alga-psa/types';
-import { ChevronUp, ChevronDown, Trash2, Edit2, Plus, Palette } from 'lucide-react';
+import { ChevronUp, ChevronDown, Trash2, Edit2, Plus, Palette, Info, AlertTriangle } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import { StatusImportDialog } from '@alga-psa/ui/components/settings/dialogs/StatusImportDialog';
 import { ConflictResolutionDialog } from '@alga-psa/reference-data/components/dialogs/ConflictResolutionDialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
+import { StatusColumnName } from '../../status-columns';
 import { toast } from 'react-hot-toast';
 import {
   getErrorMessage,
@@ -51,6 +54,7 @@ export function TenantProjectTaskStatusSettings() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [renameImpact, setRenameImpact] = useState<ProjectStatusRenameImpact | null>(null);
   const [statusToDelete, setStatusToDelete] = useState<IStatus | null>(null);
   const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
   const [isDeleteValidating, setIsDeleteValidating] = useState(false);
@@ -98,8 +102,20 @@ export function TenantProjectTaskStatusSettings() {
     }
   }
 
+  // Name the affected projects rather than only counting them, capped so a
+  // tenant with dozens of projects still gets a readable sentence.
+  function formatProjectList(projects: string[]): string {
+    const visible = projects.slice(0, 4);
+    const remaining = projects.length - visible.length;
+    if (remaining <= 0) {
+      return visible.join(', ');
+    }
+    return `${visible.join(', ')} ${t('settings.statuses.rename_impact_more', 'and {{remaining}} more', { remaining })}`;
+  }
+
   function openCreateDialog() {
     setEditingStatus(null);
+    setRenameImpact(null);
     setFormData({
       name: '',
       is_closed: false,
@@ -111,6 +127,12 @@ export function TenantProjectTaskStatusSettings() {
 
   function openEditDialog(status: IStatus) {
     setEditingStatus(status);
+    setRenameImpact(null);
+    void getProjectStatusRenameImpact(status.status_id)
+      .then((impact) => {
+        if (!isReturnedActionError(impact)) setRenameImpact(impact);
+      })
+      .catch(() => setRenameImpact(null));
     setFormData({
       name: status.name,
       is_closed: status.is_closed,
@@ -365,7 +387,7 @@ export function TenantProjectTaskStatusSettings() {
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle>{t('settings.statuses.task_status_library_title', 'Project Task Status Library')}</CardTitle>
+            <CardTitle>{t('settings.statuses.task_status_library_title', 'Task Status Library')}</CardTitle>
             <CardDescription>
               {t('settings.statuses.task_status_library_description', `Manage your organization's project task statuses. These statuses can be used across all projects.`)}
             </CardDescription>
@@ -440,12 +462,11 @@ export function TenantProjectTaskStatusSettings() {
                     )}
                   </div>
                   <div>
-                    <span className="font-medium">{status.name}</span>
-                    {status.is_closed && (
-                      <span className="ml-2 text-xs px-2 py-1 bg-gray-200 rounded">
-                        {t('settings.statuses.closed', 'Closed')}
-                      </span>
-                    )}
+                    <StatusColumnName
+                      name={status.name}
+                      isClosed={status.is_closed}
+                      className="font-medium"
+                    />
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -495,6 +516,56 @@ export function TenantProjectTaskStatusSettings() {
                 autoFocus
                 containerClassName="mb-0"
               />
+
+              {/* Where a rename actually lands — read-only, no data is changed. */}
+              {editingStatus && renameImpact && (
+                <div
+                  id="status-rename-impact"
+                  className={renameImpact.keeping.columns > 0
+                    ? 'flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100'
+                    : 'flex items-start gap-2 rounded-lg border border-[rgb(var(--color-border-200))] bg-gray-50 p-3 text-xs text-gray-600 dark:bg-[rgb(var(--color-border-50))] dark:text-gray-300'}
+                >
+                  {renameImpact.keeping.columns > 0
+                    ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                    : <Info className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />}
+                  <div className="space-y-1">
+                    <p className="font-medium">
+                      {t('settings.statuses.rename_impact_title', 'Where this rename lands')}
+                    </p>
+                    {renameImpact.following.columns === 0 && renameImpact.keeping.columns === 0 ? (
+                      <p>{t('settings.statuses.rename_impact_none', 'This status is not used as a column in any project yet.')}</p>
+                    ) : (
+                      <>
+                        {renameImpact.following.columns > 0 && (
+                          <p id="status-rename-impact-following">
+                            {t(
+                              'settings.statuses.rename_impact_following',
+                              'Follows this rename immediately: {{columns}} column(s) in {{projects}}.',
+                              {
+                                columns: renameImpact.following.columns,
+                                projects: formatProjectList(renameImpact.following.projects),
+                              }
+                            )}
+                          </p>
+                        )}
+                        {renameImpact.keeping.columns > 0 && (
+                          <p id="status-rename-impact-keeping">
+                            {t(
+                              'settings.statuses.rename_impact_keeping',
+                              'Keeps the name "{{name}}": {{columns}} column(s) in {{projects}}. These columns are not linked to this status in your Task Status Library, so those projects keep reporting the old name until you rename the column there.',
+                              {
+                                columns: renameImpact.keeping.columns,
+                                name: renameImpact.statusName,
+                                projects: formatProjectList(renameImpact.keeping.projects),
+                              }
+                            )}
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Preview */}
               <div>

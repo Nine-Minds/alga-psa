@@ -47,8 +47,9 @@ interface CommentItemProps {
   onContentChange: (content: PartialBlock[]) => void;
   onSave: (updates: Partial<IComment>) => void;
   onClose: () => void;
-  onEdit: (conversation: IComment) => void;
-  onDelete: (comment: IComment) => void;
+  /** Omitted on a read-only thread: no edit control is rendered. */
+  onEdit?: (conversation: IComment) => void;
+  onDelete?: (comment: IComment) => void;
   onReply?: (comment: IComment) => void;
   hideInternalTab?: boolean;
   uploadFile?: (file: File, blockId?: string) => Promise<string>;
@@ -282,8 +283,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const canEdit = useMemo(() => {
     if (isDeleted) return false;
     if (conversation.is_system_generated) return false;
+    // No handler means the host is showing the thread read-only.
+    if (!onEdit || !onDelete) return false;
     return currentUserId === conversation.user_id;
-  }, [conversation.user_id, currentUserId, isDeleted]);
+  }, [conversation.user_id, currentUserId, isDeleted, onEdit, onDelete]);
 
   const plainTextForCopy = useMemo(
     () => extractTicketRichTextPlainText(conversation.note),
@@ -751,7 +754,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       id={`edit-comment-${conversation.comment_id}-button`}
                       variant="ghost"
                       size="sm"
-                      onClick={() => onEdit(conversation)}
+                      onClick={() => onEdit?.(conversation)}
                       aria-label={t('conversation.editCommentAriaLabel')}
                     >
                       <Pencil className="w-4 h-4" />
@@ -760,7 +763,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       id={`delete-comment-${conversation.comment_id}-button`}
                       variant="ghost"
                       size="sm"
-                      onClick={() => onDelete(conversation)}
+                      onClick={() => onDelete?.(conversation)}
                       aria-label={t('conversation.deleteCommentAriaLabel')}
                     >
                       <Trash className="w-4 h-4" />

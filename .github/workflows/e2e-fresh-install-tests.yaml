@@ -76,7 +76,10 @@ jobs:
   build-images:
     needs: [changes, browser-collection]
     if: needs.changes.outputs.run_tests == 'true'
-    runs-on: ubuntu-latest
+    # Pinned with production-browser: the candidate identity check compares
+    # buildx's config digest against `docker image inspect` on the consumer,
+    # so both sides must run the same Docker. See production-browser below.
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     # Only this job reads earlier runs' artifacts, for verified image reuse.
     permissions:
@@ -261,7 +264,11 @@ jobs:
     name: Production browser (${{ matrix.edition }})
     needs: [changes, browser-collection, build-images]
     if: always()
-    runs-on: ubuntu-latest
+    # Pinned: `ubuntu-latest` rolled to ubuntu-26.04 on 2026-10-21, whose
+    # Docker reports a different image Id for a loaded archive, so candidate
+    # identity verification failed, and whose Playwright cannot install
+    # Chromium. Unpin once both tolerate 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -506,7 +513,7 @@ jobs:
           docker-compose -p alga-e2e-test up --no-build --wait --wait-timeout 90 -d algasim test-ingress
           docker-compose -p alga-e2e-test exec -T algasim node --input-type=module -e 'const r = await fetch("https://calendar-callback:3443/probe", { signal: AbortSignal.timeout(5000) }); if (r.status !== 404) throw new Error("Calendar callback TLS routing failed")'
           curl --fail --silent http://127.0.0.1:9500/control/catalog > "$RUNNER_TEMP/algasim-catalog.json"
-          jq -e '[.result.emulators[].id] | sort == ["msgraph", "qbo", "smtp-sink", "stripe", "threecx", "webhook-sink", "xero"]' "$RUNNER_TEMP/algasim-catalog.json"
+          jq -e '[.result.emulators[].id] | sort == ["huntress", "levelio", "msgraph", "qbo", "smtp-sink", "stripe", "threecx", "webhook-sink", "xero"]' "$RUNNER_TEMP/algasim-catalog.json"
           docker image inspect alga-e2e-test-algasim:latest --format '{{.Id}}' > "$RUNNER_TEMP/algasim-image-id.txt"
 
       - name: Initialize isolated shared worker state
@@ -882,24 +889,23 @@ jobs:
         run: npx playwright install chromium
         shell: bash
 
+      - uses: ./.github/actions/prepare-apt
+        if: ${{ !cancelled() && steps.browser_packages.outcome == 'success' }}
+
       - name: Install Playwright system dependencies
         id: browser_system
         if: ${{ !cancelled() && steps.browser_packages.outcome == 'success' }}
         working-directory: ./e2e-tests
-        # Hard ceiling so this step can never again consume the whole job budget.
-        timeout-minutes: 12
+        # Hard ceiling so this step can never consume the whole job budget.
+        # Must fit three 240s attempts plus the pauses between them (~12.5 min);
+        # at 12 the third attempt was always cut off.
+        timeout-minutes: 14
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          # `npx playwright install-deps` shells out to `apt-get`, which has
-          # intermittently stalled for 30+ minutes on the GitHub runner (an
-          # apt/dpkg lock or a Debian mirror hang). Because the step had no
-          # timeout, a single stall consumed the entire 60-minute job budget and
-          # the run was cancelled at "Install Playwright system dependencies"
-          # before the login e2e test ever executed -- even though the build and
-          # all services were up and healthy by ~T+29m. Good runs finish this
-          # step in 35-490s, so bound each attempt and retry: a transient stall
-          # self-heals instead of killing the job.
+          # `npx playwright install-deps` shells out to `apt-get`; prepare-apt
+          # above keeps a bad mirror from hanging it. Bound each attempt anyway
+          # so a stall that gets past apt's own timeouts cannot eat the job.
           set -x
           attempt=1
           max_attempts=3
@@ -911,8 +917,10 @@ jobs:
             fi
             echo "Attempt $attempt failed/stalled (exit $code); clearing apt locks and retrying..."
             # A timed-out attempt can leave apt/dpkg holding a lock; clear it so
-            # the retry is not guaranteed to stall the same way.
-            sudo pkill -9 -f 'apt-get|dpkg' 2>/dev/null || true
+            # the retry is not guaranteed to stall the same way. The pattern is
+            # anchored so pkill does not match its own `sudo pkill ... apt-get`
+            # command line and kill itself before reaching apt.
+            sudo pkill -9 -f '^(/usr/bin/)?(apt-get|dpkg)( |$)' 2>/dev/null || true
             sudo rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock \
               /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend 2>/dev/null || true
             sudo dpkg --configure -a 2>/dev/null || true

@@ -55,6 +55,7 @@ import {
   paymentRecordedEventPayloadSchema,
   paymentRefundedEventPayloadSchema,
   prepaidBalanceAlertScanRequestedEventPayloadSchema,
+  prepaidBlockUsageChangedEventPayloadSchema,
   recurringBillingRunCompletedEventPayloadSchema,
   recurringBillingRunFailedEventPayloadSchema,
   recurringBillingRunStartedEventPayloadSchema,
@@ -152,7 +153,6 @@ import {
   ticketAutoCloseWarningEventPayloadSchema,
   ticketClosedEventPayloadSchema,
   ticketCreatedEventPayloadSchema,
-  ticketRequesterFieldsSchema,
   ticketCustomerRepliedEventPayloadSchema,
   ticketEscalatedEventPayloadSchema,
   ticketExternalLinkEventPayloadSchema,
@@ -343,6 +343,7 @@ export const EVENT_TYPES = [
   'CREDIT_NOTE_VOIDED',
   'CREDIT_EXPIRING',
   'PREPAID_BALANCE_ALERT_SCAN_REQUESTED',
+  'PREPAID_BLOCK_USAGE_CHANGED',
   'HOUR_BLOCK_EXPIRING',
   'CONTRACT_CREATED',
   'CONTRACT_UPDATED',
@@ -560,8 +561,16 @@ export const BaseEventSchema = z.object({
 // Ticket event payload schema
 export const TicketEventPayloadSchema = BasePayloadSchema.extend({
   ticketId: z.string().uuid(),
-  userId: z.string().uuid(), // The user being assigned to the ticket
+  // Acting user. Present only when a user acted; see actorType. Never a substitute id.
+  // (TICKET_ASSIGNED requires it and means the assignee: TicketAssignedLegacyPayloadSchema.)
+  userId: z.string().uuid().optional(),
   assignedByUserId: z.string().uuid().optional(), // The user who performed the action
+  // Declared so the legacy branch keeps them: consumers receive the parsed object.
+  actorType: z.enum(['USER', 'CONTACT', 'SYSTEM']).optional(),
+  actorUserId: z.string().uuid().optional(),
+  actorContactId: z.string().uuid().optional(),
+  occurredAt: z.string().optional(),
+  commentId: z.string().uuid().optional(),
   changes: z.record(z.unknown()).optional(),
   externalLinks: z.array(z.record(z.unknown())).optional(),
   ...TicketNotificationSuppressionSchema,
@@ -1186,17 +1195,21 @@ export const RmmWebhookEventPayloadSchema = BasePayloadSchema.extend({
   rawPayload: z.record(z.unknown()), // Full webhook payload for processing
 });
 
-// The legacy branch parses first and strips unknown keys, so it must carry the requester identity too.
-const TicketCreatedPayloadSchema = z.union([
-  TicketEventPayloadSchema.extend(ticketRequesterFieldsSchema),
-  ticketCreatedEventPayloadSchema,
-]);
-const TicketUpdatedPayloadSchema = z.union([TicketEventPayloadSchema, ticketUpdatedEventPayloadSchema]);
-const TicketClosedPayloadSchema = z.union([TicketEventPayloadSchema, ticketClosedEventPayloadSchema]);
-const TicketAutoCloseWarningPayloadSchema = z.union([TicketEventPayloadSchema, ticketAutoCloseWarningEventPayloadSchema]);
+// The legacy branch parses first and strips unknown keys, and with `userId` optional it matches
+// domain payloads too. Give it the domain fields as optional extras (legacy definitions win on
+// shared keys) so a domain payload parsed by it keeps fields like contactNameId or closedAt.
+function legacyTicketUnion<D extends z.AnyZodObject>(domainSchema: D) {
+  return z.union([domainSchema.partial().merge(TicketEventPayloadSchema), domainSchema]);
+}
+const TicketCreatedPayloadSchema = legacyTicketUnion(ticketCreatedEventPayloadSchema);
+const TicketUpdatedPayloadSchema = legacyTicketUnion(ticketUpdatedEventPayloadSchema);
+const TicketClosedPayloadSchema = legacyTicketUnion(ticketClosedEventPayloadSchema);
+const TicketAutoCloseWarningPayloadSchema = legacyTicketUnion(ticketAutoCloseWarningEventPayloadSchema);
 const MaintenanceJobRequestedPayloadSchema = maintenanceJobRequestedEventPayloadSchema;
 const InboundEmailProviderAutoPausedPayloadSchema = inboundEmailProviderAutoPausedEventPayloadSchema;
-const TicketAssignedPayloadSchema = z.union([TicketEventPayloadSchema, ticketAssignedEventPayloadSchema]);
+// On TICKET_ASSIGNED `userId` is the assignee (the notification recipient), so it stays required.
+export const TicketAssignedLegacyPayloadSchema = TicketEventPayloadSchema.extend({ userId: z.string().uuid() });
+const TicketAssignedPayloadSchema = z.union([TicketAssignedLegacyPayloadSchema, ticketAssignedEventPayloadSchema]);
 const TicketResponseStateChangedPayloadSchemaV2 = z.union([
   TicketResponseStateChangedPayloadSchema,
   ticketResponseStateChangedEventPayloadSchema,
@@ -1363,6 +1376,7 @@ export const EventPayloadSchemas = {
   CREDIT_NOTE_VOIDED: creditNoteVoidedEventPayloadSchema,
   CREDIT_EXPIRING: creditExpiringEventPayloadSchema,
   PREPAID_BALANCE_ALERT_SCAN_REQUESTED: prepaidBalanceAlertScanRequestedEventPayloadSchema,
+  PREPAID_BLOCK_USAGE_CHANGED: prepaidBlockUsageChangedEventPayloadSchema,
   HOUR_BLOCK_EXPIRING: hourBlockExpiringEventPayloadSchema,
   CONTRACT_CREATED: ContractCreatedPayloadSchema,
   CONTRACT_UPDATED: ContractUpdatedPayloadSchema,
@@ -1619,6 +1633,7 @@ export type InvoiceGeneratedEvent = z.infer<typeof EventSchemas.INVOICE_GENERATE
 export type InvoiceFinalizedEvent = z.infer<typeof EventSchemas.INVOICE_FINALIZED>;
 export type CreditExpiringEvent = z.infer<typeof EventSchemas.CREDIT_EXPIRING>;
 export type PrepaidBalanceAlertScanRequestedEvent = z.infer<typeof EventSchemas.PREPAID_BALANCE_ALERT_SCAN_REQUESTED>;
+export type PrepaidBlockUsageChangedEvent = z.infer<typeof EventSchemas.PREPAID_BLOCK_USAGE_CHANGED>;
 export type HourBlockExpiringEvent = z.infer<typeof EventSchemas.HOUR_BLOCK_EXPIRING>;
 export type CustomEvent = z.infer<typeof EventSchemas.CUSTOM_EVENT>;
 export type InboundEmailReceivedEvent = z.infer<typeof EventSchemas.INBOUND_EMAIL_RECEIVED>;

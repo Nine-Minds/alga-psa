@@ -1,8 +1,10 @@
 'use server'
 
+import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { loadPortalTicketExternalLinks } from '../../lib/portalTicketExternalLinks';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
+import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket actions intentionally compose ticketing feature APIs for client-facing workflows. */
 
@@ -22,7 +24,12 @@ import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import { ServerEventPublisher } from '@alga-psa/event-bus';
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 import { createTenantKnex, getConnection, tenantDb, withTransaction } from '@alga-psa/db';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent, publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildPortalTicketReopenedPayload,
+  buildTicketClosedPayload,
+  buildTicketUpdatedPayload,
+} from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { actionError, actionErrorFromValidationIssue, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionMessageParams, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { enforceTicketCloseRules } from '@alga-psa/tickets/lib/validateTicketClosure';
@@ -40,7 +47,12 @@ import {
   parseTicketStatusFilterValue,
 } from '@alga-psa/tickets/lib';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
-import { applyAssetVisibilityFilter } from '@alga-psa/authorization/portal/visibility';
+import {
+  applyAssetVisibilityFilter,
+  extractActiveWatcherContactIds,
+  ticketMatchesVisibility,
+} from '@alga-psa/authorization/portal/visibility';
+import { resolveAssetBillingProfileId } from '@shared/models/assetBillingProfileModel';
 import { publishTicketUpdate } from '@alga-psa/tickets/lib/liveUpdates';
 import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions/avatarActions';
 
@@ -171,6 +183,10 @@ async function resolveVisibleTicket(
       't.client_id': visibility.clientId
     })
     .modify((queryBuilder: Knex.QueryBuilder) => {
+      // FR-E7b: deliberately WITHOUT `sharedWorkspaceTickets`. This is the gate
+      // for commenting, editing, deleting and status changes; a shared-workspace
+      // colleague reads those tickets but may not touch them unless they are the
+      // requester or a watcher, which this filter still admits.
       applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' });
     })
     .first();
@@ -274,7 +290,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         't.client_id': visibility.clientId
       });
 
-      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' });
+      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant', closedColumn: 't.is_closed' } });
 
     // Filter by status
     if (parsedStatusFilter.kind === 'all') {
@@ -364,7 +380,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           't.client_id': visibility.clientId
         })
         .modify((ticketQuery: Knex.QueryBuilder) => {
-          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' });
+          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant', closedColumn: 't.is_closed' } });
         })
         .first();
 
@@ -483,7 +499,26 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
 
       // Never fetch link data until the existing client/board/contact ticket scope succeeds.
       const portalExternalLinks = ticket ? await loadPortalTicketExternalLinks(trx, tenant, ticketId) : [];
-      return { ticket, portalExternalLinks, conversations, documents: await filterReadableCommentAttachments(trx, tenant, userId, documents), users, linkedAssets };
+      /**
+       * FR-E7b: a shared-workspace colleague may read an open ticket about the
+       * hot desk, but it is not theirs to comment on or close — the write
+       * paths resolve the ticket without the workspace clause and would refuse
+       * them with "Ticket not found". The read says so up front.
+       */
+      const ticketRow = ticket as unknown as Record<string, any> | undefined;
+      const canInteract = ticketRow
+        ? ticketMatchesVisibility(
+            {
+              clientId: ticketRow.client_id,
+              boardId: ticketRow.board_id,
+              contactId: ticketRow.contact_name_id,
+              billingProfileId: ticketRow.billing_profile_id ?? null,
+              watcherContactIds: extractActiveWatcherContactIds(ticketRow.attributes),
+            },
+            visibility
+          )
+        : false;
+      return { ticket, canInteract, portalExternalLinks, conversations, documents: await filterReadableCommentAttachments(trx, tenant, userId, documents), users, linkedAssets };
     }) as any;
 
     if (!result.ticket) {
@@ -578,6 +613,8 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
 
     return {
       ...ticketWithoutCreatorType,
+      /** False for a ticket visible only through a shared workspace. */
+      can_interact: result.canInteract,
       ticket_origin: getTicketOrigin(result.ticket as any),
       entered_at: result.ticket.entered_at instanceof Date ? result.ticket.entered_at.toISOString() : result.ticket.entered_at,
       updated_at: result.ticket.updated_at instanceof Date ? result.ticket.updated_at.toISOString() : result.ticket.updated_at,
@@ -679,6 +716,7 @@ export const addClientTicketComment = withAuth(async (
       const newComment = await tenantDb(trx, tenant).table('comments').where({ comment_id: commentId }).first();
 
       if (!isInternal) {
+        // LEVERAGE: pattern response-state-from-comment — client portal writes awaiting_internal directly (no tracking check, no TICKET_RESPONSE_STATE_CHANGED); route through applyCommentResponseState in shared/lib/tickets/responseState.ts once portal behaviour change is accepted.
         await tenantDb(trx, tenant).table('tickets')
           .where({
             ticket_id: ticketId,
@@ -691,20 +729,19 @@ export const addClientTicketComment = withAuth(async (
       // Publish comment added event
       await persistCommentPublication(trx, {
         eventType: 'TICKET_COMMENT_ADDED',
-        payload: {
+        payload: buildTicketCommentAddedPayload({
           tenantId: tenant,
           occurredAt: newComment.created_at ?? new Date().toISOString(),
           ticketId: ticketId,
           commentId: newComment.comment_id,
           userId,
           comment: {
-            id: newComment.comment_id,
             content: content,
             author: `${userRecord.first_name} ${userRecord.last_name}`,
             isInternal
           }
-        }
-      }, publishEvent);
+        })
+      }, publishStoredWorkflowEvent);
 
       await publishTicketUpdate({
         tenantId: tenant,
@@ -1018,8 +1055,10 @@ export const updateTicketStatus = withAuth(async (
         .where({
           ticket_id: ticketId
         })
+        // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
         .update({
           status_id: newStatusId,
+          ...ticketStatusClockPatch(trx, newStatusId),
           is_closed: !!statusForBoard.is_closed,
           ...(isClosing ? { closed_at: occurredAt, closed_by: userId } : {}),
           ...(isReopening ? { closed_at: null, closed_by: null } : {}),
@@ -1071,13 +1110,13 @@ export const updateTicketStatus = withAuth(async (
       if (isClosing) {
         await publishWorkflowEvent({
           eventType: 'TICKET_CLOSED',
-          payload: {
+          payload: buildTicketClosedPayload({
             ticketId: ticketId,
             userId,
             closedByUserId: userId,
             closedAt: occurredAt,
             changes: statusChanges,
-          },
+          }),
           ctx: {
             tenantId: tenant,
             actor: { actorType: 'USER' as const, actorUserId: userId },
@@ -1090,12 +1129,14 @@ export const updateTicketStatus = withAuth(async (
       } else if (isReopening) {
         await publishWorkflowEvent({
           eventType: 'TICKET_REOPENED',
-          payload: {
+          payload: buildPortalTicketReopenedPayload({
             ticketId: ticketId,
             userId,
-            reopenedByUserId: userId,
+            previousStatusId: oldStatusId,
+            newStatusId,
+            reopenedAt: occurredAt,
             changes: statusChanges,
-          },
+          }),
           ctx: {
             tenantId: tenant,
             actor: { actorType: 'USER' as const, actorUserId: userId },
@@ -1107,15 +1148,18 @@ export const updateTicketStatus = withAuth(async (
         });
       } else {
         // Publish ticket updated event
-        await publishEvent({
+        await publishWorkflowEvent({
           eventType: 'TICKET_UPDATED',
-          payload: {
-            tenantId: tenant,
-            occurredAt,
+          payload: buildTicketUpdatedPayload({
             ticketId: ticketId,
             userId,
-            changes: statusChanges
-          }
+            changes: statusChanges,
+          }),
+          ctx: {
+            tenantId: tenant,
+            actor: { actorType: 'USER' as const, actorUserId: userId },
+            occurredAt,
+          },
         });
       }
 
@@ -1254,7 +1298,7 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
           client_id: visibility.clientId
         })
         .modify((queryBuilder: Knex.QueryBuilder) => {
-          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id', watchListColumn: 'tickets.attributes' });
+          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id', watchListColumn: 'tickets.attributes', sharedWorkspaceTickets: { ticketIdColumn: 'tickets.ticket_id', tenantColumn: 'tickets.tenant', closedColumn: 'tickets.is_closed' } });
         })
         .first();
 
@@ -1411,6 +1455,14 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         ? (contactProfiles[0].billing_profile_id as string)
         : undefined;
 
+      // FR-F2: a ticket about a specific device bills where the device says.
+      // That is a narrower statement than "this contact usually belongs to
+      // segment X", so the asset's profile (or its location's default) wins
+      // over the contact heuristic; both fall through to the client default.
+      const assetBillingProfileId = validatedData.asset_id
+        ? await resolveAssetBillingProfileId(trx, tenant, validatedData.asset_id)
+        : null;
+
       // Convert to TicketModel input format
       const createTicketInput: CreateTicketInput = {
         title: validatedData.title,
@@ -1418,7 +1470,7 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         priority_id: validatedData.priority_id,
         client_id: visibility.clientId,
         contact_id: visibility.contactId, // Maps to contact_name_id in database
-        billing_profile_id: contactBillingProfileId,
+        billing_profile_id: assetBillingProfileId ?? contactBillingProfileId,
         entered_by: userId,
         source: 'client_portal',
         ticket_origin: TICKET_ORIGINS.CLIENT_PORTAL,
@@ -1453,7 +1505,12 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
           tenantDb(trx, tenant).table('assets')
             .where({ asset_id: validatedData.asset_id }),
           visibility,
-          { clientColumn: 'assets.client_id', contactColumn: 'assets.contact_name_id' }
+          {
+            clientColumn: 'assets.client_id',
+            contactColumn: 'assets.contact_name_id',
+            // FR-E7b: a workspace user can raise a ticket on any workspace asset.
+            sharedWorkspace: { assetIdColumn: 'assets.asset_id', tenantColumn: 'assets.tenant' },
+          }
         )
           .select('asset_id')
           .first();

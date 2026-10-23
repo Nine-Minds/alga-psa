@@ -4,7 +4,6 @@ import { generateClientCadenceServicePeriods } from '@alga-psa/shared/billingCli
 
 const sourceObligation: IRecurringObligationRef = {
   obligationId: 'line-1',
-  obligationType: 'contract_line',
   chargeFamily: 'fixed',
 };
 

@@ -1,7 +1,7 @@
 {
   "section": {
     "title": "Hour Blocks",
-    "description": "One-time prepaid hour blocks. Time that isn't covered by a contract line draws down these blocks, oldest expiration first.",
+    "description": "Ad-hoc prepaid hour blocks. They catch only time that no contract line covers. Blocks issued by a Prepaid Block contract line are drawn only by that line's own time.",
     "availableBalance": "{{hours}} hrs available",
     "noBlocks": "No hour blocks yet. Sell a block to this client or grant comped hours.",
     "loadFailed": "Failed to load hour blocks. Try again."
@@ -126,7 +126,8 @@
     "autoExpired": "Auto-expired",
     "voidedLabel": "Voided",
     "purchaseReversed": "Purchase reversed (invoice unfinalized)",
-    "unknownUser": "System"
+    "unknownUser": "System",
+    "sourceContract": "Contract: {{contract}}"
   },
   "expire": {
     "error": "Could not expire the hour block.",
@@ -154,5 +155,16 @@
       "missingField": "A required hour block field is missing. Please review the form and try again.",
       "referenceMissing": "The selected client, service, or invoice no longer exists. Please refresh and try again."
     }
+  },
+  "coverage": {
+    "oneLine": "Time on {{service}} bills through {{contract}} / {{line}} and will not draw this block.",
+    "manyLines": "Time on {{service}} that is assigned to a contract line will not draw this block.",
+    "linesLabel": "Contract lines covering {{service}}:",
+    "unscopedIntro": "This block covers all labor, but time on these services bills through a contract line and will not draw it:",
+    "unscopedService": "{{service}} — {{contract}} / {{line}}",
+    "unscopedServiceAssigned": "{{service}} — when assigned to a contract line",
+    "more": "and {{count}} more",
+    "badge": "Contract overlap",
+    "viewContract": "View contract"
   }
 }

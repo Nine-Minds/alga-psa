@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { publishEvent } from '@alga-psa/shared/events/publisher';
+import { randomUUID } from 'crypto';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
+import { buildInboundEmailReceivedPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/emailLifecycleEventBuilders';
 
 // Test endpoint to verify webhook and event publishing
 export async function POST(request: NextRequest) {
@@ -14,20 +16,26 @@ export async function POST(request: NextRequest) {
     const { provider = 'microsoft', messageId = 'test-message-123' } = body;
 
     // Publish test event
-    const eventId = await publishEvent({
+    const receivedAt = new Date().toISOString();
+    const eventId = randomUUID();
+    await publishWorkflowEvent({
       eventType: 'INBOUND_EMAIL_RECEIVED',
-      tenant: user.tenant,
-      payload: {
+      payload: buildInboundEmailReceivedPayload({
+        tenant: user.tenant,
         providerId: 'test-provider',
-        providerType: provider,
-        mailbox: 'test@example.com',
-        messageId: messageId,
-        webhookData: {
-          test: true,
-          timestamp: new Date().toISOString()
-        }
-      }
-    });
+        emailData: {
+          id: messageId,
+          from: { email: 'test@example.com' },
+          to: [{ email: 'support@example.com' }],
+          subject: `Test webhook event (${provider})`,
+          body: { text: 'Synthetic INBOUND_EMAIL_RECEIVED published by the webhook test endpoint.' },
+          receivedAt,
+          tenant: user.tenant,
+          providerId: 'test-provider',
+        },
+      }),
+      ctx: { tenantId: user.tenant, occurredAt: receivedAt, actor: { actorType: 'USER', actorUserId: user.user_id } },
+    }, { eventId });
 
     return NextResponse.json({
       success: true,

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { IContactEmailAddress } from '@alga-psa/shared/interfaces/contact.interfaces';
 
 import {
   contactResponseSchema,
@@ -68,4 +69,50 @@ describe('contact email API schemas', () => {
 
     expect(parsed.success).toBe(true);
   });
+
+  describe('additional email row strictness', () => {
+    const base = { full_name: 'Jane Doe', email: 'jane@example.com' };
+
+    it('rejects an unrecognized key such as type at additional_email_addresses.0', () => {
+      const result = createContactSchema.safeParse({
+        ...base,
+        additional_email_addresses: [{ email_address: 'jd@example.com', type: 'work' }],
+      });
+      expect(result.success).toBe(false);
+      const issue = result.error?.issues.find(i => i.code === 'unrecognized_keys');
+      expect(issue?.path).toEqual(['additional_email_addresses', 0]);
+    });
+
+    it('accepts a canonical_type row and read-only response keys', () => {
+      const result = createContactSchema.safeParse({
+        ...base,
+        additional_email_addresses: [{
+          email_address: 'jd@example.com',
+          canonical_type: 'work',
+          normalized_email_address: 'jd@example.com',
+          custom_email_type_id: null,
+        }],
+      });
+      expect(result.success).toBe(true);
+    });
+  });
+
+    it('accepts a full hydrated GET row (every key ContactModel hydration emits) for round-trip PUT', () => {
+      const hydratedRow = {
+        contact_additional_email_address_id: '00000000-0000-4000-8000-000000000001',
+        email_address: 'jd@example.com',
+        normalized_email_address: 'jd@example.com',
+        canonical_type: 'work',
+        custom_email_type_id: null,
+        custom_type: null,
+        display_order: 0,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-02T00:00:00.000Z',
+      } satisfies Required<IContactEmailAddress>;
+
+      expect(updateContactSchema.safeParse({ additional_email_addresses: [hydratedRow] }).success).toBe(true);
+      expect(updateContactSchema.safeParse({
+        additional_email_addresses: [{ ...hydratedRow, created_at: new Date(), updated_at: new Date() }],
+      }).success).toBe(true);
+    });
 });

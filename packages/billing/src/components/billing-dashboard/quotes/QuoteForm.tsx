@@ -30,7 +30,7 @@ import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSett
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
 import { getActiveClientLocationsForBilling, type BillingLocationSummary } from '../../../actions/billingClientLocationActions';
-import { addQuoteItem, approveQuote, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuote, createQuoteFromTemplate, createQuoteRevision, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuotes, removeQuoteItem, reorderQuoteItems, requestQuoteApprovalChanges, resendQuote, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
+import { addQuoteItem, approveQuote, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuote, createQuoteFromTemplate, createQuoteRevision, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuotes, markQuoteAccepted, removeQuoteItem, reorderQuoteItems, requestQuoteApprovalChanges, resendQuote, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import { getContactsForPicker } from '@alga-psa/user-composition/actions/contactQueryActions';
 import QuoteLineItemsEditor from './QuoteLineItemsEditor';
@@ -39,6 +39,8 @@ import {
   collectDistinctLocationIds,
 } from '../locations/locationGrouping';
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
+import QuoteMarkAcceptedDialog from './QuoteMarkAcceptedDialog';
+import QuoteSoleApproverNotice from './QuoteSoleApproverNotice';
 import QuoteStatusBadge from './QuoteStatusBadge';
 import { calculateDraftCadenceSummary, calculateDraftMonthlyRecurringNet, calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
 import { QuoteTermsContent, TextEditor } from '@alga-psa/ui/editor';
@@ -95,6 +97,8 @@ interface QuoteFormState {
   quote_date: string;
   valid_until: string;
   po_number: string;
+  recurring_section_title: string;
+  onetime_section_title: string;
   client_notes: string;
   terms_and_conditions: string;
   currency_code: string;
@@ -109,6 +113,8 @@ const EMPTY_FORM: QuoteFormState = {
   quote_date: '',
   valid_until: '',
   po_number: '',
+  recurring_section_title: '',
+  onetime_section_title: '',
   client_notes: '',
   terms_and_conditions: '',
   currency_code: 'USD',
@@ -233,6 +239,10 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const [quote, setQuote] = useState<IQuote | null>(null);
   const [isWorking, setIsWorking] = useState(false);
   const [approvalRequired, setApprovalRequired] = useState(false);
+  // Current user is the tenant's only possible approver (may approve own quotes).
+  const [isSoleApprover, setIsSoleApprover] = useState(false);
+  const [isMarkAcceptedOpen, setIsMarkAcceptedOpen] = useState(false);
+  const [markAcceptedNote, setMarkAcceptedNote] = useState('');
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
   const [quoteSenders, setQuoteSenders] = useState<Array<{ sender_id: string; email_address: string }>>([]);
   const [quoteEffectiveSenderAddress, setQuoteEffectiveSenderAddress] = useState('');
@@ -353,6 +363,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       setDefaultCurrency(tenantCurrency);
 
       setApprovalRequired(!isActionPermissionError(approvalSettings) && approvalSettings.approvalRequired === true);
+      setIsSoleApprover(!isActionPermissionError(approvalSettings) && approvalSettings.currentUserIsSoleApprover === true);
       if (isActionPermissionError(fetchedContacts) || isActionMessageError(fetchedContacts)) {
         throw new Error(getErrorMessage(fetchedContacts));
       }
@@ -390,6 +401,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           quote_date: toDateInputValue(quote.quote_date),
           valid_until: toDateInputValue(quote.valid_until),
           po_number: quote.po_number || '',
+          recurring_section_title: quote.recurring_section_title || '',
+          onetime_section_title: quote.onetime_section_title || '',
           client_notes: quote.client_notes || '',
           terms_and_conditions: quote.terms_and_conditions || '',
           currency_code: quote.currency_code || tenantCurrency,
@@ -633,6 +646,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         quote_date: form.quote_date || null,
         valid_until: form.valid_until || null,
         po_number: form.po_number || null,
+        recurring_section_title: form.recurring_section_title.trim() || null,
+        onetime_section_title: form.onetime_section_title.trim() || null,
         client_notes: form.client_notes || null,
         terms_and_conditions: form.terms_and_conditions || null,
         terms_and_conditions_block: hasTermsContent(termsBlock) ? termsBlock : null,
@@ -891,6 +906,21 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     );
     if (result) {
       setNotice(t('quoteForm.notices.resent', { defaultValue: 'Quote resent.' }));
+    }
+  };
+
+  // LEVERAGE: pattern quote-workflow-action-handlers — QuoteDetail and QuoteForm each re-implement the approve/request-changes/mark-accepted handlers, dialogs and notices; a shared quote-workflow hook/component layer is missing.
+  const handleMarkAccepted = async () => {
+    if (!quote) return;
+    const result = await runWorkflowAction(
+      t('quoteForm.errorActions.markAccepted', { defaultValue: 'mark quote as accepted' }),
+      () => markQuoteAccepted(quote.quote_id, markAcceptedNote),
+      { notifyStatusChanged: true },
+    );
+    if (result) {
+      setIsMarkAcceptedOpen(false);
+      setMarkAcceptedNote('');
+      setNotice(t('quoteForm.notices.markedAccepted', { defaultValue: 'Quote marked as accepted.' }));
     }
   };
 
@@ -1296,6 +1326,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       return [
         { id: 'quote-form-resend', label: t('quoteForm.actions.resend', { defaultValue: 'Resend' }), onClick: () => void handleResendQuote(), disabled: isWorking },
         { id: 'quote-form-reminder', label: t('quoteForm.actions.sendReminder', { defaultValue: 'Send reminder' }), onClick: () => void handleSendReminder(), disabled: isWorking },
+        { id: 'quote-form-mark-accepted', label: t('quoteForm.actions.markAccepted', { defaultValue: 'Mark as accepted' }), onClick: () => setIsMarkAcceptedOpen(true), disabled: isWorking },
         { id: 'quote-form-cancel-quote', label: t('quoteForm.actions.cancelQuote', { defaultValue: 'Cancel quote' }), onClick: () => void handleCancelQuote(), disabled: isWorking },
       ];
     }
@@ -1740,6 +1771,23 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
               />
             </section>
 
+            <section className="rounded-lg border border-border bg-background p-5 shadow-sm">
+              <header className="mb-4 space-y-1">
+                <h3 className="text-base font-semibold">{t('quoteForm.sectionTitles.title', { defaultValue: 'Grouped quote section titles' })}</h3>
+                <p className="text-xs text-muted-foreground">{t('quoteForm.sectionTitles.description', { defaultValue: 'Optional headings used by the Standard Quote Grouped layout.' })}</p>
+              </header>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  {t('quoteForm.sectionTitles.monthlyLabel', { defaultValue: 'Monthly section title' })}
+                  <Input id="quote-monthly-section-title" value={form.recurring_section_title} maxLength={255} placeholder={t('quoteForm.sectionTitles.monthlyPlaceholder')} onChange={(event) => handleChange('recurring_section_title', event.target.value)} disabled={isReadOnly} />
+                </label>
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  {t('quoteForm.sectionTitles.oneTimeLabel', { defaultValue: 'One-time section title' })}
+                  <Input id="quote-onetime-section-title" value={form.onetime_section_title} maxLength={255} placeholder={t('quoteForm.sectionTitles.oneTimePlaceholder')} onChange={(event) => handleChange('onetime_section_title', event.target.value)} disabled={isReadOnly} />
+                </label>
+              </div>
+            </section>
+
             {/* --- Client-facing text card --- */}
             <section className="rounded-lg border border-border bg-background p-5 shadow-sm">
               <header className="mb-4 space-y-1">
@@ -1941,6 +1989,14 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                   <p className="mt-2 text-sm text-muted-foreground">
                     {t('quoteForm.sidebar.approvalMessage', { defaultValue: 'Quotes need sales lead approval before sending.' })}
                   </p>
+                  {isSoleApprover && (
+                    <div className="mt-3">
+                      <QuoteSoleApproverNotice
+                        id="quote-form-sole-approver-notice"
+                        context={quoteStatus === 'pending_approval' ? 'pending' : 'draft'}
+                      />
+                    </div>
+                  )}
                   {quoteStatus === 'draft' && (
                     <Button
                       id="quote-form-sidebar-submit-approval"
@@ -2055,6 +2111,15 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         </DialogContent>
       </Dialog>
 
+      <QuoteMarkAcceptedDialog
+        isOpen={isMarkAcceptedOpen}
+        isWorking={isWorking}
+        note={markAcceptedNote}
+        onNoteChange={setMarkAcceptedNote}
+        onConfirm={() => void handleMarkAccepted()}
+        onClose={() => { setIsMarkAcceptedOpen(false); setMarkAcceptedNote(''); }}
+      />
+
       {/* Approval dialog */}
       <Dialog
         id="quote-form-approval-dialog"
@@ -2092,6 +2157,13 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                 defaultValue: 'Return this quote to draft with requested changes.',
               })}
           </DialogDescription>
+          {approvalDialogMode === 'approve' && isSoleApprover ? (
+            <p id="quote-form-approval-sole-approver-note" className="text-sm text-muted-foreground">
+              {t('quoteApproval.soleApprover.dialogNote', {
+                defaultValue: 'You are the only approver, so approving your own quote is allowed. The approval is recorded as a self-approval.',
+              })}
+            </p>
+          ) : null}
           <div className="space-y-3 py-2">
             <label className="flex flex-col gap-1 text-sm font-medium">
               {approvalDialogMode === 'approve'
@@ -2134,7 +2206,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                 {t('quoteConversion.actions.salesOrder', { defaultValue: 'Create Sales Order' })}
               </Button>
             )}
-            {conversionPreview && conversionPreview.contract_items.length > 0 && (
+            {conversionPreview && conversionPreview.contract_items.length > 0 && !conversionPreview.contract_blocked_reason && (
               <Button id="quote-form-conversion-contract" onClick={() => void handleConfirmConversion('contract')} disabled={isWorking}>
                 {t('quoteConversion.actions.contract', { defaultValue: 'Create Draft Contract' })}
               </Button>
@@ -2169,6 +2241,18 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
               {conversionPreview.invoice_error && (
                 <Alert variant="destructive">
                   <AlertDescription>{conversionPreview.invoice_error}</AlertDescription>
+                </Alert>
+              )}
+              {conversionPreview.contract_blocked_reason && (
+                <Alert variant="destructive" id="quote-conversion-contract-blocked">
+                  <AlertDescription>
+                    {conversionPreview.contract_blocked_item_description != null
+                      ? t('quoteConversion.contractBlockedServiceless', {
+                          defaultValue: conversionPreview.contract_blocked_reason,
+                          description: conversionPreview.contract_blocked_item_description,
+                        })
+                      : conversionPreview.contract_blocked_reason}
+                  </AlertDescription>
                 </Alert>
               )}
               {conversionPreview.sales_order_items.length > 0 ? (

@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Pro-Funktion"
+    },
     "accounting": {
       "bulk": {
         "button": "Sammelzuordnung",
@@ -124,6 +127,15 @@
           "paymentTerms": "Zahlungsbedingungen",
           "discounts": "Rabatte"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Desktop-Dienstkonten",
+        "desktopDiscounts": "Desktop-Rabatte",
+        "desktopAccount": "Name des Desktop-Ertragskontos",
+        "description": "Ordnen Sie Rechnungsrabatte und Gutschriften vor dem Export zu. Die Zuordnung gilt für dieses Buchhaltungsunternehmen.",
+        "add": "Zuordnung hinzufügen",
+        "remove": "Zuordnung entfernen",
+        "removeConfirm": "Diese Buchhaltungszuordnung entfernen?"
       }
     },
     "calendar": {
@@ -1223,7 +1235,12 @@
         "recommendedUnsaved": "Empfohlen – nicht gespeichert",
         "unsavedChange": "Ungespeicherte Änderung",
         "unsavedNotice": "Diese Filtereinstellungen gelten erst, wenn Sie sie speichern."
-      }
+      },
+      "proFeature": {
+        "description": "Die Microsoft Entra-Integration ist in AlgaPSA Pro verfügbar.",
+        "notice": "Die Microsoft Entra-Identitätsintegration ist eine Pro-Funktion."
+      },
+      "loading": "Microsoft Entra-Integration wird geladen…"
     },
     "google": {
       "settings": {
@@ -1294,6 +1311,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "Die Integration der IT-Dokumentation von Hudu ist in AlgaPSA Pro verfügbar."
+      },
       "clientTab": {
         "source": "Quelle: Hudu",
         "openInHudu": "In Hudu öffnen",
@@ -2314,6 +2334,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "Die NinjaOne-RMM-Integration ist in AlgaPSA Pro verfügbar."
+        },
         "loading": "NinjaOne-Integrationseinstellungen werden geladen...",
         "card": {
           "title": "NinjaOne RMM-Integration",
@@ -2591,6 +2614,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "Die Tanium-RMM-Integration ist in AlgaPSA Pro verfügbar."
+        },
         "loading": "Tanium-Integrationseinstellungen werden geladen...",
         "actions": {
           "discoverScopes": "Scopes erkennen",
@@ -2661,6 +2687,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "Die Level.io-RMM-Integration ist in AlgaPSA Pro verfügbar."
+        },
         "actions": {
           "backfillAlerts": "Warnungen nacherfassen",
           "disconnect": "Trennen",
@@ -2733,16 +2762,35 @@
           "copied": "Kopiert",
           "copy": "Kopieren",
           "description": "Level kann Webhooks nicht über seine API registrieren. Erstellen Sie in Level eine Automatisierung mit einer HTTP-POST-Aktion und verwenden Sie die folgende URL, den Header und die Payload, um Warnungen in Echtzeit an Alga zu senden.",
+          "fallbackDescription": "Verwenden Sie diese Alternative nur, wenn die nativen Webhooks unter Einstellungen → Webhooks in Level nicht genutzt werden können. Erstellen Sie eine Automatisierung mit einer HTTP-POST-Aktion mit der folgenden URL, dem Header und der Payload, um Warnungen an Alga zu senden.",
+          "fallbackNameHint": "Bearbeiten Sie den Wert \"name\" in jeder Automatisierung. Zusammen mit dem Gerät identifiziert er die Warnung; Wiederholungen mit gleichem Namen auf demselben Gerät gelten als eine Warnung.",
+          "fallbackTitle": "Alternative: HTTP-Anfrage per Automatisierung",
           "header": "Header: {{name}}",
           "hideSecret": "Secret ausblenden",
           "loading": "Webhook-Details werden geladen, nachdem die Integration konfiguriert wurde.",
+          "nativeDescription": "Öffnen Sie in Level Einstellungen → Webhooks, fügen Sie einen Webhook mit der URL und dem Signaturschlüssel unten hinzu und aktivieren Sie die aufgeführten Ereignisse. Level signiert jede Zustellung und Alga prüft die Signatur.",
+          "nativeEvents": "Zu aktivierende Ereignisse",
+          "nativeEventsHelp": "Aktivieren Sie alert_active und alert_resolved. Andere Ereignisse werden bestätigt und ignoriert.",
+          "nativeSigningSecret": "Signaturschlüssel",
+          "nativeTitle": "Nativer Webhook (empfohlen)",
           "payload": "Payload-Vorlage",
+          "regenerateCancel": "Abbrechen",
+          "regenerateConfirmLabel": "Neu generieren",
+          "regenerateConfirmMessage": "Bestehende Level-Webhooks schlagen mit 401 fehl, bis Sie den neuen Signaturschlüssel in den Webhook-Einstellungen von Level eintragen. Level wiederholt Zustellungen, sie können aber verloren gehen, wenn der Schlüssel nicht aktualisiert wird.",
+          "regenerateConfirmTitle": "Signaturschlüssel neu generieren?",
+          "regenerateConfirmed": "Signaturschlüssel neu generiert. Aktualisieren Sie ihn in den Webhook-Einstellungen von Level.",
+          "regenerateFailed": "Signaturschlüssel konnte nicht neu generiert werden",
+          "regenerateSecret": "Schlüssel neu generieren",
           "showSecret": "Secret anzeigen",
           "title": "Warnungs-Webhook",
           "url": "Webhook-URL"
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Huntress-Integration",
+          "description": "Die Huntress-Sicherheitsintegration ist eine Pro-Funktion."
+        },
         "columns": {
           "organization": "Huntress-Organisation",
           "client": "Alga-Kunde",
@@ -2783,7 +2831,7 @@
         },
         "connection": {
           "title": "Mit {{account}} verbunden",
-          "summary": "{{organizations}} Organisationen ({{unmapped}} nicht zugeordnet) · {{openIncidents}} offene Vorfälle · letzte Abfrage: {{lastPoll}}",
+          "summary": "{{organizations}} Organisationen ({{unmapped}} nicht zugeordnet) · {{openAlerts}} offene Warnungen · letzte Abfrage: {{lastPoll}}",
           "neverPolled": "nie",
           "lastPollFailed": "Letzte Abfrage fehlgeschlagen: {{error}}",
           "routingIncompleteWarning": "Die Vorfallabfrage ist pausiert, bis die Routing-Konfiguration unten vollständig ist (Board, Fallback-Kunde/-Board und Prioritäten für alle drei Schweregrade).",
@@ -2806,6 +2854,8 @@
           "selectPriority": "Priorität",
           "pollInterval": "Abfrageintervall (Minuten)",
           "autoClose": "Tickets schließen, wenn Huntress den Vorfall schließt",
+          "ingestEscalations": "Tickets aus Huntress-Eskalationen erstellen",
+          "ingestEscalationsHelp": "Eskalationen verwenden dieselben Board-, Kategorie-, Prioritätszuordnungs- und Auto-Schließen-Einstellungen wie Vorfälle. Eine Eskalation, die mehrere Organisationen betrifft, erstellt ein Ticket pro Organisation.",
           "closedStatus": "Status für geschlossene Tickets",
           "selectStatus": "Status auswählen",
           "save": "Routing-Konfiguration speichern",
@@ -2884,6 +2934,54 @@
         "errors": {
           "saveFailed": "Der Zeitplan für die Gerätesynchronisierung konnte nicht gespeichert werden."
         }
+      },
+      "peopleMode": {
+        "label": "Personen",
+        "options": {
+          "off": "Aus",
+          "suggest": "Vorschlagen",
+          "auto": "Automatisch zuweisen"
+        },
+        "updateFailed": "Der Personen-Modus konnte nicht aktualisiert werden"
+      },
+      "signedInUsers": {
+        "title": "Angemeldete Benutzer",
+        "description": "Die Benutzernamen, die die Geräte dieser Organisation melden, und der jeweils zugeordnete Kontakt.",
+        "empty": "Noch keine angemeldeten Benutzer gemeldet.",
+        "noClient": "Ordnen Sie diese Organisation einem Kunden zu, bevor Sie ihre angemeldeten Benutzer zuordnen.",
+        "refresh": "Aktualisieren",
+        "selectContact": "Kontakt auswählen",
+        "loadFailed": "Angemeldete Benutzer konnten nicht geladen werden.",
+        "saveFailed": "Die Zuordnung konnte nicht gespeichert werden.",
+        "columns": {
+          "user": "Angemeldeter Benutzer",
+          "devices": "Geräte",
+          "method": "Zugeordnet über",
+          "contact": "Kontakt"
+        },
+        "methods": {
+          "mapped": "Gespeicherte Zuordnung",
+          "email": "E-Mail",
+          "username": "Benutzername",
+          "name": "Vollständiger Name",
+          "none": "Keine Übereinstimmung"
+        }
+      },
+      "clientChange": {
+        "title": "Geräte dieser Organisation verschieben?",
+        "message": "{{count}} Asset(s) werden zu {{client}} verschoben. Zuweisungen, Gruppen und Abrechnungsprofile des vorherigen Kunden werden entfernt.",
+        "confirm": "Geräte verschieben"
+      },
+      "billingProfile": {
+        "label": "Abrechnungsprofil",
+        "clientDefault": "Kundenstandard",
+        "updateFailed": "Abrechnungsprofil konnte nicht aktualisiert werden"
+      },
+      "errors": {
+        "invalidPeopleMode": "Das ist kein gültiger Personen-Modus.",
+        "billingProfileUnavailable": "Dieses Abrechnungsprofil ist für diesen Kunden nicht verfügbar.",
+        "mappingNotFound": "Diese Zuordnung existiert nicht mehr. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+        "forbidden": "Sie haben keine Berechtigung, dies zu ändern."
       }
     },
     "sso": {
@@ -3454,6 +3552,11 @@
           "regenerate": "Paket neu erstellen",
           "regenerating": "Wird neu erstellt..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Teams-Anmeldung nicht verfügbar",
+        "tabTitle": "Teams-Registerkarte nicht verfügbar",
+        "description": "Die Microsoft Teams-Integration ist nur in Pro verfügbar."
       }
     },
     "xero": {
@@ -3980,6 +4083,8 @@
       "managePermission": "Berechtigung verweigert: Sie haben keine Berechtigung, Buchhaltungszuordnungen zu verwalten.",
       "loadFailed": "Zuordnungsdaten können nicht geladen werden. Bitte versuchen Sie es erneut.",
       "duplicate": "Für dieses Objekt existiert bereits eine Zuordnung. Bearbeiten Sie stattdessen die vorhandene Zuordnung.",
+      "duplicateTarget": "Dieses Ziel ist in dieser Organisation bereits einer anderen Entität zugeordnet. Wählen Sie ein anderes Ziel.",
+      "duplicateXeroItem": "Dieser Xero-Artikel ist bereits einer anderen Dienstleistung zugeordnet. Ein Artikel kann nur einer Dienstleistung zugeordnet werden; um mehrere Dienstleistungen unter demselben Code abzurechnen, ordnen Sie sie stattdessen einem Erlöskonto zu.",
       "saveFailed": "Die Zuordnung kann nicht gespeichert werden. Bitte versuchen Sie es erneut.",
       "idRequiredForUpdate": "Für die Aktualisierung ist die Zuordnungs-ID erforderlich.",
       "noUpdateData": "Es wurden keine Aktualisierungsdaten übermittelt.",

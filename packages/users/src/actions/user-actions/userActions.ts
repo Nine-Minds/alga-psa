@@ -20,8 +20,9 @@ import logger from '@alga-psa/core/logger';
 import { validateStorableTimeZone } from '@alga-psa/core/timeZones';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import type { ActionResultMessageKey } from '@alga-psa/ui/lib/errorHandling';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { prepareTicketResourceReassignment } from "@alga-psa/db/reassignTicketResources";
+import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import {
   sanitizeUserForResponse,
   USER_RESPONSE_FIELD_NAMES,
@@ -647,7 +648,7 @@ export const addUser = withAuth(async (
 
     if (result.success) {
       const occurredAt = new Date().toISOString();
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'USER_CREATED',
         payload: {
           userId: result.user.user_id,
@@ -947,7 +948,7 @@ export const deleteUser = withAuth(async (
 
     if (response.success) {
       const occurredAt = new Date().toISOString();
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'USER_DELETED',
         payload: {
           userId,
@@ -1154,7 +1155,7 @@ export const updateUser = withAuth(async (
         (field) => userData[field as keyof typeof userData] !== undefined
       );
 
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'USER_UPDATED',
         payload: {
           userId,
@@ -1402,7 +1403,9 @@ export const deactivateUserWithDisposition = withAuth(
               assigned_to: nextAssignee,
             };
             if (disposition.tickets.action === "archive") {
+              // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
               update.status_id = ticketArchiveStatuses.get(ticket.board_id);
+              Object.assign(update, ticketStatusClockPatch(trx, update.status_id as string | undefined));
               update.is_closed = true;
               update.closed_at = new Date();
               update.closed_by = currentUser.user_id;
@@ -1471,7 +1474,7 @@ export const deactivateUserWithDisposition = withAuth(
       revalidatePath("/settings");
       const occurredAt = new Date().toISOString();
       try {
-        await publishWorkflowEvent({
+        await publishNonCatalogWorkflowEvent({
           eventType: "USER_UPDATED",
           payload: {
             userId,
@@ -1546,7 +1549,7 @@ export const updateUserRoles = withAuth(async (
     });
 
     const occurredAt = new Date().toISOString();
-    await publishWorkflowEvent({
+    await publishNonCatalogWorkflowEvent({
       eventType: 'USER_ROLES_UPDATED',
       payload: {
         userId,

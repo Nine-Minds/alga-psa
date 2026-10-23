@@ -152,9 +152,15 @@ const billingCycleAlignmentPostInventoryRemovals = new Set([
 // pass-0 inventory snapshot was taken (recurring service-period ledger work
 // landed after the inventory was captured).
 const servicePeriodPostInventoryRefs = new Set([
+  // Workflow event emitter contract fixtures (alga0002106) carry billing event payloads with period fields.
+  'server/src/test/unit/workflow-event-contracts/contracts/billing.ts',
   'server/src/test/integration/billing/billingProfileAttribution.integration.test.ts',
   'packages/billing/src/lib/billing/pricing/isPeriodAlreadyInvoiced.ts',
   'shared/billingClients/resolveFixedLineRate.ts',
+  // alga-2026-0002499: contract-scoped client-cadence billed-boundary regression test.
+  'server/src/test/unit/billing/clientCadenceContractBoundary.regeneration.test.ts',
+  // alga-2026-0002499: generation guard now reads the contract-scoped billed boundary.
+  'server/src/test/infrastructure/billing/invoices/clientCadenceGenerationGuard.test.ts',
   // Invoice ticket presentation (origin/main a81661446e) added template
   // descriptors and behavioral coverage after this historical snapshot.
   'packages/billing/src/lib/invoice-template-ast/collectionDescriptors.ts',
@@ -170,6 +176,12 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/billing/src/lib/billing/usagePeriodTotalIdentity.ts',
   'packages/billing/tests/automaticInvoices.duplicateIdentityDedupe.test.tsx',
   'server/src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts',
+  // alga-2026-0002695: Prepaid Block issuance due-work rows map issuances onto
+  // service-period windows; added after the pass-0 snapshot.
+  'packages/billing/src/lib/prepaidBlockDueWork.ts',
+  'server/src/test/unit/billing/prepaidBlockAcceptance.db.test.ts',
+  'packages/billing/tests/prepaidBlockDueWork.db.test.ts',
+  'packages/billing/tests/prepaidBlockInvoicing.db.test.ts',
   // Calendar month-end close and grouped zero-dollar claims added persisted
   // window readers and regression fixtures after the pass-0 snapshot.
   'packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts',
@@ -257,6 +269,11 @@ const servicePeriodPostInventoryRefs = new Set([
   // seedBillingChargeSources backs fabricated usage charges with usage_tracking
   // rows keyed off the charge's servicePeriodStart.
   'server/test-utils/billingTestHelpers.ts',
+  // The obligation_type collapse migration (alga0002072) rewrites persisted
+  // recurring service-period rows and its suite seeds their boundaries; both
+  // landed after the pass-0 snapshot.
+  'server/migrations/20261010120000_collapse_recurring_service_period_obligation_type.cjs',
+  'server/migrations/__tests__/collapseRecurringServicePeriodObligationTypeMigration.integration.test.ts',
   'server/src/test/infrastructure/billing/invoices/clientBillingCycleAnchors.test.ts',
   'server/src/test/infrastructure/billing/invoices/clientBillingCycleRecurringServicePeriods.test.ts',
   'server/src/test/integration/api/invoiceService.recurringCoexistence.integration.test.ts',
@@ -316,15 +333,37 @@ const servicePeriodPostInventoryRefs = new Set([
   // service-period boundaries stamped on allocated fixed charges; it landed
   // after the pass-0 snapshot.
   'packages/billing/src/lib/billing/compute/computeFixedCharges.allocation.test.ts',
+  // Contract invoice adjustments (card b97eda7b) reconcile automatic discounts
+  // against the invoice's persisted service window and surface each generated
+  // charge's period in the draft editor; both readers landed after the
+  // pass-0 snapshot.
+  'packages/billing/src/services/invoiceAutomaticAdjustments.ts',
+  'packages/billing/src/components/billing-dashboard/ManualInvoices.tsx',
+  // The same card's line-window guard, protected-history check and partial-period
+  // descriptions read persisted charge periods; their tests assert them.
+  'packages/billing/src/actions/contractLineAction.ts',
+  'packages/billing/src/actions/invoiceActions.ts',
+  'packages/billing/src/lib/billing/compute/contractInvoiceAdjustments.ts',
+  'packages/billing/src/lib/billing/compute/contractInvoiceAdjustments.test.ts',
+  'packages/billing/src/services/contractInvoiceAdjustments.db.test.ts',
+  'packages/billing/tests/partialPeriodInvoiceDescription.test.ts',
+  'server/src/test/infrastructure/billing/contracts/contractLineProtectedHistory.test.ts',
   // Scheduled recurring quantity/price revisions (per-seat recurring services)
   // resolve their boundaries and true-up windows from persisted service periods.
   'packages/billing/src/components/billing-dashboard/contracts/RecurringUnitSchedulePanel.tsx',
   // Its discard-prompt acceptance suite stubs the effective-pricing reader,
   // which is keyed by the persisted service_period_start boundary.
   'packages/billing/tests/RecurringUnitSchedulePanel.discardDialog.test.tsx',
-  'packages/billing/src/lib/billing/reconcileAutomaticInvoiceDiscounts.ts',
   'packages/billing/src/lib/billing/recurringPricingIdentity.ts',
   'packages/billing/src/lib/billing/recurringPricingIdentity.test.ts',
+  // Quote-converted first-invoice regression (alga0002168) asserts the contract
+  // line's first service period was materialized.
+  'server/src/test/integration/billing/quoteConvertedFirstInvoice.integration.test.ts',
+  // Arrears-only line gap detection and repair (block In Advance billing on Hourly/Usage
+  // lines) read and rewrite persisted service-period rows; like the contract-cadence
+  // materialization and coverage-audit actions above, they landed after the pass-0 snapshot.
+  'packages/billing/src/actions/arrearsOnlyLineGaps.ts',
+  'packages/billing/src/actions/arrearsOnlyLineRepair.ts',
 ]);
 
 // Files whose persisted service-period field references were removed after the
@@ -340,6 +379,10 @@ const servicePeriodPostInventoryRemovals = new Set([
   'packages/billing/src/components/billing-dashboard/CreditManagement.tsx',
   'packages/reporting/src/actions/reconciliationReportActions.servicePeriods.test.ts',
   'server/src/test/unit/billing/creditReconciliation.servicePeriods.test.ts',
+  // The mock-DB unit test was replaced by the DB-backed T-REST integration
+  // tests in server/src/test/integration/billingInvoiceTiming.integration.test.ts
+  // (alga0002228).
+  'server/src/test/unit/api/invoiceService.deleteRecurringDetailGuard.test.ts',
 ]);
 
 describe('service-period-first billing plan artifacts', () => {

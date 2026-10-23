@@ -1,5 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+// Shared subpath, not the workflow-streams root barrel (see opportunityEventBuilders.ts).
+import { buildClientStatusChangedPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/clientEventBuilders';
 import { publishOpportunityEventAfterCommit } from './opportunityEvents';
 
 export async function promoteProspectClientAfterWin(
@@ -21,11 +23,11 @@ export async function promoteProspectClientAfterWin(
   await db.table('clients')
     .where({ client_id: clientId })
     .update({ lifecycle_status: 'active', updated_at: changedAt });
-  publishOpportunityEventAfterCommit(trx, tenant, 'CLIENT_STATUS_CHANGED', {
+  publishOpportunityEventAfterCommit(trx, tenant, 'CLIENT_STATUS_CHANGED', buildClientStatusChangedPayload({
     clientId,
     previousStatus: 'prospect',
     newStatus: 'active',
     changedAt,
-  }, `client_status_changed:${clientId}:${changedAt}`);
+  }), `client_status_changed:${clientId}:${changedAt}`);
   return true;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { IProject } from '@alga-psa/types';
 import { IStatus } from '@alga-psa/types';
 import { IClient } from '@alga-psa/types';
@@ -30,7 +30,10 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { ProjectTaskStatusSettings } from './settings/projects/ProjectTaskStatusSettings';
+import {
+  ProjectTaskStatusSettings,
+  type ProjectTaskStatusSettingsHandle,
+} from './settings/projects/ProjectTaskStatusSettings';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import ClientPortalConfigEditor from './ClientPortalConfigEditor';
@@ -83,7 +86,9 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
   const [showClientPortalConfig, setShowClientPortalConfig] = useState(false);
-  
+  // Status column edits are staged inside the editor and written by Save Changes.
+  const statusSettingsRef = useRef<ProjectTaskStatusSettingsHandle>(null);
+
   // TagContext is available if needed for tag-related features in the future
   // const { tags } = useTags();
 
@@ -165,6 +170,13 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
     setIsSubmitting(true);
 
     try {
+      // Staged status column changes first: a failure there keeps the drawer
+      // open with its toast instead of silently dropping them on close.
+      const statusesCommitted = await statusSettingsRef.current?.commitPendingChanges();
+      if (statusesCommitted === false) {
+        return;
+      }
+
       // Convert budgeted_hours to a number or null
       const budgetedHours = project.budgeted_hours ? Number(project.budgeted_hours) : null;
       
@@ -485,7 +497,11 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
 
           <div>
             <ProjectTaskStatusSettings
+              ref={statusSettingsRef}
               projectId={project.project_id}
+              onPendingChangesChange={(pending) => {
+                if (pending) setHasChanges(true);
+              }}
             />
           </div>
 

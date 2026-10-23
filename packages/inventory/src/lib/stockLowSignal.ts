@@ -1,15 +1,8 @@
 import type { Knex } from 'knex';
+import { buildInventoryStockLowPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/inventoryEventBuilders';
 
-export interface PendingStockLowSignal {
-  tenant: string;
-  service_id: string;
-  service_name: string;
-  sku: string | null;
-  location_id: string;
-  location_name: string;
-  on_hand: number;
-  reorder_point: number;
-}
+/** INVENTORY_STOCK_LOW payload, already built (publish after commit). */
+export type PendingStockLowSignal = ReturnType<typeof buildInventoryStockLowPayload>;
 
 interface StockLowSignalRow {
   service_id: string;
@@ -72,16 +65,16 @@ export async function collectStockLowSignalAfterConsume(
   const previousOnHand = onHand + consumed;
   if (!(previousOnHand > reorderPoint && onHand <= reorderPoint)) return null;
 
-  return {
+  return buildInventoryStockLowPayload({
     tenant,
-    service_id: row.service_id,
-    service_name: row.service_name,
+    serviceId: row.service_id,
+    serviceName: row.service_name,
     sku: row.sku,
-    location_id: row.location_id,
-    location_name: row.location_name,
-    on_hand: onHand,
-    reorder_point: reorderPoint,
-  };
+    locationId: row.location_id,
+    locationName: row.location_name,
+    onHand,
+    reorderPoint,
+  });
 }
 
 export async function collectDefaultLocationStockLowSignalAfterConsume(

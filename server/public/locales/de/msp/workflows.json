@@ -534,7 +534,8 @@
         "anniversary": "das nächste Jubiläum des Kunden",
         "renewal": "das Entscheidungsdatum für die Vertragsverlängerung",
         "contractEnd": "das Vertragsende",
-        "warrantyEnd": "das Ende der Garantie des Assets"
+        "warrantyEnd": "das Ende der Garantie des Assets",
+        "ticketStatusAge": "der Tag, an dem das Ticket die festgelegte Anzahl von Tagen im Status erreicht"
       }
     }
   },
@@ -564,7 +565,8 @@
       "exportCsv": "CSV exportieren",
       "exportJson": "JSON exportieren",
       "close": "Schließen",
-      "viewRunDetails": "Ausführungsdetails anzeigen"
+      "viewRunDetails": "Ausführungsdetails anzeigen",
+      "backToEvents": "Zurück zu Ereignissen"
     },
     "table": {
       "schemaConflict": "Katalog ≠ Einreichung",
@@ -602,7 +604,12 @@
       "waitStepLine": "Schritt: {{value}}",
       "matchedRunLabel": "Zugeordnete Ausführung",
       "runStatusLine": "Status: {{status}}",
-      "payloadLabel": "Nutzdaten"
+      "payloadLabel": "Nutzdaten",
+      "launchSkips": {
+        "title": "Nicht gestartete Workflows",
+        "unknownWorkflow": "Gelöschter Workflow",
+        "intentional": "Beabsichtigt"
+      }
     },
     "toasts": {
       "loadEventsFailed": "Ereignisse konnten nicht geladen werden",
@@ -621,7 +628,8 @@
     },
     "actions": {
       "refresh": "Aktualisieren",
-      "loadMore": "Mehr laden"
+      "loadMore": "Mehr laden",
+      "backToList": "Zurück zur Dead-Letter-Liste"
     },
     "table": {
       "columns": {
@@ -808,7 +816,20 @@
       "notPublishedNextVersion": "Noch nicht veröffentlicht. Die Veröffentlichung erstellt v{{next}}.",
       "tenantTimezoneOption": "Mandanten-Zeitzone (Standard)",
       "searchTimezones": "Zeitzonen durchsuchen",
-      "inputDataEventPending": "Wählen Sie oben das Ereignis; Ihre Schritte lesen die Daten, die dieses Ereignis sendet."
+      "inputDataEventPending": "Wählen Sie oben das Ereignis; Ihre Schritte lesen die Daten, die dieses Ereignis sendet.",
+      "dateSourceTicketStatusAge": "Ticket seit N Tagen in Status",
+      "statusAgeStatus": "Status",
+      "statusAgeStatusPlaceholder": "Status auswählen",
+      "statusAgeStatusMissing": "Auf dem ausgewählten Board gibt es keinen Status mit diesem Namen.",
+      "statusAgeOptionsFailed": "Status und Boards konnten nicht geladen werden.",
+      "statusAgeMatchByName": "Status werden nach Namen abgeglichen. Wird ein Status umbenannt, trifft dieser Trigger nicht mehr zu.",
+      "statusAgeBoard": "Board (wahlweise)",
+      "statusAgeAnyBoard": "Beliebiges Board",
+      "statusAgeDays": "Tage im Status",
+      "statusAgeRepeat": "Wiederholen, solange im Status",
+      "statusAgeRepeatEvery": "Wiederholen alle (Tage)",
+      "statusAgeNoActivity": "Nur wenn in dieser Zeit keine Aktivität (Kommentare oder Änderungen durch Personen) stattgefunden hat",
+      "statusAgeSummary": "Läuft täglich um {{time}} ({{timezone}}) für jedes Ticket, das die festgelegte Anzahl von Tagen im gewählten Status war"
     },
     "stepPanel": {
       "readOnly": "Schreibgeschützter Zugriff: Schrittbearbeitung ist deaktiviert.",
@@ -1492,6 +1513,41 @@
       "unsaved": "Nicht gespeicherte Änderungen",
       "savedAgo": "Gespeichert · {{ago}}",
       "saved": "Gespeichert"
+    },
+    "launchSkips": {
+      "banner": {
+        "summary_one": "{{count}} Ereignis in den letzten {{days}} Tagen übersprungen — {{reasons}}",
+        "summary_other": "{{count}} Ereignisse in den letzten {{days}} Tagen übersprungen — {{reasons}}",
+        "lastSkipped": "Zuletzt übersprungen {{when}}",
+        "view": "Übersprungene Ereignisse anzeigen",
+        "summary_few": "{{count}} Ereignisse in den letzten {{days}} Tagen übersprungen — {{reasons}}",
+        "summary_many": "{{count}} Ereignisse in den letzten {{days}} Tagen übersprungen — {{reasons}}"
+      },
+      "drawer": {
+        "title": "Übersprungene Ereignisse",
+        "windowLabel": "Zeitraum",
+        "window": {
+          "24h": "Letzte 24 Stunden",
+          "7d": "Letzte 7 Tage",
+          "30d": "Letzte 30 Tage"
+        },
+        "allReasons": "Alle Gründe",
+        "reasonLabel": "Grund",
+        "groupAttention": "Erfordert Aufmerksamkeit",
+        "groupGuarded": "Abgesichert / pausiert (beabsichtigt)",
+        "lastSeen": "Zuletzt gesehen {{when}}",
+        "columns": {
+          "received": "Empfangen",
+          "event": "Ereignis",
+          "reason": "Grund",
+          "message": "Nachricht"
+        },
+        "issuesTitle": "Validierungsprobleme",
+        "issueRoot": "(Payload)",
+        "openEvent": "Ereignis öffnen",
+        "loadError": "Übersprungene Ereignisse konnten nicht geladen werden.",
+        "empty": "Keine übersprungenen Ereignisse in diesem Zeitraum."
+      }
     }
   },
   "actionInputFieldInfo": {
@@ -1808,7 +1864,9 @@
     "insertionPointLabel": "Neue Schritte kommen hierhin",
     "emptyBranchPrompt": "Fügen Sie diesem Zweig einen Schritt hinzu",
     "emptyActivePrompt": "Neue Schritte kommen hierhin. Wählen Sie einen aus der Palette.",
-    "stepCount": "({{count}} Schritte)"
+    "stepCount": "({{count}} Schritte)",
+    "stepCount_few": "({{count}} Schritte)",
+    "stepCount_many": "({{count}} Schritte)"
   },
   "expressionEditor": {
     "ariaLabel": "Ausdruckseditor",
@@ -2095,7 +2153,8 @@
     "dateTiming": {
       "before": "{{count}} Tage davor",
       "after": "{{count}} Tage danach",
-      "onTheDay": "am selben Tag"
+      "onTheDay": "am selben Tag",
+      "daysInStatus": "{{count}} Tage im Status"
     },
     "dateWithTiming": "{{source}}, {{timing}}"
   },
@@ -2320,7 +2379,12 @@
       "currentRun": "Ausführung {{id}}",
       "backToWorkflow": "Zurück zum Workflow"
     },
-    "title": "Workflow-Ausführungsstudio"
+    "title": "Workflow-Ausführungsstudio",
+    "communityEdition": {
+      "title": "Pro-Funktion",
+      "description": "Das Studio für Workflow-Ausführungen ist nur in Pro verfügbar.",
+      "runId": "Ausführungs-ID: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -2786,6 +2850,10 @@
       },
       "deleteDialog": {
         "fallbackEntityName": "diesen Workflow"
+      },
+      "launchSkips": {
+        "badge": "{{count}} übersprungen",
+        "badgeTitle": "Ereignisse, für die dieser Workflow in den letzten 7 Tagen nicht gestartet wurde"
       }
     },
     "eventsCatalog": {
@@ -3089,6 +3157,10 @@
         "selectBoard": "Board auswählen oder eingeben",
         "selectPriority": "Priorität auswählen oder eingeben"
       }
+    },
+    "proFeature": {
+      "title": "Pro-Funktion",
+      "description": "Das Workflow-System ist nur in Pro verfügbar. Führen Sie ein Upgrade Ihrer Installation durch, um auf diese Funktion zuzugreifen."
     }
   },
   "toggle": {
@@ -3181,5 +3253,75 @@
   "fieldPicker": {
     "searchPlaceholder": "Felder durchsuchen",
     "noMatches": "Keine passenden Felder"
+  },
+  "launchSkipReasons": {
+    "missing_schema_ref": {
+      "label": "Payload-Schema-Referenz fehlt",
+      "hint": "Der Workflow hat keine Payload-Schema-Referenz, daher kann die Ereignis-Payload nicht validiert werden."
+    },
+    "unknown_schema_ref": {
+      "label": "Unbekannte Payload-Schema-Referenz",
+      "hint": "Die Payload-Schema-Referenz des Workflows existiert nicht in der Schema-Registry."
+    },
+    "missing_source_schema": {
+      "label": "Quellschema fehlt",
+      "hint": "Das Ereignis hat kein Quellschema zum Vergleich mit dem Payload-Schema des Workflows."
+    },
+    "schema_mismatch": {
+      "label": "Ereignis-Payload passt nicht zum Schema",
+      "hint": "Die Ereignis-Payload passt nicht zum Payload-Schema des Workflows und es ist kein Mapping konfiguriert."
+    },
+    "payload_mapping_failed": {
+      "label": "Payload-Mapping fehlgeschlagen",
+      "hint": "Das Payload-Mapping des Triggers konnte nicht auf das Ereignis angewendet werden."
+    },
+    "payload_validation_failed": {
+      "label": "Payload-Validierung fehlgeschlagen",
+      "hint": "Die gemappte Payload hat das Payload-Schema des Workflows nicht bestanden."
+    },
+    "launch_failed": {
+      "label": "Start fehlgeschlagen",
+      "hint": "Der Worker hat das Ereignis angenommen, aber der Start der Workflow-Ausführung ist fehlgeschlagen."
+    },
+    "paused": {
+      "label": "Workflow pausiert",
+      "hint": "Der Workflow ist pausiert, daher werden Ereignisse absichtlich nicht gestartet."
+    },
+    "lineage_loop_guard": {
+      "label": "Schleifenschutz (Herkunft)",
+      "hint": "Das Ereignis stammt aus der eigenen Herkunftskette dieses Workflows; übersprungen, um eine Schleife zu verhindern."
+    },
+    "self_trigger_guard": {
+      "label": "Selbstauslöse-Schutz",
+      "hint": "Das Ereignis wurde von diesem Workflow selbst ausgelöst; übersprungen, um Selbstauslösung zu verhindern."
+    },
+    "causation_depth_exceeded": {
+      "label": "Verursachungstiefe überschritten",
+      "hint": "Die Kette verursachter Ereignisse überschritt die maximale Tiefe; übersprungen, um Endlosschleifen zu verhindern."
+    }
+  },
+  "createFromTicket": {
+    "title": "Workflow aus Ticket erstellen",
+    "description": "Erstellt einen Workflow-Entwurf, dessen erster Schritt ein Ticket wie #{{number}} anlegt. Es wird nichts veröffentlicht.",
+    "cancel": "Abbrechen",
+    "creating": "Wird erstellt…",
+    "submit": "Entwurf erstellen & Designer öffnen",
+    "nameLabel": "Workflow-Name",
+    "triggerLabel": "Auslöser",
+    "triggerManual": "Manuell (bei Bedarf ausführen)",
+    "ticketCreatedWarning": "Dieser Workflow erstellt ein Ticket, und ein neues Ticket löst diesen Auslöser erneut aus. Fügen Sie vor der Veröffentlichung eine Bedingung hinzu, um eine Schleife zu vermeiden.",
+    "includeLegend": "Aus dem Ticket übernehmen",
+    "propertiesAlways": "Titel, Beschreibung, Kunde, Kontakt, Board, Kategorie und Priorität werden immer übernommen.",
+    "includeAssignment": "Zuweisung",
+    "includeTags": "Tags",
+    "includeCustomFields": "Benutzerdefinierte Felder",
+    "includeChecklist": "Checkliste",
+    "errors": {
+      "nameRequired": "Workflow-Name ist erforderlich",
+      "generic": "Workflow-Entwurf konnte nicht erstellt werden"
+    },
+    "includeCustomFieldsCount": "Benutzerdefinierte Felder ({{n}})",
+    "includeChecklistCount": "Checkliste ({{total}} Elemente: {{templates}} aus Vorlagen / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Elemente aus Vorlagen werden aus der aktuellen Vorlage neu angewendet; Änderungen an diesem Ticket werden nicht übernommen."
   }
 }

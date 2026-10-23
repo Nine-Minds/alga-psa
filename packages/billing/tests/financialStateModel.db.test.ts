@@ -24,7 +24,7 @@ vi.mock('@alga-psa/db', async (original) => ({
 }));
 // External delivery is outside this state model. Transactions, financial
 // actions, payment ingestion and mapping-ledger persistence remain real.
-vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: async () => {}, publishWorkflowEvent: async () => {} }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: async () => {}, publishWorkflowEvent: async () => {}, publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 vi.mock('../src/services/accountingSync/syncProducers', () => ({
   enqueueInvoiceAutoExport: async () => {}, enqueueExternalPaymentPush: async () => {},
   enqueueCreditApplication: async () => {}, enqueueInvoiceVoid: async () => {},

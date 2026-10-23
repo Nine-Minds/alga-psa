@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '../../../workflow/streams/workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   ticketSlaStageBreachedEventPayloadSchema,
   ticketSlaStageEnteredEventPayloadSchema,
   ticketSlaStageMetEventPayloadSchema,
-} from '@alga-psa/shared/workflow/runtime/schemas/ticketEventSchemas';
+} from '@alga-psa/event-schemas';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
   buildTicketResolutionSlaStageEnteredEvent,

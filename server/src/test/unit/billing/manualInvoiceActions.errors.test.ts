@@ -127,30 +127,21 @@ describe('generateManualInvoice structured errors', () => {
     mocks.validateClientBillingEmail.mockResolvedValue({ valid: true });
   });
 
-  it('returns the billing-email code and client name and logs tenant/client/user context', async () => {
-    mocks.validateClientBillingEmail.mockResolvedValueOnce({
+  it('does not refuse an invoice for a client without a billing email', async () => {
+    // The address is consumed when the invoice is emailed or paid online, and
+    // those paths refuse on their own; generation itself never asks.
+    mocks.validateClientBillingEmail.mockResolvedValue({
       valid: false,
       code: 'NO_BILLING_EMAIL',
       params: { clientName: 'Omni Energy Partners' },
-      error: 'Cannot generate invoice: No billing email address for "Omni Energy Partners". ' +
-        'Please set a billing contact, billing email, or a billing/default location email before generating invoices.',
+      error: 'Cannot generate invoice: No billing email address for "Omni Energy Partners".',
     });
 
     const result = await generateManualInvoice(request);
 
-    expect(result).toMatchObject({
-      success: false,
-      code: 'NO_BILLING_EMAIL',
-      params: { clientName: 'Omni Energy Partners' },
-      error: expect.stringContaining('No billing email address'),
-      message: expect.stringContaining('No billing email address'),
-    });
-    expect(mocks.warn).toHaveBeenCalledWith('[generateManualInvoice] NO_BILLING_EMAIL', {
-      tenant: 'tenant-1',
-      clientId: 'client-1',
-      userId: 'session-user-1',
-      clientName: 'Omni Energy Partners',
-    });
+    expect(mocks.validateClientBillingEmail).not.toHaveBeenCalled();
+    expect(result).not.toMatchObject({ code: 'NO_BILLING_EMAIL' });
+    expect(mocks.warn).not.toHaveBeenCalledWith('[generateManualInvoice] NO_BILLING_EMAIL', expect.anything());
   });
 
   it.each([

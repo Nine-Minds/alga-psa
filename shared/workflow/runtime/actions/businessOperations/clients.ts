@@ -6,9 +6,10 @@ import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { tenantDb } from '@alga-psa/db';
 import { ensureDefaultContractForClientIfBillingConfigured } from '../../../../billingClients/defaultContract';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
-import { withWorkflowPicker, withWorkflowNotFoundPolicy } from '../../jsonSchemaMetadata';
+import { withWorkflowPicker, withWorkflowNotFoundPolicy } from '@alga-psa/event-schemas';
 import { ClientModel } from '../../../../models/clientModel';
 import { buildClientArchivedPayload, buildClientCreatedPayload, buildClientUpdatedPayload } from '../../../streams/domainEventBuilders/clientEventBuilders';
+import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import { buildInteractionLoggedPayload, buildNoteCreatedPayload } from '../../../streams/domainEventBuilders/crmInteractionNoteEventBuilders';
 import { ticketUpdateStamp } from '../../../../lib/tickets/ticketUpdateStamp';
 import {
@@ -898,29 +899,16 @@ async function appendClientNoteBlock(
 const maybeWorkflowActor = (userId: string): { actorType: 'USER'; actorUserId: string } =>
   ({ actorType: 'USER', actorUserId: userId });
 
-async function publishWorkflowDomainEvent(params: {
-  eventType: string;
-  payload: Record<string, unknown>;
+async function publishWorkflowDomainEvent<T extends WorkflowCatalogEventType>(params: {
+  eventType: T;
+  payload: BuiltWorkflowPayload<T>;
   tenantId: string;
   occurredAt: string;
   actorUserId: string;
   idempotencyKey: string;
 }): Promise<void> {
   try {
-    const publishers = (await import('@alga-psa/event-bus/publishers')) as unknown as {
-      publishWorkflowEvent?: (value: {
-        eventType: string;
-        payload: Record<string, unknown>;
-        ctx: {
-          tenantId: string;
-          occurredAt: string;
-          actor: { actorType: 'USER'; actorUserId: string };
-        };
-        idempotencyKey: string;
-      }) => Promise<unknown>;
-    };
-    if (!publishers.publishWorkflowEvent) return;
-
+    const publishers = await import('@alga-psa/event-bus/publishers');
     await publishers.publishWorkflowEvent({
       eventType: params.eventType,
       payload: params.payload,

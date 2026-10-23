@@ -13,7 +13,7 @@ import {
   type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
-import { withWorkflowPicker, withWorkflowNotFoundPolicy } from '../../jsonSchemaMetadata';
+import { withWorkflowPicker, withWorkflowNotFoundPolicy } from '@alga-psa/event-schemas';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import {
   uuidSchema,

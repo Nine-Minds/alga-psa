@@ -11,7 +11,27 @@ import {
 
 export type TimeSheetActionError = ActionMessageError | ActionPermissionError;
 
+/**
+ * Thrown by server-side code (e.g. resolveTimeSheetForWorkDate) that already
+ * knows the user-facing expected error. Throwing - rather than returning - lets
+ * a caller-owned transaction roll back; timeSheetActionErrorFrom hands the
+ * carried error straight back so action boundaries convert it unchanged.
+ */
+export class TimeSheetResolutionError extends Error {
+  readonly expected: TimeSheetActionError;
+
+  constructor(message: string, expected: TimeSheetActionError) {
+    super(message);
+    this.name = 'TimeSheetResolutionError';
+    this.expected = expected;
+  }
+}
+
 export function timeSheetActionErrorFrom(error: unknown): TimeSheetActionError | null {
+  if (error instanceof TimeSheetResolutionError) {
+    return error.expected;
+  }
+
   // Check the typed bucket failure first: it carries which of several unrelated
   // causes fired, so it can say something the user can act on. The string match
   // further down is the fallback for any throw not yet converted.

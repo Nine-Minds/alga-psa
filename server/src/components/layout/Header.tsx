@@ -13,6 +13,7 @@ import {
   Home,
   LifeBuoy,
   PlusCircle,
+  Send,
   Settings,
   Sparkles,
   User,
@@ -40,6 +41,7 @@ import type { JobMetrics } from '@alga-psa/jobs/actions/job-actions';
 import { getQueueMetricsAction } from '@alga-psa/jobs/actions/job-actions';
 import { analytics } from '@alga-psa/analytics/client';
 import { QuickCreateDialog, QuickCreateType } from './QuickCreateDialog';
+import { VendorSupportDialog } from './VendorSupportDialog';
 import { useProduct } from '@/context/ProductContext';
 import { ThemeToggle } from '@alga-psa/ui/components/ThemeToggle';
 import { TrialBanner } from './TrialBanner';
@@ -47,6 +49,7 @@ import { PaymentFailedBanner } from './PaymentFailedBanner';
 import { useQuickAsk } from './QuickAskContext';
 import { useCatalogShortcut, useShortcutScope } from '@alga-psa/ui/keyboard-shortcuts';
 import { useActionPolling } from '@alga-psa/ui/hooks';
+import StopwatchHeaderIndicator from './StopwatchHeaderIndicator';
 
 export const QUICK_CREATE_OPEN_EVENT = 'alga:quick-create:open';
 
@@ -308,44 +311,67 @@ const RESOURCE_LINKS = [
   },
 ] as const;
 
-const ResourcesMenu: React.FC<{ t: HeaderTranslator }> = ({ t }) => (
-  <DropdownMenu>
-    <DropdownMenuTrigger asChild>
-      <Button
-        id="header-resources-menu-trigger"
-        variant="ghost"
-        size="icon"
-        aria-label={t('header.resources.ariaLabel', { defaultValue: 'Resources and help' })}
-        className="h-9 w-9"
-      >
-        <HelpCircle className="h-5 w-5" />
-      </Button>
-    </DropdownMenuTrigger>
-    <DropdownMenuContent align="end" className="min-w-[220px]">
-      <div className="px-3 py-2">
-        <p className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
-          {t('header.resources.title', { defaultValue: 'Resources' })}
-        </p>
-      </div>
-      <DropdownMenuSeparator />
-      {RESOURCE_LINKS.map((link) => (
-        <DropdownMenuItem key={link.id} asChild>
-          <a
-            id={`${link.id}-menu-item`}
-            href={link.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => analytics.capture('ui.resources_menu.select', { target: link.id })}
+const ResourcesMenu: React.FC<{ t: HeaderTranslator; userEmail?: string }> = ({ t, userEmail }) => {
+  const [supportDialogOpen, setSupportDialogOpen] = useState<boolean>(false);
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            id="header-resources-menu-trigger"
+            variant="ghost"
+            size="icon"
+            aria-label={t('header.resources.ariaLabel', { defaultValue: 'Resources and help' })}
+            className="h-9 w-9"
           >
-            <link.icon className="mr-2 h-4 w-4" />
-            {t(link.labelKey, { defaultValue: link.labelDefault })}
-            <ExternalLink className="ml-2 h-3 w-3 opacity-60" />
-          </a>
-        </DropdownMenuItem>
-      ))}
-    </DropdownMenuContent>
-  </DropdownMenu>
-);
+            <HelpCircle className="h-5 w-5" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-[220px]">
+          <div className="px-3 py-2">
+            <p className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
+              {t('header.resources.title', { defaultValue: 'Resources' })}
+            </p>
+          </div>
+          <DropdownMenuSeparator />
+          {RESOURCE_LINKS.map((link) => (
+            <DropdownMenuItem key={link.id} asChild>
+              <a
+                id={`${link.id}-menu-item`}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => analytics.capture('ui.resources_menu.select', { target: link.id })}
+              >
+                <link.icon className="mr-2 h-4 w-4" />
+                {t(link.labelKey, { defaultValue: link.labelDefault })}
+                <ExternalLink className="ml-2 h-3 w-3 opacity-60" />
+              </a>
+            </DropdownMenuItem>
+          ))}
+          <DropdownMenuItem
+            id="resources-submit-ticket-menu-item"
+            onSelect={() => {
+              analytics.capture('ui.resources_menu.select', { target: 'resources-submit-ticket' });
+              setSupportDialogOpen(true);
+            }}
+          >
+            <Send className="mr-2 h-4 w-4" />
+            {t('header.resources.submitTicket', { defaultValue: 'Submit a ticket to Nine Minds' })}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <VendorSupportDialog
+        isOpen={supportDialogOpen}
+        onClose={() => setSupportDialogOpen(false)}
+        userEmail={userEmail}
+        t={t}
+      />
+    </>
+  );
+};
 
 // NotificationMenu component removed - replaced with NotificationBell
 
@@ -577,7 +603,7 @@ export default function Header({
           </button>
         ) : null}
         <QuickCreateMenu t={t} />
-        <ResourcesMenu t={t} />
+        <ResourcesMenu t={t} userEmail={userData?.email} />
         <ThemeToggle
           labels={{
             ariaLabel: t('header.themeToggle.ariaLabel', { defaultValue: 'Theme toggle' }),
@@ -587,6 +613,7 @@ export default function Header({
             selected: t('header.themeToggle.selected', { defaultValue: 'Selected' }),
           }}
         />
+        <StopwatchHeaderIndicator />
         <NotificationBell />
         <JobActivityIndicator t={t} />
         <DropdownMenu>

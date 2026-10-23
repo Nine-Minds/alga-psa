@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import { BaseDomainEventPayloadSchema, changesSchema, updatedFieldsSchema, uuidSchema } from './commonEventPayloadSchemas';
+import { BaseDomainEventPayloadSchema, changesSchema, updatedFieldsSchema, uuidSchema, entityIdSchema } from './commonEventPayloadSchemas';
 
 const assetIdSchema = uuidSchema('Asset ID');
-const clientIdSchema = uuidSchema('Client ID');
-const userIdSchema = uuidSchema('User ID');
+const clientIdSchema = entityIdSchema('Client ID', 'client');
+const userIdSchema = entityIdSchema('User ID', 'user');
 const fileIdSchema = uuidSchema('File ID');
 
 export const assetCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({

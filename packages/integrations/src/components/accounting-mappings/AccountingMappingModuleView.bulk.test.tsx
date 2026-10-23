@@ -7,6 +7,7 @@ import '@testing-library/jest-dom';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AccountingMappingModuleView } from './AccountingMappingModuleView';
+import { isManualEntryModule } from './AccountingMappingBulkGrid';
 import type { AccountingMappingModule } from './types';
 
 const loadMock = vi.fn();
@@ -23,6 +24,7 @@ const externalTarget = {
   kindForMapping: (m: any) => (m.metadata?.xeroTargetKind === 'account' ? 'account' : 'item'),
   optionIdForMapping: (m: any) =>
     `${m.metadata?.xeroTargetKind === 'account' ? 'account' : 'item'}:${m.external_entity_id}`,
+  isExclusiveKind: (kindId: string) => kindId === 'item',
   invalidNotice: 'invalid'
 };
 
@@ -318,5 +320,272 @@ describe('AccountingMappingModuleView bulk grid', () => {
     const error = await screen.findByTestId(`${P}-error-svc-host`);
     expect(error).toHaveTextContent(message);
     expect(error).toHaveAttribute('title', message);
+  });
+
+  describe('targets already held by an existing mapping', () => {
+    const twinLoad = (mappedId: string | null = 'svc-pbi-1', extra: any[] = []) => ({
+      mappings: mappedId
+        ? [
+            {
+              id: 'm-pbi',
+              alga_entity_id: mappedId,
+              external_entity_id: 'PBI',
+              metadata: { xeroTargetKind: 'item', externalDisplayName: 'Power BI Pro' }
+            }
+          ]
+        : [],
+      algaEntities: [
+        { id: 'svc-pbi-1', name: 'Power BI Pro', baseName: 'Power BI Pro' },
+        { id: 'svc-pbi-2', name: 'Power BI Pro', baseName: 'Power BI Pro' },
+        { id: 'svc-host', name: 'Hosting', baseName: 'Hosting' },
+        ...extra
+      ],
+      externalEntities: [item('PBI', 'Power BI Pro'), item('PBIA', 'Power BI Pro Annual'), item('HOST', 'Hosting')]
+    });
+
+    it('gives an unmapped twin no suggestion but keeps the taken item pickable', async () => {
+      loadMock.mockResolvedValue(twinLoad());
+      await openBulk();
+      expect(screen.queryByTestId(`${P}-suggested-svc-pbi-2`)).not.toBeInTheDocument();
+      expect(screen.queryByTestId(`${P}-possible-svc-pbi-2`)).not.toBeInTheDocument();
+      expect(el(`${P}-select-svc-pbi-2`).checked).toBe(false);
+      expect(screen.getByTestId(`${P}-count`)).toHaveTextContent('1');
+      // Picker is empty for the twin, and the taken item is still selectable.
+      expect(screen.getAllByText('Select Xero Item or Account...')).toHaveLength(1);
+      fireEvent.click(screen.getByText('Select Xero Item or Account...').closest('button')!);
+      expect(await screen.findByText('Item · Power BI Pro (PBI)')).toBeInTheDocument();
+    });
+
+    const salesLoad = (heldKind: 'account' | 'item' | null, heldCode = '200') => ({
+      mappings: [
+        {
+          id: 'm-1',
+          alga_entity_id: 'svc-sales-1',
+          external_entity_id: heldCode,
+          metadata: heldKind ? { xeroTargetKind: heldKind } : {}
+        }
+      ],
+      algaEntities: [
+        { id: 'svc-sales-1', name: 'Sales', baseName: 'Sales' },
+        { id: 'svc-sales-2', name: 'Sales', baseName: 'Sales' }
+      ],
+      externalEntities: [
+        { id: 'account:200', name: 'Revenue account · Sales (200)', kind: 'account', code: '200', baseName: 'Sales' }
+      ]
+    });
+
+    it('still suggests and pre-ticks a shared account for the twin of a service holding it', async () => {
+      loadMock.mockResolvedValue(salesLoad('account'));
+      await openBulk();
+      expect(screen.getByTestId(`${P}-suggested-svc-sales-2`)).toBeInTheDocument();
+      expect(el(`${P}-select-svc-sales-2`).checked).toBe(true);
+    });
+
+    it('a held account:200 does not block an item:200 suggestion', async () => {
+      loadMock.mockResolvedValue({
+        ...salesLoad('account'),
+        algaEntities: [
+          { id: 'svc-sales-1', name: 'Sales', baseName: 'Sales' },
+          { id: 'svc-item', name: 'Item two hundred', baseName: 'Item two hundred' }
+        ],
+        externalEntities: [item('200', 'Item two hundred')]
+      });
+      await openBulk();
+      expect(screen.getByTestId(`${P}-suggested-svc-item`)).toBeInTheDocument();
+    });
+
+    it('a held item still blocks the same item for another service', async () => {
+      loadMock.mockResolvedValue({
+        ...salesLoad('item', '200'),
+        externalEntities: [item('200', 'Sales')]
+      });
+      await openBulk();
+      expect(screen.queryByTestId(`${P}-suggested-svc-sales-2`)).not.toBeInTheDocument();
+      expect(el(`${P}-select-svc-sales-2`).checked).toBe(false);
+    });
+
+    it('a legacy kind-less mapping holds the matching item', async () => {
+      loadMock.mockResolvedValue({ ...salesLoad(null), externalEntities: [item('200', 'Sales')] });
+      await openBulk();
+      expect(screen.queryByTestId(`${P}-suggested-svc-sales-2`)).not.toBeInTheDocument();
+    });
+
+    it('without a target config, a held external id excludes that option', async () => {
+      loadMock.mockResolvedValue({
+        mappings: [{ id: 'm-1', alga_entity_id: 'svc-sales-1', external_entity_id: 'Q1', metadata: {} }],
+        algaEntities: [
+          { id: 'svc-sales-1', name: 'Sales', baseName: 'Sales' },
+          { id: 'svc-sales-2', name: 'Sales', baseName: 'Sales' }
+        ],
+        externalEntities: [{ id: 'Q1', name: 'Sales' }]
+      });
+      render(
+        <AccountingMappingModuleView
+          module={buildModule({ externalTarget: undefined })}
+          context={context}
+        />
+      );
+      fireEvent.click(await screen.findByText('Bulk map'));
+      await screen.findByTestId(`${P}-grid`);
+      expect(screen.queryByTestId(`${P}-suggested-svc-sales-2`)).not.toBeInTheDocument();
+    });
+
+    it('drops suggestions for targets that were just saved, after the reload', async () => {
+      loadMock.mockResolvedValue(twinLoad(null));
+      createManyMock.mockImplementation(async (_ctx: unknown, inputs: any[]) =>
+        inputs.map((i) => ({ algaEntityId: i.algaEntityId, ok: true }))
+      );
+      await openBulk();
+      // Neither twin is suggested (same-batch guard); the untouched third row is.
+      expect(screen.queryByTestId(`${P}-suggested-svc-pbi-2`)).not.toBeInTheDocument();
+      expect(screen.getByTestId(`${P}-suggested-svc-host`)).toBeInTheDocument();
+      // Reload reports twin 1 mapped to PBI and Hosting's target HOST as held.
+      loadMock.mockResolvedValue({
+        ...twinLoad('svc-pbi-1'),
+        mappings: [
+          { id: 'm-1', alga_entity_id: 'svc-pbi-1', external_entity_id: 'PBI', metadata: { xeroTargetKind: 'item' } },
+          { id: 'm-2', alga_entity_id: 'svc-other', external_entity_id: 'HOST', metadata: { xeroTargetKind: 'item' } }
+        ]
+      });
+      fireEvent.click(saveAll());
+      await waitFor(() => expect(createManyMock).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(screen.queryByTestId(`${P}-suggested-svc-host`)).not.toBeInTheDocument());
+      expect(screen.queryByTestId(`${P}-suggested-svc-pbi-2`)).not.toBeInTheDocument();
+      expect(el(`${P}-select-svc-host`).checked).toBe(false);
+    });
+  });
+});
+
+describe('AccountingMappingModuleView bulk grid without a provider catalog', () => {
+  // QuickBooks CSV/Desktop and Xero CSV have no catalog to pick from, like the
+  // single-mapping dialog's free-text fallback.
+  const MP = 'qbcsv-service-mappings-bulk';
+  const manualModule = () =>
+    buildModule({
+      id: 'qbcsv-service-mappings',
+      adapterType: 'quickbooks_csv',
+      externalTarget: undefined,
+      manualExternalEntry: true,
+      labels: {
+        tab: 'Items / Services',
+        addButton: 'Add Service Mapping',
+        algaColumn: 'Alga Service',
+        externalColumn: 'QuickBooks Item',
+        dialog: { addTitle: 'Add', editTitle: 'Edit', algaField: 'Alga Service', externalField: 'QuickBooks Item' },
+        deleteConfirmation: { title: 'Delete', message: () => 'Delete?' }
+      }
+    } as Partial<AccountingMappingModule>);
+
+  beforeAll(() => {
+    if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {};
+  });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    loadMock.mockResolvedValue({ ...loadResult([]), externalEntities: [] });
+  });
+  afterEach(() => cleanup());
+
+  async function openManualBulk() {
+    render(<AccountingMappingModuleView module={manualModule()} context={{ realmId: null }} />);
+    fireEvent.click(await screen.findByText('Bulk map'));
+    await screen.findByTestId(`${MP}-grid`);
+  }
+
+  it('renders a writable text field per row instead of an empty picker', async () => {
+    await openManualBulk();
+    const input = el(`${MP}-external-svc-host`);
+    expect(input.tagName).toBe('INPUT');
+    expect(input).toHaveAttribute('placeholder', 'Enter QuickBooks Item...');
+    expect(screen.getByText('Enter the identifier exactly as it appears in your accounting system.')).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: 'Web Hosting' } });
+    expect(el(`${MP}-external-svc-host`).value).toBe('Web Hosting');
+    expect(el(`${MP}-select-svc-host`)).toBeChecked();
+    expect(screen.getByTestId(`${MP}-count`)).toHaveTextContent('1 to save');
+  });
+
+  it('keeps the field focused while a value is typed into it', async () => {
+    await openManualBulk();
+    const input = el(`${MP}-external-svc-host`);
+    input.focus();
+
+    // The first character gives the cell text it did not have, which used to
+    // rebuild the cell and drop the caret after one keystroke.
+    fireEvent.change(input, { target: { value: 'W' } });
+    expect(el(`${MP}-external-svc-host`)).toBe(input);
+    expect(document.activeElement).toBe(input);
+
+    fireEvent.change(input, { target: { value: 'Web Hosting' } });
+    expect(el(`${MP}-external-svc-host`).value).toBe('Web Hosting');
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('greys the field out and drops it from the count when the row is ignored', async () => {
+    await openManualBulk();
+    fireEvent.change(el(`${MP}-external-svc-host`), { target: { value: 'Web Hosting' } });
+    expect(screen.getByTestId(`${MP}-count`)).toHaveTextContent('1 to save');
+
+    fireEvent.click(el(`${MP}-ignore-svc-host`));
+    expect(el(`${MP}-external-svc-host`)).toBeDisabled();
+    expect(el(`${MP}-external-svc-host`).className).toContain('disabled:opacity-50');
+    expect(el(`${MP}-select-svc-host`)).not.toBeChecked();
+    expect(screen.getByTestId(`${MP}-count`)).toHaveTextContent('0 to save');
+    expect(screen.getByTestId(`${MP}-status-svc-host`)).toHaveTextContent('Ignored');
+  });
+
+  it('treats a whitespace-only value as blank', async () => {
+    await openManualBulk();
+    fireEvent.change(el(`${MP}-external-svc-host`), { target: { value: '   ' } });
+    expect(el(`${MP}-select-svc-host`)).not.toBeChecked();
+    expect(screen.getByTestId(`${MP}-count`)).toHaveTextContent('0 to save');
+    expect(screen.getByTestId(`${MP}-status-svc-host`)).toHaveTextContent('—');
+  });
+
+  it('saves the typed values, trimmed, and skips blank or ignored rows', async () => {
+    createManyMock.mockImplementation(async (_ctx: unknown, inputs: any[]) =>
+      inputs.map((i) => ({ algaEntityId: i.algaEntityId, ok: true }))
+    );
+    await openManualBulk();
+    fireEvent.change(el(`${MP}-external-svc-host`), { target: { value: '  Web Hosting  ' } });
+    fireEvent.change(el(`${MP}-external-svc-backup`), { target: { value: 'Managed Backup' } });
+    fireEvent.change(el(`${MP}-external-svc-basic`), { target: { value: '   ' } });
+    fireEvent.click(el(`${MP}-ignore-svc-backup`));
+
+    await act(async () => {
+      fireEvent.click(saveAll());
+    });
+    await waitFor(() => expect(createManyMock).toHaveBeenCalledTimes(1));
+    expect(createManyMock.mock.calls[0][1]).toEqual([
+      expect.objectContaining({ algaEntityId: 'svc-host', externalEntityId: 'Web Hosting' })
+    ]);
+  });
+});
+
+describe('bulk grid manual-entry opt-in', () => {
+  beforeAll(() => {
+    if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {};
+  });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    loadMock.mockResolvedValue({ ...loadResult([]), externalEntities: [] });
+  });
+  afterEach(() => cleanup());
+
+  it('only file-based modules that opt in type the target', () => {
+    expect(isManualEntryModule({ manualExternalEntry: true })).toBe(true);
+    expect(isManualEntryModule({})).toBe(false);
+    expect(isManualEntryModule({ manualExternalEntry: false })).toBe(false);
+    // A multi-catalog target kind always needs a catalog pick.
+    expect(isManualEntryModule({ manualExternalEntry: true, externalTarget: {} as never })).toBe(false);
+  });
+
+  it('keeps the catalog picker when a catalog-backed module returns an empty catalog', async () => {
+    const qboLike = buildModule({ id: 'qbo-live-service-mappings', adapterType: 'quickbooks_online', externalTarget: undefined } as Partial<AccountingMappingModule>);
+    render(<AccountingMappingModuleView module={qboLike} context={context} />);
+    fireEvent.click(await screen.findByText('Bulk map'));
+    await screen.findByTestId('qbo-live-service-mappings-bulk-grid');
+
+    expect(document.querySelector('input#qbo-live-service-mappings-bulk-external-svc-host')).toBeNull();
+    expect(screen.queryByText('Enter the identifier exactly as it appears in your accounting system.')).toBeNull();
   });
 });

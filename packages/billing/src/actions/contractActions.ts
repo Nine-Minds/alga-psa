@@ -1,6 +1,9 @@
 // @alga-psa/billing/actions.ts
 'use server'
 
+import { randomUUID } from 'node:crypto';
+
+import { resolveContractLineDisplayKinds, resolveTemplateLineDisplayKinds } from '../services/prepaidBlockConfigService';
 import { resolveEffectiveRecurringUnitPricingInTransaction } from '../lib/billing/seatRevisions';
 import { resolveUsageMeasurementRevision } from '../lib/billing/usageMeasurementTransitions';
 
@@ -16,11 +19,14 @@ import {
   IContractTemplate,
   IContractTemplateWithLines,
 } from '@alga-psa/types';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { deriveClientContractStatus, getTenantLocalToday } from '@alga-psa/shared/billingClients';
+import { isContractLineTimingNotAllowedError } from '@alga-psa/shared/billingClients/contractLineTimingRule';
+import { validateDiscountInput, type DiscountAuthoringInput } from '../lib/billing/discountAuthoring';
 import { getContractMonthlyFixedValuesByContract } from '@alga-psa/shared/billingClients/contractMonthlyValue';
 import { resolveMemberRate, type ServicePriceRateRow } from '@alga-psa/shared/billingClients/resolveFixedLineRate';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent, publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildContractRecordCreatedPayload, buildContractRecordUpdatedPayload } from '@alga-psa/workflow-streams';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 
 import { Knex } from 'knex';
@@ -38,7 +44,9 @@ import {
   updateContractLineRate as repoUpdateContractLineRate,
   DetailedContractLine,
 } from '../repositories/contractLineRepository';
+import { newSupportReference } from '../lib/supportReference';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
+import { syncPrepaidBlockIssuancesForContractLine } from '../services/prepaidBlockIssuanceSync';
 
 type TenantScopedKnex = Knex | Knex.Transaction;
 type ContractActionError = ActionMessageError | ActionPermissionError;
@@ -51,6 +59,10 @@ class ContractActionDomainError extends Error {
 }
 
 function contractActionErrorFrom(error: unknown): ContractActionError | null {
+  if (isContractLineTimingNotAllowedError(error)) {
+    return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
+  }
+
   if (error instanceof ContractActionDomainError) {
     if (error.message.startsWith('Permission denied:')) {
       return permissionError(error.message);
@@ -147,6 +159,71 @@ const assertNoSystemManagedIdentityMutation = (
     );
   }
 };
+
+async function validateTemplateDefaultDiscounts(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  templateId: string,
+  templateMetadata: unknown,
+): Promise<void> {
+  const metadata = typeof templateMetadata === 'object' && templateMetadata !== null
+    ? templateMetadata as Record<string, unknown> : {};
+  const definitions = metadata.default_discounts ?? [];
+  if (!Array.isArray(definitions)) throw new ContractActionDomainError('Default discounts must be a list.');
+  const db = tenantDb(trx, tenant);
+  const lines = await db.table('contract_template_lines').where({ template_id: templateId }).select('template_line_id');
+  const lineIds = new Set(lines.map((line: { template_line_id: string }) => String(line.template_line_id)));
+  const serviceRows = lineIds.size ? await db.table('contract_template_line_services')
+    .whereIn('template_line_id', [...lineIds]).select('service_id') : [];
+  const serviceIds = new Set(serviceRows.map((row: { service_id: string }) => String(row.service_id)));
+  const sourceKeys = new Set<string>();
+  for (const [index, raw] of definitions.entries()) {
+    if (!raw || typeof raw !== 'object') throw new ContractActionDomainError(`Default discount ${index + 1} is invalid.`);
+    const term = raw as Record<string, unknown>;
+    const name = typeof term.discount_name === 'string' ? term.discount_name.trim() : '';
+    const type = term.discount_type;
+    const value = Number(term.value);
+    const scope = term.scope ?? 'contract';
+    if (typeof term.template_discount_key === 'string') {
+      if (!term.template_discount_key.trim() || term.template_discount_key.length > 200 || sourceKeys.has(term.template_discount_key)) {
+        throw new ContractActionDomainError(`Default discount ${index + 1} has a duplicate or invalid template identity. Remove and re-add that term.`);
+      }
+      sourceKeys.add(term.template_discount_key);
+    }
+    if (typeof term.is_active !== 'undefined' && typeof term.is_active !== 'boolean') {
+      throw new ContractActionDomainError(`Default discount “${name || index + 1}” needs an active/inactive value.`);
+    }
+    if (term.priority != null && (typeof term.priority !== 'number' || !Number.isInteger(term.priority))) {
+      throw new ContractActionDomainError(`Default discount “${name || index + 1}” priority must be a whole number.`);
+    }
+    const normalizedType = type === 'fixed' || type === 'percentage' ? type : null;
+    const normalizedScope = scope === 'contract' || scope === 'line' || scope === 'service' ? scope : null;
+    if (!normalizedType || !normalizedScope) throw new ContractActionDomainError(`Default discount ${index + 1} has an unsupported type or scope.`);
+    const validatedInput: DiscountAuthoringInput = {
+      discount_name: name,
+      discount_type: normalizedType,
+      value,
+      start_date: typeof term.start_date === 'string' ? term.start_date : '',
+      end_date: typeof term.end_date === 'string' ? term.end_date : null,
+      scope: normalizedScope,
+      contract_line_id: typeof term.contract_line_id === 'string' ? term.contract_line_id : null,
+      scope_service_id: typeof term.scope_service_id === 'string' ? term.scope_service_id : null,
+      priority: typeof term.priority === 'number' ? term.priority : null,
+      is_active: typeof term.is_active === 'boolean' ? term.is_active : true,
+    };
+    const validationError = validateDiscountInput(validatedInput);
+    if (validationError) throw new ContractActionDomainError(`Default discount ${index + 1}: ${validationError}`);
+    if (value <= 0 || (normalizedType === 'fixed' && Number(value.toFixed(2)) !== value)) {
+      throw new ContractActionDomainError(`Default discount “${name}” must be positive; fixed amounts must use no more than two decimal places.`);
+    }
+    if (scope === 'line' && (typeof term.contract_line_id !== 'string' || !lineIds.has(term.contract_line_id))) {
+      throw new ContractActionDomainError(`Choose a line from this template for default discount “${name}”.`);
+    }
+    if (scope === 'service' && (typeof term.scope_service_id !== 'string' || !serviceIds.has(term.scope_service_id))) {
+      throw new ContractActionDomainError(`Choose a service used by this template for default discount “${name}”.`);
+    }
+  }
+}
 
 
 
@@ -356,11 +433,13 @@ export const addContractLine = withAuth(async (
 
     return knex.transaction((trx: Knex.Transaction) =>
       repoAddContractLine(trx, tenant, contractId, contractLineId, customRate).then(async (mapping) => {
+        // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
         await syncRecurringServicePeriodsForContractLine(trx, {
           tenant,
           contractLineId: mapping.contract_line_id,
           sourceRunPrefix: 'contract_add_line',
         });
+        await syncPrepaidBlockIssuancesForContractLine(trx, tenant, mapping.contract_line_id);
         return mapping;
       })
     );
@@ -411,11 +490,13 @@ export const updateContractLineAssociation = withAuth(async (
 
     const updated = await repoUpdateContractLine(knex, tenant, contractId, contractLineId, updateData);
     await knex.transaction(async (trx) => {
+      // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
       await syncRecurringServicePeriodsForContractLine(trx, {
         tenant,
         contractLineId,
         sourceRunPrefix: 'contract_line_association_update',
       });
+      await syncPrepaidBlockIssuancesForContractLine(trx, tenant, contractLineId);
     });
     return updated;
   } catch (error) {
@@ -434,10 +515,15 @@ export const updateContractLineRate = withAuth(async (
   contractId: string,
   contractLineId: string,
   rate: number,
-  billingTiming?: 'arrears' | 'advance'
+  billingTiming?: 'arrears' | 'advance',
+  invoiceLineDescription?: string | null
 ): Promise<void | ContractActionError> => {
   try {
     const { knex } = await createTenantKnex();
+
+    if (rate !== null && rate !== undefined && (!Number.isFinite(Number(rate)) || Number(rate) < 0)) {
+      return actionError('Rate must be zero or greater.');
+    }
 
     const canUpdate = await hasPermission(user, 'billing', 'update');
     if (!canUpdate) {
@@ -445,12 +531,14 @@ export const updateContractLineRate = withAuth(async (
     }
 
     await knex.transaction(async (trx) => {
-      await repoUpdateContractLineRate(trx, tenant, contractId, contractLineId, rate, billingTiming);
+      await repoUpdateContractLineRate(trx, tenant, contractId, contractLineId, rate, billingTiming, invoiceLineDescription);
+      // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
       await syncRecurringServicePeriodsForContractLine(trx, {
         tenant,
         contractLineId,
         sourceRunPrefix: 'contract_line_rate_update',
       });
+      await syncPrepaidBlockIssuancesForContractLine(trx, tenant, contractLineId);
     });
   } catch (error) {
     console.error(`Error updating contract line ${contractLineId} rate for contract ${contractId}:`, error);
@@ -497,12 +585,13 @@ export const createContract = withAuth(async (
     const occurredAt = created.created_at ?? new Date().toISOString();
     await publishWorkflowEvent({
       eventType: 'CONTRACT_CREATED',
-      payload: {
+      payload: buildContractRecordCreatedPayload({
         contractId: created.contract_id,
+        ownerClientId: created.owner_client_id,
         userId: user.user_id,
+        occurredAt: new Date(occurredAt).toISOString(),
         status: created.status,
-        timestamp: occurredAt,
-      },
+      }),
       ctx: {
         tenantId: tenant,
         occurredAt,
@@ -558,7 +647,18 @@ export const updateContract = withAuth(async (
         templateUpdates.template_status = updateData.status as IContractTemplate['template_status'];
       }
       if (updateData.template_metadata !== undefined) {
-        templateUpdates.template_metadata = updateData.template_metadata ?? null;
+        await validateTemplateDefaultDiscounts(knex, tenant, contractId, updateData.template_metadata);
+        const metadata = updateData.template_metadata && typeof updateData.template_metadata === 'object'
+          ? updateData.template_metadata as Record<string, unknown> : null;
+        const terms = Array.isArray(metadata?.default_discounts) ? metadata.default_discounts : null;
+        templateUpdates.template_metadata = metadata && terms
+          ? { ...metadata, default_discounts: terms.map((term) => ({
+              ...(term as Record<string, unknown>),
+              template_discount_key: typeof (term as Record<string, unknown>).template_discount_key === 'string'
+                ? (term as Record<string, unknown>).template_discount_key
+                : randomUUID(),
+            })) }
+          : updateData.template_metadata ?? null;
       }
 
       if (Object.keys(templateUpdates).length === 0) {
@@ -613,13 +713,16 @@ export const updateContract = withAuth(async (
     const occurredAt = updated.updated_at ?? new Date().toISOString();
     await publishWorkflowEvent({
       eventType: 'CONTRACT_UPDATED',
-      payload: {
+      payload: buildContractRecordUpdatedPayload({
         contractId,
+        ownerClientId: updated.owner_client_id,
         userId: user.user_id,
+        occurredAt: new Date(occurredAt).toISOString(),
         status: updated.status,
-        changes: safeUpdateData,
-        timestamp: occurredAt,
-      },
+        patch: safeUpdateData,
+        before: currentContract as unknown as Record<string, unknown>,
+        after: updated as unknown as Record<string, unknown>,
+      }),
       ctx: {
         tenantId: tenant,
         occurredAt,
@@ -671,20 +774,27 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
       return;
     }
 
-    const currentContract = await Contract.getById(knex, tenant, contractId);
-    if (currentContract?.is_system_managed_default === true) {
-      throw new ContractActionDomainError('System-managed default contracts cannot be deleted manually');
-    }
+    // LEVERAGE: friction contract-delete-owns-transaction — Contract.delete issues ~15
+    // statements but leaves the transaction to its caller, so every caller must remember
+    // to wrap it or a mid-way failure orphans the contract header.
+    // Everything commits together or rolls back; events are published only after commit.
+    const clientContracts = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const currentContract = await Contract.getById(trx, tenant, contractId);
+      if (currentContract?.is_system_managed_default === true) {
+        throw new ContractActionDomainError('System-managed default contracts cannot be deleted manually');
+      }
 
-    const clientContracts = await tenantScopedTable(knex, tenant, 'client_contracts')
-      .where({ contract_id: contractId })
-      .select('client_contract_id', 'client_id');
+      const rows = await tenantScopedTable(trx, tenant, 'client_contracts')
+        .where({ contract_id: contractId })
+        .select('client_contract_id', 'client_id');
 
-    await Contract.delete(knex, tenant, contractId);
+      await Contract.delete(trx, tenant, contractId);
+      return rows;
+    });
     const occurredAt = new Date().toISOString();
 
     for (const clientContract of clientContracts) {
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'CLIENT_CONTRACT_DELETED',
         payload: {
           clientContractId: clientContract.client_contract_id,
@@ -702,7 +812,7 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
       });
     }
 
-    await publishWorkflowEvent({
+    await publishNonCatalogWorkflowEvent({
       eventType: 'CONTRACT_DELETED',
       payload: {
         contractId,
@@ -717,12 +827,20 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
       idempotencyKey: `contract_deleted:${contractId}:${occurredAt}`,
     });
   } catch (error) {
-    console.error('Error deleting contract:', error);
     const expected = contractActionErrorFrom(error);
     if (expected) {
+      console.error('Error deleting contract:', error);
       return expected;
     }
-    throw error;
+    // Next masks messages thrown from server actions in production, which left the
+    // operator with no reason. Return a keyed generic error; the ref ties it to the log.
+    const ref = newSupportReference();
+    console.error('Error deleting contract:', { ref, contractId }, error);
+    return actionError(
+      `Something went wrong deleting this contract. Quote reference ${ref} when contacting support.`,
+      'msp/contracts:errors.contract.deleteFailed',
+      { ref },
+    );
   }
 });
 
@@ -804,8 +922,12 @@ export const getContractSummary = withAuth(async (user, { tenant }, contractId: 
     }));
 
     const totalAssignments = assignments.length;
+    const tenantToday = await getTenantLocalToday(knex, tenant);
+    // Summary "active clients" counts only assignments billing now: 'scheduled' (future start) is
+    // neither active nor draft, so it is not counted until its start date.
     const activeAssignments = assignments.filter((assignment) =>
       deriveClientContractStatus({
+        now: tenantToday,
         isActive: Boolean(assignment.is_active),
         startDate: assignment.start_date,
         endDate: assignment.end_date,
@@ -897,6 +1019,7 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
       .select(selection)
       .orderBy('cc.start_date', 'asc');
 
+    const tenantToday = await getTenantLocalToday(knex, tenant);
     return rows.map((row: any) => {
       const renewalMode =
         row.renewal_mode === 'none' || row.renewal_mode === 'manual' || row.renewal_mode === 'auto'
@@ -940,6 +1063,7 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
         billing_profile_id: row.billing_profile_id ?? null,
         billing_profile_name: row.billing_profile_name ?? null,
         assignment_status: deriveClientContractStatus({
+          now: tenantToday,
           isActive: Boolean(row.is_active),
           startDate: row.start_date,
           endDate: row.end_date,
@@ -986,6 +1110,8 @@ export interface IContractLineOverview {
   contract_line_id: string;
   contract_line_name: string;
   contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
+  /** Derived label kind ('PrepaidBlock' for Hourly lines with a block config); the stored type is untouched. */
+  display_kind?: string;
   billing_frequency: string;
   base_rate: number | null;  // For fixed lines - in cents
   display_order: number;
@@ -1366,6 +1492,16 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           })
         });
       }
+    }
+
+    // Derived label kind so the overview labels Prepaid Block lines correctly.
+    const overviewDisplayKinds = await (isTemplate ? resolveTemplateLineDisplayKinds : resolveContractLineDisplayKinds)(
+      knex,
+      tenant,
+      contractLines.map((line) => ({ contract_line_id: line.contract_line_id, contract_line_type: line.contract_line_type })),
+    );
+    for (const line of contractLines) {
+      line.display_kind = overviewDisplayKinds.get(line.contract_line_id) ?? line.contract_line_type;
     }
 
     // Calculate totals

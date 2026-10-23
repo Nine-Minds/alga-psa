@@ -1,3 +1,4 @@
+import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 type ScheduleEntryLike = {
   entry_id: string;
   work_item_type?: string | null;
@@ -64,14 +65,14 @@ export function buildAppointmentCreatedPayload(params: {
   timezone: string;
   createdByUserId?: string;
   location?: string;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'APPOINTMENT_CREATED'> {
   const startAt = toIsoString(params.entry.scheduled_start);
   const endAt = toIsoString(params.entry.scheduled_end);
   if (!startAt || !endAt) throw new Error('Schedule entry is missing scheduled_start/scheduled_end');
 
   const assigneeId = getSingleUserAssigneeId(params.entry);
 
-  return {
+  return builtWorkflowPayload('APPOINTMENT_CREATED', {
     appointmentId: params.entry.entry_id,
     ...(params.ticketId ? { ticketId: params.ticketId } : {}),
     startAt,
@@ -81,7 +82,7 @@ export function buildAppointmentCreatedPayload(params: {
     ...(params.createdByUserId ? { createdByUserId: params.createdByUserId } : {}),
     ...(toIsoString(params.entry.created_at) ? { createdAt: toIsoString(params.entry.created_at) } : {}),
     ...(params.location ? { location: params.location } : {}),
-  };
+  });
 }
 
 export function buildAppointmentRescheduledPayload(params: {
@@ -89,7 +90,7 @@ export function buildAppointmentRescheduledPayload(params: {
   after: ScheduleEntryLike;
   ticketId?: string;
   timezone: string;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'APPOINTMENT_RESCHEDULED'> {
   const previousStartAt = toIsoString(params.before.scheduled_start);
   const previousEndAt = toIsoString(params.before.scheduled_end);
   const newStartAt = toIsoString(params.after.scheduled_start);
@@ -98,7 +99,7 @@ export function buildAppointmentRescheduledPayload(params: {
     throw new Error('Schedule entry is missing scheduled_start/scheduled_end');
   }
 
-  return {
+  return builtWorkflowPayload('APPOINTMENT_RESCHEDULED', {
     appointmentId: params.after.entry_id,
     ...(params.ticketId ? { ticketId: params.ticketId } : {}),
     previousStartAt,
@@ -107,46 +108,46 @@ export function buildAppointmentRescheduledPayload(params: {
     newEndAt,
     timezone: params.timezone,
     rescheduledAt: new Date().toISOString(),
-  };
+  });
 }
 
 export function buildAppointmentCanceledPayload(params: {
   appointmentId: string;
   ticketId?: string;
   reason?: string;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'APPOINTMENT_CANCELED'> {
+  return builtWorkflowPayload('APPOINTMENT_CANCELED', {
     appointmentId: params.appointmentId,
     ...(params.ticketId ? { ticketId: params.ticketId } : {}),
     canceledAt: new Date().toISOString(),
     ...(params.reason ? { reason: params.reason } : {}),
-  };
+  });
 }
 
 export function buildAppointmentCompletedPayload(params: {
   appointmentId: string;
   ticketId?: string;
   outcome?: string;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'APPOINTMENT_COMPLETED'> {
+  return builtWorkflowPayload('APPOINTMENT_COMPLETED', {
     appointmentId: params.appointmentId,
     ...(params.ticketId ? { ticketId: params.ticketId } : {}),
     completedAt: new Date().toISOString(),
     ...(params.outcome ? { outcome: params.outcome } : {}),
-  };
+  });
 }
 
 export function buildAppointmentNoShowPayload(params: {
   appointmentId: string;
   ticketId?: string;
   party: 'customer' | 'agent';
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'APPOINTMENT_NO_SHOW'> {
+  return builtWorkflowPayload('APPOINTMENT_NO_SHOW', {
     appointmentId: params.appointmentId,
     ...(params.ticketId ? { ticketId: params.ticketId } : {}),
     markedAt: new Date().toISOString(),
     party: params.party,
-  };
+  });
 }
 
 export function buildAppointmentAssignedPayload(params: {
@@ -154,8 +155,8 @@ export function buildAppointmentAssignedPayload(params: {
   ticketId?: string;
   previousAssigneeId?: string;
   newAssigneeId: string;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'APPOINTMENT_ASSIGNED'> {
+  return builtWorkflowPayload('APPOINTMENT_ASSIGNED', {
     appointmentId: params.appointmentId,
     ...(params.ticketId ? { ticketId: params.ticketId } : {}),
     ...(params.previousAssigneeId
@@ -164,6 +165,6 @@ export function buildAppointmentAssignedPayload(params: {
     newAssigneeId: params.newAssigneeId,
     newAssigneeType: 'user',
     assignedAt: new Date().toISOString(),
-  };
+  });
 }
 

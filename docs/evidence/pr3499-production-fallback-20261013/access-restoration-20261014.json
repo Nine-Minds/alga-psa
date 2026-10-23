@@ -1,0 +1,62 @@
+{
+  "timestampUtc": "2026-10-14T02:14:22Z",
+  "status": "BLOCKED",
+  "attempts": {
+    "spaceNewTab": {
+      "startedUtc": "2026-10-14T02:13:44Z",
+      "command": "alga-dev space-new-tab --type=browser --projectId=b97eda7b-0e3f-4b09-be80-6b57f934d8a5 --pretty",
+      "resultUtc": "2026-10-14T02:13:54Z",
+      "error": "Connection timed out",
+      "browserCreated": false
+    },
+    "workflowOpenReview": {
+      "startedUtc": "2026-10-14T02:13:54Z",
+      "command": "alga-dev workflow-open-review --projectId=b97eda7b-0e3f-4b09-be80-6b57f934d8a5 --pretty",
+      "resultUtc": "2026-10-14T02:14:05Z",
+      "error": "Connection timed out",
+      "signedInAs": null,
+      "actualApplicationSessionVerified": false
+    },
+    "hostPing": {
+      "timestampUtc": "2026-10-14T02:14:05Z",
+      "result": "pong",
+      "hostname": "robert-X670E-Pro-RS"
+    }
+  },
+  "boundaryEvidence": {
+    "productionHealth": { "url": "http://feature-contract-invoices-automatic-adjustments-and-disc.localhost:23185/api/health", "http": 200, "body": { "status": "ok", "version": "1.0.0" } },
+    "natsMonitoringAtUtc": "2026-10-14T02:14:15Z",
+    "natsHubSubject": "wf.cli.hub",
+    "connectedAlgaDevClients": [
+      { "node": "3711034", "host": "robert-X670E-Pro-RS", "hubResponderSubscription": false },
+      { "node": "3711166", "host": "robert-X670E-Pro-RS", "hubResponderSubscription": false },
+      { "node": "1294661", "host": "robert-X670E-Pro-RS", "hubResponderSubscription": false },
+      { "node": "3130731", "host": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series", "hubResponderSubscription": false }
+    ],
+    "registeredViewer": {
+      "name": "Rober’s MacBook Pro",
+      "tailscaleIp": "100.70.145.1",
+      "online": false,
+      "lastSeenUtc": "2026-10-14T02:10:00.1Z",
+      "currentAddress": null
+    },
+    "x670ElectronIdeProcess": false,
+    "x670HostSupervisorProcess": true
+  },
+  "diagnosis": {
+    "responsibleBoundary": "IDE Electron main-process hub responder / viewer workstation connection, before browser creation and authentication",
+    "supportedResponderSource": "/home/robert/alga-dev/ghostty-pane-ide/src/main/cli/socket-server.ts (armHubCommandResponder starts wf.cli.hub subscriber)",
+    "requestProtocolSource": "/home/robert/alga-dev/ghostty-pane-ide/src/shared/state/hub-command-relay.ts (wf.cli.hub request; 8-second timeout)",
+    "interpretation": "Host ping and production are healthy. NATS is accepting host clients, but no connected IDE client subscribes to wf.cli.hub. The registered MacBook viewer peer is offline. The local X670 host has its service supervisor but no Electron IDE process, so restarting or replacing the production app would not repair this boundary."
+  },
+  "externalActionRequired": [
+    "The owner of Rober’s MacBook Pro must wake or power on the workstation and reconnect Tailscale until peer 100.70.145.1 reports Online=true.",
+    "The owner must open or restart the Ghostty Pane IDE application on that workstation and restore its shared Alga Dev/NATS connection. Confirm the IDE main-process log reports '[CLI Server] Shared hub command responder active' and the connected client subscribes to wf.cli.hub.",
+    "After the peer and responder are online, rerun fresh space-new-tab and workflow-open-review for project b97eda7b-0e3f-4b09-be80-6b57f934d8a5. Capture workflow-open-review signedInAs, then inspect /api/auth/session in that returned browser and confirm the actual account and intended role."
+  ],
+  "preservation": {
+    "applicationServerStartedOrRestarted": false,
+    "productionDataChanged": false,
+    "readiness": "BLOCKED"
+  }
+}

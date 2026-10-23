@@ -41,9 +41,6 @@ import { Temporal } from '@js-temporal/polyfill';
 import type { ISO8601String, IClientContractLine } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db'; // Assuming needed if trx doesn't carry tenant context reliably
 import { toPlainDate, toISODate, toCalendarDateString } from '@alga-psa/core';
-import {
-    buildClientCadencePostDropObligationRef,
-} from './postDropRecurringObligationIdentity';
 import { BucketUsageError } from './bucketUsageErrors';
 import {
     computeWeightedMinutes,
@@ -463,20 +460,17 @@ async function calculatePeriod(
         return null;
     }
 
-    const recurringObligation = clientPlan.cadence_owner === 'contract'
-        ? {
-            obligationType: 'contract_line' as const,
-            obligationId: clientPlan.contract_line_id,
-        }
-        : buildClientCadencePostDropObligationRef({
-            contractLineId: clientPlan.client_contract_line_id,
-            chargeFamily: 'bucket',
-        });
+    const recurringObligation = {
+        obligationId: clientPlan.cadence_owner === 'contract'
+            ? clientPlan.contract_line_id
+            : clientPlan.client_contract_line_id,
+        cadenceOwner: clientPlan.cadence_owner ?? 'client',
+    };
 
     const matchingRecurringServicePeriod = await db.table('recurring_service_periods')
         .where({
-            obligation_type: recurringObligation.obligationType,
             obligation_id: recurringObligation.obligationId,
+            cadence_owner: recurringObligation.cadenceOwner,
         })
         .whereNotNull('service_period_start')
         .whereNotNull('service_period_end')

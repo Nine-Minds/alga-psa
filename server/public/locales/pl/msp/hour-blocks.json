@@ -1,7 +1,7 @@
 {
   "section": {
     "title": "Pakiety godzin",
-    "description": "Jednorazowe przedpłacone pakiety godzin. Czas nieobjęty linią umowy jest pobierany z tych pakietów, począwszy od najwcześniej wygasającego.",
+    "description": "Jednorazowe przedpłacone pakiety godzin. Obejmują tylko czas, którego nie pokrywa żadna linia umowy. Pakiety wystawione przez linię umowy Przedpłacony pakiet są pobierane wyłącznie na podstawie czasu tej linii.",
     "availableBalance": "Dostępne: {{hours}} godz.",
     "noBlocks": "Brak pakietów godzin. Sprzedaj temu klientowi pakiet lub przyznaj godziny bezpłatnie.",
     "loadFailed": "Nie udało się załadować pakietów godzin. Spróbuj ponownie."
@@ -126,7 +126,8 @@
     "autoExpired": "Wygasł automatycznie",
     "voidedLabel": "Unieważniono",
     "purchaseReversed": "Zakup cofnięty (faktura cofnięta do wersji roboczej)",
-    "unknownUser": "System"
+    "unknownUser": "System",
+    "sourceContract": "Umowa: {{contract}}"
   },
   "expire": {
     "error": "Nie udało się wygasić pakietu godzin.",
@@ -154,5 +155,16 @@
       "missingField": "Brakuje wymaganego pola pakietu godzin. Sprawdź formularz i spróbuj ponownie.",
       "referenceMissing": "Wybrany klient, usługa lub faktura już nie istnieje. Odśwież stronę i spróbuj ponownie."
     }
+  },
+  "coverage": {
+    "oneLine": "Czas na {{service}} jest rozliczany przez {{contract}} / {{line}} i nie zostanie pobrany z tego pakietu godzin.",
+    "manyLines": "Czas na {{service}} przypisany do linii umowy nie zostanie pobrany z tego pakietu godzin.",
+    "linesLabel": "Linie umowy obejmujące {{service}}:",
+    "unscopedIntro": "Ten pakiet godzin obejmuje całą pracę, ale czas na tych usługach jest rozliczany przez linię umowy i nie zostanie z niego pobrany:",
+    "unscopedService": "{{service}} — {{contract}} / {{line}}",
+    "unscopedServiceAssigned": "{{service}} — gdy przypisano do linii umowy",
+    "more": "i {{count}} więcej",
+    "badge": "Nakładanie się umowy",
+    "viewContract": "Zobacz umowę"
   }
 }

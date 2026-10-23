@@ -64,6 +64,7 @@ describe('AI gateway client', () => {
       'aiGatewayGrantConsent',
       'aiGatewayRevokeConsent',
       'aiGatewaySetAutoTopup',
+      'isAiGatewayConfigured',
       'mintGatewayToken',
       'resolveGatewayAuthToken',
     ]);

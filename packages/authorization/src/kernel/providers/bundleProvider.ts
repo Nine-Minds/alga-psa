@@ -8,6 +8,7 @@ import type {
 } from '../contracts';
 import { ALLOW_ALL_SCOPE } from '../scope';
 import { evaluateRelationshipTemplate } from '../relationshipTemplates';
+import { isSelfApprovalBlocked } from '../selfApproval';
 
 export interface BundleNarrowingRule {
   id: string;
@@ -96,11 +97,7 @@ export class BundleAuthorizationKernelProvider implements BundleAuthorizationPro
     );
 
     const notSelfApproverViolation = matchingRules.some(
-      (rule) =>
-        rule.constraintKey === 'not_self_approver' &&
-        input.mutation?.kind === 'approve' &&
-        typeof input.record?.ownerUserId === 'string' &&
-        input.record.ownerUserId === input.subject.userId
+      (rule) => rule.constraintKey === 'not_self_approver' && isSelfApprovalBlocked(input)
     );
 
     return {

@@ -4,7 +4,13 @@ import type { EntraSyncUser } from '@ee/lib/integrations/entra/sync/types';
 const publishWorkflowEventMock = vi.fn();
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishWorkflowEvent: publishWorkflowEventMock,
+  publishUnregisteredEventType: publishWorkflowEventMock,
+  publishEvent: vi.fn(async () => undefined),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
 }));
 
 function buildUser(overrides: Partial<EntraSyncUser> = {}): EntraSyncUser {
@@ -57,8 +63,8 @@ describe('workflow-managed Entra portal provisioning events', () => {
     expect(publishWorkflowEventMock).toHaveBeenCalledWith(
       expect.objectContaining({
         eventType: 'ENTRA_PORTAL_ACCESS_ELIGIBLE',
-        idempotencyKey: 'entra_portal_access:tenant-301:managed-301:entra-tenant-301:entra-object-301:group-301:eligible',
         payload: expect.objectContaining({
+          idempotencyKey: 'entra_portal_access:tenant-301:managed-301:entra-tenant-301:entra-object-301:group-301:eligible',
           tenantId: 'tenant-301',
           clientId: 'client-301',
           contactNameId: 'contact-301',

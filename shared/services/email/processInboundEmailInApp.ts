@@ -2,6 +2,7 @@ import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfa
 import type { IEventPublisher } from '@alga-psa/types';
 import type { InboundEmailExecutionOptions } from '../../workflow/actions/emailWorkflowActions';
 import { createHash, randomUUID } from 'node:crypto';
+import { ticketStatusClockPatch } from '../../lib/ticketStatusClock';
 import { extractEmailDomain, normalizeEmailAddress } from '../../lib/email/addressUtils';
 import {
   detectAutomatedInboundMessage,
@@ -40,6 +41,7 @@ import {
 } from './notificationLoopDetection';
 import {
   allowsContactSenderAttribution,
+  isMicrosoftIntraOrgSender,
   allowsInternalSenderAttribution,
   verifySenderAuthentication,
 } from '../../lib/email/senderAuthVerification';
@@ -585,8 +587,10 @@ async function applyInboundReplyReopenTransition(params: {
 
     await db.table('tickets')
       .where({ ticket_id: params.ticketId })
+      // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
       .update({
         status_id: params.statusId,
+        ...ticketStatusClockPatch(trx, params.statusId),
         is_closed: false,
         closed_at: null,
         closed_by: null,
@@ -903,6 +907,10 @@ export async function processInboundEmailInApp(
   )?.[1];
   const senderAuthResults = verifySenderAuthentication(authenticationResultsHeader, senderEmail);
   const isVerifiedListRewrite = Boolean(emailData.headers?.['x-resolved-original-sender']);
+  // Same-M365-tenant mail has no Authentication-Results; Exchange's internal-auth stamp
+  // stands in for aligned SPF/DKIM for contact (never internal-user) attribution.
+  const isTrustedIntraOrgSender = isMicrosoftIntraOrgSender(emailData.provider, emailData.headers);
+  const contactSenderTrusted = allowsContactSenderAttribution(senderAuthResults) || isVerifiedListRewrite || isTrustedIntraOrgSender;
   const durableExecution = options.durableExecution ?? null;
 
   const helperExecutionOptions = (kind: 'ticket' | 'comment'): InboundEmailExecutionOptions | undefined => {
@@ -1006,7 +1014,7 @@ export async function processInboundEmailInApp(
       });
       return null;
     }
-    if (allowsContactSenderAttribution(senderAuthResults) || isVerifiedListRewrite) return matched;
+    if (contactSenderTrusted) return matched;
     console.warn('processInboundEmailInApp: sender auth not aligned; discarding contact match', {
       tenantId, providerId, emailId: emailData.id, senderEmail,
       contactId: matched.contact_id ?? null,
@@ -1971,7 +1979,7 @@ export async function processInboundEmailInApp(
     const automated = detectAutomatedInboundMessage(emailData).isAutomated;
     if (senderIsProviderMailbox) autoCreateSkipReason = 'provider_mailbox';
     else if (automated) autoCreateSkipReason = 'automated';
-    else if (!(allowsContactSenderAttribution(senderAuthResults) || isVerifiedListRewrite)) autoCreateSkipReason = 'auth_not_aligned';
+    else if (!contactSenderTrusted) autoCreateSkipReason = 'auth_not_aligned';
     else {
       const created = await createContactForInboundSender({ email: senderEmail!, name: senderName, clientId: domainMatchedClientId! }, tenantId, {
         existingConnection: options.durableExecution?.trx,

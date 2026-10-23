@@ -300,6 +300,9 @@
       },
       "recurring": {
         "title": "Tickets recorrentes"
+      },
+      "templates": {
+        "title": "Modelos de tickets"
       }
     },
     "userActivities": {

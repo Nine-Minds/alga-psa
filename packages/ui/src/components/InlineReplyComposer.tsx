@@ -3,10 +3,14 @@
 import React, { useMemo, useState } from 'react';
 import type { PartialBlock } from '@blocknote/core';
 import { TextEditor } from '../editor';
+import { hasEditorContent } from '../editor/hasEditorContent';
+import { useRegisterDismissGuard } from './DismissGuard';
+import { useRegisterUnsavedChanges } from '../context/UnsavedChangesContext';
 import { Button } from './Button';
 import { Label } from './Label';
 import { Switch } from './Switch';
 import { withDataAutomationId } from '../ui-reflection/withDataAutomationId';
+import { useTranslation } from '../lib/i18n/client';
 
 const DEFAULT_REPLY_BLOCK: PartialBlock[] = [{
   type: 'paragraph',
@@ -55,8 +59,8 @@ export function InlineReplyComposer({
   roomName,
   initialInternal = false,
   showInternalToggle = true,
-  submitLabel = 'Reply',
-  cancelLabel = 'Cancel',
+  submitLabel,
+  cancelLabel,
   isSubmitting = false,
   uploadFile,
   searchMentions,
@@ -65,10 +69,20 @@ export function InlineReplyComposer({
   onSubmit,
   onCancel,
 }: InlineReplyComposerProps): React.ReactElement {
+  const { t } = useTranslation('common');
   const componentId = id || `reply-composer-${parentCommentId}`;
   const [isInternal, setIsInternal] = useState(initialInternal);
   const [content, setContent] = useState<PartialBlock[]>(DEFAULT_REPLY_BLOCK);
   const editorInitialContent = useMemo(() => DEFAULT_REPLY_BLOCK, []);
+
+  // A typed reply must survive a stray Escape / overlay click on the drawer or
+  // dialog hosting this composer: report it so the container asks before closing.
+  // LEVERAGE: pattern composer-dirty-guard — same track-content + two-guard shape as TicketConversation and BentoTimelineTile
+  const hasTypedReply = hasEditorContent(content);
+  useRegisterDismissGuard(hasTypedReply);
+  // On a full page (no Dialog/Drawer) the page-level registry guards ticket
+  // navigation and reload instead; a no-op when no UnsavedChangesProvider is mounted.
+  useRegisterUnsavedChanges(`inline-reply-composer-${componentId}`, hasTypedReply);
 
   return (
     // Sticky so replying to a comment taller than the viewport keeps the
@@ -85,7 +99,7 @@ export function InlineReplyComposer({
             checked={isInternal}
             onCheckedChange={setIsInternal}
           />
-          <Label htmlFor={`${componentId}-internal-toggle`}>Mark as Internal</Label>
+          <Label htmlFor={`${componentId}-internal-toggle`}>{t('inlineReplyComposer.fields.internal.label', { defaultValue: 'Mark as Internal' })}</Label>
         </div>
       )}
       <TextEditor
@@ -106,7 +120,7 @@ export function InlineReplyComposer({
           onClick={() => onSubmit({ parentCommentId, content, isInternal })}
           disabled={isSubmitting || submitDisabled}
         >
-          {submitLabel}
+          {submitLabel ?? t('inlineReplyComposer.actions.reply', { defaultValue: 'Reply' })}
         </Button>
         <Button
           id={`${componentId}-cancel`}
@@ -115,7 +129,7 @@ export function InlineReplyComposer({
           onClick={onCancel}
           disabled={isSubmitting}
         >
-          {cancelLabel}
+          {cancelLabel ?? t('actions.cancel', { defaultValue: 'Cancel' })}
         </Button>
       </div>
     </div>

@@ -1,3 +1,5 @@
+import { builtWorkflowPayload } from '@alga-psa/event-schemas';
+
 export function buildIntegrationSyncStartedPayload(params: {
   integrationId: string;
   provider: string;
@@ -7,7 +9,7 @@ export function buildIntegrationSyncStartedPayload(params: {
   initiatedByUserId?: string;
   startedAt?: string;
 }) {
-  return {
+  return builtWorkflowPayload('INTEGRATION_SYNC_STARTED', {
     integrationId: params.integrationId,
     provider: params.provider,
     connectionId: params.connectionId,
@@ -15,7 +17,7 @@ export function buildIntegrationSyncStartedPayload(params: {
     scope: params.scope,
     initiatedByUserId: params.initiatedByUserId,
     startedAt: params.startedAt,
-  };
+  });
 }
 
 export function buildIntegrationSyncCompletedPayload(params: {
@@ -29,7 +31,7 @@ export function buildIntegrationSyncCompletedPayload(params: {
   summary?: { created?: number; updated?: number; deleted?: number; skipped?: number };
   warnings?: string[];
 }) {
-  return {
+  return builtWorkflowPayload('INTEGRATION_SYNC_COMPLETED', {
     integrationId: params.integrationId,
     provider: params.provider,
     connectionId: params.connectionId,
@@ -39,7 +41,7 @@ export function buildIntegrationSyncCompletedPayload(params: {
     durationMs: params.durationMs,
     summary: params.summary,
     warnings: params.warnings,
-  };
+  });
 }
 
 export function buildIntegrationSyncFailedPayload(params: {
@@ -54,7 +56,7 @@ export function buildIntegrationSyncFailedPayload(params: {
   errorMessage: string;
   retryable?: boolean;
 }) {
-  return {
+  return builtWorkflowPayload('INTEGRATION_SYNC_FAILED', {
     integrationId: params.integrationId,
     provider: params.provider,
     connectionId: params.connectionId,
@@ -65,6 +67,6 @@ export function buildIntegrationSyncFailedPayload(params: {
     errorCode: params.errorCode,
     errorMessage: params.errorMessage,
     retryable: params.retryable,
-  };
+  });
 }
 

@@ -23,9 +23,33 @@ import {
 import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { ConflictError, ForbiddenError, NotFoundError, NotImplementedError, ValidationError } from '../middleware/apiMiddleware';
 import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from 'server/src/lib/utils/workDate';
+import { buildTimeEntryApprovedPayload, toWorkflowTimeEntryWorkItemType } from '@alga-psa/workflow-streams';
 import { buildTicketTimeEntryAddedWorkflowEvent } from './timeEntryWorkflowEvents';
 import { hasPermission } from '../../auth/rbac';
-import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
+import type { IUser } from '@alga-psa/types';
+import {
+  StopwatchConflictError,
+  getOpenSession,
+  getSession,
+  logSession,
+  startSession,
+  type StopwatchSessionView,
+} from '@alga-psa/scheduling/lib/stopwatch/stopwatchCore';
+import { mapStopwatchError, publishLoggedSessionEvents } from './StopwatchApiService';
+import {
+  getWorkItemBillingContext,
+  deleteTimeEntryCore,
+  persistTimeEntry,
+  publishPersistedTimeEntryEvents,
+  type PersistedTimeEntry,
+} from '@alga-psa/scheduling/lib/timeEntryWriteCore';
+import { getEligibleContractLines } from '@alga-psa/scheduling/lib/contractLineDisambiguation';
+import { resolveDeterministicContractLineSelection } from '@alga-psa/scheduling/lib/contractLineDisambiguation.shared';
+import { saveTimeEntryParamsSchema, type SaveTimeEntryParams } from '@alga-psa/scheduling/actions/timeEntrySchemas';
+import {
+  CONTRACT_LINE_SOURCE_BY_SELECTION_REASON,
+  type ContractLineSource,
+} from '@alga-psa/types';
 
 export class TimeEntryService extends BaseService<any> {
   constructor() {
@@ -37,6 +61,27 @@ export class TimeEntryService extends BaseService<any> {
       defaultSort: 'start_time',
       defaultOrder: 'desc'
     });
+  }
+
+  /**
+   * Range keys the time-entry list accepts: the common created_ and updated_
+   * keys, the start/end instants, and `date_*` (mapped to the work_date calendar
+   * column). Any other `_from`/`_to` key is rejected by `applyRangeFilters`.
+   */
+  protected rangeFilterColumns(): Record<string, string> {
+    return {
+      ...super.rangeFilterColumns(),
+      created_from: `${this.tableName}.created_at`,
+      created_to: `${this.tableName}.created_at`,
+      updated_from: `${this.tableName}.updated_at`,
+      updated_to: `${this.tableName}.updated_at`,
+      start_time_from: `${this.tableName}.start_time`,
+      start_time_to: `${this.tableName}.start_time`,
+      end_time_from: `${this.tableName}.end_time`,
+      end_time_to: `${this.tableName}.end_time`,
+      date_from: `${this.tableName}.work_date`,
+      date_to: `${this.tableName}.work_date`,
+    };
   }
 
   // A PostgreSQL DATE is a calendar date, not an instant. Project it as text
@@ -58,7 +103,11 @@ export class TimeEntryService extends BaseService<any> {
 
   protected applyFilters(query: Knex.QueryBuilder, filters: Record<string, any>, knex?: Knex, tenant?: string): Knex.QueryBuilder {
     if (!filters) return query;
-    
+
+    // Created/updated plus start_time/end_time/date windows. Unsupported range
+    // keys throw instead of silently returning unfiltered entries.
+    this.applyRangeFilters(query, filters);
+
     if (filters.user_id) {
       query.where(`${this.tableName}.user_id`, filters.user_id);
     }
@@ -76,24 +125,6 @@ export class TimeEntryService extends BaseService<any> {
     }
     if (filters.is_billable !== undefined) {
       query.where(`${this.tableName}.billable_duration`, filters.is_billable ? '>' : '=', 0);
-    }
-    if (filters.start_time_from) {
-      query.where(`${this.tableName}.start_time`, '>=', filters.start_time_from);
-    }
-    if (filters.start_time_to) {
-      query.where(`${this.tableName}.start_time`, '<=', filters.start_time_to);
-    }
-    if (filters.end_time_from) {
-      query.where(`${this.tableName}.end_time`, '>=', filters.end_time_from);
-    }
-    if (filters.end_time_to) {
-      query.where(`${this.tableName}.end_time`, '<=', filters.end_time_to);
-    }
-    if (filters.date_from) {
-      query.where(`${this.tableName}.work_date`, '>=', filters.date_from);
-    }
-    if (filters.date_to) {
-      query.where(`${this.tableName}.work_date`, '<=', filters.date_to);
     }
     if (filters.time_sheet_id) {
       query.where(`${this.tableName}.time_sheet_id`, filters.time_sheet_id);
@@ -319,71 +350,48 @@ export class TimeEntryService extends BaseService<any> {
     // Get or create time sheet for the period
     const timeSheetId = await this.getOrCreateTimeSheetForWorkDate(work_date, context.userId, context);
 
-    const { is_billable, ...dataWithoutBillable } = data;
-    const timeEntryData = {
-      ...dataWithoutBillable,
+    const isBillable = data.is_billable !== false;
+
+    // Linkage is decided before anything is written so an ambiguous or ineligible
+    // line is a 400 and not a half-saved entry. Non-billable time carries none.
+    const contractLine = isBillable
+      ? await this.resolveContractLineForWrite(knex, context, {
+          workItemType: data.work_item_type,
+          workItemId: data.work_item_id ?? null,
+          serviceId: data.service_id,
+          workDate: work_date,
+          explicitContractLineId: data.contract_line_id ?? null,
+        })
+      : { id: null, source: null };
+
+    const nowIso = new Date().toISOString();
+    const entry = this.buildSaveParams({
+      entry_id: null,
+      work_item_id: data.work_item_id,
+      work_item_type: data.work_item_type,
+      start_time: startTime.toISOString(),
+      end_time: endTime.toISOString(),
+      created_at: nowIso,
+      updated_at: nowIso,
+      // 0 is the explicit non-billable marker the core honours.
+      billable_duration: isBillable ? billableDuration : 0,
+      notes: data.notes ?? '',
       user_id: context.userId, // Always use authenticated user
-      start_time: startTime, // persist minute-truncated instants, not the caller's seconds
-      end_time: endTime,
-      work_date,
-      work_timezone,
-      billable_duration: is_billable !== false ? billableDuration : 0,
       time_sheet_id: timeSheetId,
       approval_status: 'DRAFT',
-      tenant: context.tenant,
-      created_at: new Date(),
-      updated_at: new Date()
-    };
-
-    // Get billing information if billable
-    if (data.is_billable !== false) {
-      const billingInfo = await this.calculateBillingInfo(timeEntryData, context);
-      Object.assign(timeEntryData, billingInfo);
-    }
-
-    const timeEntry = await knex.transaction(async (trx) => {
-      const [created] = await tenantDb(trx, context.tenant).table('time_entries')
-        .insert(timeEntryData)
-        .returning('*');
-      await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, null, created);
-      return created;
+      service_id: data.service_id,
+      tax_region: data.tax_region,
+      tax_rate_id: data.tax_rate_id ?? undefined,
     });
 
-    // Publish event
-    await publishEvent({
-      eventType: 'TIME_ENTRY_CREATED',
-      payload: {
-        tenantId: context.tenant,
-        timeEntryId: timeEntry.entry_id,
-        userId: context.userId,
-        workItemId: timeEntry.work_item_id,
-        workItemType: timeEntry.work_item_type,
-        duration: billableDuration,
-        timestamp: new Date().toISOString()
-      }
-    });
+    const persisted = await this.persistViaWriteCore(knex, context, entry, contractLine);
+    const timeEntry = persisted.entry;
 
-    const ticketTimeEntryAdded = buildTicketTimeEntryAddedWorkflowEvent({
-      workItemType: timeEntry.work_item_type,
-      workItemId: timeEntry.work_item_id,
-      timeEntryId: timeEntry.entry_id,
-      minutes: billableDuration,
-      billable: timeEntry.billable_duration > 0,
-      createdAt: timeEntry.created_at,
-    });
-    if (ticketTimeEntryAdded) {
-      await publishWorkflowEvent({
-        eventType: ticketTimeEntryAdded.eventType,
-        payload: ticketTimeEntryAdded.payload,
-        ctx: {
-          tenantId: context.tenant,
-          occurredAt: timeEntry.created_at,
-          actor: { actorType: 'USER', actorUserId: context.userId },
-        },
-      });
-    }
+    // Post-commit events (search event + ticket-time-entry-added workflow event),
+    // exactly as the stopwatch log endpoint publishes them.
+    await publishLoggedSessionEvents(persisted, context);
 
-    return this.getWithDetails(timeEntry.entry_id, context);
+    return this.getWithDetails(timeEntry.entry_id as string, context);
   }
 
   async update(id: string, data: UpdateTimeEntryData, context: ServiceContext): Promise<any> {
@@ -449,32 +457,53 @@ export class TimeEntryService extends BaseService<any> {
       updateData.billable_duration = is_billable ? totalDuration : 0;
     }
 
-    // Recalculate billing if relevant fields changed
-    if (data.service_id !== undefined || updateData.billable_duration !== undefined) {
-      const billingInfo = await this.calculateBillingInfo({ ...existing, ...updateData }, context);
-      Object.assign(updateData, billingInfo);
-    }
+    // Merge the patch over the stored row: the write core saves a whole entry.
+    const merged = { ...existing, ...dataWithoutBillable };
+    const startIso = new Date(updateData.start_time ?? existing.start_time).toISOString();
+    const endIso = new Date(updateData.end_time ?? existing.end_time).toISOString();
+    const billableDuration: number = updateData.billable_duration ?? existing.billable_duration ?? 0;
+    const isBillable = billableDuration > 0;
+    const workDate: string = updateData.work_date ?? existing.work_date;
 
-    await knex.transaction(async (trx) => {
-      const [updated] = await tenantDb(trx, context.tenant).table('time_entries')
-        .where({ [this.primaryKey]: id })
-        .update(updateData)
-        .returning('*');
-      if (!updated) throw new NotFoundError('Time entry not found');
-      await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, existing, updated);
+    const contractLine = await this.resolveContractLineForUpdate(knex, context, existing, {
+      isBillable,
+      workItemType: merged.work_item_type,
+      workItemId: merged.work_item_id ?? null,
+      serviceId: merged.service_id,
+      workDate,
+      explicitContractLineId: data.contract_line_id ?? null,
+      linkageInputsChanged:
+        (data.service_id !== undefined && data.service_id !== existing.service_id) ||
+        (data.work_item_id !== undefined && data.work_item_id !== existing.work_item_id) ||
+        (data.work_item_type !== undefined && data.work_item_type !== existing.work_item_type) ||
+        workDate !== existing.work_date ||
+        !(existing.billable_duration > 0),
     });
 
-    // Publish event
-    await publishEvent({
-      eventType: 'TIME_ENTRY_UPDATED',
-      payload: {
-        tenantId: context.tenant,
-        timeEntryId: id,
-        userId: context.userId,
-        changes: data,
-        timestamp: new Date().toISOString()
-      }
+    const nowIso = new Date().toISOString();
+    const entry = this.buildSaveParams({
+      entry_id: id,
+      work_item_id: merged.work_item_id ?? undefined,
+      work_item_type: merged.work_item_type,
+      start_time: startIso,
+      end_time: endIso,
+      created_at: new Date(existing.created_at ?? Date.now()).toISOString(),
+      updated_at: nowIso,
+      billable_duration: billableDuration,
+      notes: merged.notes ?? '',
+      user_id: existing.user_id,
+      time_sheet_id: existing.time_sheet_id ?? undefined,
+      approval_status: existing.approval_status,
+      service_id: merged.service_id,
+      // undefined leaves the stored value untouched (the write core's update skips undefined).
+      tax_region: data.tax_region ?? undefined,
+      tax_rate_id: data.tax_rate_id,
     });
+
+    const persisted = await this.persistViaWriteCore(knex, context, entry, contractLine);
+
+    // Post-commit search event, as saveTimeEntry publishes it.
+    await publishPersistedTimeEntryEvents(persisted);
 
     return this.getById(id, context);
   }
@@ -497,10 +526,9 @@ export class TimeEntryService extends BaseService<any> {
     }
 
     await knex.transaction(async (trx) => {
-      await tenantDb(trx, context.tenant).table('time_entries')
-        .where({ [this.primaryKey]: id })
-        .del();
-      await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, existing, null);
+      // Shared with the UI deleteTimeEntry action: reverses the bucket draw and
+      // hour-block burn, deletes the row and recalculates project-task hours.
+      await deleteTimeEntryCore(trx, context.tenant, id);
     });
 
     // Publish event
@@ -565,168 +593,113 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   // Time tracking sessions
+  //
+  // LEGACY ADAPTERS (plan D7). Installed mobile builds still call start-tracking / stop-tracking /
+  // active-session. These keep the old response shapes but run on the server-side stopwatch
+  // (stopwatchCore); `session_id` is the stopwatch session id and `start_time` the first segment start.
+  // Pauses are not representable in the legacy shape: a paused session is reported with
+  // status 'paused' and elapsed_minutes = active minutes.
+
+  /** Old `time_entries`-row-shaped session payload (activeTimeSessionResponseSchema plus entry columns). */
+  private async toLegacySession(view: StopwatchSessionView, context: ServiceContext): Promise<any> {
+    const { knex } = await this.getKnex();
+    const startTime = new Date(view.segments[0]?.started_at ?? view.created_at);
+    const userTimeZone = await resolveUserTimeZone(knex, context.tenant, view.user_id);
+    const { work_date, work_timezone } = computeWorkDateFields(startTime, userTimeZone);
+    return {
+      session_id: view.session_id,
+      entry_id: view.session_id,
+      tenant: context.tenant,
+      work_item_id: view.work_item_id,
+      work_item_type: view.work_item_type,
+      service_id: view.service_id,
+      user_id: view.user_id,
+      start_time: startTime.toISOString(),
+      end_time: null,
+      work_date,
+      work_timezone,
+      notes: view.notes,
+      billable_duration: 0,
+      approval_status: 'DRAFT',
+      created_at: view.created_at,
+      updated_at: view.updated_at,
+      status: view.status === 'paused' ? 'paused' : 'active',
+      elapsed_minutes: Math.round(view.active_ms / 60_000),
+      work_item_title: view.work_item_title,
+      service_name: view.service_name,
+    };
+  }
+
   async startTimeTracking(data: StartTimeTrackingData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
 
     this.assertServiceIdPresent(data.service_id);
-    
-    // Check for existing active session (time entry with null end_time)
-    const existingSession = await this.buildTenantScopedQuery(knex, context)
-      .where('user_id', context.userId)
-      .whereNull('end_time')
-      .first();
 
-    if (existingSession) {
-      throw new ConflictError('Active time tracking session already exists. Please stop the current session first.');
+    let view: StopwatchSessionView;
+    try {
+      view = await knex.transaction((trx) =>
+        startSession(
+          trx,
+          context.tenant,
+          context.userId,
+          {
+            workItemType: data.work_item_type,
+            workItemId: data.work_item_id ?? null,
+            serviceId: data.service_id,
+            notes: data.notes || '',
+          },
+          { allowLegacyWorkItemTypes: true },
+        ),
+      );
+    } catch (error) {
+      if (error instanceof StopwatchConflictError) {
+        throw new ConflictError('Active time tracking session already exists. Please stop the current session first.');
+      }
+      throw mapStopwatchError(error);
     }
 
-    // Stamp the session start at minute granularity. Start and stop fire at different
-    // wall-clock instants, so keeping raw seconds is exactly what produced the off-by-one
-    // duration bug in stored entries.
-    const startTime = truncateToMinute(new Date());
-    const userTimeZone = await resolveUserTimeZone(knex, context.tenant, context.userId);
-    const { work_date, work_timezone } = computeWorkDateFields(startTime, userTimeZone);
-
-    // Create a time entry with null end_time to represent an active session
-    const timeEntryData = {
-      work_item_id: data.work_item_id,
-      work_item_type: data.work_item_type,
-      service_id: data.service_id,
-      user_id: context.userId,
-      start_time: startTime,
-      end_time: null, // Active session has no end time
-      work_date,
-      work_timezone,
-      notes: data.notes || '',
-      billable_duration: 0, // Will be calculated when stopped
-      approval_status: 'DRAFT',
-      tenant: context.tenant,
-      created_at: new Date(),
-      updated_at: new Date()
-    };
-
-    const session = await knex.transaction(async (trx) => {
-      const [created] = await tenantDb(trx, context.tenant).table('time_entries')
-        .insert(timeEntryData)
-        .returning('*');
-      // A DATE is a calendar date, not an instant: pg hydrates the returned column
-      // into a Date in the Node process timezone, which can shift the day. Overwrite
-      // it with the timezone-local 'YYYY-MM-DD' string computed above so the response
-      // and every other consumer see the correct date. (Citus rejects non-IMMUTABLE
-      // functions such as to_char in a distributed table's RETURNING clause.)
-      created.work_date = work_date;
-      await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, null, created);
-      return created;
-    });
-
-    return {
-      session_id: session.entry_id, // Use entry_id as session_id
-      ...session,
-      status: 'active',
-      elapsed_minutes: 0,
-      work_item_title: data.work_item_id ? await this.getWorkItemTitle(data.work_item_id, data.work_item_type, context) : null,
-      service_name: data.service_id ? await this.getServiceName(data.service_id, context) : null
-    };
+    return this.toLegacySession(view, context);
   }
 
   async stopTimeTracking(sessionId: string, data: StopTimeTrackingData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
-    
-    // Find the active session (time entry with null end_time)
-    const session = await this.buildTenantScopedQuery(knex, context)
-      .where('entry_id', sessionId)
-      .where('user_id', context.userId)
-      .whereNull('end_time')
-      .first();
 
-    if (!session) {
-      throw new NotFoundError('Active session not found');
-    }
-
-    this.assertServiceIdPresent(data.service_id ?? session.service_id);
-
-    // LEVERAGE: pattern time-entry-duration-persist — same normalize-to-minute + round shape.
-    const endTime = truncateToMinute(data.end_time ?? new Date());
-    const startTime = truncateToMinute(session.start_time);
-    const durationMs = endTime.getTime() - startTime.getTime();
-    const billableDuration = Math.round(durationMs / (1000 * 60)); // minutes
-    
-    // Update the time entry to complete the session
-    const updateData: any = {
-      end_time: endTime,
-      notes: data.notes || session.notes,
-      service_id: data.service_id || session.service_id,
-      billable_duration: data.is_billable !== false ? billableDuration : 0,
-      updated_at: new Date()
-    };
-
-    // Backstop: if a legacy row is missing these fields, compute now using the stored work_timezone if present.
-    if (!session.work_date || !session.work_timezone) {
-      const userTimeZone = await resolveUserTimeZone(knex, context.tenant, context.userId);
-      const { work_date, work_timezone } = computeWorkDateFields(
-        session.start_time,
-        session.work_timezone || userTimeZone
-      );
-      updateData.work_date = work_date;
-      updateData.work_timezone = work_timezone;
-    }
-
-    await knex.transaction(async (trx) => {
-      const [updated] = await tenantDb(trx, context.tenant).table('time_entries')
-        .where({ entry_id: sessionId })
-        .update(updateData)
-        .returning('*');
-      if (!updated) throw new NotFoundError('Active session not found');
-      await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, session, updated);
-    });
-
-    const ticketTimeEntryAdded = buildTicketTimeEntryAddedWorkflowEvent({
-      workItemType: session.work_item_type,
-      workItemId: session.work_item_id,
-      timeEntryId: sessionId,
-      minutes: billableDuration,
-      billable: updateData.billable_duration > 0,
-      createdAt: session.created_at,
-    });
-    if (ticketTimeEntryAdded) {
-      await publishWorkflowEvent({
-        eventType: ticketTimeEntryAdded.eventType,
-        payload: ticketTimeEntryAdded.payload,
-        ctx: {
-          tenantId: context.tenant,
-          occurredAt: endTime,
-          actor: { actorType: 'USER', actorUserId: context.userId },
-        },
+    let result;
+    try {
+      result = await knex.transaction(async (trx) => {
+        // Only an open (running or paused) session of the caller can be stopped.
+        const session = await getSession(trx, context.tenant, context.userId, sessionId);
+        if (!session || (session.status !== 'running' && session.status !== 'paused')) {
+          throw new NotFoundError('Active session not found');
+        }
+        this.assertServiceIdPresent(data.service_id ?? session.service_id);
+        return logSession(trx, context.tenant, context.user as IUser, sessionId, {
+          end_time: data.end_time,
+          notes: data.notes || undefined,
+          service_id: data.service_id,
+          is_billable: data.is_billable,
+        });
       });
+    } catch (error) {
+      throw mapStopwatchError(error);
     }
 
-    return this.getById(sessionId, context);
+    await publishLoggedSessionEvents(result.persisted, context);
+
+    return this.getById(result.persisted.entry.entry_id, context);
   }
 
   async getActiveSession(userId: string, context: ServiceContext): Promise<any | null> {
     const { knex } = await this.getKnex();
-    
-    // Find active session (time entry with null end_time)
-    const session = await this.buildTenantScopedQuery(knex, context)
-      .select(`${this.tableName}.*`, this.workDateProjection(knex))
-      .where('user_id', userId)
-      .whereNull('end_time')
-      .first();
 
-    if (!session) return null;
+    if (!await hasPermission(context.user, 'time_entry', 'read', knex)) {
+      throw new ForbiddenError('Permission denied: Cannot read time entries');
+    }
 
-    const now = new Date();
-    const elapsedMs = now.getTime() - new Date(session.start_time).getTime();
-    const elapsedMinutes = Math.round(elapsedMs / (1000 * 60));
-
-    return {
-      session_id: session.entry_id,
-      ...session,
-      status: 'active',
-      elapsed_minutes: elapsedMinutes,
-      work_item_title: session.work_item_id ? await this.getWorkItemTitle(session.work_item_id, session.work_item_type, context) : null,
-      service_name: session.service_id ? await this.getServiceName(session.service_id, context) : null
-    };
+    // Legacy endpoint: only the caller's own session (never another user's).
+    const view = await knex.transaction((trx) => getOpenSession(trx, context.tenant, userId));
+    if (!view) return null;
+    return this.toLegacySession(view, context);
   }
 
   // Templates
@@ -872,15 +845,36 @@ export class TimeEntryService extends BaseService<any> {
         results.push({ success: true, entry_id: entryId });
 
         // Publish event
-        await publishEvent({
-          eventType: 'TIME_ENTRY_APPROVED',
-          payload: {
-            tenantId: context.tenant,
-            timeEntryId: entryId,
-            approvedBy: context.userId,
-            timestamp: new Date().toISOString()
-          }
-        });
+        const timestamp = new Date().toISOString();
+        const workItemType = toWorkflowTimeEntryWorkItemType(entry.work_item_type);
+        if (workItemType && entry.user_id && entry.work_item_id && context.userId) {
+          await publishWorkflowEvent({
+            eventType: 'TIME_ENTRY_APPROVED',
+            payload: buildTimeEntryApprovedPayload({
+              timeEntryId: entryId,
+              userId: entry.user_id,
+              workItemId: entry.work_item_id,
+              workItemType,
+              approvedBy: context.userId,
+              timestamp,
+            }),
+            ctx: {
+              tenantId: context.tenant,
+              actor: { actorType: 'USER', actorUserId: context.userId },
+            },
+          });
+        } else {
+          // Ad-hoc / interaction / non-billable time has no workflow representation.
+          await publishEvent({
+            eventType: 'TIME_ENTRY_UPDATED',
+            payload: {
+              tenantId: context.tenant,
+              timeEntryId: entryId,
+              approvedBy: context.userId,
+              timestamp,
+            },
+          });
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         results.push({ success: false, error: errorMessage, entry_id: entryId });
@@ -1148,13 +1142,199 @@ export class TimeEntryService extends BaseService<any> {
       .first();
   }
 
-  private async calculateBillingInfo(timeEntry: any, context: ServiceContext): Promise<any> {
-    // This would integrate with billing system
-    // For now, return basic structure
+  /**
+   * Validate and shape an entry for the shared write core. The core's caller
+   * contract requires saveTimeEntryParamsSchema; that schema types work_item_id as
+   * a required string, but the REST API has always accepted ad_hoc /
+   * non_billable_category entries without one (stored as NULL), so the schema is
+   * satisfied with a placeholder and the real (absent) value is restored.
+   */
+  private buildSaveParams(input: Record<string, unknown>): SaveTimeEntryParams {
+    const parsed = saveTimeEntryParamsSchema.safeParse({
+      ...input,
+      work_item_id: input.work_item_id ?? '',
+    });
+    if (!parsed.success) {
+      throw new ValidationError('Validation failed', parsed.error.issues.map((issue) => ({
+        path: issue.path,
+        message: issue.message,
+      })));
+    }
+    return { ...parsed.data, work_item_id: (input.work_item_id ?? null) as string } as SaveTimeEntryParams;
+  }
+
+  /**
+   * Run the write core inside a transaction this service owns (core caller contract
+   * steps 3-4; the controller has already checked the time_entry permission).
+   * Expected failures (locked sheet, invoiced entry, bucket problems, ...) become
+   * 4xx API errors through the same mapping the stopwatch endpoints use.
+   */
+  private async persistViaWriteCore(
+    knex: Knex,
+    context: ServiceContext,
+    entry: SaveTimeEntryParams,
+    contractLine: { id: string | null; source: ContractLineSource | null },
+  ): Promise<PersistedTimeEntry> {
+    if (!context.user) {
+      throw new ForbiddenError('Permission denied: Missing user context');
+    }
+    try {
+      return await knex.transaction((trx) =>
+        persistTimeEntry(trx, {
+          tenant: context.tenant,
+          actor: context.user as IUser,
+          entry,
+          contractLine,
+          // The sheet was resolved from work_date (getOrCreateTimeSheetForWorkDate),
+          // so the period is checked against the same date the bucketing used.
+          sheetPeriodCheck: 'work_date',
+        }),
+      );
+    } catch (error) {
+      throw mapStopwatchError(error);
+    }
+  }
+
+  /**
+   * Contract-line linkage for a billable REST write, decided before anything is saved.
+   *
+   *  - caller named a line: it must be one of the eligible lines, else 400;
+   *  - several lines eligible and the resolver cannot narrow them (billing
+   *    profile, bucket overlay): 400 listing the candidates. The UI saves such an
+   *    entry as 'unresolved' for the review queue, but an API caller can resend
+   *    with a choice, and guessing could post to the wrong line;
+   *  - otherwise the resolver's pick (or none) with the same provenance the UI records.
+   *
+   * Client and billing profile come from the work item exactly as the write core
+   * derives them (getWorkItemBillingContext).
+   */
+  private async resolveContractLineForWrite(
+    knex: Knex,
+    context: ServiceContext,
+    input: {
+      workItemType: string;
+      workItemId: string | null;
+      serviceId: string;
+      workDate: string;
+      explicitContractLineId: string | null;
+    },
+  ): Promise<{ id: string | null; source: ContractLineSource | null }> {
+    const eligible = await this.loadEligibleContractLines(knex, context, input);
+    return this.chooseContractLine(eligible.lines, eligible.billingProfileId, input.explicitContractLineId);
+  }
+
+  /**
+   * PATCH linkage. An existing line is never nulled just because the entry was
+   * edited: it is kept (with its recorded provenance) unless the edit changed what
+   * the line depends on AND the line is no longer eligible, in which case the
+   * linkage is re-resolved like a create (including the ambiguity 400). A caller-
+   * supplied line is validated like on create. Entries that are (now) non-billable
+   * carry no linkage.
+   */
+  private async resolveContractLineForUpdate(
+    knex: Knex,
+    context: ServiceContext,
+    existing: any,
+    input: {
+      isBillable: boolean;
+      workItemType: string;
+      workItemId: string | null;
+      serviceId: string;
+      workDate: string;
+      explicitContractLineId: string | null;
+      linkageInputsChanged: boolean;
+    },
+  ): Promise<{ id: string | null; source: ContractLineSource | null }> {
+    if (!input.isBillable) {
+      return { id: null, source: null };
+    }
+
+    const existingLine: { id: string | null; source: ContractLineSource | null } = {
+      id: existing.contract_line_id ?? null,
+      source: existing.contract_line_source ?? null,
+    };
+
+    if (!input.explicitContractLineId && !input.linkageInputsChanged) {
+      // Notes, duration, tax... nothing the linkage depends on moved; leave it
+      // exactly as stored (including a legacy null: no ambiguity 400 on a notes edit).
+      return existingLine;
+    }
+
+    const eligible = await this.loadEligibleContractLines(knex, context, input);
+
+    if (
+      !input.explicitContractLineId &&
+      existingLine.id &&
+      eligible.lines.some((line) => line.client_contract_line_id === existingLine.id)
+    ) {
+      return existingLine;
+    }
+
+    return this.chooseContractLine(eligible.lines, eligible.billingProfileId, input.explicitContractLineId);
+  }
+
+  private async loadEligibleContractLines(
+    knex: Knex,
+    context: ServiceContext,
+    input: { workItemType: string; workItemId: string | null; serviceId: string; workDate: string },
+  ): Promise<{ lines: Awaited<ReturnType<typeof getEligibleContractLines>>; billingProfileId: string | null }> {
+    const { clientId, billingProfileId } = await getWorkItemBillingContext(
+      tenantDb(knex, context.tenant),
+      input.workItemType,
+      input.workItemId,
+    );
+    const lines = clientId
+      ? await getEligibleContractLines(knex, context.tenant, clientId, input.serviceId, input.workDate)
+      : [];
+    return { lines, billingProfileId };
+  }
+
+  private chooseContractLine(
+    lines: Awaited<ReturnType<typeof getEligibleContractLines>>,
+    billingProfileId: string | null,
+    explicitContractLineId: string | null,
+  ): { id: string | null; source: ContractLineSource | null } {
+    const candidates = lines.map((line) => ({
+      contract_line_id: line.client_contract_line_id,
+      contract_line_name: line.contract_line_name ?? null,
+      contract_line_type: line.contract_line_type,
+      contract_id: line.contract_id ?? null,
+      contract_name: line.contract_name ?? null,
+      has_bucket: Boolean(line.bucket_overlay?.config_id),
+    }));
+
+    if (explicitContractLineId) {
+      if (!lines.some((line) => line.client_contract_line_id === explicitContractLineId)) {
+        throw new ValidationError(
+          'contract_line_id is not an eligible contract line for this client, service and work date',
+          {
+            reason: 'contract_line_not_eligible',
+            contract_line_id: explicitContractLineId,
+            eligible_contract_lines: candidates,
+          },
+        );
+      }
+      return { id: explicitContractLineId, source: 'explicit' };
+    }
+
+    // LEVERAGE: pattern contract-line-resolution — eligibility + deterministic selection composed
+    // here a second time; the write core composes it through resolveContractLineSelection, which
+    // needs a session user. A resolver taking (knex, tenant) explicitly would be the one layer.
+    const selection = resolveDeterministicContractLineSelection(lines, { billingProfileId });
+
+    if (selection.reason === 'ambiguous') {
+      throw new ValidationError(
+        'Multiple contract lines are eligible for this time entry; resend with contract_line_id set to one of eligible_contract_lines',
+        {
+          reason: 'contract_line_ambiguous',
+          eligible_contract_lines: candidates,
+        },
+      );
+    }
+
     return {
-      contract_line_id: null,
-      tax_rate_id: null,
-      tax_region: timeEntry.tax_region || null
+      id: selection.selectedContractLineId,
+      source: CONTRACT_LINE_SOURCE_BY_SELECTION_REASON[selection.reason],
     };
   }
 

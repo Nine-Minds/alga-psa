@@ -98,6 +98,20 @@
         "assignedContractLine": "Línea de contrato asignada",
         "assignedWorkItem": "Elemento de trabajo asignado",
         "unresolvedWork": "Trabajo no resuelto"
+      },
+      "prepaidBlock": {
+        "due": "{{trigger}} · vence el {{date}}",
+        "trigger": {
+          "contract_start": "Bloque prepago: inicio del contrato",
+          "exhaustion": "Bloque prepago: agotado",
+          "threshold": "Bloque prepago: umbral de uso",
+          "expiry": "Bloque prepago: vencimiento",
+          "renewal": "Bloque prepago: renovación",
+          "manual": "Bloque prepago: emitido manualmente"
+        },
+        "stalePendingWarning": "{{count}} bloques prepago pendientes llevan más de 14 días esperando su finalización y retienen entradas de tiempo. Finalice o elimine sus facturas en borrador para que el tiempo retenido pueda facturarse.",
+        "stalePendingWarning_one": "{{count}} bloque prepago pendiente lleva más de 14 días esperando su finalización y retiene entradas de tiempo. Finalice o elimine su factura en borrador para que el tiempo retenido pueda facturarse.",
+        "stalePendingWarning_other": "{{count}} bloques prepago pendientes llevan más de 14 días esperando su finalización y retienen entradas de tiempo. Finalice o elimine sus facturas en borrador para que el tiempo retenido pueda facturarse."
       }
     },
     "actions": {
@@ -147,6 +161,7 @@
       "preview": {
         "title": "Vista previa de factura",
         "description": "Esta es una vista previa de cómo se verá la factura una vez finalizada.",
+        "noBillingEmailWarning": "{{clientName}} no tiene correo electrónico de facturación. La factura se puede generar, pero no se podrá enviar por correo electrónico ni pagar en línea hasta que configure un contacto de facturación, un correo electrónico de facturación del cliente o un correo electrónico en la ubicación de facturación o predeterminada.",
         "summary_one": "Factura {{count}} seleccionada",
         "summary_other": "Facturas {{count}} seleccionadas",
         "summaryCombined": "Esta selección generará una factura combinada.",
@@ -238,7 +253,8 @@
       "fixAllResult": "Se reconstruyeron {{schedules}} programación(es) en {{clients}} cliente(s).",
       "fixAllNoop": "Todas las programaciones de facturación ya están actualizadas. Todo lo que siga apareciendo abajo requiere revisión individual.",
       "fixAllError": "No se pudieron reconstruir los períodos de servicio. Inténtelo de nuevo.",
-      "fixAllDenied": "No tiene permiso para reconstruir los períodos de servicio."
+      "fixAllDenied": "No tiene permiso para reconstruir los períodos de servicio.",
+      "fixAllManualReview": "{{count}} período(s) por horas o de uso requieren revisión individual."
     },
     "errors": {
       "title": "Se produjeron errores al finalizar las facturas:",
@@ -271,7 +287,8 @@
       "fixed": "FIX",
       "hourly": "T&M",
       "usage": "USE",
-      "bucket": "BKT"
+      "bucket": "BKT",
+      "prepaidBlock": "PRE"
     },
     "summary": {
       "selected": "{{count}} seleccionado(s)",
@@ -332,7 +349,8 @@
       "title": "Líneas de pedido automatizadas",
       "service": "Servicio",
       "total": "Total",
-      "unknownService": "Servicio desconocido"
+      "unknownService": "Servicio desconocido",
+      "period": "Período"
     },
     "lineItems": {
       "manual": "Elementos de línea manuales",
@@ -345,7 +363,10 @@
       "saveChanges": "Guardar cambios",
       "processing": "Procesando...",
       "generateSalesOrderInvoice": "Generar factura de la orden de venta",
-      "clearSalesOrderSource": "Quitar la orden de venta de origen"
+      "clearSalesOrderSource": "Quitar la orden de venta de origen",
+      "addPartialPeriodCharge": "Agregar cargo de período parcial",
+      "reauthenticate": "Iniciar sesión de nuevo",
+      "retrySave": "Reintentar guardado"
     },
     "labels": {
       "total": "Total",
@@ -393,11 +414,15 @@
       "SOURCE_ALREADY_BILLED": "Algunos elementos seleccionados ya no son facturables (ya facturados, no aprobados o eliminados). Actualiza e inténtalo de nuevo.",
       "SOURCE_NOT_ELIGIBLE": "Uno de los elementos seleccionados no pertenece a este ticket o ya no es elegible. Actualiza e inténtalo de nuevo.",
       "SOURCE_CURRENCY_MISMATCH": "Algunos productos seleccionados tienen un precio en una moneda distinta a la de facturación de este cliente, por lo que no se pueden añadir. Factúralos por separado en su propia moneda.",
+      "CLIENT_CONTRACT_NOT_FOUND": "El contrato seleccionado no pertenece al cliente de esta factura.",
+      "SERVICE_REQUIRED": "Asigne un servicio a este cargo antes de guardar.",
       "RECURRING_PRICING_STALE": "La vista previa está desactualizada: {{details}}. Vuelva a ejecutar la vista previa para ver los valores actuales y, luego, genere de nuevo.",
-      "BILLING_PROFILE_NOT_FOUND": "El perfil de facturación seleccionado no está disponible para este cliente. Actualice la página e inténtelo de nuevo."
+      "BILLING_PROFILE_NOT_FOUND": "El perfil de facturación seleccionado no está disponible para este cliente. Actualice la página e inténtelo de nuevo.",
+      "sessionExpired": "Su sesión ha caducado. Sus cambios siguen aquí, pero no se guardaron. Inicie sesión de nuevo en otra pestaña y luego vuelva a intentar guardar.",
+      "saveRefreshFailed": "Sus cambios se guardaron, pero la página de la factura no pudo actualizarse por completo. Recargue la página para ver la factura guardada."
     },
     "warnings": {
-      "noBillingEmail": "Este cliente no tiene correo electrónico de facturación. Añada un contacto de facturación, un correo electrónico de facturación del cliente o una dirección de correo en la ubicación de facturación o predeterminada antes de generar la factura."
+      "noBillingEmail": "Este cliente no tiene correo electrónico de facturación. La factura se puede generar, pero no se podrá enviar por correo electrónico ni pagar en línea hasta que configure un contacto de facturación, un correo electrónico de facturación del cliente o un correo electrónico en la ubicación de facturación o predeterminada."
     },
     "errorFallback": {
       "title": "algo salió mal",
@@ -405,6 +430,48 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} artículo(s) de {{lineCount}} línea(s) listo(s) para facturar. Este borrador se vinculará a la orden de venta."
+    },
+    "draftAdjustments": {
+      "title": "Ajustes de factura",
+      "description": "Agregue cargos, descuentos o créditos únicos. Los cargos de contrato generados permanecen de solo lectura; corrija el contrato de origen o agregue un ajuste."
+    },
+    "partialPeriod": {
+      "title": "Cargo de período parcial",
+      "help": "Se calcula como unidades × precio unitario del período × días cubiertos / días del período completo. Las entradas se conservan con el concepto para que siga siendo comprensible.",
+      "direction": "Dirección",
+      "increase": "Aumento",
+      "decrease": "Reducción (crédito)",
+      "units": "Unidades",
+      "unitPrice": "Precio unitario",
+      "coveredDays": "Días cubiertos",
+      "fullPeriodDays": "Días del período completo",
+      "description": "Descripción (opcional)",
+      "reason": "Motivo (opcional)",
+      "previewUnavailable": "Introduzca un cálculo válido.",
+      "resolvedAmount": "Importe calculado: {{amount}}",
+      "addCharge": "Agregar cargo",
+      "creditDescription": "Crédito: {{proration}}",
+      "errors": {
+        "units": "Las unidades deben ser mayores que cero.",
+        "unitPrice": "El precio unitario debe ser un número.",
+        "invalid": "Introduzca un período parcial válido.",
+        "source": "Elija un servicio facturado con un período de servicio inequívoco."
+      },
+      "source": "Seleccionar servicio facturado",
+      "effectiveDate": "Fecha de vigencia",
+      "sourceRate": "Tarifa {{rate}}",
+      "permanentChangeNudge": "¿Es un cambio permanente? Regístrelo en el contrato.",
+      "overlapConfirm": "Ya existe un ajuste automático de contrato que se solapa con este período. ¿Añadir de todos modos este ajuste manual separado?",
+      "invoiceDescription": {
+        "increase": "{{description}} — {{units}} {{unitLabel}} adicionales, {{period}} — {{calculation}}",
+        "decrease": "{{description}} — crédito por {{units}} {{unitLabel}} menos, {{period}} — {{calculation}}"
+      },
+      "sourceDescriptionFallback": "Ajuste de servicio"
+    },
+    "exportWarnings": {
+      "discount": "{{adapter}}: configure la asignación de descuentos antes de exportar {{description}}.",
+      "service": "{{adapter}}: asigne un servicio con correspondencia a {{description}} antes de exportar.",
+      "unavailable": "No se pudo comprobar la preparación contable. Revise las asignaciones antes de exportar."
     },
     "hints": {
       "billingProfile": "La factura y sus líneas se facturan a este perfil."
@@ -739,6 +806,7 @@
     }
   },
   "invoicePreview": {
+    "sessionExpired": "La sesión expiró mientras se cargaba esta factura. Inicie sesión de nuevo y vuelva a cargar la vista previa.",
     "title": "Vista previa de factura",
     "templatePlaceholder": "Seleccionar plantilla de factura...",
     "labels": {
@@ -1359,7 +1427,14 @@
           "widthTooltip": "Usar el ancho exacto indicado abajo",
           "heightTooltip": "Usar el alto exacto indicado abajo"
         }
-      }
+      },
+      "barcode": "Código de barras",
+      "barcodeSymbology": "Tipo",
+      "barcodeQr": "Código QR",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Valor",
+      "barcodeHintWorkTag": "Texto o un campo como {{example}} (el enlace al registro). Mantenga el código con al menos unos 20 mm de ancho para que se pueda escanear.",
+      "barcodeHint": "El texto que se codificará. Mantenga el código con al menos unos 20 mm de ancho para que se pueda escanear."
     },
     "shell": {
       "selectedLabel": "Seleccionado:",
@@ -1372,7 +1447,11 @@
       "title": "Configuración de página",
       "description": "Elija preset de papel y margen sin seleccionar el nodo de página oculto.",
       "paperPreset": "Preset de papel",
-      "marginMm": "Margen (mm)"
+      "marginMm": "Margen (mm)",
+      "customSize": "Tamaño personalizado…",
+      "customWidth": "Ancho",
+      "customHeight": "Alto",
+      "customUnit": "Unidad"
     },
     "breadcrumbs": {
       "emptyHelp": "Seleccione un componente del lienzo para ver su jerarquía.",
@@ -1403,7 +1482,13 @@
         "noQuotesFound": "Sin cotizaciones.",
         "selectQuote": "Seleccionar cotización",
         "loadingQuoteDetails": "Cargando detalles de la cotización…",
-        "loadingDocumentDetails": "Cargando detalles del documento…"
+        "loadingDocumentDetails": "Cargando detalles del documento…",
+        "zoom": {
+          "fit": "Ajustar",
+          "actual": "100 %",
+          "label": "Zoom de la vista previa",
+          "fitWithScale": "Ajustar ({{percent}} %)"
+        }
       },
       "tabs": {
         "design": "Diseño",
@@ -2322,6 +2407,7 @@
     }
   },
   "draftInvoiceDetails": {
+    "sessionExpired": "La sesión expiró mientras se cargaban los detalles de la factura. Inicie sesión de nuevo y vuelva a cargar los detalles.",
     "title": "Detalles de la factura",
     "description": "Edite los metadatos del borrador de factura antes de finalizarlo.",
     "actions": {
@@ -2418,7 +2504,8 @@
     "types": {
       "salesOrder": "Orden de venta",
       "packingSlip": "Nota de entrega",
-      "pickList": "Lista de preparación de pedidos"
+      "pickList": "Lista de preparación de pedidos",
+      "workTag": "Etiqueta de trabajo / Etiqueta"
     }
   },
   "errors": {
@@ -2488,5 +2575,15 @@
     "saving": "Guardando…",
     "saveCorrection": "Guardar corrección",
     "save": "Guardar"
+  },
+  "draftInvoiceAdjustments": {
+    "sessionExpired": "La sesión expiró mientras se cargaban los ajustes de la factura. Inicie sesión de nuevo y vuelva a cargar esta factura.",
+    "signIn": "Iniciar sesión",
+    "retry": "Volver a cargar",
+    "blockedTitle": "Ajustes de factura no disponibles",
+    "blocked": {
+      "exported": "Esta factura está sincronizada con un sistema de contabilidad. Anúlela o emita un crédito por separado en lugar de editar sus conceptos.",
+      "exporting": "Se está preparando una exportación contable para esta factura. Espere a que termine antes de cambiarla."
+    }
   }
 }

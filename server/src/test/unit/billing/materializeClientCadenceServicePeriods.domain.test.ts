@@ -7,7 +7,6 @@ describe('materialize client cadence service periods', () => {
   it('T343: client-cadence materialization generates persisted future service-period records with horizon coverage and canonical client-owned invoice windows', () => {
     const sourceObligation = buildPersistedRecurringObligationRef({
       obligationId: 'line-1',
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     });
 
@@ -23,7 +22,7 @@ describe('materialize client cadence service periods', () => {
     });
 
     expect(advancePlan.scheduleKey).toBe(
-      'schedule:tenant-1:contract_line:line-1:client:advance',
+      'schedule:tenant-1:line-1:client:advance',
     );
     expect(advancePlan.coverage.meetsTargetHorizon).toBe(true);
     expect(advancePlan.coverage.needsReplenishment).toBe(false);
@@ -32,7 +31,7 @@ describe('materialize client cadence service periods', () => {
       cadenceOwner: 'client',
       duePosition: 'advance',
       lifecycleState: 'generated',
-      scheduleKey: 'schedule:tenant-1:contract_line:line-1:client:advance',
+      scheduleKey: 'schedule:tenant-1:line-1:client:advance',
       periodKey: 'period:2026-01-10:2026-02-10',
       servicePeriod: {
         start: '2026-01-10',
@@ -66,7 +65,7 @@ describe('materialize client cadence service periods', () => {
     });
 
     expect(arrearsPlan.records[0]).toMatchObject({
-      scheduleKey: 'schedule:tenant-1:contract_line:line-1:client:arrears',
+      scheduleKey: 'schedule:tenant-1:line-1:client:arrears',
       servicePeriod: {
         start: '2026-01-10',
         end: '2026-02-10',
@@ -83,7 +82,6 @@ describe('materialize client cadence service periods', () => {
   it('extends old regeneration anchors through the materialization date horizon', () => {
     const sourceObligation = buildPersistedRecurringObligationRef({
       obligationId: 'line-stale-anchor',
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     });
 

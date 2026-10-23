@@ -7,7 +7,14 @@ import Quote from '../../models/quote';
 import type { QuoteDiscountAllocationResult, QuoteDiscountItemAllocation } from '../../services/quoteDiscountAllocation';
 import { fetchTenantParty } from './tenantPartyAdapter';
 import { displayAddressField, displayCountry } from '@alga-psa/core';
-import { cadenceDefaultName, compareCadenceKeys, isRecurringCadenceKey, resolveCadenceKey } from '../quoteItemCadence';
+import {
+  cadenceDefaultName,
+  compareCadenceKeys,
+  isRecurringCadenceKey,
+  QUOTE_CADENCE_MONTHLY,
+  QUOTE_CADENCE_ONE_TIME,
+  resolveCadenceKey,
+} from '../quoteItemCadence';
 import { isPendingOptional, isQuoteItemIncluded, isSelected } from '../quoteItemInclusion';
 import { presentedTaxAmount } from '../quoteItemTax';
 import { allocateIncludedQuoteDiscounts, summarizeQuoteTotals } from '../quoteTotals';
@@ -375,21 +382,28 @@ type CadenceBaseMeta = { cadenceKey: string; pending: boolean };
  * Only non-empty bands are emitted, in canonical cadence order. Both
  * collections are the same `QuoteViewModelCadenceGroup` shape: a group in
  * `groups_by_cadence` also carries its optional sub-bucket when it has one.
+ *
+ * `customBandNames` carries the quote's own section titles keyed by cadence.
+ * A title replaces that band's vocabulary name (and is flagged so the document
+ * localization keeps the author's wording); a blank one changes nothing.
  */
 function buildCadenceGroups(
   lineItems: QuoteViewModelLineItem[],
   discountAllocations: Map<string, QuoteDiscountItemAllocation[]>,
   baseMeta: Map<string, CadenceBaseMeta>,
+  customBandNames: Record<string, string | null> = {},
 ): { groups: QuoteViewModelCadenceGroup[]; optionalGroups: QuoteViewModelCadenceGroup[] } {
   const groupsByKey = new Map<string, QuoteViewModelCadenceGroup>();
 
   const ensureGroup = (cadenceKey: string): QuoteViewModelCadenceGroup => {
     let group = groupsByKey.get(cadenceKey);
     if (!group) {
+      const customName = customBandNames[cadenceKey] || null;
+      const name = customName ?? cadenceDefaultName(cadenceKey);
       group = {
         cadence_key: cadenceKey,
-        name: cadenceDefaultName(cadenceKey),
-        total_label: `${cadenceDefaultName(cadenceKey)} Total`,
+        name,
+        total_label: `${name} Total`,
         is_recurring: isRecurringCadenceKey(cadenceKey),
         items: [],
         subtotal: 0,
@@ -400,6 +414,7 @@ function buildCadenceGroups(
         optional_tax: 0,
         optional_total: 0,
       };
+      if (customName) group.name_is_custom = true;
       groupsByKey.set(cadenceKey, group);
     }
     return group;
@@ -679,7 +694,13 @@ export async function mapLoadedQuoteToViewModel(
   const onetimeSummary = buildQuoteGroupSummary(cadenceCollections.onetime);
   const serviceSummary = buildQuoteItemGroupSummary(lineItems, (item) => item.service_item_kind === 'service');
   const productSummary = buildQuoteItemGroupSummary(lineItems, (item) => item.service_item_kind === 'product');
-  const cadenceGroups = buildCadenceGroups(lineItems, resolvedDiscounts.allocationsByDiscountId, baseMeta);
+  // The grouped layout's band headings are data-driven, so the quote's own
+  // section titles rename the monthly and one-time bands here rather than in
+  // the template AST. Other cadences keep their vocabulary name.
+  const cadenceGroups = buildCadenceGroups(lineItems, resolvedDiscounts.allocationsByDiscountId, baseMeta, {
+    [QUOTE_CADENCE_MONTHLY]: quote.recurring_section_title?.trim() || null,
+    [QUOTE_CADENCE_ONE_TIME]: quote.onetime_section_title?.trim() || null,
+  });
 
   // Overall financials are derived from the same included bases and resolved
   // discounts the groups show, through the shared `summarizeQuoteTotals`:
@@ -709,6 +730,8 @@ export async function mapLoadedQuoteToViewModel(
     status: quote.status ?? null,
     version: Number(quote.version ?? 1),
     po_number: quote.po_number ?? null,
+    recurring_section_title: quote.recurring_section_title?.trim() || null,
+    onetime_section_title: quote.onetime_section_title?.trim() || null,
     currency_code: quote.currency_code,
     subtotal: totals.subtotal,
     discount_total: totals.discount_total,

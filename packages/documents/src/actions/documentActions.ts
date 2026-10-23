@@ -46,6 +46,7 @@ import { generateDocumentPreviews } from '../lib/documentPreviewGenerator';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildDocumentAssociatedPayload,
+  buildDocumentDeletedPayload,
   buildDocumentDetachedPayload,
 } from '@alga-psa/workflow-streams';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -103,14 +104,13 @@ async function publishDocumentDeletedSearchEvent(
 ): Promise<void> {
   try {
     const occurredAt = new Date().toISOString();
-    await publishEvent({
+    await publishWorkflowEvent({
       eventType: 'DOCUMENT_DELETED',
-      payload: {
+      payload: buildDocumentDeletedPayload({ documentId, deletedByUserId: userId, deletedAt: occurredAt }),
+      ctx: {
         tenantId: tenant,
         occurredAt,
-        documentId,
-        deletedByUserId: userId,
-        deletedAt: occurredAt,
+        ...(userId ? { actor: { actorType: 'USER' as const, actorUserId: userId } } : {}),
       },
     });
   } catch (eventError) {

@@ -534,7 +534,8 @@
         "anniversary": "il prossimo anniversario del cliente",
         "renewal": "la data di decisione sul rinnovo del contratto",
         "contractEnd": "la data di fine del contratto",
-        "warrantyEnd": "la data di fine garanzia dell’asset"
+        "warrantyEnd": "la data di fine garanzia dell’asset",
+        "ticketStatusAge": "il giorno in cui il ticket raggiunge il numero di giorni nello stato"
       }
     }
   },
@@ -564,7 +565,8 @@
       "exportCsv": "Esporta CSV",
       "exportJson": "Esporta JSON",
       "close": "Chiudi",
-      "viewRunDetails": "Visualizza dettagli esecuzione"
+      "viewRunDetails": "Visualizza dettagli esecuzione",
+      "backToEvents": "Torna agli eventi"
     },
     "table": {
       "schemaConflict": "catalogo ≠ invio",
@@ -602,7 +604,12 @@
       "waitStepLine": "Passaggio: {{value}}",
       "matchedRunLabel": "Esecuzione corrispondente",
       "runStatusLine": "Stato: {{status}}",
-      "payloadLabel": "Payload"
+      "payloadLabel": "Payload",
+      "launchSkips": {
+        "title": "Workflow non avviati",
+        "unknownWorkflow": "Workflow eliminato",
+        "intentional": "Intenzionale"
+      }
     },
     "toasts": {
       "loadEventsFailed": "Impossibile caricare gli eventi del workflow",
@@ -621,7 +628,8 @@
     },
     "actions": {
       "refresh": "Aggiorna",
-      "loadMore": "Carica altri"
+      "loadMore": "Carica altri",
+      "backToList": "Torna ai messaggi non recapitabili"
     },
     "table": {
       "columns": {
@@ -808,7 +816,20 @@
       "notPublishedNextVersion": "Non ancora pubblicato. La pubblicazione crea la v{{next}}.",
       "tenantTimezoneOption": "Fuso orario del tenant (predefinito)",
       "searchTimezones": "Cerca fusi orari",
-      "inputDataEventPending": "Scegli l’evento qui sopra; i tuoi passaggi leggeranno i dati inviati da quell’evento."
+      "inputDataEventPending": "Scegli l’evento qui sopra; i tuoi passaggi leggeranno i dati inviati da quell’evento.",
+      "dateSourceTicketStatusAge": "Ticket nello stato da N giorni",
+      "statusAgeStatus": "Stato",
+      "statusAgeStatusPlaceholder": "Seleziona uno stato",
+      "statusAgeStatusMissing": "Nella bacheca selezionata non esiste uno stato con questo nome.",
+      "statusAgeOptionsFailed": "Impossibile caricare stati e bacheche.",
+      "statusAgeMatchByName": "Gli stati vengono confrontati per nome. Rinominare uno stato impedisce a questo trigger di corrispondere.",
+      "statusAgeBoard": "Bacheca (facoltativo)",
+      "statusAgeAnyBoard": "Qualsiasi bacheca",
+      "statusAgeDays": "Giorni nello stato",
+      "statusAgeRepeat": "Ripeti finché nello stato",
+      "statusAgeRepeatEvery": "Ripeti ogni (giorni)",
+      "statusAgeNoActivity": "Solo se non c'è stata alcuna attività (commenti o modifiche da parte di persone) per quel periodo",
+      "statusAgeSummary": "Viene eseguito ogni giorno alle {{time}} ({{timezone}}) per ogni ticket che è rimasto nello stato scelto per il numero di giorni impostato"
     },
     "stepPanel": {
       "readOnly": "Accesso in sola lettura: la modifica dei passaggi è disabilitata.",
@@ -1492,6 +1513,41 @@
       "unsaved": "Modifiche non salvate",
       "savedAgo": "Salvato · {{ago}}",
       "saved": "Salvato"
+    },
+    "launchSkips": {
+      "banner": {
+        "summary_one": "{{count}} evento saltato negli ultimi {{days}} giorni — {{reasons}}",
+        "summary_other": "{{count}} eventi saltati negli ultimi {{days}} giorni — {{reasons}}",
+        "lastSkipped": "Ultimo saltato {{when}}",
+        "view": "Visualizza eventi saltati",
+        "summary_few": "{{count}} eventi saltati negli ultimi {{days}} giorni — {{reasons}}",
+        "summary_many": "{{count}} eventi saltati negli ultimi {{days}} giorni — {{reasons}}"
+      },
+      "drawer": {
+        "title": "Eventi saltati",
+        "windowLabel": "Periodo",
+        "window": {
+          "24h": "Ultime 24 ore",
+          "7d": "Ultimi 7 giorni",
+          "30d": "Ultimi 30 giorni"
+        },
+        "allReasons": "Tutti i motivi",
+        "reasonLabel": "Motivo",
+        "groupAttention": "Richiede attenzione",
+        "groupGuarded": "Protetto / in pausa (intenzionale)",
+        "lastSeen": "Ultima occorrenza {{when}}",
+        "columns": {
+          "received": "Ricevuto",
+          "event": "Evento",
+          "reason": "Motivo",
+          "message": "Messaggio"
+        },
+        "issuesTitle": "Problemi di convalida",
+        "issueRoot": "(contenuto)",
+        "openEvent": "Apri evento",
+        "loadError": "Impossibile caricare gli eventi saltati.",
+        "empty": "Nessun evento saltato in questo periodo."
+      }
     }
   },
   "actionInputFieldInfo": {
@@ -1808,7 +1864,9 @@
     "insertionPointLabel": "I nuovi passaggi vanno qui",
     "emptyBranchPrompt": "Aggiungi un passaggio a questo ramo",
     "emptyActivePrompt": "I nuovi passaggi vanno qui. Scegline uno dalla palette.",
-    "stepCount": "({{count}} passaggi)"
+    "stepCount": "({{count}} passaggi)",
+    "stepCount_few": "({{count}} passaggi)",
+    "stepCount_many": "({{count}} passaggi)"
   },
   "expressionEditor": {
     "ariaLabel": "Editor di espressioni",
@@ -2095,7 +2153,8 @@
     "dateTiming": {
       "before": "{{count}} giorni prima",
       "after": "{{count}} giorni dopo",
-      "onTheDay": "nel giorno stesso"
+      "onTheDay": "nel giorno stesso",
+      "daysInStatus": "{{count}} giorni nello stato"
     },
     "dateWithTiming": "{{source}}, {{timing}}"
   },
@@ -2320,7 +2379,12 @@
       "currentRun": "Esecuzione {{id}}",
       "backToWorkflow": "Torna al workflow"
     },
-    "title": "Studio di esecuzione del workflow"
+    "title": "Studio di esecuzione del workflow",
+    "communityEdition": {
+      "title": "Funzionalità Pro",
+      "description": "Lo studio di esecuzione dei workflow è disponibile solo in Pro.",
+      "runId": "ID esecuzione: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -2786,6 +2850,10 @@
       },
       "deleteDialog": {
         "fallbackEntityName": "questo workflow"
+      },
+      "launchSkips": {
+        "badge": "{{count}} saltati",
+        "badgeTitle": "Eventi per cui questo workflow non è stato avviato negli ultimi 7 giorni"
       }
     },
     "eventsCatalog": {
@@ -3089,6 +3157,10 @@
         "selectBoard": "Seleziona o inserisci una bacheca",
         "selectPriority": "Seleziona o inserisci una priorità"
       }
+    },
+    "proFeature": {
+      "title": "Funzionalità Pro",
+      "description": "Il sistema di workflow è disponibile solo in Pro. Esegui l’upgrade della tua installazione per accedere a questa funzionalità."
     }
   },
   "toggle": {
@@ -3181,5 +3253,75 @@
   "fieldPicker": {
     "searchPlaceholder": "Cerca campi",
     "noMatches": "Nessun campo corrispondente"
+  },
+  "launchSkipReasons": {
+    "missing_schema_ref": {
+      "label": "Riferimento allo schema del payload mancante",
+      "hint": "Il workflow non ha un riferimento allo schema del payload, quindi il payload dell'evento non può essere convalidato."
+    },
+    "unknown_schema_ref": {
+      "label": "Riferimento allo schema del payload sconosciuto",
+      "hint": "Il riferimento allo schema del payload del workflow non esiste nel registro degli schemi."
+    },
+    "missing_source_schema": {
+      "label": "Schema di origine mancante",
+      "hint": "L'evento non ha uno schema di origine da confrontare con lo schema del workflow."
+    },
+    "schema_mismatch": {
+      "label": "Il payload dell'evento non corrisponde allo schema",
+      "hint": "Il payload dell'evento non corrisponde allo schema del workflow e non è configurata alcuna mappatura."
+    },
+    "payload_mapping_failed": {
+      "label": "Mappatura del payload non riuscita",
+      "hint": "La mappatura del payload del trigger non ha potuto essere applicata all'evento."
+    },
+    "payload_validation_failed": {
+      "label": "Convalida del payload non riuscita",
+      "hint": "Il payload mappato non ha superato lo schema del payload del workflow."
+    },
+    "launch_failed": {
+      "label": "Avvio non riuscito",
+      "hint": "Il worker ha accettato l'evento, ma l'avvio dell'esecuzione del workflow non è riuscito."
+    },
+    "paused": {
+      "label": "Workflow in pausa",
+      "hint": "Il workflow è in pausa, quindi gli eventi non vengono avviati intenzionalmente."
+    },
+    "lineage_loop_guard": {
+      "label": "Protezione anti-ciclo (lignaggio)",
+      "hint": "L'evento proviene dal lignaggio di questo stesso workflow; saltato per evitare un ciclo."
+    },
+    "self_trigger_guard": {
+      "label": "Protezione anti-autoattivazione",
+      "hint": "L'evento è stato emesso da questo stesso workflow; saltato per evitare l'autoattivazione."
+    },
+    "causation_depth_exceeded": {
+      "label": "Profondità di causalità superata",
+      "hint": "La catena di eventi causati ha superato la profondità massima; saltato per evitare cicli incontrollati."
+    }
+  },
+  "createFromTicket": {
+    "title": "Crea workflow dal ticket",
+    "description": "Crea un workflow in bozza il cui primo passaggio crea un ticket come #{{number}}. Non viene pubblicato nulla.",
+    "cancel": "Annulla",
+    "creating": "Creazione…",
+    "submit": "Crea bozza e apri il designer",
+    "nameLabel": "Nome del workflow",
+    "triggerLabel": "Trigger",
+    "triggerManual": "Manuale (esegui su richiesta)",
+    "ticketCreatedWarning": "Questo workflow crea un ticket e un nuovo ticket attiva di nuovo questo trigger. Aggiungi una condizione prima di pubblicare per evitare un ciclo.",
+    "includeLegend": "Includi dal ticket",
+    "propertiesAlways": "Titolo, descrizione, cliente, contatto, bacheca, categoria e priorità sono sempre inclusi.",
+    "includeAssignment": "Assegnazione",
+    "includeTags": "Tag",
+    "includeCustomFields": "Campi personalizzati",
+    "includeChecklist": "Lista di controllo",
+    "errors": {
+      "nameRequired": "Il nome del workflow è obbligatorio",
+      "generic": "Impossibile creare la bozza del workflow"
+    },
+    "includeCustomFieldsCount": "Campi personalizzati ({{n}})",
+    "includeChecklistCount": "Lista di controllo ({{total}} elementi: {{templates}} da modelli / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Gli elementi dei modelli vengono riapplicati dal modello attuale, quindi le modifiche fatte su questo ticket non vengono riportate."
   }
 }

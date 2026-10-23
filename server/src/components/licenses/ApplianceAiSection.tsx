@@ -155,8 +155,11 @@ export default function ApplianceAiSection(): React.JSX.Element {
     }
 
     if (summaryResult.status === "fulfilled") {
-      setSummary(summaryResult.value);
-      setSummaryError(false);
+      // Unavailable (gateway not configured) is treated like a failed read so
+      // the existing "balance unavailable" state renders instead of a balance.
+      const result = summaryResult.value;
+      setSummary(result.status === "ok" ? result.data : null);
+      setSummaryError(result.status !== "ok");
     } else {
       setSummaryError(true);
     }

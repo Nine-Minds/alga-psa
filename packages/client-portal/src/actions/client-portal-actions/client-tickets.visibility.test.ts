@@ -89,6 +89,12 @@ vi.mock('@alga-psa/analytics', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: (...args: any[]) => publishEventMock(...args),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
@@ -241,7 +247,7 @@ describe('client portal ticket visibility enforcement', () => {
     expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       ticketsBuilder,
       expect.objectContaining({ visibleBoardIds: ['board-1'] }),
-      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' }
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant', closedColumn: 't.is_closed' } }
     );
   });
 
@@ -289,7 +295,7 @@ describe('client portal ticket visibility enforcement', () => {
     expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       ticketsBuilder,
       expect.objectContaining({ visibleBoardIds: null }),
-      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' }
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant', closedColumn: 't.is_closed' } }
     );
   });
 
@@ -376,7 +382,7 @@ describe('client portal ticket visibility enforcement', () => {
     expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       expect.any(Object),
       expect.objectContaining({ visibleBoardIds: ['board-1'] }),
-      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' }
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant', closedColumn: 't.is_closed' } }
     );
   });
 
@@ -844,6 +850,40 @@ describe('contact-scoped portal enforcement', () => {
     if (path === 'documents') expect(touched).not.toContain('documents as d');
     expect(touched).not.toContain('statuses');
   });
+
+  // T156 / FR-E7b: a shared-workspace colleague reads the ticket but must not
+  // be able to comment on it, edit or delete a comment, or close it. That is
+  // decided by whether the gate for each path passes `sharedWorkspaceTickets`.
+  it.each([
+    ['comment', false],
+    ['edit-comment', false],
+    ['delete-comment', false],
+    ['status', false],
+    // The detail and list read paths are asserted by call shape in T008-T010
+    // above; `documents` is the read path this harness can drive to the end.
+    ['documents', true],
+  ] as Array<[string, boolean]>)('%s gate includes workspace tickets: %s', async (path, expectsWorkspace) => {
+    getVisibilityContextMock.mockResolvedValue({ ticketScope: 'contact', effectiveTicketScope: 'contact', isClientAdmin: false, contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: 'g', visibleBoardIds: ['board-1'] });
+    withTransactionMock.mockImplementation(async (_db: any, callback: any) => callback(Object.assign((table: string) => {
+      if (table === 'comments') return filteredTickets([{ comment_id: 'comment-1', ticket_id: TICKET_1, user_id: 'u' }]);
+      if (table === 'users') return makeUserQuery();
+      if (table === 'tickets as t' || table === 'tickets') return filteredTickets([]);
+      return makeChainable([]);
+    }, { raw: vi.fn() })));
+
+    const actions = await import('./client-tickets');
+    if (path === 'comment') await actions.addClientTicketComment(TICKET_1, 'note');
+    else if (path === 'edit-comment') await actions.updateClientTicketComment('comment-1', { note: 'changed' });
+    else if (path === 'delete-comment') await actions.deleteClientTicketComment('comment-1');
+    else if (path === 'status') await actions.updateTicketStatus(TICKET_1, 'status-2');
+    else await actions.getClientTicketDocuments(TICKET_1);
+
+    expect(applyTicketVisibilityFilterMock).toHaveBeenCalled();
+    const sawWorkspace = applyTicketVisibilityFilterMock.mock.calls.some(
+      (call: any[]) => Boolean(call[2]?.sharedWorkspaceTickets)
+    );
+    expect(sawWorkspace).toBe(expectsWorkspace);
+  });
 });
 
 function filteredTickets(initial: any[]) {
@@ -852,6 +892,33 @@ function filteredTickets(initial: any[]) {
   const builder = makeChainable();
   const field = (name: string) => name.split('.').pop()!;
   builder.where = vi.fn((column: any, value?: any) => {
+    // applyTicketVisibilityFilter uses a nested `where(callback)` as soon as it
+    // has more than the plain contact predicate (profiles, watchers, shared
+    // workspaces). Apply the callback's base predicates and ignore its `or*`
+    // branches: this harness has no join data to satisfy them, so ignoring
+    // them keeps the fake conservative rather than accidentally widening.
+    if (typeof column === 'function') {
+      const nested: any = {
+        where: (nestedColumn: any, nestedValue?: any) => {
+          const conditions = typeof nestedColumn === 'string' ? { [nestedColumn]: nestedValue } : nestedColumn;
+          if (conditions && typeof conditions === 'object') {
+            rows = rows.filter((row) => Object.entries(conditions).every(([key, val]) => row[field(key)] === val));
+          }
+          return nested;
+        },
+        whereIn: (nestedColumn: string, values: any[]) => {
+          rows = rows.filter((row) => values.includes(row[field(nestedColumn)]));
+          return nested;
+        },
+        whereRaw: () => nested,
+        orWhere: () => nested,
+        orWhereIn: () => nested,
+        orWhereNull: () => nested,
+        orWhereRaw: () => nested,
+      };
+      column(nested);
+      return builder;
+    }
     const conditions = typeof column === 'string' ? { [column]: value } : column;
     if (conditions && typeof conditions === 'object') {
       rows = rows.filter((row) => Object.entries(conditions).every(([key, val]) => row[field(key)] === val));

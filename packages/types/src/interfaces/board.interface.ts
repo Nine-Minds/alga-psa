@@ -86,7 +86,7 @@ export interface IBoard extends TenantEntity {
   inbound_reply_reopen_status_id?: string | null;
   inbound_reply_ai_ack_suppression_enabled?: boolean;
 
-  // Controls live timer + tracked intervals visibility in ticket details
+  // Show the stopwatch on tickets in this board (null/undefined resolves to enabled; see boardLiveTicketTimer.ts)
   enable_live_ticket_timer?: boolean;
 
   // When false the board is hidden from every client portal surface,

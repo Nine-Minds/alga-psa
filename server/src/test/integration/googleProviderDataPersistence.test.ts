@@ -75,6 +75,7 @@ describe('Google Provider Data Persistence Tests', () => {
   afterEach(async () => {
     // Clean up test data
     try {
+      await tenantTable('imap_email_provider_config').delete();
       await tenantTable('google_email_provider_config').delete();
       await tenantTable('email_providers').delete();
 
@@ -352,5 +353,92 @@ describe('Google Provider Data Persistence Tests', () => {
     // Original values preserved
     expect(configRecord.client_id).toBe('original-client-id.apps.googleusercontent.com');
     expect(configRecord.project_id).toBe('original-project');
+  });
+
+  describe('createProvider transactionality', () => {
+    const validGoogleConfig = {
+      client_id: 'tx-client-id.apps.googleusercontent.com',
+      client_secret: 'tx-client-secret',
+      project_id: 'tx-project',
+      redirect_uri: 'http://localhost:3000/api/auth/google/callback',
+      pubsub_topic_name: 'gmail-notifications',
+      pubsub_subscription_name: 'gmail-webhook-subscription',
+      label_filters: ['INBOX'],
+      auto_process_emails: true,
+      max_emails_per_sync: 50
+    };
+
+    it('rolls back the email_providers row when the vendor config insert fails', async () => {
+      const mailbox = `rollback-${uuidv4().slice(0, 8)}@gmail.com`;
+
+      await expect(
+        emailProviderService.createProvider({
+          tenant: testTenant,
+          providerType: 'google',
+          providerName: 'Rollback Gmail',
+          mailbox,
+          isActive: true,
+          vendorConfig: { ...validGoogleConfig, not_a_column: 'x' }
+        })
+      ).rejects.toThrow(/Failed to create email provider/);
+
+      const rows = await tenantTable('email_providers').where({ mailbox });
+      expect(rows).toHaveLength(0);
+    });
+
+    it('creates an IMAP provider with its config row', async () => {
+      const mailbox = `imap-${uuidv4().slice(0, 8)}@example.com`;
+
+      const created = await emailProviderService.createProvider({
+        tenant: testTenant,
+        providerType: 'imap',
+        providerName: 'IMAP Mailbox',
+        mailbox,
+        isActive: true,
+        vendorConfig: {
+          host: 'imap.example.com',
+          port: 993,
+          secure: true,
+          auth_type: 'password',
+          username: 'user@example.com',
+          folder_filters: ['INBOX']
+        }
+      });
+
+      const parents = await tenantTable<any>('email_providers').where({ mailbox });
+      expect(parents).toHaveLength(1);
+      expect(parents[0].tenant).toBe(testTenant);
+
+      const configs = await tenantTable<any>('imap_email_provider_config')
+        .where({ email_provider_id: created.id });
+      expect(configs).toHaveLength(1);
+      expect(configs[0].tenant).toBe(testTenant);
+      expect(configs[0].host).toBe('imap.example.com');
+
+      const reread = await emailProviderService.getProvider(created.id);
+      expect(created.provider_config).toEqual(reread?.provider_config);
+    });
+
+    it('joins a caller transaction and leaves nothing behind when it rolls back', async () => {
+      const mailbox = `caller-trx-${uuidv4().slice(0, 8)}@gmail.com`;
+      const sentinel = new Error('caller abort');
+
+      await expect(
+        testDb.transaction(async (trx) => {
+          await emailProviderService.createProvider({
+            tenant: testTenant,
+            providerType: 'google',
+            providerName: 'Caller Trx Gmail',
+            mailbox,
+            isActive: true,
+            vendorConfig: validGoogleConfig
+          }, trx);
+          throw sentinel;
+        })
+      ).rejects.toBe(sentinel);
+
+      const rows = await tenantTable('email_providers').where({ mailbox });
+      expect(rows).toHaveLength(0);
+    });
   });
 });

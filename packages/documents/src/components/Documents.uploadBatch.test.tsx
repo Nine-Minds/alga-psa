@@ -71,13 +71,6 @@ vi.mock('../actions/collaborativeEditingActions', () => ({
   syncCollabSnapshot: vi.fn().mockResolvedValue({ success: true }),
 }));
 
-// Documents.tsx imports './DocumentUpload' (extensionless) which Vite would
-// resolve to the stale committed .jsx twin. Load the real .tsx explicitly so
-// the batch-completion contract under test is the one being shipped.
-vi.mock('./DocumentUpload', async () => {
-  const actual = await vi.importActual<typeof import('./DocumentUpload.tsx')>('./DocumentUpload.tsx');
-  return { default: actual.default };
-});
 vi.mock('./DocumentSelector', () => ({ default: () => null }));
 vi.mock('./DocumentStorageCard', () => ({ default: () => null }));
 vi.mock('./FolderTreeView', () => ({ default: () => null }));

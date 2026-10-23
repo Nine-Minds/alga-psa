@@ -427,5 +427,12 @@
       "loading": "Ładowanie…",
       "loadMore": "Załaduj więcej"
     }
+  },
+  "communityEdition": {
+    "hostedDescription": "Funkcje zarządzania kontem i rozliczeń są dostępne w Pro dla wdrożeń hostowanych.",
+    "selfHostedDescription": "Samodzielnie hostowana Community Edition oferuje nieograniczoną liczbę użytkowników bez ograniczeń licencyjnych ani rozliczeń."
+  },
+  "page": {
+    "title": "Zarządzanie kontem"
   }
 }

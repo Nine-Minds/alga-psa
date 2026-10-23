@@ -182,7 +182,10 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/invoices',
       '/api/v1/projects',
       '/api/v1/assets',
+      '/api/v1/asset-groups',
+      '/api/v1/asset-statuses',
       '/api/v1/time-entries',
+      '/api/v1/stopwatch',
       '/api/v1/workflows',
       '/api/v1/extensions',
       '/api/v1/surveys',
@@ -259,6 +262,18 @@ export const API_RULES: readonly ApiRule[] = [
     group: 'api_telephony_webhooks',
     staticPrefixes: [
       '/api/telephony',
+    ],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false },
+  },
+  {
+    // Label printing (POST /api/labels/pdf): session-authenticated render of
+    // ticket, asset and stock-unit labels through the PSA document-layout
+    // renderer. App-internal, not v1 API, so it never appears in /api/v1/meta
+    // metadata. PSA-only, like the asset/inventory records and the layouts.
+    group: 'api_label_printing',
+    staticPrefixes: [
+      '/api/labels',
     ],
     behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
     visibleInMetadataByProduct: { psa: false, algadesk: false },

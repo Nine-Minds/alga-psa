@@ -104,7 +104,8 @@
     "emailLogs": "E-postloggar",
     "extensions": "Tillägg",
     "ticketsAll": "Alla ärenden",
-    "ticketsRecurring": "Återkommande ärenden"
+    "ticketsRecurring": "Återkommande ärenden",
+    "ticketsTemplates": "Ärendemallar"
   },
   "marketing": {
     "dialogs": {
@@ -565,7 +566,35 @@
       "ariaLabel": "Resurser och hjälp",
       "title": "Resurser",
       "documentation": "Dokumentation",
-      "support": "Kontakta supporten"
+      "support": "Kontakta supporten",
+      "submitTicket": "Skicka ett ärende till Nine Minds"
+    },
+    "supportDialog": {
+      "title": "Skicka ett ärende till Nine Minds",
+      "intro": "Nine Minds support tar emot detta som ett ärende och svarar via e-post.",
+      "categoryLabel": "Vad behöver du hjälp med?",
+      "categories": {
+        "bug": "Något fungerar inte",
+        "question": "Fråga",
+        "billing": "Fakturering",
+        "feature": "Önskemål om funktion"
+      },
+      "subjectLabel": "Ämne",
+      "descriptionLabel": "Vad hände?",
+      "descriptionPlaceholder": "Ange vad du förväntade dig, vad som hände och vilken kund eller faktura det gäller.",
+      "replyTo": "Svar skickas till {{email}}",
+      "success": "Skickat till Nine Minds support. Svar skickas till {{email}}.",
+      "submit": "Skicka till Nine Minds",
+      "sending": "Skickar…",
+      "cancel": "Avbryt",
+      "close": "Stäng",
+      "fallbackLink": "Kontakta supporten på nineminds.com",
+      "errors": {
+        "invalidInput": "Ange ett ämne med minst 3 tecken och en beskrivning med minst 20 tecken.",
+        "rateLimited": "Du skickade nyss en förfrågan. Vänta en minut innan du skickar en till.",
+        "emailNotConfigured": "Den här installationen har ingen utgående e-post konfigurerad, så förfrågan kunde inte skickas.",
+        "sendFailed": "Förfrågan kunde inte skickas. Försök igen."
+      }
     },
     "jobs": {
       "ariaLabel": "Visa aktivitet för bakgrundsjobb",
@@ -591,7 +620,20 @@
       "system": "System",
       "selected": "Valt"
     },
-    "openUserMenu": "Öppna användarmenyn"
+    "openUserMenu": "Öppna användarmenyn",
+    "stopwatch": {
+      "untitled": "Namnlös",
+      "ariaLabelPaused": "Stoppur pausat: {{label}} vid {{clock}}",
+      "ariaLabelRunning": "Stoppur pågår: {{label}} vid {{clock}}",
+      "paused": "Stoppur pausat",
+      "running": "Stoppur pågår",
+      "resume": "Återuppta",
+      "pause": "Pausa",
+      "stop": "Stoppa och logga",
+      "discard": "Kassera",
+      "pausedNoDrawer": "Stoppuret pausat vid {{clock}}. Öppna arbetsobjektet för att logga tiden.",
+      "openTicket": "Öppna ärende"
+    }
   },
   "dialogs": {
     "aiInterrupt": {
@@ -622,6 +664,18 @@
     "platformNotification": {
       "learnMore": "Läs mer",
       "dismiss": "Stäng avisering"
+    },
+    "integrationHealth": {
+      "inboundEmail": {
+        "authFailure": "Inkommande e-post för {{mailbox}} är pausad eftersom autentiseringsuppgifterna inte längre fungerar.",
+        "error": "Inkommande e-post för {{mailbox}} rapporterade ett fel och tas kanske inte emot."
+      },
+      "calendar": {
+        "error": "Kalendersynkroniseringen för {{providerName}} rapporterade ett fel och synkroniserar inte.",
+        "disconnected": "Kalendersynkroniseringen för {{providerName}} är frånkopplad och synkroniserar inte."
+      },
+      "review": "Granska",
+      "dismiss": "Stäng integrationsavisering"
     }
   },
   "quickCreate": {
@@ -757,5 +811,37 @@
   "githubStar": {
     "label": "Stjärnmärk",
     "ariaLabel": "Stjärnmärk {{repository}} på GitHub"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "MSP-portal",
+      "dashboard": "Översikt",
+      "ticketDetails": "Ärendedetaljer",
+      "tickets": "Ärenden",
+      "projectDetails": "Projektdetaljer",
+      "projects": "Projekt",
+      "clientDetails": "Kunduppgifter",
+      "clients": "Kunder",
+      "contactDetails": "Kontaktuppgifter",
+      "contacts": "Kontakter",
+      "assetDetails": "Tillgångsdetaljer",
+      "assets": "Tillgångar",
+      "billing": "Fakturering",
+      "settings": "Inställningar",
+      "settingsSection": "Inställningar: {{section}}",
+      "chat": "Chatt"
+    }
+  },
+  "chat": {
+    "page": {
+      "title": "Pro-funktion",
+      "description": "AI-chattfunktionerna kräver Pro. Uppgradera för att få tillgång till den här funktionen."
+    },
+    "messages": {
+      "proRequired": "Meddelandefunktionerna kräver Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Chattfunktionerna är endast tillgängliga i Enterprise Edition"
+    }
   }
 }

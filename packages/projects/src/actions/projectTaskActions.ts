@@ -55,6 +55,8 @@ import {
   buildProjectTaskDependencyBlockedPayload,
   buildProjectTaskDependencyUnblockedPayload,
   buildProjectTaskStatusChangedPayload,
+  buildProjectTaskUpdatedPayload,
+  buildProjectTaskAdditionalAgentAssignedPayload,
 } from '@alga-psa/workflow-streams';
 import {
   BuiltinAuthorizationKernelProvider,
@@ -783,17 +785,17 @@ export const updateTaskWithChecklist = withAuth(async (
                 // needs the rich {previous,new} diff, so emit that and gate on
                 // a real field change (PRD F003 — no no-op deliveries).
                 if (Object.keys(webhookChanges).length > 0) {
-                    await publishEvent({
+                    await publishWorkflowEvent({
                         eventType: 'PROJECT_TASK_UPDATED',
-                        payload: {
-                            tenantId: tenant,
+                        ctx,
+                        payload: buildProjectTaskUpdatedPayload({
                             projectId: phase.project_id,
                             phaseId: phase.phase_id,
                             taskId,
                             userId: user.user_id,
-                            timestamp: new Date().toISOString(),
+                            updatedAt: occurredAt,
                             changes: webhookChanges,
-                        },
+                        }),
                     });
                 }
             }
@@ -1553,18 +1555,19 @@ export const addTaskResourceAction = withAuth(async (
             if (task) {
                 const phase = await ProjectModel.getPhaseById(trx, tenant, task.phase_id);
                 if (phase) {
-                    const eventPayload = {
-                        tenantId: tenant,
-                        projectId: phase.project_id,
-                        taskId: taskId,
-                        primaryAgentId: task.assigned_to,
-                        additionalAgentId: userId,
-                        assignedByUserId: user.user_id
-                    };
-                    console.log('[projectTaskActions] Publishing PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED event:', JSON.stringify(eventPayload));
-                    await publishEvent({
+                    await publishWorkflowEvent({
                         eventType: 'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
-                        payload: eventPayload
+                        payload: buildProjectTaskAdditionalAgentAssignedPayload({
+                            projectId: phase.project_id,
+                            taskId,
+                            primaryAgentId: task.assigned_to || userId,
+                            additionalAgentId: userId,
+                            assignedByUserId: user.user_id,
+                        }),
+                        ctx: {
+                            tenantId: tenant,
+                            actor: { actorType: 'USER', actorUserId: user.user_id },
+                        },
                     });
                 }
             }
@@ -1637,16 +1640,19 @@ export const addTaskResourcesAction = withAuth(async (
 
         // Emit per-agent events after commit so subscribers see the committed rows.
         for (const userId of added) {
-            await publishEvent({
+            await publishWorkflowEvent({
                 eventType: 'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
-                payload: {
-                    tenantId: tenant,
+                payload: buildProjectTaskAdditionalAgentAssignedPayload({
                     projectId,
                     taskId,
-                    primaryAgentId,
+                    primaryAgentId: primaryAgentId || userId,
                     additionalAgentId: userId,
-                    assignedByUserId: user.user_id
-                }
+                    assignedByUserId: user.user_id,
+                }),
+                ctx: {
+                    tenantId: tenant,
+                    actor: { actorType: 'USER', actorUserId: user.user_id },
+                },
             });
         }
 
@@ -2199,17 +2205,19 @@ export const moveTaskToPhase = withAuth(async (
                 ['phase_id', 'project_status_mapping_id']
             );
             if (Object.keys(moveChanges).length > 0) {
-                await publishEvent({
+                await publishWorkflowEvent({
                     eventType: 'PROJECT_TASK_UPDATED',
-                    payload: {
-                        tenantId: tenant,
+                    payload: buildProjectTaskUpdatedPayload({
                         projectId: newPhase.project_id,
                         phaseId: newPhaseId,
                         taskId,
                         userId: user.user_id,
-                        timestamp: new Date().toISOString(),
                         changes: moveChanges,
-                    }
+                    }),
+                    ctx: {
+                        tenantId: tenant,
+                        actor: { actorType: 'USER', actorUserId: user.user_id },
+                    },
                 });
             }
 

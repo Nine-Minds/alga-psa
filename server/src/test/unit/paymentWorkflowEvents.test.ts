@@ -1,11 +1,11 @@
 import { describe, it } from 'vitest';
-import { buildWorkflowPayload } from '@alga-psa/workflow-streams/workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   paymentAppliedEventPayloadSchema,
   paymentFailedEventPayloadSchema,
   paymentRecordedEventPayloadSchema,
   paymentRefundedEventPayloadSchema,
-} from '@alga-psa/workflows/runtime/schemas/billingEventSchemas';
+} from '@alga-psa/event-schemas';
 import {
   buildPaymentAppliedPayload,
   buildPaymentFailedPayload,

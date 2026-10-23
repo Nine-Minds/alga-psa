@@ -69,7 +69,7 @@ import { FixedFeeServicesStep } from '../src/components/billing-dashboard/contra
 import type { ContractWizardData } from '../src/components/billing-dashboard/contracts/ContractWizard';
 import { getFixedServiceBasisIssue } from '../src/lib/fixedServiceBasis';
 
-type FixedService = ContractWizardData['fixed_services'][number];
+type FixedService = ContractWizardData['fixed_lines'][number]['services'][number];
 
 let latestData: ContractWizardData;
 
@@ -81,7 +81,7 @@ function Harness({ initialServices }: { initialServices: FixedService[] }) {
         currency_code: 'USD',
         billing_frequency: 'monthly',
         enable_proration: false,
-        fixed_services: initialServices,
+        fixed_lines: [{ line_key: 'line-1', enable_proration: true, base_rate: null, services: initialServices }],
       }) as unknown as ContractWizardData,
   );
   latestData = data;
@@ -92,7 +92,7 @@ function Harness({ initialServices }: { initialServices: FixedService[] }) {
 }
 
 const rateInput = () =>
-  document.getElementById('wizard-fixed-0-fixed-service-unit-rate') as HTMLInputElement;
+  document.getElementById('wizard-fixed-0-0-fixed-service-unit-rate') as HTMLInputElement;
 const flush = async () => {
   await act(async () => {
     await Promise.resolve();
@@ -117,24 +117,24 @@ describe('FixedFeeServicesStep unit rate clearing', () => {
       />,
     );
 
-    fireEvent.click(document.getElementById('service-select-0') as HTMLElement);
+    fireEvent.click(document.getElementById('fixed-line-0-service-select-0') as HTMLElement);
     await flush();
-    expect(latestData.fixed_services[0].unit_rate).toBe(10000);
+    expect(latestData.fixed_lines[0].services[0].unit_rate).toBe(10000);
     expect(rateInput().value).toBe('100.00');
 
     // Backspace "90" down to nothing: first the digits, then the empty field.
     fireEvent.change(rateInput(), { target: { value: '90' } });
-    expect(latestData.fixed_services[0].unit_rate).toBe(9000);
+    expect(latestData.fixed_lines[0].services[0].unit_rate).toBe(9000);
     fireEvent.change(rateInput(), { target: { value: '9' } });
-    expect(latestData.fixed_services[0].unit_rate).toBe(900);
+    expect(latestData.fixed_lines[0].services[0].unit_rate).toBe(900);
     fireEvent.change(rateInput(), { target: { value: '' } });
     await flush();
 
     expect(rateInput().value).toBe('');
-    expect(latestData.fixed_services[0].unit_rate ?? null).toBeNull();
+    expect(latestData.fixed_lines[0].services[0].unit_rate ?? null).toBeNull();
     // An emptied rate is not a valid row: wizard validation and submission both
     // go through this check, so it can never submit as 0 or as the catalog rate.
-    expect(getFixedServiceBasisIssue(latestData.fixed_services[0])).toBe('unit_rate_required');
+    expect(getFixedServiceBasisIssue(latestData.fixed_lines[0].services[0])).toBe('unit_rate_required');
     // It is not re-fetched/refilled behind the operator's back either.
     expect(catalogMocks.getServiceCatalogRatesForCurrency).not.toHaveBeenCalled();
 
@@ -142,8 +142,8 @@ describe('FixedFeeServicesStep unit rate clearing', () => {
     fireEvent.change(rateInput(), { target: { value: '90' } });
     await flush();
     expect(rateInput().value).toBe('90');
-    expect(latestData.fixed_services[0].unit_rate).toBe(9000);
-    expect(getFixedServiceBasisIssue(latestData.fixed_services[0])).toBeNull();
+    expect(latestData.fixed_lines[0].services[0].unit_rate).toBe(9000);
+    expect(getFixedServiceBasisIssue(latestData.fixed_lines[0].services[0])).toBeNull();
   });
 
   it('still prefills a row that arrives without a rate, then leaves it empty once cleared', async () => {
@@ -154,13 +154,13 @@ describe('FixedFeeServicesStep unit rate clearing', () => {
         ]}
       />,
     );
-    await waitFor(() => expect(latestData.fixed_services[0].unit_rate).toBe(10000));
+    await waitFor(() => expect(latestData.fixed_lines[0].services[0].unit_rate).toBe(10000));
     expect(catalogMocks.getServiceCatalogRatesForCurrency).toHaveBeenCalledTimes(1);
 
     fireEvent.change(rateInput(), { target: { value: '' } });
     await flush();
     expect(rateInput().value).toBe('');
-    expect(latestData.fixed_services[0].unit_rate ?? null).toBeNull();
+    expect(latestData.fixed_lines[0].services[0].unit_rate ?? null).toBeNull();
     expect(catalogMocks.getServiceCatalogRatesForCurrency).toHaveBeenCalledTimes(1);
   });
 });

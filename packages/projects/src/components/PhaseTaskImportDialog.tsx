@@ -453,8 +453,12 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
     }
   }, [fullCSVData, columnMappings, validateMappings, projectId, importT, defaultPhaseName]);
 
-  const handleImport = useCallback(async () => {
-    if (isProcessing || groupedPhases.length === 0) return;
+  // `phasesOverride` lets callers that just computed a grouping import it directly:
+  // a state setter does not update the value this closure already captured.
+  // The Array.isArray guard keeps a click event passed as the first argument harmless.
+  const handleImport = useCallback(async (phasesOverride?: IGroupedPhaseData[]) => {
+    const phases = Array.isArray(phasesOverride) ? phasesOverride : groupedPhases;
+    if (isProcessing || phases.length === 0) return;
 
     setIsProcessing(true);
     setStep('importing');
@@ -463,7 +467,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
     try {
       const result = await importPhasesAndTasks(
         projectId,
-        groupedPhases,
+        phases,
         statusResolutions,
         defaultStatusMappingId || undefined,
         defaultPhaseName || undefined
@@ -543,7 +547,8 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
     if (unmatchedStatuses.length > 0) {
       setStep('status_resolution');
     } else {
-      handleImport();
+      // Pass the fresh grouping — setGroupedPhases above cannot reach handleImport's closure.
+      handleImport(grouped);
     }
   }, [validationResults, userLookup, priorityLookup, serviceLookup, statusLookup, statusLookupByPhase, agentResolutions, unmatchedStatuses, handleImport, defaultPhaseName]);
 
@@ -833,7 +838,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
         </Button>
         <Button
           id="status-resolution-import-btn"
-          onClick={handleImport}
+          onClick={() => handleImport()}
           disabled={isProcessing || hasIncompleteStatusMappings || !canProceedWithImport}
         >
           {isProcessing

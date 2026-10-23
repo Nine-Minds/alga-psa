@@ -1,3 +1,4 @@
+import type { WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import { getRedisClient, getRedisConfig } from '@alga-psa/event-bus';
 import type { InternalNotification } from '../types/internalNotification';
 import logger from '@alga-psa/core/logger';
@@ -25,7 +26,10 @@ function normalizeErrorMessage(error: unknown): string {
   return String(error || 'Unknown error');
 }
 
-function safePublishNotificationWorkflowEvent(params: Parameters<typeof publishWorkflowEvent>[0]): void {
+// LEVERAGE: pattern safe-publish-workflow-event — fire-and-forget publishWorkflowEvent wrapper repeated per package
+function safePublishNotificationWorkflowEvent<T extends WorkflowCatalogEventType>(
+  params: Parameters<typeof publishWorkflowEvent<T>>[0]
+): void {
   void publishWorkflowEvent(params).catch((error) => {
     logger.warn('[NotificationBroadcaster] Failed to publish workflow notification event', {
       error: normalizeErrorMessage(error),

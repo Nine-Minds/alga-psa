@@ -768,4 +768,53 @@ describe('Quotes i18n wiring contract', () => {
       expect(getLeaf(billing, 'enums.billingFrequency.weekly')).toBeDefined();
     }
   });
+
+  it('T032: sole-approver and mark-accepted quote copy is translated in every shipped locale', () => {
+    // Discover locales from disk so a newly added locale (e.g. sv) cannot be
+    // silently skipped the way the hardcoded locale lists above would.
+    const localesRoot = path.resolve(__dirname, '../../../../server/public/locales');
+    const locales = fs
+      .readdirSync(localesRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+    const pseudoLocales = new Set(['xx', 'yy']);
+    const keys = [
+      'common.actions.markAccepted',
+      'quoteForm.actions.markAccepted',
+      'quoteForm.dialogs.markAccepted.title',
+      'quoteForm.dialogs.markAccepted.description',
+      'quoteForm.dialogs.markAccepted.note',
+      'quoteForm.dialogs.markAccepted.notePlaceholder',
+      'quoteForm.errorActions.markAccepted',
+      'quoteForm.notices.markedAccepted',
+      'quoteDetail.errors.markAccepted',
+      'quoteDetail.notices.markedAccepted',
+      'quoteApproval.soleApprover.title',
+      'quoteApproval.soleApprover.description',
+      'quoteApproval.soleApprover.draftDescription',
+      'quoteApproval.soleApprover.pendingDescription',
+      'quoteApproval.soleApprover.dialogNote',
+      'errors.quote.templateCannotBeAccepted',
+      'errors.quote.onlySentCanBeAccepted',
+    ];
+
+    expect(locales).toEqual(expect.arrayContaining(['en', 'sv', 'xx', 'yy']));
+    const en = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/en/msp/quotes.json',
+    );
+
+    for (const locale of locales) {
+      const messages = readJson<Record<string, unknown>>(
+        `../../../../server/public/locales/${locale}/msp/quotes.json`,
+      );
+      for (const key of keys) {
+        const value = getLeaf(messages, key);
+        expect(typeof value, `${locale}: ${key}`).toBe('string');
+        expect((value as string).trim(), `${locale}: ${key}`).not.toBe('');
+        if (locale !== 'en' && !pseudoLocales.has(locale)) {
+          expect(value, `${locale}: ${key} should not fall back to English`).not.toBe(getLeaf(en, key));
+        }
+      }
+    }
+  });
 });

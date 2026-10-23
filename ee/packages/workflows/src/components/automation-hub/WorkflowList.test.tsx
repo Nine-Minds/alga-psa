@@ -10,6 +10,7 @@ const actionMocks = vi.hoisted(() => ({
   deleteWorkflowDefinitionAction: vi.fn(),
   preCheckWorkflowDefinitionDeletion: vi.fn(),
   updateWorkflowDefinitionMetadataAction: vi.fn(),
+  listWorkflowLaunchSkipCountsAction: vi.fn(),
 }));
 
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
@@ -91,6 +92,7 @@ describe('WorkflowList row actions and draft badge', () => {
       counts: { total: rows.length, active: 3, draft: 1, paused: 1 },
     });
     actionMocks.updateWorkflowDefinitionMetadataAction.mockResolvedValue({ ok: true });
+    actionMocks.listWorkflowLaunchSkipCountsAction.mockResolvedValue({});
   });
 
   afterEach(() => cleanup());
@@ -125,6 +127,27 @@ describe('WorkflowList row actions and draft badge', () => {
 
     fireEvent.click(document.getElementById('workflow-list-row-run-wf-fresh') as HTMLElement);
     expect(onRunWorkflow).toHaveBeenCalledWith('wf-fresh');
+  });
+
+  it('shows an "N skipped" warning badge only for workflows with alarming skips (alga0002106)', async () => {
+    actionMocks.listWorkflowLaunchSkipCountsAction.mockResolvedValue({ 'wf-fresh': 3 });
+    render(<WorkflowList />);
+    await waitFor(() => expect(screen.getByText('3 skipped')).toBeInTheDocument());
+
+    expect(screen.getAllByText(/skipped$/)).toHaveLength(1);
+    expect(actionMocks.listWorkflowLaunchSkipCountsAction).toHaveBeenCalledTimes(1);
+    expect(actionMocks.listWorkflowLaunchSkipCountsAction).toHaveBeenCalledWith(
+      expect.objectContaining({ workflowIds: rows.map((row) => row.workflow_id) })
+    );
+  });
+
+  it('still renders the list when the skip-count query fails (alga0002106)', async () => {
+    actionMocks.listWorkflowLaunchSkipCountsAction.mockRejectedValue(new Error('boom'));
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    render(<WorkflowList />);
+    await waitFor(() => expect(screen.getByText('Just published')).toBeInTheDocument());
+    expect(screen.queryByText(/skipped$/)).not.toBeInTheDocument();
+    errorSpy.mockRestore();
   });
 
   it('hides Run when the host provides no way to start runs', async () => {

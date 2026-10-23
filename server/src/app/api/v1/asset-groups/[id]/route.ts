@@ -1,0 +1,46 @@
+/**
+ * Asset group detail (FR-E9)
+ * Path: /api/v1/asset-groups/[id]
+ */
+
+import { ApiAssetGroupController } from '@/lib/api/controllers/ApiAssetGroupController';
+import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
+import { withApiKeyRouteAuth } from '@/lib/api/middleware/withApiKeyRouteAuth';
+
+const controller = new ApiAssetGroupController();
+
+export const GET = withApiKeyRouteAuth<{ id: string }>(async (request, { params }) => {
+  try {
+    const resolvedParams = await params;
+    const req = request as any;
+    req.params = resolvedParams;
+    return await controller.getById(req, resolvedParams);
+  } catch (error) {
+    return handleApiError(error);
+  }
+});
+
+export const PUT = withApiKeyRouteAuth<{ id: string }>(async (request, { params }) => {
+  try {
+    const resolvedParams = await params;
+    const req = request as any;
+    req.params = resolvedParams;
+    return await controller.update(req, resolvedParams);
+  } catch (error) {
+    return handleApiError(error);
+  }
+});
+
+export const DELETE = withApiKeyRouteAuth<{ id: string }>(async (request, { params }) => {
+  try {
+    const resolvedParams = await params;
+    const req = request as any;
+    req.params = resolvedParams;
+    return await controller.delete(req, resolvedParams);
+  } catch (error) {
+    return handleApiError(error);
+  }
+});
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';

@@ -50,6 +50,12 @@ type RenderContext = {
   /** The recipient country's date shape: digit order, separator and clock. */
   dateFormat: CountryDateFormat;
   currencyCode: string;
+  /**
+   * Barcode SVGs from the async server prepass, keyed by node id. Undefined means "no prepass"
+   * (designer / client preview): barcode nodes render a placeholder. When provided, a barcode node
+   * without an entry is a bug and throws.
+   */
+  barcodes?: Record<string, string>;
 };
 
 const isRecord = (value: unknown): value is UnknownRecord =>
@@ -487,8 +493,13 @@ const resolveExpressionValue = (
   switch (expression.type) {
     case 'literal':
       return expression.value;
-    case 'binding':
-      return evaluation.bindings[expression.bindingId];
+    case 'binding': {
+      const value = evaluation.bindings[expression.bindingId];
+      // LEVERAGE: Binding expressions carry a localized fallback because the AST has no separate optional-binding node.
+      return value == null || (typeof value === 'string' && value.trim() === '')
+        ? displayText(expression.fallback)
+        : value;
+    }
     case 'path': {
       const parsedPath = decodeTemplatePathExpression(expression.path);
       const rowValue = scope.row ? getPathValue(scope.row, parsedPath.path) : undefined;
@@ -781,6 +792,44 @@ const renderNode = (
         />
       );
     }
+    case 'barcode': {
+      if (!ctx.barcodes) {
+        return (
+          <div
+            key={node.id}
+            id={node.id}
+            className={elementClassName || undefined}
+            data-barcode-placeholder={node.symbology}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: '24mm',
+              minHeight: node.symbology === 'qr' ? '24mm' : '10mm',
+              border: '1px dashed #9ca3af',
+              color: '#6b7280',
+              fontSize: '11px',
+              ...(style ?? {}),
+            }}
+          >
+            {node.symbology === 'qr' ? 'QR code' : 'Code 128'}
+          </div>
+        );
+      }
+      const svg = ctx.barcodes[node.id];
+      if (!svg) {
+        throw new Error(`Barcode node "${node.id}" was not rendered by the barcode prepass`);
+      }
+      return (
+        <div
+          key={node.id}
+          id={node.id}
+          className={elementClassName || undefined}
+          style={style}
+          dangerouslySetInnerHTML={{ __html: svg }}
+        />
+      );
+    }
     case 'divider':
       return <hr key={node.id} id={node.id} className={elementClassName || undefined} style={style} />;
     case 'table': {
@@ -921,6 +970,8 @@ const renderNode = (
 export interface TemplateReactRendererProps {
   ast: TemplateAst;
   evaluation: TemplateEvaluationResult;
+  /** Output of the async barcode prepass (server). Omit for placeholder rendering. */
+  barcodes?: Record<string, string>;
   /**
    * The recipient's locale. Wins over `metadata.locale` for numbers, dates and
    * currency so formatting never diverges from the language of the labels.
@@ -940,6 +991,7 @@ export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
   evaluation,
   locale: localeOverride,
   dateFormat,
+  barcodes,
 }) => {
   const invoiceRecord = isRecord(evaluation.bindings.invoice) ? evaluation.bindings.invoice : {};
   const invoiceRecordUntyped = invoiceRecord as Record<string, unknown>;
@@ -955,7 +1007,7 @@ export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
         ast.layout,
         evaluation,
         {},
-        { ast, currencyCode, locale, dateFormat: dateFormat ?? SYSTEM_DATE_FORMAT },
+        { ast, currencyCode, locale, dateFormat: dateFormat ?? SYSTEM_DATE_FORMAT, barcodes },
         rootDocumentStyleOverride
       )}
     </div>
@@ -973,7 +1025,27 @@ export interface TemplateRenderOptions {
   /** The recipient country's date shape; the fixed system default when omitted. */
   dateFormat?: CountryDateFormat;
   t?: TemplateLabelTranslator;
+  /** Output of renderBarcodeSvgs (barcode/prepass.server.ts). */
+  barcodes?: Record<string, string>;
 }
+
+/** Resolve a value expression outside a render (used by the barcode prepass). */
+export const resolveTemplateExpressionValue = (
+  expression: TemplateValueExpression,
+  ast: TemplateAst,
+  evaluation: TemplateEvaluationResult,
+  options: { locale?: string; dateFormat?: CountryDateFormat } = {}
+): unknown => {
+  const invoiceRecord = isRecord(evaluation.bindings.invoice) ? (evaluation.bindings.invoice as Record<string, unknown>) : {};
+  const currencyCode = String(invoiceRecord.currencyCode ?? invoiceRecord.currency_code ?? ast.metadata?.currencyCode ?? 'USD');
+  const locale = String(options.locale ?? ast.metadata?.locale ?? 'en-US');
+  return resolveExpressionValue(expression, evaluation, {}, {
+    ast,
+    currencyCode,
+    locale,
+    dateFormat: options.dateFormat ?? SYSTEM_DATE_FORMAT,
+  });
+};
 
 export const renderEvaluatedTemplateAst = async (
   ast: TemplateAst,
@@ -991,6 +1063,7 @@ export const renderEvaluatedTemplateAst = async (
         evaluation={localizeTimePresentation(evaluation, options.t)}
         locale={options.locale}
         dateFormat={options.dateFormat}
+        barcodes={options.barcodes}
       />
     ),
     css: buildAstCss(normalizedAst),

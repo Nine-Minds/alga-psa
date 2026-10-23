@@ -1,0 +1,45 @@
+name: levelio-native-webhook-signed
+description: >-
+  Level Settings → Webhooks with a secret, the way ~99% of Level clients
+  configure it: signed alert_active/alert_resolved envelopes, no custom
+  headers. Alga verifies X-Level-Signature over the raw body and answers 2xx;
+  the alerts create tickets. The target defaults to webhook-sink; point it at
+  Alga's /api/webhooks/levelio?tenant=<id> to reproduce live.
+steps:
+  - reset: levelio
+  - seed: levelio/group
+    params: { id: Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMQ, name: Acme Corp }
+  - seed: levelio/group
+    params: { id: Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMg, name: Branch Office, parentId: Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMQ }
+  - seed: levelio/device
+    params:
+      id: Z2lkOi8vbGV2ZWwvRGV2aWNlLzE
+      hostname: WS-01
+      groupId: Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMg
+      serial_number: SN-WS-01
+  - seed: levelio/device
+    params:
+      id: Z2lkOi8vbGV2ZWwvRGV2aWNlLzI
+      hostname: SRV-01
+      role: server
+      groupId: Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMQ
+      serial_number: SN-SRV-01
+  - seed: levelio/webhook
+    params:
+      id: alga-native
+      url: http://localhost:4030/api/webhooks/levelio?tenant=algasim-tenant
+      secret: algasim-level-webhook-secret
+      eventTypes: [alert_active, alert_resolved]
+  - action: levelio/fire-alert
+    params:
+      deviceId: Z2lkOi8vbGV2ZWwvRGV2aWNlLzE
+      name: CPU
+      description: CPU usage above 90% for 15 minutes
+      severity: critical
+  - action: levelio/fire-alert
+    params:
+      deviceId: Z2lkOi8vbGV2ZWwvRGV2aWNlLzI
+      name: Low disk space
+      description: Disk free < 5.0%
+      payload: 4.37% (10.39 GB) remaining
+      severity: warning

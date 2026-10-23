@@ -5,7 +5,6 @@ import { WorkItemType } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import {
@@ -24,6 +23,9 @@ import {
   shouldEmitAppointmentEvents,
 } from '@alga-psa/workflow-streams';
 import {
+  buildScheduleEntryCreatedPayload,
+  buildScheduleEntryDeletedPayload,
+  buildScheduleEntryUpdatedPayload,
   buildScheduleBlockCreatedPayload,
   buildScheduleBlockDeletedPayload,
   isScheduleBlockEntry,
@@ -296,18 +298,10 @@ export const addScheduleEntry = withAuth(async (
     });
 
     try {
-      await publishEvent({
-        eventType: 'SCHEDULE_ENTRY_CREATED',
-        payload: {
-          tenantId: tenant,
-          userId: user.user_id,
-          entryId: createdEntry.entry_id,
-          changes: {
+      await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_CREATED', payload: buildScheduleEntryCreatedPayload({ userId: user.user_id, entryId: createdEntry.entry_id, changes: {
             after: sanitizeScheduleEntryForEvent(createdEntry),
             assignedUserIds,
-          },
-        },
-      });
+          } }), ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } } });
     } catch (eventError) {
       console.error('[ScheduleActions] Failed to publish SCHEDULE_ENTRY_CREATED event', eventError);
     }
@@ -663,19 +657,11 @@ export const updateScheduleEntry = withAuth(async (
 
     if (updatedEntry) {
       try {
-        await publishEvent({
-          eventType: 'SCHEDULE_ENTRY_UPDATED',
-          payload: {
-            tenantId: tenant,
-            userId: user.user_id,
-            entryId: entry_id,
-            changes: {
+        await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: buildScheduleEntryUpdatedPayload({ userId: user.user_id, entryId: entry_id, changes: {
               before: sanitizeScheduleEntryForEvent(existingEntry),
               after: sanitizeScheduleEntryForEvent(updatedEntry),
               updateType: entry.updateType || IEditScope.SINGLE,
-            },
-          },
-        });
+            } }), ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } } });
       } catch (eventError) {
         console.error('[ScheduleActions] Failed to publish SCHEDULE_ENTRY_UPDATED event', eventError);
       }
@@ -1150,18 +1136,10 @@ export const deleteScheduleEntry = withAuth(async (
     }
 
     try {
-      await publishEvent({
-        eventType: 'SCHEDULE_ENTRY_DELETED',
-        payload: {
-          tenantId: tenant,
-          userId: user.user_id,
-          entryId: entry_id,
-          changes: {
+      await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_DELETED', payload: buildScheduleEntryDeletedPayload({ userId: user.user_id, entryId: entry_id, changes: {
             before: sanitizeScheduleEntryForEvent(existingEntry),
             deleteType,
-          },
-        },
-      });
+          } }), ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } } });
     } catch (eventError) {
       console.error('[ScheduleActions] Failed to publish SCHEDULE_ENTRY_DELETED event', eventError);
     }

@@ -177,7 +177,7 @@ describe('billing action tenant facade migration contract', () => {
   it('uses tenantDb for contract action summary/assignment/overview roots', () => {
     const source = readSource('packages/billing/src/actions/contractActions.ts');
 
-    expect(source).toContain("import { createTenantKnex, tenantDb } from '@alga-psa/db';");
+    expect(source).toContain("import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';");
     expect(source).toContain("facade.tenantJoin(query, 'client_contracts as cc'");
     expect(source).toContain("facade.tenantJoin(query, 'default_billing_settings as dbs'");
     expect(source).toContain("facade.tenantJoin(lineQuery, 'contract_template_line_fixed_config as tfc'");

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { registerInventoryActions } from '../businessOperations/inventory';
-import { workflowEventPayloadSchemas } from '../../schemas/workflowEventPayloadSchemas';
+import { workflowEventPayloadSchemas } from '@alga-psa/event-schemas';
 
 describe('inventory workflow actions', () => {
   it('registers all inventory actions with Zod contracts and Designer metadata', () => {

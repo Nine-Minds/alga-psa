@@ -18,7 +18,7 @@ vi.mock('@alga-psa/db', async () => {
 
 import { internalNotificationSubscriberTestHarness } from '../internalNotificationSubscriber';
 
-const { handleTicketCreated, handleTicketAssigned, handleTicketCommentAdded } = internalNotificationSubscriberTestHarness;
+const { handleTicketCreated, handleTicketAssigned, handleTicketCommentAdded, handleTicketUpdated, handleTicketCommentUpdated } = internalNotificationSubscriberTestHarness;
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 const tenantId = 'd410d992-4e99-43e7-9390-f6b0ff744509';
@@ -51,7 +51,7 @@ describe('ticket notification data never carries ids or empty names', () => {
 
   it('email ticket with no contact and no client uses the sender email', async () => {
     const db = fakeDb({ tickets: { ...baseTicket, client_name: null, contact_name: null, email_metadata: { from: { email: 'who@example.test' } } } });
-    await handleTicketCreated({ payload: { tenantId, ticketId, userId: ticketId } } as any, { db, propagateErrors: true });
+    await handleTicketCreated({ payload: { tenantId, ticketId, actorType: 'SYSTEM' } } as any, { db, propagateErrors: true });
     expect(created[0].data.clientName).toBe('who@example.test');
     expect(rendered(created[0])).not.toMatch(UUID);
   });
@@ -64,7 +64,7 @@ describe('ticket notification data never carries ids or empty names', () => {
 
   it('falls back to a word, never an empty string, when nothing is known', async () => {
     const db = fakeDb({ tickets: { ...baseTicket, client_name: '', contact_name: null } });
-    await handleTicketCreated({ payload: { tenantId, ticketId, userId: ticketId } } as any, { db, propagateErrors: true });
+    await handleTicketCreated({ payload: { tenantId, ticketId, actorType: 'SYSTEM' } } as any, { db, propagateErrors: true });
     expect(created[0].data.clientName).toBe('Unknown');
   });
 
@@ -80,14 +80,55 @@ describe('ticket notification data never carries ids or empty names', () => {
 
   it('comment with no user row uses the sender, and ignores an id posing as the author', async () => {
     const db = fakeDb({ tickets: { ...baseTicket }, users: undefined });
-    await handleTicketCommentAdded({ payload: { tenantId, ticketId, userId: ticketId, comment: { id: ticketId, content: '', author: 'who@example.test' } } } as any, { db, propagateErrors: true });
+    await handleTicketCommentAdded({ payload: { tenantId, ticketId, actorType: 'SYSTEM', comment: { id: ticketId, content: '', author: 'who@example.test' } } } as any, { db, propagateErrors: true });
     const names = created.map((r) => r.data.commentAuthor ?? r.data.authorName).filter(Boolean);
     expect(names.length).toBeGreaterThan(0);
     expect(names.every((n) => n === 'who@example.test')).toBe(true);
 
     created.length = 0;
-    await handleTicketCommentAdded({ payload: { tenantId, ticketId, userId: ticketId, comment: { id: ticketId, content: '', author: ticketId } } } as any, { db, propagateErrors: true });
+    await handleTicketCommentAdded({ payload: { tenantId, ticketId, actorType: 'SYSTEM', comment: { id: ticketId, content: '', author: ticketId } } } as any, { db, propagateErrors: true });
     const ids = created.map((r) => r.data.commentAuthor ?? r.data.authorName).filter(Boolean);
-    expect(ids.every((n) => n === 'Someone')).toBe(true);
+    expect(ids.length).toBeGreaterThan(0);
+    expect(ids.every((n) => n === 'System')).toBe(true);
   });
 });
+
+describe('ticket events with no userId (nobody acted) do not throw and name no raw id', () => {
+  const baseTicket = { ticket_id: ticketId, ticket_number: 'T-1', title: 'Printer down', assigned_to: assignee, contact_name_id: null };
+  const noUserPayload = { tenantId, ticketId, actorType: 'SYSTEM' };
+
+  it('TICKET_UPDATED notifies the assignee and names the performer "System"', async () => {
+    const db = fakeDb({ tickets: { ...baseTicket, client_name: null, contact_name: null } });
+    await handleTicketUpdated({ payload: { ...noUserPayload, changes: { title: { old: 'a', new: 'b' } } } } as any, { db, propagateErrors: true });
+    expect(created.length).toBeGreaterThan(0);
+    for (const req of created) {
+      expect(req.data.performedByName ?? 'System').toBe('System');
+      expect(req.metadata ?? {}).not.toHaveProperty('performedById');
+      expect(rendered(req)).not.toContain(ticketId + '"');
+    }
+  });
+
+  it('TICKET_COMMENT_ADDED falls back to comment.author, then System, and writes no author ids', async () => {
+    const db = fakeDb({ tickets: { ...baseTicket }, users: undefined });
+    await handleTicketCommentAdded({ payload: { ...noUserPayload, comment: { id: ticketId, content: '', author: 'who@example.test' } } } as any, { db, propagateErrors: true });
+    expect(created.length).toBeGreaterThan(0);
+    for (const req of created) {
+      expect(req.data.commentAuthor ?? req.data.authorName).toBe('who@example.test');
+      expect(req.metadata ?? {}).not.toHaveProperty('commentAuthorId');
+      expect(req.data.comment ?? {}).not.toHaveProperty('authorId');
+    }
+  });
+
+  it('TICKET_COMMENT_UPDATED with a mention and no userId creates the notification as System', async () => {
+    const mentioned = '99999999-1111-4222-8333-444455556666';
+    const content = JSON.stringify([{ type: 'paragraph', content: [{ type: 'mention', props: { userId: mentioned, displayName: 'Ada' } }] }]);
+    const db = fakeDb({ tickets: { ...baseTicket }, users: { user_id: mentioned, first_name: 'Ada', last_name: 'L' } });
+    await handleTicketCommentUpdated({ payload: { ...noUserPayload, oldComment: { id: ticketId, content: '[]', author: 'x' }, newComment: { id: ticketId, content, author: 'x' } } } as any, { db, propagateErrors: true });
+    expect(created.length).toBeGreaterThan(0);
+    for (const req of created) {
+      expect(req.data.commentAuthor ?? req.data.authorName).toBe('x');
+      expect(req.metadata ?? {}).not.toHaveProperty('commentAuthorId');
+    }
+  });
+});
+

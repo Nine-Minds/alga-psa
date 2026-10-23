@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
-import { withWorkflowJsonSchemaMetadata, withWorkflowPicker } from '../../jsonSchemaMetadata';
+import { withWorkflowJsonSchemaMetadata, withWorkflowPicker } from '@alga-psa/event-schemas';
 import {
   uuidSchema,
   isoDateTimeSchema,

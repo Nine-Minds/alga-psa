@@ -18,6 +18,9 @@ import {
 import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEditorSkeleton';
 import { buildCommentThreadGroups, HybridThreadNode, type CommentThreadGroup } from '@alga-psa/ui/components';
 import InlineReplyComposer from '@alga-psa/ui/components/InlineReplyComposer';
+import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
+import { useRegisterUnsavedChanges } from '@alga-psa/ui/context/UnsavedChangesContext';
+import { hasEditorContent } from '@alga-psa/ui/editor/hasEditorContent';
 import { ClampedContent } from '@alga-psa/ui/components/ClampedContent';
 import StickyComposerDock from '@alga-psa/ui/components/StickyComposerDock';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -284,6 +287,13 @@ export function describeSystemEntry(entry: TicketTimelineEntry, t: Translator): 
   // LEVERAGE: pattern duplicate-event-labels — these branches duplicate the
   // TICKET_DUPLICATED_FROM/TO wording in TicketActivityTimeline.tsx; same shared
   // event-label function as propagation-event-labels would cover both.
+  if (activity.event_type === 'TICKET_CREATED_FROM_TEMPLATE') {
+    const details = (activity.details ?? {}) as { template_name?: string | null };
+    const name = details.template_name?.trim();
+    if (name) {
+      return t('bento.timeline.createdFromTemplate', '{{actor}} created this ticket from template "{{name}}"', { actor, name });
+    }
+  }
   if (activity.event_type === 'TICKET_DUPLICATED_FROM') {
     const details = (activity.details ?? {}) as { source_ticket_number?: string | number | null };
     const number = details.source_ticket_number == null ? '' : String(details.source_ticket_number).trim();
@@ -482,6 +492,14 @@ export function BentoTimelineTile({
   // Composer is collapsed until asked for. Both slots are sticky, so a
   // half-typed draft follows the reader down a long timeline either way.
   const [showComposer, setShowComposer] = useState(false);
+  // Whether the open composer holds text a reader would be upset to lose. Unlike
+  // hasDraft (which only gates Send and never resets on clearing), this tracks the
+  // editor's current content. It lives here, not in a slot, so it covers both the
+  // top slot and the bottom dock, which render the same composer.
+  const [composeHasContent, setComposeHasContent] = useState(false);
+  // LEVERAGE: pattern composer-dirty-guard — track hasEditorContent(content) + useRegisterDismissGuard + useRegisterUnsavedChanges; same shape as TicketConversation and InlineReplyComposer
+  useRegisterDismissGuard(showComposer && composeHasContent);
+  useRegisterUnsavedChanges(`${id}-compose`, showComposer && composeHasContent);
   const [composerPlacement, setComposerPlacement] = useState<'top' | 'bottom'>('top');
   // Proxy for "the tile header is still on screen" — the header itself lives
   // inside BentoTile, so the filter row directly beneath it is the sentinel.
@@ -514,7 +532,7 @@ export function BentoTimelineTile({
     onDocumentsChanged: onClipboardImageUploaded,
     onDiscard: () => {
       onNewCommentContentChange(DEFAULT_BLOCK);
-      setHasDraft(false); setShowComposer(false); setIsScheduleToggle(false); setScheduledPublishAt(undefined);
+      setHasDraft(false); setComposeHasContent(false); setShowComposer(false); setIsScheduleToggle(false); setScheduledPublishAt(undefined);
       setIsResolutionToggle(false);
     },
     uploadDocumentAction: uploadTicketAttachmentAction,
@@ -754,6 +772,7 @@ export function BentoTimelineTile({
     if (success) {
       emailRecipients.reset();
       setHasDraft(false);
+      setComposeHasContent(false);
       setShowComposer(false);
       setIsResolutionToggle(false);
       setResolutionCloseStatusId(NO_STATUS_CHANGE);
@@ -764,6 +783,11 @@ export function BentoTimelineTile({
     }
     return success;
   }, [composeUploadSession.isUploading, onAddNewComment, composerVisibility, isResolutionToggle, resolutionCloseStatusId, notificationSuppression, isScheduleToggle, scheduledInstant, composeUploadSession, allowEmailRecipients, emailRecipients]);
+
+  // The composer remounts empty after a successful submit (editorKey bump).
+  useEffect(() => {
+    setComposeHasContent(false);
+  }, [editorKey]);
 
   const handleCancelCompose = useCallback(async () => {
     await composeUploadSession.requestDiscard();
@@ -873,6 +897,7 @@ export function BentoTimelineTile({
         onContentChange={(content: PartialBlock[]) => {
           onNewCommentContentChange(content);
           setHasDraft(true);
+          setComposeHasContent(hasEditorContent(content));
         }}
         searchMentions={searchUsersForMentions}
         uploadFile={composeUploadSession.uploadFile}

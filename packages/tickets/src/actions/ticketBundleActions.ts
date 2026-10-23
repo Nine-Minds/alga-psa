@@ -7,6 +7,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
 import type { IUser } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
+import { publishBundleAfterCommitPublication } from '../lib/ticketBundlePublication';
 import { publishWorkflowEvent, type WorkflowEventPublishContext } from '@alga-psa/event-bus/publishers';
 import { actionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError } from '@alga-psa/ui/lib/errorHandling';
@@ -25,6 +26,10 @@ import {
   type BundleAttachFailure,
 } from './ticketBundleUtils';
 import type { BundleStatusPropagationPreview } from '../lib/ticketBundlePropagation';
+import {
+  buildTicketMergedPayload,
+  buildTicketSplitPayload,
+} from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import {
   BundleConcurrentModificationError,
   type ClosedMasterChoice,
@@ -162,6 +167,23 @@ function bundleAttachFailureToActionError(
   }
 }
 
+function publishBundlePublication(
+  publication: BundleAfterCommitPublication,
+  workflowCtx: WorkflowEventPublishContext
+): Promise<void> {
+  return publishBundleAfterCommitPublication(publication, (event) =>
+    publishWorkflowEvent({
+      eventType: event.eventType,
+      payload: event.payload,
+      ctx: workflowCtx,
+      eventName: event.eventName,
+      fromState: event.fromState,
+      toState: event.toState,
+      idempotencyKey: event.idempotencyKey,
+    })
+  );
+}
+
 function registerBundlePublications(
   trx: Knex.Transaction,
   workflowCtx: WorkflowEventPublishContext,
@@ -170,16 +192,7 @@ function registerBundlePublications(
   for (const publication of publications) {
     registerAfterCommit(
       trx,
-      () =>
-        publishWorkflowEvent({
-          eventType: publication.eventType as any,
-          payload: publication.payload,
-          ctx: workflowCtx,
-          eventName: publication.eventName,
-          fromState: publication.fromState,
-          toState: publication.toState,
-          idempotencyKey: publication.idempotencyKey,
-        }),
+      () => publishBundlePublication(publication, workflowCtx),
       `${publication.eventType} bundle-attach`
     );
   }
@@ -498,12 +511,12 @@ export const promoteBundleMasterAction = withAuth(async (user, { tenant }, input
     eventType: 'TICKET_MERGED',
     ctx: workflowCtx,
     eventName: 'Ticket Merged',
-    payload: {
+    payload: buildTicketMergedPayload({
       sourceTicketId: result.oldMasterTicketId,
       targetTicketId: result.newMasterTicketId,
       mergedAt: occurredAt,
       reason: 'bundle:promote_master',
-    },
+    }),
   });
 
   return result;
@@ -617,12 +630,12 @@ export const removeChildFromBundleAction = withAuth(async (user, { tenant }, inp
     eventType: 'TICKET_SPLIT',
     ctx: workflowCtx,
     eventName: 'Ticket Split',
-    payload: {
+    payload: buildTicketSplitPayload({
       originalTicketId: result.masterTicketId,
       newTicketIds: [result.childTicketId],
       splitAt: occurredAt,
       reason: 'bundle:remove_child',
-    },
+    }),
   });
 
   return result;
@@ -789,12 +802,12 @@ export const unbundleMasterTicketAction = withAuth(async (user, { tenant }, inpu
       eventType: 'TICKET_SPLIT',
       ctx: workflowCtx,
       eventName: 'Ticket Split',
-      payload: {
+      payload: buildTicketSplitPayload({
         originalTicketId: result.masterTicketId,
         newTicketIds: result.childTicketIds,
         splitAt: occurredAt,
         reason: 'bundle:unbundle_master',
-      },
+      }),
     });
   }
 

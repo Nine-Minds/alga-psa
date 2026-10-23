@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { ClientMaintenanceSummary, Asset, AssetTypeRegistryEntry } from '@alga-psa/types';
+import { useSearchParams } from 'next/navigation';
+import type { ClientMaintenanceSummary, Asset, AssetGroup, AssetGroupKind, AssetTypeRegistryEntry } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { BentoStat, BentoTile, BENTO_TONE_TEXT, type BentoTone } from '@alga-psa/ui/components/bento';
 import { getClientMaintenanceSummary, listAssets } from '@alga-psa/assets/actions/assetActions';
@@ -14,6 +15,10 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Button } from '@alga-psa/ui/components/Button';
 import { QuickAddAsset } from '@alga-psa/assets/components/QuickAddAsset';
+import { AssetGroupDrawer } from '@alga-psa/assets/components/groups/AssetGroupDrawer';
+import { createAssetGroup, listAssetGroups } from '@alga-psa/assets/actions/assetGroupActions';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+import { Input } from '@alga-psa/ui/components/Input';
 import {
   AssetAgentCell,
   AssetCoverageCell,
@@ -21,6 +26,7 @@ import {
   AssetPatchingCell,
 } from '@alga-psa/assets/components/assetListCells';
 import { AssetDetailDrawerClient } from '@alga-psa/assets/components/AssetDetailDrawerClient';
+import { useAssetStatusRegistry } from '@alga-psa/assets/components/shared/useAssetStatusOptions';
 import {
   ASSET_DRAWER_TABS,
   type AssetDrawerTab,
@@ -35,6 +41,7 @@ interface ClientAssetsProps {
 
 const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
   const { t } = useTranslation('msp/clients');
+  const searchParams = useSearchParams();
   const assetTypeOptions: SelectOption[] = [
     { value: 'all', label: t('clientTabs.assets.types.all', { defaultValue: 'All Asset Types' }) },
     { value: 'workstation', label: t('clientTabs.assets.types.workstation', { defaultValue: 'Workstation' }) },
@@ -48,7 +55,20 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
   const [selectedType, setSelectedType] = useState<string>('all');
   const [assetTypeEntries, setAssetTypeEntries] = useState<AssetTypeRegistryEntry[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // F074: Assets | Groups — two views over the same client inventory. The
+  // details page's "Add to group" link lands here with ?view=groups, so the
+  // view it asked for is the one that opens.
+  const [view, setView] = useState<'assets' | 'groups'>(
+    searchParams?.get('view') === 'groups' ? 'groups' : 'assets',
+  );
+  const [groups, setGroups] = useState<AssetGroup[]>([]);
+  const [openGroupId, setOpenGroupId] = useState<string | null>(null);
+  const [isNewGroupOpen, setIsNewGroupOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupKind, setNewGroupKind] = useState<AssetGroupKind>('bundle');
   const [loadError, setLoadError] = useState(false);
+  // F021: the Coverage cell reads a custom status as its label, not its slug.
+  const { statuses: assetStatuses } = useAssetStatusRegistry();
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [pageSize, setPageSize] = useState(10);
@@ -158,7 +178,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
     }
   }, [activeDrawerTab, drawerAssetId, loadDrawerData]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoadError(false);
       const [summaryData, assetsData] = await Promise.all([
@@ -182,15 +202,81 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [clientId, selectedType, currentPage, pageSize]);
 
   useEffect(() => {
-    loadData();
-  }, [clientId, selectedType, currentPage]);
+    void loadData();
+  }, [loadData]);
 
   const handleAssetAdded = () => {
-    loadData();
+    void loadData();
   };
+
+  const loadGroups = useCallback(async () => {
+    const result = await listAssetGroups(clientId);
+    if (Array.isArray(result)) setGroups(result);
+  }, [clientId]);
+
+  /**
+   * A group write moves its members: a bundle owner assigns every member, a
+   * workspace unassigns them, the location propagates. The Assets table holds
+   * its rows in state loaded once per filter, so without this it kept showing
+   * the previous assignee until a full page reload. Stable identity — the
+   * drawer refetches the group whenever this callback changes.
+   */
+  const refreshAfterGroupChange = useCallback(() => {
+    void loadData();
+    void loadGroups();
+  }, [loadData, loadGroups]);
+
+  useEffect(() => {
+    if (view === 'groups') void loadGroups();
+  }, [view, loadGroups]);
+
+  const groupColumns = [
+    {
+      title: t('clientTabs.assets.groups.columns.name', { defaultValue: 'Name' }),
+      dataIndex: 'name',
+      render: (value: string, row: AssetGroup) => (
+        <span
+          id={`client-asset-group-row-${row.group_id}`}
+          className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-900))]"
+        >
+          {value}
+        </span>
+      )
+    },
+    {
+      title: t('clientTabs.assets.groups.columns.kind', { defaultValue: 'Kind' }),
+      dataIndex: 'kind',
+      render: (value: string) => (
+        <span className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-600))]">
+          {t(`clientTabs.assets.groups.kinds.${value}`, { defaultValue: value })}
+        </span>
+      )
+    },
+    {
+      title: t('clientTabs.assets.groups.columns.location', { defaultValue: 'Location' }),
+      dataIndex: 'location_name',
+      render: (value: string | null) => (
+        <span className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-600))]">{value || '—'}</span>
+      )
+    },
+    {
+      title: t('clientTabs.assets.groups.columns.members', { defaultValue: 'Members' }),
+      dataIndex: 'member_count',
+      render: (value: number | undefined) => (
+        <span className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-600))]">{value ?? 0}</span>
+      )
+    },
+    {
+      title: t('clientTabs.assets.groups.columns.people', { defaultValue: 'People' }),
+      dataIndex: 'people_count',
+      render: (value: number | undefined) => (
+        <span className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-600))]">{value ?? 0}</span>
+      )
+    }
+  ];
 
   const columns = [
         {
@@ -221,7 +307,18 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
         {
       title: t('clientTabs.assets.columns.coverage', { defaultValue: 'Coverage' }),
       dataIndex: 'warranty_end_date',
-      render: (_: unknown, record: Asset) => <AssetCoverageCell asset={record} now={Date.now()} />
+      render: (_: unknown, record: Asset) => (
+        <AssetCoverageCell asset={record} now={Date.now()} statuses={assetStatuses} />
+      )
+    },
+        {
+      // FR-C6: who has the device is as much a part of "the client's assets"
+      // as where it is.
+      title: t('clientTabs.assets.columns.assignedTo', { defaultValue: 'Assigned to' }),
+      dataIndex: 'contact_name',
+      render: (value: string | null) => (
+        <span className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-600))]">{value || '—'}</span>
+      )
     },
         {
       title: t('clientTabs.assets.columns.location', { defaultValue: 'Location' }),
@@ -331,22 +428,133 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
 
       {/* Assets Table - Enhanced container */}
       <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-[rgb(var(--color-border-200))]">
+        <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-gray-100 dark:border-[rgb(var(--color-border-200))]">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-[rgb(var(--color-text-900))]">{t('clientTabs.assets.inventory.title', { defaultValue: 'Assets' })}</h2>
+          {/* F074: Assets | Groups. Groups are a different unit of the same
+              inventory, not a filter over it, so they get their own view. */}
+          <div id="client-assets-view-toggle" className="flex items-center gap-1">
+            <Button
+              id="client-assets-view-assets"
+              variant={view === 'assets' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setView('assets')}
+            >
+              {t('clientTabs.assets.views.assets', { defaultValue: 'Assets' })}
+            </Button>
+            <Button
+              id="client-assets-view-groups"
+              variant={view === 'groups' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setView('groups')}
+            >
+              {t('clientTabs.assets.views.groups', { defaultValue: 'Groups' })}
+            </Button>
+            {view === 'groups' ? (
+              <Button id="client-assets-new-group" size="sm" onClick={() => setIsNewGroupOpen(true)}>
+                {t('clientTabs.assets.groups.newGroup', { defaultValue: 'New group' })}
+              </Button>
+            ) : null}
+          </div>
         </div>
-        <DataTable
-          id="client-assets-table"
-          data={assets}
-          columns={columns}
-          pagination={true}
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          onRowClick={(asset: Asset) => openDrawerForAsset(asset)}
-          totalItems={totalItems}
-          pageSize={pageSize}
-          onItemsPerPageChange={handlePageSizeChange}
-        />
+        {view === 'assets' ? (
+          <DataTable
+            id="client-assets-table"
+            data={assets}
+            columns={columns}
+            pagination={true}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            onRowClick={(asset: Asset) => openDrawerForAsset(asset)}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onItemsPerPageChange={handlePageSizeChange}
+          />
+        ) : (
+          <DataTable
+            id="client-asset-groups-table"
+            data={groups}
+            columns={groupColumns}
+            pagination={false}
+            onRowClick={(group: AssetGroup) => setOpenGroupId(group.group_id)}
+          />
+        )}
       </div>
+
+      <Dialog
+        id="client-assets-group-drawer"
+        isOpen={Boolean(openGroupId)}
+        onClose={() => { setOpenGroupId(null); refreshAfterGroupChange(); }}
+        title={t('clientTabs.assets.groups.drawerTitle', { defaultValue: 'Asset group' })}
+        className="max-w-2xl"
+      >
+        <DialogContent>
+          {openGroupId ? (
+            <AssetGroupDrawer
+              groupId={openGroupId}
+              onChanged={refreshAfterGroupChange}
+              onDeleted={() => { setOpenGroupId(null); refreshAfterGroupChange(); }}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        id="client-assets-new-group-dialog"
+        isOpen={isNewGroupOpen}
+        onClose={() => setIsNewGroupOpen(false)}
+        title={t('clientTabs.assets.groups.newGroup', { defaultValue: 'New group' })}
+        className="max-w-md"
+        footer={(
+          <div className="flex justify-end gap-2">
+            <Button id="client-assets-new-group-cancel" variant="secondary" onClick={() => setIsNewGroupOpen(false)}>
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button
+              id="client-assets-new-group-save"
+              disabled={!newGroupName.trim()}
+              onClick={async () => {
+                const created = await createAssetGroup({ clientId, name: newGroupName, kind: newGroupKind });
+                if (created && 'group_id' in created) {
+                  setIsNewGroupOpen(false);
+                  setNewGroupName('');
+                  await loadGroups();
+                  setOpenGroupId(created.group_id);
+                }
+              }}
+            >
+              {t('common.actions.create', { defaultValue: 'Create' })}
+            </Button>
+          </div>
+        )}
+      >
+        <DialogContent>
+          <div className="space-y-3">
+            <label className="block text-sm font-medium" htmlFor="client-assets-new-group-name">
+              {t('clientTabs.assets.groups.name', { defaultValue: 'Name' })}
+              <Input
+                id="client-assets-new-group-name"
+                value={newGroupName}
+                onChange={(event) => setNewGroupName(event.target.value)}
+              />
+            </label>
+            <div>
+              <label className="block text-sm font-medium" htmlFor="client-assets-new-group-kind">
+                {t('clientTabs.assets.groups.kind', { defaultValue: 'Kind' })}
+              </label>
+              <CustomSelect
+                id="client-assets-new-group-kind"
+                value={newGroupKind}
+                onValueChange={(value) => setNewGroupKind(value as AssetGroupKind)}
+                options={[
+                  { value: 'bundle', label: t('clientTabs.assets.groups.kinds.bundle', { defaultValue: 'Bundle' }) },
+                  { value: 'shared_workspace', label: t('clientTabs.assets.groups.kinds.shared_workspace', { defaultValue: 'Shared workspace' }) },
+                ]}
+                className="mt-1"
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AssetDetailDrawerClient
         isOpen={isDrawerOpen}

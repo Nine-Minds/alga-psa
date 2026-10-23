@@ -221,6 +221,8 @@ export const ticketFilterSchema = baseFilterSchema.extend({
   is_open: booleanTransform.optional(),
   is_closed: booleanTransform.optional(),
   has_assignment: booleanTransform.optional(),
+  // Whose turn it is: awaiting_client (we replied) or awaiting_internal (client replied).
+  response_state: z.enum(['awaiting_client', 'awaiting_internal']).optional(),
   entered_from: z.string().datetime().optional(),
   entered_to: z.string().datetime().optional(),
   closed_from: z.string().datetime().optional(),
@@ -588,6 +590,8 @@ export const createTicketFromAssetSchema = z.object({
   client_id: uuidSchema,
   description: z.string().optional(),
   contact_name_id: uuidSchema.optional(),
+  // FR-F2: an explicit pick wins; omitted means "inherit from the asset".
+  billing_profile_id: uuidSchema.nullable().optional(),
   category_id: uuidSchema.optional()
 });
 

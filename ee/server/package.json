@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest",
     "test:unit": "vitest run src/__tests__/unit",
+    "test:operator-auth": "MASTER_BILLING_TENANT_ID=00000000-0000-4000-8000-0000000000aa vitest run src/__tests__/unit/operatorRoutes src/__tests__/unit/applianceConsole/auth.test.ts",
     "test:integration": "vitest run src/__tests__/integration --exclude '**/*.playwright.*'",
     "test:playwright": "nx e2e",
     "test:e2e": "nx e2e",

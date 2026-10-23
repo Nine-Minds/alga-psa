@@ -25,6 +25,7 @@
     },
     "states": {
       "active": "Actief",
+      "scheduled": "Gepland",
       "inactive": "Inactief",
       "loading": "Laden...",
       "na": "N.v.t.",
@@ -1578,7 +1579,8 @@
         "warrantyEnd": "Einde garantie",
         "agent": "Medewerker",
         "patching": "Patches",
-        "coverage": "Dekking"
+        "coverage": "Dekking",
+        "assignedTo": "Toegewezen aan"
       },
       "details": {
         "local": "Lokaal",
@@ -1625,7 +1627,28 @@
         "workstation": "Werkstation"
       },
       "loadError": "Kan assets momenteel niet laden.",
-      "retry": "Opnieuw"
+      "retry": "Opnieuw",
+      "views": {
+        "assets": "Assets",
+        "groups": "Groepen"
+      },
+      "groups": {
+        "newGroup": "Nieuwe groep",
+        "drawerTitle": "Assetgroep",
+        "name": "Naam",
+        "kind": "Soort",
+        "kinds": {
+          "bundle": "Bundel",
+          "shared_workspace": "Gedeelde werkplek"
+        },
+        "columns": {
+          "name": "Naam",
+          "kind": "Soort",
+          "location": "Locatie",
+          "members": "Leden",
+          "people": "Personen"
+        }
+      }
     },
     "tickets": {
       "addTicket": "Ticket toevoegen",
@@ -1982,7 +2005,15 @@
     "accountingApply": "Selectie toepassen",
     "accountingSkip": "Voorlopig overslaan",
     "accountingRemapped": "Boekhoudkoppelingen omgezet",
-    "accountingSkipped": "{{count}} koppeling(en) konden niet worden omgezet en moeten handmatig opnieuw worden gekoppeld."
+    "accountingSkipped": "{{count}} koppeling(en) konden niet worden omgezet en moeten handmatig opnieuw worden gekoppeld.",
+    "assetsDescription": "Deze apparaten en RMM-organisaties verhuizen naar de bestemmingsklant. Synchronisatie houdt ze daar.",
+    "assetsTotal": "Assets",
+    "assetGroups": "Assetgroepen",
+    "deviceCount": "{{count}} apparaten",
+    "billingStrategyHeading": "Samengevoegd werk en apparaten factureren onder",
+    "billingStrategySource": "Factureringsprofiel van {{source}}, behouden als apart profiel bij {{target}}",
+    "billingStrategyTarget": "Standaard factureringsprofiel van {{target}}",
+    "billingStrategyHelp": "Geldt voor {{tickets}} ticket(s), {{projects}} project(en), {{assets}} asset(s) en {{mappings}} RMM-apparaatgroep(en) zonder eigen factureringsprofiel. Rijen met een expliciet profiel houden dat, en facturen, factureringscycli, betalingen en credits blijven altijd op het samengevoegde profiel."
   },
   "billingProfileContacts": {
     "title": "Profielcontactpersonen",

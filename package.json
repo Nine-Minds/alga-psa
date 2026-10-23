@@ -22,6 +22,7 @@
   "scripts": {
     "install:ignore": "npm ci --ignore-scripts",
     "postinstall": "node -e \"const f='scripts/postinstall-patches.cjs';if(require('fs').existsSync(f))process.exit(require('child_process').spawnSync(process.execPath,[f],{stdio:'inherit'}).status??1)\"",
+    "check:workflow-event-emit-sites": "node --max-old-space-size=4096 scripts/check-workflow-event-emit-sites.mjs",
     "migrate": "knex migrate:latest",
     "seed": "knex seed:run",
     "test:local": "cd server && dotenv -e ../.env.localtest -- vitest \"$@\"",

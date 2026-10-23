@@ -25,6 +25,7 @@ import {
   OpportunityStepModel,
   assembleWorkQueue,
   buildOpportunityCreatedPayload,
+  buildOpportunityStageChangedPayload,
   buildOpportunityStatusChangedPayload,
   completeOpportunityNextAction,
   completeOpportunityStepCore,
@@ -504,13 +505,13 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
     });
 
     if (current.stage !== status) {
-      publishOpportunityEventAfterCommit(trx, context.tenant, 'OPPORTUNITY_STAGE_CHANGED', {
+      publishOpportunityEventAfterCommit(trx, context.tenant, 'OPPORTUNITY_STAGE_CHANGED', buildOpportunityStageChangedPayload({
         opportunityId,
         clientId: current.client_id,
         previousStage: current.stage,
         newStage: status,
         changedAt,
-      }, `opportunity_stage_changed:${opportunityId}:${status}:${changedAt}`);
+      }), `opportunity_stage_changed:${opportunityId}:${status}:${changedAt}`);
     }
     publishOpportunityEventAfterCommit(
       trx,

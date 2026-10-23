@@ -459,19 +459,47 @@ describe('Teams API E2E Tests', () => {
 
     describe('Remove Team Member (DELETE /api/v1/teams/:id/members/:userId)', () => {
       it('should remove a member from team', async () => {
-        // Add a member first
-        await addTeamMember(env.db, env.tenant, testTeam.team_id, env.userId);
+        // Create a non-lead user; the team lead (env.userId) cannot be removed
+        const { createUserTestData } = await import('../utils/userTestData');
+        const userResponse = await env.apiClient.post('/api/v1/users', createUserTestData());
+
+        if (userResponse.status !== 201) {
+          throw new Error('Failed to create test user');
+        }
+
+        const newUserId = userResponse.data.data.user_id;
+        await addTeamMember(env.db, env.tenant, testTeam.team_id, newUserId);
 
         const response = await env.apiClient.delete(
-          `${API_BASE}/${testTeam.team_id}/members/${env.userId}`
+          `${API_BASE}/${testTeam.team_id}/members/${newUserId}`
         );
         assertSuccess(response, 204);
 
         // Verify member is removed
         const listResponse = await env.apiClient.get(`${API_BASE}/${testTeam.team_id}/members`);
         const members = listResponse.data.data || [];
-        const removedMember = members.find((m: any) => m.user_id === env.userId);
+        const removedMember = members.find((m: any) => m.user_id === newUserId);
         expect(removedMember).toBeUndefined();
+      });
+
+      it('should reject removing the team lead with 400', async () => {
+        // The lead is env.userId (manager_id set in beforeEach)
+        await addTeamMember(env.db, env.tenant, testTeam.team_id, env.userId);
+
+        const response = await env.apiClient.delete(
+          `${API_BASE}/${testTeam.team_id}/members/${env.userId}`
+        );
+        assertError(response, 400, 'VALIDATION_ERROR');
+        expect(response.data.error.message).toContain('Cannot remove the team lead');
+
+        // Lead is still a member and still the manager
+        const listResponse = await env.apiClient.get(`${API_BASE}/${testTeam.team_id}/members`);
+        const members = listResponse.data.data || [];
+        expect(members.find((m: any) => m.user_id === env.userId)).toBeDefined();
+
+        const teamResponse = await env.apiClient.get(`${API_BASE}/${testTeam.team_id}`);
+        assertSuccess(teamResponse);
+        expect(teamResponse.data.data.manager_id).toBe(env.userId);
       });
 
       it('should return 404 for non-existent member', async () => {

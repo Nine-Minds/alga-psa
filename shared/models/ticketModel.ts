@@ -12,12 +12,16 @@ import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
+import { resolveTicketEventActor } from '@alga-psa/event-schemas';
 import { isSilentTicketCreation, isTicketCreationWithPayloadExtras, type TicketCreationEvents } from '../lib/tickets/ticketLifecycleEvents';
 import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
+import { ticketStatusClockPatch } from '../lib/ticketStatusClock';
 import { prepareCommentEmailRecipients } from '../lib/tickets/commentEmailRecipients';
 import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib/ticketRequesterDisplay';
 import { SharedNumberingService } from '../services/numberingService';
 import { applyBoardDefaultWatchers } from '../lib/tickets/boardDefaultWatchers';
+import { resolveAssetBillingProfileId } from './assetBillingProfileModel';
+import { buildTicketCommentAddedPayload, buildTicketModelChanges } from '../lib/tickets/ticketWorkflowEventPayloads';
 
 // LEVERAGE: pattern ticket-origins-duplicate — copy of TICKET_ORIGINS in @alga-psa/types (shared cannot import types); keep both in sync
 const TICKET_ORIGINS = {
@@ -58,7 +62,11 @@ export const createTicketFromAssetSchema = z.object({
   status_id: z.string().uuid('Status ID must be a valid UUID'),
   board_id: z.string().uuid('Board ID must be a valid UUID'),
   asset_id: z.string().uuid('Asset ID must be a valid UUID'),
-  client_id: z.string().uuid('Client ID must be a valid UUID')
+  client_id: z.string().uuid('Client ID must be a valid UUID'),
+  // FR-E8: the asset's assignee, or a shared workspace's single user.
+  contact_name_id: z.string().uuid('Contact ID must be a valid UUID').nullable().optional(),
+  // FR-F2: an explicit pick wins; omitted means "inherit from the asset".
+  billing_profile_id: z.string().uuid('Billing profile ID must be a valid UUID').nullable().optional()
 });
 
 // Complete ticket schema for validation
@@ -104,7 +112,9 @@ export const ticketSchema = z.object({
   itil_category: z.string().nullable().optional(),
   itil_subcategory: z.string().nullable().optional(),
   // Provenance for a ticket created via "Duplicate". Create-only; no FK.
-  duplicated_from_ticket_id: z.string().uuid().nullable().optional()
+  duplicated_from_ticket_id: z.string().uuid().nullable().optional(),
+  // Provenance for a ticket created from a ticket template. Create-only; no FK.
+  created_from_template_id: z.string().uuid().nullable().optional()
 });
 
 // Ticket update schema. Classification references (severity/urgency/impact)
@@ -120,6 +130,7 @@ export const ticketUpdateSchema = ticketSchema.partial().omit({
   urgency_id: true,
   impact_id: true,
   duplicated_from_ticket_id: true,
+  created_from_template_id: true,
 });
 
 // Comment validation schema
@@ -183,6 +194,8 @@ export interface CreateTicketInput {
   due_date?: string;
   /** Source ticket this one was duplicated from (provenance, create-only). */
   duplicated_from_ticket_id?: string;
+  /** Ticket template this one was created from (provenance, create-only). */
+  created_from_template_id?: string;
 }
 
 export interface CreateTicketFromAssetInput {
@@ -193,6 +206,10 @@ export interface CreateTicketFromAssetInput {
   board_id: string;
   asset_id: string;
   client_id: string;
+  /** FR-E8: the asset's assignee, or a shared workspace's single user. */
+  contact_name_id?: string | null;
+  /** FR-F3: the profile resolved from the asset (or its location). */
+  billing_profile_id?: string | null;
 }
 
 export interface UpdateTicketInput {
@@ -447,6 +464,7 @@ export const INPUT_DRIVEN_TICKET_COLUMNS = [
   'itil_urgency',
   'due_date',
   'duplicated_from_ticket_id',
+  'created_from_template_id',
 ] as const;
 
 type InputDrivenTicketColumn = (typeof INPUT_DRIVEN_TICKET_COLUMNS)[number];
@@ -536,6 +554,7 @@ const CREATE_TICKET_FIELD_HANDLING: { [K in keyof CreateTicketInput]-?: TicketCr
   is_closed: { kind: 'excluded', reason: 'tickets are created open' },
   due_date: { kind: 'column', column: 'due_date' },
   duplicated_from_ticket_id: { kind: 'column', column: 'duplicated_from_ticket_id', nullish: true },
+  created_from_template_id: { kind: 'column', column: 'created_from_template_id', nullish: true },
 };
 
 type TicketCreateRowBase = {
@@ -1023,6 +1042,7 @@ export class TicketModel {
         ? eventPublisher.publisher
         : eventPublisher;
       const payloadExtras = isTicketCreationWithPayloadExtras(eventPublisher) ? eventPublisher.payloadExtras : {};
+      const creationActor = isTicketCreationWithPayloadExtras(eventPublisher) ? eventPublisher.actor : undefined;
       try {
         // Tickets from inbound email or the portal often have no contact or
         // client. Carry real names plus the sender email so a workflow title
@@ -1033,6 +1053,8 @@ export class TicketModel {
           tenantId: tenant,
           ticketId: ticketId,
           userId: userId,
+          // Only a contact/system actor is passed explicitly; otherwise the publisher derives it from userId.
+          ...(creationActor && !userId ? { actor: creationActor } : {}),
           metadata: {
             source: cleanedInput.source,
             board_id: cleanedInput.board_id,
@@ -1119,6 +1141,11 @@ export class TicketModel {
 
     const validatedData = validation.data;
 
+    // FR-F2: a ticket raised from an asset inherits the asset's billing profile
+    // — or its location's default — unless the caller picked one explicitly.
+    const billingProfileId = validatedData.billing_profile_id
+      ?? await resolveAssetBillingProfileId(trx, tenant, validatedData.asset_id);
+
     // Convert to CreateTicketInput format using the provided status_id and board_id
     const createTicketInput: CreateTicketInput = {
       title: validatedData.title,
@@ -1127,6 +1154,8 @@ export class TicketModel {
       client_id: validatedData.client_id,
       status_id: validatedData.status_id,
       board_id: validatedData.board_id,
+      contact_id: validatedData.contact_name_id ?? null,
+      billing_profile_id: billingProfileId,
       entered_by: enteredBy,
       attributes: {
         created_from_asset: validatedData.asset_id
@@ -1261,6 +1290,7 @@ export class TicketModel {
       .where({ ticket_id: ticketId })
       .update({
         ...updateData,
+        ...ticketStatusClockPatch(trx, updateData.status_id),
         ...ticketUpdateStamp(trx, input.updated_by ?? userId ?? null)
       })
       .returning('*');
@@ -1276,7 +1306,7 @@ export class TicketModel {
           tenantId: tenant,
           ticketId: ticketId,
           userId: userId,
-          changes: updateData,
+          changes: buildTicketModelChanges(currentTicket, updateData),
           metadata: {
             updated_fields: Object.keys(updateData)
           }
@@ -1385,6 +1415,7 @@ export class TicketModel {
       .where({ ticket_id: ticketId })
       .update({
         ...updateData,
+        ...ticketStatusClockPatch(trx, updateData.status_id),
         ...ticketUpdateStamp(trx, updateData.updated_by ?? null)
       })
       .returning('*');
@@ -1584,6 +1615,7 @@ export class TicketModel {
       const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
 
       if (responseStateEnabled) {
+        // LEVERAGE: pattern response-state-from-comment — inbound-email/model comment path sets awaiting_internal directly and emits no TICKET_RESPONSE_STATE_CHANGED; use applyCommentResponseState (shared/lib/tickets/responseState.ts) once the model can emit after-commit events.
         await db.table('tickets')
           .where({
             ticket_id: validatedData.ticket_id,
@@ -1606,15 +1638,19 @@ export class TicketModel {
           user_id: validatedData.author_id,
           metadata: validatedData.metadata,
         });
-        // The event schema requires a uuid; user-less comments reuse the ticket
-        // id as the sentinel actor, matching the inbound-email outbox publisher.
-        const eventUserId = userId || validatedData.author_id || validatedData.ticket_id;
+        // Never substitute a non-user id: a user-less comment is published as a CONTACT
+        // (matched sender) or SYSTEM actor with no payload.userId.
+        const actor = resolveTicketEventActor({
+          userId: userId || validatedData.author_id,
+          contactId: validatedData.contact_id,
+        });
 
         const event = {
           tenantId: tenant,
           ticketId: validatedData.ticket_id,
           commentId: commentId,
-          userId: eventUserId,
+          userId: userId || validatedData.author_id || undefined,
+          actor,
           metadata: {
             author_type: dbAuthorType,
             is_internal: validatedData.is_internal,
@@ -1628,11 +1664,11 @@ export class TicketModel {
           // The inbound publisher writes its durable outbox in this transaction.
           await eventPublisher.publishCommentCreated(event);
         } else {
-          await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: {
-            tenantId: tenant, ticketId: validatedData.ticket_id, commentId, userId: eventUserId,
-            comment: { id: commentId, content: validatedData.content, author: authorName,
+          await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: buildTicketCommentAddedPayload({
+            tenantId: tenant, occurredAt: new Date().toISOString(), ticketId: validatedData.ticket_id, commentId, actor,
+            comment: { content: validatedData.content, author: authorName,
               isInternal: commentIsInternal, authorType: dbAuthorType },
-          } });
+          }) });
         }
       } catch (error) {
         console.error('Failed to publish comment created event:', error);

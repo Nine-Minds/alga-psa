@@ -1,6 +1,7 @@
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
+import { toMinorUnits } from '@alga-psa/core';
 import type {
   AccountingExportAdapter,
   AccountingExternalChange,
@@ -62,9 +63,19 @@ export interface PaymentApplierDeps {
   provider?: string;
 }
 
-function toCents(value: unknown): number {
+function toCents(value: unknown, currency: string): number {
   const amount = Number(value);
-  return Number.isFinite(amount) ? Math.round(amount * 100) : 0;
+  return Number.isFinite(amount) ? toMinorUnits(amount, 'en-US', currency) : 0;
+}
+
+/** The payment's own currency (normalized payload first, raw QBO CurrencyRef otherwise). */
+function paymentCurrency(change: AccountingExternalChange): string | undefined {
+  const normalized = isNormalizedPaymentPayload(change.normalized) ? change.normalized : null;
+  if (normalized) {
+    return normalized.currency;
+  }
+  const ref = (change.payload as any)?.CurrencyRef?.value;
+  return typeof ref === 'string' ? String(ref) : undefined;
 }
 
 function paymentReference(payload: Record<string, any> | undefined, externalId: string): string {
@@ -132,6 +143,7 @@ async function resolveAllocations(
   const lines = Array.isArray(change.payload?.Line) ? (change.payload!.Line as any[]) : [];
   const allocations: PaymentAllocation[] = [];
   const unmappedExternalIds: string[] = [];
+  const currency = paymentCurrency(change) ?? 'USD';
 
   for (const line of lines) {
     const linkedTxns = Array.isArray(line?.LinkedTxn) ? line.LinkedTxn : [];
@@ -140,7 +152,7 @@ async function resolveAllocations(
       continue; // CreditMemo application lines etc. are not slice-1 payment allocations
     }
 
-    const amountCents = toCents(line.Amount);
+    const amountCents = toCents(line.Amount, currency);
     if (amountCents <= 0) {
       continue;
     }
@@ -200,11 +212,7 @@ async function applyAllocations(
   const reference = normalized
     ? normalized.reference
     : paymentReference(change.payload, change.externalId);
-  const currency = normalized
-    ? normalized.currency
-    : typeof (change.payload as any)?.CurrencyRef?.value === 'string'
-      ? String((change.payload as any).CurrencyRef.value)
-      : undefined;
+  const currency = paymentCurrency(change);
   const txnDate = normalized?.txnDate
     ? new Date(normalized.txnDate)
     : paymentTxnDate(change.payload);
@@ -482,7 +490,7 @@ export async function applyExternalPaymentChange(
       sync_token: change.syncToken ?? null,
       allocations: recorded,
       total_cents: recorded.reduce((sum, allocation) => sum + allocation.amountCents, 0),
-      unapplied_cents: toCents((change.payload as any)?.UnappliedAmt),
+      unapplied_cents: toCents((change.payload as any)?.UnappliedAmt, paymentCurrency(change) ?? 'USD'),
       reference: changeReference(change),
       ...((isNormalizedPaymentPayload(change.normalized) ? change.normalized.providerMetadata : undefined) ?? {})
     };

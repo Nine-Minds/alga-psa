@@ -73,6 +73,11 @@ interface ContactBentoLayoutProps {
   portalSummary?: ContactPortalSummary | null;
   /** Prebuilt create-ticket route href (built by the page; clients can't depend on the tickets package). */
   newTicketHref?: string;
+  /**
+   * FR-C6 / FR-E12: the contact's assigned assets and shared workspaces,
+   * injected by the page because clients can't depend on the assets package.
+   */
+  assetsSlot?: React.ReactNode;
   userId?: string;
   userPermissions?: PortalPermissions;
   quickView?: boolean;
@@ -222,6 +227,7 @@ export function ContactBentoLayout({
   relatedWork,
   portalSummary,
   newTicketHref,
+  assetsSlot,
   userPermissions = { canInvite: false, canUpdateRoles: false, canRead: false },
   quickView = false,
   onContactUpdated,
@@ -864,6 +870,9 @@ export function ContactBentoLayout({
             clientId={contact.client_id ?? null}
           />
         </ContentCardVariantProvider>
+        {assetsSlot ? (
+          <ContentCardVariantProvider variant="bento">{assetsSlot}</ContentCardVariantProvider>
+        ) : null}
         {showRelatedWork ? relatedWorkTile : null}
         {notesTile}
       </div>

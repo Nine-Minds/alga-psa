@@ -112,6 +112,18 @@ export class BadRequestError extends Error implements ApiError {
   }
 }
 
+export class UnprocessableEntityError extends Error implements ApiError {
+  statusCode = 422;
+  code = 'UNPROCESSABLE_ENTITY';
+  details: any;
+
+  constructor(message: string = 'Unprocessable entity', details?: any) {
+    super(message);
+    this.name = 'UnprocessableEntityError';
+    this.details = details;
+  }
+}
+
 export class BadGatewayError extends Error implements ApiError {
   statusCode = 502;
   code = 'BAD_GATEWAY';

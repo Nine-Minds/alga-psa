@@ -52,11 +52,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
-// Removed old SERVICE_TYPE_OPTIONS
-
 const BILLING_METHOD_OPTION_VALUES = ['fixed', 'hourly', 'usage'] as const;
-
-// Removed hardcoded SERVICE_CATEGORY_OPTIONS - will use fetched categories instead
 
 const LICENSE_TERM_OPTION_VALUES = ['monthly', 'annual', 'perpetual'] as const;
 
@@ -891,12 +887,6 @@ const ServiceCatalogManager: React.FC = () => {
           );
         },
       },
-      // Category column hidden - using Service Types for organization
-      // {
-      //   title: 'Category',
-      //   dataIndex: 'category_id',
-      //   render: (value, record) => categories.find(cat => cat.category_id === value)?.category_name || 'N/A',
-      // },
       {
         title: t('serviceCatalog.table.unit', { defaultValue: 'Unit' }),
         dataIndex: 'unit_of_measure',
@@ -973,44 +963,6 @@ const ServiceCatalogManager: React.FC = () => {
         },
       },
     ];
-
-    // Removed conditional columns based on old service_type
-    // TODO: Re-add conditional columns based on new category/billing method if needed
-    // Hidden columns: SKU, Inventory, Seat Limit, License Term
-    // baseColumns.push(
-    //   {
-    //     title: 'SKU',
-    //     dataIndex: 'sku',
-    //     render: (value, record) => {
-    //       const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
-    //       return type?.name === 'Hardware' ? value || 'N/A' : 'N/A';
-    //     },
-    //   },
-    //   {
-    //     title: 'Inventory',
-    //     dataIndex: 'inventory_count',
-    //     render: (value, record) => {
-    //       const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
-    //       return type?.name === 'Hardware' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
-    //     },
-    //   },
-    //   {
-    //     title: 'Seat Limit',
-    //     dataIndex: 'seat_limit',
-    //     render: (value, record) => {
-    //       const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
-    //       return type?.name === 'Software License' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
-    //     },
-    //   },
-    //   {
-    //     title: 'License Term',
-    //     dataIndex: 'license_term',
-    //     render: (value, record) => {
-    //       const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
-    //       return type?.name === 'Software License' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
-    //     }
-    //   }
-    // );
 
     // Always add actions column at the end
     baseColumns.push({

@@ -5,6 +5,7 @@
  */
 
 import { ticketUpdateStamp } from '../../lib/tickets/ticketUpdateStamp';
+import { ticketCreationWithActor } from '../../lib/tickets/ticketLifecycleEvents';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
@@ -783,9 +784,10 @@ export async function createContactForInboundSender(
 ): Promise<{ contactId: string; created: boolean } | null> {
   const normalizedEmail = normalizeEmailAddress(input.email);
   if (!normalizedEmail) return null;
+  const contactCreatedParams = (contact: any): Parameters<typeof buildContactCreatedPayload>[0] => ({ contactId: contact.contact_name_id, clientId: contact.client_id, fullName: contact.full_name, email: contact.email ?? normalizedEmail, primaryEmailCanonicalType: contact.primary_email_canonical_type ?? 'work', primaryEmailCustomTypeId: contact.primary_email_custom_type_id ?? null, primaryEmailType: contact.primary_email_type ?? null, additionalEmailAddresses: contact.additional_email_addresses ?? [], phoneNumbers: contact.phone_numbers ?? [], defaultPhoneNumber: contact.default_phone_number || undefined, defaultPhoneType: contact.default_phone_type || undefined, createdAt: contact.created_at ?? new Date() });
   const { withAdminTransaction } = await import('@alga-psa/db');
   let createdContact: any = null;
-  let eventPayload: Record<string, unknown> | null = null;
+  let eventPayload: ReturnType<typeof buildContactCreatedPayload> | null = null;
   try {
     const result = await withAdminTransaction(async (trx: Knex.Transaction) => {
       const run = async (savepoint: Knex.Transaction) => {
@@ -809,7 +811,7 @@ export async function createContactForInboundSender(
         }
         const contact = await ContactModel.createContact({ full_name: input.name?.trim() || normalizedEmail, email: normalizedEmail, client_id: input.clientId }, tenant, savepoint);
         createdContact = contact;
-        eventPayload = buildContactCreatedPayload({ contactId: contact.contact_name_id, clientId: contact.client_id, fullName: contact.full_name, email: contact.email ?? normalizedEmail, primaryEmailCanonicalType: contact.primary_email_canonical_type ?? 'work', primaryEmailCustomTypeId: contact.primary_email_custom_type_id ?? null, primaryEmailType: contact.primary_email_type ?? null, additionalEmailAddresses: contact.additional_email_addresses ?? [], phoneNumbers: contact.phone_numbers ?? [], defaultPhoneNumber: contact.default_phone_number || undefined, defaultPhoneType: contact.default_phone_type || undefined, createdAt: contact.created_at ?? new Date() });
+        eventPayload = buildContactCreatedPayload(contactCreatedParams(contact));
         if (executionOptions?.existingConnection) {
           if (!executionOptions.contactEventPublisher || typeof (executionOptions.contactEventPublisher as any).publishContactCreated !== 'function') {
             throw new Error('CONTACT_CREATED outbox publisher is required for durable inbound contact creation');
@@ -835,7 +837,7 @@ export async function createContactForInboundSender(
     }, executionOptions?.existingConnection as any);
     if (result?.created && eventPayload && !executionOptions?.existingConnection) {
       try {
-        await publishWorkflowEvent({ eventType: 'CONTACT_CREATED', payload: eventPayload, ctx: { tenantId: tenant }, idempotencyKey: `contact_created:${createdContact.contact_name_id}` });
+        await publishWorkflowEvent({ eventType: 'CONTACT_CREATED', payload: buildContactCreatedPayload(contactCreatedParams(createdContact)), ctx: { tenantId: tenant }, idempotencyKey: `contact_created:${createdContact.contact_name_id}` });
       } catch (eventError) {
         console.warn('createContactForInboundSender: CONTACT_CREATED publish failed', { tenantId: tenant, contactId: createdContact?.contact_name_id, error: eventError instanceof Error ? eventError.message : String(eventError) });
       }
@@ -1309,6 +1311,34 @@ export async function createTicketFromEmail(
         }
       }
 
+      // A matched contact with no user account is the actor of the inbound ticket.
+      // Without one, TICKET_CREATED is published as a SYSTEM actor with no userId.
+      const creationEvents =
+        !userId && ticketData.contact_id
+          ? ticketCreationWithActor(
+              eventPublisher,
+              { actorType: 'CONTACT', actorContactId: ticketData.contact_id },
+              'inbound email ticket: sender matched a contact'
+            )
+          : eventPublisher;
+
+      // A stale defaults location from another client would fail ticket
+      // validation and drop the whole email; prefer a ticket without location.
+      let locationId = ticketData.location_id;
+      if (locationId && ticketData.client_id) {
+        const ownedLocation = await tenantDb(trx, tenant).table('client_locations')
+          .where({ location_id: locationId, client_id: ticketData.client_id })
+          .first('location_id');
+        if (!ownedLocation) {
+          console.warn('createTicketFromEmail: location does not belong to ticket client; creating ticket without location', {
+            tenant,
+            clientId: ticketData.client_id,
+            locationId,
+          });
+          locationId = undefined;
+        }
+      }
+
       // Use enhanced TicketModel with events and analytics
       const result = await TicketModel.createTicketWithRetry({
         title: ticketData.title,
@@ -1321,13 +1351,13 @@ export async function createTicketFromEmail(
         priority_id: ticketData.priority_id,
         category_id: ticketData.category_id,
         subcategory_id: ticketData.subcategory_id,
-        location_id: ticketData.location_id,
+        location_id: locationId,
         entered_by: ticketData.entered_by || undefined,
         assigned_to: assignedTo,
         email_metadata: ticketData.email_metadata,
         attributes: ticketData.attributes ?? undefined,
         ticket_origin: TICKET_ORIGINS.INBOUND_EMAIL,
-      }, tenant, trx, {}, eventPublisher, analyticsTracker, userId, 3);
+      }, tenant, trx, {}, creationEvents, analyticsTracker, userId, 3);
 
       // Publish TICKET_ASSIGNED event if an agent was assigned
       // Note: Event publishing failure should not prevent ticket creation
@@ -1763,7 +1793,7 @@ export async function createCommentFromEmail(
 
     // Building/validating the event is best-effort: a reply comment is never
     // rolled back or orphaned by an event we cannot construct or validate.
-    let payload: Record<string, unknown> | null = null;
+    let payload: ReturnType<typeof buildInboundEmailReplyReceivedPayload> | null = null;
     try {
       payload = buildInboundEmailReplyReceivedPayload({
         tenantId: tenant,

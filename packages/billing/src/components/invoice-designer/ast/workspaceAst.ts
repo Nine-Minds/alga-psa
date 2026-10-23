@@ -89,7 +89,9 @@ const isTemplateValueExpression = (value: unknown): value is TemplateValueExpres
     return 'value' in value;
   }
   if (value.type === 'binding') {
-    return typeof value.bindingId === 'string';
+    return typeof value.bindingId === 'string' &&
+      (value.fallback === undefined || typeof value.fallback === 'string' ||
+        (isRecord(value.fallback) && typeof value.fallback.i18nKey === 'string' && typeof value.fallback.defaultValue === 'string'));
   }
   if (value.type === 'path') {
     return typeof value.path === 'string';
@@ -396,6 +398,23 @@ const resolveTextNodeContentExpression = (
   }
 
   return parsedExpression ?? { type: 'literal', value: currentText };
+};
+
+/** Barcode value: the typed text (with `{{path}}` interpolation) unless an imported expression is unchanged. */
+const resolveBarcodeValueExpression = (
+  node: WorkspaceNode,
+  documentKind: DesignerDocumentKind
+): TemplateValueExpression => {
+  const metadata = getWorkspaceNodeMetadata(node);
+  const currentValue = asTrimmedString(metadata.value);
+  const parsedExpression = parseTemplateInterpolationExpression(currentValue, documentKind);
+  const preservedExpression = isTemplateValueExpression(metadata.astValueExpression)
+    ? metadata.astValueExpression
+    : null;
+  if (preservedExpression && currentValue === asTrimmedString(metadata.__astValuePreviewValue)) {
+    return preservedExpression;
+  }
+  return parsedExpression ?? { type: 'literal', value: currentValue };
 };
 
 const createNodeStyle = (node: WorkspaceNode): TemplateNode['style'] | undefined => {
@@ -1353,9 +1372,17 @@ const mapDesignerNodeToAstNode = (
         ...createBaseNode(node),
         type: 'divider',
       };
+    case 'barcode': {
+      const metadata = getWorkspaceNodeMetadata(node);
+      return {
+        ...createBaseNode(node),
+        type: 'barcode',
+        symbology: metadata.symbology === 'code128' ? 'code128' : 'qr',
+        value: resolveBarcodeValueExpression(node, documentKind),
+      };
+    }
     case 'image':
-    case 'logo':
-    case 'qr': {
+    case 'logo': {
       const metadata = getWorkspaceNodeMetadata(node);
       const src = asTrimmedString(metadata.src) || asTrimmedString(metadata.url) || '';
       const alt = asTrimmedString(metadata.alt);
@@ -1621,6 +1648,7 @@ export const exportWorkspaceToTemplateAst = (
     nextTemplateMetadata.printSettings = {
       paperPreset: resolvedPrintSettings.paperPreset,
       marginMm: resolvedPrintSettings.marginMm,
+      ...(resolvedPrintSettings.customPageSize ? { customPageSize: resolvedPrintSettings.customPageSize } : {}),
     };
   } else {
     delete nextTemplateMetadata.printSettings;
@@ -1768,6 +1796,7 @@ export const importTemplateAstToWorkspace = (
                   printSettings: {
                     paperPreset: resolvedPrintSettings.paperPreset,
                     marginMm: resolvedPrintSettings.marginMm,
+                    ...(resolvedPrintSettings.customPageSize ? { customPageSize: resolvedPrintSettings.customPageSize } : {}),
                   },
                 }
               : {}),
@@ -1940,6 +1969,7 @@ export const importTemplateAstToWorkspace = (
           field: 'field',
           image: 'image',
           divider: 'divider',
+          barcode: 'barcode',
           table: 'table',
           'dynamic-table': 'dynamic-table',
           totals: 'totals',
@@ -2121,6 +2151,12 @@ export const importTemplateAstToWorkspace = (
               ...(row.labelStyle ? { labelStyle: cloneJson(row.labelStyle) } : {}),
             };
           });
+        } else if (inputNode.type === 'barcode') {
+          metadata.symbology = inputNode.symbology;
+          metadata.astValueExpression = inputNode.value;
+          const resolvedValue = resolveExpressionPreviewText(inputNode.value, astInput, documentKind);
+          metadata.value = resolvedValue;
+          metadata.__astValuePreviewValue = resolvedValue;
         } else if (inputNode.type === 'image') {
           metadata.astSrcExpression = inputNode.src;
           if (inputNode.src.type === 'literal') {

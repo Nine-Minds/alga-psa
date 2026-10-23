@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Tijdsvermelding toevoegen"
+    }
+  },
   "common": {
     "actions": {
       "view": "Bekijken",
@@ -127,12 +132,14 @@
       "billable": "Factureerbaar",
       "notes": "Opmerkingen",
       "deleteTimeEntry": "Tijdsinvoer verwijderen",
-      "unsavedChanges": "Niet-opgeslagen wijzigingen"
+      "unsavedChanges": "Niet-opgeslagen wijzigingen",
+      "contractLine": "Contractregel"
     },
     "placeholders": {
       "selectService": "Selecteer een dienst",
       "selectDate": "Datum selecteren",
-      "addNotes": "Voeg notities toe"
+      "addNotes": "Voeg notities toe",
+      "selectContractLine": "Selecteer een contractregel"
     },
     "validation": {
       "startBeforeEnd": "De starttijd moet eerder zijn dan de eindtijd",
@@ -150,6 +157,9 @@
       "task": "Standaard van taak",
       "phase": "Standaard van fase",
       "project": "Standaard van project"
+    },
+    "options": {
+      "resolveContractLineLater": "Geen regel - later oplossen"
     }
   },
   "workItemPicker": {
@@ -213,9 +223,9 @@
     },
     "labels": {
       "status": "Status:",
-      "showIntervals": "Intervallen tonen",
       "grid": "Rooster",
-      "list": "Lijst"
+      "list": "Lijst",
+      "showSuggestions": "Suggesties"
     }
   },
   "approval": {
@@ -396,57 +406,11 @@
     "noContract": "Er is geen contractregel gevonden voor deze service. De tijd wordt doorgestuurd naar het systeembeheerde standaardcontract.",
     "contract": "Contract: {{name}}",
     "defaultContract": "Systeembeheerd standaardcontract",
-    "multipleLines": "Meerdere contractregels beschikbaar - met standaardselectie"
+    "multipleEligible": "Meerdere contractregels komen in aanmerking voor deze datum. Selecteer een contractregel om de toewijzing op te slaan."
   },
   "billableLegend": {
     "title": "Factureerbare legende",
     "description": "Kleurindicatoren voor factureerbare tijdratio's"
-  },
-  "intervalItem": {
-    "now": "Nu",
-    "autoClosed": "Automatisch gesloten",
-    "active": "Actief"
-  },
-  "intervals": {
-    "createdFromNote_one": "Gemaakt op basis van {{count}} interval",
-    "createdFromNote_other": "Gemaakt op basis van {{count}} intervallen",
-    "selectedCount_one": "{{count}} interval geselecteerd",
-    "selectedCount_other": "{{count}} intervallen geselecteerd",
-    "title": "Tickettijdsintervallen",
-    "hideShortIntervals": "Verberg intervallen van minder dan 1 minuut",
-    "totalTime": "Totale tijd: {{value}}",
-    "selectedOne": "{{count}} interval geselecteerd",
-    "selectedOther": "{{count}} intervallen geselecteerd",
-    "tooltips": {
-      "createTimeEntry": "Maak tijdinvoer op basis van geselecteerde intervallen",
-      "deleteSelected": "Geselecteerde intervallen verwijderen",
-      "mergeSelected": "Voeg geselecteerde intervallen samen"
-    },
-    "actions": {
-      "selectAll": "Selecteer Alles",
-      "deselectAll": "Deselecteer Alles",
-      "merge": "Samenvoegen"
-    },
-    "states": {
-      "loading": "Laadintervallen...",
-      "noIntervalsThisPeriod": "Er zijn geen intervallen gevonden voor deze periode",
-      "noIntervalsThisTicket": "Er zijn geen intervallen gevonden voor dit ticket",
-      "noIntervalsLongerThanMinute": "Geen intervallen langer dan 1 minuut gevonden"
-    },
-    "entryName": "Tickettijdinvoer",
-    "messages": {
-      "cannotFindTimeSheet": "Kan geen tijdsinvoer maken - kan de urenstaat niet vinden of maken",
-      "mergeFirst": "Voeg eerst de intervallen samen voordat u een tijdsinvoer maakt",
-      "sameTicketOnly": "Kan alleen tijdinvoer creëren op basis van intervallen van hetzelfde ticket",
-      "mergeSameTicketOnly": "Kan alleen intervallen van hetzelfde ticket samenvoegen",
-      "mergeSuccess": "Intervallen zijn succesvol samengevoegd",
-      "failedMerge": "Kan intervallen niet samenvoegen",
-      "noActivePeriod": "Geen actieve periode gevonden",
-      "failedFetchTimeSheet": "Kan urenstaat niet maken of ophalen",
-      "failedPrepareTimeEntry": "Het voorbereiden van de tijdinvoer is mislukt",
-      "savedSuccess": "Tijdinvoer succesvol opgeslagen",
-      "failedSave": "Kan tijdinvoer niet opslaan"
-    }
   },
   "addWorkItemDialog": {
     "title": "Werkitem toevoegen",
@@ -503,14 +467,34 @@
       "missingFieldNamed": "Er ontbreekt een verplicht veld van de urenstaat of tijdregistratie: {{field}}."
     },
     "timePeriod": {
-      "datesRequired": "Voer geldige begin- en einddatums in."
+      "datesRequired": "Voer geldige begin- en einddatums in.",
+      "closed": "Deze tijdsperiode is gesloten. Heropen deze voordat u wijzigingen aanbrengt.",
+      "permissions": {
+        "read": "Toestemming geweigerd: perioden kunnen niet worden bekeken.",
+        "create": "Toestemming geweigerd: perioden kunnen niet worden aangemaakt.",
+        "update": "Toestemming geweigerd: perioden kunnen niet worden bijgewerkt.",
+        "delete": "Toestemming geweigerd: perioden kunnen niet worden verwijderd."
+      }
     },
     "timePeriodSettings": {
       "invalidValue": "Een van de waarden van de periode-instelling is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
       "referenceMissing": "De geselecteerde periode-instelling is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
       "duplicate": "Er bestaat al een conflicterende periode-instelling.",
       "missingField": "Er ontbreekt een verplicht veld van de periode-instelling.",
-      "missingFieldNamed": "Er ontbreekt een verplicht veld van de periode-instelling: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de periode-instelling: {{field}}.",
+      "permissions": {
+        "read": "Toestemming geweigerd: instellingen voor factuurperioden kunnen niet worden bekeken.",
+        "manage": "Toestemming geweigerd: instellingen voor factuurperioden kunnen niet worden beheerd."
+      }
+    },
+    "stopwatch": {
+      "notFound": "Stopwatchsessie niet gevonden. Mogelijk is deze al vastgelegd of verworpen. Vernieuw de pagina.",
+      "notOpen": "Deze stopwatchsessie is al gesloten.",
+      "workItemNotFound": "Het werkitem van deze stopwatch kon niet worden gevonden.",
+      "unsupportedWorkItem": "De stopwatch kan alleen worden gestart op tickets en projecttaken.",
+      "boardDisabled": "De stopwatch is uitgeschakeld voor het bord van dit ticket.",
+      "alreadyOpen": "Er loopt al een stopwatch. Stop of verwerp deze eerst.",
+      "serviceRequired": "Kies een dienst voordat u deze stopwatchsessie registreert."
     }
   },
   "workItemEntry": {
@@ -539,6 +523,55 @@
     "entryMissingPeriod": "De urenstaat van deze registratie mist de periode en kan niet worden geopend.",
     "noPeriods": "Er zijn nog geen tijdsperioden ingesteld, dus er kan geen tijd worden geregistreerd. Vraag een beheerder om tijdsperioden aan te maken onder Instellingen → Tijdregistratie.",
     "noEditablePeriods": "Alle urenstaten zijn ingediend of goedgekeurd, dus er is geen dag om tijd aan toe te voegen. Vraag een goedkeurder om een staat te heropenen, of een beheerder om een periode toe te voegen.",
-    "prepareFailed": "Er is een fout opgetreden bij het voorbereiden van de tijdregistratie. Probeer het opnieuw."
+    "prepareFailed": "Er is een fout opgetreden bij het voorbereiden van de tijdregistratie. Probeer het opnieuw.",
+    "periodRange": "{{start}} – {{end}}"
+  },
+  "suggestions": {
+    "title": "Suggesties",
+    "description": "Tickets waaraan u in deze periode hebt gewerkt en waarvoor nog geen tijd is geregistreerd. Er wordt niets geregistreerd totdat u Tijd registreren kiest.",
+    "loading": "Suggesties laden...",
+    "empty": "Geen suggesties voor deze periode",
+    "dismissAllForDay": "Alles voor deze dag negeren",
+    "logTime": "Tijd registreren",
+    "dismiss": "Negeren",
+    "estimatedNotice": "Deze tijden zijn geschat op basis van uw activiteit op dit ticket. Pas ze aan op de tijd die u daadwerkelijk hebt gewerkt.",
+    "dismissFailed": "Suggestie negeren mislukt",
+    "activitySummary_one": "eerste activiteit {{first}} · laatste {{last}} · {{count}} actie ({{kinds}})",
+    "activitySummary_other": "eerste activiteit {{first}} · laatste {{last}} · {{count}} acties ({{kinds}})",
+    "kinds": {
+      "created": "aangemaakt",
+      "commented": "gereageerd",
+      "internalNote": "interne notitie",
+      "statusChanged": "status gewijzigd",
+      "priorityChanged": "prioriteit gewijzigd",
+      "assignmentChanged": "toewijzing gewijzigd",
+      "documentsChanged": "documenten gewijzigd",
+      "checklistChanged": "checklist gewijzigd",
+      "linksChanged": "links gewijzigd",
+      "updated": "bijgewerkt"
+    },
+    "activitySummary_few": "eerste activiteit {{first}} · laatste {{last}} · {{count}} acties ({{kinds}})",
+    "activitySummary_many": "eerste activiteit {{first}} · laatste {{last}} · {{count}} acties ({{kinds}})"
+  },
+  "stopwatch": {
+    "pausedNotice_one": "{{active}} bijgehouden in {{count}} segment (gepauzeerd {{paused}})",
+    "pausedNotice_other": "{{active}} bijgehouden in {{count}} segmenten (gepauzeerd {{paused}})",
+    "discardDialog": {
+      "title": "Deze stopwatch verwijderen?",
+      "message": "De {{duration}} die op {{workItem}} is bijgehouden wordt verwijderd en er wordt geen tijdregistratie gemaakt. Dit kan niet ongedaan worden gemaakt.",
+      "confirm": "Verwijderen",
+      "cancel": "Stopwatch behouden"
+    },
+    "conflictDialog": {
+      "title": "Er is al een stopwatch geopend",
+      "message": "U houdt al {{duration}} bij op {{workItem}}. Er kan maar één stopwatch tegelijk geopend zijn.",
+      "stopAndLog": "Huidige stoppen en registreren, dan starten",
+      "discard": "Huidige verwijderen, dan starten (de bijgehouden tijd wordt verwijderd)",
+      "confirm": "Doorgaan",
+      "cancel": "Annuleren"
+    },
+    "ticketFallbackName": "Ticket {{number}}",
+    "pausedNotice_few": "{{active}} bijgehouden in {{count}} segmenten (gepauzeerd {{paused}})",
+    "pausedNotice_many": "{{active}} bijgehouden in {{count}} segmenten (gepauzeerd {{paused}})"
   }
 }

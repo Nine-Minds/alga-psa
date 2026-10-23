@@ -4,6 +4,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Activity, ActivityFilters, ActivityResponse, ActivityType } from '@alga-psa/types';
 import { fetchActivities } from '../actions/activityServerActions';
+import { useActivitiesCacheContext } from './ActivitiesCacheProvider';
 
 type CacheKey = string;
 
@@ -22,7 +23,11 @@ const CACHE_TTL = {
 const CACHE_SIZE_LIMIT = 50;
 
 export function useActivitiesCache() {
-  const cache = useRef<Map<CacheKey, CacheEntry>>(new Map());
+  // Shared cache when an ActivitiesCacheProvider is mounted; otherwise a private per-hook
+  // cache (the previous behaviour), so the hook never throws without a provider.
+  const sharedContext = useActivitiesCacheContext();
+  const privateCache = useRef<Map<CacheKey, CacheEntry>>(new Map());
+  const cache = sharedContext?.cache ?? privateCache;
   const [cacheHits, setCacheHits] = useState(0);
   const [cacheMisses, setCacheMisses] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -54,7 +59,7 @@ export function useActivitiesCache() {
       .map((key) => {
         const value = filters[key as keyof ActivityFilters];
         if (Array.isArray(value)) {
-          return `${key}:${value.sort().join(',')}`;
+          return `${key}:${[...value].sort().join(',')}`;
         }
         return `${key}:${value}`;
       })
@@ -125,12 +130,14 @@ export function useActivitiesCache() {
           console.log(`Removed ${toRemove.length} oldest cache entries`);
         }
 
+        return result;
+      } finally {
+        // Clear on hit, miss, or error: a remounted consumer's first fetch is a cache hit
+        // against the shared cache, and a failure should surface empty/error state, not a
+        // permanent skeleton. Stays per hook instance.
         if (isInitialLoad) {
           setIsInitialLoad(false);
         }
-
-        return result;
-      } finally {
         setIsLoading(false);
       }
     },

@@ -1,20 +1,18 @@
 'use client';
 
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
+import React, { useState, useEffect, useCallback } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
-import { ScheduleSection } from './ScheduleSection';
-import { TicketsSection } from './TicketsSection';
-import { ProjectsSection } from './ProjectsSection';
-import { WorkflowTasksSection } from './WorkflowTasksSection';
-import { NotificationsSection } from './NotificationsSection';
+import { ActivitiesCardsView } from './ActivitiesCardsView';
 import { ActivitiesDataTableSection } from './ActivitiesDataTableSection';
-import { LayoutGrid, List, ChevronDown, ChevronUp } from 'lucide-react';
-import { ActivityFilters as ActivityFiltersType, ActivityType } from '@alga-psa/types';
+import { LayoutGrid, List } from 'lucide-react';
+import { ActivityType } from '@alga-psa/types';
+import { useActivityFilterState } from '../hooks/useActivityFilterState';
+import { useActivityFilterOptions } from '../hooks/useActivityFilterOptions';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
-import { Card, CardHeader } from '@alga-psa/ui/components/Card';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { ACTIVITY_BOARD_PARAM, parseActivityKey } from '../lib/activityBoardLink';
 
 export function UserActivitiesDashboard() {
   const { t } = useTranslation('msp/user-activities');
@@ -22,6 +20,20 @@ export function UserActivitiesDashboard() {
   // Bell "View all notifications" deep-links here with ?focus=notifications. Treat it
   // as an EPHEMERAL card-view override (task 29.8.46).
   const focusNotifications = searchParams?.get('focus') === 'notifications';
+  const router = useRouter();
+  const pathname = usePathname();
+  // "Show on my activities" deep-links here with ?activity=<type>:<id>. Like the focus link it
+  // is an EPHEMERAL override: it forces the table view for this visit only and never writes
+  // the saved view preference. An unparseable value is ignored.
+  const activityParam = searchParams?.get(ACTIVITY_BOARD_PARAM) ?? null;
+  const [focusActivityKey, setFocusActivityKey] = useState<string | null>(
+    () => (parseActivityKey(activityParam) ? activityParam : null)
+  );
+  useEffect(() => {
+    if (activityParam && parseActivityKey(activityParam)) {
+      setFocusActivityKey(activityParam);
+    }
+  }, [activityParam]);
   // Define view mode type
   type UserActivitiesViewMode = 'cards' | 'table';
 
@@ -43,145 +55,53 @@ export function UserActivitiesDashboard() {
   // The ViewSwitcher remains the only thing that writes the preference.
   const [ephemeralView, setEphemeralView] = useState<UserActivitiesViewMode | null>(null);
 
-  const [tableInitialFilters, setTableInitialFilters] = useState<ActivityFiltersType | null>(null); // State for specific filters
-
-  // Collapsible sections state
-  const [expandedSections, setExpandedSections] = useState({
-    notifications: true,
-    schedule: true,
-  });
-
-  // Focus-mode collapsible state (flag on): notifications expanded to full mode with
-  // the other sections present but collapsed below it.
-  const [focusExpandedSections, setFocusExpandedSections] = useState({
-    notifications: true,
-    schedule: false,
-    tickets: false,
-    projects: false,
-    workflowTasks: false,
-  });
-
-  const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
-
-  const toggleFocusSection = (section: keyof typeof focusExpandedSections) => {
-    setFocusExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
+  // One filter model for the whole screen: the table and the cards share it, so switching
+  // views keeps the filters and "View All" carries them over.
+  const filterState = useActivityFilterState();
+  const filterOptions = useActivityFilterOptions(filterState.filters.types);
+  const { filters, hasOverride, setOverrideFilters, clearOverride } = filterState;
 
   // Generic handler for "View All" clicks
   const handleViewAll = (types: ActivityType[]) => {
-    const filters: ActivityFiltersType = { types, isClosed: false };
-    setTableInitialFilters(filters);
+    // The table opens with the current filters, narrowed to the section's type. This visit
+    // only: nothing is persisted until the user edits a filter.
+    //
+    // Notifications is the exception: it is not in the filter bar's type set, its rows have no
+    // dueDate (a carried date range would empty the table), and `search` means the notification
+    // category for it. So it opens with exactly its own filters, nothing from the bar.
+    const isNotificationsOnly = types.length === 1 && types[0] === ActivityType.NOTIFICATION;
+    setOverrideFilters(
+      isNotificationsOnly ? { types, isClosed: false } : { ...filters, types }
+    );
     // Switch to the table view ephemerally; do NOT persist the preference.
     setEphemeralView('table');
   };
 
-  // Specific handlers calling the generic one
-  const handleViewAllSchedule = () => handleViewAll([ActivityType.SCHEDULE]); // Corrected Enum Member
-  const handleViewAllProjects = () => handleViewAll([ActivityType.PROJECT_TASK]);
-  const handleViewAllTickets = () => handleViewAll([ActivityType.TICKET]);
-  const handleViewAllWorkflowTasks = () => handleViewAll([ActivityType.WORKFLOW_TASK]);
-  const handleViewAllNotifications = () => handleViewAll([ActivityType.NOTIFICATION]);
+  // The section resolved the deep link (highlighted, or reported not found): consume the param
+  // so a refresh / back navigation doesn't repeat it, and pin the table view for this visit
+  // (the saved preference stays untouched).
+  const handleFocusConsumed = useCallback(() => {
+    setFocusActivityKey(null);
+    setEphemeralView((prev) => prev ?? 'table');
+    if (searchParams?.get(ACTIVITY_BOARD_PARAM)) {
+      const next = new URLSearchParams(searchParams.toString());
+      next.delete(ACTIVITY_BOARD_PARAM);
+      const query = next.toString();
+      router.replace(query ? `${pathname}?${query}` : (pathname ?? ''), { scroll: false });
+    }
+  }, [pathname, router, searchParams]);
 
-
-  // Determine the filters to apply to the table.
-  // When no explicit "View All" filters were passed, hand the table an EMPTY object so it
-  // hydrates from the user's saved preferences (due/created dates, client, tags, search, …).
-  // Injecting default types here would make the table's `hasExplicitFilters` true and
-  // permanently bypass that hydration — silently dropping every persisted filter on reload.
-  // The table falls back to its own DEFAULT_FILTERS when the user has no saved preference.
-  const currentTableFilters: ActivityFiltersType = tableInitialFilters || {};
-
-  // Table view content - Defined before use and memoized to prevent unnecessary re-renders
-  const tableViewContent = useMemo(() => (
+  const tableViewContent = (
     <ActivitiesDataTableSection
-      title={tableInitialFilters
+      title={hasOverride
         ? t('dashboard.filteredTitle', { defaultValue: 'Filtered Activities' })
         : t('dashboard.allActivitiesTitle', { defaultValue: 'All Activities' })}
-      initialFilters={currentTableFilters}
       id="all-activities-table-section"
+      focusActivityKey={focusActivityKey}
+      onFocusConsumed={handleFocusConsumed}
+      filterState={filterState}
+      filterOptions={filterOptions}
     />
-  ), [currentTableFilters, tableInitialFilters, t]
-  );
-
-  // Card view content - Defined before use and memoized to prevent unnecessary re-renders
-  const cardViewContent = useMemo(() => (
-    <div className="space-y-6">
-      {/* Notifications Section - Full width at top with collapsible card wrapper */}
-      <Card>
-        <CardHeader
-          className="cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => toggleSection('notifications')}
-        >
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">{t('dashboard.sections.notifications', { defaultValue: 'Notifications' })}</h2>
-            {expandedSections.notifications ? (
-              <ChevronUp className="h-5 w-5 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
-            )}
-          </div>
-        </CardHeader>
-        {expandedSections.notifications && (
-          <NotificationsSection
-            limit={5}
-            onViewAll={handleViewAllNotifications}
-          />
-        )}
-      </Card>
-
-      {/* Schedule Section - Full width with collapsible card wrapper */}
-      <Card>
-        <CardHeader
-          className="cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => toggleSection('schedule')}
-        >
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">{t('dashboard.sections.schedule', { defaultValue: 'Schedule' })}</h2>
-            {expandedSections.schedule ? (
-              <ChevronUp className="h-5 w-5 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
-            )}
-          </div>
-        </CardHeader>
-        {expandedSections.schedule && (
-          <ScheduleSection
-            limit={5}
-            onViewAll={handleViewAllSchedule}
-          />
-        )}
-      </Card>
-
-      {/* Other sections in 2-column grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Tickets Section */}
-        <TicketsSection
-          limit={5}
-          onViewAll={handleViewAllTickets}
-        />
-
-        {/* Projects Section */}
-        <ProjectsSection
-          limit={5}
-          onViewAll={handleViewAllProjects}
-        />
-
-        {/* Workflow Tasks Section */}
-        <WorkflowTasksSection
-          limit={5}
-          onViewAll={handleViewAllWorkflowTasks}
-        />
-      </div>
-    </div>
-  ), [handleViewAllSchedule, handleViewAllTickets, handleViewAllProjects, handleViewAllNotifications, handleViewAllWorkflowTasks, expandedSections.notifications, expandedSections.schedule]
   );
 
   // Define options for the ViewSwitcher with explicit type
@@ -195,134 +115,29 @@ export function UserActivitiesDashboard() {
     setViewModePreference(newView);
     // An explicit switch also wins over any ephemeral/focus override this visit.
     setEphemeralView(newView);
-    if (newView === 'table') {
-      setTableInitialFilters(null); // Reset specific filters when switching to table view
-    }
+    // An explicit switch ends any View All narrowing, in both directions.
+    clearOverride();
   };
 
-  // Effective view mode: an ephemeral override wins, else the focus deep link
-  // forces cards, else the saved preference.
+  // Effective view mode: an ephemeral override wins, else the activity deep link forces the
+  // table, else the focus deep link forces cards, else the saved preference.
   const effectiveViewMode: UserActivitiesViewMode =
-    ephemeralView ?? (focusNotifications ? 'cards' : viewMode);
-
-  // Focus-mode card layout: notifications expanded to full mode, the other
-  // sections rendered collapsed below — still present and expandable.
-  const focusCardViewContent = (
-    <div className="space-y-6">
-      {/* Notifications — expanded, full mode with server-side pagination + priority chips */}
-      <Card>
-        <CardHeader
-          className="cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => toggleFocusSection('notifications')}
-        >
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">{t('dashboard.sections.notifications', { defaultValue: 'Notifications' })}</h2>
-            {focusExpandedSections.notifications ? (
-              <ChevronUp className="h-5 w-5 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
-            )}
-          </div>
-        </CardHeader>
-        {focusExpandedSections.notifications && (
-          <NotificationsSection
-            fullMode
-            onViewAll={handleViewAllNotifications}
-          />
-        )}
-      </Card>
-
-      {/* Schedule — collapsed */}
-      <Card>
-        <CardHeader
-          className="cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => toggleFocusSection('schedule')}
-        >
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">{t('dashboard.sections.schedule', { defaultValue: 'Schedule' })}</h2>
-            {focusExpandedSections.schedule ? (
-              <ChevronUp className="h-5 w-5 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
-            )}
-          </div>
-        </CardHeader>
-        {focusExpandedSections.schedule && (
-          <ScheduleSection limit={5} onViewAll={handleViewAllSchedule} />
-        )}
-      </Card>
-
-      {/* Tickets — collapsed */}
-      <Card>
-        <CardHeader
-          className="cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => toggleFocusSection('tickets')}
-        >
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">{t('sections.tickets.title', { defaultValue: 'Tickets' })}</h2>
-            {focusExpandedSections.tickets ? (
-              <ChevronUp className="h-5 w-5 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
-            )}
-          </div>
-        </CardHeader>
-        {focusExpandedSections.tickets && (
-          <TicketsSection limit={5} onViewAll={handleViewAllTickets} />
-        )}
-      </Card>
-
-      {/* Projects — collapsed */}
-      <Card>
-        <CardHeader
-          className="cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => toggleFocusSection('projects')}
-        >
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">{t('sections.projects.title', { defaultValue: 'Project Tasks' })}</h2>
-            {focusExpandedSections.projects ? (
-              <ChevronUp className="h-5 w-5 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
-            )}
-          </div>
-        </CardHeader>
-        {focusExpandedSections.projects && (
-          <ProjectsSection limit={5} onViewAll={handleViewAllProjects} />
-        )}
-      </Card>
-
-      {/* Workflow Tasks — collapsed */}
-      <Card>
-        <CardHeader
-          className="cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => toggleFocusSection('workflowTasks')}
-        >
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">{t('sections.workflowTasks.title', { defaultValue: 'Workflow Tasks' })}</h2>
-            {focusExpandedSections.workflowTasks ? (
-              <ChevronUp className="h-5 w-5 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
-            )}
-          </div>
-        </CardHeader>
-        {focusExpandedSections.workflowTasks && (
-          <WorkflowTasksSection limit={5} onViewAll={handleViewAllWorkflowTasks} />
-        )}
-      </Card>
-    </div>
-  );
+    ephemeralView ?? (focusActivityKey ? 'table' : focusNotifications ? 'cards' : viewMode);
 
   // Pick the main content. Table always wins when selected; otherwise the focus
   // deep link renders the focus layout, else the standard card view.
   let mainContent: React.ReactNode;
   if (effectiveViewMode === 'table') {
     mainContent = tableViewContent;
-  } else if (focusNotifications) {
-    mainContent = focusCardViewContent;
   } else {
-    mainContent = cardViewContent;
+    mainContent = (
+      <ActivitiesCardsView
+        filterState={filterState}
+        filterOptions={filterOptions}
+        focusNotifications={focusNotifications}
+        onViewAll={handleViewAll}
+      />
+    );
   }
 
   return (

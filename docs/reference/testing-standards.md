@@ -347,7 +347,7 @@ the expensive suites regularly:
 
 | Workflow | Trigger | What runs | Database |
 |---|---|---|---|
-| `unit-tests.yml` | every PR, push to main | `nx affected -t test` (DB-free unit suites across projects with a `test` target, Nx-cached, two-pass to avoid runner OOM) + skipped-test budget guard | none |
+| `unit-tests.yml` | every PR, push to main | `nx affected -t test` (DB-free unit suites across projects with a `test` target, Nx-cached; `server` is excluded because the server-unit shards below run its unit directory) + skipped-test budget guard | none |
 | `unit-tests.yml` (coverage job) | push to main only | server unit suite with coverage, lcov uploaded as artifact (informational) | none |
 | `integration-tests.yml` | PRs touching server/packages/shared/ee | Tier-1 gate: `server npm run test:integration:tier1` — the `tier1.manifest.json` floor (billing, accounting, authorization, intake, journeys) plus every suite whose import graph reaches the PR diff (`vitest --changed`); schema/harness changes run the full directory | Postgres service container (pgvector) |
 | `integration-tests.yml` | nightly cron, manual dispatch (`suite: full`) | full `server/src/test/integration` suite | Postgres service container |

@@ -15,7 +15,8 @@ import type {
   IProjectTemplateWithDetails,
 } from '@alga-psa/types';
 import { DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildProjectCreatedPayload } from '@alga-psa/workflow-streams';
 import type { IUser } from '@alga-psa/types';
 import {
   actionError,
@@ -477,14 +478,19 @@ export const applyTemplate = withAuth(async (
       return applyProjectTemplate(trx, tenant, templateId, projectData);
     });
 
-    await publishEvent({
+    const createdAt = new Date();
+    await publishWorkflowEvent({
       eventType: 'PROJECT_CREATED',
-      payload: {
+      ctx: {
         tenantId: tenant,
-        projectId,
-        userId: user.user_id,
-        timestamp: new Date().toISOString(),
+        occurredAt: createdAt,
+        actor: { actorType: 'USER', actorUserId: user.user_id },
       },
+      payload: buildProjectCreatedPayload({
+        projectId,
+        createdByUserId: user.user_id,
+        createdAt,
+      }),
     });
 
     return projectId;

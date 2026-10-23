@@ -198,7 +198,7 @@ export interface RmmAlertProcessingResult {
  * packages; see buildRmmAlertPipelineDeps() in @alga-psa/integrations.
  */
 export interface RmmAlertPipelineDeps {
-  publishWorkflowEvent?: (args: {
+  publishRmmAlertEvent?: (args: {
     eventType: 'RMM_ALERT_TRIGGERED' | 'RMM_ALERT_RESOLVED';
     tenantId: string;
     payload: Record<string, unknown>;

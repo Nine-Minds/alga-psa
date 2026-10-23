@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const extendExpiryMock = vi.fn(async () => undefined);
 const isRevokedOrIdentityMismatchMock = vi.fn(async () => false);
+const getRejectionReasonMock = vi.fn(async () => null as string | null);
 const createMock = vi.fn(async () => 'sess-created');
 
 const tenantFirstMock = vi.fn();
@@ -103,6 +104,7 @@ vi.mock('./sso/mspSsoResolution', () => ({
 vi.mock('@alga-psa/db/models/UserSession', () => ({
   UserSession: {
     isRevokedOrIdentityMismatch: (...args: unknown[]) => isRevokedOrIdentityMismatchMock(...(args as [])),
+    getRejectionReason: (...args: unknown[]) => getRejectionReasonMock(...(args as [])),
     extendExpiry: (...args: unknown[]) => extendExpiryMock(...(args as [])),
     create: (...args: unknown[]) => createMock(...(args as [])),
     updateLocation: vi.fn(),
@@ -125,6 +127,7 @@ describe('nextAuth session expiry sliding', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     isRevokedOrIdentityMismatchMock.mockResolvedValue(false);
+    getRejectionReasonMock.mockResolvedValue(null);
     createMock.mockResolvedValue('sess-created');
     extendExpiryMock.mockResolvedValue(undefined);
     // Keep plan refresh quiet/side-effect-free for these cases.
@@ -184,10 +187,10 @@ describe('nextAuth session expiry sliding', () => {
     };
 
     await runJwt(token);
-    isRevokedOrIdentityMismatchMock.mockResolvedValue(true);
+    getRejectionReasonMock.mockResolvedValue('revoked');
 
     await expect(runJwt(token)).resolves.toBeNull();
-    expect(isRevokedOrIdentityMismatchMock).toHaveBeenCalledTimes(2);
+    expect(getRejectionReasonMock).toHaveBeenCalledTimes(2);
   });
 
   // Returning null here deletes the session cookie, so a pool timeout on this
@@ -195,7 +198,7 @@ describe('nextAuth session expiry sliding', () => {
   // requireLiveSession repeats the check and returns no session (see
   // getSession.test.ts, 'fails closed when the revocation lookup throws').
   it('keeps the session cookie when durable revocation state cannot be read', async () => {
-    isRevokedOrIdentityMismatchMock.mockRejectedValue(new Error('database unavailable'));
+    getRejectionReasonMock.mockRejectedValue(new Error('database unavailable'));
 
     const token = {
       id: 'u-1',
@@ -213,7 +216,7 @@ describe('nextAuth session expiry sliding', () => {
   });
 
   it('still drops the cookie when the lookup says the session is revoked', async () => {
-    isRevokedOrIdentityMismatchMock.mockResolvedValue(true);
+    getRejectionReasonMock.mockResolvedValue('revoked');
 
     await expect(runJwt({
       id: 'u-1',
@@ -228,7 +231,7 @@ describe('nextAuth session expiry sliding', () => {
   it('applies immediate fail-closed revocation checks in the synchronous auth config', async () => {
     const jwt = options.callbacks?.jwt;
     expect(jwt).toBeTypeOf('function');
-    isRevokedOrIdentityMismatchMock.mockResolvedValue(true);
+    getRejectionReasonMock.mockResolvedValue('revoked');
 
     await expect(jwt!({
       token: {
@@ -250,7 +253,7 @@ describe('nextAuth session expiry sliding', () => {
       last_plan_check: Date.now(),
     })).resolves.toBeNull();
 
-    expect(isRevokedOrIdentityMismatchMock).not.toHaveBeenCalled();
+    expect(getRejectionReasonMock).not.toHaveBeenCalled();
     expect(extendExpiryMock).not.toHaveBeenCalled();
   });
 
@@ -282,7 +285,7 @@ describe('nextAuth session expiry sliding', () => {
       session_id: 'sess-created',
       login_method: 'azure-ad',
     });
-    expect(isRevokedOrIdentityMismatchMock).toHaveBeenCalledWith(
+    expect(getRejectionReasonMock).toHaveBeenCalledWith(
       'tenant-1',
       'sess-created',
       { userId: 'u-1', userType: 'internal' }

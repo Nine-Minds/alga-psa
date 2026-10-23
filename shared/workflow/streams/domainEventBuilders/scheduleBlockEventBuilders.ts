@@ -1,3 +1,4 @@
+import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 type ScheduleEntryLike = {
   entry_id: string;
   work_item_type?: string | null;
@@ -37,7 +38,7 @@ export function buildScheduleBlockCreatedPayload(params: {
   entry: ScheduleEntryLike;
   timezone: string;
   reason?: string;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'SCHEDULE_BLOCK_CREATED'> {
   const startAt = toIsoString(params.entry.scheduled_start);
   const endAt = toIsoString(params.entry.scheduled_end);
   if (!startAt || !endAt) throw new Error('Schedule block entry is missing scheduled_start/scheduled_end');
@@ -49,7 +50,7 @@ export function buildScheduleBlockCreatedPayload(params: {
   const notes = String(params.entry.notes ?? '').trim();
   const inferredReason = title && title.toLowerCase() !== 'busy' ? title : notes || undefined;
 
-  return {
+  return builtWorkflowPayload('SCHEDULE_BLOCK_CREATED', {
     scheduleBlockId: params.entry.entry_id,
     ownerId,
     ownerType: 'user',
@@ -58,16 +59,16 @@ export function buildScheduleBlockCreatedPayload(params: {
     timezone: params.timezone,
     ...(toIsoString(params.entry.created_at) ? { createdAt: toIsoString(params.entry.created_at) } : {}),
     ...(params.reason ? { reason: params.reason } : inferredReason ? { reason: inferredReason } : {}),
-  };
+  });
 }
 
 export function buildScheduleBlockDeletedPayload(params: {
   scheduleBlockId: string;
   reason?: string;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'SCHEDULE_BLOCK_DELETED'> {
+  return builtWorkflowPayload('SCHEDULE_BLOCK_DELETED', {
     scheduleBlockId: params.scheduleBlockId,
     deletedAt: new Date().toISOString(),
     ...(params.reason ? { reason: params.reason } : {}),
-  };
+  });
 }

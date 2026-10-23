@@ -4,17 +4,40 @@
  */
 
 import { z } from 'zod';
+import { TIME_SHEET_LIST_SORT_KEYS, TIME_SHEET_LIST_SORT_ALIASES, TIME_SHEET_LIST_DEFAULT_SORT } from './timeSheetSort';
+import { Temporal } from '@js-temporal/polyfill';
 import { 
   uuidSchema, 
   createListQuerySchema, 
   createUpdateSchema,
   baseFilterSchema,
   booleanTransform,
-  dateSchema
+  dateSchema,
+  isoDateSchema
 } from './common';
 import { approvalStatusSchema, timeEntryResponseSchema } from './timeEntry';
 
 // Time period frequency schema
+// Time periods are half-open [start_date, end_date).
+const TIME_PERIOD_END_DATE_DESCRIPTION =
+  'Exclusive end of the period: the first day after the period. A period covering Aug 16–22 has end_date 2026-08-23.';
+
+// Time period dates are DATE columns: YYYY-MM-DD on the wire.
+// Input also accepts an RFC 3339 datetime, truncated textually to the calendar date the client wrote.
+export const timePeriodDateInputSchema = z
+  .union([isoDateSchema, z.string().datetime({ offset: true })])
+  .transform((value) => value.slice(0, 10))
+  .refine((value) => {
+    try {
+      Temporal.PlainDate.from(value, { overflow: 'reject' });
+      return true;
+    } catch {
+      return false;
+    }
+  }, 'Must be a valid calendar date');
+
+export const timePeriodDateSchema = isoDateSchema;
+
 export const timePeriodFrequencySchema = z.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom']);
 
 // Create time sheet schema
@@ -48,7 +71,12 @@ export const timeSheetFilterSchema = baseFilterSchema.extend({
 });
 
 // Time sheet list query schema
-export const timeSheetListQuerySchema = createListQuerySchema(timeSheetFilterSchema);
+// `sort` is an allowlist (see TimeSheetService.resolveTimeSheetListSort); created_at is a legacy alias of period_start.
+export const timeSheetListQuerySchema = createListQuerySchema(timeSheetFilterSchema).extend({
+  sort: z.enum([...TIME_SHEET_LIST_SORT_KEYS, ...Object.keys(TIME_SHEET_LIST_SORT_ALIASES)] as [string, ...string[]])
+    .optional()
+    .default(TIME_SHEET_LIST_DEFAULT_SORT)
+});
 
 // Time sheet response schema
 export const timeSheetResponseSchema = z.object({
@@ -90,9 +118,10 @@ export const timeSheetWithDetailsResponseSchema = timeSheetResponseSchema.extend
   
   time_period: z.object({
     period_id: uuidSchema,
-    start_date: dateSchema,
-    end_date: dateSchema,
-    is_current: z.boolean()
+    start_date: timePeriodDateSchema,
+    end_date: timePeriodDateSchema.describe(TIME_PERIOD_END_DATE_DESCRIPTION),
+    is_current: z.boolean(),
+    is_closed: z.boolean()
   }).optional(),
   
   time_entries: z.array(timeEntryResponseSchema).optional(),
@@ -117,19 +146,31 @@ export const timeSheetWithDetailsResponseSchema = timeSheetResponseSchema.extend
 });
 
 // Time period schemas
-export const createTimePeriodSchema = z.object({
-  start_date: dateSchema,
-  end_date: dateSchema,
-  is_current: z.boolean().optional().default(false)
+const timePeriodBodySchema = z.object({
+  start_date: timePeriodDateInputSchema,
+  end_date: timePeriodDateInputSchema.describe(TIME_PERIOD_END_DATE_DESCRIPTION),
+  is_current: z.boolean().optional().describe('Ignored. is_current is derived from the dates on read; accepted for backward compatibility.')
 });
 
-export const updateTimePeriodSchema = createUpdateSchema(createTimePeriodSchema);
+const START_BEFORE_END_MESSAGE = 'Start date must be before end date';
+
+export const createTimePeriodSchema = timePeriodBodySchema.refine(
+  (data) => data.start_date < data.end_date,
+  { message: START_BEFORE_END_MESSAGE, path: ['end_date'] }
+);
+
+export const updateTimePeriodSchema = createUpdateSchema(timePeriodBodySchema).superRefine((data, ctx) => {
+  if (data.start_date !== undefined && data.end_date !== undefined && data.start_date >= data.end_date) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: START_BEFORE_END_MESSAGE, path: ['end_date'] });
+  }
+});
 
 export const timePeriodResponseSchema = z.object({
   period_id: uuidSchema,
-  start_date: dateSchema,
-  end_date: dateSchema,
+  start_date: timePeriodDateSchema,
+  end_date: timePeriodDateSchema.describe(TIME_PERIOD_END_DATE_DESCRIPTION),
   is_current: z.boolean(),
+  is_closed: z.boolean(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,
@@ -266,14 +307,6 @@ export const timeSheetExportQuerySchema = z.object({
   fields: z.array(z.string()).optional()
 });
 
-// Time period generation
-export const generateTimePeriodsSchema = z.object({
-  start_date: dateSchema,
-  end_date: dateSchema,
-  frequency: timePeriodFrequencySchema,
-  frequency_unit: z.number().min(1).optional().default(1)
-});
-
 // Base schedule entry schema (without refinements)
 const baseScheduleEntrySchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -365,7 +398,6 @@ export type ReverseApprovalData = z.infer<typeof reverseApprovalSchema>;
 export type TimeSheetStatsResponse = z.infer<typeof timeSheetStatsResponseSchema>;
 export type TimeSheetSearchData = z.infer<typeof timeSheetSearchSchema>;
 export type TimeSheetExportQuery = z.infer<typeof timeSheetExportQuerySchema>;
-export type GenerateTimePeriodsData = z.infer<typeof generateTimePeriodsSchema>;
 export type CreateScheduleEntryData = z.infer<typeof createScheduleEntrySchema>;
 export type UpdateScheduleEntryData = z.infer<typeof updateScheduleEntrySchema>;
 export type ScheduleEntryResponse = z.infer<typeof scheduleEntryResponseSchema>;

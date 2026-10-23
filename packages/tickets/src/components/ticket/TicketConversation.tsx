@@ -51,6 +51,9 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { getContactAvatarUrlAction, getUserContactId, searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
+import { useRegisterUnsavedChanges } from '@alga-psa/ui/context/UnsavedChangesContext';
+import { hasEditorContent } from '@alga-psa/ui/editor/hasEditorContent';
 import { useTicketRichTextUploadSession } from './useTicketRichTextUploadSession';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import {
@@ -105,6 +108,12 @@ interface TicketConversationProps {
   onDelete: (comment: IComment) => void;
   onContentChange: (content: PartialBlock[]) => void;
   hideInternalTab?: boolean; // Optional prop to hide the Internal tab
+  /**
+   * Read-only: the thread is shown without any way to add to it. The client
+   * portal uses this for a ticket a shared-workspace colleague can see but
+   * not act on (FR-E7b) — the write path would refuse them anyway.
+   */
+  readOnly?: boolean;
   isSubmitting?: boolean; // Flag to indicate if a submission is in progress
   overrides?: Record<string, { note?: string; updated_at?: string }>; // Optional local overrides by comment_id
   externalComments?: Array<IComment & { child_ticket_id?: string; child_ticket_number?: string; child_ticket_title?: string; child_client_name?: string }>;
@@ -156,6 +165,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   editorKey,
   onNewCommentContentChange,
   onAddNewComment,
+  readOnly = false,
   onAddReplyComment,
   onTabChange,
   onEdit,
@@ -241,8 +251,28 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     }, 0);
   }, []);
 
+  // Whether the open composer holds typed text. Reported to the surrounding
+  // Drawer/Dialog so Escape or an overlay click asks before dropping it.
+  const [composeHasContent, setComposeHasContent] = useState(false);
+  // LEVERAGE: pattern composer-dirty-guard — same track-content + two-guard shape as BentoTimelineTile and InlineReplyComposer
+  useRegisterDismissGuard(showEditor && composeHasContent);
+  // Full-page ticket view: no Dialog/Drawer to guard, so the page-level registry
+  // makes prev/next ticket navigation confirm and reload/history chords blocked.
+  useRegisterUnsavedChanges(`${compId}-compose`, showEditor && composeHasContent);
+
+  const handleComposeContentChange = React.useCallback((content: PartialBlock[]) => {
+    setComposeHasContent(hasEditorContent(content));
+    onNewCommentContentChange(content);
+  }, [onNewCommentContentChange]);
+
+  // The composer remounts empty after a successful submit (editorKey bump).
+  useEffect(() => {
+    setComposeHasContent(false);
+  }, [editorKey]);
+
   const discardComposeEditor = React.useCallback(() => {
     onNewCommentContentChange(DEFAULT_BLOCK);
+    setComposeHasContent(false);
     setShowEditor(false);
   }, [onNewCommentContentChange]);
 
@@ -549,9 +579,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           onContentChange={onContentChange}
           onSave={updates => { if (!existingCommentUploadSession.isUploading) onSave(updates); }}
           onClose={existingCommentUploadSession.requestDiscard}
-          onEdit={() => onEdit(mergedConversation)}
-          onDelete={onDelete}
-          onReply={() => setReplyingToCommentId(mergedConversation.comment_id ?? null)}
+          onEdit={readOnly ? undefined : () => onEdit(mergedConversation)}
+          onDelete={readOnly ? undefined : onDelete}
+          onReply={readOnly ? undefined : () => setReplyingToCommentId(mergedConversation.comment_id ?? null)}
           hideInternalTab={hideInternalTab}
           uploadFile={existingCommentUploadSession.uploadFile}
           reactions={reactionsMap[mergedConversation.comment_id || ''] || []}
@@ -900,7 +930,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             key={editorKey}
             roomName={`ticket-${ticket.ticket_id}`}
             initialContent={DEFAULT_BLOCK}
-            onContentChange={onNewCommentContentChange}
+            onContentChange={handleComposeContentChange}
             searchMentions={searchUsersForMentions}
             uploadFile={composeUploadSession.uploadFile}
             footerActions={showEmailRecipients ? (
@@ -949,7 +979,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       <div className="p-6">
         <div ref={headerAnchorRef} className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">{t('conversation.comments', 'Comments')}</h2>
-          {!showEditor && (
+          {!showEditor && !readOnly && (
             <Button
               id={`${compId}-show-comment-editor-btn`}
               onClick={() => handleAddCommentClick('top')}
@@ -961,7 +991,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         <StickyComposerDock
           id={`${compId}-composer-top`}
           side="top"
-          visible={showEditor && editorPlacement === 'top'}
+          visible={!readOnly && showEditor && editorPlacement === 'top'}
           expanded
         >
           <div className="p-3">{composerBlock}</div>
@@ -986,7 +1016,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             composer right here rather than sending the reader back up. */}
         <StickyComposerDock
           id={`${compId}-composer-dock`}
-          visible={showEditor ? editorPlacement === 'bottom' : !headerAnchorVisible}
+          visible={!readOnly && (showEditor ? editorPlacement === 'bottom' : !headerAnchorVisible)}
           expanded={showEditor && editorPlacement === 'bottom'}
           placeholder={t('conversation.typeComment', 'Type your comment here...')}
           onExpand={() => handleAddCommentClick('bottom')}

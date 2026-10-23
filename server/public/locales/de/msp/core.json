@@ -104,7 +104,8 @@
     },
     "passwords": "Passwörter",
     "ticketsAll": "Alle Tickets",
-    "ticketsRecurring": "Wiederkehrende Tickets"
+    "ticketsRecurring": "Wiederkehrende Tickets",
+    "ticketsTemplates": "Ticket-Vorlagen"
   },
   "sidebar": {
     "backToMain": "Zurück zur Hauptansicht",
@@ -208,7 +209,35 @@
       "ariaLabel": "Ressourcen und Hilfe",
       "title": "Ressourcen",
       "documentation": "Dokumentation",
-      "support": "Support kontaktieren"
+      "support": "Support kontaktieren",
+      "submitTicket": "Ticket an Nine Minds senden"
+    },
+    "supportDialog": {
+      "title": "Ticket an Nine Minds senden",
+      "intro": "Der Support von Nine Minds erhält dies als Ticket und antwortet per E-Mail.",
+      "categoryLabel": "Wobei benötigen Sie Hilfe?",
+      "categories": {
+        "bug": "Etwas funktioniert nicht",
+        "question": "Frage",
+        "billing": "Abrechnung",
+        "feature": "Funktionswunsch"
+      },
+      "subjectLabel": "Betreff",
+      "descriptionLabel": "Was ist passiert?",
+      "descriptionPlaceholder": "Beschreiben Sie, was Sie erwartet haben, was passiert ist und welcher Kunde oder welche Rechnung betroffen ist.",
+      "replyTo": "Antworten gehen an {{email}}",
+      "success": "An den Support von Nine Minds gesendet. Antworten gehen an {{email}}.",
+      "submit": "An Nine Minds senden",
+      "sending": "Wird gesendet …",
+      "cancel": "Abbrechen",
+      "close": "Schließen",
+      "fallbackLink": "Support über nineminds.com kontaktieren",
+      "errors": {
+        "invalidInput": "Geben Sie einen Betreff mit mindestens 3 Zeichen und eine Beschreibung mit mindestens 20 Zeichen ein.",
+        "rateLimited": "Sie haben gerade eine Anfrage gesendet. Warten Sie eine Minute, bevor Sie eine weitere senden.",
+        "emailNotConfigured": "Für diese Installation ist kein E-Mail-Versand konfiguriert, daher konnte die Anfrage nicht gesendet werden.",
+        "sendFailed": "Das Senden der Anfrage ist fehlgeschlagen. Versuchen Sie es erneut."
+      }
     },
     "jobs": {
       "ariaLabel": "Aktivität der Hintergrundjobs anzeigen",
@@ -239,6 +268,19 @@
       "ariaLabel": "KI zu diesem Workflow fragen",
       "title": "KI fragen",
       "shortcutHint": "Quick Ask für Workflow-Hilfe öffnen"
+    },
+    "stopwatch": {
+      "untitled": "Ohne Titel",
+      "ariaLabelPaused": "Stoppuhr pausiert: {{label}} bei {{clock}}",
+      "ariaLabelRunning": "Stoppuhr läuft: {{label}} bei {{clock}}",
+      "paused": "Stoppuhr pausiert",
+      "running": "Stoppuhr läuft",
+      "resume": "Fortsetzen",
+      "pause": "Pausieren",
+      "stop": "Stoppen und erfassen",
+      "discard": "Verwerfen",
+      "pausedNoDrawer": "Stoppuhr bei {{clock}} pausiert. Öffnen Sie das Arbeitselement, um die Zeit zu erfassen.",
+      "openTicket": "Ticket öffnen"
     }
   },
   "dialogs": {
@@ -270,6 +312,18 @@
     "platformNotification": {
       "learnMore": "Mehr erfahren",
       "dismiss": "Benachrichtigung schließen"
+    },
+    "integrationHealth": {
+      "inboundEmail": {
+        "authFailure": "Eingehende E-Mails für {{mailbox}} sind pausiert — die Anmeldedaten funktionieren nicht mehr.",
+        "error": "Eingehende E-Mails für {{mailbox}} haben einen Fehler gemeldet und werden möglicherweise nicht empfangen."
+      },
+      "calendar": {
+        "error": "Die Kalendersynchronisierung für {{providerName}} hat einen Fehler gemeldet und synchronisiert nicht.",
+        "disconnected": "Die Kalendersynchronisierung für {{providerName}} ist getrennt und synchronisiert nicht."
+      },
+      "review": "Prüfen",
+      "dismiss": "Integrationshinweis schließen"
     }
   },
   "quickCreate": {
@@ -757,5 +811,37 @@
   "githubStar": {
     "label": "Mit Stern markieren",
     "ariaLabel": "{{repository}} auf GitHub mit einem Stern markieren"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "MSP-Portal",
+      "dashboard": "Dashboard",
+      "ticketDetails": "Ticketdetails",
+      "tickets": "Tickets",
+      "projectDetails": "Projektdetails",
+      "projects": "Projekte",
+      "clientDetails": "Kundendetails",
+      "clients": "Kunden",
+      "contactDetails": "Kontaktdetails",
+      "contacts": "Kontakte",
+      "assetDetails": "Assetdetails",
+      "assets": "Assets",
+      "billing": "Abrechnung",
+      "settings": "Einstellungen",
+      "settingsSection": "Einstellungen: {{section}}",
+      "chat": "Chat"
+    }
+  },
+  "chat": {
+    "page": {
+      "title": "Pro-Funktion",
+      "description": "KI-Chatfunktionen erfordern Pro. Führen Sie ein Upgrade durch, um auf diese Funktion zuzugreifen."
+    },
+    "messages": {
+      "proRequired": "Nachrichtenfunktionen erfordern Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Chatfunktionen sind nur in der Enterprise Edition verfügbar"
+    }
   }
 }

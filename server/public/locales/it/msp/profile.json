@@ -500,6 +500,8 @@
         "sending": "Invio…",
         "rotateSecret": "Ruota segreto",
         "rotating": "Rotazione…",
+        "retryFailed": "Riprova le consegne fallite",
+        "retryingFailed": "Nuovo tentativo…",
         "back": "Torna ai webhook"
       },
       "deliveries": {
@@ -541,6 +543,8 @@
         "stateChangeFailed": "Impossibile aggiornare lo stato del webhook.",
         "retryQueued": "Ritentativo in coda per l'evento {{eventId}}.",
         "retryFailed": "Impossibile riprovare la consegna.",
+        "retryFailedQueued": "{{queued}} consegne in coda per il nuovo tentativo, {{skipped}} ignorate.",
+        "retryFailedFailed": "Impossibile riprovare le consegne fallite.",
         "invalidHeaderLine": "Riga di intestazione non valida: \"{{line}}\"",
         "invalidRetryConfig": "La configurazione dei tentativi deve essere un oggetto JSON"
       },
@@ -727,6 +731,9 @@
     }
   },
   "connectSso": {
+    "proFeature": {
+      "description": "Il collegamento degli account SSO è disponibile in Pro. Passa a Pro per connettere il tuo account Google Workspace o Microsoft 365 e ottenere un’autenticazione senza interruzioni."
+    },
     "linkError": {
       "title": "Collegamento SSO non riuscito.",
       "no_matching_user": "L'account con cui hai effettuato l'accesso è {{providerEmail}}, mentre il tuo accesso AlgaPSA è {{accountEmail}}. Collega un account che usa {{accountEmail}} oppure chiedi all'amministratore del tuo provider di identità di impostare {{accountEmail}} come indirizzo email principale di quell'account.",

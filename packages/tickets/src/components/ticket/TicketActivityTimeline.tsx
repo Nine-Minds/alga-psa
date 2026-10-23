@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ChevronRight,
   Copy,
+  LayoutTemplate,
   Link2,
   Lock,
   Mail,
@@ -128,6 +129,8 @@ function eventIcon(eventType: string): React.ReactElement {
     case 'TICKET_DUPLICATED_FROM':
     case 'TICKET_DUPLICATED_TO':
       return <Copy className="h-4 w-4" />;
+    case 'TICKET_CREATED_FROM_TEMPLATE':
+      return <LayoutTemplate className="h-4 w-4" />;
     case 'TICKET_CLOSED':
       return <CheckCircle className="h-4 w-4" />;
     case 'TICKET_REOPENED':
@@ -202,6 +205,15 @@ function describeActivity(activity: TicketActivityRow, visibilityLabel: (visible
   switch (activity.event_type) {
     case 'TICKET_CREATED':
       return { title: `${actor} created the ticket` };
+    case 'TICKET_CREATED_FROM_TEMPLATE': {
+      // The name is a snapshot taken at creation, so it survives the template being renamed or deleted.
+      const details = (activity.details ?? {}) as { template_name?: string };
+      return {
+        title: details.template_name
+          ? `${actor} created this ticket from template "${details.template_name}"`
+          : `${actor} created this ticket from a template`,
+      };
+    }
     case 'TICKET_DUPLICATED_FROM': {
       const details = (activity.details ?? {}) as { source_ticket_number?: string };
       return {
@@ -435,6 +447,7 @@ const EVENT_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: 'TICKET_DOCUMENT_ATTACHED', label: 'Document attached' },
   { value: 'TICKET_DOCUMENT_REMOVED', label: 'Document removed' },
   { value: 'TICKET_INBOUND_EMAIL_RECEIVED', label: 'Inbound email' },
+  { value: 'TICKET_CREATED_FROM_TEMPLATE', label: 'Created from template' },
   { value: 'TICKET_DUPLICATED_FROM', label: 'Duplicated from' },
   { value: 'TICKET_DUPLICATED_TO', label: 'Duplicated to' },
   { value: 'TICKET_BUNDLE_REOPENED', label: 'Bundle reopened' },

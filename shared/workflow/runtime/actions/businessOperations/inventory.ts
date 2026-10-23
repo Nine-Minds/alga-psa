@@ -7,7 +7,7 @@ import {
   withTenantTransaction,
   writeRunAudit,
 } from './shared';
-import { withWorkflowPicker } from '../../jsonSchemaMetadata';
+import { withWorkflowPicker } from '@alga-psa/event-schemas';
 
 const stockUnitStatusSchema = z.enum([
   'in_stock',

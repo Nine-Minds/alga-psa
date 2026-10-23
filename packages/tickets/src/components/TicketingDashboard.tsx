@@ -8,6 +8,7 @@ import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from '@
 import { ITag } from '@alga-psa/types';
 import { buildCreateTicketHref } from '../lib/createTicketRoute';
 import { createTicketActionsColumn } from './ticketActionsColumn';
+import { useTicketTemplatePermissions } from './templates/useTicketTemplatePermissions';
 import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BoardTabStrip from './BoardTabStrip';
@@ -47,7 +48,7 @@ import {
 import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/ShareActionsMenu';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
-import { IBoard, IClient, IUser, ITeam } from '@alga-psa/types';
+import { IBoard, IClient, IContact, IUser, ITeam } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -63,7 +64,7 @@ import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filt
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { useIntervalTracking, useRangeSelection } from '@alga-psa/ui/hooks';
+import { useRangeSelection } from '@alga-psa/ui/hooks';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
@@ -96,7 +97,7 @@ import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPick
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { useDrawer } from '@alga-psa/ui';
-import { getClientById } from '../actions/clientLookupActions';
+import { getClientById, getContactByContactNameId } from '../actions/clientLookupActions';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import {
   buildTicketStatusFilterOptions,
@@ -162,6 +163,7 @@ interface TicketingDashboardProps {
   sortDirection?: 'asc' | 'desc';
   onSortChange: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
   renderClientDetails?: (args: { id: string; client: IClient }) => React.ReactNode;
+  renderContactDetails?: (args: { id: string; contact: IContact; clients: IClient[]; userId?: string }) => React.ReactNode;
   initialAgentAvatarUrls?: Record<string, string | null>;
   initialTeamAvatarUrls?: Record<string, string | null>;
   initialTicketTags?: Record<string, ITag[]>;
@@ -332,6 +334,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   sortDirection = 'desc',
   onSortChange,
   renderClientDetails,
+  renderContactDetails,
   initialAgentAvatarUrls = {},
   initialTeamAvatarUrls = {},
   initialTicketTags = {},
@@ -493,6 +496,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+
+  // Gates the row menu's "Create template from ticket" item; the server action is authoritative.
+  const templatePermissions = useTicketTemplatePermissions();
 
   // The only way out of this route. Announcing the departure *before* the push
   // is the point: the container mirrors filter state into the URL, and a write
@@ -914,9 +920,56 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       replaceDrawer(<div className="p-4 text-sm text-red-600">{message}</div>);
     }
   }, [id, openDrawer, replaceDrawer, renderClientDetails, t]);
-  
-  // Use interval tracking hook to get interval count
-  const { intervalCount, isLoading: isLoadingIntervals } = useIntervalTracking(currentUser?.user_id);
+
+  const onQuickViewContact = useCallback(async (contactNameId: string) => {
+    if (!contactNameId) return;
+
+    openDrawer(
+      <div className="p-4 text-sm text-gray-600">
+        {t('dashboard.drawer.loading', 'Loading...')}
+      </div>,
+      undefined,
+      undefined,
+      '900px'
+    );
+    try {
+      const contact = await getContactByContactNameId(contactNameId);
+      if (!contact) {
+        replaceDrawer(
+          <div className="p-4 text-sm text-gray-600">
+            {t('info.contactNotFound', 'Contact not found.')}
+          </div>
+        );
+        return;
+      }
+
+      // ContactDetailsView resolves the contact's client name and phone country
+      // from this list, so the owning client is all it needs.
+      const client = contact.client_id ? await getClientById(contact.client_id) : null;
+
+      replaceDrawer(
+        renderContactDetails
+          ? renderContactDetails({
+            id: `${id}-contact-details`,
+            contact,
+            clients: client ? [client] : [],
+            userId: currentUser?.user_id,
+          })
+          : (
+            <div className="p-4 text-sm text-gray-600">
+              {t('dashboard.drawer.contactRendererMissing', 'Contact details are unavailable in this context.')}
+            </div>
+          ),
+        undefined,
+        '900px'
+      );
+    } catch (e) {
+      const message = e instanceof Error
+        ? e.message
+        : t('info.contactLoadFailed', 'Failed to load contact.');
+      replaceDrawer(<div className="p-4 text-sm text-red-600">{message}</div>);
+    }
+  }, [currentUser?.user_id, id, openDrawer, replaceDrawer, renderContactDetails, t]);
 
   // Custom function for clicking on tickets with filter preservation
   const handleTicketClick = useCallback((ticketId: string) => {
@@ -927,8 +980,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     navigateAwayTo(href);
   }, [getCurrentFiltersQuery, navigateAwayTo]);
 
-
-  // Handle saving time entries created from intervals
 
   const [expandedBundleMasters, setExpandedBundleMasters] = useState<Set<string>>(new Set());
   const [loadedBundleChildrenMasters, setLoadedBundleChildrenMasters] = useState<Set<string>>(new Set());
@@ -1489,6 +1540,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       tagSize: densityClasses.tagSize,
       showClient: true,
       onClientClick: onQuickViewClient,
+      onContactClick: onQuickViewContact,
       statusIsClosedById,
       additionalAgentAvatarUrls,
       teamAvatarUrls,
@@ -1599,6 +1651,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         duplicateFromTicketId: ticketId,
         isAlgaDeskMode: useAlgaDeskQuickAddForm,
       })),
+      // Opens the template editor prefilled from the ticket. Nothing is saved until Save there.
+      onCreateTemplate: (ticketId) => navigateAwayTo(`/msp/tickets/templates/new?fromTicket=${encodeURIComponent(ticketId)}`),
+      canCreateTemplate: templatePermissions.create,
     });
 
     return [selectionColumn, ...baseColumns, actionsColumn];
@@ -1611,6 +1666,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     handleTagsChange,
     ticketTagsRef,
     onQuickViewClient,
+    onQuickViewContact,
     id,
     allVisibleTicketsSelected,
     isSelectionIndeterminate,
@@ -1629,6 +1685,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     densityClasses.tagSize,
     navigateAwayTo,
     useAlgaDeskQuickAddForm,
+    templatePermissions.create,
     t,
     locale,
     dateFormat,
@@ -2376,13 +2433,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                       </button>
                     </span>
                   ))}
-                  <button
-                    type="button"
-                    onClick={handleResetFilters}
-                    className="ml-1 text-xs font-medium text-[rgb(var(--color-text-500))] underline-offset-2 hover:text-[rgb(var(--color-text-700))] hover:underline"
-                  >
-                    {t('filters.clearFilters', 'Clear filters')}
-                  </button>
                 </div>
               )}
 

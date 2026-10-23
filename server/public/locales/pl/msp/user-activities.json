@@ -168,7 +168,8 @@
       "expandGroup": "Rozwiń grupę",
       "collapseGroup": "Zwiń grupę",
       "renameGroup": "Zmień nazwę grupy",
-      "deleteGroup": "Usuń grupę"
+      "deleteGroup": "Usuń grupę",
+      "groupMenu": "Akcje grupy"
     },
     "dropActivitiesHere": "Upuść aktywności tutaj",
     "ungroupedHeading": "Niepogrupowane",
@@ -178,6 +179,16 @@
       "status": "Status",
       "priority": "Priorytet",
       "dueDate": "Termin"
+    },
+    "defaultBadge": "Domyślna",
+    "defaultBadgeHint": "Aktywności, których nie umieszczono w żadnej grupie, pojawiają się tutaj, w tym nowo przypisane zadania.",
+    "defaultGroupEmpty": "Nowa praca przypisana do Ciebie pojawi się tutaj",
+    "menu": {
+      "setDefault": "Ustaw jako domyślną dla nowej pracy",
+      "unsetDefault": "Przestań używać jako domyślnej"
+    },
+    "errors": {
+      "setDefaultFailed": "Nie udało się zaktualizować grupy domyślnej"
     }
   },
   "printable": {
@@ -190,13 +201,10 @@
       "title": "Zadania projektu",
       "actions": {
         "refresh": "Odśwież",
-        "filter": "Filtruj",
-        "reset": "Resetuj",
         "viewAll": "Wyświetl wszystko"
       },
       "ariaLabels": {
-        "refresh": "Odśwież zadania projektu",
-        "filter": "Filtruj zadania projektu"
+        "refresh": "Odśwież zadania projektu"
       },
       "states": {
         "loading": "Ładowanie aktywności projektu...",
@@ -204,47 +212,16 @@
       },
       "errors": {
         "loadFailed": "Nie udało się załadować aktywności projektu. Proszę spróbować ponownie później."
-      },
-      "filterDialog": {
-        "title": "Filtruj zadania projektu",
-        "description": "Proszę wybrać kryteria filtrowania aktywności zadań projektu.",
-        "fields": {
-          "search": "Szukaj",
-          "searchPlaceholder": "Szukaj tytułu, opisu",
-          "project": "Projekt",
-          "projectPlaceholder": "Wybierz projekt...",
-          "allProjects": "Wszystkie projekty",
-          "phase": "Faza",
-          "phasePlaceholder": "Wybierz fazę...",
-          "phaseLoadingPlaceholder": "Ładowanie faz...",
-          "phaseSelectFirstPlaceholder": "Najpierw proszę wybrać projekt",
-          "allPhases": "Wszystkie fazy",
-          "priority": "Priorytet",
-          "priorityPlaceholder": "Wybierz priorytet...",
-          "allPriorities": "Wszystkie priorytety",
-          "dueDateRange": "Zakres terminów",
-          "createdDateRange": "Zakres dat utworzenia",
-          "showClosedTasks": "Pokaż zamknięte zadania"
-        },
-        "actions": {
-          "reset": "Resetuj",
-          "cancel": "Anuluj",
-          "apply": "Zastosuj filtry",
-          "clearDates": "Wyczyść"
-        }
       }
     },
     "tickets": {
       "title": "Zgłoszenia",
       "actions": {
         "refresh": "Odśwież",
-        "filter": "Filtruj",
-        "reset": "Resetuj",
         "viewAll": "Wyświetl wszystko"
       },
       "ariaLabels": {
-        "refresh": "Odśwież zgłoszenia",
-        "filter": "Filtruj zgłoszenia"
+        "refresh": "Odśwież zgłoszenia"
       },
       "states": {
         "loading": "Ładowanie aktywności zgłoszeń...",
@@ -252,31 +229,6 @@
       },
       "errors": {
         "loadFailed": "Nie udało się załadować aktywności zgłoszeń. Proszę spróbować ponownie później."
-      },
-      "filterDialog": {
-        "title": "Filtruj zgłoszenia",
-        "description": "Proszę wybrać kryteria filtrowania aktywności zgłoszeń.",
-        "fields": {
-          "search": "Szukaj",
-          "searchPlaceholder": "Szukaj tytułu, opisu, nr zgłoszenia",
-          "client": "Klient",
-          "contact": "Kontakt",
-          "status": "Status",
-          "statusPlaceholder": "Wybierz status...",
-          "allStatuses": "Wszystkie statusy",
-          "priority": "Priorytet",
-          "priorityPlaceholder": "Wybierz priorytet...",
-          "allPriorities": "Wszystkie priorytety",
-          "dueDateRange": "Zakres terminów",
-          "createdDateRange": "Zakres dat utworzenia",
-          "showClosedTickets": "Pokaż zamknięte zgłoszenia"
-        },
-        "actions": {
-          "reset": "Resetuj",
-          "cancel": "Anuluj",
-          "apply": "Zastosuj filtry",
-          "clearDates": "Wyczyść"
-        }
       }
     },
     "workflowTasks": {
@@ -284,13 +236,10 @@
       "drawerTitle": "Zadania workflow",
       "actions": {
         "refresh": "Odśwież",
-        "filter": "Filtruj",
-        "reset": "Resetuj",
         "viewAll": "Wyświetl wszystko"
       },
       "ariaLabels": {
-        "refresh": "Odśwież zadania workflow",
-        "filter": "Filtruj zadania workflow"
+        "refresh": "Odśwież zadania workflow"
       },
       "states": {
         "loading": "Ładowanie aktywności zadań workflow...",
@@ -298,33 +247,6 @@
       },
       "errors": {
         "loadFailed": "Nie udało się załadować aktywności zadań workflow. Proszę spróbować ponownie później."
-      },
-      "filterDialog": {
-        "title": "Filtruj zadania workflow",
-        "description": "Proszę wybrać kryteria filtrowania aktywności zadań workflow.",
-        "fields": {
-          "search": "Szukaj",
-          "searchPlaceholder": "Szukaj tytułu, opisu",
-          "workflowExecution": "Wykonanie workflow",
-          "workflowExecutionPlaceholder": "Wybierz wykonanie workflow...",
-          "allExecutions": "Wszystkie wykonania",
-          "priority": "Priorytet",
-          "priorityPlaceholder": "Wybierz priorytet...",
-          "allPriorities": "Wszystkie priorytety",
-          "priorityHigh": "Wysoki",
-          "priorityMedium": "Średni",
-          "priorityLow": "Niski",
-          "dueDateRange": "Zakres terminów",
-          "createdDateRange": "Zakres dat utworzenia",
-          "showClosedTasks": "Pokaż zamknięte zadania",
-          "includeHiddenTasks": "Uwzględnij ukryte zadania"
-        },
-        "actions": {
-          "reset": "Resetuj",
-          "cancel": "Anuluj",
-          "apply": "Zastosuj filtry",
-          "clearDates": "Wyczyść"
-        }
       },
       "listDrawer": {
         "searchPlaceholder": "Szukaj zadań...",
@@ -352,8 +274,6 @@
       "title": "Harmonogram",
       "actions": {
         "refresh": "Odśwież",
-        "filter": "Filtruj",
-        "reset": "Resetuj",
         "viewAll": "Wyświetl wszystko"
       },
       "states": {
@@ -364,41 +284,17 @@
         "loadFailed": "Nie udało się załadować aktywności harmonogramu. Proszę spróbować ponownie później.",
         "refreshFailed": "Nie udało się odświeżyć aktywności harmonogramu. Proszę spróbować ponownie później.",
         "addAdHocFailed": "Nie udało się dodać aktywności. Spróbuj ponownie."
-      },
-      "filterDialog": {
-        "title": "Filtruj wpisy harmonogramu",
-        "description": "Proszę wybrać kryteria filtrowania aktywności harmonogramu.",
-        "fields": {
-          "search": "Szukaj",
-          "searchPlaceholder": "Szukaj tytułu, opisu",
-          "dateRange": "Zakres dat",
-          "workItemType": "Typ powiązanego elementu pracy",
-          "workItemTypePlaceholder": "Wybierz typ elementu pracy...",
-          "allTypes": "Wszystkie typy",
-          "ticket": "Zgłoszenie",
-          "projectTask": "Zadanie projektu",
-          "workflowTask": "Zadanie workflow",
-          "showClosedEntries": "Pokaż zamknięte wpisy",
-          "showRecurringOnly": "Pokaż tylko cykliczne"
-        },
-        "actions": {
-          "reset": "Resetuj",
-          "cancel": "Anuluj",
-          "apply": "Zastosuj filtry"
-        }
       }
     },
     "notifications": {
       "title": "Powiadomienia",
       "actions": {
         "refresh": "Odśwież",
-        "filter": "Filtruj",
         "reset": "Resetuj",
         "viewAll": "Wyświetl wszystko"
       },
       "ariaLabels": {
-        "refresh": "Odśwież powiadomienia",
-        "filter": "Filtruj powiadomienia"
+        "refresh": "Odśwież powiadomienia"
       },
       "tabs": {
         "unread": "Nieprzeczytane",
@@ -413,12 +309,7 @@
         "loadFailed": "Nie udało się załadować aktywności powiadomień. Proszę spróbować ponownie później."
       },
       "filterDialog": {
-        "title": "Filtruj powiadomienia",
-        "description": "Proszę wybrać kryteria filtrowania aktywności powiadomień.",
         "fields": {
-          "status": "Status",
-          "unreadOnly": "Tylko nieprzeczytane",
-          "showRead": "Pokaż przeczytane",
           "category": "Kategoria",
           "categoryPlaceholder": "Wybierz kategorię...",
           "allCategories": "Wszystkie kategorie",
@@ -429,11 +320,6 @@
             "system": "System"
           },
           "dateRange": "Zakres dat"
-        },
-        "actions": {
-          "reset": "Resetuj",
-          "cancel": "Anuluj",
-          "apply": "Zastosuj filtry"
         }
       },
       "priority": {
@@ -543,5 +429,32 @@
   "actions": {
     "print": "Drukuj",
     "printOptions": "Opcje drukowania"
+  },
+  "actionMenu": {
+    "moveToGroup": "Przenieś do grupy",
+    "loadingGroups": "Ładowanie…",
+    "newGroupTitle": "Nowa grupa"
+  },
+  "deepLink": {
+    "notInView": "Tego elementu nie ma w bieżącym widoku.",
+    "notOnList": "Tego elementu nie ma już na Twojej liście aktywności.",
+    "clearFilters": "Wyczyść filtry"
+  },
+  "myGroup": {
+    "label": "Moja grupa",
+    "chip": "Moja grupa: {{name}}",
+    "ungrouped": "Bez grupy",
+    "privacyHint": "Widzisz to tylko Ty. Porządkuje Twoją listę aktywności.",
+    "selectPlaceholder": "Wybierz grupę",
+    "newGroup": "Nowa grupa…",
+    "newGroupPlaceholder": "Nazwa grupy",
+    "create": "Utwórz",
+    "cancel": "Anuluj",
+    "showOnBoard": "Pokaż w moich aktywnościach",
+    "errors": {
+      "load": "Nie udało się wczytać Twoich grup.",
+      "move": "Nie udało się zmienić grupy. Spróbuj ponownie.",
+      "create": "Nie udało się utworzyć grupy. Spróbuj ponownie."
+    }
   }
 }

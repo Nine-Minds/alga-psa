@@ -299,6 +299,7 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
 
       const currencyCode = (invoice as any).currencyCode || 'USD';
       const amountLocale = await getTenantDefaultLocale(tenant, 'client');
+      // LEVERAGE: pattern currency-minor-units — hard-coded /100 assumes a 2-digit currency; display/compute formatting should go through formatCurrencyFromMinorUnits (alga0002091 follow-up) (also 1 more identical site(s) in this file)
       const totalAmount = formatCurrency((invoice.total_amount - (invoice.credit_applied ?? 0)) / 100, amountLocale, currencyCode);
 
       const invoiceDate = invoice.invoice_date

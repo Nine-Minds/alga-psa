@@ -1,5 +1,6 @@
 "use server"
 
+import type { WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import { tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
@@ -72,7 +73,10 @@ function normalizeDateTime(value: unknown): string {
   return new Date().toISOString();
 }
 
-function safePublishNotificationWorkflowEvent(params: Parameters<typeof publishWorkflowEvent>[0]): void {
+// LEVERAGE: pattern safe-publish-workflow-event — fire-and-forget publishWorkflowEvent wrapper repeated per package
+function safePublishNotificationWorkflowEvent<T extends WorkflowCatalogEventType>(
+  params: Parameters<typeof publishWorkflowEvent<T>>[0]
+): void {
   void publishWorkflowEvent(params).catch((error) => {
     logger.warn('[InternalNotificationActions] Failed to publish workflow notification event', {
       error: error instanceof Error ? error.message : String(error),

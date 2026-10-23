@@ -14,9 +14,10 @@ import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
 import {
   checkAndReactivateExpiredContract,
   createClientContractAssignment,
+  getTenantLocalToday,
 } from '@alga-psa/shared/billingClients';
 import { withAuth } from '@alga-psa/auth';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishNonCatalogWorkflowEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { emitDateDomainEventOnce, normalizeDateDomainKeyDate } from '@alga-psa/event-bus/workflow/dateDomainEvents';
 import {
   buildContractCreatedPayload,
@@ -36,6 +37,12 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+
+// Tenant-local "today" for workflow status derivation (UTC fallback when no tenant timezone is set).
+const getWorkflowToday = async (tenant: string): Promise<string> => {
+  const { knex } = await createTenantKnex(tenant);
+  return getTenantLocalToday(knex, tenant);
+};
 
 const assertCanReadClientContracts = (user: any) =>
   assertMspPermission(
@@ -249,6 +256,7 @@ export const assignContractToClient = withAuth(async (
 
     const createdAt = clientContract.created_at ?? new Date().toISOString();
     const status = deriveClientContractWorkflowStatus({
+      now: await getWorkflowToday(tenant),
       isActive: clientContract.is_active,
       startDate: clientContract.start_date,
       endDate: clientContract.end_date,
@@ -273,7 +281,7 @@ export const assignContractToClient = withAuth(async (
       idempotencyKey: `contract_created:${clientContract.contract_id}:${clientContract.client_id}`,
     });
 
-    await publishWorkflowEvent({
+    await publishNonCatalogWorkflowEvent({
       eventType: 'CLIENT_CONTRACT_CREATED',
       payload: {
         clientContractId: clientContract.client_contract_id,
@@ -397,6 +405,7 @@ export const createClientContract = withAuth(async (
   if (createdForEvent) {
     const createdAt = createdForEvent.created_at ?? new Date().toISOString();
     const status = deriveClientContractWorkflowStatus({
+      now: await getWorkflowToday(tenant),
       isActive: createdForEvent.is_active,
       startDate: createdForEvent.start_date,
       endDate: createdForEvent.end_date,
@@ -421,7 +430,7 @@ export const createClientContract = withAuth(async (
       idempotencyKey: `contract_created:${createdForEvent.contract_id}:${createdForEvent.client_id}`,
     });
 
-    await publishWorkflowEvent({
+    await publishNonCatalogWorkflowEvent({
       eventType: 'CLIENT_CONTRACT_CREATED',
       payload: {
         clientContractId: createdForEvent.client_contract_id,
@@ -607,7 +616,7 @@ export const updateClientContract = withAuth(async (
       });
     }
 
-    await publishWorkflowEvent({
+    await publishNonCatalogWorkflowEvent({
       eventType: 'CLIENT_CONTRACT_UPDATED',
       payload: {
         clientContractId,
@@ -626,11 +635,13 @@ export const updateClientContract = withAuth(async (
     });
 
     const previousStatus = deriveClientContractWorkflowStatus({
+      now: await getWorkflowToday(tenant),
       isActive: beforeContract.is_active,
       startDate: beforeContract.start_date,
       endDate: beforeContract.end_date,
     });
     const newStatus = deriveClientContractWorkflowStatus({
+      now: await getWorkflowToday(tenant),
       isActive: updatedClientContract.is_active,
       startDate: updatedClientContract.start_date,
       endDate: updatedClientContract.end_date,
@@ -732,6 +743,7 @@ export const deactivateClientContract = withAuth(async (
 
     const changedAt = deactivatedContract.updated_at ?? new Date().toISOString();
     const previousStatus = deriveClientContractWorkflowStatus({
+      now: await getWorkflowToday(tenant),
       isActive: beforeContract.is_active,
       startDate: beforeContract.start_date,
       endDate: beforeContract.end_date,
@@ -756,7 +768,7 @@ export const deactivateClientContract = withAuth(async (
       });
     }
 
-    await publishWorkflowEvent({
+    await publishNonCatalogWorkflowEvent({
       eventType: 'CLIENT_CONTRACT_UPDATED',
       payload: {
         clientContractId,
@@ -841,6 +853,7 @@ export const applyContractToClient = withAuth(async (
       }
 
       for (const line of contractLines) {
+        // LEVERAGE: pattern template-clone-substrate — legacy clone path; see cloneTemplateLineToContract (alga-2026-0002371).
         // Clone services and configuration from template to this contract line
         await cloneTemplateContractLineAsync(trx, {
           tenant,

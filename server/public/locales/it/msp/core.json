@@ -104,7 +104,8 @@
     },
     "passwords": "Password",
     "ticketsAll": "Tutti i ticket",
-    "ticketsRecurring": "Ticket ricorrenti"
+    "ticketsRecurring": "Ticket ricorrenti",
+    "ticketsTemplates": "Modelli di ticket"
   },
   "sidebar": {
     "backToMain": "Torna al principale",
@@ -208,7 +209,35 @@
       "ariaLabel": "Risorse e aiuto",
       "title": "Risorse",
       "documentation": "Documentazione",
-      "support": "Contatta l'assistenza"
+      "support": "Contatta l'assistenza",
+      "submitTicket": "Invia un ticket a Nine Minds"
+    },
+    "supportDialog": {
+      "title": "Invia un ticket a Nine Minds",
+      "intro": "Il supporto Nine Minds riceve questa richiesta come ticket e risponde via email.",
+      "categoryLabel": "Su cosa ti serve aiuto?",
+      "categories": {
+        "bug": "Qualcosa non funziona",
+        "question": "Domanda",
+        "billing": "Fatturazione",
+        "feature": "Richiesta di funzionalità"
+      },
+      "subjectLabel": "Oggetto",
+      "descriptionLabel": "Che cosa è successo?",
+      "descriptionPlaceholder": "Indica cosa ti aspettavi, cosa è successo e quale cliente o fattura è coinvolto.",
+      "replyTo": "Le risposte arrivano a {{email}}",
+      "success": "Inviato al supporto Nine Minds. Le risposte arrivano a {{email}}.",
+      "submit": "Invia a Nine Minds",
+      "sending": "Invio in corso…",
+      "cancel": "Annulla",
+      "close": "Chiudi",
+      "fallbackLink": "Contatta il supporto su nineminds.com",
+      "errors": {
+        "invalidInput": "Inserisci un oggetto di almeno 3 caratteri e una descrizione di almeno 20 caratteri.",
+        "rateLimited": "Hai appena inviato una richiesta. Attendi un minuto prima di inviarne un’altra.",
+        "emailNotConfigured": "Questa installazione non ha la posta in uscita configurata, quindi la richiesta non è stata inviata.",
+        "sendFailed": "Invio della richiesta non riuscito. Riprova."
+      }
     },
     "jobs": {
       "ariaLabel": "Visualizza l'attività dei job in background",
@@ -239,6 +268,19 @@
       "ariaLabel": "Chiedi all’IA informazioni su questo workflow",
       "title": "Chiedi all’IA",
       "shortcutHint": "Apri Quick Ask per la guida sul workflow"
+    },
+    "stopwatch": {
+      "untitled": "Senza titolo",
+      "ariaLabelPaused": "Cronometro in pausa: {{label}} a {{clock}}",
+      "ariaLabelRunning": "Cronometro in corso: {{label}} a {{clock}}",
+      "paused": "Cronometro in pausa",
+      "running": "Cronometro in corso",
+      "resume": "Riprendi",
+      "pause": "Pausa",
+      "stop": "Ferma e registra",
+      "discard": "Scarta",
+      "pausedNoDrawer": "Cronometro in pausa a {{clock}}. Apri l'elemento di lavoro per registrare il tempo.",
+      "openTicket": "Apri ticket"
     }
   },
   "dialogs": {
@@ -270,6 +312,18 @@
     "platformNotification": {
       "learnMore": "Scopri di più",
       "dismiss": "Ignora notifica"
+    },
+    "integrationHealth": {
+      "inboundEmail": {
+        "authFailure": "Le email in entrata per {{mailbox}} sono in pausa perché le credenziali non funzionano più.",
+        "error": "Le email in entrata per {{mailbox}} hanno segnalato un errore e potrebbero non essere ricevute."
+      },
+      "calendar": {
+        "error": "La sincronizzazione del calendario per {{providerName}} ha segnalato un errore e non è attiva.",
+        "disconnected": "La sincronizzazione del calendario per {{providerName}} è disconnessa e non è attiva."
+      },
+      "review": "Verifica",
+      "dismiss": "Ignora avviso di integrazione"
     }
   },
   "quickCreate": {
@@ -757,5 +811,37 @@
   "githubStar": {
     "label": "Aggiungi una stella",
     "ariaLabel": "Aggiungi una stella a {{repository}} su GitHub"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "Portale MSP",
+      "dashboard": "Dashboard",
+      "ticketDetails": "Dettagli del ticket",
+      "tickets": "Ticket",
+      "projectDetails": "Dettagli del progetto",
+      "projects": "Progetti",
+      "clientDetails": "Dettagli del cliente",
+      "clients": "Clienti",
+      "contactDetails": "Dettagli del contatto",
+      "contacts": "Contatti",
+      "assetDetails": "Dettagli dell’asset",
+      "assets": "Asset",
+      "billing": "Fatturazione",
+      "settings": "Impostazioni",
+      "settingsSection": "Impostazioni: {{section}}",
+      "chat": "Chat"
+    }
+  },
+  "chat": {
+    "page": {
+      "title": "Funzionalità Pro",
+      "description": "Le funzionalità di chat con IA richiedono Pro. Passa al piano superiore per accedere a questa funzionalità."
+    },
+    "messages": {
+      "proRequired": "Le funzionalità di messaggistica richiedono Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Le funzionalità di chat sono disponibili solo in Enterprise Edition"
+    }
   }
 }

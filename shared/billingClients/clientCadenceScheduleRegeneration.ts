@@ -14,20 +14,23 @@ import {
 } from './billingCycleAnchors';
 import { materializeClientCadenceServicePeriods } from './materializeClientCadenceServicePeriods';
 import { clipRecurringCandidatesToObligationBounds } from './clipRecurringCandidatesToObligationBounds';
+import { isRecurringLineExpectedInClientCadenceWindow } from './recurringTiming';
+import { whereLiveClientCadenceRecurringLine } from './liveClientCadenceRecurringLine';
 import { getClientBillingCycleAnchor } from './billingSchedule';
 import {
   backfillRecurringServicePeriods,
   type IRecurringServicePeriodBackfillPlan,
 } from './backfillRecurringServicePeriods';
-import {
-  buildPersistedClientCadencePostDropObligationRef,
-  CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
-} from './postDropRecurringObligationIdentity';
+import { resolveEffectiveBillingTiming, resolveRecurringChargeFamily } from './contractLineTimingRule';
 
 type ClientCadenceRecurringObligationRow = {
   client_contract_line_id: string;
+  contract_id: string;
   start_date: unknown;
   end_date: unknown;
+  /** Authored line bounds, intersected with the assignment in the planner. */
+  line_start_date?: unknown;
+  line_end_date?: unknown;
   contract_line_type: string | null;
   billing_timing: string | null;
 };
@@ -42,7 +45,6 @@ type RecurringServicePeriodDbRow = {
   period_key: string;
   revision: number | string;
   obligation_id: string;
-  obligation_type: string;
   charge_family: RecurringChargeFamily;
   cadence_owner: 'client' | 'contract';
   due_position: DuePosition;
@@ -135,9 +137,16 @@ function maxIsoDateOnly(left: ISO8601String, right: ISO8601String) {
 }
 
 /**
- * First eligible client-cadence obligation start. A newly added line inherits
- * its assignment's start, but cannot reopen service already consumed in the
- * client's ledger (including draft invoice detail links on sibling lines).
+ * First eligible client-cadence obligation start. A line inherits its
+ * assignment's start (lines have no effective date of their own) but cannot
+ * reopen service already consumed by its CONTRACT: `billedBoundaryEnd` must be
+ * the boundary of the contract the line belongs to
+ * (loadClientCadenceContractBilledBoundaries).
+ *  - A line added to an already-billed contract starts at that contract's
+ *    billed / draft-linked boundary, not at the assignment start (otherwise it
+ *    would bill every period back to a years-old assignment).
+ *  - A line on a NEW contract starting mid-cycle is not limited by another
+ *    contract's invoices, so it keeps its first partial period.
  * Keep discovery, initial materialization and operator repairs on this rule.
  */
 export function resolveClientCadenceObligationStart(input: {
@@ -152,24 +161,35 @@ export function resolveClientCadenceObligationStart(input: {
     : assignmentStart;
 }
 
-function resolveRecurringChargeFamily(contractLineType: string | null): RecurringChargeFamily {
-  switch ((contractLineType ?? 'fixed').toLowerCase()) {
-    case 'fixed':
-      return 'fixed';
-    case 'time':
-    case 'hourly':
-      return 'hourly';
-    case 'usage':
-      return 'usage';
-    case 'bucket':
-      return 'bucket';
-    case 'product':
-      return 'product';
-    case 'license':
-      return 'license';
-    default:
-      return 'fixed';
-  }
+/**
+ * The single "does this client-cadence line owe a service period in this
+ * invoice window?" rule: the window expectation evaluated from the line's
+ * contract-scoped obligation start (resolveClientCadenceObligationStart), not
+ * the raw assignment start. Gap discovery and the generation guard both call
+ * this so listing, discovery and generation can never disagree.
+ */
+export function isClientCadenceLineExpectedInWindow(input: {
+  duePosition: DuePosition;
+  assignmentStart: unknown;
+  assignmentEnd?: unknown;
+  /** Boundary of the line's OWN contract (loadClientCadenceContractBilledBoundaries). */
+  billedBoundaryEnd: ISO8601String | null;
+  fallbackStart: ISO8601String;
+  windowStart: string;
+  windowEnd: string;
+}): boolean {
+  const obligationStart = resolveClientCadenceObligationStart({
+    assignmentStart: input.assignmentStart,
+    billedBoundaryEnd: input.billedBoundaryEnd,
+    fallbackStart: input.fallbackStart,
+  });
+  return isRecurringLineExpectedInClientCadenceWindow({
+    duePosition: input.duePosition,
+    assignmentStart: obligationStart,
+    assignmentEnd: normalizeDateOnlyValue(input.assignmentEnd) ?? null,
+    windowStart: input.windowStart,
+    windowEnd: input.windowEnd,
+  });
 }
 
 function mapRecurringServicePeriodRow(row: RecurringServicePeriodDbRow): IRecurringServicePeriodRecord {
@@ -182,7 +202,6 @@ function mapRecurringServicePeriodRow(row: RecurringServicePeriodDbRow): IRecurr
     sourceObligation: {
       tenant: row.tenant,
       obligationId: row.obligation_id,
-      obligationType: row.obligation_type as IRecurringServicePeriodRecord['sourceObligation']['obligationType'],
       chargeFamily: row.charge_family,
     },
     cadenceOwner: row.cadence_owner,
@@ -236,7 +255,6 @@ function serializeRecurringServicePeriodRecord(record: IRecurringServicePeriodRe
     period_key: record.periodKey,
     revision: record.revision,
     obligation_id: record.sourceObligation.obligationId,
-    obligation_type: record.sourceObligation.obligationType,
     charge_family: record.sourceObligation.chargeFamily,
     cadence_owner: record.cadenceOwner,
     due_position: record.duePosition,
@@ -263,7 +281,7 @@ function serializeRecurringServicePeriodRecord(record: IRecurringServicePeriodRe
   };
 }
 
-function buildScheduleSourceRuleVersion(
+export function buildScheduleSourceRuleVersion(
   billingCycle: BillingCycleType,
   anchor: NormalizedBillingCycleAnchorSettings,
 ) {
@@ -277,29 +295,70 @@ function buildScheduleSourceRuleVersion(
   ].join('|');
 }
 
-export async function loadClientBilledLedgerBoundary(
+/**
+ * Last billed (or invoice-linked, including draft) client-cadence service-period
+ * end for each of a client's contracts, keyed by contract_id (the client-owned
+ * contract the lines belong to). Contracts with no billed history are absent.
+ *
+ * The "already billed" boundary is scoped to the CONTRACT/ASSIGNMENT:
+ *  - invoice history on ANY line of a contract limits a line newly added to
+ *    that contract (it starts after the contract's ledger, F029/T019/T020 of
+ *    the contract-quantity-and-usage-semantics plan);
+ *  - history on a DIFFERENT contract of the same client does not: a new
+ *    contract starting mid-cycle keeps its first partial period even when
+ *    another contract is already billed (e.g. in advance) through the cycle.
+ */
+export async function loadClientCadenceContractBilledBoundaries(
   trx: Knex | Knex.Transaction,
   params: { tenant: string; clientId: string },
-) {
+): Promise<Map<string, ISO8601String>> {
   const db = tenantDb(trx, params.tenant);
   const query = db.table('recurring_service_periods as rsp');
   db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
   db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
-  const lastBilled = await query
-    .where('rsp.obligation_type', CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE)
+  const billedRows = (await query
     .where('rsp.cadence_owner', 'client')
     .where('ct.owner_client_id', params.clientId)
     .where((builder) => {
       builder.where('rsp.lifecycle_state', 'billed')
         .orWhereNotNull('rsp.invoice_charge_detail_id');
     })
-    .orderBy('rsp.service_period_end', 'desc')
-    .select({ service_period_end: 'rsp.service_period_end' })
-    .first();
+    .select({
+      contract_id: 'cl.contract_id',
+      service_period_end: 'rsp.service_period_end',
+    })) as Array<{ contract_id: string; service_period_end: unknown }>;
 
-  return lastBilled?.service_period_end
-    ? normalizeDateOnlyValue(lastBilled.service_period_end)
-    : null;
+  const boundaries = new Map<string, ISO8601String>();
+  for (const row of billedRows) {
+    const end = normalizeDateOnlyValue(row.service_period_end);
+    if (!end) {
+      continue;
+    }
+    const current = boundaries.get(row.contract_id);
+    if (!current || compareIsoDateOnly(end, current) > 0) {
+      boundaries.set(row.contract_id, end);
+    }
+  }
+  return boundaries;
+}
+
+/**
+ * Client-wide latest billed end across every contract. Only for "is there billed
+ * history in the affected range?" reporting; it must never gate what a
+ * particular line may generate (use the contract boundary for that).
+ */
+export async function loadClientBilledLedgerBoundary(
+  trx: Knex | Knex.Transaction,
+  params: { tenant: string; clientId: string },
+) {
+  const boundaries = await loadClientCadenceContractBilledBoundaries(trx, params);
+  let latest: ISO8601String | null = null;
+  for (const end of boundaries.values()) {
+    if (!latest || compareIsoDateOnly(end, latest) > 0) {
+      latest = end;
+    }
+  }
+  return latest;
 }
 
 async function loadClientCadenceRecurringObligations(
@@ -312,20 +371,14 @@ async function loadClientCadenceRecurringObligations(
   // client-owned contract that owns the live cloned lines.
   db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
   db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
-  return query
-    .andWhere('cc.client_id', params.clientId)
-    .where('cc.is_active', true)
-    .where('ct.is_active', true)
-    .where('cl.is_active', true)
-    .where((builder) =>
-      builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
-    )
-    .where('cl.cadence_owner', 'client')
-    .whereNotNull('cl.billing_timing')
+  return whereLiveClientCadenceRecurringLine(query.andWhere('cc.client_id', params.clientId))
     .select(
       'cl.contract_line_id as client_contract_line_id',
+      'cl.contract_id as contract_id',
       'cc.start_date',
       'cc.end_date',
+      'cl.start_date as line_start_date',
+      'cl.end_date as line_end_date',
       'cl.contract_line_type',
       'cl.billing_timing',
     );
@@ -338,7 +391,6 @@ async function loadExistingRecurringServicePeriodRecords(
   const rows = await tenantDb(trx, params.tenant).table('recurring_service_periods')
     .where({
       obligation_id: params.obligationId,
-      obligation_type: CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
       cadence_owner: 'client',
     })
     .orderBy('service_period_start', 'asc')
@@ -350,7 +402,6 @@ async function loadExistingRecurringServicePeriodRecords(
       'period_key',
       'revision',
       'obligation_id',
-      'obligation_type',
       'charge_family',
       'cadence_owner',
       'due_position',
@@ -420,6 +471,7 @@ type ClientCadenceObligationRegenerationPlan = {
 };
 
 type ClientCadenceRegenerationComputation = {
+  /** Client-wide, reporting only (preview). Per-line boundaries drive generation. */
   billedBoundaryEnd: ISO8601String | null;
   obligationPlans: ClientCadenceObligationRegenerationPlan[];
 };
@@ -434,7 +486,13 @@ async function computeClientCadenceRegeneration(
   trx: Knex.Transaction,
   params: ClientCadenceScheduleChangeParams,
 ): Promise<ClientCadenceRegenerationComputation> {
-  const billedBoundaryEnd = await loadClientBilledLedgerBoundary(trx, params);
+  const billedBoundaryByContract = await loadClientCadenceContractBilledBoundaries(trx, params);
+  let clientBilledBoundaryEnd: ISO8601String | null = null;
+  for (const end of billedBoundaryByContract.values()) {
+    if (!clientBilledBoundaryEnd || compareIsoDateOnly(end, clientBilledBoundaryEnd) > 0) {
+      clientBilledBoundaryEnd = end;
+    }
+  }
   const obligations = await loadClientCadenceRecurringObligations(trx, params);
   const materializedAt = new Date().toISOString();
   const sourceRuleVersion = buildScheduleSourceRuleVersion(
@@ -446,21 +504,34 @@ async function computeClientCadenceRegeneration(
   const obligationPlans: ClientCadenceObligationRegenerationPlan[] = [];
 
   for (const obligation of obligations) {
-    const obligationStart =
+    // Scoped to the line's contract: another contract's invoices must not
+    // suppress this line's periods; its own contract's ledger still limits it.
+    const billedBoundaryEnd = billedBoundaryByContract.get(obligation.contract_id) ?? null;
+    const assignmentStart =
       normalizeDateOnlyValue(obligation.start_date) ?? ensureUtcMidnightIsoDate(materializedAt);
+    const lineStart = normalizeDateOnlyValue(obligation.line_start_date);
+    const obligationStart = lineStart && compareIsoDateOnly(lineStart, assignmentStart) > 0
+      ? lineStart
+      : assignmentStart;
     const regenerationStart = resolveClientCadenceObligationStart({
       assignmentStart: obligationStart,
       billedBoundaryEnd,
       fallbackStart: materializedAt,
     });
-    const obligationEnd = normalizeDateOnlyValue(obligation.end_date);
+    const assignmentEnd = normalizeDateOnlyValue(obligation.end_date);
+    const lineEnd = normalizeDateOnlyValue(obligation.line_end_date);
+    const obligationEnd = assignmentEnd && lineEnd
+      ? (compareIsoDateOnly(lineEnd, assignmentEnd) < 0 ? lineEnd : assignmentEnd)
+      : (lineEnd ?? assignmentEnd);
 
     if (obligationEnd && compareIsoDateOnly(obligationEnd, regenerationStart) <= 0) {
       continue;
     }
 
-    const duePosition: DuePosition =
-      obligation.billing_timing === 'advance' ? 'advance' : 'arrears';
+    const duePosition: DuePosition = resolveEffectiveBillingTiming(
+      obligation.contract_line_type,
+      obligation.billing_timing,
+    );
     const existingRecords = await loadExistingRecurringServicePeriodRecords(trx, {
       tenant: params.tenant,
       obligationId: obligation.client_contract_line_id,
@@ -470,11 +541,11 @@ async function computeClientCadenceRegeneration(
       asOf: regenerationStart,
       materializedAt,
       billingCycle: params.billingCycle,
-      sourceObligation: buildPersistedClientCadencePostDropObligationRef({
+      sourceObligation: {
         tenant: params.tenant,
-        contractLineId: obligation.client_contract_line_id,
+        obligationId: obligation.client_contract_line_id,
         chargeFamily: resolveRecurringChargeFamily(obligation.contract_line_type),
-      }),
+      },
       duePosition,
       sourceRuleVersion,
       sourceRunKey,
@@ -508,7 +579,7 @@ async function computeClientCadenceRegeneration(
     });
   }
 
-  return { billedBoundaryEnd, obligationPlans };
+  return { billedBoundaryEnd: clientBilledBoundaryEnd, obligationPlans };
 }
 
 export async function replenishClientCadenceServicePeriods(
@@ -601,7 +672,6 @@ export async function retireFutureClientCadenceRowsForLine(
   await tenantDb(trx, params.tenant).table('recurring_service_periods')
     .where({
       obligation_id: params.contractLineId,
-      obligation_type: CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
       cadence_owner: 'client',
     })
     .whereNotIn('lifecycle_state', ['archived', 'superseded', 'billed'])

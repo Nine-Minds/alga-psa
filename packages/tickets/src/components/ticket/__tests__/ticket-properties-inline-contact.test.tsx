@@ -13,6 +13,8 @@ const getContactAvatarUrlActionMock = vi.fn();
 const getUserAvatarUrlsBatchActionMock = vi.fn();
 const getUserContactIdMock = vi.fn();
 
+vi.mock('../TicketStopwatchControls', () => ({ TicketStopwatchControls: () => null }));
+
 vi.mock('next/server', () => ({
   NextRequest: class NextRequest {},
   NextResponse: {
@@ -283,8 +285,6 @@ const defaultProps = () => ({
   board: {
     board_name: 'Support',
   },
-  elapsedTime: 0,
-  isRunning: false,
   timeDescription: '',
   team: null,
   teams: [],

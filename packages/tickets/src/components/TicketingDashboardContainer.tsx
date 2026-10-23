@@ -170,6 +170,7 @@ interface TicketingDashboardContainerProps {
   initialFormOptions?: TicketFormOptions | null;
   canUpdateTickets?: boolean;
   renderClientDetails?: React.ComponentProps<typeof TicketingDashboard>['renderClientDetails'];
+  renderContactDetails?: React.ComponentProps<typeof TicketingDashboard>['renderContactDetails'];
   allowSlaStatusFilter?: boolean;
   useAlgaDeskQuickAddForm?: boolean;
   /** Decided by the page's server component: every smart search gate passed for this caller. */
@@ -187,6 +188,7 @@ export default function TicketingDashboardContainer({
   initialFormOptions,
   canUpdateTickets,
   renderClientDetails,
+  renderContactDetails,
   allowSlaStatusFilter = true,
   useAlgaDeskQuickAddForm = false,
   smartSearchAvailable = false,
@@ -1088,6 +1090,7 @@ export default function TicketingDashboardContainer({
       sortDirection={sortDirection}
       onSortChange={handleSortChange}
       renderClientDetails={renderClientDetails}
+      renderContactDetails={renderContactDetails}
       initialAgentAvatarUrls={ticketMetadata.agentAvatarUrls}
       initialTeamAvatarUrls={ticketMetadata.teamAvatarUrls}
       initialTicketTags={ticketMetadata.ticketTags}

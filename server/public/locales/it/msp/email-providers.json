@@ -727,6 +727,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Funzionalità Pro",
+      "domainsDescription": "I domini gestiti richiedono Pro.",
+      "settingsDescription": "Le impostazioni delle email gestite richiedono Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Impossibile caricare i domini gestiti",
       "loadOutboundSettingsFailed": "Impossibile caricare le impostazioni di posta in uscita",
@@ -930,6 +935,12 @@
       "copyHostAriaLabel": "Copia host",
       "copyFqdnAriaLabel": "Copia nome completo",
       "hostHint": "Suggerimento: nel tuo provider DNS, inserisci solo l'Host mostrato sopra. La maggior parte dei provider (Namecheap, GoDaddy, Cloudflare e altri) aggiunge automaticamente “{{domain}}”. Se incolli il nome completo, il dominio viene ripetuto (…{{domain}}.{{domain}}) e il record non verrà mai verificato."
+    },
+    "dnsRecordInstructions": {
+      "proFeature": {
+        "title": "Funzionalità Pro",
+        "description": "Le istruzioni per i record DNS richiedono Pro."
+      }
     }
   },
   "inboundRules": {
@@ -1131,7 +1142,10 @@
       "duplicateShortName": "Esiste già una configurazione con questo nome breve",
       "createFailed": "Impossibile creare i valori predefiniti dei ticket in entrata. Riprovare.",
       "notFound": "Configurazione dei valori predefiniti non trovata",
-      "updateFailed": "Impossibile aggiornare i valori predefiniti dei ticket in entrata. Riprovare."
+      "updateFailed": "Impossibile aggiornare i valori predefiniti dei ticket in entrata. Riprovare.",
+      "locationRequiresClient": "Seleziona un cliente prima di selezionare una posizione",
+      "locationClientMismatch": "La posizione selezionata non appartiene al cliente selezionato",
+      "referencedByProviders": "Questa configurazione è ancora usata dai seguenti provider email: {{providers}}. Seleziona altri valori predefiniti dei ticket in entrata per quei provider prima di eliminarla."
     },
     "ticketFieldOptions": {
       "permissionDenied": "Autorizzazione negata: impossibile leggere le opzioni dei campi del ticket",

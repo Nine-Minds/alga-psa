@@ -7,7 +7,7 @@ import { createClient, createTenant, createUser } from '../../../test-utils/test
 import { tenantDb } from '@alga-psa/db';
 import { BundlePropagationConfirmationRequiredError } from '@alga-psa/tickets/lib/ticketBundlePropagation';
 import { resolveCommentAuthor } from '@alga-psa/tickets/lib';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { ValidationError } from '@/lib/api/middleware/apiMiddleware';
 
 vi.mock('server/src/lib/utils/getSecret', () => ({
@@ -56,10 +56,21 @@ vi.mock('next/cache', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(async () => {}),
   publishWorkflowEvent: vi.fn(async () => {}),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishEvent: vi.fn(async () => {}),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('server/src/lib/eventBus', () => ({
@@ -507,7 +518,7 @@ describe('Ticket bundling integration', () => {
     const scopedDb = tenantDb(db, tenantId);
     const childBefore = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
 
-    vi.mocked(publishEvent).mockClear();
+    vi.mocked(publishStoredWorkflowEvent).mockClear();
     await runWithTenant(tenantId, async () => {
       await addTicketCommentWithCache(masterId, content, false, false, internalUser as any);
     });
@@ -554,7 +565,7 @@ describe('Ticket bundling integration', () => {
     // Only the master's TICKET_COMMENT_ADDED is published — the child copy is a
     // display artifact with no event of its own. (A response-state event may
     // also fire; only the comment-added count is asserted.)
-    const commentAddedCalls = vi.mocked(publishEvent).mock.calls.filter(
+    const commentAddedCalls = vi.mocked(publishStoredWorkflowEvent).mock.calls.filter(
       ([published]) => published?.eventType === 'TICKET_COMMENT_ADDED'
     );
     expect(commentAddedCalls).toHaveLength(1);

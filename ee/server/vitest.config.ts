@@ -51,6 +51,7 @@ export default defineConfig({
       { find: /^@\/lib\/tenant$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/tenant.ts')}` },
       { find: /^@\/lib\/iap\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/iap')}/$1` },
       { find: /^@\/lib\/storage\/providers\/StorageProvider$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/storage/providers/StorageProvider.ts')}` },
+      { find: /^@\/lib\/observability\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/observability')}/$1` },
       { find: /^@\/lib\/services\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/services')}/$1` },
       { find: /^@\/config\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/config')}/$1` },
       { find: /^@\/utils\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/utils')}/$1` },

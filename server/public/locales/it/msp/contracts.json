@@ -53,6 +53,8 @@
   },
   "status": {
     "active": "Attivo",
+    "scheduled": "Pianificato",
+    "startsOn": "Inizia il {{date}}",
     "draft": "Bozza",
     "expired": "Scaduto",
     "terminated": "Terminato"
@@ -177,6 +179,7 @@
     },
     "headerCard": {
       "assignmentLifecycleHint": "Lo stato live del cliente è controllato dal ciclo di vita dell'assegnazione riportato di seguito.",
+      "scheduledExplanation": "Questo contratto è attivo e inizierà la fatturazione il {{date}}.",
       "assignmentStatus": "Stato dell'assegnazione",
       "billingFrequencyLabel": "Frequenza di fatturazione *",
       "billingFrequencyPlaceholder": "Seleziona frequenza di fatturazione",
@@ -264,7 +267,8 @@
       "lines": "Linee contrattuali",
       "overview": "Panoramica",
       "pricing": "Piani dei prezzi",
-      "simulator": "Simula"
+      "simulator": "Simula",
+      "discounts": "Sconti"
     },
     "validation": {
       "billingFrequencyRequired": "La frequenza di fatturazione è obbligatoria.",
@@ -297,6 +301,7 @@
     },
     "status": {
       "active": "Attivo",
+      "scheduled": "Pianificato",
       "draft": "Bozza",
       "expired": "Scaduto",
       "terminated": "Terminato"
@@ -539,7 +544,8 @@
       "name": "Nome",
       "rate": "Tariffa",
       "services": "Servizi",
-      "type": "Tipo"
+      "type": "Tipo",
+      "dates": "Date"
     },
     "configuration": {
       "description": "Impostazioni che si applicano a questa linea contrattuale",
@@ -550,7 +556,15 @@
       "minutesValue": "{{count}} minuti",
       "roundUpToNearest": "Arrotonda per eccesso al più vicino (minuti)",
       "title": "Configurazione della linea contrattuale",
-      "usageInfo": "Le linee contrattuali basate su utilizzo sono configurate per servizio con tariffe unitarie."
+      "usageInfo": "Le linee contrattuali basate su utilizzo sono configurate per servizio con tariffe unitarie.",
+      "invoiceText": "Testo della riga di fattura",
+      "invoiceTextPlaceholder": "Stampato sulla fattura; per impostazione predefinita, il nome della riga",
+      "invoiceTextDefault": "Usa il nome della riga",
+      "startDate": "Data di inizio",
+      "endDate": "Data di fine",
+      "inheritsContract": "Inizio contratto",
+      "inheritsContractEnd": "Fine contratto",
+      "billedEditExplanation": "Dopo la fatturazione di una riga, il testo della fattura e le date restano modificabili. Le date non possono escludere periodi di servizio già fatturati o rivendicati; tariffe e quantità si modificano in modo prospettico."
     },
     "customRate": "Personalizzato",
     "description": {
@@ -566,13 +580,15 @@
       "selectAbove": "Seleziona una linea contrattuale sopra per iniziare."
     },
     "errors": {
-      "cannotEditWithInvoices": "Impossibile modificare la linea contrattuale: questo contratto ha fatture associate. Le linee contrattuali non possono essere modificate una volta generate le fatture.",
       "failedToCheckEditable": "Impossibile verificare se il contratto può essere modificato",
       "failedToLoad": "Impossibile caricare le linee contrattuali",
       "failedToRefresh": "Impossibile aggiornare le linee contrattuali",
       "failedToRemove": "Impossibile rimuovere la linea contrattuale",
       "failedToUpdate": "Impossibile aggiornare la linea contrattuale",
-      "failedToResetRate": "Impossibile ripristinare la tariffa della riga"
+      "failedToResetRate": "Impossibile ripristinare la tariffa della riga",
+      "protectedStartDate": "La data di inizio deve essere il {{boundary}} o precedente per includere la cronologia protetta.",
+      "protectedEndDate": "La data di fine deve essere il {{boundary}} o successiva per includere la cronologia protetta.",
+      "cannotEditWithInvoices": "Impossibile modificare la linea contrattuale: questo contratto ha fatture associate. Le linee contrattuali non possono essere modificate una volta generate le fatture."
     },
     "loading": {
       "contractLines": "Caricamento linee contrattuali",
@@ -694,7 +710,10 @@
     },
     "fields": {
       "billingTimingQuestion": "Quando deve essere fatturata questa linea?",
-      "rate": "Tariffa"
+      "rate": "Tariffa",
+      "invoiceText": "Testo della riga di fattura",
+      "invoiceTextPlaceholder": "Stampato sulla fattura; per impostazione predefinita, il nome della riga",
+      "invoiceTextHelp": "Questo testo viene stampato letteralmente sulla riga di fattura ricorrente."
     },
     "sections": {
       "billingTiming": "Tempistiche di fatturazione",
@@ -813,13 +832,15 @@
       "hourlyTitle": "Orario",
       "usageDescription": "Fattura per unità consumate.",
       "usageTitle": "Basato su utilizzo",
-      "fixedSemantics": "Fattura un prezzo forfettario oppure quantità ricorrente × tariffa unitaria in ogni periodo."
+      "fixedSemantics": "Fattura un prezzo forfettario oppure quantità ricorrente × tariffa unitaria in ogni periodo.",
+      "prepaidBlockTitle": "Blocco prepagato",
+      "prepaidBlockDescription": "Fattura un blocco di ore in anticipo; il tempo registrato lo scala e il blocco successivo viene fatturato quando si esaurisce."
     },
     "billingTiming": {
       "advance": "Anticipato (fatturazione all'inizio del periodo)",
       "arrears": "Posticipato (fatturazione alla fine del periodo)"
     },
-    "billingTimingHelp": "La fatturazione anticipata è tipica per le tariffe fisse; quella posticipata per i servizi basati su tempo/utilizzo.",
+    "billingTimingHelp": "Le righe fisse possono essere fatturate in anticipo o in modo posticipato. Le righe a ore e a consumo vengono sempre fatturate in modo posticipato, dopo l’esecuzione del lavoro.",
     "chooseBillingModel": "Scegli un modello di fatturazione *",
     "chooseBillingModelDescription": "Seleziona il comportamento di fatturazione adatto a questa offerta.",
     "contractLineNameLabel": "Nome della linea contrattuale *",
@@ -881,13 +902,21 @@
       "usageServiceRequired": "È richiesto almeno un servizio basato su utilizzo",
       "usageServiceSelectRequired": "Servizio {{index}}: Seleziona un servizio",
       "invalidQuantity": "La quantità deve essere maggiore o uguale a zero.",
-      "recurringUnitRateRequired": "Inserisci una tariffa unitaria per ogni servizio ricorrente."
+      "recurringUnitRateRequired": "Inserisci una tariffa unitaria per ogni servizio ricorrente.",
+      "prepaidBlockCurrencyRequired": "Il contratto richiede una valuta prima di poter prezzare un blocco prepagato."
     },
     "fixedServicesPricingIntent": "Scegli per ogni servizio un prezzo forfettario o postazioni/unità ricorrenti.",
     "fixedServicesPricingExplanation": "Le allocazioni a prezzo forfettario condividono la tariffa base della linea. Le postazioni ricorrenti fatturano la quantità concordata × tariffa unitaria in ogni periodo senza record di utilizzo.",
     "recurringQuantity": "Quantità ricorrente",
     "allocationQuantity": "Quantità di allocazione",
-    "bundleBaseRateHelp": "Tariffa ricorrente per i servizi a prezzo forfettario. Le postazioni ricorrenti vengono fatturate separatamente a quantità × tariffa unitaria."
+    "bundleBaseRateHelp": "Tariffa ricorrente per i servizi a prezzo forfettario. Le postazioni ricorrenti vengono fatturate separatamente a quantità × tariffa unitaria.",
+    "invoiceTextLabel": "Testo della riga di fattura",
+    "invoiceTextPlaceholder": "Stampato sulla fattura; per impostazione predefinita, il nome della riga",
+    "invoiceTextHelp": "Questo testo viene stampato letteralmente sulla riga di fattura ricorrente.",
+    "startDateLabel": "Data di inizio riga",
+    "endDateLabel": "Data di fine riga",
+    "prepaidBlockTitle": "Blocco prepagato",
+    "prepaidBlockDescription": "Imposta dimensione e prezzo del blocco. Il prezzo predefinito è ore x tariffa del servizio e viene salvato come importo esplicito."
   },
   "pricingSchedules": {
     "list": {
@@ -1230,9 +1259,11 @@
       "usageBasedPlans": "Piani basati su utilizzo",
       "recurringQuantityLabel": "Quantità ricorrente:",
       "unitRateLabel": "Tariffa unitaria:",
+      "hourlyRateLabel": "Tariffa oraria:",
       "unitRateFromCatalog": "Prezzo di catalogo nella valuta del cliente",
       "unitAmountLabel": "Importo ricorrente:",
-      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}",
+      "prepaidBlockKind": "Blocco prepagato"
     },
     "editBasicsTitle": "Modifica nozioni di base del modello",
     "editGuidanceTitle": "Modifica indicazioni del modello",
@@ -1306,6 +1337,25 @@
       "hypothetical": "Profilo cliente ipotetico",
       "open": "Simula",
       "title": "Simulazione del modello"
+    },
+    "discounts": {
+      "title": "Sconti predefiniti del contratto",
+      "help": "Ogni contratto cliente riceve una copia modificabile indipendente. Gli sconti globali si applicano alle righe idonee.",
+      "invalid": "Inserisci un nome, un valore positivo e una data di inizio.",
+      "remove": "Rimuovi",
+      "name": "Nome dello sconto",
+      "percentage": "Percentuale",
+      "fixed": "Importo fisso",
+      "value": "Valore",
+      "startDate": "Inizia il",
+      "endDate": "Termina il (facoltativo)",
+      "add": "Aggiungi sconto predefinito",
+      "chooseLine": "Scegli una riga del modello",
+      "chooseService": "Scegli un servizio"
+    },
+    "prepaidBlock": {
+      "setup": "Vendi come blocco prepagato",
+      "blockNeutral": "{{hours}} h / {{price}} (nella valuta del cliente)"
     }
   },
   "quickStart": {
@@ -1426,6 +1476,7 @@
       "hourlyServices": "Servizi orari",
       "products": "Prodotti",
       "reviewCreate": "Rivedi e crea",
+      "templateLines": "Righe del modello",
       "usageBasedServices": "Servizi basati su utilizzo"
     },
     "title": {
@@ -1464,7 +1515,8 @@
       "unsupportedRecurringAuthoringCombination": "Combinazione di creazione ricorrente non supportata per i servizi {{lineType}}: la cadenza di anniversario del contratto attualmente supporta le frequenze di fatturazione {{supportedFrequencies}}. {{billingFrequency}} non è ancora supportata. Utilizza una delle frequenze supportate oppure fatturare sulla pianificazione di fatturazione del cliente.",
       "recurringUnitRateRequired": "Inserisci una tariffa unitaria per ogni servizio ricorrente.",
       "recurringQuantityWholeNumber": "La quantità ricorrente deve essere un numero intero.",
-      "fixedQuantityInvalid": "La quantità deve essere zero o maggiore."
+      "fixedQuantityInvalid": "La quantità deve essere zero o maggiore.",
+      "fixedLineNoService": "La riga fissa \"{{lineName}}\" ha un importo ricorrente ma nessun servizio su cui fatturarlo. Aggiungi un servizio prima di terminare."
     },
     "nav": {
       "back": "Indietro",
@@ -1478,6 +1530,27 @@
     "simulation": {
       "description": "Prova questa bozza non salvata con attività prevista. La simulazione non salva né emette nulla.",
       "title": "Simula prima di creare"
+    },
+    "fixedLines": {
+      "addLine": "Aggiungi riga fissa",
+      "nameLabel": "Nome della riga (facoltativo)",
+      "namePlaceholder": "Riga fissa {{number}}",
+      "removeLine": "Rimuovi riga fissa",
+      "noServiceWarning": "Questa riga ha un importo ricorrente ma nessun servizio su cui fatturarlo. Aggiungi un servizio prima di terminare; puoi comunque salvarla come bozza."
+    },
+    "recurringChange": {
+      "title": "Conferma la modifica del totale ricorrente",
+      "message": "Questo modifica il valore ricorrente mensile stimato del contratto da {{before}} a {{after}}.",
+      "confirm": "Conferma e continua",
+      "cancel": "Indietro"
+    },
+    "discounts": {
+      "help": "Gli sconti globali si applicano a ogni addebito idoneo fatturato da questo contratto. Vengono creati insieme al contratto quando completi la configurazione e la simulazione qui sotto li calcola.",
+      "draftDialog": {
+        "title": "Salvare la bozza senza sconti?",
+        "message": "Una bozza salvata conserva solo le sue righe, quindi gli sconti aggiunti qui non vengono salvati con essa. Completa la configurazione per crearli insieme al contratto oppure aggiungili in seguito nella scheda Sconti del contratto.",
+        "confirm": "Salva comunque la bozza"
+      }
     }
   },
   "wizardBasics": {
@@ -1791,7 +1864,9 @@
       "fixedFeeServices": "Servizi a tariffa fissa",
       "products": "Prodotti",
       "hourlyServices": "Servizi orari",
-      "usageBasedServices": "Servizi basati su utilizzo"
+      "usageBasedServices": "Servizi basati su utilizzo",
+      "fixedFeeServicesNumbered": "Servizi a tariffa fissa ({{number}})",
+      "prepaidBlocks": "Righe di blocchi prepagati"
     },
     "fields": {
       "client": "Cliente",
@@ -1911,7 +1986,8 @@
     "total": {
       "title": "Totale mensile stimato",
       "description": "Solo addebiti fissi. I servizi orari e basati su utilizzo vengono fatturati separatamente in base all'utilizzo effettivo.",
-      "perMonth": "al mese"
+      "perMonth": "al mese",
+      "savedDraftValue": "Valore della bozza salvata: {{amount}}"
     },
     "finalChecklist": {
       "title": "Prima di terminare:",
@@ -1919,7 +1995,38 @@
       "itemPo": "Conferma i requisiti dell'ordine d'acquisto (se presenti)",
       "itemDates": "Verifica le date di inizio e fine",
       "itemEditLater": "Ricorda: puoi modificare il contratto in seguito se necessario"
+    },
+    "prepaid": {
+      "badgeCount_one": "{{count}} riga",
+      "badgeCount_other": "{{count}} righe",
+      "blockSummary": "{{hours}} ore per {{price}}",
+      "expiresAfter_one": "scade dopo {{count}} mese",
+      "expiresAfter_other": "scade dopo {{count}} mesi",
+      "neverExpires": "non scade mai"
     }
+  },
+  "wizardTemplateLines": {
+    "title": "Righe del modello",
+    "description": "Ogni riga del modello viene creata nel contratto con il proprio nome, la propria frequenza di fatturazione, i propri servizi e le proprie tariffe. Modifica qualsiasi valore qui sotto per sovrascriverlo solo per questo contratto; i valori non modificati vengono copiati dal modello. Le tariffe sono in {{currency}}.",
+    "loading": "Caricamento delle righe del modello...",
+    "noTemplate": "Seleziona un modello nel primo passaggio.",
+    "emptyTemplate": "Questo modello non ha righe, quindi non c’è nulla da creare.",
+    "bucketPools_one": "{{count}} pacchetto ore copiato dal modello",
+    "bucketPools_other": "{{count}} pacchetti ore copiati dal modello",
+    "lineName": "Nome della riga",
+    "billingFrequency": "Frequenza di fatturazione",
+    "fixedBaseRate": "Tariffa base fissa",
+    "fixedBaseRateHint": "Tariffa del modello {{rate}}. Lascia vuoto per mantenerla.",
+    "fixedBaseRateNone": "Il modello non imposta alcuna tariffa di riga; i servizi seguono i prezzi del loro catalogo.",
+    "minimumBillableTime": "Tempo minimo fatturabile (minuti)",
+    "roundUpToNearest": "Arrotonda per eccesso al più vicino (minuti)",
+    "quantity": "Quantità",
+    "hourlyRate": "Tariffa oraria",
+    "unitRate": "Tariffa unitaria",
+    "serviceRate": "Tariffa del servizio",
+    "noCurrencyPrice": "Nessun prezzo in {{currency}} per questo servizio. Inserisci una tariffa, altrimenti il contratto non può essere creato.",
+    "templateRateNote": "Dal modello (l’importo non è associato a una valuta).",
+    "reviewTitle": "Righe create dal modello"
   },
   "templateWizard": {
     "title": {
@@ -2009,7 +2116,7 @@
       "advance": "Anticipato - fatturazione all'inizio del periodo"
     },
     "fields": {
-      "billingTiming": "Tempistiche di fatturazione",
+      "billingTiming": "Momento di fatturazione per le righe a tariffa fissa",
       "adjustPartialPeriods": "Adegua per periodi parziali",
       "services": "Servizi",
       "serviceNumber": "Servizio {{index}}",
@@ -2123,7 +2230,8 @@
       "fixedFeeServices": "Servizi a tariffa fissa",
       "products": "Prodotti",
       "hourlyServices": "Servizi orari",
-      "usageBasedServices": "Servizi basati su utilizzo"
+      "usageBasedServices": "Servizi basati su utilizzo",
+      "prepaidBlocks": "Righe di blocchi prepagati"
     },
     "fields": {
       "templateName": "Nome del modello",
@@ -2184,6 +2292,9 @@
       "unitSingular": "unità",
       "rolloverEnabled": "Riporto abilitato",
       "period": "Periodo: {{period}}"
+    },
+    "prepaid": {
+      "blockSummaryNeutral": "{{hours}} ore per {{price}} (nella valuta del cliente)"
     }
   },
   "templatePreview": {
@@ -2456,7 +2567,8 @@
       "tieredPricing": "prezzi a scaglioni",
       "timing": {
         "advance": "Fatturazione anticipata",
-        "arrears": "Fatturazione posticipata"
+        "arrears": "Fatturazione posticipata",
+        "arrearsOnly": "Fatturato in posticipato"
       },
       "title": "Modifiche al contratto",
       "types": {
@@ -2552,7 +2664,8 @@
       "conflict": "Questa modifica del contratto è in conflitto con un record esistente. Aggiornare la pagina e riprovare.",
       "notAllowed": "Uno dei valori del contratto non è consentito. Controllare il modulo e riprovare.",
       "missingField": "Manca un campo obbligatorio del contratto.",
-      "missingFieldNamed": "Manca un campo obbligatorio del contratto: {{field}}."
+      "missingFieldNamed": "Manca un campo obbligatorio del contratto: {{field}}.",
+      "deleteFailed": "Qualcosa è andato storto durante l'eliminazione di questo contratto. Indica il riferimento {{ref}} quando contatti il supporto."
     },
     "wizard": {
       "permissions": {
@@ -2568,7 +2681,10 @@
       "missingClient": "Al contratto in bozza manca l’assegnazione del cliente",
       "invalidStartDate": "Il contratto in bozza ha una data di inizio non valida",
       "recordInvalid": "Uno dei record selezionati della procedura guidata del contratto non è più valido. Aggiornare la pagina e riprovare.",
-      "duplicate": "Esiste già un record corrispondente della procedura guidata del contratto."
+      "duplicate": "Esiste già un record corrispondente della procedura guidata del contratto.",
+      "resumeUnsupportedShape": "Questa bozza non può essere ripresa nella procedura guidata senza modificarne i prezzi: {{lines}}",
+      "fixedLineNoService": "La riga fissa \"{{lineName}}\" ha un importo ricorrente ma nessun servizio su cui fatturarlo. Aggiungi un servizio prima di terminare.",
+      "standingTerms": "Questa bozza contiene condizioni di sconto ricorrenti. Modifica le schede Righe e Sconti per conservarle."
     },
     "pricingSchedule": {
       "endAfterEffective": "La data di fine deve essere successiva alla data di decorrenza",
@@ -2619,6 +2735,207 @@
     "done": "Fine"
   },
   "sellHourBlockNote": {
-    "text": "Un plafond di ore del contratto fattura solo l'eccedenza. Per addebitare in anticipo un blocco di ore, usa Vendi blocco in Blocchi ore, nella scheda Pannello di fatturazione del cliente."
+    "text": "Un plafond di ore del contratto fattura solo l'eccedenza. Per addebitare in anticipo un blocco di ore, aggiungi a questo contratto una linea Blocco prepagato."
+  },
+  "billingTimingField": {
+    "arrears": "Posticipata",
+    "fixedHelp": "Le righe fisse possono essere fatturate in anticipo o in modo posticipato.",
+    "nonFixedHelp": "Le righe a ore e a consumo vengono sempre fatturate in modo posticipato, dopo l’esecuzione del lavoro.",
+    "options": {
+      "advance": "Anticipata (fattura a inizio periodo)",
+      "arrears": "Posticipata (fattura a fine periodo)"
+    }
+  },
+  "contractDiscounts": {
+    "title": "Sconti",
+    "description": "Ogni contratto cliente dispone di una propria copia modificabile. Gli sconti del contratto si applicano agli addebiti idonei delle sue voci fatturate.",
+    "loading": "Caricamento sconti…",
+    "empty": "Nessuno sconto è ancora configurato per questo contratto.",
+    "actions": {
+      "attach": "Collega",
+      "pickShared": "Collega sconto esistente",
+      "detach": "Scollega da questo contratto",
+      "toggleActive": "Modifica lo stato dello sconto",
+      "add": "Aggiungi sconto",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "saving": "Salvataggio…"
+    },
+    "attachment": {
+      "shared": "Associazione al contratto",
+      "line": "Collegamento alla voce"
+    },
+    "sharedEditNotice": "Le modifiche riguardano solo questo contratto cliente. Modificare il modello non cambia le copie dei contratti esistenti.",
+    "dialog": {
+      "contractAttachmentLineScopeLocked": "Questo sconto è associato a questo contratto cliente. Per limitarlo a una riga, scollegalo e crea uno sconto specifico per quella riga.",
+      "createTitle": "Aggiungi sconto",
+      "editTitle": "Modifica sconto"
+    },
+    "columns": {
+      "name": "Nome",
+      "value": "Valore",
+      "scope": "Ambito",
+      "line": "Riga di contratto",
+      "dates": "Date",
+      "status": "Stato"
+    },
+    "status": {
+      "active": "Attivo",
+      "inactive": "Inattivo"
+    },
+    "scopes": {
+      "invoice": "Tutti gli addebiti idonei",
+      "contract": "Questo contratto",
+      "service": "Un servizio",
+      "line": "Una riga di contratto"
+    },
+    "values": {
+      "unnamedLine": "Riga senza nome"
+    },
+    "types": {
+      "percentage": "Percentuale",
+      "fixed": "Importo fisso"
+    },
+    "fields": {
+      "name": "Nome",
+      "namePlaceholder": "es. Fedeltà 10%",
+      "type": "Tipo",
+      "percentValue": "Percentuale (0–100)",
+      "fixedValue": "Importo",
+      "startDate": "Data di inizio",
+      "endDate": "Data di fine",
+      "line": "Riga di contratto",
+      "linePlaceholder": "Seleziona una riga di contratto",
+      "scope": "Ambito",
+      "priority": "Priorità",
+      "priorityPlaceholder": "Facoltativo",
+      "service": "Servizio",
+      "servicePlaceholder": "Seleziona un servizio",
+      "active": "Attivo"
+    },
+    "errors": {
+      "loadFailed": "Impossibile caricare gli sconti.",
+      "saveFailed": "Impossibile salvare lo sconto."
+    }
+  },
+  "prepaidBlock": {
+    "errors": {
+      "hoursInvalid": "Inserisci una dimensione del blocco maggiore di zero (sono ammesse frazioni di ora).",
+      "priceInvalid": "Inserisci un prezzo del blocco pari o superiore a zero.",
+      "expiryInvalid": "La scadenza deve essere un numero intero di mesi da 1 a 120, oppure vuota.",
+      "thresholdInvalid": "La soglia di utilizzo deve essere una percentuale intera da 1 a 99, oppure vuota.",
+      "serviceRequired": "La riga richiede almeno un servizio a ore."
+    },
+    "hoursValue": "{{hours}} h",
+    "trigger": {
+      "initial": "Blocco iniziale",
+      "exhaustion": "Blocco esaurito",
+      "threshold": "Soglia di utilizzo",
+      "expiry": "Blocco scaduto",
+      "renewal": "Rinnovo del contratto",
+      "manual": "Emesso manualmente"
+    },
+    "loading": "Caricamento dei dettagli del blocco prepagato...",
+    "heading": "Blocco prepagato",
+    "actions": {
+      "edit": "Modifica",
+      "remove": "Rimuovi configurazione del blocco",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "issueNext": "Emetti il blocco successivo"
+    },
+    "warnings": {
+      "coveredServiceOnOtherLine": "{{service}} è presente anche in un'altra riga attiva ({{line}}). Il tempo potrebbe essere fatturato lì invece di scalare da questo blocco."
+    },
+    "summary": {
+      "block": "Blocco",
+      "expiry": "Scadenza",
+      "neverExpires": "Non scade mai",
+      "expiresAfterMonths": "{{months}} mesi",
+      "soldAs": "Venduto come",
+      "triggers": "Il blocco successivo viene fatturato quando",
+      "onExhaustion": "il blocco si esaurisce",
+      "onThreshold": "{{percent}}% utilizzato",
+      "onExpiry": "il blocco scade",
+      "onRenewal": "il contratto viene rinnovato",
+      "tierAutoIssue": "Finalizzato automaticamente",
+      "tierDraft": "Bozza da rivedere"
+    },
+    "balance": {
+      "label": "Saldo attivo",
+      "value": "{{remaining}} di {{total}} rimanenti",
+      "none": "Nessun blocco attivo. Un blocco si attiva quando la sua fattura viene finalizzata.",
+      "contractEnded": "Contratto terminato; le ore rimanenti sono state perse."
+    },
+    "pending": {
+      "heading": "Blocco in sospeso in attesa della finalizzazione della fattura",
+      "draftInvoice": "Fattura in bozza",
+      "noInvoice": "Nessuna fattura collegata",
+      "ageDays": "{{days}} giorni di anzianità",
+      "held": "{{hours}} di tempo registrato sono trattenute finché questo blocco non si attiva."
+    },
+    "next": {
+      "label": "Prossima emissione pianificata",
+      "none": "Nessuna"
+    },
+    "history": {
+      "heading": "Cronologia dei blocchi",
+      "empty": "Nessun blocco è stato ancora emesso.",
+      "columns": {
+        "issued": "Emesso",
+        "reason": "Motivo",
+        "status": "Stato",
+        "hours": "Rimanente",
+        "amount": "Importo",
+        "invoice": "Fattura"
+      }
+    },
+    "fields": {
+      "blockHours": "Dimensione del blocco (ore)",
+      "blockHoursHelp": "Sono ammesse frazioni, ad esempio 1,5 per 90 minuti.",
+      "blockPrice": "Prezzo del blocco ({{currency}})",
+      "blockPriceManualHelp": "Impostato esplicitamente. Viene salvato come inserito e non segue la tariffa oraria.",
+      "blockPriceDefaultHelp": "Per impostazione predefinita, ore x tariffa del servizio. Viene salvato come prezzo esplicito.",
+      "useRateTimesHours": "Usa ore x tariffa",
+      "soldAs": "La riga di fattura è venduta come",
+      "soldAsHelp": "Determina imposte, contabilità generale e mappatura dell'esportazione contabile della riga di fattura del blocco.",
+      "expiryMonths": "Scade dopo (mesi)",
+      "neverExpires": "Non scade mai",
+      "expiryMonthsHelp": "Lascia vuoto per ore che non scadono mai. Le ore non utilizzate vengono perse alla scadenza.",
+      "thresholdPercent": "Emetti il blocco successivo all'utilizzo (%)",
+      "noThreshold": "Nessuna soglia",
+      "triggersHeading": "Fattura il blocco successivo quando",
+      "triggerExhaustion": "Il blocco si esaurisce",
+      "triggerExpiry": "Il blocco scade",
+      "triggerRenewal": "Il contratto viene rinnovato",
+      "triggerRenewalHint": "Fattura un nuovo blocco a ogni rinnovo (anniversario di un contratto a tempo indeterminato o contratto di rinnovo attivato). I blocchi esistenti mantengono la propria scadenza.",
+      "tier": "Fattura successiva",
+      "tierDraft": "Crea una bozza da rivedere",
+      "tierAutoIssue": "Finalizza e invia automaticamente",
+      "blockPriceNeutral": "Prezzo del blocco (nella valuta del cliente)"
+    },
+    "status": {
+      "pending": "In sospeso",
+      "active": "Attivo",
+      "expired": "Scaduto",
+      "voided": "Annullato"
+    }
+  },
+  "wizardPrepaidBlock": {
+    "heading": "Righe di blocchi prepagati",
+    "description": "Vendi ore in anticipo. Ogni riga fattura un blocco di ore a prezzo fisso e il tempo registrato consuma il blocco; le ore oltre il blocco vengono fatturate alla tariffa oraria.",
+    "templateDescription": "Vendi ore in anticipo. Ogni riga fattura un blocco di ore a prezzo fisso e il tempo registrato consuma il blocco. Il prezzo assume la valuta del cliente quando da questo modello viene creato un contratto.",
+    "lineName": "Nome della riga (facoltativo)",
+    "lineNamePlaceholder": "Blocco prepagato",
+    "removeLine": "Rimuovi riga di blocco prepagato",
+    "serviceItem": "Servizio {{index}}",
+    "overageRate": "Tariffa oraria",
+    "removeService": "Rimuovi servizio",
+    "addService": "Aggiungi servizio a questa riga",
+    "addLine": "Aggiungi riga di blocco prepagato",
+    "validation": {
+      "invalidBlock": "Completa dimensione, prezzo e trigger di ogni riga di blocco prepagato prima di terminare.",
+      "rateRequired": "Il servizio di blocco prepagato \"{{serviceName}}\" richiede una tariffa oraria superiore a zero (le ore oltre il blocco vengono fatturate a quella tariffa)."
+    }
   }
 }

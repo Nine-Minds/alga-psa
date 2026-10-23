@@ -10517,6 +10517,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "null"
                 ]
               },
+              "lifecycle_status": {
+                "type": "string",
+                "enum": [
+                  "prospect",
+                  "active",
+                  "former"
+                ]
+              },
               "logoUrl": {
                 "type": [
                   "string",
@@ -10745,6 +10753,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "is_inactive": {
           "type": "boolean"
+        },
+        "lifecycle_status": {
+          "type": "string",
+          "enum": [
+            "prospect",
+            "active",
+            "former"
+          ]
         },
         "tags": {
           "type": "array",
@@ -10983,6 +10999,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "type": [
                 "string",
                 "null"
+              ]
+            },
+            "lifecycle_status": {
+              "type": "string",
+              "enum": [
+                "prospect",
+                "active",
+                "former"
               ]
             },
             "logoUrl": {
@@ -11292,6 +11316,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "lifecycle_status": {
+              "type": "string",
+              "enum": [
+                "prospect",
+                "active",
+                "former"
+              ]
+            },
             "logoUrl": {
               "type": [
                 "string",
@@ -11475,6 +11507,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "is_inactive": {
           "type": "boolean"
+        },
+        "lifecycle_status": {
+          "type": "string",
+          "enum": [
+            "prospect",
+            "active",
+            "former"
+          ]
         },
         "tags": {
           "type": "array",
@@ -11713,6 +11753,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "type": [
                 "string",
                 "null"
+              ]
+            },
+            "lifecycle_status": {
+              "type": "string",
+              "enum": [
+                "prospect",
+                "active",
+                "former"
               ]
             },
             "logoUrl": {
@@ -13290,37 +13338,141 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {
-        "full_name": {
+        "contact_kind": {
           "type": "string",
-          "minLength": 1,
-          "maxLength": 255
+          "enum": [
+            "person",
+            "shared_mailbox"
+          ]
+        },
+        "full_name": {
+          "type": "string"
         },
         "client_id": {
           "type": "string",
+          "format": "uuid"
+        },
+        "manager_contact_id": {
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "uuid"
         },
         "phone_numbers": {
           "type": "array",
           "items": {
             "type": "object",
-            "additionalProperties": {}
-          }
+            "properties": {
+              "contact_phone_number_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Include to keep an existing row on update; omit for a new row."
+              },
+              "phone_number": {
+                "type": "string"
+              },
+              "extension": {
+                "type": "string",
+                "description": "Digits only."
+              },
+              "canonical_type": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "work",
+                  "mobile",
+                  "home",
+                  "fax",
+                  "other"
+                ]
+              },
+              "custom_type": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              },
+              "is_default": {
+                "type": "boolean"
+              },
+              "display_order": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "normalized_phone_number": {
+                "type": "string",
+                "description": "Read-only; ignored on write."
+              },
+              "custom_phone_type_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Read-only; ignored on write."
+              },
+              "created_at": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Read-only; ignored on write."
+              },
+              "updated_at": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Read-only; ignored on write."
+              }
+            },
+            "required": [
+              "phone_number"
+            ],
+            "additionalProperties": false,
+            "description": "Each row needs canonical_type (work|mobile|home|fax|other) or custom_type, not both. When any rows are sent, exactly one must have is_default: true. On update, the array replaces all of the contact's phone numbers; include contact_phone_number_id to keep an existing row."
+          },
+          "default": []
         },
         "email": {
-          "type": "string",
-          "format": "email"
+          "type": "string"
         },
         "primary_email_canonical_type": {
           "type": [
             "string",
             "null"
+          ],
+          "enum": [
+            "work",
+            "personal",
+            "billing",
+            "other"
           ]
         },
         "primary_email_custom_type": {
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "minLength": 1
         },
         "primary_email_custom_type_id": {
           "type": [
@@ -13333,17 +13485,98 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "array",
           "items": {
             "type": "object",
-            "additionalProperties": {}
-          }
+            "properties": {
+              "contact_additional_email_address_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Include to keep an existing row on update; omit for a new row."
+              },
+              "email_address": {
+                "type": "string",
+                "description": "Must be a valid email address."
+              },
+              "canonical_type": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "work",
+                  "personal",
+                  "billing",
+                  "other"
+                ]
+              },
+              "custom_type": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              },
+              "display_order": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "normalized_email_address": {
+                "type": "string",
+                "description": "Read-only; ignored on write."
+              },
+              "custom_email_type_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Read-only; ignored on write."
+              },
+              "created_at": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Read-only; ignored on write."
+              },
+              "updated_at": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Read-only; ignored on write."
+              }
+            },
+            "required": [
+              "email_address"
+            ],
+            "additionalProperties": false,
+            "description": "Each row needs canonical_type (work|personal|billing|other) or custom_type, not both. On update, the array replaces all of the contact's additional email addresses; include contact_additional_email_address_id to keep an existing row."
+          },
+          "default": []
         },
         "role": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100
         },
         "notes": {
           "type": "string"
         },
         "is_inactive": {
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "tags": {
           "type": "array",
@@ -13355,7 +13588,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "full_name",
         "email"
-      ]
+      ],
+      "additionalProperties": false
     },
     "responseBodySchema": {
       "type": "object",
@@ -13437,36 +13671,133 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "type": "object",
       "properties": {
         "full_name": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 255
+          "type": "string"
         },
         "client_id": {
           "type": "string",
+          "format": "uuid"
+        },
+        "manager_contact_id": {
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "uuid"
         },
         "phone_numbers": {
           "type": "array",
           "items": {
             "type": "object",
-            "additionalProperties": {}
-          }
+            "properties": {
+              "contact_phone_number_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Include to keep an existing row on update; omit for a new row."
+              },
+              "phone_number": {
+                "type": "string"
+              },
+              "extension": {
+                "type": "string",
+                "description": "Digits only."
+              },
+              "canonical_type": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "work",
+                  "mobile",
+                  "home",
+                  "fax",
+                  "other"
+                ]
+              },
+              "custom_type": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              },
+              "is_default": {
+                "type": "boolean"
+              },
+              "display_order": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "normalized_phone_number": {
+                "type": "string",
+                "description": "Read-only; ignored on write."
+              },
+              "custom_phone_type_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Read-only; ignored on write."
+              },
+              "created_at": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Read-only; ignored on write."
+              },
+              "updated_at": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Read-only; ignored on write."
+              }
+            },
+            "required": [
+              "phone_number"
+            ],
+            "additionalProperties": false,
+            "description": "Each row needs canonical_type (work|mobile|home|fax|other) or custom_type, not both. When any rows are sent, exactly one must have is_default: true. On update, the array replaces all of the contact's phone numbers; include contact_phone_number_id to keep an existing row."
+          },
+          "default": []
         },
         "email": {
-          "type": "string",
-          "format": "email"
+          "type": "string"
         },
         "primary_email_canonical_type": {
           "type": [
             "string",
             "null"
+          ],
+          "enum": [
+            "work",
+            "personal",
+            "billing",
+            "other"
           ]
         },
         "primary_email_custom_type": {
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "minLength": 1
         },
         "primary_email_custom_type_id": {
           "type": [
@@ -13479,17 +13810,98 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "array",
           "items": {
             "type": "object",
-            "additionalProperties": {}
-          }
+            "properties": {
+              "contact_additional_email_address_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Include to keep an existing row on update; omit for a new row."
+              },
+              "email_address": {
+                "type": "string",
+                "description": "Must be a valid email address."
+              },
+              "canonical_type": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "work",
+                  "personal",
+                  "billing",
+                  "other"
+                ]
+              },
+              "custom_type": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              },
+              "display_order": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "normalized_email_address": {
+                "type": "string",
+                "description": "Read-only; ignored on write."
+              },
+              "custom_email_type_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Read-only; ignored on write."
+              },
+              "created_at": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Read-only; ignored on write."
+              },
+              "updated_at": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Read-only; ignored on write."
+              }
+            },
+            "required": [
+              "email_address"
+            ],
+            "additionalProperties": false,
+            "description": "Each row needs canonical_type (work|personal|billing|other) or custom_type, not both. On update, the array replaces all of the contact's additional email addresses; include contact_additional_email_address_id to keep an existing row."
+          },
+          "default": []
         },
         "role": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100
         },
         "notes": {
           "type": "string"
         },
         "is_inactive": {
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "tags": {
           "type": "array",
@@ -13498,10 +13910,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           }
         }
       },
-      "required": [
-        "full_name",
-        "email"
-      ]
+      "additionalProperties": false
     },
     "responseBodySchema": {
       "type": "object",
@@ -26118,7 +26527,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       ]
     },
     "playbooks": [
-      "Create a workflow from natural language: 1) GET /api/workflow/registry/authoring-guide — the definition/step JSON schemas, expression grammar, worked example, and pitfalls. 2) GET /api/workflow/registry/events — pick the trigger event (event_type) and note its payload_schema_ref; fetch the payload shape via GET /api/workflow/registry/schemas/{schemaRef}. 3) GET /api/workflow/registry/designer-catalog and /api/workflow/registry/actions — find action ids and their input/output schemas. 4) Resolve every tenant-specific reference to a real id BEFORE composing — never invent UUIDs (see the resolve-tenant-references playbook). 5) Compose the WorkflowDefinition JSON. 6) POST /api/workflow-definitions/validate until it returns no errors (each error names the offending step and often a did-you-mean suggestion). 7) POST /api/workflow-definitions/simulate with a realistic payload; check the trace shows the intended branches and that each stubbed action's evaluatedInput is correct. 8) POST /api/workflow-definitions to save the draft. 9) Reply with the editor link /msp/workflow-editor/{workflowId} so the user can review and publish — never publish yourself.",
+      "Create a workflow from natural language: 1) GET /api/workflow/registry/authoring-guide — the definition/step JSON schemas, expression grammar, worked example, and pitfalls. 2) GET /api/workflow/registry/events — pick the trigger event (event_type) and note its payload_schema_ref; fetch the payload shape via GET /api/workflow/registry/schemas/{schemaRef}. 3) GET /api/workflow/registry/designer-catalog and /api/workflow/registry/actions — find action ids and their input/output schemas. 4) Resolve every tenant-specific reference to a real id BEFORE composing — never invent UUIDs (see the resolve-tenant-references playbook). 5) Compose the WorkflowDefinition JSON. 6) POST /api/workflow-definitions/validate until it returns no errors (each error names the offending step and often a did-you-mean suggestion). 7) POST /api/workflow-definitions/simulate and check the trace shows the intended branches and that each stubbed action's evaluatedInput is correct. For event-triggered workflows send useLatestEvent: true (or eventId for a specific stored event) so a stored event is replayed through the trigger; send an explicit payload only for non-event triggers or when no event of that type has been stored. payloadSource \"replayed-event\" with status completed means the trigger contract was checked against real data; \"Production would skip this event\" means production would never launch the workflow for that event (add trigger.payloadMapping, or set payloadSchemaRef to the event's source schema ref); the \"payload synthesized from schema\" warning means the trigger contract was NOT checked. 8) POST /api/workflow-definitions to save the draft. 9) Reply with the editor link /msp/workflow-editor/{workflowId} so the user can review and publish — never publish yourself.",
       "Update an existing workflow: GET /api/workflow-definitions/{workflowId}/{version} to fetch the current draft, edit the definition document, validate and simulate as when creating, then PUT /api/workflow-definitions/{workflowId}/{version} with expectedDraftVersion set to the draft version you fetched (a 409 means someone else changed the draft — re-fetch and re-apply).",
       "Resolve tenant references: priorities via GET /api/v1/priorities; boards via GET /api/v1/boards; statuses via GET /api/v1/statuses; users via GET /api/v1/users; clients via GET /api/v1/clients (or clients.find action at run time); contacts via GET /api/v1/contacts; activity groups via GET /api/v1/activities/groups or the activities.find_group workflow action at run time. Prefer run-time resolution actions (tickets.find, contacts.find, activities.find_group) inside the workflow when the value depends on the triggering event."
     ],
@@ -26251,7 +26660,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/workflow-definitions/simulate",
     "displayName": "Simulate a workflow draft (dry run)",
     "summary": "Execute an inline WorkflowDefinition with zero side effects and read the step-by-step trace",
-    "description": "Dry-runs a draft: control flow and transforms execute for real, action.call steps are stubbed (their evaluated inputs are recorded in invocations), and waits pause the run unless a fixture resumes them. Omit payload to have one synthesized from the trigger's event schema. Use the trace to confirm branch decisions and that every action would be called with the right inputs before saving the draft.",
+    "description": "Dry-runs a draft: control flow and transforms execute for real, action.call steps are stubbed (their evaluated inputs are recorded in invocations), and waits pause the run unless a fixture resumes them. For event-triggered workflows pass useLatestEvent: true (or eventId) to replay a stored event through the trigger instead of sending a payload; these cannot be combined with payload. Omit payload and replay to have one synthesized from the trigger's event schema (the trigger contract is then NOT checked). Use the trace to confirm branch decisions and that every action would be called with the right inputs before saving the draft.",
     "tags": [
       "Workflow Definitions"
     ],
@@ -26268,6 +26677,15 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "object",
           "additionalProperties": {},
           "description": "Workflow payload used as-is (wins over eventPayload and synthesis)."
+        },
+        "eventId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Replay this stored workflow runtime event (must match the trigger event type). Cannot be combined with payload."
+        },
+        "useLatestEvent": {
+          "type": "boolean",
+          "description": "Replay the latest stored event of the trigger event type for this tenant. Cannot be combined with payload."
         },
         "eventPayload": {
           "type": "object",
@@ -26333,7 +26751,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       ]
     },
     "playbooks": [
-      "Verify a draft: simulate with a payload representative of the user's request; assert status is completed (or paused-at-wait when the flow intentionally waits), the trace takes the intended branches, and each invocation's input contains the resolved ids you expect. Supply fixtures keyed by step id to control stubbed action outputs your conditions depend on — schema-shaped placeholder outputs may otherwise steer branches unrealistically."
+      "Verify a draft: for event-triggered workflows simulate with useLatestEvent: true (or eventId for a specific stored event); send an explicit payload only for non-event triggers, or when no event of that type has been stored (404). payloadSource \"replayed-event\" with status completed means the trigger contract was checked against real data; \"Production would skip this event\" means production would never launch the workflow for that event (add trigger.payloadMapping, or set payloadSchemaRef to the event's source schema ref); the \"payload synthesized from schema\" warning means the trigger contract was NOT checked. Assert status is completed (or paused-at-wait when the flow intentionally waits), the trace takes the intended branches, and each invocation's input contains the resolved ids you expect. Supply fixtures keyed by step id to control stubbed action outputs your conditions depend on — schema-shaped placeholder outputs may otherwise steer branches unrealistically."
     ],
     "examples": [
       {
@@ -34888,7 +35306,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "boolean"
         },
         "enable_live_ticket_timer": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Show the stopwatch on tickets in this board. When false, the stopwatch cannot be started on this board's tickets; a stopwatch already running keeps running. Defaults to true."
         },
         "client_portal_visible": {
           "type": "boolean"
@@ -36525,7 +36944,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/services",
     "displayName": "Create service",
     "summary": "Create service",
-    "description": "Creates a new service catalog entry. Resolve custom_service_type_id with GET /api/v1/service-types and category_id with GET /api/v1/categories/service before calling this endpoint. Use this endpoint for fixed, hourly, or usage-based service offerings.",
+    "description": "Creates a new service catalog entry. Resolve custom_service_type_id with GET /api/v1/service-types and category_id with GET /api/v1/categories/service before calling this endpoint. Use this endpoint for fixed, hourly, or usage-based service offerings. Supply prices (rates in integer minor units) to set the displayed prices; prices[0] is primary and is mirrored into default_rate, so default_rate may then be omitted. scheduled_prices sets future-dated prices.",
     "tags": [
       "Services",
       "Service Catalog"
@@ -36608,13 +37027,71 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "is_active": {
           "type": "boolean"
+        },
+        "prices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "currency_code": {
+                "type": "string"
+              },
+              "rate": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "effective_date": {},
+              "price_id": {},
+              "service_id": {},
+              "tenant": {},
+              "created_at": {},
+              "updated_at": {},
+              "display_order": {}
+            },
+            "required": [
+              "currency_code",
+              "rate"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Full set of current prices, rate in integer minor units (e.g. cents), currency_code from the supported currency list. Replaces the entire current price window; omitted currencies are removed and prices: [] clears it. prices[0] is the primary price and is mirrored into default_rate. Currencies must be unique."
+        },
+        "scheduled_prices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "currency_code": {
+                "type": "string"
+              },
+              "rate": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "effective_date": {},
+              "price_id": {},
+              "service_id": {},
+              "tenant": {},
+              "created_at": {},
+              "updated_at": {},
+              "display_order": {}
+            },
+            "required": [
+              "currency_code",
+              "rate"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Full set of future-dated prices (each effective_date must be after today). Replaces the entire future price window; scheduled_prices: [] clears it. Does not change the current prices or default_rate."
+        },
+        "currency_code": {
+          "description": "Not accepted. Send prices[].currency_code instead; a top-level currency_code returns 400."
         }
       },
       "required": [
         "service_name",
         "custom_service_type_id",
-        "billing_method",
-        "default_rate"
+        "billing_method"
       ]
     },
     "responseBodySchema": {
@@ -36680,7 +37157,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/services/{id}",
     "displayName": "Update service",
     "summary": "Update service",
-    "description": "Updates a service catalog entry by UUID.",
+    "description": "Updates a service catalog entry by UUID. Send prices to replace the current price window (prices[0] is primary and is mirrored into default_rate) and scheduled_prices to replace the future window; either is applied in full or rejected with 400. Sending only default_rate rewrites the rate of the primary current price. A default_rate that differs from prices[0].rate, a top-level currency_code, an unsupported currency, a fractional or negative rate, or a duplicate currency returns 400.",
     "tags": [
       "Services",
       "Service Catalog"
@@ -36775,6 +37252,65 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "is_active": {
           "type": "boolean"
+        },
+        "prices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "currency_code": {
+                "type": "string"
+              },
+              "rate": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "effective_date": {},
+              "price_id": {},
+              "service_id": {},
+              "tenant": {},
+              "created_at": {},
+              "updated_at": {},
+              "display_order": {}
+            },
+            "required": [
+              "currency_code",
+              "rate"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Full set of current prices, rate in integer minor units (e.g. cents), currency_code from the supported currency list. Replaces the entire current price window; omitted currencies are removed and prices: [] clears it. prices[0] is the primary price and is mirrored into default_rate. Currencies must be unique."
+        },
+        "scheduled_prices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "currency_code": {
+                "type": "string"
+              },
+              "rate": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "effective_date": {},
+              "price_id": {},
+              "service_id": {},
+              "tenant": {},
+              "created_at": {},
+              "updated_at": {},
+              "display_order": {}
+            },
+            "required": [
+              "currency_code",
+              "rate"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Full set of future-dated prices (each effective_date must be after today). Replaces the entire future price window; scheduled_prices: [] clears it. Does not change the current prices or default_rate."
+        },
+        "currency_code": {
+          "description": "Not accepted. Send prices[].currency_code instead; a top-level currency_code returns 400."
         }
       }
     },
@@ -37007,7 +37543,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/products",
     "displayName": "Create product",
     "summary": "Create product",
-    "description": "Creates a new product catalog entry. Resolve custom_service_type_id with GET /api/v1/service-types and category_id with GET /api/v1/categories/service before calling this endpoint. Products are catalog entries with item_kind product and always use billing_method usage.",
+    "description": "Creates a new product catalog entry. Resolve custom_service_type_id with GET /api/v1/service-types and category_id with GET /api/v1/categories/service before calling this endpoint. Products are catalog entries with item_kind product and always use billing_method usage. Supply prices (integer minor units) to set the displayed prices; prices[0] is primary and is mirrored into default_rate. Shorthand: currency_code + default_rate (integer minor units) creates a single price { currency_code, rate: default_rate }; default_rate is required with currency_code and currency_code cannot be combined with prices.",
     "tags": [
       "Products",
       "Service Catalog"
@@ -37035,13 +37571,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "default_rate": {
           "type": "number",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "currency_code": {
           "type": "string",
-          "minLength": 3,
-          "maxLength": 3
+          "description": "Shorthand for one price: with default_rate it upserts a single prices entry { currency_code, rate: default_rate } (default_rate is integer minor units, same as prices[].rate) and never writes a catalog column. Must be from the supported currency list. default_rate is required with it. On create it creates that one price; on update it sets that currency as the primary price (prices[0], mirrored into default_rate), replaces its rate if present or adds it, and leaves the other current prices untouched. Cannot be combined with prices (400)."
         },
         "unit_of_measure": {
           "type": "string",
@@ -37234,20 +37768,55 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "type": "object",
             "properties": {
               "currency_code": {
-                "type": "string",
-                "minLength": 3,
-                "maxLength": 3
+                "type": "string"
               },
               "rate": {
-                "type": "number",
+                "type": "integer",
                 "minimum": 0
-              }
+              },
+              "effective_date": {},
+              "price_id": {},
+              "service_id": {},
+              "tenant": {},
+              "created_at": {},
+              "updated_at": {},
+              "display_order": {}
             },
             "required": [
               "currency_code",
               "rate"
-            ]
-          }
+            ],
+            "additionalProperties": false
+          },
+          "description": "Full set of current prices, rate in integer minor units (e.g. cents), currency_code from the supported currency list. Replaces the entire current price window; omitted currencies are removed and prices: [] clears it. prices[0] is the primary price and is mirrored into default_rate. Currencies must be unique."
+        },
+        "scheduled_prices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "currency_code": {
+                "type": "string"
+              },
+              "rate": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "effective_date": {},
+              "price_id": {},
+              "service_id": {},
+              "tenant": {},
+              "created_at": {},
+              "updated_at": {},
+              "display_order": {}
+            },
+            "required": [
+              "currency_code",
+              "rate"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Full set of future-dated prices (each effective_date must be after today). Replaces the entire future price window; scheduled_prices: [] clears it. Does not change the current prices or default_rate."
         }
       },
       "required": [
@@ -37318,7 +37887,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/products/{id}",
     "displayName": "Update product",
     "summary": "Update product",
-    "description": "Updates a product catalog entry by UUID.",
+    "description": "Updates a product catalog entry by UUID. Send prices to replace the current price window (prices[0] is primary and is mirrored into default_rate) and scheduled_prices to replace the future window; either is applied in full or rejected with 400. Sending only default_rate rewrites the rate of the primary current price. Shorthand: currency_code + default_rate (integer minor units) upserts that single currency as the primary price (prices[0], mirrored into default_rate), replacing its rate or adding it, and leaves the other current prices of the product untouched; default_rate is required with currency_code and currency_code cannot be combined with prices. A default_rate that differs from prices[0].rate, currency_code without default_rate, currency_code together with prices, an unsupported currency, a fractional or negative rate, or a duplicate currency returns 400.",
     "tags": [
       "Products",
       "Service Catalog"
@@ -37358,13 +37927,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "default_rate": {
           "type": "number",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "currency_code": {
           "type": "string",
-          "minLength": 3,
-          "maxLength": 3
+          "description": "Shorthand for one price: with default_rate it upserts a single prices entry { currency_code, rate: default_rate } (default_rate is integer minor units, same as prices[].rate) and never writes a catalog column. Must be from the supported currency list. default_rate is required with it. On create it creates that one price; on update it sets that currency as the primary price (prices[0], mirrored into default_rate), replaces its rate if present or adds it, and leaves the other current prices untouched. Cannot be combined with prices (400)."
         },
         "unit_of_measure": {
           "type": "string",
@@ -37557,20 +38124,55 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "type": "object",
             "properties": {
               "currency_code": {
-                "type": "string",
-                "minLength": 3,
-                "maxLength": 3
+                "type": "string"
               },
               "rate": {
-                "type": "number",
+                "type": "integer",
                 "minimum": 0
-              }
+              },
+              "effective_date": {},
+              "price_id": {},
+              "service_id": {},
+              "tenant": {},
+              "created_at": {},
+              "updated_at": {},
+              "display_order": {}
             },
             "required": [
               "currency_code",
               "rate"
-            ]
-          }
+            ],
+            "additionalProperties": false
+          },
+          "description": "Full set of current prices, rate in integer minor units (e.g. cents), currency_code from the supported currency list. Replaces the entire current price window; omitted currencies are removed and prices: [] clears it. prices[0] is the primary price and is mirrored into default_rate. Currencies must be unique."
+        },
+        "scheduled_prices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "currency_code": {
+                "type": "string"
+              },
+              "rate": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "effective_date": {},
+              "price_id": {},
+              "service_id": {},
+              "tenant": {},
+              "created_at": {},
+              "updated_at": {},
+              "display_order": {}
+            },
+            "required": [
+              "currency_code",
+              "rate"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Full set of future-dated prices (each effective_date must be after today). Replaces the entire future price window; scheduled_prices: [] clears it. Does not change the current prices or default_rate."
         }
       }
     },
@@ -38060,8 +38662,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "status_id",
                   "status_name",
                   "is_closed",
+                  "response_state",
                   "previous_status_id",
                   "previous_status_name",
+                  "previous_response_state",
+                  "new_response_state",
                   "priority_id",
                   "priority_name",
                   "client_id",
@@ -38131,7 +38736,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               }
             }
           },
-          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, previous_status_id, previous_status_name, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
         },
         "payload_transformation": {
           "type": "object",
@@ -38512,8 +39117,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "status_id",
                   "status_name",
                   "is_closed",
+                  "response_state",
                   "previous_status_id",
                   "previous_status_name",
+                  "previous_response_state",
+                  "new_response_state",
                   "priority_id",
                   "priority_name",
                   "client_id",
@@ -38583,7 +39191,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               }
             }
           },
-          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, previous_status_id, previous_status_name, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
         },
         "payload_transformation": {
           "type": "object",
@@ -38989,8 +39597,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "status_id",
                   "status_name",
                   "is_closed",
+                  "response_state",
                   "previous_status_id",
                   "previous_status_name",
+                  "previous_response_state",
+                  "new_response_state",
                   "priority_id",
                   "priority_name",
                   "client_id",
@@ -39060,7 +39671,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               }
             }
           },
-          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, previous_status_id, previous_status_name, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
         },
         "payload_transformation": {
           "type": "object",
@@ -45957,6 +46568,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
+        "name": "response_state",
+        "in": "query",
+        "required": false,
+        "description": "Only tickets whose turn it is: awaiting_client (we replied, waiting on the client) or awaiting_internal (the client replied, waiting on us).",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "awaiting_client",
+            "awaiting_internal"
+          ]
+        }
+      },
+      {
         "name": "entered_from",
         "in": "query",
         "required": false,
@@ -47975,32 +48599,66 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {
-        "work_item_type": {
-          "type": "string"
-        },
         "work_item_id": {
-          "type": "string"
-        },
-        "user_id": {
           "type": "string",
-          "format": "uuid"
+          "format": "uuid",
+          "description": "Required when work_item_type is ticket or project_task (the ticket must exist). Not required for other work item types."
         },
-        "started_at": {
-          "type": "string"
+        "work_item_type": {
+          "type": "string",
+          "enum": [
+            "ticket",
+            "project_task",
+            "non_billable_category",
+            "ad_hoc",
+            "interaction"
+          ]
         },
-        "ended_at": {
-          "type": "string"
+        "start_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 datetime. Duration is computed from start_time and end_time and cannot be submitted."
         },
-        "duration_minutes": {
-          "type": "number"
-        },
-        "billable_minutes": {
-          "type": "number"
+        "end_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 datetime. Must be after start_time. Duration is computed and cannot be submitted."
         },
         "notes": {
           "type": "string"
+        },
+        "service_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Required (it drives billing)."
+        },
+        "tax_region": {
+          "type": "string"
+        },
+        "tax_rate_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Optional. Stored as given, like the UI save path; the API does not compute tax."
+        },
+        "contract_line_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
+        },
+        "is_billable": {
+          "type": "boolean",
+          "default": true
         }
-      }
+      },
+      "required": [
+        "work_item_type",
+        "start_time",
+        "end_time",
+        "service_id"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
@@ -48036,7 +48694,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-entries/active-session",
     "displayName": "Get active tracking session",
     "summary": "Get active tracking session",
-    "description": "Returns active tracking session for current user context.",
+    "description": "Deprecated: use GET /api/v1/stopwatch/active. Returns the caller's open stopwatch session in the legacy time-entry-row shape (`session_id` is the stopwatch session id, `start_time` the first segment start). Requires time_entry:read.",
     "tags": [
       "Work Management v1"
     ],
@@ -48190,8 +48848,80 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "parameters": [],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "work_item_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Required when work_item_type is ticket or project_task (the ticket must exist). Not required for other work item types."
+              },
+              "work_item_type": {
+                "type": "string",
+                "enum": [
+                  "ticket",
+                  "project_task",
+                  "non_billable_category",
+                  "ad_hoc",
+                  "interaction"
+                ]
+              },
+              "start_time": {
+                "type": "string",
+                "format": "date-time",
+                "description": "ISO 8601 datetime. Duration is computed from start_time and end_time and cannot be submitted."
+              },
+              "end_time": {
+                "type": "string",
+                "format": "date-time",
+                "description": "ISO 8601 datetime. Must be after start_time. Duration is computed and cannot be submitted."
+              },
+              "notes": {
+                "type": "string"
+              },
+              "service_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Required (it drives billing)."
+              },
+              "tax_region": {
+                "type": "string"
+              },
+              "tax_rate_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Optional. Stored as given, like the UI save path; the API does not compute tax."
+              },
+              "contract_line_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
+              },
+              "is_billable": {
+                "type": "boolean",
+                "default": true
+              }
+            },
+            "required": [
+              "work_item_type",
+              "start_time",
+              "end_time",
+              "service_id"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 50
+        }
+      },
+      "required": [
+        "entries"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
@@ -48235,8 +48965,87 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "parameters": [],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "entry_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "work_item_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Required when work_item_type is ticket or project_task (the ticket must exist). Not required for other work item types."
+                  },
+                  "work_item_type": {
+                    "type": "string",
+                    "enum": [
+                      "ticket",
+                      "project_task",
+                      "non_billable_category",
+                      "ad_hoc",
+                      "interaction"
+                    ]
+                  },
+                  "start_time": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "ISO 8601 datetime. Duration is computed from start_time and end_time and cannot be submitted."
+                  },
+                  "end_time": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "ISO 8601 datetime. Must be after start_time. Duration is computed and cannot be submitted."
+                  },
+                  "notes": {
+                    "type": "string"
+                  },
+                  "service_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Required on create (it drives billing); cannot be cleared on update."
+                  },
+                  "tax_region": {
+                    "type": "string"
+                  },
+                  "tax_rate_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid",
+                    "description": "Optional. Stored as given, like the UI save path; the API does not compute tax."
+                  },
+                  "contract_line_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
+                  },
+                  "is_billable": {
+                    "type": "boolean",
+                    "default": true
+                  }
+                }
+              }
+            },
+            "required": [
+              "entry_id",
+              "data"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 50
+        }
+      },
+      "required": [
+        "entries"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
@@ -48280,8 +49089,20 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "parameters": [],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "entry_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1,
+          "maxItems": 50
+        }
+      },
+      "required": [
+        "entry_ids"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
@@ -48612,7 +49433,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-entries/start-tracking",
     "displayName": "Start time tracking",
     "summary": "Start time tracking",
-    "description": "Starts active tracking session.",
+    "description": "Deprecated: use POST /api/v1/stopwatch. Starts a stopwatch session and returns it in the legacy time-entry-row shape. 409 when a session is already open.",
     "tags": [
       "Work Management v1"
     ],
@@ -48782,7 +49603,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-entries/stop-tracking/{sessionId}",
     "displayName": "Stop time tracking",
     "summary": "Stop time tracking",
-    "description": "Stops active tracking session by session id.",
+    "description": "Deprecated: use POST /api/v1/stopwatch/{id}/log. Logs the open (running or paused) session as a time entry and returns the entry.",
     "tags": [
       "Work Management v1"
     ],
@@ -49035,8 +49856,61 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "work_item_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Required when work_item_type is ticket or project_task (the ticket must exist). Not required for other work item types."
+        },
+        "work_item_type": {
+          "type": "string",
+          "enum": [
+            "ticket",
+            "project_task",
+            "non_billable_category",
+            "ad_hoc",
+            "interaction"
+          ]
+        },
+        "start_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 datetime. Duration is computed from start_time and end_time and cannot be submitted."
+        },
+        "end_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 datetime. Must be after start_time. Duration is computed and cannot be submitted."
+        },
+        "notes": {
+          "type": "string"
+        },
+        "service_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Required on create (it drives billing); cannot be cleared on update."
+        },
+        "tax_region": {
+          "type": "string"
+        },
+        "tax_rate_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Optional. Stored as given, like the UI save path; the API does not compute tax."
+        },
+        "contract_line_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
+        },
+        "is_billable": {
+          "type": "boolean",
+          "default": true
+        }
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -49129,7 +50003,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods",
     "displayName": "List time periods",
     "summary": "List time periods",
-    "description": "Lists time periods via ApiTimeSheetController.listTimePeriods().",
+    "description": "Lists time periods via ApiTimeSheetController.listTimePeriods(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
     "tags": [
       "Work Management v1"
     ],
@@ -49254,7 +50128,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods",
     "displayName": "Create time period",
     "summary": "Create time period",
-    "description": "Creates time period via ApiTimeSheetController.createTimePeriod().",
+    "description": "Creates a time period. start_date/end_date accept YYYY-MM-DD (datetimes are truncated to their date). is_current is ignored on input and derived on read. Returns 409 when it overlaps an existing period; periods that touch (one's end_date equals the next's start_date) are allowed. end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
     "tags": [
       "Work Management v1"
     ],
@@ -49262,8 +50136,41 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "parameters": [],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
+          ],
+          "description": "Exclusive end of the period: the first day after the period. A period covering Aug 16–22 has end_date 2026-08-23."
+        },
+        "is_current": {
+          "type": "boolean",
+          "description": "Ignored. is_current is derived from the dates on read; accepted for backward compatibility."
+        }
+      },
+      "required": [
+        "start_date",
+        "end_date"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
@@ -49299,7 +50206,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/current",
     "displayName": "Get current time period",
     "summary": "Get current time period",
-    "description": "Current route delegates to ApiTimeSheetController.list() and does not call a dedicated current-period method.",
+    "description": "Returns the period containing today (UTC) or ?date=, via getCurrentTimePeriod(). When no period covers today it may materialize one from time period settings.",
     "tags": [
       "Work Management v1"
     ],
@@ -49400,7 +50307,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/{id}",
     "displayName": "Get time period",
     "summary": "Get time period",
-    "description": "Gets time period UUID via getTimePeriod().",
+    "description": "Gets time period UUID via getTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
     "tags": [
       "Work Management v1"
     ],
@@ -49452,7 +50359,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/{id}",
     "displayName": "Update time period",
     "summary": "Update time period",
-    "description": "Updates time period UUID via updateTimePeriod().",
+    "description": "Updates time period UUID via updateTimePeriod(). start_date/end_date accept YYYY-MM-DD (datetimes are truncated to their date); is_current is ignored. Returns 409 when the period is closed, when it has time sheets, or when the new dates overlap another period. end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
     "tags": [
       "Work Management v1"
     ],
@@ -49472,8 +50379,37 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
+          ],
+          "description": "Exclusive end of the period: the first day after the period. A period covering Aug 16–22 has end_date 2026-08-23."
+        },
+        "is_current": {
+          "type": "boolean",
+          "description": "Ignored. is_current is derived from the dates on read; accepted for backward compatibility."
+        }
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -49509,7 +50445,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/{id}",
     "displayName": "Delete time period",
     "summary": "Delete time period",
-    "description": "Deletes time period UUID via deleteTimePeriod().",
+    "description": "Deletes time period UUID via deleteTimePeriod(). Returns 409 when the period is closed or has time sheets.",
     "tags": [
       "Work Management v1"
     ],
@@ -49527,11 +50463,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ],
-    "requestBodySchema": {
-      "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
-    },
     "responseBodySchema": {
       "type": "object",
       "properties": {
@@ -49566,7 +50497,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/{id}/close",
     "displayName": "Close time period",
     "summary": "Close time period",
-    "description": "Current route delegates to ApiTimeSheetController.update() (time sheet update flow), not dedicated time-period close logic.",
+    "description": "Sets is_closed true (idempotent). A closed period rejects edits and deletion until reopened; time entry is not affected.",
     "tags": [
       "Work Management v1"
     ],
@@ -49584,11 +50515,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ],
-    "requestBodySchema": {
-      "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
-    },
     "responseBodySchema": {
       "type": "object",
       "properties": {
@@ -49623,7 +50549,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/{id}/reopen",
     "displayName": "Reopen time period",
     "summary": "Reopen time period",
-    "description": "Current route delegates to ApiTimeSheetController.update() (time sheet update flow), not dedicated time-period reopen logic.",
+    "description": "Sets is_closed false (idempotent). A closed period rejects edits and deletion until reopened; time entry is not affected.",
     "tags": [
       "Work Management v1"
     ],
@@ -49641,11 +50567,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ],
-    "requestBodySchema": {
-      "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
-    },
     "responseBodySchema": {
       "type": "object",
       "properties": {
@@ -50476,8 +51397,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "sort",
         "in": "query",
         "required": false,
+        "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400.",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "approval_status",
+            "approved_at",
+            "created_at",
+            "period_end",
+            "period_start",
+            "submitted_at"
+          ],
+          "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400."
         }
       },
       {
@@ -50493,7 +51424,25 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "fields",
+        "name": "user_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "period_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "approval_status",
         "in": "query",
         "required": false,
         "schema": {
@@ -50501,7 +51450,52 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "search",
+        "name": "approved_by",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "submitted_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "submitted_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "approved_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "approved_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "has_entries",
         "in": "query",
         "required": false,
         "schema": {
@@ -50509,11 +51503,39 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "query",
+        "name": "period_start_from",
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_start_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_end_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_end_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     ],
@@ -50897,8 +51919,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "sort",
         "in": "query",
         "required": false,
+        "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400.",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "approval_status",
+            "approved_at",
+            "created_at",
+            "period_end",
+            "period_start",
+            "submitted_at"
+          ],
+          "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400."
         }
       },
       {
@@ -50914,7 +51946,25 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "fields",
+        "name": "user_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "period_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "approval_status",
         "in": "query",
         "required": false,
         "schema": {
@@ -50922,7 +51972,52 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "search",
+        "name": "approved_by",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "submitted_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "submitted_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "approved_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "approved_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "has_entries",
         "in": "query",
         "required": false,
         "schema": {
@@ -50930,11 +52025,39 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "query",
+        "name": "period_start_from",
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_start_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_end_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_end_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     ],
@@ -50987,6 +52110,330 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "data",
         "pagination"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_stopwatch_active",
+    "method": "get",
+    "path": "/api/v1/stopwatch/active",
+    "displayName": "Get active stopwatch session",
+    "summary": "Get active stopwatch session",
+    "description": "Returns the caller's open (running or paused) stopwatch session, or `data: null`. Elapsed time is derived from `segments`; `active_ms` and `server_now` are computed by the server. `user_id` reads another user's session and requires delegation rights (time_sheet:approve plus read_all or manager-of-subject).",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "user_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/WorkV1StopwatchSession"
+            },
+            {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "The open (running or paused) session, or null."
+            }
+          ]
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_stopwatch",
+    "method": "post",
+    "path": "/api/v1/stopwatch",
+    "displayName": "Start stopwatch",
+    "summary": "Start stopwatch",
+    "description": "Starts a stopwatch session on a ticket or project task. A user has at most one open session: starting while one exists returns 409 with `details.open_session`. Also 409 when the ticket's board has the stopwatch turned off.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "work_item_type": {
+          "type": "string",
+          "enum": [
+            "ticket",
+            "project_task"
+          ]
+        },
+        "work_item_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "service_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "work_item_type",
+        "work_item_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WorkV1StopwatchSession"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_stopwatch_id_pause",
+    "method": "post",
+    "path": "/api/v1/stopwatch/{id}/pause",
+    "displayName": "Pause stopwatch",
+    "summary": "Pause stopwatch",
+    "description": "Closes the open segment. Idempotent: pausing a paused session returns it unchanged.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WorkV1StopwatchSession"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_stopwatch_id_resume",
+    "method": "post",
+    "path": "/api/v1/stopwatch/{id}/resume",
+    "displayName": "Resume stopwatch",
+    "summary": "Resume stopwatch",
+    "description": "Opens a new segment. Idempotent: resuming a running session returns it unchanged.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WorkV1StopwatchSession"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "patch-_api_v1_stopwatch_id",
+    "method": "patch",
+    "path": "/api/v1/stopwatch/{id}",
+    "displayName": "Update stopwatch draft",
+    "summary": "Update stopwatch draft",
+    "description": "Updates the notes and/or service of an open session. Omitted fields are unchanged; `service_id: null` clears the service.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "notes": {
+          "type": "string"
+        },
+        "service_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WorkV1StopwatchSession"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_stopwatch_id",
+    "method": "delete",
+    "path": "/api/v1/stopwatch/{id}",
+    "displayName": "Discard stopwatch",
+    "summary": "Discard stopwatch",
+    "description": "Discards an open session without logging time.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ]
+  },
+  {
+    "id": "post-_api_v1_stopwatch_id_log",
+    "method": "post",
+    "path": "/api/v1/stopwatch/{id}/log",
+    "displayName": "Log stopwatch as time entry",
+    "summary": "Log stopwatch as time entry",
+    "description": "Logs the session as exactly one time entry: start = first segment start (to the minute), end = start + active duration, billable_duration = active minutes (min 1). Any body field overrides the derived value. The time sheet is resolved server-side from the start date; a locked (submitted/approved) sheet returns 409 and the session is left untouched.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "start_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "billable_duration": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "is_billable": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "service_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "session": {
+              "$ref": "#/components/schemas/WorkV1StopwatchSession"
+            },
+            "time_entry": {
+              "type": "object",
+              "additionalProperties": {},
+              "description": "The persisted time entry."
+            }
+          },
+          "required": [
+            "session",
+            "time_entry"
+          ]
+        }
+      },
+      "required": [
+        "data"
       ]
     }
   },

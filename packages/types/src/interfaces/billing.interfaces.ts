@@ -195,7 +195,7 @@ export interface IUsageBasedCharge extends IBillingCharge, TenantEntity {
   usagePeriodTotalRevision?: number;
 }
 
-type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license' | 'project_milestone' | 'project_deposit' | 'hour_block';
+type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license' | 'project_milestone' | 'project_deposit' | 'hour_block' | 'prepaid_block';
 export interface IRecurringChargeDetailPeriod {
   servicePeriodStart?: ISO8601String | null;
   servicePeriodEnd?: ISO8601String | null;
@@ -296,6 +296,22 @@ export interface IDiscount extends TenantEntity {
   discount_type: 'percentage' | 'fixed';
   value: number;
   amount?: number;
+  /**
+   * Explicit eligible scope. Null preserves the legacy invoice-wide behavior
+   * (a contract-line link stays an eligibility trigger, not an implicit
+   * narrowing). Set by configured automatic discounts that opt into a scope.
+   */
+  scope?: 'invoice' | 'contract' | 'service' | 'item' | null;
+  /** Contract assignment a `contract`-scoped discount resolves against. */
+  client_contract_id?: string | null;
+  /** Contract line a legacy/eligibility-linked discount is associated with. */
+  contract_line_id?: string | null;
+  /** Service a `service`-scoped discount resolves against. */
+  scope_service_id?: string | null;
+  /** Charge item an `item`-scoped discount resolves against. */
+  applies_to_item_id?: string | null;
+  /** Persisted evaluation order; lower runs first. */
+  priority?: number | null;
 }
 
 export interface IAdjustment extends TenantEntity {
@@ -474,6 +490,39 @@ export interface IProductCharge extends IBillingCharge, TenantEntity {
   material_source_id?: string;
 }
 
+/**
+ * Up-front Prepaid Block invoice line, produced from a scheduled
+ * `contract_line_block_issuances` row (plan D2). `total` is authoritative at
+ * `block_price`; `quantity` is the block size in hours and `rate` is the price
+ * per hour rounded to whole minor units, so quantity x rate may differ from
+ * `total` by rounding (invoice_charges.quantity is numeric(14,6), unit_price a
+ * bigint; downstream export reconciles the pair against the amount).
+ * Persisting the charge also creates the pending contract hour block.
+ */
+export interface IPrepaidBlockCharge extends IBillingCharge, TenantEntity {
+  type: 'prepaid_block';
+  issuance_id: string;
+  /** The Hourly line carrying the block config; also `client_contract_line_id`. */
+  contract_line_id: string;
+  /** Catalog service the invoice line is sold as (config.sold_as_service_id). */
+  serviceId: string;
+  serviceName: string;
+  /** Block size in minutes (quantity is this in hours). */
+  block_minutes: number;
+  /** Block price in minor units of `currency_code`. */
+  block_price: number;
+  /** contracts.currency_code, passed explicitly to the hour block. */
+  currency_code: string;
+  /** Null = never expires. */
+  expiry_months: number | null;
+  /** Covered services for the block's scope rows. */
+  scope_service_ids: string[];
+  quantity: number;
+  rate: number;
+  total: number;
+  billingTiming: 'advance';
+}
+
 export interface ILicenseCharge extends IBillingCharge, TenantEntity {
   serviceId: string;
   serviceName: string;
@@ -508,6 +557,8 @@ export interface IServicePrice extends TenantEntity {
   rate: number; // Amount in minor units (cents)
   /** Calendar date (`YYYY-MM-DD`) the price takes effect; the epoch when untagged. */
   effective_date?: string | null;
+  /** Explicit primary order within the price's window; 0 is the primary price. */
+  display_order?: number;
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
 }
@@ -581,6 +632,10 @@ export interface IContractLine extends TenantEntity {
   location_id?: string | null;
   is_custom?: boolean; // Whether this is a custom contract line (not from preset)
   is_active?: boolean;
+  /** Authored line start (inclusive); null inherits the contract assignment start. */
+  start_date?: ISO8601String | null;
+  /** Authored line end (exclusive, half-open); null inherits the contract assignment end. */
+  end_date?: ISO8601String | null;
   // Hourly contract line fields (contract-line-level, same for all services)
   hourly_rate?: number | null; // Deprecated: Use service-level hourly_rate instead
   minimum_billable_time?: number | null; // Minimum time to bill for hourly services

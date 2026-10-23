@@ -1,3 +1,4 @@
+import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 export type RecurringBillingRunSelectionMode = 'due_service_periods';
 export type RecurringBillingRunWindowIdentity =
   | 'client_cadence_window'
@@ -30,7 +31,7 @@ export type RecurringBillingRunStartedPayloadInput = {
 };
 
 export function buildRecurringBillingRunStartedPayload(input: RecurringBillingRunStartedPayloadInput) {
-  return {
+  return builtWorkflowPayload('RECURRING_BILLING_RUN_STARTED', {
     runId: input.runId,
     scheduleId: input.scheduleId ?? undefined,
     startedAt: input.startedAt,
@@ -40,7 +41,7 @@ export function buildRecurringBillingRunStartedPayload(input: RecurringBillingRu
     selectionMode: input.selectionMode ?? 'due_service_periods',
     windowIdentity: input.windowIdentity ?? 'mixed_execution_windows',
     executionWindowKinds: normalizeExecutionWindowKinds(input.executionWindowKinds),
-  };
+  });
 }
 
 export type RecurringBillingRunCompletedPayloadInput = {
@@ -57,7 +58,7 @@ export type RecurringBillingRunCompletedPayloadInput = {
 };
 
 export function buildRecurringBillingRunCompletedPayload(input: RecurringBillingRunCompletedPayloadInput) {
-  return {
+  return builtWorkflowPayload('RECURRING_BILLING_RUN_COMPLETED', {
     runId: input.runId,
     completedAt: input.completedAt,
     invoicesCreated: input.invoicesCreated,
@@ -68,7 +69,7 @@ export function buildRecurringBillingRunCompletedPayload(input: RecurringBilling
     selectionMode: input.selectionMode ?? 'due_service_periods',
     windowIdentity: input.windowIdentity ?? 'mixed_execution_windows',
     executionWindowKinds: normalizeExecutionWindowKinds(input.executionWindowKinds),
-  };
+  });
 }
 
 export type RecurringBillingRunFailedPayloadInput = {
@@ -85,7 +86,7 @@ export type RecurringBillingRunFailedPayloadInput = {
 };
 
 export function buildRecurringBillingRunFailedPayload(input: RecurringBillingRunFailedPayloadInput) {
-  return {
+  return builtWorkflowPayload('RECURRING_BILLING_RUN_FAILED', {
     runId: input.runId,
     failedAt: input.failedAt,
     errorCode: input.errorCode,
@@ -96,5 +97,5 @@ export function buildRecurringBillingRunFailedPayload(input: RecurringBillingRun
     selectionMode: input.selectionMode ?? 'due_service_periods',
     windowIdentity: input.windowIdentity ?? 'mixed_execution_windows',
     executionWindowKinds: normalizeExecutionWindowKinds(input.executionWindowKinds),
-  };
+  });
 }

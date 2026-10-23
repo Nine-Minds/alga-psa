@@ -28,6 +28,7 @@ import { toISODate, toPlainDate } from '@alga-psa/core';
 import { materializeClientCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeClientCadenceServicePeriods';
 import { materializeContractCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeContractCadenceServicePeriods';
 import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
+import { resolveEffectiveBillingTiming } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import {
   getBillingPeriodForDate,
   getNextBillingBoundaryAfter,
@@ -178,7 +179,7 @@ export function generateLineServicePeriods(
     input;
 
   const lineCycle = normalizeBillingCycle(line.billing_frequency);
-  const duePosition = line.billing_timing === 'advance' ? 'advance' : 'arrears';
+  const duePosition = resolveEffectiveBillingTiming(line.contract_line_type, line.billing_timing);
   const cadenceOwner = resolveCadenceOwner(line.cadence_owner);
   const asOf = toUtcMidnight(horizon.start_date);
   const anchorDate = toUtcMidnight(contractStartDate ?? horizon.start_date);
@@ -186,7 +187,6 @@ export function generateLineServicePeriods(
   const sourceObligation: IPersistedRecurringObligationRef = {
     tenant: 'contract-simulator',
     obligationId: line.key,
-    obligationType: 'contract_line',
     chargeFamily: 'fixed',
   };
 

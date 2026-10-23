@@ -11,4 +11,20 @@ export * from '../../../../../shared/workflow/runtime/designer/conditionModel';
 export * from '../../../../../shared/workflow/runtime/designer/entityLookups';
 export * from '../../../../../shared/workflow/runtime/designer/caughtError';
 export * from '../../../../../shared/workflow/runtime/dateTriggerOccurrence';
+export {
+  dateTriggerSourceDefinitions,
+  DATE_TRIGGER_SOURCE_IDS,
+  getDateTriggerSourceDefinition,
+  isDateTriggerSourceId,
+  getDateTriggerSourceByCatalogEvent,
+} from '@alga-psa/event-schemas';
+export type {
+  DateTriggerSourceMode,
+  DateTriggerSourceRecurrence,
+  DateTriggerSourceDefinition,
+  DateTriggerSourceId,
+  DateTriggerPayloadSchemaRefs,
+} from '@alga-psa/event-schemas';
+export * from '../../../../../shared/workflow/runtime/dateTriggerBuilder';
+export * from '../../../../../shared/workflow/runtime/dateTriggerParams';
 export * from './payloadIssues';

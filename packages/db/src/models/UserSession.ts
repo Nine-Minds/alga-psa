@@ -55,6 +55,8 @@ export interface SessionIdentity {
   userType: 'internal' | 'client';
 }
 
+export type UserSessionRejectionReason = 'missing' | 'revoked' | 'user_missing' | 'identity_mismatch' | null;
+
 export type RevocationReason =
   | 'user_logout'
   | 'user_logout_all'
@@ -224,6 +226,15 @@ export class UserSession {
     sessionId: string,
     identity: SessionIdentity
   ): Promise<boolean> {
+    return (await UserSession.getRejectionReason(tenant, sessionId, identity)) !== null;
+  }
+
+  /** Returns a safe reason code for auth diagnostics without exposing row data. */
+  static async getRejectionReason(
+    tenant: string,
+    sessionId: string,
+    identity: SessionIdentity
+  ): Promise<UserSessionRejectionReason> {
     const knex = await getConnection(tenant);
     const db = tenantDb(knex, tenant);
     const query = db.table<Record<string, any>>('sessions')
@@ -238,10 +249,11 @@ export class UserSession {
 
     const session = await query.first();
 
-    return !session
-      || session.revoked_at !== null
-      || session.session_user_id !== identity.userId
-      || session.actual_user_type !== identity.userType;
+    if (!session) return 'missing';
+    if (session.revoked_at !== null) return 'revoked';
+    if (session.actual_user_type == null) return 'user_missing';
+    if (session.session_user_id !== identity.userId || session.actual_user_type !== identity.userType) return 'identity_mismatch';
+    return null;
   }
 
   static async enforceMaxSessions(tenant: string, userId: string, maxSessions: number): Promise<void> {

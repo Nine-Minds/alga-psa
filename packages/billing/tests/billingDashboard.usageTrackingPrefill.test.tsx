@@ -11,7 +11,7 @@
  */
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 const usageTrackingProps: Array<Record<string, unknown>> = [];
@@ -53,7 +53,7 @@ vi.mock('../src/components/billing-dashboard/RecurringServicePeriodsTab', () => 
 vi.mock('../src/components/settings/tax/TaxRegionsAndRates', () => ({ TaxRegionsAndRates: () => null }));
 vi.mock('../src/components/billing-dashboard/contracts/TemplatesTab', () => ({ default: () => null }));
 vi.mock('../src/components/billing-dashboard/contracts/ClientContractsTab', () => ({ default: () => null }));
-vi.mock('../src/components/billing-dashboard/contracts/ContractDetailSwitcher', () => ({ default: () => null }));
+vi.mock('../src/components/billing-dashboard/contracts/ContractDetailSwitcher', () => ({ default: () => <div data-testid="contract-detail-screen" /> }));
 vi.mock('../src/components/billing-dashboard/contract-lines/ContractLinePresetTypeRouter', () => ({ ContractLinePresetTypeRouter: () => null }));
 vi.mock('../src/components/billing-dashboard/reports/ContractReports', () => ({ default: () => null }));
 vi.mock('../src/components/billing-dashboard/InvoicingHub', () => ({ default: () => null }));
@@ -136,5 +136,17 @@ describe('BillingDashboard usage-tracking prefill routing', () => {
         initialPeriodEnd: '2026-10-01',
       });
     });
+  });
+
+  it('mounts contract detail for an assignment-only deep link and leaves a missing source on the list', async () => {
+    liveSearchParams.current = new URLSearchParams('tab=client-contracts&clientContractId=assignment-42&contractView=lines&contractLineId=line-9');
+    const { rerender } = render(
+      <BillingDashboard initialServices={[]} initialQuery={{ tab: 'client-contracts', clientContractId: 'assignment-42', contractView: 'lines', contractLineId: 'line-9' }} />,
+    );
+    expect(screen.getByTestId('contract-detail-screen')).toBeInTheDocument();
+
+    liveSearchParams.current = new URLSearchParams('tab=client-contracts');
+    rerender(<BillingDashboard initialServices={[]} initialQuery={{ tab: 'client-contracts' }} />);
+    expect(screen.queryByTestId('contract-detail-screen')).not.toBeInTheDocument();
   });
 });

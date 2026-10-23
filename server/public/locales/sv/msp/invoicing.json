@@ -98,6 +98,20 @@
         "assignedContractLine": "Tilldelad avtalsrad",
         "assignedWorkItem": "Tilldelad arbetspost",
         "unresolvedWork": "Arbete med olöst koppling"
+      },
+      "prepaidBlock": {
+        "due": "{{trigger}} · förfaller {{date}}",
+        "trigger": {
+          "contract_start": "Förbetalt block: avtalsstart",
+          "exhaustion": "Förbetalt block: förbrukat",
+          "threshold": "Förbetalt block: användningströskel",
+          "expiry": "Förbetalt block: utgång",
+          "renewal": "Förbetalt block: förnyelse",
+          "manual": "Förbetalt block: utfärdat manuellt"
+        },
+        "stalePendingWarning": "{{count}} väntande förbetalda block har väntat på slutförande i mer än 14 dagar och håller kvar tidrapporter. Slutför eller ta bort fakturautkasten så att den kvarhållna tiden kan faktureras.",
+        "stalePendingWarning_one": "{{count}} väntande förbetalt block har väntat på slutförande i mer än 14 dagar och håller kvar tidrapporter. Slutför eller ta bort fakturautkastet så att den kvarhållna tiden kan faktureras.",
+        "stalePendingWarning_other": "{{count}} väntande förbetalda block har väntat på slutförande i mer än 14 dagar och håller kvar tidrapporter. Slutför eller ta bort fakturautkasten så att den kvarhållna tiden kan faktureras."
       }
     },
     "actions": {
@@ -147,6 +161,7 @@
       "preview": {
         "title": "Förhandsgranskning av faktura",
         "description": "Detta är en förhandsgranskning av hur fakturan kommer att se ut när den är fastställd.",
+        "noBillingEmailWarning": "{{clientName}} saknar faktura-e-post. Fakturan kan skapas, men den kan inte skickas via e-post eller betalas online förrän du anger en fakturakontakt, en faktura-e-postadress för kunden eller en e-postadress på fakturerings- eller standardplatsen.",
         "summary_one": "{{count}} faktura markerad",
         "summary_other": "{{count}} fakturor markerade",
         "summaryCombined": "Det här urvalet skapar en samlad faktura.",
@@ -238,7 +253,8 @@
       "fixAllResult": "Ombyggda scheman: {{schedules}}. Berörda kunder: {{clients}}.",
       "fixAllNoop": "Alla faktureringsscheman är redan uppdaterade. Det som fortfarande visas nedan behöver granskas individuellt.",
       "fixAllError": "Det gick inte att bygga om tjänsteperioderna. Försök igen.",
-      "fixAllDenied": "Du har inte behörighet att bygga om tjänsteperioder."
+      "fixAllDenied": "Du har inte behörighet att bygga om tjänsteperioder.",
+      "fixAllManualReview": "{{count}} timbaserade eller användningsbaserade perioder måste granskas individuellt."
     },
     "errors": {
       "title": "Fel uppstod när fakturorna fastställdes:",
@@ -271,7 +287,8 @@
       "fixed": "Fast",
       "hourly": "Löpande",
       "usage": "Förbrukning",
-      "bucket": "Timpott"
+      "bucket": "Timpott",
+      "prepaidBlock": "Förbetalt"
     },
     "summary": {
       "selected": "Markerade: {{count}}",
@@ -332,7 +349,8 @@
       "title": "Automatiserade rader",
       "service": "Tjänst",
       "total": "Totalt",
-      "unknownService": "Okänd tjänst"
+      "unknownService": "Okänd tjänst",
+      "period": "Period"
     },
     "lineItems": {
       "manual": "Manuella rader",
@@ -345,7 +363,10 @@
       "saveChanges": "Spara ändringar",
       "processing": "Bearbetar…",
       "generateSalesOrderInvoice": "Skapa faktura från försäljningsorder",
-      "clearSalesOrderSource": "Rensa ursprunglig försäljningsorder"
+      "clearSalesOrderSource": "Rensa ursprunglig försäljningsorder",
+      "addPartialPeriodCharge": "Lägg till avgift för delperiod",
+      "reauthenticate": "Logga in igen",
+      "retrySave": "Försök spara igen"
     },
     "labels": {
       "total": "Totalt",
@@ -394,10 +415,14 @@
       "SOURCE_ALREADY_BILLED": "Vissa valda poster kan inte längre faktureras (redan fakturerade, inte godkända eller borttagna). Ladda om sidan och försök igen.",
       "SOURCE_NOT_ELIGIBLE": "En vald post hör inte till det här ärendets debiterbara poster eller kan inte längre faktureras. Ladda om sidan och försök igen.",
       "SOURCE_CURRENCY_MISMATCH": "Vissa valda produkter är prissatta i en annan valuta än kundens faktureringsvaluta och kan därför inte läggas till. Fakturera dem separat i deras egen valuta.",
-      "BILLING_PROFILE_NOT_FOUND": "Den valda faktureringsprofilen är inte tillgänglig för kunden. Ladda om sidan och försök igen."
+      "BILLING_PROFILE_NOT_FOUND": "Den valda faktureringsprofilen är inte tillgänglig för kunden. Ladda om sidan och försök igen.",
+      "CLIENT_CONTRACT_NOT_FOUND": "Det valda avtalet tillhör inte fakturans kund.",
+      "SERVICE_REQUIRED": "Tilldela en tjänst till avgiften innan du sparar.",
+      "sessionExpired": "Din session har gått ut. Dina ändringar finns kvar här men har inte sparats. Logga in igen på en ny flik och försök sedan spara igen.",
+      "saveRefreshFailed": "Dina ändringar sparades, men fakturasidan kunde inte uppdateras helt. Läs in sidan igen för att visa den sparade fakturan."
     },
     "warnings": {
-      "noBillingEmail": "Den här kunden saknar e-postadress för fakturering. Ange en faktureringskontakt, en e-postadress för kundens fakturering eller en e-postadress för faktureringsplatsen eller standardplatsen innan du skapar fakturan."
+      "noBillingEmail": "Den här kunden saknar faktura-e-post. Fakturan kan skapas, men den kan inte skickas via e-post eller betalas online förrän du anger en fakturakontakt, en faktura-e-postadress för kunden eller en e-postadress på fakturerings- eller standardplatsen."
     },
     "errorFallback": {
       "title": "Något gick fel",
@@ -408,6 +433,48 @@
     },
     "hints": {
       "billingProfile": "Fakturan och dess rader faktureras till den här profilen."
+    },
+    "draftAdjustments": {
+      "title": "Fakturajusteringar",
+      "description": "Lägg till engångsavgifter, rabatter eller krediteringar. Genererade avtalsavgifter är skrivskyddade. Korrigera källavtalet eller lägg till en justering."
+    },
+    "partialPeriod": {
+      "title": "Avgift för delperiod",
+      "help": "Välj en fakturerad tjänst. Dess pris, tjänsteperiod, skattehantering och avtalskoppling används för att beräkna en engångsjustering.",
+      "direction": "Riktning",
+      "increase": "Ökning",
+      "decrease": "Minskning (kreditering)",
+      "units": "Enheter",
+      "source": "Välj fakturerad tjänst",
+      "effectiveDate": "Gäller från",
+      "sourceRate": "Pris {{rate}}",
+      "unitPrice": "Enhetspris",
+      "coveredDays": "Dagar som omfattas",
+      "fullPeriodDays": "Dagar i hela perioden",
+      "description": "Beskrivning (valfritt)",
+      "reason": "Orsak (valfritt)",
+      "previewUnavailable": "Ange en giltig beräkning.",
+      "resolvedAmount": "Beräknat belopp: {{amount}}",
+      "addCharge": "Lägg till avgift",
+      "creditDescription": "Kreditering: {{proration}}",
+      "errors": {
+        "source": "Välj en fakturerad tjänst med en entydig tjänsteperiod.",
+        "units": "Antalet enheter måste vara större än noll.",
+        "unitPrice": "Enhetspriset måste vara ett tal.",
+        "invalid": "Ange en giltig delperiod."
+      },
+      "permanentChangeNudge": "Är det här en permanent ändring? Registrera den på avtalet i stället.",
+      "overlapConfirm": "En automatisk justering för en avtalsändring överlappar redan den här perioden. Vill du ändå lägga till den separata manuella justeringen?",
+      "invoiceDescription": {
+        "increase": "{{description}} — ytterligare {{units}} {{unitLabel}}, {{period}} — {{calculation}}",
+        "decrease": "{{description}} — kreditering för {{units}} färre {{unitLabel}}, {{period}} — {{calculation}}"
+      },
+      "sourceDescriptionFallback": "Tjänstejustering"
+    },
+    "exportWarnings": {
+      "discount": "{{adapter}}: konfigurera rabattmappningen innan du exporterar {{description}}.",
+      "service": "{{adapter}}: tilldela en mappad tjänst till {{description}} före export.",
+      "unavailable": "Det gick inte att kontrollera om fakturan är klar för bokföringsexport. Kontrollera mappningarna före export."
     }
   },
   "quickInvoice": {
@@ -739,6 +806,7 @@
     }
   },
   "invoicePreview": {
+    "sessionExpired": "Sessionen gick ut när fakturan lästes in. Logga in igen och läs sedan in förhandsvisningen på nytt.",
     "title": "Förhandsgranskning av faktura",
     "templatePlaceholder": "Välj fakturamall…",
     "labels": {
@@ -1359,7 +1427,14 @@
           "widthTooltip": "Använd den exakta bredden som anges nedan",
           "heightTooltip": "Använd den exakta höjden som anges nedan"
         }
-      }
+      },
+      "barcode": "Streckkod",
+      "barcodeSymbology": "Typ",
+      "barcodeQr": "QR-kod",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Värde",
+      "barcodeHintWorkTag": "Text, eller ett fält som {{example}} (länken till posten). Håll koden minst cirka 20 mm bred så att den går att skanna.",
+      "barcodeHint": "Texten som ska kodas. Håll koden minst cirka 20 mm bred så att den går att skanna."
     },
     "shell": {
       "selectedLabel": "Markerat:",
@@ -1372,7 +1447,11 @@
       "title": "Sidinställningar",
       "description": "Välj ett förinställt pappersformat och en sidmarginal utan att markera den dolda sidnoden.",
       "paperPreset": "Förinställt pappersformat",
-      "marginMm": "Marginal (mm)"
+      "marginMm": "Marginal (mm)",
+      "customSize": "Anpassad storlek…",
+      "customWidth": "Bredd",
+      "customHeight": "Höjd",
+      "customUnit": "Enhet"
     },
     "breadcrumbs": {
       "emptyHelp": "Välj en komponent på arbetsytan för att visa dess hierarki.",
@@ -1403,7 +1482,13 @@
         "noQuotesFound": "Inga offerter hittades.",
         "selectQuote": "Välj offert",
         "loadingQuoteDetails": "Läser in offertuppgifter…",
-        "loadingDocumentDetails": "Läser in dokumentuppgifter…"
+        "loadingDocumentDetails": "Läser in dokumentuppgifter…",
+        "zoom": {
+          "fit": "Anpassa",
+          "actual": "100 %",
+          "label": "Förhandsgranskningszoom",
+          "fitWithScale": "Anpassa ({{percent}} %)"
+        }
       },
       "tabs": {
         "design": "Design",
@@ -2322,6 +2407,7 @@
     }
   },
   "draftInvoiceDetails": {
+    "sessionExpired": "Sessionen gick ut när fakturauppgifterna lästes in. Logga in igen och läs sedan in uppgifterna på nytt.",
     "title": "Fakturauppgifter",
     "description": "Redigera fakturautkastets metadata innan det fastställs.",
     "actions": {
@@ -2418,7 +2504,8 @@
     "types": {
       "salesOrder": "Försäljningsorder",
       "packingSlip": "Följesedel",
-      "pickList": "Plocklista"
+      "pickList": "Plocklista",
+      "workTag": "Arbetsetikett / Etikett"
     }
   },
   "errors": {
@@ -2488,5 +2575,15 @@
     "saving": "Sparar…",
     "saveCorrection": "Spara rättelse",
     "save": "Spara"
+  },
+  "draftInvoiceAdjustments": {
+    "sessionExpired": "Sessionen gick ut när fakturajusteringarna lästes in. Logga in igen och läs sedan in fakturan på nytt.",
+    "signIn": "Logga in",
+    "retry": "Läs in igen",
+    "blockedTitle": "Fakturajusteringar är inte tillgängliga",
+    "blocked": {
+      "exported": "Den här fakturan är synkroniserad med ett bokföringssystem. Makulera den eller utfärda en separat kreditfaktura i stället för att redigera raderna.",
+      "exporting": "En bokföringsexport förbereds för den här fakturan. Vänta tills den är klar innan du ändrar fakturan."
+    }
   }
 }

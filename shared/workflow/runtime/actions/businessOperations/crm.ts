@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
-import { withWorkflowPicker, withWorkflowNotFoundPolicy } from '../../jsonSchemaMetadata';
+import { withWorkflowPicker, withWorkflowNotFoundPolicy } from '@alga-psa/event-schemas';
 import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
 import {
   Quote,
@@ -30,6 +30,7 @@ import {
   rethrowAsStandardError,
   type TenantTxContext,
 } from './shared';
+import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import { buildInteractionLoggedPayload } from '../../../streams/domainEventBuilders/crmInteractionNoteEventBuilders';
 import { buildTagAppliedPayload, buildTagDefinitionCreatedPayload } from '../../../streams/domainEventBuilders/tagEventBuilders';
 import {
@@ -654,30 +655,16 @@ const maybeWorkflowActor = (userId: string): { actorType: 'USER'; actorUserId: s
   actorUserId: userId,
 });
 
-async function publishWorkflowDomainEvent(params: {
-  eventType: string;
-  payload: Record<string, unknown>;
+async function publishWorkflowDomainEvent<T extends WorkflowCatalogEventType>(params: {
+  eventType: T;
+  payload: BuiltWorkflowPayload<T>;
   tenantId: string;
   occurredAt: string;
   actorUserId: string;
   idempotencyKey: string;
 }): Promise<void> {
   try {
-    const publishers = (await import('@alga-psa/event-bus/publishers')) as unknown as {
-      publishWorkflowEvent?: (value: {
-        eventType: string;
-        payload: Record<string, unknown>;
-        ctx: {
-          tenantId: string;
-          occurredAt: string;
-          actor: { actorType: 'USER'; actorUserId: string };
-        };
-        idempotencyKey: string;
-      }) => Promise<unknown>;
-    };
-
-    if (!publishers.publishWorkflowEvent) return;
-
+    const publishers = await import('@alga-psa/event-bus/publishers');
     await publishers.publishWorkflowEvent({
       eventType: params.eventType,
       payload: params.payload,

@@ -9,6 +9,11 @@ import {
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/publishers';
+import {
+  buildOutboundEmailFailedPayload,
+  buildOutboundEmailQueuedPayload,
+  buildOutboundEmailSentPayload,
+} from '@alga-psa/shared/workflow/streams/domainEventBuilders/emailLifecycleEventBuilders';
 import { addGradientFallback } from './branding/gradientFallback';
 import { embedBrandLogo } from './inlineBrandLogo';
 import { SupportedLocale } from './lib/localeConfig';
@@ -641,17 +646,17 @@ export abstract class BaseEmailService {
       try {
         await publishWorkflowEvent({
           eventType: 'OUTBOUND_EMAIL_QUEUED',
-          payload: {
+          payload: buildOutboundEmailQueuedPayload({
             messageId: workflowMessageId,
-            ...(maybeThreadId ? { threadId: maybeThreadId } : {}),
-            ...(maybeTicketId ? { ticketId: maybeTicketId } : {}),
+            threadId: maybeThreadId,
+            ticketId: maybeTicketId,
             from: fromEmail,
             to: toEmails,
-            ...(ccEmails?.length ? { cc: ccEmails } : {}),
+            cc: ccEmails,
             subject,
             queuedAt: new Date().toISOString(),
             provider: emailProvider.providerType,
-          },
+          }),
           ctx: workflowCtx,
           idempotencyKey: `outbound_email:${workflowMessageId}:queued`,
         });
@@ -699,31 +704,31 @@ export abstract class BaseEmailService {
         if (result.success) {
           await publishWorkflowEvent({
             eventType: 'OUTBOUND_EMAIL_SENT',
-            payload: {
+            payload: buildOutboundEmailSentPayload({
               messageId: workflowMessageId,
               providerMessageId:
                 result.providerMessageId || result.messageId || `${result.providerType}:${result.providerId}:${workflowMessageId}`,
-              ...(maybeThreadId ? { threadId: maybeThreadId } : {}),
-              ...(maybeTicketId ? { ticketId: maybeTicketId } : {}),
+              threadId: maybeThreadId,
+              ticketId: maybeTicketId,
               sentAt: result.sentAt?.toISOString?.() || new Date().toISOString(),
               provider: result.providerType || emailProvider.providerType,
-            },
+            }),
             ctx: workflowCtx,
             idempotencyKey: `outbound_email:${workflowMessageId}:sent`,
           });
         } else {
           await publishWorkflowEvent({
             eventType: 'OUTBOUND_EMAIL_FAILED',
-            payload: {
+            payload: buildOutboundEmailFailedPayload({
               messageId: workflowMessageId,
-              ...(maybeThreadId ? { threadId: maybeThreadId } : {}),
-              ...(maybeTicketId ? { ticketId: maybeTicketId } : {}),
+              threadId: maybeThreadId,
+              ticketId: maybeTicketId,
               failedAt: new Date().toISOString(),
               provider: result.providerType || emailProvider.providerType,
               errorMessage: result.error || 'Email send failed',
-              ...(result.metadata?.errorCode ? { errorCode: String(result.metadata.errorCode) } : {}),
-              ...(typeof result.metadata?.retryable === 'boolean' ? { retryable: result.metadata.retryable } : {}),
-            },
+              errorCode: result.metadata?.errorCode ? String(result.metadata.errorCode) : undefined,
+              retryable: typeof result.metadata?.retryable === 'boolean' ? result.metadata.retryable : undefined,
+            }),
             ctx: workflowCtx,
             idempotencyKey: `outbound_email:${workflowMessageId}:failed`,
           });
@@ -786,15 +791,15 @@ export abstract class BaseEmailService {
         const failureTenantId = params.tenantId || 'system';
         await publishWorkflowEvent({
           eventType: 'OUTBOUND_EMAIL_FAILED',
-          payload: {
+          payload: buildOutboundEmailFailedPayload({
             messageId: failureMessageId,
-            ...(isUuid(params.replyContext?.threadId) ? { threadId: params.replyContext?.threadId } : {}),
-            ...(isUuid(params.replyContext?.ticketId) ? { ticketId: params.replyContext?.ticketId } : {}),
+            threadId: isUuid(params.replyContext?.threadId) ? params.replyContext?.threadId : undefined,
+            ticketId: isUuid(params.replyContext?.ticketId) ? params.replyContext?.ticketId : undefined,
             failedAt: new Date().toISOString(),
             provider: emailProvider.providerType,
             errorMessage: error instanceof Error ? error.message : 'Unknown error',
-            ...(typeof (error as any)?.code === 'string' ? { errorCode: (error as any).code } : {}),
-          },
+            errorCode: typeof (error as any)?.code === 'string' ? (error as any).code : undefined,
+          }),
           ctx: {
             tenantId: failureTenantId,
             correlationId: params.correlationId || failureMessageId,

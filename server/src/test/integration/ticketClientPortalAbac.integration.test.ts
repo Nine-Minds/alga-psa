@@ -14,10 +14,20 @@ import { addTicketCommentWithCache } from '@alga-psa/tickets/actions/optimizedTi
 import { createComment } from '@alga-psa/tickets/actions/comment-actions/commentActions';
 import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 
-const eventMocks = vi.hoisted(() => ({
-  publishEvent: vi.fn().mockResolvedValue(undefined),
+const eventMocks = vi.hoisted(() => {
+  const publishEvent = vi.fn().mockResolvedValue(undefined);
+  return {
+  publishEvent,
+  // The scheduled-comment handler replays through publishStoredWorkflowEvent / publishBuiltWorkflowPayload; forward both to publishEvent so the
+  // dispatch assertions below keep observing the comment event and its eventId option.
+  publishStoredWorkflowEvent: (...args: any[]) => (publishEvent as any)(...args),
   publishWorkflowEvent: vi.fn().mockResolvedValue(undefined),
-}));
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: (...args: any[]) => (publishEvent as any)(...args),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
+  };
+});
 const optimizedPathMocks = vi.hoisted(() => ({
   user: null as any,
   tenant: null as string | null,

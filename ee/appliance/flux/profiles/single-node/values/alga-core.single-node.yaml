@@ -77,6 +77,8 @@ redis:
     enabled: true
     size: 20Gi
     storageClass: local-path
+    aof:
+      enabled: true
 
 persistence:
   keepPvcOnUninstall: true

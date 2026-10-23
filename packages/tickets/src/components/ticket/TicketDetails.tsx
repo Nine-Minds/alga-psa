@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getUserTimeZone, generateUUID } from '@alga-psa/core';
+import { getUserTimeZone } from '@alga-psa/core';
 import { formatTicketDateTime, formatTicketRelativeToNow } from '../../lib/ticketDateTimeFormat';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
@@ -87,12 +87,13 @@ import { Input } from "@alga-psa/ui/components/Input";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { Label } from "@alga-psa/ui/components/Label";
 import { PresenceBar } from '@alga-psa/ui/presence/PresenceBar';
-import { ExternalLink, Mail, History, Trash2, Copy } from 'lucide-react';
+import { ExternalLink, Mail, History, Trash2, Copy, MoreHorizontal, LayoutTemplate, Workflow } from 'lucide-react';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
+import { useTicketTemplatePermissions } from '../templates/useTicketTemplatePermissions';
 import { WorkItemType } from "@alga-psa/types";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
 import { PartialBlock, StyledText } from '@blocknote/core';
-import { useTicketTimeTracking } from "@alga-psa/ui/hooks";
-import { IntervalTrackingService } from "@alga-psa/ui/services";
+import { hasEditorContent } from '@alga-psa/ui/editor/hasEditorContent';
 import { convertBlockNoteToMarkdown } from "@alga-psa/formatting/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
@@ -107,7 +108,7 @@ import {
 import TicketOriginBadge from '../TicketOriginBadge';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useTicketLiveContext } from './TicketLiveProvider';
-import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
+import { buildTicketTimeEntryContext } from '../../lib/timeEntryContext';
 import { getTicketOrigin } from '../../lib/ticketOrigin';
 import { getRecurringSourceForTicket } from '../../actions/recurringTicketActions';
 import type { RecurringTicketSource } from '../../lib/recurring/types';
@@ -137,7 +138,7 @@ import {
 } from '../../lib/commentImageDocuments';
 import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
 import { hasAdminSettingsViewAccess } from './commentMetadataDebug';
-import type { TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
+import { hasWorkflowManageAccess, type TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
 import { normalizeTicketLiveField, type TicketLiveConflictState } from './ticketLiveFields';
 import TicketResolutionDialog from './TicketResolutionDialog';
 import { persistResolutionComment } from './resolutionCommentPersistence';
@@ -211,6 +212,12 @@ interface TicketDetailsProps {
     ) => Promise<boolean>;
     onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null, emailRecipients?: CommentEmailRecipientsPayload) => Promise<void>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
+    /**
+     * Additive notification fired after a user edit was saved successfully (field change,
+     * batch save, new comment, description edit). Purely informational; hosts use it to
+     * refresh data derived from the ticket (e.g. the activities list).
+     */
+    onSaved?: () => void;
     isSubmitting?: boolean;
     /**
      * Optional injected UI for survey summary (e.g. @alga-psa/surveys TicketSurveySummaryCard).
@@ -254,6 +261,19 @@ interface TicketDetailsProps {
     renderQuickInvoice?: (args: { ticket: ITicket }) => React.ReactNode;
 
     /**
+     * Optional injected UI for "Create workflow from ticket" (EE only; the composition layer
+     * fills it from the `@alga-psa/workflows/ticket-actions` seam). When absent (CE) or in
+     * Alga Desk mode the More menu entry is not rendered.
+     */
+    renderCreateWorkflowFromTicket?: (args: {
+        ticketId: string;
+        ticketNumber: string;
+        title: string;
+        open: boolean;
+        onOpenChange: (open: boolean) => void;
+    }) => React.ReactNode;
+
+    /**
      * Optional injected UI for client quick view (e.g. @alga-psa/clients ClientDetails).
      * If omitted, TicketDetails falls back to a minimal drawer with a link to open the client page.
      */
@@ -262,11 +282,6 @@ interface TicketDetailsProps {
         client: IClient;
     }) => React.ReactNode;
 
-    /**
-     * Optional injected UI for interval management (e.g. @alga-psa/scheduling IntervalManagement).
-     * Shows auto-tracked time intervals below the ticket timer.
-     */
-    renderIntervalManagement?: (args: { ticketId: string; userId: string }) => React.ReactNode;
     /** AlgaDesk product mode: Duplicate opens the AlgaDesk create form variant. */
     isAlgaDeskMode?: boolean;
     hideSlaStatus?: boolean;
@@ -326,6 +341,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     onBatchTicketUpdate,
     onAddComment,
     onUpdateDescription,
+    onSaved,
     isSubmitting = false,
     surveySummaryCard,
     bootstrap,
@@ -333,8 +349,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     renderContactDetails,
     renderCreateProjectTask,
     renderQuickInvoice,
+    renderCreateWorkflowFromTicket,
     renderClientDetails,
-    renderIntervalManagement,
     isAlgaDeskMode = false,
     hideSlaStatus = false,
     hideBilling = false,
@@ -361,8 +377,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Tracks which mount fetches the server bootstrap already satisfied, so the
     // corresponding effects skip their FIRST run only (later dep-driven runs —
     // e.g. checklist on status change — still fetch).
+    const [canManageWorkflows, setCanManageWorkflows] = useState(
+        bootstrap?.canManageWorkflows ?? false,
+    );
+    const [createWorkflowOpen, setCreateWorkflowOpen] = useState(false);
     const bootstrapSkips = useRef({
-        permissions: bootstrap?.canViewCommentMetadataDebug != null,
+        permissions: bootstrap?.canViewCommentMetadataDebug != null && bootstrap?.canManageWorkflows != null,
         checklist: bootstrap?.checklistItems != null || bootstrap?.autoCloseState != null,
         layout: bootstrap?.layoutPreference != null,
         teams: bootstrap?.teams != null,
@@ -373,6 +393,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     });
     const { getDocumentByTicketId, deleteDocument } = useDocumentsCrossFeature();
     const router = useRouter();
+    // Gates the header "Create template from ticket" item and the template link; server actions are authoritative.
+    const templatePermissions = useTicketTemplatePermissions();
+    // Gates the header "Create workflow from ticket" item: EE slot present, workflow:manage, not Alga Desk.
+    const canCreateWorkflowFromTicket = Boolean(renderCreateWorkflowFromTicket) && canManageWorkflows && !isAlgaDeskMode;
     const searchParams = useSearchParams();
 
     useEffect(() => {
@@ -388,6 +412,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         void getCurrentUserPermissions().then((perms) => {
             if (!cancelled) {
                 setCanViewCommentMetadataDebug(hasAdminSettingsViewAccess(perms));
+                setCanManageWorkflows(hasWorkflowManageAccess(perms));
             }
         });
         return () => {
@@ -574,6 +599,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false, suppression: null });
             setCloseOverrideReason('');
             toast.success(t('messages.ticketClosed', 'Ticket closed'));
+            onSaved?.();
         } catch (error) {
             handleTicketActionError(error, t('messages.closeFailed', 'Failed to close ticket'));
         } finally {
@@ -1327,8 +1353,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isEditing, setIsEditing] = useState(false);
     const [currentComment, setCurrentComment] = useState<IComment | null>(null);
 
-    const [elapsedTime, setElapsedTime] = useState(0);
-    const [isRunning, setIsRunning] = useState(false);
     const [timeDescription, setTimeDescription] = useState('');
     const [timeEntriesRefreshKey, setTimeEntriesRefreshKey] = useState(0);
     const [scheduleRefreshKey, setScheduleRefreshKey] = useState(0);
@@ -1435,6 +1459,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 number: ticket.ticket_number,
             }));
 
+            // Notify before closing: closing the drawer unmounts this component.
+            onSaved?.();
+
             if (isInDrawer) {
                 closeDrawer();
                 onClose?.();
@@ -1453,10 +1480,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         } finally {
             setIsTicketDeleteProcessing(false);
         }
-    }, [ticket.ticket_id, ticket.ticket_number, isInDrawer, closeDrawer, onClose, router, searchParams, t]);
-
-    // Create a single instance of the service
-    const intervalService = useMemo(() => new IntervalTrackingService(), []);
+    }, [ticket.ticket_id, ticket.ticket_number, isInDrawer, closeDrawer, onClose, onSaved, router, searchParams, t]);
 
     useEffect(() => {
         if (bootstrapSkips.current.teams) {
@@ -1507,25 +1531,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         };
         loadTeam();
     }, [ticket.assigned_team_id, teams]);
-
-    // Timer logic
-    const tick = useCallback(() => {
-        setElapsedTime(prevTime => {
-            return prevTime + 1;
-        });
-    }, [isRunning]);
-
-    useEffect(() => {
-        let intervalId: NodeJS.Timeout | undefined;
-        if (isRunning) {
-            intervalId = setInterval(tick, 1000);
-        }
-        return () => {
-            if (intervalId) {
-                clearInterval(intervalId);
-            }
-        };
-    }, [isRunning, tick]);
 
     // Load ticketing display settings
     useEffect(() => {
@@ -1585,208 +1590,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         };
         fetchTags();
     }, [ticket.ticket_id]);
-
-    // Add automatic interval tracking using the custom hook
-    // Unique holder ID per tab for lock ownership
-    const [holderId] = useState<string>(() => {
-        if (typeof window !== 'undefined') {
-            const existing = sessionStorage.getItem('tabHolderId');
-            if (existing) return existing;
-            const id = generateUUID();
-            sessionStorage.setItem('tabHolderId', id);
-            return id;
-        }
-        return Math.random().toString(36).slice(2);
-    });
-
-    const {
-        isTracking,
-        currentIntervalId,
-        isLockedByOther,
-        startTracking,
-        stopTracking,
-        refreshLockState,
-    } = useTicketTimeTracking(
-        initialTicket.ticket_id || '',
-        initialTicket.ticket_number || '',
-        initialTicket.title || '',
-        userId || '',
-        { autoStart: false, holderId }
-    );
-
-    // Stabilize startTracking for effects to avoid repeated auto-attempts due to function identity changes
-    const startTrackingRef = React.useRef(startTracking);
-    useEffect(() => { startTrackingRef.current = startTracking; }, [startTracking]);
-
-    // Reflect tracking state into local stopwatch state
-    useEffect(() => {
-        console.log('[TicketDetails] isTracking changed ->', isTracking);
-        setIsRunning(!!isTracking);
-    }, [isTracking]);
-
-    // Proactive auto-start on mount when userId/ticketId ready (no dialog on lock)
-    const autoStartedRef = React.useRef(false);
-    useEffect(() => {
-        const auto = async () => {
-            if (autoStartedRef.current) return;
-            if (!initialTicket.ticket_id || !userId) return;
-            if (isTracking) return;
-            if (!isLiveTicketTimerEnabled) return;
-            console.log('[TicketDetails] auto-start attempt');
-            try {
-                const started = await startTrackingRef.current(false);
-                console.log('[TicketDetails] auto-start result ->', started);
-                if (started) {
-                    setElapsedTime(0);
-                    autoStartedRef.current = true;
-                }
-            } catch (e) {
-                // Ignore auto-start failures; time tracking is best-effort here.
-            }
-        };
-        auto();
-        // only attempt once when ids are ready and not already tracking
-    }, [initialTicket.ticket_id, userId, isTracking, isLiveTicketTimerEnabled]);
-
-    // New screens start from zero; no seeding from existing intervals
-
-    useEffect(() => {
-        const disableLiveTimerInView = async () => {
-            if (isLiveTicketTimerEnabled) {
-                return;
-            }
-
-            try {
-                await stopTracking();
-            } catch {
-                // Ignore stop errors while enforcing board policy.
-            }
-
-            setIsRunning(false);
-            setElapsedTime(0);
-        };
-
-        disableLiveTimerInView();
-    }, [isLiveTicketTimerEnabled, stopTracking]);
-
-    // Poll lock state periodically to update UI lock indicator
-    useEffect(() => {
-        let id: any;
-        const poll = async () => {
-            try { await refreshLockState(); } catch {}
-        };
-        id = setInterval(poll, 5000);
-        poll();
-        return () => clearInterval(id);
-    }, [refreshLockState]);
-    
-    // Function to close the current interval before navigation
-    // Enhanced function to close the interval - will find and close any open interval for this ticket
-    const closeCurrentInterval = useCallback(async () => {
-        try {
-            // If we have a currentIntervalId, use it
-            if (currentIntervalId) {
-                console.debug('Closing known interval before navigation:', currentIntervalId);
-                await intervalService.endInterval(currentIntervalId);
-                return;
-            }
-            
-            // If currentIntervalId is null, try to find any open interval for this ticket
-            console.debug('No currentIntervalId available, checking for open intervals');
-            if (userId && initialTicket.ticket_id) {
-                const openInterval = await intervalService.getOpenInterval(initialTicket.ticket_id, userId);
-                if (openInterval) {
-                    console.debug('Found open interval to close:', openInterval.id);
-                    await intervalService.endInterval(openInterval.id);
-                } else {
-                    console.debug('No open intervals found for this ticket');
-                }
-            }
-        } catch (error: any) {
-            console.error('Error closing interval:', error);
-        }
-    }, [currentIntervalId, intervalService, userId, initialTicket.ticket_id]);
-    
-    // Fixed navigation function - wait for interval to close before navigating
-    const handleBackToTickets = useCallback(async () => {
-        try {
-            // Stop tracking and release lock before leaving
-            await stopTracking();
-            // Wait for the interval to close
-            await closeCurrentInterval();
-            
-            // Navigate after interval is closed
-            if (onClose) {
-                onClose();
-            } else {
-                // Use proper routing to tickets dashboard instead of router.back()
-                router.push('/msp/tickets');
-            }
-        } catch (error) {
-            console.error('Error closing interval before navigation:', error);
-            // Navigate anyway to prevent user from being stuck
-            if (onClose) {
-                onClose();
-            } else {
-                // Use proper routing to tickets dashboard instead of router.back()
-                router.push('/msp/tickets');
-            }
-        }
-    }, [closeCurrentInterval, onClose, router, stopTracking]);
-
-    // Handle timer control actions with locking
-    const [isReplaceDialogOpen, setIsReplaceDialogOpen] = useState(false);
-
-    const doStart = useCallback(async (force = false) => {
-        if (!initialTicket.ticket_id || !userId) return;
-        try {
-            const started = await startTracking(force);
-            if (started) {
-                setElapsedTime(0);
-                setIsRunning(true);
-            } else if (!force) {
-                // Locked elsewhere
-                setIsReplaceDialogOpen(true);
-            }
-        } catch (e) {
-            console.error('Failed to start tracking:', e);
-        }
-    }, [initialTicket.ticket_id, userId, startTracking]);
-
-    const handleStartClick = useCallback(() => {
-        doStart(false);
-    }, [doStart]);
-
-    const handleConfirmReplace = useCallback(async () => {
-        setIsReplaceDialogOpen(false);
-        await doStart(true);
-    }, [doStart]);
-
-    const handlePauseClick = useCallback(async () => {
-        try {
-            await stopTracking();
-        } catch {}
-        setIsRunning(false);
-    }, [stopTracking]);
-
-    const handleStopClick = useCallback(async () => {
-        try {
-            await stopTracking();
-        } catch {}
-        setIsRunning(false);
-        setElapsedTime(0);
-    }, [stopTracking]);
-
-    // Ensure we stop tracking only when component unmounts (not on re-renders)
-    const stopTrackingRef = React.useRef(stopTracking);
-    useEffect(() => {
-        stopTrackingRef.current = stopTracking;
-    }, [stopTracking]);
-    useEffect(() => {
-        return () => {
-            stopTrackingRef.current?.().catch(() => {});
-        };
-    }, []);
 
     const handleClientClick = async () => {
         if (!client?.client_id) return;
@@ -1918,12 +1721,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             if (result) {
                 setAdditionalAgents(prev => [...prev, result]);
                 toast.success(t('messages.agentAdded'));
+                onSaved?.();
             } else {
                 setTicket(prevTicket => ({
                     ...prevTicket,
                     assigned_to: userId
                 }));
                 toast.success(t('messages.agentAssigned'));
+                onSaved?.();
             }
         } catch (error) {
             handleTicketActionError(error, t('messages.addAgentFailed'));
@@ -1938,6 +1743,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             }
             setAdditionalAgents(prev => prev.filter(agent => agent.assignment_id !== assignmentId));
             toast.success(t('messages.agentRemoved'));
+            onSaved?.();
         } catch (error) {
             handleTicketActionError(error, t('messages.removeAgentFailed'));
         }
@@ -2033,6 +1839,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 // stamps updated_at/updated_by itself; browsers never send them.
                 setTicket(prev => ({ ...prev, updated_at: new Date().toISOString() }));
                 setUpdatedByUser(localActor);
+                onSaved?.();
             }
         } catch (error) {
             console.error(`Error updating ticket ${field}:`, error);
@@ -2072,6 +1879,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             if (isReturnedActionError(result)) {
                 throw result;
             }
+            // The assignment is durable; notify even if the follow-up fetches fail.
+            onSaved?.();
 
             // If we didn't have team details from local state, fetch them
             if (!teamDetails) {
@@ -2099,7 +1908,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             setAdditionalAgents(previousAgents);
             handleTicketActionError(error, t('messages.teamAssignFailed'));
         }
-    }, [ticket, team, additionalAgents, teams]);
+    }, [ticket, team, additionalAgents, teams, onSaved]);
 
     const handleRemoveTeamAssignment = useCallback(async (
         mode: 'remove_all' | 'keep_all' | 'selective',
@@ -2111,6 +1920,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 throw result;
             }
 
+            onSaved?.();
             setTicket(prevTicket => ({
                 ...prevTicket,
                 assigned_team_id: null
@@ -2130,7 +1940,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             console.error('Error removing team assignment:', error);
             handleTicketActionError(error, t('messages.teamRemoveFailed'));
         }
-    }, [ticket.ticket_id]);
+    }, [ticket.ticket_id, onSaved]);
 
     const [editorKey, setEditorKey] = useState(0);
     const refreshTicketDocuments = useCallback(async () => {
@@ -2265,6 +2075,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 // not, since the editor only reads initialContent on mount.
                 setEditorKey((k) => k + 1);
 
+                onSaved?.();
                 return true;
             } else {
                 // Use the regular createComment action for MSP portal
@@ -2325,6 +2136,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         // See note above: remount the composer editor to clear the view.
                         setEditorKey((k) => k + 1);
                         console.log("New note added successfully");
+                        onSaved?.();
                         return true;
                     } else {
                         console.error('Failed to add comment');
@@ -2380,6 +2192,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             if (isReturnedActionError(result)) {
                 throw result;
             }
+
+            onSaved?.();
 
             const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
             if (isReturnedActionError(updatedComments)) {
@@ -2458,6 +2272,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             if (isReturnedActionError(updateResult)) {
                 throw updateResult;
             }
+            onSaved?.();
             await refreshTicketDocuments();
 
             const updatedCommentData = await findCommentById(currentComment.comment_id!);
@@ -2526,6 +2341,7 @@ const handleClose = () => {
             setConversations(prevConversations =>
                 prevConversations.filter(conv => conv.comment_id !== comment.comment_id)
             );
+            onSaved?.();
         } catch (error) {
             console.error("Error deleting comment:", error);
         }
@@ -2557,6 +2373,7 @@ const handleClose = () => {
                         updated_at: new Date().toISOString()
                     }));
                     setUpdatedByUser(localActor);
+                    onSaved?.();
                 }
                 
                 return success;
@@ -2592,6 +2409,7 @@ const handleClose = () => {
 
 
                 toast.success(t('messages.descriptionUpdated'));
+                onSaved?.();
                 return true;
             }
         } catch (error) {
@@ -2599,6 +2417,11 @@ const handleClose = () => {
             return false;
         }
     };
+
+    // A stopwatch Stop saved its entry (the session is logged server-side): refresh the time list.
+    const handleStopwatchEntryLogged = useCallback(() => {
+        setTimeEntriesRefreshKey((value) => value + 1);
+    }, []);
 
     const handleAddTimeEntry = async () => {
         if (isLaunchingTimeEntryRef.current) {
@@ -2612,23 +2435,16 @@ const handleClose = () => {
                 return;
             }
 
-            const baseOnComplete = createTicketTimeEntryOnComplete({
-                stopTracking,
-                setElapsedTime,
-                setIsRunning,
-            });
             await launchTimeEntry({
                 openDrawer,
                 closeDrawer,
                 context: buildTicketTimeEntryContext({
                     ticket,
                     clientName: client?.client_name ?? null,
-                    elapsedTime,
                     timeDescription,
                     masterTicketNumber: bundle?.masterTicket?.ticket_number ?? null,
                 }),
                 onComplete: () => {
-                    baseOnComplete();
                     setTimeEntriesRefreshKey((value) => value + 1);
                 },
             });
@@ -2675,7 +2491,6 @@ const handleClose = () => {
                 context: buildTicketTimeEntryContext({
                     ticket,
                     clientName: client?.client_name ?? null,
-                    elapsedTime: 0,
                     timeDescription: '',
                     masterTicketNumber: bundle?.masterTicket?.ticket_number ?? null,
                 }),
@@ -2735,6 +2550,7 @@ const handleClose = () => {
                 updated_at: new Date().toISOString(),
             }));
             setUpdatedByUser(localActor);
+            onSaved?.();
             return true;
         } catch (error) {
             console.error('Error updating watch list:', error);
@@ -2811,6 +2627,7 @@ const handleClose = () => {
             // Header "Updated … by …": local UI state only; the server stamps the row.
             setTicket(prev => ({ ...prev, updated_at: new Date().toISOString() }));
             setUpdatedByUser(localActor);
+            onSaved?.();
 
             if (newContactId) {
                 const contactData = await getContactByContactNameId(newContactId);
@@ -2883,6 +2700,7 @@ const handleClose = () => {
                 updated_at: new Date().toISOString()
             }));
             setUpdatedByUser(localActor);
+            onSaved?.();
 
             if (field === 'itil_impact') {
                 toast.success(t('messages.itilImpactUpdated'));
@@ -2952,6 +2770,7 @@ const handleClose = () => {
                 // individual-save fallback below relies on handleSelectChange,
                 // which bumps per field on its own.
                 setActivityLogRefreshKey((value) => value + 1);
+                onSaved?.();
             }
             return success;
         }
@@ -2983,6 +2802,7 @@ const handleClose = () => {
                 for (const [field, value] of itilEntries) {
                     await handleItilFieldChange(field, value);
                 }
+                onSaved?.();
                 return true;
             }
 
@@ -3066,19 +2886,27 @@ const handleClose = () => {
 
         setIsSubmittingResolutionClose(true);
         let resolutionSaved = false;
+        // Fires onSaved: the resolution comment is durable, or the status write
+        // landed on the no-comment path. Either way the list row is stale.
+        let ticketChanged = false;
         try {
-            const resolutionAdded = await addResolutionComment(
-                JSON.stringify(contentBlocks),
-                suppression,
-                isInternal,
-                emailRecipients,
-            );
-            if (!resolutionAdded) {
-                return false;
+            // A resolution is optional; an empty editor must not insert a blank
+            // comment, so the close runs on its own.
+            if (hasEditorContent(contentBlocks)) {
+                const resolutionAdded = await addResolutionComment(
+                    JSON.stringify(contentBlocks),
+                    suppression,
+                    isInternal,
+                    emailRecipients,
+                );
+                if (!resolutionAdded) {
+                    return false;
+                }
+                resolutionSaved = true;
+                ticketChanged = true;
             }
-            resolutionSaved = true;
 
-            // The comment is already durable at this point. Close this dialog
+            // Any comment is already durable at this point. Close this dialog
             // so a failed or blocked status write cannot accidentally create a
             // duplicate resolution on resubmit.
             setIsResolutionCloseDialogOpen(false);
@@ -3101,9 +2929,9 @@ const handleClose = () => {
                 console.error('Close rules check failed after adding resolution:', checkError);
             }
 
-            // Resolution comment is durable; ask about bundle propagation before
-            // the status write. Cancelling leaves the ticket open (the comment
-            // stays, as before).
+            // Any resolution comment is durable; ask about bundle propagation
+            // before the status write. Cancelling leaves the ticket open (the
+            // comment stays, as before).
             const propagationDecision = await confirmBundlePropagation(statusId);
             if (!propagationDecision.proceed) {
                 return resolutionSaved;
@@ -3124,6 +2952,7 @@ const handleClose = () => {
             if (isReturnedActionError(result)) {
                 throw result;
             }
+            ticketChanged = true;
 
             setTicket((previousTicket) => ({
                 ...previousTicket,
@@ -3139,10 +2968,16 @@ const handleClose = () => {
             handleTicketActionError(error, t('messages.closeFailed', 'Failed to close ticket'));
             return resolutionSaved;
         } finally {
+            // The resolution comment is durable once saved, even when the status
+            // write was blocked, cancelled or failed, so the list row is stale
+            // in every such case. Single call covers all exits.
+            if (ticketChanged) {
+                onSaved?.();
+            }
             setIsSubmittingResolutionClose(false);
             setIsSubmittingBundlePropagation(false);
         }
-    }, [addResolutionComment, closedStatusOptions, confirmBundlePropagation, localActor, runWithPendingLiveFields, t, ticket.ticket_id]);
+    }, [addResolutionComment, closedStatusOptions, confirmBundlePropagation, localActor, onSaved, runWithPendingLiveFields, t, ticket.ticket_id]);
 
     const handleClientChange = async (newClientId: string) => {
         try {
@@ -3157,6 +2992,8 @@ const handleClose = () => {
                 }
                 return result;
             });
+            // The client change is durable; notify even if follow-up fetches fail.
+            onSaved?.();
             
             const [clientData, contactsData, locationData] = await Promise.all([
                 getClientById(newClientId),
@@ -3198,6 +3035,7 @@ const handleClose = () => {
                 updated_at: new Date().toISOString()
             }));
             setUpdatedByUser(localActor);
+            onSaved?.();
 
             toast.success(t('messages.locationUpdated'));
         } catch (error) {
@@ -3220,6 +3058,7 @@ const handleClose = () => {
                 updated_at: new Date().toISOString()
             }));
             setUpdatedByUser(localActor);
+            onSaved?.();
 
             toast.success(t('messages.billingProfileUpdated', 'Billing profile updated'));
         } catch (error) {
@@ -3252,6 +3091,7 @@ const handleClose = () => {
             setConversations(prevConversations =>
                 prevConversations.filter(conv => conv.comment_id !== commentToDelete.commentId)
             );
+            onSaved?.();
 
             if (deleteImages && commentToDelete.imageDocuments.length > 0 && ticket.ticket_id) {
                 try {
@@ -3313,11 +3153,12 @@ const handleClose = () => {
                 return;
             }
             toast.success(t('messages.removedFromBundle'));
+            onSaved?.();
             router.refresh();
         } catch (error) {
             handleTicketActionError(error, t('messages.removeFromBundleFailed'));
         }
-    }, [router]);
+    }, [router, onSaved, t]);
 
     const handleUnbundleMaster = useCallback(async () => {
         if (!ticket.ticket_id) return;
@@ -3328,11 +3169,12 @@ const handleClose = () => {
                 return;
             }
             toast.success(t('messages.bundleRemoved'));
+            onSaved?.();
             router.refresh();
         } catch (error) {
             handleTicketActionError(error, t('messages.unbundleFailed'));
         }
-    }, [ticket.ticket_id, router]);
+    }, [ticket.ticket_id, router, onSaved, t]);
 
     const performAddChildToBundle = useCallback(async (childTicketId: string, onClosedMaster?: ClosedMasterChoice) => {
         if (!ticket.ticket_id) return;
@@ -3346,10 +3188,11 @@ const handleClose = () => {
             return;
         }
         toast.success(t('messages.addedToBundle'));
+        onSaved?.();
         setAddChildTicketNumber('');
         resetChildTicketPickerState();
         router.refresh();
-    }, [ticket.ticket_id, t, router, resetChildTicketPickerState]);
+    }, [ticket.ticket_id, t, router, resetChildTicketPickerState, onSaved]);
 
     // Fetch the master's closed context before linking. An open master links
     // straight away; a closed master must go through the explicit choice
@@ -3553,12 +3396,13 @@ const handleClose = () => {
                 return;
             }
             toast.success(t('messages.promotedMaster'));
+            onSaved?.();
             router.push(`/msp/tickets/${childTicketId}`);
             router.refresh();
         } catch (error) {
             handleTicketActionError(error, t('messages.promoteMasterFailed'));
         }
-    }, [ticket.ticket_id, router]);
+    }, [ticket.ticket_id, router, onSaved, t]);
 
     const handleToggleBundleMode = useCallback(async () => {
         if (!ticket.ticket_id || !bundle?.isBundleMaster) return;
@@ -3571,13 +3415,14 @@ const handleClose = () => {
                 return;
             }
             toast.success(t('messages.bundleSettingsUpdated'));
+            onSaved?.();
             router.refresh();
         } catch (error) {
             handleTicketActionError(error, t('messages.updateBundleSettingsFailed'));
         } finally {
             setIsUpdatingBundleSettings(false);
         }
-    }, [ticket.ticket_id, bundle?.isBundleMaster, bundle?.mode, router]);
+    }, [ticket.ticket_id, bundle?.isBundleMaster, bundle?.mode, router, onSaved, t]);
 
     if (!tenant) {
         return (
@@ -3857,6 +3702,30 @@ const handleClose = () => {
                                         })}
                                     </Link>
                                 ) : null}
+                                {ticket.created_from_template_id && ticket.created_from_template_name ? (
+                                    templatePermissions.read ? (
+                                        <Link
+                                            id={`${id}-created-from-template-link`}
+                                            href={`/msp/tickets/templates/${ticket.created_from_template_id}`}
+                                            className="flex-shrink-0 text-xs text-[rgb(var(--color-primary-600))] hover:underline whitespace-nowrap"
+                                        >
+                                            {t('details.fromTemplate', {
+                                                defaultValue: 'From template: {{name}}',
+                                                name: ticket.created_from_template_name,
+                                            })}
+                                        </Link>
+                                    ) : (
+                                        <span
+                                            id={`${id}-created-from-template`}
+                                            className="flex-shrink-0 text-xs text-gray-600 whitespace-nowrap"
+                                        >
+                                            {t('details.fromTemplate', {
+                                                defaultValue: 'From template: {{name}}',
+                                                name: ticket.created_from_template_name,
+                                            })}
+                                        </span>
+                                    )
+                                ) : null}
                             </div>
 
                             <div className="flex items-center gap-2">
@@ -3898,6 +3767,51 @@ const handleClose = () => {
                                     <Copy className="h-4 w-4" />
                                     <span>{t('actions.duplicate', { defaultValue: 'Duplicate' })}</span>
                                 </Button>
+                                {templatePermissions.create || canCreateWorkflowFromTicket ? (
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                id={`${id}-more-actions-button`}
+                                                variant="outline"
+                                                size="sm"
+                                                aria-label={t('actions.moreActions', { defaultValue: 'More actions' })}
+                                            >
+                                                <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            {templatePermissions.create ? (
+                                                <DropdownMenuItem
+                                                    id={`${id}-create-template-menu-item`}
+                                                    onClick={() => router.push(
+                                                        `/msp/tickets/templates/new?fromTicket=${encodeURIComponent(ticket.ticket_id ?? "")}`
+                                                    )}
+                                                >
+                                                    <LayoutTemplate className="h-4 w-4 mr-2" />
+                                                    {t('actions.createTemplate', { defaultValue: 'Create template from ticket' })}
+                                                </DropdownMenuItem>
+                                            ) : null}
+                                            {canCreateWorkflowFromTicket ? (
+                                                <DropdownMenuItem
+                                                    id="create-workflow-from-ticket-menu-item"
+                                                    onSelect={() => setCreateWorkflowOpen(true)}
+                                                >
+                                                    <Workflow className="mr-2 h-4 w-4" />
+                                                    {t('actions.createWorkflowFromTicket', { defaultValue: 'Create workflow from ticket' })}
+                                                </DropdownMenuItem>
+                                            ) : null}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                ) : null}
+                                {renderCreateWorkflowFromTicket && canCreateWorkflowFromTicket
+                                    ? renderCreateWorkflowFromTicket({
+                                        ticketId: ticket.ticket_id as string,
+                                        ticketNumber: ticket.ticket_number ?? '',
+                                        title: ticket.title,
+                                        open: createWorkflowOpen,
+                                        onOpenChange: setCreateWorkflowOpen,
+                                    })
+                                    : null}
                                 <Button
                                     id={`${id}-delete-ticket-button`}
                                     variant="destructive"
@@ -4138,14 +4052,14 @@ const handleClose = () => {
                     title={t('info.cannotCloseYet', "This ticket can't be closed yet")}
                 >
                     <DialogContent>
-                        <p className="text-sm text-gray-600 mb-3">
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
                             {t('info.closeRulesIntro', "The board's close rules require the following before this ticket can be closed:")}
                         </p>
                         <ul className="space-y-2 mb-4">
                             {closeBlockedDialog.failures.map((failure) => (
                                 <li
                                     key={failure.rule}
-                                    className="flex items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                                    className="flex items-center justify-between gap-2 rounded-md border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-3 py-2 text-sm text-amber-900 dark:text-amber-200"
                                 >
                                     <span>{failure.message}</span>
                                     {failure.rule === 'checklist_incomplete' && (
@@ -4220,18 +4134,6 @@ const handleClose = () => {
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
-
-                {/* Timer Replace Confirmation */}
-                <ConfirmationDialog
-                    id={`${id}-replace-timer-dialog`}
-                    isOpen={isReplaceDialogOpen}
-                    onClose={() => setIsReplaceDialogOpen(false)}
-                    onConfirm={handleConfirmReplace}
-                    title={t('info.timerActiveElsewhereTitle', 'Timer Active Elsewhere')}
-                    message={t('info.timerTakeoverMessage', "This ticket's timer is active in another window. Do you want to take over and replace it here?")}
-                    confirmLabel={t('info.replaceHere', 'Replace Here')}
-                    cancelLabel={t('actions.cancel', 'Cancel')}
-                />
 
                 <ConfirmationDialog
                     id={`${id}-bundle-add-child-multi-client-confirm`}
@@ -4428,20 +4330,17 @@ const handleClose = () => {
                     clients={clients}
                     onChangeContact={handleContactChange}
                     onChangeClient={handleClientChange}
+                    onChangeLocation={handleLocationChange}
+                    onChangeBillingProfile={handleBillingProfileChange}
                     checklistItems={checklistItems ?? []}
                     onChecklistItemsChanged={setChecklistItems}
                     externalLinks={externalLinks ?? undefined}
                     onExternalLinksChanged={setExternalLinks}
                     hideTimeEntry={hideTimeEntry}
                     isLiveTicketTimerEnabled={isLiveTicketTimerEnabled}
-                    elapsedTime={elapsedTime}
-                    isRunning={isRunning}
-                    isTimerLocked={isLockedByOther}
                     timeDescription={timeDescription}
                     onTimeDescriptionChange={setTimeDescription}
-                    onStart={handleStartClick}
-                    onPause={handlePauseClick}
-                    onStop={handleStopClick}
+                    onTimeEntryLogged={handleStopwatchEntryLogged}
                     onAddTimeEntry={handleAddTimeEntry}
                     isLaunchingTimeEntry={isLaunchingTimeEntry}
                     onScheduleWork={handleScheduleWork}
@@ -4452,7 +4351,6 @@ const handleClose = () => {
                     timeEntriesRefreshKey={timeEntriesRefreshKey}
                     onEditTimeEntry={handleEditTimeEntry}
                     onDeleteTimeEntry={handleRequestDeleteTimeEntry}
-                    renderIntervalManagement={renderIntervalManagement}
                     additionalAgents={additionalAgents}
                     availableAgents={availableAgents}
                     onAddAgent={handleAddAgent}
@@ -4633,14 +4531,9 @@ const handleClose = () => {
                                 contactInfo={contactInfo}
                                 createdByUser={createdByUser}
                                 board={board}
-                                elapsedTime={elapsedTime}
-                                isRunning={isRunning}
                                 timeDescription={timeDescription}
-                                isTimerLocked={isLockedByOther}
-                                onStart={handleStartClick}
-                                onPause={handlePauseClick}
-                                onStop={handleStopClick}
                                 onTimeDescriptionChange={setTimeDescription}
+                                onTimeEntryLogged={handleStopwatchEntryLogged}
                                 onAddTimeEntry={handleAddTimeEntry}
                                 isLaunchingTimeEntry={isLaunchingTimeEntry}
                                 onClientClick={handleClientClick}
@@ -4680,8 +4573,7 @@ const handleClose = () => {
                                 surveySummaryCard={surveySummaryCard}
                                     hideTimeEntry={hideTimeEntry}
                                     hideMaterials={hideMaterials}
-                                    renderIntervalManagement={renderIntervalManagement}
-                                    onRemoveTeamAssignment={handleRemoveTeamAssignment}
+                                                    onRemoveTeamAssignment={handleRemoveTeamAssignment}
                                     onAssignTeam={handleAssignTeam}
                                     isLiveTicketTimerEnabled={isLiveTicketTimerEnabled}
                                     timeEntriesRefreshKey={timeEntriesRefreshKey}

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
 import type { ActionContext } from '../../registries/actionRegistry';
-import { withWorkflowPicker } from '../../jsonSchemaMetadata';
+import { withWorkflowPicker } from '@alga-psa/event-schemas';
 import { uuidSchema, throwActionError, type TenantTxContext } from './shared';
 
 /**

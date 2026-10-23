@@ -65,7 +65,13 @@ vi.mock('@alga-psa/db/models/user', () => ({
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishWorkflowEvent: publishWorkflowEventMock,
+  publishNonCatalogWorkflowEvent: publishWorkflowEventMock,
+  publishEvent: vi.fn(async () => undefined),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/core/encryption', () => ({

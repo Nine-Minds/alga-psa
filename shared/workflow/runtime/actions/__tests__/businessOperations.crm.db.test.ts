@@ -41,6 +41,12 @@ const publishWorkflowEventMock = vi.hoisted(() =>
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: (event: PublishedWorkflowEvent) => publishWorkflowEventMock(event),
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 function verifyTestDatabase(dbName: string): void {

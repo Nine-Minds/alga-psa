@@ -3,6 +3,7 @@
  */
 
 export * from './csv';
+export { IntegrationHealthBanner } from './IntegrationHealthBanner';
 export { AccountingMappingManager } from './accounting-mappings';
 export type {
   AccountingMappingContext,

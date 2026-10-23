@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeFifoAllocation } from '../hourBlockService';
+import { classifyContractLineCoverage, computeFifoAllocation } from '../hourBlockService';
+import type { ContractLineCoverageRow } from '../hourBlockService';
 
 type Block = { block_id: string; remaining_minutes: number };
 
@@ -65,5 +66,79 @@ describe('computeFifoAllocation', () => {
     const first = computeFifoAllocation(500, blocks);
     const second = computeFifoAllocation(500, blocks);
     expect(second).toEqual(first);
+  });
+});
+
+describe('classifyContractLineCoverage', () => {
+  const window = { from: '2026-10-13', to: '2027-10-13' };
+  function row(n: string, start: string, end: string | null, serviceId = 'svc'): ContractLineCoverageRow {
+    return {
+      service_id: serviceId,
+      service_name: 'Support',
+      contract_id: `contract-${n}`,
+      contract_name: `Contract ${n}`,
+      client_contract_id: `cc-${n}`,
+      contract_line_id: `line-${n}`,
+      contract_line_name: `Line ${n}`,
+      start_date: start,
+      end_date: end,
+    };
+  }
+
+  it('returns an empty list for no rows', () => {
+    expect(classifyContractLineCoverage([], window)).toEqual([]);
+  });
+
+  it('classifies a single line as automatic', () => {
+    const result = classifyContractLineCoverage([row('a', '2026-01-01', null)], window);
+    expect(result).toHaveLength(1);
+    expect(result[0].assignment).toBe('automatic');
+    expect(result[0].lines).toHaveLength(1);
+  });
+
+  it('classifies two overlapping lines as when_assigned', () => {
+    const result = classifyContractLineCoverage(
+      [row('a', '2026-01-01', null), row('b', '2026-06-01', '2027-06-01')],
+      window,
+    );
+    expect(result[0].assignment).toBe('when_assigned');
+    expect(result[0].lines).toHaveLength(2);
+  });
+
+  it('keeps two back-to-back lines automatic and lists both', () => {
+    const result = classifyContractLineCoverage(
+      [row('a', '2026-01-01', '2026-12-31'), row('b', '2027-01-01', null)],
+      window,
+    );
+    expect(result[0].assignment).toBe('automatic');
+    expect(result[0].lines.map((l) => l.contract_line_id)).toEqual(['line-a', 'line-b']);
+  });
+
+  it('ignores overlap that falls outside the window', () => {
+    const result = classifyContractLineCoverage(
+      [row('a', '2020-01-01', '2026-10-12'), row('b', '2026-01-01', null)],
+      window,
+    );
+    expect(result[0].assignment).toBe('automatic');
+  });
+
+  it('drops the excluded line so it is never named as a covering line', () => {
+    const result = classifyContractLineCoverage([row('a', '2026-01-01', null)], window, 'line-a');
+    expect(result).toHaveLength(0);
+  });
+
+  it('reclassifies to automatic once the block\'s own overlapping line is excluded', () => {
+    const result = classifyContractLineCoverage(
+      [row('a', '2026-01-01', null), row('b', '2026-06-01', '2027-06-01')],
+      window,
+      'line-b',
+    );
+    expect(result[0].assignment).toBe('automatic');
+    expect(result[0].lines.map((l) => l.contract_line_id)).toEqual(['line-a']);
+  });
+
+  it('treats a null exclusion as no exclusion', () => {
+    const withNull = classifyContractLineCoverage([row('a', '2026-01-01', null)], window, null);
+    expect(withNull).toHaveLength(1);
   });
 });

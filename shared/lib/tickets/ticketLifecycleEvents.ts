@@ -1,6 +1,8 @@
 import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
-import type { IEventPublisher } from '@alga-psa/types';
+import type { IEventPublisher, WorkflowActor } from '@alga-psa/types';
+import type { WorkflowEventPublishContext } from '@alga-psa/event-bus/publishers';
+import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 
 /**
  * Ticket lifecycle event engine.
@@ -29,20 +31,14 @@ export type TicketTransitionSnapshot = {
 
 export type TicketTransitionContext = {
   occurredAt: string;
+  /** Extra TICKET_STATUS_CHANGED payload fields. */
+  statusChangedPayloadExtras?: Record<string, unknown>;
   actorUserId?: string;
   previousStatusIsClosed?: boolean;
   newStatusIsClosed?: boolean;
 };
 
-export type TicketTransitionWorkflowEvent = {
-  eventType:
-    | 'TICKET_STATUS_CHANGED'
-    | 'TICKET_PRIORITY_CHANGED'
-    | 'TICKET_UNASSIGNED'
-    | 'TICKET_REOPENED'
-    | 'TICKET_ESCALATED'
-    | 'TICKET_QUEUE_CHANGED';
-  payload: Record<string, unknown>;
+type TicketTransitionWorkflowMeta = {
   workflow?: {
     eventName?: string;
     fromState?: string;
@@ -50,9 +46,75 @@ export type TicketTransitionWorkflowEvent = {
   };
 };
 
+type TicketTransitionEventType =
+  | 'TICKET_STATUS_CHANGED'
+  | 'TICKET_PRIORITY_CHANGED'
+  | 'TICKET_UNASSIGNED'
+  | 'TICKET_REOPENED'
+  | 'TICKET_ESCALATED'
+  | 'TICKET_QUEUE_CHANGED';
+
+/** Discriminated by `eventType`: each payload is branded for exactly its own event. */
+export type TicketTransitionWorkflowEvent = {
+  [T in TicketTransitionEventType]: {
+    eventType: T;
+    payload: Record<string, unknown> & BuiltWorkflowPayload<T>;
+  } & TicketTransitionWorkflowMeta;
+}[TicketTransitionEventType];
+
+/**
+ * Publish one transition event. A switch (one case per event) because a union of branded events
+ * cannot be passed through a single generic `publishWorkflowEvent` call without losing the brand.
+ */
+export async function publishTicketTransitionWorkflowEvent(
+  ev: TicketTransitionWorkflowEvent,
+  ctx: WorkflowEventPublishContext
+): Promise<void> {
+  const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
+  const meta = {
+    ctx,
+    eventName: ev.workflow?.eventName,
+    fromState: ev.workflow?.fromState,
+    toState: ev.workflow?.toState,
+  };
+  // LEVERAGE: friction brand-union-dispatch — publishing a union of branded events needs a per-member switch.
+  switch (ev.eventType) {
+    case 'TICKET_STATUS_CHANGED':
+      return publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ...meta });
+    case 'TICKET_PRIORITY_CHANGED':
+      return publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ...meta });
+    case 'TICKET_UNASSIGNED':
+      return publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ...meta });
+    case 'TICKET_REOPENED':
+      return publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ...meta });
+    case 'TICKET_ESCALATED':
+      return publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ...meta });
+    case 'TICKET_QUEUE_CHANGED':
+      return publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ...meta });
+  }
+}
+
 function normalizeUuid(value: string | null | undefined): string | null {
   if (!value) return null;
   return value;
+}
+
+/** TICKET_STATUS_CHANGED payload (also used by the bundle close path). */
+export function buildTicketStatusChangedPayload(input: {
+  ticketId: string;
+  previousStatusId: string;
+  newStatusId: string;
+  changedAt: string;
+  /** Extra fields (e.g. notification suppression flags of a silent API update); win over the base fields. */
+  extras?: Record<string, unknown>;
+}) {
+  return builtWorkflowPayload('TICKET_STATUS_CHANGED', {
+    ticketId: input.ticketId,
+    previousStatusId: input.previousStatusId,
+    newStatusId: input.newStatusId,
+    changedAt: input.changedAt,
+    ...input.extras,
+  });
 }
 
 export function buildTicketTransitionEvents(params: {
@@ -70,12 +132,13 @@ export function buildTicketTransitionEvents(params: {
   if (before.statusId !== after.statusId) {
     events.push({
       eventType: 'TICKET_STATUS_CHANGED',
-      payload: {
+      payload: buildTicketStatusChangedPayload({
         ticketId: after.ticketId,
         previousStatusId: before.statusId,
         newStatusId: after.statusId,
         changedAt: occurredAt,
-      },
+        extras: ctx.statusChangedPayloadExtras,
+      }),
       workflow: {
         eventName: 'Ticket Status Changed',
         fromState: before.statusId,
@@ -91,12 +154,12 @@ export function buildTicketTransitionEvents(params: {
   ) {
     events.push({
       eventType: 'TICKET_PRIORITY_CHANGED',
-      payload: {
+      payload: builtWorkflowPayload('TICKET_PRIORITY_CHANGED', {
         ticketId: after.ticketId,
         previousPriorityId: before.priorityId,
         newPriorityId: after.priorityId,
         changedAt: occurredAt,
-      },
+      }),
       workflow: {
         eventName: 'Ticket Priority Changed',
       },
@@ -107,12 +170,12 @@ export function buildTicketTransitionEvents(params: {
     if (!newAssignedTo && previousAssignedTo) {
       events.push({
         eventType: 'TICKET_UNASSIGNED',
-        payload: {
+        payload: builtWorkflowPayload('TICKET_UNASSIGNED', {
           ticketId: after.ticketId,
           previousAssigneeId: previousAssignedTo,
           previousAssigneeType: 'user',
           unassignedAt: occurredAt,
-        },
+        }),
         workflow: {
           eventName: 'Ticket Unassigned',
         },
@@ -123,12 +186,12 @@ export function buildTicketTransitionEvents(params: {
   if (before.boardId !== after.boardId) {
     events.push({
       eventType: 'TICKET_QUEUE_CHANGED',
-      payload: {
+      payload: builtWorkflowPayload('TICKET_QUEUE_CHANGED', {
         ticketId: after.ticketId,
         previousBoardId: before.boardId,
         newBoardId: after.boardId,
         changedAt: occurredAt,
-      },
+      }),
       workflow: {
         eventName: 'Ticket Queue Changed',
       },
@@ -138,12 +201,12 @@ export function buildTicketTransitionEvents(params: {
   if (ctx.previousStatusIsClosed && !ctx.newStatusIsClosed && before.statusId !== after.statusId) {
     events.push({
       eventType: 'TICKET_REOPENED',
-      payload: {
+      payload: builtWorkflowPayload('TICKET_REOPENED', {
         ticketId: after.ticketId,
         previousStatusId: before.statusId,
         newStatusId: after.statusId,
         reopenedAt: occurredAt,
-      },
+      }),
       workflow: {
         eventName: 'Ticket Reopened',
         fromState: before.statusId,
@@ -155,12 +218,12 @@ export function buildTicketTransitionEvents(params: {
   if (!before.escalated && after.escalated) {
     events.push({
       eventType: 'TICKET_ESCALATED',
-      payload: {
+      payload: builtWorkflowPayload('TICKET_ESCALATED', {
         ticketId: after.ticketId,
         fromQueueId: before.boardId,
         toQueueId: after.boardId,
         escalatedAt: occurredAt,
-      },
+      }),
       workflow: {
         eventName: 'Ticket Escalated',
       },
@@ -188,6 +251,11 @@ export interface TicketCreationWithPayloadExtras {
   readonly reason: string;
   readonly publisher: IEventPublisher;
   readonly payloadExtras: Readonly<Record<string, unknown>>;
+  /**
+   * Explicit actor for TICKET_CREATED when it is not derivable from the `userId`
+   * argument (e.g. a CONTACT for inbound email). Forwarded to `publishTicketCreated`.
+   */
+  readonly actor?: WorkflowActor;
 }
 
 export type TicketCreationEvents = IEventPublisher | SilentTicketCreation | TicketCreationWithPayloadExtras;
@@ -215,6 +283,24 @@ export function contactSuppressedTicketCreation(
     publisher,
     payloadExtras: { suppressContactNotifications: true },
   };
+}
+
+/**
+ * Publish TICKET_CREATED through `publisher` with an explicit actor, e.g. the matched
+ * contact of an inbound email that has no user account.
+ */
+export function ticketCreationWithActor(
+  publisher: IEventPublisher,
+  actor: WorkflowActor,
+  reason: string
+): TicketCreationWithPayloadExtras {
+  if (!reason || !reason.trim()) {
+    throw new Error('ticketCreationWithActor requires a reason');
+  }
+  if (!publisher) {
+    throw new Error('ticketCreationWithActor requires a publisher');
+  }
+  return { __ticketCreationWithPayloadExtras: true, reason, publisher, payloadExtras: {}, actor };
 }
 
 export function isTicketCreationWithPayloadExtras(value: unknown): value is TicketCreationWithPayloadExtras {
@@ -335,6 +421,7 @@ export async function publishTicketTransitionsAfterCommit(
     ctx: {
       occurredAt,
       actorUserId: params.actorUserId,
+      statusChangedPayloadExtras: params.statusChangedPayloadExtras,
       previousStatusIsClosed: isClosed(before.statusId),
       newStatusIsClosed: isClosed(after.statusId),
     },
@@ -365,19 +452,9 @@ export async function publishTicketTransitionsAfterCommit(
   registerAfterCommit(
     trx,
     async () => {
-      const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
+      const eventCtx = { tenantId: tenant, actor, occurredAt, ...(correlationId ? { correlationId } : {}) };
       for (const ev of events) {
-        await publishWorkflowEvent({
-          eventType: ev.eventType as any,
-          payload:
-            ev.eventType === 'TICKET_STATUS_CHANGED' && params.statusChangedPayloadExtras
-              ? { ...ev.payload, ...params.statusChangedPayloadExtras }
-              : ev.payload,
-          ctx: { tenantId: tenant, actor, occurredAt, ...(correlationId ? { correlationId } : {}) },
-          eventName: ev.workflow?.eventName,
-          fromState: ev.workflow?.fromState,
-          toState: ev.workflow?.toState,
-        });
+        await publishTicketTransitionWorkflowEvent(ev, eventCtx);
       }
     },
     `ticket transitions ticket=${after.ticketId}`

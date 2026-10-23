@@ -22,10 +22,16 @@ vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) => ({
   publishEvent: vi.fn(async (event: any, options?: any) => {
     busEvents.push({ eventType: event.eventType, payload: event.payload, options });
   }),
+  // Builder-minted payloads (WorkflowEventPublisher / ticket model) arrive already complete.
+  publishBuiltWorkflowPayload: vi.fn(async (event: any, options?: any) => {
+    busEvents.push({ eventType: event.eventType, payload: event.payload, options });
+  }),
   publishWorkflowEvent: vi.fn(async (params: any, options?: any) => {
+    const { buildWorkflowPayload } = await import('@alga-psa/event-schemas');
+    const ctx = params.idempotencyKey ? { ...params.ctx, idempotencyKey: params.idempotencyKey } : params.ctx;
     busEvents.push({
       eventType: params.eventType,
-      payload: params.payload,
+      payload: buildWorkflowPayload(params.payload, ctx),
       options: { ...options, workflow: { executionId: params.ctx?.correlationId } },
     });
   }),

@@ -24,7 +24,7 @@ import { Knex } from 'knex';
 import { createTag, findTagsByEntityId } from '@alga-psa/tags/actions/tagActions';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { ClientModel } from '@alga-psa/shared/models/clientModel';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent, publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildClientArchivedPayload,
   buildClientCreatedPayload,
@@ -1355,7 +1355,7 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
     const tailored = tailorClientDeleteAlternatives(result, client.is_inactive);
     if (result.deleted) {
       const occurredAt = new Date().toISOString();
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'CLIENT_DELETED',
         payload: {
           clientId,

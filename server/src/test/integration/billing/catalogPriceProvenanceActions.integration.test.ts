@@ -210,13 +210,20 @@ describe('Catalog price provenance — clone, wizard, constraints and schedule o
     expect(line.rate_provenance).toBe('inherited');
     expect(line.is_template).toBe(false);
 
-    // No member snapshot was written, so the line resolves to the catalog.
+    // No member snapshot rate was written, so the line resolves to the catalog.
+    // The member still gets its fixed config row (NULL base_rate, inherited),
+    // the same shape the wizard and createConfiguration write, so a later
+    // member-rate edit has a row to update.
     const configs = await context.db('contract_line_service_configuration')
       .where({ tenant: context.tenantId, contract_line_id: liveLineId });
     expect(configs.length).toBeGreaterThan(0);
     const fixedConfigs = await context.db('contract_line_service_fixed_config')
       .whereIn('config_id', configs.map((config) => config.config_id));
-    expect(fixedConfigs).toHaveLength(0);
+    expect(fixedConfigs).toHaveLength(configs.length);
+    for (const fixedConfig of fixedConfigs) {
+      expect(fixedConfig.base_rate).toBeNull();
+      expect(fixedConfig.rate_provenance).toBe('inherited');
+    }
 
     await updateCatalogPrice(context, serviceId, { rateCents: 12000, effectiveDate: '2023-02-01' });
     const preview = await previewServicePriceChange(serviceId, 12000, '2023-02-01');

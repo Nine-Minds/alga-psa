@@ -13,15 +13,18 @@ import {
  * workflow's trigger and the record picked in the form, so nobody has to work them out by hand.
  */
 
-export type RunDialogDateTrigger = { source: WorkflowDateTriggerSourceId; offsetDays: number };
+export type RunDialogDateTrigger = { source: WorkflowDateTriggerSourceId; offsetDays: number; params?: Record<string, unknown> };
 
 /** The date trigger of a workflow definition's trigger, or null for any other trigger. */
 export const toRunDialogDateTrigger = (trigger: unknown): RunDialogDateTrigger | null => {
   if (!trigger || typeof trigger !== 'object') return null;
-  const candidate = trigger as { type?: unknown; source?: unknown; offsetDays?: unknown };
+  const candidate = trigger as { type?: unknown; source?: unknown; offsetDays?: unknown; params?: unknown };
   if (candidate.type !== 'date' || !isWorkflowDateTriggerSource(candidate.source)) return null;
   const offsetDays = typeof candidate.offsetDays === 'number' && Number.isInteger(candidate.offsetDays) ? candidate.offsetDays : 0;
-  return { source: candidate.source, offsetDays };
+  const params = candidate.params && typeof candidate.params === 'object' && !Array.isArray(candidate.params)
+    ? candidate.params as Record<string, unknown>
+    : undefined;
+  return params ? { source: candidate.source, offsetDays, params } : { source: candidate.source, offsetDays };
 };
 
 /** Today's calendar date where the dialog runs (YYYY-MM-DD). */
@@ -56,6 +59,7 @@ export const applyDateTriggerTiming = (
   const derived = deriveDateTriggerTiming({
     source: params.trigger.source,
     offsetDays,
+    params: params.trigger.params,
     payload: current,
     record: params.record,
     today: params.today,
@@ -80,6 +84,7 @@ const SOURCE_DATE_NAMES: Record<WorkflowDateTriggerSourceId, { key: string; defa
   'contract.renewal_decision': { key: 'runDialog.dateTrigger.dateNames.renewal', defaultValue: "the contract's renewal decision date" },
   'contract.end': { key: 'runDialog.dateTrigger.dateNames.contractEnd', defaultValue: "the contract's end date" },
   'asset.warranty_end': { key: 'runDialog.dateTrigger.dateNames.warrantyEnd', defaultValue: "the asset's warranty end date" },
+  'ticket.status_age': { key: 'runDialog.dateTrigger.dateNames.ticketStatusAge', defaultValue: 'the day the ticket reaches the number of days in status' },
 };
 
 /** Plain-language help for the timing fields of a date-triggered payload; null for other fields. */

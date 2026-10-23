@@ -106,6 +106,8 @@ vaultAgent:
   sharedSecretPath: secret/data/alga-psa/shared
 
 livenessProbe:
+  # Unconditional 200; never depends on Redis or the DB.
+  path: /health
   initialDelaySeconds: 20
   periodSeconds: 30
   timeoutSeconds: 10
@@ -113,6 +115,8 @@ livenessProbe:
   successThreshold: 1
 
 readinessProbe:
+  # Fails only on DB down, Redis down or a wedged queue consumer.
+  path: /ready
   initialDelaySeconds: 10
   periodSeconds: 10
   timeoutSeconds: 5
@@ -133,6 +137,19 @@ autoscaling:
   maxReplicas: 3
   targetCPUUtilizationPercentage: 70
   targetMemoryUtilizationPercentage: 80
+
+# Prometheus scrape wiring. /metrics is always served by the pod (unless
+# EMAIL_SERVICE_METRICS_ENABLED=false); this block only adds scrape discovery.
+metrics:
+  enabled: false
+  # prometheus.io/* pod annotations when enabled.
+  podAnnotations: true
+  serviceMonitor:
+    # Also requires metrics.enabled. Needs the Prometheus Operator CRDs.
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    labels: {}
 
 podDisruptionBudget:
   enabled: false

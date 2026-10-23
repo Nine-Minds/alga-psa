@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import { BaseDomainEventPayloadSchema, uuidSchema } from './commonEventPayloadSchemas';
+import { BaseDomainEventPayloadSchema, entityIdSchema, uuidSchema } from './commonEventPayloadSchemas';
 
 const opportunityIdSchema = uuidSchema('Opportunity ID');
-const clientIdSchema = uuidSchema('Client ID');
-const userIdSchema = uuidSchema('User ID');
+const clientIdSchema = entityIdSchema('Client ID', 'client');
+const userIdSchema = entityIdSchema('User ID', 'user');
 const suggestionIdSchema = uuidSchema('Suggestion ID');
 
 const opportunityStageSchema = z.enum([

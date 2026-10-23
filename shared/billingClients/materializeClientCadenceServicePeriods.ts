@@ -126,7 +126,6 @@ export function materializeClientCadenceServicePeriods(
   const servicePeriods = generateClientCadenceServicePeriods(generationInput);
   const scheduleKey = buildRecurringServicePeriodScheduleKey({
     tenant: input.sourceObligation.tenant,
-    obligationType: input.sourceObligation.obligationType,
     obligationId: input.sourceObligation.obligationId,
     cadenceOwner: 'client',
     duePosition: input.duePosition,

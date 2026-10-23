@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { workflowDefinitionSchema } from '@alga-psa/workflows/runtime';
+import { WORKFLOW_LAUNCH_SKIP_REASONS } from '../lib/workflowLaunchSkipReasons';
 
 const versionNumber = z.preprocess(
   (val) => (typeof val === 'string' ? Number(val) : val),
@@ -241,4 +242,32 @@ export const SubmitWorkflowEventInput = z.object({
   correlationKey: z.string().min(1).optional(),
   payloadSchemaRef: z.string().min(1).optional(),
   payload: z.record(z.any()).default({})
+});
+
+// --- Workflow event launch skips (alga0002106) ---
+
+const launchSkipReasonSchema = z.enum(WORKFLOW_LAUNCH_SKIP_REASONS);
+
+export const GetWorkflowLaunchSkipSummaryInput = z.object({
+  workflowId: z.string().uuid(),
+  from: z.string().datetime({ offset: true }).optional()
+});
+
+export const ListWorkflowLaunchSkipsPagedInput = z.object({
+  workflowId: z.string().uuid(),
+  from: z.string().datetime({ offset: true }).optional(),
+  to: z.string().datetime({ offset: true }).optional(),
+  reason: launchSkipReasonSchema.optional(),
+  intentional: z.boolean().optional(),
+  page: pageNumber.default(1),
+  pageSize: pageSizeNumber.default(25)
+});
+
+export const ListWorkflowLaunchSkipCountsInput = z.object({
+  workflowIds: z.array(z.string().uuid()).max(500),
+  from: z.string().datetime({ offset: true }).optional()
+});
+
+export const ListEventLaunchSkipsInput = z.object({
+  eventId: z.string().uuid()
 });

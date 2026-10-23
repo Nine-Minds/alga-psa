@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ tenantDb: vi.fn(), publishEvent: vi.fn() }));
 vi.mock('@alga-psa/db', async (importOriginal) => ({ ...(await importOriginal<typeof import('@alga-psa/db')>()), tenantDb: mocks.tenantDb, withTransaction: async (_knex: unknown, callback: (trx: unknown) => Promise<unknown>) => callback({}) }));
 vi.mock('@alga-psa/shared/billingClients/defaultTaxRate', () => ({ resolveCatalogTaxRateIdForCreate: async (_trx: unknown, _tenant: string, explicitRate: string | null | undefined) => explicitRate ?? null }));
-vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: mocks.publishEvent }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: mocks.publishEvent, publishWorkflowEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 
 import { ServiceCatalogService } from '../../../lib/api/services/ServiceCatalogService';
 import { createServiceSchema } from '../../../lib/api/schemas/serviceSchemas';
