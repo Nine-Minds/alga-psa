@@ -1667,7 +1667,10 @@
       "ruleCategoryBoardMismatch": "De geselecteerde categorie hoort bij een ander bord dan de regel.",
       "ruleCategoryInvalid": "De geselecteerde categorie is geen categorie op het hoogste niveau.",
       "ruleSubcategoryInvalid": "De geselecteerde subcategorie hoort niet bij de geselecteerde categorie.",
-      "ruleSubcategoryRequiresCategory": "Selecteer een categorie voordat u een subcategorie kiest."
+      "ruleSubcategoryRequiresCategory": "Selecteer een categorie voordat u een subcategorie kiest.",
+      "ruleTooManyKeywords": "Gebruik maximaal {{max}} trefwoorden per regel.",
+      "ruleKeywordTooLong": "Elk trefwoord mag maximaal {{max}} tekens bevatten.",
+      "ruleOriginInvalid": "Een van de geselecteerde ticketbronnen is ongeldig."
     }
   },
   "ticketSection": {

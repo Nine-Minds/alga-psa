@@ -228,7 +228,9 @@ export function shouldSkipApiKeyAuth(pathname: string): boolean {
         pathname.endsWith('/download') || pathname.endsWith('/content'))) ||
     // Session-authenticated inventory SO document endpoints (auth enforced in-handler via withAuth).
     (pathname.startsWith('/api/inventory/sales-orders/') &&
-      (pathname.endsWith('/document') || pathname.endsWith('/email-confirmation')));
+      (pathname.endsWith('/document') || pathname.endsWith('/email-confirmation'))) ||
+    // Session-authenticated label PDF endpoint (auth + record-level permission enforced in-handler).
+    pathname === '/api/labels/pdf';
 }
 
 export function hasContradictoryPortalIdentity(user: {

@@ -30,7 +30,8 @@
           "mapped": "Zugeordnet",
           "noResult": "Für diese Zeile wurde kein Ergebnis zurückgegeben.",
           "pending": "Ausstehend",
-          "saved": "Gespeichert"
+          "saved": "Gespeichert",
+          "missingField": "{{field}} fehlt"
         },
         "suggested": "Vorgeschlagen",
         "toSave": "{{total}} zu speichern"
@@ -82,7 +83,8 @@
           "instant": "Sofort",
           "live": "Produktiv",
           "manual": "Manuell",
-          "twoWay": "Bidirektional"
+          "twoWay": "Bidirektional",
+          "iif": "IIF"
         },
         "highlights": {
           "delivery": "Übertragung",
@@ -102,6 +104,9 @@
           },
           "xeroCsv": {
             "description": "Exportieren Sie Rechnungen als CSV für den manuellen Import in Xero und importieren Sie Steuerdaten aus Xero-Berichten."
+          },
+          "qbd": {
+            "description": "Rechnungen als IIF-Datei für den Import in QuickBooks Desktop exportieren."
           }
         },
         "selected": "{{title}} ausgewählt",
@@ -129,13 +134,22 @@
         }
       },
       "adjustmentMappings": {
-        "desktopServices": "Desktop-Dienstkonten",
-        "desktopDiscounts": "Desktop-Rabatte",
         "desktopAccount": "Name des Desktop-Ertragskontos",
         "description": "Ordnen Sie Rechnungsrabatte und Gutschriften vor dem Export zu. Die Zuordnung gilt für dieses Buchhaltungsunternehmen.",
         "add": "Zuordnung hinzufügen",
         "remove": "Zuordnung entfernen",
-        "removeConfirm": "Diese Buchhaltungszuordnung entfernen?"
+        "removeConfirm": "Diese Buchhaltungszuordnung entfernen?",
+        "desktopTaxAccount": "Name des Desktop-Umsatzsteuerkontos",
+        "desktopCustomer": "Name des Desktop-Kunden",
+        "desktopTerms": "Name der Desktop-Zahlungsbedingung",
+        "descriptionTaxCodes": "Jede Steuerregion gibt den Umsatzsteuerartikel bzw. die -gruppe an, die QuickBooks Desktop berechnet, sowie das Verbindlichkeitskonto, auf das gebucht wird.",
+        "descriptionServices": "Jede Dienstleistung gibt den QuickBooks Desktop-Artikel an, den ihre Rechnungszeilen verwenden, sowie das Erlöskonto, auf das sie gebucht werden.",
+        "descriptionClients": "Der QuickBooks Desktop-Kunde, als der jeder Kunde fakturiert wird. Nicht zugeordnete Kunden blockieren den Export.",
+        "descriptionPaymentTerms": "Die QuickBooks Desktop-Zahlungsbedingungen, die auf jeder Rechnung gedruckt werden. Nicht zugeordnete Bedingungen bleiben leer.",
+        "desktopItem": "Name des Desktop-Artikels",
+        "desktopItemHelp": "Der Artikel genau so, wie er in Ihrer QuickBooks Desktop-Artikelliste steht. Jede Rechnungszeile nennt einen Artikel, daher werden Exporte blockiert, bis er festgelegt ist.",
+        "desktopSalesTaxItem": "Umsatzsteuerartikel oder -gruppe",
+        "desktopSalesTaxItemHelp": "Leer lassen, um den Standard-Umsatzsteuerartikel aus den QuickBooks Desktop-Einstellungen zu verwenden."
       }
     },
     "calendar": {
@@ -4254,6 +4268,59 @@
           "providers": "Heute Teams Phone; derselbe Anrufkern trägt künftige Anbieter."
         }
       }
+    },
+    "qbd": {
+      "settings": {
+        "title": "QuickBooks Desktop (IIF)-Integration",
+        "description": "Rechnungen als IIF-Datei für Datei → Dienstprogramme → Importieren → IIF-Dateien in QuickBooks Desktop exportieren.",
+        "loading": "QuickBooks Desktop-Einstellungen werden geladen...",
+        "savedMessage": "Einstellungen erfolgreich gespeichert",
+        "save": "Einstellungen speichern",
+        "connectionsPermissionNotice": "Sie können die QuickBooks Desktop-Einstellungen ansehen, zum Ändern ist jedoch die Berechtigung zum Verwalten von Verbindungen erforderlich. Bitten Sie einen Administrator, sie zu erteilen.",
+        "errors": {
+          "load": "QuickBooks Desktop-Einstellungen konnten nicht geladen werden",
+          "save": "QuickBooks Desktop-Einstellungen konnten nicht gespeichert werden"
+        },
+        "warning": {
+          "title": "Sichern Sie zuerst Ihre Firmendatei",
+          "description": "QuickBooks Desktop legt beim Import einer IIF-Datei jeden unbekannten Kunden-, Artikel-, Konto- oder Zahlungsbedingungsnamen neu an, und IIF-Importe können nicht rückgängig gemacht werden. Stellen Sie sicher, dass alle Namen hier und in den Zuordnungen exakt mit Ihrer Firmendatei übereinstimmen, und testen Sie den ersten Import mit einer Sicherungskopie."
+        },
+        "exportSettings": {
+          "title": "IIF-Exporteinstellungen",
+          "description": "Geben Sie die Konto- und Artikelnamen von QuickBooks Desktop genau so ein, wie sie in Ihrem Kontenplan und Ihrer Artikelliste erscheinen."
+        },
+        "fields": {
+          "arAccount": "Debitorenkonto",
+          "arAccountHelp": "Das Debitorenkonto, auf das jede Rechnung gebucht wird.",
+          "defaultIncomeAccount": "Standard-Erlöskonto",
+          "defaultIncomeAccountHelp": "Das Erlöskonto für Artikel, die aus einem Export zugeordnet werden, und für jede Dienstleistungs- oder Rabattzuordnung ohne Konto.",
+          "salesTaxPayableAccount": "Umsatzsteuer-Verbindlichkeitskonto",
+          "salesTaxPayableAccountHelp": "Das Konto, auf das die Umsatzsteuerzeile gebucht wird, sofern die Steuercode-Zuordnung der Steuerregion kein anderes angibt.",
+          "defaultSalesTaxItem": "Standard-Umsatzsteuerartikel",
+          "defaultSalesTaxItemHelp": "Umsatzsteuerartikel oder -gruppe für besteuerte Rechnungen, deren Steuercode-Zuordnung keinen angibt.",
+          "newProductItemType": "Artikeltyp für neue Produkte",
+          "inventoryWarning": "Wareneingänge aus Alga werden nicht exportiert, daher werden die Bestände in QuickBooks negativ, sofern Sie den Bestand nicht auch in QuickBooks erfassen.",
+          "nonInventoryHelp": "Empfohlen: Alga bleibt das führende System für den Lagerbestand, und QuickBooks erfasst nur den Verkauf.",
+          "inventoryAssetAccount": "Lagerbestandskonto",
+          "cogsAccount": "Wareneinsatzkonto"
+        },
+        "mappings": {
+          "title": "QuickBooks-Zuordnungen",
+          "description": "Ordnen Sie Alga-Kunden, Dienstleistungen, Rabatte, Steuercodes und Zahlungsbedingungen den Namen in Ihrer QuickBooks Desktop-Firmendatei zu. Jede Dienstleistung und jeder Rabatt benötigt einen Desktop-Artikel; nicht zugeordnete Zahlungsbedingungen bleiben leer.",
+          "permissionNotice": "Zum Bearbeiten von QuickBooks Desktop-Zuordnungen ist die Berechtigung zum Verwalten von Zuordnungen erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
+        },
+        "exports": {
+          "description": "Erstellen Sie einen QuickBooks Desktop-Exportstapel, führen Sie ihn aus und laden Sie dann die IIF-Datei in den Stapeldetails herunter."
+        },
+        "newItems": {
+          "title": "Durch Exporte angelegte Artikel",
+          "description": "Wenn ein Export für ein Alga-Produkt einen neuen QuickBooks-Artikel anlegt, wird dieser Artikeltyp verwendet. Leistungen werden immer als Dienstleistungsartikel angelegt."
+        },
+        "itemTypes": {
+          "nonInventory": "Nicht-Lagerartikel",
+          "inventory": "Lagerartikel"
+        }
+      }
     }
   },
   "errors": {
@@ -4373,6 +4440,10 @@
       "contactWithoutClient": "Ein Kontakt mit dieser E-Mail-Adresse existiert bereits im System ohne Kundenzuordnung",
       "emailOnAnotherClient": "Diese E-Mail-Adresse ist bereits einem anderen Kunden zugeordnet",
       "emailOnAnotherClientNamed": "Diese E-Mail-Adresse ist bereits {{clientName}} zugeordnet"
+    },
+    "quickbooksDesktop": {
+      "viewSettingsPermission": "Benutzer hat keine Berechtigung, Integrationseinstellungen anzuzeigen",
+      "manageIntegrationsPermission": "Benutzer hat keine Berechtigung, Integrationseinstellungen zu verwalten"
     }
   },
   "telephony": {

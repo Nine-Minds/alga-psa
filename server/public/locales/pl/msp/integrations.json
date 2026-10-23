@@ -30,7 +30,8 @@
           "mapped": "Zmapowane",
           "noResult": "Nie zwrócono wyniku dla tego wiersza.",
           "pending": "Oczekuje",
-          "saved": "Zapisano"
+          "saved": "Zapisano",
+          "missingField": "Brak: {{field}}"
         },
         "suggested": "Sugerowane",
         "toSave": "Do zapisania: {{total}}"
@@ -82,7 +83,8 @@
           "instant": "Natychmiastowy",
           "live": "Na żywo",
           "manual": "Ręczny",
-          "twoWay": "Dwukierunkowy"
+          "twoWay": "Dwukierunkowy",
+          "iif": "IIF"
         },
         "highlights": {
           "delivery": "Dostarczanie",
@@ -102,6 +104,9 @@
           },
           "xeroCsv": {
             "description": "Eksportuj faktury do CSV w celu ręcznego importu do Xero i importuj dane podatkowe z raportów Xero."
+          },
+          "qbd": {
+            "description": "Eksportuj faktury jako plik IIF do importu w QuickBooks Desktop."
           }
         },
         "selected": "Wybrano {{title}}",
@@ -129,13 +134,22 @@
         }
       },
       "adjustmentMappings": {
-        "desktopServices": "Konta usług Desktop",
-        "desktopDiscounts": "Rabaty Desktop",
         "desktopAccount": "Nazwa konta przychodów Desktop",
         "description": "Przed eksportem przypisz rabaty i uznania faktur. Przypisanie dotyczy tej firmy księgowej.",
         "add": "Dodaj przypisanie",
         "remove": "Usuń przypisanie",
-        "removeConfirm": "Usunąć to przypisanie księgowe?"
+        "removeConfirm": "Usunąć to przypisanie księgowe?",
+        "desktopTaxAccount": "Nazwa konta podatku od sprzedaży Desktop",
+        "desktopCustomer": "Nazwa klienta Desktop",
+        "desktopTerms": "Nazwa warunków Desktop",
+        "descriptionTaxCodes": "Każdy region podatkowy wskazuje pozycję lub grupę podatku od sprzedaży naliczaną przez QuickBooks Desktop oraz konto zobowiązań, na które jest księgowana.",
+        "descriptionServices": "Każda usługa wskazuje pozycję QuickBooks Desktop używaną w jej wierszach faktury oraz konto przychodów, na które są księgowane.",
+        "descriptionClients": "Klient QuickBooks Desktop, na którego wystawiane są faktury dla każdego klienta. Niezmapowani klienci blokują eksport.",
+        "descriptionPaymentTerms": "Warunki QuickBooks Desktop drukowane na każdej fakturze. Niezmapowane warunki pozostają puste.",
+        "desktopItem": "Nazwa pozycji Desktop",
+        "desktopItemHelp": "Pozycja dokładnie tak, jak widnieje na liście pozycji QuickBooks Desktop. Każdy wiersz faktury wskazuje pozycję, dlatego eksporty są blokowane, dopóki nie zostanie ustawiona.",
+        "desktopSalesTaxItem": "Pozycja lub grupa podatku od sprzedaży",
+        "desktopSalesTaxItemHelp": "Pozostaw puste, aby użyć domyślnej pozycji podatku od sprzedaży z ustawień QuickBooks Desktop."
       }
     },
     "calendar": {
@@ -4254,6 +4268,59 @@
           "providers": "Dziś Teams Phone; ten sam rdzeń połączeń przyjmie kolejnych dostawców."
         }
       }
+    },
+    "qbd": {
+      "settings": {
+        "title": "Integracja QuickBooks Desktop (IIF)",
+        "description": "Eksportuj faktury jako plik IIF dla opcji Plik → Narzędzia → Importuj → Pliki IIF w QuickBooks Desktop.",
+        "loading": "Ładowanie ustawień QuickBooks Desktop...",
+        "savedMessage": "Ustawienia zostały zapisane",
+        "save": "Zapisz ustawienia",
+        "connectionsPermissionNotice": "Możesz przeglądać ustawienia QuickBooks Desktop, ale ich zmiana wymaga uprawnienia do zarządzania połączeniami. Poproś administratora o jego nadanie.",
+        "errors": {
+          "load": "Nie udało się wczytać ustawień QuickBooks Desktop",
+          "save": "Nie udało się zapisać ustawień QuickBooks Desktop"
+        },
+        "warning": {
+          "title": "Najpierw utwórz kopię zapasową pliku firmy",
+          "description": "Podczas importu pliku IIF QuickBooks Desktop tworzy każdą nierozpoznaną nazwę klienta, pozycji, konta lub warunku, a importów IIF nie można cofnąć. Upewnij się, że każda nazwa poniżej i w mapowaniach dokładnie odpowiada plikowi firmy, i wykonaj pierwszy import na kopii zapasowej."
+        },
+        "exportSettings": {
+          "title": "Ustawienia eksportu IIF",
+          "description": "Wprowadź nazwy kont i pozycji QuickBooks Desktop dokładnie tak, jak w planie kont i liście pozycji."
+        },
+        "fields": {
+          "arAccount": "Konto należności",
+          "arAccountHelp": "Konto należności, na które księgowana jest każda faktura.",
+          "defaultIncomeAccount": "Domyślne konto przychodów",
+          "defaultIncomeAccountHelp": "Konto przychodów dla pozycji zmapowanych z eksportu oraz dla każdego mapowania usług lub rabatów bez konta.",
+          "salesTaxPayableAccount": "Konto zobowiązań z tytułu podatku od sprzedaży",
+          "salesTaxPayableAccountHelp": "Konto, na które księgowany jest wiersz podatku od sprzedaży, chyba że mapowanie kodów podatkowych regionu wskazuje inne.",
+          "defaultSalesTaxItem": "Domyślna pozycja podatku od sprzedaży",
+          "defaultSalesTaxItemHelp": "Pozycja lub grupa podatku od sprzedaży dla opodatkowanych faktur, których mapowanie kodów podatkowych jej nie wskazuje.",
+          "newProductItemType": "Typ pozycji dla nowych produktów",
+          "inventoryWarning": "Przyjęcia magazynowe z Alga nie są eksportowane, więc stany w QuickBooks staną się ujemne, chyba że wprowadzisz stany również w QuickBooks.",
+          "nonInventoryHelp": "Zalecane: Alga pozostaje głównym systemem magazynowym, a QuickBooks rejestruje tylko sprzedaż.",
+          "inventoryAssetAccount": "Konto aktywów magazynowych",
+          "cogsAccount": "Konto kosztu sprzedanych towarów"
+        },
+        "mappings": {
+          "title": "Mapowania QuickBooks",
+          "description": "Zmapuj klientów, usługi, rabaty, kody podatkowe i warunki płatności Alga na nazwy w pliku firmy QuickBooks Desktop. Każda usługa i rabat wymaga pozycji Desktop; niezmapowane warunki płatności pozostają puste.",
+          "permissionNotice": "Edytowanie mapowań QuickBooks Desktop wymaga uprawnienia do zarządzania mapowaniami. Poproś administratora o jego nadanie."
+        },
+        "exports": {
+          "description": "Utwórz partię eksportu QuickBooks Desktop, uruchom ją, a następnie pobierz plik IIF ze szczegółów partii."
+        },
+        "newItems": {
+          "title": "Pozycje tworzone przez eksporty",
+          "description": "Gdy eksport tworzy nową pozycję QuickBooks dla produktu Alga, używa tego typu pozycji. Usługi są zawsze tworzone jako pozycje usługowe."
+        },
+        "itemTypes": {
+          "nonInventory": "Część niemagazynowa",
+          "inventory": "Część magazynowa"
+        }
+      }
     }
   },
   "errors": {
@@ -4373,6 +4440,10 @@
       "contactWithoutClient": "W systemie istnieje już kontakt z tym adresem e-mail bez przypisania do klienta",
       "emailOnAnotherClient": "Ten adres e-mail jest już powiązany z innym klientem",
       "emailOnAnotherClientNamed": "Ten adres e-mail jest już powiązany z: {{clientName}}"
+    },
+    "quickbooksDesktop": {
+      "viewSettingsPermission": "Użytkownik nie ma uprawnień do wyświetlania ustawień integracji",
+      "manageIntegrationsPermission": "Użytkownik nie ma uprawnień do zarządzania ustawieniami integracji"
     }
   },
   "telephony": {

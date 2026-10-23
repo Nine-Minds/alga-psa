@@ -67,4 +67,26 @@ describe('document type registry', () => {
     expect(html).toContain('SO-00042');
     expect(html).toContain('Acme Corp');
   });
+
+  it('registers ONE generic work-tag label type with a standard template per label class', () => {
+    expect(isDocumentType('work-tag')).toBe(true);
+    const entry = getDocumentTypeRegistryEntry('work-tag');
+    expect(entry.standardCodes).toEqual(
+      expect.arrayContaining(['standard-ticket-work-tag', 'standard-asset-label', 'standard-stock-unit-label']),
+    );
+    expect(entry.standardCodes).toContain(entry.defaultStandardCode);
+    expect(entry.buildBindings().values).toHaveProperty('recordUrl');
+  });
+
+  it('every label standard template renders a cell against the sample model and carries a 4x2in page', async () => {
+    const entry = getDocumentTypeRegistryEntry('work-tag');
+    for (const code of entry.standardCodes) {
+      const ast = entry.getStandardTemplateAstByCode(code)!;
+      expect(ast.metadata?.printSettings?.customPageSize).toEqual({ width: 4, height: 2, unit: 'in' });
+      const evaluation = evaluateTemplateAst(ast, entry.buildSampleViewModel() as never);
+      const html = await renderTemplateAstHtmlDocument(ast, evaluation, { locale: 'en' });
+      expect(html).toContain('@page');
+      expect(html).toContain('<svg');
+    }
+  });
 });

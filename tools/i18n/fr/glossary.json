@@ -2256,7 +2256,8 @@
       "Important",
       "Compact",
       "Extensions (Pro)",
-      "Stable"
+      "Stable",
+      "Code 128"
     ],
     "caseInsensitive": [
       "api",

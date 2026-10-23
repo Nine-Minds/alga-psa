@@ -30,7 +30,8 @@
           "mapped": "Mappé",
           "noResult": "Aucun résultat n'a été renvoyé pour cette ligne.",
           "pending": "En attente",
-          "saved": "Enregistré"
+          "saved": "Enregistré",
+          "missingField": "{{field}} manquant"
         },
         "suggested": "Suggéré",
         "toSave": "{{total}} à enregistrer"
@@ -82,7 +83,8 @@
           "instant": "Instantané",
           "live": "En direct",
           "manual": "Manuel",
-          "twoWay": "Bidirectionnel"
+          "twoWay": "Bidirectionnel",
+          "iif": "IIF"
         },
         "highlights": {
           "delivery": "Livraison",
@@ -102,6 +104,9 @@
           },
           "xeroCsv": {
             "description": "Exportez les factures au format CSV pour un import manuel dans Xero et importez les données fiscales depuis les rapports Xero."
+          },
+          "qbd": {
+            "description": "Exportez les factures dans un fichier IIF à importer dans QuickBooks Desktop."
           }
         },
         "selected": "{{title}} sélectionné",
@@ -129,13 +134,22 @@
         }
       },
       "adjustmentMappings": {
-        "desktopServices": "Comptes de services Desktop",
-        "desktopDiscounts": "Remises Desktop",
         "desktopAccount": "Nom du compte de produits Desktop",
         "description": "Associez les remises et avoirs avant l’exportation. Cette association appartient à cette société comptable.",
         "add": "Ajouter une association",
         "remove": "Supprimer une association",
-        "removeConfirm": "Supprimer cette association comptable ?"
+        "removeConfirm": "Supprimer cette association comptable ?",
+        "desktopTaxAccount": "Nom du compte de taxe de vente Desktop",
+        "desktopCustomer": "Nom du client Desktop",
+        "desktopTerms": "Nom des conditions Desktop",
+        "descriptionTaxCodes": "Chaque région fiscale indique l’article ou le groupe de taxe de vente facturé par QuickBooks Desktop et le compte de passif sur lequel il est comptabilisé.",
+        "descriptionServices": "Chaque service indique l’article QuickBooks Desktop utilisé par ses lignes de facture et le compte de produits sur lequel elles sont comptabilisées.",
+        "descriptionClients": "Le client QuickBooks Desktop sous lequel chaque client est facturé. Les clients sans correspondance bloquent l’exportation.",
+        "descriptionPaymentTerms": "Les conditions QuickBooks Desktop imprimées sur chaque facture. Les conditions sans correspondance restent vides.",
+        "desktopItem": "Nom de l’article Desktop",
+        "desktopItemHelp": "L’article exactement tel qu’il apparaît dans votre liste d’articles QuickBooks Desktop. Chaque ligne de facture indique un article, les exportations sont donc bloquées tant qu’il n’est pas défini.",
+        "desktopSalesTaxItem": "Article ou groupe de taxe de vente",
+        "desktopSalesTaxItemHelp": "Laissez vide pour utiliser l’article de taxe de vente par défaut des paramètres QuickBooks Desktop."
       }
     },
     "calendar": {
@@ -4254,6 +4268,59 @@
           "providers": "Teams Phone aujourd'hui ; le même noyau d'appels accueillera les futurs fournisseurs."
         }
       }
+    },
+    "qbd": {
+      "settings": {
+        "title": "Intégration QuickBooks Desktop (IIF)",
+        "description": "Exportez les factures dans un fichier IIF pour Fichier → Utilitaires → Importer → Fichiers IIF dans QuickBooks Desktop.",
+        "loading": "Chargement des paramètres QuickBooks Desktop...",
+        "savedMessage": "Paramètres enregistrés avec succès",
+        "save": "Enregistrer les paramètres",
+        "connectionsPermissionNotice": "Vous pouvez consulter les paramètres QuickBooks Desktop, mais leur modification nécessite la capacité de gestion des connexions. Demandez à un administrateur de vous l'accorder.",
+        "errors": {
+          "load": "Impossible de charger les paramètres QuickBooks Desktop",
+          "save": "Impossible d'enregistrer les paramètres QuickBooks Desktop"
+        },
+        "warning": {
+          "title": "Sauvegardez d'abord votre fichier d'entreprise",
+          "description": "QuickBooks Desktop crée tout nom de client, d'article, de compte ou de condition qu'il ne reconnaît pas lors de l'import d'un fichier IIF, et les imports IIF ne peuvent pas être annulés. Vérifiez que chaque nom ci-dessous et dans les correspondances correspond exactement à votre fichier d'entreprise, et testez votre premier import sur une copie de sauvegarde."
+        },
+        "exportSettings": {
+          "title": "Paramètres d'export IIF",
+          "description": "Saisissez les noms de comptes et d'articles QuickBooks Desktop exactement tels qu'ils apparaissent dans votre plan comptable et votre liste d'articles."
+        },
+        "fields": {
+          "arAccount": "Compte clients",
+          "arAccountHelp": "Le compte clients sur lequel chaque facture est comptabilisée.",
+          "defaultIncomeAccount": "Compte de produits par défaut",
+          "defaultIncomeAccountHelp": "Le compte de produits des articles mis en correspondance depuis une exportation, et de toute correspondance Services ou Remises sans compte.",
+          "salesTaxPayableAccount": "Compte de taxe de vente à payer",
+          "salesTaxPayableAccountHelp": "Le compte sur lequel la ligne de taxe de vente est comptabilisée, sauf si la correspondance des codes fiscaux de la région en indique un autre.",
+          "defaultSalesTaxItem": "Article de taxe de vente par défaut",
+          "defaultSalesTaxItemHelp": "Article ou groupe de taxe de vente pour les factures taxées dont la correspondance des codes fiscaux n’en indique aucun.",
+          "newProductItemType": "Type d'article pour les nouveaux produits",
+          "inventoryWarning": "Les réceptions de stock d'Alga ne sont pas exportées : les quantités en stock dans QuickBooks deviendront négatives, sauf si vous saisissez aussi le stock dans QuickBooks.",
+          "nonInventoryHelp": "Recommandé : Alga reste le système de référence pour le stock et QuickBooks n'enregistre que la vente.",
+          "inventoryAssetAccount": "Compte d'actif de stock",
+          "cogsAccount": "Compte de coût des marchandises vendues"
+        },
+        "mappings": {
+          "title": "Correspondances QuickBooks",
+          "description": "Faites correspondre les clients, services, remises, codes fiscaux et conditions de paiement d’Alga aux noms de votre fichier d’entreprise QuickBooks Desktop. Chaque service et chaque remise nécessite un article Desktop ; les conditions de paiement sans correspondance restent vides.",
+          "permissionNotice": "La modification des correspondances QuickBooks Desktop nécessite l’autorisation de gérer les correspondances. Demandez-la à un administrateur."
+        },
+        "exports": {
+          "description": "Créez un lot d’exportation QuickBooks Desktop, exécutez-le, puis téléchargez le fichier IIF depuis les détails du lot."
+        },
+        "newItems": {
+          "title": "Articles créés par les exports",
+          "description": "Lorsqu'un export crée un nouvel article QuickBooks pour un produit Alga, il utilise ce type d'article. Les services sont toujours créés comme articles de service."
+        },
+        "itemTypes": {
+          "nonInventory": "Pièce hors stock",
+          "inventory": "Pièce en stock"
+        }
+      }
     }
   },
   "errors": {
@@ -4373,6 +4440,10 @@
       "contactWithoutClient": "Un contact avec cette adresse e-mail existe déjà dans le système sans affectation à un client",
       "emailOnAnotherClient": "Cet e-mail est déjà associé à un autre client",
       "emailOnAnotherClientNamed": "Cet e-mail est déjà associé à {{clientName}}"
+    },
+    "quickbooksDesktop": {
+      "viewSettingsPermission": "L'utilisateur n'a pas l'autorisation de consulter les paramètres d'intégration",
+      "manageIntegrationsPermission": "L'utilisateur n'a pas l'autorisation de gérer les paramètres d'intégration"
     }
   },
   "telephony": {

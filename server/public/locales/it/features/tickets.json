@@ -1667,7 +1667,10 @@
       "ruleCategoryBoardMismatch": "La categoria selezionata appartiene a una bacheca diversa da quella della regola.",
       "ruleCategoryInvalid": "La categoria selezionata non è una categoria di primo livello.",
       "ruleSubcategoryInvalid": "La sottocategoria selezionata non appartiene alla categoria selezionata.",
-      "ruleSubcategoryRequiresCategory": "Seleziona una categoria prima di scegliere una sottocategoria."
+      "ruleSubcategoryRequiresCategory": "Seleziona una categoria prima di scegliere una sottocategoria.",
+      "ruleTooManyKeywords": "Usi al massimo {{max}} parole chiave per regola.",
+      "ruleKeywordTooLong": "Ogni parola chiave può avere al massimo {{max}} caratteri.",
+      "ruleOriginInvalid": "Una delle origini ticket selezionate non è valida."
     }
   },
   "ticketSection": {

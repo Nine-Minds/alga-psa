@@ -635,4 +635,127 @@ describe('AccountingExportValidation.ensureMappingsForBatch', () => {
       expect(repo.errors).toEqual([]);
     });
   });
+
+  describe('QuickBooks Desktop', () => {
+    const desktopState = (overrides: Partial<FakeState> = {}) =>
+      baseState({
+        batch: { batch_id: 'batch-1', tenant: TENANT, adapter_type: 'quickbooks_desktop', target_realm: null },
+        clients: [{ client_id: 'client-1', client_name: 'Acme Corp', payment_terms: 'net_30' }],
+        services: [{ service_id: 'svc-1', service_name: 'Laptop', item_kind: 'product' }],
+        ...overrides,
+      });
+
+    it('validates against the QuickBooks Desktop mappings, as the adapter reads them', async () => {
+      const resolver = createFakeResolver({
+        resolveClientMapping: vi.fn(async () => ({ external_entity_id: 'Acme Corp', source: 'company' })),
+        resolveServiceMapping: vi.fn(async () => ({ external_entity_id: 'Sales', metadata: { qbdItem: 'Laptop' }, source: 'service' })),
+      });
+      const { repo } = await run(desktopState(), resolver);
+
+      expect(resolver.resolveServiceMapping).toHaveBeenCalledWith(
+        expect.objectContaining({ adapterType: 'quickbooks_desktop', serviceId: 'svc-1' })
+      );
+      expect(resolver.resolveClientMapping).toHaveBeenCalledWith(
+        expect.objectContaining({ adapterType: 'quickbooks_desktop', clientId: 'client-1' })
+      );
+      expect(repo.errors).toEqual([]);
+      expect(repo.updateBatchStatus).toHaveBeenCalledWith('batch-1', { status: 'ready' });
+    });
+
+    it('treats a Desktop service or discount mapping without an item name as unmapped', async () => {
+      const resolver = createFakeResolver({
+        resolveClientMapping: vi.fn(async () => ({ external_entity_id: 'Acme Corp', source: 'company' })),
+        resolveServiceMapping: vi.fn(async () => ({ external_entity_id: 'Sales', metadata: null, source: 'service' })),
+        resolveDiscountMapping: vi.fn(async () => ({ external_entity_id: 'Discounts Given', metadata: { qbdItem: ' ' }, source: 'discount' })),
+      });
+      const state = desktopState({
+        lines: [makeCanonicalLine(), makeCanonicalLine({ line_id: 'line-2', document_line_id: 'charge-2' })],
+        charges: [
+          { item_id: 'charge-1', invoice_id: 'inv-1', service_id: 'svc-1', tax_region: null },
+          { item_id: 'charge-2', invoice_id: 'inv-1', service_id: null, is_discount: true, tax_region: null },
+        ],
+        chargeDetails: [
+          { item_id: 'charge-1', service_period_start: P1_START, service_period_end: P1_END, billing_timing: 'advance' },
+          { item_id: 'charge-2', service_period_start: P1_START, service_period_end: P1_END, billing_timing: 'advance' },
+        ],
+      });
+      const { repo } = await run(state, resolver);
+
+      expect(repo.errors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: 'missing_service_mapping',
+            metadata: expect.objectContaining({ alga_entity_id: 'svc-1', desktop_account: 'Sales', desktop_mapping_source: 'service' }),
+          }),
+          expect.objectContaining({
+            code: 'missing_discount_mapping',
+            metadata: expect.objectContaining({ desktop_account: 'Discounts Given', desktop_mapping_source: 'discount' }),
+          }),
+        ])
+      );
+      expect(repo.updateBatchStatus).toHaveBeenCalledWith('batch-1', { status: 'needs_attention' });
+    });
+
+    it('requires a tax code mapping for taxed regions but not a payment term mapping', async () => {
+      const resolver = createFakeResolver({
+        resolveClientMapping: vi.fn(async () => ({ external_entity_id: 'Acme Corp', source: 'company' })),
+        resolveServiceMapping: vi.fn(async () => ({ external_entity_id: 'Sales', metadata: { qbdItem: 'Laptop' }, source: 'service' })),
+        resolveTaxCodeMapping: vi.fn(async () => null),
+        resolvePaymentTermMapping: vi.fn(async () => null),
+      });
+      const state = desktopState({
+        charges: [{ item_id: 'charge-1', invoice_id: 'inv-1', service_id: 'svc-1', tax_region: 'CA' }],
+      });
+      const { repo } = await run(state, resolver);
+
+      expect(resolver.resolveTaxCodeMapping).toHaveBeenCalledWith(
+        expect.objectContaining({ adapterType: 'quickbooks_desktop', taxRegionId: 'CA' })
+      );
+      expect(resolver.resolvePaymentTermMapping).not.toHaveBeenCalled();
+      expect(repo.errors).toEqual([expect.objectContaining({ code: 'missing_tax_mapping' })]);
+    });
+
+    it('reports unmapped clients, services and discounts with the Alga entity for the create-as-new prompt', async () => {
+      const resolver = createFakeResolver({
+        resolveClientMapping: vi.fn(async () => null),
+        resolveServiceMapping: vi.fn(async () => null),
+        resolveDiscountMapping: vi.fn(async () => null),
+      });
+      const state = desktopState({
+        lines: [makeCanonicalLine(), makeCanonicalLine({ line_id: 'line-2', document_line_id: 'charge-2' })],
+        charges: [
+          { item_id: 'charge-1', invoice_id: 'inv-1', service_id: 'svc-1', tax_region: null },
+          { item_id: 'charge-2', invoice_id: 'inv-1', service_id: null, is_discount: true, tax_region: null },
+        ],
+        chargeDetails: [
+          { item_id: 'charge-1', service_period_start: P1_START, service_period_end: P1_END, billing_timing: 'advance' },
+          { item_id: 'charge-2', service_period_start: P1_START, service_period_end: P1_END, billing_timing: 'advance' },
+        ],
+      });
+      const { repo } = await run(state, resolver);
+
+      expect(repo.errors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: 'missing_client_mapping',
+            metadata: expect.objectContaining({ alga_entity_type: 'client', alga_entity_id: 'client-1', alga_name: 'Acme Corp' }),
+          }),
+          expect.objectContaining({
+            code: 'missing_service_mapping',
+            metadata: expect.objectContaining({
+              alga_entity_type: 'service',
+              alga_entity_id: 'svc-1',
+              alga_name: 'Laptop',
+              item_kind: 'product',
+            }),
+          }),
+          expect.objectContaining({
+            code: 'missing_discount_mapping',
+            metadata: expect.objectContaining({ alga_entity_type: 'discount' }),
+          }),
+        ])
+      );
+      expect(repo.updateBatchStatus).toHaveBeenCalledWith('batch-1', { status: 'needs_attention' });
+    });
+  });
 });
