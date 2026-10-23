@@ -2,7 +2,7 @@
 
 
 import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Card, Box } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -83,6 +83,10 @@ interface ContractLinesProps {
   onContractLinesChanged?: () => void;
   isReadOnly?: boolean;
   focusContractLineId?: string | null;
+  /** One-shot request to open this line in edit mode (ignored when read-only). Plain focus links leave it unset. */
+  editIntentLineId?: string | null;
+  /** Called once the edit intent has been handled (applied or refused), so the parent clears it. */
+  onEditIntentConsumed?: () => void;
 }
 
 interface DetailedContractLineMapping {
@@ -171,7 +175,7 @@ const DRAFT_SERVICE_CONFIG_PREFIX = 'draft-service-config:';
 
 const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
 
-const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null, onContractLinesChanged, isReadOnly = false, focusContractLineId = null }) => {
+const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null, onContractLinesChanged, isReadOnly = false, focusContractLineId = null, editIntentLineId = null, onEditIntentConsumed }) => {
   const { t } = useTranslation('msp/contracts');
 
   const handleAssignLineBillingProfile = async (
@@ -720,6 +724,28 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       }));
     }
   };
+
+  // One-shot edit intent (Overview "Edit"): once the target line has loaded, open it in the
+  // same edit mode the Edit button uses, then tell the parent to clear the intent. The ref
+  // guards against refetches/re-renders re-running it while the async edit setup is in flight;
+  // clearing the intent in the parent keeps later manual collapses from re-triggering edit mode.
+  const handleEditRef = useRef(handleEditContractLine);
+  handleEditRef.current = handleEditContractLine;
+  const consumedEditIntentRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!editIntentLineId) {
+      consumedEditIntentRef.current = null;
+      return;
+    }
+    if (consumedEditIntentRef.current === editIntentLineId) return;
+    const target = contractLines.find((line) => line.contract_line_id === editIntentLineId);
+    if (!target) return; // lines not loaded yet; effect re-runs when they arrive
+    consumedEditIntentRef.current = editIntentLineId;
+    if (!isReadOnly) {
+      void handleEditRef.current(target);
+    }
+    onEditIntentConsumed?.();
+  }, [editIntentLineId, contractLines, isReadOnly, onEditIntentConsumed]);
 
   const handleEffectiveBoundaryChange = async (contractLineId: string, boundary: string) => {
     setEffectiveBoundary(boundary);
@@ -1298,6 +1324,13 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                         <span>•</span>
                         <span>
                           {t('contractLines.columns.frequency', { defaultValue: 'Frequency' })}: {formatBillingFrequency(line.billing_frequency)}
+                        </span>
+                        <span>•</span>
+                        <span data-testid={`contract-line-billing-timing-${line.contract_line_id}`}>
+                          {t('billing.labels.timing', { defaultValue: 'Billing Timing' })}:{' '}
+                          {resolveEffectiveBillingTiming(line.contract_line_type, line.billing_timing) === 'advance'
+                            ? t('billing.timing.advance', { defaultValue: 'In Advance' })
+                            : t('billing.timing.arrears', { defaultValue: 'In Arrears' })}
                         </span>
                         {services.length > 0 && (
                           <>

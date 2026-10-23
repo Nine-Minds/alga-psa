@@ -65,7 +65,10 @@ import { listContractSimulationClients } from "@alga-psa/billing/actions/contrac
 import GenericPlanServicesList from "../contract-lines/GenericContractLineServicesList";
 import { ContractLineEditDialog } from "./ContractLineEditDialog";
 import { BillingTimingField } from "./BillingTimingField";
-import { isAdvanceTimingAllowedForLineType } from "@shared/billingClients/contractLineTimingRule";
+import {
+  isAdvanceTimingAllowedForLineType,
+  resolveEffectiveBillingTiming,
+} from "@shared/billingClients/contractLineTimingRule";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import { unitFixedServiceAmountCents } from "../../../lib/fixedServiceBasis";
 import {
@@ -2112,7 +2115,15 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
                   </p>
                   <p className="text-xs text-muted-foreground uppercase tracking-wide">
                     {humanize(line.contract_line_type)} •{" "}
-                    {humanize(line.billing_frequency)}
+                    {humanize(line.billing_frequency)} •{" "}
+                    <span data-testid={`template-line-billing-timing-${line.contract_line_id}`}>
+                      {resolveEffectiveBillingTiming(
+                        line.contract_line_type,
+                        line.billing_timing,
+                      ) === "advance"
+                        ? t("billing.timing.advance", { defaultValue: "In Advance" })
+                        : t("billing.timing.arrears", { defaultValue: "In Arrears" })}
+                    </span>
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
