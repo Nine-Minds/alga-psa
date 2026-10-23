@@ -24,7 +24,7 @@ import { tenantDb } from '@alga-psa/db';
 import { sanitizeEmailHtml } from '../../lib/email/sanitizeEmailHtml';
 import { INBOUND_MIME_PARSE_OPTIONS } from './inboundMimeParseOptions';
 import { ORIGINAL_EMAIL_ATTACHMENT_ID } from './inboundEmailArtifactHelpers';
-import { rfcMessageIdLookupForms } from './inboundEmailIdentity';
+import { normalizeRfc822MessageId, rfcMessageIdLookupForms } from './inboundEmailIdentity';
 // The pure sibling, not `inboundEmbeddedImageUrlRewrite`: that module also
 // converts bodies to BlockNote, and importing `@blocknote/server-util` into a
 // route handler pulls React's `createContext` into a server graph, which makes
@@ -128,6 +128,37 @@ async function loadEmbeddedImageMappings(
     }));
 }
 
+/**
+ * Narrow `email_processed_attachments` to the rows archived for one message id.
+ *
+ * The two sides are not written in the same shape. The durable pipeline stores
+ * the canonical normalized id in `email_id`, but the default pipeline stores
+ * mailparser's raw header value there — angle brackets kept, domain case
+ * untouched — while `tickets.email_metadata` and `comments.metadata.email`
+ * always hold the normalized form. A bracketed, mixed-case row cannot be
+ * reconstructed from that normalized value, so an RFC-style id is also compared
+ * with brackets trimmed and case folded on both sides. An opaque provider id
+ * (Graph/Gmail, no domain) stays an exact match: those are case-sensitive and
+ * folding them could match a neighbouring message.
+ */
+export function whereInboundEmailArtifactMessageId<T extends Knex.QueryBuilder>(
+  query: T,
+  messageId: string
+): T {
+  const forms = rfcMessageIdLookupForms(messageId);
+  const normalized = normalizeRfc822MessageId(messageId);
+  const folded = normalized?.includes('@') ? normalized.toLowerCase() : null;
+
+  query.where(function (this: Knex.QueryBuilder) {
+    this.whereIn('email_id', forms);
+    if (folded) {
+      this.orWhereRaw("lower(btrim(email_id, '<>')) = ?", [folded]);
+    }
+  });
+
+  return query;
+}
+
 /** Download the archived `.eml` bytes, or null when the file is gone or oversized. */
 async function readArchivedEmailSource(
   lookup: InboundEmailHtmlLookup,
@@ -146,7 +177,20 @@ async function readArchivedEmailSource(
   }
 
   const provider = await getStorageProvider();
-  return provider.download(file.storage_path);
+  try {
+    return await provider.download(file.storage_path);
+  } catch (error) {
+    // The row can outlive its object (retention sweep, a restore that skipped
+    // the bucket, a half-finished upload). That is "no formatted view exists",
+    // not a server error: a 500 would put a permanent failure message under
+    // the body, where the contract is to withdraw the toggle.
+    console.warn('[renderInboundEmailHtml] archived email source is unreadable', {
+      tenant: lookup.tenantId,
+      fileId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
 }
 
 /**
@@ -168,7 +212,9 @@ export async function renderInboundEmailHtml(
       attachment_id: ORIGINAL_EMAIL_ATTACHMENT_ID,
       processing_status: 'success',
     })
-    .whereIn('email_id', forms)
+    .modify((query: Knex.QueryBuilder) =>
+      whereInboundEmailArtifactMessageId(query, lookup.messageId)
+    )
     .whereNotNull('file_id')
     .first('email_id', 'file_id');
 

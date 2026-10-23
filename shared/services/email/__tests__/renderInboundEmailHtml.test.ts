@@ -1,8 +1,15 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import knexLib from 'knex';
+import { simpleParser } from 'mailparser';
 
-import { buildInboundEmailHtmlFromMime } from '../renderInboundEmailHtml';
+import { normalizeRfc822MessageId } from '../inboundEmailIdentity';
+import { INBOUND_MIME_PARSE_OPTIONS } from '../inboundMimeParseOptions';
+import {
+  buildInboundEmailHtmlFromMime,
+  whereInboundEmailArtifactMessageId,
+} from '../renderInboundEmailHtml';
 
 const PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
@@ -11,12 +18,12 @@ function buildMime(parts: string[]): Buffer {
   return Buffer.from(parts.join('\r\n'));
 }
 
-function buildHtmlMime(html: string): Buffer {
+function buildHtmlMime(html: string, messageId = '<formatted@example.test>'): Buffer {
   return buildMime([
     'From: Sender <sender@example.test>',
     'To: support@example.test',
     'Subject: Formatted reply',
-    'Message-ID: <formatted@example.test>',
+    `Message-ID: ${messageId}`,
     'MIME-Version: 1.0',
     'Content-Type: text/html; charset="utf-8"',
     '',
@@ -150,6 +157,62 @@ describe('buildInboundEmailHtmlFromMime', () => {
     );
 
     expect(html).toBeNull();
+  });
+});
+
+/**
+ * The archived artifact is looked up by the message id stored on the ticket or
+ * comment, but the two pipelines do not write `email_processed_attachments.email_id`
+ * the same way: the durable one stores the canonical normalized id, the default
+ * one stores mailparser's raw header value. An exact-match-only lookup finds
+ * nothing for the default pipeline, which is every Microsoft/IMAP ticket until
+ * durable mode is switched on — the toggle would simply never appear.
+ */
+describe('whereInboundEmailArtifactMessageId', () => {
+  const db = knexLib({ client: 'pg' });
+
+  function compile(messageId: string) {
+    return whereInboundEmailArtifactMessageId(db('email_processed_attachments'), messageId)
+      .toSQL()
+      .toNative();
+  }
+
+  it('matches the bracketed, mixed-case email_id the default pipeline archives', async () => {
+    // The value the default pipeline puts in `email_id` comes straight from
+    // mailparser, so take it from mailparser rather than assuming its shape.
+    const parsed: any = await simpleParser(
+      buildHtmlMime('<p>Hi</p>', '<ABC.123@Example.COM>'),
+      INBOUND_MIME_PARSE_OPTIONS
+    );
+    const archivedEmailId = String(parsed.messageId);
+    // The value `tickets.email_metadata` / `comments.metadata.email` store, and
+    // therefore the only value the route can look up with.
+    const storedMessageId = normalizeRfc822MessageId(archivedEmailId) as string;
+
+    // Guard the premise: without a difference here there would be nothing to fix.
+    expect(archivedEmailId).not.toBe(storedMessageId);
+
+    const { sql, bindings } = compile(storedMessageId);
+
+    expect(sql).toContain("lower(btrim(email_id, '<>'))");
+    // What Postgres computes for the archived row, evaluated here.
+    expect(bindings).toContain(archivedEmailId.replace(/^<|>$/g, '').toLowerCase());
+  });
+
+  it('still matches a row written in the canonical normalized form', () => {
+    const { sql, bindings } = compile('abc.123@example.com');
+
+    expect(sql).toContain('"email_id" in (');
+    expect(bindings).toContain('abc.123@example.com');
+  });
+
+  it('keeps an opaque provider id an exact match', () => {
+    const graphId = 'AAMkADExYzBmZS1hYmNk';
+    const { sql, bindings } = compile(graphId);
+
+    // Folding case here could hand back a different message's archive.
+    expect(sql).not.toContain('btrim');
+    expect(bindings).toEqual([graphId]);
   });
 });
 
