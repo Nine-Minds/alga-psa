@@ -6,6 +6,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ClientPicker } from './ClientPicker';
 import { AsyncClientPicker, type PickerClientOption } from './AsyncClientPicker';
 import { ClientTagsProvider } from '../context/ClientTagsContext';
+import { ClientPickerSearchProvider } from '../context/ClientPickerSearchContext';
 
 vi.mock('../ui-reflection/useAutomationIdAndRegister', () => ({
   useAutomationIdAndRegister: (info: any) => ({ automationIdProps: { id: info.id }, updateMetadata: vi.fn() }),
@@ -240,5 +241,37 @@ describe('ClientPicker', () => {
     fireEvent.click(screen.getByText('Beta'));
     expect(onSelect).toHaveBeenCalledWith('b');
     await waitFor(() => expect(fetchClientTags).toHaveBeenCalledWith(['a', 'b']));
+  });
+
+  it('is async by default (no clients prop) and uses the context searcher', async () => {
+    const searchClients = vi.fn(async (_p?: any) => ({ clients: mk(1), total: 1 }));
+    render(
+      <ClientPickerSearchProvider value={{ searchClients }}>
+        <ClientPicker id="cp4" onSelect={vi.fn()} selectedClientId={null} />
+      </ClientPickerSearchProvider>
+    );
+    open();
+    await screen.findByText('Client 0');
+    expect(searchClients).toHaveBeenCalled();
+  });
+
+  it('prefers an explicit searchClients prop over the context searcher', async () => {
+    const fromContext = vi.fn(async (_p?: any) => ({ clients: mk(1, 'Ctx'), total: 1 }));
+    const fromProp = vi.fn(async (_p?: any) => ({ clients: mk(1, 'Prop'), total: 1 }));
+    render(
+      <ClientPickerSearchProvider value={{ searchClients: fromContext }}>
+        <ClientPicker id="cp5" searchClients={fromProp} onSelect={vi.fn()} selectedClientId={null} />
+      </ClientPickerSearchProvider>
+    );
+    open();
+    await screen.findByText('Prop 0');
+    expect(fromContext).not.toHaveBeenCalled();
+  });
+
+  it('logs an error and renders an empty in-memory picker when no searcher is available', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(<ClientPicker id="cp6" onSelect={vi.fn()} selectedClientId={null} />);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining('No client searcher'));
+    error.mockRestore();
   });
 });
