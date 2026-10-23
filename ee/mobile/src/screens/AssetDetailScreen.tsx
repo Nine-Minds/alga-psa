@@ -98,6 +98,7 @@ export function AssetDetailScreen({ route, navigation }: Props) {
   const { assetId, assetName } = route.params;
   const theme = useTheme();
   const { t } = useTranslation("assets");
+  const { t: tInventory } = useTranslation("inventory");
   const { client, apiKey } = useInventoryApi();
   const { showToast } = useToast();
 
@@ -138,6 +139,9 @@ export function AssetDetailScreen({ route, navigation }: Props) {
         // 403 and 404 look identical, and nothing about the record (including
         // the assetName route param) may be shown.
         setAsset(null);
+        // The navigator derives the header title from the assetName route param;
+        // replace it so the denied record's name is not shown there either.
+        navigation.setOptions({ title: tInventory("asset.title", "Asset") });
         setStatus("unavailable");
         return;
       }

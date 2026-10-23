@@ -115,13 +115,14 @@ function ok<T>(data: T) {
 async function renderScreen(
   navigate: ReturnType<typeof vi.fn> = vi.fn(),
   goBack: ReturnType<typeof vi.fn> = vi.fn(),
+  setOptions: ReturnType<typeof vi.fn> = vi.fn(),
 ): Promise<ReactTestRenderer> {
   let tree!: ReactTestRenderer;
   await act(async () => {
     tree = create(
       <AssetDetailScreen
         route={{ key: "r", name: "AssetDetail", params: { assetId: "asset-1", assetName: "Device" } } as never}
-        navigation={{ navigate, goBack } as never}
+        navigation={{ navigate, goBack, setOptions } as never}
       />,
     );
   });
@@ -385,8 +386,12 @@ describe("AssetDetailScreen", () => {
     it("shows the unavailable state with no record content, not the route assetName, and no Retry", async () => {
       mockGetAsset.mockResolvedValue({ ok: false, status: (error as { status: number }).status, error });
       const goBack = vi.fn();
-      const tree = await renderScreen(vi.fn(), goBack);
+      const setOptions = vi.fn();
+      const tree = await renderScreen(vi.fn(), goBack, setOptions);
       const text = allText(tree);
+      // The header title is derived from the assetName param; it must be replaced.
+      expect(setOptions).toHaveBeenCalledWith({ title: "Asset" });
+      expect(JSON.stringify(setOptions.mock.calls)).not.toContain("Device");
       expect(text).toContain("Not found, or you don't have access");
       expect(text).not.toContain("Device"); // assetName route param
       expect(text).not.toContain("Dell Latitude");
