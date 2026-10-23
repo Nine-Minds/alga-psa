@@ -104,6 +104,9 @@ async function snapshot(): Promise<Record<string, { count: number; maxUpdatedAt:
 // Transaction control is not a write; everything else must be a read.
 const READ_ONLY = /^\s*(select|with|begin|commit|rollback|savepoint|release|set\s+(local\s+)?(search_path|statement_timeout|app\.))/i;
 
+// A SELECT can still write or lock: reject row locks, sequence advances, notifications and SELECT INTO.
+const SELECT_WITH_EFFECT = /\bfor\s+(no\s+key\s+)?(update|share|key\s+share)\b|\bnextval\s*\(|\bsetval\s*\(|\bpg_notify\s*\(|\bselect\b[^;]*\binto\s+\w/i;
+
 describe('T-noside: printing is read-only', () => {
   beforeAll(async () => {
     db = await createTestDbConnection({ runSeeds: true });
@@ -193,6 +196,7 @@ describe('T-noside: printing is read-only', () => {
     expect(rec.statements.length).toBeGreaterThan(0);
     const writes = rec.statements.filter((s) => !READ_ONLY.test(s.sql));
     expect(writes).toEqual([]);
+    expect(rec.statements.filter((s) => SELECT_WITH_EFFECT.test(s.sql))).toEqual([]);
 
     expect(after).toEqual(before);
     expect(published).not.toHaveBeenCalled();

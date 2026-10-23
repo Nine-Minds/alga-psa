@@ -23,3 +23,12 @@ Subcategory, else category, else null (design §9; the dossier's board fallback 
 
 ## Acceptance
 See `features.json` / `tests.json`. Live smoke test (design §7) is pending.
+
+## Smoke test steps (for the later smoke tester; not run yet)
+Sign in as the canonical QA user (see dossier). Needs a ticket with exactly one linked asset whose serial is >= 8 chars, and a second restricted user for step 3.
+1. Ticket detail: click **Print work tag** (`<id>-print-work-tag-button`). PDF shows logo, MSP name, client, title, ticket number, reason (subcategory else category), `Asset {tag}`, `S/N ...last4`, QR. Edit Item/Reason in the dialog and reprint: edits appear, QR unchanged.
+2. Asset detail: Actions dropdown / **Print asset label** (`asset-print-label-button`); choose the Code 128 template. Check tag, name, client, QR, barcode. The page **Print page** button still prints the page.
+3. Ticket list: select 3 tickets including one the restricted user cannot read; Print work tags: PDF has 2 labels, dialog reports 1 skipped. Same for assets. Select > 200: action disabled with tooltip.
+4. Hide client name in a tenant work-tag template (designer: Fields shown on the label), Set as Default for the ticket class, reprint: no client name. Asset default unaffected.
+5. Scan both QRs with a phone while signed out: sign-in, then land on the ticket / asset (callbackUrl round trip). A scan by a user who cannot open the record reveals nothing.
+6. In the DB confirm the T-noside tables (stock_*, invoices, invoice_charges, time_entries, assets, asset_history, tickets, documents, audit_logs) are unchanged after the prints.

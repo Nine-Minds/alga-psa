@@ -6,7 +6,7 @@
       "F004",
       "F005"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T002",
@@ -57,7 +57,7 @@
     "featureIds": [
       "F010"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T008",
