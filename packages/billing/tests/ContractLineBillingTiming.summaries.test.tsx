@@ -7,7 +7,7 @@
 //    expanded and in edit mode, exactly once;
 //  - read-only contracts get no Edit action and a focus/edit id never enters edit mode.
 
-import React, { useState } from 'react';
+import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -21,6 +21,11 @@ vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
 }));
 vi.mock('@alga-psa/billing/actions/contractActions', () => ({
   getContractOverview: mocks.getContractOverview,
+  getContractById: (...a: unknown[]) => detail.getContractById(...a),
+  getContractSummary: vi.fn(async () => null),
+  getContractAssignments: vi.fn(async () => []),
+  updateContract: vi.fn(),
+  deleteContract: vi.fn(),
 }));
 vi.mock('@alga-psa/billing/actions/contractLineSemanticsActions', () => ({
   setUsageMeasurementMode: vi.fn(),
@@ -66,6 +71,60 @@ vi.mock('@alga-psa/billing/actions/billingProfileActions', () => ({
   getClientBillingProfilesForBilling: vi.fn(async () => []),
 }));
 
+
+// ---- ContractDetail boundary mocks (I/O, routing, drawer, tenant, tabs shell) ----
+const nav = vi.hoisted(() => ({ params: new URLSearchParams('tab=client-contracts&contractId=contract-1') }));
+const detail = vi.hoisted(() => ({ getContractById: vi.fn() }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
+  useSearchParams: () => nav.params,
+  usePathname: () => '/msp/billing',
+}));
+vi.mock('@alga-psa/ui', () => ({ useDrawer: () => ({ openDrawer: vi.fn(), replaceDrawer: vi.fn(), closeDrawer: vi.fn() }) }));
+vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: () => ({ enabled: false, loading: false }) }));
+vi.mock('@alga-psa/ui/hooks/useClientBillingProfiles', () => ({
+  useClientBillingProfiles: () => ({ profiles: [], isLoading: false, error: null }),
+}));
+vi.mock('@alga-psa/ui/components/providers/TenantProvider', () => ({ useTenant: () => 'tenant-1' }));
+vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => ({
+  useDocumentsCrossFeature: () => ({ getDocumentsByContractId: vi.fn(async () => []), renderDocuments: () => null }),
+}));
+vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({
+  getClientContractByIdForBilling: vi.fn(async () => null),
+  updateClientContractForBilling: vi.fn(async () => null),
+  getClientByIdForBilling: vi.fn(async () => null),
+}));
+vi.mock('@alga-psa/billing/actions/quoteActions', () => ({ getQuoteByConvertedContractId: vi.fn(async () => null) }));
+vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({ fetchInvoicesByContract: vi.fn(async () => []) }));
+vi.mock('@alga-psa/billing/actions/invoiceTemplates', () => ({ getInvoiceTemplates: vi.fn(async () => []) }));
+vi.mock('@alga-psa/reference-data/actions/boardActions', () => ({ getAllBoards: vi.fn(async () => []) }));
+vi.mock('@alga-psa/reference-data/actions/status-actions/statusActions', () => ({ getTicketStatuses: vi.fn(async () => []) }));
+vi.mock('../src/components/billing-dashboard/contracts/ContractHeader', () => ({ default: () => <div data-testid="contract-header" /> }));
+vi.mock('../src/components/billing-dashboard/contracts/PricingSchedules', () => ({ default: () => null }));
+vi.mock('../src/components/billing-dashboard/contracts/ContractDiscounts', () => ({ default: () => null }));
+vi.mock('../src/components/billing-dashboard/invoicing/InvoicePreviewPanel', () => ({ default: () => null }));
+// Tabs shell that renders only the ACTIVE panel, so "the Lines tab is active" is observable.
+vi.mock('@alga-psa/ui/components/Tabs', async () => {
+  const react = await vi.importActual<typeof import('react')>('react');
+  const Ctx = react.createContext<{ value: string; onValueChange: (v: string) => void }>({ value: '', onValueChange: () => undefined });
+  return {
+    Tabs: ({ value, onValueChange, children }: any) => <Ctx.Provider value={{ value, onValueChange }}>{children}</Ctx.Provider>,
+    TabsList: ({ children }: any) => <div role="tablist">{children}</div>,
+    TabsTrigger: ({ value, children, disabled }: any) => {
+      const c = react.useContext(Ctx);
+      return (
+        <button type="button" role="tab" disabled={disabled} aria-selected={c.value === value} onClick={() => c.onValueChange(value)}>
+          {children}
+        </button>
+      );
+    },
+    TabsContent: ({ value, children }: any) => {
+      const c = react.useContext(Ctx);
+      return c.value === value ? <div data-testid={`tab-panel-${value}`}>{children}</div> : null;
+    },
+  };
+});
+
 const translate = (key: string, options?: Record<string, unknown>) => {
   let value = String(options?.defaultValue ?? key);
   for (const [name, replacement] of Object.entries(options ?? {})) {
@@ -78,9 +137,12 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: translate }),
   useFormatters: () => ({
     formatCurrency: (amount: number, currencyCode: string) => `${currencyCode} ${amount.toFixed(2)}`,
+    formatDate: (v: unknown) => String(v),
+    formatNumber: (v: number) => String(v),
   }),
 }));
 vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', () => ({
+  useBillingFrequencyOptions: () => [],
   useFormatBillingFrequency: () => (value: string) => value,
   useFormatContractLineType: () => (value: string) => value,
 }));
@@ -105,6 +167,7 @@ vi.mock('../src/components/billing-dashboard/contracts/BillingTimingField', () =
 }));
 
 const { ContractOverview } = await import('../src/components/billing-dashboard/contracts/ContractOverview');
+const { default: ContractDetail } = await import('../src/components/billing-dashboard/contracts/ContractDetail');
 const { default: ContractLines } = await import('../src/components/billing-dashboard/contracts/ContractLines');
 
 const overviewLine = (id: string, type: 'Fixed' | 'Hourly', timing: 'advance' | 'arrears') => ({
@@ -141,10 +204,23 @@ const detailedLine = (id: string, type: 'Fixed' | 'Hourly') => ({
 });
 
 const contract = { contract_id: 'contract-1', contract_name: 'C', is_template: false } as any;
+const contractRecord = (extra: Record<string, unknown> = {}) => ({
+  contract_id: 'contract-1',
+  contract_name: 'Managed Services',
+  contract_description: 'd',
+  status: 'active',
+  billing_frequency: 'monthly',
+  is_template: false,
+  currency_code: 'AUD',
+  ...extra,
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
   Element.prototype.scrollIntoView = vi.fn(); // jsdom lacks it
+  nav.params = new URLSearchParams('tab=client-contracts&contractId=contract-1');
+  window.history.replaceState(null, '', '/msp/billing?tab=client-contracts&contractId=contract-1');
+  detail.getContractById.mockResolvedValue(contractRecord());
   mocks.getDetailedContractLines.mockResolvedValue([detailedLine('line-fixed', 'Fixed'), detailedLine('line-hourly', 'Hourly')]);
 });
 afterEach(() => cleanup());
@@ -168,77 +244,66 @@ describe('effective billing timing on summary rows', () => {
   });
 });
 
-describe('Overview Edit deep link', () => {
-  // Mirrors ContractDetail's wiring: onEditLine -> focus request -> ContractLines props.
-  const Harness: React.FC<{ readOnly?: boolean }> = ({ readOnly = false }) => {
-    const [tab, setTab] = useState<'edit' | 'lines'>('edit');
-    const [req, setReq] = useState<{ lineId: string; edit: boolean } | null>(null);
-    return tab === 'edit' ? (
-      <ContractOverview
-        contractId="contract-1"
-        isReadOnly={readOnly}
-        onNavigateToLines={() => setTab('lines')}
-        onEditLine={(lineId) => {
-          setReq({ lineId, edit: !readOnly });
-          setTab('lines');
-        }}
-      />
-    ) : (
-      <ContractLines
-        contract={contract}
-        isReadOnly={readOnly}
-        focusContractLineId={req?.lineId ?? null}
-        editIntentLineId={req?.edit ? req.lineId : null}
-        onEditIntentConsumed={() => setReq((c) => (c ? { ...c, edit: false } : c))}
-      />
+describe('Overview Edit deep link, through the real ContractDetail', () => {
+  const renderDetail = () => render(<ContractDetail resolvedContractId="contract-1" resolvedClientContractId={null} />);
+  const editorOf = (id: string) => screen.queryByTestId(`timing-editor-billing-timing-${id}`);
+
+  it('Edit opens the Lines tab with only that line expanded and in edit mode; cancel (real button) does not re-enter edit mode', async () => {
+    mocks.getContractOverview.mockResolvedValue(
+      overviewOf(overviewLine('line-fixed', 'Fixed', 'advance'), overviewLine('line-hourly', 'Hourly', 'advance')),
     );
-  };
-
-  it('opens the line expanded and in edit mode, and does not re-enter edit mode after the user cancels', async () => {
-    mocks.getContractOverview.mockResolvedValue(overviewOf(overviewLine('line-fixed', 'Fixed', 'advance'), overviewLine('line-hourly', 'Hourly', 'advance')));
-    render(<Harness />);
+    renderDetail();
     fireEvent.click(await screen.findByRole('button', { name: 'Edit Fixed line' }));
-    expect(await screen.findByTestId('timing-editor-billing-timing-line-fixed')).toBeTruthy();
-    expect(screen.queryByTestId('timing-editor-billing-timing-line-hourly')).toBeNull();
 
-    // Intent was consumed: a refetch-style re-render must not restart editing after cancel.
-    const cancel = document.getElementById('cancel-edit-line-fixed') ?? screen.queryByRole('button', { name: /cancel/i });
-    if (cancel) {
-      fireEvent.click(cancel);
-      await waitFor(() => expect(screen.queryByTestId('timing-editor-billing-timing-line-fixed')).toBeNull());
-    }
-    expect(mocks.getDetailedContractLines).toHaveBeenCalledTimes(1);
+    expect(await screen.findByTestId('tab-panel-lines')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Contract Lines' }).getAttribute('aria-selected')).toBe('true');
+    expect(await screen.findByTestId('timing-editor-billing-timing-line-fixed')).toBeTruthy();
+    expect(editorOf('line-hourly')).toBeNull();
+    expect(screen.getAllByTestId(/^timing-editor-/)).toHaveLength(1);
+
+    const cancel = await screen.findByRole('button', { name: /^cancel$/i }, { timeout: 2000 }).catch(() => null);
+    expect(cancel).not.toBeNull();
+    expect(cancel!.id).toBe('cancel-line-line-fixed');
+    fireEvent.click(document.getElementById('cancel-line-line-fixed')!);
+    await waitFor(() => expect(editorOf('line-fixed')).toBeNull());
+    // Settle: the consumed one-shot intent must not re-open edit mode.
+    await new Promise((r) => setTimeout(r, 50));
+    expect(editorOf('line-fixed')).toBeNull();
+    expect(document.getElementById('cancel-line-line-fixed')).toBeNull();
   });
 
-  it('single-line "View details" goes straight to that line in edit mode', async () => {
+  it('single-line "View details" lands on that line in edit mode', async () => {
     mocks.getContractOverview.mockResolvedValue(overviewOf(overviewLine('line-fixed', 'Fixed', 'advance')));
     mocks.getDetailedContractLines.mockResolvedValue([detailedLine('line-fixed', 'Fixed')]);
-    render(<Harness />);
+    renderDetail();
     fireEvent.click(await screen.findByText(/View details/));
+    expect(await screen.findByTestId('tab-panel-lines')).toBeTruthy();
     expect(await screen.findByTestId('timing-editor-billing-timing-line-fixed')).toBeTruthy();
   });
 
-  it('read-only: no Overview Edit action, and "View details" only expands the line', async () => {
+  it('system-managed default contract: no Overview Edit action, and "View details" never enters edit mode', async () => {
+    detail.getContractById.mockResolvedValue(contractRecord({ is_system_managed_default: true }));
     mocks.getContractOverview.mockResolvedValue(overviewOf(overviewLine('line-fixed', 'Fixed', 'advance')));
     mocks.getDetailedContractLines.mockResolvedValue([detailedLine('line-fixed', 'Fixed')]);
-    render(<Harness readOnly />);
+    renderDetail();
     await screen.findByTestId('overview-line-billing-timing-line-fixed');
     expect(document.getElementById('contract-overview-edit-line-line-fixed')).toBeNull();
-    fireEvent.click(screen.getByText(/View details/));
-    await screen.findByTestId('contract-line-billing-timing-line-fixed');
-    expect(screen.queryByTestId('timing-editor-billing-timing-line-fixed')).toBeNull();
-  });
+    expect(screen.queryByRole('button', { name: 'Edit Fixed line' })).toBeNull();
 
+    fireEvent.click(screen.getByText(/View details/));
+    expect(await screen.findByTestId('tab-panel-lines')).toBeTruthy();
+    await screen.findByTestId('contract-line-billing-timing-line-fixed');
+    await new Promise((r) => setTimeout(r, 50));
+    expect(editorOf('line-fixed')).toBeNull();
+  });
+});
+
+// ContractLines-only unit cases (no ContractDetail): the one-shot props contract itself.
+describe('ContractLines edit-intent props (unit)', () => {
   it('read-only ContractLines never enters edit mode from an edit intent, and still reports it consumed', async () => {
     const consumed = vi.fn();
     render(
-      <ContractLines
-        contract={contract}
-        isReadOnly
-        focusContractLineId="line-fixed"
-        editIntentLineId="line-fixed"
-        onEditIntentConsumed={consumed}
-      />,
+      <ContractLines contract={contract} isReadOnly focusContractLineId="line-fixed" editIntentLineId="line-fixed" onEditIntentConsumed={consumed} />,
     );
     await screen.findByTestId('contract-line-billing-timing-line-fixed');
     await waitFor(() => expect(consumed).toHaveBeenCalled());
