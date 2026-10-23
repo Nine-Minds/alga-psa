@@ -23,6 +23,7 @@ export default defineConfig({
       // covers the stale-source comparison, not only the server-wide glob.
       'src/lib/billing/recurringPricingIdentity.test.ts',
       'src/schemas/**/*.test.ts',
+      'src/services/quoteAccessLinks.test.ts',
       'src/constants/billingQuoteValidity.test.ts',
       // Colocated suites for the document-preview tenant-branding seam. Most
       // src/ tests are reached only through server/vitest.config.ts (which globs

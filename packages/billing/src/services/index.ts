@@ -138,3 +138,11 @@ export {
   type AccountingSyncOperation
 } from './accountingSync/accountingSync.types';
 export { verifyAndCompletePublicSetup, type SetupInspection } from './publicSetupConfirmation';
+export {
+  QuoteAccessLinks,
+  computeQuoteAccessExpiry,
+  hashQuoteAccessToken,
+  type IQuoteAccessLink,
+  type QuoteAccessLinkRevokeReason,
+  type QuoteAccessResolveResult,
+} from './quoteAccessLinks';

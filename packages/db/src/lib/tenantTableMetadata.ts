@@ -415,6 +415,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   po_landed_costs: { scope: 'tenant' },
   purchase_order_lines: { scope: 'tenant' },
   purchase_orders: { scope: 'tenant' },
+  quote_access_links: { scope: 'tenant' },
   quote_activities: { scope: 'tenant' },
   quote_document_template_assignments: { scope: 'tenant' },
   quote_document_templates: { scope: 'tenant' },

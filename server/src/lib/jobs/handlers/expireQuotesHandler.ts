@@ -134,6 +134,12 @@ export async function expireQuotesHandler(data: ExpireQuotesJobData): Promise<vo
             updated_at: trx.fn.now(),
           });
 
+        // Same transaction as the status change.
+        await db.table('quote_access_links')
+          .where({ quote_id: quote.quote_id })
+          .whereNull('revoked_at')
+          .update({ revoked_at: trx.fn.now(), revoked_reason: 'cancelled' });
+
         await db.table('quote_activities').insert({
           tenant: tenantId,
           quote_id: quote.quote_id,
