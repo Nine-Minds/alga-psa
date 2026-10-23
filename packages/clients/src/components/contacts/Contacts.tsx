@@ -1212,7 +1212,6 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           isOpen={isImportDialogOpen}
           onClose={() => setIsImportDialogOpen(false)}
           onImportComplete={handleImportComplete}
-          clients={clients}
         />
 
         {/* ConfirmationDialog for Delete */}

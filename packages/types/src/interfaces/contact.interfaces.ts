@@ -76,6 +76,8 @@ export interface IContact extends TenantEntity, ITaggable {
   updated_at: string;
 
   avatarUrl?: string | null;
+  /** Logo of the contact's client; attached per page by list actions (getAllContacts / getContactsByClient). */
+  client_logo_url?: string | null;
   is_client_admin?: boolean;
   portal_visibility_group_id?: string | null;
   /** Reports-to: the contact whose staff this contact is (same client, acyclic). */

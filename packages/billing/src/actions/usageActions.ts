@@ -24,6 +24,7 @@ import {
   type ContractLineSource,
 } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
+import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { adjustQuantityDraw } from '@alga-psa/shared/billingClients/drawAdjustments';
 import {
   bucketUsageErrorMessage,
@@ -616,7 +617,13 @@ export const getUsageRecords = withAuth(async (user, { tenant }, filter?: IUsage
       query = query.where('usage_tracking.usage_date', '<=', filter.end_date);
     }
 
-    return await query.orderBy('usage_tracking.usage_date', 'desc') as unknown as IUsageRecord[];
+    const records = await query.orderBy('usage_tracking.usage_date', 'desc') as unknown as IUsageRecord[];
+
+    // Logos for the distinct clients on these rows only (one batched lookup).
+    const clientIds = Array.from(new Set(records.map((record) => record.client_id).filter(Boolean)));
+    if (clientIds.length === 0) return records;
+    const logoUrls = await getClientLogoUrlsBatch(clientIds, tenant);
+    return records.map((record) => ({ ...record, client_logo_url: logoUrls.get(record.client_id) ?? null }));
   } catch (error) {
     const expected = usageActionErrorFrom(error);
     if (expected) return expected;

@@ -504,7 +504,7 @@ export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[]
             return await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, rows);
         });
 
-        return withAssignedUsers(projects);
+        return await withClientLogos(withAssignedUsers(projects), tenant);
     } catch (error) {
         console.error('Error fetching projects:', error);
         throw error;
@@ -530,6 +530,20 @@ function withAssignedUsers(projects: IProject[]): IProject[] {
         }
         return project;
     });
+}
+
+/**
+ * Attaches `client_logo_url` for the distinct clients on these rows with one batched lookup,
+ * so the list never needs the whole client table just to draw logos.
+ */
+async function withClientLogos(projects: IProject[], tenant: string): Promise<IProject[]> {
+    const clientIds = Array.from(new Set(projects.map((p) => p.client_id).filter(Boolean)));
+    if (clientIds.length === 0) return projects;
+    const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+    return projects.map((project) => ({
+        ...project,
+        client_logo_url: logoUrlsMap.get(project.client_id) ?? null,
+    }));
 }
 
 function uniqueProjectIds(projectIds: string[]): string[] {
@@ -620,7 +634,7 @@ export const loadProjectListItemsByIds = withAuth(async (
             }
         }
 
-        return { projects: withAssignedUsers(ordered), metadata: { projectTags } };
+        return { projects: await withClientLogos(withAssignedUsers(ordered), tenant), metadata: { projectTags } };
     });
 });
 
