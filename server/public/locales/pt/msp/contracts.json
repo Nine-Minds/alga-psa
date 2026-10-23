@@ -53,6 +53,8 @@
   },
   "status": {
     "active": "Ativo",
+    "scheduled": "Agendado",
+    "startsOn": "Começa em {{date}}",
     "draft": "Rascunho",
     "expired": "Expirado",
     "terminated": "Terminado"
@@ -177,6 +179,7 @@
     },
     "headerCard": {
       "assignmentLifecycleHint": "O status do cliente ativo é controlado pelo ciclo de vida da atribuição abaixo.",
+      "scheduledExplanation": "Este contrato está ativo e começará a faturar em {{date}}.",
       "assignmentStatus": "Status da Atribuição",
       "billingFrequencyLabel": "Frequência de cobrança *",
       "billingFrequencyPlaceholder": "Selecione a frequência de cobrança",
@@ -298,6 +301,7 @@
     },
     "status": {
       "active": "Ativo",
+      "scheduled": "Agendado",
       "draft": "Rascunho",
       "expired": "Expirado",
       "terminated": "Terminado"
@@ -612,6 +616,7 @@
       "quantityShort": "Quantidade: {{quantity}}",
       "quantityTaxAllocation": "Quantidade (para alocação de impostos)",
       "rateTaxAllocation": "Taxa (para alocação de impostos)",
+      "shareOfLineFee": "Parcela da tarifa da linha",
       "title": "Serviços ({{count}})",
       "typeLabel": "Serviço {{type}}",
       "unitOfMeasure": "Unidade de Medida",

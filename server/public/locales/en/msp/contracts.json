@@ -53,6 +53,8 @@
   },
   "status": {
     "active": "Active",
+    "scheduled": "Scheduled",
+    "startsOn": "Starts {{date}}",
     "draft": "Draft",
     "expired": "Expired",
     "terminated": "Terminated"
@@ -177,6 +179,7 @@
     },
     "headerCard": {
       "assignmentLifecycleHint": "Live client status is controlled by the assignment lifecycle below.",
+      "scheduledExplanation": "This contract is active and begins billing on {{date}}.",
       "assignmentStatus": "Assignment Status",
       "billingFrequencyLabel": "Billing Frequency *",
       "billingFrequencyPlaceholder": "Select billing frequency",
@@ -298,6 +301,7 @@
     },
     "status": {
       "active": "Active",
+      "scheduled": "Scheduled",
       "draft": "Draft",
       "expired": "Expired",
       "terminated": "Terminated"
@@ -612,6 +616,7 @@
       "quantityShort": "Qty: {{quantity}}",
       "quantityTaxAllocation": "Quantity (for tax allocation)",
       "rateTaxAllocation": "Rate (for tax allocation)",
+      "shareOfLineFee": "Share of line fee",
       "title": "Services ({{count}})",
       "typeLabel": "{{type}} Service",
       "unitOfMeasure": "Unit of Measure",

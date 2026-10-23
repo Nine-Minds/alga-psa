@@ -30,7 +30,8 @@
           "mapped": "Gekoppeld",
           "noResult": "Voor deze rij is geen resultaat teruggegeven.",
           "pending": "In afwachting",
-          "saved": "Opgeslagen"
+          "saved": "Opgeslagen",
+          "missingField": "{{field}} ontbreekt"
         },
         "suggested": "Voorgesteld",
         "toSave": "{{total}} op te slaan"
@@ -82,7 +83,8 @@
           "instant": "Direct",
           "live": "Live",
           "manual": "Handmatig",
-          "twoWay": "Tweerichtings"
+          "twoWay": "Tweerichtings",
+          "iif": "IIF"
         },
         "highlights": {
           "delivery": "Levering",
@@ -102,6 +104,9 @@
           },
           "xeroCsv": {
             "description": "Exporteer facturen naar CSV voor handmatige import in Xero en importeer belastinggegevens uit Xero-rapporten."
+          },
+          "qbd": {
+            "description": "Exporteer facturen als IIF-bestand om te importeren in QuickBooks Desktop."
           }
         },
         "selected": "{{title}} geselecteerd",
@@ -129,13 +134,22 @@
         }
       },
       "adjustmentMappings": {
-        "desktopServices": "Desktop-dienstrekeningen",
-        "desktopDiscounts": "Desktop-kortingen",
         "desktopAccount": "Naam Desktop-opbrengstrekening",
         "description": "Koppel factuurkortingen en credits vóór export. De koppeling hoort bij dit boekhoudbedrijf.",
         "add": "Koppeling toevoegen",
         "remove": "Koppeling verwijderen",
-        "removeConfirm": "Deze boekhoudkoppeling verwijderen?"
+        "removeConfirm": "Deze boekhoudkoppeling verwijderen?",
+        "desktopTaxAccount": "Naam Desktop-omzetbelastingrekening",
+        "desktopCustomer": "Naam Desktop-klant",
+        "desktopTerms": "Naam Desktop-betalingsvoorwaarde",
+        "descriptionTaxCodes": "Elke belastingregio noemt het omzetbelastingartikel of de -groep die QuickBooks Desktop berekent en de passivarekening waarop wordt geboekt.",
+        "descriptionServices": "Elke service noemt het QuickBooks Desktop-artikel dat de factuurregels gebruiken en de opbrengstrekening waarop ze worden geboekt.",
+        "descriptionClients": "De QuickBooks Desktop-klant waaronder elke klant wordt gefactureerd. Niet-gekoppelde klanten blokkeren de export.",
+        "descriptionPaymentTerms": "De QuickBooks Desktop-betalingsvoorwaarden die op elke factuur worden afgedrukt. Niet-gekoppelde voorwaarden blijven leeg.",
+        "desktopItem": "Naam Desktop-artikel",
+        "desktopItemHelp": "Het artikel precies zoals het in uw QuickBooks Desktop-artikellijst staat. Elke factuurregel noemt een artikel, dus exports worden geblokkeerd totdat het is ingesteld.",
+        "desktopSalesTaxItem": "Omzetbelastingartikel of -groep",
+        "desktopSalesTaxItemHelp": "Laat leeg om het standaard omzetbelastingartikel uit de QuickBooks Desktop-instellingen te gebruiken."
       }
     },
     "calendar": {
@@ -4056,6 +4070,59 @@
           "providers": "Vandaag Teams Phone; dezelfde gesprekskern draagt toekomstige aanbieders."
         }
       }
+    },
+    "qbd": {
+      "settings": {
+        "title": "QuickBooks Desktop (IIF)-integratie",
+        "description": "Exporteer facturen als IIF-bestand voor Bestand → Hulpprogramma's → Importeren → IIF-bestanden in QuickBooks Desktop.",
+        "loading": "QuickBooks Desktop-instellingen laden...",
+        "savedMessage": "Instellingen succesvol opgeslagen",
+        "save": "Instellingen opslaan",
+        "connectionsPermissionNotice": "U kunt de QuickBooks Desktop-instellingen bekijken, maar voor wijzigen is de bevoegdheid voor het beheren van verbindingen nodig. Vraag een beheerder om deze toe te kennen.",
+        "errors": {
+          "load": "QuickBooks Desktop-instellingen konden niet worden geladen",
+          "save": "QuickBooks Desktop-instellingen konden niet worden opgeslagen"
+        },
+        "warning": {
+          "title": "Maak eerst een back-up van uw bedrijfsbestand",
+          "description": "QuickBooks Desktop maakt elke klant-, artikel-, rekening- of voorwaardenaam aan die het niet herkent bij het importeren van een IIF-bestand, en IIF-imports kunnen niet ongedaan worden gemaakt. Zorg dat elke naam hieronder en in de koppelingen exact overeenkomt met uw bedrijfsbestand en test uw eerste import op een back-upkopie."
+        },
+        "exportSettings": {
+          "title": "IIF-exportinstellingen",
+          "description": "Voer de rekening- en artikelnamen van QuickBooks Desktop exact in zoals ze in uw rekeningschema en artikellijst staan."
+        },
+        "fields": {
+          "arAccount": "Debiteurenrekening",
+          "arAccountHelp": "De debiteurenrekening waarop elke factuur wordt geboekt.",
+          "defaultIncomeAccount": "Standaard opbrengstrekening",
+          "defaultIncomeAccountHelp": "De opbrengstrekening voor artikelen die vanuit een export worden gekoppeld, en voor elke koppeling van Services of Kortingen zonder rekening.",
+          "salesTaxPayableAccount": "Rekening te betalen omzetbelasting",
+          "salesTaxPayableAccountHelp": "De rekening waarop de omzetbelastingregel wordt geboekt, tenzij de belastingcodekoppeling van de belastingregio een andere noemt.",
+          "defaultSalesTaxItem": "Standaard omzetbelastingartikel",
+          "defaultSalesTaxItemHelp": "Omzetbelastingartikel of -groep voor belaste facturen waarvan de belastingcodekoppeling er geen noemt.",
+          "newProductItemType": "Artikeltype voor nieuwe producten",
+          "inventoryWarning": "Voorraadontvangsten uit Alga worden niet geëxporteerd, dus de voorraad in QuickBooks wordt negatief tenzij u de voorraad ook in QuickBooks invoert.",
+          "nonInventoryHelp": "Aanbevolen: Alga blijft het leidende voorraadsysteem en QuickBooks registreert alleen de verkoop.",
+          "inventoryAssetAccount": "Rekening voorraadactiva",
+          "cogsAccount": "Rekening kostprijs verkopen"
+        },
+        "mappings": {
+          "title": "QuickBooks-koppelingen",
+          "description": "Koppel Alga-klanten, services, kortingen, belastingcodes en betalingsvoorwaarden aan de namen in uw QuickBooks Desktop-bedrijfsbestand. Elke service en korting heeft een Desktop-artikel nodig; niet-gekoppelde betalingsvoorwaarden blijven leeg.",
+          "permissionNotice": "Voor het bewerken van QuickBooks Desktop-koppelingen is de bevoegdheid koppelingen beheren nodig. Vraag een beheerder om deze toe te kennen."
+        },
+        "exports": {
+          "description": "Maak een QuickBooks Desktop-exportbatch, voer deze uit en download daarna het IIF-bestand via de batchgegevens."
+        },
+        "newItems": {
+          "title": "Door exports aangemaakte artikelen",
+          "description": "Wanneer een export een nieuw QuickBooks-artikel aanmaakt voor een Alga-product, wordt dit artikeltype gebruikt. Diensten worden altijd als dienstartikel aangemaakt."
+        },
+        "itemTypes": {
+          "nonInventory": "Niet-voorraadartikel",
+          "inventory": "Voorraadartikel"
+        }
+      }
     }
   },
   "errors": {
@@ -4175,6 +4242,10 @@
       "contactWithoutClient": "Er bestaat al een contact met dit e-mailadres in het systeem zonder klanttoewijzing",
       "emailOnAnotherClient": "Dit e-mailadres is al gekoppeld aan een andere klant",
       "emailOnAnotherClientNamed": "Dit e-mailadres is al gekoppeld aan {{clientName}}"
+    },
+    "quickbooksDesktop": {
+      "viewSettingsPermission": "Gebruiker heeft geen toestemming om integratie-instellingen te bekijken",
+      "manageIntegrationsPermission": "Gebruiker heeft geen toestemming om integratie-instellingen te beheren"
     }
   },
   "telephony": {

@@ -4,7 +4,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
-import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
+import { deriveClientContractStatus, getTenantLocalToday } from '@alga-psa/shared/billingClients';
 import {
   aggregateCentsByCurrency,
   getContractMonthlyValuesByAssignment,
@@ -232,7 +232,9 @@ async function getContractRevenueYtdByAssignment(
 const mapAssignmentStatusToRevenueStatus = (
   status: ReturnType<typeof deriveClientContractStatus>
 ): ContractRevenue['status'] | null => {
-  if (status === 'draft') {
+  // Not billing yet: both real drafts and confirmed future-start ('scheduled') contracts keep the
+  // report's existing 'upcoming' bucket (future-start rows were 'draft' -> 'upcoming' before).
+  if (status === 'draft' || status === 'scheduled') {
     return 'upcoming';
   }
   if (status === 'terminated') {
@@ -280,6 +282,7 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
     db.tenantJoin(dataQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');
     db.tenantJoin(dataQuery, 'clients as cl', 'cc.client_id', 'cl.client_id', { type: 'left' });
     const data = (await dataQuery) as unknown as ContractRevenueAssignmentRow[];
+    const tenantToday = await getTenantLocalToday(knex, tenant);
 
     const aggregatedMap = new Map<string, any>();
 
@@ -289,7 +292,7 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
         startDate: normalizeDateOnly(row.start_date),
         endDate: normalizeDateOnly(row.end_date),
         contractStatus: row.contract_status ?? undefined,
-        now: today,
+        now: tenantToday,
       });
       const status = mapAssignmentStatusToRevenueStatus(assignmentStatus);
       if (!status) {
@@ -400,6 +403,7 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
     );
 
     const expirationMap = new Map<string, ContractExpiration>();
+    const tenantToday = await getTenantLocalToday(knex, tenant);
 
     for (const row of data) {
       const assignmentStatus = deriveClientContractStatus({
@@ -407,8 +411,9 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         startDate: normalizeDateOnly(row.start_date),
         endDate: normalizeDateOnly(row.end_date),
         contractStatus: row.contract_status ?? undefined,
-        now: today,
+        now: tenantToday,
       });
+      // Only contracts billing now can expire; 'scheduled' has not started so it is excluded.
       if (assignmentStatus !== 'active') {
         continue;
       }

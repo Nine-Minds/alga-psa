@@ -160,6 +160,7 @@ jobs:
 
       # devServerStartup.integration.test.ts exercises real browser hydration.
       # Install on every shard: suite selection can move it between shards.
+      - uses: ./.github/actions/prepare-apt
       - name: Install Chromium for integration browser assertions
         run: npx --no-install playwright install --with-deps chromium
 
