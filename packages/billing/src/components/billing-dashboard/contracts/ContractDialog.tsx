@@ -16,7 +16,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { IClient } from '@alga-psa/types';
-import { createClientContractForBilling, getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
+import { createClientContractForBilling, getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import { HelpCircle, Info, Coins } from 'lucide-react';
@@ -31,6 +31,7 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { useBillingClient } from '../../../hooks/useBillingClient';
 import { ContractLinePresetPicker } from './ContractLinePresetPicker';
 import { useContractLinePresetSelection } from './useContractLinePresetSelection';
 
@@ -94,8 +95,6 @@ export function ContractDialog({
   const [poNumber, setPoNumber] = useState<string>('');
   const [poAmountInput, setPoAmountInput] = useState<string>('');
   const [poAmount, setPoAmount] = useState<number | undefined>(undefined);
-  const [clients, setClients] = useState<IClient[]>([]);
-  const [isLoadingClients, setIsLoadingClients] = useState(true);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
@@ -115,31 +114,19 @@ export function ContractDialog({
     reset: resetPresetSelection,
   } = presetSelection;
 
-  // Load clients and contract line presets when the dialog opens
+  // The selected client (currency source), looked up by id; the picker searches the server.
+  const { client: selectedClient, isLoading: isLoadingSelectedClient, prime: primeSelectedClient } =
+    useBillingClient(clientId || null);
+
+  // Load contract line presets when the dialog opens
   useEffect(() => {
     if (open) {
-      void Promise.all([loadClients(), presetSelection.loadPresets()]);
+      void presetSelection.loadPresets();
       if (initialClientId) {
         setClientId(initialClientId);
       }
     }
   }, [open, initialClientId]);
-
-  const loadClients = async () => {
-    try {
-      const fetchedClients = await getAllClientsForBilling();
-      if (isReturnedActionError(fetchedClients)) {
-        setValidationErrors([getErrorMessage(fetchedClients)]);
-        setClients([]);
-        return;
-      }
-      setClients(fetchedClients);
-    } catch (error) {
-      console.error('Error loading clients:', error);
-    } finally {
-      setIsLoadingClients(false);
-    }
-  };
 
   // Update form when editingContract changes
   useEffect(() => {
@@ -218,8 +205,17 @@ export function ContractDialog({
 
     try {
       // Get currency code from client or editing contract
-      const selectedClient = clients.find(c => c.client_id === clientId);
-      const currencyCode = editingContract?.currency_code || selectedClient?.default_currency_code || 'USD';
+      let currencySource: IClient | null = selectedClient;
+      if (!editingContract?.currency_code && !currencySource && isLoadingSelectedClient) {
+        // Submitted before the by-id lookup returned: read it now rather than default to USD.
+        const lookedUp = await getClientByIdForBilling(clientId);
+        if (isReturnedActionError(lookedUp)) {
+          setValidationErrors([getErrorMessage(lookedUp)]);
+          return;
+        }
+        currencySource = lookedUp;
+      }
+      const currencyCode = editingContract?.currency_code || currencySource?.default_currency_code || 'USD';
 
       // Create the contract (without client-specific fields)
       const contractData: Omit<IContract, 'contract_id' | 'tenant' | 'created_at' | 'updated_at'> = {
@@ -408,7 +404,6 @@ export function ContractDialog({
               </Label>
               <ClientPicker
                 id="contract-dialog-client-picker"
-                clients={clients}
                 selectedClientId={clientId}
                 onSelect={(id) => {
                   setClientId(id || '');
@@ -500,7 +495,6 @@ export function ContractDialog({
                 <>
                   <div className="flex items-center h-10 px-3 bg-muted border rounded-md text-sm">
                     {(() => {
-                      const selectedClient = clients.find(c => c.client_id === clientId);
                       const currencyCode = selectedClient?.default_currency_code || 'USD';
                       const currencyOption = CURRENCY_OPTIONS.find(c => c.value === currencyCode);
                       return currencyOption?.label || currencyCode;
@@ -823,15 +817,7 @@ export function ContractDialog({
         open: isQuickAddClientOpen,
         onOpenChange: setIsQuickAddClientOpen,
         onClientAdded: (newClient) => {
-          setClients((currentClients) => {
-            const existingIndex = currentClients.findIndex(
-              (client) => client.client_id === newClient.client_id,
-            );
-            if (existingIndex === -1) return [...currentClients, newClient];
-            const nextClients = [...currentClients];
-            nextClients[existingIndex] = newClient;
-            return nextClients;
-          });
+          primeSelectedClient(newClient);
           setClientId(newClient.client_id);
           clearErrorIfSubmitted();
         },

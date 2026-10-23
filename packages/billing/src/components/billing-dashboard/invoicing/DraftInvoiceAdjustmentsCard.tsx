@@ -6,7 +6,7 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IClient, IService, InvoiceViewModel } from '@alga-psa/types';
-import { getAllClientsForBillingRecoverable } from '@alga-psa/billing/actions/billingClientsActions';
+import { getClientByIdForBillingRecoverable } from '@alga-psa/billing/actions/billingClientsActions';
 import { getServicesRecoverable } from '@alga-psa/billing/actions/serviceActions';
 import {
   getInvoiceAdjustmentCapability,
@@ -40,7 +40,7 @@ const DraftInvoiceAdjustmentsCard: React.FC<DraftInvoiceAdjustmentsCardProps> = 
   onUpdated,
 }) => {
   const { t } = useTranslation('msp/invoicing');
-  const [clients, setClients] = useState<IClient[]>([]);
+  const [client, setClient] = useState<IClient | null>(null);
   const [services, setServices] = useState<IService[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [capability, setCapability] = useState<InvoiceAdjustmentCapability | null>(null);
@@ -58,18 +58,18 @@ const DraftInvoiceAdjustmentsCard: React.FC<DraftInvoiceAdjustmentsCardProps> = 
       setAuthenticationExpired(false);
       setCapability(null);
       try {
-        const [clientsResult, servicesResult, capabilityResult] = await Promise.all([
-          getAllClientsForBillingRecoverable(),
+        const [clientResult, servicesResult, capabilityResult] = await Promise.all([
+          getClientByIdForBillingRecoverable(invoice.client_id),
           getServicesRecoverable(1, 999, { item_kind: 'any' }),
           getInvoiceAdjustmentCapability(invoice.invoice_id),
         ]);
         if (cancelled) return;
-        if (isAuthenticationFailure(clientsResult)) {
+        if (isAuthenticationFailure(clientResult)) {
           setAuthenticationExpired(true);
           return;
         }
-        if (isActionMessageError(clientsResult) || isActionPermissionError(clientsResult)) {
-          setLoadError(getErrorMessage(clientsResult));
+        if (isActionMessageError(clientResult) || isActionPermissionError(clientResult)) {
+          setLoadError(getErrorMessage(clientResult));
           return;
         }
         if (isAuthenticationFailure(servicesResult)) {
@@ -80,7 +80,7 @@ const DraftInvoiceAdjustmentsCard: React.FC<DraftInvoiceAdjustmentsCardProps> = 
           setLoadError(getErrorMessage(servicesResult));
           return;
         }
-        setClients(clientsResult as IClient[]);
+        setClient((clientResult as IClient | null) ?? null);
         const loadedServices = Array.isArray((servicesResult as { services?: IService[] }).services)
           ? (servicesResult as { services: IService[] }).services
           : [];
@@ -179,7 +179,7 @@ const DraftInvoiceAdjustmentsCard: React.FC<DraftInvoiceAdjustmentsCardProps> = 
   return (
     <div id="draft-invoice-adjustments-section">
       <ManualInvoices
-        clients={clients}
+        client={client}
         services={services}
         invoice={invoice}
         variant="draftAdjustments"
