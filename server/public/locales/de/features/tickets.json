@@ -2575,7 +2575,7 @@
       "fromTicket": "Aus Ticket #{{number}} vorausgefüllt. Es wird erst gespeichert, wenn Sie auf Speichern klicken.",
       "inlineImages": "Die Beschreibung enthält Bilder, die zum Quellticket gehören. Sie werden möglicherweise nicht mehr angezeigt, wenn dieses Ticket gelöscht wird. Entfernen Sie sie oder laden Sie sie erneut hoch, wenn die Vorlage das Ticket überdauern soll.",
       "viewOnly": "Sie können diese Vorlage ansehen, aber nicht ändern.",
-      "referenceProblems": "Einige Felder dieser Vorlage verweisen auf nicht mehr vorhandene Elemente. Sie bleiben leer, wenn die Vorlage verwendet wird. Korrigieren Sie sie und speichern Sie:",
+      "referenceProblems": "Einige Felder dieser Vorlage sind ungültig: Sie verweisen auf nicht mehr vorhandene Elemente oder passen nicht zusammen (zum Beispiel eine Priorität, die nicht zum Board passt). Korrigieren Sie sie und speichern Sie:",
       "inactiveWarning": "Inaktiv: in der Vorlagenauswahl ausgeblendet; wird weiterhin von {{count}} Zeitplänen verwendet.",
       "sharedWarning": "Änderungen gelten für jeden wiederkehrenden Zeitplan, der diese Vorlage verwendet, ab dem nächsten erstellten Ticket.",
       "boardChangeWarning": "Beim Ändern des Boards werden Priorität und Kategorie zurückgesetzt, und der Status von Zeitplänen mit dieser Vorlage kann ungültig werden. Diese Zeitpläne schlagen fehl, bis Sie sie bearbeiten. Betroffene Zeitpläne: {{schedules}}.",
@@ -2585,7 +2585,7 @@
     "errors": {
       "notFound": "Ticket-Vorlage nicht gefunden",
       "duplicateName": "Eine Vorlage mit dem Namen {{name}} existiert bereits",
-      "invalidReferences": "Die Vorlage verweist auf ein Board, eine Kategorie oder eine Priorität, die nicht verfügbar ist",
+      "invalidReferences": "{{problems}}",
       "notAvailable": "Ticket-Vorlagen sind nicht verfügbar",
       "subcategoryNeedsCategory": "Eine Unterkategorie erfordert eine Kategorie",
       "inUseBySchedules": "Wird von {{count}} wiederkehrenden Zeitplan/Zeitplänen verwendet: {{schedules}}. Weisen Sie ihnen zuerst eine andere Vorlage zu oder archivieren Sie sie."

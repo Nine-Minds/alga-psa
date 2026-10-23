@@ -413,7 +413,7 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
       {referenceProblems.length > 0 && (
         <Alert id={`${ID}-reference-problems`} variant="warning">
           <AlertDescription>
-            <p className="font-medium">{t('templates.editor.referenceProblems', 'Some fields in this template point at things that no longer exist. They are left blank when the template is used. Fix them and save:')}</p>
+            <p className="font-medium">{t('templates.editor.referenceProblems', 'Some fields in this template are not valid: they refer to something that no longer exists, or do not fit together (for example a priority that does not match the board). Fix them and save:')}</p>
             <ul className="list-disc pl-5">{referenceProblems.map((problem) => <li key={problem.field}>{problem.message}</li>)}</ul>
           </AlertDescription>
         </Alert>

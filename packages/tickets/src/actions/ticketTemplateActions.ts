@@ -119,10 +119,8 @@ function allowlistedCustomFields(fields: Record<string, unknown>): Record<string
 async function assertValidReferences(trx: Knex.Transaction, tenant: string, input: ParsedTicketTemplateInput) {
   const problems = await findTicketFieldReferenceProblems(trx, tenant, { fields: input });
   if (problems.length > 0) {
-    throw new TicketTemplateError(
-      problems.map((problem) => problem.message).join('. '),
-      'INVALID_REFERENCES'
-    );
+    const joined = problems.map((problem) => problem.message).join('. ');
+    throw new TicketTemplateError(joined, 'INVALID_REFERENCES', { problems: joined });
   }
 }
 

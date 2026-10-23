@@ -2575,7 +2575,7 @@
       "fromTicket": "Vooraf ingevuld vanuit ticket #{{number}}. Er wordt niets opgeslagen tot u op Opslaan klikt.",
       "inlineImages": "De beschrijving bevat afbeeldingen die bij het brionticket horen. Ze worden mogelijk niet meer getoond als dat ticket wordt verwijderd. Verwijder ze of upload ze opnieuw als het sjabloon het ticket moet overleven.",
       "viewOnly": "U kunt dit sjabloon bekijken maar niet wijzigen.",
-      "referenceProblems": "Sommige velden in dit sjabloon verwijzen naar dingen die niet meer bestaan. Ze blijven leeg wanneer het sjabloon wordt gebruikt. Corrigeer ze en sla op:",
+      "referenceProblems": "Sommige velden van dit sjabloon zijn ongeldig: ze verwijzen naar iets dat niet meer bestaat of passen niet bij elkaar (bijvoorbeeld een prioriteit die niet bij het bord past). Corrigeer ze en sla op:",
       "inactiveWarning": "Inactief: verborgen in de sjabloonkiezer; wordt nog gebruikt door {{count}} schema's.",
       "sharedWarning": "Wijzigingen gelden voor elk terugkerend schema dat deze sjabloon gebruikt, vanaf het volgende ticket dat het aanmaakt.",
       "boardChangeWarning": "Het wijzigen van het bord wist prioriteit en categorie en kan de status van schema's met deze sjabloon ongeldig maken. Die schema's mislukken totdat u ze bewerkt. Betrokken schema's: {{schedules}}.",
@@ -2585,7 +2585,7 @@
     "errors": {
       "notFound": "Ticketsjabloon niet gevonden",
       "duplicateName": "Er bestaat al een sjabloon met de naam {{name}}",
-      "invalidReferences": "Het sjabloon verwijst naar een bord, categorie of prioriteit die niet beschikbaar is",
+      "invalidReferences": "{{problems}}",
       "notAvailable": "Ticketsjablonen zijn niet beschikbaar",
       "subcategoryNeedsCategory": "Een subcategorie vereist een categorie",
       "inUseBySchedules": "In gebruik door {{count}} terugkerend(e) schema('s): {{schedules}}. Wijs ze eerst naar een andere sjabloon of archiveer ze."

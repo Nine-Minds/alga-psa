@@ -387,6 +387,11 @@ describe('Priority type vs board priority_type (integration)', () => {
       await seedItilSide();
       const create = await attempt(() => templateActions.createTicketTemplate(templateInput({ priority_id: itilPriorityId }) as any));
       expect(refusalMessage(create)).toContain("Priority ‘P2 - High’ is an ITIL priority but board ‘Tpl Board’ uses custom priorities");
+      // The refusal carries the specific problem as the interpolation param of the generic key.
+      expect(create.value).toMatchObject({
+        messageKey: 'features/tickets:templates.errors.invalidReferences',
+        messageParams: { problems: expect.stringContaining('is an ITIL priority but board ‘Tpl Board’ uses custom priorities') },
+      });
 
       const templateId = await insertTemplate();
       const update = await attempt(() => templateActions.updateTicketTemplate(templateId, templateInput({ board_id: itilBoardId, category_id: null, subcategory_id: null }) as any));

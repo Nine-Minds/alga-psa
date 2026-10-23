@@ -2575,7 +2575,7 @@
       "fromTicket": "Prérempli à partir du ticket n° {{number}}. Rien n'est enregistré tant que vous ne cliquez pas sur Enregistrer.",
       "inlineImages": "La description contient des images qui appartiennent au ticket source. Elles peuvent ne plus s'afficher si ce ticket est supprimé. Retirez-les ou téléversez-les à nouveau si le modèle doit survivre au ticket.",
       "viewOnly": "Vous pouvez consulter ce modèle mais pas le modifier.",
-      "referenceProblems": "Certains champs de ce modèle pointent vers des éléments qui n'existent plus. Ils restent vides lors de l'utilisation du modèle. Corrigez-les et enregistrez :",
+      "referenceProblems": "Certains champs de ce modèle ne sont pas valides : ils font référence à des éléments qui n'existent plus ou sont incompatibles entre eux (par exemple une priorité qui ne correspond pas au tableau). Corrigez-les et enregistrez :",
       "inactiveWarning": "Inactif : masqué dans le sélecteur de modèles ; toujours utilisé par {{count}} planifications.",
       "sharedWarning": "Les modifications s'appliquent à chaque planification récurrente utilisant ce modèle, à partir du prochain ticket créé.",
       "boardChangeWarning": "Changer de tableau efface la priorité et la catégorie, et peut invalider le statut des planifications utilisant ce modèle. Ces planifications échouent tant que vous ne les modifiez pas. Planifications concernées : {{schedules}}.",
@@ -2585,7 +2585,7 @@
     "errors": {
       "notFound": "Modèle de ticket introuvable",
       "duplicateName": "Un modèle nommé {{name}} existe déjà",
-      "invalidReferences": "Le modèle fait référence à un tableau, une catégorie ou une priorité qui n'est pas disponible",
+      "invalidReferences": "{{problems}}",
       "notAvailable": "Les modèles de tickets ne sont pas disponibles",
       "subcategoryNeedsCategory": "Une sous-catégorie nécessite une catégorie",
       "inUseBySchedules": "Utilisée par {{count}} planification(s) récurrente(s) : {{schedules}}. Associez-les à un autre modèle ou archivez-les d'abord."
