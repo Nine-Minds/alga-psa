@@ -87,6 +87,8 @@ import {
   CircleDot,
   UserPlus,
 } from 'lucide-react';
+import { MAX_LABELS_PER_REQUEST } from '@alga-psa/types';
+import { LabelPrintDialog } from '@alga-psa/ui/components';
 import { useListViews } from '@alga-psa/list-views/hooks';
 import { ListViewPicker } from '@alga-psa/list-views/components';
 import {
@@ -221,6 +223,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   const [visibleColumnIds, setVisibleColumnIds] = useState<ColumnKey[]>(() => [...DEFAULT_VISIBLE_ASSET_COLUMNS]);
   const [columnSizing, setColumnSizing] = useState<Record<string, number> | undefined>(undefined);
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
+  const [isPrintLabelsOpen, setIsPrintLabelsOpen] = useState(false);
   const [isBulkStatusOpen, setIsBulkStatusOpen] = useState(false);
   // F039: bulk assignment only makes sense inside one client — a contact
   // belongs to a client, so a mixed selection has no valid picker.
@@ -2190,6 +2193,19 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
             onClick: () => setIsBulkGroupOpen(true),
           },
           {
+            id: 'print-labels',
+            label: t('assetDashboardClient.bulk.actionBar.printLabels', { defaultValue: 'Print labels' }),
+            icon: <Printer className="h-4 w-4" />,
+            disabled: selectedAssetIds.length > MAX_LABELS_PER_REQUEST,
+            title: selectedAssetIds.length > MAX_LABELS_PER_REQUEST
+              ? t('assetDashboardClient.bulk.actionBar.printLabelsLimit', {
+                  defaultValue: 'You can print at most {{max}} labels at a time',
+                  max: MAX_LABELS_PER_REQUEST,
+                })
+              : undefined,
+            onClick: () => setIsPrintLabelsOpen(true),
+          },
+          {
             id: 'delete',
             label: t('assetDashboardClient.bulk.actionBar.delete', { defaultValue: 'Delete' }),
             icon: <Trash2 className="h-4 w-4" />,
@@ -2200,6 +2216,15 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
         onClear={() => setSelectedAssetIds([])}
         clearLabel={t('assetDashboardClient.bulk.actionBar.clear', { defaultValue: 'Clear' })}
       />
+      {isPrintLabelsOpen && (
+        <LabelPrintDialog
+          isOpen={isPrintLabelsOpen}
+          onClose={() => setIsPrintLabelsOpen(false)}
+          labelClass="asset-identity"
+          ids={selectedAssetIds}
+          idPrefix="asset-print-labels"
+        />
+      )}
       <AssetCommandPalette
         isOpen={isCommandPaletteOpen}
         assets={assets}

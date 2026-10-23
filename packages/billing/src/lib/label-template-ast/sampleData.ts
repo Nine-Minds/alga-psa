@@ -13,5 +13,6 @@ export const buildSampleLabelViewModel = (): LabelViewModel => ({
   detail: 'Diagnose power fault',
   secondaryIdentifier: 'AT-000123',
   serialSuffix: '7K2Q',
-  tenantClient: { name: 'Example MSP', logoUrl: null },
+  tenantClient: { name: 'Example MSP', logoUrl: null, brandText: 'Example MSP' },
+  display: { assetLine: 'Asset AT-000123', serialLine: 'S/N \u20267K2Q' },
 });
