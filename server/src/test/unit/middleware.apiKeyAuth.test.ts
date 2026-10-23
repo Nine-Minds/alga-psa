@@ -85,6 +85,11 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/tickets/ticket-123/live-token')).toBe(true);
   });
 
+  it('allows the ticket original-email view to use session auth', () => {
+    expect(shouldSkipApiKeyAuth('/api/tickets/ticket-123/email-html')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/tickets/ticket-123/comments')).toBe(false);
+  });
+
   it('allows the Level.io webhook route (X-Alga-Webhook-Secret authenticated in-route)', () => {
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio/')).toBe(true);
