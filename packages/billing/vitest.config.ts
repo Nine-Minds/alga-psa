@@ -89,6 +89,7 @@ export default defineConfig({
       // Per-seat unit-rate rendering on the template detail page and the
       // currency-neutral template review step — listed for the same reason as above.
       'src/components/billing-dashboard/contracts/ContractTemplateDetail.unitRate.test.tsx',
+      'src/components/billing-dashboard/contracts/ContractTemplateDetail.manageServices.test.tsx',
       'src/components/billing-dashboard/contracts/template-wizard/steps/TemplateReviewContractStep.unitRate.test.tsx',
       // Contract-line service rates are stored in minor units; the services list
       // must not re-scale them. Listed for the same reason as above.
