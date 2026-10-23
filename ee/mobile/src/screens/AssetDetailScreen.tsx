@@ -6,6 +6,7 @@ import { useTheme } from "../ui/ThemeContext";
 import type { Theme } from "../ui/themes";
 import { Badge, Card, PrimaryButton, Separator, TextInput } from "../ui/components";
 import { ErrorState, LoadingState } from "../ui/states";
+import { RecordUnavailableState, isRecordUnavailableError } from "../ui/components/RecordUnavailableState";
 import { formatDateShort } from "../ui/formatters/dateTime";
 import { useToast } from "../ui/toast/ToastProvider";
 import {
@@ -106,7 +107,7 @@ export function AssetDetailScreen({ route, navigation }: Props) {
   const [tickets, setTickets] = useState<AssetTicketRow[]>([]);
   const [software, setSoftware] = useState<AssetSoftwareItem[]>([]);
   const [notesBlockData, setNotesBlockData] = useState<unknown | null>(null);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "ready" | "error" | "unavailable">("loading");
   const [linkOpen, setLinkOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [recordSchedule, setRecordSchedule] = useState<MaintenanceSchedule | null>(null);
@@ -132,7 +133,15 @@ export function AssetDetailScreen({ route, navigation }: Props) {
     ]);
     if (controller.signal.aborted) return;
     if (!assetResult.ok) {
-      if (assetResult.error.kind !== "canceled") setStatus("error");
+      if (assetResult.error.kind === "canceled") return;
+      if (isRecordUnavailableError(assetResult.error)) {
+        // 403 and 404 look identical, and nothing about the record (including
+        // the assetName route param) may be shown.
+        setAsset(null);
+        setStatus("unavailable");
+        return;
+      }
+      setStatus("error");
       return;
     }
     setAsset(assetResult.data.data);
@@ -210,6 +219,9 @@ export function AssetDetailScreen({ route, navigation }: Props) {
   }, [fetchAll]);
 
   if (status === "loading") return <LoadingState message={t("detail.loading", "Loading device")} />;
+  if (status === "unavailable") {
+    return <RecordUnavailableState onBack={() => navigation.goBack()} />;
+  }
   if (status === "error" || !asset) {
     return (
       <ErrorState
