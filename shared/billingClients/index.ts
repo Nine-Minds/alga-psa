@@ -20,6 +20,7 @@ export * from './taxSettings';
 export * from './billingSchedule';
 export * from './clientCadenceScheduleContext';
 export * from './clientContractStatus';
+export * from './tenantLocalDate';
 export * from './contractMonthlyValue';
 export * from './recurringTiming';
 export * from './recurringRunExecutionIdentity';

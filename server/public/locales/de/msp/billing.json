@@ -654,7 +654,8 @@
       "referenceMissing": "Der ausgewählte Kunde, Vertrag oder Abrechnungsdatensatz existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "duplicate": "Diese Vertragszuordnung des Kunden existiert bereits.",
       "missingField": "Erforderliches Feld des Kundenvertrags fehlt.",
-      "missingFieldNamed": "Erforderliches Feld des Kundenvertrags fehlt: {{field}}."
+      "missingFieldNamed": "Erforderliches Feld des Kundenvertrags fehlt: {{field}}.",
+      "alreadyActiveScheduled": "Dieser Vertrag ist bereits aktiv und beginnt am {{startDate}}; es gibt nichts zu aktivieren."
     },
     "cycle": {
       "cannotCreateNext": "Der nächste Abrechnungszeitraum kann derzeit nicht erstellt werden"

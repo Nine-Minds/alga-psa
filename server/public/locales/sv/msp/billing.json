@@ -654,7 +654,8 @@
       "referenceMissing": "Den valda kunden, det valda avtalet eller den valda faktureringsposten finns inte längre. Ladda om sidan och försök igen.",
       "duplicate": "Denna tilldelning av kundavtal finns redan.",
       "missingField": "Ett obligatoriskt fält för kundavtalet saknas.",
-      "missingFieldNamed": "Ett obligatoriskt fält för kundavtalet saknas: {{field}}."
+      "missingFieldNamed": "Ett obligatoriskt fält för kundavtalet saknas: {{field}}.",
+      "alreadyActiveScheduled": "Det här avtalet är redan aktivt och börjar den {{startDate}}; det finns inget att aktivera."
     },
     "cycle": {
       "cannotCreateNext": "Det går inte att skapa nästa faktureringscykel just nu"

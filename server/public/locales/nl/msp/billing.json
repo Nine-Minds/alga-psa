@@ -654,7 +654,8 @@
       "referenceMissing": "De geselecteerde klant, het contract of de factuurregistratie bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
       "duplicate": "Deze contracttoewijzing van de klant bestaat al.",
       "missingField": "Er ontbreekt een verplicht veld van het klantcontract.",
-      "missingFieldNamed": "Er ontbreekt een verplicht veld van het klantcontract: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van het klantcontract: {{field}}.",
+      "alreadyActiveScheduled": "Dit contract is al actief en begint op {{startDate}}; er is niets om te activeren."
     },
     "cycle": {
       "cannotCreateNext": "De volgende factuurcyclus kan momenteel niet worden aangemaakt"
