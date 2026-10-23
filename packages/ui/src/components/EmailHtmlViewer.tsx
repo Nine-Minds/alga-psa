@@ -43,17 +43,33 @@ function rememberHtml(src: string, value: string | null): void {
 
 const SANDBOX = 'allow-same-origin allow-popups allow-popups-to-escape-sandbox';
 
+/**
+ * The frame stays a light sheet in both app themes, and says so with
+ * `color-scheme: light` rather than a hardcoded palette.
+ *
+ * Senders author mail against a white background with their own ink: a dark
+ * canvas turns black-on-white signatures, table rules and inline-styled
+ * headings invisible, and fidelity to what the sender sent is the entire point
+ * of this view — so re-tinting it would break the feature, not theme it. The
+ * app's tokens cannot reach in here anyway (custom properties do not cross a
+ * document boundary), so pinning the scheme is also what makes the colours
+ * below resolvable: `Canvas`/`CanvasText`/`GrayText` are the system palette
+ * that scheme selects, and it keeps the sheet's own scrollbars and form
+ * controls light instead of letting an OS dark theme paint them onto white.
+ */
 const FRAME_STYLES = [
-  'html,body{margin:0;padding:0;background:#ffffff;}',
+  ':root{color-scheme:light;}',
+  'html,body{margin:0;padding:0;background:Canvas;color:CanvasText;}',
   'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;',
-  'font-size:14px;line-height:1.5;color:#111827;overflow-wrap:anywhere;}',
+  'font-size:14px;line-height:1.5;overflow-wrap:anywhere;}',
   'img{max-width:100%;height:auto;}',
   'table{max-width:100%;}',
-  'blockquote{margin:0 0 0 0.75rem;padding-left:0.75rem;border-left:2px solid #d1d5db;color:#4b5563;}',
+  'blockquote{margin:0 0 0 0.75rem;padding-left:0.75rem;border-left:2px solid GrayText;color:GrayText;}',
 ].join('');
 
 function toFrameDocument(html: string): string {
   return `<!doctype html><html><head><meta charset="utf-8">`
+    + `<meta name="color-scheme" content="light">`
     + `<meta name="viewport" content="width=device-width,initial-scale=1">`
     + `<style>${FRAME_STYLES}</style></head><body>${html}</body></html>`;
 }
