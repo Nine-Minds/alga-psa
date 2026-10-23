@@ -229,3 +229,9 @@ Each migrated picker must:
 - **Selected-client lookups adding a round trip on select.** This is acceptable (one indexed row). Guard against out-of-order responses when the user changes the selection quickly: ignore stale results by id.
 - **Saved views referencing a deleted client.** The targeted id check must drop the filter just as the old full-list check did, not apply a filter that matches nothing.
 - **Card D running in parallel.** It may touch `ContactDetailsView`/`QuickAddContactRenderProps`. D7 keeps both cards' callers compiling regardless of merge order.
+
+## Release notes (draft text)
+
+- **Client dropdowns on contacts, billing, projects, assets and time entry now search on the server.** They no longer load the whole client list, so they open quickly on tenants with thousands of clients.
+- **Permission change:** choosing a client on the projects and assets screens (new project, apply template, project details, new asset, asset form, asset filters) now requires the `client:read` permission. Users with a custom role that has `project:create` or `asset:create` but not `client:read` will see "Failed to load results" in the client picker. Grant `client:read` to such roles. The default roles that create projects or assets already hold it.
+- Asset records linked to an inactive client now show that client's name in the asset form instead of a blank field.
