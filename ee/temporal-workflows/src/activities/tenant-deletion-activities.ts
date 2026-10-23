@@ -118,7 +118,8 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Quote details
   'quote_activities', 'quote_items', 'quote_document_template_assignments',
-  'quote_document_templates', 'standard_quote_document_templates', 'quotes',
+  'quote_document_templates', 'standard_quote_document_templates',
+  'quote_access_links', 'quotes',
 
   // Opportunity management and core records. Quotes and interactions are
   // deleted first because both reference opportunities. Reviews depend on
