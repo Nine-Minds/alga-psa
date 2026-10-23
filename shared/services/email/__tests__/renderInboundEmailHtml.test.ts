@@ -142,6 +142,19 @@ describe('buildInboundEmailHtmlFromMime', () => {
     expect(html).toContain('rel="noopener noreferrer">Search</a> tail');
   });
 
+  it('hardens a link whose other attribute values mention target= and rel=', async () => {
+    const html = await buildInboundEmailHtmlFromMime(
+      buildHtmlMime('<a href="https://example.test/x" title="pick a target=b or rel=z">Pick</a>')
+    );
+
+    // Hardening runs over the DOM, so a value that reads like an attribute is
+    // still only a value: a string rewrite would have eaten part of the title
+    // and left the anchor with no target at all.
+    expect(html).toContain('title="pick a target=b or rel=z"');
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noopener noreferrer"');
+  });
+
   it('returns null when the archived message carries no body at all', async () => {
     const html = await buildInboundEmailHtmlFromMime(
       buildMime([

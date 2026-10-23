@@ -50,24 +50,6 @@ export interface InboundEmailHtmlLookup {
 }
 
 /**
- * Point links at a new tab and strip any rel the sender supplied. The viewer
- * renders this inside a sandboxed iframe, so a bare `target="_blank"` would
- * still open into an unsandboxed context — `noopener` keeps the opened page
- * from reaching back through `window.opener`.
- */
-function hardenLinks(html: string): string {
-  // Quote-aware on purpose: the HTML serializer does not escape `>` inside an
-  // attribute value, so `[^>]*` would cut a link like `href="…?a=>b"` in half.
-  return html.replace(/<a\b((?:"[^"]*"|'[^']*'|[^>"'])*)>/gi, (_match, rawAttributes: string) => {
-    const attributes = String(rawAttributes).replace(
-      /\s+(?:target|rel)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi,
-      ''
-    );
-    return `<a${attributes} target="_blank" rel="noopener noreferrer">`;
-  });
-}
-
-/**
  * Parse archived MIME into sanitized display HTML. Pure: no database, no
  * storage — the artifact lookup lives in `renderInboundEmailHtml`.
  *
@@ -90,12 +72,16 @@ export async function buildInboundEmailHtmlFromMime(
   }
 
   const withImages = rewriteEmbeddedImageSourcesInContent(source, embeddedImageMappings);
-  const sanitized = await sanitizeEmailHtml(withImages);
+  // Link hardening belongs to the sanitizer pass: the viewer renders this in a
+  // sandboxed iframe, so a bare `target="_blank"` opens into an unsandboxed
+  // context and `noopener` is what keeps the opened page from reaching back
+  // through `window.opener`.
+  const sanitized = await sanitizeEmailHtml(withImages, { hardenLinks: true });
   if (!sanitized?.trim()) {
     return null;
   }
 
-  return hardenLinks(sanitized);
+  return sanitized;
 }
 
 /**
