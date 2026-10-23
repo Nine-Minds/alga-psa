@@ -1606,7 +1606,9 @@
       "missingFieldNamed": "Brakuje wymaganego pola zgłoszenia: {{field}}.",
       "referenceMissing": "Jeden z wybranych rekordów zgłoszenia już nie istnieje. Odśwież stronę i spróbuj ponownie.",
       "conflict": "Ta zmiana zgłoszenia koliduje z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
-      "valueNotAllowed": "Jedna z wartości zgłoszenia jest niedozwolona. Sprawdź formularz i spróbuj ponownie."
+      "valueNotAllowed": "Jedna z wartości zgłoszenia jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "priorityItilBoardCustom": "Priorytet „{{priority}}” jest priorytetem ITIL, ale tablica „{{board}}” używa priorytetów niestandardowych.",
+      "priorityCustomBoardItil": "Priorytet „{{priority}}” jest priorytetem niestandardowym, ale tablica „{{board}}” używa priorytetów ITIL."
     },
     "board": {
       "invalidReference": "Wybrana tablica, status lub reguła jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",

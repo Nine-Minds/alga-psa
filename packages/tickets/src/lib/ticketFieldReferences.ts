@@ -45,19 +45,49 @@ interface PriorityBoardTypePriority {
   is_from_itil_standard?: boolean | null;
 }
 
+export interface PriorityBoardTypeProblem {
+  /** The composed English message (names included), shown as-is when no translation applies. */
+  message: string;
+  messageKey: string;
+  messageParams: { priority: string; board: string };
+}
+
+/**
+ * Thrown by manual ticket create/update. `ticketActionErrorFrom` turns it into a returned
+ * `actionError(message, messageKey, messageParams)`, so the refusal reaches the user instead of
+ * being redacted as an unrecognised server error.
+ */
+export class PriorityBoardTypeError extends Error {
+  readonly messageKey: string;
+  readonly messageParams: PriorityBoardTypeProblem['messageParams'];
+  constructor(problem: PriorityBoardTypeProblem) {
+    super(problem.message);
+    this.name = 'PriorityBoardTypeError';
+    this.messageKey = problem.messageKey;
+    this.messageParams = problem.messageParams;
+  }
+}
+
 /** A null `priority_type` is `custom` (as in boardActions); a null `is_from_itil_standard` is custom. */
 function describePriorityBoardTypeMismatch(
   board: PriorityBoardTypeBoard,
   priority: PriorityBoardTypePriority,
   schedule?: boolean
-): string | null {
+): PriorityBoardTypeProblem | null {
   const boardIsItil = (board.priority_type ?? 'custom') === 'itil';
   const priorityIsItil = Boolean(priority.is_from_itil_standard);
   if (boardIsItil === priorityIsItil) return null;
   const suffix = schedule ? '; edit the schedule' : '';
-  return priorityIsItil
+  const message = priorityIsItil
     ? `Priority ‘${priority.priority_name}’ is an ITIL priority but board ‘${board.board_name}’ uses custom priorities${suffix}`
     : `Priority ‘${priority.priority_name}’ is a custom priority but board ‘${board.board_name}’ uses ITIL priorities${suffix}`;
+  return {
+    message,
+    messageKey: priorityIsItil
+      ? 'features/tickets:errors.ticket.priorityItilBoardCustom'
+      : 'features/tickets:errors.ticket.priorityCustomBoardItil',
+    messageParams: { priority: priority.priority_name, board: board.board_name },
+  };
 }
 
 /**
@@ -71,7 +101,7 @@ export async function findPriorityBoardTypeProblem(
   tenant: string,
   boardId: string,
   priorityId: string
-): Promise<string | null> {
+): Promise<PriorityBoardTypeProblem | null> {
   const db = tenantDb(conn, tenant);
   const board = await db.table('boards').where({ board_id: boardId }).first('board_name', 'priority_type');
   if (!board) return null;
@@ -94,7 +124,7 @@ export async function findTicketUpdatePriorityBoardTypeProblem(
   tenant: string,
   current: { board_id?: string | null; priority_id?: string | null },
   patch: { board_id?: string | null; priority_id?: string | null }
-): Promise<string | null> {
+): Promise<PriorityBoardTypeProblem | null> {
   const boardChanged = Boolean(patch.board_id) && patch.board_id !== current.board_id;
   const priorityChanged = Boolean(patch.priority_id) && patch.priority_id !== current.priority_id;
   if (!boardChanged && !priorityChanged) return null;
@@ -157,8 +187,8 @@ export async function findTicketFieldReferenceProblems(
     if (!priority) {
       problems.push({ field: 'priority_id', message: 'The selected priority no longer exists' });
     } else if (board) {
-      const message = describePriorityBoardTypeMismatch(board, priority, targets.schedule);
-      if (message) problems.push({ field: 'priority_id', message });
+      const mismatch = describePriorityBoardTypeMismatch(board, priority, targets.schedule);
+      if (mismatch) problems.push({ field: 'priority_id', message: mismatch.message });
     }
   } else if (targets.schedule) {
     problems.push({ field: 'priority_id', message: 'A priority is required: choose one on the template or override it for this schedule' });

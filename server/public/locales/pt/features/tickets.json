@@ -1606,7 +1606,9 @@
       "missingFieldNamed": "Falta um campo obrigatório do ticket: {{field}}.",
       "referenceMissing": "Um dos registros de ticket selecionados não existe mais. Atualize a página e tente novamente.",
       "conflict": "Esta alteração do ticket conflita com um registro existente. Atualize a página e tente novamente.",
-      "valueNotAllowed": "Um dos valores do ticket não é permitido. Revise o formulário e tente novamente."
+      "valueNotAllowed": "Um dos valores do ticket não é permitido. Revise o formulário e tente novamente.",
+      "priorityItilBoardCustom": "A prioridade ‘{{priority}}’ é uma prioridade ITIL, mas o quadro ‘{{board}}’ usa prioridades personalizadas.",
+      "priorityCustomBoardItil": "A prioridade ‘{{priority}}’ é uma prioridade personalizada, mas o quadro ‘{{board}}’ usa prioridades ITIL."
     },
     "board": {
       "invalidReference": "O quadro, o status ou a regra selecionados são inválidos. Atualize a página e tente novamente.",

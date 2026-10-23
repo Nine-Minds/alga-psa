@@ -1606,7 +1606,9 @@
       "missingFieldNamed": "Er ontbreekt een verplicht ticketveld: {{field}}.",
       "referenceMissing": "Een van de geselecteerde ticketrecords bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
       "conflict": "Deze ticketwijziging is in conflict met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
-      "valueNotAllowed": "Een van de ticketwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw."
+      "valueNotAllowed": "Een van de ticketwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "priorityItilBoardCustom": "Prioriteit ‘{{priority}}’ is een ITIL-prioriteit, maar bord ‘{{board}}’ gebruikt aangepaste prioriteiten.",
+      "priorityCustomBoardItil": "Prioriteit ‘{{priority}}’ is een aangepaste prioriteit, maar bord ‘{{board}}’ gebruikt ITIL-prioriteiten."
     },
     "board": {
       "invalidReference": "Het geselecteerde bord, de status of de regel is ongeldig. Vernieuw de pagina en probeer het opnieuw.",

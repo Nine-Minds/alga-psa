@@ -1606,7 +1606,9 @@
       "missingFieldNamed": "Manca un campo obbligatorio del ticket: {{field}}.",
       "referenceMissing": "Uno dei record del ticket selezionati non esiste più. Aggiornare la pagina e riprovare.",
       "conflict": "Questa modifica del ticket è in conflitto con un record esistente. Aggiornare la pagina e riprovare.",
-      "valueNotAllowed": "Uno dei valori del ticket non è consentito. Controllare il modulo e riprovare."
+      "valueNotAllowed": "Uno dei valori del ticket non è consentito. Controllare il modulo e riprovare.",
+      "priorityItilBoardCustom": "La priorità ‘{{priority}}’ è una priorità ITIL, ma la bacheca ‘{{board}}’ usa priorità personalizzate.",
+      "priorityCustomBoardItil": "La priorità ‘{{priority}}’ è una priorità personalizzata, ma la bacheca ‘{{board}}’ usa priorità ITIL."
     },
     "board": {
       "invalidReference": "La bacheca, lo stato o la regola selezionati non sono validi. Aggiornare la pagina e riprovare.",

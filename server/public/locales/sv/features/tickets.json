@@ -1614,7 +1614,9 @@
       "missingFieldNamed": "Ett obligatoriskt ärendefält saknas: {{field}}.",
       "referenceMissing": "En av de valda ärendeposterna finns inte längre. Ladda om sidan och försök igen.",
       "conflict": "Den här ärendeändringen står i konflikt med en befintlig post. Ladda om sidan och försök igen.",
-      "valueNotAllowed": "Ett av ärendevärdena är inte tillåtet. Granska formuläret och försök igen."
+      "valueNotAllowed": "Ett av ärendevärdena är inte tillåtet. Granska formuläret och försök igen.",
+      "priorityItilBoardCustom": "Prioriteten ‘{{priority}}’ är en ITIL-prioritet, men tavlan ‘{{board}}’ använder anpassade prioriteter.",
+      "priorityCustomBoardItil": "Prioriteten ‘{{priority}}’ är en anpassad prioritet, men tavlan ‘{{board}}’ använder ITIL-prioriteter."
     },
     "board": {
       "invalidReference": "Den valda tavlan, statusen eller regeln är ogiltig. Ladda om sidan och försök igen.",

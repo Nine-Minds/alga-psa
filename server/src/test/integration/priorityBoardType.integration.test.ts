@@ -11,6 +11,8 @@ import * as auth from '@alga-psa/auth';
 import * as rbac from '@alga-psa/auth/rbac';
 import * as ticketActions from '@alga-psa/tickets/actions/ticketActions';
 import { findTicketFieldReferenceProblems, findPriorityBoardTypeProblem } from '@alga-psa/tickets/lib/ticketFieldReferences';
+import * as optimizedActions from '@alga-psa/tickets/actions/optimizedTicketActions';
+import { TicketService } from '@/lib/api/services/TicketService';
 import * as templateActions from '@alga-psa/tickets/actions/ticketTemplateActions';
 import { TestContext } from '../../../test-utils/testContext';
 import { createUser } from '../../../test-utils/testDataFactory';
@@ -42,6 +44,12 @@ function refusalMessage(outcome: Outcome): string {
     if (typeof v.actionError === 'string') return v.actionError;
   }
   return '';
+}
+
+/** The refusal must be RETURNED as `{ actionError }` (a thrown Error is redacted in production Next.js). */
+function expectReturnedActionError(outcome: Outcome, message: string, params: { priority: string; board: string }, key: string) {
+  expect(outcome.threw).toBeNull();
+  expect(outcome.value).toMatchObject({ actionError: expect.stringContaining(message), messageKey: key, messageParams: params });
 }
 
 const json = (value: unknown) => (typeof value === 'string' ? JSON.parse(value) : value);
@@ -339,7 +347,7 @@ describe('Priority type vs board priority_type (integration)', () => {
       await seedItilSide();
       const problems = await findTicketFieldReferenceProblems(context.db, tenantId, { fields: fields(boardId, itilPriorityId) });
       expect(mismatchOf(problems)).toEqual(["Priority ‘P2 - High’ is an ITIL priority but board ‘Tpl Board’ uses custom priorities"]);
-      expect(await findPriorityBoardTypeProblem(context.db, tenantId, boardId, itilPriorityId)).toBe(mismatchOf(problems)[0]);
+      expect((await findPriorityBoardTypeProblem(context.db, tenantId, boardId, itilPriorityId))?.message).toBe(mismatchOf(problems)[0]);
     });
 
     it('rejects a custom priority on an ITIL board, and appends "edit the schedule" for schedules', async () => {
@@ -363,7 +371,7 @@ describe('Priority type vs board priority_type (integration)', () => {
       await tt('boards').where({ board_id: boardId }).update({ priority_type: null });
       await tt('priorities').where({ priority_id: priorityId }).update({ is_from_itil_standard: null });
       expect(await findPriorityBoardTypeProblem(context.db, tenantId, boardId, priorityId)).toBeNull();
-      expect(await findPriorityBoardTypeProblem(context.db, tenantId, boardId, itilPriorityId)).toMatch(/is an ITIL priority but board ‘Tpl Board’ uses custom/);
+      expect((await findPriorityBoardTypeProblem(context.db, tenantId, boardId, itilPriorityId))?.message).toMatch(/is an ITIL priority but board ‘Tpl Board’ uses custom/);
     });
 
     it('adds nothing when the board is missing (the board problem already speaks)', async () => {
@@ -397,7 +405,12 @@ describe('Priority type vs board priority_type (integration)', () => {
       await seedItilSide();
       const before = await countTickets();
       const outcome = await attempt(() => ticketActions.addTicket(ticketForm(null, { priority_id: itilPriorityId, category_id: '', subcategory_id: '' })));
-      expect(refusalMessage(outcome)).toContain('is an ITIL priority but board ‘Tpl Board’ uses custom priorities');
+      expectReturnedActionError(
+        outcome,
+        'is an ITIL priority but board ‘Tpl Board’ uses custom priorities',
+        { priority: 'P2 - High', board: 'Tpl Board' },
+        'features/tickets:errors.ticket.priorityItilBoardCustom'
+      );
       expect(await countTickets()).toBe(before);
 
       const ok = await attempt(() => ticketActions.addTicket(ticketForm(null, { board_id: itilBoardId, status_id: itilStatusId, priority_id: itilPriorityId, category_id: '', subcategory_id: '' })));
@@ -423,7 +436,12 @@ describe('Priority type vs board priority_type (integration)', () => {
       const otherItil = uuidv4();
       await tt('priorities').insert({ tenant: tenantId, priority_id: otherItil, priority_name: `P3 - PBT ${otherItil.slice(0, 4)}`, item_type: 'ticket', order_number: 9101, color: '#ff0', is_from_itil_standard: true, itil_priority_level: 3, created_by: ownerUser });
       const toOtherItil = await attempt(() => ticketActions.updateTicket(sourceTicketId, { priority_id: otherItil }));
-      expect(refusalMessage(toOtherItil)).toContain('P3 - PBT');
+      expectReturnedActionError(
+        toOtherItil,
+        'P3 - PBT',
+        { priority: expect.stringContaining('P3 - PBT') as any, board: 'Tpl Board' },
+        'features/tickets:errors.ticket.priorityItilBoardCustom'
+      );
 
       // ...a matching custom priority repairs it...
       const repair = await attempt(() => ticketActions.updateTicket(sourceTicketId, { priority_id: priorityId }));
@@ -431,7 +449,35 @@ describe('Priority type vs board priority_type (integration)', () => {
 
       // ...and moving the (now custom) ticket to the ITIL board with its status is refused on the board side.
       const move = await attempt(() => ticketActions.updateTicket(sourceTicketId, { board_id: itilBoardId, status_id: itilStatusId }));
-      expect(refusalMessage(move)).toContain(`Priority ‘${customPriorityName}’ is a custom priority but board ‘Service Desk’ uses ITIL priorities`);
+      expectReturnedActionError(
+        move,
+        `Priority ‘${customPriorityName}’ is a custom priority but board ‘Service Desk’ uses ITIL priorities`,
+        { priority: customPriorityName, board: 'Service Desk' },
+        'features/tickets:errors.ticket.priorityCustomBoardItil'
+      );
+    });
+
+    it('updateTicketWithCache (ticket detail save path) returns the refusal as an actionError', async () => {
+      await seedItilSide();
+      const outcome = await attempt(() => optimizedActions.updateTicketWithCache(sourceTicketId, { priority_id: itilPriorityId }));
+      expectReturnedActionError(
+        outcome,
+        `Priority ‘${'P2 - High'}’ is an ITIL priority but board ‘Tpl Board’ uses custom priorities`,
+        { priority: 'P2 - High', board: 'Tpl Board' },
+        'features/tickets:errors.ticket.priorityItilBoardCustom'
+      );
+      expect((await tt('tickets').where({ ticket_id: sourceTicketId }).first()).priority_id).toBe(priorityId);
+    });
+
+    it('REST TicketService.update refuses with a ValidationError on priority_id', async () => {
+      await seedItilSide();
+      const service = new TicketService();
+      vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: context.db });
+      const serviceContext = { userId: ownerUser, tenant: tenantId, user: { user_id: ownerUser, user_type: 'internal' as const, tenant: tenantId } };
+      const error: any = await service.update(sourceTicketId, { priority_id: itilPriorityId } as any, serviceContext as any).then(() => null, (e) => e);
+      expect(error?.name).toBe('ValidationError');
+      expect(JSON.stringify(error.details)).toContain('priority_id');
+      expect(JSON.stringify(error.details)).toContain('is an ITIL priority but board ‘Tpl Board’ uses custom priorities');
     });
   });
 });

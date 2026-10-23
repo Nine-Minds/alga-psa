@@ -1732,7 +1732,7 @@ export class TicketService extends BaseService<ITicket> {
 
         const priorityProblem = await findPriorityBoardTypeProblem(trx, context.tenant, data.board_id, data.priority_id);
         if (priorityProblem) {
-          throw new ValidationError('Validation failed', [{ path: ['priority_id'], message: priorityProblem }]);
+          throw new ValidationError('Validation failed', [{ path: ['priority_id'], message: priorityProblem.message }]);
         }
 
         // Convert API data format to TicketModel input format
@@ -1933,7 +1933,7 @@ export class TicketService extends BaseService<ITicket> {
         cleanedData as { board_id?: string | null; priority_id?: string | null }
       );
       if (priorityProblem) {
-        throw new ValidationError('Validation failed', [{ path: ['priority_id'], message: priorityProblem }]);
+        throw new ValidationError('Validation failed', [{ path: ['priority_id'], message: priorityProblem.message }]);
       }
 
       if (cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id) {
@@ -2310,7 +2310,7 @@ export class TicketService extends BaseService<ITicket> {
 
       const assetPriorityProblem = await findPriorityBoardTypeProblem(trx, context.tenant, data.board_id, data.priority_id);
       if (assetPriorityProblem) {
-        throw new ValidationError('Validation failed', [{ path: ['priority_id'], message: assetPriorityProblem }]);
+        throw new ValidationError('Validation failed', [{ path: ['priority_id'], message: assetPriorityProblem.message }]);
       }
 
       // Publish after the transaction commits so notification subscribers can

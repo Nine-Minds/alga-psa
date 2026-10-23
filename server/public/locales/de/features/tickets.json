@@ -1606,7 +1606,9 @@
       "missingFieldNamed": "Erforderliches Ticketfeld fehlt: {{field}}.",
       "referenceMissing": "Einer der ausgewählten Ticketdatensätze existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "conflict": "Diese Ticketänderung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
-      "valueNotAllowed": "Einer der Ticketwerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut."
+      "valueNotAllowed": "Einer der Ticketwerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "priorityItilBoardCustom": "Die Priorität ‚{{priority}}‘ ist eine ITIL-Priorität, aber das Board ‚{{board}}‘ verwendet benutzerdefinierte Prioritäten.",
+      "priorityCustomBoardItil": "Die Priorität ‚{{priority}}‘ ist eine benutzerdefinierte Priorität, aber das Board ‚{{board}}‘ verwendet ITIL-Prioritäten."
     },
     "board": {
       "invalidReference": "Das ausgewählte Board, der Status oder die Regel ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",

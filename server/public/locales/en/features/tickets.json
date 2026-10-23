@@ -1614,7 +1614,9 @@
       "missingFieldNamed": "Missing required ticket field: {{field}}.",
       "referenceMissing": "One of the selected ticket records no longer exists. Please refresh and try again.",
       "conflict": "This ticket change conflicts with an existing record. Please refresh and try again.",
-      "valueNotAllowed": "One of the ticket values is not allowed. Please review the form and try again."
+      "valueNotAllowed": "One of the ticket values is not allowed. Please review the form and try again.",
+      "priorityItilBoardCustom": "Priority ‘{{priority}}’ is an ITIL priority but board ‘{{board}}’ uses custom priorities.",
+      "priorityCustomBoardItil": "Priority ‘{{priority}}’ is a custom priority but board ‘{{board}}’ uses ITIL priorities."
     },
     "board": {
       "invalidReference": "The selected board, status, or rule is invalid. Please refresh and try again.",
