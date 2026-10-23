@@ -50,7 +50,8 @@ export class OAuthError extends Error {
     this.name = 'OAuthError';
   }
 
-  get status(): number { return 400; }
+  /** Microsoft answers a bad client secret (invalid_client) with 401, everything else with 400. */
+  get status(): number { return this.error === 'invalid_client' ? 401 : 400; }
 
   get body() {
     const suffix = `\r\nTrace ID: ${this.ids.traceId}\r\nCorrelation ID: ${this.ids.correlationId}\r\nTimestamp: ${this.ids.timestamp}`;
@@ -714,7 +715,9 @@ export class MsGraphCore implements EmulatorCore {
     id_token?: string;
   } {
     if (this.clients.get(String(input.client_id))?.secret !== String(input.client_secret)) {
-      throw new GraphApiError(401, { error: 'invalid_client' });
+      throw this.oauthError(7000215,
+        'invalid_client',
+        `Invalid client secret provided. Ensure the secret being sent in the request is the client secret value, not the client secret ID, for a secret added to app '${String(input.client_id)}'.`);
     }
     if (input.grant_type === 'authorization_code') {
       const code = this.codes.get(String(input.code));
