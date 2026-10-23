@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ActionContext } from '../../../../../shared/workflow/runtime/registries/actionRegistry';
 
@@ -175,6 +176,15 @@ describe('asset maintenance workflow actions and shared lifecycle', () => {
     }
     await expect(execute('skip_maintenance', { occurrence_id: ids.occurrence, reason: '  ' })).rejects.toThrow();
     await expect(execute('complete_maintenance', { occurrence_id: ids.occurrence, performed_at: 'not-a-date' })).rejects.toThrow();
+    await expect(execute('complete_maintenance', { occurrence_id: ids.occurrence, performed_at: '2026-02-30' })).rejects.toThrow();
+  });
+
+  it('keeps action schemas compatible with the workflow worker zod pin', () => {
+    const source = readFileSync(
+      new URL('../../../../../shared/workflow/runtime/actions/businessOperations/assetMaintenance.ts', import.meta.url),
+      'utf8',
+    );
+    expect(source).not.toMatch(/z\.string\(\)\.date\(/);
   });
 
   it('gets a plan and its open occurrence without writing', async () => {

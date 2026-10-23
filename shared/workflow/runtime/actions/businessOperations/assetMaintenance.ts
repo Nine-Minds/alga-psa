@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
-import { withWorkflowNotFoundPolicy, withWorkflowPicker } from '@alga-psa/event-schemas';
+import { dateOnlySchema, withWorkflowNotFoundPolicy, withWorkflowPicker } from '@alga-psa/event-schemas';
 import {
   BuiltinAuthorizationKernelProvider, BundleAuthorizationKernelProvider,
   createAuthorizationKernel,
@@ -223,7 +223,7 @@ export function registerAssetMaintenanceActions(): void {
     version: 1,
     inputSchema: z.object({
       occurrence_id: uuidSchema,
-      performed_at: z.union([z.string().date(), isoDateTimeSchema]).optional().describe('Completion calendar date or ISO timestamp, for example ticket.closed_at; defaults to today'),
+      performed_at: z.union([dateOnlySchema('Completion calendar date (YYYY-MM-DD)'), isoDateTimeSchema]).optional().describe('Completion calendar date or ISO timestamp, for example ticket.closed_at; defaults to today'),
       notes: z.string().optional(),
       maintenance_data: z.record(z.unknown()).optional().describe('Structured completion details from the ticket or workflow'),
     }),
