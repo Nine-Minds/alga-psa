@@ -4489,7 +4489,7 @@ const handleClose = () => {
                                 userId={userId || ''}
                                 tenant={tenant}
                                 contacts={contacts}
-                                            locations={locations}
+                                locations={locations}
                                 clientFilterState={clientFilterState}
                                 clientTypeFilter={clientTypeFilter}
                                 onChangeContact={handleContactChange}

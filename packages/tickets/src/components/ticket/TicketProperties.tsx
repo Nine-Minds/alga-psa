@@ -719,7 +719,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               setIsQuickAddContactOpen(false);
               setShowContactPicker(true);
             },
-                      selectedClientId: ticket.client_id || client?.client_id,
+            selectedClientId: ticket.client_id || client?.client_id,
           })}
           <div>
             <h5 className="font-bold">{t('properties.createdBy', 'Created By')}</h5>
