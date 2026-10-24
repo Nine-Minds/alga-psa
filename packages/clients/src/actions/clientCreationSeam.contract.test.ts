@@ -28,15 +28,8 @@ const SCAN_ROOTS = [
 /** The one module allowed to insert a client row. */
 const SEAM = 'shared/models/clientCreation.ts';
 
-/**
- * Test/bootstrap utilities, not product paths. `lib/testing/tenant-creation.ts`
- * backs the create-tenant/rollback-tenant CLI and the Playwright tenant
- * fixtures; it is packaged into the appliance bootstrap image, where shared/
- * ships as dist only, so it deliberately keeps its import surface minimal.
- */
-const ALLOWLIST = new Set([
-  'ee/server/src/lib/testing/tenant-creation.ts',
-]);
+/** No production path is exempt. */
+const ALLOWLIST = new Set<string>([]);
 
 const SKIPPED_DIRECTORIES = new Set([
   'node_modules',
@@ -130,9 +123,14 @@ const DIRECT_INSERT_PATTERNS: Array<{ label: string; pattern: RegExp }> = [
     pattern: /\.into\s*\(\s*['"]clients['"]\s*\)/,
   },
   {
-    // knex('clients').insert(...) / trx('clients').insert(...)
-    label: "knex('clients') … .insert",
-    pattern: /\b(?:knex|trx|tx|db|conn|knexOrTrx|trxOrKnex)\s*\(\s*['"]clients['"]\s*\)\s*\.insert\b/,
+    // Any call that takes 'clients' as a table argument and is inserted into:
+    // knex('clients').insert(...), trx('clients').insert(...),
+    // tenantScopedTable(tx, 'clients').insert(...),
+    // tenantScopedTable(trx, 'clients', tenant).insert(...).
+    // The lookbehind leaves `.table('clients')` to the pattern above so one
+    // offending line is reported once.
+    label: "<fn>('clients') … .insert",
+    pattern: /(?<!\.)\b[A-Za-z_$][\w$]*\s*\(\s*(?:[^()'"]*,\s*)?['"]clients['"]\s*(?:,\s*[^()'"]*)?\)\s*\.insert\b/,
   },
 ];
 
@@ -150,6 +148,41 @@ describe('client creation seam contract', () => {
     expect(files).toContain(SEAM);
     expect(files).toContain('packages/clients/src/actions/clientActions.ts');
     expect(files).toContain('ee/temporal-workflows/src/db/tenant-operations.ts');
+  });
+
+  it('recognises every insert style the codebase writes tables with', () => {
+    // Without this the gate can pass while being blind: the business-operation
+    // ops wrote `tenantScopedTable(tx, 'clients').insert(...)` and no pattern
+    // saw it.
+    const shouldMatch = [
+      "await db.table('clients').insert(row);",
+      "await tenantDb(trx, tenant).table<IClient>('clients').insert(row);",
+      "await trx.insert(row).into('clients');",
+      "await knex('clients').insert(row);",
+      "await trx('clients').insert(row);",
+      "await tenantScopedTable(tx, 'clients').insert(createRow);",
+      "await tenantScopedTable(trx, 'clients', tenant).insert(row);",
+      "await clientsTable('clients').insert(row);",
+    ];
+    const shouldNotMatch = [
+      "const columns = await getTableColumns(tx, 'clients');",
+      "await tenantScopedTable(tx, 'clients').where('client_id', id).update(patch);",
+      "await db.table('client_locations').insert(row);",
+      "await db.table('clients_extra').insert(row);",
+    ];
+
+    for (const sample of shouldMatch) {
+      expect(
+        DIRECT_INSERT_PATTERNS.some(({ pattern }) => pattern.test(normalize(sample))),
+        `gate is blind to: ${sample}`
+      ).toBe(true);
+    }
+    for (const sample of shouldNotMatch) {
+      expect(
+        DIRECT_INSERT_PATTERNS.some(({ pattern }) => pattern.test(normalize(sample))),
+        `gate false-positives on: ${sample}`
+      ).toBe(false);
+    }
   });
 
   it('routes every clients insert through createClientWithDefaults', () => {
