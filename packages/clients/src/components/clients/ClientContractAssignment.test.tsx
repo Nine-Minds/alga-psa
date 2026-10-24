@@ -320,13 +320,13 @@ describe('ClientContractAssignment contract-detail navigation', () => {
       expect(screen.queryByText('03/31/2026')).toBeNull();
     });
 
-    it('renders a UTC-midnight Date from the pg driver as 04/01/2026 (4/1) once it crosses the read boundary', async () => {
+    it('renders a local-midnight Date from the pg driver as 04/01/2026 (4/1) once it crosses the read boundary', async () => {
       process.env.TZ = 'America/Los_Angeles';
       const normalized = normalizeClientContract({
         client_contract_id: 'cc-1',
         client_id: 'client-1',
         contract_id: 'contract-1',
-        start_date: new Date('2026-04-01T00:00:00Z'),
+        start_date: new Date(2026, 3, 1), // pg DATE column: server-local midnight
         end_date: null,
         is_active: true,
       });
