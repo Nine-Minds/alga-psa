@@ -8,8 +8,9 @@
  * means code exists; it is not a claim that anything passed at the current
  * candidate, so it can only ever produce `implemented-unverified` here.
  *
- * A row reaches `verified` only through EVIDENCE below — an explicit record of
- * a command or journey that was actually run, at a named SHA, with its result.
+ * The default census records current sources without promoting any row to
+ * verified. Historical evidence/classifications are available with --historical
+ * for reproducing old packets; they are never current acceptance by default.
  * A skipped test, a screenshot alone, or a previous assignment reporting
  * success cannot set it. Nothing is deleted and nothing is waived: rows that
  * are out of the current round's scope keep their derived status and say so.
@@ -18,6 +19,7 @@
  *   node scripts/build-co-managed-inventory.mjs --out docs/evidence/co-managed-completion/<sha>
  */
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -31,6 +33,7 @@ import {
   planRows,
 } from './lib/co-managed-plan-ids.mjs';
 import { markArtifactAvailability } from './lib/co-managed-completion.mjs';
+import { requirementSources } from './lib/co-managed-requirement-sources.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const argv = process.argv.slice(2);
@@ -41,6 +44,10 @@ const arg = (name, fallback) => {
 
 const candidate = arg('candidate', execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim());
 const outDir = path.resolve(root, arg('out', `docs/evidence/co-managed-completion/${candidate.slice(0, 10)}`));
+// A source census deliberately does not import historical acceptance verdicts.
+// It regenerates all IDs and records current paths without treating source
+// existence, old flags or old test counts as candidate acceptance.
+const currentSourceCensus = !argv.includes('--historical');
 
 const STATUSES = ['missing-code', 'implemented-unverified', 'failed', 'blocked-external', 'verified'];
 
@@ -1160,6 +1167,33 @@ function buildRows() {
   const rows = [];
   const push = (row) => {
     const key = row.plan === 'correction' || row.plan === 'foundation' ? row.id : `${row.plan}:${row.id}`;
+    if (currentSourceCensus) {
+      const mapping = requirementSources(row.plan, row);
+      const references = [...new Set([...mapping.sources, ...mapping.tests])].map(file => ({
+        path: file,
+        sha256: existsSync(path.join(root, file))
+          ? createHash('sha256').update(readFileSync(path.join(root, file))).digest('hex') : null,
+      }));
+      const missing = references.filter(ref => !ref.sha256);
+      const external = key === 'clientIntegration:T018' || key === 'clientIntegration:T019';
+      const status = missing.length ? 'missing-code' : external ? 'blocked-external' : 'implemented-unverified';
+      rows.push({
+        key, plan: row.plan, id: row.id, kind: row.kind, description: row.description,
+        planPath: row.plan === 'foundation' ? PLANS.foundation : `${PLANS[row.plan]}/${row.kind === 'feature' ? 'features' : 'tests'}.json`,
+        planImplemented: row.implemented === true,
+        implementationSource: mapping.sources.join(', '), currentRegression: mapping.tests.join(', '),
+        sourceReferences: references, ownerRole: row.ownerRole ?? 'implementing-ood', dependsOn: row.dependsOn ?? [],
+        status,
+        remainingAcceptance: `${row.description} ${mapping.remaining}`,
+        amendment: row.plan === 'ticketList' && ['F002', 'F003', 'F010', 'F011', 'F012', 'F013', 'F014', 'F017', 'F027', 'T002', 'T005', 'T008'].includes(row.id)
+          ? 'docs/plans/2026-09-11-co-managed-ticket-list-unification/PRD.md#decision-amendment--2026-10-14: assess this retained ID under D1-D4/A1-A8, not the superseded two-source shell/snapshot design.' : undefined,
+        justification: missing.length
+          ? `Source census cannot find ${missing.map(ref => ref.path).join(', ')}.`
+          : `${external ? 'Real-provider portion remains externally owned. ' : ''}Current source and regression locations exist; this is not full behavioral acceptance. ${mapping.remaining}`,
+        evidence: [{ id: 'current-source-census' }],
+      });
+      return;
+    }
     const status = deriveStatus(key, row);
     const override = OVERRIDES[key] ?? TICKET_LIST_RECONCILIATION[key];
     rows.push({
@@ -1234,6 +1268,22 @@ function buildRows() {
 }
 
 const rows = buildRows();
+mkdirSync(outDir, { recursive: true });
+if (currentSourceCensus) {
+  writeFileSync(path.join(outDir, 'source-census.json'), `${JSON.stringify({
+    candidate, generatedAt: new Date().toISOString(),
+    claim: 'Required IDs and referenced source files are present; this census does not prove full implementation or runtime acceptance.',
+    rows,
+  }, null, 2)}\n`);
+}
+const activeEvidence = currentSourceCensus ? {
+  'current-source-census': {
+    type: 'analysis', sha: candidate,
+    command: 'node scripts/build-co-managed-inventory.mjs --current-source-census',
+    result: `${rows.length} requirement rows mapped to current source and regression paths; no acceptance statuses promoted to verified.`,
+    artifact: 'source-census.json',
+  },
+} : EVIDENCE;
 
 // Fail closed on the things CT001 will eventually assert.
 const failures = [...coManagedRequirementKeys(root).failures];
@@ -1243,8 +1293,8 @@ const failures = [...coManagedRequirementKeys(root).failures];
  * Read if present; absent facts stay null so the gate reports them as blocking
  * reasons rather than treating absence as satisfaction.
  */
-const factsPath = arg('facts', path.join(outDir, 'candidate-facts.json'));
-const facts = existsSync(factsPath) ? JSON.parse(readFileSync(factsPath, 'utf8')) : null;
+const factsPath = arg('facts', currentSourceCensus ? null : path.join(outDir, 'candidate-facts.json'));
+const facts = factsPath && existsSync(factsPath) ? JSON.parse(readFileSync(factsPath, 'utf8')) : null;
 if (facts && facts.candidate !== candidate) {
   failures.push(`candidate-facts.json was collected at ${facts.candidate} but this manifest is for ${candidate}`);
 }
@@ -1259,19 +1309,23 @@ for (const row of rows) {
     failures.push(`${row.key}: verified with no evidence record`);
   }
   for (const item of row.evidence) {
-    if (!item.command || !item.result) failures.push(`${row.key}: evidence ${item.id} is not a real record`);
+    const record = activeEvidence[item.id] ?? item;
+    if (!record.command || !record.result) failures.push(`${row.key}: evidence ${item.id} is not a real record`);
+  }
+  for (const reference of row.sourceReferences ?? []) {
+    if (!reference.sha256) failures.push(`${row.key}: referenced source ${reference.path} does not exist`);
   }
 }
 // An artifact reference that does not resolve is worse than none: it reads as
 // corroboration a reviewer can open, and cannot be.
-for (const [id, item] of Object.entries(EVIDENCE)) {
+for (const [id, item] of Object.entries(activeEvidence)) {
   if (!item.artifact) failures.push(`evidence ${id}: no artifact reference`);
 }
 // Stamps `artifactAvailable` onto each record. The failures below stop this
 // run, but manifest.json is written before the exit, so the flag is what makes
 // the verifier block independently on a manifest kept from a failed
 // collection. Shared with the verifier so the two cannot drift.
-for (const { id, field, reference } of markArtifactAvailability(EVIDENCE, (rel) => existsSync(path.join(outDir, rel)))) {
+for (const { id, field, reference } of markArtifactAvailability(activeEvidence, (rel) => existsSync(path.join(outDir, rel)))) {
   failures.push(`evidence ${id}: ${field} ${reference} does not exist`);
 }
 const expected = EXPECTED_COUNTS;
@@ -1295,7 +1349,7 @@ const inventory = {
   statusVocabulary: STATUSES,
   counts, totals: { rows: rows.length, byStatus },
   failures,
-  evidence: EVIDENCE,
+  evidence: activeEvidence,
   rows,
 };
 
@@ -1341,9 +1395,12 @@ const manifest = {
     ? { runId: facts.ci.runId, status: facts.ci.status, conclusion: facts.ci.conclusion, checks: facts.ci.checks }
     : { runId: null, checks: [] },
   reviewEnvironment: { stable: false, observedMinutes: 0, healingEvents: null },
-  openDefects: OPEN_DEFECTS,
+  // Historical findings are retained in the old packets. A source census
+  // neither confirms them at this candidate nor establishes a clean defect
+  // audit: every in-card requirement stays unaccepted pending execution.
+  openDefects: currentSourceCensus ? [] : OPEN_DEFECTS,
   productionPrerequisites: PRODUCTION_PREREQUISITES,
-  evidence: EVIDENCE,
+  evidence: activeEvidence,
   requirements: rows.map((row) => ({
     key: row.key, status: row.status, justification: row.justification,
     ownerRole: row.ownerRole, requiredInCard: row.status !== 'blocked-external',
@@ -1371,7 +1428,7 @@ md.push('## Evidence records');
 md.push('');
 md.push('| id | type | sha | command / journey | result |');
 md.push('| --- | --- | --- | --- | --- |');
-for (const [id, item] of Object.entries(EVIDENCE)) {
+for (const [id, item] of Object.entries(activeEvidence)) {
   md.push(`| \`${id}\` | ${item.type} | \`${item.sha}\` | ${item.command.replace(/\|/g, '\\|')} | ${item.result.replace(/\|/g, '\\|')} |`);
 }
 md.push('');
@@ -1379,10 +1436,12 @@ for (const [bucket, label] of [
   ['foundation', 'Foundation contracts T01–T22'],
   ['clientIntegration:feature', 'Client integration features F001–F033'],
   ['clientIntegration:test', 'Client integration tests T001–T021'],
-  ['ticketList:feature', 'Ticket list features F001–F039'],
-  ['ticketList:test', 'Ticket list tests T001–T020'],
+  ['ticketList:feature', 'Ticket list features F001–F049'],
+  ['ticketList:test', 'Ticket list tests T001–T026'],
   ['correction:feature', 'Correction features CF001–CF032'],
   ['correction:test', 'Correction tests CT001–CT026'],
+  ['nativeTicketScreen:feature', 'Native ticket screen features F001–F037'],
+  ['nativeTicketScreen:test', 'Native ticket screen tests T001–T014'],
 ]) {
   md.push(`## ${label}`);
   md.push('');
@@ -1399,6 +1458,21 @@ for (const [bucket, label] of [
   md.push('');
 }
 writeFileSync(path.join(outDir, 'inventory.md'), `${md.join('\n')}\n`);
+
+if (currentSourceCensus) {
+  const remaining = ['# Remaining acceptance obligations', '', `Candidate: \`${candidate}\`.`, '',
+    'Every approved ID is retained below. Source locations are a census, not proof that the complete requirement passed.',
+    'No source-only record is promoted to verified. External portions retain their release owner.', ''];
+  for (const row of rows) {
+    remaining.push(`## ${row.key}`, '', `Status: \`${row.status}\`.`, '', row.description, '',
+      `Specification: \`${row.planPath}\` (${row.id}).`, '',
+      `Implementation: ${row.implementationSource.split(', ').map(file => `\`${file}\``).join(', ')}.`, '',
+      `Regression locations: ${row.currentRegression.split(', ').map(file => `\`${file}\``).join(', ')}.`, '',
+      `Still required: ${row.remainingAcceptance}`, '');
+    if (row.amendment) remaining.push(`Approved amendment: ${row.amendment}`, '');
+  }
+  writeFileSync(path.join(outDir, 'remaining-acceptance.md'), `${remaining.join('\n')}\n`);
+}
 
 console.log(`${rows.length} rows -> ${path.relative(root, outDir)}`);
 console.log(Object.entries(byStatus).sort().map(([s, n]) => `  ${s}: ${n}`).join('\n'));

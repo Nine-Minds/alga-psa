@@ -58,8 +58,13 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
   },
   {
+    group: 'msp_subscription_account',
+    staticPrefixes: ['/msp/account'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'not_found' },
+  },
+  {
     group: 'msp_core_helpdesk',
-    staticPrefixes: ['/msp/tickets', '/msp/create-ticket', '/msp/clients', '/msp/contacts', '/msp/interactions', '/msp/knowledge-base', '/msp/reports', '/msp/settings', '/msp/profile', '/msp/security-settings', '/msp/account', '/msp/add-ons'],
+    staticPrefixes: ['/msp/tickets', '/msp/create-ticket', '/msp/clients', '/msp/contacts', '/msp/interactions', '/msp/knowledge-base', '/msp/reports', '/msp/settings', '/msp/profile', '/msp/security-settings', '/msp/add-ons'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
   },
   {

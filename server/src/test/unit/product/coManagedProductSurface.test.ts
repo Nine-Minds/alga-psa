@@ -18,10 +18,18 @@ describe('co-managed product boundary', () => {
     expect(resolveProductRouteBehavior('algadesk', `/msp/${screen}`)).toBe('upgrade_boundary');
   });
 
-  it.each(['billing', 'opportunities', 'marketing', 'integrations', 'unknown-module'])
+  it.each(['account', 'billing', 'opportunities', 'marketing', 'integrations', 'unknown-module'])
   ('denies commercial and unlisted screen %s', (screen) => {
     expect(resolveProductRouteBehavior('co_managed', `/msp/${screen}`)).toBe('not_found');
     expect(resolveProductRouteBehavior('psa', `/msp/${screen}`)).toBe('allowed');
+  });
+
+  it('keeps customer upgrade separate from native subscription account management', () => {
+    expect(resolveProductRouteBehavior('psa', '/msp/account')).toBe('allowed');
+    expect(resolveProductRouteBehavior('algadesk', '/msp/account')).toBe('allowed');
+    expect(resolveProductRouteBehavior('co_managed', '/msp/account/subscription')).toBe('not_found');
+    expect(resolveProductRouteBehavior('co_managed', '/msp/profile')).toBe('allowed');
+    expect(resolveProductRouteBehavior('co_managed', '/msp/co-management/upgrade')).toBe('allowed');
   });
 
   it.each(['projects', 'assets', 'time-entries', 'documents', 'workflows', 'scheduling'])
@@ -30,7 +38,7 @@ describe('co-managed product boundary', () => {
     expect(getApiMetadataProducts(`/api/v1/${resource}`)).toEqual(['psa', 'co_managed']);
   });
 
-  it.each(['invoices', 'quotes', 'contracts', 'financial', 'accounting-exports', 'rmm', 'integrations', 'unknown-area'])
+  it.each(['account', 'invoices', 'quotes', 'contracts', 'financial', 'accounting-exports', 'rmm', 'integrations', 'unknown-area'])
   ('denies commercial/unlisted API %s', (resource) => {
     expect(resolveProductApiBehavior('co_managed', `/api/v1/${resource}`)).toBe('denied');
     expect(getApiMetadataProducts(`/api/v1/${resource}`)).not.toContain('co_managed');

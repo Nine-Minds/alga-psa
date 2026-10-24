@@ -33,7 +33,7 @@ import type {
 import { isOAuthMappingFailure, OAuthAccountLinkConflictError } from "./sso/types";
 import { SSO_LINK_STATE_COOKIE, SSO_PROFILE_TAB_URL } from "./sso/linkStateCookie";
 import {
-    getMicrosoftSsoEmulatorEndpoints,
+    buildMicrosoftSsoEmulatorProvider,
     isMicrosoftSsoEmulatorEnabled,
 } from "./sso/microsoftSsoEmulator";
 import { mapCeOAuthProfileToExtendedUser } from "./sso/ceOAuthProfileMapper";
@@ -420,9 +420,8 @@ function buildGoogleProvider(clientId: string, clientSecret: string) {
 
 /**
  * Microsoft sign-in, against Entra or — when the simulator gate is on — against
- * the algasim Microsoft simulator. The simulator issues no signed id_token, so
- * that branch runs as plain OAuth2 and resolves the account from Graph `/me`,
- * which carries the same `mail`/`userPrincipalName` pair `profile()` reads.
+ * the algasim Microsoft simulator. That branch uses discovery and signed OIDC
+ * tokens with the same state, PKCE and nonce checks as the production provider.
  */
 function buildAzureADProvider(config: {
     clientId: string;
@@ -432,30 +431,7 @@ function buildAzureADProvider(config: {
     profile: (profile: Record<string, any>) => Promise<ExtendedUser>;
 }) {
     if (isMicrosoftSsoEmulatorEnabled()) {
-        const endpoints = getMicrosoftSsoEmulatorEndpoints(config.authority);
-        return {
-            id: 'azure-ad',
-            name: 'Microsoft',
-            type: 'oauth' as const,
-            clientId: config.clientId,
-            clientSecret: config.clientSecret,
-            // The emulator is plain OAuth with a userinfo endpoint and no ID
-            // token, so there is no nonce for Auth.js to verify.
-            checks: (config.checks ?? ['pkce', 'state']).filter((check) => check !== 'nonce') as Array<'pkce' | 'state'>,
-            authorization: {
-                url: endpoints.authorization,
-                params: {
-                    scope: 'openid email profile https://graph.microsoft.com/User.Read',
-                },
-            },
-            token: {
-                url: endpoints.token,
-            },
-            userinfo: {
-                url: endpoints.userinfo,
-            },
-            profile: config.profile,
-        };
+        return buildMicrosoftSsoEmulatorProvider(config);
     }
 
     return AzureADProvider({

@@ -3,6 +3,13 @@
 Evidence for PR [#3363](https://github.com/Nine-Minds/alga-psa/pull/3363), collected against the
 correction plan in [`docs/plans/2026-09-20-co-managed-it-completion/`](../../plans/2026-09-20-co-managed-it-completion/PRD.md).
 
+The current inventory generator reads all 260 approved IDs and records current
+source and regression paths. It does not promote source presence to acceptance.
+The [October 24 follow-up](81fe5d58c8/readiness-20261024/README.md) records the
+before/after verifier output, every remaining obligation and boundary mutations.
+Use the verifier's live output for the current verdict. Older counts below are
+historical.
+
 **One directory, named for the packet's anchor commit.** Earlier rounds are not kept as parallel
 directories: an accumulation of near-identical candidate folders is how a stale SHA gets relabelled
 as current. The inventory and manifest are regenerated whenever the candidate moves, and evidence
@@ -63,7 +70,7 @@ Its invocation record and any packet-delivery receipt are **outputs** of this
 gate, never inputs to it. Binding the verdict to review eligibility is the XO's
 job; merging and human approval are later board actions.
 
-## Current verdict
+## Historical verdict — September 20
 
 `implementationReady`, `humanReviewReady` and `productionReady` are all
 **false**. 190 blocking reasons, of which the first is that 189 of the 193
