@@ -630,5 +630,8 @@
     "setupComplete": {
       "title": "Karteneinrichtung"
     }
+  },
+  "pay": {
+    "title": "Rechnung bezahlen"
   }
 }

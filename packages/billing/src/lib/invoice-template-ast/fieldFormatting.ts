@@ -1,4 +1,4 @@
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { formatCurrencyFromMinorUnits, fromMinorUnits } from '@alga-psa/core';
 import { SYSTEM_DATE_FORMAT, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import type { TemplateFieldDisplayFormat, TemplateValueFormat } from '@alga-psa/types';
 import { formatDateValue } from '@alga-psa/ui/lib/i18n/formatDateValue';
@@ -21,10 +21,14 @@ const FALLBACK_CURRENCY = 'USD';
 
 const formatCurrency = (value: number, currencyCode: string, locale?: string) => {
   try {
-    return new Intl.NumberFormat(locale || FALLBACK_LOCALE, {
+    const currency = currencyCode || FALLBACK_CURRENCY;
+    const resolvedLocale = locale || FALLBACK_LOCALE;
+    // LEVERAGE: pattern minor-unit-currency-format — duplicated in react-renderer.formatValue; see there
+    // Amounts are minor units; the exponent comes from the currency (USD 2, JPY 0, KWD 3).
+    return new Intl.NumberFormat(resolvedLocale, {
       style: 'currency',
-      currency: currencyCode || FALLBACK_CURRENCY,
-    }).format(value / 100);
+      currency,
+    }).format(fromMinorUnits(value, resolvedLocale, currency));
   } catch {
     return formatCurrencyFromMinorUnits(value, FALLBACK_LOCALE, FALLBACK_CURRENCY);
   }

@@ -216,6 +216,7 @@ export async function snapshotContractToScenario(
         "template_id",
         "template_name",
         "default_billing_frequency",
+        "currency_code",
       );
     if (template) {
       isTemplate = true;
@@ -224,7 +225,7 @@ export async function snapshotContractToScenario(
         contract_name: template.template_name,
         owner_client_id: null,
         billing_frequency: template.default_billing_frequency || "monthly",
-        currency_code: "USD",
+        currency_code: template.currency_code,
         is_system_managed_default: false,
       };
     }
@@ -892,11 +893,14 @@ async function buildScenarioServiceConfig(
     case "Fixed": {
       const fixed = configDetails.typeConfig as {
         base_rate?: number | null;
+        base_rate_basis?: "per_unit" | "share" | null;
         pricing_basis?: "unit" | "bundle" | null;
       } | null;
+      const fixedBaseRate = toCents(fixed?.base_rate ?? null);
       return {
         configuration_type: "Fixed",
-        base_rate: toCents(fixed?.base_rate ?? null),
+        base_rate: fixedBaseRate,
+        base_rate_basis: fixedBaseRate === null ? null : fixed?.base_rate_basis ?? null,
         pricing_basis: fixed?.pricing_basis ?? null,
       };
     }

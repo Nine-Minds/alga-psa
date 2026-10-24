@@ -215,6 +215,7 @@ describe('route registry filesystem inventory', () => {
     '.well-known': 'well-known URIs (app deep links, security.txt)',
     auth: 'authentication flows for both portals, pre-product by nature',
     'ext-ui': 'extension iframe host surface',
+    pay: 'public tokened invoice payment redirect (emailed /pay/<token>); the billing feature that issues the link is product-gated',
     'payment-methods': 'public tokened card-setup return page; the billing feature that issues the link is product-gated',
     runner: 'extension runner surface',
     share: 'public tokened share-link landing pages',

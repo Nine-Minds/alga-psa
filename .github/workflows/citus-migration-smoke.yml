@@ -148,6 +148,7 @@ jobs:
           fi
           psql -h localhost -U postgres -d server -c "SELECT con.conname, con.conrelid::regclass AS referrer, con.confrelid::regclass AS referenced, p1.partmethod AS referrer_kind, p1.colocationid AS referrer_colocation, p2.colocationid AS referenced_colocation FROM pg_constraint con LEFT JOIN pg_dist_partition p1 ON p1.logicalrelid = con.conrelid LEFT JOIN pg_dist_partition p2 ON p2.logicalrelid = con.confrelid WHERE con.conname = 'tenant_settings_default_tax_rate_id_foreign';"
 
+      - uses: ./.github/actions/prepare-apt
       - name: Install PDF text extraction tools
         run: sudo apt-get update && sudo apt-get install -y poppler-utils
 
