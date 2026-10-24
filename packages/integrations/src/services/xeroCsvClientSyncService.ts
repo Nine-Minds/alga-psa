@@ -16,10 +16,22 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { unparseCSV, parseCSV } from '@alga-psa/core';
 import { withTransaction } from '@alga-psa/db';
 import type { IClient, IClientLocation } from '@alga-psa/types';
-import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
-import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
+import {
+  createClientWithDefaults,
+  type CreateClientWithDefaultsData,
+} from '@alga-psa/shared/models/clientCreation';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildClientCreatedPayload } from '@alga-psa/workflow-streams';
 
 const ADAPTER_TYPE = 'xero_csv';
+
+/** A client this import created, kept for the post-commit CLIENT_CREATED publish. */
+interface CreatedXeroClient {
+  clientId: string;
+  clientName: string;
+  createdAt: string;
+  status: string;
+}
 
 /**
  * Xero Contacts CSV export row structure.
@@ -500,7 +512,7 @@ export class XeroCsvClientSyncService {
       };
     }
 
-    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const { createdClients, ...result } = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant);
 
       // Load all existing clients
@@ -536,6 +548,9 @@ export class XeroCsvClientSyncService {
       let skipped = 0;
       let mappingsCreated = 0;
       const errors: Array<{ rowIndex: number; contactName: string; error: string }> = [];
+      // CLIENT_CREATED is published after the transaction commits, as the client
+      // actions do, so a subscriber cannot read a rolled-back client.
+      const createdClients: CreatedXeroClient[] = [];
 
       for (let i = 0; i < parsedContacts.length; i++) {
         const contact = parsedContacts[i];
@@ -590,10 +605,11 @@ export class XeroCsvClientSyncService {
           } else {
             // Create new client
             if (mergedOptions.createNewClients) {
-              const newClientId = await this.createClient(trx, tenant, contact, userId);
+              const newClient = await this.createClient(trx, tenant, contact, userId);
+              createdClients.push(newClient);
 
               // Create mapping
-              await this.createClientMapping(trx, tenant, newClientId, contact.contactName);
+              await this.createClientMapping(trx, tenant, newClient.clientId, contact.contactName);
               mappingsCreated++;
 
               created++;
@@ -623,9 +639,29 @@ export class XeroCsvClientSyncService {
         updated,
         skipped,
         errors,
-        mappingsCreated
+        mappingsCreated,
+        createdClients
       };
     });
+
+    for (const createdClient of createdClients) {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_CREATED',
+        payload: buildClientCreatedPayload({
+          clientId: createdClient.clientId,
+          clientName: createdClient.clientName,
+          createdByUserId: userId,
+          createdAt: createdClient.createdAt,
+          status: createdClient.status,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt: createdClient.createdAt,
+          actor: userId ? { actorType: 'USER' as const, actorUserId: userId } : undefined,
+        },
+        idempotencyKey: `client_created:${createdClient.clientId}`,
+      });
+    }
 
     logger.info('[XeroCsvClientSync] Client import completed', {
       tenant,
@@ -707,13 +743,14 @@ export class XeroCsvClientSyncService {
     tenant: string,
     contact: ParsedXeroContact,
     userId: string
-  ): Promise<string> {
+  ): Promise<CreatedXeroClient> {
     const now = new Date().toISOString();
     const clientId = await trx.raw('SELECT gen_random_uuid() as id').then(r => r.rows[0].id);
     const db = tenantDb(trx, tenant);
 
-    await db.table('clients').insert({
-      tenant,
+    // The shared seam adds the tenant default currency, the default billing
+    // profile, the default contract and default tax settings to every row.
+    const created = await createClientWithDefaults(trx, tenant, {
       client_id: clientId,
       client_name: contact.contactName,
       client_type: 'company',
@@ -723,16 +760,7 @@ export class XeroCsvClientSyncService {
       is_tax_exempt: false,
       url: '',
       billing_cycle: 'monthly',
-      created_at: now,
-      updated_at: now
-    });
-
-    await ensureClientDefaultBillingProfile(trx, tenant, clientId);
-
-    await ensureDefaultContractForClientIfBillingConfigured(trx, {
-      tenant,
-      clientId,
-    });
+    } as CreateClientWithDefaultsData);
 
     // Create default location if we have address data
     if (contact.addressLine1 || contact.phone || contact.email) {
@@ -760,7 +788,13 @@ export class XeroCsvClientSyncService {
       });
     }
 
-    return clientId;
+    return {
+      clientId,
+      clientName: created.client_name,
+      createdAt: String(created.created_at ?? now),
+      status: (created as { properties?: { status?: string } }).properties?.status
+        ?? (created.is_inactive ? 'inactive' : 'active'),
+    };
   }
 
   /**

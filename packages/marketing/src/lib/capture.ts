@@ -3,6 +3,7 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import { persistGeneratedSuggestions, type GeneratedSuggestion } from '@alga-psa/opportunities/lib';
 import { recordMarketingEngagement } from './engagements';
 import { normalizeEmail } from './suppression';
+import { createClientWithDefaults } from '@alga-psa/shared/models/clientCreation';
 import type { CaptureSubmission } from '../schemas/marketingSchemas';
 
 export interface CaptureResult {
@@ -78,17 +79,13 @@ export async function submitCaptureInternal(
           : null;
 
         if (!client) {
-          const currency = await tenantDefaultCurrency(db, tenant);
-          const [created] = await db.table('clients')
-            .insert({
-              tenant,
-              client_name: companyName ?? payload.name.trim(),
-              lifecycle_status: 'prospect',
-              default_currency_code: currency,
-              properties: { source: `capture:${slug}` },
-            })
-            .returning('client_id');
-          client = created;
+          // Prospect clients get the same defaults as any other client, from
+          // the shared creation seam (tenant currency included).
+          client = await createClientWithDefaults(trx, tenant, {
+            client_name: companyName ?? payload.name.trim(),
+            lifecycle_status: 'prospect',
+            properties: { source: `capture:${slug}` },
+          });
           clientCreated = true;
         }
         clientId = String(client.client_id);
