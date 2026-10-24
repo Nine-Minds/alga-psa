@@ -23,6 +23,10 @@ function fakeTable(name: string) {
   if (name === 'tenants') {
     return { first: () => Promise.resolve({ product_code: 'psa' }) };
   }
+  // Read by the shared creation seam to adopt the tenant's default currency.
+  if (name === 'default_billing_settings') {
+    return { select: () => ({ first: () => Promise.resolve({ default_currency_code: 'USD' }) }) };
+  }
   const query: any = {
     where: () => query,
     first: () => Promise.resolve(existingClient),
