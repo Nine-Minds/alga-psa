@@ -460,6 +460,7 @@
         "reconnectTitle": "Återanslut CIPP",
         "legacyDescription": "Ange din CIPP-API-URL och en äldre statisk API-nyckel. CIPP utfärdar inte längre sådana nycklar, så använd en API-klient om du kan.",
         "reconnectNote": "API-URL, Program-ID (klient) och Klientorganisations-ID fylls i från den aktuella anslutningen. Ange klienthemligheten igen. Den aktuella anslutningen fortsätter fungera tills de nya uppgifterna klarar ett test och du sparar.",
+        "reconnectNoteLegacy": "API-URL fylls i från den aktuella anslutningen. Ange Program-ID (klient), klienthemligheten och Klientorganisations-ID från CIPP > Integrations > CIPP-API. Den aktuella anslutningen fortsätter fungera tills de nya uppgifterna klarar ett test och du sparar.",
         "legacyNote": "Äldre API-nycklar är endast till för anslutningar som skapades innan CIPP införde API-klienter. Befintliga anslutningar fortsätter fungera.",
         "legacyEncryptionNote": "API-nyckeln krypteras vid lagring och visas aldrig igen efter att den sparats.",
         "help": {

@@ -460,6 +460,7 @@
         "reconnectTitle": "Riconnetti CIPP",
         "legacyDescription": "Inserisci l'URL dell'API CIPP e una chiave API statica legacy. CIPP non emette più queste chiavi, quindi usa un client API se possibile.",
         "reconnectNote": "L'URL dell'API, l'ID applicazione (client) e l'ID tenant sono precompilati dalla connessione attuale. Inserisci di nuovo il segreto client. La connessione attuale continua a funzionare finché i nuovi dettagli non superano una prova e non salvi.",
+        "reconnectNoteLegacy": "L'URL dell'API è precompilato dalla connessione attuale. Inserisci l'ID applicazione (client), il segreto client e l'ID tenant da CIPP > Integrations > CIPP-API. La connessione attuale continua a funzionare finché i nuovi dettagli non superano una prova e non salvi.",
         "legacyNote": "Le chiavi API legacy servono solo per le connessioni create prima che CIPP introducesse i client API. Le connessioni esistenti continuano a funzionare.",
         "legacyEncryptionNote": "La chiave API è cifrata a riposo e non viene più mostrata dopo il salvataggio.",
         "help": {

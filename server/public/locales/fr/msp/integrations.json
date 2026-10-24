@@ -460,6 +460,7 @@
         "reconnectTitle": "Reconnecter CIPP",
         "legacyDescription": "Saisissez l'URL de votre API CIPP et une clé d'API statique héritée. CIPP n'émet plus ces clés ; utilisez un client API si possible.",
         "reconnectNote": "L'URL de l'API, l'ID d'application (client) et l'ID de locataire sont préremplis à partir de la connexion actuelle. Saisissez à nouveau le secret client. La connexion actuelle continue de fonctionner jusqu'à ce que les nouvelles informations réussissent un test et que vous enregistriez.",
+        "reconnectNoteLegacy": "L'URL de l'API est préremplie à partir de la connexion actuelle. Saisissez l'ID d'application (client), le secret client et l'ID de locataire depuis CIPP > Integrations > CIPP-API. La connexion actuelle continue de fonctionner jusqu'à ce que les nouvelles informations réussissent un test et que vous enregistriez.",
         "legacyNote": "Les clés d'API héritées sont réservées aux connexions créées avant que CIPP n'introduise les clients API. Les connexions existantes continuent de fonctionner.",
         "legacyEncryptionNote": "La clé d'API est chiffrée au repos et n'est plus jamais affichée après l'enregistrement.",
         "help": {

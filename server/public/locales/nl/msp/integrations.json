@@ -460,6 +460,7 @@
         "reconnectTitle": "CIPP opnieuw verbinden",
         "legacyDescription": "Voer uw CIPP-API-URL en een verouderde statische API-sleutel in. CIPP geeft deze sleutels niet meer uit, gebruik dus bij voorkeur een API-client.",
         "reconnectNote": "De API-URL, Toepassings-ID (client) en Tenant-ID worden ingevuld op basis van de huidige verbinding. Voer het clientgeheim opnieuw in. De huidige verbinding blijft werken totdat de nieuwe gegevens een test doorstaan en u opslaat.",
+        "reconnectNoteLegacy": "De API-URL wordt ingevuld op basis van de huidige verbinding. Voer het Toepassings-ID (client), het clientgeheim en het Tenant-ID in vanuit CIPP > Integrations > CIPP-API. De huidige verbinding blijft werken totdat de nieuwe gegevens een test doorstaan en u opslaat.",
         "legacyNote": "Verouderde API-sleutels zijn alleen bedoeld voor verbindingen die zijn gemaakt voordat CIPP API-clients introduceerde. Bestaande verbindingen blijven werken.",
         "legacyEncryptionNote": "De API-sleutel wordt versleuteld opgeslagen en na het opslaan nooit meer getoond.",
         "help": {

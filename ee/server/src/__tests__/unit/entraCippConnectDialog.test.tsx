@@ -294,6 +294,7 @@ describe('EntraCippConnectDialog', () => {
     expect(field('entra-cipp-tenantid').value).toBe(GUID_B);
     expect(field('entra-cipp-clientsecret').value).toBe('');
     expect(text('entra-cipp-reconnect-note')).toContain('Enter the client secret again');
+    expect(text('entra-cipp-reconnect-note')).toContain('Tenant ID are filled in');
     // Everything but the secret is present, yet Save and Test stay off.
     expect(testButton().disabled).toBe(true);
     expect(saveButton().disabled).toBe(true);
@@ -314,6 +315,9 @@ describe('EntraCippConnectDialog', () => {
     expect(field('entra-cipp-tenantid').value).toBe('');
     expect(document.getElementById('entra-cipp-apitoken')).toBeNull();
     expect(document.getElementById('entra-cipp-clientsecret')).not.toBeNull();
+    // Only the API URL is pre-filled, and the note must say so.
+    expect(text('entra-cipp-reconnect-note')).toContain('The API URL is filled in from the current connection');
+    expect(text('entra-cipp-reconnect-note')).not.toContain('Tenant ID are filled in');
     // Opening it saved nothing.
     expect(connectEntraCippMock).not.toHaveBeenCalled();
   });

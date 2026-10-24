@@ -289,7 +289,9 @@ export function EntraCippConnectDialog({
 
                             {isReconnect ? (
                                 <p className="text-sm text-muted-foreground" id="entra-cipp-reconnect-note">
-                                    {t('integrations.entra.cippDialog.reconnectNote')}
+                                    {t(reconnect?.authType === 'legacy_api_token'
+                                        ? 'integrations.entra.cippDialog.reconnectNoteLegacy'
+                                        : 'integrations.entra.cippDialog.reconnectNote')}
                                 </p>
                             ) : null}
 

@@ -460,6 +460,7 @@
         "reconnectTitle": "Reconnect CIPP",
         "legacyDescription": "Enter your CIPP API URL and a legacy static API key. CIPP no longer issues these keys, so use an API client if you can.",
         "reconnectNote": "The API URL, Application (client) ID and Tenant ID are filled in from the current connection. Enter the client secret again. The current connection keeps working until the new details pass a test and you save.",
+        "reconnectNoteLegacy": "The API URL is filled in from the current connection. Enter the Application (client) ID, Client secret and Tenant ID from CIPP > Integrations > CIPP-API. The current connection keeps working until the new details pass a test and you save.",
         "legacyNote": "Legacy API keys are only for connections created before CIPP introduced API clients. Existing connections keep working.",
         "legacyEncryptionNote": "The API key is encrypted at rest and is never shown again after saving.",
         "help": {

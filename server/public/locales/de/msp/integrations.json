@@ -460,6 +460,7 @@
         "reconnectTitle": "CIPP erneut verbinden",
         "legacyDescription": "Geben Sie Ihre CIPP-API-URL und einen älteren statischen API-Schlüssel ein. CIPP stellt diese Schlüssel nicht mehr aus, verwenden Sie daher nach Möglichkeit einen API-Client.",
         "reconnectNote": "API-URL, Anwendungs-ID (Client) und Mandanten-ID werden aus der aktuellen Verbindung übernommen. Geben Sie den geheimen Clientschlüssel erneut ein. Die aktuelle Verbindung funktioniert weiter, bis die neuen Daten einen Test bestehen und Sie speichern.",
+        "reconnectNoteLegacy": "Die API-URL wird aus der aktuellen Verbindung übernommen. Geben Sie Anwendungs-ID (Client), geheimen Clientschlüssel und Mandanten-ID aus CIPP > Integrations > CIPP-API ein. Die aktuelle Verbindung funktioniert weiter, bis die neuen Daten einen Test bestehen und Sie speichern.",
         "legacyNote": "Ältere API-Schlüssel sind nur für Verbindungen gedacht, die erstellt wurden, bevor CIPP API-Clients eingeführt hat. Bestehende Verbindungen funktionieren weiterhin.",
         "legacyEncryptionNote": "Der API-Schlüssel wird verschlüsselt gespeichert und nach dem Speichern nie wieder angezeigt.",
         "help": {
