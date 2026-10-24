@@ -81,3 +81,37 @@ PgBouncer is configured to:
 - Use transaction pooling mode
 - Support up to 1000 client connections
 - Maintain a pool of 20 connections per database
+
+## Upgrading
+
+PgBouncer now requires password authentication for every connection, and only
+the `app_user` role is served through it. Bundled services already send the
+right credentials. Review the following when upgrading an existing install.
+
+1. **Rebuild the PgBouncer image.** PgBouncer is built locally, so a plain
+   `docker compose up -d` keeps running the old image. Re-run your usual
+   command with the same `-f` files and add `--build`:
+
+   ```bash
+   docker compose -f <same files as before> up -d --build
+   ```
+
+2. **External tools** that connect to PgBouncer must use the `app_user` role
+   with the password in `secrets/db_password_server`.
+
+3. **Administration goes directly to Postgres.** The `postgres` superuser is no
+   longer reachable through PgBouncer. Connect to Postgres itself (host
+   `postgres`, port `5432` inside the Compose network, or the published
+   Postgres port from the host). Bundled services already do this through
+   `DB_HOST_ADMIN` and `DB_PORT_ADMIN`.
+
+4. **Dev servers run on the host** must set `DB_HOST_ADMIN` and
+   `DB_PORT_ADMIN` in `server/.env.local`, pointing at the published Postgres
+   host and port of your stack (for example `DB_HOST_ADMIN=127.0.0.1` and
+   `DB_PORT_ADMIN=<your stack's Postgres port>`). Without them, admin and
+   pg-boss connections are sent to PgBouncer and fail with a password
+   authentication error.
+
+5. **Development EE Hocuspocus** (`docker-compose.ee.yaml`) now connects as
+   `hocuspocus_user` with the password in `secrets/db_password_hocuspocus`.
+   Make sure that secret file exists before bringing the stack up.
