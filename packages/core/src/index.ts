@@ -39,6 +39,9 @@ export * from './lib/quoteItemInclusion';
 
 // Formatting utilities
 export * from './lib/formatters';
+
+// Postal address formatting (skips empty components)
+export * from './lib/address';
 export * from './lib/fileNames';
 export * from './lib/projectBillingStatus';
 export * from './lib/appointmentRequestLinks';
