@@ -574,8 +574,10 @@
     "invoiceTemplateHelp": "Seleccione una plantilla o use la predeterminada",
     "paymentTerms": {
       "dueOnReceipt": "Vencimiento al recibir",
+      "net14": "neto 14",
       "net15": "neto 15",
-      "net30": "neto 30"
+      "net30": "neto 30",
+      "net7": "neto 7"
     },
     "preferredPaymentMethod": "Método de pago preferido",
     "defaultCurrency": "Moneda predeterminada",
