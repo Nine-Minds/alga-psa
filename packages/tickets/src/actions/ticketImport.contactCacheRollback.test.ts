@@ -231,3 +231,48 @@ describe('importTickets contact cache after a per-row rollback', () => {
     expect(fake.store.tickets[0].contact_id).toBe(fake.store.contacts[0].contact_name_id);
   });
 });
+
+describe('importTickets historical dates for closed rows', () => {
+  const run = (rows: Array<Record<string, unknown>>) =>
+    importTickets(
+      rows.map((r, i) => ticketRow({ contact_id: null, rowNumber: i + 2, ...r })) as any,
+      [] as any,
+      [] as any,
+      [{ action: 'create' }] as any,
+      [] as any,
+      [] as any,
+      'board-1',
+    ) as Promise<any>;
+
+  it('defaults entered_at to closed_at for a closed row with a close date but no open date', async () => {
+    const result = await run([{ title: 'Legacy closed', is_closed: true, closed_at: '2024-05-01T10:00:00Z' }]);
+    expect(result.errors).toEqual([]);
+    expect(createTicketMock.mock.calls[0][0].historical).toEqual({
+      entered_at: '2024-05-01T10:00:00Z',
+      closed_at: '2024-05-01T10:00:00Z',
+      closed_by: 'user-1',
+    });
+  });
+
+  it('keeps an explicit entered_at on a closed row', async () => {
+    await run([{ title: 'Both', is_closed: true, entered_at: '2024-04-01T10:00:00Z', closed_at: '2024-05-01T10:00:00Z' }]);
+    expect(createTicketMock.mock.calls[0][0].historical).toMatchObject({
+      entered_at: '2024-04-01T10:00:00Z',
+      closed_at: '2024-05-01T10:00:00Z',
+    });
+  });
+
+  it('imports a closed row with neither date, using now for both', async () => {
+    const result = await run([{ title: 'Closed no dates', is_closed: true }]);
+    expect(result.errors).toEqual([]);
+    expect(result.ticketsCreated).toBe(1);
+    const h = createTicketMock.mock.calls[0][0].historical;
+    expect(h.entered_at).toBe(h.closed_at);
+    expect(Number.isNaN(Date.parse(h.entered_at))).toBe(false);
+  });
+
+  it('passes no historical for an open row without entered_at', async () => {
+    await run([{ title: 'Open' }]);
+    expect(createTicketMock.mock.calls[0][0].historical).toBeUndefined();
+  });
+});

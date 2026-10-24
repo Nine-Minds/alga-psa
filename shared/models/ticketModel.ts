@@ -98,6 +98,8 @@ export const ticketSchema = z.object({
   entered_at: z.string().nullable(),
   updated_at: z.string().nullable(),
   closed_at: z.string().nullable(),
+  // Only written by historical creation (`CreateTicketInput.historical`).
+  is_closed: z.boolean().optional(),
   due_date: z.string().nullable().optional(),
   source: z.string().nullable().optional(),
   ticket_origin: z.string().nullable().optional(),
@@ -130,6 +132,7 @@ export const ticketUpdateSchema = ticketSchema.partial().omit({
   urgency_id: true,
   impact_id: true,
   duplicated_from_ticket_id: true,
+  is_closed: true,
   created_from_template_id: true,
 });
 
@@ -206,6 +209,26 @@ export interface CreateTicketInput {
   duplicated_from_ticket_id?: string;
   /** Ticket template this one was created from (provenance, create-only). */
   created_from_template_id?: string;
+  /**
+   * Marks the ticket as an imported historical record: it is stored with the
+   * supplied `entered_at` (instead of now) and, for a closed status, with
+   * `is_closed`, `closed_at` and `closed_by`.
+   *
+   * Invariants enforced by `createTicket`:
+   * - requires `silentTicketCreation(...)` as the event publisher, so a
+   *   backdated ticket can never start SLA or fan out TICKET_CREATED;
+   * - `entered_at` and `closed_at` are not in the future, and
+   *   `entered_at <= closed_at`;
+   * - a closed status requires `closed_at`; an open status rejects `closed_at`
+   *   and `closed_by`.
+   */
+  historical?: HistoricalTicketInput;
+}
+
+export interface HistoricalTicketInput {
+  entered_at: string;
+  closed_at?: string | null;
+  closed_by?: string | null;
 }
 
 export interface CreateTicketFromAssetInput {
@@ -446,7 +469,9 @@ export function cleanNullableFields(data: Record<string, any>): Record<string, a
  *
  * Generated identity/timestamp columns (`ticket_id`, `tenant`,
  * `ticket_number`, `entered_at`, `updated_at`) are deliberately absent: they
- * stay under model control and no input key can target them.
+ * stay under model control. The only way to move `entered_at` is the explicit
+ * `historical` input, which the model validates and applies itself.
+ * `is_closed`, `closed_at` and `closed_by` are written only from `historical`.
  */
 export const INPUT_DRIVEN_TICKET_COLUMNS = [
   'title',
@@ -475,6 +500,9 @@ export const INPUT_DRIVEN_TICKET_COLUMNS = [
   'due_date',
   'duplicated_from_ticket_id',
   'created_from_template_id',
+  'is_closed',
+  'closed_at',
+  'closed_by',
 ] as const;
 
 type InputDrivenTicketColumn = (typeof INPUT_DRIVEN_TICKET_COLUMNS)[number];
@@ -482,6 +510,8 @@ type InputDrivenTicketColumn = (typeof INPUT_DRIVEN_TICKET_COLUMNS)[number];
 /** Everything a resolver may read while assembling an input-driven row. */
 type TicketCreateRowContext = {
   cleanedInput: CreateTicketInput;
+  /** Whether the (historical) ticket's status is a closed status. */
+  historicalStatusIsClosed?: boolean;
   resolvedBillingProfileId: string | null;
   attributes: Record<string, unknown> | null;
 };
@@ -557,14 +587,28 @@ const CREATE_TICKET_FIELD_HANDLING: { [K in keyof CreateTicketInput]-?: TicketCr
   urgency_id: { kind: 'column', column: 'urgency_id', nullish: true },
   impact_id: { kind: 'column', column: 'impact_id', nullish: true },
   updated_by: { kind: 'excluded', reason: 'create leaves updated_by unset; set on update' },
-  closed_by: { kind: 'excluded', reason: 'tickets are created open' },
+  closed_by: { kind: 'excluded', reason: 'tickets are created open; historical closes go through `historical`' },
   itil_impact: { kind: 'column', column: 'itil_impact' },
   itil_urgency: { kind: 'column', column: 'itil_urgency' },
-  closed_at: { kind: 'excluded', reason: 'tickets are created open' },
-  is_closed: { kind: 'excluded', reason: 'tickets are created open' },
+  closed_at: { kind: 'excluded', reason: 'tickets are created open; historical closes go through `historical`' },
+  is_closed: { kind: 'excluded', reason: 'tickets are created open; historical closes go through `historical`' },
   due_date: { kind: 'column', column: 'due_date' },
   duplicated_from_ticket_id: { kind: 'column', column: 'duplicated_from_ticket_id', nullish: true },
   created_from_template_id: { kind: 'column', column: 'created_from_template_id', nullish: true },
+  // `historical.entered_at` is applied to the base row by createTicket; this
+  // entry derives the closed columns, only for a ticket in a closed status.
+  historical: {
+    kind: 'resolve',
+    build: ({ cleanedInput, historicalStatusIsClosed }) => {
+      const historical = cleanedInput.historical;
+      if (!historical || !historicalStatusIsClosed) return {};
+      return {
+        is_closed: true,
+        closed_at: historical.closed_at ?? null,
+        closed_by: historical.closed_by ?? null,
+      };
+    },
+  },
 };
 
 type TicketCreateRowBase = {
@@ -606,6 +650,47 @@ export function buildTicketCreateRow(
   }
 
   return row;
+}
+
+/**
+ * Message prefix for historical-input failures; the field path is embedded so
+ * API callers can map the error to a 400 with a field path.
+ */
+export const HISTORICAL_TICKET_ERROR_PREFIX = 'Invalid historical ticket';
+
+function historicalTicketError(field: 'entered_at' | 'closed_at' | 'closed_by' | 'historical', message: string): Error {
+  return new Error(`${HISTORICAL_TICKET_ERROR_PREFIX} [${field}]: ${message}`);
+}
+
+/**
+ * Checks the date invariants of `historical` that do not depend on the status.
+ * Returns the parsed instants.
+ */
+function validateHistoricalDates(
+  historical: HistoricalTicketInput,
+  now: Date,
+): { enteredAt: Date; closedAt: Date | null } {
+  const enteredAt = new Date(historical.entered_at);
+  if (Number.isNaN(enteredAt.getTime())) {
+    throw historicalTicketError('entered_at', 'entered_at must be a valid datetime');
+  }
+  if (enteredAt.getTime() > now.getTime()) {
+    throw historicalTicketError('entered_at', 'entered_at must not be in the future');
+  }
+  let closedAt: Date | null = null;
+  if (historical.closed_at) {
+    closedAt = new Date(historical.closed_at);
+    if (Number.isNaN(closedAt.getTime())) {
+      throw historicalTicketError('closed_at', 'closed_at must be a valid datetime');
+    }
+    if (closedAt.getTime() > now.getTime()) {
+      throw historicalTicketError('closed_at', 'closed_at must not be in the future');
+    }
+    if (closedAt.getTime() < enteredAt.getTime()) {
+      throw historicalTicketError('closed_at', 'closed_at must not be before entered_at');
+    }
+  }
+  return { enteredAt, closedAt };
 }
 
 // =============================================================================
@@ -933,6 +1018,14 @@ export class TicketModel {
       throw new Error('Tenant is required');
     }
 
+    // A historical ticket is backdated, so it must never start SLA or publish
+    // TICKET_CREATED. Silence is enforced here, in the lowest layer.
+    if (input.historical && !(isSilentTicketCreation(eventPublisher) && eventPublisher.kind === 'silent')) {
+      throw new Error(
+        'TicketModel.createTicket: `historical` tickets require silentTicketCreation(reason); refusing to backdate a ticket that would publish TICKET_CREATED'
+      );
+    }
+
     // Perform input validation
     const inputValidation = this.validateCreateTicketInput(input);
     if (!inputValidation.valid) {
@@ -966,12 +1059,37 @@ export class TicketModel {
       throw new Error(businessRuleValidation.error);
     }
 
+    const now = new Date();
+
+    // Historical creation: validate the date/status invariants before taking a
+    // ticket number.
+    let enteredAt = now;
+    let historicalStatusIsClosed = false;
+    if (cleanedInput.historical) {
+      const historical = cleanedInput.historical;
+      const dates = validateHistoricalDates(historical, now);
+      enteredAt = dates.enteredAt;
+      const status = await tenantDb(trx, tenant)
+        .table('statuses')
+        .where({ status_id: cleanedInput.status_id })
+        .first('is_closed');
+      historicalStatusIsClosed = status?.is_closed === true;
+      if (historicalStatusIsClosed && !historical.closed_at) {
+        throw historicalTicketError('closed_at', 'closed_at is required when status_id is a closed status');
+      }
+      if (!historicalStatusIsClosed && (historical.closed_at || historical.closed_by)) {
+        throw historicalTicketError(
+          historical.closed_at ? 'closed_at' : 'closed_by',
+          'closed_at and closed_by are only allowed when status_id is a closed status'
+        );
+      }
+    }
+
     // Single numbering entry point: applies the tenant's prefix, padding and
     // optional date format.
     const ticketNumber = await SharedNumberingService.getNextNumber('TICKET', { knex: trx, tenant });
 
     const ticketId = uuidv4();
-    const now = new Date();
 
     // Soft-defaulted billing profile: an explicit choice wins, otherwise the
     // ticket's location supplies one, otherwise it stays unset and charge
@@ -1003,11 +1121,12 @@ export class TicketModel {
         ticket_id: ticketId,
         tenant,
         ticket_number: ticketNumber,
-        entered_at: now.toISOString(),
+        entered_at: enteredAt.toISOString(),
         updated_at: now.toISOString(),
       },
       {
         cleanedInput,
+        historicalStatusIsClosed,
         resolvedBillingProfileId,
         attributes: Object.keys(attributes).length > 0 ? attributes : null,
       },
@@ -1136,7 +1255,7 @@ export class TicketModel {
       severity_id: cleanedInput.severity_id ?? null,
       urgency_id: cleanedInput.urgency_id ?? null,
       impact_id: cleanedInput.impact_id ?? null,
-      entered_at: now.toISOString(),
+      entered_at: enteredAt.toISOString(),
       tenant
     };
   }
