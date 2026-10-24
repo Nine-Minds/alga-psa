@@ -27,7 +27,7 @@ import { IExtendedWorkItem } from '@alga-psa/types';
 import { TimeEntryProvider, useTimeEntry } from './TimeEntryProvider';
 import TimeEntrySkeletons from './TimeEntrySkeletons';
 import SingleTimeEntryForm from './SingleTimeEntryForm';
-import { validateTimeEntry } from './utils';
+import { contractLineFieldsForWrite, validateTimeEntry } from './utils';
 import { useSchedulingCrossFeatureOptional } from '../../../../context/SchedulingCrossFeatureContext';
 import { TimeEntrySaveRejectedError } from '../../../../lib/timeEntrySaveAdapter';
 import type { CatalogPeriod } from '../../../../lib/timeEntryPeriodSelection';
@@ -214,6 +214,8 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
         approval_status: 'DRAFT' as TimeSheetStatus,
         service_id: entry.service_id || undefined,
         tax_region: entry.tax_region || undefined,
+        // Never echo a server-resolved (auto_*) line back: see contractLineFieldsForWrite.
+        ...contractLineFieldsForWrite(entry, 'resave'),
       };
 
       await onSave(timeEntry);

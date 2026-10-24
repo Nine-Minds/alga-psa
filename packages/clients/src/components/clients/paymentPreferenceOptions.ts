@@ -35,6 +35,8 @@ export function paymentTermsLabels(t: Translate): Record<PaymentTerms, string> {
   return {
     net_30: t('billingConfigForm.paymentTerms.net30', { defaultValue: 'Net 30' }),
     net_15: t('billingConfigForm.paymentTerms.net15', { defaultValue: 'Net 15' }),
+    net_14: t('billingConfigForm.paymentTerms.net14', { defaultValue: 'Net 14' }),
+    net_7: t('billingConfigForm.paymentTerms.net7', { defaultValue: 'Net 7' }),
     due_on_receipt: t('billingConfigForm.paymentTerms.dueOnReceipt', { defaultValue: 'Due on Receipt' }),
   };
 }

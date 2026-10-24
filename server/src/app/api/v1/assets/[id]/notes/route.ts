@@ -8,6 +8,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { guardAssetReadForRequest } from 'server/src/lib/api/controllers/assetReadGuard';
 import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 import {
   getAssetNoteContent,
@@ -43,6 +44,9 @@ export async function GET(
     if (!id) {
       return NextResponse.json({ error: 'Missing asset ID' }, { status: 400 });
     }
+
+    const denied = await guardAssetReadForRequest(request, id);
+    if (denied) return denied;
 
     const noteContent = await runWithApiKeyOrSession(request, () => getAssetNoteContent(id));
     if (isActionError(noteContent)) {

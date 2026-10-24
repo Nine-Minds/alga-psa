@@ -31,6 +31,7 @@ import {
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
 import { renderTemplateAstHtmlDocument } from '../lib/invoice-template-ast/server-render';
+import { resolveTemplatePreviewSheetFromAst } from '../lib/invoice-template-ast/printSettings';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { mapDbSalesOrderToViewModel } from '../lib/adapters/salesOrderAdapters';
 import { overlaySalesOrderSampleTenant } from '../components/invoice-designer/preview/tenantBrandingOverlay';
@@ -302,6 +303,8 @@ export const runAuthoritativeTemplatePreview = withAuth(
       knex,
       locale: normalizeLocale(locale) ?? undefined,
       dateFormat,
+      // A label is drawn on the cell it prints in (same size, margin and clipping); documents stay unframed.
+      previewSheet: resolveTemplatePreviewSheetFromAst(templateAst, getDocumentTypeRegistryEntry(type).printGeometry) ?? undefined,
     });
     return { html };
   },

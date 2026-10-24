@@ -71,6 +71,9 @@ interface ClientData {
   billing_location_email?: string;
 }
 
+/** Stripe Checkout Sessions last at most 24h; independent of the tenant's link-lifetime setting. */
+export const CHECKOUT_SESSION_TTL_HOURS = 24;
+
 export class PaymentService {
   private tenantId: string;
   private knex!: Knex;
@@ -274,12 +277,10 @@ export class PaymentService {
       throw new Error(`No billing email address for client: ${client.client_name}. Please set a billing contact, billing email, or a billing/default location email.`);
     }
 
-    // Get payment settings for expiration
-    const settings = await this.getPaymentSettings();
-    // Stripe Checkout Sessions have a max expiration of 24 hours
-    const STRIPE_MAX_EXPIRATION_HOURS = 24;
-    const effectiveExpirationHours = Math.min(settings.paymentLinkExpirationHours, STRIPE_MAX_EXPIRATION_HOURS);
-    const expiresAt = new Date(Date.now() + effectiveExpirationHours * 60 * 60 * 1000);
+    // Checkout Sessions are short-lived by provider design. The tenant's
+    // `paymentLinkExpirationHours` is the lifetime of the durable `/pay/<token>`
+    // link in emails (see paymentLinkToken), not of this session.
+    const expiresAt = new Date(Date.now() + CHECKOUT_SESSION_TTL_HOURS * 60 * 60 * 1000);
 
     // Build success URL - must match client portal routes
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
