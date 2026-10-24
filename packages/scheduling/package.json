@@ -41,6 +41,10 @@
       "import": "./src/lib/resourceCapacity.ts",
       "types": "./src/lib/resourceCapacity.ts"
     },
+    "./lib/visibleCalendars": {
+      "import": "./src/lib/visibleCalendars.ts",
+      "types": "./src/lib/visibleCalendars.ts"
+    },
     "./lib/calendarAccess": {
       "import": "./src/lib/calendarAccess.ts",
       "types": "./src/lib/calendarAccess.ts"

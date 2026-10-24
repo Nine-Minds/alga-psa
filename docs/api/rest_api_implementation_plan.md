@@ -280,10 +280,11 @@ This document outlines the comprehensive implementation plan for creating REST A
 
 #### Week 7: Scheduling & Time Configuration
 - [x] **API-015**: Schedules API ✅ (Schemas & Service Complete)
+  - ✅ `GET /api/v1/calendars` - List the calendars the caller can see (personal + group, with `access_level`/`can_edit`); group `calendar_id` goes on the entry, personal = `calendar_id: null` + `assigned_user_ids: [owner]`
   - ✅ `GET /api/v1/schedules` - List schedules with filtering
   - ✅ `POST /api/v1/schedules` - Create new schedule entry
   - ✅ `GET /api/v1/schedules/{id}` - Get schedule details
-  - ✅ `PUT /api/v1/schedules/{id}` - Update schedule entry
+  - ✅ `PUT /api/v1/schedules/{id}` - Update schedule entry (`calendar_id`: omit = unchanged, group uuid = move onto that group calendar, `null` = move back to a personal calendar)
   - ✅ `DELETE /api/v1/schedules/{id}` - Delete schedule entry
 
 - [x] **API-016**: Time Configuration APIs ✅ (Schemas & Service Complete)

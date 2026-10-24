@@ -1401,7 +1401,7 @@
       "mediaSource": "Origine immagine",
       "mediaSourceLogo": "Logo aziendale",
       "mediaSourceCustom": "Immagine personalizzata",
-      "mediaSourceLogoHint": "Mostra su ogni documento il logo delle impostazioni di branding della tua azienda.",
+      "mediaSourceLogoHint": "Mostra su ogni documento il logo della scheda cliente della tua azienda.",
       "mediaSourceUrl": "URL di origine",
       "renameInner": "Rinominare anche {{count}} livelli interni ({{from}} → {{to}}…)?",
       "renameInnerApply": "Rinomina",
@@ -2406,7 +2406,7 @@
     },
     "imagePicker": {
       "browse": "Sfoglia documenti",
-      "hiddenFromClients": "{{document}} è nascosto ai clienti. Non comparirà nei preventivi o nelle fatture visualizzati tramite il portale clienti.",
+      "hiddenFromClients": "{{document}} è nascosto ai clienti, che quindi non possono aprirlo nel portale clienti. Compare comunque nelle fatture e nei PDF dei preventivi che lo usano.",
       "updating": "Aggiornamento...",
       "markVisible": "Contrassegna come visibile ai clienti",
       "visibleInPortal": "Visibile nel portale clienti",

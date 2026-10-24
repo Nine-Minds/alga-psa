@@ -1401,7 +1401,7 @@
       "mediaSource": "Bildquelle",
       "mediaSourceLogo": "Firmenlogo",
       "mediaSourceCustom": "Eigenes Bild",
-      "mediaSourceLogoHint": "Zeigt auf jedem Dokument das Logo aus den Branding-Einstellungen Ihres Unternehmens.",
+      "mediaSourceLogoHint": "Zeigt auf jedem Dokument das Logo aus dem Kundendatensatz Ihres eigenen Unternehmens.",
       "mediaSourceUrl": "Quell-URL",
       "renameInner": "Auch {{count}} innere Ebenen umbenennen ({{from}} → {{to}}…)?",
       "renameInnerApply": "Umbenennen",
@@ -2406,7 +2406,7 @@
     },
     "imagePicker": {
       "browse": "Dokumente durchsuchen",
-      "hiddenFromClients": "{{document}} ist für Kunden ausgeblendet. Es wird nicht in Angeboten oder Rechnungen angezeigt, die über das Kundenportal aufgerufen werden.",
+      "hiddenFromClients": "{{document}} ist für Kunden ausgeblendet und kann im Kundenportal nicht geöffnet werden. Es erscheint weiterhin auf Rechnungen und in PDF-Dateien von Angeboten, die es verwenden.",
       "updating": "Wird aktualisiert...",
       "markVisible": "Als für Kunden sichtbar markieren",
       "visibleInPortal": "Im Kundenportal sichtbar",

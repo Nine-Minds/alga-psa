@@ -14,6 +14,7 @@ import { initializeScheduler } from 'server/src/lib/jobs';
 import { validateEmailConfiguration, logEmailConfigWarnings } from './validation/emailConfigValidation';
 import { initializeNotificationAccumulator, shutdownNotificationAccumulator } from './eventBus/subscribers/ticketEmailSubscriber';
 import { DelayedEmailQueue, TenantEmailService, StaticTemplateProcessor, EmailProviderManager, sendPasswordResetEmail, getSystemEmailService } from '@alga-psa/email';
+import { buildTenantPortalUrl } from '@alga-psa/tenancy/server';
 import { TokenBucketRateLimiter, type BucketConfig } from '@alga-psa/core/rateLimit';
 import { EventEmailRetryQueue } from './notifications/EventEmailRetryQueue';
 import { registerAuthEmailProvider } from '@alga-psa/auth';
@@ -141,6 +142,7 @@ export async function initializeApp() {
       TenantEmailService: Object.assign(TenantEmailService, { resolveOutboundSenderForTenant: TenantEmailService.resolveOutboundSenderForTenant }) as any,
       StaticTemplateProcessor: StaticTemplateProcessor as any,
       EmailProviderManager: EmailProviderManager as any,
+      buildTenantPortalUrl,
     });
     registerWorkflowScheduleJobRunner(async () => initializeJobRunner());
     // Let vertical packages (billing, client-portal, documents) enqueue jobs

@@ -1401,7 +1401,7 @@
       "mediaSource": "Image source",
       "mediaSourceLogo": "Company logo",
       "mediaSourceCustom": "Custom image",
-      "mediaSourceLogoHint": "Shows the logo from your company branding settings on every document.",
+      "mediaSourceLogoHint": "Shows the logo from your own company's client record on every document.",
       "mediaSourceUrl": "Source URL",
       "renameInner": "Rename {{count}} inner layers too ({{from}} → {{to}}…)?",
       "renameInnerApply": "Rename",
@@ -2406,7 +2406,7 @@
     },
     "imagePicker": {
       "browse": "Browse Documents",
-      "hiddenFromClients": "{{document}} is hidden from clients. It will not appear on quotes or invoices viewed through the client portal.",
+      "hiddenFromClients": "{{document}} is hidden from clients, so they cannot open it in the client portal. It still appears on invoices and quote PDFs that use it.",
       "updating": "Updating...",
       "markVisible": "Mark as visible to clients",
       "visibleInPortal": "Visible in client portal",

@@ -1,18 +1,23 @@
-import { toPlainDate } from '@alga-psa/core';
+import { toPlainDate } from './dateTimeUtils';
 
-/** Format a PostgreSQL DATE while preserving its calendar day at action boundaries. */
-export function formatInvoiceCalendarDate(
+/**
+ * Format a date-only value (PostgreSQL DATE, `YYYY-MM-DD`, or a Date that
+ * represents one) as a long calendar date in the given locale, preserving the
+ * calendar day. No timezone conversion is applied on purpose: these fields have
+ * no time of day, and converting would shift the day.
+ */
+export function formatLocalizedCalendarDate(
   value: Date | Parameters<typeof toPlainDate>[0],
   locale: string,
 ): string {
-  // Invoice calendar values reach this action as Date objects from more than
-  // one query adapter: some encode midnight in the process timezone, while the
-  // current pg/Knex path can encode midnight UTC. Preserve the calendar fields
-  // that identify each representation before formatting in UTC.
+  // Calendar values reach callers as Date objects from more than one query
+  // adapter: some encode midnight in the process timezone, while the current
+  // pg/Knex path can encode midnight UTC. Preserve the calendar fields that
+  // identify each representation before formatting in UTC.
   let calendarDate: string;
   if (value instanceof Date) {
     if (Number.isNaN(value.getTime())) {
-      throw new Error('Cannot format an invalid invoice calendar date');
+      throw new Error('Cannot format an invalid calendar date');
     }
     const isUtcMidnight = value.getUTCHours() === 0
       && value.getUTCMinutes() === 0
@@ -27,9 +32,7 @@ export function formatInvoiceCalendarDate(
   }
   const [year, month, day] = calendarDate.split('-').map(Number);
   return new Intl.DateTimeFormat(locale, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+    dateStyle: 'long',
     timeZone: 'UTC',
   }).format(new Date(Date.UTC(year, month - 1, day)));
 }

@@ -232,6 +232,7 @@ CE,/api/v1/billing,GET,server/src/app/api/v1/billing/route.ts,,,
 CE,/api/v1/billing-analytics/overview,GET,server/src/app/api/v1/billing-analytics/overview/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
 CE,/api/v1/boards,GET POST,server/src/app/api/v1/boards/route.ts,ApiBoardController,@/lib/api/controllers/ApiBoardController,server/src/lib/api/controllers/ApiBoardController.ts
 CE,/api/v1/boards/{id},DELETE GET PUT,server/src/app/api/v1/boards/[id]/route.ts,ApiBoardController,@/lib/api/controllers/ApiBoardController,server/src/lib/api/controllers/ApiBoardController.ts
+CE,/api/v1/calendars,GET,server/src/app/api/v1/calendars/route.ts,ApiTimeSheetController,server/src/lib/api/controllers/ApiTimeSheetController,server/src/lib/api/controllers/ApiTimeSheetController.ts
 CE,/api/v1/categories/analytics,GET,server/src/app/api/v1/categories/analytics/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
 CE,/api/v1/categories/bulk/delete,POST,server/src/app/api/v1/categories/bulk/delete/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
 CE,/api/v1/categories/search,GET,server/src/app/api/v1/categories/search/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
