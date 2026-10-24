@@ -484,7 +484,15 @@
           "unreachable": "Impossibile raggiungere CIPP a questo URL",
           "tokenRejected": "Microsoft ha rifiutato l'accesso del client API",
           "apiRefused": "CIPP ha rifiutato il token di accesso",
-          "legacyRejected": "CIPP ha rifiutato la chiave API"
+          "legacyRejected": "CIPP ha rifiutato la chiave API",
+          "roleBlocked": "Il ruolo personalizzato di CIPP blocca un'autorizzazione necessaria alla sincronizzazione",
+          "transport": {
+            "dns": "Impossibile raggiungere {{host}}: il nome host non viene risolto. Controlla l'URL dell'API; copialo da CIPP > Integrations > CIPP-API.",
+            "refused": "Impossibile raggiungere {{host}}: la connessione è stata rifiutata. L'host esiste ma non accetta connessioni. Controlla l'URL dell'API e che la function app CIPP-API sia in esecuzione.",
+            "timeout": "Impossibile raggiungere {{host}}: la richiesta è scaduta. L'host potrebbe non essere disponibile o un firewall potrebbe bloccare il nostro traffico. Controlla l'URL dell'API e riprova.",
+            "tls": "Impossibile raggiungere {{host}}: il suo certificato TLS non è stato accettato. Usa l'URL https dell'API mostrato in CIPP > Integrations > CIPP-API.",
+            "network": "Impossibile raggiungere {{host}}: la richiesta di rete non è riuscita prima della risposta di CIPP. Controlla l'URL dell'API e riprova."
+          }
         }
       },
       "console": {
@@ -838,7 +846,6 @@
             "validationFailed": "Microsoft ti ha autenticato, ma non è stato possibile leggere l'elenco dei tenant gestiti; non è stato salvato nulla. Le autorizzazioni sono state accettate — di solito il tenant partner non è integrato in Microsoft 365 Lighthouse o non ha relazioni GDAP attive.",
             "tokenRejected": "Microsoft ha rifiutato il token di accesso della connessione; non è stato salvato nulla. Riavvia la connessione."
           },
-          "cippServerLabel": "Server CIPP",
           "connectingSuffix": " (Connessione...)",
           "details": "Dettagli della connessione",
           "directCredentialSourceLabel": "Fonte credenziali:",

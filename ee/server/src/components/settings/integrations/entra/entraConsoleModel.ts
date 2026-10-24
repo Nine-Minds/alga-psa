@@ -6,6 +6,7 @@ import type {
   EntraSyncScheduleSettings,
 } from '@alga-psa/integrations/actions';
 import { entraClientHealth } from './entraClientHealth';
+import { displayCippApiUrl } from '../cippConnectModel';
 
 /**
  * What the console decides without the DOM: which tab a URL means, and what
@@ -476,7 +477,10 @@ export const buildCippConnectionView = (
   return {
     authType,
     isLegacy: authType === 'legacy_api_token',
-    apiUrl: details?.cippBaseUrl || null,
+    // One form everywhere: the URL as CIPP shows it (ending /api), the same
+    // value the connect dialog displays. Storage keeps the host form that
+    // request paths append /api to.
+    apiUrl: details?.cippBaseUrl ? displayCippApiUrl(details.cippBaseUrl) : null,
     clientId: details?.cippClientId || null,
     tenantId: details?.cippDirectoryId || null,
   };

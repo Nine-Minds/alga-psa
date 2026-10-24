@@ -710,6 +710,8 @@ export const testEntraCippCredentials = withAuth(async (
       error: probe.error || 'Unable to validate the CIPP connection.',
       // The classification (no secret) lets the dialog title the failure.
       code: probe.code,
+      // For an unreachable host: DNS, refused, timeout, TLS or network.
+      cause: probe.cause,
     } as const;
   }
 
@@ -763,6 +765,8 @@ export const connectEntraCipp = withAuth(async (
       error: probe.error || 'Unable to validate the CIPP connection.',
       // The classification (no secret) lets the dialog title the failure.
       code: probe.code,
+      // For an unreachable host: DNS, refused, timeout, TLS or network.
+      cause: probe.cause,
     } as const;
   }
 

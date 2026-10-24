@@ -163,7 +163,7 @@ describe('EntraSetupWizard CIPP connection details', () => {
     renderWizard(apiClientStatus());
     const details = document.getElementById('entra-setup-cipp-connection');
     expect(details?.textContent).toContain('API client');
-    expect(details?.textContent).toContain('https://cipp-api.example.net');
+    expect(details?.textContent).toContain('https://cipp-api.example.net/api');
     expect(details?.textContent).toContain('client-id-1');
     expect(details?.textContent).toContain('tenant-id-1');
     expect(document.getElementById('entra-setup-cipp-legacy-badge')).toBeNull();
@@ -197,7 +197,7 @@ describe('EntraSetupWizard CIPP connection details', () => {
     expect(dialog).not.toBeNull();
     expect(JSON.parse(dialog?.getAttribute('data-reconnect') ?? 'null')).toEqual({
       authType: 'legacy_api_token',
-      apiUrl: 'https://cipp-api.example.net',
+      apiUrl: 'https://cipp-api.example.net/api',
       clientId: null,
       tenantId: null,
     });

@@ -484,7 +484,15 @@
           "unreachable": "CIPP is op deze URL niet bereikbaar",
           "tokenRejected": "Microsoft heeft de aanmelding van de API-client geweigerd",
           "apiRefused": "CIPP heeft het toegangstoken geweigerd",
-          "legacyRejected": "CIPP heeft de API-sleutel geweigerd"
+          "legacyRejected": "CIPP heeft de API-sleutel geweigerd",
+          "roleBlocked": "De aangepaste CIPP-rol blokkeert een machtiging die de synchronisatie nodig heeft",
+          "transport": {
+            "dns": "{{host}} is niet bereikbaar: de hostnaam kan niet worden omgezet. Controleer de API-URL op typefouten; kopieer deze uit CIPP > Integrations > CIPP-API.",
+            "refused": "{{host}} is niet bereikbaar: de verbinding werd geweigerd. De host bestaat, maar accepteert geen verbindingen. Controleer de API-URL en of de CIPP-API-functie-app draait.",
+            "timeout": "{{host}} is niet bereikbaar: er is een time-out opgetreden. De host is mogelijk offline of een firewall blokkeert ons verkeer. Controleer de API-URL en probeer het opnieuw.",
+            "tls": "{{host}} is niet bereikbaar: het TLS-certificaat werd niet geaccepteerd. Gebruik de https-API-URL uit CIPP > Integrations > CIPP-API.",
+            "network": "{{host}} is niet bereikbaar: het netwerkverzoek is mislukt voordat CIPP antwoordde. Controleer de API-URL en probeer het opnieuw."
+          }
         }
       },
       "console": {
@@ -838,7 +846,6 @@
             "validationFailed": "Microsoft heeft u aangemeld, maar de lijst met beheerde tenants kon niet worden gelezen; er is niets opgeslagen. Uw machtigingen zijn geaccepteerd — meestal is de partnertenant niet aangesloten op Microsoft 365 Lighthouse of zijn er geen actieve GDAP-relaties.",
             "tokenRejected": "Microsoft heeft het toegangstoken van de verbinding geweigerd; er is niets opgeslagen. Start de verbinding opnieuw."
           },
-          "cippServerLabel": "CIPP-server",
           "connectingSuffix": " (Verbinden...)",
           "details": "Verbindingsgegevens",
           "directCredentialSourceLabel": "Bron van inloggegevens:",

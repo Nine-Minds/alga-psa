@@ -352,6 +352,27 @@ describe('connectEntraCipp validates before persisting', () => {
       expect(JSON.stringify(result)).not.toContain('action-secret-VALUE');
     });
 
+    it('passes the transport cause of an unreachable host through to the dialog', async () => {
+      probeCippCredentialsMock.mockResolvedValue({
+        valid: false,
+        checkedAt: '2026-07-25T00:00:00.000Z',
+        error: 'Could not reach CIPP at cipp.example.com: the host name does not resolve (DNS).',
+        code: 'unreachable',
+        cause: 'dns',
+      });
+      const { testEntraCippCredentials } = await import(
+        '@alga-psa/integrations/actions/integrations/entraActions'
+      );
+      const result = await testEntraCippCredentials(
+        { user_id: 'user-1', user_type: 'internal' } as any,
+        { tenant: 'tenant-ac' },
+        apiClient as any
+      );
+      expect(result).toMatchObject({ success: false, code: 'unreachable', cause: 'dns' });
+      expect((result as { error: string }).error).toContain('does not resolve');
+      expect(saveEntraCippCredentialsMock).not.toHaveBeenCalled();
+    });
+
     it('tests an API client without persisting anything', async () => {
       probeCippCredentialsMock.mockResolvedValue({
         valid: true,

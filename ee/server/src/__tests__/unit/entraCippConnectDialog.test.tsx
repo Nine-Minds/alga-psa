@@ -266,6 +266,42 @@ describe('EntraCippConnectDialog', () => {
     expect(connectEntraCippMock).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['dns', 'the host name does not resolve'],
+    ['refused', 'the connection was refused'],
+    ['timeout', 'the request timed out'],
+    ['tls', 'TLS certificate was not accepted'],
+    ['network', 'the network request failed'],
+  ])('explains an unreachable host by its transport cause (%s), in the UI language', async (cause, phrase) => {
+    testEntraCippCredentialsMock.mockResolvedValue({
+      success: false,
+      error: 'server-side English message',
+      code: 'unreachable',
+      cause,
+    });
+    renderDialog();
+    fillApiClient({ 'entra-cipp-apiurl': 'https://cipp-typo.example.net/api' });
+    fireEvent.click(testButton());
+
+    await waitFor(() => expect(text('entra-cipp-test-failure-remedy')).toContain(phrase));
+    expect(text('entra-cipp-test-failure-remedy')).toContain('cipp-typo.example.net');
+    expect(text('entra-cipp-test-failure-remedy')).not.toContain('server-side English message');
+    expect(text('entra-cipp-test-failure-title')).toContain('could not be reached');
+    expect(saveButton().disabled).toBe(true);
+  });
+
+  it('titles a Custom Role that blocks listusers as a role problem', async () => {
+    const remedy = "CIPP refused listusers with HTTP 403 while other endpoints work, so the API client's Custom Role is blocking it. In CIPP, give the role access to listusers.";
+    testEntraCippCredentialsMock.mockResolvedValue({ success: false, error: remedy, code: 'role_blocked' });
+    renderDialog();
+    fillApiClient();
+    fireEvent.click(testButton());
+
+    await waitFor(() => expect(text('entra-cipp-test-failure-remedy')).toBe(remedy));
+    expect(text('entra-cipp-test-failure-title')).toContain('Custom Role blocks a permission sync needs');
+    expect(saveButton().disabled).toBe(true);
+  });
+
   it('titles a rejected legacy key as such', async () => {
     testEntraCippCredentialsMock.mockResolvedValue({
       success: false,

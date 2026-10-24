@@ -486,6 +486,10 @@ export function EntraConsole({
         : await validateEntraDirectConnection();
       if ('error' in result) {
         setActionError(result.error || t('integrations.entra.console.errors.validateFailed'));
+        // The server has just recorded validation_failed on the connection.
+        // Refresh so the header stops claiming "Healthy" for a credential
+        // that was rejected seconds ago.
+        await onStatusChanged();
         return;
       }
       setActionMessage(t('integrations.entra.console.connection.validated'));
@@ -1053,20 +1057,10 @@ export function EntraConsole({
                 CIPP"); what belongs here is where it points, which the lead
                 does not say. The direct tenant row was missing entirely, so a
                 direct-connected tenant's rail identified nothing at all. */}
-            {status?.connectionType === 'cipp' ? (
-              <KeyValue
-                label={t('integrations.entra.settings.connection.cippServerLabel')}
-                value={
-                  status.connectionDetails?.cippBaseUrl
-                  || t('integrations.entra.settings.connection.notAvailable')
-                }
-              />
-            ) : null}
             {cippView ? (
               <EntraCippConnectionDetails
                 view={cippView}
                 idPrefix="entra-console-rail"
-                showApiUrl={false}
                 onReconnect={handleReconnectCipp}
               />
             ) : null}
@@ -1156,20 +1150,10 @@ export function EntraConsole({
               label={t('integrations.entra.console.connection.methodLabel')}
               value={connectionMethodLabel}
             />
-            {status?.connectionType === 'cipp' ? (
-              <KeyValue
-                label={t('integrations.entra.settings.connection.cippServerLabel')}
-                value={
-                  status.connectionDetails?.cippBaseUrl
-                  || t('integrations.entra.settings.connection.notAvailable')
-                }
-              />
-            ) : null}
             {cippView ? (
               <EntraCippConnectionDetails
                 view={cippView}
                 idPrefix="entra-console"
-                showApiUrl={false}
                 onReconnect={handleReconnectCipp}
               />
             ) : null}

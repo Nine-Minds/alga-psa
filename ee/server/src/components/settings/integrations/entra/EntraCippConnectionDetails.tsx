@@ -12,8 +12,6 @@ interface EntraCippConnectionDetailsProps {
   idPrefix: string;
   /** Opens the connect dialog in reconnect mode. */
   onReconnect: () => void;
-  /** Omit the API URL row where the surrounding panel already shows it. */
-  showApiUrl?: boolean;
   disabled?: boolean;
 }
 
@@ -38,7 +36,6 @@ export function EntraCippConnectionDetails({
   view,
   idPrefix,
   onReconnect,
-  showApiUrl = true,
   disabled = false,
 }: EntraCippConnectionDetailsProps): React.JSX.Element {
   const { t } = useTranslation('msp/integrations');
@@ -60,13 +57,11 @@ export function EntraCippConnectionDetails({
           )}
         </div>
       ) : null}
-      {showApiUrl ? (
-        <Row
-          id={`${idPrefix}-cipp-api-url`}
-          label={t('integrations.entra.settings.connection.apiUrlLabel')}
-          value={view.apiUrl || na}
-        />
-      ) : null}
+      <Row
+        id={`${idPrefix}-cipp-api-url`}
+        label={t('integrations.entra.settings.connection.apiUrlLabel')}
+        value={view.apiUrl || na}
+      />
       {view.authType === 'api_client' ? (
         <>
           <Row

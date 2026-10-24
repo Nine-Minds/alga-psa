@@ -484,7 +484,15 @@
           "unreachable": "CIPP ist unter dieser URL nicht erreichbar",
           "tokenRejected": "Microsoft hat die Anmeldung des API-Clients abgelehnt",
           "apiRefused": "CIPP hat das Zugriffstoken abgelehnt",
-          "legacyRejected": "CIPP hat den API-Schlüssel abgelehnt"
+          "legacyRejected": "CIPP hat den API-Schlüssel abgelehnt",
+          "roleBlocked": "Die benutzerdefinierte CIPP-Rolle blockiert eine für die Synchronisierung nötige Berechtigung",
+          "transport": {
+            "dns": "{{host}} ist nicht erreichbar: Der Hostname lässt sich nicht auflösen. Prüfen Sie die API-URL auf Tippfehler; kopieren Sie sie aus CIPP > Integrations > CIPP-API.",
+            "refused": "{{host}} ist nicht erreichbar: Die Verbindung wurde abgelehnt. Der Host existiert, nimmt aber keine Verbindungen an. Prüfen Sie die API-URL und ob die CIPP-API-Function-App läuft.",
+            "timeout": "{{host}} ist nicht erreichbar: Zeitüberschreitung der Anfrage. Der Host ist eventuell nicht verfügbar, oder eine Firewall verwirft unseren Datenverkehr. Prüfen Sie die API-URL und versuchen Sie es erneut.",
+            "tls": "{{host}} ist nicht erreichbar: Das TLS-Zertifikat wurde nicht akzeptiert. Verwenden Sie die https-API-URL aus CIPP > Integrations > CIPP-API.",
+            "network": "{{host}} ist nicht erreichbar: Die Netzwerkanfrage ist fehlgeschlagen, bevor CIPP geantwortet hat. Prüfen Sie die API-URL und versuchen Sie es erneut."
+          }
         }
       },
       "console": {
@@ -838,7 +846,6 @@
             "validationFailed": "Microsoft hat Sie angemeldet, aber die verwaltete Mandantenliste konnte nicht gelesen werden; es wurde nichts gespeichert. Ihre Berechtigungen wurden akzeptiert — meist ist der Partner-Mandant nicht in Microsoft 365 Lighthouse eingebunden oder es bestehen keine aktiven GDAP-Beziehungen.",
             "tokenRejected": "Microsoft hat das Zugriffstoken der Verbindung abgelehnt; es wurde nichts gespeichert. Starten Sie die Verbindung erneut."
           },
-          "cippServerLabel": "CIPP-Server",
           "connectingSuffix": " (Verbindung wird hergestellt...)",
           "details": "Verbindungsdetails",
           "directCredentialSourceLabel": "Anmeldedatenquelle:",

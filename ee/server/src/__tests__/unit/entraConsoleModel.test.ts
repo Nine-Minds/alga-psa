@@ -387,7 +387,7 @@ describe('buildCippConnectionView', () => {
     expect(view).toEqual({
       authType: 'api_client',
       isLegacy: false,
-      apiUrl: 'https://cipp-api.example.net',
+      apiUrl: 'https://cipp-api.example.net/api',
       clientId: 'c',
       tenantId: 't',
     });

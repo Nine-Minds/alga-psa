@@ -141,6 +141,83 @@ describe('probeCippCredentials', () => {
     expect((result as any).error).toMatch(/API URL is missing \/api or points at the wrong host/);
   });
 
+  const transportError = (code: string) =>
+    Object.assign(new Error(`transport ${code}`), { isAxiosError: true, code, response: undefined });
+
+  it.each([
+    ['ENOTFOUND', 'dns', /does not resolve \(DNS\)/],
+    ['EAI_AGAIN', 'dns', /does not resolve/],
+    ['ECONNREFUSED', 'refused', /connection was refused/],
+    ['ECONNABORTED', 'timeout', /timed out/],
+    ['ETIMEDOUT', 'timeout', /timed out/],
+    ['DEPTH_ZERO_SELF_SIGNED_CERT', 'tls', /TLS certificate/],
+    ['ECONNRESET', 'network', /network request failed/],
+  ])('names the transport cause when the host never answers (%s -> %s)', async (code, cause, message) => {
+    stubMint(true, 200, { access_token: 'probe-token', expires_in: 3600 });
+    hoisted.get.mockImplementation(async () => { throw transportError(code); });
+
+    const result = await probeCippCredentials(API_CLIENT);
+
+    expect(result).toMatchObject({ valid: false, code: 'unreachable', cause });
+    expect((result as any).error).toContain('cipp.test');
+    expect((result as any).error).toMatch(message);
+    expect((result as any).error).not.toBe('CIPP validation request failed.');
+    // Same host for every candidate path: one attempt, not three timeouts.
+    expect(hoisted.get).toHaveBeenCalledTimes(1);
+  });
+
+  it('names the transport cause for a legacy key too', async () => {
+    hoisted.get.mockImplementation(async () => { throw transportError('ENOTFOUND'); });
+    const result = await probeCippCredentials({ baseUrl: 'https://cipp.test', apiToken: 'k' });
+    expect(result).toMatchObject({ valid: false, code: 'unreachable', cause: 'dns' });
+  });
+
+  it('fails when a Custom Role blocks listusers even though listtenants works', async () => {
+    stubMint(true, 200, { access_token: 'probe-token', expires_in: 3600 });
+    hoisted.get.mockImplementation(async (url: string) => {
+      if (url.includes('/api/listusers')) throw axiosError(403);
+      return { data: [{ customerId: 'tenant-guid-1', defaultDomainName: 'one.example' }], headers: {} };
+    });
+
+    const result = await probeCippCredentials(API_CLIENT);
+
+    expect(result).toMatchObject({ valid: false, code: 'role_blocked' });
+    expect((result as any).error).toMatch(/Custom Role is blocking it/);
+    expect((result as any).error).toContain('listusers');
+    // It asked for users the way sync does: one managed tenant via tenantFilter.
+    expect(hoisted.get.mock.calls[1][0]).toBe('https://cipp.test/api/listusers?tenantFilter=tenant-guid-1');
+    expect(hoisted.get.mock.calls[1][1].headers).toEqual({ Authorization: 'Bearer probe-token' });
+  });
+
+  it('passes when the role allows listusers', async () => {
+    stubMint(true, 200, { access_token: 'probe-token', expires_in: 3600 });
+    hoisted.get.mockImplementation(async (url: string) => (
+      url.includes('/api/listusers')
+        ? { data: [], headers: {} }
+        : { data: [{ customerId: 'tenant-guid-1' }, { customerId: 'tenant-guid-2' }], headers: {} }
+    ));
+    const result = await probeCippCredentials(API_CLIENT);
+    expect(result).toMatchObject({ valid: true, tenantCountSample: 2 });
+    expect(hoisted.get).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not fail the test for a listusers error that is not a refusal', async () => {
+    stubMint(true, 200, { access_token: 'probe-token', expires_in: 3600 });
+    hoisted.get.mockImplementation(async (url: string) => {
+      if (url.includes('/api/listusers')) throw axiosError(500);
+      return { data: [{ customerId: 'tenant-guid-1' }], headers: {} };
+    });
+    const result = await probeCippCredentials(API_CLIENT);
+    expect(result).toMatchObject({ valid: true });
+  });
+
+  it('does not probe listusers for a legacy key', async () => {
+    hoisted.get.mockResolvedValue({ data: [{ customerId: 'tenant-guid-1' }], headers: {} });
+    const result = await probeCippCredentials({ baseUrl: 'https://cipp.test', apiToken: 'k' });
+    expect(result).toMatchObject({ valid: true });
+    expect(hoisted.get).toHaveBeenCalledTimes(1);
+  });
+
   it('leaves the legacy probe request and rejection message unchanged', async () => {
     hoisted.get.mockImplementation(async () => { throw axiosError(403); });
     const result = await probeCippCredentials({ baseUrl: 'https://cipp.test', apiToken: 'k' });

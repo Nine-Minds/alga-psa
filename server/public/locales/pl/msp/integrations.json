@@ -484,7 +484,15 @@
           "unreachable": "Nie można połączyć się z CIPP pod tym adresem URL",
           "tokenRejected": "Microsoft odrzucił logowanie klienta API",
           "apiRefused": "CIPP odrzucił token dostępu",
-          "legacyRejected": "CIPP odrzucił klucz API"
+          "legacyRejected": "CIPP odrzucił klucz API",
+          "roleBlocked": "Rola niestandardowa CIPP blokuje uprawnienie potrzebne do synchronizacji",
+          "transport": {
+            "dns": "Nie można połączyć się z {{host}}: nie można rozwiązać nazwy hosta. Sprawdź adres URL API pod kątem literówek; skopiuj go z CIPP > Integrations > CIPP-API.",
+            "refused": "Nie można połączyć się z {{host}}: połączenie zostało odrzucone. Host istnieje, ale nie przyjmuje połączeń. Sprawdź adres URL API i czy aplikacja funkcji CIPP-API działa.",
+            "timeout": "Nie można połączyć się z {{host}}: upłynął limit czasu żądania. Host może być niedostępny lub zapora blokuje nasz ruch. Sprawdź adres URL API i spróbuj ponownie.",
+            "tls": "Nie można połączyć się z {{host}}: jego certyfikat TLS nie został zaakceptowany. Użyj adresu URL API https widocznego w CIPP > Integrations > CIPP-API.",
+            "network": "Nie można połączyć się z {{host}}: żądanie sieciowe nie powiodło się, zanim CIPP odpowiedział. Sprawdź adres URL API i spróbuj ponownie."
+          }
         }
       },
       "console": {
@@ -838,7 +846,6 @@
             "validationFailed": "Microsoft zalogował Cię, ale nie udało się odczytać listy zarządzanych organizacji; nic nie zostało zapisane. Uprawnienia zostały zaakceptowane — zwykle oznacza to, że organizacja partnerska nie jest wdrożona w Microsoft 365 Lighthouse lub nie ma aktywnych relacji GDAP.",
             "tokenRejected": "Microsoft odrzucił token dostępu połączenia; nic nie zostało zapisane. Rozpocznij połączenie ponownie."
           },
-          "cippServerLabel": "Serwer CIPP",
           "connectingSuffix": " (Łączenie...)",
           "details": "Szczegóły połączenia",
           "directCredentialSourceLabel": "Źródło poświadczeń:",

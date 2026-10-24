@@ -484,7 +484,15 @@
           "unreachable": "CIPP could not be reached at this URL",
           "tokenRejected": "Microsoft rejected the API client's sign-in",
           "apiRefused": "CIPP refused the access token",
-          "legacyRejected": "CIPP rejected the API key"
+          "legacyRejected": "CIPP rejected the API key",
+          "roleBlocked": "CIPP's Custom Role blocks a permission sync needs",
+          "transport": {
+            "dns": "Could not reach {{host}}: the host name does not resolve. Check the API URL for typos; copy it from CIPP > Integrations > CIPP-API.",
+            "refused": "Could not reach {{host}}: the connection was refused. The host exists but nothing is accepting connections there. Check the API URL and that the CIPP-API function app is running.",
+            "timeout": "Could not reach {{host}}: the request timed out. The host may be down, or a firewall may be dropping our traffic. Check the API URL and try again.",
+            "tls": "Could not reach {{host}}: its TLS certificate was not accepted. Use the https API URL shown in CIPP > Integrations > CIPP-API.",
+            "network": "Could not reach {{host}}: the network request failed before CIPP answered. Check the API URL and try again."
+          }
         }
       },
       "console": {
@@ -838,7 +846,6 @@
             "validationFailed": "Microsoft signed you in, but the managed tenant list could not be read, so nothing was saved. Your permissions were accepted — this usually means the partner tenant is not onboarded to Microsoft 365 Lighthouse or has no active GDAP relationships.",
             "tokenRejected": "Microsoft rejected the connection's access token, so nothing was saved. Start the connection again."
           },
-          "cippServerLabel": "CIPP server",
           "connectingSuffix": " (Connecting...)",
           "details": "Connection details",
           "directCredentialSourceLabel": "Credential Source:",

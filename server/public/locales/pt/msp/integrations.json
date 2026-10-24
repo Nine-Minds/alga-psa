@@ -484,7 +484,15 @@
           "unreachable": "Não foi possível acessar o CIPP neste URL",
           "tokenRejected": "A Microsoft rejeitou o login do cliente de API",
           "apiRefused": "O CIPP recusou o token de acesso",
-          "legacyRejected": "O CIPP rejeitou a chave de API"
+          "legacyRejected": "O CIPP rejeitou a chave de API",
+          "roleBlocked": "A função personalizada do CIPP bloqueia uma permissão necessária para a sincronização",
+          "transport": {
+            "dns": "Não foi possível acessar {{host}}: o nome do host não é resolvido. Verifique a URL da API; copie-a de CIPP > Integrations > CIPP-API.",
+            "refused": "Não foi possível acessar {{host}}: a conexão foi recusada. O host existe, mas não aceita conexões. Verifique a URL da API e se o aplicativo de funções CIPP-API está em execução.",
+            "timeout": "Não foi possível acessar {{host}}: a solicitação expirou. O host pode estar indisponível ou um firewall pode estar bloqueando nosso tráfego. Verifique a URL da API e tente novamente.",
+            "tls": "Não foi possível acessar {{host}}: o certificado TLS não foi aceito. Use a URL https da API mostrada em CIPP > Integrations > CIPP-API.",
+            "network": "Não foi possível acessar {{host}}: a solicitação de rede falhou antes de o CIPP responder. Verifique a URL da API e tente novamente."
+          }
         }
       },
       "console": {
@@ -838,7 +846,6 @@
             "validationFailed": "A Microsoft fez seu login, mas a lista de tenants gerenciados não pôde ser lida; nada foi salvo. Suas permissões foram aceitas — geralmente significa que o tenant de parceiro não está integrado ao Microsoft 365 Lighthouse ou não tem relações GDAP ativas.",
             "tokenRejected": "A Microsoft rejeitou o token de acesso da conexão; nada foi salvo. Inicie a conexão novamente."
           },
-          "cippServerLabel": "Servidor CIPP",
           "connectingSuffix": "(Conectando...)",
           "details": "Detalhes da conexão",
           "directCredentialSourceLabel": "Fonte da credencial:",

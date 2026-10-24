@@ -3,6 +3,8 @@ import {
   buildCippCredentialInput,
   cippTestFingerprint,
   classifyCippFailure,
+  cippHostForDisplay,
+  cippTransportCause,
   displayCippApiUrl,
   isCippFormComplete,
   normalizeCippApiUrl,
@@ -91,5 +93,22 @@ describe('form helpers', () => {
     expect(classifyCippFailure('api_client', 'auth_rejected')).toBe('apiRefused');
     expect(classifyCippFailure('legacy', 'auth_rejected')).toBe('legacyRejected');
     expect(classifyCippFailure('legacy', undefined)).toBeNull();
+    expect(classifyCippFailure('api_client', 'unreachable')).toBe('unreachable');
+    expect(classifyCippFailure('legacy', 'unreachable')).toBe('unreachable');
+    expect(classifyCippFailure('api_client', 'role_blocked')).toBe('roleBlocked');
+  });
+});
+
+describe('transport failures', () => {
+  it('only localizes a known cause on an unreachable result', () => {
+    expect(cippTransportCause('unreachable', 'dns')).toBe('dns');
+    expect(cippTransportCause('unreachable', 'something-new')).toBeNull();
+    expect(cippTransportCause('ip_blocked', 'dns')).toBeNull();
+    expect(cippTransportCause(undefined, undefined)).toBeNull();
+  });
+
+  it('names the host the operator typed, with or without scheme and /api', () => {
+    expect(cippHostForDisplay('https://cipp.example.net/api')).toBe('cipp.example.net');
+    expect(cippHostForDisplay('cipp.example.net:8443')).toBe('cipp.example.net:8443');
   });
 });

@@ -484,7 +484,15 @@
           "unreachable": "CIPP kunde inte nås på den här URL:en",
           "tokenRejected": "Microsoft avvisade API-klientens inloggning",
           "apiRefused": "CIPP avvisade åtkomsttoken",
-          "legacyRejected": "CIPP avvisade API-nyckeln"
+          "legacyRejected": "CIPP avvisade API-nyckeln",
+          "roleBlocked": "CIPP:s anpassade roll blockerar en behörighet som synkroniseringen behöver",
+          "transport": {
+            "dns": "Det gick inte att nå {{host}}: värdnamnet kan inte slås upp. Kontrollera API-URL:en; kopiera den från CIPP > Integrations > CIPP-API.",
+            "refused": "Det gick inte att nå {{host}}: anslutningen nekades. Värden finns men tar inte emot anslutningar. Kontrollera API-URL:en och att CIPP-API-funktionsappen körs.",
+            "timeout": "Det gick inte att nå {{host}}: begäran överskred tidsgränsen. Värden kan vara nere eller så blockerar en brandvägg vår trafik. Kontrollera API-URL:en och försök igen.",
+            "tls": "Det gick inte att nå {{host}}: dess TLS-certifikat godtogs inte. Använd https-API-URL:en som visas i CIPP > Integrations > CIPP-API.",
+            "network": "Det gick inte att nå {{host}}: nätverksbegäran misslyckades innan CIPP svarade. Kontrollera API-URL:en och försök igen."
+          }
         }
       },
       "console": {
@@ -838,7 +846,6 @@
             "validationFailed": "Microsoft loggade in dig, men listan över hanterade klientorganisationer kunde inte läsas, så inget sparades. Dina behörigheter godkändes – detta innebär oftast att partnerns klientorganisation inte har anslutits till Microsoft 365 Lighthouse eller saknar aktiva GDAP-relationer.",
             "tokenRejected": "Microsoft avvisade anslutningens åtkomsttoken, så inget sparades. Starta anslutningen igen."
           },
-          "cippServerLabel": "CIPP-server",
           "connectingSuffix": " (Ansluter…)",
           "details": "Anslutningsuppgifter",
           "directCredentialSourceLabel": "Källa för autentiseringsuppgifter:",

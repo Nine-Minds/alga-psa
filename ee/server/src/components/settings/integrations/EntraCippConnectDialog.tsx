@@ -11,6 +11,8 @@ import { connectEntraCipp, testEntraCippCredentials } from '@alga-psa/integratio
 import {
     buildCippCredentialInput,
     classifyCippFailure,
+    cippHostForDisplay,
+    cippTransportCause,
     cippTestFingerprint,
     displayCippApiUrl,
     isCippFormComplete,
@@ -42,7 +44,7 @@ interface EntraCippConnectDialogProps {
 type CippTestResult =
     | { state: 'untested' }
     | { state: 'passed'; tenantCountSample: number; testedFingerprint: string }
-    | { state: 'failed'; error: string; code?: string };
+    | { state: 'failed'; error: string; code?: string; cause?: string };
 
 const HELP_STEP_KEYS = [
     'openIntegration',
@@ -88,7 +90,7 @@ export function EntraCippConnectDialog({
     const [isTesting, setIsTesting] = React.useState(false);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [testResult, setTestResult] = React.useState<CippTestResult>({ state: 'untested' });
-    const [error, setError] = React.useState<{ message: string; code?: string } | null>(null);
+    const [error, setError] = React.useState<{ message: string; code?: string; cause?: string } | null>(null);
 
     // Re-seed whenever the dialog opens, so a reconnect always starts from the
     // connection on record and never from a previous session's typing.
@@ -156,6 +158,7 @@ export function EntraCippConnectDialog({
                     state: 'failed',
                     error: result.error,
                     code: (result as { code?: string }).code,
+                    cause: (result as { cause?: string }).cause,
                 });
                 return;
             }
@@ -192,7 +195,11 @@ export function EntraCippConnectDialog({
             // this succeeds.
             const result = await connectEntraCipp(buildCippCredentialInput(values));
             if ('error' in result) {
-                setError({ message: result.error, code: (result as { code?: string }).code });
+                setError({
+                    message: result.error,
+                    code: (result as { code?: string }).code,
+                    cause: (result as { cause?: string }).cause,
+                });
                 return;
             }
 
@@ -211,6 +218,16 @@ export function EntraCippConnectDialog({
     const failureTitle = (code: string | undefined) => {
         const kind = classifyCippFailure(values.shape, code);
         return kind ? t(`integrations.entra.cippDialog.failure.${kind}`) : null;
+    };
+
+    // An unreachable host is explained in the operator's language, naming the
+    // host on screen and what stopped the request; otherwise the server's
+    // remedy is shown as is.
+    const failureRemedy = (message: string, code: string | undefined, cause: string | undefined) => {
+        const transport = cippTransportCause(code, cause);
+        if (!transport) return message;
+        const host = cippHostForDisplay(isApiClient ? values.apiUrl : values.baseUrl);
+        return t(`integrations.entra.cippDialog.failure.transport.${transport}`, { host });
     };
 
     const busy = isTesting || isSubmitting;
@@ -424,7 +441,9 @@ export function EntraCippConnectDialog({
                                         {failureTitle(testResult.code)}
                                     </strong>
                                 ) : null}
-                                <span id="entra-cipp-test-failure-remedy">{testResult.error}</span>
+                                <span id="entra-cipp-test-failure-remedy">
+                                    {failureRemedy(testResult.error, testResult.code, testResult.cause)}
+                                </span>
                             </AlertDescription>
                         </Alert>
                     ) : null}
@@ -446,7 +465,7 @@ export function EntraCippConnectDialog({
                                 {failureTitle(error.code) ? (
                                     <strong className="block">{failureTitle(error.code)}</strong>
                                 ) : null}
-                                {error.message}
+                                {failureRemedy(error.message, error.code, error.cause)}
                             </AlertDescription>
                         </Alert>
                     ) : null}

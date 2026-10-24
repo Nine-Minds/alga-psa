@@ -484,7 +484,15 @@
           "unreachable": "Impossible de joindre CIPP à cette URL",
           "tokenRejected": "Microsoft a rejeté la connexion du client API",
           "apiRefused": "CIPP a refusé le jeton d'accès",
-          "legacyRejected": "CIPP a rejeté la clé d'API"
+          "legacyRejected": "CIPP a rejeté la clé d'API",
+          "roleBlocked": "Le rôle personnalisé CIPP bloque une autorisation nécessaire à la synchronisation",
+          "transport": {
+            "dns": "Impossible de joindre {{host}} : le nom d'hôte ne se résout pas. Vérifiez l'URL de l'API ; copiez-la depuis CIPP > Integrations > CIPP-API.",
+            "refused": "Impossible de joindre {{host}} : la connexion a été refusée. L'hôte existe mais n'accepte aucune connexion. Vérifiez l'URL de l'API et que l'application de fonctions CIPP-API est en cours d'exécution.",
+            "timeout": "Impossible de joindre {{host}} : la requête a expiré. L'hôte est peut-être indisponible, ou un pare-feu bloque notre trafic. Vérifiez l'URL de l'API et réessayez.",
+            "tls": "Impossible de joindre {{host}} : son certificat TLS n'a pas été accepté. Utilisez l'URL https de l'API affichée dans CIPP > Integrations > CIPP-API.",
+            "network": "Impossible de joindre {{host}} : la requête réseau a échoué avant que CIPP ne réponde. Vérifiez l'URL de l'API et réessayez."
+          }
         }
       },
       "console": {
@@ -838,7 +846,6 @@
             "validationFailed": "Microsoft vous a connecté, mais la liste des locataires gérés n'a pas pu être lue ; rien n'a été enregistré. Vos autorisations ont été acceptées — en général, le locataire partenaire n'est pas intégré à Microsoft 365 Lighthouse ou n'a aucune relation GDAP active.",
             "tokenRejected": "Microsoft a rejeté le jeton d'accès de la connexion ; rien n'a été enregistré. Relancez la connexion."
           },
-          "cippServerLabel": "Serveur CIPP",
           "connectingSuffix": " (Connexion...)",
           "details": "Détails de la connexion",
           "directCredentialSourceLabel": "Source des identifiants :",

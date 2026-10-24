@@ -5,6 +5,10 @@
  * without rendering anything.
  */
 
+import type { CippTransportCause } from '@ee/lib/integrations/entra/providers/cipp/cippFailureMessages';
+
+export type { CippTransportCause };
+
 export type CippConnectShape = 'api_client' | 'legacy';
 
 /**
@@ -96,10 +100,33 @@ export function buildCippCredentialInput(values: CippFormValues) {
   };
 }
 
+const TRANSPORT_CAUSES: readonly CippTransportCause[] = ['dns', 'refused', 'timeout', 'tls', 'network'];
+
+/**
+ * The transport cause the server reported for an unreachable host, if it is
+ * one this dialog has localized copy for. Anything else falls back to the
+ * server's own message.
+ */
+export function cippTransportCause(code: string | undefined, cause: unknown): CippTransportCause | null {
+  if (code !== 'unreachable') return null;
+  return TRANSPORT_CAUSES.includes(cause as CippTransportCause) ? (cause as CippTransportCause) : null;
+}
+
+/** The host part of the URL being tested, for naming it in an error. */
+export function cippHostForDisplay(input: string): string {
+  const normalized = normalizeCippApiUrl(input);
+  try {
+    return new URL(normalized).host || normalized;
+  } catch {
+    return normalized;
+  }
+}
+
 export type CippFailureKind =
   | 'unreachable'
   | 'tokenRejected'
   | 'apiRefused'
+  | 'roleBlocked'
   | 'legacyRejected';
 
 /**
@@ -112,6 +139,7 @@ export function classifyCippFailure(
   code: string | undefined
 ): CippFailureKind | null {
   switch (code) {
+    case 'unreachable':
     case 'html_response':
     case 'validation_failed':
       return 'unreachable';
@@ -120,6 +148,8 @@ export function classifyCippFailure(
       return 'tokenRejected';
     case 'ip_blocked':
       return 'apiRefused';
+    case 'role_blocked':
+      return 'roleBlocked';
     case 'auth_rejected':
       return shape === 'api_client' ? 'apiRefused' : 'legacyRejected';
     default:
