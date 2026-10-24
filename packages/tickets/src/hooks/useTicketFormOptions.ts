@@ -8,8 +8,8 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
-const CACHE_KEY = 'ticket_form_options';
-const CACHE_TIMESTAMP_KEY = 'ticket_form_options_ts';
+const CACHE_KEY = 'ticket_form_options_v2';
+const CACHE_TIMESTAMP_KEY = 'ticket_form_options_v2_ts';
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 type TicketFormOptionsResult = Awaited<ReturnType<typeof getTicketFormOptions>>;

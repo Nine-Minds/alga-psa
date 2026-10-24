@@ -22,6 +22,7 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { searchClientsForPicker } from '../../actions/clientLookupActions';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { toast } from 'react-hot-toast';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -70,7 +71,6 @@ interface TicketPropertiesProps {
   userId: string;
   tenant: string;
   contacts: any[];
-  clients: IClient[];
   locations?: IClientLocation[];
   clientFilterState: 'all' | 'active' | 'inactive';
   clientTypeFilter: 'all' | 'company' | 'individual';
@@ -149,7 +149,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   userId,
   tenant,
   contacts,
-  clients,
   locations = [],
   clientFilterState,
   clientTypeFilter,
@@ -368,22 +367,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         return t('properties.notAvailable', 'N/A');
     }
   }, [client?.client_name, contactInfo?.full_name, locations, t, ticket.location]);
-
-  const uniqueClientsForPicker = React.useMemo(() => {
-    if (!clients) return [];
-    const seen = new Set<string>();
-    return clients.filter(client => {
-      // Ensure client and client_id are valid before processing
-      if (!client || typeof client.client_id === 'undefined') {
-        return false;
-      }
-      if (seen.has(client.client_id)) {
-        return false;
-      }
-      seen.add(client.client_id);
-      return true;
-    });
-  }, [clients]);
 
   const teamMembersOnTicket = React.useMemo(() => {
     return additionalAgents.filter(agent => agent.role === 'team_member');
@@ -736,7 +719,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               setIsQuickAddContactOpen(false);
               setShowContactPicker(true);
             },
-            clients,
             selectedClientId: ticket.client_id || client?.client_id,
           })}
           <div>
@@ -800,7 +782,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                     <div className="w-full">
                       <ClientPicker
                         {...withDataAutomationId({ id: `${id}-client-picker` })}
-                        clients={uniqueClientsForPicker}
+                        searchClients={searchClientsForPicker}
                         onSelect={setSelectedClientId}
                         selectedClientId={selectedClientId || client?.client_id || ''}
                         filterState={clientFilterState}

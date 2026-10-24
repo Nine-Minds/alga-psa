@@ -576,13 +576,13 @@ export default function TicketingDashboardContainer({
     statusIds: effectiveOptions.statusOptions.map(option => option.value),
     priorityIds: effectiveOptions.priorityOptions.map(option => option.value),
     categoryIds: effectiveOptions.categories.map((category: { category_id: string }) => category.category_id),
-    clientIds: effectiveOptions.clients.map(client => client.client_id),
+    // No clientIds universe: the client filter is a server-searched picker, so a saved client id
+    // cannot be validated without loading every client. An absent universe means "cannot validate".
     userIds: effectiveOptions.users.map((user: { user_id: string }) => user.user_id),
   }), [
     effectiveOptions.statusOptions,
     effectiveOptions.priorityOptions,
     effectiveOptions.categories,
-    effectiveOptions.clients,
     effectiveOptions.users,
   ]);
 
@@ -973,7 +973,6 @@ export default function TicketingDashboardContainer({
     statusIds: new Set<string>(knownFilterIds.statusIds as string[]),
     priorityIds: new Set<string>(knownFilterIds.priorityIds as string[]),
     categoryIds: new Set<string>(knownFilterIds.categoryIds as string[]),
-    clientIds: new Set<string>(knownFilterIds.clientIds as string[]),
     userIds: new Set<string>(knownFilterIds.userIds as string[]),
     teamIds: initialTeams ? new Set(initialTeams.map(team => team.team_id)) : undefined,
     tags: effectiveOptions.tags ? new Set(effectiveOptions.tags.map(tag => tag.tag_text)) : undefined,
@@ -1073,7 +1072,6 @@ export default function TicketingDashboardContainer({
       initialStatuses={effectiveOptions.statusOptions}
       initialPriorities={effectiveOptions.priorityOptions}
       initialCategories={effectiveOptions.categories}
-      initialClients={effectiveOptions.clients}
       initialTags={effectiveOptions.tags || []}
       initialUsers={effectiveOptions.users}
       totalCount={totalCount}

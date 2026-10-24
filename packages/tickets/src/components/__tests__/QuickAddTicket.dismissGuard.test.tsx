@@ -96,6 +96,7 @@ vi.mock('../../actions/ticketFormActions', () => ({
 vi.mock('../../actions/clientLookupActions', () => ({
   getContactsByClient: vi.fn().mockResolvedValue([]),
   getClientLocations: vi.fn().mockResolvedValue([]),
+  searchClientsForPicker: vi.fn().mockResolvedValue({ clients: [], total: 0 }),
 }));
 
 vi.mock('@alga-psa/reference-data/actions', () => ({

@@ -9,11 +9,12 @@ const context = vi.hoisted(() => ({
   userId: '',
   db: null as any,
   allowed: true,
+  userType: 'internal',
   logoCalls: [] as string[][],
 }));
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) =>
-    fn({ user_id: context.userId, tenant: context.tenant, user_type: 'internal' }, { tenant: context.tenant }, ...args),
+    fn({ user_id: context.userId, tenant: context.tenant, user_type: context.userType }, { tenant: context.tenant }, ...args),
   withAuthCheck: (fn: any) => fn,
   hasPermission: vi.fn(async () => context.allowed),
   preCheckDeletion: vi.fn(),
@@ -23,20 +24,17 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/db')>()),
   createTenantKnex: async () => ({ knex: context.db, tenant: context.tenant }),
 }));
-vi.mock('@alga-psa/clients/lib/documentsHelpers', () => ({
-  getClientLogoUrlsBatchAsync: vi.fn(async (ids: string[]) => {
-    context.logoCalls.push(ids);
-    return new Map(ids.map((id) => [id, `/logo/${id}`]));
-  }),
-}));
-vi.mock('../../../../packages/clients/src/lib/documentsHelpers', () => ({
-  getClientLogoUrlsBatchAsync: vi.fn(async (ids: string[]) => {
+// The shared picker model resolves logos via @alga-psa/formatting directly.
+vi.mock('@alga-psa/formatting/avatarUtils', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/formatting/avatarUtils')>()),
+  getClientLogoUrlsBatch: vi.fn(async (ids: string[]) => {
     context.logoCalls.push(ids);
     return new Map(ids.map((id) => [id, `/logo/${id}`]));
   }),
 }));
 
 import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
+import { searchClientsForPicker as searchClientsForPickerFromTickets } from '@alga-psa/tickets/actions/clientLookupActions';
 
 let db: Knex;
 const databaseName = `client_picker_search_test_${randomUUID().replaceAll('-', '')}`;
@@ -182,6 +180,28 @@ it('rejects callers without client:read', async () => {
   try {
     await expect(searchClientsForPicker({})).rejects.toThrow(/Permission denied/);
   } finally {
+    context.allowed = true;
+  }
+});
+
+it('tickets-local action returns the same results as the clients action for internal users', async () => {
+  const fromClients = await searchClientsForPicker({ search: 'acme', pageSize: 5 });
+  const fromTickets = await searchClientsForPickerFromTickets({ search: 'acme', pageSize: 5 });
+  expect(fromTickets).toEqual(fromClients);
+  expect(names(fromTickets).length).toBeGreaterThan(0);
+});
+
+it('tickets-local action rejects non-internal users and users without client:read', async () => {
+  try {
+    context.userType = 'client';
+    await expect(searchClientsForPickerFromTickets({})).rejects.toThrow(/internal-only/);
+    await expect(searchClientsForPicker({})).rejects.toThrow(/Permission denied/);
+    context.userType = 'internal';
+    context.allowed = false;
+    await expect(searchClientsForPickerFromTickets({})).rejects.toThrow(/cannot read client/);
+    await expect(searchClientsForPicker({})).rejects.toThrow(/Permission denied/);
+  } finally {
+    context.userType = 'internal';
     context.allowed = true;
   }
 });

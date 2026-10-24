@@ -59,19 +59,34 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(section).toContain("tenantScopedTable(trx, 'tickets as t', tenant)");
     expect(section).toContain('Comment.getAllbyTicketId(trx, tenant, ticketId)');
     expect(section).toContain("tenantScopedTable(trx, 'documents as d', tenant)");
-    expect(section).toContain("tenantScopedTable(trx, 'clients as c', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'ticket_resources', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'users', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'statuses', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'boards', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'priorities', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'categories', tenant)");
-    expect(section).toContain("tenantScopedTable(trx, 'documents', tenant)");
     expect(section).not.toContain("'t.tenant': tenant");
     expect(section).not.toContain('tenant: tenant');
     expect(section).not.toContain(".where({ 'c.tenant': tenant })");
     expect(section).not.toContain(".where({ tenant })");
     expect(section).not.toContain(".andWhere({ tenant })");
+  });
+
+  it('does not load the tenant client list in getConsolidatedTicketData (client pickers are server-searched)', () => {
+    const source = fs.readFileSync(path.resolve(__dirname, './optimizedTicketActions.ts'), 'utf8');
+    const start = source.indexOf('export const getConsolidatedTicketData');
+    const end = source.indexOf('export const getTicketFormOptions', start);
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    const section = source.slice(start, end);
+
+    // The only clients query left is the single client attached to the ticket, keyed by id.
+    const clientQueries = section.match(/'clients as c'/g) ?? [];
+    expect(clientQueries).toHaveLength(1);
+    expect(section).toContain("'c.client_id': ticket.client_id");
+    expect(section).not.toContain('getAllClients');
+    expect(section).not.toMatch(/\n\s+clients(,|:)/);
+    expect(section).not.toContain('clientsWithLogos');
   });
 
   it('uses structural tenant scoping for consolidated ticket client and bundle roots', () => {
@@ -177,7 +192,9 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(optionsSection).toContain("tenantScopedTable(trx, 'priorities', tenant)");
     expect(optionsSection).toContain("tenantScopedTable(trx, 'boards', tenant)");
     expect(optionsSection).toContain("tenantScopedTable(trx, 'categories', tenant)");
-    expect(optionsSection).toContain("tenantScopedTable(trx, 'clients as c', tenant)");
+    // The client filter is a server-searched picker; form options never load the client list.
+    expect(optionsSection).not.toContain("'clients as c'");
+    expect(optionsSection).not.toContain('getClientLogoUrlsBatch');
     expect(optionsSection).toContain("tenantScopedTable(trx, 'users', tenant)");
     expect(optionsSection).not.toContain(".where({ tenant, item_type: 'ticket' })");
     expect(optionsSection).not.toContain(".where({ tenant })");

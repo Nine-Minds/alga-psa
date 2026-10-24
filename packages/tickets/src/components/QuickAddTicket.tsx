@@ -17,17 +17,18 @@ import { addTicketResource } from '../actions/ticketResourceActions';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions/searchUsersForMentions';
-import { getContactsByClient, getClientLocations } from '../actions/clientLookupActions';
+import { getContactsByClient, getClientLocations, getClientById } from '../actions/clientLookupActions';
 import { getTicketFormData } from '../actions/ticketFormActions';
 import { getTicketDuplicateSource } from '../actions/ticketActions';
 import { getTicketTemplateForCreate, listTicketTemplatesForCreate } from '../actions/ticketTemplateActions';
 import type { TicketDuplicateSource } from '../lib/ticketDuplicate';
 import { getTicketCategoriesByBoard, BoardCategoryData } from '../actions/ticketCategoryActions';
 import type { TicketTemplateForCreate, TicketTemplateOption } from '@alga-psa/types';
-import { IUser, IBoard, ITicketStatus, IPriority, IStandardPriority, IClient, IClientLocation, IContact, ITicket, ITicketCategory } from '@alga-psa/types';
+import { IUser, IBoard, ITicketStatus, IPriority, IStandardPriority, IClientLocation, IContact, ITicket, ITicketCategory } from '@alga-psa/types';
 import { IUserWithRoles } from '@alga-psa/types';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { searchClientsForPicker } from '../actions/clientLookupActions';
 import { CategoryPicker } from './CategoryPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -279,9 +280,12 @@ export function QuickAddTicket({
   const [statusId, setStatusId] = useState('');
   const [priorityId, setPriorityId] = useState('');
   const [clientId, setClientId] = useState(prefilledClient?.id || '');
+  // Name of the selected client, used for the {{client}} template title token (no full client list is loaded).
+  const [selectedClientName, setSelectedClientName] = useState<string | null>(prefilledClient?.name ?? null);
   const [contactId, setContactId] = useState(prefilledContact?.id || null);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const latestClientSelectionRef = useRef<string | null>(null);
   const [selectedClientType, setSelectedClientType] = useState<'company' | 'individual' | null>(null);
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [boardConfig, setBoardConfig] = useState<BoardCategoryData['boardConfig']>({
@@ -296,7 +300,6 @@ export function QuickAddTicket({
   const [statuses, setStatuses] = useState<ITicketStatus[]>([]);
   const [isLoadingStatuses, setIsLoadingStatuses] = useState(false);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [locations, setLocations] = useState<IClientLocation[]>([]);
   const [locationId, setLocationId] = useState<string | null>(null);
@@ -408,7 +411,6 @@ export function QuickAddTicket({
         setUsers(formData.users);
         setBoards(formData.boards);
         setPriorities(formData.priorities);
-        setClients(formData.clients);
 
         const availableBoards = formData.boards || [];
         const availablePriorities = formData.priorities || [];
@@ -416,6 +418,7 @@ export function QuickAddTicket({
         if (formData.selectedClient) {
           setIsPrefilledClient(true);
           setClientId(formData.selectedClient.client_id);
+          setSelectedClientName(formData.selectedClient.client_name ?? null);
           setSelectedClientType(formData.selectedClient.client_type as 'company' | 'individual');
           if (formData.contacts) {
             setContacts(formData.contacts);
@@ -688,24 +691,32 @@ export function QuickAddTicket({
       setIsPrefilledClient(false);
     }
 
+    latestClientSelectionRef.current = newClientId;
     setClientId(newClientId || '');
+    setSelectedClientName(null);
     setContactId(null);
     // The location belongs to the client that was selected before.
     setLocationId(null);
     clearErrorIfSubmitted();
 
+    setSelectedClientType(null);
     if (newClientId !== null) {
-      const selectedClient = clients.find(client => client.client_id === newClientId);
-
-      if (selectedClient?.client_type === 'company') {
-        setSelectedClientType('company');
-      } else if (selectedClient?.client_type === 'individual') {
-        setSelectedClientType('individual');
-      } else {
-        setSelectedClientType(null);
+      // The async picker only hands back an id, so resolve client_type with a single-client fetch.
+      // LEVERAGE: pattern fetch-selected-client-by-id — single-client lookup for a picker's selected value
+      const requestedId = newClientId;
+      try {
+        const selectedClient = await getClientById(requestedId);
+        // Ignore stale responses if the user picked another client meanwhile.
+        if (latestClientSelectionRef.current !== requestedId) return;
+        setSelectedClientName(selectedClient?.client_name ?? null);
+        setSelectedClientType(
+          selectedClient?.client_type === 'company' || selectedClient?.client_type === 'individual'
+            ? selectedClient.client_type
+            : null
+        );
+      } catch (error) {
+        console.error('Error fetching selected client:', error);
       }
-    } else {
-      setSelectedClientType(null);
     }
   };
 
@@ -800,6 +811,7 @@ export function QuickAddTicket({
       })),
     });
     setClientId(source.client.id);
+    setSelectedClientName(source.client.name || null);
     setSelectedClientType((source.client.type as 'company' | 'individual' | null) ?? null);
     setContactId(source.contact?.id ?? null);
     setLocationId(source.location_id ?? null);
@@ -846,7 +858,7 @@ export function QuickAddTicket({
   // Tokens are filled from the client, contact and due date picked so far; a missing one renders empty.
   // The due date is a calendar date taken from the picked Date's local parts (not toISOString).
   function templateTitleContext(): TitleTokenContext {
-    const clientName = clients.find((candidate) => candidate.client_id === clientId)?.client_name ?? null;
+    const clientName = clientId ? selectedClientName : null;
     const contactName = contacts.find((candidate) => candidate.contact_name_id === contactId)?.full_name ?? null;
     return { clientName, contactName, dueDate: dueDate ? toCalendarDate(dueDate) : null };
   }
@@ -935,18 +947,15 @@ export function QuickAddTicket({
     setStatusId('');
     setPriorityId('');
     setClientId(prefilledClient?.id || '');
+    setSelectedClientName(prefilledClient?.name ?? null);
     setContactId(prefilledContact?.id || null);
     setLocationId(null);
     setLocations([]);
     setContacts([]);
     // Reset isPrefilledClient - it will be set to true again if there's a prefilled client
     setIsPrefilledClient(false);
-    if (prefilledClient?.id) {
-      const client = clients.find(c => c.client_id === prefilledClient.id);
-      setSelectedClientType(client?.client_type as 'company' | 'individual' || null);
-    } else {
-      setSelectedClientType(null);
-    }
+    // client_type for a prefilled client is resolved by getTicketFormData (selectedClient) on load.
+    setSelectedClientType(null);
     setSelectedCategories([]);
     // Reset ITIL fields
     setItilImpact(undefined);
@@ -998,7 +1007,7 @@ export function QuickAddTicket({
     if (next !== title) setTitle(next);
     // Only a client, contact or due date change re-renders; title edits must not loop back through here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clientId, contactId, dueDate, templateSource, clients, contacts]);
+  }, [clientId, contactId, dueDate, templateSource, selectedClientName, contacts]);
 
   // A template prefill is a baseline too: an untouched template-filled draft is not dirty.
   const draftBaselineTitle = duplicateSource ? duplicateSource.title : templateSource ? lastRenderedTitleRef.current ?? templateSource.title : prefilledTitle;
@@ -1311,13 +1320,6 @@ export function QuickAddTicket({
     { active: open && !isEmbedded, enabled: !isSubmitting && !isLoading && !ticketCreated && !isNavigatingToTicket },
   );
 
-  const filteredClients = clients.filter(client => {
-    if (clientFilterState === 'all') return true;
-    if (clientFilterState === 'active') return !client.is_inactive;
-    if (clientFilterState === 'inactive') return client.is_inactive;
-    return true;
-  });
-
   const hasRequiredFieldErrors = !title.trim() || !boardId || !statusId ||
     (boardConfig.priority_type === 'custom' && !priorityId) ||
     (boardConfig.priority_type === 'itil' && (!itilImpact || !itilUrgency)) ||
@@ -1575,7 +1577,7 @@ export function QuickAddTicket({
                   <div className={hasAttemptedSubmit && !clientId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
                     <ClientPicker
                       id={`${id}-client`}
-                      clients={filteredClients}
+                      searchClients={searchClientsForPicker}
                       onSelect={handleClientChange}
                       selectedClientId={clientId}
                       filterState={clientFilterState}
@@ -2069,14 +2071,12 @@ export function QuickAddTicket({
           setContactId(newContact.contact_name_id);
           setIsQuickAddContactOpen(false);
         },
-        clients,
         selectedClientId: clientId,
       })}
       {renderQuickAddClient({
         open: isQuickAddClientOpen,
         onOpenChange: setIsQuickAddClientOpen,
         onClientAdded: (newClient) => {
-          setClients(prev => [...prev, newClient]);
           handleClientChange(newClient.client_id);
         },
         skipSuccessDialog: true,

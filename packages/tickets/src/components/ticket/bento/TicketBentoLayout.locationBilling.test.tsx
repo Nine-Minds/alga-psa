@@ -84,6 +84,7 @@ vi.mock('@alga-psa/teams/actions', () => ({
 
 vi.mock('../../../actions/clientLookupActions', () => ({
   getClientBillingProfiles: vi.fn().mockResolvedValue([]),
+  searchClientsForPicker: vi.fn(),
 }));
 
 vi.mock('@alga-psa/ui/context', () => ({

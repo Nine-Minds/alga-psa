@@ -7,6 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { searchClientsForPicker } from '../../../actions/clientLookupActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
@@ -181,7 +182,6 @@ export interface TicketBentoLayoutProps {
   onContactClick: () => void;
   onClientClick: () => void;
   /** Clients list, used to scope the quick-add-contact modal. */
-  clients?: IClient[];
   /** Persists a contact change (or clear, when null). Enables inline contact editing on the tile — the picker pool is the existing `contacts` prop. */
   onChangeContact?: (contactId: string | null) => void;
   /** Repoints the ticket to a different client (resets contact + location). Enables the inline ClientPicker on the tile. */
@@ -336,18 +336,6 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   const [selectedNewClientId, setSelectedNewClientId] = React.useState<string | null>(null);
   const [clientFilterState, setClientFilterState] = React.useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = React.useState<'all' | 'company' | 'individual'>('all');
-  // props.clients can contain the same company more than once (joins upstream);
-  // dedupe by client_id so the picker shows each company once.
-  const uniqueClients = React.useMemo(() => {
-    const seen = new Set<string>();
-    return (props.clients ?? []).filter((client) => {
-      if (!client || typeof client.client_id === 'undefined') return false;
-      if (seen.has(client.client_id)) return false;
-      seen.add(client.client_id);
-      return true;
-    });
-  }, [props.clients]);
-
   // Log call/email: the quick-add-interaction flow needs a client, so it is only
   // offered when the ticket resolves to one. A successful add bumps the refresh
   // key so the Calls and emails tile refetches and shows the new row.
@@ -535,7 +523,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
                   <div className="mt-1.5 space-y-2">
                     <ClientPicker
                       id={`${id}-client-picker`}
-                      clients={uniqueClients}
+                      searchClients={searchClientsForPicker}
                       onSelect={setSelectedNewClientId}
                       selectedClientId={selectedNewClientId || props.client?.client_id || ''}
                       filterState={clientFilterState}
@@ -690,7 +678,6 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           setIsQuickAddContactOpen(false);
           setContactEditOpen(true);
         },
-        clients: uniqueClients,
         selectedClientId: effectiveClientId ?? null,
       })}
 

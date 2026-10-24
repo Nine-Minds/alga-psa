@@ -85,7 +85,6 @@ describe('TicketDetailsContainer renderCreateProjectTask passthrough', () => {
           userMap: {},
           options: { status: [], agent: [], board: [], priority: [] },
           categories: [],
-          clients: [],
           locations: [],
           agentSchedules: []
         }}
@@ -113,7 +112,6 @@ describe('TicketDetailsContainer renderCreateProjectTask passthrough', () => {
           userMap: {},
           options: { status: [], agent: [], board: [], priority: [] },
           categories: [],
-          clients: [],
           locations: [],
           agentSchedules: []
         }}

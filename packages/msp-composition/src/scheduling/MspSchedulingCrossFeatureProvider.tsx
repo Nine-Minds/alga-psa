@@ -62,7 +62,6 @@ export function MspSchedulingCrossFeatureProvider({ children }: { children: Reac
         boardOptions={ticketData.options.board}
         priorityOptions={ticketData.options.priority}
         initialCategories={ticketData.categories}
-        initialClients={ticketData.clients}
         initialLocations={ticketData.locations}
         initialAgentSchedules={ticketData.agentSchedules}
         currentUser={props.currentUser}

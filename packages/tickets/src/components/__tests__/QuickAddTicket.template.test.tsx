@@ -76,7 +76,13 @@ vi.mock('../../actions/ticketFormActions', () => ({
 
 vi.mock('../../actions/clientLookupActions', () => ({
   getContactsByClient: (...args: unknown[]) => getContactsByClientMock(...args),
-  getClientLocations: (...args: unknown[]) => getClientLocationsMock(...args)
+  getClientLocations: (...args: unknown[]) => getClientLocationsMock(...args),
+  searchClientsForPicker: vi.fn(),
+  getClientById: vi.fn(async (id: string) => ({
+    client_id: id,
+    client_name: id === 'client-2' ? 'Globex' : id === 'client-1' ? 'Acme' : id,
+    client_type: 'company',
+  })),
 }));
 
 // Lightweight non-modal Dialog: the real radix-based Dialog aria-hides sibling
@@ -99,9 +105,9 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
 
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   __esModule: true,
-  ClientPicker: function ClientPickerMock({ onSelect, selectedClientId, clients, disabled }: any) {
+  ClientPicker: function ClientPickerMock({ onSelect, selectedClientId, clients, searchClients, disabled }: any) {
     return (
-      <div data-testid="client-picker">
+      <div data-testid="client-picker" data-async={String(typeof searchClients === 'function' && clients === undefined)}>
         <div data-testid="client-picker-value">{selectedClientId}</div>
         <div data-testid="client-picker-disabled">{String(Boolean(disabled))}</div>
         <button
@@ -685,7 +691,6 @@ describe('QuickAddTicket template mode', () => {
       users: [{ user_id: 'user-9', first_name: 'Grace', last_name: 'Hopper' }],
       boards: [{ board_id: 'board-1', board_name: 'Support' }],
       priorities: [{ priority_id: 'priority-1', priority_name: 'High' }],
-      clients: [{ client_id: 'client-1', client_name: 'Acme', client_type: 'company' }],
       statuses: [{ status_id: 'status-1', name: 'Open' }],
     });
     getTicketStatusesMock.mockResolvedValue([
@@ -714,6 +719,7 @@ describe('QuickAddTicket template mode', () => {
     expect(boardSelectSpy).not.toHaveBeenCalled();
     expect(clientSelectSpy).not.toHaveBeenCalled();
     expect(screen.getByTestId('client-picker-value')).toHaveTextContent('');
+    expect(screen.getByTestId('client-picker')).toHaveAttribute('data-async', 'true');
     expect(screen.queryByTestId('contact-picker-value')?.textContent ?? '').toBe(''); // contact is never taken from a template
     expect(screen.getByTestId('assigned-to-value')).toHaveTextContent('');
 
@@ -725,6 +731,23 @@ describe('QuickAddTicket template mode', () => {
     expect(checklist).toHaveTextContent('Create accounts');
     expect(checklist).toHaveTextContent('Order laptop');
     expect(screen.getByTestId('quick-add-ticket-template-custom-fields')).toBeInTheDocument();
+  });
+
+  it('{{client}} renders the prefilled client name, then follows the picker selection (async picker, no client list)', async () => {
+    getTicketTemplateForCreateMock.mockResolvedValue(makeTemplate({ title: 'Move for {{client}}' }));
+    getTicketFormDataMock.mockResolvedValue({
+      users: [],
+      boards: [{ board_id: 'board-1', board_name: 'Support' }],
+      priorities: [{ priority_id: 'priority-1', priority_name: 'High' }],
+      statuses: [{ status_id: 'status-1', name: 'Open' }],
+      selectedClient: { client_id: 'client-1', client_name: 'Acme', client_type: 'company' },
+    });
+    renderQuickAdd({ prefilledClient: { id: 'client-1', name: 'Acme' } });
+    await pickTemplate();
+    await waitFor(() => expect(screen.getByPlaceholderText('Ticket Title *')).toHaveValue('Move for Acme'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change client' }));
+    await waitFor(() => expect(screen.getByPlaceholderText('Ticket Title *')).toHaveValue('Move for Globex'));
   });
 
   it('submit sends ticket_template_id and the checklist opt-in, never a template status or attributes', async () => {

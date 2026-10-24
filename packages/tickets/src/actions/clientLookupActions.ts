@@ -10,6 +10,11 @@ import {
   getAllActiveContacts as getAllActiveContactsModel,
   getContactsByClient as getContactsByClientModel,
 } from '@alga-psa/shared/ticketClients/contacts';
+import {
+  searchClientsForPicker as searchClientsForPickerModel,
+  type SearchClientsForPickerParams,
+  type SearchClientsForPickerResult,
+} from '@alga-psa/shared/ticketClients/clientPicker';
 import { getClientLocations as getClientLocationsModel } from '@alga-psa/shared/ticketClients/locations';
 import {
   listClientBillingProfiles,
@@ -124,4 +129,22 @@ export const getClientLocations = withAuth(async (user, { tenant }, clientId: st
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getClientLocationsModel(trx, tenant, clientId);
   });
+});
+
+/**
+ * Paged/searchable client lookup for the ticket surfaces' async client picker.
+ *
+ * Tickets-local twin of `searchClientsForPicker` in @alga-psa/clients (which
+ * tickets must not import: nx cycle). Both delegate to the same shared model;
+ * both require an internal user holding client:read.
+ */
+export const searchClientsForPicker = withAuth(async (
+  user,
+  { tenant },
+  params: SearchClientsForPickerParams = {}
+): Promise<SearchClientsForPickerResult> => {
+  await assertInternalReadAccess(user, 'client');
+  const { knex } = await createTenantKnex();
+
+  return searchClientsForPickerModel(knex, tenant, user, params);
 });

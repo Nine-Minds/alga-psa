@@ -80,7 +80,6 @@ interface TicketDetailsContainerProps {
       priority: { value: string; label: string }[];
     };
     categories: any[];
-    clients: any[];
     locations: any[];
     agentSchedules: any[];
   };
@@ -344,7 +343,6 @@ export default function TicketDetailsContainer({
       boardOptions={ticketData.options.board}
       priorityOptions={ticketData.options.priority}
       initialCategories={ticketData.categories}
-      initialClients={ticketData.clients}
       initialLocations={ticketData.locations}
       initialAgentSchedules={ticketData.agentSchedules}
       onTicketUpdate={handleTicketUpdate}
