@@ -1998,7 +1998,7 @@
     },
     "total": {
       "title": "Geschat maandtotaal",
-      "description": "Alleen vaste kosten. Uur- en verbruiksservices factureren apart op basis van het werkelijke verbruik.",
+      "description": "Producten en vaste kosten zijn in dit totaal opgenomen. Uur- en verbruiksservices worden op basis van werkelijk gebruik gefactureerd.",
       "perMonth": "per maand",
       "savedDraftValue": "Opgeslagen conceptwaarde: {{amount}}"
     },

@@ -1998,7 +1998,7 @@
     },
     "total": {
       "title": "Totale mensile stimato",
-      "description": "Solo addebiti fissi. I servizi orari e basati su utilizzo vengono fatturati separatamente in base all'utilizzo effettivo.",
+      "description": "Prodotti e addebiti fissi sono inclusi in questo totale. I servizi orari e a consumo vengono fatturati a consuntivo.",
       "perMonth": "al mese",
       "savedDraftValue": "Valore della bozza salvata: {{amount}}"
     },

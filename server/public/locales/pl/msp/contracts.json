@@ -2002,7 +2002,7 @@
     },
     "total": {
       "title": "Szacowana suma miesięczna",
-      "description": "Tylko opłaty stałe. Usługi godzinowe i rozliczane według zużycia są rozliczane osobno na podstawie rzeczywistego użycia.",
+      "description": "Produkty i opłaty stałe są wliczone w tę sumę. Usługi godzinowe i rozliczane według zużycia są rozliczane według rzeczywistych wartości.",
       "perMonth": "miesięcznie",
       "savedDraftValue": "Zapisana wartość wersji roboczej: {{amount}}"
     },

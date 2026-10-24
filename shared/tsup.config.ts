@@ -99,6 +99,7 @@ export default defineConfig({
     'billingClients/recurringUnitPricing': 'billingClients/recurringUnitPricing.ts',
     'billingClients/recurringUnitMidPeriodAdjustment': 'billingClients/recurringUnitMidPeriodAdjustment.ts',
     'billingClients/coverageProration': 'billingClients/coverageProration.ts',
+    'billingClients/recurringMemberRate': 'billingClients/recurringMemberRate.ts',
     'billingClients/contractMonthlyValue': 'billingClients/contractMonthlyValue.ts',
     'billingClients/index': 'billingClients/index.ts',
     // packages/jobs runs vitest from its own root, so this resolves through the

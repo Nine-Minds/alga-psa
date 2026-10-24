@@ -1998,7 +1998,7 @@
     },
     "total": {
       "title": "Total Mensal Estimado",
-      "description": "Somente cobranças fixas. Faturamento por hora e serviços de uso separadamente com base no uso real.",
+      "description": "Produtos e cobranças fixas estão incluídos neste total. Serviços por hora e de uso são faturados com base no consumo real.",
       "perMonth": "por mês",
       "savedDraftValue": "Valor do rascunho guardado: {{amount}}"
     },

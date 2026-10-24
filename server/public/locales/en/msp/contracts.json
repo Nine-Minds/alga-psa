@@ -1998,7 +1998,7 @@
     },
     "total": {
       "title": "Estimated Monthly Total",
-      "description": "Fixed charges only. Hourly and usage services bill separately based on actual usage.",
+      "description": "Products and fixed charges are included in this total. Hourly and usage services are billed on actuals.",
       "perMonth": "per month",
       "savedDraftValue": "Saved draft value: {{amount}}"
     },

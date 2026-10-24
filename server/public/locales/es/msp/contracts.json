@@ -1998,7 +1998,7 @@
     },
     "total": {
       "title": "Total mensual estimado",
-      "description": "Solo cargos fijos. Los servicios por hora y de uso se facturan por separado según el uso real.",
+      "description": "Los productos y los cargos fijos están incluidos en este total. Los servicios por hora y de uso se facturan según el consumo real.",
       "perMonth": "por mes",
       "savedDraftValue": "Valor del borrador guardado: {{amount}}"
     },

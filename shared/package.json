@@ -11,6 +11,7 @@
     "./billingClients/recurringUnitPricing": "./dist/billingClients/recurringUnitPricing.js",
     "./billingClients/recurringUnitMidPeriodAdjustment": "./dist/billingClients/recurringUnitMidPeriodAdjustment.js",
     "./billingClients/coverageProration": "./dist/billingClients/coverageProration.js",
+    "./billingClients/recurringMemberRate": "./dist/billingClients/recurringMemberRate.js",
     "./billingClients/contractMonthlyValue": "./dist/billingClients/contractMonthlyValue.js",
     "./types": "./dist/types/index.js",
     "./core": "./dist/core/index.js",
