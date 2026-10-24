@@ -6,10 +6,11 @@ import {
   buildClientCreatedPayload,
   buildClientStatusChangedPayload,
 } from '@alga-psa/workflow-streams';
-import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
-import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
+import {
+  createClientWithDefaults,
+  type CreateClientWithDefaultsData,
+} from '@alga-psa/shared/models/clientCreation';
 
-import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
 import { CLIENT_SINCE_FORMAT_MESSAGE, toClientSinceDate } from '../lib/clientSince';
 
 import {
@@ -170,23 +171,11 @@ const upsertClientByExternalIdAction: InboundActionDefinition<UpsertClientByExte
           return { client: updated, wasCreated: false };
         }
 
-        const [created] = await tenantDb(trx, ctx.tenant).table<IClient>('clients')
-          .insert({
-            ...payload,
-            tenant: ctx.tenant,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .returning('*');
-
-        await ensureClientDefaultBillingProfile(trx, ctx.tenant, created.client_id, {
-          clientName: created.client_name,
-        });
-
-        await ensureDefaultContractForClientIfBillingConfigured(trx, {
-          tenant: ctx.tenant,
-          clientId: created.client_id,
-        });
+        const created = await createClientWithDefaults(
+          trx,
+          ctx.tenant,
+          payload as CreateClientWithDefaultsData,
+        );
 
         await writeEntityMapping(ctx.tenant, ctx.webhookSlug, 'client', created.client_id, mappedValues.external_id, {
           knex: trx,
@@ -206,14 +195,8 @@ const upsertClientByExternalIdAction: InboundActionDefinition<UpsertClientByExte
     const { client, wasCreated } = result;
 
     if (wasCreated) {
-      // Mirror createClient post-commit side effects (tax settings, workflow event).
-      try {
-        await createDefaultTaxSettingsAsync(client.client_id);
-      } catch (taxError) {
-        // Tax settings are best-effort for inbound webhooks; surface in delivery outcome metadata.
-        console.error(`Failed to create default tax settings for inbound client ${client.client_id}:`, taxError);
-      }
-
+      // Tax settings now come from the shared creation seam inside the
+      // transaction, so only the workflow event is left to mirror here.
       const createdAt = client.created_at ?? new Date().toISOString();
       const status =
         (client as any)?.properties?.status ?? (client.is_inactive ? 'inactive' : 'active');

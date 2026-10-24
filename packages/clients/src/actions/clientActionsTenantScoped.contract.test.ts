@@ -40,8 +40,10 @@ describe('clientActions tenant-scoped query contract', () => {
     expect(updateSection).not.toContain(".where({ client_id: clientId, tenant })");
     expect(updateSection).not.toContain("trx<IClient>('clients')");
 
-    expect(createSection).toContain("tenantScopedTable(knex, 'default_billing_settings', tenant)");
-    expect(createSection).toContain("tenantScopedTable(trx, 'clients', tenant)");
+    // Creation is delegated to the shared seam, which owns the tenant scoping
+    // for the clients insert and the default_billing_settings lookup.
+    expect(createSection).toContain('createClientWithDefaults(trx, tenant, clientData as CreateClientWithDefaultsData)');
+    expect(createSection).not.toContain("tenantScopedTable(trx, 'clients', tenant)");
     expect(createSection).not.toContain("knex('default_billing_settings')");
     expect(createSection).not.toContain("trx<IClient>('clients')");
     expect(createSection).not.toContain(".where({ tenant })");

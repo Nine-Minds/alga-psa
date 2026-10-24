@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   updateContact: vi.fn(),
   publishWorkflowEvent: vi.fn().mockResolvedValue(undefined),
   ensureDefaultContractForClientIfBillingConfigured: vi.fn().mockResolvedValue(undefined),
-  createDefaultTaxSettingsAsync: vi.fn().mockResolvedValue(undefined),
+  initializeClientDefaultTax: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -79,8 +79,9 @@ vi.mock('@alga-psa/shared/billingClients/defaultContract', () => ({
   ensureDefaultContractForClientIfBillingConfigured: mocks.ensureDefaultContractForClientIfBillingConfigured,
 }));
 
-vi.mock('@alga-psa/clients/lib/billingHelpers', () => ({
-  createDefaultTaxSettingsAsync: mocks.createDefaultTaxSettingsAsync,
+// Tax initialization is now transactional, inside the shared creation seam.
+vi.mock('@alga-psa/shared/billingClients/defaultTaxRate', () => ({
+  initializeClientDefaultTax: mocks.initializeClientDefaultTax,
 }));
 
 async function loadClientInboundActions() {
@@ -132,6 +133,21 @@ describe('client inbound webhook actions', () => {
       }
       if (table === 'client_billing_profiles') {
         return billingProfilesQuery;
+      }
+      // The creation seam resolves the tenant default currency and the product
+      // code (which decides whether tax initialization runs).
+      if (table === 'default_billing_settings') {
+        return {
+          where: vi.fn().mockReturnThis(),
+          select: vi.fn().mockReturnThis(),
+          first: vi.fn().mockResolvedValue({ default_currency_code: 'EUR' }),
+        };
+      }
+      if (table === 'tenants') {
+        return {
+          where: vi.fn().mockReturnThis(),
+          first: vi.fn().mockResolvedValue({ product_code: 'psa' }),
+        };
       }
       throw new Error(`Unexpected table ${table}`);
     });
@@ -200,6 +216,8 @@ describe('client inbound webhook actions', () => {
         email: 'ops@example.com',
         phone_no: '+15551234567',
         is_inactive: false,
+        // The seam adopts the tenant's configured default currency.
+        default_currency_code: 'EUR',
         properties: {
           source_system: 'rmm',
           inbound_webhook_external_id: 'company-42',
@@ -210,7 +228,7 @@ describe('client inbound webhook actions', () => {
       trx,
       expect.objectContaining({ tenant: 'tenant-a', clientId: 'client-1' }),
     );
-    expect(mocks.createDefaultTaxSettingsAsync).toHaveBeenCalledWith('client-1');
+    expect(mocks.initializeClientDefaultTax).toHaveBeenCalledWith(trx, 'tenant-a', 'client-1');
     expect(mocks.publishWorkflowEvent).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: 'CLIENT_CREATED' }),
     );
@@ -295,7 +313,7 @@ describe('client inbound webhook actions', () => {
     expect(clientsQuery.insert).not.toHaveBeenCalled();
     expect(mocks.writeEntityMapping).not.toHaveBeenCalled();
     expect(mocks.ensureDefaultContractForClientIfBillingConfigured).not.toHaveBeenCalled();
-    expect(mocks.createDefaultTaxSettingsAsync).not.toHaveBeenCalled();
+    expect(mocks.initializeClientDefaultTax).not.toHaveBeenCalled();
   });
 
   it('T1022: setClientActiveByExternalId toggles active state through is_inactive', async () => {

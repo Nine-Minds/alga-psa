@@ -1,12 +1,10 @@
 'use server'
 
 import type { DeletionValidationResult, IClient, IClientWithLocation } from '@alga-psa/types';
-import { resolveProductCode } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { unparseCSV, isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { preCheckDeletion } from '@alga-psa/auth';
-import { createDefaultTaxSettings } from '@alga-psa/shared/billingClients/taxSettings';
 import { parseClientCsvBoolean } from '../lib/clientCsvFields';
 import { revalidatePath } from 'next/cache';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
@@ -33,8 +31,10 @@ import {
   buildClientUpdatedPayload,
 } from '@alga-psa/workflow-streams';
 import { buildContactPrimarySetPayload } from '@alga-psa/workflow-streams';
-import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
-import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
+import {
+  createClientWithDefaults,
+  type CreateClientWithDefaultsData,
+} from '@alga-psa/shared/models/clientCreation';
 import {
   actionError,
   permissionError,
@@ -570,48 +570,12 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
       clientData.properties.website = clientData.url ?? clientData.properties.website;
     }
 
-    // When no explicit currency is provided, adopt the tenant's configured default
-    // (default_billing_settings.default_currency_code) instead of leaving it null and
-    // letting downstream `... || 'USD'` fallbacks fire. 'USD' remains the final fallback.
-    if (!clientData.default_currency_code) {
-      const billingSettings = await tenantScopedTable(knex, 'default_billing_settings', tenant)
-        .select('default_currency_code')
-        .first();
-      clientData.default_currency_code = billingSettings?.default_currency_code || 'USD';
-    }
-
-    const createdClient = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const [created] = await tenantScopedTable(trx, 'clients', tenant)
-        .insert({
-          ...clientData,
-          tenant,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .returning('*');
-
-      // Every client must have exactly one default billing profile — it is the
-      // terminal step of charge attribution. Provisioned here so it carries the
-      // client's name from the start.
-      await ensureClientDefaultBillingProfile(trx, tenant, created.client_id, {
-        clientName: created.client_name,
-      });
-
-      await ensureDefaultContractForClientIfBillingConfigured(trx, {
-        tenant,
-        clientId: created.client_id,
-      });
-
-      // Tax initialization must share the client transaction: a failure (for
-      // example, no active tax rate) must not leave a partially created client.
-      // AlgaDesk has no billing tax setup and keeps its existing exemption.
-      const tenantRow = await tenantDb(trx, tenant).table('tenants').first('product_code');
-      if (resolveProductCode(tenantRow?.product_code).productCode !== 'algadesk') {
-        await createDefaultTaxSettings(trx, tenant, created.client_id);
-      }
-
-      return created;
-    });
+    // The shared seam owns the row insert and every default a client needs:
+    // tenant currency, default billing profile, system-managed default contract
+    // and default tax settings, all in this transaction.
+    const createdClient = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      createClientWithDefaults(trx, tenant, clientData as CreateClientWithDefaultsData)
+    );
 
     if (!createdClient) {
       throw new Error('Client insert completed without returning the created record.');
@@ -1904,21 +1868,17 @@ export const importClientsFromCSV = withAuth(async (
             auto_invoice: clientData.auto_invoice || false,
             invoice_delivery_method: clientData.invoice_delivery_method || '',
             region_code: clientData.region_code || null,
-            default_currency_code: clientData.default_currency_code || tenantDefaultCurrencyCode,
+            default_currency_code: clientData.default_currency_code || undefined,
             tax_id_number: clientData.tax_id_number || '',
             tax_exemption_certificate: clientData.tax_exemption_certificate || '',
             notes: clientData.notes || '',
             client_since: clientSince,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
           };
 
-          [savedClient] = await tenantScopedTable(trx, 'clients', tenant)
-            .insert(clientToCreate)
-            .returning('*');
-
-          await ensureClientDefaultBillingProfile(trx, tenant, savedClient!.client_id, {
-            clientName: savedClient!.client_name,
+          // Imported rows get the same defaults as a hand-created client; the
+          // batch's currency lookup is passed through so it is not repeated per row.
+          savedClient = await createClientWithDefaults(trx, tenant, clientToCreate as CreateClientWithDefaultsData, {
+            defaultCurrencyCode: tenantDefaultCurrencyCode,
           });
 
           if (hasLocationData(clientData)) {
@@ -1946,6 +1906,28 @@ export const importClientsFromCSV = withAuth(async (
           originalData: clientData
         });
         continue;
+      }
+
+      // Imported clients announce themselves exactly as hand-created ones do,
+      // after the row commits so a subscriber cannot read a rolled-back client.
+      if (created && savedClient) {
+        const createdAt = savedClient.created_at ?? new Date().toISOString();
+        await publishWorkflowEvent({
+          eventType: 'CLIENT_CREATED',
+          payload: buildClientCreatedPayload({
+            clientId: savedClient.client_id,
+            clientName: savedClient.client_name,
+            createdByUserId: user.user_id,
+            createdAt,
+            status: (savedClient as any)?.properties?.status ?? (savedClient.is_inactive ? 'inactive' : 'active'),
+          }),
+          ctx: {
+            tenantId: tenant,
+            occurredAt: createdAt,
+            actor: maybeUserActor(user),
+          },
+          idempotencyKey: `client_created:${savedClient.client_id}`,
+        });
       }
 
       // Tags run after the row commits: createTag opens its own connection, so
