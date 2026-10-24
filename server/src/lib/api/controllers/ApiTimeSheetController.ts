@@ -181,6 +181,95 @@ export class ApiTimeSheetController extends ApiBaseController {
   }
 
   /**
+   * Get the time entries of one time sheet (GET /time-sheets/{id}/entries)
+   */
+  // LEVERAGE: pattern api-controller-auth-preamble — same auth/tenant/permission sequence as getWithDetails()
+  getEntries() {
+    return this.perSheetRead((id, ctx) => this.timeSheetService.getTimeSheetEntries(id, ctx));
+  }
+
+  /**
+   * Get the summary of one time sheet (GET /time-sheets/{id}/summary)
+   */
+  // LEVERAGE: pattern api-controller-auth-preamble — same auth/tenant/permission sequence as getWithDetails()
+  getSummary() {
+    return this.perSheetRead((id, ctx) => this.timeSheetService.getTimeSheetSummary(id, ctx));
+  }
+
+  /**
+   * Shared read for /time-sheets/{id}/<sub-resource>: authenticates, checks
+   * time_sheet:read, takes the id from route params (never the last URL
+   * segment, which is the sub-resource name), 404s unknown or other-tenant
+   * sheets via getById(), then runs the reader.
+   */
+  private perSheetRead(
+    reader: (id: string, ctx: { userId: string; user: any; tenant: string }) => Promise<unknown>
+  ) {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiKey = req.headers.get('x-api-key');
+
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+
+        assertInternalApiUser(user);
+
+        await this.assertManualProductAccess(req, keyRecord, user);
+
+        const db = await getConnection(tenantId!);
+        const hasReadPermission = await hasPermission(user, 'time_sheet', 'read', db);
+
+        if (!hasReadPermission) {
+          throw new ForbiddenError('Permission denied: Cannot read time sheets');
+        }
+
+        const params = await (req as any).params;
+        const parsedId = uuidSchema.safeParse(params?.id);
+        if (!parsedId.success) {
+          throw new ValidationError('Invalid time sheet id', parsedId.error.errors);
+        }
+        const id = parsedId.data;
+
+        const ctx = { userId: user.user_id, user, tenant: tenantId! };
+        const result = await runWithTenant(tenantId!, async () => {
+          const timeSheet = await this.timeSheetService.getById(id, ctx);
+          if (!timeSheet) {
+            return null;
+          }
+          return { data: await reader(id, ctx) };
+        });
+
+        if (!result) {
+          throw new NotFoundError('Time sheet not found');
+        }
+
+        return createSuccessResponse(result.data);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
    * Submit time sheet for approval
    */
   submit() {
@@ -799,8 +888,15 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Validate query parameters
         const url = new URL(req.url);
-        const queryParams = Object.fromEntries(url.searchParams);
-        
+        // Repeated array params (?user_ids=a&user_ids=b) collapse under
+        // Object.fromEntries, so collect them explicitly; the schema also
+        // splits comma-separated values.
+        const queryParams: Record<string, string | string[]> = {};
+        for (const key of new Set(url.searchParams.keys())) {
+          const values = url.searchParams.getAll(key);
+          queryParams[key] = values.length > 1 ? values : values[0];
+        }
+
         let searchParams;
         try {
           searchParams = timeSheetSearchSchema.parse(queryParams);
