@@ -134,6 +134,8 @@ Earlier versions included an `endpoint` field pointing at `dist/handlers/...`. C
 - `RUNNER_DEBUG_REDIS_URL`, `RUNNER_DEBUG_REDIS_STREAM_PREFIX`, `RUNNER_DEBUG_REDIS_MAXLEN`, `RUNNER_DEBUG_MAX_EVENT_BYTES`: Enable Redis-backed debug streaming (stdout/stderr/log fan-out).
 - `UI_PROXY_BASE_URL`, `UI_PROXY_TIMEOUT_MS`: Configure the UI proxy host capability (UI proxy calls authenticate with the extension's own `api_key` secret, not a shared runner key).
 - `WASM_POOL_*` / `EXT_CACHE_ROOT`: Tune Wasmtime pooling and cache directories.
+- `RUNNER_MODULE_CACHE_MAX_ENTRIES` (default 64) / `RUNNER_MODULE_CACHE_MAX_BYTES` (default 536870912): bound the in-process module-bytes LRU. Entries beyond either cap evict least-recently-used first.
+- `RUNNER_COMPILED_CACHE_MAX_ENTRIES` (default 16): bound the in-process compiled-component LRU (cranelift output per content hash).
 
 ## Gateway → Runner flow (summary)
 

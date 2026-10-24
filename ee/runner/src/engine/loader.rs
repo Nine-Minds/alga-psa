@@ -16,7 +16,7 @@ use tar::Archive;
 use tokio::{
     fs,
     io::AsyncReadExt,
-    sync::{Mutex as TokioMutex, RwLock},
+    sync::Mutex as TokioMutex,
 };
 use wasmtime::{
     component::{Component, Linker, ResourceTable},
@@ -33,7 +33,11 @@ use super::component;
 use super::host_api::{
     add_component_host, to_component_execute_request, to_model_execute_response, HostRuntimeConfig,
 };
-use crate::{cache::fs as cache_fs, util::errors::IntegrityError};
+use crate::{
+    cache::fs as cache_fs,
+    cache::lru::{LruCache, LruCacheConfig},
+    util::errors::IntegrityError,
+};
 use aws_credential_types::Credentials as AwsCredentials;
 use aws_sdk_s3::{config as s3config, Client as S3Client};
 use url::Url;
@@ -47,12 +51,20 @@ const DEFAULT_MAX_CORE_INSTANCE_SIZE: usize = 1 << 20;
 const DEFAULT_MAX_COMPONENT_INSTANCE_SIZE: usize = 1 << 20;
 const EPOCH_TICK_MS: u64 = 10;
 
+const DEFAULT_MODULE_CACHE_MAX_ENTRIES: usize = 64;
+const DEFAULT_MODULE_CACHE_MAX_BYTES: usize = 512 * 1024 * 1024;
+const DEFAULT_COMPILED_CACHE_MAX_ENTRIES: usize = 16;
+
 pub struct ModuleLoader {
     pub engine: Engine,
     http: Client,
-    cache: Arc<RwLock<HashMap<String, Arc<Vec<u8>>>>>,
+    // LRU-bounded: the process-wide loader must not pin every content hash it has
+    // ever served, or superseded extension versions accumulate until the pod dies.
+    cache: TokioMutex<LruCache<String, Arc<Vec<u8>>>>,
     // Cranelift-compiling a JS component costs seconds of CPU; compile once per content hash.
-    compiled: std::sync::Mutex<HashMap<[u8; 32], Component>>,
+    compiled: std::sync::Mutex<LruCache<[u8; 32], Component>>,
+    // Per-hash compile gates so concurrent first requests for a new hash compile it once.
+    compile_locks: std::sync::Mutex<HashMap<[u8; 32], Arc<TokioMutex<()>>>>,
     runtime_cfg: HostRuntimeConfig,
     bundle_store_base: Url,
     cache_root: PathBuf,
@@ -181,12 +193,30 @@ impl ModuleLoader {
         let loader = Self {
             engine,
             http,
-            cache: Arc::new(RwLock::new(HashMap::new())),
-            compiled: std::sync::Mutex::new(HashMap::new()),
+            cache: TokioMutex::new(LruCache::new(LruCacheConfig {
+                max_entries: env_usize("RUNNER_MODULE_CACHE_MAX_ENTRIES", DEFAULT_MODULE_CACHE_MAX_ENTRIES),
+                max_bytes: env_usize("RUNNER_MODULE_CACHE_MAX_BYTES", DEFAULT_MODULE_CACHE_MAX_BYTES),
+            })),
+            compiled: std::sync::Mutex::new(LruCache::new(LruCacheConfig {
+                max_entries: env_usize("RUNNER_COMPILED_CACHE_MAX_ENTRIES", DEFAULT_COMPILED_CACHE_MAX_ENTRIES),
+                // One unit of weight per component; entry count is the meaningful cap.
+                max_bytes: usize::MAX,
+            })),
+            compile_locks: std::sync::Mutex::new(HashMap::new()),
             runtime_cfg,
             bundle_store_base,
             cache_root,
         };
+        // Deadlines are relative to the current epoch, so one ticker thread per engine
+        // serves every store it creates. Starting it here (not only in shared()) keeps
+        // timeouts live on loaders built directly, e.g. the smoke tests. The thread
+        // runs for the process lifetime; loaders are long-lived by design.
+        let ticker_engine = loader.engine.clone();
+        std::thread::spawn(move || loop {
+            std::thread::sleep(Duration::from_millis(EPOCH_TICK_MS));
+            ticker_engine.increment_epoch();
+        });
+
         tracing::info!("✓ ModuleLoader fully initialized and ready");
         tracing::info!("  - In-memory object cache ready");
         tracing::info!("  - HTTP transport ready for MinIO downloads");
@@ -198,31 +228,49 @@ impl ModuleLoader {
     /// allocator, and compiled components are only valid for the Engine that made them.
     pub fn shared() -> anyhow::Result<&'static ModuleLoader> {
         static SHARED: once_cell::sync::OnceCell<ModuleLoader> = once_cell::sync::OnceCell::new();
-        SHARED.get_or_try_init(|| {
-            let loader = ModuleLoader::new()?;
-            // Deadlines are relative to the current epoch, so one ticker serves every store.
-            let engine = loader.engine.clone();
-            std::thread::spawn(move || loop {
-                std::thread::sleep(Duration::from_millis(EPOCH_TICK_MS));
-                engine.increment_epoch();
-            });
-            Ok(loader)
-        })
+        SHARED.get_or_try_init(ModuleLoader::new)
     }
 
-    fn compiled_component(&self, wasm: &[u8]) -> anyhow::Result<Component> {
+    async fn compiled_component(&self, wasm: &[u8]) -> anyhow::Result<Component> {
         use sha2::{Digest, Sha256};
         let key: [u8; 32] = Sha256::digest(wasm).into();
         if let Some(component) = self.compiled.lock().unwrap().get(&key) {
             tracing::info!("Component served from compiled cache");
-            return Ok(component.clone());
+            return Ok(component);
+        }
+        // Per-hash gate: concurrent first requests for the same new hash compile
+        // once, and the losers take the cached result after waiting.
+        let gate = self
+            .compile_locks
+            .lock()
+            .unwrap()
+            .entry(key)
+            .or_insert_with(|| Arc::new(TokioMutex::new(())))
+            .clone();
+        let _guard = gate.lock().await;
+        if let Some(component) = self.compiled.lock().unwrap().get(&key) {
+            tracing::info!("Component served from compiled cache after compile gate");
+            return Ok(component);
         }
         let component = Component::from_binary(&self.engine, wasm)?;
-        self.compiled.lock().unwrap().insert(key, component.clone());
+        let evicted = self.compiled.lock().unwrap().insert(key, component.clone(), 1);
+        if !evicted.is_empty() {
+            tracing::info!(evicted=%evicted.len(), "Compiled-component cache evicted LRU entries");
+        }
+        // Drop the gate once nothing can be waiting on it any more: 1 count is
+        // the map's own Arc, 1 is this call's `gate` clone; anything higher is
+        // a live waiter that must still be released through the map entry.
+        if let Ok(mut locks) = self.compile_locks.try_lock() {
+            if let Some(existing) = locks.get(&key) {
+                if Arc::strong_count(existing) <= 2 {
+                    locks.remove(&key);
+                }
+            }
+        }
         Ok(component)
     }
 
-    fn instantiate(
+    async fn instantiate(
         &self,
         wasm: &[u8],
         timeout_ms: Option<u64>,
@@ -233,7 +281,7 @@ impl ModuleLoader {
 
         // Parse WASM component
         tracing::info!("Parsing WebAssembly component binary...");
-        let component = self.compiled_component(wasm)?;
+        let component = self.compiled_component(wasm).await?;
         tracing::info!("✓ Component binary parsed successfully");
 
         // Initialize resource table
@@ -342,7 +390,8 @@ impl ModuleLoader {
             .unwrap_or(content_hash)
             .to_ascii_lowercase();
         let cache_key = format!("{}::{}::{}::{}", tenant, extension, hash_hex, entry_path);
-        if let Some(bytes) = self.cache.read().await.get(&cache_key).cloned() {
+        let cached = self.cache.lock().await.get(&cache_key);
+        if let Some(bytes) = cached {
             tracing::info!(tenant=%tenant, extension=%extension, hash=%hash_hex, entry=%entry_path, "Component bytes served from in-memory cache");
             return Ok((*bytes).clone());
         }
@@ -369,7 +418,11 @@ impl ModuleLoader {
         tracing::info!(tenant=%tenant, extension=%extension, bytes=%bytes.len(), "WASM component loaded from cache");
 
         let arc = Arc::new(bytes.clone());
-        self.cache.write().await.insert(cache_key, arc);
+        let weight = arc.len();
+        let evicted = self.cache.lock().await.insert(cache_key, arc, weight);
+        if !evicted.is_empty() {
+            tracing::info!(evicted=%evicted.len(), "Module-bytes cache evicted LRU entries");
+        }
         Ok(bytes)
     }
 
@@ -420,7 +473,7 @@ impl ModuleLoader {
 
         // Instantiate WASM component
         tracing::info!(request_id=%request_id, "Instantiating WASM component in Wasmtime");
-        let (mut store, component, linker) = self.instantiate(wasm, timeout_ms, memory_mb)?;
+        let (mut store, component, linker) = self.instantiate(wasm, timeout_ms, memory_mb).await?;
         tracing::info!(request_id=%request_id, "WASM component instantiated successfully");
 
         // Set execution context
@@ -547,13 +600,21 @@ pub async fn verify_archive_sha256(
     let mut using_presigned = false;
 
     // STORAGE_S3_* is the documented runner config (shared with the server);
-    // S3_* / MINIO_* are kept for existing local setups.
-    if let (Ok(base), Some(access), Some(secret)) = (
-        std::env::var("BUNDLE_STORE_BASE"),
-        first_env(&["STORAGE_S3_ACCESS_KEY", "S3_ACCESS_KEY", "MINIO_ACCESS_KEY"]),
-        first_env(&["STORAGE_S3_SECRET_KEY", "S3_SECRET_KEY", "MINIO_SECRET_KEY"]),
-    ) {
-        tracing::info!(expected_hash=%expected_lower, "S3/MinIO credentials detected - attempting presigned URL generation");
+    // S3_* / MINIO_* are kept for existing local setups. The precedence winner
+    // for each credential is named in the log so a mixed setup is diagnosable.
+    let access = first_env_named(&["STORAGE_S3_ACCESS_KEY", "S3_ACCESS_KEY", "MINIO_ACCESS_KEY"]);
+    let secret = first_env_named(&["STORAGE_S3_SECRET_KEY", "S3_SECRET_KEY", "MINIO_SECRET_KEY"]);
+    if let (Ok(base), Some((access_name, access_value)), Some((secret_name, secret_value))) =
+        (std::env::var("BUNDLE_STORE_BASE"), access.as_ref(), secret.as_ref())
+    {
+        tracing::info!(
+            expected_hash=%expected_lower,
+            access_key_var=%access_name,
+            secret_key_var=%secret_name,
+            "S3/MinIO credentials detected - attempting presigned URL generation"
+        );
+        let access = access_value.clone();
+        let secret = secret_value.clone();
         if let Ok(base_url) = Url::parse(&base) {
             let bucket = base_url
                 .path()
@@ -854,10 +915,27 @@ fn presign_target_from_urls(base_url: &Url, bundle_url: &Url) -> Option<(String,
 
 /// First of `names` that is set to a non-blank value.
 fn first_env(names: &[&str]) -> Option<String> {
-    names
-        .iter()
-        .filter_map(|name| std::env::var(name).ok())
-        .find(|value| !value.trim().is_empty())
+    first_env_named(names).map(|(_, value)| value)
+}
+
+/// First of `names` set to a non-blank value, paired with the variable name it
+/// came from so the precedence winner can be named in logs (STORAGE_S3_*
+/// outranks the legacy S3_*/MINIO_* names when both are set).
+fn first_env_named(names: &[&str]) -> Option<(String, String)> {
+    names.iter().find_map(|name| {
+        std::env::var(name)
+            .ok()
+            .filter(|value| !value.trim().is_empty())
+            .map(|value| (name.to_string(), value))
+    })
+}
+
+/// Parse a usize env override; falls back to `default` when unset, blank, or invalid.
+fn env_usize(name: &str, default: usize) -> usize {
+    std::env::var(name)
+        .ok()
+        .and_then(|value| value.trim().parse::<usize>().ok())
+        .unwrap_or(default)
 }
 
 #[cfg(test)]
@@ -959,6 +1037,37 @@ mod tests {
         let (bucket, key) = presign_target_from_urls(&base, &bundle).unwrap();
         assert_eq!(bucket, "extensions");
         assert_eq!(key, "tenants/t1/extensions/e1/sha256/h/bundle.tar.zst");
+    }
+
+    #[test]
+    fn env_usize_falls_back_on_missing_or_invalid_values() {
+        std::env::remove_var("ALGA_TEST_USIZE_SIZE");
+        assert_eq!(env_usize("ALGA_TEST_USIZE_SIZE", 7), 7);
+        std::env::set_var("ALGA_TEST_USIZE_SIZE", " 12 ");
+        assert_eq!(env_usize("ALGA_TEST_USIZE_SIZE", 7), 12);
+        std::env::set_var("ALGA_TEST_USIZE_SIZE", "not-a-number");
+        assert_eq!(env_usize("ALGA_TEST_USIZE_SIZE", 7), 7);
+        std::env::remove_var("ALGA_TEST_USIZE_SIZE");
+    }
+
+    #[test]
+    fn first_env_named_reports_the_precedence_winner() {
+        let (a, b) = ("ALGA_TEST_NAMED_A", "ALGA_TEST_NAMED_B");
+        std::env::remove_var(a);
+        std::env::set_var(b, "from-b");
+        assert_eq!(
+            first_env_named(&[a, b]),
+            Some((b.to_string(), "from-b".to_string()))
+        );
+        std::env::set_var(a, "from-a");
+        assert_eq!(
+            first_env_named(&[a, b]),
+            Some((a.to_string(), "from-a".to_string()))
+        );
+        for name in [a, b] {
+            std::env::remove_var(name);
+        }
+        assert_eq!(first_env_named(&[a, b]), None);
     }
 
     #[test]
