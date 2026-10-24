@@ -266,7 +266,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   });
   const contractId = (searchParams?.get('contractId') ?? resolvedContractId ?? null) as string | null;
   const clientContractId = searchParams?.get('clientContractId') ?? resolvedClientContractId ?? null;
-  const focusedContractLineId = searchParams?.get('contractLineId') ?? null;
+  const urlFocusedContractLineId = searchParams?.get('contractLineId') ?? null;
+  // Overview "Edit"/"View details" request: focus a line and (unless read-only) open it in edit mode.
+  // Held in state, not the URL, so the edit intent is one-shot and never survives a reload.
+  const [lineFocusRequest, setLineFocusRequest] = useState<{ lineId: string; edit: boolean; seq: number } | null>(null);
+  const focusedContractLineId = lineFocusRequest?.lineId ?? urlFocusedContractLineId;
   const tenant = useTenant()!;
   const { getDocumentsByContractId, renderDocuments } = useDocumentsCrossFeature();
 
@@ -2007,6 +2011,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                 <ContractOverview
                   contractId={contractId}
                   onNavigateToLines={() => handleTabChange('lines')}
+                  onEditLine={(lineId) => {
+                    setLineFocusRequest((prev) => ({ lineId, edit: !isSystemManagedDefault, seq: (prev?.seq ?? 0) + 1 }));
+                    handleTabChange('lines');
+                  }}
+                  isReadOnly={isSystemManagedDefault}
                 />
               ) : null}
 
@@ -2689,6 +2698,8 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
             contract={contract}
             clientId={primaryAssignment?.client_id ?? contract.owner_client_id ?? null}
             focusContractLineId={focusedContractLineId}
+            editIntentLineId={lineFocusRequest?.edit ? lineFocusRequest.lineId : null}
+            onEditIntentConsumed={() => setLineFocusRequest((current) => (current ? { ...current, edit: false } : current))}
             onContractLinesChanged={handleContractLinesChanged}
             isReadOnly={isSystemManagedDefault}
           />

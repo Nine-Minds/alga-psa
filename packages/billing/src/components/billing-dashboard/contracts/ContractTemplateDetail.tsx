@@ -69,6 +69,7 @@ import GenericPlanServicesList from "../contract-lines/GenericContractLineServic
 import { ContractLineEditDialog } from "./ContractLineEditDialog";
 import { BillingTimingField } from "./BillingTimingField";
 import { isAdvanceTimingAllowedForLineType } from "@shared/billingClients/contractLineTimingRule";
+import { getContractLineBillingTimingLabel } from "./contractLineBillingTimingLabel";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import { unitFixedServiceAmountCents } from "../../../lib/fixedServiceBasis";
 import {
@@ -1858,7 +1859,16 @@ const ContractTemplateDetail: React.FC = () => {
                                   defaultValue: "Prepaid Block",
                                 })
                               : humanize(line.contract_line_type)}{" "}
-                            • {humanize(line.billing_frequency)}
+                            • {humanize(line.billing_frequency)} •{" "}
+                            <span
+                              data-testid={`template-composition-line-billing-timing-${line.contract_line_id}`}
+                            >
+                              {getContractLineBillingTimingLabel(
+                                t,
+                                line.contract_line_type,
+                                line.billing_timing,
+                              )}
+                            </span>
                           </p>
                         </div>
                         <Badge variant="outline" className="text-xs">
@@ -2152,7 +2162,14 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
                   </p>
                   <p className="text-xs text-muted-foreground uppercase tracking-wide">
                     {humanize(line.contract_line_type)} •{" "}
-                    {humanize(line.billing_frequency)}
+                    {humanize(line.billing_frequency)} •{" "}
+                    <span data-testid={`template-line-billing-timing-${line.contract_line_id}`}>
+                      {getContractLineBillingTimingLabel(
+                        t,
+                        line.contract_line_type,
+                        line.billing_timing,
+                      )}
+                    </span>
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">

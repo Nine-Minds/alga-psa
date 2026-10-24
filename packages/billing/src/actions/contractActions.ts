@@ -1,6 +1,7 @@
 // @alga-psa/billing/actions.ts
 'use server'
 
+import { resolveEffectiveBillingTiming } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { randomUUID } from 'node:crypto';
 
 import { resolveContractLineDisplayKinds, resolveTemplateLineDisplayKinds } from '../services/prepaidBlockConfigService';
@@ -1112,6 +1113,8 @@ export interface IContractLineOverview {
   /** Derived label kind ('PrepaidBlock' for Hourly lines with a block config); the stored type is untouched. */
   display_kind?: string;
   billing_frequency: string;
+  /** Effective timing (Hourly/Usage always resolve to arrears); never the raw column. */
+  billing_timing: 'advance' | 'arrears';
   base_rate: number | null;  // For fixed lines - in cents
   display_order: number;
   services: {
@@ -1208,6 +1211,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           'ctl.template_line_name as contract_line_name',
           'ctl.line_type as contract_line_type',
           'ctl.billing_frequency',
+          'ctl.billing_timing',
           'ctl.display_order',
           'tfc.base_rate'
         ])
@@ -1252,6 +1256,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           contract_line_name: line.contract_line_name,
           contract_line_type: (line.contract_line_type || 'Fixed') as 'Fixed' | 'Hourly' | 'Usage',
           billing_frequency: line.billing_frequency || 'monthly',
+          billing_timing: resolveEffectiveBillingTiming(line.contract_line_type || 'Fixed', line.billing_timing),
           base_rate: line.base_rate ? Number(line.base_rate) : null,
           display_order: line.display_order ?? 0,
           services: (services as any[]).map((svc: any) => {
@@ -1296,6 +1301,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           'cl.contract_line_name',
           'cl.contract_line_type',
           'cl.billing_frequency',
+          'cl.billing_timing',
           'cl.display_order',
           'cl.custom_rate as base_rate'
         ])
@@ -1454,6 +1460,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           contract_line_name: line.contract_line_name,
           contract_line_type: (line.contract_line_type || 'Fixed') as 'Fixed' | 'Hourly' | 'Usage',
           billing_frequency: line.billing_frequency || 'monthly',
+          billing_timing: resolveEffectiveBillingTiming(line.contract_line_type || 'Fixed', line.billing_timing),
           base_rate: line.base_rate ? Number(line.base_rate) : null,
           display_order: line.display_order ?? 0,
           services: (services as any[]).map((svc: any) => {
