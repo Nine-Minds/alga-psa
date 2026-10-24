@@ -478,6 +478,15 @@
         "failed": "Nie udało się zapisać Twojej karty",
         "savedDescription": "Twoja karta jest gotowa do przyszłych płatności.",
         "failedDescription": "Nie udało się zweryfikować konfiguracji. Poproś dostawcę rozliczeń o nowy link."
+      },
+      "payLink": {
+        "heading": "Nie można użyć tego linku do płatności",
+        "expired": "Ten link do płatności wygasł.",
+        "invalid": "Ten link do płatności jest nieprawidłowy.",
+        "notPayable": "Tej faktury nie można już opłacić za pomocą tego linku. Być może została już opłacona lub nie jest już dostępna do płatności online.",
+        "unavailable": "Nie udało się teraz otworzyć strony płatności. Spróbuj ponownie za kilka minut.",
+        "viewInPortal": "Zobacz fakturę w portalu klienta",
+        "contactProvider": "Skontaktuj się ze swoim dostawcą rozliczeń, aby otrzymać nowy link."
       }
     }
   },

@@ -2,6 +2,14 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { resolveCreditExpirationDate } from '../lib/creditExpirationDate';
+import { computePrepaidBlockExpirationDate } from '../lib/prepaidBlockDates';
+import { reconcileLineAllocations } from '@alga-psa/shared/billingClients/hourBlockService';
+import {
+  lockInvoiceBlocksWithLineSiblings,
+  lockPrepaidBlockOwnersForInvoice,
+  releaseAndVoidLinkedBlock,
+  scheduleExpiryIssuanceForActivatedBlock,
+} from './prepaidBlockLifecycleService';
 
 /**
  * Payment-time settlement of prepaid replenishment invoices and finalize-time
@@ -33,6 +41,7 @@ type InvoiceChargeRow = {
   item_id: string;
   quantity: number | string | null;
   unit_price: number | string | null;
+  total_price: number | string | null;
   service_id: string | null;
 };
 
@@ -100,32 +109,43 @@ export async function activateHourBlocksForFinalizedInvoice(
   userId: string | null
 ): Promise<void> {
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Row-lock the pending blocks (canonical block_id order — the same order
-    // every other hour_blocks check-then-act site locks in; see
-    // selectEligibleBlocks in shared/billingClients/hourBlockService) inside
-    // the transaction that flips them. Pre-fix, this snapshot was an unlocked
-    // read outside the transaction and the activation UPDATE did not re-check
-    // status, so a void/expire committing in between resurrected the block to
-    // `active` on top of the void audit.
-    const pendingBlocks: PendingHourBlockRow[] = await tenantScopedTable<PendingHourBlockRow>(trx, tenant, 'hour_blocks')
-      .where({
-        tenant,
-        source_invoice_id: invoiceId,
-        status: 'pending',
-      })
-      .orderBy('block_id', 'asc')
-      .forUpdate()
-      .select('block_id', 'service_id', 'source_invoice_charge_id');
+    // Lock order (plan Risk 6): Prepaid Block config + issuance rows FIRST,
+    // then every block of the affected lines plus the invoice-linked blocks in
+    // one canonical block_id-ordered statement (the same order every other
+    // hour_blocks check-then-act site locks in; see selectEligibleBlocks in
+    // shared/billingClients/hourBlockService), all inside the transaction that
+    // flips them. Pre-fix, this snapshot was an unlocked read outside the
+    // transaction and the activation UPDATE did not re-check status, so a
+    // void/expire committing in between resurrected the block to `active` on
+    // top of the void audit.
+    const { contractLineIds } = await lockPrepaidBlockOwnersForInvoice(trx, tenant, invoiceId);
+    const linkedBlocks = await lockInvoiceBlocksWithLineSiblings(trx, tenant, invoiceId, contractLineIds);
+    const pendingBlocks = linkedBlocks.filter((b) => b.status === 'pending');
 
     if (pendingBlocks.length === 0) {
       return;
     }
+
+    const invoiceDate: string | Date | null = pendingBlocks.some((b) => b.contract_line_id)
+      ? ((await tenantScopedTable(trx, tenant, 'invoices').where({ invoice_id: invoiceId }).first('invoice_date'))?.invoice_date ?? null) as string | Date | null
+      : null;
+    const linesToRedraw = new Set<string>();
 
     const now = new Date().toISOString();
     for (const block of pendingBlocks) {
       const line = await resolvePurchaseLineForBlock(trx, tenant, invoiceId, block);
 
       if (!line) {
+        if (block.contract_line_id) {
+          // Contract block: release its gap draws and restore its issuance too.
+          const released = await releaseAndVoidLinkedBlock(trx, tenant, {
+            blockId: block.block_id, status: 'pending', contractLineId: block.contract_line_id,
+            issuanceId: block.issuance_id, invoiceId, userId, now,
+            reason: 'Purchase line removed from the invoice before finalization',
+          });
+          if (released.voided) linesToRedraw.add(block.contract_line_id);
+          continue;
+        }
         await voidPendingBlockAtFinalization(
           trx,
           tenant,
@@ -142,6 +162,15 @@ export async function activateHourBlocksForFinalizedInvoice(
       const unitPrice = Number(line.unit_price);
       const totalMinutes = Math.round(quantity * 60);
       if (!Number.isFinite(quantity) || quantity <= 0 || totalMinutes <= 0) {
+        if (block.contract_line_id) {
+          const released = await releaseAndVoidLinkedBlock(trx, tenant, {
+            blockId: block.block_id, status: 'pending', contractLineId: block.contract_line_id,
+            issuanceId: block.issuance_id, invoiceId, userId, now,
+            reason: 'Purchase line no longer has a positive quantity at finalization',
+          });
+          if (released.voided) linesToRedraw.add(block.contract_line_id);
+          continue;
+        }
         await voidPendingBlockAtFinalization(
           trx,
           tenant,
@@ -154,7 +183,47 @@ export async function activateHourBlocksForFinalizedInvoice(
         continue;
       }
 
-      await tenantScopedTable(trx, tenant, 'hour_blocks')
+      const isContractBlock = Boolean(block.contract_line_id);
+      let remainingMinutes = totalMinutes;
+      let expirationUpdate: { expiration_date: string | null } | Record<string, never> = {};
+      let purchaseAmount = Math.round(quantity * unitPrice);
+
+      if (isContractBlock) {
+        // The line's authoritative total is the price; quantity * unit_price is
+        // only equal to it when the price divides evenly by the hours.
+        if (line.total_price != null) purchaseAmount = Number(line.total_price);
+
+        // Expiry clock starts at the FINAL invoice date (plan D6): the draft's
+        // date may have been edited since generation. If the config was removed
+        // since, keep the expiry stamped at generation.
+        const config = await tenantScopedTable(trx, tenant, 'contract_line_prepaid_blocks')
+          .where({ contract_line_id: block.contract_line_id })
+          .first('expiry_months');
+        if (config && invoiceDate) {
+          expirationUpdate = {
+            expiration_date: computePrepaidBlockExpirationDate(invoiceDate, config.expiry_months as number | null),
+          };
+        }
+
+        // A pending contract block may already hold gap draws; remaining is
+        // total minus what is allocated, not total.
+        const allocatedRow = await tenantScopedTable(trx, tenant, 'hour_block_time_allocations')
+          .where({ block_id: block.block_id })
+          .sum({ minutes: 'minutes' })
+          .first();
+        const allocated = Number(allocatedRow?.minutes ?? 0);
+        if (allocated > totalMinutes) {
+          // The draft line was edited below what the gap draw already holds:
+          // drop this block's draws and let the line re-draw against the final
+          // size once the status flips.
+          await tenantScopedTable(trx, tenant, 'hour_block_time_allocations').where({ block_id: block.block_id }).delete();
+          linesToRedraw.add(block.contract_line_id!);
+        } else {
+          remainingMinutes = totalMinutes - allocated;
+        }
+      }
+
+      const activated = await tenantScopedTable(trx, tenant, 'hour_blocks')
         // Belt-and-suspenders alongside the row lock: only a still-pending row
         // may flip to active, so drift in the locked select can never
         // resurrect a voided/expired block.
@@ -163,15 +232,17 @@ export async function activateHourBlocksForFinalizedInvoice(
           status: 'active',
           purchased_at: now,
           updated_at: now,
-          // Sync from the authoritative final line. A pending block has never
-          // been burnable, so remaining resets with total.
+          // Sync from the authoritative final line. An ad-hoc pending block has
+          // never been burnable, so remaining resets with total.
           total_minutes: totalMinutes,
-          remaining_minutes: totalMinutes,
+          remaining_minutes: remainingMinutes,
           hourly_rate: Math.round(unitPrice),
-          purchase_amount: Math.round(quantity * unitPrice),
+          purchase_amount: purchaseAmount,
           service_id: line.service_id ?? block.service_id,
           source_invoice_charge_id: line.item_id,
+          ...expirationUpdate,
         });
+      if (activated === 0) continue;
       await tenantScopedTable(trx, tenant, 'hour_block_audit').insert({
         tenant,
         block_id: block.block_id,
@@ -185,6 +256,23 @@ export async function activateHourBlocksForFinalizedInvoice(
           synced_from_line: { item_id: line.item_id, quantity, unit_price: unitPrice },
         },
       });
+
+      if (isContractBlock) {
+        await scheduleExpiryIssuanceForActivatedBlock(
+          trx,
+          tenant,
+          {
+            block_id: block.block_id,
+            client_id: block.client_id,
+            contract_line_id: block.contract_line_id!,
+            client_contract_id: block.client_contract_id,
+          },
+          invoiceDate!,
+        );
+      }
+    }
+    for (const lineId of [...linesToRedraw].sort()) {
+      await reconcileLineAllocations(trx, tenant, lineId);
     }
     console.log(`Activated ${pendingBlocks.length} pending hour block(s) from invoice ${invoiceId}`);
   });

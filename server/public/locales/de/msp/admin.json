@@ -830,7 +830,8 @@
           "groups_read": "Verzeichnisgruppen lesen",
           "entitlement_group_resolves": "Berechtigungsgruppe auflösen",
           "user_yield_preview": "Vorschau der berücksichtigten Benutzer",
-          "per_tenant_users": "CIPP-Benutzer je Mandant"
+          "per_tenant_users": "CIPP-Benutzer je Mandant",
+          "cipp_token_mint": "Abruf eines CIPP-API-Tokens"
         },
         "readiness": {
           "authenticated": "Angemeldet",
@@ -911,8 +912,8 @@
           "noManagedTenants": "Es wurden keine verwalteten Mandanten zurückgegeben. Der Partner muss in Microsoft 365 Lighthouse mit aktiven GDAP-Beziehungen eingerichtet sein.",
           "mappedTenantMissing": "Der zugeordnete Mandant „{{client}}“ wurde bei der Erkennung nicht gefunden. GDAP ist möglicherweise abgelaufen oder wurde beendet.",
           "mappingsLookupFailed": "Bestätigte Mandantenzuordnungen konnten nicht gelesen werden. Führen Sie die Diagnose erneut aus; prüfen Sie bei anhaltenden Problemen die Mandantenzuordnungen.",
-          "cippCredentialsMissing": "Die CIPP-Basis-URL und ein API-Token sind erforderlich. Konfigurieren Sie diese auf der Registerkarte Verbindung.",
-          "cippAuthRejected": "CIPP hat die API-Anmeldedaten abgelehnt. Erneuern Sie den CIPP-API-Schlüssel unter Einstellungen > CIPP > API-Zugriff; dies ist kein geheimer Azure-Clientschlüssel.",
+          "cippCredentialsMissing": "CIPP-API-URL und Anmeldedaten sind erforderlich. Konfigurieren Sie sie auf der Registerkarte „Verbindung“.",
+          "cippAuthRejected": "CIPP hat den älteren API-Schlüssel abgelehnt. Verbinden Sie erneut mit einem CIPP-API-Client über die Registerkarte „Verbindung“ (Erstellung in CIPP > Integrations > CIPP-API).",
           "cippEmptyTenantList": "CIPP hat keine Mandanten zurückgegeben. Prüfen Sie die Sichtbarkeit der Kunden und die CIPP-Konfiguration.",
           "cippUnreachable": "CIPP ist nicht erreichbar. Prüfen Sie die Basis-URL, DNS/TLS und ausgehende Verbindungen.",
           "cippPerTenantFailed": "CIPP konnte das Verzeichnis dieses Mandanten nicht lesen.",

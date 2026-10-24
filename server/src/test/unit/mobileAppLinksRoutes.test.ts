@@ -22,7 +22,11 @@ describe('.well-known mobile app link routes', () => {
     expect(res.headers.get('cache-control')).toBe('public, max-age=3600');
     const body = await res.json();
     expect(body.applinks.details[0].appIDs).toEqual(['ABCDE12345.com.nineminds.algapsa']);
-    expect(body.applinks.details[0].components).toEqual([{ '/': '/msp/tickets/*' }]);
+    expect(body.applinks.details[0].components).toEqual([
+      { '/': '/msp/tickets/*' },
+      { '/': '/msp/assets/*' },
+      { '/': '/msp/inventory/units', '?': { unitId: '*' } },
+    ]);
   });
 
   it('serves assetlinks.json as cacheable JSON', async () => {

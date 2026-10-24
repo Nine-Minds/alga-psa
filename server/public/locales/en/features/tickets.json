@@ -256,7 +256,8 @@
     "openMenu": "Open menu",
     "moreActions": "More actions",
     "createTemplate": "Create template from ticket",
-    "createWorkflowFromTicket": "Create workflow from ticket"
+    "createWorkflowFromTicket": "Create workflow from ticket",
+    "printWorkTag": "Print work tag"
   },
   "messages": {
     "noTickets": "No tickets found",
@@ -469,6 +470,14 @@
     "clientPortal": "Received via Client Portal",
     "inboundEmail": "Received via Inbound Email"
   },
+  "originalEmail": {
+    "text": "Text",
+    "original": "Original email",
+    "emailShort": "Email",
+    "loading": "Loading the original email…",
+    "error": "The original email could not be loaded.",
+    "group": "Message view"
+  },
   "documents": {
     "title": "Documents",
     "noDocuments": "No documents attached",
@@ -654,7 +663,9 @@
       "more": "More",
       "bundleNeedsOne": "Select at least 1 ticket to bundle",
       "selectedCount_few": "{{count}} selected",
-      "selectedCount_many": "{{count}} selected"
+      "selectedCount_many": "{{count}} selected",
+      "printLabels": "Print labels",
+      "printLabelsLimit": "You can print at most {{max}} labels at a time"
     },
     "moveDialogTitle": "Move Selected Tickets",
     "moveDialogDescription": "Select a destination board and status, then confirm moving the selected tickets.",
@@ -687,7 +698,7 @@
     "bundleMasterLabel": "Select Master Ticket",
     "bundleMasterPlaceholder": "Select master ticket...",
     "bundleSyncUpdates": "Sync updates from master to children (public replies + workflow changes)",
-    "bundleSyncUpdatesHelp": "Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children, and status, assignee and priority changes on the master apply to children. Workflow fields are locked on children. Internal notes stay on the master.",
+    "bundleSyncUpdatesHelp": "Children keep their current status when bundled. With sync updates on, closing or reopening the master closes or reopens all children, status, assignee and priority changes on the master apply to them, and their workflow fields are locked. With it off, children manage their own status, assignee and priority. Internal notes stay on the master.",
     "bundleSelectAtLeastTwo": "Select at least two tickets to bundle.",
     "bundleSelectMaster": "Select a master ticket.",
     "bundleSuccess": "Tickets bundled",
@@ -760,8 +771,8 @@
       "masterTicket": "Select Master Ticket",
       "selectMasterTicket": "Select master ticket...",
       "syncUpdates": "Sync updates from master to children (public replies + workflow changes)",
-      "syncUpdatesHelp": "Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children, and status, assignee and priority changes on the master apply to children. Workflow fields are locked on children. Internal notes stay on the master.",
-      "childrenDescription": "Children keep their current status; workflow fields are locked on children. Inbound child replies are surfaced below as view-only.",
+      "syncUpdatesHelp": "Children keep their current status when bundled. With sync updates on, closing or reopening the master closes or reopens all children, status, assignee and priority changes on the master apply to them, and their workflow fields are locked. With it off, children manage their own status, assignee and priority. Internal notes stay on the master.",
+      "childrenDescription": "Children keep their current status. Workflow fields are locked on children only in Sync Updates mode. Inbound child replies are surfaced below as view-only.",
       "checkingMasters": "Checking existing bundles...",
       "existingMasterSuffix": "(existing master)",
       "existingMasterLocked": "One selected ticket is already a bundle master. It will be used as the master; the others will be added as children.",
@@ -972,6 +983,7 @@
     "templateReplaceTitle": "Replace your changes?",
     "templateReplaceMessage": "Applying a template replaces the title, description and other fields you have entered.",
     "templateReplaceConfirm": "Apply template",
+    "templateTokenHint": "The title fills in the client, contact and due date you pick, until you edit it.",
     "tagCreatePartialFailure_few": "{{count}} tags could not be created",
     "tagCreatePartialFailure_many": "{{count}} tags could not be created",
     "tagCreationFailed_few": "{{count}} tags could not be created",
@@ -1674,7 +1686,10 @@
       "ruleCategoryBoardMismatch": "The selected category belongs to a different board than the rule.",
       "ruleCategoryInvalid": "The selected category is not a top-level category.",
       "ruleSubcategoryInvalid": "The selected subcategory does not belong to the selected category.",
-      "ruleSubcategoryRequiresCategory": "Select a category before choosing a subcategory."
+      "ruleSubcategoryRequiresCategory": "Select a category before choosing a subcategory.",
+      "ruleTooManyKeywords": "Use at most {{max}} keywords per rule.",
+      "ruleKeywordTooLong": "Keep each keyword to {{max}} characters or fewer.",
+      "ruleOriginInvalid": "One of the selected ticket sources is not valid."
     }
   },
   "ticketSection": {
@@ -1703,9 +1718,11 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children, and status, assignee and priority changes on the master apply to children. Workflow fields are locked on children. Internal notes stay on the master.",
+      "childrenDescription": "Children keep their current status when bundled. In Sync Updates mode, closing or reopening the master closes or reopens all children, status, assignee and priority changes on the master apply to them, and their workflow fields are locked. In Link Only mode, children manage their own status, assignee and priority. Internal notes stay on the master.",
       "title": "Bundle",
       "masterBanner": "This ticket is the master of a bundle ({{count}} children). Mode: {{mode}}.",
+      "childLockedNotice": "Workflow fields are locked; work from the master ticket.",
+      "childLinkedNotice": "It is linked to the master and managed on its own.",
       "multipleClients": "Multiple clients",
       "mode": "Mode: {{mode}}",
       "unbundle": "Unbundle",
@@ -1741,7 +1758,15 @@
       "applyResolutionHelpNoComment": "Closes the child with status {{status}}. The master has no public resolution comment to post.",
       "reopenMasterLabel": "Add and reopen master",
       "reopenMasterHelp": "Reopens only the master. Already-closed children in this bundle stay closed; reopen notifications and SLA apply to the master.",
-      "closedMasterGating": "The board's close rules do not allow open children under a closed master, so keeping the master closed is not an option."
+      "closedMasterGating": "The board's close rules do not allow open children under a closed master, so keeping the master closed is not an option.",
+      "modeSwitchDialogIntro": "The master is closed. Choose what should happen to the open children when the bundle switches to Sync Updates.",
+      "modeSwitchConfirm": "Switch to Sync Updates",
+      "keepClosedSwitchLabel": "Switch and keep master closed",
+      "keepClosedSwitchHelp": "Open children stay open with their own SLA clocks. The bundle will show as inconsistent until they are resolved.",
+      "applyResolutionSwitchLabel": "Switch and apply the master's resolution to open children",
+      "applyResolutionSwitchHelp": "Closes each open child with status {{status}} and posts the master's resolution to it as a public comment.",
+      "applyResolutionSwitchHelpNoComment": "Closes each open child with status {{status}}. The master has no public resolution comment to post.",
+      "reopenMasterSwitchLabel": "Switch and reopen master"
     },
     "autoClose": "Will close automatically on {{date}} unless there's new activity.",
     "autoCloseWarned": "The customer has been warned.",
@@ -2250,7 +2275,9 @@
       "details": "Details",
       "template": "Ticket template",
       "schedule": "Schedule",
-      "behaviour": "Behaviour"
+      "behaviour": "Behaviour",
+      "overrides": "Overrides for this schedule",
+      "dispatch": "Dispatch"
     },
     "fields": {
       "board": "Board",
@@ -2457,6 +2484,22 @@
       "monthlyOnDay": "{{every}} on {{day}}",
       "monthlyOnNthWeekday": "{{every}} on the {{ordinal}} {{weekday}}",
       "yearly": "Every year on {{month}} {{day}}"
+    },
+    "template": {
+      "intro": "What the ticket looks like comes from a shared ticket template. Changing the template changes every schedule that uses it, from the next ticket on.",
+      "select": "Ticket template",
+      "placeholder": "Select a ticket template",
+      "inactiveOption": "{{name}} (inactive)",
+      "summary": "{{checklist}} checklist item(s), {{tags}} tag(s)",
+      "inactiveNotice": "This template is inactive: hidden from the template picker; still used by {{count}} schedules.",
+      "sharedNotice": "Used by {{count}} schedules. Editing the template changes all of them.",
+      "edit": "Edit template",
+      "new": "New template",
+      "sampleTitle": "First ticket title:",
+      "tokensHelp": "Template titles can use {{tokens}}; they are filled in per ticket."
+    },
+    "overridesSection": {
+      "intro": "Leave a group off to use the template. Each client can override these again."
     }
   },
   "stopwatch": {
@@ -2490,12 +2533,15 @@
         "title": "Ticket title",
         "board": "Board",
         "checklist": "Checklist items",
-        "status": "Status"
-      }
+        "status": "Status",
+        "schedules": "Schedules"
+      },
+      "deleteBlocked": "Used by {{count}} recurring schedule(s). Point them at another template or archive them first."
     },
     "status": {
       "active": "Active",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "scheduledOnly": "Scheduled only"
     },
     "actions": {
       "edit": "Edit",
@@ -2517,7 +2563,10 @@
       "notesHelp": "For your team only. Not copied to tickets.",
       "title": "Ticket title",
       "description": "Description",
-      "descriptionPlaceholder": "Description"
+      "descriptionPlaceholder": "Description",
+      "offerForManualUse": "Offer in the new ticket picker",
+      "offerForManualUseHelp": "Turn off for templates that only recurring schedules use.",
+      "titleTokens": "You can use {{tokens}} in the title; they are filled in per ticket."
     },
     "checklist": {
       "empty": "No checklist items.",
@@ -2545,14 +2594,24 @@
       "fromTicket": "Prefilled from ticket #{{number}}. Nothing is saved until you click Save.",
       "inlineImages": "The description contains images that belong to the source ticket. They may stop displaying if that ticket is deleted. Remove them or re-upload them if the template should outlive the ticket.",
       "viewOnly": "You can view this template but not change it.",
-      "referenceProblems": "Some fields in this template point at things that no longer exist. They are left blank when the template is used. Fix them and save:"
+      "referenceProblems": "Some fields in this template point at things that no longer exist. They are left blank when the template is used. Fix them and save:",
+      "inactiveWarning": "Inactive: hidden from the template picker; still used by {{count}} schedules.",
+      "sharedWarning": "Changes here apply to every recurring schedule that uses this template, from the next ticket each one creates.",
+      "boardChangeWarning": "Changing the board clears priority and category, and can make the status of schedules that use this template invalid. Those schedules fail until you edit them. Affected schedules: {{schedules}}."
     },
     "errors": {
       "notFound": "Ticket template not found",
       "duplicateName": "A template named {{name}} already exists",
       "invalidReferences": "The template refers to a board, category or priority that is not available",
       "notAvailable": "Ticket templates are not available",
-      "subcategoryNeedsCategory": "A subcategory requires a category"
+      "subcategoryNeedsCategory": "A subcategory requires a category",
+      "inUseBySchedules": "Used by {{count}} recurring schedule(s): {{schedules}}. Point them at another template or archive them first."
+    },
+    "usage": {
+      "schedules": "Used by {{count}} schedules",
+      "paused": "paused",
+      "tickets": "{{count}} tickets created from this template",
+      "scheduleThis": "Schedule this template…"
     }
   },
   "enums": {

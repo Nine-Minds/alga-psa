@@ -719,6 +719,89 @@ describe('escalateTicket', () => {
     });
   });
 
+  describe('helper failures are not swallowed (alga-2026-0002687)', () => {
+    const builder = (overrides: Record<string, unknown> = {}) => ({
+      where: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      leftJoin: vi.fn().mockReturnThis(),
+      first: vi.fn().mockResolvedValue(null),
+      insert: vi.fn().mockResolvedValue([]),
+      update: vi.fn().mockResolvedValue(1),
+      fn: { now: vi.fn().mockReturnValue('NOW()') },
+      raw: vi.fn((sql: unknown) => sql),
+      andWhere: vi.fn().mockReturnThis(),
+      ...overrides,
+    });
+
+    const arrange = (overrides: { resources?: Record<string, unknown>; audit?: Record<string, unknown> } = {}) => {
+      mockTrx.tableBuilders['tickets'] = builder({
+        first: vi.fn().mockResolvedValue({
+          ticket_id: TICKET_ID,
+          ticket_number: 'T-001',
+          title: 'Test Ticket',
+          board_id: BOARD_ID,
+          assigned_to: 'assignee-123',
+          escalation_level: null,
+          escalated: false,
+        }),
+      });
+      mockTrx.tableBuilders['escalation_managers as em'] = builder({
+        first: vi.fn().mockResolvedValue({
+          config_id: 'config-123',
+          board_id: BOARD_ID,
+          escalation_level: 1,
+          manager_user_id: MANAGER_USER_ID,
+          notify_via: ['in_app'],
+          manager_first_name: 'John',
+          manager_last_name: 'Manager',
+          manager_email: 'john@example.com',
+        }),
+      });
+      mockTrx.tableBuilders['ticket_resources'] = builder(overrides.resources);
+      mockTrx.tableBuilders['sla_audit_log'] = builder(overrides.audit);
+    };
+
+    it('returns success=false when adding the manager resource fails', async () => {
+      arrange({ resources: { insert: vi.fn().mockRejectedValue(new Error('insert failed')) } });
+
+      const result = await escalateTicket(mockTrx.trx, TENANT, TICKET_ID, 1);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('insert failed');
+    });
+
+    it('returns success=false when the in-app notification path throws', async () => {
+      arrange();
+      vi.mocked(createNotificationFromTemplateInternal).mockRejectedValueOnce(
+        new Error('current transaction is aborted')
+      );
+
+      const result = await escalateTicket(mockTrx.trx, TENANT, TICKET_ID, 1);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('current transaction is aborted');
+    });
+
+    it('returns success=false when writing the audit row fails', async () => {
+      arrange({ audit: { insert: vi.fn().mockRejectedValue(new Error('audit failed')) } });
+
+      const result = await escalateTicket(mockTrx.trx, TENANT, TICKET_ID, 1);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('audit failed');
+    });
+
+    it('keeps a missing/disabled in-app template non-fatal (inApp=false, success=true)', async () => {
+      arrange();
+      vi.mocked(createNotificationFromTemplateInternal).mockResolvedValueOnce(null);
+
+      const result = await escalateTicket(mockTrx.trx, TENANT, TICKET_ID, 1);
+
+      expect(result.success).toBe(true);
+      expect(result.notificationsSent.inApp).toBe(false);
+    });
+  });
+
   describe('audit logging', () => {
     it('should log escalation event on successful escalation', async () => {
       const ticketData = {

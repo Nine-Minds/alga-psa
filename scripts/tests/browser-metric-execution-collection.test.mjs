@@ -541,3 +541,37 @@ test('historical pull request run permits absent mutable PR association', async 
   const { state, collect } = fixture(); state.run.pull_requests = [];
   assert.equal((await collect()).collectionMetadata.revisionValidation, 'merge-run-head-parent-verified');
 });
+
+test('a pull request from a fork marks its executions as lacking export credentials', async () => {
+  const { state, collect } = fixture();
+  state.run.conclusion = 'success';
+  state.run.head_repository = { full_name: 'Contributor/alga-psa' };
+  for (const job of state.jobs) job.steps = [{ name: 'Record browser journey readiness', status: 'completed', conclusion: 'success' }];
+  state.values.values = [BROWSER_HEADER];
+  const input = await collect();
+  assert.ok(input.expectedExecutions.every(entry => entry.credentialsAvailable === false && entry.credentialsEvidence === 'fork-pull-request'));
+  const result = reconcileBrowserMetricExecutions(input);
+  assert.equal(result.status, 'not-required');
+  assert.ok(result.records.every(record => record.exportStatus === 'credentials-unavailable'));
+});
+
+for (const [name, head_repository, event] of [
+  ['same-repository pull request', { full_name: 'nine-minds/ALGA-PSA' }, 'pull_request'],
+  ['absent head repository', undefined, 'pull_request'],
+  ['fork-looking push', { full_name: 'Contributor/alga-psa' }, 'workflow_dispatch'],
+]) test(`${name} keeps the strict missing-export verdict`, async () => {
+  const { state, collect } = fixture();
+  state.run.conclusion = 'success'; state.run.head_repository = head_repository;
+  if (event !== 'pull_request') { state.run.event = event; state.run.head_sha = revision; state.jobs.forEach(job => { job.head_sha = revision; }); }
+  for (const job of state.jobs) job.steps = [{ name: 'Record browser journey readiness', status: 'completed', conclusion: 'success' }];
+  state.values.values = [BROWSER_HEADER];
+  const input = await collect();
+  assert.ok(input.expectedExecutions.every(entry => entry.credentialsAvailable === undefined));
+  assert.equal(reconcileBrowserMetricExecutions(input).status, 'incomplete');
+});
+
+test('a malformed head repository fails closed', async () => {
+  const { state, collect } = fixture();
+  state.run.head_repository = { full_name: 42 };
+  await assert.rejects(collect(), error => error.diagnostic.code === 'invalid-run-head-repository');
+});

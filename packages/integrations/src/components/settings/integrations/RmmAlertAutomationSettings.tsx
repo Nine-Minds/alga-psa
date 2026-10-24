@@ -1346,7 +1346,7 @@ function WindowEditorDialog({
 // Main component
 // ---------------------------------------------------------------------------
 
-const POLLING_PROVIDERS = new Set(["ninjaone", "tacticalrmm"]);
+const POLLING_PROVIDERS = new Set(["ninjaone", "tacticalrmm", "datto"]);
 
 export function RmmAlertAutomationSettings({
   integrationId,

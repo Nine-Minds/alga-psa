@@ -830,7 +830,8 @@
           "groups_read": "Ler grupos do diretório",
           "entitlement_group_resolves": "Resolver grupo de direitos",
           "user_yield_preview": "Prévia dos usuários incluídos",
-          "per_tenant_users": "Usuários por locatário do CIPP"
+          "per_tenant_users": "Usuários por locatário do CIPP",
+          "cipp_token_mint": "Emissão do token da API do CIPP"
         },
         "readiness": {
           "authenticated": "Conectado",
@@ -911,8 +912,8 @@
           "noManagedTenants": "Nenhum locatário gerenciado foi retornado. O parceiro deve estar integrado ao Microsoft 365 Lighthouse com relações GDAP ativas.",
           "mappedTenantMissing": "O locatário mapeado “{{client}}” não foi retornado pela descoberta. A relação GDAP pode ter expirado ou sido encerrada.",
           "mappingsLookupFailed": "Não foi possível ler os mapeamentos de locatários confirmados. Execute o diagnóstico novamente; se o problema persistir, revise os mapeamentos.",
-          "cippCredentialsMissing": "A URL base do CIPP e um token de API são necessários. Configure-os na aba Conexão.",
-          "cippAuthRejected": "O CIPP rejeitou a credencial da API. Renove a chave de API do CIPP em Configurações > CIPP > Acesso à API; não se trata de um segredo do cliente do Azure.",
+          "cippCredentialsMissing": "O URL da API do CIPP e as credenciais são obrigatórios. Configure-os na guia Conexão.",
+          "cippAuthRejected": "O CIPP rejeitou a chave de API legada. Reconecte com um cliente de API do CIPP na guia Conexão (crie um em CIPP > Integrations > CIPP-API).",
           "cippEmptyTenantList": "O CIPP não retornou locatários. Verifique a visibilidade dos clientes e a configuração do CIPP.",
           "cippUnreachable": "Não foi possível acessar o CIPP. Verifique a URL base, DNS/TLS e a conectividade de saída.",
           "cippPerTenantFailed": "O CIPP não conseguiu ler o diretório deste locatário.",

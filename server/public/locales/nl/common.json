@@ -1580,7 +1580,31 @@
     }
   },
   "labels": {
-    "printColumns": "Afdrukkolommen"
+    "printColumns": "Afdrukkolommen",
+    "dialog": {
+      "assetTitle": "Assetlabels afdrukken",
+      "count_one": "{{count}} geselecteerd",
+      "count_other": "{{count}} geselecteerd",
+      "failed": "De labels konden niet worden afgedrukt.",
+      "item": "Onderdeel",
+      "layout": "Indeling",
+      "linkedAsset": "Gekoppelde asset",
+      "noAsset": "Geen asset",
+      "notFound": "Deze records konden niet worden geopend.",
+      "openPdf": "PDF openen",
+      "printed_one": "{{count}} label afgedrukt.",
+      "printed_other": "{{count}} labels afgedrukt.",
+      "printing": "Voorbereiden…",
+      "print": "Afdrukken",
+      "reason": "Reden",
+      "skipFailures": "Deze overslaan en de rest afdrukken",
+      "skipped_one": "{{count}} record is overgeslagen omdat het niet kon worden geopend.",
+      "skipped_other": "{{count}} records zijn overgeslagen omdat ze niet konden worden geopend.",
+      "template": "Sjabloon",
+      "ticketTitle": "Werklabels afdrukken",
+      "tooMany": "U kunt maximaal {{max}} labels tegelijk afdrukken.",
+      "useTemplate": "{{template}} gebruiken"
+    }
   },
   "deleteEntity": {
     "checkingDependenciesTitle": "Afhankelijkheden controleren",

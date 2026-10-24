@@ -17,15 +17,26 @@ export type EntraOperatorErrorCode =
   /** The provider answered, and refused the stored credential. */
   | 'credential-rejected'
   /** The provider could not be reached at all. */
-  | 'unreachable';
+  | 'unreachable'
+  /** A CIPP API client could not be exchanged for an access token. */
+  | 'token-mint-failed'
+  /** Microsoft does not recognise the CIPP API scope: the identifier URI needs repair. */
+  | 'token-scope-rejected';
 
 export class EntraOperatorError extends Error {
   public readonly code: EntraOperatorErrorCode;
+  /**
+   * Finer cause for errors that share a code (e.g. an IP-allowlist 403 and a
+   * Custom Role 403 are both 'credential-rejected'), so diagnostics can pick
+   * the right remedy without parsing the message.
+   */
+  public readonly reason?: string;
 
-  constructor(code: EntraOperatorErrorCode, message: string) {
+  constructor(code: EntraOperatorErrorCode, message: string, reason?: string) {
     super(message);
     this.name = 'EntraOperatorError';
     this.code = code;
+    this.reason = reason;
   }
 }
 

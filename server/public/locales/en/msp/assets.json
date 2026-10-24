@@ -246,7 +246,9 @@
         "setLocation": "Set location",
         "setStatus": "Set status",
         "assignContact": "Assign to contact",
-        "addToGroup": "Add to group"
+        "addToGroup": "Add to group",
+        "printLabels": "Print labels",
+        "printLabelsLimit": "You can print at most {{max}} labels at a time"
       },
       "actions": {
         "apply": "Apply",
@@ -446,7 +448,9 @@
       "rebootDevice": "Reboot Device",
       "rebooting": "Rebooting...",
       "editAsset": "Edit Asset",
-      "deleteAsset": "Delete Asset"
+      "deleteAsset": "Delete Asset",
+      "printLabel": "Print asset label",
+      "printPage": "Print page"
     },
     "values": {
       "unknownClient": "Unknown Client"
@@ -831,7 +835,8 @@
       "save": "Save",
       "label": "Button label",
       "template": "URL template",
-      "tokens": "Use {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {client.name}, and {field.<key>} with custom field keys defined in Settings → Assets → Asset types.",
+      "ninjaExample": "NinjaOne device dashboard example: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Replace the host with your NinjaOne region: app, eu, ca, oc or us2 .ninjarmm.com.",
+      "tokens": "Use {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name}, and {field.<key>} with custom field keys defined in Settings → Assets → Asset types.",
       "errors": {
         "load": "Failed to load remote access links.",
         "save": "Failed to save the remote access link.",

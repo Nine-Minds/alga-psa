@@ -437,7 +437,7 @@ describe('service request store-only submissions', () => {
         clientId: fixture.clientId,
         payload: { details: '  \n  ' },
       })
-    ).rejects.toThrow('Submission validation failed: Required field missing: "details"');
+    ).rejects.toThrow('Submission validation failed: Required field missing: "Details"');
 
     expect(await countRows(fixture.tenant, 'service_request_submissions')).toBe(0);
   });
