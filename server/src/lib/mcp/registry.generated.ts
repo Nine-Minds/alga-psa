@@ -7718,10 +7718,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "provider",
         "in": "path",
         "required": true,
-        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing.",
+        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing.",
         "schema": {
           "type": "string",
-          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing."
+          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
         }
       }
     ],
@@ -7821,10 +7821,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "provider",
         "in": "path",
         "required": true,
-        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing.",
+        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing.",
         "schema": {
           "type": "string",
-          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing."
+          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
         }
       }
     ],
@@ -7942,10 +7942,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "provider",
         "in": "path",
         "required": true,
-        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing.",
+        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing.",
         "schema": {
           "type": "string",
-          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing."
+          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
         }
       }
     ],
@@ -48635,6 +48635,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "tax_region": {
           "type": "string"
         },
+        "tax_rate_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Optional. Stored as given, like the UI save path; the API does not compute tax."
+        },
+        "contract_line_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
+        },
         "is_billable": {
           "type": "boolean",
           "default": true
@@ -48877,6 +48890,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "tax_region": {
                 "type": "string"
               },
+              "tax_rate_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Optional. Stored as given, like the UI save path; the API does not compute tax."
+              },
+              "contract_line_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
+              },
               "is_billable": {
                 "type": "boolean",
                 "default": true
@@ -48987,6 +49013,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   },
                   "tax_region": {
                     "type": "string"
+                  },
+                  "tax_rate_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid",
+                    "description": "Optional. Stored as given, like the UI save path; the API does not compute tax."
+                  },
+                  "contract_line_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
                   },
                   "is_billable": {
                     "type": "boolean",
@@ -49853,6 +49892,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "tax_region": {
           "type": "string"
+        },
+        "tax_rate_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Optional. Stored as given, like the UI save path; the API does not compute tax."
+        },
+        "contract_line_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
         },
         "is_billable": {
           "type": "boolean",
@@ -51345,8 +51397,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "sort",
         "in": "query",
         "required": false,
+        "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400.",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "approval_status",
+            "approved_at",
+            "created_at",
+            "period_end",
+            "period_start",
+            "submitted_at"
+          ],
+          "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400."
         }
       },
       {
@@ -51362,7 +51424,25 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "fields",
+        "name": "user_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "period_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "approval_status",
         "in": "query",
         "required": false,
         "schema": {
@@ -51370,7 +51450,52 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "search",
+        "name": "approved_by",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "submitted_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "submitted_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "approved_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "approved_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "has_entries",
         "in": "query",
         "required": false,
         "schema": {
@@ -51378,11 +51503,39 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "query",
+        "name": "period_start_from",
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_start_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_end_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_end_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     ],
@@ -51766,8 +51919,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "sort",
         "in": "query",
         "required": false,
+        "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400.",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "approval_status",
+            "approved_at",
+            "created_at",
+            "period_end",
+            "period_start",
+            "submitted_at"
+          ],
+          "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400."
         }
       },
       {
@@ -51783,7 +51946,25 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "fields",
+        "name": "user_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "period_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "approval_status",
         "in": "query",
         "required": false,
         "schema": {
@@ -51791,7 +51972,52 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "search",
+        "name": "approved_by",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "submitted_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "submitted_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "approved_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "approved_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "has_entries",
         "in": "query",
         "required": false,
         "schema": {
@@ -51799,11 +52025,39 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "query",
+        "name": "period_start_from",
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_start_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_end_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_end_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     ],

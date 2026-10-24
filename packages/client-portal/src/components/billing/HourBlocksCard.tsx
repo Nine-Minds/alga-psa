@@ -95,6 +95,17 @@ export default function HourBlocksCard() {
                         </span>
                       )}
                     </div>
+                    {block.contract_name && (
+                      <p
+                        id={`hour-block-contract-${block.block_id}`}
+                        className="truncate text-xs text-gray-500"
+                      >
+                        {t('hourBlocks.contractLabel', {
+                          contract: block.contract_name,
+                          defaultValue: 'Contract: {{contract}}',
+                        })}
+                      </p>
+                    )}
                     <div className="mt-1.5 h-1.5 w-full rounded-full bg-gray-200">
                       <div
                         className="h-1.5 rounded-full bg-[rgb(var(--color-primary-500))]"
@@ -123,6 +134,7 @@ export default function HourBlocksCard() {
                     <span className="truncate">
                       {entry.work_item_title || t('hourBlocks.timeEntry', 'Time entry')}
                       {entry.entry_date ? ` · ${formatCalendarDate(entry.entry_date) ?? ''}` : ''}
+                      {entry.contract_name ? ` · ${entry.contract_name}` : ''}
                     </span>
                     <span className="shrink-0 tabular-nums">-{entry.hours.toFixed(1)}h</span>
                   </li>

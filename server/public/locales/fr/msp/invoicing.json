@@ -98,6 +98,20 @@
         "assignedContractLine": "Ligne de contrat attribuée",
         "assignedWorkItem": "Élément de travail affecté",
         "unresolvedWork": "Travail non résolu"
+      },
+      "prepaidBlock": {
+        "due": "{{trigger}} · échéance le {{date}}",
+        "trigger": {
+          "contract_start": "Bloc prépayé : début du contrat",
+          "exhaustion": "Bloc prépayé : épuisé",
+          "threshold": "Bloc prépayé : seuil d’utilisation",
+          "expiry": "Bloc prépayé : expiration",
+          "renewal": "Bloc prépayé : renouvellement",
+          "manual": "Bloc prépayé : émis manuellement"
+        },
+        "stalePendingWarning": "{{count}} blocs prépayés en attente depuis plus de 14 jours de finalisation retiennent des saisies de temps. Finalisez ou supprimez leurs factures brouillons afin que le temps retenu puisse être facturé.",
+        "stalePendingWarning_one": "{{count}} bloc prépayé en attente depuis plus de 14 jours de finalisation retient des saisies de temps. Finalisez ou supprimez sa facture brouillon afin que le temps retenu puisse être facturé.",
+        "stalePendingWarning_other": "{{count}} blocs prépayés en attente depuis plus de 14 jours de finalisation retiennent des saisies de temps. Finalisez ou supprimez leurs factures brouillons afin que le temps retenu puisse être facturé."
       }
     },
     "actions": {
@@ -273,7 +287,8 @@
       "fixed": "FIX",
       "hourly": "T&M",
       "usage": "USE",
-      "bucket": "BKT"
+      "bucket": "BKT",
+      "prepaidBlock": "PRE"
     },
     "summary": {
       "selected": "{{count}} sélectionné(s)",
@@ -1412,7 +1427,14 @@
           "widthTooltip": "Utiliser la largeur exacte saisie ci-dessous",
           "heightTooltip": "Utiliser la hauteur exacte saisie ci-dessous"
         }
-      }
+      },
+      "barcode": "Code-barres",
+      "barcodeSymbology": "Type",
+      "barcodeQr": "Code QR",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Valeur",
+      "barcodeHintWorkTag": "Du texte, ou un champ tel que {{example}} (le lien vers l’enregistrement). Gardez le code large d’au moins 20 mm environ pour qu’il soit lisible.",
+      "barcodeHint": "Le texte à encoder. Gardez le code large d’au moins 20 mm environ pour qu’il soit lisible."
     },
     "shell": {
       "selectedLabel": "Sélectionné :",
@@ -1425,7 +1447,11 @@
       "title": "Mise en page",
       "description": "Choisissez le préréglage de papier et la marge sans sélectionner le nœud de page masqué.",
       "paperPreset": "Préréglage papier",
-      "marginMm": "Marge (mm)"
+      "marginMm": "Marge (mm)",
+      "customSize": "Taille personnalisée…",
+      "customWidth": "Largeur",
+      "customHeight": "Hauteur",
+      "customUnit": "Unité"
     },
     "breadcrumbs": {
       "emptyHelp": "Sélectionnez un composant du canevas pour voir sa hiérarchie.",
@@ -1456,7 +1482,13 @@
         "noQuotesFound": "Aucun devis trouvé.",
         "selectQuote": "Sélectionner un devis",
         "loadingQuoteDetails": "Chargement des détails du devis…",
-        "loadingDocumentDetails": "Chargement des détails du document…"
+        "loadingDocumentDetails": "Chargement des détails du document…",
+        "zoom": {
+          "fit": "Ajuster",
+          "actual": "100 %",
+          "label": "Zoom de l'aperçu",
+          "fitWithScale": "Ajuster ({{percent}} %)"
+        }
       },
       "tabs": {
         "design": "Conception",
@@ -2472,7 +2504,8 @@
     "types": {
       "salesOrder": "Commande client",
       "packingSlip": "Bon de livraison",
-      "pickList": "Liste de prélèvement"
+      "pickList": "Liste de prélèvement",
+      "workTag": "Étiquette de travail / Label"
     }
   },
   "errors": {

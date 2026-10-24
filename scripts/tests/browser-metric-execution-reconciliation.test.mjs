@@ -267,3 +267,49 @@ test('cancelled before source artifacts and export remains a visible unknown can
  const input=fixture();Object.assign(input.expectedExecutions[0],{revision:null,revisionEvidence:'unavailable',revisionDiagnostics:['artifact-missing'],conclusion:'cancelled'});
  input.exportedRows.rows=[];const record=reconcile(input).records[0];assert.equal(record.status,'cancelled');assert.equal(record.exportStatus,'tested-revision-unknown');assert.equal(record.unverifiedCurrentAttemptRunExportCount,0);
 });
+// A fork pull request runs without repository secrets, so its recorder cannot
+// export rows. That absence is not a reporting gap; a present export is.
+function forkFixture(change = {}) {
+  const input = fixture(); input.exportedRows.rows = [];
+  Object.assign(input.expectedExecutions[0], { credentialsAvailable: false, credentialsEvidence: 'fork-pull-request',
+    recorderStatus: 'completed', recorderConclusion: 'success', ...change });
+  return input;
+}
+test('a green fork pull request without an export is not-required, not missing-export', () => {
+  const result = reconcile(forkFixture());
+  assert.equal(result.status, 'not-required');
+  assert.equal(result.records[0].exportStatus, 'credentials-unavailable');
+  assert.equal(result.records[0].blocking, false);
+  assert.deepEqual(result.records[0].issues, ['metrics-credentials-unavailable']);
+  assert.equal(result.records[0].credentialsAvailable, false);
+});
+test('a fork pull request that somehow exported rows is a conflict', () => {
+  const input = forkFixture(); input.exportedRows.rows = fixture().exportedRows.rows;
+  const result = reconcile(input);
+  assert.equal(result.status, 'incomplete'); assert.equal(result.records[0].blocking, true);
+  assert.deepEqual(result.records[0].issues, ['unexpected-export-without-credentials']);
+});
+for (const [conclusion, status] of [['failure', 'failed'], ['cancelled', 'cancelled']])
+  test(`a ${conclusion} fork lane stays the gate's finding: ${status}, lane-unsuccessful`, () => {
+    const result = reconcile(forkFixture({ conclusion }));
+    assert.equal(result.records[0].status, status); assert.equal(result.records[0].blocking, false);
+    assert.equal(result.status, 'lane-unsuccessful');
+  });
+for (const change of [{ credentialsEvidence: undefined }, { credentialsEvidence: 'operator' }, { eventName: 'push' }, { credentialsAvailable: 'no' }])
+  test(`rejects invalid credentials evidence: ${JSON.stringify(change)}`, () => {
+    assert.throws(() => reconcile(forkFixture(change)), /Invalid credentials/);
+  });
+test('explicit non-selection on a fork keeps the selection verdict', () => {
+  const input = notSelectedFixture();
+  Object.assign(input.expectedExecutions[0], { credentialsAvailable: false, credentialsEvidence: 'fork-pull-request' });
+  assert.deepEqual(reconcile(input).records[0].issues, ['browser-tests-not-selected']);
+});
+test('CLI exits successfully for a fork pull request without exports', async t => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'metric-fork-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const input = path.join(dir, 'input.json'), output = path.join(dir, 'output.json');
+  await writeFile(input, JSON.stringify(forkFixture()));
+  const result = spawnSync(process.execPath, ['scripts/reconcile-browser-metric-executions.mjs', input, output]);
+  assert.equal(result.status, 0);
+  assert.equal(JSON.parse(await readFile(output, 'utf8')).status, 'not-required');
+});
