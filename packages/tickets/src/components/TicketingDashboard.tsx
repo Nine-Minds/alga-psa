@@ -48,6 +48,7 @@ import {
 import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/ShareActionsMenu';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
+import { LabelPrintDialog } from '@alga-psa/ui/components';
 import { IBoard, IClient, IContact, IUser, ITeam } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -362,6 +363,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   useTagPermissions(['ticket']);
 
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
+  const [isPrintLabelsOpen, setIsPrintLabelsOpen] = useState(false);
   const {
     selectedTicketIds,
     setSelectedTicketIds,
@@ -3077,8 +3079,18 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           setBulkDeleteErrors([]);
           setIsBulkDeleteDialogOpen(true);
         }}
+        onPrintLabels={() => setIsPrintLabelsOpen(true)}
         onClear={clearSelection}
       />
+      {isPrintLabelsOpen && (
+        <LabelPrintDialog
+          isOpen={isPrintLabelsOpen}
+          onClose={() => setIsPrintLabelsOpen(false)}
+          labelClass="ticket-work-tag"
+          ids={selectedTicketIdsArray}
+          idPrefix={`${id}-print-labels`}
+        />
+      )}
     </ReflectionContainer>
     </>
   );

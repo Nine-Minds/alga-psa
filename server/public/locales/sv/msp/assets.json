@@ -246,7 +246,9 @@
         "setLocation": "Ange plats",
         "setStatus": "Ange status",
         "assignContact": "Tilldela till kontakt",
-        "addToGroup": "Lägg till i grupp"
+        "addToGroup": "Lägg till i grupp",
+        "printLabels": "Skriv ut etiketter",
+        "printLabelsLimit": "Du kan skriva ut högst {{max}} etiketter åt gången"
       },
       "actions": {
         "apply": "Tillämpa",
@@ -446,7 +448,9 @@
       "rebootDevice": "Starta om enhet",
       "rebooting": "Startar om…",
       "editAsset": "Redigera tillgång",
-      "deleteAsset": "Radera tillgång"
+      "deleteAsset": "Radera tillgång",
+      "printLabel": "Skriv ut tillgångsetikett",
+      "printPage": "Skriv ut sida"
     },
     "values": {
       "unknownClient": "Okänd kund"

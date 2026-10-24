@@ -2455,11 +2455,13 @@
     "description": "Design the layouts used to render {{type}} PDFs and previews.",
     "availableLayouts": "Available Layouts",
     "actions": {
-      "newLayout": "New Layout"
+      "newLayout": "New Layout",
+      "setDefaultForClass": "Set as Default for {{class}}"
     },
     "columns": {
       "name": "Name",
-      "source": "Source"
+      "source": "Source",
+      "labelClass": "Class"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (Standard)",
@@ -2491,7 +2493,10 @@
         "details": "Layout Details"
       },
       "fields": {
-        "version": "Version"
+        "version": "Version",
+        "labelClass": "Label class",
+        "labelFields": "Fields shown on the label",
+        "labelFieldsHint": "The record link (QR code) and the identifier are always shown."
       },
       "placeholders": {
         "templateName": "{{type}} Template"

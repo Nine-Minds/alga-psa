@@ -248,7 +248,8 @@
     "openMenu": "Abrir menú",
     "moreActions": "Más acciones",
     "createTemplate": "Crear plantilla desde el ticket",
-    "createWorkflowFromTicket": "Crear flujo de trabajo desde el ticket"
+    "createWorkflowFromTicket": "Crear flujo de trabajo desde el ticket",
+    "printWorkTag": "Imprimir etiqueta de trabajo"
   },
   "messages": {
     "noTickets": "No se encontraron tickets",
@@ -792,7 +793,9 @@
       "more": "Más",
       "bundleNeedsOne": "Selecciona al menos 1 ticket para agrupar",
       "selectedCount_few": "{{count}} seleccionados",
-      "selectedCount_many": "{{count}} seleccionados"
+      "selectedCount_many": "{{count}} seleccionados",
+      "printLabels": "Imprimir etiquetas",
+      "printLabelsLimit": "Puede imprimir como máximo {{max}} etiquetas a la vez"
     },
     "assign": {
       "dialogTitle": "Asignar tickets seleccionados",

@@ -246,7 +246,9 @@
         "setLocation": "Locatie instellen",
         "setStatus": "Status instellen",
         "assignContact": "Aan contact toewijzen",
-        "addToGroup": "Aan groep toevoegen"
+        "addToGroup": "Aan groep toevoegen",
+        "printLabels": "Labels afdrukken",
+        "printLabelsLimit": "U kunt maximaal {{max}} labels tegelijk afdrukken"
       },
       "actions": {
         "apply": "Toepassen",
@@ -446,7 +448,9 @@
       "rebootDevice": "Apparaat opnieuw opstarten",
       "rebooting": "Opnieuw opstarten...",
       "editAsset": "Asset bewerken",
-      "deleteAsset": "Asset verwijderen"
+      "deleteAsset": "Asset verwijderen",
+      "printLabel": "Assetlabel afdrukken",
+      "printPage": "Pagina afdrukken"
     },
     "values": {
       "unknownClient": "Onbekende klant"

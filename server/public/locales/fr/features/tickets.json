@@ -248,7 +248,8 @@
     "openMenu": "Ouvrir le menu",
     "moreActions": "Plus d'actions",
     "createTemplate": "Créer un modèle à partir du ticket",
-    "createWorkflowFromTicket": "Créer un workflow à partir du ticket"
+    "createWorkflowFromTicket": "Créer un workflow à partir du ticket",
+    "printWorkTag": "Imprimer l'étiquette de travail"
   },
   "messages": {
     "noTickets": "Aucun ticket trouvé",
@@ -792,7 +793,9 @@
       "more": "Plus",
       "bundleNeedsOne": "Sélectionnez au moins 1 ticket à regrouper",
       "selectedCount_few": "{{count}} sélectionnés",
-      "selectedCount_many": "{{count}} sélectionnés"
+      "selectedCount_many": "{{count}} sélectionnés",
+      "printLabels": "Imprimer les étiquettes",
+      "printLabelsLimit": "Vous pouvez imprimer au maximum {{max}} étiquettes à la fois"
     },
     "assign": {
       "dialogTitle": "Assigner les tickets sélectionnés",

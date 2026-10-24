@@ -2,7 +2,11 @@
  * Label PDF API Route (session-authenticated; the composition root for label printing)
  * POST /api/labels/pdf — render one or more records as a label PDF (one label per page, or n-up).
  *
- * Body: { labelClass, ids: string[], templateCode?, layout? }
+ * Body: { labelClass, ids: string[], templateId?, templateCode?, layout?, overrides?, linkedAssetId? }
+ *   templateId: a tenant custom work-tag template id or a standard code (supersedes templateCode).
+ *   overrides / linkedAssetId: single ticket only (see printLabels).
+ * Unreadable records are skipped and counted in the X-Label-Skipped response header; if none is readable,
+ * or the single requested record is not, the response is a uniform 404.
  * 422: { error, failures?: LabelPrintFailure[] } — all-or-nothing; `failures` lists every record that
  *      cannot print with the requested template, with a `suggestedTemplateCode` where one exists.
  *
@@ -16,7 +20,13 @@
  */
 
 import { AuthenticationError, withAuth } from '@alga-psa/auth';
-import { LabelLayoutError, LabelRenderError, renderLabelBatchPdf } from '@alga-psa/billing/services';
+import {
+  LabelLayoutError,
+  LabelRenderError,
+  renderLabelBatchPdf,
+  resolveLabelTemplateForTenant,
+} from '@alga-psa/billing/services';
+import { getTicketLinkedAssetLabelParts } from '@alga-psa/assets/lib/ticketLinkedAssetLabels';
 import { assetLabelViewModelProvider } from '@alga-psa/assets/lib/labelViewModelProvider';
 import { stockUnitLabelViewModelProvider } from '@alga-psa/inventory/lib/labelViewModelProvider';
 import { ticketLabelViewModelProvider } from '@alga-psa/tickets/lib/labelViewModelProvider';
@@ -36,6 +46,8 @@ const PROVIDERS: Record<LabelClass, LabelViewModelProvider> = {
 const deps: PrintLabelsDeps = {
   providers: PROVIDERS,
   renderPdf: (tenant, items, layout) => renderLabelBatchPdf(tenant, items, layout),
+  resolveTemplate: (tenant, labelClass, templateId) => resolveLabelTemplateForTenant(tenant, labelClass, templateId),
+  getLinkedAssetParts: (context, ticketIds, chosen) => getTicketLinkedAssetLabelParts(context, ticketIds, chosen),
   describeClientError: (error) => {
     if (error instanceof LabelRenderError) {
       return { message: error.message, failures: error.failures };
@@ -87,6 +99,8 @@ export async function POST(request: Request) {
         'Content-Disposition': 'inline; filename="labels.pdf"',
         'Cache-Control': 'no-store',
         'X-Label-Count': String(result.labels),
+        // Only a count: never which records were skipped or why.
+        'X-Label-Skipped': String(result.skipped),
       },
     });
   } catch (error) {

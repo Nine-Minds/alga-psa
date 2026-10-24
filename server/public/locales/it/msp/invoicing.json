@@ -2455,11 +2455,13 @@
     "description": "Progetta i layout usati per generare i PDF e le anteprime di {{type}}.",
     "availableLayouts": "Layout disponibili",
     "actions": {
-      "newLayout": "Nuovo layout"
+      "newLayout": "Nuovo layout",
+      "setDefaultForClass": "Imposta come predefinito per {{class}}"
     },
     "columns": {
       "name": "Nome",
-      "source": "Origine"
+      "source": "Origine",
+      "labelClass": "Classe"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (standard)",
@@ -2491,7 +2493,10 @@
         "details": "Dettagli del layout"
       },
       "fields": {
-        "version": "Versione"
+        "version": "Versione",
+        "labelClass": "Classe di etichetta",
+        "labelFields": "Campi mostrati sull'etichetta",
+        "labelFieldsHint": "Il collegamento al record (codice QR) e l'identificativo sono sempre mostrati."
       },
       "placeholders": {
         "templateName": "Modello per {{type}}"

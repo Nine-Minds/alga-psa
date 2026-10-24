@@ -1580,7 +1580,37 @@
     }
   },
   "labels": {
-    "printColumns": "Kolumny wydruku"
+    "printColumns": "Kolumny wydruku",
+    "dialog": {
+      "assetTitle": "Drukuj etykiety zasobów",
+      "count_one": "Zaznaczono {{count}}",
+      "count_few": "Zaznaczono {{count}}",
+      "count_many": "Zaznaczono {{count}}",
+      "count_other": "Zaznaczono {{count}}",
+      "failed": "Nie udało się wydrukować etykiet.",
+      "item": "Element",
+      "layout": "Układ",
+      "linkedAsset": "Powiązany zasób",
+      "noAsset": "Brak zasobu",
+      "notFound": "Nie udało się otworzyć tych rekordów.",
+      "openPdf": "Otwórz PDF",
+      "printed_one": "Wydrukowano {{count}} etykietę.",
+      "printed_few": "Wydrukowano {{count}} etykiety.",
+      "printed_many": "Wydrukowano {{count}} etykiet.",
+      "printed_other": "Wydrukowano {{count}} etykiety.",
+      "printing": "Przygotowywanie…",
+      "print": "Drukuj",
+      "reason": "Powód",
+      "skipFailures": "Pomiń te i wydrukuj resztę",
+      "skipped_one": "Pominięto {{count}} rekord, ponieważ nie udało się go otworzyć.",
+      "skipped_few": "Pominięto {{count}} rekordy, ponieważ nie udało się ich otworzyć.",
+      "skipped_many": "Pominięto {{count}} rekordów, ponieważ nie udało się ich otworzyć.",
+      "skipped_other": "Pominięto {{count}} rekordu, ponieważ nie udało się go otworzyć.",
+      "template": "Szablon",
+      "ticketTitle": "Drukuj etykiety robocze",
+      "tooMany": "Jednorazowo można wydrukować co najwyżej {{max}} etykiet.",
+      "useTemplate": "Użyj szablonu {{template}}"
+    }
   },
   "deleteEntity": {
     "checkingDependenciesTitle": "Sprawdzanie zależności",
