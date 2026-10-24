@@ -235,7 +235,7 @@ impl ModuleLoader {
         use sha2::{Digest, Sha256};
         let key: [u8; 32] = Sha256::digest(wasm).into();
         if let Some(component) = self.compiled.lock().unwrap().get(&key) {
-            tracing::info!("Component served from compiled cache");
+            tracing::debug!("Component served from compiled cache");
             return Ok(component);
         }
         // Per-hash gate: concurrent first requests for the same new hash compile
@@ -249,7 +249,7 @@ impl ModuleLoader {
             .clone();
         let _guard = gate.lock().await;
         if let Some(component) = self.compiled.lock().unwrap().get(&key) {
-            tracing::info!("Component served from compiled cache after compile gate");
+            tracing::debug!("Component served from compiled cache after compile gate");
             return Ok(component);
         }
         let component = Component::from_binary(&self.engine, wasm)?;
@@ -277,16 +277,16 @@ impl ModuleLoader {
         memory_mb: Option<u64>,
     ) -> anyhow::Result<(Store<HostState>, Component, Linker<HostState>)> {
         let wasm_size = wasm.len();
-        tracing::info!(wasm_size=%wasm_size, timeout_ms=?timeout_ms, memory_mb=?memory_mb, "Wasmtime component instantiation starting");
+        tracing::debug!(wasm_size=%wasm_size, timeout_ms=?timeout_ms, memory_mb=?memory_mb, "Wasmtime component instantiation starting");
 
         // Parse WASM component
-        tracing::info!("Parsing WebAssembly component binary...");
+        tracing::debug!("Parsing WebAssembly component binary...");
         let component = self.compiled_component(wasm).await?;
-        tracing::info!("✓ Component binary parsed successfully");
+        tracing::debug!("✓ Component binary parsed successfully");
 
         // Initialize resource table
         let table = ResourceTable::new();
-        tracing::info!("✓ Resource table initialized");
+        tracing::debug!("✓ Resource table initialized");
 
         // For now we keep WASI stdio defaulted; stdout/stderr mapping is handled at the
         // logging layer by using the HostExecutionContext + DebugHub. If in the future we
@@ -295,7 +295,7 @@ impl ModuleLoader {
         // Use a dedicated stderr sink that mirrors guest stderr into the debug hub when enabled.
         // We intentionally keep stdout as-is for now and treat stderr as the primary signal for
         // extension authors; this avoids surprising noise while still surfacing failures.
-        tracing::info!("Configuring WASI runtime context with stderr capture");
+        tracing::debug!("Configuring WASI runtime context with stderr capture");
         let stderr = StderrPipe::new(move |bytes: Vec<u8>| {
             if let Ok(line) = std::str::from_utf8(&bytes) {
                 let line = line.trim_end_matches(&['\r', '\n'][..]).to_string();
@@ -317,14 +317,14 @@ impl ModuleLoader {
             .inherit_stdout()
             .stderr(stderr)
             .build();
-        tracing::info!("✓ WASI context configured with stdio handlers");
+        tracing::debug!("✓ WASI context configured with stdio handlers");
 
         let http = WasiHttpCtx::new();
-        tracing::info!("✓ WASI HTTP context initialized");
+        tracing::debug!("✓ WASI HTTP context initialized");
 
         // Calculate memory limit
         let memory_limit = (memory_mb.unwrap_or(DEFAULT_MAX_MEMORY_MB) as usize) * 1024 * 1024;
-        tracing::info!(
+        tracing::debug!(
             "Memory limit configured: {} bytes ({} MB)",
             memory_limit,
             memory_mb.unwrap_or(DEFAULT_MAX_MEMORY_MB)
@@ -339,34 +339,34 @@ impl ModuleLoader {
             http,
         };
         let mut store = Store::new(&self.engine, host_state);
-        tracing::info!("✓ Host state created with memory limits and runtime config");
+        tracing::debug!("✓ Host state created with memory limits and runtime config");
 
         // Apply store-level resource limits if needed
         store.limiter(|s| s);
-        tracing::info!("✓ Resource limiter installed on store");
+        tracing::debug!("✓ Resource limiter installed on store");
 
         if let Some(ms) = timeout_ms {
-            tracing::info!(timeout_ms=%ms, "Configuring epoch-based timeout ({}ms)", ms);
+            tracing::debug!(timeout_ms=%ms, "Configuring epoch-based timeout ({}ms)", ms);
             self.apply_timeout(&mut store, ms);
-            tracing::info!("✓ Timeout configuration applied");
+            tracing::debug!("✓ Timeout configuration applied");
         } else {
             // The shared epoch ticker never stops, so an unset deadline would trap at once.
             store.set_epoch_deadline(u64::MAX / 2);
         }
 
         // Build linker with all required imports
-        tracing::info!("Linking component with host APIs...");
+        tracing::debug!("Linking component with host APIs...");
         let mut linker: Linker<HostState> = Linker::new(&self.engine);
 
-        tracing::info!("  - Adding WASI (preview2) APIs to linker");
+        tracing::debug!("  - Adding WASI (preview2) APIs to linker");
         wasmtime_wasi::p2::add_to_linker_async(&mut linker)?;
-        tracing::info!("  - Adding WASI HTTP APIs to linker");
+        tracing::debug!("  - Adding WASI HTTP APIs to linker");
         wasmtime_wasi_http::p2::add_only_http_to_linker_async(&mut linker)?;
-        tracing::info!("  - Adding component-specific host APIs to linker");
+        tracing::debug!("  - Adding component-specific host APIs to linker");
         add_component_host(&mut linker)?;
-        tracing::info!("✓ Component linker fully configured with all host APIs");
+        tracing::debug!("✓ Component linker fully configured with all host APIs");
 
-        tracing::info!(wasm_size=%wasm_size, "Wasmtime instantiation successful - ready for execution");
+        tracing::debug!(wasm_size=%wasm_size, "Wasmtime instantiation successful - ready for execution");
         Ok((store, component, linker))
     }
 
@@ -378,13 +378,15 @@ impl ModuleLoader {
         let _ = store.epoch_deadline_trap();
     }
 
+    /// Loads the guest module bytes, sharing cached copies via `Arc` so a cache
+    /// hit never copies the (potentially multi-MB) binary per request.
     pub async fn load_wasm_module(
         &self,
         tenant: &str,
         extension: &str,
         content_hash: &str,
         entry_path: &str,
-    ) -> anyhow::Result<Vec<u8>> {
+    ) -> anyhow::Result<Arc<Vec<u8>>> {
         let hash_hex = content_hash
             .strip_prefix("sha256:")
             .unwrap_or(content_hash)
@@ -392,15 +394,15 @@ impl ModuleLoader {
         let cache_key = format!("{}::{}::{}::{}", tenant, extension, hash_hex, entry_path);
         let cached = self.cache.lock().await.get(&cache_key);
         if let Some(bytes) = cached {
-            tracing::info!(tenant=%tenant, extension=%extension, hash=%hash_hex, entry=%entry_path, "Component bytes served from in-memory cache");
-            return Ok((*bytes).clone());
+            tracing::debug!(tenant=%tenant, extension=%extension, hash=%hash_hex, entry=%entry_path, "Component bytes served from in-memory cache");
+            return Ok(bytes);
         }
 
         let object_key = format!(
             "tenants/{}/extensions/{}/sha256/{}/bundle.tar.zst",
             tenant, extension, hash_hex
         );
-        tracing::info!(tenant=%tenant, extension=%extension, hash=%hash_hex, entry=%entry_path, object_key=%object_key, "Ensuring bundle cached locally");
+        tracing::debug!(tenant=%tenant, extension=%extension, hash=%hash_hex, entry=%entry_path, object_key=%object_key, "Ensuring bundle cached locally");
         let paths = ensure_bundle_cached(
             &self.bundle_store_base,
             &self.cache_root,
@@ -410,20 +412,20 @@ impl ModuleLoader {
         .await?;
 
         let wasm_path = paths.bundle_root.join(entry_path);
-        tracing::info!(tenant=%tenant, extension=%extension, path=%wasm_path.to_string_lossy(), "Reading WASM component from cache");
+        tracing::debug!(tenant=%tenant, extension=%extension, path=%wasm_path.to_string_lossy(), "Reading WASM component from cache");
         let bytes = fs::read(&wasm_path).await.map_err(|err| {
             tracing::error!(error=%err.to_string(), path=%wasm_path.to_string_lossy(), "Failed to read WASM component from cache");
             err
         })?;
-        tracing::info!(tenant=%tenant, extension=%extension, bytes=%bytes.len(), "WASM component loaded from cache");
+        tracing::debug!(tenant=%tenant, extension=%extension, bytes=%bytes.len(), "WASM component loaded from cache");
 
-        let arc = Arc::new(bytes.clone());
+        let arc = Arc::new(bytes);
         let weight = arc.len();
-        let evicted = self.cache.lock().await.insert(cache_key, arc, weight);
+        let evicted = self.cache.lock().await.insert(cache_key, arc.clone(), weight);
         if !evicted.is_empty() {
             tracing::info!(evicted=%evicted.len(), "Module-bytes cache evicted LRU entries");
         }
-        Ok(bytes)
+        Ok(arc)
     }
 
     pub async fn execute_handler(
@@ -443,26 +445,26 @@ impl ModuleLoader {
         let tenant_id = &request.context.tenant_id;
         let extension_id = &request.context.extension_id;
 
-        tracing::info!(request_id=%request_id, tenant=%tenant_id, extension=%extension_id, "Extension execution started");
-        tracing::info!(request_id=%request_id, timeout_ms=?timeout_ms, memory_mb=?memory_mb, "Execution parameters");
+        tracing::debug!(request_id=%request_id, tenant=%tenant_id, extension=%extension_id, "Extension execution started");
+        tracing::debug!(request_id=%request_id, timeout_ms=?timeout_ms, memory_mb=?memory_mb, "Execution parameters");
 
         // Ensure baseline capabilities are always present for the guest runtime. Some callers
         // (especially external tooling) may omit them, but the component contract expects the
         // context/read + log emit capabilities to be available at minimum.
-        tracing::info!(request_id=%request_id, "Normalizing capability providers");
+        tracing::debug!(request_id=%request_id, "Normalizing capability providers");
         if context.providers.is_empty() {
             context.providers = crate::providers::default_capabilities()
                 .into_iter()
                 .map(|cap| cap.to_ascii_lowercase())
                 .collect();
-            tracing::info!(request_id=%request_id, provider_count=%context.providers.len(), "Added default capabilities");
+            tracing::debug!(request_id=%request_id, provider_count=%context.providers.len(), "Added default capabilities");
         } else {
             for cap in crate::providers::default_capabilities() {
                 context.providers.insert(cap.to_ascii_lowercase());
             }
-            tracing::info!(request_id=%request_id, provider_count=%context.providers.len(), "Supplemented existing capabilities");
+            tracing::debug!(request_id=%request_id, provider_count=%context.providers.len(), "Supplemented existing capabilities");
         }
-        tracing::info!(
+        tracing::debug!(
             request_id=%request_id,
             tenant=%tenant_id,
             extension=%extension_id,
@@ -472,44 +474,44 @@ impl ModuleLoader {
         );
 
         // Instantiate WASM component
-        tracing::info!(request_id=%request_id, "Instantiating WASM component in Wasmtime");
+        tracing::debug!(request_id=%request_id, "Instantiating WASM component in Wasmtime");
         let (mut store, component, linker) = self.instantiate(wasm, timeout_ms, memory_mb).await?;
-        tracing::info!(request_id=%request_id, "WASM component instantiated successfully");
+        tracing::debug!(request_id=%request_id, "WASM component instantiated successfully");
 
         // Set execution context
         store.data_mut().context = context;
-        tracing::info!(request_id=%request_id, "Host execution context attached to store");
+        tracing::debug!(request_id=%request_id, "Host execution context attached to store");
 
         // Pre-instantiate component
-        tracing::info!(request_id=%request_id, "Pre-instantiating component for execution");
+        tracing::debug!(request_id=%request_id, "Pre-instantiating component for execution");
         let instance_pre = linker.instantiate_pre(&component)?;
-        tracing::info!(request_id=%request_id, "Component pre-instantiation complete");
+        tracing::debug!(request_id=%request_id, "Component pre-instantiation complete");
 
         // Instantiate the component
-        tracing::info!(request_id=%request_id, "Instantiating component instance");
+        tracing::debug!(request_id=%request_id, "Instantiating component instance");
         let instance = instance_pre.instantiate_async(&mut store).await?;
-        tracing::info!(request_id=%request_id, "Component instance created");
+        tracing::debug!(request_id=%request_id, "Component instance created");
 
         // Get the handler function
-        tracing::info!(request_id=%request_id, "Resolving 'handler' function export");
+        tracing::debug!(request_id=%request_id, "Resolving 'handler' function export");
         let handler = instance.get_typed_func::<
             (&component::alga::extension::types::ExecuteRequest,),
             (component::alga::extension::types::ExecuteResponse,),
         >(&mut store, "handler")?;
-        tracing::info!(request_id=%request_id, "Handler function resolved successfully");
+        tracing::debug!(request_id=%request_id, "Handler function resolved successfully");
 
         // Convert request to component format
-        tracing::info!(request_id=%request_id, "Converting request to component format");
+        tracing::debug!(request_id=%request_id, "Converting request to component format");
         let input = to_component_execute_request(request)?;
-        tracing::info!(request_id=%request_id, "Request conversion complete");
+        tracing::debug!(request_id=%request_id, "Request conversion complete");
 
         // Call the handler
-        tracing::info!(request_id=%request_id, "Calling extension handler function");
+        tracing::debug!(request_id=%request_id, "Calling extension handler function");
         let result = handler.call_async(&mut store, (&input,)).await;
 
         let (output,) = match result {
             Ok(v) => {
-                tracing::info!(request_id=%request_id, "Extension handler executed successfully");
+                tracing::debug!(request_id=%request_id, "Extension handler executed successfully");
                 v
             }
             Err(e) => {
@@ -520,9 +522,9 @@ impl ModuleLoader {
         };
 
         // Convert response back to model format
-        tracing::info!(request_id=%request_id, "Converting response from component format");
+        tracing::debug!(request_id=%request_id, "Converting response from component format");
         let response = to_model_execute_response(output);
-        tracing::info!(request_id=%request_id, status=%response.status, "Extension execution complete - response ready");
+        tracing::debug!(request_id=%request_id, status=%response.status, "Extension execution complete - response ready");
 
         Ok(response)
     }
@@ -578,7 +580,7 @@ pub async fn verify_archive_sha256(
     use tokio::io::AsyncWriteExt;
 
     let expected_lower = expected_hex.to_ascii_lowercase();
-    tracing::info!(expected_hash=%expected_lower, bundle_url=%url.to_string(), "Bundle archive download and hash verification started");
+    tracing::info!(expected_hash=%expected_lower, bundle_url=%crate::engine::host_api::redact_url_query(&url.to_string()), "Bundle archive download and hash verification started");
     tracing::info!(expected_hash=%expected_lower, "Archive will be verified against SHA256 hash and extracted to cache");
 
     let cache_root = cache_fs::ext_cache_root_from_env();
@@ -682,11 +684,11 @@ pub async fn verify_archive_sha256(
         tracing::info!(expected_hash=%expected_lower, "Using direct URL download (no presigned URL)");
     }
 
-    tracing::info!(expected_hash=%expected_lower, download_url=%fetch_url.to_string(), "Starting bundle download");
+    tracing::info!(expected_hash=%expected_lower, download_url=%crate::engine::host_api::redact_url_query(&fetch_url.to_string()), "Starting bundle download");
 
     let mut resp = client.get(fetch_url.clone()).send().await?;
     if !resp.status().is_success() {
-        tracing::error!(expected_hash=%expected_lower, status=%resp.status().as_u16(), download_url=%fetch_url.to_string(), "Bundle download failed with non-success HTTP status");
+        tracing::error!(expected_hash=%expected_lower, status=%resp.status().as_u16(), download_url=%crate::engine::host_api::redact_url_query(&fetch_url.to_string()), "Bundle download failed with non-success HTTP status");
         tracing::error!(
             "Expected HTTP 200-299, got HTTP {} for bundle {}",
             resp.status(),
@@ -728,7 +730,7 @@ pub async fn verify_archive_sha256(
         tracing::error!("Bytes: {}", total);
         tracing::error!("URL: {}", url.to_string());
         tracing::error!("═══════════════════════════════════════════════════════");
-        tracing::error!(expected=%expected_lower, computed=%got, bytes=total, download_url=%url.to_string(), "HASH_MISMATCH: Bundle integrity check failed");
+        tracing::error!(expected=%expected_lower, computed=%got, bytes=total, download_url=%crate::engine::host_api::redact_url_query(&url.to_string()), "HASH_MISMATCH: Bundle integrity check failed");
         return Err(IntegrityError::ArchiveHashMismatch {
             expected_hex: expected_lower,
             computed_hex: got,
@@ -783,7 +785,7 @@ pub async fn ensure_bundle_cached(
     }
 
     let url = bundle_url_for_key(bundle_store_base, object_key)?;
-    tracing::info!(hash=%normalized_hash, object_key=%object_key, url=%url.to_string(), "Bundle archive fetch start");
+    tracing::info!(hash=%normalized_hash, object_key=%object_key, url=%crate::engine::host_api::redact_url_query(&url.to_string()), "Bundle archive fetch start");
     let tmp_archive = verify_archive_sha256(&url, &normalized_hash).await?;
 
     if let Err(err) = extract_bundle_archive(&tmp_archive, &bundle_root, &ui_root).await {

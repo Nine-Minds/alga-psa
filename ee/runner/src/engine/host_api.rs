@@ -328,6 +328,29 @@ fn clone_context_for_host(state: &HostState) -> HostExecutionContext {
     state.context.clone()
 }
 
+/// Redacts URL query values so credentials carried in query strings
+/// (ITFlow-style `?api_key=...`) or presigned S3 parameters never reach logs.
+/// Keeps keys and parameter order; replaces each value with a short fingerprint.
+pub(crate) fn redact_url_query(raw: &str) -> String {
+    let (base, query) = match raw.split_once('?') {
+        Some((base, query)) => (base, Some(query)),
+        None => return raw.to_string(),
+    };
+    let query = query.unwrap_or_default();
+    let redacted: Vec<String> = query
+        .split('&')
+        .filter(|pair| !pair.is_empty())
+        .map(|pair| match pair.split_once('=') {
+            Some((key, value)) => format!("{}={}", key, redact_identifier(value)),
+            None => (*pair).to_string(),
+        })
+        .collect();
+    if redacted.is_empty() {
+        return base.to_string();
+    }
+    format!("{}?{}", base, redacted.join("&"))
+}
+
 fn redact_identifier(value: &str) -> String {
     if value.is_empty() {
         return "<empty>".to_string();
@@ -525,11 +548,14 @@ impl http::Host for HostState {
 
             let method: Method = method.parse().map_err(|_| HttpError::InvalidUrl)?;
             let started = Instant::now();
-            tracing::info!(
+            // High-frequency per-call line: debug-only. The URL may carry
+            // credentials in the query string (ITFlow-style APIs), so the
+            // query is redacted even at debug level.
+            tracing::debug!(
                 tenant=%tenant,
                 extension=%extension,
                 method=%method,
-                url=%route,
+                url=%redact_url_query(&route),
                 "http capability fetch start"
             );
 
@@ -548,12 +574,12 @@ impl http::Host for HostState {
 
             let status = response.status().as_u16();
             let elapsed_ms = started.elapsed().as_millis();
-            tracing::info!(
+            tracing::debug!(
                 tenant=%tenant,
                 extension=%extension,
                 status,
                 elapsed_ms,
-                url=%route,
+                url=%redact_url_query(&route),
                 "http capability fetch completed"
             );
             let mut headers = Vec::new();
@@ -685,7 +711,8 @@ impl storage::Host for HostState {
             let extension = ctx.extension_id.unwrap_or_default();
             let namespace_log = namespace.clone();
             let key_log = key.clone();
-            tracing::info!(
+            // High-frequency per-call line: debug-only.
+            tracing::debug!(
                 tenant=%tenant,
                 extension=%extension,
                 namespace=%namespace_log,
@@ -739,7 +766,7 @@ impl storage::Host for HostState {
             let extension = ctx.extension_id.unwrap_or_default();
             let namespace_log = entry.namespace.clone();
             let key_log = entry.key.clone();
-            tracing::info!(
+            tracing::debug!(
                 tenant=%tenant,
                 extension=%extension,
                 namespace=%namespace_log,
@@ -813,7 +840,7 @@ impl storage::Host for HostState {
             let extension = ctx.extension_id.unwrap_or_default();
             let namespace_log = namespace.clone();
             let key_log = key.clone();
-            tracing::info!(
+            tracing::debug!(
                 tenant=%tenant,
                 extension=%extension,
                 namespace=%namespace_log,
@@ -871,7 +898,7 @@ impl storage::Host for HostState {
             let extension = ctx.extension_id.unwrap_or_default();
             let namespace_log = namespace.clone();
             let cursor_log = cursor.clone();
-            tracing::info!(
+            tracing::debug!(
                 tenant=%tenant,
                 extension=%extension,
                 namespace=%namespace_log,
@@ -2899,6 +2926,28 @@ mod tests {
         assert_eq!(redact_identifier(""), "<empty>");
         assert_eq!(redact_identifier("id"), "***");
         assert_eq!(redact_identifier("secret"), "se…et");
+    }
+
+    #[test]
+    fn redact_url_query_masks_credential_bearing_values() {
+        // Values of 4 chars or fewer are fully masked by redact_identifier;
+        // that is intentional — never echo query values verbatim.
+        assert_eq!(
+            redact_url_query("https://itflow.example.net/api/v1/clients/read.php?api_key=abcdefghijkl&limit=50"),
+            "https://itflow.example.net/api/v1/clients/read.php?api_key=ab…kl&limit=***"
+        );
+        // Presigned S3 URLs must not leak the signature or credential verbatim,
+        // and parameter order is preserved.
+        let redacted = redact_url_query(
+            "https://minio.example.net/bucket/key?X-Amz-Credential=AKIAIOSFODNN7EXAMPLE&X-Amz-Signature=deadbeefcafe1234&X-Amz-Expires=900",
+        );
+        assert!(!redacted.contains("AKIAIOSFODNN7EXAMPLE"));
+        assert!(!redacted.contains("deadbeefcafe1234"));
+        assert!(redacted.starts_with("https://minio.example.net/bucket/key?X-Amz-Credential="));
+        assert_eq!(redacted.split('&').count(), 3);
+        // No query: unchanged. Empty/edge queries handled.
+        assert_eq!(redact_url_query("https://example.net/a/b"), "https://example.net/a/b");
+        assert_eq!(redact_url_query("https://example.net/a?"), "https://example.net/a");
     }
 
     #[test]
