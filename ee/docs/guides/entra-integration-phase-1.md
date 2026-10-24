@@ -65,7 +65,7 @@ Choose one connection type per tenant:
 Switching connection types automatically clears stale credentials for the previous type.
 
 Both connect paths validate before they persist. The CIPP dialog tests the candidate credential
-(mint a token, read the tenant list, then read users for the first tenant) and keeps Save disabled until that test passes; the Direct OAuth callback
+(mint a token, read the tenant list, then read users for the first tenant) and keeps **Connect** disabled until that test passes; the Direct OAuth callback
 probes Microsoft Graph with the freshly exchanged token before writing anything, so a sign-in that
 completes without admin consent leaves no connection record at all. A failed connect never disturbs
 a connection the tenant already had.
@@ -103,7 +103,12 @@ CIPP keys (defined in `ENTRA_CIPP_SECRET_KEYS`, stored per tenant by `cippSecret
 Saving one shape deletes the other's keys, so a tenant never holds a stale credential of the
 other kind. Disconnect deletes every CIPP key, including the client secret.
 
-Reconnecting a legacy connection: the dialog opens in the API-client shape with the API URL filled
+Reconnecting: on a legacy connection the Connection details show a warning badge and the notice
+"This connection uses a legacy CIPP API key. It keeps syncing unchanged. Reconnect to switch to a
+CIPP API client." with a **Reconnect** button (in the setup wizard and the console's Connection
+tab). On an API-client connection, **Rotate credential** on the console's Connection tab opens the
+same dialog, titled **Reconnect CIPP**, with the API URL, Application (client) ID and Tenant ID
+prefilled; the operator re-enters the Client secret. For a legacy connection the dialog opens in the API-client shape with the API URL filled
 in; the operator enters the client ID, secret and Tenant ID. The legacy key keeps working until
 the new client passes a test and is saved; saving replaces the legacy key and connection row with
 the API client. If the API-client test or the swap fails, the legacy key is left (or put back) as it was.
@@ -245,9 +250,9 @@ The settings wizard follows four explicit write-gated steps:
 - Choose `direct` or `cipp` from the connection chooser, which states each option's prerequisites.
 - For direct: confirm the interstitial (a Global Administrator must consent; the connection then
   runs as a service principal), complete OAuth, and the callback validates before persisting.
-- For CIPP: in CIPP open **Integrations > CIPP-API**, create the client, enable it and Save to
+- For CIPP: choose the CIPP card in the connection chooser and press **Set up CIPP connection**, which opens the **Connect CIPP** dialog. In CIPP open **Integrations > CIPP-API**, create the client, enable it and Save to
   Azure; then enter **API URL**, **Application (client) ID**, **Client secret** and **Tenant ID**,
-  press Test connection, then Save. The Tenant ID can take 5 to 15 minutes to appear in CIPP after
+  press **Test connection**, then **Connect**. The Tenant ID can take 5 to 15 minutes to appear in CIPP after
   the first save.
 
 2. Discover Tenants
@@ -364,7 +369,7 @@ Two explicit run scopes:
 | 1. Readiness | Edition/tier/RBAC; active connection row + stored validation snapshot; app-registration binding (missing binding, missing/archived profile, missing Entra capability); client secret presence and fingerprint; expected app-registration values; Temporal/schedule readiness |
 | 2. Partner auth | Token-set presence; forced common-authority refresh; decoded claims and required-scope comparison; `/me` baseline |
 | 3. Discovery | `managedTenants` endpoint probe (or `/organization` in self-tenant smoke mode); full paged discovery with count and up-to-ten sample; confirmed mappings versus live discovery |
-| C.1–C.5 (CIPP) | Credential presence; reachability across the candidate endpoints; for API clients, minting a client-credentials token; authentication; tenant-list count/sample; mappings versus the CIPP list |
+| C.1–C.6 (CIPP) | In run order: `cipp_credentials_present` (CIPP credentials); `cipp_token_mint` (CIPP API token mint; API clients only, skipped for legacy API-key connections); `cipp_reachable` (CIPP API reachability); `cipp_auth` (CIPP API credential); `cipp_tenant_list` (tenant-list count/sample); `cipp_mappings_vs_list` (confirmed mappings versus the CIPP tenant list) |
 | 5. Sync health | Last five runs with trigger/duration/totals; per-tenant failures of the latest real run; open reconciliation count and oldest age |
 
 A failed prerequisite marks only its **dependent** steps `skip` with
@@ -382,7 +387,7 @@ token failure does not suppress local sync-history and queue checks.
 | `entitlement_group_resolves` | Resolve the configured group (report `securityEnabled`, flag a non-security group), then a read-only `checkMemberGroups` probe for the first user |
 | `user_yield_preview` | Off by default; when enabled, reuse the existing user filter to report total/included and exclusions by `account_disabled`, `missing_identity`, `service_account`, `tenant_custom_pattern` |
 
-CIPP clients run `C.6 per_tenant_users` as a bounded one-page read, with the same optional
+CIPP clients run the per-client step `per_tenant_users` as a bounded one-page read, with the same optional
 yield preview.
 
 ### Support export
