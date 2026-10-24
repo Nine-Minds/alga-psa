@@ -104,6 +104,12 @@ describe('client inbound webhook actions', () => {
     select: ReturnType<typeof vi.fn>;
     first: ReturnType<typeof vi.fn>;
   };
+  let locationsQuery: {
+    where: ReturnType<typeof vi.fn>;
+    first: ReturnType<typeof vi.fn>;
+    insert: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -127,12 +133,23 @@ describe('client inbound webhook actions', () => {
       select: vi.fn().mockReturnThis(),
       first: vi.fn().mockResolvedValue({ billing_profile_id: 'billing-profile-1' }),
     };
+    // Mapped contact/address fields belong to the default location, not to
+    // `clients` — those columns were dropped in 20250707120000.
+    locationsQuery = {
+      where: vi.fn().mockReturnThis(),
+      first: vi.fn().mockResolvedValue(null),
+      insert: vi.fn().mockResolvedValue(undefined),
+      update: vi.fn().mockResolvedValue(undefined),
+    };
     trx = vi.fn((table: string) => {
       if (table === 'clients') {
         return clientsQuery;
       }
       if (table === 'client_billing_profiles') {
         return billingProfilesQuery;
+      }
+      if (table === 'client_locations') {
+        return locationsQuery;
       }
       // The creation seam resolves the tenant default currency and the product
       // code (which decides whether tax initialization runs).
@@ -213,8 +230,8 @@ describe('client inbound webhook actions', () => {
         tenant: 'tenant-a',
         client_name: 'Acme Corp',
         client_type: 'company',
-        email: 'ops@example.com',
-        phone_no: '+15551234567',
+        // `email` is not a clients column; `billing_email` is.
+        billing_email: 'ops@example.com',
         is_inactive: false,
         // The seam adopts the tenant's configured default currency.
         default_currency_code: 'EUR',
@@ -222,6 +239,19 @@ describe('client inbound webhook actions', () => {
           source_system: 'rmm',
           inbound_webhook_external_id: 'company-42',
         },
+      }),
+    );
+    const insertedClient = clientsQuery.insert.mock.calls[0][0];
+    expect(insertedClient).not.toHaveProperty('email');
+    expect(insertedClient).not.toHaveProperty('phone_no');
+    // The phone lands on the client's default location instead.
+    expect(locationsQuery.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        client_id: 'client-1',
+        phone: '+15551234567',
+        email: 'ops@example.com',
+        is_default: true,
       }),
     );
     expect(mocks.ensureDefaultContractForClientIfBillingConfigured).toHaveBeenCalledWith(
@@ -302,7 +332,7 @@ describe('client inbound webhook actions', () => {
     expect(clientsQuery.update).toHaveBeenCalledWith(
       expect.objectContaining({
         client_name: 'Acme Corp',
-        email: 'new-ops@example.com',
+        billing_email: 'new-ops@example.com',
         properties: {
           existing: true,
           source_system: 'rmm',
@@ -310,6 +340,10 @@ describe('client inbound webhook actions', () => {
         },
       }),
     );
+    expect(clientsQuery.update.mock.calls[0][0]).not.toHaveProperty('email');
+    // An update refreshes an existing default location but does not invent
+    // one; this client has none, so nothing is written.
+    expect(locationsQuery.insert).not.toHaveBeenCalled();
     expect(clientsQuery.insert).not.toHaveBeenCalled();
     expect(mocks.writeEntityMapping).not.toHaveBeenCalled();
     expect(mocks.ensureDefaultContractForClientIfBillingConfigured).not.toHaveBeenCalled();
