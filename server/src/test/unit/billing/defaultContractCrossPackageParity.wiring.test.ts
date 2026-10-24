@@ -13,7 +13,7 @@ describe('default-contract cross-package parity wiring', () => {
     const xeroSource = readRepo('packages/integrations/src/services/xeroCsvClientSyncService.ts');
     const seamSource = readRepo('shared/models/clientCreation.ts');
 
-    expect(xeroSource).toContain('await createClientWithDefaults(trx, tenant, {');
+    expect(xeroSource).toMatch(/await createClientWithDefaults\(\s*trx,\s*tenant,/);
     expect(seamSource).toContain('ensureDefaultContractForClientIfBillingConfigured');
     expect(seamSource).toContain('await ensureDefaultContractForClientIfBillingConfigured(trx, {');
     expect(seamSource).toContain('await db.table(\'clients\')');

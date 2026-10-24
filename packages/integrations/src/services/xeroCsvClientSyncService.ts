@@ -15,7 +15,7 @@ import logger from '@alga-psa/core/logger';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { unparseCSV, parseCSV } from '@alga-psa/core';
 import { withTransaction } from '@alga-psa/db';
-import type { IClient, IClientLocation } from '@alga-psa/types';
+import { resolveProductCode, type IClient, type IClientLocation } from '@alga-psa/types';
 import {
   createClientWithDefaults,
   type CreateClientWithDefaultsData,
@@ -515,6 +515,17 @@ export class XeroCsvClientSyncService {
     const { createdClients, ...result } = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant);
 
+      // Resolve the per-tenant creation defaults once for the whole import
+      // rather than once per created client.
+      const billingSettings = await db.table('default_billing_settings')
+        .select('default_currency_code')
+        .first();
+      const tenantRow = await db.table('tenants').first('product_code');
+      const creationDefaults = {
+        defaultCurrencyCode: billingSettings?.default_currency_code || 'USD',
+        skipTaxSettings: resolveProductCode(tenantRow?.product_code).productCode === 'algadesk',
+      };
+
       // Load all existing clients
       const existingClients = await db.table<DbClient>('clients')
         .select('client_id', 'client_name', 'billing_email')
@@ -605,7 +616,7 @@ export class XeroCsvClientSyncService {
           } else {
             // Create new client
             if (mergedOptions.createNewClients) {
-              const newClient = await this.createClient(trx, tenant, contact, userId);
+              const newClient = await this.createClient(trx, tenant, contact, userId, creationDefaults);
               createdClients.push(newClient);
 
               // Create mapping
@@ -742,25 +753,33 @@ export class XeroCsvClientSyncService {
     trx: Knex.Transaction,
     tenant: string,
     contact: ParsedXeroContact,
-    userId: string
+    userId: string,
+    defaults: { defaultCurrencyCode: string; skipTaxSettings: boolean }
   ): Promise<CreatedXeroClient> {
     const now = new Date().toISOString();
     const clientId = await trx.raw('SELECT gen_random_uuid() as id').then(r => r.rows[0].id);
     const db = tenantDb(trx, tenant);
 
     // The shared seam adds the tenant default currency, the default billing
-    // profile, the default contract and default tax settings to every row.
-    const created = await createClientWithDefaults(trx, tenant, {
-      client_id: clientId,
-      client_name: contact.contactName,
-      client_type: 'company',
-      billing_email: contact.email,
-      tax_id_number: contact.taxNumber,
-      is_inactive: false,
-      is_tax_exempt: false,
-      url: '',
-      billing_cycle: 'monthly',
-    } as CreateClientWithDefaultsData);
+    // profile, the default contract and default tax settings to every row. The
+    // import resolved the currency and product code once, so neither is
+    // re-read per contact.
+    const created = await createClientWithDefaults(
+      trx,
+      tenant,
+      {
+        client_id: clientId,
+        client_name: contact.contactName,
+        client_type: 'company',
+        billing_email: contact.email,
+        tax_id_number: contact.taxNumber,
+        is_inactive: false,
+        is_tax_exempt: false,
+        url: '',
+        billing_cycle: 'monthly',
+      } as CreateClientWithDefaultsData,
+      defaults
+    );
 
     // Create default location if we have address data
     if (contact.addressLine1 || contact.phone || contact.email) {
@@ -791,7 +810,9 @@ export class XeroCsvClientSyncService {
     return {
       clientId,
       clientName: created.client_name,
-      createdAt: String(created.created_at ?? now),
+      // The event contract requires an ISO-8601 string; `returning('*')` hands
+      // back a pg Date, whose default stringification is not that.
+      createdAt: created.created_at ? new Date(created.created_at).toISOString() : now,
       status: (created as { properties?: { status?: string } }).properties?.status
         ?? (created.is_inactive ? 'inactive' : 'active'),
     };
