@@ -142,12 +142,13 @@ describe('REST manual invoice creation takes terms from the effective billing id
     const header = await create({ billingProfileId: otherProfileId });
     const charges = await context.db('invoice_charges')
       .where({ tenant: context.tenantId, invoice_id: header.invoice_id })
-      .select('billing_profile_id');
+      .select('billing_profile_id', 'billing_profile_source');
 
     expect(header.billing_profile_id).toBe(otherProfileId);
     expect(charges.length).toBeGreaterThan(0);
     for (const charge of charges) {
       expect(charge.billing_profile_id).toBe(header.billing_profile_id);
+      expect(charge.billing_profile_source).toBe('explicit');
     }
   });
 
@@ -157,12 +158,13 @@ describe('REST manual invoice creation takes terms from the effective billing id
     const header = await create();
     const charges = await context.db('invoice_charges')
       .where({ tenant: context.tenantId, invoice_id: header.invoice_id })
-      .select('billing_profile_id');
+      .select('billing_profile_id', 'billing_profile_source');
 
     expect(header.billing_profile_id).toBe(defaultProfileId);
     expect(charges.length).toBeGreaterThan(0);
     for (const charge of charges) {
       expect(charge.billing_profile_id).toBe(defaultProfileId);
+      expect(charge.billing_profile_source).toBe('client_default');
     }
   });
 
@@ -254,6 +256,117 @@ describe('REST manual invoice creation takes terms from the effective billing id
       tax: 0,
       total_amount: 0,
       status: 'draft',
+    });
+
+    const items = () => [
+      { description: 'A', quantity: 1, unit_price: 1000 },
+      { description: 'B', quantity: 2, unit_price: 500 },
+    ];
+    const chargesOf = (invoiceId: string) =>
+      context.db('invoice_charges')
+        .where({ tenant: context.tenantId, invoice_id: invoiceId })
+        .select('billing_profile_id', 'billing_profile_source');
+    const headerOf = (invoiceId: string) =>
+      context.db('invoices').where({ tenant: context.tenantId, invoice_id: invoiceId }).first();
+
+    it('D1: generic create bills items under an explicit header profile as explicit', async () => {
+      await ensureDefaultBillingProfile(context, context.clientId);
+      const profileId = await createBillingProfile(context, context.clientId, 'Non-default');
+
+      const created = await serviceUnderTest().create(
+        { ...base(), billing_profile_id: profileId, items: items() } as any,
+        ctx(),
+      );
+      const header = await headerOf((created as any).invoice_id);
+      const charges = await chargesOf(header.invoice_id);
+
+      expect(header.billing_profile_id).toBe(profileId);
+      expect(charges).toHaveLength(2);
+      for (const charge of charges) {
+        expect(charge.billing_profile_id).toBe(header.billing_profile_id);
+        expect(charge.billing_profile_source).toBe('explicit');
+      }
+    });
+
+    it('D1: generic create without a profile bills items under the client default as client_default', async () => {
+      const defaultProfileId = await ensureDefaultBillingProfile(context, context.clientId);
+
+      const created = await serviceUnderTest().create({ ...base(), items: items() } as any, ctx());
+      const header = await headerOf((created as any).invoice_id);
+      const charges = await chargesOf(header.invoice_id);
+
+      expect(header.billing_profile_id).toBe(defaultProfileId);
+      expect(charges).toHaveLength(2);
+      for (const charge of charges) {
+        expect(charge.billing_profile_id).toBe(defaultProfileId);
+        expect(charge.billing_profile_source).toBe('client_default');
+      }
+    });
+
+    async function draftUnderDefaultAndNet15CreditCardProfile() {
+      const defaultProfileId = await ensureDefaultBillingProfile(context, context.clientId);
+      await context.db('client_billing_profiles')
+        .where({ tenant: context.tenantId, billing_profile_id: defaultProfileId })
+        .update({ payment_terms: 'net_30', preferred_payment_method: 'check' });
+      const otherProfileId = await createBillingProfile(context, context.clientId, 'Net 15 card');
+      await context.db('client_billing_profiles')
+        .where({ tenant: context.tenantId, billing_profile_id: otherProfileId })
+        .update({ payment_terms: 'net_15', preferred_payment_method: 'credit_card' });
+      const created = await serviceUnderTest().create({ ...base(), items: items() } as any, ctx());
+      const header = await headerOf((created as any).invoice_id);
+      expect(header.payment_method).toBe('check');
+      expect(daysBetween(header.invoice_date, header.due_date)).toBe(30);
+      return { defaultProfileId, otherProfileId, invoiceId: header.invoice_id as string };
+    }
+
+    it('D2: changing the profile on a draft re-resolves terms and re-points non-explicit charges', async () => {
+      const { otherProfileId, invoiceId } = await draftUnderDefaultAndNet15CreditCardProfile();
+
+      await updateAsGeneric(invoiceId, { billing_profile_id: otherProfileId });
+
+      const header = await headerOf(invoiceId);
+      expect(header.billing_profile_id).toBe(otherProfileId);
+      expect(header.payment_method).toBe('credit_card');
+      expect(daysBetween(header.invoice_date, header.due_date)).toBe(15);
+      const charges = await chargesOf(invoiceId);
+      expect(charges).toHaveLength(2);
+      for (const charge of charges) {
+        expect(charge.billing_profile_id).toBe(otherProfileId);
+        expect(charge.billing_profile_source).toBe('explicit');
+      }
+    });
+
+    it('D2: caller-supplied payment_method and due_date win over re-resolved terms', async () => {
+      const { otherProfileId, invoiceId } = await draftUnderDefaultAndNet15CreditCardProfile();
+
+      await updateAsGeneric(invoiceId, {
+        billing_profile_id: otherProfileId,
+        payment_method: 'bank_transfer',
+      });
+      let header = await headerOf(invoiceId);
+      expect(header.payment_method).toBe('bank_transfer');
+      expect(daysBetween(header.invoice_date, header.due_date)).toBe(15);
+
+      const { otherProfileId: other2, invoiceId: invoice2 } = await draftUnderDefaultAndNet15CreditCardProfile();
+      await updateAsGeneric(invoice2, { billing_profile_id: other2, due_date: '2030-01-01' });
+      header = await headerOf(invoice2);
+      expect(dateOnly(header.due_date)).toBe('2030-01-01');
+      expect(header.payment_method).toBe('credit_card');
+    });
+
+    it('D2: explicitly pinned charges are not re-pointed', async () => {
+      const { defaultProfileId, otherProfileId, invoiceId } = await draftUnderDefaultAndNet15CreditCardProfile();
+      const pinned = await context.db('invoice_charges')
+        .where({ tenant: context.tenantId, invoice_id: invoiceId }).first('item_id');
+      await context.db('invoice_charges')
+        .where({ tenant: context.tenantId, item_id: pinned.item_id })
+        .update({ billing_profile_source: 'explicit' });
+
+      await updateAsGeneric(invoiceId, { billing_profile_id: otherProfileId });
+
+      const stillPinned = await context.db('invoice_charges')
+        .where({ tenant: context.tenantId, item_id: pinned.item_id }).first();
+      expect(stillPinned.billing_profile_id).toBe(defaultProfileId);
     });
 
     it('rejects a foreign billing_profile_id on generic create', async () => {

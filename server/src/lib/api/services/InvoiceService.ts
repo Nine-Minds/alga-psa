@@ -618,7 +618,9 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       // Create line items if provided
       if (data.items?.length) {
-        await this.createInvoiceLineItems(invoice.invoice_id, data.items, trx, context);
+        // Only a caller-supplied profile makes the charges 'explicit'; a header
+        // profile back-filled from billingTerms keeps them 'client_default'.
+        await this.createInvoiceLineItems(invoice.invoice_id, data.items, trx, context, data.billing_profile_id ?? null);
       }
 
       // Audit log
@@ -733,6 +735,44 @@ export class InvoiceService extends BaseService<IInvoice> {
       const { items: _items, ...headerData } = data;
       const updateData: any = await this.addUpdateAuditFields(trx, headerData, context, 'invoices');
 
+      // Changing the billing profile of a draft re-resolves the profile-derived
+      // terms (payment method, due date); caller-supplied values in the same
+      // request win. Clearing the profile (null) falls back to the client default.
+      const profileChangedOnDraft = existing.status === 'draft'
+        && data.billing_profile_id !== undefined
+        && data.billing_profile_id !== existing.billing_profile_id;
+      let repointToProfileId: string | null | undefined;
+      let repointSource: 'explicit' | 'client_default' = 'client_default';
+      if (profileChangedOnDraft) {
+        const termsClientId = data.client_id ?? existing.client_id;
+        if (termsClientId) {
+          const rawInvoiceDate = data.invoice_date ?? existing.invoice_date;
+          const termsInvoiceDate = rawInvoiceDate instanceof Date
+            ? rawInvoiceDate.toISOString()
+            : String(rawInvoiceDate);
+          const terms = await resolveInvoiceBillingTerms(
+            trx,
+            context.tenant,
+            termsClientId,
+            termsInvoiceDate,
+            data.billing_profile_id,
+          );
+          if (data.payment_method === undefined) {
+            updateData.payment_method = terms.paymentMethod;
+          }
+          if (data.due_date === undefined) {
+            updateData.due_date = terms.dueDate;
+          }
+          repointToProfileId = terms.billingProfileId;
+          // A caller-chosen profile is 'explicit' (same rule as create); a
+          // cleared profile falls back to the default -> 'client_default'.
+          repointSource = data.billing_profile_id ? 'explicit' : 'client_default';
+          if (!data.billing_profile_id) {
+            updateData.billing_profile_id = terms.billingProfileId;
+          }
+        }
+      }
+
       // Remove undefined values
       Object.keys(updateData).forEach(key => {
         if (updateData[key] === undefined) {
@@ -744,6 +784,18 @@ export class InvoiceService extends BaseService<IInvoice> {
       await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: id })
         .update(updateData);
+
+      // Re-point charges that were not individually pinned. Skipped when items
+      // are replaced below (createInvoiceLineItems attributes the new ones).
+      if (repointToProfileId !== undefined && !data.items) {
+        await tenantDb(trx, context.tenant).table('invoice_charges')
+          .where({ invoice_id: id })
+          .where((qb) => qb.whereNull('billing_profile_source').orWhereNot('billing_profile_source', 'explicit'))
+          .update({
+            billing_profile_id: repointToProfileId,
+            billing_profile_source: repointSource,
+          });
+      }
 
       // Update line items if provided
       if (data.items) {
@@ -778,7 +830,20 @@ export class InvoiceService extends BaseService<IInvoice> {
         return it;
       });
 
-      await this.createInvoiceLineItems(id, normalizedItems, trx, context);
+      // Caller intent: a profile named in this request, else the header's
+      // existing profile unless it is just the client default.
+      let callerProfileId: string | null;
+      if (data.billing_profile_id !== undefined) {
+        callerProfileId = data.billing_profile_id;
+      } else {
+        const defaultProfileId = existing.client_id
+          ? await getClientDefaultBillingProfileId(trx, context.tenant, existing.client_id)
+          : null;
+        callerProfileId = existing.billing_profile_id && existing.billing_profile_id !== defaultProfileId
+          ? existing.billing_profile_id
+          : null;
+      }
+      await this.createInvoiceLineItems(id, normalizedItems, trx, context, callerProfileId);
       }
 
       const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, id);
@@ -2076,14 +2141,17 @@ export class InvoiceService extends BaseService<IInvoice> {
         await persistManualInvoiceCharges(
           trx,
           invoiceId,
-          // Charges bill under the same profile as the header (as the UI
-          // manual path does), so an explicit billingProfileId governs the
-          // lines as well as the terms instead of falling back to the
-          // client's default profile.
+          // Mirrors the UI manual path (manualInvoiceActions): a charge carries
+          // the profile the caller named, else nothing -
+          // persistManualInvoiceCharges then attributes it to the client
+          // default ('client_default'). The header still uses the resolved
+          // profile; only caller-supplied profiles make charges 'explicit'.
           data.items.map((item) => ({
             ...item,
             rate: Math.round(item.rate),
-            billing_profile_id: billingTerms.billingProfileId ?? undefined
+            // LEVERAGE: pattern item-profile-or-caller-profile — see createInvoiceLineItems
+            // (the REST manual item schema has no per-item profile, so only the caller's argument applies)
+            billing_profile_id: data.billingProfileId ?? undefined
           })),
           client,
           sessionLike as any,
@@ -2514,7 +2582,23 @@ export class InvoiceService extends BaseService<IInvoice> {
       .orderBy('created_at', 'desc');
   }
 
-  private async createInvoiceLineItems(invoiceId: string, lineItems: any[], trx: Knex.Transaction, context: ServiceContext): Promise<void> {
+  /**
+   * `callerBillingProfileId` is the profile the CALLER chose for the invoice
+   * header (not whatever the header row happens to hold). Attribution rule,
+   * shared with the UI manual path (manualInvoiceActions: `item ?? caller`):
+   *   - item names a profile            -> that profile, source 'explicit'
+   *   - else caller chose a header one  -> that profile, source 'explicit'
+   *   - else (nothing chosen)           -> client default, 'client_default'
+   * A header profile that create() back-filled from the client default is NOT
+   * caller intent, so it must not be passed here.
+   */
+  private async createInvoiceLineItems(
+    invoiceId: string,
+    lineItems: any[],
+    trx: Knex.Transaction,
+    context: ServiceContext,
+    callerBillingProfileId: string | null = null,
+  ): Promise<void> {
     // Line items persist to the canonical `invoice_charges` table (surfaced to
     // the `invoice_items` view). `total_price`/`net_amount` are calculated
     // server-side from `unit_price`/`quantity` when the caller omits them.
@@ -2556,8 +2640,9 @@ export class InvoiceService extends BaseService<IInvoice> {
         applies_to_service_id: item.applies_to_service_id,
         client_contract_id: item.client_contract_id,
         location_id: item.location_id,
-        billing_profile_id: item.billing_profile_id ?? defaultBillingProfileId,
-        billing_profile_source: item.billing_profile_id ? 'explicit' : 'client_default',
+        // LEVERAGE: pattern item-profile-or-caller-profile — item ?? caller, source explicit/client_default (also manualInvoiceActions, persistManualInvoiceCharges)
+        billing_profile_id: item.billing_profile_id ?? callerBillingProfileId ?? defaultBillingProfileId,
+        billing_profile_source: (item.billing_profile_id ?? callerBillingProfileId) ? 'explicit' : 'client_default',
         created_by: context.userId,
         tenant: context.tenant,
         created_at: new Date()
