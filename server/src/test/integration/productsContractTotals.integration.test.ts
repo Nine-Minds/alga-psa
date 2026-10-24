@@ -184,7 +184,7 @@ describe('Products-only AUD contract: wizard total == stored valuation == engine
     const { contractId, lines } = await createProductsContract([{ service_id: a, quantity: 5 }]);
     await t('contract_lines').where({ contract_line_id: lines[0].contract_line_id }).update({ custom_rate: 0, rate_provenance: 'custom' });
     const members = await t('contract_line_service_configuration').where({ contract_line_id: lines[0].contract_line_id });
-    await t('contract_line_service_fixed_config').whereIn('config_id', members.map((m: any) => m.config_id)).update({ base_rate: 0, rate_provenance: 'custom' });
+    await t('contract_line_service_fixed_config').whereIn('config_id', members.map((m: any) => m.config_id)).update({ base_rate: 0, base_rate_basis: 'per_unit', rate_provenance: 'custom' });
     expect((await getContractMonthlyFixedValuesByContract(db, tenantId, [contractId])).get(contractId)?.monthlyValueCents).toBe(80_490);
   });
 
@@ -206,18 +206,18 @@ describe('backfill migration', () => {
     // Customer's bad shape.
     await t('contract_lines').where({ contract_line_id: productLineId }).update({ custom_rate: 0, rate_provenance: 'custom' });
     const productMembers = await t('contract_line_service_configuration').where({ contract_line_id: productLineId });
-    await t('contract_line_service_fixed_config').whereIn('config_id', productMembers.map((m: any) => m.config_id)).update({ base_rate: 0, pricing_basis: 'bundle', rate_provenance: 'custom' });
+    await t('contract_line_service_fixed_config').whereIn('config_id', productMembers.map((m: any) => m.config_id)).update({ base_rate: 0, base_rate_basis: 'per_unit', pricing_basis: 'bundle', rate_provenance: 'custom' });
 
     // Step 3 shape: rate-less 'bundle' product members (what the wizard wrote before the basis fix).
     const d = await seedProduct('Backfill D', 18000, 0, serviceTypeId);
     const { lines: nullRateLines } = await createProductsContract([{ service_id: d, quantity: 2 }]);
     const nullRateMembers = await t('contract_line_service_configuration').where({ contract_line_id: nullRateLines[0].contract_line_id });
-    await t('contract_line_service_fixed_config').whereIn('config_id', nullRateMembers.map((m: any) => m.config_id)).update({ base_rate: null, pricing_basis: 'bundle', rate_provenance: 'inherited' });
+    await t('contract_line_service_fixed_config').whereIn('config_id', nullRateMembers.map((m: any) => m.config_id)).update({ base_rate: null, base_rate_basis: null, pricing_basis: 'bundle', rate_provenance: 'inherited' });
 
     // Control: a product member carrying a REAL bundle rate (information, not a placeholder) stays a bundle.
     const { lines: realRateLines } = await createProductsContract([{ service_id: d, quantity: 3 }]);
     const realRateMembers = await t('contract_line_service_configuration').where({ contract_line_id: realRateLines[0].contract_line_id });
-    await t('contract_line_service_fixed_config').whereIn('config_id', realRateMembers.map((m: any) => m.config_id)).update({ base_rate: 5000, pricing_basis: 'bundle', rate_provenance: 'custom' });
+    await t('contract_line_service_fixed_config').whereIn('config_id', realRateMembers.map((m: any) => m.config_id)).update({ base_rate: 5000, base_rate_basis: 'per_unit', pricing_basis: 'bundle', rate_provenance: 'custom' });
 
     // Control: a non-product Fixed line with custom_rate 0 and a 0 bundle member.
     const clientId = uuidv4();
@@ -230,14 +230,14 @@ describe('backfill migration', () => {
     const controlLine = (await t('contract_lines').where({ contract_id: control.contract_id }))[0];
     await t('contract_lines').where({ contract_line_id: controlLine.contract_line_id }).update({ custom_rate: 0, rate_provenance: 'custom' });
     const controlMembers = await t('contract_line_service_configuration').where({ contract_line_id: controlLine.contract_line_id });
-    await t('contract_line_service_fixed_config').whereIn('config_id', controlMembers.map((m: any) => m.config_id)).update({ base_rate: 0, pricing_basis: 'bundle', rate_provenance: 'custom' });
+    await t('contract_line_service_fixed_config').whereIn('config_id', controlMembers.map((m: any) => m.config_id)).update({ base_rate: 0, base_rate_basis: 'per_unit', pricing_basis: 'bundle', rate_provenance: 'custom' });
 
     // Control: a template-flagged line holding a product member with the same 0 / 'bundle' shape.
     const { lines: templateLines } = await createProductsContract([{ service_id: a, quantity: 1 }]);
     const templateLineId = templateLines[0].contract_line_id;
     await t('contract_lines').where({ contract_line_id: templateLineId }).update({ is_template: true });
     const templateMembers = await t('contract_line_service_configuration').where({ contract_line_id: templateLineId });
-    await t('contract_line_service_fixed_config').whereIn('config_id', templateMembers.map((m: any) => m.config_id)).update({ base_rate: 0, pricing_basis: 'bundle', rate_provenance: 'custom' });
+    await t('contract_line_service_fixed_config').whereIn('config_id', templateMembers.map((m: any) => m.config_id)).update({ base_rate: 0, base_rate_basis: 'per_unit', pricing_basis: 'bundle', rate_provenance: 'custom' });
 
     // Expected counts for THIS tenant, by the written-out predicate (independent of the migration's code path).
     const expectedLines = Number((await db.raw(
