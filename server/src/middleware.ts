@@ -51,6 +51,13 @@ function corsPreflightResponse(origin: string | null): NextResponse {
 const protectedPrefix = '/msp';
 const clientPortalPrefix = '/client-portal';
 const publicPagePaths = new Set(['/payment-methods/setup-complete']);
+// Durable emailed invoice payment link: /pay/<opaque signed token>. Exactly one
+// base64url segment; the page verifies the token itself (no session exists).
+const PUBLIC_PAY_LINK_PATH = /^\/pay\/[A-Za-z0-9_-]{1,512}$/;
+
+export function isPublicPagePath(pathname: string): boolean {
+  return publicPagePaths.has(pathname) || PUBLIC_PAY_LINK_PATH.test(pathname);
+}
 
 export interface ClientPortalThemeRequestContext {
   isClientPortal: boolean;
@@ -443,8 +450,9 @@ const _middleware = auth((request) => {
   // Skip auth pages to prevent redirect loops
   const isAuthPage = pathname.startsWith('/auth/');
 
-  // Public Stripe Checkout return page verifies its opaque session context itself.
-  if (publicPagePaths.has(pathname)) {
+  // Public Stripe Checkout return page and the emailed /pay/<token> link verify
+  // their opaque signed context themselves.
+  if (isPublicPagePath(pathname)) {
     return applyCorsHeaders(response, origin);
   }
 
