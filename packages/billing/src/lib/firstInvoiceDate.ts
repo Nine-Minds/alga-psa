@@ -58,6 +58,13 @@ export type FirstInvoiceDate =
       /** The first service period the invoice covers, clipped to the contract start. */
       servicePeriodStart: string;
       servicePeriodEnd: string;
+      /** Last day the first invoice covers (the exclusive `servicePeriodEnd` minus one day), `YYYY-MM-DD`. For display. */
+      servicePeriodEndInclusive: string;
+      /** The unclipped schedule period containing the start date, `YYYY-MM-DD`. */
+      schedulePeriodStart: string;
+      schedulePeriodEnd: string;
+      /** True when the start date falls strictly inside the schedule period (the first period is partial). */
+      startsMidPeriod: boolean;
     }
   | {
       status: 'unavailable';
@@ -75,6 +82,18 @@ const PREVIEW_OBLIGATION: IPersistedRecurringObligationRef = {
 
 const toIsoMidnight = (ymd: string) => `${ymd}T00:00:00Z`;
 
+/** Calendar-day subtraction on a YMD string (UTC arithmetic on a date-only value, so no timezone drift). */
+function minusOneDay(ymd: string): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10);
+}
+
+function localYmd(date: Date): string {
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${mm}-${dd}`;
+}
+
 function scenarioFor(
   cadenceOwner: 'client' | 'contract',
   duePosition: DuePosition,
@@ -88,12 +107,19 @@ function toResult(
 ): FirstInvoiceDate {
   // Activity window is set when the contract starts inside the schedule period.
   const activity = record.activityWindow;
+  const servicePeriodStart = (activity?.start ?? record.servicePeriod.start).slice(0, 10);
+  const servicePeriodEnd = (activity?.end ?? record.servicePeriod.end).slice(0, 10);
+  const schedulePeriodStart = record.servicePeriod.start.slice(0, 10);
   return {
     status: 'date',
     scenario,
     invoiceDate: record.invoiceWindow.start.slice(0, 10),
-    servicePeriodStart: (activity?.start ?? record.servicePeriod.start).slice(0, 10),
-    servicePeriodEnd: (activity?.end ?? record.servicePeriod.end).slice(0, 10),
+    servicePeriodStart,
+    servicePeriodEnd,
+    servicePeriodEndInclusive: minusOneDay(servicePeriodEnd),
+    schedulePeriodStart,
+    schedulePeriodEnd: record.servicePeriod.end.slice(0, 10),
+    startsMidPeriod: servicePeriodStart > schedulePeriodStart,
   };
 }
 
@@ -156,4 +182,63 @@ export function resolveFirstInvoiceDate(input: FirstInvoiceDateInput): FirstInvo
   });
   const [first] = clipRecurringCandidatesToObligationBounds(plan.records, asOf, null);
   return first ? toResult(scenario, first) : unavailable('client_schedule_unavailable');
+}
+
+export type ArrearsFirstInvoiceHintInput = {
+  lineType?: string;
+  cadenceOwner?: 'client' | 'contract';
+  billingTiming?: 'arrears' | 'advance';
+  /** Contract/line start date, `YYYY-MM-DD`. */
+  startDate?: string | null;
+  clientSchedule?: FirstInvoiceClientSchedule | null;
+};
+
+export type ArrearsFirstInvoiceHintResult = {
+  /** First day the arrears invoice can be generated. */
+  invoiceDate: string;
+  /** First covered day (the contract start). */
+  periodStart: string;
+  /** Last covered day, inclusive. */
+  periodEndInclusive: string;
+  /** Invoice-window start of the period that In Advance would bill the same partial period on. */
+  advanceInvoiceDate: string;
+};
+
+/**
+ * Decides whether to tell the user that a Fixed, client-cadence, arrears line
+ * starting partway through a client billing period will first invoice later
+ * than they might expect. Returns `null` in every other case. This is the only
+ * place that rule lives.
+ *
+ * When `today` is given (edit surfaces), the hint is suppressed once the first
+ * invoice date is no longer in the future; the comparison is on local-date YMD
+ * strings, never `Date` against UTC midnight.
+ */
+export function resolveArrearsFirstInvoiceHint(
+  input: ArrearsFirstInvoiceHintInput,
+  today?: Date,
+): ArrearsFirstInvoiceHintResult | null {
+  if (input.lineType !== 'Fixed') return null;
+  if (input.cadenceOwner === 'contract') return null;
+  if (input.billingTiming !== 'arrears') return null;
+  if (!input.startDate || !input.clientSchedule) return null;
+
+  const base = {
+    startDate: input.startDate,
+    clientSchedule: input.clientSchedule,
+    cadenceOwner: 'client' as const,
+  };
+  const arrears = resolveFirstInvoiceDate({ ...base, billingTiming: 'arrears' });
+  if (arrears.status !== 'date' || !arrears.startsMidPeriod) return null;
+  if (today && !(arrears.invoiceDate > localYmd(today))) return null;
+
+  const advance = resolveFirstInvoiceDate({ ...base, billingTiming: 'advance' });
+  if (advance.status !== 'date') return null;
+
+  return {
+    invoiceDate: arrears.invoiceDate,
+    periodStart: arrears.servicePeriodStart,
+    periodEndInclusive: arrears.servicePeriodEndInclusive,
+    advanceInvoiceDate: advance.invoiceDate,
+  };
 }

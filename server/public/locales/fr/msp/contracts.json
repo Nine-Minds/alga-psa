@@ -1744,10 +1744,6 @@
       "recurringQuantityLabel": "Quantité récurrente",
       "allocationQuantityLabel": "Quantité d’allocation",
       "noCurrencyPrice": "Aucun prix en {{currency}} dans le catalogue. Saisissez un tarif unitaire."
-    },
-    "advanceSuggestion": {
-      "message": "Facturée à terme échu, cette ligne ne peut pas être facturée avant la fin de sa première période de service. Avec une facturation par avance selon le rythme du contrat, elle est facturée à la date de début.",
-      "action": "Facturer par avance selon le rythme du contrat"
     }
   },
   "wizardProducts": {
@@ -2752,7 +2748,8 @@
       "advance": "Facturée par avance selon le rythme du contrat : la première facture est disponible à partir du {{date}}, la date de début du contrat."
     },
     "client": {
-      "arrears": "Facturée à terme échu selon le calendrier de facturation du client : la première facture sera disponible le {{date}}, à la fin de la période de facturation en cours du client.",
+      "arrears": "Facturée à terme échu selon le calendrier de facturation du client : la première facture sera disponible le {{date}}, à la fin de la période de facturation du client qui contient la date de début.",
+      "arrearsPartial": "Facturée à terme échu selon le calendrier de facturation du client : la première facture sera disponible le {{date}}, à la fin de la période de facturation du client qui contient la date de début. La date de début tombant en cours de période, elle couvre {{periodStart}} – {{periodEnd}}.",
       "advance": "Facturée par avance selon le calendrier de facturation du client : la première facture est disponible à partir du {{date}}, le début de la période de facturation du client qui contient la date de début du contrat."
     }
   },
@@ -2970,5 +2967,9 @@
       "invalidBlock": "Renseignez la taille, le prix et les déclencheurs de chaque ligne de bloc prépayé avant de terminer.",
       "rateRequired": "Le service de bloc prépayé « {{serviceName}} » nécessite un taux horaire supérieur à zéro (les heures au-delà du bloc sont facturées à ce taux)."
     }
+  },
+  "arrearsFirstInvoiceHint": {
+    "message": "Première facture : la facture du {{invoiceDate}} couvre {{periodStart}} – {{periodEnd}} (facturée à terme échu). Choisissez « À l'avance » pour la facturer sur la facture de la période commençant le {{advanceInvoiceDate}}.",
+    "billInAdvance": "Facturer à l'avance"
   }
 }

@@ -266,8 +266,10 @@ const servicePeriodPostInventoryRefs = new Set([
   'server/src/test/integration/accounting/xeroInboundReconciliation.integration.test.ts',
   // The contract wizard's first-invoice notice derives the first service
   // period a new contract will bill; it landed after the pass-0 snapshot.
-  'packages/billing/src/components/billing-dashboard/contracts/wizard-steps/firstInvoiceDate.ts',
-  'packages/billing/src/components/billing-dashboard/contracts/wizard-steps/firstInvoiceDate.test.ts',
+  'packages/billing/src/lib/firstInvoiceDate.ts',
+  'packages/billing/src/lib/firstInvoiceDate.test.ts',
+  // The notice renders the first service period resolved by firstInvoiceDate.
+  'packages/billing/src/components/billing-dashboard/contracts/wizard-steps/FirstInvoiceNotice.tsx',
   'server/src/lib/api/services/InvoiceService.ts',
   // seedBillingChargeSources backs fabricated usage charges with usage_tracking
   // rows keyed off the charge's servicePeriodStart.
