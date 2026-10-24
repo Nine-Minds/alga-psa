@@ -25291,8 +25291,12 @@
             }
           },
           "calendar_id": {
-            "type": "string",
-            "format": "uuid"
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Group calendar id (see GET /api/v1/calendars). null = personal calendar: on update moves the entry off its group calendar, on create is the same as omitting it. Omitted on update = calendar unchanged."
           },
           "notes": {
             "type": "string"
@@ -25351,8 +25355,12 @@
             }
           },
           "calendar_id": {
-            "type": "string",
-            "format": "uuid"
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Group calendar id (see GET /api/v1/calendars). null = personal calendar: on update moves the entry off its group calendar, on create is the same as omitting it. Omitted on update = calendar unchanged."
           },
           "notes": {
             "type": "string"
@@ -25488,6 +25496,103 @@
         "required": [
           "data",
           "pagination"
+        ]
+      },
+      "WorkV1CalendarListQuery": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "group"
+            ],
+            "description": "Only return calendars of this type."
+          },
+          "include_archived": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "description": "Include archived group calendars (default false). Archived calendars are only visible to their managers."
+          }
+        }
+      },
+      "WorkV1Calendar": {
+        "type": "object",
+        "properties": {
+          "calendar_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Group calendars: the id to send as calendar_id on a schedule entry. Personal calendars: always null, because a personal calendar is not addressed by an id on entries. To put an entry on someone's personal calendar, send calendar_id null (or omit it) together with assigned_user_ids: [owner_user_id]."
+          },
+          "name": {
+            "type": "string",
+            "description": "Group calendar name, or the owner's display name for a personal calendar."
+          },
+          "calendar_type": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "group"
+            ]
+          },
+          "owner_user_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Owner of a personal calendar (its identity in this list); null for group calendars."
+          },
+          "access_level": {
+            "type": "string",
+            "enum": [
+              "read",
+              "edit",
+              "manage",
+              "free_busy"
+            ],
+            "description": "Effective access level of the caller on this calendar."
+          },
+          "can_edit": {
+            "type": "boolean",
+            "description": "True when access_level is edit or manage."
+          },
+          "is_archived": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "calendar_id",
+          "name",
+          "calendar_type",
+          "owner_user_id",
+          "access_level",
+          "can_edit",
+          "is_archived"
+        ]
+      },
+      "WorkV1CalendarListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkV1Calendar"
+            }
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
         ]
       },
       "WorkV1StopwatchSession": {
@@ -94182,7 +94287,7 @@
       },
       "put": {
         "summary": "Update schedule entry",
-        "description": "Updates schedule entry via ApiTimeSheetController.updateScheduleEntry().",
+        "description": "Updates schedule entry via ApiTimeSheetController.updateScheduleEntry(). `calendar_id`: omit to leave the calendar unchanged; a group calendar uuid moves the entry onto that group calendar (edit access required); `null` moves it back to a personal calendar (the entry stays on its assignees' personal calendars). Requires edit access to the existing entry (403 read-only, 404 no access).",
         "tags": [
           "Work Management v1"
         ],
@@ -104061,6 +104166,111 @@
           },
           "404": {
             "description": "Target resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/calendars": {
+      "get": {
+        "summary": "List calendars",
+        "description": "Lists the calendars the caller can see, with effective access. Requires user_schedule:read; visibility is the same as the schedule sidebar: the caller's own personal calendar, personal calendars shared with the caller (active owners only), and group calendars the caller can see (every group calendar for user_schedule:update holders). HOW TO USE A RESULT ON A SCHEDULE ENTRY: for a group calendar, send its calendar_id as `calendar_id` on POST/PUT /api/v1/schedules. Personal calendars have no calendar_id in this list (null) and are identified by owner_user_id; to put an entry on a personal calendar send `calendar_id: null` (or omit it) together with `assigned_user_ids: [owner_user_id]`. Group-calendar validation rejects personal ids.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiTimeSheetController.listCalendars()",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "time_sheet"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "personal",
+                "group"
+              ],
+              "description": "Only return calendars of this type."
+            },
+            "required": false,
+            "description": "Only return calendars of this type.",
+            "name": "type",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "Include archived group calendars (default false). Archived calendars are only visible to their managers."
+            },
+            "required": false,
+            "description": "Include archived group calendars (default false). Archived calendars are only visible to their managers.",
+            "name": "include_archived",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Visible calendars.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1CalendarListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query parameter.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing user_schedule:read.",
             "content": {
               "application/json": {
                 "schema": {

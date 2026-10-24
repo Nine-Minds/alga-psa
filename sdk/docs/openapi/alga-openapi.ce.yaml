@@ -18025,8 +18025,14 @@ components:
             type: string
             format: uuid
         calendar_id:
-          type: string
+          type:
+            - string
+            - "null"
           format: uuid
+          description: "Group calendar id (see GET /api/v1/calendars). null = personal
+            calendar: on update moves the entry off its group calendar, on
+            create is the same as omitting it. Omitted on update = calendar
+            unchanged."
         notes:
           type: string
         is_private:
@@ -18064,8 +18070,14 @@ components:
             type: string
             format: uuid
         calendar_id:
-          type: string
+          type:
+            - string
+            - "null"
           format: uuid
+          description: "Group calendar id (see GET /api/v1/calendars). null = personal
+            calendar: on update moves the entry off its group calendar, on
+            create is the same as omitting it. Omitted on update = calendar
+            unchanged."
         notes:
           type: string
         is_private:
@@ -18156,6 +18168,84 @@ components:
       required:
         - data
         - pagination
+    WorkV1CalendarListQuery:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: &a177
+            - personal
+            - group
+          description: Only return calendars of this type.
+        include_archived:
+          type: string
+          enum: &a178
+            - "true"
+            - "false"
+          description: Include archived group calendars (default false). Archived
+            calendars are only visible to their managers.
+    WorkV1Calendar:
+      type: object
+      properties:
+        calendar_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: "Group calendars: the id to send as calendar_id on a schedule
+            entry. Personal calendars: always null, because a personal calendar
+            is not addressed by an id on entries. To put an entry on someone's
+            personal calendar, send calendar_id null (or omit it) together with
+            assigned_user_ids: [owner_user_id]."
+        name:
+          type: string
+          description: Group calendar name, or the owner's display name for a personal
+            calendar.
+        calendar_type:
+          type: string
+          enum:
+            - personal
+            - group
+        owner_user_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Owner of a personal calendar (its identity in this list); null for
+            group calendars.
+        access_level:
+          type: string
+          enum:
+            - read
+            - edit
+            - manage
+            - free_busy
+          description: Effective access level of the caller on this calendar.
+        can_edit:
+          type: boolean
+          description: True when access_level is edit or manage.
+        is_archived:
+          type: boolean
+      required:
+        - calendar_id
+        - name
+        - calendar_type
+        - owner_user_id
+        - access_level
+        - can_edit
+        - is_archived
+    WorkV1CalendarListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkV1Calendar"
+        meta:
+          type: object
+          additionalProperties: {}
+      required:
+        - data
     WorkV1StopwatchSession:
       type: object
       properties:
@@ -18802,7 +18892,7 @@ components:
           type: string
         order:
           type: string
-          enum: &a177
+          enum: &a179
             - asc
             - desc
         search:
@@ -18811,12 +18901,12 @@ components:
           type: string
         include_items:
           type: string
-          enum: &a178
+          enum: &a180
             - "true"
             - "false"
         include_client:
           type: string
-          enum: &a179
+          enum: &a181
             - "true"
             - "false"
     QuotesContractsGenericBodyV1:
@@ -19020,14 +19110,14 @@ components:
       properties:
         status:
           type: string
-          enum: &a180
+          enum: &a182
             - open
             - won
             - lost
             - all
         stage:
           type: string
-          enum: &a181
+          enum: &a183
             - identified
             - qualified
             - assessment
@@ -19043,14 +19133,14 @@ components:
           format: uuid
         opportunity_type:
           type: string
-          enum: &a182
+          enum: &a184
             - new_logo
             - expansion
             - renewal
             - project
         stalled_only:
           type: string
-          enum: &a183
+          enum: &a185
             - "true"
             - "false"
         search:
@@ -19066,7 +19156,7 @@ components:
           default: "25"
         sort_by:
           type: string
-          enum: &a184
+          enum: &a186
             - next_action_due
             - expected_close_date
             - mrr_cents
@@ -19075,7 +19165,7 @@ components:
           default: next_action_due
         sort_direction:
           type: string
-          enum: &a185
+          enum: &a187
             - asc
             - desc
           default: asc
@@ -19376,7 +19466,7 @@ components:
       properties:
         status:
           type: string
-          enum: &a186
+          enum: &a188
             - pending
             - accepted
             - dismissed
@@ -19686,7 +19776,7 @@ components:
       properties:
         active_only:
           type: string
-          enum: &a187
+          enum: &a189
             - "true"
             - "false"
           description: When "true", only active channels are returned. Omit for all
@@ -19696,7 +19786,7 @@ components:
       properties:
         status:
           type: string
-          enum: &a188
+          enum: &a190
             - scheduled
             - awaiting-manual-publish
             - published
@@ -20136,7 +20226,7 @@ components:
           format: uuid
         is_closed:
           type: string
-          enum: &a189
+          enum: &a191
             - "true"
             - "false"
           description: Filter by status closure; 'false' also matches interactions with no
@@ -20674,7 +20764,7 @@ components:
           format: uuid
         low_stock:
           type: string
-          enum: &a192
+          enum: &a194
             - "true"
             - "false"
     InventoryLooseBodyV1:
@@ -63783,7 +63873,13 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     put:
       summary: Update schedule entry
-      description: Updates schedule entry via ApiTimeSheetController.updateScheduleEntry().
+      description: "Updates schedule entry via
+        ApiTimeSheetController.updateScheduleEntry(). `calendar_id`: omit to
+        leave the calendar unchanged; a group calendar uuid moves the entry onto
+        that group calendar (edit access required); `null` moves it back to a
+        personal calendar (the entry stays on its assignees' personal
+        calendars). Requires edit access to the existing entry (403 read-only,
+        404 no access)."
       tags:
         - Work Management v1
       security:
@@ -70092,6 +70188,81 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/calendars:
+    get:
+      summary: List calendars
+      description: "Lists the calendars the caller can see, with effective access.
+        Requires user_schedule:read; visibility is the same as the schedule
+        sidebar: the caller's own personal calendar, personal calendars shared
+        with the caller (active owners only), and group calendars the caller can
+        see (every group calendar for user_schedule:update holders). HOW TO USE
+        A RESULT ON A SCHEDULE ENTRY: for a group calendar, send its calendar_id
+        as `calendar_id` on POST/PUT /api/v1/schedules. Personal calendars have
+        no calendar_id in this list (null) and are identified by owner_user_id;
+        to put an entry on a personal calendar send `calendar_id: null` (or omit
+        it) together with `assigned_user_ids: [owner_user_id]`. Group-calendar
+        validation rejects personal ids."
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiTimeSheetController.listCalendars()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: time_sheet
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            enum: *a177
+            description: Only return calendars of this type.
+          required: false
+          description: Only return calendars of this type.
+          name: type
+          in: query
+        - schema:
+            type: string
+            enum: *a178
+            description: Include archived group calendars (default false). Archived
+              calendars are only visible to their managers.
+          required: false
+          description: Include archived group calendars (default false). Archived
+            calendars are only visible to their managers.
+          name: include_archived
+          in: query
+      responses:
+        "200":
+          description: Visible calendars.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1CalendarListResponse"
+        "400":
+          description: Invalid query parameter.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: Missing user_schedule:read.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
   /api/v1/stopwatch/active:
     get:
       summary: Get active stopwatch session
@@ -72359,7 +72530,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a177
+            enum: *a179
           required: false
           name: order
           in: query
@@ -72375,13 +72546,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a178
+            enum: *a180
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a179
+            enum: *a181
           required: false
           name: include_client
           in: query
@@ -72450,7 +72621,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a177
+            enum: *a179
           required: false
           name: order
           in: query
@@ -72466,13 +72637,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a178
+            enum: *a180
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a179
+            enum: *a181
           required: false
           name: include_client
           in: query
@@ -73887,7 +74058,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a177
+            enum: *a179
           required: false
           name: order
           in: query
@@ -73903,13 +74074,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a178
+            enum: *a180
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a179
+            enum: *a181
           required: false
           name: include_client
           in: query
@@ -73982,7 +74153,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a177
+            enum: *a179
           required: false
           name: order
           in: query
@@ -73998,13 +74169,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a178
+            enum: *a180
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a179
+            enum: *a181
           required: false
           name: include_client
           in: query
@@ -74224,13 +74395,13 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: *a180
+            enum: *a182
           required: false
           name: status
           in: query
         - schema:
             type: string
-            enum: *a181
+            enum: *a183
           required: false
           name: stage
           in: query
@@ -74248,13 +74419,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a182
+            enum: *a184
           required: false
           name: opportunity_type
           in: query
         - schema:
             type: string
-            enum: *a183
+            enum: *a185
           required: false
           name: stalled_only
           in: query
@@ -74280,14 +74451,14 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a184
+            enum: *a186
             default: next_action_due
           required: false
           name: sort_by
           in: query
         - schema:
             type: string
-            enum: *a185
+            enum: *a187
             default: asc
           required: false
           name: sort_direction
@@ -75631,7 +75802,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: *a186
+            enum: *a188
           required: false
           name: status
           in: query
@@ -77555,7 +77726,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: *a187
+            enum: *a189
             description: When "true", only active channels are returned. Omit for all
               channels.
           required: false
@@ -77975,7 +78146,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: *a188
+            enum: *a190
           required: false
           name: status
           in: query
@@ -78824,9 +78995,9 @@ paths:
   /api/v1/interactions:
     get:
       summary: List interactions
-      tags: &a190
+      tags: &a192
         - Interactions v1
-      security: &a191
+      security: &a193
         - ApiKeyAuth: []
       extensions:
         x-tenant-scoped: true
@@ -78886,7 +79057,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a189
+            enum: *a191
             description: Filter by status closure; 'false' also matches interactions with no
               status.
           required: false
@@ -78962,8 +79133,8 @@ paths:
         to start_time plus duration (or 30 minutes). schedule_assigned_user_ids
         defaults to the API key owner; booking other users requires
         user_schedule:update. This does not create a Teams meeting.
-      tags: *a190
-      security: *a191
+      tags: *a192
+      security: *a193
       extensions:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
@@ -79017,8 +79188,8 @@ paths:
   /api/v1/interactions/{id}:
     get:
       summary: Get an interaction
-      tags: *a190
-      security: *a191
+      tags: *a192
+      security: *a193
       extensions:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
@@ -79075,8 +79246,8 @@ paths:
       description: Closes/reopens an interaction (status_id must be an interaction
         status) or replaces its notes. Title and timing are not editable here
         because they also re-sync the linked calendar entry.
-      tags: *a190
-      security: *a191
+      tags: *a192
+      security: *a193
       extensions:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
@@ -79138,8 +79309,8 @@ paths:
     get:
       summary: List interaction statuses
       description: Tenant statuses of type interaction, in display order.
-      tags: *a190
-      security: *a191
+      tags: *a192
+      security: *a193
       extensions:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
@@ -79188,8 +79359,8 @@ paths:
     get:
       summary: List interaction types
       description: Returns the union of system and tenant-defined interaction types.
-      tags: *a190
-      security: *a191
+      tags: *a192
+      security: *a193
       extensions:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
@@ -79356,7 +79527,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a192
+            enum: *a194
           required: false
           name: low_stock
           in: query
@@ -79518,7 +79689,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a192
+            enum: *a194
           required: false
           name: low_stock
           in: query
@@ -79813,7 +79984,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a192
+            enum: *a194
           required: false
           name: low_stock
           in: query
@@ -80247,7 +80418,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a192
+            enum: *a194
           required: false
           name: low_stock
           in: query
@@ -80492,7 +80663,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a192
+            enum: *a194
           required: false
           name: low_stock
           in: query

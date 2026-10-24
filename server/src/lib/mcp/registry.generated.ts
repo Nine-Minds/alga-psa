@@ -45395,8 +45395,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           }
         },
         "calendar_id": {
-          "type": "string",
-          "format": "uuid"
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Group calendar id (see GET /api/v1/calendars). null = personal calendar: on update moves the entry off its group calendar, on create is the same as omitting it. Omitted on update = calendar unchanged."
         },
         "notes": {
           "type": "string"
@@ -45629,7 +45633,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/schedules/{id}",
     "displayName": "Update schedule entry",
     "summary": "Update schedule entry",
-    "description": "Updates schedule entry via ApiTimeSheetController.updateScheduleEntry().",
+    "description": "Updates schedule entry via ApiTimeSheetController.updateScheduleEntry(). `calendar_id`: omit to leave the calendar unchanged; a group calendar uuid moves the entry onto that group calendar (edit access required); `null` moves it back to a personal calendar (the entry stays on its assignees' personal calendars). Requires edit access to the existing entry (403 read-only, 404 no access).",
     "tags": [
       "Work Management v1"
     ],
@@ -45684,8 +45688,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           }
         },
         "calendar_id": {
-          "type": "string",
-          "format": "uuid"
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Group calendar id (see GET /api/v1/calendars). null = personal calendar: on update moves the entry off its group calendar, on create is the same as omitting it. Omitted on update = calendar unchanged."
         },
         "notes": {
           "type": "string"
@@ -52883,6 +52891,66 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "data",
         "pagination"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_calendars",
+    "method": "get",
+    "path": "/api/v1/calendars",
+    "displayName": "List calendars",
+    "summary": "List calendars",
+    "description": "Lists the calendars the caller can see, with effective access. Requires user_schedule:read; visibility is the same as the schedule sidebar: the caller's own personal calendar, personal calendars shared with the caller (active owners only), and group calendars the caller can see (every group calendar for user_schedule:update holders). HOW TO USE A RESULT ON A SCHEDULE ENTRY: for a group calendar, send its calendar_id as `calendar_id` on POST/PUT /api/v1/schedules. Personal calendars have no calendar_id in this list (null) and are identified by owner_user_id; to put an entry on a personal calendar send `calendar_id: null` (or omit it) together with `assigned_user_ids: [owner_user_id]`. Group-calendar validation rejects personal ids.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "type",
+        "in": "query",
+        "required": false,
+        "description": "Only return calendars of this type.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "personal",
+            "group"
+          ],
+          "description": "Only return calendars of this type."
+        }
+      },
+      {
+        "name": "include_archived",
+        "in": "query",
+        "required": false,
+        "description": "Include archived group calendars (default false). Archived calendars are only visible to their managers.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "description": "Include archived group calendars (default false). Archived calendars are only visible to their managers."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/WorkV1Calendar"
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
       ]
     }
   },
