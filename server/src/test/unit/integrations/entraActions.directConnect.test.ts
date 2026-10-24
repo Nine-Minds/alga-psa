@@ -365,6 +365,7 @@ describe('Entra direct connect action permissions', () => {
     expect(result.data.baseUrl).toBe('https://cipp.example.com/base');
 
     expect(saveEntraCippCredentialsMock).toHaveBeenCalledWith('tenant-37', {
+      authType: 'legacy_api_token',
       baseUrl: 'https://cipp.example.com/base',
       apiToken: 'cipp-token-37',
     });

@@ -510,6 +510,15 @@
         "savedDescription": "Your card is ready for future payments.",
         "failedDescription": "The setup could not be verified. Please ask your billing provider for a new link."
       },
+      "payLink": {
+        "heading": "This payment link can't be used",
+        "expired": "This payment link has expired.",
+        "invalid": "This payment link isn't valid.",
+        "notPayable": "This invoice can no longer be paid with this link. It may already be paid or no longer be open for online payment.",
+        "unavailable": "We couldn't open the payment page right now. Please try again in a few minutes.",
+        "viewInPortal": "View invoice in the client portal",
+        "contactProvider": "Please contact your billing provider for a new link."
+      },
       "fields": {
         "cardNumber": "Card Number",
         "expiryMonth": "Month",

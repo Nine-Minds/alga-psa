@@ -6366,7 +6366,9 @@ it('T5/T2: Migration A flips stored-advance Hourly/Usage rows to arrears and sup
   const fixedPresetId = uuidv4();
   await dropArrearsOnlyChecks(['contract_template_lines', 'contract_line_presets']);
   await tenantTable(db, tenantId, 'contract_templates').insert({
-    tenant: tenantId, template_id: templateId, template_name: 'Migration A Template',
+    // Base currency is required on every template; this one is only here for the
+    // timing migration to flip, so it matches the suite's USD contracts.
+    tenant: tenantId, template_id: templateId, template_name: 'Migration A Template', currency_code: 'USD',
   });
   await tenantTable(db, tenantId, 'contract_template_lines').insert({
     tenant: tenantId, template_id: templateId, template_line_id: templateLineId,

@@ -25,7 +25,7 @@ import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates'
 import { finalizeInvoice, deleteDraftInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { validateInvoiceFinalization, updateInvoiceTaxSource } from '@alga-psa/billing/actions/taxSourceActions';
 import { downloadInvoicePDF } from '@alga-psa/billing/actions/invoiceGeneration';
-import { toPlainDate } from '@alga-psa/core';
+import { formatCurrencyFromMinorUnits, toPlainDate } from '@alga-psa/core';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -49,7 +49,7 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
   refreshTrigger
 }) => {
   const { t } = useTranslation('msp/invoicing');
-  const { formatCurrency, formatDate } = useFormatters();
+  const { formatDate, locale } = useFormatters();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -489,9 +489,9 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
     {
       title: t('draftsTab.columns.amount', { defaultValue: 'Amount' }),
       dataIndex: 'total_amount',
-      render: (value, record) => formatCurrency(Number(value) / 100, record.currencyCode || 'USD', {
-        minimumFractionDigits: 2,
-      }),
+      // Totals are minor units; the exponent is the currency's (USD 2, JPY 0), so this
+      // column agrees with the rendered invoice instead of assuming a fixed divisor.
+      render: (value, record) => formatCurrencyFromMinorUnits(Number(value), locale, record.currencyCode || 'USD'),
     },
     {
       title: t('draftsTab.columns.invoiceDate', { defaultValue: 'Invoice Date' }),

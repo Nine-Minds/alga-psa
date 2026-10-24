@@ -1,4 +1,11 @@
 import axios from 'axios';
+import { getCippTokenService, isCippTokenError } from './cippTokenService';
+import {
+  cippApiClientRejectedMessage,
+  cippHtmlResponseMessage,
+  cippListTenantsForbiddenMessage,
+  looksLikeHtml,
+} from './cippFailureMessages';
 
 /**
  * The CIPP reachability probe, with no side effects of any kind: it takes the
@@ -10,10 +17,25 @@ import axios from 'axios';
  * credential or mark an existing connection validation_failed on the way past.
  */
 
-export type CippProbeCredentials = {
+export type CippProbeLegacyCredentials = {
+  /** Optional: callers that predate API clients send only baseUrl + apiToken. */
+  authType?: 'legacy_api_token';
   baseUrl: string;
   apiToken: string;
 };
+
+export type CippProbeApiClientCredentials = {
+  authType: 'api_client';
+  /** The CIPP-API host without the trailing /api; request paths add it. */
+  baseUrl: string;
+  clientId: string;
+  clientSecret: string;
+  directoryId: string;
+};
+
+export type CippProbeCredentials =
+  | CippProbeLegacyCredentials
+  | CippProbeApiClientCredentials;
 
 export type CippProbeResult =
   | {
@@ -26,7 +48,14 @@ export type CippProbeResult =
       valid: false;
       checkedAt: string;
       error: string;
-      code: 'auth_rejected' | 'validation_failed';
+      code:
+        | 'auth_rejected'
+        | 'validation_failed'
+        // API-client connections only:
+        | 'token_mint_failed'
+        | 'token_scope_rejected'
+        | 'ip_blocked'
+        | 'html_response';
     };
 
 function buildCandidateUrls(baseUrl: string): string[] {
@@ -67,15 +96,47 @@ export async function probeCippCredentials(
   const candidateUrls = buildCandidateUrls(credentials.baseUrl);
   let lastError: string | null = null;
 
+  // Mint uncached: the probe has to prove the exchange works right now, not
+  // that some earlier token is still warm. Legacy keeps its exact headers.
+  let headers: Record<string, string>;
+  const isApiClient = credentials.authType === 'api_client';
+  if (credentials.authType === 'api_client') {
+    try {
+      const { token } = await getCippTokenService().mint(credentials);
+      headers = { Authorization: `Bearer ${token}` };
+    } catch (error: unknown) {
+      if (isCippTokenError(error)) {
+        return {
+          valid: false,
+          checkedAt: new Date().toISOString(),
+          error: error.message,
+          code: error.code === 'token-scope-rejected' ? 'token_scope_rejected' : 'token_mint_failed',
+        };
+      }
+      throw error;
+    }
+  } else {
+    headers = {
+      Authorization: `Bearer ${credentials.apiToken}`,
+      'X-API-KEY': credentials.apiToken,
+    };
+  }
+
   for (const url of candidateUrls) {
     try {
       const response = await axios.get(url, {
         timeout: 15000,
-        headers: {
-          Authorization: `Bearer ${credentials.apiToken}`,
-          'X-API-KEY': credentials.apiToken,
-        },
+        headers,
       });
+
+      if (isApiClient && looksLikeHtml(response.headers?.['content-type'], response.data)) {
+        return {
+          valid: false,
+          checkedAt: new Date().toISOString(),
+          error: cippHtmlResponseMessage(),
+          code: 'html_response',
+        };
+      }
 
       const tenantCount = extractTenantCount(response.data);
       if (tenantCount !== null) {
@@ -91,9 +152,39 @@ export async function probeCippCredentials(
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         const status = error.response?.status;
+        if (
+          isApiClient
+          && looksLikeHtml(error.response?.headers?.['content-type'], error.response?.data)
+        ) {
+          return {
+            valid: false,
+            checkedAt: new Date().toISOString(),
+            error: cippHtmlResponseMessage(),
+            code: 'html_response',
+          };
+        }
+
         if (status === 404) {
           lastError = `CIPP endpoint not found at ${url}`;
           continue;
+        }
+
+        if (isApiClient && status === 403) {
+          return {
+            valid: false,
+            checkedAt: new Date().toISOString(),
+            error: cippListTenantsForbiddenMessage(),
+            code: 'ip_blocked',
+          };
+        }
+
+        if (isApiClient && status === 401) {
+          return {
+            valid: false,
+            checkedAt: new Date().toISOString(),
+            error: cippApiClientRejectedMessage(),
+            code: 'auth_rejected',
+          };
         }
 
         if (status === 401 || status === 403) {

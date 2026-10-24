@@ -53,6 +53,8 @@
   },
   "status": {
     "active": "Activo",
+    "scheduled": "Programado",
+    "startsOn": "Comienza el {{date}}",
     "draft": "Borrador",
     "expired": "Venció",
     "terminated": "Finalizado"
@@ -94,7 +96,7 @@
     },
     "timing": {
       "advance": "Por adelantado",
-      "arrears": "En mora"
+      "arrears": "A período vencido"
     }
   },
   "po": {
@@ -177,6 +179,7 @@
     },
     "headerCard": {
       "assignmentLifecycleHint": "El estado del cliente en vivo se controla mediante el ciclo de vida de la asignación que aparece a continuación.",
+      "scheduledExplanation": "Este contrato está activo y comenzará a facturarse el {{date}}.",
       "assignmentStatus": "Estado de asignación",
       "billingFrequencyLabel": "Frecuencia de facturación *",
       "billingFrequencyPlaceholder": "Seleccione la frecuencia de facturación",
@@ -298,6 +301,7 @@
     },
     "status": {
       "active": "Activo",
+      "scheduled": "Programado",
       "draft": "Borrador",
       "expired": "Vencido",
       "terminated": "Rescindido"
@@ -612,6 +616,7 @@
       "quantityShort": "Cant.: {{quantity}}",
       "quantityTaxAllocation": "Cantidad (para asignación de impuestos)",
       "rateTaxAllocation": "Tarifa (para asignación de impuestos)",
+      "shareOfLineFee": "Parte de la tarifa de la línea",
       "title": "Servicios ({{count}})",
       "typeLabel": "Servicio {{type}}",
       "unitOfMeasure": "Unidad de medida",
@@ -767,7 +772,7 @@
     },
     "fixedConfig": {
       "defaultBaseRate": "Tarifa base predeterminada:",
-      "defaultRatePlaceholder": "Predeterminado: ${{rate}}",
+      "defaultRatePlaceholder": "Predeterminado: {{rate}}",
       "enterBaseRate": "Ingrese la tarifa base",
       "leaveBlankDefault": "Deje en blanco para usar la tarifa predeterminada",
       "notSet": "Sin definir",
@@ -775,7 +780,7 @@
       "title": "Configuración de tarifa fija"
     },
     "hourlyConfig": {
-      "defaultRate": "Predeterminado: ${{rate}}",
+      "defaultRate": "Predeterminado: {{rate}}",
       "hourlyRate": "Tarifa por hora",
       "minimumBillableMinutes": "Minutos mínimos facturables",
       "roundUpToNearest": "Redondear al más cercano (minutos)",
@@ -801,7 +806,7 @@
     },
     "title": "Agregar líneas de contrato desde preajustes",
     "usageConfig": {
-      "defaultRate": "Predeterminado: ${{rate}}",
+      "defaultRate": "Predeterminado: {{rate}}",
       "recordDrivenNote": "Los servicios por uso se facturan según el uso registrado en el seguimiento de uso para cada período de servicio. Un período sin registro de uso no genera cargo: registre el uso (o un cero explícito) en cada período para facturar estos servicios.",
       "ratePerUnit": "Tarifa (por unidad)",
       "unitHint": "p. ej., GB, llamada a API, usuario",
@@ -1286,9 +1291,7 @@
     },
     "loadingTemplate": "Cargando plantilla...",
     "servicesLabel": "Servicios",
-    "summary": {
-      "clientCurrency": "Moneda del cliente"
-    },
+    "summary": {},
     "templateBadge": "Plantilla",
     "templateNotFound": "Plantilla de contrato no encontrada",
     "templateSnapshotTitle": "Captura de la plantilla",
@@ -1333,6 +1336,16 @@
       "hypothetical": "Perfil de cliente hipotético",
       "open": "Simular",
       "title": "Simulación de plantilla"
+    },
+    "pricing": {
+      "title": "Precios por moneda",
+      "addCurrency": "Añadir moneda",
+      "removeCurrency": "Quitar",
+      "missing": "Faltan {{count}} importe(s)",
+      "baseCurrency": "(moneda base)",
+      "changeBaseCurrency": "Cambiar moneda base",
+      "changeBaseConfirm": "¿Cambiar la moneda base a {{currency}}? Los importes existentes NO se convierten: conservan su valor numérico y se interpretan como {{currency}}.",
+      "noSlots": "Esta plantilla aún no tiene importes que valorar."
     },
     "discounts": {
       "title": "Descuentos de contrato predeterminados",
@@ -1540,6 +1553,9 @@
       "confirm": "Confirmar y continuar",
       "cancel": "Volver"
     },
+    "templatePicker": {
+      "needsRates": "Necesita tarifas en {{currency}}"
+    },
     "discounts": {
       "help": "Los descuentos globales se aplican a cada cargo apto que factura este contrato. Se crean junto con el contrato al finalizar la configuración y la simulación de abajo los calcula.",
       "draftDialog": {
@@ -1669,7 +1685,8 @@
       "preview": {
         "billingCadenceLabel": "Cadencia de facturación:",
         "notSpecified": "No especificado",
-        "templateLabel": "Plantilla:"
+        "templateLabel": "Plantilla:",
+        "currencyLabel": "Moneda base:"
       },
       "selectTemplateOptional": "Seleccione una plantilla (opcional)",
       "startFromTemplate": "Comenzar desde una plantilla"
@@ -2021,8 +2038,15 @@
     "unitRate": "Tarifa unitaria",
     "serviceRate": "Tarifa del servicio",
     "noCurrencyPrice": "No hay precio en {{currency}} para este servicio. Introduzca una tarifa o no se podrá crear el contrato.",
-    "templateRateNote": "De la plantilla (el importe no tiene moneda asociada).",
-    "reviewTitle": "Líneas creadas a partir de la plantilla"
+    "reviewTitle": "Líneas creadas a partir de la plantilla",
+    "fallbackAlert": "Esta plantilla no tiene tarifas en {{currency}}. Se copia su estructura; introduzca los importes en {{currency}} a continuación. Los importes de la plantilla se muestran solo como referencia y no se convierten.",
+    "templateReference": "Plantilla: {{amount}} {{currency}}",
+    "catalogPrice": "Precio del catálogo",
+    "fromTemplateCurrency": "De la plantilla ({{currency}})",
+    "fromTemplatePriceSet": "De las tarifas en {{currency}} de la plantilla",
+    "noCurrencyAmount": "Sin importe en {{currency}}. Introduzca uno o no se podrá crear el contrato.",
+    "overtimeRate": "Tarifa de horas extra",
+    "bucketOverageRate": "Tarifa de exceso"
   },
   "templateWizard": {
     "title": {
@@ -2066,8 +2090,10 @@
           "usage": "Uso"
         }
       },
-      "recurringQuantityInvalid": "La cantidad recurrente de «{{serviceName}}» debe ser un número entero de cero o más, y cualquier tarifa unitaria debe ser un importe válido."
-    }
+      "recurringQuantityInvalid": "La cantidad recurrente de «{{serviceName}}» debe ser un número entero de cero o más, y cualquier tarifa unitaria debe ser un importe válido.",
+      "currencyRequired": "La moneda base es obligatoria"
+    },
+    "currency": "Moneda base *"
   },
   "templateBasics": {
     "heading": "Información básica de la plantilla",
@@ -2085,7 +2111,8 @@
     "help": {
       "templateName": "Use un nombre descriptivo para que los equipos puedan identificar rápidamente la plantilla correcta.",
       "internalNotes": "Estas notas permanecen con la plantilla para proporcionar contexto cuando los compañeros de equipo la utilicen.",
-      "billingFrequency": "Establece la cadencia predeterminada cuando se aplica la plantilla. Aún se puede ajustar por cliente."
+      "billingFrequency": "Establece la cadencia predeterminada cuando se aplica la plantilla. Aún se puede ajustar por cliente.",
+      "currency": "Las tarifas introducidas en este asistente están en esta moneda. Después se pueden añadir a la plantilla precios en otras monedas. Los importes nunca se convierten."
     }
   },
   "templateFixed": {
@@ -2220,7 +2247,7 @@
   },
   "templateReview": {
     "heading": "Revisar plantilla",
-    "description": "Confirme el contenido de la plantilla. Las tarifas se determinan por el precio de cada servicio en la moneda del cliente cuando se crea un contrato a partir de esta plantilla.",
+    "description": "Confirme el contenido de la plantilla. Las tarifas se guardan en la moneda base de la plantilla. Las demás monedas usan los conjuntos de precios de la plantilla, o usted introduce los importes al crear un contrato.",
     "sections": {
       "basics": "Información básica de la plantilla",
       "fixedFeeServices": "Servicios de tarifa fija",
@@ -2232,7 +2259,8 @@
     "fields": {
       "templateName": "Nombre de la plantilla",
       "billingFrequency": "Frecuencia de facturación",
-      "internalNotes": "Notas internas"
+      "internalNotes": "Notas internas",
+      "baseCurrency": "Moneda base"
     },
     "fallback": {
       "none": "—",
@@ -2268,8 +2296,7 @@
       "serviceLabel": "Servicio:",
       "invoiceWindowLabel": "Ventana de facturación:",
       "unitRateLabel": "Tarifa unitaria:",
-      "unitRateFromCatalog": "Precio de catálogo en la moneda del cliente",
-      "unitRateNeutral": "{{rate}} en la moneda del cliente"
+      "unitRateFromCatalog": "Precio de catálogo en la moneda del cliente"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Tiempo mínimo facturable:",
@@ -2283,7 +2310,7 @@
       "hoursIncluded": "{{value}} horas incluidas",
       "unitsIncluded": "{{value}} {{unit}} incluidas",
       "unitsFallback": "unidades",
-      "overage": "Exceso ${{amount}}/{{unit}}",
+      "overage": "Exceso {{amount}}/{{unit}}",
       "hourSingular": "hora",
       "unitSingular": "unidad",
       "rolloverEnabled": "Acumulación habilitada",
@@ -2488,7 +2515,7 @@
       "editDetails": "Editar reglas",
       "editDetailsFor": "Editar detalles de {{line}}",
       "fields": {
-        "adjustmentAmount": "Importe del ajuste en dólares",
+        "adjustmentAmount": "Importe del ajuste",
         "adjustmentDescription": "Descripción del ajuste",
         "adjustmentPeriod": "Período del ajuste",
         "billingFrequency": "Frecuencia de facturación",
@@ -2506,16 +2533,16 @@
         "lineType": "Tipo de línea",
         "minimumBillableMinutes": "Minutos mínimos facturables",
         "minimumUsage": "Uso mínimo",
-        "overtimeRate": "Tarifa de horas extra ($/h)",
+        "overtimeRate": "Tarifa de horas extra por hora",
         "overtimeThreshold": "Umbral de horas extra (horas)",
         "roundUpMinutes": "Redondear a minutos",
         "scheduleEffectiveDate": "Fecha de entrada en vigor del horario",
         "scheduleEndDate": "Fecha de fin del horario",
-        "scheduleRate": "Tarifa del horario en dólares",
+        "scheduleRate": "Tarifa del horario",
         "serviceQuantity": "Cantidad de licencias o productos",
         "tierMaximum": "Máximo del nivel",
         "tierMinimum": "Mínimo del nivel",
-        "tierRate": "Tarifa del nivel en dólares",
+        "tierRate": "Tarifa del nivel",
         "usageUnit": "Unidad de uso"
       },
       "frequencies": {
@@ -2540,7 +2567,7 @@
       "placeholders": {
         "minimum": "mínimo",
         "minimumMinutes": "minutos mínimos",
-        "overtimeRate": "horas extra $/h",
+        "overtimeRate": "tarifa de horas extra por hora",
         "roundMinutes": "redondeo en minutos",
         "thresholdHours": "horas del umbral"
       },
@@ -2580,7 +2607,8 @@
         "value": "Valor",
         "appliesTo": "Se aplica a",
         "description": "Descripción",
-        "amount": "Importe ($)",
+        "amount": "Importe",
+        "rate": "Tarifa",
         "billingPeriod": "Período de facturación",
         "timing": "Momento"
       }
@@ -2680,6 +2708,10 @@
       "duplicate": "Ya existe un registro coincidente del asistente de contratos.",
       "resumeUnsupportedShape": "Este borrador no se puede reanudar en el asistente sin cambiar sus precios: {{lines}}",
       "fixedLineNoService": "La línea fija \"{{lineName}}\" tiene un importe recurrente pero ningún servicio sobre el que facturarlo. Añada un servicio antes de finalizar.",
+      "templateAmountsMissing": "No se puede crear el contrato en {{currency}}. Los siguientes importes no tienen valor en {{currency}}: {{amounts}}. Introduzca un importe para cada uno o añada tarifas en {{currency}} a la plantilla.",
+      "currencyPricingMissing": "No se puede crear el contrato en {{currency}}. No hay precio en {{currency}} para: {{services}}.",
+      "invalidTemplateCurrency": "«{{currency}}» no es un código de moneda ISO 4217 válido",
+      "templateCurrencyHasPriceSet": "Esta plantilla ya tiene una lista de precios en {{currency}}. Elimínela antes de convertir {{currency}} en la moneda base.",
       "standingTerms": "Este borrador tiene condiciones de descuento recurrentes. Edite las pestañas Líneas y Descuentos para conservarlas."
     },
     "pricingSchedule": {
@@ -2732,6 +2764,11 @@
   },
   "sellHourBlockNote": {
     "text": "Una bolsa de horas del contrato solo factura el exceso. Para cobrar por adelantado un bloque de horas, agregue una línea de Bloque prepagado a este contrato."
+  },
+  "review": {
+    "saveTemplateRates": "Guardar estas tarifas en {{currency}} en la plantilla",
+    "saveMissingTemplateRates": "Añadir a la plantilla las tarifas en {{currency}} que faltan",
+    "updateTemplateRates": "Actualizar las tarifas en {{currency}} de la plantilla con estos importes"
   },
   "billingTimingField": {
     "arrears": "Al vencimiento",

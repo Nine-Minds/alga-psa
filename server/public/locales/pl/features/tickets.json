@@ -461,6 +461,14 @@
     "clientPortal": "Otrzymano przez Portal Klienta",
     "inboundEmail": "Otrzymano przez e-mail"
   },
+  "originalEmail": {
+    "text": "Tekst",
+    "original": "Oryginalny e-mail",
+    "emailShort": "E-mail",
+    "loading": "Wczytywanie oryginalnego e-maila…",
+    "error": "Nie można wczytać oryginalnego e-maila.",
+    "group": "Widok wiadomości"
+  },
   "documents": {
     "title": "Dokumenty",
     "noDocuments": "Brak dołączonych dokumentów",
@@ -1667,7 +1675,10 @@
       "ruleCategoryBoardMismatch": "Wybrana kategoria należy do innej tablicy niż reguła.",
       "ruleCategoryInvalid": "Wybrana kategoria nie jest kategorią najwyższego poziomu.",
       "ruleSubcategoryInvalid": "Wybrana podkategoria nie należy do wybranej kategorii.",
-      "ruleSubcategoryRequiresCategory": "Wybierz kategorię przed wybraniem podkategorii."
+      "ruleSubcategoryRequiresCategory": "Wybierz kategorię przed wybraniem podkategorii.",
+      "ruleTooManyKeywords": "Użyj co najwyżej {{max}} słów kluczowych w jednej regule.",
+      "ruleKeywordTooLong": "Każde słowo kluczowe może mieć najwyżej {{max}} znaków.",
+      "ruleOriginInvalid": "Jedno z wybranych źródeł zgłoszenia jest nieprawidłowe."
     }
   },
   "ticketSection": {

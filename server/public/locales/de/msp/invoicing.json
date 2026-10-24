@@ -1451,7 +1451,14 @@
           "widthTooltip": "Die unten eingegebene exakte Breite verwenden",
           "heightTooltip": "Die unten eingegebene exakte Höhe verwenden"
         }
-      }
+      },
+      "barcode": "Barcode",
+      "barcodeSymbology": "Typ",
+      "barcodeQr": "QR-Code",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Wert",
+      "barcodeHintWorkTag": "Text oder ein Feld wie {{example}} (der Link zum Datensatz). Der Code sollte mindestens etwa 20 mm breit sein, damit er sich scannen lässt.",
+      "barcodeHint": "Der zu codierende Text. Der Code sollte mindestens etwa 20 mm breit sein, damit er sich scannen lässt."
     },
     "shell": {
       "selectedLabel": "Ausgewählt:",
@@ -1464,7 +1471,11 @@
       "title": "Seiteneinrichtung",
       "description": "Papierformat und Seitenrand wählen, ohne den versteckten Seiten-Knoten auszuwählen.",
       "paperPreset": "Papierformat",
-      "marginMm": "Rand (mm)"
+      "marginMm": "Rand (mm)",
+      "customSize": "Benutzerdefinierte Größe…",
+      "customWidth": "Breite",
+      "customHeight": "Höhe",
+      "customUnit": "Einheit"
     },
     "breadcrumbs": {
       "emptyHelp": "Wählen Sie eine Komponente auf der Leinwand aus, um ihre Hierarchie anzuzeigen.",
@@ -1495,7 +1506,13 @@
         "noQuotesFound": "Keine Angebote gefunden.",
         "selectQuote": "Angebot wählen",
         "loadingQuoteDetails": "Angebotsdetails werden geladen…",
-        "loadingDocumentDetails": "Dokumentdetails werden geladen…"
+        "loadingDocumentDetails": "Dokumentdetails werden geladen…",
+        "zoom": {
+          "fit": "Einpassen",
+          "actual": "100 %",
+          "label": "Vorschau-Zoom",
+          "fitWithScale": "Einpassen ({{percent}} %)"
+        }
       },
       "tabs": {
         "design": "Entwurf",
@@ -2511,7 +2528,8 @@
     "types": {
       "salesOrder": "Verkaufsauftrag",
       "packingSlip": "Lieferschein",
-      "pickList": "Kommissionierliste"
+      "pickList": "Kommissionierliste",
+      "workTag": "Arbeitsetikett / Label"
     }
   },
   "errors": {

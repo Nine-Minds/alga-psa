@@ -20,6 +20,7 @@ import {
   IPaymentProviderConfig,
   PaymentSettings,
   DEFAULT_PAYMENT_SETTINGS,
+  validatePaymentSettingsInput,
 } from '@alga-psa/types';
 
 // Path to ngrok URL file (written by ngrok-sync container)
@@ -474,6 +475,11 @@ export const updatePaymentSettingsAction = withAuth(async (
   { tenant },
   settings: Partial<PaymentSettings>
 ): Promise<PaymentActionResult<PaymentSettings>> => {
+  const expirationError = validatePaymentSettingsInput(settings);
+  if (expirationError) {
+    return { success: false, error: expirationError };
+  }
+
   try {
     const { knex } = await createTenantKnex();
 

@@ -28,6 +28,7 @@ import { ProductAccessError, getTenantProduct } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 import { hasPermission } from '../../auth/rbac';
 import { getConnection } from '../../db/db';
+import { guardAssetRead } from './assetReadGuard';
 
 export class ApiAssetController {
   private assetService: AssetService;
@@ -90,7 +91,9 @@ export class ApiAssetController {
    */
   async getById(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    
+    const denied = await guardAssetRead(context, params.id, this.assetService);
+    if (denied) return denied;
+
     const asset = await this.assetService.getWithDetails(params.id, context);
     
     if (!asset) {
@@ -242,7 +245,7 @@ export class ApiAssetController {
     const context = await this.requireAllowedContext(req);
 
     // Response joins ticket data onto an asset — require read on both resources.
-    const denied = await this.requireReadPermissions(context, ['asset', 'ticket']);
+    const denied = await guardAssetRead(context, params.id, this.assetService, ['ticket']);
     if (denied) return denied;
 
     const tickets = await this.assetService.getAssetTickets(params.id, context);
@@ -366,7 +369,9 @@ export class ApiAssetController {
    */
   async listMaintenanceSchedules(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    
+    const denied = await guardAssetRead(context, params.id, this.assetService);
+    if (denied) return denied;
+
     const schedules = await this.assetService.getMaintenanceSchedules(params.id, context);
     
     return createApiResponse(schedules);
@@ -442,7 +447,9 @@ export class ApiAssetController {
    */
   async getMaintenanceHistory(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    
+    const denied = await guardAssetRead(context, params.id, this.assetService);
+    if (denied) return denied;
+
     const history = await this.assetService.getMaintenanceHistory(params.id, context);
     
     return createApiResponse(history);

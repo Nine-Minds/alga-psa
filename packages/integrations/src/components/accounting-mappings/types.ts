@@ -118,11 +118,28 @@ export type AccountingMappingTargetConfig = {
   /** Catalog option id a stored mapping row corresponds to. */
   optionIdForMapping: (mapping: ExternalEntityMapping) => string;
   /**
+   * Whether a mapping of this kind holds its target exclusively, i.e. the
+   * server's unique index rejects a second mapping to the same target. The bulk
+   * grid withholds only exclusively-held options from suggestions.
+   */
+  isExclusiveKind: (kindId: string) => boolean;
+  /**
    * Copy rendered (table and edit dialog) when a stored mapping's target no
    * longer exists in the live catalog — the remediation prompt for invalid
    * legacy mappings.
    */
   invalidNotice: string;
+};
+
+export type AccountingMetadataField = {
+  /** Metadata key the value is stored under. */
+  key: string;
+  label: string;
+  placeholder?: string;
+  helpText?: string;
+  /** Column heading in the mappings table; defaults to `label`. */
+  columnLabel?: string;
+  required?: boolean;
 };
 
 export type AccountingMetadataConfig = {
@@ -131,6 +148,11 @@ export type AccountingMetadataConfig = {
     * Defaults to false.
     */
   enableJsonEditor?: boolean;
+  /**
+   * Named text inputs stored in the mapping's metadata, edited in the dialog
+   * and shown as table columns. Other metadata keys are preserved on save.
+   */
+  fields?: AccountingMetadataField[];
 };
 
 export type AccountingMappingElementIds = {

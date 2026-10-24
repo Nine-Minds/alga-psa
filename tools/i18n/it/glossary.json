@@ -2208,6 +2208,7 @@
   "identicalAllowlist": {
     "exact": [
       "{{from}} → {{to}}",
+      "RMA {{id}}",
       "AI",
       "API",
       "Account",
@@ -2235,6 +2236,7 @@
       "Dashboard",
       "Dashboard | AlgaPSA",
       "Datto",
+      "Datto RMM",
       "Email",
       "Email:",
       "Entra ID",
@@ -2361,7 +2363,8 @@
       "Auto",
       "auto | 50% | 120px",
       "Cc",
-      "{{size}} GB"
+      "{{size}} GB",
+      "Code 128"
     ],
     "caseInsensitive": [
       "account",
