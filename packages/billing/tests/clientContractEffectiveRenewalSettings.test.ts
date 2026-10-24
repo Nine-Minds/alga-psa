@@ -1,5 +1,5 @@
-// Pinned before any Date is constructed: the boundary must emit the stored calendar
-// day even west of UTC, where a local-time read of UTC midnight lands on the prior day.
+// Pinned before any Date is constructed. pg returns DATE columns as server-local-midnight Dates,
+// so the fixtures below build `new Date(y, m, d)`; every-zone coverage is in clientContractDateColumn.timeZones.test.ts.
 process.env.TZ = 'America/Los_Angeles';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -526,7 +526,7 @@ describe('client contract effective renewal settings normalization', () => {
     expect(normalized.evergreen_review_anchor_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(normalized.decision_due_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
-  it('emits the stored calendar day for a UTC-midnight Date under TZ=America/Los_Angeles', () => {
+  it('emits the stored calendar day for a server-local-midnight pg DATE under TZ=America/Los_Angeles', () => {
     expect(new Intl.DateTimeFormat('en').resolvedOptions().timeZone).toBe('America/Los_Angeles');
 
     const normalized = normalizeClientContract({
@@ -534,7 +534,7 @@ describe('client contract effective renewal settings normalization', () => {
       client_contract_id: 'cc-6',
       client_id: 'client-6',
       tenant: 'tenant-1',
-      start_date: new Date('2026-04-01T00:00:00Z'),
+      start_date: new Date(2026, 3, 1),
       end_date: null,
       is_active: true,
       use_tenant_renewal_defaults: true,
@@ -552,8 +552,8 @@ describe('client contract effective renewal settings normalization', () => {
   it('emits both dates as YYYY-MM-DD strings, and leaves end_date alone when absent', () => {
     const both = normalizeClientContract({
       is_active: true,
-      start_date: new Date('2026-04-01T00:00:00Z'),
-      end_date: new Date('2026-12-31T00:00:00Z'),
+      start_date: new Date(2026, 3, 1),
+      end_date: new Date(2026, 11, 31),
     });
     expect(both.start_date).toBe('2026-04-01');
     expect(both.end_date).toBe('2026-12-31');
@@ -572,7 +572,7 @@ describe('client contract effective renewal settings normalization', () => {
         client_id: 'client-1',
         contract_id: 'contract-1',
         is_active: true,
-        start_date: new Date('2026-03-31T00:00:00Z'),
+        start_date: new Date(2026, 2, 31),
         end_date: null,
       };
     });

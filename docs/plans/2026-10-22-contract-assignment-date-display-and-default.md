@@ -63,7 +63,7 @@ No new helper. Four private re-implementations of rule 4 get deleted, not extend
 | Layer | Today | Target |
 |---|---|---|
 | Column | `timestamp` at `00:00:00` | unchanged |
-| pg driver | `Date` @ UTC midnight (`knexfile.ts:28`) | unchanged |
+| pg driver | `Date` @ **server-local** midnight (`client_contracts` dates are DATE columns, no 1082 parser); read with local getters | unchanged |
 | `normalizeClientContract` | computes `normalizeDateOnly` at `shared/…/clientContracts.ts:259-260` and `models/clientContract.ts:240-241` but **never assigns it back** | assigns `start_date`/`end_date` as strings |
 | Wire type | declared `ISO8601String`, actually `Date` | `YYYY-MM-DD \| null` |
 

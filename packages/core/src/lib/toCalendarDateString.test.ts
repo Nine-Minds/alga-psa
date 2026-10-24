@@ -90,9 +90,9 @@ describe('toCalendarDateString — string / PlainDate / null normalization', () 
 });
 
 describe('toCalendarDateString — why the contract read boundary does not use it (alga0002302)', () => {
-  // A pg `timestamp` read is a Date at UTC midnight. This helper reads LOCAL components
-  // (right for DatePicker output), so it would give the previous day west of UTC.
-  // normalizeClientContract reads the UTC day instead.
+  // This helper reads LOCAL components (right for DatePicker output), so a UTC-midnight Date gives the
+  // previous day west of UTC. (normalizeClientContract also reads local components, because pg builds
+  // DATE columns as server-local-midnight Dates; see clientContractDateColumn.timeZones.test.ts.)
   it('reads a UTC-midnight Date as the prior local day in America/Los_Angeles', () => {
     assertTz('America/Los_Angeles', 420);
     expect(toCalendarDateString(new Date('2026-04-01T00:00:00Z'))).toBe('2026-03-31');
