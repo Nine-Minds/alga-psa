@@ -2081,6 +2081,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Datto RMM",
       "mention",
       ",",
       "3CX",
@@ -2199,6 +2200,7 @@
       "Services",
       "Shift",
       "Signature",
+      "Sites",
       "SLA",
       "SMS",
       "SMTP",

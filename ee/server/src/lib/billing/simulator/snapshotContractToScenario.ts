@@ -216,6 +216,7 @@ export async function snapshotContractToScenario(
         "template_id",
         "template_name",
         "default_billing_frequency",
+        "currency_code",
       );
     if (template) {
       isTemplate = true;
@@ -224,7 +225,7 @@ export async function snapshotContractToScenario(
         contract_name: template.template_name,
         owner_client_id: null,
         billing_frequency: template.default_billing_frequency || "monthly",
-        currency_code: "USD",
+        currency_code: template.currency_code,
         is_system_managed_default: false,
       };
     }

@@ -2650,6 +2650,202 @@
           "select": "Select contact"
         }
       },
+      "datto": {
+        "errors": {
+          "loadSettings": "Failed to load Datto RMM settings",
+          "loadSiteMappings": "Failed to load site mappings",
+          "saveConfig": "Failed to save Datto RMM configuration",
+          "connectionTest": "Connection test failed",
+          "disconnect": "Disconnect failed",
+          "syncSites": "Site sync failed",
+          "someSitesFailed": "Some sites failed to sync: {{errors}}",
+          "syncDevices": "Device sync failed",
+          "someDevicesFailed": "Some devices failed to sync: {{errors}}",
+          "updateMapping": "Failed to update mapping",
+          "backfillAlerts": "Alert backfill failed",
+          "someAlertsFailed": "Some alerts failed to upsert: {{errors}}",
+          "ingestSoftware": "Software ingestion failed",
+          "someSoftwareFailed": "Some devices failed to ingest software: {{errors}}",
+          "createClients": "Failed to create clients for Datto sites",
+          "someClientsFailed": "Some sites were not mapped: {{errors}}",
+          "regenerateWebhookSecret": "Could not regenerate the webhook secret"
+        },
+        "toasts": {
+          "saveFailedTitle": "Save failed",
+          "savedTitle": "Saved",
+          "savedDescription": "Datto RMM configuration updated.",
+          "connectionFailedTitle": "Connection failed",
+          "connectedTitle": "Connected",
+          "connectedDescription": "Datto RMM connection verified.",
+          "disconnectFailedTitle": "Disconnect failed",
+          "disconnectedTitle": "Disconnected",
+          "disconnectedDescription": "Datto RMM credentials cleared. Site mappings were kept.",
+          "syncFailedTitle": "Sync failed",
+          "sitesSyncedTitle": "Sites synced",
+          "sitesSyncedDescription": "Datto sites have been synced into site mappings.",
+          "devicesSyncedTitle": "Devices synced",
+          "devicesSyncedDescription": "Datto devices have been synced into assets.",
+          "updateFailedTitle": "Update failed",
+          "backfillFailedTitle": "Backfill failed",
+          "alertsSyncedTitle": "Alerts synced",
+          "alertsSyncedDescription": "Open Datto alerts have been backfilled.",
+          "ingestionFailedTitle": "Ingestion failed",
+          "softwareIngestedTitle": "Software ingested",
+          "softwareIngestedDescription": "Datto software inventory has been ingested.",
+          "optionsSavedDescription": "Datto RMM options updated.",
+          "createClientsFailedTitle": "Client creation failed",
+          "sitesSyncedWithClients": "Datto sites have been synced. New sites: {{created}} clients created, {{linked}} linked, {{failed}} failed.",
+          "webhookSecretRegeneratedTitle": "Webhook secret regenerated",
+          "webhookSecretRegeneratedDescription": "Update the header value in your Datto webhook responses."
+        },
+        "success": {
+          "saved": "Datto RMM configuration saved. Run Test Connection to activate it.",
+          "unnamedAccount": "your account",
+          "connection": "Connection successful. Account: {{account}}. Sites: {{sites}}, Devices: {{devices}}.",
+          "disconnected": "Disconnected.",
+          "siteSyncCompleted": "Site sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}, Failed: {{failed}}",
+          "deviceSyncCompleted": "Device sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}, Failed: {{failed}}",
+          "alertBackfillCompleted": "Alert backfill completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}, Failed: {{failed}}",
+          "softwareIngestionCompleted": "Software ingestion completed. Processed: {{processed}}, Installed/Updated: {{created}}, Assets Updated: {{updated}}, Failed: {{failed}}",
+          "clientsCreated": "Created {{created}} clients and linked {{linked}} existing clients. Skipped: {{skipped}}, Failed: {{failed}}"
+        },
+        "mappings": {
+          "site": "Datto Site",
+          "client": "Alga Client",
+          "defaultContact": "Default Contact",
+          "missingBadge": "Not in Datto",
+          "onDemandBadge": "On-demand",
+          "signedInUsersSite": "Signed-in users for site",
+          "signedInUsersSelect": "Choose a mapped site"
+        },
+        "dattoIdLabel": "Datto ID: {{id}}",
+        "client": {
+          "loading": "Loading clients…",
+          "select": "Select client",
+          "suggested": "Suggested: {{client}}",
+          "create": "Create client \"{{name}}\"",
+          "creating": "Creating…"
+        },
+        "contact": {
+          "select": "Select contact"
+        },
+        "autoSync": "Auto-sync",
+        "platform": {
+          "custom": "Custom URL"
+        },
+        "webhook": {
+          "copiedTitle": "Copied",
+          "url": "Webhook URL",
+          "urlCopied": "Webhook URL copied to clipboard.",
+          "copy": "Copy",
+          "headerName": "Custom Header Name",
+          "headerNameCopied": "Webhook header name copied to clipboard.",
+          "secret": "Header Secret",
+          "secretCopied": "Webhook secret copied to clipboard.",
+          "bodyTemplate": "Body Template (alert triggered)",
+          "bodyTemplateCopied": "Body template copied to clipboard.",
+          "resolveBodyTemplate": "Body Template (alert resolved)",
+          "resolveBodyTemplateCopied": "Resolved body template copied to clipboard.",
+          "unavailable": "Webhook information unavailable. (Requires settings update permission.)"
+        },
+        "disconnectConfirm": {
+          "title": "Disconnect Datto RMM?",
+          "message": "The stored API key and secret are removed, the webhook secret is reset, and scheduled syncs stop. Site mappings and synced assets are kept."
+        },
+        "actions": {
+          "disconnect": "Disconnect",
+          "refresh": "Refresh",
+          "saving": "Saving...",
+          "save": "Save",
+          "testing": "Testing...",
+          "testConnection": "Test Connection",
+          "disconnecting": "Disconnecting...",
+          "syncing": "Syncing...",
+          "syncSites": "Sync Sites",
+          "syncDevices": "Sync Devices",
+          "ingesting": "Ingesting...",
+          "ingestSoftware": "Ingest Software",
+          "syncAlerts": "Sync Alerts",
+          "createClients": "Create clients",
+          "createClientsForUnmapped": "Create clients for unmapped ({{count}})",
+          "regenerateSecret": "Regenerate secret"
+        },
+        "title": "Datto RMM",
+        "description": "Connect Datto RMM to sync sites and devices, ingest alerts, and open Web Remote from assets.",
+        "status": {
+          "connected": "Connected",
+          "disconnected": "Disconnected",
+          "instanceUrlNotSet": "API URL not set"
+        },
+        "counts": {
+          "mappedSites": "Mapped Sites",
+          "syncedDevices": "Synced Devices",
+          "activeAlerts": "Active Alerts",
+          "lastSync": "Last Sync",
+          "never": "Never"
+        },
+        "lastError": "Last error: {{error}}",
+        "fields": {
+          "platform": "Platform",
+          "platformHelp": "Pick the region in the address you use to sign in to Datto RMM (for example https://merlot.rmm.datto.com is Merlot).",
+          "instanceUrl": "API URL",
+          "instanceUrlHelp": "The Datto API host, e.g. https://merlot-api.centrastage.net. A trailing /api is added automatically.",
+          "apiUserNote": "Create a dedicated Datto API user for Alga. Open that user in Datto RMM to generate its API key and secret, and give its security level read access to the account, sites, devices, alerts, and audit data.",
+          "softwareOnSync": "Ingest software during device sync",
+          "softwareOnSyncHelp": "Reads each changed device’s software audit as part of the sync. This makes one extra API call per changed device, which can be slow on large accounts.",
+          "resolveOnClose": "Resolve the Datto alert when its ticket closes",
+          "resolveOnCloseHelp": "Requires a Datto API user with write access to alerts. Leave off for a read-only API user.",
+          "rebootComponent": "Reboot component",
+          "rebootComponentSelect": "Select a component",
+          "rebootComponentUid": "Component UID",
+          "rebootComponentFallback": "The component list is unavailable ({{reason}}). Paste the component UID instead.",
+          "rebootComponentUnknownReason": "unknown error",
+          "rebootComponentHelp": "Leave empty to disable the Reboot action. Only components already in your Datto account can run.",
+          "hostChangedHint": "The platform or API URL changed. Enter the API key and API secret again to save.",
+          "optionsNeedCredentials": "Save the API key and secret first. These options are locked while no credentials are stored.",
+          "autoCreateClients": "Create clients for new sites automatically",
+          "autoCreateClientsHelp": "Sites are refreshed before every scheduled device sync. When this is on, a site seen for the first time gets an Alga client named after it, or is linked to the client that already has that name. Existing unmapped sites and on-demand sites are left alone."
+        },
+        "auth": {
+          "apiKey": "API key",
+          "enterApiKey": "Enter API key",
+          "saved": "Saved: {{value}}",
+          "apiSecret": "API secret",
+          "savedEnterToUpdate": "Saved (enter to update)",
+          "enterApiSecret": "Enter API secret"
+        },
+        "statusLine": {
+          "configured": "Status: Configured",
+          "notConfigured": "Status: Not configured"
+        },
+        "loadingSettings": "Loading Datto RMM settings...",
+        "sections": {
+          "sites": "Sites",
+          "sitesDescription": "Sync Datto sites into Alga site mappings, then map them to Alga Clients.",
+          "siteMapping": "Site Mapping",
+          "siteMappingDescription": "Assign each Datto site to an Alga Client and control auto-sync per site. Suggestions come from the site name or its Autotask company name and are never applied automatically.",
+          "siteMappingEmpty": "No sites found. Run \"Sync Sites\" first.",
+          "devices": "Devices",
+          "devicesDescription": "Sync Datto devices into Alga Assets for sites with auto-sync turned on.",
+          "alerts": "Alerts",
+          "alertsDescription": "Alerts are polled on the schedule configured under Alert automation below. Use Sync Alerts to pull open alerts now.",
+          "webhooks": "Webhook (optional fast path)",
+          "webhooksDescription": "Polling is the guaranteed path. To get alerts in seconds, add a webhook response action to your Datto monitor policies using the URL, custom header, and body template below.",
+          "assetActions": "Asset actions",
+          "assetActionsDescription": "Choose the Datto component that reboots a device when a technician clicks Reboot on an asset. It runs as a quick job and needs an API user with write access."
+        },
+        "createClientsConfirm": {
+          "title": "Create clients for unmapped sites?",
+          "message": "Each of the {{count}} unmapped sites gets an Alga client named after it and is mapped to it. A site whose name matches an existing client is linked to that client instead. On-demand sites and sites no longer in Datto are left alone."
+        },
+        "proFeature": {
+          "description": "Datto RMM integration is available in AlgaPSA Pro."
+        },
+        "regenerateSecretConfirm": {
+          "title": "Regenerate the webhook secret?",
+          "message": "The current secret stops working immediately. Webhook alerts are rejected until every Datto webhook response sends the new header value. Polling is not affected."
+        }
+      },
       "tanium": {
         "proFeature": {
           "description": "Tanium RMM integration is available in AlgaPSA Pro."
@@ -3018,7 +3214,9 @@
         "invalidPeopleMode": "That is not a valid people mode.",
         "billingProfileUnavailable": "That billing profile is not available for this client.",
         "mappingNotFound": "That mapping no longer exists. Refresh and try again.",
-        "forbidden": "You do not have permission to change this."
+        "forbidden": "You do not have permission to change this.",
+        "clientNotFound": "That client no longer exists. Refresh and try again.",
+        "contactNotForClient": "That contact does not belong to the client this site is mapped to."
       }
     },
     "sso": {

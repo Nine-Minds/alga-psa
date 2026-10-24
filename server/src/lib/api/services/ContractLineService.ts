@@ -13,6 +13,10 @@ import { IService } from 'server/src/interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { cloneTemplateContractLine } from '@alga-psa/billing/lib/billing/utils/templateClone';
 import {
+  legacyCloneAmountReader,
+  resolveTemplateAmountsForContract,
+} from '@alga-psa/shared/billingClients/templateAmounts';
+import {
   upsertContractLinePrepaidBlockInTransaction,
   removeContractLinePrepaidBlockInTransaction,
 } from '@alga-psa/billing/services/prepaidBlockConfigService';
@@ -1302,6 +1306,16 @@ export class ContractLineService extends BaseService<IContractLine> {
         cadence_owner: templateLine.cadence_owner,
       }, templateLine.contract_line_type);
       const newContractLineId = uuidv4();
+      // The template's amounts in the TARGET contract's currency. The template
+      // line's own custom_rate / overtime_rate columns are in the template's
+      // currency and are never copied onto the contract line.
+      const templateAmounts = await resolveTemplateAmountsForContract(
+        trx,
+        context.tenant,
+        templateContractId,
+        targetContractId,
+      );
+      const templateAmountReader = legacyCloneAmountReader(templateAmounts, data.contract_line_id);
       const contractLineData = await this.addCreateAuditFields(trx, {
         contract_line_id: newContractLineId,
         contract_id: targetContractId,
@@ -1314,11 +1328,11 @@ export class ContractLineService extends BaseService<IContractLine> {
         cadence_owner: templateRecurringStorage.cadence_owner,
         is_active: data.is_active ?? true,
         is_custom: false,
-        custom_rate: data.custom_rate ?? templateLine.custom_rate,
+        custom_rate: data.custom_rate ?? templateAmountReader.lineRate(),
         display_order: templateLine.display_order ?? 0,
         enable_proration: templateLine.enable_proration,
         enable_overtime: templateLine.enable_overtime,
-        overtime_rate: templateLine.overtime_rate,
+        overtime_rate: templateAmountReader.lineOvertimeRate(),
         overtime_threshold: templateLine.overtime_threshold,
         enable_after_hours_rate: templateLine.enable_after_hours_rate,
         after_hours_multiplier: templateLine.after_hours_multiplier,
@@ -1336,7 +1350,8 @@ export class ContractLineService extends BaseService<IContractLine> {
         contractLineId: newContractLineId,
         templateContractId,
         overrideRate: data.custom_rate ?? null,
-        effectiveDate: data.start_date
+        effectiveDate: data.start_date,
+        amounts: templateAmounts,
       });
 
       // Return response in legacy format for backwards compatibility

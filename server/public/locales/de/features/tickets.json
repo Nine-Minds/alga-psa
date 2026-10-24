@@ -461,6 +461,14 @@
     "clientPortal": "Empfangen über Kundenportal",
     "inboundEmail": "Empfangen über E-Mail"
   },
+  "originalEmail": {
+    "text": "Text",
+    "original": "Original-E-Mail",
+    "emailShort": "E-Mail",
+    "loading": "Original-E-Mail wird geladen …",
+    "error": "Die Original-E-Mail konnte nicht geladen werden.",
+    "group": "Nachrichtenansicht"
+  },
   "documents": {
     "title": "Dokumente",
     "noDocuments": "Keine Dokumente angehängt",

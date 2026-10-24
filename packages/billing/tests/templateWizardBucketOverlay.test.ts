@@ -72,6 +72,10 @@ vi.mock('@alga-psa/ui/components/onboarding/WizardNavigation', () => ({
     ),
 }));
 
+vi.mock('@alga-psa/billing/actions/billingCurrencyActions', () => ({
+  getTenantDefaultCurrencyCode: vi.fn().mockResolvedValue('EUR'),
+}));
+
 vi.mock('@alga-psa/billing/actions/contractWizardActions', () => ({
   createContractTemplateFromWizard: (...args: any[]) => createContractTemplateFromWizard(...args),
   checkTemplateNameExists: (...args: any[]) => checkTemplateNameExists(...args),
@@ -220,6 +224,8 @@ describe('TemplateWizard bucket overlays', () => {
     expect(submitted.cadence_owner).toBe('client');
     expect(submitted.billing_timing).toBe('advance');
     expect(submitted.enable_proration).toBe(true);
+    // The template is authored in the tenant default currency unless the author picks another.
+    expect(submitted.currency_code).toBe('EUR');
     expect(submitted.hourly_services?.[0]?.bucket_overlay).toEqual({
       total_minutes: 120,
       overage_rate: 15000,

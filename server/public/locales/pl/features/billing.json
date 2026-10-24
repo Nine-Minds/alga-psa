@@ -67,6 +67,7 @@
     "taxBreakdown": "Rozbicie podatku",
     "manualInvoice": "Faktura ręczna",
     "credits": "Kredyty",
+    "currency": "Waluta",
     "financialArtifactSummary": "Faktura tylko finansowa. Cykliczne okresy usług pojawiają się tylko w cyklicznych wierszach szczegółów.",
     "servicePeriod": "Okres usługi",
     "servicePeriods": "Okresy usług",
