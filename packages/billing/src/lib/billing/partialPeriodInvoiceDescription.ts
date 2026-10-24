@@ -23,15 +23,17 @@ export const buildPartialPeriodInvoiceDescription = (input: {
   units: number;
   start: string;
   exclusiveEnd: string;
+  /** Stored unit price, in the currency's own minor units. */
   unitPrice: number;
   coveredDays: number;
   fullPeriodDays: number;
   currencyCode: string;
-  formatCurrency: (amount: number, currencyCode: string) => string;
+  /** Formats a minor-unit amount; the exponent is the currency's, not a fixed 100. */
+  formatCurrency: (minorUnits: number, currencyCode: string) => string;
   describe: (direction: 'increase' | 'decrease', values: { description: string; units: number; unitLabel: string; period: string; calculation: string }) => string;
 }): string => {
   const period = formatPartialPeriodDates(input.start, input.exclusiveEnd);
-  const calculation = `${input.units} × ${input.formatCurrency(input.unitPrice / 100, input.currencyCode)} × ${input.coveredDays}/${input.fullPeriodDays}`;
+  const calculation = `${input.units} × ${input.formatCurrency(input.unitPrice, input.currencyCode)} × ${input.coveredDays}/${input.fullPeriodDays}`;
   const unitLabel = input.sourceDescription.match(/\b(users?|seats?|licenses?|endpoints?)\b/i)?.[0].toLowerCase() ?? 'units';
   return input.describe(input.direction, {
     description: input.sourceDescription,

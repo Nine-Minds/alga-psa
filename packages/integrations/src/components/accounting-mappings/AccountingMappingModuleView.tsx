@@ -268,6 +268,16 @@ export function AccountingMappingModuleView({
           return name;
         }
       },
+      ...(module.metadata?.fields ?? []).map((field) => ({
+        title: field.columnLabel ?? field.label,
+        dataIndex: `metadata.${field.key}`,
+        render: (_value: unknown, record: DisplayMapping) => {
+          const value = (record.metadata as Record<string, unknown> | null | undefined)?.[field.key];
+          return typeof value === 'string' && value.trim()
+            ? value
+            : t('integrations.accounting.moduleView.notAvailable', { defaultValue: 'N/A' });
+        }
+      })),
       {
         title: t('integrations.accounting.moduleView.actionsColumn', { defaultValue: 'Actions' }),
         dataIndex: 'id',
@@ -322,7 +332,7 @@ export function AccountingMappingModuleView({
         }
       }
     ],
-    [module.labels, module.elements, module.id, t]
+    [module.labels, module.elements, module.id, module.metadata?.fields, t]
   );
 
   if (isLoading) {

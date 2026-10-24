@@ -23,6 +23,11 @@ describe('reserved inbound webhook integration types', () => {
       }
     });
 
+    it('should reserve the Datto RMM slugs', () => {
+      expect(isReservedInboundWebhookIntegrationType('datto')).toBe(true);
+      expect(isReservedInboundWebhookIntegrationType('Datto_RMM')).toBe(true);
+    });
+
     it('should not flag tenant-defined integration types', () => {
       expect(isReservedInboundWebhookIntegrationType('my-custom-hook')).toBe(false);
       expect(isReservedInboundWebhookIntegrationType('rmm-alerts')).toBe(false);

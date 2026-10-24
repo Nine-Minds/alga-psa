@@ -41,6 +41,11 @@ vi.mock('@alga-psa/billing/actions/recurringServicePeriodSync', () => ({
   syncRecurringServicePeriodsForContractLine: vi.fn(async () => undefined),
 }));
 
+// Prepaid Block issuance sync (alga-2026-0002695) runs next to the period sync; also DB-free here.
+vi.mock('@alga-psa/billing/services/prepaidBlockIssuanceSync', () => ({
+  syncPrepaidBlockIssuancesForContractLine: vi.fn(async () => ({ action: 'none' })),
+}));
+
 describe('Contract Line Actions', () => {
   afterEach(() => {
     vi.clearAllMocks();

@@ -16,6 +16,11 @@
       "import": "./dist/blocknoteUtils.js",
       "require": "./dist/blocknoteUtils.js"
     },
+    "./normalizeBlocks": {
+      "types": "./src/normalizeBlocks.ts",
+      "import": "./dist/normalizeBlocks.js",
+      "require": "./dist/normalizeBlocks.js"
+    },
     "./avatarUtils": {
       "types": "./src/avatarUtils.ts",
       "import": "./dist/avatarUtils.js",

@@ -157,11 +157,14 @@ describe('MSP i18n Phase 0 - config', () => {
       'features/tickets',
       'msp/time-entry',
       'msp/user-activities',
+      'msp/schedule',
+      'features/documents',
     ]);
     expect(ROUTE_NAMESPACES['/msp/settings']).toEqual([
       'common',
       'msp/core',
       'msp/settings',
+      'msp/extensions',
       'msp/keyboard-shortcuts',
       'msp/admin',
       'msp/email-providers',
@@ -172,6 +175,7 @@ describe('MSP i18n Phase 0 - config', () => {
       'features/billing',
       'msp/calendar',
       'msp/integrations',
+      'features/documents',
     ]);
 
     const hasLegacyMsp = Object.values(ROUTE_NAMESPACES).some((namespaces) =>

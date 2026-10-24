@@ -15,6 +15,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import {
     IBillingCharge,
     IBucketCharge,
+    IPrepaidBlockCharge,
     IUsageBasedCharge,
     ITimeBasedCharge,
     IFixedPriceCharge,
@@ -25,10 +26,13 @@ import {
     IRecurringDueWorkMaterializationGap,
     IRecurringDueWorkPaginatedResponse,
     IRecurringDueWorkRow,
+    IRecurringScopedDuePeriodSelection,
     RecurringDueWorkChargeType,
     RECURRING_RANGE_SEMANTICS,
 } from '@alga-psa/types';
 import { DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES } from '@alga-psa/types';
+import { fetchPrepaidBlockIssuanceDueWorkRows } from '../lib/prepaidBlockDueWork';
+import { resolvePrepaidBlockBusinessDate } from '../lib/prepaidBlockDates';
 import { TaxService } from '../services/taxService';
 import { fetchStrandedArrearsOnlyLineGaps } from './arrearsOnlyLineGaps';
 import { ITaxCalculationResult } from '@alga-psa/types';
@@ -57,6 +61,7 @@ import { BillingEngine, createFixedChargePreviewSession } from '../lib/billing/b
 import {
     detectRecurringApprovalBlockers,
     detectRecurringApprovalWarnings,
+    detectStalePendingPrepaidBlockWarnings,
     formatApprovalBlockedReason,
     type RecurringApprovalBlockerCounts,
     type RecurringApprovalWarnings,
@@ -781,6 +786,7 @@ function normalizeChargeType(
         case 'Hourly':
         case 'Usage':
         case 'Bucket':
+        case 'PrepaidBlock':
             return raw;
         default:
             return null;
@@ -1235,8 +1241,7 @@ function buildRecurringDueWorkInvoiceCandidates(
         rows.map((row) => [row.executionIdentityKey, row] as const),
     );
 
-    const grouped = groupDueServicePeriodsForInvoiceCandidates(
-        rows.map((row) => ({
+    const toScopedSelection = (row: IRecurringDueWorkRow): IRecurringScopedDuePeriodSelection => ({
             clientId: row.clientId,
             ...(row.recordId ? metadataByRecordId.get(row.recordId) : undefined),
             servicePeriod: {
@@ -1279,8 +1284,26 @@ function buildRecurringDueWorkInvoiceCandidates(
                 (row.recordId ? metadataByRecordId.get(row.recordId)?.exportShapeKey : null)
                 ?? row.exportShapeKey
                 ?? null,
-        })),
-    );
+        });
+
+    // A not-yet-due Prepaid Block member must not hold back the ready members of
+    // its window (e.g. an in-advance Fixed fee): group it into its own candidate,
+    // which reads as "Not yet due" with the block's due date. Other ineligible
+    // members still block their group, unchanged.
+    const isEarlyPrepaidBlockRow = (row: IRecurringDueWorkRow) =>
+        row.chargeType === 'PrepaidBlock' && row.isEarly === true;
+    const withKeySuffix = (suffix: string) => (group: ReturnType<typeof groupDueServicePeriodsForInvoiceCandidates>[number]) => ({
+        ...group,
+        groupKey: `${group.groupKey}${suffix}`,
+    });
+    const grouped = [
+        ...groupDueServicePeriodsForInvoiceCandidates(
+            rows.filter((row) => !isEarlyPrepaidBlockRow(row)).map(toScopedSelection),
+        ).map(withKeySuffix('')),
+        ...groupDueServicePeriodsForInvoiceCandidates(
+            rows.filter(isEarlyPrepaidBlockRow).map(toScopedSelection),
+        ).map(withKeySuffix(':prepaid-block-not-yet-due')),
+    ];
 
     const candidates = grouped
         .map((candidate): IRecurringDueWorkInvoiceCandidate | null => {
@@ -1331,8 +1354,14 @@ function buildRecurringDueWorkInvoiceCandidates(
             const everyMemberEarly = members.length > 0 && members.every((member) => member.isEarly === true);
             const anyAttributionIncomplete = members.some((member) => member.attribution?.isComplete === false);
             const notYetDue = !canGenerate && everyMemberEarly && !anyAttributionIncomplete;
+            // A Prepaid Block opens on its issuance due date, which can fall well
+            // after its invoice window starts; other rows open with their window.
             const availableOnDate = notYetDue
-                ? (members.map((member) => member.invoiceWindowStart).sort()[0] ?? null)
+                ? (members
+                    .map((member) => (member.chargeType === 'PrepaidBlock'
+                        ? member.blockDueDate
+                        : undefined) ?? member.invoiceWindowStart)
+                    .sort()[0] ?? null)
                 : null;
             // Month-end early close: every member is a calendar-month arrears
             // period whose final calendar day is TODAY on the account's effective
@@ -1655,18 +1684,24 @@ export async function isBucketCharge(charge: IBillingCharge): Promise<boolean> {
     return charge.type === 'bucket';
 }
 
+export async function isPrepaidBlockCharge(charge: IBillingCharge): Promise<boolean> {
+    return charge.type === 'prepaid_block';
+}
+
 // Charge Helpers
 export async function getChargeQuantity(charge: IBillingCharge): Promise<number> {
     // Need to await the results of the async type guards
     if (await isBucketCharge(charge)) return (charge as IBucketCharge).overageHours;
     if (await isFixedPriceCharge(charge) || await isUsageBasedCharge(charge)) return (charge as IFixedPriceCharge | IUsageBasedCharge).quantity ?? 0; // Handle potential undefined quantity
     if (await isTimeBasedCharge(charge)) return (charge as ITimeBasedCharge).duration ?? 0; // Handle potential undefined duration
+    if (await isPrepaidBlockCharge(charge)) return (charge as IPrepaidBlockCharge).quantity;
     return 1;
 }
 
 export async function getChargeUnitPrice(charge: IBillingCharge): Promise<number> {
     // Need to await the result of the async type guard
     if (await isBucketCharge(charge)) return (charge as IBucketCharge).overageRate;
+    if (await isPrepaidBlockCharge(charge)) return (charge as IPrepaidBlockCharge).rate;
     return charge.rate;
 }
 
@@ -1963,8 +1998,21 @@ export const getAvailableRecurringDueWork = withAuth(async (
             tenant,
             clientMetadataById,
         );
+        // Scheduled Prepaid Block issuances: dated one-off in-advance rows that
+        // share the contract's invoice window (and grouping scope) with its Fixed rows.
+        // Readiness uses the tenant business date (not the user's range end), the same
+        // source as the issuance due dates and the billing engine's not-due-until guard.
+        const prepaidBlockRows = await fetchPrepaidBlockIssuanceDueWorkRows(knex, {
+            tenant,
+            asOf: await resolvePrepaidBlockBusinessDate(knex, tenant) as ISO8601String,
+            clientTaxSourceById: new Map(
+                Array.from(clientMetadataById.entries()).map(([clientId, meta]) => [clientId, meta.taxSource] as const),
+            ),
+            options,
+            groupingMetadataByRecordId,
+        });
         const invoiceCandidates = buildRecurringDueWorkInvoiceCandidates(
-            [...readyPersistedRows, ...unresolvedNonContractRows],
+            [...readyPersistedRows, ...unresolvedNonContractRows, ...prepaidBlockRows],
             groupingMetadataByRecordId,
             asOf,
             monthEndCloseEligibilityDate,
@@ -1976,7 +2024,7 @@ export const getAvailableRecurringDueWork = withAuth(async (
         const approvalBlockedEntryCountsByExecutionIdentityKey = await detectRecurringApprovalBlockers({
             knex,
             tenant,
-            rows: [...readyPersistedRows, ...unresolvedNonContractRows].map((row) => ({
+            rows: [...readyPersistedRows, ...unresolvedNonContractRows, ...prepaidBlockRows].map((row) => ({
                 executionIdentityKey: row.executionIdentityKey,
                 clientId: row.clientId,
                 servicePeriodStart: row.servicePeriodStart,
@@ -1985,18 +2033,28 @@ export const getAvailableRecurringDueWork = withAuth(async (
                 scheduleKey: row.scheduleKey ?? null,
             })),
         });
-        const approvalWarningsByExecutionIdentityKey = await detectRecurringApprovalWarnings({
+        const approvalWarningRows = [...readyPersistedRows, ...unresolvedNonContractRows, ...prepaidBlockRows].map((row) => ({
+                executionIdentityKey: row.executionIdentityKey,
+                clientId: row.clientId,
+                servicePeriodStart: row.servicePeriodStart,
+                servicePeriodEnd: row.servicePeriodEnd,
+                contractLineId: row.contractLineId ?? null,
+                scheduleKey: row.scheduleKey ?? null,
+            }));
+        const projectApprovalWarnings = await detectRecurringApprovalWarnings({
             knex,
             tenant,
-            rows: [...readyPersistedRows, ...unresolvedNonContractRows].map((row) => ({
-                executionIdentityKey: row.executionIdentityKey,
-                clientId: row.clientId,
-                servicePeriodStart: row.servicePeriodStart,
-                servicePeriodEnd: row.servicePeriodEnd,
-                contractLineId: row.contractLineId ?? null,
-                scheduleKey: row.scheduleKey ?? null,
-            })),
+            rows: approvalWarningRows,
         });
+        const stalePrepaidBlockWarnings = await detectStalePendingPrepaidBlockWarnings({
+            knex,
+            tenant,
+            rows: approvalWarningRows,
+        });
+        const approvalWarningsByExecutionIdentityKey = new Map(projectApprovalWarnings);
+        for (const [key, extra] of stalePrepaidBlockWarnings) {
+            approvalWarningsByExecutionIdentityKey.set(key, [...(approvalWarningsByExecutionIdentityKey.get(key) ?? []), ...extra]);
+        }
         const approvalBlockedInvoiceCandidates = applyRecurringApprovalBlocksToInvoiceCandidates(
             blockedInvoiceCandidates,
             approvalBlockedEntryCountsByExecutionIdentityKey,

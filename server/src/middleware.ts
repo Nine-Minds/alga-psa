@@ -208,6 +208,11 @@ const exactApiKeySkipPaths = [
   // the ninjaone/tacticalrmm entries, but Level has no sub-routes.
   '/api/webhooks/levelio',
   '/api/webhooks/levelio/',
+  // Datto RMM alert webhook: single POST route that authenticates the tenant +
+  // X-Alga-Webhook-Secret in the route handler (no x-api-key). Exact match only,
+  // so `/api/webhooks/dattoevil` and deeper routes stay behind the API-key gate.
+  '/api/webhooks/datto',
+  '/api/webhooks/datto/',
 ];
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
@@ -217,13 +222,19 @@ export function shouldSkipApiKeyAuth(pathname: string): boolean {
     /^\/api\/client-portal\/documents\/[^/]+\/(?:file|export)$/.test(pathname) ||
     exactApiKeySkipPaths.includes(pathname) ||
     apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
-    (pathname.startsWith('/api/tickets/') && pathname.endsWith('/live-token')) ||
+    (pathname.startsWith('/api/tickets/') &&
+      (pathname.endsWith('/live-token') ||
+        // Original-email view for MSP and client-portal readers; the route
+        // authenticates the session and reuses the ticket read authorization.
+        pathname.endsWith('/email-html'))) ||
     (pathname.startsWith('/api/documents/') &&
       (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview') ||
         pathname.endsWith('/download') || pathname.endsWith('/content'))) ||
     // Session-authenticated inventory SO document endpoints (auth enforced in-handler via withAuth).
     (pathname.startsWith('/api/inventory/sales-orders/') &&
-      (pathname.endsWith('/document') || pathname.endsWith('/email-confirmation')));
+      (pathname.endsWith('/document') || pathname.endsWith('/email-confirmation'))) ||
+    // Session-authenticated label PDF endpoint (auth + record-level permission enforced in-handler).
+    pathname === '/api/labels/pdf';
 }
 
 export function hasContradictoryPortalIdentity(user: {

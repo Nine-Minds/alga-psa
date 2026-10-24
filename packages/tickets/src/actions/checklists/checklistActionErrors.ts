@@ -5,6 +5,14 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
+import {
+  APPLY_RULE_KEYWORD_TOO_LONG,
+  APPLY_RULE_MAX_KEYWORDS,
+  APPLY_RULE_MAX_KEYWORD_LENGTH,
+  APPLY_RULE_ORIGIN_INVALID,
+  APPLY_RULE_TOO_MANY_KEYWORDS,
+} from './applyRuleMatcherValidation';
+
 export type ChecklistActionError = ActionMessageError | ActionPermissionError;
 
 export const APPLY_RULE_CATEGORY_BOARD_MISMATCH = 'The selected category belongs to a different board than the rule.';
@@ -34,6 +42,15 @@ export function checklistActionErrorFrom(error: unknown): ChecklistActionError |
   if (error instanceof Error) {
     if (error.message.includes('Permission denied')) {
       return permissionError(error.message);
+    }
+    if (error.message === APPLY_RULE_TOO_MANY_KEYWORDS) {
+      return actionError(error.message, 'features/tickets:errors.checklist.ruleTooManyKeywords', { max: APPLY_RULE_MAX_KEYWORDS });
+    }
+    if (error.message === APPLY_RULE_KEYWORD_TOO_LONG) {
+      return actionError(error.message, 'features/tickets:errors.checklist.ruleKeywordTooLong', { max: APPLY_RULE_MAX_KEYWORD_LENGTH });
+    }
+    if (error.message === APPLY_RULE_ORIGIN_INVALID) {
+      return actionError(error.message, 'features/tickets:errors.checklist.ruleOriginInvalid');
     }
     const scopeErrorKey = APPLY_RULE_SCOPE_ERROR_KEYS[error.message];
     if (scopeErrorKey) {

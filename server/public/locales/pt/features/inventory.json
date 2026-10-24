@@ -32,7 +32,8 @@
     "to": "Para",
     "today": "Hoje",
     "total": "Total",
-    "unknown": "Desconhecido"
+    "unknown": "Desconhecido",
+    "recordUnavailable": "Não encontrado ou você não tem acesso"
   },
   "counts": {
     "adjustments": "{{count}} ajuste(s)",
@@ -1305,6 +1306,18 @@
     "ageAtVendor": "{{days}} dias com o fornecedor",
     "filters": {
       "statusActive": "Exibindo casos de RMA com status {{status}}."
+    },
+    "detail": {
+      "title": "RMA {{id}}",
+      "reference": "Referência do RMA",
+      "product": "Produto",
+      "returnedSerial": "Número de série da unidade devolvida",
+      "opened": "Aberto",
+      "updated": "Atualizado",
+      "age": "Idade (dias)",
+      "reason": "Motivo",
+      "viewUnit": "Ver unidade",
+      "viewAsset": "Ver ativo"
     }
   },
   "salesOrders": {
@@ -1698,7 +1711,9 @@
       "failed": "Não foi possível repor a devolução no estoque.",
       "restocking": "Repondo no estoque…",
       "submit": "Repor no estoque"
-    }
+    },
+    "printLabel": "Imprimir etiqueta",
+    "printWithTemplate": "Imprimir com {{code}}"
   },
   "transfers": {
     "addLine": "Adicionar Linha",

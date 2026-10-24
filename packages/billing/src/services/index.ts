@@ -146,3 +146,10 @@ export {
   type QuoteAccessLinkRevokeReason,
   type QuoteAccessResolveResult,
 } from './quoteAccessLinks';
+
+// Label batch rendering (work tags, asset / stock-unit labels): one PDF from N authorized view models.
+export { renderLabelBatchPdf, renderHtmlToPdf } from './labelPdfService';
+export { LabelRenderError } from '../lib/label-batch/renderLabelBatchHtml';
+export type { LabelPrintItem } from '../lib/label-batch/renderLabelBatchHtml';
+export { LabelLayoutError } from '../lib/label-batch/layout';
+export type { LabelBatchLayout, OnePerPageLayout, GridLayout } from '../lib/label-batch/layout';

@@ -17,6 +17,13 @@ describe('renderRemoteAccessTemplate', () => {
     )).toBe('https://remote.example/Example%20Co/Workstation/abc');
   });
 
+  it('supports the RMM device id placeholder', () => {
+    expect(renderRemoteAccessTemplate(
+      'https://example.rmmservice.com/#/deviceDashboard/{asset.rmm_device_id}/details',
+      { asset: { rmm_device_id: '2456' }, client: {} }
+    )).toBe('https://example.rmmservice.com/#/deviceDashboard/2456/details');
+  });
+
   it('returns null for a missing placeholder value', () => {
     expect(renderRemoteAccessTemplate(
       'https://remote.example/{field.session}',
@@ -79,5 +86,26 @@ describe('renderRemoteAccessTemplate', () => {
       'https://remote.example/connect/{field.session}',
       { asset: {}, client: {}, field: { session: 'a%b@c:d' } }
     )).toBe('https://remote.example/connect/a%25b%40c%3Ad');
+  });
+
+  it('renders RMM placeholders URL-encoded', () => {
+    expect(renderRemoteAccessTemplate(
+      'https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/{asset.rmm_provider}/{asset.rmm_organization_id}',
+      { asset: { rmm_device_id: 'a/b 1', rmm_provider: 'ninjaone', rmm_organization_id: 7 }, client: {} }
+    )).toBe('https://app.ninjarmm.com/#/deviceDashboard/a%2Fb%201/ninjaone/7');
+  });
+
+  it('returns null when rmm_device_id is missing, empty, or null', () => {
+    const template = 'https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview';
+    expect(renderRemoteAccessTemplate(template, { asset: {}, client: {} })).toBeNull();
+    expect(renderRemoteAccessTemplate(template, { asset: { rmm_device_id: '' }, client: {} })).toBeNull();
+    expect(renderRemoteAccessTemplate(template, { asset: { rmm_device_id: null }, client: {} })).toBeNull();
+  });
+
+  it('still rejects unknown asset keys', () => {
+    expect(renderRemoteAccessTemplate(
+      'https://remote.example/{asset.attributes}',
+      { asset: { attributes: 'x' }, client: {} }
+    )).toBeNull();
   });
 });

@@ -6,7 +6,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useI18n } from '@alga-psa/ui/lib/i18n/client';
+import { useI18n, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 
 interface LanguageSwitcherProps {
@@ -32,7 +32,8 @@ export function LanguageSwitcher({
   showFlags = false,
   onChange,
 }: LanguageSwitcherProps) {
-  const { locale, setLocale, supportedLocales, localeNames } = useI18n();
+  const { t } = useTranslation('common');
+  const { locale, setLocale, supportedLocales } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const [isChanging, setIsChanging] = useState(false);
 
@@ -51,7 +52,7 @@ export function LanguageSwitcher({
 
   const getLocaleDisplay = (loc: SupportedLocale) => {
     if (showNames) {
-      return localeNames[loc] || loc.toUpperCase();
+      return t(`enums.locale.${loc}`, { defaultValue: loc.toUpperCase() });
     }
     return loc.toUpperCase();
   };
@@ -65,7 +66,7 @@ export function LanguageSwitcher({
           className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           onClick={() => setIsOpen(!isOpen)}
           disabled={isChanging}
-          aria-label="Select language"
+          aria-label={t('language.selectLanguage')}
           aria-expanded={isOpen}
           aria-haspopup="listbox"
         >
@@ -139,7 +140,7 @@ export function LanguageSwitcher({
   // Buttons variant
   if (variant === 'buttons') {
     return (
-      <div className={`flex gap-2 ${className}`} role="group" aria-label="Select language">
+      <div className={`flex gap-2 ${className}`} role="group" aria-label={t('language.selectLanguage')}>
         {supportedLocales.map((loc) => (
           <button
             key={loc}
@@ -180,7 +181,7 @@ export function LanguageSwitcher({
             disabled={isChanging || loc === locale}
             aria-pressed={loc === locale}
           >
-            {showNames ? localeNames[loc] : loc.toUpperCase()}
+            {getLocaleDisplay(loc)}
           </button>
         </React.Fragment>
       ))}
