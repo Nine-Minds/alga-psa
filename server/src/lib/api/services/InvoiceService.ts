@@ -2076,9 +2076,14 @@ export class InvoiceService extends BaseService<IInvoice> {
         await persistManualInvoiceCharges(
           trx,
           invoiceId,
+          // Charges bill under the same profile as the header (as the UI
+          // manual path does), so an explicit billingProfileId governs the
+          // lines as well as the terms instead of falling back to the
+          // client's default profile.
           data.items.map((item) => ({
             ...item,
-            rate: Math.round(item.rate)
+            rate: Math.round(item.rate),
+            billing_profile_id: billingTerms.billingProfileId ?? undefined
           })),
           client,
           sessionLike as any,

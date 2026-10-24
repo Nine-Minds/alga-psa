@@ -134,6 +134,38 @@ describe('REST manual invoice creation takes terms from the effective billing id
     expect(header.billing_profile_id).toBe(otherProfileId);
   });
 
+  it('bills the charges under the explicit billingProfileId, not the client default', async () => {
+    const defaultProfileId = await ensureDefaultBillingProfile(context, context.clientId);
+    const otherProfileId = await createBillingProfile(context, context.clientId, 'South Plant');
+    expect(otherProfileId).not.toBe(defaultProfileId);
+
+    const header = await create({ billingProfileId: otherProfileId });
+    const charges = await context.db('invoice_charges')
+      .where({ tenant: context.tenantId, invoice_id: header.invoice_id })
+      .select('billing_profile_id');
+
+    expect(header.billing_profile_id).toBe(otherProfileId);
+    expect(charges.length).toBeGreaterThan(0);
+    for (const charge of charges) {
+      expect(charge.billing_profile_id).toBe(header.billing_profile_id);
+    }
+  });
+
+  it('bills the charges under the header profile when billingProfileId is omitted', async () => {
+    const defaultProfileId = await ensureDefaultBillingProfile(context, context.clientId);
+
+    const header = await create();
+    const charges = await context.db('invoice_charges')
+      .where({ tenant: context.tenantId, invoice_id: header.invoice_id })
+      .select('billing_profile_id');
+
+    expect(header.billing_profile_id).toBe(defaultProfileId);
+    expect(charges.length).toBeGreaterThan(0);
+    for (const charge of charges) {
+      expect(charge.billing_profile_id).toBe(defaultProfileId);
+    }
+  });
+
   it('rejects a billingProfileId that belongs to another client with a 400', async () => {
     const { v4: uuidv4 } = await import('uuid');
     const otherClientId = uuidv4();
