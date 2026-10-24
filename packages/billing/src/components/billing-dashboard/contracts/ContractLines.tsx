@@ -1989,42 +1989,40 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                               : t('contractLines.services.unitRate', { defaultValue: 'Unit Rate' })}
                                           </Label>
                                           {isEditing ? (
-                                            <div className="relative mt-1">
-                                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">{getCurrencySymbol(contract.currency_code || 'USD')}</span>
-                                              <Input
-                                                id={`rate-${serviceConfig.configuration.config_id}`}
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                value={
-                                                  serviceConfig.configuration.configuration_type === 'Hourly'
-                                                    ? (editData.hourly_rate !== undefined ? (editData.hourly_rate / 100).toFixed(2) : '')
-                                                    : (editData.base_rate !== undefined ? (editData.base_rate / 100).toFixed(2) : '')
+                                            <Input
+                                              leadingAdornment={getCurrencySymbol(contract.currency_code || 'USD')}
+                                              containerClassName="mt-1"
+                                              id={`rate-${serviceConfig.configuration.config_id}`}
+                                              type="number"
+                                              min="0"
+                                              step="0.01"
+                                              value={
+                                                serviceConfig.configuration.configuration_type === 'Hourly'
+                                                  ? (editData.hourly_rate !== undefined ? (editData.hourly_rate / 100).toFixed(2) : '')
+                                                  : (editData.base_rate !== undefined ? (editData.base_rate / 100).toFixed(2) : '')
+                                              }
+                                              onChange={(e) => {
+                                                const cents = e.target.value ? Math.round(parseFloat(e.target.value) * 100) : undefined;
+                                                if (serviceConfig.configuration.configuration_type === 'Hourly') {
+                                                  setEditServiceConfigs({
+                                                    ...editServiceConfigs,
+                                                    [configId]: {
+                                                      ...editData,
+                                                      hourly_rate: cents
+                                                    }
+                                                  });
+                                                } else {
+                                                  setEditServiceConfigs({
+                                                    ...editServiceConfigs,
+                                                    [configId]: {
+                                                      ...editData,
+                                                      base_rate: cents
+                                                    }
+                                                  });
                                                 }
-                                                onChange={(e) => {
-                                                  const cents = e.target.value ? Math.round(parseFloat(e.target.value) * 100) : undefined;
-                                                  if (serviceConfig.configuration.configuration_type === 'Hourly') {
-                                                    setEditServiceConfigs({
-                                                      ...editServiceConfigs,
-                                                      [configId]: {
-                                                        ...editData,
-                                                        hourly_rate: cents
-                                                      }
-                                                    });
-                                                  } else {
-                                                    setEditServiceConfigs({
-                                                      ...editServiceConfigs,
-                                                      [configId]: {
-                                                        ...editData,
-                                                        base_rate: cents
-                                                      }
-                                                    });
-                                                  }
-                                                }}
-                                                onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                                                className="pl-10"
-                                              />
-                                            </div>
+                                              }}
+                                              onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                                            />
                                           ) : (
                                             <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
                                               {formatRate(serviceConfig.typeConfig?.hourly_rate || serviceConfig.typeConfig?.base_rate)}
@@ -2080,6 +2078,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                           />
                                           {editBucketConfigs[serviceConfig.service.service_id] && (
                                             <BucketOverlayFields
+                                              currencyCode={contract.currency_code || 'USD'}
                                               mode={serviceConfig.configuration.configuration_type === 'Hourly' ? 'hours' : 'usage'}
                                               value={editBucketConfigs[serviceConfig.service.service_id] || {}}
                                               onChange={(next) => {
@@ -2205,6 +2204,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                             service_name: serviceConfig.service.service_name,
                           }))}
                           schedules={bucketSchedules}
+                          currencyCode={contract.currency_code}
                           onChanged={() => {
                             void loadServicesForLine(line.contract_line_id, true);
                           }}
@@ -2232,6 +2232,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
             onClose={() => setShowAddDialog(false)}
             contractId={contract.contract_id}
             onAdd={handleAddContractLines}
+            currencyCode={contract.currency_code || 'USD'}
           />
 
           <CreateCustomContractLineDialog

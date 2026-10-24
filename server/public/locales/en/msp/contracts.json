@@ -772,7 +772,7 @@
     },
     "fixedConfig": {
       "defaultBaseRate": "Default Base Rate:",
-      "defaultRatePlaceholder": "Default: ${{rate}}",
+      "defaultRatePlaceholder": "Default: {{rate}}",
       "enterBaseRate": "Enter base rate",
       "leaveBlankDefault": "Leave blank to use the default rate",
       "notSet": "Not set",
@@ -780,7 +780,7 @@
       "title": "Fixed Rate Configuration"
     },
     "hourlyConfig": {
-      "defaultRate": "Default: ${{rate}}",
+      "defaultRate": "Default: {{rate}}",
       "hourlyRate": "Hourly Rate",
       "minimumBillableMinutes": "Minimum billable minutes",
       "roundUpToNearest": "Round up to nearest (minutes)",
@@ -806,7 +806,7 @@
     },
     "title": "Add Contract Lines from Presets",
     "usageConfig": {
-      "defaultRate": "Default: ${{rate}}",
+      "defaultRate": "Default: {{rate}}",
       "recordDrivenNote": "Usage services bill from usage recorded in Usage Tracking for each service period. A period with no usage record produces no charge — record usage (or an explicit zero) each period to bill these services.",
       "ratePerUnit": "Rate (per unit)",
       "unitHint": "e.g., GB, API call, user",
@@ -2512,7 +2512,7 @@
       },
       "discounts": "Discounts",
       "fields": {
-        "adjustmentAmount": "Adjustment amount dollars",
+        "adjustmentAmount": "Adjustment amount",
         "adjustmentDescription": "Adjustment description",
         "adjustmentPeriod": "Adjustment period",
         "billingFrequency": "Billing frequency",
@@ -2530,16 +2530,16 @@
         "minimumUsage": "Minimum usage",
         "includedHours": "Included hours",
         "includedUnits": "Included units",
-        "overtimeRate": "Overtime rate ($/hr)",
+        "overtimeRate": "Overtime rate per hour",
         "overtimeThreshold": "Overtime threshold (hours)",
         "roundUpMinutes": "Round up to minutes",
         "scheduleEffectiveDate": "Schedule effective date",
         "scheduleEndDate": "Schedule end date",
-        "scheduleRate": "Schedule rate dollars",
+        "scheduleRate": "Schedule rate",
         "serviceQuantity": "License or product quantity",
         "tierMaximum": "Tier maximum",
         "tierMinimum": "Tier minimum",
-        "tierRate": "Tier rate dollars",
+        "tierRate": "Tier rate",
         "usageUnit": "Usage unit"
       },
       "frequencies": {
@@ -2565,7 +2565,7 @@
       "placeholders": {
         "minimum": "minimum",
         "minimumMinutes": "minimum minutes",
-        "overtimeRate": "overtime $/hr",
+        "overtimeRate": "overtime rate per hour",
         "roundMinutes": "round minutes",
         "thresholdHours": "threshold hours"
       },
@@ -2607,7 +2607,8 @@
         "value": "Value",
         "appliesTo": "Applies to",
         "description": "Description",
-        "amount": "Amount ($)",
+        "amount": "Amount",
+        "rate": "Rate",
         "billingPeriod": "Billing period",
         "timing": "Timing"
       }
