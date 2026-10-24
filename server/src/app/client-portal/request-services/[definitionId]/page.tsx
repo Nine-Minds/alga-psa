@@ -147,6 +147,7 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
               selectPlaceholder: t('detail.selectOption'),
               datePlaceholder: t('detail.datePlaceholder'),
               submit: t('detail.submit'),
+              requiredField: t('detail.requiredField'),
             }}
           />
         )}

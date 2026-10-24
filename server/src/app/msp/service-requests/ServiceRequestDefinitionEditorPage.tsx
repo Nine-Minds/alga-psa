@@ -705,6 +705,19 @@ export default function ServiceRequestDefinitionEditorPage() {
     sortOrder: '0',
   });
   const [formBehaviorProviderInput, setFormBehaviorProviderInput] = useState('basic');
+  // Unsaved edits to the Advanced (JSON) panel; null shows the saved config. Saved only by
+  // the panel's own button (never by "Save all"), so it cannot overwrite "Show when…" edits.
+  const [formBehaviorConfigDraft, setFormBehaviorConfigDraft] = useState<string | null>(null);
+  const savedFormBehaviorConfigText = JSON.stringify(
+    data?.execution.formBehaviorConfig ?? {},
+    null,
+    2
+  );
+  // A draft is based on the saved config it was typed over; once that changes (a
+  // "Show when…" save, or another reload), drop the draft rather than save stale rules.
+  useEffect(() => {
+    setFormBehaviorConfigDraft(null);
+  }, [savedFormBehaviorConfigText]);
   const [visibilityProviderInput, setVisibilityProviderInput] = useState(
     'all-authenticated-client-users'
   );
@@ -1822,9 +1835,43 @@ export default function ServiceRequestDefinitionEditorPage() {
                   label={t('editor.execution.advanced.config')}
                   wrapperClassName="mb-0"
                   className="min-h-[140px] font-mono"
-                  value={JSON.stringify(data.execution.formBehaviorConfig ?? {}, null, 2)}
-                  readOnly
+                  value={formBehaviorConfigDraft ?? savedFormBehaviorConfigText}
+                  onChange={(event) => setFormBehaviorConfigDraft(event.target.value)}
                 />
+                <div>
+                  <Button
+                    id="service-request-form-behavior-config-save"
+                    disabled={formBehaviorConfigDraft === null}
+                    onClick={async () => {
+                      if (formBehaviorConfigDraft === null) return;
+                      let parsed: unknown;
+                      try {
+                        parsed = formBehaviorConfigDraft.trim() ? JSON.parse(formBehaviorConfigDraft) : {};
+                      } catch {
+                        toast.error(t('messages.error.formBehaviorInvalid'));
+                        return;
+                      }
+                      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                        toast.error(t('messages.error.formBehaviorNotObject'));
+                        return;
+                      }
+                      try {
+                        await updateServiceRequestFormBehaviorConfigAction(
+                          data.definitionId,
+                          parsed as Record<string, unknown>
+                        );
+                        setFormBehaviorConfigDraft(null);
+                        await reloadDefinitionEditorState(data.definitionId);
+                        toast.success(t('messages.success.formBehaviorConfigUpdated'));
+                      } catch (error) {
+                        console.error('Failed to update form behavior config', error);
+                        toast.error(t('messages.error.formBehaviorInvalid'));
+                      }
+                    }}
+                  >
+                    {t('editor.execution.advanced.save')}
+                  </Button>
+                </div>
               </div>
             </details>
           </div>

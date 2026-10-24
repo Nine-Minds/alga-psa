@@ -122,7 +122,7 @@
           "is-empty": "är tomt"
         },
         "advancedJson": "Avancerat (JSON)",
-        "advancedJsonHelp": "Skrivskyddad vy av den sparade konfigurationen, inklusive kontextstandarder. Använd ”Visa när…” på varje fält för att ändra reglerna."
+        "advancedJsonHelp": "Hela den sparade konfigurationen, inklusive kontextstandarder. Synlighetsregler ändras enklast med ”Visa när…” på varje fält. Osparade ändringar här förkastas om en regel ändras där."
       }
     },
     "execution": {

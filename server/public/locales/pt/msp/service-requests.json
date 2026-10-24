@@ -122,7 +122,7 @@
           "is-empty": "está vazio"
         },
         "advancedJson": "Avançado (JSON)",
-        "advancedJsonHelp": "Visualização somente leitura da configuração salva, incluindo os padrões de contexto. Use “Mostrar quando…” em cada campo para alterar as regras."
+        "advancedJsonHelp": "A configuração salva completa, incluindo os padrões de contexto. As regras de visibilidade são mais fáceis de alterar com “Mostrar quando…” em cada campo. Edições não salvas aqui são descartadas se uma regra for alterada lá."
       }
     },
     "execution": {

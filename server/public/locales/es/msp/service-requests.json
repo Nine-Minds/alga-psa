@@ -122,7 +122,7 @@
           "is-empty": "está vacío"
         },
         "advancedJson": "Avanzado (JSON)",
-        "advancedJsonHelp": "Vista de solo lectura de la configuración guardada, incluidos los valores de contexto predeterminados. Use «Mostrar cuando…» en cada campo para cambiar las reglas."
+        "advancedJsonHelp": "La configuración guardada completa, incluidos los valores de contexto predeterminados. Las reglas de visibilidad se cambian más fácilmente con «Mostrar cuando…» en cada campo. Los cambios sin guardar aquí se descartan si se modifica una regla allí."
       }
     },
     "execution": {

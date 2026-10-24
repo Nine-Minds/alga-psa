@@ -27,6 +27,7 @@ describe("RequestServiceForm long-text fields", () => {
           selectPlaceholder: "Select",
           datePlaceholder: "Date",
           submit: "Submit request",
+          requiredField: "This field is required.",
         }}
         clientSubmissionKey="attempt-1"
       />,
@@ -76,6 +77,7 @@ describe("RequestServiceForm long-text fields", () => {
           selectPlaceholder: "Select",
           datePlaceholder: "Date",
           submit: "Submit request",
+          requiredField: "This field is required.",
         }}
         clientSubmissionKey="attempt-2"
       />,
@@ -98,7 +100,12 @@ const vpnReason = () => document.getElementById("request-service-field-vpn_reaso
 describe("RequestServiceForm live conditional visibility", () => {
   afterEach(() => cleanup());
 
-  const labels = { selectPlaceholder: "Select", datePlaceholder: "Date", submit: "Submit request" };
+  const labels = {
+    selectPlaceholder: "Select",
+    datePlaceholder: "Date",
+    submit: "Submit request",
+    requiredField: "This field is required.",
+  };
   const visibility = {
     enabled: true,
     rules: [{ fieldKey: "vpn_reason", source: "needs_vpn", operator: "is-true" as const }],
@@ -167,5 +174,52 @@ describe("RequestServiceForm live conditional visibility", () => {
       />,
     );
     expect(vpnReason()).not.toBeNull();
+  });
+
+  it("blocks submit on a revealed, empty required field and keeps the client's answers", async () => {
+    const user = userEvent.setup();
+    const action = vi.fn();
+    render(
+      <RequestServiceForm
+        action={action}
+        fields={[{ key: "summary", type: "short-text", label: "Summary" }, ...fields]}
+        initialValues={{}}
+        visibility={visibility}
+        labels={labels}
+        clientSubmissionKey="k"
+      />,
+    );
+    await user.type(document.getElementById("request-service-field-summary")!, "New starter");
+    await user.click(screen.getByRole("checkbox", { name: "Needs VPN" }));
+    await user.click(screen.getByRole("button", { name: "Submit request" }));
+
+    expect(action).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent("This field is required.");
+    expect(vpnReason()).toHaveFocus();
+    expect(document.getElementById("request-service-field-summary")!).toHaveValue("New starter");
+    expect(screen.getByRole("checkbox", { name: "Needs VPN" })).toBeChecked();
+
+    await user.type(vpnReason()!, "Remote");
+    expect(screen.queryByRole("alert")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Submit request" }));
+    expect(action).toHaveBeenCalledTimes(1);
+    expect((action.mock.calls[0][0] as FormData).get("vpn_reason")).toBe("Remote");
+  });
+
+  it("does not treat an unchecked required checkbox as missing (matches the server)", async () => {
+    const user = userEvent.setup();
+    const action = vi.fn();
+    render(
+      <RequestServiceForm
+        action={action}
+        fields={[{ key: "agree", type: "checkbox", label: "Agree", required: true }]}
+        initialValues={{}}
+        labels={labels}
+        clientSubmissionKey="k"
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Submit request" }));
+    expect(action).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

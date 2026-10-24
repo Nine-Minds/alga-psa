@@ -354,7 +354,7 @@ describe('service request advanced form behavior', () => {
           clientId: fixture.clientId,
           payload: { request_type: 'access', manager_approval: '' },
         })
-      ).rejects.toThrow('Required field missing: "manager_approval"');
+      ).rejects.toThrow('Required field missing: "Manager Approval ID"');
     });
 
     it('drops hidden answers (including chained ones) from submitted_payload', async () => {

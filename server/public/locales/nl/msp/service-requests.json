@@ -122,7 +122,7 @@
           "is-empty": "is leeg"
         },
         "advancedJson": "Geavanceerd (JSON)",
-        "advancedJsonHelp": "Alleen-lezenweergave van de opgeslagen configuratie, inclusief contextstandaarden. Gebruik „Tonen wanneer…” bij elk veld om regels te wijzigen."
+        "advancedJsonHelp": "De volledige opgeslagen configuratie, inclusief contextstandaarden. Zichtbaarheidsregels wijzigt u makkelijker met „Tonen wanneer…” bij elk veld. Niet-opgeslagen wijzigingen hier worden verworpen als daar een regel wordt gewijzigd."
       }
     },
     "execution": {

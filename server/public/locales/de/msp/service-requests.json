@@ -122,7 +122,7 @@
           "is-empty": "ist leer"
         },
         "advancedJson": "Erweitert (JSON)",
-        "advancedJsonHelp": "Schreibgeschützte Ansicht der gespeicherten Konfiguration, einschließlich Kontext-Standardwerten. Ändern Sie Sichtbarkeitsregeln über „Anzeigen, wenn…“ an jedem Feld."
+        "advancedJsonHelp": "Die vollständige gespeicherte Konfiguration, einschließlich Kontext-Standardwerten. Sichtbarkeitsregeln ändern Sie einfacher über „Anzeigen, wenn…“ an jedem Feld. Ungespeicherte Änderungen hier werden verworfen, wenn dort eine Regel geändert wird."
       }
     },
     "execution": {

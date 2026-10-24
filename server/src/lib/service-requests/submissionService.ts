@@ -9,6 +9,7 @@ import {
   computeVisibleFieldKeys,
   parseVisibilityRules,
   type VisibilityContext,
+  isMissingRequiredValue,
 } from './formVisibility';
 import type { ServiceRequestExecutionResult } from './providers/contracts';
 import { publishServiceRequestSubmissionSearchEvent } from './searchEvents';
@@ -181,16 +182,6 @@ export function isClientSubmissionKeyConflict(error: unknown): boolean {
   return isUniqueViolationOnIndex(error, CLIENT_SUBMISSION_KEY_UNIQUE_INDEX);
 }
 
-function isMissingRequiredValue(value: unknown): boolean {
-  if (value === null || value === undefined) {
-    return true;
-  }
-  if (typeof value === 'string') {
-    return value.trim().length === 0;
-  }
-  return false;
-}
-
 /**
  * Recomputes which fields are visible for a submission, using the same shared
  * evaluator as the browser. Seeds from the definition's initial values overlaid with
@@ -240,17 +231,20 @@ export function validateSubmissionAgainstPublishedSchema(input: {
     if (visibleFieldKeySet && !visibleFieldKeySet.has(field.key)) {
       continue;
     }
+    // Messages reach the requester, so name the field by its label, not its internal key.
+    const fieldLabel =
+      typeof field.label === 'string' && field.label.trim().length > 0 ? field.label.trim() : field.key;
 
     if (field.type === 'file-upload') {
       const hasFile = attachmentList.some((attachment) => attachment.fieldKey === field.key);
       if (!hasFile) {
-        errors.push(`Required file upload missing for "${field.key}"`);
+        errors.push(`Required file upload missing for "${fieldLabel}"`);
       }
       continue;
     }
 
     if (isMissingRequiredValue(input.payload[field.key])) {
-      errors.push(`Required field missing: "${field.key}"`);
+      errors.push(`Required field missing: "${fieldLabel}"`);
     }
   }
 

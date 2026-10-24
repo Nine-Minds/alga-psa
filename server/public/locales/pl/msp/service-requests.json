@@ -122,7 +122,7 @@
           "is-empty": "jest puste"
         },
         "advancedJson": "Zaawansowane (JSON)",
-        "advancedJsonHelp": "Podgląd zapisanej konfiguracji tylko do odczytu, w tym wartości domyślnych kontekstu. Reguły zmieniaj w edytorze „Pokaż, gdy…” przy każdym polu."
+        "advancedJsonHelp": "Pełna zapisana konfiguracja, w tym wartości domyślne kontekstu. Reguły widoczności łatwiej zmieniać w edytorze „Pokaż, gdy…” przy każdym polu. Niezapisane zmiany w tym miejscu zostaną odrzucone, jeśli zmienisz tam regułę."
       }
     },
     "execution": {

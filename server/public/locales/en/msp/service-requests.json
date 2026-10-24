@@ -122,7 +122,7 @@
           "is-empty": "is empty"
         },
         "advancedJson": "Advanced (JSON)",
-        "advancedJsonHelp": "Read-only view of the saved configuration, including context defaults. Use the “Show when…” editor on each field to change visibility rules."
+        "advancedJsonHelp": "The full saved configuration, including context defaults. Visibility rules are easier to change with “Show when…” on each field. Unsaved edits here are discarded if a rule is changed there."
       }
     },
     "execution": {

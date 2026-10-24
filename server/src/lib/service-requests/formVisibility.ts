@@ -206,3 +206,18 @@ export function computeVisibleFieldKeys(
   }
   return visible;
 }
+
+/**
+ * Whether a required (non-file) field's submitted value counts as missing. Shared so the
+ * browser blocks exactly the submissions the server would reject. An unchecked checkbox
+ * (`false`) is a value, not a missing answer.
+ */
+export function isMissingRequiredValue(value: unknown): boolean {
+  if (value === null || value === undefined) {
+    return true;
+  }
+  if (typeof value === 'string') {
+    return value.trim().length === 0;
+  }
+  return false;
+}

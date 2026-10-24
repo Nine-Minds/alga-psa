@@ -122,7 +122,7 @@
           "is-empty": "est vide"
         },
         "advancedJson": "Avancé (JSON)",
-        "advancedJsonHelp": "Vue en lecture seule de la configuration enregistrée, y compris les valeurs par défaut du contexte. Utilisez « Afficher quand… » sur chaque champ pour modifier les règles."
+        "advancedJsonHelp": "La configuration enregistrée complète, y compris les valeurs par défaut du contexte. Les règles de visibilité se modifient plus facilement avec « Afficher quand… » sur chaque champ. Les modifications non enregistrées ici sont abandonnées si une règle y est modifiée."
       }
     },
     "execution": {

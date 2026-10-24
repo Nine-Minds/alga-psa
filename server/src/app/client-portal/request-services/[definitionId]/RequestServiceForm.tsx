@@ -9,6 +9,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import {
   computeVisibleFieldKeys,
+  isMissingRequiredValue,
   type VisibilityContext,
   type VisibilityRule,
 } from '../../../../lib/service-requests/formVisibility';
@@ -48,6 +49,8 @@ interface RequestServiceFormLabels {
   selectPlaceholder: string;
   datePlaceholder: string;
   submit: string;
+  /** Shown under a visible required field that is still empty when the client submits. */
+  requiredField: string;
 }
 
 interface RequestServiceFormVisibility {
@@ -97,8 +100,19 @@ export function RequestServiceForm({
     }
     return initial;
   });
-  const setValue = (key: string, value: unknown) =>
+  // Keys of visible required fields that were empty at the last blocked submit.
+  const [missingFieldKeys, setMissingFieldKeys] = useState<ReadonlySet<string>>(() => new Set());
+  const clearMissing = (key: string) =>
+    setMissingFieldKeys((previous) => {
+      if (!previous.has(key)) return previous;
+      const next = new Set(previous);
+      next.delete(key);
+      return next;
+    });
+  const setValue = (key: string, value: unknown) => {
     setValues((previous) => ({ ...previous, [key]: value }));
+    clearMissing(key);
+  };
 
   // Hidden fields are not rendered at all: the browser submits no hidden answers and
   // never enforces their `required`.
@@ -106,6 +120,41 @@ export function RequestServiceForm({
     visibility?.enabled
       ? new Set(computeVisibleFieldKeys(fields, visibility.rules, values, visibility.context))
       : null;
+
+  // The form is noValidate (the custom select and date picker submit through hidden
+  // inputs, which native validation cannot check), so required fields are checked here
+  // with the server's own rule. Blocking in the browser keeps the client's answers; the
+  // server still re-validates, and a field that is hidden is never required.
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    const missing: string[] = [];
+    fields.forEach((field, index) => {
+      const key = field.key || `field_${index}`;
+      if (!field.required || (visibleFieldKeys && !visibleFieldKeys.has(key))) {
+        return;
+      }
+      if (field.type === 'file-upload') {
+        const input = event.currentTarget.elements.namedItem(key);
+        const hasFile = input instanceof HTMLInputElement && (input.files?.length ?? 0) > 0;
+        if (!hasFile) missing.push(key);
+        return;
+      }
+      if (isMissingRequiredValue(values[key])) {
+        missing.push(key);
+      }
+    });
+    setMissingFieldKeys(new Set(missing));
+    if (missing.length > 0) {
+      event.preventDefault();
+      document.getElementById(`request-service-field-${missing[0]}`)?.focus();
+    }
+  };
+
+  const renderRequiredError = (key: string) =>
+    missingFieldKeys.has(key) ? (
+      <p id={`request-service-field-${key}-error`} role="alert" className="text-sm text-destructive">
+        {labels.requiredField}
+      </p>
+    ) : null;
 
   const renderHelpText = (helpText?: string | null, extraClass = '') =>
     helpText ? (
@@ -115,7 +164,13 @@ export function RequestServiceForm({
     ) : null;
 
   return (
-    <form action={action} encType="multipart/form-data" noValidate className="space-y-4">
+    <form
+      action={action}
+      onSubmit={handleSubmit}
+      encType="multipart/form-data"
+      noValidate
+      className="space-y-4"
+    >
       <input
         type="hidden"
         name={CLIENT_SUBMISSION_KEY_FIELD_NAME}
@@ -144,6 +199,7 @@ export function RequestServiceForm({
                 onChange={(event) => setValue(key, event.target.value)}
                 rows={4}
               />
+              {renderRequiredError(key)}
               {renderHelpText(helpText)}
             </div>
           );
@@ -173,6 +229,7 @@ export function RequestServiceForm({
                 allowClear={!field.required}
               />
               <input type="hidden" name={key} value={typeof currentValue === 'string' ? currentValue : ''} />
+              {renderRequiredError(key)}
               {renderHelpText(helpText)}
             </div>
           );
@@ -189,6 +246,7 @@ export function RequestServiceForm({
                 onChange={(event) => setValue(key, event.target.checked)}
                 required={field.required}
               />
+              {renderRequiredError(key)}
               {renderHelpText(helpText, 'ml-6')}
             </div>
           );
@@ -203,7 +261,9 @@ export function RequestServiceForm({
                 type="file"
                 label={labelWithRequired}
                 required={field.required}
+                onChange={() => clearMissing(key)}
               />
+              {renderRequiredError(key)}
               {renderHelpText(helpText)}
             </div>
           );
@@ -228,6 +288,7 @@ export function RequestServiceForm({
                 placeholder={labels.datePlaceholder}
               />
               <input type="hidden" name={key} value={toIsoDateString(currentDate)} />
+              {renderRequiredError(key)}
               {renderHelpText(helpText)}
             </div>
           );
@@ -244,6 +305,7 @@ export function RequestServiceForm({
               value={typeof currentValue === 'string' ? currentValue : ''}
               onChange={(event) => setValue(key, event.target.value)}
             />
+            {renderRequiredError(key)}
             {renderHelpText(helpText)}
           </div>
         );
