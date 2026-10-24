@@ -450,5 +450,20 @@
     "hoursUsed": "Wykorzystane godziny: {{hours}}",
     "hoursTotal": "Łączna liczba godzin: {{hours}}",
     "rolloverHours": "Uwzględnione przeniesione godziny: {{hours}}"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "Termin płatności po otrzymaniu",
+      "net14": "Netto 14",
+      "net15": "Netto 15",
+      "net30": "Netto 30",
+      "net7": "Netto 7"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Przelew bankowy",
+      "check": "Sprawdzać",
+      "creditCard": "Karta kredytowa"
+    },
+    "tenantDefault": "Domyślne dla organizacji ({{value}})"
   }
 }

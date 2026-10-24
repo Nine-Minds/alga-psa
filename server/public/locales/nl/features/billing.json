@@ -450,5 +450,20 @@
     "hoursUsed": "{{hours}} uur gebruikt",
     "hoursTotal": "{{hours}} uur in totaal",
     "rolloverHours": "Inclusief {{hours}} overgedragen uren"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "Verschuldigd bij ontvangst",
+      "net14": "Netto 14",
+      "net15": "Netto 15",
+      "net30": "Netto 30",
+      "net7": "Netto 7"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Bankoverschrijving",
+      "check": "Rekening",
+      "creditCard": "Creditcard"
+    },
+    "tenantDefault": "Standaard van de tenant ({{value}})"
   }
 }

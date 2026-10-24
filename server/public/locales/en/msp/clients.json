@@ -571,13 +571,6 @@
     "invoiceDeliveryMethod": "Invoice delivery method",
     "invoiceTemplate": "Invoice template",
     "invoiceTemplateHelp": "Select a template or use default",
-    "paymentTerms": {
-      "dueOnReceipt": "Due on Receipt",
-      "net14": "Net 14",
-      "net15": "Net 15",
-      "net30": "Net 30",
-      "net7": "Net 7"
-    },
     "preferredPaymentMethod": "Preferred payment method",
     "defaultCurrency": "Default currency",
     "selectTaxRegion": "Select Tax Region (Optional)",
@@ -589,11 +582,6 @@
       "both": "Both",
       "email": "Email",
       "mail": "Mail"
-    },
-    "paymentMethods": {
-      "bankTransfer": "Bank Transfer",
-      "check": "Check",
-      "creditCard": "Credit Card"
     },
     "paymentTermsLabel": "Payment terms",
     "standardTemplateLabel": "(Standard)",
@@ -1792,7 +1780,8 @@
     },
     "cardExpiry": ", exp {{month}}/{{year}}",
     "legacyPaymentTerms": "\"{{value}}\" is not a recognized payment term and was never applied. Saving clears it.",
-    "cardOnFile": "{{type}} ending in {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} ending in {{last4}}{{expiry}}",
+    "tenantDefaultValue": "Tenant default: {{value}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Prepaid Balance Alerts",

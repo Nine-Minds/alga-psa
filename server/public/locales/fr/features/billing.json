@@ -450,5 +450,20 @@
     "hoursUsed": "{{hours}} heures utilisées",
     "hoursTotal": "{{hours}} heures au total",
     "rolloverHours": "Comprend {{hours}} heures reportées"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "Exigible à réception",
+      "net14": "Net à 14 jours",
+      "net15": "Net à 15 jours",
+      "net30": "Net à 30 jours",
+      "net7": "Net à 7 jours"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Virement bancaire",
+      "check": "Chèque",
+      "creditCard": "Carte de crédit"
+    },
+    "tenantDefault": "Valeur par défaut du locataire ({{value}})"
   }
 }

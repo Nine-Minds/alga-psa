@@ -621,13 +621,6 @@
     "invoiceDeliveryMethod": "Sposób dostarczenia faktury",
     "invoiceTemplate": "Szablon faktury",
     "invoiceTemplateHelp": "Wybierz szablon lub użyj domyślnego",
-    "paymentTerms": {
-      "dueOnReceipt": "Termin płatności po otrzymaniu",
-      "net14": "Netto 14",
-      "net15": "Netto 15",
-      "net30": "Netto 30",
-      "net7": "Netto 7"
-    },
     "preferredPaymentMethod": "Preferowana metoda płatności",
     "defaultCurrency": "Domyślna waluta",
     "selectTaxRegion": "Wybierz region podatkowy (opcjonalnie)",
@@ -639,11 +632,6 @@
       "both": "Obydwa",
       "email": "E-mail",
       "mail": "Poczta"
-    },
-    "paymentMethods": {
-      "bankTransfer": "Przelew bankowy",
-      "check": "Sprawdzać",
-      "creditCard": "Karta kredytowa"
     },
     "paymentTermsLabel": "Warunki płatności",
     "standardTemplateLabel": "(Standardowy)",
@@ -1817,7 +1805,8 @@
     },
     "cardExpiry": ", ważna do {{month}}/{{year}}",
     "legacyPaymentTerms": "„{{value}}” nie jest rozpoznawanym warunkiem płatności i nigdy nie został zastosowany. Zapisanie spowoduje jego usunięcie.",
-    "cardOnFile": "{{type}} z końcówką {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} z końcówką {{last4}}{{expiry}}",
+    "tenantDefaultValue": "Domyślne dla organizacji: {{value}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Alerty salda przedpłaconego",

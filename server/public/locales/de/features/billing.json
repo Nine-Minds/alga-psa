@@ -450,5 +450,20 @@
     "hoursUsed": "{{hours}} Stunden verbraucht",
     "hoursTotal": "{{hours}} Stunden insgesamt",
     "rolloverHours": "Enthält {{hours}} übertragene Stunden"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "Fällig bei Erhalt",
+      "net14": "Netto 14",
+      "net15": "Netto 15",
+      "net30": "Netto 30",
+      "net7": "Netto 7"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Banküberweisung",
+      "check": "Scheck",
+      "creditCard": "Kreditkarte"
+    },
+    "tenantDefault": "Mandantenstandard ({{value}})"
   }
 }

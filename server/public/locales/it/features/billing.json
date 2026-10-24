@@ -450,5 +450,20 @@
     "hoursUsed": "{{hours}} ore utilizzate",
     "hoursTotal": "{{hours}} ore totali",
     "rolloverHours": "Include {{hours}} ore riportate"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "A causa della ricevuta",
+      "net14": "netto 14",
+      "net15": "netto 15",
+      "net30": "30 netti",
+      "net7": "netto 7"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Bonifico bancario",
+      "check": "Controllo",
+      "creditCard": "Carta di credito"
+    },
+    "tenantDefault": "Predefinito del tenant ({{value}})"
   }
 }

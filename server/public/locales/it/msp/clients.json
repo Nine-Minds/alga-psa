@@ -571,13 +571,6 @@
     "invoiceDeliveryMethod": "Metodo di consegna della fattura",
     "invoiceTemplate": "Modello di fattura",
     "invoiceTemplateHelp": "Seleziona un modello o utilizza quello predefinito",
-    "paymentTerms": {
-      "dueOnReceipt": "A causa della ricevuta",
-      "net14": "netto 14",
-      "net15": "netto 15",
-      "net30": "30 netti",
-      "net7": "netto 7"
-    },
     "preferredPaymentMethod": "Metodo di pagamento preferito",
     "defaultCurrency": "Valuta predefinita",
     "selectTaxRegion": "Seleziona regione fiscale (facoltativo)",
@@ -589,11 +582,6 @@
       "both": "Entrambi",
       "email": "E-mail",
       "mail": "Posta"
-    },
-    "paymentMethods": {
-      "bankTransfer": "Bonifico bancario",
-      "check": "Controllo",
-      "creditCard": "Carta di credito"
     },
     "paymentTermsLabel": "Termini di pagamento",
     "standardTemplateLabel": "(Standard)",
@@ -1765,7 +1753,8 @@
     },
     "cardExpiry": ", scade {{month}}/{{year}}",
     "legacyPaymentTerms": "«{{value}}» non è una condizione di pagamento riconosciuta e non è mai stata applicata. Verrà rimossa al salvataggio.",
-    "cardOnFile": "{{type}} con ultime cifre {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} con ultime cifre {{last4}}{{expiry}}",
+    "tenantDefaultValue": "Predefinito del tenant: {{value}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Avvisi saldo prepagato",
