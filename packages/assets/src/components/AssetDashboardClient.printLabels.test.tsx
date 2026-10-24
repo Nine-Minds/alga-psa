@@ -304,5 +304,6 @@ describe('AssetDashboardClient bulk print labels', () => {
     expect(button().disabled).toBe(true); // 201 selected
     await userEvent.click(await pick('asset-select-a200'));
     expect(button().disabled).toBe(false); // 200 selected
-  });
+    // Renders 201 rows; the default 5s timeout is exceeded on loaded CI runners (5.8s observed).
+  }, 30000);
 });
