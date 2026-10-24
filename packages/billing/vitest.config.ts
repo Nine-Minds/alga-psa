@@ -11,11 +11,23 @@ export default defineConfig({
     include: [
       'tests/**/*.test.ts',
       'tests/**/*.test.tsx',
+      'src/lib/invoice-template-ast/printSettings.test.ts',
+      'src/lib/invoice-template-ast/previewSheet.test.ts',
+      'src/components/invoice-designer/preview/previewSheetScale.test.ts',
+      'src/components/invoice-designer/ast/workspaceAst.roundtrip.nodes.test.ts',
+      'src/lib/invoice-template-ast/barcode/barcode.test.ts',
+      'src/lib/invoice-template-ast/barcode/clientBundle.test.ts',
+      'src/lib/document-templates/registry.test.ts',
+      'src/lib/label-template-ast/**/*.test.ts',
+      'src/lib/label-batch/**/*.test.ts',
+      'src/components/invoice-designer/utils/documentKind.test.ts',
+      'src/components/invoice-designer/fields/documentBindingCatalog.test.ts',
       'src/actions/projectBillingActions.contract.test.ts',
       'src/actions/invoiceEmailBrandLogo.contract.test.ts',
       'src/lib/prepaidBalanceAlerts.test.ts',
       'src/lib/contractRecurringShape.test.ts',
       'src/lib/taxRateApplicability.test.ts',
+      'src/lib/currency/rateInput.test.ts',
       'src/lib/billing/compute/**/*.test.ts',
       'src/lib/billing/pricing/**/*.test.ts',
       // Preview/generation consistency for scheduled recurring quantity/price
@@ -58,6 +70,11 @@ export default defineConfig({
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.existingQuote.test.tsx',
       'src/components/invoice-designer/DesignerVisualWorkspace.test.tsx',
       'src/components/invoice-designer/preview/tenantBrandingOverlay.test.ts',
+      // Tenant logo precedence on generated documents (Settings -> Branding
+      // first, own-company client record second) — listed for the same reason
+      // as the branding-seam suites above.
+      'src/lib/adapters/tenantPartyAdapter.test.ts',
+      'src/services/pdfGenerationService.tenantClientLogo.test.ts',
       // Behavioral coverage for realm-exact QBO mapping resolution — listed
       // explicitly for the same reason as the suites above.
       'src/services/accountingSync/realmScopedOperations.test.ts',
@@ -89,12 +106,17 @@ export default defineConfig({
       // Per-seat unit-rate rendering on the template detail page and the
       // currency-neutral template review step — listed for the same reason as above.
       'src/components/billing-dashboard/contracts/ContractTemplateDetail.unitRate.test.tsx',
+      'src/components/billing-dashboard/contracts/ContractTemplateDetail.manageServices.test.tsx',
       'src/components/billing-dashboard/contracts/template-wizard/steps/TemplateReviewContractStep.unitRate.test.tsx',
       // Contract-line service rates are stored in minor units; the services list
       // must not re-scale them. Listed for the same reason as above.
       'src/components/billing-dashboard/contract-lines/GenericContractLineServicesList.customRate.test.tsx',
       // Wizard quantity input draft/commit behavior.
       'src/components/billing-dashboard/contracts/QuantityInput.test.tsx',
+      'src/components/billing-dashboard/contracts/wizard-steps/templateLineAmounts.test.ts',
+      'src/components/billing-dashboard/contracts/wizard-steps/templatePickerOption.test.ts',
+      'src/components/billing-dashboard/contracts/wizard-steps/TemplateLinesStep.fallback.test.tsx',
+      'src/components/billing-dashboard/contracts/ContractWizard.templateErrors.test.tsx',
       // Template saves must stay valid upserts on Citus distributed tables.
       'src/models/templateSaveUpsert.citus.test.ts',
       // Client AR must stay a single-shard, co-located join on Citus.

@@ -25,6 +25,7 @@
     },
     "states": {
       "active": "Actief",
+      "scheduled": "Gepland",
       "inactive": "Inactief",
       "loading": "Laden...",
       "na": "N.v.t.",
