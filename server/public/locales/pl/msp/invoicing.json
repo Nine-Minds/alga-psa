@@ -1429,7 +1429,7 @@
       "mediaSource": "Źródło obrazu",
       "mediaSourceLogo": "Logotyp firmy",
       "mediaSourceCustom": "Własny obraz",
-      "mediaSourceLogoHint": "Wyświetla na każdym dokumencie logotyp z ustawień marki Twojej firmy.",
+      "mediaSourceLogoHint": "Wyświetla na każdym dokumencie logotyp z rekordu klienta Twojej własnej firmy.",
       "mediaSourceUrl": "Adres URL źródła",
       "renameInner": "Zmienić też nazwy {{count}} warstw wewnętrznych ({{from}} → {{to}}…)?",
       "renameInnerApply": "Zmień nazwy",
@@ -2434,7 +2434,7 @@
     },
     "imagePicker": {
       "browse": "Przeglądaj dokumenty",
-      "hiddenFromClients": "Dokument {{document}} jest ukryty przed klientami. Nie pojawi się w ofertach ani fakturach wyświetlanych przez portal klienta.",
+      "hiddenFromClients": "Dokument {{document}} jest ukryty przed klientami, więc nie mogą go otworzyć w portalu klienta. Nadal pojawia się na fakturach i w plikach PDF ofert, które go używają.",
       "updating": "Aktualizowanie...",
       "markVisible": "Oznacz jako widoczny dla klientów",
       "visibleInPortal": "Widoczny w portalu klienta",

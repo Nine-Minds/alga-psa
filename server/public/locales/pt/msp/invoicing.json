@@ -1377,7 +1377,7 @@
       "mediaSource": "Origem da imagem",
       "mediaSourceLogo": "Logotipo da empresa",
       "mediaSourceCustom": "Imagem personalizada",
-      "mediaSourceLogoHint": "Mostra em todos os documentos o logotipo das configurações de marca da sua empresa.",
+      "mediaSourceLogoHint": "Mostra em todos os documentos o logotipo do registro de cliente da sua própria empresa.",
       "mediaSourceUrl": "URL de origem",
       "renameInner": "Renomear também {{count}} camadas internas ({{from}} → {{to}}…)?",
       "renameInnerApply": "Renomear",
@@ -2382,7 +2382,7 @@
     },
     "imagePicker": {
       "browse": "Procurar documentos",
-      "hiddenFromClients": "{{document}} está oculto para os clientes. Ele não aparecerá em cotações ou faturas visualizadas pelo portal do cliente.",
+      "hiddenFromClients": "{{document}} está oculto para os clientes, que não podem abri-lo no portal do cliente. Ele continua aparecendo nas faturas e nos PDFs de cotações que o usam.",
       "updating": "Atualizando...",
       "markVisible": "Marcar como visível para os clientes",
       "visibleInPortal": "Visível no portal do cliente",

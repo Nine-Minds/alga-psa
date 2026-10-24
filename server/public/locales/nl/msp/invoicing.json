@@ -1377,7 +1377,7 @@
       "mediaSource": "Afbeeldingsbron",
       "mediaSourceLogo": "Bedrijfslogo",
       "mediaSourceCustom": "Eigen afbeelding",
-      "mediaSourceLogoHint": "Toont op elk document het logo uit de huisstijlinstellingen van uw bedrijf.",
+      "mediaSourceLogoHint": "Toont op elk document het logo uit het klantrecord van uw eigen bedrijf.",
       "mediaSourceUrl": "Bron-URL",
       "renameInner": "Ook {{count}} onderliggende lagen hernoemen ({{from}} → {{to}}…)?",
       "renameInnerApply": "Hernoemen",
@@ -2382,7 +2382,7 @@
     },
     "imagePicker": {
       "browse": "Documenten doorzoeken",
-      "hiddenFromClients": "{{document}} is verborgen voor klanten. Het wordt niet weergegeven op offertes of facturen die via het klantenportaal worden bekeken.",
+      "hiddenFromClients": "{{document}} is verborgen voor klanten, dus zij kunnen het niet openen in het klantenportaal. Het wordt nog steeds weergegeven op facturen en in PDF's van offertes die het gebruiken.",
       "updating": "Bijwerken...",
       "markVisible": "Markeren als zichtbaar voor klanten",
       "visibleInPortal": "Zichtbaar in het klantenportaal",
