@@ -51,7 +51,10 @@ jobs:
     needs: [check-changes, images]
     # `needs` is skipped entirely on schedule; `always()` lets the nightly run proceed.
     if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true') && needs.images.result == 'success'
-    runs-on: ubuntu-latest
+    # Pinned: `ubuntu-latest` rolled to ubuntu-26.04 on 2026-10-21 and the
+    # Chromium install below dies with "Playwright does not support chromium
+    # on ubuntu26.04-x64". Unpin once Playwright ships 26.04 dependencies.
+    runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -157,6 +160,7 @@ jobs:
 
       # devServerStartup.integration.test.ts exercises real browser hydration.
       # Install on every shard: suite selection can move it between shards.
+      - uses: ./.github/actions/prepare-apt
       - name: Install Chromium for integration browser assertions
         run: npx --no-install playwright install --with-deps chromium
 

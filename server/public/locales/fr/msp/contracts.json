@@ -53,6 +53,8 @@
   },
   "status": {
     "active": "Actif",
+    "scheduled": "Planifié",
+    "startsOn": "Commence le {{date}}",
     "draft": "Brouillon",
     "expired": "Expiré",
     "terminated": "Terminé"
@@ -94,7 +96,7 @@
     },
     "timing": {
       "advance": "À l'avance",
-      "arrears": "En retard"
+      "arrears": "À terme échu"
     }
   },
   "po": {
@@ -177,6 +179,7 @@
     },
     "headerCard": {
       "assignmentLifecycleHint": "Le statut client en direct est contrôlé par le cycle de vie d'affectation ci-dessous.",
+      "scheduledExplanation": "Ce contrat est actif et commencera la facturation le {{date}}.",
       "assignmentStatus": "Statut d'affectation",
       "billingFrequencyLabel": "Fréquence de facturation *",
       "billingFrequencyPlaceholder": "Sélectionnez la fréquence de facturation",
@@ -298,6 +301,7 @@
     },
     "status": {
       "active": "Actif",
+      "scheduled": "Planifié",
       "draft": "Brouillon",
       "expired": "Expiré",
       "terminated": "Résilié"
@@ -612,6 +616,7 @@
       "quantityShort": "Qté : {{quantity}}",
       "quantityTaxAllocation": "Quantité (pour allocation fiscale)",
       "rateTaxAllocation": "Tarif (pour allocation fiscale)",
+      "shareOfLineFee": "Part du tarif de la ligne",
       "title": "Services ({{count}})",
       "typeLabel": "Service {{type}}",
       "unitOfMeasure": "Unité de mesure",
@@ -1286,9 +1291,7 @@
     },
     "loadingTemplate": "Chargement du modèle...",
     "servicesLabel": "Services",
-    "summary": {
-      "clientCurrency": "Devise du client"
-    },
+    "summary": {},
     "templateBadge": "Modèle",
     "templateNotFound": "Modèle de contrat introuvable",
     "templateSnapshotTitle": "Instantané du modèle",
@@ -1333,6 +1336,16 @@
       "hypothetical": "Profil client hypothétique",
       "open": "Simuler",
       "title": "Simulation du modèle"
+    },
+    "pricing": {
+      "title": "Prix par devise",
+      "addCurrency": "Ajouter une devise",
+      "removeCurrency": "Retirer",
+      "missing": "{{count}} montant(s) manquant(s)",
+      "baseCurrency": "(devise de base)",
+      "changeBaseCurrency": "Changer la devise de base",
+      "changeBaseConfirm": "Changer la devise de base en {{currency}} ? Les montants existants ne sont PAS convertis : ils gardent leur valeur numérique et sont lus en {{currency}}.",
+      "noSlots": "Ce modèle n’a pas encore de montants à tarifer."
     },
     "discounts": {
       "title": "Remises contractuelles par défaut",
@@ -1540,6 +1553,9 @@
       "confirm": "Confirmer et continuer",
       "cancel": "Retour"
     },
+    "templatePicker": {
+      "needsRates": "Tarifs en {{currency}} requis"
+    },
     "discounts": {
       "help": "Les remises globales s’appliquent à chaque charge admissible facturée par ce contrat. Elles sont créées avec le contrat lorsque vous terminez la configuration, et la simulation ci-dessous les valorise.",
       "draftDialog": {
@@ -1669,7 +1685,8 @@
       "preview": {
         "billingCadenceLabel": "Cadence de facturation :",
         "notSpecified": "Non spécifié",
-        "templateLabel": "Modèle :"
+        "templateLabel": "Modèle :",
+        "currencyLabel": "Devise de base :"
       },
       "selectTemplateOptional": "Sélectionnez un modèle (facultatif)",
       "startFromTemplate": "Démarrer à partir d'un modèle"
@@ -2021,8 +2038,15 @@
     "unitRate": "Tarif unitaire",
     "serviceRate": "Tarif du service",
     "noCurrencyPrice": "Aucun prix en {{currency}} pour ce service. Saisissez un tarif, sinon le contrat ne peut pas être créé.",
-    "templateRateNote": "Issu du modèle (le montant n’est pas associé à une devise).",
-    "reviewTitle": "Lignes créées à partir du modèle"
+    "reviewTitle": "Lignes créées à partir du modèle",
+    "fallbackAlert": "Ce modèle n’a pas de tarifs en {{currency}}. Sa structure est copiée ; saisissez les montants en {{currency}} ci-dessous. Les montants du modèle sont affichés à titre indicatif et ne sont pas convertis.",
+    "templateReference": "Modèle : {{amount}} {{currency}}",
+    "catalogPrice": "Prix du catalogue",
+    "fromTemplateCurrency": "Du modèle ({{currency}})",
+    "fromTemplatePriceSet": "Des tarifs en {{currency}} du modèle",
+    "noCurrencyAmount": "Aucun montant en {{currency}}. Saisissez-en un, sinon le contrat ne pourra pas être créé.",
+    "overtimeRate": "Tarif des heures supplémentaires",
+    "bucketOverageRate": "Tarif de dépassement"
   },
   "templateWizard": {
     "title": {
@@ -2066,8 +2090,10 @@
           "usage": "Utilisation"
         }
       },
-      "recurringQuantityInvalid": "La quantité récurrente de « {{serviceName}} » doit être un nombre entier supérieur ou égal à zéro, et tout tarif unitaire doit être un montant valide."
-    }
+      "recurringQuantityInvalid": "La quantité récurrente de « {{serviceName}} » doit être un nombre entier supérieur ou égal à zéro, et tout tarif unitaire doit être un montant valide.",
+      "currencyRequired": "La devise de base est obligatoire"
+    },
+    "currency": "Devise de base *"
   },
   "templateBasics": {
     "heading": "Informations de base du modèle",
@@ -2085,7 +2111,8 @@
     "help": {
       "templateName": "Utilisez un nom descriptif pour que les équipes puissent identifier rapidement le bon modèle.",
       "internalNotes": "Ces notes restent avec le modèle pour fournir un contexte lorsque les coéquipiers l'utilisent.",
-      "billingFrequency": "Définit la cadence par défaut lorsque le modèle est appliqué. Elle peut toujours être ajustée par client."
+      "billingFrequency": "Définit la cadence par défaut lorsque le modèle est appliqué. Elle peut toujours être ajustée par client.",
+      "currency": "Les tarifs saisis dans cet assistant sont dans cette devise. Les prix dans d’autres devises pourront être ajoutés ensuite au modèle. Les montants ne sont jamais convertis."
     }
   },
   "templateFixed": {
@@ -2220,7 +2247,7 @@
   },
   "templateReview": {
     "heading": "Vérifier le modèle",
-    "description": "Confirmez le contenu du modèle. Les tarifs sont déterminés par la tarification de chaque service dans la devise du client lorsqu'un contrat est créé à partir de ce modèle.",
+    "description": "Confirmez le contenu du modèle. Les tarifs sont enregistrés dans la devise de base du modèle. Les autres devises utilisent les jeux de prix du modèle, ou vous saisissez les montants lors de la création d'un contrat.",
     "sections": {
       "basics": "Informations de base du modèle",
       "fixedFeeServices": "Services à frais fixes",
@@ -2232,7 +2259,8 @@
     "fields": {
       "templateName": "Nom du modèle",
       "billingFrequency": "Fréquence de facturation",
-      "internalNotes": "Notes internes"
+      "internalNotes": "Notes internes",
+      "baseCurrency": "Devise de base"
     },
     "fallback": {
       "none": "—",
@@ -2268,8 +2296,7 @@
       "serviceLabel": "Service :",
       "invoiceWindowLabel": "Fenêtre de facturation :",
       "unitRateLabel": "Tarif unitaire :",
-      "unitRateFromCatalog": "Prix du catalogue dans la devise du client",
-      "unitRateNeutral": "{{rate}} dans la devise du client"
+      "unitRateFromCatalog": "Prix du catalogue dans la devise du client"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Temps minimum facturable :",
@@ -2283,7 +2310,7 @@
       "hoursIncluded": "{{value}} heures incluses",
       "unitsIncluded": "{{value}} {{unit}} inclus",
       "unitsFallback": "unités",
-      "overage": "Dépassement ${{amount}}/{{unit}}",
+      "overage": "Dépassement {{amount}}/{{unit}}",
       "hourSingular": "heure",
       "unitSingular": "unité",
       "rolloverEnabled": "Report activé",
@@ -2680,6 +2707,10 @@
       "duplicate": "Un enregistrement correspondant de l’assistant de contrat existe déjà.",
       "resumeUnsupportedShape": "Ce brouillon ne peut pas être repris dans l'assistant sans modifier sa tarification : {{lines}}",
       "fixedLineNoService": "La ligne fixe « {{lineName}} » a un montant récurrent mais aucun service sur lequel le facturer. Ajoutez un service avant de terminer.",
+      "templateAmountsMissing": "Impossible de créer le contrat en {{currency}}. Les montants suivants n’ont pas de valeur en {{currency}} : {{amounts}}. Saisissez un montant pour chacun ou ajoutez des tarifs en {{currency}} au modèle.",
+      "currencyPricingMissing": "Impossible de créer le contrat en {{currency}}. Aucun prix en {{currency}} n’est défini pour : {{services}}.",
+      "invalidTemplateCurrency": "« {{currency}} » n’est pas un code de devise ISO 4217 valide",
+      "templateCurrencyHasPriceSet": "Ce modèle possède déjà une grille de prix en {{currency}}. Supprimez-la avant de faire de {{currency}} la devise de base.",
       "standingTerms": "Ce brouillon contient des conditions de remise récurrentes. Modifiez les onglets Lignes et Remises pour les conserver."
     },
     "pricingSchedule": {
@@ -2732,6 +2763,11 @@
   },
   "sellHourBlockNote": {
     "text": "Un forfait d'heures de contrat ne facture que le dépassement. Pour facturer d'avance un bloc d'heures, ajoutez une ligne Bloc prépayé à ce contrat."
+  },
+  "review": {
+    "saveTemplateRates": "Enregistrer ces tarifs en {{currency}} dans le modèle",
+    "saveMissingTemplateRates": "Ajouter au modèle les tarifs en {{currency}} manquants",
+    "updateTemplateRates": "Mettre à jour les tarifs en {{currency}} du modèle avec ces montants"
   },
   "billingTimingField": {
     "arrears": "À terme échu",

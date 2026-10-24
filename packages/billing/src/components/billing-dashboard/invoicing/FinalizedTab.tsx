@@ -28,7 +28,7 @@ import {
 import { downloadInvoicePDF } from '@alga-psa/billing/actions/invoiceGeneration';
 import { scheduleInvoiceZipAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { SendInvoiceEmailDialog } from './SendInvoiceEmailDialog';
-import { toPlainDate } from '@alga-psa/core';
+import { formatCurrencyFromMinorUnits, toPlainDate } from '@alga-psa/core';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -64,7 +64,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
   refreshTrigger
 }) => {
   const { t } = useTranslation('msp/invoicing');
-  const { formatCurrency, formatDate } = useFormatters();
+  const { formatDate, locale } = useFormatters();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -393,7 +393,9 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
 	    {
 	      title: t('finalizedTab.columns.amount', { defaultValue: 'Amount' }),
 	      dataIndex: 'total_amount',
-	      render: (value, record) => formatCurrency(Number(value) / 100, record.currencyCode || 'USD'),
+	      // Minor units formatted with the currency's own exponent, so this column
+	      // matches the invoice as rendered (JPY 200 is ¥200, not ¥2.00).
+	      render: (value, record) => formatCurrencyFromMinorUnits(Number(value), locale, record.currencyCode || 'USD'),
 	    },
     {
       title: t('finalizedTab.columns.finalizedDate', { defaultValue: 'Finalized Date' }),

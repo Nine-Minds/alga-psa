@@ -2,7 +2,7 @@
 
 
 import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Card, Box } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -66,6 +66,7 @@ import {
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency, useFormatContractLineType } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { BillingTimingField } from './BillingTimingField';
+import { getContractLineBillingTimingLabel } from './contractLineBillingTimingLabel';
 import {
   isAdvanceTimingAllowedForLineType,
   resolveEffectiveBillingTiming,
@@ -83,6 +84,10 @@ interface ContractLinesProps {
   onContractLinesChanged?: () => void;
   isReadOnly?: boolean;
   focusContractLineId?: string | null;
+  /** One-shot request to open this line in edit mode (ignored when read-only). Plain focus links leave it unset. */
+  editIntentLineId?: string | null;
+  /** Called once the edit intent has been handled (applied or refused), so the parent clears it. */
+  onEditIntentConsumed?: () => void;
 }
 
 interface DetailedContractLineMapping {
@@ -171,7 +176,7 @@ const DRAFT_SERVICE_CONFIG_PREFIX = 'draft-service-config:';
 
 const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
 
-const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null, onContractLinesChanged, isReadOnly = false, focusContractLineId = null }) => {
+const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null, onContractLinesChanged, isReadOnly = false, focusContractLineId = null, editIntentLineId = null, onEditIntentConsumed }) => {
   const { t } = useTranslation('msp/contracts');
 
   const handleAssignLineBillingProfile = async (
@@ -721,6 +726,28 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     }
   };
 
+  // One-shot edit intent (Overview "Edit"): once the target line has loaded, open it in the
+  // same edit mode the Edit button uses, then tell the parent to clear the intent. The ref
+  // guards against refetches/re-renders re-running it while the async edit setup is in flight;
+  // clearing the intent in the parent keeps later manual collapses from re-triggering edit mode.
+  const handleEditRef = useRef(handleEditContractLine);
+  handleEditRef.current = handleEditContractLine;
+  const consumedEditIntentRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!editIntentLineId) {
+      consumedEditIntentRef.current = null;
+      return;
+    }
+    if (consumedEditIntentRef.current === editIntentLineId) return;
+    const target = contractLines.find((line) => line.contract_line_id === editIntentLineId);
+    if (!target) return; // lines not loaded yet; effect re-runs when they arrive
+    consumedEditIntentRef.current = editIntentLineId;
+    if (!isReadOnly) {
+      void handleEditRef.current(target);
+    }
+    onEditIntentConsumed?.();
+  }, [editIntentLineId, contractLines, isReadOnly, onEditIntentConsumed]);
+
   const handleEffectiveBoundaryChange = async (contractLineId: string, boundary: string) => {
     setEffectiveBoundary(boundary);
     if (!boundary) return;
@@ -908,6 +935,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
         } else if (serviceConfig.configuration.configuration_type === 'Fixed') {
           if (editData.base_rate !== undefined) {
             typeConfig.base_rate = editData.base_rate;
+            // The edit keeps what the stored number means (share vs per unit); a
+            // rate on a member that had none is a unit price.
+            typeConfig.base_rate_basis = serviceConfig.typeConfig?.base_rate_basis ?? 'per_unit';
           }
         }
 
@@ -933,7 +963,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                 unit_of_measure:
                   editData.unit_of_measure || addition.selection.service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
               }
-            : { base_rate: editData.base_rate ?? addition.selection.customRate };
+            // A Fixed member's authoring default is the catalog price per unit.
+            : { base_rate: editData.base_rate ?? addition.selection.customRate, base_rate_basis: 'per_unit' as const };
 
         return {
           serviceId: addition.selection.service.service_id,
@@ -1299,6 +1330,11 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                         <span>
                           {t('contractLines.columns.frequency', { defaultValue: 'Frequency' })}: {formatBillingFrequency(line.billing_frequency)}
                         </span>
+                        <span>•</span>
+                        <span data-testid={`contract-line-billing-timing-${line.contract_line_id}`}>
+                          {t('billing.labels.timing', { defaultValue: 'Billing Timing' })}:{' '}
+                          {getContractLineBillingTimingLabel(t, line.contract_line_type, line.billing_timing)}
+                        </span>
                         {services.length > 0 && (
                           <>
                             <span>•</span>
@@ -1598,9 +1634,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                   />
                                 ) : (
                                   <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
-                                    {resolveEffectiveBillingTiming(line.contract_line_type, line.billing_timing) === 'advance'
-                                      ? t('billing.timing.advance', { defaultValue: 'In Advance' })
-                                      : t('billing.timing.arrears', { defaultValue: 'In Arrears' })}
+                                    {getContractLineBillingTimingLabel(t, line.contract_line_type, line.billing_timing)}
                                   </p>
                                 )}
                               </div>
@@ -1950,7 +1984,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                               ? t('contractLines.services.hourlyRate', { defaultValue: 'Hourly Rate' })
                                               : serviceConfig.configuration.configuration_type === 'Usage' || isUnitPriced || isRecurringProduct
                                               ? t('contractLines.services.unitRate', { defaultValue: 'Unit Rate' })
-                                              : t('contractLines.services.rateTaxAllocation', { defaultValue: 'Rate (for tax allocation)' })}
+                                              : serviceConfig.typeConfig?.base_rate_basis === 'share'
+                                              ? t('contractLines.services.shareOfLineFee', { defaultValue: 'Share of line fee' })
+                                              : t('contractLines.services.unitRate', { defaultValue: 'Unit Rate' })}
                                           </Label>
                                           {isEditing ? (
                                             <div className="relative mt-1">

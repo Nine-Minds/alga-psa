@@ -4185,6 +4185,7 @@ export class BillingEngine {
         "clsc.custom_rate as configuration_custom_rate",
         "clsc.config_id",
         "clsfc.base_rate as service_base_rate",
+        "clsfc.base_rate_basis as base_rate_basis",
         "clsfc.pricing_basis as pricing_basis",
       );
 
@@ -4381,6 +4382,7 @@ export class BillingEngine {
         "clsc.custom_rate as configuration_custom_rate",
         "clsc.config_id",
         "clsfc.base_rate as service_base_rate",
+        "clsfc.base_rate_basis as base_rate_basis",
         "clsfc.pricing_basis as pricing_basis",
         // Note: enable_proration is on contract_lines, not service config
       );
@@ -4949,6 +4951,7 @@ export class BillingEngine {
               configuration_quantity: service.configuration_quantity,
               configuration_custom_rate: service.configuration_custom_rate,
               service_base_rate: service.service_base_rate,
+              base_rate_basis: service.base_rate_basis,
               service_line_custom_rate: service.service_line_custom_rate,
               default_rate: service.default_rate,
               pricing_basis: service.pricing_basis,
@@ -4974,6 +4977,8 @@ export class BillingEngine {
             // other candidates so computeFixedCharges cannot fall back to a
             // stale configuration or catalog column.
             service_base_rate: resolvedRateCents,
+            // The resolved unit price is per unit, whatever the baseline row said.
+            base_rate_basis: "per_unit",
             configuration_custom_rate: null,
             currency_rate: catalogRate,
             default_rate: null,
