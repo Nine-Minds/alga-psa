@@ -71,6 +71,7 @@ import {
 import { applyMatchingChecklistTemplates, ticketDescriptionFromAttributes } from '@alga-psa/shared/lib/ticketChecklists';
 import { enforceTicketCloseRules, type CloseRuleBypassSource } from '../lib/validateTicketClosure';
 import { maybeReopenBundleMasterFromChildReply, mirrorCommentToChild } from './ticketBundleUtils';
+import { BUNDLE_CHILD_LOCKED_FIELDS, isChildWorkflowLocked } from '../lib/bundleWorkflowLock';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -2749,13 +2750,18 @@ export async function updateTicketInTransaction(
       throw new Error('Ticket not found');
     }
 
-    // Bundled child tickets lock workflow fields by default
-    const isBundledChild = Boolean(currentTicket.master_ticket_id);
-    const lockedFields = new Set(['status_id', 'assigned_to', 'priority_id']);
-    if (isBundledChild) {
-      const attempted = Object.keys(validatedData).filter((k) => lockedFields.has(k));
-      if (attempted.length > 0) {
-        throw new Error(`This ticket is bundled; workflow fields are locked (${attempted.join(', ')}). Update the master ticket instead.`);
+    // A bundled child's workflow fields are locked only while its master is in
+    // sync_updates mode; link_only children manage their own.
+    if (currentTicket.master_ticket_id) {
+      const masterSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+        .where({ master_ticket_id: currentTicket.master_ticket_id })
+        .first();
+      if (isChildWorkflowLocked({ isBundledChild: true, masterSettings })) {
+        const lockedFields = new Set<string>(BUNDLE_CHILD_LOCKED_FIELDS);
+        const attempted = Object.keys(validatedData).filter((k) => lockedFields.has(k));
+        if (attempted.length > 0) {
+          throw new Error(`This ticket is bundled; workflow fields are locked (${attempted.join(', ')}). Update the master ticket instead.`);
+        }
       }
     }
 
