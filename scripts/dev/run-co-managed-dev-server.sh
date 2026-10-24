@@ -18,12 +18,12 @@
 #     --readinessPort=3374 --readinessPath=/auth/msp/signin
 #
 # Usage: scripts/dev/run-co-managed-dev-server.sh [--host <addr>] [--port <n>]
-#   ADVERTISED_HOST  address a reviewer's browser uses (default: 100.82.172.57)
+#   ADVERTISED_HOST  canonical review host (default: feature-co-managed-it.localhost)
 #   PORT             listen port (default: 3374)
 #
 set -euo pipefail
 
-ADVERTISED_HOST="${ADVERTISED_HOST:-100.82.172.57}"
+ADVERTISED_HOST="${ADVERTISED_HOST:-feature-co-managed-it.localhost}"
 PORT="${PORT:-3374}"
 
 while [ $# -gt 0 ]; do
@@ -92,7 +92,7 @@ READINESS_PATH=/auth/msp/signin
 # at startup that it covers whatever HOST/NEXTAUTH_URL advertise.
 export HOST="http://${ADVERTISED_HOST}:${PORT}"
 export NEXTAUTH_URL="http://${ADVERTISED_HOST}:${PORT}"
-export DEV_ALLOWED_ORIGINS="${ADVERTISED_HOST},localhost"
+export DEV_ALLOWED_ORIGINS="${ADVERTISED_HOST},localhost,127.0.0.1"
 export PORT
 export NODE_ENV=development
 # The dev server resolves workspace packages from the repo-root node_modules.
@@ -103,7 +103,7 @@ export NX_LOAD_DOT_ENV_FILES=false
 
 # dev-server.ts binds `process.env.HOSTNAME ?? '0.0.0.0'`. Interactive bash
 # exports HOSTNAME as the machine name, which would bind the listener to that
-# name's single address (127.0.1.1 here) and make the tailnet review URL
+# name's single address (127.0.1.1 here) and make the canonical review URL
 # unreachable while localhost still answered. `next dev -p` ignored HOSTNAME, so
 # this trap arrives with the custom entrypoint. Pin it.
 export HOSTNAME=0.0.0.0
@@ -111,7 +111,8 @@ export HOSTNAME=0.0.0.0
 # Send the browser's notification/collaboration socket to this origin's
 # /hocuspocus, which dev-server.ts proxies to HOCUSPOCUS_HOST:HOCUSPOCUS_PORT.
 # server/.env.local ships NEXT_PUBLIC_HOCUSPOCUS_URL=ws://localhost:1235, which
-# names the *reviewer's own* machine once the app is served over the tailnet, so
+# names the *reviewer's own* machine once the app is served through the review
+# hostname, so
 # it can never connect for a remote reviewer regardless of what runs here. Going
 # through the proxy means a missing upstream is answered by a bounded 502
 # instead of a browser-side error against the wrong host; the notification hook

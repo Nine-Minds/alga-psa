@@ -120,4 +120,21 @@ describe('development launch wiring', () => {
     expect(source).toContain('attachNextUpgradeHandler');
     expect(source).toContain('delegateHmrToNext');
   });
+
+  it('advertises the canonical Co-Managed review origin on the dev service', () => {
+    const source = readFileSync(
+      path.join(repoRoot, 'scripts/dev/run-co-managed-dev-server.sh'),
+      'utf8',
+    );
+
+    expect(source).toContain(
+      'ADVERTISED_HOST="${ADVERTISED_HOST:-feature-co-managed-it.localhost}"',
+    );
+    expect(source).toContain('export HOST="http://${ADVERTISED_HOST}:${PORT}"');
+    expect(source).toContain('export NEXTAUTH_URL="http://${ADVERTISED_HOST}:${PORT}"');
+    expect(source).toContain(
+      'export DEV_ALLOWED_ORIGINS="${ADVERTISED_HOST},localhost,127.0.0.1"',
+    );
+    expect(source).not.toContain('100.82.172.57');
+  });
 });

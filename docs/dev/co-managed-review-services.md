@@ -56,7 +56,7 @@ alga-dev workflow-ensure-service --projectId=$PROJECT --name=dev-server \
   --cwd="$WORKTREE/server" \
   --command="CARD_SERVICE_STARTUP_GRACE=420 CARD_SERVICE_PROBE_TIMEOUT=30 $RUN dev-server \
     --health http://127.0.0.1:3374/auth/msp/signin \
-    $WORKTREE/scripts/dev/run-co-managed-dev-server.sh --host 100.82.172.57 --port 3374"
+    $WORKTREE/scripts/dev/run-co-managed-dev-server.sh --port 3374"
 
 alga-dev workflow-ensure-service --projectId=$PROJECT --name=temporal-worker \
   --cwd="$WORKTREE/ee/temporal-workflows" \
@@ -84,6 +84,11 @@ alga-dev workflow-ensure-service --projectId=$PROJECT --name=review-guide \
 2. **It is idempotent when the command matches**, returning `"created": false`.
    That is the desired behaviour for reviving a dead PTY, but it means
    re-ensuring is *not* a way to pick up new code.
+3. **A no-command ensure only reuses a live registration.** The service record
+   must first be created with its durable wrapper command. While that record is
+   live, `workflow-ensure-service --projectId=$PROJECT --name=dev-server`
+   reattaches/revives the registered checkout command. A concluded or absent
+   service is not a stored command lookup and still requires `--command`.
 
 ### Restarting is adoption, not a cold start
 
@@ -105,16 +110,14 @@ alga-dev workflow-restart-service --projectId=$PROJECT --name=dev-server
 retyping a registration. It sets, every time:
 
 ```
-HOST=http://100.82.172.57:3374
-NEXTAUTH_URL=http://100.82.172.57:3374
-DEV_ALLOWED_ORIGINS=100.82.172.57,localhost
+HOST=http://feature-co-managed-it.localhost:3374
+NEXTAUTH_URL=http://feature-co-managed-it.localhost:3374
+DEV_ALLOWED_ORIGINS=feature-co-managed-it.localhost,localhost,127.0.0.1
 ```
 
 `server/next.config.mjs` reads `DEV_ALLOWED_ORIGINS` into `allowedDevOrigins`.
-Without it Next **403s every `/_next/*` HMR, font and RSC request** from a
-browser on the tailnet address, and the page stalls at *"Loading
-translations…"*. `curl` still returns 200 throughout, so a curl-only check
-falsely passes.
+Without it Next can **403 `/_next/*` HMR, font and RSC requests** from the
+canonical `.localhost` review hostname while a basic page request returns 200.
 
 `next.config.mjs` now asserts this at startup: if `HOST`/`NEXTAUTH_URL`
 advertise a non-loopback host that `DEV_ALLOWED_ORIGINS` does not list, the dev
@@ -141,14 +144,14 @@ Two properties of that entrypoint the launcher has to pin:
 
 - **`HOSTNAME`.** `dev-server.ts` binds `process.env.HOSTNAME ?? '0.0.0.0'`.
   Interactive bash exports `HOSTNAME` as the machine name, which would bind the
-  listener to that name's single address (127.0.1.1 here) and make the tailnet
+  listener to that name's single address (127.0.1.1 here) and make the canonical
   review URL unreachable while `localhost` still answered. `next dev -p` ignored
   `HOSTNAME`, so this trap arrives with the custom entrypoint. The launcher
   exports `HOSTNAME=0.0.0.0`.
 - **`NEXT_PUBLIC_HOCUSPOCUS_URL`.** `server/.env.local` ships
   `ws://localhost:1235`, which names the *reviewer's own* machine once the app is
-  served over the tailnet. The launcher overrides it to
-  `ws://<advertised-host>:<port>/hocuspocus` so the socket goes through the
+  served from a review hostname. The launcher overrides it to
+  `ws://feature-co-managed-it.localhost:3374/hocuspocus` so the socket goes through the
   entrypoint's bounded proxy. With no hocuspocus upstream running, that answers a
   prompt `502` and the notification hook falls back to its 30s poll.
 
@@ -167,7 +170,7 @@ says "up".
 After every restart, verify with an actual HTTP status:
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' --max-time 20 http://100.82.172.57:3374/auth/msp/signin
+curl -s -o /dev/null -w '%{http_code}\n' --max-time 20 http://feature-co-managed-it.localhost:3374/auth/msp/signin
 # expect 200
 ```
 
@@ -311,10 +314,10 @@ done
 # each chain must pass through the hub pid (460951 at time of writing)
 
 # 3. Real HTTP readiness, not a port check.
-curl -s -o /dev/null -w 'app %{http_code}\n'   http://100.82.172.57:3374/auth/msp/signin
+curl -s -o /dev/null -w 'app %{http_code}\n'   http://feature-co-managed-it.localhost:3374/auth/msp/signin
 curl -s -o /dev/null -w 'temporal %{http_code}\n' http://127.0.0.1:8375/health
 curl -s -o /dev/null -w 'workflow %{http_code}\n' http://127.0.0.1:4374/health
-curl -s -o /dev/null -w 'guide %{http_code}\n'    http://100.82.172.57:8874/
+curl -s -o /dev/null -w 'guide %{http_code}\n'    http://127.0.0.1:8874/
 ```
 
 ## Restarting after editing a workspace package
@@ -330,7 +333,7 @@ npm run build --workspace=@alga-psa/<pkg>      # required for packages/storage:
                                                # from dist, which is gitignored
                                                # and CI-rebuilt
 alga-dev workflow-restart-service --projectId=$PROJECT --name=dev-server
-curl -s -o /dev/null -w '%{http_code}\n' http://100.82.172.57:3374/auth/msp/signin
+curl -s -o /dev/null -w '%{http_code}\n' http://feature-co-managed-it.localhost:3374/auth/msp/signin
 ```
 
 Skipping the restart validates stale code; an earlier round got false 200s
