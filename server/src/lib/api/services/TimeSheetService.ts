@@ -23,7 +23,8 @@ import {
   TimeSheetSearchData,
   TimeSheetExportQuery,
   CreateScheduleEntryData,
-  UpdateScheduleEntryData
+  UpdateScheduleEntryData,
+  ScheduleEntryFilters
 } from '../schemas/timeSheet';
 import { publishUnregisteredEventType } from 'server/src/lib/eventBus/publishers';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -976,7 +977,7 @@ export class TimeSheetService extends BaseService<any> {
 
 
   // Schedule entries
-  async getScheduleEntries(context: ServiceContext, filters?: any): Promise<any[]> {
+  async getScheduleEntries(context: ServiceContext, filters?: ScheduleEntryFilters): Promise<any[]> {
       const { visible, access } = await this.loadVisibleScheduleEntries(context, filters);
       const results = await Promise.all(
         visible.map((candidate) => this.buildScheduleEntryResult(candidate, access, context))
@@ -993,7 +994,7 @@ export class TimeSheetService extends BaseService<any> {
    */
   async getScheduleEntriesPage(
     context: ServiceContext,
-    filters: any,
+    filters: ScheduleEntryFilters,
     pagination: { page: number; limit: number }
   ): Promise<{ data: any[]; total: number }> {
       const { visible, access } = await this.loadVisibleScheduleEntries(context, filters);
@@ -1005,7 +1006,7 @@ export class TimeSheetService extends BaseService<any> {
       return { data: data.filter((entry) => entry !== null), total: visible.length };
     }
 
-  private async loadVisibleScheduleEntries(context: ServiceContext, filters?: any) {
+  private async loadVisibleScheduleEntries(context: ServiceContext, filters?: ScheduleEntryFilters) {
       const { knex } = await this.getKnex();
       const db = tenantDb(knex, context.tenant);
       
@@ -1017,6 +1018,10 @@ export class TimeSheetService extends BaseService<any> {
       }
       if (filters?.end_date) {
         query = query.where('scheduled_end', '<=', filters.end_date);
+      }
+      // Date-only end_date arrives as an exclusive next-day bound (see ScheduleEntryFilters).
+      if (filters?.end_before) {
+        query = query.where('scheduled_end', '<', filters.end_before);
       }
       if (filters?.user_id) {
         query = db.tenantJoin(query, 'schedule_entry_assignees', 'schedule_entries.entry_id', 'schedule_entry_assignees.entry_id')

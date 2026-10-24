@@ -1878,20 +1878,20 @@ export class ApiTimeSheetController extends ApiBaseController {
         const serviceContext = { userId: user.user_id, user, tenant: tenantId! };
 
         if (!options.paginate) {
-          const { start_date, end_date, user_id } = parseQuery(scheduleEntryListQuerySchema);
+          const { filters } = parseQuery(scheduleEntryListQuerySchema);
           const entries = await runWithTenant(tenantId!, async () => {
-            return await this.timeSheetService.getScheduleEntries(serviceContext, { start_date, end_date, user_id });
+            return await this.timeSheetService.getScheduleEntries(serviceContext, filters);
           });
           return createSuccessResponse(entries);
         }
 
-        const { page, limit, start_date, end_date, user_id } = parseQuery(scheduleEntrySearchQuerySchema);
+        const { page, limit, filters } = parseQuery(scheduleEntrySearchQuerySchema);
 
         // Paginated after visibility is resolved, so total excludes hidden entries.
         // LEVERAGE: pattern paginated-list-outside-base — ApiBaseController.list() paginates via service.list(); schedule entries need a bespoke paged service method.
         const result = await runWithTenant(tenantId!, async () => {
           return await this.timeSheetService.getScheduleEntriesPage(
-            serviceContext, { start_date, end_date, user_id }, { page, limit });
+            serviceContext, filters, { page, limit });
         });
 
         return createPaginatedResponse(result.data, result.total, page, limit, undefined, req);

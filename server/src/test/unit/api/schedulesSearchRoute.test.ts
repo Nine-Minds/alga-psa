@@ -88,9 +88,24 @@ describe('GET /api/v1/schedules/search', () => {
   });
 
   it.each([
+    // C3: a date-only end_date covers the whole UTC day (exclusive next-day bound).
+    ['end_date=2026-11-04', { end_before: '2026-11-05T00:00:00.000Z' }],
+    ['start_date=2026-11-04&end_date=2026-11-04', { start_date: '2026-11-04T00:00:00.000Z', end_before: '2026-11-05T00:00:00.000Z' }],
+    ['end_date=2026-12-31', { end_before: '2027-01-01T00:00:00.000Z' }],
+    ['start_date=2026-11-04T12:00:00Z&end_date=2026-11-04', { start_date: '2026-11-04T12:00:00Z', end_before: '2026-11-05T00:00:00.000Z' }],
+    ['end_date=2026-11-04T23:59:59Z', { end_date: '2026-11-04T23:59:59Z' }],
+  ])('normalizes %s to whole-day UTC bounds', async (qs, expected) => {
+    const res = await GET(req(`?${qs}`));
+    expect(res.status).toBe(200);
+    const [, filters] = mocks.getScheduleEntriesPage.mock.calls[0];
+    expect(filters).toEqual(expected);
+  });
+
+  it.each([
     ['start_date=not-a-date'],
     ['end_date=2026-13-45'],
     [`start_date=2026-02-01&end_date=2026-01-01`],
+    ['start_date=2026-11-05T00:00:00Z&end_date=2026-11-04'],
     ['user_id=nope'],
   ])('returns 400 for invalid query %s without calling the service', async (qs) => {
     const res = await GET(req(`?${qs}`));

@@ -72,6 +72,13 @@ describe('GET /api/v1/schedules', () => {
     expect(filters).toEqual({ start_date: START, end_date: END, user_id: '11111111-1111-4111-8111-111111111111' });
   });
 
+  it('treats a date-only end_date as the whole UTC day (shared filter with /search)', async () => {
+    const res = await GET(req('?start_date=2026-11-04&end_date=2026-11-04'));
+    expect(res.status).toBe(200);
+    const [, filters] = mocks.getScheduleEntries.mock.calls[0];
+    expect(filters).toEqual({ start_date: '2026-11-04T00:00:00.000Z', end_before: '2026-11-05T00:00:00.000Z' });
+  });
+
   it('ignores page/limit instead of paginating', async () => {
     const res = await GET(req('?page=2&limit=5'));
     expect(res.status).toBe(200);
