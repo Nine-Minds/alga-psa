@@ -1,7 +1,15 @@
 'use server';
 
 import User from '@alga-psa/db/models/user';
-import { DeletionValidationResult, IUser, IUserRole } from '@alga-psa/types';
+import {
+  DeletionValidationResult,
+  IUser,
+  IUserRole,
+  isClientUserType,
+  isInteractiveUserType,
+  isLicensedUserType,
+  isMspPrincipalUserType,
+} from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
@@ -388,6 +396,25 @@ async function findExistingUserByEmailGlobally(
 }
 
 /**
+ * User management only ever acts on interactive users (internal | client).
+ * Looks the target up under the tenant and throws 'User not found' for a missing
+ * row or a non-interactive principal (e.g. service), failing closed.
+ */
+async function assertInteractiveUserTarget(
+  tenant: string,
+  knexOrTrx: Knex | Knex.Transaction,
+  targetUserId: string
+): Promise<void> {
+  const target = await tenantDb(knexOrTrx, tenant).table('users')
+    .where({ user_id: targetUserId })
+    .first('user_type');
+  // Fail closed: a missing row and a non-interactive principal look the same.
+  if (!target || !isInteractiveUserType(target.user_type)) {
+    throw new Error('User not found');
+  }
+}
+
+/**
  * Client-portal callers may only manage client users of their own company
  * (mirrors assertCanManageClientUser in
  * packages/client-portal/src/actions/client-portal-actions/clientUserActions.ts).
@@ -403,7 +430,7 @@ async function assertPortalUserManagementScope(
   knexOrTrx: Knex | Knex.Transaction,
   targetUserId: string
 ): Promise<void> {
-  if (currentUser.user_type !== 'client') {
+  if (isMspPrincipalUserType(currentUser.user_type)) {
     return;
   }
 
@@ -510,6 +537,15 @@ export const addUser = withAuth(async (
         throwPermissionError('create user');
       }
 
+      // Only interactive person types can be created here; 'internal' is the
+      // backward-compatible default when no type is supplied. Anything else
+      // (including 'service') is rejected rather than mapped to a person type.
+      const requestedUserType: unknown = userData.userType ?? 'internal';
+      if (requestedUserType !== 'internal' && requestedUserType !== 'client') {
+        return { success: false, code: 'USER_CREATE_FAILED', error: 'Invalid user type' };
+      }
+      const newUserType: 'internal' | 'client' = requestedUserType;
+
       if (!userData.roleId) {
         return { success: false, code: 'ROLE_REQUIRED', error: 'Role is required' };
       }
@@ -524,7 +560,7 @@ export const addUser = withAuth(async (
       }
 
       // Validate role matches user type
-      const isClientUser = userData.userType === 'client';
+      const isClientUser = isClientUserType(newUserType);
       if (isClientUser && !role.client) {
         return {
           success: false,
@@ -543,7 +579,7 @@ export const addUser = withAuth(async (
       // Check if email already exists globally for this user_type. Internal
       // and client users may share an email by design.
       const emailExists = await findExistingUserByEmailGlobally(userData.email, {
-        userType: userData.userType || 'internal',
+        userType: newUserType,
       });
       if (emailExists) {
         return {
@@ -554,7 +590,7 @@ export const addUser = withAuth(async (
       }
 
       // Check license limits for  MSP (internal) users
-      if (userData.userType !== 'client') {
+      if (isLicensedUserType(newUserType)) {
         const tenantRow = await tenantDb(trx, tenant).table('tenants')
           .first('licensed_user_count', 'plan');
 
@@ -619,7 +655,7 @@ export const addUser = withAuth(async (
           is_inactive: false,
           hashed_password: await hashPassword(userData.password),
           tenant: tenant || undefined,
-          user_type: userData.userType || 'internal', // Default to 'internal' for backward compatibility
+          user_type: newUserType,
           contact_id: userData.contactId || undefined,
           reports_to: userData.reportsTo || undefined
         }).returning(USER_RESPONSE_FIELD_NAMES);
@@ -718,6 +754,7 @@ export const deleteUser = withAuth(async (
       // Client-portal callers may only delete client users of their own
       // company; internal callers are gated by the RBAC check above.
       await assertPortalUserManagementScope(user, tenant, trx, userId);
+      await assertInteractiveUserTarget(tenant, trx, userId);
 
       return await tenantDb(trx, tenant).table('clients')
         .where({ account_manager_id: userId })
@@ -1022,6 +1059,7 @@ export const updateUser = withAuth(async (
       // gated by the RBAC check above.
       if (!isOwnProfile) {
         await assertPortalUserManagementScope(currentUser, tenant, trx, userId);
+        await assertInteractiveUserTarget(tenant, trx, userId);
       }
 
       // Defense-in-depth against mass-assignment: this generic profile-update
@@ -1296,13 +1334,7 @@ export const deactivateUserWithDisposition = withAuth(
             userId,
           );
 
-          const target = await tenantDb(trx, tenant)
-            .table("users")
-            .where({ user_id: userId })
-            .first("user_id");
-          if (!target) {
-            throw new Error("User not found");
-          }
+          await assertInteractiveUserTarget(tenant, trx, userId);
 
           for (const bucket of [
             disposition.tickets,
@@ -1533,6 +1565,7 @@ export const updateUserRoles = withAuth(async (
       if (!await hasPermission(currentUser, 'user', 'update', trx)) {
         throwPermissionError('update user roles');
       }
+      await assertInteractiveUserTarget(tenant, trx, userId);
 
       // Delete existing roles
       await tenantDb(trx, tenant).table('user_roles')
@@ -1569,6 +1602,9 @@ export const updateUserRoles = withAuth(async (
     const message = getErrorMessage(error);
     if (message.startsWith('Permission denied:')) {
       return { success: false, error: message };
+    }
+    if (message === 'User not found') {
+      return { success: false, error: 'User not found' };
     }
     const dbError = error as { code?: string; column?: string };
     if (dbError?.code === '22P02' || dbError?.code === '23503') {
@@ -1869,12 +1905,22 @@ export const adminChangeUserPassword = withAuth(async (
       };
     }
 
+    // Non-interactive principals (e.g. service) never have a password set
+    // through user management. Fail closed as if the user does not exist.
+    if (!isInteractiveUserType(targetUser.user_type)) {
+      return {
+        success: false,
+        error: 'User not found',
+        messageKey: 'common:errors.auth.userNotFound',
+      };
+    }
+
     // This flow is for MSP staff only. The 'Admin' role-name check below is
     // also satisfied by the client portal 'Admin' role, so gating on it alone
     // would let portal admins reset MSP staff passwords. Portal admins must
     // use the portal's own flow (resetClientUserPassword), which enforces
     // same-company scoping.
-    if (currentUser.user_type !== 'internal') {
+    if (!isLicensedUserType(currentUser.user_type)) {
       return {
         success: false,
         error: 'Unauthorized: Internal staff privileges required',

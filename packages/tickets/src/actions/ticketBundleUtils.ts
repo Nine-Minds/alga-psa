@@ -41,6 +41,7 @@ import {
   captureTicketTransitionSnapshot,
   publishTicketTransitionsAfterCommit,
 } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { buildTicketResolutionSlaStageCompletionEvent } from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
 import {
   buildTicketClosedPayload,
@@ -1205,6 +1206,11 @@ export async function propagateBundleMasterStatus(
     previousIsClosed !== null && nextIsClosed !== null && previousIsClosed !== nextIsClosed
       ? (nextIsClosed ? 'close' : 'reopen')
       : null;
+
+  // Human-work guard (R5.3): propagating assigned_to to children must not assign a non-internal user.
+  if (Object.prototype.hasOwnProperty.call(updateData, 'assigned_to')) {
+    await assertHumanWorkAssignee(trx, ctx.tenant, [updateData.assigned_to as string | null | undefined]);
+  }
 
   if (crossesBoundary === null) {
     // Legacy sync: mirror workflow fields to every child, no propagation rows.

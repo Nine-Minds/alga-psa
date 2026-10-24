@@ -966,7 +966,7 @@ async function resolveQuoteAuthorizationSubject(
   return {
     tenant: tenantId,
     userId: actorUserId,
-    userType: userRow?.user_type === 'client' ? 'client' : 'internal',
+    userType: userRow?.user_type === 'client' ? 'client' : userRow?.user_type === 'service' ? 'service' : 'internal',
     roleIds: roleRows.map((row) => row.role_id),
     teamIds: teamRows.map((row) => row.team_id),
     managedUserIds: managedRows.map((row) => row.user_id),

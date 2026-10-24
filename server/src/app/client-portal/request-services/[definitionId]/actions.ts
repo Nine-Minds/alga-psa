@@ -3,6 +3,7 @@
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 import { getAuthenticatedClientId } from '@alga-psa/client-portal/lib/clientAuth';
 import { redirect } from 'next/navigation';
 import { StorageService } from '@alga-psa/storage/StorageService';
@@ -82,7 +83,7 @@ export const getRequestServiceDefinitionDetailAction = withAuth(async (
   { tenant }: AuthContext,
   definitionId: string
 ): Promise<ServiceRequestPortalDefinitionDetail | null> => {
-  if (currentUser.user_type !== 'client') {
+  if (!isClientUserType(currentUser.user_type)) {
     return null;
   }
 
@@ -110,7 +111,7 @@ export const getRequestServiceVisibilityContextAction = withAuth(async (
   currentUser: IUserWithRoles,
   { tenant }: AuthContext
 ): Promise<{ requesterUserId: string; clientId: string; contactId: string | null } | null> => {
-  if (currentUser.user_type !== 'client') {
+  if (!isClientUserType(currentUser.user_type)) {
     return null;
   }
 
@@ -128,7 +129,7 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
   definitionId: string,
   formData: FormData
 ): Promise<void> => {
-  if (currentUser.user_type !== 'client') {
+  if (!isClientUserType(currentUser.user_type)) {
     redirect(buildRequestServiceDefinitionRedirectUrl(definitionId, { error: 'forbidden' }));
   }
 

@@ -148,7 +148,9 @@ export const addInteraction = withAuth(async (
       ? interactionData
       : { ...interactionData, duration: reconciled.duration };
 
-    const scheduleAssignedUserIds = resolveScheduleAssignees(user.user_id, options.scheduleAssignedUserIds);
+    const scheduleAssignedUserIds = options.createScheduleEntry
+      ? resolveScheduleAssignees(user.user_id, options.scheduleAssignedUserIds, user.user_type)
+      : [];
     if (options.createScheduleEntry && scheduleAssignedUserIds.some((id) => id !== user.user_id)) {
       // Same gate addScheduleEntry applies: booking someone else's calendar is an update
       // of their schedule, not of your own.

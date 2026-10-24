@@ -889,7 +889,7 @@ export const ClientEventPayloadSchema = BasePayloadSchema.extend({
 
 export const UserEventPayloadSchema = BasePayloadSchema.extend({
   userId: z.string().uuid(),
-  userType: z.enum(['internal', 'client']).optional(),
+  userType: z.enum(['internal', 'client', 'service']).optional(),
   email: z.string().email().optional(),
   changedFields: z.array(z.string()).optional(),
   roleIds: z.array(z.string().uuid()).optional(),
