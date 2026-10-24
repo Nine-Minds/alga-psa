@@ -93,6 +93,36 @@
         "checkbox": "casilla de verificación",
         "date": "fecha",
         "file-upload": "carga de archivo"
+      },
+      "visibility": {
+        "title": "Mostrar cuando…",
+        "none": "Siempre visible",
+        "addRule": "Añadir condición",
+        "removeRule": "Quitar condición",
+        "source": "Campo",
+        "selectSource": "Seleccionar un campo",
+        "operator": "Condición",
+        "value": "Valor",
+        "valueTrue": "Marcado",
+        "valueFalse": "Desmarcado",
+        "selectValue": "Seleccionar un valor",
+        "legacyBooleanWarning": "Esta regla compara con texto, pero una casilla contiene verdadero/falso y nunca coincidirá. Vuelva a seleccionar el valor para corregirlo.",
+        "saveFailed": "No se pudieron guardar las reglas de visibilidad.",
+        "contextSources": {
+          "requesterUserId": "Usuario solicitante",
+          "clientId": "Cliente solicitante",
+          "contactId": "Contacto solicitante"
+        },
+        "operators": {
+          "equals": "es igual a",
+          "not-equals": "no es igual a",
+          "is-true": "está marcado / verdadero",
+          "is-false": "está desmarcado / falso",
+          "has-value": "tiene un valor",
+          "is-empty": "está vacío"
+        },
+        "advancedJson": "Avanzado (JSON)",
+        "advancedJsonHelp": "La configuración guardada completa, incluidos los valores de contexto predeterminados. Las reglas de visibilidad se cambian más fácilmente con «Mostrar cuando…» en cada campo. Los cambios sin guardar aquí se descartan si se modifica una regla allí."
       }
     },
     "execution": {

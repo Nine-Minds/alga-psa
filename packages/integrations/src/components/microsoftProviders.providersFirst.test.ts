@@ -67,6 +67,23 @@ describe('Microsoft providers-first form contracts', () => {
   });
 
   it('records guided administrator consent before advancing the Email binding', () => {
+    // The consent timestamp is stamped in exactly one place: the shared writer.
+    const writerSource = fs.readFileSync(
+      path.resolve(testDir, '../lib/microsoftEmailAdminConsent.ts'),
+      'utf8'
+    );
+    const writerStart = writerSource.indexOf('export async function writeMicrosoftEmailAdminConsent');
+    const writerEnd = writerSource.indexOf('export async function recordMicrosoftEmailAdminConsentFromState', writerStart);
+    const writerBody = writerSource.slice(writerStart, writerEnd);
+    const consentWrite = writerBody.indexOf('email_admin_consent_granted_at: now');
+    const bindingWrite = writerBody.indexOf("table<any>('microsoft_profile_consumer_bindings')");
+
+    expect(writerStart).toBeGreaterThanOrEqual(0);
+    expect(writerEnd).toBeGreaterThan(writerStart);
+    expect(consentWrite).toBeGreaterThanOrEqual(0);
+    expect(bindingWrite).toBeGreaterThan(consentWrite);
+
+    // The guarded action delegates to the writer and never stamps consent itself.
     const confirmationStart = microsoftActionsSource.indexOf(
       'export async function confirmMicrosoftEmailAdminConsentInternal'
     );
@@ -75,12 +92,14 @@ describe('Microsoft providers-first form contracts', () => {
       confirmationStart
     );
     const confirmationSource = microsoftActionsSource.slice(confirmationStart, confirmationEnd);
-    const consentWrite = confirmationSource.indexOf('email_admin_consent_granted_at: now');
-    const bindingWrite = confirmationSource.indexOf("table('microsoft_profile_consumer_bindings')");
-
     expect(confirmationStart).toBeGreaterThanOrEqual(0);
-    expect(consentWrite).toBeGreaterThanOrEqual(0);
-    expect(bindingWrite).toBeGreaterThan(consentWrite);
+    expect(confirmationSource).toContain('writeMicrosoftEmailAdminConsent({');
+    expect(confirmationSource).not.toContain('email_admin_consent_granted_at');
+    expect(microsoftActionsSource).not.toContain('email_admin_consent_granted_at: now');
+
+    // The unguarded state-based writer must not live in a 'use server' module.
+    expect(writerSource).not.toMatch(/^['"]use server['"]/m);
+    expect(microsoftActionsSource).not.toContain('recordMicrosoftEmailAdminConsentFromState');
     expect(microsoftActionsSource).toContain(
       'Microsoft tenant administrator consent must be recorded before binding this profile to Email'
     );

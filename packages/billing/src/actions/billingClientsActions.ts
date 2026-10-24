@@ -15,6 +15,7 @@ import {
   createClientContractAssignment,
   updateClientContractAssignment,
   activateClientContractAssignment,
+  ContractAlreadyActiveScheduledError,
   checkAndReactivateExpiredContract,
   type ClientPaginationParams,
   type ClientContractAssignmentCreateInput,
@@ -39,6 +40,13 @@ import {
 export type BillingClientsActionError = ActionMessageError | ActionPermissionError;
 
 function billingClientsActionErrorFrom(error: unknown): BillingClientsActionError | null {
+  if (error instanceof ContractAlreadyActiveScheduledError) {
+    return actionError(
+      error.message,
+      'msp/billing:errors.clientContract.alreadyActiveScheduled',
+      { startDate: error.startDate },
+    );
+  }
   if (error instanceof Error) {
     if (error.message.startsWith('Permission denied')) {
       return permissionError(error.message);

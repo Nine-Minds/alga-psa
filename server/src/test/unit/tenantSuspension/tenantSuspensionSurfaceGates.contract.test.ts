@@ -30,6 +30,12 @@ describe('tenant suspension surface gates', () => {
     expect(source).toContain("reason: 'tenant_suspended' }, { status: 200 })");
   });
 
+  it('Datto RMM webhook acks and drops for suspended tenants', () => {
+    const source = read('ee/server/src/app/api/webhooks/datto/route.ts');
+    expect(source).toContain('await isTenantSuspended(knex, tenant)');
+    expect(source).toContain("reason: 'tenant_suspended' }, { status: 200 })");
+  });
+
   it('T030/T032: workflow-worker skips suspended tenants before ingesting events, fail-open', () => {
     const source = read('services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.ts');
     const gateIdx = source.indexOf('await isTenantSuspended(knex, event.tenant)');

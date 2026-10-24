@@ -461,6 +461,14 @@
     "clientPortal": "Ontvangen via Klantenportaal",
     "inboundEmail": "Ontvangen via e-mail"
   },
+  "originalEmail": {
+    "text": "Tekst",
+    "original": "Originele e-mail",
+    "emailShort": "E-mail",
+    "loading": "Originele e-mail wordt geladen…",
+    "error": "De originele e-mail kan niet worden geladen.",
+    "group": "Berichtweergave"
+  },
   "documents": {
     "title": "Documenten",
     "noDocuments": "Geen documenten toegevoegd",
@@ -1667,7 +1675,10 @@
       "ruleCategoryBoardMismatch": "De geselecteerde categorie hoort bij een ander bord dan de regel.",
       "ruleCategoryInvalid": "De geselecteerde categorie is geen categorie op het hoogste niveau.",
       "ruleSubcategoryInvalid": "De geselecteerde subcategorie hoort niet bij de geselecteerde categorie.",
-      "ruleSubcategoryRequiresCategory": "Selecteer een categorie voordat u een subcategorie kiest."
+      "ruleSubcategoryRequiresCategory": "Selecteer een categorie voordat u een subcategorie kiest.",
+      "ruleTooManyKeywords": "Gebruik maximaal {{max}} trefwoorden per regel.",
+      "ruleKeywordTooLong": "Elk trefwoord mag maximaal {{max}} tekens bevatten.",
+      "ruleOriginInvalid": "Een van de geselecteerde ticketbronnen is ongeldig."
     }
   },
   "ticketSection": {

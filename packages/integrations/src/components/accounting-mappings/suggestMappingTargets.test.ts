@@ -155,4 +155,74 @@ describe('suggestMappingTargets', () => {
     expect(result.has('b')).toBe(false);
     expect(result.get('c')).toMatchObject({ externalId: 'item:HOST' });
   });
+
+  describe('unavailable targets', () => {
+    const taken = (...ids: string[]) => ({ unavailableExternalIds: new Set(ids) });
+
+    it('blocks a twin whose exact name match is taken, with no fuzzy fallback', () => {
+      const result = suggestMappingTargets(
+        [svc('b', 'Power BI Pro')],
+        [item('PBI', 'Power BI Pro'), item('PBIA', 'Power BI Pro Annual')],
+        taken('item:PBI')
+      );
+      expect(result.has('b')).toBe(false);
+    });
+
+    it('a blocked code tier skips the name tier', () => {
+      const result = suggestMappingTargets(
+        [svc('s1', 'Consulting', 'CONSULT-1')],
+        [item('CONSULT-1', 'Unrelated'), item('FREE', 'Consulting')],
+        taken('item:CONSULT-1')
+      );
+      expect(result.has('s1')).toBe(false);
+    });
+
+    it('suggests the free item when twin catalog items exist and one is taken', () => {
+      const result = suggestMappingTargets(
+        [svc('b', 'Power BI Pro')],
+        [item('PBI1', 'Power BI Pro'), item('PBI2', 'Power BI Pro')],
+        taken('item:PBI1')
+      );
+      expect(result.get('b')).toEqual({ externalId: 'item:PBI2', kind: 'item', matchedBy: 'name' });
+    });
+
+    it('does not fall back to a free account when the preferred-kind item is taken', () => {
+      const result = suggestMappingTargets(
+        [svc('s1', 'Sales')],
+        [item('S1', 'Sales'), account('200', 'Sales')],
+        taken('item:S1')
+      );
+      expect(result.has('s1')).toBe(false);
+    });
+
+    it('a held account:200 does not block an item:200 suggestion', () => {
+      const result = suggestMappingTargets(
+        [svc('s1', 'Hosting Plan')],
+        [item('200', 'Hosting Plan'), account('200', 'Sales')],
+        taken('account:200')
+      );
+      expect(result.get('s1')).toMatchObject({ externalId: 'item:200', kind: 'item' });
+    });
+
+    it('never fuzzy-suggests an unavailable target', () => {
+      const algas = [svc('s1', 'Power BI Pro Annual')];
+      const externals = [item('PBIP', 'Power BI Pro Annual Plan')];
+      expect(suggestMappingTargets(algas, externals).get('s1')).toMatchObject({ matchedBy: 'fuzzy' });
+      expect(suggestMappingTargets(algas, externals, taken('item:PBIP')).has('s1')).toBe(false);
+    });
+
+    it('keeps an exact match ambiguous when several available candidates remain', () => {
+      const result = suggestMappingTargets(
+        [svc('s1', 'Power BI Pro Annual')],
+        [item('A', 'Power BI Pro Annual'), item('B', 'Power BI Pro Annual'), item('C', 'Power BI Pro Annual'), item('D', 'Power BI Pro Annual Plan')],
+        taken('item:C')
+      );
+      expect(result.has('s1')).toBe(false);
+    });
+
+    it('behaves as before when unavailableExternalIds is omitted', () => {
+      const result = suggestMappingTargets([svc('b', 'Power BI Pro')], [item('PBI', 'Power BI Pro')]);
+      expect(result.get('b')).toMatchObject({ externalId: 'item:PBI' });
+    });
+  });
 });

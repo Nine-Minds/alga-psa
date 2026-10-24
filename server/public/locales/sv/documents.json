@@ -14,6 +14,7 @@
       "semiAnnually": "Halvårsvis"
     },
     "cadenceTotal": "{{cadence}} totalt",
+    "currency": "Valuta",
     "date": "Datum",
     "description": "Beskrivning",
     "discounts": "Rabatter",
@@ -60,6 +61,7 @@
     "rate": "À-pris",
     "recurring": "Återkommande",
     "service": "Tjänst",
+    "servicePeriod": "Tjänsteperiod",
     "shipDate": "Leveransdatum",
     "shipTo": "Leveransadress",
     "shipped": "Skickat",

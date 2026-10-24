@@ -16,7 +16,8 @@ import type {
   DateValue,
 } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
-import { displayAddressField, displayCountry, formatPostalAddress } from '@alga-psa/core';
+import { blockNoteToPlainText } from '@alga-psa/formatting/blocknoteUtils';
+import { displayAddressField, displayCountry, formatPostalAddress, toISODate, toPlainDate } from '@alga-psa/core';
 import { paymentMethodDisplayLabel } from '@alga-psa/shared/billingClients/paymentPreferences';
 // toPlainDate is likely not needed here as we format to string for Wasm
 
@@ -80,6 +81,31 @@ const normalizeDateLikeValue = (value: unknown): string | null => {
   return null;
 };
 
+/**
+ * Service periods are calendar dates, not instants. Keep the date as written
+ * (`2026-03-01T00:00:00+05:00` is March 1st, not the UTC day before it) and emit
+ * a date-only `YYYY-MM-DD` so the renderer's date-only path never shifts a day.
+ * Date objects carry their UTC calendar day, matching how the DB layer builds them.
+ */
+const normalizeServicePeriodDate = (value: unknown): string | null => {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : toISODate(toPlainDate(value));
+  }
+  const trimmed = normalizeDateLikeValue(value);
+  if (!trimmed) {
+    return null;
+  }
+  const dateOnlyMatch = trimmed.match(/^(\d{4}-\d{2}-\d{2})(?:$|[T\s])/);
+  if (dateOnlyMatch) {
+    try {
+      return toISODate(toPlainDate(dateOnlyMatch[1]));
+    } catch {
+      return trimmed;
+    }
+  }
+  return trimmed;
+};
+
 const normalizeRecurringDetailPeriods = (item: Record<string, unknown>): RendererRecurringDetailPeriod[] | undefined => {
   const candidate = item.recurringDetailPeriods ?? item.recurring_detail_periods;
   if (!Array.isArray(candidate) || candidate.length === 0) {
@@ -90,12 +116,12 @@ const normalizeRecurringDetailPeriods = (item: Record<string, unknown>): Rendere
     .filter((detail): detail is Record<string, unknown> => !!detail && typeof detail === 'object')
     .map((detail) => ({
       servicePeriodStart:
-        normalizeDateLikeValue(detail.servicePeriodStart) ??
-        normalizeDateLikeValue(detail.service_period_start) ??
+        normalizeServicePeriodDate(detail.servicePeriodStart) ??
+        normalizeServicePeriodDate(detail.service_period_start) ??
         null,
       servicePeriodEnd:
-        normalizeDateLikeValue(detail.servicePeriodEnd) ??
-        normalizeDateLikeValue(detail.service_period_end) ??
+        normalizeServicePeriodDate(detail.servicePeriodEnd) ??
+        normalizeServicePeriodDate(detail.service_period_end) ??
         null,
       billingTiming:
         detail.billingTiming === 'advance' || detail.billingTiming === 'arrears'
@@ -205,6 +231,25 @@ const resolveRecurringServicePeriodSummary = (source: Record<string, unknown>, l
 const isRecurringItem = (item: WasmInvoiceLineItem): boolean =>
   (item.recurringDetailPeriods?.length ?? 0) > 0 || !!item.billingTiming;
 
+/**
+ * The per-line "Service Period" cell text. Reuses the invoice-level label
+ * builder (named month, reading-language locale, UTC-pinned) so both read the
+ * same. One-time lines carry no recurring marker and stay null (blank cell).
+ */
+const buildLineServicePeriodLabel = (
+  start: string | null,
+  end: string | null,
+  billingTiming: unknown,
+  detailPeriods: RendererRecurringDetailPeriod[] | undefined,
+  locale?: string
+): string | null => {
+  const isRecurring = (detailPeriods?.length ?? 0) > 0 || !!billingTiming;
+  if (!isRecurring || !start || !end) {
+    return null;
+  }
+  return buildRecurringServicePeriodLabel(start, end, locale);
+};
+
 export const buildLocationAddressBlock = (location: WasmInvoiceLineItemLocation | null): string | null => {
   if (!location) return null;
   const cityLine = formatPostalAddress([
@@ -268,6 +313,24 @@ export function buildInvoiceLocationGroups(items: WasmInvoiceLineItem[]): WasmIn
 /** Round minutes to display hours (6dp, like invoice_charges.quantity; minutes stay authoritative). */
 const minutesToHours = (minutes: number): number => Math.round((minutes / 60) * 1e6) / 1e6;
 
+/**
+ * Display rounding for invoice quantities (2dp, integers untouched — the same
+ * rule as the `formatQuantity` helpers in billing/compute). Applied to the
+ * by-ticket presentation rows only; the 6dp stored/derived hours and the
+ * authoritative minutes are never altered.
+ */
+// LEVERAGE: pattern invoice-quantity-format — formatQuantity is copy-pasted in computeBucketCharges, computeUsageBasedCharges and computeRecurringQuantityCharges; this is a 4th variant. Extract one shared invoice quantity formatter.
+const roundInvoiceQuantity = (quantity: number): number =>
+  Number.isInteger(quantity) ? quantity : Math.round(quantity * 100) / 100;
+
+/**
+ * Read-time description for a by-ticket row: plain text of the ticket description
+ * (snapshots written before the write-time fix still hold BlockNote JSON), else
+ * the ticket title, else an empty cell. Never JSON.
+ */
+const ticketRowDescription = (description: unknown, title: unknown): string =>
+  blockNoteToPlainText(description) || blockNoteToPlainText(title);
+
 /** Snapshot input for the billed-time collections: entry + owning charge id. */
 export type InvoiceTimeCollectionSource = IInvoiceChargeTimeEntrySnapshot & {
   itemId?: string | null;
@@ -309,7 +372,7 @@ export function buildInvoiceTimeCollections(
       workItemId: source.workItemId ?? null,
       ticketNumber: source.ticketNumber ?? null,
       title: source.title ?? null,
-      description: source.description ?? null,
+      description: source.description == null ? null : (blockNoteToPlainText(source.description) || null),
       date: source.entryDate ?? null,
       billedMinutes: Math.round(toFiniteNumber(source.billedMinutes)),
       hours: minutesToHours(Math.round(toFiniteNumber(source.billedMinutes))),
@@ -373,7 +436,7 @@ export function buildInvoiceTimeCollections(
         workItemId: isTicket || isTask ? first.workItemId : null,
         ticketNumber: isTicket ? first.ticketNumber : null,
         title: isTicket || isTask ? first.title : null,
-        description: isTicket ? first.description : null,
+        description: isTicket ? first.description : null, // already plain text (see timeEntries mapping)
         label,
         labelKey: !label ? `time.${isTicket ? 'ticket' : isTask ? 'task' : 'other'}` : undefined,
         rateKind,
@@ -492,7 +555,7 @@ function attachTicketPresentation(
   let rows: InvoiceTicketPresentationRow[] = [
     ...groups.map((group) => ({
       timePresentation: true as const, id: group.key, label: group.label, labelKey: group.labelKey,
-      description: group.description ?? '', quantity: group.totalHours,
+      description: ticketRowDescription(group.description, group.title), quantity: roundInvoiceQuantity(group.totalHours),
       rate: group.rate, rateKind: group.rateKind, rateDisplay: group.rate,
       amount: group.totalAmount,
       contributions: group.entries.map((entry) => ({ itemId: entry.itemId!, entryId: entry.id, amount: entry.amount })),
@@ -607,13 +670,13 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
       const normalizedItems = (dbData.invoice_charges ?? []).map((item: IInvoiceCharge) => {
         const normalizedDetailPeriods = normalizeRecurringDetailPeriods(item as unknown as Record<string, unknown>);
         const summaryStart =
-          normalizeDateLikeValue((item as any).servicePeriodStart) ??
-          normalizeDateLikeValue((item as any).service_period_start) ??
+          normalizeServicePeriodDate((item as any).servicePeriodStart) ??
+          normalizeServicePeriodDate((item as any).service_period_start) ??
           normalizedDetailPeriods?.[0]?.servicePeriodStart ??
           null;
         const summaryEnd =
-          normalizeDateLikeValue((item as any).servicePeriodEnd) ??
-          normalizeDateLikeValue((item as any).service_period_end) ??
+          normalizeServicePeriodDate((item as any).servicePeriodEnd) ??
+          normalizeServicePeriodDate((item as any).service_period_end) ??
           normalizedDetailPeriods?.[normalizedDetailPeriods.length - 1]?.servicePeriodEnd ??
           null;
         const summaryBillingTiming =
@@ -638,6 +701,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
           taxAmount: toMinorUnits(item.tax_amount),
           servicePeriodStart: summaryStart,
           servicePeriodEnd: summaryEnd,
+          servicePeriodLabel: buildLineServicePeriodLabel(summaryStart, summaryEnd, summaryBillingTiming, normalizedDetailPeriods, locale),
           billingTiming: summaryBillingTiming,
           recurringDetailPeriods: normalizedDetailPeriods,
           ...((item as any).item_type === 'project'
@@ -708,6 +772,19 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
             quantity: Number(item.quantity ?? 0),
             unitPrice: Number(item.unitPrice ?? 0),
             total: Number(item.total ?? 0),
+            ...(item.servicePeriodLabel === undefined
+              ? (() => {
+                  const record = item as unknown as Record<string, unknown>;
+                  const detailPeriods = normalizeRecurringDetailPeriods(record);
+                  const start = normalizeServicePeriodDate(item.servicePeriodStart) ?? detailPeriods?.[0]?.servicePeriodStart ?? null;
+                  const end = normalizeServicePeriodDate(item.servicePeriodEnd) ?? detailPeriods?.[detailPeriods.length - 1]?.servicePeriodEnd ?? null;
+                  return {
+                    servicePeriodStart: start,
+                    servicePeriodEnd: end,
+                    servicePeriodLabel: buildLineServicePeriodLabel(start, end, item.billingTiming, detailPeriods, locale),
+                  };
+                })()
+              : {}),
         }));
         viewModel.subtotal = Number(viewModel.subtotal ?? 0);
         viewModel.tax = Number(viewModel.tax ?? 0);
