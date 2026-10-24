@@ -6,6 +6,7 @@ import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import {
   getRequestServiceDefinitionDetailAction,
+  getRequestServiceVisibilityContextAction,
   submitRequestServiceDefinitionAction,
 } from './actions';
 
@@ -16,6 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: t('clientPortal.requestServices.detail.title', { defaultValue: 'Service Request' }),
   };
 }
+import { parseVisibilityRules } from '../../../../lib/service-requests/formVisibility';
 import { ServiceRequestIcon } from '../ServiceRequestIcon';
 import { RequestServiceForm } from './RequestServiceForm';
 
@@ -56,13 +58,16 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
   const fields = Array.isArray((detail.formSchema as any)?.fields)
     ? ((detail.formSchema as any).fields as any[])
     : [];
-  const visibleFieldKeySet = new Set(detail.visibleFieldKeys ?? []);
-  const visibleFields = fields.filter(
-    (field: any, index: number) =>
-      visibleFieldKeySet.has(
-        typeof field?.key === 'string' ? field.key : `field_${index}`
-      )
-  );
+  // Rules only reach the browser for the advanced provider; in CE the detail is null
+  // for such definitions, so this stays disabled and no rules are sent.
+  const visibilityRules =
+    detail.formBehaviorProvider === 'advanced'
+      ? (parseVisibilityRules(detail.formBehaviorConfig) ?? [])
+      : [];
+  const visibilityEnabled = visibilityRules.length > 0;
+  const visibilityContext = visibilityEnabled
+    ? await getRequestServiceVisibilityContextAction()
+    : null;
 
   return (
     <div className="space-y-4">
@@ -109,12 +114,12 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
 
       <section className="rounded border p-4 bg-[rgb(var(--color-border-100))]">
         <h2 className="text-base font-semibold mb-2">{t('detail.formTitle')}</h2>
-        {visibleFields.length === 0 ? (
+        {fields.length === 0 ? (
           <p className="text-sm text-[rgb(var(--color-text-600))]">{t('detail.noFields')}</p>
         ) : (
           <RequestServiceForm
             action={submitAction}
-            fields={visibleFields.map((field: any, index: number) => ({
+            fields={fields.map((field: any, index: number) => ({
               key: typeof field?.key === 'string' ? field.key : `field_${index}`,
               label: typeof field?.label === 'string' ? field.label : (typeof field?.key === 'string' ? field.key : `field_${index}`),
               type: typeof field?.type === 'string' ? field.type : undefined,
@@ -132,11 +137,17 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
                 : undefined,
             }))}
             initialValues={detail.initialValues}
+            visibility={{
+              enabled: visibilityEnabled && visibilityContext !== null,
+              rules: visibilityEnabled && visibilityContext !== null ? visibilityRules : [],
+              context: visibilityContext ?? { requesterUserId: '', clientId: '', contactId: null },
+            }}
             clientSubmissionKey={clientSubmissionKey}
             labels={{
               selectPlaceholder: t('detail.selectOption'),
               datePlaceholder: t('detail.datePlaceholder'),
               submit: t('detail.submit'),
+              requiredField: t('detail.requiredField'),
             }}
           />
         )}
