@@ -3,6 +3,7 @@
 import { WorkflowEventPublisher } from '@alga-psa/shared/workflow/adapters/workflowEventPublisher';
 import { contactSuppressedTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import logger from '@alga-psa/core/logger';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
@@ -751,6 +752,7 @@ async function runThreecxAdminMutation(
   user: unknown,
   tenant: string,
   mutate: (ee: typeof import('@alga-psa/ee-threecx/lib')) => Promise<unknown>,
+  actionId: string,
 ): Promise<ThreecxMutationResult> {
   const gate = await requireManageableProvider(user, tenant, '3cx');
   if ('error' in gate) {
@@ -761,7 +763,25 @@ async function runThreecxAdminMutation(
     await mutate(ee);
     return { success: true };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : String(error) };
+    const message = error instanceof Error ? error.message : String(error);
+    // The PBX client already wrote the primary error line (status, excerpt,
+    // capability) for PBX failures; this line adds the action id at warn.
+    // Anything else has no earlier line, so it is the primary one.
+    const pbxFailure = error instanceof Error && error.name === 'ThreecxPbxError';
+    const details = {
+      tenantId: tenant,
+      actionId,
+      status: pbxFailure ? (error as any).status : undefined,
+      bodyExcerpt: pbxFailure ? (error as any).body : undefined,
+      capability: pbxFailure ? (error as any).capability : undefined,
+      error: message,
+    };
+    if (pbxFailure) {
+      logger.warn('[3CX] Admin action failed', details);
+    } else {
+      logger.error('[3CX] Admin action failed', details);
+    }
+    return { success: false, error: message };
   }
 }
 
@@ -770,43 +790,43 @@ export const saveThreecxPbxCredentials = withAuth(async (
   { tenant },
   input: { baseUrl: string; clientId: string; clientSecret?: string | null },
 ): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.saveThreecxPbxCredentials(tenant, input)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.saveThreecxPbxCredentials(tenant, input), 'saveThreecxPbxCredentials'));
 
 export const testThreecxPbxConnection = withAuth(async (user, { tenant }): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.testThreecxPbxConnection(tenant)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.testThreecxPbxConnection(tenant), 'testThreecxPbxConnection'));
 
 export const clearThreecxPbxCredentials = withAuth(async (user, { tenant }): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.clearThreecxPbxCredentials(tenant)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.clearThreecxPbxCredentials(tenant), 'clearThreecxPbxCredentials'));
 
 export const syncThreecxExtensions = withAuth(async (user, { tenant }): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.syncThreecxExtensions(tenant)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.syncThreecxExtensions(tenant), 'syncThreecxExtensions'));
 
 export const setThreecxExtensionUser = withAuth(async (
   user,
   { tenant },
   input: { dn: string; userId: string | null },
 ): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.setThreecxExtensionUser(tenant, input)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.setThreecxExtensionUser(tenant, input), 'setThreecxExtensionUser'));
 
 export const setThreecxCallHistoryImport = withAuth(async (
   user,
   { tenant },
   input: { enabled: boolean; lookbackDays?: number },
 ): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.setThreecxCallHistoryImport(tenant, input)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.setThreecxCallHistoryImport(tenant, input), 'setThreecxCallHistoryImport'));
 
 export const setThreecxPhonebookSync = withAuth(async (
   user,
   { tenant },
   input: { enabled: boolean; schedule: 'daily' | 'hourly' },
 ): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.setThreecxPhonebookSync(tenant, input)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.setThreecxPhonebookSync(tenant, input), 'setThreecxPhonebookSync'));
 
 export const runThreecxPhonebookPush = withAuth(async (user, { tenant }): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.pushThreecxPhonebook(tenant)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.pushThreecxPhonebook(tenant), 'pushThreecxPhonebook'));
 
 export const runThreecxPhonebookImport = withAuth(async (user, { tenant }): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.importThreecxPhonebook(tenant)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.importThreecxPhonebook(tenant), 'importThreecxPhonebook'));
 
 export type ThreecxContactQueueItem = Awaited<
   ReturnType<typeof import('@alga-psa/ee-threecx/lib').listThreecxContactQueue>
@@ -833,21 +853,21 @@ export const mapThreecxContactToClient = withAuth(async (
   { tenant },
   input: { contactId: string; clientId: string | null },
 ): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.mapThreecxContactToClient(tenant, input)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.mapThreecxContactToClient(tenant, input), 'mapThreecxContactToClient'));
 
 export const completeThreecxPendingContact = withAuth(async (
   user,
   { tenant },
   input: { pendingId: string; firstName: string; lastName: string; email: string; number: string; clientId: string | null },
 ): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.completeThreecxPendingContact(tenant, input)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.completeThreecxPendingContact(tenant, input), 'completeThreecxPendingContact'));
 
 export const dismissThreecxPendingContact = withAuth(async (
   user,
   { tenant },
   input: { pendingId: string },
 ): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.dismissThreecxPendingContact(tenant, input)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.dismissThreecxPendingContact(tenant, input), 'dismissThreecxPendingContact'));
 
 /**
  * Click-to-call through the PBX. The call always originates from the caller's

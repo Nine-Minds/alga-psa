@@ -4167,13 +4167,16 @@
             "callControl": "Anrufsteuerung",
             "xapi": "Konfigurations-API",
             "lastChecked": "Zuletzt geprüft",
-            "notConnectedHint": "Verbinden Sie oben die PBX-API, um diese Funktion zu nutzen."
+            "notConnectedHint": "Verbinden Sie oben die PBX-API, um diese Funktion zu nutzen.",
+            "usersBlocked": "Die Rolle der 3CX-API-App darf keine Benutzer lesen. Vergeben Sie die nötigen Rechte unter 3CX Admin Console > Integrations > API > (app) > Role.",
+            "contactsBlocked": "Die Rolle der 3CX-API-App darf keine Kontakte verwalten. Vergeben Sie die nötigen Rechte unter 3CX Admin Console > Integrations > API > (app) > Role."
           },
           "extensions": {
             "title": "Nebenstellen",
             "sync": "Von PBX abgleichen",
             "lastSync": "Letzter Abgleich",
             "empty": "Noch keine Nebenstellen abgeglichen.",
+            "emptyAfterSync": "3CX hat keine aktivierten Benutzer zurückgegeben; prüfen Sie die Berechtigungen der API-App",
             "dn": "Nebenstelle",
             "pbxUser": "PBX-Benutzer",
             "algaUser": "AlgaPSA-Benutzer",

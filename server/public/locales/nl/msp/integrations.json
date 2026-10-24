@@ -4167,13 +4167,16 @@
             "callControl": "Oproepbesturing",
             "xapi": "Configuratie-API",
             "lastChecked": "Laatst gecontroleerd",
-            "notConnectedHint": "Verbind hierboven de PBX-API om deze functie te gebruiken."
+            "notConnectedHint": "Verbind hierboven de PBX-API om deze functie te gebruiken.",
+            "usersBlocked": "De rol van de 3CX API-app mag geen gebruikers lezen. Geef de rol de benodigde rechten in 3CX Admin Console > Integrations > API > (app) > Role.",
+            "contactsBlocked": "De rol van de 3CX API-app mag geen contacten beheren. Geef de rol de benodigde rechten in 3CX Admin Console > Integrations > API > (app) > Role."
           },
           "extensions": {
             "title": "Toestellen",
             "sync": "Synchroniseren vanaf PBX",
             "lastSync": "Laatste synchronisatie",
             "empty": "Nog geen toestellen gesynchroniseerd.",
+            "emptyAfterSync": "3CX heeft geen ingeschakelde gebruikers teruggegeven; controleer de rechten van de API-app",
             "dn": "Toestel",
             "pbxUser": "PBX-gebruiker",
             "algaUser": "AlgaPSA-gebruiker",

@@ -4167,13 +4167,16 @@
             "callControl": "Contrôle d'appel",
             "xapi": "API de configuration",
             "lastChecked": "Dernière vérification",
-            "notConnectedHint": "Connectez l'API du PBX ci-dessus pour utiliser cette fonction."
+            "notConnectedHint": "Connectez l'API du PBX ci-dessus pour utiliser cette fonction.",
+            "usersBlocked": "Le rôle de l'application API 3CX ne peut pas lire les utilisateurs. Accordez-lui les droits nécessaires dans 3CX Admin Console > Integrations > API > (app) > Role.",
+            "contactsBlocked": "Le rôle de l'application API 3CX ne peut pas gérer les contacts. Accordez-lui les droits nécessaires dans 3CX Admin Console > Integrations > API > (app) > Role."
           },
           "extensions": {
             "title": "Extensions",
             "sync": "Synchroniser depuis le PBX",
             "lastSync": "Dernière synchronisation",
             "empty": "Aucune extension synchronisée pour le moment.",
+            "emptyAfterSync": "3CX n'a renvoyé aucun utilisateur activé ; vérifiez les autorisations de l'application API",
             "dn": "Extension",
             "pbxUser": "Utilisateur PBX",
             "algaUser": "Utilisateur AlgaPSA",
