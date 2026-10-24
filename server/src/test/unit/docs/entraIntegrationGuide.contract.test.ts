@@ -40,6 +40,8 @@ describe('Entra integration guide contracts', () => {
     expect(guide).toContain('deprecated legacy path');
     // CIPP no longer has a Settings > CIPP > API access page.
     expect(guide).not.toMatch(/Settings\s*(>|→)\s*CIPP\s*(>|→)\s*API access/);
+    expect(guide).not.toContain('API access');
+    expect(guide).not.toContain('CIPP-API host and API key');
     expect(guide).toContain('getSecretProviderInstance()');
     expect(guide).toContain('env/filesystem/vault provider chains');
   });
