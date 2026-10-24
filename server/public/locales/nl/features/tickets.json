@@ -248,7 +248,8 @@
     "openMenu": "Menu openen",
     "moreActions": "Meer acties",
     "createTemplate": "Sjabloon maken van ticket",
-    "createWorkflowFromTicket": "Workflow maken van ticket"
+    "createWorkflowFromTicket": "Workflow maken van ticket",
+    "printWorkTag": "Werklabel afdrukken"
   },
   "messages": {
     "noTickets": "Geen tickets gevonden",
@@ -784,7 +785,9 @@
       "more": "Meer",
       "bundleNeedsOne": "Selecteer minstens 1 ticket om te bundelen",
       "selectedCount_few": "{{count}} geselecteerd",
-      "selectedCount_many": "{{count}} geselecteerd"
+      "selectedCount_many": "{{count}} geselecteerd",
+      "printLabels": "Labels afdrukken",
+      "printLabelsLimit": "U kunt maximaal {{max}} labels tegelijk afdrukken"
     },
     "assign": {
       "dialogTitle": "Geselecteerde tickets toewijzen",

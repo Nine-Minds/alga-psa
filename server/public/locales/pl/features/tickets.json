@@ -248,7 +248,8 @@
     "openMenu": "Otwórz menu",
     "moreActions": "Więcej akcji",
     "createTemplate": "Utwórz szablon ze zgłoszenia",
-    "createWorkflowFromTicket": "Utwórz workflow ze zgłoszenia"
+    "createWorkflowFromTicket": "Utwórz workflow ze zgłoszenia",
+    "printWorkTag": "Drukuj etykietę roboczą"
   },
   "messages": {
     "noTickets": "Brak zgłoszeń",
@@ -784,7 +785,9 @@
       "more": "Więcej",
       "selectedCount_few": "Zaznaczono {{count}}",
       "selectedCount_many": "Zaznaczono {{count}}",
-      "bundleNeedsOne": "Wybierz co najmniej 1 zgłoszenie do połączenia"
+      "bundleNeedsOne": "Wybierz co najmniej 1 zgłoszenie do połączenia",
+      "printLabels": "Drukuj etykiety",
+      "printLabelsLimit": "Jednorazowo można wydrukować co najwyżej {{max}} etykiet"
     },
     "assign": {
       "dialogTitle": "Przypisz wybrane zgłoszenia",

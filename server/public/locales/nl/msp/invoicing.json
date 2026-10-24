@@ -2431,11 +2431,13 @@
     "description": "Ontwerp de indelingen waarmee pdf’s en voorbeelden voor {{type}} worden weergegeven.",
     "availableLayouts": "Beschikbare indelingen",
     "actions": {
-      "newLayout": "Nieuwe indeling"
+      "newLayout": "Nieuwe indeling",
+      "setDefaultForClass": "Instellen als standaard voor {{class}}"
     },
     "columns": {
       "name": "Naam",
-      "source": "Bron"
+      "source": "Bron",
+      "labelClass": "Klasse"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (Standaard)",
@@ -2467,7 +2469,10 @@
         "details": "Indelingsgegevens"
       },
       "fields": {
-        "version": "Versie"
+        "version": "Versie",
+        "labelClass": "Labelklasse",
+        "labelFields": "Velden die op het label worden getoond",
+        "labelFieldsHint": "De recordlink (QR-code) en de identificatie worden altijd getoond."
       },
       "placeholders": {
         "templateName": "Sjabloon voor {{type}}"

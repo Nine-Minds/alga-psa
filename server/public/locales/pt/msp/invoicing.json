@@ -2431,11 +2431,13 @@
     "description": "Crie os layouts usados para gerar PDFs e pré-visualizações de {{type}}.",
     "availableLayouts": "Layouts disponíveis",
     "actions": {
-      "newLayout": "Novo layout"
+      "newLayout": "Novo layout",
+      "setDefaultForClass": "Definir como padrão para {{class}}"
     },
     "columns": {
       "name": "Nome",
-      "source": "Origem"
+      "source": "Origem",
+      "labelClass": "Classe"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (Padrão)",
@@ -2467,7 +2469,10 @@
         "details": "Detalhes do layout"
       },
       "fields": {
-        "version": "Versão"
+        "version": "Versão",
+        "labelClass": "Classe da etiqueta",
+        "labelFields": "Campos exibidos na etiqueta",
+        "labelFieldsHint": "O link do registro (código QR) e o identificador são sempre exibidos."
       },
       "placeholders": {
         "templateName": "Modelo de {{type}}"

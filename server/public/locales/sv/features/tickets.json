@@ -256,7 +256,8 @@
     "openMenu": "Öppna meny",
     "moreActions": "Fler åtgärder",
     "createTemplate": "Skapa mall från ärende",
-    "createWorkflowFromTicket": "Skapa arbetsflöde från ärende"
+    "createWorkflowFromTicket": "Skapa arbetsflöde från ärende",
+    "printWorkTag": "Skriv ut arbetsetikett"
   },
   "messages": {
     "noTickets": "Inga ärenden hittades",
@@ -654,7 +655,9 @@
       "more": "Mer",
       "bundleNeedsOne": "Markera minst 1 ärende att gruppera",
       "selectedCount_few": "{{count}} markerade",
-      "selectedCount_many": "{{count}} markerade"
+      "selectedCount_many": "{{count}} markerade",
+      "printLabels": "Skriv ut etiketter",
+      "printLabelsLimit": "Du kan skriva ut högst {{max}} etiketter åt gången"
     },
     "moveDialogTitle": "Flytta markerade ärenden",
     "moveDialogDescription": "Välj måltavla och målstatus och bekräfta sedan flytten av de markerade ärendena.",
