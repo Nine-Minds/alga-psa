@@ -271,7 +271,8 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
               service_id: service.service_id,
               quantity: service.quantity,
               pricing_basis: service.pricing_basis,
-              custom_rate: service.unit_rate ?? undefined,
+              // A bundle member has no unit rate; drop one left over from a unit selection.
+              custom_rate: service.pricing_basis === 'unit' ? service.unit_rate ?? undefined : undefined,
             });
           }
         });
@@ -488,8 +489,14 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                   quantity={service.quantity}
                   planFixedConfig={{ enable_proration: enableProration, billing_cycle_alignment: billingCycleAlignment }}
                   onConfigurationChange={updates => setFixedServices(current => current.map((item, i) => i === index
-                    ? { ...item, pricing_basis: updates.pricing_basis ?? item.pricing_basis,
-                        unit_rate: updates.base_rate !== undefined ? updates.base_rate : item.unit_rate }
+                    ? (() => {
+                        const pricingBasis = updates.pricing_basis ?? item.pricing_basis;
+                        // Switching back to bundle drops the unit rate: a bundle member has none.
+                        return { ...item, pricing_basis: pricingBasis,
+                          unit_rate: pricingBasis === 'bundle'
+                            ? undefined
+                            : updates.base_rate !== undefined ? updates.base_rate : item.unit_rate };
+                      })()
                     : item))}
                   onPlanFixedConfigChange={updates => {
                     setEnableProration(updates.enable_proration ?? enableProration);

@@ -2081,6 +2081,8 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "RMA {{id}}",
+      "Datto RMM",
       "mention",
       ",",
       "3CX",
@@ -2199,6 +2201,7 @@
       "Services",
       "Shift",
       "Signature",
+      "Sites",
       "SLA",
       "SMS",
       "SMTP",
@@ -2254,7 +2257,8 @@
       "Important",
       "Compact",
       "Extensions (Pro)",
-      "Stable"
+      "Stable",
+      "Code 128"
     ],
     "caseInsensitive": [
       "api",

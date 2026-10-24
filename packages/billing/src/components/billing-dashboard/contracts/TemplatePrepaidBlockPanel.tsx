@@ -23,11 +23,13 @@ import {
   minutesToHoursText,
   type PrepaidBlockConfigDraft,
 } from './prepaidBlockConfigDraft';
-import { useTemplateNeutralRate } from './templateNeutralRate';
+import { useTemplateMoney } from './useTemplateMoney';
 
 interface TemplatePrepaidBlockPanelProps {
   /** contract_template_lines.template_line_id of an Hourly template line. */
   templateLineId: string;
+  /** The template's base currency; falls back to the ambient authoring currency. */
+  currencyCode?: string;
   isReadOnly?: boolean;
   /** Called after a save/remove with whether the line now has a block config (to update the badge). */
   onChanged?: (hasConfig: boolean) => void;
@@ -38,18 +40,20 @@ const isActionFailure = (value: unknown): boolean =>
 
 /**
  * Display and edit of a template line's Prepaid Block config
- * (contract_template_line_prepaid_blocks). Templates are currency-neutral, so the
- * price is a plain amount that takes the client's currency when a contract is created.
+ * (contract_template_line_prepaid_blocks). The price is stored and shown in the
+ * template's base currency; it is copied as-is when a contract is created.
  */
 export const TemplatePrepaidBlockPanel: React.FC<TemplatePrepaidBlockPanelProps> = ({
   templateLineId,
+  currencyCode,
   isReadOnly = false,
   onChanged,
 }) => {
   const { t } = useTranslation('msp/contracts');
   const idPrefix = `template-prepaid-block-${templateLineId}`;
   const { currencyCode: authoringCurrency } = useCurrencyFormat();
-  const formatNeutralRate = useTemplateNeutralRate();
+  const templateCurrency = currencyCode ?? authoringCurrency;
+  const formatTemplateAmount = useTemplateMoney(templateCurrency);
   const errorText = usePrepaidBlockDraftErrorText();
 
   const [view, setView] = useState<TemplateLinePrepaidBlockView | null>(null);
@@ -186,7 +190,7 @@ export const TemplatePrepaidBlockPanel: React.FC<TemplatePrepaidBlockPanelProps>
             idPrefix={`${idPrefix}-edit`}
             value={draft}
             onChange={setDraft}
-            currencyCode={authoringCurrency}
+            currencyCode={templateCurrency}
             coveredServices={coveredServices}
             disabled={busy}
             errors={draftErrors}
@@ -210,7 +214,7 @@ export const TemplatePrepaidBlockPanel: React.FC<TemplatePrepaidBlockPanelProps>
                 {t('templateDetail.prepaidBlock.blockNeutral', {
                   defaultValue: "{{hours}} h / {{price}} (in the client's currency)",
                   hours: minutesToHoursText(Number(config.block_minutes)),
-                  price: formatNeutralRate(Number(config.block_price)),
+                  price: formatTemplateAmount(Number(config.block_price)),
                 })}
               </dd>
             </div>

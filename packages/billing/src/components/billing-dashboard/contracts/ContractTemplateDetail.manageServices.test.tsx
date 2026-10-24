@@ -49,6 +49,7 @@ vi.mock('next/navigation', () => ({
 vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', () => ({
   useBillingFrequencyOptions: () => [],
 }));
+vi.mock('./TemplatePricingSection', () => ({ TemplatePricingSection: () => null }));
 vi.mock('../contract-lines/GenericContractLineServicesList', () => ({
   default: ({ contractLineId }: { contractLineId: string }) => (
     <div data-testid={`services-list-${contractLineId}`} />
@@ -87,7 +88,7 @@ describe('ContractTemplateDetail Manage Services', () => {
 
   afterEach(() => cleanup());
 
-  it('opens the services manager and formats the line rate currency-neutrally', async () => {
+  it('opens the services manager and formats the line rate in the template currency', async () => {
     render(
       <CurrencyFormatProvider currencyCode="USD" locale="en-US">
         <ContractTemplateDetail />
@@ -99,11 +100,11 @@ describe('ContractTemplateDetail Manage Services', () => {
 
     await waitFor(() => expect(screen.getByText('Manage Template Services')).toBeInTheDocument());
     expect(actions.getDetailedContractLines).toHaveBeenCalled();
-    // Templates are currency-neutral: the rate carries no symbol or code, even
-    // when the stored template row has a currency_code and the provider has another.
+    // Templates carry a base currency: the rate is formatted in the template's
+    // currency (EUR), not the surrounding provider's (USD).
     const rate = screen.getByText(/123\.45/);
-    expect(rate).toHaveTextContent("123.45 in the client's currency");
-    expect(rate.textContent).not.toMatch(/[$€£¥]|USD|EUR/);
+    expect(rate).toHaveTextContent('€123.45');
+    expect(rate.textContent).not.toMatch(/\$|USD/);
     expect(screen.getByTestId('services-list-line-1')).toBeInTheDocument();
   });
 
@@ -139,12 +140,48 @@ describe('ContractTemplateDetail Manage Services', () => {
     expect(screen.getByTestId('services-list-line-usage')).toBeInTheDocument();
 
     // The rate badge follows the line type, and the fixed-fee rate editor stays
-    // fixed-only.
-    expect(screen.getByText(/Hourly rate:/)).toHaveTextContent("150.00 in the client's currency");
+    // fixed-only. The amount is formatted in the template's own base currency.
+    expect(screen.getByText(/Hourly rate:/)).toHaveTextContent('€150.00');
     expect(screen.queryByText(/Fixed Fee Rate:/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Edit Rate' })).toBeNull();
     // A usage line with no line-level rate shows no rate badge at all: its
     // rates live on the services below.
     expect(screen.queryByText(/Unit rate:/)).toBeNull();
+  });
+
+  it('shows effective billing timing in the Template Composition line summaries', async () => {
+    actions.getDetailedContractLines.mockResolvedValue([
+      {
+        contract_line_id: 'line-fixed',
+        contract_line_name: 'Managed Bundle',
+        contract_line_type: 'Fixed',
+        billing_frequency: 'monthly',
+        billing_timing: 'advance',
+        rate: 10000,
+      },
+      {
+        contract_line_id: 'line-hourly',
+        contract_line_name: 'Support Hours',
+        contract_line_type: 'Hourly',
+        billing_frequency: 'monthly',
+        billing_timing: 'advance',
+        rate: 15000,
+      },
+    ]);
+
+    render(
+      <CurrencyFormatProvider currencyCode="USD" locale="en-US">
+        <ContractTemplateDetail />
+      </CurrencyFormatProvider>,
+    );
+
+    // Manage Services is intentionally not opened: this is the default composition view.
+    const fixedTiming = await screen.findByTestId('template-composition-line-billing-timing-line-fixed');
+    expect(fixedTiming).toHaveTextContent('In Advance');
+    // Hourly lines are always arrears, even when stored as advance.
+    expect(screen.getByTestId('template-composition-line-billing-timing-line-hourly')).toHaveTextContent(
+      'In Arrears',
+    );
+    expect(screen.queryByText('Manage Template Services')).toBeNull();
   });
 });

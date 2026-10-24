@@ -163,6 +163,9 @@ export const combinedFixedPlanConfigResponseSchema = z.object({
 
 export const pricingBasisSchema = z.enum(['bundle', 'unit']);
 
+// What a stored fixed-member base_rate means (see shared/billingClients/fixedMemberRate.ts).
+export const fixedBaseRateBasisSchema = z.enum(['per_unit', 'share']);
+
 // Base service configuration
 export const planServiceConfigurationSchema = z.object({
   config_id: uuidSchema,
@@ -181,6 +184,7 @@ export const planServiceConfigurationSchema = z.object({
 export const planServiceFixedConfigSchema = z.object({
   config_id: uuidSchema,
   base_rate: z.number().min(0).optional(),
+  base_rate_basis: fixedBaseRateBasisSchema.nullable().optional(),
   pricing_basis: pricingBasisSchema.nullable().optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
@@ -192,8 +196,14 @@ export const planServiceFixedConfigSchema = z.object({
 // currency. 'bundle' (default): the line total is authoritative and the
 // quantity only allocates a share of it. The basis is chosen when the service
 // is added and cannot be changed by an update.
+//
+// base_rate_basis states what a stored base_rate means for a bundle member:
+// 'per_unit' (rate x quantity; the default when absent, the API's documented
+// unit-rate sense) or 'share' (the member's slice of the line total, quantity
+// ignored). Per-unit services are always per_unit.
 export const createPlanServiceFixedConfigSchema = z.object({
   base_rate: z.number().min(0).nullable().optional(),
+  base_rate_basis: fixedBaseRateBasisSchema.optional(),
   pricing_basis: pricingBasisSchema.optional()
 });
 
@@ -322,7 +332,13 @@ export const updatePlanServiceSchema = z.object({
     createPlanServiceHourlyConfigSchema.partial(),
     createPlanServiceUsageConfigSchema.partial(),
     createPlanServiceBucketConfigSchema.partial()
-  ]).optional(),
+  ]).and(
+    // The partial branches above strip unknown keys and the hourly/usage/bucket
+    // partials accept an empty object, so an invalid base_rate_basis would be
+    // silently dropped. Validate it explicitly whenever it is present (default
+    // strip: the right side contributes no keys other than base_rate_basis).
+    z.object({ base_rate_basis: fixedBaseRateBasisSchema.optional() })
+  ).optional(),
   rate_tiers: z.array(createRateTierSchema).optional(),
   user_type_rates: z.array(createUserTypeRateSchema).optional()
 });

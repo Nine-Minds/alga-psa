@@ -21,7 +21,7 @@ interface BucketOverlayFieldsProps {
   disabled?: boolean;
   automationId?: string;
   billingFrequency?: string;
-  /** Contract currency; omit to use the tenant default. */
+  /** Contract or template currency; the overage rate is in this currency's own minor units. Omit to use the tenant default. */
   currencyCode?: string;
 }
 
@@ -33,20 +33,22 @@ export function BucketOverlayFields({
   disabled = false,
   automationId,
   billingFrequency = 'monthly',
-  currencyCode
+  currencyCode,
 }: BucketOverlayFieldsProps) {
   const { t } = useTranslation('msp/contracts');
-  const { symbol } = useCurrencyFormat();
+  const { symbol, fractionDigits } = useCurrencyFormat();
+  const rateDigits = currencyCode ? fractionDigits(currencyCode) : 2;
+  const rateScale = 10 ** rateDigits;
   const [overageRateInput, setOverageRateInput] = useState<string>('');
 
   useEffect(() => {
     // Initialize overage rate input from value
     if (value.overage_rate !== undefined) {
-      setOverageRateInput((value.overage_rate / 100).toFixed(2));
+      setOverageRateInput((value.overage_rate / rateScale).toFixed(rateDigits));
     } else {
       setOverageRateInput('');
     }
-  }, [value.overage_rate]);
+  }, [value.overage_rate, rateScale, rateDigits]);
   const resolvedUnitLabel =
     mode === 'hours'
       ? t('bucketOverlay.units.hours', { defaultValue: 'hours' })
@@ -180,9 +182,9 @@ export function BucketOverlayFields({
               handleOverageChange(0);
             } else {
               const dollars = parseFloat(overageRateInput) || 0;
-              const cents = Math.round(dollars * 100);
+              const cents = Math.round(dollars * rateScale);
               handleOverageChange(cents);
-              setOverageRateInput((cents / 100).toFixed(2));
+              setOverageRateInput((cents / rateScale).toFixed(rateDigits));
             }
           }}
           placeholder="0.00"

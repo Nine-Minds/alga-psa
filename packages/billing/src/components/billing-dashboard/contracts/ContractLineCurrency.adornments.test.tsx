@@ -18,6 +18,7 @@ const SYMBOLS: Record<string, string> = { USD: '$', CAD: 'CA$', EUR: '€' };
 vi.mock('@alga-psa/ui/lib', () => ({
   useCurrencyFormat: () => ({
     symbol: (currency?: string) => (currency ? SYMBOLS[currency] : 'TENANT-DEFAULT'),
+    fractionDigits: () => 2,
     money: (minor: number, currency?: string) =>
       `${currency ? SYMBOLS[currency] : 'TENANT-DEFAULT'}${(minor / 100).toFixed(2)}`,
   }),
