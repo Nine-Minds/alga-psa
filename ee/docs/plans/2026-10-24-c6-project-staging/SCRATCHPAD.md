@@ -6,3 +6,4 @@
 - Watch: `projectAuthorization.contract.test.ts` greps the private authorizer source; update with the extraction.
 - Watch: C3 also edits recordLinks.ts; keep the two copies byte-identical.
 - Build order: see features.json (design section 4).
+- 2026-10-24 gate re-check (F001): `gh pr view 3818` state=OPEN, mergedAt=null. Plan-only; no code written, plan unchanged.
