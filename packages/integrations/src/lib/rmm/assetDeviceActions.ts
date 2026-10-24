@@ -1,7 +1,7 @@
 /**
  * Per-provider device actions behind the asset detail page (refresh, reboot,
  * script, remote control). The Tactical implementation is Community Edition;
- * NinjaOne arrives through the guarded @enterprise import the same way the
+ * NinjaOne and Datto arrive through guarded @enterprise imports the same way the
  * device-sync and alert-polling jobs resolve their EE strategies.
  */
 
@@ -37,6 +37,15 @@ export async function resolveRmmAssetDeviceActions(
         // Real adapter in EE builds; the CE stub exports undefined.
         const mod = await import('@enterprise/lib/integrations/ninjaone/assetDeviceActions');
         return (mod.ninjaOneAssetDeviceActions as RmmAssetDeviceActions | undefined) ?? null;
+      } catch {
+        return null;
+      }
+    }
+    case 'datto': {
+      try {
+        // Real adapter in EE builds; the CE stub exports undefined.
+        const mod = await import('@enterprise/lib/integrations/datto/assetDeviceActions');
+        return (mod.dattoRmmAssetDeviceActions as RmmAssetDeviceActions | undefined) ?? null;
       } catch {
         return null;
       }

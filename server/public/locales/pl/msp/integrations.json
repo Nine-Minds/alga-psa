@@ -30,7 +30,8 @@
           "mapped": "Zmapowane",
           "noResult": "Nie zwrócono wyniku dla tego wiersza.",
           "pending": "Oczekuje",
-          "saved": "Zapisano"
+          "saved": "Zapisano",
+          "missingField": "Brak: {{field}}"
         },
         "suggested": "Sugerowane",
         "toSave": "Do zapisania: {{total}}"
@@ -82,7 +83,8 @@
           "instant": "Natychmiastowy",
           "live": "Na żywo",
           "manual": "Ręczny",
-          "twoWay": "Dwukierunkowy"
+          "twoWay": "Dwukierunkowy",
+          "iif": "IIF"
         },
         "highlights": {
           "delivery": "Dostarczanie",
@@ -102,6 +104,9 @@
           },
           "xeroCsv": {
             "description": "Eksportuj faktury do CSV w celu ręcznego importu do Xero i importuj dane podatkowe z raportów Xero."
+          },
+          "qbd": {
+            "description": "Eksportuj faktury jako plik IIF do importu w QuickBooks Desktop."
           }
         },
         "selected": "Wybrano {{title}}",
@@ -129,13 +134,22 @@
         }
       },
       "adjustmentMappings": {
-        "desktopServices": "Konta usług Desktop",
-        "desktopDiscounts": "Rabaty Desktop",
         "desktopAccount": "Nazwa konta przychodów Desktop",
         "description": "Przed eksportem przypisz rabaty i uznania faktur. Przypisanie dotyczy tej firmy księgowej.",
         "add": "Dodaj przypisanie",
         "remove": "Usuń przypisanie",
-        "removeConfirm": "Usunąć to przypisanie księgowe?"
+        "removeConfirm": "Usunąć to przypisanie księgowe?",
+        "desktopTaxAccount": "Nazwa konta podatku od sprzedaży Desktop",
+        "desktopCustomer": "Nazwa klienta Desktop",
+        "desktopTerms": "Nazwa warunków Desktop",
+        "descriptionTaxCodes": "Każdy region podatkowy wskazuje pozycję lub grupę podatku od sprzedaży naliczaną przez QuickBooks Desktop oraz konto zobowiązań, na które jest księgowana.",
+        "descriptionServices": "Każda usługa wskazuje pozycję QuickBooks Desktop używaną w jej wierszach faktury oraz konto przychodów, na które są księgowane.",
+        "descriptionClients": "Klient QuickBooks Desktop, na którego wystawiane są faktury dla każdego klienta. Niezmapowani klienci blokują eksport.",
+        "descriptionPaymentTerms": "Warunki QuickBooks Desktop drukowane na każdej fakturze. Niezmapowane warunki pozostają puste.",
+        "desktopItem": "Nazwa pozycji Desktop",
+        "desktopItemHelp": "Pozycja dokładnie tak, jak widnieje na liście pozycji QuickBooks Desktop. Każdy wiersz faktury wskazuje pozycję, dlatego eksporty są blokowane, dopóki nie zostanie ustawiona.",
+        "desktopSalesTaxItem": "Pozycja lub grupa podatku od sprzedaży",
+        "desktopSalesTaxItemHelp": "Pozostaw puste, aby użyć domyślnej pozycji podatku od sprzedaży z ustawień QuickBooks Desktop."
       }
     },
     "calendar": {
@@ -1689,10 +1703,15 @@
           "consentNotGranted": "Microsoft nie potwierdził zgody administratora.",
           "consentPersistFailed": "Nie udało się zapisać zgody administratora Microsoft.",
           "invalidState": "To żądanie konfiguracji Microsoft jest nieprawidłowe lub wygasło. Rozpocznij ponownie w ustawieniach dostawców.",
-          "microsoftError": "Microsoft nie mógł ukończyć żądania konfiguracji. Spróbuj ponownie lub użyj konfiguracji ręcznej.",
+          "microsoftError": "Microsoft nie mógł ukończyć żądania konfiguracji.",
           "missingCode": "Microsoft nie zwrócił kodu autoryzacyjnego. Rozpocznij konfigurację ponownie.",
-          "sessionMismatch": "Twoja sesja AlgaPSA nie odpowiada administratorowi, który rozpoczął tę konfigurację. Zaloguj się i spróbuj ponownie.",
-          "optionsLoadFailed": "Nie udało się wczytać opcji konfiguracji poczty Microsoft."
+          "sessionMismatch": "Ta konfiguracja została rozpoczęta w innej przeglądarce lub w oknie prywatnym. Dokończ ją w tym samym oknie, w którym ją rozpoczęto, albo użyj linku zatwierdzenia.",
+          "optionsLoadFailed": "Nie udało się wczytać opcji konfiguracji poczty Microsoft.",
+          "policyBlocked": "Zasady dostępu warunkowego lub zasady urządzeń w Twojej organizacji Microsoft zablokowały logowanie. Poproś administratora Microsoft o wyłączenie tej aplikacji spod zasad albo zatwierdź z urządzenia dozwolonego przez zasady.",
+          "adminRequired": "Aplikację musi zatwierdzić administrator globalny Microsoft. Skopiuj link zatwierdzenia i wyślij go tej osobie.",
+          "wrongTenant": "Użyte konto Microsoft należy do innej organizacji Microsoft niż ta, która jest konfigurowana.",
+          "appNotFound": "Nie znaleziono aplikacji Microsoft w tej organizacji Microsoft. Mogła zostać usunięta albo podano nieprawidłową organizację Microsoft. Możesz ręcznie skonfigurować inną aplikację.",
+          "quoteDiagnostics": "Podaj to podczas sprawdzania dzienników logowania Entra: {{diagnostics}}"
         },
         "fields": {
           "clientId": "Identyfikator klienta",
@@ -2613,6 +2632,202 @@
           "select": "Wybierz kontakt"
         }
       },
+      "datto": {
+        "errors": {
+          "loadSettings": "Nie udało się wczytać ustawień Datto RMM",
+          "loadSiteMappings": "Nie udało się wczytać mapowań lokalizacji",
+          "saveConfig": "Nie udało się zapisać konfiguracji Datto RMM",
+          "connectionTest": "Test połączenia nie powiódł się",
+          "disconnect": "Rozłączanie nie powiodło się",
+          "syncSites": "Synchronizacja lokalizacji nie powiodła się",
+          "someSitesFailed": "Nie udało się zsynchronizować niektórych lokalizacji: {{errors}}",
+          "syncDevices": "Synchronizacja urządzeń nie powiodła się",
+          "someDevicesFailed": "Nie udało się zsynchronizować niektórych urządzeń: {{errors}}",
+          "updateMapping": "Nie udało się zaktualizować mapowania",
+          "backfillAlerts": "Uzupełnianie alertów nie powiodło się",
+          "someAlertsFailed": "Niektórych alertów nie można było zaktualizować: {{errors}}",
+          "ingestSoftware": "Pobieranie oprogramowania nie powiodło się",
+          "someSoftwareFailed": "Nie udało się pobrać oprogramowania z niektórych urządzeń: {{errors}}",
+          "createClients": "Nie udało się utworzyć klientów dla lokalizacji Datto",
+          "someClientsFailed": "Niektóre lokalizacje nie zostały przypisane: {{errors}}",
+          "regenerateWebhookSecret": "Nie udało się wygenerować nowego secretu webhooka"
+        },
+        "toasts": {
+          "saveFailedTitle": "Zapisywanie nie powiodło się",
+          "savedTitle": "Zapisano",
+          "savedDescription": "Zaktualizowano konfigurację Datto RMM.",
+          "connectionFailedTitle": "Połączenie nie powiodło się",
+          "connectedTitle": "Połączono",
+          "connectedDescription": "Zweryfikowano połączenie z Datto RMM.",
+          "disconnectFailedTitle": "Rozłączanie nie powiodło się",
+          "disconnectedTitle": "Rozłączono",
+          "disconnectedDescription": "Wyczyszczono dane uwierzytelniające Datto RMM. Mapowania lokalizacji zostały zachowane.",
+          "syncFailedTitle": "Synchronizacja nie powiodła się",
+          "sitesSyncedTitle": "Zsynchronizowano lokalizacje",
+          "sitesSyncedDescription": "Lokalizacje Datto zostały zsynchronizowane do mapowań lokalizacji.",
+          "devicesSyncedTitle": "Zsynchronizowano urządzenia",
+          "devicesSyncedDescription": "Urządzenia Datto zostały zsynchronizowane jako zasoby.",
+          "updateFailedTitle": "Aktualizacja nie powiodła się",
+          "backfillFailedTitle": "Uzupełnianie nie powiodło się",
+          "alertsSyncedTitle": "Zsynchronizowano alerty",
+          "alertsSyncedDescription": "Otwarte alerty Datto zostały uzupełnione.",
+          "ingestionFailedTitle": "Pobieranie nie powiodło się",
+          "softwareIngestedTitle": "Pobrano oprogramowanie",
+          "softwareIngestedDescription": "Inwentarz oprogramowania Datto został pobrany.",
+          "optionsSavedDescription": "Zaktualizowano opcje Datto RMM.",
+          "createClientsFailedTitle": "Tworzenie klientów nie powiodło się",
+          "sitesSyncedWithClients": "Zsynchronizowano lokalizacje Datto. Nowe lokalizacje: utworzono {{created}} klientów, powiązano {{linked}}, niepowodzenia: {{failed}}.",
+          "webhookSecretRegeneratedTitle": "Wygenerowano nowy secret webhooka",
+          "webhookSecretRegeneratedDescription": "Zaktualizuj wartość nagłówka w odpowiedziach webhooka w Datto."
+        },
+        "success": {
+          "saved": "Zapisano konfigurację Datto RMM. Uruchom „Testuj połączenie”, aby ją aktywować.",
+          "unnamedAccount": "Twoje konto",
+          "connection": "Połączenie zakończone powodzeniem. Konto: {{account}}. Lokalizacje: {{sites}}, Urządzenia: {{devices}}.",
+          "disconnected": "Rozłączono.",
+          "siteSyncCompleted": "Synchronizacja lokalizacji zakończona. Przetworzone: {{processed}}, Utworzone: {{created}}, Zaktualizowane: {{updated}}, Nieudane: {{failed}}",
+          "deviceSyncCompleted": "Synchronizacja urządzeń zakończona. Przetworzone: {{processed}}, Utworzone: {{created}}, Zaktualizowane: {{updated}}, Nieudane: {{failed}}",
+          "alertBackfillCompleted": "Uzupełnianie alertów zakończone. Przetworzone: {{processed}}, Utworzone: {{created}}, Zaktualizowane: {{updated}}, Nieudane: {{failed}}",
+          "softwareIngestionCompleted": "Pobieranie oprogramowania zakończone. Przetworzone: {{processed}}, Zainstalowane/Zaktualizowane: {{created}}, Zaktualizowane zasoby: {{updated}}, Nieudane: {{failed}}",
+          "clientsCreated": "Utworzono {{created}} klientów i powiązano {{linked}} istniejących. Pominięto: {{skipped}}, Niepowodzenia: {{failed}}"
+        },
+        "mappings": {
+          "site": "Lokalizacja Datto",
+          "client": "Klient Alga",
+          "defaultContact": "Kontakt domyślny",
+          "missingBadge": "Brak w Datto",
+          "onDemandBadge": "Na żądanie",
+          "signedInUsersSite": "Zalogowani użytkownicy lokalizacji",
+          "signedInUsersSelect": "Wybierz przypisaną lokalizację"
+        },
+        "dattoIdLabel": "ID Datto: {{id}}",
+        "client": {
+          "loading": "Ładowanie klientów…",
+          "select": "Wybierz klienta",
+          "suggested": "Sugestia: {{client}}",
+          "create": "Utwórz klienta „{{name}}”",
+          "creating": "Tworzenie…"
+        },
+        "contact": {
+          "select": "Wybierz kontakt"
+        },
+        "autoSync": "Automatyczna synchronizacja",
+        "platform": {
+          "custom": "Niestandardowy URL"
+        },
+        "webhook": {
+          "copiedTitle": "Skopiowano",
+          "url": "URL webhooka",
+          "urlCopied": "Skopiowano URL webhooka do schowka.",
+          "copy": "Kopiuj",
+          "headerName": "Niestandardowa nazwa nagłówka",
+          "headerNameCopied": "Skopiowano nazwę nagłówka webhooka do schowka.",
+          "secret": "Secret nagłówka",
+          "secretCopied": "Skopiowano secret webhooka do schowka.",
+          "bodyTemplate": "Szablon treści (alert wyzwolony)",
+          "bodyTemplateCopied": "Skopiowano szablon treści do schowka.",
+          "resolveBodyTemplate": "Szablon treści (alert rozwiązany)",
+          "resolveBodyTemplateCopied": "Skopiowano szablon treści dla rozwiązania do schowka.",
+          "unavailable": "Informacje o webhooku są niedostępne. (Wymaga uprawnienia do aktualizacji ustawień.)"
+        },
+        "disconnectConfirm": {
+          "title": "Rozłączyć Datto RMM?",
+          "message": "Zapisany klucz API i secret zostaną usunięte, secret webhooka zostanie zresetowany, a zaplanowane synchronizacje zostaną zatrzymane. Mapowania lokalizacji i zsynchronizowane zasoby zostaną zachowane."
+        },
+        "actions": {
+          "disconnect": "Rozłącz",
+          "refresh": "Odśwież",
+          "saving": "Zapisywanie...",
+          "save": "Zapisz",
+          "testing": "Testowanie...",
+          "testConnection": "Testuj połączenie",
+          "disconnecting": "Rozłączanie...",
+          "syncing": "Synchronizacja...",
+          "syncSites": "Synchronizuj lokalizacje",
+          "syncDevices": "Synchronizuj urządzenia",
+          "ingesting": "Pobieranie...",
+          "ingestSoftware": "Pobierz oprogramowanie",
+          "syncAlerts": "Synchronizuj alerty",
+          "createClients": "Utwórz klientów",
+          "createClientsForUnmapped": "Utwórz klientów dla nieprzypisanych ({{count}})",
+          "regenerateSecret": "Wygeneruj nowy secret"
+        },
+        "title": "Datto RMM",
+        "description": "Połącz Datto RMM, aby synchronizować lokalizacje i urządzenia, pobierać alerty i otwierać Web Remote z poziomu zasobów.",
+        "status": {
+          "connected": "Połączono",
+          "disconnected": "Rozłączono",
+          "instanceUrlNotSet": "URL API nie jest ustawiony"
+        },
+        "counts": {
+          "mappedSites": "Zmapowane lokalizacje",
+          "syncedDevices": "Zsynchronizowane urządzenia",
+          "activeAlerts": "Aktywne alerty",
+          "lastSync": "Ostatnia synchronizacja",
+          "never": "Nigdy"
+        },
+        "lastError": "Ostatni błąd: {{error}}",
+        "fields": {
+          "platform": "Platforma",
+          "platformHelp": "Wybierz region z adresu używanego do logowania do Datto RMM (na przykład https://merlot.rmm.datto.com oznacza Merlot).",
+          "instanceUrl": "URL API",
+          "instanceUrlHelp": "Host API Datto, np. https://merlot-api.centrastage.net. Końcowy /api jest dodawany automatycznie.",
+          "apiUserNote": "Utwórz dedykowanego użytkownika API Datto dla Alga. Otwórz tego użytkownika w Datto RMM, aby wygenerować jego klucz API i secret, a następnie nadaj jego poziomowi zabezpieczeń dostęp do odczytu danych konta, lokalizacji, urządzeń, alertów i audytu.",
+          "softwareOnSync": "Pobieraj oprogramowanie podczas synchronizacji urządzeń",
+          "softwareOnSyncHelp": "Podczas synchronizacji odczytuje audyt oprogramowania każdego zmienionego urządzenia. Oznacza to jedno dodatkowe wywołanie API na zmienione urządzenie, co może być wolne w dużych kontach.",
+          "resolveOnClose": "Rozwiązuj alert Datto po zamknięciu jego zgłoszenia",
+          "resolveOnCloseHelp": "Wymaga użytkownika API Datto z dostępem do zapisu alertów. Pozostaw wyłączone dla użytkownika API tylko do odczytu.",
+          "rebootComponent": "Komponent restartu",
+          "rebootComponentSelect": "Wybierz komponent",
+          "rebootComponentUid": "UID komponentu",
+          "rebootComponentFallback": "Lista komponentów jest niedostępna ({{reason}}). Zamiast tego wklej UID komponentu.",
+          "rebootComponentUnknownReason": "nieznany błąd",
+          "rebootComponentHelp": "Pozostaw puste, aby wyłączyć akcję restartu. Można uruchamiać tylko komponenty, które już znajdują się na Twoim koncie Datto.",
+          "hostChangedHint": "Platforma lub adres URL API został zmieniony. Wprowadź ponownie klucz API i secret API, aby zapisać.",
+          "optionsNeedCredentials": "Najpierw zapisz klucz API i secret. Te opcje są zablokowane, dopóki nie zapisano poświadczeń.",
+          "autoCreateClients": "Automatycznie twórz klientów dla nowych lokalizacji",
+          "autoCreateClientsHelp": "Lokalizacje są odświeżane przed każdą zaplanowaną synchronizacją urządzeń. Gdy ta opcja jest włączona, lokalizacja widziana po raz pierwszy otrzymuje klienta Alga o tej samej nazwie lub zostaje powiązana z klientem, który już ma tę nazwę. Istniejące nieprzypisane lokalizacje i lokalizacje na żądanie pozostają bez zmian."
+        },
+        "auth": {
+          "apiKey": "Klucz API",
+          "enterApiKey": "Wprowadź klucz API",
+          "saved": "Zapisano: {{value}}",
+          "apiSecret": "Secret API",
+          "savedEnterToUpdate": "Zapisano (wprowadź, aby zaktualizować)",
+          "enterApiSecret": "Wprowadź secret API"
+        },
+        "statusLine": {
+          "configured": "Status: Skonfigurowano",
+          "notConfigured": "Status: Nie skonfigurowano"
+        },
+        "loadingSettings": "Ładowanie ustawień Datto RMM...",
+        "sections": {
+          "sites": "Lokalizacje",
+          "sitesDescription": "Synchronizuj lokalizacje Datto do mapowań lokalizacji Alga, a następnie przypisz je do klientów Alga.",
+          "siteMapping": "Mapowanie lokalizacji",
+          "siteMappingDescription": "Przypisz każdą lokalizację Datto do klienta Alga i kontroluj automatyczną synchronizację dla każdej lokalizacji. Sugestie pochodzą z nazwy lokalizacji lub nazwy jej firmy w Autotask i nigdy nie są stosowane automatycznie.",
+          "siteMappingEmpty": "Nie znaleziono lokalizacji. Najpierw uruchom „Synchronizuj lokalizacje”.",
+          "devices": "Urządzenia",
+          "devicesDescription": "Synchronizuj urządzenia Datto jako zasoby Alga dla lokalizacji z włączoną automatyczną synchronizacją.",
+          "alerts": "Alerty",
+          "alertsDescription": "Alerty są odpytywane zgodnie z harmonogramem skonfigurowanym poniżej w sekcji Automatyzacja alertów. Użyj „Synchronizuj alerty”, aby pobrać otwarte alerty teraz.",
+          "webhooks": "Webhook (opcjonalna szybka ścieżka)",
+          "webhooksDescription": "Odpytywanie jest ścieżką gwarantowaną. Aby otrzymywać alerty w ciągu kilku sekund, dodaj akcję odpowiedzi webhooka do polityk monitorowania Datto, używając poniższego URL, niestandardowego nagłówka i szablonu treści.",
+          "assetActions": "Akcje na zasobach",
+          "assetActionsDescription": "Wybierz komponent Datto, który restartuje urządzenie, gdy technik kliknie „Uruchom ponownie urządzenie” przy zasobie. Jest uruchamiany jako Quick Job i wymaga użytkownika API z dostępem do zapisu."
+        },
+        "createClientsConfirm": {
+          "title": "Utworzyć klientów dla nieprzypisanych lokalizacji?",
+          "message": "Każda z {{count}} nieprzypisanych lokalizacji otrzyma klienta Alga o tej samej nazwie i zostanie do niego przypisana. Lokalizacja, której nazwa odpowiada istniejącemu klientowi, zostanie powiązana z tym klientem. Lokalizacje na żądanie i te, których nie ma już w Datto, pozostaną bez zmian."
+        },
+        "proFeature": {
+          "description": "Integracja z Datto RMM jest dostępna w AlgaPSA Pro."
+        },
+        "regenerateSecretConfirm": {
+          "title": "Wygenerować nowy secret webhooka?",
+          "message": "Obecny secret natychmiast przestanie działać. Alerty z webhooka będą odrzucane, dopóki każda odpowiedź webhooka w Datto nie zacznie wysyłać nowej wartości nagłówka. Nie ma to wpływu na odpytywanie."
+        }
+      },
       "tanium": {
         "proFeature": {
           "description": "Integracja z systemem RMM Tanium jest dostępna w AlgaPSA Pro."
@@ -2981,7 +3196,9 @@
         "invalidPeopleMode": "To nieprawidłowy tryb osób.",
         "billingProfileUnavailable": "Ten profil rozliczeniowy nie jest dostępny dla tego klienta.",
         "mappingNotFound": "To powiązanie już nie istnieje. Odśwież stronę i spróbuj ponownie.",
-        "forbidden": "Nie masz uprawnień, aby to zmienić."
+        "forbidden": "Nie masz uprawnień, aby to zmienić.",
+        "clientNotFound": "Ten klient już nie istnieje. Odśwież i spróbuj ponownie.",
+        "contactNotForClient": "Ten kontakt nie należy do klienta, do którego przypisano tę lokalizację."
       }
     },
     "sso": {
@@ -3950,13 +4167,16 @@
             "callControl": "Sterowanie połączeniami",
             "xapi": "API konfiguracji",
             "lastChecked": "Ostatnie sprawdzenie",
-            "notConnectedHint": "Połącz API centrali powyżej, aby użyć tej funkcji."
+            "notConnectedHint": "Połącz API centrali powyżej, aby użyć tej funkcji.",
+            "usersBlocked": "Rola aplikacji API 3CX nie może odczytywać użytkowników. Nadaj jej potrzebne uprawnienia w 3CX Admin Console > Integrations > API > (app) > Role.",
+            "contactsBlocked": "Rola aplikacji API 3CX nie może zarządzać kontaktami. Nadaj jej potrzebne uprawnienia w 3CX Admin Console > Integrations > API > (app) > Role."
           },
           "extensions": {
             "title": "Numery wewnętrzne",
             "sync": "Synchronizuj z centrali",
             "lastSync": "Ostatnia synchronizacja",
             "empty": "Nie zsynchronizowano jeszcze numerów wewnętrznych.",
+            "emptyAfterSync": "3CX nie zwrócił włączonych użytkowników; sprawdź uprawnienia aplikacji API",
             "dn": "Numer wewnętrzny",
             "pbxUser": "Użytkownik centrali",
             "algaUser": "Użytkownik AlgaPSA",
@@ -4054,6 +4274,59 @@
           "tickets": "Utwórz zgłoszenie z rozmowy albo powiąż rozmowę ze zgłoszeniem, nad którym już pracujesz.",
           "queue": "Kolejka numerów niedopasowanych i niejednoznacznych, aby żadna rozmowa nie została przypisana na wyczucie.",
           "providers": "Dziś Teams Phone; ten sam rdzeń połączeń przyjmie kolejnych dostawców."
+        }
+      }
+    },
+    "qbd": {
+      "settings": {
+        "title": "Integracja QuickBooks Desktop (IIF)",
+        "description": "Eksportuj faktury jako plik IIF dla opcji Plik → Narzędzia → Importuj → Pliki IIF w QuickBooks Desktop.",
+        "loading": "Ładowanie ustawień QuickBooks Desktop...",
+        "savedMessage": "Ustawienia zostały zapisane",
+        "save": "Zapisz ustawienia",
+        "connectionsPermissionNotice": "Możesz przeglądać ustawienia QuickBooks Desktop, ale ich zmiana wymaga uprawnienia do zarządzania połączeniami. Poproś administratora o jego nadanie.",
+        "errors": {
+          "load": "Nie udało się wczytać ustawień QuickBooks Desktop",
+          "save": "Nie udało się zapisać ustawień QuickBooks Desktop"
+        },
+        "warning": {
+          "title": "Najpierw utwórz kopię zapasową pliku firmy",
+          "description": "Podczas importu pliku IIF QuickBooks Desktop tworzy każdą nierozpoznaną nazwę klienta, pozycji, konta lub warunku, a importów IIF nie można cofnąć. Upewnij się, że każda nazwa poniżej i w mapowaniach dokładnie odpowiada plikowi firmy, i wykonaj pierwszy import na kopii zapasowej."
+        },
+        "exportSettings": {
+          "title": "Ustawienia eksportu IIF",
+          "description": "Wprowadź nazwy kont i pozycji QuickBooks Desktop dokładnie tak, jak w planie kont i liście pozycji."
+        },
+        "fields": {
+          "arAccount": "Konto należności",
+          "arAccountHelp": "Konto należności, na które księgowana jest każda faktura.",
+          "defaultIncomeAccount": "Domyślne konto przychodów",
+          "defaultIncomeAccountHelp": "Konto przychodów dla pozycji zmapowanych z eksportu oraz dla każdego mapowania usług lub rabatów bez konta.",
+          "salesTaxPayableAccount": "Konto zobowiązań z tytułu podatku od sprzedaży",
+          "salesTaxPayableAccountHelp": "Konto, na które księgowany jest wiersz podatku od sprzedaży, chyba że mapowanie kodów podatkowych regionu wskazuje inne.",
+          "defaultSalesTaxItem": "Domyślna pozycja podatku od sprzedaży",
+          "defaultSalesTaxItemHelp": "Pozycja lub grupa podatku od sprzedaży dla opodatkowanych faktur, których mapowanie kodów podatkowych jej nie wskazuje.",
+          "newProductItemType": "Typ pozycji dla nowych produktów",
+          "inventoryWarning": "Przyjęcia magazynowe z Alga nie są eksportowane, więc stany w QuickBooks staną się ujemne, chyba że wprowadzisz stany również w QuickBooks.",
+          "nonInventoryHelp": "Zalecane: Alga pozostaje głównym systemem magazynowym, a QuickBooks rejestruje tylko sprzedaż.",
+          "inventoryAssetAccount": "Konto aktywów magazynowych",
+          "cogsAccount": "Konto kosztu sprzedanych towarów"
+        },
+        "mappings": {
+          "title": "Mapowania QuickBooks",
+          "description": "Zmapuj klientów, usługi, rabaty, kody podatkowe i warunki płatności Alga na nazwy w pliku firmy QuickBooks Desktop. Każda usługa i rabat wymaga pozycji Desktop; niezmapowane warunki płatności pozostają puste.",
+          "permissionNotice": "Edytowanie mapowań QuickBooks Desktop wymaga uprawnienia do zarządzania mapowaniami. Poproś administratora o jego nadanie."
+        },
+        "exports": {
+          "description": "Utwórz partię eksportu QuickBooks Desktop, uruchom ją, a następnie pobierz plik IIF ze szczegółów partii."
+        },
+        "newItems": {
+          "title": "Pozycje tworzone przez eksporty",
+          "description": "Gdy eksport tworzy nową pozycję QuickBooks dla produktu Alga, używa tego typu pozycji. Usługi są zawsze tworzone jako pozycje usługowe."
+        },
+        "itemTypes": {
+          "nonInventory": "Część niemagazynowa",
+          "inventory": "Część magazynowa"
         }
       }
     }
@@ -4175,6 +4448,10 @@
       "contactWithoutClient": "W systemie istnieje już kontakt z tym adresem e-mail bez przypisania do klienta",
       "emailOnAnotherClient": "Ten adres e-mail jest już powiązany z innym klientem",
       "emailOnAnotherClientNamed": "Ten adres e-mail jest już powiązany z: {{clientName}}"
+    },
+    "quickbooksDesktop": {
+      "viewSettingsPermission": "Użytkownik nie ma uprawnień do wyświetlania ustawień integracji",
+      "manageIntegrationsPermission": "Użytkownik nie ma uprawnień do zarządzania ustawieniami integracji"
     }
   },
   "telephony": {

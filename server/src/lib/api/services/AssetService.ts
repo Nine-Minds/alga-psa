@@ -332,6 +332,39 @@ export class AssetService extends BaseService<any> {
     return asset;
   }
 
+  /**
+   * The record context the authorization kernel evaluates for an asset read.
+   * Mirrors `resolveAssetAuthorizationRecords` in the assets package (assignees
+   * and teams come from asset_associations). Tenant-scoped: another tenant's id
+   * resolves to null.
+   */
+  async getAuthorizationRecord(id: string, context: ServiceContext): Promise<Record<string, any> | null> {
+    const knex = await this.getDbForContext(context);
+    const asset = await scopedTable(knex, context.tenant, this.tableName)
+      .where({ asset_id: id })
+      .select('asset_id', 'client_id')
+      .first();
+    if (!asset) return null;
+
+    const associations: Array<{ entity_type: string; entity_id: string }> = await scopedTable(
+      knex,
+      context.tenant,
+      'asset_associations',
+    )
+      .where({ asset_id: id })
+      .select('entity_type', 'entity_id');
+
+    const assignedUserIds = associations.filter((a) => a.entity_type === 'user').map((a) => a.entity_id);
+    const teamIds = associations.filter((a) => a.entity_type === 'team').map((a) => a.entity_id);
+    return {
+      id: asset.asset_id,
+      ownerUserId: assignedUserIds[0] ?? null,
+      assignedUserIds,
+      clientId: asset.client_id ?? null,
+      teamIds,
+    };
+  }
+
   async getWithDetails(id: string, context: ServiceContext): Promise<any | null> {
     const asset = await this.getById(id, context);
     if (!asset) return null;
@@ -408,7 +441,8 @@ export class AssetService extends BaseService<any> {
     };
 
     // One transaction: a rejected assignee must not leave an asset behind
-    // without the contact the caller asked for.
+    // without the contact the caller asked for, and a failed extension write
+    // must not leave a committed asset with no extension row.
     const asset = await knex.transaction(async (trx) => {
       const [created] = await scopedTable(trx, context.tenant, this.tableName)
         .insert(assetRecord)
@@ -417,13 +451,12 @@ export class AssetService extends BaseService<any> {
       if (requestedContactId) {
         await this.applyAssignee(trx, context, created.asset_id, requestedContactId);
       }
+
+      if (extensionData) {
+        await this.upsertExtensionData(created.asset_id, created.asset_type, extensionData, context, trx);
+      }
       return created;
     });
-
-    // Handle extension data if provided
-    if (extensionData) {
-      await this.upsertExtensionData(asset.asset_id, asset.asset_type, extensionData, context);
-    }
 
     // Publish event
     await publishWorkflowEvent({
@@ -563,9 +596,10 @@ export class AssetService extends BaseService<any> {
       .where({ [this.primaryKey]: id })
       .first();
 
-    // One transaction for the columns, the group removal and the assignee:
-    // separately, a failed assignment left the client move committed without
-    // its FR-E5 group removal, or the other way round.
+    // One transaction for the columns, the group removal, the assignee and the
+    // extension row: separately, a failed assignment left the client move
+    // committed without its FR-E5 group removal (or the other way round), and a
+    // failed extension write left the rest of the same PUT committed.
     const after = await knex.transaction(async (trx) => {
       const [updated] = await scopedTable(trx, context.tenant, this.tableName)
         .where({ [this.primaryKey]: id })
@@ -589,12 +623,17 @@ export class AssetService extends BaseService<any> {
         await this.applyAssignee(trx, context, id, nextContactId);
       }
 
+      if (extensionData) {
+        // A retype moves the extension row to the new type's table; the old
+        // one goes with the type it belonged to.
+        if (data.asset_type && current?.asset_type && data.asset_type !== current.asset_type) {
+          await this.deleteExtensionData(id, current.asset_type, context, trx);
+        }
+        await this.upsertExtensionData(id, effectiveAssetType, extensionData, context, trx);
+      }
+
       return updated;
     });
-
-    if (extensionData) {
-      await this.upsertExtensionData(id, effectiveAssetType, extensionData, context);
-    }
 
     // Publish event
     const updatePayload = buildAssetUpdatedPayload({
@@ -846,39 +885,62 @@ export class AssetService extends BaseService<any> {
       .first();
   }
 
-  async upsertExtensionData(assetId: string, assetType: string, data: any, context: ServiceContext): Promise<void> {
+  /**
+   * Every array-shaped extension column is `jsonb`, but node-pg renders a bare
+   * JS array as an array literal, which Postgres rejects with 22P02 for a json
+   * column. Mirrors encodeExtensionJsonArrays in the internal asset actions.
+   */
+  private encodeExtensionJsonArrays(fields: Record<string, unknown>): Record<string, unknown> {
+    const encoded: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(fields)) {
+      encoded[key] = Array.isArray(value) ? JSON.stringify(value) : value;
+    }
+    return encoded;
+  }
+
+  async upsertExtensionData(
+    assetId: string,
+    assetType: string,
+    data: any,
+    context: ServiceContext,
+    trx?: Knex
+  ): Promise<void> {
     const tableName = this.getExtensionTableName(assetType);
     if (!tableName) return;
 
-    const extensionData = {
-      ...data,
-      asset_id: assetId,
-      tenant: context.tenant,
-      updated_at: new Date()
-    };
+    // The extension tables carry no created_at/updated_at columns, and
+    // tenant/asset_id are the Citus partition key + PK, so they cannot appear
+    // in an UPDATE SET clause.
+    const { tenant: _tenant, asset_id: _assetId, ...rest } = (data ?? {}) as Record<string, unknown>;
+    const extensionFields = this.encodeExtensionJsonArrays(rest);
 
-    // Check if record exists
-    const knex = await this.getDbForContext(context);
-    const existing = await scopedTable(knex, context.tenant, tableName)
+    const conn = trx ?? (await this.getDbForContext(context));
+    const existing = await scopedTable(conn, context.tenant, tableName)
       .where({ asset_id: assetId })
       .first();
 
     if (existing) {
-      await scopedTable(knex, context.tenant, tableName)
+      if (Object.keys(extensionFields).length === 0) return;
+      await scopedTable(conn, context.tenant, tableName)
         .where({ asset_id: assetId })
-        .update(extensionData);
+        .update(extensionFields);
     } else {
-      extensionData.created_at = new Date();
-      await scopedTable(knex, context.tenant, tableName).insert(extensionData);
+      await scopedTable(conn, context.tenant, tableName)
+        .insert({ tenant: context.tenant, asset_id: assetId, ...extensionFields });
     }
   }
 
-  async deleteExtensionData(assetId: string, assetType: string, context: ServiceContext): Promise<void> {
+  async deleteExtensionData(
+    assetId: string,
+    assetType: string,
+    context: ServiceContext,
+    trx?: Knex
+  ): Promise<void> {
     const tableName = this.getExtensionTableName(assetType);
     if (!tableName) return;
 
-    const knex = await this.getDbForContext(context);
-    await scopedTable(knex, context.tenant, tableName)
+    const conn = trx ?? (await this.getDbForContext(context));
+    await scopedTable(conn, context.tenant, tableName)
       .where({ asset_id: assetId })
       .del();
   }

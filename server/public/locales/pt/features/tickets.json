@@ -461,6 +461,14 @@
     "clientPortal": "Recebido via Portal do Cliente",
     "inboundEmail": "Recebido via e-mail de entrada"
   },
+  "originalEmail": {
+    "text": "Texto",
+    "original": "Email original",
+    "emailShort": "Email",
+    "loading": "Carregando o email original…",
+    "error": "Não foi possível carregar o email original.",
+    "group": "Visualização da mensagem"
+  },
   "documents": {
     "title": "Documentos",
     "noDocuments": "Nenhum documento anexado",
@@ -1667,7 +1675,10 @@
       "ruleCategoryBoardMismatch": "A categoria selecionada pertence a um quadro diferente do da regra.",
       "ruleCategoryInvalid": "A categoria selecionada não é uma categoria de nível superior.",
       "ruleSubcategoryInvalid": "A subcategoria selecionada não pertence à categoria selecionada.",
-      "ruleSubcategoryRequiresCategory": "Selecione uma categoria antes de escolher uma subcategoria."
+      "ruleSubcategoryRequiresCategory": "Selecione uma categoria antes de escolher uma subcategoria.",
+      "ruleTooManyKeywords": "Use no máximo {{max}} palavras-chave por regra.",
+      "ruleKeywordTooLong": "Cada palavra-chave deve ter no máximo {{max}} caracteres.",
+      "ruleOriginInvalid": "Uma das origens de ticket selecionadas não é válida."
     }
   },
   "ticketSection": {

@@ -389,6 +389,8 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Contract templates (must be deleted before contracts)
   // Hourly/usage configs reference contract_template_line_service_configuration
   // with NO ACTION and must be deleted before it.
+  // Price sets/prices reference template lines, buckets and templates (children first)
+  'contract_template_prices', 'contract_template_price_sets',
   'contract_template_line_defaults',
   'contract_template_line_prepaid_blocks',
   'contract_template_line_bucket_services', 'contract_template_line_buckets',

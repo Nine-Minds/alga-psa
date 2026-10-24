@@ -68,7 +68,7 @@ import {
   hasCuratedChanges,
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
-import { applyMatchingChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
+import { applyMatchingChecklistTemplates, ticketDescriptionFromAttributes } from '@alga-psa/shared/lib/ticketChecklists';
 import { enforceTicketCloseRules, type CloseRuleBypassSource } from '../lib/validateTicketClosure';
 import { maybeReopenBundleMasterFromChildReply, mirrorCommentToChild } from './ticketBundleUtils';
 import {
@@ -3131,6 +3131,10 @@ export async function updateTicketInTransaction(
           category_id: updatedTicket.category_id,
           subcategory_id: updatedTicket.subcategory_id,
           priority_id: updatedTicket.priority_id,
+          client_id: updatedTicket.client_id,
+          ticket_origin: updatedTicket.ticket_origin,
+          title: updatedTicket.title,
+          description: ticketDescriptionFromAttributes(updatedTicket.attributes),
         }, isSystemActor
           ? undefined
           : {
