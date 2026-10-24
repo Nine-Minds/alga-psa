@@ -448,10 +448,31 @@ export interface SimulatedPeriod {
   invoice_view_model: WasmInvoiceViewModel;
 }
 
+/**
+ * A note on a simulation run. `info` and `warning` accompany priced periods.
+ *
+ * `error` is BLOCKING: the simulator refused to run (for example a service has
+ * a configuration type it can't price). A result that carries any `error`
+ * diagnostic has `periods: []` and therefore no totals; consumers must test
+ * with {@link isSimulationBlocked} and show the diagnostic instead of totals,
+ * and must not compare a blocked result (a blocked side has no figures, so a
+ * delta against it would read as a misleading $0 change).
+ *
+ * `message` is the English text. `message_key` plus `message_params` is the
+ * localized form (i18next `{{placeholders}}`); the structured fields name the
+ * offending contract line, service and configuration type when known.
+ */
 export interface SimulationDiagnostic {
-  severity: "info" | "warning";
+  severity: "info" | "warning" | "error";
   message: string;
   line_key?: string;
+  code?: ContractSimulationErrorCode;
+  message_key?: string;
+  message_params?: Record<string, string | number>;
+  line_name?: string;
+  service_id?: string;
+  service_name?: string;
+  configuration_type?: string;
 }
 
 export interface ContractSimulationResult {
@@ -485,6 +506,150 @@ export interface SimulationComparison {
   periods: SimulationPeriodDelta[];
   /** Cents. */
   horizon_total_delta: number;
+}
+
+/* ----------------------------- refusals ----------------------------- */
+
+/**
+ * Why the simulator refused to run, carried as the `code` of the coded error
+ * the simulator throws internally and as the `code` of the resulting blocking
+ * diagnostic. Each one is something the user can act on (fix the contract's
+ * configuration, pick a client, change the replay range). The simulator entry
+ * points convert these into a blocking result or a typed refusal; the action
+ * boundary does the same as a backstop. Any error without one of these codes
+ * is unexpected and is logged.
+ */
+export const CONTRACT_SIMULATION_ERROR_CODES = [
+  "CONTRACT_SIMULATION_UNSUPPORTED_LINE_TYPE",
+  "CONTRACT_SIMULATION_UNSUPPORTED_SERVICE_CONFIGURATION",
+  "CONTRACT_SIMULATION_SERVICE_NOT_IN_CATALOG",
+  "CONTRACT_SIMULATION_POOL_MISSING",
+  "CONTRACT_SIMULATION_CONTRACT_NOT_FOUND",
+  "CONTRACT_SIMULATION_CLIENT_NOT_AVAILABLE",
+  "CONTRACT_SIMULATION_CLIENT_REQUIRED",
+  "CONTRACT_SIMULATION_HISTORY_REQUIRES_CLIENT",
+  "CONTRACT_SIMULATION_INVALID_REPLAY_RANGE",
+  "CONTRACT_SIMULATION_SCENARIO_INVALID",
+  "CONTRACT_SIMULATION_SCENARIO_REFERENCE_INVALID",
+  /** Not a refusal the simulator chose: an unexpected failure the action boundary logged. */
+  "CONTRACT_SIMULATION_UNEXPECTED",
+] as const;
+
+export type ContractSimulationErrorCode =
+  (typeof CONTRACT_SIMULATION_ERROR_CODES)[number];
+
+export function isContractSimulationErrorCode(
+  value: unknown,
+): value is ContractSimulationErrorCode {
+  return (
+    typeof value === "string" &&
+    (CONTRACT_SIMULATION_ERROR_CODES as readonly string[]).includes(value)
+  );
+}
+
+/** The shape of a thrown coded refusal (structurally a CodedError). */
+export interface ContractSimulationRefusalError {
+  message: string;
+  code: string;
+  messageKey?: string;
+  messageParams?: Record<string, string | number>;
+}
+
+/** Whether `error` is a coded refusal from the simulator. */
+export function isContractSimulationRefusalError(
+  error: unknown,
+): error is ContractSimulationRefusalError {
+  return (
+    error instanceof Error &&
+    isContractSimulationErrorCode((error as { code?: unknown }).code)
+  );
+}
+
+/**
+ * The blocking diagnostic a refusal becomes. The structured fields come from
+ * the refusal's params: lineKey, lineName, serviceId, serviceName,
+ * configurationType.
+ */
+export function simulationRefusalToDiagnostic(
+  error: ContractSimulationRefusalError,
+): SimulationDiagnostic {
+  const params = error.messageParams;
+  const read = (name: string): string | undefined => {
+    const value = params?.[name];
+    return value === undefined || value === "" ? undefined : String(value);
+  };
+  const diagnostic: SimulationDiagnostic = {
+    severity: "error",
+    message: error.message,
+    code: error.code as ContractSimulationErrorCode,
+  };
+  if (error.messageKey) diagnostic.message_key = error.messageKey;
+  if (params) diagnostic.message_params = params;
+  const lineKey = read("lineKey");
+  const lineName = read("lineName");
+  const serviceId = read("serviceId");
+  const serviceName = read("serviceName");
+  const configurationType = read("configurationType");
+  if (lineKey) diagnostic.line_key = lineKey;
+  if (lineName) diagnostic.line_name = lineName;
+  if (serviceId) diagnostic.service_id = serviceId;
+  if (serviceName) diagnostic.service_name = serviceName;
+  if (configurationType) diagnostic.configuration_type = configurationType;
+  return diagnostic;
+}
+
+/**
+ * The result of a run the simulator refused: blocking diagnostics and no
+ * periods, hence no totals.
+ */
+export function blockedSimulationResult(
+  scenario:
+    | Partial<Pick<ContractScenario, "scenario_id" | "currency_code" | "horizon">>
+    | null
+    | undefined,
+  diagnostics: SimulationDiagnostic[],
+): ContractSimulationResult {
+  return {
+    scenario_id: scenario?.scenario_id ?? "",
+    currency_code: scenario?.currency_code || "USD",
+    horizon: scenario?.horizon ?? { start_date: "", period_count: 0 },
+    periods: [],
+    diagnostics,
+  };
+}
+
+/** True when the result carries a blocking diagnostic (and so has no totals). */
+export function isSimulationBlocked(
+  result: Pick<ContractSimulationResult, "diagnostics">,
+): boolean {
+  return result.diagnostics.some((diagnostic) => diagnostic.severity === "error");
+}
+
+/** The blocking diagnostics of a result, in order. */
+export function blockingDiagnostics(
+  result: Pick<ContractSimulationResult, "diagnostics">,
+): SimulationDiagnostic[] {
+  return result.diagnostics.filter((diagnostic) => diagnostic.severity === "error");
+}
+
+/**
+ * Typed refusal for the actions that don't return a ContractSimulationResult
+ * (snapshot, draft scenario, prefill). The UI renders `diagnostic` where the
+ * scenario or prefill would have appeared.
+ */
+export interface ContractSimulationRefusal {
+  refused: true;
+  diagnostic: SimulationDiagnostic;
+}
+
+export function isContractSimulationRefusal(
+  value: unknown,
+): value is ContractSimulationRefusal {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as ContractSimulationRefusal).refused === true
+  );
 }
 
 /** Structured CE result for the EE-guarded simulator actions. */

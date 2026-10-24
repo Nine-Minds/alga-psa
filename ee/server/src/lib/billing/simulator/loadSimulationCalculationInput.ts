@@ -75,6 +75,7 @@ import {
   type ResolvedChargeTaxPolicy,
   calculateContractBucketPeriodState,
 } from "@alga-psa/billing/lib/billing/domain";
+import { simulationRefusal } from "./simulationRefusal";
 
 interface SimulationBillingClient {
   client_id: string;
@@ -112,11 +113,15 @@ export async function loadSimulationCalculationInput(
     );
   }
   if (!scenario) {
-    throw new Error("A contract scenario is required to run a simulation");
+    throw simulationRefusal(
+      "CONTRACT_SIMULATION_SCENARIO_INVALID",
+      "There is no scenario to simulate. Reload the page and try again.",
+    );
   }
   if (!Array.isArray(scenario.lines)) {
-    throw new Error(
-      `Scenario ${scenario.scenario_id ?? "(unknown)"} has no lines array`,
+    throw simulationRefusal(
+      "CONTRACT_SIMULATION_SCENARIO_INVALID",
+      "This scenario has no contract lines to simulate. Reload the page and try again.",
     );
   }
 
@@ -137,9 +142,9 @@ export async function loadSimulationCalculationInput(
       .where({ client_id: scenario.client_binding.client_id })
       .first("client_id", "is_tax_exempt");
     if (!clientRow) {
-      throw new Error(
-        `Client ${scenario.client_binding.client_id} bound to scenario ` +
-          `${scenario.scenario_id} not found in tenant ${tenant}`,
+      throw simulationRefusal(
+        "CONTRACT_SIMULATION_CLIENT_NOT_AVAILABLE",
+        "The client this simulation uses is not available. It may have been deleted; choose another client.",
       );
     }
     client = {

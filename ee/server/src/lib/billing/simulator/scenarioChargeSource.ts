@@ -55,6 +55,7 @@ import {
   resolveAssumedQuantity,
   syntheticConfigId,
 } from "./syntheticActivity";
+import { simulationRefusal } from "./simulationRefusal";
 
 /** State a simulation run threads across periods (pool rollover, in memory). */
 export interface ScenarioRunState {
@@ -179,22 +180,54 @@ export class ScenarioChargeSource implements ContractChargeSource {
       }));
   }
 
-  /** The simulator must fail loudly: it cannot show a charge it cannot price. */
+  /**
+   * The simulator must not show a charge it cannot price, so it refuses (the
+   * engine only warns). The resolver never throws, so the refusal is raised
+   * here, in the simulator's own adapter, and simulateContractScenario turns
+   * it into a blocking diagnostic in the result (no periods, no totals). It
+   * names the line and service the way the user sees them, so it says what to
+   * fix.
+   */
+  // LEVERAGE: friction resolver-unhandled-callback — the resolver can only hand
+  // unhandled kinds to a callback, so the simulator refuses by throwing from it
+  // and catching in simulateContractScenario. A resolver that returned its
+  // diagnostics with the charges would let the caller decide (engine: warn,
+  // simulator: block) without a throw/catch round trip.
   reportUnhandled(diagnostics: ResolutionDiagnostics): void {
-    const lineId = this.line.clientContractLineId;
+    const lineName = this.input.line.contract_line_name;
     if (diagnostics.unhandledLineType) {
-      throw new Error(
-        `Contract line ${lineId} has contract_line_type "${diagnostics.unhandledLineType}", which no charge family handles`,
+      throw simulationRefusal(
+        "CONTRACT_SIMULATION_UNSUPPORTED_LINE_TYPE",
+        `Contract line "${lineName}" has the line type "${diagnostics.unhandledLineType}", which the simulator can't price. ` +
+          "Change the line to Fixed, Hourly or Usage, then simulate again.",
+        {
+          lineKey: this.input.line.key,
+          lineName,
+          lineType: diagnostics.unhandledLineType,
+        },
       );
     }
-    const detail = diagnostics.unhandledServices
-      .map(
-        (service) =>
-          `service ${service.serviceId} (configuration_type "${service.configurationType ?? "null"}")`,
-      )
-      .join("; ");
-    throw new Error(
-      `Contract line ${lineId} (contract_line_type "${this.line.contractLineType ?? "unknown"}") configures services no charge family handles: ${detail}`,
+    // One refusal names one service: fixing it and simulating again surfaces
+    // the next one, and the copy stays a single localizable sentence.
+    const unhandled = diagnostics.unhandledServices[0];
+    const serviceName =
+      this.input.line.services.find(
+        (service) => service.service_id === unhandled?.serviceId,
+      )?.service_name ??
+      unhandled?.serviceId ??
+      "";
+    const configurationType = unhandled?.configurationType ?? "none";
+    throw simulationRefusal(
+      "CONTRACT_SIMULATION_UNSUPPORTED_SERVICE_CONFIGURATION",
+      `"${serviceName}" on contract line "${lineName}" has the configuration type "${configurationType}", which the simulator can't price. ` +
+        "Set the service to Fixed, Hourly, Usage or Bucket, then simulate again.",
+      {
+        lineKey: this.input.line.key,
+        lineName,
+        serviceId: unhandled?.serviceId ?? "",
+        serviceName,
+        configurationType,
+      },
     );
   }
 

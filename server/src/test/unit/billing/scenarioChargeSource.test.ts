@@ -1,14 +1,27 @@
 import { describe, expect, it } from "vitest";
 import { resolveContractLineCharges } from "@alga-psa/billing/lib/billing/chargeResolution";
+import { simulationRefusalToDiagnostic } from "@alga-psa/types";
+import { asSimulationRefusal } from "@ee/lib/billing/simulator/simulationRefusal";
 import { ScenarioChargeSource, createScenarioRunState } from "@ee/lib/billing/simulator/scenarioChargeSource";
 
-const service = (service_id: string, configuration: Record<string, unknown>) =>
-  ({ service_id, service_name: service_id, configuration }) as any;
+const service = (service_id: string, configuration: Record<string, unknown>, service_name = service_id) =>
+  ({ service_id, service_name, configuration }) as any;
+
+/** The refusal the source raises, as the blocking diagnostic simulateContractScenario returns. */
+async function refusalDiagnostic(source: ScenarioChargeSource) {
+  const error = await resolveContractLineCharges(source).then(
+    () => null,
+    (caught) => caught,
+  );
+  const refusal = asSimulationRefusal(error);
+  expect(refusal).not.toBeNull();
+  return simulationRefusalToDiagnostic(refusal!);
+}
 
 function sourceFor(line: Record<string, unknown>) {
   return new ScenarioChargeSource({
     scenario: { assumptions: {} } as any,
-    line: { key: "line-1", contract_line_type: "Hourly", ...line } as any,
+    line: { key: "line-1", contract_line_name: "Managed Support", contract_line_type: "Hourly", ...line } as any,
     lineFacts: { clientContractLineId: "ccl-1" } as any,
     client: { client_id: "c" },
     billingPeriod: {} as any,
@@ -55,19 +68,42 @@ describe("ScenarioChargeSource", () => {
     expect(await source.configuredServiceIds()).toEqual(["svc-a", "svc-b", "svc-c"]);
   });
 
-  it("fails loudly (the simulator throws where the engine only warns) for a service kind no family handles", async () => {
+  it("refuses a service kind no family handles with a blocking diagnostic naming the line, service and configuration type", async () => {
     const source = sourceFor({
       services: [
         service("svc-h", { configuration_type: "Hourly" }),
-        service("svc-x", { configuration_type: "Mystery" }),
+        service("svc-x", { configuration_type: "Mystery" }, "Magic Service"),
       ],
     });
-    await expect(resolveContractLineCharges(source)).rejects.toThrow(/ccl-1.*svc-x.*Mystery/);
+    const diagnostic = await refusalDiagnostic(source);
+    expect(diagnostic).toMatchObject({
+      severity: "error",
+      code: "CONTRACT_SIMULATION_UNSUPPORTED_SERVICE_CONFIGURATION",
+      message_key: "msp/contracts:contractSimulator.errors.unsupportedServiceConfiguration",
+      line_key: "line-1",
+      line_name: "Managed Support",
+      service_id: "svc-x",
+      service_name: "Magic Service",
+      configuration_type: "Mystery",
+    });
+    expect(diagnostic.message).toMatch(/Magic Service.*Managed Support.*Mystery/);
+    expect(diagnostic.message_params).toMatchObject({
+      serviceName: "Magic Service",
+      lineName: "Managed Support",
+      configurationType: "Mystery",
+    });
   });
 
-  it("fails loudly for a contract_line_type no family handles", async () => {
+  it("refuses a contract_line_type no family handles with a blocking diagnostic naming the line", async () => {
     const source = sourceFor({ services: [], contract_line_type: "Weird" });
     (source as any).line = { clientContractLineId: "ccl-1", contractLineType: "Weird" };
-    await expect(resolveContractLineCharges(source)).rejects.toThrow(/ccl-1.*Weird/);
+    const diagnostic = await refusalDiagnostic(source);
+    expect(diagnostic).toMatchObject({
+      severity: "error",
+      code: "CONTRACT_SIMULATION_UNSUPPORTED_LINE_TYPE",
+      line_key: "line-1",
+      line_name: "Managed Support",
+    });
+    expect(diagnostic.message).toMatch(/Managed Support.*Weird/);
   });
 });

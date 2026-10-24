@@ -2382,6 +2382,22 @@
       "description": "Ta umowa nie ma pozycji umowy. Najpierw dodaj pozycje umowy, a następnie wróć, aby przeprowadzić symulację.",
       "title": "Na razie nie ma czego symulować"
     },
+    "errors": {
+      "title": "Nie można uruchomić symulacji",
+      "baselineTitle": "Obecnej umowy nie można zasymulować, więc nie ma z czym porównywać",
+      "unsupportedLineType": "Pozycja umowy „{{lineName}}\" ma typ pozycji „{{lineType}}\", którego symulator nie potrafi wycenić. Zmień pozycję na Ryczałt, Godzinową lub Zużycie i zasymuluj ponownie.",
+      "unsupportedServiceConfiguration": "Usługa „{{serviceName}}\" w pozycji umowy „{{lineName}}\" ma typ konfiguracji „{{configurationType}}\", którego symulator nie potrafi wycenić. Ustaw usługę jako Ryczałt, Godzinową, Zużycie lub Pakiet i zasymuluj ponownie.",
+      "serviceNotInCatalog": "Pozycja umowy „{{lineName}}\" używa usługi, której nie ma już w katalogu usług ({{serviceId}}). Usuń ją z pozycji lub przywróć usługę i zasymuluj ponownie.",
+      "poolMissing": "Usługa „{{serviceName}}\" w pozycji umowy „{{lineName}}\" jest skonfigurowana jako pakiet, ale nie ma puli godzin w cenie. Dodaj godziny w cenie puli w pozycji umowy i zasymuluj ponownie.",
+      "contractNotFound": "Ta umowa jest niedostępna. Mogła zostać usunięta; odśwież stronę.",
+      "clientNotAvailable": "Klient tej symulacji jest niedostępny. Mógł zostać usunięty; wybierz innego klienta.",
+      "clientRequired": "Przed symulacją wybierz klienta.",
+      "historyRequiresClient": "Założenia historyczne wymagają scenariusza powiązanego z prawdziwym klientem. Wybierz klienta dla tej symulacji i spróbuj ponownie.",
+      "invalidReplayRange": "Zakres odtwarzania jest nieprawidłowy. Wybierz zakres, który kończy się po swoim początku i obejmuje nie więcej niż 120 okresów rozliczeniowych.",
+      "scenarioInvalid": "Tego scenariusza nie można zasymulować, ponieważ jego konfiguracja jest niekompletna. Odśwież stronę i spróbuj ponownie.",
+      "scenarioReferenceInvalid": "Ten scenariusz odwołuje się do czegoś, co jest już niedostępne, na przykład pozycji umowy, usługi, stawki podatku lub lokalizacji klienta. Odśwież stronę, aby zacząć od bieżącej umowy.",
+      "unexpected": "Symulator nie mógł się uruchomić z powodu nieoczekiwanego błędu. Spróbuj ponownie; jeśli problem się powtarza, skontaktuj się z pomocą techniczną."
+    },
     "explanation": {
       "amount": "Kwota",
       "close": "Zamknij",
@@ -2428,6 +2444,7 @@
       "simulatedDelta": "symulowana różnica"
     },
     "runBar": {
+      "blocked": "Symulacja niemożliwa",
       "compareToggle": "Pokaż zmiany względem bieżącego kontraktu",
       "horizonOption": "{{count}} okresów rozliczeniowych klienta",
       "lastRun": "Symulacja aktualna · {{count}} okresów rozliczeniowych klienta",
@@ -2436,6 +2453,7 @@
       "simulating": "Symulowanie…",
       "stale": "Zmiany nie zostały zasymulowane",
       "staleBanner": "Te kwoty pochodzą z poprzedniej symulacji. Zaktualizuj symulację, aby uwzględnić najnowsze zmiany.",
+      "staleBlockedBanner": "Ten komunikat pochodzi z poprzedniej symulacji. Zaktualizuj symulację, aby uwzględnić najnowsze zmiany.",
       "updateSimulation": "Zaktualizuj symulację"
     },
     "scenario": {

@@ -18,6 +18,7 @@ import { getClientBillingCycleAnchor } from "@alga-psa/shared/billingClients/bil
 import { resolveUnitOfMeasure } from "@alga-psa/core/unitOfMeasure";
 import { resolveEffectiveBillingTiming } from "@alga-psa/shared/billingClients/contractLineTimingRule";
 import { assumptionKey } from "./syntheticActivity";
+import { simulationRefusal } from "./simulationRefusal";
 
 const midnight = (value: string): string =>
   `${toISODate(toPlainDate(value))}T00:00:00Z`;
@@ -104,13 +105,23 @@ export async function draftContractToScenario(
   tenant: string,
   draft: ContractDraftSimulationInput,
 ): Promise<ContractScenario> {
-  if (!draft.client_id) throw new Error("Select a client before simulating");
+  if (!draft.client_id) {
+    throw simulationRefusal(
+      "CONTRACT_SIMULATION_CLIENT_REQUIRED",
+      "Select a client before simulating.",
+    );
+  }
   const db = tenantDb(knex, tenant);
   const client = await db
     .table("clients")
     .where({ client_id: draft.client_id })
     .first("client_id", "client_name");
-  if (!client) throw new Error("Draft simulation client is not available");
+  if (!client) {
+    throw simulationRefusal(
+      "CONTRACT_SIMULATION_CLIENT_NOT_AVAILABLE",
+      "The client this simulation uses is not available. It may have been deleted; choose another client.",
+    );
+  }
 
   const currencyCode = draft.currency_code || "USD";
   const catalogQuery = db.table("service_catalog as sc");
@@ -162,7 +173,10 @@ export async function draftContractToScenario(
   ): ScenarioLineService => {
     const catalog = catalogById.get(serviceId);
     if (!catalog)
-      throw new Error("Draft contains an invalid service reference");
+      throw simulationRefusal(
+        "CONTRACT_SIMULATION_SCENARIO_REFERENCE_INVALID",
+        "This draft refers to a service that is no longer available. Remove it from the contract, then simulate again.",
+      );
     return {
       configuration_id: `draft-config-${serviceId}-${configuration.configuration_type}`,
       service_id: catalog.service_id,
