@@ -535,6 +535,7 @@
         "renewal": "⟦ŧħḗ ƈȯƞŧřȧƈŧ'ş řḗƞḗẇȧŀ ḓḗƈīşīȯƞ ḓȧŧḗ⟧",
         "contractEnd": "⟦ŧħḗ ƈȯƞŧřȧƈŧ'ş ḗƞḓ ḓȧŧḗ⟧",
         "warrantyEnd": "⟦ŧħḗ ȧşşḗŧ'ş ẇȧřřȧƞŧẏ ḗƞḓ ḓȧŧḗ⟧",
+        "maintenanceDue": "⟦ŧħḗ ȧşşḗŧ ḿȧīƞŧḗƞȧƞƈḗ ḓŭḗ ḓȧŧḗ⟧",
         "ticketStatusAge": "⟦ŧħḗ ḓȧẏ ŧħḗ ŧīƈķḗŧ řḗȧƈħḗş ŧħḗ ƞŭḿƀḗř ȯƒ ḓȧẏş īƞ şŧȧŧŭş⟧"
       }
     }
@@ -795,6 +796,7 @@
       "dateSourceRenewal": "⟦Ƈȯƞŧřȧƈŧ řḗƞḗẇȧŀ ḓḗƈīşīȯƞ ḓȧŧḗ⟧",
       "dateSourceContractEnd": "⟦Ƈȯƞŧřȧƈŧ ḗƞḓ ḓȧŧḗ⟧",
       "dateSourceWarranty": "⟦Ȧşşḗŧ ẇȧřřȧƞŧẏ ḗƞḓ⟧",
+      "dateSourceMaintenanceDue": "⟦Ȧşşḗŧ ḿȧīƞŧḗƞȧƞƈḗ ḓŭḗ⟧",
       "dateOffset": "⟦Ḓȧẏş⟧",
       "dateDirection": "⟦Ŧīḿīƞɠ⟧",
       "before": "⟦Ɓḗƒȯřḗ⟧",

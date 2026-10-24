@@ -21,6 +21,8 @@ export default defineConfig({
     'services/email/providers/MicrosoftGraphAdapter': 'services/email/providers/MicrosoftGraphAdapter.ts',
     'services/diagnostics/index': 'services/diagnostics/index.ts',
     'services/assets/assetTicketAssociation': 'services/assets/assetTicketAssociation.ts',
+    'services/assets/maintenanceRecurrence': 'services/assets/maintenanceRecurrence.ts',
+    'services/assets/maintenanceLifecycle': 'services/assets/maintenanceLifecycle.ts',
     'services/tickets/createTicketWithSideEffects': 'services/tickets/createTicketWithSideEffects.ts',
     'services/tickets/ticketModelEventPublisher': 'services/tickets/ticketModelEventPublisher.ts',
     'services/tickets/ticketResourceCore': 'services/tickets/ticketResourceCore.ts',

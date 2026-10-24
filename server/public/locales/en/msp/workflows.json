@@ -535,6 +535,7 @@
         "renewal": "the contract's renewal decision date",
         "contractEnd": "the contract's end date",
         "warrantyEnd": "the asset's warranty end date",
+        "maintenanceDue": "the asset maintenance due date",
         "ticketStatusAge": "the day the ticket reaches the number of days in status"
       }
     }
@@ -795,6 +796,7 @@
       "dateSourceRenewal": "Contract renewal decision date",
       "dateSourceContractEnd": "Contract end date",
       "dateSourceWarranty": "Asset warranty end",
+      "dateSourceMaintenanceDue": "Asset maintenance due",
       "dateOffset": "Days",
       "dateDirection": "Timing",
       "before": "Before",

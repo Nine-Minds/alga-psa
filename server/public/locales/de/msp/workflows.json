@@ -535,6 +535,7 @@
         "renewal": "das Entscheidungsdatum für die Vertragsverlängerung",
         "contractEnd": "das Vertragsende",
         "warrantyEnd": "das Ende der Garantie des Assets",
+        "maintenanceDue": "das Fälligkeitsdatum der Asset-Wartung",
         "ticketStatusAge": "der Tag, an dem das Ticket die festgelegte Anzahl von Tagen im Status erreicht"
       }
     }
@@ -795,6 +796,7 @@
       "dateSourceRenewal": "Entscheidungsdatum für die Vertragsverlängerung",
       "dateSourceContractEnd": "Vertragsenddatum",
       "dateSourceWarranty": "Garantieende des Assets",
+      "dateSourceMaintenanceDue": "Fällige Asset-Wartung",
       "dateOffset": "Tage",
       "dateDirection": "Zeitpunkt",
       "before": "Vorher",

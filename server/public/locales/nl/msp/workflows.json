@@ -535,6 +535,7 @@
         "renewal": "de beslisdatum voor verlenging van het contract",
         "contractEnd": "de einddatum van het contract",
         "warrantyEnd": "de einddatum van de garantie van het asset",
+        "maintenanceDue": "de vervaldatum van het onderhoud van het asset",
         "ticketStatusAge": "de dag waarop het ticket het aantal dagen in de status bereikt"
       }
     }
@@ -795,6 +796,7 @@
       "dateSourceRenewal": "Beslissingsdatum voor contractverlenging",
       "dateSourceContractEnd": "Einddatum contract",
       "dateSourceWarranty": "Einde garantie asset",
+      "dateSourceMaintenanceDue": "Onderhoud asset vervallen",
       "dateOffset": "Dagen",
       "dateDirection": "Tijdstip",
       "before": "Voor",
