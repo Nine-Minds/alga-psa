@@ -6317,6 +6317,16 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "attributes": {
           "$ref": "#/components/schemas/AssetAttributes"
+        },
+        "extension_data": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/AssetExtensionData"
+            },
+            {
+              "description": "Provided keys are written to the extension row; omitted keys remain."
+            }
+          ]
         }
       }
     },
@@ -43384,8 +43394,67 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "parameters": [],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scheduled_start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "scheduled_end": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "work_item_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "work_item_type": {
+          "type": "string",
+          "enum": [
+            "ticket",
+            "project_task",
+            "meeting",
+            "break",
+            "other"
+          ]
+        },
+        "assigned_user_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "calendar_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Group calendar id (see GET /api/v1/calendars). null = personal calendar: on update moves the entry off its group calendar, on create is the same as omitting it. Omitted on update = calendar unchanged."
+        },
+        "notes": {
+          "type": "string"
+        },
+        "is_private": {
+          "type": "boolean",
+          "default": false
+        },
+        "is_all_day": {
+          "type": "boolean"
+        },
+        "recurrence_pattern": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "scheduled_start",
+        "scheduled_end"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
@@ -43598,7 +43667,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/schedules/{id}",
     "displayName": "Update schedule entry",
     "summary": "Update schedule entry",
-    "description": "Updates schedule entry via ApiTimeSheetController.updateScheduleEntry().",
+    "description": "Updates schedule entry via ApiTimeSheetController.updateScheduleEntry(). `calendar_id`: omit to leave the calendar unchanged; a group calendar uuid moves the entry onto that group calendar (edit access required); `null` moves it back to a personal calendar (the entry stays on its assignees' personal calendars). Requires edit access to the existing entry (403 read-only, 404 no access).",
     "tags": [
       "Work Management v1"
     ],
@@ -43618,8 +43687,62 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scheduled_start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "scheduled_end": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "work_item_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "work_item_type": {
+          "type": "string",
+          "enum": [
+            "ticket",
+            "project_task",
+            "meeting",
+            "break",
+            "other"
+          ]
+        },
+        "assigned_user_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "calendar_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Group calendar id (see GET /api/v1/calendars). null = personal calendar: on update moves the entry off its group calendar, on create is the same as omitting it. Omitted on update = calendar unchanged."
+        },
+        "notes": {
+          "type": "string"
+        },
+        "is_private": {
+          "type": "boolean",
+          "default": false
+        },
+        "is_all_day": {
+          "type": "boolean"
+        },
+        "recurrence_pattern": {
+          "type": "string"
+        }
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -47334,7 +47457,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-entries",
     "displayName": "Create time entry",
     "summary": "Create time entry",
-    "description": "Creates time entry.",
+    "description": "Creates a time entry. Billable entries are linked to a contract line (optional `contract_line_id`; auto-resolved when exactly one line is eligible) and draw bucket/hour-block usage. Returns 400 ValidationError (VALIDATION_ERROR) with details.reason `contract_line_ambiguous` or `contract_line_not_eligible` and details.eligible_contract_lines[] (contract_line_id, contract_line_name, contract_line_type, contract_id, contract_name, has_bucket) when the line cannot be resolved.",
     "tags": [
       "Work Management v1"
     ],
@@ -47825,7 +47948,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-entries/bulk",
     "displayName": "Bulk delete time entries",
     "summary": "Bulk delete time entries",
-    "description": "Bulk delete time entry operation.",
+    "description": "Bulk delete time entry operation. Each deletion reverses the entry's bucket usage and hour-block burn.",
     "tags": [
       "Work Management v1"
     ],
@@ -48580,7 +48703,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-entries/{id}",
     "displayName": "Update time entry",
     "summary": "Update time entry",
-    "description": "Updates time entry UUID.",
+    "description": "Updates time entry UUID. Re-resolves the contract line and adjusts bucket usage by the change; returns the same 400 contract_line_ambiguous / contract_line_not_eligible ValidationError as create.",
     "tags": [
       "Work Management v1"
     ],
@@ -48690,7 +48813,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-entries/{id}",
     "displayName": "Delete time entry",
     "summary": "Delete time entry",
-    "description": "Deletes time entry UUID.",
+    "description": "Deletes time entry UUID and reverses the bucket usage draw and hour-block burn the entry made.",
     "tags": [
       "Work Management v1"
     ],
@@ -50858,6 +50981,66 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_calendars",
+    "method": "get",
+    "path": "/api/v1/calendars",
+    "displayName": "List calendars",
+    "summary": "List calendars",
+    "description": "Lists the calendars the caller can see, with effective access. Requires user_schedule:read; visibility is the same as the schedule sidebar: the caller's own personal calendar, personal calendars shared with the caller (active owners only), and group calendars the caller can see (every group calendar for user_schedule:update holders). HOW TO USE A RESULT ON A SCHEDULE ENTRY: for a group calendar, send its calendar_id as `calendar_id` on POST/PUT /api/v1/schedules. Personal calendars have no calendar_id in this list (null) and are identified by owner_user_id; to put an entry on a personal calendar send `calendar_id: null` (or omit it) together with `assigned_user_ids: [owner_user_id]`. Group-calendar validation rejects personal ids.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "type",
+        "in": "query",
+        "required": false,
+        "description": "Only return calendars of this type.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "personal",
+            "group"
+          ],
+          "description": "Only return calendars of this type."
+        }
+      },
+      {
+        "name": "include_archived",
+        "in": "query",
+        "required": false,
+        "description": "Include archived group calendars (default false). Archived calendars are only visible to their managers.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "description": "Include archived group calendars (default false). Archived calendars are only visible to their managers."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/WorkV1Calendar"
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_stopwatch_active",
     "method": "get",
     "path": "/api/v1/stopwatch/active",
@@ -52186,6 +52369,58 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "format": "uuid",
           "description": "External link UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_id_projectlinks",
+    "method": "get",
+    "path": "/api/v1/tickets/{id}/project-links",
+    "displayName": "List the project tasks a ticket is linked to",
+    "summary": "List the project tasks a ticket is linked to",
+    "description": "Returns each project task the ticket is linked to, with its project, phase and current status (custom status name, then project status, then standard), is_closed, and when the task last changed. Requires read on the ticket and on project; links to projects the caller cannot read are omitted.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
         }
       }
     ],
