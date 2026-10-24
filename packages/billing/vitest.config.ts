@@ -98,6 +98,7 @@ export default defineConfig({
       // share one UTC-pinned formatter — listed for the same reason as above.
       'src/lib/invoice-template-ast/fieldFormatting.test.ts',
       'src/lib/invoice-template-ast/react-renderer.test.tsx',
+      'src/lib/invoice-template-ast/server-render.inlineImages.test.ts',
       // Country-driven date shape: a document is dated the way its recipient
       // writes dates, whatever language it is written in.
       'src/lib/invoice-template-ast/fieldFormatting.country.test.ts',
@@ -111,6 +112,10 @@ export default defineConfig({
       // Contract-line service rates are stored in minor units; the services list
       // must not re-scale them. Listed for the same reason as above.
       'src/components/billing-dashboard/contract-lines/GenericContractLineServicesList.customRate.test.tsx',
+      // Live contract-line adornments (preset picker, bucket overlay) follow the contract currency.
+      'src/components/billing-dashboard/contracts/ContractLineCurrency.adornments.test.tsx',
+      'src/components/billing-dashboard/contracts/ContractLineCurrency.inputs.test.tsx',
+      'src/components/billing-dashboard/contracts/BucketPoolEditor.currency.test.tsx',
       // Wizard quantity input draft/commit behavior.
       'src/components/billing-dashboard/contracts/QuantityInput.test.tsx',
       'src/components/billing-dashboard/contracts/wizard-steps/templateLineAmounts.test.ts',
@@ -121,6 +126,9 @@ export default defineConfig({
       'src/models/templateSaveUpsert.citus.test.ts',
       // Client AR must stay a single-shard, co-located join on Citus.
       'src/actions/billingProfileArActions.citus.test.ts',
+      // Shared pure balance formula used by REST invoice reads and the client portal.
+      'src/lib/balanceDue.test.ts',
+      'src/lib/creditBalance.test.ts',
     ],
     // Above vitest.setup.ts's 20s asyncUtilTimeout, so a stalled waitFor fails
     // as itself rather than as a test timeout.

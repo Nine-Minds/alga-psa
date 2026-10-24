@@ -2218,6 +2218,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{from}} → {{to}}",
       "RMA {{id}}",
       "({{count}} ticket)",
       "({{count}} tickets)",

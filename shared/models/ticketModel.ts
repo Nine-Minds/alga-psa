@@ -314,6 +314,8 @@ export interface CreateCommentOutput {
   ticket_id: string;
   content: string;
   author_type: string;
+  /** Final stored visibility (may differ from the requested flag; see D1). */
+  is_internal: boolean;
   created_at: string;
 }
 
@@ -1514,7 +1516,7 @@ export class TicketModel {
     }
 
     const commentId = uuidv4();
-    const parentCommentId = validatedData.parent_comment_id || null;
+    let parentCommentId = validatedData.parent_comment_id || null;
     let threadId = uuidv4();
     let commentIsInternal = validatedData.is_internal || false;
     const now = new Date();
@@ -1566,8 +1568,18 @@ export class TicketModel {
         throw new Error('Cannot reply to a deleted comment');
       }
 
-      threadId = parent.thread_id;
-      commentIsInternal = Boolean(parent.thread_is_internal);
+      // D1 (alga-2026-0002798): a client/contact author can never create an
+      // internal comment. If the parent thread is internal, do not join it (a
+      // public comment inside an internal thread would be hidden/misrouted);
+      // store a top-level public comment in a fresh public thread instead.
+      // LEVERAGE: pattern non-internal-author-visibility-guard — duplicated in packages/tickets/src/models/comment.ts (insert); extract a shared visibility resolver.
+      if (Boolean(parent.thread_is_internal) && dbAuthorType === 'client') {
+        parentCommentId = null;
+        commentIsInternal = false;
+      } else {
+        threadId = parent.thread_id;
+        commentIsInternal = Boolean(parent.thread_is_internal);
+      }
     }
 
     // One-off Cc/Bcc ride along in metadata. Visibility is resolved above, so a
@@ -1626,7 +1638,8 @@ export class TicketModel {
         });
     }
 
-    if (!validatedData.is_internal && validatedData.author_type === 'contact') {
+    // D3: key off the final stored visibility, not the requested flag.
+    if (!commentIsInternal && validatedData.author_type === 'contact') {
       // Only update response state if tracking is enabled for this tenant
       const tenantSettingsRow = await db.table('tenant_settings')
         .select('ticket_display_settings')
@@ -1700,7 +1713,7 @@ export class TicketModel {
       try {
         await analyticsTracker.trackCommentCreated({
           ticket_id: validatedData.ticket_id,
-          is_internal: validatedData.is_internal || false,
+          is_internal: commentIsInternal,
           is_resolution: validatedData.is_resolution || false,
           author_type: dbAuthorType,
           created_via: 'manual'
@@ -1715,6 +1728,7 @@ export class TicketModel {
       ticket_id: validatedData.ticket_id,
       content: validatedData.content,
       author_type: validatedData.author_type || 'system',
+      is_internal: commentIsInternal,
       created_at: now.toISOString()
     };
   }

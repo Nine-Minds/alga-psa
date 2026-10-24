@@ -772,7 +772,7 @@
     },
     "fixedConfig": {
       "defaultBaseRate": "Standardgrundavgift:",
-      "defaultRatePlaceholder": "Standard: {{rate}} $",
+      "defaultRatePlaceholder": "Standard: {{rate}}",
       "enterBaseRate": "Ange grundavgift",
       "leaveBlankDefault": "Lämna tomt för att använda standardtaxan",
       "notSet": "Inte angivet",
@@ -780,7 +780,7 @@
       "title": "Inställningar för fast avgift"
     },
     "hourlyConfig": {
-      "defaultRate": "Standard: {{rate}} $",
+      "defaultRate": "Standard: {{rate}}",
       "hourlyRate": "Timtaxa",
       "minimumBillableMinutes": "Minsta debiterbara antal minuter",
       "roundUpToNearest": "Avrunda uppåt till närmaste (minuter)",
@@ -806,7 +806,7 @@
     },
     "title": "Lägg till avtalsrader från förinställningar",
     "usageConfig": {
-      "defaultRate": "Standard: {{rate}} $",
+      "defaultRate": "Standard: {{rate}}",
       "recordDrivenNote": "Förbrukningsbaserade tjänster debiteras utifrån den förbrukning som anges under Förbrukningsregistrering för varje tjänsteperiod. En period utan förbrukningspost ger ingen debitering – registrera förbrukning (eller uttryckligen noll) varje period för att debitera dessa tjänster.",
       "ratePerUnit": "Taxa (per enhet)",
       "unitHint": "T.ex. GB, API-anrop, användare",
@@ -2512,7 +2512,7 @@
       },
       "discounts": "Rabatter",
       "fields": {
-        "adjustmentAmount": "Justeringsbelopp i dollar",
+        "adjustmentAmount": "Justeringsbelopp",
         "adjustmentDescription": "Beskrivning av justeringen",
         "adjustmentPeriod": "Justeringsperiod",
         "billingFrequency": "Faktureringsintervall",
@@ -2530,16 +2530,16 @@
         "minimumUsage": "Minsta förbrukning",
         "includedHours": "Ingående timmar",
         "includedUnits": "Ingående enheter",
-        "overtimeRate": "Övertidstaxa ($/h)",
+        "overtimeRate": "Övertidstaxa per timme",
         "overtimeThreshold": "Övertidsgräns (timmar)",
         "roundUpMinutes": "Avrunda uppåt till minuter",
         "scheduleEffectiveDate": "Schemats startdatum",
         "scheduleEndDate": "Schemats slutdatum",
-        "scheduleRate": "Schemats taxa i dollar",
+        "scheduleRate": "Schemats taxa",
         "serviceQuantity": "Antal licenser eller produkter",
         "tierMaximum": "Nivåns maximivärde",
         "tierMinimum": "Nivåns minimivärde",
-        "tierRate": "Nivåns taxa i dollar",
+        "tierRate": "Nivåns taxa",
         "usageUnit": "Förbrukningsenhet"
       },
       "frequencies": {
@@ -2565,7 +2565,7 @@
       "placeholders": {
         "minimum": "minimivärde",
         "minimumMinutes": "minsta antal minuter",
-        "overtimeRate": "övertid $/h",
+        "overtimeRate": "övertidstaxa per timme",
         "roundMinutes": "avrunda minuter",
         "thresholdHours": "timgräns"
       },
@@ -2607,7 +2607,8 @@
         "value": "Värde",
         "appliesTo": "Gäller för",
         "description": "Beskrivning",
-        "amount": "Belopp ($)",
+        "amount": "Belopp",
+        "rate": "Taxa",
         "billingPeriod": "Faktureringsperiod",
         "timing": "Tidpunkt"
       }

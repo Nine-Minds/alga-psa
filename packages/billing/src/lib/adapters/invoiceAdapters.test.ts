@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildInvoiceTimeCollections,
+  buildLocationAddressBlock,
   mapDbInvoiceToWasmViewModel,
   type InvoiceTimeCollectionSource,
 } from './invoiceAdapters';
@@ -738,5 +739,28 @@ describe('mapDbInvoiceToWasmViewModel billed-time collections', () => {
     expect(mapped).not.toBeNull();
     expect(mapped?.timeEntries).toBeUndefined();
     expect(mapped?.ticketGroups).toBeUndefined();
+  });
+});
+
+describe('buildLocationAddressBlock', () => {
+  it('skips an empty or whitespace address_line2 instead of printing an empty line', () => {
+    const base = {
+      address_line1: '2315 W Ayleen St',
+      city: 'Tampa',
+      state_province: 'FL',
+      postal_code: '33607',
+      country_name: 'United States',
+    } as any;
+    const expected = '2315 W Ayleen St\nTampa, FL, 33607\nUnited States';
+    expect(buildLocationAddressBlock({ ...base, address_line2: '' })).toBe(expected);
+    expect(buildLocationAddressBlock({ ...base, address_line2: '   ' })).toBe(expected);
+    expect(buildLocationAddressBlock({ ...base, address_line2: null })).toBe(expected);
+  });
+
+  it('skips empty city-line parts and returns null for an all-empty location', () => {
+    expect(
+      buildLocationAddressBlock({ address_line1: '1 Main', city: 'Tampa', state_province: '', postal_code: ' ' } as any),
+    ).toBe('1 Main\nTampa');
+    expect(buildLocationAddressBlock({ address_line1: '', city: '  ' } as any)).toBeNull();
   });
 });

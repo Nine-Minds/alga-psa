@@ -1,3 +1,4 @@
+import { paymentTermOptions } from '@alga-psa/shared/billingClients/paymentPreferences';
 import {
   createExternalEntityMapping,
   deleteExternalEntityMapping,
@@ -40,11 +41,7 @@ type PaymentTermOption = {
   name: string;
 };
 
-export const PAYMENT_TERMS: PaymentTermOption[] = [
-  { id: 'net_30', name: 'Net 30' },
-  { id: 'net_15', name: 'Net 15' },
-  { id: 'due_on_receipt', name: 'Due on receipt' }
-];
+export const PAYMENT_TERMS: PaymentTermOption[] = paymentTermOptions();
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 

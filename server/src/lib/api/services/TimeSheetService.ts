@@ -23,7 +23,8 @@ import {
   TimeSheetSearchData,
   TimeSheetExportQuery,
   CreateScheduleEntryData,
-  UpdateScheduleEntryData
+  UpdateScheduleEntryData,
+  CalendarResponse
 } from '../schemas/timeSheet';
 import {
   TIME_SHEET_LIST_DEFAULT_SORT,
@@ -38,11 +39,16 @@ import { ensureTimePeriodCoversDate } from '@alga-psa/scheduling/lib/timePeriodM
 import { Temporal } from '@js-temporal/polyfill';
 import { hasPermission } from '../../auth/rbac';
 import {
+  assertEditableGroupCalendar,
   buildVisibilityFilter,
+  canAssignUser,
   evaluateEntryAccess,
+  levelAtLeast,
   resolveCalendarAccess,
   type CalendarAccess,
 } from '@alga-psa/scheduling/lib/calendarAccess';
+import { loadVisibleCalendars } from '@alga-psa/scheduling/lib/visibleCalendars';
+import type { IVisibleCalendar } from '@alga-psa/types';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
 /**
@@ -1117,6 +1123,17 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       const ScheduleEntry = (await import('@alga-psa/shared/models/scheduleEntry')).default;
 
+      // Group calendar placement: same access path as the addScheduleEntry server action.
+      // Failures throw (404/403); they never fall back to a personal entry.
+      const calendarId = data.calendar_id ?? null;
+      const assignedUserIds: string[] = data.assigned_user_ids || [];
+      if (calendarId) {
+        const access = await this.assertWritableGroupCalendar(knex, calendarId, context);
+        if (assignedUserIds.some((userId) => !canAssignUser(userId, access))) {
+          throw new ForbiddenError('Permission denied: Cannot assign schedules to other users');
+        }
+      }
+
       const entry = await withTransaction(knex, async (trx) => {
         // Map work_item_type to valid WorkItemType or default
         let workItemType: 'ticket' | 'project_task' | 'non_billable_category' | 'ad_hoc' | 'interaction';
@@ -1138,10 +1155,11 @@ export class TimeSheetService extends BaseService<any> {
           is_private: data.is_private,
           is_all_day: data.is_all_day ?? false,
           recurrence_pattern: data.recurrence_pattern ? JSON.parse(data.recurrence_pattern) : null,
-          assigned_user_ids: data.assigned_user_ids || [],
+          assigned_user_ids: assignedUserIds,
+          calendar_id: calendarId,
           status: 'scheduled'
         }, {
-          assignedUserIds: data.assigned_user_ids || [],
+          assignedUserIds,
           assignedByUserId: context.userId
         });
 
@@ -1150,7 +1168,7 @@ export class TimeSheetService extends BaseService<any> {
 
       await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_CREATED', payload: buildScheduleEntryCreatedPayload({ userId: context.userId, entryId: entry.entry_id, changes: {
             after: entry,
-            assignedUserIds: data.assigned_user_ids || [],
+            assignedUserIds,
           } }), ctx: { tenantId: context.tenant, actor: { actorType: 'USER', actorUserId: context.userId } } });
 
       // Re-fetch after commit: getScheduleEntry runs on a pooled
@@ -1175,27 +1193,50 @@ export class TimeSheetService extends BaseService<any> {
         const assigneeIds = await tenantDb(trx, context.tenant).table('schedule_entry_assignees')
           .where({ entry_id: id })
           .pluck('user_id');
-        const isOwnEntry = existing.created_by === context.userId ||
-          (assigneeIds.length === 1 && assigneeIds[0] === context.userId);
-
-        if (existing.is_private && !isOwnEntry) {
+        // Same rule as the updateScheduleEntry server action and the REST controller.
+        const access = await resolveCalendarAccess(
+          trx,
+          context.tenant,
+          { user_id: context.userId },
+          await this.canViewAllSchedules(context)
+        );
+        const isOwnEntry = assigneeIds.length === 1 && assigneeIds[0] === context.userId;
+        if (existing.is_private && !existing.calendar_id && !isOwnEntry) {
           throw new ForbiddenError('Permission denied: Cannot update a private schedule entry');
         }
+        const decision = evaluateEntryAccess({ ...existing, assigned_user_ids: assigneeIds }, access);
+        if (decision.access === 'none') {
+          throw new NotFoundError('Schedule entry not found');
+        }
+        if (!decision.canEdit) {
+          throw new ForbiddenError('Permission denied: Cannot update this schedule entry');
+        }
+        const addedToEntry = (data.assigned_user_ids ?? []).filter((userId: string) => !assigneeIds.includes(userId));
+        if (addedToEntry.some((userId: string) => !canAssignUser(userId, access))) {
+          throw new ForbiddenError('Permission denied: Cannot assign schedules to other users');
+        }
 
-        if (!await this.canManageSchedules(context, 'update')) {
-          const assignmentRemainsOwn = data.assigned_user_ids
-            ? data.assigned_user_ids.length === 1 && data.assigned_user_ids[0] === context.userId
-            : true;
-          if (!isOwnEntry || !assignmentRemainsOwn) {
-            throw new ForbiddenError('Permission denied: Cannot update this schedule entry');
+        // calendar_id: undefined = unchanged, null = move to the personal calendar (no target check,
+        // same as the updateScheduleEntry server action; edit on the existing entry was checked above),
+        // uuid = move onto that group calendar.
+        // Moving onto a group calendar requires edit access there; never silently ignored.
+        if (data.calendar_id && data.calendar_id !== existing.calendar_id) {
+          const targetAccess = await this.assertWritableGroupCalendar(trx, data.calendar_id, context);
+          const addedAssignees = (data.assigned_user_ids ?? []).filter((userId: string) => !assigneeIds.includes(userId));
+          if (addedAssignees.some((userId: string) => !canAssignUser(userId, targetAccess))) {
+            throw new ForbiddenError('Permission denied: Cannot assign schedules to other users');
           }
         }
 
+        // assigned_user_ids lives in schedule_entry_assignees, not on schedule_entries.
+        const { assigned_user_ids: _assignedUserIds, ...rowData } = data;
         const updateData = {
-          ...data,
+          ...rowData,
+          // Group calendar entries are never private (same invariant as ScheduleEntry.create). Judged on
+          // the resulting calendar, as the server action does; a move to personal (null) leaves is_private as sent.
+          ...((data.calendar_id !== undefined ? data.calendar_id : existing.calendar_id) ? { is_private: false } : {}),
           updated_at: new Date()
         };
-  
 
         const { validateAllDayInterval } = await import('@alga-psa/shared/models/scheduleEntry');
         validateAllDayInterval({
@@ -1229,16 +1270,21 @@ export class TimeSheetService extends BaseService<any> {
           .where({ entry_id: id })
           .first();
 
+        const finalAssigneeIds: string[] = data.assigned_user_ids !== undefined
+          ? data.assigned_user_ids
+          : assigneeIds;
+
         return {
           existing,
           updated,
+          beforeAssigneeIds: assigneeIds as string[],
+          afterAssigneeIds: finalAssigneeIds,
         };
       });
 
       await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: buildScheduleEntryUpdatedPayload({ userId: context.userId, entryId: id, changes: {
-            before: result.existing,
-            after: result.updated,
-            assignedUserIds: data.assigned_user_ids,
+            before: this.scheduleEntryEventSnapshot(result.existing, result.beforeAssigneeIds),
+            after: this.scheduleEntryEventSnapshot(result.updated, result.afterAssigneeIds),
           } }), ctx: { tenantId: context.tenant, actor: { actorType: 'USER', actorUserId: context.userId } } });
 
       // Re-fetch after commit: getScheduleEntry runs on a pooled
@@ -1246,6 +1292,34 @@ export class TimeSheetService extends BaseService<any> {
       return this.getScheduleEntry(id, context);
     }
 
+
+  /**
+   * Calendars visible to the caller (GET /api/v1/calendars). Visibility is the same helper the
+   * getCalendarsVisibleToMe server action uses, with canViewAll = the caller's user_schedule:update.
+   */
+  async listCalendars(
+    context: ServiceContext,
+    filters: { type?: 'personal' | 'group'; include_archived?: boolean } = {}
+  ): Promise<CalendarResponse[]> {
+    const { knex } = await this.getKnex();
+    const canViewAll = await this.canViewAllSchedules(context);
+    const visible = await loadVisibleCalendars(knex, context.tenant, { user_id: context.userId }, canViewAll);
+
+    const toItem = (calendar: IVisibleCalendar): CalendarResponse => ({
+      calendar_id: calendar.calendar_id,
+      name: calendar.name,
+      calendar_type: calendar.calendar_type,
+      owner_user_id: calendar.owner_user_id,
+      access_level: calendar.access_level,
+      can_edit: levelAtLeast(calendar.access_level, 'edit'),
+      is_archived: !!calendar.is_archived,
+    });
+
+    return [visible.me, ...visible.people, ...visible.groups]
+      .map(toItem)
+      .filter((item) => !filters.type || item.calendar_type === filters.type)
+      .filter((item) => filters.include_archived || !item.is_archived);
+  }
 
   async deleteScheduleEntry(id: string, context: ServiceContext): Promise<void> {
       const { knex } = await this.getKnex();
@@ -1263,14 +1337,22 @@ export class TimeSheetService extends BaseService<any> {
         const assigneeIds = await tenantDb(trx, context.tenant).table('schedule_entry_assignees')
           .where({ entry_id: id })
           .pluck('user_id');
-        const isOwnEntry = existing.created_by === context.userId ||
-          (assigneeIds.length === 1 && assigneeIds[0] === context.userId);
-
+        // Same rule as the deleteScheduleEntry server action (which checks plain is_private).
+        const isOwnEntry = assigneeIds.length === 1 && assigneeIds[0] === context.userId;
         if (existing.is_private && !isOwnEntry) {
           throw new ForbiddenError('Permission denied: Cannot delete a private schedule entry');
         }
-
-        if (!isOwnEntry && !await this.canManageSchedules(context, 'delete')) {
+        const access = await resolveCalendarAccess(
+          trx,
+          context.tenant,
+          { user_id: context.userId },
+          await this.canViewAllSchedules(context)
+        );
+        const decision = evaluateEntryAccess({ ...existing, assigned_user_ids: assigneeIds }, access);
+        if (decision.access === 'none') {
+          throw new NotFoundError('Schedule entry not found');
+        }
+        if (!decision.canEdit) {
           throw new ForbiddenError('Permission denied: Cannot delete this schedule entry');
         }
 
@@ -1393,6 +1475,61 @@ export class TimeSheetService extends BaseService<any> {
     return false; // Simplified for now
   }
 
+  /**
+   * Resolve the caller's calendar access and require an editable, non-archived group calendar.
+   * 404 when the calendar is unavailable to the caller (missing, other tenant, personal, archived,
+   * or not visible to them); 403 when they can see it but lack edit access.
+   */
+  private async assertWritableGroupCalendar(
+    knexOrTrx: Knex | Knex.Transaction,
+    calendarId: string,
+    context: ServiceContext
+  ): Promise<CalendarAccess> {
+    const access = await resolveCalendarAccess(
+      knexOrTrx,
+      context.tenant,
+      { user_id: context.userId },
+      await this.canViewAllSchedules(context)
+    );
+    const error = await assertEditableGroupCalendar(knexOrTrx, context.tenant, calendarId, access);
+    if (error) {
+      // A group calendar the caller has some access to (but not edit) is a 403; one they cannot
+      // see at all must be indistinguishable from a missing/other-tenant calendar (404).
+      if (access.groupLevels.has(calendarId) && error.startsWith('Permission denied')) {
+        throw new ForbiddenError(error);
+      }
+      throw new NotFoundError('The selected calendar is not available.');
+    }
+    return access;
+  }
+
+  /**
+   * Same before/after shape the scheduleActions server action publishes (camelCase, with
+   * assignedUserIds), which the calendar sync subscriber reads to decide per-user sync.
+   */
+  // LEVERAGE: pattern schedule-entry-event-snapshot — duplicates sanitizeScheduleEntryForEvent in scheduleActions.ts
+  private scheduleEntryEventSnapshot(entry: any, assignedUserIds: string[]) {
+    if (!entry) return undefined;
+    const toIso = (value: unknown): string | null => {
+      if (!value) return null;
+      const date = value instanceof Date ? value : new Date(value as string);
+      return Number.isNaN(date.getTime()) ? null : date.toISOString();
+    };
+    return {
+      id: entry.entry_id,
+      title: entry.title,
+      scheduledStart: toIso(entry.scheduled_start),
+      scheduledEnd: toIso(entry.scheduled_end),
+      status: entry.status,
+      workItemId: entry.work_item_id,
+      workItemType: entry.work_item_type,
+      isRecurring: entry.is_recurring,
+      recurrencePattern: entry.recurrence_pattern,
+      assignedUserIds,
+      isPrivate: entry.is_private,
+    };
+  }
+
   private async canViewAllSchedules(context: ServiceContext): Promise<boolean> {
     if (!context.user) return false;
     const { knex } = await this.getKnex();
@@ -1508,6 +1645,22 @@ export class TimeSheetService extends BaseService<any> {
       };
     }
 
+
+  /**
+   * Raw entry plus assigned_user_ids, for authorization only. getScheduleEntry cannot be used
+   * for that: it returns null/masked data for viewers without full access and exposes
+   * assigned_users, not the assigned_user_ids evaluateEntryAccess reads.
+   */
+  async getScheduleEntryForAccess(id: string, context: ServiceContext): Promise<any | null> {
+      const { knex } = await this.getKnex();
+      const db = tenantDb(knex, context.tenant);
+      const entry = await db.table('schedule_entries').where({ entry_id: id }).first();
+      if (!entry) return null;
+      const assigned_user_ids: string[] = await db.table('schedule_entry_assignees')
+        .where({ entry_id: id })
+        .pluck('user_id');
+      return { ...entry, assigned_user_ids };
+    }
 
   private async getScheduleAssignees(entryId: string, context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();

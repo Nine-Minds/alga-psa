@@ -33,6 +33,7 @@ export * from './lib/onboardingWizard';
 export * from './lib/knowledgeBase';
 export * from './lib/senderActionResult';
 export * from './lib/externalSystems';
+export * from './lib/paymentSettings';
 export * from './search';
 export * from './deletion';
 export * from './constants/index';

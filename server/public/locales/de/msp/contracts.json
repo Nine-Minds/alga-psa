@@ -772,7 +772,7 @@
     },
     "fixedConfig": {
       "defaultBaseRate": "Standard-Grundtarif:",
-      "defaultRatePlaceholder": "Standard: ${{rate}}",
+      "defaultRatePlaceholder": "Standard: {{rate}}",
       "enterBaseRate": "Grundtarif eingeben",
       "leaveBlankDefault": "Leer lassen, um den Standardtarif zu verwenden",
       "notSet": "Nicht festgelegt",
@@ -780,7 +780,7 @@
       "title": "Festtarifkonfiguration"
     },
     "hourlyConfig": {
-      "defaultRate": "Standard: ${{rate}}",
+      "defaultRate": "Standard: {{rate}}",
       "hourlyRate": "Stundensatz",
       "minimumBillableMinutes": "Minimale abrechenbare Minuten",
       "roundUpToNearest": "Auf nächstes (Minuten) aufrunden",
@@ -806,7 +806,7 @@
     },
     "title": "Vertragslinien aus Vorlagenbausteinen hinzufügen",
     "usageConfig": {
-      "defaultRate": "Standard: ${{rate}}",
+      "defaultRate": "Standard: {{rate}}",
       "recordDrivenNote": "Nutzungsbasierte Dienste werden anhand des in der Verbrauchserfassung erfassten Verbrauchs je Leistungszeitraum abgerechnet. Ein Zeitraum ohne Verbrauchsdatensatz erzeugt keine Abrechnung — erfasse den Verbrauch (oder eine explizite Null) für jeden Zeitraum, um diese Dienste abzurechnen.",
       "ratePerUnit": "Tarif (pro Einheit)",
       "unitHint": "z. B. GB, API-Aufruf, Benutzer",
@@ -2515,7 +2515,7 @@
       "editDetails": "Regeln bearbeiten",
       "editDetailsFor": "Details für {{line}} bearbeiten",
       "fields": {
-        "adjustmentAmount": "Korrekturbetrag in Dollar",
+        "adjustmentAmount": "Korrekturbetrag",
         "adjustmentDescription": "Korrekturbeschreibung",
         "adjustmentPeriod": "Korrekturzeitraum",
         "billingFrequency": "Abrechnungsfrequenz",
@@ -2533,16 +2533,16 @@
         "lineType": "Linientyp",
         "minimumBillableMinutes": "Minimal abrechenbare Minuten",
         "minimumUsage": "Mindestnutzung",
-        "overtimeRate": "Überstundensatz ($/Std.)",
+        "overtimeRate": "Überstundensatz pro Stunde",
         "overtimeThreshold": "Überstundenschwelle (Stunden)",
         "roundUpMinutes": "Aufrunden auf Minuten",
         "scheduleEffectiveDate": "Preisplan gültig ab",
         "scheduleEndDate": "Preisplan-Enddatum",
-        "scheduleRate": "Preisplansatz in Dollar",
+        "scheduleRate": "Preisplansatz",
         "serviceQuantity": "Lizenz- oder Produktmenge",
         "tierMaximum": "Stufenmaximum",
         "tierMinimum": "Stufenminimum",
-        "tierRate": "Stufensatz in Dollar",
+        "tierRate": "Stufensatz",
         "usageUnit": "Nutzungseinheit"
       },
       "frequencies": {
@@ -2567,7 +2567,7 @@
       "placeholders": {
         "minimum": "Minimum",
         "minimumMinutes": "Mindestminuten",
-        "overtimeRate": "Überstunden $/Std.",
+        "overtimeRate": "Überstundensatz pro Stunde",
         "roundMinutes": "Minuten runden",
         "thresholdHours": "Schwellenstunden"
       },
@@ -2600,7 +2600,8 @@
         "value": "Wert",
         "appliesTo": "Gilt für",
         "description": "Beschreibung",
-        "amount": "Betrag ($)",
+        "amount": "Betrag",
+        "rate": "Satz",
         "billingPeriod": "Abrechnungszeitraum",
         "timing": "Zeitpunkt"
       },

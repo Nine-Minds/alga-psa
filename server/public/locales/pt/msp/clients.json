@@ -574,8 +574,10 @@
     "invoiceTemplateHelp": "Selecione um modelo ou use o padrão",
     "paymentTerms": {
       "dueOnReceipt": "Vencimento no recebimento",
+      "net14": "Líquido 14",
       "net15": "Líquido 15",
-      "net30": "Líquido 30"
+      "net30": "Líquido 30",
+      "net7": "Líquido 7"
     },
     "preferredPaymentMethod": "Método de pagamento preferido",
     "defaultCurrency": "Moeda padrão",

@@ -772,7 +772,7 @@
     },
     "fixedConfig": {
       "defaultBaseRate": "Taxa básica padrão:",
-      "defaultRatePlaceholder": "Padrão: ${{rate}}",
+      "defaultRatePlaceholder": "Padrão: {{rate}}",
       "enterBaseRate": "Insira a taxa básica",
       "leaveBlankDefault": "Deixe em branco para usar a taxa padrão",
       "notSet": "Não definido",
@@ -780,7 +780,7 @@
       "title": "Configuração de taxa fixa"
     },
     "hourlyConfig": {
-      "defaultRate": "Padrão: ${{rate}}",
+      "defaultRate": "Padrão: {{rate}}",
       "hourlyRate": "Taxa horária",
       "minimumBillableMinutes": "Minutos mínimos faturáveis",
       "roundUpToNearest": "Arredondar para o mais próximo (minutos)",
@@ -806,7 +806,7 @@
     },
     "title": "Adicionar linhas de contrato de predefinições",
     "usageConfig": {
-      "defaultRate": "Padrão: ${{rate}}",
+      "defaultRate": "Padrão: {{rate}}",
       "recordDrivenNote": "Os serviços baseados em uso são faturados com base no uso registrado no Rastreamento de uso para cada período de serviço. Um período sem registro de uso não gera cobrança — registre o uso (ou um zero explícito) em cada período para faturar esses serviços.",
       "ratePerUnit": "Taxa (por unidade)",
       "unitHint": "por exemplo, GB, chamada de API, usuário",
@@ -2515,7 +2515,7 @@
       "editDetails": "Editar regras",
       "editDetailsFor": "Editar detalhes de {{line}}",
       "fields": {
-        "adjustmentAmount": "Valor do ajuste em dólares",
+        "adjustmentAmount": "Valor do ajuste",
         "adjustmentDescription": "Descrição do ajuste",
         "adjustmentPeriod": "Período do ajuste",
         "billingFrequency": "Frequência de faturamento",
@@ -2533,16 +2533,16 @@
         "lineType": "Tipo de linha",
         "minimumBillableMinutes": "Minutos mínimos faturáveis",
         "minimumUsage": "Uso mínimo",
-        "overtimeRate": "Tarifa de hora extra ($/h)",
+        "overtimeRate": "Tarifa de hora extra por hora",
         "overtimeThreshold": "Limite de horas extras (horas)",
         "roundUpMinutes": "Arredondar para minutos",
         "scheduleEffectiveDate": "Data de vigência do cronograma",
         "scheduleEndDate": "Data de término do cronograma",
-        "scheduleRate": "Tarifa do cronograma em dólares",
+        "scheduleRate": "Tarifa do cronograma",
         "serviceQuantity": "Quantidade de licenças ou produtos",
         "tierMaximum": "Máximo da faixa",
         "tierMinimum": "Mínimo da faixa",
-        "tierRate": "Tarifa da faixa em dólares",
+        "tierRate": "Tarifa da faixa",
         "usageUnit": "Unidade de uso"
       },
       "frequencies": {
@@ -2567,7 +2567,7 @@
       "placeholders": {
         "minimum": "mínimo",
         "minimumMinutes": "minutos mínimos",
-        "overtimeRate": "hora extra $/h",
+        "overtimeRate": "tarifa de hora extra por hora",
         "roundMinutes": "arredondamento em minutos",
         "thresholdHours": "horas do limite"
       },
@@ -2607,7 +2607,8 @@
         "value": "Valor",
         "appliesTo": "Aplica-se a",
         "description": "Descrição",
-        "amount": "Valor ($)",
+        "amount": "Valor",
+        "rate": "Tarifa",
         "billingPeriod": "Período de faturamento",
         "timing": "Momento"
       }

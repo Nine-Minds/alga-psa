@@ -1448,7 +1448,7 @@
       "daysPlural": "{{count}} dni",
       "daysDecimal": "{{count}} dni",
       "hoursUnit": "godzin ({{formatted}})",
-      "willExpireAfter": "Linki płatności wygasną po {{duration}}"
+      "willExpireAfter": "Link do płatności z e-maila będzie działał przez {{duration}}"
     },
     "notConnected": {
       "title": "Stripe nie jest połączony",
@@ -1466,7 +1466,7 @@
       },
       "paymentLinkExpiration": {
         "label": "Wygaśnięcie linku płatności",
-        "description": "Jak długo linki płatności pozostają ważne, zanim wygasną"
+        "description": "Jak długo działa link do płatności w e-mailach z fakturą (od 1 godziny do 30 dni). Każde kliknięcie otwiera nową, bezpieczną płatność, dopóki faktura jest nieopłacona."
       },
       "actions": {
         "save": "Zapisz ustawienia",
