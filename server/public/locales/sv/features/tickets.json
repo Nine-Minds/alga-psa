@@ -1631,7 +1631,14 @@
       "referenceInvalid": "Den valda tavlan, statusen, prioriteten, den ansvariga, teamet eller SLA-policyn är inte längre giltig. Ladda om sidan och försök igen.",
       "duplicateName": "En tavla med det här namnet finns redan.",
       "duplicate": "En tavla eller status med samma inställningar finns redan.",
-      "invalidValue": "Ett av tavlans eller statusens värden är ogiltigt. Ladda om sidan och försök igen."
+      "invalidValue": "Ett av tavlans eller statusens värden är ogiltigt. Ladda om sidan och försök igen.",
+      "notificationEmailInvalid": "Aviseringsregel {{rule}} har en ogiltig e-postadress (högst {{max}} tecken)",
+      "notificationEmailLimit": "Aviseringsregel {{rule}} får ha högst {{max}} e-postadresser",
+      "notificationRecipientRequired": "Aviseringsregel {{rule}} måste avisera minst en användare, ett team eller en e-postadress",
+      "notificationEmailIsUser": "Aviseringsregel {{rule}}: {{address}} är en Alga-användares e-postadress. Välj användaren i stället.",
+      "notificationEmailIsContact": "Aviseringsregel {{rule}}: {{address}} tillhör en kundkontakt eller plats och kan inte vara mottagare.",
+      "notificationEmailClientDomain": "Aviseringsregel {{rule}}: {{address}} finns på en kunds e-postdomän och kan inte vara mottagare.",
+      "notificationEmailInboundMailbox": "Aviseringsregel {{rule}}: {{address}} är en ansluten inkommande brevlåda och kan inte vara mottagare."
     },
     "material": {
       "invalidValue": "Ett av de valda materialvärdena är ogiltigt. Ladda om sidan och försök igen.",

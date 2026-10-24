@@ -1623,7 +1623,14 @@
       "referenceInvalid": "La bacheca, lo stato, la priorità, l’incaricato, il team o il criterio SLA selezionati non sono più validi. Aggiornare la pagina e riprovare.",
       "duplicateName": "Esiste già una bacheca con questo nome.",
       "duplicate": "Esiste già una bacheca o uno stato con le stesse impostazioni.",
-      "invalidValue": "Uno dei valori della bacheca o dello stato non è valido. Aggiornare la pagina e riprovare."
+      "invalidValue": "Uno dei valori della bacheca o dello stato non è valido. Aggiornare la pagina e riprovare.",
+      "notificationEmailInvalid": "La regola di notifica {{rule}} contiene un indirizzo e-mail non valido (massimo {{max}} caratteri)",
+      "notificationEmailLimit": "La regola di notifica {{rule}} può contenere al massimo {{max}} indirizzi e-mail",
+      "notificationRecipientRequired": "La regola di notifica {{rule}} deve notificare almeno un utente, un team o un indirizzo e-mail",
+      "notificationEmailIsUser": "Regola di notifica {{rule}}: {{address}} è l'indirizzo e-mail di un utente Alga. Scegli invece l'utente.",
+      "notificationEmailIsContact": "Regola di notifica {{rule}}: {{address}} appartiene a un contatto o a una sede di un cliente e non può essere un destinatario.",
+      "notificationEmailClientDomain": "Regola di notifica {{rule}}: {{address}} appartiene al dominio e-mail di un cliente e non può essere un destinatario.",
+      "notificationEmailInboundMailbox": "Regola di notifica {{rule}}: {{address}} è una casella in entrata collegata e non può essere un destinatario."
     },
     "material": {
       "invalidValue": "Uno dei valori del materiale selezionati non è valido. Aggiornare la pagina e riprovare.",

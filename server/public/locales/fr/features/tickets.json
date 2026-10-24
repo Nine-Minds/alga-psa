@@ -1623,7 +1623,14 @@
       "referenceInvalid": "Le tableau, le statut, la priorité, le responsable, l’équipe ou la politique SLA sélectionné n’est plus valide. Veuillez actualiser la page et réessayer.",
       "duplicateName": "Un tableau portant ce nom existe déjà.",
       "duplicate": "Un tableau ou un statut avec les mêmes paramètres existe déjà.",
-      "invalidValue": "L’une des valeurs de tableau ou de statut n’est pas valide. Veuillez actualiser la page et réessayer."
+      "invalidValue": "L’une des valeurs de tableau ou de statut n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "notificationEmailInvalid": "La règle de notification {{rule}} contient une adresse e-mail non valide ({{max}} caractères maximum)",
+      "notificationEmailLimit": "La règle de notification {{rule}} peut contenir au maximum {{max}} adresses e-mail",
+      "notificationRecipientRequired": "La règle de notification {{rule}} doit notifier au moins un utilisateur, une équipe ou une adresse e-mail",
+      "notificationEmailIsUser": "Règle de notification {{rule}} : {{address}} est l'adresse e-mail d'un utilisateur Alga. Choisissez plutôt l'utilisateur.",
+      "notificationEmailIsContact": "Règle de notification {{rule}} : {{address}} appartient à un contact ou à un site d'un client et ne peut pas être destinataire.",
+      "notificationEmailClientDomain": "Règle de notification {{rule}} : {{address}} se trouve sur le domaine e-mail d'un client et ne peut pas être destinataire.",
+      "notificationEmailInboundMailbox": "Règle de notification {{rule}} : {{address}} est une boîte de réception connectée et ne peut pas être destinataire."
     },
     "material": {
       "invalidValue": "L’une des valeurs de matériel sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",

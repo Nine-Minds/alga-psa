@@ -1623,7 +1623,14 @@
       "referenceInvalid": "Het geselecteerde bord, de status, de prioriteit, de behandelaar, het team of het SLA-beleid is niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
       "duplicateName": "Er bestaat al een bord met deze naam.",
       "duplicate": "Er bestaat al een bord of status met dezelfde instellingen.",
-      "invalidValue": "Een van de bord- of statuswaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw."
+      "invalidValue": "Een van de bord- of statuswaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "notificationEmailInvalid": "Meldingsregel {{rule}} bevat een ongeldig e-mailadres (maximaal {{max}} tekens)",
+      "notificationEmailLimit": "Meldingsregel {{rule}} mag maximaal {{max}} e-mailadressen bevatten",
+      "notificationRecipientRequired": "Meldingsregel {{rule}} moet minstens één gebruiker, team of e-mailadres informeren",
+      "notificationEmailIsUser": "Meldingsregel {{rule}}: {{address}} is het e-mailadres van een Alga-gebruiker. Kies in plaats daarvan de gebruiker.",
+      "notificationEmailIsContact": "Meldingsregel {{rule}}: {{address}} hoort bij een klantcontact of locatie en kan geen ontvanger zijn.",
+      "notificationEmailClientDomain": "Meldingsregel {{rule}}: {{address}} staat op het e-maildomein van een klant en kan geen ontvanger zijn.",
+      "notificationEmailInboundMailbox": "Meldingsregel {{rule}}: {{address}} is een gekoppelde inkomende mailbox en kan geen ontvanger zijn."
     },
     "material": {
       "invalidValue": "Een van de geselecteerde materiaalwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
