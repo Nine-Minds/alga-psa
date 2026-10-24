@@ -54,22 +54,26 @@ RUN="$WORKTREE/scripts/dev/run-card-service.sh"
 # answer must not be read as no answer.
 alga-dev workflow-ensure-service --projectId=$PROJECT --name=dev-server \
   --cwd="$WORKTREE/server" \
+  --readinessPort=3374 --readinessPath=/auth/msp/signin \
   --command="CARD_SERVICE_STARTUP_GRACE=420 CARD_SERVICE_PROBE_TIMEOUT=30 $RUN dev-server \
     --health http://127.0.0.1:3374/auth/msp/signin \
     $WORKTREE/scripts/dev/run-co-managed-dev-server.sh --port 3374"
 
 alga-dev workflow-ensure-service --projectId=$PROJECT --name=temporal-worker \
   --cwd="$WORKTREE/ee/temporal-workflows" \
+  --readinessPort=8375 --readinessPath=/health \
   --command="$RUN temporal-worker --health http://127.0.0.1:8375/health \
     node dist/ee/temporal-workflows/src/worker.js"
 
 alga-dev workflow-ensure-service --projectId=$PROJECT --name=workflow-worker \
   --cwd="$WORKTREE/services/workflow-worker" \
+  --readinessPort=4374 --readinessPath=/health \
   --command="$RUN workflow-worker --health http://127.0.0.1:4374/health \
     node --env-file=.env ."
 
 alga-dev workflow-ensure-service --projectId=$PROJECT --name=review-guide \
   --cwd=/home/robert/card-reviews/co-managed-it-3363 \
+  --readinessPort=8874 --readinessPath=/ \
   --command="$RUN review-guide --health http://127.0.0.1:8874/ \
     python3 -m http.server 8874 --bind 0.0.0.0"
 ```
@@ -89,6 +93,28 @@ alga-dev workflow-ensure-service --projectId=$PROJECT --name=review-guide \
    live, `workflow-ensure-service --projectId=$PROJECT --name=dev-server`
    reattaches/revives the registered checkout command. A concluded or absent
    service is not a stored command lookup and still requires `--command`.
+
+### Capacity admission
+
+If the board refuses startup for insufficient memory, keep the admission guard
+in place. Inspect its reservations with:
+
+```bash
+alga-dev workflow-resource-holds --host=ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series
+alga-dev workflow-await-list --projectId=$PROJECT
+```
+
+The ledger subtracts reservations and the host floor from measured available
+memory. `free` alone therefore does not establish that startup is admitted.
+Ask the capacity owner for an admitted window; do not stop unrelated services
+or launch the app outside the board.
+
+Check an await's `lastDetail` before relying on it. The original capacity await
+`849931a0-e4e9-427a-9649-d0fec3c22978` expanded an awk `$2` inside double quotes
+and returned a syntax error on every poll. It is cancelled and replaced by
+`0d6ddff7-0572-4259-b9a5-88499ab0c8a3`, whose Python check was verified to return
+exit 1 below its 42 GiB threshold without a syntax error. That threshold is a
+wake signal; the board must still admit each actual service launch.
 
 ### Restarting is adoption, not a cold start
 
