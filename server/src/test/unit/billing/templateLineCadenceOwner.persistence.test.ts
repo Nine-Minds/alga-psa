@@ -12,6 +12,7 @@ const normalizeKey = (key: string) => key.split('.').pop() ?? key;
 
 class FakeQuery {
   private filters: Record<string, unknown> = {};
+  private inFilters: Array<[string, unknown[]]> = [];
 
   constructor(
     private readonly table: string,
@@ -30,6 +31,14 @@ class FakeQuery {
     for (const [key, filterValue] of Object.entries(columnOrFilters)) {
       this.filters[normalizeKey(key)] = filterValue;
     }
+    return this;
+  }
+
+  // The template amount resolver batches its reads (`whereIn('template_id',
+  // ids)`, `whereIn('config_id', ids)`, ...), so the fake has to answer set
+  // membership as well as equality.
+  whereIn(column: string, values: unknown[]) {
+    this.inFilters.push([normalizeKey(column), values]);
     return this;
   }
 
@@ -64,8 +73,10 @@ class FakeQuery {
 
   private rows() {
     const rows = this.state.rows[this.table] ?? [];
-    return rows.filter((row) =>
-      Object.entries(this.filters).every(([key, value]) => row[normalizeKey(key)] === value),
+    return rows.filter(
+      (row) =>
+        Object.entries(this.filters).every(([key, value]) => row[normalizeKey(key)] === value) &&
+        this.inFilters.every(([key, values]) => values.includes(row[key])),
     );
   }
 }

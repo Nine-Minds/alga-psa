@@ -478,6 +478,15 @@
         "failed": "Nous n'avons pas pu enregistrer votre carte",
         "savedDescription": "Votre carte est prête pour vos prochains paiements.",
         "failedDescription": "La configuration n'a pas pu être vérifiée. Demandez un nouveau lien à votre prestataire de facturation."
+      },
+      "payLink": {
+        "heading": "Ce lien de paiement ne peut pas être utilisé",
+        "expired": "Ce lien de paiement a expiré.",
+        "invalid": "Ce lien de paiement n'est pas valide.",
+        "notPayable": "Cette facture ne peut plus être payée avec ce lien. Elle est peut-être déjà payée ou n'accepte plus le paiement en ligne.",
+        "unavailable": "Nous n'avons pas pu ouvrir la page de paiement pour le moment. Veuillez réessayer dans quelques minutes.",
+        "viewInPortal": "Voir la facture dans le portail client",
+        "contactProvider": "Veuillez contacter votre fournisseur de facturation pour obtenir un nouveau lien."
       }
     }
   },

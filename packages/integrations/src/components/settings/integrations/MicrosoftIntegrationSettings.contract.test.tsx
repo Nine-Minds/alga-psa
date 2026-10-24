@@ -27,8 +27,12 @@ const getMicrosoftEmailAdminConsentUrlMock = vi.hoisted(() => vi.fn());
 const toastMock = vi.hoisted(() => vi.fn());
 const routerPushMock = vi.hoisted(() => vi.fn());
 
+const routerReplaceMock = vi.hoisted(() => vi.fn());
+
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: routerPushMock }),
+  usePathname: () => '/msp/settings/integrations',
+  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ push: routerPushMock, replace: routerReplaceMock }),
 }));
 
 vi.mock('@alga-psa/integrations/actions', () => ({

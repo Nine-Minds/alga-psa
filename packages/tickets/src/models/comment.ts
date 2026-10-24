@@ -105,8 +105,8 @@ const Comment = {
       }
 
       const now = new Date().toISOString();
-      const parentCommentId = comment.parent_comment_id || null;
-      const isReply = Boolean(parentCommentId);
+      let parentCommentId = comment.parent_comment_id || null;
+      let isReply = Boolean(parentCommentId);
       let commentId = comment.comment_id;
       let threadId = comment.thread_id;
 
@@ -141,15 +141,29 @@ const Comment = {
         }
 
         const threadIsInternal = Boolean(parent.thread_is_internal);
-        if (comment.is_internal == null) {
-          comment.is_internal = threadIsInternal;
-        } else if (Boolean(comment.is_internal) !== threadIsInternal) {
-          throw new Error('Reply visibility must match the thread root visibility');
+        if (threadIsInternal && comment.author_type === 'client') {
+          // D1 (alga-2026-0002798): a client author can never create an internal
+          // comment, and a public comment cannot live in an internal thread. Store
+          // a top-level public comment in a fresh public thread instead of
+          // inheriting (or rejecting on) the internal thread's visibility.
+          // LEVERAGE: pattern non-internal-author-visibility-guard — duplicated in shared/models/ticketModel.ts (createComment); extract a shared visibility resolver.
+          comment.is_internal = false;
+          parentCommentId = null;
+          isReply = false;
+          threadId = undefined; // never reuse the internal thread id
+        } else {
+          if (comment.is_internal == null) {
+            comment.is_internal = threadIsInternal;
+          } else if (Boolean(comment.is_internal) !== threadIsInternal) {
+            throw new Error('Reply visibility must match the thread root visibility');
+          }
+          threadId = parent.thread_id;
         }
+      }
 
+      if (isReply) {
         const idsResult = await trx.raw('SELECT gen_random_uuid() AS comment_id');
         commentId = commentId || idsResult.rows?.[0]?.comment_id;
-        threadId = parent.thread_id;
       } else {
         const idsResult = await trx.raw('SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id');
         const generatedIds = idsResult.rows?.[0];

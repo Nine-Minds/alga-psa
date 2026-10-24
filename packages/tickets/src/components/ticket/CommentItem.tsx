@@ -13,12 +13,17 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { ClampedContent } from '@alga-psa/ui/components/ClampedContent';
+import { useInboundEmailView } from '@alga-psa/ui/components/EmailHtmlViewer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { ReactionDisplay } from '@alga-psa/ui/components/ReactionDisplay';
 import type { IAggregatedReaction } from '@alga-psa/types';
 import { getCommentResponseSource } from '../../lib/responseSource';
+import {
+  originalEmailSourceForComment,
+  originalEmailToggleLabels,
+} from '../../lib/inboundEmailOriginalView';
 import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { resolveCommentAuthor } from '../../lib/commentAuthorResolution';
 import ResponseSourceBadge from '../ResponseSourceBadge';
@@ -260,6 +265,11 @@ const CommentItem: React.FC<CommentItemProps> = ({
     () => getCommentResponseSource(conversation),
     [conversation]
   );
+  // Inbound-email comments can also be read as the message the sender wrote.
+  const originalEmailSrc = useMemo(
+    () => originalEmailSourceForComment(ticketId, conversation),
+    [ticketId, conversation]
+  );
   const authorEmail = getAuthorEmail();
 
   // One-off Cc/Bcc for this single comment. Bcc is MSP-only: the client-portal
@@ -278,6 +288,16 @@ const CommentItem: React.FC<CommentItemProps> = ({
     return lines;
   }, [conversation.metadata, t]);
   const isDeleted = Boolean(conversation.deleted_at);
+  const isEditingThisComment = isEditing && currentComment?.comment_id === conversation.comment_id;
+
+  // The switcher joins the badge row beside the "via inbound email" badge that
+  // explains it, instead of spending a line of its own above every message. A
+  // deleted or open-in-the-editor comment has no body to read as mail.
+  const emailView = useInboundEmailView({
+    id: `${commentId}-original-email`,
+    src: isDeleted || isEditingThisComment ? null : originalEmailSrc,
+    labels: originalEmailToggleLabels(t),
+  });
 
   // Only allow users to edit their own comments
   const canEdit = useMemo(() => {
@@ -607,6 +627,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     }}
                   />
                 )}
+                {emailView.switcher}
                 {externalLinks.map((link) => (
                   <span
                     key={link.link_id}
@@ -780,7 +801,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               >
                 [deleted]
               </div>
-            ) : isEditing && currentComment?.comment_id === conversation.comment_id ? (
+            ) : isEditingThisComment ? (
               editorContent
             ) : (
               <div
@@ -800,11 +821,13 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     showMoreLabel={t('conversation.showMore', 'Show more')}
                     showLessLabel={t('conversation.showLess', 'Show less')}
                   >
-                    <RichTextViewer
-                      key={`${conversation.comment_id}-${conversation.updated_at || conversation.created_at}`}
-                      content={displayContent as any}
-                      className="w-full min-w-0 max-w-full"
-                    />
+                    {emailView.body(
+                      <RichTextViewer
+                        key={`${conversation.comment_id}-${conversation.updated_at || conversation.created_at}`}
+                        content={displayContent as any}
+                        className="w-full min-w-0 max-w-full"
+                      />
+                    )}
                   </ClampedContent>
               </div>
           )}
