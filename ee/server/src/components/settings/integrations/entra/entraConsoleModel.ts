@@ -445,3 +445,39 @@ export function buildEntraRunHistoryCsv(
 
   return lines.join('\n');
 }
+
+/**
+ * CIPP connection identity as the UI may show it. Built from the status
+ * payload's non-secret fields only; there is no secret in `EntraStatusResponse`
+ * to leak, and this keeps it that way by naming exactly what is read.
+ */
+export interface EntraCippConnectionView {
+  authType: 'api_client' | 'legacy_api_token' | null;
+  isLegacy: boolean;
+  apiUrl: string | null;
+  clientId: string | null;
+  tenantId: string | null;
+}
+
+export const buildCippConnectionView = (
+  connectionType: string | null | undefined,
+  details:
+    | {
+        cippBaseUrl?: string | null;
+        cippAuthType?: 'api_client' | 'legacy_api_token' | null;
+        cippClientId?: string | null;
+        cippDirectoryId?: string | null;
+      }
+    | null
+    | undefined
+): EntraCippConnectionView | null => {
+  if (connectionType !== 'cipp') return null;
+  const authType = details?.cippAuthType ?? null;
+  return {
+    authType,
+    isLegacy: authType === 'legacy_api_token',
+    apiUrl: details?.cippBaseUrl || null,
+    clientId: details?.cippClientId || null,
+    tenantId: details?.cippDirectoryId || null,
+  };
+};

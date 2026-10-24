@@ -52,6 +52,7 @@ import {
   type EntraSkippedTenant,
 } from '../EntraTenantMappingTable';
 import { EntraCippConnectDialog } from '../EntraCippConnectDialog';
+import { EntraCippConnectionDetails } from './EntraCippConnectionDetails';
 import { ConnectionMethodChooser, type EntraConnectionMethod } from './ConnectionMethodChooser';
 import { EntraDirectConsentDialog } from './EntraDirectConsentDialog';
 import { MicrosoftAppRegistrationPicker } from './MicrosoftAppRegistrationPicker';
@@ -67,6 +68,7 @@ import { RelativeTime } from './RelativeTime';
 import { formatEntraExactTime, formatEntraRelativeTime } from './timeFormat';
 import { wasEntraSyncAccepted } from './syncStart';
 import {
+  buildCippConnectionView,
   ENTRA_CONSOLE_TABS,
   ENTRA_RUN_RESULT_BADGE_VARIANTS,
   ENTRA_RUN_RESULT_LABEL_KEYS,
@@ -516,6 +518,13 @@ export function EntraConsole({
     setRotateDirectOpen(true);
   }, [status?.connectionType]);
 
+  // Reconnect on a legacy CIPP connection opens the API-client dialog. The
+  // stored legacy credential is untouched until that dialog's Save succeeds.
+  const handleReconnectCipp = React.useCallback(() => {
+    setActionError(null);
+    setRotateCippOpen(true);
+  }, []);
+
   const handleReconnect = React.useCallback(() => {
     setActionError(null);
     if (reconnectMethod === 'cipp') {
@@ -570,6 +579,9 @@ export function EntraConsole({
       lastValidatedAt: status?.lastValidatedAt || null,
       lastValidationError: status?.lastValidationError || null,
       cippBaseUrl: status?.connectionDetails?.cippBaseUrl || null,
+      cippAuthType: status?.connectionDetails?.cippAuthType || null,
+      cippClientId: status?.connectionDetails?.cippClientId || null,
+      cippDirectoryId: status?.connectionDetails?.cippDirectoryId || null,
       directTenantId: status?.connectionDetails?.directTenantId || null,
       directCredentialSource: status?.connectionDetails?.directCredentialSource || null,
       directProfileName: status?.connectionDetails?.directProfileName || null,
@@ -612,6 +624,7 @@ export function EntraConsole({
         });
 
   const connectionHealthy = status?.status === 'connected';
+  const cippView = buildCippConnectionView(status?.connectionType, status?.connectionDetails);
   const connectionMethodLabel = status?.connectionType
     ? t(`integrations.entra.settings.connection.types.${status.connectionType}`)
     : t('integrations.entra.settings.connection.notConfigured');
@@ -1049,6 +1062,14 @@ export function EntraConsole({
                 }
               />
             ) : null}
+            {cippView ? (
+              <EntraCippConnectionDetails
+                view={cippView}
+                idPrefix="entra-console-rail"
+                showApiUrl={false}
+                onReconnect={handleReconnectCipp}
+              />
+            ) : null}
             {status?.connectionType === 'direct' ? (
               <KeyValue
                 label={t('integrations.entra.settings.connection.directTenantLabel')}
@@ -1142,6 +1163,14 @@ export function EntraConsole({
                   status.connectionDetails?.cippBaseUrl
                   || t('integrations.entra.settings.connection.notAvailable')
                 }
+              />
+            ) : null}
+            {cippView ? (
+              <EntraCippConnectionDetails
+                view={cippView}
+                idPrefix="entra-console"
+                showApiUrl={false}
+                onReconnect={handleReconnectCipp}
               />
             ) : null}
             {status?.connectionType === 'direct' ? (
@@ -1493,6 +1522,12 @@ export function EntraConsole({
       <EntraCippConnectDialog
         open={rotateCippOpen}
         onOpenChange={setRotateCippOpen}
+        reconnect={cippView && cippView.authType ? {
+          authType: cippView.authType,
+          apiUrl: cippView.apiUrl,
+          clientId: cippView.clientId,
+          tenantId: cippView.tenantId,
+        } : null}
         onSuccess={() => {
           void onStatusChanged();
           void loadConsole();

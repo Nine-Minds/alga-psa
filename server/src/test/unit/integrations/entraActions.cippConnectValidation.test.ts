@@ -109,6 +109,8 @@ describe('connectEntraCipp validates before persisting', () => {
     expect(result).toEqual({
       success: false,
       error: 'CIPP credentials were rejected by the remote API.',
+      // The probe's (non-secret) classification rides along so the dialog can title it.
+      code: 'auth_rejected',
     });
     expect(insertMock).not.toHaveBeenCalled();
     expect(updateMock).not.toHaveBeenCalled();
@@ -339,7 +341,11 @@ describe('connectEntraCipp validates before persisting', () => {
         apiClient as any
       );
 
-      expect(result).toEqual({ success: false, error: 'Microsoft rejected the client secret.' });
+      expect(result).toEqual({
+        success: false,
+        error: 'Microsoft rejected the client secret.',
+        code: 'token_mint_failed',
+      });
       expect(saveEntraCippCredentialsMock).not.toHaveBeenCalled();
       expect(insertMock).not.toHaveBeenCalled();
       expect(updateMock).not.toHaveBeenCalled();

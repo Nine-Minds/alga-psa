@@ -57,7 +57,10 @@ vi.mock('@ee/components/settings/integrations/EntraReconciliationQueue', () => (
   default: () => <div id="entra-review-queue-stub" />,
 }));
 vi.mock('@ee/components/settings/integrations/EntraCippConnectDialog', () => ({
-  EntraCippConnectDialog: () => null,
+  EntraCippConnectDialog: ({ open, reconnect }: { open: boolean; reconnect?: unknown }) =>
+    open ? (
+      <div id="entra-cipp-connect-dialog-stub" data-reconnect={JSON.stringify(reconnect ?? null)} />
+    ) : null,
 }));
 vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
   ConfirmationDialog: ({ isOpen, id }: { isOpen: boolean; id?: string }) =>
@@ -586,6 +589,73 @@ describe('EntraConsole overview', () => {
     expect(document.getElementById('entra-console-overwrites-inactivate')?.textContent).toContain(
       'left alone'
     );
+  });
+
+  describe('CIPP connection details', () => {
+    const cippStatus = (details: Record<string, unknown>) =>
+      statusOf({
+        connectionType: 'cipp',
+        connectionDetails: {
+          cippBaseUrl: 'https://cipp-api.example.net',
+          directTenantId: null,
+          directCredentialSource: null,
+          directProfileId: null,
+          directProfileName: null,
+          directProfileMissing: false,
+          ...details,
+        } as EntraStatusResponse['connectionDetails'],
+      });
+
+    it('shows API-client identity on the connection tab and never a secret', async () => {
+      window.history.replaceState({}, '', '/msp/settings/integrations/entra?tab=connection');
+      renderConsole(
+        cippStatus({ cippAuthType: 'api_client', cippClientId: 'client-id-1', cippDirectoryId: 'tenant-id-1' })
+      );
+
+      await waitFor(() =>
+        expect(document.getElementById('entra-console-cipp-details')).not.toBeNull()
+      );
+      const details = document.getElementById('entra-console-cipp-details');
+      expect(details?.textContent).toContain('API client');
+      expect(details?.textContent).toContain('client-id-1');
+      expect(details?.textContent).toContain('tenant-id-1');
+      expect(document.getElementById('entra-console-cipp-legacy-badge')).toBeNull();
+      expect(document.getElementById('entra-console-cipp-reconnect')).toBeNull();
+      expect(document.body.innerHTML.toLowerCase()).not.toContain('clientsecret');
+      expect(document.body.innerHTML.toLowerCase()).not.toContain('apitoken');
+    });
+
+    it('labels a legacy connection and Reconnect opens the dialog in reconnect mode', async () => {
+      window.history.replaceState({}, '', '/msp/settings/integrations/entra?tab=connection');
+      renderConsole(cippStatus({ cippAuthType: 'legacy_api_token' }));
+
+      await waitFor(() =>
+        expect(document.getElementById('entra-console-cipp-legacy-badge')).not.toBeNull()
+      );
+      expect(document.getElementById('entra-console-cipp-legacy-badge')?.textContent).toContain(
+        'Legacy API key'
+      );
+      expect(document.getElementById('entra-console-cipp-legacy-notice')?.textContent).toContain(
+        'keeps syncing unchanged'
+      );
+      expect(document.getElementById('entra-cipp-connect-dialog-stub')).toBeNull();
+
+      fireEvent.click(document.getElementById('entra-console-cipp-reconnect') as HTMLButtonElement);
+
+      const dialog = document.getElementById('entra-cipp-connect-dialog-stub');
+      expect(dialog).not.toBeNull();
+      expect(JSON.parse(dialog?.getAttribute('data-reconnect') ?? 'null')).toMatchObject({
+        authType: 'legacy_api_token',
+        apiUrl: 'https://cipp-api.example.net',
+      });
+    });
+
+    it('shows the legacy badge in the overview rail too', async () => {
+      renderConsole(cippStatus({ cippAuthType: 'legacy_api_token' }));
+      await waitFor(() =>
+        expect(document.getElementById('entra-console-rail-cipp-legacy-badge')).not.toBeNull()
+      );
+    });
   });
 });
 

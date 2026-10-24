@@ -425,26 +425,66 @@
           "test": "Prova connessione",
           "testing": "Prova in corso…"
         },
-        "description": "Inserisci l'URL della tua istanza CIPP e un token API per consentire ad Alga di scoprire e sincronizzare i dati Entra.",
-        "encryptionNote": "La chiave API è cifrata a riposo e non viene più mostrata dopo il salvataggio.",
+        "description": "Inserisci i dettagli di un client API CIPP per consentire ad Alga di scoprire e sincronizzare i dati Entra.",
+        "encryptionNote": "Il segreto client è cifrato a riposo e non viene più mostrato dopo il salvataggio.",
         "errors": {
           "missingFields": "Sia l'URL di base sia il token API sono obbligatori.",
           "testFirst": "Prova la connessione prima di salvare.",
-          "unknown": "Si è verificato un errore sconosciuto."
+          "unknown": "Si è verificato un errore sconosciuto.",
+          "missingApiClientFields": "URL dell'API, ID applicazione (client), segreto client e ID tenant sono tutti obbligatori."
         },
         "fields": {
           "apiToken": "Token API",
-          "apiTokenHelp": "In CIPP: Impostazioni → CIPP → Accesso API. Copia la chiave API, non un segreto client di Azure.",
+          "apiTokenHelp": "La chiave API statica di una versione precedente di CIPP. CIPP non le emette più; preferisci un client API.",
           "apiTokenPlaceholder": "Inserisci token...",
-          "baseUrl": "URL di base CIPP",
-          "baseUrlHelp": "Questo è l'host della function app CIPP-API (ad esempio my-cipp-api.azurewebsites.net), non il frontend CIPP a cui accedi.",
-          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+          "baseUrl": "URL dell'API CIPP",
+          "baseUrlHelp": "L'URL dell'API CIPP, con o senza /api finale.",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com",
+          "apiUrl": "URL dell'API",
+          "apiUrlPlaceholder": "https://your-cipp-api.azurewebsites.net/api",
+          "apiUrlHelp": "Incolla l'URL dell'API mostrato in CIPP. Termina con /api; funziona con o senza questo suffisso.",
+          "clientId": "ID applicazione (client)",
+          "clientIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "clientSecret": "Segreto client",
+          "clientSecretPlaceholder": "Inserisci il segreto client...",
+          "clientSecretHelp": "CIPP mostra il segreto una sola volta, quando salvi il client con Save to Azure. Se non ce l'hai più, crea un nuovo segreto e inseriscilo qui.",
+          "tenantId": "ID tenant",
+          "tenantIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "tenantIdHelp": "L'ID tenant mostrato nella pagina CIPP-API, accanto al client."
         },
         "test": {
           "passed": "CIPP ha risposto. {{count}} tenant visibili.",
           "required": "Prova la connessione prima di salvare."
         },
-        "title": "Connetti CIPP"
+        "title": "Connetti CIPP",
+        "reconnectTitle": "Riconnetti CIPP",
+        "legacyDescription": "Inserisci l'URL dell'API CIPP e una chiave API statica legacy. CIPP non emette più queste chiavi, quindi usa un client API se possibile.",
+        "reconnectNote": "L'URL dell'API, l'ID applicazione (client) e l'ID tenant sono precompilati dalla connessione attuale. Inserisci di nuovo il segreto client. La connessione attuale continua a funzionare finché i nuovi dettagli non superano una prova e non salvi.",
+        "legacyNote": "Le chiavi API legacy servono solo per le connessioni create prima che CIPP introducesse i client API. Le connessioni esistenti continuano a funzionare.",
+        "legacyEncryptionNote": "La chiave API è cifrata a riposo e non viene più mostrata dopo il salvataggio.",
+        "help": {
+          "title": "Dove trovare questi dati in CIPP",
+          "steps": {
+            "openIntegration": "In CIPP, vai a Integrations > CIPP-API.",
+            "createClient": "Scegli Create New Client.",
+            "enable": "Abilita il client.",
+            "saveToAzure": "Scegli Save to Azure.",
+            "copySecret": "Copia il segreto client. CIPP lo mostra una sola volta.",
+            "copyDetails": "Copia l'ID tenant e l'URL dell'API da questa stessa pagina, insieme all'ID applicazione (client)."
+          },
+          "tenantIdDelay": "L'ID tenant può impiegare da 5 a 15 minuti per comparire dopo il primo salvataggio. Se non è ancora presente, attendi e aggiorna la pagina di CIPP.",
+          "restrictions": "Se il client usa Allowed IP Ranges, aggiungi lì gli IP di uscita di Alga. Se usa un Custom Role, il ruolo deve consentire listtenants, listusers, listgroups, listusergroups e ListMailboxes."
+        },
+        "shape": {
+          "useLegacy": "Usa invece una chiave API legacy",
+          "useApiClient": "Usa invece un client API CIPP (consigliato)"
+        },
+        "failure": {
+          "unreachable": "Impossibile raggiungere CIPP a questo URL",
+          "tokenRejected": "Microsoft ha rifiutato l'accesso del client API",
+          "apiRefused": "CIPP ha rifiutato il token di accesso",
+          "legacyRejected": "CIPP ha rifiutato la chiave API"
+        }
       },
       "console": {
         "actions": {
@@ -810,7 +850,17 @@
           "types": {
             "cipp": "CIPP",
             "direct": "Microsoft Entra Diretto"
-          }
+          },
+          "authTypeLabel": "Autenticazione",
+          "authTypes": {
+            "api_client": "Client API",
+            "legacy_api_token": "Chiave API legacy"
+          },
+          "apiUrlLabel": "URL dell'API",
+          "clientIdLabel": "ID applicazione (client)",
+          "cippTenantIdLabel": "ID tenant",
+          "legacyNotice": "Questa connessione usa una chiave API CIPP legacy. Continua a sincronizzare senza modifiche. Riconnetti per passare a un client API CIPP.",
+          "reconnectCipp": "Riconnetti"
         },
         "currentStep": {
           "connect": {
@@ -1009,8 +1059,8 @@
             "description": "Alga legge i tenant tramite l'istanza CIPP che già utilizzi.",
             "label": "CIPP (CyberDrain Improved Partner Portal)",
             "prerequisites": {
-              "apiHost": "L'host della function app CIPP-API, non il frontend CIPP.",
-              "apiKey": "Una chiave API CIPP con accesso all'elenco dei tenant.",
+              "apiHost": "L'URL dell'API, l'ID applicazione (client) e l'ID tenant da CIPP > Integrations > CIPP-API.",
+              "apiKey": "Il segreto del client API, che CIPP mostra una sola volta.",
               "instance": "Un'istanza CIPP attiva."
             }
           },

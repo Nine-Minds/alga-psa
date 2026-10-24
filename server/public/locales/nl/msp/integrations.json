@@ -425,26 +425,66 @@
           "test": "Verbinding testen",
           "testing": "Testen…"
         },
-        "description": "Voer uw CIPP-instantie-URL en een API-token in om Alga toegang te geven om Entra-gegevens te ontdekken en te synchroniseren.",
-        "encryptionNote": "De API-sleutel wordt versleuteld opgeslagen en na het opslaan nooit meer getoond.",
+        "description": "Voer de gegevens van een CIPP-API-client in zodat Alga Entra-gegevens kan ontdekken en synchroniseren.",
+        "encryptionNote": "Het clientgeheim wordt versleuteld opgeslagen en na het opslaan nooit meer getoond.",
         "errors": {
           "missingFields": "Zowel Basis-URL als API-token zijn vereist.",
           "testFirst": "Test de verbinding voordat u opslaat.",
-          "unknown": "Er is een onbekende fout opgetreden."
+          "unknown": "Er is een onbekende fout opgetreden.",
+          "missingApiClientFields": "API-URL, Toepassings-ID (client), clientgeheim en Tenant-ID zijn allemaal vereist."
         },
         "fields": {
           "apiToken": "API-token",
-          "apiTokenHelp": "In CIPP: Instellingen → CIPP → API-toegang. Kopieer de API-sleutel, niet een Azure-clientgeheim.",
+          "apiTokenHelp": "De statische API-sleutel uit een oudere CIPP-versie. CIPP geeft deze niet meer uit; geef de voorkeur aan een API-client.",
           "apiTokenPlaceholder": "Voer token in...",
-          "baseUrl": "CIPP-basis-URL",
-          "baseUrlHelp": "Dit is de host van de CIPP-API function app (bijvoorbeeld my-cipp-api.azurewebsites.net), niet de CIPP-frontend waarop u zich aanmeldt.",
-          "baseUrlPlaceholder": "https://cipp.uwdomein.com"
+          "baseUrl": "CIPP-API-URL",
+          "baseUrlHelp": "De CIPP-API-URL, met of zonder de afsluitende /api.",
+          "baseUrlPlaceholder": "https://cipp.uwdomein.com",
+          "apiUrl": "API-URL",
+          "apiUrlPlaceholder": "https://your-cipp-api.azurewebsites.net/api",
+          "apiUrlHelp": "Plak de API-URL die in CIPP wordt getoond. Deze eindigt op /api; het werkt met of zonder dat achtervoegsel.",
+          "clientId": "Toepassings-ID (client)",
+          "clientIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "clientSecret": "Clientgeheim",
+          "clientSecretPlaceholder": "Voer clientgeheim in...",
+          "clientSecretHelp": "CIPP toont het geheim maar één keer, wanneer u de client opslaat met Save to Azure. Als u het niet meer hebt, maak dan een nieuw geheim aan en voer dat hier in.",
+          "tenantId": "Tenant-ID",
+          "tenantIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "tenantIdHelp": "De Tenant-ID die op de pagina CIPP-API naast de client wordt getoond."
         },
         "test": {
           "passed": "CIPP antwoordde. {{count}} tenants zichtbaar.",
           "required": "Test de verbinding voordat u opslaat."
         },
-        "title": "CIPP verbinden"
+        "title": "CIPP verbinden",
+        "reconnectTitle": "CIPP opnieuw verbinden",
+        "legacyDescription": "Voer uw CIPP-API-URL en een verouderde statische API-sleutel in. CIPP geeft deze sleutels niet meer uit, gebruik dus bij voorkeur een API-client.",
+        "reconnectNote": "De API-URL, Toepassings-ID (client) en Tenant-ID worden ingevuld op basis van de huidige verbinding. Voer het clientgeheim opnieuw in. De huidige verbinding blijft werken totdat de nieuwe gegevens een test doorstaan en u opslaat.",
+        "legacyNote": "Verouderde API-sleutels zijn alleen bedoeld voor verbindingen die zijn gemaakt voordat CIPP API-clients introduceerde. Bestaande verbindingen blijven werken.",
+        "legacyEncryptionNote": "De API-sleutel wordt versleuteld opgeslagen en na het opslaan nooit meer getoond.",
+        "help": {
+          "title": "Waar u deze gegevens in CIPP vindt",
+          "steps": {
+            "openIntegration": "Ga in CIPP naar Integrations > CIPP-API.",
+            "createClient": "Kies Create New Client.",
+            "enable": "Schakel de client in.",
+            "saveToAzure": "Kies Save to Azure.",
+            "copySecret": "Kopieer het clientgeheim. CIPP toont het maar één keer.",
+            "copyDetails": "Kopieer de Tenant-ID en de API-URL van diezelfde pagina, samen met de Toepassings-ID (client)."
+          },
+          "tenantIdDelay": "Het kan 5 tot 15 minuten duren voordat de Tenant-ID na de eerste keer opslaan verschijnt. Is hij er nog niet, wacht dan en vernieuw de CIPP-pagina.",
+          "restrictions": "Als de client Allowed IP Ranges gebruikt, voeg dan de egress-IP's van Alga daar toe. Als de client een Custom Role gebruikt, moet de rol listtenants, listusers, listgroups, listusergroups en ListMailboxes toestaan."
+        },
+        "shape": {
+          "useLegacy": "In plaats daarvan een verouderde API-sleutel gebruiken",
+          "useApiClient": "In plaats daarvan een CIPP-API-client gebruiken (aanbevolen)"
+        },
+        "failure": {
+          "unreachable": "CIPP is op deze URL niet bereikbaar",
+          "tokenRejected": "Microsoft heeft de aanmelding van de API-client geweigerd",
+          "apiRefused": "CIPP heeft het toegangstoken geweigerd",
+          "legacyRejected": "CIPP heeft de API-sleutel geweigerd"
+        }
       },
       "console": {
         "actions": {
@@ -810,7 +850,17 @@
           "types": {
             "cipp": "CIPP",
             "direct": "Microsoft Entra Direct"
-          }
+          },
+          "authTypeLabel": "Verificatie",
+          "authTypes": {
+            "api_client": "API-client",
+            "legacy_api_token": "Verouderde API-sleutel"
+          },
+          "apiUrlLabel": "API-URL",
+          "clientIdLabel": "Toepassings-ID (client)",
+          "cippTenantIdLabel": "Tenant-ID",
+          "legacyNotice": "Deze verbinding gebruikt een verouderde CIPP-API-sleutel. Ze blijft ongewijzigd synchroniseren. Maak opnieuw verbinding om over te stappen op een CIPP-API-client.",
+          "reconnectCipp": "Opnieuw verbinden"
         },
         "currentStep": {
           "connect": {
@@ -1009,8 +1059,8 @@
             "description": "Alga leest tenants via de CIPP-instantie die u al draait.",
             "label": "CIPP (CyberDrain Improved Partner Portal)",
             "prerequisites": {
-              "apiHost": "De host van de CIPP-API function app, niet de CIPP-frontend.",
-              "apiKey": "Een CIPP API-sleutel met toegang tot de tenantlijst.",
+              "apiHost": "De API-URL, Toepassings-ID (client) en Tenant-ID uit CIPP > Integrations > CIPP-API.",
+              "apiKey": "Het geheim van de API-client, dat CIPP maar één keer toont.",
               "instance": "Een draaiende CIPP-instantie."
             }
           },
