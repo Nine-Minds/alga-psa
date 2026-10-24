@@ -469,6 +469,14 @@
     "clientPortal": "Mottaget via kundportalen",
     "inboundEmail": "Mottaget via inkommande e-post"
   },
+  "originalEmail": {
+    "text": "Text",
+    "original": "Ursprungligt e-postmeddelande",
+    "emailShort": "E-post",
+    "loading": "Läser in det ursprungliga e-postmeddelandet…",
+    "error": "Det ursprungliga e-postmeddelandet kunde inte läsas in.",
+    "group": "Meddelandevisning"
+  },
   "documents": {
     "title": "Dokument",
     "noDocuments": "Inga bifogade dokument",
@@ -1675,7 +1683,10 @@
       "ruleCategoryBoardMismatch": "Den valda kategorin tillhör en annan tavla än regeln.",
       "ruleCategoryInvalid": "Den valda kategorin är inte en kategori på översta nivån.",
       "ruleSubcategoryInvalid": "Den valda underkategorin tillhör inte den valda kategorin.",
-      "ruleSubcategoryRequiresCategory": "Välj en kategori innan du väljer en underkategori."
+      "ruleSubcategoryRequiresCategory": "Välj en kategori innan du väljer en underkategori.",
+      "ruleTooManyKeywords": "Använd högst {{max}} nyckelord per regel.",
+      "ruleKeywordTooLong": "Varje nyckelord får vara högst {{max}} tecken långt.",
+      "ruleOriginInvalid": "En av de valda ärendekällorna är ogiltig."
     }
   },
   "ticketSection": {

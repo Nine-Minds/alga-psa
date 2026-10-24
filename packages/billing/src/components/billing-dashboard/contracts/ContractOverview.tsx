@@ -6,7 +6,8 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { getContractOverview } from '@alga-psa/billing/actions/contractActions';
 import type { IContractOverview, IContractLineOverview } from '@alga-psa/billing/actions/contractActions';
-import { Package, Clock, Activity, Coins, Layers3, ChevronDown, ChevronRight } from 'lucide-react';
+import { Package, Clock, Activity, Coins, Layers3, ChevronDown, ChevronRight, Edit } from 'lucide-react';
+import { getContractLineBillingTimingLabel } from './contractLineBillingTimingLabel';
 import { unitFixedServiceAmountCents } from '../../../lib/fixedServiceBasis';
 import { UsageLegacyTransitionDialog, type UsageLegacyTransitionMode } from './UsageLegacyTransitionDialog';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -23,6 +24,9 @@ const isReturnedActionError = (value: unknown) =>
 interface ContractOverviewProps {
   contractId: string;
   onNavigateToLines?: () => void;
+  /** Opens the Contract Lines tab with this line expanded and in edit mode. Omit (or set isReadOnly) to hide the Edit action. */
+  onEditLine?: (contractLineId: string) => void;
+  isReadOnly?: boolean;
 }
 
 const getTypeIcon = (type: 'Fixed' | 'Hourly' | 'Usage') => {
@@ -57,6 +61,9 @@ const ContractLineCard: React.FC<{
   formatFrequencyLabel: (frequency: string) => string;
   formatServiceCountLabel: (count: number) => string;
   formatContractLineType: (value: string) => string;
+  billingTimingLabel: string;
+  editLabel?: string;
+  onEditLine?: () => void;
   includedServicesLabel: string;
   noServicesConfiguredLabel: string;
   billedOnRecordedUsageLabel: string;
@@ -82,6 +89,9 @@ const ContractLineCard: React.FC<{
   formatFrequencyLabel,
   formatServiceCountLabel,
   formatContractLineType,
+  billingTimingLabel,
+  editLabel,
+  onEditLine,
   includedServicesLabel,
   noServicesConfiguredLabel,
   billedOnRecordedUsageLabel,
@@ -96,10 +106,12 @@ const ContractLineCard: React.FC<{
 }) => {
   return (
     <div className="border border-[rgb(var(--color-border-200))] rounded-lg overflow-hidden">
+      <div className="flex items-center">
       <button
         type="button"
+        id={`contract-overview-line-toggle-${line.contract_line_id}`}
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-3 hover:bg-muted transition-colors text-left"
+        className="flex-1 min-w-0 flex items-center justify-between p-3 hover:bg-muted transition-colors text-left"
       >
         <div className="flex items-center gap-3">
           {getTypeIcon(line.contract_line_type)}
@@ -111,6 +123,8 @@ const ContractLineCard: React.FC<{
               </Badge>
               <span>•</span>
               <span>{formatFrequencyLabel(line.billing_frequency)}</span>
+              <span>•</span>
+              <span data-testid={`overview-line-billing-timing-${line.contract_line_id}`}>{billingTimingLabel}</span>
               {line.base_rate !== null && line.contract_line_type === 'Fixed' && (
                 <>
                   <span>•</span>
@@ -133,6 +147,19 @@ const ContractLineCard: React.FC<{
           )}
         </div>
       </button>
+      {onEditLine && (
+        <button
+          type="button"
+          id={`contract-overview-edit-line-${line.contract_line_id}`}
+          aria-label={`${editLabel} ${line.contract_line_name}`}
+          onClick={onEditLine}
+          className="flex items-center gap-1 mr-3 px-2 py-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-muted rounded"
+        >
+          <Edit className="h-3.5 w-3.5" />
+          {editLabel}
+        </button>
+      )}
+      </div>
 
       {isExpanded && line.services.length > 0 && (
         <div className="border-t border-[rgb(var(--color-border-200))] bg-muted p-3">
@@ -267,7 +294,9 @@ const ContractLineCard: React.FC<{
 
 export const ContractOverview: React.FC<ContractOverviewProps> = ({
   contractId,
-  onNavigateToLines
+  onNavigateToLines,
+  onEditLine,
+  isReadOnly = false,
 }) => {
   const { t } = useTranslation('msp/contracts');
   const { formatCurrency } = useFormatters();
@@ -487,7 +516,16 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
             {onNavigateToLines && (
               <button
                 type="button"
-                onClick={onNavigateToLines}
+                id="contract-overview-view-details"
+                onClick={() => {
+                  // A single line deep-links to it. The parent decides whether that
+                  // opens edit mode (read-only contracts only expand it).
+                  if (overview.contractLines.length === 1 && onEditLine) {
+                    onEditLine(overview.contractLines[0].contract_line_id);
+                  } else {
+                    onNavigateToLines();
+                  }
+                }}
                 className="text-xs text-blue-600 hover:text-blue-800 mt-1"
               >
                 {t('contractOverview.stats.viewDetails', { defaultValue: 'View details' })} →
@@ -554,6 +592,9 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
                   formatFrequencyLabel={formatFrequencyLabel}
                   formatServiceCountLabel={formatServiceCountLabel}
                   formatContractLineType={formatContractLineType}
+                  billingTimingLabel={getContractLineBillingTimingLabel(t, line.contract_line_type, line.billing_timing)}
+                  editLabel={t('common.actions.edit', { defaultValue: 'Edit' })}
+                  onEditLine={onEditLine && !isReadOnly ? () => onEditLine(line.contract_line_id) : undefined}
                   includedServicesLabel={includedServicesLabel}
                   noServicesConfiguredLabel={noServicesConfiguredLabel}
                   billedOnRecordedUsageLabel={billedOnRecordedUsageLabel}

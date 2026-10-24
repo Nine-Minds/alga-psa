@@ -510,6 +510,15 @@
         "savedDescription": "Ditt kort är klart för framtida betalningar.",
         "failedDescription": "Det gick inte att verifiera registreringen. Be leverantören om en ny länk."
       },
+      "payLink": {
+        "heading": "Den här betalningslänken kan inte användas",
+        "expired": "Den här betalningslänken har gått ut.",
+        "invalid": "Den här betalningslänken är ogiltig.",
+        "notPayable": "Den här fakturan kan inte längre betalas med den här länken. Den kan redan vara betald eller inte längre öppen för onlinebetalning.",
+        "unavailable": "Vi kunde inte öppna betalningssidan just nu. Försök igen om några minuter.",
+        "viewInPortal": "Visa fakturan i kundportalen",
+        "contactProvider": "Kontakta din faktureringsleverantör för en ny länk."
+      },
       "fields": {
         "cardNumber": "Kortnummer",
         "expiryMonth": "Månad",

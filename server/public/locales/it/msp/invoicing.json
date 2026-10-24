@@ -1427,7 +1427,14 @@
           "widthTooltip": "Usa la larghezza esatta inserita sotto",
           "heightTooltip": "Usa l'altezza esatta inserita sotto"
         }
-      }
+      },
+      "barcode": "Codice a barre",
+      "barcodeSymbology": "Tipo",
+      "barcodeQr": "Codice QR",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Valore",
+      "barcodeHintWorkTag": "Testo o un campo come {{example}} (il link al record). Mantieni il codice largo almeno 20 mm circa perché sia leggibile.",
+      "barcodeHint": "Il testo da codificare. Mantieni il codice largo almeno 20 mm circa perché sia leggibile."
     },
     "shell": {
       "selectedLabel": "Selezionato:",
@@ -1440,7 +1447,11 @@
       "title": "Impostazioni pagina",
       "description": "Scegli un preset di carta e margine senza selezionare il nodo di pagina nascosto.",
       "paperPreset": "Preset carta",
-      "marginMm": "Margine (mm)"
+      "marginMm": "Margine (mm)",
+      "customSize": "Dimensione personalizzata…",
+      "customWidth": "Larghezza",
+      "customHeight": "Altezza",
+      "customUnit": "Unità"
     },
     "breadcrumbs": {
       "emptyHelp": "Seleziona un componente sulla tela per vederne la gerarchia.",
@@ -1471,7 +1482,13 @@
         "noQuotesFound": "Nessun preventivo trovato.",
         "selectQuote": "Seleziona preventivo",
         "loadingQuoteDetails": "Caricamento dettagli preventivo…",
-        "loadingDocumentDetails": "Caricamento dettagli documento…"
+        "loadingDocumentDetails": "Caricamento dettagli documento…",
+        "zoom": {
+          "fit": "Adatta",
+          "actual": "100%",
+          "label": "Zoom anteprima",
+          "fitWithScale": "Adatta ({{percent}}%)"
+        }
       },
       "tabs": {
         "design": "Progettazione",
@@ -2487,7 +2504,8 @@
     "types": {
       "salesOrder": "Ordine di vendita",
       "packingSlip": "Documento di trasporto",
-      "pickList": "Lista di prelievo"
+      "pickList": "Lista di prelievo",
+      "workTag": "Etichetta di lavoro / Etichetta"
     }
   },
   "errors": {

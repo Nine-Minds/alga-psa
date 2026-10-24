@@ -1427,7 +1427,14 @@
           "widthTooltip": "Använd den exakta bredden som anges nedan",
           "heightTooltip": "Använd den exakta höjden som anges nedan"
         }
-      }
+      },
+      "barcode": "Streckkod",
+      "barcodeSymbology": "Typ",
+      "barcodeQr": "QR-kod",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Värde",
+      "barcodeHintWorkTag": "Text, eller ett fält som {{example}} (länken till posten). Håll koden minst cirka 20 mm bred så att den går att skanna.",
+      "barcodeHint": "Texten som ska kodas. Håll koden minst cirka 20 mm bred så att den går att skanna."
     },
     "shell": {
       "selectedLabel": "Markerat:",
@@ -1440,7 +1447,11 @@
       "title": "Sidinställningar",
       "description": "Välj ett förinställt pappersformat och en sidmarginal utan att markera den dolda sidnoden.",
       "paperPreset": "Förinställt pappersformat",
-      "marginMm": "Marginal (mm)"
+      "marginMm": "Marginal (mm)",
+      "customSize": "Anpassad storlek…",
+      "customWidth": "Bredd",
+      "customHeight": "Höjd",
+      "customUnit": "Enhet"
     },
     "breadcrumbs": {
       "emptyHelp": "Välj en komponent på arbetsytan för att visa dess hierarki.",
@@ -1471,7 +1482,13 @@
         "noQuotesFound": "Inga offerter hittades.",
         "selectQuote": "Välj offert",
         "loadingQuoteDetails": "Läser in offertuppgifter…",
-        "loadingDocumentDetails": "Läser in dokumentuppgifter…"
+        "loadingDocumentDetails": "Läser in dokumentuppgifter…",
+        "zoom": {
+          "fit": "Anpassa",
+          "actual": "100 %",
+          "label": "Förhandsgranskningszoom",
+          "fitWithScale": "Anpassa ({{percent}} %)"
+        }
       },
       "tabs": {
         "design": "Design",
@@ -2487,7 +2504,8 @@
     "types": {
       "salesOrder": "Försäljningsorder",
       "packingSlip": "Följesedel",
-      "pickList": "Plocklista"
+      "pickList": "Plocklista",
+      "workTag": "Arbetsetikett / Etikett"
     }
   },
   "errors": {

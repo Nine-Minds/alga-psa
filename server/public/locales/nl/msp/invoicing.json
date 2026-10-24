@@ -1427,7 +1427,14 @@
           "widthTooltip": "De hieronder ingevoerde exacte breedte gebruiken",
           "heightTooltip": "De hieronder ingevoerde exacte hoogte gebruiken"
         }
-      }
+      },
+      "barcode": "Streepjescode",
+      "barcodeSymbology": "Type",
+      "barcodeQr": "QR-code",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Waarde",
+      "barcodeHintWorkTag": "Tekst, of een veld zoals {{example}} (de link naar het record). Houd de code minstens ongeveer 20 mm breed zodat hij scanbaar blijft.",
+      "barcodeHint": "De tekst die wordt gecodeerd. Houd de code minstens ongeveer 20 mm breed zodat hij scanbaar blijft."
     },
     "shell": {
       "selectedLabel": "Geselecteerd:",
@@ -1440,7 +1447,11 @@
       "title": "Pagina-instelling",
       "description": "Kies een papierpreset en paginamarge zonder het verborgen pagina-knooppunt te selecteren.",
       "paperPreset": "Papierpreset",
-      "marginMm": "Marge (mm)"
+      "marginMm": "Marge (mm)",
+      "customSize": "Aangepast formaat…",
+      "customWidth": "Breedte",
+      "customHeight": "Hoogte",
+      "customUnit": "Eenheid"
     },
     "breadcrumbs": {
       "emptyHelp": "Selecteer een component in het canvas om de hiërarchie te zien.",
@@ -1471,7 +1482,13 @@
         "noQuotesFound": "Geen offertes gevonden.",
         "selectQuote": "Offerte kiezen",
         "loadingQuoteDetails": "Offertedetails worden geladen…",
-        "loadingDocumentDetails": "Documentdetails worden geladen…"
+        "loadingDocumentDetails": "Documentdetails worden geladen…",
+        "zoom": {
+          "fit": "Passend",
+          "actual": "100%",
+          "label": "Zoom voorbeeld",
+          "fitWithScale": "Passend ({{percent}}%)"
+        }
       },
       "tabs": {
         "design": "Ontwerp",
@@ -2487,7 +2504,8 @@
     "types": {
       "salesOrder": "Verkooporder",
       "packingSlip": "Pakbon",
-      "pickList": "Picklijst"
+      "pickList": "Picklijst",
+      "workTag": "Werklabel / Label"
     }
   },
   "errors": {

@@ -388,7 +388,7 @@ describe('contract line service membership editing', () => {
         quantity: 1,
         customRate: 25000,
         configurationType: 'Fixed',
-        typeConfig: { base_rate: 25000 },
+        typeConfig: { base_rate: 25000, base_rate_basis: 'per_unit' },
       }),
     ]));
     expect(actionMocks.applyContractLineServiceMembershipChanges).not.toHaveBeenCalled();
@@ -459,7 +459,7 @@ describe('contract line service membership editing', () => {
           quantity: 1,
           customRate: 25000,
           configurationType: 'Fixed',
-          typeConfig: { base_rate: 25000 },
+          typeConfig: { base_rate: 25000, base_rate_basis: 'per_unit' },
         }],
         removals: ['existing-service'],
       },

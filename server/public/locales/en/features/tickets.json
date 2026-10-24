@@ -469,6 +469,14 @@
     "clientPortal": "Received via Client Portal",
     "inboundEmail": "Received via Inbound Email"
   },
+  "originalEmail": {
+    "text": "Text",
+    "original": "Original email",
+    "emailShort": "Email",
+    "loading": "Loading the original email…",
+    "error": "The original email could not be loaded.",
+    "group": "Message view"
+  },
   "documents": {
     "title": "Documents",
     "noDocuments": "No documents attached",
@@ -1675,7 +1683,10 @@
       "ruleCategoryBoardMismatch": "The selected category belongs to a different board than the rule.",
       "ruleCategoryInvalid": "The selected category is not a top-level category.",
       "ruleSubcategoryInvalid": "The selected subcategory does not belong to the selected category.",
-      "ruleSubcategoryRequiresCategory": "Select a category before choosing a subcategory."
+      "ruleSubcategoryRequiresCategory": "Select a category before choosing a subcategory.",
+      "ruleTooManyKeywords": "Use at most {{max}} keywords per rule.",
+      "ruleKeywordTooLong": "Keep each keyword to {{max}} characters or fewer.",
+      "ruleOriginInvalid": "One of the selected ticket sources is not valid."
     }
   },
   "ticketSection": {

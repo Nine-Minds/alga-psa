@@ -5,6 +5,8 @@ import type { TemplateEvaluationResult } from './evaluator';
 import { renderEvaluatedTemplateAst } from './react-renderer';
 import { localizeTemplateAstForLocale } from './i18nLabels';
 import { tenantDb } from '@alga-psa/db';
+import { resolveCustomPageCssFromAst, type TemplatePreviewSheet } from './printSettings';
+import { buildPreviewSheetCss, wrapInPreviewSheet } from './previewSheet';
 import { StorageProviderFactory, FileStoreModel } from '@alga-psa/storage';
 import type { FileStore } from '@alga-psa/storage';
 
@@ -41,6 +43,11 @@ export interface TemplateHtmlDocumentOptions {
    * 30/09/2026 whatever language the document speaks.
    */
   dateFormat?: CountryDateFormat;
+  /**
+   * Screen preview only: draw the markup on a sheet the size of its printed page (see previewSheet.ts).
+   * Never set on a path that produces a PDF.
+   */
+  previewSheet?: TemplatePreviewSheet;
 }
 
 // ---------------------------------------------------------------------------
@@ -216,19 +223,43 @@ export async function inlineTemplateImageSources<T>(
 // Public API
 // ---------------------------------------------------------------------------
 
+/**
+ * Render a template to its body markup + CSS without the surrounding HTML document. Includes the
+ * async barcode prepass (server-only; skipped with no library load when there is no barcode node).
+ * Used by the document renderer below and by the label batch layer, which composes many fragments
+ * into one document.
+ */
+export const renderTemplateAstFragment = async (
+  ast: TemplateAst,
+  evaluation: TemplateEvaluationResult,
+  options: Pick<TemplateHtmlDocumentOptions, 'locale' | 'dateFormat'> = {}
+): Promise<{ html: string; css: string; locale: string | undefined }> => {
+  const { ast: localizedAst, locale, t } = await localizeTemplateAstForLocale(ast, options.locale);
+  // Barcode prepass: async + server-only (qrcode / bwip-js are dynamically imported, never bundled
+  // for the client). Skipped entirely, with no library load, when the template has no barcode node.
+  const { renderBarcodeSvgs } = await import('./barcode/prepass.server');
+  const barcodes = await renderBarcodeSvgs(localizedAst, evaluation, { locale });
+  const { html, css } = await renderEvaluatedTemplateAst(localizedAst, evaluation, {
+    barcodes,
+    locale,
+    dateFormat: options.dateFormat,
+    t,
+  });
+  return { html, css, locale };
+};
+
 export const renderTemplateAstHtmlDocument = async (
   ast: TemplateAst,
   evaluation: TemplateEvaluationResult,
   options: TemplateHtmlDocumentOptions = {}
 ): Promise<string> => {
-  const { ast: localizedAst, locale, t } = await localizeTemplateAstForLocale(ast, options.locale);
-  const { html, css } = await renderEvaluatedTemplateAst(localizedAst, evaluation, {
-    locale,
-    dateFormat: options.dateFormat,
-    t,
-  });
+  const { html, css, locale } = await renderTemplateAstFragment(ast, evaluation, options);
   const title = escapeHtml(options.title ?? 'Invoice');
-  const additionalCss = options.additionalCss ?? '';
+  // Custom page size: emit a real @page rule (preferCSSPageSize makes Chromium honour it).
+  const customPageCss = resolveCustomPageCssFromAst(ast);
+  const previewSheetCss = options.previewSheet ? buildPreviewSheetCss(options.previewSheet) : null;
+  const additionalCss = [customPageCss, options.additionalCss, previewSheetCss].filter(Boolean).join('\n');
+  const bodyHtml = options.previewSheet ? wrapInPreviewSheet(html, options.previewSheet) : html;
   const bodyClassName = options.bodyClassName ? ` class="${escapeHtml(options.bodyClassName)}"` : '';
 
   // When Puppeteer renders HTML via page.setContent(), the page origin is about:blank.
@@ -249,7 +280,7 @@ ${additionalCss}
     </style>
   </head>
   <body${bodyClassName}>
-${html}
+${bodyHtml}
   </body>
 </html>`;
 

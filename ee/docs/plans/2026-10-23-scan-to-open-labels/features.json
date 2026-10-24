@@ -1,0 +1,62 @@
+[
+  {
+    "id": "F001",
+    "description": "Asset getById: product gate, asset:read 403, load, record-level check, 404 parity",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Asset sub-resources (maintenance, history, tickets, software, notes) apply record-level check -> 404",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "classifyScannedCode with origin normalisation (record / foreign-record / code)",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "linking.ts uses matchRecordPath; alga://asset and alga://stock-unit; isAllowedPath/requiresSession extended",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "ScanView + manual entry route through classifier; project/rma offer Open in browser; foreign shows message",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "RecordUnavailableState on TicketDetail, AssetDetail, StockUnitDetail for 403/404",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "description": "app.json intent filters for assets and units",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "description": "MOBILE_APP_LINK_COMPONENTS and AASA components; app.json/server parity test",
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "description": "rmaCaseQuery shared builder and getRmaCase action",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "description": "Unit detail dialog via ?unitId= (History action opens same dialog)",
+    "implemented": true
+  },
+  {
+    "id": "F011",
+    "description": "RMA detail dialog via ?rmaId=",
+    "implemented": true
+  },
+  {
+    "id": "F012",
+    "description": "Print label from unit dialog via /api/labels/pdf stock-unit-identity",
+    "implemented": true
+  }
+]

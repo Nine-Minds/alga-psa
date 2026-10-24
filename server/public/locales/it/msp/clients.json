@@ -25,6 +25,7 @@
     },
     "states": {
       "active": "Attivo",
+      "scheduled": "Pianificato",
       "inactive": "Inattivo",
       "loading": "Caricamento...",
       "na": "N/D",
@@ -573,8 +574,10 @@
     "invoiceTemplateHelp": "Seleziona un modello o utilizza quello predefinito",
     "paymentTerms": {
       "dueOnReceipt": "A causa della ricevuta",
+      "net14": "netto 14",
       "net15": "netto 15",
-      "net30": "30 netti"
+      "net30": "30 netti",
+      "net7": "netto 7"
     },
     "preferredPaymentMethod": "Metodo di pagamento preferito",
     "defaultCurrency": "Valuta predefinita",
