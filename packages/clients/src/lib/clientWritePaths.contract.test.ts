@@ -14,6 +14,8 @@ const read = (rel: string) => readFileSync(path.join(root, rel), 'utf8');
 
 /** writer file -> [file that must contain the marker, marker] */
 const PUBLISHED_WRITERS: Record<string, [string, string]> = {
+  // Datto RMM site provisioning inserts new active clients; publishes CLIENT_CREATED after commit.
+  'ee/server/src/lib/integrations/datto/siteClientProvisioning.ts': ['ee/server/src/lib/integrations/datto/siteClientProvisioning.ts', "eventType: 'CLIENT_CREATED'"],
   // UI: updateClient, createClient, CSV import, markClientInactive/ActiveWithContacts.
   'packages/clients/src/actions/clientActions.ts': ['packages/clients/src/actions/clientActions.ts', "eventType: 'CLIENT_UPDATED'"],
   'packages/clients/src/actions/inboundActions.ts': ['packages/clients/src/actions/inboundActions.ts', 'CLIENT_STATUS_CHANGED'],
