@@ -1,0 +1,132 @@
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
+import { HELD_BY_MSP_STATUS, type Asset, type IAssetCustody, type IAssetCustodyEvent } from '@alga-psa/types';
+import type { ReceiveEquipmentInput } from '../schemas/assetCustody.schema';
+import { createAssetInTransaction } from '../../actions/assetActions';
+import { CustodyError } from './errors';
+import { openCustody } from './openCustody';
+
+/**
+ * Ticket intake core (design D4). Runs inside the caller's transaction and owns no permission checks:
+ * the wrapper (msp-composition `receiveEquipment`) has already checked asset:create/update, the ticket
+ * record check and the asset record check.
+ *
+ * NEVER writes stock, money or time. It writes assets (new item only), asset_associations,
+ * asset_custody, asset_custody_events and asset_history, nothing else. It deliberately does not
+ * import @alga-psa/inventory or @alga-psa/billing, and does not call `createAssetAssociation`.
+ */
+
+export interface ReceiveEquipmentResult {
+  asset: Pick<Asset, 'asset_id' | 'asset_tag' | 'name' | 'client_id' | 'asset_type'>;
+  createdAsset: boolean;
+  custody: IAssetCustody;
+  event: IAssetCustodyEvent;
+}
+
+/** `<ticket_number>-EQ<n>`: n is one more than the highest suffix already used for this ticket. */
+export async function nextEquipmentTag(trx: Knex.Transaction, tenant: string, ticketNumber: string): Promise<string> {
+  const prefix = `${ticketNumber}-EQ`;
+  const rows = await tenantDb(trx, tenant)
+    .table('assets')
+    .whereLike('asset_tag', `${prefix.replace(/[\\%_]/g, '\\$&')}%`)
+    .select<Array<{ asset_tag: string }>>('asset_tag');
+  let max = 0;
+  for (const { asset_tag } of rows) {
+    const suffix = asset_tag.slice(prefix.length);
+    if (/^\d+$/.test(suffix)) max = Math.max(max, Number(suffix));
+  }
+  return `${prefix}${max + 1}`;
+}
+
+export async function receiveEquipmentForTicket(
+  trx: Knex.Transaction,
+  tenant: string,
+  actorUserId: string,
+  input: ReceiveEquipmentInput
+): Promise<ReceiveEquipmentResult> {
+  const db = tenantDb(trx, tenant);
+  const ticket = await db
+    .table('tickets')
+    .where({ ticket_id: input.ticket_id })
+    .select('ticket_id', 'ticket_number', 'client_id')
+    .first();
+  if (!ticket) throw new CustodyError('ticket_not_found', 'Ticket not found.');
+  if (!ticket.client_id) {
+    throw new CustodyError('ticket_has_no_client', 'This ticket has no client. Set a client before receiving equipment.');
+  }
+
+  let assetId = input.asset_id;
+  let createdAsset = false;
+  let assetSummary: ReceiveEquipmentResult['asset'] | null = null;
+
+  if (input.new_asset) {
+    const n = input.new_asset;
+    const assetTag = n.asset_tag ?? (await nextEquipmentTag(trx, tenant, String(ticket.ticket_number)));
+    const created = await createAssetInTransaction(trx, tenant, actorUserId, {
+      asset_type: n.asset_type,
+      client_id: ticket.client_id,
+      asset_tag: assetTag,
+      name: n.name,
+      status: HELD_BY_MSP_STATUS,
+      ownership: 'client',
+      serial_number: n.serial_number ?? undefined,
+      manufacturer: n.manufacturer,
+      model: n.model,
+    } as any);
+    assetId = created.asset_id;
+    createdAsset = true;
+    assetSummary = {
+      asset_id: created.asset_id,
+      asset_tag: created.asset_tag,
+      name: created.name,
+      client_id: created.client_id,
+      asset_type: created.asset_type,
+    };
+  }
+
+  // openCustody enforces client match, open-episode and location/holder validity.
+  const opened = await openCustody(trx, tenant, actorUserId, {
+    asset_id: assetId!,
+    ticket_id: input.ticket_id,
+    purpose: input.purpose,
+    location_id: input.location_id,
+    bin: input.bin,
+    holder_user_id: input.holder_user_id,
+    next_action_party: input.next_action_party,
+    next_action_note: input.next_action_note,
+    follow_up_on: input.follow_up_on,
+    condition_note: input.condition_note,
+    accessories: input.accessories,
+    document_ids: input.document_ids,
+    occurred_at: input.occurred_at,
+    note: input.note,
+  });
+
+  if (!assetSummary) {
+    const existing = await db
+      .table('assets')
+      .where({ asset_id: assetId })
+      .select('asset_id', 'asset_tag', 'name', 'client_id', 'asset_type')
+      .first();
+    assetSummary = existing;
+  }
+
+  // Link asset to ticket directly (not via createAssetAssociation: that is a server action with its own auth).
+  const already = await db
+    .table('asset_associations')
+    .where({ asset_id: assetId, entity_type: 'ticket', entity_id: input.ticket_id })
+    .first('asset_id');
+  if (!already) {
+    await db.table('asset_associations').insert({
+      tenant,
+      asset_id: assetId,
+      entity_id: input.ticket_id,
+      entity_type: 'ticket',
+      relationship_type: 'affected',
+      created_by: actorUserId,
+      created_at: new Date().toISOString(),
+    });
+  }
+
+  return { asset: assetSummary!, createdAsset, custody: opened.custody, event: opened.event };
+}
