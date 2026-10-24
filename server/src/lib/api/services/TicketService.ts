@@ -3142,6 +3142,7 @@ export class TicketService extends BaseService<ITicket> {
     if (externalSystem || externalId) {
       const externalLinkSubquery = scopedDb.subquery('external_entity_links as eel')
         .select('*')
+        .whereRaw('eel.tenant = t.tenant')
         .whereRaw('eel.ticket_id = t.ticket_id')
         .andWhere('eel.entity_type', 'ticket');
       if (externalSystem) {
@@ -3189,6 +3190,7 @@ export class TicketService extends BaseService<ITicket> {
             query.whereExists(
               scopedDb.subquery('statuses as s')
                 .select('*')
+                .whereRaw('s.tenant = t.tenant')
                 .whereRaw('s.status_id = t.status_id')
                 .andWhere('s.is_closed', false)
             );
@@ -3199,6 +3201,7 @@ export class TicketService extends BaseService<ITicket> {
             query.whereExists(
               scopedDb.subquery('statuses as s')
                 .select('*')
+                .whereRaw('s.tenant = t.tenant')
                 .whereRaw('s.status_id = t.status_id')
                 .andWhere('s.is_closed', true)
             );
@@ -3218,6 +3221,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('clients as c')
               .select('*')
+              .whereRaw('c.tenant = t.tenant')
               .whereRaw('c.client_id = t.client_id')
               .andWhere('c.client_name', value)
           );
@@ -3226,6 +3230,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('contacts as cn')
               .select('*')
+              .whereRaw('cn.tenant = t.tenant')
               .whereRaw('cn.contact_name_id = t.contact_name_id')
               .andWhere('cn.full_name', value)
           );
@@ -3234,6 +3239,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('boards as b')
               .select('*')
+              .whereRaw('b.tenant = t.tenant')
               .whereRaw('b.board_id = t.board_id')
               .andWhere('b.board_name', value)
           );
@@ -3242,6 +3248,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('categories as cat')
               .select('*')
+              .whereRaw('cat.tenant = t.tenant')
               .whereRaw('cat.category_id = t.category_id')
               .andWhere('cat.category_name', value)
           );
@@ -3251,6 +3258,7 @@ export class TicketService extends BaseService<ITicket> {
             const tagTexts = (value as string[]).map(tag => tag.toLowerCase());
             const tagSubquery = scopedDb.subquery('tag_mappings as tm')
               .select('*')
+              .whereRaw('tm.tenant = t.tenant')
               .whereRaw('tm.tagged_id = t.ticket_id')
               .andWhere('tm.tagged_type', 'ticket')
               .whereRaw(
@@ -3276,6 +3284,7 @@ export class TicketService extends BaseService<ITicket> {
               subQuery.orWhereExists(
                 scopedDb.subquery('clients as c')
                   .select('*')
+                  .whereRaw('c.tenant = t.tenant')
                   .whereRaw('c.client_id = t.client_id')
                   .andWhereILike('c.client_name', `%${value}%`)
               );
@@ -3292,6 +3301,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('priorities as p')
               .select('*')
+              .whereRaw('p.tenant = t.tenant')
               .whereRaw('p.priority_id = t.priority_id')
               .andWhere('p.priority_name', value)
           );
@@ -3300,6 +3310,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('statuses as s')
               .select('*')
+              .whereRaw('s.tenant = t.tenant')
               .whereRaw('s.status_id = t.status_id')
               .andWhere('s.name', value)
           );

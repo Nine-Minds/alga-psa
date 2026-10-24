@@ -630,5 +630,8 @@
     "setupComplete": {
       "title": "Configuration de la carte"
     }
+  },
+  "pay": {
+    "title": "Payer la facture"
   }
 }

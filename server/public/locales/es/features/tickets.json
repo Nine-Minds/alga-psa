@@ -461,6 +461,14 @@
     "clientPortal": "Recibido vía Portal de Cliente",
     "inboundEmail": "Recibido vía correo electrónico"
   },
+  "originalEmail": {
+    "text": "Texto",
+    "original": "Correo original",
+    "emailShort": "Correo",
+    "loading": "Cargando el correo original…",
+    "error": "No se pudo cargar el correo original.",
+    "group": "Vista del mensaje"
+  },
   "documents": {
     "title": "Documentos",
     "noDocuments": "No hay documentos adjuntos",
@@ -964,6 +972,7 @@
     "templateReplaceTitle": "¿Reemplazar sus cambios?",
     "templateReplaceMessage": "Aplicar una plantilla reemplaza el título, la descripción y otros campos que ha introducido.",
     "templateReplaceConfirm": "Aplicar plantilla",
+    "templateTokenHint": "El título se completa con el cliente, el contacto y la fecha de vencimiento que elija, hasta que lo edite.",
     "tagCreatePartialFailure_few": "No se pudieron crear {{count}} etiquetas",
     "tagCreatePartialFailure_many": "No se pudieron crear {{count}} etiquetas",
     "tagCreationFailed_few": "No se pudieron crear {{count}} etiquetas",
@@ -1666,7 +1675,10 @@
       "ruleCategoryBoardMismatch": "La categoría seleccionada pertenece a un tablero distinto al de la regla.",
       "ruleCategoryInvalid": "La categoría seleccionada no es una categoría de nivel superior.",
       "ruleSubcategoryInvalid": "La subcategoría seleccionada no pertenece a la categoría seleccionada.",
-      "ruleSubcategoryRequiresCategory": "Seleccione una categoría antes de elegir una subcategoría."
+      "ruleSubcategoryRequiresCategory": "Seleccione una categoría antes de elegir una subcategoría.",
+      "ruleTooManyKeywords": "Use como máximo {{max}} palabras clave por regla.",
+      "ruleKeywordTooLong": "Cada palabra clave debe tener {{max}} caracteres o menos.",
+      "ruleOriginInvalid": "Uno de los orígenes de ticket seleccionados no es válido."
     }
   },
   "ticketSection": {
@@ -2260,7 +2272,9 @@
       "details": "Detalles",
       "template": "Plantilla del ticket",
       "schedule": "Programación",
-      "behaviour": "Comportamiento"
+      "behaviour": "Comportamiento",
+      "overrides": "Anulaciones para esta programación",
+      "dispatch": "Despacho"
     },
     "fields": {
       "board": "Tablero",
@@ -2467,6 +2481,22 @@
       "monthlyOnDay": "{{every}}, {{day}}",
       "monthlyOnNthWeekday": "{{every}}, el {{ordinal}} {{weekday}}",
       "yearly": "Cada año el {{day}} de {{month}}"
+    },
+    "template": {
+      "intro": "El aspecto del ticket proviene de una plantilla de ticket compartida. Cambiar la plantilla cambia todas las programaciones que la usan, a partir del siguiente ticket.",
+      "select": "Plantilla de ticket",
+      "placeholder": "Seleccione una plantilla de ticket",
+      "inactiveOption": "{{name}} (inactiva)",
+      "summary": "{{checklist}} elemento(s) de lista, {{tags}} etiqueta(s)",
+      "inactiveNotice": "Esta plantilla está inactiva: oculta en el selector de plantillas; todavía la usan {{count}} programaciones.",
+      "sharedNotice": "Usada por {{count}} programaciones. Editar la plantilla las cambia a todas.",
+      "edit": "Editar plantilla",
+      "new": "Nueva plantilla",
+      "sampleTitle": "Título del primer ticket:",
+      "tokensHelp": "Los títulos de plantilla pueden usar {{tokens}}; se rellenan en cada ticket."
+    },
+    "overridesSection": {
+      "intro": "Deje un grupo desactivado para usar la plantilla. Cada cliente puede anularlos de nuevo."
     }
   },
   "stopwatch": {
@@ -2500,12 +2530,15 @@
         "title": "Título del ticket",
         "board": "Tablero",
         "checklist": "Elementos de la lista",
-        "status": "Estado"
-      }
+        "status": "Estado",
+        "schedules": "Programaciones"
+      },
+      "deleteBlocked": "Usada por {{count}} programación(es) recurrente(s). Asígneles otra plantilla o archívelas primero."
     },
     "status": {
       "active": "Activa",
-      "inactive": "Inactiva"
+      "inactive": "Inactiva",
+      "scheduledOnly": "Solo programada"
     },
     "actions": {
       "edit": "Editar",
@@ -2527,7 +2560,10 @@
       "notesHelp": "Solo para su equipo. No se copian a los tickets.",
       "title": "Título del ticket",
       "description": "Descripción",
-      "descriptionPlaceholder": "Descripción"
+      "descriptionPlaceholder": "Descripción",
+      "offerForManualUse": "Ofrecer en el selector de nuevo ticket",
+      "offerForManualUseHelp": "Desactívelo para plantillas que solo usan las programaciones recurrentes.",
+      "titleTokens": "Puede usar {{tokens}} en el título; se rellenan en cada ticket."
     },
     "checklist": {
       "empty": "Sin elementos de lista.",
@@ -2555,14 +2591,24 @@
       "fromTicket": "Rellenado desde el ticket #{{number}}. No se guarda nada hasta que haga clic en Guardar.",
       "inlineImages": "La descripción contiene imágenes que pertenecen al ticket de origen. Pueden dejar de mostrarse si ese ticket se elimina. Quítelas o vuelva a subirlas si la plantilla debe sobrevivir al ticket.",
       "viewOnly": "Puede ver esta plantilla pero no modificarla.",
-      "referenceProblems": "Algunos campos de esta plantilla apuntan a elementos que ya no existen. Se dejan en blanco al usar la plantilla. Corríjalos y guarde:"
+      "referenceProblems": "Algunos campos de esta plantilla apuntan a elementos que ya no existen. Se dejan en blanco al usar la plantilla. Corríjalos y guarde:",
+      "inactiveWarning": "Inactiva: oculta en el selector de plantillas; todavía la usan {{count}} programaciones.",
+      "sharedWarning": "Los cambios se aplican a cada programación recurrente que use esta plantilla, a partir del siguiente ticket que cree.",
+      "boardChangeWarning": "Cambiar el tablero borra la prioridad y la categoría, y puede invalidar el estado de las programaciones que usan esta plantilla. Esas programaciones fallan hasta que las edite. Programaciones afectadas: {{schedules}}."
     },
     "errors": {
       "notFound": "Plantilla de ticket no encontrada",
       "duplicateName": "Ya existe una plantilla llamada {{name}}",
       "invalidReferences": "La plantilla hace referencia a un tablero, una categoría o una prioridad que no está disponible",
       "notAvailable": "Las plantillas de tickets no están disponibles",
-      "subcategoryNeedsCategory": "Una subcategoría requiere una categoría"
+      "subcategoryNeedsCategory": "Una subcategoría requiere una categoría",
+      "inUseBySchedules": "Usada por {{count}} programación(es) recurrente(s): {{schedules}}. Asígneles otra plantilla o archívelas primero."
+    },
+    "usage": {
+      "schedules": "Usada por {{count}} programaciones",
+      "paused": "en pausa",
+      "tickets": "{{count}} tickets creados con esta plantilla",
+      "scheduleThis": "Programar esta plantilla…"
     }
   },
   "enums": {

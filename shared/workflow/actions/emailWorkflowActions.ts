@@ -1684,7 +1684,9 @@ export async function createCommentFromEmail(
         .first();
       const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
 
-      if (responseStateEnabled) {
+      // D3: response state follows the comment's final stored visibility, never the
+      // requested flag or the parent thread's. An internal comment must not flip it.
+      if (responseStateEnabled && !result.is_internal) {
         if (normalizedAuthorType === 'client') {
           await db.table('tickets')
             .where({ ticket_id: commentData.ticket_id })

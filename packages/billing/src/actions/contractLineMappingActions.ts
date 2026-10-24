@@ -9,6 +9,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
+import { assertLiveLineMatchesTemplateCurrency } from '@alga-psa/shared/billingClients/templateAmounts';
 import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
 import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
 import {
@@ -156,6 +157,11 @@ export async function ensureTemplateLineSnapshot(
 
   if (!contractLine) {
     throw new ContractLineMappingDomainError(`Base contract line ${contractLineId} not found for tenant ${tenant}`);
+  }
+  try {
+    await assertLiveLineMatchesTemplateCurrency(knex as any, tenant, templateId, contractLineId);
+  } catch (error) {
+    throw new ContractLineMappingDomainError((error as Error).message);
   }
 
   const now = new Date().toISOString();

@@ -13,6 +13,7 @@ import { listContacts } from "../api/contacts";
 import type { CommentRecipientSuggestion } from "../features/ticketDetail/components/CommentEmailRecipients";
 import type { MentionSuggestionItem } from "../features/ticketRichText/MentionSuggestionList";
 import { ErrorState, LoadingState } from "../ui/states";
+import { RecordUnavailableState } from "../ui/components/RecordUnavailableState";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
@@ -205,7 +206,7 @@ export function TicketDetailBody({
 
   // --- Hooks ---
   const ticketData = useTicketData(deps);
-  const { ticket, initialLoading, error, comments, commentsError, refreshing, refresh, fetchTicket, fetchComments, setComments } = ticketData;
+  const { ticket, initialLoading, error, unavailable, comments, commentsError, refreshing, refresh, fetchTicket, fetchComments, setComments } = ticketData;
 
   const commentDraftHook = useCommentDraft({ ...deps, isOffline, fetchTicket, fetchComments, setComments });
 
@@ -317,6 +318,9 @@ export function TicketDetailBody({
   }
   if (initialLoading && !ticket) {
     return <LoadingState message={t("detail.loadingTicket")} />;
+  }
+  if (unavailable && !ticket) {
+    return <RecordUnavailableState onBack={navigation ? () => navigation.goBack() : undefined} />;
   }
   if (error && !ticket) {
     return <ErrorState title={error.title} description={error.description} />;

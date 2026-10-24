@@ -46,6 +46,12 @@ const env = {
   OUTBOUND_DIAG_DB_USER: process.env.DB_USER_SERVER || 'app_user',
   OUTBOUND_DIAG_DB_PASSWORD: process.env.DB_PASSWORD_SERVER || '',
   OUTBOUND_DIAG_DB_NAME: 'test_database',
+  INVOICE_LIFECYCLE_DB_TESTS: '1',
+  INVOICE_LIFECYCLE_DB_HOST: process.env.DB_HOST || '127.0.0.1',
+  INVOICE_LIFECYCLE_DB_PORT: process.env.DB_PORT || '5432',
+  INVOICE_LIFECYCLE_DB_USER: process.env.DB_USER_SERVER || 'app_user',
+  INVOICE_LIFECYCLE_DB_PASSWORD: process.env.DB_PASSWORD_SERVER || '',
+  INVOICE_LIFECYCLE_DB_NAME: 'test_database',
 };
 const args = ['--config', 'vitest.workspace-db.config.ts', ...process.argv.slice(2)];
 const run = (args) => spawnSync(process.execPath, [path.join(cwd, 'node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });

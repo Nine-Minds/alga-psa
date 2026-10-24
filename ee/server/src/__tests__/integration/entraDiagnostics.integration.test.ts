@@ -379,7 +379,7 @@ describe('Entra diagnostics: migrated DB and Microsoft Graph emulator', () => {
     const steps = Object.fromEntries(report.steps.map(step => [step.id, step]));
     if ([401, 403].includes(status)) {
       expect(steps.cipp_auth.status).toBe('fail');
-      expect(JSON.stringify(report.recommendations)).toContain('CIPP API key');
+      expect(JSON.stringify(report.recommendations)).toContain('CIPP rejected the legacy API key');
     } else expect(steps.cipp_reachable.status).toBe('fail');
     expect(steps.cipp_tenant_list.status).toBe('skip');
     expect(steps.cipp_mappings_vs_list.status).toBe('skip');

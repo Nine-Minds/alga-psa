@@ -469,6 +469,14 @@
     "clientPortal": "Mottaget via kundportalen",
     "inboundEmail": "Mottaget via inkommande e-post"
   },
+  "originalEmail": {
+    "text": "Text",
+    "original": "Ursprungligt e-postmeddelande",
+    "emailShort": "E-post",
+    "loading": "Läser in det ursprungliga e-postmeddelandet…",
+    "error": "Det ursprungliga e-postmeddelandet kunde inte läsas in.",
+    "group": "Meddelandevisning"
+  },
   "documents": {
     "title": "Dokument",
     "noDocuments": "Inga bifogade dokument",
@@ -972,6 +980,7 @@
     "templateReplaceTitle": "Ersätta dina ändringar?",
     "templateReplaceMessage": "Att använda en mall ersätter rubrik, beskrivning och andra fält du har fyllt i.",
     "templateReplaceConfirm": "Använd mall",
+    "templateTokenHint": "Titeln fylls i med vald kund, kontakt och förfallodatum tills du redigerar den.",
     "tagCreatePartialFailure_few": "{{count}} taggar kunde inte skapas",
     "tagCreatePartialFailure_many": "{{count}} taggar kunde inte skapas",
     "tagCreationFailed_few": "{{count}} taggar kunde inte skapas",
@@ -1674,7 +1683,10 @@
       "ruleCategoryBoardMismatch": "Den valda kategorin tillhör en annan tavla än regeln.",
       "ruleCategoryInvalid": "Den valda kategorin är inte en kategori på översta nivån.",
       "ruleSubcategoryInvalid": "Den valda underkategorin tillhör inte den valda kategorin.",
-      "ruleSubcategoryRequiresCategory": "Välj en kategori innan du väljer en underkategori."
+      "ruleSubcategoryRequiresCategory": "Välj en kategori innan du väljer en underkategori.",
+      "ruleTooManyKeywords": "Använd högst {{max}} nyckelord per regel.",
+      "ruleKeywordTooLong": "Varje nyckelord får vara högst {{max}} tecken långt.",
+      "ruleOriginInvalid": "En av de valda ärendekällorna är ogiltig."
     }
   },
   "ticketSection": {
@@ -2260,7 +2272,9 @@
       "details": "Detaljer",
       "template": "Ärendemall",
       "schedule": "Schema",
-      "behaviour": "Beteende"
+      "behaviour": "Beteende",
+      "overrides": "Åsidosättanden för det här schemat",
+      "dispatch": "Tilldelning"
     },
     "fields": {
       "board": "Tavla",
@@ -2467,6 +2481,22 @@
       "monthlyOnDay": "{{every}} på {{day}}",
       "monthlyOnNthWeekday": "{{every}} på {{ordinal}} {{weekday}}",
       "yearly": "Varje år den {{day}} {{month}}"
+    },
+    "template": {
+      "intro": "Hur ärendet ser ut kommer från en delad ärendemall. Ändrar du mallen ändras alla scheman som använder den, från nästa ärende.",
+      "select": "Ärendemall",
+      "placeholder": "Välj en ärendemall",
+      "inactiveOption": "{{name}} (inaktiv)",
+      "summary": "{{checklist}} checklistpunkt(er), {{tags}} tagg(ar)",
+      "inactiveNotice": "Mallen är inaktiv: dold i mallväljaren; används fortfarande av {{count}} scheman.",
+      "sharedNotice": "Används av {{count}} scheman. Ändrar du mallen ändras alla.",
+      "edit": "Redigera mall",
+      "new": "Ny mall",
+      "sampleTitle": "Titel på första ärendet:",
+      "tokensHelp": "Malltitlar kan använda {{tokens}}; de fylls i per ärende."
+    },
+    "overridesSection": {
+      "intro": "Lämna en grupp avstängd för att använda mallen. Varje kund kan åsidosätta dem igen."
     }
   },
   "stopwatch": {
@@ -2500,12 +2530,15 @@
         "title": "Ärenderubrik",
         "board": "Tavla",
         "checklist": "Checklistpunkter",
-        "status": "Status"
-      }
+        "status": "Status",
+        "schedules": "Scheman"
+      },
+      "deleteBlocked": "Används av {{count}} återkommande schema(n). Peka dem på en annan mall eller arkivera dem först."
     },
     "status": {
       "active": "Aktiv",
-      "inactive": "Inaktiv"
+      "inactive": "Inaktiv",
+      "scheduledOnly": "Endast schemalagd"
     },
     "actions": {
       "edit": "Redigera",
@@ -2527,7 +2560,10 @@
       "notesHelp": "Endast för ditt team. Kopieras inte till ärenden.",
       "title": "Ärenderubrik",
       "description": "Beskrivning",
-      "descriptionPlaceholder": "Beskrivning"
+      "descriptionPlaceholder": "Beskrivning",
+      "offerForManualUse": "Erbjud i väljaren för nya ärenden",
+      "offerForManualUseHelp": "Stäng av för mallar som bara återkommande scheman använder.",
+      "titleTokens": "Du kan använda {{tokens}} i titeln; de fylls i per ärende."
     },
     "checklist": {
       "empty": "Inga checklistpunkter.",
@@ -2555,14 +2591,24 @@
       "fromTicket": "Förifyllt från ärende #{{number}}. Inget sparas förrän du klickar på Spara.",
       "inlineImages": "Beskrivningen innehåller bilder som tillhör källärendet. De kan sluta visas om ärendet tas bort. Ta bort dem eller ladda upp dem igen om mallen ska finnas kvar efter ärendet.",
       "viewOnly": "Du kan visa den här mallen men inte ändra den.",
-      "referenceProblems": "Vissa fält i den här mallen pekar på sådant som inte längre finns. De lämnas tomma när mallen används. Rätta dem och spara:"
+      "referenceProblems": "Vissa fält i den här mallen pekar på sådant som inte längre finns. De lämnas tomma när mallen används. Rätta dem och spara:",
+      "inactiveWarning": "Inaktiv: dold i mallväljaren; används fortfarande av {{count}} scheman.",
+      "sharedWarning": "Ändringar gäller alla återkommande scheman som använder mallen, från nästa ärende de skapar.",
+      "boardChangeWarning": "Att byta tavla rensar prioritet och kategori och kan göra status ogiltig för scheman som använder mallen. Dessa scheman misslyckas tills du redigerar dem. Berörda scheman: {{schedules}}."
     },
     "errors": {
       "notFound": "Ärendemallen hittades inte",
       "duplicateName": "Det finns redan en mall med namnet {{name}}",
       "invalidReferences": "Mallen refererar till en tavla, kategori eller prioritet som inte är tillgänglig",
       "notAvailable": "Ärendemallar är inte tillgängliga",
-      "subcategoryNeedsCategory": "En underkategori kräver en kategori"
+      "subcategoryNeedsCategory": "En underkategori kräver en kategori",
+      "inUseBySchedules": "Används av {{count}} återkommande schema(n): {{schedules}}. Peka dem på en annan mall eller arkivera dem först."
+    },
+    "usage": {
+      "schedules": "Används av {{count}} scheman",
+      "paused": "pausad",
+      "tickets": "{{count}} ärenden skapade från mallen",
+      "scheduleThis": "Schemalägg den här mallen…"
     }
   },
   "enums": {

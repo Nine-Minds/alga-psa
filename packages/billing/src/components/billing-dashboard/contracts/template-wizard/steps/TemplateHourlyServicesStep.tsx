@@ -264,6 +264,7 @@ export function TemplateHourlyServicesStep({
                       onChange={(next) => updateBucketOverlay(index, next)}
                       automationId={`template-hourly-bucket-${index}`}
                       billingFrequency={data.billing_frequency}
+                      currencyCode={data.currency_code || undefined}
                     />
                   )}
                 </div>

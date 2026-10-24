@@ -131,6 +131,7 @@ vi.mock('@alga-psa/billing/actions/contractReportActions', () => ({
     },
   ]),
   getBucketUsageReport: vi.fn(async () => []),
+  getHourBlockUsageReport: vi.fn(async () => []),
   getContractReportSummary: vi.fn(async () => ({
     fixedMrrByCurrency: [{ currencyCode: 'CAD', totalCents: 50000 }],
     ytdRevenueByCurrency: [{ currencyCode: 'CAD', totalCents: 100000 }],

@@ -139,7 +139,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'invoice_adjustment_operations',
   'invoice_charges', 'invoice_annotations', 'invoice_time_entries', 'invoice_usage_records',
   'invoice_charge_details', 'invoice_charge_fixed_details', 'invoice_items',
-  'invoice_autopay_attempts', 'billing_profile_autopay', 'invoice_payment_links', 'invoice_payments', 'invoice_template_assignments',
+  'invoice_autopay_attempts', 'billing_profile_autopay', 'invoice_payment_links', 'invoice_payments', 'payment_confirmation_emails', 'invoice_template_assignments',
 
   // Prepaid hour blocks. The three child tables FK to hour_blocks, so they go
   // first; hour_blocks itself FKs to time_entries, service_catalog, invoices and
@@ -275,12 +275,14 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Recurring tickets. Client asset links FK to definition clients and assets;
   // definition clients FK to definitions and clients; occurrences FK to
-  // definitions only. All four go before assets and clients.
+  // definitions only. All four go before assets and clients. Definitions also hold a
+  // RESTRICT FK to ticket_templates, so they must stay ahead of the template tables below.
   'recurring_ticket_client_assets', 'recurring_ticket_occurrences',
   'recurring_ticket_definition_clients', 'recurring_ticket_definitions',
 
   // Ticket templates. Both FK to tenants; items FK to templates (ON DELETE CASCADE),
-  // so items go first. Neither references tickets or clients.
+  // so items go first. Neither references tickets or clients. Must come AFTER
+  // recurring_ticket_definitions (ON DELETE RESTRICT on ticket_template_id).
   'ticket_template_checklist_items', 'ticket_templates',
 
   // Asset details
@@ -387,6 +389,8 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Contract templates (must be deleted before contracts)
   // Hourly/usage configs reference contract_template_line_service_configuration
   // with NO ACTION and must be deleted before it.
+  // Price sets/prices reference template lines, buckets and templates (children first)
+  'contract_template_prices', 'contract_template_price_sets',
   'contract_template_line_defaults',
   'contract_template_line_prepaid_blocks',
   'contract_template_line_bucket_services', 'contract_template_line_buckets',
