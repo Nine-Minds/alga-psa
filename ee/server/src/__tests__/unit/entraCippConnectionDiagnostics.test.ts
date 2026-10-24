@@ -201,7 +201,7 @@ describe('CIPP connection diagnostics outcomes', () => {
     const report = await runEntraConnectionDiagnostics('tenant-1', { includeIdentifiers: true });
     const rec = report.recommendations.find((r) => r.code === 'cipp_auth_rejected');
     expect(rec?.messageKey).toBe('cippAuthRejected');
-    expect(rec?.text).toMatch(/not an Azure client secret/);
+    expect(rec?.text).toMatch(/rejected the legacy API key.*CIPP API client/);
   });
 
   it('reports an HTML response under cipp_html_response, not cipp_invalid_payload', async () => {
