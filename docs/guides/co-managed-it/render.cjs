@@ -170,11 +170,11 @@ function relativeArtifactHref(pageName, artifact) {
   return path.posix.relative(path.posix.dirname(pageName), artifact.replaceAll('\\', '/')) || path.posix.basename(artifact);
 }
 
-function recordingScaffold(row, pageName, outputPageName) {
+function recordingScaffold(row, pageName) {
   const paths = row.recordingPaths;
-  const webm = relativeArtifactHref(outputPageName, paths.webm);
-  const vtt = relativeArtifactHref(outputPageName, paths.chapterVtt);
-  const json = relativeArtifactHref(outputPageName, paths.recordingJson);
+  const webm = relativeArtifactHref(pageName, paths.webm);
+  const vtt = relativeArtifactHref(pageName, paths.chapterVtt);
+  const json = relativeArtifactHref(pageName, paths.recordingJson);
   const id = slug(path.basename(pageName, '.html')) || 'guide';
   const payload = {
     schemaVersion: 1,
@@ -218,11 +218,11 @@ function recordingScaffold(row, pageName, outputPageName) {
   };
 }
 
-function completedRecording(row, pageName, outputPageName) {
+function completedRecording(row, pageName) {
   const paths = row.recordingPaths;
-  const webm = relativeArtifactHref(outputPageName, paths.webm);
-  const vtt = relativeArtifactHref(outputPageName, paths.chapterVtt);
-  const json = relativeArtifactHref(outputPageName, paths.recordingJson);
+  const webm = relativeArtifactHref(pageName, paths.webm);
+  const vtt = relativeArtifactHref(pageName, paths.chapterVtt);
+  const json = relativeArtifactHref(pageName, paths.recordingJson);
   const id = slug(path.basename(pageName, '.html')) || 'guide';
   const chapters = row.completedRecording.cues;
   const payload = {
@@ -264,6 +264,16 @@ function completedRecording(row, pageName, outputPageName) {
   };
 }
 
+// outputRoot is the packet's guides directory; coverage paths are relative to
+// the packet root. Keep copied artifacts at the locations the inventory names.
+function guideArtifactPath(artifact) {
+  const normalized = artifact.replaceAll('\\', '/');
+  if (!normalized.startsWith('guides/')) throw new Error(`Section guide artifact must be under guides/: ${artifact}`);
+  return path.join(outputRoot, normalized.slice('guides/'.length));
+}
+for (const pageName of pageNames) {
+  for (const artifact of Object.values(coverageByGuide.get(pageName).recordingPaths)) guideArtifactPath(artifact);
+}
 fs.mkdirSync(outputRoot, {recursive:true});
 for (const file of files) {
   const source = fs.readFileSync(path.join(sourceRoot,file),'utf8');
@@ -272,8 +282,7 @@ for (const file of files) {
   const isParent = file === 'README.md';
   const pageName = isParent ? 'guides/index.html' : `guides/${file.replace(/\.md$/, '.html')}`;
   const row = coverageByGuide.get(pageName);
-  const outputPageName = isParent ? 'index.html' : file.replace(/\.md$/, '.html');
-  const recording = row.status === 'complete' ? completedRecording(row, pageName, outputPageName) : recordingScaffold(row, pageName, outputPageName);
+  const recording = row.status === 'complete' ? completedRecording(row, pageName) : recordingScaffold(row, pageName);
   const ids = new Set();
   const body = md.parse(source).replace(/<h([1-6])>(.*?)<\/h\1>/g, (_,depth,content) => {
     const id = slug(content.replace(/<[^>]*>/g,''));
@@ -289,11 +298,11 @@ for (const file of files) {
 `;
   fs.writeFileSync(path.join(outputRoot,isParent?'index.html':file.replace(/\.md$/,'.html')),output);
   for (const artifact of [row.recordingPaths.recordingJson, row.recordingPaths.chapterVtt, row.status === 'complete' ? row.recordingPaths.webm : null].filter(Boolean)) {
-    fs.mkdirSync(path.dirname(path.join(outputRoot, artifact)), {recursive:true});
+    fs.mkdirSync(path.dirname(guideArtifactPath(artifact)), {recursive:true});
   }
-  fs.writeFileSync(path.join(outputRoot,row.recordingPaths.recordingJson),recording.metadata);
-  fs.writeFileSync(path.join(outputRoot,row.recordingPaths.chapterVtt),recording.chapterFile);
-  if (row.status === 'complete') fs.copyFileSync(recording.sourceFile, path.join(outputRoot, row.recordingPaths.webm));
+  fs.writeFileSync(guideArtifactPath(row.recordingPaths.recordingJson),recording.metadata);
+  fs.writeFileSync(guideArtifactPath(row.recordingPaths.chapterVtt),recording.chapterFile);
+  if (row.status === 'complete') fs.copyFileSync(recording.sourceFile, guideArtifactPath(row.recordingPaths.webm));
 }
 fs.copyFileSync(path.join(sourceRoot,'styles.css'),path.join(outputRoot,'styles.css'));
 console.log(`Rendered ${files.length} guides with completed recordings or blocked scaffolds for ${revision} to ${outputRoot}`);

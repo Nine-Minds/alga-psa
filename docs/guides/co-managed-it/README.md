@@ -14,7 +14,12 @@ node docs/guides/co-managed-it/render.cjs /tmp/co-managed-guides \
   --coverage /absolute/path/to/video-coverage.json
 ```
 
-The output contains the collection guide and 12 section guides. The main walkthrough is maintained in the review packet's root `index.html` and has its own recording artifacts.
+The output directory represents the review packet's `guides/` directory and
+contains the collection guide and 12 section guides. Coverage `recordingPaths`
+are relative to the packet root, so section artifacts must start with `guides/`.
+The renderer removes that prefix when writing them beneath the output directory.
+The main walkthrough is maintained in the review packet's root `index.html`
+and has its own recording artifacts.
 
 ### Render a completed walkthrough
 

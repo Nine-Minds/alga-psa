@@ -13,7 +13,7 @@ const revision = '0123456789abcdef0123456789abcdef01234567';
 function fixture({ completed = false, corrupt = null } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'co-managed-render-test-'));
   const coveragePath = path.join(root, 'coverage.json');
-  const outputPath = path.join(root, 'rendered');
+  const outputPath = path.join(root, 'packet', 'guides');
   const files = fs.readdirSync(sourceRoot).filter(name => name.endsWith('.md')).sort();
   const pages = ['index.html', ...files.map(name => name === 'README.md' ? 'guides/index.html' : `guides/${name.replace(/\.md$/, '.html')}`)];
   const guides = pages.map((guide, index) => {
@@ -87,13 +87,18 @@ test('completed recording renders an embedded player, copied WebM/VTT, metadata,
   assert.match(guideHtml, /<video controls/);
   assert.match(guideHtml, /<track kind="chapters"/);
   assert.match(guideHtml, /video\.currentTime=Number\(select\.value\)/);
-  assert.match(guideHtml, /src="guides\/01-onboarding-walkthrough\.webm"/);
-  assert.equal(fs.readFileSync(path.join(f.outputPath, 'guides/01-onboarding-walkthrough.webm')).subarray(0, 4).toString('hex'), '1a45dfa3');
-  assert.match(fs.readFileSync(path.join(f.outputPath, 'guides/01-onboarding-walkthrough.vtt'), 'utf8'), /Synthetic chapter/);
-  const metadata = JSON.parse(fs.readFileSync(path.join(f.outputPath, 'guides/01-onboarding-walkthrough.json'), 'utf8'));
+  assert.match(guideHtml, /src="01-onboarding-walkthrough\.webm"/);
+  const artifactPath = name => path.join(path.dirname(f.outputPath), `guides/01-onboarding-walkthrough.${name}`);
+  assert.equal(fs.readFileSync(artifactPath('webm')).subarray(0, 4).toString('hex'), '1a45dfa3');
+  assert.match(fs.readFileSync(artifactPath('vtt'), 'utf8'), /Synthetic chapter/);
+  const metadata = JSON.parse(fs.readFileSync(artifactPath('json'), 'utf8'));
   assert.equal(metadata.status, 'complete');
   assert.equal(metadata.testedRevision, revision);
   assert.equal(metadata.chapters.length, 2);
+  for (const artifact of Object.values(metadata.recordingPaths)) {
+    assert.ok(fs.existsSync(path.join(path.dirname(f.outputPath), artifact)), artifact);
+  }
+  assert.equal(fs.existsSync(path.join(f.outputPath, 'guides')), false);
   // README.md generates the collection page at outputRoot/index.html. Its row
   // is blocked in this fixture, so the separate collection output remains a scaffold.
   assert.match(html, /data-recording-status="blocked"/);
