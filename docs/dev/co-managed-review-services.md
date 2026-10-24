@@ -57,7 +57,12 @@ alga-dev workflow-ensure-service --projectId=$PROJECT --name=dev-server \
   --readinessPort=3374 --readinessPath=/auth/msp/signin \
   --command="CARD_SERVICE_STARTUP_GRACE=420 CARD_SERVICE_PROBE_TIMEOUT=30 $RUN dev-server \
     --health http://127.0.0.1:3374/auth/msp/signin \
-    $WORKTREE/scripts/dev/run-co-managed-dev-server.sh --port 3374"
+    $WORKTREE/scripts/dev/run-co-managed-dev-server.sh"
+
+# Once this canonical registration exists, the commandless form is the
+# supported idempotent launch/revival path for this card. It must retain the
+# registered cwd, command, readiness path, and this checkout's origin:
+alga-dev workflow-ensure-service --projectId=$PROJECT --name=dev-server
 
 alga-dev workflow-ensure-service --projectId=$PROJECT --name=temporal-worker \
   --cwd="$WORKTREE/ee/temporal-workflows" \

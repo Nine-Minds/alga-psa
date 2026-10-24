@@ -28,7 +28,9 @@ R=/home/robert/alga-copies/feature-co-managed-it
 RUN="$R/scripts/dev/run-card-service.sh"
 alga-dev workflow-ensure-service --projectId=$P --name=dev-server --cwd=$R/server \
   --readinessPort=3374 --readinessPath=/auth/msp/signin \
-  --command="CARD_SERVICE_STARTUP_GRACE=420 CARD_SERVICE_PROBE_TIMEOUT=30 $RUN dev-server --health http://127.0.0.1:3374/auth/msp/signin $R/scripts/dev/run-co-managed-dev-server.sh --port 3374"
+  --command="CARD_SERVICE_STARTUP_GRACE=420 CARD_SERVICE_PROBE_TIMEOUT=30 $RUN dev-server --health http://127.0.0.1:3374/auth/msp/signin $R/scripts/dev/run-co-managed-dev-server.sh"
+# Thereafter this commandless invocation revives the same board-owned service:
+alga-dev workflow-ensure-service --projectId=$P --name=dev-server
 alga-dev workflow-ensure-service --projectId=$P --name=temporal-worker --cwd=$R/ee/temporal-workflows \
   --command='node dist/ee/temporal-workflows/src/worker.js' --readinessPort=8375 --readinessPath=/health
 alga-dev workflow-ensure-service --projectId=$P --name=workflow-worker --cwd=$R/services/workflow-worker \

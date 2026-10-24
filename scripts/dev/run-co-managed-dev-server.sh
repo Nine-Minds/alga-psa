@@ -58,9 +58,9 @@ fi
 
 # READINESS MUST BE AS DEEP AS WE CAN GET IT
 #
-# This service was registered with `/auth/signin` as its readiness and health
-# path, and that path could not have detected what human review blocker 6 hit,
-# whatever status it returned.
+# Older concluded registrations used `/auth/signin` and a stale advertised
+# host. The supported registration uses `/auth/msp/signin` and this launcher's
+# canonical `feature-co-managed-it.localhost:3374` origin.
 #
 # The app was serving the root "404 - Page Not Found" for every /msp URL FOUR or
 # more path segments long -- the co-managed shared task, ticket and project
@@ -72,13 +72,9 @@ fi
 # the tree: the same files, untouched, serve those routes before and after. See
 # docs/dev/co-managed-review-services.md.
 #
-# `/auth/signin` is TWO segments, so it sat two levels shallower than the
-# shallowest route that failed -- structurally blind to the failure. (It is a
-# perfectly real App Router page, server/src/app/auth/signin/page.tsx, and its
-# 307 is that page's own server-side redirect() to the portal-specific sign-in.
-# The redirect was never the problem; the depth was.) That is why the probe, the
-# bound port and the process record all looked correct for the whole window,
-# and the failure surfaced only when a human clicked a link.
+# `/auth/signin` is two segments and redirects. The three-segment page below is
+# the deeper session-less readiness route and avoids treating that redirect as
+# a successful page render.
 #
 # `/auth/msp/signin` is THREE segments -- the deepest any public route in this
 # app goes, since every page under src/app/auth bottoms out at three -- and it
