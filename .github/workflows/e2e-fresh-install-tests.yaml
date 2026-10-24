@@ -1223,7 +1223,7 @@ jobs:
         run: |
           set -euo pipefail
           cat > "$RUNNER_TEMP/citus-upgrade-compose.json" <<'JSON'
-          {"services":{"upgrade-citus":{"image":"citusdata/citus:12.1","command":["postgres","-c","password_encryption=md5"],"environment":{"POSTGRES_USER":"postgres","POSTGRES_PASSWORD":"placeholder-password","POSTGRES_DB":"postgres","POSTGRES_HOST_AUTH_METHOD":"md5"},"networks":["app-network"]},"server":{"environment":{"DB_HOST":"upgrade-citus","DB_PORT":"5432","DB_NAME_SERVER":"upgrade_citus_ci"}}}}
+          {"services":{"upgrade-citus":{"image":"citusdata/citus:12.1","command":["postgres","-c","password_encryption=md5"],"environment":{"POSTGRES_USER":"postgres","POSTGRES_PASSWORD":"placeholder-password","POSTGRES_DB":"postgres","POSTGRES_HOST_AUTH_METHOD":"md5"},"networks":["app-network"]},"server":{"environment":{"DB_HOST":"upgrade-citus","DB_PORT":"5432","DB_NAME_SERVER":"upgrade_citus_ci","DB_HOST_ADMIN":"upgrade-citus","DB_PORT_ADMIN":"5432"}}}}
           JSON
           export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/citus-upgrade-compose.json"
           docker-compose -p alga-e2e-test up --no-build --no-deps -d upgrade-citus
