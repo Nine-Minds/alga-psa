@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "candidate": "1c27c97496cb094397349fe4a584df3a93643eca",
+  "candidate": "83d61543cabb46c64c1a35eb3a75f5252dd5e4f1",
   "base": "7e8d87a9482528142004dfbb6fd5b29c58150e59",
-  "collectedAt": "2026-10-24T16:01:46.179Z",
+  "collectedAt": "2026-10-24T16:54:14.774Z",
   "pr": {
     "number": 3363,
-    "head": null
+    "head": "83d61543cabb46c64c1a35eb3a75f5252dd5e4f1"
   },
   "provenance": {
     "app": {
@@ -14,15 +14,51 @@
     "worker": {
       "revision": null
     },
-    "migrations": null,
-    "config": null,
-    "simulator": null
+    "migrations": "sha256:45093475b95a0f8616dd2066983e63df",
+    "config": "sha256:bac51e51904540c60120240d65de27ef",
+    "simulator": "sha256:050521427490830cf4afd0c439f2d7a9",
+    "inputs": {
+      "migrations": [
+        {
+          "path": "server/migrations",
+          "tree": "b5f3404146f62a7f5a183fb0fde6fada5cd2c437"
+        },
+        {
+          "path": "ee/server/migrations",
+          "tree": "83c1856a5dd9d9132391dd9da4c5599c2216b705"
+        }
+      ],
+      "config": [
+        {
+          "path": "docker-compose.yaml",
+          "tree": "8ee152aaa05d1254e37ca1d161522d8176af8e7b"
+        },
+        {
+          "path": "docker-compose.ee.yaml",
+          "tree": "e6a51193c5e744a1a024eec3b03f1ee85f7aae57"
+        },
+        {
+          "path": "docker-compose.e2e-emulators.yaml",
+          "tree": "bb3df55beb7072666dd936df1ed3a88b80dd1195"
+        },
+        {
+          "path": ".env.example",
+          "tree": "dcc4995d53fdbbe53e8d80c550bb45336ba96d23"
+        }
+      ],
+      "simulator": [
+        {
+          "path": "packages/emulators",
+          "tree": "9e16dbd706d15a89a00f4ba39ef89d321b0ab473"
+        }
+      ]
+    }
   },
   "worktreeClean": false,
   "mergeability": {
-    "mergeable": null,
-    "mergeStateStatus": null,
-    "checkedAtSha": null
+    "mergeable": "CONFLICTING",
+    "mergeStateStatus": "DIRTY",
+    "checkedAtSha": "83d61543cabb46c64c1a35eb3a75f5252dd5e4f1"
   },
   "ci": {
     "runId": null,
@@ -63,7 +99,7 @@
   "evidence": {
     "current-source-census": {
       "type": "analysis",
-      "sha": "1c27c97496cb094397349fe4a584df3a93643eca",
+      "sha": "83d61543cabb46c64c1a35eb3a75f5252dd5e4f1",
       "command": "node scripts/build-co-managed-inventory.mjs --current-source-census",
       "result": "260 requirement rows mapped to current source and regression paths; no acceptance statuses promoted to verified.",
       "artifact": "source-census.json",
