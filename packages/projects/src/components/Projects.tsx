@@ -45,10 +45,13 @@ import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { LIST_VIEW_URL_PARAM } from '@alga-psa/list-views';
 import { useListViews } from '@alga-psa/list-views/hooks';
+import { getListView } from '@alga-psa/list-views/actions';
 import { ListViewPicker } from '@alga-psa/list-views/components';
 import {
+  collectViewClientIds,
   createProjectListViewAdapter,
   pickProjectViewFilters,
+  resolveKnownClientIds,
   type ProjectListLiveState,
 } from '../lib/projectListViewAdapter';
 
@@ -164,7 +167,6 @@ function parseFiltersFromSearch(search: string): ProjectListFilters {
 
 interface ProjectsProps {
   initialProjects: IProject[];
-  clients: IClient[];
   initialFilters?: Partial<ProjectListFilters>;
   initialProjectTags?: Record<string, ITag[]>;
   initialAllUniqueTags?: ITag[];
@@ -187,13 +189,13 @@ export const DEFAULT_PROJECT_FILTERS: ProjectListFilters = {
   pageSize: 10,
 };
 
-export default function Projects({ initialProjects, clients, initialFilters, initialProjectTags, initialAllUniqueTags, smartSearchAvailable = false }: ProjectsProps) {
+export default function Projects({ initialProjects, initialFilters, initialProjectTags, initialAllUniqueTags, smartSearchAvailable = false }: ProjectsProps) {
   const { t } = useTranslation(['features/projects', 'common']);
   // toLocaleDateString() with no locale follows the browser, not the app.
   const { formatDate } = useFormatters();
   const projectListT = useCallback((key: string, fallback: string, options?: Record<string, unknown>) =>
     t(`projectList.${key}`, { defaultValue: fallback, ...(options ?? {}) }), [t]);
-  const { getAllContacts, getContactByContactNameId, renderQuickAddContact, renderClientDetails } = useClientIntegration();
+  const { getAllContacts, getContactByContactNameId, getClientById, getExistingClientIds, renderQuickAddContact, renderClientDetails } = useClientIntegration();
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['project']);
 
@@ -404,12 +406,19 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
     columnSizing,
   }), [activeFilters, tableSort, columnSizing]);
 
+  // Saved views are checked against only the clients they reference (never the whole
+  // client table). Until that lookup has run for the loaded views, `ready` holds the
+  // hook back from applying one, so a view is never sanitised against an unchecked set.
+  const [knownClientIds, setKnownClientIds] = useState<ReadonlySet<string>>(() => new Set());
+  const [savedViewClientsChecked, setSavedViewClientsChecked] = useState(false);
+  const checkedViewClientIdsRef = useRef<Set<string>>(new Set());
+
   const projectListViewAdapter = useMemo(() => createProjectListViewAdapter({
     defaultFilters: pickProjectViewFilters(DEFAULT_PROJECT_FILTERS as Record<string, unknown>),
     defaultSort: DEFAULT_PROJECT_SORT,
     defaultPageSize: DEFAULT_PROJECT_FILTERS.pageSize ?? 10,
-    known: { clientIds: new Set(clients.map((client) => client.client_id)) },
-  }), [clients]);
+    known: { clientIds: knownClientIds },
+  }), [knownClientIds]);
 
   const handleListViewApply = useCallback((next: ProjectListLiveState, meta: { viewId: string | null }) => {
     if (filterUpdateTimeoutRef.current) {
@@ -439,7 +448,42 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
     urlHasExplicitState: entryUrlHasFilters.current,
     // Projects mirror their filters into the URL, so they own the single write.
     ownsUrl: true,
+    ready: savedViewClientsChecked,
   });
+
+  const savedViews = listViews.views;
+  const savedViewsLoading = listViews.isLoading;
+  useEffect(() => {
+    if (savedViewsLoading) return;
+    let cancelled = false;
+    void (async () => {
+      const referenced = new Set(collectViewClientIds(savedViews));
+      // A `?view=` link can open a view the list does not include; its client counts too.
+      const requestedViewId = new URLSearchParams(window.location.search).get(LIST_VIEW_URL_PARAM);
+      if (requestedViewId && !savedViews.some((view) => view.view_id === requestedViewId)) {
+        try {
+          const requested = await getListView(requestedViewId);
+          if (requested && !('actionError' in requested) && !('permissionError' in requested)) {
+            collectViewClientIds([requested as { settings: { filters?: { clientId?: string } | null } }])
+              .forEach((id) => referenced.add(id));
+          }
+        } catch (error) {
+          console.error('[projects] failed to load requested view', error);
+        }
+      }
+      const unchecked = Array.from(referenced).filter((id) => !checkedViewClientIdsRef.current.has(id));
+      if (unchecked.length > 0) {
+        const existing = await resolveKnownClientIds(unchecked, getExistingClientIds);
+        if (cancelled) return;
+        unchecked.forEach((id) => checkedViewClientIdsRef.current.add(id));
+        setKnownClientIds((previous) => new Set([...previous, ...existing]));
+      }
+      if (!cancelled) setSavedViewClientsChecked(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [savedViews, savedViewsLoading, getExistingClientIds]);
 
   const handleTagsChange = (projectId: string, tags: ITag[]) => {
     projectTagsRef.current[projectId] = tags;
@@ -712,7 +756,6 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
     openDrawer(
       <ProjectDetailsEdit
         initialProject={project}
-        clients={clients}
         onSave={(updatedProject) => {
           setProjects(prevProjects =>
             prevProjects.map((p): IProject =>
@@ -798,11 +841,17 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
       clientDrawer.openClientDrawer(clientId);
       return;
     }
-    const client = clients.find(c => c.client_id === clientId);
-    if (client) {
-      setQuickViewClient(client);
-      setIsQuickViewOpen(true);
-    }
+    void (async () => {
+      try {
+        const client = await getClientById(clientId);
+        if (client) {
+          setQuickViewClient(client);
+          setIsQuickViewOpen(true);
+        }
+      } catch (error) {
+        console.error('[projects] failed to load client for quick view', error);
+      }
+    })();
   };
 
   const formatDisplayDate = (value: unknown): string => {
@@ -857,11 +906,10 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
       dataIndex: 'client_id',
       width: '12%',
       render: (value, record) => {
-        const client = clients.find(c => c.client_id === value);
-        if (!client) return <ClientNameCell clientName={null} />;
+        if (!value || !record.client_name) return <ClientNameCell clientName={null} />;
 
         return (
-          <ClientNameCell clientId={client.client_id} clientName={client.client_name} logoUrl={client.logoUrl ?? null}>
+          <ClientNameCell clientId={value} clientName={record.client_name} logoUrl={record.client_logo_url ?? null}>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -869,7 +917,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
               }}
               className="text-blue-500 hover:underline text-left whitespace-normal break-words"
             >
-              {client.client_name}
+              {record.client_name}
             </button>
           </ClientNameCell>
         );
@@ -1137,7 +1185,6 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
           {/* Client filter */}
           <ClientPicker
             id="project-client-filter"
-            clients={clients}
             onSelect={(clientId) => handleFilterChange({ clientId: clientId || undefined })}
             selectedClientId={activeFilters.clientId || null}
             filterState={clientFilterState}
@@ -1175,7 +1222,6 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
               handleFilterChange({ contactId: newContact.contact_name_id });
               setIsQuickAddContactOpen(false);
             },
-            clients,
             selectedClientId: activeFilters.clientId || undefined,
           })}
 
@@ -1301,7 +1347,6 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
         <ProjectQuickAdd
           onClose={() => setShowQuickAdd(false)}
           onProjectAdded={handleProjectAdded}
-          clients={clients}
         />
       )}
 

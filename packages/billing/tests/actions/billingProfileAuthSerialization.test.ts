@@ -30,7 +30,7 @@ vi.mock('@alga-psa/shared/billingClients/billingProfiles', () => ({
 }));
 
 import { getClientBillingProfilesForBilling } from '../../src/actions/billingProfileActions';
-import { getAllClientsForBillingRecoverable } from '../../src/actions/billingClientsActions';
+import { getClientByIdForBillingRecoverable } from '../../src/actions/billingClientsActions';
 import { getServicesRecoverable } from '../../src/actions/serviceActions';
 import { getActiveClientLocationsForBillingRecoverable } from '../../src/actions/billingClientLocationActions';
 import { getInvoiceAdjustmentCapability } from '../../src/actions/invoiceModification';
@@ -43,7 +43,7 @@ import {
 
 describe('invoice read authentication serialization', () => {
   it.each([
-    ['billing clients', () => getAllClientsForBillingRecoverable()],
+    ['billing clients', () => getClientByIdForBillingRecoverable('client-1')],
     ['service catalog', () => getServicesRecoverable(1, 999, { item_kind: 'any' })],
     ['client locations', () => getActiveClientLocationsForBillingRecoverable('client-1')],
     ['billing profiles', () => getClientBillingProfilesForBilling('client-1')],

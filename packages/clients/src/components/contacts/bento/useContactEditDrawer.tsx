@@ -4,19 +4,16 @@ import React, { useCallback } from 'react';
 import type { IContact } from '@alga-psa/types';
 import { useDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getContactByContactNameId, getAllClients } from '@alga-psa/clients/actions';
+import { getContactByContactNameId } from '@alga-psa/clients/actions';
 import ContactDetailsEdit from '../ContactDetailsEdit';
 
 /**
  * Open a contact's edit form in the shared drawer from just an id.
  *
- * Drawer content is fixed when the drawer opens, so the client list has to be
- * complete at that moment: it is loaded here (every client, including inactive)
- * rather than threaded in from the page. There is deliberately no fallback to a
- * page-scoped list — a shortened list is the alga0002338 bug (the change-client
- * picker offered only the client being viewed) — so a failed load shows an error.
+ * The change-client picker in ContactDetailsEdit searches the whole tenant on the server,
+ * so no client list is loaded or threaded in here. That keeps the alga0002338 guarantee
+ * (the picker offers every tenant client, never a page-scoped list) by construction.
  */
-// LEVERAGE: pattern contact-drawer-loader — open loading drawer → load contact + getAllClients(true) → replaceDrawer
 export function useContactEditDrawer(): (
   contactId: string,
   options?: { onSaved?: (contact: IContact) => void },
@@ -31,10 +28,7 @@ export function useContactEditDrawer(): (
       </div>
     );
     try {
-      const [contact, clients] = await Promise.all([
-        getContactByContactNameId(contactId),
-        getAllClients(true),
-      ]);
+      const contact = await getContactByContactNameId(contactId);
 
       if (!contact) {
         replaceDrawer(
@@ -49,7 +43,6 @@ export function useContactEditDrawer(): (
         <ContactDetailsEdit
           id="client-contact-edit"
           initialContact={contact}
-          clients={clients}
           isInDrawer={true}
           onSave={(updatedContact) => {
             options?.onSaved?.(updatedContact);

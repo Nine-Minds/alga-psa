@@ -18,27 +18,6 @@ async function assertInternalReadAccess(user: IUserWithRoles, resource: 'client'
   }
 }
 
-export const getSchedulingClients = withAuth(async (
-  user,
-  { tenant },
-  includeInactive: boolean = true
-): Promise<IClient[]> => {
-  await assertInternalReadAccess(user, 'client');
-  const { knex } = await createTenantKnex();
-
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const query = (tenantDb(trx, tenant) as any).table('clients')
-      .select('*')
-      .orderBy('client_name', 'asc');
-
-    if (!includeInactive) {
-      query.andWhere({ is_inactive: false });
-    }
-
-    return query;
-  }) as unknown as IClient[];
-});
-
 export const getSchedulingClientById = withAuth(async (
   user,
   { tenant },

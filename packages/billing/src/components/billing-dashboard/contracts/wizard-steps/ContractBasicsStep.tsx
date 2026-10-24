@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -11,7 +11,8 @@ import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { ContractWizardData } from '../ContractWizard';
-import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
+import { getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
+import { useBillingClient } from '../../../../hooks/useBillingClient';
 import { CURRENCY_OPTIONS, getCurrencySymbol, currencyFractionDigits } from '@alga-psa/core';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
@@ -29,7 +30,6 @@ import { format as formatDateFns, parse as parseDateFns } from 'date-fns';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
 import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
-import { IClient } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -81,8 +81,10 @@ export function ContractBasicsStep({
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const formatBillingFrequency = useFormatBillingFrequency();
   const { renderQuickAddClient } = useQuickAddClient();
-  const [clients, setClients] = useState<IClient[]>([]);
-  const [isLoadingClients, setIsLoadingClients] = useState(true);
+  // Name for the summary, looked up by id (the picker searches the server, so no list is held).
+  const { client: summaryClient, prime: primeSummaryClient } = useBillingClient(data.client_id || null);
+  // Latest picked client id: a slow currency lookup for an earlier pick must not apply.
+  const latestPickedClientIdRef = useRef<string>(data.client_id || '');
   const [poAmountInput, setPoAmountInput] = useState<string>('');
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
@@ -97,25 +99,6 @@ export function ContractBasicsStep({
     return { currencyCode, fractionDigits, minorUnitFactor: Math.pow(10, fractionDigits) };
   }, [data.currency_code]);
   const currencySymbol = getCurrencySymbol(data.currency_code);
-
-  useEffect(() => {
-    const loadClients = async () => {
-      try {
-        const fetchedClients = await getAllClientsForBilling();
-        if (isActionMessageError(fetchedClients) || isActionPermissionError(fetchedClients)) {
-          setClients([]);
-          return;
-        }
-        setClients(fetchedClients);
-      } catch (error) {
-        console.error('Error loading clients:', error);
-      } finally {
-        setIsLoadingClients(false);
-      }
-    };
-
-    void loadClients();
-  }, []);
 
   useEffect(() => {
     if (data.po_amount !== undefined) {
@@ -263,26 +246,33 @@ export function ContractBasicsStep({
         </Label>
         <ClientPicker
           id="contract-basics-client-picker"
-          clients={clients}
           selectedClientId={data.client_id || null}
           onSelect={(id) => {
-            const selectedClient = clients.find((c) => c.client_id === id);
-            const clientCurrency = selectedClient?.default_currency_code || data.currency_code;
+            latestPickedClientIdRef.current = id || '';
             updateData({
               client_id: id || '',
-              currency_code: clientCurrency,
               // A profile belongs to exactly one client; keeping the previous
               // pick would be rejected on save.
               billing_profile_id: null,
             });
+            if (!id) return;
+            // The contract's currency defaults to the picked client's; read just that client.
+            void (async () => {
+              try {
+                const picked = await getClientByIdForBilling(id);
+                if (latestPickedClientIdRef.current !== id) return;
+                if (isActionMessageError(picked) || isActionPermissionError(picked) || !picked) return;
+                if (picked.default_currency_code) updateData({ currency_code: picked.default_currency_code });
+              } catch (error) {
+                console.error('Error loading client currency:', error);
+              }
+            })();
           }}
           filterState={filterState}
           onFilterStateChange={setFilterState}
           clientTypeFilter={clientTypeFilter}
           onClientTypeFilterChange={setClientTypeFilter}
-          placeholder={isLoadingClients
-            ? t('wizardBasics.client.loadingClients', { defaultValue: 'Loading clients…' })
-            : t('wizardBasics.client.selectClient', { defaultValue: 'Select a client' })}
+          placeholder={t('wizardBasics.client.selectClient', { defaultValue: 'Select a client' })}
           className="w-full"
           onAddNew={() => setIsQuickAddClientOpen(true)}
         />
@@ -290,7 +280,8 @@ export function ContractBasicsStep({
           open: isQuickAddClientOpen,
           onOpenChange: setIsQuickAddClientOpen,
           onClientAdded: (newClient) => {
-            setClients(prev => [...prev, newClient]);
+            latestPickedClientIdRef.current = newClient.client_id;
+            primeSummaryClient(newClient);
             updateData({ client_id: newClient.client_id });
           },
           skipSuccessDialog: true,
@@ -808,7 +799,7 @@ export function ContractBasicsStep({
             <div className="text-sm space-y-1">
               <p>
                 <strong>{t('wizardBasics.summary.labels.client', { defaultValue: 'Client:' })}</strong>{' '}
-                {clients.find((c) => c.client_id === data.client_id)?.client_name
+                {summaryClient?.client_name
                   || t('wizardBasics.summary.values.notSelected', { defaultValue: 'Not selected' })}
               </p>
               <p>

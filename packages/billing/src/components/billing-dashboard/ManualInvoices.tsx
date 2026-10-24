@@ -33,6 +33,7 @@ import { calculateManualInvoiceEditorTotal } from './manualInvoiceTotals';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
+import { useBillingClient } from '../../hooks/useBillingClient';
 import { useClientBillingProfiles } from '@alga-psa/ui/hooks/useClientBillingProfiles';
 import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
 import type { IClient } from '@alga-psa/types';
@@ -75,7 +76,11 @@ interface TaxRateChoice {
 }
 
 interface ManualInvoicesProps {
-  clients: IClient[];
+  /**
+   * The invoice's own client when the host already loaded it (draft adjustments). Otherwise
+   * the client is looked up by id once an invoice or a picker selection supplies one.
+   */
+  client?: IClient | null;
   services: IService[];
   onGenerateSuccess: () => void;
   invoice?: InvoiceViewModel;
@@ -283,7 +288,7 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
 }
 
 const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
-  clients,
+  client: providedClient = null,
   services,
   onGenerateSuccess,
   invoice, // This is the initial invoice prop
@@ -300,13 +305,20 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   // the invoice line — is in the currency's own minor units.
   const { locale } = useFormatters();
   const { renderQuickAddClient } = useQuickAddClient();
-  const [clientOptions, setClientOptions] = useState<IClient[]>(clients);
   const [selectedClient, setSelectedClient] = useState<string | null>(
     invoice?.client_id || null
   );
   const [selectedSalesOrderId, setSelectedSalesOrderId] = useState<string>('');
   // State to hold the full invoice data, initialized from prop but updated locally after fetch/changes
   const [currentInvoiceData, setCurrentInvoiceData] = useState<InvoiceViewModel | undefined>(invoice);
+  // Currency, region and name of the client this invoice is for: the host-provided client when
+  // it matches, otherwise a by-id lookup (the picker no longer carries a tenant client list).
+  const activeClientId = currentInvoiceData?.client_id || invoice?.client_id || selectedClient;
+  const providedMatches = Boolean(providedClient && providedClient.client_id === activeClientId);
+  const { client: lookedUpClient, prime: primeLookedUpClient } = useBillingClient(
+    providedMatches ? null : activeClientId,
+  );
+  const activeClientData = providedMatches ? providedClient : lookedUpClient;
   // State specifically for the manual items being edited
   // Persisted rows become editable only after a coherent snapshot loads. A
   // list projection may be stale and must never become a write payload.
@@ -422,10 +434,6 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       defaultValue: message,
     });
   };
-
-  useEffect(() => {
-    setClientOptions(clients);
-  }, [clients]);
 
   // Pre-select the client's default profile — the operator picks another only
   // when this invoice belongs to a different segment. Only a segmented client
@@ -1411,8 +1419,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   console.log('[Render] Rendering ManualInvoicesContent. currentInvoiceData items:', currentInvoiceData?.invoice_charges?.length);
 
   // Get currency code from invoice data, selected client, or default to USD
-  const selectedClientData = clientOptions.find(c => c.client_id === (currentInvoiceData?.client_id || selectedClient));
-  const currencyCode = currentInvoiceData?.currencyCode || selectedClientData?.default_currency_code || 'USD';
+  const currencyCode = currentInvoiceData?.currencyCode || activeClientData?.default_currency_code || 'USD';
 
   const partialPeriodCalculation = (() => {
     try {
@@ -1479,8 +1486,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   // cannot be reconstructed resolves to `undefined` so opening and saving it
   // preserves the stored treatment instead of stripping it.
   const resolveInitialTaxRateId = (item: EditableInvoiceItem): string | null | undefined => {
-    const invoiceClientId = currentInvoiceData?.client_id || invoice?.client_id || selectedClient;
-    const clientRegion = clientOptions.find((client) => client.client_id === invoiceClientId)?.region_code ?? null;
+    const clientRegion = activeClientData?.region_code ?? null;
     return resolveInitialManualTaxRateId({
       isDiscount: Boolean(item.is_discount),
       explicitTaxRateId: item.tax_rate_id,
@@ -1570,7 +1576,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                   {t('manualInvoices.fields.client', { defaultValue: 'Client' })}
                 </label>
                 <div className="text-[rgb(var(--color-text-900))]">
-                  {clientOptions.find(c => c.client_id === currentInvoiceData.client_id)?.client_name
+                  {activeClientData?.client_name
                     || t('common.labels.unknownClient', { defaultValue: 'Unknown client' })}
                 </div>
               </div>
@@ -1722,7 +1728,6 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                     <>
                       <ClientPicker
                         id='client-picker'
-                        clients={clientOptions}
                         selectedClientId={selectedClient}
                         onSelect={setSelectedClient}
                         filterState={filterState}
@@ -1738,7 +1743,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                         open: isQuickAddClientOpen,
                         onOpenChange: setIsQuickAddClientOpen,
                         onClientAdded: (newClient) => {
-                          setClientOptions(prev => [...prev, newClient]);
+                          primeLookedUpClient(newClient);
                           setSelectedClient(newClient.client_id);
                         },
                         skipSuccessDialog: true,

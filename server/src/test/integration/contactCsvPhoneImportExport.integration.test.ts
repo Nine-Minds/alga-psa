@@ -337,6 +337,7 @@ describe('contact CSV hybrid email import/export integration', () => {
             },
           ],
           client_id: 'client-1',
+          client_name: 'Acme Client',
           role: 'Coordinator',
           notes: 'Export test',
           default_phone_number: null,
@@ -360,12 +361,6 @@ describe('contact CSV hybrid email import/export integration', () => {
               display_order: 1,
             },
           ],
-        } as any,
-      ],
-      [
-        {
-          client_id: 'client-1',
-          client_name: 'Acme Client',
         } as any,
       ],
       { 'contact-1': [] }

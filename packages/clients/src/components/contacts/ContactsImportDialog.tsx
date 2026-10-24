@@ -20,7 +20,7 @@ import {
   ICSVImportOptions,
   ImportContactResult,
 } from '@alga-psa/types';
-import { importContactsFromCSV, checkExistingEmails, generateContactCSVTemplate } from '@alga-psa/clients/actions';
+import { importContactsFromCSV, checkExistingEmails, generateContactCSVTemplate, findClientsByNames } from '@alga-psa/clients/actions';
 import { Upload, AlertTriangle, Check, Download } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { parseCSV, unparseCSV } from '@alga-psa/core';
@@ -41,7 +41,6 @@ interface ContactsImportDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onImportComplete: (contacts: IContact[]) => void;
-  clients: { client_id: string; client_name: string; }[];
 }
 
 interface ImportOptionsProps {
@@ -63,7 +62,6 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
   isOpen,
   onClose,
   onImportComplete,
-  clients
 }) => {
   const { t } = useTranslation('msp/contacts');
   const [step, setStep] = useState<'upload' | 'mapping' | 'preview' | 'importing' | 'results' | 'complete'>('upload');
@@ -315,10 +313,20 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
     }
   };
 
-  const transformDataForImport = (data: ContactCsvRecord[]): ContactCsvImportData[] => {
+  const transformDataForImport = async (data: ContactCsvRecord[]): Promise<ContactCsvImportData[]> => {
+    // Resolve client names with one targeted lookup instead of loading every client.
+    const distinctNames = Array.from(
+      new Set(data.map((record) => record.client).filter((name): name is string => Boolean(name)))
+    );
+    const matched = distinctNames.length > 0 ? await findClientsByNames(distinctNames) : [];
+    if (isReturnedActionError(matched)) {
+      throw new Error(getErrorMessage(matched));
+    }
+    const clientIdByName = new Map(matched.map((c) => [c.client_name, c.client_id]));
+
     return data.map((record): ContactCsvImportData => {
-      // Find client ID from client name
-      const client = clients.find(c => c.client_name === record.client);
+      // Find client ID from client name (exact, case-sensitive)
+      const client = record.client ? { client_id: clientIdByName.get(record.client) } : undefined;
       const parsedPrimaryEmailType = record.primary_email_type
         ? parseContactCsvEmailType(record.primary_email_type)
         : {};
@@ -356,7 +364,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
     setProcessingDetails({ current: 0, total: data.length });
     
     try {
-      const transformedData = transformDataForImport(data);
+      const transformedData = await transformDataForImport(data);
       const results = await importContactsFromCSV(
         transformedData,
         importOptions.updateExisting

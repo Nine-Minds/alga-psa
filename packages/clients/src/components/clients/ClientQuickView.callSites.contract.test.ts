@@ -21,7 +21,6 @@ describe('ClientQuickView call sites', () => {
       'packages/clients/src/components/contacts/Contacts.tsx',
       'packages/msp-composition/src/clients/MspContactTickets.tsx',
       'packages/clients/src/components/contacts/ContactDetailsView.tsx',
-      'packages/clients/src/components/contacts/ContactDetails.tsx',
     ];
 
     for (const file of migratedFiles) {

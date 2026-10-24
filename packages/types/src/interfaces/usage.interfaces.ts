@@ -15,6 +15,7 @@ export interface IUsageRecord extends TenantEntity {
   comments?: string | null;
   tax_region?: string;
   client_name?: string; // Joined from clients table
+  client_logo_url?: string | null; // Attached per list by getUsageRecords (batched)
   service_name?: string; // Joined from service_catalog table
   contract_line_id?: string | null;
   contract_line_source?: ContractLineSource | null;

@@ -338,14 +338,14 @@ describe('Project Permissions', () => {
     vi.mocked(getCurrentUser).mockResolvedValue(regularUser);
     const projects = await projectActions.getProjects();
     expect(projects).toHaveLength(1);
-    expect(projects[0]).toEqual(mockProject);
+    expect(projects[0]).toEqual({ ...mockProject, client_logo_url: null });
   });
 
   it('should allow admin user to view projects', async () => {
     vi.mocked(getCurrentUser).mockResolvedValue(adminUser);
     const projects = await projectActions.getProjects();
     expect(projects).toHaveLength(1);
-    expect(projects[0]).toEqual(mockProject);
+    expect(projects[0]).toEqual({ ...mockProject, client_logo_url: null });
   });
 
   it('should throw an error if user does not have view permission', async () => {

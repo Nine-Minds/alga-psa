@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Card, Box } from '@radix-ui/themes';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -12,12 +12,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Button } from '@alga-psa/ui/components/Button';
 import { IContract } from '@alga-psa/types';
 import { getContracts } from '@alga-psa/billing/actions/contractActions';
-import {
-  getClientContractsForBilling,
-  getDetailedClientContractForBilling,
-  getAllClientsForBilling,
-} from '@alga-psa/billing/actions/billingClientsActions';
-import { IClient } from '@alga-psa/types';
+import { getContractAssignmentsForReport } from '@alga-psa/billing/actions/billingClientsActions';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -47,7 +42,8 @@ const ContractUsageReport: React.FC = () => {
   const { formatCurrency, formatDate } = useFormatters();
   const { currencyCode: tenantCurrency } = useCurrencyFormat();
   const [contracts, setContracts] = useState<IContract[]>([]);
-  const [clients, setClients] = useState<IClient[]>([]);
+  // Latest usage request; a slower response for a previously selected contract is dropped.
+  const usageRequestRef = useRef(0);
   const [contractUsage, setContractUsage] = useState<ContractUsageRecord[]>([]);
   const [selectedContract, setSelectedContract] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -70,29 +66,17 @@ const ContractUsageReport: React.FC = () => {
   const fetchInitialData = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      // Get all contracts and clients
-      const [fetchedContracts, fetchedClients] = await Promise.all([
-        getContracts(),
-        getAllClientsForBilling(false) // false to get only active clients
-      ]);
+      const fetchedContracts = await getContracts();
       if (isReturnedActionError(fetchedContracts)) {
         setError(getErrorMessage(fetchedContracts));
         setContracts([]);
-        setClients([]);
         return;
       }
-      if (isReturnedActionError(fetchedClients)) {
-        setError(getErrorMessage(fetchedClients));
-        setContracts([]);
-        setClients([]);
-        return;
-      }
-      
+
       setContracts(fetchedContracts);
-      setClients(fetchedClients);
-      
+
       // Set default selected contract if available
       if (fetchedContracts.length > 0) {
         setSelectedContract(fetchedContracts[0].contract_id);
@@ -107,51 +91,38 @@ const ContractUsageReport: React.FC = () => {
   };
 
   const fetchContractUsage = async (contractId: string) => {
+    const requestId = ++usageRequestRef.current;
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      // Get all clients that have this contract assigned
-      const clientContracts: ContractUsageRecord[] = [];
-      
-      for (const client of clients) {
-        const clientContractAssignments = await getClientContractsForBilling(client.client_id);
-        if (isReturnedActionError(clientContractAssignments)) {
-          setError(getErrorMessage(clientContractAssignments));
-          return;
-        }
-        const matchingContract = clientContractAssignments.find(cc => cc.contract_id === contractId);
-        
-        if (matchingContract && matchingContract.client_contract_id) {
-          const detailedContract = await getDetailedClientContractForBilling(matchingContract.client_contract_id);
-          if (isReturnedActionError(detailedContract)) {
-            setError(getErrorMessage(detailedContract));
-            return;
-          }
-          
-          if (detailedContract) {
-            clientContracts.push({
-              client_id: client.client_id,
-              client_name: client.client_name || t('contractUsage.statusValues.unknownClient', { defaultValue: 'Unknown Client' }),
-              logoUrl: client.logoUrl ?? null,
-              contract_id: contractId,
-              contract_name: detailedContract.contract_name,
-              start_date: matchingContract.start_date,
-              end_date: matchingContract.end_date,
-              contract_line_count: detailedContract.contract_line_count || 0,
-              total_billed: detailedContract.total_billed || 0,
-              is_active: matchingContract.is_active
-            });
-          }
-        }
+      // One query for the clients that have this contract assigned (no per-client loop).
+      const assignments = await getContractAssignmentsForReport(contractId);
+      if (requestId !== usageRequestRef.current) return;
+      if (isReturnedActionError(assignments)) {
+        setError(getErrorMessage(assignments));
+        return;
       }
-      
-      setContractUsage(clientContracts);
+
+      setContractUsage(assignments.map((assignment) => ({
+        client_id: assignment.client_id,
+        client_name: assignment.client_name || t('contractUsage.statusValues.unknownClient', { defaultValue: 'Unknown Client' }),
+        logoUrl: assignment.client_logo_url ?? null,
+        contract_id: contractId,
+        contract_name: assignment.contract_name,
+        start_date: assignment.start_date,
+        end_date: assignment.end_date,
+        contract_line_count: assignment.contract_line_count,
+        // The detailed contract never reported a billed total, so this has always been 0.
+        total_billed: 0,
+        is_active: assignment.is_active,
+      })));
     } catch (error) {
+      if (requestId !== usageRequestRef.current) return;
       console.error('Error fetching contract usage:', error);
       setError(t('contractUsage.errors.loadUsageData', { defaultValue: 'Failed to load contract usage data' }));
     } finally {
-      setIsLoading(false);
+      if (requestId === usageRequestRef.current) setIsLoading(false);
     }
   };
 

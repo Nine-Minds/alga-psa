@@ -16,7 +16,6 @@ describe('quick add asset client creation wiring contract', () => {
     expect(source).toContain('renderQuickAddClient({');
     expect(source).toContain('open: isQuickAddClientOpen,');
     expect(source).toContain('onOpenChange: setIsQuickAddClientOpen,');
-    expect(source).toContain('setClients(prev => [...prev, newClient]);');
     expect(source).toContain('setSelectedClientId(newClient.client_id);');
     expect(source).toContain('clearErrorIfSubmitted();');
   });

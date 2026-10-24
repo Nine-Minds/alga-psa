@@ -12,10 +12,9 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrencyFromMinorUnits, toMinorUnits } from '@alga-psa/core';
 import { toast } from 'react-hot-toast';
-import type { IClient } from '@alga-psa/types';
 import type { CreditRow } from './CreditsTable';
 import { transferCreditToClient } from './actions';
-import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
+import { useBillingClient } from '../../hooks/useBillingClient';
 
 interface TransferCreditDialogProps {
   credit: CreditRow | null;
@@ -26,7 +25,6 @@ export default function TransferCreditDialog({ credit, onClose }: TransferCredit
   const creditCurrency = credit?.currency_code || 'USD';
   const { t, i18n } = useTranslation('msp/credits');
   const router = useRouter();
-  const [clients, setClients] = useState<IClient[]>([]);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [targetClientId, setTargetClientId] = useState<string | null>(null);
   const [amount, setAmount] = useState<number | undefined>(undefined);
@@ -45,17 +43,7 @@ export default function TransferCreditDialog({ credit, onClose }: TransferCredit
     }
   }, [credit]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    let cancelled = false;
-    getAllClientsForBilling()
-      .then((result) => {
-        if (!cancelled) setClients(result);
-      })
-      .catch((err) => console.error('Failed to load clients for transfer:', err));
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { client: targetClient } = useBillingClient(targetClientId);
 
   const handleTransfer = async () => {
     if (!credit || !targetClientId) {
@@ -127,16 +115,14 @@ export default function TransferCreditDialog({ credit, onClose }: TransferCredit
               <div className="mt-1">
                 <ClientPicker
                   id="transfer-credit-client-picker"
-                  clients={clients}
                   selectedClientId={targetClientId}
                   onSelect={setTargetClientId}
                   filterState={filterState}
                   onFilterStateChange={setFilterState}
                   disabledClientIds={new Set([credit.client_id])}
                 />
-                {targetClientId && (() => {
-                  const target = clients.find((client) => client.client_id === targetClientId);
-                  const targetCurrency = target?.default_currency_code || 'USD';
+                {targetClientId && targetClient && (() => {
+                  const targetCurrency = targetClient.default_currency_code || 'USD';
                   return <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
                     {targetCurrency === creditCurrency
                       ? t('transferDialog.hints.currencyMatch', { defaultValue: 'Target client currency: {{currency}}', currency: targetCurrency })
