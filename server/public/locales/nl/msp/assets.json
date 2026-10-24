@@ -1483,6 +1483,8 @@
       "installDate": "Installatiedatum"
     },
     "empty": "Er is geen software gevonden die voldoet aan uw zoekopdracht.",
+    "noInventory": "Voor dit apparaat is nog geen software-inventaris verzameld.",
+    "loadError": "De software-inventaris kon niet worden geladen.",
     "totalItems": "Totaal aantal artikelen: {{count}}",
     "values": {
       "unknown": "Onbekend"

@@ -316,7 +316,8 @@
     "inboundDomainAutoCreateHelp": "I domini associati possono creare un contatto per un nuovo mittente attendibile.",
     "inboundDomainAutoCreateUpdated": "Impostazione dei contatti mittente aggiornata.",
     "inboundDomainAutoCreateUpdateFailed": "Impossibile aggiornare l’impostazione dei contatti mittente.",
-    "recurringTickets": "Ticket ricorrenti"
+    "recurringTickets": "Ticket ricorrenti",
+    "software": "Software"
   },
   "clientCommandCenter": {
     "cards": {
@@ -329,7 +330,8 @@
       "people": "Persone",
       "record": "Scheda cliente",
       "service": "Servizio",
-      "timeline": "Tutto, in ordine"
+      "timeline": "Tutto, in ordine",
+      "software": "Software"
     },
     "csatEmpty": "Ancora nessuna risposta ai sondaggi.",
     "discardCancel": "Continua a modificare",
@@ -406,6 +408,12 @@
       "primary": "Principale"
     },
     "pulseError": "Impossibile caricare il riepilogo del cliente.",
+    "quickLinks": {
+      "assets": "Asset",
+      "contacts": "Contatti",
+      "label": "Collegamenti rapidi",
+      "software": "Software"
+    },
     "rail": {
       "close": "Chiudi",
       "installBase": "Parco installato",
@@ -440,6 +448,13 @@
       "onTrack": "SLA nei tempi",
       "onTrackLeft": "SLA: {{left}} rimasti",
       "paused": "SLA in pausa"
+    },
+    "software": {
+      "assetsMeta_one": "1 asset",
+      "assetsMeta_other": "{{count}} asset",
+      "loadError": "Impossibile caricare l'inventario software.",
+      "titles": "titoli",
+      "viewAll": "Tutto il software"
     },
     "timeline": {
       "daysAgo": "{{count}} gg fa",
@@ -2033,5 +2048,21 @@
     "manager": "Responsabile",
     "seesTickets": "Vede i ticket del profilo",
     "editHint": "Si modificano sul profilo di fatturazione, nelle impostazioni di fatturazione del cliente."
+  },
+  "clientSoftware": {
+    "columns": {
+      "assets": "Asset",
+      "lastSeen": "Ultimo rilevamento",
+      "title": "Titolo",
+      "versions": "Versioni"
+    },
+    "empty": "Nessun inventario software finora — l'inventario viene raccolto per dispositivo",
+    "emptyAssetsLink": "Vedi asset",
+    "exportCsv": "Esporta CSV",
+    "exportError": "Impossibile esportare l'inventario software.",
+    "installedOn": "Installato su",
+    "loadError": "Impossibile caricare l'inventario software.",
+    "moreAssets": "e altri {{count}} (primi {{limit}} per nome)",
+    "searchPlaceholder": "Cerca software..."
   }
 }

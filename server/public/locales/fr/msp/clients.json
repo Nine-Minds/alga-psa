@@ -316,7 +316,8 @@
     "inboundDomainAutoCreateHelp": "Les domaines associés peuvent créer un contact pour un nouvel expéditeur de confiance.",
     "inboundDomainAutoCreateUpdated": "Paramètre des contacts expéditeurs mis à jour.",
     "inboundDomainAutoCreateUpdateFailed": "Impossible de mettre à jour le paramètre des contacts expéditeurs.",
-    "recurringTickets": "Tickets récurrents"
+    "recurringTickets": "Tickets récurrents",
+    "software": "Logiciels"
   },
   "clientCommandCenter": {
     "cards": {
@@ -329,7 +330,8 @@
       "people": "Personnes",
       "record": "Fiche client",
       "service": "Service",
-      "timeline": "Tout, dans l’ordre"
+      "timeline": "Tout, dans l’ordre",
+      "software": "Logiciels"
     },
     "csatEmpty": "Aucune réponse d’enquête pour l’instant.",
     "discardCancel": "Continuer la modification",
@@ -406,6 +408,12 @@
       "primary": "Principal"
     },
     "pulseError": "Impossible de charger l’aperçu du client.",
+    "quickLinks": {
+      "assets": "Actifs",
+      "contacts": "Contacts",
+      "label": "Liens rapides",
+      "software": "Logiciels"
+    },
     "rail": {
       "close": "Fermer",
       "installBase": "Parc installé",
@@ -440,6 +448,13 @@
       "onTrack": "SLA respecté",
       "onTrackLeft": "SLA : {{left}} restant",
       "paused": "SLA en pause"
+    },
+    "software": {
+      "assetsMeta_one": "1 actif",
+      "assetsMeta_other": "{{count}} actifs",
+      "loadError": "Impossible de charger l'inventaire des logiciels.",
+      "titles": "titres",
+      "viewAll": "Tous les logiciels"
     },
     "timeline": {
       "daysAgo": "il y a {{count}} j",
@@ -2033,5 +2048,21 @@
     "manager": "Responsable",
     "seesTickets": "Voit les tickets du profil",
     "editHint": "Ces éléments se modifient sur le profil de facturation, dans les paramètres de facturation du client."
+  },
+  "clientSoftware": {
+    "columns": {
+      "assets": "Actifs",
+      "lastSeen": "Dernière détection",
+      "title": "Titre",
+      "versions": "Versions"
+    },
+    "empty": "Aucun inventaire logiciel pour l'instant — l'inventaire est collecté par appareil",
+    "emptyAssetsLink": "Voir les actifs",
+    "exportCsv": "Exporter en CSV",
+    "exportError": "Impossible d'exporter l'inventaire des logiciels.",
+    "installedOn": "Installé sur",
+    "loadError": "Impossible de charger l'inventaire des logiciels.",
+    "moreAssets": "et {{count}} de plus (les {{limit}} premiers par nom)",
+    "searchPlaceholder": "Rechercher un logiciel..."
   }
 }

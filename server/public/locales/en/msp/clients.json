@@ -316,7 +316,8 @@
     "inboundDomainAutoCreateHelp": "Mapped domains can optionally create a contact for a trusted new sender. Domains must be unique across clients.",
     "inboundDomainAutoCreateUpdated": "Sender contact setting updated.",
     "inboundDomainAutoCreateUpdateFailed": "Could not update sender contact setting.",
-    "recurringTickets": "Recurring tickets"
+    "recurringTickets": "Recurring tickets",
+    "software": "Software"
   },
   "clientCommandCenter": {
     "cards": {
@@ -329,7 +330,8 @@
       "people": "People",
       "record": "Client record",
       "service": "Service",
-      "timeline": "Everything, in order"
+      "timeline": "Everything, in order",
+      "software": "Software"
     },
     "csatEmpty": "No survey responses yet.",
     "discardCancel": "Keep editing",
@@ -406,6 +408,12 @@
       "primary": "Primary"
     },
     "pulseError": "Could not load the client snapshot.",
+    "quickLinks": {
+      "assets": "Assets",
+      "contacts": "Contacts",
+      "label": "Quick links",
+      "software": "Software"
+    },
     "rail": {
       "close": "Close",
       "installBase": "Install base",
@@ -440,6 +448,13 @@
       "onTrack": "SLA on track",
       "onTrackLeft": "SLA {{left}} left",
       "paused": "SLA paused"
+    },
+    "software": {
+      "assetsMeta_one": "1 asset",
+      "assetsMeta_other": "{{count}} assets",
+      "loadError": "Could not load software inventory.",
+      "titles": "titles",
+      "viewAll": "All software"
     },
     "timeline": {
       "daysAgo": "{{count}}d ago",
@@ -2033,5 +2048,21 @@
     "manager": "Manager",
     "seesTickets": "Sees profile tickets",
     "editHint": "Edit these on the billing profile, under the client's billing settings."
+  },
+  "clientSoftware": {
+    "columns": {
+      "assets": "Assets",
+      "lastSeen": "Last seen",
+      "title": "Title",
+      "versions": "Versions"
+    },
+    "empty": "No software inventory yet — inventory is collected per device",
+    "emptyAssetsLink": "View assets",
+    "exportCsv": "Export CSV",
+    "exportError": "Could not export software inventory.",
+    "installedOn": "Installed on",
+    "loadError": "Could not load software inventory.",
+    "moreAssets": "and {{count}} more (showing the first {{limit}} by name)",
+    "searchPlaceholder": "Search software..."
   }
 }
