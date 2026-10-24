@@ -5,6 +5,7 @@ import { cn } from '../../lib/utils';
 import { Clock, ArrowRightFromLine, ArrowLeftToLine } from 'lucide-react';
 import { TicketResponseState } from '@alga-psa/types';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { useTranslation, translate } from '../../lib/i18n/client';
 
 export interface ResponseStateLabels {
   awaitingClient: string;
@@ -35,7 +36,9 @@ interface ResponseStateBadgeProps {
 export function getResponseStateLabel(
   state: TicketResponseState,
   isClientPortal: boolean = false,
-  labels?: ResponseStateLabels
+  labels?: ResponseStateLabels,
+  t: (key: string, options?: Record<string, unknown>) => string = (key, options) =>
+    translate('features/tickets', key, options)
 ): string {
   if (!state) return '';
 
@@ -54,9 +57,9 @@ export function getResponseStateLabel(
   if (isClientPortal) {
     switch (state) {
       case 'awaiting_client':
-        return 'Awaiting Your Response';
+        return t('responseState.awaitingYourResponse', { defaultValue: 'Awaiting Your Response' });
       case 'awaiting_internal':
-        return 'Awaiting Support Response';
+        return t('responseState.awaitingSupportResponse', { defaultValue: 'Awaiting Support Response' });
       default:
         return '';
     }
@@ -64,9 +67,9 @@ export function getResponseStateLabel(
 
   switch (state) {
     case 'awaiting_client':
-      return 'Awaiting Client';
+      return t('responseState.awaitingClient', { defaultValue: 'Awaiting Client' });
     case 'awaiting_internal':
-      return 'Awaiting Internal';
+      return t('responseState.awaitingInternal', { defaultValue: 'Awaiting Internal' });
     default:
       return '';
   }
@@ -78,7 +81,9 @@ export function getResponseStateLabel(
 function getResponseStateTooltip(
   state: TicketResponseState,
   isClientPortal: boolean = false,
-  labels?: ResponseStateLabels
+  labels?: ResponseStateLabels,
+  t: (key: string, options?: Record<string, unknown>) => string = (key, options) =>
+    translate('features/tickets', key, options)
 ): string {
   if (!state) return '';
 
@@ -97,9 +102,9 @@ function getResponseStateTooltip(
   if (isClientPortal) {
     switch (state) {
       case 'awaiting_client':
-        return 'Support is waiting for your response';
+        return t('responseState.awaitingYourResponseTooltip', { defaultValue: 'Support is waiting for your response' });
       case 'awaiting_internal':
-        return 'Your response has been received. Support will respond soon.';
+        return t('responseState.awaitingSupportResponseTooltip', { defaultValue: 'Your response has been received. Support will respond soon.' });
       default:
         return '';
     }
@@ -107,9 +112,9 @@ function getResponseStateTooltip(
 
   switch (state) {
     case 'awaiting_client':
-      return 'Waiting for client to respond';
+      return t('responseState.awaitingClientTooltip', { defaultValue: 'Waiting for client to respond' });
     case 'awaiting_internal':
-      return 'Client has responded, waiting for internal action';
+      return t('responseState.awaitingInternalTooltip', { defaultValue: 'Client has responded, waiting for internal action' });
     default:
       return '';
   }
@@ -146,13 +151,14 @@ export function ResponseStateBadge({
   labels,
   className,
 }: ResponseStateBadgeProps) {
+  const { t } = useTranslation('features/tickets');
   // Don't render anything if no response state
   if (!responseState) {
     return null;
   }
 
-  const label = getResponseStateLabel(responseState, isClientPortal, labels);
-  const tooltip = getResponseStateTooltip(responseState, isClientPortal, labels);
+  const label = getResponseStateLabel(responseState, isClientPortal, labels, t);
+  const tooltip = getResponseStateTooltip(responseState, isClientPortal, labels, t);
 
   const sizeClasses = {
     sm: 'px-1.5 py-0.5 text-xs',

@@ -10,7 +10,8 @@
   },
   "purchasePage": {
     "title": "Comprar licencias",
-    "description": "Añada más licencias de usuario a su cuenta de AlgaPSA"
+    "description": "Añada más licencias de usuario a su cuenta de AlgaPSA",
+    "communityEditionDescription": "La Community Edition autohospedada ofrece usuarios ilimitados sin restricciones de licencia ni costos adicionales."
   },
   "purchaseSuccess": {
     "metaTitle": "Compra completada",
@@ -37,7 +38,8 @@
     },
     "sessionDetails": "Detalles de la sesión (para soporte)",
     "sessionId": "ID de sesión:",
-    "goToAccountManagement": "Ir a Gestión de la cuenta"
+    "goToAccountManagement": "Ir a Gestión de la cuenta",
+    "enterpriseOnly": "Esta función solo está disponible en Pro."
   },
   "subscriptionForm": {
     "title": "Administrar suscripción de licencias",
@@ -256,7 +258,8 @@
         "description_many": "Le quedan {{count}} días para usar todas las funciones de Pro.",
         "description_other": "Le quedan {{count}} días para usar todas las funciones de Pro.",
         "descriptionNoDays": "Puede usar todas las funciones de Pro durante el periodo de prueba.",
-        "badge": "Prueba activa"
+        "badge": "Prueba activa",
+        "description_few": "Le quedan {{count}} días para usar todas las funciones de Pro."
       },
       "licensed": {
         "eyebrow": "Licencia de pago",
@@ -304,7 +307,8 @@
       "refreshLabel": "Actualización de la licencia",
       "connected": "Conectado",
       "lastCheckIn": "Última comprobación: {{timestamp}}",
-      "refreshHelp": "Aplica de inmediato los cambios de puestos o de plan realizados en el portal."
+      "refreshHelp": "Aplica de inmediato los cambios de puestos o de plan realizados en el portal.",
+      "daysRemaining_few": "Quedan {{count}} días"
     },
     "portal": {
       "manageTitle": "Puestos, facturación y códigos de activación",

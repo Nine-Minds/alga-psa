@@ -6,6 +6,7 @@ import type { IClient } from '@alga-psa/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
@@ -43,6 +44,10 @@ import { TelephonyStatusBadge } from './TelephonyStatusBadge';
 type TFn = ReturnType<typeof useTranslation>['t'];
 type RunBusy = (fn: () => Promise<void>) => Promise<void>;
 
+/** Each section owns one slot, so a failed action shows where the user clicked. */
+type ActionKey = 'overview' | 'pbx' | 'extensions' | 'callHistory' | 'phonebook' | 'contactQueue';
+type ActionErrors = Partial<Record<ActionKey, string>>;
+
 function formatWhen(value: string | null | undefined): string {
   if (!value) return '—';
   const date = new Date(value);
@@ -63,8 +68,30 @@ interface SectionProps {
   busy: boolean;
   canManage: boolean;
   runBusy: RunBusy;
+  /** This section's action error. Survives reload(); only a new action in the section clears it. */
+  error: string | null;
   setError: (error: string | null) => void;
   reload: () => Promise<void>;
+}
+
+function SectionError({ id, error }: { id: string; error: string | null }) {
+  if (!error) return null;
+  return (
+    <Alert id={id} variant="destructive" data-automation-id={id}>
+      <AlertDescription>{error}</AlertDescription>
+    </Alert>
+  );
+}
+
+/** Capability reason when a role-gated probe failed; undefined (unknown) leaves the control enabled. */
+function capabilityBlock(
+  probe: { ok: boolean; reason: string | null } | undefined,
+  t: TFn,
+  fallbackKey: string,
+  fallback: string,
+): string | null {
+  if (!probe || probe.ok !== false) return null;
+  return probe.reason ?? t(fallbackKey, { defaultValue: fallback });
 }
 
 function SectionTitle({ id, children }: { id: string; children: React.ReactNode }) {
@@ -106,7 +133,7 @@ function CapabilityChip({ id, label, granted, t }: { id: string; label: string; 
   );
 }
 
-function PbxSection({ state, t, busy, canManage, runBusy, setError, reload }: SectionProps) {
+function PbxSection({ state, t, busy, canManage, runBusy, error, setError, reload }: SectionProps) {
   const [baseUrl, setBaseUrl] = useState(state.pbx.baseUrl ?? '');
   const [clientId, setClientId] = useState(state.pbx.clientId ?? '');
   const [clientSecret, setClientSecret] = useState('');
@@ -162,6 +189,7 @@ function PbxSection({ state, t, busy, canManage, runBusy, setError, reload }: Se
         </SectionTitle>
         {pbxStatusBadge()}
       </div>
+      <SectionError id="threecx-pbx-error" error={error} />
       <p>
         {t('integrations.telephony.providers.threecx.pbx.help', {
           defaultValue:
@@ -222,6 +250,23 @@ function PbxSection({ state, t, busy, canManage, runBusy, setError, reload }: Se
           {t('integrations.telephony.providers.threecx.pbx.lastChecked', { defaultValue: 'Last checked' })}: {formatWhen(state.pbx.lastCheckedAt)}
         </span>
       </div>
+      {(['users', 'contacts'] as const).map((capability) => {
+        const probe = state.pbx.capabilities[capability];
+        if (!probe || probe.ok !== false) return null;
+        return (
+          <Alert key={capability} id={`threecx-pbx-capability-${capability}-problem`} variant="warning">
+            <AlertDescription>
+              {probe.reason ??
+                t(`integrations.telephony.providers.threecx.pbx.${capability}Blocked`, {
+                  defaultValue:
+                    capability === 'users'
+                      ? "The 3CX API app's role cannot read users."
+                      : "The 3CX API app's role cannot manage contacts.",
+                })}
+            </AlertDescription>
+          </Alert>
+        );
+      })}
       {state.pbx.lastError && (
         <p id="threecx-pbx-last-error" className="text-[rgb(var(--color-accent-600))]">{state.pbx.lastError}</p>
       )}
@@ -229,13 +274,20 @@ function PbxSection({ state, t, busy, canManage, runBusy, setError, reload }: Se
   );
 }
 
-function ExtensionsSection({ state, t, busy, canManage, pbxConnected, runBusy, setError, reload }: SectionProps & { pbxConnected: boolean }) {
+function ExtensionsSection({ state, t, busy, canManage, pbxConnected, runBusy, error, setError, reload }: SectionProps & { pbxConnected: boolean }) {
   const userOptions = useMemo(
     () => [
       { value: '', label: t('integrations.telephony.providers.threecx.extensions.unmapped', { defaultValue: 'Not mapped' }) },
       ...state.users.map((user) => ({ value: user.userId, label: `${user.name} (${user.email})` })),
     ],
     [state.users, t],
+  );
+
+  const usersBlock = capabilityBlock(
+    state.pbx.capabilities.users,
+    t,
+    'integrations.telephony.providers.threecx.pbx.usersBlocked',
+    "The 3CX API app's role cannot read users.",
   );
 
   const sync = () =>
@@ -255,22 +307,34 @@ function ExtensionsSection({ state, t, busy, canManage, pbxConnected, runBusy, s
       <SectionTitle id="threecx-extensions-title">
         {t('integrations.telephony.providers.threecx.extensions.title', { defaultValue: 'Extensions' })}
       </SectionTitle>
+      <SectionError id="threecx-extensions-error" error={error} />
       {!pbxConnected ? (
         <NotConnectedHint t={t} />
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-2">
-            <Button id="threecx-extensions-sync" variant="outline" size="sm" disabled={!canManage || busy || !state.pbx.capabilities.xapi} onClick={() => void sync()}>
+            <Button id="threecx-extensions-sync" variant="outline" size="sm" disabled={!canManage || busy || !state.pbx.capabilities.xapi || Boolean(usersBlock)} tooltipText={usersBlock ?? undefined} onClick={() => void sync()}>
               {t('integrations.telephony.providers.threecx.extensions.sync', { defaultValue: 'Sync from PBX' })}
             </Button>
+            {usersBlock && (
+              <span id="threecx-extensions-sync-disabled-reason" className="text-[rgb(var(--color-accent-600))]">{usersBlock}</span>
+            )}
             <span id="threecx-extensions-synced-at">
               {t('integrations.telephony.providers.threecx.extensions.lastSync', { defaultValue: 'Last sync' })}: {formatWhen(state.extensionsSyncedAt)}
             </span>
           </div>
           {state.extensions.length === 0 ? (
-            <p id="threecx-extensions-empty">
-              {t('integrations.telephony.providers.threecx.extensions.empty', { defaultValue: 'No extensions synced yet.' })}
-            </p>
+            state.extensionsSyncedAt ? (
+              <p id="threecx-extensions-empty-synced">
+                {t('integrations.telephony.providers.threecx.extensions.emptyAfterSync', {
+                  defaultValue: "3CX returned no enabled users; check the API app's permissions",
+                })}
+              </p>
+            ) : (
+              <p id="threecx-extensions-empty">
+                {t('integrations.telephony.providers.threecx.extensions.empty', { defaultValue: 'No extensions synced yet.' })}
+              </p>
+            )
           ) : (
             <table className="w-full text-left" id="threecx-extensions-table">
               <thead>
@@ -315,7 +379,7 @@ function ExtensionsSection({ state, t, busy, canManage, pbxConnected, runBusy, s
   );
 }
 
-function CallHistorySection({ state, t, busy, canManage, pbxConnected, runBusy, setError, reload }: SectionProps & { pbxConnected: boolean }) {
+function CallHistorySection({ state, t, busy, canManage, pbxConnected, runBusy, error, setError, reload }: SectionProps & { pbxConnected: boolean }) {
   const [lookback, setLookback] = useState(String(state.cdr.lookbackDays));
   useEffect(() => setLookback(String(state.cdr.lookbackDays)), [state.cdr.lookbackDays]);
 
@@ -339,6 +403,7 @@ function CallHistorySection({ state, t, busy, canManage, pbxConnected, runBusy, 
           onCheckedChange={(checked) => void toggle(checked)}
         />
       </div>
+      <SectionError id="threecx-cdr-error" error={error} />
       {!pbxConnected ? (
         <NotConnectedHint t={t} />
       ) : (
@@ -369,11 +434,18 @@ function CallHistorySection({ state, t, busy, canManage, pbxConnected, runBusy, 
   );
 }
 
-function PhonebookSection({ state, t, busy, canManage, pbxConnected, runBusy, setError, reload }: SectionProps & { pbxConnected: boolean }) {
+function PhonebookSection({ state, t, busy, canManage, pbxConnected, runBusy, error, setError, reload }: SectionProps & { pbxConnected: boolean }) {
   const scheduleOptions = [
     { value: 'daily', label: t('integrations.telephony.providers.threecx.phonebook.daily', { defaultValue: 'Daily' }) },
     { value: 'hourly', label: t('integrations.telephony.providers.threecx.phonebook.hourly', { defaultValue: 'Hourly' }) },
   ];
+
+  const contactsBlock = capabilityBlock(
+    state.pbx.capabilities.contacts,
+    t,
+    'integrations.telephony.providers.threecx.pbx.contactsBlocked',
+    "The 3CX API app's role cannot manage contacts.",
+  );
 
   const update = (enabled: boolean, schedule: 'daily' | 'hourly') =>
     runBusy(async () => {
@@ -409,6 +481,7 @@ function PhonebookSection({ state, t, busy, canManage, pbxConnected, runBusy, se
           onCheckedChange={(checked) => void update(checked, state.phonebook.schedule)}
         />
       </div>
+      <SectionError id="threecx-phonebook-error" error={error} />
       {!pbxConnected ? (
         <NotConnectedHint t={t} />
       ) : (
@@ -427,13 +500,16 @@ function PhonebookSection({ state, t, busy, canManage, pbxConnected, runBusy, se
             onValueChange={(value) => void update(state.phonebook.enabled, value === 'hourly' ? 'hourly' : 'daily')}
           />
           <div className="flex flex-wrap items-center gap-2">
-            <Button id="threecx-phonebook-push" variant="outline" size="sm" disabled={!canManage || busy || !state.pbx.capabilities.xapi} onClick={() => void push()}>
+            <Button id="threecx-phonebook-push" variant="outline" size="sm" disabled={!canManage || busy || !state.pbx.capabilities.xapi || Boolean(contactsBlock)} tooltipText={contactsBlock ?? undefined} onClick={() => void push()}>
               {t('integrations.telephony.providers.threecx.phonebook.pushNow', { defaultValue: 'Push now' })}
             </Button>
-            <Button id="threecx-phonebook-import" variant="outline" size="sm" disabled={!canManage || busy || !state.pbx.capabilities.xapi} onClick={() => void importNow()}>
+            <Button id="threecx-phonebook-import" variant="outline" size="sm" disabled={!canManage || busy || !state.pbx.capabilities.xapi || Boolean(contactsBlock)} tooltipText={contactsBlock ?? undefined} onClick={() => void importNow()}>
               {t('integrations.telephony.providers.threecx.phonebook.importNow', { defaultValue: 'Import now' })}
             </Button>
           </div>
+          {contactsBlock && (
+            <span id="threecx-phonebook-push-disabled-reason" className="text-[rgb(var(--color-accent-600))]">{contactsBlock}</span>
+          )}
           <p id="threecx-phonebook-last-push">
             {t('integrations.telephony.providers.threecx.phonebook.lastPush', { defaultValue: 'Last push' })}: {formatWhen(state.phonebook.lastPushAt)} ({counts(state.phonebook.lastPushCounts)})
           </p>
@@ -455,6 +531,7 @@ interface ContactQueueSectionProps {
   busy: boolean;
   canManage: boolean;
   runBusy: RunBusy;
+  error: string | null;
   setError: (error: string | null) => void;
   initialPendingId: string | null;
 }
@@ -480,7 +557,7 @@ function targetsToClients(targets: TelephonyResolutionTarget[]): IClient[] {
   });
 }
 
-function ContactQueueSection({ t, busy, canManage, runBusy, setError, initialPendingId }: ContactQueueSectionProps) {
+function ContactQueueSection({ t, busy, canManage, runBusy, error, setError, initialPendingId }: ContactQueueSectionProps) {
   const [items, setItems] = useState<ThreecxContactQueueItem[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
   const [selection, setSelection] = useState<Record<string, string | null>>({});
@@ -539,6 +616,7 @@ function ContactQueueSection({ t, busy, canManage, runBusy, setError, initialPen
       <SectionTitle id="threecx-contact-queue-title">
         {t('integrations.telephony.providers.threecx.queue.title', { defaultValue: 'Contacts created from 3CX' })}
       </SectionTitle>
+      <SectionError id="threecx-contact-queue-error" error={error} />
       {items.length === 0 ? (
         <p id="threecx-contact-queue-empty">
           {t('integrations.telephony.providers.threecx.queue.empty', { defaultValue: 'Nothing waiting. Contacts created from the 3CX client without a matching client show up here.' })}
@@ -715,15 +793,27 @@ export function ThreecxIntegrationSettings() {
   const [state, setState] = useState<ThreecxCardState | null>(null);
   const [fullKey, setFullKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [stateError, setStateError] = useState<string | null>(null);
+  const [actionErrors, setActionErrors] = useState<ActionErrors>({});
+
+  const setActionError = useCallback((key: ActionKey, message: string | null) => {
+    setActionErrors((current) => {
+      const next = { ...current };
+      if (message) next[key] = message;
+      else delete next[key];
+      return next;
+    });
+  }, []);
 
   const load = useCallback(async () => {
     try {
       const next = await getThreecxCardState();
       setState(next);
-      setError(next.success ? null : next.error ?? null);
+      // load() owns only stateError: it must never clear an action's error,
+      // or the reload that follows every action would wipe it.
+      setStateError(next.success ? null : next.error ?? null);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : String(loadError));
+      setStateError(loadError instanceof Error ? loadError.message : String(loadError));
     }
   }, []);
 
@@ -731,22 +821,36 @@ export function ThreecxIntegrationSettings() {
     void load();
   }, [load]);
 
-  const runBusy: RunBusy = useCallback(async (fn) => {
-    setBusy(true);
-    setError(null);
-    try {
-      await fn();
-    } catch (runError) {
-      setError(runError instanceof Error ? runError.message : String(runError));
-    } finally {
-      setBusy(false);
-    }
-  }, []);
+  // Only a new action in a section clears that section's error.
+  const runBusyFor = useCallback(
+    (key: ActionKey): RunBusy =>
+      async (fn) => {
+        setBusy(true);
+        setActionError(key, null);
+        try {
+          await fn();
+        } catch (runError) {
+          setActionError(key, runError instanceof Error ? runError.message : String(runError));
+        } finally {
+          setBusy(false);
+        }
+      },
+    [setActionError],
+  );
+
+  const sectionProps = useMemo(() => {
+    const keys: ActionKey[] = ['overview', 'pbx', 'extensions', 'callHistory', 'phonebook', 'contactQueue'];
+    return Object.fromEntries(
+      keys.map((key) => [key, { runBusy: runBusyFor(key), setError: (message: string | null) => setActionError(key, message) }]),
+    ) as Record<ActionKey, { runBusy: RunBusy; setError: (message: string | null) => void }>;
+  }, [runBusyFor, setActionError]);
+  const runBusy = sectionProps.overview.runBusy;
+  const setError = sectionProps.overview.setError;
 
   // Availability is authoritative on the server. Do not briefly expose the
   // settings while that check is still in flight (or when it is denied).
   if (!state?.available) {
-    return null;
+    return stateError ? <SectionError id="threecx-state-error" error={stateError} /> : null;
   }
 
   const canManage = Boolean(state?.canManage);
@@ -807,6 +911,7 @@ export function ThreecxIntegrationSettings() {
 
   return (
     <div className="space-y-6" id="threecx-integration-settings">
+      <SectionError id="threecx-state-error" error={stateError} />
       <Card id="threecx-overview-card">
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -825,6 +930,7 @@ export function ThreecxIntegrationSettings() {
         </CardHeader>
 
         <CardContent className="space-y-4 text-sm text-muted-foreground">
+          <SectionError id="threecx-overview-error" error={actionErrors.overview ?? null} />
           {!canManage && (
             <p id="threecx-permission-message">
               {t('integrations.telephony.providers.threecx.permission', {
@@ -941,16 +1047,16 @@ export function ThreecxIntegrationSettings() {
       {isActive && state && (
         <>
           <SectionCard id="threecx-pbx-card">
-            <PbxSection state={state} t={t} busy={busy} canManage={canManage} runBusy={runBusy} setError={setError} reload={load} />
+            <PbxSection state={state} t={t} busy={busy} canManage={canManage} runBusy={sectionProps.pbx.runBusy} error={actionErrors.pbx ?? null} setError={sectionProps.pbx.setError} reload={load} />
           </SectionCard>
           <SectionCard id="threecx-extensions-card">
-            <ExtensionsSection state={state} t={t} busy={busy} canManage={canManage} pbxConnected={pbxConnected} runBusy={runBusy} setError={setError} reload={load} />
+            <ExtensionsSection state={state} t={t} busy={busy} canManage={canManage} pbxConnected={pbxConnected} runBusy={sectionProps.extensions.runBusy} error={actionErrors.extensions ?? null} setError={sectionProps.extensions.setError} reload={load} />
           </SectionCard>
           <SectionCard id="threecx-cdr-card">
-            <CallHistorySection state={state} t={t} busy={busy} canManage={canManage} pbxConnected={pbxConnected} runBusy={runBusy} setError={setError} reload={load} />
+            <CallHistorySection state={state} t={t} busy={busy} canManage={canManage} pbxConnected={pbxConnected} runBusy={sectionProps.callHistory.runBusy} error={actionErrors.callHistory ?? null} setError={sectionProps.callHistory.setError} reload={load} />
           </SectionCard>
           <SectionCard id="threecx-phonebook-card">
-            <PhonebookSection state={state} t={t} busy={busy} canManage={canManage} pbxConnected={pbxConnected} runBusy={runBusy} setError={setError} reload={load} />
+            <PhonebookSection state={state} t={t} busy={busy} canManage={canManage} pbxConnected={pbxConnected} runBusy={sectionProps.phonebook.runBusy} error={actionErrors.phonebook ?? null} setError={sectionProps.phonebook.setError} reload={load} />
           </SectionCard>
           {canManage && (
             <SectionCard id="threecx-contact-queue-card">
@@ -958,8 +1064,9 @@ export function ThreecxIntegrationSettings() {
                 t={t}
                 busy={busy}
                 canManage={canManage}
-                runBusy={runBusy}
-                setError={setError}
+                runBusy={sectionProps.contactQueue.runBusy}
+                error={actionErrors.contactQueue ?? null}
+                setError={sectionProps.contactQueue.setError}
                 initialPendingId={searchParams?.get('threecxPending') ?? null}
               />
             </SectionCard>
@@ -967,11 +1074,6 @@ export function ThreecxIntegrationSettings() {
         </>
       )}
 
-      {error && (
-        <p className="text-sm text-[rgb(var(--color-accent-600))]" id="threecx-error-message">
-          {error}
-        </p>
-      )}
     </div>
   );
 }

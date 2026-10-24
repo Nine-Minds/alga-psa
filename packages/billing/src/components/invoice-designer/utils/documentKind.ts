@@ -1,7 +1,17 @@
 import type { DesignerNode } from '../state/designerStore';
 import { getNodeMetadata } from './nodeProps';
 
-export type DesignerDocumentKind = 'invoice' | 'quote' | 'sales-order';
+export type DesignerDocumentKind = 'invoice' | 'quote' | 'sales-order' | 'work-tag';
+
+// recordUrl + identifier are the label view model's discriminators. Label catalogs also expose
+// clientName / tenantName, which the quote check below would otherwise claim, so this runs first.
+const hasWorkTagBindingCatalog = (bindings: unknown): boolean => {
+  if (!bindings || typeof bindings !== 'object') {
+    return false;
+  }
+  const values = (bindings as { values?: Record<string, unknown> }).values;
+  return Boolean(values && typeof values === 'object' && 'recordUrl' in values && 'identifier' in values);
+};
 
 const hasSalesOrderBindingCatalog = (bindings: unknown): boolean => {
   if (!bindings || typeof bindings !== 'object') {
@@ -60,6 +70,9 @@ export const resolveDocumentKindFromBindingCatalog = (
   bindings: unknown,
   templateMetadata?: unknown
 ): DesignerDocumentKind => {
+  if (hasWorkTagBindingCatalog(bindings)) {
+    return 'work-tag';
+  }
   // Sales order is checked before quote — both expose tenant/customer bindings, so the
   // sales-order-specific bindings must win.
   if (hasSalesOrderBindingCatalog(bindings)) {

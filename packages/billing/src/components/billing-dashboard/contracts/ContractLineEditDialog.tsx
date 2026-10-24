@@ -7,14 +7,13 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
-import { getCurrencySymbol } from '@alga-psa/core';
+import { currencyFractionDigits, getCurrencySymbol } from '@alga-psa/core';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { BillingTimingField } from './BillingTimingField';
 import {
   isAdvanceTimingAllowedForLineType,
   resolveEffectiveBillingTiming,
 } from '@shared/billingClients/contractLineTimingRule';
-import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 interface ContractLineEditDialogProps {
   line: {
@@ -30,12 +29,13 @@ interface ContractLineEditDialogProps {
     /** Verbatim invoice line text; falls back to the line name when null. */
     invoice_line_description?: string | null;
   };
-  /**
-   * Currency of the contract being edited. Omit (null) for a contract template,
-   * which is currency-neutral: no symbol is shown and the rate is scaled by the
-   * same fraction digits `useTemplateNeutralRate` uses to display it.
-   */
+  /** Currency of the contract or template being edited; shown as the input symbol. */
   currencyCode?: string | null;
+  /**
+   * True for a contract template: its rate is stored in the currency's own minor
+   * units (0 digits for JPY), unlike contracts which keep the historical cents scale.
+   */
+  exactMinorUnits?: boolean;
   onClose: () => void;
   onSave: (
     contractLineId: string,
@@ -45,7 +45,7 @@ interface ContractLineEditDialogProps {
   ) => Promise<void>;
 }
 
-export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: ContractLineEditDialogProps) {
+export function ContractLineEditDialog({ line, currencyCode, exactMinorUnits, onClose, onSave }: ContractLineEditDialogProps) {
   const { t } = useTranslation('msp/contracts');
   const initialRateCents =
     line.rate !== undefined && line.rate !== null
@@ -54,11 +54,7 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
         ? Math.round(Number(line.custom_rate))
         : 0;
 
-  const neutral = !currencyCode;
-  const { fractionDigits } = useCurrencyFormat();
-  // Contracts keep their historical cents scale; neutral template rates use the
-  // authoring currency's minor-unit scale, matching useTemplateNeutralRate.
-  const digits = neutral ? fractionDigits() : 2;
+  const digits = exactMinorUnits && currencyCode ? currencyFractionDigits(currencyCode) : 2;
   const scale = 10 ** digits;
 
   const [rateInput, setRateInput] = useState<string>(() => (initialRateCents / scale).toFixed(digits));
@@ -71,7 +67,7 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const currencySymbol = neutral ? null : getCurrencySymbol(currencyCode as string);
+  const currencySymbol = currencyCode ? getCurrencySymbol(currencyCode) : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -184,7 +180,7 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
                     const minor = Math.round(dollars * scale);
                     setRateInput((minor / scale).toFixed(digits));
                   }}
-                  className={`${neutral ? '' : 'pl-10 '}[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
+                  className={`${currencySymbol ? 'pl-10 ' : ''}[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
                 />
               </div>
             </div>

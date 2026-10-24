@@ -13,6 +13,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
     formatDate: (date: Date, options?: Intl.DateTimeFormatOptions) =>
       `${options?.dateStyle ? 'full' : 'short'}:${date.toISOString().slice(0, 10)}`,
   }),
+  useTranslation: () => ({ t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key }),
 }));
 vi.mock('@alga-psa/ui/hooks', () => ({
   useTruncationDetection: () => ({ ref: { current: null }, isTruncated: false }),

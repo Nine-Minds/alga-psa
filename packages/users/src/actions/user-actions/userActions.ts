@@ -808,6 +808,8 @@ export const deleteUser = withAuth(async (
         ['contract_pricing_schedules', 'updated_by'],
         ['contract_template_pricing_schedules', 'created_by'],
         ['contract_template_pricing_schedules', 'updated_by'],
+        ['contract_template_price_sets', 'created_by'],
+        ['contract_template_price_sets', 'updated_by'],
         ['escalation_managers', 'manager_user_id'],
         ['external_files', 'deleted_by_id'],
         ['external_tax_imports', 'imported_by'],

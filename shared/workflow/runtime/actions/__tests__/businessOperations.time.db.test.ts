@@ -257,6 +257,7 @@ async function createFixedPlanAssignment(
     config_id: configId,
     tenant: context.tenantId,
     base_rate: baseRateDollars,
+    base_rate_basis: 'share',
   });
 
   return { contractLineId, contractId, clientContractId };

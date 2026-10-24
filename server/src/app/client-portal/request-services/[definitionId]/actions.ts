@@ -10,6 +10,7 @@ import { StorageService } from '@alga-psa/storage/StorageService';
 import {
   getVisiblePublishedServiceRequestDefinitionDetail,
   submitPortalServiceRequest,
+  resolveSubmissionVisibility,
   validateSubmissionAgainstPublishedSchema,
   type ServiceRequestPortalDefinitionDetail,
 } from '../../../../lib/service-requests';
@@ -102,6 +103,26 @@ export const getRequestServiceDefinitionDetailAction = withAuth(async (
   });
 });
 
+/**
+ * Session-derived values for `context.*` visibility sources. Deliberately excludes
+ * tenant: only requester, client and contact identifiers may reach the browser.
+ */
+export const getRequestServiceVisibilityContextAction = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<{ requesterUserId: string; clientId: string; contactId: string | null } | null> => {
+  if (currentUser.user_type !== 'client') {
+    return null;
+  }
+
+  const { knex } = await createTenantKnex();
+  return withTransaction(knex, async (trx) => ({
+    requesterUserId: currentUser.user_id,
+    clientId: await getAuthenticatedClientId(trx, currentUser.user_id, tenant),
+    contactId: currentUser.contact_id ?? null,
+  }));
+});
+
 export const submitRequestServiceDefinitionAction = withAuth(async (
   currentUser: IUserWithRoles,
   { tenant }: AuthContext,
@@ -175,14 +196,25 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
       }
     }
 
+    // Recompute visibility from the submitted payload (not the load-time
+    // detail.visibleFieldKeys, which is stale once a controlling field changes).
+    const visibleFieldKeys = resolveSubmissionVisibility(detail, payload, {
+      requesterUserId: currentUser.user_id,
+      clientId,
+      contactId: currentUser.contact_id ?? null,
+    });
+    const visibleFieldKeySet = new Set(visibleFieldKeys);
+    const visiblePendingUploads = pendingUploads.filter((upload) =>
+      visibleFieldKeySet.has(upload.fieldKey)
+    );
     const validationErrors = validateSubmissionAgainstPublishedSchema({
       formSchema: detail.formSchema,
       payload,
-      attachments: pendingUploads.map((upload) => ({
+      attachments: visiblePendingUploads.map((upload) => ({
         fieldKey: upload.fieldKey,
         fileId: `pending:${upload.file.name}`,
       })),
-      visibleFieldKeys: detail.visibleFieldKeys,
+      visibleFieldKeys,
     });
     if (validationErrors.length > 0) {
       return {
@@ -202,7 +234,7 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
         fileSize: number;
       }[] = [];
 
-      for (const upload of pendingUploads) {
+      for (const upload of visiblePendingUploads) {
         const mimeType = upload.file.type || 'application/octet-stream';
         await StorageService.validateFileUpload(tenant, mimeType, upload.file.size);
         const buffer = Buffer.from(await upload.file.arrayBuffer());

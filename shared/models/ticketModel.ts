@@ -15,7 +15,7 @@ import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
 import { resolveTicketEventActor } from '@alga-psa/event-schemas';
 import { isSilentTicketCreation, isTicketCreationWithPayloadExtras, type TicketCreationEvents } from '../lib/tickets/ticketLifecycleEvents';
-import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
+import { applyMatchingChecklistTemplates, ticketDescriptionToPlainText, type TicketServiceRequestContext } from '../lib/ticketChecklists';
 import { ticketStatusClockPatch } from '../lib/ticketStatusClock';
 import { prepareCommentEmailRecipients } from '../lib/tickets/commentEmailRecipients';
 import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib/ticketRequesterDisplay';
@@ -155,6 +155,16 @@ export const createCommentSchema = z.object({
 // =============================================================================
 // INTERFACES
 // =============================================================================
+
+/**
+ * Create-time context that is not ticket data. `serviceRequest` marks a ticket
+ * being created from a service request: the submission row cannot link to the
+ * ticket yet (created_ticket_id is written afterwards), so checklist auto-apply
+ * must be told explicitly instead of looking it up.
+ */
+export interface CreateTicketOptions {
+  serviceRequest?: TicketServiceRequestContext;
+}
 
 export interface CreateTicketInput {
   title: string;
@@ -847,10 +857,11 @@ export class TicketModel {
     eventPublisher: TicketCreationEvents,
     analyticsTracker?: IAnalyticsTracker,
     userId?: string,
-    maxRetries: number = 3
+    maxRetries: number = 3,
+    options?: CreateTicketOptions
   ): Promise<CreateTicketOutput> {
     return withRetry(
-      () => this.createTicket(input, tenant, trx, validationOptions, eventPublisher, analyticsTracker, userId),
+      () => this.createTicket(input, tenant, trx, validationOptions, eventPublisher, analyticsTracker, userId, options),
       maxRetries
     );
   }
@@ -910,7 +921,8 @@ export class TicketModel {
     validationOptions: ValidationOptions,
     eventPublisher: TicketCreationEvents,
     analyticsTracker?: IAnalyticsTracker,
-    userId?: string
+    userId?: string,
+    options?: CreateTicketOptions
   ): Promise<CreateTicketOutput> {
     if (!eventPublisher) {
       throw new Error(
@@ -1035,6 +1047,13 @@ export class TicketModel {
         category_id: cleanedInput.category_id ?? null,
         subcategory_id: cleanedInput.subcategory_id ?? null,
         priority_id: cleanedInput.priority_id ?? null,
+        client_id: cleanedInput.client_id ?? null,
+        ticket_origin: cleanedInput.ticket_origin || TICKET_ORIGINS.INTERNAL,
+        title: cleanedInput.title,
+        description: ticketDescriptionToPlainText(cleanedInput.description),
+        // null (not undefined) skips the submissions lookup: a ticket that was
+        // just inserted can only be service-request-backed if the caller says so.
+        serviceRequest: options?.serviceRequest ?? null,
       });
     } catch (error) {
       console.error('Failed to auto-apply checklist templates:', error);

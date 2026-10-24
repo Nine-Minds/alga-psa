@@ -46,8 +46,7 @@ import {
 } from '@alga-psa/tickets/lib/ticketBundlePolicy';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
 import {
-  TICKET_LATEST_ACTIVITY_PUBLIC_SQL,
-  TICKET_LATEST_ACTIVITY_SQL,
+  ticketLatestActivitySql,
 } from '@alga-psa/tickets/actions/ticketListSortSql';
 import { enforceTicketCloseRules, TicketCloseValidationError } from '@alga-psa/tickets/lib/validateTicketClosure';
 import { prepareTicketResourceReassignment } from '@alga-psa/db/reassignTicketResources';
@@ -162,8 +161,9 @@ const TICKET_LIST_FIELD_ALLOWLIST = new Set<string>([
  * `sort` is a string, so before this map an unknown value reached
  * `orderBy('t.<value>')` and surfaced as a 500 from Postgres instead of a 400.
  *
- * `latest_activity_at` carries no fixed SQL — the expression depends on whether
- * the caller is a client-portal contact (see TICKET_LATEST_ACTIVITY_PUBLIC_SQL).
+ * `latest_activity_at` carries no fixed SQL — the expression depends on the
+ * tenant and on whether the caller is a client-portal contact (see
+ * ticketLatestActivitySql).
  */
 type TicketApiSortSpec = { column?: string; activity?: true };
 
@@ -548,9 +548,9 @@ export class TicketService extends BaseService<ITicket> {
 
     // Client-portal callers must not be able to read the timing of internal
     // notes off this column, nor have them reorder the portal list.
-    const latestActivitySql = clientVisibility
-      ? TICKET_LATEST_ACTIVITY_PUBLIC_SQL
-      : TICKET_LATEST_ACTIVITY_SQL;
+    const latestActivity = ticketLatestActivitySql(context.tenant, {
+      publicOnly: Boolean(clientVisibility),
+    });
 
     const wants = (field: string) => Boolean(selectedFields && selectedFields.includes(field));
 
@@ -594,7 +594,7 @@ export class TicketService extends BaseService<ITicket> {
     // Order by the allowlisted term, then ticket_id desc so pages stay stable
     // across a tie (parity with applyTicketListSort on the web list).
     if (sortSpec.activity) {
-      dataQuery = dataQuery.orderByRaw(`${latestActivitySql} ${sortDirection}`);
+      dataQuery = dataQuery.orderByRaw(`${latestActivity.sql} ${sortDirection}`, latestActivity.bindings);
     } else {
       dataQuery = dataQuery.orderBy(sortSpec.column!, sortDirection);
     }
@@ -636,7 +636,7 @@ export class TicketService extends BaseService<ITicket> {
           END as assigned_to_name`),
           // Same expression the latest_activity_at sort orders by, so the
           // reported value is exactly the one the ordering used.
-          knex.raw(`${latestActivitySql} as latest_activity_at`),
+          knex.raw(`${latestActivity.sql} as latest_activity_at`, latestActivity.bindings),
         );
     } else {
       const selectParts: any[] = [];
@@ -655,7 +655,7 @@ export class TicketService extends BaseService<ITicket> {
       if (selectedFields.includes('closed_at')) selectParts.push('t.closed_at');
       if (selectedFields.includes('master_ticket_id')) selectParts.push('t.master_ticket_id');
       if (selectedFields.includes('latest_activity_at')) {
-        selectParts.push(knex.raw(`${latestActivitySql} as latest_activity_at`));
+        selectParts.push(knex.raw(`${latestActivity.sql} as latest_activity_at`, latestActivity.bindings));
       }
       if (needsBundleMaster) selectParts.push('mt.ticket_number as bundle_master_ticket_number');
       if (needsBundleChildCount) selectParts.push(bundleChildCountSelect);
@@ -3147,6 +3147,7 @@ export class TicketService extends BaseService<ITicket> {
     if (externalSystem || externalId) {
       const externalLinkSubquery = scopedDb.subquery('external_entity_links as eel')
         .select('*')
+        .whereRaw('eel.tenant = t.tenant')
         .whereRaw('eel.ticket_id = t.ticket_id')
         .andWhere('eel.entity_type', 'ticket');
       if (externalSystem) {
@@ -3194,6 +3195,7 @@ export class TicketService extends BaseService<ITicket> {
             query.whereExists(
               scopedDb.subquery('statuses as s')
                 .select('*')
+                .whereRaw('s.tenant = t.tenant')
                 .whereRaw('s.status_id = t.status_id')
                 .andWhere('s.is_closed', false)
             );
@@ -3204,6 +3206,7 @@ export class TicketService extends BaseService<ITicket> {
             query.whereExists(
               scopedDb.subquery('statuses as s')
                 .select('*')
+                .whereRaw('s.tenant = t.tenant')
                 .whereRaw('s.status_id = t.status_id')
                 .andWhere('s.is_closed', true)
             );
@@ -3223,6 +3226,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('clients as c')
               .select('*')
+              .whereRaw('c.tenant = t.tenant')
               .whereRaw('c.client_id = t.client_id')
               .andWhere('c.client_name', value)
           );
@@ -3231,6 +3235,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('contacts as cn')
               .select('*')
+              .whereRaw('cn.tenant = t.tenant')
               .whereRaw('cn.contact_name_id = t.contact_name_id')
               .andWhere('cn.full_name', value)
           );
@@ -3239,6 +3244,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('boards as b')
               .select('*')
+              .whereRaw('b.tenant = t.tenant')
               .whereRaw('b.board_id = t.board_id')
               .andWhere('b.board_name', value)
           );
@@ -3247,6 +3253,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('categories as cat')
               .select('*')
+              .whereRaw('cat.tenant = t.tenant')
               .whereRaw('cat.category_id = t.category_id')
               .andWhere('cat.category_name', value)
           );
@@ -3256,6 +3263,7 @@ export class TicketService extends BaseService<ITicket> {
             const tagTexts = (value as string[]).map(tag => tag.toLowerCase());
             const tagSubquery = scopedDb.subquery('tag_mappings as tm')
               .select('*')
+              .whereRaw('tm.tenant = t.tenant')
               .whereRaw('tm.tagged_id = t.ticket_id')
               .andWhere('tm.tagged_type', 'ticket')
               .whereRaw(
@@ -3281,6 +3289,7 @@ export class TicketService extends BaseService<ITicket> {
               subQuery.orWhereExists(
                 scopedDb.subquery('clients as c')
                   .select('*')
+                  .whereRaw('c.tenant = t.tenant')
                   .whereRaw('c.client_id = t.client_id')
                   .andWhereILike('c.client_name', `%${value}%`)
               );
@@ -3297,6 +3306,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('priorities as p')
               .select('*')
+              .whereRaw('p.tenant = t.tenant')
               .whereRaw('p.priority_id = t.priority_id')
               .andWhere('p.priority_name', value)
           );
@@ -3305,6 +3315,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('statuses as s')
               .select('*')
+              .whereRaw('s.tenant = t.tenant')
               .whereRaw('s.status_id = t.status_id')
               .andWhere('s.name', value)
           );

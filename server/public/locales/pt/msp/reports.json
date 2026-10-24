@@ -276,7 +276,7 @@
       },
       "bucketUsage": {
         "title": "Utilização de horas de intervalo",
-        "description": "Monitore o uso de horas de intervalo e identifique situações de excesso",
+        "description": "Monitore o uso de horas em bloco e identifique situações de excedente. Os blocos de horas pré-pagas (contratuais e avulsos) são listados com seu consumo.",
         "empty": "Nenhum contrato baseado em bucket encontrado"
       },
       "profitability": {
@@ -305,13 +305,20 @@
       "profit": "Lucro",
       "margin": "Margem",
       "plusVariableUsage": "+ utilização variável",
-      "variableUsage": "Utilização variável"
+      "variableUsage": "Utilização variável",
+      "service": "Serviço",
+      "hourlyRate": "Tarifa / hora",
+      "expirationDate": "Expira",
+      "neverExpires": "Nunca",
+      "adhocBlock": "Avulso"
     },
     "statusValues": {
       "active": "Ativo",
       "upcoming": "Por vir",
       "yes": "Sim",
-      "no": "Não"
+      "no": "Não",
+      "expired": "Expirado",
+      "voided": "Cancelado"
     },
     "profitability": {
       "formats": {
@@ -414,6 +421,11 @@
         "allAgreements": "Todos os contratos",
         "currency": "Moeda"
       }
+    },
+    "columnsMenu": {
+      "label": "Colunas",
+      "title": "Colunas",
+      "reset": "Restaurar colunas padrão"
     }
   },
   "contractPerformance": {
