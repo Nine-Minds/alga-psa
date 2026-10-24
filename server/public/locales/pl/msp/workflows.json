@@ -2379,7 +2379,12 @@
       "currentRun": "Uruchomienie {{id}}",
       "backToWorkflow": "Wróć do workflow"
     },
-    "title": "Studio uruchamiania workflow"
+    "title": "Studio uruchamiania workflow",
+    "communityEdition": {
+      "title": "Funkcja Pro",
+      "description": "Studio uruchomień workflow jest dostępne tylko w Pro.",
+      "runId": "ID uruchomienia: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3152,6 +3157,10 @@
         "selectBoard": "Wybierz lub wprowadź tablicę",
         "selectPriority": "Wybierz lub wprowadź priorytet"
       }
+    },
+    "proFeature": {
+      "title": "Funkcja Pro",
+      "description": "System workflow jest dostępny tylko w Pro. Uaktualnij swoją instalację, aby uzyskać dostęp do tej funkcji."
     }
   },
   "toggle": {

@@ -4,6 +4,7 @@ import React, { InputHTMLAttributes, useEffect, useRef, useCallback } from 'reac
 import { FormFieldComponent, AutomationProps } from '../ui-reflection/types';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import { CommonActions } from '../ui-reflection/actionBuilders';
+import { useTranslation } from '../lib/i18n/client';
 
 type InputSize = 'sm' | 'md' | 'lg';
 
@@ -58,6 +59,7 @@ export function Input({
   "data-automation-id": dataAutomationId,
   ...props
 }: InputProps & AutomationProps) {
+  const { t } = useTranslation('common');
   const inputRef = useRef<HTMLInputElement | null>(null);
   const cursorPositionRef = useRef<number | null>(null);
   const isComposing = useRef(false);
@@ -85,9 +87,9 @@ export function Input({
     disabled,
     required
   }, () => [
-    CommonActions.type(label ? `Type text into ${label} field` : 'Type text into this field'),
-    CommonActions.focus('Focus this input field'),
-    CommonActions.clear('Clear the current text')
+    CommonActions.type(label ? t('input.actions.typeIntoLabel', { label }) : t('input.actions.type')),
+    CommonActions.focus(t('input.actions.focus')),
+    CommonActions.clear(t('input.actions.clear'))
   ], dataAutomationId);
 
   // Always use the generated automation props (which include our override ID if provided)

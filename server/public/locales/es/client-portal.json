@@ -66,7 +66,8 @@
       "createTicket": "Crear ticket",
       "requestAppointment": "Solicitar cita",
       "viewLatestInvoice": "Ver la última factura",
-      "newServiceRequest": "Nueva solicitud de servicio"
+      "newServiceRequest": "Nueva solicitud de servicio",
+      "createSupportTicket": "Crear ticket de soporte"
     },
     "appointments": {
       "title": "Próximas citas",
@@ -329,7 +330,25 @@
       "tenant_mismatch": "{{providerEmail}} pertenece al portal de otra organización. Inicie sesión con su contraseña o póngase en contacto con su proveedor de servicios."
     },
     "configurationTitle": "No se pudo iniciar sesión",
-    "configurationMessage": "No se pudo iniciar sesión. Inténtelo de nuevo o póngase en contacto con su proveedor de servicios."
+    "configurationMessage": "No se pudo iniciar sesión. Inténtelo de nuevo o póngase en contacto con su proveedor de servicios.",
+    "registration": {
+      "messages": {
+        "verified": "Usuario verificado y registrado correctamente"
+      },
+      "errors": {
+        "verifyFailed": "No se pudo verificar y registrar al usuario",
+        "invalidToken": "Token inválido",
+        "tokenExpired": "Token vencido",
+        "tokenNotActive": "El token aún no está activo",
+        "unknown": "Error desconocido"
+      },
+      "user": "Usuario",
+      "clientPortalUser": "Usuario del portal del cliente",
+      "mspUser": "Usuario MSP",
+      "resetExpiration": "1 hora",
+      "verificationExpiration": "24 horas",
+      "superadminRole": "Rol de superadministrador"
+    }
   },
   "account": {
     "title": "Cuenta",
@@ -555,7 +574,9 @@
       "invoices": "Notificaciones de facturas",
       "announcements": "Anuncios del sistema",
       "emailPreferences": "Correo electrónico",
-      "internalPreferences": "Interno"
+      "internalPreferences": "Interno",
+      "unreadCount_few": "{{count}} notificaciones no leídas",
+      "unreadCount_many": "{{count}} notificaciones no leídas"
     },
     "actions": {
       "save": "Guardar cambios",
@@ -833,7 +854,9 @@
     "card": {
       "unread": "No leída",
       "noMessage": "Sin mensaje"
-    }
+    },
+    "unreadCount_few": "{{count}} notificaciones sin leer",
+    "unreadCount_many": "{{count}} notificaciones sin leer"
   },
   "sidebar": {
     "goToDashboard": "Ir al panel",

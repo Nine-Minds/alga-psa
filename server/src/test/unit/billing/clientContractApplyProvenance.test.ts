@@ -12,6 +12,23 @@ vi.mock('@alga-psa/db', () => ({
   withTransaction: (...args: any[]) => withTransaction(...args),
 }));
 
+// applyContractToClient now resolves the template's amounts in the contract's
+// currency before cloning each line. These tests assert provenance, not money,
+// so resolve to an empty base set rather than teaching the fake trx above
+// about the template amount tables.
+vi.mock('@alga-psa/shared/billingClients/templateAmounts', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  resolveTemplateAmountsForContract: vi.fn(async () => ({
+    template_id: 'template-contract-1',
+    source: 'base',
+    template_currency: 'USD',
+    target_currency: 'USD',
+    price_set_currencies: [],
+    slots: [],
+    amountBySlot: new Map(),
+  })),
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) =>
     fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),

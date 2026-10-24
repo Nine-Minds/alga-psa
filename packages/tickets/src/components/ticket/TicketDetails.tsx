@@ -40,6 +40,7 @@ import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
 import type { CommentEmailRecipientsPayload } from "./CommentEmailRecipientsControl";
 import { TicketActivityTimeline } from "./TicketActivityTimeline";
+import { useInboundEmailViewPreference } from "../../hooks/useInboundEmailViewPreference";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import {
@@ -93,6 +94,7 @@ import { useTicketTemplatePermissions } from '../templates/useTicketTemplatePerm
 import { WorkItemType } from "@alga-psa/types";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
 import { PartialBlock, StyledText } from '@blocknote/core';
+import { hasEditorContent } from '@alga-psa/ui/editor/hasEditorContent';
 import { convertBlockNoteToMarkdown } from "@alga-psa/formatting/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
@@ -369,6 +371,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const { formatDate, locale, dateFormat } = useFormatters();
     const ticketLive = useTicketLiveContext();
     const { data: session } = useSession();
+    // Keeps the Text / Email choice on inbound-email bodies a stored per-user
+    // preference rather than per-message state.
+    useInboundEmailViewPreference();
     const [hasHydrated, setHasHydrated] = useState(false);
     const [canViewCommentMetadataDebug, setCanViewCommentMetadataDebug] = useState(
         bootstrap?.canViewCommentMetadataDebug ?? false,
@@ -2885,19 +2890,27 @@ const handleClose = () => {
 
         setIsSubmittingResolutionClose(true);
         let resolutionSaved = false;
+        // Fires onSaved: the resolution comment is durable, or the status write
+        // landed on the no-comment path. Either way the list row is stale.
+        let ticketChanged = false;
         try {
-            const resolutionAdded = await addResolutionComment(
-                JSON.stringify(contentBlocks),
-                suppression,
-                isInternal,
-                emailRecipients,
-            );
-            if (!resolutionAdded) {
-                return false;
+            // A resolution is optional; an empty editor must not insert a blank
+            // comment, so the close runs on its own.
+            if (hasEditorContent(contentBlocks)) {
+                const resolutionAdded = await addResolutionComment(
+                    JSON.stringify(contentBlocks),
+                    suppression,
+                    isInternal,
+                    emailRecipients,
+                );
+                if (!resolutionAdded) {
+                    return false;
+                }
+                resolutionSaved = true;
+                ticketChanged = true;
             }
-            resolutionSaved = true;
 
-            // The comment is already durable at this point. Close this dialog
+            // Any comment is already durable at this point. Close this dialog
             // so a failed or blocked status write cannot accidentally create a
             // duplicate resolution on resubmit.
             setIsResolutionCloseDialogOpen(false);
@@ -2920,9 +2933,9 @@ const handleClose = () => {
                 console.error('Close rules check failed after adding resolution:', checkError);
             }
 
-            // Resolution comment is durable; ask about bundle propagation before
-            // the status write. Cancelling leaves the ticket open (the comment
-            // stays, as before).
+            // Any resolution comment is durable; ask about bundle propagation
+            // before the status write. Cancelling leaves the ticket open (the
+            // comment stays, as before).
             const propagationDecision = await confirmBundlePropagation(statusId);
             if (!propagationDecision.proceed) {
                 return resolutionSaved;
@@ -2943,6 +2956,7 @@ const handleClose = () => {
             if (isReturnedActionError(result)) {
                 throw result;
             }
+            ticketChanged = true;
 
             setTicket((previousTicket) => ({
                 ...previousTicket,
@@ -2961,7 +2975,7 @@ const handleClose = () => {
             // The resolution comment is durable once saved, even when the status
             // write was blocked, cancelled or failed, so the list row is stale
             // in every such case. Single call covers all exits.
-            if (resolutionSaved) {
+            if (ticketChanged) {
                 onSaved?.();
             }
             setIsSubmittingResolutionClose(false);
@@ -4042,14 +4056,14 @@ const handleClose = () => {
                     title={t('info.cannotCloseYet', "This ticket can't be closed yet")}
                 >
                     <DialogContent>
-                        <p className="text-sm text-gray-600 mb-3">
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
                             {t('info.closeRulesIntro', "The board's close rules require the following before this ticket can be closed:")}
                         </p>
                         <ul className="space-y-2 mb-4">
                             {closeBlockedDialog.failures.map((failure) => (
                                 <li
                                     key={failure.rule}
-                                    className="flex items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                                    className="flex items-center justify-between gap-2 rounded-md border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-3 py-2 text-sm text-amber-900 dark:text-amber-200"
                                 >
                                     <span>{failure.message}</span>
                                     {failure.rule === 'checklist_incomplete' && (
