@@ -557,6 +557,17 @@
         "selectedCount": "{{count}} selected",
         "clear": "Clear"
       }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Invoice finalized, but a follow-up step did not complete: {{steps}}. The invoice is finalized; you can retry that step.",
+      "steps": {
+        "credit_auto_apply": "automatic credit application",
+        "project_deposit_credits": "project deposit credits",
+        "workflow_events": "workflow events",
+        "accounting_export": "accounting export",
+        "replenishment_status": "prepaid replenishment status",
+        "autopay": "auto-pay"
+      }
     }
   },
   "finalizedTab": {
@@ -857,6 +868,19 @@
       "cancel": "Cancel",
       "confirm": "Void Invoice",
       "voiding": "Voiding..."
+    },
+    "history": {
+      "title": "History",
+      "empty": "No lifecycle history recorded.",
+      "loadFailed": "Failed to load invoice history.",
+      "system": "System",
+      "ops": {
+        "invoice_finalized": "Finalized",
+        "invoice_unfinalized": "Unfinalized",
+        "invoice_deleted": "Deleted"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "none"
     }
   },
   "templateEditor": {
@@ -2513,7 +2537,8 @@
       "invoiceUpdate": "Permission denied: invoice update required",
       "invoiceDelete": "Permission denied: invoice delete required",
       "invoiceAccess": "Permission denied: invoice access denied",
-      "otherClientInvoices": "Permission denied: cannot access invoices for another client"
+      "otherClientInvoices": "Permission denied: cannot access invoices for another client",
+      "invoiceRead": "Permission denied: invoice read required"
     },
     "invoice": {
       "notFound": "Invoice not found",
@@ -2535,7 +2560,9 @@
       "duplicate": "A conflicting invoice already exists. Please refresh and try again.",
       "missingField": "Missing required invoice field.",
       "missingFieldNamed": "Missing required invoice field: {{field}}.",
-      "billingProfileUnavailable": "The selected billing profile is not available for this client."
+      "billingProfileUnavailable": "The selected billing profile is not available for this client.",
+      "deleteNotDraft": "Only draft invoices can be deleted; void the invoice instead.",
+      "deleteHasPayments": "Invoices with recorded payments cannot be deleted."
     },
     "billingCycle": {
       "notFoundRefresh": "Billing cycle not found. It may have been updated or deleted. Please refresh and try again.",

@@ -557,6 +557,17 @@
         "selectedCount": "{{count}} selecionado",
         "clear": "Limpar seleção"
       }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Fatura finalizada, mas uma etapa posterior não foi concluída: {{steps}}. A fatura está finalizada; você pode tentar essa etapa novamente.",
+      "steps": {
+        "credit_auto_apply": "aplicação automática de crédito",
+        "project_deposit_credits": "créditos de depósito de projeto",
+        "workflow_events": "eventos de fluxo de trabalho",
+        "accounting_export": "exportação contábil",
+        "replenishment_status": "status de reposição pré-paga",
+        "autopay": "pagamento automático"
+      }
     }
   },
   "finalizedTab": {
@@ -857,6 +868,19 @@
       "cancel": "Cancelar",
       "confirm": "Anular fatura",
       "voiding": "Anulando..."
+    },
+    "history": {
+      "title": "Histórico",
+      "empty": "Nenhum histórico registrado.",
+      "loadFailed": "Falha ao carregar o histórico da fatura.",
+      "system": "Sistema",
+      "ops": {
+        "invoice_finalized": "Finalizada",
+        "invoice_unfinalized": "Reaberta",
+        "invoice_deleted": "Excluída"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "nenhum"
     }
   },
   "templateEditor": {
@@ -2513,7 +2537,8 @@
       "invoiceUpdate": "Permissão negada: é necessária permissão de atualização de faturas",
       "invoiceDelete": "Permissão negada: é necessária permissão de exclusão de faturas",
       "invoiceAccess": "Permissão negada: acesso à fatura negado",
-      "otherClientInvoices": "Permissão negada: não é possível acessar as faturas de outro cliente"
+      "otherClientInvoices": "Permissão negada: não é possível acessar as faturas de outro cliente",
+      "invoiceRead": "Permissão negada: leitura de faturas necessária"
     },
     "invoice": {
       "notFound": "Fatura não encontrada",
@@ -2535,7 +2560,9 @@
       "duplicate": "Já existe uma fatura conflitante. Atualize a página e tente novamente.",
       "missingField": "Falta um campo obrigatório da fatura.",
       "missingFieldNamed": "Falta um campo obrigatório da fatura: {{field}}.",
-      "billingProfileUnavailable": "O perfil de faturação selecionado não está disponível para este cliente."
+      "billingProfileUnavailable": "O perfil de faturação selecionado não está disponível para este cliente.",
+      "deleteNotDraft": "Só é possível excluir faturas em rascunho; anule a fatura em vez disso.",
+      "deleteHasPayments": "Faturas com pagamentos registrados não podem ser excluídas."
     },
     "billingCycle": {
       "notFoundRefresh": "Ciclo de faturamento não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
