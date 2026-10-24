@@ -24,16 +24,38 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
     </select>
   ),
 }));
+vi.mock('./contracts/ServicePicker', () => ({
+  ServicePicker: ({ id, options, value, onChange }: any) => (
+    <select id={id} value={value} onChange={(event) => onChange(event.target.value)}>
+      <option value="">Select Service</option>
+      {options.map((option: any) => (
+        <option key={option.value} value={option.value}>{option.label}</option>
+      ))}
+    </select>
+  ),
+}));
 vi.mock('@alga-psa/ui/components/Button', () => ({
   Button: ({ children, variant: _variant, size: _size, ...rest }: any) => <button {...rest}>{children}</button>,
 }));
 vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: (props: any) => <input {...props} />,
 }));
-vi.mock('@alga-psa/core', () => ({
-  formatCurrency: (value: number) => `$${value.toFixed(2)}`,
-  getCurrencySymbol: () => '$',
-}));
+vi.mock('@alga-psa/core', () => {
+  // The real exponents, read from Intl the way @alga-psa/core does, so a JPY line in
+  // these tests scales exactly as it does in the app (USD 2, JPY 0, KWD 3).
+  const fractionDigits = (currency: string) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency }).resolvedOptions().maximumFractionDigits ?? 2;
+
+  return {
+    formatCurrency: (value: number) => `$${value.toFixed(2)}`,
+    getCurrencySymbol: (currency = 'USD') => (currency === 'JPY' ? '¥' : '$'),
+    currencyFractionDigits: (currency = 'USD') => fractionDigits(currency),
+    toMinorUnits: (value: number, _locale: string | undefined, currency = 'USD') =>
+      Math.round(value * 10 ** fractionDigits(currency)),
+    fromMinorUnits: (value: number, _locale: string | undefined, currency = 'USD') =>
+      value / 10 ** fractionDigits(currency),
+  };
+});
 vi.mock('@alga-psa/types', () => ({}));
 
 afterEach(cleanup);
@@ -119,6 +141,77 @@ it('publishes the current expanded editor draft immediately without collapsing',
   }));
   expect(onChange).not.toHaveBeenCalled();
   expect(document.getElementById('collapse-line-item-button')).toBeTruthy();
+});
+
+// A rate of 50 on a zero-decimal currency is ¥50, not 5000 minor units: the fixed ×100
+// banked ¥5,000 and the invoice (which scales by the currency's exponent) billed ¥5,000.
+it('banks a yen rate as whole yen, not hundredths', () => {
+  const onChange = vi.fn();
+  const onDraftChange = vi.fn();
+  render(
+    <LineItem
+      item={baseItem}
+      index={0}
+      isExpanded
+      serviceOptions={serviceOptions}
+      onRemove={vi.fn()}
+      onChange={onChange}
+      onDraftChange={onDraftChange}
+      onToggleExpand={vi.fn()}
+      currencyCode="JPY"
+    />,
+  );
+
+  fireEvent.change(document.getElementById('service-select-item-1')!, { target: { value: 'svc-1' } });
+  fireEvent.change(document.getElementById('quantity-input')!, { target: { value: '1' } });
+  fireEvent.change(document.getElementById('rate-input')!, { target: { value: '50' } });
+
+  expect(onDraftChange).toHaveBeenLastCalledWith(expect.objectContaining({ quantity: 1, rate: 50 }));
+  // The editor's own subtotal has to read the same ¥50 the invoice total will show.
+  expect(screen.getByText('Subtotal: ¥50')).toBeTruthy();
+
+  fireEvent.click(document.getElementById('collapse-line-item-button')!);
+  expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ rate: 50 }));
+});
+
+it('shows a stored yen rate without a dollars divisor', () => {
+  render(
+    <LineItem
+      item={{ ...baseItem, service_id: 'svc-1', quantity: 2, rate: 50 }}
+      index={0}
+      isExpanded={false}
+      serviceOptions={serviceOptions}
+      onRemove={vi.fn()}
+      onChange={vi.fn()}
+      onToggleExpand={vi.fn()}
+      currencyCode="JPY"
+    />,
+  );
+
+  expect(screen.getByText('2 × ¥50')).toBeTruthy();
+  expect(screen.getByText('¥100')).toBeTruthy();
+});
+
+it('banks a yen fixed discount as whole yen', () => {
+  const onDraftChange = vi.fn();
+  render(
+    <LineItem
+      item={{ ...baseItem, is_discount: true, discount_type: 'fixed' }}
+      index={0}
+      isExpanded
+      serviceOptions={serviceOptions}
+      onRemove={vi.fn()}
+      onChange={vi.fn()}
+      onDraftChange={onDraftChange}
+      onToggleExpand={vi.fn()}
+      currencyCode="JPY"
+    />,
+  );
+
+  fireEvent.change(document.getElementById('discount-value-input')!, { target: { value: '50' } });
+
+  expect(onDraftChange).toHaveBeenCalledWith(expect.objectContaining({ rate: -50 }));
+  expect(screen.getByText('Amount: -¥50')).toBeTruthy();
 });
 
 it('re-syncs the editor when the item data genuinely changes', () => {

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -17,8 +17,10 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
-import type { ColumnDefinition, IRmaCase, IStockLocation, IVendor, RmaType } from '@alga-psa/types';
+import { recordPath, type ColumnDefinition, type IRmaCase, type IStockLocation, type IVendor, type RmaType } from '@alga-psa/types';
+import { RecordUnavailable } from './RecordUnavailable';
 import {
+  getRmaCase,
   listRmaCases,
   openRma,
   openAdvanceRma,
@@ -54,6 +56,7 @@ const RMA_STATUS_FILTERS = new Set([
   'closed',
 ]);
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const shortId = (id?: string | null): string => (id ? id.slice(0, 8) : '—');
 
 // Tenant locale + currency come from CurrencyFormatProvider via the hook;
@@ -79,6 +82,8 @@ export function RmaManager({
   const money = formatMoney(fmtMinorUnits);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const rmaIdParam = searchParams?.get('rmaId') ?? null;
   const { t } = useTranslation('features/inventory');
   const statusParam = searchParams?.get('status') ?? '';
   const statusFilter = RMA_STATUS_FILTERS.has(statusParam) ? statusParam : '';
@@ -97,6 +102,8 @@ export function RmaManager({
   const [vendorId, setVendorId] = useState('');
   const [vendorRef, setVendorRef] = useState('');
   const [actioning, setActioning] = useState(false);
+  const [rmaDetail, setRmaDetail] = useState<IRmaCase | null>(null);
+  const [rmaUnavailable, setRmaUnavailable] = useState(false);
 
   const RMA_TYPE_OPTIONS = [
     { value: 'standard', label: t('rma.types.standard', 'Standard') },
@@ -130,6 +137,47 @@ export function RmaManager({
     advance_replacement: t('rma.types.advanceReplacement', 'Advance replacement'),
   };
   const typeLabel = (v?: string | null): string => (v && RMA_TYPE_LABELS[v]) || humanize(v);
+
+  // The detail dialog is driven by `?rmaId=` so a scanned RMA label lands on a linkable view.
+  const closeRmaDialog = useCallback(() => {
+    setRmaDetail(null);
+    setRmaUnavailable(false);
+    const next = new URLSearchParams(searchParams?.toString() ?? '');
+    next.delete('rmaId');
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname);
+  }, [pathname, router, searchParams]);
+
+  useEffect(() => {
+    if (!rmaIdParam) {
+      setRmaDetail(null);
+      setRmaUnavailable(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = UUID_RE.test(rmaIdParam) ? await getRmaCase(rmaIdParam) : null;
+        if (cancelled) return;
+        // Missing, cross-tenant and permission-denied are deliberately one state.
+        if (!result || isActionMessageError(result) || isActionPermissionError(result)) {
+          setRmaDetail(null);
+          setRmaUnavailable(true);
+          return;
+        }
+        setRmaUnavailable(false);
+        setRmaDetail(result);
+      } catch (e) {
+        if (cancelled) return;
+        console.error(e);
+        setRmaDetail(null);
+        setRmaUnavailable(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [rmaIdParam]);
 
   const reload = useCallback(async () => {
     try {
@@ -503,6 +551,67 @@ export function RmaManager({
             </Button>
           </div>
         </div>
+      </Dialog>
+
+      <Dialog
+        id="rma-detail-dialog"
+        isOpen={rmaDetail !== null || rmaUnavailable}
+        onClose={closeRmaDialog}
+        title={t('rma.detail.title', 'RMA {{id}}', { id: rmaDetail ? rmaDetail.rma_reference || shortId(rmaDetail.rma_id) : '' }).trim()}
+        className="max-w-2xl"
+      >
+        {rmaUnavailable && <RecordUnavailable id="rma-dialog-unavailable" />}
+        {!rmaUnavailable && rmaDetail && (
+          <div className="space-y-4 p-1">
+            <div className="grid gap-3 text-sm sm:grid-cols-2">
+              {([
+                [t('rma.columns.type', 'Type'), typeLabel(rmaDetail.rma_type)],
+                [t('common.status', 'Status'), statusLabel(rmaDetail.status)],
+                [t('rma.columns.client', 'Client'), rmaDetail.client_name || t('common.emptyValue', '—')],
+                [t('rma.columns.vendor', 'Vendor'), rmaDetail.vendor_name || t('common.emptyValue', '—')],
+                [t('rma.detail.reference', 'RMA reference'), rmaDetail.rma_reference || t('common.emptyValue', '—')],
+                [t('rma.detail.product', 'Product'), rmaDetail.service_name || t('common.emptyValue', '—')],
+                [t('rma.detail.returnedSerial', 'Returned unit serial'), rmaDetail.returned_serial_number || t('common.emptyValue', '—')],
+                [t('rma.detail.opened', 'Opened'), rmaDetail.opened_at ? new Date(rmaDetail.opened_at).toLocaleDateString() : t('common.emptyValue', '—')],
+                [t('rma.detail.updated', 'Updated'), rmaDetail.updated_at ? new Date(rmaDetail.updated_at).toLocaleDateString() : t('common.emptyValue', '—')],
+                ...(rmaDetail.age_days != null ? [[t('rma.detail.age', 'Age (days)'), String(rmaDetail.age_days)]] : []),
+              ] as Array<[string, string]>).map(([label, value]) => (
+                <div key={label}>
+                  <div className="text-xs text-gray-500">{label}</div>
+                  <div>{value}</div>
+                </div>
+              ))}
+            </div>
+            {rmaDetail.reason && (
+              <div className="text-sm">
+                <div className="text-xs text-gray-500">{t('rma.detail.reason', 'Reason')}</div>
+                <div>{rmaDetail.reason}</div>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2">
+              {rmaDetail.returned_unit_id && (
+                <Button id="rma-detail-view-unit" variant="outline" size="sm" onClick={() => router.push(recordPath('stock_unit', rmaDetail.returned_unit_id as string))}>
+                  {t('rma.detail.viewUnit', 'View unit')}
+                </Button>
+              )}
+              {rmaDetail.asset_id && (
+                <Button id="rma-detail-view-asset" variant="outline" size="sm" onClick={() => router.push(recordPath('asset', rmaDetail.asset_id as string))}>
+                  {t('rma.detail.viewAsset', 'View asset')}
+                </Button>
+              )}
+              {rmaDetail.status === 'awaiting_return' && (
+                <Button id="rma-detail-receive-return" size="sm" onClick={() => { const c = rmaDetail; closeRmaDialog(); openReceiveReturn(c); }}>
+                  {t('rma.receiveReturn', 'Receive return')}
+                </Button>
+              )}
+              {rmaDetail.status === 'returned' && (
+                <Button id="rma-detail-send-to-vendor" size="sm" onClick={() => { const c = rmaDetail; closeRmaDialog(); openSendToVendor(c); }}>
+                  {t('rma.sendToVendor', 'Send to vendor')}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
       </Dialog>
     </div>
   );

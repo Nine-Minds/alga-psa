@@ -135,7 +135,6 @@
         "overtime": {
           "enableLabel": "Włącz stawki za nadgodziny",
           "rateHelp": "Stawka stosowana po przekroczeniu progu.",
-          "rateLabel": "Stawka za nadgodziny ($/godz.)",
           "thresholdHelp": "Godziny przed zastosowaniem OT.",
           "thresholdLabel": "Próg nadgodzin (godziny/okres)",
           "thresholdPlaceholder": "40",
@@ -375,7 +374,6 @@
     },
     "hourlyConfig": {
       "labels": {
-        "hourlyRate": "Stawka godzinowa ($)",
         "minimumBillableTime": "Minimalny czas rozliczeniowy (minuty)",
         "roundUpToNearest": "Zaokrąglij do najbliższego (minuty)"
       },
@@ -398,7 +396,6 @@
           "technician": "Technik"
         },
         "perHourSuffix": "/godz",
-        "rateSrLabel": "Stawka ($/godz.)",
         "selectTypePlaceholder": "Wybierz typ",
         "tooltip": "Zdefiniuj różne stawki godzinowe dla określonych typów użytkowników pracujących w tej usłudze. Zastępują one domyślną stawkę godzinową usługi.",
         "userTypeSrLabel": "Typ użytkownika",

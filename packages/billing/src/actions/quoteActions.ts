@@ -19,6 +19,7 @@ import { resolveInvoiceBillingRecipient } from '../services/invoiceBillingRecipi
 import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate, formatQuoteDate } from '../lib/quote-email-templates';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { mapLoadedQuoteToViewModel } from '../lib/adapters/quoteAdapters';
+import { buildTenantPortalUrl } from '@alga-psa/tenancy/server';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { getQuoteApprovalWorkflowSettings as loadQuoteApprovalWorkflowSettings, setQuoteApprovalWorkflowRequired as persistQuoteApprovalWorkflowRequired, type QuoteApprovalWorkflowSettings } from '../lib/quoteApprovalSettings';
 import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
@@ -537,6 +538,18 @@ const resolveQuoteRecipientLocale = async (
   } catch {
     // A locale lookup must never block sending the quote itself.
     return 'en';
+  }
+};
+
+// Deep link to the quote in the client portal, on the tenant's portal origin
+// (active custom domain, else the configured public base URL). Undefined when
+// no public origin exists, so the email goes out without a link.
+const buildQuotePortalLink = async (tenant: string, quoteId: string): Promise<string | undefined> => {
+  try {
+    return (await buildTenantPortalUrl(tenant, `/client-portal/billing/quotes/${encodeURIComponent(quoteId)}`)) ?? undefined;
+  } catch {
+    // A link lookup must never block sending the quote itself.
+    return undefined;
   }
 };
 
@@ -1729,8 +1742,7 @@ export const sendQuote = withAuth(async (
     if (recipients.length > 0) {
       emailRecipients = recipients;
       const companyName = tenantParty?.name || 'Your Company';
-      const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
+      const portalLink = await buildQuotePortalLink(tenant, quote.quote_id);
       const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
       const renderedEmail = await renderQuoteEmail({
         knex,
@@ -1830,8 +1842,7 @@ export const resendQuote = withAuth(async (
     if (recipients.length > 0) {
       emailRecipients = recipients;
       const companyName = tenantParty?.name || 'Your Company';
-      const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
+      const portalLink = await buildQuotePortalLink(tenant, quote.quote_id);
       const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
       const renderedEmail = await renderQuoteEmail({
         knex,
@@ -1927,8 +1938,7 @@ export const sendQuoteReminder = withAuth(async (
     if (recipients.length > 0) {
       emailRecipients = recipients;
       const companyName = tenantParty?.name || 'Your Company';
-      const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
+      const portalLink = await buildQuotePortalLink(tenant, quote.quote_id);
       const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
       const renderedEmail = await renderQuoteEmail({
         knex,

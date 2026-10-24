@@ -21,16 +21,14 @@ import {
   type RecurringTicketClientUpdate,
   type RecurringTicketDefinitionInput,
 } from '../lib/recurring/definitionInput';
-import {
-  recurringTicketOverridesSchema,
-  resolveEffectiveFields,
-  type RecurringTemplateFields,
-} from '../lib/recurring/effectiveFields';
+import { recurringTicketOverridesSchema, type RecurringTemplateFields } from '../lib/recurring/effectiveFields';
 import { RecurringTicketError } from '../lib/recurring/errors';
 import { asJsonColumn } from '../lib/recurring/jsonColumn';
 import { loadTenantTimeZone } from '../lib/recurring/tenantTimeZone';
 import { listUpcomingOccurrences } from '../lib/recurring/upcomingOccurrences';
-import { findRecurringReferenceProblems } from '../lib/recurring/validateReferences';
+import { findTicketFieldReferenceProblems } from '../lib/ticketFieldReferences';
+import { resolveTemplateTicketFields } from '../lib/instantiateTicketTemplate';
+import { renderTitleTemplate } from '../lib/ticketTitleTokens';
 import type {
   RecurringDefinitionClientRecord,
   RecurringDefinitionDetail,
@@ -40,6 +38,7 @@ import type {
   RecurringOccurrenceListItem,
   RecurringOccurrencePage,
   RecurringSchedulePreview,
+  RecurringTemplateSummary,
   RecurringTicketForClient,
   RecurringTicketSource,
 } from '../lib/recurring/types';
@@ -98,24 +97,19 @@ function statusOf(row: { is_active: boolean; archived_at: Date | string | null }
   return row.is_active ? 'active' : 'paused';
 }
 
-function toDefinitionRecord(row: Record<string, any>): RecurringDefinitionRecord {
+function toDefinitionRecord(row: Record<string, any>, template: RecurringTemplateSummary | null = null): RecurringDefinitionRecord {
   return {
     definition_id: row.definition_id,
     name: row.name,
     is_active: row.is_active,
     archived_at: toIso(row.archived_at),
-    title_template: row.title_template,
-    description: row.description == null ? null : asJsonColumn(row.description),
-    board_id: row.board_id,
+    ticket_template_id: row.ticket_template_id,
+    template,
+    overrides: recurringTicketOverridesSchema.parse(asJsonColumn(row.overrides ?? {})),
     status_id: row.status_id ?? null,
-    priority_id: row.priority_id,
-    category_id: row.category_id ?? null,
-    subcategory_id: row.subcategory_id ?? null,
     assigned_to: row.assigned_to ?? null,
     assigned_team_id: row.assigned_team_id ?? null,
     additional_agent_ids: asJsonColumn<string[]>(row.additional_agent_ids ?? []),
-    tags: asJsonColumn<string[]>(row.tags ?? []),
-    checklist_template_id: row.checklist_template_id ?? null,
     recurrence: parseRecurrenceRule(asJsonColumn(row.recurrence)),
     start_date: calendarDate(row.start_date, 'start_date'),
     create_time: row.create_time,
@@ -127,26 +121,27 @@ function toDefinitionRecord(row: Record<string, any>): RecurringDefinitionRecord
   };
 }
 
-function templateFields(input: {
-  board_id: string;
-  status_id: string | null;
-  priority_id: string;
-  category_id: string | null;
-  subcategory_id: string | null;
-  assigned_to: string | null;
-  assigned_team_id: string | null;
-  additional_agent_ids: string[];
-}): RecurringTemplateFields {
-  return {
-    board_id: input.board_id,
-    status_id: input.status_id,
-    priority_id: input.priority_id,
-    category_id: input.category_id,
-    subcategory_id: input.subcategory_id,
-    assigned_to: input.assigned_to,
-    assigned_team_id: input.assigned_team_id,
-    additional_agent_ids: input.additional_agent_ids,
-  };
+/** Name and state of each template, by id. A template that no longer exists is simply absent. */
+async function loadTemplateSummaries(
+  conn: Conn,
+  tenant: string,
+  templateIds: string[]
+): Promise<Map<string, RecurringTemplateSummary>> {
+  if (templateIds.length === 0) return new Map();
+  const rows = await tenantDb(conn, tenant)
+    .table('ticket_templates')
+    .whereIn('template_id', [...new Set(templateIds)])
+    .select('template_id', 'name', 'title', 'is_active', 'offer_for_manual_use', 'board_id', 'priority_id', 'category_id', 'subcategory_id');
+  return new Map(rows.map((row) => [row.template_id as string, row as RecurringTemplateSummary]));
+}
+
+/** The cascade up to (not including) the client layer: template -> dispatch -> the definition's overrides. */
+function definitionFields(definition: RecurringDefinitionRecord): RecurringTemplateFields {
+  return resolveTemplateTicketFields(
+    definition.template ?? { board_id: null, priority_id: null, category_id: null, subcategory_id: null },
+    definition,
+    [definition.overrides]
+  );
 }
 
 async function assertDefinitionReferences(
@@ -154,17 +149,18 @@ async function assertDefinitionReferences(
   tenant: string,
   input: ParsedRecurringTicketDefinitionInput
 ): Promise<void> {
-  const problems = await findRecurringReferenceProblems(conn, tenant, { fields: templateFields(input) });
-  if (input.checklist_template_id) {
-    const template = await tenantDb(conn, tenant)
-      .table('checklist_templates')
-      .where({ template_id: input.checklist_template_id })
-      .first('template_id');
-    if (!template) {
-      problems.push({ field: 'board_id', message: 'The selected checklist template no longer exists' });
-    }
+  const template = (await loadTemplateSummaries(conn, tenant, [input.ticket_template_id])).get(input.ticket_template_id);
+  if (!template) {
+    throw new RecurringTicketError('The selected ticket template no longer exists', 'INVALID_REFERENCES', {
+      problems: 'The selected ticket template no longer exists',
+    });
   }
-  throwIfProblems(problems);
+  throwIfProblems(
+    await findTicketFieldReferenceProblems(conn, tenant, {
+      fields: resolveTemplateTicketFields(template, input, [input.overrides]),
+      schedule: true,
+    })
+  );
 }
 
 function throwIfProblems(problems: { message: string }[]): void {
@@ -273,7 +269,7 @@ export const listRecurringTicketDefinitions = withAuth(async (
       latest.filter((row) => Number(row.recency) === 1 && row.status === 'failed').map((row) => row.definition_id as string)
     );
 
-    const records = rows.map(toDefinitionRecord);
+    const records = rows.map((row) => toDefinitionRecord(row));
     const calendar = await loadCalendarIfNeeded(knex, tenant, records.map((record) => record.non_business_day_policy));
     const timeZone = await loadTenantTimeZone(knex, tenant);
     const now = new Date();
@@ -312,7 +308,8 @@ export const getRecurringTicketDefinition = withAuth(async (
 
     const row = await db.table(DEFINITIONS).where({ definition_id: definitionId }).first();
     if (!row) throw new RecurringTicketError('Recurring ticket not found', 'DEFINITION_NOT_FOUND');
-    const definition = toDefinitionRecord(row);
+    const template = (await loadTemplateSummaries(knex, tenant, [row.ticket_template_id])).get(row.ticket_template_id) ?? null;
+    const definition = toDefinitionRecord(row, template);
 
     const clientQuery = db.table(`${DEFINITION_CLIENTS} as dc`);
     db.tenantJoin(clientQuery, 'clients as c', 'dc.client_id', 'c.client_id', { type: 'left' });
@@ -346,7 +343,13 @@ export const getRecurringTicketDefinition = withAuth(async (
 
     const calendar = await loadCalendarIfNeeded(knex, tenant, [definition.non_business_day_policy]);
     const timeZone = await loadTenantTimeZone(knex, tenant);
-    return { definition, clients, next_due_at: nextDueAt(definition, calendar, timeZone, new Date()), time_zone: timeZone };
+    return {
+      definition,
+      clients,
+      next_due_at: nextDueAt(definition, calendar, timeZone, new Date()),
+      time_zone: timeZone,
+      effective_fields: definitionFields(definition),
+    };
   } catch (error) {
     const expected = recurringActionErrorFrom(error);
     if (expected) return expected;
@@ -359,18 +362,12 @@ function definitionColumns(input: ParsedRecurringTicketDefinitionInput) {
   return {
     name: input.name,
     is_active: input.is_active,
-    title_template: input.title_template,
-    description: input.description == null ? null : JSON.stringify(input.description),
-    board_id: input.board_id,
+    ticket_template_id: input.ticket_template_id,
+    overrides: JSON.stringify(input.overrides),
     status_id: input.status_id,
-    priority_id: input.priority_id,
-    category_id: input.category_id,
-    subcategory_id: input.subcategory_id,
     assigned_to: input.assigned_to,
     assigned_team_id: input.assigned_team_id,
     additional_agent_ids: JSON.stringify(input.additional_agent_ids),
-    tags: JSON.stringify(input.tags),
-    checklist_template_id: input.checklist_template_id,
     recurrence: JSON.stringify(input.recurrence),
     start_date: input.start_date,
     create_time: input.create_time,
@@ -380,6 +377,16 @@ function definitionColumns(input: ParsedRecurringTicketDefinitionInput) {
     open_previous_policy: input.open_previous_policy,
     notify_client_on_create: input.notify_client_on_create,
   };
+}
+
+/**
+ * R2: choosing a template for a schedule reads it, so it needs `ticket_template:read` on top of
+ * `recurring_ticket:create|update`. Content edits stay behind `ticket_template:update`.
+ */
+async function requireTemplateRead(user: Parameters<typeof hasPermission>[0], conn: Conn): Promise<void> {
+  if (!(await hasPermission(user, 'ticket_template', 'read', conn as Knex.Transaction))) {
+    throw new Error('Permission denied: Cannot use ticket templates');
+  }
 }
 
 export const createRecurringTicketDefinition = withAuth(async (
@@ -392,6 +399,7 @@ export const createRecurringTicketDefinition = withAuth(async (
     const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx) => {
       await requirePermission(user, 'create', trx);
+      await requireTemplateRead(user, trx);
       await assertDefinitionReferences(trx, tenant, input);
 
       const definitionId = uuidv4();
@@ -427,6 +435,7 @@ export const updateRecurringTicketDefinition = withAuth(async (
     return await withTransaction(knex, async (trx) => {
       await requirePermission(user, 'update', trx);
       const existing = await loadWritableDefinition(trx, tenant, definitionId);
+      if (input.ticket_template_id !== existing.ticket_template_id) await requireTemplateRead(user, trx);
       await assertDefinitionReferences(trx, tenant, input);
 
       const db = tenantDb(trx, tenant);
@@ -583,14 +592,22 @@ export const updateRecurringTicketClient = withAuth(async (
       await requirePermission(user, 'update', trx);
       const clientRow = await loadClientRow(trx, tenant, definitionClientId);
       const definitionRow = await loadWritableDefinition(trx, tenant, clientRow.definition_id);
-      const definition = toDefinitionRecord(definitionRow);
+      const template = (await loadTemplateSummaries(trx, tenant, [definitionRow.ticket_template_id])).get(definitionRow.ticket_template_id) ?? null;
+      const definition = toDefinitionRecord(definitionRow, template);
+      if (!template) {
+        throw new RecurringTicketError('The schedule\'s ticket template no longer exists; edit the schedule', 'INVALID_REFERENCES', {
+          problems: 'The schedule\'s ticket template no longer exists; edit the schedule',
+        });
+      }
 
-      // Validate the effective ticket this client would get, so a board override that does not fit the
-      // inherited category (for example) is rejected when saved rather than failing every run.
-      const fields = resolveEffectiveFields(templateFields(definition), update.overrides);
+      // Validate the effective ticket this client would get (template -> schedule overrides -> these), so a
+      // board override that does not fit the inherited category (for example) is rejected when saved
+      // rather than failing every run.
+      const fields = resolveTemplateTicketFields(template, definition, [definition.overrides, update.overrides]);
       throwIfProblems(
-        await findRecurringReferenceProblems(trx, tenant, {
+        await findTicketFieldReferenceProblems(trx, tenant, {
           fields,
+          schedule: true,
           clientId: clientRow.client_id,
           contactId: update.contact_id,
           locationId: update.location_id,
@@ -763,7 +780,13 @@ export const previewRecurringTicketOccurrences = withAuth(async (
       timeZone,
       count: 5,
     });
+    const template = draft.ticket_template_id
+      ? (await loadTemplateSummaries(knex, tenant, [draft.ticket_template_id])).get(draft.ticket_template_id)
+      : undefined;
     return {
+      sample_title: template && upcoming[0]
+        ? renderTitleTemplate(template.title, { dueDate: upcoming[0].due, clientName: draft.sample_client_name ?? null })
+        : null,
       occurrences: upcoming.map((candidate) => ({
         nominal: candidate.nominal,
         due: candidate.due,
@@ -801,7 +824,7 @@ export const listRecurringTicketsForClient = withAuth(async (
       .select(
         'dc.definition_client_id',
         'dc.is_active as client_is_active',
-        'dc.overrides',
+        'dc.overrides as client_overrides',
         'dc.contact_id',
         'dc.location_id',
         'd.*'
@@ -819,7 +842,8 @@ export const listRecurringTicketsForClient = withAuth(async (
       assetsByClient.set(asset.definition_client_id as string, list);
     }
 
-    const records = rows.map((row) => toDefinitionRecord(row));
+    const templates = await loadTemplateSummaries(knex, tenant, rows.map((row) => row.ticket_template_id as string));
+    const records = rows.map((row) => toDefinitionRecord(row, templates.get(row.ticket_template_id) ?? null));
     const calendar = await loadCalendarIfNeeded(knex, tenant, records.map((record) => record.non_business_day_policy));
     const timeZone = await loadTenantTimeZone(knex, tenant);
     const now = new Date();
@@ -836,7 +860,8 @@ export const listRecurringTicketsForClient = withAuth(async (
         recurrence: record.recurrence,
         next_due_at: status === 'active' && row.client_is_active ? nextDueAt(record, calendar, timeZone, now) : null,
         time_zone: timeZone,
-        overrides: recurringTicketOverridesSchema.parse(asJsonColumn(row.overrides ?? {})),
+        overrides: recurringTicketOverridesSchema.parse(asJsonColumn(row.client_overrides ?? {})),
+        inherited_fields: definitionFields(record),
         contact_id: row.contact_id ?? null,
         location_id: row.location_id ?? null,
         asset_ids: assetsByClient.get(row.definition_client_id as string) ?? [],

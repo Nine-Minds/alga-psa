@@ -5,17 +5,24 @@ const retrieveAttemptPaymentIntent = vi.fn();
 const recordAutoPaySuccess = vi.fn();
 const expireActiveLinksForInvoice = vi.fn();
 const getOrCreatePaymentLink = vi.fn();
+const getPaymentSettings = vi.fn();
+const sendEmail = vi.fn();
+const resolveRecipient = vi.fn();
+const buildDurablePaymentUrl = vi.fn();
+const buildPortalInvoiceUrl = vi.fn();
 const currentPaymentMethod = { payment_method_id: 'pm-new', external_payment_method_id: 'stripe-pm-new', external_customer_id: 'cus-1' };
 
 vi.mock('@alga-psa/db', () => ({
   getConnection: vi.fn(),
   tenantDb: vi.fn((knex: any) => ({ table: (name: string) => knex.table(name) })),
 }));
-vi.mock('../../../lib/payments/PaymentService', () => ({ PaymentService: { create: vi.fn(async () => ({ recordAutoPaySuccess, expireActiveLinksForInvoice, getOrCreatePaymentLink })) } }));
+vi.mock('../../../lib/payments/PaymentService', () => ({ PaymentService: { create: vi.fn(async () => ({ recordAutoPaySuccess, expireActiveLinksForInvoice, getOrCreatePaymentLink, getPaymentSettings })) } }));
 vi.mock('../../../lib/payments/StripePaymentProvider', () => ({ createStripePaymentProvider: vi.fn(() => ({ chargeSavedPaymentMethod: stripeCharge, retrieveAttemptPaymentIntent })) }));
 vi.mock('../../../lib/temporal/invoiceAutopay', () => ({ startInvoiceAutopay: vi.fn(), signalInvoiceAutopay: vi.fn(), signalProfileAutopayChanged: vi.fn() }));
 vi.mock('../../../lib/payments/stripeWebhookEvents', () => ({ reconcileStripeWebhookEvents: vi.fn() }));
-vi.mock('@alga-psa/email', () => ({ getSystemEmailService: vi.fn() }));
+vi.mock('@alga-psa/email', () => ({ getSystemEmailService: vi.fn(async () => ({ sendEmail })) }));
+vi.mock('@alga-psa/billing/services/invoiceBillingRecipientService', () => ({ resolveInvoiceBillingRecipient: (...a: unknown[]) => resolveRecipient(...a) }));
+vi.mock('@alga-psa/billing/lib/payments/invoicePaymentUrls', () => ({ buildDurablePaymentUrl: (...a: unknown[]) => buildDurablePaymentUrl(...a), buildPortalInvoiceUrl: (...a: unknown[]) => buildPortalInvoiceUrl(...a) }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(), publishEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 
 import { getConnection } from '@alga-psa/db';
@@ -61,7 +68,12 @@ describe('AutopayService single-attempt executor', () => {
     retrieveAttemptPaymentIntent.mockResolvedValue(null);
     recordAutoPaySuccess.mockResolvedValue({ success: true });
     expireActiveLinksForInvoice.mockResolvedValue(undefined);
-    getOrCreatePaymentLink.mockResolvedValue({ url: 'https://pay.example/invoice-1' });
+    getOrCreatePaymentLink.mockResolvedValue({ url: 'https://checkout.stripe.com/c/pay/cs_live_dying' });
+    getPaymentSettings.mockResolvedValue({ paymentLinkExpirationHours: 720 });
+    resolveRecipient.mockResolvedValue({ recipientEmail: 'billing@example.test' });
+    sendEmail.mockResolvedValue({ success: true });
+    buildDurablePaymentUrl.mockResolvedValue('https://app.example.test/pay/TOKEN');
+    buildPortalInvoiceUrl.mockResolvedValue('https://app.example.test/client-portal/billing?tab=invoices&invoiceId=invoice-1');
   });
 
   it('resumes processing attempts with the current enrolled card and the same idempotency key', async () => {
@@ -94,6 +106,48 @@ describe('AutopayService single-attempt executor', () => {
     const service = await AutopayService.create('tenant-1');
     await service.finishAutopayWithFallback('invoice-1', 'attempt-1', 'payment_failed');
     expect(getOrCreatePaymentLink).not.toHaveBeenCalled();
+  });
+
+  it('emails the durable /pay/<token> link with the configured lifetime and never pre-creates a Checkout session', async () => {
+    const service = await AutopayService.create('tenant-1');
+    await service.finishAutopayWithFallback('invoice-1', 'attempt-1', 'payment_failed');
+    expect(getOrCreatePaymentLink).not.toHaveBeenCalled();
+    expect(buildDurablePaymentUrl).toHaveBeenCalledWith('tenant-1', 'invoice-1', 720);
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    const email = sendEmail.mock.calls[0][0];
+    expect(email.html).toContain('/pay/TOKEN');
+    expect(email.text).toContain('https://app.example.test/pay/TOKEN');
+    expect(email.html + email.text).not.toContain('stripe.com');
+  });
+
+  it('uses the shared max lifetime when no payment settings exist', async () => {
+    getPaymentSettings.mockResolvedValue(undefined);
+    const service = await AutopayService.create('tenant-1');
+    await service.finishAutopayWithFallback('invoice-1', 'attempt-1', 'payment_failed');
+    expect(buildDurablePaymentUrl).toHaveBeenCalledWith('tenant-1', 'invoice-1', 720);
+  });
+
+  it('falls back to the portal URL, never a Stripe URL, when there is no public base for the durable link', async () => {
+    buildDurablePaymentUrl.mockResolvedValue(null);
+    const service = await AutopayService.create('tenant-1');
+    await service.finishAutopayWithFallback('invoice-1', 'attempt-1', 'payment_failed');
+    const email = sendEmail.mock.calls[0][0];
+    expect(email.text).toContain('/client-portal/billing');
+    expect(email.html).toContain('invoiceId=invoice-1');
+    expect(email.html).toContain('&amp;');
+    expect(email.html + email.text).not.toContain('stripe.com');
+    expect(getOrCreatePaymentLink).not.toHaveBeenCalled();
+  });
+
+  it('sends no email when neither a durable nor a portal URL can be built, but still publishes the failure event', async () => {
+    buildDurablePaymentUrl.mockResolvedValue(null);
+    buildPortalInvoiceUrl.mockResolvedValue(null);
+    const service = await AutopayService.create('tenant-1');
+    await service.finishAutopayWithFallback('invoice-1', 'attempt-1', 'payment_failed');
+    expect(sendEmail).not.toHaveBeenCalled();
+    expect(getOrCreatePaymentLink).not.toHaveBeenCalled();
+    const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
+    expect(publishWorkflowEvent).toHaveBeenCalled();
   });
 
   it('does not cancel a processing row through the invoice-settled cancellation path', async () => {

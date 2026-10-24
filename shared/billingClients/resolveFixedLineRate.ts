@@ -14,6 +14,11 @@
  */
 
 import logger from "@alga-psa/core/logger";
+import {
+  fixedMemberContributionCents,
+  fixedRateBasisOf,
+  type FixedRateBasis,
+} from "./fixedMemberRate";
 
 export type RateProvenance = "custom" | "inherited" | "unreviewed";
 
@@ -32,6 +37,13 @@ export interface ResolvedRate {
   source: RateSource | null;
   sourceId: string | null;
   provenance: RateProvenance;
+  /**
+   * What `rateCents` means (see fixedMemberRate.ts). Only a stored fixed-config
+   * `base_rate` can be a `share`; every other source is a per-unit price. At
+   * line level this is the basis of the line's `rateCents` (a line total is
+   * reported as `share`: it is already the whole fee).
+   */
+  basis: FixedRateBasis;
   /** Governing unit-pricing revision, when one applied. */
   revisionId?: string | null;
   revisionVersion?: number | null;
@@ -57,6 +69,8 @@ export interface PlanServiceRateRow {
   service_base_rate?: number | string | null;
   /** `contract_line_service_fixed_config.rate_provenance`. */
   base_rate_provenance?: RateProvenance | null;
+  /** `contract_line_service_fixed_config.base_rate_basis`: share vs per-unit. */
+  base_rate_basis?: string | null;
   /** `contract_line_service_configuration.custom_rate` (cents). */
   configuration_custom_rate?: number | string | null;
   /**
@@ -246,6 +260,7 @@ export function resolveMemberRate(
         source: "unit_revision",
         sourceId: revision.revision_id ?? null,
         provenance: "inherited",
+        basis: "per_unit",
         ...revisionIdentity,
         pricePolicy: "catalog",
         catalogPriceId: catalogRate?.price_id ?? null,
@@ -259,6 +274,7 @@ export function resolveMemberRate(
         source: "unit_revision",
         sourceId: revision.revision_id ?? null,
         provenance: "custom",
+        basis: "per_unit",
         ...revisionIdentity,
         pricePolicy: "override",
       };
@@ -284,6 +300,7 @@ export function resolveMemberRate(
         source: "service_override",
         sourceId: service.config_id,
         provenance: baseRateProvenance,
+        basis: fixedRateBasisOf(service),
       };
     }
   }
@@ -296,6 +313,7 @@ export function resolveMemberRate(
       source: "config_override",
       sourceId: service.config_id,
       provenance: "custom",
+      basis: "per_unit",
     };
   }
 
@@ -308,6 +326,7 @@ export function resolveMemberRate(
         source: "service_override",
         sourceId: service.config_id,
         provenance: "custom",
+        basis: "per_unit",
       };
     }
   }
@@ -325,6 +344,7 @@ export function resolveMemberRate(
       source: "catalog",
       sourceId: catalogPrice.price_id,
       provenance: "inherited",
+      basis: "per_unit",
     };
   }
 
@@ -346,11 +366,25 @@ export function resolveMemberRate(
         source: "catalog_legacy",
         sourceId: service.service_id,
         provenance: "inherited",
+        basis: "per_unit",
       };
     }
   }
 
-  return { rateCents: null, source: null, sourceId: null, provenance: "inherited" };
+  return { rateCents: null, source: null, sourceId: null, provenance: "inherited", basis: "per_unit" };
+}
+
+/**
+ * A resolved member's contribution to the line fee for one period. Callers that
+ * value a member (rate review, monthly value) use this and never re-derive the
+ * multiplication; the interpretation lives in fixedMemberRate.ts.
+ */
+export function memberContributionCents(
+  resolved: Pick<ResolvedRate, "rateCents" | "basis">,
+  service: PlanServiceRateRow,
+): number | null {
+  if (resolved.rateCents === null) return null;
+  return fixedMemberContributionCents(resolved.rateCents, resolved.basis, quantityOf(service));
 }
 
 export interface EffectiveServicePrice {
@@ -502,6 +536,7 @@ export function resolveFixedLineRate(
           source: "pricing_schedule",
           sourceId: activeSchedule.schedule_id ?? null,
           provenance: "custom",
+          basis: "share",
         },
         perService,
       };
@@ -523,6 +558,7 @@ export function resolveFixedLineRate(
         source: "line_override",
         sourceId: input.line.contract_line_id,
         provenance: lineProvenance,
+        basis: "share",
       },
       perService,
     };
@@ -533,8 +569,9 @@ export function resolveFixedLineRate(
   let hasMemberRate = false;
   for (const service of input.planServices) {
     const member = perService.get(service.config_id);
-    if (!member || member.rateCents === null) continue;
-    derived += member.rateCents * quantityOf(service);
+    const contribution = member ? memberContributionCents(member, service) : null;
+    if (contribution === null) continue;
+    derived += contribution;
     hasMemberRate = true;
   }
 
@@ -544,6 +581,7 @@ export function resolveFixedLineRate(
       source: hasMemberRate ? "derived" : null,
       sourceId: null,
       provenance: "inherited",
+      basis: "share",
     },
     perService,
   };

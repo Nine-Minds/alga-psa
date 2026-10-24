@@ -16,6 +16,7 @@ import { TagFilter } from './tags/TagFilter';
 import { useClientTags } from '../context/ClientTagsContext';
 import type { EntityAvatarProps } from './EntityAvatar';
 import { useTranslation } from '../lib/i18n/client';
+import { AsyncClientPicker, type ClientPickerSearchFn } from './AsyncClientPicker';
 
 import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
@@ -27,9 +28,25 @@ type ButtonSize = VariantProps<typeof buttonVariants>['size'];
 type ClientFilterState = 'all' | 'active' | 'inactive';
 type ClientTypeFilter = 'all' | 'company' | 'individual';
 
+/** In-memory mode only: skip the tag fetch (and hide the tag filter) for lists larger than this. */
+const IN_MEMORY_TAG_FETCH_LIMIT = 200;
+
 interface ClientPickerProps {
   id?: string;
+  /**
+   * @deprecated Full in-memory client lists don't scale (5k+ tenants). Pass `searchClients`
+   * (e.g. `searchClientsForPicker`) instead; the server pages, searches and filters.
+   * Cards D, E and F are migrating the remaining callers off full lists. Still honoured
+   * for small, pre-filtered lists. Ignored when `searchClients` is set.
+   */
   clients?: IClient[];
+  /**
+   * Async mode: server-side search (pass `searchClientsForPicker`). The picker pages,
+   * debounces and hydrates the selected value itself and never needs the full list.
+   */
+  searchClients?: ClientPickerSearchFn;
+  /** Async mode only: ids removed from results on the server (not the same as disabledClientIds). */
+  excludeIds?: string[];
   onSelect: (clientId: string | null) => void;
   selectedClientId: string | null;
   filterState?: ClientFilterState;
@@ -95,7 +112,33 @@ const OptionButton: React.FC<OptionButtonProps> = ({ id, label, onSelect, disabl
   );
 };
 
-export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
+export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = (props) => {
+  if (props.searchClients) {
+    return (
+      <AsyncClientPicker
+        id={props.id}
+        searchClients={props.searchClients}
+        onSelect={props.onSelect}
+        selectedClientId={props.selectedClientId}
+        filterState={props.filterState}
+        onFilterStateChange={props.onFilterStateChange}
+        clientTypeFilter={props.clientTypeFilter}
+        onClientTypeFilterChange={props.onClientTypeFilterChange}
+        disabledClientIds={props.disabledClientIds}
+        disabledTooltip={props.disabledTooltip}
+        excludeIds={props.excludeIds}
+        className={props.className}
+        placeholder={props.placeholder}
+        modal={props.modal}
+        onAddNew={props.onAddNew}
+        disabled={props.disabled}
+      />
+    );
+  }
+  return <InMemoryClientPicker {...props} />;
+};
+
+const InMemoryClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   id = 'client-picker',
   clients = [],
   onSelect,
@@ -144,7 +187,8 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   );
 
   useEffect(() => {
-    if (!isOpen || !fetchClientTags || clients.length === 0) return;
+    // Scoped to the ids we were given; a list too large to be "small by definition" gets no tag filter.
+    if (!isOpen || !fetchClientTags || clients.length === 0 || clients.length > IN_MEMORY_TAG_FETCH_LIMIT) return;
     let cancelled = false;
     fetchClientTags(clients.map((client) => client.client_id))
       .then((tags) => {

@@ -34,6 +34,7 @@ import {
   propagateBundleMasterStatus,
   revertBundlePropagationForChild,
   revertBundlePropagationsForMaster,
+  changeBundleSettings,
   type BundleAfterCommitPublication,
   type BundleAttachFailure,
 } from '@alga-psa/tickets/actions/ticketBundleUtils';
@@ -42,10 +43,10 @@ import {
   BundleConcurrentModificationError,
   type ClosedMasterChoice,
 } from '@alga-psa/tickets/lib/ticketBundlePolicy';
+import { BUNDLE_CHILD_LOCKED_FIELDS, isChildWorkflowLocked } from '@alga-psa/tickets/lib/bundleWorkflowLock';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
 import {
-  TICKET_LATEST_ACTIVITY_PUBLIC_SQL,
-  TICKET_LATEST_ACTIVITY_SQL,
+  ticketLatestActivitySql,
 } from '@alga-psa/tickets/actions/ticketListSortSql';
 import { enforceTicketCloseRules, TicketCloseValidationError } from '@alga-psa/tickets/lib/validateTicketClosure';
 import { prepareTicketResourceReassignment } from '@alga-psa/db/reassignTicketResources';
@@ -140,11 +141,6 @@ const TICKET_MOBILE_LIST_FIELDS = [
   'bundle_child_count',
 ];
 
-// Shared with packages/tickets/src/actions/optimizedTicketActions.ts: the
-// fields a bundled child cannot change directly, and the fields a
-// sync_updates master pushes down to its children.
-const BUNDLE_CHILD_LOCKED_FIELDS = ['status_id', 'assigned_to', 'priority_id'] as const;
-
 const TICKET_LIST_FIELD_ALLOWLIST = new Set<string>([
   ...TICKET_MOBILE_LIST_FIELDS,
   'mobile_list',
@@ -160,8 +156,9 @@ const TICKET_LIST_FIELD_ALLOWLIST = new Set<string>([
  * `sort` is a string, so before this map an unknown value reached
  * `orderBy('t.<value>')` and surfaced as a 500 from Postgres instead of a 400.
  *
- * `latest_activity_at` carries no fixed SQL — the expression depends on whether
- * the caller is a client-portal contact (see TICKET_LATEST_ACTIVITY_PUBLIC_SQL).
+ * `latest_activity_at` carries no fixed SQL — the expression depends on the
+ * tenant and on whether the caller is a client-portal contact (see
+ * ticketLatestActivitySql).
  */
 type TicketApiSortSpec = { column?: string; activity?: true };
 
@@ -545,9 +542,9 @@ export class TicketService extends BaseService<ITicket> {
 
     // Client-portal callers must not be able to read the timing of internal
     // notes off this column, nor have them reorder the portal list.
-    const latestActivitySql = clientVisibility
-      ? TICKET_LATEST_ACTIVITY_PUBLIC_SQL
-      : TICKET_LATEST_ACTIVITY_SQL;
+    const latestActivity = ticketLatestActivitySql(context.tenant, {
+      publicOnly: Boolean(clientVisibility),
+    });
 
     const wants = (field: string) => Boolean(selectedFields && selectedFields.includes(field));
 
@@ -591,7 +588,7 @@ export class TicketService extends BaseService<ITicket> {
     // Order by the allowlisted term, then ticket_id desc so pages stay stable
     // across a tie (parity with applyTicketListSort on the web list).
     if (sortSpec.activity) {
-      dataQuery = dataQuery.orderByRaw(`${latestActivitySql} ${sortDirection}`);
+      dataQuery = dataQuery.orderByRaw(`${latestActivity.sql} ${sortDirection}`, latestActivity.bindings);
     } else {
       dataQuery = dataQuery.orderBy(sortSpec.column!, sortDirection);
     }
@@ -633,7 +630,7 @@ export class TicketService extends BaseService<ITicket> {
           END as assigned_to_name`),
           // Same expression the latest_activity_at sort orders by, so the
           // reported value is exactly the one the ordering used.
-          knex.raw(`${latestActivitySql} as latest_activity_at`),
+          knex.raw(`${latestActivity.sql} as latest_activity_at`, latestActivity.bindings),
         );
     } else {
       const selectParts: any[] = [];
@@ -652,7 +649,7 @@ export class TicketService extends BaseService<ITicket> {
       if (selectedFields.includes('closed_at')) selectParts.push('t.closed_at');
       if (selectedFields.includes('master_ticket_id')) selectParts.push('t.master_ticket_id');
       if (selectedFields.includes('latest_activity_at')) {
-        selectParts.push(knex.raw(`${latestActivitySql} as latest_activity_at`));
+        selectParts.push(knex.raw(`${latestActivity.sql} as latest_activity_at`, latestActivity.bindings));
       }
       if (needsBundleMaster) selectParts.push('mt.ticket_number as bundle_master_ticket_number');
       if (needsBundleChildCount) selectParts.push(bundleChildCountSelect);
@@ -1883,12 +1880,17 @@ export class TicketService extends BaseService<ITicket> {
       // UPDATE statement. Inline links are written by the create paths only.
       delete (cleanedData as any).external_links;
 
-      // Bundled child tickets lock workflow fields, same as the in-app
-      // update action: status, assignment and priority flow down from the
-      // master (sync_updates) or are managed there (link_only). Adopted from
-      // main: a direct REST write to a bundled child's workflow fields is
-      // rejected, so a child can never be reopened behind the master's back.
-      if (currentTicket.master_ticket_id) {
+      // A bundled child's workflow fields are locked only while its master is
+      // in sync_updates mode (the master pushes status, assignment and priority
+      // down, so a direct write would be overwritten or contradict it). A
+      // link_only child manages its own workflow fields. Same rule as the
+      // in-app update action: bundleWorkflowLock.
+      const masterSettings = currentTicket.master_ticket_id
+        ? await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
+            .where({ master_ticket_id: currentTicket.master_ticket_id })
+            .first()
+        : null;
+      if (isChildWorkflowLocked({ isBundledChild: Boolean(currentTicket.master_ticket_id), masterSettings })) {
         const attempted = BUNDLE_CHILD_LOCKED_FIELDS.filter(
           (field) => (cleanedData as Record<string, unknown>)[field] !== undefined
             && (cleanedData as Record<string, unknown>)[field] !== (currentTicket as Record<string, unknown>)[field]
@@ -2136,12 +2138,12 @@ export class TicketService extends BaseService<ITicket> {
         { propagateToChildren }
       );
 
-      // A bundled child can no longer be reopened through this REST path: the
-      // BUNDLE_CHILD_LOCKED_FIELDS gate above rejects any change to a child's
-      // status_id/assigned_to/priority_id, so the ledger can never disagree
-      // with tickets.is_closed via this surface. (The former independent-close
-      // revert hook is intentionally gone; only bundle detach/remove reverts
-      // rows now.)
+      // A sync_updates child can no longer be reopened through this REST path:
+      // the BUNDLE_CHILD_LOCKED_FIELDS gate above rejects any change to its
+      // status_id/assigned_to/priority_id, so the propagation ledger cannot
+      // disagree with tickets.is_closed via this surface. (The former
+      // independent-close revert hook is intentionally gone; only bundle
+      // detach/remove reverts rows now.)
 
       // Publish appropriate events
       if (statusChanged) {
@@ -3142,6 +3144,7 @@ export class TicketService extends BaseService<ITicket> {
     if (externalSystem || externalId) {
       const externalLinkSubquery = scopedDb.subquery('external_entity_links as eel')
         .select('*')
+        .whereRaw('eel.tenant = t.tenant')
         .whereRaw('eel.ticket_id = t.ticket_id')
         .andWhere('eel.entity_type', 'ticket');
       if (externalSystem) {
@@ -3189,6 +3192,7 @@ export class TicketService extends BaseService<ITicket> {
             query.whereExists(
               scopedDb.subquery('statuses as s')
                 .select('*')
+                .whereRaw('s.tenant = t.tenant')
                 .whereRaw('s.status_id = t.status_id')
                 .andWhere('s.is_closed', false)
             );
@@ -3199,6 +3203,7 @@ export class TicketService extends BaseService<ITicket> {
             query.whereExists(
               scopedDb.subquery('statuses as s')
                 .select('*')
+                .whereRaw('s.tenant = t.tenant')
                 .whereRaw('s.status_id = t.status_id')
                 .andWhere('s.is_closed', true)
             );
@@ -3218,6 +3223,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('clients as c')
               .select('*')
+              .whereRaw('c.tenant = t.tenant')
               .whereRaw('c.client_id = t.client_id')
               .andWhere('c.client_name', value)
           );
@@ -3226,6 +3232,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('contacts as cn')
               .select('*')
+              .whereRaw('cn.tenant = t.tenant')
               .whereRaw('cn.contact_name_id = t.contact_name_id')
               .andWhere('cn.full_name', value)
           );
@@ -3234,6 +3241,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('boards as b')
               .select('*')
+              .whereRaw('b.tenant = t.tenant')
               .whereRaw('b.board_id = t.board_id')
               .andWhere('b.board_name', value)
           );
@@ -3242,6 +3250,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('categories as cat')
               .select('*')
+              .whereRaw('cat.tenant = t.tenant')
               .whereRaw('cat.category_id = t.category_id')
               .andWhere('cat.category_name', value)
           );
@@ -3251,6 +3260,7 @@ export class TicketService extends BaseService<ITicket> {
             const tagTexts = (value as string[]).map(tag => tag.toLowerCase());
             const tagSubquery = scopedDb.subquery('tag_mappings as tm')
               .select('*')
+              .whereRaw('tm.tenant = t.tenant')
               .whereRaw('tm.tagged_id = t.ticket_id')
               .andWhere('tm.tagged_type', 'ticket')
               .whereRaw(
@@ -3276,6 +3286,7 @@ export class TicketService extends BaseService<ITicket> {
               subQuery.orWhereExists(
                 scopedDb.subquery('clients as c')
                   .select('*')
+                  .whereRaw('c.tenant = t.tenant')
                   .whereRaw('c.client_id = t.client_id')
                   .andWhereILike('c.client_name', `%${value}%`)
               );
@@ -3292,6 +3303,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('priorities as p')
               .select('*')
+              .whereRaw('p.tenant = t.tenant')
               .whereRaw('p.priority_id = t.priority_id')
               .andWhere('p.priority_name', value)
           );
@@ -3300,6 +3312,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereExists(
             scopedDb.subquery('statuses as s')
               .select('*')
+              .whereRaw('s.tenant = t.tenant')
               .whereRaw('s.status_id = t.status_id')
               .andWhere('s.name', value)
           );
@@ -3657,34 +3670,33 @@ export class TicketService extends BaseService<ITicket> {
 
   async updateBundleSettings(
     context: ServiceContext,
-    params: { masterTicketId: string; mode?: BundleMode; reopenOnChildReply?: boolean }
+    params: {
+      masterTicketId: string;
+      mode?: BundleMode;
+      reopenOnChildReply?: boolean;
+      /** Required when switching a bundle with a closed master to sync_updates. */
+      onClosedMaster?: ClosedMasterChoice;
+    }
   ): Promise<{ master_ticket_id: string; mode: BundleMode; reopen_on_child_reply: boolean }> {
     const { knex } = await this.getKnex();
+    const occurredAt = new Date().toISOString();
 
     return withTransaction(knex, async (trx) => {
-      const existing = await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
-        .where({ master_ticket_id: params.masterTicketId })
-        .first();
-      if (!existing) throw new NotFoundError('Bundle settings not found');
-
-      const update: any = {};
-      if (params.mode) update.mode = params.mode;
-      if (params.reopenOnChildReply !== undefined) update.reopen_on_child_reply = params.reopenOnChildReply;
-
-      if (Object.keys(update).length === 0) {
-        return {
-          master_ticket_id: existing.master_ticket_id,
-          mode: existing.mode,
-          reopen_on_child_reply: existing.reopen_on_child_reply,
-        };
+      const changed = await changeBundleSettings(trx, context.tenant, {
+        masterTicketId: params.masterTicketId,
+        mode: params.mode,
+        reopenOnChildReply: params.reopenOnChildReply,
+        choice: params.onClosedMaster ?? null,
+        actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: context.userId },
+        source: TICKET_ACTIVITY_SOURCE.API,
+        occurredAt,
+      });
+      if (!changed.ok) {
+        if (changed.code === 'settings_not_found') throw new NotFoundError('Bundle settings not found');
+        this.throwBundleAttachFailure(changed);
       }
-
-      const [updated] = await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
-        .where({ master_ticket_id: params.masterTicketId })
-        .update(update)
-        .returning(['master_ticket_id', 'mode', 'reopen_on_child_reply']);
-
-      return updated;
+      this.registerBundlePublications(trx, context, changed.value.publications);
+      return changed.value.settings;
     });
   }
 

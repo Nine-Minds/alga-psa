@@ -421,6 +421,12 @@ describe('ticket comment threading actions', () => {
       expect(deniedInternalThreadReply).toMatchObject({
         actionError: 'Reply visibility must match the thread root visibility',
       });
+      // A denied portal reply must not be stored at all -- not even re-rooted
+      // into a fresh public thread the way inbound email replies are.
+      const clientAuthoredIds = await scopedDb(context.tenant).table('comments')
+        .where({ user_id: ids.client_user_id })
+        .pluck('comment_id');
+      expect(clientAuthoredIds).toEqual([allowedReplyId]);
 
       const deniedInaccessibleReply = await createComment({
         ticket_id: ids.other_ticket_id,
@@ -435,6 +441,18 @@ describe('ticket comment threading actions', () => {
       });
     } finally {
       userRef.user = originalUser;
+      // Remove anything the client user authored, including comments a
+      // regression stored outside the seeded threads, so cleanup cannot mask
+      // the real assertion with a users FK violation.
+      const strayClientComments = await scopedDb(context.tenant).table('comments')
+        .where({ user_id: ids.client_user_id })
+        .select('comment_id', 'thread_id');
+      await scopedDb(context.tenant).table('comments')
+        .where({ user_id: ids.client_user_id })
+        .delete();
+      await scopedDb(context.tenant).table('comment_threads')
+        .whereIn('root_comment_id', strayClientComments.map((row: any) => row.comment_id))
+        .delete();
       await scopedDb(context.tenant).table('comments')
         .whereIn('parent_comment_id', [clientVisibleRootId, internalRootId, inaccessibleRootId].filter(Boolean))
         .delete();
