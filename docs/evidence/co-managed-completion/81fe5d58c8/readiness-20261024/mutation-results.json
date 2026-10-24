@@ -1,0 +1,25 @@
+[
+  {
+    "mutation": "foreign-read-admission",
+    "file": "packages/co-managed/src/sharedWorkRead.ts",
+    "exitCode": 1,
+    "detectedActualBoundaryBypass": true
+  },
+  {
+    "mutation": "foreign-write-admission",
+    "file": "packages/co-managed/src/customerWork.ts",
+    "exitCode": 1,
+    "detectedActualBoundaryBypass": true
+  },
+  {
+    "mutation": "restored-boundaries",
+    "exitCode": 0,
+    "passed": true
+  },
+  {
+    "mutation": "OIDC token verification omitted",
+    "exitCode": 1,
+    "detected": true,
+    "restoredExitCode": 0
+  }
+]

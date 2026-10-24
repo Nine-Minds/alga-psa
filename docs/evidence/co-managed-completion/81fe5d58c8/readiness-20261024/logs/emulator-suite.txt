@@ -1,0 +1,36 @@
+
+ RUN  v4.1.11 /home/robert/alga-copies/feature-co-managed-it/packages/emulators/msgraph
+
+[algasim] msgraph vendor surface listening {"port":39633}
+[algasim] control API listening {"port":36047}
+[algasim] msgraph vendor surface listening {"port":33379}
+[algasim] control API listening {"port":46013}
+[algasim] msgraph vendor surface listening {"port":46223}
+[algasim] control API listening {"port":46665}
+[algasim] msgraph vendor surface listening {"port":33151}
+[algasim] control API listening {"port":41141}
+[algasim] msgraph vendor surface listening {"port":41355}
+[algasim] control API listening {"port":46419}
+[algasim] msgraph vendor surface listening {"port":37541}
+[algasim] control API listening {"port":40585}
+[algasim] msgraph vendor surface listening {"port":39623}
+[algasim] control API listening {"port":40129}
+[algasim] restored emulator state {"stateFile":"/tmp/algasim-state-89m1er/state.json","savedAt":"2026-10-24T15:50:30.455Z"}
+[algasim] msgraph vendor surface listening {"port":40085}
+[algasim] control API listening {"port":46599}
+[algasim] msgraph vendor surface listening {"port":44743}
+[algasim] control API listening {"port":46155}
+[algasim] msgraph vendor surface listening {"port":44993}
+[algasim] control API listening {"port":39721}
+[algasim] msgraph vendor surface listening {"port":34435}
+[algasim] control API listening {"port":44065}
+[algasim] msgraph vendor surface listening {"port":43833}
+[algasim] control API listening {"port":37705}
+[algasim] msgraph vendor surface listening {"port":46775}
+[algasim] control API listening {"port":41103}
+[algasim] msgraph notification delivery failed {"subscriptionId":"91fd781c-11b0-4ea6-810b-b089ea844226","error":"fetch failed"}
+
+ Test Files  10 passed (10)
+      Tests  105 passed (105)
+   Start at  11:50:29
+   Duration  1.78s (transform 2.26s, setup 0ms, import 3.32s, tests 4.20s, environment 0ms)

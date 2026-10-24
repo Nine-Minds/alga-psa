@@ -1,0 +1,19 @@
+
+> @alga-psa/emulator-msgraph@0.0.1 build
+> tsup
+
+CLI Building entry: {"botFramework":"src/botFramework.ts","core":"src/core.ts","entraOidc":"src/entraOidc.ts","index":"src/index.ts","notifier":"src/notifier.ts","register":"src/register.ts","wire":"src/wire.ts"}
+CLI Using tsconfig: tsconfig.json
+CLI tsup v8.5.1
+CLI Using tsup config: /home/robert/alga-copies/feature-co-managed-it/packages/emulators/msgraph/tsup.config.ts
+CLI Target: es2022
+CLI Cleaning output folder
+ESM Build start
+ESM dist/botFramework.js 1.25 KB
+ESM dist/entraOidc.js    788.00 B
+ESM dist/core.js         43.98 KB
+ESM dist/notifier.js     8.90 KB
+ESM dist/register.js     18.95 KB
+ESM dist/index.js        572.00 B
+ESM dist/wire.js         25.85 KB
+ESM ⚡️ Build success in 10ms

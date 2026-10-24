@@ -1,0 +1,63 @@
+co-managed completion gate — docs/evidence/co-managed-completion/81fe5d58c8/manifest.json
+candidate: 353786ce9168cf813f2ed0219018024b263ca354
+requirements: blocked-external=3 failed=2 implemented-unverified=104 missing-code=82 verified=2
+
+implementationReady: false
+  - required requirement ticketList:F040 is absent from the manifest
+  - required requirement ticketList:F041 is absent from the manifest
+  - required requirement ticketList:F042 is absent from the manifest
+  - required requirement ticketList:F043 is absent from the manifest
+  - required requirement ticketList:F044 is absent from the manifest
+  - required requirement ticketList:F045 is absent from the manifest
+  - required requirement ticketList:F046 is absent from the manifest
+  - required requirement ticketList:F047 is absent from the manifest
+  - required requirement ticketList:F048 is absent from the manifest
+  - required requirement ticketList:F049 is absent from the manifest
+  - required requirement ticketList:T021 is absent from the manifest
+  - required requirement ticketList:T022 is absent from the manifest
+  - required requirement ticketList:T023 is absent from the manifest
+  - required requirement ticketList:T024 is absent from the manifest
+  - required requirement ticketList:T025 is absent from the manifest
+  - required requirement ticketList:T026 is absent from the manifest
+  - required requirement nativeTicketScreen:F001 is absent from the manifest
+  - required requirement nativeTicketScreen:F002 is absent from the manifest
+  - required requirement nativeTicketScreen:F003 is absent from the manifest
+  - required requirement nativeTicketScreen:F004 is absent from the manifest
+  - required requirement nativeTicketScreen:F005 is absent from the manifest
+  - required requirement nativeTicketScreen:F006 is absent from the manifest
+  - required requirement nativeTicketScreen:F007 is absent from the manifest
+  - required requirement nativeTicketScreen:F008 is absent from the manifest
+  - required requirement nativeTicketScreen:F009 is absent from the manifest
+  - required requirement nativeTicketScreen:F010 is absent from the manifest
+  - required requirement nativeTicketScreen:F011 is absent from the manifest
+  - required requirement nativeTicketScreen:F012 is absent from the manifest
+  - required requirement nativeTicketScreen:F013 is absent from the manifest
+  - required requirement nativeTicketScreen:F014 is absent from the manifest
+  - required requirement nativeTicketScreen:F015 is absent from the manifest
+  - required requirement nativeTicketScreen:F016 is absent from the manifest
+  - required requirement nativeTicketScreen:F017 is absent from the manifest
+  - required requirement nativeTicketScreen:F018 is absent from the manifest
+  - required requirement nativeTicketScreen:F019 is absent from the manifest
+  - required requirement nativeTicketScreen:F020 is absent from the manifest
+  - required requirement nativeTicketScreen:F021 is absent from the manifest
+  - required requirement nativeTicketScreen:F022 is absent from the manifest
+  - required requirement nativeTicketScreen:F023 is absent from the manifest
+  - required requirement nativeTicketScreen:F024 is absent from the manifest
+  … and 223 more
+
+humanReviewReady: false
+  - manifest candidate 353786ce91 is not the current HEAD 0784ad4c7d (5618 file(s) changed outside docs/evidence/co-managed-completion/81fe5d58c8)
+  - implementationReady is false
+  - running app revision missing is not the candidate
+  - running worker revision missing is not the candidate
+  - review environment is not recorded stable
+  - review environment observation is shorter than the required 30 minutes
+  - review environment healed an unrecorded number of times
+
+productionReady: false
+  - manifest candidate 353786ce91 is not the current HEAD 0784ad4c7d (5618 file(s) changed outside docs/evidence/co-managed-completion/81fe5d58c8)
+  - humanReviewReady is false
+  - stripe-recurring-1149: not accepted by the release owner
+  - external-license-issuance: not accepted by the release owner
+  - microsoft-real-application: not accepted by the release owner
+  - deployed-storage-and-migrations: not accepted by the release owner

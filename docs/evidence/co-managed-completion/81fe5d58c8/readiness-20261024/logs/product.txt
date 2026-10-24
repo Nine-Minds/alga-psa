@@ -1,0 +1,151 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "20260610"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ |node| src/test/unit/product/coManagedPortableArchive.test.ts (4 tests) 4325ms 12 MB heap used
+   ✓ portable encrypted archive transport > round trips an authenticated manifest and actual files across a frame boundary using only the customer passphrase  477ms
+   ✓ portable encrypted archive transport > rejects wrong passphrases, context substitution, modified bytes, reordered or duplicated frames, truncation and appended content before returning a lease  2806ms
+   ✓ portable encrypted archive transport > rejects authenticated but inconsistent blob checksums and cleans up after extraction failure  607ms
+   ✓ portable encrypted archive transport > rejects unsafe identities, duplicate membership, oversized files, symlinks and source hash changes without partial output  434ms
+ ✓ |node| src/test/unit/product/coManagedTicketCommentActions.test.ts (6 tests) 5ms 14 MB heap used
+ ✓ |node| src/test/unit/product/providerSetupReachability.test.ts (7 tests) 227ms 44 MB heap used
+ ✓ |node| src/test/unit/product/routeRegistryFilesystemInventory.contract.test.ts (5 tests) 17ms 31 MB heap used
+ ✓ |node| src/test/unit/product/coManagedManagementActions.test.ts (11 tests) 5ms 21 MB heap used
+ ✓ |node| src/test/unit/product/coManagedSharedTicketData.test.ts (4 tests) 2ms 23 MB heap used
+ ✓ |node| src/test/unit/product/mcpIdpDiscoveryNotRequestSelected.contract.test.ts (3 tests) 1ms 24 MB heap used
+ ✓ |node| src/test/unit/product/coManagedT21Boundary.contract.test.ts (6 tests) 2ms 27 MB heap used
+ ✓ |node| src/test/unit/product/coManagedOrganizationSlaClock.test.ts (9 tests) 7ms 25 MB heap used
+ ✓ |node| src/test/unit/product/portableRestoreUploadCleanupHandler.test.ts (3 tests) 1ms 27 MB heap used
+ ✓ |node| src/test/unit/product/coManagedAttachmentActions.test.ts (9 tests) 5ms 30 MB heap used
+ ✓ |node| src/test/unit/product/coManagedPortableTransfer.test.ts (5 tests) 26ms 33 MB heap used
+ ✓ |node| src/test/unit/product/coManagedTicketQueueActions.test.ts (7 tests) 3ms 24 MB heap used
+ ✓ |node| src/test/unit/product/hardcodedCurrency.contract.test.ts (6 tests) 1ms 84 MB heap used
+ ✓ |node| src/test/unit/product/algadeskRouteAndApiBoundarySmoke.test.ts (5 tests) 2ms 77 MB heap used
+ ✓ |node| src/test/unit/product/coManagedPortableWorkspaceRestoreRecords.test.ts (9 tests) 46ms 102 MB heap used
+ ✓ |node| src/test/unit/product/coManagedPortableWorkspaceRestoreVault.test.ts (6 tests) 1115ms 105 MB heap used
+   ✓ authenticates exact envelope membership and passphrase before invoking the configured destination provider  426ms
+ ✓ |node| src/test/unit/product/coManagedCustomerTicketRoute.test.ts (2 tests) 1ms 107 MB heap used
+ ✓ |node| src/test/unit/product/serverActionProductAccess.contract.test.ts (2 tests) 1ms 109 MB heap used
+ ✓ |node| src/test/unit/product/coManagedAttachmentUploadLimit.test.ts (1 test) 1ms 111 MB heap used
+ ✓ |node| src/test/unit/product/coManagedPortableRecords.test.ts (5 tests) 1ms 114 MB heap used
+ ✓ |node| src/test/unit/product/coManagedPortalAttachmentDownload.test.ts (6 tests) 6ms 103 MB heap used
+ ✓ |node| src/test/unit/product/coManagedDelegatedAdministrationActions.test.ts (4 tests) 3ms 106 MB heap used
+ ✓ |node| src/test/unit/product/portableRestoreRecoverySchedule.test.ts (2 tests) 1ms 113 MB heap used
+ ✓ |node| src/test/unit/productSurfaceRegistry.test.ts (13 tests) 2ms 110 MB heap used
+ ✓ |node| src/test/unit/product/coManagedAcceptanceActions.test.ts (2 tests) 1ms 112 MB heap used
+ ✓ |node| src/test/unit/product/coManagedSharedTicketDetailsAction.test.ts (2 tests) 1ms 115 MB heap used
+ ✓ |node| src/test/unit/product/coManagedProvisioningMessage.test.ts (4 tests) 1ms 106 MB heap used
+ ✓ |node| src/test/unit/product/coManagedPortableTemporaryDirectory.test.ts (4 tests) 70ms 110 MB heap used
+ ✓ |node| src/test/unit/product/commentAudience.test.ts (2 tests) 1ms 106 MB heap used
+ ✓ |node| src/test/unit/product/coManagedPortableRestoreIdentity.test.ts (9 tests) 8ms 112 MB heap used
+ ✓ |node| src/test/unit/product/coManagedTicketEditActions.test.ts (14 tests) 3ms 116 MB heap used
+ ✓ |node| src/test/unit/product/coManagedAttachmentDownload.test.ts (6 tests) 3ms 119 MB heap used
+ ✓ |node| src/test/unit/product/conversationDraftSubmission.test.ts (9 tests) 9ms 111 MB heap used
+ ✓ |node| src/test/unit/product/coManagedSecureContextCrypto.test.ts (3 tests) 3ms 119 MB heap used
+ ✓ |node| src/test/unit/product/coManagedProductSurface.test.ts (33 tests) 3ms 116 MB heap used
+ ✓ |node| src/test/unit/product/coManagedTicketCommentMutationActions.test.ts (6 tests) 1ms 120 MB heap used
+ ✓ |node| src/test/unit/product/dashboardChecklistReachability.test.ts (4 tests) 1ms 126 MB heap used
+ ✓ |node| src/test/unit/productAccess.test.ts (8 tests) 29ms 122 MB heap used
+ ✓ |node| src/test/unit/product/coManagedThreadDisclosureActions.test.ts (9 tests) 3ms 125 MB heap used
+ ✓ |node| src/test/unit/product/coManagedPortableRichTextReferences.test.ts (10 tests) 13ms 137 MB heap used
+ ✓ |node| src/test/unit/product/coManagedPortableWorkspaceRestoreFiles.test.ts (16 tests) 716ms 147 MB heap used
+   ✓ opens an authenticated archive, streams verified bytes to unique destination keys and releases ownership after caller commit  507ms
+ ✓ |node| src/test/unit/product/coManagedPortableDownload.test.ts (3 tests) 5ms 138 MB heap used
+ ✓ |node| src/test/unit/product/coManagedDeletedPanel.contract.test.ts (2 tests) 558ms 140 MB heap used
+   ✓ deleted co-managed ticket panel components > are not imported anywhere  558ms
+ ✓ |node| src/test/unit/product/coManagedSeatPlurals.test.ts (8 tests) 6ms 144 MB heap used
+ ✓ |node| src/test/unit/product/psaPreservation.contract.test.ts (2 tests) 1ms 146 MB heap used
+ ✓ |node| src/test/unit/product/uiReachabilityCoherence.contract.test.ts (5 tests) 4ms 175 MB heap used
+ ✓ |node| src/test/unit/product/coManagedSponsorRouteSelection.test.ts (5 tests) 4ms 179 MB heap used
+ ✓ |node| src/test/unit/product/coManagedPortableVault.test.ts (3 tests) 2182ms 172 MB heap used
+   ✓ co-managed portable customer vault > restores usable passwords and OTP seeds with a new installation key after the source key is gone  389ms
+   ✓ co-managed portable customer vault > rejects tampering, substitution, wrong membership and wrong passphrases before any destination vault call  999ms
+   ✓ co-managed portable customer vault > uses the destination Transit write scheme and fails closed if source decryption or destination encryption fails  795ms
+ ✓ |node| src/test/unit/product/coManagedTimeBillingProfileActions.test.ts (6 tests) 2ms 176 MB heap used
+ ✓ |node| src/test/unit/product/coManagedPortableWorkspaceManifest.test.ts (17 tests) 220ms 186 MB heap used
+ ✓ |node| src/test/unit/product/coManagedTicketAssignmentActions.test.ts (10 tests) 3ms 190 MB heap used
+ ✓ |node| src/test/unit/product/coManagedConversationDraftActions.test.ts (8 tests) 3ms 182 MB heap used
+ ✓ |node| src/test/unit/product/coManagedConversationRichText.test.ts (18 tests) 9ms 193 MB heap used
+ ✓ |node| src/test/unit/product/coManagedPortalAttachmentActions.test.ts (5 tests) 2ms 184 MB heap used
+ ✓ |node| src/test/unit/product/coManagedConversationText.test.ts (6 tests) 2ms 187 MB heap used
+ ✓ |node| src/test/unit/product/routeEntryPointCoverage.contract.test.ts (2 tests) 3ms 188 MB heap used
+ ✓ |node| src/test/unit/product/coManagedTicketConversationActions.test.ts (6 tests) 3ms 192 MB heap used
+ ✓ |node| src/test/unit/product/coManagedPortableTemporaryRecovery.test.ts (2 tests) 3ms 195 MB heap used
+ ✓ |node| src/test/unit/product/coManagedSharedWorkActions.test.ts (14 tests) 4ms 196 MB heap used
+ ✓ |node| src/test/unit/product/coManagedPrivateTicketCommentActions.test.ts (6 tests) 2ms 200 MB heap used
+ ✓ |node| src/test/unit/product/productRouteBoundaryComposition.contract.test.ts (3 tests) 1ms 203 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedTicketSection.test.tsx (6 tests) 279ms 80 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedConversationDocument.test.tsx (6 tests) 106ms 123 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedProjectTaskConversation.test.tsx (14 tests) 201ms 132 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedSharedTicketDataSource.test.tsx (23 tests) 23ms 134 MB heap used
+ ✓ |jsdom| src/test/unit/product/qualifiedTicketList.test.tsx (28 tests) 2186ms 283 MB heap used
+   ✓ T007 — applied filters, sort and pagination reach the server > sends the submitted search and each toolbar filter, resetting to page 1 every time  538ms
+   ✓ T022 — Customer Tickets owns its toolbar and carries no native chrome > search runs as you type: keystrokes within the pause make one request, Enter applies at once, and Reset clears the text  533ms
+   ✓ T022 — Customer Tickets owns its toolbar and carries no native chrome > writes the typed search to the address bar with replaceState, never a history push  516ms
+ ✓ |jsdom| src/test/unit/product/coManagedLegacyAdapter.test.tsx (2 tests) 3ms 301 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedFeatureBoundary.test.tsx (8 tests) 14ms 301 MB heap used
+ ✓ |jsdom| src/test/unit/product/customerTicketsFlagOff.test.tsx (3 tests) 61ms 312 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedDelegatedAdministration.test.tsx (5 tests) 45ms 319 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedTimeBillingProfile.test.tsx (6 tests) 33ms 317 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedOverview.test.tsx (6 tests) 123ms 335 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedRequesterTaskDeepLink.test.tsx (2 tests) 21ms 328 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedClientAction.test.tsx (2 tests) 8ms 335 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedPolicyPanel.test.tsx (7 tests) 351ms 339 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedProjectTaskEditor.test.tsx (14 tests) 190ms 350 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedTeamSetup.test.tsx (4 tests) 39ms 197 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedClientOverviewTable.test.tsx (3 tests) 41ms 195 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedDeparture.test.tsx (6 tests) 69ms 200 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedEffort.test.tsx (8 tests) 44ms 203 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedHandbackRecovery.test.tsx (13 tests) 74ms 225 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedClientManagement.test.tsx (30 tests) 390ms 294 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedTimeEntry.test.tsx (9 tests) 94ms 300 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedRequesterTaskConversation.test.tsx (9 tests) 79ms 307 MB heap used
+ ✓ |jsdom| src/test/unit/product/customerTicketsRows.test.tsx (13 tests) 255ms 325 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedSlaPolicyPanel.test.tsx (8 tests) 46ms 332 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedArchive.test.tsx (9 tests) 81ms 335 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedClientIntegration.test.tsx (10 tests) 22ms 336 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedEffortSummary.test.tsx (4 tests) 23ms 336 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedLocalAudienceChange.test.tsx (2 tests) 124ms 352 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedProjectTaskQueue.test.tsx (7 tests) 103ms 349 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedPortalAttachments.test.tsx (13 tests) 78ms 359 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedLegacyRedirect.test.tsx (5 tests) 73ms 355 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedPortableExport.test.tsx (3 tests) 27ms 357 MB heap used
+ ✓ |jsdom| src/test/unit/product/serverProductRouteGuard.test.tsx (2 tests) 30ms 357 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedLocalTicketDataSource.test.tsx (6 tests) 235ms 366 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedAcceptanceBoundary.test.tsx (8 tests) 55ms 378 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedCallout.test.tsx (29 tests) 9484ms 400 MB heap used
+   ✓ T023 — callout strip > loads lazily after mount through the one action and never asks until the gate resolves  309ms
+   ✓ T023 — callout strip > renders nothing and makes no read when flag still loading  309ms
+   ✓ T023 — callout strip > renders nothing and makes no read when flag errored  307ms
+   ✓ T023 — callout strip > renders nothing and makes no read when tenant not Pro  308ms
+   ✓ T023 — callout strip > renders nothing and makes no read when non-PSA product  308ms
+   ✓ T023 — dismissal is per viewer and per count > stays dismissed for the same viewer and counts, across a remount  515ms
+   ✓ T023 — dismissal is per viewer and per count > is remembered per viewer: another viewer on the same browser still sees it  516ms
+   ✓ T023 — dismissal is per viewer and per count > shows the strip again for new work after a dismissed count fell to zero (3 -> dismiss -> 0 -> 2)  771ms
+   ✓ T023 — dismissal is per viewer and per count > keeps the dismissal while the count is unknown (error) so a failed read does not reset it  515ms
+   ✓ T023 — dismissal is per viewer and per count > stays dismissed while the count is at or below what was dismissed but above zero, and a rise past the lowered value returns  771ms
+   ✓ T023 — dismissal is per viewer and per count > returns when the count rises above the dismissed value  519ms
+   ✓ T023 — dismissal is per viewer and per count > returns when a count changes, only for the segment that changed  519ms
+   ✓ T023 — dismissal is correct on the first render and per key > never renders a dismissed strip, not even for one commit, once the signals resolve  358ms
+   ✓ T025 — client-scoped callout > renders nothing when the client has no signal or the read fails  311ms
+ ✓ |jsdom| src/test/unit/product/coManagedPoolEditor.test.tsx (5 tests) 144ms 405 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedUpgrade.test.tsx (7 tests) 152ms 408 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedProvisioningPanel.test.tsx (14 tests) 1090ms 435 MB heap used
+   ✓ co-managed provisioning UI > lets an acknowledged rejected request be corrected without changing its operation identity  305ms
+ ✓ |jsdom| src/test/unit/product/coManagedCommentAttachments.test.tsx (16 tests) 250ms 432 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedProjectEffortProvider.test.tsx (5 tests) 28ms 447 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedWorkSignalsProvider.test.tsx (7 tests) 4566ms 263 MB heap used
+   ✓ work signals cache > reads once after mount and does not read again when the pathname changes  1461ms
+   ✓ work signals cache > re-reads on window focus  561ms
+   ✓ work signals cache > re-reads when the tab becomes visible again, not while hidden  860ms
+   ✓ work signals cache > re-reads on an explicit refresh()  559ms
+   ✓ work signals cache > re-reads on the interval  559ms
+   ✓ work signals cache > stays closed and makes no read for refresh / focus when the gate is off  307ms
+
+ Test Files  105 passed (105)
+      Tests  799 passed (799)
+   Start at  15:36:11
+   Duration  54.74s (transform 5.60s, setup 488ms, collect 18.46s, tests 31.03s, environment 276ms, prepare 63ms)
