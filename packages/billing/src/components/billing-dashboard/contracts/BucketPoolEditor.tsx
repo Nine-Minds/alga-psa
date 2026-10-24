@@ -19,6 +19,7 @@ import {
   type BucketPoolActionError,
 } from '@alga-psa/billing/actions/bucketPoolActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { SellHourBlockNote } from './SellHourBlockNote';
 
 function isBucketPoolError(result: unknown): result is BucketPoolActionError {
@@ -39,6 +40,8 @@ export interface BucketPoolEditorProps {
   /** Business-hours schedules for the after-hours rule (tenant default first). */
   schedules: Array<{ schedule_id: string; schedule_name: string; is_default: boolean }>;
   onChanged?: () => void;
+  /** Contract currency for the overage-rate adornment; omit to use the tenant default. */
+  currencyCode?: string;
 }
 
 /**
@@ -54,6 +57,7 @@ export function BucketPoolEditor({
   allServices,
   schedules,
   onChanged,
+  currencyCode,
 }: BucketPoolEditorProps) {
   const { t } = useTranslation('msp/contracts');
   const [pools, setPools] = useState<BucketPoolSnapshot[]>([]);
@@ -240,6 +244,7 @@ export function BucketPoolEditor({
                 : unpooledLineServices}
               defaultSchedule={defaultSchedule}
               schedules={schedules}
+              currencyCode={currencyCode}
               onUpdate={(patch) => handleUpdatePool(pool, patch)}
               onAddMember={(serviceId, multiplier) => handleAddMember(pool, serviceId, multiplier)}
               onRemoveMember={(serviceId) => handleRemoveMember(pool, serviceId)}
@@ -254,6 +259,7 @@ export function BucketPoolEditor({
               hasCatchAll={hasCatchAll}
               defaultSchedule={defaultSchedule}
               schedules={schedules}
+              currencyCode={currencyCode}
               onCancel={() => setShowCreate(false)}
               onCreate={handleCreatePool}
             />
@@ -277,6 +283,7 @@ interface PoolCardProps {
   unpooledServices: Array<{ service_id: string; service_name: string }>;
   defaultSchedule?: { schedule_id: string; schedule_name: string; is_default: boolean };
   schedules: Array<{ schedule_id: string; schedule_name: string; is_default: boolean }>;
+  currencyCode?: string;
   onUpdate: (patch: {
     bucket_name?: string | null;
     total_minutes?: number;
@@ -294,6 +301,7 @@ function PoolCard({
   unpooledServices,
   defaultSchedule,
   schedules,
+  currencyCode,
   onUpdate,
   onAddMember,
   onRemoveMember,
@@ -301,6 +309,7 @@ function PoolCard({
   onSetRule,
 }: PoolCardProps) {
   const { t } = useTranslation('msp/contracts');
+  const { symbol } = useCurrencyFormat();
   const [hoursInput, setHoursInput] = useState<string>((pool.total_minutes / 60).toString());
   const [rateInput, setRateInput] = useState<string>((pool.overage_rate / 100).toFixed(2));
   const [selectedServiceId, setSelectedServiceId] = useState('');
@@ -378,8 +387,8 @@ function PoolCard({
           <Input type="number" min="0" value={hoursInput} onChange={(e) => setHoursInput(e.target.value)} onBlur={applyHours} />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">{t('bucketPools.labels.overageRate', { defaultValue: 'Overage rate ($/hr)' })}</Label>
-          <Input type="number" min="0" step="0.01" value={rateInput} onChange={(e) => setRateInput(e.target.value)} onBlur={applyRate} />
+          <Label className="text-xs">{t('bucketPools.labels.overageRate', { defaultValue: 'Overage rate per hour' })}</Label>
+          <Input type="number" min="0" step="0.01" leadingAdornment={symbol(currencyCode)} value={rateInput} onChange={(e) => setRateInput(e.target.value)} onBlur={applyRate} />
         </div>
         <div className="space-y-1 flex items-end">
           <SwitchWithLabel
@@ -527,6 +536,7 @@ interface CreatePoolFormProps {
   hasCatchAll: boolean;
   defaultSchedule?: { schedule_id: string; schedule_name: string; is_default: boolean };
   schedules: Array<{ schedule_id: string; schedule_name: string; is_default: boolean }>;
+  currencyCode?: string;
   onCancel: () => void;
   onCreate: (draft: {
     name: string;
@@ -545,10 +555,12 @@ function CreatePoolForm({
   hasCatchAll,
   defaultSchedule,
   schedules,
+  currencyCode,
   onCancel,
   onCreate,
 }: CreatePoolFormProps) {
   const { t } = useTranslation('msp/contracts');
+  const { symbol } = useCurrencyFormat();
   const [name, setName] = useState('');
   const [totalHours, setTotalHours] = useState('40');
   const [overageRate, setOverageRate] = useState('0');
@@ -594,8 +606,8 @@ function CreatePoolForm({
           <Input type="number" min="0" value={totalHours} onChange={(e) => setTotalHours(e.target.value)} />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">{t('bucketPools.labels.overageRate', { defaultValue: 'Overage rate ($/hr)' })}</Label>
-          <Input type="number" min="0" step="0.01" value={overageRate} onChange={(e) => setOverageRate(e.target.value)} />
+          <Label className="text-xs">{t('bucketPools.labels.overageRate', { defaultValue: 'Overage rate per hour' })}</Label>
+          <Input type="number" min="0" step="0.01" leadingAdornment={symbol(currencyCode)} value={overageRate} onChange={(e) => setOverageRate(e.target.value)} />
         </div>
       </div>
 

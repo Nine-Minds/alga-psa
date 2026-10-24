@@ -609,6 +609,10 @@ describe('inventory REST API (integration)', () => {
       body: { service_id: fixture.stockedServiceId, counted_quantity: 5 },
     }), { sessionId }));
     expect(recorded.status).toBe(200);
+    const listed = await countController.listCounts()(request(fixture, '/api/v1/inventory/counts'));
+    expect(listed.status).toBe(200);
+    const listedSession = (await listed.json()).data.find((row: any) => row.session_id === sessionId);
+    expect(listedSession.line_count).toBeGreaterThanOrEqual(1);
     const submitted = await countController.submitCount()(withParams(
       request(fixture, `/api/v1/inventory/counts/${sessionId}/submit`, { method: 'POST' }),
       { sessionId },

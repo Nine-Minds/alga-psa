@@ -201,13 +201,10 @@
       "title": "Projektaufgaben",
       "actions": {
         "refresh": "Aktualisieren",
-        "filter": "Filtern",
-        "reset": "Zurücksetzen",
         "viewAll": "Alle anzeigen"
       },
       "ariaLabels": {
-        "refresh": "Projektaufgaben aktualisieren",
-        "filter": "Projektaufgaben filtern"
+        "refresh": "Projektaufgaben aktualisieren"
       },
       "states": {
         "loading": "Projektaktivitäten werden geladen...",
@@ -215,47 +212,16 @@
       },
       "errors": {
         "loadFailed": "Projektaktivitäten konnten nicht geladen werden. Bitte versuchen Sie es später erneut."
-      },
-      "filterDialog": {
-        "title": "Projektaufgaben filtern",
-        "description": "Wählen Sie Kriterien aus, um Projektaufgaben-Aktivitäten zu filtern.",
-        "fields": {
-          "search": "Suche",
-          "searchPlaceholder": "Titel, Beschreibung suchen",
-          "project": "Projekt",
-          "projectPlaceholder": "Projekt auswählen...",
-          "allProjects": "Alle Projekte",
-          "phase": "Phase",
-          "phasePlaceholder": "Phase auswählen...",
-          "phaseLoadingPlaceholder": "Phasen werden geladen...",
-          "phaseSelectFirstPlaceholder": "Wählen Sie zuerst ein Projekt",
-          "allPhases": "Alle Phasen",
-          "priority": "Priorität",
-          "priorityPlaceholder": "Priorität auswählen...",
-          "allPriorities": "Alle Prioritäten",
-          "dueDateRange": "Fälligkeitszeitraum",
-          "createdDateRange": "Erstellungszeitraum",
-          "showClosedTasks": "Geschlossene Aufgaben anzeigen"
-        },
-        "actions": {
-          "reset": "Zurücksetzen",
-          "cancel": "Abbrechen",
-          "apply": "Filter anwenden",
-          "clearDates": "Löschen"
-        }
       }
     },
     "tickets": {
       "title": "Tickets",
       "actions": {
         "refresh": "Aktualisieren",
-        "filter": "Filtern",
-        "reset": "Zurücksetzen",
         "viewAll": "Alle anzeigen"
       },
       "ariaLabels": {
-        "refresh": "Tickets aktualisieren",
-        "filter": "Tickets filtern"
+        "refresh": "Tickets aktualisieren"
       },
       "states": {
         "loading": "Ticket-Aktivitäten werden geladen...",
@@ -263,31 +229,6 @@
       },
       "errors": {
         "loadFailed": "Ticket-Aktivitäten konnten nicht geladen werden. Bitte versuchen Sie es später erneut."
-      },
-      "filterDialog": {
-        "title": "Tickets filtern",
-        "description": "Wählen Sie Kriterien aus, um Ticket-Aktivitäten zu filtern.",
-        "fields": {
-          "search": "Suche",
-          "searchPlaceholder": "Titel, Beschreibung, Ticket-Nr. suchen",
-          "client": "Kunde",
-          "contact": "Kontakt",
-          "status": "Status",
-          "statusPlaceholder": "Status auswählen...",
-          "allStatuses": "Alle Status",
-          "priority": "Priorität",
-          "priorityPlaceholder": "Priorität auswählen...",
-          "allPriorities": "Alle Prioritäten",
-          "dueDateRange": "Fälligkeitszeitraum",
-          "createdDateRange": "Erstellungszeitraum",
-          "showClosedTickets": "Geschlossene Tickets anzeigen"
-        },
-        "actions": {
-          "reset": "Zurücksetzen",
-          "cancel": "Abbrechen",
-          "apply": "Filter anwenden",
-          "clearDates": "Löschen"
-        }
       }
     },
     "workflowTasks": {
@@ -295,13 +236,10 @@
       "drawerTitle": "Workflow-Aufgaben",
       "actions": {
         "refresh": "Aktualisieren",
-        "filter": "Filtern",
-        "reset": "Zurücksetzen",
         "viewAll": "Alle anzeigen"
       },
       "ariaLabels": {
-        "refresh": "Workflow-Aufgaben aktualisieren",
-        "filter": "Workflow-Aufgaben filtern"
+        "refresh": "Workflow-Aufgaben aktualisieren"
       },
       "states": {
         "loading": "Workflow-Aufgaben-Aktivitäten werden geladen...",
@@ -309,33 +247,6 @@
       },
       "errors": {
         "loadFailed": "Workflow-Aufgaben-Aktivitäten konnten nicht geladen werden. Bitte versuchen Sie es später erneut."
-      },
-      "filterDialog": {
-        "title": "Workflow-Aufgaben filtern",
-        "description": "Wählen Sie Kriterien aus, um Workflow-Aufgaben-Aktivitäten zu filtern.",
-        "fields": {
-          "search": "Suche",
-          "searchPlaceholder": "Titel, Beschreibung suchen",
-          "workflowExecution": "Workflow-Ausführung",
-          "workflowExecutionPlaceholder": "Workflow-Ausführung auswählen...",
-          "allExecutions": "Alle Ausführungen",
-          "priority": "Priorität",
-          "priorityPlaceholder": "Priorität auswählen...",
-          "allPriorities": "Alle Prioritäten",
-          "priorityHigh": "Hoch",
-          "priorityMedium": "Mittel",
-          "priorityLow": "Niedrig",
-          "dueDateRange": "Fälligkeitszeitraum",
-          "createdDateRange": "Erstellungszeitraum",
-          "showClosedTasks": "Geschlossene Aufgaben anzeigen",
-          "includeHiddenTasks": "Ausgeblendete Aufgaben einschließen"
-        },
-        "actions": {
-          "reset": "Zurücksetzen",
-          "cancel": "Abbrechen",
-          "apply": "Filter anwenden",
-          "clearDates": "Löschen"
-        }
       },
       "listDrawer": {
         "searchPlaceholder": "Aufgaben suchen...",
@@ -363,8 +274,6 @@
       "title": "Zeitplan",
       "actions": {
         "refresh": "Aktualisieren",
-        "filter": "Filtern",
-        "reset": "Zurücksetzen",
         "viewAll": "Alle anzeigen"
       },
       "states": {
@@ -375,41 +284,17 @@
         "loadFailed": "Zeitplan-Aktivitäten konnten nicht geladen werden. Bitte versuchen Sie es später erneut.",
         "refreshFailed": "Zeitplan-Aktivitäten konnten nicht aktualisiert werden. Bitte versuchen Sie es später erneut.",
         "addAdHocFailed": "Aktivität konnte nicht hinzugefügt werden. Bitte versuchen Sie es erneut."
-      },
-      "filterDialog": {
-        "title": "Zeitplan-Einträge filtern",
-        "description": "Wählen Sie Kriterien aus, um Zeitplan-Aktivitäten zu filtern.",
-        "fields": {
-          "search": "Suche",
-          "searchPlaceholder": "Titel, Beschreibung suchen",
-          "dateRange": "Datumsbereich",
-          "workItemType": "Zugehöriger Arbeitselementtyp",
-          "workItemTypePlaceholder": "Arbeitselementtyp auswählen...",
-          "allTypes": "Alle Typen",
-          "ticket": "Ticket",
-          "projectTask": "Projektaufgabe",
-          "workflowTask": "Workflow-Aufgabe",
-          "showClosedEntries": "Geschlossene Einträge anzeigen",
-          "showRecurringOnly": "Nur wiederkehrende anzeigen"
-        },
-        "actions": {
-          "reset": "Zurücksetzen",
-          "cancel": "Abbrechen",
-          "apply": "Filter anwenden"
-        }
       }
     },
     "notifications": {
       "title": "Benachrichtigungen",
       "actions": {
         "refresh": "Aktualisieren",
-        "filter": "Filtern",
         "reset": "Zurücksetzen",
         "viewAll": "Alle anzeigen"
       },
       "ariaLabels": {
-        "refresh": "Benachrichtigungen aktualisieren",
-        "filter": "Benachrichtigungen filtern"
+        "refresh": "Benachrichtigungen aktualisieren"
       },
       "tabs": {
         "unread": "Ungelesen",
@@ -424,12 +309,7 @@
         "loadFailed": "Benachrichtigungs-Aktivitäten konnten nicht geladen werden. Bitte versuchen Sie es später erneut."
       },
       "filterDialog": {
-        "title": "Benachrichtigungen filtern",
-        "description": "Wählen Sie Kriterien aus, um Benachrichtigungs-Aktivitäten zu filtern.",
         "fields": {
-          "status": "Status",
-          "unreadOnly": "Nur ungelesen",
-          "showRead": "Gelesene anzeigen",
           "category": "Kategorie",
           "categoryPlaceholder": "Kategorie auswählen...",
           "allCategories": "Alle Kategorien",
@@ -440,11 +320,6 @@
             "system": "System"
           },
           "dateRange": "Datumsbereich"
-        },
-        "actions": {
-          "reset": "Zurücksetzen",
-          "cancel": "Abbrechen",
-          "apply": "Filter anwenden"
         }
       },
       "priority": {

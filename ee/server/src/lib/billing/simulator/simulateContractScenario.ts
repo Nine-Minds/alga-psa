@@ -38,6 +38,7 @@ export async function simulateContractScenario(
         },
       },
       obligations: period.obligations,
+      supplementalCharges: period.supplementalCharges,
       taxContexts: period.taxContexts,
       discountsAndAdjustments: {
         billingPeriod: {

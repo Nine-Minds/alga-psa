@@ -630,5 +630,8 @@
     "setupComplete": {
       "title": "Card Setup"
     }
+  },
+  "pay": {
+    "title": "Pay Invoice"
   }
 }

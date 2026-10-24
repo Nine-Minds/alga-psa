@@ -1,3 +1,4 @@
+import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { isThreecxEmulatorModeEnabled } from '../emulatorMode';
 import {
@@ -5,6 +6,7 @@ import {
   getThreecxProviderConfig,
   getThreecxProviderState,
   updateThreecxConfig,
+  type ThreecxCapabilityProbe,
   type ThreecxPbxCapabilities,
   type ThreecxProviderState,
 } from '../providerState';
@@ -108,33 +110,61 @@ export interface ThreecxConnectionProbe {
   error: string | null;
 }
 
+const ROLE_HINT = '3CX Admin Console > Integrations > API > (app) > Role';
+
+function describeProbeFailure(label: string, error: ThreecxPbxError): string {
+  if (error.status === 403) {
+    return `The 3CX API app's role does not allow reading ${label}. Grant it the needed rights in ${ROLE_HINT}.`;
+  }
+  const detail = error.body ? `: ${error.body}` : '';
+  return `3CX refused the ${label} check (HTTP ${error.status})${detail}`;
+}
+
 /**
- * Token first, then one probe per surface. A capability the PBX refuses
- * (403, or 404 on an edition without the surface) reads as not granted; only
- * a token failure marks the whole connection as an error.
+ * Token first, then read-only probes (GET only, never a write verb) run in
+ * parallel. `xapi` reads /Defs, which any authenticated API app may; `users`
+ * and `contacts` read one row each, which needs the app's role to grant them,
+ * so a 403 there leaves `xapi` true. A network failure marks everything
+ * unreachable; only that or a token failure marks the connection as an error.
  */
 export async function probeThreecxPbx(
   tenantId: string,
   options: TestThreecxPbxConnectionOptions & Pick<CreateThreecxPbxClientOptions, 'credentials'> = {},
 ): Promise<ThreecxConnectionProbe> {
+  const unreachable = (message: string): ThreecxCapabilityProbe => ({ ok: false, status: 0, reason: message });
   const capabilities: ThreecxPbxCapabilities = { xapi: false, callControl: false };
   try {
-    const client = await createThreecxPbxClient(tenantId, options);
+    const client = await createThreecxPbxClient(tenantId, { ...options, expectFailures: true });
     // Force a fresh token so the probe reflects the credentials as saved.
     await client.accessToken(true);
 
-    try {
-      await client.xapiGet('/Defs', { $select: 'Id' });
-      capabilities.xapi = true;
-    } catch (error) {
-      if (!(error instanceof ThreecxPbxError) || error.status === 0) throw error;
-    }
-    try {
-      await client.callControlGet('');
-      capabilities.callControl = true;
-    } catch (error) {
-      if (!(error instanceof ThreecxPbxError) || error.status === 0) throw error;
-    }
+    const run = async (label: string, call: () => Promise<unknown>): Promise<ThreecxCapabilityProbe> => {
+      try {
+        await call();
+        return { ok: true, status: 200, reason: null };
+      } catch (error) {
+        if (!(error instanceof ThreecxPbxError)) throw error;
+        if (error.status === 0) throw error;
+        logger.warn('[3CX] Capability probe refused', {
+          tenantId,
+          capability: label,
+          status: error.status,
+          bodyExcerpt: error.body,
+        });
+        return { ok: false, status: error.status, reason: describeProbeFailure(label, error) };
+      }
+    };
+
+    const [xapi, users, contacts, callControl] = await Promise.all([
+      run('xapi', () => client.xapiGet('/Defs', { $select: 'Id' })),
+      run('users', () => client.xapiGet('/Users', { $top: 1 })),
+      run('contacts', () => client.xapiGet('/Contacts', { $top: 1 })),
+      run('callControl', () => client.callControlGet('')),
+    ]);
+    capabilities.xapi = xapi.ok;
+    capabilities.callControl = callControl.ok;
+    capabilities.users = users;
+    capabilities.contacts = contacts;
     return { status: 'connected', capabilities, error: null };
   } catch (error) {
     const message =
@@ -143,6 +173,10 @@ export async function probeThreecxPbx(
         : error instanceof Error
           ? error.message
           : String(error);
+    if (error instanceof ThreecxPbxError && error.status === 0) {
+      const probe = unreachable(message);
+      return { status: 'error', capabilities: { xapi: false, callControl: false, users: probe, contacts: probe }, error: message };
+    }
     return { status: 'error', capabilities, error: message };
   }
 }
