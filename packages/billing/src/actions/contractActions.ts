@@ -233,10 +233,9 @@ const mapTemplateToContract = (template: IContractTemplate): IContract => ({
   contract_name: template.template_name,
   contract_description: template.template_description ?? undefined,
   billing_frequency: template.default_billing_frequency,
-  // currency_code removed from templates - templates are now currency-neutral
-  // When converting to contract, we use USD as default. Actual contract currency
-  // is set from client's default_currency_code when creating a real contract.
-  currency_code: 'USD',
+  // The template's base currency. A contract created from it takes the client's
+  // currency, not this one.
+  currency_code: template.currency_code,
   is_active: template.template_status === 'published',
   status: template.template_status,
   is_template: true,
@@ -641,8 +640,8 @@ export const updateContract = withAuth(async (
       if (typeof updateData.billing_frequency === 'string') {
         templateUpdates.default_billing_frequency = updateData.billing_frequency;
       }
-      // currency_code removed from templates - templates are now currency-neutral
-      // Currency is inherited from the client when a contract is created
+      // The base currency is not changed here: relabelling goes through
+      // updateContractTemplateCurrency, which also guards the per-currency price sets.
       if (updateData.status && ['draft', 'published', 'archived'].includes(updateData.status)) {
         templateUpdates.template_status = updateData.status as IContractTemplate['template_status'];
       }
@@ -1180,8 +1179,8 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
 
     const isTemplate = Boolean(templateRecord);
 
-    // Get currency code - templates default to USD, contracts have their own currency
-    let currencyCode = 'USD';
+    // Templates carry their own base currency; contracts have theirs.
+    let currencyCode = templateRecord?.currency_code ?? 'USD';
     let clientId: string | null = null;
     if (!isTemplate) {
       const contractRecord = await tenantScopedTable(knex, tenant, 'contracts')
