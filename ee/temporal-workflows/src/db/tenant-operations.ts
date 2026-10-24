@@ -687,6 +687,13 @@ export async function rollbackTenantInDB(
       // before the tenant row because the catalog has a tenant foreign key.
       await db.table('service_catalog').delete();
 
+      // The creation seam gives the MSP system client a default billing
+      // profile and a tax settings row; both carry a foreign key to clients
+      // (the billing profile FK is NO ACTION), so they go first.
+      await db.table('client_tax_rates').delete();
+      await db.table('client_tax_settings').delete();
+      await db.table('client_billing_profiles').delete();
+
       // Delete clients (references tenant)
       await db.table('clients').delete();
 
