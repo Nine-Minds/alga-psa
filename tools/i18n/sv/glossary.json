@@ -533,6 +533,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "RMA {{id}}",
       "TeamViewer",
       "VNC",
       "RDP",

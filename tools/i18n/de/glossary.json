@@ -2347,6 +2347,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "RMA {{id}}",
       " (Standard)",
       "(optional)",
       "(Standard)",

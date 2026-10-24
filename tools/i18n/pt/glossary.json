@@ -2590,6 +2590,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "RMA {{id}}",
       "AI",
       "API",
       "CSV",
