@@ -789,7 +789,7 @@ export function ContractDialog({
                       {t('contractDialog.po.amountLabel', { defaultValue: 'PO Amount (Optional)' })}
                     </Label>
                     <Input
-                      leadingAdornment={symbol()}
+                      leadingAdornment={symbol(resolvedContractCurrency)}
                       id="po_amount"
                       type="text"
                       inputMode="decimal"
