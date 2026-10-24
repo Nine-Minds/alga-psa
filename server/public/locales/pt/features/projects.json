@@ -85,7 +85,9 @@
     "noService": "Sem serviço",
     "servicePlaceholder": "Selecione o serviço padrão",
     "serviceHelp": "Usado nas entradas de horas das tarefas desta fase quando a própria tarefa não define um serviço.",
-    "serviceDisplayLabel": "Serviço"
+    "serviceDisplayLabel": "Serviço",
+    "taskCount_few": "Tarefas {{count}}",
+    "taskCount_many": "Tarefas {{count}}"
   },
   "projectList": {
     "addProject": "Adicionar projeto",
@@ -314,7 +316,9 @@
     "confirmMoveTasksMessage": "Tem certeza de que deseja mover as tarefas selecionadas de {{count}} para a fase \"{{targetPhase}}\"?",
     "taskTypeFallback": "Tarefa",
     "timeline": "Linha do tempo",
-    "loadingTimeline": "Carregando linha do tempo..."
+    "loadingTimeline": "Carregando linha do tempo...",
+    "bulkTagsSuccess_few": "Tags adicionadas às tarefas {{count}}",
+    "bulkTagsSuccess_many": "Tags adicionadas às tarefas {{count}}"
   },
   "taskForm": {
     "addTitle": "Adicionar nova tarefa",
@@ -433,7 +437,15 @@
     "serviceInheritedFromProject": "Herda {{service}} do projeto.",
     "startDateLabel": "Data de início",
     "taskStartDateLabel": "Data de início da tarefa",
-    "startDatePlaceholder": "Selecione a data de início"
+    "startDatePlaceholder": "Selecione a data de início",
+    "createdTicketsIntro_few": "Você criou tickets {{count}} durante esta sessão:",
+    "createdTicketsIntro_many": "Você criou tickets {{count}} durante esta sessão:",
+    "documentCleanupFailure_few": "Os documentos {{count}} não puderam ser excluídos e permanecerão em Documentos",
+    "documentCleanupFailure_many": "Os documentos {{count}} não puderam ser excluídos e permanecerão em Documentos",
+    "documentsCleanupIntro_few": "Você tem documentos {{count}} que eram {{cleanupType}}:",
+    "documentsCleanupIntro_many": "Você tem documentos {{count}} que eram {{cleanupType}}:",
+    "ticketCleanupFailure_few": "Não foi possível excluir os tickets {{count}}",
+    "ticketCleanupFailure_many": "Não foi possível excluir os tickets {{count}}"
   },
   "taskDependencies": {
     "title": "Dependências",
@@ -644,7 +656,13 @@
     },
     "exportSelected": "Exportar {{count}} selecionado",
     "selectedTasksNotice_one": "Exportando tarefa selecionada {{count}}.",
-    "selectedTasksNotice_other": "Exportando tarefas selecionadas {{count}}."
+    "selectedTasksNotice_other": "Exportando tarefas selecionadas {{count}}.",
+    "phasesSelected_few": "{{selected}} das fases {{total}} selecionadas",
+    "phasesSelected_many": "{{selected}} das fases {{total}} selecionadas",
+    "selectedTasksNotice_few": "Exportando tarefas selecionadas {{count}}.",
+    "selectedTasksNotice_many": "Exportando tarefas selecionadas {{count}}.",
+    "success_few": "Tarefas {{count}} exportadas com sucesso para CSV.",
+    "success_many": "Tarefas {{count}} exportadas com sucesso para CSV."
   },
   "import": {
     "title": "Fases e tarefas de importação",
@@ -765,7 +783,9 @@
     "statusUnmatchedTooltip": "O status não corresponde a nenhum status existente para esta fase. Resolva nas etapas de mapeamento antes da importação.",
     "statusFallbackSuffix": "Padrão",
     "statusFallbackTooltip": "Usando o status de fallback padrão para esta fase.",
-    "inPhaseBadge": "em {{phase}}"
+    "inPhaseBadge": "em {{phase}}",
+    "taskCountLabel_few": "(tarefas {{count}})",
+    "taskCountLabel_many": "(tarefas {{count}})"
   },
   "dialogs": {
     "moveTask": {
@@ -839,7 +859,9 @@
       "restrictedTooltip": "Detalhes limitados – você não está designado para esta tarefa",
       "badgeCount_one": "Tarefa {{count}}",
       "billsToProject": "Horas faturadas como horas do projeto",
-      "billsToClient": "Horas faturadas no nível do cliente"
+      "billsToClient": "Horas faturadas no nível do cliente",
+      "badgeCount_few": "Tarefas {{count}}",
+      "badgeCount_many": "Tarefas {{count}}"
     },
     "bulkMoveTask": {
       "title": "Mover tarefas",
@@ -1215,7 +1237,9 @@
       "taskCount_other": "Tarefas {{count}}",
       "unknownUser": "Desconhecido",
       "unknownTask": "Tarefa desconhecida",
-      "checklistCountTitle": "Item da lista de verificação {{count}}"
+      "checklistCountTitle": "Item da lista de verificação {{count}}",
+      "taskCount_few": "Tarefas {{count}}",
+      "taskCount_many": "Tarefas {{count}}"
     },
     "taskForm": {
       "addTitle": "Adicionar tarefa",
@@ -1625,7 +1649,9 @@
       "submitting": "Adicionando tags...",
       "confirm_one": "Adicionar tags à tarefa {{count}}",
       "confirm_other": "Adicionar tags às tarefas {{count}}",
-      "failedHeading": "Não foi possível adicionar tags às seguintes tarefas:"
+      "failedHeading": "Não foi possível adicionar tags às seguintes tarefas:",
+      "confirm_few": "Adicionar tags às tarefas {{count}}",
+      "confirm_many": "Adicionar tags às tarefas {{count}}"
     }
   },
   "common:actions": {
@@ -1688,7 +1714,9 @@
       "lockedSummary_other": "{{count}} entradas totalizando {{amount}} estão bloqueadas e não serão alteradas.",
       "edit": "Editar condições",
       "saved": "Condições de faturação atualizadas",
-      "dialogTitle": "Editar condições de faturação"
+      "dialogTitle": "Editar condições de faturação",
+      "lockedSummary_few": "{{count}} entradas totalizando {{amount}} estão bloqueadas e não serão alteradas.",
+      "lockedSummary_many": "{{count}} entradas totalizando {{amount}} estão bloqueadas e não serão alteradas."
     },
     "setup": {
       "title": "Faturar este projeto",
@@ -2037,5 +2065,22 @@
     "question": "As dependências não são obrigatórias, então você pode continuar. Deseja continuar?",
     "proceed": "Continuar mesmo assim",
     "cancel": "Cancelar"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "Compacto"
+    },
+    "spacious": {
+      "label": "Espaçoso"
+    },
+    "decrease": {
+      "title": "Diminuir a largura das colunas"
+    },
+    "increase": {
+      "title": "Aumentar a largura das colunas"
+    },
+    "reset": {
+      "title": "Restaurar o padrão"
+    }
   }
 }

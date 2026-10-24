@@ -72,6 +72,15 @@ describe('product surface registry', () => {
     expect(getApiMetadataProducts(streamPath)).toEqual([]);
   });
 
+  it('keeps the session-authenticated label PDF route PSA-only without publishing it as a v1 API', () => {
+    const labelPdfPath = '/api/labels/pdf';
+
+    expect(resolveProductApiBehavior('psa', labelPdfPath)).toBe('allowed');
+    expect(resolveProductApiBehavior('algadesk', labelPdfPath)).toBe('denied');
+    expect(isApiVisibleInMetadata('psa', labelPdfPath)).toBe(false);
+    expect(isApiVisibleInMetadata('algadesk', labelPdfPath)).toBe(false);
+  });
+
   it('T003: filters metadata/OpenAPI visibility by product', () => {
     expect(isApiVisibleInMetadata('algadesk', '/api/v1/tickets')).toBe(true);
     expect(isApiVisibleInMetadata('algadesk', '/api/v1/meta/endpoints')).toBe(true);

@@ -370,6 +370,28 @@ describe('runEntraClientAccessDiagnostics', () => {
     expect(rec?.text).not.toMatch(/GDAP/);
   });
 
+  it('passes an API-client role-blocked message through without the generic messageKey', async () => {
+    hoisted.connectionType = 'cipp';
+    const message = "CIPP refused listusers with HTTP 403 while other endpoints work, so the API client's Custom Role is blocking it. In CIPP, give the role access to listusers.";
+    hoisted.cippError = Object.assign(new Error(message), { code: 'unreachable', reason: 'role-blocked' });
+    const result = await runEntraClientAccessDiagnostics('tenant-1', 'user-1', { clientIds: ['c1'] });
+    const rec = result.clients[0].steps.flatMap((s) => s.recommendations ?? [])[0];
+    expect(rec?.code).toBe('cipp_per_tenant_failed');
+    expect(rec?.text).toBe(message);
+    expect(rec?.messageKey).toBeUndefined();
+    const aggregate = result.recommendations.find((r: any) => r.text === message);
+    expect(aggregate).toBeTruthy();
+    expect((aggregate as any).messageKey).toBeUndefined();
+  });
+
+  it('keeps cippPerTenantFailed for a generic CIPP failure without a reason', async () => {
+    hoisted.connectionType = 'cipp';
+    hoisted.cippError = new Error('boom');
+    const result = await runEntraClientAccessDiagnostics('tenant-1', 'user-1', { clientIds: ['c1'] });
+    const rec = result.clients[0].steps.flatMap((s) => s.recommendations ?? [])[0];
+    expect(rec?.messageKey).toBe('cippPerTenantFailed');
+  });
+
   it('records every exclusion category and warns when all users are excluded', async () => {
     hoisted.users = [
       { entraObjectId: 'u1', email: 'a@c1.example' },

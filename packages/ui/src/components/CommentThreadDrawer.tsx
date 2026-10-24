@@ -6,6 +6,7 @@ import Drawer from './Drawer';
 import HybridThreadNode from './HybridThreadNode';
 import InlineReplyComposer from './InlineReplyComposer';
 import type { CommentThreadGroup } from './CommentThreadList';
+import { useTranslation } from '../lib/i18n/client';
 
 export interface CommentThreadDrawerProps<TComment> {
   id?: string;
@@ -49,8 +50,8 @@ export function CommentThreadDrawer<TComment>({
   replyRoomName,
   initialInternal = false,
   showInternalToggle = true,
-  submitLabel = 'Reply',
-  cancelLabel = 'Cancel',
+  submitLabel,
+  cancelLabel,
   isSubmitting = false,
   uploadFile,
   searchMentions,
@@ -58,6 +59,7 @@ export function CommentThreadDrawer<TComment>({
   replySubmitDisabled = false,
   onSubmitReply,
 }: CommentThreadDrawerProps<TComment>): React.ReactElement {
+  const { t } = useTranslation('common');
   const rootCommentId = group ? getCommentId(group.root) : null;
   const composerParentId = replyParentCommentId || rootCommentId || '';
   const composerRoomName = useMemo(
@@ -86,8 +88,8 @@ export function CommentThreadDrawer<TComment>({
               roomName={composerRoomName}
               initialInternal={initialInternal}
               showInternalToggle={showInternalToggle}
-              submitLabel={submitLabel}
-              cancelLabel={cancelLabel}
+              submitLabel={submitLabel ?? t('inlineReplyComposer.actions.reply', { defaultValue: 'Reply' })}
+              cancelLabel={cancelLabel ?? t('actions.cancel', { defaultValue: 'Cancel' })}
               isSubmitting={isSubmitting}
               uploadFile={uploadFile}
               searchMentions={searchMentions}

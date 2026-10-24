@@ -21,7 +21,8 @@ import {
   NetworkDeviceAssetData,
   ServerAssetData,
   MobileDeviceAssetData,
-  PrinterAssetData
+  PrinterAssetData,
+  parseAssetExtensionData
 } from '../schemas/asset';
 import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { buildAssetCreatedPayload, buildAssetUpdatedPayload } from '@alga-psa/workflow-streams';
@@ -35,6 +36,27 @@ import { assertBillingProfileForClient } from '@alga-psa/shared/models/assetBill
 
 function validationDetails(issues: Array<{ key: string; code: string; message: string }>) {
   return issues.map((issue) => ({ path: ['attributes', issue.key], code: issue.code, message: issue.message }));
+}
+
+function hasExtensionData(data: Record<string, unknown> | undefined): data is Record<string, unknown> {
+  return !!data && Object.keys(data).length > 0;
+}
+
+function validateExtensionData(assetType: string, data: Record<string, unknown>): Record<string, unknown> {
+  const parsed = parseAssetExtensionData(assetType, data);
+  if (!parsed) {
+    throw new ValidationError('Invalid extension_data', [
+      { path: ['extension_data'], code: 'unsupported_asset_type', message: `Asset type '${assetType}' has no extension data` }
+    ]);
+  }
+  if (!parsed.success) {
+    throw new ValidationError('Invalid extension_data', parsed.error.errors.map((issue) => ({
+      path: ['extension_data', ...issue.path],
+      code: issue.code,
+      message: issue.message
+    })));
+  }
+  return parsed.data;
 }
 
 function mapInvalidAssetTypeError(error: unknown, slug: string): unknown {
@@ -99,9 +121,33 @@ export class AssetService extends BaseService<any> {
     });
   }
 
+  /**
+   * Range keys the asset list accepts: the common created_ and updated_ keys
+   * plus the purchase-date and warranty windows. Any other `_from`/`_to` key is
+   * rejected by `applyRangeFilters`.
+   */
+  protected rangeFilterColumns(): Record<string, string> {
+    return {
+      ...super.rangeFilterColumns(),
+      created_from: `${this.tableName}.created_at`,
+      created_to: `${this.tableName}.created_at`,
+      updated_from: `${this.tableName}.updated_at`,
+      updated_to: `${this.tableName}.updated_at`,
+      purchase_date_from: `${this.tableName}.purchase_date`,
+      purchase_date_to: `${this.tableName}.purchase_date`,
+      warranty_end_from: `${this.tableName}.warranty_end_date`,
+      warranty_end_to: `${this.tableName}.warranty_end_date`,
+    };
+  }
+
   async list(options: ListOptions, context: ServiceContext, filters?: AssetFilterData): Promise<ListResult<any>> {
     const knex = await this.getDbForContext(context);
     const query = scopedTable(knex, context.tenant, this.tableName);
+
+    // Common and asset-specific range filters. Unsupported range keys fail loudly.
+    if (filters) {
+      this.applyRangeFilters(query, filters);
+    }
 
     // Apply filters
     if (filters) {
@@ -144,18 +190,6 @@ export class AssetService extends BaseService<any> {
       if (filters.client_name) {
         tenantDb(knex, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id');
         query.where('clients.client_name', 'ilike', `%${filters.client_name}%`);
-      }
-      if (filters.purchase_date_from) {
-        query.where(`${this.tableName}.purchase_date`, '>=', filters.purchase_date_from);
-      }
-      if (filters.purchase_date_to) {
-        query.where(`${this.tableName}.purchase_date`, '<=', filters.purchase_date_to);
-      }
-      if (filters.warranty_end_from) {
-        query.where(`${this.tableName}.warranty_end_date`, '>=', filters.warranty_end_from);
-      }
-      if (filters.warranty_end_to) {
-        query.where(`${this.tableName}.warranty_end_date`, '<=', filters.warranty_end_to);
       }
       if (filters.has_warranty !== undefined) {
         if (filters.has_warranty) {
@@ -203,6 +237,8 @@ export class AssetService extends BaseService<any> {
     const countQuery = scopedTable(knex, context.tenant, this.tableName);
 
     if (filters) {
+      // Apply the same range filters to count query
+      this.applyRangeFilters(countQuery, filters);
       // Apply the same filters to count query
       if (filters.client_id) {
         countQuery.where(`${this.tableName}.client_id`, filters.client_id);
@@ -296,6 +332,39 @@ export class AssetService extends BaseService<any> {
     return asset;
   }
 
+  /**
+   * The record context the authorization kernel evaluates for an asset read.
+   * Mirrors `resolveAssetAuthorizationRecords` in the assets package (assignees
+   * and teams come from asset_associations). Tenant-scoped: another tenant's id
+   * resolves to null.
+   */
+  async getAuthorizationRecord(id: string, context: ServiceContext): Promise<Record<string, any> | null> {
+    const knex = await this.getDbForContext(context);
+    const asset = await scopedTable(knex, context.tenant, this.tableName)
+      .where({ asset_id: id })
+      .select('asset_id', 'client_id')
+      .first();
+    if (!asset) return null;
+
+    const associations: Array<{ entity_type: string; entity_id: string }> = await scopedTable(
+      knex,
+      context.tenant,
+      'asset_associations',
+    )
+      .where({ asset_id: id })
+      .select('entity_type', 'entity_id');
+
+    const assignedUserIds = associations.filter((a) => a.entity_type === 'user').map((a) => a.entity_id);
+    const teamIds = associations.filter((a) => a.entity_type === 'team').map((a) => a.entity_id);
+    return {
+      id: asset.asset_id,
+      ownerUserId: assignedUserIds[0] ?? null,
+      assignedUserIds,
+      clientId: asset.client_id ?? null,
+      teamIds,
+    };
+  }
+
   async getWithDetails(id: string, context: ServiceContext): Promise<any | null> {
     const asset = await this.getById(id, context);
     if (!asset) return null;
@@ -337,6 +406,9 @@ export class AssetService extends BaseService<any> {
     const typeEntry = await resolveRestAssetType(knex, context.tenant, assetData.asset_type);
     const issues = validateAttributesForWrite(typeEntry, attributes, 'create');
     if (issues.length) throw new ValidationError('Invalid asset attributes', validationDetails(issues));
+    const extensionData = hasExtensionData(extension_data)
+      ? validateExtensionData(assetData.asset_type, extension_data)
+      : undefined;
 
     if (assetData.location_id) {
       await this.assertLocationBelongsToClient(knex, context.tenant, assetData.client_id, assetData.location_id);
@@ -369,7 +441,8 @@ export class AssetService extends BaseService<any> {
     };
 
     // One transaction: a rejected assignee must not leave an asset behind
-    // without the contact the caller asked for.
+    // without the contact the caller asked for, and a failed extension write
+    // must not leave a committed asset with no extension row.
     const asset = await knex.transaction(async (trx) => {
       const [created] = await scopedTable(trx, context.tenant, this.tableName)
         .insert(assetRecord)
@@ -378,13 +451,12 @@ export class AssetService extends BaseService<any> {
       if (requestedContactId) {
         await this.applyAssignee(trx, context, created.asset_id, requestedContactId);
       }
+
+      if (extensionData) {
+        await this.upsertExtensionData(created.asset_id, created.asset_type, extensionData, context, trx);
+      }
       return created;
     });
-
-    // Handle extension data if provided
-    if (extension_data && Object.keys(extension_data).length > 0) {
-      await this.upsertExtensionData(asset.asset_id, asset.asset_type, extension_data, context);
-    }
 
     // Publish event
     await publishWorkflowEvent({
@@ -412,14 +484,17 @@ export class AssetService extends BaseService<any> {
     const knex = await this.getDbForContext(context);
     const updateData: Record<string, unknown> = { ...data };
     const attributes = data.attributes as Record<string, unknown> | undefined;
+    const extensionInput = data.extension_data;
     delete updateData.attributes;
+    delete updateData.extension_data;
 
     const needsCurrent =
       data.location_id !== undefined ||
       data.contact_name_id !== undefined ||
       data.status !== undefined ||
       data.client_id !== undefined;
-    const needsAssetContext = needsCurrent || data.attributes !== undefined || data.asset_type !== undefined;
+    const needsAssetContext =
+      needsCurrent || data.attributes !== undefined || data.asset_type !== undefined || hasExtensionData(extensionInput);
 
     const current = needsAssetContext
       ? await scopedTable(knex, context.tenant, this.tableName)
@@ -441,6 +516,11 @@ export class AssetService extends BaseService<any> {
       if (issues.length) throw new ValidationError('Invalid asset attributes', validationDetails(issues));
       if (attributes !== undefined) updateData.attributes = attributesMergeExpression(knex, attributes);
     }
+
+    const effectiveAssetType = data.asset_type ?? current?.asset_type;
+    const extensionData = hasExtensionData(extensionInput)
+      ? validateExtensionData(effectiveAssetType, extensionInput)
+      : undefined;
 
     if (data.location_id) {
       const clientId = data.client_id || current?.client_id;
@@ -516,9 +596,10 @@ export class AssetService extends BaseService<any> {
       .where({ [this.primaryKey]: id })
       .first();
 
-    // One transaction for the columns, the group removal and the assignee:
-    // separately, a failed assignment left the client move committed without
-    // its FR-E5 group removal, or the other way round.
+    // One transaction for the columns, the group removal, the assignee and the
+    // extension row: separately, a failed assignment left the client move
+    // committed without its FR-E5 group removal (or the other way round), and a
+    // failed extension write left the rest of the same PUT committed.
     const after = await knex.transaction(async (trx) => {
       const [updated] = await scopedTable(trx, context.tenant, this.tableName)
         .where({ [this.primaryKey]: id })
@@ -540,6 +621,15 @@ export class AssetService extends BaseService<any> {
 
       if (nextContactId !== undefined) {
         await this.applyAssignee(trx, context, id, nextContactId);
+      }
+
+      if (extensionData) {
+        // A retype moves the extension row to the new type's table; the old
+        // one goes with the type it belonged to.
+        if (data.asset_type && current?.asset_type && data.asset_type !== current.asset_type) {
+          await this.deleteExtensionData(id, current.asset_type, context, trx);
+        }
+        await this.upsertExtensionData(id, effectiveAssetType, extensionData, context, trx);
       }
 
       return updated;
@@ -795,39 +885,62 @@ export class AssetService extends BaseService<any> {
       .first();
   }
 
-  async upsertExtensionData(assetId: string, assetType: string, data: any, context: ServiceContext): Promise<void> {
+  /**
+   * Every array-shaped extension column is `jsonb`, but node-pg renders a bare
+   * JS array as an array literal, which Postgres rejects with 22P02 for a json
+   * column. Mirrors encodeExtensionJsonArrays in the internal asset actions.
+   */
+  private encodeExtensionJsonArrays(fields: Record<string, unknown>): Record<string, unknown> {
+    const encoded: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(fields)) {
+      encoded[key] = Array.isArray(value) ? JSON.stringify(value) : value;
+    }
+    return encoded;
+  }
+
+  async upsertExtensionData(
+    assetId: string,
+    assetType: string,
+    data: any,
+    context: ServiceContext,
+    trx?: Knex
+  ): Promise<void> {
     const tableName = this.getExtensionTableName(assetType);
     if (!tableName) return;
 
-    const extensionData = {
-      ...data,
-      asset_id: assetId,
-      tenant: context.tenant,
-      updated_at: new Date()
-    };
+    // The extension tables carry no created_at/updated_at columns, and
+    // tenant/asset_id are the Citus partition key + PK, so they cannot appear
+    // in an UPDATE SET clause.
+    const { tenant: _tenant, asset_id: _assetId, ...rest } = (data ?? {}) as Record<string, unknown>;
+    const extensionFields = this.encodeExtensionJsonArrays(rest);
 
-    // Check if record exists
-    const knex = await this.getDbForContext(context);
-    const existing = await scopedTable(knex, context.tenant, tableName)
+    const conn = trx ?? (await this.getDbForContext(context));
+    const existing = await scopedTable(conn, context.tenant, tableName)
       .where({ asset_id: assetId })
       .first();
 
     if (existing) {
-      await scopedTable(knex, context.tenant, tableName)
+      if (Object.keys(extensionFields).length === 0) return;
+      await scopedTable(conn, context.tenant, tableName)
         .where({ asset_id: assetId })
-        .update(extensionData);
+        .update(extensionFields);
     } else {
-      extensionData.created_at = new Date();
-      await scopedTable(knex, context.tenant, tableName).insert(extensionData);
+      await scopedTable(conn, context.tenant, tableName)
+        .insert({ tenant: context.tenant, asset_id: assetId, ...extensionFields });
     }
   }
 
-  async deleteExtensionData(assetId: string, assetType: string, context: ServiceContext): Promise<void> {
+  async deleteExtensionData(
+    assetId: string,
+    assetType: string,
+    context: ServiceContext,
+    trx?: Knex
+  ): Promise<void> {
     const tableName = this.getExtensionTableName(assetType);
     if (!tableName) return;
 
-    const knex = await this.getDbForContext(context);
-    await scopedTable(knex, context.tenant, tableName)
+    const conn = trx ?? (await this.getDbForContext(context));
+    await scopedTable(conn, context.tenant, tableName)
       .where({ asset_id: assetId })
       .del();
   }

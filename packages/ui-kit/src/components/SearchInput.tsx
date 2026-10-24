@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type SearchInputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'style' | 'size'> & {
   /** Callback when search value changes (debounced if debounceMs > 0) */
@@ -142,11 +143,12 @@ export function SearchInput({
   size = 'md',
   value: controlledValue,
   onChange,
-  placeholder = 'Search...',
+  placeholder,
   disabled,
   style,
   ...props
 }: SearchInputProps) {
+  const { t } = useTranslation('common');
   const [internalValue, setInternalValue] = useState('');
   const debounceTimerRef = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -236,7 +238,7 @@ export function SearchInput({
         className="alga-search-input"
         value={value}
         onChange={handleChange}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t('form.searchPlaceholder')}
         disabled={disabled}
         style={inputStyle}
         {...props}
@@ -251,7 +253,7 @@ export function SearchInput({
           type="button"
           onClick={handleClear}
           style={rightIconStyle}
-          aria-label="Clear search"
+          aria-label={t('actions.clearSearch')}
         >
           <ClearIcon size={sizeConfig.iconSize} />
         </button>

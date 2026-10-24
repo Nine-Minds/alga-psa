@@ -731,6 +731,9 @@
     }
   },
   "connectSso": {
+    "proFeature": {
+      "description": "La liaison de comptes SSO est disponible dans Pro. Passez à Pro pour connecter votre compte Google Workspace ou Microsoft 365 et bénéficier d’une authentification fluide."
+    },
     "linkError": {
       "title": "Échec de l'association SSO.",
       "no_matching_user": "Le compte avec lequel vous vous êtes connecté est {{providerEmail}}, alors que votre identifiant AlgaPSA est {{accountEmail}}. Associez un compte qui utilise {{accountEmail}}, ou demandez à l'administrateur de votre fournisseur d'identité de définir {{accountEmail}} comme adresse e-mail principale de ce compte.",

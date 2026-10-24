@@ -18,6 +18,8 @@ import logger from '@alga-psa/core/logger';
 import { registerFeatureFlagChecker } from '@alga-psa/core/features';
 import { featureFlags } from '@alga-psa/core/server';
 import { TenantEmailService, StaticTemplateProcessor, EmailProviderManager } from '@alga-psa/email';
+// LEVERAGE: friction tenancy-server-barrel — the '@alga-psa/tenancy/server' barrel mixes next/auth-dependent and pure code; import the auth-free subpath.
+import { buildTenantPortalUrl } from '@alga-psa/tenancy/lib/tenantPortalUrl';
 import { HealthServer } from './healthServer.js';
 import { getWorkflowWorkerMetrics } from './metrics.js';
 import { registerEnterpriseStorageProviders } from './registerEnterpriseStorageProviders.js';
@@ -56,6 +58,7 @@ async function startServices() {
       TenantEmailService: Object.assign(TenantEmailService, { resolveOutboundSenderForTenant: TenantEmailService.resolveOutboundSenderForTenant }) as any,
       StaticTemplateProcessor: StaticTemplateProcessor as any,
       EmailProviderManager: EmailProviderManager as any,
+      buildTenantPortalUrl,
     });
 
     await registerEnterpriseStorageProviders();

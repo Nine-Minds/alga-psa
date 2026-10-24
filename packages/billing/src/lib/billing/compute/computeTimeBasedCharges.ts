@@ -12,6 +12,7 @@ import type {
   ChargeProfileAssignments,
 } from "./types";
 import { resolveChargeProfileFor } from "../billingProfileResolution";
+import { blockNoteToPlainText } from "@alga-psa/formatting/blocknoteUtils";
 
 /**
  * Time-entry charge math extracted from BillingEngine.calculateTimeBasedCharges.
@@ -188,7 +189,8 @@ export function buildTimeEntryWorkItemSnapshot(
     title: isTicket
       ? trimmedOrNull(entry.ticket_title)
       : trimmedOrNull(entry.project_task_name),
-    description: isTicket ? trimmedOrNull(entry.ticket_description) : null,
+    // Snapshots are customer-visible: store plain text, not the BlockNote JSON the editor persists.
+    description: isTicket ? trimmedOrNull(blockNoteToPlainText(entry.ticket_description)) : null,
     entryDate: toIsoDateOrNull(entry.start_time),
     billedMinutes: Math.round(billed.billedMinutes),
     rate: Math.round(billed.rate),

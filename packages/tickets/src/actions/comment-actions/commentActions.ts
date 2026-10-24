@@ -116,6 +116,26 @@ async function assertClientCanCreateComment(
   if (!ticket || ticket.client_id !== clientId) {
     throw new Error('Client user cannot access this ticket');
   }
+
+  // Comment.insert re-roots a client reply aimed at an internal thread into a
+  // fresh public thread (D1, for inbound email whose headers resolve to an
+  // internal thread). A portal user never sees internal threads, so an explicit
+  // parent_comment_id pointing at one is rejected here instead.
+  if (comment.parent_comment_id) {
+    const parentThread = await tenantDb(trx, tenant)
+      .tenantJoin(
+        tenantScopedTable(trx, 'comments as parent', tenant),
+        'comment_threads as thread',
+        'parent.thread_id',
+        'thread.thread_id'
+      )
+      .select('thread.is_internal as thread_is_internal')
+      .where('parent.comment_id', comment.parent_comment_id)
+      .first();
+    if (parentThread?.thread_is_internal) {
+      throw new Error('Reply visibility must match the thread root visibility');
+    }
+  }
 }
 
 export const findCommentsByTicketId = withAuth(async (_user, { tenant }, ticketId: string): Promise<IComment[] | TicketActionError> => {

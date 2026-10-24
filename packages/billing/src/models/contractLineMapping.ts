@@ -279,8 +279,9 @@ const ContractLineMapping = {
           contract_id: contractId,
           contract_line_id: contractLineId,
         })
-        .first(['cadence_owner', 'billing_timing']);
+        .first(['cadence_owner', 'billing_timing', 'contract_line_type']);
       const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+        lineType: existingLine?.contract_line_type ?? null,
         cadenceOwner: dataToUpdate.cadence_owner,
         fallbackCadenceOwner: existingLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
         billingTiming: dataToUpdate.billing_timing,

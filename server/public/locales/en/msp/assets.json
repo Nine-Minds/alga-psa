@@ -38,6 +38,20 @@
       "offline": "Offline",
       "overdue": "Overdue",
       "unknown": "Unknown"
+    },
+    "rmaStatus": {
+      "open": "Open",
+      "awaiting_return": "Awaiting return",
+      "returned": "Returned",
+      "sent_to_vendor": "Sent to vendor",
+      "replacement_received": "Replacement received",
+      "replacement_deployed": "Replacement deployed",
+      "dead_unit_owed": "Dead unit owed",
+      "dead_unit_returned": "Dead unit returned",
+      "replaced": "Replaced",
+      "credited": "Credited",
+      "charged": "Charged",
+      "closed": "Closed"
     }
   },
   "assetAlertsSection": {
@@ -817,7 +831,8 @@
       "save": "Save",
       "label": "Button label",
       "template": "URL template",
-      "tokens": "Use {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name}, and {field.<key>} with custom field keys defined in Settings → Assets → Asset types.",
+      "ninjaExample": "NinjaOne device dashboard example: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Replace the host with your NinjaOne region: app, eu, ca, oc or us2 .ninjarmm.com.",
+      "tokens": "Use {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name}, and {field.<key>} with custom field keys defined in Settings → Assets → Asset types.",
       "errors": {
         "load": "Failed to load remote access links.",
         "save": "Failed to save the remote access link.",
@@ -1149,7 +1164,8 @@
       "unknown": "Unknown",
       "unifiedMemory": "{{size}}GB Unified Memory",
       "memoryUsed": " ({{size}}GB Used)",
-      "freeStorage": "{{size}} GB Free"
+      "freeStorage": "{{size}} GB Free",
+      "totalStorage": "{{size}} GB"
     },
     "empty": "No hardware data available",
     "emptyStorage": "No storage drives detected"
@@ -1503,13 +1519,6 @@
     }
   },
   "assetBento": {
-    "rmmUser": {
-      "looksLike": "· Looks like {{contact}}",
-      "mapDialogDescription": "“{{user}}” will be remembered for this RMM organization.",
-      "mapDialogTitle": "Map signed-in user to a contact",
-      "mapFailed": "Unable to save the mapping.",
-      "mapToContact": "Map to contact…"
-    },
     "health": "Health",
     "security": "Security",
     "openTickets": "Open tickets",
@@ -1559,6 +1568,13 @@
     "lastDone": "Last done",
     "noMaintenance": "Nothing scheduled.",
     "docsHint": "Attachments and credentials for this asset.",
+    "rmmUser": {
+      "looksLike": "· Looks like {{contact}}",
+      "mapDialogDescription": "“{{user}}” will be remembered for this RMM organization.",
+      "mapDialogTitle": "Map signed-in user to a contact",
+      "mapFailed": "Unable to save the mapping.",
+      "mapToContact": "Map to contact…"
+    },
     "manufacturer": "Manufacturer",
     "model": "Model",
     "vendor": "Vendor",
@@ -1714,6 +1730,36 @@
     "empty": "No matching assets for this client",
     "loading": "Loading...",
     "remove": "Remove asset"
+  },
+  "inventoryProvenance": {
+    "title": "Inventory provenance",
+    "fields": {
+      "product": {
+        "label": "Product"
+      },
+      "serial": {
+        "label": "Serial"
+      },
+      "mac": {
+        "label": "MAC"
+      },
+      "originSalesOrder": {
+        "label": "Origin sales order"
+      },
+      "delivered": {
+        "label": "Delivered"
+      }
+    },
+    "rmaHistory": {
+      "title": "RMA history"
+    },
+    "emptyValue": "—",
+    "rmaLabel": "RMA"
+  },
+  "skeletons": {
+    "assetForm": {
+      "loading": "Loading asset form..."
+    }
   },
   "assetStatuses": {
     "active": "Active",

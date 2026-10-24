@@ -25,6 +25,7 @@
     },
     "states": {
       "active": "Active",
+      "scheduled": "Scheduled",
       "inactive": "Inactive",
       "loading": "Loading...",
       "na": "N/A",
@@ -573,8 +574,10 @@
     "invoiceTemplateHelp": "Select a template or use default",
     "paymentTerms": {
       "dueOnReceipt": "Due on Receipt",
+      "net14": "Net 14",
       "net15": "Net 15",
-      "net30": "Net 30"
+      "net30": "Net 30",
+      "net7": "Net 7"
     },
     "preferredPaymentMethod": "Preferred payment method",
     "defaultCurrency": "Default currency",

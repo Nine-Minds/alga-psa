@@ -276,7 +276,7 @@ export const searchSoftwareFleetWide = withAuth(async (
     // Get paginated software entries with install counts
     const offset = (page - 1) * limit;
     const currentAssetSoftware = db.table('asset_software')
-      .select('software_id', 'asset_id')
+      .select('tenant', 'software_id', 'asset_id')
       .where('is_current', true)
       .as('asw');
     let softwareQuery = catalogQuery.clone()
@@ -288,17 +288,24 @@ export const searchSoftwareFleetWide = withAuth(async (
         'sc.software_type',
         'sc.is_managed',
         'sc.is_security_relevant'
-      )
-      .leftJoin(currentAssetSoftware, 'asw.software_id', 'sc.software_id');
+      );
+    db.tenantJoinSubquery(softwareQuery, currentAssetSoftware, 'asw.software_id', 'sc.software_id', {
+      type: 'left',
+      rootTenantColumn: 'sc.tenant',
+      joinedTenantColumn: 'asw.tenant',
+    });
 
     // Filter by client if specified
     if (client_id) {
       const tenantAssets = db.table('assets')
-        .select('asset_id', 'client_id')
+        .select('tenant', 'asset_id', 'client_id')
         .as('a');
-      softwareQuery = softwareQuery
-        .leftJoin(tenantAssets, 'a.asset_id', 'asw.asset_id')
-        .where('a.client_id', client_id);
+      db.tenantJoinSubquery(softwareQuery, tenantAssets, 'a.asset_id', 'asw.asset_id', {
+        type: 'left',
+        rootTenantColumn: 'asw.tenant',
+        joinedTenantColumn: 'a.tenant',
+      });
+      softwareQuery = softwareQuery.where('a.client_id', client_id);
     }
 
     const softwareRows = await softwareQuery

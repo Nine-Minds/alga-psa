@@ -630,6 +630,7 @@
       }
     },
     "sections": {
+      "carriedDiscounts": "⟦Ḓīşƈȯŭƞŧş ƈȧřřīḗḓ ȯƞŧȯ ƈȯƞŧřȧƈŧ ŀīƞḗş⟧",
       "contractItems": "⟦Ƈȯƞŧřȧƈŧ Īŧḗḿş⟧",
       "conversionMode": "⟦Ƈȯƞṽḗřşīȯƞ Ḿȯḓḗ⟧",
       "excludedFromConversion": "⟦Ḗẋƈŀŭḓḗḓ ƒřȯḿ Ƈȯƞṽḗřşīȯƞ⟧",
@@ -655,6 +656,7 @@
       "converted": "⟦Ƈȯƞṽḗřŧḗḓ⟧",
       "discount": "⟦Ḓīşƈȯŭƞŧ⟧",
       "fixed": "⟦ƒīẋḗḓ⟧",
+      "monthlyTotal": "⟦Ḿȯƞŧħŀẏ ŧȯŧȧŀ ȧƒŧḗř ḓīşƈȯŭƞŧş⟧",
       "notConverted": "⟦Ƞȯŧ ƈȯƞṽḗřŧḗḓ⟧"
     },
     "partial": {

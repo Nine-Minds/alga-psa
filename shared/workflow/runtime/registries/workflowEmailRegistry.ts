@@ -9,6 +9,16 @@
  */
 
 export interface WorkflowEmailProvider {
+  /**
+   * Builds a client-portal URL on the tenant's portal origin (active custom
+   * domain, else the public base URL); null when no public origin exists.
+   * Registered from @alga-psa/tenancy to keep shared free of that dependency.
+   */
+  buildTenantPortalUrl?: (
+    tenantId: string,
+    path: string,
+    params?: Record<string, string | null | undefined>,
+  ) => Promise<string | null>;
   TenantEmailService: {
     getInstance(tenantId: string): {
       sendEmail(params: unknown): Promise<{ success: boolean; error?: string; messageId?: string; providerId?: string; providerType?: string; sentAt?: Date | string }>;

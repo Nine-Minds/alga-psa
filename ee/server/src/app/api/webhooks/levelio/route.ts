@@ -4,8 +4,9 @@
  * Two authenticated inputs share this URL (`?tenant=<id>`):
  *
  * 1. Native Settings -> Webhooks (primary). Detected by `X-Level-Signature`.
- *    The HMAC-SHA256 of the RAW body is verified with a per-tenant signing
- *    secret before anything is parsed. Envelope:
+ *    The HMAC-SHA256 of the RAW body is verified before anything is parsed,
+ *    with the per-tenant signing secret or, for setups made before that
+ *    existed, the shared webhook secret. Envelope:
  *    `{ event_type, event_id, occurred_at, data }`. `event_id` is constant
  *    across Level's retries and is claimed in `rmm_webhook_events` so a
  *    redelivery is a durable no-op.
@@ -104,8 +105,18 @@ export async function POST(req: Request) {
 
     const secretProvider = await getSecretProviderInstance();
     if (native) {
-      const signingSecret = await secretProvider.getTenantSecret(tenant, LEVELIO_WEBHOOK_SIGNING_SECRET_KEY);
-      if (!signingSecret || !verifyLevelSignature(rawBody, signature, signingSecret)) {
+      // Before the dedicated signing secret existed, the settings card showed
+      // only the shared webhook secret, and customers pasted that into Level's
+      // signing-secret field. Both are this tenant's own secrets, so a signature
+      // from either is accepted rather than breaking every existing setup.
+      const [signingSecret, legacySecret] = await Promise.all([
+        secretProvider.getTenantSecret(tenant, LEVELIO_WEBHOOK_SIGNING_SECRET_KEY),
+        secretProvider.getTenantSecret(tenant, LEVELIO_WEBHOOK_SECRET_KEY),
+      ]);
+      const verified = [signingSecret, legacySecret].some(
+        (candidate) => Boolean(candidate) && verifyLevelSignature(rawBody, signature, candidate as string),
+      );
+      if (!verified) {
         return NextResponse.json({ error: 'Unauthorized: invalid webhook signature' }, { status: 401 });
       }
     } else {

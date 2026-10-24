@@ -1,9 +1,11 @@
+import { tryNormalizeDateOnly } from '@alga-psa/types';
 import type { IClientContract } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import {
   createClientContractAssignment,
   deriveClientContractStatus,
+  getTenantLocalToday,
   updateClientContractAssignment,
 } from '@alga-psa/shared/billingClients';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
@@ -31,18 +33,9 @@ const normalizePositiveInteger = (value: unknown): number | undefined => {
   return normalized !== undefined && normalized > 0 ? normalized : undefined;
 };
 
-const normalizeDateOnly = (value: unknown): string | undefined => {
-  if (value === null || value === undefined) return undefined;
-  if (typeof value !== 'string') return undefined;
-
-  const trimmed = value.trim();
-  if (!trimmed) return undefined;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
-  if (trimmed.includes('T')) {
-    return trimmed.slice(0, 10);
-  }
-  return undefined;
-};
+// LEVERAGE: pattern date-only-normalizer — several local normalizeDateOnly copies exist; this one
+// delegates to the shared @alga-psa/types helper so pg DATE `Date` values keep their calendar date.
+const normalizeDateOnly = (value: unknown): string | undefined => tryNormalizeDateOnly(value) ?? undefined;
 
 const subtractDaysFromDateOnly = (dateOnly: string, days: number): string | undefined => {
   if (!Number.isInteger(days) || days < 0) return undefined;
@@ -204,7 +197,10 @@ const withRenewalDefaultsJoin = (
   return facade.tenantJoin(query, 'default_billing_settings as dbs', 'cc.tenant', 'dbs.tenant', { type: 'left' });
 };
 
-export const normalizeClientContract = (row: any): IClientContract => {
+export const normalizeClientContract = (
+  row: any,
+  options: { today?: string } = {}
+): IClientContract => {
   if (!row) return row;
 
   const normalized = { ...row } as Record<string, unknown>;
@@ -290,6 +286,7 @@ export const normalizeClientContract = (row: any): IClientContract => {
     contractStatus: typeof normalized.contract_status === 'string'
       ? normalized.contract_status
       : undefined,
+    now: options.today,
   });
 
   delete normalized.tenant_default_renewal_mode;
@@ -341,7 +338,8 @@ const ClientContract = {
         ...RENEWAL_DEFAULT_SELECTIONS,
       ]);
 
-      return dedupeClientContractsByRenewalCycle(rows.map(normalizeClientContract));
+      const today = await getTenantLocalToday(db, tenant);
+      return dedupeClientContractsByRenewalCycle(rows.map((row: any) => normalizeClientContract(row, { today })));
     } catch (error) {
       console.error(`Error fetching contracts for client ${clientId}:`, error);
       throw error;
@@ -376,7 +374,8 @@ const ClientContract = {
         ...RENEWAL_DEFAULT_SELECTIONS,
       ]);
 
-      return dedupeClientContractsByRenewalCycle(rows.map(normalizeClientContract));
+      const today = await getTenantLocalToday(db, tenant);
+      return dedupeClientContractsByRenewalCycle(rows.map((row: any) => normalizeClientContract(row, { today })));
     } catch (error) {
       console.error('Error fetching contracts for clients:', error);
       throw error;
@@ -404,7 +403,7 @@ const ClientContract = {
         ])
         .first();
 
-      return row ? normalizeClientContract(row) : null;
+      return row ? normalizeClientContract(row, { today: await getTenantLocalToday(db, tenant) }) : null;
     } catch (error) {
       console.error(`Error fetching client contract ${clientContractId}:`, error);
       throw error;
@@ -439,7 +438,9 @@ const ClientContract = {
         return null;
       }
 
-      const normalized = normalizeClientContract(clientContract) as any;
+      const normalized = normalizeClientContract(clientContract, {
+        today: await getTenantLocalToday(db, tenant),
+      }) as any;
 
       const assignmentContractLinesQuery = facade.table('client_contracts as cc')
         .where({
