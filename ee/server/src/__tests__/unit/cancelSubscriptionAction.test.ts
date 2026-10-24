@@ -30,6 +30,9 @@ vi.mock('@alga-psa/core/logger', () => ({
 vi.mock('@alga-psa/email/sendCancellationRequestEmail', () => ({
   sendCancellationRequestEmail: mocks.sendCancellationRequestEmail,
 }));
+vi.mock('@alga-psa/notifications/notifications/emailLocaleResolver', () => ({
+  resolveEmailLocale: vi.fn(async () => 'es'),
+}));
 vi.mock('@alga-psa/email', () => ({ sendCancellationFeedbackEmail: vi.fn() }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -99,6 +102,7 @@ describe('cancelSubscriptionAction cancellation request email', () => {
       recipientName: 'Acme Corp',
       recipientEmail: 'owner@example.test',
       cancelAtDate: new Date(CANCEL_AT * 1000).toISOString(),
+      locale: 'es',
     });
   });
 
