@@ -57,6 +57,11 @@ const h = vi.hoisted(() => {
       result.returning = () => Promise.resolve(rows.map((row) => ({ ...row })));
       return result;
     }
+    async del() {
+      const doomed = new Set(this.rows());
+      state[this.table] = (state[this.table] ?? []).filter((row) => !doomed.has(row));
+      return doomed.size;
+    }
     insert(row: Row) {
       inserts.push({ table: this.table, row });
       const copy: Row = this.table === 'assets' ? { asset_id: 'new-asset', ...row } : { ...row };

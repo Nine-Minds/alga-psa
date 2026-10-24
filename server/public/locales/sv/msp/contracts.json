@@ -616,6 +616,7 @@
       "quantityShort": "Antal: {{quantity}}",
       "quantityTaxAllocation": "Antal (för skattefördelning)",
       "rateTaxAllocation": "Taxa (för skattefördelning)",
+      "shareOfLineFee": "Andel av radavgiften",
       "title": "Tjänster ({{count}})",
       "typeLabel": "Tjänst av typen {{type}}",
       "unitOfMeasure": "Måttenhet",
@@ -1290,9 +1291,7 @@
     },
     "loadingTemplate": "Läser in mall…",
     "servicesLabel": "Tjänster",
-    "summary": {
-      "clientCurrency": "Kundens valuta"
-    },
+    "summary": {},
     "templateBadge": "Mall",
     "templateNotFound": "Avtalsmallen hittades inte",
     "templateSnapshotTitle": "Ögonblicksbild av mallen",
@@ -1337,6 +1336,16 @@
       "hypothetical": "Hypotetisk kundprofil",
       "open": "Simulera",
       "title": "Mallsimulering"
+    },
+    "pricing": {
+      "title": "Priser per valuta",
+      "addCurrency": "Lägg till valuta",
+      "removeCurrency": "Ta bort",
+      "missing": "{{count}} belopp saknas",
+      "baseCurrency": "(bas)",
+      "changeBaseCurrency": "Ändra basvaluta",
+      "changeBaseConfirm": "Ändra basvalutan till {{currency}}? Befintliga belopp räknas INTE om: de behåller sitt numeriska värde och läses som {{currency}}.",
+      "noSlots": "Den här mallen har inga belopp att prissätta ännu."
     },
     "discounts": {
       "title": "Standardrabatter för avtal",
@@ -1544,6 +1553,9 @@
       "confirm": "Bekräfta och fortsätt",
       "cancel": "Tillbaka"
     },
+    "templatePicker": {
+      "needsRates": "Behöver {{currency}}-priser"
+    },
     "discounts": {
       "help": "Avtalsövergripande rabatter gäller varje berättigad avgift som avtalet fakturerar. De skapas tillsammans med avtalet när du slutför konfigurationen, och simuleringen nedan prissätter dem.",
       "draftDialog": {
@@ -1673,7 +1685,8 @@
       "preview": {
         "billingCadenceLabel": "Faktureringsintervall:",
         "notSpecified": "Inte angivet",
-        "templateLabel": "Mall:"
+        "templateLabel": "Mall:",
+        "currencyLabel": "Basvaluta:"
       },
       "selectTemplateOptional": "Välj en mall (valfritt)",
       "startFromTemplate": "Utgå från mall"
@@ -2025,8 +2038,15 @@
     "unitRate": "Enhetstaxa",
     "serviceRate": "Tjänstetaxa",
     "noCurrencyPrice": "Inget pris i {{currency}} för den här tjänsten. Ange en taxa, annars kan avtalet inte skapas.",
-    "templateRateNote": "Från mallen (beloppet har ingen valutamärkning).",
-    "reviewTitle": "Rader som skapats från mallen"
+    "reviewTitle": "Rader som skapats från mallen",
+    "fallbackAlert": "Den här mallen har inga priser i {{currency}}. Dess struktur kopieras; ange belopp i {{currency}} nedan. Mallens belopp visas endast som referens och räknas inte om.",
+    "templateReference": "Mall: {{amount}} {{currency}}",
+    "catalogPrice": "Katalogpris",
+    "fromTemplateCurrency": "Från mallen ({{currency}})",
+    "fromTemplatePriceSet": "Från mallens {{currency}}-priser",
+    "noCurrencyAmount": "Inget belopp i {{currency}}. Ange ett, annars kan avtalet inte skapas.",
+    "overtimeRate": "Övertidspris",
+    "bucketOverageRate": "Överskridandepris"
   },
   "templateWizard": {
     "title": {
@@ -2070,8 +2090,10 @@
           "usage": "Förbrukning"
         }
       },
-      "recurringQuantityInvalid": "Det återkommande antalet för \"{{serviceName}}\" måste vara ett heltal, noll eller mer, och ett eventuellt enhetspris måste vara ett giltigt belopp."
-    }
+      "recurringQuantityInvalid": "Det återkommande antalet för \"{{serviceName}}\" måste vara ett heltal, noll eller mer, och ett eventuellt enhetspris måste vara ett giltigt belopp.",
+      "currencyRequired": "Basvaluta krävs"
+    },
+    "currency": "Basvaluta *"
   },
   "templateBasics": {
     "heading": "Mallens grunduppgifter",
@@ -2089,7 +2111,8 @@
     "help": {
       "templateName": "Använd ett beskrivande namn så att team snabbt kan hitta rätt mall.",
       "internalNotes": "Anteckningarna följer med mallen och ger sammanhang när kollegor använder den.",
-      "billingFrequency": "Anger standardintervallet när mallen tillämpas. Det kan fortfarande justeras per kund."
+      "billingFrequency": "Anger standardintervallet när mallen tillämpas. Det kan fortfarande justeras per kund.",
+      "currency": "Priser som anges i den här guiden är i denna valuta. Priser i andra valutor kan läggas till i mallen efteråt. Belopp räknas aldrig om."
     }
   },
   "templateFixed": {
@@ -2224,7 +2247,7 @@
   },
   "templateReview": {
     "heading": "Granska mall",
-    "description": "Bekräfta mallens innehåll. Taxorna bestäms av varje tjänsts prissättning i kundens valuta när ett avtal skapas från mallen.",
+    "description": "Bekräfta mallens innehåll. Taxorna sparas i mallens basvaluta. Andra valutor använder mallens prisuppsättningar, eller så anger du beloppen när du skapar ett avtal.",
     "sections": {
       "basics": "Mallens grunduppgifter",
       "fixedFeeServices": "Tjänster med fast avgift",
@@ -2236,7 +2259,8 @@
     "fields": {
       "templateName": "Mallnamn",
       "billingFrequency": "Faktureringsintervall",
-      "internalNotes": "Interna anteckningar"
+      "internalNotes": "Interna anteckningar",
+      "baseCurrency": "Basvaluta"
     },
     "fallback": {
       "none": "—",
@@ -2272,8 +2296,7 @@
       "serviceLabel": "Tjänst:",
       "invoiceWindowLabel": "Faktureringsperiod:",
       "unitRateLabel": "Enhetspris:",
-      "unitRateFromCatalog": "Katalogpris i kundens valuta",
-      "unitRateNeutral": "{{rate}} i kundens valuta"
+      "unitRateFromCatalog": "Katalogpris i kundens valuta"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Minsta debiterbara tid:",
@@ -2287,7 +2310,7 @@
       "hoursIncluded": "{{value}} timmar ingår",
       "unitsIncluded": "{{value}} {{unit}} ingår",
       "unitsFallback": "enheter",
-      "overage": "Överförbrukning {{amount}} $/{{unit}}",
+      "overage": "Överskridande {{amount}}/{{unit}}",
       "hourSingular": "timme",
       "unitSingular": "enhet",
       "rolloverEnabled": "Överföring till nästa period aktiverad",
@@ -2684,6 +2707,10 @@
       "duplicate": "En matchande post finns redan i avtalsguiden.",
       "resumeUnsupportedShape": "Det här utkastet kan inte återupptas i guiden utan att dess priser ändras: {{lines}}",
       "fixedLineNoService": "Den fasta raden \"{{lineName}}\" har ett återkommande belopp men ingen tjänst att fakturera det på. Lägg till en tjänst innan du slutför.",
+      "templateAmountsMissing": "Avtalet kan inte skapas i {{currency}}. Följande belopp saknar värde i {{currency}}: {{amounts}}. Ange ett belopp för varje eller lägg till {{currency}}-priser i mallen.",
+      "currencyPricingMissing": "Avtalet kan inte skapas i {{currency}}. Inget pris i {{currency}} är angivet för: {{services}}.",
+      "invalidTemplateCurrency": "\"{{currency}}\" är inte en giltig ISO 4217-valutakod",
+      "templateCurrencyHasPriceSet": "Den här mallen har redan en prislista i {{currency}}. Ta bort den innan {{currency}} blir basvaluta.",
       "standingTerms": "Det här utkastet har löpande rabattvillkor. Redigera flikarna Rader och Rabatter för att bevara villkoren."
     },
     "pricingSchedule": {
@@ -2736,6 +2763,11 @@
   },
   "sellHourBlockNote": {
     "text": "En timpott i avtalet fakturerar bara överförbrukning. Om du vill ta betalt för ett timblock i förskott lägger du till en rad för Förbetalt block i det här avtalet."
+  },
+  "review": {
+    "saveTemplateRates": "Spara dessa {{currency}}-priser i mallen",
+    "saveMissingTemplateRates": "Lägg till de saknade {{currency}}-priserna i mallen",
+    "updateTemplateRates": "Uppdatera mallens {{currency}}-priser med dessa belopp"
   },
   "billingTimingField": {
     "arrears": "I efterskott",

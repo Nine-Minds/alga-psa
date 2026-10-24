@@ -534,6 +534,7 @@
   "identicalAllowlist": {
     "exact": [
       "RMA {{id}}",
+      "Datto RMM",
       "TeamViewer",
       "VNC",
       "RDP",

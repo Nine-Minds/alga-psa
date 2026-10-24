@@ -908,6 +908,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
         } else if (serviceConfig.configuration.configuration_type === 'Fixed') {
           if (editData.base_rate !== undefined) {
             typeConfig.base_rate = editData.base_rate;
+            // The edit keeps what the stored number means (share vs per unit); a
+            // rate on a member that had none is a unit price.
+            typeConfig.base_rate_basis = serviceConfig.typeConfig?.base_rate_basis ?? 'per_unit';
           }
         }
 
@@ -933,7 +936,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                 unit_of_measure:
                   editData.unit_of_measure || addition.selection.service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
               }
-            : { base_rate: editData.base_rate ?? addition.selection.customRate };
+            // A Fixed member's authoring default is the catalog price per unit.
+            : { base_rate: editData.base_rate ?? addition.selection.customRate, base_rate_basis: 'per_unit' as const };
 
         return {
           serviceId: addition.selection.service.service_id,
@@ -1950,7 +1954,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                               ? t('contractLines.services.hourlyRate', { defaultValue: 'Hourly Rate' })
                                               : serviceConfig.configuration.configuration_type === 'Usage' || isUnitPriced || isRecurringProduct
                                               ? t('contractLines.services.unitRate', { defaultValue: 'Unit Rate' })
-                                              : t('contractLines.services.rateTaxAllocation', { defaultValue: 'Rate (for tax allocation)' })}
+                                              : serviceConfig.typeConfig?.base_rate_basis === 'share'
+                                              ? t('contractLines.services.shareOfLineFee', { defaultValue: 'Share of line fee' })
+                                              : t('contractLines.services.unitRate', { defaultValue: 'Unit Rate' })}
                                           </Label>
                                           {isEditing ? (
                                             <div className="relative mt-1">
