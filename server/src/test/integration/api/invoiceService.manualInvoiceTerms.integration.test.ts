@@ -319,7 +319,7 @@ describe('REST manual invoice creation takes terms from the effective billing id
       return { defaultProfileId, otherProfileId, invoiceId: header.invoice_id as string };
     }
 
-    it('D2: changing the profile on a draft re-resolves terms and re-points non-explicit charges', async () => {
+    it('D2: changing the profile on a draft re-resolves terms and re-points charges that were on the old header profile', async () => {
       const { otherProfileId, invoiceId } = await draftUnderDefaultAndNet15CreditCardProfile();
 
       await updateAsGeneric(invoiceId, { billing_profile_id: otherProfileId });
@@ -426,6 +426,51 @@ describe('REST manual invoice creation takes terms from the effective billing id
         .whereNot({ item_id: pinned.item_id });
       expect(others).toHaveLength(1);
       expect(others[0].billing_profile_id).toBe(otherProfileId);
+    });
+
+    it('D2: re-points only header-following charges; other profiles and contract sources are untouched', async () => {
+      await ensureDefaultBillingProfile(context, context.clientId);
+      const p1 = await profileWith('P1', 'net_30', 'check');
+      const p2 = await profileWith('P2', 'net_30', 'check');
+      const p3 = await profileWith('P3', 'net_30', 'check');
+      const p4 = await profileWith('P4', 'net_15', 'credit_card');
+      const created = await serviceUnderTest().create(
+        { ...base(), billing_profile_id: p1, items: [
+          { description: 'A', quantity: 1, unit_price: 1000 },
+          { description: 'B', quantity: 1, unit_price: 1000 },
+          { description: 'C', quantity: 1, unit_price: 1000 },
+          { description: 'D', quantity: 1, unit_price: 1000 },
+          { description: 'E', quantity: 1, unit_price: 1000 },
+        ] } as any,
+        ctx(),
+      );
+      const invoiceId = (created as any).invoice_id as string;
+      const byDescription = async (d: string) =>
+        context.db('invoice_charges')
+          .where({ tenant: context.tenantId, invoice_id: invoiceId, description: d }).first();
+      const set = (d: string, patch: Record<string, unknown>) =>
+        context.db('invoice_charges')
+          .where({ tenant: context.tenantId, invoice_id: invoiceId, description: d }).update(patch);
+      await set('A', { billing_profile_id: p1, billing_profile_source: 'client_default' });
+      await set('B', { billing_profile_id: p2, billing_profile_source: 'client_default' });
+      await set('C', { billing_profile_id: p3, billing_profile_source: 'contract_line' });
+      await set('D', { billing_profile_id: null, billing_profile_source: null });
+      await set('E', { billing_profile_id: p1, billing_profile_source: 'contract_line' });
+
+      await updateAsGeneric(invoiceId, { billing_profile_id: p4 });
+
+      expect((await headerOf(invoiceId)).billing_profile_id).toBe(p4);
+      const a = await byDescription('A');
+      expect([a.billing_profile_id, a.billing_profile_source]).toEqual([p4, 'explicit']);
+      const b = await byDescription('B');
+      expect([b.billing_profile_id, b.billing_profile_source]).toEqual([p2, 'client_default']);
+      const c = await byDescription('C');
+      expect([c.billing_profile_id, c.billing_profile_source]).toEqual([p3, 'contract_line']);
+      const d = await byDescription('D');
+      expect(d.billing_profile_id).toBe(p4);
+      expect(d.billing_profile_source).toBe('explicit');
+      const e = await byDescription('E');
+      expect([e.billing_profile_id, e.billing_profile_source]).toEqual([p4, 'contract_line']);
     });
 
     it('rejects a foreign billing_profile_id on generic create', async () => {

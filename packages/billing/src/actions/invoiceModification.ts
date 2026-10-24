@@ -68,6 +68,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import logger from '@alga-psa/core/logger';
+import { repointHeaderFollowingCharges } from '../lib/billing/repointHeaderFollowingCharges';
 import {
   ManualInvoiceError,
   type ManualInvoiceErrorCode,
@@ -1014,16 +1015,12 @@ export const updateDraftInvoiceProperties = withAuth(async (
       // followed the invoice header move with it, so profile spend and AR stay
       // consistent with what the invoice now bills.
       const previousBillingProfileId = resolvedBillingProfileId;
-      const chargeRepoint = tenantScopedTable(trx, tenant, 'invoice_charges')
-        .where({ invoice_id: invoiceId });
-      if (previousBillingProfileId) {
-        chargeRepoint.where((qb) => {
-          qb.where('billing_profile_id', previousBillingProfileId).orWhereNull('billing_profile_id');
-        });
-      } else {
-        chargeRepoint.whereNull('billing_profile_id');
-      }
-      await chargeRepoint.update({ billing_profile_id: nextBillingProfileId });
+      await repointHeaderFollowingCharges(trx, {
+        tenant,
+        invoiceId,
+        fromProfileId: previousBillingProfileId,
+        toProfileId: nextBillingProfileId,
+      });
 
       await tenantScopedTable(trx, tenant, 'invoices')
         .where({ invoice_id: invoiceId, tenant })
