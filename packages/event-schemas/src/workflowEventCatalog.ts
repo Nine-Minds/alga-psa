@@ -49,6 +49,7 @@ export const WORKFLOW_EVENT_CATALOG = {
   APPOINTMENT_RESCHEDULED: { schemaRef: 'payload.AppointmentRescheduled.v1' },
   ASSET_ASSIGNED: { schemaRef: 'payload.AssetAssigned.v1' },
   ASSET_CREATED: { schemaRef: 'payload.AssetCreated.v1' },
+  ASSET_CUSTODY_CHANGED: { schemaRef: 'payload.AssetCustodyChanged.v1' },
   ASSET_UNASSIGNED: { schemaRef: 'payload.AssetUnassigned.v1' },
   ASSET_UPDATED: { schemaRef: 'payload.AssetUpdated.v1' },
   ASSET_WARRANTY_EXPIRING: { schemaRef: 'payload.AssetWarrantyExpiring.v1' },

@@ -149,6 +149,7 @@ import {
 import {
   assetAssignedEventPayloadSchema,
   assetCreatedEventPayloadSchema,
+  assetCustodyChangedEventPayloadSchema,
   assetUnassignedEventPayloadSchema,
   assetUpdatedEventPayloadSchema,
   assetWarrantyExpiringEventPayloadSchema,
@@ -382,6 +383,7 @@ export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
   'payload.AssetAssigned.v1': assetAssignedEventPayloadSchema,
   'payload.AssetUnassigned.v1': assetUnassignedEventPayloadSchema,
   'payload.AssetWarrantyExpiring.v1': assetWarrantyExpiringEventPayloadSchema,
+  'payload.AssetCustodyChanged.v1': assetCustodyChangedEventPayloadSchema,
   'payload.FileUploaded.v1': fileUploadedEventPayloadSchema,
   'payload.MediaProcessingSucceeded.v1': mediaProcessingSucceededEventPayloadSchema,
   'payload.MediaProcessingFailed.v1': mediaProcessingFailedEventPayloadSchema,
