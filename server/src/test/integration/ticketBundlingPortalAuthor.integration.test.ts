@@ -261,7 +261,7 @@ describe('Ticket bundling client portal author resolution', () => {
     // anything. This region is a superset of the one this test guarded when the
     // conversation query still opened its own `comments` scan.
     const start = source.indexOf("const visibleCommentsQuery = scopedDb.table('comments');");
-    const end = source.indexOf('const [ticket, conversations, documents, users, linkedAssets]', start);
+    const end = source.indexOf('const [conversations, documents, users, linkedAssets]', start);
 
     expect(start).toBeGreaterThanOrEqual(0);
     expect(end).toBeGreaterThan(start);

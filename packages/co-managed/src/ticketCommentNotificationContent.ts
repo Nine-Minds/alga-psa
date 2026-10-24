@@ -1,3 +1,4 @@
+import type { TicketConversationReference } from '@alga-psa/shared/lib/tickets/namedConversations';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
@@ -11,6 +12,7 @@ export interface TicketCommentNotificationContent<Resource extends { tenant: str
   resource: Resource;
   commentId: string;
   threadId: string;
+  conversationTarget?: TicketConversationReference;
   audience: TicketCommentAudience;
   note: string;
   ticketNumber?: string;
@@ -30,10 +32,22 @@ export async function readLockedTicketCommentNotification<Resource extends { ten
   if (isCoManagedReadFieldHidden(redactedFields, [...coManagedConversationBodySources, 'comments', 'comment_threads', 'comment_id'])) return null;
   const locator = await owner.table('comments').where({ ticket_id: context.resource.id, comment_id: commentId }).first('thread_id');
   if (!locator?.thread_id) return null;
-  // Match native command lock order: ticket -> thread -> comment/root. The
-  // thread lock serializes disclosure and reply operations during delivery.
-  const thread = await owner.table('comment_threads').where({ thread_id: locator.thread_id, ticket_id: context.resource.id }).forShare().first('thread_id');
-  if (!thread) return null;
+  // Retain named-container admission before thread/source locks, matching
+  // named publication. A moved root cannot redirect a queued delivery.
+  const locatedThread = await owner.table('comment_threads').where({ thread_id: locator.thread_id, ticket_id: context.resource.id }).first('conversation_id');
+  if (!locatedThread) return null;
+  let conversationTarget: TicketConversationReference | undefined;
+  let namedAudience: string | undefined;
+  if (locatedThread.conversation_id) {
+    if (isCoManagedReadFieldHidden(redactedFields, ['ticket_conversations', 'conversation_id', 'name', 'audience', 'default_slot', 'message_version', 'mailbox_id', 'mailbox_tenant'])) return null;
+    const named = await owner.table('ticket_conversations').where({ conversation_id: locatedThread.conversation_id,
+      ticket_tenant: context.resource.tenant, ticket_id: context.resource.id }).forShare().first('conversation_id', 'audience');
+    if (!named || !audiences.includes(named.audience)) return null;
+    conversationTarget = { storeTenant: context.resource.tenant, conversationId: named.conversation_id };
+    namedAudience = named.audience;
+  }
+  const thread = await owner.table('comment_threads').where({ thread_id: locator.thread_id, ticket_id: context.resource.id }).forShare().first('thread_id', 'conversation_id');
+  if (!thread || thread.conversation_id !== locatedThread.conversation_id) return null;
   const query = owner.table('comments as c').where({ 'c.comment_id': commentId, 'c.ticket_id': context.resource.id,
     'c.thread_id': thread.thread_id, 'c.publish_state': 'published' }).whereNull('c.deleted_at');
   owner.tenantJoin(query, 'comment_threads as t', 'c.thread_id', 't.thread_id', { on: join => join.andOn('t.ticket_id', '=', 'c.ticket_id') });
@@ -42,7 +56,7 @@ export async function readLockedTicketCommentNotification<Resource extends { ten
   const audience = commentAudienceSql(trx, 't', 'root', 'c');
   const comment = await query.where('root.publish_state', 'published').whereRaw(`? IN (${audiences.map(() => '?').join(', ')})`, [audience, ...audiences])
     .select('c.user_id', 'c.contact_id', 'c.actor_reference_id', 'c.actor_display_name', 'c.actor_organization_name', 'c.note', 'c.is_system_generated', { audience }).forShare().first();
-  if (!comment) return null;
+  if (!comment || (namedAudience && comment.audience !== namedAudience)) return null;
   let author: CoManagedConversationAuthor;
   if (comment.actor_reference_id) {
     const reference = await owner.table('collaboration_actor_references').where('actor_reference_id', comment.actor_reference_id).forShare().first('actor_tenant', 'actor_user_id');
@@ -63,7 +77,7 @@ export async function readLockedTicketCommentNotification<Resource extends { ten
   const ticket = await owner.table('tickets').where('ticket_id', context.resource.id).first('ticket_number', 'title');
   if (!ticket) return null;
   const message: TicketCommentNotificationContent<Resource> = {
-    resource: { ...context.resource }, commentId, threadId: thread.thread_id, audience: comment.audience, note: comment.note ?? '',
+    resource: { ...context.resource }, commentId, threadId: thread.thread_id, ...(conversationTarget ? { conversationTarget } : {}), audience: comment.audience, note: comment.note ?? '',
     ...(!isCoManagedReadFieldHidden(redactedFields, ['ticket_number', 'tickets.ticket_number']) ? { ticketNumber: ticket.ticket_number } : {}),
     ...(!isCoManagedReadFieldHidden(redactedFields, ['title', 'tickets.title']) ? { ticketTitle: ticket.title } : {}),
     ...(!isCoManagedReadFieldHidden(redactedFields, coManagedConversationAuthorSources) ? { author } : {}),

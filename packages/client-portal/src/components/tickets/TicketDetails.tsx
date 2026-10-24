@@ -2,7 +2,12 @@
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket details intentionally compose ticket feature UI for customer-facing support workflows. */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { usePortalConversationNavigation } from './usePortalConversationNavigation';
+import { Button } from '@alga-psa/ui/components/Button';
+import { useConversationMessageTarget } from '@alga-psa/tickets/components/ticket/conversations/useConversationMessageFocus';
+import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { RichTextViewer } from '@alga-psa/ui/editor';
@@ -68,7 +73,20 @@ const isReturnedActionError = (
 ): value is { readonly actionError: string } | { readonly permissionError: string } =>
   isActionMessageError(value) || isActionPermissionError(value);
 
-export function TicketDetails({
+export function TicketDetails(props: TicketDetailsProps) {
+  const { data: session } = useSession();
+  const { t } = useTranslation('features/tickets');
+  const identity = session ? `${session.session_id}:${session.user?.tenant}:${session.user?.id}` : null;
+  const admittedIdentity = useRef<string | null>(null);
+  if (!identity) return null;
+  if (admittedIdentity.current === null) admittedIdentity.current = identity;
+  // Server-prefetched bodies/documents belong to the identity that opened this
+  // screen. A new account must open its own authorized ticket projection.
+  if (admittedIdentity.current !== identity) return <p role="status">{t('namedConversations.reopenAfterAccountChange', 'Reopen this ticket after switching accounts.')}</p>;
+  return <TicketDetailsContent key={`${identity}:${props.initialTicket.tenant}:${props.ticketId}`} {...props} />;
+}
+
+function TicketDetailsContent({
   ticketId,
   isOpen,
   onClose,
@@ -81,9 +99,24 @@ export function TicketDetails({
   const { t, i18n } = useTranslation('features/tickets');
   const { t: tCommon } = useTranslation('common');
   const dateLocale = getDateFnsLocale(i18n.language);
+  const { enabled: namedConversationsEnabled } = useFeatureFlag('release-v1-6-feature', { defaultValue: false });
+  const [conversationBusy, setConversationBusy] = useState(false);
+  const conversationLock = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const beginConversationRequest = () => {
+    if (conversationLock.current) return false;
+    conversationLock.current = true; setConversationBusy(true); return true;
+  };
+  const endConversationRequest = () => { conversationLock.current = false; if (mounted.current) setConversationBusy(false); };
   const isAlgaDeskPortal = productCode === 'algadesk';
   // Use pre-fetched data from server component
   const [ticket, setTicket] = useState<ITicketWithDetails>(initialTicket);
+  const selectedConversation = ticket.requesterConversations?.find(conversation => conversation.conversationId === ticket.selectedConversationId);
+  const messageTarget = useConversationMessageTarget(ticket.tenant ?? '', namedConversationsEnabled && ticket.tenant && selectedConversation
+    ? { storeTenant: ticket.tenant, conversationId: selectedConversation.conversationId, defaultSlot: selectedConversation.isDefault ? 'requester' : null } : null);
+  const focusedMessageId = messageTarget && ticket.conversations?.some(comment => comment.comment_id?.toLowerCase() === messageTarget.toLowerCase() &&
+    !comment.deleted_at && !comment.is_internal && (!comment.publish_state || comment.publish_state === 'published')) ? messageTarget.toLowerCase() : null;
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<{ id: string; name?: string | null; email?: string | null; avatarUrl?: string | null } | null>(null);
@@ -164,7 +197,6 @@ export function TicketDetails({
       console.error('Failed to refresh ticket documents after clipboard upload:', error);
     }
   }, [ticketId, handleReturnedActionError]);
-  // No component-level pending state needed; we'll keep optimistic data within the save handler scope
 
   // State for appointment requests
   const [appointments, setAppointments] = useState<ITicketAppointmentRequest[]>([]);
@@ -276,6 +308,20 @@ export function TicketDetails({
     fetchCurrentUser();
   }, [isOpen, asStandalone]);
 
+  const hasDraftContent = (value: unknown): boolean => {
+    if (typeof value === 'string') return value.length > 0;
+    if (Array.isArray(value)) return value.some(hasDraftContent);
+    if (!value || typeof value !== 'object') return false;
+    const node = value as { type?: string; text?: string; content?: unknown; children?: unknown };
+    return Boolean((node.type && !['paragraph', 'text'].includes(node.type)) || node.text ||
+      hasDraftContent(node.content) || hasDraftContent(node.children));
+  };
+  const unfinishedConversation = isEditing || hasDraftContent(newCommentContent);
+  const navigation = usePortalConversationNavigation({ ticket, enabled: namedConversationsEnabled, bindUrl: asStandalone,
+    busy: conversationBusy, blocked: unfinishedConversation, begin: beginConversationRequest, end: endConversationRequest,
+    onLoaded: details => { setTicket(details); setCommentOverrides({}); setError(null); setConversationVersion(value => value + 1); },
+  });
+
   const handleNewCommentContentChange = (content: PartialBlock[]) => {
     setNewCommentContent(content);
   };
@@ -305,12 +351,14 @@ export function TicketDetails({
       return false;
     }
 
+    if (!beginConversationRequest()) return false;
     try {
       const commentResult = await addClientTicketComment(
         ticketId,
         JSON.stringify(newCommentContent),
         isInternal,
-        isResolution
+        isResolution,
+        ticket.selectedConversationId
       );
       if (isReturnedActionError(commentResult)) {
         handleReturnedActionError(commentResult);
@@ -333,7 +381,7 @@ export function TicketDetails({
         }]
       }]);
       // Refresh ticket details to get new comment
-      const details = await getClientTicketDetails(ticketId);
+      const details = await getClientTicketDetails(ticketId, ticket.selectedConversationId);
       if (isReturnedActionError(details)) {
         handleReturnedActionError(details);
         return false;
@@ -344,12 +392,12 @@ export function TicketDetails({
       setError(t('messages.commentError', 'Failed to add comment'));
       handleError(error, t('messages.commentError', 'Failed to add comment'));
       return false;
-    }
+    } finally { endConversationRequest(); }
   };
 
   const handleAddReplyComment = async (content: PartialBlock[], parentCommentId: string): Promise<boolean> => {
     try {
-      const result = await addClientTicketComment(ticketId, JSON.stringify(content), false, false, parentCommentId);
+      const result = await addClientTicketComment(ticketId, JSON.stringify(content), false, false, ticket.selectedConversationId, parentCommentId);
       if (isReturnedActionError(result)) {
         handleReturnedActionError(result);
         return false;
@@ -373,6 +421,7 @@ export function TicketDetails({
   };
 
   const handleSave = async (updates: Partial<IComment>) => {
+    if (!beginConversationRequest()) return;
     try {
       if (!currentComment?.comment_id) return;
       
@@ -449,7 +498,7 @@ export function TicketDetails({
 
       // Refresh ticket details to get the authoritative updated comment
       if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][handleSave] Refetching ticket details');
-      const details = await getClientTicketDetails(ticketId);
+      const details = await getClientTicketDetails(ticketId, ticket.selectedConversationId);
       if (isReturnedActionError(details)) {
         handleReturnedActionError(details);
         return;
@@ -501,7 +550,7 @@ export function TicketDetails({
     } catch (error) {
       setError(t('messages.failedToUpdateComment', 'Failed to update comment'));
       handleError(error, t('messages.failedToUpdateComment', 'Failed to update comment'));
-    }
+    } finally { endConversationRequest(); }
   };
 
   const handleClose = () => {
@@ -510,6 +559,7 @@ export function TicketDetails({
   };
 
   const handleDelete = async (comment: IComment) => {
+    if (!beginConversationRequest()) return;
     try {
       if (!comment.comment_id) return;
       
@@ -526,7 +576,7 @@ export function TicketDetails({
         return;
       }
       // Refresh ticket details to remove deleted comment
-      const details = await getClientTicketDetails(ticketId);
+      const details = await getClientTicketDetails(ticketId, ticket.selectedConversationId);
       if (isReturnedActionError(details)) {
         handleReturnedActionError(details);
         return;
@@ -536,7 +586,7 @@ export function TicketDetails({
     } catch (error) {
       setError(t('messages.failedToDeleteComment', 'Failed to delete comment'));
       handleError(error, t('messages.failedToDeleteComment', 'Failed to delete comment'));
-    }
+    } finally { endConversationRequest(); }
   };
 
   const handleContentChange = (content: PartialBlock[]) => {
@@ -883,7 +933,25 @@ export function TicketDetails({
           {/* Comments Section */}
           {ticket.conversations && (
             <div>
-              {currentUser ? <TicketConversation
+              {currentUser ? (
+                <>
+              {namedConversationsEnabled && (ticket.requesterConversations?.length ?? 0) > 1 && <div className="mb-4 space-y-2">
+                <CustomSelect id="portal-ticket-conversation" label={t('namedConversations.portalSelector', 'Conversation')}
+                  value={ticket.selectedConversationId ?? ''}
+                  options={ticket.requesterConversations!.map(conversation => ({ value: conversation.conversationId, label: conversation.name }))}
+                  onValueChange={navigation.select} disabled={conversationBusy || unfinishedConversation} />
+                {unfinishedConversation && !navigation.pending && <p role="status" className="text-sm text-muted-foreground">{t('namedConversations.finishRequesterEdit', 'Finish or cancel your current edit before switching conversations.')}</p>}
+              </div>}
+              {navigation.pending && unfinishedConversation && <p role="status" className="mb-3 text-sm">{t('namedConversations.finishNavigation', 'Finish or cancel your current edit to open the requested conversation.')}</p>}
+              {navigation.unavailable && <div role="alert" className="mb-3 space-y-2">
+                <p>{t('namedConversations.unavailable', 'This conversation is unavailable.')}</p>
+                <Button id="portal-conversation-retry" variant="ghost" disabled={conversationBusy} onClick={navigation.retry}>{t('namedConversations.retry', 'Retry')}</Button>
+                <Button id="portal-conversation-return" variant="ghost" disabled={conversationBusy} onClick={navigation.returnToCurrent}>{t('namedConversations.returnToCurrent', 'Return to current conversation')}</Button>
+              </div>}
+              <fieldset disabled={conversationBusy} inert={conversationBusy} aria-busy={conversationBusy} className="min-w-0">
+              {messageTarget && !focusedMessageId && <p role="alert" className="text-sm">{t('namedConversations.messageUnavailable', 'This message is unavailable in this conversation.')}</p>}
+              <TicketConversation
+                focusedMessageId={conversationBusy ? null : focusedMessageId}
                 key={`conv-${conversationVersion}`}
                 ticket={ticket}
                 conversations={ticket.conversations}
@@ -912,7 +980,10 @@ export function TicketDetails({
                 overrides={commentOverrides}
                 onClipboardImageUploaded={refreshTicketDocuments}
                 defaultNewestFirst
-              /> : <LoadingIndicator text={t('common.loading', 'Loading...')} />}
+              />
+              </fieldset>
+                </>
+              ) : <LoadingIndicator text={t('common.loading', 'Loading...')} />}
             </div>
           )}
 

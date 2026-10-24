@@ -1148,5 +1148,32 @@
         "users": "No se pudieron cargar los usuarios. Inténtelo de nuevo."
       }
     }
+  },
+  "replyReview": {
+    "loadError": "No se pudieron cargar las respuestas retenidas. Se requiere permiso para administrar el buzón.",
+    "openError": "No se pudo abrir esta respuesta. Actualice para comprobar si sigue retenida.",
+    "resolved": "Respuesta agregada a la conversación seleccionada.",
+    "resolveError": "No se pudo confirmar la asignación. Reintente para comprobar la misma operación o actualice para revisar el estado actual.",
+    "sharedIt": "TI compartida",
+    "private": "Privado de la organización",
+    "title": "Respuestas de conversación retenidas",
+    "refresh": "Actualizar",
+    "description": "Revise las respuestas cuya conversación no se pudo confirmar y elija dónde corresponden.",
+    "loading": "Cargando…",
+    "back": "Volver a las respuestas retenidas",
+    "from": "De",
+    "to": "Para",
+    "unverified": "No se pudo verificar la autenticación del remitente o el mensaje no es utilizable. Esta respuesta permanece retenida.",
+    "destination": "Conversación de destino",
+    "chooseDestination": "Elegir una conversación",
+    "noDestinations": "No hay conversaciones con proveedores disponibles para escritura en este buzón.",
+    "retry": "Reintentar asignación",
+    "resolve": "Agregar respuesta a la conversación",
+    "empty": "No hay respuestas de conversación pendientes de revisión.",
+    "noSubject": "(Sin asunto)",
+    "review": "Revisar",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "nav": "Respuestas retenidas"
   }
 }

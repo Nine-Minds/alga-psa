@@ -97,7 +97,7 @@ vi.mock('@alga-psa/integrations/components/settings/integrations/CalendarEnterpr
 vi.mock('@alga-psa/integrations/components/settings/integrations/TeamsEnterpriseIntegrationSettings', () => ({
   TeamsEnterpriseIntegrationSettings: () => <div data-testid="teams-stub" />,
 }));
-vi.mock('@alga-psa/integrations/components', () => ({
+vi.mock('@alga-psa/integrations/components/email/EmailProviderConfiguration', () => ({
   EmailProviderConfiguration: () => <div data-testid="email-provider-stub" />,
 }));
 vi.mock('@alga-psa/integrations/entra/components/entry', () => ({
@@ -132,6 +132,28 @@ describe('IntegrationsSettingsPage — Hudu IT Documentation category gating (T0
 
     expect(document.querySelector('[data-tab-id="it-documentation"]')).toBeNull();
     expect(screen.queryByText('integrations.categories.itDocumentation.label')).toBeNull();
+  });
+
+  it('updates Hudu availability without remounting the email settings sibling', () => {
+    useHuduIntegrationEnabledMock.mockReturnValue({ enabled: false, loading: false });
+    const { rerender } = render(<IntegrationsSettingsPage />);
+    const emailSettings = screen.getByTestId('email-provider-stub');
+
+    expect(document.querySelector('[data-tab-id="it-documentation"]')).toBeNull();
+    expect(emailSettings.closest('[data-tab-id]')?.getAttribute('data-tab-id')).toBe('communication');
+
+    useHuduIntegrationEnabledMock.mockReturnValue({ enabled: true, loading: false });
+    rerender(<IntegrationsSettingsPage />);
+
+    const huduTab = document.querySelector('[data-tab-id="it-documentation"]');
+    expect(huduTab?.querySelectorAll('[data-testid="dynamic-integration-stub"]')).toHaveLength(1);
+    expect(screen.getByTestId('email-provider-stub')).toBe(emailSettings);
+
+    useHuduIntegrationEnabledMock.mockReturnValue({ enabled: false, loading: false });
+    rerender(<IntegrationsSettingsPage />);
+
+    expect(document.querySelector('[data-tab-id="it-documentation"]')).toBeNull();
+    expect(screen.getByTestId('email-provider-stub')).toBe(emailSettings);
   });
 
   it('hides the IT Documentation category in CE even if the hook were to report enabled', () => {

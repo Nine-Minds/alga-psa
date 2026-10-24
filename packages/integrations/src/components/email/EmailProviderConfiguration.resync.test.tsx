@@ -16,6 +16,7 @@ const toastMock = vi.hoisted(() => Object.assign(vi.fn(), {
 }));
 
 vi.mock('react-hot-toast', () => ({ default: toastMock }));
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({ useFeatureFlag: () => ({ enabled: false }) }));
 
 vi.mock('../../actions/email-actions/emailProviderActions', () => ({
   deleteEmailProvider: vi.fn(),
@@ -332,7 +333,7 @@ describe('EmailProviderConfiguration setup guidance across editions', () => {
     expect(screen.queryByRole('button', { name: 'Open Providers' })).not.toBeInTheDocument();
   });
 
-  it('shows the hosted Providers hint alongside the setup guidance in EE', async () => {
+  it('keeps the hosted Providers entry reachable in EE with the named-conversation release flag disabled', async () => {
     isEnterpriseEditionMock.mockImplementation(() => true);
     getEmailProvidersMock.mockResolvedValueOnce({ providers: [] });
 
@@ -342,6 +343,6 @@ describe('EmailProviderConfiguration setup guidance across editions', () => {
 
     expect(screen.getByText(/Bring your own Microsoft app/)).toBeInTheDocument();
     expect(screen.getByText('Microsoft app setup is managed in Providers.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open Providers' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Providers' })).toBeEnabled();
   });
 });

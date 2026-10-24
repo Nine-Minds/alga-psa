@@ -9,6 +9,7 @@ import { entryLayoutBootstrap } from './entryLayoutBootstrap';
 import { createComment, updateComment, findCommentById } from '../../../actions/comment-actions/commentActions';
 
 const {
+  namedConversationMock,
   routerPushMock,
   findBoardByIdMock,
   getTicketByIdMock,
@@ -16,6 +17,7 @@ const {
   toastErrorMock,
   getDocumentsMock,
 } = vi.hoisted(() => ({
+  namedConversationMock: vi.fn((..._args: any[]) => ({ navigator: undefined, panel: undefined })),
   routerPushMock: vi.fn(),
   findBoardByIdMock: vi.fn(),
   getTicketByIdMock: vi.fn(),
@@ -40,6 +42,8 @@ let liveTicketContext = {
   },
   reconnectVersion: 0,
 };
+
+vi.mock('../conversations/useNamedTicketConversations', () => ({ useNamedTicketConversations: namedConversationMock }));
 
 vi.mock('next/navigation', () => {
   // A fresh router on each render would reset the remote-update debounce.
@@ -469,6 +473,16 @@ describe('TicketDetails remote live updates', () => {
     vi.useRealTimers();
   });
 
+  it('refreshes the ticket status after an accepted named publication even when live updates are disabled', async () => {
+    liveTicketContext.enabled = false;
+    getTicketByIdMock.mockResolvedValue({ ...baseTicket, status_id: 'status-2', is_closed: true, response_state: null });
+    renderTicketDetails();
+    expect(screen.getByTestId('ticket-info-status')).toHaveAttribute('data-status', 'status-1');
+    await act(async () => { await namedConversationMock.mock.calls.at(-1)![3].onPublished(); });
+    expect(getTicketByIdMock).toHaveBeenCalledWith('ticket-1');
+    expect(screen.getByTestId('ticket-info-status')).toHaveAttribute('data-status', 'status-2');
+  });
+
   it('accepts refreshed document props with unchanged IDs and removed membership', async () => {
     const internal = { document_id: 'same-id', document_name: 'original.pdf', comment_attachment_is_public: false };
     const publicDocument = { ...internal, document_name: 'renamed.pdf', comment_attachment_is_public: true };
@@ -668,6 +682,9 @@ describe('TicketDetails remote live updates', () => {
     });
 
     const view = renderTicketDetails();
+    // Let the initial editor report its dirty state before introducing the
+    // competing remote event; bootstrap also resolves asynchronous reads.
+    await act(async () => { await Promise.resolve(); });
 
     liveTicketContext = {
       ...liveTicketContext,

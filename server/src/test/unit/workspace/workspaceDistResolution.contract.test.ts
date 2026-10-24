@@ -55,6 +55,18 @@ describe('built workspace barrels under plain Node', () => {
     expect(parsed.visited).toBeGreaterThan(50);
   });
 
+  it('loads the email worker named-conversation entry points under plain Node', () => {
+    // Unlike Vitest's source aliases, a worker must load emitted JS through
+    // package exports. This reproduced the email-service startup failure.
+    const output = execFileSync(process.execPath, ['--input-type=module', '-e', `
+      const attachments = await import('@alga-psa/co-managed/inboundNamedConversationAttachments');
+      const replies = await import('@alga-psa/co-managed/inboundNamedConversationEmail');
+      if (!Object.keys(attachments).length || !Object.keys(replies).length) throw new Error('Empty worker entry point');
+      console.log('worker modules loaded');
+    `], { cwd: REPO_ROOT, encoding: 'utf-8' });
+    expect(output).toContain('worker modules loaded');
+  });
+
   /**
    * Guards 50b7b97195. `archiveFiles`/`archiveReads` used to bind
    * StorageProviderFactory at module scope, which put Node filesystem builtins

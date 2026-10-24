@@ -134,6 +134,16 @@ let currentProject: ProjectRecord | null = null;
 let currentPortalDomain: PortalDomainRecord | null = null;
 
 const sendEmailMock = vi.hoisted(() => vi.fn(async () => ({ success: true })));
+const enqueueNativeTicketCommentEmailsMock = vi.hoisted(() => vi.fn(async () => {}));
+const processCoManagedCustomerEmailDeliveriesMock = vi.hoisted(() => vi.fn(async () => 0));
+// This suite exercises legacy external rendering and the subscriber's durable
+// handoff. Real recipient deduplication and qualified reply tokens are exercised
+// by the native ticket email matrix in coManagedBootstrap.integration.test.ts.
+vi.mock('@alga-psa/co-managed', async importOriginal => ({
+  ...await importOriginal<typeof import('@alga-psa/co-managed')>(),
+  enqueueNativeTicketCommentEmails: enqueueNativeTicketCommentEmailsMock,
+  processCoManagedCustomerEmailDeliveries: processCoManagedCustomerEmailDeliveriesMock,
+}));
 const getTenantEmailSettingsMock = vi.hoisted(() => vi.fn(async () => null as any));
 const getDefaultFromAddressMock = vi.hoisted(() =>
   vi.fn(() => ({ email: 'notifications@example.com', name: 'AlgaPSA Notifications' })),
@@ -1028,6 +1038,8 @@ beforeEach(() => {
   currentPortalDomain = null;
   resetNotificationState();
   sendEmailMock.mockReset();
+  enqueueNativeTicketCommentEmailsMock.mockReset().mockResolvedValue(undefined);
+  processCoManagedCustomerEmailDeliveriesMock.mockReset().mockResolvedValue(0);
   getTenantEmailSettingsMock.mockReset();
   getTenantEmailSettingsMock.mockImplementation(async () => null as any);
   getDefaultFromAddressMock.mockReset();
@@ -1637,12 +1649,13 @@ describe('ticket email subscriber deduplication', () => {
     expect(sharedCount).toBe(1);
   });
 
-  it('T076: sends one ticket comment email per recipient with distinct reply tokens', async () => {
+  it('sends the external comment once and hands internal recipients to durable delivery with the external exclusion', async () => {
     seedTemplate('ticket-comment-added', 'New Comment {{ticket.title}}', '<p>{{comment.content}}</p>');
 
     const tenantId = randomUUID();
     const ticketId = randomUUID();
     const commentId = randomUUID();
+    const eventId = randomUUID();
     const authorId = randomUUID();
     const assignedUserId = randomUUID();
     const additionalUserId = randomUUID();
@@ -1673,7 +1686,7 @@ describe('ticket email subscriber deduplication', () => {
     ] as any);
 
     await handlerFor('TICKET_COMMENT_ADDED')({
-      id: randomUUID(),
+      id: eventId,
       eventType: 'TICKET_COMMENT_ADDED',
       timestamp: new Date().toISOString(),
       payload: {
@@ -1689,15 +1702,23 @@ describe('ticket email subscriber deduplication', () => {
       },
     });
 
-    expect(sendEmailMock).toHaveBeenCalledTimes(2);
+    expect(sendEmailMock).toHaveBeenCalledTimes(1);
     const recipients = sendEmailMock.mock.calls.map((call) => call[0].to);
     expect(recipients.filter((email) => email === contactEmail).length).toBe(1);
-    expect(recipients.filter((email) => email === sharedEmail).length).toBe(1);
+    expect(recipients.filter((email) => email === sharedEmail).length).toBe(0);
+    expect(enqueueNativeTicketCommentEmailsMock).toHaveBeenCalledExactlyOnceWith(mockKnex, {
+      ownerTenant: tenantId, ticketId, commentId, eventId,
+    }, [contactEmail]);
+    expect(processCoManagedCustomerEmailDeliveriesMock).toHaveBeenCalledExactlyOnceWith(
+      mockKnex, tenantId, expect.any(Function),
+    );
+    expect(enqueueNativeTicketCommentEmailsMock.mock.invocationCallOrder[0]).toBeLessThan(
+      processCoManagedCustomerEmailDeliveriesMock.mock.invocationCallOrder[0],
+    );
 
     const tokenRows = Array.from(tokenStore.values()).filter((row) => row.comment_id === commentId);
-    expect(tokenRows).toHaveLength(2);
-    expect(tokenRows.map((row) => row.recipient_email).sort()).toEqual([contactEmail, sharedEmail].sort());
-    expect(new Set(tokenRows.map((row) => row.token)).size).toBe(2);
+    expect(tokenRows).toHaveLength(1);
+    expect(tokenRows.map((row) => row.recipient_email)).toEqual([contactEmail]);
     for (const row of tokenRows) {
       expect(row).toMatchObject({
         tenant: tenantId,

@@ -1,6 +1,9 @@
-const { supportsTriggers } = require('./utils/citusDistribution.cjs');
+const { canCreateDistributedTable, supportsTriggers } = require('./utils/citusDistribution.cjs');
 const TABLE = 'co_management_thread_transfers';
 exports.up = async knex => {
+  // Keep shard DDL and function DDL on one connection per node while retaining
+  // the migration's atomic transaction.
+  if (await canCreateDistributedTable(knex)) await knex.raw("SET LOCAL citus.multi_shard_modify_mode TO 'sequential'");
   if (!await knex.schema.hasColumn(TABLE,'project_task_id')) await knex.schema.alterTable(TABLE,t=>t.uuid('project_task_id').nullable());
   await knex.raw('ALTER TABLE ?? ALTER COLUMN ticket_id DROP NOT NULL',[TABLE]);
   if (!await knex('pg_constraint').where('conname','co_thread_transfer_parent_check').whereRaw('conrelid = ?::regclass',[TABLE]).first())
@@ -18,6 +21,7 @@ exports.up = async knex => {
   }
 };
 exports.down = async knex => {
+  if (await canCreateDistributedTable(knex)) await knex.raw("SET LOCAL citus.multi_shard_modify_mode TO 'sequential'");
   if (await knex(TABLE).whereNotNull('project_task_id').first() || await knex('co_management_conversation_attachments').whereNotNull('project_task_id').whereNotNull('disclosure_operation_id').first())
     throw new Error('Cannot discard retained task disclosure history');
   if (await supportsTriggers(knex, 'co_management_thread_transfers')) {

@@ -11,6 +11,11 @@ type BentoTimelineTileProps = React.ComponentProps<typeof BentoTimelineTile>;
 
 const getTicketTimelineEntries = vi.fn();
 
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => null,
+  useRouter: () => ({ replace: vi.fn() }),
+}));
+
 vi.mock('next/dynamic', () => ({
   default: () => () => <div data-testid="composer-editor" />,
 }));

@@ -665,6 +665,55 @@ describe('Ticket bundling integration', () => {
     expect(resolvedViaContact.displayName).toBe('Bundling Contact');
   });
 
+  it.each(['client', 'contact', 'unknown'] as const)(
+    'sync_updates preserves a %s source author independently of the acting user', async (sourceKind) => {
+      const scopedDb = tenantDb(db, tenantId);
+      const clientId = await createClient(db, tenantId, `Source author ${uuidv4().slice(0, 6)}`);
+      const contactId = await createContact(db, tenantId, clientId, `source-${uuidv4().slice(0, 6)}@example.com`);
+      const masterId = uuidv4();
+      const childId = uuidv4();
+      for (const ticketId of [masterId, childId]) {
+        await insertTicket(db, { tenant: tenantId, ticketId, ticketNumber: `SRC-${uuidv4().slice(0, 6)}`,
+          title: 'Source author preservation', clientId, contactId, statusId: statusOpenId, priorityId, boardId });
+      }
+      await runWithTenant(tenantId, () => bundleTicketsAction({
+        masterTicketId: masterId, childTicketIds: [childId], mode: 'sync_updates',
+      }, internalUser as any));
+
+      const sourceId = await insertResolutionComment(db, tenantId, masterId, clientUser.user_id, {
+        isInternal: false, isResolution: false, note: 'Original author update',
+      });
+      const author = {
+        user_id: sourceKind === 'client' ? clientUser.user_id : null,
+        contact_id: sourceKind === 'contact' ? contactId : null,
+        author_type: sourceKind === 'client' ? 'client' : 'unknown',
+      };
+      await scopedDb.table('comments').where('comment_id', sourceId).update(author);
+      const source = await scopedDb.table('comments').where('comment_id', sourceId).first();
+      const { attachNativeRootToConversation } = await import('@alga-psa/shared/lib/tickets/namedConversations');
+      const { applyTicketBundleCommentEffects } = await import('@alga-psa/tickets/lib/ticketBundleCommentEffects');
+      await db.transaction(async (trx) => {
+        await attachNativeRootToConversation({ trx, ticket: { tenant: tenantId, ticketId: masterId }, storeTenant: tenantId }, source.thread_id);
+        // The actor applying the effect is not the source author. Retrying the
+        // effect must preserve the same attribution and create only one copy.
+        await applyTicketBundleCommentEffects(trx, tenantId, sourceId, internalUser.user_id);
+        await applyTicketBundleCommentEffects(trx, tenantId, sourceId, internalUser.user_id);
+      });
+
+      const mirrors = await scopedDb.table('comments').where('ticket_id', childId);
+      expect(mirrors).toHaveLength(1);
+      expect(mirrors[0]).toMatchObject({ ...author, note: source.note, is_system_generated: true, is_internal: false });
+      const thread = await scopedDb.table('comment_threads').where('thread_id', mirrors[0].thread_id).first();
+      expect(thread.created_by).toBe(author.user_id);
+      const conversation = await scopedDb.table('ticket_conversations').where('conversation_id', thread.conversation_id).first();
+      expect(conversation).toMatchObject({ ticket_id: childId, audience: 'requester', default_slot: 'requester' });
+      expect(Number(conversation.message_version)).toBe(1);
+      const links = await scopedDb.table('ticket_bundle_mirrors').where('source_comment_id', sourceId);
+      expect(links).toHaveLength(1);
+      expect(links[0]).toMatchObject({ child_ticket_id: childId, child_comment_id: mirrors[0].comment_id });
+    }
+  );
+
   it('T008: consolidated child comments expose bundle provenance while staying unattributed', async () => {
     const scopedDb = tenantDb(db, tenantId);
     const clientA = await createClient(db, tenantId, `PRV ${uuidv4().slice(0, 6)}`);

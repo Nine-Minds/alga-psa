@@ -58,6 +58,17 @@ it('offers no write affordance when the section is read only', async () => {
   expect(document.getElementById('co-ticket-assignment-change')).toBeNull();
 });
 
+it.each([
+  [{ hasAssignment: false }, 'coManaged.ticket.assignment.needsHandoff'],
+  [{ hasAssignment: true }, 'coManaged.ticket.assignment.needsHandoff'],
+  [{}, 'coManaged.ticket.restricted'],
+])('renders the assignment disclosure without a revision: %j', async (state, expected) => {
+  mocks.assignment.mockResolvedValue({ ...state, canEdit: false, canAssign: false, mspAssignment: null });
+  render(<CoManagedTicketSection target={{ kind: 'local', ticketId: 'ticket-a' }} />);
+  await waitFor(() => expect(document.getElementById('co-ticket-assignment-value')).toHaveTextContent(expected));
+  expect(document.getElementById('co-ticket-assignment-change')).toBeNull();
+});
+
 it('hands back with the current revision, then refreshes the screen, the work signals and the owner', async () => {
   const onChanged = vi.fn();
   render(<CoManagedTicketSection target={{ kind: 'local', ticketId: 'ticket-a' }} onChanged={onChanged} />);

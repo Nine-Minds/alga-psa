@@ -1,5 +1,8 @@
 'use client';
 
+import type { RequesterHistoryComposition } from '../conversations/NativeRequesterConversation';
+import { useConversationReplyLink } from '../conversations/useConversationReplyLink';
+
 import { ticketActivityAttribution } from '../../../lib/ticketActivityAttribution';
 import React, { use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
@@ -73,6 +76,7 @@ interface TimelineNode {
 }
 
 interface BentoTimelineTileProps {
+  composition?: RequesterHistoryComposition;
   id: string;
   ticketId: string;
   conversations: IComment[];
@@ -400,6 +404,7 @@ export function BentoTimelineTile({
   contactFirstName,
   ticketCreatedAt,
   refreshKey = 0,
+  composition,
   initialOrder = 'asc',
   editorKey,
   isSubmitting,
@@ -462,6 +467,7 @@ export function BentoTimelineTile({
   const skipFirstEntriesFetch = useRef(Boolean(initialEntries));
   const skipFirstReactionsFetch = useRef(Boolean(initialReactions));
   const [filter, setFilter] = useState<LaneFilter>('everything');
+  useEffect(() => { if (composition?.focusedMessageId) setFilter('everything'); }, [composition?.focusedMessageId]);
   const [order, setOrder] = useState<'asc' | 'desc'>(initialOrder);
   // One-off Cc/Bcc for the comment being composed; separate drafts for the
   // main composer and the inline reply.
@@ -513,6 +519,12 @@ export function BentoTimelineTile({
   useRegisterDismissGuard(showComposer && composeHasContent);
   useRegisterUnsavedChanges(`${id}-compose`, showComposer && composeHasContent);
   const [composerPlacement, setComposerPlacement] = useState<'top' | 'bottom'>('top');
+  const replyLinkError = useConversationReplyLink(!composition && !showComposer && !hasDraft && !isEditing && !isSubmitting && !replyingToCommentId, target => {
+    const source = conversations.find(item => item.comment_id === target.commentId && item.thread_id === target.threadId &&
+      !item.deleted_at && !item.is_internal && (!item.publish_state || item.publish_state === 'published'));
+    if (!source) return false;
+    setReplyingToCommentId(target.commentId); return true;
+  });
   // Proxy for "the tile header is still on screen" — the header itself lives
   // inside BentoTile, so the filter row directly beneath it is the sentinel.
   const headerAnchorRef = useRef<HTMLDivElement>(null);
@@ -836,10 +848,10 @@ export function BentoTimelineTile({
         ?.querySelector<HTMLElement>('[contenteditable="true"]')
         ?.focus({ preventScroll: true });
     });
-  });
+  }, { enabled: !composition });
   useDialogSubmitShortcut(() => { void handleSend(); }, {
-    active: hasDraft,
-    enabled: !isSubmitting && !composeUploadSession.isUploading && hasDraft && scheduleIsValid,
+    active: !composition && hasDraft,
+    enabled: !composition && !isSubmitting && !composeUploadSession.isUploading && hasDraft && scheduleIsValid,
   });
 
   // A single comment card plus, when it's the active reply target, an inline
@@ -850,6 +862,7 @@ export function BentoTimelineTile({
     return (
       <>
         <CommentItem
+          focusedMessageId={composition?.focusedMessageId}
           variant="compact"
           accentBorderClassName={accent || undefined}
           id={commentId ? `${id}-comment-${commentId}` : `${id}-comment-unknown`}
@@ -863,19 +876,24 @@ export function BentoTimelineTile({
           onContentChange={onContentChange}
           onSave={updates => { if (!editUploadSession.isUploading) onSaveComment(updates); }}
           onClose={editUploadSession.requestDiscard}
-          onEdit={() => onEditComment(comment)}
-          onDelete={onDeleteComment}
+          onEdit={async () => { if (!composition || await composition.beforeEdit()) onEditComment(comment); }}
+          onDelete={async value => { if (!composition || await composition.beforeEdit()) onDeleteComment(value); }}
           onReply={
-            !readOnly && onAddReplyComment && commentId
+            composition ? composition.ready && comment.publish_state !== 'scheduled' ? () => { void composition.reply(comment); } : undefined : !readOnly && onAddReplyComment && commentId
               ? () => setReplyingToCommentId(commentId)
               : undefined
           }
+          hideInternalTab={Boolean(composition)}
+          mutationsDisabled={Boolean(composition && !composition.ready && !(isEditing && currentComment?.comment_id === commentId))}
+          beforeScheduleChange={composition?.beforeEdit}
+          onScheduleChanged={composition?.afterChange}
           uploadFile={editUploadSession.uploadFile}
           reactions={dataSource.capabilities.reactions ? reactionsMap[commentId] || [] : undefined}
           onToggleReaction={dataSource.capabilities.reactions ? handleToggleReaction : undefined}
           userNames={reactionUserNames}
           canViewCommentMetadataDebug={canViewCommentMetadataDebug}
         />
+        {!comment.deleted_at && composition?.renderDetails?.(comment)}
       </>
     );
   };
@@ -1108,6 +1126,7 @@ export function BentoTimelineTile({
         </button>
       }
     >
+      {replyLinkError && <p role="alert">{t('namedConversations.replyUnavailable', 'This reply target is unavailable. Your saved draft is unchanged.')}</p>}
       <div ref={headerAnchorRef} id={`${id}-filters`} className="flex flex-wrap items-center gap-1.5 mb-3">
         {laneFilters.map((laneFilter) => {
           const count =
@@ -1129,7 +1148,7 @@ export function BentoTimelineTile({
             </button>
           );
         })}
-        {!showComposer && !readOnly && (
+        {!composition && !showComposer && !readOnly && (
           <Button
             id={`${id}-add-comment-btn`}
             className="ml-auto"
@@ -1143,7 +1162,7 @@ export function BentoTimelineTile({
       <StickyComposerDock
         id={`${id}-composer-top`}
         side="top"
-        visible={!readOnly && showComposer && composerPlacement === 'top'}
+        visible={!composition && !readOnly && showComposer && composerPlacement === 'top'}
         expanded
       >
         {composer}
@@ -1214,6 +1233,7 @@ export function BentoTimelineTile({
                           getCommentId={(comment) => comment.comment_id}
                           renderComment={(comment) => renderThreadComment(comment)}
                           autoCollapseAfter={3}
+                          revealCommentId={group.comments.some(comment => comment.comment_id === composition?.focusedMessageId) ? composition?.focusedMessageId : null}
                         />
                       );
                     })() : (
@@ -1228,7 +1248,7 @@ export function BentoTimelineTile({
         </ClampedContent>
       )}
 
-      {replyTargetComment && replyingToCommentId && (
+      {!composition && replyTargetComment && replyingToCommentId && (
         <div id={`${id}-reply-dock`} className="sticky bottom-2 z-20 pt-3">
           <div className="rounded-lg bg-[rgb(var(--color-card))] shadow-lg">
             <p className="px-3 pt-2 text-xs font-medium text-[rgb(var(--color-text-500))]">
@@ -1294,7 +1314,7 @@ export function BentoTimelineTile({
 
       <StickyComposerDock
         id={`${id}-composer-dock`}
-        visible={!readOnly && !replyingToCommentId && (showComposer ? composerPlacement === 'bottom' : !headerAnchorVisible)}
+        visible={!composition && !readOnly && !replyingToCommentId && (showComposer ? composerPlacement === 'bottom' : !headerAnchorVisible)}
         expanded={showComposer && composerPlacement === 'bottom'}
         placeholder={
           contactFirstName

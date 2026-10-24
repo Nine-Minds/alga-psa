@@ -1905,8 +1905,9 @@
     {
       "term": "cytat",
       "preferred": "oferta",
-      "reason": "Fałszywy odpowiednik sales quote; cytat to przytoczony fragment tekstu. Używać wycena.",
-      "enWhen": "\\bquot(e|es|ed|ing)\\b"
+      "reason": "Fałszywy odpowiednik sales quote; cytat to przytoczony fragment tekstu. Używać wycena. The conversation sharing control quotes message text, not a sales document.",
+      "enWhen": "\\bquot(e|es|ed|ing)\\b",
+      "keyUnless": "^features/tickets:namedConversations\\.share\\.quote$"
     },
     {
       "term": "cytatu",

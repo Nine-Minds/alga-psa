@@ -1,4 +1,7 @@
 {
+  "listToolbar": {
+    "removeFilter": "Ta bort {{label}}"
+  },
   "phone": {
     "extension": "ankn."
   },

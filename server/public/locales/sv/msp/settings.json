@@ -678,7 +678,9 @@
           "statusPlaceholder": "Välj status vid återöppning",
           "statusUseDefault": "Använd tavlans öppna standardstatus",
           "suppressAiLabel": "Förhindra återöppning vid korta bekräftelsesvar (AI)",
-          "suppressAiHelp": "Endast för tillägget Enterprise AI Assistant. Om tillägget inte är tillgängligt öppnas ärenden igen som vanligt vid svar."
+          "suppressAiHelp": "Endast för tillägget Enterprise AI Assistant. Om tillägget inte är tillgängligt öppnas ärenden igen som vanligt vid svar.",
+          "sideConversationsLabel": "Tillämpa den här policyn på e-postsvar i sidokonversationer",
+          "sideConversationsHelp": "Svar i leverantörskonversationer och konversationer för delad IT använder samma policy för tidsgräns, status och undertryckning ovan. Avstängd som standard och påverkar inget om inte policyn ovan också är aktiverad."
         },
         "liveTimer": {
           "label": "Visa stoppur på ärenden",

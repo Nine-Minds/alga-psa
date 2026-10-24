@@ -1148,5 +1148,32 @@
         "users": "Échec du chargement des utilisateurs. Veuillez réessayer."
       }
     }
+  },
+  "replyReview": {
+    "loadError": "Impossible de charger les réponses retenues. L’autorisation d’administrer la boîte aux lettres est requise.",
+    "openError": "Impossible d’ouvrir cette réponse. Actualisez pour vérifier si elle est toujours retenue.",
+    "resolved": "Réponse ajoutée à la conversation sélectionnée.",
+    "resolveError": "L’affectation n’a pas pu être confirmée. Réessayez pour vérifier la même opération ou actualisez pour examiner l’état actuel.",
+    "sharedIt": "Informatique partagée",
+    "private": "Privé à l’organisation",
+    "title": "Réponses de conversation retenues",
+    "refresh": "Actualiser",
+    "description": "Vérifiez les réponses dont la conversation n’a pas pu être confirmée, puis choisissez leur destination.",
+    "loading": "Chargement…",
+    "back": "Retour aux réponses retenues",
+    "from": "De",
+    "to": "À",
+    "unverified": "L’authentification de l’expéditeur n’a pas pu être vérifiée ou le message est inutilisable. Cette réponse reste retenue.",
+    "destination": "Conversation de destination",
+    "chooseDestination": "Choisir une conversation",
+    "noDestinations": "Aucune conversation fournisseur accessible en écriture n’est disponible pour cette boîte aux lettres.",
+    "retry": "Réessayer l’affectation",
+    "resolve": "Ajouter la réponse à la conversation",
+    "empty": "Aucune réponse de conversation n’attend de vérification.",
+    "noSubject": "(Sans objet)",
+    "review": "Vérifier",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "nav": "Réponses retenues"
   }
 }

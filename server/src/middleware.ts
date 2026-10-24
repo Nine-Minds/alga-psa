@@ -217,6 +217,9 @@ const exactApiKeySkipPaths = [
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
   return pathname === '/api/ticket-comment-attachments/download' ||
+    // These browser routes enforce tracked sessions and qualified content access in-handler.
+    pathname === '/api/tickets/conversation-synthesis' || pathname === '/api/tickets/conversation-ai' ||
+    /^\/api\/(?:tickets\/(?:conversation-attachments|conversation-editor-files)|client-portal\/conversation-attachments)\/[^/]+\/?$/.test(pathname) ||
     // Client portal document handlers authenticate the portal session and run
     // the shared tenant/client visibility resolver before serving content.
     /^\/api\/client-portal\/documents\/[^/]+\/(?:file|export)$/.test(pathname) ||

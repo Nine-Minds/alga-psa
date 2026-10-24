@@ -120,6 +120,7 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
       tables: {
         tenants: [{ tenant: 'tenant-ms-1', product_code: 'psa' }],
         co_management_relationships: [],
+        ticket_conversation_email_routes: [],
       },
     }, undefined, table));
     withTransactionMock.mockImplementation(async (_conn: unknown, callback: (trx: any) => Promise<void>) => {

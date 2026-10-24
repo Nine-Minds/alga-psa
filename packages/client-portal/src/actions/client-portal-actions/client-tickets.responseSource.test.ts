@@ -84,6 +84,22 @@ const convertBlockNoteToMarkdownMock = vi.fn();
 const publishEventMock = vi.fn();
 const maybeReopenBundleMasterFromChildReplyMock = vi.fn();
 
+vi.mock('@alga-psa/tickets/lib/clientPortalVisibility.server', () => ({
+  getClientContactVisibilityContext: vi.fn().mockResolvedValue({ clientId: 'client-1', contactId: 'contact-1', effectiveTicketScope: 'client', visibleBoardIds: null }),
+}));
+
+vi.mock('@alga-psa/shared/lib/tickets/portalTicketConversations', () => ({
+  readPortalTicketConversations: vi.fn().mockResolvedValue({ selectedConversationId: 'requester-conversation',
+    requesterConversations: [{ conversationId: 'requester-conversation', name: 'Requester', isDefault: true, status: 'open' }] }),
+}));
+
+// The shared Comment model binds a new root thread to a named conversation; the
+// conversation store is exercised in its own suite, so stub the attach here.
+vi.mock('@alga-psa/shared/lib/tickets/namedConversations', async importOriginal => ({
+  ...await importOriginal<typeof import('@alga-psa/shared/lib/tickets/namedConversations')>(),
+  attachNativeRootToConversation: vi.fn(async () => ({ conversationId: 'requester-conversation' })),
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),

@@ -2,6 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { EventSchemas } from '@alga-psa/event-schemas';
 import { TicketModel } from '../ticketModel';
+import { attachNativeRootToConversation } from '../../lib/tickets/namedConversations';
+
+// Routing is an independent command boundary; this suite exercises the
+// publication payload and keeps the real author/actor serialization intact.
+vi.mock('../../lib/tickets/namedConversations', () => ({ attachNativeRootToConversation: vi.fn(async () => undefined) }));
 
 // Same passthrough facade the sibling authorship test uses: tenant scoping is
 // the real facade's concern, not this test's.
@@ -52,6 +57,9 @@ function createTrxHarness() {
   trx.raw = vi.fn((sql: string) => sql);
 
   const persistedPayload = () => {
+    expect(attachNativeRootToConversation).toHaveBeenCalledWith(
+      { trx, ticket: { tenant, ticketId }, storeTenant: tenant }, inserted.at(-1).thread_id, undefined,
+    );
     const update = commentUpdates.find(row => row.comment_publication_payload);
     return JSON.parse(update.comment_publication_payload);
   };

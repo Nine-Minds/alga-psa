@@ -2,7 +2,7 @@ import { registerCoManagedPushTransport } from '@alga-psa/notifications/lib/coMa
 import { registerAllSubscribers } from './subscribers';
 import logger from '@alga-psa/core/logger';
 import { getEventBus } from './index';
-import { registerInternalNotificationHook } from '@alga-psa/notifications/actions';
+import { registerInternalNotificationHook } from '@alga-psa/notifications/actions/internal-notification-actions/notificationHooks';
 import { triggerPushForNotification } from '../pushNotifications/pushNotificationDispatcher';
 
 export async function initializeEventBus(): Promise<void> {

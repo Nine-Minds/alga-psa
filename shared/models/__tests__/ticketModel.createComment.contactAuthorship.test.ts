@@ -6,6 +6,12 @@ vi.mock('../../lib/commentAudience', async (importOriginal) => ({
   assertCommentThreadAudience: vi.fn().mockResolvedValue('requester'),
 }));
 
+// Conversation-store binding is exercised against PostgreSQL; this harness
+// isolates author mapping, so stub the named-conversation attach.
+vi.mock('../../lib/tickets/namedConversations', () => ({
+  attachNativeRootToConversation: vi.fn(async () => ({ conversationId: 'conv-00000000-0000-4000-8000-000000000001' })),
+}));
+
 // The model queries through the tenantDb facade now; these fakes dispatch by
 // table name, so mock the facade as a passthrough — tenant scoping is the
 // real facade's concern, not these tests'. tenantJoin degrades to a plain

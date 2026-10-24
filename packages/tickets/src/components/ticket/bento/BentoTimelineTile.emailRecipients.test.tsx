@@ -12,6 +12,11 @@ import { BentoTimelineTile } from './BentoTimelineTile';
  */
 type BentoTimelineTileProps = React.ComponentProps<typeof BentoTimelineTile>;
 
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => null,
+  useRouter: () => ({ replace: vi.fn() }),
+}));
+
 vi.mock('next/dynamic', () => ({
   // Render the editor's footer slot: the Cc/Bcc toggle lives there.
   default: () => ({ onContentChange, footerActions }: {

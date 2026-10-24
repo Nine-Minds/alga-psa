@@ -1898,8 +1898,9 @@
     {
       "term": "citation",
       "preferred": "devis",
-      "reason": "Faux ami de sales quote ; citation désigne un extrait cité ou une convocation, tandis que le document commercial est un devis.",
-      "enWhen": "\\bquot(e|es|ed|ing)\\b"
+      "reason": "Faux ami de sales quote ; citation désigne un extrait cité ou une convocation, tandis que le document commercial est un devis. The conversation sharing control quotes message text, not a sales document.",
+      "enWhen": "\\bquot(e|es|ed|ing)\\b",
+      "keyUnless": "^features/tickets:namedConversations\\.share\\.quote$"
     },
     {
       "term": "citations",

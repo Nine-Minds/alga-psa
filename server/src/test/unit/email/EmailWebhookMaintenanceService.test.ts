@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () => ({
-  MicrosoftGraphAdapter: vi.fn(() => mocks.adapter),
+  MicrosoftGraphAdapter: vi.fn(function () { return mocks.adapter; }),
 }));
 vi.mock('@alga-psa/shared/services/email/microsoftEmailProviderConfig', () => ({
   buildMicrosoftEmailProviderConfig: vi.fn(async (config) => config),
@@ -116,7 +116,7 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
       insert: vi.fn().mockResolvedValue([1]),
     };
     const knex: any = vi.fn((table?: string) => {
-      if (table === 'tenants' || table === 'co_management_relationships') return {
+      if (table === 'tenants' || table === 'co_management_relationships' || table === 'ticket_conversation_email_routes') return {
         where: vi.fn().mockReturnThis(),
         first: async () => table === 'tenants' ? { product_code: 'psa' } : undefined,
       };

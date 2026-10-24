@@ -1148,5 +1148,32 @@
         "users": "Impossibile caricare gli utenti. Riprovare."
       }
     }
+  },
+  "replyReview": {
+    "loadError": "Impossibile caricare le risposte trattenute. È necessaria l’autorizzazione per amministrare la casella.",
+    "openError": "Impossibile aprire questa risposta. Aggiorna per verificare se è ancora trattenuta.",
+    "resolved": "Risposta aggiunta alla conversazione selezionata.",
+    "resolveError": "Impossibile confermare l’assegnazione. Riprova per verificare la stessa operazione oppure aggiorna per controllare lo stato attuale.",
+    "sharedIt": "IT condiviso",
+    "private": "Privato dell’organizzazione",
+    "title": "Risposte alle conversazioni trattenute",
+    "refresh": "Aggiorna",
+    "description": "Controlla le risposte la cui conversazione non è stata confermata, quindi scegli dove inserirle.",
+    "loading": "Caricamento…",
+    "back": "Torna alle risposte trattenute",
+    "from": "Da",
+    "to": "A",
+    "unverified": "Impossibile verificare l’autenticazione del mittente oppure il messaggio non è utilizzabile. Questa risposta rimane trattenuta.",
+    "destination": "Conversazione di destinazione",
+    "chooseDestination": "Scegli una conversazione",
+    "noDestinations": "Nessuna conversazione con fornitori accessibile in scrittura è disponibile per questa casella.",
+    "retry": "Riprova assegnazione",
+    "resolve": "Aggiungi risposta alla conversazione",
+    "empty": "Nessuna risposta alle conversazioni è in attesa di controllo.",
+    "noSubject": "(Senza oggetto)",
+    "review": "Controlla",
+    "previous": "Precedente",
+    "next": "Successivo",
+    "nav": "Risposte trattenute"
   }
 }

@@ -1,6 +1,9 @@
-const { supportsTriggers } = require('./utils/citusDistribution.cjs');
+const { canCreateDistributedTable, supportsTriggers } = require('./utils/citusDistribution.cjs');
 const TABLES = ['co_management_conversation_attachments', 'co_managed_archive_files'];
 exports.up = async knex => {
+  // Function DDL and shard DDL must use a single connection per node in this
+  // migration transaction. Set the mode before any distributed operation.
+  if (await canCreateDistributedTable(knex)) await knex.raw("SET LOCAL citus.multi_shard_modify_mode TO 'sequential'");
   for (const table of TABLES) {
     if (!await knex.schema.hasColumn(table, 'project_task_id')) await knex.schema.alterTable(table, t => t.uuid('project_task_id').nullable());
     await knex.raw('ALTER TABLE ?? ALTER COLUMN ticket_id DROP NOT NULL', [table]);
@@ -24,6 +27,7 @@ exports.up = async knex => {
   }
 };
 exports.down = async knex => {
+  if (await canCreateDistributedTable(knex)) await knex.raw("SET LOCAL citus.multi_shard_modify_mode TO 'sequential'");
   for (const table of TABLES) if (await knex(table).whereNotNull('project_task_id').first()) throw new Error('Cannot discard retained task attachments');
   if (await supportsTriggers(knex, 'co_managed_archive_files')) {
     await knex.raw('DROP TRIGGER IF EXISTS co_archive_file_task_immutable ON co_managed_archive_files');

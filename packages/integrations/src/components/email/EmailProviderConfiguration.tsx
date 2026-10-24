@@ -26,6 +26,8 @@ import { EmailProviderList } from './EmailProviderList';
 import { ProviderSetupWizardDialog } from './ProviderSetupWizardDialog';
 import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';
 import { InboundEmailRulesManager } from './admin/InboundEmailRulesManager';
+import { NamedReplyReviewManager } from './admin/NamedReplyReviewManager';
+import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import { Microsoft365DiagnosticsDialog } from './admin/Microsoft365DiagnosticsDialog';
 import { GmailDiagnosticsDialog } from './admin/GmailDiagnosticsDialog';
 import { DrawerOutlet, DrawerProvider, useDrawer } from '@alga-psa/ui';
@@ -85,6 +87,7 @@ function EmailProviderConfigurationContent({
   onProviderDeleted
 }: EmailProviderConfigurationProps) {
   const { t } = useTranslation('msp/email-providers');
+  const { enabled: namedRepliesEnabled } = useFeatureFlag('release-v1-6-feature');
   const isEnterpriseEdition = isMicrosoftConsumerEnterpriseEdition();
   const [providers, setProviders] = useState<EmailProvider[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +95,7 @@ function EmailProviderConfigurationContent({
   const [wizardOpen, setWizardOpen] = useState(false);
   const [showDefaultsManager, setShowDefaultsManager] = useState(false);
   const [tenant, setTenant] = useState<string>('');
-  const [activeSection, setActiveSection] = useState<'providers' | 'defaults' | 'rules'>('providers');
+  const [activeSection, setActiveSection] = useState<'providers' | 'defaults' | 'rules' | 'reply-review'>('providers');
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [diagnosticsProvider, setDiagnosticsProvider] = useState<EmailProvider | null>(null);
   const [microsoftEmailSetup, setMicrosoftEmailSetup] = useState<MicrosoftEmailSetupReadiness | null | undefined>(undefined);
@@ -685,6 +688,11 @@ function EmailProviderConfigurationContent({
               defaultValue: 'Inbound Rules',
             })}
           </Button>
+          {namedRepliesEnabled && <Button id="nav-named-reply-review" variant="ghost"
+            className={`justify-start w-full px-2 py-2 ${activeSection === 'reply-review' ? 'font-semibold text-[rgb(var(--color-primary-700))] bg-primary-500/10' : ''}`}
+            aria-current={activeSection === 'reply-review' ? 'page' : undefined} onClick={() => setActiveSection('reply-review')}>
+            {t('replyReview.nav', { defaultValue: 'Held replies' })}
+          </Button>}
         </nav>
       </div>
       <div className="flex-1 min-w-0">
@@ -717,7 +725,7 @@ function EmailProviderConfigurationContent({
               window.dispatchEvent(new CustomEvent('inbound-defaults-updated'));
             }} />
           </div>
-        ) : (
+        ) : activeSection === 'reply-review' && namedRepliesEnabled ? <NamedReplyReviewManager /> : (
           <div className="space-y-4">
             <InboundEmailRulesManager />
           </div>

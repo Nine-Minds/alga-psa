@@ -1,5 +1,8 @@
+import { recoverNamedConversationNotifications } from '@alga-psa/notifications/lib/namedConversationNotificationFanout';
 import { sendCoManagedWorkflowTicketEmail } from './coManagedWorkflowTicketEmailTransport';
 import { recoverCoManagedScheduledComments } from './publishScheduledComment';
+import { recoverNativeNamedConversationEmails, recoverNamedConversationEmailNotifications } from '@alga-psa/co-managed';
+import { namedConversationEmailTransport } from '@alga-psa/tickets/lib/namedConversationEmail';
 import { getConnection } from '@alga-psa/db';
 import { dispatchCoManagedConversationEvents, recoverCoManagedEventConsumers, processCoManagedCommentEmailDeliveries, processCoManagedCustomerEmailDeliveries, processCoManagedRequesterEmailDeliveries, processCoManagedWorkflowTicketEmails } from '@alga-psa/co-managed';
 import { sendCoManagedCommentEmail, sendCoManagedCustomerCommentEmail, sendCoManagedRequesterCommentEmail } from './coManagedCommentEmailTransport';
@@ -16,6 +19,9 @@ export async function coManagedNotificationRecoveryHandler(input: { tenantId: st
   const recover = async <T>(work: () => Promise<T>): Promise<T | undefined> => {
     try { return await work(); } catch (error) { failures.push(error); }
   };
+  const namedNotifications = await recover(() => recoverNamedConversationNotifications(db, input.tenantId, input.limit));
+  const namedEmailNotifications = await recover(() => recoverNamedConversationEmailNotifications(db, input.tenantId, input.limit));
+  const namedEmails = await recover(() => recoverNativeNamedConversationEmails(db, input.tenantId, namedConversationEmailTransport, input.limit));
   const schedules = await recover(() => recoverCoManagedScheduledComments(db, input.tenantId, input.limit));
   const events = await recover(() => dispatchCoManagedConversationEvents(db, input.tenantId, publishCoManagedConversationEvent, { limit: input.limit }));
   const consumers = await recover(() => recoverCoManagedEventConsumers(db, input.tenantId, replayCoManagedConversationConsumer, { limit: input.limit }));
@@ -27,5 +33,5 @@ export async function coManagedNotificationRecoveryHandler(input: { tenantId: st
   const routingEmails = await recover(() => processCoManagedRoutingEmailDeliveries(db, input.tenantId, sendCoManagedRoutingEmail, input.limit));
   const notifications = await recover(() => recoverCoManagedNotificationDeliveries(input.tenantId, input.limit));
   if (failures.length) throw new AggregateError(failures, 'Co-managed notification maintenance has unfinished work');
-  return { workflowEmails, schedules, events, consumers, emails, customerEmails, requesterEmails, routingNotifications, routingEmails, notifications };
+  return { namedNotifications, namedEmailNotifications, namedEmails, workflowEmails, schedules, events, consumers, emails, customerEmails, requesterEmails, routingNotifications, routingEmails, notifications };
 }

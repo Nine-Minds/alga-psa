@@ -14,6 +14,11 @@ import TicketConversation from './TicketConversation';
  */
 type TicketConversationProps = React.ComponentProps<typeof TicketConversation>;
 
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => null,
+  useRouter: () => ({ replace: vi.fn() }),
+}));
+
 vi.mock('next/dynamic', () => ({
   // The main composer's editor arrives through next/dynamic; render its footer
   // slot so the Cc/Bcc toggle that lives there is reachable.

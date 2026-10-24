@@ -678,7 +678,9 @@
           "statusPlaceholder": "Wiederöffnungs-Status auswählen",
           "statusUseDefault": "Standard-Offenstatus des Boards verwenden",
           "suppressAiLabel": "Wiederöffnen bei kurzen Bestätigungsantworten unterdrücken (KI)",
-          "suppressAiHelp": "Nur Enterprise AI Assistant Add-on. Falls nicht verfügbar, öffnen Antworten normal wieder."
+          "suppressAiHelp": "Nur Enterprise AI Assistant Add-on. Falls nicht verfügbar, öffnen Antworten normal wieder.",
+          "sideConversationsLabel": "Diese Richtlinie auf E-Mail-Antworten in Nebenunterhaltungen anwenden",
+          "sideConversationsHelp": "Antworten in Lieferanten- und gemeinsamen IT-Unterhaltungen verwenden dieselbe obige Richtlinie für Frist, Status und Unterdrückung. Standardmäßig deaktiviert und nur wirksam, wenn auch die obige Richtlinie aktiviert ist."
         },
         "liveTimer": {
           "label": "Stoppuhr bei Tickets anzeigen",

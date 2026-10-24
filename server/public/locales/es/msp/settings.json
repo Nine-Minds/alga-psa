@@ -678,7 +678,9 @@
           "statusPlaceholder": "Seleccionar estado de reapertura",
           "statusUseDefault": "Usar el estado abierto predeterminado del tablero",
           "suppressAiLabel": "Suprimir reapertura para respuestas ACK cortas (IA)",
-          "suppressAiHelp": "Solo complemento Enterprise AI Assistant. Si no está disponible, las respuestas reabren normalmente."
+          "suppressAiHelp": "Solo complemento Enterprise AI Assistant. Si no está disponible, las respuestas reabren normalmente.",
+          "sideConversationsLabel": "Aplicar esta política a las respuestas por correo de conversaciones secundarias",
+          "sideConversationsHelp": "Las respuestas de conversaciones con proveedores y de TI compartida usan la misma política de límite temporal, estado y supresión indicada arriba. Está desactivada de forma predeterminada y solo tiene efecto si la política anterior también está activada."
         },
         "liveTimer": {
           "label": "Mostrar cronómetro en los tickets",

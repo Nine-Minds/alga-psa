@@ -43,7 +43,7 @@ export default function CoManagedAssignmentField({ resource, refreshKey, onSaved
   if (!state) return <div id="co-ticket-assignment-loading" role="status" aria-label={t('coManaged.ticket.loading')} className="h-8 animate-pulse rounded-md bg-[rgb(var(--color-border-100))]" />;
   const assignment = state.mspAssignment;
   const known = state.revision !== undefined;
-  const summary = !known ? t('hasAssignment' in state ? 'coManaged.ticket.assignment.needsHandoff' : 'coManaged.ticket.restricted')
+  const summary = !known ? ('hasAssignment' in state ? t('coManaged.ticket.assignment.needsHandoff') : t('coManaged.ticket.restricted'))
     : assignment ? `${assignment.organizationName} · ${assignment.name}`
     : t(state.hasAssignment ? 'coManaged.ticket.assignment.unavailable' : 'coManaged.projects.assignment.unassigned');
   return <div id="co-ticket-assignment" className="flex items-center justify-between gap-2 text-sm">

@@ -33,6 +33,45 @@ it('returns opaque denials and storage failures without disclosing paths', async
   expect(response.status).toBe(503); expect(await response.text()).not.toContain('private/storage'); expect(mocks.provider).not.toHaveBeenCalled();
 });
 
+it('passes explicit named destinations to admission and returns an opaque denial for inaccessible conversations', async () => {
+  const { TicketConversationError } = await import('@alga-psa/shared/lib/tickets/namedConversations');
+  const named = request(); named.nextUrl.searchParams.set('conversationId', 'selected');
+  mocks.download.mockRejectedValue(new TicketConversationError('CONVERSATION_FORBIDDEN'));
+  const result = await GET(named, params);
+  expect(result.status).toBe(404); expect(await result.json()).toEqual({ error: 'Not found' });
+  expect(mocks.download.mock.calls[0][2]).toEqual({ ticketId: 'ticket', threadId: 'thread', commentId: 'comment', conversationId: 'selected' });
+  expect(mocks.provider).not.toHaveBeenCalled();
+});
+it('downloads an authorized named-conversation attachment using the requester session', async () => {
+  const named = request(); named.nextUrl.searchParams.set('conversationId', 'selected');
+  mocks.bytes.mockResolvedValue(Buffer.from('named attachment'));
+  mocks.download.mockImplementation(async (_db, _actor, _target, _id, transfer) => ({
+    attachment: { fileName: 'named.txt' }, content: await transfer('authorized/named/path'),
+  }));
+  const result = await GET(named, params);
+  expect(result.status).toBe(200);
+  expect(await result.text()).toBe('named attachment');
+  expect(mocks.download).toHaveBeenCalledExactlyOnceWith('db',
+    { kind: 'session', tenant: 'customer', userId: 'requester', sessionId: 'session' },
+    { ticketId: 'ticket', threadId: 'thread', commentId: 'comment', conversationId: 'selected' }, 'file', expect.any(Function));
+  expect(mocks.bytes).toHaveBeenCalledExactlyOnceWith('authorized/named/path');
+  expect(result.headers.get('cache-control')).toBe('no-store, private');
+});
+it.each([
+  'ticketId=ticket&conversationId=one&conversationId=two',
+  'ticketId=ticket&conversationId=',
+  'taskId=task&projectId=project&conversationId=selected',
+  'ticketId=ticket&conversationId=selected&taskId=task&projectId=project',
+  'ticketId=ticket&conversationId=selected&storeTenant=foreign',
+])('rejects invalid named attachment scope before admission: %s', async query => {
+  const req = { nextUrl: new URL(`https://alga.test/api/client-portal/conversation-attachments/file?threadId=thread&commentId=comment&${query}`) } as any;
+  const result = await GET(req, params);
+  expect(result.status).toBe(404);
+  expect(await result.json()).toEqual({ error: 'Not found' });
+  expect(mocks.download).not.toHaveBeenCalled();
+  expect(mocks.taskDownload).not.toHaveBeenCalled();
+  expect(mocks.provider).not.toHaveBeenCalled();
+});
 it('uses task/project admission for requester task files without accepting mixed or repeated parent identities', async () => {
   mocks.taskDownload.mockResolvedValue({ attachment: { fileName: 'task.txt' }, content: Buffer.from('task') });
   const req = (query: string) => ({ nextUrl: new URL('https://alga.test/api/client-portal/conversation-attachments/file?' + query) }) as any;

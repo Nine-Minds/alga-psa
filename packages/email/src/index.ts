@@ -94,3 +94,5 @@ export {
   createDefaultProviderConfig,
   type EditableEmailProviderType,
 } from './providerConfig';
+
+export type { ReviewedEmailIntent, ReviewedEmailPreview } from './reviewedEmail';

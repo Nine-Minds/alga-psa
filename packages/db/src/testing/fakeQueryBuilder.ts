@@ -134,7 +134,8 @@ export function fakeQueryBuilder(options: FakeQueryBuilderOptions = {}): FakeQue
       const produced = options.onInsert?.(list) ?? list;
       const result: any = Promise.resolve(produced);
       result.returning = async () => produced;
-      result.onConflict = () => ({ merge: async () => produced, ignore: async () => produced });
+      // Conflict handling retains the insert builder's returning() chain.
+      result.onConflict = () => ({ merge: () => result, ignore: () => result });
       return result;
     },
     update(patch: FakeRow) {

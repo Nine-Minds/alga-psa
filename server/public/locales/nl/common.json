@@ -1,4 +1,7 @@
 {
+  "listToolbar": {
+    "removeFilter": "{{label}} verwijderen"
+  },
   "phone": {
     "extension": "toestel"
   },

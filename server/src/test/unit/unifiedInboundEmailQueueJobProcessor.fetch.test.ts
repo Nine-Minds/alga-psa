@@ -120,7 +120,7 @@ function createDbMock(params: {
 
   const db = vi.fn((table: string) => {
     if (table === 'tenants') return { first: async () => ({ product_code: 'psa' }) };
-    if (table === 'co_management_relationships') return { first: async () => undefined };
+    if (table === 'co_management_relationships' || table === 'ticket_conversation_email_routes') return { first: async () => undefined };
     if (table === 'microsoft_email_provider_config as mc') {
       const builder = {
         join() {

@@ -678,7 +678,9 @@
           "statusPlaceholder": "Select reopen status",
           "statusUseDefault": "Use board default open status",
           "suppressAiLabel": "Suppress reopen for short ACK replies (AI)",
-          "suppressAiHelp": "Enterprise AI Assistant add-on only. If unavailable, replies reopen normally."
+          "suppressAiHelp": "Enterprise AI Assistant add-on only. If unavailable, replies reopen normally.",
+          "sideConversationsLabel": "Apply this policy to side-conversation email replies",
+          "sideConversationsHelp": "Vendor and Shared IT conversation replies reuse the same cutoff, status and suppression policy above. Off by default and has no effect unless the policy above is also enabled."
         },
         "liveTimer": {
           "label": "Show stopwatch on tickets",

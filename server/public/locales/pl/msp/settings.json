@@ -682,7 +682,9 @@
           "statusPlaceholder": "Wybierz status ponownego otwarcia",
           "statusUseDefault": "Użyj domyślnego statusu otwartego tablicy",
           "suppressAiLabel": "Pomiń ponowne otwieranie dla krótkich odpowiedzi potwierdzających (AI)",
-          "suppressAiHelp": "Tylko dodatek Enterprise AI Assistant. Jeśli niedostępny, odpowiedzi otwierają zgłoszenia normalnie."
+          "suppressAiHelp": "Tylko dodatek Enterprise AI Assistant. Jeśli niedostępny, odpowiedzi otwierają zgłoszenia normalnie.",
+          "sideConversationsLabel": "Stosuj tę zasadę do odpowiedzi e-mail w rozmowach pobocznych",
+          "sideConversationsHelp": "Odpowiedzi w rozmowach z dostawcami i wspólnym IT korzystają z powyższych zasad terminu granicznego, statusu i pomijania. Opcja jest domyślnie wyłączona i działa tylko wtedy, gdy włączona jest również powyższa zasada."
         },
         "liveTimer": {
           "label": "Pokaż stoper przy zgłoszeniach",

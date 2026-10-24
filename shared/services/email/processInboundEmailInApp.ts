@@ -1,5 +1,7 @@
+import type { NamedConversationReplyAdmission } from './namedConversationReplyAdmission';
+import { hasAcceptedNamedConversationReference, isNamedConversationCorrespondent } from './namedConversationCorrespondents';
 import { htmlToVisibleText } from '../../lib/email/replyParser';
-import { isQualifiedReplyToken, qualifiedReplyTokenFromBody, type EmailReplyAdmission, type AdmittedEmailReply } from './qualifiedReplyAdmission';
+import { hasNamedConversationReplyHint, isQualifiedReplyToken, qualifiedReplyTokenFromBody, type EmailReplyAdmission, type AdmittedEmailReply } from './qualifiedReplyAdmission';
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
 import type { IEventPublisher } from '@alga-psa/types';
 import type { InboundEmailExecutionOptions } from '../../workflow/actions/emailWorkflowActions';
@@ -97,6 +99,7 @@ export interface ProcessInboundEmailInAppOptions {
     trx: any;
     inboxId: string;
     qualifiedReplyAdmission?: EmailReplyAdmission;
+    namedConversationReplyAdmission?: NamedConversationReplyAdmission;
     eventPublishers?: {
       ticket?: IEventPublisher;
       comment?: IEventPublisher;
@@ -167,7 +170,7 @@ export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unkn
   notificationLoop?: NotificationLoopDetectionResult;
   outcome?: {
     kind: 'skipped' | 'deduped' | 'replied' | 'created' | 'quarantined';
-    matchedBy?: 'reply_token' | 'thread_headers';
+    matchedBy?: 'reply_token' | 'thread_headers' | 'correspondent' | 'manual_review';
     ticketId?: string;
     ticketNumber?: string;
     commentId?: string;
@@ -191,7 +194,7 @@ type ProcessInboundEmailInAppBaseResult =
     }
   | {
       outcome: 'replied';
-      matchedBy: 'reply_token' | 'thread_headers';
+      matchedBy: 'reply_token' | 'thread_headers' | 'manual_review';
       ticketId: string;
       commentId: string;
     }
@@ -211,6 +214,11 @@ type ProcessInboundEmailInAppBaseResult =
       outcome: 'quarantined';
       reason: 'unauthorized_requester_reply' | 'unauthorized_technician_reply';
       matchedBy: 'reply_token';
+    }
+  | {
+      outcome: 'quarantined';
+      reason: 'conversation_reply_requires_admission';
+      matchedBy: 'reply_token' | 'thread_headers' | 'correspondent';
     };
 
 export type ProcessInboundEmailInAppResult = ProcessInboundEmailInAppBaseResult & {
@@ -237,7 +245,7 @@ function getReplyTokenFingerprint(token?: string): {
   };
 }
 
-type InboundReplyReopenPolicyContext = {
+export type InboundReplyReopenPolicyContext = {
   ticketId: string;
   boardId: string;
   statusId: string | null;
@@ -428,7 +436,7 @@ function toIsoOrNull(value: unknown): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-function isClosedTicketBeyondReopenCutoff(params: {
+export function isClosedTicketBeyondReopenCutoff(params: {
   closedAt: string | null;
   receivedAt?: string;
   cutoffHours: number;
@@ -467,7 +475,7 @@ async function loadTicketOneOffRecipients(tenantId: string, ticketId: string): P
   }
 }
 
-async function loadInboundReplyPolicyContext(params: {
+export async function loadInboundReplyPolicyContext(params: {
   tenantId: string;
   ticketId: string;
   existingConnection?: any;
@@ -533,7 +541,7 @@ async function loadInboundReplyPolicyContext(params: {
   }, params.existingConnection);
 }
 
-async function resolveBoardReopenStatusTarget(params: {
+export async function resolveBoardReopenStatusTarget(params: {
   tenantId: string;
   boardId: string;
   explicitStatusId: string | null;
@@ -572,7 +580,7 @@ async function resolveBoardReopenStatusTarget(params: {
   }, params.existingConnection);
 }
 
-async function applyInboundReplyReopenTransition(params: {
+export async function applyInboundReplyReopenTransition(params: {
   tenantId: string;
   ticketId: string;
   statusId: string;
@@ -943,31 +951,8 @@ export async function processInboundEmailInApp(
 
   const skipInlineArtifacts = Boolean(durableExecution);
 
-  // Fast-path: if we've already created a ticket for this email, never create a second one.
+  // Reserve qualified evidence before any legacy lookup can select a ticket.
   const reservedQualifiedToken = qualifiedReplyTokenFromBody(emailData.body);
-  const existingTicket = reservedQualifiedToken ? null : await findExistingEmailTicket({
-    tenantId,
-    providerId,
-    messageId: emailData.id,
-    sourceSha256: emailData.sourceSha256,
-  });
-  if (existingTicket) {
-    const diagnostics = options.collectDiagnostics
-      ? buildDiagnostics({
-          emailData,
-          senderEmail,
-        })
-      : undefined;
-    if (diagnostics) {
-      diagnostics.threading.matchedTicketId = existingTicket.ticketId;
-      diagnostics.threading.failureReason = 'deduped';
-    }
-    return withDiagnostics({
-      outcome: 'deduped',
-      dedupeKey,
-      ticketId: existingTicket.ticketId,
-    }, diagnostics);
-  }
 
   const {
     parseEmailReplyBody,
@@ -1124,7 +1109,7 @@ export async function processInboundEmailInApp(
     return withDiagnostics({ outcome: 'skipped', reason: 'notification_loop' }, diagnostics);
   }
 
-  if (conversationToken && !hasSubstantiveReplyContent(parsedEmail, emailData)) {
+  if (conversationToken && !hasNamedConversationReplyHint(emailData) && !hasSubstantiveReplyContent(parsedEmail, emailData)) {
     console.info('processInboundEmailInApp: skipping token-only inbound email with no reply content', {
       tenantId,
       providerId,
@@ -1955,6 +1940,10 @@ export async function processInboundEmailInApp(
     ...helperExtraArgs('ticket', qualifiedReply?.kind === 'customer_technician' ? qualifiedReply.userId : undefined)
   );
 
+  const followupConversation = qualifiedReply?.prepareFollowupConversation
+    ? await qualifiedReply.prepareFollowupConversation({ ticketId: ticketResult.ticket_id, clientId: targetClientId!, boardId: defaults.board_id })
+    : undefined;
+
   if (ruleAssignedAssetId) {
     try {
       await withTenantAdminTransaction(tenantId, async (trx: any) => {
@@ -1971,6 +1960,7 @@ export async function processInboundEmailInApp(
   const commentId = await createCommentFromEmail(
     {
       ticket_id: ticketResult.ticket_id,
+      conversation_id: followupConversation?.conversationId,
       content: serializedBlocks,
       collaboration_audience: qualifiedReply?.audience,
       source: 'email',
@@ -2036,6 +2026,54 @@ export async function processInboundEmailInApp(
     commentId,
   }, diagnostics);
   };
+
+  // Named vendor replies keep their own writer. Named requester admission uses
+  // the canonical engine below, preserving reopen/follow-up policy and effects.
+  // Rejected named evidence never proceeds to legacy dedupe or matching.
+  if (durableExecution?.namedConversationReplyAdmission) {
+    const named = await durableExecution.namedConversationReplyAdmission(durableExecution.trx, {
+      tenant: tenantId, providerId, inboxId: durableExecution.inboxId, email: emailData, senderAuth: senderAuthResults,
+    }, async (qualifiedReply, matchedBy = 'reply_token') => {
+      if (qualifiedReply.audience !== 'requester') throw new Error('Named requester admission cannot apply requester lifecycle to a side conversation');
+      const reply = await handleThreadedReply({ ticketId: qualifiedReply.ticketId, parentCommentId: qualifiedReply.parentCommentId,
+        matchedBy, qualifiedReply });
+      return reply ?? handleNewTicket(qualifiedReply);
+    });
+    if (named) return named;
+  }
+  if (hasNamedConversationReplyHint(emailData)) {
+    return { outcome: 'quarantined', reason: 'conversation_reply_requires_admission', matchedBy: hasNamedConversationReplyHint({ body: emailData.body }) ? 'reply_token' : 'thread_headers' };
+  }
+  if (durableExecution && !durableExecution.namedConversationReplyAdmission) {
+    if (await hasAcceptedNamedConversationReference(durableExecution.trx, tenantId, providerId, emailData))
+      return { outcome: 'quarantined', reason: 'conversation_reply_requires_admission', matchedBy: 'thread_headers' };
+    if (!reservedQualifiedToken && await isNamedConversationCorrespondent(durableExecution.trx, tenantId, providerId, emailData.from.email))
+      return { outcome: 'quarantined', reason: 'conversation_reply_requires_admission', matchedBy: 'correspondent' };
+  }
+  const existingTicket = reservedQualifiedToken ? null : await findExistingEmailTicket({
+    tenantId,
+    providerId,
+    messageId: emailData.id,
+    sourceSha256: emailData.sourceSha256,
+  });
+  if (existingTicket) {
+    const diagnostics = options.collectDiagnostics
+      ? buildDiagnostics({
+          emailData,
+          senderEmail,
+        })
+      : undefined;
+    if (diagnostics) {
+      diagnostics.threading.matchedTicketId = existingTicket.ticketId;
+      diagnostics.threading.failureReason = 'deduped';
+    }
+    return withDiagnostics({
+      outcome: 'deduped',
+      dedupeKey,
+      ticketId: existingTicket.ticketId,
+    }, diagnostics);
+  }
+
 
   const token = conversationToken;
   if (isQualifiedReplyToken(token)) {

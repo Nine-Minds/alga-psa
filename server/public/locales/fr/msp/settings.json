@@ -678,7 +678,9 @@
           "statusPlaceholder": "Sélectionner un statut de réouverture",
           "statusUseDefault": "Utiliser le statut ouvert par défaut du tableau",
           "suppressAiLabel": "Ignorer la réouverture pour les courtes réponses d'accusé de réception (IA)",
-          "suppressAiHelp": "Module complémentaire Enterprise AI Assistant uniquement. Si indisponible, les réponses rouvrent normalement."
+          "suppressAiHelp": "Module complémentaire Enterprise AI Assistant uniquement. Si indisponible, les réponses rouvrent normalement.",
+          "sideConversationsLabel": "Appliquer cette politique aux réponses par e-mail des conversations secondaires",
+          "sideConversationsHelp": "Les réponses des conversations fournisseur et informatique partagée utilisent la même politique de délai, de statut et de suppression ci-dessus. Désactivée par défaut, cette option n’a d’effet que si la politique ci-dessus est aussi activée."
         },
         "liveTimer": {
           "label": "Afficher le chronomètre sur les tickets",

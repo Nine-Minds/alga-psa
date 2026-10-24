@@ -678,7 +678,9 @@
           "statusPlaceholder": "Seleziona stato di riapertura",
           "statusUseDefault": "Usa lo stato aperto predefinito della bacheca",
           "suppressAiLabel": "Sopprimi riapertura per brevi risposte di conferma (IA)",
-          "suppressAiHelp": "Solo componente aggiuntivo Enterprise AI Assistant. Se non disponibile, le risposte riaprono normalmente."
+          "suppressAiHelp": "Solo componente aggiuntivo Enterprise AI Assistant. Se non disponibile, le risposte riaprono normalmente.",
+          "sideConversationsLabel": "Applica questa politica alle risposte e-mail delle conversazioni secondarie",
+          "sideConversationsHelp": "Le risposte delle conversazioni con fornitori e IT condiviso usano la stessa politica di limite temporale, stato e soppressione indicata sopra. Disattivata per impostazione predefinita, questa opzione ha effetto solo se è attiva anche la politica precedente."
         },
         "liveTimer": {
           "label": "Mostra il cronometro sui ticket",

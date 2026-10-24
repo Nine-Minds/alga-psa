@@ -1,4 +1,7 @@
 {
+  "listToolbar": {
+    "removeFilter": "{{label}} entfernen"
+  },
   "phone": {
     "extension": "Durchw."
   },

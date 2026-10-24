@@ -1,4 +1,7 @@
 {
+  "listToolbar": {
+    "removeFilter": "Usuń {{label}}"
+  },
   "phone": {
     "extension": "wew."
   },
