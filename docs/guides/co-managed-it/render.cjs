@@ -55,6 +55,9 @@ for (const row of coverage.guides) {
   if (row.candidateRevision !== revision || row.status !== 'blocked') {
     throw new Error(`Only blocked coverage rows for ${revision} can be scaffold-rendered (${row.guide}).`);
   }
+  if (row.recordedAt !== undefined) {
+    throw new Error(`Blocked coverage row ${row.guide} must not claim a recording timestamp.`);
+  }
   const paths = row.recordingPaths;
   if (!paths) throw new Error(`Missing recordingPaths for ${row.guide}.`);
   for (const kind of ['webm', 'chapterVtt', 'recordingJson']) safeRelativePath(paths[kind], kind, row.guide);
@@ -109,7 +112,14 @@ function recordingScaffold(row, pageName) {
     chapterSeekVerified: false,
     blocker: row.blocker,
     missing: row.missing,
-    preparedAt: coverage.checkedAt ?? null,
+    metadataUpdatedAt: coverage.metadataUpdatedAt ?? coverage.checkedAt ?? null,
+    runtime: coverage.runtime ?? null,
+    build: coverage.build ?? { sourceRevision: revision },
+    scenario: row.scenario ?? { guide: row.guide, status: 'planned; not executed' },
+    limitations: row.limitations ?? [
+      'This guide was not walked because its review application was unavailable.',
+      'No WebM or timed chapter data exists; playback and chapter seeking were not verified.',
+    ],
   };
   const blockerText = String(row.blocker).replace(/\s*This scaffold is not a recording\.\s*$/i, '');
   return {
