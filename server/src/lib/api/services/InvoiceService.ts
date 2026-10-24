@@ -336,17 +336,105 @@ export class InvoiceService extends BaseService<IInvoice> {
       .toString();
   }
 
-  private buildRecurringInvoiceSummaryQuery(trx: Knex.Transaction, context: ServiceContext) {
-    return tenantDb(trx, context.tenant).table('recurring_service_periods as rsp')
+  /**
+   * Recurring-period summary per invoice, read in its own standalone statement.
+   *
+   * HARD RULE: no statement on the REST invoice read path may reference
+   * recurring_service_periods together with `invoices` (or any other
+   * distributed table). rsp is not distributed, so any such statement makes the
+   * Citus coordinator open a connection back to itself, which is refused when
+   * connection slots are exhausted. The summary is therefore merged in JS.
+   *
+   * Invoices without rsp rows get null for all six recurring_* fields.
+   */
+  private async mergeRecurringSummary<T extends { invoice_id?: string }>(
+    trx: Knex.Transaction,
+    context: ServiceContext,
+    rows: T[]
+  ): Promise<T[]> {
+    const ids = Array.from(new Set(rows.map((row) => row.invoice_id).filter((id): id is string => !!id)));
+    const summaries = new Map<string, any>();
+
+    if (ids.length > 0) {
+      const summaryRows = await tenantDb(trx, context.tenant).table('recurring_service_periods as rsp')
+        .whereNotNull('rsp.invoice_id')
+        .whereIn('rsp.invoice_id', ids)
+        .select('rsp.tenant')
+        .select('rsp.invoice_id')
+        .min('rsp.service_period_start as recurring_service_period_start')
+        .max('rsp.service_period_end as recurring_service_period_end')
+        .min('rsp.invoice_window_start as recurring_invoice_window_start')
+        .max('rsp.invoice_window_end as recurring_invoice_window_end')
+        .max('rsp.cadence_owner as recurring_cadence_owner')
+        .groupBy('rsp.tenant', 'rsp.invoice_id');
+      for (const row of summaryRows as any[]) {
+        summaries.set(row.invoice_id, row);
+      }
+    }
+
+    return rows.map((row) => {
+      const summary = row.invoice_id ? summaries.get(row.invoice_id) : undefined;
+      const owner = summary?.recurring_cadence_owner;
+      return {
+        ...row,
+        recurring_service_period_start: summary?.recurring_service_period_start ?? null,
+        recurring_service_period_end: summary?.recurring_service_period_end ?? null,
+        recurring_invoice_window_start: summary?.recurring_invoice_window_start ?? null,
+        recurring_invoice_window_end: summary?.recurring_invoice_window_end ?? null,
+        recurring_execution_window_kind:
+          owner === 'contract' ? 'contract_cadence_window' : owner === 'client' ? 'client_cadence_window' : null,
+        recurring_cadence_source:
+          owner === 'contract' ? 'contract_anniversary' : owner === 'client' ? 'client_schedule' : null,
+      };
+    });
+  }
+
+  /**
+   * Resolves the execution_window_kind / cadence_source filters to invoice ids
+   * with a standalone rsp query (same semantics as before: filter on the
+   * aggregated max(cadence_owner) per invoice). Returns null when no recognised
+   * cadence filter is present (no-op), otherwise the matching invoice ids
+   * (possibly empty).
+   */
+  private async resolveCadenceFilterInvoiceIds(
+    trx: Knex.Transaction,
+    context: ServiceContext,
+    filters?: InvoiceFilter
+  ): Promise<string[] | null> {
+    if (!filters) return null;
+    const f = filters as Record<string, unknown>;
+    const owners: string[] = [];
+
+    if (f.execution_window_kind === 'contract_cadence_window') owners.push('contract');
+    else if (f.execution_window_kind === 'client_cadence_window') owners.push('client');
+    if (f.cadence_source === 'contract_anniversary') owners.push('contract');
+    else if (f.cadence_source === 'client_schedule') owners.push('client');
+
+    if (owners.length === 0) return null;
+    // Both filters set to different owners can never match (previously two ANDed predicates).
+    if (new Set(owners).size > 1) return [];
+
+    const rows = await tenantDb(trx, context.tenant).table('recurring_service_periods as rsp')
       .whereNotNull('rsp.invoice_id')
       .select('rsp.invoice_id')
-      .min('rsp.service_period_start as recurring_service_period_start')
-      .max('rsp.service_period_end as recurring_service_period_end')
-      .min('rsp.invoice_window_start as recurring_invoice_window_start')
-      .max('rsp.invoice_window_end as recurring_invoice_window_end')
-      .max('rsp.cadence_owner as recurring_cadence_owner')
-      .groupBy('rsp.invoice_id')
-      .as('recurring_invoice_summary');
+      .groupBy('rsp.tenant', 'rsp.invoice_id')
+      .havingRaw('max(rsp.cadence_owner) = ?', [owners[0]]);
+    return (rows as any[]).map((row) => row.invoice_id);
+  }
+
+  /**
+   * Net recorded payments per invoice, in cents. Same definition as
+   * recordExternalPayment's sumPayments: every invoice_payments row counts
+   * (reversals are stored as negative rows), no status filter. Grouped by
+   * tenant so the join in buildBaseQuery is co-located on the distribution key.
+   */
+  private buildInvoicePaymentsSummaryQuery(trx: Knex.Transaction, context: ServiceContext) {
+    return tenantDb(trx, context.tenant).table('invoice_payments as ip')
+      .select('ip.tenant')
+      .select('ip.invoice_id')
+      .sum({ total_paid: 'ip.amount' })
+      .groupBy('ip.tenant', 'ip.invoice_id')
+      .as('invoice_payments_summary');
   }
 
   // ============================================================================
@@ -367,48 +455,21 @@ export class InvoiceService extends BaseService<IInvoice> {
     
     return withTransaction(knex, async (trx) => {
       const db = tenantDb(trx, context.tenant);
+      const cadenceInvoiceIds = await this.resolveCadenceFilterInvoiceIds(trx, context, filters);
+      if (cadenceInvoiceIds !== null && cadenceInvoiceIds.length === 0) {
+        return { data: [], total: 0 };
+      }
+
       let query = this.buildBaseQuery(trx, context);
 
       // Apply filters
       if (filters) {
-        query = this.applyInvoiceFilters(query, filters);
+        query = this.applyInvoiceFilters(query, filters, cadenceInvoiceIds);
       }
 
       // Add joins based on include options
       if ((options as any).include_client) {
-        // Use a subquery to get the billing address to avoid aggregate issues with Citus
-        const billingAddressSubquery = db.table('client_locations as cl')
-          .select(
-            'cl.client_id',
-            'cl.tenant',
-            'cl.address_line1 as billing_address_line1',
-            'cl.address_line2 as billing_address_line2',
-            'cl.address_line3 as billing_address_line3',
-            'cl.city as billing_city',
-            'cl.state_province as billing_state_province',
-            'cl.postal_code as billing_postal_code',
-            'cl.country_name as billing_country_name'
-          )
-          .where(function() {
-            this.where('cl.is_billing_address', true)
-                .orWhere('cl.is_default', true);
-          })
-          .orderByRaw('cl.is_billing_address DESC, cl.is_default DESC')
-          .limit(1)
-          .as('billing_loc');
-
-        query = db.tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id', { type: 'left' })
-          .leftJoin(billingAddressSubquery, 'clients.client_id', 'billing_loc.client_id')
-          .select(
-            'clients.client_name',
-            'billing_loc.billing_address_line1',
-            'billing_loc.billing_address_line2',
-            'billing_loc.billing_address_line3',
-            'billing_loc.billing_city',
-            'billing_loc.billing_state_province',
-            'billing_loc.billing_postal_code',
-            'billing_loc.billing_country_name'
-          );
+        query = this.joinClientBillingAddress(trx, context, query);
       }
 
       if ((options as any).include_billing_cycle) {
@@ -446,19 +507,22 @@ export class InvoiceService extends BaseService<IInvoice> {
       query.orderBy(`invoices.${sortField}`, sortOrder);
       query.limit(limit).offset(offset);
 
-      // Get total count using the same recurring summary join so execution-window filters stay consistent.
+      // Count uses the same base query and the same resolved cadence ids as the data query.
       const countQuery = this.buildBaseQuery(trx, context)
         .clearSelect()
         .clearOrder();
 
       if (filters) {
-        this.applyInvoiceFilters(countQuery, filters);
+        this.applyInvoiceFilters(countQuery, filters, cadenceInvoiceIds);
       }
 
-      const [data, [{ count }]] = await Promise.all([
+      const [pageRows, [{ count }]] = await Promise.all([
         query,
         countQuery.countDistinct('invoices.invoice_id as count')
       ]);
+
+      // Recurring fields come from a separate tenant query (never joined with invoices).
+      const data = await this.mergeRecurringSummary(trx, context, pageRows as any[]);
 
       // Add HATEOAS links
       const dataWithLinks = data.map((row: any) => {
@@ -487,13 +551,15 @@ export class InvoiceService extends BaseService<IInvoice> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
-        const invoice = await this.buildBaseQuery(trx, context)
+        const baseInvoice = await this.buildBaseQuery(trx, context)
           .where('invoices.invoice_id', id)
           .first();
   
-        if (!invoice) {
+        if (!baseInvoice) {
           return null;
         }
+
+        const [invoice] = await this.mergeRecurringSummary(trx, context, [baseInvoice as any]);
   
         // Get related data based on options
         const includeItems = options?.include_items !== false;
@@ -1931,7 +1997,8 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       // Apply filters if provided
       if (filters) {
-        baseQuery = this.applyInvoiceFilters(baseQuery, filters);
+        const cadenceInvoiceIds = await this.resolveCadenceFilterInvoiceIds(trx, context, filters);
+        baseQuery = this.applyInvoiceFilters(baseQuery, filters, cadenceInvoiceIds);
       }
 
       const [statusStats, monthlyStats, topClients] = await Promise.all([
@@ -2192,37 +2259,84 @@ export class InvoiceService extends BaseService<IInvoice> {
   // Helper Methods
   // ============================================================================
 
-  protected buildBaseQuery(trx: Knex.Transaction, context: ServiceContext): Knex.QueryBuilder {
-    const recurringInvoiceSummary = this.buildRecurringInvoiceSummaryQuery(trx, context);
+  /**
+   * Joins clients plus their billing address. The address derived table carries
+   * `tenant` and is joined on it (tenantJoinSubquery) so Citus keeps the join
+   * on one shard. One location per client (DISTINCT ON), billing address first,
+   * then default - same precedence as models/invoice.ts and invoiceQueries.ts.
+   */
+  protected joinClientBillingAddress(trx: Knex.Transaction, context: ServiceContext, query: Knex.QueryBuilder): Knex.QueryBuilder {
+    const db = tenantDb(trx, context.tenant);
+    // Use a subquery to get the billing address to avoid aggregate issues with Citus
+    const billingAddressSubquery = db.table('client_locations as cl')
+      .select(
+        trx.raw('DISTINCT ON (cl.tenant, cl.client_id) cl.client_id'),
+        'cl.tenant',
+        'cl.address_line1 as billing_address_line1',
+        'cl.address_line2 as billing_address_line2',
+        'cl.address_line3 as billing_address_line3',
+        'cl.city as billing_city',
+        'cl.state_province as billing_state_province',
+        'cl.postal_code as billing_postal_code',
+        'cl.country_name as billing_country_name'
+      )
+      .where(function() {
+        this.where('cl.is_billing_address', true)
+            .orWhere('cl.is_default', true);
+      })
+      .orderByRaw('cl.tenant, cl.client_id, cl.is_billing_address DESC NULLS LAST, cl.is_default DESC NULLS LAST, cl.created_at ASC, cl.location_id ASC')
+      .as('billing_loc');
 
-    return tenantDb(trx, context.tenant).table('invoices')
-      .leftJoin(recurringInvoiceSummary, 'recurring_invoice_summary.invoice_id', 'invoices.invoice_id')
+    db.tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id', { type: 'left' });
+    db.tenantJoinSubquery(query, billingAddressSubquery, 'clients.client_id', 'billing_loc.client_id', {
+      type: 'left',
+      rootTenantColumn: 'clients.tenant',
+      joinedTenantColumn: 'billing_loc.tenant',
+    });
+    return query.select(
+      'clients.client_name',
+      'billing_loc.billing_address_line1',
+      'billing_loc.billing_address_line2',
+      'billing_loc.billing_address_line3',
+      'billing_loc.billing_city',
+      'billing_loc.billing_state_province',
+      'billing_loc.billing_postal_code',
+      'billing_loc.billing_country_name'
+    );
+  }
+
+  protected buildBaseQuery(trx: Knex.Transaction, context: ServiceContext): Knex.QueryBuilder {
+    const db = tenantDb(trx, context.tenant);
+    const paymentsSummary = this.buildInvoicePaymentsSummaryQuery(trx, context);
+
+    const query = db.table('invoices');
+    // The payments summary joins on tenant as well as invoice_id (Citus colocation).
+    // The rsp table must never appear here; see mergeRecurringSummary.
+    db.tenantJoinSubquery(query, paymentsSummary, 'invoice_payments_summary.invoice_id', 'invoices.invoice_id', {
+      type: 'left',
+      rootTenantColumn: 'invoices.tenant',
+      joinedTenantColumn: 'invoice_payments_summary.tenant',
+    });
+
+    return query
       .select(
         'invoices.*',
         trx.raw('COALESCE(invoices.credit_applied, 0) as credit_applied'),
-        trx.raw('(invoices.total_amount - COALESCE(invoices.credit_applied, 0)) as balance_due'),
-        'recurring_invoice_summary.recurring_service_period_start',
-        'recurring_invoice_summary.recurring_service_period_end',
-        'recurring_invoice_summary.recurring_invoice_window_start',
-        'recurring_invoice_summary.recurring_invoice_window_end',
-        trx.raw(`
-          CASE
-            WHEN recurring_invoice_summary.recurring_cadence_owner = 'contract' THEN 'contract_cadence_window'
-            WHEN recurring_invoice_summary.recurring_cadence_owner = 'client' THEN 'client_cadence_window'
-            ELSE NULL
-          END as recurring_execution_window_kind
-        `),
-        trx.raw(`
-          CASE
-            WHEN recurring_invoice_summary.recurring_cadence_owner = 'contract' THEN 'contract_anniversary'
-            WHEN recurring_invoice_summary.recurring_cadence_owner = 'client' THEN 'client_schedule'
-            ELSE NULL
-          END as recurring_cadence_source
-        `)
+        // Mirrors computeBalanceDue: total - credit - net payments (no clamp).
+        trx.raw('(invoices.total_amount - COALESCE(invoices.credit_applied, 0) - COALESCE(invoice_payments_summary.total_paid, 0)) as balance_due')
       );
   }
 
-  private applyInvoiceFilters(query: Knex.QueryBuilder, filters: InvoiceFilter): Knex.QueryBuilder {
+  /**
+   * `cadenceInvoiceIds` are the pre-resolved ids for the execution_window_kind /
+   * cadence_source filters (see resolveCadenceFilterInvoiceIds); this method must
+   * stay free of rsp references.
+   */
+  private applyInvoiceFilters(
+    query: Knex.QueryBuilder,
+    filters: InvoiceFilter,
+    cadenceInvoiceIds: string[] | null = null
+  ): Knex.QueryBuilder {
     // Common created_*/updated_* plus invoice/due/finalized windows. Unsupported
     // range keys throw rather than returning unfiltered invoices.
     this.applyRangeFilters(query, filters);
@@ -2271,20 +2385,6 @@ export class InvoiceService extends BaseService<IInvoice> {
         case 'billing_cycle_id':
           query.where('invoices.billing_cycle_id', value);
           break;
-        case 'execution_window_kind':
-          if (value === 'contract_cadence_window') {
-            query.where('recurring_invoice_summary.recurring_cadence_owner', 'contract');
-          } else if (value === 'client_cadence_window') {
-            query.where('recurring_invoice_summary.recurring_cadence_owner', 'client');
-          }
-          break;
-        case 'cadence_source':
-          if (value === 'contract_anniversary') {
-            query.where('recurring_invoice_summary.recurring_cadence_owner', 'contract');
-          } else if (value === 'client_schedule') {
-            query.where('recurring_invoice_summary.recurring_cadence_owner', 'client');
-          }
-          break;
         case 'has_credit_applied':
           if (value) {
             query.where('invoices.credit_applied', '>', 0);
@@ -2294,6 +2394,11 @@ export class InvoiceService extends BaseService<IInvoice> {
           break;
       }
     });
+
+    if (cadenceInvoiceIds !== null) {
+      // Empty list: whereIn([]) compiles to a constant-false predicate, never `IN ()`.
+      query.whereIn('invoices.invoice_id', cadenceInvoiceIds);
+    }
 
     return query;
   }
