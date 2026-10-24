@@ -72,7 +72,9 @@ async function isActionOrApiRequest(): Promise<boolean> {
   try {
     const { headers } = await import('next/headers.js');
     const requestHeaders = await headers();
-    return Boolean(requestHeaders.get('next-action')) || (requestHeaders.get('x-pathname') ?? '').startsWith('/api/');
+    const contentType = requestHeaders.get('content-type') ?? '';
+    const isMultipartSubmission = /^multipart\/form-data(?:\s*;|$)/i.test(contentType);
+    return Boolean(requestHeaders.get('next-action')) || isMultipartSubmission || (requestHeaders.get('x-pathname') ?? '').startsWith('/api/');
   } catch {
     return false;
   }
