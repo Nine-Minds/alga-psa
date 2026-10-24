@@ -1191,6 +1191,7 @@ export class InvoiceService extends BaseService<IInvoice> {
           method: String(data.payment_method ?? 'manual'),
           receivedByUserId: context.userId,
           gatewayTransactionId: data.reference_number,
+          source: 'manual',
         }),
         ctx: {
           tenantId: context.tenant,
