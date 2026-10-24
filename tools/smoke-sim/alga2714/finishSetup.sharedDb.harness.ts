@@ -13,7 +13,8 @@ import { computeRecurringQuantityCharges } from '@alga-psa/billing/lib/billing/c
  * alga-2026-0002714 round 2 -- Finish Setup persists end to end against the SHARED dev database.
  *
  * Opt-in (the shared DB is not a CI fixture):
- *   SHARED_DEV_DB_E2E=1 npx vitest run src/test/integration/productsContractFinishSetup.sharedDb.integration.test.ts
+ *   SHARED_DEV_DB_E2E=1 npx vitest run --config ../tools/smoke-sim/alga2714/vitest.sharedDb.config.ts
+ *   (run from server/; deliberately not named *.test.ts so no CI lane collects it)
  *
  * It needs main's `contract_lines.start_date` migration applied (Finish Setup used to 500 on
  * `column cl.start_date does not exist`). Everything runs inside ONE transaction that is rolled
@@ -87,7 +88,7 @@ async function seedProduct(name: string, audPriceCents: number | null, defaultRa
 
 describe.skipIf(!ENABLED)('Finish Setup, Products-only AUD contract, shared dev DB', () => {
   beforeAll(async () => {
-    const secret = path.resolve(__dirname, '../../../../secrets/postgres_password');
+    const secret = path.resolve(__dirname, '../../../secrets/postgres_password');
     root = knexLib({
       client: 'pg',
       connection: {
