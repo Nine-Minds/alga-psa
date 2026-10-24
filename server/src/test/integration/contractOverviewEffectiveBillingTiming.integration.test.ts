@@ -102,6 +102,7 @@ async function withLegacyRows<T>(table: string, constraint: string, fn: (trx: Kn
 const ok = <T,>(result: T): T => {
   expect(result, JSON.stringify(result)).toBeTruthy();
   expect(result).not.toHaveProperty('error');
+  expect(result).not.toHaveProperty('actionError');
   return result;
 };
 
@@ -175,6 +176,7 @@ describe('getContractOverview effective billing timing', () => {
       await createContractTemplateFromWizard({
         contract_name: `Timing template ${uuidv4().slice(0, 6)}`,
         billing_frequency: 'monthly',
+        currency_code: 'USD',
         fixed_services: [{ service_id: svc.serviceId, pricing_basis: 'unit', quantity: 1, unit_rate: 10000 }],
       } as any),
     );
