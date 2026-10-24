@@ -1703,10 +1703,15 @@
           "consentNotGranted": "Microsoft n’a pas confirmé le consentement de l’administrateur.",
           "consentPersistFailed": "Impossible d’enregistrer le consentement de l’administrateur Microsoft.",
           "invalidState": "Cette demande de configuration Microsoft est invalide ou a expiré. Recommencez depuis les paramètres des fournisseurs.",
-          "microsoftError": "Microsoft n’a pas pu mener à bien la demande de configuration. Réessayez ou utilisez la configuration manuelle.",
+          "microsoftError": "Microsoft n'a pas pu terminer la demande de configuration.",
           "missingCode": "Microsoft n’a renvoyé aucun code d’autorisation. Recommencez la configuration.",
-          "sessionMismatch": "Votre session AlgaPSA ne correspond pas à l’administrateur qui a démarré cette configuration. Connectez-vous et réessayez.",
-          "optionsLoadFailed": "Impossible de charger les options de configuration de l'e-mail Microsoft."
+          "sessionMismatch": "Cette configuration a été lancée dans un autre navigateur ou dans une fenêtre privée. Terminez-la dans la fenêtre où vous l'avez commencée, ou utilisez le lien d'approbation.",
+          "optionsLoadFailed": "Impossible de charger les options de configuration de l'e-mail Microsoft.",
+          "policyBlocked": "Une stratégie d'accès conditionnel ou d'appareil de votre locataire Microsoft a bloqué la connexion. Demandez à votre administrateur Microsoft d'exempter cette application, ou approuvez depuis un appareil autorisé par votre stratégie.",
+          "adminRequired": "Un administrateur général Microsoft doit approuver l'application. Copiez le lien d'approbation et envoyez-le-lui.",
+          "wrongTenant": "Le compte Microsoft utilisé appartient à un autre locataire Microsoft que celui en cours de configuration.",
+          "appNotFound": "L'application Microsoft est introuvable dans ce locataire Microsoft. Elle a peut-être été supprimée, ou le locataire Microsoft est incorrect. Vous pouvez configurer une autre application manuellement.",
+          "quoteDiagnostics": "Communiquez ceci lors de la consultation des journaux de connexion Entra : {{diagnostics}}"
         },
         "fields": {
           "clientId": "ID client",

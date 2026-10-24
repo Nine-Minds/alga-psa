@@ -1703,10 +1703,15 @@
           "consentNotGranted": "Microsoft heeft de toestemming van de beheerder niet bevestigd.",
           "consentPersistFailed": "Kan de Microsoft-beheerderstoestemming niet vastleggen.",
           "invalidState": "Dit Microsoft-configuratieverzoek is ongeldig of verlopen. Start opnieuw vanuit de providerinstellingen.",
-          "microsoftError": "Microsoft kon het configuratieverzoek niet voltooien. Probeer het opnieuw of gebruik de handmatige configuratie.",
+          "microsoftError": "Microsoft kon de installatieaanvraag niet voltooien.",
           "missingCode": "Microsoft heeft geen autorisatiecode geretourneerd. Start de configuratie opnieuw.",
-          "sessionMismatch": "Uw AlgaPSA-sessie komt niet overeen met de beheerder die deze configuratie heeft gestart. Meld u aan en probeer het opnieuw.",
-          "optionsLoadFailed": "Kan de configuratieopties voor Microsoft-e-mail niet laden."
+          "sessionMismatch": "Deze installatie is gestart in een andere browser of in een privévenster. Rond haar af in hetzelfde venster waarin u bent begonnen, of gebruik de goedkeuringslink.",
+          "optionsLoadFailed": "Kan de configuratieopties voor Microsoft-e-mail niet laden.",
+          "policyBlocked": "Een Conditional Access- of apparaatbeleid in uw Microsoft-tenant heeft de aanmelding geblokkeerd. Vraag uw Microsoft-beheerder deze app uit te zonderen, of keur goed vanaf een apparaat dat uw beleid toestaat.",
+          "adminRequired": "Een globale Microsoft-beheerder moet de app goedkeuren. Kopieer de goedkeuringslink en stuur die naar deze persoon.",
+          "wrongTenant": "Het gebruikte Microsoft-account hoort bij een andere Microsoft-tenant dan degene die wordt geconfigureerd.",
+          "appNotFound": "De Microsoft-app is niet gevonden in die Microsoft-tenant. Mogelijk is hij verwijderd of is de Microsoft-tenant onjuist. U kunt handmatig een andere app instellen.",
+          "quoteDiagnostics": "Vermeld dit bij het controleren van de Entra-aanmeldlogboeken: {{diagnostics}}"
         },
         "fields": {
           "clientId": "Client ID",

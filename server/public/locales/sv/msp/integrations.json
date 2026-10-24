@@ -1703,10 +1703,15 @@
           "consentNotGranted": "Microsoft bekräftade inte administratörssamtycke.",
           "consentPersistFailed": "Det gick inte att registrera Microsoft-administratörssamtycke.",
           "invalidState": "Den här Microsoft-konfigurationsbegäran är ogiltig eller har gått ut. Börja om från inställningarna för leverantörer.",
-          "microsoftError": "Microsoft kunde inte slutföra konfigurationsbegäran. Försök igen eller använd manuell konfiguration.",
+          "microsoftError": "Microsoft kunde inte slutföra installationsbegäran.",
           "missingCode": "Microsoft returnerade ingen auktoriseringskod. Starta konfigurationen igen.",
-          "sessionMismatch": "Din AlgaPSA-session matchar inte administratören som startade konfigurationen. Logga in och försök igen.",
-          "optionsLoadFailed": "Det gick inte att läsa in konfigurationsalternativ för Microsoft-e-post."
+          "sessionMismatch": "Den här installationen startades i en annan webbläsare eller i ett privat fönster. Slutför den i samma fönster som du startade den i, eller använd godkännandelänken.",
+          "optionsLoadFailed": "Det gick inte att läsa in konfigurationsalternativ för Microsoft-e-post.",
+          "policyBlocked": "En princip för villkorsstyrd åtkomst eller enhet i din Microsoft-klientorganisation blockerade inloggningen. Be din Microsoft-administratör undanta appen, eller godkänn från en enhet som principen tillåter.",
+          "adminRequired": "Appen måste godkännas av en global Microsoft-administratör. Kopiera godkännandelänken och skicka den till personen.",
+          "wrongTenant": "Microsoft-kontot som användes tillhör en annan Microsoft-klientorganisation än den som konfigureras.",
+          "appNotFound": "Microsoft-appen hittades inte i den Microsoft-klientorganisationen. Den kan ha tagits bort, eller så är Microsoft-klientorganisationen fel. Du kan konfigurera en annan app manuellt.",
+          "quoteDiagnostics": "Ange detta när du granskar Entras inloggningsloggar: {{diagnostics}}"
         },
         "fields": {
           "clientId": "Klient-ID",

@@ -19,6 +19,7 @@ import {
   getAssetSoftwareSummary,
 } from '@alga-psa/assets/actions/softwareActions';
 import { assetActionErrorFrom, assetActionErrorMessage } from '@alga-psa/assets/actions/assetActionErrors';
+import { guardAssetReadForRequest } from 'server/src/lib/api/controllers/assetReadGuard';
 import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 import type { SoftwareCategory, SoftwareType } from '@alga-psa/types';
 
@@ -95,6 +96,9 @@ export async function GET(
     if (!id) {
       return NextResponse.json({ error: 'Missing asset ID' }, { status: 400 });
     }
+
+    const denied = await guardAssetReadForRequest(request, id);
+    if (denied) return denied;
 
     const url = new URL(request.url);
     const pageParam = parsePositiveIntParam(url.searchParams.get('page'), 'page', 1);
