@@ -1,0 +1,56 @@
+name: huntress-escalation-multi-org
+description: >-
+  One Huntress escalation spanning two organizations, with an Agent and an
+  Identity entity — the shape that makes escalation ingestion open a ticket per
+  organization. It starts open, goes overdue when its response window lapses,
+  and is then resolved through the resolution endpoint (an Unwanted Country
+  Access type, so the resolution takes determination + scope and reports
+  resolution_method: rule). GET /v1/escalations omits `entities`; only
+  GET /v1/escalations/{id} carries them.
+steps:
+  - reset: huntress
+  - action: huntress/configure
+    params:
+      accountName: Acme MSP
+      accountSubdomain: acme
+      credentials:
+        - { key: algasim-huntress-key, secret: algasim-huntress-secret, escalationsWrite: true }
+  - seed: huntress/organization
+    params: { id: 500, name: Acme Inc., key: acme }
+  - seed: huntress/organization
+    params: { id: 600, name: Globex Ltd., key: globex }
+  - seed: huntress/agent
+    params: { id: 7, hostname: SRV01, organization_id: 500, platform: windows, os: Windows Server 2022 }
+  - seed: huntress/escalation
+    params:
+      id: 84938
+      organization_ids: [500, 600]
+      severity: high
+      status: open
+      subject: Unexpected login from an unexpected country
+      type: Unwanted Country Access
+      type_code: unwanted_country_access
+      subtype: RU
+      due_at: '2026-10-21T00:00:00Z'
+      entities:
+        - { id: 7, type: Agent }
+        - id: 9001
+          type: Identity
+          details: { username: user@globex.test, email: user@globex.test }
+  # A second escalation on one organization only, so per-organization ticket
+  # routing has something to disagree about.
+  - seed: huntress/escalation
+    params:
+      id: 84939
+      organization_ids: [600]
+      severity: low
+      subject: Defender Disabled
+      type: Environmental Issue
+      type_code: environmental_issue
+  # The response window lapses, then the partner answers the escalation.
+  - advance: 4h
+  - action: huntress/update-escalation
+    params: { escalationId: 84938, status: overdue }
+  - advance: 30m
+  - action: huntress/resolve-escalation
+    params: { escalationId: 84938, determination: unauthorized, scope: organization }

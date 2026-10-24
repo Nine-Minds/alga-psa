@@ -1446,8 +1446,7 @@
       "daysPlural": "{{count}} días",
       "daysDecimal": "{{count}} días",
       "hoursUnit": "horas ({{formatted}})",
-      "willExpireAfter": "Los enlaces de pago expirarán después de {{duration}}",
-      "cappedNote": "Stripe limita las sesiones de Checkout a 24 horas, por lo que un valor mayor sigue expirando a las 24 horas. Los clientes pueden obtener un nuevo enlace de pago en el portal del cliente mientras la factura esté pendiente."
+      "willExpireAfter": "El enlace de pago enviado por correo funcionará durante {{duration}}"
     },
     "notConnected": {
       "title": "Stripe no conectado",
@@ -1465,7 +1464,7 @@
       },
       "paymentLinkExpiration": {
         "label": "Expiración del enlace de pago",
-        "description": "Cuánto tiempo permanece válido un enlace de pago enviado con una factura, hasta 24 horas. Las sesiones de Stripe Checkout duran como máximo 24 horas, por lo que valores mayores no tienen efecto adicional."
+        "description": "Cuánto tiempo funciona el enlace de pago de los correos de factura (de 1 hora a 30 días). Cada clic abre un pago seguro nuevo mientras la factura siga sin pagar."
       },
       "actions": {
         "save": "Guardar configuración",

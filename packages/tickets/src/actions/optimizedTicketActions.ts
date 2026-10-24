@@ -68,7 +68,7 @@ import {
   hasCuratedChanges,
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
-import { applyMatchingChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
+import { applyMatchingChecklistTemplates, ticketDescriptionFromAttributes } from '@alga-psa/shared/lib/ticketChecklists';
 import { enforceTicketCloseRules, type CloseRuleBypassSource } from '../lib/validateTicketClosure';
 import { maybeReopenBundleMasterFromChildReply, mirrorCommentToChild } from './ticketBundleUtils';
 import {
@@ -1248,7 +1248,9 @@ async function buildTicketListBaseQuery(
       baseQuery = baseQuery.whereExists(
         tenantScopedTable(trx, 'statuses', tenant)
           .select('*')
-          .whereRaw('statuses.status_id = t.status_id')
+          // LEVERAGE: pattern tenant-correlated-exists — correlate on the distribution column so Citus can co-locate the subquery
+          .whereRaw('statuses.tenant = t.tenant')
+          .andWhereRaw('statuses.status_id = t.status_id')
           .andWhere('statuses.is_closed', false)
       );
     } else if (parsedStatusFilter.kind === 'name') {
@@ -1316,6 +1318,8 @@ async function buildTicketListBaseQuery(
                 .select('*')
                 .whereRaw('tc.tenant = t.tenant')
                 .whereRaw('tc.master_ticket_id = t.ticket_id')
+                // LEVERAGE: pattern tenant-correlated-exists — correlate on the distribution column so Citus can co-locate the subquery
+                .andWhereRaw('tc.tenant = t.tenant')
                 .andWhere('tc.client_id', validatedFilters.clientId)
             );
         });
@@ -1333,6 +1337,8 @@ async function buildTicketListBaseQuery(
                 .select('*')
                 .whereRaw('tc.tenant = t.tenant')
                 .whereRaw('tc.master_ticket_id = t.ticket_id')
+                // LEVERAGE: pattern tenant-correlated-exists — correlate on the distribution column so Citus can co-locate the subquery
+                .andWhereRaw('tc.tenant = t.tenant')
                 .andWhere('tc.contact_name_id', validatedFilters.contactId)
             );
         });
@@ -3125,6 +3131,10 @@ export async function updateTicketInTransaction(
           category_id: updatedTicket.category_id,
           subcategory_id: updatedTicket.subcategory_id,
           priority_id: updatedTicket.priority_id,
+          client_id: updatedTicket.client_id,
+          ticket_origin: updatedTicket.ticket_origin,
+          title: updatedTicket.title,
+          description: ticketDescriptionFromAttributes(updatedTicket.attributes),
         }, isSystemActor
           ? undefined
           : {

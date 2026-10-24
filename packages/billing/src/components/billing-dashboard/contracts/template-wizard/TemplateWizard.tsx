@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { getTenantDefaultCurrencyCode } from '@alga-psa/billing/actions/billingCurrencyActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { WizardProgress } from '@alga-psa/ui/components/onboarding/WizardProgress';
@@ -44,8 +45,8 @@ export interface TemplateWizardData {
   billing_frequency: string;
   cadence_owner?: 'client' | 'contract';
   billing_timing?: 'arrears' | 'advance';
-  // Templates are currency-neutral. Currency and rates are determined when a contract
-  // is created from this template - rates come from the service's prices in the client's currency.
+  /** Base currency of the template; empty until the tenant default has loaded. */
+  currency_code: string;
   enable_proration?: boolean;
   fixed_services: Array<{
     service_id: string;
@@ -54,8 +55,8 @@ export interface TemplateWizardData {
     /** 'bundle' (default) allocates a share of the line total; 'unit' bills quantity × unit rate. */
     pricing_basis?: 'bundle' | 'unit';
     /**
-     * Optional default unit rate in minor units. Templates are currency-neutral, so an
-     * empty rate means "use the service's catalog price in the contract currency".
+     * Optional default unit rate in minor units of the template's base currency. An empty
+     * rate means "use the service's catalog price in the contract currency".
      */
     unit_rate?: number | null;
   }>;
@@ -102,7 +103,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     cadence_owner: 'client',
     billing_timing: 'arrears',
     enable_proration: false,
-    // currency_code removed - templates are now currency-neutral
+    currency_code: '',
     fixed_services: [],
     product_services: [],
     hourly_services: [],
@@ -125,6 +126,20 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     [t]
   );
 
+  // Default the base currency to the tenant default; the author can change it.
+  useEffect(() => {
+    if (!open || wizardData.currency_code) return;
+    let cancelled = false;
+    getTenantDefaultCurrencyCode()
+      .then((code) => {
+        if (!cancelled) setWizardData((prev) => (prev.currency_code ? prev : { ...prev, currency_code: code }));
+      })
+      .catch((error) => console.error('Failed to load tenant default currency', error));
+    return () => {
+      cancelled = true;
+    };
+  }, [open, wizardData.currency_code]);
+
   useEffect(() => {
     if (!open) {
       setWizardData({
@@ -134,7 +149,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
         cadence_owner: 'client',
         billing_timing: 'arrears',
         enable_proration: false,
-        // currency_code removed - templates are now currency-neutral
+        currency_code: '',
         fixed_services: [],
         product_services: [],
         hourly_services: [],
@@ -164,7 +179,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     round_up_to_nearest: wizardData.round_up_to_nearest,
     billing_frequency: wizardData.billing_frequency,
     prepaid_block_lines: 'lines' in prepaid && prepaid.lines.length > 0 ? prepaid.lines : undefined,
-    // currency_code removed - templates are now currency-neutral
+    currency_code: wizardData.currency_code,
     };
   };
 
@@ -277,6 +292,15 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
             ...prev,
             [stepIndex]: t('templateWizard.validation.billingFrequencyRequired', {
               defaultValue: 'Billing frequency is required',
+            }),
+          }));
+          return false;
+        }
+        if (!wizardData.currency_code) {
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: t('templateWizard.validation.currencyRequired', {
+              defaultValue: 'Base currency is required',
             }),
           }));
           return false;
@@ -418,7 +442,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
         cadence_owner: 'client',
         billing_timing: 'arrears',
         enable_proration: false,
-        // currency_code removed - templates are now currency-neutral
+        currency_code: '',
         fixed_services: [],
         product_services: [],
         hourly_services: [],

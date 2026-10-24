@@ -14,6 +14,7 @@
       "semiAnnually": "Halbjährlich"
     },
     "cadenceTotal": "{{cadence}} gesamt",
+    "currency": "Währung",
     "date": "Datum",
     "description": "Beschreibung",
     "discounts": "Rabatte",
@@ -60,6 +61,7 @@
     "rate": "Satz",
     "recurring": "Wiederkehrend",
     "service": "Leistung",
+    "servicePeriod": "Leistungszeitraum",
     "shipDate": "Versanddatum",
     "shipTo": "Lieferadresse",
     "shipped": "Versendet",

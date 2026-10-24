@@ -9,6 +9,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
 import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
+import { formatLocationAddress } from '@alga-psa/core';
 import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '../../auth/rbac';
@@ -96,6 +97,7 @@ import {
   updateInvoiceTotalsAndRecordTransaction
 } from '@alga-psa/billing/services/invoiceService';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
+import { paymentTermDays } from '@alga-psa/shared/billingClients/paymentPreferences';
 import { getClientDefaultBillingProfileId } from '@alga-psa/billing/lib/billing/billingProfileLookup';
 
 type DeferredEvent = () => Promise<void>;
@@ -322,18 +324,6 @@ export class InvoiceService extends BaseService<IInvoice> {
     return summarizeInvoiceRecurringProvenance(charges);
   }
 
-  private getPaymentTermDays(paymentTerms?: string | null): number {
-    switch (paymentTerms) {
-      case 'net_15':
-        return 15;
-      case 'due_on_receipt':
-        return 0;
-      case 'net_30':
-      default:
-        return 30;
-    }
-  }
-
   private async computeDueDate(trx: Knex.Transaction, tenant: string, clientId: string, invoiceDate: string): Promise<string> {
     const client = await tenantDb(trx, tenant).table('clients')
       .where({ client_id: clientId })
@@ -342,7 +332,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 
     const plainInvoiceDate = Temporal.PlainDate.from(invoiceDate);
     return plainInvoiceDate
-      .add({ days: this.getPaymentTermDays(client?.payment_terms) })
+      .add({ days: paymentTermDays(client?.payment_terms) })
       .toString();
   }
 
@@ -391,14 +381,13 @@ export class InvoiceService extends BaseService<IInvoice> {
           .select(
             'cl.client_id',
             'cl.tenant',
-            trx.raw(`CONCAT_WS(', ',
-              NULLIF(cl.address_line1, 'N/A'),
-              cl.address_line2,
-              NULLIF(cl.city, 'N/A'),
-              cl.state_province,
-              cl.postal_code,
-              NULLIF(cl.country_name, 'Unknown')
-            ) as formatted_address`)
+            'cl.address_line1 as billing_address_line1',
+            'cl.address_line2 as billing_address_line2',
+            'cl.address_line3 as billing_address_line3',
+            'cl.city as billing_city',
+            'cl.state_province as billing_state_province',
+            'cl.postal_code as billing_postal_code',
+            'cl.country_name as billing_country_name'
           )
           .where(function() {
             this.where('cl.is_billing_address', true)
@@ -412,7 +401,13 @@ export class InvoiceService extends BaseService<IInvoice> {
           .leftJoin(billingAddressSubquery, 'clients.client_id', 'billing_loc.client_id')
           .select(
             'clients.client_name',
-            trx.raw('COALESCE(billing_loc.formatted_address, \'\') as billing_address')
+            'billing_loc.billing_address_line1',
+            'billing_loc.billing_address_line2',
+            'billing_loc.billing_address_line3',
+            'billing_loc.billing_city',
+            'billing_loc.billing_state_province',
+            'billing_loc.billing_postal_code',
+            'billing_loc.billing_country_name'
           );
       }
 
@@ -466,10 +461,15 @@ export class InvoiceService extends BaseService<IInvoice> {
       ]);
 
       // Add HATEOAS links
-      const dataWithLinks = data.map((invoice: any) => ({
-        ...invoice,
-        _links: this.generateInvoiceLinks(invoice)
-      }));
+      const dataWithLinks = data.map((row: any) => {
+        const invoice = (options as any).include_client
+          ? this.withFormattedBillingAddress(row)
+          : row;
+        return {
+          ...invoice,
+          _links: this.generateInvoiceLinks(invoice)
+        };
+      });
 
       return {
         data: dataWithLinks,
@@ -1202,6 +1202,7 @@ export class InvoiceService extends BaseService<IInvoice> {
           method: String(data.payment_method ?? 'manual'),
           receivedByUserId: context.userId,
           gatewayTransactionId: data.reference_number,
+          source: 'manual',
         }),
         ctx: {
           tenantId: context.tenant,
@@ -2363,7 +2364,7 @@ export class InvoiceService extends BaseService<IInvoice> {
   private async getInvoiceClient(clientId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
     const db = tenantDb(trx, context.tenant);
 
-    return db.tenantJoin(
+    const row = await db.tenantJoin(
       db.table('clients as c'),
       'client_locations as cl',
       'c.client_id',
@@ -2383,11 +2384,49 @@ export class InvoiceService extends BaseService<IInvoice> {
         'c.client_id',
         'c.client_name',
         'c.billing_email as email',
-        trx.raw(`CONCAT_WS(', ', NULLIF(cl.address_line1, 'N/A'), cl.address_line2, NULLIF(cl.city, 'N/A'), cl.state_province, cl.postal_code, NULLIF(cl.country_name, 'Unknown')) as billing_address`),
+        'cl.address_line1 as billing_address_line1',
+        'cl.address_line2 as billing_address_line2',
+        'cl.address_line3 as billing_address_line3',
+        'cl.city as billing_city',
+        'cl.state_province as billing_state_province',
+        'cl.postal_code as billing_postal_code',
+        'cl.country_name as billing_country_name',
         'cl.phone as phone_no'
       )
       .orderByRaw('cl.is_billing_address DESC, cl.is_default DESC')
       .first();
+
+    return row ? this.withFormattedBillingAddress(row) : row;
+  }
+
+  /**
+   * Collapse the billing_* location columns selected by SQL into the single
+   * `billing_address` string API consumers see; formatting lives in TS so empty
+   * components are skipped in one place (formatLocationAddress).
+   */
+  private withFormattedBillingAddress<T extends Record<string, any>>(row: T): Record<string, any> {
+    const {
+      billing_address_line1,
+      billing_address_line2,
+      billing_address_line3,
+      billing_city,
+      billing_state_province,
+      billing_postal_code,
+      billing_country_name,
+      ...rest
+    } = row;
+    return {
+      ...rest,
+      billing_address: formatLocationAddress({
+        address_line1: billing_address_line1,
+        address_line2: billing_address_line2,
+        address_line3: billing_address_line3,
+        city: billing_city,
+        state_province: billing_state_province,
+        postal_code: billing_postal_code,
+        country_name: billing_country_name,
+      }),
+    };
   }
 
   private async getBillingCycle(cycleId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
