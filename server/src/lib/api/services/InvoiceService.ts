@@ -785,12 +785,21 @@ export class InvoiceService extends BaseService<IInvoice> {
         .where({ invoice_id: id })
         .update(updateData);
 
-      // Re-point charges that were not individually pinned. Skipped when items
-      // are replaced below (createInvoiceLineItems attributes the new ones).
+      // Re-point every charge that was following the header: those whose source
+      // is null/non-explicit, OR whose profile equals the old header profile
+      // (D1 stamps header-following charges 'explicit', and earlier re-points do
+      // too). Only charges pinned to a profile different from the old header are
+      // left alone. Skipped when items are replaced below
+      // (createInvoiceLineItems attributes the new ones).
       if (repointToProfileId !== undefined && !data.items) {
         await tenantDb(trx, context.tenant).table('invoice_charges')
           .where({ invoice_id: id })
-          .where((qb) => qb.whereNull('billing_profile_source').orWhereNot('billing_profile_source', 'explicit'))
+          .where((qb) => {
+            qb.whereNull('billing_profile_source').orWhereNot('billing_profile_source', 'explicit');
+            if (existing.billing_profile_id) {
+              qb.orWhere('billing_profile_id', existing.billing_profile_id);
+            }
+          })
           .update({
             billing_profile_id: repointToProfileId,
             billing_profile_source: repointSource,
