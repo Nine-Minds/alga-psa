@@ -15,17 +15,22 @@ export const CO_MANAGED_PLANS = {
   clientIntegration: 'docs/plans/2026-09-11-co-managed-client-integration',
   ticketList: 'docs/plans/2026-09-11-co-managed-ticket-list-unification',
   correction: 'docs/plans/2026-09-20-co-managed-it-completion',
+  nativeTicketScreen: 'docs/plans/2026-10-15-co-managed-native-ticket-screen',
 };
+
+export const CO_MANAGED_CHECKLIST_PLANS = Object.keys(CO_MANAGED_PLANS).filter(plan => plan !== 'foundation');
 
 /** Row counts the plans are known to carry. A shrinking plan is a failure. */
 export const EXPECTED_COUNTS = {
   foundation: 22,
   'clientIntegration:feature': 33,
   'clientIntegration:test': 21,
-  'ticketList:feature': 39,
-  'ticketList:test': 20,
+  'ticketList:feature': 49,
+  'ticketList:test': 26,
   'correction:feature': 32,
   'correction:test': 26,
+  'nativeTicketScreen:feature': 37,
+  'nativeTicketScreen:test': 14,
 };
 
 /** Foundation T01–T22, parsed from the plan's behavioral table. */
@@ -78,7 +83,7 @@ export function coManagedRequirementKeys(root) {
     bump('foundation');
   }
 
-  for (const plan of ['clientIntegration', 'ticketList', 'correction']) {
+  for (const plan of CO_MANAGED_CHECKLIST_PLANS) {
     for (const [kind, file] of [['feature', 'features.json'], ['test', 'tests.json']]) {
       for (const row of planRows(root, plan, file)) {
         if (typeof row?.id !== 'string' || !row.id) {
@@ -91,10 +96,25 @@ export function coManagedRequirementKeys(root) {
     }
   }
 
+  // Counts alone cannot detect one required ID being replaced by a new one.
+  // Keep the approved contiguous ID ranges independent of the files being read.
+  const requiredKeys = new Set();
   for (const [bucket, want] of Object.entries(EXPECTED_COUNTS)) {
     if (counts[bucket] !== want) {
       failures.push(`${bucket}: plan carries ${counts[bucket] ?? 0} rows, expected ${want}`);
     }
+    const [plan, kind] = bucket.split(':');
+    const prefix = plan === 'foundation' ? 'T' : plan === 'correction'
+      ? (kind === 'feature' ? 'CF' : 'CT') : (kind === 'feature' ? 'F' : 'T');
+    for (let number = 1; number <= want; number++) {
+      const id = `${prefix}${String(number).padStart(plan === 'foundation' ? 2 : 3, '0')}`;
+      const key = plan === 'foundation' || plan === 'correction' ? id : `${plan}:${id}`;
+      requiredKeys.add(key);
+      if (!keys.includes(key)) failures.push(`required requirement key missing from the plans: ${key}`);
+    }
+  }
+  for (const key of keys) {
+    if (!requiredKeys.has(key)) failures.push(`unknown requirement key in the plans: ${key}`);
   }
   const duplicates = keys.filter((key, index) => keys.indexOf(key) !== index);
   for (const key of new Set(duplicates)) failures.push(`duplicate requirement key in the plans: ${key}`);

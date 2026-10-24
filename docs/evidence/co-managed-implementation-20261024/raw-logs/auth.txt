@@ -1,0 +1,8 @@
+
+ RUN  v4.1.11 /home/robert/alga-copies/feature-co-managed-it/packages/auth
+
+
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  11:13:15
+   Duration  145ms (transform 37ms, setup 0ms, import 49ms, tests 5ms, environment 0ms)

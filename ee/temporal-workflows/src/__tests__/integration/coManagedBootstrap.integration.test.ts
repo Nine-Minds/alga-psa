@@ -3002,6 +3002,87 @@ async function sharedWorkFixture() {
 }
 
 describe('co-managed shared-work authorization boundary', () => {
+  it('isolates sibling customers and MSP data when all three tickets have the same local identity', async () => {
+    const first = await sharedWorkFixture();
+    const { principal, resource, sponsor, sponsorActor, target, customer, operation } = first;
+    const { withCoManagedSharedWork: sharedWork } = await import('../../../../../packages/co-managed/src/sharedWork');
+    const { withCoManagedCustomerTicket: customerWork } = await import('../../../../../packages/co-managed/src/customerWork');
+    const { getCoManagedSharedWorkSummary: summary } = await import('../../../../../packages/co-managed/src/sharedWorkRead');
+    const { replaceCoManagedStaffAssignments } = await import('../../../../../packages/co-managed/src/policy');
+    await replaceCoManagedStaffAssignments(db, sponsorActor, target, 2,
+      [{ kind: 'user', principalId: principal.userId, role: 'technician' }]);
+
+    // Both customers have the same sponsor. Relationship membership must still
+    // be checked per customer, even when every ticket has the same UUID/number.
+    await sponsor.table('co_managed_entitlements').update({ capacity: 4 });
+    const siblingClientId = randomUUID();
+    await sponsor.table('clients').insert({ tenant: principal.tenant, client_id: siblingClientId, client_name: 'Sibling customer' });
+    const siblingOperation = await prepareCoManagedProvisioning(db, {
+      sponsorTenant: principal.tenant, clientId: siblingClientId, requestedBy: principal.userId,
+      escalationBoardId: operation.escalation_board_id, operationId: randomUUID(), seats: 2,
+      visibilityMode: 'board_scope', workspaceName: 'Sibling IT',
+      administrator: { firstName: 'Sibling', lastName: 'Admin', email: `sibling-${randomUUID()}@example.test` },
+    });
+    const sibling = await readyForAcceptance('board_scope', siblingOperation);
+    await acceptCoManagedRelationship(db, sibling.actor, sibling.input);
+    const siblingStatus = await sibling.customer.table('statuses')
+      .where({ board_id: sibling.operation.customer_board_id, item_type: 'ticket', is_closed: false }).first();
+    const ticket = await customer.table('tickets').where('ticket_id', resource.id).first();
+    await sibling.customer.table('tickets').insert({
+      tenant: sibling.actor.tenant, ticket_id: resource.id, ticket_number: ticket.ticket_number, title: 'Sibling confidential issue',
+      client_id: sibling.operation.customer_client_id, board_id: sibling.operation.customer_board_id,
+      status_id: siblingStatus.status_id, entered_by: sibling.actor.userId,
+    });
+    const ownerStatus = await customer.table('statuses').where('status_id', ticket.status_id).first();
+    await sponsor.table('statuses').insert({ ...ownerStatus, tenant: principal.tenant, board_id: operation.escalation_board_id });
+    await sponsor.table('tickets').insert({
+      tenant: principal.tenant, ticket_id: resource.id, ticket_number: ticket.ticket_number, title: 'MSP confidential issue',
+      client_id: operation.request.clientId, board_id: operation.escalation_board_id,
+      status_id: ownerStatus.status_id, entered_by: principal.userId,
+    });
+    const siblingResource = { ...resource, tenant: sibling.actor.tenant, relationshipId: sibling.operation.relationship_id };
+    const mspResource = { ...resource, tenant: principal.tenant };
+    const forbidden = { code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' };
+    expect((await summary(db, principal, resource)).fields.title).toBe('Customer issue');
+    await expect(summary(db, principal, siblingResource)).rejects.toMatchObject(forbidden);
+    await replaceCoManagedStaffAssignments(db, sponsorActor,
+      { customerTenant: sibling.actor.tenant, relationshipId: sibling.operation.relationship_id }, 2,
+      [{ kind: 'user', principalId: principal.userId, role: 'technician' }]);
+    expect((await summary(db, principal, siblingResource)).fields.title).toBe('Sibling confidential issue');
+    // Even a sponsor assigned to both customers cannot combine their identities.
+    for (const mixed of [{ ...resource, relationshipId: siblingResource.relationshipId },
+      { ...siblingResource, relationshipId: resource.relationshipId }]) {
+      await expect(summary(db, principal, mixed)).rejects.toMatchObject(forbidden);
+    }
+
+    const deniedCommand = vi.fn(async (context: { trx: Knex.Transaction; resource: typeof resource }) => {
+      return tenantDb(context.trx, context.resource.tenant).table('tickets')
+        .where('ticket_id', context.resource.id).update({ title: 'Unauthorized overwrite' }).returning('title');
+    });
+    for (const owner of [first, sibling]) {
+      const sessionId = randomUUID();
+      await owner.customer.table('sessions').insert({ tenant: owner.actor.tenant, user_id: owner.actor.userId,
+        session_id: sessionId, expires_at: new Date(Date.now() + 3600000) });
+      const actor = { ...owner.actor, kind: 'session' as const, sessionId };
+      const ownResource = owner === first ? resource : siblingResource;
+      const foreignResource = owner === first ? siblingResource : resource;
+      expect((await summary(db, actor, ownResource)).fields.title)
+        .toBe(owner === first ? 'Customer issue' : 'Sibling confidential issue');
+      for (const foreign of [foreignResource, mspResource,
+        { ...ownResource, relationshipId: foreignResource.relationshipId }]) {
+        await expect(summary(db, actor, foreign)).rejects.toMatchObject(forbidden);
+        for (const action of ['read', 'update'] as const) {
+          await expect(customerWork(db, actor, foreign, action, deniedCommand)).rejects.toMatchObject(forbidden);
+          await expect(sharedWork(db, actor, foreign, action, deniedCommand)).rejects.toMatchObject(forbidden);
+        }
+      }
+    }
+    expect(deniedCommand).not.toHaveBeenCalled();
+    expect(await customer.table('tickets').where('ticket_id', resource.id).first('title')).toEqual({ title: 'Customer issue' });
+    expect(await sibling.customer.table('tickets').where('ticket_id', resource.id).first('title')).toEqual({ title: 'Sibling confidential issue' });
+    expect(await sponsor.table('tickets').where('ticket_id', resource.id).first('title')).toEqual({ title: 'MSP confidential issue' });
+  });
+
   it('intersects live home RBAC, explicit staff assignment, customer scope, and lifecycle without switching identity', async () => {
     const { principal, resource, sponsorActor, actor, target, sponsor, customer, operation, roleId } = await sharedWorkFixture();
     const { withCoManagedSharedWork: work } = await import('../../../../../packages/co-managed/src/sharedWork');

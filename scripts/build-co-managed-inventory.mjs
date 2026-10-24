@@ -2,7 +2,7 @@
 /**
  * CF001 — build the row-level reconciliation inventory for PR #3363.
  *
- * Every requirement in the three plans this card is executing against has to
+ * Every requirement in the approved plans this card is executing against has to
  * appear exactly once, with a status that is derived from something checkable
  * rather than asserted in prose. `implemented: true` in a plan's features.json
  * means code exists; it is not a claim that anything passed at the current
@@ -23,7 +23,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   CO_MANAGED_PLANS as PLANS,
+  CO_MANAGED_CHECKLIST_PLANS,
   EXPECTED_COUNTS,
+  coManagedRequirementKeys,
   foundationAcceptance,
   foundationContracts,
   planRows,
@@ -1205,7 +1207,7 @@ function buildRows() {
     });
   }
 
-  for (const plan of ['clientIntegration', 'ticketList', 'correction']) {
+  for (const plan of CO_MANAGED_CHECKLIST_PLANS) {
     const dir = PLANS[plan];
     const tests = planRows(root, plan, 'tests.json');
     const coveredBy = {};
@@ -1234,7 +1236,7 @@ function buildRows() {
 const rows = buildRows();
 
 // Fail closed on the things CT001 will eventually assert.
-const failures = [];
+const failures = [...coManagedRequirementKeys(root).failures];
 
 /**
  * Candidate facts collected by scripts/collect-co-managed-candidate-facts.mjs.

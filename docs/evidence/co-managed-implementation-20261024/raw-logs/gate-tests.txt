@@ -1,0 +1,430 @@
+TAP version 13
+# Subtest: the fixture passes all three predicates
+ok 1 - the fixture passes all three predicates
+  ---
+  duration_ms: 3.432579
+  type: 'test'
+  ...
+# Subtest: the three predicates are calculated separately
+ok 2 - the three predicates are calculated separately
+  ---
+  duration_ms: 0.266801
+  type: 'test'
+  ...
+# Subtest: fails closed on a missing manifest
+ok 3 - fails closed on a missing manifest
+  ---
+  duration_ms: 0.078096
+  type: 'test'
+  ...
+# Subtest: fails closed when the expected ID set is not supplied
+ok 4 - fails closed when the expected ID set is not supplied
+  ---
+  duration_ms: 0.158128
+  type: 'test'
+  ...
+# Subtest: rejects: a removed required ID
+ok 5 - rejects: a removed required ID
+  ---
+  duration_ms: 0.25018
+  type: 'test'
+  ...
+# Subtest: rejects: a duplicate ID
+ok 6 - rejects: a duplicate ID
+  ---
+  duration_ms: 0.262213
+  type: 'test'
+  ...
+# Subtest: rejects: an unknown ID appearing from nowhere
+ok 7 - rejects: an unknown ID appearing from nowhere
+  ---
+  duration_ms: 0.295135
+  type: 'test'
+  ...
+# Subtest: rejects: an unknown status
+ok 8 - rejects: an unknown status
+  ---
+  duration_ms: 0.097944
+  type: 'test'
+  ...
+# Subtest: rejects: a requirement with no justification
+ok 9 - rejects: a requirement with no justification
+  ---
+  duration_ms: 0.225193
+  type: 'test'
+  ...
+# Subtest: rejects: verified with no evidence record
+ok 10 - rejects: verified with no evidence record
+  ---
+  duration_ms: 0.230333
+  type: 'test'
+  ...
+# Subtest: rejects: an unresolved required row
+ok 11 - rejects: an unresolved required row
+  ---
+  duration_ms: 0.118673
+  type: 'test'
+  ...
+# Subtest: rejects: a failed required row
+ok 12 - rejects: a failed required row
+  ---
+  duration_ms: 0.061215
+  type: 'test'
+  ...
+# Subtest: rejects: missing code on a required row
+ok 13 - rejects: missing code on a required row
+  ---
+  duration_ms: 0.042219
+  type: 'test'
+  ...
+# Subtest: rejects: evidence that names no command
+ok 14 - rejects: evidence that names no command
+  ---
+  duration_ms: 0.040967
+  type: 'test'
+  ...
+# Subtest: rejects: evidence that names no actual result
+ok 15 - rejects: evidence that names no actual result
+  ---
+  duration_ms: 0.032251
+  type: 'test'
+  ...
+# Subtest: rejects: evidence of an unknown type
+ok 16 - rejects: evidence of an unknown type
+  ---
+  duration_ms: 0.034254
+  type: 'test'
+  ...
+# Subtest: rejects: an unavailable artifact
+ok 17 - rejects: an unavailable artifact
+  ---
+  duration_ms: 0.075862
+  type: 'test'
+  ...
+# Subtest: rejects: evidence referenced but not recorded
+ok 18 - rejects: evidence referenced but not recorded
+  ---
+  duration_ms: 0.060814
+  type: 'test'
+  ...
+# Subtest: rejects: a stale SHA relabelled onto the candidate
+ok 19 - rejects: a stale SHA relabelled onto the candidate
+  ---
+  duration_ms: 0.090931
+  type: 'test'
+  ...
+# Subtest: historical evidence is usable only with a recorded dependency analysis
+ok 20 - historical evidence is usable only with a recorded dependency analysis
+  ---
+  duration_ms: 0.060273
+  type: 'test'
+  ...
+# Subtest: rejects: an open functional defect
+ok 21 - rejects: an open functional defect
+  ---
+  duration_ms: 0.050535
+  type: 'test'
+  ...
+# Subtest: rejects: an open security defect
+ok 22 - rejects: an open security defect
+  ---
+  duration_ms: 0.040326
+  type: 'test'
+  ...
+# Subtest: rejects: an open data-integrity defect
+ok 23 - rejects: an open data-integrity defect
+  ---
+  duration_ms: 0.052939
+  type: 'test'
+  ...
+# Subtest: rejects: a candidate that is not the PR head
+ok 24 - rejects: a candidate that is not the PR head
+  ---
+  duration_ms: 0.061526
+  type: 'test'
+  ...
+# Subtest: rejects: a running app on a different revision
+ok 25 - rejects: a running app on a different revision
+  ---
+  duration_ms: 0.064281
+  type: 'test'
+  ...
+# Subtest: rejects: a running worker on a different revision
+ok 26 - rejects: a running worker on a different revision
+  ---
+  duration_ms: 2.538689
+  type: 'test'
+  ...
+# Subtest: rejects: a dirty delivered worktree
+ok 27 - rejects: a dirty delivered worktree
+  ---
+  duration_ms: 0.122841
+  type: 'test'
+  ...
+# Subtest: rejects: conflicting mergeability
+ok 28 - rejects: conflicting mergeability
+  ---
+  duration_ms: 0.11153
+  type: 'test'
+  ...
+# Subtest: rejects: unknown mergeability
+ok 29 - rejects: unknown mergeability
+  ---
+  duration_ms: 0.10076
+  type: 'test'
+  ...
+# Subtest: rejects: a dirty merge state
+ok 30 - rejects: a dirty merge state
+  ---
+  duration_ms: 0.12791
+  type: 'test'
+  ...
+# Subtest: rejects: mergeability checked at an older SHA
+ok 31 - rejects: mergeability checked at an older SHA
+  ---
+  duration_ms: 0.097022
+  type: 'test'
+  ...
+# Subtest: rejects: a pending mandatory check
+ok 32 - rejects: a pending mandatory check
+  ---
+  duration_ms: 0.097693
+  type: 'test'
+  ...
+# Subtest: rejects: a failed mandatory check
+ok 33 - rejects: a failed mandatory check
+  ---
+  duration_ms: 0.063198
+  type: 'test'
+  ...
+# Subtest: rejects: a skipped mandatory check
+ok 34 - rejects: a skipped mandatory check
+  ---
+  duration_ms: 0.048591
+  type: 'test'
+  ...
+# Subtest: rejects: a cancelled mandatory check
+ok 35 - rejects: a cancelled mandatory check
+  ---
+  duration_ms: 0.067477
+  type: 'test'
+  ...
+# Subtest: rejects: a mandatory check that ran at another SHA
+ok 36 - rejects: a mandatory check that ran at another SHA
+  ---
+  duration_ms: 0.107201
+  type: 'test'
+  ...
+# Subtest: rejects: no mandatory checks at all
+ok 37 - rejects: no mandatory checks at all
+  ---
+  duration_ms: 0.110658
+  type: 'test'
+  ...
+# Subtest: a count of green checks cannot substitute for the required set
+ok 38 - a count of green checks cannot substitute for the required set
+  ---
+  duration_ms: 0.151084
+  type: 'test'
+  ...
+# Subtest: rejects: an unstable review environment
+ok 39 - rejects: an unstable review environment
+  ---
+  duration_ms: 0.092233
+  type: 'test'
+  ...
+# Subtest: rejects: an observation shorter than 30 minutes
+ok 40 - rejects: an observation shorter than 30 minutes
+  ---
+  duration_ms: 0.065182
+  type: 'test'
+  ...
+# Subtest: rejects: any automatic healing during the observation
+ok 41 - rejects: any automatic healing during the observation
+  ---
+  duration_ms: 0.042961
+  type: 'test'
+  ...
+# Subtest: rejects: an external prerequisite with no owner
+ok 42 - rejects: an external prerequisite with no owner
+  ---
+  duration_ms: 0.072176
+  type: 'test'
+  ...
+# Subtest: rejects: a production prerequisite the release owner has not accepted
+ok 43 - rejects: a production prerequisite the release owner has not accepted
+  ---
+  duration_ms: 0.076554
+  type: 'test'
+  ...
+# Subtest: rejects: no production prerequisites recorded at all
+ok 44 - rejects: no production prerequisites recorded at all
+  ---
+  duration_ms: 0.052359
+  type: 'test'
+  ...
+# Subtest: rejects: an unsupported schema version
+ok 45 - rejects: an unsupported schema version
+  ---
+  duration_ms: 0.040526
+  type: 'test'
+  ...
+# Subtest: rejects: a short candidate SHA
+ok 46 - rejects: a short candidate SHA
+  ---
+  duration_ms: 0.040817
+  type: 'test'
+  ...
+# Subtest: rejects: a missing base SHA
+ok 47 - rejects: a missing base SHA
+  ---
+  duration_ms: 0.041338
+  type: 'test'
+  ...
+# Subtest: rejects: a missing collection timestamp
+ok 48 - rejects: a missing collection timestamp
+  ---
+  duration_ms: 0.036018
+  type: 'test'
+  ...
+# Subtest: rejects: missing requirements entirely
+ok 49 - rejects: missing requirements entirely
+  ---
+  duration_ms: 0.029956
+  type: 'test'
+  ...
+# Subtest: rejects: missing open-defect tracking
+ok 50 - rejects: missing open-defect tracking
+  ---
+  duration_ms: 0.036339
+  type: 'test'
+  ...
+# Subtest: rejects: a missing migrations fingerprint
+ok 51 - rejects: a missing migrations fingerprint
+  ---
+  duration_ms: 0.067076
+  type: 'test'
+  ...
+# Subtest: rejects: a missing simulator fingerprint
+ok 52 - rejects: a missing simulator fingerprint
+  ---
+  duration_ms: 0.055304
+  type: 'test'
+  ...
+# Subtest: prose cannot satisfy a predicate
+ok 53 - prose cannot satisfy a predicate
+  ---
+  duration_ms: 0.067697
+  type: 'test'
+  ...
+# Subtest: counts are reported for every status present
+ok 54 - counts are reported for every status present
+  ---
+  duration_ms: 0.0586
+  type: 'test'
+  ...
+# Subtest: the status vocabulary is the one the inventory uses
+ok 55 - the status vocabulary is the one the inventory uses
+  ---
+  duration_ms: 0.083046
+  type: 'test'
+  ...
+# Subtest: analysis is a recordable evidence type, not a malformed manifest
+ok 56 - analysis is a recordable evidence type, not a malformed manifest
+  ---
+  duration_ms: 0.097613
+  type: 'test'
+  ...
+# Subtest: rejects: a row verified by a code read alone
+ok 57 - rejects: a row verified by a code read alone
+  ---
+  duration_ms: 0.099186
+  type: 'test'
+  ...
+# Subtest: analysis alongside an executed run is fine — it is a supplement, not a substitute
+ok 58 - analysis alongside an executed run is fine — it is a supplement, not a substitute
+  ---
+  duration_ms: 0.135284
+  type: 'test'
+  ...
+# Subtest: the analysis floor is per-row, not per-manifest
+ok 59 - the analysis floor is per-row, not per-manifest
+  ---
+  duration_ms: 0.130495
+  type: 'test'
+  ...
+# Subtest: HEAD may rewrite only the packet under the candidate it describes
+ok 60 - HEAD may rewrite only the packet under the candidate it describes
+  ---
+  duration_ms: 0.125085
+  type: 'test'
+  ...
+# Subtest: a single file touched outside that directory is real drift
+ok 61 - a single file touched outside that directory is real drift
+  ---
+  duration_ms: 0.097563
+  type: 'test'
+  ...
+# Subtest: a prefix that merely looks similar does not count as inside
+ok 62 - a prefix that merely looks similar does not count as inside
+  ---
+  duration_ms: 0.03734
+  type: 'test'
+  ...
+# Subtest: an empty or unusable diff never grants the exception
+ok 63 - an empty or unusable diff never grants the exception
+  ---
+  duration_ms: 0.07418
+  type: 'test'
+  ...
+# Subtest: the collector stamps artifact availability and the verifier blocks on it
+ok 64 - the collector stamps artifact availability and the verifier blocks on it
+  ---
+  duration_ms: 0.248297
+  type: 'test'
+  ...
+# Subtest: includes every approved plan and both ticket amendments in the required identity set
+ok 65 - includes every approved plan and both ticket amendments in the required identity set
+  ---
+  duration_ms: 9.411914
+  type: 'test'
+  ...
+# Subtest: rejects a removed native-screen requirement
+ok 66 - rejects a removed native-screen requirement
+  ---
+  duration_ms: 5.064776
+  type: 'test'
+  ...
+# Subtest: rejects a removed foundation isolation contract
+ok 67 - rejects a removed foundation isolation contract
+  ---
+  duration_ms: 5.74314
+  type: 'test'
+  ...
+# Subtest: rejects replacing a required ID while keeping its plan row count unchanged
+ok 68 - rejects replacing a required ID while keeping its plan row count unchanged
+  ---
+  duration_ms: 4.227894
+  type: 'test'
+  ...
+# Subtest: rejects duplicate IDs even when the plan row count is unchanged
+ok 69 - rejects duplicate IDs even when the plan row count is unchanged
+  ---
+  duration_ms: 3.334646
+  type: 'test'
+  ...
+# Subtest: rejects a new requirement until the approved identity baseline is updated
+ok 70 - rejects a new requirement until the approved identity baseline is updated
+  ---
+  duration_ms: 7.692193
+  type: 'test'
+  ...
+1..70
+# tests 70
+# suites 0
+# pass 70
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 75.067851

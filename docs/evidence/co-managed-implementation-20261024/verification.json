@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "collectedAt": "2026-10-24T15:21:43.832734+00:00",
+  "executionHost": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+  "executionBase": "2632aaacb0c1a54376e0071e1daca31a82b56cd9",
+  "branch": "feature/co-managed-it",
+  "node": "v22.18.0",
+  "databaseHarness": {
+    "source": "server_co_managed",
+    "selection": "schema-only clone to randomly named disposable PostgreSQL database; no product fixtures modified",
+    "seed": "20260610",
+    "runner": "server/vitest.config.ts",
+    "limitations": "mail, event, storage and external adapters use the existing suite doubles"
+  },
+  "sourceSha256": {
+    "ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts": "ce58da7cf3ca1a94dbf51e2d228684c96a2d830755a206c704e27aa108d1483d",
+    "scripts/build-co-managed-inventory.mjs": "ccacf79cc5f60d6e9bacadd7800eb1502e346fb4fb8ee55d06baf9def9672e13",
+    "scripts/lib/co-managed-plan-ids.mjs": "be1e56e041b618b45189188585aa6b93a1e0567245571d19765f54507298e60d",
+    "scripts/tests/co-managed-plan-ids.test.mjs": "8f2ba77262fc812eee1777a24e97d9d5200ffd246e55f734f4a39893b72ae20a"
+  },
+  "secretRedactions": [],
+  "commands": [
+    {
+      "cwd": "packages/auth",
+      "command": "npx vitest run src/lib/withAuth.coManagedAcceptance.test.ts",
+      "exitCode": 0,
+      "passed": 7,
+      "log": "raw-logs/auth.txt"
+    },
+    {
+      "cwd": "server",
+      "command": "npx vitest run ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts -t 'isolates sibling customers and MSP data'",
+      "exitCode": 0,
+      "passed": 1,
+      "unselected": 1458,
+      "log": "raw-logs/isolation.txt"
+    },
+    {
+      "cwd": "server",
+      "command": "npx vitest run ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts",
+      "exitCode": 0,
+      "passed": 1459,
+      "skipped": 0,
+      "seconds": 376.28,
+      "log": "raw-logs/bootstrap-full.txt"
+    },
+    {
+      "cwd": "server",
+      "command": "VITEST_SEED=20260610 npx vitest run src/test/unit/product ../packages/auth/src/lib/withAuth.coManagedAcceptance.test.ts",
+      "exitCode": 0,
+      "passed": 803,
+      "files": 106,
+      "log": "raw-logs/product.txt"
+    },
+    {
+      "cwd": ".",
+      "command": "node --test scripts/tests/co-managed-plan-ids.test.mjs scripts/tests/co-managed-completion.test.mjs",
+      "exitCode": 0,
+      "passed": 70,
+      "log": "raw-logs/gate-tests.txt"
+    },
+    {
+      "cwd": ".",
+      "command": "count-only validation mutation, replacement-ID test against separate temporary module",
+      "exitCode": 1,
+      "expectedFailure": true,
+      "log": "raw-logs/plan-id-mutation.txt"
+    },
+    {
+      "cwd": ".",
+      "command": "node scripts/build-co-managed-inventory.mjs --out /tmp/co-managed-implement-inventory",
+      "exitCode": 1,
+      "generatedRequirements": 260,
+      "planIdentityFailures": 0,
+      "limitation": "26 historical evidence references absent in temporary directory; not current acceptance evidence",
+      "log": "raw-logs/inventory.txt"
+    },
+    {
+      "cwd": ".",
+      "command": "node scripts/verify-co-managed-completion.mjs",
+      "exitCode": 1,
+      "expectedFailure": true,
+      "implementationReady": false,
+      "humanReviewReady": false,
+      "productionReady": false,
+      "log": "raw-logs/readiness.txt"
+    },
+    {
+      "cwd": "server",
+      "command": "NODE_OPTIONS=--max-old-space-size=12288 npx tsc --noEmit",
+      "exitCode": 0,
+      "log": "raw-logs/server-types.txt"
+    },
+    {
+      "cwd": "ee/temporal-workflows",
+      "command": "NODE_OPTIONS=--max-old-space-size=12288 npx tsc --noEmit",
+      "exitCode": 0,
+      "log": "raw-logs/ee-types.txt"
+    },
+    {
+      "cwd": "packages/auth",
+      "command": "NODE_OPTIONS=--max-old-space-size=12288 npx tsc --noEmit",
+      "exitCode": 0,
+      "log": "raw-logs/auth-types.txt"
+    },
+    {
+      "cwd": "packages/co-managed",
+      "command": "NODE_OPTIONS=--max-old-space-size=12288 npx tsc --noEmit",
+      "exitCode": 0,
+      "log": "raw-logs/co-managed-types.txt"
+    }
+  ],
+  "logNormalization": "Trailing whitespace and excess terminal newlines removed; empty typecheck outputs remain empty.",
+  "originalLogSha256": {
+    "auth.txt": "6f909bf132ef7621e9c8222e359d986f19c87c7e84ff804313e4d09e7e97324d",
+    "isolation.txt": "a1ed77bf5369793e7822810fe21a3236d11d399e053056fe95c57723884bbb36",
+    "bootstrap-full.txt": "949939a6b95d7c945806df8c369b3e4043a2049054f0d3a8e4b083e162188b92",
+    "product.txt": "3c307f4a67fc89c83f5f5153ff03a55a5bb29f74f32219f67b35820c7670914b",
+    "gate-tests.txt": "98a47ca48481155f8e1816447983b7138dce2a8b36bc98f06783f7c406dc4754",
+    "plan-id-mutation.txt": "39fe5bb803f30753bd9062c1a0d2f400ff5c5893507b78ebc551d689ac78c3bf",
+    "inventory.txt": "cba3a7127e166a33996f29e0d6d3a753410b9c0c94cd4c1b4d4717dea2e9c5f2",
+    "readiness.txt": "6c2cd9b5c9351192d91ad46cd0ebbe46e54045acfb8fff70495ea1c8948a8705",
+    "server-types.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "ee-types.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "auth-types.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "co-managed-types.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "additionalChecks": [
+    {
+      "command": "node --check scripts/lib/co-managed-plan-ids.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node --check scripts/build-co-managed-inventory.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "repositoryTestFiles and isNodeToolingTest assertions for the new test file",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    }
+  ]
+}

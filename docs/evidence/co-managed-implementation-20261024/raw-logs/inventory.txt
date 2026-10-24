@@ -1,0 +1,31 @@
+260 rows -> ../../../../tmp/co-managed-implement-inventory
+  blocked-external: 3
+  implemented-unverified: 171
+  missing-code: 81
+  verified: 5
+FAIL evidence base-reconciliation: artifact base-reconciliation.md does not exist
+FAIL evidence provider-route-regression: artifact cf005-provider-setup.md does not exist
+FAIL evidence provider-route-browser: artifact screenshots/cf005-co-managed-providers.png does not exist
+FAIL evidence release-flag-off-walk: artifact cf005-provider-setup.md does not exist
+FAIL evidence base-reconciliation-round3: artifact base-reconciliation-round3.md does not exist
+FAIL evidence nav-contract-reanchored: artifact cf005-provider-setup.md does not exist
+FAIL evidence integration-shard-apt-repair: artifact base-reconciliation-round3.md does not exist
+FAIL evidence cf002-diagnostic-survives-pass: artifact cf002-requester-deferral.md does not exist
+FAIL evidence cf002-cause-established: artifact raw-logs/inbound-diagnostics-shard1-35534035281.ndjson does not exist
+FAIL evidence cf002-repair-confirmed: artifact raw-logs/inbound-diagnostics-shard1-35537272058.ndjson does not exist
+FAIL evidence bundle-propagation-regression-repair: artifact base-reconciliation-round3.md does not exist
+FAIL evidence fixture-reset-repaired: artifact raw-logs/fixture-reset-cycle-449e0a7b6c.txt does not exist
+FAIL evidence cf007-authority-hardening: artifact cf007-microsoft-authority.md does not exist
+FAIL evidence qualified-handback-eligibility-repair: artifact ticket-list-reconciliation.md does not exist
+FAIL evidence cf002-verified-green-shard: artifact raw-logs/inbound-diagnostics-shard1-35543087189.ndjson does not exist
+FAIL evidence gate-self-test: artifact raw-logs/gate-self-test.txt does not exist
+FAIL evidence requester-deferral-refund-asserted: artifact raw-logs/cf003-cf004-refund-assertions.txt does not exist
+FAIL evidence f010-shell-extraction: artifact f010-shell-extraction.md does not exist
+FAIL evidence ticket-list-reconciliation: artifact ticket-list-reconciliation.md does not exist
+FAIL evidence admission-adapter-callsites: artifact cf002-requester-deferral.md does not exist
+FAIL evidence inbound-diagnostics-regression: artifact cf002-requester-deferral.md does not exist
+FAIL evidence requester-deferral-ci-failure: artifact raw-logs/ci-shard1-618019c3e3.txt does not exist
+FAIL evidence requester-deferral-ci-diagnosed: artifact raw-logs/ci-shard1-fb2e696645.txt does not exist
+FAIL evidence requester-deferral-control-run: artifact raw-logs/shard-control-arm.txt does not exist
+FAIL evidence requester-deferral-control-run: artifactCompare raw-logs/shard-fixed-arm.txt does not exist
+FAIL evidence requester-deferral-local-pass: artifact raw-logs/shard-fixed-arm.txt does not exist

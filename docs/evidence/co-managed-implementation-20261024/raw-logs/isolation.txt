@@ -1,0 +1,13 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "20260610"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts (1459 tests | 1458 skipped) 5925ms 167 MB heap used
+   ✓ co-managed shared-work authorization boundary > isolates sibling customers and MSP data when all three tickets have the same local identity  643ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 1458 skipped (1459)
+   Start at  15:13:16
+   Duration  14.72s (transform 3.00s, setup 87ms, collect 4.73s, tests 5.92s, environment 0ms, prepare 40ms)
