@@ -25,8 +25,9 @@ import { initializeClientDefaultTax } from '../billingClients/defaultTaxRate';
 
 export interface CreateClientWithDefaultsOptions {
   /**
-   * Skip default tax initialization. For callers that already resolved the
-   * tenant's product code once for a batch, or that intentionally own tax setup.
+   * Whether to skip default tax initialization. Authoritative when supplied —
+   * for callers that already resolved the tenant's product code once for a
+   * batch, or that intentionally own tax setup. Omit to resolve it here.
    */
   skipTaxSettings?: boolean;
   /**
@@ -108,12 +109,15 @@ export async function createClientWithDefaults(
   // default must roll the client back rather than commit a client with no
   // usable tax configuration. A tenant that has not configured tax at all is
   // tolerated by the initializer. AlgaDesk has no billing tax setup and keeps
-  // its existing exemption.
-  if (!options.skipTaxSettings) {
-    const tenantRow = await db.table('tenants').first('product_code');
-    if (resolveProductCode(tenantRow?.product_code).productCode !== 'algadesk') {
-      await initializeClientDefaultTax(trx, tenant, created.client_id);
-    }
+  // its existing exemption; a batch caller that already resolved the product
+  // code passes the answer in, so this does not re-read `tenants` per row.
+  const skipTax = options.skipTaxSettings
+    ?? (resolveProductCode(
+      (await db.table('tenants').first('product_code'))?.product_code
+    ).productCode === 'algadesk');
+
+  if (!skipTax) {
+    await initializeClientDefaultTax(trx, tenant, created.client_id);
   }
 
   return created as IClient;

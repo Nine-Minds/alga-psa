@@ -207,6 +207,20 @@ describe('createClientWithDefaults', () => {
       expect(tableSpy).not.toHaveBeenCalledWith('tenants');
     });
 
+    it('trusts an explicit opt-in without re-reading the product code', async () => {
+      // A batch caller resolved the product code once; the seam must not pay
+      // for a `tenants` read per row.
+      const trx = makeTrx();
+      const tableSpy = vi.fn(trx);
+
+      await createClientWithDefaults(tableSpy as any, TENANT, { client_name: 'Acme' }, {
+        skipTaxSettings: false,
+      });
+
+      expect(h.initializeClientDefaultTax).toHaveBeenCalledWith(tableSpy, TENANT, 'client-1');
+      expect(tableSpy).not.toHaveBeenCalledWith('tenants');
+    });
+
     it('propagates a tax failure so the caller transaction rolls the client back', async () => {
       const trx = makeTrx();
       h.initializeClientDefaultTax.mockRejectedValueOnce(
