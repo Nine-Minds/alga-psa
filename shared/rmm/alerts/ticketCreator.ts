@@ -286,6 +286,7 @@ function initialNote(event: NormalizedRmmAlertEvent): string {
 const PROVIDER_LABELS: Record<string, string> = {
   ninjaone: 'NinjaOne',
   tacticalrmm: 'Tactical RMM',
+  datto: 'Datto RMM',
   levelio: 'Level',
   huntress: 'Huntress',
   tanium: 'Tanium',

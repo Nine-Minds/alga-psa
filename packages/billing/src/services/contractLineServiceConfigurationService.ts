@@ -22,7 +22,7 @@ import {
   IUserTypeRate
 } from '@alga-psa/types';
 import ContractLineServiceConfiguration from '../models/contractLineServiceConfiguration';
-import ContractLineServiceFixedConfig from '../models/contractLineServiceFixedConfig';
+import ContractLineServiceFixedConfig, { resolveFixedMemberRateWrite } from '../models/contractLineServiceFixedConfig';
 import ContractLineServiceHourlyConfig from '../models/contractLineServiceHourlyConfig';
 import ContractLineServiceUsageConfig from '../models/contractLineServiceUsageConfig';
 import ContractLineServiceBucketConfig from '../models/contractLineServiceBucketConfig';
@@ -215,7 +215,12 @@ export class ContractLineServiceConfigurationService {
         case 'Fixed':
           await fixedConfigModel.create({
             config_id: configId,
-            base_rate: (typeConfig as IContractLineServiceFixedConfig)?.base_rate ?? null,
+            // A stored base_rate must state its meaning; seats are per_unit.
+            ...resolveFixedMemberRateWrite({
+              base_rate: (typeConfig as IContractLineServiceFixedConfig)?.base_rate ?? null,
+              base_rate_basis: (typeConfig as IContractLineServiceFixedConfig)?.base_rate_basis,
+              pricing_basis: (typeConfig as IContractLineServiceFixedConfig)?.pricing_basis ?? 'bundle',
+            }),
             rate_provenance: (typeConfig as IContractLineServiceFixedConfig)?.rate_provenance ?? undefined,
             pricing_basis: (typeConfig as IContractLineServiceFixedConfig)?.pricing_basis ?? 'bundle',
             // enable_proration: (typeConfig as IContractLineServiceFixedConfig)?.enable_proration ?? false, // Removed: Handled in contract_line_fixed_config
@@ -422,7 +427,9 @@ export class ContractLineServiceConfigurationService {
             // delete fixedUpdateData.billing_cycle_alignment; // Removed as property no longer exists
             // Only update if there are other fields left (e.g., base_rate)
             if (Object.keys(fixedUpdateData).length > 0) {
-              await fixedConfigModel.update(configId, fixedUpdateData);
+              // Model.update recomputes basis + provenance with the rate and
+              // keeps the stored basis when the patch does not state one.
+              await fixedConfigModel.update(configId, fixedUpdateData as Parameters<typeof fixedConfigModel.update>[1]);
             }
             break;
             

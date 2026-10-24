@@ -266,7 +266,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   });
   const contractId = (searchParams?.get('contractId') ?? resolvedContractId ?? null) as string | null;
   const clientContractId = searchParams?.get('clientContractId') ?? resolvedClientContractId ?? null;
-  const focusedContractLineId = searchParams?.get('contractLineId') ?? null;
+  const urlFocusedContractLineId = searchParams?.get('contractLineId') ?? null;
+  // Overview "Edit"/"View details" request: focus a line and (unless read-only) open it in edit mode.
+  // Held in state, not the URL, so the edit intent is one-shot and never survives a reload.
+  const [lineFocusRequest, setLineFocusRequest] = useState<{ lineId: string; edit: boolean; seq: number } | null>(null);
+  const focusedContractLineId = lineFocusRequest?.lineId ?? urlFocusedContractLineId;
   const tenant = useTenant()!;
   const { getDocumentsByContractId, renderDocuments } = useDocumentsCrossFeature();
 
@@ -369,6 +373,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     primaryAssignment?.use_tenant_renewal_defaults !== false;
   const formatStatusLabel = useCallback((status?: string) => {
     if (status === 'active') return t('status.active', { defaultValue: 'Active' });
+    if (status === 'scheduled') return t('status.scheduled', { defaultValue: 'Scheduled' });
     if (status === 'terminated') return t('status.terminated', { defaultValue: 'Terminated' });
     if (status === 'expired') return t('status.expired', { defaultValue: 'Expired' });
     return t('status.draft', { defaultValue: 'Draft' });
@@ -1740,6 +1745,8 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                               variant={
                                 primaryAssignmentStatus === 'active'
                                   ? 'success'
+                                  : primaryAssignmentStatus === 'scheduled'
+                                    ? 'info'
                                   : primaryAssignmentStatus === 'terminated'
                                     ? 'warning'
                                     : primaryAssignmentStatus === 'expired'
@@ -1754,6 +1761,15 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                 defaultValue: 'Live client status is controlled by the assignment lifecycle below.',
                               })}
                             </p>
+                            {primaryAssignmentStatus === 'scheduled' && (
+                              // Already active, so there is no "Set to Active" here; explain the start date.
+                              <p id="contract-scheduled-start-note" className="text-xs text-muted-foreground">
+                                {t('contractDetail.headerCard.scheduledExplanation', {
+                                  defaultValue: 'This contract is active and begins billing on {{date}}.',
+                                  date: formatDate(primaryAssignment?.start_date),
+                                })}
+                              </p>
+                            )}
                           </>
                         ) : (
                           <>
@@ -1934,6 +1950,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                           </span>
                           <Badge variant={
                             primaryAssignmentStatus === 'active' ? 'success' :
+                            primaryAssignmentStatus === 'scheduled' ? 'info' :
                             primaryAssignmentStatus === 'terminated' ? 'warning' :
                             primaryAssignmentStatus === 'expired' ? 'error' :
                             'default-muted'
@@ -1994,6 +2011,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                 <ContractOverview
                   contractId={contractId}
                   onNavigateToLines={() => handleTabChange('lines')}
+                  onEditLine={(lineId) => {
+                    setLineFocusRequest((prev) => ({ lineId, edit: !isSystemManagedDefault, seq: (prev?.seq ?? 0) + 1 }));
+                    handleTabChange('lines');
+                  }}
+                  isReadOnly={isSystemManagedDefault}
                 />
               ) : null}
 
@@ -2676,6 +2698,8 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
             contract={contract}
             clientId={primaryAssignment?.client_id ?? contract.owner_client_id ?? null}
             focusContractLineId={focusedContractLineId}
+            editIntentLineId={lineFocusRequest?.edit ? lineFocusRequest.lineId : null}
+            onEditIntentConsumed={() => setLineFocusRequest((current) => (current ? { ...current, edit: false } : current))}
             onContractLinesChanged={handleContractLinesChanged}
             isReadOnly={isSystemManagedDefault}
           />

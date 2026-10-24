@@ -37,13 +37,15 @@
 // rate_provenance moves with the rate because of the CHECK constraints (a NULL rate must be
 // 'inherited'). Not reversible: the zero was a placeholder, not information (down is a no-op).
 //
-// COLLISION WARNING (unmerged branch 20261012000001_fixed_member_base_rate_basis): it adds
-// CHECK ((base_rate IS NULL) = (base_rate_basis IS NULL)) and a pricing_basis/'share' check on this
-// table. Step 2 nulls base_rate without touching base_rate_basis, which that CHECK rejects for
-// rows whose base_rate_basis is set; any pricing_basis change must also satisfy its seat check
-// (pricing_basis = 'unit' => base_rate_basis IS DISTINCT FROM 'share'). Whoever merges the two
-// must reconcile them (e.g. also null base_rate_basis in step 2) -- this migration does not fold
-// that constraint in.
+// base_rate_basis (20261012000001_fixed_member_base_rate_basis, merged): it adds
+// CHECK ((base_rate IS NULL) = (base_rate_basis IS NULL)) and a seat check (pricing_basis = 'unit'
+// => base_rate_basis IS DISTINCT FROM 'share'). Step 2 therefore clears base_rate_basis together
+// with base_rate (the wizard placeholder wrote base_rate_basis 'per_unit'); step 3 only touches rows
+// whose base_rate is already NULL, which the pair CHECK guarantees have a NULL basis. The column is
+// cleared only when it exists, so the file stays valid on a database that predates that migration.
+//
+// Ordering: knex runs any unapplied file regardless of its timestamp, and no migration newer than
+// this one touches contract_lines / contract_line_service_fixed_config, so the name is unchanged.
 //
 // Citus-safe: every statement is tenant-scoped, ids are selected first and bound in Node, there
 // are no joins/functions/casts in the UPDATEs. Row counts are logged per tenant and in total.
@@ -199,6 +201,10 @@ exports.up = async function up(knex) {
     const zeroConfigIds = await productMemberConfigIds(db, (q) => q.where('base_rate', 0));
     const nullConfigIds = await productMemberConfigIds(db, (q) => q.whereNull('base_rate'));
 
+    const clearBasis = (await knex.schema.hasColumn('contract_line_service_fixed_config', 'base_rate_basis'))
+      ? { base_rate_basis: null }
+      : {};
+
     let configsUpdated = 0;
     let basisOnlyUpdated = 0;
     for (const ids of chunk(zeroConfigIds)) {
@@ -206,7 +212,7 @@ exports.up = async function up(knex) {
         .whereIn('config_id', ids)
         .where('base_rate', 0)
         .where('pricing_basis', 'bundle')
-        .update({ base_rate: null, rate_provenance: 'inherited', pricing_basis: 'unit', updated_at: nowIso });
+        .update({ base_rate: null, ...clearBasis, rate_provenance: 'inherited', pricing_basis: 'unit', updated_at: nowIso });
     }
     for (const ids of chunk(nullConfigIds)) {
       basisOnlyUpdated += await db.table('contract_line_service_fixed_config')

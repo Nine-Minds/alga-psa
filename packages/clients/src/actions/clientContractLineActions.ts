@@ -8,6 +8,10 @@ import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from '@alga-psa/core';
 import { normalizeLiveRecurringStorage, normalizeRecurringStorageForLineType } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
+import {
+  legacyCloneAmountReader,
+  resolveTemplateAmountsForContract,
+} from '@alga-psa/shared/billingClients/templateAmounts';
 import { isContractLineTimingNotAllowedError } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
 import { withAuth } from '@alga-psa/auth';
@@ -472,6 +476,17 @@ export const addClientContractLine = withAuth(async (
         throw new Error('A contract line with the same details already exists for this client');
       }
 
+      // The template's amounts in the TARGET contract's currency. The source line's
+      // custom_rate / overtime_rate columns may be in another currency and are never
+      // copied onto the new line.
+      const templateAmounts = await resolveTemplateAmountsForContract(
+        trx,
+        tenant,
+        templateContractId,
+        clientContract.contract_id
+      );
+      const templateAmountReader = legacyCloneAmountReader(templateAmounts, newBilling.contract_line_id);
+
       // Replacements must create a fresh line identity so historical recurring detail
       // periods remain attached to the superseded line instead of being mutated in place.
       const newContractLineId = trx.raw('gen_random_uuid()');
@@ -491,11 +506,11 @@ export const addClientContractLine = withAuth(async (
           cadence_owner: newBilling.cadence_owner ?? templateRecurringStorage.cadence_owner,
           is_active: newBilling.is_active ?? true,
           is_custom: false,
-          custom_rate: newBilling.custom_rate ?? templateLine.custom_rate,
+          custom_rate: newBilling.custom_rate ?? templateAmountReader.lineRate(),
           display_order: templateLine.display_order ?? 0,
           enable_proration: templateLine.enable_proration,
           enable_overtime: templateLine.enable_overtime,
-          overtime_rate: templateLine.overtime_rate,
+          overtime_rate: templateAmountReader.lineOvertimeRate(),
           overtime_threshold: templateLine.overtime_threshold,
           enable_after_hours_rate: templateLine.enable_after_hours_rate,
           after_hours_multiplier: templateLine.after_hours_multiplier,
@@ -511,7 +526,8 @@ export const addClientContractLine = withAuth(async (
         contractLineId: created.contract_line_id,
         templateContractId,
         overrideRate: newBilling.custom_rate ?? null,
-        effectiveDate: startDate.toISOString()
+        effectiveDate: startDate.toISOString(),
+        amounts: templateAmounts
       });
 
       return created;

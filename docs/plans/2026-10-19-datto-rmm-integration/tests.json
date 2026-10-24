@@ -1,0 +1,189 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: common helpers re-exported; existing tacticalrmm unit suite passes unchanged.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit/registry: CE registry lists tacticalrmm + datto, not EE providers; RmmIntegrationsSetup.registry.test updated.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F010"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "E2E: existing integrations-tactical-*.playwright tests pass with CE picker.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Unit: dattoApiClient.normalizeBaseUrl handles platform names, full URLs, trailing /api and slashes.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Unit: token fetch sends basic public-client:public + password grant; cached token reused until expiry; 401 triggers single re-auth then fails.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Unit: pagination follows pageDetails.nextPageUrl until null; 429 honors Retry-After.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Unit: settings mask secrets; save requires system_settings update; test connection maps 401 vs 403 to distinct messages.",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Unit: disconnect clears secrets, sets inactive, preserves rmm_organization_mappings.",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Unit: site sync upserts idempotently keyed by site uid; renames update name.",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Unit: client suggestion prefers autotaskCompanyName, falls back to name, never auto-assigns.",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "E2E: map Datto site to client with default contact and auto-sync.",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Unit: device mapper covers server/desktop/laptop/printer/esxi/network/mobile, online/offline/suspended/deleted, epoch-ms timestamps.",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Unit: audit mapper extracts serial, make/model, RAM sum, disks; audit skipped when lastAuditDate unchanged.",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Unit: full sync only processes auto-sync sites; writes external entity mappings; leaves vanished assets.",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Unit: incremental filter on lastSeen/lastAuditDate; strategy throws on success=false.",
+    "implemented": true,
+    "featureIds": [
+      "F032",
+      "F033"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "DB: rmm-device-sync schedule registers for provider datto (mirror rmmDeviceSyncSchedule.db.test).",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Unit: alert mapper priority->severity table, conditionIdentity stability, missing alertUid -> null.",
+    "implemented": true,
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Unit: fetcher filters unmapped sites and resolved alerts; reconciliation resolves disappeared alerts.",
+    "implemented": true,
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Unit: webhook rejects missing/invalid secret (401), dedupes repeated event, suspended tenant 200 no-op, triggers single-device refresh.",
+    "implemented": true,
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "Unit: middleware exact-skips /api/webhooks/datto but not /api/webhooks/dattoevil.",
+    "implemented": true,
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "Unit: software ingest bulk upsert, concurrency cap respected, unchanged audit skipped.",
+    "implemented": true,
+    "featureIds": [
+      "F050"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "Unit: asset actions dispatch for datto; remote URL from webRemoteUrl; reboot without component throws actionable error; runScript returns job uid.",
+    "implemented": true,
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "Unit: outbound adapter only resolves when toggle on; 403 surfaced as permission error.",
+    "implemented": true,
+    "featureIds": [
+      "F060"
+    ]
+  }
+]

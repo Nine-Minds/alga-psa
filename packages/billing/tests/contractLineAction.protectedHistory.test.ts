@@ -13,6 +13,7 @@ vi.mock('@alga-psa/db', () => {
   const builder = (table: string): any => {
     const q: any = {
       where: vi.fn().mockReturnThis(), andWhere: vi.fn().mockReturnThis(), whereIn: vi.fn().mockReturnThis(),
+      whereNot: vi.fn().mockReturnThis(),
       whereNotNull: vi.fn().mockReturnThis(), forUpdate: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(), first: vi.fn(async () => table === 'contract_lines' ? state.currentLine : undefined),
       update: vi.fn(async () => 1), insert: vi.fn(async () => undefined),

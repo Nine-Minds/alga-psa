@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { fixedMemberContributionCents, fixedRateBasisOf } from './fixedMemberRate';
 import {
   resolveMemberRate,
   selectEffectiveServicePrice,
@@ -69,6 +70,8 @@ interface FixedMemberValuationRow {
   /** `contract_line_services.custom_rate` — the legacy service-line override. */
   service_line_custom_rate?: number | string | null;
   base_rate: number | string | null;
+  /** What `base_rate` means ('per_unit' or 'share'); see fixedMemberRate.ts. */
+  base_rate_basis?: string | null;
   pricing_basis: string | null;
   /** Catalog rate (minor units) — the engine's last fallback for a member with no configured rate. */
   default_rate: number | string | null;
@@ -169,6 +172,7 @@ export async function getContractMonthlyFixedValuesByContract(
         'clsc.quantity',
         'clsc.custom_rate',
         'fc.base_rate',
+        'fc.base_rate_basis',
         'fc.pricing_basis',
         'sc.default_rate',
         'sc.item_kind',
@@ -428,22 +432,30 @@ export async function getContractMonthlyFixedValuesByContract(
           const bundleProducts = bundleMembers.filter((member) => member.item_kind === 'product');
           const bundleOthers = bundleMembers.filter((member) => member.item_kind !== 'product');
           totalCents += productMembersRecurringTotalCents(bundleProducts.map(toRateInput));
-          const deriveFrom = (rateOf: (member: FixedMemberValuationRow) => number | null): number | null => {
+          const deriveFrom = (contributionOf: (member: FixedMemberValuationRow, quantity: number) => number | null): number | null => {
             let derived = 0;
             let hasRate = false;
             for (const member of bundleOthers) {
-              const rate = rateOf(member);
-              if (rate !== null) {
-                const quantity = Number(member.quantity ?? 1) || 1;
-                derived += rate * quantity;
+              const quantity = Number(member.quantity ?? 1) || 1;
+              const contribution = contributionOf(member, quantity);
+              if (contribution !== null) {
+                derived += contribution;
                 hasRate = true;
               }
             }
             return hasRate ? Math.round(derived) : null;
           };
           const derivedCents =
-            deriveFrom((member) => toCents(member.base_rate)) ??
-            deriveFrom((member) => toCents(member.default_rate));
+            // A stored base_rate is read through its basis (a share is not scaled
+            // by quantity); the catalog default_rate is always a unit price.
+            deriveFrom((member, quantity) => {
+              const rate = toCents(member.base_rate);
+              return rate === null ? null : fixedMemberContributionCents(rate, fixedRateBasisOf(member), quantity);
+            }) ??
+            deriveFrom((member, quantity) => {
+              const rate = toCents(member.default_rate);
+              return rate === null ? null : fixedMemberContributionCents(rate, 'per_unit', quantity);
+            });
           if (derivedCents !== null) {
             totalCents += derivedCents;
           }

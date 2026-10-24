@@ -74,7 +74,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
 
   const AssetExtensionData = registry.registerSchema(
     'AssetExtensionData',
-    zOpenApi.record(zOpenApi.unknown()).describe('Asset-type-specific extension data written to the corresponding extension table for workstation, network device, server, mobile device, or printer assets.'),
+    zOpenApi.record(zOpenApi.unknown()).describe('Asset-type-specific extension data written to the corresponding extension table for workstation, network device, server, mobile device, or printer assets. Validated against the schema of the asset type (on update, the new asset_type or the stored one); unknown keys are dropped, and other asset types return 400.'),
   );
 
   const AssetAttributes = registry.registerSchema(
@@ -128,6 +128,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       order_number: zOpenApi.string().max(255).nullable().optional().describe('Purchase order number.'),
       billing_profile_id: zOpenApi.string().uuid().nullable().optional().describe('Billing profile for work on this device. Must belong to the asset client and be active; cleared when the client changes.'),
       attributes: AssetAttributes.optional(),
+      extension_data: AssetExtensionData.optional().describe('Provided keys are written to the extension row; omitted keys remain.'),
     }),
   );
 

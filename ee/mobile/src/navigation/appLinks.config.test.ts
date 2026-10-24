@@ -35,6 +35,33 @@ describe("hosted app link declarations", () => {
     expect(filter?.action).toBe("VIEW");
     expect(filter?.autoVerify).toBe(true);
     expect(filter?.category).toEqual(expect.arrayContaining(["BROWSABLE", "DEFAULT"]));
-    expect(filter?.data).toEqual([{ scheme: "https", host: "algapsa.com", pathPrefix: "/msp/tickets/" }]);
+    expect(filter?.data).toEqual([
+      { scheme: "https", host: "algapsa.com", pathPrefix: "/msp/tickets/" },
+      { scheme: "https", host: "algapsa.com", pathPrefix: "/msp/assets/" },
+      // Android cannot match the query string; isAllowedPath in linking.ts
+      // rejects a units URL without ?unitId= so it falls through to the browser.
+      { scheme: "https", host: "algapsa.com", pathPrefix: "/msp/inventory/units" },
+    ]);
+  });
+
+  // Parity (C3): every path the server's AASA claims is also claimed by the
+  // Android intent filter, and vice versa. The cross-package read follows the
+  // precedent in urls/recordLinks.test.ts.
+  it("claims the same paths as the server's MOBILE_APP_LINK_COMPONENTS", async () => {
+    const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+    const appJson = JSON.parse(await readFile(path.join(root, "app.json"), "utf8")) as AppJson;
+    const serverSrc = await readFile(
+      path.join(root, "../../server/src/lib/mobileAppLinks.ts"),
+      "utf8",
+    );
+    const block = serverSrc.match(/MOBILE_APP_LINK_COMPONENTS[^=]*=\s*\[([\s\S]*?)\n\];/)?.[1] ?? "";
+    const serverPaths = [...block.matchAll(/'\/':\s*'([^']+)'/g)].map((m) => m[1].replace(/\*$/, ""));
+    expect(serverPaths.length).toBeGreaterThan(0);
+
+    const androidPaths = (appJson.expo.android?.intentFilters ?? [])
+      .flatMap((f) => f.data ?? [])
+      .filter((d) => d.host === "algapsa.com")
+      .map((d) => d.pathPrefix);
+    expect([...androidPaths].sort()).toEqual([...serverPaths].sort());
   });
 });
