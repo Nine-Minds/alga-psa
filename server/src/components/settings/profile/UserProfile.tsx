@@ -286,6 +286,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
           SCIM_MANAGED_INACTIVE: 'profile.messages.error.scimManagedInactive',
           INVALID_TIMEZONE: 'profile.messages.error.invalidTimezone',
           PERMISSION_DENIED: 'profile.messages.error.permissionDenied',
+          INVALID_ACTIVE_STATE: 'profile.messages.error.updateFailed',
           USER_UPDATE_FAILED: 'profile.messages.error.updateFailed',
         };
         toast.error(t(errorKeys[result.code], { defaultValue: result.error }));

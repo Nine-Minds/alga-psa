@@ -122,6 +122,7 @@ export function ClientProfile() {
           SCIM_MANAGED_INACTIVE: 'profile.messages.scimManagedInactive',
           INVALID_TIMEZONE: 'profile.messages.invalidTimezone',
           PERMISSION_DENIED: 'profile.messages.permissionDenied',
+          INVALID_ACTIVE_STATE: 'profile.messages.updateFailed',
           USER_UPDATE_FAILED: 'profile.messages.updateFailed',
         };
         toast.error(tProfile(errorKeys[result.code], { defaultValue: result.error }));
