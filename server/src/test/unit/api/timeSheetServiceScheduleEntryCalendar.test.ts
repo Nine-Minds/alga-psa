@@ -142,6 +142,12 @@ describe('REST schedule entries: calendar_id', () => {
       expect(updateScheduleEntrySchema.parse({ calendar_id: CAL_EDIT }).calendar_id).toBe(CAL_EDIT);
       expect(() => createScheduleEntrySchema.parse({ ...baseCreate, calendar_id: 'nope' })).toThrow();
     });
+
+    it('accepts calendar_id null (move to personal) on update and create; omitted stays undefined', () => {
+      expect(updateScheduleEntrySchema.parse({ calendar_id: null }).calendar_id).toBeNull();
+      expect(updateScheduleEntrySchema.parse({ title: 'x' }).calendar_id).toBeUndefined();
+      expect(createScheduleEntrySchema.parse({ ...baseCreate, calendar_id: null }).calendar_id).toBeNull();
+    });
   });
 
   describe('create', () => {
@@ -191,6 +197,12 @@ describe('REST schedule entries: calendar_id', () => {
         makeService().createScheduleEntry({ ...baseCreate, calendar_id: CAL_VIEW } as any, context),
       ).rejects.toMatchObject({ name: 'ForbiddenError' });
       expect(state.created).toHaveLength(0);
+    });
+
+    it('treats calendar_id null exactly like absent', async () => {
+      await makeService().createScheduleEntry({ ...baseCreate, calendar_id: null, assigned_user_ids: [USER] } as any, context);
+      expect(state.created[0].entry.calendar_id).toBeNull();
+      expect(state.created[0].options.assignedUserIds).toEqual([USER]);
     });
 
     it('keeps the old behaviour when calendar_id is absent (null calendar, assignees as given)', async () => {
@@ -250,6 +262,62 @@ describe('REST schedule entries: calendar_id', () => {
       expect(event!.payload.changes.after.assignedUserIds).toEqual([USER]);
     });
   });
+  describe('update with calendar_id null / omitted', () => {
+    const onGroup = (calendarId = CAL_EDIT, isPrivate = false) => {
+      state.tables.schedule_entries[0] = { ...state.tables.schedule_entries[0], calendar_id: calendarId, is_private: isPrivate };
+    };
+
+    it('group entry -> null persists null, keeps assignees and does not touch is_private (as the action does)', async () => {
+      onGroup();
+      await makeService().updateScheduleEntry(ENTRY_ID, { calendar_id: null } as any, context);
+
+      const rowUpdate = state.updates.find((u) => u.table === 'schedule_entries');
+      expect(rowUpdate.data.calendar_id).toBeNull();
+      expect('is_private' in rowUpdate.data).toBe(false);
+      expect(state.tables.schedule_entries[0].calendar_id).toBeNull();
+      expect(state.tables.schedule_entry_assignees.map((a) => a.user_id)).toEqual([USER]);
+    });
+
+    it('group entry -> null with is_private: true makes it a private personal entry', async () => {
+      onGroup();
+      await makeService().updateScheduleEntry(ENTRY_ID, { calendar_id: null, is_private: true } as any, context);
+      const rowUpdate = state.updates.find((u) => u.table === 'schedule_entries');
+      expect(rowUpdate.data.calendar_id).toBeNull();
+      expect(rowUpdate.data.is_private).toBe(true);
+    });
+
+    it('publishes before/after assignedUserIds after a group -> personal move', async () => {
+      onGroup();
+      await makeService().updateScheduleEntry(ENTRY_ID, { calendar_id: null } as any, context);
+      const event = state.published.find((e) => e.eventType === 'SCHEDULE_ENTRY_UPDATED');
+      expect(event!.payload.changes.before.assignedUserIds).toEqual([USER]);
+      expect(event!.payload.changes.after.assignedUserIds).toEqual([USER]);
+    });
+
+    it('omitted calendar_id leaves the calendar unchanged and keeps a group entry non-private', async () => {
+      onGroup();
+      await makeService().updateScheduleEntry(ENTRY_ID, { title: 'Renamed' } as any, context);
+      const rowUpdate = state.updates.find((u) => u.table === 'schedule_entries');
+      expect('calendar_id' in rowUpdate.data).toBe(false);
+      expect(rowUpdate.data.is_private).toBe(false);
+      expect(state.tables.schedule_entries[0].calendar_id).toBe(CAL_EDIT);
+    });
+
+    it('null on an entry the caller can only read: 403; no access: 404; nothing written', async () => {
+      onGroup(CAL_VIEW);
+      // Assigned to someone else, so the caller's access comes only from the calendar share.
+      state.tables.schedule_entry_assignees = [{ tenant: TENANT, entry_id: ENTRY_ID, user_id: OTHER_USER }];
+      state.groupLevels.set(CAL_VIEW, { calendarId: CAL_VIEW, level: 'read', isArchived: false });
+      await expect(makeService().updateScheduleEntry(ENTRY_ID, { calendar_id: null } as any, context))
+        .rejects.toMatchObject({ name: 'ForbiddenError' });
+      onGroup(CAL_HIDDEN);
+      await expect(makeService().updateScheduleEntry(ENTRY_ID, { calendar_id: null } as any, context))
+        .rejects.toMatchObject({ name: 'NotFoundError' });
+      expect(state.updates).toHaveLength(0);
+      expect(state.published).toHaveLength(0);
+    });
+  });
+
   describe('update/delete follow the shared-calendar rule (same as the controller)', () => {
     const groupEntry = () => {
       state.tables.schedule_entries[0] = { ...state.tables.schedule_entries[0], created_by: OTHER_USER, calendar_id: CAL_EDIT };

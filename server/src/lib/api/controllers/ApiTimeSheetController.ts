@@ -23,7 +23,8 @@ import {
   timeSheetSearchSchema,
   timeSheetExportQuerySchema,
   createScheduleEntrySchema,
-  updateScheduleEntrySchema
+  updateScheduleEntrySchema,
+  calendarListQuerySchema
 } from '../schemas/timeSheet';
 import { 
   ApiKeyServiceForApi 
@@ -1883,6 +1884,70 @@ export class ApiTimeSheetController extends ApiBaseController {
         });
 
         return createSuccessResponse(entries);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * List the calendars the caller can see (GET /api/v1/calendars).
+   * Floor is user_schedule:read; visibility comes from resolveCalendarAccess via the service.
+   */
+  listCalendars() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiKey = req.headers.get('x-api-key');
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        assertInternalApiUser(user);
+        await this.assertManualProductAccess(req, keyRecord, user);
+
+        const db = await getConnection(tenantId!);
+        const canRead = await hasPermission(user, 'user_schedule', 'read', db);
+        if (!canRead) {
+          throw new ForbiddenError('Permission denied: Cannot read schedules');
+        }
+
+        const url = new URL(req.url);
+        let query;
+        try {
+          query = calendarListQuerySchema.parse({
+            type: url.searchParams.get('type') || undefined,
+            include_archived: url.searchParams.get('include_archived') || undefined,
+          });
+        } catch (error) {
+          if (error instanceof ZodError) {
+            throw new ValidationError('Invalid query parameters', error.errors);
+          }
+          throw error;
+        }
+
+        const calendars = await runWithTenant(tenantId!, async () => {
+          return await this.timeSheetService.listCalendars(
+            { userId: user.user_id, user, tenant: tenantId! },
+            query
+          );
+        });
+
+        return createSuccessResponse(calendars);
       } catch (error) {
         return handleApiError(error);
       }

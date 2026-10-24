@@ -151,6 +151,7 @@ describe('route registry filesystem inventory', () => {
     '/api/v1/appliance-installs': 'v1 appliance installs',
     '/api/v1/auth': 'v1 auth',
     '/api/v1/billing-analytics': 'v1 billing analytics',
+    '/api/v1/calendars': 'v1 calendars',
     '/api/v1/categories': 'v1 categories',
     '/api/v1/client-contract-lines': 'v1 contract lines',
     '/api/v1/company-contract-lines': 'v1 contract lines (legacy naming)',

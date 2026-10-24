@@ -69,6 +69,10 @@ vi.mock('@/lib/api/services/TimeSheetService', () => ({
     async deleteScheduleEntry() {
       state.calls.push('delete');
     }
+    async listCalendars() {
+      state.calls.push('listCalendars');
+      return [];
+    }
   },
 }));
 
@@ -196,5 +200,47 @@ describe('REST schedule create', () => {
   it('read-only share does not allow assigning', async () => {
     state.userLevels = new Map([[X, 'read']]);
     expect((await new ApiTimeSheetController().createScheduleEntry()(req('POST', createBody([X])))).status).toBe(403);
+  });
+});
+
+describe('REST schedule update with calendar_id: null (move to personal)', () => {
+  it('edit share on the existing group calendar: allowed', async () => {
+    state.groupLevels = group('edit');
+    const res = await new ApiTimeSheetController().updateScheduleEntry()(req('PUT', { calendar_id: null }));
+    expect(res.status).toBe(200);
+    expect(state.calls).toEqual(['update']);
+  });
+
+  it('read-only share on the existing group calendar: 403, nothing written', async () => {
+    state.groupLevels = group('read');
+    const res = await new ApiTimeSheetController().updateScheduleEntry()(req('PUT', { calendar_id: null }));
+    expect(res.status).toBe(403);
+    expect(state.calls).toEqual([]);
+  });
+
+  it('no access to the existing group calendar: 404', async () => {
+    const res = await new ApiTimeSheetController().updateScheduleEntry()(req('PUT', { calendar_id: null }));
+    expect(res.status).toBe(404);
+    expect(state.calls).toEqual([]);
+  });
+});
+
+describe('REST GET /api/v1/calendars authorisation', () => {
+  const listReq = () => new NextRequest('http://localhost/api/v1/calendars', { headers: { 'x-api-key': 'k' } });
+
+  it('without user_schedule:read: 403 and the service is not called', async () => {
+    state.perms = {};
+    expect((await new ApiTimeSheetController().listCalendars()(listReq())).status).toBe(403);
+    expect(state.calls).toEqual([]);
+  });
+
+  it('with user_schedule:read: 200', async () => {
+    expect((await new ApiTimeSheetController().listCalendars()(listReq())).status).toBe(200);
+    expect(state.calls).toEqual(['listCalendars']);
+  });
+
+  it('rejects an invalid type filter with 400', async () => {
+    const r = new NextRequest('http://localhost/api/v1/calendars?type=bogus', { headers: { 'x-api-key': 'k' } });
+    expect((await new ApiTimeSheetController().listCalendars()(r)).status).toBe(400);
   });
 });

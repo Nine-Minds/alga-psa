@@ -23,7 +23,8 @@ import {
   TimeSheetSearchData,
   TimeSheetExportQuery,
   CreateScheduleEntryData,
-  UpdateScheduleEntryData
+  UpdateScheduleEntryData,
+  CalendarResponse
 } from '../schemas/timeSheet';
 import {
   TIME_SHEET_LIST_DEFAULT_SORT,
@@ -42,9 +43,12 @@ import {
   buildVisibilityFilter,
   canAssignUser,
   evaluateEntryAccess,
+  levelAtLeast,
   resolveCalendarAccess,
   type CalendarAccess,
 } from '@alga-psa/scheduling/lib/calendarAccess';
+import { loadVisibleCalendars } from '@alga-psa/scheduling/lib/visibleCalendars';
+import type { IVisibleCalendar } from '@alga-psa/types';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
 /**
@@ -1212,6 +1216,9 @@ export class TimeSheetService extends BaseService<any> {
           throw new ForbiddenError('Permission denied: Cannot assign schedules to other users');
         }
 
+        // calendar_id: undefined = unchanged, null = move to the personal calendar (no target check,
+        // same as the updateScheduleEntry server action; edit on the existing entry was checked above),
+        // uuid = move onto that group calendar.
         // Moving onto a group calendar requires edit access there; never silently ignored.
         if (data.calendar_id && data.calendar_id !== existing.calendar_id) {
           const targetAccess = await this.assertWritableGroupCalendar(trx, data.calendar_id, context);
@@ -1225,8 +1232,9 @@ export class TimeSheetService extends BaseService<any> {
         const { assigned_user_ids: _assignedUserIds, ...rowData } = data;
         const updateData = {
           ...rowData,
-          // Group calendar entries are never private (same invariant as ScheduleEntry.create).
-          ...(data.calendar_id ? { is_private: false } : {}),
+          // Group calendar entries are never private (same invariant as ScheduleEntry.create). Judged on
+          // the resulting calendar, as the server action does; a move to personal (null) leaves is_private as sent.
+          ...((data.calendar_id !== undefined ? data.calendar_id : existing.calendar_id) ? { is_private: false } : {}),
           updated_at: new Date()
         };
 
@@ -1284,6 +1292,34 @@ export class TimeSheetService extends BaseService<any> {
       return this.getScheduleEntry(id, context);
     }
 
+
+  /**
+   * Calendars visible to the caller (GET /api/v1/calendars). Visibility is the same helper the
+   * getCalendarsVisibleToMe server action uses, with canViewAll = the caller's user_schedule:update.
+   */
+  async listCalendars(
+    context: ServiceContext,
+    filters: { type?: 'personal' | 'group'; include_archived?: boolean } = {}
+  ): Promise<CalendarResponse[]> {
+    const { knex } = await this.getKnex();
+    const canViewAll = await this.canViewAllSchedules(context);
+    const visible = await loadVisibleCalendars(knex, context.tenant, { user_id: context.userId }, canViewAll);
+
+    const toItem = (calendar: IVisibleCalendar): CalendarResponse => ({
+      calendar_id: calendar.calendar_id,
+      name: calendar.name,
+      calendar_type: calendar.calendar_type,
+      owner_user_id: calendar.owner_user_id,
+      access_level: calendar.access_level,
+      can_edit: levelAtLeast(calendar.access_level, 'edit'),
+      is_archived: !!calendar.is_archived,
+    });
+
+    return [visible.me, ...visible.people, ...visible.groups]
+      .map(toItem)
+      .filter((item) => !filters.type || item.calendar_type === filters.type)
+      .filter((item) => filters.include_archived || !item.is_archived);
+  }
 
   async deleteScheduleEntry(id: string, context: ServiceContext): Promise<void> {
       const { knex } = await this.getKnex();

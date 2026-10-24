@@ -7,6 +7,7 @@ import {
   updateTimeEntrySchema,
 } from '../../schemas/timeEntry';
 import {
+  calendarResponseSchema,
   createScheduleEntrySchema,
   createTimePeriodSchema,
   updateScheduleEntrySchema,
@@ -386,7 +387,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/schedules/search', summary: 'Search schedules', description: 'Current route delegates to ApiTimeSheetController.list() (time sheet list path), not schedule-specific search.', family: 'time_sheet' },
     { method: 'delete', path: '/api/v1/schedules/{id}', summary: 'Delete schedule entry', description: 'Deletes schedule entry via ApiTimeSheetController.deleteScheduleEntry().', family: 'time_sheet' },
     { method: 'get', path: '/api/v1/schedules/{id}', summary: 'Get schedule entry', description: 'Current route delegates to ApiTimeSheetController.getById() (time sheet read path), not schedule-specific getter.', family: 'time_sheet' },
-    { method: 'put', path: '/api/v1/schedules/{id}', summary: 'Update schedule entry', description: 'Updates schedule entry via ApiTimeSheetController.updateScheduleEntry().', family: 'time_sheet' },
+    { method: 'put', path: '/api/v1/schedules/{id}', summary: 'Update schedule entry', description: 'Updates schedule entry via ApiTimeSheetController.updateScheduleEntry(). `calendar_id`: omit to leave the calendar unchanged; a group calendar uuid moves the entry onto that group calendar (edit access required); `null` moves it back to a personal calendar (the entry stays on its assignees\' personal calendars). Requires edit access to the existing entry (403 read-only, 404 no access).', family: 'time_sheet' },
     { method: 'get', path: '/api/v1/schedules/{id}/conflicts', summary: 'Get schedule conflicts', description: 'Current route delegates to ApiTimeSheetController.list() rather than conflict-specific schedule logic.', family: 'time_sheet' },
 
     { method: 'get', path: '/api/v1/tags', summary: 'List tags', description: 'Lists tags via ApiTagController.list().', family: 'tag' },
@@ -656,6 +657,55 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       edition: 'both',
     });
   }
+
+  // ==========================================================================
+  // Calendars - GET /api/v1/calendars (calendar discovery for schedule entries)
+  // ==========================================================================
+  const CalendarListQuery = registry.registerSchema(
+    'WorkV1CalendarListQuery',
+    zOpenApi.object({
+      type: zOpenApi.enum(['personal', 'group']).optional().describe('Only return calendars of this type.'),
+      include_archived: zOpenApi.enum(['true', 'false']).optional().describe('Include archived group calendars (default false). Archived calendars are only visible to their managers.'),
+    }),
+  );
+  const CalendarItem = registry.registerSchema('WorkV1Calendar', calendarResponseSchema);
+  const CalendarListResponse = registry.registerSchema(
+    'WorkV1CalendarListResponse',
+    zOpenApi.object({
+      data: zOpenApi.array(CalendarItem),
+      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+    }),
+  );
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/calendars',
+    summary: 'List calendars',
+    description:
+      'Lists the calendars the caller can see, with effective access. Requires user_schedule:read; visibility is the same as the schedule sidebar: ' +
+      'the caller\'s own personal calendar, personal calendars shared with the caller (active owners only), and group calendars the caller can see ' +
+      '(every group calendar for user_schedule:update holders). ' +
+      'HOW TO USE A RESULT ON A SCHEDULE ENTRY: for a group calendar, send its calendar_id as `calendar_id` on POST/PUT /api/v1/schedules. ' +
+      'Personal calendars have no calendar_id in this list (null) and are identified by owner_user_id; to put an entry on a personal calendar send ' +
+      '`calendar_id: null` (or omit it) together with `assigned_user_ids: [owner_user_id]`. Group-calendar validation rejects personal ids.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { query: CalendarListQuery },
+    responses: {
+      200: { description: 'Visible calendars.', schema: CalendarListResponse },
+      400: { description: 'Invalid query parameter.', schema: ApiError },
+      401: { description: 'API key missing/invalid or associated user missing.', schema: ApiError },
+      403: { description: 'Missing user_schedule:read.', schema: ApiError },
+      500: { description: 'Unexpected controller/service failure.', schema: ApiError },
+    },
+    extensions: {
+      'x-tenant-scoped': true,
+      'x-auth-mechanism': 'x-api-key validated in ApiTimeSheetController.listCalendars()',
+      'x-tenant-header': 'x-tenant-id (optional; inferred from API key when omitted)',
+      'x-rbac-resource': 'time_sheet',
+    },
+    edition: 'both',
+  });
 
   // ==========================================================================
   // Stopwatch (server-side sessions) - /api/v1/stopwatch
