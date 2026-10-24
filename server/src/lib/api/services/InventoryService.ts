@@ -5,6 +5,7 @@ import {
   BaseService,
   type ListResult,
   type ServiceContext,
+  tenantDb,
   withTransaction,
 } from '@alga-psa/db';
 import {
@@ -620,21 +621,23 @@ export class InventoryService extends BaseService<any> {
   ): Promise<ListResult<CountSessionApiRow>> {
     const knex = await this.getDbForContext(context);
     return withTransaction(knex, async (trx) => {
+      const lineCounts = trx('count_lines')
+        .where({ tenant: context.tenant })
+        .groupBy('tenant', 'session_id')
+        .select('tenant', 'session_id')
+        .count({ line_count: '*' })
+        .as('cl');
       const query = trx('count_sessions as cs')
         .leftJoin('stock_locations as loc', function () {
           this.on('loc.location_id', '=', 'cs.location_id').andOn('loc.tenant', '=', 'cs.tenant');
         })
-        .leftJoin(
-          trx('count_lines')
-            .where({ tenant: context.tenant })
-            .groupBy('session_id')
-            .select('session_id')
-            .count({ line_count: '*' })
-            .as('cl'),
-          'cl.session_id',
-          'cs.session_id',
-        )
         .where({ 'cs.tenant': context.tenant });
+      // Derived table carries tenant and is joined on it so Citus keeps the join co-located.
+      tenantDb(trx, context.tenant).tenantJoinSubquery(query, lineCounts, 'cl.session_id', 'cs.session_id', {
+        type: 'left',
+        rootTenantColumn: 'cs.tenant',
+        joinedTenantColumn: 'cl.tenant',
+      });
       if (input.location_id) query.andWhere('cs.location_id', input.location_id);
       if (input.status) query.andWhere('cs.status', input.status);
       const rows = await query

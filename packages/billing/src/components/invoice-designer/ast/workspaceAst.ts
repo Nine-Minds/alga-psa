@@ -400,6 +400,23 @@ const resolveTextNodeContentExpression = (
   return parsedExpression ?? { type: 'literal', value: currentText };
 };
 
+/** Barcode value: the typed text (with `{{path}}` interpolation) unless an imported expression is unchanged. */
+const resolveBarcodeValueExpression = (
+  node: WorkspaceNode,
+  documentKind: DesignerDocumentKind
+): TemplateValueExpression => {
+  const metadata = getWorkspaceNodeMetadata(node);
+  const currentValue = asTrimmedString(metadata.value);
+  const parsedExpression = parseTemplateInterpolationExpression(currentValue, documentKind);
+  const preservedExpression = isTemplateValueExpression(metadata.astValueExpression)
+    ? metadata.astValueExpression
+    : null;
+  if (preservedExpression && currentValue === asTrimmedString(metadata.__astValuePreviewValue)) {
+    return preservedExpression;
+  }
+  return parsedExpression ?? { type: 'literal', value: currentValue };
+};
+
 const createNodeStyle = (node: WorkspaceNode): TemplateNode['style'] | undefined => {
   const inline: Record<string, unknown> = {};
   const style = getWorkspaceNodeStyle(node);
@@ -456,6 +473,9 @@ const createNodeStyle = (node: WorkspaceNode): TemplateNode['style'] | undefined
   if (style.fontStyle) inline.fontStyle = style.fontStyle;
   if (style.lineHeight !== undefined) inline.lineHeight = style.lineHeight;
   if (style.textAlign) inline.textAlign = style.textAlign;
+  if (style.tableLayout) inline.tableLayout = style.tableLayout;
+  if (style.whiteSpace) inline.whiteSpace = style.whiteSpace;
+  if (style.overflowWrap) inline.overflowWrap = style.overflowWrap;
   if (style.display) inline.display = style.display;
   if (style.flexDirection) inline.flexDirection = style.flexDirection;
   if (style.justifyContent) inline.justifyContent = style.justifyContent;
@@ -637,6 +657,23 @@ const coerceTextAlign = (value: unknown): DesignerNodeStyle['textAlign'] | undef
   return undefined;
 };
 
+const coerceTableLayout = (value: unknown): DesignerNodeStyle['tableLayout'] | undefined =>
+  value === 'auto' || value === 'fixed' ? value : undefined;
+
+const coerceWhiteSpace = (value: unknown): DesignerNodeStyle['whiteSpace'] | undefined => {
+  if (value === 'normal' || value === 'nowrap' || value === 'pre' || value === 'pre-line' || value === 'pre-wrap') {
+    return value;
+  }
+  return undefined;
+};
+
+const coerceOverflowWrap = (value: unknown): DesignerNodeStyle['overflowWrap'] | undefined => {
+  if (value === 'normal' || value === 'break-word' || value === 'anywhere') {
+    return value;
+  }
+  return undefined;
+};
+
 const coerceJustifyContent = (value: unknown): DesignerContainerLayout['justifyContent'] | undefined => {
   if (
     value === 'flex-start' ||
@@ -800,6 +837,15 @@ const coerceNodeStyleFromInlineStyle = (inline: Record<string, unknown> | undefi
 
   const textAlign = coerceTextAlign(inline.textAlign);
   if (textAlign) style.textAlign = textAlign;
+
+  const tableLayout = coerceTableLayout(inline.tableLayout);
+  if (tableLayout) style.tableLayout = tableLayout;
+
+  const whiteSpace = coerceWhiteSpace(inline.whiteSpace);
+  if (whiteSpace) style.whiteSpace = whiteSpace;
+
+  const overflowWrap = coerceOverflowWrap(inline.overflowWrap);
+  if (overflowWrap) style.overflowWrap = overflowWrap;
 
   const display = inline.display === 'flex' || inline.display === 'grid' ? inline.display : undefined;
   if (display) style.display = display;
@@ -1355,9 +1401,17 @@ const mapDesignerNodeToAstNode = (
         ...createBaseNode(node),
         type: 'divider',
       };
+    case 'barcode': {
+      const metadata = getWorkspaceNodeMetadata(node);
+      return {
+        ...createBaseNode(node),
+        type: 'barcode',
+        symbology: metadata.symbology === 'code128' ? 'code128' : 'qr',
+        value: resolveBarcodeValueExpression(node, documentKind),
+      };
+    }
     case 'image':
-    case 'logo':
-    case 'qr': {
+    case 'logo': {
       const metadata = getWorkspaceNodeMetadata(node);
       const src = asTrimmedString(metadata.src) || asTrimmedString(metadata.url) || '';
       const alt = asTrimmedString(metadata.alt);
@@ -1623,6 +1677,7 @@ export const exportWorkspaceToTemplateAst = (
     nextTemplateMetadata.printSettings = {
       paperPreset: resolvedPrintSettings.paperPreset,
       marginMm: resolvedPrintSettings.marginMm,
+      ...(resolvedPrintSettings.customPageSize ? { customPageSize: resolvedPrintSettings.customPageSize } : {}),
     };
   } else {
     delete nextTemplateMetadata.printSettings;
@@ -1770,6 +1825,7 @@ export const importTemplateAstToWorkspace = (
                   printSettings: {
                     paperPreset: resolvedPrintSettings.paperPreset,
                     marginMm: resolvedPrintSettings.marginMm,
+                    ...(resolvedPrintSettings.customPageSize ? { customPageSize: resolvedPrintSettings.customPageSize } : {}),
                   },
                 }
               : {}),
@@ -1942,6 +1998,7 @@ export const importTemplateAstToWorkspace = (
           field: 'field',
           image: 'image',
           divider: 'divider',
+          barcode: 'barcode',
           table: 'table',
           'dynamic-table': 'dynamic-table',
           totals: 'totals',
@@ -2123,6 +2180,12 @@ export const importTemplateAstToWorkspace = (
               ...(row.labelStyle ? { labelStyle: cloneJson(row.labelStyle) } : {}),
             };
           });
+        } else if (inputNode.type === 'barcode') {
+          metadata.symbology = inputNode.symbology;
+          metadata.astValueExpression = inputNode.value;
+          const resolvedValue = resolveExpressionPreviewText(inputNode.value, astInput, documentKind);
+          metadata.value = resolvedValue;
+          metadata.__astValuePreviewValue = resolvedValue;
         } else if (inputNode.type === 'image') {
           metadata.astSrcExpression = inputNode.src;
           if (inputNode.src.type === 'literal') {

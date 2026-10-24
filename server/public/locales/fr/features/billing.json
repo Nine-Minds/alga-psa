@@ -67,6 +67,7 @@
     "taxBreakdown": "Ventilation des taxes",
     "manualInvoice": "Facture manuelle",
     "credits": "Crédits",
+    "currency": "Devise",
     "financialArtifactSummary": "Facture financière uniquement. Les périodes de service récurrentes n'apparaissent que sur les lignes de détail récurrentes.",
     "servicePeriod": "Période de service",
     "servicePeriods": "Périodes de service",

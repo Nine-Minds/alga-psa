@@ -25,6 +25,7 @@
     },
     "states": {
       "active": "Actif",
+      "scheduled": "Planifié",
       "inactive": "Inactif",
       "loading": "Chargement...",
       "na": "S/O",
@@ -573,8 +574,10 @@
     "invoiceTemplateHelp": "Sélectionnez un modèle ou utilisez la valeur par défaut",
     "paymentTerms": {
       "dueOnReceipt": "Exigible à réception",
+      "net14": "Net à 14 jours",
       "net15": "Net à 15 jours",
-      "net30": "Net à 30 jours"
+      "net30": "Net à 30 jours",
+      "net7": "Net à 7 jours"
     },
     "preferredPaymentMethod": "Mode de paiement préféré",
     "defaultCurrency": "Devise par défaut",

@@ -246,7 +246,9 @@
         "setLocation": "Ange plats",
         "setStatus": "Ange status",
         "assignContact": "Tilldela till kontakt",
-        "addToGroup": "Lägg till i grupp"
+        "addToGroup": "Lägg till i grupp",
+        "printLabels": "Skriv ut etiketter",
+        "printLabelsLimit": "Du kan skriva ut högst {{max}} etiketter åt gången"
       },
       "actions": {
         "apply": "Tillämpa",
@@ -446,7 +448,9 @@
       "rebootDevice": "Starta om enhet",
       "rebooting": "Startar om…",
       "editAsset": "Redigera tillgång",
-      "deleteAsset": "Radera tillgång"
+      "deleteAsset": "Radera tillgång",
+      "printLabel": "Skriv ut tillgångsetikett",
+      "printPage": "Skriv ut sida"
     },
     "values": {
       "unknownClient": "Okänd kund"
@@ -831,7 +835,8 @@
       "save": "Spara",
       "label": "Knapptext",
       "template": "URL-mall",
-      "tokens": "Använd {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {client.name} och {field.<key>} med anpassade fältnycklar som definieras under Inställningar → Tillgångar → Tillgångstyper.",
+      "ninjaExample": "Exempel på NinjaOne-enhetsinstrumentpanel: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Byt ut värden mot din NinjaOne-region: app, eu, ca, oc eller us2 .ninjarmm.com.",
+      "tokens": "Använd {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} och {field.<key>} med anpassade fältnycklar som definieras under Inställningar → Tillgångar → Tillgångstyper.",
       "errors": {
         "load": "Det gick inte att läsa in länkar för fjärråtkomst.",
         "save": "Det gick inte att spara länken för fjärråtkomst.",

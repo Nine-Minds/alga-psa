@@ -256,7 +256,8 @@
     "openMenu": "Öppna meny",
     "moreActions": "Fler åtgärder",
     "createTemplate": "Skapa mall från ärende",
-    "createWorkflowFromTicket": "Skapa arbetsflöde från ärende"
+    "createWorkflowFromTicket": "Skapa arbetsflöde från ärende",
+    "printWorkTag": "Skriv ut arbetsetikett"
   },
   "messages": {
     "noTickets": "Inga ärenden hittades",
@@ -469,6 +470,14 @@
     "clientPortal": "Mottaget via kundportalen",
     "inboundEmail": "Mottaget via inkommande e-post"
   },
+  "originalEmail": {
+    "text": "Text",
+    "original": "Ursprungligt e-postmeddelande",
+    "emailShort": "E-post",
+    "loading": "Läser in det ursprungliga e-postmeddelandet…",
+    "error": "Det ursprungliga e-postmeddelandet kunde inte läsas in.",
+    "group": "Meddelandevisning"
+  },
   "documents": {
     "title": "Dokument",
     "noDocuments": "Inga bifogade dokument",
@@ -654,7 +663,9 @@
       "more": "Mer",
       "bundleNeedsOne": "Markera minst 1 ärende att gruppera",
       "selectedCount_few": "{{count}} markerade",
-      "selectedCount_many": "{{count}} markerade"
+      "selectedCount_many": "{{count}} markerade",
+      "printLabels": "Skriv ut etiketter",
+      "printLabelsLimit": "Du kan skriva ut högst {{max}} etiketter åt gången"
     },
     "moveDialogTitle": "Flytta markerade ärenden",
     "moveDialogDescription": "Välj måltavla och målstatus och bekräfta sedan flytten av de markerade ärendena.",
@@ -687,7 +698,7 @@
     "bundleMasterLabel": "Välj huvudärende",
     "bundleMasterPlaceholder": "Välj huvudärende…",
     "bundleSyncUpdates": "Synkronisera uppdateringar från huvudärendet till underärenden (kundsynliga svar + ändringar i arbetsflödet)",
-    "bundleSyncUpdatesHelp": "Underärenden behåller sin nuvarande status när de grupperas. Om huvudärendet därefter stängs eller öppnas igen gäller det även alla underärenden. Ändringar av huvudärendets status, ansvarig och prioritet tillämpas också på underärendena. Arbetsflödesfält är låsta på underärenden. Interna anteckningar stannar på huvudärendet.",
+    "bundleSyncUpdatesHelp": "Underärenden behåller sin nuvarande status när de grupperas. Med synkronisering aktiverad gäller det även alla underärenden när huvudärendet stängs eller öppnas igen, ändringar av huvudärendets status, ansvarig och prioritet tillämpas på dem, och deras arbetsflödesfält är låsta. Utan synkronisering hanterar underärendena själva sin status, ansvarig och prioritet. Interna anteckningar stannar på huvudärendet.",
     "bundleSelectAtLeastTwo": "Markera minst två ärenden att gruppera.",
     "bundleSelectMaster": "Välj ett huvudärende.",
     "bundleSuccess": "Ärendena har grupperats",
@@ -760,8 +771,8 @@
       "masterTicket": "Välj huvudärende",
       "selectMasterTicket": "Välj huvudärende…",
       "syncUpdates": "Synkronisera uppdateringar från huvudärendet till underärenden (kundsynliga svar + ändringar i arbetsflödet)",
-      "syncUpdatesHelp": "Underärenden behåller sin nuvarande status när de grupperas. Om huvudärendet därefter stängs eller öppnas igen gäller det även alla underärenden. Ändringar av huvudärendets status, ansvarig och prioritet tillämpas också på underärendena. Arbetsflödesfält är låsta på underärenden. Interna anteckningar stannar på huvudärendet.",
-      "childrenDescription": "Underärenden behåller sin nuvarande status. Arbetsflödesfält är låsta på underärenden. Inkommande svar på underärenden visas nedan som skrivskyddade.",
+      "syncUpdatesHelp": "Underärenden behåller sin nuvarande status när de grupperas. Med synkronisering aktiverad gäller det även alla underärenden när huvudärendet stängs eller öppnas igen, ändringar av huvudärendets status, ansvarig och prioritet tillämpas på dem, och deras arbetsflödesfält är låsta. Utan synkronisering hanterar underärendena själva sin status, ansvarig och prioritet. Interna anteckningar stannar på huvudärendet.",
+      "childrenDescription": "Underärenden behåller sin nuvarande status. Arbetsflödesfält är bara låsta i läget Sync Updates. Inkommande svar på underärenden visas nedan som skrivskyddade.",
       "checkingMasters": "Kontrollerar befintliga grupper…",
       "existingMasterSuffix": "(befintligt huvudärende)",
       "existingMasterLocked": "Ett markerat ärende är redan huvudärende i en grupp. Det används som huvudärende och övriga läggs till som underärenden.",
@@ -1675,7 +1686,10 @@
       "ruleCategoryBoardMismatch": "Den valda kategorin tillhör en annan tavla än regeln.",
       "ruleCategoryInvalid": "Den valda kategorin är inte en kategori på översta nivån.",
       "ruleSubcategoryInvalid": "Den valda underkategorin tillhör inte den valda kategorin.",
-      "ruleSubcategoryRequiresCategory": "Välj en kategori innan du väljer en underkategori."
+      "ruleSubcategoryRequiresCategory": "Välj en kategori innan du väljer en underkategori.",
+      "ruleTooManyKeywords": "Använd högst {{max}} nyckelord per regel.",
+      "ruleKeywordTooLong": "Varje nyckelord får vara högst {{max}} tecken långt.",
+      "ruleOriginInvalid": "En av de valda ärendekällorna är ogiltig."
     }
   },
   "ticketSection": {
@@ -1704,9 +1718,11 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Underärenden behåller sin nuvarande status när de grupperas. Om huvudärendet därefter stängs eller öppnas igen gäller det även alla underärenden. Ändringar av huvudärendets status, ansvarig och prioritet tillämpas också på underärendena. Arbetsflödesfält är låsta på underärenden. Interna anteckningar stannar på huvudärendet.",
+      "childrenDescription": "Underärenden behåller sin nuvarande status när de grupperas. I läget Sync Updates gäller det även alla underärenden när huvudärendet stängs eller öppnas igen, ändringar av huvudärendets status, ansvarig och prioritet tillämpas på dem, och deras arbetsflödesfält är låsta. I läget Link Only hanterar underärendena själva sin status, ansvarig och prioritet. Interna anteckningar stannar på huvudärendet.",
       "title": "Grupp",
       "masterBanner": "Det här ärendet är huvudärende i en grupp (underärenden: {{count}}). Läge: {{mode}}.",
+      "childLockedNotice": "Arbetsflödesfält är låsta; arbeta från huvudärendet.",
+      "childLinkedNotice": "Det är länkat till huvudärendet och hanteras separat.",
       "multipleClients": "Flera kunder",
       "mode": "Läge: {{mode}}",
       "unbundle": "Lös upp grupp",
@@ -1742,7 +1758,15 @@
       "applyResolutionHelpNoComment": "Stänger underärendet med status {{status}}. Huvudärendet har ingen kundsynlig lösningskommentar att publicera.",
       "reopenMasterLabel": "Lägg till och öppna huvudärendet igen",
       "reopenMasterHelp": "Öppnar endast huvudärendet igen. Redan stängda underärenden i gruppen förblir stängda. Aviseringar om återöppning och SLA gäller huvudärendet.",
-      "closedMasterGating": "Tavlans stängningsregler tillåter inte öppna underärenden under ett stängt huvudärende. Därför går det inte att behålla huvudärendet stängt."
+      "closedMasterGating": "Tavlans stängningsregler tillåter inte öppna underärenden under ett stängt huvudärende. Därför går det inte att behålla huvudärendet stängt.",
+      "modeSwitchDialogIntro": "Huvudärendet är stängt. Välj vad som ska hända med de öppna underärendena när gruppen byter till Sync Updates.",
+      "modeSwitchConfirm": "Byt till Sync Updates",
+      "keepClosedSwitchLabel": "Byt och behåll huvudärendet stängt",
+      "keepClosedSwitchHelp": "Öppna underärenden förblir öppna med sin egen SLA-klocka. Gruppen visas som inkonsekvent tills de är lösta.",
+      "applyResolutionSwitchLabel": "Byt och tillämpa huvudärendets lösning på öppna underärenden",
+      "applyResolutionSwitchHelp": "Stänger varje öppet underärende med status {{status}} och publicerar huvudärendets lösning som en kundsynlig kommentar i det.",
+      "applyResolutionSwitchHelpNoComment": "Stänger varje öppet underärende med status {{status}}. Huvudärendet har ingen offentlig lösningskommentar att publicera.",
+      "reopenMasterSwitchLabel": "Byt och öppna huvudärendet igen"
     },
     "autoClose": "Stängs automatiskt {{date}} om ingen ny aktivitet sker.",
     "autoCloseWarned": "Kunden har varnats.",

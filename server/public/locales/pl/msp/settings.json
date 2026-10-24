@@ -1024,13 +1024,40 @@
         },
         "rules": {
           "label": "Reguły automatycznego stosowania",
-          "help": "Szablon jest automatycznie stosowany do nowych zgłoszeń pasujących do którejkolwiek z tych reguł. Pozostaw pole jako \"Dowolny\", aby dopasować wszystkie wartości.",
+          "help": "Szablon jest stosowany do nowego zgłoszenia, gdy pasuje ono do dowolnej z jego reguł. Reguła pasuje tylko wtedy, gdy zgłoszenie spełnia wszystkie ustawione filtry. Pozostaw filtr pusty, aby go pominąć.",
           "empty": "Brak reguł automatycznego stosowania. Szablon nadal można stosować do zgłoszeń ręcznie.",
           "board": "Tablica",
           "category": "Kategoria",
           "subcategory": "Podkategoria",
           "priority": "Priorytet",
-          "any": "Dowolny"
+          "any": "Dowolny",
+          "appliesToAll": "Dotyczy wszystkich zgłoszeń",
+          "clients": "Klienci",
+          "clientsAny": "Dowolny klient",
+          "clientsAddAnother": "Dodaj kolejnego klienta",
+          "removeClient": "Usuń {{name}}",
+          "origins": "Źródło zgłoszenia",
+          "originsAny": "Dowolne źródło",
+          "fromServiceRequest": "Tylko zgłoszenia z żądania usługi",
+          "anyServiceRequest": "Dowolne żądanie usługi",
+          "keywords": "Słowa kluczowe",
+          "keywordsPlaceholder": "Wpisz słowo lub frazę i naciśnij Enter",
+          "keywordsHelp": "Dopasowywane są także fragmenty słów, więc \"onboard\" znajdzie \"onboarding\". Wielkość liter jest pomijana.",
+          "removeKeyword": "Usuń {{keyword}}",
+          "keywordMode": "Dopasowanie",
+          "keywordModeAny": "Dowolne słowo kluczowe",
+          "keywordModeAll": "Wszystkie słowa kluczowe",
+          "keywordTarget": "Szukaj w",
+          "keywordTargetBoth": "Tytuł i opis",
+          "keywordTargetTitle": "Tytuł",
+          "keywordTargetDescription": "Opis",
+          "originLabels": {
+            "internal": "Utworzone przez personel",
+            "client_portal": "Portal klienta",
+            "inbound_email": "Przychodząca wiadomość e-mail",
+            "api": "API",
+            "recurring": "Harmonogram cykliczny"
+          }
         }
       },
       "dialog": {

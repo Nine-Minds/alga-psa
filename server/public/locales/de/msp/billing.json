@@ -416,7 +416,8 @@
       "createBatch": "Stapel erstellen",
       "creating": "Erstellen...",
       "cancelBatch": "Stapel stornieren",
-      "retry": "Erneut versuchen"
+      "retry": "Erneut versuchen",
+      "resolveUnmapped": "Nicht zugeordnete Einträge auflösen"
     },
     "states": {
       "loadingBatches": "Stapel werden geladen...",
@@ -491,6 +492,35 @@
       "download": "Herunterladen",
       "unavailable": "Für diesen historischen Stapel ist keine Datei gespeichert. Sie kann nur durch einen neuen Export wiederhergestellt werden.",
       "storageFallback": "In einer Datenbanksicherung gespeichert"
+    },
+    "unmapped": {
+      "title": "Nicht zugeordnete QuickBooks-Einträge",
+      "descriptionDesktop": "Diese benötigen einen QuickBooks Desktop-Kunden oder -Artikel, bevor sie exportiert werden können. Legen Sie sie als neue Einträge an (die IIF-Datei fügt sie QuickBooks Desktop hinzu) oder verknüpfen Sie sie mit einem vorhandenen QuickBooks-Eintrag mit genau demselben Namen. Ihre Auswahl wird als QuickBooks Desktop-Zuordnung gespeichert, sodass künftige Exporte nicht erneut fragen.",
+      "descriptionCsv": "Für diese Einträge gibt es noch keine QuickBooks-Zuordnung. Exportieren Sie sie unter dem unten stehenden Namen (QuickBooks legt neue Namen beim CSV-Import an) oder verknüpfen Sie sie mit einem vorhandenen QuickBooks-Eintrag mit genau demselben Namen. Ihre Auswahl wird als Zuordnung gespeichert, damit künftige Exporte nicht erneut fragen.",
+      "permissionNotice": "Zum Speichern von QuickBooks-Zuordnungen ist die Berechtigung zum Verwalten von Zuordnungen erforderlich. Wenden Sie sich an einen Administrator oder ordnen Sie diese Einträge in den QuickBooks-Einstellungen zu.",
+      "kinds": {
+        "client": "Kunde",
+        "service": "Leistung",
+        "product": "Produkt",
+        "discount": "Rabatt"
+      },
+      "modes": {
+        "create": "Neu anlegen",
+        "existing": "Bereits in QuickBooks"
+      },
+      "nameAria": "QuickBooks-Name für {{name}}",
+      "desktopNote": "Neue Produkte verwenden den in den QuickBooks Desktop-Einstellungen gewählten Artikeltyp. Wählen Sie „Bereits in QuickBooks\" für alles, was in Ihrer Firmendatei existiert, damit dessen Angaben nicht überschrieben werden.",
+      "actions": {
+        "cancel": "Abbrechen",
+        "goToMappings": "Zu den QuickBooks-Zuordnungen",
+        "save": "Zuordnungen speichern und exportieren"
+      },
+      "toast": {
+        "saved": "QuickBooks-Zuordnungen gespeichert",
+        "saveError": "QuickBooks-Zuordnungen konnten nicht gespeichert werden"
+      },
+      "postsTo": "Bucht auf {{account}}",
+      "postsToDefault": "Bucht auf das Standard-Erlöskonto"
     }
   },
   "templateRenderer": {
@@ -654,7 +684,8 @@
       "referenceMissing": "Der ausgewählte Kunde, Vertrag oder Abrechnungsdatensatz existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "duplicate": "Diese Vertragszuordnung des Kunden existiert bereits.",
       "missingField": "Erforderliches Feld des Kundenvertrags fehlt.",
-      "missingFieldNamed": "Erforderliches Feld des Kundenvertrags fehlt: {{field}}."
+      "missingFieldNamed": "Erforderliches Feld des Kundenvertrags fehlt: {{field}}.",
+      "alreadyActiveScheduled": "Dieser Vertrag ist bereits aktiv und beginnt am {{startDate}}; es gibt nichts zu aktivieren."
     },
     "cycle": {
       "cannotCreateNext": "Der nächste Abrechnungszeitraum kann derzeit nicht erstellt werden"
@@ -728,7 +759,25 @@
         "create": "Berechtigung verweigert: Buchhaltungsexport-Stapel können nicht erstellt werden",
         "read": "Berechtigung verweigert: Auf Buchhaltungsexport-Stapel kann nicht zugegriffen werden",
         "update": "Berechtigung verweigert: Buchhaltungsexport-Stapel können nicht geändert werden",
-        "execute": "Berechtigung verweigert: Buchhaltungsexport-Stapel können nicht ausgeführt werden"
+        "execute": "Berechtigung verweigert: Buchhaltungsexport-Stapel können nicht ausgeführt werden",
+        "createMappings": "Zum Anlegen von QuickBooks-Zuordnungen aus einem Export sind die Berechtigungen für Exporte und das Verwalten von Zuordnungen erforderlich"
+      },
+      "quickbooksMapping": {
+        "noDecisions": "Legen Sie für mindestens einen nicht zugeordneten Eintrag fest, wie er behandelt werden soll.",
+        "stale": "Einer der ausgewählten Einträge ist für diesen Stapel nicht mehr unzugeordnet. Aktualisieren Sie und versuchen Sie es erneut.",
+        "duplicateSubmission": "„{{algaName}}\" wurde doppelt übermittelt.",
+        "invalidMode": "Wählen Sie für „{{algaName}}\" „Neu anlegen\" oder „Bereits in QuickBooks\".",
+        "nameRequired": "Geben Sie einen QuickBooks-Namen für „{{algaName}}\" ein.",
+        "nameInvalidCharacters": "Der QuickBooks-Name für „{{algaName}}\" darf keine Tabulatoren, Zeilenumbrüche oder doppelten Anführungszeichen enthalten.",
+        "nameTooLong": "Der QuickBooks-Name für „{{algaName}}\" ist länger als {{maxLength}} Zeichen.",
+        "duplicateNewName": "„{{qbName}}\" wird für mehr als einen neuen QuickBooks-Eintrag verwendet.",
+        "duplicateClientName": "„{{qbName}}\" ist für mehr als einen Kunden ausgewählt. Jeder QuickBooks-Name kann nur einem zugeordnet werden.",
+        "duplicateItemName": "„{{qbName}}\" ist für mehr als einen Artikel ausgewählt. Jeder QuickBooks-Name kann nur einem zugeordnet werden.",
+        "nameTakenByClient": "„{{qbName}}\" ist bereits einem anderen Kunden zugeordnet und kann daher nicht auch für „{{algaName}}\" verwendet werden. Wählen Sie einen anderen QuickBooks-Namen oder ändern Sie die bestehende Zuordnung in den QuickBooks-Zuordnungen.",
+        "nameTakenByItem": "„{{qbName}}\" ist bereits einem anderen Artikel zugeordnet und kann daher nicht auch für „{{algaName}}\" verwendet werden. Wählen Sie einen anderen QuickBooks-Namen oder ändern Sie die bestehende Zuordnung in den QuickBooks-Zuordnungen.",
+        "unsupportedBatch": "Dieser Stapel ist kein QuickBooks Desktop- oder QuickBooks CSV-Export.",
+        "nameTakenConcurrently": "Einer dieser QuickBooks-Namen wurde gerade einem anderen Eintrag zugeordnet. Aktualisieren Sie die Liste und wählen Sie einen anderen Namen.",
+        "desktopIncomeAccountRequired": "Legen Sie das Standard-Erlöskonto in den QuickBooks Desktop-Einstellungen fest, bevor Sie Artikel aus einem Export zuordnen."
       }
     },
     "vendorBill": {

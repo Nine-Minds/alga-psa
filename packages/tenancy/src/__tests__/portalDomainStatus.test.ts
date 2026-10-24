@@ -39,7 +39,7 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
-import { getPortalDomainStatusForTenant } from '../server/portalDomainStatus';
+import { getPortalDomainStatusForTenant } from '../lib/portalDomainStatus';
 
 const ORIGINAL_NEXTAUTH_URL = process.env.NEXTAUTH_URL;
 

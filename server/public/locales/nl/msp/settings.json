@@ -1024,13 +1024,40 @@
         },
         "rules": {
           "label": "Automatisch-toepassenregels",
-          "help": "Het sjabloon wordt automatisch toegepast op nieuwe tickets die overeenkomen met een van deze regels. Laat een veld op \"Willekeurig\" staan om alle waarden te matchen.",
+          "help": "Een sjabloon wordt toegepast op een nieuw ticket als het aan een van de regels voldoet. Een regel komt alleen overeen als het ticket aan alle ingestelde filters voldoet. Laat een filter leeg om het te negeren.",
           "empty": "Geen automatisch-toepassenregels. Dit sjabloon kan nog steeds handmatig op tickets worden toegepast.",
           "board": "Bord",
           "category": "Categorie",
           "subcategory": "Subcategorie",
           "priority": "Prioriteit",
-          "any": "Willekeurig"
+          "any": "Willekeurig",
+          "appliesToAll": "Geldt voor alle tickets",
+          "clients": "Klanten",
+          "clientsAny": "Elke klant",
+          "clientsAddAnother": "Nog een klant toevoegen",
+          "removeClient": "{{name}} verwijderen",
+          "origins": "Bron van het ticket",
+          "originsAny": "Elke bron",
+          "fromServiceRequest": "Alleen tickets uit een serviceaanvraag",
+          "anyServiceRequest": "Elke serviceaanvraag",
+          "keywords": "Trefwoorden",
+          "keywordsPlaceholder": "Typ een woord of zin en druk op Enter",
+          "keywordsHelp": "Ook woorddelen komen overeen, dus \"onboard\" vindt ook \"onboarding\". Hoofdletters worden genegeerd.",
+          "removeKeyword": "{{keyword}} verwijderen",
+          "keywordMode": "Overeenkomst",
+          "keywordModeAny": "Een willekeurig trefwoord",
+          "keywordModeAll": "Alle trefwoorden",
+          "keywordTarget": "Zoeken in",
+          "keywordTargetBoth": "Titel en beschrijving",
+          "keywordTargetTitle": "Titel",
+          "keywordTargetDescription": "Beschrijving",
+          "originLabels": {
+            "internal": "Aangemaakt door medewerkers",
+            "client_portal": "Klantenportaal",
+            "inbound_email": "Inkomende e-mail",
+            "api": "API",
+            "recurring": "Terugkerende planning"
+          }
         }
       },
       "dialog": {

@@ -1024,13 +1024,40 @@
         },
         "rules": {
           "label": "Reglas de aplicación automática",
-          "help": "La plantilla se aplica automáticamente a los nuevos tickets que coincidan con alguna de estas reglas. Deje un campo como \"Cualquiera\" para coincidir con todos los valores.",
+          "help": "Una plantilla se aplica a un ticket nuevo cuando coincide con cualquiera de sus reglas. Una regla solo coincide si el ticket cumple todos los filtros que definió. Deje un filtro vacío para ignorarlo.",
           "empty": "Sin reglas de aplicación automática. Esta plantilla puede aplicarse manualmente a los tickets.",
           "board": "Tablero",
           "category": "Categoría",
           "subcategory": "Subcategoría",
           "priority": "Prioridad",
-          "any": "Cualquiera"
+          "any": "Cualquiera",
+          "appliesToAll": "Se aplica a todos los tickets",
+          "clients": "Clientes",
+          "clientsAny": "Cualquier cliente",
+          "clientsAddAnother": "Agregar otro cliente",
+          "removeClient": "Quitar {{name}}",
+          "origins": "Origen del ticket",
+          "originsAny": "Cualquier origen",
+          "fromServiceRequest": "Solo tickets de una solicitud de servicio",
+          "anyServiceRequest": "Cualquier solicitud de servicio",
+          "keywords": "Palabras clave",
+          "keywordsPlaceholder": "Escriba una palabra o frase y presione Intro",
+          "keywordsHelp": "También coincide con partes de palabras, así que \"onboard\" encuentra \"onboarding\". Se ignoran las mayúsculas.",
+          "removeKeyword": "Quitar {{keyword}}",
+          "keywordMode": "Coincidencia",
+          "keywordModeAny": "Cualquier palabra clave",
+          "keywordModeAll": "Todas las palabras clave",
+          "keywordTarget": "Buscar en",
+          "keywordTargetBoth": "Título y descripción",
+          "keywordTargetTitle": "Título",
+          "keywordTargetDescription": "Descripción",
+          "originLabels": {
+            "internal": "Creado por el personal",
+            "client_portal": "Portal del cliente",
+            "inbound_email": "Correo entrante",
+            "api": "API",
+            "recurring": "Programación recurrente"
+          }
         }
       },
       "dialog": {

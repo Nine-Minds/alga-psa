@@ -3,6 +3,7 @@ import { getPortalDomain } from '../../models/PortalDomainModel';
 import { resolveTenantAppBase } from '@alga-psa/tenancy/server';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 import logger from '@alga-psa/core/logger';
+import { recordUrl } from '@alga-psa/types';
 
 /**
  * Entity types supported for notification link generation
@@ -116,22 +117,23 @@ function normalizeHost(host: string): string {
 function resolveInternalUrl(input: EntityLinkInput, baseUrl: string): string {
   switch (input.type) {
     case 'ticket':
-      const ticketUrl = `${baseUrl}/msp/tickets/${input.ticketId}`;
+      // LEVERAGE: pattern record-links — MSP record URLs come from the shared recordUrl resolver.
+      const ticketUrl = recordUrl('ticket', input.ticketId, baseUrl);
       return input.commentId ? `${ticketUrl}#comment-${input.commentId}` : ticketUrl;
 
     case 'document':
       return `${baseUrl}/msp/documents?doc=${input.documentId}`;
 
     case 'project':
-      return `${baseUrl}/msp/projects/${input.projectId}`;
+      // LEVERAGE: pattern record-links — MSP record URLs come from the shared recordUrl resolver.
+      return recordUrl('project', input.projectId, baseUrl);
 
     case 'project_task':
-      const taskParams = new URLSearchParams();
-      if (input.phaseId) {
-        taskParams.set('phaseId', input.phaseId);
-      }
-      taskParams.set('taskId', input.taskId);
-      const taskUrl = `${baseUrl}/msp/projects/${input.projectId}?${taskParams.toString()}`;
+      // LEVERAGE: pattern record-links — canonical task URL is the project page with ?taskId= (and optional phaseId).
+      const taskUrl = recordUrl('project_task', input.taskId, baseUrl, {
+        projectId: input.projectId,
+        phaseId: input.phaseId,
+      });
       return input.taskCommentId ? `${taskUrl}#comment-${input.taskCommentId}` : taskUrl;
 
     case 'invoice':

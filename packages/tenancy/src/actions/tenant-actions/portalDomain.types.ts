@@ -2,7 +2,7 @@ import type {
   PortalDomainStatus,
   PortalDomainSurface,
   PortalDomainVerificationMethod,
-} from '../../lib/PortalDomainModel';
+} from '../../lib/PortalDomainStore';
 
 export type PortalDomainEdition = 'ce' | 'ee';
 

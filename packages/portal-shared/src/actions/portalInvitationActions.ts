@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto';
 import { createTenantKnex, tenantDb, runWithTenant } from '@alga-psa/db';
 import { PortalInvitationService } from '../services/PortalInvitationService';
 import { getTenantSlugForTenant } from '@alga-psa/db';
-import { resolveTenantAppBase } from '@alga-psa/tenancy/server';
+import { getTenantPortalBaseUrl, resolveTenantAppBase } from '@alga-psa/tenancy/server';
 import { getSystemEmailService, TenantEmailService, sendPortalInvitationEmail } from '@alga-psa/email';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
@@ -572,17 +572,23 @@ export const sendPortalInvitation = withAuth(async (
       };
     }
 
-    // Prefer the tenant's active custom domain serving the client portal (vanity host) so the
-    // invitation lands on the host the client portal is served from.
-    let vanityBaseUrl = '';
+    // Resolve the portal origin before opening the transaction: the lookups acquire
+    // their own connection. Prefer the tenant's active custom domain serving the
+    // client portal (so the invitation lands on the host the client portal is served
+    // from); otherwise the tenant portal base URL (configured public base URL).
+    let portalBaseUrl: string | null = null;
     try {
       const resolved = await resolveTenantAppBase(tenant, 'client_portal');
       if (resolved.source === 'vanity') {
-        vanityBaseUrl = resolved.baseUrl;
+        portalBaseUrl = resolved.baseUrl;
       }
     } catch (domainError) {
       console.warn('Failed to resolve custom portal domain for invitation link:', domainError);
     }
+    if (!portalBaseUrl) {
+      portalBaseUrl = await getTenantPortalBaseUrl(tenant);
+    }
+
     // Use a transaction to ensure atomicity
     const result = await knex.transaction(async (trx) => {
       const scopedDb = tenantDb(trx, tenant);
@@ -663,24 +669,14 @@ export const sendPortalInvitation = withAuth(async (
       const tenantSlug = await getTenantSlugForTenant(tenant);
 
 
-      // Generate portal setup URL with robust base URL fallback
-      const baseUrl =
-        vanityBaseUrl ||
-        process.env.NEXT_PUBLIC_BASE_URL ||
-        process.env.NEXTAUTH_URL ||
-        (process.env.HOST ? `https://${process.env.HOST}` : '');
-
-      if (!baseUrl) {
+      if (!portalBaseUrl) {
         throw new PortalInvitationError(
           'Base URL is not configured for portal invitations',
           'BASE_URL_NOT_CONFIGURED'
         );
       }
 
-      const setupUrl = new URL(
-        '/auth/portal/setup',
-        baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`
-      );
+      const setupUrl = new URL('/auth/portal/setup', portalBaseUrl);
       setupUrl.searchParams.set('token', invitationResult.token || '');
       setupUrl.searchParams.set('tenant', tenantSlug);
       const portalSetupUrl = setupUrl.toString();

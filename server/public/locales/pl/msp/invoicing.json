@@ -585,6 +585,17 @@
         "selectedCount": "Zaznaczono {{count}}",
         "clear": "Wyczyść zaznaczenie"
       }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Faktura sfinalizowana, ale krok następczy nie został ukończony: {{steps}}. Faktura jest sfinalizowana; można ponowić ten krok.",
+      "steps": {
+        "credit_auto_apply": "automatyczne zastosowanie kredytu",
+        "project_deposit_credits": "kredyty z zaliczek projektowych",
+        "workflow_events": "zdarzenia workflow",
+        "accounting_export": "eksport księgowy",
+        "replenishment_status": "status uzupełnienia przedpłaty",
+        "autopay": "płatność automatyczna"
+      }
     }
   },
   "finalizedTab": {
@@ -885,6 +896,19 @@
       "cancel": "Anuluj",
       "confirm": "Anuluj fakturę",
       "voiding": "Anulowanie…"
+    },
+    "history": {
+      "title": "Historia",
+      "empty": "Brak zapisanej historii.",
+      "loadFailed": "Nie udało się wczytać historii faktury.",
+      "system": "System",
+      "ops": {
+        "invoice_finalized": "Sfinalizowana",
+        "invoice_unfinalized": "Otwarta ponownie",
+        "invoice_deleted": "Usunięta"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "brak"
     }
   },
   "templateEditor": {
@@ -1429,7 +1453,7 @@
       "mediaSource": "Źródło obrazu",
       "mediaSourceLogo": "Logotyp firmy",
       "mediaSourceCustom": "Własny obraz",
-      "mediaSourceLogoHint": "Wyświetla na każdym dokumencie logotyp z ustawień marki Twojej firmy.",
+      "mediaSourceLogoHint": "Wyświetla na każdym dokumencie logotyp z rekordu klienta Twojej własnej firmy.",
       "mediaSourceUrl": "Adres URL źródła",
       "renameInner": "Zmienić też nazwy {{count}} warstw wewnętrznych ({{from}} → {{to}}…)?",
       "renameInnerApply": "Zmień nazwy",
@@ -1479,7 +1503,14 @@
           "widthTooltip": "Użyj dokładnej szerokości wpisanej poniżej",
           "heightTooltip": "Użyj dokładnej wysokości wpisanej poniżej"
         }
-      }
+      },
+      "barcode": "Kod kreskowy",
+      "barcodeSymbology": "Typ",
+      "barcodeQr": "Kod QR",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Wartość",
+      "barcodeHintWorkTag": "Tekst lub pole, np. {{example}} (link do rekordu). Kod powinien mieć co najmniej około 20 mm szerokości, aby dał się zeskanować.",
+      "barcodeHint": "Tekst do zakodowania. Kod powinien mieć co najmniej około 20 mm szerokości, aby dał się zeskanować."
     },
     "shell": {
       "selectedLabel": "Wybrano:",
@@ -1492,7 +1523,11 @@
       "title": "Ustawienia strony",
       "description": "Wybierz preset papieru i margines bez wybierania ukrytego węzła strony.",
       "paperPreset": "Preset papieru",
-      "marginMm": "Margines (mm)"
+      "marginMm": "Margines (mm)",
+      "customSize": "Rozmiar niestandardowy…",
+      "customWidth": "Szerokość",
+      "customHeight": "Wysokość",
+      "customUnit": "Jednostka"
     },
     "breadcrumbs": {
       "emptyHelp": "Wybierz komponent na kanwie, aby zobaczyć hierarchię.",
@@ -1523,7 +1558,13 @@
         "noQuotesFound": "Brak wycen.",
         "selectQuote": "Wybierz wycenę",
         "loadingQuoteDetails": "Ładowanie szczegółów wyceny…",
-        "loadingDocumentDetails": "Ładowanie szczegółów dokumentu…"
+        "loadingDocumentDetails": "Ładowanie szczegółów dokumentu…",
+        "zoom": {
+          "fit": "Dopasuj",
+          "actual": "100%",
+          "label": "Powiększenie podglądu",
+          "fitWithScale": "Dopasuj ({{percent}}%)"
+        }
       },
       "tabs": {
         "design": "Projektowanie",
@@ -2417,7 +2458,7 @@
     },
     "imagePicker": {
       "browse": "Przeglądaj dokumenty",
-      "hiddenFromClients": "Dokument {{document}} jest ukryty przed klientami. Nie pojawi się w ofertach ani fakturach wyświetlanych przez portal klienta.",
+      "hiddenFromClients": "Dokument {{document}} jest ukryty przed klientami, więc nie mogą go otworzyć w portalu klienta. Nadal pojawia się na fakturach i w plikach PDF ofert, które go używają.",
       "updating": "Aktualizowanie...",
       "markVisible": "Oznacz jako widoczny dla klientów",
       "visibleInPortal": "Widoczny w portalu klienta",
@@ -2466,11 +2507,13 @@
     "description": "Projektuj układy służące do generowania plików PDF i podglądów dla dokumentów typu „{{type}}”.",
     "availableLayouts": "Dostępne układy",
     "actions": {
-      "newLayout": "Nowy układ"
+      "newLayout": "Nowy układ",
+      "setDefaultForClass": "Ustaw jako domyślny dla: {{class}}"
     },
     "columns": {
       "name": "Nazwa",
-      "source": "Źródło"
+      "source": "Źródło",
+      "labelClass": "Klasa"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (wersja standardowa)",
@@ -2502,7 +2545,10 @@
         "details": "Szczegóły układu"
       },
       "fields": {
-        "version": "Wersja"
+        "version": "Wersja",
+        "labelClass": "Klasa etykiety",
+        "labelFields": "Pola wyświetlane na etykiecie",
+        "labelFieldsHint": "Link do rekordu (kod QR) i identyfikator są zawsze wyświetlane."
       },
       "placeholders": {
         "templateName": "Szablon dokumentu typu „{{type}}”"
@@ -2539,7 +2585,8 @@
     "types": {
       "salesOrder": "Zamówienie sprzedaży",
       "packingSlip": "Dokument dostawy",
-      "pickList": "Lista kompletacyjna"
+      "pickList": "Lista kompletacyjna",
+      "workTag": "Etykieta robocza / Etykieta"
     }
   },
   "errors": {
@@ -2547,7 +2594,8 @@
       "invoiceUpdate": "Odmowa uprawnień: wymagane uprawnienie aktualizacji faktur",
       "invoiceDelete": "Odmowa uprawnień: wymagane uprawnienie usuwania faktur",
       "invoiceAccess": "Odmowa uprawnień: odmowa dostępu do faktury",
-      "otherClientInvoices": "Odmowa uprawnień: brak dostępu do faktur innego klienta"
+      "otherClientInvoices": "Odmowa uprawnień: brak dostępu do faktur innego klienta",
+      "invoiceRead": "Odmowa dostępu: wymagane uprawnienie do odczytu faktur"
     },
     "invoice": {
       "notFound": "Nie znaleziono faktury",
@@ -2569,7 +2617,9 @@
       "duplicate": "Istnieje już sprzeczna faktura. Odśwież stronę i spróbuj ponownie.",
       "missingField": "Brakuje wymaganego pola faktury.",
       "missingFieldNamed": "Brakuje wymaganego pola faktury: {{field}}.",
-      "billingProfileUnavailable": "Wybrany profil rozliczeniowy nie jest dostępny dla tego klienta."
+      "billingProfileUnavailable": "Wybrany profil rozliczeniowy nie jest dostępny dla tego klienta.",
+      "deleteNotDraft": "Można usuwać tylko faktury robocze; zamiast tego unieważnij fakturę.",
+      "deleteHasPayments": "Nie można usunąć faktur z zarejestrowanymi płatnościami."
     },
     "billingCycle": {
       "notFoundRefresh": "Nie znaleziono cyklu rozliczeniowego. Mógł zostać zaktualizowany lub usunięty. Odśwież stronę i spróbuj ponownie.",

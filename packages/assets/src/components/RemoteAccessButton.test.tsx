@@ -88,6 +88,22 @@ describe('RemoteAccessButton availability', () => {
     open.mockRestore();
   });
 
+  it('offers only Remote Desktop for Datto assets and opens the Web Remote URL', async () => {
+    mockGetLinks.mockResolvedValue([]);
+    mockRmm.getAssetRemoteControlTypes.mockResolvedValue(['splashtop', 'shell']);
+    mockRmm.getAssetRemoteControlUrl.mockResolvedValue('https://concord.centrastage.net/csm/remote/dev-1');
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    render(<RemoteAccessButton asset={asset({ rmm_provider: 'datto', rmm_device_id: 'dev-1' })} />);
+    fireEvent.click(screen.getByTestId('open-menu'));
+
+    const desktop = await screen.findByText('remoteAccess.remoteDesktop');
+    expect(screen.queryByText('remoteAccess.remoteShell')).toBeNull();
+    desktop.closest('button')?.click();
+    await vi.waitFor(() => expect(mockRmm.getAssetRemoteControlUrl).toHaveBeenCalledWith('asset-1', 'splashtop'));
+    expect(open).toHaveBeenCalledWith('https://concord.centrastage.net/csm/remote/dev-1', '_blank', 'noopener,noreferrer');
+    open.mockRestore();
+  });
+
   it('shows an error when the provider cannot resolve a session URL', async () => {
     mockRmm.getAssetRemoteControlTypes.mockResolvedValue(['shell']);
     mockRmm.getAssetRemoteControlUrl.mockResolvedValue(null);

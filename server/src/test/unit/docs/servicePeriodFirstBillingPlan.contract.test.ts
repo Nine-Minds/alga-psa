@@ -166,6 +166,9 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/billing/src/lib/invoice-template-ast/collectionDescriptors.ts',
   'server/src/test/integration/invoiceTicketProduction.integration.test.ts',
   'server/src/test/unit/billing/invoiceTicketPresentation.test.ts',
+  // alga-2026-0002771: by-ticket plain-text/rounded-hours coverage builds
+  // time-charge fixtures with service-period timing after this snapshot.
+  'server/src/test/unit/billing/invoiceByTicketPlainText.test.ts',
   // Explicit usage-contract measurement semantics (usage period totals, seat
   // revisions, unit-pricing revisions) added persisted service-period readers
   // and fixtures after the pass-0 snapshot.
