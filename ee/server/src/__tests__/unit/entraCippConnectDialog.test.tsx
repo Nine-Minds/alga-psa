@@ -317,4 +317,38 @@ describe('EntraCippConnectDialog', () => {
     // Opening it saved nothing.
     expect(connectEntraCippMock).not.toHaveBeenCalled();
   });
+
+  it('reconnects a legacy connection as an API client once the new client tests clean', async () => {
+    passingTest(2);
+    connectEntraCippMock.mockResolvedValue({
+      success: true,
+      data: { status: 'connected', connectionType: 'cipp', baseUrl: 'https://cipp-api.example.net' },
+    });
+    const { onSuccess } = renderDialog({
+      reconnect: {
+        authType: 'legacy_api_token',
+        apiUrl: 'https://cipp-api.example.net',
+        clientId: null,
+        tenantId: null,
+      },
+    });
+
+    fireEvent.change(field('entra-cipp-clientid'), { target: { value: GUID_A } });
+    fireEvent.change(field('entra-cipp-clientsecret'), { target: { value: 'secret-1' } });
+    fireEvent.change(field('entra-cipp-tenantid'), { target: { value: GUID_B } });
+    await testAndWaitForSave();
+
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+
+    const expected = {
+      authType: 'api_client',
+      apiUrl: 'https://cipp-api.example.net',
+      clientId: GUID_A,
+      clientSecret: 'secret-1',
+      tenantId: GUID_B,
+    };
+    expect(testEntraCippCredentialsMock).toHaveBeenCalledWith(expected);
+    expect(connectEntraCippMock).toHaveBeenCalledWith(expected);
+  });
 });

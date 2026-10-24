@@ -374,6 +374,108 @@ describe('connectEntraCipp validates before persisting', () => {
       expect(saveEntraCippCredentialsMock).not.toHaveBeenCalled();
     });
 
+    describe('reconnecting a legacy API-key connection as an API client', () => {
+      const legacyOnRecord = {
+        authType: 'legacy_api_token' as const,
+        baseUrl: 'https://cipp.example.com',
+        apiToken: 'legacy-key-VALUE',
+      };
+      const passingProbe = {
+        valid: true,
+        checkedAt: '2026-07-25T00:00:00.000Z',
+        tenantCountSample: 3,
+        endpoint: 'https://cipp.example.com/api/listtenants',
+      };
+
+      it('replaces the legacy credential and connection row with the API client', async () => {
+        getEntraCippCredentialsMock.mockResolvedValue(legacyOnRecord);
+        probeCippCredentialsMock.mockResolvedValue(passingProbe);
+        const { knexMock, insertMock, updateMock } = buildKnexMock();
+        createTenantKnexMock.mockResolvedValue({ knex: knexMock });
+
+        const { connectEntraCipp } = await import(
+          '@alga-psa/integrations/actions/integrations/entraActions'
+        );
+        const result = await connectEntraCipp(
+          { user_id: 'user-r', user_type: 'internal' } as any,
+          { tenant: 'tenant-r' },
+          apiClient as any
+        );
+
+        expect(result.success).toBe(true);
+        // The probe ran on the API client, never on the stored legacy key.
+        expect(probeCippCredentialsMock).toHaveBeenCalledTimes(1);
+        expect(probeCippCredentialsMock.mock.calls[0][0]).toMatchObject({ authType: 'api_client' });
+        // The one credential slot now holds the API client.
+        expect(saveEntraCippCredentialsMock).toHaveBeenCalledTimes(1);
+        expect(saveEntraCippCredentialsMock).toHaveBeenCalledWith(
+          'tenant-r',
+          expect.objectContaining({ authType: 'api_client', clientId: 'client-1', directoryId: 'dir-1' })
+        );
+        // The old (legacy) row is retired and a fresh CIPP row recorded.
+        expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ is_active: false, status: 'disconnected' }));
+        expect(insertMock).toHaveBeenCalledWith(
+          expect.objectContaining({ connection_type: 'cipp', status: 'connected', cipp_base_url: 'https://cipp.example.com' })
+        );
+        expect(JSON.stringify(insertMock.mock.calls)).not.toContain('legacy-key-VALUE');
+      });
+
+      it('leaves the legacy connection working when the API client fails its test', async () => {
+        getEntraCippCredentialsMock.mockResolvedValue(legacyOnRecord);
+        probeCippCredentialsMock.mockResolvedValue({
+          valid: false,
+          checkedAt: '2026-07-25T00:00:00.000Z',
+          error: 'CIPP refused the request from this address.',
+          code: 'ip_blocked',
+        });
+        const { knexMock, insertMock, updateMock } = buildKnexMock();
+        createTenantKnexMock.mockResolvedValue({ knex: knexMock });
+
+        const { connectEntraCipp } = await import(
+          '@alga-psa/integrations/actions/integrations/entraActions'
+        );
+        const result = await connectEntraCipp(
+          { user_id: 'user-r', user_type: 'internal' } as any,
+          { tenant: 'tenant-r' },
+          apiClient as any
+        );
+
+        expect(result).toMatchObject({ success: false, code: 'ip_blocked' });
+        expect(saveEntraCippCredentialsMock).not.toHaveBeenCalled();
+        expect(clearEntraCippCredentialsMock).not.toHaveBeenCalled();
+        expect(updateMock).not.toHaveBeenCalled();
+        expect(insertMock).not.toHaveBeenCalled();
+      });
+
+      it('puts the legacy key back, shape and all, when the swap fails', async () => {
+        getEntraCippCredentialsMock.mockResolvedValue(legacyOnRecord);
+        probeCippCredentialsMock.mockResolvedValue(passingProbe);
+        const { knexMock } = buildKnexMock();
+        knexMock.mockImplementation(() => ({
+          where: vi.fn().mockReturnThis(),
+          update: vi.fn(async () => 1),
+          insert: vi.fn(async () => {
+            throw new Error('deadlock detected');
+          }),
+        }));
+        createTenantKnexMock.mockResolvedValue({ knex: knexMock });
+
+        const { connectEntraCipp } = await import(
+          '@alga-psa/integrations/actions/integrations/entraActions'
+        );
+        const result = await connectEntraCipp(
+          { user_id: 'user-r', user_type: 'internal' } as any,
+          { tenant: 'tenant-r' },
+          apiClient as any
+        );
+
+        expect(result.success).toBe(false);
+        expect(saveEntraCippCredentialsMock).toHaveBeenLastCalledWith('tenant-r', legacyOnRecord);
+        expect(clearEntraCippCredentialsMock).not.toHaveBeenCalled();
+        expect(clearEntraDirectTokenSetMock).not.toHaveBeenCalled();
+      });
+    });
+
     it('rejects an API client missing its secret before any probe', async () => {
       const { connectEntraCipp } = await import(
         '@alga-psa/integrations/actions/integrations/entraActions'
