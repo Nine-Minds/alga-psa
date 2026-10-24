@@ -6,7 +6,7 @@ The [ticket-screen walkthrough](http://100.82.172.57:8874/) retains its October 
 
 ## Regenerate guide pages
 
-Render to a temporary directory first. The renderer validates the supplied revision against the coverage file, requires all 14 guide rows, and writes blocked JSON and WebVTT scaffolds without changing these source files or fabricating WebM files.
+Render to a temporary directory first. The renderer validates the supplied revision against the coverage file, requires all 14 guide rows, and writes completed recordings or blocked JSON and WebVTT scaffolds without changing these source files or fabricating WebM files.
 
 ```sh
 node docs/guides/co-managed-it/render.cjs /tmp/co-managed-guides \
@@ -15,6 +15,25 @@ node docs/guides/co-managed-it/render.cjs /tmp/co-managed-guides \
 ```
 
 The output contains the collection guide and 12 section guides. The main walkthrough is maintained in the review packet's root `index.html` and has its own recording artifacts.
+
+### Render a completed walkthrough
+
+Coverage rows may use `status: "complete"` after the product interaction has
+been recorded and checked in a browser. Set `testedRevision`, `recordedAt`,
+`durationSeconds`, `actors`, `steps`, `outcomes`, and `chapters`. Set both
+`playbackVerified` and `chapterSeekVerified` to `true`. `runtime` must identify
+the same `sourceRevision` (or `revision`), and `build.sourceRevision` must match
+the candidate. `recordingSourcePaths.webm` and `.chapterVtt` point to files
+relative to the coverage JSON. The renderer validates the WebM container and
+duration with `ffprobe`, checks the timed VTT chapters, copies the media to
+`recordingPaths`, and writes a player with chapter seeking.
+
+Blocked rows still need a blocker and a `missing` list. They must not claim a
+recording timestamp or verified playback/chapter seeking. To validate renderer
+behavior without product evidence, run `node --test
+docs/guides/co-managed-it/render.test.cjs`. That test creates a synthetic clip
+in a temporary directory. It is not a walkthrough and must not be added to
+acceptance evidence.
 
 ## Choose a section
 
