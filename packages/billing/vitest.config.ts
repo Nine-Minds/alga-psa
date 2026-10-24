@@ -27,6 +27,7 @@ export default defineConfig({
       'src/lib/prepaidBalanceAlerts.test.ts',
       'src/lib/contractRecurringShape.test.ts',
       'src/lib/taxRateApplicability.test.ts',
+      'src/lib/currency/rateInput.test.ts',
       'src/lib/billing/compute/**/*.test.ts',
       'src/lib/billing/pricing/**/*.test.ts',
       // Preview/generation consistency for scheduled recurring quantity/price
