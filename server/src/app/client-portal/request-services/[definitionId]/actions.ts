@@ -111,7 +111,7 @@ export const getRequestServiceVisibilityContextAction = withAuth(async (
   currentUser: IUserWithRoles,
   { tenant }: AuthContext
 ): Promise<{ requesterUserId: string; clientId: string; contactId: string | null } | null> => {
-  if (currentUser.user_type !== 'client') {
+  if (!isClientUserType(currentUser.user_type)) {
     return null;
   }
 
