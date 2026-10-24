@@ -47,8 +47,9 @@ vi.mock('@alga-psa/shared/billingClients/billingProfiles', () => ({
 vi.mock('@alga-psa/shared/billingClients/defaultContract', () => ({
   ensureDefaultContractForClientIfBillingConfigured: (...args: any[]) => defaultContract(...args),
 }));
-vi.mock('@alga-psa/shared/billingClients/taxSettings', () => ({
-  createDefaultTaxSettings: (...args: any[]) => taxSettings(...args),
+// Reached through the shared client-creation seam, which owns tax init.
+vi.mock('@alga-psa/shared/billingClients/defaultTaxRate', () => ({
+  initializeClientDefaultTax: (...args: any[]) => taxSettings(...args),
 }));
 vi.mock('@alga-psa/shared/rmm/moveRmmOrganizationAssets', () => ({
   moveRmmOrganizationAssets: (...args: any[]) => moveAssets(...args),
