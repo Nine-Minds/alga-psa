@@ -4167,13 +4167,16 @@
             "callControl": "Samtalsstyrning",
             "xapi": "Konfigurations-API",
             "lastChecked": "Senast kontrollerad",
-            "notConnectedHint": "Anslut PBX-API:et ovan för att använda funktionen."
+            "notConnectedHint": "Anslut PBX-API:et ovan för att använda funktionen.",
+            "usersBlocked": "3CX API-appens roll kan inte läsa användare. Ge den nödvändiga rättigheter i 3CX Admin Console > Integrations > API > (app) > Role.",
+            "contactsBlocked": "3CX API-appens roll kan inte hantera kontakter. Ge den nödvändiga rättigheter i 3CX Admin Console > Integrations > API > (app) > Role."
           },
           "extensions": {
             "title": "Anknytningar",
             "sync": "Synkronisera från PBX",
             "lastSync": "Senaste synkronisering",
             "empty": "Inga anknytningar har synkroniserats ännu.",
+            "emptyAfterSync": "3CX returnerade inga aktiverade användare; kontrollera API-appens behörigheter",
             "dn": "Anknytning",
             "pbxUser": "PBX-användare",
             "algaUser": "AlgaPSA-användare",

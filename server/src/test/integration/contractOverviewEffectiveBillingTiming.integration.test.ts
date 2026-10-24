@@ -99,12 +99,14 @@ async function withLegacyRows<T>(table: string, constraint: string, fn: (trx: Kn
   return result;
 }
 
+// Wizard actions report expected failures as `{ actionError }` / `{ permissionError }` values,
+// not throws; reject those too so a refused submission fails here, not as an undefined id later.
 const ok = <T,>(result: T): T => {
   expect(result, JSON.stringify(result)).toBeTruthy();
-  // Wizard actions report failures as { actionError } / { permissionError } values, not throws.
-  for (const key of ['error', 'actionError', 'permissionError']) {
-    expect(result, JSON.stringify(result)).not.toHaveProperty(key);
-  }
+  // Wizard actions report expected failures as values ({ actionError } / { permissionError }), not throws.
+  expect(result).not.toHaveProperty('error');
+  expect(result).not.toHaveProperty('actionError');
+  expect(result).not.toHaveProperty('permissionError');
   return result;
 };
 

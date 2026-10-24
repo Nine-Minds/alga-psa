@@ -4167,13 +4167,16 @@
             "callControl": "Sterowanie połączeniami",
             "xapi": "API konfiguracji",
             "lastChecked": "Ostatnie sprawdzenie",
-            "notConnectedHint": "Połącz API centrali powyżej, aby użyć tej funkcji."
+            "notConnectedHint": "Połącz API centrali powyżej, aby użyć tej funkcji.",
+            "usersBlocked": "Rola aplikacji API 3CX nie może odczytywać użytkowników. Nadaj jej potrzebne uprawnienia w 3CX Admin Console > Integrations > API > (app) > Role.",
+            "contactsBlocked": "Rola aplikacji API 3CX nie może zarządzać kontaktami. Nadaj jej potrzebne uprawnienia w 3CX Admin Console > Integrations > API > (app) > Role."
           },
           "extensions": {
             "title": "Numery wewnętrzne",
             "sync": "Synchronizuj z centrali",
             "lastSync": "Ostatnia synchronizacja",
             "empty": "Nie zsynchronizowano jeszcze numerów wewnętrznych.",
+            "emptyAfterSync": "3CX nie zwrócił włączonych użytkowników; sprawdź uprawnienia aplikacji API",
             "dn": "Numer wewnętrzny",
             "pbxUser": "Użytkownik centrali",
             "algaUser": "Użytkownik AlgaPSA",

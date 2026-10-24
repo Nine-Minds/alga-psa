@@ -4167,13 +4167,16 @@
             "callControl": "Controllo chiamate",
             "xapi": "API di configurazione",
             "lastChecked": "Ultimo controllo",
-            "notConnectedHint": "Collega l'API del centralino qui sopra per usare questa funzione."
+            "notConnectedHint": "Collega l'API del centralino qui sopra per usare questa funzione.",
+            "usersBlocked": "Il ruolo dell'app API di 3CX non può leggere gli utenti. Concedigli i diritti necessari in 3CX Admin Console > Integrations > API > (app) > Role.",
+            "contactsBlocked": "Il ruolo dell'app API di 3CX non può gestire i contatti. Concedigli i diritti necessari in 3CX Admin Console > Integrations > API > (app) > Role."
           },
           "extensions": {
             "title": "Interni",
             "sync": "Sincronizza dal centralino",
             "lastSync": "Ultima sincronizzazione",
             "empty": "Nessun interno sincronizzato finora.",
+            "emptyAfterSync": "3CX non ha restituito utenti abilitati; controlla i permessi dell'app API",
             "dn": "Interno",
             "pbxUser": "Utente del centralino",
             "algaUser": "Utente AlgaPSA",
