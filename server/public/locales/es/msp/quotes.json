@@ -630,6 +630,7 @@
       }
     },
     "sections": {
+      "carriedDiscounts": "Descuentos trasladados a las líneas de contrato",
       "contractItems": "Artículos del contrato",
       "conversionMode": "Modo de conversión",
       "excludedFromConversion": "Excluido de la conversión",
@@ -655,6 +656,7 @@
       "converted": "Convertido",
       "discount": "Descuento",
       "fixed": "fijado",
+      "monthlyTotal": "Total mensual después de descuentos",
       "notConverted": "No convertido"
     },
     "partial": {

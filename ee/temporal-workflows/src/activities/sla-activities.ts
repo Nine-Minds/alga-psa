@@ -93,34 +93,67 @@ export async function checkAndEscalate(input: {
 }): Promise<void> {
   const log = logger();
 
-  await withTenantTransaction(input.tenantId, async (trx) => {
-    const escalationLevel = await checkEscalationNeeded(
-      trx,
-      input.tenantId,
-      input.ticketId,
-      input.thresholdPercent
-    );
+  try {
+    await withTenantTransaction(input.tenantId, async (trx) => {
+      const escalationLevel = await checkEscalationNeeded(
+        trx,
+        input.tenantId,
+        input.ticketId,
+        input.thresholdPercent
+      );
 
-    if (!escalationLevel) {
-      log.info('No escalation needed', {
+      if (!escalationLevel) {
+        log.info('No escalation needed', {
+          ticketId: input.ticketId,
+          thresholdPercent: input.thresholdPercent,
+        });
+        return;
+      }
+
+      log.info('Escalating ticket', {
         ticketId: input.ticketId,
+        escalationLevel,
         thresholdPercent: input.thresholdPercent,
       });
-      return;
-    }
 
-    log.info('Escalating ticket', {
+      const result = await escalateTicket(trx, input.tenantId, input.ticketId, escalationLevel);
+
+      if (!result.success) {
+        // Throw inside the transaction callback so it rolls back and Temporal
+        // records the failure and retries. escalateTicket reports success=false
+        // only when nothing may be committed.
+        throw new Error(
+          `SLA escalation failed for ticket ${input.ticketId} (level ${escalationLevel}): ${result.error}`
+        );
+      }
+
+      if (result.error) {
+        // success=true with an error message is the "already at or above" no-op.
+        log.info('SLA escalation skipped (no-op)', {
+          ticketId: input.ticketId,
+          escalationLevel,
+          reason: result.error,
+        });
+        return;
+      }
+
+      log.info('SLA escalation completed', {
+        ticketId: input.ticketId,
+        escalationLevel,
+        managerId: result.managerId,
+        resourceAdded: result.resourceAdded,
+        notificationsSent: result.notificationsSent,
+      });
+    });
+  } catch (error) {
+    log.error('SLA escalation failed', {
       ticketId: input.ticketId,
-      escalationLevel,
+      phase: input.phase,
       thresholdPercent: input.thresholdPercent,
+      error,
     });
-
-    await escalateTicket(trx, input.tenantId, input.ticketId, escalationLevel);
-    log.info('SLA escalation completed', {
-      ticketId: input.ticketId,
-      escalationLevel,
-    });
-  });
+    throw error;
+  }
 }
 
 export async function updateSlaStatus(input: {

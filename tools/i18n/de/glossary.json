@@ -2347,6 +2347,8 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{from}} → {{to}}",
+      "RMA {{id}}",
       " (Standard)",
       "(optional)",
       "(Standard)",
@@ -2404,6 +2406,7 @@
       "Dashboard",
       "Dashboard | AlgaPSA",
       "Datto",
+      "Datto RMM",
       "Debug",
       "Designer",
       "Details",

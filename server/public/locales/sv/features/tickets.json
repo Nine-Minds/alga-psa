@@ -469,6 +469,14 @@
     "clientPortal": "Mottaget via kundportalen",
     "inboundEmail": "Mottaget via inkommande e-post"
   },
+  "originalEmail": {
+    "text": "Text",
+    "original": "Ursprungligt e-postmeddelande",
+    "emailShort": "E-post",
+    "loading": "Läser in det ursprungliga e-postmeddelandet…",
+    "error": "Det ursprungliga e-postmeddelandet kunde inte läsas in.",
+    "group": "Meddelandevisning"
+  },
   "documents": {
     "title": "Dokument",
     "noDocuments": "Inga bifogade dokument",

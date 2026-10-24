@@ -40,6 +40,7 @@ import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
 import type { CommentEmailRecipientsPayload } from "./CommentEmailRecipientsControl";
 import { TicketActivityTimeline } from "./TicketActivityTimeline";
+import { useInboundEmailViewPreference } from "../../hooks/useInboundEmailViewPreference";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import {
@@ -370,6 +371,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const { formatDate, locale, dateFormat } = useFormatters();
     const ticketLive = useTicketLiveContext();
     const { data: session } = useSession();
+    // Keeps the Text / Email choice on inbound-email bodies a stored per-user
+    // preference rather than per-message state.
+    useInboundEmailViewPreference();
     const [hasHydrated, setHasHydrated] = useState(false);
     const [canViewCommentMetadataDebug, setCanViewCommentMetadataDebug] = useState(
         bootstrap?.canViewCommentMetadataDebug ?? false,

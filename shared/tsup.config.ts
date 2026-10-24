@@ -95,10 +95,13 @@ export default defineConfig({
     'extensions/installs': 'extensions/installs.ts',
     'extensions/types': 'extensions/types.ts',
     'billingClients/resolveFixedLineRate': 'billingClients/resolveFixedLineRate.ts',
+    'billingClients/fixedMemberRate': 'billingClients/fixedMemberRate.ts',
     'billingClients/recurringUnitPricing': 'billingClients/recurringUnitPricing.ts',
     'billingClients/recurringUnitMidPeriodAdjustment': 'billingClients/recurringUnitMidPeriodAdjustment.ts',
     'billingClients/coverageProration': 'billingClients/coverageProration.ts',
     'billingClients/contractMonthlyValue': 'billingClients/contractMonthlyValue.ts',
+    'billingClients/quoteDiscountAllocation': 'billingClients/quoteDiscountAllocation.ts',
+    'billingClients/quoteConversionDiscounts': 'billingClients/quoteConversionDiscounts.ts',
     'billingClients/index': 'billingClients/index.ts',
     // packages/jobs runs vitest from its own root, so this resolves through the
     // exports map into dist/ rather than being transpiled from source the way
@@ -110,6 +113,7 @@ export default defineConfig({
     'billingClients/weightedBurn': 'billingClients/weightedBurn.ts',
     'billingClients/drawAdjustments': 'billingClients/drawAdjustments.ts',
     'billingClients/templateClone': 'billingClients/templateClone.ts',
+    'billingClients/templateAmounts': 'billingClients/templateAmounts.ts',
     'billingClients/ticketProjectAttribution': 'billingClients/ticketProjectAttribution.ts',
     'billingClients/renewalTicket': 'billingClients/renewalTicket.ts',
     'lib/quoteTerms': 'lib/quoteTerms.ts',

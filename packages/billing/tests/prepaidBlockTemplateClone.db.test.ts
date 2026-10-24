@@ -31,6 +31,9 @@ vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }
 const repo = enabled ? await import('../src/repositories/contractLineRepository') : (null as any);
 const legacyBilling = enabled ? await import('../src/lib/billing/utils/templateClone') : (null as any);
 const legacyShared = enabled ? await import('@alga-psa/shared/billingClients/templateClone') : (null as any);
+// The legacy clones take their amounts from the resolver instead of copying
+// template amount columns, so every caller resolves them for the target contract.
+const templateAmounts = enabled ? await import('@alga-psa/shared/billingClients/templateAmounts') : (null as any);
 const mappingActions = enabled ? await import('../src/actions/contractLineMappingActions') : (null as any);
 const configService = enabled ? await import('../src/services/prepaidBlockConfigService') : (null as any);
 
@@ -59,7 +62,9 @@ describe.runIf(enabled)('Prepaid Block config through template clone and snapsho
   async function seedTemplateLine(withBlock = true, withHourlyConfig = true) {
     const templateId = uuidv4();
     const templateLineId = uuidv4();
-    await db('contract_templates').insert({ tenant, template_id: templateId, template_name: `Tpl ${templateId.slice(0, 6)}` });
+    // Base currency matches the contracts below (newContract defaults to EUR),
+    // so cloning reads the template's own amounts.
+    await db('contract_templates').insert({ tenant, template_id: templateId, template_name: `Tpl ${templateId.slice(0, 6)}`, currency_code: 'EUR' });
     await db('contract_template_lines').insert({
       tenant, template_line_id: templateLineId, template_id: templateId, template_line_name: 'Prepaid Block', line_type: 'Hourly',
     });
@@ -157,8 +162,10 @@ describe.runIf(enabled)('Prepaid Block config through template clone and snapsho
     await db('contract_lines').insert({
       tenant, contract_line_id: contractLineId, contract_id: contractId, contract_line_name: 'Legacy clone', contract_line_type: 'Hourly',
     });
-    await db.transaction((trx) =>
-      getFn()(trx, { tenant, templateContractLineId: templateLineId, contractLineId, templateContractId: templateId }));
+    await db.transaction(async (trx) => {
+      const amounts = await templateAmounts.resolveTemplateAmountsForContract(trx, tenant, templateId, contractId);
+      return getFn()(trx, { tenant, templateContractLineId: templateLineId, contractLineId, templateContractId: templateId, amounts });
+    });
     expectCarried(await blockRow(contractLineId));
   });
 
@@ -175,8 +182,10 @@ describe.runIf(enabled)('Prepaid Block config through template clone and snapsho
     await db('contract_lines').insert({
       tenant, contract_line_id: contractLineId, contract_id: contractId, contract_line_name: 'Fallback', contract_line_type: 'Hourly',
     });
-    await db.transaction((trx) =>
-      legacyShared.cloneTemplateContractLine(trx, { tenant, templateContractLineId: templateLineId, contractLineId, templateContractId: templateId }));
+    await db.transaction(async (trx) => {
+      const amounts = await templateAmounts.resolveTemplateAmountsForContract(trx, tenant, templateId, contractId);
+      return legacyShared.cloneTemplateContractLine(trx, { tenant, templateContractLineId: templateLineId, contractLineId, templateContractId: templateId, amounts });
+    });
     expect((await blockRow(contractLineId)).sold_as_service_id).toBe(svcA); // first by template display order
   });
 
@@ -198,7 +207,9 @@ describe.runIf(enabled)('Prepaid Block config through template clone and snapsho
 
   async function newTemplate() {
     const templateId = uuidv4();
-    await db('contract_templates').insert({ tenant, template_id: templateId, template_name: `Snap ${templateId.slice(0, 6)}` });
+    // The snapshot source lines live on EUR contracts, and a live line may only
+    // be snapshotted into a template whose base currency is the same.
+    await db('contract_templates').insert({ tenant, template_id: templateId, template_name: `Snap ${templateId.slice(0, 6)}`, currency_code: 'EUR' });
     return templateId;
   }
 

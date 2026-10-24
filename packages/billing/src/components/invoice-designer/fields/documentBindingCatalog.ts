@@ -88,6 +88,11 @@ const ITEM_FIELDS: Record<DesignerDocumentKind, DocumentItemField[]> = {
       valueType: 'string',
       description: 'Line item recurring service period end date when available.',
     },
+    {
+      name: 'servicePeriodLabel',
+      valueType: 'string',
+      description: 'Line item recurring service period as a date range; blank for one-time lines.',
+    },
     { name: 'billingTiming', valueType: 'string', description: 'Line item billing timing when available.' },
   ],
   quote: [
@@ -174,13 +179,6 @@ const buildDocumentBindingFields = (documentKind: DesignerDocumentKind): Documen
       // `invoice.number` is the path shipped templates and the field catalog already use.
       leafOverrides: { invoiceNumber: 'number' },
     }),
-    // On every invoice render model, but with no built-in binding to generate from.
-    {
-      path: 'invoice.currencyCode',
-      renderPath: 'currencyCode',
-      valueType: 'string',
-      description: 'Data path: currencyCode',
-    },
   ];
 };
 

@@ -33,6 +33,10 @@
       "types": "./src/lib/catalog/serviceCatalogPricing.ts",
       "import": "./dist/lib/catalog/serviceCatalogPricing.mjs"
     },
+    "./lib/payments/invoicePaymentUrls": {
+      "types": "./src/lib/payments/invoicePaymentUrls.ts",
+      "import": "./dist/lib/payments/invoicePaymentUrls.mjs"
+    },
     "./services": {
       "types": "./src/services/index.ts",
       "import": "./dist/services/index.mjs"
@@ -62,6 +66,7 @@
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
     "@alga-psa/event-bus": "*",
+    "@alga-psa/event-schemas": "*",
     "@alga-psa/integrations": "*",
     "@alga-psa/validation": "*",
     "@alga-psa/workflow-streams": "*",
