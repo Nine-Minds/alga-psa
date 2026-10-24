@@ -1163,6 +1163,7 @@ async function simulateFixedCharges(
         ? (service.configuration_quantity ?? service.quantity)
         : service.quantity,
       service_base_rate: service.configuration.base_rate,
+      base_rate_basis: service.configuration.base_rate_basis ?? null,
       pricing_basis: isUnit(service) ? "unit" : null,
     };
   });
@@ -1198,6 +1199,7 @@ async function simulateFixedCharges(
         configurationId: service.config_id,
         configurationQuantity: service.configuration_quantity,
         baseRate: service.service_base_rate,
+        baseRateBasis: service.base_rate_basis,
         pricingBasis: service.pricing_basis,
       })),
       // The scenario carries the full service list; there is no separate

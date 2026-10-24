@@ -85,6 +85,11 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/tickets/ticket-123/live-token')).toBe(true);
   });
 
+  it('allows the ticket original-email view to use session auth', () => {
+    expect(shouldSkipApiKeyAuth('/api/tickets/ticket-123/email-html')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/tickets/ticket-123/comments')).toBe(false);
+  });
+
   it('allows the Level.io webhook route (X-Alga-Webhook-Secret authenticated in-route)', () => {
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio/')).toBe(true);
@@ -95,6 +100,18 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio-extra')).toBe(false);
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio.more')).toBe(false);
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio/malicious')).toBe(false);
+  });
+
+  it('allows the Datto RMM webhook route (X-Alga-Webhook-Secret authenticated in-route)', () => {
+    expect(shouldSkipApiKeyAuth('/api/webhooks/datto')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/datto/')).toBe(true);
+  });
+
+  it('exempts the Datto RMM route exactly, never a prefixed or deeper sibling', () => {
+    expect(shouldSkipApiKeyAuth('/api/webhooks/dattoevil')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/datto-extra')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/datto/x')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/datto/malicious')).toBe(false);
   });
 
   it('keeps sibling RMM + payment webhook routes and unrelated APIs gated', () => {

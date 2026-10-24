@@ -280,6 +280,7 @@ export async function POST(req: NextRequest) {
     amount,
     provider: PROVIDER,
     referenceNumber: extractReferenceNumber(payload, eventId),
+    source: 'online_payment',
     currency: extractCurrency(payload),
     paymentDate: new Date(),
     notes: `Alternative Payments webhook ${eventId}`,

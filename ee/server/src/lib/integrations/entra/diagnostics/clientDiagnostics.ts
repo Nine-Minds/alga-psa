@@ -756,7 +756,10 @@ async function runCippClient(options: {
           data: { sampledUserCount: users.length, bounded: true },
         };
       } catch (error: any) {
-        const isCredential = error?.code === 'credential-rejected';
+        // API-client failures carry a `reason` and an already-specific
+        // message (allowlist, role, token mint); only the legacy key
+        // rejection gets the "rotate the key" text.
+        const isCredential = error?.code === 'credential-rejected' && !error?.reason;
         const rec: DiagnosticsRecommendation = isCredential
           ? {
               code: 'cipp_auth_rejected',
@@ -764,12 +767,20 @@ async function runCippClient(options: {
               text: 'CIPP rejected the API credential for this tenant. Rotate the CIPP API key from Settings > CIPP > API access; this is not an Azure client secret.',
               messageKey: 'cippAuthRejected',
             }
-          : {
-              code: 'cipp_per_tenant_failed',
-              severity: 'fail',
-              text: error?.message || 'CIPP could not read this tenant directory.',
-              messageKey: 'cippPerTenantFailed',
-            };
+          : error?.reason
+            ? {
+                // Specific API-client message; a messageKey would let the
+                // generic locale string override it in the UI.
+                code: 'cipp_per_tenant_failed',
+                severity: 'fail',
+                text: error.message || 'CIPP could not read this tenant directory.',
+              }
+            : {
+                code: 'cipp_per_tenant_failed',
+                severity: 'fail',
+                text: error?.message || 'CIPP could not read this tenant directory.',
+                messageKey: 'cippPerTenantFailed',
+              };
         recState.recommendations.push(rec);
         return { status: 'fail' as const, error: { message: rec.text, code: error?.code }, recommendations: [rec] };
       }

@@ -13,6 +13,10 @@ import { IService } from 'server/src/interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { cloneTemplateContractLine } from '@alga-psa/billing/lib/billing/utils/templateClone';
 import {
+  legacyCloneAmountReader,
+  resolveTemplateAmountsForContract,
+} from '@alga-psa/shared/billingClients/templateAmounts';
+import {
   upsertContractLinePrepaidBlockInTransaction,
   removeContractLinePrepaidBlockInTransaction,
 } from '@alga-psa/billing/services/prepaidBlockConfigService';
@@ -762,12 +766,16 @@ export class ContractLineService extends BaseService<IContractLine> {
             throw new ValidationError('custom_rate and type_config.base_rate disagree; provide the unit rate once');
           }
           const unitRate = explicitBaseRate ?? data.custom_rate ?? null;
-          typeConfig = { ...requestedTypeConfig, pricing_basis: 'unit', base_rate: unitRate };
+          typeConfig = { ...requestedTypeConfig, pricing_basis: 'unit', base_rate: unitRate, base_rate_basis: 'per_unit' };
           // A second, conflicting price on the base configuration would be
           // ambiguous; the per-unit rate is the only price.
           customRate = undefined;
         } else if (pricingBasis !== undefined && pricingBasis !== 'bundle') {
           throw new ValidationError(`Unsupported pricing basis: ${pricingBasis}`);
+        } else if (configurationType === 'Fixed' && typeConfig.base_rate != null && typeConfig.base_rate_basis == null) {
+          // A bundle member's stored rate must state its meaning. The API's
+          // documented sense of base_rate is the unit rate.
+          typeConfig = { ...typeConfig, base_rate_basis: 'per_unit' };
         }
 
         if (configurationType === 'Fixed') {
@@ -884,6 +892,10 @@ export class ContractLineService extends BaseService<IContractLine> {
           typeConfig = restTypeConfig;
           // custom_rate is the unit-rate alias for a per-unit service (see addServiceToPlan).
           const isUnit = isUnitFixedService({ pricing_basis: storedBasis });
+          if (typeConfig.base_rate != null && typeConfig.base_rate_basis == null && !fixed?.base_rate_basis) {
+            // Nothing stored and nothing stated: the API's documented unit-rate sense.
+            typeConfig = { ...typeConfig, base_rate_basis: 'per_unit' };
+          }
           if (isUnit && typeConfig.base_rate != null && data.custom_rate != null && typeConfig.base_rate !== data.custom_rate) {
             throw new ValidationError('custom_rate and type_config.base_rate disagree; provide the unit rate once');
           }
@@ -1294,6 +1306,16 @@ export class ContractLineService extends BaseService<IContractLine> {
         cadence_owner: templateLine.cadence_owner,
       }, templateLine.contract_line_type);
       const newContractLineId = uuidv4();
+      // The template's amounts in the TARGET contract's currency. The template
+      // line's own custom_rate / overtime_rate columns are in the template's
+      // currency and are never copied onto the contract line.
+      const templateAmounts = await resolveTemplateAmountsForContract(
+        trx,
+        context.tenant,
+        templateContractId,
+        targetContractId,
+      );
+      const templateAmountReader = legacyCloneAmountReader(templateAmounts, data.contract_line_id);
       const contractLineData = await this.addCreateAuditFields(trx, {
         contract_line_id: newContractLineId,
         contract_id: targetContractId,
@@ -1306,11 +1328,11 @@ export class ContractLineService extends BaseService<IContractLine> {
         cadence_owner: templateRecurringStorage.cadence_owner,
         is_active: data.is_active ?? true,
         is_custom: false,
-        custom_rate: data.custom_rate ?? templateLine.custom_rate,
+        custom_rate: data.custom_rate ?? templateAmountReader.lineRate(),
         display_order: templateLine.display_order ?? 0,
         enable_proration: templateLine.enable_proration,
         enable_overtime: templateLine.enable_overtime,
-        overtime_rate: templateLine.overtime_rate,
+        overtime_rate: templateAmountReader.lineOvertimeRate(),
         overtime_threshold: templateLine.overtime_threshold,
         enable_after_hours_rate: templateLine.enable_after_hours_rate,
         after_hours_multiplier: templateLine.after_hours_multiplier,
@@ -1328,7 +1350,8 @@ export class ContractLineService extends BaseService<IContractLine> {
         contractLineId: newContractLineId,
         templateContractId,
         overrideRate: data.custom_rate ?? null,
-        effectiveDate: data.start_date
+        effectiveDate: data.start_date,
+        amounts: templateAmounts,
       });
 
       // Return response in legacy format for backwards compatibility
@@ -2246,7 +2269,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       // A per-unit service must stay per-unit in the copy: without its fixed
       // config it would be re-created as a bundle allocation and the seats
       // would silently stop billing.
-      let typeConfig: { pricing_basis: 'unit'; base_rate: number | null } | undefined;
+      let typeConfig: { pricing_basis: 'unit'; base_rate: number | null; base_rate_basis: 'per_unit' } | undefined;
       if (sourceService.configuration_type === 'Fixed') {
         const sourceFixed = await tenantDb(trx, context.tenant).table('contract_line_service_fixed_config')
           .where('config_id', sourceService.config_id)
@@ -2255,6 +2278,7 @@ export class ContractLineService extends BaseService<IContractLine> {
           const sourceRate = sourceFixed.base_rate == null ? null : Number(sourceFixed.base_rate);
           typeConfig = {
             pricing_basis: 'unit',
+            base_rate_basis: 'per_unit',
             base_rate: sourceRate === null ? null : Math.round(modifyRates ? adjust(sourceRate) : sourceRate),
           };
         }
