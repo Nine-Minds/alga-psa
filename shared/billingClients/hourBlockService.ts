@@ -273,9 +273,13 @@ export interface ContractLineCoverageRow {
  * 'when_assigned'. Lines that follow each other in time stay 'automatic'.
  * Output is sorted by service, contract and line name.
  *
- * `excludeContractLineId` drops one line from the classification. A block
- * issued BY a Prepaid Block line must not warn that the line's own time "will
- * not draw this block" — that time draws it (the contract burn target).
+ * `excludeContractLineId` hides one line from the returned `lines` only: a
+ * block issued BY a Prepaid Block line must not warn that the line's own time
+ * "will not draw this block" — that time draws it (the contract burn target).
+ * The overlap check still sees the excluded line, because un-assigned time on
+ * a service it shares with another line splits between the two, which keeps
+ * the service 'when_assigned'. A service with no lines left after the
+ * exclusion is dropped from the output.
  */
 export function classifyContractLineCoverage(
   rows: ContractLineCoverageRow[],
@@ -284,7 +288,6 @@ export function classifyContractLineCoverage(
 ): ServiceContractLineCoverage[] {
   const byService = new Map<string, { name: string; lines: Map<string, ContractLineCoverageLine> }>();
   for (const row of rows) {
-    if (excludeContractLineId && row.contract_line_id === excludeContractLineId) continue;
     const start = toDateOnly(row.start_date);
     if (!start) continue;
     const end = toDateOnly(row.end_date ?? null);
@@ -331,11 +334,17 @@ export function classifyContractLineCoverage(
         }
       }
     }
+    // The issuing line is never named as a covering line, but it has already
+    // been weighed in `overlap` above.
+    const displayed = excludeContractLineId
+      ? lines.filter((l) => l.contract_line_id !== excludeContractLineId)
+      : lines;
+    if (displayed.length === 0) continue;
     result.push({
       service_id: serviceId,
       service_name: entry.name,
       assignment: overlap ? 'when_assigned' : 'automatic',
-      lines,
+      lines: displayed,
     });
   }
   return result.sort(
