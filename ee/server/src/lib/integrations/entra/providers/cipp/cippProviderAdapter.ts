@@ -135,6 +135,7 @@ export type CippTenantProbeOutcome =
   | 'auth_rejected'
   | 'http_error'
   | 'invalid_payload'
+  | 'html_response'
   | 'unreachable';
 
 export interface CippTenantProbe {
@@ -445,7 +446,7 @@ export class CippProviderAdapter implements EntraProviderAdapter {
         const response = await this.authenticatedGet(tenant, credentials, url);
         if (isApiClientProbe && looksLikeHtml(response.headers?.['content-type'], response.data)) {
           return {
-            outcome: 'invalid_payload',
+            outcome: 'html_response',
             reachable: true,
             authRejected: false,
             endpoint: url,
@@ -488,7 +489,7 @@ export class CippProviderAdapter implements EntraProviderAdapter {
           if (isApiClientProbe
             && looksLikeHtml(error.response?.headers?.['content-type'], error.response?.data)) {
             return {
-              outcome: 'invalid_payload',
+              outcome: 'html_response',
               reachable: true,
               authRejected: false,
               endpoint: url,

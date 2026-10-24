@@ -248,6 +248,22 @@ describe('CippProviderAdapter with an API-client credential', () => {
     expect(notFound.reason).toBe('html-response');
   });
 
+  it('probeTenantList reports HTML as html_response, not invalid_payload', async () => {
+    sequencedTokens();
+    hoisted.get.mockResolvedValueOnce({
+      data: '<!DOCTYPE html><html></html>',
+      headers: { 'content-type': 'text/html' },
+      status: 200,
+    });
+    const ok = await new CippProviderAdapter().probeTenantList('tenant-1');
+    expect(ok.outcome).toBe('html_response');
+    expect(ok.error).toMatch(/missing \/api or points at the wrong host/);
+
+    hoisted.get.mockRejectedValueOnce(axiosError(404, '<html></html>', { 'content-type': 'text/html' }));
+    const failed = await new CippProviderAdapter().probeTenantList('tenant-1');
+    expect(failed.outcome).toBe('html_response');
+  });
+
   it('does not treat HTML as a wrong URL for a legacy credential (behaviour unchanged)', async () => {
     hoisted.creds = LEGACY;
     hoisted.get.mockResolvedValueOnce({ data: '<!DOCTYPE html>', headers: { 'content-type': 'text/html' }, status: 200 });

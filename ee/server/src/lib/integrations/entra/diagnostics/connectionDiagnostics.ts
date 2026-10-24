@@ -32,6 +32,7 @@ import {
 import { createDirectProviderAdapter } from '../providers/direct/directProviderAdapter';
 import { CippProviderAdapter, type CippTenantProbe } from '../providers/cipp/cippProviderAdapter';
 import { getEntraCippCredentials } from '../providers/cipp/cippSecretStore';
+import { cippHtmlResponseMessage } from '../providers/cipp/cippFailureMessages';
 import { getCippTokenService, isCippApiClientCredentials, isCippTokenError } from '../providers/cipp/cippTokenService';
 import { listConfirmedEntraMappings } from '../mapping/confirmedMappingsService';
 import { getEntraSyncSchedule } from '../scheduleService';
@@ -1176,6 +1177,27 @@ export async function runEntraConnectionDiagnostics(
           recommendations: [rec],
         };
       }
+      if (cippProbe.outcome === 'html_response') {
+        // Must precede invalid_payload: the generic "not a tenant list" text
+        // hides the actionable "API URL is missing /api" remedy.
+        const rec: DiagnosticsRecommendation = {
+          code: 'cipp_html_response',
+          severity: 'fail',
+          text: cippProbe.error ?? cippHtmlResponseMessage(),
+        };
+        collect([rec]);
+        return {
+          status: 'fail' as const,
+          data: {
+            attemptedEndpoints: cippProbe.attempted,
+            answeringEndpoint: cippProbe.endpoint,
+            status: cippProbe.status,
+            htmlResponse: true,
+          },
+          error: { message: rec.text, status: cippProbe.status },
+          recommendations: [rec],
+        };
+      }
       if (cippProbe.outcome === 'invalid_payload') {
         const rec: DiagnosticsRecommendation = {
           code: 'cipp_invalid_payload',
@@ -1234,13 +1256,20 @@ export async function runEntraConnectionDiagnostics(
       // For an API client the probe carries its own, more specific wording
       // (allowlist 403 vs rejected token); the legacy text names an API key
       // that such a connection does not have.
-      const rec: DiagnosticsRecommendation = {
-        code: 'cipp_auth_rejected',
-        severity: 'fail',
-        text: cippProbe.error
-          ?? 'CIPP rejected the API credential. Rotate it from the Connection tab. This is the CIPP API key from Settings > CIPP > API access in CIPP itself, not an Azure client secret.',
-        messageKey: 'cippAuthRejected',
-      };
+      // An API-client probe error is the specific text; it must not carry the
+      // legacy messageKey, whose locale string would override it in the UI.
+      const rec: DiagnosticsRecommendation = cippProbe.error
+        ? {
+            code: 'cipp_auth_rejected',
+            severity: 'fail',
+            text: cippProbe.error,
+          }
+        : {
+            code: 'cipp_auth_rejected',
+            severity: 'fail',
+            text: 'CIPP rejected the API credential. Rotate it from the Connection tab. This is the CIPP API key from Settings > CIPP > API access in CIPP itself, not an Azure client secret.',
+            messageKey: 'cippAuthRejected',
+          };
       collect([rec]);
       return {
         status: 'fail' as const,

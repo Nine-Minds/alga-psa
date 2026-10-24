@@ -187,6 +187,41 @@ describe('CIPP connection diagnostics outcomes', () => {
     expect(report.recommendations.some((r) => r.code === 'cipp_invalid_payload')).toBe(true);
   });
 
+  it('emits the API-client IP-block text without the legacy messageKey', async () => {
+    const text = 'CIPP refused the tenant list (listtenants) with HTTP 403. This usually means our egress IP is not in the API client\'s allowlist.';
+    hoisted.probe = { ...hoisted.probe, outcome: 'auth_rejected', authRejected: true, status: 403, error: text, tenants: [] };
+    const report = await runEntraConnectionDiagnostics('tenant-1', { includeIdentifiers: true });
+    const rec = report.recommendations.find((r) => r.code === 'cipp_auth_rejected');
+    expect(rec?.text).toBe(text);
+    expect(rec?.messageKey).toBeUndefined();
+  });
+
+  it('keeps the legacy cippAuthRejected key and text when the probe carries no error', async () => {
+    hoisted.probe = { ...hoisted.probe, outcome: 'auth_rejected', authRejected: true, status: 401, tenants: [] };
+    const report = await runEntraConnectionDiagnostics('tenant-1', { includeIdentifiers: true });
+    const rec = report.recommendations.find((r) => r.code === 'cipp_auth_rejected');
+    expect(rec?.messageKey).toBe('cippAuthRejected');
+    expect(rec?.text).toMatch(/not an Azure client secret/);
+  });
+
+  it('reports an HTML response under cipp_html_response, not cipp_invalid_payload', async () => {
+    hoisted.probe = {
+      ...hoisted.probe,
+      outcome: 'html_response',
+      status: 200,
+      error: 'CIPP answered with a web page instead of API data: the API URL is missing /api or points at the wrong host.',
+      tenants: [],
+    };
+    const report = await runEntraConnectionDiagnostics('tenant-1', { includeIdentifiers: true });
+    const steps = stepsById(report);
+    expect(steps.cipp_reachable.status).toBe('fail');
+    expect(steps.cipp_tenant_list.status).toBe('skip');
+    const rec = report.recommendations.find((r) => r.code === 'cipp_html_response');
+    expect(rec?.text).toMatch(/missing \/api or points at the wrong host/);
+    expect(rec?.messageKey).toBeUndefined();
+    expect(report.recommendations.some((r) => r.code === 'cipp_invalid_payload')).toBe(false);
+  });
+
   it('fails reachability on timeout/DNS', async () => {
     hoisted.probe = { ...hoisted.probe, outcome: 'unreachable', reachable: false, networkCode: 'ETIMEDOUT', tenants: [] };
     const report = await runEntraConnectionDiagnostics('tenant-1', { includeIdentifiers: true });

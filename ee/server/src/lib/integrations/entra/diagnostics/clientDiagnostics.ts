@@ -767,12 +767,20 @@ async function runCippClient(options: {
               text: 'CIPP rejected the API credential for this tenant. Rotate the CIPP API key from Settings > CIPP > API access; this is not an Azure client secret.',
               messageKey: 'cippAuthRejected',
             }
-          : {
-              code: 'cipp_per_tenant_failed',
-              severity: 'fail',
-              text: error?.message || 'CIPP could not read this tenant directory.',
-              messageKey: 'cippPerTenantFailed',
-            };
+          : error?.reason
+            ? {
+                // Specific API-client message; a messageKey would let the
+                // generic locale string override it in the UI.
+                code: 'cipp_per_tenant_failed',
+                severity: 'fail',
+                text: error.message || 'CIPP could not read this tenant directory.',
+              }
+            : {
+                code: 'cipp_per_tenant_failed',
+                severity: 'fail',
+                text: error?.message || 'CIPP could not read this tenant directory.',
+                messageKey: 'cippPerTenantFailed',
+              };
         recState.recommendations.push(rec);
         return { status: 'fail' as const, error: { message: rec.text, code: error?.code }, recommendations: [rec] };
       }
