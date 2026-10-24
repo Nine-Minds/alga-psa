@@ -1463,7 +1463,7 @@
       },
       "paymentConfirmations": {
         "label": "Wysyłaj wiadomości potwierdzające płatność",
-        "description": "Wysyłaj potwierdzenie e-mailem do kontaktu rozliczeniowego klienta po otrzymaniu płatności online."
+        "description": "Wysyłaj klientom wiadomość e-mail po otrzymaniu płatności"
       },
       "paymentLinkExpiration": {
         "label": "Wygaśnięcie linku płatności",

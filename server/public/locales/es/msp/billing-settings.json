@@ -1461,7 +1461,7 @@
       },
       "paymentConfirmations": {
         "label": "Enviar correos de confirmación de pago",
-        "description": "Enviar un recibo por correo al contacto de facturación del cliente cuando se reciba un pago en línea."
+        "description": "Notificar a los clientes por correo cuando se reciba su pago"
       },
       "paymentLinkExpiration": {
         "label": "Expiración del enlace de pago",

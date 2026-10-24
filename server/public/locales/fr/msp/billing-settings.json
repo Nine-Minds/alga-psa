@@ -1461,7 +1461,7 @@
       },
       "paymentConfirmations": {
         "label": "Envoyer des e-mails de confirmation de paiement",
-        "description": "Envoyer un reçu par e-mail au contact de facturation du client lorsqu'un paiement en ligne est reçu."
+        "description": "Envoyer un e-mail aux clients lorsque leur paiement est reçu"
       },
       "paymentLinkExpiration": {
         "label": "Expiration du lien de paiement",

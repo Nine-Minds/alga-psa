@@ -11,7 +11,6 @@
 
 import { Knex } from 'knex';
 import { mergePaymentSettings } from '@alga-psa/types';
-import type { PaymentReceiptSender } from '@alga-psa/email';
 import { getConnection, tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import {
@@ -74,21 +73,13 @@ interface ClientData {
   billing_location_email?: string;
 }
 
-// Loaded lazily so the email package (and its provider graph) is only pulled in when a receipt is actually sent.
-const defaultReceiptSender: PaymentReceiptSender = async (params) => {
-  const { sendPaymentReceiptEmail } = await import('@alga-psa/email');
-  return sendPaymentReceiptEmail(params);
-};
-
 export class PaymentService {
   private tenantId: string;
   private knex!: Knex;
   private provider: PaymentProvider | null = null;
-  private receiptSender: PaymentReceiptSender;
 
-  private constructor(tenantId: string, receiptSender?: PaymentReceiptSender) {
+  private constructor(tenantId: string) {
     this.tenantId = tenantId;
-    this.receiptSender = receiptSender ?? defaultReceiptSender;
   }
 
   private tenantTable<Row extends object>(tableExpression: string): Knex.QueryBuilder<Row, Row[]> {
@@ -98,11 +89,8 @@ export class PaymentService {
   /**
    * Creates a PaymentService instance for a tenant.
    */
-  static async create(
-    tenantId: string,
-    options: { receiptSender?: PaymentReceiptSender } = {}
-  ): Promise<PaymentService> {
-    const service = new PaymentService(tenantId, options.receiptSender);
+  static async create(tenantId: string): Promise<PaymentService> {
+    const service = new PaymentService(tenantId);
     service.knex = await getConnection();
 
     // Initialize provider if configured
@@ -814,10 +802,6 @@ export class PaymentService {
       newStatus: recordResult.newStatus,
     });
 
-    // The AR transaction has committed and this event is newly recorded (replays
-    // returned above), so this is the only place a receipt can be sent once.
-    await this.sendPaymentReceipt(event, invoice);
-
     const occurredAt = new Date().toISOString();
     await publishWorkflowEvent({
       eventType: 'PAYMENT_RECORDED',
@@ -859,50 +843,6 @@ export class PaymentService {
       paymentId,
       invoiceId: event.invoiceId,
     };
-  }
-
-  /**
-   * Emails a receipt to the client's billing contact when the tenant has
-   * "Send payment confirmations" on. Never throws: webhook processing must not
-   * fail (and be retried by the provider) because of email.
-   */
-  private async sendPaymentReceipt(event: PaymentWebhookEvent, invoice: InvoiceData): Promise<void> {
-    try {
-      const settings = await this.getPaymentSettings();
-      if (!settings.sendPaymentConfirmations) {
-        return;
-      }
-
-      const client = await this.getClient(invoice.client_id, invoice.billing_profile_id ?? null);
-      if (!client?.billing_location_email) {
-        logger.warn('[PaymentService] Skipping payment receipt: no billing email for client', {
-          tenantId: this.tenantId,
-          invoiceId: invoice.invoice_id,
-          clientId: invoice.client_id,
-        });
-        return;
-      }
-
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      await this.receiptSender({
-        tenant: this.tenantId,
-        email: client.billing_location_email,
-        clientId: client.client_id,
-        clientName: client.client_name,
-        invoiceNumber: invoice.invoice_number,
-        amountMinor: event.amount!,
-        currency: String(invoice.currency_code || event.currency || 'USD'),
-        paymentDate: new Date(),
-        paymentMethod: event.provider === 'stripe' ? 'Stripe' : String(event.provider),
-        invoiceUrl: `${baseUrl}/client-portal/billing?tab=invoices&invoiceId=${encodeURIComponent(invoice.invoice_id)}`,
-      });
-    } catch (error) {
-      logger.error('[PaymentService] Failed to send payment receipt email', {
-        tenantId: this.tenantId,
-        invoiceId: invoice.invoice_id,
-        error,
-      });
-    }
   }
 
   /**

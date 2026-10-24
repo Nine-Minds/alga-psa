@@ -1498,7 +1498,7 @@
       },
       "paymentConfirmations": {
         "label": "Send Payment Confirmation Emails",
-        "description": "Email a receipt to the client's billing contact when an online payment is received."
+        "description": "Email customers when their payment is received"
       },
       "paymentLinkExpiration": {
         "label": "Payment Link Expiration",

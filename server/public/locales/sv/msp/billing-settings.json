@@ -1515,7 +1515,7 @@
       },
       "paymentConfirmations": {
         "label": "Skicka betalningsbekräftelser via e-post",
-        "description": "Skicka ett kvitto via e-post till kundens faktureringskontakt när en onlinebetalning tas emot."
+        "description": "Skicka e-post till kunder när deras betalning har tagits emot"
       },
       "paymentLinkExpiration": {
         "label": "Giltighetstid för betalningslänkar",

@@ -1461,7 +1461,7 @@
       },
       "paymentConfirmations": {
         "label": "Betalingsbevestigingsmails verzenden",
-        "description": "Stuur een ontvangstbewijs per e-mail naar de factuurcontactpersoon van de klant wanneer een online betaling is ontvangen."
+        "description": "E-mail klanten wanneer hun betaling is ontvangen"
       },
       "paymentLinkExpiration": {
         "label": "Vervaldatum betaallink",

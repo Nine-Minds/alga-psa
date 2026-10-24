@@ -1461,7 +1461,7 @@
       },
       "paymentConfirmations": {
         "label": "Invia email di conferma pagamento",
-        "description": "Invia una ricevuta via email al contatto di fatturazione del cliente quando viene ricevuto un pagamento online."
+        "description": "Invia un'email ai clienti quando viene ricevuto il loro pagamento"
       },
       "paymentLinkExpiration": {
         "label": "Scadenza dei link di pagamento",

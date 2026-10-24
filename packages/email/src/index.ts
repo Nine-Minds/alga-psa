@@ -58,8 +58,6 @@ export {
 // Individual email sending functions
 export { sendPasswordResetEmail } from './sendPasswordResetEmail';
 export { sendPortalInvitationEmail } from './sendPortalInvitationEmail';
-export { sendPaymentReceiptEmail } from './sendPaymentReceiptEmail';
-export type { SendPaymentReceiptEmailParams, PaymentReceiptSender } from './sendPaymentReceiptEmail';
 export { sendTeamInvitationEmail } from './sendTeamInvitationEmail';
 export { sendTenantRecoveryEmail } from './clientPortalTenantRecoveryEmail';
 export { sendVerificationEmail } from './sendVerificationEmail';

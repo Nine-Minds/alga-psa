@@ -1461,7 +1461,7 @@
       },
       "paymentConfirmations": {
         "label": "Zahlungsbestätigungs-E-Mails senden",
-        "description": "Eine Quittung per E-Mail an den Rechnungskontakt des Kunden senden, wenn eine Online-Zahlung eingeht."
+        "description": "Kunden per E-Mail benachrichtigen, wenn ihre Zahlung eingegangen ist"
       },
       "paymentLinkExpiration": {
         "label": "Ablauf des Zahlungslinks",
