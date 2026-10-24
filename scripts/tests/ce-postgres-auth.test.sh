@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# CE Postgres password-authentication harness (scenarios T1-T8, plus T0: parser unit checks).
+# CE Postgres password-authentication harness (scenarios T1-T9, plus T0: parser unit checks).
 #
 # Runs the real `postgres` service from
 #   -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml
@@ -13,10 +13,10 @@
 # Environment:
 #   CE_POSTGRES_AUTH_T8   auto (default) | 1 | 0
 #       T8 brings up PgBouncer (built from ./pgbouncer) and connects through
-#       port 6432. The "wrong password is rejected by PgBouncer" assertion needs
-#       the PgBouncer auth_type change, so it is skipped with a message while
-#       pgbouncer/pgbouncer.ini.template still says `auth_type = trust`.
-#       0 skips T8 entirely; 1 makes a skipped part a failure.
+#       port 6432; it checks that PgBouncer requires and verifies passwords.
+#       T9 builds the same image and checks that PgBouncer fails closed.
+#       auto skips both (with a message) when the image cannot be built here;
+#       0 skips them entirely; 1 makes a build problem a failure (used in CI).
 #   PG_IMAGE              image used for sibling clients (default: the pinned `pgvector`
 #                         image from docker-compose.images.yaml)
 #   TMPDIR                where the sandbox is created (default /tmp). Docker must be able to
@@ -139,7 +139,8 @@ cleanup() {
     dc down -v --remove-orphans >/dev/null 2>&1 || true
     docker volume rm -f "$VOLUME" >/dev/null 2>&1 || true
     docker network rm "$NETWORK" >/dev/null 2>&1 || true
-    docker rmi -f "${PROJECT}-pgbouncer" >/dev/null 2>&1 || true
+    docker rmi -f "${PROJECT}-pgbouncer" "${PROJECT}-pgbouncer-t9" >/dev/null 2>&1 || true
+    docker rm -f "${PROJECT}-t9-pgbouncer" >/dev/null 2>&1 || true
     rm -rf "$SANDBOX"
     exit $rc
 }
@@ -147,19 +148,19 @@ trap cleanup EXIT
 
 # --- helpers ---------------------------------------------------------------
 
-# sibling_psql <host> <port> <user> <password|""> <psql args...>
+# sibling_psql <host> <port> <user> <password|""> <db> <psql args...>
 # Runs psql from a throwaway container on the stack network. An empty password
 # means "send none" (-w makes psql fail instead of prompting).
 sibling_psql() {
-    local host="$1" port="$2" user="$3" password="$4"
-    shift 4
+    local host="$1" port="$2" user="$3" password="$4" db="$5"
+    shift 5
     local env_args=(-e PGCONNECT_TIMEOUT=5)
     [ -n "$password" ] && env_args+=(-e "PGPASSWORD=$password")
     docker run --rm --network "$NETWORK" "${env_args[@]}" --entrypoint psql "$PG_IMAGE" \
-        -X -w -h "$host" -p "$port" -U "$user" -d postgres "$@" 2>&1
+        -X -w -h "$host" -p "$port" -U "$user" -d "$db" "$@" 2>&1
 }
 
-pg() { sibling_psql postgres 5432 "$@"; }
+pg() { sibling_psql postgres 5432 "$1" "$2" postgres "${@:3}"; }
 
 container_state() {
     local cid
@@ -476,23 +477,115 @@ t8_through_pgbouncer() {
     fi
     sleep 3
     local out
-    out="$(sibling_psql pgbouncer 6432 app_user "$APP_SECRET" -tAc 'select current_user')"
+    out="$(sibling_psql pgbouncer 6432 app_user "$APP_SECRET" server -tAc 'select current_user')"
     [ "$out" = "app_user" ] && ok "app_user connects through 6432 with its secret" || nok "app_user connects through 6432 with its secret" "$out"
-    out="$(sibling_psql pgbouncer 6432 postgres "$SUPER_SECRET" -tAc 'select current_user')"
-    [ "$out" = "postgres" ] && ok "postgres connects through 6432 with the secret" || nok "postgres connects through 6432 with the secret" "$out"
+    # The superuser is not served through PgBouncer at all, even with the right secret.
+    out="$(sibling_psql pgbouncer 6432 postgres "$SUPER_SECRET" server -tAc 'select current_user')"
+    auth_rejected "$out" && ok "postgres is rejected through 6432 even with the correct secret" || nok "postgres is rejected through 6432 even with the correct secret" "$out"
+    out="$(sibling_psql pgbouncer 6432 postgres "$SUPER_SECRET" postgres -tAc 'select current_user')"
+    auth_rejected "$out" && ok "postgres is rejected through 6432 for the postgres database too" || nok "postgres is rejected through 6432 for the postgres database too" "$out"
+    out="$(sibling_psql postgres 5432 postgres "$SUPER_SECRET" server -tAc 'select current_user')"
+    [ "$out" = "postgres" ] && ok "postgres still connects directly to Postgres with the secret" || nok "postgres still connects directly to Postgres with the secret" "$out"
+    out="$(sibling_psql pgbouncer 6432 app_user "$APP_SECRET" postgres -tAc 'select current_user')"
+    grep -qi 'no such database\|authentication failed\|not allowed' <<<"$out" \
+        && ok "app_user cannot open the postgres maintenance database through 6432" || nok "app_user cannot open the postgres maintenance database through 6432" "$out"
 
-    if grep -Eq '^[[:space:]]*auth_type[[:space:]]*=[[:space:]]*trust' "$REPO_ROOT/pgbouncer/pgbouncer.ini.template"; then
+    local user secret
+    for user in app_user postgres; do
+        out="$(sibling_psql pgbouncer 6432 "$user" "" server -tAc 'select 1')"
+        auth_rejected "$out" && ok "PgBouncer rejects $user without a password" || nok "PgBouncer rejects $user without a password" "$out"
+        out="$(sibling_psql pgbouncer 6432 "$user" "wrong-password" server -tAc 'select 1')"
+        auth_rejected "$out" && ok "PgBouncer rejects $user with a wrong password" || nok "PgBouncer rejects $user with a wrong password" "$out"
+    done
+}
+
+# auth_rejected <psql output>: true when the output is an authentication refusal.
+auth_rejected() {
+    grep -qi 'no password supplied\|authentication failed\|no such user' <<<"$1"
+}
+
+# T9 builds the PgBouncer image on its own and runs the entrypoint with bad inputs.
+t9_pgbouncer_fails_closed() {
+    begin "T9 PgBouncer fails closed"
+    if [ "$T8_MODE" = "0" ]; then
+        echo "  skip - disabled by CE_POSTGRES_AUTH_T8=0"
+        SKIPPED=$((SKIPPED + 1))
+        return
+    fi
+    local image="${PROJECT}-pgbouncer-t9" name="${PROJECT}-t9-pgbouncer" build_log
+    if ! build_log="$(docker build -q -t "$image" "$SANDBOX/pgbouncer" 2>&1)"; then
         if [ "$T8_MODE" = "1" ]; then
-            nok "PgBouncer rejects a wrong password (needs the PgBouncer auth_type change)"
+            nok "pgbouncer image built" "$build_log"
         else
-            echo "  skip - 'PgBouncer rejects a wrong password': pgbouncer.ini.template still has auth_type = trust (sibling PgBouncer change)"
+            echo "  skip - pgbouncer image could not be built here (set CE_POSTGRES_AUTH_T8=1 to require it)"
             SKIPPED=$((SKIPPED + 1))
         fi
-    else
-        out="$(sibling_psql pgbouncer 6432 app_user "wrong-password" -tAc 'select 1')"
-        grep -qi 'password authentication failed\|authentication failed' <<<"$out" \
-            && ok "PgBouncer rejects a wrong password" || nok "PgBouncer rejects a wrong password" "$out"
+        return
     fi
+    local dir="$SANDBOX/t9" out rc
+    mkdir -p "$dir"
+    printf '%s' "$APP_SECRET" > "$dir/db_password_server"
+    chmod 644 "$dir"/*
+
+    # t9_run <extra docker args...>: run the entrypoint to completion (it must exit by itself).
+    t9_run() {
+        timeout 60 docker run --rm \
+            -v "$dir/db_password_server:/run/secrets/db_password_server:ro" \
+            "$@" "$image" 2>&1
+    }
+
+    printf '' > "$dir/db_password_server"
+    out="$(t9_run)"; rc=$?
+    if [ $rc -ne 0 ] && [ $rc -ne 124 ] && grep -q 'is empty' <<<"$out"; then
+        ok "exits non-zero on an empty db_password_server (rc=$rc)"
+    else
+        nok "exits non-zero on an empty db_password_server (rc=$rc)" "$out"
+    fi
+    printf ' \r\n' > "$dir/db_password_server"
+    out="$(t9_run)"; rc=$?
+    if [ $rc -ne 0 ] && [ $rc -ne 124 ] && grep -q 'is empty' <<<"$out"; then
+        ok "exits non-zero on a whitespace-only db_password_server (rc=$rc)"
+    else
+        nok "exits non-zero on a whitespace-only db_password_server (rc=$rc)" "$out"
+    fi
+
+    printf '%s' "$APP_SECRET" > "$dir/db_password_server"
+    sed 's/^auth_type = .*/auth_type = trust/' "$SANDBOX/pgbouncer/pgbouncer.ini.template" > "$dir/trust.ini.template"
+    grep -q '^auth_type = trust$' "$dir/trust.ini.template" || nok "trust override was generated"
+    out="$(t9_run -v "$dir/trust.ini.template:/etc/pgbouncer/pgbouncer.ini.template:ro")"; rc=$?
+    if [ $rc -ne 0 ] && [ $rc -ne 124 ] && grep -q 'auth_type = trust is not allowed' <<<"$out"; then
+        ok "exits non-zero on a mounted ini with auth_type = trust (rc=$rc)"
+    else
+        nok "exits non-zero on a mounted ini with auth_type = trust (rc=$rc)" "$out"
+    fi
+    grep -v '^auth_type' "$SANDBOX/pgbouncer/pgbouncer.ini.template" > "$dir/none.ini.template"
+    out="$(t9_run -v "$dir/none.ini.template:/etc/pgbouncer/pgbouncer.ini.template:ro")"; rc=$?
+    if [ $rc -ne 0 ] && [ $rc -ne 124 ] && grep -q 'does not set auth_type' <<<"$out"; then
+        ok "exits non-zero on a mounted ini without auth_type (rc=$rc)"
+    else
+        nok "exits non-zero on a mounted ini without auth_type (rc=$rc)" "$out"
+    fi
+
+    # A secret file with surrounding whitespace and CRLF must still authenticate with the trimmed value.
+    if ! legacy_init; then
+        nok "legacy volume initialised with trust"
+        return 1
+    fi
+    up_postgres
+    wait_ready "$SUPER_SECRET" || { nok "postgres started after upgrade"; return 1; }
+    printf '  %s\r\n' "$APP_SECRET" > "$dir/db_password_server"
+    docker rm -f "$name" >/dev/null 2>&1
+    docker run -d --name "$name" --network "$NETWORK" --network-alias t9-pgbouncer \
+        -e POSTGRES_HOST=postgres \
+        -v "$dir/db_password_server:/run/secrets/db_password_server:ro" \
+        "$image" >/dev/null
+    sleep 3
+    out="$(sibling_psql t9-pgbouncer 6432 app_user "$APP_SECRET" server -tAc 'select current_user')"
+    [ "$out" = "app_user" ] && ok "a secret file with CRLF and spaces authenticates with the trimmed value" \
+        || nok "a secret file with CRLF and spaces authenticates with the trimmed value" "$out $(docker logs "$name" 2>&1 | tail -5)"
+    out="$(sibling_psql t9-pgbouncer 6432 app_user "${APP_SECRET}"$'\r' server -tAc 'select 1')"
+    auth_rejected "$out" && ok "the untrimmed value is not what authenticates" || nok "the untrimmed value is not what authenticates" "$out"
+    docker rm -f "$name" >/dev/null 2>&1
 }
 
 # --- main ------------------------------------------------------------------
@@ -504,7 +597,7 @@ main() {
     docker pull -q "$PG_IMAGE" >/dev/null 2>&1 || true
 
     local selected=("$@")
-    [ ${#selected[@]} -eq 0 ] && selected=(T0 T1 T2 T3 T4 T5 T6 T7 T8)
+    [ ${#selected[@]} -eq 0 ] && selected=(T0 T1 T2 T3 T4 T5 T6 T7 T8 T9)
     local t
     for t in "${selected[@]}"; do
         local before_failed=$FAILED
@@ -518,6 +611,7 @@ main() {
             T6) t6_trust_env_fails_closed ;;
             T7) t7_setup_guard ;;
             T8) t8_through_pgbouncer ;;
+            T9) t9_pgbouncer_fails_closed ;;
             *) echo "unknown scenario: $t" >&2; exit 2 ;;
         esac
         if [ "$FAILED" -gt "$before_failed" ]; then record "$t" FAIL; else record "$t" PASS; fi
