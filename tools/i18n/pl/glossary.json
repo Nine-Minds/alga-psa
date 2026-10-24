@@ -2216,6 +2216,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{from}} → {{to}}",
       ",",
       "3CX",
       "Acme IT Solutions",

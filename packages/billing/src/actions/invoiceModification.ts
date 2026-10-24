@@ -729,9 +729,13 @@ export interface FinalizeWarning {
   message: string;
 }
 
-/** `success: true` means the finalize COMMITTED, even when `warnings` is non-empty. */
+/**
+ * `success: true` means the finalize COMMITTED, even when `warnings` is present.
+ * A clean finalize returns exactly `{ success: true }`; `warnings` appears only
+ * when at least one post-commit step failed.
+ */
 export type FinalizeInvoiceActionResult =
-  | { success: true; warnings: FinalizeWarning[] }
+  | { success: true; warnings?: FinalizeWarning[] }
   | InvoiceActionError;
 export type InvoiceManualItemsUpdateActionResult = InvoiceViewModel | InvoiceActionError | ManualInvoiceFailure;
 
@@ -1105,7 +1109,7 @@ export const finalizeInvoice = withAuth(async (
 
   // The finalize has committed. Post-commit failures are reported as warnings;
   // the caller must treat this as a success and reload.
-  return { success: true, warnings };
+  return warnings.length > 0 ? { success: true, warnings } : { success: true };
 });
 
 export async function finalizeInvoiceWithKnex(

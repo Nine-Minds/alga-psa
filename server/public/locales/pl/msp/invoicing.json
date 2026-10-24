@@ -591,7 +591,7 @@
       "steps": {
         "credit_auto_apply": "automatyczne zastosowanie kredytu",
         "project_deposit_credits": "kredyty z zaliczek projektowych",
-        "workflow_events": "zdarzenia przepływu pracy",
+        "workflow_events": "zdarzenia workflow",
         "accounting_export": "eksport księgowy",
         "replenishment_status": "status uzupełnienia przedpłaty",
         "autopay": "płatność automatyczna"

@@ -2207,6 +2207,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{from}} → {{to}}",
       "AI",
       "API",
       "Account",

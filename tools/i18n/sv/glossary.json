@@ -533,6 +533,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{from}} → {{to}}",
       "TeamViewer",
       "VNC",
       "RDP",

@@ -184,8 +184,8 @@ describe.runIf(enabled)('invoice lifecycle: quote release, audit trail, post-com
     const invoiceId = await seedDraft('AUDIT');
     const { finalizeInvoice, unfinalizeInvoice, deleteDraftInvoice } = await import('../src/actions/invoiceModification');
 
-    const finalized: any = await finalizeInvoice(invoiceId);
-    expect(finalized.success).toBe(true);
+    // A clean finalize keeps the pre-warnings contract: exactly { success: true }.
+    expect(await finalizeInvoice(invoiceId)).toEqual({ success: true });
     expect(await unfinalizeInvoice(invoiceId)).toEqual({ success: true });
     expect(await deleteDraftInvoice(invoiceId)).toEqual({ success: true });
 
