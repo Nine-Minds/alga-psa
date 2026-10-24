@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use server';
 
-import { isMspPrincipalUserType } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
@@ -65,7 +65,7 @@ async function assertClientPortalInvoiceAccess(
   user: InvoiceQueryUser,
   invoiceId: string
 ): Promise<ActionPermissionError | null> {
-  if (isMspPrincipalUserType(user.user_type)) {
+  if (!isClientUserType(user.user_type)) {
     return null;
   }
   const portalClientId = await getClientPortalUserClientId(knex, tenant, user);

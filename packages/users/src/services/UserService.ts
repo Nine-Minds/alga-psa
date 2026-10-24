@@ -375,7 +375,7 @@ export class UserService extends BaseService<IUser> {
       // Non-interactive principals are not managed through user management;
       // fail closed as if the user does not exist.
       if (!existingUser || !isInteractiveUserType(existingUser.user_type)) {
-        throw new Error('User not found or permission denied');
+        throw new NotFoundError('User not found');
       }
 
       // user_type is immutable here except the existing internal <-> client

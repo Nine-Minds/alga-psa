@@ -73,7 +73,7 @@ async function assertClientCanCreateComment(
   user: any,
   comment: Omit<IComment, 'tenant'>
 ): Promise<void> {
-  if (isMspPrincipalUserType(user?.user_type)) {
+  if (!isClientUserType(user?.user_type)) {
     return;
   }
 

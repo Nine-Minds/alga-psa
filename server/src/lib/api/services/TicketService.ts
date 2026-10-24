@@ -1,4 +1,4 @@
-import { isMspPrincipalUserType } from '@alga-psa/types';
+import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { publishTicketTransitionsAfterCommit, ticketCreatedPublishedByCaller } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
@@ -396,7 +396,8 @@ export class TicketService extends BaseService<ITicket> {
   private async resolveClientTicketVisibility(
     context: ServiceContext
   ): Promise<ContactVisibilityContext | null> {
-    if (isMspPrincipalUserType(context.user?.user_type)) {
+    // Client path only for a real client user; missing/undefined user_type and service stay on the MSP path.
+    if (!isClientUserType(context.user?.user_type)) {
       return null;
     }
 

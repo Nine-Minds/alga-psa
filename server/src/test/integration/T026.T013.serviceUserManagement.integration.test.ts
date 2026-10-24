@@ -333,7 +333,7 @@ describe('Service principals A/4 user management (T026, T013, F085, F086)', () =
       const service = new UserService();
       const context: any = { tenant: f.tenant, userId: f.admin.user_id, user: f.admin };
       await expect(service.delete(f.serviceId, context)).rejects.toMatchObject({ statusCode: 404 });
-      await expect(service.update(f.serviceId, { first_name: 'X' } as any, context)).rejects.toThrow();
+      await expect(service.update(f.serviceId, { first_name: 'X' } as any, context)).rejects.toMatchObject({ statusCode: 404, code: 'NOT_FOUND' });
       const row = await serviceRow(f);
       expect(row).toBeTruthy();
       expect(row.first_name).toBe('Service');

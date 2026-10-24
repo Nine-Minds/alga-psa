@@ -183,8 +183,23 @@ const ScheduleEntry = {
       throw new Error(`Schedule entry ${entry_id} not found in tenant ${tenant}`);
     }
 
-    // Human-work guard: validate only assignees this write adds, so legacy assignees
-    // (e.g. a former agent user) that are kept never block the edit.
+    // Validate that every assignee exists in the tenant BEFORE the human-work guard, so a
+    // missing user keeps surfacing as "not found" rather than as a guard error.
+    if (userIds.length > 0) {
+      const validUsers = await tenantScopedTable(knexOrTrx, 'users', tenant)
+        .whereIn('user_id', userIds)
+        .select('user_id');
+
+      const validUserIds = validUsers.map((u: { user_id: string }) => u.user_id);
+      const invalidUserIds = userIds.filter(id => !validUserIds.includes(id));
+
+      if (invalidUserIds.length > 0) {
+        throw new Error(`Users ${invalidUserIds.join(', ')} not found in tenant ${tenant}`);
+      }
+    }
+
+    // Human-work guard (after existence/tenant validation): validate only assignees this
+    // write adds, so legacy assignees (e.g. a former agent user) that are kept never block the edit.
     const existingAssignees = await tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)
       .where('entry_id', entry_id)
       .select('user_id');
@@ -202,18 +217,6 @@ const ScheduleEntry = {
 
     // Insert new assignments
     if (userIds.length > 0) {
-      // Verify all users exist in the correct tenant
-      const validUsers = await tenantScopedTable(knexOrTrx, 'users', tenant)
-        .whereIn('user_id', userIds)
-        .select('user_id');
-
-      const validUserIds = validUsers.map((u: { user_id: string }) => u.user_id);
-      const invalidUserIds = userIds.filter(id => !validUserIds.includes(id));
-
-      if (invalidUserIds.length > 0) {
-        throw new Error(`Users ${invalidUserIds.join(', ')} not found in tenant ${tenant}`);
-      }
-
       const assignments = userIds.map(
         (user_id): { tenant: string; entry_id: string; user_id: string } => ({
           tenant,

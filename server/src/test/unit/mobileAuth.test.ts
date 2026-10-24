@@ -230,10 +230,7 @@ describe('mobile auth (OTT + refresh rotation)', () => {
       expires_at: new Date(Date.now() + 60_000),
     });
 
-    // Call history otherwise leaks between shuffled tests (restoreAllMocks keeps vi.fn() history).
-    vi.mocked(ApiKeyService.createApiKey).mockClear();
-
-    vi.spyOn(ApiKeyService, 'createApiKey').mockImplementation(async (_userId, _desc, _expires, opts) => {
+    const createApiKeySpy = vi.spyOn(ApiKeyService, 'createApiKey').mockImplementation(async (_userId, _desc, _expires, opts) => {
       const id = crypto.randomUUID();
       return {
         api_key_id: id,
@@ -252,6 +249,8 @@ describe('mobile auth (OTT + refresh rotation)', () => {
         usage_count: 0,
       } as any;
     });
+    // Call history otherwise leaks between shuffled tests (spyOn on the module's vi.fn() reuses it).
+    createApiKeySpy.mockClear();
 
     vi.spyOn(ApiKeyService, 'deactivateApiKey').mockResolvedValue(undefined);
     vi.spyOn(ApiKeyService, 'expireApiKeyAfter').mockResolvedValue(undefined);
