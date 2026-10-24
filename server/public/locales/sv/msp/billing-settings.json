@@ -1521,7 +1521,7 @@
       "daysPlural": "{{count}} dagar",
       "daysDecimal": "{{count}} dagar",
       "hoursUnit": "timmar ({{formatted}})",
-      "willExpireAfter": "Betalningslänkar löper ut efter {{duration}}"
+      "willExpireAfter": "Betalningslänken i mejlet fungerar i {{duration}}"
     },
     "notConnected": {
       "title": "Stripe är inte anslutet",
@@ -1539,7 +1539,7 @@
       },
       "paymentLinkExpiration": {
         "label": "Giltighetstid för betalningslänkar",
-        "description": "Hur länge betalningslänkar är giltiga innan de löper ut"
+        "description": "Hur länge betalningslänken i fakturamejl fungerar (1 timme till 30 dagar). Varje klick öppnar en ny säker betalning så länge fakturan är obetald."
       },
       "actions": {
         "save": "Spara inställningar",

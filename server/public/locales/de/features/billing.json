@@ -67,6 +67,7 @@
     "taxBreakdown": "Steueraufstellung",
     "manualInvoice": "Manuelle Rechnung",
     "credits": "Gutschriften",
+    "currency": "Währung",
     "financialArtifactSummary": "Nur-Finanzrechnung. Wiederkehrende Leistungszeiträume erscheinen nur auf wiederkehrenden Detailzeilen.",
     "servicePeriod": "Leistungszeitraum",
     "servicePeriods": "Leistungszeiträume",
@@ -241,7 +242,8 @@
     "contractLineType": {
       "Fixed": "Festpreis",
       "Hourly": "Stündlich",
-      "Usage": "Nutzungsbasiert"
+      "Usage": "Nutzungsbasiert",
+      "PrepaidBlock": "Prepaid-Block"
     },
     "quoteStatus": {
       "draft": "Entwurf",
@@ -442,7 +444,8 @@
     "hoursLeft": "Noch {{hours}} Std.",
     "expires": "Läuft am {{date}} ab",
     "recentBurn": "Letzte Nutzung",
-    "timeEntry": "Zeiteintrag"
+    "timeEntry": "Zeiteintrag",
+    "contractLabel": "Vertrag: {{contract}}"
   },
   "bucketUsage": {
     "contractLine": "Vertragslinie für Stundenkontingent",

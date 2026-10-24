@@ -40,6 +40,11 @@ import { SlaStatusBadge } from '@alga-psa/ui/components/sla';
 import type { ITeam } from '@alga-psa/types';
 import { useSession } from 'next-auth/react';
 import { FieldConflictBanner } from '@alga-psa/ui/presence/FieldConflictBanner';
+import { useInboundEmailView } from '@alga-psa/ui/components/EmailHtmlViewer';
+import {
+  originalEmailSourceForTicket,
+  originalEmailToggleLabels,
+} from '../../lib/inboundEmailOriginalView';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../lib/ticketRichText';
 import { useTicketRichTextUploadSession } from './useTicketRichTextUploadSession';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
@@ -563,6 +568,19 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [descriptionContent, setDescriptionContent] = useState<PartialBlock[]>(() =>
     parseTicketRichTextContent(ticket.attributes?.description as string | object | undefined)
   );
+
+  const originalEmailSrc = useMemo(() => originalEmailSourceForTicket(ticket), [ticket]);
+
+  // The switcher sits in the Description heading row so it costs no height; the
+  // editor owns the stored body, so no original is offered while editing, and
+  // an empty description renders no body for the switcher to act on.
+  const emailView = useInboundEmailView({
+    id: `${id}-description-original-email`,
+    src:
+      isEditingDescription || !ticket.attributes?.description ? null : originalEmailSrc,
+    labels: originalEmailToggleLabels(t),
+    switcherClassName: 'ml-auto',
+  });
 
   const discardDescriptionEdit = useCallback(() => {
     const originalDescription =
@@ -1976,6 +1994,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   <Pencil className="w-4 h-4 text-gray-500" />
                 </button>
               )}
+              {emailView.switcher}
             </div>
 
             {isEditingDescription ? (
@@ -2034,7 +2053,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
                   if (!descriptionText) return t('info.noDescription', 'No description found.');
 
-                  return <RichTextViewer content={descriptionText} className="break-words max-w-full min-w-0" />;
+                  // An email-opened ticket can also be read as the original message.
+                  return emailView.body(
+                    <RichTextViewer content={descriptionText} className="break-words max-w-full min-w-0" />
+                  );
                 })()}
               </div>
             )}

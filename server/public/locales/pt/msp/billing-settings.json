@@ -1521,7 +1521,7 @@
       "daysPlural": "{{count}} dias",
       "daysDecimal": "{{count}} dias",
       "hoursUnit": "horas ({{formatted}})",
-      "willExpireAfter": "Os links de pagamento expirarão após {{duration}}"
+      "willExpireAfter": "O link de pagamento enviado por e-mail funcionará durante {{duration}}"
     },
     "notConnected": {
       "title": "Faixa não conectada",
@@ -1539,7 +1539,7 @@
       },
       "paymentLinkExpiration": {
         "label": "Expiração do link de pagamento",
-        "description": "Quanto tempo os links de pagamento permanecem válidos antes de expirarem"
+        "description": "Por quanto tempo o link de pagamento nos e-mails de fatura continua a funcionar (de 1 hora a 30 dias). Cada clique abre um novo pagamento seguro enquanto a fatura estiver por pagar."
       },
       "actions": {
         "save": "Salvar configurações",

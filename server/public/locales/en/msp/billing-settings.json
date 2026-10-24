@@ -1521,7 +1521,7 @@
       "daysPlural": "{{count}} days",
       "daysDecimal": "{{count}} days",
       "hoursUnit": "hours ({{formatted}})",
-      "willExpireAfter": "Payment links will expire after {{duration}}"
+      "willExpireAfter": "The emailed payment link will work for {{duration}}"
     },
     "notConnected": {
       "title": "Stripe Not Connected",
@@ -1539,7 +1539,7 @@
       },
       "paymentLinkExpiration": {
         "label": "Payment Link Expiration",
-        "description": "How long payment links remain valid before expiring"
+        "description": "How long the payment link in invoice emails keeps working (1 hour to 30 days). Each click opens a fresh secure checkout while the invoice is unpaid."
       },
       "actions": {
         "save": "Save Settings",

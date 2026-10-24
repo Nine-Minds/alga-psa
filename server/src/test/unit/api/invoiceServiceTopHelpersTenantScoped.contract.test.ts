@@ -18,8 +18,8 @@ function sectionBetween(startMarker: string, endMarker: string): string {
 describe('invoice service top helper tenant-scoped query contract', () => {
   it('uses structural tenant scoping for payment totals, due dates, and recurring summaries', () => {
     const amountDueSection = sectionBetween('private async getInvoiceAmountDue', 'private async getInvoiceRecurringProvenance');
-    const dueDateSection = sectionBetween('private async computeDueDate', 'private buildRecurringInvoiceSummaryQuery');
-    const recurringSummarySection = sectionBetween('private buildRecurringInvoiceSummaryQuery', '// ============================================================================');
+    const dueDateSection = sectionBetween('private async computeDueDate', 'private async mergeRecurringSummary');
+    const recurringSummarySection = sectionBetween('private async mergeRecurringSummary', '// ============================================================================');
 
     expect(amountDueSection).toContain('tenantDb(');
     expect(amountDueSection).toContain(".table('invoice_payments')");

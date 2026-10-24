@@ -1521,7 +1521,7 @@
       "daysPlural": "{{count}} giorni",
       "daysDecimal": "{{count}} giorni",
       "hoursUnit": "ore ({{formatted}})",
-      "willExpireAfter": "I link di pagamento scadranno dopo {{duration}}"
+      "willExpireAfter": "Il link di pagamento inviato via email funzionerà per {{duration}}"
     },
     "notConnected": {
       "title": "Stripe non connesso",
@@ -1539,7 +1539,7 @@
       },
       "paymentLinkExpiration": {
         "label": "Scadenza dei link di pagamento",
-        "description": "Per quanto tempo i link di pagamento restano validi prima di scadere"
+        "description": "Per quanto tempo funziona il link di pagamento nelle email delle fatture (da 1 ora a 30 giorni). Ogni clic apre un nuovo pagamento sicuro finché la fattura non è pagata."
       },
       "actions": {
         "save": "Salva impostazioni",

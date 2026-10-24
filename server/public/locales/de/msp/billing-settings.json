@@ -1521,7 +1521,7 @@
       "daysPlural": "{{count}} Tage",
       "daysDecimal": "{{count}} Tage",
       "hoursUnit": "Stunden ({{formatted}})",
-      "willExpireAfter": "Zahlungslinks laufen nach {{duration}} ab"
+      "willExpireAfter": "Der per E-Mail versendete Zahlungslink funktioniert {{duration}} lang"
     },
     "notConnected": {
       "title": "Stripe nicht verbunden",
@@ -1539,7 +1539,7 @@
       },
       "paymentLinkExpiration": {
         "label": "Ablauf des Zahlungslinks",
-        "description": "Wie lange Zahlungslinks gültig bleiben, bevor sie ablaufen"
+        "description": "Wie lange der Zahlungslink in Rechnungs-E-Mails funktioniert (1 Stunde bis 30 Tage). Jeder Klick öffnet eine neue sichere Zahlungsseite, solange die Rechnung offen ist."
       },
       "actions": {
         "save": "Einstellungen speichern",

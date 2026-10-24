@@ -96,6 +96,11 @@ import {
 } from '../lib/assetTypeAttributes';
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '../lib/assetAttributeWrites';
 import { validateAssetStatusSlug } from '../lib/assetStatusRegistry';
+import {
+    resolveAuthorizationSubjectForUser as resolveSharedAuthorizationSubject,
+    resolveAssetAuthorizationRecords as resolveSharedAssetAuthorizationRecords,
+    type AssetAuthUser as SharedAssetAuthUser,
+} from '../lib/assetReadAuthorization';
 import { isAssetAssigneeError, setAssetAssignee } from '../lib/assetAssignment';
 import { getAssetGroupSummariesForAssets, getAssetGroupSummary, removeAssetFromAnyGroup } from '../lib/assetGroups';
 import {
@@ -485,60 +490,17 @@ async function applyPurchaseCostCurrency(
     candidate.purchase_cost_currency = currency || (await resolveTenantDefaultCurrency(trx, tenant));
 }
 
-type AssetAuthUser = {
-    user_id: string;
-    user_type: 'internal' | 'client';
-    clientId?: string | null;
-    roles?: Array<{ role_id?: string } | string>;
-};
-
-function extractRoleIdsFromUser(user: AssetAuthUser): string[] {
-    if (!Array.isArray(user.roles)) {
-        return [];
-    }
-
-    return user.roles
-        .map((role) => {
-            if (typeof role === 'string') {
-                return role;
-            }
-            return typeof role?.role_id === 'string' ? role.role_id : null;
-        })
-        .filter((value): value is string => Boolean(value));
-}
+// Subject and record resolution live in ../lib/assetReadAuthorization (shared with the label code
+// paths). The thin wrappers and the kernel/decision text below stay here because
+// assetAuthorization.contract.test.ts pins them in this file's source.
+type AssetAuthUser = SharedAssetAuthUser;
 
 async function resolveAuthorizationSubjectForUser(
     trx: Knex.Transaction,
     tenant: string,
     user: AssetAuthUser
 ): Promise<AuthorizationSubject> {
-    let roleIds = extractRoleIdsFromUser(user);
-    if (roleIds.length === 0) {
-        try {
-            const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
-                .where({ user_id: user.user_id })
-                .select<{ role_id: string }[]>('role_id');
-            roleIds = roleRows.map((row) => row.role_id);
-        } catch {
-            roleIds = [];
-        }
-    }
-
-    const [teamRows, managedRows] = await Promise.all([
-        tenantScopedTable(trx, 'team_members', tenant).where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
-        tenantScopedTable(trx, 'users', tenant).where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
-    ]);
-
-    return {
-        tenant,
-        userId: user.user_id,
-        userType: user.user_type,
-        roleIds,
-        teamIds: teamRows.map((row) => row.team_id),
-        managedUserIds: managedRows.map((row) => row.user_id),
-        clientId: user.clientId ?? null,
-        portfolioClientIds: user.clientId ? [user.clientId] : [],
-    };
+    return resolveSharedAuthorizationSubject(trx, tenant, user);
 }
 
 async function resolveAssetAuthorizationRecords(
@@ -546,42 +508,7 @@ async function resolveAssetAuthorizationRecords(
     tenant: string,
     assets: Array<Pick<Asset, 'asset_id' | 'client_id'>>
 ): Promise<Map<string, AuthorizationRecord>> {
-    const assetIds = assets.map((asset) => asset.asset_id);
-    if (assetIds.length === 0) {
-        return new Map();
-    }
-
-    const associationRows = await tenantScopedTable(trx, 'asset_associations', tenant)
-        .whereIn('asset_id', assetIds)
-        .select<Array<{ asset_id: string; entity_type: string; entity_id: string }>>('asset_id', 'entity_type', 'entity_id');
-
-    const associationsByAsset = new Map<string, Array<{ entity_type: string; entity_id: string }>>();
-    for (const row of associationRows) {
-        const existing = associationsByAsset.get(row.asset_id) ?? [];
-        existing.push({ entity_type: row.entity_type, entity_id: row.entity_id });
-        associationsByAsset.set(row.asset_id, existing);
-    }
-
-    const records = new Map<string, AuthorizationRecord>();
-    for (const asset of assets) {
-        const associations = associationsByAsset.get(asset.asset_id) ?? [];
-        const assignedUserIds = associations
-            .filter((association) => association.entity_type === 'user')
-            .map((association) => association.entity_id);
-        const teamIds = associations
-            .filter((association) => association.entity_type === 'team')
-            .map((association) => association.entity_id);
-
-        records.set(asset.asset_id, {
-            id: asset.asset_id,
-            ownerUserId: assignedUserIds[0] ?? null,
-            assignedUserIds,
-            clientId: asset.client_id ?? null,
-            teamIds,
-        });
-    }
-
-    return records;
+    return resolveSharedAssetAuthorizationRecords(trx, tenant, assets);
 }
 
 type AssetAuthorizationInput = Pick<Asset, 'asset_id' | 'client_id'>;

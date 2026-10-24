@@ -1521,7 +1521,7 @@
       "daysPlural": "{{count}} jours",
       "daysDecimal": "{{count}} jours",
       "hoursUnit": "heures ({{formatted}})",
-      "willExpireAfter": "Les liens de paiement expireront après {{duration}}"
+      "willExpireAfter": "Le lien de paiement envoyé par e-mail fonctionnera pendant {{duration}}"
     },
     "notConnected": {
       "title": "Stripe non connecté",
@@ -1539,7 +1539,7 @@
       },
       "paymentLinkExpiration": {
         "label": "Expiration du lien de paiement",
-        "description": "Durée pendant laquelle les liens de paiement restent valides avant d'expirer"
+        "description": "Durée de validité du lien de paiement des e-mails de facture (de 1 heure à 30 jours). Chaque clic ouvre un nouveau paiement sécurisé tant que la facture reste impayée."
       },
       "actions": {
         "save": "Enregistrer les paramètres",

@@ -1521,7 +1521,7 @@
       "daysPlural": "{{count}} días",
       "daysDecimal": "{{count}} días",
       "hoursUnit": "horas ({{formatted}})",
-      "willExpireAfter": "Los enlaces de pago expirarán después de {{duration}}"
+      "willExpireAfter": "El enlace de pago enviado por correo funcionará durante {{duration}}"
     },
     "notConnected": {
       "title": "Stripe no conectado",
@@ -1539,7 +1539,7 @@
       },
       "paymentLinkExpiration": {
         "label": "Expiración del enlace de pago",
-        "description": "Cuánto tiempo permanecen válidos los enlaces de pago antes de expirar"
+        "description": "Cuánto tiempo funciona el enlace de pago de los correos de factura (de 1 hora a 30 días). Cada clic abre un pago seguro nuevo mientras la factura siga sin pagar."
       },
       "actions": {
         "save": "Guardar configuración",

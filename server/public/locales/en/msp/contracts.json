@@ -53,6 +53,8 @@
   },
   "status": {
     "active": "Active",
+    "scheduled": "Scheduled",
+    "startsOn": "Starts {{date}}",
     "draft": "Draft",
     "expired": "Expired",
     "terminated": "Terminated"
@@ -177,6 +179,7 @@
     },
     "headerCard": {
       "assignmentLifecycleHint": "Live client status is controlled by the assignment lifecycle below.",
+      "scheduledExplanation": "This contract is active and begins billing on {{date}}.",
       "assignmentStatus": "Assignment Status",
       "billingFrequencyLabel": "Billing Frequency *",
       "billingFrequencyPlaceholder": "Select billing frequency",
@@ -298,6 +301,7 @@
     },
     "status": {
       "active": "Active",
+      "scheduled": "Scheduled",
       "draft": "Draft",
       "expired": "Expired",
       "terminated": "Terminated"
@@ -583,7 +587,8 @@
       "failedToUpdate": "Failed to update contract line",
       "failedToResetRate": "Failed to reset the line rate",
       "protectedStartDate": "Start date must be on or before {{boundary}} to include protected service history.",
-      "protectedEndDate": "End date must be on or after {{boundary}} to include protected service history."
+      "protectedEndDate": "End date must be on or after {{boundary}} to include protected service history.",
+      "cannotEditWithInvoices": "Cannot edit contract line: This contract has associated invoices. Contract lines cannot be edited once invoices have been generated."
     },
     "loading": {
       "contractLines": "Loading contract lines",
@@ -611,6 +616,7 @@
       "quantityShort": "Qty: {{quantity}}",
       "quantityTaxAllocation": "Quantity (for tax allocation)",
       "rateTaxAllocation": "Rate (for tax allocation)",
+      "shareOfLineFee": "Share of line fee",
       "title": "Services ({{count}})",
       "typeLabel": "{{type}} Service",
       "unitOfMeasure": "Unit of Measure",
@@ -766,7 +772,7 @@
     },
     "fixedConfig": {
       "defaultBaseRate": "Default Base Rate:",
-      "defaultRatePlaceholder": "Default: ${{rate}}",
+      "defaultRatePlaceholder": "Default: {{rate}}",
       "enterBaseRate": "Enter base rate",
       "leaveBlankDefault": "Leave blank to use the default rate",
       "notSet": "Not set",
@@ -774,7 +780,7 @@
       "title": "Fixed Rate Configuration"
     },
     "hourlyConfig": {
-      "defaultRate": "Default: ${{rate}}",
+      "defaultRate": "Default: {{rate}}",
       "hourlyRate": "Hourly Rate",
       "minimumBillableMinutes": "Minimum billable minutes",
       "roundUpToNearest": "Round up to nearest (minutes)",
@@ -800,7 +806,7 @@
     },
     "title": "Add Contract Lines from Presets",
     "usageConfig": {
-      "defaultRate": "Default: ${{rate}}",
+      "defaultRate": "Default: {{rate}}",
       "recordDrivenNote": "Usage services bill from usage recorded in Usage Tracking for each service period. A period with no usage record produces no charge — record usage (or an explicit zero) each period to bill these services.",
       "ratePerUnit": "Rate (per unit)",
       "unitHint": "e.g., GB, API call, user",
@@ -827,7 +833,9 @@
       "hourlyTitle": "Hourly",
       "usageDescription": "Invoice for units consumed.",
       "usageTitle": "Usage-Based",
-      "fixedSemantics": "Bill a bundle price or recurring quantity × unit rate every period."
+      "fixedSemantics": "Bill a bundle price or recurring quantity × unit rate every period.",
+      "prepaidBlockTitle": "Prepaid Block",
+      "prepaidBlockDescription": "Invoice a block of hours up front; time logged draws it down and the next block is invoiced when it runs out."
     },
     "billingTiming": {
       "advance": "Advance (bill at start of period)",
@@ -895,7 +903,8 @@
       "usageServiceRequired": "At least one usage-based service is required",
       "usageServiceSelectRequired": "Service {{index}}: Please select a service",
       "invalidQuantity": "Quantity must be zero or greater.",
-      "recurringUnitRateRequired": "Enter a unit rate for each recurring service."
+      "recurringUnitRateRequired": "Enter a unit rate for each recurring service.",
+      "prepaidBlockCurrencyRequired": "The contract needs a currency before a prepaid block can be priced."
     },
     "fixedServicesPricingIntent": "Choose a bundle price or recurring seats/units for each service.",
     "fixedServicesPricingExplanation": "Bundle allocations share the line base rate. Recurring seats bill the agreed quantity × unit rate each period without usage records.",
@@ -906,7 +915,9 @@
     "invoiceTextPlaceholder": "Printed on the invoice; defaults to the line name",
     "invoiceTextHelp": "This text prints verbatim on the recurring invoice line.",
     "startDateLabel": "Line start date",
-    "endDateLabel": "Line end date"
+    "endDateLabel": "Line end date",
+    "prepaidBlockTitle": "Prepaid Block",
+    "prepaidBlockDescription": "Set the block size and price. The price defaults to hours x the service rate and is saved as an explicit amount."
   },
   "pricingSchedules": {
     "list": {
@@ -1252,7 +1263,8 @@
       "hourlyRateLabel": "Hourly rate:",
       "unitRateFromCatalog": "Catalog price in the client's currency",
       "unitAmountLabel": "Recurring amount:",
-      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}",
+      "prepaidBlockKind": "Prepaid Block"
     },
     "editBasicsTitle": "Edit Template Basics",
     "editGuidanceTitle": "Edit Template Guidance",
@@ -1279,9 +1291,7 @@
     },
     "loadingTemplate": "Loading template...",
     "servicesLabel": "Services",
-    "summary": {
-      "clientCurrency": "Client's currency"
-    },
+    "summary": {},
     "templateBadge": "Template",
     "templateNotFound": "Contract template not found",
     "templateSnapshotTitle": "Template Snapshot",
@@ -1327,6 +1337,16 @@
       "open": "Simulate",
       "title": "Template simulation"
     },
+    "pricing": {
+      "title": "Pricing by currency",
+      "addCurrency": "Add currency",
+      "removeCurrency": "Remove",
+      "missing": "{{count}} amount(s) missing",
+      "baseCurrency": "(base)",
+      "changeBaseCurrency": "Change base currency",
+      "changeBaseConfirm": "Change the base currency to {{currency}}? Existing amounts are NOT converted: they keep their numeric value and are read as {{currency}}.",
+      "noSlots": "This template has no amounts to price yet."
+    },
     "discounts": {
       "title": "Default contract discounts",
       "help": "Each client contract receives an independent editable copy. Contract-wide discounts apply across its eligible lines.",
@@ -1341,6 +1361,10 @@
       "add": "Add default discount",
       "chooseLine": "Choose a template line",
       "chooseService": "Choose a service"
+    },
+    "prepaidBlock": {
+      "setup": "Sell as a prepaid block",
+      "blockNeutral": "{{hours}} h / {{price}} (in the client's currency)"
     }
   },
   "quickStart": {
@@ -1529,6 +1553,9 @@
       "confirm": "Confirm and continue",
       "cancel": "Go back"
     },
+    "templatePicker": {
+      "needsRates": "Needs {{currency}} rates"
+    },
     "discounts": {
       "help": "Contract-wide discounts apply to every eligible charge this contract bills. They are created with the contract when you finish setup, and the simulation below prices them.",
       "draftDialog": {
@@ -1658,7 +1685,8 @@
       "preview": {
         "billingCadenceLabel": "Billing cadence:",
         "notSpecified": "Not specified",
-        "templateLabel": "Template:"
+        "templateLabel": "Template:",
+        "currencyLabel": "Base currency:"
       },
       "selectTemplateOptional": "Select a template (optional)",
       "startFromTemplate": "Start From Template"
@@ -1850,7 +1878,8 @@
       "products": "Products",
       "hourlyServices": "Hourly Services",
       "usageBasedServices": "Usage-Based Services",
-      "fixedFeeServicesNumbered": "Fixed Fee Services ({{number}})"
+      "fixedFeeServicesNumbered": "Fixed Fee Services ({{number}})",
+      "prepaidBlocks": "Prepaid Block Lines"
     },
     "fields": {
       "client": "Client",
@@ -1979,6 +2008,14 @@
       "itemPo": "Confirm PO requirements (if any)",
       "itemDates": "Verify the start and end dates",
       "itemEditLater": "Remember: you can edit the contract later if needed"
+    },
+    "prepaid": {
+      "badgeCount_one": "{{count}} line",
+      "badgeCount_other": "{{count}} lines",
+      "blockSummary": "{{hours}} hours for {{price}}",
+      "expiresAfter_one": "expires after {{count}} month",
+      "expiresAfter_other": "expires after {{count}} months",
+      "neverExpires": "never expires"
     }
   },
   "wizardTemplateLines": {
@@ -2001,8 +2038,15 @@
     "unitRate": "Unit rate",
     "serviceRate": "Service rate",
     "noCurrencyPrice": "No {{currency}} price for this service. Enter a rate or the contract cannot be created.",
-    "templateRateNote": "From the template (amount is not currency-tagged).",
-    "reviewTitle": "Lines created from the template"
+    "reviewTitle": "Lines created from the template",
+    "fallbackAlert": "This template has no {{currency}} rates. Its structure is copied; enter {{currency}} amounts below. Template amounts are shown for reference only and are not converted.",
+    "templateReference": "Template: {{amount}} {{currency}}",
+    "catalogPrice": "Catalog price",
+    "fromTemplateCurrency": "From the template ({{currency}})",
+    "fromTemplatePriceSet": "From the template's {{currency}} rates",
+    "noCurrencyAmount": "No {{currency}} amount. Enter one or the contract cannot be created.",
+    "overtimeRate": "Overtime rate",
+    "bucketOverageRate": "Overage rate"
   },
   "templateWizard": {
     "title": {
@@ -2046,8 +2090,10 @@
           "usage": "Usage"
         }
       },
-      "recurringQuantityInvalid": "Recurring quantity for \"{{serviceName}}\" must be a whole number of zero or more, and any unit rate must be a valid amount."
-    }
+      "recurringQuantityInvalid": "Recurring quantity for \"{{serviceName}}\" must be a whole number of zero or more, and any unit rate must be a valid amount.",
+      "currencyRequired": "Base currency is required"
+    },
+    "currency": "Base currency *"
   },
   "templateBasics": {
     "heading": "Template Basics",
@@ -2065,7 +2111,8 @@
     "help": {
       "templateName": "Use a descriptive name so teams can quickly identify the right template.",
       "internalNotes": "These notes stay with the template to provide context when teammates use it.",
-      "billingFrequency": "Sets the default cadence when the template is applied. It can still be adjusted per client."
+      "billingFrequency": "Sets the default cadence when the template is applied. It can still be adjusted per client.",
+      "currency": "Rates entered in this wizard are in this currency. Prices for other currencies can be added on the template afterwards. Amounts are never converted."
     }
   },
   "templateFixed": {
@@ -2200,18 +2247,20 @@
   },
   "templateReview": {
     "heading": "Review Template",
-    "description": "Confirm the template contents. Rates are determined by each service's pricing in the client's currency when a contract is created from this template.",
+    "description": "Confirm the template contents. Rates are stored in the template's base currency. Other currencies use the template's price sets, or you enter the amounts when you create a contract.",
     "sections": {
       "basics": "Template Basics",
       "fixedFeeServices": "Fixed Fee Services",
       "products": "Products",
       "hourlyServices": "Hourly Services",
-      "usageBasedServices": "Usage-Based Services"
+      "usageBasedServices": "Usage-Based Services",
+      "prepaidBlocks": "Prepaid Block Lines"
     },
     "fields": {
       "templateName": "Template Name",
       "billingFrequency": "Billing Frequency",
-      "internalNotes": "Internal Notes"
+      "internalNotes": "Internal Notes",
+      "baseCurrency": "Base Currency"
     },
     "fallback": {
       "none": "—",
@@ -2247,8 +2296,7 @@
       "serviceLabel": "Service:",
       "invoiceWindowLabel": "Invoice window:",
       "unitRateLabel": "Unit rate:",
-      "unitRateFromCatalog": "Catalog price in the client's currency",
-      "unitRateNeutral": "{{rate}} in the client's currency"
+      "unitRateFromCatalog": "Catalog price in the client's currency"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Minimum billable time:",
@@ -2262,11 +2310,14 @@
       "hoursIncluded": "{{value}} hours included",
       "unitsIncluded": "{{value}} {{unit}} included",
       "unitsFallback": "units",
-      "overage": "Overage ${{amount}}/{{unit}}",
+      "overage": "Overage {{amount}}/{{unit}}",
       "hourSingular": "hour",
       "unitSingular": "unit",
       "rolloverEnabled": "Rollover enabled",
       "period": "Period: {{period}}"
+    },
+    "prepaid": {
+      "blockSummaryNeutral": "{{hours}} hours for {{price}} (in the client's currency)"
     }
   },
   "templatePreview": {
@@ -2461,7 +2512,7 @@
       },
       "discounts": "Discounts",
       "fields": {
-        "adjustmentAmount": "Adjustment amount dollars",
+        "adjustmentAmount": "Adjustment amount",
         "adjustmentDescription": "Adjustment description",
         "adjustmentPeriod": "Adjustment period",
         "billingFrequency": "Billing frequency",
@@ -2479,16 +2530,16 @@
         "minimumUsage": "Minimum usage",
         "includedHours": "Included hours",
         "includedUnits": "Included units",
-        "overtimeRate": "Overtime rate ($/hr)",
+        "overtimeRate": "Overtime rate per hour",
         "overtimeThreshold": "Overtime threshold (hours)",
         "roundUpMinutes": "Round up to minutes",
         "scheduleEffectiveDate": "Schedule effective date",
         "scheduleEndDate": "Schedule end date",
-        "scheduleRate": "Schedule rate dollars",
+        "scheduleRate": "Schedule rate",
         "serviceQuantity": "License or product quantity",
         "tierMaximum": "Tier maximum",
         "tierMinimum": "Tier minimum",
-        "tierRate": "Tier rate dollars",
+        "tierRate": "Tier rate",
         "usageUnit": "Usage unit"
       },
       "frequencies": {
@@ -2514,7 +2565,7 @@
       "placeholders": {
         "minimum": "minimum",
         "minimumMinutes": "minimum minutes",
-        "overtimeRate": "overtime $/hr",
+        "overtimeRate": "overtime rate per hour",
         "roundMinutes": "round minutes",
         "thresholdHours": "threshold hours"
       },
@@ -2556,7 +2607,8 @@
         "value": "Value",
         "appliesTo": "Applies to",
         "description": "Description",
-        "amount": "Amount ($)",
+        "amount": "Amount",
+        "rate": "Rate",
         "billingPeriod": "Billing period",
         "timing": "Timing"
       }
@@ -2656,6 +2708,10 @@
       "duplicate": "A matching contract wizard record already exists.",
       "resumeUnsupportedShape": "This draft can't be resumed in the wizard without changing its pricing: {{lines}}",
       "fixedLineNoService": "Fixed line \"{{lineName}}\" has a recurring amount but no service to bill it on. Add a service before finishing.",
+      "templateAmountsMissing": "Cannot create contract in {{currency}}. The following amounts have no {{currency}} value: {{amounts}}. Enter an amount for each, or add {{currency}} rates to the template.",
+      "currencyPricingMissing": "Cannot create contract in {{currency}}. No {{currency}} price is set for: {{services}}.",
+      "invalidTemplateCurrency": "\"{{currency}}\" is not a valid ISO 4217 currency code",
+      "templateCurrencyHasPriceSet": "This template already has a {{currency}} price set. Delete it before making {{currency}} the base currency.",
       "standingTerms": "This draft has standing discount terms. Edit its Lines and Discounts tabs to preserve those terms."
     },
     "pricingSchedule": {
@@ -2707,7 +2763,12 @@
     "done": "Done"
   },
   "sellHourBlockNote": {
-    "text": "A contract hour bucket bills only the overage. To charge for a block of hours up front, use Sell block under Hour Blocks on the client's Billing Dashboard tab."
+    "text": "A contract hour bucket bills only the overage. To charge for a block of hours up front, add a Prepaid Block line to this contract."
+  },
+  "review": {
+    "saveTemplateRates": "Save these {{currency}} rates to the template",
+    "saveMissingTemplateRates": "Add the missing {{currency}} rates to the template",
+    "updateTemplateRates": "Update the template's {{currency}} rates with these amounts"
   },
   "billingTimingField": {
     "arrears": "In Arrears",
@@ -2788,6 +2849,126 @@
     "errors": {
       "loadFailed": "Failed to load discounts.",
       "saveFailed": "Failed to save the discount."
+    }
+  },
+  "prepaidBlock": {
+    "errors": {
+      "hoursInvalid": "Enter a block size greater than zero (fractions of an hour are allowed).",
+      "priceInvalid": "Enter a block price of zero or more.",
+      "expiryInvalid": "Expiry must be a whole number of months from 1 to 120, or empty.",
+      "thresholdInvalid": "The usage threshold must be a whole percentage from 1 to 99, or empty.",
+      "serviceRequired": "The line needs at least one hourly service."
+    },
+    "hoursValue": "{{hours}} h",
+    "trigger": {
+      "initial": "Initial block",
+      "exhaustion": "Block ran out",
+      "threshold": "Usage threshold",
+      "expiry": "Block expired",
+      "renewal": "Contract renewal",
+      "manual": "Issued manually"
+    },
+    "loading": "Loading prepaid block details...",
+    "heading": "Prepaid Block",
+    "actions": {
+      "edit": "Edit",
+      "remove": "Remove block config",
+      "cancel": "Cancel",
+      "save": "Save",
+      "issueNext": "Issue next block"
+    },
+    "warnings": {
+      "coveredServiceOnOtherLine": "{{service}} is also on another active line ({{line}}). Time for it may bill there instead of drawing from this block."
+    },
+    "summary": {
+      "block": "Block",
+      "expiry": "Expiry",
+      "neverExpires": "Never expires",
+      "expiresAfterMonths": "{{months}} months",
+      "soldAs": "Sold as",
+      "triggers": "Next block is invoiced when",
+      "onExhaustion": "The block runs out",
+      "onThreshold": "{{percent}}% used",
+      "onExpiry": "The block expires",
+      "onRenewal": "The contract renews",
+      "tierAutoIssue": "Finalized automatically",
+      "tierDraft": "Draft for review"
+    },
+    "balance": {
+      "label": "Active balance",
+      "value": "{{remaining}} of {{total}} remaining",
+      "none": "No active block yet. A block activates when its invoice is finalized.",
+      "contractEnded": "Contract ended; remaining hours were forfeited."
+    },
+    "pending": {
+      "heading": "Pending block awaiting invoice finalization",
+      "draftInvoice": "Draft invoice",
+      "noInvoice": "No invoice linked",
+      "ageDays": "{{days}} days old",
+      "held": "{{hours}} of logged time is held until this block activates."
+    },
+    "next": {
+      "label": "Next scheduled issuance",
+      "none": "None"
+    },
+    "history": {
+      "heading": "Block history",
+      "empty": "No blocks have been issued yet.",
+      "columns": {
+        "issued": "Issued",
+        "reason": "Reason",
+        "status": "Status",
+        "hours": "Remaining",
+        "amount": "Amount",
+        "invoice": "Invoice"
+      }
+    },
+    "fields": {
+      "blockHours": "Block size (hours)",
+      "blockHoursHelp": "Fractions are fine, for example 1.5 for 90 minutes.",
+      "blockPrice": "Block price ({{currency}})",
+      "blockPriceManualHelp": "Set explicitly. It is stored as entered and does not follow the hourly rate.",
+      "blockPriceDefaultHelp": "Defaults to hours x the service rate. It is saved as an explicit price.",
+      "useRateTimesHours": "Use hours x rate",
+      "soldAs": "Invoice line is sold as",
+      "soldAsHelp": "Drives tax, GL and accounting export mapping for the block invoice line.",
+      "expiryMonths": "Expires after (months)",
+      "neverExpires": "Never expires",
+      "expiryMonthsHelp": "Leave empty for hours that never expire. Unused hours are forfeited at expiry.",
+      "thresholdPercent": "Issue next block at usage (%)",
+      "noThreshold": "No threshold",
+      "triggersHeading": "Invoice the next block when",
+      "triggerExhaustion": "The block runs out",
+      "triggerExpiry": "The block expires",
+      "triggerRenewal": "The contract renews",
+      "triggerRenewalHint": "Invoices a new block on each renewal (evergreen anniversary or activated renewal contract). Existing blocks keep their own expiry.",
+      "tier": "Follow-on invoice",
+      "tierDraft": "Create a draft for review",
+      "tierAutoIssue": "Finalize and send automatically",
+      "blockPriceNeutral": "Block price (in the client's currency)"
+    },
+    "status": {
+      "pending": "Pending",
+      "active": "Active",
+      "expired": "Expired",
+      "voided": "Voided"
+    }
+  },
+  "wizardPrepaidBlock": {
+    "heading": "Prepaid block lines",
+    "description": "Sell hours in advance. Each line invoices a block of hours at a fixed price, and tracked time draws the block down; hours beyond the block bill at the hourly rate.",
+    "templateDescription": "Sell hours in advance. Each line invoices a block of hours at a fixed price, and tracked time draws the block down. The price takes the client's currency when a contract is created from this template.",
+    "lineName": "Line name (optional)",
+    "lineNamePlaceholder": "Prepaid Block",
+    "removeLine": "Remove prepaid block line",
+    "serviceItem": "Service {{index}}",
+    "overageRate": "Hourly rate",
+    "removeService": "Remove service",
+    "addService": "Add service to this line",
+    "addLine": "Add Prepaid Block Line",
+    "validation": {
+      "invalidBlock": "Complete the block size, price and trigger settings for every prepaid block line before finishing.",
+      "rateRequired": "Prepaid block service \"{{serviceName}}\" needs an hourly rate above zero (hours beyond the block bill at that rate)."
     }
   }
 }

@@ -25,6 +25,7 @@
     },
     "states": {
       "active": "Aktiv",
+      "scheduled": "Schemalagt",
       "inactive": "Inaktiv",
       "loading": "Läser in…",
       "na": "Ej tillämpligt",
