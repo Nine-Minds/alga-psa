@@ -53,4 +53,3 @@ Pass when the approved operation persists on the approved record, other targets 
 - [Delegated administration screen](../../../server/src/components/co-managed/CoManagedDelegatedAdministration.tsx)
 - [Allowed operations and admission](../../../packages/co-managed/src/delegatedAdministration.ts)
 - [English screen labels](../../../server/public/locales/en/features/co-management-delegation.json)
-

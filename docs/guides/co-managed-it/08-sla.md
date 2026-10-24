@@ -56,4 +56,3 @@ Pass when saved mappings govern new escalations, old targets remain stable, resp
 - [SLA mapping screen](../../../server/src/components/co-managed/CoManagedSlaPolicyPanel.tsx)
 - [SLA selection and transitions](../../../packages/co-managed/src/ticketSla.ts)
 - [Organization-specific SLA reads](../../../packages/co-managed/src/ticketSlaRead.ts)
-

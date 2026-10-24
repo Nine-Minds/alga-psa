@@ -55,4 +55,3 @@ Record the new client/workspace, accepted scope, delivered invitation, final sta
 - [Setup recovery](../../../server/src/components/co-managed/CoManagedClientRecovery.tsx)
 - [Acceptance boundary](../../../server/src/components/co-managed/CoManagedAcceptanceBoundary.tsx)
 - [Invitation delivery and retry](../../../packages/co-managed/src/provisioningInvitation.ts)
-

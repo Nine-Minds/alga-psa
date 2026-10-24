@@ -55,4 +55,3 @@ Pass when exact persisted entries agree across effort, timesheet, approval and d
 - [Qualified time launcher](../../../server/src/components/co-managed/CoManagedTimeEntry.tsx)
 - [Commercial billing profile](../../../server/src/components/co-managed/CoManagedTimeBillingProfile.tsx)
 - [Shared time billing mode](../../../packages/co-managed/src/timeEntryBillingMode.ts)
-

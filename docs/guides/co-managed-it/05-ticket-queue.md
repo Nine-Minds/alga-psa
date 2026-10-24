@@ -54,4 +54,3 @@ Pass when queue scope survives navigation, exported content matches the full aut
 - [Qualified ticket list](../../../server/src/components/co-managed/QualifiedTicketList.tsx)
 - [Bulk handback composer and reload recovery](../../../server/src/components/co-managed/CoManagedTicketHandbackComposer.tsx)
 - [Bulk command](../../../packages/co-managed/src/ticketBulkHandback.ts)
-

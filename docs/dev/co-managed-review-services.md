@@ -116,6 +116,29 @@ and returned a syntax error on every poll. It is cancelled and replaced by
 exit 1 below its 42 GiB threshold without a syntax error. That threshold is a
 wake signal; the board must still admit each actual service launch.
 
+### Open Review identity
+
+The installed board release `202610232337-g5429853d2c` uses
+`qa@emeraldcity.oz` as its test-login identity. Its `openCardReview` path
+prepares that identity through `ensureReviewLogin`, signs in on the selected
+app origin, and checks the resulting session email before returning
+`signedInAs`. The older report that Open Review hardcodes Glinda no longer
+describes this release. Glinda remains the template identity for the board's
+test-account preparation.
+
+Once the registered application is ready, run:
+
+```bash
+alga-dev workflow-open-review --projectId=$PROJECT
+```
+
+Require `success: true` and `signedInAs: qa@emeraldcity.oz`, then confirm the
+QA identity and Oz organization in the application. Source inspection of the
+board establishes its intended identity; it does not prove successful sign-in.
+Do not replace account hashes or switch manually to QA to satisfy this check.
+If resolution reports no app service, repair registration first. Open Review
+prefers an available `review-app` registration and otherwise uses `dev-server`.
+
 ### Restarting is adoption, not a cold start
 
 `workflow-restart-service` kills the wrapper in the PTY; the wrapper relaunches

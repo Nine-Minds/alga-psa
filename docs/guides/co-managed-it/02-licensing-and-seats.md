@@ -54,4 +54,3 @@ Pass when provider/license capacity, sponsor totals and customer allocations rec
 - [Pool editor](../../../server/src/components/co-managed/CoManagedPoolEditor.tsx)
 - [Customer seat allocation and shortfall purchase](../../../server/src/components/co-managed/CoManagedClientSeats.tsx)
 - [Tenant license management](../../../packages/co-managed/src/tenantLicenseManagement.ts)
-

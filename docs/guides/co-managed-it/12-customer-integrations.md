@@ -60,4 +60,3 @@ Record configuration, sign-in, directory, outbound and inbound results individua
 - [Provider route and capability boundary](../../../server/src/app/msp/co-management/providers/page.tsx)
 - [Inbound requester reply handling](../../../packages/co-managed/src/inboundRequesterReply.ts)
 - [Integration completion requirements](../../plans/2026-09-20-co-managed-it-completion/PRD.md)
-

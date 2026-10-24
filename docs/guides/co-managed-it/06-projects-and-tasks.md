@@ -55,4 +55,3 @@ Pass when scope, edits, assignment, history and effort refer to the same custome
 - [Task editor](../../../server/src/components/co-managed/CoManagedProjectTaskEditor.tsx)
 - [MSP task assignment](../../../server/src/components/co-managed/CoManagedProjectTaskAssignment.tsx)
 - [Task edit enforcement](../../../packages/co-managed/src/projectTaskEditing.ts)
-

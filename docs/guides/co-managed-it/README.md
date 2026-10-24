@@ -66,4 +66,3 @@ These guides do not change the card's approval, CI, merge or production-readines
 - [Client management composition](../../../server/src/components/co-managed/CoManagedClientView.tsx)
 - [Whole-card completion requirements](../../plans/2026-09-20-co-managed-it-completion/PRD.md)
 - [Native ticket screen requirements](../../plans/2026-10-15-co-managed-native-ticket-screen/PRD.md)
-

@@ -56,4 +56,3 @@ Pass when each principal sees and changes only permitted work, with revocation e
 - [Individual-ticket grants](../../../server/src/components/co-managed/CoManagedExplicitTicketGrantsPanel.tsx)
 - [Policy enforcement](../../../packages/co-managed/src/policy.ts)
 - [Shared field redaction](../../../packages/co-managed/src/sharedWorkRead.ts)
-

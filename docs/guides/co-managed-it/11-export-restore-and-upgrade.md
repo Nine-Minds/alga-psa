@@ -75,4 +75,3 @@ Record export, restore and activation receipts separately from upgrade results. 
 - [Operator restore CLI](../../../server/scripts/restore-portable-workspace.ts)
 - [Portable workspace behavior and limitations](../../features/co-managed-portable-workspace.md)
 - [Upgrade screen](../../../server/src/components/co-managed/CoManagedUpgrade.tsx)
-
