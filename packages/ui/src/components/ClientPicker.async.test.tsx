@@ -189,6 +189,18 @@ describe('AsyncClientPicker', () => {
     expect(screen.getByRole('combobox').getAttribute('id')).toBe('cp-trigger');
   });
 
+  it('keeps `${id}-option-${clientId}` in the DOM and clickable', async () => {
+    const onSelect = vi.fn();
+    const searchClients = vi.fn(async (_p?: any) => ({ clients: mk(2), total: 2 }));
+    renderPicker({ id: 'client-picker', searchClients, onSelect });
+    open();
+    await screen.findByText('Client 1');
+    const option = document.querySelector('#client-picker-option-Client-1') as HTMLElement;
+    expect(option).not.toBeNull();
+    fireEvent.click(option);
+    expect(onSelect).toHaveBeenCalledWith('Client-1');
+  });
+
   it('does not fetch when filters change while closed', async () => {
     const searchClients = vi.fn(async (_p?: any) => ({ clients: mk(1), total: 1 }));
     const ui = (state: 'active' | 'all') => (
