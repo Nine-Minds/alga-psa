@@ -338,6 +338,11 @@ export interface XeroInvoicePayload {
   externalInvoiceId?: string | null;
   contactId: string;
   currency?: string | null;
+  /**
+   * Plain Alga invoice_number (no PO suffix). Sent as Xero InvoiceNumber on create only;
+   * never derived from `reference` or `invoiceId`. When absent Xero auto-numbers the invoice.
+   */
+  invoiceNumber?: string | null;
   reference?: string | null;
   invoiceDate?: string | null;
   dueDate?: string | null;
@@ -1369,7 +1374,9 @@ async function getAppSecrets(tenantId: string, secretProvider?: ISecretProvider)
 }
 
 function mapInvoicePayload(payload: XeroInvoicePayload): Record<string, unknown> {
-  const invoiceNumber = payload.reference ?? payload.invoiceId;
+  // InvoiceNumber is sent on create only. An update by InvoiceID must not carry it,
+  // otherwise invoices already exported with a PO-suffixed number would be renamed.
+  const invoiceNumber = payload.externalInvoiceId ? undefined : payload.invoiceNumber?.trim() || undefined;
   const currency = payload.currency ?? 'USD';
   const lineItems = payload.lines.map((line) => mapInvoiceLine(line, currency));
 

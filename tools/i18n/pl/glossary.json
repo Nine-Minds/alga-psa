@@ -2216,6 +2216,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "RMA {{id}}",
       ",",
       "3CX",
       "Acme IT Solutions",
@@ -2243,6 +2244,7 @@
       "CSV",
       "Ctrl",
       "Datto",
+      "Datto RMM",
       "email@example.com, another@example.com",
       "Entra ID",
       "Excel",
@@ -2351,7 +2353,8 @@
       "TeamViewer",
       "Kilogram",
       "Auto",
-      "auto | 50% | 120px"
+      "auto | 50% | 120px",
+      "Code 128"
     ],
     "caseInsensitive": [
       "api",

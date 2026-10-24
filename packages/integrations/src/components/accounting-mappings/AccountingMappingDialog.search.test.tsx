@@ -25,6 +25,7 @@ const externalTarget = {
     mapping.metadata?.xeroTargetKind === 'account' ? 'account' : 'item',
   optionIdForMapping: (mapping: any) =>
     `${mapping.metadata?.xeroTargetKind === 'account' ? 'account' : 'item'}:${mapping.external_entity_id}`,
+  isExclusiveKind: (kindId: string) => kindId === 'item',
   invalidNotice: 'Pick a valid Xero Item, or explicitly switch to a Revenue Account.'
 };
 

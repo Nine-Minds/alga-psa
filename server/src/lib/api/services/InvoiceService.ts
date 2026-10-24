@@ -96,6 +96,7 @@ import {
   updateInvoiceTotalsAndRecordTransaction
 } from '@alga-psa/billing/services/invoiceService';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
+import { paymentTermDays } from '@alga-psa/shared/billingClients/paymentPreferences';
 import { getClientDefaultBillingProfileId } from '@alga-psa/billing/lib/billing/billingProfileLookup';
 
 type DeferredEvent = () => Promise<void>;
@@ -322,18 +323,6 @@ export class InvoiceService extends BaseService<IInvoice> {
     return summarizeInvoiceRecurringProvenance(charges);
   }
 
-  private getPaymentTermDays(paymentTerms?: string | null): number {
-    switch (paymentTerms) {
-      case 'net_15':
-        return 15;
-      case 'due_on_receipt':
-        return 0;
-      case 'net_30':
-      default:
-        return 30;
-    }
-  }
-
   private async computeDueDate(trx: Knex.Transaction, tenant: string, clientId: string, invoiceDate: string): Promise<string> {
     const client = await tenantDb(trx, tenant).table('clients')
       .where({ client_id: clientId })
@@ -342,7 +331,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 
     const plainInvoiceDate = Temporal.PlainDate.from(invoiceDate);
     return plainInvoiceDate
-      .add({ days: this.getPaymentTermDays(client?.payment_terms) })
+      .add({ days: paymentTermDays(client?.payment_terms) })
       .toString();
   }
 
@@ -1273,6 +1262,7 @@ export class InvoiceService extends BaseService<IInvoice> {
           method: String(data.payment_method ?? 'manual'),
           receivedByUserId: context.userId,
           gatewayTransactionId: data.reference_number,
+          source: 'manual',
         }),
         ctx: {
           tenantId: context.tenant,

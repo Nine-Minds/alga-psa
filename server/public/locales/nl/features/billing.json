@@ -67,6 +67,7 @@
     "taxBreakdown": "Belastingoverzicht",
     "manualInvoice": "Handmatige factuur",
     "credits": "Kredieten",
+    "currency": "Valuta",
     "financialArtifactSummary": "Alleen financiële factuur. Terugkerende serviceperioden verschijnen alleen op terugkerende detailregels.",
     "servicePeriod": "Serviceperiode",
     "servicePeriods": "Serviceperioden",

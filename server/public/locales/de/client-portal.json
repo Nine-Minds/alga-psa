@@ -478,6 +478,15 @@
         "failed": "Ihre Karte konnte nicht gespeichert werden",
         "savedDescription": "Ihre Karte ist für zukünftige Zahlungen bereit.",
         "failedDescription": "Die Einrichtung konnte nicht bestätigt werden. Bitte fordern Sie bei Ihrem Rechnungssteller einen neuen Link an."
+      },
+      "payLink": {
+        "heading": "Dieser Zahlungslink kann nicht verwendet werden",
+        "expired": "Dieser Zahlungslink ist abgelaufen.",
+        "invalid": "Dieser Zahlungslink ist ungültig.",
+        "notPayable": "Diese Rechnung kann mit diesem Link nicht mehr bezahlt werden. Möglicherweise ist sie bereits bezahlt oder nicht mehr für die Online-Zahlung freigegeben.",
+        "unavailable": "Die Zahlungsseite konnte gerade nicht geöffnet werden. Bitte versuchen Sie es in einigen Minuten erneut.",
+        "viewInPortal": "Rechnung im Kundenportal ansehen",
+        "contactProvider": "Bitte wenden Sie sich an Ihren Rechnungssteller, um einen neuen Link zu erhalten."
       }
     }
   },

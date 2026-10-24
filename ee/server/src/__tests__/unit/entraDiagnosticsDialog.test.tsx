@@ -80,6 +80,36 @@ describe('EntraDiagnosticsDialog', () => {
     mocks.getMappings.mockResolvedValue({ success: true, data: { mappings: [] } });
   });
 
+  it('renders API-client remedies from rec.text and keeps the legacy key text', async () => {
+    const allowlist = "CIPP refused the tenant list (listtenants) with HTTP 403. This usually means our egress IP is not in the API client's allowlist: add our egress IPs under Allowed IP Ranges.";
+    const html = 'CIPP answered with a web page instead of API data: the API URL is missing /api or points at the wrong host.';
+    mocks.runConnection.mockResolvedValue({
+      success: true,
+      data: {
+        ...connectionReport,
+        recommendations: [
+          { code: 'cipp_auth_rejected', severity: 'fail', text: allowlist },
+          { code: 'cipp_html_response', severity: 'fail', text: html },
+          {
+            code: 'cipp_auth_rejected',
+            severity: 'fail',
+            text: 'legacy fallback text that the locale must override',
+            messageKey: 'cippAuthRejected',
+          },
+        ],
+      },
+    });
+    render(<EntraDiagnosticsDialog isOpen onClose={() => {}} />);
+    await waitFor(() => {
+      expect(screen.getByText(/egress IP is not in the API client's allowlist/)).toBeTruthy();
+    });
+    expect(screen.getByText(/missing \/api or points at the wrong host/)).toBeTruthy();
+    // Legacy key path still renders the locale string.
+    expect(screen.getByText(/Rotate the CIPP API key from Settings/)).toBeTruthy();
+    // The allowlist remedy is not replaced by the legacy rotate-the-key text.
+    expect(screen.getAllByText(/Rotate the CIPP API key/)).toHaveLength(1);
+  });
+
   it('renders the overall badge, steps, and recommendations from a fixture', async () => {
     mocks.runConnection.mockResolvedValue({ success: true, data: connectionReport });
     render(<EntraDiagnosticsDialog isOpen onClose={() => {}} />);

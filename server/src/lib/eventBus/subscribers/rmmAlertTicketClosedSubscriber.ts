@@ -137,6 +137,12 @@ async function dispatchRmmAlertReset(
 
     const adapter = await resolveAdapter(alert.provider);
     if (!adapter) continue;
+    if (
+      adapter.isResetEnabled &&
+      !(await adapter.isResetEnabled({ tenantId, integrationId: alert.integration_id }))
+    ) {
+      continue;
+    }
 
     const now = new Date().toISOString();
     try {
@@ -186,8 +192,8 @@ async function resetEnabledForAlert(
 }
 
 /**
- * CE-safe adapter resolution: explicit registrations win; the NinjaOne and
- * Level adapters load lazily from the EE tree and are absent in CE builds.
+ * CE-safe adapter resolution: explicit registrations win; the NinjaOne, Level
+ * and Datto adapters load lazily from the EE tree and are absent in CE builds.
  */
 async function resolveAdapter(provider: string): Promise<RmmAlertOutboundAdapter | undefined> {
   const registered = getRmmAlertOutboundAdapter(provider);
@@ -208,6 +214,14 @@ async function resolveAdapter(provider: string): Promise<RmmAlertOutboundAdapter
     try {
       const mod = await import('@enterprise/lib/integrations/levelio/alerts/outboundAdapter');
       return mod.levelIoAlertOutboundAdapter ?? undefined;
+    } catch {
+      return undefined;
+    }
+  }
+  if (provider === 'datto') {
+    try {
+      const mod = await import('@enterprise/lib/integrations/datto/alertOutbound');
+      return mod.dattoRmmAlertOutboundAdapter ?? undefined;
     } catch {
       return undefined;
     }

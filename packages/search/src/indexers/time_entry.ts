@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 
 import { createTenantScopedIndexerQuery, tenantJoinIndexerTable } from '../tenantScopedIndexerQuery';
+import { recordPath } from '@alga-psa/types';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
 interface TimeEntrySearchRow {
@@ -50,13 +51,15 @@ function workItemLabel(row: TimeEntrySearchRow): string {
   return row.work_item_type ?? 'Time entry';
 }
 
-function urlFor(row: TimeEntrySearchRow): string {
+export function urlFor(row: TimeEntrySearchRow): string {
   if (row.work_item_type === 'ticket' && row.work_item_id) {
-    return `/msp/tickets/${row.work_item_id}`;
+    // LEVERAGE: pattern record-links — URL comes from the shared recordPath resolver (@alga-psa/types), not an inline template.
+    return recordPath('ticket', row.work_item_id);
   }
 
   if (row.work_item_type === 'project_task' && row.work_item_id && row.project_id) {
-    return `/msp/projects/${row.project_id}/tasks/${row.work_item_id}`;
+    // LEVERAGE: pattern record-links — URL comes from the shared recordPath resolver (@alga-psa/types), not an inline template.
+    return recordPath('project_task', row.work_item_id, { projectId: row.project_id });
   }
 
   if (row.work_item_type === 'interaction' && row.work_item_id) {
