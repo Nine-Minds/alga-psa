@@ -246,7 +246,9 @@
         "setLocation": "Definir localização",
         "setStatus": "Definir status",
         "assignContact": "Atribuir a contato",
-        "addToGroup": "Adicionar ao grupo"
+        "addToGroup": "Adicionar ao grupo",
+        "printLabels": "Imprimir etiquetas",
+        "printLabelsLimit": "Você pode imprimir no máximo {{max}} etiquetas por vez"
       },
       "actions": {
         "apply": "Aplicar",
@@ -446,7 +448,9 @@
       "rebootDevice": "Reinicializar dispositivo",
       "rebooting": "Reiniciando...",
       "editAsset": "Editar recurso",
-      "deleteAsset": "Excluir recurso"
+      "deleteAsset": "Excluir recurso",
+      "printLabel": "Imprimir etiqueta do recurso",
+      "printPage": "Imprimir página"
     },
     "values": {
       "unknownClient": "Cliente desconhecido"
@@ -849,7 +853,8 @@
       "save": "Salvar",
       "label": "Rótulo do botão",
       "template": "Modelo de URL",
-      "tokens": "Use {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {client.name} e {field.<key>} com as chaves de campos personalizados definidas em Configurações → Ativos → Tipos de ativo.",
+      "ninjaExample": "Exemplo do painel de dispositivo do NinjaOne: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Substitua o host pela sua região do NinjaOne: app, eu, ca, oc ou us2 .ninjarmm.com.",
+      "tokens": "Use {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} e {field.<key>} com as chaves de campos personalizados definidas em Configurações → Ativos → Tipos de ativo.",
       "loading": "Carregando opções de acesso remoto…",
       "unavailable": "Indisponível para este ativo",
       "actions": "Ações",

@@ -68,9 +68,10 @@ import {
   hasCuratedChanges,
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
-import { applyMatchingChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
+import { applyMatchingChecklistTemplates, ticketDescriptionFromAttributes } from '@alga-psa/shared/lib/ticketChecklists';
 import { enforceTicketCloseRules, type CloseRuleBypassSource } from '../lib/validateTicketClosure';
 import { maybeReopenBundleMasterFromChildReply, mirrorCommentToChild } from './ticketBundleUtils';
+import { BUNDLE_CHILD_LOCKED_FIELDS, isChildWorkflowLocked } from '../lib/bundleWorkflowLock';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -1248,7 +1249,9 @@ async function buildTicketListBaseQuery(
       baseQuery = baseQuery.whereExists(
         tenantScopedTable(trx, 'statuses', tenant)
           .select('*')
-          .whereRaw('statuses.status_id = t.status_id')
+          // LEVERAGE: pattern tenant-correlated-exists — correlate on the distribution column so Citus can co-locate the subquery
+          .whereRaw('statuses.tenant = t.tenant')
+          .andWhereRaw('statuses.status_id = t.status_id')
           .andWhere('statuses.is_closed', false)
       );
     } else if (parsedStatusFilter.kind === 'name') {
@@ -1316,6 +1319,8 @@ async function buildTicketListBaseQuery(
                 .select('*')
                 .whereRaw('tc.tenant = t.tenant')
                 .whereRaw('tc.master_ticket_id = t.ticket_id')
+                // LEVERAGE: pattern tenant-correlated-exists — correlate on the distribution column so Citus can co-locate the subquery
+                .andWhereRaw('tc.tenant = t.tenant')
                 .andWhere('tc.client_id', validatedFilters.clientId)
             );
         });
@@ -1333,6 +1338,8 @@ async function buildTicketListBaseQuery(
                 .select('*')
                 .whereRaw('tc.tenant = t.tenant')
                 .whereRaw('tc.master_ticket_id = t.ticket_id')
+                // LEVERAGE: pattern tenant-correlated-exists — correlate on the distribution column so Citus can co-locate the subquery
+                .andWhereRaw('tc.tenant = t.tenant')
                 .andWhere('tc.contact_name_id', validatedFilters.contactId)
             );
         });
@@ -2743,13 +2750,18 @@ export async function updateTicketInTransaction(
       throw new Error('Ticket not found');
     }
 
-    // Bundled child tickets lock workflow fields by default
-    const isBundledChild = Boolean(currentTicket.master_ticket_id);
-    const lockedFields = new Set(['status_id', 'assigned_to', 'priority_id']);
-    if (isBundledChild) {
-      const attempted = Object.keys(validatedData).filter((k) => lockedFields.has(k));
-      if (attempted.length > 0) {
-        throw new Error(`This ticket is bundled; workflow fields are locked (${attempted.join(', ')}). Update the master ticket instead.`);
+    // A bundled child's workflow fields are locked only while its master is in
+    // sync_updates mode; link_only children manage their own.
+    if (currentTicket.master_ticket_id) {
+      const masterSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+        .where({ master_ticket_id: currentTicket.master_ticket_id })
+        .first();
+      if (isChildWorkflowLocked({ isBundledChild: true, masterSettings })) {
+        const lockedFields = new Set<string>(BUNDLE_CHILD_LOCKED_FIELDS);
+        const attempted = Object.keys(validatedData).filter((k) => lockedFields.has(k));
+        if (attempted.length > 0) {
+          throw new Error(`This ticket is bundled; workflow fields are locked (${attempted.join(', ')}). Update the master ticket instead.`);
+        }
       }
     }
 
@@ -3125,6 +3137,10 @@ export async function updateTicketInTransaction(
           category_id: updatedTicket.category_id,
           subcategory_id: updatedTicket.subcategory_id,
           priority_id: updatedTicket.priority_id,
+          client_id: updatedTicket.client_id,
+          ticket_origin: updatedTicket.ticket_origin,
+          title: updatedTicket.title,
+          description: ticketDescriptionFromAttributes(updatedTicket.attributes),
         }, isSystemActor
           ? undefined
           : {

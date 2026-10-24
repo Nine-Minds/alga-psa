@@ -63,6 +63,7 @@ function basePayload(overrides: Partial<XeroInvoicePayload> = {}): XeroInvoicePa
     invoiceId: 'alga-invoice-1',
     contactId: 'contact-1',
     currency: 'USD',
+    invoiceNumber: 'INV-100',
     reference: 'INV-100',
     invoiceDate: '2024-03-15',
     dueDate: '2024-04-14',
@@ -146,12 +147,12 @@ describe('XeroClientService.createInvoices payload mapping', () => {
     });
   });
 
-  it('falls back to the Alga invoice id as InvoiceNumber and defaults LineAmountTypes when not provided', async () => {
+  it('never falls back to the Alga invoice id as InvoiceNumber and defaults LineAmountTypes when not provided', async () => {
     const invoice = await postedInvoice(
-      basePayload({ reference: null, lineAmountType: undefined })
+      basePayload({ invoiceNumber: null, reference: null, lineAmountType: undefined })
     );
 
-    expect(invoice.InvoiceNumber).toBe('alga-invoice-1');
+    expect(invoice).not.toHaveProperty('InvoiceNumber');
     expect(invoice).not.toHaveProperty('Reference');
     expect(invoice.LineAmountTypes).toBe('Exclusive');
   });

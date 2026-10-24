@@ -248,7 +248,8 @@
     "openMenu": "Abrir menu",
     "moreActions": "Mais ações",
     "createTemplate": "Criar modelo a partir do ticket",
-    "createWorkflowFromTicket": "Criar fluxo de trabalho a partir do ticket"
+    "createWorkflowFromTicket": "Criar fluxo de trabalho a partir do ticket",
+    "printWorkTag": "Imprimir etiqueta de trabalho"
   },
   "messages": {
     "noTickets": "Nenhum ticket encontrado",
@@ -461,6 +462,14 @@
     "clientPortal": "Recebido via Portal do Cliente",
     "inboundEmail": "Recebido via e-mail de entrada"
   },
+  "originalEmail": {
+    "text": "Texto",
+    "original": "Email original",
+    "emailShort": "Email",
+    "loading": "Carregando o email original…",
+    "error": "Não foi possível carregar o email original.",
+    "group": "Visualização da mensagem"
+  },
   "documents": {
     "title": "Documentos",
     "noDocuments": "Nenhum documento anexado",
@@ -646,7 +655,9 @@
       "more": "Mais",
       "bundleNeedsOne": "Selecione pelo menos 1 ticket para agrupar",
       "selectedCount_few": "{{count}} selecionado",
-      "selectedCount_many": "{{count}} selecionado"
+      "selectedCount_many": "{{count}} selecionado",
+      "printLabels": "Imprimir etiquetas",
+      "printLabelsLimit": "Você pode imprimir no máximo {{max}} etiquetas por vez"
     },
     "moveDialogTitle": "Mover tickets selecionados",
     "moveDialogDescription": "Selecione um quadro de destino e status e confirme a movimentação dos tickets selecionados.",
@@ -679,7 +690,7 @@
     "bundleMasterLabel": "Selecione o ticket mestre",
     "bundleMasterPlaceholder": "Selecione o ticket mestre...",
     "bundleSyncUpdates": "Sincronizar atualizações do mestre para os filhos (respostas públicas + alterações no fluxo de trabalho)",
-    "bundleSyncUpdatesHelp": "Os tickets filhos mantêm seu status atual ao serem agrupados. Depois, fechar ou reabrir o mestre fecha ou reabre todos os tickets filhos, e as alterações de status, responsável e prioridade no mestre se aplicam aos filhos. Os campos de fluxo de trabalho ficam bloqueados nos filhos. As notas internas permanecem no mestre.",
+    "bundleSyncUpdatesHelp": "Os tickets filhos mantêm seu status atual ao serem agrupados. Com a sincronização ativada, fechar ou reabrir o mestre fecha ou reabre todos os filhos, as alterações de status, responsável e prioridade no mestre se aplicam a eles e seus campos de fluxo de trabalho ficam bloqueados. Sem a sincronização, os filhos gerenciam por conta própria status, responsável e prioridade. As notas internas permanecem no mestre.",
     "bundleSelectAtLeastTwo": "Selecione pelo menos dois tickets para agrupar.",
     "bundleSelectMaster": "Selecione um ticket mestre.",
     "bundleSuccess": "Tickets agrupados",
@@ -752,8 +763,8 @@
       "masterTicket": "Selecione o ticket mestre",
       "selectMasterTicket": "Selecione o ticket mestre...",
       "syncUpdates": "Sincronizar atualizações do mestre para os filhos (respostas públicas + alterações no fluxo de trabalho)",
-      "syncUpdatesHelp": "Os tickets filhos mantêm seu status atual ao serem agrupados. Depois, fechar ou reabrir o mestre fecha ou reabre todos os tickets filhos, e as alterações de status, responsável e prioridade no mestre se aplicam aos filhos. Os campos de fluxo de trabalho ficam bloqueados nos filhos. As notas internas permanecem no mestre.",
-      "childrenDescription": "As crianças mantêm o seu estado atual; os campos de fluxo de trabalho estão bloqueados para filhos. As respostas derivadas de entrada são exibidas abaixo como somente visualização.",
+      "syncUpdatesHelp": "Os tickets filhos mantêm seu status atual ao serem agrupados. Com a sincronização ativada, fechar ou reabrir o mestre fecha ou reabre todos os filhos, as alterações de status, responsável e prioridade no mestre se aplicam a eles e seus campos de fluxo de trabalho ficam bloqueados. Sem a sincronização, os filhos gerenciam por conta própria status, responsável e prioridade. As notas internas permanecem no mestre.",
+      "childrenDescription": "Os tickets filhos mantêm seu status atual. Os campos de fluxo de trabalho ficam bloqueados somente no modo Sync Updates. As respostas recebidas dos filhos são exibidas abaixo como somente leitura.",
       "checkingMasters": "Verificando pacotes existentes...",
       "existingMasterSuffix": "(mestre existente)",
       "existingMasterLocked": "Um ticket selecionado já é um pacote master. Ele será usado como mestre; os outros serão adicionados como filhos.",
@@ -1667,7 +1678,10 @@
       "ruleCategoryBoardMismatch": "A categoria selecionada pertence a um quadro diferente do da regra.",
       "ruleCategoryInvalid": "A categoria selecionada não é uma categoria de nível superior.",
       "ruleSubcategoryInvalid": "A subcategoria selecionada não pertence à categoria selecionada.",
-      "ruleSubcategoryRequiresCategory": "Selecione uma categoria antes de escolher uma subcategoria."
+      "ruleSubcategoryRequiresCategory": "Selecione uma categoria antes de escolher uma subcategoria.",
+      "ruleTooManyKeywords": "Use no máximo {{max}} palavras-chave por regra.",
+      "ruleKeywordTooLong": "Cada palavra-chave deve ter no máximo {{max}} caracteres.",
+      "ruleOriginInvalid": "Uma das origens de ticket selecionadas não é válida."
     }
   },
   "ticketSection": {
@@ -1696,9 +1710,11 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Os tickets filhos mantêm seu status atual ao serem agrupados. Depois, fechar ou reabrir o mestre fecha ou reabre todos os tickets filhos, e as alterações de status, responsável e prioridade no mestre se aplicam aos filhos. Os campos de fluxo de trabalho ficam bloqueados nos filhos. As notas internas permanecem no mestre.",
+      "childrenDescription": "Os tickets filhos mantêm seu status atual ao serem agrupados. No modo Sync Updates, fechar ou reabrir o mestre fecha ou reabre todos os filhos, as alterações de status, responsável e prioridade no mestre se aplicam a eles e seus campos de fluxo de trabalho ficam bloqueados. No modo Link Only, os filhos gerenciam por conta própria status, responsável e prioridade. As notas internas permanecem no mestre.",
       "title": "Pacote",
       "masterBanner": "Este ticket é o mestre de um pacote ({{count}} filhos). Modo: {{mode}}.",
+      "childLockedNotice": "Os campos de fluxo de trabalho estão bloqueados; trabalhe a partir do ticket mestre.",
+      "childLinkedNotice": "Ele está vinculado ao mestre e é gerenciado de forma independente.",
       "multipleClients": "Vários clientes",
       "mode": "Modo: {{mode}}",
       "unbundle": "Desagrupar",
@@ -1734,7 +1750,15 @@
       "applyResolutionHelpNoComment": "Fecha o ticket filho com o status {{status}}. O ticket principal não tem nenhum comentário de resolução público para publicar.",
       "reopenMasterLabel": "Adicionar e reabrir o ticket principal",
       "reopenMasterHelp": "Reabre apenas o ticket principal. Os tickets filhos já fechados neste pacote permanecem fechados; as notificações de reabertura e o SLA se aplicam ao ticket principal.",
-      "closedMasterGating": "As regras de fechamento do quadro não permitem tickets filhos abertos sob um ticket principal fechado, portanto manter o ticket principal fechado não é uma opção."
+      "closedMasterGating": "As regras de fechamento do quadro não permitem tickets filhos abertos sob um ticket principal fechado, portanto manter o ticket principal fechado não é uma opção.",
+      "modeSwitchDialogIntro": "O ticket principal está fechado. Escolha o que deve acontecer com os tickets filhos abertos quando o pacote mudar para Sync Updates.",
+      "modeSwitchConfirm": "Mudar para Sync Updates",
+      "keepClosedSwitchLabel": "Mudar e manter o ticket principal fechado",
+      "keepClosedSwitchHelp": "Os tickets filhos abertos permanecem abertos com o próprio cronômetro de SLA. O pacote será exibido como inconsistente até que sejam resolvidos.",
+      "applyResolutionSwitchLabel": "Mudar e aplicar a resolução do ticket principal aos tickets filhos abertos",
+      "applyResolutionSwitchHelp": "Fecha cada ticket filho aberto com o status {{status}} e publica nele a resolução do ticket principal como comentário público.",
+      "applyResolutionSwitchHelpNoComment": "Fecha cada ticket filho aberto com o status {{status}}. O ticket principal não tem um comentário de resolução público para publicar.",
+      "reopenMasterSwitchLabel": "Mudar e reabrir o ticket principal"
     },
     "autoClose": "Será fechado automaticamente em {{date}}, a menos que haja nova atividade.",
     "autoCloseWarned": "O cliente foi avisado.",

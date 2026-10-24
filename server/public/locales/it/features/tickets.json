@@ -248,7 +248,8 @@
     "openMenu": "Apri menu",
     "moreActions": "Altre azioni",
     "createTemplate": "Crea modello dal ticket",
-    "createWorkflowFromTicket": "Crea workflow dal ticket"
+    "createWorkflowFromTicket": "Crea workflow dal ticket",
+    "printWorkTag": "Stampa etichetta di lavoro"
   },
   "messages": {
     "noTickets": "Nessun ticket trovato",
@@ -461,6 +462,14 @@
     "clientPortal": "Ricevuto tramite Portale Clienti",
     "inboundEmail": "Ricevuto tramite e-mail"
   },
+  "originalEmail": {
+    "text": "Testo",
+    "original": "Email originale",
+    "emailShort": "Email",
+    "loading": "Caricamento dell'email originale…",
+    "error": "Impossibile caricare l'email originale.",
+    "group": "Visualizzazione del messaggio"
+  },
   "documents": {
     "title": "Documenti",
     "noDocuments": "Nessun documento allegato",
@@ -659,7 +668,7 @@
     "bundleMasterLabel": "Seleziona ticket master",
     "bundleMasterPlaceholder": "Seleziona ticket master...",
     "bundleSyncUpdates": "Sincronizza gli aggiornamenti dal master ai figli (risposte pubbliche + modifiche al flusso di lavoro)",
-    "bundleSyncUpdatesHelp": "I ticket figli mantengono lo stato attuale quando vengono raggruppati. Successivamente, la chiusura o riapertura del master chiude o riapre tutti i ticket figli, e le modifiche di stato, assegnatario e priorità sul master si applicano ai figli. I campi del flusso di lavoro sono bloccati sui figli. Le note interne restano sul master.",
+    "bundleSyncUpdatesHelp": "I ticket figli mantengono lo stato attuale quando vengono raggruppati. Con la sincronizzazione attiva, la chiusura o riapertura del master chiude o riapre tutti i figli, le modifiche di stato, assegnatario e priorità sul master si applicano a loro e i loro campi del flusso di lavoro sono bloccati. Senza sincronizzazione, i figli gestiscono autonomamente stato, assegnatario e priorità. Le note interne restano sul master.",
     "bundleSelectAtLeastTwo": "Seleziona almeno due ticket da raggruppare.",
     "bundleSelectMaster": "Seleziona un ticket master.",
     "bundleSuccess": "Ticket raggruppati",
@@ -732,8 +741,8 @@
       "masterTicket": "Seleziona ticket master",
       "selectMasterTicket": "Seleziona ticket master...",
       "syncUpdates": "Sincronizza gli aggiornamenti dal master ai figli (risposte pubbliche + modifiche al flusso di lavoro)",
-      "syncUpdatesHelp": "I ticket figli mantengono lo stato attuale quando vengono raggruppati. Successivamente, la chiusura o riapertura del master chiude o riapre tutti i ticket figli, e le modifiche di stato, assegnatario e priorità sul master si applicano ai figli. I campi del flusso di lavoro sono bloccati sui figli. Le note interne restano sul master.",
-      "childrenDescription": "I secondari mantengono il loro stato attuale; i campi del workflow sono bloccati sui secondari. Le risposte in entrata dei secondari sono mostrate sotto in sola lettura.",
+      "syncUpdatesHelp": "I ticket figli mantengono lo stato attuale quando vengono raggruppati. Con la sincronizzazione attiva, la chiusura o riapertura del master chiude o riapre tutti i figli, le modifiche di stato, assegnatario e priorità sul master si applicano a loro e i loro campi del flusso di lavoro sono bloccati. Senza sincronizzazione, i figli gestiscono autonomamente stato, assegnatario e priorità. Le note interne restano sul master.",
+      "childrenDescription": "I ticket figli mantengono lo stato attuale. I campi del flusso di lavoro sono bloccati solo in modalità Sync Updates. Le risposte in entrata dei figli sono mostrate sotto in sola lettura.",
       "checkingMasters": "Verifica dei raggruppamenti esistenti...",
       "existingMasterSuffix": "(master esistente)",
       "existingMasterLocked": "Un ticket selezionato è già un master di raggruppamento. Verrà usato come master; gli altri saranno aggiunti come figli.",
@@ -784,7 +793,9 @@
       "more": "Altro",
       "bundleNeedsOne": "Seleziona almeno 1 ticket da raggruppare",
       "selectedCount_few": "{{count}} selezionati",
-      "selectedCount_many": "{{count}} selezionati"
+      "selectedCount_many": "{{count}} selezionati",
+      "printLabels": "Stampa etichette",
+      "printLabelsLimit": "Puoi stampare al massimo {{max}} etichette alla volta"
     },
     "assign": {
       "dialogTitle": "Assegna ticket selezionati",
@@ -1667,7 +1678,10 @@
       "ruleCategoryBoardMismatch": "La categoria selezionata appartiene a una bacheca diversa da quella della regola.",
       "ruleCategoryInvalid": "La categoria selezionata non è una categoria di primo livello.",
       "ruleSubcategoryInvalid": "La sottocategoria selezionata non appartiene alla categoria selezionata.",
-      "ruleSubcategoryRequiresCategory": "Seleziona una categoria prima di scegliere una sottocategoria."
+      "ruleSubcategoryRequiresCategory": "Seleziona una categoria prima di scegliere una sottocategoria.",
+      "ruleTooManyKeywords": "Usi al massimo {{max}} parole chiave per regola.",
+      "ruleKeywordTooLong": "Ogni parola chiave può avere al massimo {{max}} caratteri.",
+      "ruleOriginInvalid": "Una delle origini ticket selezionate non è valida."
     }
   },
   "ticketSection": {
@@ -1696,9 +1710,11 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "I ticket figli mantengono lo stato attuale quando vengono raggruppati. Successivamente, la chiusura o riapertura del master chiude o riapre tutti i ticket figli, e le modifiche di stato, assegnatario e priorità sul master si applicano ai figli. I campi del flusso di lavoro sono bloccati sui figli. Le note interne restano sul master.",
+      "childrenDescription": "I ticket figli mantengono lo stato attuale quando vengono raggruppati. In modalità Sync Updates, la chiusura o riapertura del master chiude o riapre tutti i figli, le modifiche di stato, assegnatario e priorità sul master si applicano a loro e i loro campi del flusso di lavoro sono bloccati. In modalità Link Only, i figli gestiscono autonomamente stato, assegnatario e priorità. Le note interne restano sul master.",
       "title": "Gruppo",
       "masterBanner": "Questo ticket è il principale di un gruppo ({{count}} figli). Modalità: {{mode}}.",
+      "childLockedNotice": "I campi del flusso di lavoro sono bloccati; lavora dal ticket master.",
+      "childLinkedNotice": "È collegato al master e viene gestito in modo autonomo.",
       "multipleClients": "Più clienti",
       "mode": "Modalità: {{mode}}",
       "unbundle": "Separa",
@@ -1734,7 +1750,15 @@
       "applyResolutionHelpNoComment": "Chiude il ticket figlio con lo stato {{status}}. Il ticket principale non ha alcun commento di risoluzione pubblico da pubblicare.",
       "reopenMasterLabel": "Aggiungi e riapri il ticket principale",
       "reopenMasterHelp": "Riapre solo il ticket principale. I ticket figli già chiusi in questo gruppo restano chiusi; le notifiche di riapertura e lo SLA si applicano al ticket principale.",
-      "closedMasterGating": "Le regole di chiusura della bacheca non consentono ticket figli aperti sotto un ticket principale chiuso, quindi non è possibile mantenere chiuso il ticket principale."
+      "closedMasterGating": "Le regole di chiusura della bacheca non consentono ticket figli aperti sotto un ticket principale chiuso, quindi non è possibile mantenere chiuso il ticket principale.",
+      "modeSwitchDialogIntro": "Il ticket principale è chiuso. Scegli cosa deve succedere ai ticket figli aperti quando il gruppo passa a Sync Updates.",
+      "modeSwitchConfirm": "Passa a Sync Updates",
+      "keepClosedSwitchLabel": "Passa e mantieni chiuso il ticket principale",
+      "keepClosedSwitchHelp": "I ticket figli aperti restano aperti con il proprio orologio SLA. Il gruppo risulterà incoerente finché non saranno risolti.",
+      "applyResolutionSwitchLabel": "Passa e applica la risoluzione del ticket principale ai ticket figli aperti",
+      "applyResolutionSwitchHelp": "Chiude ogni ticket figlio aperto con lo stato {{status}} e vi pubblica la risoluzione del ticket principale come commento pubblico.",
+      "applyResolutionSwitchHelpNoComment": "Chiude ogni ticket figlio aperto con lo stato {{status}}. Il ticket principale non ha un commento di risoluzione pubblico da pubblicare.",
+      "reopenMasterSwitchLabel": "Passa e riapri il ticket principale"
     },
     "autoClose": "Verrà chiuso automaticamente il {{date}} salvo nuove attività.",
     "autoCloseWarned": "Il cliente è stato avvisato.",

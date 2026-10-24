@@ -248,7 +248,8 @@
     "openMenu": "Otwórz menu",
     "moreActions": "Więcej akcji",
     "createTemplate": "Utwórz szablon ze zgłoszenia",
-    "createWorkflowFromTicket": "Utwórz workflow ze zgłoszenia"
+    "createWorkflowFromTicket": "Utwórz workflow ze zgłoszenia",
+    "printWorkTag": "Drukuj etykietę roboczą"
   },
   "messages": {
     "noTickets": "Brak zgłoszeń",
@@ -461,6 +462,14 @@
     "clientPortal": "Otrzymano przez Portal Klienta",
     "inboundEmail": "Otrzymano przez e-mail"
   },
+  "originalEmail": {
+    "text": "Tekst",
+    "original": "Oryginalny e-mail",
+    "emailShort": "E-mail",
+    "loading": "Wczytywanie oryginalnego e-maila…",
+    "error": "Nie można wczytać oryginalnego e-maila.",
+    "group": "Widok wiadomości"
+  },
   "documents": {
     "title": "Dokumenty",
     "noDocuments": "Brak dołączonych dokumentów",
@@ -659,7 +668,7 @@
     "bundleMasterLabel": "Wybierz zgłoszenie nadrzędne",
     "bundleMasterPlaceholder": "Wybierz zgłoszenie nadrzędne...",
     "bundleSyncUpdates": "Synchronizuj aktualizacje z nadrzędnego do podrzędnych (publiczne odpowiedzi + zmiany workflow)",
-    "bundleSyncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Następnie zamknięcie lub ponowne otwarcie zgłoszenia nadrzędnego zamyka lub ponownie otwiera wszystkie zgłoszenia podrzędne, a zmiany statusu, osoby przypisanej i priorytetu w zgłoszeniu nadrzędnym są stosowane do podrzędnych. Pola workflow są zablokowane dla zgłoszeń podrzędnych. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
+    "bundleSyncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Przy włączonej synchronizacji zamknięcie lub ponowne otwarcie zgłoszenia nadrzędnego zamyka lub ponownie otwiera wszystkie zgłoszenia podrzędne, zmiany statusu, osoby przypisanej i priorytetu w zgłoszeniu nadrzędnym są do nich stosowane, a ich pola workflow są zablokowane. Bez synchronizacji zgłoszenia podrzędne same zarządzają swoim statusem, osobą przypisaną i priorytetem. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
     "bundleSelectAtLeastTwo": "Wybierz co najmniej dwa zgłoszenia do połączenia.",
     "bundleSelectMaster": "Wybierz zgłoszenie nadrzędne.",
     "bundleSuccess": "Zgłoszenia połączone",
@@ -732,8 +741,8 @@
       "masterTicket": "Wybierz zgłoszenie nadrzędne",
       "selectMasterTicket": "Wybierz zgłoszenie nadrzędne...",
       "syncUpdates": "Synchronizuj aktualizacje z nadrzędnego do podrzędnych (publiczne odpowiedzi + zmiany workflow)",
-      "syncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Następnie zamknięcie lub ponowne otwarcie zgłoszenia nadrzędnego zamyka lub ponownie otwiera wszystkie zgłoszenia podrzędne, a zmiany statusu, osoby przypisanej i priorytetu w zgłoszeniu nadrzędnym są stosowane do podrzędnych. Pola workflow są zablokowane dla zgłoszeń podrzędnych. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
-      "childrenDescription": "Podrzędne zachowują swój obecny status; pola workflow są zablokowane na zgłoszeniach podrzędnych. Odpowiedzi przychodzące na podrzędne są wyświetlane poniżej jako tylko do odczytu.",
+      "syncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Przy włączonej synchronizacji zamknięcie lub ponowne otwarcie zgłoszenia nadrzędnego zamyka lub ponownie otwiera wszystkie zgłoszenia podrzędne, zmiany statusu, osoby przypisanej i priorytetu w zgłoszeniu nadrzędnym są do nich stosowane, a ich pola workflow są zablokowane. Bez synchronizacji zgłoszenia podrzędne same zarządzają swoim statusem, osobą przypisaną i priorytetem. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
+      "childrenDescription": "Zgłoszenia podrzędne zachowują obecny status. Pola workflow są zablokowane tylko w trybie Sync Updates. Odpowiedzi przychodzące na zgłoszenia podrzędne są wyświetlane poniżej jako tylko do odczytu.",
       "checkingMasters": "Sprawdzanie istniejących połączeń...",
       "existingMasterSuffix": "(istniejące zgłoszenie nadrzędne)",
       "existingMasterLocked": "Jedno z wybranych zgłoszeń jest już zgłoszeniem nadrzędnym. Zostanie użyte jako nadrzędne; pozostałe zostaną dodane jako podrzędne.",
@@ -784,7 +793,9 @@
       "more": "Więcej",
       "selectedCount_few": "Zaznaczono {{count}}",
       "selectedCount_many": "Zaznaczono {{count}}",
-      "bundleNeedsOne": "Wybierz co najmniej 1 zgłoszenie do połączenia"
+      "bundleNeedsOne": "Wybierz co najmniej 1 zgłoszenie do połączenia",
+      "printLabels": "Drukuj etykiety",
+      "printLabelsLimit": "Jednorazowo można wydrukować co najwyżej {{max}} etykiet"
     },
     "assign": {
       "dialogTitle": "Przypisz wybrane zgłoszenia",
@@ -1667,7 +1678,10 @@
       "ruleCategoryBoardMismatch": "Wybrana kategoria należy do innej tablicy niż reguła.",
       "ruleCategoryInvalid": "Wybrana kategoria nie jest kategorią najwyższego poziomu.",
       "ruleSubcategoryInvalid": "Wybrana podkategoria nie należy do wybranej kategorii.",
-      "ruleSubcategoryRequiresCategory": "Wybierz kategorię przed wybraniem podkategorii."
+      "ruleSubcategoryRequiresCategory": "Wybierz kategorię przed wybraniem podkategorii.",
+      "ruleTooManyKeywords": "Użyj co najwyżej {{max}} słów kluczowych w jednej regule.",
+      "ruleKeywordTooLong": "Każde słowo kluczowe może mieć najwyżej {{max}} znaków.",
+      "ruleOriginInvalid": "Jedno z wybranych źródeł zgłoszenia jest nieprawidłowe."
     }
   },
   "ticketSection": {
@@ -1696,9 +1710,11 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Następnie zamknięcie lub ponowne otwarcie zgłoszenia nadrzędnego zamyka lub ponownie otwiera wszystkie zgłoszenia podrzędne, a zmiany statusu, osoby przypisanej i priorytetu w zgłoszeniu nadrzędnym są stosowane do podrzędnych. Pola workflow są zablokowane dla zgłoszeń podrzędnych. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
+      "childrenDescription": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. W trybie Sync Updates zamknięcie lub ponowne otwarcie zgłoszenia nadrzędnego zamyka lub ponownie otwiera wszystkie zgłoszenia podrzędne, zmiany statusu, osoby przypisanej i priorytetu w zgłoszeniu nadrzędnym są do nich stosowane, a ich pola workflow są zablokowane. W trybie Link Only zgłoszenia podrzędne same zarządzają swoim statusem, osobą przypisaną i priorytetem. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
       "title": "Pakiet",
       "masterBanner": "To zgłoszenie jest nadrzędnym w pakiecie ({{count}} podrzędnych). Tryb: {{mode}}.",
+      "childLockedNotice": "Pola workflow są zablokowane; pracuj w zgłoszeniu nadrzędnym.",
+      "childLinkedNotice": "Jest powiązane ze zgłoszeniem nadrzędnym i zarządzane niezależnie.",
       "multipleClients": "Wielu klientów",
       "mode": "Tryb: {{mode}}",
       "unbundle": "Rozpakuj",
@@ -1734,7 +1750,15 @@
       "applyResolutionHelpNoComment": "Zamyka zgłoszenie podrzędne ze statusem {{status}}. Zgłoszenie nadrzędne nie ma publicznego komentarza z rozwiązaniem do opublikowania.",
       "reopenMasterLabel": "Dodaj i otwórz ponownie zgłoszenie nadrzędne",
       "reopenMasterHelp": "Otwiera ponownie tylko zgłoszenie nadrzędne. Już zamknięte zgłoszenia podrzędne w tym pakiecie pozostają zamknięte; powiadomienia o ponownym otwarciu i SLA dotyczą zgłoszenia nadrzędnego.",
-      "closedMasterGating": "Reguły zamykania tablicy nie zezwalają na otwarte zgłoszenia podrzędne w ramach zamkniętego zgłoszenia nadrzędnego, więc pozostawienie zgłoszenia nadrzędnego zamkniętego nie jest możliwe."
+      "closedMasterGating": "Reguły zamykania tablicy nie zezwalają na otwarte zgłoszenia podrzędne w ramach zamkniętego zgłoszenia nadrzędnego, więc pozostawienie zgłoszenia nadrzędnego zamkniętego nie jest możliwe.",
+      "modeSwitchDialogIntro": "Zgłoszenie nadrzędne jest zamknięte. Wybierz, co ma się stać z otwartymi zgłoszeniami podrzędnymi po przełączeniu pakietu na Sync Updates.",
+      "modeSwitchConfirm": "Przełącz na Sync Updates",
+      "keepClosedSwitchLabel": "Przełącz i pozostaw zgłoszenie nadrzędne zamknięte",
+      "keepClosedSwitchHelp": "Otwarte zgłoszenia podrzędne pozostają otwarte z własnym licznikiem SLA. Pakiet będzie oznaczony jako niespójny, dopóki nie zostaną rozwiązane.",
+      "applyResolutionSwitchLabel": "Przełącz i zastosuj rozwiązanie zgłoszenia nadrzędnego do otwartych zgłoszeń podrzędnych",
+      "applyResolutionSwitchHelp": "Zamyka każde otwarte zgłoszenie podrzędne ze statusem {{status}} i publikuje w nim rozwiązanie zgłoszenia nadrzędnego jako komentarz publiczny.",
+      "applyResolutionSwitchHelpNoComment": "Zamyka każde otwarte zgłoszenie podrzędne ze statusem {{status}}. Zgłoszenie nadrzędne nie ma publicznego komentarza z rozwiązaniem do opublikowania.",
+      "reopenMasterSwitchLabel": "Przełącz i otwórz ponownie zgłoszenie nadrzędne"
     },
     "autoClose": "Zostanie automatycznie zamknięte {{date}}, jeśli nie pojawi się nowa aktywność.",
     "autoCloseWarned": "Klient został powiadomiony.",

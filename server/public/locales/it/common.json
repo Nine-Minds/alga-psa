@@ -1580,7 +1580,31 @@
     }
   },
   "labels": {
-    "printColumns": "Colonne di stampa"
+    "printColumns": "Colonne di stampa",
+    "dialog": {
+      "assetTitle": "Stampa etichette degli asset",
+      "count_one": "{{count}} selezionato",
+      "count_other": "{{count}} selezionati",
+      "failed": "Non è stato possibile stampare le etichette.",
+      "item": "Elemento",
+      "layout": "Disposizione",
+      "linkedAsset": "Asset collegato",
+      "noAsset": "Nessun asset",
+      "notFound": "Impossibile aprire questi record.",
+      "openPdf": "Apri PDF",
+      "printed_one": "Stampata {{count}} etichetta.",
+      "printed_other": "Stampate {{count}} etichette.",
+      "printing": "Preparazione…",
+      "print": "Stampa",
+      "reason": "Motivo",
+      "skipFailures": "Salta questi e stampa il resto",
+      "skipped_one": "{{count}} record è stato saltato perché non è stato possibile aprirlo.",
+      "skipped_other": "{{count}} record sono stati saltati perché non è stato possibile aprirli.",
+      "template": "Modello",
+      "ticketTitle": "Stampa etichette di lavoro",
+      "tooMany": "Puoi stampare al massimo {{max}} etichette alla volta.",
+      "useTemplate": "Usa {{template}}"
+    }
   },
   "deleteEntity": {
     "checkingDependenciesTitle": "Verifica delle dipendenze",

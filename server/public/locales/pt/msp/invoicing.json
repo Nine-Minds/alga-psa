@@ -557,6 +557,17 @@
         "selectedCount": "{{count}} selecionado",
         "clear": "Limpar seleção"
       }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Fatura finalizada, mas uma etapa posterior não foi concluída: {{steps}}. A fatura está finalizada; você pode tentar essa etapa novamente.",
+      "steps": {
+        "credit_auto_apply": "aplicação automática de crédito",
+        "project_deposit_credits": "créditos de depósito de projeto",
+        "workflow_events": "eventos de fluxo de trabalho",
+        "accounting_export": "exportação contábil",
+        "replenishment_status": "status de reposição pré-paga",
+        "autopay": "pagamento automático"
+      }
     }
   },
   "finalizedTab": {
@@ -857,6 +868,19 @@
       "cancel": "Cancelar",
       "confirm": "Anular fatura",
       "voiding": "Anulando..."
+    },
+    "history": {
+      "title": "Histórico",
+      "empty": "Nenhum histórico registrado.",
+      "loadFailed": "Falha ao carregar o histórico da fatura.",
+      "system": "Sistema",
+      "ops": {
+        "invoice_finalized": "Finalizada",
+        "invoice_unfinalized": "Reaberta",
+        "invoice_deleted": "Excluída"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "nenhum"
     }
   },
   "templateEditor": {
@@ -1377,7 +1401,7 @@
       "mediaSource": "Origem da imagem",
       "mediaSourceLogo": "Logotipo da empresa",
       "mediaSourceCustom": "Imagem personalizada",
-      "mediaSourceLogoHint": "Mostra em todos os documentos o logotipo das configurações de marca da sua empresa.",
+      "mediaSourceLogoHint": "Mostra em todos os documentos o logotipo do registro de cliente da sua própria empresa.",
       "mediaSourceUrl": "URL de origem",
       "renameInner": "Renomear também {{count}} camadas internas ({{from}} → {{to}}…)?",
       "renameInnerApply": "Renomear",
@@ -1427,7 +1451,14 @@
           "widthTooltip": "Usar a largura exata digitada abaixo",
           "heightTooltip": "Usar a altura exata digitada abaixo"
         }
-      }
+      },
+      "barcode": "Código de barras",
+      "barcodeSymbology": "Tipo",
+      "barcodeQr": "Código QR",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Valor",
+      "barcodeHintWorkTag": "Texto ou um campo como {{example}} (o link para o registro). Mantenha o código com pelo menos cerca de 20 mm de largura para que possa ser lido.",
+      "barcodeHint": "O texto a ser codificado. Mantenha o código com pelo menos cerca de 20 mm de largura para que possa ser lido."
     },
     "shell": {
       "selectedLabel": "Selecionado:",
@@ -1440,7 +1471,11 @@
       "title": "Configuração de página",
       "description": "Escolha uma predefinição de papel e uma margem de página sem selecionar o nó de página oculto.",
       "paperPreset": "Predefinição de papel",
-      "marginMm": "Margem (mm)"
+      "marginMm": "Margem (mm)",
+      "customSize": "Tamanho personalizado…",
+      "customWidth": "Largura",
+      "customHeight": "Altura",
+      "customUnit": "Unidade"
     },
     "breadcrumbs": {
       "emptyHelp": "Selecione um componente na tela para visualizar sua hierarquia.",
@@ -1471,7 +1506,13 @@
         "noQuotesFound": "Nenhuma cotação encontrada.",
         "selectQuote": "Selecione a cotação",
         "loadingQuoteDetails": "Carregando detalhes da cotação...",
-        "loadingDocumentDetails": "Carregando detalhes do documento..."
+        "loadingDocumentDetails": "Carregando detalhes do documento...",
+        "zoom": {
+          "fit": "Ajustar",
+          "actual": "100%",
+          "label": "Zoom da pré-visualização",
+          "fitWithScale": "Ajustar ({{percent}}%)"
+        }
       },
       "tabs": {
         "design": "Projeto",
@@ -2365,7 +2406,7 @@
     },
     "imagePicker": {
       "browse": "Procurar documentos",
-      "hiddenFromClients": "{{document}} está oculto para os clientes. Ele não aparecerá em cotações ou faturas visualizadas pelo portal do cliente.",
+      "hiddenFromClients": "{{document}} está oculto para os clientes, que não podem abri-lo no portal do cliente. Ele continua aparecendo nas faturas e nos PDFs de cotações que o usam.",
       "updating": "Atualizando...",
       "markVisible": "Marcar como visível para os clientes",
       "visibleInPortal": "Visível no portal do cliente",
@@ -2414,11 +2455,13 @@
     "description": "Crie os layouts usados para gerar PDFs e pré-visualizações de {{type}}.",
     "availableLayouts": "Layouts disponíveis",
     "actions": {
-      "newLayout": "Novo layout"
+      "newLayout": "Novo layout",
+      "setDefaultForClass": "Definir como padrão para {{class}}"
     },
     "columns": {
       "name": "Nome",
-      "source": "Origem"
+      "source": "Origem",
+      "labelClass": "Classe"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (Padrão)",
@@ -2450,7 +2493,10 @@
         "details": "Detalhes do layout"
       },
       "fields": {
-        "version": "Versão"
+        "version": "Versão",
+        "labelClass": "Classe da etiqueta",
+        "labelFields": "Campos exibidos na etiqueta",
+        "labelFieldsHint": "O link do registro (código QR) e o identificador são sempre exibidos."
       },
       "placeholders": {
         "templateName": "Modelo de {{type}}"
@@ -2487,7 +2533,8 @@
     "types": {
       "salesOrder": "Pedido de venda",
       "packingSlip": "Nota de entrega",
-      "pickList": "Lista de separação"
+      "pickList": "Lista de separação",
+      "workTag": "Etiqueta de trabalho / Etiqueta"
     }
   },
   "errors": {
@@ -2495,7 +2542,8 @@
       "invoiceUpdate": "Permissão negada: é necessária permissão de atualização de faturas",
       "invoiceDelete": "Permissão negada: é necessária permissão de exclusão de faturas",
       "invoiceAccess": "Permissão negada: acesso à fatura negado",
-      "otherClientInvoices": "Permissão negada: não é possível acessar as faturas de outro cliente"
+      "otherClientInvoices": "Permissão negada: não é possível acessar as faturas de outro cliente",
+      "invoiceRead": "Permissão negada: leitura de faturas necessária"
     },
     "invoice": {
       "notFound": "Fatura não encontrada",
@@ -2517,7 +2565,9 @@
       "duplicate": "Já existe uma fatura conflitante. Atualize a página e tente novamente.",
       "missingField": "Falta um campo obrigatório da fatura.",
       "missingFieldNamed": "Falta um campo obrigatório da fatura: {{field}}.",
-      "billingProfileUnavailable": "O perfil de faturação selecionado não está disponível para este cliente."
+      "billingProfileUnavailable": "O perfil de faturação selecionado não está disponível para este cliente.",
+      "deleteNotDraft": "Só é possível excluir faturas em rascunho; anule a fatura em vez disso.",
+      "deleteHasPayments": "Faturas com pagamentos registrados não podem ser excluídas."
     },
     "billingCycle": {
       "notFoundRefresh": "Ciclo de faturamento não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
