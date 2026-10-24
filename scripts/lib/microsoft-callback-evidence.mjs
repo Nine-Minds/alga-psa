@@ -24,7 +24,8 @@ export function verifyMicrosoftCallbackEvidence({ report, revision, source, runt
   const gitSource = report?.sourceRevisionOrigin === 'git' && report.sourceRevision === revision
     && report.sourceRevisionAfter === revision;
   const containerSource = report?.sourceRevisionOrigin === 'environment' && report.sourceRevision === revision
-    && report.sourceRevisionAfter === null && runtimeBinding?.imageRevision === revision
+    && report.sourceRevisionAfter === null && /^[a-f0-9]{40}$/.test(runtimeBinding?.imageBuildRevision ?? revision)
+    && runtimeBinding?.imageRevision === (runtimeBinding?.imageBuildRevision ?? revision)
     && /^sha256:[a-f0-9]{64}$/.test(runtimeBinding.imageId ?? '')
     && runtimeBinding.containerImageId === runtimeBinding.imageId
     && runtimeBinding.mountedSourceRevision === revision && runtimeBinding.mountsReadOnly === true;

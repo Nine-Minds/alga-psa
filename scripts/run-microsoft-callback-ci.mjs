@@ -6,13 +6,17 @@ import { pathToFileURL } from 'node:url';
 import { testRevision } from './lib/test-revision.mjs';
 import { verifyMicrosoftCallbackEvidence } from './lib/microsoft-callback-evidence.mjs';
 
-export function callbackRuntimeBinding({ image, container, root, revision }) {
+import { expectedImageRevision } from './lib/expected-image-revision.mjs';
+
+// `imageBuildRevision` is the revision the verified build record says the
+// image was built at: the candidate's, or the original build's when reused.
+export function callbackRuntimeBinding({ image, container, root, revision, imageBuildRevision = revision }) {
   const mountsReadOnly = ['packages', 'ee', 'e2e-tests'].every(part => {
     const matches = container.Mounts?.filter(mount => mount.Destination === `/app/${part}`) || [];
     return matches.length === 1 && matches[0].Type === 'bind' && matches[0].RW === false
       && path.resolve(matches[0].Source) === path.resolve(root, part);
   });
-  return { imageRevision: image.revision, imageId: image.id, containerImageId: container.Image,
+  return { imageRevision: image.revision, imageBuildRevision, imageId: image.id, containerImageId: container.Image,
     mountedSourceRevision: revision, mountsReadOnly };
 }
 
@@ -58,7 +62,8 @@ export function runMicrosoftCallbackCi({ env = process.env } = {}) {
     assert.equal(runner.source.before.dirty, false, 'Callback CI requires clean source');
     const revision = runner.source.before.revision;
     const image = JSON.parse(command('docker', ['image', 'inspect', '--format', '{"id":{{json .Id}},"revision":{{json (index .Config.Labels "org.opencontainers.image.revision")}}}', 'alga-e2e-test_server_ee_local:latest']));
-    assert.equal(image.revision, revision, 'Callback image must match tested checkout');
+    const imageBuildRevision = expectedImageRevision({ service: 'server-ee', env });
+    assert.equal(image.revision, imageBuildRevision, 'Callback image must match its verified build record');
     const overlay = path.join(temporary, 'compose.json');
     writeFileSync(overlay, JSON.stringify(callbackComposeOverride({ root, temporary, output, revision, sourceEmail: env.NATIVE_MICROSOFT_OIDC_SOURCE_EMAIL })));
     const composeEnv = { ...env, COMPOSE_FILE: `${env.COMPOSE_FILE}:${overlay}` };
@@ -67,7 +72,7 @@ export function runMicrosoftCallbackCi({ env = process.env } = {}) {
     created = true;
     command('docker-compose', ['-p', 'alga-e2e-test', 'run', '--no-deps', '-d', '--name', containerName, 'server'], { env: composeEnv });
     const container = JSON.parse(command('docker', ['inspect', '--format', '{"Image":{{json .Image}},"Mounts":{{json .Mounts}}}', containerName]));
-    runner.runtimeBinding = callbackRuntimeBinding({ image, container, root, revision });
+    runner.runtimeBinding = callbackRuntimeBinding({ image, container, root, revision, imageBuildRevision });
     assert.equal(runner.runtimeBinding.mountsReadOnly, true);
     assert.equal(runner.runtimeBinding.containerImageId, image.id);
     const result = command('docker', ['wait', containerName], { timeout: 360000 });

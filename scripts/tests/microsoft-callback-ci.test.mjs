@@ -7,8 +7,18 @@ const image = { id: `sha256:${'b'.repeat(64)}`, revision };
 const validContainer = () => ({ Image: image.id, Mounts: ['packages', 'ee', 'e2e-tests'].map(part => ({ Type: 'bind', Source: `${root}/${part}`, Destination: `/app/${part}`, RW: false })) });
 test('actual inspected read-only source mounts bind the container image to the checkout', () => {
   assert.deepEqual(callbackRuntimeBinding({ image, container: validContainer(), root, revision }), {
-    imageRevision: revision, imageId: image.id, containerImageId: image.id, mountedSourceRevision: revision, mountsReadOnly: true,
+    imageRevision: revision, imageBuildRevision: revision, imageId: image.id, containerImageId: image.id, mountedSourceRevision: revision, mountsReadOnly: true,
   });
+});
+test('a reused image binds through its original build revision while the mounted source stays the candidate', () => {
+  const source = 'c'.repeat(40);
+  const runtimeBinding = callbackRuntimeBinding({ image: { ...image, revision: source }, container: validContainer(), root, revision, imageBuildRevision: source });
+  assert.equal(runtimeBinding.imageBuildRevision, source);
+  assert.equal(runtimeBinding.mountedSourceRevision, revision);
+  const report = { sourceRevisionOrigin: 'environment', sourceRevision: revision, sourceRevisionAfter: null };
+  assert.ok(!verifyMicrosoftCallbackEvidence({ revision, runtimeBinding, report }).failures.includes('mismatched-callback-source'));
+  const mismatched = callbackRuntimeBinding({ image: { ...image, revision: source }, container: validContainer(), root, revision });
+  assert.ok(verifyMicrosoftCallbackEvidence({ revision, runtimeBinding: mismatched, report }).failures.includes('mismatched-callback-source'));
 });
 for (const [name, mutate] of [
   ['writable source', c => { c.Mounts[0].RW = true; }],

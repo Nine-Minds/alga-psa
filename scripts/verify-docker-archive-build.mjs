@@ -17,7 +17,19 @@ export function verifyBuildRecord(record, expected) {
     || !digest.test(record.configImageId ?? '') || !digest.test(record.buildReportedDigest ?? '')
     || record.metadata?.['containerimage.config.digest'] !== record.configImageId
     || record.metadata?.['containerimage.digest'] !== record.buildReportedDigest) throw new Error('Build record does not match candidate');
+  if (record.reuse !== undefined) {
+    const r = record.reuse;
+    if (!/^[a-f0-9]{40}$/.test(r?.sourceRevision ?? '') || r.sourceRevision === record.revision
+      || !/^[1-9][0-9]*$/.test(String(r.sourceRunId ?? '')) || !Number.isSafeInteger(r.sourceAttempt) || r.sourceAttempt < 1
+      || !/^[1-9][0-9]*$/.test(String(r.artifactRunId ?? '')) || typeof r.inputs?.policy !== 'string' || !digest.test(r.inputs?.sha256 ?? '')
+      || !Number.isSafeInteger(r.inputs?.files) || r.inputs.files < 1) throw new Error('Build record reuse provenance is invalid');
+  }
   return record;
+}
+
+/** The revision a loaded image is labeled with: the original build's, when reused. */
+export function builtRevision(record, expected) {
+  return record.reuse?.sourceRevision ?? expected.revision;
 }
 
 export async function verifyDockerArchive(record, archivePath, expected) {
@@ -37,7 +49,7 @@ export function verifyLoadedDockerImage(record, inspection, expected) {
   verifyBuildRecord(record, expected);
   if (!Array.isArray(inspection) || inspection.length !== 1) throw new Error('Exactly one loaded image is required');
   const image = inspection[0];
-  if (image.Id !== record.configImageId || image.Config?.Labels?.['org.opencontainers.image.revision'] !== expected.revision
+  if (image.Id !== record.configImageId || image.Config?.Labels?.['org.opencontainers.image.revision'] !== builtRevision(record, expected)
     || `${image.Os}/${image.Architecture}` !== record.platform) throw new Error('Loaded image does not match candidate build');
 }
 
