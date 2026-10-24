@@ -304,6 +304,107 @@ describe('service request advanced form behavior', () => {
     expect(validation.errors.some((error) => error.includes('visibilityRules[0].value is required'))).toBe(true);
   });
 
+  describe('submit-time visibility recomputation', () => {
+    const chainedSchema = {
+      fields: [
+        {
+          key: 'request_type',
+          type: 'select',
+          label: 'Request Type',
+          required: true,
+          options: [
+            { value: 'standard', label: 'Standard' },
+            { value: 'access', label: 'Access' },
+          ],
+        },
+        { key: 'manager_approval', type: 'short-text', label: 'Manager Approval ID', required: true },
+        { key: 'approval_notes', type: 'short-text', label: 'Approval Notes', required: false },
+      ],
+    };
+    const chainedConfig = {
+      visibilityRules: [
+        { fieldKey: 'manager_approval', source: 'payload.request_type', operator: 'equals', value: 'access' },
+        // Chained: depends on a field that may itself be hidden.
+        { fieldKey: 'approval_notes', source: 'manager_approval', operator: 'has-value' },
+      ],
+    };
+
+    async function publishChained(fixture: AdvancedFixture): Promise<string> {
+      const definitionId = uuidv4();
+      await createPublishedAdvancedDefinition({
+        tenant: fixture.tenant,
+        definitionId,
+        versionId: uuidv4(),
+        formSchemaSnapshot: chainedSchema,
+        formBehaviorConfig: chainedConfig,
+      });
+      return definitionId;
+    }
+
+    it('a revealed, required and empty field blocks submit', async () => {
+      const fixture = await createAdvancedFixture();
+      const definitionId = await publishChained(fixture);
+
+      await expect(
+        submitPortalServiceRequest({
+          knex: db,
+          tenant: fixture.tenant,
+          definitionId,
+          requesterUserId: fixture.requesterUserId,
+          clientId: fixture.clientId,
+          payload: { request_type: 'access', manager_approval: '' },
+        })
+      ).rejects.toThrow('Required field missing: "Manager Approval ID"');
+    });
+
+    it('drops hidden answers (including chained ones) from submitted_payload', async () => {
+      const fixture = await createAdvancedFixture();
+      const definitionId = await publishChained(fixture);
+
+      const result = await submitPortalServiceRequest({
+        knex: db,
+        tenant: fixture.tenant,
+        definitionId,
+        requesterUserId: fixture.requesterUserId,
+        clientId: fixture.clientId,
+        payload: {
+          request_type: 'standard',
+          manager_approval: 'stale-approval',
+          approval_notes: 'stale-notes',
+          not_in_schema: 'smuggled',
+        },
+      });
+
+      const row = await tenantTable(fixture.tenant, 'service_request_submissions')
+        .where({ submission_id: result.submissionId })
+        .first('submitted_payload');
+      expect(row?.submitted_payload).toEqual({ request_type: 'standard' });
+    });
+
+    it('keeps chained fields visible when the whole chain is revealed', async () => {
+      const fixture = await createAdvancedFixture();
+      const definitionId = await publishChained(fixture);
+
+      const result = await submitPortalServiceRequest({
+        knex: db,
+        tenant: fixture.tenant,
+        definitionId,
+        requesterUserId: fixture.requesterUserId,
+        clientId: fixture.clientId,
+        payload: { request_type: 'access', manager_approval: 'APR-1', approval_notes: 'ok' },
+      });
+
+      const row = await tenantTable(fixture.tenant, 'service_request_submissions')
+        .where({ submission_id: result.submissionId })
+        .first('submitted_payload');
+      expect(row?.submitted_payload).toEqual({
+        request_type: 'access',
+        manager_approval: 'APR-1',
+        approval_notes: 'ok',
+      });
+    });
+  });
+
   it('T038: advanced context-aware defaults resolve requester and client values in portal detail initial values', async () => {
     const fixture = await createAdvancedFixture();
     const definitionId = uuidv4();

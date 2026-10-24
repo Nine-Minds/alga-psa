@@ -42,21 +42,21 @@ describe("navigation deep link config", () => {
 
 describe("hosted ticket links", () => {
   it("folds a hosted web ticket URL into the alga:// ticket route", async () => {
-    const { normalizeHostedTicketUrl } = await import("./linking");
+    const { normalizeHostedRecordUrl } = await import("./linking");
     const id = "541B5B63-9E14-47B6-A8F0-0B664F079ED4";
-    expect(normalizeHostedTicketUrl(`https://algapsa.com/msp/tickets/${id}`)).toBe(
+    expect(normalizeHostedRecordUrl(`https://algapsa.com/msp/tickets/${id}`)).toBe(
       `alga://ticket/${id.toLowerCase()}`,
     );
-    expect(normalizeHostedTicketUrl(`https://algapsa.com/msp/tickets/${id}#comment-abc`)).toBe(
+    expect(normalizeHostedRecordUrl(`https://algapsa.com/msp/tickets/${id}#comment-abc`)).toBe(
       `alga://ticket/${id.toLowerCase()}`,
     );
-    expect(normalizeHostedTicketUrl(`https://algapsa.com/msp/tickets/${id}?tab=time`)).toBe(
+    expect(normalizeHostedRecordUrl(`https://algapsa.com/msp/tickets/${id}?tab=time`)).toBe(
       `alga://ticket/${id.toLowerCase()}`,
     );
   });
 
   it("leaves every other hosted URL alone", async () => {
-    const { normalizeHostedTicketUrl } = await import("./linking");
+    const { normalizeHostedRecordUrl } = await import("./linking");
     for (const url of [
       "https://algapsa.com/msp/tickets",
       "https://algapsa.com/msp/clients/541b5b63-9e14-47b6-a8f0-0b664f079ed4",
@@ -64,8 +64,21 @@ describe("hosted ticket links", () => {
       "https://algapsa.com.evil.com/msp/tickets/541b5b63-9e14-47b6-a8f0-0b664f079ed4",
       "http://algapsa.com/msp/tickets/541b5b63-9e14-47b6-a8f0-0b664f079ed4",
     ]) {
-      expect(normalizeHostedTicketUrl(url)).toBe(url);
+      expect(normalizeHostedRecordUrl(url)).toBe(url);
     }
+  });
+
+  it("still opens TicketDetail for the push notification url (alga://ticket/:id)", async () => {
+    // Shape produced by server/src/lib/pushNotifications/expoPushService.ts.
+    const url = "alga://ticket/541b5b63-9e14-47b6-a8f0-0b664f079ed4";
+    const ExpoLinking = await import("expo-linking");
+    (ExpoLinking.getInitialURL as any).mockResolvedValueOnce(url);
+    vi.resetModules();
+    const { linking, setDeepLinkSignedIn } = await import("./linking");
+    setDeepLinkSignedIn(true);
+    await expect(linking.getInitialURL?.()).resolves.toBe(url);
+    expect((linking as any).config.screens.TicketDetail).toBe("ticket/:ticketId");
+    expect((linking as any).prefixes).not.toContain("https://algapsa.com");
   });
 
   it("opens a hosted ticket link directly when signed in", async () => {
@@ -169,9 +182,9 @@ describe("hosted ticket links", () => {
     const mod = await import("./linking");
     const linking = mod.linking as any;
     expect(linking.config.screens.ProjectTaskDetail).toBe("project-task/:taskId");
-    expect(mod.normalizeHostedTicketUrl("https://algapsa.com/msp/projects/11111111-1111-4111-8111-111111111111?phaseId=x&taskId=22222222-2222-4222-8222-222222222222"))
+    expect(mod.normalizeHostedRecordUrl("https://algapsa.com/msp/projects/11111111-1111-4111-8111-111111111111?phaseId=x&taskId=22222222-2222-4222-8222-222222222222"))
       .toBe("alga://project-task/22222222-2222-4222-8222-222222222222");
-    expect(mod.normalizeHostedTicketUrl("https://algapsa.com/msp/projects/11111111-1111-4111-8111-111111111111")).toBe("https://algapsa.com/msp/projects/11111111-1111-4111-8111-111111111111");
+    expect(mod.normalizeHostedRecordUrl("https://algapsa.com/msp/projects/11111111-1111-4111-8111-111111111111")).toBe("https://algapsa.com/msp/projects/11111111-1111-4111-8111-111111111111");
   });
 
   it("holds a task link tapped while signed out like a ticket link", async () => {
@@ -188,5 +201,64 @@ describe("hosted ticket links", () => {
     expect(listener).not.toHaveBeenCalled();
     mod.setDeepLinkSignedIn(true);
     await expect(mod.linking.getInitialURL!()).resolves.toBe("alga://project-task/22222222-2222-4222-8222-222222222222");
+  });
+});
+
+describe("hosted asset and stock-unit links", () => {
+  const id = "541b5b63-9e14-47b6-a8f0-0b664f079ed4";
+
+  it("declares AssetDetail and StockUnitDetail routes", async () => {
+    const { linking } = await import("./linking");
+    const screens = (linking as any).config.screens;
+    expect(screens.AssetDetail).toBe("asset/:assetId");
+    expect(screens.StockUnitDetail).toBe("stock-unit/:unitId");
+  });
+
+  it("folds hosted asset and unit URLs", async () => {
+    const { normalizeHostedRecordUrl } = await import("./linking");
+    expect(normalizeHostedRecordUrl(`https://algapsa.com/msp/assets/${id.toUpperCase()}`)).toBe(`alga://asset/${id}`);
+    expect(normalizeHostedRecordUrl(`https://algapsa.com/msp/inventory/units?unitId=${id}`)).toBe(
+      `alga://stock-unit/${id}`,
+    );
+  });
+
+  it("leaves non-UUID ids, units without unitId, and other origins alone", async () => {
+    const { normalizeHostedRecordUrl } = await import("./linking");
+    for (const url of [
+      "https://algapsa.com/msp/assets/not-a-uuid",
+      "https://algapsa.com/msp/inventory/units",
+      "https://algapsa.com/msp/inventory/units?unitId=abc",
+      `https://evil.com/msp/assets/${id}`,
+      `https://algapsa.com.evil.com/msp/inventory/units?unitId=${id}`,
+      `http://algapsa.com/msp/assets/${id}`,
+    ]) {
+      expect(normalizeHostedRecordUrl(url)).toBe(url);
+    }
+  });
+
+  it("rejects units URLs with no unitId and bad alga:// ids at the allow-list", async () => {
+    const ExpoLinking = await import("expo-linking");
+    for (const url of [
+      "https://algapsa.com/msp/inventory/units",
+      "alga://asset/not-a-uuid",
+      "alga://stock-unit/not-a-uuid",
+    ]) {
+      (ExpoLinking.getInitialURL as any).mockResolvedValueOnce(url);
+      vi.resetModules();
+      const { linking, setDeepLinkSignedIn } = await import("./linking");
+      setDeepLinkSignedIn(true);
+      await expect(linking.getInitialURL?.()).resolves.toBeNull();
+    }
+  });
+
+  it("holds an asset link while signed out and replays it after sign-in", async () => {
+    const ExpoLinking = await import("expo-linking");
+    (ExpoLinking.getInitialURL as any).mockResolvedValueOnce(`https://algapsa.com/msp/assets/${id}`);
+    vi.resetModules();
+    const { linking, setDeepLinkSignedIn } = await import("./linking");
+    setDeepLinkSignedIn(false);
+    await expect(linking.getInitialURL?.()).resolves.toBeNull();
+    setDeepLinkSignedIn(true);
+    await expect(linking.getInitialURL?.()).resolves.toBe(`alga://asset/${id}`);
   });
 });

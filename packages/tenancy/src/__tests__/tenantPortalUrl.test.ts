@@ -3,12 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const statusMock = vi.hoisted(() => vi.fn());
 const warnMock = vi.hoisted(() => vi.fn());
 
-vi.mock('../server/portalDomainStatus', () => ({ getPortalDomainStatusForTenant: statusMock }));
+vi.mock('../lib/portalDomainStatus', () => ({ getPortalDomainStatusForTenant: statusMock }));
 vi.mock('@alga-psa/core/logger', () => ({
   default: { warn: warnMock, info: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-import { buildTenantPortalUrl, getTenantPortalBaseUrl } from '../server/tenantPortalUrl';
+import { buildTenantPortalUrl, getTenantPortalBaseUrl } from '../lib/tenantPortalUrl';
 
 const ENV_KEYS = ['NEXT_PUBLIC_BASE_URL', 'NEXTAUTH_URL', 'HOST'] as const;
 const saved = new Map(ENV_KEYS.map((key) => [key, process.env[key]]));

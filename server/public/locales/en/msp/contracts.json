@@ -53,6 +53,8 @@
   },
   "status": {
     "active": "Active",
+    "scheduled": "Scheduled",
+    "startsOn": "Starts {{date}}",
     "draft": "Draft",
     "expired": "Expired",
     "terminated": "Terminated"
@@ -177,6 +179,7 @@
     },
     "headerCard": {
       "assignmentLifecycleHint": "Live client status is controlled by the assignment lifecycle below.",
+      "scheduledExplanation": "This contract is active and begins billing on {{date}}.",
       "assignmentStatus": "Assignment Status",
       "billingFrequencyLabel": "Billing Frequency *",
       "billingFrequencyPlaceholder": "Select billing frequency",
@@ -298,6 +301,7 @@
     },
     "status": {
       "active": "Active",
+      "scheduled": "Scheduled",
       "draft": "Draft",
       "expired": "Expired",
       "terminated": "Terminated"
@@ -612,6 +616,7 @@
       "quantityShort": "Qty: {{quantity}}",
       "quantityTaxAllocation": "Quantity (for tax allocation)",
       "rateTaxAllocation": "Rate (for tax allocation)",
+      "shareOfLineFee": "Share of line fee",
       "title": "Services ({{count}})",
       "typeLabel": "{{type}} Service",
       "unitOfMeasure": "Unit of Measure",
@@ -767,7 +772,7 @@
     },
     "fixedConfig": {
       "defaultBaseRate": "Default Base Rate:",
-      "defaultRatePlaceholder": "Default: ${{rate}}",
+      "defaultRatePlaceholder": "Default: {{rate}}",
       "enterBaseRate": "Enter base rate",
       "leaveBlankDefault": "Leave blank to use the default rate",
       "notSet": "Not set",
@@ -775,7 +780,7 @@
       "title": "Fixed Rate Configuration"
     },
     "hourlyConfig": {
-      "defaultRate": "Default: ${{rate}}",
+      "defaultRate": "Default: {{rate}}",
       "hourlyRate": "Hourly Rate",
       "minimumBillableMinutes": "Minimum billable minutes",
       "roundUpToNearest": "Round up to nearest (minutes)",
@@ -801,7 +806,7 @@
     },
     "title": "Add Contract Lines from Presets",
     "usageConfig": {
-      "defaultRate": "Default: ${{rate}}",
+      "defaultRate": "Default: {{rate}}",
       "recordDrivenNote": "Usage services bill from usage recorded in Usage Tracking for each service period. A period with no usage record produces no charge — record usage (or an explicit zero) each period to bill these services.",
       "ratePerUnit": "Rate (per unit)",
       "unitHint": "e.g., GB, API call, user",
@@ -1286,9 +1291,7 @@
     },
     "loadingTemplate": "Loading template...",
     "servicesLabel": "Services",
-    "summary": {
-      "clientCurrency": "Client's currency"
-    },
+    "summary": {},
     "templateBadge": "Template",
     "templateNotFound": "Contract template not found",
     "templateSnapshotTitle": "Template Snapshot",
@@ -1333,6 +1336,16 @@
       "hypothetical": "Hypothetical client profile",
       "open": "Simulate",
       "title": "Template simulation"
+    },
+    "pricing": {
+      "title": "Pricing by currency",
+      "addCurrency": "Add currency",
+      "removeCurrency": "Remove",
+      "missing": "{{count}} amount(s) missing",
+      "baseCurrency": "(base)",
+      "changeBaseCurrency": "Change base currency",
+      "changeBaseConfirm": "Change the base currency to {{currency}}? Existing amounts are NOT converted: they keep their numeric value and are read as {{currency}}.",
+      "noSlots": "This template has no amounts to price yet."
     },
     "discounts": {
       "title": "Default contract discounts",
@@ -1540,6 +1553,9 @@
       "confirm": "Confirm and continue",
       "cancel": "Go back"
     },
+    "templatePicker": {
+      "needsRates": "Needs {{currency}} rates"
+    },
     "discounts": {
       "help": "Contract-wide discounts apply to every eligible charge this contract bills. They are created with the contract when you finish setup, and the simulation below prices them.",
       "draftDialog": {
@@ -1669,7 +1685,8 @@
       "preview": {
         "billingCadenceLabel": "Billing cadence:",
         "notSpecified": "Not specified",
-        "templateLabel": "Template:"
+        "templateLabel": "Template:",
+        "currencyLabel": "Base currency:"
       },
       "selectTemplateOptional": "Select a template (optional)",
       "startFromTemplate": "Start From Template"
@@ -2021,8 +2038,15 @@
     "unitRate": "Unit rate",
     "serviceRate": "Service rate",
     "noCurrencyPrice": "No {{currency}} price for this service. Enter a rate or the contract cannot be created.",
-    "templateRateNote": "From the template (amount is not currency-tagged).",
-    "reviewTitle": "Lines created from the template"
+    "reviewTitle": "Lines created from the template",
+    "fallbackAlert": "This template has no {{currency}} rates. Its structure is copied; enter {{currency}} amounts below. Template amounts are shown for reference only and are not converted.",
+    "templateReference": "Template: {{amount}} {{currency}}",
+    "catalogPrice": "Catalog price",
+    "fromTemplateCurrency": "From the template ({{currency}})",
+    "fromTemplatePriceSet": "From the template's {{currency}} rates",
+    "noCurrencyAmount": "No {{currency}} amount. Enter one or the contract cannot be created.",
+    "overtimeRate": "Overtime rate",
+    "bucketOverageRate": "Overage rate"
   },
   "templateWizard": {
     "title": {
@@ -2066,8 +2090,10 @@
           "usage": "Usage"
         }
       },
-      "recurringQuantityInvalid": "Recurring quantity for \"{{serviceName}}\" must be a whole number of zero or more, and any unit rate must be a valid amount."
-    }
+      "recurringQuantityInvalid": "Recurring quantity for \"{{serviceName}}\" must be a whole number of zero or more, and any unit rate must be a valid amount.",
+      "currencyRequired": "Base currency is required"
+    },
+    "currency": "Base currency *"
   },
   "templateBasics": {
     "heading": "Template Basics",
@@ -2085,7 +2111,8 @@
     "help": {
       "templateName": "Use a descriptive name so teams can quickly identify the right template.",
       "internalNotes": "These notes stay with the template to provide context when teammates use it.",
-      "billingFrequency": "Sets the default cadence when the template is applied. It can still be adjusted per client."
+      "billingFrequency": "Sets the default cadence when the template is applied. It can still be adjusted per client.",
+      "currency": "Rates entered in this wizard are in this currency. Prices for other currencies can be added on the template afterwards. Amounts are never converted."
     }
   },
   "templateFixed": {
@@ -2220,7 +2247,7 @@
   },
   "templateReview": {
     "heading": "Review Template",
-    "description": "Confirm the template contents. Rates are determined by each service's pricing in the client's currency when a contract is created from this template.",
+    "description": "Confirm the template contents. Rates are stored in the template's base currency. Other currencies use the template's price sets, or you enter the amounts when you create a contract.",
     "sections": {
       "basics": "Template Basics",
       "fixedFeeServices": "Fixed Fee Services",
@@ -2232,7 +2259,8 @@
     "fields": {
       "templateName": "Template Name",
       "billingFrequency": "Billing Frequency",
-      "internalNotes": "Internal Notes"
+      "internalNotes": "Internal Notes",
+      "baseCurrency": "Base Currency"
     },
     "fallback": {
       "none": "—",
@@ -2268,8 +2296,7 @@
       "serviceLabel": "Service:",
       "invoiceWindowLabel": "Invoice window:",
       "unitRateLabel": "Unit rate:",
-      "unitRateFromCatalog": "Catalog price in the client's currency",
-      "unitRateNeutral": "{{rate}} in the client's currency"
+      "unitRateFromCatalog": "Catalog price in the client's currency"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Minimum billable time:",
@@ -2283,7 +2310,7 @@
       "hoursIncluded": "{{value}} hours included",
       "unitsIncluded": "{{value}} {{unit}} included",
       "unitsFallback": "units",
-      "overage": "Overage ${{amount}}/{{unit}}",
+      "overage": "Overage {{amount}}/{{unit}}",
       "hourSingular": "hour",
       "unitSingular": "unit",
       "rolloverEnabled": "Rollover enabled",
@@ -2485,7 +2512,7 @@
       },
       "discounts": "Discounts",
       "fields": {
-        "adjustmentAmount": "Adjustment amount dollars",
+        "adjustmentAmount": "Adjustment amount",
         "adjustmentDescription": "Adjustment description",
         "adjustmentPeriod": "Adjustment period",
         "billingFrequency": "Billing frequency",
@@ -2503,16 +2530,16 @@
         "minimumUsage": "Minimum usage",
         "includedHours": "Included hours",
         "includedUnits": "Included units",
-        "overtimeRate": "Overtime rate ($/hr)",
+        "overtimeRate": "Overtime rate per hour",
         "overtimeThreshold": "Overtime threshold (hours)",
         "roundUpMinutes": "Round up to minutes",
         "scheduleEffectiveDate": "Schedule effective date",
         "scheduleEndDate": "Schedule end date",
-        "scheduleRate": "Schedule rate dollars",
+        "scheduleRate": "Schedule rate",
         "serviceQuantity": "License or product quantity",
         "tierMaximum": "Tier maximum",
         "tierMinimum": "Tier minimum",
-        "tierRate": "Tier rate dollars",
+        "tierRate": "Tier rate",
         "usageUnit": "Usage unit"
       },
       "frequencies": {
@@ -2538,7 +2565,7 @@
       "placeholders": {
         "minimum": "minimum",
         "minimumMinutes": "minimum minutes",
-        "overtimeRate": "overtime $/hr",
+        "overtimeRate": "overtime rate per hour",
         "roundMinutes": "round minutes",
         "thresholdHours": "threshold hours"
       },
@@ -2580,7 +2607,8 @@
         "value": "Value",
         "appliesTo": "Applies to",
         "description": "Description",
-        "amount": "Amount ($)",
+        "amount": "Amount",
+        "rate": "Rate",
         "billingPeriod": "Billing period",
         "timing": "Timing"
       }
@@ -2680,6 +2708,10 @@
       "duplicate": "A matching contract wizard record already exists.",
       "resumeUnsupportedShape": "This draft can't be resumed in the wizard without changing its pricing: {{lines}}",
       "fixedLineNoService": "Fixed line \"{{lineName}}\" has a recurring amount but no service to bill it on. Add a service before finishing.",
+      "templateAmountsMissing": "Cannot create contract in {{currency}}. The following amounts have no {{currency}} value: {{amounts}}. Enter an amount for each, or add {{currency}} rates to the template.",
+      "currencyPricingMissing": "Cannot create contract in {{currency}}. No {{currency}} price is set for: {{services}}.",
+      "invalidTemplateCurrency": "\"{{currency}}\" is not a valid ISO 4217 currency code",
+      "templateCurrencyHasPriceSet": "This template already has a {{currency}} price set. Delete it before making {{currency}} the base currency.",
       "standingTerms": "This draft has standing discount terms. Edit its Lines and Discounts tabs to preserve those terms."
     },
     "pricingSchedule": {
@@ -2732,6 +2764,11 @@
   },
   "sellHourBlockNote": {
     "text": "A contract hour bucket bills only the overage. To charge for a block of hours up front, add a Prepaid Block line to this contract."
+  },
+  "review": {
+    "saveTemplateRates": "Save these {{currency}} rates to the template",
+    "saveMissingTemplateRates": "Add the missing {{currency}} rates to the template",
+    "updateTemplateRates": "Update the template's {{currency}} rates with these amounts"
   },
   "billingTimingField": {
     "arrears": "In Arrears",

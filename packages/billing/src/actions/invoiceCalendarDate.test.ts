@@ -86,11 +86,11 @@ vi.mock('../services/pdfGenerationService', () => ({
 vi.mock('./invoiceQueries', () => ({
   getInvoiceForRendering: vi.fn(async (invoiceId: string) => mocks.invoiceById.get(invoiceId)),
 }));
-vi.mock('../../../tenancy/src/server/portalDomainStatus', () => ({
+vi.mock('../../../tenancy/src/lib/portalDomainStatus', () => ({
   getPortalDomainStatusForTenant: vi.fn(async () => ({ status: 'none' })),
 }));
 // Use the real portal URL helper (its only dependency, the domain status lookup, is mocked above).
-vi.mock('@alga-psa/tenancy/server', async () => import('../../../tenancy/src/server/tenantPortalUrl'));
+vi.mock('@alga-psa/tenancy/server', async () => import('../../../tenancy/src/lib/tenantPortalUrl'));
 vi.mock('./paymentActions', () => ({
   getPaymentService: mocks.getPaymentService,
   expireInvoicePaymentLinksForTerminalStatus: vi.fn(),

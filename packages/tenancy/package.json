@@ -21,10 +21,6 @@
       "import": "./dist/server.mjs",
       "require": "./dist/server.js"
     },
-    "./server/tenantPortalUrl": {
-      "types": "./src/server/tenantPortalUrl.ts",
-      "import": "./src/server/tenantPortalUrl.ts"
-    },
     "./client": {
       "types": "./dist/client.d.ts",
       "import": "./dist/client.mjs",
@@ -38,6 +34,10 @@
     "./lib/tenantDefaultCountry": {
       "types": "./src/lib/tenantDefaultCountry.ts",
       "import": "./src/lib/tenantDefaultCountry.ts"
+    },
+    "./lib/tenantPortalUrl": {
+      "types": "./src/lib/tenantPortalUrl.ts",
+      "import": "./src/lib/tenantPortalUrl.ts"
     },
     "./lib/tenantDefaultCompanyName": {
       "types": "./src/lib/tenantDefaultCompanyName.ts",

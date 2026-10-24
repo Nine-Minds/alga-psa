@@ -105,8 +105,12 @@ describe('template line service management for non-Fixed lines', () => {
       config_id: configId,
       unit_of_measure: 'GB',
       enable_tiered_pricing: false,
-      base_rate: 12500,
     });
+    // The fixture prices the service only through the currency-untagged
+    // service_catalog.default_rate, which a template no longer snapshots: an
+    // amount is taken from the catalog in the template's own currency or left
+    // unset to follow the catalog at billing time.
+    expect(rowsOf('contract_template_line_service_usage_config')[0].base_rate).toBeUndefined();
   });
 
   it('adds a Bucket configuration to an Hourly template line with overage_rate defaulted', async () => {
