@@ -2,7 +2,9 @@ import {
   customPageSizeToMm,
   matchRecordPath,
   recordUrl,
+  type LabelHideableField,
   type LabelPrintFailure,
+  type LabelTenantClient,
   type LabelViewModel,
   type TemplateAst,
 } from '@alga-psa/types';
@@ -21,8 +23,14 @@ import type { LabelBatchLayout } from './layout';
 
 export interface LabelPrintItem {
   viewModel: LabelViewModel;
-  /** A standard label template code for this item's label class. Defaults to the class's template. */
+  /**
+   * A label template code for this item's label class. For a standard template it selects the AST;
+   * with `templateAst` it is only the name failures are reported under (the custom template's id).
+   * Defaults to the class's standard template.
+   */
   templateCode?: string;
+  /** A resolved tenant custom template. Already validated for the item's class by the caller. */
+  templateAst?: TemplateAst;
 }
 
 export class LabelRenderError extends Error {
@@ -65,7 +73,42 @@ export function assertCanonicalLabelUrl(viewModel: LabelViewModel): void {
   }
 }
 
+/**
+ * The model a label template evaluates. Fields the template hides (`metadata.labelSettings.hiddenFields`)
+ * are NULLED here, before evaluation, so a hidden value cannot reach the HTML even when a custom text node
+ * binds it. `url` and `identifier` are not hideable (the type and the schema both exclude them). The display
+ * lines ("Asset {tag}", "S/N ...{suffix}") and the brand text are derived afterwards from what remains.
+ */
+export function buildLabelModel(
+  viewModel: LabelViewModel,
+  tenantClient: LabelTenantClient | null | undefined,
+  hiddenFields: readonly LabelHideableField[] = []
+): LabelViewModel {
+  const hidden = new Set<LabelHideableField>(hiddenFields);
+  const base = tenantClient ?? viewModel.tenantClient ?? null;
+  const name = hidden.has('tenantName') ? null : base?.name ?? null;
+  const logoUrl = hidden.has('tenantLogo') ? null : base?.logoUrl ?? null;
+  const secondaryIdentifier = hidden.has('secondaryIdentifier') ? null : viewModel.secondaryIdentifier;
+  const serialSuffix = hidden.has('serialSuffix') ? null : viewModel.serialSuffix;
+  return {
+    ...viewModel,
+    title: hidden.has('title') ? null : viewModel.title,
+    clientName: hidden.has('clientName') ? null : viewModel.clientName,
+    detail: hidden.has('detail') ? null : viewModel.detail,
+    secondaryIdentifier,
+    serialSuffix,
+    tenantClient: base || name || logoUrl ? { name, logoUrl, brandText: logoUrl ? null : name } : null,
+    display: {
+      assetLine: secondaryIdentifier ? `Asset ${secondaryIdentifier}` : null,
+      serialLine: serialSuffix ? `S/N \u2026${serialSuffix}` : null,
+    },
+  };
+}
+
 function resolveTemplateAst(item: LabelPrintItem): { ast: TemplateAst; code: string } {
+  if (item.templateAst) {
+    return { ast: item.templateAst, code: item.templateCode ?? 'custom' };
+  }
   const code = item.templateCode ?? LABEL_STANDARD_CODE_BY_CLASS[item.viewModel.labelClass];
   if (LABEL_CLASS_BY_STANDARD_CODE[code] !== item.viewModel.labelClass) {
     throw new LabelRenderError(`Label template "${code}" does not print "${item.viewModel.labelClass}" labels.`);
@@ -85,7 +128,7 @@ function resolveTemplateAst(item: LabelPrintItem): { ast: TemplateAst; code: str
 export async function renderLabelBatchHtml(
   items: readonly LabelPrintItem[],
   layout: LabelBatchLayout,
-  options: { tenantClient?: { name: string | null; logoUrl: string | null } | null; locale?: string } = {}
+  options: { tenantClient?: LabelTenantClient | null; locale?: string } = {}
 ): Promise<ComposedLabelDocument> {
   const cells: RenderedLabelCell[] = [];
   const failures: LabelPrintFailure[] = [];
@@ -95,7 +138,7 @@ export async function renderLabelBatchHtml(
     try {
       assertCanonicalLabelUrl(item.viewModel);
       const { ast, code } = resolveTemplateAst(item);
-      const model = { ...item.viewModel, tenantClient: options.tenantClient ?? item.viewModel.tenantClient ?? null };
+      const model = buildLabelModel(item.viewModel, options.tenantClient, ast.metadata?.labelSettings?.hiddenFields);
       const evaluation = evaluateTemplateAst(ast, model as unknown as Record<string, unknown>);
       const { html, css } = await renderTemplateAstFragment(ast, evaluation, { locale: options.locale });
       const printSettings = ast.metadata?.printSettings;

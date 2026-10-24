@@ -256,7 +256,8 @@
     "openMenu": "⟦Ȯƥḗƞ ḿḗƞŭ⟧",
     "moreActions": "⟦Ḿȯřḗ ȧƈŧīȯƞş⟧",
     "createTemplate": "⟦Ƈřḗȧŧḗ ŧḗḿƥŀȧŧḗ ƒřȯḿ ŧīƈķḗŧ⟧",
-    "createWorkflowFromTicket": "⟦Ƈřḗȧŧḗ ẇȯřķƒŀȯẇ ƒřȯḿ ŧīƈķḗŧ⟧"
+    "createWorkflowFromTicket": "⟦Ƈřḗȧŧḗ ẇȯřķƒŀȯẇ ƒřȯḿ ŧīƈķḗŧ⟧",
+    "printWorkTag": "⟦Ƥřīƞŧ ẇȯřķ ŧȧɠ⟧"
   },
   "messages": {
     "noTickets": "⟦Ƞȯ ŧīƈķḗŧş ƒȯŭƞḓ⟧",
@@ -662,7 +663,9 @@
       "more": "⟦Ḿȯřḗ⟧",
       "bundleNeedsOne": "⟦Şḗŀḗƈŧ ȧŧ ŀḗȧşŧ 1 ŧīƈķḗŧ ŧȯ ƀŭƞḓŀḗ⟧",
       "selectedCount_few": "⟦{{count}} şḗŀḗƈŧḗḓ⟧",
-      "selectedCount_many": "⟦{{count}} şḗŀḗƈŧḗḓ⟧"
+      "selectedCount_many": "⟦{{count}} şḗŀḗƈŧḗḓ⟧",
+      "printLabels": "⟦Ƥřīƞŧ ŀȧƀḗŀş⟧",
+      "printLabelsLimit": "⟦Ẏȯŭ ƈȧƞ ƥřīƞŧ ȧŧ ḿȯşŧ {{max}} ŀȧƀḗŀş ȧŧ ȧ ŧīḿḗ⟧"
     },
     "moveDialogTitle": "⟦Ḿȯṽḗ Şḗŀḗƈŧḗḓ Ŧīƈķḗŧş⟧",
     "moveDialogDescription": "⟦Şḗŀḗƈŧ ȧ ḓḗşŧīƞȧŧīȯƞ ƀȯȧřḓ ȧƞḓ şŧȧŧŭş, ŧħḗƞ ƈȯƞƒīřḿ ḿȯṽīƞɠ ŧħḗ şḗŀḗƈŧḗḓ ŧīƈķḗŧş.⟧",

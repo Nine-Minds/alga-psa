@@ -17,7 +17,12 @@ export const LABEL_TEMPLATE_VALUE_BINDINGS: LabelTemplateValueBindings = {
   detail: { id: 'detail', kind: 'value', path: 'detail', fallback: '' },
   secondaryIdentifier: { id: 'secondaryIdentifier', kind: 'value', path: 'secondaryIdentifier', fallback: '' },
   serialSuffix: { id: 'serialSuffix', kind: 'value', path: 'serialSuffix', fallback: '' },
+  // Display lines derived by the renderer AFTER hidden fields are nulled ("Asset {tag}", "S/N ...{suffix}").
+  assetLine: { id: 'assetLine', kind: 'value', path: 'display.assetLine', fallback: '' },
+  serialLine: { id: 'serialLine', kind: 'value', path: 'display.serialLine', fallback: '' },
   tenantName: { id: 'tenantName', kind: 'value', path: 'tenantClient.name', fallback: '' },
+  // The standard templates' text brand line: the issuer name, but only when there is no logo to show.
+  tenantBrandText: { id: 'tenantBrandText', kind: 'value', path: 'tenantClient.brandText', fallback: '' },
   tenantLogo: { id: 'tenantLogo', kind: 'value', path: 'tenantClient.logoUrl' },
 };
 

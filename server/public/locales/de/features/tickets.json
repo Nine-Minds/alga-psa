@@ -248,7 +248,8 @@
     "openMenu": "Menü öffnen",
     "moreActions": "Weitere Aktionen",
     "createTemplate": "Vorlage aus Ticket erstellen",
-    "createWorkflowFromTicket": "Workflow aus Ticket erstellen"
+    "createWorkflowFromTicket": "Workflow aus Ticket erstellen",
+    "printWorkTag": "Arbeitsetikett drucken"
   },
   "messages": {
     "noTickets": "Keine Tickets gefunden",
@@ -792,7 +793,9 @@
       "more": "Mehr",
       "bundleNeedsOne": "Wählen Sie mindestens 1 Ticket zum Bündeln aus",
       "selectedCount_few": "{{count}} ausgewählt",
-      "selectedCount_many": "{{count}} ausgewählt"
+      "selectedCount_many": "{{count}} ausgewählt",
+      "printLabels": "Etiketten drucken",
+      "printLabelsLimit": "Sie können höchstens {{max}} Etiketten auf einmal drucken"
     },
     "assign": {
       "dialogTitle": "Ausgewählte Tickets zuweisen",

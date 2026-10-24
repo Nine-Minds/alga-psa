@@ -2431,11 +2431,13 @@
     "description": "Entwerfen Sie die Layouts, die zum Rendern von {{type}}-PDFs und -Vorschauen verwendet werden.",
     "availableLayouts": "Verfügbare Layouts",
     "actions": {
-      "newLayout": "Neues Layout"
+      "newLayout": "Neues Layout",
+      "setDefaultForClass": "Als Standard für {{class}} festlegen"
     },
     "columns": {
       "name": "Name",
-      "source": "Quelle"
+      "source": "Quelle",
+      "labelClass": "Klasse"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (Standardversion)",
@@ -2467,7 +2469,10 @@
         "details": "Layoutdetails"
       },
       "fields": {
-        "version": "Version"
+        "version": "Version",
+        "labelClass": "Etikettenklasse",
+        "labelFields": "Auf dem Etikett angezeigte Felder",
+        "labelFieldsHint": "Der Datensatzlink (QR-Code) und die Kennung werden immer angezeigt."
       },
       "placeholders": {
         "templateName": "Vorlage für {{type}}"

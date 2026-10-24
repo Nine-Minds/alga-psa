@@ -2483,11 +2483,13 @@
     "description": "Projektuj układy służące do generowania plików PDF i podglądów dla dokumentów typu „{{type}}”.",
     "availableLayouts": "Dostępne układy",
     "actions": {
-      "newLayout": "Nowy układ"
+      "newLayout": "Nowy układ",
+      "setDefaultForClass": "Ustaw jako domyślny dla: {{class}}"
     },
     "columns": {
       "name": "Nazwa",
-      "source": "Źródło"
+      "source": "Źródło",
+      "labelClass": "Klasa"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (wersja standardowa)",
@@ -2519,7 +2521,10 @@
         "details": "Szczegóły układu"
       },
       "fields": {
-        "version": "Wersja"
+        "version": "Wersja",
+        "labelClass": "Klasa etykiety",
+        "labelFields": "Pola wyświetlane na etykiecie",
+        "labelFieldsHint": "Link do rekordu (kod QR) i identyfikator są zawsze wyświetlane."
       },
       "placeholders": {
         "templateName": "Szablon dokumentu typu „{{type}}”"

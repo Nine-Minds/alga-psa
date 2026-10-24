@@ -2431,11 +2431,13 @@
     "description": "Utforma layouterna som används för PDF-filer och förhandsgranskningar av dokumenttypen {{type}}.",
     "availableLayouts": "Tillgängliga layouter",
     "actions": {
-      "newLayout": "Ny layout"
+      "newLayout": "Ny layout",
+      "setDefaultForClass": "Ange som standard för {{class}}"
     },
     "columns": {
       "name": "Namn",
-      "source": "Källa"
+      "source": "Källa",
+      "labelClass": "Klass"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (Standard)",
@@ -2467,7 +2469,10 @@
         "details": "Layoutdetaljer"
       },
       "fields": {
-        "version": "Version"
+        "version": "Version",
+        "labelClass": "Etikettklass",
+        "labelFields": "Fält som visas på etiketten",
+        "labelFieldsHint": "Postlänken (QR-kod) och identifieraren visas alltid."
       },
       "placeholders": {
         "templateName": "Mall – {{type}}"

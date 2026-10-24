@@ -19,6 +19,14 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/tickets/123')).toBe(false);
   });
 
+  it('lets the session-authenticated label endpoints (pdf, templates, linked-assets) through, and only those', () => {
+    for (const p of ['/api/labels/pdf', '/api/labels/templates', '/api/labels/linked-assets']) {
+      expect(shouldSkipApiKeyAuth(p)).toBe(true);
+    }
+    expect(shouldSkipApiKeyAuth('/api/labels/pdf/extra')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/labels/other')).toBe(false);
+  });
+
   it('allows the Teams package download route to use session auth', () => {
     expect(shouldSkipApiKeyAuth('/api/teams/package/download')).toBe(true);
   });

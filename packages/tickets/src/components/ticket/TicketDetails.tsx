@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } fr
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getUserTimeZone } from '@alga-psa/core';
+import { deriveWorkReason } from '../../lib/deriveWorkReason';
 import { formatTicketDateTime, formatTicketRelativeToNow } from '../../lib/ticketDateTimeFormat';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
@@ -88,7 +89,7 @@ import { Input } from "@alga-psa/ui/components/Input";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { Label } from "@alga-psa/ui/components/Label";
 import { PresenceBar } from '@alga-psa/ui/presence/PresenceBar';
-import { ExternalLink, Mail, History, Trash2, Copy, MoreHorizontal, LayoutTemplate, Workflow } from 'lucide-react';
+import { ExternalLink, Printer, Mail, History, Trash2, Copy, MoreHorizontal, LayoutTemplate, Workflow } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { useTicketTemplatePermissions } from '../templates/useTicketTemplatePermissions';
 import { WorkItemType } from "@alga-psa/types";
@@ -97,7 +98,7 @@ import { PartialBlock, StyledText } from '@blocknote/core';
 import { hasEditorContent } from '@alga-psa/ui/editor/hasEditorContent';
 import { convertBlockNoteToMarkdown } from "@alga-psa/formatting/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
-import { ResponseStateBadge } from '@alga-psa/ui/components';
+import { ResponseStateBadge, LabelPrintDialog } from '@alga-psa/ui/components';
 import TicketNavigation from './TicketNavigation';
 import LayoutToggle from './bento/LayoutToggle';
 import TicketBentoLayout from './bento/TicketBentoLayout';
@@ -375,6 +376,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // preference rather than per-message state.
     useInboundEmailViewPreference();
     const [hasHydrated, setHasHydrated] = useState(false);
+    const [isPrintWorkTagOpen, setIsPrintWorkTagOpen] = useState(false);
     const [canViewCommentMetadataDebug, setCanViewCommentMetadataDebug] = useState(
         bootstrap?.canViewCommentMetadataDebug ?? false,
     );
@@ -568,6 +570,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         ticket.subcategory_id,
         ticket.priority_id,
     ]);
+
+    // Reason prefill: subcategory name, else category name (same rule as the server provider). The dialog
+    // sends an override only if the user edits the field.
+    const printWorkReason = useMemo(() => {
+        const nameOf = (categoryId?: string | null) =>
+            categoryId ? initialCategories.find((c) => c.category_id === categoryId)?.category_name : undefined;
+        return deriveWorkReason(nameOf(ticket.subcategory_id), nameOf(ticket.category_id)) ?? '';
+    }, [initialCategories, ticket.category_id, ticket.subcategory_id]);
 
     const checklistSummary = useMemo(
         () => summarizeChecklist(checklistItems ?? []),
@@ -3759,6 +3769,16 @@ const handleClose = () => {
                                     </Button>
                                 )}
                                 <Button
+                                    id={`${id}-print-work-tag-button`}
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setIsPrintWorkTagOpen(true)}
+                                    className="flex items-center gap-2"
+                                >
+                                    <Printer className="h-4 w-4" />
+                                    <span>{t('actions.printWorkTag', 'Print work tag')}</span>
+                                </Button>
+                                <Button
                                     id={`${id}-duplicate-ticket-button`}
                                     variant="outline"
                                     size="sm"
@@ -4747,6 +4767,17 @@ const handleClose = () => {
                     ) : null}
                 </div>
             </Drawer>
+            {isPrintWorkTagOpen && (
+                <LabelPrintDialog
+                    isOpen={isPrintWorkTagOpen}
+                    onClose={() => setIsPrintWorkTagOpen(false)}
+                    labelClass="ticket-work-tag"
+                    ids={[ticket.ticket_id as string]}
+                    defaultTitle={ticket.title ?? ''}
+                    defaultDetail={printWorkReason}
+                    idPrefix={`${id}-print-work-tag`}
+                />
+            )}
         </ReflectionContainer>
     );
 };

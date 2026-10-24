@@ -2431,11 +2431,13 @@
     "description": "Concevez les mises en page utilisées pour produire les PDF et aperçus de type « {{type}} ».",
     "availableLayouts": "Mises en page disponibles",
     "actions": {
-      "newLayout": "Nouvelle mise en page"
+      "newLayout": "Nouvelle mise en page",
+      "setDefaultForClass": "Définir par défaut pour {{class}}"
     },
     "columns": {
       "name": "Nom",
-      "source": "Source"
+      "source": "Source",
+      "labelClass": "Classe"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (standard)",
@@ -2467,7 +2469,10 @@
         "details": "Détails de la mise en page"
       },
       "fields": {
-        "version": "Version"
+        "version": "Version",
+        "labelClass": "Classe d'étiquette",
+        "labelFields": "Champs affichés sur l'étiquette",
+        "labelFieldsHint": "Le lien de l'enregistrement (code QR) et l'identifiant sont toujours affichés."
       },
       "placeholders": {
         "templateName": "Modèle pour {{type}}"

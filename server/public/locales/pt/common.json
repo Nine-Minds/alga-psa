@@ -1580,7 +1580,31 @@
     }
   },
   "labels": {
-    "printColumns": "Imprimir colunas"
+    "printColumns": "Imprimir colunas",
+    "dialog": {
+      "assetTitle": "Imprimir etiquetas de recursos",
+      "count_one": "{{count}} selecionado",
+      "count_other": "{{count}} selecionados",
+      "failed": "Não foi possível imprimir as etiquetas.",
+      "item": "Item",
+      "layout": "Disposição",
+      "linkedAsset": "Recurso vinculado",
+      "noAsset": "Nenhum recurso",
+      "notFound": "Não foi possível abrir estes registros.",
+      "openPdf": "Abrir PDF",
+      "printed_one": "{{count}} etiqueta impressa.",
+      "printed_other": "{{count}} etiquetas impressas.",
+      "printing": "Preparando…",
+      "print": "Imprimir",
+      "reason": "Motivo",
+      "skipFailures": "Ignorar estes e imprimir o restante",
+      "skipped_one": "{{count}} registro foi ignorado porque não pôde ser aberto.",
+      "skipped_other": "{{count}} registros foram ignorados porque não puderam ser abertos.",
+      "template": "Modelo",
+      "ticketTitle": "Imprimir etiquetas de trabalho",
+      "tooMany": "Você pode imprimir no máximo {{max}} etiquetas por vez.",
+      "useTemplate": "Usar {{template}}"
+    }
   },
   "deleteEntity": {
     "checkingDependenciesTitle": "Verificando Dependências",
