@@ -34,12 +34,18 @@ function tenantScopedTable(knex: Knex, tenant: string, table: string): Knex.Quer
   return tenantDb(knex, tenant).table(table) as Knex.QueryBuilder<any, any>;
 }
 
+/** ILIKE pattern that matches `term` literally (escapes %, _ and \\). */
+function containsPattern(term: string): string {
+  return `%${term.replace(/[\\%_]/g, '\\$&')}%`;
+}
+
 /**
- * Get software installed on an asset
- * Uses the normalized asset_software table with software_catalog join
+ * Get software installed on an asset. Requires asset:read.
+ * Uses the normalized asset_software table with software_catalog join — the
+ * same source as the client-level software view, so its drill lands on matching rows.
  */
 export const getAssetSoftware = withAuth(async (
-  _user,
+  user,
   { tenant },
   params: AssetSoftwareQueryParams
 ): Promise<AssetSoftwareListResponse | AssetActionError> => {
@@ -56,6 +62,10 @@ export const getAssetSoftware = withAuth(async (
   } = params;
 
   try {
+    if (!await hasPermission(user, 'asset', 'read')) {
+      throw new Error('Permission denied: Cannot read assets');
+    }
+
     // Base query using the view for convenience
     let query = tenantScopedTable(knex, tenant, 'v_asset_software_details')
       .where('asset_id', asset_id);
@@ -76,10 +86,12 @@ export const getAssetSoftware = withAuth(async (
     }
 
     // Search filter
-    if (search) {
+    const term = search?.trim();
+    if (term) {
+      const pattern = containsPattern(term);
       query = query.where(function() {
-        this.whereILike('software_name', `%${search}%`)
-          .orWhereILike('publisher', `%${search}%`);
+        this.whereILike('software_name', pattern)
+          .orWhereILike('publisher', pattern);
       });
     }
 
@@ -531,7 +543,7 @@ function buildClientSoftwareQuery(
 
   const term = search?.trim();
   if (term) {
-    query = query.whereILike('sc.name', `%${term.replace(/[\\%_]/g, '\\$&')}%`);
+    query = query.whereILike('sc.name', containsPattern(term));
   }
   return query;
 }

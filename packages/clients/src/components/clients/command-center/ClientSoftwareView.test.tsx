@@ -5,6 +5,7 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ClientSoftwareView, { assetSoftwareHref } from './ClientSoftwareView';
+import { FocusViewNavigationContext } from './FocusViewNavigation';
 
 const t = (key: string, options?: Record<string, unknown>) =>
   String(options?.defaultValue ?? key).replace(/\{\{(\w+)\}\}/g, (_m, n) => String(options?.[n] ?? ''));
@@ -41,6 +42,32 @@ describe('ClientSoftwareView', () => {
     getSummary.mockResolvedValue(response([], 0));
     render(<ClientSoftwareView id="sw" clientId="c1" getSummary={getSummary} t={t} />);
     expect(await screen.findByText(/No software inventory yet/)).toBeInTheDocument();
+    expect(document.getElementById('sw-empty-assets-link')).toHaveAttribute('href', '/msp/assets');
+  });
+
+  it('empty-state "View assets" opens this client\'s Assets focus view when hosted in the focus view', async () => {
+    getSummary.mockResolvedValue(response([], 0));
+    const openView = vi.fn();
+    render(
+      <FocusViewNavigationContext.Provider value={{ hasView: (tabId) => tabId === 'assets', openView }}>
+        <ClientSoftwareView id="sw" clientId="c1" getSummary={getSummary} t={t} />
+      </FocusViewNavigationContext.Provider>,
+    );
+    await screen.findByText(/No software inventory yet/);
+    const link = document.getElementById('sw-empty-assets-link')!;
+    expect(link.tagName).toBe('BUTTON');
+    fireEvent.click(link);
+    expect(openView).toHaveBeenCalledWith('assets');
+  });
+
+  it('keeps the asset list link when the focus view has no Assets view', async () => {
+    getSummary.mockResolvedValue(response([], 0));
+    render(
+      <FocusViewNavigationContext.Provider value={{ hasView: () => false, openView: vi.fn() }}>
+        <ClientSoftwareView id="sw" clientId="c1" getSummary={getSummary} t={t} />
+      </FocusViewNavigationContext.Provider>,
+    );
+    await screen.findByText(/No software inventory yet/);
     expect(document.getElementById('sw-empty-assets-link')).toHaveAttribute('href', '/msp/assets');
   });
 

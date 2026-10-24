@@ -17,6 +17,7 @@ import type {
   ColumnDefinition,
 } from '@alga-psa/types';
 import { CLIENT_SOFTWARE_ASSET_PREVIEW_LIMIT, CLIENT_SOFTWARE_PAGE_SIZE } from '@alga-psa/types';
+import { useFocusViewNavigation } from './FocusViewNavigation';
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
@@ -28,7 +29,10 @@ interface ClientSoftwareViewProps {
   id: string;
   clientId: string;
   getSummary: GetClientSoftwareSummary;
-  /** Opens the Assets focus view for the empty-state link (falls back to the assets list route). */
+  /**
+   * Opens this client's Assets view for the empty-state link. Defaults to the
+   * sibling Assets focus view when hosted in one; falls back to the assets list.
+   */
   onOpenAssets?: (() => void) | null;
   t: TFn;
 }
@@ -46,6 +50,9 @@ export const assetSoftwareHref = (assetId: string, title: string): string =>
  * grouped by catalog id. Read-only; rows expand to the devices carrying it.
  */
 export default function ClientSoftwareView({ id, clientId, getSummary, onOpenAssets, t }: ClientSoftwareViewProps) {
+  const focusNavigation = useFocusViewNavigation();
+  const openAssets = onOpenAssets
+    ?? (focusNavigation?.hasView('assets') ? () => focusNavigation.openView('assets') : null);
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -219,11 +226,11 @@ export default function ClientSoftwareView({ id, clientId, getSummary, onOpenAss
       {isEmpty ? (
         <div id={`${id}-empty`} className="py-10 text-center text-sm text-[rgb(var(--color-text-600))]">
           <p>{t('clientSoftware.empty', { defaultValue: 'No software inventory yet — inventory is collected per device' })}</p>
-          {onOpenAssets ? (
+          {openAssets ? (
             <button
               id={`${id}-empty-assets-link`}
               type="button"
-              onClick={onOpenAssets}
+              onClick={openAssets}
               className="mt-2 font-semibold text-primary-600 hover:text-primary-800 hover:underline"
             >
               {t('clientSoftware.emptyAssetsLink', { defaultValue: 'View assets' })}

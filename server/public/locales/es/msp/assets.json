@@ -1483,6 +1483,8 @@
       "installDate": "Fecha de instalación"
     },
     "empty": "No se encontró ningún software que coincida con su búsqueda.",
+    "noInventory": "Aún no se ha recopilado inventario de software para este dispositivo.",
+    "loadError": "No se pudo cargar el inventario de software.",
     "totalItems": "Total de artículos: {{count}}",
     "values": {
       "unknown": "Desconocido"

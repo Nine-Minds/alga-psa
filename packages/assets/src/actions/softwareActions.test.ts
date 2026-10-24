@@ -59,7 +59,7 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 import { hasPermission } from '@alga-psa/auth';
-import { getClientSoftwareSummary } from './softwareActions';
+import { getAssetSoftware, getClientSoftwareSummary } from './softwareActions';
 
 const CLIENT = 'c1000000-0000-4000-8000-0000000000c1';
 
@@ -150,5 +150,60 @@ describe('getClientSoftwareSummary', () => {
     await getClientSoftwareSummary({ clientId: CLIENT, page: 'all' });
     expect(callsOf('limit')).toHaveLength(0);
     expect(callsOf('offset')).toHaveLength(0);
+  });
+});
+
+describe('getAssetSoftware', () => {
+  const ASSET = 'a1000000-0000-4000-8000-0000000000a1';
+
+  beforeEach(() => {
+    h.calls.length = 0;
+    h.state.permitted = true;
+    h.state.countRow = { count: '0' };
+    h.state.rows = [];
+    vi.mocked(hasPermission).mockClear();
+  });
+
+  it('requires asset:read and returns a permission error before touching the inventory', async () => {
+    h.state.permitted = false;
+    const result: any = await getAssetSoftware({ asset_id: ASSET });
+    expect(hasPermission).toHaveBeenCalledWith(h.user, 'asset', 'read');
+    expect(result.permissionError).toContain('Permission denied');
+    expect(callsOf('tenantDb.table')).toHaveLength(0);
+  });
+
+  it('reads current installs for the asset from the normalized view, tenant-scoped', async () => {
+    h.state.countRow = { count: '1' };
+    h.state.rows = [{
+      software_id: 's1', name: 'Google Chrome', publisher: 'Google', category: 'Browser',
+      software_type: 'application', version: '125', install_date: null, size_bytes: null,
+      first_seen_at: '2026-01-01T00:00:00.000Z', is_current: true, is_managed: false, is_security_relevant: false,
+    }];
+    const result: any = await getAssetSoftware({ asset_id: ASSET, limit: 50 });
+
+    expect(callsOf('tenantDb.table').map((c) => [c.table, c.args[0]])).toEqual([['v_asset_software_details', h.TENANT]]);
+    const wheres = callsOf('where').map((c) => c.args);
+    expect(wheres).toContainEqual(['asset_id', ASSET]);
+    expect(wheres).toContainEqual(['is_current', true]);
+    expect(result.total).toBe(1);
+    expect(result.software).toEqual([expect.objectContaining({ software_id: 's1', name: 'Google Chrome', version: '125' })]);
+  });
+
+  it('matches the search term literally on name or publisher (escaped ILIKE)', async () => {
+    await getAssetSoftware({ asset_id: ASSET, search: '  50%_off ' });
+    const grouped = callsOf('where').find((c) => typeof c.args[0] === 'function');
+    expect(grouped).toBeDefined();
+    const before = h.calls.length;
+    (grouped!.args[0] as (this: unknown) => void).call(h.makeBuilder('inner'));
+    const ilike = h.calls.slice(before).map((c) => [c.method, ...c.args]);
+    expect(ilike).toEqual([
+      ['whereILike', 'software_name', '%50\\%\\_off%'],
+      ['orWhereILike', 'publisher', '%50\\%\\_off%'],
+    ]);
+  });
+
+  it('skips the search clause for a blank term', async () => {
+    await getAssetSoftware({ asset_id: ASSET, search: '   ' });
+    expect(callsOf('where').some((c) => typeof c.args[0] === 'function')).toBe(false);
   });
 });
