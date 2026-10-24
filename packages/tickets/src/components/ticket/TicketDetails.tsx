@@ -132,6 +132,7 @@ import {
     type EligibleChildTicket
 } from '../../actions/ticketBundleActions';
 import { ClosedMasterChoiceFields } from './ClosedMasterChoiceFields';
+import { isChildWorkflowLocked } from '../../lib/bundleWorkflowLock';
 import type { ClosedMasterChoice } from '../../lib/ticketBundlePolicy';
 import { deleteDraftClipboardImages } from '../../actions/comment-actions/clipboardImageDraftActions';
 import {
@@ -733,6 +734,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [closedMasterContext, setClosedMasterContext] = useState<BundleMasterClosedContextActionResult | null>(null);
     const [closedMasterChoice, setClosedMasterChoice] = useState<ClosedMasterChoice | null>(null);
     const [pendingClosedMasterChildId, setPendingClosedMasterChildId] = useState<string | null>(null);
+    const [isModeSwitchPending, setIsModeSwitchPending] = useState(false);
     const [isLoadingClosedMasterContext, setIsLoadingClosedMasterContext] = useState(false);
     const [isWatchListSaving, setIsWatchListSaving] = useState(false);
     const [allContactsForWatchList, setAllContactsForWatchList] = useState<IContact[]>([]);
@@ -3418,12 +3420,18 @@ const handleClose = () => {
         }
     }, [ticket.ticket_id, router, onSaved, t]);
 
-    const handleToggleBundleMode = useCallback(async () => {
-        if (!ticket.ticket_id || !bundle?.isBundleMaster) return;
+    const performBundleModeChange = useCallback(async (
+        nextMode: 'link_only' | 'sync_updates',
+        onClosedMaster?: ClosedMasterChoice,
+    ) => {
+        if (!ticket.ticket_id) return;
         try {
             setIsUpdatingBundleSettings(true);
-            const nextMode = bundle.mode === 'link_only' ? 'sync_updates' : 'link_only';
-            const result = await updateBundleSettingsAction({ masterTicketId: ticket.ticket_id, mode: nextMode });
+            const result = await updateBundleSettingsAction({
+                masterTicketId: ticket.ticket_id,
+                mode: nextMode,
+                ...(onClosedMaster ? { onClosedMaster } : {}),
+            });
             if (isReturnedActionError(result)) {
                 handleTicketActionError(result, t('messages.updateBundleSettingsFailed'));
                 return;
@@ -3436,7 +3444,44 @@ const handleClose = () => {
         } finally {
             setIsUpdatingBundleSettings(false);
         }
-    }, [ticket.ticket_id, bundle?.isBundleMaster, bundle?.mode, router, onSaved, t]);
+    }, [ticket.ticket_id, router, onSaved, t]);
+
+    // Switching to sync_updates on a closed master needs the same explicit
+    // choice as adding a child to one, so the closed-master dialog is reused.
+    const handleToggleBundleMode = useCallback(async () => {
+        if (!ticket.ticket_id || !bundle?.isBundleMaster) return;
+        const nextMode = bundle.mode === 'link_only' ? 'sync_updates' : 'link_only';
+        if (nextMode === 'link_only') {
+            await performBundleModeChange(nextMode);
+            return;
+        }
+        try {
+            setIsUpdatingBundleSettings(true);
+            const context = await getBundleMasterClosedContextAction({ masterTicketId: ticket.ticket_id });
+            if (isReturnedActionError(context)) {
+                handleTicketActionError(context, t('messages.updateBundleSettingsFailed'));
+                return;
+            }
+            if (!context.isClosed) {
+                setIsUpdatingBundleSettings(false);
+                await performBundleModeChange(nextMode);
+                return;
+            }
+            setClosedMasterContext(context);
+            setClosedMasterChoice(
+                context.allowedChoices.includes('keep_closed')
+                    ? 'keep_closed'
+                    : (context.allowedChoices[0] ?? null)
+            );
+            setPendingClosedMasterChildId(null);
+            setIsModeSwitchPending(true);
+            setIsClosedMasterChoiceOpen(true);
+        } catch (error) {
+            handleTicketActionError(error, t('messages.updateBundleSettingsFailed'));
+        } finally {
+            setIsUpdatingBundleSettings(false);
+        }
+    }, [ticket.ticket_id, bundle?.isBundleMaster, bundle?.mode, t, performBundleModeChange]);
 
     if (!tenant) {
         return (
@@ -3459,6 +3504,13 @@ const handleClose = () => {
             ? t('liveUpdates.connection.unavailable', 'Live updates unavailable')
             : null;
 
+    // Children lock their workflow fields only under a sync_updates master;
+    // bundle.mode is the master's ticket_bundle_settings.mode from the detail load.
+    const bundleWorkflowLocked = isChildWorkflowLocked({
+        isBundledChild: Boolean(bundle?.isBundleChild),
+        masterSettings: { mode: bundle?.mode },
+    });
+
     const bundleAndCloseBanners = (
         <>
                                 {bundle?.isBundleChild && bundle?.masterTicket ? (
@@ -3467,7 +3519,10 @@ const handleClose = () => {
                                         <a className="font-medium underline" href={`/msp/tickets/${bundle.masterTicket.ticket_id}`}>
                                             {bundle.masterTicket.ticket_number}
                                         </a>
-                                        . Workflow fields are locked; work from the master ticket.
+                                        .{' '}
+                                        {bundleWorkflowLocked
+                                            ? t('details.bundle.childLockedNotice', 'Workflow fields are locked; work from the master ticket.')
+                                            : t('details.bundle.childLinkedNotice', 'It is linked to the master and managed on its own.')}
                                     </div>
                                 ) : null}
 
@@ -3518,7 +3573,7 @@ const handleClose = () => {
                                             </div>
                                         </div>
                                         <div className="text-xs text-gray-500 mb-2">
-                                            {t('details.bundle.childrenDescription')}
+                                            {t('details.bundle.childrenDescription', 'Children keep their current status when bundled. In Sync Updates mode, closing or reopening the master closes or reopens all children, status, assignee and priority changes on the master apply to them, and their workflow fields are locked. In Link Only mode, children manage their own status, assignee and priority. Internal notes stay on the master.')}
                                         </div>
                                         <div className="flex items-center gap-2 mb-3" ref={searchContainerRef}>
                                             <div className="relative flex-1">
@@ -4192,6 +4247,7 @@ const handleClose = () => {
                     onClose={() => {
                         setIsClosedMasterChoiceOpen(false);
                         setPendingClosedMasterChildId(null);
+                        setIsModeSwitchPending(false);
                     }}
                     className="max-w-lg"
                 >
@@ -4200,7 +4256,9 @@ const handleClose = () => {
                             {t('details.bundle.closedMasterDialogTitle', "This bundle's master is closed")}
                         </h2>
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            {t('details.bundle.closedMasterDialogIntro', 'The master is closed. Choose what should happen to the child when it is added.')}
+                            {isModeSwitchPending
+                                ? t('details.bundle.modeSwitchDialogIntro', 'The master is closed. Choose what should happen to the open children when the bundle switches to Sync Updates.')
+                                : t('details.bundle.closedMasterDialogIntro', 'The master is closed. Choose what should happen to the child when it is added.')}
                         </p>
                         {closedMasterContext && (
                             <div className="mt-4">
@@ -4211,6 +4269,7 @@ const handleClose = () => {
                                     onChange={setClosedMasterChoice}
                                     hasResolutionComment={closedMasterContext.hasResolutionComment}
                                     masterStatusName={closedMasterContext.masterStatusName}
+                                    variant={isModeSwitchPending ? 'switch' : 'add'}
                                 />
                             </div>
                         )}
@@ -4222,6 +4281,7 @@ const handleClose = () => {
                                 onClick={() => {
                                     setIsClosedMasterChoiceOpen(false);
                                     setPendingClosedMasterChildId(null);
+                                    setIsModeSwitchPending(false);
                                 }}
                             >
                                 {t('actions.cancel', 'Cancel')}
@@ -4229,8 +4289,15 @@ const handleClose = () => {
                             <Button
                                 id={`${id}-bundle-closed-master-confirm`}
                                 type="button"
-                                disabled={!closedMasterChoice || !pendingClosedMasterChildId}
+                                disabled={!closedMasterChoice || (!pendingClosedMasterChildId && !isModeSwitchPending)}
                                 onClick={async () => {
+                                    if (isModeSwitchPending && closedMasterChoice) {
+                                        const choice = closedMasterChoice;
+                                        setIsClosedMasterChoiceOpen(false);
+                                        setIsModeSwitchPending(false);
+                                        await performBundleModeChange('sync_updates', choice);
+                                        return;
+                                    }
                                     if (!pendingClosedMasterChildId || !closedMasterChoice) return;
                                     const childId = pendingClosedMasterChildId;
                                     const choice = closedMasterChoice;
@@ -4239,7 +4306,9 @@ const handleClose = () => {
                                     await performAddChildToBundle(childId, choice);
                                 }}
                             >
-                                {t('details.bundle.add', 'Add')}
+                                {isModeSwitchPending
+                                    ? t('details.bundle.modeSwitchConfirm', 'Switch to Sync Updates')
+                                    : t('details.bundle.add', 'Add')}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -4292,7 +4361,7 @@ const handleClose = () => {
                     hideSlaStatus={hideSlaStatus}
                     hideBilling={hideBilling}
                     hideScheduling={hideScheduling}
-                    workflowLocked={Boolean(bundle?.isBundleChild)}
+                    workflowLocked={bundleWorkflowLocked}
                     onOpenAllFields={() => setIsAllFieldsDrawerOpen(true)}
                     tags={tags}
                     onTagsChange={handleTagsChange}
@@ -4427,7 +4496,7 @@ const handleClose = () => {
                                     initialCategories={initialCategories}
                                     itilImpact={itilImpact}
                                     itilUrgency={itilUrgency}
-                                    isBundledChild={Boolean(bundle?.isBundleChild)}
+                                    isBundledChild={bundleWorkflowLocked}
                                     responseStateTrackingEnabled={responseStateTrackingEnabled}
                                     renderProjectTaskActions={renderCreateProjectTask}
                                     renderQuickInvoiceActions={hideBilling ? undefined : renderQuickInvoice}
@@ -4648,7 +4717,7 @@ const handleClose = () => {
                             initialCategories={initialCategories}
                             itilImpact={itilImpact}
                             itilUrgency={itilUrgency}
-                            isBundledChild={Boolean(bundle?.isBundleChild)}
+                            isBundledChild={bundleWorkflowLocked}
                             responseStateTrackingEnabled={responseStateTrackingEnabled}
                             renderProjectTaskActions={renderCreateProjectTask}
                             renderQuickInvoiceActions={hideBilling ? undefined : renderQuickInvoice}
