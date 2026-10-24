@@ -2,18 +2,47 @@ import { tenantDb } from '@alga-psa/db';
 import type { IClientLocation } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
-export type CreateClientLocationInput = Omit<
+// Optional text columns that are nullable in the database. '' / whitespace is
+// stored as NULL (see normalizeOptionalFields); null clears the value.
+const NULLABLE_OPTIONAL_FIELDS = [
+  'location_name',
+  'address_line2',
+  'address_line3',
+  'state_province',
+  'postal_code',
+  'region_code',
+  'notes',
+] as const;
+
+type NullableOptionalField = (typeof NULLABLE_OPTIONAL_FIELDS)[number];
+type WithNullableOptionals<T> = Omit<T, NullableOptionalField> & {
+  [K in NullableOptionalField]?: string | null;
+};
+
+export type CreateClientLocationInput = WithNullableOptionals<Omit<
   IClientLocation,
   'location_id' | 'tenant' | 'client_id' | 'created_at' | 'updated_at'
->;
+>>;
 
-export type UpdateClientLocationInput = Partial<Omit<
+export type UpdateClientLocationInput = Partial<WithNullableOptionals<Omit<
   IClientLocation,
   'location_id' | 'tenant' | 'client_id' | 'created_at' | 'updated_at' | 'email'
->> & {
+>>> & {
   // null clears the stored email; undefined leaves it untouched.
   email?: string | null;
 };
+
+/** '' / whitespace-only optional fields become NULL; undefined is left untouched. */
+function normalizeOptionalFields<T extends Partial<Record<NullableOptionalField, string | null>>>(data: T): T {
+  const normalized = { ...data };
+  for (const field of NULLABLE_OPTIONAL_FIELDS) {
+    const value = normalized[field];
+    if (typeof value === 'string' && value.trim() === '') {
+      (normalized as Record<string, unknown>)[field] = null;
+    }
+  }
+  return normalized;
+}
 
 async function lockClient(trx: Knex.Transaction, tenant: string, clientId: string): Promise<void> {
   const client = await tenantDb(trx, tenant).table('clients')
@@ -71,8 +100,9 @@ export async function createLocation(
   trx: Knex.Transaction,
   tenant: string,
   clientId: string,
-  data: CreateClientLocationInput
+  rawData: CreateClientLocationInput
 ): Promise<IClientLocation> {
+  const data = normalizeOptionalFields(rawData);
   await lockClient(trx, tenant, clientId);
   const db = tenantDb(trx, tenant);
   const isActive = data.is_active ?? true;
@@ -92,7 +122,8 @@ export async function createLocation(
 
   const [location] = await db.table<IClientLocation>('client_locations')
     .insert({
-      ...data,
+      // The optional text columns are nullable in the database even though the row type says string.
+      ...(data as unknown as Partial<IClientLocation>),
       location_id: trx.raw('gen_random_uuid()'),
       tenant,
       client_id: clientId,
@@ -111,8 +142,9 @@ export async function updateLocation(
   tenant: string,
   clientId: string,
   locationId: string,
-  data: UpdateClientLocationInput
+  rawData: UpdateClientLocationInput
 ): Promise<IClientLocation> {
+  const data = normalizeOptionalFields(rawData);
   await lockClient(trx, tenant, clientId);
   const db = tenantDb(trx, tenant);
   const existing = await db.table<IClientLocation>('client_locations')
@@ -165,7 +197,7 @@ export async function updateLocation(
   const [location] = await db.table<IClientLocation>('client_locations')
     .where({ client_id: clientId, location_id: locationId })
     .update({
-      ...rest,
+      ...(rest as unknown as Partial<IClientLocation>),
       // The email column is nullable in the database even though the row type says string.
       ...(email !== undefined ? { email: email as string | undefined } : {}),
       updated_at: trx.fn.now(),

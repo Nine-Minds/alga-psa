@@ -132,12 +132,14 @@
       "billable": "Fatturabile",
       "notes": "Note",
       "deleteTimeEntry": "Elimina l'immissione dell'ora",
-      "unsavedChanges": "Modifiche non salvate"
+      "unsavedChanges": "Modifiche non salvate",
+      "contractLine": "Riga di contratto"
     },
     "placeholders": {
       "selectService": "Seleziona un servizio",
       "selectDate": "Seleziona la data",
-      "addNotes": "Aggiungi note"
+      "addNotes": "Aggiungi note",
+      "selectContractLine": "Seleziona una riga di contratto"
     },
     "validation": {
       "startBeforeEnd": "L'ora di inizio deve essere precedente all'ora di fine",
@@ -155,6 +157,9 @@
       "task": "Predefinito dall’attività",
       "phase": "Predefinito dalla fase",
       "project": "Predefinito dal progetto"
+    },
+    "options": {
+      "resolveContractLineLater": "Nessuna riga - risolvi più tardi"
     }
   },
   "workItemPicker": {
@@ -401,7 +406,7 @@
     "noContract": "Nessuna linea di contratto trovata per questo servizio. Il tempo verrà indirizzato al contratto predefinito gestito dal sistema.",
     "contract": "Contratto: {{name}}",
     "defaultContract": "Contratto predefinito gestito dal sistema",
-    "multipleLines": "Sono disponibili più linee di contratto, utilizzando la selezione predefinita"
+    "multipleEligible": "Più righe di contratto sono idonee per questa data. Seleziona una riga di contratto per salvare l'assegnazione."
   },
   "billableLegend": {
     "title": "Legenda fatturabile",

@@ -461,6 +461,14 @@
     "clientPortal": "Ontvangen via Klantenportaal",
     "inboundEmail": "Ontvangen via e-mail"
   },
+  "originalEmail": {
+    "text": "Tekst",
+    "original": "Originele e-mail",
+    "emailShort": "E-mail",
+    "loading": "Originele e-mail wordt geladen…",
+    "error": "De originele e-mail kan niet worden geladen.",
+    "group": "Berichtweergave"
+  },
   "documents": {
     "title": "Documenten",
     "noDocuments": "Geen documenten toegevoegd",
@@ -964,6 +972,7 @@
     "templateReplaceTitle": "Uw wijzigingen vervangen?",
     "templateReplaceMessage": "Het toepassen van een sjabloon vervangt de titel, beschrijving en andere velden die u hebt ingevuld.",
     "templateReplaceConfirm": "Sjabloon toepassen",
+    "templateTokenHint": "De titel vult de gekozen klant, contactpersoon en vervaldatum in, totdat u hem bewerkt.",
     "tagCreatePartialFailure_few": "{{count}} tags konden niet worden aangemaakt",
     "tagCreatePartialFailure_many": "{{count}} tags konden niet worden aangemaakt",
     "tagCreationFailed_few": "{{count}} tags konden niet worden aangemaakt",
@@ -1666,7 +1675,10 @@
       "ruleCategoryBoardMismatch": "De geselecteerde categorie hoort bij een ander bord dan de regel.",
       "ruleCategoryInvalid": "De geselecteerde categorie is geen categorie op het hoogste niveau.",
       "ruleSubcategoryInvalid": "De geselecteerde subcategorie hoort niet bij de geselecteerde categorie.",
-      "ruleSubcategoryRequiresCategory": "Selecteer een categorie voordat u een subcategorie kiest."
+      "ruleSubcategoryRequiresCategory": "Selecteer een categorie voordat u een subcategorie kiest.",
+      "ruleTooManyKeywords": "Gebruik maximaal {{max}} trefwoorden per regel.",
+      "ruleKeywordTooLong": "Elk trefwoord mag maximaal {{max}} tekens bevatten.",
+      "ruleOriginInvalid": "Een van de geselecteerde ticketbronnen is ongeldig."
     }
   },
   "ticketSection": {
@@ -2250,7 +2262,9 @@
       "details": "Details",
       "template": "Ticketsjabloon",
       "schedule": "Planning",
-      "behaviour": "Gedrag"
+      "behaviour": "Gedrag",
+      "overrides": "Overschrijvingen voor dit schema",
+      "dispatch": "Toewijzing"
     },
     "fields": {
       "board": "Bord",
@@ -2457,6 +2471,22 @@
       "monthlyOnDay": "{{every}} op {{day}}",
       "monthlyOnNthWeekday": "{{every}} op de {{ordinal}} {{weekday}}",
       "yearly": "Elk jaar op {{day}} {{month}}"
+    },
+    "template": {
+      "intro": "Hoe het ticket eruitziet komt uit een gedeelde tickettemplate. Een wijziging van de sjabloon wijzigt elk schema dat deze gebruikt, vanaf het volgende ticket.",
+      "select": "Tickettemplate",
+      "placeholder": "Selecteer een tickettemplate",
+      "inactiveOption": "{{name}} (inactief)",
+      "summary": "{{checklist}} checklistitem(s), {{tags}} tag(s)",
+      "inactiveNotice": "Deze sjabloon is inactief: verborgen in de sjabloonkiezer; wordt nog gebruikt door {{count}} schema's.",
+      "sharedNotice": "In gebruik door {{count}} schema's. Het bewerken van de sjabloon wijzigt ze allemaal.",
+      "edit": "Sjabloon bewerken",
+      "new": "Nieuwe sjabloon",
+      "sampleTitle": "Titel van het eerste ticket:",
+      "tokensHelp": "Sjabloontitels kunnen {{tokens}} gebruiken; ze worden per ticket ingevuld."
+    },
+    "overridesSection": {
+      "intro": "Laat een groep uit om de sjabloon te gebruiken. Elke klant kan deze opnieuw overschrijven."
     }
   },
   "stopwatch": {
@@ -2490,12 +2520,15 @@
         "title": "Tickettitel",
         "board": "Bord",
         "checklist": "Checklistitems",
-        "status": "Status"
-      }
+        "status": "Status",
+        "schedules": "Schema's"
+      },
+      "deleteBlocked": "In gebruik door {{count}} terugkerend(e) schema('s). Wijs ze eerst naar een andere sjabloon of archiveer ze."
     },
     "status": {
       "active": "Actief",
-      "inactive": "Inactief"
+      "inactive": "Inactief",
+      "scheduledOnly": "Alleen gepland"
     },
     "actions": {
       "edit": "Bewerken",
@@ -2517,7 +2550,10 @@
       "notesHelp": "Alleen voor uw team. Wordt niet naar tickets gekopieerd.",
       "title": "Tickettitel",
       "description": "Beschrijving",
-      "descriptionPlaceholder": "Beschrijving"
+      "descriptionPlaceholder": "Beschrijving",
+      "offerForManualUse": "Aanbieden in de kiezer voor nieuwe tickets",
+      "offerForManualUseHelp": "Uitschakelen voor sjablonen die alleen door terugkerende schema's worden gebruikt.",
+      "titleTokens": "U kunt {{tokens}} in de titel gebruiken; ze worden per ticket ingevuld."
     },
     "checklist": {
       "empty": "Geen checklistitems.",
@@ -2545,14 +2581,24 @@
       "fromTicket": "Vooraf ingevuld vanuit ticket #{{number}}. Er wordt niets opgeslagen tot u op Opslaan klikt.",
       "inlineImages": "De beschrijving bevat afbeeldingen die bij het brionticket horen. Ze worden mogelijk niet meer getoond als dat ticket wordt verwijderd. Verwijder ze of upload ze opnieuw als het sjabloon het ticket moet overleven.",
       "viewOnly": "U kunt dit sjabloon bekijken maar niet wijzigen.",
-      "referenceProblems": "Sommige velden in dit sjabloon verwijzen naar dingen die niet meer bestaan. Ze blijven leeg wanneer het sjabloon wordt gebruikt. Corrigeer ze en sla op:"
+      "referenceProblems": "Sommige velden in dit sjabloon verwijzen naar dingen die niet meer bestaan. Ze blijven leeg wanneer het sjabloon wordt gebruikt. Corrigeer ze en sla op:",
+      "inactiveWarning": "Inactief: verborgen in de sjabloonkiezer; wordt nog gebruikt door {{count}} schema's.",
+      "sharedWarning": "Wijzigingen gelden voor elk terugkerend schema dat deze sjabloon gebruikt, vanaf het volgende ticket dat het aanmaakt.",
+      "boardChangeWarning": "Het wijzigen van het bord wist prioriteit en categorie en kan de status van schema's met deze sjabloon ongeldig maken. Die schema's mislukken totdat u ze bewerkt. Betrokken schema's: {{schedules}}."
     },
     "errors": {
       "notFound": "Ticketsjabloon niet gevonden",
       "duplicateName": "Er bestaat al een sjabloon met de naam {{name}}",
       "invalidReferences": "Het sjabloon verwijst naar een bord, categorie of prioriteit die niet beschikbaar is",
       "notAvailable": "Ticketsjablonen zijn niet beschikbaar",
-      "subcategoryNeedsCategory": "Een subcategorie vereist een categorie"
+      "subcategoryNeedsCategory": "Een subcategorie vereist een categorie",
+      "inUseBySchedules": "In gebruik door {{count}} terugkerend(e) schema('s): {{schedules}}. Wijs ze eerst naar een andere sjabloon of archiveer ze."
+    },
+    "usage": {
+      "schedules": "In gebruik door {{count}} schema's",
+      "paused": "gepauzeerd",
+      "tickets": "{{count}} tickets aangemaakt met deze sjabloon",
+      "scheduleThis": "Deze sjabloon inplannen…"
     }
   },
   "enums": {

@@ -98,6 +98,20 @@
         "assignedContractLine": "Línea de contrato asignada",
         "assignedWorkItem": "Elemento de trabajo asignado",
         "unresolvedWork": "Trabajo no resuelto"
+      },
+      "prepaidBlock": {
+        "due": "{{trigger}} · vence el {{date}}",
+        "trigger": {
+          "contract_start": "Bloque prepago: inicio del contrato",
+          "exhaustion": "Bloque prepago: agotado",
+          "threshold": "Bloque prepago: umbral de uso",
+          "expiry": "Bloque prepago: vencimiento",
+          "renewal": "Bloque prepago: renovación",
+          "manual": "Bloque prepago: emitido manualmente"
+        },
+        "stalePendingWarning": "{{count}} bloques prepago pendientes llevan más de 14 días esperando su finalización y retienen entradas de tiempo. Finalice o elimine sus facturas en borrador para que el tiempo retenido pueda facturarse.",
+        "stalePendingWarning_one": "{{count}} bloque prepago pendiente lleva más de 14 días esperando su finalización y retiene entradas de tiempo. Finalice o elimine su factura en borrador para que el tiempo retenido pueda facturarse.",
+        "stalePendingWarning_other": "{{count}} bloques prepago pendientes llevan más de 14 días esperando su finalización y retienen entradas de tiempo. Finalice o elimine sus facturas en borrador para que el tiempo retenido pueda facturarse."
       }
     },
     "actions": {
@@ -273,7 +287,8 @@
       "fixed": "FIX",
       "hourly": "T&M",
       "usage": "USE",
-      "bucket": "BKT"
+      "bucket": "BKT",
+      "prepaidBlock": "PRE"
     },
     "summary": {
       "selected": "{{count}} seleccionado(s)",
@@ -541,6 +556,17 @@
       "actionBar": {
         "selectedCount": "{{count}} seleccionados",
         "clear": "Limpiar selección"
+      }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Factura finalizada, pero un paso posterior no se completó: {{steps}}. La factura está finalizada; puede reintentar ese paso.",
+      "steps": {
+        "credit_auto_apply": "aplicación automática de crédito",
+        "project_deposit_credits": "créditos de depósito de proyecto",
+        "workflow_events": "eventos de flujo de trabajo",
+        "accounting_export": "exportación contable",
+        "replenishment_status": "estado de reposición prepagada",
+        "autopay": "pago automático"
       }
     }
   },
@@ -842,6 +868,19 @@
       "cancel": "Cancelar",
       "confirm": "Anular factura",
       "voiding": "Anulando…"
+    },
+    "history": {
+      "title": "Historial",
+      "empty": "No hay historial registrado.",
+      "loadFailed": "No se pudo cargar el historial de la factura.",
+      "system": "Sistema",
+      "ops": {
+        "invoice_finalized": "Finalizada",
+        "invoice_unfinalized": "Reabierta",
+        "invoice_deleted": "Eliminada"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "ninguno"
     }
   },
   "templateEditor": {
@@ -1362,7 +1401,7 @@
       "mediaSource": "Origen de la imagen",
       "mediaSourceLogo": "Logotipo de la empresa",
       "mediaSourceCustom": "Imagen personalizada",
-      "mediaSourceLogoHint": "Muestra en cada documento el logotipo de la configuración de marca de su empresa.",
+      "mediaSourceLogoHint": "Muestra en cada documento el logotipo del registro de cliente de su propia empresa.",
       "mediaSourceUrl": "URL de origen",
       "renameInner": "¿Cambiar también el nombre de {{count}} capas internas ({{from}} → {{to}}…)?",
       "renameInnerApply": "Cambiar nombre",
@@ -1412,7 +1451,14 @@
           "widthTooltip": "Usar el ancho exacto indicado abajo",
           "heightTooltip": "Usar el alto exacto indicado abajo"
         }
-      }
+      },
+      "barcode": "Código de barras",
+      "barcodeSymbology": "Tipo",
+      "barcodeQr": "Código QR",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Valor",
+      "barcodeHintWorkTag": "Texto o un campo como {{example}} (el enlace al registro). Mantenga el código con al menos unos 20 mm de ancho para que se pueda escanear.",
+      "barcodeHint": "El texto que se codificará. Mantenga el código con al menos unos 20 mm de ancho para que se pueda escanear."
     },
     "shell": {
       "selectedLabel": "Seleccionado:",
@@ -1425,7 +1471,11 @@
       "title": "Configuración de página",
       "description": "Elija preset de papel y margen sin seleccionar el nodo de página oculto.",
       "paperPreset": "Preset de papel",
-      "marginMm": "Margen (mm)"
+      "marginMm": "Margen (mm)",
+      "customSize": "Tamaño personalizado…",
+      "customWidth": "Ancho",
+      "customHeight": "Alto",
+      "customUnit": "Unidad"
     },
     "breadcrumbs": {
       "emptyHelp": "Seleccione un componente del lienzo para ver su jerarquía.",
@@ -1456,7 +1506,13 @@
         "noQuotesFound": "Sin cotizaciones.",
         "selectQuote": "Seleccionar cotización",
         "loadingQuoteDetails": "Cargando detalles de la cotización…",
-        "loadingDocumentDetails": "Cargando detalles del documento…"
+        "loadingDocumentDetails": "Cargando detalles del documento…",
+        "zoom": {
+          "fit": "Ajustar",
+          "actual": "100 %",
+          "label": "Zoom de la vista previa",
+          "fitWithScale": "Ajustar ({{percent}} %)"
+        }
       },
       "tabs": {
         "design": "Diseño",
@@ -2350,7 +2406,7 @@
     },
     "imagePicker": {
       "browse": "Explorar documentos",
-      "hiddenFromClients": "{{document}} está oculto para los clientes. No aparecerá en las cotizaciones ni en las facturas consultadas a través del portal del cliente.",
+      "hiddenFromClients": "{{document}} está oculto para los clientes, por lo que no pueden abrirlo en el portal del cliente. Sigue apareciendo en las facturas y en los PDF de cotizaciones que lo usan.",
       "updating": "Actualizando...",
       "markVisible": "Marcar como visible para los clientes",
       "visibleInPortal": "Visible en el portal del cliente",
@@ -2472,7 +2528,8 @@
     "types": {
       "salesOrder": "Orden de venta",
       "packingSlip": "Nota de entrega",
-      "pickList": "Lista de preparación de pedidos"
+      "pickList": "Lista de preparación de pedidos",
+      "workTag": "Etiqueta de trabajo / Etiqueta"
     }
   },
   "errors": {
@@ -2480,7 +2537,8 @@
       "invoiceUpdate": "Permiso denegado: se requiere permiso de actualización de facturas",
       "invoiceDelete": "Permiso denegado: se requiere permiso de eliminación de facturas",
       "invoiceAccess": "Permiso denegado: acceso a la factura denegado",
-      "otherClientInvoices": "Permiso denegado: no se puede acceder a las facturas de otro cliente"
+      "otherClientInvoices": "Permiso denegado: no se puede acceder a las facturas de otro cliente",
+      "invoiceRead": "Permiso denegado: se requiere permiso de lectura de facturas"
     },
     "invoice": {
       "notFound": "Factura no encontrada",
@@ -2502,7 +2560,9 @@
       "duplicate": "Ya existe una factura en conflicto. Actualice la página e inténtelo de nuevo.",
       "missingField": "Falta un campo obligatorio de la factura.",
       "missingFieldNamed": "Falta un campo obligatorio de la factura: {{field}}.",
-      "billingProfileUnavailable": "El perfil de facturación seleccionado no está disponible para este cliente."
+      "billingProfileUnavailable": "El perfil de facturación seleccionado no está disponible para este cliente.",
+      "deleteNotDraft": "Solo se pueden eliminar facturas en borrador; anule la factura en su lugar.",
+      "deleteHasPayments": "No se pueden eliminar facturas con pagos registrados."
     },
     "billingCycle": {
       "notFoundRefresh": "No se encontró el ciclo de facturación. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
