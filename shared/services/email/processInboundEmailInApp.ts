@@ -31,7 +31,7 @@ import {
   type InboundReplyAckDeciderResult,
 } from './inboundReplyAcknowledgementDecider';
 import { evaluateInboundEmailRules } from './inboundEmailRules';
-import { normalizeRfc822MessageId } from './inboundEmailIdentity';
+import { normalizeRfc822MessageId, rfcMessageIdLookupForms } from './inboundEmailIdentity';
 import { captureTicketTransitionSnapshot, publishTicketTransitionsAfterCommit } from '../../lib/tickets/ticketLifecycleEvents';
 import { withTenantAdminTransaction } from './tenantAdminTransaction';
 import { associateAssetWithTicket } from '../assets/assetTicketAssociation';
@@ -635,18 +635,6 @@ async function applyInboundReplyReopenTransition(params: {
 
 function buildDedupeKey(input: ProcessInboundEmailInAppInput): string {
   return `inbound-email:${input.tenantId}:${input.providerId}:${input.emailData.id}`;
-}
-
-/**
- * Candidate lookup forms for a raw RFC 5322 Message-ID. The canonical
- * normalized form matches how the durable pipeline writes `email_metadata`
- * message ids; the raw trimmed (bracketed) form still matches legacy rows.
- */
-function rfcMessageIdLookupForms(value: string | null | undefined): string[] {
-  const raw = typeof value === 'string' ? value.trim() : '';
-  if (!raw) return [];
-  const normalized = normalizeRfc822MessageId(raw);
-  return Array.from(new Set([normalized, raw].filter((form): form is string => Boolean(form))));
 }
 
 /**

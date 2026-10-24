@@ -551,6 +551,37 @@ describe('BentoHero unsaved change model', () => {
     expect(screen.getByText(/Opened by/)).toBeInTheDocument();
   });
 
+  it('hangs the email view switcher off the Description heading, not the body', () => {
+    renderHero({
+      ticket: {
+        ...baseTicket,
+        source: 'email',
+        email_metadata: { messageId: 'abc@example.test', providerId: 'provider-1' },
+      } as any,
+    });
+
+    const switcher = screen.getByRole('group', { name: 'Message view' });
+    // Above the body it spent a row the tile has not got, and it counted
+    // against the clamp that decides whether "Show more" is needed.
+    expect(switcher.closest('#bento-hero-description-original-email')).toBeNull();
+    expect(switcher.closest('.max-h-40')).toBeNull();
+    expect(switcher.parentElement?.textContent).toContain('Description');
+  });
+
+  it('drops the switcher while the description is being edited', () => {
+    renderHero({
+      ticket: {
+        ...baseTicket,
+        source: 'email',
+        email_metadata: { messageId: 'abc@example.test', providerId: 'provider-1' },
+      } as any,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit description' }));
+
+    expect(screen.queryByRole('group', { name: 'Message view' })).not.toBeInTheDocument();
+  });
+
   it('flags the description edit as unsaved and flushes it inside the hero batch', async () => {
     const onBatchSelectChange = vi.fn().mockResolvedValue(true);
     renderHero({ onBatchSelectChange });

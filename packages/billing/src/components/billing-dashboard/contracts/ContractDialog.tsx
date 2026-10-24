@@ -218,8 +218,7 @@ export function ContractDialog({
 
     try {
       // Get currency code from client or editing contract
-      const selectedClient = clients.find(c => c.client_id === clientId);
-      const currencyCode = editingContract?.currency_code || selectedClient?.default_currency_code || 'USD';
+      const currencyCode = resolvedContractCurrency;
 
       // Create the contract (without client-specific fields)
       const contractData: Omit<IContract, 'contract_id' | 'tenant' | 'created_at' | 'updated_at'> = {
@@ -326,6 +325,12 @@ export function ContractDialog({
       onClose();
     }
   };
+
+  // LEVERAGE: pattern contract-currency-resolution — contract currency falls back to client default then USD; repeated across dialogs
+  const resolvedContractCurrency =
+    editingContract?.currency_code ||
+    clients.find(c => c.client_id === clientId)?.default_currency_code ||
+    'USD';
 
   return (
     <>
@@ -684,6 +689,7 @@ export function ContractDialog({
               ) : (
                 <ContractLinePresetPicker
                   selection={presetSelection}
+                  currencyCode={resolvedContractCurrency}
                   typeFilterId="contract-line-preset-type-filter"
                   resetFiltersId="clear-preset-filters-button"
                   filtersClassName="flex flex-wrap items-center gap-2 mb-3"
@@ -782,35 +788,32 @@ export function ContractDialog({
                     <Label htmlFor="po_amount">
                       {t('contractDialog.po.amountLabel', { defaultValue: 'PO Amount (Optional)' })}
                     </Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
-                      <Input
-                        id="po_amount"
-                        type="text"
-                        inputMode="decimal"
-                        value={poAmountInput}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/[^0-9.]/g, '');
-                          const decimalCount = (value.match(/\./g) || []).length;
-                          if (decimalCount <= 1) {
-                            setPoAmountInput(value);
-                          }
-                        }}
-                        onBlur={() => {
-                          if (poAmountInput.trim() === '' || poAmountInput === '.') {
-                            setPoAmountInput('');
-                            setPoAmount(undefined);
-                          } else {
-                            const dollars = parseFloat(poAmountInput) || 0;
-                            const cents = Math.round(dollars * 100);
-                            setPoAmount(cents);
-                            setPoAmountInput((cents / 100).toFixed(2));
-                          }
-                        }}
-                        placeholder={t('contractDialog.po.amountPlaceholder', { defaultValue: '0.00' })}
-                        className="pl-10"
-                      />
-                    </div>
+                    <Input
+                      leadingAdornment={symbol(resolvedContractCurrency)}
+                      id="po_amount"
+                      type="text"
+                      inputMode="decimal"
+                      value={poAmountInput}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^0-9.]/g, '');
+                        const decimalCount = (value.match(/\./g) || []).length;
+                        if (decimalCount <= 1) {
+                          setPoAmountInput(value);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (poAmountInput.trim() === '' || poAmountInput === '.') {
+                          setPoAmountInput('');
+                          setPoAmount(undefined);
+                        } else {
+                          const dollars = parseFloat(poAmountInput) || 0;
+                          const cents = Math.round(dollars * 100);
+                          setPoAmount(cents);
+                          setPoAmountInput((cents / 100).toFixed(2));
+                        }
+                      }}
+                      placeholder={t('contractDialog.po.amountPlaceholder', { defaultValue: '0.00' })}
+                    />
                   </div>
                 </div>
               )}

@@ -162,6 +162,14 @@ describe('InventoryService', () => {
     }
   });
 
+  it('C3: getUnit queries by the caller tenant and returns null for another tenant\'s unit (REST 404)', async () => {
+    mocks.queryUnitDetail.mockResolvedValue(null);
+    const service = new InventoryService();
+    const result = await service.getUnit(UNIT_ID, context(makeDb({})));
+    expect(result).toBeNull();
+    expect(mocks.queryUnitDetail).toHaveBeenCalledWith(expect.anything(), TENANT, UNIT_ID);
+  });
+
   it('T020: matches MAC case-insensitively while ignoring separators', async () => {
     const row = {
       service_id: SERVICE_ID,
