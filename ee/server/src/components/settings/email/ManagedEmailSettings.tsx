@@ -416,7 +416,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     setSmtpTestResult(null);
     try {
       // Persist current edits first so the test reflects what's on screen.
-      // The masked password ('***') is resolved to the stored secret server-side.
+      // The masked password ('***') means "unchanged"; the saved password is resolved from the secret store server-side.
       const updated = await persistSmtpSettings();
       if (!updated) return;
       const result = await testOutboundEmail(smtpTestRecipient.trim() || undefined);
