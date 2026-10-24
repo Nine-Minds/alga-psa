@@ -2163,20 +2163,6 @@ async function calculateChargeDetails(
   return { netAmount, taxCalculationResult };
 }
 
-// TODO: Move to billingAndTax.ts
-function getPaymentTermDays(paymentTerms: string): number {
-  switch (paymentTerms) {
-    case 'net_30':
-      return 30;
-    case 'net_15':
-      return 15;
-    case 'due_on_receipt':
-      return 0;
-    default:
-      return 30; // Default to 30 days if unknown payment term
-  }
-}
-
 // Adapter function to convert data to WasmInvoiceViewModel
 async function adaptToWasmViewModel(
   billingResult: IBillingResult,

@@ -4,13 +4,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import type { SelectOption as SearchableSelectOption } from '@alga-psa/ui/components/SearchableSelect';
+import { ServicePicker } from './contracts/ServicePicker';
 import { DiscountType } from '@alga-psa/types';
 import { formatCurrency } from '@alga-psa/core';
-import { getCurrencySymbol } from '@alga-psa/core';
+import { currencyFractionDigits, fromMinorUnits, getCurrencySymbol, toMinorUnits } from '@alga-psa/core';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Extend SelectOption to include rate
-export interface ServiceOption extends SelectOption {
+export interface ServiceOption extends SearchableSelectOption {
   rate?: number; // default_rate in cents
   tax_rate_id?: string | null; // Add tax_rate_id
 }
@@ -111,6 +113,14 @@ export const LineItem: React.FC<LineItemProps> = ({
 }) => {
   const { t } = useTranslation('msp/billing');
   const currencySymbol = getCurrencySymbol(currencyCode);
+  // A rate is stored in the invoice currency's own minor units, so the editor scales by
+  // that currency's exponent (USD cents, JPY whole yen) instead of a fixed 100. With the
+  // fixed divisor a rate typed as 50 on a JPY invoice was banked as 5000 and billed ¥5,000.
+  const minorDigits = currencyFractionDigits(currencyCode);
+  const toMinor = (major: number) => toMinorUnits(major, undefined, currencyCode);
+  const toMajor = (minor: number) => fromMinorUnits(minor, undefined, currencyCode);
+  const toMajorText = (minor: number) => toMajor(minor).toFixed(minorDigits);
+  const amountStep = minorDigits === 0 ? '1' : toMajor(1).toFixed(minorDigits);
   // Internal state for editing
   const [editState, setEditState] = useState<EditableItem>(() => ({
     ...item,
@@ -124,8 +134,8 @@ export const LineItem: React.FC<LineItemProps> = ({
   // Track raw discount amount input for display purposes
   const [discountAmountInput, setDiscountAmountInput] = useState<string>(
     item.is_discount && item.discount_type === 'fixed'
-      ? (Math.abs(item.rate) / 100).toFixed(2)
-      : "0.00"
+      ? toMajorText(Math.abs(item.rate))
+      : toMajorText(0)
   );
   const [isSearchHighlighted, setIsSearchHighlighted] = useState(false);
   const itemDomId = item.item_id ? `item-${item.item_id}` : `item-${index}`;
@@ -171,7 +181,7 @@ export const LineItem: React.FC<LineItemProps> = ({
     
     // Reset discount amount input
     if (item.is_discount && item.discount_type === 'fixed') {
-      setDiscountAmountInput((Math.abs(item.rate) / 100).toFixed(2));
+      setDiscountAmountInput(toMajorText(Math.abs(item.rate)));
     }
   }, [itemSyncKey, item]);
 
@@ -207,10 +217,10 @@ export const LineItem: React.FC<LineItemProps> = ({
   // discount-like row. It keeps its quantity semantics, so it renders with a
   // quantity and a unit-credit amount rather than the authored-discount shape.
   const isQuantityCredit = Boolean(editState.is_discount && editState.is_manual_credit);
-  const creditUnitInDollars = Math.abs(editState.rate) / 100;
+  const creditUnitInMajorUnits = toMajor(Math.abs(editState.rate));
 
-  // Convert rate to dollars for display (only for non-percentage discounts)
-  const rateInDollars = editState.rate / 100;
+  // Convert the rate to major units for display (only for non-percentage discounts)
+  const rateInMajorUnits = toMajor(editState.rate);
   const discountTypeOptions: SelectOption[] = [
     {
       value: 'percentage',
@@ -248,12 +258,13 @@ export const LineItem: React.FC<LineItemProps> = ({
             if (prev.discount_percentage) {
               // For item-specific discounts, this will be handled by parent component
               // For invoice-level discounts, use a nominal value
-              newState.rate = -Math.abs(prev.discount_percentage * 100); // Convert percentage to cents
+              // Read the percentage as an amount in the invoice currency
+              newState.rate = -toMinor(Math.abs(prev.discount_percentage));
               // Update display value
-              setDiscountAmountInput((Math.abs(prev.discount_percentage)).toFixed(2));
+              setDiscountAmountInput(toMajorText(Math.abs(newState.rate)));
             } else {
-              newState.rate = -1000; // Default to $10.00
-              setDiscountAmountInput("10.00");
+              newState.rate = -toMinor(10); // Default to 10 in the invoice currency
+              setDiscountAmountInput(toMajorText(Math.abs(newState.rate)));
             }
             // Clear the percentage for fixed discounts
             newState.discount_percentage = undefined;
@@ -347,7 +358,7 @@ export const LineItem: React.FC<LineItemProps> = ({
               <span className="text-muted-foreground">
                 {editState.discount_type === 'percentage'
                   ? `${editState.discount_percentage}%`
-                  : `${currencySymbol}${(Math.abs(subtotal) / 100).toFixed(2)}`}
+                  : `${currencySymbol}${toMajorText(Math.abs(subtotal))}`}
                 {editState.applies_to_item_id && (
                   <>
                     <span className="mx-2 text-muted-foreground">|</span>
@@ -381,12 +392,12 @@ export const LineItem: React.FC<LineItemProps> = ({
         </div>
         <div className="flex items-center gap-4">
           {!editState.is_discount && (
-            <span className="text-muted-foreground">{editState.quantity} × {currencySymbol}{rateInDollars.toFixed(2)}</span>
+            <span className="text-muted-foreground">{editState.quantity} × {currencySymbol}{toMajorText(editState.rate)}</span>
           )}
           <span className="font-medium">
             {editState.discount_type === 'percentage'
               ? `${editState.discount_percentage || 0}%`
-              : `${currencySymbol}${Math.abs(subtotal / 100).toFixed(2)}`}
+              : `${currencySymbol}${toMajorText(Math.abs(subtotal))}`}
           </span>
           {editState.discount_type === 'percentage' && (
             <span className="text-sm text-muted-foreground ml-1">
@@ -452,13 +463,16 @@ export const LineItem: React.FC<LineItemProps> = ({
           // Regular line item fields
           <>
             <div>
-              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+              <label
+                htmlFor={`service-select-${item.item_id ?? index}`}
+                className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1"
+              >
                 {t('lineItem.fields.service', { defaultValue: 'Service' })}
               </label>
-              <CustomSelect
+              <ServicePicker
                 id={`service-select-${item.item_id ?? index}`}
                 value={editState.service_id}
-                onValueChange={(value) => handleLocalChange('service_id', value)}
+                onChange={(value) => handleLocalChange('service_id', value)}
                 options={serviceOptions}
                 className="w-full"
                 disabled={editState.isRemoved}
@@ -513,15 +527,9 @@ export const LineItem: React.FC<LineItemProps> = ({
                 id='credit-unit-input'
                 type="number"
                 min="0"
-                step="0.01"
-                value={creditUnitInDollars}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  const cents = raw.includes('.')
-                    ? Math.round(parseFloat(raw) * 100)
-                    : parseInt(raw, 10) * 100;
-                  handleLocalChange('rate', cents || 0);
-                }}
+                step={amountStep}
+                value={creditUnitInMajorUnits}
+                onChange={(e) => handleLocalChange('rate', toMinor(parseFloat(e.target.value) || 0))}
                 className="w-full"
                 disabled={editState.isRemoved}
               />
@@ -585,14 +593,13 @@ export const LineItem: React.FC<LineItemProps> = ({
                     // Store the sanitized value for display
                     setDiscountAmountInput(validValue);
                     
-                    // Update the rate value (stored as negative cents)
+                    // Update the rate value (stored as negative minor units)
                     if (validValue === '' || validValue === '.') {
                       handleLocalChange('rate', 0);
                     } else {
-                      const dollarValue = parseFloat(validValue);
-                      if (!isNaN(dollarValue)) {
-                        const rateInCents = Math.round(dollarValue * 100);
-                        handleLocalChange('rate', -Math.abs(rateInCents));
+                      const majorValue = parseFloat(validValue);
+                      if (!isNaN(majorValue)) {
+                        handleLocalChange('rate', -Math.abs(toMinor(majorValue)));
                       }
                     }
                     
@@ -670,15 +677,9 @@ export const LineItem: React.FC<LineItemProps> = ({
               <Input
                 id='rate-input'
                 type="number"
-                step="0.01"
-                value={rateInDollars}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  const rateInCents = value.includes('.')
-                    ? Math.round(parseFloat(value) * 100)
-                    : parseInt(value, 10) * 100;
-                  handleLocalChange('rate', rateInCents || 0);
-                }}
+                step={amountStep}
+                value={rateInMajorUnits}
+                onChange={(e) => handleLocalChange('rate', toMinor(parseFloat(e.target.value) || 0))}
                  className="w-full"
                  disabled={editState.isRemoved}
                />
@@ -799,7 +800,7 @@ export const LineItem: React.FC<LineItemProps> = ({
                 : t('lineItem.summary.amount', {
                     defaultValue: 'Amount: -{{currencySymbol}}{{amount}}',
                     currencySymbol,
-                    amount: (Math.abs(subtotal) / 100).toFixed(2),
+                    amount: toMajorText(Math.abs(subtotal)),
                   })}
               {editState.applies_to_item_id && (
                 <>
@@ -819,7 +820,7 @@ export const LineItem: React.FC<LineItemProps> = ({
             {t('lineItem.summary.subtotal', {
               defaultValue: 'Subtotal: {{currencySymbol}}{{amount}}',
               currencySymbol,
-              amount: (subtotal / 100).toFixed(2),
+              amount: toMajorText(subtotal),
             })}
           </>
         )}

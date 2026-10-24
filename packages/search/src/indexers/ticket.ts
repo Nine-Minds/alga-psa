@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 
 import { createTenantScopedIndexerQuery, tenantJoinIndexerTable } from '../tenantScopedIndexerQuery';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
+import { recordPath } from '@alga-psa/types';
 
 interface TicketSearchRow {
   ticket_id: string;
@@ -31,7 +32,8 @@ function toSearchDoc(tenant: string, row: TicketSearchRow): SearchDoc {
     objectId: row.ticket_id,
     title: row.title ?? identifier ?? row.ticket_id,
     subtitle: compactJoin([row.client_name, identifier]),
-    url: `/msp/tickets/${row.ticket_id}`,
+    // LEVERAGE: pattern record-links — URL comes from the shared recordPath resolver (@alga-psa/types), not an inline template.
+    url: recordPath('ticket', row.ticket_id),
     metadata: identifier ? { identifier } : undefined,
     acl: {
       requiredPermission: 'ticket:read',

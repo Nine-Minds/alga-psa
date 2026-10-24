@@ -122,7 +122,7 @@ describe('FixedContractLineConfiguration base-rate seeding', () => {
       '../src/components/billing-dashboard/contract-lines/FixedContractLineConfiguration'
     );
 
-    render(<FixedPlanConfiguration contractLineId="line-1" />);
+    render(<FixedPlanConfiguration contractLineId="line-1" currencyCode="USD" />);
 
     await screen.findByDisplayValue('Managed Support');
     await waitFor(() => expect(baseRateInput().value).toBe(''));
@@ -144,7 +144,7 @@ describe('FixedContractLineConfiguration base-rate seeding', () => {
       '../src/components/billing-dashboard/contract-lines/FixedContractLineConfiguration'
     );
 
-    render(<FixedPlanConfiguration contractLineId="line-1" />);
+    render(<FixedPlanConfiguration contractLineId="line-1" currencyCode="USD" />);
 
     await waitFor(() => expect(baseRateInput().value).toBe('120.00'));
 
@@ -164,7 +164,7 @@ describe('FixedContractLineConfiguration base-rate seeding', () => {
       '../src/components/billing-dashboard/contract-lines/FixedContractLineConfiguration'
     );
 
-    render(<FixedPlanConfiguration contractLineId="line-1" />);
+    render(<FixedPlanConfiguration contractLineId="line-1" currencyCode="USD" />);
     await screen.findByDisplayValue('Managed Support');
 
     seed.totalCents = 0;
@@ -184,7 +184,7 @@ describe('FixedContractLineConfiguration base-rate seeding', () => {
       '../src/components/billing-dashboard/contract-lines/FixedContractLineConfiguration'
     );
 
-    render(<FixedPlanConfiguration contractLineId="line-1" />);
+    render(<FixedPlanConfiguration contractLineId="line-1" currencyCode="USD" />);
 
     // The plan header loads while the fixed config is still pending, so the
     // service list can report its total first.
@@ -223,7 +223,7 @@ describe('FixedContractLineConfiguration base-rate seeding', () => {
       '../src/components/billing-dashboard/contract-lines/FixedContractLineConfiguration'
     );
 
-    render(<FixedPlanConfiguration contractLineId="line-1" />);
+    render(<FixedPlanConfiguration contractLineId="line-1" currencyCode="USD" />);
 
     await screen.findByDisplayValue('Managed Support');
     seed.totalCents = 5000;
@@ -246,7 +246,7 @@ describe('FixedContractLineConfiguration base-rate seeding', () => {
       '../src/components/billing-dashboard/contract-lines/FixedContractLineConfiguration'
     );
 
-    render(<FixedPlanConfiguration contractLineId="line-1" />);
+    render(<FixedPlanConfiguration contractLineId="line-1" currencyCode="USD" />);
     await screen.findByDisplayValue('Managed Support');
     expect(baseRateInput().value).toBe('');
 
@@ -280,7 +280,7 @@ describe('FixedContractLineConfiguration base-rate seeding', () => {
       '../src/components/billing-dashboard/contract-lines/FixedContractLineConfiguration'
     );
 
-    render(<FixedPlanConfiguration contractLineId="line-1" />);
+    render(<FixedPlanConfiguration contractLineId="line-1" currencyCode="USD" />);
     await screen.findByDisplayValue('Managed Support');
     await waitFor(() => expect(baseRateInput().value).toBe(''));
 

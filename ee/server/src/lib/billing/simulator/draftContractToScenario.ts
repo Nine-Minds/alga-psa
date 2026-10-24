@@ -204,6 +204,7 @@ export async function draftContractToScenario(
         // fixed-charge path, not here).
         base_rate:
           isUnit && item.unit_rate != null ? Math.round(item.unit_rate) : null,
+        base_rate_basis: isUnit && item.unit_rate != null ? "per_unit" : null,
         ...(isUnit ? { pricing_basis: "unit" as const } : {}),
       });
       return item.bucket_overlay
