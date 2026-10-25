@@ -2427,6 +2427,22 @@
       "description": "Ce contrat ne comporte aucune ligne de contrat. Ajoutez d'abord des lignes de contrat, puis revenez pour simuler.",
       "title": "Rien à simuler pour le moment"
     },
+    "errors": {
+      "title": "La simulation ne peut pas s'exécuter",
+      "baselineTitle": "Le contrat actuel ne peut pas être simulé, il n'y a donc rien à comparer",
+      "unsupportedLineType": "La ligne de contrat « {{lineName}} » a le type de ligne « {{lineType}} », que le simulateur ne sait pas calculer. Passez la ligne en Forfait, Horaire ou Utilisation, puis relancez la simulation.",
+      "unsupportedServiceConfiguration": "« {{serviceName}} » sur la ligne de contrat « {{lineName}} » a le type de configuration « {{configurationType}} », que le simulateur ne sait pas calculer. Réglez le service sur Forfait, Horaire, Utilisation ou Enveloppe, puis relancez la simulation.",
+      "serviceNotInCatalog": "La ligne de contrat « {{lineName}} » utilise un service qui ne figure plus dans le catalogue de services ({{serviceId}}). Retirez-le de la ligne ou rétablissez le service, puis relancez la simulation.",
+      "poolMissing": "« {{serviceName}} » sur la ligne de contrat « {{lineName}} » est configuré comme enveloppe, mais n'a pas de réserve d'heures incluses. Ajoutez les heures incluses de la réserve sur la ligne de contrat, puis relancez la simulation.",
+      "contractNotFound": "Ce contrat n'est pas disponible. Il a peut-être été supprimé ; rechargez la page.",
+      "clientNotAvailable": "Le client de cette simulation n'est pas disponible. Il a peut-être été supprimé ; choisissez un autre client.",
+      "clientRequired": "Sélectionnez un client avant de lancer la simulation.",
+      "historyRequiresClient": "Les hypothèses historiques nécessitent un scénario lié à un vrai client. Choisissez un client pour cette simulation, puis réessayez.",
+      "invalidReplayRange": "La plage de relecture n'est pas valide. Choisissez une plage qui se termine après son début et couvre au plus 120 périodes de facturation.",
+      "scenarioInvalid": "Ce scénario ne peut pas être simulé car sa configuration est incomplète. Rechargez la page et réessayez.",
+      "scenarioReferenceInvalid": "Ce scénario fait référence à un élément qui n'est plus disponible, comme une ligne de contrat, un service, un taux de taxe ou un site du client. Rechargez la page pour repartir du contrat actuel.",
+      "unexpected": "Le simulateur n'a pas pu s'exécuter à cause d'une erreur inattendue. Réessayez ; si le problème persiste, contactez le support."
+    },
     "explanation": {
       "amount": "Montant",
       "close": "Fermer",
@@ -2473,6 +2489,7 @@
       "simulatedDelta": "écart simulé"
     },
     "runBar": {
+      "blocked": "Simulation impossible",
       "compareToggle": "Afficher les écarts par rapport au contrat actuel",
       "horizonOption": "{{count}} périodes de facturation du client",
       "lastRun": "Simulation à jour · {{count}} périodes de facturation du client",
@@ -2481,6 +2498,7 @@
       "simulating": "Simulation en cours…",
       "stale": "Modifications non simulées",
       "staleBanner": "Ces montants proviennent de la simulation précédente. Actualisez la simulation pour inclure vos derniers changements.",
+      "staleBlockedBanner": "Ce message provient de la simulation précédente. Mettez à jour la simulation pour inclure vos dernières modifications.",
       "updateSimulation": "Actualiser la simulation"
     },
     "scenario": {

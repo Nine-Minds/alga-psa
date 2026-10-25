@@ -25,9 +25,12 @@ const DefaultPaymentTermsSettings = (): React.JSX.Element => {
   const [loadError, setLoadError] = React.useState(false);
 
   React.useEffect(() => {
+    // The load can settle after the section unmounts (tab switch, navigation); drop it then.
+    let cancelled = false;
     const loadSettings = async () => {
       try {
         const settings = await getDefaultBillingSettings();
+        if (cancelled) return;
         if (isActionPermissionError(settings) || isActionMessageError(settings)) {
           handleError(new Error(getErrorMessage(settings)), t('general.paymentTerms.errors.load', { defaultValue: 'Failed to load settings' }));
           setLoadError(true);
@@ -35,11 +38,15 @@ const DefaultPaymentTermsSettings = (): React.JSX.Element => {
         }
         setTerms(settings.defaultPaymentTerms ?? DEFAULT_PAYMENT_TERMS);
       } catch (error) {
+        if (cancelled) return;
         setLoadError(true);
         handleError(error, t('general.paymentTerms.errors.load', { defaultValue: 'Failed to load settings' }));
       }
     };
     void loadSettings();
+    return () => {
+      cancelled = true;
+    };
     // Load once: `t` identity may change per render and must not re-trigger the load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

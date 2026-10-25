@@ -2427,6 +2427,22 @@
       "description": "Este contrato no tiene líneas de contrato. Añada primero líneas de contrato y vuelva para simular.",
       "title": "Nada que simular todavía"
     },
+    "errors": {
+      "title": "No se puede ejecutar la simulación",
+      "baselineTitle": "No se puede simular el contrato actual, así que no hay nada con lo que comparar",
+      "unsupportedLineType": "La línea de contrato \"{{lineName}}\" tiene el tipo de línea \"{{lineType}}\", que el simulador no puede calcular. Cambie la línea a Fija, Por horas o De uso y vuelva a simular.",
+      "unsupportedServiceConfiguration": "\"{{serviceName}}\" en la línea de contrato \"{{lineName}}\" tiene el tipo de configuración \"{{configurationType}}\", que el simulador no puede calcular. Configure el servicio como Fijo, Por horas, De uso o Bolsa y vuelva a simular.",
+      "serviceNotInCatalog": "La línea de contrato \"{{lineName}}\" usa un servicio que ya no está en el catálogo de servicios ({{serviceId}}). Quítelo de la línea o restaure el servicio y vuelva a simular.",
+      "poolMissing": "\"{{serviceName}}\" en la línea de contrato \"{{lineName}}\" está configurado como bolsa, pero no tiene un fondo de horas incluidas. Añada las horas incluidas del fondo en la línea de contrato y vuelva a simular.",
+      "contractNotFound": "Este contrato no está disponible. Puede que se haya eliminado; recargue la página.",
+      "clientNotAvailable": "El cliente de esta simulación no está disponible. Puede que se haya eliminado; elija otro cliente.",
+      "clientRequired": "Seleccione un cliente antes de simular.",
+      "historyRequiresClient": "Los supuestos históricos requieren un escenario vinculado a un cliente real. Elija un cliente para esta simulación e inténtelo de nuevo.",
+      "invalidReplayRange": "El rango de reproducción no es válido. Elija un rango que termine después de empezar y que no abarque más de 120 períodos de facturación.",
+      "scenarioInvalid": "Este escenario no se puede simular porque su configuración está incompleta. Recargue la página e inténtelo de nuevo.",
+      "scenarioReferenceInvalid": "Este escenario hace referencia a algo que ya no está disponible, como una línea de contrato, un servicio, una tasa de impuesto o una ubicación del cliente. Recargue la página para empezar desde el contrato actual.",
+      "unexpected": "El simulador no pudo ejecutarse por un error inesperado. Inténtelo de nuevo; si el problema continúa, contacte con soporte."
+    },
     "explanation": {
       "amount": "Importe",
       "close": "Cerrar",
@@ -2473,6 +2489,7 @@
       "simulatedDelta": "diferencia simulada"
     },
     "runBar": {
+      "blocked": "No se puede simular",
       "compareToggle": "Mostrar cambios respecto al contrato actual",
       "horizonOption": "{{count}} períodos de facturación del cliente",
       "lastRun": "Simulación al día · {{count}} períodos de facturación del cliente",
@@ -2481,6 +2498,7 @@
       "simulating": "Simulando…",
       "stale": "Cambios sin simular",
       "staleBanner": "Estos importes provienen de la simulación anterior. Actualice la simulación para incluir sus últimos cambios.",
+      "staleBlockedBanner": "Este mensaje es de la simulación anterior. Actualice la simulación para incluir sus últimos cambios.",
       "updateSimulation": "Actualizar simulación"
     },
     "scenario": {
