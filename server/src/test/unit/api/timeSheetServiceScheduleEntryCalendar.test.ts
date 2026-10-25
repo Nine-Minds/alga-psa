@@ -81,6 +81,10 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   }),
 }));
 vi.mock('server/src/lib/eventBus/publishers', () => ({ publishUnregisteredEventType: vi.fn() }));
+vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
+  assertHumanWorkAssignee: vi.fn(async () => undefined),
+  assertHumanWorkOwner: vi.fn(async () => undefined),
+}));
 vi.mock('@alga-psa/shared/models/scheduleEntry', () => ({
   validateAllDayInterval: vi.fn(),
   default: {
@@ -92,6 +96,7 @@ vi.mock('@alga-psa/shared/models/scheduleEntry', () => ({
 }));
 
 import { hasPermission } from '../../../lib/auth/rbac';
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { TimeSheetService } from '../../../lib/api/services/TimeSheetService';
 import { createScheduleEntrySchema, updateScheduleEntrySchema } from '../../../lib/api/schemas/timeSheet';
 
@@ -252,6 +257,37 @@ describe('REST schedule entries: calendar_id', () => {
       expect(event!.payload.changes.before.assignedUserIds).toEqual([USER]);
       expect(event!.payload.changes.after.assignedUserIds).toEqual([]);
       expect(event!.payload.entryId).toBe(ENTRY_ID);
+    });
+
+    it('runs the human-work guard on only the assignees the update adds, then replaces the assignee set', async () => {
+      // Group-calendar entry already assigned to OTHER_USER; the caller adds themselves.
+      state.tables.schedule_entries[0].calendar_id = CAL_EDIT;
+      state.tables.schedule_entry_assignees = [{ tenant: TENANT, entry_id: ENTRY_ID, user_id: OTHER_USER }];
+      vi.mocked(assertHumanWorkAssignee).mockClear();
+      await makeService().updateScheduleEntry(
+        ENTRY_ID,
+        { assigned_user_ids: [OTHER_USER, USER] } as any,
+        context,
+      );
+
+      expect(assertHumanWorkAssignee).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(assertHumanWorkAssignee).mock.calls[0][2]).toEqual([USER]);
+      expect(state.tables.schedule_entry_assignees.map((row) => row.user_id)).toEqual([OTHER_USER, USER]);
+      const event = state.published.find((e) => e.eventType === 'SCHEDULE_ENTRY_UPDATED');
+      expect(event!.payload.changes.before.assignedUserIds).toEqual([OTHER_USER]);
+      expect(event!.payload.changes.after.assignedUserIds).toEqual([OTHER_USER, USER]);
+    });
+
+    it('writes nothing to the assignee set when the human-work guard rejects an added assignee', async () => {
+      state.tables.schedule_entries[0].calendar_id = CAL_EDIT;
+      state.tables.schedule_entry_assignees = [{ tenant: TENANT, entry_id: ENTRY_ID, user_id: OTHER_USER }];
+      vi.mocked(assertHumanWorkAssignee).mockRejectedValueOnce(new Error('not a human-work assignee'));
+      await expect(
+        makeService().updateScheduleEntry(ENTRY_ID, { assigned_user_ids: [USER] } as any, context),
+      ).rejects.toThrow('not a human-work assignee');
+
+      expect(state.tables.schedule_entry_assignees.map((row) => row.user_id)).toEqual([OTHER_USER]);
+      expect(state.published).toHaveLength(0);
     });
 
     it('carries the existing assignees into the event when assigned_user_ids is not supplied', async () => {
