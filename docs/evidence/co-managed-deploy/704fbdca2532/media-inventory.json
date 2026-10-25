@@ -1,6 +1,6 @@
 {
-  "checkedAt": "2026-10-25T07:51:00Z",
-  "artifactCount": 45,
+  "checkedAt": "2026-10-25T07:53:30Z",
+  "artifactCount": 48,
   "artifacts": [
     {
       "file": "recordings/01-onboarding.json",
@@ -211,6 +211,21 @@
       "file": "recordings/main.webm",
       "bytes": 306438,
       "sha256": "c1463911abcbf9e5bede26159aa8877a644db32c6deb611c08f8797fd5f471a4"
+    },
+    {
+      "file": "supplemental/customer-ticket-oversight.json",
+      "bytes": 1789,
+      "sha256": "97c5489ebf98c84e402f24379e61d0de6e45e3a71d4b2e83f4db4e353df62678"
+    },
+    {
+      "file": "supplemental/customer-ticket-oversight.vtt",
+      "bytes": 172,
+      "sha256": "81cab5a41af025732f08f9aec20a877dd2bccd708e25b3f90b9f7df9d02920cb"
+    },
+    {
+      "file": "supplemental/customer-ticket-oversight.webm",
+      "bytes": 549954,
+      "sha256": "58fc28eef3fc00e7872441eff8057290d944a270d30fa68ba6f5b8db15acad61"
     },
     {
       "file": "supplemental/native-ticket-search.json",

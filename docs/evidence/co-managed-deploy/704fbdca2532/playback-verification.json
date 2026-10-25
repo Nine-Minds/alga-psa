@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-25T07:36:30Z",
+  "checkedAt": "2026-10-25T07:53:30Z",
   "browser": "Chromium via Playwright, executable /usr/bin/google-chrome",
   "pages": 14,
   "assertions": "Every page returned HTTP 200, had exactly one video player, played the WebM and sought after selecting chapter 2.",
@@ -20,7 +20,7 @@
     "/guides/12-customer-integrations.html"
   ],
   "range": "All 14 WebM URLs returned HTTP 206 for Range bytes=0-1 with correct Content-Range lengths.",
-  "scenarioAcceptance": "Media playback and seeking verified. The recorded product scenarios remain partial, read-only QA navigation.",
+  "scenarioAcceptance": "The fourteen guide walkthrough scenarios remain incomplete; only route entry was recorded.",
   "walkthroughCoverageStatus": "incomplete for all fourteen guide scenarios; clips show route entry only",
   "supplementalRecording": {
     "path": "/evidence/704fbdca2532/native-ticket-search.html",
@@ -29,5 +29,23 @@
     "chapterSeekVerified": true,
     "rangeStatus": 206,
     "outcome": "Bounded QA search, clear, reload, sign-out interaction; separate from guide walkthrough coverage."
-  }
+  },
+  "supplementalRecordings": [
+    {
+      "path": "/evidence/704fbdca2532/native-ticket-search.html",
+      "playerCount": 1,
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "rangeStatus": 206,
+      "outcome": "Bounded native ticket search, clear, reload and sign-out interaction."
+    },
+    {
+      "path": "/evidence/704fbdca2532/customer-ticket-oversight.html",
+      "playerCount": 1,
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "rangeStatus": 206,
+      "outcome": "Customer oversight queue selection persisted after reload; QA sign-out verified."
+    }
+  ]
 }

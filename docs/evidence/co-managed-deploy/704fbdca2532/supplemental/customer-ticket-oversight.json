@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "walkthroughCoverage": "supplemental bounded shared customer-ticket queue check; does not complete any of the fourteen guide scenarios",
+  "candidateRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "buildId": "build-1792910542349",
+  "recordedAt": "2026-10-25T07:52:10.084Z",
+  "durationSeconds": 6.72,
+  "actors": [
+    {
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+      "role": "MSP QA",
+      "sessionId": "e4b74511-b5c4-466f-a762-8082004d310f"
+    }
+  ],
+  "route": "/msp/tickets/customer",
+  "initialState": {
+    "queueView": "working (default)",
+    "visibleRows": 1,
+    "ticketNumbers": [
+      "000002"
+    ]
+  },
+  "action": {
+    "control": "Customer oversight queue",
+    "url": "http://feature-co-managed-it.localhost:23377/msp/tickets/customer?queueView=oversight&workspace=all",
+    "queueView": "oversight",
+    "workspace": "all",
+    "visibleTicketNumbers": [
+      "000002",
+      "000001"
+    ]
+  },
+  "durableResultAfterReload": {
+    "url": "http://feature-co-managed-it.localhost:23377/msp/tickets/customer?queueView=oversight&workspace=all",
+    "visibleRows": 2,
+    "ticketNumbers": [
+      "000002",
+      "000001"
+    ],
+    "heading": "Customer Tickets"
+  },
+  "signOutVerified": true,
+  "mutations": [],
+  "limitations": [
+    "Actor was MSP QA, not customer Alice.",
+    "Read-only queue selector/filter; no durable business records changed.",
+    "Does not test customer tenant boundaries or ticket-detail authorization.",
+    "This is supplemental product evidence and does not complete any of the fourteen guide walkthroughs."
+  ],
+  "media": {
+    "webm": "customer-ticket-oversight.webm",
+    "chapterVtt": "customer-ticket-oversight.vtt"
+  }
+}

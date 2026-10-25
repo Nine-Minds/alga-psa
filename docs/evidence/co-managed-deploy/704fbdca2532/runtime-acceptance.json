@@ -66,6 +66,18 @@
       "result": "URL recorded searchQuery=TIC001022 and 3 visible rows (TIC001022, TIC001021, TIC001020), indicating ticket/comment search. Clearing restored 10 visible rows; reload restored 10. QA session signed out.",
       "evidence": "supplemental/native-ticket-search.json and .webm",
       "limitations": "Read-only QA check only; customer actor not used, no mutation or detailed native ticket/comment/attachment/workflow acceptance."
+    },
+    {
+      "area": "Shared Customer Tickets queue selector",
+      "status": "bounded-pass-with-limitation",
+      "actor": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+      "route": "/msp/tickets/customer",
+      "initial": "Default working queue showed ticket 000002.",
+      "action": "Selected Customer oversight (workspace=all), then hard reloaded.",
+      "result": "URL persisted queueView=oversight&workspace=all; after reload two rows (000002 and 000001) remained visible. Session signed out.",
+      "evidence": "supplemental/customer-ticket-oversight.json and .webm",
+      "limitations": "Read-only MSP QA flow, not customer actor; does not prove customer tenant boundary or detail authorization."
     }
   ]
 }
