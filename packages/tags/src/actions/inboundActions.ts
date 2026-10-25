@@ -1,5 +1,6 @@
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { TaggedEntityType } from '@alga-psa/types';
+import { assertCoManagedOperationalWrite, isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 
 import TagDefinition from '../models/tagDefinition';
 
@@ -56,7 +57,12 @@ function throwInboundFailure(
 }
 
 function toExpectedInboundActionResult(error: unknown): InboundActionResult | null {
-  return error instanceof ExpectedInboundActionFailure ? error.result : null;
+  if (error instanceof ExpectedInboundActionFailure) return error.result;
+  // An ended or not-yet-accepted co-managed workspace refuses operational writes.
+  if (isCoManagedLifecycleError(error)) {
+    return { success: false, entityType: 'tag', message: error.message, metadata: { code: error.code } };
+  }
+  return null;
 }
 
 const addTagToEntityByExternalIdAction: InboundActionDefinition<AddTagToEntityByExternalIdMappedValues> = {
@@ -109,6 +115,7 @@ const addTagToEntityByExternalIdAction: InboundActionDefinition<AddTagToEntityBy
     let result;
     try {
       result = await withTransaction(knex, async (trx) => {
+        await assertCoManagedOperationalWrite(trx, ctx.tenant);
         const db = tenantDb(trx, ctx.tenant);
 
         const lookup = await lookupAlgaEntityByExternalId(

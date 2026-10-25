@@ -2736,6 +2736,101 @@ describe('co-managed KB UI mutation lifecycle', () => {
   }));
 });
 
+describe('co-managed tag lifecycle admission', () => {
+  const readOnlyMessage = 'This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.';
+  const tagFixture = async (customer: ReturnType<typeof tenantDb>, operation: any, actor: { tenant: string; userId: string }) => {
+    const status = await customer.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket' }).first();
+    const priority = await customer.table('priorities').where('item_type', 'ticket').first();
+    const ticketId = randomUUID();
+    await customer.table('tickets').insert({ tenant: actor.tenant, ticket_id: ticketId, ticket_number: `TAG-${ticketId.slice(0, 6)}`,
+      title: 'Tagged ticket', client_id: operation.customer_client_id, board_id: operation.customer_board_id,
+      status_id: status.status_id, priority_id: priority.priority_id, entered_by: actor.userId, attributes: {} });
+    const tags = await import('../../../../../packages/tags/src/actions/tagActions');
+    const rows = async () => ({
+      definitions: await customer.table('tag_definitions').orderBy('tag_id').select('*'),
+      mappings: await customer.table('tag_mappings').orderBy('mapping_id').select('*'),
+    });
+    return { ticketId, tags, rows };
+  };
+
+  it('refuses every tag write of a departed customer without changing a row, while reads still return its tags', async () => withProjectActionsFixture(async ({ operation, actor, input, customer, publish }) => {
+    await acceptCoManagedRelationship(db, actor, input);
+    const { ticketId, tags, rows } = await tagFixture(customer, operation, actor);
+    const { withTransaction: transaction } = await import('@alga-psa/db');
+    // While active the customer can tag its own ticket.
+    const kept = await tags.createTag({ tag_text: 'Before departure', tagged_id: ticketId, tagged_type: 'ticket' }) as any;
+    expect(kept).toMatchObject({ tag_text: 'Before departure', tagged_id: ticketId });
+    expect(await customer.table('tag_mappings').where('mapping_id', kept.tag_id)).toHaveLength(1);
+
+    await customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+    expect((await getCoManagedOperationalState(db, actor.tenant)).state).toBe('terminated');
+    const before = await rows();
+    publish.mockClear();
+
+    const refusals = [
+      () => tags.createTag({ tag_text: 'After departure', tagged_id: ticketId, tagged_type: 'ticket' }),
+      () => tags.createTag({ tag_text: 'Before departure', tagged_id: randomUUID(), tagged_type: 'ticket' }),
+      () => tags.updateTag(kept.tag_id, { tag_text: 'Renamed after departure' }),
+      () => tags.updateTagColor(kept.tag_id, '#FF0000', '#FFFFFF'),
+      () => tags.updateTagText(kept.tag_id, 'Renamed after departure'),
+      () => tags.deleteTag(kept.tag_id),
+      () => tags.deleteTag(kept.tag_id, true),
+      () => tags.deleteAllTagsByText('Before departure', 'ticket'),
+    ];
+    for (const write of refusals) expect(await write()).toEqual({ actionError: readOnlyMessage });
+    // The per-entity helper swallows per-tag failures; it must still write nothing.
+    expect(await tags.createTagsForEntity(ticketId, 'ticket', [{ tag_text: 'Pending after departure' } as any])).toEqual([]);
+    // Writers that join a caller's transaction refuse it, so the caller rolls back.
+    await expect(transaction(db, trx => tags.createTagsForEntityWithTransaction(trx, actor.tenant, ticketId, 'ticket',
+      [{ tag_text: 'Imported after departure' } as any]))).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    await expect(transaction(db, trx => tags.bulkApplyTagsToEntities(trx, actor.tenant, 'ticket',
+      [{ entityId: ticketId, newTexts: ['Bulk after departure'], existingTexts: ['Before departure'] }])))
+      .rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    const { tagInboundActions } = await import('../../../../../packages/tags/src/actions/inboundActions');
+    expect(await tagInboundActions[0].handle({ tenant: actor.tenant, webhookSlug: 'tags', deliveryId: randomUUID(), headers: {},
+      rawBody: {}, idempotencyKey: null } as any, { entity_type: 'ticket', external_id: 'ext-1', tag_text: 'Inbound after departure' }))
+      .toEqual({ success: false, entityType: 'tag', message: readOnlyMessage, metadata: { code: 'CO_MANAGED_READ_ONLY' } });
+
+    expect(await rows()).toEqual(before);
+    expect(publish).not.toHaveBeenCalled();
+
+    // Reading survives departure.
+    expect(await tags.findTagsByEntityId(ticketId, 'ticket')).toEqual([expect.objectContaining({ tag_id: kept.tag_id, tag_text: 'Before departure' })]);
+    expect(await tags.findTagsByEntityIds([ticketId], 'ticket')).toEqual([expect.objectContaining({ tag_id: kept.tag_id })]);
+    expect(await tags.findTagById(kept.tag_id)).toMatchObject({ tag_text: 'Before departure', tagged_id: ticketId });
+    expect(await tags.getTagMappingUsageCount(kept.tag_id)).toMatchObject({ tagText: 'Before departure', usageCount: 1 });
+    expect(await tags.findAllTagsByType('ticket')).toEqual([expect.objectContaining({ tag_text: 'Before departure' })]);
+  }));
+
+  it.each(['active co-managed', 'native PSA'] as const)('keeps tag create, update, bulk apply and delete working for an %s tenant', async kind => withProjectActionsFixture(async ({ operation, actor, input, customer }) => {
+    await acceptCoManagedRelationship(db, actor, input);
+    // An ordinary PSA tenant is any product other than co_managed: admission is a no-op there.
+    if (kind === 'native PSA') await customer.table('tenants').update({ product_code: 'psa' });
+    expect((await getCoManagedOperationalState(db, actor.tenant)).state).toBe(kind === 'native PSA' ? 'independent' : 'active');
+    const { ticketId, tags } = await tagFixture(customer, operation, actor);
+    const { withTransaction: transaction } = await import('@alga-psa/db');
+
+    const created = await tags.createTag({ tag_text: 'Working tag', tagged_id: ticketId, tagged_type: 'ticket' }) as any;
+    expect(created).toMatchObject({ tag_text: 'Working tag' });
+    expect(await tags.updateTagColor(created.tag_id, '#112233', '#FFFFFF')).toMatchObject({ background_color: '#112233' });
+    expect(await tags.updateTagText(created.tag_id, 'Renamed tag')).toMatchObject({ new_tag_text: 'Renamed tag', updated_count: 1 });
+    expect(await tags.updateTag(created.tag_id, { tag_text: 'Updated tag' })).toBeUndefined();
+    expect(await customer.table('tag_definitions').where('tag_text', 'Updated tag').first()).toMatchObject({ background_color: '#112233' });
+    expect(await transaction(db, trx => tags.createTagsForEntityWithTransaction(trx, actor.tenant, ticketId, 'ticket',
+      [{ tag_text: 'Imported tag' } as any]))).toEqual([expect.objectContaining({ tag_text: 'Imported tag' })]);
+    expect(await transaction(db, trx => tags.bulkApplyTagsToEntities(trx, actor.tenant, 'ticket',
+      [{ entityId: ticketId, newTexts: ['Bulk tag'], existingTexts: ['Updated tag', 'Imported tag'] }])))
+      .toEqual({ appliedByEntity: { [ticketId]: ['Bulk tag'] } });
+    expect((await tags.findTagsByEntityId(ticketId, 'ticket') as any[]).map(tag => tag.tag_text).sort())
+      .toEqual(['Bulk tag', 'Imported tag', 'Updated tag']);
+
+    expect(await tags.deleteTag(created.tag_id, true)).toBeUndefined();
+    expect(await tags.deleteAllTagsByText('Bulk tag', 'ticket')).toEqual({ deleted_count: 1 });
+    expect((await customer.table('tag_mappings').where('tagged_id', ticketId)).map(row => row.tag_id)).toHaveLength(1);
+    expect(await customer.table('tag_definitions').whereIn('tag_text', ['Updated tag', 'Bulk tag'])).toEqual([]);
+  }));
+});
+
 describe('co-managed KB import staging', () => {
   it('admits staging atomically, retains paused source, and only schedules committed batches with stable polling identities', async () => withProjectActionsFixture(async ({ operation, actor, input, customer }) => {
     const actions = await import('../../../../../packages/documents/src/actions/kbArticleActions');

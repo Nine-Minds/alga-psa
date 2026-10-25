@@ -1979,6 +1979,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   initialTags={tags}
                   onTagsChange={onTagsChange}
                   useInlineInput={isInDrawer}
+                  readOnly={dataSource.screen.readOnly === true}
                 />
               ) : (
                 <p className="text-sm text-gray-500">{t('info.tagsCannotBeManaged', 'Tags cannot be managed')}</p>

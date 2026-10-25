@@ -5,6 +5,7 @@ import TagMapping, { ITagMapping, ITagWithDefinition } from '../models/tagMappin
 import { ITag, TaggedEntityType, PendingTag, IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
+import { assertCoManagedOperationalWrite, isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
 import { generateEntityColorAsync } from '../lib/uiHelpers';
 import type { Knex } from 'knex';
@@ -41,6 +42,12 @@ type TagTextSnapshot = string[];
 function tagActionErrorFrom(error: unknown): TagActionError | null {
   if (isTagActionError(error)) {
     return error;
+  }
+
+  // An ended or not-yet-accepted co-managed workspace refuses operational
+  // writes; that is an expected outcome with a message for the user.
+  if (isCoManagedLifecycleError(error)) {
+    return actionError(error.message);
   }
 
   if (error instanceof Error) {
@@ -360,6 +367,10 @@ export const createTag = withAuth(async (
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      // Lifecycle admission first, in this transaction, before any lock or write.
+      // LEVERAGE: pattern operational-write-admission — every writer (tags, tickets, KB, materials) hand-places this guard at the top of its own withTransaction and maps the refusal to an action error; omitting it is silent (this file had none). A write-transaction primitive that admits by default would make the omission impossible.
+      await assertCoManagedOperationalWrite(trx, tenant);
+
       // Check permissions
       const entityResource = getPermissionResource(tag.tagged_type);
 
@@ -491,6 +502,8 @@ export const updateTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      await assertCoManagedOperationalWrite(trx, tenant);
+
       // Get existing tag to check entity type (id is mapping_id)
       const existingTag = await tagMappingsWithDefinitionsQuery(trx, tenant)
         .modify((query) => joinTagDefinitions(query, trx, tenant))
@@ -595,6 +608,8 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      await assertCoManagedOperationalWrite(trx, tenant);
+
       // Get existing tag to check entity type and creator (id is mapping_id)
       const existingTag = await tagMappingsWithDefinitionsQuery(trx, tenant)
         .modify((query) => joinTagDefinitions(query, trx, tenant))
@@ -873,6 +888,10 @@ export const createTagsForEntityWithTransaction = withAuth(async (
 ): Promise<ITag[]> => {
   const userId = currentUser.user_id;
 
+  // Admit against the caller's transaction so the lifecycle locks are held
+  // through its commit. Outside the per-tag loop: that loop swallows errors.
+  await assertCoManagedOperationalWrite(trx, tenant);
+
   // Mirror createTag's gate: minting a brand-new tag definition requires
   // tag:create permission. Resolved once per call since pendingTags is small.
   const userHasTagCreate = await hasPermissionAsync(currentUser, 'tag', 'create', trx);
@@ -1021,6 +1040,10 @@ export const bulkApplyTagsToEntities = withAuth(async (
   taggedType: TaggedEntityType,
   applications: Array<{ entityId: string; newTexts: string[]; existingTexts: string[] }>
 ): Promise<{ appliedByEntity: Record<string, string[]> }> => {
+  // Admit against the caller's transaction so the lifecycle locks are held
+  // through its commit.
+  await assertCoManagedOperationalWrite(trx, tenant);
+
   const userId = currentUser.user_id;
   const appliedByEntity: Record<string, string[]> = {};
 
@@ -1226,6 +1249,8 @@ export const updateTagColor = withAuth(async (currentUser: IUserWithRoles, { ten
 
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
+
       // tagId is actually mapping_id in the new system
       const tag = await tagMappingsWithDefinitionsQuery(trx, tenant)
         .modify((query) => joinTagDefinitions(query, trx, tenant))
@@ -1308,6 +1333,8 @@ export const updateTagText = withAuth(async (currentUser: IUserWithRoles, { tena
 
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
+
       // tagId is actually mapping_id in the new system
       const tag = await tagMappingsWithDefinitionsQuery(trx, tenant)
         .modify((query) => joinTagDefinitions(query, trx, tenant))
@@ -1478,6 +1505,8 @@ export const deleteAllTagsByText = withAuth(async (currentUser: IUserWithRoles, 
 
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
+
       // Check permissions
       const entityResource = getPermissionResource(taggedType);
 

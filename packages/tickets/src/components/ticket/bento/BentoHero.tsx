@@ -1215,6 +1215,7 @@ export function BentoHero({
               initialTags={tags ?? []}
               onTagsChange={onTagsChange}
               useInlineInput
+              readOnly={dataSource.screen.readOnly === true}
             />
           </div>
         ) : null}
