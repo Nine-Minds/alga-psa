@@ -1,6 +1,6 @@
 /**
  * buildSimulatedPeriod maps the prepaidBlock and hourBlockDraw charge families
- * to the "Prepaid block issued" and "Block draw" presentation lines. DB-free.
+ * to the prepaid-block fee ("<service> — prepaid block, <h> h") and "Block draw" presentation lines. DB-free.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -32,7 +32,7 @@ const obligations: any[] = [
       issuance: {
         issuanceId: 'i', contractLineId: 'L', clientContractLineId: 'L', tenant: 't',
         blockMinutes: 600, blockPrice: 150000, expiryMonths: 12, scopeServiceIds: ['svc'],
-        soldAsServiceId: 'svc', serviceName: 'Support - prepaid block (10 h, contract start)',
+        soldAsServiceId: 'svc', serviceName: 'Support',
         soldAsTaxRateId: null, currencyCode: 'EUR', taxDate: '2026-01-01',
         servicePeriodStart: '2026-01-01', servicePeriodEnd: '2026-02-01',
       },
@@ -76,7 +76,8 @@ describe('buildSimulatedPeriod prepaid block lines', () => {
     );
     const [issued, draw] = period.lines;
     expect(issued.charge_type).toBe('prepaid_block');
-    expect(issued.service_name).toMatch(/^Prepaid block issued/);
+    // Same wording the engine persists (prepaidBlockDescriptions), so past-invoice comparison pairs the lines.
+    expect(issued.service_name).toBe('Support — prepaid block, 10 h');
     expect(issued.net_amount).toBe(150000);
     expect(draw.charge_type).toBe('block_draw');
     expect(draw.service_name).toMatch(/^Block draw/);

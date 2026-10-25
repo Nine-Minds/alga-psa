@@ -545,6 +545,15 @@ describe("Contract charge resolution parity (simulator vs engine dry run)", () =
     expect(dec.descriptions.some((text) => text.includes("(over prepaid block)"))).toBe(true);
     expect(dec.descriptions.some((text) => /prepaid block, 10 h$/.test(text))).toBe(true);
     expect(await simulatedWindow(context, contract, 1, { 1: 14 })).toEqual(dec.lines);
+    // Same wording as the issued invoice, for the block fee and the overage line, so
+    // "Compare with past invoices" pairs them instead of showing two unmatched lines.
+    const simulatedDescriptions = (await simulatedRawLines(context, contract, 1, { 1: 14 }))
+      .filter((line) => line.charge_type === "prepaid_block" || line.net_amount === 60_000)
+      .map((line) => line.service_name);
+    expect(simulatedDescriptions).toHaveLength(2);
+    expect(simulatedDescriptions.some((text) => /prepaid block, 10 h$/.test(text))).toBe(true);
+    expect(simulatedDescriptions.some((text) => text.endsWith("(over prepaid block)"))).toBe(true);
+    for (const text of simulatedDescriptions) expect(dec.descriptions).toContain(text);
 
     // Editing the block changes only the next unbilled period.
     await context
@@ -1805,6 +1814,28 @@ async function simulatedWindow(
   horizonStart = "2025-11-01",
   keepCadenceOwner = false,
 ): Promise<ParityLine[]> {
+  return (await simulatedRawLines(context, contract, index, hoursByWindow, horizonStart, keepCadenceOwner))
+    .map((line): ParityLine => {
+      const kind = line.charge_type === "block_draw" ? "hour_block" : normalizeKind(line.charge_type);
+      return {
+        kind,
+        serviceId: serviceIdFor(kind, line.service_id),
+        quantity: kind === "hour_block" ? round(Number(line.quantity ?? 0)) : quantityFor(kind, Number(line.quantity ?? 0)),
+        net: line.net_amount,
+      };
+    })
+    .sort(compareLines);
+}
+
+/** The simulator's presentation lines for one window (descriptions are `service_name`). */
+async function simulatedRawLines(
+  context: TestContext,
+  contract: CadenceBlockContract,
+  index: number,
+  hoursByWindow: Record<number, number>,
+  horizonStart = "2025-11-01",
+  keepCadenceOwner = false,
+) {
   const scenario = structuredClone(
     await snapshotContractToScenario(context.db, context.tenantId, {
       contractId: contract.contractId,
@@ -1818,15 +1849,5 @@ async function simulatedWindow(
     overrides: hoursByWindow,
   };
   const simulated = await simulateContractScenario(context.db, context.tenantId, scenario);
-  return (simulated.periods[index]?.lines ?? [])
-    .map((line): ParityLine => {
-      const kind = line.charge_type === "block_draw" ? "hour_block" : normalizeKind(line.charge_type);
-      return {
-        kind,
-        serviceId: serviceIdFor(kind, line.service_id),
-        quantity: kind === "hour_block" ? round(Number(line.quantity ?? 0)) : quantityFor(kind, Number(line.quantity ?? 0)),
-        net: line.net_amount,
-      };
-    })
-    .sort(compareLines);
+  return simulated.periods[index]?.lines ?? [];
 }

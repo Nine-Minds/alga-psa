@@ -389,7 +389,6 @@ export class ScenarioChargeSource implements ContractChargeSource {
     const { scenario, line, lineFacts, billingPeriod, currencyCode, periodIndex } =
       this.input;
     const { config, soldAs } = ledger;
-    const hours = config.block_minutes / 60;
     return (ledger.issuesByPeriod.get(periodIndex) ?? []).map((issue) => ({
       issuanceId: `sim-issuance:${line.key}:${issue.blockOrdinal}`,
       contractLineId: line.key,
@@ -402,7 +401,9 @@ export class ScenarioChargeSource implements ContractChargeSource {
       expiryMonths: config.expiry_months,
       scopeServiceIds: line.services.map((service) => service.service_id),
       soldAsServiceId: soldAs.service_id,
-      serviceName: `${soldAs.service_name} - prepaid block (${formatBlockHours(hours)} h, ${issue.trigger.replace("_", " ")})`,
+      // The engine names the issuance by the sold-as service; the invoice-line wording is added by
+      // prepaidBlockFeeDescription at presentation, so both sides read the same.
+      serviceName: soldAs.service_name,
       soldAsTaxRateId: soldAs.tax_rate_id,
       currencyCode,
       taxDate: issue.issueDate,
@@ -906,10 +907,6 @@ function usageUnitForPool(line: ScenarioLine, serviceId: string | undefined): st
   return usageConfig?.configuration_type === "Usage"
     ? usageConfig.unit_of_measure
     : "units";
-}
-
-function formatBlockHours(hours: number): string {
-  return Number.isInteger(hours) ? String(hours) : hours.toFixed(2);
 }
 
 function cadenceQuantityLabel(lineCycle: string): string {

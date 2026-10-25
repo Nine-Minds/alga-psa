@@ -24,10 +24,12 @@ import type {
   IBillingPeriod,
   IBucketCharge,
   IHourBlockCharge,
+  IPrepaidBlockCharge,
   IRecurringActivityWindow,
   IRecurringServicePeriod,
   IRecurringServicePeriodRecord,
   ISO8601String,
+  ITimeBasedCharge,
   ScenarioBucketConfig,
   ScenarioLine,
   ScenarioLineService,
@@ -84,6 +86,10 @@ import {
   type ResolvedChargeTaxPolicy,
   calculateContractBucketPeriodState,
 } from "@alga-psa/billing/lib/billing/domain";
+import {
+  overPrepaidBlockDescription,
+  prepaidBlockFeeDescription,
+} from "@alga-psa/billing/lib/billing/compute/prepaidBlockDescriptions";
 import { simulationRefusal } from "./simulationRefusal";
 
 interface SimulationBillingClient {
@@ -513,6 +519,30 @@ function buildResolvedContractLineFacts(
  * (invoiceGeneration getChargeQuantity). Presentation only: the canonical
  * line and the engine's output are untouched.
  */
+/**
+ * The wording the engine persists for the prepaid-block family (block fee and
+ * the time billed over a cadence block), from the one shared helper, so
+ * "Compare with past invoices" pairs simulated lines with issued ones.
+ */
+function presentedBlockDescription(
+  description: string,
+  sourceCharge: IBillingCharge | undefined,
+): string {
+  if (sourceCharge?.type === "prepaid_block") {
+    return prepaidBlockFeeDescription({
+      name: sourceCharge.serviceName,
+      hours: (sourceCharge as IPrepaidBlockCharge).quantity,
+    });
+  }
+  if (
+    sourceCharge?.type === "time" &&
+    (sourceCharge as ITimeBasedCharge).overPrepaidBlock
+  ) {
+    return overPrepaidBlockDescription(sourceCharge.serviceName);
+  }
+  return description;
+}
+
 function presentedQuantity(
   canonicalLine: { chargeFamily: string; quantity: number },
   sourceCharge: IBillingCharge | undefined,
@@ -587,11 +617,13 @@ export function buildSimulatedPeriod(
       return {
         line_key: canonicalLine.lineKey,
         service_id: canonicalLine.serviceId ?? null,
-        service_name: blockLine
-          ? blockLine === "prepaid_block"
-            ? `Prepaid block issued - ${canonicalLine.description}`
-            : `Block draw - ${canonicalLine.description}`
-          : canonicalLine.description,
+        service_name:
+          blockLine === "block_draw"
+            ? `Block draw - ${canonicalLine.description}`
+            : presentedBlockDescription(
+                canonicalLine.description,
+                calculation.sourceCharges[lineIndex],
+              ),
         charge_type: chargeType,
         quantity_label: quantityLabel,
         rate_label: formatCents(canonicalLine.unitRate, scenario.currency_code),
