@@ -129,6 +129,7 @@ let tenantId: string;
 let userId: string;
 
 let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration')['generateInvoice'];
+let previewGroupedInvoicesForSelectionInputs: typeof import('@alga-psa/billing/actions/invoiceGeneration')['previewGroupedInvoicesForSelectionInputs'];
 let generateGroupedInvoicesAsRecurringBillingRun: typeof import('@alga-psa/billing/actions/recurringBillingRunActions')['generateGroupedInvoicesAsRecurringBillingRun'];
 let syncRecurringServicePeriodsForContractLine:
   typeof import('@alga-psa/billing/actions/recurringServicePeriodSync')['syncRecurringServicePeriodsForContractLine'];
@@ -280,7 +281,7 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
     await ensureDefaultBillingSettings({ db, tenantId } as any);
     await ensureClientPlanBundlesTable({ db, tenantId } as any);
 
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
+    ({ generateInvoice, previewGroupedInvoicesForSelectionInputs } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ generateGroupedInvoicesAsRecurringBillingRun } = await import('@alga-psa/billing/actions/recurringBillingRunActions'));
     ({ syncRecurringServicePeriodsForContractLine } = await import(
       '@alga-psa/billing/actions/recurringServicePeriodSync'
@@ -585,11 +586,25 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
       'T004 Reporting Plan',
       'T004-reporting-only-row',
     );
+    // Default-profile and separately-billed rows must never share one invoice
+    // (the other profile's charges would be silently dropped): the selection is
+    // refused outright and nothing is billed.
+    const invoiceCountBeforeMixed = await table('invoices').where({ client_id: clientId }).count<{ count: string }[]>('* as count');
+    const mixedRun = await generateGroupedInvoicesAsRecurringBillingRun({
+      groupedTargets: [{
+        groupKey: 'T004-mixed-default-and-check-rows',
+        selectorInputs: [selectors[0].selectorInput, selectors[1].selectorInput],
+        billingCycleId: null,
+      }],
+    });
+    expect(mixedRun).toMatchObject({ invoicesCreated: 0, failedCount: 1 });
+    expect((await table('invoices').where({ client_id: clientId }).count<{ count: string }[]>('* as count'))[0].count)
+      .toBe(invoiceCountBeforeMixed[0].count);
     const checkInvoice = await generateSelectedRows(
-      [selectors[0].selectorInput, selectors[1].selectorInput],
+      [selectors[1].selectorInput],
       checkProfileId,
       'T004 Check Plan',
-      'T004-mixed-default-and-check-rows',
+      'T004-check-row',
     );
     const excludedCardPeriods = await table('recurring_service_periods')
       .where({ obligation_id: selectors[0].selectorInput.executionWindow.contractLineId })
@@ -820,6 +835,10 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
         && member.servicePeriodStart === JANUARY_START
         && member.servicePeriodEnd === FEBRUARY_START);
     expect(members).toHaveLength(2);
+    // Each recurring-due row carries the invoice profile it lands on, and the
+    // two lines land on different ones (separately billed Check vs. default).
+    expect(Object.fromEntries(members.map((member: any) => [member.contractLineName, member.invoiceBillingProfileId])))
+      .toEqual({ 'T004 Reader Card Plan': cardProfileId, 'T004 Reader Check Plan': checkProfileId });
     const selectors = members.map((member: any) => member.selectorInput);
     for (const selector of selectors) {
       expect(selector.executionWindow).toMatchObject({ kind: 'client_cadence_window', cadenceOwner: 'client' });
@@ -881,19 +900,55 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
       return table('invoices').where({ client_id: clientId }).orderBy('created_at', 'desc').first();
     };
 
-    // The mixed selection resolves to the separately billed Check profile.
-    // Card is excluded from that invoice and remains independently billable.
-    const checkInvoice = await generateOne(selectors, 'T004-reader-mixed');
-    expect(checkInvoice).toMatchObject({ billing_profile_id: checkProfileId, payment_method: 'check' });
-    expect(await periodState()).toEqual(expect.arrayContaining([
-      expect.objectContaining({ lifecycle_state: 'billed', invoice_id: checkInvoice.invoice_id }),
-      expect.objectContaining({ lifecycle_state: expect.not.stringMatching(/^billed$/), invoice_id: null }),
-    ]));
+    // A selection mixing lines that land on different invoice profiles must never
+    // become one invoice (which would drop the other profile's charges): preview
+    // and generation both refuse it, and nothing is billed.
+    const mixedPreview = await previewGroupedInvoicesForSelectionInputs([
+      { previewGroupKey: 'T004-reader-mixed', selectorInputs: selectors },
+    ]) as any;
+    expect(mixedPreview.success).toBe(false);
+    const mixedRun = await generateGroupedInvoicesAsRecurringBillingRun({
+      groupedTargets: [{ groupKey: 'T004-reader-mixed', selectorInputs: selectors, billingCycleId: null }],
+    });
+    expect(mixedRun).toMatchObject({ invoicesCreated: 0, failedCount: 1 });
+    expect(Number((await table('invoices').where({ client_id: clientId }).count<{ count: string }[]>('* as count'))[0].count))
+      .toBe(invoiceCountBefore);
+    expect((await periodState()).every((row: any) => row.lifecycle_state !== 'billed' && row.invoice_id == null)).toBe(true);
+
+    // Split per landing profile (what the Generate screen submits for a
+    // "Separate" group): preview shows two invoices, generation creates the same two.
+    const splitPreview = await previewGroupedInvoicesForSelectionInputs([
+      { previewGroupKey: 'T004-reader-check', selectorInputs: [checkSelector] },
+      { previewGroupKey: 'T004-reader-card', selectorInputs: [cardSelector] },
+    ]) as any;
+    expect(splitPreview).toMatchObject({ success: true, invoiceCount: 2 });
+    const previewTotals = splitPreview.previews.map((preview: any) => Number(preview.data.subtotal)).sort();
+    expect(previewTotals).toEqual([FIXED_RATE_CENTS, FIXED_RATE_CENTS]);
+
+    const splitRun = await generateGroupedInvoicesAsRecurringBillingRun({
+      groupedTargets: [
+        { groupKey: 'T004-reader-check', selectorInputs: [checkSelector], billingCycleId: null },
+        { groupKey: 'T004-reader-card', selectorInputs: [cardSelector], billingCycleId: null },
+      ],
+    });
+    expect(splitRun).toMatchObject({ invoicesCreated: 2, failedCount: 0 });
+    const generated = await table('invoices').where({ client_id: clientId }).orderBy('created_at', 'desc');
+    expect(generated).toHaveLength(invoiceCountBefore + 2);
+    const checkInvoice = generated.find((invoice: any) => invoice.billing_profile_id === checkProfileId);
+    const cardInvoice = generated.find((invoice: any) => invoice.billing_profile_id === cardProfileId);
+    expect(checkInvoice).toMatchObject({ payment_method: 'check' });
+    expect(cardInvoice).toMatchObject({ payment_method: 'credit_card' });
+    // Check is due on receipt; the default (Card) profile keeps net_30.
     expect(String(checkInvoice.due_date).slice(0, 10)).toBe(String(checkInvoice.invoice_date).slice(0, 10));
+    expect(String(cardInvoice.due_date).slice(0, 10)).not.toBe(String(cardInvoice.invoice_date).slice(0, 10));
     const checkCharges = await chargesFor(checkInvoice.invoice_id);
     expect(checkCharges).toHaveLength(1);
     expect(Number(checkCharges[0].net_amount)).toBe(FIXED_RATE_CENTS);
     expect(checkCharges[0].billing_profile_id).toBe(checkProfileId);
+    const cardCharges = await chargesFor(cardInvoice.invoice_id);
+    expect(cardCharges).toHaveLength(1);
+    expect(Number(cardCharges[0].net_amount)).toBe(FIXED_RATE_CENTS);
+    expect(cardCharges[0].billing_profile_id).toBe(cardProfileId);
     const checkPeriods = await table('recurring_service_periods')
       .where({ obligation_id: assignments.find((item) => item.label === 'Check')!.contractLineId,
         invoice_window_start: selectors[0].windowStart, invoice_window_end: selectors[0].windowEnd })
@@ -902,9 +957,7 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
     expect(checkPeriods.every((row: any) => row.lifecycle_state === 'billed'
       && row.invoice_id === checkInvoice.invoice_id
       && checkCharges.some((charge) => charge.item_id === row.invoice_charge_id))).toBe(true);
-
-    const cardInvoice = await generateOne([cardSelector], 'T004-reader-independent-card');
-    expect(cardInvoice).toMatchObject({ billing_profile_id: cardProfileId, payment_method: 'credit_card' });
+    expect((await periodState()).every((row: any) => row.lifecycle_state === 'billed')).toBe(true);
 
     // A persisted invoice link remains authoritative if an administrator
     // later changes the selected line's profile assignment.

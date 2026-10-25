@@ -2861,14 +2861,24 @@ async function resolveRecurringSelectionBillingProfileId(
 
   // The shared landing rule (also read by the contract billing trace): an
   // attribution that does not land on the default profile's invoice keeps its own.
-  const separatelyBilledSelections = [...resolvedProfileIds].filter((billingProfileId) =>
-    resolveInvoiceProfileForAttribution(billingProfileId, defaultScope) !== defaultScope.billingProfileId,
+  // A selection must land on exactly one invoice profile. Scoping the charges to
+  // one profile would silently drop every other profile's charges, so a mixed
+  // selection is an error, never "pick one" (the Generate UI splits such groups
+  // into one selection per landing profile before it ever gets here).
+  const landingProfileIds = new Set(
+    [...resolvedProfileIds].map((billingProfileId) =>
+      resolveInvoiceProfileForAttribution(billingProfileId, defaultScope),
+    ),
   );
-  if (separatelyBilledSelections.length > 1) {
-    throw new Error('A recurring invoice selection cannot combine multiple separately billed profiles.');
+  if (landingProfileIds.size > 1) {
+    throw new Error(
+      'A recurring invoice selection cannot combine lines that land on different invoice profiles '
+      + `(${[...landingProfileIds].join(', ')}). Select each invoice profile's lines separately.`,
+    );
   }
-  if (separatelyBilledSelections.length === 1) {
-    return separatelyBilledSelections[0];
+  const [landingProfileId] = [...landingProfileIds];
+  if (landingProfileId && landingProfileId !== defaultScope.billingProfileId) {
+    return landingProfileId;
   }
   if (
     options.fallbackBillingProfileId

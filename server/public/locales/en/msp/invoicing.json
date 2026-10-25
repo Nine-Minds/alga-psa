@@ -78,7 +78,8 @@
       "poScopeDiffers": "PO scope differs",
       "currencyDiffers": "Currency differs",
       "taxTreatmentDiffers": "Tax treatment differs",
-      "exportShapeDiffers": "Export shape differs"
+      "exportShapeDiffers": "Export shape differs",
+      "billingProfileDiffers": "Invoice profile differs"
     },
     "executionRows": {
       "labels": {

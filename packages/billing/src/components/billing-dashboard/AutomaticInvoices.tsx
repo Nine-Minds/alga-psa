@@ -159,7 +159,8 @@ type AutomaticInvoiceIncompatibilityReasonKey =
   | 'poScopeDiffers'
   | 'currencyDiffers'
   | 'taxTreatmentDiffers'
-  | 'exportShapeDiffers';
+  | 'exportShapeDiffers'
+  | 'billingProfileDiffers';
 
 type ReadyPeriod = IRecurringDueWorkInvoiceCandidate;
 
@@ -487,6 +488,7 @@ const AUTOMATIC_INVOICE_INCOMPATIBILITY_LABELS: Record<AutomaticInvoiceIncompati
   currencyDiffers: 'Currency differs',
   taxTreatmentDiffers: 'Tax treatment differs',
   exportShapeDiffers: 'Export shape differs',
+  billingProfileDiffers: 'Invoice profile differs',
 };
 
 const resolveIncompatibilityReasons = (candidate: ReadyPeriod): AutomaticInvoiceIncompatibilityReasonKey[] => {
@@ -507,6 +509,11 @@ const resolveIncompatibilityReasons = (candidate: ReadyPeriod): AutomaticInvoice
   const uniquePoScopes = new Set(members.map((member) => normalizeScopeValue(member.purchaseOrderScopeKey)));
   const uniqueTaxSources = new Set(members.map((member) => normalizeScopeValue(member.taxSource)));
   const uniqueExportShapes = new Set(members.map((member) => normalizeScopeValue(member.exportShapeKey)));
+  // Lines that land on different invoice profiles (a bills-separately profile
+  // vs. the default one) are different invoices with different payment terms.
+  const uniqueInvoiceProfiles = new Set(
+    members.flatMap((member) => (member.invoiceBillingProfileId ? [member.invoiceBillingProfileId] : [])),
+  );
 
   if (uniqueWindows.size > 1) {
     reasons.push('invoiceWindowDiffers');
@@ -525,6 +532,9 @@ const resolveIncompatibilityReasons = (candidate: ReadyPeriod): AutomaticInvoice
   }
   if (uniqueExportShapes.size > 1) {
     reasons.push('exportShapeDiffers');
+  }
+  if (uniqueInvoiceProfiles.size > 1) {
+    reasons.push('billingProfileDiffers');
   }
 
   return reasons;
@@ -1456,6 +1466,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         normalizeScopeValue(member.purchaseOrderScopeKey),
         normalizeScopeValue(member.taxSource),
         normalizeScopeValue(member.exportShapeKey),
+        normalizeScopeValue(member.invoiceBillingProfileId),
       ].join('|')),
     );
     return Math.max(buckets.size, 1);

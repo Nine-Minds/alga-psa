@@ -1,4 +1,5 @@
 import type { IBillingCharge } from '@alga-psa/types';
+import { resolveChargeProfile } from './billingProfileResolution';
 
 /**
  * The pure half of invoice profile scoping (F094): which charges belong on the
@@ -102,4 +103,23 @@ export function describeInvoiceProfileLanding(
     };
   }
   return { invoiceProfileId, reason: 'not_billed_separately' };
+}
+
+/**
+ * The invoice profile a recurring contract line lands on: attribution through
+ * the shared chain (line profile, then contract profile, then client default),
+ * then the shared landing rule. `defaultScope` is the scope of the client's
+ * default profile. Recurring lines have no work item, so the chain stops at
+ * the contract.
+ */
+export function resolveRecurringLineLandingProfile(
+  input: { lineProfileId?: string | null; contractProfileId?: string | null },
+  defaultScope: InvoiceProfileScope,
+): string {
+  const attributed = resolveChargeProfile({
+    contractLineBillingProfileId: input.lineProfileId,
+    contractBillingProfileId: input.contractProfileId,
+    clientDefaultBillingProfileId: defaultScope.billingProfileId,
+  });
+  return resolveInvoiceProfileForAttribution(attributed.billingProfileId, defaultScope);
 }

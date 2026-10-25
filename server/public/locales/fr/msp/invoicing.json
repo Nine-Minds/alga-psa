@@ -78,7 +78,8 @@
       "poScopeDiffers": "La portée du bon de commande diffère",
       "currencyDiffers": "La devise diffère",
       "taxTreatmentDiffers": "Le traitement fiscal diffère",
-      "exportShapeDiffers": "La forme des exportations diffère"
+      "exportShapeDiffers": "La forme des exportations diffère",
+      "billingProfileDiffers": "Le profil de facturation diffère"
     },
     "executionRows": {
       "labels": {

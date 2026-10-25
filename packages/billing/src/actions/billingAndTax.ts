@@ -8,6 +8,8 @@ import { ISO8601String } from '@alga-psa/types';
 import { toPlainDate, toISODate } from '@alga-psa/core';
 import { whereLiveClientCadenceRecurringLine } from '@alga-psa/shared/billingClients/liveClientCadenceRecurringLine';
 import { paymentTermDays } from '@alga-psa/shared/billingClients/paymentPreferences';
+import { resolveInvoiceProfileScope } from '../lib/billing/billingProfileInvoiceScope';
+import { resolveRecurringLineLandingProfile, type InvoiceProfileScope } from '@alga-psa/shared/billingClients/invoiceProfileScope';
 import { resolveInvoiceDueDate } from '../lib/billing/invoiceDueDate';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
@@ -141,6 +143,7 @@ interface PersistedRecurringDueWorkDbRow {
 }
 
 interface RecurringDueWorkGroupingMetadata {
+    contractLineId?: string | null;
     clientContractId?: string | null;
     purchaseOrderScopeKey?: string | null;
     currencyCode?: string | null;
@@ -703,6 +706,61 @@ async function filterRepairableMaterializationGaps(
         const billedBoundary = billedBoundaryByScheduleKey.get(gap.scheduleKey);
         return !billedBoundary || gap.servicePeriodEnd > billedBoundary;
     });
+}
+
+/**
+ * Stamp each contract-line row with the invoice profile it lands on, through
+ * the shared attribution chain and landing rule, so the Generate grouping can
+ * tell that lines headed for different invoices must not be combined.
+ */
+async function attachInvoiceBillingProfileIds<T extends IRecurringDueWorkRow>(
+    trx: BillingQueryExecutor,
+    tenant: string,
+    rows: T[],
+    metadataByRecordId: Map<string, RecurringDueWorkGroupingMetadata>,
+): Promise<T[]> {
+    const lineIdOf = (row: T): string | null =>
+        (row.recordId ? metadataByRecordId.get(row.recordId)?.contractLineId : null) ?? row.contractLineId ?? null;
+    const lineIds = Array.from(new Set(rows.map(lineIdOf).filter((id): id is string => Boolean(id))));
+    if (lineIds.length === 0) {
+        return rows;
+    }
+    const db = tenantDb(trx, tenant);
+    const query = db.table('contract_lines as cl');
+    db.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'cl.contract_id');
+    const assignments = await query
+        .whereIn('cl.contract_line_id', lineIds)
+        .where('cc.is_active', true)
+        .select('cl.contract_line_id', 'cc.client_id', 'cl.billing_profile_id as line_profile_id', 'cc.billing_profile_id as contract_profile_id');
+    const assignmentByLineAndClient = new Map<string, { line: string | null; contract: string | null }>(
+        assignments.map((a: any) => [
+            `${a.contract_line_id}|${a.client_id}`,
+            { line: a.line_profile_id ?? null, contract: a.contract_profile_id ?? null },
+        ] as const),
+    );
+    const scopeByClient = new Map<string, InvoiceProfileScope>();
+    const result: T[] = [];
+    for (const row of rows) {
+        const lineId = lineIdOf(row);
+        const assignment = lineId ? assignmentByLineAndClient.get(`${lineId}|${row.clientId}`) : undefined;
+        if (!assignment) {
+            result.push(row);
+            continue;
+        }
+        let scope = scopeByClient.get(row.clientId);
+        if (!scope) {
+            scope = await resolveInvoiceProfileScope(trx, tenant, row.clientId, null);
+            scopeByClient.set(row.clientId, scope);
+        }
+        result.push({
+            ...row,
+            invoiceBillingProfileId: resolveRecurringLineLandingProfile(
+                { lineProfileId: assignment.line, contractProfileId: assignment.contract },
+                scope,
+            ),
+        });
+    }
+    return result;
 }
 
 function mapPersistedRecurringDueWorkDbRowsToRows(
@@ -1935,6 +1993,7 @@ export const getAvailableRecurringDueWork = withAuth(async (
             persistedDbRows.map((row) => [
                 row.record_id,
                 {
+                    contractLineId: row.contract_line_id ?? null,
                     clientContractId: row.client_contract_id ?? row.contract_id ?? null,
                     purchaseOrderScopeKey: row.po_required ? row.client_contract_id ?? null : null,
                     currencyCode: row.currency_code ?? null,
@@ -1973,7 +2032,7 @@ export const getAvailableRecurringDueWork = withAuth(async (
                 )
                 .filter((key): key is string => Boolean(key)),
         );
-        const readyPersistedRows = persistedRows.filter((row) => {
+        const readyPersistedRows = await attachInvoiceBillingProfileIds(knex, tenant, persistedRows.filter((row) => {
             const dbRow = row.recordId
                 ? persistedDbRows.find((candidate) => candidate.record_id === row.recordId)
                 : null;
@@ -1990,7 +2049,7 @@ export const getAvailableRecurringDueWork = withAuth(async (
                 invoiceWindowEnd: dbRow.invoice_window_end,
             });
             return !suppressionKey || !backfillSuppressionKeys.has(suppressionKey);
-        });
+        }), groupingMetadataByRecordId);
         const unresolvedNonContractRows = await fetchUnresolvedNonContractDueWorkRows(
             knex,
             candidateBillingPeriods,
@@ -2002,7 +2061,7 @@ export const getAvailableRecurringDueWork = withAuth(async (
         // share the contract's invoice window (and grouping scope) with its Fixed rows.
         // Readiness uses the tenant business date (not the user's range end), the same
         // source as the issuance due dates and the billing engine's not-due-until guard.
-        const prepaidBlockRows = await fetchPrepaidBlockIssuanceDueWorkRows(knex, {
+        const prepaidBlockRows = await attachInvoiceBillingProfileIds(knex, tenant, await fetchPrepaidBlockIssuanceDueWorkRows(knex, {
             tenant,
             asOf: await resolvePrepaidBlockBusinessDate(knex, tenant) as ISO8601String,
             clientTaxSourceById: new Map(
@@ -2010,7 +2069,7 @@ export const getAvailableRecurringDueWork = withAuth(async (
             ),
             options,
             groupingMetadataByRecordId,
-        });
+        }), groupingMetadataByRecordId);
         const invoiceCandidates = buildRecurringDueWorkInvoiceCandidates(
             [...readyPersistedRows, ...unresolvedNonContractRows, ...prepaidBlockRows],
             groupingMetadataByRecordId,
