@@ -78,5 +78,13 @@
     "prdRefs": [
       "Findings to fix"
     ]
+  },
+  {
+    "id": "F011",
+    "description": "listEntityAssets orders newest association first (created_at desc, asset_id tiebreak) so a just-received item is within the panel's collapsed rows",
+    "implemented": true,
+    "prdRefs": [
+      "Findings to fix"
+    ]
   }
 ]

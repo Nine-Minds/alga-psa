@@ -94,5 +94,14 @@
       "F002",
       "F010"
     ]
+  },
+  {
+    "id": "T012",
+    "description": "entityAssetOrder: newest association within first INITIAL_DISPLAY_COUNT rows; unauthorized dropped, deduped, tie-break; listEntityAssets uses ORDER BY created_at desc",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F001"
+    ]
   }
 ]
