@@ -13,7 +13,7 @@ function git(cwd, ...args) {
   return execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
 }
 
-function makeCandidate(mutation = 'none') {
+function makeCandidate(mutation = 'none', prepareOnly = '0') {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'co-managed-review-app-'));
   const root = path.join(tmp, 'repo');
   fs.mkdirSync(path.join(root, 'scripts/dev'), { recursive: true });
@@ -67,6 +67,7 @@ exit 91
       HOME: path.join(tmp, 'home'),
       TEST_ROOT: root,
       TEST_MUTATION: mutation,
+      CO_MANAGED_REVIEW_PREPARE_ONLY: prepareOnly,
       CO_MANAGED_REVIEW_DIST: dist,
       PORT: '24473',
     },
@@ -107,4 +108,48 @@ test('stamps and serves when the captured HEAD and source fingerprint remain sta
   const head = git(candidate.root, 'rev-parse', 'HEAD');
   assert.equal(stamp, `${head}+da39a3ee5e6b`);
   assert.equal(fs.existsSync(path.join(candidate.root, 'served')), true);
+});
+
+test('prepare-only stamps a stable build without invoking next start', (t) => {
+  const candidate = makeCandidate('none', '1');
+  t.after(() => fs.rmSync(candidate.tmp, { recursive: true, force: true }));
+
+  assert.equal(candidate.result.status, 0, candidate.result.stdout + candidate.result.stderr);
+  const stamp = fs.readFileSync(path.join(candidate.root, 'server', candidate.dist, '.alga-review-revision'), 'utf8').trim();
+  const head = git(candidate.root, 'rev-parse', 'HEAD');
+  assert.equal(stamp, `${head}+da39a3ee5e6b`);
+  assert.match(candidate.result.stdout, /application startup skipped/);
+  assert.equal(fs.existsSync(path.join(candidate.root, 'served')), false);
+});
+
+test('rejects invalid prepare-only values before typecheck or build', (t) => {
+  const candidate = makeCandidate('none', 'true');
+  t.after(() => fs.rmSync(candidate.tmp, { recursive: true, force: true }));
+
+  assert.equal(candidate.result.status, 2, candidate.result.stdout + candidate.result.stderr);
+  assert.match(candidate.result.stderr, /CO_MANAGED_REVIEW_PREPARE_ONLY must be 0 or 1/);
+  assert.equal(fs.existsSync(path.join(candidate.root, 'served')), false);
+  assert.equal(fs.existsSync(path.join(candidate.root, 'server', candidate.dist, 'BUILD_ID')), false);
+});
+
+test('prepare-only refuses to stamp when source changes during production compilation', (t) => {
+  const candidate = makeCandidate('source', '1');
+  t.after(() => fs.rmSync(candidate.tmp, { recursive: true, force: true }));
+
+  assert.notEqual(candidate.result.status, 0, candidate.result.stdout + candidate.result.stderr);
+  assert.match(candidate.result.stderr, /changed during production compilation/);
+  assert.match(candidate.result.stderr, /refusing to stamp or serve/);
+  assert.equal(fs.existsSync(path.join(candidate.root, 'server', candidate.dist, '.alga-review-revision')), false);
+  assert.equal(fs.existsSync(path.join(candidate.root, 'served')), false);
+});
+
+test('prepare-only refuses to stamp when HEAD changes during production compilation', (t) => {
+  const candidate = makeCandidate('head', '1');
+  t.after(() => fs.rmSync(candidate.tmp, { recursive: true, force: true }));
+
+  assert.notEqual(candidate.result.status, 0, candidate.result.stdout + candidate.result.stderr);
+  assert.match(candidate.result.stderr, /changed during production compilation/);
+  assert.match(candidate.result.stderr, /refusing to stamp or serve/);
+  assert.equal(fs.existsSync(path.join(candidate.root, 'server', candidate.dist, '.alga-review-revision')), false);
+  assert.equal(fs.existsSync(path.join(candidate.root, 'served')), false);
 });
