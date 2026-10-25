@@ -217,7 +217,10 @@
       "policies": {
         "title": "Asset Policies"
       },
-      "title": "Assets"
+      "title": "Assets",
+      "custody": {
+        "title": "Equipment in custody"
+      }
     },
     "billing": {
       "title": "Billing",

@@ -262,6 +262,7 @@ interface TicketDetailsProps {
      * QuickInvoiceTicketDialog). Keeps @alga-psa/tickets from importing billing.
      */
     renderQuickInvoice?: (args: { ticket: ITicket }) => React.ReactNode;
+    renderReceiveEquipment?: (args: { ticket: ITicket }) => React.ReactNode;
 
     /**
      * Optional injected UI for "Create workflow from ticket" (EE only; the composition layer
@@ -352,6 +353,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     renderContactDetails,
     renderCreateProjectTask,
     renderQuickInvoice,
+    renderReceiveEquipment,
     renderCreateWorkflowFromTicket,
     renderClientDetails,
     isAlgaDeskMode = false,
@@ -4367,6 +4369,7 @@ const handleClose = () => {
                     onTagsChange={handleTagsChange}
                     taskActions={renderCreateProjectTask?.({ ticket, additionalAgents: additionalAgentsForInfo })}
                     quickInvoiceActions={hideBilling ? undefined : renderQuickInvoice?.({ ticket })}
+                    receiveEquipmentActions={renderReceiveEquipment?.({ ticket })}
                     onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                         ? () => setIsResolutionCloseDialogOpen(true)
                         : undefined}
@@ -4500,6 +4503,7 @@ const handleClose = () => {
                                     responseStateTrackingEnabled={responseStateTrackingEnabled}
                                     renderProjectTaskActions={renderCreateProjectTask}
                                     renderQuickInvoiceActions={hideBilling ? undefined : renderQuickInvoice}
+                                    renderReceiveEquipmentActions={renderReceiveEquipment}
                                     onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                                         ? () => setIsResolutionCloseDialogOpen(true)
                                         : undefined}
@@ -4721,6 +4725,7 @@ const handleClose = () => {
                             responseStateTrackingEnabled={responseStateTrackingEnabled}
                             renderProjectTaskActions={renderCreateProjectTask}
                             renderQuickInvoiceActions={hideBilling ? undefined : renderQuickInvoice}
+                                    renderReceiveEquipmentActions={renderReceiveEquipment}
                             onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                                 ? () => setIsResolutionCloseDialogOpen(true)
                                 : undefined}

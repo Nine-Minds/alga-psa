@@ -363,6 +363,9 @@
           "title": "Asset bewerken"
         },
         "fallbackTitle": "Activadetails"
+      },
+      "custody": {
+        "title": "Apparatuur in bewaring"
       }
     },
     "chat": {

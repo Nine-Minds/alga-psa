@@ -17,6 +17,8 @@ export const LABEL_TEMPLATE_VALUE_BINDINGS: LabelTemplateValueBindings = {
   detail: { id: 'detail', kind: 'value', path: 'detail', fallback: '' },
   secondaryIdentifier: { id: 'secondaryIdentifier', kind: 'value', path: 'secondaryIdentifier', fallback: '' },
   serialSuffix: { id: 'serialSuffix', kind: 'value', path: 'serialSuffix', fallback: '' },
+  custodyLocation: { id: 'custodyLocation', kind: 'value', path: 'custodyLocation', fallback: '' },
+  nextAction: { id: 'nextAction', kind: 'value', path: 'nextAction', fallback: '' },
   // Display lines derived by the renderer AFTER hidden fields are nulled ("Asset {tag}", "S/N ...{suffix}").
   assetLine: { id: 'assetLine', kind: 'value', path: 'display.assetLine', fallback: '' },
   serialLine: { id: 'serialLine', kind: 'value', path: 'display.serialLine', fallback: '' },

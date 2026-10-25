@@ -169,6 +169,9 @@ const buildTicketWorkTag = (): TemplateAst =>
       text('item', 'title', lines(2, 11, 1.2)),
       identifier('ticket-number', 20),
       text('reason', 'detail', { ...lines(1, 10, 1.2), color: '#374151' }),
+      // Held client equipment (custody): one line each, collapsing when empty so a tag with no equipment is unchanged.
+      text('custody-location', 'custodyLocation', { ...lines(1, 10, 1.2), fontWeight: 700 }),
+      text('next-action', 'nextAction', { ...lines(1, 9, 1.2), color: '#374151' }),
       text('asset', 'assetLine', { fontSize: '10px', lineHeight: 1.2, fontFamily: 'monospace' }),
       text('serial', 'serialLine', { ...lines(1, 9, 1.2), color: '#4b5563', fontFamily: 'monospace' }),
     ],

@@ -95,7 +95,18 @@ export interface PrintLabelsDeps {
     context: LabelRequestContext,
     ticketIds: readonly string[],
     chosen: Record<string, string>
-  ) => Promise<Record<string, { assetId: string; assetTag: string | null; serialSuffix: string | null } | null>>;
+  ) => Promise<
+    Record<
+      string,
+      {
+        assetId: string;
+        assetTag: string | null;
+        serialSuffix: string | null;
+        custodyLocation?: string | null;
+        nextAction?: string | null;
+      } | null
+    >
+  >;
   describeClientError: (error: unknown) => { message: string; failures?: LabelPrintFailure[] } | null;
 }
 
@@ -257,7 +268,15 @@ export async function printLabels(
     viewModels = viewModels.map((vm) => {
       if (vm.labelClass !== 'ticket-work-tag') return vm;
       const linked = parts[vm.recordId];
-      return linked ? { ...vm, secondaryIdentifier: linked.assetTag, serialSuffix: linked.serialSuffix } : vm;
+      return linked
+        ? {
+            ...vm,
+            secondaryIdentifier: linked.assetTag,
+            serialSuffix: linked.serialSuffix,
+            custodyLocation: linked.custodyLocation ?? null,
+            nextAction: linked.nextAction ?? null,
+          }
+        : vm;
     });
   }
   if (overrides) {
