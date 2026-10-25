@@ -210,7 +210,7 @@
   {
     "id": "F027",
     "description": "LEVERAGE markers at workflow event-wait filters, reporting FilterDefinition, inbound email rule conditions, automation/webhook condition schemas and REST TicketService.applyTicketFilters pointing at @alga-psa/predicates",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Workflow conditions on the shared model"
     ]
@@ -402,7 +402,7 @@
   {
     "id": "F051",
     "description": "Filter descriptor table { key, isActive, label, clear } driving toolbar, activeFilterCount and active-filter chips for predicate dimensions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]
@@ -410,7 +410,7 @@
   {
     "id": "F052",
     "description": "Requester tags toolbar filter: contact-type tag options, any-of / none-of, writes contact.tags predicates",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]
@@ -418,7 +418,7 @@
   {
     "id": "F053",
     "description": "Client tags toolbar filter: client-type tag options, any-of / none-of, writes client.tags predicates",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]
@@ -426,7 +426,7 @@
   {
     "id": "F054",
     "description": "Ticket form options loader returns contact-type and client-type tag definitions (including referenced definitions with no mappings)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]
@@ -482,7 +482,7 @@
   {
     "id": "F061",
     "description": "Settings \u2192 Tags \u2192 Display on chips screen: per entity type and audience, ordered add/remove/reorder",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Display rules"
     ]
@@ -522,7 +522,7 @@
   {
     "id": "F066",
     "description": "getConsolidatedTicketData returns displayed tags for requester and client",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Chip hydration"
     ]
@@ -530,7 +530,7 @@
   {
     "id": "F067",
     "description": "Contact and client picker option loaders return displayed tags",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Chip hydration"
     ]
@@ -538,7 +538,7 @@
   {
     "id": "F068",
     "description": "EntityChip in packages/ui: avatar, name, click-through, ordered tag badges with tag colors, maxBadges with +n overflow tooltip",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Surfaces"
     ]
@@ -546,7 +546,7 @@
   {
     "id": "F069",
     "description": "Ticket list Client and Contact cells render EntityChip (maxBadges 2)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Surfaces"
     ]
@@ -554,7 +554,7 @@
   {
     "id": "F070",
     "description": "TicketBentoLayout requester and client rows render EntityChip",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Surfaces"
     ]
@@ -562,7 +562,7 @@
   {
     "id": "F071",
     "description": "TicketProperties contact and client rows render EntityChip",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Surfaces"
     ]
@@ -570,7 +570,7 @@
   {
     "id": "F072",
     "description": "ContactPicker and ClientPicker options and selected value show displayed tags",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Surfaces"
     ]
@@ -578,7 +578,7 @@
   {
     "id": "F073",
     "description": "i18n strings for chips, tag filters and display-rule settings in every locale file",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Surfaces"
     ]
@@ -646,7 +646,7 @@
   {
     "id": "F081",
     "description": "packages/predicates/README.md and the ticket query schema file header document the semantics spec and the add-a-dimension recipe",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Design principles"
     ]
@@ -654,7 +654,7 @@
   {
     "id": "F082",
     "description": "Release notes entry for the intended behavior changes: bundled tag matching through children, assigned-to-me honoured by the main list, chip tags from display rules",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration"
     ]

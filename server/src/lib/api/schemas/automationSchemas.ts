@@ -62,6 +62,7 @@ export const scheduleFrequencySchema = z.enum([
 ]);
 
 // Condition operators
+// LEVERAGE: pattern condition-dialects — overlapping condition dialect; candidate to converge on @alga-psa/predicates (also: workflow event-wait filters, reporting FilterDefinition, inbound email rules, automation API conditions, service-request visibility)
 export const conditionOperatorSchema = z.enum([
   'equals',
   'not_equals',

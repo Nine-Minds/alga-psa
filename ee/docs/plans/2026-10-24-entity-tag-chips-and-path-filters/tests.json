@@ -218,7 +218,7 @@
   {
     "id": "T022",
     "description": "EntityChip component: renders badges in given order with tag colors, collapses beyond maxBadges into +n with the rest in the tooltip, and fires click-through",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068"
     ]
@@ -226,7 +226,7 @@
   {
     "id": "T023",
     "description": "Ticket columns component: Contact and Client cells render EntityChip with row tags; Contact column is visible by default",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F069",
       "F009"
@@ -235,7 +235,7 @@
   {
     "id": "T024",
     "description": "Dashboard component: Requester tags and Client tags filters write contact.tags / client.tags predicates (any-of and none-of), show active-filter chips from the descriptor table, and clear individually",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051",
       "F052",

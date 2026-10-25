@@ -85,3 +85,10 @@
 ## Open Questions
 
 None open. See the plan-review decisions above.
+
+## 2026-10-25 — steps 7 and 8
+
+- Step 7 shipped: ticket header/properties use `EntityChip`; pickers show display tags; Settings > Tags (`TagDisplaySettings`) manages rules; `where` tag filters in the dashboard toolbar.
+- T025 (Playwright, `server/src/test/e2e/entity-tag-chips.playwright.test.ts`) is written and type-checks but was NOT run (the app server must not be started). Left `implemented: false`. Selectors for the filter popover options and the save dialog textbox are unverified.
+- F027: `LEVERAGE: pattern condition-dialects` markers at the five dialect sites. F081: header doc in `predicates/src/index.ts`, README recipe already present. F082: `RELEASE_NOTES.md` here.
+- Browser criteria 1, 5, 9 verified only via component/unit/integration tests.
