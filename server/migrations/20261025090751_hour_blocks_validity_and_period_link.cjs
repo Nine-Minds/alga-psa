@@ -12,9 +12,29 @@
  * No data backfill. service_period_record_id carries no FK: recurring service
  * periods are colocated differently from hour_blocks on Citus, and the period
  * is released/voided by the lifecycle code rather than by cascade.
+ * hour_blocks_issuance_fkey becomes a plain (NO ACTION) composite FK on every
+ * deployment: the original ON DELETE SET NULL (issuance_id) (non-Citus only)
+ * would null issuance_id on a contract block and violate the CHECK above. An
+ * issuance with blocks is cancelled/restored, never deleted. Citus already
+ * has the plain FK, so this only changes single-node databases.
  * Transaction-free, like the other hour_blocks migrations.
  */
+const { hasCitus, isDistributed } = require('./utils/citusDistribution.cjs');
+
 exports.config = { transaction: false };
+
+async function setIssuanceFk(knex, onDelete) {
+  await knex.raw('ALTER TABLE hour_blocks DROP CONSTRAINT IF EXISTS hour_blocks_issuance_fkey');
+  await knex.raw(
+    'ALTER TABLE hour_blocks ADD CONSTRAINT hour_blocks_issuance_fkey ' +
+      'FOREIGN KEY (tenant, issuance_id) REFERENCES contract_line_block_issuances (tenant, issuance_id)' +
+      (onDelete ? ` ON DELETE ${onDelete}` : ''),
+  );
+}
+
+async function isDistributedHourBlocks(knex) {
+  return (await hasCitus(knex)) && (await isDistributed(knex, 'hour_blocks'));
+}
 
 const VALIDITY_CK = 'hour_blocks_valid_from_expiration_check';
 const SOURCE_CK = 'hour_blocks_contract_source_check';
@@ -41,6 +61,10 @@ exports.up = async function up(knex) {
     [SOURCE_CK],
   );
 
+  if (!(await isDistributedHourBlocks(knex))) {
+    await setIssuanceFk(knex, undefined);
+  }
+
   await knex.raw(
     'CREATE INDEX IF NOT EXISTS hour_blocks_contract_line_valid_from_idx ON hour_blocks (tenant, contract_line_id, valid_from)',
   );
@@ -60,6 +84,9 @@ exports.down = async function down(knex) {
       `Cannot roll back hour block validity: ${row.n} hour block(s) carry valid_from or service_period_record_id ` +
         '(cadence prepaid blocks). Void and remove them explicitly first.',
     );
+  }
+  if (!(await isDistributedHourBlocks(knex))) {
+    await setIssuanceFk(knex, 'SET NULL (issuance_id)');
   }
   await knex.raw('DROP INDEX IF EXISTS hour_blocks_service_period_record_idx');
   await knex.raw('DROP INDEX IF EXISTS hour_blocks_contract_line_valid_from_idx');

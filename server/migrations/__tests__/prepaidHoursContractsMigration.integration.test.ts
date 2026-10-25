@@ -151,6 +151,40 @@ describe('prepaid hours on contracts migrations (DB-backed)', () => {
     expect(await sqlState(row('valid_from', "NULL"))).toBe('23503');
   });
 
+  it('refuses to delete an issuance that has a contract block, but deletes one without blocks', async () => {
+    const fk = await db.raw(
+      "SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'hour_blocks_issuance_fkey'",
+    );
+    expect(fk.rows[0].def).not.toMatch(/ON DELETE (SET NULL|CASCADE)/);
+
+    await inRolledBackTrx(async (trx) => {
+      const tenant = randomUUID();
+      const lineId = randomUUID();
+      const issuance = (id: string) => ({
+        tenant, issuance_id: id, contract_line_id: lineId, client_contract_id: randomUUID(),
+      });
+      const withBlock = randomUUID();
+      const without = randomUUID();
+      const base = { client_id: randomUUID(), due_date: '2026-11-01', trigger_kind: 'manual' };
+      await trx('contract_line_block_issuances').insert([
+        { ...base, ...issuance(withBlock) },
+        { ...base, ...issuance(without), contract_line_id: randomUUID() },
+      ]);
+      await trx('hour_blocks').insert({
+        tenant, block_id: randomUUID(), client_id: randomUUID(), service_id: randomUUID(),
+        total_minutes: 60, remaining_minutes: 60, hourly_rate: 100,
+        source_type: 'contract', contract_line_id: lineId, issuance_id: withBlock,
+      });
+      await trx.raw("SET LOCAL session_replication_role = 'origin'");
+      await trx.raw('SAVEPOINT d1');
+      await expect(
+        trx('contract_line_block_issuances').where({ tenant, issuance_id: withBlock }).del(),
+      ).rejects.toMatchObject({ code: '23503' });
+      await trx.raw('ROLLBACK TO SAVEPOINT d1');
+      expect(await trx('contract_line_block_issuances').where({ tenant, issuance_id: without }).del()).toBe(1);
+    });
+  });
+
   it("allows charge_family = 'prepaid_block' on recurring_service_periods", async () => {
     const def = await db.raw(
       "SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'recurring_service_periods_charge_family_check'",
