@@ -88,3 +88,25 @@ describe('resolveCustodyToday', () => {
     expect(await resolveCustodyToday({} as any, 't', 'u', new Date('2026-10-24T03:00:00Z'))).toBe('2026-10-23');
   });
 });
+
+describe('toCustodyResult asset-layer errors', () => {
+  it('turns a thrown invalidAssetTypeError into a localizable validation result', async () => {
+    const { toCustodyResult } = await import('./actionResult');
+    const { invalidAssetTypeError } = await import('../assetTypeAttributes');
+    const result = await toCustodyResult(async () => {
+      throw invalidAssetTypeError('docking station');
+    });
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error.code).toBe('validation');
+    expect(result.error.message).toBe('Asset type "docking station" is not available. Choose a valid asset type.');
+    expect(result.error.message).not.toContain('{');
+    expect(result.error.messageKey).toBe('msp/assets:errors.asset.typeUnavailableNamed');
+    expect(result.error.messageParams).toEqual({ assetType: 'docking station' });
+  });
+
+  it('still rethrows unrelated errors', async () => {
+    const { toCustodyResult } = await import('./actionResult');
+    await expect(toCustodyResult(async () => { throw new Error('boom'); })).rejects.toThrow('boom');
+  });
+});

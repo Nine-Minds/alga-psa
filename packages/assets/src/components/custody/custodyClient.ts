@@ -14,13 +14,33 @@ import { useAssetCrossFeature } from '../../context/AssetCrossFeatureContext';
  * own message on a refusal.
  */
 
-export type CustodyOutcome<T> = { ok: true; data: T } | { ok: false; message: string; denied: boolean };
+export type CustodyOutcome<T> =
+  | { ok: true; data: T }
+  | { ok: false; message: string; denied: boolean; messageKey?: string; messageParams?: Record<string, unknown> };
+
+/** A structured payload (JSON) must never reach the user; callers fall back to a translated generic message. */
+export function looksLikeRawPayload(message: string | undefined | null): boolean {
+  return typeof message === 'string' && message.trimStart().startsWith('{');
+}
 
 export function custodyOutcome<T>(result: unknown): CustodyOutcome<T> {
   if (isActionPermissionError(result)) return { ok: false, message: result.permissionError, denied: true };
-  const r = result as { success?: boolean; data?: T; error?: { message?: string } } | null;
+  const r = result as {
+    success?: boolean;
+    data?: T;
+    error?: { message?: string; messageKey?: string; messageParams?: Record<string, unknown> };
+  } | null;
   if (r && r.success === true) return { ok: true, data: r.data as T };
-  return { ok: false, message: r?.error?.message || 'Something went wrong.', denied: false };
+  const raw = r?.error?.message;
+  if (!raw || looksLikeRawPayload(raw)) {
+    return { ok: false, message: 'Something went wrong.', denied: false, messageKey: 'msp/assets:custody.errors.generic' };
+  }
+  return {
+    ok: false,
+    message: raw,
+    denied: false,
+    ...(r?.error?.messageKey ? { messageKey: r.error.messageKey, messageParams: r.error.messageParams } : {}),
+  };
 }
 
 export interface CustodyLocationsState {

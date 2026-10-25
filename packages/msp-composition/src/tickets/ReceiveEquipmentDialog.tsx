@@ -22,6 +22,7 @@ import {
   type CustodyDetailsValue,
 } from '@alga-psa/assets/components/custody/CustodyFields';
 import { DialogShell, HolderPicker } from '@alga-psa/assets/components/custody/CustodyDialogs';
+import { buildAssetTypeOptions, useAssetTypeRegistry } from '@alga-psa/assets/components/shared/useAssetTypeOptions';
 import { matchAssetCacheKeys } from '@alga-psa/assets/lib/assetCacheKeys';
 import { uploadDocument } from '@alga-psa/documents/actions/documentActions';
 import { receiveEquipment, type ReceiveEquipmentActionData } from './receiveEquipmentActions';
@@ -67,6 +68,9 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
   const [result, setResult] = useState<ReceiveEquipmentActionData | null>(null);
   const [printOpen, setPrintOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
+
+  const registryEntries = useAssetTypeRegistry(isOpen);
+  const assetTypeOptions = useMemo(() => buildAssetTypeOptions(registryEntries, t, { includeUnknown: true }), [registryEntries, t]);
 
   const clientId = ticket.client_id ?? null;
   const ticketId = ticket.ticket_id ?? null;
@@ -130,7 +134,7 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
           : {
               new_asset: {
                 name: newItem.name.trim(),
-                asset_type: newItem.asset_type.trim() || 'unknown',
+                asset_type: newItem.asset_type,
                 manufacturer: newItem.manufacturer.trim() || null,
                 model: newItem.model.trim() || null,
                 serial_number: newItem.serial_number.trim() || null,
@@ -149,7 +153,11 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
         document_ids: documentIds,
       })
     );
-    if (!outcome.ok) return outcome.message;
+    if (!outcome.ok) {
+      return outcome.messageKey
+        ? t(outcome.messageKey, { defaultValue: outcome.message, ...(outcome.messageParams ?? {}) })
+        : outcome.message;
+    }
     setResult(outcome.data);
     void mutate(matchAssetCacheKeys([outcome.data.asset.asset_id]));
     void mutate((key: unknown) => Array.isArray(key) && key[0] === 'custody');
@@ -227,7 +235,6 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
             {(
               [
                 ['name', t('custody.receiveEquipment.fields.name', { defaultValue: 'Name' })],
-                ['asset_type', t('custody.receiveEquipment.fields.type', { defaultValue: 'Type' })],
                 ['manufacturer', t('custody.receiveEquipment.fields.manufacturer', { defaultValue: 'Manufacturer' })],
                 ['model', t('custody.receiveEquipment.fields.model', { defaultValue: 'Model' })],
                 ['serial_number', t('custody.receiveEquipment.fields.serial', { defaultValue: 'Serial number' })],
@@ -243,6 +250,15 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
                 />
               </div>
             ))}
+            <div>
+              <Label htmlFor={`${id}-asset_type`}>{t('custody.receiveEquipment.fields.type', { defaultValue: 'Type' })}</Label>
+              <CustomSelect
+                id={`${id}-asset_type`}
+                value={newItem.asset_type}
+                onValueChange={(value) => setNewItem((prev) => ({ ...prev, asset_type: value }))}
+                options={assetTypeOptions}
+              />
+            </div>
           </div>
         )}
 

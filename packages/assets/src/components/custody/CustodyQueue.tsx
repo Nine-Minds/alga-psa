@@ -131,7 +131,13 @@ export function CustodyQueue() {
         title: t('custody.queue.columns.location', { defaultValue: 'Location' }),
         dataIndex: 'location_name',
         render: (_v: unknown, row: ICustodyQueueRow) =>
-          row.state === 'with_vendor' ? withVendor : formatCustodyPlace(row.location_name, row.bin) || '-',
+          row.state === 'with_vendor' ? (
+            withVendor
+          ) : (
+            <span className="whitespace-normal break-words" title={formatCustodyPlace(row.location_name, row.bin) || undefined}>
+              {formatCustodyPlace(row.location_name, row.bin) || '-'}
+            </span>
+          ),
       },
       {
         title: t('custody.queue.columns.holder', { defaultValue: 'Holder' }),
