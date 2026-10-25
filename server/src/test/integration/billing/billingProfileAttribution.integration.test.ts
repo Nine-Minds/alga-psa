@@ -6,7 +6,6 @@ import { tenantDb } from '@alga-psa/db';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { Temporal } from '@js-temporal/polyfill';
 import { formatInvoiceCalendarDate } from '../../../../../packages/billing/src/actions/invoiceCalendarDate';
-import { PER_PROFILE_INVOICING_FLAG } from '../../../../../packages/billing/src/lib/billing/billingProfileInvoiceScope';
 import { buildContractCadenceDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 import { getAvailableRecurringDueWork } from '@alga-psa/billing/actions/billingAndTax';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
@@ -117,8 +116,6 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 
 const HOOK_TIMEOUT = 300_000;
 const transactionControl = vi.hoisted(() => ({ useRealTransactions: false }));
-let perProfileFlagSpy: { mockRestore(): void } | null = null;
-let perProfileInvoicingEnabledInTest = false;
 
 // The contract starts in December and bills in arrears, so the January cycle
 // bills the *December* service period — billable work is dated accordingly.
@@ -296,9 +293,6 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
 
   afterEach(() => {
     transactionControl.useRealTransactions = false;
-    perProfileInvoicingEnabledInTest = false;
-    perProfileFlagSpy?.mockRestore();
-    perProfileFlagSpy = null;
   });
 
   // T054 — the S1 backfill only covers clients that existed when it ran. A
@@ -533,13 +527,6 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
       contract_profile_id: cardProfileId,
     });
 
-    const core = await import('@alga-psa/core/server');
-    const originalIsEnabled = core.featureFlags.isEnabled.bind(core.featureFlags);
-    perProfileFlagSpy = vi.spyOn(core.featureFlags, 'isEnabled').mockImplementation(async (flag, context) => {
-      if (flag === PER_PROFILE_INVOICING_FLAG) return perProfileInvoicingEnabledInTest;
-      return originalIsEnabled(flag, context);
-    });
-    perProfileInvoicingEnabledInTest = true;
     transactionControl.useRealTransactions = true;
 
     const generateSelectedRows = async (
@@ -737,27 +724,32 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
         await syncRecurringServicePeriodsForContractLine(trx, {
           tenant: tenantId,
           contractLineId: selector.executionWindow.contractLineId!,
-          sourceRunPrefix: 't004-flag-off-rollup',
+          sourceRunPrefix: 't004-bills-separately-false-rollup',
         });
       });
     }
-    perProfileInvoicingEnabledInTest = false;
-    const flagOffInvoice = await generateSelectedRows(
+    // bills_separately=false on every profile: nothing bills separately, so the
+    // whole window (including the check profile's attributed charge) rolls up
+    // onto the default profile's invoice.
+    await table('client_billing_profiles')
+      .whereIn('billing_profile_id', [cardProfileId, checkProfileId])
+      .update({ bills_separately: false });
+    const notSeparateInvoice = await generateSelectedRows(
       nextWindowSelectors,
       cardProfileId,
       'T004 Card Plan',
-      'T004-flag-off-mixed-profiles',
+      'T004-bills-separately-false-mixed-profiles',
     );
-    const flagOffCharges = await chargesFor(flagOffInvoice.invoice_id);
-    expect(flagOffCharges.map((charge) => charge.description).sort()).toEqual([
+    const notSeparateCharges = await chargesFor(notSeparateInvoice.invoice_id);
+    expect(notSeparateCharges.map((charge) => charge.description).sort()).toEqual([
       'T004 Card Plan',
       'T004 Check Plan',
     ]);
-    expect(flagOffCharges.find((charge) => charge.description === 'T004 Card Plan')?.billing_profile_id)
+    expect(notSeparateCharges.find((charge) => charge.description === 'T004 Card Plan')?.billing_profile_id)
       .toBe(cardProfileId);
-    expect(flagOffCharges.find((charge) => charge.description === 'T004 Check Plan')?.billing_profile_id)
+    expect(notSeparateCharges.find((charge) => charge.description === 'T004 Check Plan')?.billing_profile_id)
       .toBe(checkProfileId);
-    expect(await snapshotFor(flagOffInvoice.invoice_id)).toMatchObject({
+    expect(await snapshotFor(notSeparateInvoice.invoice_id)).toMatchObject({
       billing_profile_id: cardProfileId,
       payment_method: 'bank_transfer',
     });
@@ -772,9 +764,9 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
       expect(periodRows.length).toBeGreaterThan(0);
       expect(periodRows.every((period) =>
         period.lifecycle_state === 'billed'
-        && period.invoice_id === flagOffInvoice.invoice_id
+        && period.invoice_id === notSeparateInvoice.invoice_id
         && period.invoice_charge_id
-        && flagOffCharges.some((charge) => charge.item_id === period.invoice_charge_id),
+        && notSeparateCharges.some((charge) => charge.item_id === period.invoice_charge_id),
       )).toBe(true);
     }
   }, HOOK_TIMEOUT);
@@ -837,13 +829,6 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
       expect(selector.executionWindow.contractId).toBeUndefined();
     }
 
-    const core = await import('@alga-psa/core/server');
-    const originalIsEnabled = core.featureFlags.isEnabled.bind(core.featureFlags);
-    perProfileFlagSpy = vi.spyOn(core.featureFlags, 'isEnabled').mockImplementation(async (flag, context) => {
-      if (flag === PER_PROFILE_INVOICING_FLAG) return perProfileInvoicingEnabledInTest;
-      return originalIsEnabled(flag, context);
-    });
-    perProfileInvoicingEnabledInTest = true;
     transactionControl.useRealTransactions = true;
 
     const invoiceCountBefore = Number((await table('invoices').where({ client_id: clientId })

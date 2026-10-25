@@ -25,7 +25,6 @@ import {
   seedBillingCycle,
 } from '../../../../test-utils/billingProfileTestHelpers';
 import { wireLocalTestDbEnv } from '../../../../../packages/billing/src/actions/_dbTestUtils';
-import { PER_PROFILE_INVOICING_FLAG } from '../../../../../packages/billing/src/lib/billing/billingProfileInvoiceScope';
 import { loadContractBillingTrace } from '@alga-psa/shared/billingClients/contractBillingTrace';
 import { resolveChargeProfile } from '@alga-psa/shared/billingClients/billingProfileResolution';
 import { resolveInvoiceDueDate } from '../../../../../packages/billing/src/lib/billing/invoiceDueDate';
@@ -117,8 +116,6 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 }));
 
 const transactionControl = vi.hoisted(() => ({ useRealTransactions: false }));
-let perProfileFlagSpy: { mockRestore(): void } | null = null;
-let perProfileInvoicingEnabledInTest = false;
 let userId: string;
 let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration')['generateInvoice'];
 let syncRecurringServicePeriodsForContractLine:
@@ -135,12 +132,11 @@ function table(name: string, tenant = tenantId) {
   return tenantDb(db, tenant).table(name);
 }
 
-/** The trace as the app loads it: the flag is a caller-supplied input. */
-function traceOf(contractId: string, options: { perProfileInvoicing?: boolean; asOf?: string } = {}) {
+/** The trace as the app loads it. */
+function traceOf(contractId: string, options: { asOf?: string } = {}) {
   return loadContractBillingTrace(db, tenantId, {
     contractId,
     asOf: options.asOf ?? ASOF,
-    perProfileInvoicing: options.perProfileInvoicing ?? false,
   });
 }
 
@@ -265,9 +261,6 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
 
   afterEach(() => {
     transactionControl.useRealTransactions = false;
-    perProfileInvoicingEnabledInTest = false;
-    perProfileFlagSpy?.mockRestore();
-    perProfileFlagSpy = null;
   });
 
   afterAll(async () => {
@@ -302,7 +295,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
       lineProfileIds: [null, entityId, entityId],
     });
 
-    const trace = await traceOf(contractId, { perProfileInvoicing: true });
+    const trace = await traceOf(contractId);
 
     expect(trace!.profiles).toHaveLength(2);
     const entity = trace!.profiles.find((p) => p.billingProfileId === entityId)!;
@@ -348,7 +341,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
       template_status: 'draft',
     }).catch(() => undefined);
 
-    expect(await loadContractBillingTrace(db, tenantId, { contractId: templateId, perProfileInvoicing: false })).toBeNull();
+    expect(await loadContractBillingTrace(db, tenantId, { contractId: templateId })).toBeNull();
   }, HOOK_TIMEOUT);
 
   it('trace due-date offset equals resolveInvoiceDueDate for every billed profile', async () => {
@@ -358,7 +351,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     await billSeparately(entityId, 'due_on_receipt');
     const { contractId } = await createContract(tenantId, clientId, { lineProfileIds: [null, entityId] });
 
-    const trace = await traceOf(contractId, { perProfileInvoicing: true });
+    const trace = await traceOf(contractId);
 
     expect(trace!.profiles).toHaveLength(2);
     for (const profile of trace!.profiles) {
@@ -405,7 +398,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
       );
     }
     // Reading as the other tenant never exposes tenant A's contract.
-    expect(await loadContractBillingTrace(db, otherTenantId, { contractId, perProfileInvoicing: false })).toBeNull();
+    expect(await loadContractBillingTrace(db, otherTenantId, { contractId })).toBeNull();
   }, HOOK_TIMEOUT);
 
   // Step 4. The engine reads COALESCE(tickets.billing_profile_id, projects.billing_profile_id)
@@ -445,7 +438,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
       billingProfileId: profileB,
     });
 
-    const trace = await traceOf(contractId, { perProfileInvoicing: true });
+    const trace = await traceOf(contractId);
     const engine = await engineOutcomeForTicket(clientId, ticketId, contractId, defaultId);
 
     expect(engine).toMatchObject({ billingProfileId: profileB, source: 'work_item' });
@@ -503,7 +496,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
       clientId, title: 'Facility B work', ticketNumber: `FX-${uuidv4().slice(0, 6)}`, billingProfileId: profileB,
     });
 
-    const trace = await traceOf(contractId, { perProfileInvoicing: true });
+    const trace = await traceOf(contractId);
     const engine = await engineOutcomeForTicket(clientId, ticketId, contractId, defaultId);
 
     expect(engine).toMatchObject({ billingProfileId: profileB, source: 'work_item' });
@@ -525,7 +518,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     // The FK is tenant-scoped only, so this state is reachable (e.g. a ticket moved between clients).
     await table('tickets').where({ ticket_id: ticketId }).update({ billing_profile_id: foreignProfile });
 
-    const trace = await traceOf(contractId, { perProfileInvoicing: true });
+    const trace = await traceOf(contractId);
     const engine = await engineOutcomeForTicket(clientId, ticketId, contractId, defaultId);
 
     expect(engine).toMatchObject({ billingProfileId: foreignProfile, source: 'work_item' });
@@ -573,16 +566,8 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     return String(value).slice(0, 10);
   }
 
-  function enableFlag(enabled: boolean) {
-    return import('@alga-psa/core/server').then((core) => {
-      const original = core.featureFlags.isEnabled.bind(core.featureFlags);
-      perProfileFlagSpy = vi.spyOn(core.featureFlags, 'isEnabled').mockImplementation(async (flag, context) => {
-        if (flag === PER_PROFILE_INVOICING_FLAG) return perProfileInvoicingEnabledInTest;
-        return original(flag, context);
-      });
-      perProfileInvoicingEnabledInTest = enabled;
-      transactionControl.useRealTransactions = true;
-    });
+  function useRealTransactions() {
+    transactionControl.useRealTransactions = true;
   }
 
   async function seedBillableClient(name: string, paymentTerms: string) {
@@ -685,7 +670,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     return table('invoices').where({ invoice_id: invoiceId }).first('invoice_date', 'due_date', 'billing_profile_id');
   }
 
-  it('(i) contract assigned to a profile that does not bill separately, flag off: the engine invoices the default at Net 30 and so does the trace', async () => {
+  it('(i) contract assigned to a profile that does not bill separately: the engine invoices the default at Net 30 and so does the trace', async () => {
     const { clientId, defaultId } = await seedBillableClient('Agreement (i) Client', 'net_30');
     const profileP = await createBillingProfile({ db, tenantId }, clientId, 'Agreement (i) P');
     await table('client_billing_profiles')
@@ -698,14 +683,14 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     await createApprovedTimeEntry({ db, tenantId }, {
       userId, ticketId, serviceId: hourly.serviceId, contractLineId: hourly.contractLineId, workDate: '2024-12-16', minutes: 60,
     });
-    await enableFlag(false);
+    useRealTransactions();
 
     const result = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(cycleId));
     const invoice = await invoiceRow(result.invoice_id);
     const charges = await table('invoice_charges').where({ invoice_id: result.invoice_id }).select('billing_profile_id');
     const invoiceDate = dateOnly(invoice.invoice_date);
 
-    const trace = await traceOf(hourly.contractId, { perProfileInvoicing: false, asOf: invoiceDate });
+    const trace = await traceOf(hourly.contractId, { asOf: invoiceDate });
     const profile = trace!.profiles[0];
 
     // Attribution says P ...
@@ -715,7 +700,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     // ... invoicing says the default, and the trace agrees with the invoice row.
     expect(invoice.billing_profile_id).toBe(defaultId);
     expect(profile.invoiceProfile.billingProfileId).toBe(invoice.billing_profile_id);
-    expect(profile.invoiceReason).toBe('separate_invoicing_off');
+    expect(profile.invoiceReason).toBe('not_billed_separately');
     expect(profile.terms).toMatchObject({ source: 'client', days: 30 });
     expect(profile.terms.dueDateExample.dueDate).toBe(dateOnly(invoice.due_date));
   }, HOOK_TIMEOUT);
@@ -734,14 +719,14 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     await createApprovedTimeEntry({ db, tenantId }, {
       userId, ticketId, serviceId: hourly.serviceId, contractLineId: hourly.contractLineId, workDate: '2024-12-16', minutes: 60,
     });
-    await enableFlag(false);
+    useRealTransactions();
 
     const result = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(cycleId));
     const invoice = await invoiceRow(result.invoice_id);
     const charges = await table('invoice_charges')
       .where({ invoice_id: result.invoice_id, billing_profile_source: 'work_item' })
       .select('billing_profile_id');
-    const trace = await traceOf(hourly.contractId, { perProfileInvoicing: false, asOf: dateOnly(invoice.invoice_date) });
+    const trace = await traceOf(hourly.contractId, { asOf: dateOnly(invoice.invoice_date) });
 
     expect(charges.length).toBeGreaterThan(0);
     expect(charges.every((c: any) => c.billing_profile_id === profileP)).toBe(true);
@@ -749,7 +734,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     const candidate = trace!.workItemProfiles!.find((p) => p.billingProfileId === profileP)!;
     expect(candidate).toBeDefined();
     expect(candidate.invoiceProfile.billingProfileId).toBe(invoice.billing_profile_id);
-    expect(candidate.invoiceReason).toBe('separate_invoicing_off');
+    expect(candidate.invoiceReason).toBe('not_billed_separately');
     expect(candidate.terms).toMatchObject({ source: 'client', days: 30 });
     expect(candidate.terms.dueDateExample.dueDate).toBe(dateOnly(invoice.due_date));
   }, HOOK_TIMEOUT);
@@ -796,13 +781,13 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     const entryId = await createApprovedTimeEntry({ db, tenantId }, {
       userId, ticketId, serviceId: hourly.serviceId, contractLineId: null, workDate: '2024-12-16', minutes: 60,
     });
-    await enableFlag(false);
+    useRealTransactions();
     const result = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(cycleId));
     const invoice = await invoiceRow(result.invoice_id);
     const workItemCharges = await table('invoice_charges')
       .where({ invoice_id: result.invoice_id, billing_profile_source: 'work_item' })
       .select('billing_profile_id');
-    const trace = await traceOf(hourly.contractId, { perProfileInvoicing: false, asOf: dateOnly(invoice.invoice_date) });
+    const trace = await traceOf(hourly.contractId, { asOf: dateOnly(invoice.invoice_date) });
     return { defaultId, profileP, hourly, entryId, invoice, workItemCharges, trace };
   }
 
@@ -825,7 +810,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     const candidate = trace!.workItemProfiles!.find((p) => p.billingProfileId === profileP)!;
     expect(candidate).toBeDefined();
     expect(candidate.invoiceProfile.billingProfileId).toBe(invoice.billing_profile_id);
-    expect(candidate.invoiceReason).toBe('separate_invoicing_off');
+    expect(candidate.invoiceReason).toBe('not_billed_separately');
     expect(candidate.terms.dueDateExample.dueDate).toBe(dateOnly(invoice.due_date));
   }, HOOK_TIMEOUT);
 
@@ -841,7 +826,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     expect(trace!.workItemProfiles).toBeUndefined();
   }, HOOK_TIMEOUT);
 
-  it('(iii) flag on and P bills separately: the engine issues P\'s own invoice on P\'s Net 15 terms, and the trace shows the same', async () => {
+  it('(iii) P bills separately: the engine issues P\'s own invoice on P\'s Net 15 terms, and the trace shows the same', async () => {
     const { clientId, defaultId } = await seedBillableClient('Agreement (iii) Client', 'net_30');
     const profileP = await createBillingProfile({ db, tenantId }, clientId, 'Agreement (iii) P');
     await billSeparately(profileP, 'net_15');
@@ -853,11 +838,11 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     await createApprovedTimeEntry({ db, tenantId }, {
       userId, ticketId, serviceId: hourly.serviceId, contractLineId: hourly.contractLineId, workDate: '2024-12-16', minutes: 60,
     });
-    await enableFlag(true);
+    useRealTransactions();
 
     const result = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(profileCycleId));
     const invoice = await invoiceRow(result.invoice_id);
-    const trace = await traceOf(hourly.contractId, { perProfileInvoicing: true, asOf: dateOnly(invoice.invoice_date) });
+    const trace = await traceOf(hourly.contractId, { asOf: dateOnly(invoice.invoice_date) });
     const profile = trace!.profiles[0];
 
     expect(invoice.billing_profile_id).toBe(profileP);

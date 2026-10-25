@@ -445,8 +445,7 @@
       "dueSentenceWorkItem": "Faktura z dnia {{invoiceDate}} jest płatna do {{dueDate}} — {{terms}} {{source}}, chyba że zgłoszenie lub projekt jest rozliczane przez inny profil",
       "workItemProfileLine": "Jeśli zgłoszenie lub projekt jest rozliczane przez {{name}}:",
       "invoiceLanding": {
-        "notBilledSeparately": "Przypisano do {{attributed}}; zafakturowano na {{invoice}} ({{attributed}} nie rozlicza osobno) — {{terms}}, termin {{dueDate}}",
-        "separateInvoicingOff": "Przypisano do {{attributed}}; zafakturowano na {{invoice}} (osobne fakturowanie jest wyłączone dla tego najemcy) — {{terms}}, termin {{dueDate}}"
+        "notBilledSeparately": "Przypisano do {{attributed}}; zafakturowano na {{invoice}} ({{attributed}} nie rozlicza osobno) — {{terms}}, termin {{dueDate}}"
       }
     }
   },

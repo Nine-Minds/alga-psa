@@ -445,8 +445,7 @@
       "dueSentenceWorkItem": "Una fattura del {{invoiceDate}} scade il {{dueDate}}: — {{terms}} {{source}}, a meno che il ticket o il progetto sia fatturato con un altro profilo",
       "workItemProfileLine": "Se il ticket o progetto è fatturato con {{name}}:",
       "invoiceLanding": {
-        "notBilledSeparately": "Attribuito a {{attributed}}; fatturato su {{invoice}} ({{attributed}} non fattura separatamente) — {{terms}}, scadenza {{dueDate}}",
-        "separateInvoicingOff": "Attribuito a {{attributed}}; fatturato su {{invoice}} (la fatturazione separata è disattivata per questo tenant) — {{terms}}, scadenza {{dueDate}}"
+        "notBilledSeparately": "Attribuito a {{attributed}}; fatturato su {{invoice}} ({{attributed}} non fattura separatamente) — {{terms}}, scadenza {{dueDate}}"
       }
     }
   },

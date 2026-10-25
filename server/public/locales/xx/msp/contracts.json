@@ -445,8 +445,7 @@
       "dueSentenceWorkItem": "⟦Ȧ {{invoiceDate}} īƞṽȯīƈḗ īş ḓŭḗ {{dueDate}} — {{terms}} {{source}}, ŭƞŀḗşş ŧħḗ ŧīƈķḗŧ ȯř ƥřȯĵḗƈŧ īş ƀīŀŀḗḓ ŧȯ ȧƞȯŧħḗř ƥřȯƒīŀḗ⟧",
       "workItemProfileLine": "⟦Īƒ ŧħḗ ŧīƈķḗŧ ȯř ƥřȯĵḗƈŧ īş ƀīŀŀḗḓ ŧȯ {{name}}:⟧",
       "invoiceLanding": {
-        "notBilledSeparately": "⟦Ȧŧŧřīƀŭŧḗḓ ŧȯ {{attributed}}; īƞṽȯīƈḗḓ ȯƞ {{invoice}} ({{attributed}} ḓȯḗş ƞȯŧ ƀīŀŀ şḗƥȧřȧŧḗŀẏ) — {{terms}}, ḓŭḗ {{dueDate}}⟧",
-        "separateInvoicingOff": "⟦Ȧŧŧřīƀŭŧḗḓ ŧȯ {{attributed}}; īƞṽȯīƈḗḓ ȯƞ {{invoice}} (şḗƥȧřȧŧḗ īƞṽȯīƈīƞɠ īş ȯƒƒ ƒȯř ŧħīş ŧḗƞȧƞŧ) — {{terms}}, ḓŭḗ {{dueDate}}⟧"
+        "notBilledSeparately": "⟦Ȧŧŧřīƀŭŧḗḓ ŧȯ {{attributed}}; īƞṽȯīƈḗḓ ȯƞ {{invoice}} ({{attributed}} ḓȯḗş ƞȯŧ ƀīŀŀ şḗƥȧřȧŧḗŀẏ) — {{terms}}, ḓŭḗ {{dueDate}}⟧"
       }
     }
   },

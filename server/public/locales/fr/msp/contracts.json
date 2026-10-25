@@ -385,8 +385,8 @@
       "lineCountOther": "{{count}} lignes",
       "termsLabel": "Conditions de paiement",
       "terms": {
-        "net_30": "Net 30",
-        "net_15": "Net 15",
+        "net_30": "Net à 30 jours",
+        "net_15": "Net à 15 jours",
         "due_on_receipt": "Dû à réception"
       },
       "termsSource": {
@@ -445,8 +445,7 @@
       "dueSentenceWorkItem": "Une facture du {{invoiceDate}} est due le {{dueDate}} — {{terms}} {{source}}, sauf si le ticket ou le projet est facturé via un autre profil",
       "workItemProfileLine": "Si le ticket ou le projet est facturé via {{name}} :",
       "invoiceLanding": {
-        "notBilledSeparately": "Attribué à {{attributed}} ; facturé sur {{invoice}} ({{attributed}} ne facture pas séparément) — {{terms}}, échéance le {{dueDate}}",
-        "separateInvoicingOff": "Attribué à {{attributed}} ; facturé sur {{invoice}} (la facturation séparée est désactivée pour ce locataire) — {{terms}}, échéance le {{dueDate}}"
+        "notBilledSeparately": "Attribué à {{attributed}} ; facturé sur {{invoice}} ({{attributed}} ne facture pas séparément) — {{terms}}, échéance le {{dueDate}}"
       }
     }
   },

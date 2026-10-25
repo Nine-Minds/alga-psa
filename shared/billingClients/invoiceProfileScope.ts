@@ -5,13 +5,12 @@ import type { IBillingCharge } from '@alga-psa/types';
  * invoice a given billing profile produces, and therefore which profile's
  * payment terms stamp that invoice's due date.
  *
- * The I/O half (`resolveInvoiceProfileScope`, the `billing-profiles-separate-invoicing`
- * tenant flag) stays in `packages/billing`; the flag value reaches this module
- * only as the `perProfileInvoicing` input. The invoice engine and the contract
+ * The I/O half (`resolveInvoiceProfileScope`) stays in `packages/billing`. The
+ * invoice engine and the contract
  * billing trace both decide "which invoice does this charge land on" through
  * `resolveInvoiceProfileForAttribution`, so they cannot disagree.
  *
- *   Flag off, or no profile bills separately → no filtering: everything lands on
+ *   No profile bills separately → no filtering: everything lands on
  *   the default profile's invoice (attribution is a reporting dimension only).
  *
  *   Otherwise a separately billing profile takes its own charges; the default
@@ -30,22 +29,12 @@ export interface InvoiceProfileScopeInput {
   /** The invoice's own profile (the cycle's profile, or the default). */
   billingProfileId: string;
   defaultProfileId: string;
-  /** Tenant flag `billing-profiles-separate-invoicing`, evaluated by the caller. */
-  perProfileInvoicing: boolean;
   /** Active profiles with `bills_separately = true` (`listSeparatelyBillingProfiles`). */
   separatelyBillingProfileIds: Iterable<string>;
 }
 
 export function buildInvoiceProfileScope(input: InvoiceProfileScopeInput): InvoiceProfileScope {
   const isDefaultProfile = input.billingProfileId === input.defaultProfileId;
-  if (!input.perProfileInvoicing) {
-    return {
-      isScoped: false,
-      billingProfileId: input.billingProfileId,
-      isDefaultProfile,
-      separatelyBillingProfileIds: new Set(),
-    };
-  }
   const separatelyBillingProfileIds = new Set(input.separatelyBillingProfileIds);
   return {
     // Nothing bills separately → nothing to split, so do not filter. This is
@@ -78,8 +67,6 @@ export function chargeBelongsToScope(
 export type InvoiceProfileLandingReason =
   /** Attributed to the default profile, or unattributed. */
   | 'same_profile'
-  /** Attributed elsewhere, and separate invoicing is off for the tenant. */
-  | 'separate_invoicing_off'
   /** Attributed elsewhere; the profile does not bill separately (or is inactive). */
   | 'not_billed_separately'
   /** Attributed to a separately billing profile: it keeps its own invoice. */
@@ -105,7 +92,6 @@ export function resolveInvoiceProfileForAttribution(
 export function describeInvoiceProfileLanding(
   attributedProfileId: string | null | undefined,
   defaultScope: InvoiceProfileScope,
-  perProfileInvoicing: boolean,
 ): { invoiceProfileId: string; reason: InvoiceProfileLandingReason } {
   const invoiceProfileId = resolveInvoiceProfileForAttribution(attributedProfileId, defaultScope);
   const attributed = attributedProfileId ?? null;
@@ -115,5 +101,5 @@ export function describeInvoiceProfileLanding(
       reason: attributed !== null && attributed !== defaultScope.billingProfileId ? 'own_invoice' : 'same_profile',
     };
   }
-  return { invoiceProfileId, reason: perProfileInvoicing ? 'not_billed_separately' : 'separate_invoicing_off' };
+  return { invoiceProfileId, reason: 'not_billed_separately' };
 }

@@ -445,8 +445,7 @@
       "dueSentenceWorkItem": "Een factuur van {{invoiceDate}} is verschuldigd op {{dueDate}} — {{terms}} {{source}}, tenzij het ticket of project via een ander profiel wordt gefactureerd",
       "workItemProfileLine": "Als het ticket of project via {{name}} wordt gefactureerd:",
       "invoiceLanding": {
-        "notBilledSeparately": "Toegewezen aan {{attributed}}; gefactureerd op {{invoice}} ({{attributed}} factureert niet apart) — {{terms}}, vervaldatum {{dueDate}}",
-        "separateInvoicingOff": "Toegewezen aan {{attributed}}; gefactureerd op {{invoice}} (aparte facturering staat uit voor deze tenant) — {{terms}}, vervaldatum {{dueDate}}"
+        "notBilledSeparately": "Toegewezen aan {{attributed}}; gefactureerd op {{invoice}} ({{attributed}} factureert niet apart) — {{terms}}, vervaldatum {{dueDate}}"
       }
     }
   },

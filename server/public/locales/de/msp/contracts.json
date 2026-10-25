@@ -445,8 +445,7 @@
       "dueSentenceWorkItem": "Eine Rechnung vom {{invoiceDate}} ist am {{dueDate}} fällig — {{terms}} {{source}}, sofern das Ticket oder Projekt nicht über ein anderes Profil abgerechnet wird",
       "workItemProfileLine": "Wenn das Ticket oder Projekt über {{name}} abgerechnet wird:",
       "invoiceLanding": {
-        "notBilledSeparately": "Zugeordnet zu {{attributed}}; abgerechnet auf {{invoice}} ({{attributed}} rechnet nicht separat ab) — {{terms}}, fällig am {{dueDate}}",
-        "separateInvoicingOff": "Zugeordnet zu {{attributed}}; abgerechnet auf {{invoice}} (separate Rechnungsstellung ist für diesen Mandanten deaktiviert) — {{terms}}, fällig am {{dueDate}}"
+        "notBilledSeparately": "Zugeordnet zu {{attributed}}; abgerechnet auf {{invoice}} ({{attributed}} rechnet nicht separat ab) — {{terms}}, fällig am {{dueDate}}"
       }
     }
   },

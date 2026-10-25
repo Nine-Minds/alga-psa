@@ -2757,7 +2757,7 @@ async function resolveRecurringSelectionBillingProfileId(
   knex: Knex | Knex.Transaction,
   tenant: string,
   selectorInputs: IRecurringDueSelectionInput[],
-  options: { fallbackBillingProfileId?: string | null; userId?: string } = {},
+  options: { fallbackBillingProfileId?: string | null } = {},
 ): Promise<string | null> {
   const clientId = assertSameRecurringSelectionWindow(selectorInputs).clientId;
   const defaultProfileId = await getClientDefaultBillingProfileId(knex, tenant, clientId);
@@ -2854,7 +2854,6 @@ async function resolveRecurringSelectionBillingProfileId(
     tenant,
     clientId,
     null,
-    { userId: options.userId },
   );
   if (!defaultScope.isScoped) {
     return options.fallbackBillingProfileId ?? defaultScope.billingProfileId;
@@ -3604,7 +3603,7 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
     knex,
     tenant,
     params.normalizedSelectorInputs,
-    { fallbackBillingProfileId: cycleBillingProfileId, userId: user.user_id },
+    { fallbackBillingProfileId: cycleBillingProfileId },
   );
   if (intendedBillingProfileId) {
     const intendedScope = await resolveInvoiceProfileScope(
@@ -3612,7 +3611,6 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
       tenant,
       client_id,
       intendedBillingProfileId,
-      { userId: user.user_id },
     );
     const scopedCharges = scopeChargesToProfile(billingResult.charges, intendedScope);
     if (billingResult.charges.length > 0 && scopedCharges.length === 0) {
@@ -4048,7 +4046,6 @@ export async function createInvoiceFromBillingResultImpl(
     tenant,
     clientId,
     options.billingProfileId ?? cycleBillingProfileId,
-    { userId },
   );
   // F095 — bill-to, PO, delivery, and tax identity come from the profile,
   // falling back to the client field by field.

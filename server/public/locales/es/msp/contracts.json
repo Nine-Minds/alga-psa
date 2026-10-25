@@ -445,8 +445,7 @@
       "dueSentenceWorkItem": "Una factura del {{invoiceDate}} vence el {{dueDate}}: — {{terms}} {{source}}, salvo que el ticket o proyecto se facture con otro perfil",
       "workItemProfileLine": "Si el ticket o proyecto se factura con {{name}}:",
       "invoiceLanding": {
-        "notBilledSeparately": "Atribuido a {{attributed}}; facturado en {{invoice}} ({{attributed}} no factura por separado) — {{terms}}, vence el {{dueDate}}",
-        "separateInvoicingOff": "Atribuido a {{attributed}}; facturado en {{invoice}} (la facturación por separado está desactivada para este inquilino) — {{terms}}, vence el {{dueDate}}"
+        "notBilledSeparately": "Atribuido a {{attributed}}; facturado en {{invoice}} ({{attributed}} no factura por separado) — {{terms}}, vence el {{dueDate}}"
       }
     }
   },

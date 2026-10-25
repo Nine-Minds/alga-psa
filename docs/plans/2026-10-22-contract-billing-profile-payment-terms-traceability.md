@@ -3,6 +3,15 @@
 Card `7a9ead2e-49b3-4f04-a775-54ef7051a7a4` — ticket alga0002302, findings 1, 4 and part of 7; branch
 `feature/contract-billing-profile-payment-terms-traceabil`, verified at `0c10002bc8`.
 
+> **Amendment 2026-10-24 (Captain's order).** The PostHog flag `billing-profiles-separate-invoicing`
+> was removed. It was a redundant second gate, it made the UI show a "Bills separately" switch the
+> engine then ignored, and it made invoicing depend on PostHog being reachable. Each profile's own
+> `bills_separately` (default false) is now the only opt-in: a charge attributed to an active profile
+> with `bills_separately=true` gets its own invoice; every other charge rolls up onto the default
+> profile's invoice. The `separate_invoicing_off` reason and the `perProfileInvoicing` trace input no
+> longer exist. Tenants that already have a `bills_separately=true` profile get separate invoices
+> immediately. Where this plan below still describes the flag, the amendment governs.
+
 ## Scope
 
 The card names six defects; line numbers are on this branch.
@@ -29,10 +38,9 @@ it lands on, so the trace must state the terms and due date of the *invoice prof
    (`packages/billing/src/lib/billing/billingProfileResolution.ts:64-104`).
 2. *Invoice profile — which profile's invoice the charge lands on*: the landing rule in
    `shared/billingClients/invoiceProfileScope.ts` (`chargeBelongsToScope`,
-   `resolveInvoiceProfileForAttribution`, `describeInvoiceProfileLanding`). With separate invoicing
-   off, or when the attributed profile does not bill separately (`bills_separately`), the charge
-   lands on the default profile's invoice; only an attributed profile that bills separately, with
-   the `billing-profiles-separate-invoicing` flag on, keeps its own invoice. The engine
+   `resolveInvoiceProfileForAttribution`, `describeInvoiceProfileLanding`). When the attributed profile does not bill separately (`bills_separately`), the charge
+   lands on the default profile's invoice; only an active attributed profile with `bills_separately`
+   keeps its own invoice. The engine
    (`resolveRecurringSelectionBillingProfileId`) and the trace call this same helper.
 3. *Terms — which value within the invoice profile*: `resolveEffectiveBillingIdentity` of the
    **invoice** profile — per field profile, else client, with `overriddenFields` recording what the
@@ -109,9 +117,8 @@ another profile. Findings from the engine, which match the resolver doc comment:
   non-null `billing_profile_id` of the client's tickets and of its projects. That is a superset of what
   any single charge sees, which is the right size for "profiles this could resolve to".
 
-**Flag input.** `perProfileInvoicingEnabled` pulls in the feature-flag client, which the shared module
-cannot import, so `loadContractBillingTrace` takes `perProfileInvoicing: boolean` from its caller
-(`getContractOverview` and `snapshotContractToScenario` evaluate it). The loader reads the
+**No flag input.** `loadContractBillingTrace` takes no per-profile-invoicing input; it
+reads the
 separately-billing profiles with `listSeparatelyBillingProfiles`. Still live, no snapshot, no column,
 no migration.
 

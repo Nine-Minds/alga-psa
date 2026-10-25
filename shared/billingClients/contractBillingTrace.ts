@@ -38,12 +38,11 @@ import { DEFAULT_PAYMENT_TERMS, normalizePaymentTerms, paymentTermDays } from '.
  * so what an operator reads cannot disagree with the invoice that follows.
  *
  * Attribution is not invoicing. A charge attributed to profile P lands on P's
- * invoice only when the tenant flag is on and P bills separately; otherwise it
+ * invoice only when P bills separately (`bills_separately`, active); otherwise it
  * lands on the client default's invoice and carries the default's terms. The
  * trace therefore resolves attribution (`resolveChargeProfile`), then the invoice
  * profile (`resolveInvoiceProfileForAttribution`, the function the engine's
  * selection resolver calls), then terms and due date from the invoice profile.
- * The flag is evaluated by the caller and passed in as `perProfileInvoicing`.
  * This module must not grow a second `line ?? contract ?? workItem ?? default`
  * chain: the work-item step is just one more input to `resolveChargeProfile`.
  */
@@ -81,8 +80,6 @@ export interface BuildContractBillingTraceInput {
   /** `contracts.billing_frequency`; used for cadence only when the contract has no lines. */
   contractBillingFrequency?: string | null;
   clientDefaultBillingProfileId: string;
-  /** Tenant flag `billing-profiles-separate-invoicing`, evaluated by the caller. */
-  perProfileInvoicing: boolean;
   /** `listSeparatelyBillingProfiles` ids for the client (active, `bills_separately`). */
   separatelyBillingProfileIds: string[];
   /** `client_contracts.billing_profile_id` of the binding being traced. */
@@ -125,14 +122,13 @@ const ENGLISH_LABELS: Record<ContractBillingTraceField['key'], string> = {
 
 type LandingInput = Pick<
   BuildContractBillingTraceInput,
-  'clientDefaultBillingProfileId' | 'perProfileInvoicing' | 'separatelyBillingProfileIds'
+  'clientDefaultBillingProfileId' | 'separatelyBillingProfileIds'
 >;
 
 function defaultInvoiceScope(input: LandingInput): InvoiceProfileScope {
   return buildInvoiceProfileScope({
     billingProfileId: input.clientDefaultBillingProfileId,
     defaultProfileId: input.clientDefaultBillingProfileId,
-    perProfileInvoicing: input.perProfileInvoicing,
     separatelyBillingProfileIds: input.separatelyBillingProfileIds,
   });
 }
@@ -142,7 +138,7 @@ export function resolveTraceInvoiceLanding(
   input: LandingInput,
   attributedProfileId: string,
 ): { invoiceProfileId: string; reason: ContractBillingTraceInvoiceReason } {
-  return describeInvoiceProfileLanding(attributedProfileId, defaultInvoiceScope(input), input.perProfileInvoicing);
+  return describeInvoiceProfileLanding(attributedProfileId, defaultInvoiceScope(input));
 }
 
 /** Which profile bills one line (or the contract as a whole when `line` is null). */
@@ -450,12 +446,6 @@ export interface LoadContractBillingTraceOptions {
   /** Trace one specific assignment (a merged-in client) instead of the owning client's. */
   clientContractId?: string | null;
   asOf?: ISO8601String;
-  /**
-   * Tenant flag `billing-profiles-separate-invoicing`. Evaluated by the caller
-   * (`perProfileInvoicingEnabled` in packages/billing): shared code must not
-   * depend on the feature-flag client.
-   */
-  perProfileInvoicing: boolean;
 }
 
 /**
@@ -592,7 +582,6 @@ export async function loadContractBillingTrace(
   const base = {
     assignmentBillingProfileId: assignment?.billing_profile_id ?? null,
     clientDefaultBillingProfileId,
-    perProfileInvoicing: options.perProfileInvoicing,
     separatelyBillingProfileIds,
   };
   const billingProfileIds = new Set<string>(

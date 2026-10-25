@@ -101,25 +101,18 @@ export const BillingTermsSection: React.FC<BillingTermsSectionProps> = ({
   // attributed to a profile whose invoice is another one, say so rather than
   // letting the attributed profile's name stand next to the invoice's terms.
   const dueSentence = (profile: ContractBillingTraceProfile, caveat = false) => {
-    if (profile.invoiceReason === 'not_billed_separately' || profile.invoiceReason === 'separate_invoicing_off') {
+    if (profile.invoiceReason === 'not_billed_separately') {
       const params = {
         attributed: profile.name,
         invoice: profile.invoiceProfile.name,
         terms: termsLabel(profile.terms.value),
         dueDate: profile.terms.dueDateExample.dueDate,
       };
-      const landing =
-        profile.invoiceReason === 'not_billed_separately'
-          ? t('contractOverview.billing.invoiceLanding.notBilledSeparately', {
-              ...params,
-              defaultValue:
-                'Attributed to {{attributed}}; invoiced on {{invoice}} ({{attributed}} does not bill separately) — {{terms}}, due {{dueDate}}',
-            })
-          : t('contractOverview.billing.invoiceLanding.separateInvoicingOff', {
-              ...params,
-              defaultValue:
-                'Attributed to {{attributed}}; invoiced on {{invoice}} (separate invoicing is off for this tenant) — {{terms}}, due {{dueDate}}',
-            });
+      const landing = t('contractOverview.billing.invoiceLanding.notBilledSeparately', {
+        ...params,
+        defaultValue:
+          'Attributed to {{attributed}}; invoiced on {{invoice}} ({{attributed}} does not bill separately) — {{terms}}, due {{dueDate}}',
+      });
       return `${landing}.`;
     }
     return plainDueSentence(profile.terms, caveat);

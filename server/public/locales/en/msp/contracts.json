@@ -445,8 +445,7 @@
       "dueSentenceWorkItem": "A {{invoiceDate}} invoice is due {{dueDate}} — {{terms}} {{source}}, unless the ticket or project is billed to another profile",
       "workItemProfileLine": "If the ticket or project is billed to {{name}}:",
       "invoiceLanding": {
-        "notBilledSeparately": "Attributed to {{attributed}}; invoiced on {{invoice}} ({{attributed}} does not bill separately) — {{terms}}, due {{dueDate}}",
-        "separateInvoicingOff": "Attributed to {{attributed}}; invoiced on {{invoice}} (separate invoicing is off for this tenant) — {{terms}}, due {{dueDate}}"
+        "notBilledSeparately": "Attributed to {{attributed}}; invoiced on {{invoice}} ({{attributed}} does not bill separately) — {{terms}}, due {{dueDate}}"
       }
     }
   },

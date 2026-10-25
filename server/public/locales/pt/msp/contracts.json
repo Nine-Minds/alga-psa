@@ -426,7 +426,7 @@
         "tax_region": "Região fiscal",
         "delivery": "Entrega de faturas",
         "template": "Modelo de fatura",
-        "po_number": "Número da ordem de compra",
+        "po_number": "Número do pedido de compra",
         "currency": "Moeda",
         "cadence": "Periodicidade de faturação",
         "profile_billing_cycle": "Ciclo de faturação do perfil",
@@ -445,8 +445,7 @@
       "dueSentenceWorkItem": "Uma fatura de {{invoiceDate}} vence em {{dueDate}} — {{terms}} {{source}}, a menos que o ticket ou projeto seja faturado por outro perfil",
       "workItemProfileLine": "Se o ticket ou projeto for faturado por {{name}}:",
       "invoiceLanding": {
-        "notBilledSeparately": "Atribuído a {{attributed}}; faturado em {{invoice}} ({{attributed}} não fatura separadamente) — {{terms}}, vencimento {{dueDate}}",
-        "separateInvoicingOff": "Atribuído a {{attributed}}; faturado em {{invoice}} (a faturação separada está desativada para este inquilino) — {{terms}}, vencimento {{dueDate}}"
+        "notBilledSeparately": "Atribuído a {{attributed}}; faturado em {{invoice}} ({{attributed}} não fatura separadamente) — {{terms}}, vencimento {{dueDate}}"
       }
     }
   },

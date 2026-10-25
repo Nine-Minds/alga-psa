@@ -445,8 +445,7 @@
       "dueSentenceWorkItem": "En faktura daterad {{invoiceDate}} förfaller {{dueDate}} — {{terms}} {{source}}, om inte ärendet eller projektet faktureras via en annan profil",
       "workItemProfileLine": "Om ärendet eller projektet faktureras via {{name}}:",
       "invoiceLanding": {
-        "notBilledSeparately": "Hänförd till {{attributed}}; faktureras på {{invoice}} ({{attributed}} faktureras inte separat) — {{terms}}, förfaller {{dueDate}}",
-        "separateInvoicingOff": "Hänförd till {{attributed}}; faktureras på {{invoice}} (separat fakturering är avstängd för den här hyresgästen) — {{terms}}, förfaller {{dueDate}}"
+        "notBilledSeparately": "Hänförd till {{attributed}}; faktureras på {{invoice}} ({{attributed}} faktureras inte separat) — {{terms}}, förfaller {{dueDate}}"
       }
     }
   },

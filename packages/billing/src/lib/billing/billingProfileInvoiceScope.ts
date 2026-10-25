@@ -1,7 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type { IBillingCharge } from '@alga-psa/types';
-import { featureFlags } from '@alga-psa/core/server';
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 import { listSeparatelyBillingProfiles } from '@alga-psa/shared/billingClients/billingProfileSettings';
 import {
@@ -36,29 +35,11 @@ export * from '@alga-psa/shared/billingClients/invoiceProfileScope';
  * comes out smaller.
  */
 
-export const PER_PROFILE_INVOICING_FLAG = 'billing-profiles-separate-invoicing';
-
-/**
- * Per-profile invoice production is gated behind a per-tenant feature flag
- * (F101). With the flag off, `bills_separately` is inert and generation behaves
- * exactly as it did before this slice — which is the property T037 asserts.
- */
-export async function perProfileInvoicingEnabled(
-  tenant: string,
-  userId?: string,
-): Promise<boolean> {
-  return featureFlags.isEnabled(PER_PROFILE_INVOICING_FLAG, {
-    tenantId: tenant,
-    userId,
-  });
-}
-
 export async function resolveInvoiceProfileScope(
   knex: Knex | Knex.Transaction,
   tenant: string,
   clientId: string,
   cycleBillingProfileId: string | null | undefined,
-  options?: { userId?: string },
 ): Promise<InvoiceProfileScope> {
   const defaultProfileId = await ensureClientDefaultBillingProfile(knex, tenant, clientId);
   const billingProfileId = cycleBillingProfileId ?? defaultProfileId;
@@ -70,14 +51,10 @@ export async function resolveInvoiceProfileScope(
     throw new Error(`Billing profile ${billingProfileId} does not belong to client ${clientId} in this tenant.`);
   }
 
-  const perProfileInvoicing = await perProfileInvoicingEnabled(tenant, options?.userId);
-  const separatelyBilling = perProfileInvoicing
-    ? await listSeparatelyBillingProfiles(knex, tenant, clientId)
-    : [];
+  const separatelyBilling = await listSeparatelyBillingProfiles(knex, tenant, clientId);
   return buildInvoiceProfileScope({
     billingProfileId,
     defaultProfileId,
-    perProfileInvoicing,
     separatelyBillingProfileIds: separatelyBilling.map((profile) => profile.billing_profile_id),
   });
 }

@@ -17,7 +17,6 @@ import {
 } from '@alga-psa/types';
 import type { ContractBillingTrace } from '@alga-psa/types';
 import { loadContractBillingTrace } from '@alga-psa/shared/billingClients/contractBillingTrace';
-import { perProfileInvoicingEnabled } from '../lib/billing/billingProfileInvoiceScope';
 import {
   IContractTemplate,
   IContractTemplateWithLines,
@@ -1561,7 +1560,6 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
         ? null
         : await loadContractBillingTrace(knex, tenant, {
             contractId,
-            perProfileInvoicing: await perProfileInvoicingEnabled(tenant),
           }),
     };
   } catch (error) {

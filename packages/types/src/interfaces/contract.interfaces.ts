@@ -251,12 +251,10 @@ export interface ContractBillingTraceField {
 export type ContractBillingTraceInvoiceReason =
   /** Same profile: attributed to the one whose invoice carries the charge. */
   | 'same_profile'
-  /** The attributed profile bills separately and the tenant flag is on: it keeps its own invoice. */
+  /** The attributed profile bills separately: it keeps its own invoice. */
   | 'own_invoice'
   /** The attributed profile does not bill separately (or is inactive): charges roll up to the default. */
-  | 'not_billed_separately'
-  /** Separate invoicing is off for the tenant: every charge lands on the default profile's invoice. */
-  | 'separate_invoicing_off';
+  | 'not_billed_separately';
 
 /** The profile whose invoice carries the charges; its terms stamp the due date. */
 export interface ContractBillingTraceInvoiceProfile {

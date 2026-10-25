@@ -46,8 +46,7 @@ const build = (overrides: Partial<BuildContractBillingTraceInput> = {}) =>
     currencyCode: 'USD',
     contractBillingFrequency: 'monthly',
     clientDefaultBillingProfileId: DEFAULT_ID,
-    // North bills separately and the tenant flag is on, unless a test says otherwise.
-    perProfileInvoicing: true,
+    // North bills separately, unless a test says otherwise.
     separatelyBillingProfileIds: [NORTH_ID],
     assignmentBillingProfileId: null,
     lines: [{ contractLineId: 'line-1', contractLineName: 'Managed', billingProfileId: null, billingFrequency: 'monthly' }],
@@ -189,7 +188,7 @@ describe('buildContractBillingTrace', () => {
     const defaultNet30 = identity(DEFAULT_ID);
     const assigned = { assignmentBillingProfileId: NORTH_ID };
 
-    it('flag on and the attributed profile bills separately: its own invoice, its own terms', () => {
+    it('the attributed profile bills separately: its own invoice, its own terms', () => {
       const trace = build({ ...assigned, identities: { [NORTH_ID]: northNet15 } });
       expect(trace.profiles[0]).toMatchObject({
         billingProfileId: NORTH_ID,
@@ -200,7 +199,7 @@ describe('buildContractBillingTrace', () => {
       expect(trace.terms.dueDateExample.dueDate).toBe('2026-11-06');
     });
 
-    it('flag on but the profile does not bill separately: invoiced on the default, at the default terms', () => {
+    it('the profile does not bill separately: invoiced on the default, at the default terms', () => {
       const trace = build({ ...assigned, separatelyBillingProfileIds: [], identities: { [DEFAULT_ID]: defaultNet30, [NORTH_ID]: northNet15 } });
       expect(trace.profiles[0]).toMatchObject({
         billingProfileId: NORTH_ID,
@@ -212,25 +211,25 @@ describe('buildContractBillingTrace', () => {
       expect(trace.terms.dueDateExample.dueDate).toBe('2026-11-21');
     });
 
-    it('flag off: bills_separately is inert, everything lands on the default', () => {
-      const trace = build({ ...assigned, perProfileInvoicing: false, identities: { [DEFAULT_ID]: defaultNet30, [NORTH_ID]: northNet15 } });
+    it('bills_separately=false: everything lands on the default', () => {
+      const trace = build({ ...assigned, separatelyBillingProfileIds: [], identities: { [DEFAULT_ID]: defaultNet30, [NORTH_ID]: northNet15 } });
       expect(trace.profiles[0]).toMatchObject({
         invoiceProfile: { billingProfileId: DEFAULT_ID },
-        invoiceReason: 'separate_invoicing_off',
+        invoiceReason: 'not_billed_separately',
       });
       expect(trace.terms.days).toBe(30);
     });
 
     it('does not load or use the attributed profile\'s identity when it does not invoice', () => {
       // North has no identity entry at all: only the default is read.
-      const trace = build({ ...assigned, perProfileInvoicing: false, identities: { [DEFAULT_ID]: defaultNet30 } });
+      const trace = build({ ...assigned, separatelyBillingProfileIds: [], identities: { [DEFAULT_ID]: defaultNet30 } });
       expect(trace.terms.days).toBe(30);
     });
 
     it('mixed attribution that all lands on the default is one invoice: count of invoice profiles is 1', () => {
       const trace = build({
         assignmentBillingProfileId: NORTH_ID,
-        perProfileInvoicing: false,
+        separatelyBillingProfileIds: [],
         lines: [
           { contractLineId: 'a', billingProfileId: null },
           { contractLineId: 'b', billingProfileId: DEFAULT_ID },
@@ -247,11 +246,11 @@ describe('buildContractBillingTrace', () => {
 
     it('work-item candidates split attribution from invoicing the same way', () => {
       const lines = [{ contractLineId: 'time', billingProfileId: null, serviceCount: 1 }];
-      const off = build({ lines, perProfileInvoicing: false, workItemProfileIds: [NORTH_ID], identities: { [DEFAULT_ID]: defaultNet30 } });
+      const off = build({ lines, separatelyBillingProfileIds: [], workItemProfileIds: [NORTH_ID], identities: { [DEFAULT_ID]: defaultNet30 } });
       expect(off.workItemProfiles![0]).toMatchObject({
         billingProfileId: NORTH_ID,
         invoiceProfile: { billingProfileId: DEFAULT_ID },
-        invoiceReason: 'separate_invoicing_off',
+        invoiceReason: 'not_billed_separately',
       });
       expect(off.workItemProfiles![0].terms.days).toBe(30);
       const on = build({ lines, workItemProfileIds: [NORTH_ID], identities: { [DEFAULT_ID]: defaultNet30, [NORTH_ID]: northNet15 } });
