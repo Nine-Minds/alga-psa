@@ -1,0 +1,44 @@
+▲ [WARNING] Duplicate key "@alga-psa/event-schemas" in object literal [duplicate-object-key]
+
+    package.json:65:4:
+      65 │     "@alga-psa/event-schemas": "*"
+         ╵     ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  The original key "@alga-psa/event-schemas" is here:
+
+    package.json:53:4:
+      53 │     "@alga-psa/event-schemas": "*",
+         ╵     ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+ RUN  v4.1.11 /home/robert/alga-copies/feature-co-managed-it/packages/tickets
+
+stdout | src/lib/ticket-columns.tagsReadOnly.test.tsx > ticket list inline tags > shows the tags with no add, remove or edit control when the viewer cannot update tickets
+Fetched permissions for ticket : {
+  canAddExisting: true,
+  canCreateNew: true,
+  canEditColors: true,
+  canEditText: true,
+  canDelete: true,
+  canDeleteAll: true
+}
+
+stdout | src/lib/ticket-columns.tagsReadOnly.test.tsx > ticket list inline tags > keeps add, remove and edit for a viewer who can update tickets
+Fetched permissions for ticket : {
+  canAddExisting: true,
+  canCreateNew: true,
+  canEditColors: true,
+  canEditText: true,
+  canDelete: true,
+  canDeleteAll: true
+}
+
+ ✓ src/lib/ticket-columns.tagsReadOnly.test.tsx > ticket list inline tags > shows the tags with no add, remove or edit control when the viewer cannot update tickets 36ms
+ ✓ src/lib/ticket-columns.tagsReadOnly.test.tsx > ticket list inline tags > keeps add, remove and edit for a viewer who can update tickets 24ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  18:23:44
+   Duration  1.63s (transform 454ms, setup 95ms, import 1.23s, tests 61ms, environment 177ms)
+
+exit 0

@@ -1,0 +1,18 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "20260610"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts (1475 tests | 1465 skipped) 8759ms 231 MB heap used
+   ✓ co-managed tag lifecycle admission > keeps tag create, update, bulk apply and delete working for an native PSA tenant  969ms
+   ✓ co-managed tag lifecycle admission > keeps REST TagService create, update and delete working for an active co-managed tenant  762ms
+   ✓ rejects the legacy ticket edit if its grace deadline passes while waiting for the ticket lock  1210ms
+   ✓ rejects the optimized ticket edit if its grace deadline passes while waiting for the ticket lock  1861ms
+
+ Test Files  1 passed (1)
+      Tests  10 passed | 1465 skipped (1475)
+   Start at  22:12:16
+   Duration  16.61s (transform 4.01s, setup 77ms, collect 3.97s, tests 8.76s, environment 0ms, prepare 28ms)
+
+exit 0

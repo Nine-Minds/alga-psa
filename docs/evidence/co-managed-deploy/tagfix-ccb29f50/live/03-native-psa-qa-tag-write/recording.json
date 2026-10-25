@@ -1,0 +1,94 @@
+{
+  "scenario": "03-native-psa-qa-tag-write",
+  "recordedAt": "2026-10-25T22:42:19.781Z",
+  "runtime": {
+    "sourceRevision": "ccb29f5087628ffb7a37be19d8d2a2f193bb693e",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "ccb29f5087628ffb7a37be19d8d2a2f193bb693e",
+    "buildId": "build-1792967039963"
+  },
+  "assertions": [
+    {
+      "id": "tag-persisted",
+      "passed": true,
+      "at": "2026-10-25T22:42:26.757Z",
+      "data": {
+        "added": [
+          {
+            "mapping_id": "7bf6cfc9-beba-4490-a22d-801ecc4f09d3",
+            "tag_id": "8a457c74-a1b9-4f47-b2bb-f3fc79990d6e",
+            "tag_text": "SMOKE tagfix 1792968139805",
+            "tagged_id": "68a51c93-2c2a-4bb6-be7e-5562d405a33d",
+            "created_by": "5e6e332e-047d-488f-be12-9bce7e5d7bf8"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tag-removed-and-cleaned",
+      "passed": true,
+      "at": "2026-10-25T22:42:30.416Z",
+      "data": {
+        "visible": 0
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T22:42:21.899Z",
+      "seconds": 2.118,
+      "actor": "qa",
+      "title": "Fresh normal login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+      }
+    },
+    {
+      "at": "2026-10-25T22:42:23.998Z",
+      "seconds": 4.217,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/68a51c93-2c2a-4bb6-be7e-5562d405a33d"
+    },
+    {
+      "at": "2026-10-25T22:42:26.757Z",
+      "seconds": 6.976,
+      "actor": "qa",
+      "title": "tag-persisted",
+      "data": {
+        "added": [
+          {
+            "mapping_id": "7bf6cfc9-beba-4490-a22d-801ecc4f09d3",
+            "tag_id": "8a457c74-a1b9-4f47-b2bb-f3fc79990d6e",
+            "tag_text": "SMOKE tagfix 1792968139805",
+            "tagged_id": "68a51c93-2c2a-4bb6-be7e-5562d405a33d",
+            "created_by": "5e6e332e-047d-488f-be12-9bce7e5d7bf8"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-25T22:42:30.416Z",
+      "seconds": 10.635,
+      "actor": "qa",
+      "title": "tag-removed-and-cleaned",
+      "data": {
+        "visible": 0
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 11.24,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

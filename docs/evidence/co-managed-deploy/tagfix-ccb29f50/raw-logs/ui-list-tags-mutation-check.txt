@@ -1,0 +1,6 @@
+== mutation: ticket-columns stops passing tagsReadOnly to TagManager
+     × shows the tags with no add, remove or edit control when the viewer cannot update tickets 53ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  1 failed | 1 passed (2)
+== restored
+      Tests  2 passed (2)

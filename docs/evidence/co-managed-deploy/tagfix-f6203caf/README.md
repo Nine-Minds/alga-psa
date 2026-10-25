@@ -1,5 +1,7 @@
 # Departed-customer tag writes: repair and live re-run
 
+> **Followed by [tagfix-ccb29f50](../tagfix-ccb29f50/README.md).** That round guards the REST `TagService` and `ClientService` tag writes and the ticket-list tags, and it re-anchors the four integration tests listed below as pre-existing failures.
+
 A terminated co-managed customer could add a tag to its own ticket, and the tag survived a reload. The workspace should have been read-only. The defect was reproduced on `56e708a31b` / `build-1792957994771`, with evidence in `/tmp/alga-smoke-evidence/co-managed-it-20261025-ece82/04-ended-tag-write/`. It is repaired in `f6203cafff58164fa324424df8c20950107ca3ab`. That commit was built and served through normal board admission, and the reproduction was repeated against it.
 
 ## What runs where

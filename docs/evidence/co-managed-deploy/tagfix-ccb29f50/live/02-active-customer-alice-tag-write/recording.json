@@ -1,0 +1,94 @@
+{
+  "scenario": "02-active-customer-alice-tag-write",
+  "recordedAt": "2026-10-25T22:42:07.491Z",
+  "runtime": {
+    "sourceRevision": "ccb29f5087628ffb7a37be19d8d2a2f193bb693e",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "ccb29f5087628ffb7a37be19d8d2a2f193bb693e",
+    "buildId": "build-1792967039963"
+  },
+  "assertions": [
+    {
+      "id": "tag-persisted",
+      "passed": true,
+      "at": "2026-10-25T22:42:14.781Z",
+      "data": {
+        "added": [
+          {
+            "mapping_id": "e73ea2ab-b24b-43a2-84f2-91765c45b5a4",
+            "tag_id": "526902bc-472a-49de-9231-22be7868d7f7",
+            "tag_text": "SMOKE tagfix 1792968127532",
+            "tagged_id": "cfff4242-7962-4100-a54c-687eaa540500",
+            "created_by": "ea343af6-c05d-471c-987d-635dca584d4a"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tag-removed-and-cleaned",
+      "passed": true,
+      "at": "2026-10-25T22:42:19.391Z",
+      "data": {
+        "visible": 0
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T22:42:09.644Z",
+      "seconds": 2.153,
+      "actor": "alice",
+      "title": "Fresh normal login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+      }
+    },
+    {
+      "at": "2026-10-25T22:42:11.720Z",
+      "seconds": 4.229,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "at": "2026-10-25T22:42:14.781Z",
+      "seconds": 7.29,
+      "actor": "alice",
+      "title": "tag-persisted",
+      "data": {
+        "added": [
+          {
+            "mapping_id": "e73ea2ab-b24b-43a2-84f2-91765c45b5a4",
+            "tag_id": "526902bc-472a-49de-9231-22be7868d7f7",
+            "tag_text": "SMOKE tagfix 1792968127532",
+            "tagged_id": "cfff4242-7962-4100-a54c-687eaa540500",
+            "created_by": "ea343af6-c05d-471c-987d-635dca584d4a"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-25T22:42:19.391Z",
+      "seconds": 11.9,
+      "actor": "alice",
+      "title": "tag-removed-and-cleaned",
+      "data": {
+        "visible": 0
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 12.64,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ]
+}

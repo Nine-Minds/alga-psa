@@ -1,0 +1,23 @@
+{
+  "tenant": "d46de2e8-21a5-424d-8699-f14e07e407a4",
+  "relationship": "38db9e8a-7f42-429c-baae-f0eb813b385b",
+  "state": "terminated",
+  "before": [
+    {
+      "mapping_id": "5189148f-00af-4ef8-abdd-ba6eec3989c8",
+      "tag_id": "6263f9a0-d096-48ae-b552-3ad753007629",
+      "tag_text": "SMOKE ended tag 1792962099027",
+      "tagged_id": "c7c64319-d853-4b83-b774-a846d285aa1f",
+      "created_by": "6660fcf5-8157-4dfc-bb35-28a137b1c26d"
+    }
+  ],
+  "after": [
+    {
+      "mapping_id": "5189148f-00af-4ef8-abdd-ba6eec3989c8",
+      "tag_id": "6263f9a0-d096-48ae-b552-3ad753007629",
+      "tag_text": "SMOKE ended tag 1792962099027",
+      "tagged_id": "c7c64319-d853-4b83-b774-a846d285aa1f",
+      "created_by": "6660fcf5-8157-4dfc-bb35-28a137b1c26d"
+    }
+  ]
+}

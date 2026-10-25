@@ -1,0 +1,187 @@
+{
+  "scenario": "01-departed-customer-tags-read-only",
+  "recordedAt": "2026-10-25T22:41:43.930Z",
+  "runtime": {
+    "sourceRevision": "ccb29f5087628ffb7a37be19d8d2a2f193bb693e",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "ccb29f5087628ffb7a37be19d8d2a2f193bb693e",
+    "buildId": "build-1792967039963"
+  },
+  "assertions": [
+    {
+      "id": "relationship-terminated",
+      "passed": true,
+      "at": "2026-10-25T22:41:44.666Z",
+      "data": {
+        "relationship": "38db9e8a-7f42-429c-baae-f0eb813b385b",
+        "state": "terminated"
+      }
+    },
+    {
+      "id": "entry-existing-tag-displayed",
+      "passed": true,
+      "at": "2026-10-25T22:41:51.358Z",
+      "data": {
+        "tag": "SMOKE ended tag 1792962099027"
+      }
+    },
+    {
+      "id": "entry-no-tag-mutation-controls",
+      "passed": true,
+      "at": "2026-10-25T22:41:51.358Z",
+      "data": {
+        "addPopover": 0,
+        "addInline": 0,
+        "remove": 0
+      }
+    },
+    {
+      "id": "grid-existing-tag-displayed",
+      "passed": true,
+      "at": "2026-10-25T22:41:53.054Z",
+      "data": {
+        "tag": "SMOKE ended tag 1792962099027"
+      }
+    },
+    {
+      "id": "grid-no-tag-mutation-controls",
+      "passed": true,
+      "at": "2026-10-25T22:41:53.055Z",
+      "data": {
+        "addPopover": 0,
+        "addInline": 0,
+        "remove": 0
+      }
+    },
+    {
+      "id": "ticket-list-no-tag-mutation-controls",
+      "passed": true,
+      "at": "2026-10-25T22:41:58.711Z",
+      "data": {
+        "addPopover": 0,
+        "addInline": 0,
+        "remove": 0,
+        "inlineTagShown": true
+      }
+    },
+    {
+      "id": "db-unchanged",
+      "passed": true,
+      "at": "2026-10-25T22:41:58.866Z",
+      "data": {
+        "mappings": 1
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T22:41:44.666Z",
+      "seconds": 0.736,
+      "title": "relationship-terminated",
+      "data": {
+        "relationship": "38db9e8a-7f42-429c-baae-f0eb813b385b",
+        "state": "terminated"
+      }
+    },
+    {
+      "at": "2026-10-25T22:41:47.250Z",
+      "seconds": 3.32,
+      "actor": "departed-customer",
+      "title": "Fresh normal login",
+      "data": {
+        "email": "depart.admin.1792959853966@cmreview.test",
+        "tenant": "d46de2e8-21a5-424d-8699-f14e07e407a4"
+      }
+    },
+    {
+      "at": "2026-10-25T22:41:49.625Z",
+      "seconds": 5.695,
+      "actor": "departed-customer",
+      "title": "navigate",
+      "data": "/msp/tickets/c7c64319-d853-4b83-b774-a846d285aa1f"
+    },
+    {
+      "at": "2026-10-25T22:41:51.358Z",
+      "seconds": 7.428,
+      "actor": "departed-customer",
+      "title": "entry-existing-tag-displayed",
+      "data": {
+        "tag": "SMOKE ended tag 1792962099027"
+      }
+    },
+    {
+      "at": "2026-10-25T22:41:51.358Z",
+      "seconds": 7.428,
+      "actor": "departed-customer",
+      "title": "entry-no-tag-mutation-controls",
+      "data": {
+        "addPopover": 0,
+        "addInline": 0,
+        "remove": 0
+      }
+    },
+    {
+      "at": "2026-10-25T22:41:53.054Z",
+      "seconds": 9.124,
+      "actor": "departed-customer",
+      "title": "grid-existing-tag-displayed",
+      "data": {
+        "tag": "SMOKE ended tag 1792962099027"
+      }
+    },
+    {
+      "at": "2026-10-25T22:41:53.055Z",
+      "seconds": 9.125,
+      "actor": "departed-customer",
+      "title": "grid-no-tag-mutation-controls",
+      "data": {
+        "addPopover": 0,
+        "addInline": 0,
+        "remove": 0
+      }
+    },
+    {
+      "at": "2026-10-25T22:41:57.137Z",
+      "seconds": 13.207,
+      "actor": "departed-customer",
+      "title": "navigate",
+      "data": "/msp/tickets"
+    },
+    {
+      "at": "2026-10-25T22:41:58.711Z",
+      "seconds": 14.781,
+      "actor": "departed-customer",
+      "title": "ticket-list-no-tag-mutation-controls",
+      "data": {
+        "addPopover": 0,
+        "addInline": 0,
+        "remove": 0,
+        "inlineTagShown": true
+      }
+    },
+    {
+      "at": "2026-10-25T22:41:58.866Z",
+      "seconds": 14.936,
+      "actor": "departed-customer",
+      "title": "db-unchanged",
+      "data": {
+        "mappings": 1
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Departed actor is the disposable departure fixture admin used by the original reproduction (tenant d46de2e8), not alice@whiterabbit.test, whose workspace is active."
+  ],
+  "durationSeconds": 15.72,
+  "actors": [
+    {
+      "name": "departed-customer",
+      "email": "depart.admin.1792959853966@cmreview.test",
+      "tenant": "d46de2e8-21a5-424d-8699-f14e07e407a4"
+    }
+  ]
+}

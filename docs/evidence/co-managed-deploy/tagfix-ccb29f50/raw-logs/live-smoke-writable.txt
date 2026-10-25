@@ -1,0 +1,9 @@
+02-active-customer-alice-tag-write Fresh normal login {"email":"alice@whiterabbit.test","tenant":"1f98df77-cd15-44c2-8f4d-42ff52d01e84"}
+02-active-customer-alice-tag-write navigate "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500"
+02-active-customer-alice-tag-write tag-persisted {"added":[{"mapping_id":"e73ea2ab-b24b-43a2-84f2-91765c45b5a4","tag_id":"526902bc-472a-49de-9231-22be7868d7f7","tag_text":"SMOKE tagfix 1792968127532","tagged_id":"cfff4242-7962-4100-a54c-687eaa540500","created_by":"ea343af6-c05d-471c-987d-635dca584d4a"}]}
+02-active-customer-alice-tag-write tag-removed-and-cleaned {"visible":0}
+03-native-psa-qa-tag-write Fresh normal login {"email":"qa@emeraldcity.oz","tenant":"24ac76c8-df59-4b10-8371-c56222904580"}
+03-native-psa-qa-tag-write navigate "/msp/tickets/68a51c93-2c2a-4bb6-be7e-5562d405a33d"
+03-native-psa-qa-tag-write tag-persisted {"added":[{"mapping_id":"7bf6cfc9-beba-4490-a22d-801ecc4f09d3","tag_id":"8a457c74-a1b9-4f47-b2bb-f3fc79990d6e","tag_text":"SMOKE tagfix 1792968139805","tagged_id":"68a51c93-2c2a-4bb6-be7e-5562d405a33d","created_by":"5e6e332e-047d-488f-be12-9bce7e5d7bf8"}]}
+03-native-psa-qa-tag-write tag-removed-and-cleaned {"visible":0}
+exit 0

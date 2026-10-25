@@ -1,0 +1,8 @@
+=== 2026-10-25T22:38:11Z run-card-service.sh starting review-app: bash /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-co-managed-review-app.sh
+[alga-card-service] phase=building
+Typechecking review candidate ccb29f5087628ffb7a37be19d8d2a2f193bb693e+da39a3ee5e6b
+Typecheck passed for ccb29f5087628ffb7a37be19d8d2a2f193bb693e+da39a3ee5e6b
+Review build ccb29f5087628ffb7a37be19d8d2a2f193bb693e+da39a3ee5e6b already exists in .next-review-final-ccb29f50
+[alga-card-service] phase=serving
+✓ Ready in 86ms
+[EventBus] Redis Client Ready

@@ -1,0 +1,149 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "20260610"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts (1475 tests) 335617ms 607 MB heap used
+   ✓ customer-owned co-management acceptance > ends every sponsorship before the sponsor is deleted, leaving no customer pointing at it  2383ms
+   ✓ co-managed board deletion dependency > blocks deleting a board shared with the MSP until the relationship ends  410ms
+   ✓ ticket API lifecycle admission against PostgreSQL > denies direct ticket, assignment, comment, and bundle mutations before acceptance and after grace  1963ms
+   ✓ durable co-managed attachments > parks attachments without spending attempts or overwriting failure history and fences reclaimed pause releases  387ms
+   ✓ co-managed tag lifecycle admission > keeps REST TagService create, update and delete working for an active co-managed tenant  439ms
+   ✓ co-managed ticket escalation and handback > rechecks session expiry after waiting for the approved destination lock without leaving a grant or work reference  1201ms
+   ✓ co-managed ticket escalation and handback > rechecks license expiry after waiting for the approved destination lock without leaving a grant or work reference  1193ms
+   ✓ paginates the qualified shared IT journal without leaking source fields hidden by authorization bundles  433ms
+   ✓ rejects the legacy ticket edit if its grace deadline passes while waiting for the ticket lock  1166ms
+   ✓ rejects the optimized ticket edit if its grace deadline passes while waiting for the ticket lock  1167ms
+   ✓ rechecks the MSP session deadline after waiting for the actor-reference lock before a canonical mutation  1213ms
+   ✓ renders qualified ticket edit/close attribution in immediate email, accumulated email and in-app notifications  1510ms
+   ✓ filters shared work by the sponsor client before search, counts and pagination  683ms
+   ✓ rechecks revoked queue scope and session expiry after waiting for lifecycle locks  1194ms
+   ✓ rechecks the actual session after waiting for a private thread lock before applying content  1219ms
+   ✓ rechecks shared comment session authority after waiting on its root thread without leaving a reply or receipt  1258ms
+   ✓ retains recipient identity, membership and resource grant locks through the delivery callback  342ms
+   ✓ rechecks the interactive session after waiting for a stored notification lock  1227ms
+   ✓ atomically queues all notification channels and recovers missed immediate effects with independent retry state  303ms
+   ✓ does not issue a notification signal token if the session expires while waiting for a home identity lock  1231ms
+   ✓ rechecks shared edit authority after a thread lock wait and leaves no receipt or effects when the session expires  1242ms
+   ✓ keeps attachment transport expiry pending, permits an exact renewed retry and retains reads during license lapse  5357ms
+   ✓ publishes a drafted message and every prepared attachment atomically through the production comment adapter  329ms
+   ✓ keeps private draft messages and files in the correct organization and inherits reply audiences  431ms
+   ✓ serves requester-facing files through actual portal identity, never shared IT, private or forged references  601ms
+   ✓ keeps staged files invisible to requesters until publication and rejects corrupted bytes or session expiry during download  909ms
+   ✓ retains requester identity, RBAC, board visibility and audience locks through file transport  342ms
+   ✓ rechecks requester session expiry after comment lock waits before opening storage  1245ms
+   ✓ expires idle drafts and standalone pending uploads while retaining fresh work and every published file  485ms
+   ✓ cleans only the owning store and invokes the production scheduled handler with idempotent provider deletion  1211ms
+   ✓ rechecks draft session expiry after cleanup lock contention before uploading any bytes  1237ms
+   ✓ removes a published attachment idempotently without changing its message and purges only the selected object  484ms
+   ✓ revokes requester file access on removal while retaining published draft receipts and preventing upload resurrection  305ms
+   ✓ rechecks session expiry after an attachment removal lock wait before marking the file discarded  1274ms
+   ✓ retains audience admission after grant loss, license lapse and session expiry behind a thread lock  1267ms
+   ✓ keeps published draft files attached across disclosure and rejects old-audience staged replies  308ms
+   ✓ transfers a confirmed MSP-private thread and files atomically with historical authors and empty tombstones  368ms
+   ✓ checks source checksums and session expiry before sending private bytes into customer storage  1346ms
+   ✓ removes a disclosed attachment from its customer-owned path while preserving original private history  392ms
+   ✓ suppresses queued customer email after current inactive changes  541ms
+   ✓ does not use fallback email to bypass a requester with invalid_address restrictions  604ms
+   ✓ rechecks requester token expiry after waiting for the canonical thread lock  1215ms
+   ✓ rolls requester reply writes back if the token expires while the writer is awaiting work  1215ms
+   ✓ rolls qualified requester reply writes and outbox back before retaining quarantine after expiry during the writer  353ms
+   ✓ admits customer technician replies to the canonical shared_it thread using current local authority  884ms
+   ✓ rechecks customer technician token expiry after a canonical thread lock wait  1300ms
+   ✓ rolls back customer technician writes when token expiry occurs while the writer awaits work  1216ms
+   ✓ preserves requester audience and qualified identity when a technician reply passes the closed-ticket cutoff  334ms
+   ✓ retries a transient technician reply writer failure and commits only one eventual reply  317ms
+   ✓ retains technician MIME artifacts after current changed_actor authority fails  529ms
+   ✓ does not publish technician artifact bytes after the retained claim expires during transport  2266ms
+   ✓ rolls back native optimized comment and earlier intents if a later workflow intent fails  1885ms
+   ✓ rolls back workflow model comments when current admission fails: expired_lease  591ms
+   ✓ denies shared task mutations under current read_only_grant authority  445ms
+   ✓ pages shared project tasks without copying assignments, and loses access immediately on unsharing  400ms
+   ✓ task attachments retain qualified audiences, retry identity and independent MSP archive bytes  553ms
+   ✓ task attachments survive encrypted customer export and native restore without the MSP private store  1628ms
+   ✓ task conversations page both stores with microsecond cursors and duplicate IDs in a non-UTC connection  679ms
+   ✓ project search removes masked bodies from matching, snippets, scores and counts while retaining visible names  317ms
+   ✓ task notification reads and queued delivery honor current staff authority without cached fallback  382ms
+   ✓ task email migration preserves rolling ticket writers, enrolls only pending task events, and refuses retained task loss  422ms
+   ✓ native timer cancellation controller forwards the verified credential and exact path identity  682ms
+   ✓ native time detail reads recheck credential expiry after waiting for the actual work lock  1775ms
+   ✓ native timesheet collections reject the whole response when credentials expire during a source lock wait  1779ms
+   ✓ native time API collections reject the whole result when a key expires during a source wait  1773ms
+   ✓ native time sheet lists reject the whole collection when the key expires during a nested source wait  1803ms
+   ✓ customer sheet API submits reviews and reverses real entries while storing feedback privately  332ms
+   ✓ customer sheet API omits hidden source effort and forbids whole-sheet commands over excluded entries  553ms
+   ✓ customer sheet edits use real workflow permissions and reject arbitrary approval assignments  321ms
+   ✓ customer sheet reporting computes visible statistics and exports all pages with filters and grouping  988ms
+   ✓ customer sheet reporting preserves masked totals and withholds free text across every export format  351ms
+   ✓ the nightly maintenance run rolls back generated periods if the sponsor becomes read-only during the run  2849ms
+   ✓ customer schedule reads reject the whole collection when its key expires while retaining a work root  1826ms
+   ✓ customer schedule commands validate current assignments partial dates recurrence and retained time dependencies  309ms
+   ✓ customer appointment rescheduling rolls back request calendar and meeting updates when final credentials expire  442ms
+   ✓ customer meeting creation preparation rejects changed disclosures and revoked credentials while retaining the original operation  395ms
+   ✓ customer approved meeting generation keeps approval intact on provider failure and permits a fresh attempt after cleanup  384ms
+   ✓ customer meeting artifact delivery cancels prepared content on final credential expiry and cannot use revoked credentials  1423ms
+   ✓ customer interaction meeting reads reject expired credentials after waiting for an actual source lock  1439ms
+   ✓ customer interaction lifecycle rolls back insertion and deletion when credentials expire at the final check  524ms
+   ✓ consolidated ticket export returns every matching shared row in global order regardless of page controls and never native tickets  1403ms
+   ✓ MSP SLA observation does not advance read-only work  918ms
+   ✓ MSP SLA display presents separate customer and MSP outcomes without persisting a read or exposing policy configuration  380ms
+   ✓ MSP SLA email skips a queued recipient after preference changes  1149ms
+   ✓ MSP SLA email skips a queued recipient after inactive changes  368ms
+   ✓ MSP SLA awaiting-client follows native optimized response-state edits atomically  385ms
+   ✓ MSP SLA bundle child reply missing reopen setup rolls back the master and child comment together  329ms
+   ✓ co-managed workflow assignment retains actual user targets, resources and no-op state without resetting SLA  907ms
+   ✓ co-managed workflow close email suppresses current requester_changed delivery  880ms
+   ✓ co-managed workflow close email suppresses current author_revoked delivery  326ms
+   ✓ MSP time billing work applies current field scope to captured descriptions  310ms
+   ✓ MSP time billing work reaches the existing catalog charge engine with retained customer provenance  392ms
+   ✓ shared effort totals retain customer-owned effort after revocation without reading ongoing MSP totals  382ms
+   ✓ participation evidence excludes oversight and customer-only work until the MSP actually contributes  547ms
+   ✓ archive files exclude private, unpublished and newly unshared uploads and capture drafts only at publication  309ms
+   ✓ archive reads deliver pending and stored bytes with integrity and final session checks  976ms
+   ✓ archive reads download route binds the actual MSP session and returns non-cacheable attachment bytes  355ms
+   ✓ MSP-private archive captures published draft files and keeps private and shared policies independent  328ms
+   ✓ PSA capability backfills join the co-managed upgrade transaction and preserve customer work and existing grants  459ms
+   ✓ independent hosted checkout recovers a lost response and a paid webhook after the browser closes without changing MSP billing or converting early  324ms
+   ✓ independent hosted checkout refuses foreign payment ownership and rolls billing imports back when final reconciliation fails  1117ms
+   ✓ portable vault export retains customer metadata and audited usable secrets after departure without MSP private data  528ms
+   ✓ portable vault export fails closed on restricted ACL, audit failure and authority changes during provider work  530ms
+   ✓ portable conversation export preserves published customer/shared files after departure without MSP private or pending uploads  367ms
+   ✓ portable workspace coordinator binds actual private and shared conversation files to authenticated package records  1297ms
+   ✓ portable conversation export verifies stored checksums and removes staged files after parent access or path changes  420ms
+   ✓ portable workspace graph validates cross-section identities and rejects dangling author service and configuration references  623ms
+   ✓ portable remote meeting files capture real bounded Graph response streams from retained original identities only  438ms
+   ✓ portable remote meeting files reject missing provider receipt and oversized or truncated responses without retained output  390ms
+   ✓ portable workspace coordinator seals all sections at one cutoff and delivers under fresh native locks without provider work  1241ms
+   ✓ portable workspace coordinator rejects source changes after staging and revoked sessions before any delivery callback  2124ms
+   ✓ portable workspace prepared download rejects an expired staging lease before opening a transaction  643ms
+   ✓ portable export browser handler streams after releasing database locks and rejects revoked or foreign requests  1505ms
+   ✓ portable workspace restore inserts actual files records and usable vault into a new suspended tenant atomically  1330ms
+   ✓ portable workspace coordinator removes all staged files after a later credential provider failure and disposes abandoned packages  1019ms
+   ✓ portable installation restore authenticates owner authority and converges retries without replacing tenants  7272ms
+   ✓ portable workspace preparation enforces cumulative disk limits and cancels provider work without retained staging  604ms
+   ✓ shared time profile selects only the current MSP client and preserves null/default and retry semantics  334ms
+   ✓ shared stopwatch starts on the work reference, logs through the shared save, and lists the entry for that work item  981ms
+   ✓ shared stopwatch cannot be redirected: a native clock never logs shared time and a shared clock never logs another item  444ms
+   ✓ shared invoice journey persists qualified MSP and native effort once under concurrent generation and retries  2046ms
+   ✓ shared invoice journey reconciles approved MSP effort into a later contract and claims its native recurring period once  1587ms
+   ✓ shared invoice journey retains rendered MSP invoice and archive after actual customer tenant deletion  1466ms
+   ✓ requester task conversation pages before returning private counts and rejects replies to a deleted root  378ms
+   ✓ delegated administration option search paginates only authorized display fields and admitted principals  577ms
+   ✓ co-managed provisioning cleanup > cancels a queued workspace without creating it and acknowledges capacity release exactly once  2308ms
+   ✓ co-managed provisioning cleanup > cleans the real bootstrapped defaults and invitation while retaining the MSP, siblings and reservation tombstone  2533ms
+   ✓ co-managed provisioning cleanup > rolls back data deletion and retains seats on failure, then resumes the same operation  4781ms
+   ✓ co-managed provisioning cleanup > records retryable cleanup failure for unknown tenant data instead of releasing its reservation  4356ms
+   ✓ co-managed provisioning cleanup > cancels after the initial administrator signs up but before acceptance, deleting the account with the workspace  2298ms
+   ✓ co-managed provisioning cleanup > serializes first signup against cancellation so a cancelled workspace cannot be claimed  2402ms
+   ✓ task thread private disclosure copies posted files with historical authors and tombstones and retries one canonical publication  309ms
+   ✓ task thread private disclosure resumes failed byte transfer and cleans only abandoned task disclosure objects  303ms
+   ✓ task thread private disclosure rechecks the session after transport before publishing any customer content  820ms
+   ✓ archive boundary paginates authorized work without hidden-only pages or candidate counts  456ms
+
+ Test Files  1 passed (1)
+      Tests  1475 passed (1475)
+   Start at  22:16:50
+   Duration  343.48s (transform 8.52s, setup 67ms, collect 4.01s, tests 335.62s, environment 0ms, prepare 26ms)
+
+exit 0
