@@ -90,10 +90,7 @@
         "description": "Wybierz, które kolumny dołączyć podczas drukowania kontaktów."
       }
     },
-    "shareTooltip": "Drukuj, importuj i eksportuj",
-    "filters": {
-      "vipOnly": "Tylko VIP"
-    }
+    "shareTooltip": "Drukuj, importuj i eksportuj"
   },
   "contactDetails": {
     "title": "Szczegóły kontaktu",
@@ -523,12 +520,6 @@
       "emailExistsPrefix": "E-mail już istnieje:",
       "invalidReferencePrefix": "Nieprawidłowe odwołanie:",
       "systemPrefix": "Błąd systemu:"
-    },
-    "vip": {
-      "label": "VIP"
-    },
-    "poc": {
-      "label": "Osoba kontaktowa"
     }
   },
   "contactDetailsEdit": {
@@ -567,9 +558,7 @@
       "reportsTo": "Podlega:",
       "reportsToPlaceholder": "Brak przełożonego",
       "reportsToClear": "Wyczyść",
-      "reportsToHelp": "Musi to być osoba z tego samego klienta. Używane do widoczności w portalu („mój zespół”) zgłoszeń, urządzeń i projektów.",
-      "vip": "VIP:",
-      "poc": "Osoba kontaktowa:"
+      "reportsToHelp": "Musi to być osoba z tego samego klienta. Używane do widoczności w portalu („mój zespół”) zgłoszeń, urządzeń i projektów."
     },
     "loading": {
       "destinations": "Ładowanie miejsc docelowych..."

@@ -315,13 +315,7 @@
     "inboundDomainAutoCreateHelp": "I domini associati possono creare un contatto per un nuovo mittente attendibile.",
     "inboundDomainAutoCreateUpdated": "Impostazione dei contatti mittente aggiornata.",
     "inboundDomainAutoCreateUpdateFailed": "Impossibile aggiornare l’impostazione dei contatti mittente.",
-    "recurringTickets": "Ticket ricorrenti",
-    "vip": {
-      "label": "Cliente VIP",
-      "helper": "Mostra un badge VIP per questo cliente negli elenchi e nei dettagli dei ticket",
-      "on": "VIP",
-      "off": "Standard"
-    }
+    "recurringTickets": "Ticket ricorrenti"
   },
   "clientCommandCenter": {
     "cards": {

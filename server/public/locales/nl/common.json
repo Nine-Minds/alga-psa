@@ -2172,11 +2172,5 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Weergave wisselen"
-  },
-  "flags": {
-    "vip": "VIP",
-    "poc": "Hoofdcontact",
-    "pocFull": "Hoofdcontact",
-    "pocShort": "HC"
   }
 }

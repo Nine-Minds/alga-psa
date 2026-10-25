@@ -512,32 +512,6 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
             </tr>
             <tr>
               <td className="py-2 font-semibold">
-                {t('contactDetailsEdit.fields.vip', { defaultValue: 'VIP:' })}
-              </td>
-              <td className="py-2">
-                <Switch
-                  id="contact-edit-vip"
-                  checked={contact.is_vip === true}
-                  onCheckedChange={(checked) => handleInputChange('is_vip', checked)}
-                  className="data-[state=checked]:bg-primary-500"
-                />
-              </td>
-            </tr>
-            <tr>
-              <td className="py-2 font-semibold">
-                {t('contactDetailsEdit.fields.poc', { defaultValue: 'Point of contact:' })}
-              </td>
-              <td className="py-2">
-                <Switch
-                  id="contact-edit-poc"
-                  checked={contact.is_primary_contact === true}
-                  onCheckedChange={(checked) => handleInputChange('is_primary_contact', checked)}
-                  className="data-[state=checked]:bg-primary-500"
-                />
-              </td>
-            </tr>
-            <tr>
-              <td className="py-2 font-semibold">
                 {t('contactDetailsEdit.fields.notes', { defaultValue: 'Notes:' })}
               </td>
               <td className="py-2">

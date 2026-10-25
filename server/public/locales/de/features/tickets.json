@@ -527,9 +527,7 @@
       "bundled": "Gebündelt",
       "activeBoards": "Aktive Boards",
       "inactiveBoards": "Inaktive Boards",
-      "allBoards": "Alle Boards",
-      "vipOnly": "Nur VIP",
-      "vipRequesters": "VIP-Anfragende"
+      "allBoards": "Alle Boards"
     },
     "selection": {
       "pageSelected_one": "Alle {{count}} Tickets auf dieser Seite sind ausgewählt.",

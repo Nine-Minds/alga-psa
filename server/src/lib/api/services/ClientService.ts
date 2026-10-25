@@ -390,7 +390,6 @@ export class ClientService extends BaseService<IClient> {
         billing_email: data.billing_email,
         account_manager_id: data.account_manager_id,
         is_inactive: data.is_inactive || false,
-        is_vip: (data as any).is_vip ?? false,
         lifecycle_status: (data as any).lifecycle_status ?? 'active',
         client_since: data.client_since ?? null,
         tenant: context.tenant,
@@ -669,7 +668,7 @@ export class ClientService extends BaseService<IClient> {
         'payment_terms', 'billing_cycle', 'credit_limit', 'default_currency_code',
         'preferred_payment_method', 'auto_invoice', 'invoice_delivery_method', 'region_code',
         'is_tax_exempt', 'tax_exemption_certificate', 'timezone', 'invoice_template_id', 'client_since',
-        'billing_contact_id', 'billing_email', 'account_manager_id', 'is_inactive', 'is_vip', 'lifecycle_status',
+        'billing_contact_id', 'billing_email', 'account_manager_id', 'is_inactive', 'lifecycle_status',
       ] as const;
       const updateData: Record<string, unknown> = { updated_at: knex.raw('now()') };
       for (const column of clientColumns) {
@@ -1026,9 +1025,6 @@ export class ClientService extends BaseService<IClient> {
           break;
         case 'billing_cycle':
           query.where('c.billing_cycle', value);
-          break;
-        case 'is_vip':
-          query.where('c.is_vip', value);
           break;
         case 'is_inactive':
           query.where('c.is_inactive', value);

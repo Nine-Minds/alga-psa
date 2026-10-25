@@ -103,8 +103,6 @@ export interface CreateContactInput {
   role?: string;
   notes?: string;
   is_inactive?: boolean;
-  is_vip?: boolean;
-  is_primary_contact?: boolean;
 }
 
 /**
@@ -125,6 +123,4 @@ export interface UpdateContactInput {
   role?: string;
   notes?: string;
   is_inactive?: boolean;
-  is_vip?: boolean;
-  is_primary_contact?: boolean;
 }

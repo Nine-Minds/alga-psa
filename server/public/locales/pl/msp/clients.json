@@ -345,13 +345,7 @@
     "inboundDomainAutoCreateHelp": "Przypisane domeny mogą tworzyć kontakt dla zaufanego nowego nadawcy.",
     "inboundDomainAutoCreateUpdated": "Zaktualizowano ustawienie kontaktów nadawców.",
     "inboundDomainAutoCreateUpdateFailed": "Nie udało się zaktualizować ustawienia kontaktów nadawców.",
-    "recurringTickets": "Zgłoszenia cykliczne",
-    "vip": {
-      "label": "Klient VIP",
-      "helper": "Pokaż plakietkę VIP dla tego klienta na listach i w szczegółach zgłoszeń",
-      "on": "VIP",
-      "off": "Standardowy"
-    }
+    "recurringTickets": "Zgłoszenia cykliczne"
   },
   "clientCommandCenter": {
     "cards": {

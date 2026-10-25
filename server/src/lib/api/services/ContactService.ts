@@ -259,8 +259,6 @@ export class ContactService extends BaseService<IContact> {
           role: data.role ?? undefined,
           notes: data.notes ?? undefined,
           is_inactive: data.is_inactive ?? false,
-          is_vip: (data as any).is_vip ?? undefined,
-          is_primary_contact: (data as any).is_primary_contact ?? undefined,
         },
         context.tenant,
         trx
@@ -661,12 +659,6 @@ export class ContactService extends BaseService<IContact> {
           break;
         case 'role':
           query.whereILike('c.role', `%${value}%`);
-          break;
-        case 'is_vip':
-          query.where('c.is_vip', value);
-          break;
-        case 'is_primary_contact':
-          query.where('c.is_primary_contact', value);
           break;
         case 'is_inactive':
           query.where('c.is_inactive', value);

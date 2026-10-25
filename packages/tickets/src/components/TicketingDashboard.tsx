@@ -491,7 +491,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     return dateStr ? new Date(dateStr) : undefined;
   }, [filterValues.dueDateFrom, filterValues.dueDateTo]);
   const selectedResponseState = (filterValues.responseState ?? 'all') as 'awaiting_client' | 'awaiting_internal' | 'none' | 'all';
-  const requesterVipOnly = filterValues.requester_vip === true;
   const selectedSlaStatus = allowSlaStatusFilter ? (filterValues.slaStatusFilter ?? 'all') : 'all';
   const bundleView = (filterValues.bundleView ?? 'bundled') as 'bundled' | 'individual';
 
@@ -866,9 +865,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (allowSlaStatusFilter && f.slaStatusFilter && f.slaStatusFilter !== 'all') {
       params.set('slaStatusFilter', f.slaStatusFilter);
     }
-    if (f.requester_vip === true) {
-      params.set('requesterVip', 'true');
-    }
     if (f.tags && f.tags.length > 0) {
       params.set('tags', f.tags.join(','));
     }
@@ -1201,7 +1197,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     dueDateFrom: filterValues.dueDateFrom,
     dueDateTo: filterValues.dueDateTo,
     responseState: selectedResponseState !== 'all' ? selectedResponseState : undefined,
-    requester_vip: requesterVipOnly ? true : undefined,
     slaStatusFilter: allowSlaStatusFilter && selectedSlaStatus !== 'all' ? selectedSlaStatus as ITicketListFilters['slaStatusFilter'] : undefined,
     sortBy,
     sortDirection,
@@ -2117,7 +2112,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       dueDateFrom: undefined,
       dueDateTo: undefined,
       responseState: undefined,
-      requester_vip: undefined,
       slaStatusFilter: undefined,
       bundleView: 'bundled',
     });
@@ -2191,10 +2185,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         none: t('dashboard.filters.noResponseState', 'No Response State'),
       };
       chips.push({ key: 'response', label: `${t('fields.responseState', 'Response State')}: ${map[selectedResponseState] ?? selectedResponseState}`, onRemove: () => onFilterChange({ responseState: undefined }) });
-    }
-
-    if (requesterVipOnly) {
-      chips.push({ key: 'requesterVip', label: t('dashboard.filters.vipRequesters', 'VIP requesters'), onRemove: () => onFilterChange({ requester_vip: undefined }) });
     }
 
     if (selectedPriority !== 'all') {
@@ -2515,16 +2505,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     placeholder={t('dashboard.filters.responseState', 'Response State')}
                   />
                 )}
-                <Button
-                  id={`${id}-vip-requester-toggle`}
-                  type="button"
-                  variant={requesterVipOnly ? 'default' : 'outline'}
-                  size="sm"
-                  aria-pressed={requesterVipOnly}
-                  onClick={() => onFilterChange({ requester_vip: requesterVipOnly ? undefined : true })}
-                >
-                  {t('dashboard.filters.vipOnly', 'VIP only')}
-                </Button>
                 <PrioritySelect
                   id={`${id}-priority-select`}
                   options={priorityOptions}

@@ -11,7 +11,6 @@ import { ITag } from '@alga-psa/types';
 import { TagManager } from '@alga-psa/tags/components';
 import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { PocBadge, VipBadge } from '@alga-psa/ui/components/FlagBadges';
 import { CallLink } from '@alga-psa/ui/components/CallLink';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
@@ -641,8 +640,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                   >
                     {contactInfo?.full_name || t('properties.noContactSelected', 'No contact selected')}
                   </p>
-                  <VipBadge isVip={contactInfo?.is_vip} />
-                  <PocBadge isPoc={contactInfo?.is_primary_contact} />
                   <Button
                     {...withDataAutomationId({ id: `${id}-toggle-contact-picker-btn` })}
                     variant="ghost"
@@ -786,7 +783,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 >
                   {client?.client_name || t('properties.notAvailable', 'N/A')}
                 </p>
-                <VipBadge isVip={client?.is_vip} />
                 <Button
                   {...withDataAutomationId({ id: `${id}-show-client-picker-btn` })}
                   variant="ghost"

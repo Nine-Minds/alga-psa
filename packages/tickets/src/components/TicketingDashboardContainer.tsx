@@ -133,7 +133,6 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
     dueDateFrom: params.get('dueDateFrom') || undefined,
     dueDateTo: params.get('dueDateTo') || undefined,
     responseState,
-    requester_vip: params.get('requesterVip') === 'true' ? true : undefined,
     slaStatusFilter,
     showOpenOnly: isTicketStatusOpenFilter(params.get('statusId') || TICKET_STATUS_FILTER_OPEN),
     sortBy,
@@ -396,9 +395,6 @@ export default function TicketingDashboardContainer({
     if (allowSlaStatusFilter && filters.slaStatusFilter && filters.slaStatusFilter !== 'all') {
       params.set('slaStatusFilter', filters.slaStatusFilter);
     }
-    if (filters.requester_vip === true) {
-      params.set('requesterVip', 'true');
-    }
     if (filters.bundleView && filters.bundleView !== 'bundled') {
       params.set('bundleView', filters.bundleView);
     }
@@ -465,7 +461,6 @@ export default function TicketingDashboardContainer({
         dueDateFrom: filters.dueDateFrom || undefined,
         dueDateTo: filters.dueDateTo || undefined,
         responseState: filters.responseState || undefined,
-        requester_vip: filters.requester_vip === true ? true : undefined,
         slaStatusFilter: allowSlaStatusFilter ? (filters.slaStatusFilter || undefined) : undefined,
         sortBy: effectiveSortBy,
         sortDirection: effectiveSortDirection,

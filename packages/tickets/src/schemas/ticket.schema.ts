@@ -169,8 +169,6 @@ export const ticketListFiltersSchema = z.object({
   excludeCategoryIds: z.array(z.union([z.string().uuid(), z.literal('no-category')])).optional(),
   clientId: z.string().uuid().nullish(),
   contactId: z.string().uuid().nullish(),
-  requester_vip: z.boolean().optional(),
-  client_vip: z.boolean().optional(),
   searchQuery: z.string().optional(),
   boardFilterState: z.enum(['active', 'inactive', 'all']),
   showOpenOnly: z.boolean().optional(),

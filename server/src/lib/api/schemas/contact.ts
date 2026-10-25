@@ -108,8 +108,6 @@ export const createContactSchema = z.object({
   role: z.string().max(100).optional(),
   notes: z.string().optional(),
   is_inactive: z.boolean().optional().default(false),
-  is_vip: z.boolean().optional(),
-  is_primary_contact: z.boolean().optional(),
   tags: z.array(z.string()).optional()
 }).strict();
 
@@ -126,8 +124,6 @@ export const contactFilterSchema = baseFilterSchema.extend({
   client_id: uuidSchema.optional(),
   role: z.string().optional(),
   is_inactive: booleanTransform.optional(),
-  is_vip: booleanTransform.optional(),
-  is_primary_contact: booleanTransform.optional(),
   has_client: booleanTransform.optional(),
   client_name: z.string().optional()
 });
@@ -154,8 +150,6 @@ export const contactResponseSchema = z.object({
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   is_inactive: z.boolean(),
-  is_vip: z.boolean().optional(),
-  is_primary_contact: z.boolean().optional(),
   notes: z.string().nullable(),
   avatarUrl: z.string().nullable().optional(),
   tenant: uuidSchema,

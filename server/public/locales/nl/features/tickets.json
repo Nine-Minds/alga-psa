@@ -527,9 +527,7 @@
       "bundled": "Gebundeld",
       "activeBoards": "Actieve borden",
       "inactiveBoards": "Inactieve borden",
-      "allBoards": "Alle borden",
-      "vipOnly": "Alleen VIP",
-      "vipRequesters": "VIP-aanvragers"
+      "allBoards": "Alle borden"
     },
     "selection": {
       "pageSelected_one": "Alle {{count}} ticket op deze pagina zijn geselecteerd.",

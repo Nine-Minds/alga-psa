@@ -527,9 +527,7 @@
       "bundled": "Agrupado",
       "activeBoards": "Tableros activos",
       "inactiveBoards": "Tableros inactivos",
-      "allBoards": "Todos los tableros",
-      "vipOnly": "Solo VIP",
-      "vipRequesters": "Solicitantes VIP"
+      "allBoards": "Todos los tableros"
     },
     "selection": {
       "pageSelected_one": "Todos los {{count}} ticket de esta página están seleccionados.",

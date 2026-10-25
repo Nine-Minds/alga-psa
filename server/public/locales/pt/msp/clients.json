@@ -315,13 +315,7 @@
     "inboundDomainAutoCreateHelp": "Os domínios mapeados podem, opcionalmente, criar um contato para um novo remetente confiável. Os domínios precisam ser únicos entre os clientes.",
     "inboundDomainAutoCreateUpdated": "A configuração de contatos do remetente foi atualizada.",
     "inboundDomainAutoCreateUpdateFailed": "Não foi possível atualizar a configuração de contatos do remetente.",
-    "recurringTickets": "Tickets recorrentes",
-    "vip": {
-      "label": "Cliente VIP",
-      "helper": "Mostrar um emblema VIP para este cliente nas listas e detalhes de tickets",
-      "on": "VIP",
-      "off": "Padrão"
-    }
+    "recurringTickets": "Tickets recorrentes"
   },
   "clientCommandCenter": {
     "cards": {

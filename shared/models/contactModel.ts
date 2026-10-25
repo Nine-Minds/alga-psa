@@ -195,8 +195,6 @@ export const contactFormSchema = z.object({
   role: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   is_inactive: z.boolean().optional(),
-  is_vip: z.boolean().optional(),
-  is_primary_contact: z.boolean().optional(),
 });
 
 export const contactSchema = z.object({
@@ -241,8 +239,6 @@ export const contactSchema = z.object({
   role: z.string().nullable(),
   notes: z.string().nullable(),
   is_inactive: z.boolean().nullable(),
-  is_vip: z.boolean().optional(),
-  is_primary_contact: z.boolean().optional(),
   created_at: z.string(),
   updated_at: z.string(),
 });
@@ -898,8 +894,6 @@ export class ContactModel {
       role: input.role?.trim() || null,
       notes: input.notes?.trim() || null,
       is_inactive: input.is_inactive || false,
-      is_vip: validatedInput.is_vip ?? false,
-      is_primary_contact: validatedInput.is_primary_contact ?? false,
       created_at: now,
       updated_at: now,
     };

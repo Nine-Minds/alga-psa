@@ -1347,16 +1347,6 @@ async function buildTicketListBaseQuery(
       }
     }
 
-    // VIP filters run on the same tenant-scoped left joins (`cn`, `comp`) that resolve
-    // contact_name / client_name, so pagination totals and rows agree. Both joins already
-    // carry the tenant equality, so no extra cross-shard join is introduced (see #3808).
-    if (validatedFilters.requester_vip === true) {
-      baseQuery = baseQuery.where('cn.is_vip', true);
-    }
-    if (validatedFilters.client_vip === true) {
-      baseQuery = baseQuery.where('comp.is_vip', true);
-    }
-
     baseQuery = applyTicketListIndexedSearchFilter(trx, baseQuery, tenant, user, validatedFilters);
 
     // Apply tag filter if provided
@@ -1960,9 +1950,6 @@ function buildTicketListItemsQuery(
       'cat.category_name',
       'comp.client_name',
       'cn.full_name as contact_name',
-      'cn.is_vip as contact_is_vip',
-      'cn.is_primary_contact as contact_is_primary_contact',
-      'comp.is_vip as client_is_vip',
       trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
       trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
       'tm.team_name as assigned_team_name',
@@ -1990,9 +1977,6 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       category_name,
       client_name,
       contact_name,
-      contact_is_vip,
-      contact_is_primary_contact,
-      client_is_vip,
       entered_by_name,
       assigned_to_name,
       assigned_team_name,
@@ -2035,9 +2019,6 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       category_name: category_name || 'Unknown',
       client_name: client_name || 'Unknown',
       contact_name: contact_name || null,
-      contact_is_vip: contact_is_vip === true,
-      contact_is_primary_contact: contact_is_primary_contact === true,
-      client_is_vip: client_is_vip === true,
       entered_by_name: entered_by_name || 'Unknown',
       assigned_to_name: assigned_to_name || null,
       assigned_team_name: assigned_team_name || null,

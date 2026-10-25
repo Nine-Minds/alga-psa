@@ -193,9 +193,6 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
         filtersFromURL.responseState = params.responseState as ITicketListFilters['responseState'];
       }
     }
-    if (params?.requesterVip === 'true') {
-      filtersFromURL.requester_vip = true;
-    }
     if (allowSlaStatusFilter && params?.slaStatusFilter && typeof params.slaStatusFilter === 'string') {
       const allowedSlaStatuses = ['all', 'has_sla', 'no_sla', 'on_track', 'breached', 'paused'] as const;
       if ((allowedSlaStatuses as readonly string[]).includes(params.slaStatusFilter)) {
@@ -327,7 +324,6 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       dueDateFrom: initialFilters.dueDateFrom || undefined,
       dueDateTo: initialFilters.dueDateTo || undefined,
       responseState: initialFilters.responseState || undefined,
-      requester_vip: initialFilters.requester_vip === true ? true : undefined,
       slaStatusFilter: initialFilters.slaStatusFilter || undefined,
       sortBy: initialFilters.sortBy || 'entered_at',
       sortDirection: initialFilters.sortDirection || 'desc',

@@ -315,13 +315,7 @@
     "inboundDomainAutoCreateHelp": "Zugeordnete Domains können für vertrauenswürdige neue Absender einen Kontakt erstellen.",
     "inboundDomainAutoCreateUpdated": "Absendereinstellung aktualisiert.",
     "inboundDomainAutoCreateUpdateFailed": "Absendereinstellung konnte nicht aktualisiert werden.",
-    "recurringTickets": "Wiederkehrende Tickets",
-    "vip": {
-      "label": "VIP-Kunde",
-      "helper": "VIP-Kennzeichen für diesen Kunden in Ticketlisten und Details anzeigen",
-      "on": "VIP",
-      "off": "Standard"
-    }
+    "recurringTickets": "Wiederkehrende Tickets"
   },
   "clientCommandCenter": {
     "cards": {

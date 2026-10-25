@@ -649,19 +649,6 @@ export function ClientDetailsTabContent({
                 inactiveLabel={t('common.states.inactive', { defaultValue: 'Inactive' })}
               />
             </div>
-            <div className="col-span-3">
-              <SwitchDetailItem
-                value={editedClient.is_vip === true}
-                onEdit={(isVip) => onFieldChange('is_vip', isVip)}
-                automationId="client-vip-field"
-                statusLabel={t('clientDetails.vip.label', { defaultValue: 'VIP client' })}
-                helperLabel={t('clientDetails.vip.helper', {
-                  defaultValue: 'Show a VIP badge on this client in ticket lists and details',
-                })}
-                activeLabel={t('clientDetails.vip.on', { defaultValue: 'VIP' })}
-                inactiveLabel={t('clientDetails.vip.off', { defaultValue: 'Standard' })}
-              />
-            </div>
           </div>
 
           <div className="space-y-2">

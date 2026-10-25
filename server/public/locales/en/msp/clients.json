@@ -315,13 +315,7 @@
     "inboundDomainAutoCreateHelp": "Mapped domains can optionally create a contact for a trusted new sender. Domains must be unique across clients.",
     "inboundDomainAutoCreateUpdated": "Sender contact setting updated.",
     "inboundDomainAutoCreateUpdateFailed": "Could not update sender contact setting.",
-    "recurringTickets": "Recurring tickets",
-    "vip": {
-      "label": "VIP client",
-      "helper": "Show a VIP badge on this client in ticket lists and details",
-      "on": "VIP",
-      "off": "Standard"
-    }
+    "recurringTickets": "Recurring tickets"
   },
   "clientCommandCenter": {
     "cards": {

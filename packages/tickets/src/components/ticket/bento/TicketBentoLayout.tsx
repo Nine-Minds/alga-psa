@@ -37,7 +37,6 @@ import TicketTimeEntries from './../TicketTimeEntries';
 import { TicketStopwatchControls } from '../TicketStopwatchControls';
 import TicketMaterialsCard from './../TicketMaterialsCard';
 import TicketWatchListCard from './../TicketWatchListCard';
-import { PocBadge, VipBadge } from '@alga-psa/ui/components/FlagBadges';
 import type { CommentEmailRecipientsPayload } from '../CommentEmailRecipientsControl';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
@@ -469,8 +468,6 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
                 >
                   {props.contactInfo.full_name}
                 </button>
-                <VipBadge isVip={props.contactInfo?.is_vip} />
-                <PocBadge isPoc={props.contactInfo?.is_primary_contact} />
               </div>
             ) : canEditContact ? (
               <button
@@ -514,7 +511,6 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
                   >
                     {props.client.client_name}
                   </button>
-                  <VipBadge isVip={props.client?.is_vip} />
                   {canChangeClient ? (
                     <button
                       id={`${id}-client-edit`}

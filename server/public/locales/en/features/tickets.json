@@ -535,9 +535,7 @@
       "bundled": "Bundled",
       "activeBoards": "Active Boards",
       "inactiveBoards": "Inactive Boards",
-      "allBoards": "All Boards",
-      "vipOnly": "VIP only",
-      "vipRequesters": "VIP requesters"
+      "allBoards": "All Boards"
     },
     "selection": {
       "pageSelected_one": "All {{count}} ticket on this page are selected.",

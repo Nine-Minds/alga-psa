@@ -527,9 +527,7 @@
       "bundled": "Zgrupowane",
       "activeBoards": "Aktywne tablice",
       "inactiveBoards": "Nieaktywne tablice",
-      "allBoards": "Wszystkie tablice",
-      "vipOnly": "Tylko VIP",
-      "vipRequesters": "Zgłaszający VIP"
+      "allBoards": "Wszystkie tablice"
     },
     "selection": {
       "pageSelected_one": "Zaznaczono wszystkie {{count}} zgłoszenie na tej stronie.",

@@ -122,9 +122,6 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   client_logo_url?: string | null;
   contact_name: string | null;
   contact_avatar_url?: string | null;
-  contact_is_vip?: boolean;
-  contact_is_primary_contact?: boolean;
-  client_is_vip?: boolean;
   entered_by_name: string;
   assigned_to_name: string | null;
   additional_agent_count?: number;
@@ -151,8 +148,6 @@ export interface ITicketListFilters {
   excludeCategoryIds?: string[];      // Categories to exclude (parent or subcategory ids; 'no-category' sentinel excludes uncategorized)
   clientId?: string;
   contactId?: string;
-  requester_vip?: boolean;            // Only tickets whose requester contact is flagged VIP (SQL predicate on the requester join)
-  client_vip?: boolean;               // Only tickets whose client is flagged VIP
   searchQuery?: string;
   boardFilterState: 'active' | 'inactive' | 'all';
   showOpenOnly?: boolean;

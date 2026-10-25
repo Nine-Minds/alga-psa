@@ -111,14 +111,3 @@ describe('parseReturnFilters assignee handling', () => {
     expect(filters.includeUnassigned).toBe(true);
   });
 });
-
-describe('parseReturnFilters VIP requester filter', () => {
-  it('parses requesterVip=true to requester_vip: true', () => {
-    expect(parseReturnFilters(encodeURIComponent('requesterVip=true')).requester_vip).toBe(true);
-  });
-
-  it('leaves requester_vip undefined when absent or not "true"', () => {
-    expect(parseReturnFilters('').requester_vip).toBeUndefined();
-    expect(parseReturnFilters(encodeURIComponent('requesterVip=false')).requester_vip).toBeUndefined();
-  });
-});

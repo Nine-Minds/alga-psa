@@ -90,10 +90,7 @@
         "description": "Välj vilka kolumner som ska ingå när du skriver ut kontakter."
       }
     },
-    "shareTooltip": "Skriv ut, importera och exportera",
-    "filters": {
-      "vipOnly": "Endast VIP"
-    }
+    "shareTooltip": "Skriv ut, importera och exportera"
   },
   "contactDetails": {
     "title": "Kontaktuppgifter",
@@ -523,12 +520,6 @@
       "emailExistsPrefix": "E-postadressen finns redan:",
       "invalidReferencePrefix": "Ogiltig referens:",
       "systemPrefix": "Systemfel:"
-    },
-    "vip": {
-      "label": "VIP"
-    },
-    "poc": {
-      "label": "Kontaktperson"
     }
   },
   "contactDetailsEdit": {
@@ -567,9 +558,7 @@
       "reportsTo": "Rapporterar till:",
       "reportsToPlaceholder": "Ingen chef",
       "reportsToClear": "Rensa",
-      "reportsToHelp": "Måste vara någon hos samma kund. Används för portalsynlighet (”min personal”) för ärenden, enheter och projekt.",
-      "vip": "VIP:",
-      "poc": "Kontaktperson:"
+      "reportsToHelp": "Måste vara någon hos samma kund. Används för portalsynlighet (”min personal”) för ärenden, enheter och projekt."
     },
     "loading": {
       "destinations": "Läser in destinationer…"
