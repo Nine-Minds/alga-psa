@@ -1412,10 +1412,10 @@
     "availableBadge": "Verfügbar: {{available}}",
     "availableByLocation": "Freier Bestand nach Standort",
     "freeOfOnHand": "{{free}} frei von {{onHand}}",
-    "stockHeld": "Nur {{free}} verfügbar. {{held}} vorrätige Stück sind für Kundenaufträge fest gesperrt und können hier nicht verwendet werden.",
+    "stockHeld": "Nur {{free}} verfügbar. {{held}} vorrätige Stück sind für Kundenaufträge oder Projekte fest gesperrt und können hier nicht verwendet werden.",
     "stockInsufficient": "Nur {{onHand}} auf Lager, {{requested}} angefordert.",
-    "reservedStockTitle": "Bestand ist für einen Kundenauftrag reserviert",
-    "reservedStockMessage": "Nur {{free}} dieses Produkts sind frei. {{reserved}} vorrätige Stück sind für Kundenaufträge reserviert, angefordert wurden {{requested}}. Wenn Sie sie trotzdem hinzufügen, entnehmen Sie Bestand, auf den ein Kundenauftrag zählt, und der Auftrag kann unterversorgt bleiben.",
+    "reservedStockTitle": "Bestand ist für einen Kundenauftrag oder ein Projekt reserviert",
+    "reservedStockMessage": "Nur {{free}} dieses Produkts sind frei. {{reserved}} vorrätige Stück sind für Kundenaufträge oder Projekte reserviert, angefordert wurden {{requested}}. Wenn Sie sie trotzdem hinzufügen, entnehmen Sie Bestand, auf den ein Kundenauftrag oder Projekt zählt, und es kann unterversorgt bleiben.",
     "reservedStockConfirm": "Trotzdem hinzufügen"
   },
   "watchList": {
@@ -1689,7 +1689,11 @@
       "ruleSubcategoryRequiresCategory": "Wählen Sie eine Kategorie aus, bevor Sie eine Unterkategorie wählen.",
       "ruleTooManyKeywords": "Verwenden Sie höchstens {{max}} Schlüsselwörter pro Regel.",
       "ruleKeywordTooLong": "Jedes Schlüsselwort darf höchstens {{max}} Zeichen lang sein.",
-      "ruleOriginInvalid": "Eine der ausgewählten Ticketquellen ist ungültig."
+      "ruleOriginInvalid": "Eine der ausgewählten Ticketquellen ist ungültig.",
+      "templateClientMismatch": "Diese Checklistenvorlage ist auf einen anderen Client beschränkt als den des Tickets.",
+      "templateClientInvalid": "Der ausgewählte Client wurde nicht gefunden.",
+      "ruleClientOutsideTemplateScope": "Diese Vorlage gehört zu einem Kunden, daher können ihre Regeln keine anderen Kunden ansprechen.",
+      "templateRulesTargetOtherClients": "Einige Regeln für automatische Anwendung dieser Vorlage zielen auf andere Kunden. Entfernen Sie diese Kunden aus den Regeln, bevor Sie die Vorlage einem Kunden zuordnen."
     }
   },
   "ticketSection": {

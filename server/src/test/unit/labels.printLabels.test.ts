@@ -19,7 +19,7 @@ const setup = (readable: string[], userType = 'internal') => {
   };
   const renderPdf = vi.fn(async () => ({ pdf: Buffer.from('%PDF'), labels: 1, sheets: 1 }));
   const deps: PrintLabelsDeps = {
-    providers: { 'ticket-work-tag': provider, 'asset-identity': undefined, 'stock-unit-identity': undefined },
+    providers: { 'ticket-work-tag': provider, 'asset-identity': undefined, 'stock-unit-identity': undefined, 'staging-container': undefined },
     renderPdf, describeClientError: () => null,
     resolveTemplate: vi.fn(async () => ({ ok: true as const, templateCode: 'standard-ticket-work-tag', templateAst: null })) as never,
     getLinkedAssetParts: vi.fn(async () => ({})) as never,
@@ -164,6 +164,83 @@ describe('printLabels', () => {
       status: 422,
       message: '2 of 3 labels cannot be printed',
       failures,
+    });
+  });
+
+  describe('mixed items (C6 bulk print)', () => {
+    const boxVm = (id: string): LabelViewModel => ({
+      labelClass: 'staging-container', entityType: 'staging_container', recordId: id,
+      url: `https://x.test/msp/projects/${C}/staging?containerId=${id}`, identifier: `PRJ-1-B0${id.slice(0, 1)}`,
+      code128Value: `PRJ-1-B0${id.slice(0, 1)}`, title: null, clientName: null, detail: null,
+      secondaryIdentifier: null, serialSuffix: null, sequence: { n: 1, total: 2 },
+    });
+    const mixedSetup = (readableBoxes: string[], readableTickets: string[]) => {
+      const s = setup(readableTickets);
+      const boxes: LabelViewModelProvider = {
+        entityType: 'staging_container', labelClass: 'staging-container',
+        getLabelViewModels: vi.fn(async (_c, ids) => ids.map((i) => (readableBoxes.includes(i) ? boxVm(i) : null))),
+      };
+      s.deps.providers['staging-container'] = boxes;
+      (s.deps.resolveTemplate as ReturnType<typeof vi.fn>).mockImplementation(async (_t: string, cls: string) => ({
+        ok: true as const, templateCode: `standard-${cls}`,
+      }));
+      return { ...s, boxes };
+    };
+
+    it('keeps request order across classes, one provider call per class, each with its own template', async () => {
+      const s = mixedSetup([A, B], [C]);
+      const r = await printLabels(s.deps, s.caller, {
+        items: [
+          { labelClass: 'staging-container', id: A },
+          { labelClass: 'ticket-work-tag', id: C },
+          { labelClass: 'staging-container', id: B },
+        ],
+      });
+      expect(r).toMatchObject({ ok: true, skipped: 0 });
+      expect(s.boxes.getLabelViewModels).toHaveBeenCalledTimes(1);
+      expect((s.boxes.getLabelViewModels as ReturnType<typeof vi.fn>).mock.calls[0][1]).toEqual([A, B]);
+      const items = (s.renderPdf.mock.calls[0] as unknown[])[1] as Array<{ viewModel: LabelViewModel; templateCode: string }>;
+      expect(items.map((i) => [i.viewModel.recordId, i.templateCode])).toEqual([
+        [A, 'standard-staging-container'],
+        [C, 'standard-ticket-work-tag'],
+        [B, 'standard-staging-container'],
+      ]);
+    });
+
+    it('skips and counts unreadable records; nothing readable is the uniform 404', async () => {
+      const s = mixedSetup([A], []);
+      const partial = await printLabels(s.deps, s.caller, {
+        items: [{ labelClass: 'staging-container', id: A }, { labelClass: 'ticket-work-tag', id: B }],
+      });
+      expect(partial).toMatchObject({ ok: true, skipped: 1 });
+      const none = await printLabels(s.deps, s.caller, { items: [{ labelClass: 'staging-container', id: B }] });
+      expect(none).toEqual({ ok: false, status: 404, message: 'Not found.' });
+    });
+
+    it('validates items, the shared cap, and refuses single-class options before any data read', async () => {
+      const s = mixedSetup([A], [A]);
+      for (const body of [
+        { items: [] },
+        { items: Array(201).fill({ labelClass: 'staging-container', id: A }) },
+        { items: [{ labelClass: 'nope', id: A }] },
+        { items: [{ labelClass: 'staging-container', id: 'x' }] },
+        { items: [{ labelClass: 'staging-container', id: A }], labelClass: 'ticket-work-tag', ids: [A] },
+        { items: [{ labelClass: 'staging-container', id: A }], templateId: 'standard-staging-container' },
+        { items: [{ labelClass: 'ticket-work-tag', id: A }], overrides: { title: 'x' } },
+      ]) {
+        expect(await printLabels(s.deps, s.caller, body)).toMatchObject({ ok: false, status: 400 });
+      }
+      expect(s.boxes.getLabelViewModels).not.toHaveBeenCalled();
+      expect(s.provider.getLabelViewModels).not.toHaveBeenCalled();
+    });
+
+    it('a mixed batch is all-or-nothing on render failure', async () => {
+      const s = mixedSetup([A], [C]);
+      s.renderPdf.mockRejectedValueOnce(new Error('1 of 2 labels cannot be printed'));
+      s.deps.describeClientError = (e) => ({ message: (e as Error).message });
+      expect(await printLabels(s.deps, s.caller, {
+        items: [{ labelClass: 'staging-container', id: A }, { labelClass: 'ticket-work-tag', id: C }],
+      })).toEqual({ ok: false, status: 422, message: '1 of 2 labels cannot be printed' });
     });
   });
 });

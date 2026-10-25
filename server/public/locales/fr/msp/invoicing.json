@@ -2534,7 +2534,8 @@
       "salesOrder": "Commande client",
       "packingSlip": "Bon de livraison",
       "pickList": "Liste de prélèvement",
-      "workTag": "Étiquette de travail / Label"
+      "workTag": "Étiquette de travail / Label",
+      "stagingManifest": "Manifeste de colisage"
     }
   },
   "errors": {

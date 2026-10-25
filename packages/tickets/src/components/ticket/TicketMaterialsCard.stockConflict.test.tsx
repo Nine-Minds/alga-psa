@@ -119,8 +119,8 @@ describe('TicketMaterialsCard stock reserved or held for sales orders (B1)', () 
 
     await openFormAndSubmit();
 
-    expect(await screen.findByText('Stock is reserved for a sales order')).toBeInTheDocument();
-    expect(screen.getByText(/Only 2 of this product is free\. 8 on hand is reserved for sales orders, and you asked for 5/)).toBeInTheDocument();
+    expect(await screen.findByText('Stock is reserved for a sales order or project')).toBeInTheDocument();
+    expect(screen.getByText(/Only 2 of this product is free\. 8 on hand is reserved for sales orders or projects, and you asked for 5/)).toBeInTheDocument();
     expect(vi.mocked(actions.addTicketMaterial).mock.calls[0][0]).not.toHaveProperty('allow_reserved_override');
 
     fireEvent.click(screen.getByRole('button', { name: 'Add anyway' }));
@@ -134,7 +134,7 @@ describe('TicketMaterialsCard stock reserved or held for sales orders (B1)', () 
 
     await openFormAndSubmit();
 
-    expect(await screen.findByText(/Only 3 available\. 7 on hand is on hard hold for sales orders/)).toBeInTheDocument();
+    expect(await screen.findByText(/Only 3 available\. 7 on hand is on hard hold for sales orders or projects/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add anyway' })).not.toBeInTheDocument();
     expect(actions.addTicketMaterial).toHaveBeenCalledTimes(1);
   });

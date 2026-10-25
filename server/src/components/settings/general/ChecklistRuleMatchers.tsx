@@ -42,6 +42,11 @@ interface ChecklistRuleMatchersProps {
   definitions: ChecklistRuleServiceRequestDefinitionOption[];
   onClientPicked: (clientId: string) => void;
   onChange: (patch: ChecklistRuleMatcherPatch) => void;
+  /**
+   * Name of the template's owning client, when it has one. Ownership already limits every rule to
+   * that client (and the server rejects other clients), so the client matcher is shown read-only.
+   */
+  ownerClientName?: string | null;
 }
 
 /** True when the rule has no filter at all, i.e. it matches every ticket. */
@@ -68,6 +73,7 @@ const ChecklistRuleMatchers: React.FC<ChecklistRuleMatchersProps> = ({
   definitions,
   onClientPicked,
   onChange,
+  ownerClientName,
 }) => {
   const { t } = useTranslation('msp/settings');
   const [keywordDraft, setKeywordDraft] = useState('');
@@ -106,6 +112,12 @@ const ChecklistRuleMatchers: React.FC<ChecklistRuleMatchersProps> = ({
     <div className="grid gap-3 md:grid-cols-2">
       <div className="space-y-2">
         <Label htmlFor={`checklist-template-rule-client-${index}`}>{t(`${P}.clients`)}</Label>
+        {ownerClientName != null ? (
+          <p id={`checklist-template-rule-client-${index}`} className="text-sm text-muted-foreground">
+            {t(`${P}.clientsFixedByTemplate`, { client: ownerClientName })}
+          </p>
+        ) : (
+        <>
         <ClientPicker
           id={`checklist-template-rule-client-${index}`}
           searchClients={searchClientsForPicker}
@@ -139,6 +151,8 @@ const ChecklistRuleMatchers: React.FC<ChecklistRuleMatchersProps> = ({
               );
             })}
           </div>
+        )}
+        </>
         )}
       </div>
 

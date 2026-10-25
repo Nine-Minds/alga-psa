@@ -96,7 +96,7 @@ async function withFulfillmentActionErrors<T>(work: () => Promise<T>): Promise<T
 }
 
 /** A serialized unit row joined with the hard-hold flag used by the poach guard (F084). */
-type CandidateUnit = IStockUnit & { foreign_hard_hold: boolean };
+type CandidateUnit = IStockUnit & { foreign_hard_hold: boolean; project_claim: boolean };
 
 export interface FulfillSalesOrderLineInput {
   /** Source location for non-serialized consume, or a filter for serialized FIFO. */
@@ -148,10 +148,14 @@ async function loadCandidateUnits(
     .select('u.*')
     .select(
       trx.raw(
-        `(u.allocated_so_line_id IS NOT NULL AND u.allocated_so_line_id <> ? AND so2.allocation_mode = 'hard') AS foreign_hard_hold`,
+        // A project staging claim names one specific serial that may already be on a label or a
+        // manifest, so it is never poachable (C6 D6), whatever its staging status.
+        `((u.allocated_so_line_id IS NOT NULL AND u.allocated_so_line_id <> ? AND so2.allocation_mode = 'hard')
+          OR u.allocated_staging_line_id IS NOT NULL) AS foreign_hard_hold`,
         [soLineId],
       ),
     )
+    .select(trx.raw('(u.allocated_staging_line_id IS NOT NULL) AS project_claim'))
     // LEVERAGE: pattern fifo-unit-order — allocation, fulfillment candidates, and this pick list share FIFO ordering.
     .orderByRaw('u.received_at ASC NULLS LAST, u.unit_id ASC');
 
@@ -203,8 +207,10 @@ export interface FulfillmentCandidateUnit {
   location_id: string | null;
   location_name: string | null;
   received_at: string | Date | null;
-  /** Hard-held by ANOTHER sales order — not selectable (F084 poach guard). */
+  /** Hard-held by ANOTHER sales order, or claimed by a project — not selectable (F084 poach guard, C6 D6). */
   foreign_hard_hold: boolean;
+  /** Claimed by project staging (C6): shown as allocated to a project, never selectable. */
+  allocated_to_project: boolean;
   /** Already allocated to this line — the FIFO default picks these first. */
   allocated_to_this_line: boolean;
   /** Soft-allocated to a different order — selectable, but labeled (F004). */
@@ -242,6 +248,7 @@ export const listFulfillmentCandidateUnits = withAuth(
           location_name: u.location_id ? locationName.get(u.location_id) ?? null : null,
           received_at: u.received_at ?? null,
           foreign_hard_hold: Boolean(u.foreign_hard_hold),
+          allocated_to_project: Boolean(u.project_claim),
           allocated_to_this_line: u.allocated_so_line_id === soLineId,
           foreign_soft_allocated: Boolean(
             u.allocated_so_line_id && u.allocated_so_line_id !== soLineId && !u.foreign_hard_hold,
@@ -339,6 +346,9 @@ export const fulfillSalesOrderLine = withAuth(
           picked = explicit.map((id) => {
             const u = byId.get(id);
             if (!u) throw new Error(`Unit ${id} is not available for this product/line`);
+            if (u.project_claim) {
+              throw new Error(`Unit ${id} is allocated to project staging and cannot be poached`);
+            }
             if (u.foreign_hard_hold) {
               throw new Error(`Unit ${id} is hard-held by another sales order and cannot be poached`);
             }

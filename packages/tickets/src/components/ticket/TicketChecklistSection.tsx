@@ -359,7 +359,7 @@ const TicketChecklistSection: React.FC<TicketChecklistSectionProps> = ({
     if (templatesLoaded || templatesLoading) return;
     setTemplatesLoading(true);
     try {
-      const fetched = await getChecklistTemplates();
+      const fetched = await getChecklistTemplates({ forTicketId: ticketId });
       setTemplates(fetched);
       setTemplatesLoaded(true);
     } catch (error) {
@@ -367,7 +367,7 @@ const TicketChecklistSection: React.FC<TicketChecklistSectionProps> = ({
     } finally {
       setTemplatesLoading(false);
     }
-  }, [t, templatesLoaded, templatesLoading]);
+  }, [t, templatesLoaded, templatesLoading, ticketId]);
 
   const handleApplyTemplate = useCallback(
     async (template: IChecklistTemplate) => {

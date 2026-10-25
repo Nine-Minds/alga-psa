@@ -1412,10 +1412,10 @@
     "availableBadge": "Beschikbaar: {{available}}",
     "availableByLocation": "Vrije voorraad per locatie",
     "freeOfOnHand": "{{free}} vrij van {{onHand}}",
-    "stockHeld": "Slechts {{free}} beschikbaar. {{held}} op voorraad is vastgezet voor verkooporders en kan hier niet worden gebruikt.",
+    "stockHeld": "Slechts {{free}} beschikbaar. {{held}} op voorraad is vastgezet voor verkooporders of projecten en kan hier niet worden gebruikt.",
     "stockInsufficient": "Slechts {{onHand}} op voorraad, {{requested}} gevraagd.",
-    "reservedStockTitle": "Voorraad is gereserveerd voor een verkooporder",
-    "reservedStockMessage": "Slechts {{free}} van dit product is vrij. {{reserved}} op voorraad is gereserveerd voor verkooporders en u vroeg er {{requested}}. Als u het toch toevoegt, neemt u voorraad af waar een verkooporder op rekent en kan die order tekortkomen.",
+    "reservedStockTitle": "Voorraad is gereserveerd voor een verkooporder of project",
+    "reservedStockMessage": "Slechts {{free}} van dit product is vrij. {{reserved}} op voorraad is gereserveerd voor verkooporders of projecten en u vroeg er {{requested}}. Als u het toch toevoegt, neemt u voorraad af waar een verkooporder of project op rekent en kan die tekortkomen.",
     "reservedStockConfirm": "Toch toevoegen"
   },
   "watchList": {
@@ -1689,7 +1689,11 @@
       "ruleSubcategoryRequiresCategory": "Selecteer een categorie voordat u een subcategorie kiest.",
       "ruleTooManyKeywords": "Gebruik maximaal {{max}} trefwoorden per regel.",
       "ruleKeywordTooLong": "Elk trefwoord mag maximaal {{max}} tekens bevatten.",
-      "ruleOriginInvalid": "Een van de geselecteerde ticketbronnen is ongeldig."
+      "ruleOriginInvalid": "Een van de geselecteerde ticketbronnen is ongeldig.",
+      "templateClientMismatch": "Dit checklistsjabloon is beperkt tot een andere klant dan die van het ticket.",
+      "templateClientInvalid": "De geselecteerde klant is niet gevonden.",
+      "ruleClientOutsideTemplateScope": "Dit sjabloon hoort bij één klant, dus de regels kunnen geen andere klanten selecteren.",
+      "templateRulesTargetOtherClients": "Sommige regels voor automatisch toepassen van dit sjabloon richten zich op andere klanten. Verwijder die klanten uit de regels voordat u het sjabloon aan één klant toewijst."
     }
   },
   "ticketSection": {

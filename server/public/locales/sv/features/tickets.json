@@ -1420,10 +1420,10 @@
     "availableBadge": "Tillgängligt: {{available}}",
     "availableByLocation": "Fritt lager per plats",
     "freeOfOnHand": "{{free}} lediga av {{onHand}}",
-    "stockHeld": "Bara {{free}} tillgängliga. {{held}} i lager är hårt spärrade för försäljningsorder och kan inte användas här.",
+    "stockHeld": "Bara {{free}} tillgängliga. {{held}} i lager är hårt spärrade för försäljningsorder eller projekt och kan inte användas här.",
     "stockInsufficient": "Bara {{onHand}} i lager, {{requested}} begärda.",
-    "reservedStockTitle": "Lagret är reserverat för en försäljningsorder",
-    "reservedStockMessage": "Bara {{free}} av den här produkten är lediga. {{reserved}} i lager är reserverade för försäljningsorder och du begärde {{requested}}. Om du lägger till det ändå tas lager som en försäljningsorder räknar med, och ordern kan bli underfylld.",
+    "reservedStockTitle": "Lagret är reserverat för en försäljningsorder eller ett projekt",
+    "reservedStockMessage": "Bara {{free}} av den här produkten är lediga. {{reserved}} i lager är reserverade för försäljningsorder eller projekt och du begärde {{requested}}. Om du lägger till det ändå tas lager som en försäljningsorder eller ett projekt räknar med, och det kan bli underfyllt.",
     "reservedStockConfirm": "Lägg till ändå"
   },
   "watchList": {
@@ -1697,7 +1697,11 @@
       "ruleSubcategoryRequiresCategory": "Välj en kategori innan du väljer en underkategori.",
       "ruleTooManyKeywords": "Använd högst {{max}} nyckelord per regel.",
       "ruleKeywordTooLong": "Varje nyckelord får vara högst {{max}} tecken långt.",
-      "ruleOriginInvalid": "En av de valda ärendekällorna är ogiltig."
+      "ruleOriginInvalid": "En av de valda ärendekällorna är ogiltig.",
+      "templateClientMismatch": "Den här checklistmallen är begränsad till en annan kund än ärendets kund.",
+      "templateClientInvalid": "Den valda kunden hittades inte.",
+      "ruleClientOutsideTemplateScope": "Den här mallen tillhör en kund, så dess regler kan inte rikta sig mot andra kunder.",
+      "templateRulesTargetOtherClients": "Några av mallens regler för automatisk tillämpning riktar sig mot andra kunder. Ta bort de kunderna från reglerna innan du kopplar mallen till en kund."
     }
   },
   "ticketSection": {

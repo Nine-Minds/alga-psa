@@ -1713,7 +1713,11 @@
       "submit": "Repor no estoque"
     },
     "printLabel": "Imprimir etiqueta",
-    "printWithTemplate": "Imprimir com {{code}}"
+    "printWithTemplate": "Imprimir com {{code}}",
+    "claimant": {
+      "project": "Projeto {{number}}",
+      "salesOrder": "Pedido de venda {{number}}"
+    }
   },
   "transfers": {
     "addLine": "Adicionar Linha",

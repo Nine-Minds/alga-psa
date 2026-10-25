@@ -2,6 +2,7 @@
 
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { Knex } from 'knex';
+import { releaseStagingForTask } from '@alga-psa/inventory/lib';
 import ProjectTaskModel from '../models/projectTask';
 import ProjectModel from '@alga-psa/projects/models/project';
 import TaskTypeModel from '../models/taskType';
@@ -59,15 +60,7 @@ import {
   buildProjectTaskUpdatedPayload,
   buildProjectTaskAdditionalAgentAssignedPayload,
 } from '@alga-psa/workflow-streams';
-import {
-  BuiltinAuthorizationKernelProvider,
-  BundleAuthorizationKernelProvider,
-  RequestLocalAuthorizationCache,
-  createAuthorizationKernel,
-  type AuthorizationRecord,
-  type AuthorizationSubject,
-} from '@alga-psa/authorization/kernel';
-import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';
 import {
   actionError,
   actionErrorFromValidationIssue,
@@ -318,110 +311,6 @@ async function checkPermission(user: IUser, resource: string, action: string, kn
     if (!hasPermissionResult) {
         throw new Error(`Permission denied: Cannot ${action} ${resource}`);
     }
-}
-
-function extractRoleIdsFromUser(user: IUserWithRoles): string[] {
-    if (!Array.isArray(user.roles)) {
-        return [];
-    }
-
-    return user.roles
-        .map((role) => {
-            if (typeof role === 'string') {
-                return role;
-            }
-            return typeof role?.role_id === 'string' ? role.role_id : null;
-        })
-        .filter((value): value is string => Boolean(value));
-}
-
-async function resolveAuthorizationSubjectForUser(
-    trx: Knex.Transaction,
-    tenant: string,
-    user: IUserWithRoles
-): Promise<AuthorizationSubject> {
-    let roleIds = extractRoleIdsFromUser(user);
-    if (roleIds.length === 0) {
-        try {
-            const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
-                .where({ user_id: user.user_id })
-                .select<{ role_id: string }[]>('role_id');
-            roleIds = roleRows.map((row) => row.role_id);
-        } catch {
-            roleIds = [];
-        }
-    }
-
-    const [teamRows, managedRows] = await Promise.all([
-        tenantScopedTable(trx, 'team_members', tenant).where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
-        tenantScopedTable(trx, 'users', tenant).where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
-    ]);
-
-    return {
-        tenant,
-        userId: user.user_id,
-        userType: user.user_type,
-        roleIds,
-        teamIds: teamRows.map((row) => row.team_id),
-        managedUserIds: managedRows.map((row) => row.user_id),
-        clientId: user.clientId ?? null,
-        portfolioClientIds: user.clientId ? [user.clientId] : [],
-    };
-}
-
-function toProjectAuthorizationRecord(project: { project_id?: string | null; client_id?: string | null; assigned_to?: string | null }): AuthorizationRecord {
-    const assignedUserIds =
-        typeof project.assigned_to === 'string' && project.assigned_to.length > 0 ? [project.assigned_to] : [];
-
-    return {
-        id: project.project_id ?? null,
-        ownerUserId: project.assigned_to ?? null,
-        assignedUserIds,
-        clientId: project.client_id ?? null,
-    };
-}
-
-async function createProjectReadAuthorizer(
-    trx: Knex.Transaction,
-    tenant: string,
-    user: IUserWithRoles
-): Promise<(project: { project_id?: string | null; client_id?: string | null; assigned_to?: string | null }) => Promise<boolean>> {
-    const subject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
-    const authorizationKernel = createAuthorizationKernel({
-        builtinProvider: new BuiltinAuthorizationKernelProvider(),
-        bundleProvider: new BundleAuthorizationKernelProvider({
-            resolveRules: async (input) => {
-                try {
-                    return await resolveBundleNarrowingRulesForEvaluation(trx, input);
-                } catch {
-                    return [];
-                }
-            },
-        }),
-        rbacEvaluator: async () => true,
-    });
-    const requestCache = new RequestLocalAuthorizationCache();
-
-    return async (project): Promise<boolean> => {
-        const projectId = project.project_id;
-        if (!projectId) {
-            return false;
-        }
-
-        const decision = await authorizationKernel.authorizeResource({
-            subject,
-            resource: {
-                type: 'project',
-                action: 'read',
-                id: projectId,
-            },
-            record: toProjectAuthorizationRecord(project),
-            requestCache,
-            knex: trx,
-        });
-
-        return decision.allowed;
-    };
 }
 
 async function isProjectReadAdmin(
@@ -1198,6 +1087,9 @@ export const deleteTask = withAuth(async (
             }
 
             await ProjectTaskModel.deleteChecklistItems(trx, tenant, taskId);
+
+            // C6: return staging claims on the task (and detach installed lines / boxes) so nothing is left phantom-claimed.
+            await releaseStagingForTask(trx, tenant, taskId, user.user_id);
 
             await ProjectTaskModel.deleteTask(trx, tenant, taskId);
 

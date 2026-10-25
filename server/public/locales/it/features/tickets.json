@@ -1412,10 +1412,10 @@
     "availableBadge": "Disponibile: {{available}}",
     "availableByLocation": "Scorte libere per ubicazione",
     "freeOfOnHand": "{{free}} libere su {{onHand}}",
-    "stockHeld": "Solo {{free}} disponibili. {{held}} in giacenza sono bloccate in modo definitivo per ordini di vendita e non possono essere usate qui.",
+    "stockHeld": "Solo {{free}} disponibili. {{held}} in giacenza sono bloccate in modo definitivo per ordini di vendita o progetti e non possono essere usate qui.",
     "stockInsufficient": "Solo {{onHand}} in giacenza, {{requested}} richiesti.",
-    "reservedStockTitle": "Le scorte sono riservate a un ordine di vendita",
-    "reservedStockMessage": "Solo {{free}} di questo prodotto sono libere. {{reserved}} in giacenza sono riservate a ordini di vendita e ne hai richiesti {{requested}}. Aggiungerlo comunque sottrae scorte su cui conta un ordine di vendita e può lasciarlo incompleto.",
+    "reservedStockTitle": "Le scorte sono riservate a un ordine di vendita o a un progetto",
+    "reservedStockMessage": "Solo {{free}} di questo prodotto sono libere. {{reserved}} in giacenza sono riservate a ordini di vendita o progetti e ne hai richiesti {{requested}}. Aggiungerlo comunque sottrae scorte su cui conta un ordine di vendita o un progetto e può lasciarlo incompleto.",
     "reservedStockConfirm": "Aggiungi comunque"
   },
   "watchList": {
@@ -1689,7 +1689,11 @@
       "ruleSubcategoryRequiresCategory": "Seleziona una categoria prima di scegliere una sottocategoria.",
       "ruleTooManyKeywords": "Usi al massimo {{max}} parole chiave per regola.",
       "ruleKeywordTooLong": "Ogni parola chiave può avere al massimo {{max}} caratteri.",
-      "ruleOriginInvalid": "Una delle origini ticket selezionate non è valida."
+      "ruleOriginInvalid": "Una delle origini ticket selezionate non è valida.",
+      "templateClientMismatch": "Questo modello di checklist è limitato a un cliente diverso da quello del ticket.",
+      "templateClientInvalid": "Il cliente selezionato non è stato trovato.",
+      "ruleClientOutsideTemplateScope": "Questo modello appartiene a un cliente, quindi le sue regole non possono riguardare altri clienti.",
+      "templateRulesTargetOtherClients": "Alcune regole di applicazione automatica di questo modello riguardano altri clienti. Rimuovi quei clienti dalle regole prima di assegnare il modello a un cliente."
     }
   },
   "ticketSection": {

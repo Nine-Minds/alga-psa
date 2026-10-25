@@ -210,7 +210,10 @@
             "title": "Zadanie projektu"
           }
         },
-        "fallbackTitle": "Szczegóły projektu"
+        "fallbackTitle": "Szczegóły projektu",
+        "staging": {
+          "title": "Przygotowanie projektu"
+        }
       },
       "templates": {
         "layout": {

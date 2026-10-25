@@ -1420,10 +1420,10 @@
     "availableBadge": "Available: {{available}}",
     "availableByLocation": "Free stock by location",
     "freeOfOnHand": "{{free}} free of {{onHand}}",
-    "stockHeld": "Only {{free}} available. {{held}} on hand is on hard hold for sales orders and can't be used here.",
+    "stockHeld": "Only {{free}} available. {{held}} on hand is on hard hold for sales orders or projects and can't be used here.",
     "stockInsufficient": "Only {{onHand}} on hand, {{requested}} requested.",
-    "reservedStockTitle": "Stock is reserved for a sales order",
-    "reservedStockMessage": "Only {{free}} of this product is free. {{reserved}} on hand is reserved for sales orders, and you asked for {{requested}}. Adding it anyway takes stock a sales order is counting on and may leave that order short.",
+    "reservedStockTitle": "Stock is reserved for a sales order or project",
+    "reservedStockMessage": "Only {{free}} of this product is free. {{reserved}} on hand is reserved for sales orders or projects, and you asked for {{requested}}. Adding it anyway takes stock a sales order or project is counting on and may leave it short.",
     "reservedStockConfirm": "Add anyway"
   },
   "watchList": {
@@ -1697,7 +1697,11 @@
       "ruleSubcategoryRequiresCategory": "Select a category before choosing a subcategory.",
       "ruleTooManyKeywords": "Use at most {{max}} keywords per rule.",
       "ruleKeywordTooLong": "Keep each keyword to {{max}} characters or fewer.",
-      "ruleOriginInvalid": "One of the selected ticket sources is not valid."
+      "ruleOriginInvalid": "One of the selected ticket sources is not valid.",
+      "templateClientMismatch": "This checklist template is limited to a different client than this ticket's client.",
+      "templateClientInvalid": "The selected client was not found.",
+      "ruleClientOutsideTemplateScope": "This template belongs to one client, so its rules cannot target other clients.",
+      "templateRulesTargetOtherClients": "Some of this template's auto-apply rules target other clients. Remove those clients from the rules before assigning the template to one client."
     }
   },
   "ticketSection": {

@@ -5,7 +5,7 @@ import { IClient, IProject, IProjectPhase, IUserWithRoles } from '@alga-psa/type
 import { ITag } from '@alga-psa/types';
 import HoursProgressBar from './HoursProgressBar';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
-import { Download, Edit2, Mail, Printer, Save, Settings2 } from 'lucide-react';
+import { Download, Edit2, Mail, Package, Printer, Save, Settings2 } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/ShareActionsMenu';
@@ -248,6 +248,17 @@ export default function ProjectInfo({
             onClick={handleMaterialsClick}
           >
             {t('projectInfo.materials', 'Materials')}
+          </Button>
+          <Button
+            id="project-staging-button"
+            variant="outline"
+            size="sm"
+            asChild
+          >
+            <a href={`/msp/projects/${project.project_id}/staging`}>
+              <Package className="h-4 w-4 mr-2" />
+              {t('projectInfo.staging', 'Staging')}
+            </a>
           </Button>
           <Button
             id="edit-project-button"

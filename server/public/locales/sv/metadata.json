@@ -406,6 +406,9 @@
           "detail": {
             "title": "Projektuppgift"
           }
+        },
+        "staging": {
+          "title": "Projektförberedelse"
         }
       },
       "templates": {

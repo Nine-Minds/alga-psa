@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { PREFERRED_PAYMENT_METHODS } from '@alga-psa/shared/billingClients/paymentPreferences';
 import {
   uuidSchema,
   dateSchema,
@@ -165,6 +166,8 @@ const baseInvoiceSchema = z.object({
   client_id: uuidSchema,
   invoice_date: invoiceDateSchema,
   due_date: dueDateSchema,
+  payment_method: z.enum(PREFERRED_PAYMENT_METHODS).nullable().optional(),
+  billing_profile_id: uuidSchema.nullable().optional(),
   subtotal: monetaryAmountSchema,
   tax: monetaryAmountSchema,
   total_amount: monetaryAmountSchema,
@@ -400,6 +403,7 @@ const generateInvoicePDFSchema = z.object({
 // Manual invoice request schema
 const manualInvoiceRequestSchema = z.object({
   clientId: uuidSchema,
+  billingProfileId: uuidSchema.optional(),
   items: z.array(manualInvoiceItemSchema).min(1),
   expirationDate: z.string().optional(),
   isPrepayment: z.boolean().default(false)

@@ -984,7 +984,8 @@
         "description": "Beschrijving",
         "items": "Artikelen",
         "status": "Status",
-        "actions": "Acties"
+        "actions": "Acties",
+        "scope": "Beschikbaar voor"
       },
       "statusLabels": {
         "active": "Actief",
@@ -1002,7 +1003,9 @@
         "down": "Omlaag",
         "remove": "Verwijderen",
         "addItem": "Item toevoegen",
-        "addRule": "Regel toevoegen"
+        "addRule": "Regel toevoegen",
+        "duplicateToClient": "Dupliceren naar klant…",
+        "duplicate": "Dupliceren"
       },
       "fields": {
         "name": {
@@ -1032,8 +1035,10 @@
           "priority": "Prioriteit",
           "any": "Willekeurig",
           "appliesToAll": "Geldt voor alle tickets",
+          "appliesToAllClientTickets": "Geldt voor alle tickets van {{client}}",
           "clients": "Klanten",
           "clientsAny": "Elke klant",
+          "clientsFixedByTemplate": "Alleen {{client}} (bepaald door de klant van het sjabloon)",
           "clientsAddAnother": "Nog een klant toevoegen",
           "removeClient": "{{name}} verwijderen",
           "origins": "Bron van het ticket",
@@ -1057,7 +1062,13 @@
             "inbound_email": "Inkomende e-mail",
             "api": "API",
             "recurring": "Terugkerende planning"
-          }
+          },
+          "clientScopedWarning": "Dit sjabloon is beperkt tot {{client}}: deze regels gelden alleen voor tickets van {{client}}."
+        },
+        "availableTo": {
+          "label": "Beschikbaar voor",
+          "clear": "Alle klanten",
+          "help": "Laat op Alle klanten staan om deze sjabloon bij elk ticket aan te bieden, of kies een klant om hem tot de tickets van die klant te beperken."
         }
       },
       "dialog": {
@@ -1065,13 +1076,17 @@
         "editTemplate": "Checklistsjabloon bewerken",
         "createFirstHelp": "Maak eerst het sjabloon aan en voeg daarna checklistitems en automatisch-toepassenregels toe.",
         "deleteTitle": "Checklistsjabloon verwijderen",
-        "deleteMessage": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Checklists die al aan tickets zijn toegevoegd, worden niet beïnvloed."
+        "deleteMessage": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Checklists die al aan tickets zijn toegevoegd, worden niet beïnvloed.",
+        "duplicateTitle": "Dupliceren naar klant",
+        "duplicateHelp": "Kopieer \"{{name}}\" en de bijbehorende items naar een nieuw sjabloon dat tot één klant is beperkt. De kopie is onafhankelijk: latere wijzigingen aan het ene sjabloon hebben geen invloed op het andere.",
+        "duplicateClientPlaceholder": "Selecteer een klant"
       },
       "messages": {
         "success": {
           "created": "Checklistsjabloon succesvol aangemaakt",
           "updated": "Checklistsjabloon succesvol bijgewerkt",
-          "deleted": "Checklistsjabloon succesvol verwijderd"
+          "deleted": "Checklistsjabloon succesvol verwijderd",
+          "duplicated": "Checklistsjabloon naar klant gedupliceerd"
         },
         "error": {
           "fetchFailed": "Kan checklistsjablonen niet ophalen",
@@ -1081,8 +1096,18 @@
           "deleteFailed": "Kan checklistsjabloon niet verwijderen",
           "updateStatusFailed": "Kan sjabloonstatus niet bijwerken",
           "itemSaveFailed": "Kan checklistitem niet opslaan",
-          "ruleSaveFailed": "Kan automatisch-toepassenregel niet opslaan"
+          "ruleSaveFailed": "Kan automatisch-toepassenregel niet opslaan",
+          "duplicateFailed": "Checklistsjabloon dupliceren mislukt"
         }
+      },
+      "scope": {
+        "allClients": "Alle klanten",
+        "unknownClient": "Onbekende klant"
+      },
+      "filter": {
+        "client": "Klant",
+        "allClients": "Alle klanten",
+        "clear": "Filter wissen"
       }
     },
     "externalSystems": {

@@ -406,6 +406,9 @@
           "detail": {
             "title": "Project Task"
           }
+        },
+        "staging": {
+          "title": "Project Staging"
         }
       },
       "templates": {

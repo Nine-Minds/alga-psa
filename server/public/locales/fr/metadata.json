@@ -179,7 +179,10 @@
             "title": "Tâche du projet"
           }
         },
-        "fallbackTitle": "Détails du projet"
+        "fallbackTitle": "Détails du projet",
+        "staging": {
+          "title": "Préparation du projet"
+        }
       },
       "templates": {
         "layout": {

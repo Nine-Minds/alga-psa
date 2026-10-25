@@ -3,6 +3,7 @@
  * POST /api/labels/pdf — render one or more records as a label PDF (one label per page, or n-up).
  *
  * Body: { labelClass, ids: string[], templateId?, templateCode?, layout?, overrides?, linkedAssetId? }
+ *    or { items: Array<{ labelClass, id }>, layout? }  (mixed classes in one PDF, in order; C6 bulk print)
  *   templateId: a tenant custom work-tag template id or a standard code (supersedes templateCode).
  *   overrides / linkedAssetId: single ticket only (see printLabels).
  * Unreadable records are skipped and counted in the X-Label-Skipped response header; if none is readable,
@@ -30,17 +31,19 @@ import { getTicketLinkedAssetLabelParts } from '@alga-psa/assets/lib/ticketLinke
 import { assetLabelViewModelProvider } from '@alga-psa/assets/lib/labelViewModelProvider';
 import { stockUnitLabelViewModelProvider } from '@alga-psa/inventory/lib/labelViewModelProvider';
 import { ticketLabelViewModelProvider } from '@alga-psa/tickets/lib/labelViewModelProvider';
+import { stagingContainerLabelViewModelProvider } from '@alga-psa/projects/lib/stagingLabelViewModelProvider';
 import { BarcodeError } from '@alga-psa/billing/lib/invoice-template-ast/barcode/constraints';
 import type { LabelClass, LabelViewModelProvider } from '@alga-psa/types';
 
 import { printLabels, type PrintLabelsDeps } from '../../../../lib/labels/printLabels';
 
-// C1 ships providers for ticket, asset and stock unit. RMA / project / project-task have no label
-// class and no data access yet (see ee/docs/plans/2026-10-20-label-rendering-foundation).
+// C1 ships providers for ticket, asset and stock unit; C6 adds project staging boxes. RMA / project /
+// project-task have no label class yet (see ee/docs/plans/2026-10-20-label-rendering-foundation).
 const PROVIDERS: Record<LabelClass, LabelViewModelProvider> = {
   'ticket-work-tag': ticketLabelViewModelProvider,
   'asset-identity': assetLabelViewModelProvider,
   'stock-unit-identity': stockUnitLabelViewModelProvider,
+  'staging-container': stagingContainerLabelViewModelProvider,
 };
 
 const deps: PrintLabelsDeps = {
