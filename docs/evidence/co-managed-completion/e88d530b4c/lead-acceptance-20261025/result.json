@@ -1,0 +1,147 @@
+{
+  "observedAt": "2026-10-25T03:31:45.828076+00:00",
+  "applicationBuildRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+  "buildId": "build-1792894631786",
+  "repairCommit": "88b592d776",
+  "reviewReady": false,
+  "recordingReady": false,
+  "recordings": {
+    "genuineMedia": 14,
+    "browserPlaybackVerified": 14,
+    "browserChapterSeekVerified": 14,
+    "fullyAcceptedGuideScenarios": 0,
+    "scenarioStatus": "partial",
+    "inventory": "video-coverage.json",
+    "publishedRoot": "http://100.82.172.57:8874/"
+  },
+  "persistedOutcomes": [
+    {
+      "area": "multipart and acceptance",
+      "receipt": {
+        "at": "2026-10-25T02:53:17.760Z",
+        "tenant": "a967fcd6-2fa7-4c16-833e-91a1ed6855ff",
+        "exportedAction": "createBoard",
+        "contentType": "multipart/form-data",
+        "nextActionHeader": false,
+        "status": 500,
+        "redirected": false,
+        "response": "Internal Server Error"
+      },
+      "rawEvidence": "http://100.82.172.57:8874/evidence/lead-acceptance-20261025/01-onboarding-activation/pending-action.json"
+    },
+    {
+      "area": "customer portable export",
+      "receipt": {
+        "downloadName": "alga-workspace-5bf14599-2418-499b-9b3d-a7011e9d4e19.alga-backup",
+        "sizeBytes": 192878,
+        "sha256": "f16ff680ec0447b244bafc3879a13c7d4632d344d394ed497b782dc341b53e4f",
+        "customerTenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+        "privateFileRetained": true
+      },
+      "rawEvidence": "http://100.82.172.57:8874/evidence/lead-acceptance-20261025/11-export-restore-and-upgrade/download-receipt.json"
+    },
+    {
+      "area": "native comment attachment bytes",
+      "receipt": {
+        "fileId": "1af467dc-7262-49ea-a8ba-83876a554a7a",
+        "httpStatus": 200,
+        "sizeBytes": 36,
+        "sha256": "4886e9fd444d495b54942d67b449682820e81a00adfcbe4a5011c295b5af7c1a",
+        "matchesOriginal": true
+      },
+      "rawEvidence": "http://100.82.172.57:8874/evidence/lead-acceptance-20261025/main-native-confirmed/native-download.json"
+    },
+    {
+      "area": "private note isolation",
+      "receipt": {
+        "marker": "CM-LEAD-LIVE-1792896302990",
+        "distinctRecipientLiveDisplay": false,
+        "customerPrivateAfterReload": true,
+        "crossOrganizationDenials": true
+      },
+      "rawEvidence": "http://100.82.172.57:8874/evidence/lead-acceptance-20261025/07-conversations-final/results.json"
+    },
+    {
+      "area": "pending/active relationship",
+      "databaseRead": " state  |          accepted_at          \n--------+-------------------------------\n active | 2026-10-25 02:53:17.815082+00\n(1 row)\n\n",
+      "rawEvidence": "http://100.82.172.57:8874/evidence/lead-acceptance-20261025/01-onboarding-activation/accepted-state.txt"
+    },
+    {
+      "area": "commercial effort",
+      "databaseRead": "                tenant                |               entry_id               | work_item_type | billing_mode | billable_duration |                      notes                       \n--------------------------------------+--------------------------------------+----------------+--------------+-------------------+--------------------------------------------------\n 24ac76c8-df59-4b10-8371-c56222904580 | 9bcd33ca-2010-4582-bae0-0c6886f38da2 | co_managed     | commercial   |                15 | CM-LEAD 15 minute commercial acceptance 20261025\n(1 row)\n\n",
+      "rawEvidence": "http://100.82.172.57:8874/evidence/lead-acceptance-20261025/09-time-persisted/persisted-time.txt"
+    },
+    {
+      "area": "customer project/task",
+      "databaseRead": "              project_id              |               task_id                |      task_name      |                tenant                \n--------------------------------------+--------------------------------------+---------------------+--------------------------------------\n 943acf31-95f4-47b0-8818-9de8977e5abd | 32bde60e-9e8b-4584-8926-8e7fb627d710 | CM Lead shared task | 1f98df77-cd15-44c2-8f4d-42ff52d01e84\n(1 row)\n\n",
+      "rawEvidence": "http://100.82.172.57:8874/evidence/lead-acceptance-20261025/06-projects-task-sharing/persisted-state.txt"
+    },
+    {
+      "area": "disposable closure",
+      "databaseRead": "           relationship_id            |   state    |          ended_at          \n--------------------------------------+------------+----------------------------\n a7905c3f-f89f-47bc-969f-0e3b55e6022a | terminated | 2026-10-25 02:58:45.843+00\n(1 row)\n\n seats |  state   |        released_at         \n-------+----------+----------------------------\n     1 | released | 2026-10-25 02:58:45.843+00\n(1 row)\n\n sealed_manifests \n------------------\n                1\n(1 row)\n\n",
+      "rawEvidence": "http://100.82.172.57:8874/evidence/lead-acceptance-20261025/10-departure-retained/closure-state.txt"
+    },
+    {
+      "area": "handoffs",
+      "databaseRead": " ticket_number | revision | responsibility | assigned_to | assigned_team_id | response_state | handoffs \n---------------+----------+----------------+-------------+------------------+----------------+----------\n 000001        |       25 | customer       |             |                  |                |       21\n 000002        |       26 | msp            |             |                  |                |       21\n(2 rows)\n\n",
+      "rawEvidence": "http://100.82.172.57:8874/evidence/lead-acceptance-20261025/05-customer-ticket-loop/work-state.txt"
+    },
+    {
+      "area": "Qualified task mutation, note and customer revocation/restoration",
+      "databaseRead": "               task_id                |      task_name      |                tenant                \n--------------------------------------+---------------------+--------------------------------------\n 32bde60e-9e8b-4584-8926-8e7fb627d710 | CM Lead shared task | 1f98df77-cd15-44c2-8f4d-42ff52d01e84\n(1 row)\n\n              project_id              | can_collaborate \n--------------------------------------+-----------------\n 943acf31-95f4-47b0-8818-9de8977e5abd | t\n(1 row)\n\n",
+      "rawEvidence": "http://100.82.172.57:8874/evidence/lead-acceptance-20261025/06-task-boundaries-final/recording.json"
+    },
+    {
+      "area": "Task shared/private file authorization",
+      "receipt": {
+        "sharedFile": "cm-shared-task.txt",
+        "sharedBytes": 27,
+        "sha256": "cd50facc415106d3433beaa179ee69f490dd891ef47a16e33c7a3613808e82e5",
+        "customerSharedStatus": 200,
+        "customerMspPrivateStatus": 404,
+        "mspPrivateIntegrity": true
+      },
+      "rawEvidence": "http://100.82.172.57:8874/evidence/lead-acceptance-20261025/07-task-attachment-boundaries/recording.json"
+    },
+    {
+      "area": "Customer operational effort",
+      "databaseRead": "                tenant                |               entry_id               | work_item_type | billing_mode |  elapsed_minutes   | billable_duration | service_id | contract_line_id \n--------------------------------------+--------------------------------------+----------------+--------------+--------------------+-------------------+------------+------------------\n 1f98df77-cd15-44c2-8f4d-42ff52d01e84 | d09b520a-ac72-4213-b28c-65c4fbfc771f | project_task   | operational  | 5.0000000000000000 |                 0 |            | \n(1 row)\n\n",
+      "rawEvidence": "http://100.82.172.57:8874/evidence/lead-acceptance-20261025/09-operational-save-final/recording.json"
+    },
+    {
+      "area": "Distinct-recipient live repair development verification",
+      "receipt": {
+        "message": "CM-LEAD LIVE HINT REPAIR 1792898627713",
+        "recipient": "alice@whiterabbit.test",
+        "sender": "qa@emeraldcity.oz",
+        "documentNavigated": false,
+        "liveDisplay": true,
+        "mode": "development",
+        "sourceRepairUncommitted": true,
+        "productionVerified": false
+      },
+      "rawEvidence": "http://100.82.172.57:8874/evidence/lead-acceptance-20261025/live-repair-development/recording.json"
+    }
+  ],
+  "remaining": [
+    "Distinct customer live delivery failed on the e88d production build. Repair c3fb35abf9 passes focused transaction tests and actual development two-actor display without reload; production rebuild/retest remains required.",
+    "Real Microsoft application/callback, customer provider persistence/inbound/directory/revocation unverified; no production emulator override.",
+    "Task edit/note and project revocation/restoration plus posted shared/private files now have runtime evidence. Full requester, thread-disclosure and removal/recovery coverage remains unverified.",
+    "Customer operational effort and MSP commercial effort now have separate persisted ownership receipts. Stopwatch, full-sheet approval and invoice reconciliation remain unverified.",
+    "Isolated restore and destination-paid independent activation remain unverified.",
+    "Legacy native file download route source repair awaits new production build and HTTP verification.",
+    "PR reports CONFLICTING/DIRTY; no broad merge attempted.",
+    "The14 recordings preserve actual e88d build provenance; they are partial scenarios, not complete current-repair acceptance walkthroughs."
+  ],
+  "validation": {
+    "nodeTooling": "4/4 pass; synthetic renderer fixtures are tooling tests only",
+    "fileDownloadRegression": "4/4 pass; removing runWithTenant reproduces authorized500 failure",
+    "microsoftOidcSupportingTests": "11/11 pass in isolated emulator/Auth.js, including correctly signed expired token rejection. Not deployed or realMicrosoft acceptance.",
+    "fullServerTypecheck": "PASS: NODE_OPTIONS=--max-old-space-size=12288 npx tsc --noEmit exited0. Prior5GiB-capped run exhausted heap;12GiB rerun started only after measured14.12GiB headroom.",
+    "liveRefreshPostgreSQL": "4/4 focused production-comment cases pass, including after-commit/rollback/retry and qualified identity. Missing-hook negative control fails as expected.",
+    "workerBuilds": "Temporal and workflow-worker builds both pass; compiled input lists exclude the two changed app-only modules.",
+    "workerColdRestart": "Both workers cold-restarted after successful builds, HTTP200; see worker-provenance.json and worker-source-input-audit.json."
+  },
+  "liveRefreshRepairCommit": "c3fb35abf9",
+  "completedAt": "2026-10-25T03:36:11.947177+00:00"
+}

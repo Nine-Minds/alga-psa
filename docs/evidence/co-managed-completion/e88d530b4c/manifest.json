@@ -65,7 +65,8 @@
   "mergeability": {
     "mergeable": "CONFLICTING",
     "mergeStateStatus": "DIRTY",
-    "checkedAtSha": "57612f0ad021baae237f4eb475556e5ca7b76884"
+    "checkedAtSha": "4ab971da3c945162b4059d8b2d434360813fbef2",
+    "checkedAt": "2026-10-25T03:00:47Z"
   },
   "ci": {
     "runId": null,
@@ -80,7 +81,16 @@
     {
       "id": "co-managed-live-update-recipient-delivery-unverified",
       "kind": "functional",
-      "summary": "The previous 503/500 token failures are repaired: both live-token routes return HTTP 200, authenticated Hocuspocus ticket/notification rooms connect, and a Redis ticket update is broadcast. Recipient-side UI delivery was not established because the available two tabs shared the QA actor and self-originated events are suppressed; keep open until a distinct authorized recipient observes a live update."
+      "summary": "Distinct customer live delivery failed on the e88d production build. Repair c3fb35abf9 passes focused transaction tests and actual development two-actor display without reload; production rebuild/retest remains required.",
+      "evidence": "lead-acceptance-20261025/result.json",
+      "repairCommit": "c3fb35abf9",
+      "productionVerified": false
+    },
+    {
+      "id": "native-file-download-tenant-context",
+      "kind": "functional",
+      "summary": "Authenticated /api/files/:fileId/download returned500 (tenant context not found) on e88d build. Source fix88b592d776 passes regression and negative control; production rebuild/HTTP verification pending. Native comment canonical /api/documents/download/:fileId returned200 and exact original bytes.",
+      "evidence": "lead-acceptance-20261025/result.json"
     }
   ],
   "productionPrerequisites": [

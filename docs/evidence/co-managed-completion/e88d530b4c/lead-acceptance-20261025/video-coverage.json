@@ -1,0 +1,2675 @@
+{
+  "checkedAt": "2026-10-25T03:04:55.409Z",
+  "candidateRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+  "checkoutRevision": "4ab971da3c945162b4059d8b2d434360813fbef2",
+  "requiredGuides": 14,
+  "recordedGuides": 14,
+  "coveredGuides": 0,
+  "partialGuides": 14,
+  "blockedGuides": 0,
+  "reviewReady": false,
+  "recordingReady": false,
+  "runtimeSummary": "Production interactions recorded at e88d530b4c, build-1792894631786. Every scenario remains partial; actual runtime provenance is preserved. Live recipient delivery, provider/inbound, full billing, restore and external activation remain unverified. GitHub PR is CONFLICTING/DIRTY.",
+  "guides": [
+    {
+      "guide": "index.html",
+      "candidateRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "testedRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "status": "complete",
+      "recordedAt": "2026-10-25T02:59:55.588Z",
+      "durationSeconds": 75.88,
+      "actors": [
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        },
+        {
+          "name": "alice",
+          "email": "alice@whiterabbit.test",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+        }
+      ],
+      "steps": [
+        {
+          "at": "2026-10-25T03:00:00.999Z",
+          "seconds": 5.411,
+          "title": "/msp/tickets",
+          "actor": "qa",
+          "result": "1013\n\u00b7\nNo Category\n\t\nCurious Beginning\n\t\nWhimsical Wish\n\t\nGeneral Support\n\t\nEC\nEmerald City\n\t\nOpen menu\n\n\n\t\nSMOKE-WF native Oz ticket 2 (rebuilt worker)\nTIC001012\n\u00b7\nNo Category\n\t\nCurious Beginning\n\t\nWhimsical Wish\n\t\nGeneral Support\n\t\nEC\nEmerald City\n\t\nOpen menu\n\n1 - 10 of 16 items\n\n1\n2\n10 items/page",
+          "sourceClip": "main-walkthrough"
+        },
+        {
+          "at": "2026-10-25T03:00:16.002Z",
+          "seconds": 20.414,
+          "title": "Native All Tickets",
+          "actor": "qa",
+          "result": "Native dashboard and Customer Tickets navigation remain separate",
+          "sourceClip": "main-walkthrough"
+        },
+        {
+          "at": "2026-10-25T03:00:21.744Z",
+          "seconds": 26.156,
+          "title": "/msp/tickets/fd378092-ce14-4423-a988-a9816ba0c950",
+          "actor": "qa",
+          "result": "LA policy applies\n\nChecklist\nTime logged\n00:00:00\nWork description\nAdd time entry\nLogged\n0 hrs\n\nNo time logged yet\n\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team\u2026\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links",
+          "sourceClip": "main-walkthrough"
+        },
+        {
+          "at": "2026-10-25T03:00:25.355Z",
+          "seconds": 29.767,
+          "title": "Native comment after reload",
+          "actor": "qa",
+          "result": "Comment plus uploaded file submitted; download integrity requires separate check",
+          "sourceClip": "main-walkthrough"
+        },
+        {
+          "at": "2026-10-25T03:00:30.425Z",
+          "seconds": 34.837,
+          "title": "/msp/tickets/customer",
+          "actor": "qa",
+          "result": "Shared tickets where your team is responsible or assigned.\n\nWorking queue\nCustomer oversight\nFilters\nView\n\n1 ticket \u00b7 1 open \u00b7 0 closed\n\n\t\nTicket\n\t\nStatus\n\t\nPriority\n\t\nResponsible organization\n\t\nUpdated\n\u2193\n\n\n\t\n000002 \u00b7 SMOKE callout count change 142333\nWhite Rabbit IT\n\t\nOpen\n\t\nHigh\n\t\nMSP\n\t\n10/17/2026",
+          "sourceClip": "main-walkthrough"
+        },
+        {
+          "at": "2026-10-25T03:04:11.865Z",
+          "seconds": 59.425000000000004,
+          "title": "/msp/tickets/fd378092-ce14-4423-a988-a9816ba0c950",
+          "actor": "qa",
+          "result": "LA policy applies\n\nChecklist\nTime logged\n00:00:00\nWork description\nAdd time entry\nLogged\n0 hrs\n\nNo time logged yet\n\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team\u2026\nWatch List\nDocuments\nTXT\ncm-native-acceptance.txt\n36 B\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links",
+          "sourceClip": "main-native-confirmed"
+        },
+        {
+          "at": "2026-10-25T03:04:12.366Z",
+          "seconds": 59.926,
+          "title": "Native comment and attachment after reload",
+          "actor": "qa",
+          "result": {
+            "comment": true,
+            "downloadVerified": true
+          },
+          "sourceClip": "main-native-confirmed"
+        },
+        {
+          "at": "2026-10-25T03:04:17.236Z",
+          "seconds": 64.796,
+          "title": "/msp/tickets/customer",
+          "actor": "qa",
+          "result": "Shared tickets where your team is responsible or assigned.\n\nWorking queue\nCustomer oversight\nFilters\nView\n\n1 ticket \u00b7 1 open \u00b7 0 closed\n\n\t\nTicket\n\t\nStatus\n\t\nPriority\n\t\nResponsible organization\n\t\nUpdated\n\u2193\n\n\n\t\n000002 \u00b7 SMOKE callout count change 142333\nWhite Rabbit IT\n\t\nOpen\n\t\nHigh\n\t\nMSP\n\t\n10/17/2026",
+          "sourceClip": "main-native-confirmed"
+        },
+        {
+          "at": "2026-10-25T03:04:17.239Z",
+          "seconds": 64.799,
+          "title": "Separate customer ticket queue",
+          "actor": "qa",
+          "result": "Native and customer routes verified independently",
+          "sourceClip": "main-native-confirmed"
+        },
+        {
+          "at": "2026-10-25T03:04:22.131Z",
+          "seconds": 69.691,
+          "title": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+          "actor": "qa",
+          "result": "ft\nCM-LEAD 15 minute commercial acceptance 20261025\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336",
+          "sourceClip": "main-native-confirmed"
+        },
+        {
+          "at": "2026-10-25T03:04:22.221Z",
+          "seconds": 69.781,
+          "title": "Persisted commercial effort remains visible",
+          "actor": "qa",
+          "result": "15 minutes, MSP-owned",
+          "sourceClip": "main-native-confirmed"
+        },
+        {
+          "at": "2026-10-25T03:04:27.139Z",
+          "seconds": 74.69900000000001,
+          "title": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500",
+          "actor": "alice",
+          "result": "\nNo SLA policy applies\n\nChecklist\nTime logged\n\nRecorded effort\n\nCustomer\n0 hours\nMSP\n3.25 hours\nCombined\n3.25 hours\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team\u2026\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links",
+          "sourceClip": "main-native-confirmed"
+        },
+        {
+          "at": "2026-10-25T03:04:27.221Z",
+          "seconds": 74.781,
+          "title": "Customer private separation",
+          "actor": "alice",
+          "result": "Own private visible; MSP private absent",
+          "sourceClip": "main-native-confirmed"
+        }
+      ],
+      "outcomes": [
+        {
+          "action": "/msp/tickets",
+          "result": "1013\n\u00b7\nNo Category\n\t\nCurious Beginning\n\t\nWhimsical Wish\n\t\nGeneral Support\n\t\nEC\nEmerald City\n\t\nOpen menu\n\n\n\t\nSMOKE-WF native Oz ticket 2 (rebuilt worker)\nTIC001012\n\u00b7\nNo Category\n\t\nCurious Beginning\n\t\nWhimsical Wish\n\t\nGeneral Support\n\t\nEC\nEmerald City\n\t\nOpen menu\n\n1 - 10 of 16 items\n\n1\n2\n10 items/page"
+        },
+        {
+          "action": "Native All Tickets",
+          "result": "Native dashboard and Customer Tickets navigation remain separate"
+        },
+        {
+          "action": "/msp/tickets/fd378092-ce14-4423-a988-a9816ba0c950",
+          "result": "LA policy applies\n\nChecklist\nTime logged\n00:00:00\nWork description\nAdd time entry\nLogged\n0 hrs\n\nNo time logged yet\n\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team\u2026\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links"
+        },
+        {
+          "action": "Native comment after reload",
+          "result": "Comment plus uploaded file submitted; download integrity requires separate check"
+        },
+        {
+          "action": "/msp/tickets/customer",
+          "result": "Shared tickets where your team is responsible or assigned.\n\nWorking queue\nCustomer oversight\nFilters\nView\n\n1 ticket \u00b7 1 open \u00b7 0 closed\n\n\t\nTicket\n\t\nStatus\n\t\nPriority\n\t\nResponsible organization\n\t\nUpdated\n\u2193\n\n\n\t\n000002 \u00b7 SMOKE callout count change 142333\nWhite Rabbit IT\n\t\nOpen\n\t\nHigh\n\t\nMSP\n\t\n10/17/2026"
+        },
+        {
+          "action": "/msp/tickets/fd378092-ce14-4423-a988-a9816ba0c950",
+          "result": "LA policy applies\n\nChecklist\nTime logged\n00:00:00\nWork description\nAdd time entry\nLogged\n0 hrs\n\nNo time logged yet\n\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team\u2026\nWatch List\nDocuments\nTXT\ncm-native-acceptance.txt\n36 B\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links"
+        },
+        {
+          "action": "Native comment and attachment after reload",
+          "result": {
+            "comment": true,
+            "downloadVerified": true
+          }
+        },
+        {
+          "action": "/msp/tickets/customer",
+          "result": "Shared tickets where your team is responsible or assigned.\n\nWorking queue\nCustomer oversight\nFilters\nView\n\n1 ticket \u00b7 1 open \u00b7 0 closed\n\n\t\nTicket\n\t\nStatus\n\t\nPriority\n\t\nResponsible organization\n\t\nUpdated\n\u2193\n\n\n\t\n000002 \u00b7 SMOKE callout count change 142333\nWhite Rabbit IT\n\t\nOpen\n\t\nHigh\n\t\nMSP\n\t\n10/17/2026"
+        },
+        {
+          "action": "Separate customer ticket queue",
+          "result": "Native and customer routes verified independently"
+        },
+        {
+          "action": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+          "result": "ft\nCM-LEAD 15 minute commercial acceptance 20261025\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336"
+        },
+        {
+          "action": "Persisted commercial effort remains visible",
+          "result": "15 minutes, MSP-owned"
+        },
+        {
+          "action": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500",
+          "result": "\nNo SLA policy applies\n\nChecklist\nTime logged\n\nRecorded effort\n\nCustomer\n0 hours\nMSP\n3.25 hours\nCombined\n3.25 hours\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team\u2026\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links"
+        },
+        {
+          "action": "Customer private separation",
+          "result": "Own private visible; MSP private absent"
+        }
+      ],
+      "chapters": [
+        {
+          "start": 0,
+          "end": 20.414,
+          "title": "main walkthrough"
+        },
+        {
+          "start": 20.414,
+          "end": 29.767,
+          "title": "Native All Tickets"
+        },
+        {
+          "start": 29.767,
+          "end": 53.84,
+          "title": "Native comment after reload"
+        },
+        {
+          "start": 53.84,
+          "end": 59.926,
+          "title": "main native confirmed"
+        },
+        {
+          "start": 59.926,
+          "end": 64.799,
+          "title": "Native comment and attachment after reload"
+        },
+        {
+          "start": 64.799,
+          "end": 69.781,
+          "title": "Separate customer ticket queue"
+        },
+        {
+          "start": 69.781,
+          "end": 74.781,
+          "title": "Persisted commercial effort remains visible"
+        },
+        {
+          "start": 74.781,
+          "end": 75.88,
+          "title": "Customer private separation"
+        }
+      ],
+      "runtime": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/lead-acceptance-20261025/main-walkthrough/recording.json",
+          "evidence/lead-acceptance-20261025/main-native-confirmed/recording.json"
+        ]
+      },
+      "limitations": [
+        "locator.waitFor: Timeout 18000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('000002', { exact: true }).first() to be visible\u001b[22m\n",
+        "Native comment and submitted attachment, separate queues, shared effort and customer privacy recorded. Full native workflow/approval/invoice acceptance and all externally owned prerequisites remain separate.",
+        "Recorded against production build e88d530b4c (build-1792894631786). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+      ],
+      "recordingPaths": {
+        "webm": "main-walkthrough.webm",
+        "chapterVtt": "main-walkthrough.vtt",
+        "recordingJson": "main-walkthrough.json"
+      },
+      "recordingSourcePaths": {
+        "webm": "main/walkthrough.webm",
+        "chapterVtt": "main/chapters.vtt"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "artifactSha256": {
+        "webm": "a5113ed14016a0110e41d1d5592c8b2af0c4ddb498a116219b7a973a6e2d21b4",
+        "chapterVtt": "67e546a09d0766795a8a38651b0f67cf0be92f2827ea22bcf7695527d1994aee"
+      }
+    },
+    {
+      "guide": "guides/index.html",
+      "candidateRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "testedRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "status": "complete",
+      "recordedAt": "2026-10-25T03:01:20.470Z",
+      "durationSeconds": 25.68,
+      "actors": [
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        },
+        {
+          "name": "alice",
+          "email": "alice@whiterabbit.test",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+        }
+      ],
+      "steps": [
+        {
+          "at": "2026-10-25T03:01:26.335Z",
+          "seconds": 5.865,
+          "title": "/msp/co-managed",
+          "actor": "qa",
+          "result": "a@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation",
+          "sourceClip": "collection-final"
+        },
+        {
+          "at": "2026-10-25T03:01:26.338Z",
+          "seconds": 5.868,
+          "title": "Licensed customer workspace overview",
+          "actor": "qa",
+          "result": "Shared capacity and customer directory",
+          "sourceClip": "collection-final"
+        },
+        {
+          "at": "2026-10-25T03:01:31.902Z",
+          "seconds": 11.432,
+          "title": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed",
+          "actor": "qa",
+          "result": "ndependent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status",
+          "sourceClip": "collection-final"
+        },
+        {
+          "at": "2026-10-25T03:01:31.904Z",
+          "seconds": 11.434,
+          "title": "Client-linked co-managed workspace",
+          "actor": "qa",
+          "result": "his relationship ends.\n\nWhite Rabbit IT\n\nLive access between these organizations ends immediately when you confirm.\n\nThe customer keeps its workspace and data. Read access, export, and upgrade to an independent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status",
+          "sourceClip": "collection-final"
+        },
+        {
+          "at": "2026-10-25T03:01:36.783Z",
+          "seconds": 16.313,
+          "title": "/msp/tickets/customer",
+          "actor": "qa",
+          "result": "Shared tickets where your team is responsible or assigned.\n\nWorking queue\nCustomer oversight\nFilters\nView\n\n1 ticket \u00b7 1 open \u00b7 0 closed\n\n\t\nTicket\n\t\nStatus\n\t\nPriority\n\t\nResponsible organization\n\t\nUpdated\n\u2193\n\n\n\t\n000002 \u00b7 SMOKE callout count change 142333\nWhite Rabbit IT\n\t\nOpen\n\t\nHigh\n\t\nMSP\n\t\n10/17/2026",
+          "sourceClip": "collection-final"
+        },
+        {
+          "at": "2026-10-25T03:01:36.787Z",
+          "seconds": 16.317,
+          "title": "Separate Customer Tickets surface",
+          "actor": "qa",
+          "result": "Native All Tickets remains separate",
+          "sourceClip": "collection-final"
+        },
+        {
+          "at": "2026-10-25T03:01:41.563Z",
+          "seconds": 21.093,
+          "title": "/msp/co-management",
+          "actor": "alice",
+          "result": " configured separately.\n\nBoards\nService Desk\nAccess for Service Desk\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nProjects\nCM Lead customer project 20261025\nAccess for CM Lead customer project 20261025\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nSave access\nReload current access",
+          "sourceClip": "collection-final"
+        },
+        {
+          "at": "2026-10-25T03:01:41.565Z",
+          "seconds": 21.095,
+          "title": "Customer controls own sharing",
+          "actor": "alice",
+          "result": "Explicit project and board grants",
+          "sourceClip": "collection-final"
+        },
+        {
+          "at": "2026-10-25T03:01:46.323Z",
+          "seconds": 25.853,
+          "title": "/msp/co-management/export",
+          "actor": "alice",
+          "result": " backup of your customer workspace.\n\nWhite Rabbit IT\n\nKeep the recovery passphrase somewhere safe. Without it, the backup cannot be opened.\n\nRestoring requires reconnecting external accounts and activating imported users.\n\nRecovery passphrase*\nConfirm recovery passphrase*\nPrepare and download backup",
+          "sourceClip": "collection-final"
+        },
+        {
+          "at": "2026-10-25T03:01:46.325Z",
+          "seconds": 25.855,
+          "title": "Customer portability surface",
+          "actor": "alice",
+          "result": "Passphrase export uses customer authority",
+          "sourceClip": "collection-final"
+        }
+      ],
+      "outcomes": [
+        {
+          "action": "/msp/co-managed",
+          "result": "a@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation"
+        },
+        {
+          "action": "Licensed customer workspace overview",
+          "result": "Shared capacity and customer directory"
+        },
+        {
+          "action": "/msp/clients/151ce95d-225d-4756-be83-89580d04ef22?tab=co-managed",
+          "result": "ndependent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status"
+        },
+        {
+          "action": "Client-linked co-managed workspace",
+          "result": "his relationship ends.\n\nWhite Rabbit IT\n\nLive access between these organizations ends immediately when you confirm.\n\nThe customer keeps its workspace and data. Read access, export, and upgrade to an independent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status"
+        },
+        {
+          "action": "/msp/tickets/customer",
+          "result": "Shared tickets where your team is responsible or assigned.\n\nWorking queue\nCustomer oversight\nFilters\nView\n\n1 ticket \u00b7 1 open \u00b7 0 closed\n\n\t\nTicket\n\t\nStatus\n\t\nPriority\n\t\nResponsible organization\n\t\nUpdated\n\u2193\n\n\n\t\n000002 \u00b7 SMOKE callout count change 142333\nWhite Rabbit IT\n\t\nOpen\n\t\nHigh\n\t\nMSP\n\t\n10/17/2026"
+        },
+        {
+          "action": "Separate Customer Tickets surface",
+          "result": "Native All Tickets remains separate"
+        },
+        {
+          "action": "/msp/co-management",
+          "result": " configured separately.\n\nBoards\nService Desk\nAccess for Service Desk\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nProjects\nCM Lead customer project 20261025\nAccess for CM Lead customer project 20261025\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nSave access\nReload current access"
+        },
+        {
+          "action": "Customer controls own sharing",
+          "result": "Explicit project and board grants"
+        },
+        {
+          "action": "/msp/co-management/export",
+          "result": " backup of your customer workspace.\n\nWhite Rabbit IT\n\nKeep the recovery passphrase somewhere safe. Without it, the backup cannot be opened.\n\nRestoring requires reconnecting external accounts and activating imported users.\n\nRecovery passphrase*\nConfirm recovery passphrase*\nPrepare and download backup"
+        },
+        {
+          "action": "Customer portability surface",
+          "result": "Passphrase export uses customer authority"
+        }
+      ],
+      "chapters": [
+        {
+          "start": 0,
+          "end": 5.868,
+          "title": "collection final"
+        },
+        {
+          "start": 5.868,
+          "end": 11.434,
+          "title": "Licensed customer workspace overview"
+        },
+        {
+          "start": 11.434,
+          "end": 16.317,
+          "title": "Client-linked co-managed workspace"
+        },
+        {
+          "start": 16.317,
+          "end": 21.095,
+          "title": "Separate Customer Tickets surface"
+        },
+        {
+          "start": 21.095,
+          "end": 25.68,
+          "title": "Customer controls own sharing"
+        }
+      ],
+      "runtime": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/lead-acceptance-20261025/collection-final/recording.json"
+        ]
+      },
+      "limitations": [
+        "This is the collection navigation walkthrough with live fixtures; each section has separate outcome limits. It does not establish all section acceptance or real provider/paid activation readiness.",
+        "Recorded against production build e88d530b4c (build-1792894631786). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+      ],
+      "recordingPaths": {
+        "webm": "guides/collection-walkthrough.webm",
+        "chapterVtt": "guides/collection-walkthrough.vtt",
+        "recordingJson": "guides/collection-walkthrough.json"
+      },
+      "recordingSourcePaths": {
+        "webm": "collection/walkthrough.webm",
+        "chapterVtt": "collection/chapters.vtt"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "artifactSha256": {
+        "webm": "69a0332648728d5853ef47856bffc8bf1f95efb1334e856c646c74df09342ed3",
+        "chapterVtt": "d9ac542c5973bc44d3da6573465aa29562b47485bc5164dde75285934d4a6cb4"
+      }
+    },
+    {
+      "guide": "guides/01-onboarding.html",
+      "candidateRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "testedRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "status": "complete",
+      "recordedAt": "2026-10-25T02:45:27.381Z",
+      "durationSeconds": 79.4,
+      "actors": [
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        },
+        {
+          "name": "invited customer admin",
+          "email": "lead.20261025@cmreview.test",
+          "tenant": "a967fcd6-2fa7-4c16-833e-91a1ed6855ff"
+        }
+      ],
+      "steps": [
+        {
+          "at": "2026-10-25T02:45:32.529Z",
+          "seconds": 5.148,
+          "title": "/msp/co-managed",
+          "actor": "qa",
+          "result": "a@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation",
+          "sourceClip": "01-onboarding-provision"
+        },
+        {
+          "at": "2026-10-25T02:45:40.275Z",
+          "seconds": 12.894,
+          "title": "Submitted customer provisioning",
+          "actor": "qa",
+          "result": "s://example.com/phish\" style=\"font-size:30px\">Accept now</a>\tl3-html@cmreview-i.test\tSeats released\tCancelled\t\n\nCM Review 20261018-I\tiris@cmreview-i.test\tSeats released\tCancelled\t\n\nCM Review 20261018-H\thana@cmreview-h.test\t2\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-G\tgina@cmreview-g.test\t3\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-F\tdana@cmreview-d.test\tSeats released\tCancelled\t\n\nCM Review 20261018-E\teve@cmreview-e.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-D\tdana@cmreview-d.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-C\tcal@cmreview-c.test\tSeats released\tCancelled\t\n\nCM Review 20261018-B\tbea@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation",
+          "sourceClip": "01-onboarding-provision"
+        },
+        {
+          "at": "2026-10-25T02:48:59.910Z",
+          "seconds": 19.37,
+          "title": "/msp/co-managed",
+          "actor": "qa",
+          "result": "a@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation",
+          "sourceClip": "01-onboarding-delivery-retry"
+        },
+        {
+          "at": "2026-10-25T02:49:03.446Z",
+          "seconds": 22.905,
+          "title": "Retry original pending operation",
+          "actor": "qa",
+          "result": "Same operation ID; no duplicate workspace",
+          "sourceClip": "01-onboarding-delivery-retry"
+        },
+        {
+          "at": "2026-10-25T02:52:35.129Z",
+          "seconds": 27.833000000000002,
+          "title": "Claimed invited administrator",
+          "result": "Original delivered invitation; normal new-user setup",
+          "sourceClip": "01-onboarding-acceptance"
+        },
+        {
+          "at": "2026-10-25T02:53:17.514Z",
+          "seconds": 48.792,
+          "title": "Pending review rendered",
+          "result": "Scope visible before acceptance",
+          "sourceClip": "01-onboarding-activation"
+        },
+        {
+          "at": "2026-10-25T02:53:17.760Z",
+          "seconds": 49.037,
+          "title": "Multipart action without next-action header",
+          "result": {
+            "status": 500,
+            "redirected": false,
+            "response": "Internal Server Error"
+          },
+          "sourceClip": "01-onboarding-activation"
+        },
+        {
+          "at": "2026-10-25T02:53:28.438Z",
+          "seconds": 59.715,
+          "title": "Accepted and opened own ticket workspace",
+          "result": " later.\n\nEmail Address *\n\nThis will be used for signing in to your account.\n\nCompany Address\n\nYour organization's address. Review and correct it if needed.\n\nAddress Line 1 *\nAddress Line 2\nCity *\nState/Province\nPostal Code\nCountry *\nSelect Country\nNote: Name, email, organization, address line 1, city, and country are required. Address line 2, state/province, and postal code are optional.\nBack\nNext",
+          "sourceClip": "01-onboarding-activation"
+        },
+        {
+          "at": "2026-10-25T02:55:29.785Z",
+          "seconds": 65.958,
+          "title": "/msp/tickets",
+          "result": "rganization's address. Review and correct it if needed.\n\nAddress Line 1 *\nAddress Line 2\nCity *\nState/Province\nPostal Code\nCountry *\nSelect Country\nNote: Name, email, organization, address line 1, city, and country are required. Address line 2, state/province, and postal code are optional.\nBack\nNext",
+          "sourceClip": "01-workspace-setup-final"
+        },
+        {
+          "at": "2026-10-25T02:55:31.975Z",
+          "seconds": 68.148,
+          "title": "Post-acceptance workspace setup write",
+          "result": "am, and your ticketing defaults.\n\nWorkspace\n2\nTeam Members\n3\nTicketing\nInvite Team Members\n\nAdd your team members to get them started. You can skip this step and add them later.\n\nUsers: 1/1\nTechnician seat limit reached (1/1). Ask your MSP to allocate more seats.\nTeam Member 1\nFirst Name\nLast Name\nEmail\nRole\nSelect...\nHow should they get access?\nSend email invite\nSet a password myself\n\nThey'll get an email with a link to set their own password. No passwords to share.\n\nSave Current Team Member First\n\nUnsaved team member\n\nPlease save the current team member before adding a new one.\n\nOptional: You can skip this step and invite or manage team members anytime from Settings > Users.\nBack\nSkip\nNext",
+          "sourceClip": "01-workspace-setup-final"
+        },
+        {
+          "at": "2026-10-25T02:55:42.207Z",
+          "seconds": 78.38,
+          "title": "Accepted workspace after reload",
+          "result": "AlgaPSA\nHome\nUser Activities\nTickets\nProjects\nClients\nCo-managed IT\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nAll Tickets\na967fcd6-2fa7-4c16-833e-91a1ed6855ff\nQuick Create\nLR\nTicketing Dashboard\nAdd Ticket\nAll tickets\nFilters\nBundled\nDefault view\nView\n2 columns hidden.\nShow all\n\t\nTitle\n\t\nStatus\n\t\nPriority\n\t\nBoard\n\t\nClient\n\t\nActions",
+          "sourceClip": "01-workspace-setup-final"
+        }
+      ],
+      "outcomes": [
+        {
+          "action": "/msp/co-managed",
+          "result": "a@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation"
+        },
+        {
+          "action": "Submitted customer provisioning",
+          "result": "s://example.com/phish\" style=\"font-size:30px\">Accept now</a>\tl3-html@cmreview-i.test\tSeats released\tCancelled\t\n\nCM Review 20261018-I\tiris@cmreview-i.test\tSeats released\tCancelled\t\n\nCM Review 20261018-H\thana@cmreview-h.test\t2\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-G\tgina@cmreview-g.test\t3\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-F\tdana@cmreview-d.test\tSeats released\tCancelled\t\n\nCM Review 20261018-E\teve@cmreview-e.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-D\tdana@cmreview-d.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-C\tcal@cmreview-c.test\tSeats released\tCancelled\t\n\nCM Review 20261018-B\tbea@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation"
+        },
+        {
+          "action": "/msp/co-managed",
+          "result": "a@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation"
+        },
+        {
+          "action": "Retry original pending operation",
+          "result": "Same operation ID; no duplicate workspace"
+        },
+        {
+          "action": "Claimed invited administrator",
+          "result": "Original delivered invitation; normal new-user setup"
+        },
+        {
+          "action": "Pending review rendered",
+          "result": "Scope visible before acceptance"
+        },
+        {
+          "action": "Multipart action without next-action header",
+          "result": {
+            "status": 500,
+            "redirected": false,
+            "response": "Internal Server Error"
+          }
+        },
+        {
+          "action": "Accepted and opened own ticket workspace",
+          "result": " later.\n\nEmail Address *\n\nThis will be used for signing in to your account.\n\nCompany Address\n\nYour organization's address. Review and correct it if needed.\n\nAddress Line 1 *\nAddress Line 2\nCity *\nState/Province\nPostal Code\nCountry *\nSelect Country\nNote: Name, email, organization, address line 1, city, and country are required. Address line 2, state/province, and postal code are optional.\nBack\nNext"
+        },
+        {
+          "action": "/msp/tickets",
+          "result": "rganization's address. Review and correct it if needed.\n\nAddress Line 1 *\nAddress Line 2\nCity *\nState/Province\nPostal Code\nCountry *\nSelect Country\nNote: Name, email, organization, address line 1, city, and country are required. Address line 2, state/province, and postal code are optional.\nBack\nNext"
+        },
+        {
+          "action": "Post-acceptance workspace setup write",
+          "result": "am, and your ticketing defaults.\n\nWorkspace\n2\nTeam Members\n3\nTicketing\nInvite Team Members\n\nAdd your team members to get them started. You can skip this step and add them later.\n\nUsers: 1/1\nTechnician seat limit reached (1/1). Ask your MSP to allocate more seats.\nTeam Member 1\nFirst Name\nLast Name\nEmail\nRole\nSelect...\nHow should they get access?\nSend email invite\nSet a password myself\n\nThey'll get an email with a link to set their own password. No passwords to share.\n\nSave Current Team Member First\n\nUnsaved team member\n\nPlease save the current team member before adding a new one.\n\nOptional: You can skip this step and invite or manage team members anytime from Settings > Users.\nBack\nSkip\nNext"
+        },
+        {
+          "action": "Accepted workspace after reload",
+          "result": "AlgaPSA\nHome\nUser Activities\nTickets\nProjects\nClients\nCo-managed IT\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nAll Tickets\na967fcd6-2fa7-4c16-833e-91a1ed6855ff\nQuick Create\nLR\nTicketing Dashboard\nAdd Ticket\nAll tickets\nFilters\nBundled\nDefault view\nView\n2 columns hidden.\nShow all\n\t\nTitle\n\t\nStatus\n\t\nPriority\n\t\nBoard\n\t\nClient\n\t\nActions"
+        }
+      ],
+      "chapters": [
+        {
+          "start": 0,
+          "end": 12.894,
+          "title": "01 onboarding provision"
+        },
+        {
+          "start": 12.894,
+          "end": 13.84,
+          "title": "Submitted customer provisioning"
+        },
+        {
+          "start": 13.84,
+          "end": 22.905,
+          "title": "01 onboarding delivery retry"
+        },
+        {
+          "start": 22.905,
+          "end": 23.96,
+          "title": "Retry original pending operation"
+        },
+        {
+          "start": 23.96,
+          "end": 27.833,
+          "title": "01 onboarding acceptance"
+        },
+        {
+          "start": 27.833,
+          "end": 47.04,
+          "title": "Claimed invited administrator"
+        },
+        {
+          "start": 47.04,
+          "end": 48.792,
+          "title": "01 onboarding activation"
+        },
+        {
+          "start": 48.792,
+          "end": 59.715,
+          "title": "Pending review rendered"
+        },
+        {
+          "start": 59.715,
+          "end": 60.76,
+          "title": "Accepted and opened own ticket workspace"
+        },
+        {
+          "start": 60.76,
+          "end": 68.148,
+          "title": "01 workspace setup final"
+        },
+        {
+          "start": 68.148,
+          "end": 78.38,
+          "title": "Post-acceptance workspace setup write"
+        },
+        {
+          "start": 78.38,
+          "end": 79.4,
+          "title": "Accepted workspace after reload"
+        }
+      ],
+      "runtime": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/lead-acceptance-20261025/01-onboarding-provision/recording.json",
+          "evidence/lead-acceptance-20261025/01-onboarding-delivery-retry/recording.json",
+          "evidence/lead-acceptance-20261025/01-onboarding-acceptance/recording.json",
+          "evidence/lead-acceptance-20261025/01-onboarding-activation/recording.json",
+          "evidence/lead-acceptance-20261025/01-workspace-setup-final/recording.json"
+        ]
+      },
+      "limitations": [
+        "Provisioning, original invitation delivery/claim, multipart pending denial, acceptance and onboarding writes were verified in successive real sessions. Two clips include automation waits that were corrected by later clips. Ordinary PSA and account denial are covered separately.",
+        "No live Microsoft sign-in or external paid-license validation is established."
+      ],
+      "recordingPaths": {
+        "webm": "guides/01-onboarding-walkthrough.webm",
+        "chapterVtt": "guides/01-onboarding-walkthrough.vtt",
+        "recordingJson": "guides/01-onboarding-walkthrough.json"
+      },
+      "recordingSourcePaths": {
+        "webm": "01-onboarding/walkthrough.webm",
+        "chapterVtt": "01-onboarding/chapters.vtt"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "artifactSha256": {
+        "webm": "99a4b0264f000bd0500ec17d363ba8b850259c44f5076617d50415adce8326f7",
+        "chapterVtt": "364bfa0dacb9bfb2873785590d5178ef9cb02152a573b9ba40604b5fa310009b"
+      }
+    },
+    {
+      "guide": "guides/02-licensing-and-seats.html",
+      "candidateRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "testedRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "status": "complete",
+      "recordedAt": "2026-10-25T02:42:36.751Z",
+      "durationSeconds": 12.12,
+      "actors": [
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        }
+      ],
+      "steps": [
+        {
+          "at": "2026-10-25T02:42:42.031Z",
+          "seconds": 5.28,
+          "title": "/msp/co-managed",
+          "actor": "qa",
+          "result": "a@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation",
+          "sourceClip": "02-licensing-and-seats"
+        },
+        {
+          "at": "2026-10-25T02:42:42.276Z",
+          "seconds": 5.525,
+          "title": "Review 14-seat simulator pool purchase",
+          "actor": "qa",
+          "result": "Review customer seat purchase\n\n14 seats \u00b7 $160.86 per month\n\nEstimated amount due now: $22.98\n\nConfirm purchase",
+          "sourceClip": "02-licensing-and-seats"
+        },
+        {
+          "at": "2026-10-25T02:42:47.967Z",
+          "seconds": 11.216,
+          "title": "Confirmed test-mode purchase through product",
+          "actor": "qa",
+          "result": "H\thana@cmreview-h.test\t2\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-G\tgina@cmreview-g.test\t3\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-F\tdana@cmreview-d.test\tSeats released\tCancelled\t\n\nCM Review 20261018-E\teve@cmreview-e.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-D\tdana@cmreview-d.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-C\tcal@cmreview-c.test\tSeats released\tCancelled\t\n\nCM Review 20261018-B\tbea@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation",
+          "sourceClip": "02-licensing-and-seats"
+        }
+      ],
+      "outcomes": [
+        {
+          "action": "/msp/co-managed",
+          "result": "a@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation"
+        },
+        {
+          "action": "Review 14-seat simulator pool purchase",
+          "result": "Review customer seat purchase\n\n14 seats \u00b7 $160.86 per month\n\nEstimated amount due now: $22.98\n\nConfirm purchase"
+        },
+        {
+          "action": "Confirmed test-mode purchase through product",
+          "result": "H\thana@cmreview-h.test\t2\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-G\tgina@cmreview-g.test\t3\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-F\tdana@cmreview-d.test\tSeats released\tCancelled\t\n\nCM Review 20261018-E\teve@cmreview-e.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-D\tdana@cmreview-d.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-C\tcal@cmreview-c.test\tSeats released\tCancelled\t\n\nCM Review 20261018-B\tbea@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation"
+        }
+      ],
+      "chapters": [
+        {
+          "start": 0,
+          "end": 5.525,
+          "title": "02 licensing and seats"
+        },
+        {
+          "start": 5.525,
+          "end": 11.216,
+          "title": "Review 14-seat simulator pool purchase"
+        },
+        {
+          "start": 11.216,
+          "end": 12.12,
+          "title": "Confirmed test-mode purchase through product"
+        }
+      ],
+      "runtime": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/lead-acceptance-20261025/02-licensing-and-seats/recording.json"
+        ]
+      },
+      "limitations": [
+        "Isolated Stripe simulator purchase; not live Stripe acceptance. Reconciliation and provisioning follow.",
+        "Recorded against production build e88d530b4c (build-1792894631786). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+      ],
+      "recordingPaths": {
+        "webm": "guides/02-licensing-and-seats-walkthrough.webm",
+        "chapterVtt": "guides/02-licensing-and-seats-walkthrough.vtt",
+        "recordingJson": "guides/02-licensing-and-seats-walkthrough.json"
+      },
+      "recordingSourcePaths": {
+        "webm": "02-licensing-and-seats/walkthrough.webm",
+        "chapterVtt": "02-licensing-and-seats/chapters.vtt"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "artifactSha256": {
+        "webm": "58a34625abaf886eb9865d40202250084d2c39972f964dcf1c607917f8b25782",
+        "chapterVtt": "58ce12020c87b1d899a61a6491194b1e98233511eab3b8da127a1b9a099151d6"
+      }
+    },
+    {
+      "guide": "guides/03-access-policies.html",
+      "candidateRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "testedRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "status": "complete",
+      "recordedAt": "2026-10-25T02:48:04.414Z",
+      "durationSeconds": 16.48,
+      "actors": [
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        },
+        {
+          "name": "alice",
+          "email": "alice@whiterabbit.test",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+        }
+      ],
+      "steps": [
+        {
+          "at": "2026-10-25T02:48:09.818Z",
+          "seconds": 5.404,
+          "title": "/msp/co-management",
+          "actor": "alice",
+          "result": "cket visibility to work explicitly escalated to the MSP. Project access is configured separately.\n\nBoards\nService Desk\nAccess for Service Desk\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nProjects\n\nNo access configured.\n\nSearch\nSelect an item\nSelect...\nAdd\nSave access\nReload current access",
+          "sourceClip": "03-access-policies-final"
+        },
+        {
+          "at": "2026-10-25T02:48:12.468Z",
+          "seconds": 8.054,
+          "title": "Customer board View scope saved and reloaded",
+          "actor": "alice",
+          "result": "View",
+          "sourceClip": "03-access-policies-final"
+        },
+        {
+          "at": "2026-10-25T02:48:15.080Z",
+          "seconds": 10.666,
+          "title": "Restored approved Collaborate scope",
+          "actor": "alice",
+          "result": "Reload confirmed",
+          "sourceClip": "03-access-policies-final"
+        },
+        {
+          "at": "2026-10-25T02:48:19.896Z",
+          "seconds": 15.482,
+          "title": "/msp/co-management?operationId=52e5cc37-950f-4141-90e8-c34311419efb",
+          "actor": "qa",
+          "result": "ndependent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status",
+          "sourceClip": "03-access-policies-final"
+        },
+        {
+          "at": "2026-10-25T02:48:19.957Z",
+          "seconds": 15.543,
+          "title": "MSP staff assignment view",
+          "actor": "qa",
+          "result": "\nWhite Rabbit IT\n\t\nOpen\n\t\nHigh\n\t\nMSP\n\t\n10/17/2026\nOpen in Customer Tickets\nWork\n\nClient projects and shared task queues stay in the MSP shell with their qualified identities.\n\nProjects\nProject task queues\nEnd co-management\n\nReview what happens when this relationship ends.\n\nWhite Rabbit IT\n\nLive access between these organizations ends immediately when you confirm.\n\nThe customer keeps its workspace and data. Read access, export, and upgrade to an independent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status",
+          "sourceClip": "03-access-policies-final"
+        }
+      ],
+      "outcomes": [
+        {
+          "action": "/msp/co-management",
+          "result": "cket visibility to work explicitly escalated to the MSP. Project access is configured separately.\n\nBoards\nService Desk\nAccess for Service Desk\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nProjects\n\nNo access configured.\n\nSearch\nSelect an item\nSelect...\nAdd\nSave access\nReload current access"
+        },
+        {
+          "action": "Customer board View scope saved and reloaded",
+          "result": "View"
+        },
+        {
+          "action": "Restored approved Collaborate scope",
+          "result": "Reload confirmed"
+        },
+        {
+          "action": "/msp/co-management?operationId=52e5cc37-950f-4141-90e8-c34311419efb",
+          "result": "ndependent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status"
+        },
+        {
+          "action": "MSP staff assignment view",
+          "result": "\nWhite Rabbit IT\n\t\nOpen\n\t\nHigh\n\t\nMSP\n\t\n10/17/2026\nOpen in Customer Tickets\nWork\n\nClient projects and shared task queues stay in the MSP shell with their qualified identities.\n\nProjects\nProject task queues\nEnd co-management\n\nReview what happens when this relationship ends.\n\nWhite Rabbit IT\n\nLive access between these organizations ends immediately when you confirm.\n\nThe customer keeps its workspace and data. Read access, export, and upgrade to an independent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status"
+        }
+      ],
+      "chapters": [
+        {
+          "start": 0,
+          "end": 8.054,
+          "title": "03 access policies final"
+        },
+        {
+          "start": 8.054,
+          "end": 10.666,
+          "title": "Customer board View scope saved and reloaded"
+        },
+        {
+          "start": 10.666,
+          "end": 15.543,
+          "title": "Restored approved Collaborate scope"
+        },
+        {
+          "start": 15.543,
+          "end": 16.48,
+          "title": "MSP staff assignment view"
+        }
+      ],
+      "runtime": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/lead-acceptance-20261025/03-access-policies-final/recording.json"
+        ]
+      },
+      "limitations": [
+        "Customer board scope persistence/restoration verified. Independent ticket grants can preserve access; this is not a full revocation or viewer matrix.",
+        "Recorded against production build e88d530b4c (build-1792894631786). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+      ],
+      "recordingPaths": {
+        "webm": "guides/03-access-policies-walkthrough.webm",
+        "chapterVtt": "guides/03-access-policies-walkthrough.vtt",
+        "recordingJson": "guides/03-access-policies-walkthrough.json"
+      },
+      "recordingSourcePaths": {
+        "webm": "03-access-policies/walkthrough.webm",
+        "chapterVtt": "03-access-policies/chapters.vtt"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "artifactSha256": {
+        "webm": "c8e4d917212042ba9bd94f9d40b0da4032b9ff0330c0aebe022c7ed8cf761523",
+        "chapterVtt": "eb1e57fc8db9f8ff86f2790bffb336785dcf7e96e5adf6dba24f5ceb56b4f3ae"
+      }
+    },
+    {
+      "guide": "guides/04-delegated-administration.html",
+      "candidateRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "testedRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "status": "complete",
+      "recordedAt": "2026-10-25T02:46:27.351Z",
+      "durationSeconds": 16.2,
+      "actors": [
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        },
+        {
+          "name": "alice",
+          "email": "alice@whiterabbit.test",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+        }
+      ],
+      "steps": [
+        {
+          "at": "2026-10-25T02:46:32.252Z",
+          "seconds": 4.901,
+          "title": "/msp/co-management/administration?operationId=52e5cc37-950f-4141-90e8-c34311419efb",
+          "actor": "qa",
+          "result": "ndependent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status",
+          "sourceClip": "04-delegated-administration"
+        },
+        {
+          "at": "2026-10-25T02:46:35.149Z",
+          "seconds": 7.798,
+          "title": "Bounded board change persisted",
+          "actor": "qa",
+          "result": "Customer-approved QA grant",
+          "sourceClip": "04-delegated-administration"
+        },
+        {
+          "at": "2026-10-25T02:46:37.852Z",
+          "seconds": 10.501,
+          "title": "Restored original board description",
+          "actor": "qa",
+          "result": "Verified after reload",
+          "sourceClip": "04-delegated-administration"
+        },
+        {
+          "at": "2026-10-25T02:46:42.550Z",
+          "seconds": 15.199,
+          "title": "/msp/co-management/administration",
+          "actor": "alice",
+          "result": "rant general administration access.\n\nOperation\nEdit board display settings\nAssigned MSP technician or team\nAssigned MSP technician or team\nSelect...\nPrevious\nNext\nCustomer record\nCustomer record\nSelect...\nPrevious\nNext\nApprove task\nService Desk\n\nEdit board display settings \u00b7 QA Tester\n\nRevoke access",
+          "sourceClip": "04-delegated-administration"
+        }
+      ],
+      "outcomes": [
+        {
+          "action": "/msp/co-management/administration?operationId=52e5cc37-950f-4141-90e8-c34311419efb",
+          "result": "ndependent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status"
+        },
+        {
+          "action": "Bounded board change persisted",
+          "result": "Customer-approved QA grant"
+        },
+        {
+          "action": "Restored original board description",
+          "result": "Verified after reload"
+        },
+        {
+          "action": "/msp/co-management/administration",
+          "result": "rant general administration access.\n\nOperation\nEdit board display settings\nAssigned MSP technician or team\nAssigned MSP technician or team\nSelect...\nPrevious\nNext\nCustomer record\nCustomer record\nSelect...\nPrevious\nNext\nApprove task\nService Desk\n\nEdit board display settings \u00b7 QA Tester\n\nRevoke access"
+        }
+      ],
+      "chapters": [
+        {
+          "start": 0,
+          "end": 7.798,
+          "title": "04 delegated administration"
+        },
+        {
+          "start": 7.798,
+          "end": 10.501,
+          "title": "Bounded board change persisted"
+        },
+        {
+          "start": 10.501,
+          "end": 16.2,
+          "title": "Restored original board description"
+        }
+      ],
+      "runtime": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/lead-acceptance-20261025/04-delegated-administration/recording.json"
+        ]
+      },
+      "limitations": [
+        "Existing customer-approved board grant used; no existing approval was revoked. New-grant revocation/user/invitation operations remain unexecuted.",
+        "Recorded against production build e88d530b4c (build-1792894631786). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+      ],
+      "recordingPaths": {
+        "webm": "guides/04-delegated-administration-walkthrough.webm",
+        "chapterVtt": "guides/04-delegated-administration-walkthrough.vtt",
+        "recordingJson": "guides/04-delegated-administration-walkthrough.json"
+      },
+      "recordingSourcePaths": {
+        "webm": "04-delegated-administration/walkthrough.webm",
+        "chapterVtt": "04-delegated-administration/chapters.vtt"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "artifactSha256": {
+        "webm": "0a0aecfecba0a2e1b6d6295c8a0bc4c1588355e1d8832f52027a078117720a09",
+        "chapterVtt": "4900d8506dcee9d6db706bb59f2ec55a7295135c3bdf594eda51052cd1f8ec65"
+      }
+    },
+    {
+      "guide": "guides/05-ticket-queue.html",
+      "candidateRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "testedRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "status": "complete",
+      "recordedAt": "2026-10-25T02:59:07.962Z",
+      "durationSeconds": 24.52,
+      "actors": [
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        },
+        {
+          "name": "alice",
+          "email": "alice@whiterabbit.test",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+        }
+      ],
+      "steps": [
+        {
+          "at": "2026-10-25T02:59:12.899Z",
+          "seconds": 4.937,
+          "title": "/msp/co-management/sla?operationId=52e5cc37-950f-4141-90e8-c34311419efb",
+          "actor": "qa",
+          "result": "ndependent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status",
+          "sourceClip": "05-customer-ticket-loop"
+        },
+        {
+          "at": "2026-10-25T02:59:12.902Z",
+          "seconds": 4.94,
+          "title": "Sponsor priority mapping",
+          "actor": "qa",
+          "result": " shared task queues stay in the MSP shell with their qualified identities.\n\nProjects\nProject task queues\nEnd co-management\n\nReview what happens when this relationship ends.\n\nWhite Rabbit IT\n\nLive access between these organizations ends immediately when you confirm.\n\nThe customer keeps its workspace and data. Read access, export, and upgrade to an independent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status",
+          "sourceClip": "05-customer-ticket-loop"
+        },
+        {
+          "at": "2026-10-25T02:59:17.978Z",
+          "seconds": 10.016,
+          "title": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+          "actor": "qa",
+          "result": "ft\nCM-LEAD 15 minute commercial acceptance 20261025\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336",
+          "sourceClip": "05-customer-ticket-loop"
+        },
+        {
+          "at": "2026-10-25T02:59:22.133Z",
+          "seconds": 14.171,
+          "title": "MSP handback and separate clocks",
+          "actor": "qa",
+          "result": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nCo-managed access\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\n\u2190 Back to\nTickets\n#000002\nCreated Internally\nGrid\nEntry\nSMOKE callout count change 142333\n\nCreated 10/14/2026, 2:24 PM (10 days ago)\n\nUpdated 10/17/2026, 7:55 PM (7 days ago)\n\nSMOKE callout count change 142333\nResolve and close\nAll fields\nSTATUS\nOpen\nPRIORITY\nHigh\nBOARD\nService Desk\nCATEGORY\nSMOKE customer cat 20261016\nASSIGNED TO\nNot assigned\nDUE\nREPLY STATUS\nNo reply needed\nDESCRIPTION\n\n\n\n\nOpened\n\nContact\n\nNo contact on this ticket\n\nWR\nClient\nWhite Rabbit IT\nCo-managed\nResponsible\nWhite Rabbit IT\n\nWHITE RABBIT IT SLA\n\nNo SLA configured\n\nOZ SLA\n\nPaused\n\nResponse\nBreached\n\nCompleted \u00b7 Oct 15, 2026, 11:34 PM\n\nResolution\nBreached\nMSP assignment\nNot assigned to the MSP\nChange\nCalls and emails\n\nNo calls or emails logged\n\nTimeline\nOldest first\n\nReplies, time, and system changes in one place\n\nEverything (8)\nReplies (8)\nTime (0)\nSystem (0)\nAlerts (0)\nAdd Comment\nOCT 15\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 15, 11:34 PM\n\nSMOKE-NATIVE shared IT note from Oz 0333\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 15, 11:34 PM\n\nSMOKE-NATIVE OZ-PRIVATE note 0335\n\nOCT 17\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 17, 1:55 AM\n\nREVIEW-80 production shared IT 20261017\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 17, 7:56 PM\n\nhey there fellas\n\nTODAY\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 24, 10:40 PM\n\nCM-LEAD-20261025-0243 SHARED both IT teams\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 24, 10:40 PM\n\nCM-LEAD-20261025-0243 OZ-PRIVATE only MSP\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 24, 10:45 PM\n\nCM-LEAD-LIVE-1792896302990 shared note to customer\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 24, 10:45 PM\n\nCM-LEAD-LIVE-1792896302990 MSP PRIVATE\n\nTime logged\n3 hrs 15 min\nacross 4 entries\nOct 16\nOct 17\nOct 18\nOct 25\n\nRecorded ef",
+          "sourceClip": "05-customer-ticket-loop"
+        },
+        {
+          "at": "2026-10-25T02:59:27.046Z",
+          "seconds": 19.084,
+          "title": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500",
+          "actor": "alice",
+          "result": "\nNo SLA policy applies\n\nChecklist\nTime logged\n\nRecorded effort\n\nCustomer\n0 hours\nMSP\n3.25 hours\nCombined\n3.25 hours\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team\u2026\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links",
+          "sourceClip": "05-customer-ticket-loop"
+        },
+        {
+          "at": "2026-10-25T02:59:31.521Z",
+          "seconds": 23.559,
+          "title": "Customer escalation restored",
+          "actor": "alice",
+          "result": "Persisted reload",
+          "sourceClip": "05-customer-ticket-loop"
+        }
+      ],
+      "outcomes": [
+        {
+          "action": "/msp/co-management/sla?operationId=52e5cc37-950f-4141-90e8-c34311419efb",
+          "result": "ndependent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status"
+        },
+        {
+          "action": "Sponsor priority mapping",
+          "result": " shared task queues stay in the MSP shell with their qualified identities.\n\nProjects\nProject task queues\nEnd co-management\n\nReview what happens when this relationship ends.\n\nWhite Rabbit IT\n\nLive access between these organizations ends immediately when you confirm.\n\nThe customer keeps its workspace and data. Read access, export, and upgrade to an independent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status"
+        },
+        {
+          "action": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+          "result": "ft\nCM-LEAD 15 minute commercial acceptance 20261025\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336"
+        },
+        {
+          "action": "MSP handback and separate clocks",
+          "result": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nCo-managed access\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\n\u2190 Back to\nTickets\n#000002\nCreated Internally\nGrid\nEntry\nSMOKE callout count change 142333\n\nCreated 10/14/2026, 2:24 PM (10 days ago)\n\nUpdated 10/17/2026, 7:55 PM (7 days ago)\n\nSMOKE callout count change 142333\nResolve and close\nAll fields\nSTATUS\nOpen\nPRIORITY\nHigh\nBOARD\nService Desk\nCATEGORY\nSMOKE customer cat 20261016\nASSIGNED TO\nNot assigned\nDUE\nREPLY STATUS\nNo reply needed\nDESCRIPTION\n\n\n\n\nOpened\n\nContact\n\nNo contact on this ticket\n\nWR\nClient\nWhite Rabbit IT\nCo-managed\nResponsible\nWhite Rabbit IT\n\nWHITE RABBIT IT SLA\n\nNo SLA configured\n\nOZ SLA\n\nPaused\n\nResponse\nBreached\n\nCompleted \u00b7 Oct 15, 2026, 11:34 PM\n\nResolution\nBreached\nMSP assignment\nNot assigned to the MSP\nChange\nCalls and emails\n\nNo calls or emails logged\n\nTimeline\nOldest first\n\nReplies, time, and system changes in one place\n\nEverything (8)\nReplies (8)\nTime (0)\nSystem (0)\nAlerts (0)\nAdd Comment\nOCT 15\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 15, 11:34 PM\n\nSMOKE-NATIVE shared IT note from Oz 0333\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 15, 11:34 PM\n\nSMOKE-NATIVE OZ-PRIVATE note 0335\n\nOCT 17\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 17, 1:55 AM\n\nREVIEW-80 production shared IT 20261017\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 17, 7:56 PM\n\nhey there fellas\n\nTODAY\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 24, 10:40 PM\n\nCM-LEAD-20261025-0243 SHARED both IT teams\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 24, 10:40 PM\n\nCM-LEAD-20261025-0243 OZ-PRIVATE only MSP\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 24, 10:45 PM\n\nCM-LEAD-LIVE-1792896302990 shared note to customer\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 24, 10:45 PM\n\nCM-LEAD-LIVE-1792896302990 MSP PRIVATE\n\nTime logged\n3 hrs 15 min\nacross 4 entries\nOct 16\nOct 17\nOct 18\nOct 25\n\nRecorded ef"
+        },
+        {
+          "action": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500",
+          "result": "\nNo SLA policy applies\n\nChecklist\nTime logged\n\nRecorded effort\n\nCustomer\n0 hours\nMSP\n3.25 hours\nCombined\n3.25 hours\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team\u2026\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links"
+        },
+        {
+          "action": "Customer escalation restored",
+          "result": "Persisted reload"
+        }
+      ],
+      "chapters": [
+        {
+          "start": 0,
+          "end": 4.94,
+          "title": "05 customer ticket loop"
+        },
+        {
+          "start": 4.94,
+          "end": 14.171,
+          "title": "Sponsor priority mapping"
+        },
+        {
+          "start": 14.171,
+          "end": 23.559,
+          "title": "MSP handback and separate clocks"
+        },
+        {
+          "start": 23.559,
+          "end": 24.52,
+          "title": "Customer escalation restored"
+        }
+      ],
+      "runtime": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/lead-acceptance-20261025/05-customer-ticket-loop/recording.json"
+        ]
+      },
+      "limitations": [
+        "Separate clock display and responsibility transfers observed; breach notification delivery, CE/EE parity and exact elapsed-time arithmetic need further evidence.",
+        "Recorded against production build e88d530b4c (build-1792894631786). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+      ],
+      "recordingPaths": {
+        "webm": "guides/05-ticket-queue-walkthrough.webm",
+        "chapterVtt": "guides/05-ticket-queue-walkthrough.vtt",
+        "recordingJson": "guides/05-ticket-queue-walkthrough.json"
+      },
+      "recordingSourcePaths": {
+        "webm": "05-ticket-queue/walkthrough.webm",
+        "chapterVtt": "05-ticket-queue/chapters.vtt"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "artifactSha256": {
+        "webm": "6a2a390e26987bea74d909c9aefe8d5b2a5ff69f0539e7cea09acbe0ae140b42",
+        "chapterVtt": "817de9cc33492ec81a08fa3dc6194126b9845ca57076758d41217e0d4fadd0e1"
+      }
+    },
+    {
+      "guide": "guides/06-projects-and-tasks.html",
+      "candidateRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "testedRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "status": "complete",
+      "recordedAt": "2026-10-25T02:55:41.766Z",
+      "durationSeconds": 68.52,
+      "actors": [
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        },
+        {
+          "name": "alice",
+          "email": "alice@whiterabbit.test",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+        }
+      ],
+      "steps": [
+        {
+          "at": "2026-10-25T02:55:47.112Z",
+          "seconds": 5.346,
+          "title": "/msp/projects",
+          "actor": "alice",
+          "result": "d01e84\nQuick Create\nAL\nProject task queues\nProjects\nCreate from Template\nAdd Project\nActive projects\nAll open statuses\nSelect Client\nFilter by contact\nAll managers\nFilter by deadline\nFilter\nDefault view\n3 columns hidden.\nShow all\nNumber\n\t\nProject Name\n\t\nClient\n\t\nContact\n\t\nStatus\n\t\nDeadline\n\t\nActions",
+          "sourceClip": "06-project-create"
+        },
+        {
+          "at": "2026-10-25T02:55:51.053Z",
+          "seconds": 9.287,
+          "title": "Created customer-owned project",
+          "actor": "alice",
+          "result": "AlgaPSA\nHome\nUser Activities\nTickets\nProjects\nClients\nCo-managed IT\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nAll Projects\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nProject task queues\nProjects\nCreate from Template\nAdd Project\nActive projects\nAll open statuses\nSelect Client\nFilter by contact\nAll managers\nFilter by deadline\nFilter\nDefault view\n3 columns hidden.\nShow all\nNumber\n\t\nProject Name\n\t\nClient\n\t\nContact\n\t\nStatus\n\t\nDeadline\n\t\nActions\n\n\nPROJECT0001\n\t\nCM Lead customer project 20261025\n\t\nWR\nWhite Rabbit IT\n\t\nNo Contact\n\t\nNot Started\n\t\nN/A\n\t\nOpen menu",
+          "sourceClip": "06-project-create"
+        },
+        {
+          "at": "2026-10-25T02:58:02.573Z",
+          "seconds": 19.634,
+          "title": "/msp/projects/943acf31-95f4-47b0-8818-9de8977e5abd",
+          "actor": "alice",
+          "result": "get:\n0.0 of 0.0 hours\nProject Phases\nAdd Task\nAdd Phase\nImport\nCM Lead phase\n0 tasks\nProject defaults\nStart: Not set\nDue: Not set\nKanban Board: CM Lead phase\nProject defaults\nCompact\nReset\nSpacious\nKanban\nList\nWord\nAa\nFilter\nAll Agents\nAll Priorities\nAll Types\n0 / 0 Done\nTo Do\n0\nIn Progress\n0\nDone\n0",
+          "sourceClip": "06-projects-task-sharing"
+        },
+        {
+          "at": "2026-10-25T02:58:06.778Z",
+          "seconds": 23.839,
+          "title": "Customer task after reload",
+          "actor": "alice",
+          "result": "New task persisted in customer-owned project",
+          "sourceClip": "06-projects-task-sharing"
+        },
+        {
+          "at": "2026-10-25T02:58:11.612Z",
+          "seconds": 28.673000000000002,
+          "title": "/msp/co-management",
+          "actor": "alice",
+          "result": "cket visibility to work explicitly escalated to the MSP. Project access is configured separately.\n\nBoards\nService Desk\nAccess for Service Desk\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nProjects\n\nNo access configured.\n\nSearch\nSelect an item\nSelect...\nAdd\nSave access\nReload current access",
+          "sourceClip": "06-projects-task-sharing"
+        },
+        {
+          "at": "2026-10-25T02:58:15.735Z",
+          "seconds": 32.796,
+          "title": "Explicit customer project sharing after reload",
+          "actor": "alice",
+          "result": "Collaborate grant persisted",
+          "sourceClip": "06-projects-task-sharing"
+        },
+        {
+          "at": "2026-10-25T02:58:20.439Z",
+          "seconds": 37.5,
+          "title": "/msp/co-management/projects/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/943acf31-95f4-47b0-8818-9de8977e5abd",
+          "actor": "qa",
+          "result": "1-c56222904580\nQuick Create\nQT\nProject tasks\nReload current access\nRecorded effort\nReload current access\n\nCompleted time for work you can access.\n\nCustomer\n0 hours\nMSP\n0 hours\nCombined\n0 hours\nCM Lead shared task\nWhite Rabbit IT \u00b7 CM Lead customer project 20261025 \u00b7 CM Lead phase\nTo Do\nPrevious\nNext",
+          "sourceClip": "06-projects-task-sharing"
+        },
+        {
+          "at": "2026-10-25T02:58:20.481Z",
+          "seconds": 37.542,
+          "title": "MSP reads same customer-owned task",
+          "actor": "qa",
+          "result": "Shared project admitted for assigned technician",
+          "sourceClip": "06-projects-task-sharing"
+        },
+        {
+          "at": "2026-10-25T03:14:39.553Z",
+          "seconds": 43.611,
+          "title": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+          "actor": "qa",
+          "result": "ssign\nReload current access\nConversation\nReload current state\nNew message\n\nNo messages are visible yet.\n\nChange history\nReload current access\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext",
+          "sourceClip": "06-task-boundaries-final"
+        },
+        {
+          "at": "2026-10-25T03:14:41.909Z",
+          "seconds": 45.967,
+          "title": "Qualified MSP task edit after reload",
+          "actor": "qa",
+          "result": "Persisted",
+          "sourceClip": "06-task-boundaries-final"
+        },
+        {
+          "at": "2026-10-25T03:14:45.060Z",
+          "seconds": 49.117999999999995,
+          "title": "Qualified shared task note after reload",
+          "actor": "qa",
+          "result": "Persisted",
+          "sourceClip": "06-task-boundaries-final"
+        },
+        {
+          "at": "2026-10-25T03:14:50.081Z",
+          "seconds": 54.138999999999996,
+          "title": "/msp/co-management",
+          "actor": "alice",
+          "result": " configured separately.\n\nBoards\nService Desk\nAccess for Service Desk\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nProjects\nCM Lead customer project 20261025\nAccess for CM Lead customer project 20261025\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nSave access\nReload current access",
+          "sourceClip": "06-task-boundaries-final"
+        },
+        {
+          "at": "2026-10-25T03:14:51.639Z",
+          "seconds": 55.696999999999996,
+          "title": "Customer project grant revoked",
+          "actor": "alice",
+          "result": "Verified after reload",
+          "sourceClip": "06-task-boundaries-final"
+        },
+        {
+          "at": "2026-10-25T03:14:56.395Z",
+          "seconds": 60.452999999999996,
+          "title": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+          "actor": "qa",
+          "result": "nts\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nShared Tasks\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nProject task\n\nCould not load this project or task.\n\nReload current access",
+          "sourceClip": "06-task-boundaries-final"
+        },
+        {
+          "at": "2026-10-25T03:14:56.401Z",
+          "seconds": 60.458999999999996,
+          "title": "Formerly authorized task now denied",
+          "actor": "qa",
+          "result": "Fresh MSP read fails closed",
+          "sourceClip": "06-task-boundaries-final"
+        },
+        {
+          "at": "2026-10-25T03:15:01.239Z",
+          "seconds": 65.297,
+          "title": "/msp/co-management",
+          "actor": "alice",
+          "result": "cket visibility to work explicitly escalated to the MSP. Project access is configured separately.\n\nBoards\nService Desk\nAccess for Service Desk\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nProjects\n\nNo access configured.\n\nSearch\nSelect an item\nSelect...\nAdd\nSave access\nReload current access",
+          "sourceClip": "06-task-boundaries-final"
+        },
+        {
+          "at": "2026-10-25T03:15:03.511Z",
+          "seconds": 67.56899999999999,
+          "title": "Restored explicit project grant",
+          "actor": "alice",
+          "result": "Reversible review change restored",
+          "sourceClip": "06-task-boundaries-final"
+        }
+      ],
+      "outcomes": [
+        {
+          "action": "/msp/projects",
+          "result": "d01e84\nQuick Create\nAL\nProject task queues\nProjects\nCreate from Template\nAdd Project\nActive projects\nAll open statuses\nSelect Client\nFilter by contact\nAll managers\nFilter by deadline\nFilter\nDefault view\n3 columns hidden.\nShow all\nNumber\n\t\nProject Name\n\t\nClient\n\t\nContact\n\t\nStatus\n\t\nDeadline\n\t\nActions"
+        },
+        {
+          "action": "Created customer-owned project",
+          "result": "AlgaPSA\nHome\nUser Activities\nTickets\nProjects\nClients\nCo-managed IT\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nAll Projects\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nProject task queues\nProjects\nCreate from Template\nAdd Project\nActive projects\nAll open statuses\nSelect Client\nFilter by contact\nAll managers\nFilter by deadline\nFilter\nDefault view\n3 columns hidden.\nShow all\nNumber\n\t\nProject Name\n\t\nClient\n\t\nContact\n\t\nStatus\n\t\nDeadline\n\t\nActions\n\n\nPROJECT0001\n\t\nCM Lead customer project 20261025\n\t\nWR\nWhite Rabbit IT\n\t\nNo Contact\n\t\nNot Started\n\t\nN/A\n\t\nOpen menu"
+        },
+        {
+          "action": "/msp/projects/943acf31-95f4-47b0-8818-9de8977e5abd",
+          "result": "get:\n0.0 of 0.0 hours\nProject Phases\nAdd Task\nAdd Phase\nImport\nCM Lead phase\n0 tasks\nProject defaults\nStart: Not set\nDue: Not set\nKanban Board: CM Lead phase\nProject defaults\nCompact\nReset\nSpacious\nKanban\nList\nWord\nAa\nFilter\nAll Agents\nAll Priorities\nAll Types\n0 / 0 Done\nTo Do\n0\nIn Progress\n0\nDone\n0"
+        },
+        {
+          "action": "Customer task after reload",
+          "result": "New task persisted in customer-owned project"
+        },
+        {
+          "action": "/msp/co-management",
+          "result": "cket visibility to work explicitly escalated to the MSP. Project access is configured separately.\n\nBoards\nService Desk\nAccess for Service Desk\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nProjects\n\nNo access configured.\n\nSearch\nSelect an item\nSelect...\nAdd\nSave access\nReload current access"
+        },
+        {
+          "action": "Explicit customer project sharing after reload",
+          "result": "Collaborate grant persisted"
+        },
+        {
+          "action": "/msp/co-management/projects/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/943acf31-95f4-47b0-8818-9de8977e5abd",
+          "result": "1-c56222904580\nQuick Create\nQT\nProject tasks\nReload current access\nRecorded effort\nReload current access\n\nCompleted time for work you can access.\n\nCustomer\n0 hours\nMSP\n0 hours\nCombined\n0 hours\nCM Lead shared task\nWhite Rabbit IT \u00b7 CM Lead customer project 20261025 \u00b7 CM Lead phase\nTo Do\nPrevious\nNext"
+        },
+        {
+          "action": "MSP reads same customer-owned task",
+          "result": "Shared project admitted for assigned technician"
+        },
+        {
+          "action": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+          "result": "ssign\nReload current access\nConversation\nReload current state\nNew message\n\nNo messages are visible yet.\n\nChange history\nReload current access\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext"
+        },
+        {
+          "action": "Qualified MSP task edit after reload",
+          "result": "Persisted"
+        },
+        {
+          "action": "Qualified shared task note after reload",
+          "result": "Persisted"
+        },
+        {
+          "action": "/msp/co-management",
+          "result": " configured separately.\n\nBoards\nService Desk\nAccess for Service Desk\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nProjects\nCM Lead customer project 20261025\nAccess for CM Lead customer project 20261025\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nSave access\nReload current access"
+        },
+        {
+          "action": "Customer project grant revoked",
+          "result": "Verified after reload"
+        },
+        {
+          "action": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+          "result": "nts\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nShared Tasks\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nProject task\n\nCould not load this project or task.\n\nReload current access"
+        },
+        {
+          "action": "Formerly authorized task now denied",
+          "result": "Fresh MSP read fails closed"
+        },
+        {
+          "action": "/msp/co-management",
+          "result": "cket visibility to work explicitly escalated to the MSP. Project access is configured separately.\n\nBoards\nService Desk\nAccess for Service Desk\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nProjects\n\nNo access configured.\n\nSearch\nSelect an item\nSelect...\nAdd\nSave access\nReload current access"
+        },
+        {
+          "action": "Restored explicit project grant",
+          "result": "Reversible review change restored"
+        }
+      ],
+      "chapters": [
+        {
+          "start": 0,
+          "end": 9.287,
+          "title": "06 project create"
+        },
+        {
+          "start": 9.287,
+          "end": 14.32,
+          "title": "Created customer-owned project"
+        },
+        {
+          "start": 14.32,
+          "end": 23.839,
+          "title": "06 projects task sharing"
+        },
+        {
+          "start": 23.839,
+          "end": 32.796,
+          "title": "Customer task after reload"
+        },
+        {
+          "start": 32.796,
+          "end": 37.542,
+          "title": "Explicit customer project sharing after reload"
+        },
+        {
+          "start": 37.542,
+          "end": 38.48,
+          "title": "MSP reads same customer-owned task"
+        },
+        {
+          "start": 38.48,
+          "end": 45.967,
+          "title": "06 task boundaries final"
+        },
+        {
+          "start": 45.967,
+          "end": 49.117999999999995,
+          "title": "Qualified MSP task edit after reload"
+        },
+        {
+          "start": 49.117999999999995,
+          "end": 55.696999999999996,
+          "title": "Qualified shared task note after reload"
+        },
+        {
+          "start": 55.696999999999996,
+          "end": 60.458999999999996,
+          "title": "Customer project grant revoked"
+        },
+        {
+          "start": 60.458999999999996,
+          "end": 67.56899999999999,
+          "title": "Formerly authorized task now denied"
+        },
+        {
+          "start": 67.56899999999999,
+          "end": 68.52,
+          "title": "Restored explicit project grant"
+        }
+      ],
+      "runtime": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/lead-acceptance-20261025/06-project-create/recording.json",
+          "evidence/lead-acceptance-20261025/06-projects-task-sharing/recording.json",
+          "evidence/lead-acceptance-20261025/06-task-boundaries-final/recording.json"
+        ]
+      },
+      "limitations": [
+        "Shared task edit/revision, note persistence and project revocation/restoration checked. Files, requester access, disclosure, assignment and operational time are separate checks.",
+        "Actual recorded production build e88d530b4c; later source repairs are not silently relabeled as this runtime. Full guide acceptance remains incomplete."
+      ],
+      "recordingPaths": {
+        "webm": "guides/06-projects-and-tasks-walkthrough.webm",
+        "chapterVtt": "guides/06-projects-and-tasks-walkthrough.vtt",
+        "recordingJson": "guides/06-projects-and-tasks-walkthrough.json"
+      },
+      "recordingSourcePaths": {
+        "webm": "06-projects-and-tasks/walkthrough.webm",
+        "chapterVtt": "06-projects-and-tasks/chapters.vtt"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "artifactSha256": {
+        "webm": "dc40a0c77c5dab6dca0056f88cb239e318399b8b372eebec67f8a00742da3029",
+        "chapterVtt": "11ca400a7634bb09a4ad139ea5c94d7e1bae815a70554638d9882894b2ea7951"
+      }
+    },
+    {
+      "guide": "guides/07-conversations-and-files.html",
+      "candidateRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "testedRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "status": "complete",
+      "recordedAt": "2026-10-25T02:45:03.560Z",
+      "durationSeconds": 57.68,
+      "actors": [
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        },
+        {
+          "name": "alice",
+          "email": "alice@whiterabbit.test",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+        }
+      ],
+      "steps": [
+        {
+          "at": "2026-10-25T02:45:18.764Z",
+          "seconds": 15.205,
+          "title": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+          "actor": "qa",
+          "result": "on\nAdd time entry\nLogged\n3 hrs\nMy entries\n(3)\n3 hrs\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336",
+          "sourceClip": "07-conversations-final"
+        },
+        {
+          "at": "2026-10-25T02:45:19.938Z",
+          "seconds": 16.378,
+          "title": "MSP shared IT contribution",
+          "actor": "qa",
+          "result": "Committed through native composer",
+          "sourceClip": "07-conversations-final"
+        },
+        {
+          "at": "2026-10-25T02:45:34.941Z",
+          "seconds": 31.381,
+          "title": "Distinct customer live display",
+          "actor": "qa",
+          "result": "Not observed before reload",
+          "sourceClip": "07-conversations-final"
+        },
+        {
+          "at": "2026-10-25T02:45:41.190Z",
+          "seconds": 37.63,
+          "title": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500",
+          "actor": "alice",
+          "result": "locks\n\nNo SLA policy applies\n\nChecklist\nTime logged\n\nRecorded effort\n\nCustomer\n0 hours\nMSP\n3 hours\nCombined\n3 hours\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team\u2026\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links",
+          "sourceClip": "07-conversations-final"
+        },
+        {
+          "at": "2026-10-25T02:45:41.198Z",
+          "seconds": 37.638,
+          "title": "Customer refreshed shared note and private denial",
+          "actor": "alice",
+          "result": "Passed",
+          "sourceClip": "07-conversations-final"
+        },
+        {
+          "at": "2026-10-25T02:45:42.870Z",
+          "seconds": 39.31,
+          "title": "Customer private write after fresh reload",
+          "actor": "alice",
+          "result": "Passed",
+          "sourceClip": "07-conversations-final"
+        },
+        {
+          "at": "2026-10-25T02:45:47.760Z",
+          "seconds": 44.2,
+          "title": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+          "actor": "qa",
+          "result": "on\nAdd time entry\nLogged\n3 hrs\nMy entries\n(3)\n3 hrs\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336",
+          "sourceClip": "07-conversations-final"
+        },
+        {
+          "at": "2026-10-25T02:45:47.765Z",
+          "seconds": 44.205,
+          "title": "MSP refreshed own note and customer-private denial",
+          "actor": "qa",
+          "result": "Passed",
+          "sourceClip": "07-conversations-final"
+        },
+        {
+          "at": "2026-10-25T03:16:33.004Z",
+          "seconds": 50.147,
+          "title": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+          "actor": "qa",
+          "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext",
+          "sourceClip": "07-task-attachment-boundaries"
+        },
+        {
+          "at": "2026-10-25T03:16:34.674Z",
+          "seconds": 51.815999999999995,
+          "title": "MSP task file publication and private download",
+          "actor": "qa",
+          "result": "Exact original bytes",
+          "sourceClip": "07-task-attachment-boundaries"
+        },
+        {
+          "at": "2026-10-25T03:16:39.483Z",
+          "seconds": 56.625,
+          "title": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+          "actor": "alice",
+          "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext",
+          "sourceClip": "07-task-attachment-boundaries"
+        },
+        {
+          "at": "2026-10-25T03:16:39.551Z",
+          "seconds": 56.693,
+          "title": "Customer task file authority",
+          "actor": "alice",
+          "result": {
+            "sharedHttp": 200,
+            "exactSharedBytes": true,
+            "mspPrivateHttp": 404,
+            "privateNoteAbsent": true
+          },
+          "sourceClip": "07-task-attachment-boundaries"
+        }
+      ],
+      "outcomes": [
+        {
+          "action": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+          "result": "on\nAdd time entry\nLogged\n3 hrs\nMy entries\n(3)\n3 hrs\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336"
+        },
+        {
+          "action": "MSP shared IT contribution",
+          "result": "Committed through native composer"
+        },
+        {
+          "action": "Distinct customer live display",
+          "result": "Not observed before reload"
+        },
+        {
+          "action": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500",
+          "result": "locks\n\nNo SLA policy applies\n\nChecklist\nTime logged\n\nRecorded effort\n\nCustomer\n0 hours\nMSP\n3 hours\nCombined\n3 hours\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team\u2026\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links"
+        },
+        {
+          "action": "Customer refreshed shared note and private denial",
+          "result": "Passed"
+        },
+        {
+          "action": "Customer private write after fresh reload",
+          "result": "Passed"
+        },
+        {
+          "action": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+          "result": "on\nAdd time entry\nLogged\n3 hrs\nMy entries\n(3)\n3 hrs\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336"
+        },
+        {
+          "action": "MSP refreshed own note and customer-private denial",
+          "result": "Passed"
+        },
+        {
+          "action": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+          "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext"
+        },
+        {
+          "action": "MSP task file publication and private download",
+          "result": "Exact original bytes"
+        },
+        {
+          "action": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+          "result": "Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester \u00b7 Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext"
+        },
+        {
+          "action": "Customer task file authority",
+          "result": {
+            "sharedHttp": 200,
+            "exactSharedBytes": true,
+            "mspPrivateHttp": 404,
+            "privateNoteAbsent": true
+          }
+        }
+      ],
+      "chapters": [
+        {
+          "start": 0,
+          "end": 16.378,
+          "title": "07 conversations final"
+        },
+        {
+          "start": 16.378,
+          "end": 31.381,
+          "title": "MSP shared IT contribution"
+        },
+        {
+          "start": 31.381,
+          "end": 37.638,
+          "title": "Distinct customer live display"
+        },
+        {
+          "start": 37.638,
+          "end": 39.31,
+          "title": "Customer refreshed shared note and private denial"
+        },
+        {
+          "start": 39.31,
+          "end": 44.205,
+          "title": "Customer private write after fresh reload"
+        },
+        {
+          "start": 44.205,
+          "end": 45.16,
+          "title": "MSP refreshed own note and customer-private denial"
+        },
+        {
+          "start": 45.16,
+          "end": 51.815999999999995,
+          "title": "07 task attachment boundaries"
+        },
+        {
+          "start": 51.815999999999995,
+          "end": 56.693,
+          "title": "MSP task file publication and private download"
+        },
+        {
+          "start": 56.693,
+          "end": 57.68,
+          "title": "Customer task file authority"
+        }
+      ],
+      "runtime": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/lead-acceptance-20261025/07-conversations-final/recording.json",
+          "evidence/lead-acceptance-20261025/07-task-attachment-boundaries/recording.json"
+        ]
+      },
+      "limitations": [
+        "Posted task shared/private file publication and two-organization byte authorization verified. Removal, whole-thread disclosure, requester and portable/archive integration require additional checks.",
+        "Actual recorded production build e88d530b4c; later source repairs are not silently relabeled as this runtime. Full guide acceptance remains incomplete."
+      ],
+      "recordingPaths": {
+        "webm": "guides/07-conversations-and-files-walkthrough.webm",
+        "chapterVtt": "guides/07-conversations-and-files-walkthrough.vtt",
+        "recordingJson": "guides/07-conversations-and-files-walkthrough.json"
+      },
+      "recordingSourcePaths": {
+        "webm": "07-conversations-and-files/walkthrough.webm",
+        "chapterVtt": "07-conversations-and-files/chapters.vtt"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "artifactSha256": {
+        "webm": "98df2f74bfc3a59222755d51de3e2ff6c6b97937feae94b37c6713817bdec1b1",
+        "chapterVtt": "936992ca38e68bf290a96044b493a867be8903a5c87b7e1977edfe77b0593381"
+      }
+    },
+    {
+      "guide": "guides/08-sla.html",
+      "candidateRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "testedRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "status": "complete",
+      "recordedAt": "2026-10-25T02:46:44.212Z",
+      "durationSeconds": 24.44,
+      "actors": [
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        },
+        {
+          "name": "alice",
+          "email": "alice@whiterabbit.test",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+        }
+      ],
+      "steps": [
+        {
+          "at": "2026-10-25T02:46:49.120Z",
+          "seconds": 4.908,
+          "title": "/msp/co-management/sla?operationId=52e5cc37-950f-4141-90e8-c34311419efb",
+          "actor": "qa",
+          "result": "ndependent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status",
+          "sourceClip": "08-sla"
+        },
+        {
+          "at": "2026-10-25T02:46:49.122Z",
+          "seconds": 4.91,
+          "title": "Sponsor priority mapping",
+          "actor": "qa",
+          "result": " shared task queues stay in the MSP shell with their qualified identities.\n\nProjects\nProject task queues\nEnd co-management\n\nReview what happens when this relationship ends.\n\nWhite Rabbit IT\n\nLive access between these organizations ends immediately when you confirm.\n\nThe customer keeps its workspace and data. Read access, export, and upgrade to an independent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status",
+          "sourceClip": "08-sla"
+        },
+        {
+          "at": "2026-10-25T02:46:54.276Z",
+          "seconds": 10.064,
+          "title": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+          "actor": "qa",
+          "result": "on\nAdd time entry\nLogged\n3 hrs\nMy entries\n(3)\n3 hrs\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336",
+          "sourceClip": "08-sla"
+        },
+        {
+          "at": "2026-10-25T02:46:58.395Z",
+          "seconds": 14.183,
+          "title": "MSP handback and separate clocks",
+          "actor": "qa",
+          "result": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nCo-managed access\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\n\u2190 Back to\nTickets\n#000002\nCreated Internally\nGrid\nEntry\nSMOKE callout count change 142333\n\nCreated 10/14/2026, 2:24 PM (10 days ago)\n\nUpdated 10/17/2026, 7:55 PM (7 days ago)\n\nSMOKE callout count change 142333\nResolve and close\nAll fields\nSTATUS\nOpen\nPRIORITY\nHigh\nBOARD\nService Desk\nCATEGORY\nSMOKE customer cat 20261016\nASSIGNED TO\nNot assigned\nDUE\nREPLY STATUS\nNo reply needed\nDESCRIPTION\n\n\n\n\nOpened\n\nContact\n\nNo contact on this ticket\n\nWR\nClient\nWhite Rabbit IT\nCo-managed\nResponsible\nWhite Rabbit IT\n\nWHITE RABBIT IT SLA\n\nNo SLA configured\n\nOZ SLA\n\nPaused\n\nResponse\nBreached\n\nCompleted \u00b7 Oct 15, 2026, 11:34 PM\n\nResolution\nBreached\nMSP assignment\nNot assigned to the MSP\nChange\nCalls and emails\n\nNo calls or emails logged\n\nTimeline\nOldest first\n\nReplies, time, and system changes in one place\n\nEverything (8)\nReplies (8)\nTime (0)\nSystem (0)\nAlerts (0)\nAdd Comment\nOCT 15\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 15, 11:34 PM\n\nSMOKE-NATIVE shared IT note from Oz 0333\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 15, 11:34 PM\n\nSMOKE-NATIVE OZ-PRIVATE note 0335\n\nOCT 17\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 17, 1:55 AM\n\nREVIEW-80 production shared IT 20261017\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 17, 7:56 PM\n\nhey there fellas\n\nTODAY\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 24, 10:40 PM\n\nCM-LEAD-20261025-0243 SHARED both IT teams\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 24, 10:40 PM\n\nCM-LEAD-20261025-0243 OZ-PRIVATE only MSP\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 24, 10:45 PM\n\nCM-LEAD-LIVE-1792896302990 shared note to customer\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 24, 10:45 PM\n\nCM-LEAD-LIVE-1792896302990 MSP PRIVATE\n\nTime logged\n3 hrs\nacross 3 entries\nOct 16\nOct 17\nOct 18\n\nRecorded effort\n\nCustomer",
+          "sourceClip": "08-sla"
+        },
+        {
+          "at": "2026-10-25T02:47:03.269Z",
+          "seconds": 19.057,
+          "title": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500",
+          "actor": "alice",
+          "result": "locks\n\nNo SLA policy applies\n\nChecklist\nTime logged\n\nRecorded effort\n\nCustomer\n0 hours\nMSP\n3 hours\nCombined\n3 hours\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team\u2026\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links",
+          "sourceClip": "08-sla"
+        },
+        {
+          "at": "2026-10-25T02:47:07.690Z",
+          "seconds": 23.478,
+          "title": "Customer escalation restored",
+          "actor": "alice",
+          "result": "Persisted reload",
+          "sourceClip": "08-sla"
+        }
+      ],
+      "outcomes": [
+        {
+          "action": "/msp/co-management/sla?operationId=52e5cc37-950f-4141-90e8-c34311419efb",
+          "result": "ndependent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status"
+        },
+        {
+          "action": "Sponsor priority mapping",
+          "result": " shared task queues stay in the MSP shell with their qualified identities.\n\nProjects\nProject task queues\nEnd co-management\n\nReview what happens when this relationship ends.\n\nWhite Rabbit IT\n\nLive access between these organizations ends immediately when you confirm.\n\nThe customer keeps its workspace and data. Read access, export, and upgrade to an independent AlgaPSA subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nReview departureRefresh status"
+        },
+        {
+          "action": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+          "result": "on\nAdd time entry\nLogged\n3 hrs\nMy entries\n(3)\n3 hrs\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336"
+        },
+        {
+          "action": "MSP handback and separate clocks",
+          "result": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nCo-managed access\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\n\u2190 Back to\nTickets\n#000002\nCreated Internally\nGrid\nEntry\nSMOKE callout count change 142333\n\nCreated 10/14/2026, 2:24 PM (10 days ago)\n\nUpdated 10/17/2026, 7:55 PM (7 days ago)\n\nSMOKE callout count change 142333\nResolve and close\nAll fields\nSTATUS\nOpen\nPRIORITY\nHigh\nBOARD\nService Desk\nCATEGORY\nSMOKE customer cat 20261016\nASSIGNED TO\nNot assigned\nDUE\nREPLY STATUS\nNo reply needed\nDESCRIPTION\n\n\n\n\nOpened\n\nContact\n\nNo contact on this ticket\n\nWR\nClient\nWhite Rabbit IT\nCo-managed\nResponsible\nWhite Rabbit IT\n\nWHITE RABBIT IT SLA\n\nNo SLA configured\n\nOZ SLA\n\nPaused\n\nResponse\nBreached\n\nCompleted \u00b7 Oct 15, 2026, 11:34 PM\n\nResolution\nBreached\nMSP assignment\nNot assigned to the MSP\nChange\nCalls and emails\n\nNo calls or emails logged\n\nTimeline\nOldest first\n\nReplies, time, and system changes in one place\n\nEverything (8)\nReplies (8)\nTime (0)\nSystem (0)\nAlerts (0)\nAdd Comment\nOCT 15\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 15, 11:34 PM\n\nSMOKE-NATIVE shared IT note from Oz 0333\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 15, 11:34 PM\n\nSMOKE-NATIVE OZ-PRIVATE note 0335\n\nOCT 17\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 17, 1:55 AM\n\nREVIEW-80 production shared IT 20261017\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 17, 7:56 PM\n\nhey there fellas\n\nTODAY\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 24, 10:40 PM\n\nCM-LEAD-20261025-0243 SHARED both IT teams\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 24, 10:40 PM\n\nCM-LEAD-20261025-0243 OZ-PRIVATE only MSP\n\nQT\n\nQA Tester\n\nShared IT teams\nShared IT teams\nOct 24, 10:45 PM\n\nCM-LEAD-LIVE-1792896302990 shared note to customer\n\nQT\n\nQA Tester\n\nMy organization only\nMy organization only\nOct 24, 10:45 PM\n\nCM-LEAD-LIVE-1792896302990 MSP PRIVATE\n\nTime logged\n3 hrs\nacross 3 entries\nOct 16\nOct 17\nOct 18\n\nRecorded effort\n\nCustomer"
+        },
+        {
+          "action": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500",
+          "result": "locks\n\nNo SLA policy applies\n\nChecklist\nTime logged\n\nRecorded effort\n\nCustomer\n0 hours\nMSP\n3 hours\nCombined\n3 hours\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team\u2026\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links"
+        },
+        {
+          "action": "Customer escalation restored",
+          "result": "Persisted reload"
+        }
+      ],
+      "chapters": [
+        {
+          "start": 0,
+          "end": 4.91,
+          "title": "08 sla"
+        },
+        {
+          "start": 4.91,
+          "end": 14.183,
+          "title": "Sponsor priority mapping"
+        },
+        {
+          "start": 14.183,
+          "end": 23.478,
+          "title": "MSP handback and separate clocks"
+        },
+        {
+          "start": 23.478,
+          "end": 24.44,
+          "title": "Customer escalation restored"
+        }
+      ],
+      "runtime": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/lead-acceptance-20261025/08-sla/recording.json"
+        ]
+      },
+      "limitations": [
+        "Separate clock display and responsibility transfers observed; breach notification delivery, CE/EE parity and exact elapsed-time arithmetic need further evidence.",
+        "Recorded against production build e88d530b4c (build-1792894631786). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+      ],
+      "recordingPaths": {
+        "webm": "guides/08-sla-walkthrough.webm",
+        "chapterVtt": "guides/08-sla-walkthrough.vtt",
+        "recordingJson": "guides/08-sla-walkthrough.json"
+      },
+      "recordingSourcePaths": {
+        "webm": "08-sla/walkthrough.webm",
+        "chapterVtt": "08-sla/chapters.vtt"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "artifactSha256": {
+        "webm": "15975c130374f65ad221a6bd99ece37ceda766ca8e3d1f4c845e7c487f1dfac9",
+        "chapterVtt": "860b216abf487879b84712eadf97f4dff7ebadf196a124b3a36f7ff65c85a90c"
+      }
+    },
+    {
+      "guide": "guides/09-time-and-billing.html",
+      "candidateRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "testedRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "status": "complete",
+      "recordedAt": "2026-10-25T02:56:32.457Z",
+      "durationSeconds": 38.36,
+      "actors": [
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        },
+        {
+          "name": "alice",
+          "email": "alice@whiterabbit.test",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+        }
+      ],
+      "steps": [
+        {
+          "at": "2026-10-25T02:56:37.675Z",
+          "seconds": 5.219,
+          "title": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+          "actor": "qa",
+          "result": "on\nAdd time entry\nLogged\n3 hrs\nMy entries\n(3)\n3 hrs\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336",
+          "sourceClip": "09-time-persisted"
+        },
+        {
+          "at": "2026-10-25T02:56:45.271Z",
+          "seconds": 12.814,
+          "title": "MSP commercial time after reload",
+          "actor": "qa",
+          "result": "15 minute entry visible on qualified ticket",
+          "sourceClip": "09-time-persisted"
+        },
+        {
+          "at": "2026-10-25T02:56:50.387Z",
+          "seconds": 17.93,
+          "title": "/msp/time-entry",
+          "actor": "qa",
+          "result": "us\n\t\nHours Entered\n\t\nDays Logged\n\t\nActions\n\n\n\t\n2026-10-16 - 2026-10-31\n\t\nIn Progress\nCurrent\n\t\n4.3h\n\t\n4 days\n\t\nView\n\n\n\t\n2026-10-12 - 2026-10-15\n\t\nIn Progress\n\t\n6h\n\t\n3 days\n\t\nView\n\n\n\t\n2026-10-05 - 2026-10-11\n\t\nIn Progress\n\t\n0h\n\t\n0 days\n\t\nView\n\n\n\t\n2026-09-01 - 2026-09-30\n\t\nApproved\n\t\n2h\n\t\n1 day\n\t\nView",
+          "sourceClip": "09-time-persisted"
+        },
+        {
+          "at": "2026-10-25T02:56:50.435Z",
+          "seconds": 17.978,
+          "title": "Native time collection opened",
+          "actor": "qa",
+          "result": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nTime Entry\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nSelect a Time Period\nManage Time Periods\n1 column hidden.\nShow all\n\t\nPeriod\n\t\nStatus\n\t\nHours Entered\n\t\nDays Logged\n\t\nActions\n\n\n\t\n2026-10-16 - 2026-10-31\n\t\nIn Progress\nCurrent\n\t\n4.3h\n\t\n4 days\n\t\nView\n\n\n\t\n2026-10-12 - 2026-10-15\n\t\nIn Progress\n\t\n6h\n\t\n3 days\n\t\nView\n\n\n\t\n2026-10-05 - 2026-10-11\n\t\nIn Progress\n\t\n0h\n\t\n0 days\n\t\nView\n\n\n\t\n2026-09-01 - 2026-09-30\n\t\nApproved\n\t\n2h\n\t\n1 day\n\t\nView",
+          "sourceClip": "09-time-persisted"
+        },
+        {
+          "at": "2026-10-25T03:24:26.115Z",
+          "seconds": 23.946,
+          "title": "/msp/settings?tab=time-entry&subtab=time-periods",
+          "actor": "alice",
+          "result": "me Entry\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nTime Entry\nTime Entry Settings\n\nManage your time entry settings and time periods\n\nTime Period Settings\nTime Periods\nTime Periods\n\nView and manage time entry periods for time tracking\n\nCreate New Time Period\nStart Date\n\t\nLast Day\n\t\nActions",
+          "sourceClip": "09-operational-save-final"
+        },
+        {
+          "at": "2026-10-25T03:24:28.705Z",
+          "seconds": 26.536,
+          "title": "Customer time period after reload",
+          "actor": "alice",
+          "result": "Loading translations...",
+          "sourceClip": "09-operational-save-final"
+        },
+        {
+          "at": "2026-10-25T03:24:33.800Z",
+          "seconds": 31.631,
+          "title": "/msp/projects/943acf31-95f4-47b0-8818-9de8977e5abd",
+          "actor": "alice",
+          "result": "ort\nCM Lead phase\n1 task\nProject defaults\nStart: Not set\nDue: Not set\nKanban Board: CM Lead phase\nProject defaults\nCompact\nReset\nSpacious\nKanban\nList\nWord\nAa\nFilter\nAll Agents\nAll Priorities\nAll Types\n0 / 1 Done\nTo Do\n1\nTask Actions\nCM Lead shared task\nNot assigned\nNo due date\n1\nIn Progress\n0\nDone\n0",
+          "sourceClip": "09-operational-save-final"
+        },
+        {
+          "at": "2026-10-25T03:24:39.206Z",
+          "seconds": 37.037000000000006,
+          "title": "Customer service-free operational entry saved",
+          "actor": "alice",
+          "result": "Persisted receipt records ownership and billing mode",
+          "sourceClip": "09-operational-save-final"
+        }
+      ],
+      "outcomes": [
+        {
+          "action": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+          "result": "on\nAdd time entry\nLogged\n3 hrs\nMy entries\n(3)\n3 hrs\n10/18/2026, 4:00 AM\nBillable\n1 hr\nYellow Brick Road Repair\nDraft\nhi\n10/17/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nREVIEW-80 production commercial time 20261017\n10/16/2026, 4:00 AM\nBillable\n1 hr\nBasic Support\nDraft\nSMOKE-NATIVE MSP time 0336"
+        },
+        {
+          "action": "MSP commercial time after reload",
+          "result": "15 minute entry visible on qualified ticket"
+        },
+        {
+          "action": "/msp/time-entry",
+          "result": "us\n\t\nHours Entered\n\t\nDays Logged\n\t\nActions\n\n\n\t\n2026-10-16 - 2026-10-31\n\t\nIn Progress\nCurrent\n\t\n4.3h\n\t\n4 days\n\t\nView\n\n\n\t\n2026-10-12 - 2026-10-15\n\t\nIn Progress\n\t\n6h\n\t\n3 days\n\t\nView\n\n\n\t\n2026-10-05 - 2026-10-11\n\t\nIn Progress\n\t\n0h\n\t\n0 days\n\t\nView\n\n\n\t\n2026-09-01 - 2026-09-30\n\t\nApproved\n\t\n2h\n\t\n1 day\n\t\nView"
+        },
+        {
+          "action": "Native time collection opened",
+          "result": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nTime Entry\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nSelect a Time Period\nManage Time Periods\n1 column hidden.\nShow all\n\t\nPeriod\n\t\nStatus\n\t\nHours Entered\n\t\nDays Logged\n\t\nActions\n\n\n\t\n2026-10-16 - 2026-10-31\n\t\nIn Progress\nCurrent\n\t\n4.3h\n\t\n4 days\n\t\nView\n\n\n\t\n2026-10-12 - 2026-10-15\n\t\nIn Progress\n\t\n6h\n\t\n3 days\n\t\nView\n\n\n\t\n2026-10-05 - 2026-10-11\n\t\nIn Progress\n\t\n0h\n\t\n0 days\n\t\nView\n\n\n\t\n2026-09-01 - 2026-09-30\n\t\nApproved\n\t\n2h\n\t\n1 day\n\t\nView"
+        },
+        {
+          "action": "/msp/settings?tab=time-entry&subtab=time-periods",
+          "result": "me Entry\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nTime Entry\nTime Entry Settings\n\nManage your time entry settings and time periods\n\nTime Period Settings\nTime Periods\nTime Periods\n\nView and manage time entry periods for time tracking\n\nCreate New Time Period\nStart Date\n\t\nLast Day\n\t\nActions"
+        },
+        {
+          "action": "Customer time period after reload",
+          "result": "Loading translations..."
+        },
+        {
+          "action": "/msp/projects/943acf31-95f4-47b0-8818-9de8977e5abd",
+          "result": "ort\nCM Lead phase\n1 task\nProject defaults\nStart: Not set\nDue: Not set\nKanban Board: CM Lead phase\nProject defaults\nCompact\nReset\nSpacious\nKanban\nList\nWord\nAa\nFilter\nAll Agents\nAll Priorities\nAll Types\n0 / 1 Done\nTo Do\n1\nTask Actions\nCM Lead shared task\nNot assigned\nNo due date\n1\nIn Progress\n0\nDone\n0"
+        },
+        {
+          "action": "Customer service-free operational entry saved",
+          "result": "Persisted receipt records ownership and billing mode"
+        }
+      ],
+      "chapters": [
+        {
+          "start": 0,
+          "end": 12.814,
+          "title": "09 time persisted"
+        },
+        {
+          "start": 12.814,
+          "end": 17.978,
+          "title": "MSP commercial time after reload"
+        },
+        {
+          "start": 17.978,
+          "end": 18.92,
+          "title": "Native time collection opened"
+        },
+        {
+          "start": 18.92,
+          "end": 26.536,
+          "title": "09 operational save final"
+        },
+        {
+          "start": 26.536,
+          "end": 37.037000000000006,
+          "title": "Customer time period after reload"
+        },
+        {
+          "start": 37.037000000000006,
+          "end": 38.36,
+          "title": "Customer service-free operational entry saved"
+        }
+      ],
+      "runtime": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/lead-acceptance-20261025/09-time-persisted/recording.json",
+          "evidence/lead-acceptance-20261025/09-operational-save-final/recording.json"
+        ]
+      },
+      "limitations": [
+        "Customer operational effort and MSP commercial effort were recorded separately. Complete timesheet approval and MSP invoice reconciliation remain unverified.",
+        "Actual recorded production build e88d530b4c; later source repairs are not silently relabeled as this runtime. Full guide acceptance remains incomplete."
+      ],
+      "recordingPaths": {
+        "webm": "guides/09-time-and-billing-walkthrough.webm",
+        "chapterVtt": "guides/09-time-and-billing-walkthrough.vtt",
+        "recordingJson": "guides/09-time-and-billing-walkthrough.json"
+      },
+      "recordingSourcePaths": {
+        "webm": "09-time-and-billing/walkthrough.webm",
+        "chapterVtt": "09-time-and-billing/chapters.vtt"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "artifactSha256": {
+        "webm": "bbadf59b3580933842960dd44a74e5548ae8083f561d6b3f09722623cc5026c2",
+        "chapterVtt": "7bf2f844d68ee0ee1e7f1746cc4093ca29ab95edb0c8113b3abfb1d978e30c37"
+      }
+    },
+    {
+      "guide": "guides/10-departure-and-archives.html",
+      "candidateRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "testedRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "status": "complete",
+      "recordedAt": "2026-10-25T02:58:40.722Z",
+      "durationSeconds": 33.36,
+      "actors": [
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        },
+        {
+          "name": "invited customer admin",
+          "email": "lead.20261025@cmreview.test",
+          "tenant": "a967fcd6-2fa7-4c16-833e-91a1ed6855ff"
+        }
+      ],
+      "steps": [
+        {
+          "at": "2026-10-25T02:58:45.690Z",
+          "seconds": 4.968,
+          "title": "/msp/co-management/departure",
+          "result": "main available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nUpgrade to AlgaPSAExport workspaceReview departureRefresh status",
+          "sourceClip": "10-departure-final"
+        },
+        {
+          "at": "2026-10-25T02:58:49.895Z",
+          "seconds": 9.173,
+          "title": "Disposable relationship ended after reload",
+          "result": "Customer retains read-only workspace; existing White Rabbit remains active",
+          "sourceClip": "10-departure-final"
+        },
+        {
+          "at": "2026-10-25T02:58:54.948Z",
+          "seconds": 14.226,
+          "title": "/msp/tickets",
+          "result": "echnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nAll Tickets\na967fcd6-2fa7-4c16-833e-91a1ed6855ff\nQuick Create\nLR\nTicketing Dashboard\nAdd Ticket\nAll tickets\nFilters\nBundled\nDefault view\nView\n2 columns hidden.\nShow all\n\t\nTitle\n\t\nStatus\n\t\nPriority\n\t\nBoard\n\t\nClient\n\t\nActions",
+          "sourceClip": "10-departure-final"
+        },
+        {
+          "at": "2026-10-25T03:00:30.160Z",
+          "seconds": 20.371,
+          "title": "/msp/co-management/departure",
+          "result": " subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nUpgrade to AlgaPSAExport workspaceRefresh status",
+          "sourceClip": "10-departure-retained"
+        },
+        {
+          "at": "2026-10-25T03:00:30.166Z",
+          "seconds": 20.377,
+          "title": "Fresh customer departure read",
+          "result": "Ended; no live sponsor counterpart disclosure",
+          "sourceClip": "10-departure-retained"
+        },
+        {
+          "at": "2026-10-25T03:00:35.609Z",
+          "seconds": 25.82,
+          "title": "/msp/tickets",
+          "result": "echnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nAll Tickets\na967fcd6-2fa7-4c16-833e-91a1ed6855ff\nQuick Create\nLR\nTicketing Dashboard\nAdd Ticket\nAll tickets\nFilters\nBundled\nDefault view\nView\n2 columns hidden.\nShow all\n\t\nTitle\n\t\nStatus\n\t\nPriority\n\t\nBoard\n\t\nClient\n\t\nActions",
+          "sourceClip": "10-departure-retained"
+        },
+        {
+          "at": "2026-10-25T03:00:35.610Z",
+          "seconds": 25.820999999999998,
+          "title": "Customer retains native read workspace",
+          "result": "No data deletion",
+          "sourceClip": "10-departure-retained"
+        },
+        {
+          "at": "2026-10-25T03:00:40.380Z",
+          "seconds": 30.591,
+          "title": "/msp/co-managed/archive",
+          "actor": "qa",
+          "result": "-c56222904580\nQuick Create\nQT\nShared work archive\n\nRetained history and files from work your organization participated in.\n\nReload current access\nSMOKE callout count change 142333\nWhite Rabbit\nPrinter offline in accounts\nWhite Rabbit\nPrevious\nNext\n\nSelect retained work to view its history and files.",
+          "sourceClip": "10-departure-retained"
+        },
+        {
+          "at": "2026-10-25T03:00:42.183Z",
+          "seconds": 32.394,
+          "title": "MSP retained archive surface",
+          "actor": "qa",
+          "result": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nOverview\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nShared work archive\n\nRetained history and files from work your organization participated in.\n\nReload current access\nSMOKE callout count change 142333\nWhite Rabbit\nPrinter offline in accounts\nWhite Rabbit\nPrevious\nNext\n\nSelect retained work to view its history and files.",
+          "sourceClip": "10-departure-retained"
+        }
+      ],
+      "outcomes": [
+        {
+          "action": "/msp/co-management/departure",
+          "result": "main available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nUpgrade to AlgaPSAExport workspaceReview departureRefresh status"
+        },
+        {
+          "action": "Disposable relationship ended after reload",
+          "result": "Customer retains read-only workspace; existing White Rabbit remains active"
+        },
+        {
+          "action": "/msp/tickets",
+          "result": "echnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nAll Tickets\na967fcd6-2fa7-4c16-833e-91a1ed6855ff\nQuick Create\nLR\nTicketing Dashboard\nAdd Ticket\nAll tickets\nFilters\nBundled\nDefault view\nView\n2 columns hidden.\nShow all\n\t\nTitle\n\t\nStatus\n\t\nPriority\n\t\nBoard\n\t\nClient\n\t\nActions"
+        },
+        {
+          "action": "/msp/co-management/departure",
+          "result": " subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nUpgrade to AlgaPSAExport workspaceRefresh status"
+        },
+        {
+          "action": "Fresh customer departure read",
+          "result": "Ended; no live sponsor counterpart disclosure"
+        },
+        {
+          "action": "/msp/tickets",
+          "result": "echnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nAll Tickets\na967fcd6-2fa7-4c16-833e-91a1ed6855ff\nQuick Create\nLR\nTicketing Dashboard\nAdd Ticket\nAll tickets\nFilters\nBundled\nDefault view\nView\n2 columns hidden.\nShow all\n\t\nTitle\n\t\nStatus\n\t\nPriority\n\t\nBoard\n\t\nClient\n\t\nActions"
+        },
+        {
+          "action": "Customer retains native read workspace",
+          "result": "No data deletion"
+        },
+        {
+          "action": "/msp/co-managed/archive",
+          "result": "-c56222904580\nQuick Create\nQT\nShared work archive\n\nRetained history and files from work your organization participated in.\n\nReload current access\nSMOKE callout count change 142333\nWhite Rabbit\nPrinter offline in accounts\nWhite Rabbit\nPrevious\nNext\n\nSelect retained work to view its history and files."
+        },
+        {
+          "action": "MSP retained archive surface",
+          "result": "AlgaPSA\nHome\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nOverview\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nShared work archive\n\nRetained history and files from work your organization participated in.\n\nReload current access\nSMOKE callout count change 142333\nWhite Rabbit\nPrinter offline in accounts\nWhite Rabbit\nPrevious\nNext\n\nSelect retained work to view its history and files."
+        }
+      ],
+      "chapters": [
+        {
+          "start": 0,
+          "end": 9.173,
+          "title": "10 departure final"
+        },
+        {
+          "start": 9.173,
+          "end": 15.28,
+          "title": "Disposable relationship ended after reload"
+        },
+        {
+          "start": 15.28,
+          "end": 20.377,
+          "title": "10 departure retained"
+        },
+        {
+          "start": 20.377,
+          "end": 25.82,
+          "title": "Fresh customer departure read"
+        },
+        {
+          "start": 25.82,
+          "end": 32.394,
+          "title": "Customer retains native read workspace"
+        },
+        {
+          "start": 32.394,
+          "end": 33.36,
+          "title": "MSP retained archive surface"
+        }
+      ],
+      "runtime": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/lead-acceptance-20261025/10-departure-final/recording.json",
+          "evidence/lead-acceptance-20261025/10-departure-retained/recording.json"
+        ]
+      },
+      "limitations": [
+        "The first clip ends after a successful UI departure with a verification-query column error; the second clip corrects that read and confirms one released seat and one sealed manifest.",
+        "The disposable workspace had no participated shared work. Retention of shared files, private evidence and billed history remains unverified here."
+      ],
+      "recordingPaths": {
+        "webm": "guides/10-departure-and-archives-walkthrough.webm",
+        "chapterVtt": "guides/10-departure-and-archives-walkthrough.vtt",
+        "recordingJson": "guides/10-departure-and-archives-walkthrough.json"
+      },
+      "recordingSourcePaths": {
+        "webm": "10-departure-and-archives/walkthrough.webm",
+        "chapterVtt": "10-departure-and-archives/chapters.vtt"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "artifactSha256": {
+        "webm": "52cdecef4d39bea7a5b6b0292bf8a2abe5e1ab1bb634a6eee05920dcd29bbba2",
+        "chapterVtt": "c62fcceb6b9bd4c72a4fea82df5d2b36318af1dc92e6a10ccac7f2bfe3f22b6c"
+      }
+    },
+    {
+      "guide": "guides/11-export-restore-and-upgrade.html",
+      "candidateRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "testedRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "status": "complete",
+      "recordedAt": "2026-10-25T02:57:23.154Z",
+      "durationSeconds": 11.92,
+      "actors": [
+        {
+          "name": "alice",
+          "email": "alice@whiterabbit.test",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+        }
+      ],
+      "steps": [
+        {
+          "at": "2026-10-25T02:57:28.117Z",
+          "seconds": 4.964,
+          "title": "/msp/co-management/export",
+          "actor": "alice",
+          "result": " backup of your customer workspace.\n\nWhite Rabbit IT\n\nKeep the recovery passphrase somewhere safe. Without it, the backup cannot be opened.\n\nRestoring requires reconnecting external accounts and activating imported users.\n\nRecovery passphrase*\nConfirm recovery passphrase*\nPrepare and download backup",
+          "sourceClip": "11-export-restore-and-upgrade"
+        },
+        {
+          "at": "2026-10-25T02:57:29.042Z",
+          "seconds": 5.888,
+          "title": "Customer encrypted portable download",
+          "actor": "alice",
+          "result": {
+            "downloadName": "alga-workspace-5bf14599-2418-499b-9b3d-a7011e9d4e19.alga-backup",
+            "sizeBytes": 192878,
+            "sha256": "f16ff680ec0447b244bafc3879a13c7d4632d344d394ed497b782dc341b53e4f",
+            "customerTenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+            "privateFileRetained": true
+          },
+          "sourceClip": "11-export-restore-and-upgrade"
+        },
+        {
+          "at": "2026-10-25T02:57:34.084Z",
+          "seconds": 10.93,
+          "title": "/msp/co-management/upgrade",
+          "actor": "alice",
+          "result": "\nAn active, paid AlgaPSA subscription belonging to this workspace is required before upgrading.\n\nThis purchase pays for this workspace. MSP access ends only when you confirm the upgrade after payment.\n\nTotal seats in your pool\nBilling frequency\nMonthly\nReview purchase\nUpgrade workspaceRefresh status",
+          "sourceClip": "11-export-restore-and-upgrade"
+        },
+        {
+          "at": "2026-10-25T02:57:34.090Z",
+          "seconds": 10.936,
+          "title": "Independent upgrade admission",
+          "actor": "alice",
+          "result": "Not admitted without a destination-owned paid PSA subscription",
+          "sourceClip": "11-export-restore-and-upgrade"
+        }
+      ],
+      "outcomes": [
+        {
+          "action": "/msp/co-management/export",
+          "result": " backup of your customer workspace.\n\nWhite Rabbit IT\n\nKeep the recovery passphrase somewhere safe. Without it, the backup cannot be opened.\n\nRestoring requires reconnecting external accounts and activating imported users.\n\nRecovery passphrase*\nConfirm recovery passphrase*\nPrepare and download backup"
+        },
+        {
+          "action": "Customer encrypted portable download",
+          "result": {
+            "downloadName": "alga-workspace-5bf14599-2418-499b-9b3d-a7011e9d4e19.alga-backup",
+            "sizeBytes": 192878,
+            "sha256": "f16ff680ec0447b244bafc3879a13c7d4632d344d394ed497b782dc341b53e4f",
+            "customerTenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+            "privateFileRetained": true
+          }
+        },
+        {
+          "action": "/msp/co-management/upgrade",
+          "result": "\nAn active, paid AlgaPSA subscription belonging to this workspace is required before upgrading.\n\nThis purchase pays for this workspace. MSP access ends only when you confirm the upgrade after payment.\n\nTotal seats in your pool\nBilling frequency\nMonthly\nReview purchase\nUpgrade workspaceRefresh status"
+        },
+        {
+          "action": "Independent upgrade admission",
+          "result": "Not admitted without a destination-owned paid PSA subscription"
+        }
+      ],
+      "chapters": [
+        {
+          "start": 0,
+          "end": 5.888,
+          "title": "11 export restore and upgrade"
+        },
+        {
+          "start": 5.888,
+          "end": 10.936,
+          "title": "Customer encrypted portable download"
+        },
+        {
+          "start": 10.936,
+          "end": 11.92,
+          "title": "Independent upgrade admission"
+        }
+      ],
+      "runtime": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/lead-acceptance-20261025/11-export-restore-and-upgrade/recording.json"
+        ]
+      },
+      "limitations": [
+        "Real customer export downloaded and hashed. Isolated installation restore and paid activation were not performed; destination license/subscription is externally required.",
+        "Recorded against production build e88d530b4c (build-1792894631786). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+      ],
+      "recordingPaths": {
+        "webm": "guides/11-export-restore-and-upgrade-walkthrough.webm",
+        "chapterVtt": "guides/11-export-restore-and-upgrade-walkthrough.vtt",
+        "recordingJson": "guides/11-export-restore-and-upgrade-walkthrough.json"
+      },
+      "recordingSourcePaths": {
+        "webm": "11-export-restore-and-upgrade/walkthrough.webm",
+        "chapterVtt": "11-export-restore-and-upgrade/chapters.vtt"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "artifactSha256": {
+        "webm": "8e5c33477b8c94dc25a4f32b786509e96747000ffb9a7976335d5b3e840c9a99",
+        "chapterVtt": "3f2789593c39090c6bc1c4564b4093f65f8681f132f7c5ba915576086427d39e"
+      }
+    },
+    {
+      "guide": "guides/12-customer-integrations.html",
+      "candidateRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "testedRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "status": "complete",
+      "recordedAt": "2026-10-25T02:58:07.729Z",
+      "durationSeconds": 22.48,
+      "actors": [
+        {
+          "name": "qa",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        },
+        {
+          "name": "alice",
+          "email": "alice@whiterabbit.test",
+          "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+        }
+      ],
+      "steps": [
+        {
+          "at": "2026-10-25T02:58:12.732Z",
+          "seconds": 5.003,
+          "title": "/msp/settings/email",
+          "actor": "alice",
+          "result": "s\nSurvey email\nSender\nUse default\nDisplay name\nSave Settings\nAccount email\nSender\nUse default\nDisplay name\nSave Settings\nGeneral email\nSender\nUse default\nDisplay name\nSave Settings\n\nBoard-specific ticket senders are managed in each board\u2019s settings.\n\nRun Outbound Diagnostics\nRun Outbound Diagnostics",
+          "sourceClip": "12-customer-integrations"
+        },
+        {
+          "at": "2026-10-25T02:58:12.736Z",
+          "seconds": 5.007,
+          "title": "Customer email binding",
+          "actor": "alice",
+          "result": "Existing Nine Minds Managed binding retained; no secret replacement",
+          "sourceClip": "12-customer-integrations"
+        },
+        {
+          "at": "2026-10-25T02:58:17.556Z",
+          "seconds": 9.827,
+          "title": "/msp/co-management/providers",
+          "actor": "alice",
+          "result": "AM & Admin > Service Accounts > Keys > Add key > JSON.\n\nRefresh\nDisconnect Google providers\nSave\nAfter saving, re-authorize Gmail and Calendar from their integration screens. Existing Google email and calendar connections are not migrated. Staff sign-in uses the saved Google OAuth client and secret.",
+          "sourceClip": "12-customer-integrations"
+        },
+        {
+          "at": "2026-10-25T02:58:19.559Z",
+          "seconds": 11.83,
+          "title": "Customer provider ownership controls",
+          "actor": "alice",
+          "result": "ur company uses both.\n\nOpen Single Sign-On\nGoogle\nNot configured\n\nStaff sign-in with Google, Gmail inbound email, and Google Calendar.\n\nMicrosoft\nNeeds setup\n\nStaff sign-in with Microsoft, Outlook email, Outlook calendar sync, and Teams.\n\nGoogle\n\nEnter your company's Google OAuth app credentials for staff sign-in, Gmail inbound email, and Google Calendar.\n\nGoogle Cloud Console\nSetup guide\nGoogle OAuth app values\nGoogle Cloud project ID\n\nRequired for inbound Gmail notifications. Find it in the project picker at the top of Google Cloud.\n\nOAuth app\n\nGoogle Cloud: APIs & Services > Credentials > OAuth 2.0 Client IDs.\n\nUse the Google OAuth client for Calendar too\nStaff sign-in and Gmail always use the OAuth client below. Turn this on to share it with Calendar; turn it off to enter separate Calendar credentials.\nGoogle OAuth Client ID for staff sign-in and Gmail\nGoogle OAuth Client Secret for staff sign-in and Gmail\nCalendar OAuth Client ID\nCalendar OAuth Client Secret\nGmail notification service account\n\nRequired for inbound Gmail notifications. Not used for staff sign-in.\n\nGoogle Cloud: IAM & Admin > Service Accounts > Keys > Add key > JSON.\n\nRefresh\nDisconnect Google providers\nSave\nAfter saving, re-authorize Gmail and Calendar from their integration screens. Existing Google email and calendar connections are not migrated. Staff sign-in uses the saved Google OAuth client and secret.",
+          "sourceClip": "12-customer-integrations"
+        },
+        {
+          "at": "2026-10-25T02:58:24.445Z",
+          "seconds": 16.716,
+          "title": "/auth/msp/signin",
+          "actor": "alice",
+          "result": "isits and remote sessions with bi-directional sync.\n\nHide\nDownload AlgaPSA Mobile app\n\nScan a QR code with your phone to download the AlgaPSA mobile app.\n\nApp Store (iOS)\nGoogle Play (Android)\nNeed a deeper dive?\n\nExplore deployment runbooks and best practices in the knowledge base.\n\nVisit resources",
+          "sourceClip": "12-customer-integrations"
+        },
+        {
+          "at": "2026-10-25T02:58:24.445Z",
+          "seconds": 16.716,
+          "title": "Staff sign-in entry with existing session",
+          "actor": "alice",
+          "result": "No production Microsoft binding prepared; cannot assert OIDC round trip",
+          "sourceClip": "12-customer-integrations"
+        },
+        {
+          "at": "2026-10-25T02:58:29.226Z",
+          "seconds": 21.497,
+          "title": "/msp/settings/email",
+          "actor": "qa",
+          "result": "s\nSurvey email\nSender\nUse default\nDisplay name\nSave Settings\nAccount email\nSender\nUse default\nDisplay name\nSave Settings\nGeneral email\nSender\nUse default\nDisplay name\nSave Settings\n\nBoard-specific ticket senders are managed in each board\u2019s settings.\n\nRun Outbound Diagnostics\nRun Outbound Diagnostics",
+          "sourceClip": "12-customer-integrations"
+        }
+      ],
+      "outcomes": [
+        {
+          "action": "/msp/settings/email",
+          "result": "s\nSurvey email\nSender\nUse default\nDisplay name\nSave Settings\nAccount email\nSender\nUse default\nDisplay name\nSave Settings\nGeneral email\nSender\nUse default\nDisplay name\nSave Settings\n\nBoard-specific ticket senders are managed in each board\u2019s settings.\n\nRun Outbound Diagnostics\nRun Outbound Diagnostics"
+        },
+        {
+          "action": "Customer email binding",
+          "result": "Existing Nine Minds Managed binding retained; no secret replacement"
+        },
+        {
+          "action": "/msp/co-management/providers",
+          "result": "AM & Admin > Service Accounts > Keys > Add key > JSON.\n\nRefresh\nDisconnect Google providers\nSave\nAfter saving, re-authorize Gmail and Calendar from their integration screens. Existing Google email and calendar connections are not migrated. Staff sign-in uses the saved Google OAuth client and secret."
+        },
+        {
+          "action": "Customer provider ownership controls",
+          "result": "ur company uses both.\n\nOpen Single Sign-On\nGoogle\nNot configured\n\nStaff sign-in with Google, Gmail inbound email, and Google Calendar.\n\nMicrosoft\nNeeds setup\n\nStaff sign-in with Microsoft, Outlook email, Outlook calendar sync, and Teams.\n\nGoogle\n\nEnter your company's Google OAuth app credentials for staff sign-in, Gmail inbound email, and Google Calendar.\n\nGoogle Cloud Console\nSetup guide\nGoogle OAuth app values\nGoogle Cloud project ID\n\nRequired for inbound Gmail notifications. Find it in the project picker at the top of Google Cloud.\n\nOAuth app\n\nGoogle Cloud: APIs & Services > Credentials > OAuth 2.0 Client IDs.\n\nUse the Google OAuth client for Calendar too\nStaff sign-in and Gmail always use the OAuth client below. Turn this on to share it with Calendar; turn it off to enter separate Calendar credentials.\nGoogle OAuth Client ID for staff sign-in and Gmail\nGoogle OAuth Client Secret for staff sign-in and Gmail\nCalendar OAuth Client ID\nCalendar OAuth Client Secret\nGmail notification service account\n\nRequired for inbound Gmail notifications. Not used for staff sign-in.\n\nGoogle Cloud: IAM & Admin > Service Accounts > Keys > Add key > JSON.\n\nRefresh\nDisconnect Google providers\nSave\nAfter saving, re-authorize Gmail and Calendar from their integration screens. Existing Google email and calendar connections are not migrated. Staff sign-in uses the saved Google OAuth client and secret."
+        },
+        {
+          "action": "/auth/msp/signin",
+          "result": "isits and remote sessions with bi-directional sync.\n\nHide\nDownload AlgaPSA Mobile app\n\nScan a QR code with your phone to download the AlgaPSA mobile app.\n\nApp Store (iOS)\nGoogle Play (Android)\nNeed a deeper dive?\n\nExplore deployment runbooks and best practices in the knowledge base.\n\nVisit resources"
+        },
+        {
+          "action": "Staff sign-in entry with existing session",
+          "result": "No production Microsoft binding prepared; cannot assert OIDC round trip"
+        },
+        {
+          "action": "/msp/settings/email",
+          "result": "s\nSurvey email\nSender\nUse default\nDisplay name\nSave Settings\nAccount email\nSender\nUse default\nDisplay name\nSave Settings\nGeneral email\nSender\nUse default\nDisplay name\nSave Settings\n\nBoard-specific ticket senders are managed in each board\u2019s settings.\n\nRun Outbound Diagnostics\nRun Outbound Diagnostics"
+        }
+      ],
+      "chapters": [
+        {
+          "start": 0,
+          "end": 5.007,
+          "title": "12 customer integrations"
+        },
+        {
+          "start": 5.007,
+          "end": 11.83,
+          "title": "Customer email binding"
+        },
+        {
+          "start": 11.83,
+          "end": 16.716,
+          "title": "Customer provider ownership controls"
+        },
+        {
+          "start": 16.716,
+          "end": 22.48,
+          "title": "Staff sign-in entry with existing session"
+        }
+      ],
+      "runtime": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "origin": "http://feature-co-managed-it.localhost:23374",
+        "mode": "production"
+      },
+      "build": {
+        "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786"
+      },
+      "scenario": {
+        "status": "partial; consult outcomes and limitations",
+        "rawClips": [
+          "evidence/lead-acceptance-20261025/12-customer-integrations/recording.json"
+        ]
+      },
+      "limitations": [
+        "Customer and sponsor email settings and customer provider workbench inspected separately. Customer provider save, real Microsoft callback, directory sync, requester inbound/replay/revocation are blocked by missing isolated test binding. System invitation SMTP delivery was verified separately and does not establish customer-provider acceptance.",
+        "Recorded against production build e88d530b4c (build-1792894631786). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+      ],
+      "recordingPaths": {
+        "webm": "guides/12-customer-integrations-walkthrough.webm",
+        "chapterVtt": "guides/12-customer-integrations-walkthrough.vtt",
+        "recordingJson": "guides/12-customer-integrations-walkthrough.json"
+      },
+      "recordingSourcePaths": {
+        "webm": "12-customer-integrations/walkthrough.webm",
+        "chapterVtt": "12-customer-integrations/chapters.vtt"
+      },
+      "playbackVerified": true,
+      "chapterSeekVerified": true,
+      "artifactSha256": {
+        "webm": "2976b643773aa0cbdcf3568c8f6c5f9d1a12cf44d414c53d404f25a32cfe8dbe",
+        "chapterVtt": "afba5ceb0fea64f314f2cdb723e5650121b0f6cfdfac699b4d0bf3f6d67d8c8a"
+      }
+    }
+  ],
+  "mediaPlaybackVerified": 14,
+  "recordingArtifactBaseUrl": "http://100.82.172.57:8874/evidence/walkthroughs-e88d530b4c/"
+}

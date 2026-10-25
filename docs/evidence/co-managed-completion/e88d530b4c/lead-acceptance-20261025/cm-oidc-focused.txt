@@ -1,0 +1,11 @@
+
+ RUN  v4.1.11 /home/robert/alga-copies/feature-co-managed-it/packages/emulators/msgraph
+
+[algasim] msgraph vendor surface listening {"port":38007}
+[algasim] control API listening {"port":37765}
+
+ Test Files  1 passed (1)
+      Tests  11 passed (11)
+   Start at  23:14:57
+   Duration  723ms (transform 188ms, setup 0ms, import 403ms, tests 227ms, environment 0ms)
+

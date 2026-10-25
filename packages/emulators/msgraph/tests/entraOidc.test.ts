@@ -106,6 +106,13 @@ it.each(['issuer', 'audience', 'signature'] as const)('the application provider 
   await expect(provider.token.conform(new Response(JSON.stringify({ ...tokens, id_token: forged })))).rejects.toThrow();
 });
 
+it('the application provider rejects a correctly signed expired ID token', async () => {
+  const tokens = await (await redeem(await authorization())).json();
+  const expired = signEntraIdToken(decodeJwt(tokens.id_token), Math.floor(Date.now() / 1000) - 7200);
+  const provider = buildMicrosoftSsoEmulatorProvider({ clientId, clientSecret, authority: tenant, profile: async profile => profile });
+  await expect(provider.token.conform(new Response(JSON.stringify({ ...tokens, id_token: expired })))).rejects.toThrow(/exp/);
+});
+
 async function authJourney(tamper?: 'state' | 'nonce') {
   const jar = new Map<string, string>();
   const provider = buildMicrosoftSsoEmulatorProvider({ clientId, clientSecret, authority: tenant,

@@ -1,7 +1,9 @@
 # Co-Managed IT acceptance plan
 
-Status: **Acceptance mapped; runtime review blocked by board capacity admission.**
-Candidate: `3ed12da0171aaefef03bb56acadf8458b7fd863f` (PR #3363).
+Status: **Partial production acceptance; review remains incomplete.**
+Recorded application: `e88d530b4c0fadfa40d3c0a77cf7102745187219`, production
+`build-1792894631786` (PR #3363). Later source repairs require their own runtime
+verification; retain this actual build provenance.
 
 This plan makes the existing approved scope actionable; it does not replace it.
 The approved authority is [the foundation plan](../2026-09-06-co-managed-it-plan.md),
@@ -45,14 +47,29 @@ do not count as product acceptance.
 
 ## Current execution boundary
 
-At this snapshot, the board has live guide and compiled-worker services, but no
-registered dev-server or production review-app. `workflow-open-review` fails
-because the card has no dev-server registration. Board capacity has denied the
-app service admissions; existing requests are tracked in the card's board
-messages. No admission bypass, unrelated-card stop, credential change, or
-fabricated recording is acceptable. Until both applications are board-admitted,
-product runtime rows and all 14 recordings remain blocked. Existing recording
-JSON/VTT files are blocked scaffolds and count as 0/14.
+Normal board admission now provides the dev-server, production review-app,
+compiled workers and guide server. Direct Open Review entered as QA. The
+October 25 execution verified a fresh invitation/acceptance journey, multipart
+pending rejection, customer account-root/child denial, two-organization note
+separation, reversible scope/delegated changes, responsibility/SLA transitions,
+customer project/task sharing and revocation, shared/private task files,
+separate commercial and operational time, encrypted export and a disposable
+departure. See the [bounded runtime results](../../evidence/co-managed-completion/e88d530b4c/lead-acceptance-20261025/result.json).
+
+All fourteen guides have genuine separate recordings with browser-verified
+playback and chapter seeking. Their scenarios remain **partial**, and their
+metadata retains the recorded build revision. Playable media does not complete
+acceptance. Distinct-recipient live delivery, full task/file/disclosure coverage,
+customer providers/inbound/directory, real Microsoft sign-in, complete time
+approval/billing, isolated restore and paid activation remain unverified or
+blocked. The demonstrated legacy file-download tenant-context repair and
+after-commit live-comment refresh repair await their new production build.
+The live repair has a successful development two-actor check; that does not
+replace production verification. GitHub reports the branch CONFLICTING/DIRTY.
+
+Keep the completion gate false, retain unverified census statuses, and continue
+through normal board service admission. No unrelated-card stop, credential
+replacement, fabricated recording or readiness-rule relaxation is acceptable.
 
 ## Completion criteria
 

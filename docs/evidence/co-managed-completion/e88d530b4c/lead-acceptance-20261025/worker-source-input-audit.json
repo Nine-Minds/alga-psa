@@ -1,0 +1,14 @@
+[
+  {
+    "buildInfo": "ee/temporal-workflows/dist/tsconfig.build.tsbuildinfo",
+    "matchingLocalSourceFiles": 1473,
+    "mismatches": [],
+    "missing": []
+  },
+  {
+    "buildInfo": "services/workflow-worker/dist/services/workflow-worker/tsconfig.tsbuildinfo",
+    "matchingLocalSourceFiles": 602,
+    "mismatches": [],
+    "missing": []
+  }
+]

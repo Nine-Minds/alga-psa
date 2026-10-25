@@ -1,0 +1,4 @@
+
+> temporal-workflows@1.0.0 build
+> NODE_OPTIONS=--max-old-space-size=8192 tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json -f
+

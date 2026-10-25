@@ -1,0 +1,34 @@
+TAP version 13
+# Subtest: blocked rows keep timestamp and playback claims prohibited
+ok 1 - blocked rows keep timestamp and playback claims prohibited
+  ---
+  duration_ms: 28.716785
+  type: 'test'
+  ...
+# Subtest: completed recording renders an embedded player, copied WebM/VTT, metadata, and seek controls
+ok 2 - completed recording renders an embedded player, copied WebM/VTT, metadata, and seek controls
+  ---
+  duration_ms: 139.145049
+  type: 'test'
+  ...
+# Subtest: completed rows require existing media and current runtime provenance
+ok 3 - completed rows require existing media and current runtime provenance
+  ---
+  duration_ms: 140.976946
+  type: 'test'
+  ...
+# Subtest: worker environment retains system invitation mail, literal secrets and the selected review origin
+ok 4 - worker environment retains system invitation mail, literal secrets and the selected review origin
+  ---
+  duration_ms: 152.906143
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 350.769549

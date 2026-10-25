@@ -408,3 +408,19 @@ local environment. This opt-in accepts only a loopback endpoint and an
 Rebuild/restart the review app after source changes. The simulator's embedded
 checkout completion still uses the existing simulator control flow; this does
 not enable real payments with a simulator key.
+
+## Guide video hosting
+
+The registered `review-guide` serves the external packet with:
+
+```bash
+node scripts/dev/serve-co-managed-review-guide.mjs /home/robert/card-reviews/co-managed-it-3363
+```
+
+Use this byte-range-capable server for walkthrough recordings. The former
+`python3 -m http.server` returned whole files to Range requests; Chrome reported
+an empty seekable interval and chapter controls could not seek. Verify HTTP 206
+for a `Range: bytes=0-31` request, then test playback and the actual chapter
+control on every guide. A successful media check does not establish product
+acceptance; keep partial scenario results and their actual build revision
+visible beside each player.

@@ -1,0 +1,226 @@
+[
+  {
+    "guide": "index.html",
+    "checkedAt": "2026-10-25T03:31:46.979Z",
+    "videoCount": 1,
+    "played": true,
+    "chapterTarget": 20.414,
+    "state": {
+      "time": 20.414,
+      "duration": 75.88,
+      "error": null,
+      "cues": 8
+    },
+    "rangeStatus": 206,
+    "metadataHttp": 200,
+    "vttHttp": 200
+  },
+  {
+    "guide": "guides/index.html",
+    "checkedAt": "2026-10-25T03:31:47.663Z",
+    "videoCount": 1,
+    "played": true,
+    "chapterTarget": 5.868,
+    "state": {
+      "time": 5.868,
+      "duration": 25.68,
+      "error": null,
+      "cues": 5
+    },
+    "rangeStatus": 206,
+    "metadataHttp": 200,
+    "vttHttp": 200
+  },
+  {
+    "guide": "guides/01-onboarding.html",
+    "checkedAt": "2026-10-25T03:31:48.297Z",
+    "videoCount": 1,
+    "played": true,
+    "chapterTarget": 12.894,
+    "state": {
+      "time": 12.894,
+      "duration": 79.4,
+      "error": null,
+      "cues": 12
+    },
+    "rangeStatus": 206,
+    "metadataHttp": 200,
+    "vttHttp": 200
+  },
+  {
+    "guide": "guides/02-licensing-and-seats.html",
+    "checkedAt": "2026-10-25T03:31:48.926Z",
+    "videoCount": 1,
+    "played": true,
+    "chapterTarget": 5.525,
+    "state": {
+      "time": 5.525,
+      "duration": 12.12,
+      "error": null,
+      "cues": 3
+    },
+    "rangeStatus": 206,
+    "metadataHttp": 200,
+    "vttHttp": 200
+  },
+  {
+    "guide": "guides/03-access-policies.html",
+    "checkedAt": "2026-10-25T03:31:49.548Z",
+    "videoCount": 1,
+    "played": true,
+    "chapterTarget": 8.054,
+    "state": {
+      "time": 8.054,
+      "duration": 16.48,
+      "error": null,
+      "cues": 4
+    },
+    "rangeStatus": 206,
+    "metadataHttp": 200,
+    "vttHttp": 200
+  },
+  {
+    "guide": "guides/04-delegated-administration.html",
+    "checkedAt": "2026-10-25T03:31:50.191Z",
+    "videoCount": 1,
+    "played": true,
+    "chapterTarget": 7.798,
+    "state": {
+      "time": 7.798,
+      "duration": 16.2,
+      "error": null,
+      "cues": 3
+    },
+    "rangeStatus": 206,
+    "metadataHttp": 200,
+    "vttHttp": 200
+  },
+  {
+    "guide": "guides/05-ticket-queue.html",
+    "checkedAt": "2026-10-25T03:31:51.010Z",
+    "videoCount": 1,
+    "played": true,
+    "chapterTarget": 4.9399999999999995,
+    "state": {
+      "time": 4.955463,
+      "duration": 24.52,
+      "error": null,
+      "cues": 4
+    },
+    "rangeStatus": 206,
+    "metadataHttp": 200,
+    "vttHttp": 200
+  },
+  {
+    "guide": "guides/06-projects-and-tasks.html",
+    "checkedAt": "2026-10-25T03:31:51.630Z",
+    "videoCount": 1,
+    "played": true,
+    "chapterTarget": 9.287,
+    "state": {
+      "time": 9.287,
+      "duration": 68.52,
+      "error": null,
+      "cues": 12
+    },
+    "rangeStatus": 206,
+    "metadataHttp": 200,
+    "vttHttp": 200
+  },
+  {
+    "guide": "guides/07-conversations-and-files.html",
+    "checkedAt": "2026-10-25T03:31:52.262Z",
+    "videoCount": 1,
+    "played": true,
+    "chapterTarget": 16.378,
+    "state": {
+      "time": 16.378,
+      "duration": 57.68,
+      "error": null,
+      "cues": 9
+    },
+    "rangeStatus": 206,
+    "metadataHttp": 200,
+    "vttHttp": 200
+  },
+  {
+    "guide": "guides/08-sla.html",
+    "checkedAt": "2026-10-25T03:31:52.915Z",
+    "videoCount": 1,
+    "played": true,
+    "chapterTarget": 4.91,
+    "state": {
+      "time": 4.91,
+      "duration": 24.44,
+      "error": null,
+      "cues": 4
+    },
+    "rangeStatus": 206,
+    "metadataHttp": 200,
+    "vttHttp": 200
+  },
+  {
+    "guide": "guides/09-time-and-billing.html",
+    "checkedAt": "2026-10-25T03:31:53.530Z",
+    "videoCount": 1,
+    "played": true,
+    "chapterTarget": 12.814,
+    "state": {
+      "time": 12.814,
+      "duration": 38.36,
+      "error": null,
+      "cues": 6
+    },
+    "rangeStatus": 206,
+    "metadataHttp": 200,
+    "vttHttp": 200
+  },
+  {
+    "guide": "guides/10-departure-and-archives.html",
+    "checkedAt": "2026-10-25T03:31:54.164Z",
+    "videoCount": 1,
+    "played": true,
+    "chapterTarget": 9.173,
+    "state": {
+      "time": 9.173,
+      "duration": 33.36,
+      "error": null,
+      "cues": 6
+    },
+    "rangeStatus": 206,
+    "metadataHttp": 200,
+    "vttHttp": 200
+  },
+  {
+    "guide": "guides/11-export-restore-and-upgrade.html",
+    "checkedAt": "2026-10-25T03:31:54.793Z",
+    "videoCount": 1,
+    "played": true,
+    "chapterTarget": 5.888,
+    "state": {
+      "time": 5.888,
+      "duration": 11.92,
+      "error": null,
+      "cues": 3
+    },
+    "rangeStatus": 206,
+    "metadataHttp": 200,
+    "vttHttp": 200
+  },
+  {
+    "guide": "guides/12-customer-integrations.html",
+    "checkedAt": "2026-10-25T03:31:55.413Z",
+    "videoCount": 1,
+    "played": true,
+    "chapterTarget": 5.007,
+    "state": {
+      "time": 5.007,
+      "duration": 22.48,
+      "error": null,
+      "cues": 4
+    },
+    "rangeStatus": 206,
+    "metadataHttp": 200,
+    "vttHttp": 200
+  }
+]

@@ -1,0 +1,20 @@
+⨯ Error [CoManagedLifecycleError]: The customer administrator must accept co-management before this workspace can be used.
+    at l (.next-review/server/chunks/1832.js:7:41520)
+    at k (.next-review/server/chunks/1832.js:7:8729)
+    at async (.next-review/server/chunks/1832.js:7:8934)
+    at async o (.next-review/server/chunks/41032.js:3:12633)
+    at async r (.next-review/server/chunks/41032.js:4:4542)
+    at async Module.W (.next-review/server/chunks/41032.js:6:2628) {
+  lifecycle: { state: 'pending_acceptance', canWrite: false, graceEndsAt: null },
+  code: 'CO_MANAGED_NOT_ACTIVE'
+}
+⨯ Error [CoManagedLifecycleError]: The customer administrator must accept co-management before this workspace can be used.
+    at l (.next-review/server/chunks/1832.js:7:41520)
+    at k (.next-review/server/chunks/1832.js:7:8729)
+    at async (.next-review/server/chunks/1832.js:7:8934)
+    at async o (.next-review/server/chunks/41032.js:3:12633)
+    at async r (.next-review/server/chunks/41032.js:4:4542)
+    at async Module.W (.next-review/server/chunks/41032.js:6:2628) {
+  lifecycle: { state: 'pending_acceptance', canWrite: false, graceEndsAt: null },
+  code: 'CO_MANAGED_NOT_ACTIVE'
+}

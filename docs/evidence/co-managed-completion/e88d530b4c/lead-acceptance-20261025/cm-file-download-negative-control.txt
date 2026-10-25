@@ -1,0 +1,65 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "1792897620869"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+stdout | src/test/unit/api/fileDownloadTenantContext.test.ts > serves authorized bytes under the session tenant and restores the caller context
+GET request received for file download with params: { fileId: 'file-id' }
+
+stdout | src/test/unit/api/fileDownloadTenantContext.test.ts > serves authorized bytes under the session tenant and restores the caller context
+Creating tenant knex connection...
+
+stdout | src/test/unit/api/fileDownloadTenantContext.test.ts > serves authorized bytes under the session tenant and restores the caller context
+Tenant found: authenticated-tenant
+
+stdout | src/test/unit/api/fileDownloadTenantContext.test.ts > serves authorized bytes under the session tenant and restores the caller context
+Attempting to download file with ID: file-id
+
+stderr | src/test/unit/api/fileDownloadTenantContext.test.ts > serves authorized bytes under the session tenant and restores the caller context
+Download error: Error: tenant context not found
+    at Object.<anonymous> (/home/robert/alga-copies/feature-co-managed-it/server/src/test/unit/api/fileDownloadTenantContext.test.ts:29:68)
+    at Object.mockCall (file:///home/robert/alga-copies/feature-co-managed-it/server/node_modules/@vitest/spy/dist/index.js:96:15)
+    at Object.spy [as download] (file:///home/robert/alga-copies/feature-co-managed-it/node_modules/tinyspy/dist/index.js:47:80)
+    at Object.downloadFile (/home/robert/alga-copies/feature-co-managed-it/server/src/test/unit/api/fileDownloadTenantContext.test.ts:22:118)
+    at GET (/home/robert/alga-copies/feature-co-managed-it/server/src/app/api/files/[fileId]/download/route.ts:39:45)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at /home/robert/alga-copies/feature-co-managed-it/server/src/test/unit/api/fileDownloadTenantContext.test.ts:41:22
+    at /home/robert/alga-copies/feature-co-managed-it/server/src/test/unit/api/fileDownloadTenantContext.test.ts:40:3
+    at file:///home/robert/alga-copies/feature-co-managed-it/server/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20
+
+ ❯ |node| src/test/unit/api/fileDownloadTenantContext.test.ts (4 tests | 1 failed | 3 skipped) 16ms 14 MB heap used
+   × serves authorized bytes under the session tenant and restores the caller context 15ms
+     → expected 500 to be 200 // Object.is equality
+   ↓ does not read storage when unauthenticated
+   ↓ does not read storage when missing
+   ↓ does not read storage when forbidden
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |node| src/test/unit/api/fileDownloadTenantContext.test.ts > serves authorized bytes under the session tenant and restores the caller context
+AssertionError: expected 500 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 500
+
+ ❯ src/test/unit/api/fileDownloadTenantContext.test.ts:42:29
+     40|   await tenantContext.run('unrelated-request', async () => {
+     41|     const response = await download();
+     42|     expect(response.status).toBe(200);
+       |                             ^
+     43|     expect(await response.text()).toBe('original bytes');
+     44|     expect(tenantContext.getStore()).toBe('unrelated-request');
+ ❯ src/test/unit/api/fileDownloadTenantContext.test.ts:40:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 skipped (4)
+   Start at  03:07:01
+   Duration  4.33s (transform 67ms, setup 64ms, collect 21ms, tests 16ms, environment 0ms, prepare 31ms)
+

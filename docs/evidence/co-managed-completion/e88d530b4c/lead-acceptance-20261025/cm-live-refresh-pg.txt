@@ -1,0 +1,15 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "20260610"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts (1460 tests | 1456 skipped) 6720ms 196 MB heap used
+   ✓ signals customer live comment refresh after commit with qualified identity and no content, but never on rollback or receipt replay  1687ms
+   ✓ publishes distinct shared IT and customer-private workflow audiences without changing response state or fabricating local MSP IDs  500ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed | 1456 skipped (1460)
+   Start at  03:22:46
+   Duration  15.65s (transform 3.56s, setup 68ms, collect 4.35s, tests 6.72s, environment 0ms, prepare 36ms)
+

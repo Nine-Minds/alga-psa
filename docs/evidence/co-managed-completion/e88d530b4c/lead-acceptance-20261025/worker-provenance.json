@@ -1,0 +1,59 @@
+{
+  "checkedAt": "2026-10-25T03:32:30.114075+00:00",
+  "workers": [
+    {
+      "name": "temporal-worker",
+      "childPid": 2733943,
+      "childStartedAtUtc": "Sun Oct 25 03:30:50 2026",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/ee/temporal-workflows",
+      "entry": "ee/temporal-workflows/dist/ee/temporal-workflows/src/worker.js",
+      "entrySha256": "d8328c8a383a8a6f66ab6ac5fd769e4a13a69b83da6e1ff88b3a1ec667c14d9c",
+      "health": {
+        "status": "healthy",
+        "timestamp": "2026-10-25T03:32:30.024Z",
+        "worker": "running",
+        "queues": [
+          {
+            "taskQueue": "tenant-workflows",
+            "state": "RUNNING"
+          },
+          {
+            "taskQueue": "portal-domain-workflows",
+            "state": "RUNNING"
+          },
+          {
+            "taskQueue": "email-domain-workflows",
+            "state": "RUNNING"
+          },
+          {
+            "taskQueue": "alga-jobs",
+            "state": "RUNNING"
+          },
+          {
+            "taskQueue": "sla-workflows",
+            "state": "RUNNING"
+          }
+        ]
+      },
+      "buildInfo": "ee/temporal-workflows/dist/tsconfig.build.tsbuildinfo"
+    },
+    {
+      "name": "workflow-worker",
+      "childPid": 2734144,
+      "childStartedAtUtc": "Sun Oct 25 03:30:51 2026",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/services/workflow-worker",
+      "entry": "services/workflow-worker/dist/services/workflow-worker/src/index.js",
+      "entrySha256": "f2be6be532957114654f14cf5b9c6e2f03ab77d2e8ecc3aeed23422a6e003ab1",
+      "health": {
+        "ready": true,
+        "startedAt": "2026-10-25T03:30:53.230Z",
+        "workers": {
+          "temporal": true,
+          "eventStream": true,
+          "dataStoreSweep": true
+        }
+      },
+      "buildInfo": "services/workflow-worker/dist/services/workflow-worker/tsconfig.tsbuildinfo"
+    }
+  ]
+}

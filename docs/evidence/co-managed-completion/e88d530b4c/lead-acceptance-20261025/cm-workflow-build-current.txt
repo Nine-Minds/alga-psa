@@ -1,0 +1,7 @@
+
+> workflow-worker@1.0.0 build
+> tsc -p tsconfig.json && tsc-alias -p tsconfig.json -f --resolve-full-paths && node scripts/fix-relative-import-extensions.mjs && node scripts/validate-runtime-imports.mjs && node scripts/validate-native-storage-imports.mjs
+
+Rewrote extensionless relative imports in workflow-worker dist files: 0
+Workflow worker runtime import validation passed.
+Native workflow storage import validation passed (3 subpath imports).

@@ -1,0 +1,13 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "1792897707326"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ |node| src/test/unit/api/fileDownloadTenantContext.test.ts (4 tests) 20ms 14 MB heap used
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  03:08:27
+   Duration  6.99s (transform 90ms, setup 86ms, collect 22ms, tests 20ms, environment 0ms, prepare 34ms)
+

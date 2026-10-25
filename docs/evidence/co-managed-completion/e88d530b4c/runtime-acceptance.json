@@ -23,8 +23,8 @@
       "persistedResultAfterReload": "Native All Tickets still rendered 14 items; Customer Tickets still rendered one distinct shared ticket. No merged list was observed.",
       "runtimeRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
       "evidence": [
-        "native-tickets.png",
-        "customer-tickets.png"
+        "../2b0ec8d9f5/native-tickets.png",
+        "../2b0ec8d9f5/customer-tickets.png"
       ],
       "limitation": "Read-only route/data-source observation. Filters, URL-state, export, authorized writes, SSR mutations, and client-ticket navigation regressions were not exercised."
     },
@@ -39,7 +39,7 @@
       "persistedResultAfterReload": "Not independently reloaded in this observation; no mutation was made. Existing displayed history and effort remain visible.",
       "runtimeRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
       "evidence": [
-        "shared-ticket.png"
+        "../2b0ec8d9f5/shared-ticket.png"
       ],
       "limitation": "An MSP view does not establish customer audience separation. No comment, attachment, assignment, escalation/handback, time write, revocation, or customer reload was executed."
     },
@@ -106,7 +106,7 @@
       "persistedResultAfterReload": "No new persisted result; reads only.",
       "runtimeRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
       "evidence": [
-        "shared-ticket.png"
+        "../2b0ec8d9f5/shared-ticket.png"
       ],
       "blocker": "No customer-side comparison or new action was performed. Task collaboration, authorship qualification, privacy denial, assignments, escalation/handback, independent clocks, operational/commercial separation, revocation and retained history after revocation remain unverified."
     },
@@ -121,11 +121,11 @@
       "persistedResultAfterReload": "The two ticket lists remained distinct after reload. Ticket TIC001020 and its description persisted at /msp/tickets/12f53fbf-edec-47b8-bb2c-e4e70cbe1819; list total increased to 15.",
       "runtimeRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
       "evidence": [
-        "native-tickets.png",
-        "customer-tickets.png",
-        "shared-ticket.png",
-        "cm-native-ticket-worker-event.png",
-        "worker-business-event.json"
+        "../2b0ec8d9f5/native-tickets.png",
+        "../2b0ec8d9f5/customer-tickets.png",
+        "../2b0ec8d9f5/shared-ticket.png",
+        "../2b0ec8d9f5/cm-native-ticket-worker-event.png",
+        "../2b0ec8d9f5/worker-business-event.json"
       ],
       "blocker": "Native comments, attachments, project/task screens, time writes, workflows and client-ticket tab navigation were not exercised.",
       "limitation": "Native comments, attachments, project/task screens, time writes, workflow editor/control, and client-ticket tab navigation were not fully exercised. Live updates were offline; see runtimeLimitation."
@@ -141,8 +141,8 @@
       "persistedResultAfterReload": "TIC001020 remained rendered with its title and description; native list count became 15.",
       "runtimeRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
       "evidence": [
-        "cm-native-ticket-worker-event.png",
-        "worker-business-event.json"
+        "../2b0ec8d9f5/cm-native-ticket-worker-event.png",
+        "../2b0ec8d9f5/worker-business-event.json"
       ],
       "limitation": "One internal native ticket action only; does not prove co-managed acceptance gate behavior or other PSA write surfaces."
     },
@@ -157,7 +157,7 @@
       "persistedResultAfterReload": "Ticket persisted. Worker resolved payload.TicketCreated.v1 and ticket correlation, matched two of three workflows, skipped both because paused, and acknowledged stream message 1792893767326-0. No workflow run started.",
       "runtimeRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
       "evidence": [
-        "worker-business-event.json"
+        "../2b0ec8d9f5/worker-business-event.json"
       ],
       "blocker": "A valid event was processed, but no active eligible workflow performed a business action. Verify completion with an appropriately authorized active workflow in a disposable fixture."
     },
