@@ -1,0 +1,137 @@
+{
+  "observedAt": "2026-10-25T04:21:00Z",
+  "publishedSourceRevision": "2192c83e0ae76f17ffadcbf9876e48758402d2c1",
+  "pullRequest": {
+    "number": 3363,
+    "state": "OPEN",
+    "headRefName": "feature/co-managed-it",
+    "headRefOid": "2192c83e0ae76f17ffadcbf9876e48758402d2c1"
+  },
+  "checks": [
+    {
+      "name": "Server whole-project typecheck",
+      "status": "passed",
+      "sourceRevision": "2192c83e0ae76f17ffadcbf9876e48758402d2c1",
+      "command": "NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck --workspace=server",
+      "scopeNote": "Completed after the native timesheet projection changes. This evidence applies to server source at 2192c83e0a; the later launcher-only repair does not change TypeScript source.",
+      "completedAt": "2026-10-25T04:43:10Z"
+    },
+    {
+      "name": "Legacy file download tenant context",
+      "status": "passed",
+      "command": "server Vitest: src/test/unit/api/fileDownloadTenantContext.test.ts",
+      "result": "4/4 passed"
+    },
+    {
+      "name": "Worker mail environment generation",
+      "status": "passed",
+      "command": "node --test scripts/tests/co-managed-worker-env.test.mjs",
+      "result": "1/1 passed; literal secrets and selected review origin covered"
+    },
+    {
+      "name": "Shared comment live refresh",
+      "status": "passed",
+      "database": "server_co_managed on port 5376",
+      "seed": 20260610,
+      "result": "1 focused integration test passed; covers commit, rollback and receipt replay"
+    },
+    {
+      "name": "Native timesheet projections",
+      "status": "passed",
+      "database": "server_co_managed on port 5376",
+      "seed": 20260610,
+      "result": "2 focused integration tests and 5 native timesheet list tests passed"
+    },
+    {
+      "name": "Co-managed compiled distribution",
+      "status": "passed",
+      "command": "npm run build --workspace=@alga-psa/co-managed"
+    },
+    {
+      "name": "Scheduling package generic build",
+      "status": "not-applicable-to-dist",
+      "result": "The package tsup script has no entry points; its Nx build target is a no-op. Server route imports the source subpath and the admitted production build compiles it."
+    },
+    {
+      "name": "Patch hygiene",
+      "status": "passed",
+      "command": "bash -n scripts/dev/run-co-managed-review-app.sh && git diff --check"
+    },
+    {
+      "name": "Review launcher compilation race regressions",
+      "status": "passed",
+      "command": "node --test scripts/tests/co-managed-review-app.test.mjs",
+      "result": "3/3 passed: tracked source mutation, HEAD mutation, and stable source snapshot"
+    }
+  ],
+  "priorRuntime": {
+    "sourceRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+    "buildId": "build-1792894631786",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "observedAt": "2026-10-25T04:20:31Z",
+    "httpApiHealth": 200,
+    "process": {
+      "pid": 2140829,
+      "command": "next-server (v16.3.8)",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "startedAt": "2026-10-25T02:27:12Z"
+    },
+    "buildPath": "server/.next-review",
+    "preserved": true
+  },
+  "candidate": {
+    "sourceRevision": "2192c83e0ae76f17ffadcbf9876e48758402d2c1",
+    "service": "review-app-candidate",
+    "port": 23375,
+    "readinessPath": "/api/health",
+    "admittedAt": "2026-10-25T04:17:33Z",
+    "statusAtObservation": "serving",
+    "buildPath": "server/.next-review-candidate",
+    "httpVerified": true,
+    "httpApiHealth": 200,
+    "buildId": "build-1792901890006",
+    "revisionStamp": "2192c83e0ae76f17ffadcbf9876e48758402d2c1+da39a3ee5e6b",
+    "process": {
+      "pid": 3350700,
+      "command": "next-server (v16.3.8)",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "startedAt": "2026-10-25T04:35:30Z"
+    }
+  },
+  "workers": [
+    {
+      "name": "temporal-worker",
+      "pid": 3176894,
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/ee/temporal-workflows",
+      "command": "node --env-file=.env dist/ee/temporal-workflows/src/worker.js",
+      "startedAt": "2026-10-25T04:19:12Z",
+      "healthHttp": 200,
+      "entry": "ee/temporal-workflows/dist/ee/temporal-workflows/src/worker.js",
+      "entrySha256": "d8328c8a383a8a6f66ab6ac5fd769e4a13a69b83da6e1ff88b3a1ec667c14d9c"
+    },
+    {
+      "name": "workflow-worker",
+      "pid": 3184629,
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/services/workflow-worker",
+      "command": "node --env-file=.env .",
+      "startedAt": "2026-10-25T04:19:53Z",
+      "healthHttp": 200,
+      "entry": "services/workflow-worker/dist/services/workflow-worker/src/index.js",
+      "entrySha256": "f2be6be532957114654f14cf5b9c6e2f03ab77d2e8ecc3aeed23422a6e003ab1"
+    }
+  ],
+  "recordings": {
+    "currentRevisionGuides": 0,
+    "previousRevisionGuides": 14,
+    "previousRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+    "scenarioCoverage": "partial for every guide; not acceptance",
+    "currentCandidatePlaybackOrChapterSeekVerified": false
+  },
+  "directOpenReview": {
+    "status": "blocked",
+    "error": "Browser backend disposed (previous attempt); retry pending after candidate deployment",
+    "signedInAs": null
+  },
+  "overallAcceptance": "incomplete",
+  "refreshedAt": "2026-10-25T04:43:10Z"
+}
