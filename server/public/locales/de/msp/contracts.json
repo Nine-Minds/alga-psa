@@ -1998,7 +1998,7 @@
     },
     "total": {
       "title": "Geschätzte monatliche Summe",
-      "description": "Nur feste Gebühren. Stunden- und nutzungsbasierte Services werden separat basierend auf der tatsächlichen Nutzung abgerechnet.",
+      "description": "Produkte und feste Gebühren sind in dieser Summe enthalten. Stunden- und nutzungsbasierte Services werden nach tatsächlichem Aufwand abgerechnet.",
       "perMonth": "pro Monat",
       "savedDraftValue": "Gespeicherter Entwurfswert: {{amount}}"
     },

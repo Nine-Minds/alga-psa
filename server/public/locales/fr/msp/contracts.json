@@ -1998,7 +1998,7 @@
     },
     "total": {
       "title": "Total mensuel estimé",
-      "description": "Frais fixes uniquement. Les services horaires et à l'usage sont facturés séparément selon l'usage réel.",
+      "description": "Les produits et les frais fixes sont inclus dans ce total. Les services horaires et à l'usage sont facturés selon le réel.",
       "perMonth": "par mois",
       "savedDraftValue": "Valeur du brouillon enregistré : {{amount}}"
     },

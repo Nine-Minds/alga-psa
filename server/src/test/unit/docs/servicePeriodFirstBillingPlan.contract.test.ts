@@ -152,6 +152,10 @@ const billingCycleAlignmentPostInventoryRemovals = new Set([
 // pass-0 inventory snapshot was taken (recurring service-period ledger work
 // landed after the inventory was captured).
 const servicePeriodPostInventoryRefs = new Set([
+  // alga-2026-0002714: products-contract recurring-total unit test builds contract-line fixtures with service-period fields.
+  'packages/billing/src/lib/billing/compute/recurringMemberRate.test.ts',
+  // alga-2026-0002714: products-contract totals integration test seeds and reads persisted service-period fields.
+  'server/src/test/integration/productsContractTotals.integration.test.ts',
   // Workflow event emitter contract fixtures (alga0002106) carry billing event payloads with period fields.
   'server/src/test/unit/workflow-event-contracts/contracts/billing.ts',
   'server/src/test/integration/billing/billingProfileAttribution.integration.test.ts',
