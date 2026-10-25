@@ -1,0 +1,104 @@
+{
+  "observedAt": "2026-10-25T02:30:50Z",
+  "reviewApp": {
+    "service": "review-app:24",
+    "port": 23374,
+    "httpHealth": 200,
+    "buildId": "build-1792894631786",
+    "buildCheckoutRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+    "applicationSourceBaseline": "adeabb3274fc18a62a101238c67729cd23435afb; application source files identical between revisions",
+    "pid": 2140829,
+    "startedAt": "2026-10-25T02:27:12Z",
+    "cwd": "/home/robert/alga-copies/feature-co-managed-it/server"
+  },
+  "openReview": {
+    "signedInAs": "qa@emeraldcity.oz",
+    "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+    "organization": "Emerald City",
+    "route": "/msp/tickets",
+    "verifiedAt": "2026-10-25T02:27:40Z",
+    "method": "supported workflow-open-review"
+  },
+  "liveUpdates": {
+    "notificationTokenHttp": 200,
+    "ticketTokenHttp": 200,
+    "ticketId": "fd378092-ce14-4423-a988-a9816ba0c950",
+    "hocuspocusHealthHttp": 200,
+    "hocuspocusConnections": [
+      "notification-signals:24ac76c8-df59-4b10-8371-c56222904580:5e6e332e-047d-488f-be12-9bce7e5d7bf8",
+      "ticket:24ac76c8-df59-4b10-8371-c56222904580:fd378092-ce14-4423-a988-a9816ba0c950"
+    ],
+    "redisEvent": "TicketUpdatesExtension logged Broadcasting ticket update for ticket room after internal comment submission",
+    "recipientDelivery": "unverified: the second browser tab used the same QA identity, and clients suppress their own update. A separate authorized recipient session was unavailable. The update persisted and appeared after reload.",
+    "evidenceScreenshot": "co-managed-live-update-after.png"
+  },
+  "devServer": {
+    "canonicalSessionId": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:dev-server:24",
+    "commandlessEnsure": "reused existing registration; unhealthy prior process was retired and wrapper relaunched by supported ensure",
+    "port": 3374,
+    "http": "200",
+    "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+    "supervisorRestartedAt": "2026-10-25T02:29:54Z",
+    "childPid": 2177455,
+    "childCwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+    "readinessHttp": 200
+  },
+  "otherServices": {
+    "reviewGuidePort8874Http": 200,
+    "temporalWorkerPort8375Http": 200,
+    "workflowWorkerPort4374Http": 200,
+    "hocuspocusPort1235Http": 200
+  },
+  "mergeability": {
+    "head": "57612f0ad021baae237f4eb475556e5ca7b76884",
+    "mergeable": false,
+    "mergeableState": "DIRTY"
+  },
+  "workers": {
+    "temporal": {
+      "service": "temporal-worker:25",
+      "http": 200,
+      "body": "healthy; five queues RUNNING: tenant-workflows, portal-domain-workflows, email-domain-workflows, alga-jobs, sla-workflows",
+      "childPid": 1949060,
+      "startedAt": "2026-10-24T18:58:47Z",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/ee/temporal-workflows",
+      "compiledEntry": "ee/temporal-workflows/dist/ee/temporal-workflows/src/worker.js",
+      "compiledEntrySha256": "d8328c8a383a8a6f66ab6ac5fd769e4a13a69b83da6e1ff88b3a1ec667c14d9c",
+      "compiledEntryMtime": "2026-10-13T20:51:22Z",
+      "inputAudit": "1,473 source inputs matched local compiler inputs in earlier runtime audit; this is provenance, not a cold-restart claim."
+    },
+    "workflow": {
+      "service": "workflow-worker:23",
+      "http": 200,
+      "body": "ready true; temporal, eventStream, dataStoreSweep all true",
+      "childPid": 1949120,
+      "startedAt": "2026-10-24T18:58:47Z",
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/services/workflow-worker",
+      "compiledEntry": "services/workflow-worker/dist/services/workflow-worker/src/index.js",
+      "compiledEntrySha256": "f2be6be532957114654f14cf5b9c6e2f03ab77d2e8ecc3aeed23422a6e003ab1",
+      "compiledEntryMtime": "2026-10-13T20:52:12Z",
+      "inputAudit": "602 source inputs matched local compiler inputs in earlier runtime audit. Actual behavior: event 902f6728 started run 8b7b4f9e-eb64-4efb-b259-0ce6ab3c1997 and persisted two comments on TIC001021 after reload; workflow prior Paused state restored."
+    }
+  },
+  "hocuspocus": {
+    "service": "hocuspocus:21",
+    "http": 200,
+    "pid": 2009724,
+    "startedAt": "2026-10-25T02:13:44Z",
+    "cwd": "/home/robert/alga-copies/feature-co-managed-it/hocuspocus",
+    "redis": "connected and subscribed to ticket updates",
+    "secretSource": "ignored server/.env.local loaded by Node --env-file; secret value excluded"
+  },
+  "runtimeRevision": {
+    "priorProductionBuild": {
+      "revision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "buildId": "build-1792892121948"
+    },
+    "currentProductionBuild": {
+      "checkoutRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "buildId": "build-1792894631786",
+      "applicationFilesIdenticalTo": "adeabb3274fc18a62a101238c67729cd23435afb"
+    },
+    "laterEvidencePublication": "57612f0ad021baae237f4eb475556e5ca7b76884"
+  }
+}

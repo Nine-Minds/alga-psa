@@ -207,16 +207,37 @@
         "co-managed-workflow-ticket-comments.png"
       ],
       "limitation": "Internal native ticket workflow only; does not satisfy customer collaboration, privacy, SLA, or tenant acceptance."
+    },
+    {
+      "area": "Post-restart live-update configuration and delivery",
+      "status": "partial-pass",
+      "actor": "qa@emeraldcity.oz (internal MSP technician; same actor in both browser tabs)",
+      "tenant": "Emerald City / 24ac76c8-df59-4b10-8371-c56222904580",
+      "route": "/msp/tickets/fd378092-ce14-4423-a988-a9816ba0c950; Hocuspocus ticket and notification rooms",
+      "initialState": "Previous build had notification-token 503 and ticket-token 500. Card-owned Hocuspocus now healthy; review-app:24 serves new build.",
+      "action": "Opened ticket in two authenticated QA tabs, verified both live-token routes returned 200, submitted an Internal comment on disposable TIC001021, observed Redis-driven ticket-room broadcast in Hocuspocus logs, then reloaded second tab.",
+      "persistedResultAfterReload": "Internal comment persisted and appeared after second-tab reload; Hocuspocus accepted both room connections and logged the ticket update broadcast.",
+      "runtimeRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219 build checkout; application source files match adeabb3274fc18a62a101238c67729cd23435afb.",
+      "evidence": [
+        "runtime-postbuild-check.json",
+        "co-managed-live-update-after.png"
+      ],
+      "limitation": "No live recipient UI update before reload was observed; same-user update suppression applies. A distinct authorized customer/admin recipient session was not available, so end-to-end recipient delivery remains unverified."
     }
   ],
   "runtimeLimitation": {
-    "status": "verification-pending-after-configuration-repair",
+    "status": "partially-recovered-delivery-unverified",
     "priorObservedEndpoints": {
       "/api/notifications/live-token": 503,
       "/api/tickets/12f53fbf-edec-47b8-bb2c-e4e70cbe1819/live-token": 500
     },
-    "repair": "card-owned hocuspocus:21 healthy on 1235; HOCUSPOCUS_JWT_SECRET configured only in ignored server/.env.local; review-app:24 restarted through supported board at 02:17:09Z",
-    "currentVerification": "Not testable until admitted build listens. Token status and actual websocket delivery have not been verified."
+    "postRepairEndpointResponses": {
+      "/api/notifications/live-token": 200,
+      "/api/tickets/fd378092-ce14-4423-a988-a9816ba0c950/live-token": 200
+    },
+    "repair": "card-owned Hocuspocus:21 healthy on 1235; review-app:24 restarted normally and now serves build-1792894631786",
+    "observedDelivery": "Hocuspocus accepted authenticated notification and ticket room connections. Redis ticket update reached TicketUpdatesExtension, which logged broadcast to the ticket room. The recipient UI was not verified because both browser tabs used QA identity and self-originated updates are suppressed; no separate authorized recipient actor session was available.",
+    "defect": "Remains open until a separate authorized recipient visibly receives an update."
   },
   "notOverallAcceptance": true,
   "configurationRepair": {
@@ -224,19 +245,44 @@
     "port": 1235,
     "healthHttp": 200,
     "startedAt": "2026-10-25T02:13:44.546Z",
-    "reviewAppRestart": "admitted 2026-10-25T02:17:09.105Z; current normal build is still active",
+    "reviewAppRestart": "completed through supported board operation; current build serves HTTP 200",
     "security": "Secret stored only in ignored server/.env.local and supplied to the card-owned service with Node literal-safe --env-file; value is not recorded in evidence.",
-    "verification": "Pending HTTP readiness, token endpoints and actual websocket delivery; open defect remains."
+    "verification": "Both notification and ticket live-token endpoints now return HTTP 200; Hocuspocus accepted authenticated room connections and broadcast a ticket update. Recipient-side display remains unverified without a distinct authorized actor."
   },
   "latestRuntimeObservation": {
-    "observedAt": "2026-10-25T02:26:00Z",
+    "observedAt": "2026-10-25T02:30:50Z",
     "service": "review-app:24",
-    "buildCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
-    "runtimeSourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
-    "processPid": 2049894,
-    "processState": "Next production build active; log reports finalizing page optimization and collecting build traces",
-    "readiness": "HTTP 000 during build",
-    "log": "/home/robert/.alga-dev/card-services/card-service_964ce5e0-45a5-41b2-8e2c-73903742a85a_review-app_24/service.log",
-    "priorBuild": "adeabb3274fc18a62a101238c67729cd23435afb / build-1792892121948 remains a separate prior serving build record"
+    "readinessHttp": 200,
+    "buildId": "build-1792894631786",
+    "buildCheckoutRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+    "applicationSourceBaseline": "adeabb3274fc18a62a101238c67729cd23435afb; application source files identical between revisions",
+    "pid": 2140829,
+    "startedAt": "2026-10-25T02:27:12Z",
+    "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+    "priorBuildProvenance": {
+      "revision": "adeabb3274fc18a62a101238c67729cd23435afb",
+      "buildId": "build-1792892121948",
+      "status": "prior actual serving build before the configuration restart"
+    }
+  },
+  "postBuildOpenReview": {
+    "signedInAs": "qa@emeraldcity.oz",
+    "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+    "organization": "Emerald City",
+    "route": "/msp/tickets",
+    "verifiedAt": "2026-10-25T02:27:40Z",
+    "method": "supported workflow-open-review"
+  },
+  "guideLinksVerification": "guide-links-verification.json",
+  "recordings": {
+    "required": 14,
+    "completed": 0,
+    "blocked": 14,
+    "pageLinksHttp200": 14,
+    "vttHttp200": 14,
+    "jsonHttp200": 14,
+    "webmHttp200": 0,
+    "playbackVerified": false,
+    "chapterSeekVerified": false
   }
 }

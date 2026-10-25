@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-25T02:26:00Z",
+  "checkedAt": "2026-10-25T02:34:00Z",
   "candidateRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
   "requiredGuides": 14,
   "coveredGuides": 0,
@@ -17,13 +17,12 @@
       "chapterSeekVerified": false,
       "status": "blocked",
       "missing": [
-        "Current HTTP-ready runtime for the guide scenario",
         "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
         "A genuine separate WebM captured during this guide\u2019s walkthrough",
         "Timed chapter WebVTT matched to the recording",
         "Browser-verified playback and chapter seeking"
       ],
-      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "blocker": "This guide\u2019s complete authorized product scenario remains unexecuted and no genuine per-guide WebM/VTT playback or chapter seek evidence exists.",
       "scaffoldPresent": {
         "chapterVtt": true,
         "recordingJson": true,
@@ -37,19 +36,19 @@
         "A production application read check is not full acceptance of this guide\u2019s scenario.",
         "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
       ],
-      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "metadataUpdatedAt": "2026-10-25T02:30:50Z",
       "runtime": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
         "mode": "production",
         "origin": "http://feature-co-managed-it.localhost:23374",
-        "productionVerified": false,
-        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+        "productionVerified": true,
+        "evidence": "runtime-postbuild-check.json"
       },
       "build": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
-        "priorBuildId": "build-1792892121948",
-        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
-        "status": "rebuilding; no current HTTP readiness"
+        "checkoutRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "status": "serving; application code files identical to adeabb source baseline"
       }
     },
     {
@@ -64,13 +63,12 @@
       "chapterSeekVerified": false,
       "status": "blocked",
       "missing": [
-        "Current HTTP-ready runtime for the guide scenario",
         "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
         "A genuine separate WebM captured during this guide\u2019s walkthrough",
         "Timed chapter WebVTT matched to the recording",
         "Browser-verified playback and chapter seeking"
       ],
-      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "blocker": "This guide\u2019s complete authorized product scenario remains unexecuted and no genuine per-guide WebM/VTT playback or chapter seek evidence exists.",
       "scaffoldPresent": {
         "chapterVtt": true,
         "recordingJson": true,
@@ -84,19 +82,19 @@
         "A production application read check is not full acceptance of this guide\u2019s scenario.",
         "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
       ],
-      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "metadataUpdatedAt": "2026-10-25T02:30:50Z",
       "runtime": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
         "mode": "production",
         "origin": "http://feature-co-managed-it.localhost:23374",
-        "productionVerified": false,
-        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+        "productionVerified": true,
+        "evidence": "runtime-postbuild-check.json"
       },
       "build": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
-        "priorBuildId": "build-1792892121948",
-        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
-        "status": "rebuilding; no current HTTP readiness"
+        "checkoutRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "status": "serving; application code files identical to adeabb source baseline"
       }
     },
     {
@@ -111,13 +109,12 @@
       "chapterSeekVerified": false,
       "status": "blocked",
       "missing": [
-        "Current HTTP-ready runtime for the guide scenario",
         "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
         "A genuine separate WebM captured during this guide\u2019s walkthrough",
         "Timed chapter WebVTT matched to the recording",
         "Browser-verified playback and chapter seeking"
       ],
-      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "blocker": "This guide\u2019s complete authorized product scenario remains unexecuted and no genuine per-guide WebM/VTT playback or chapter seek evidence exists.",
       "scaffoldPresent": {
         "chapterVtt": true,
         "recordingJson": true,
@@ -131,19 +128,19 @@
         "A production application read check is not full acceptance of this guide\u2019s scenario.",
         "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
       ],
-      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "metadataUpdatedAt": "2026-10-25T02:30:50Z",
       "runtime": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
         "mode": "production",
         "origin": "http://feature-co-managed-it.localhost:23374",
-        "productionVerified": false,
-        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+        "productionVerified": true,
+        "evidence": "runtime-postbuild-check.json"
       },
       "build": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
-        "priorBuildId": "build-1792892121948",
-        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
-        "status": "rebuilding; no current HTTP readiness"
+        "checkoutRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "status": "serving; application code files identical to adeabb source baseline"
       }
     },
     {
@@ -158,13 +155,12 @@
       "chapterSeekVerified": false,
       "status": "blocked",
       "missing": [
-        "Current HTTP-ready runtime for the guide scenario",
         "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
         "A genuine separate WebM captured during this guide\u2019s walkthrough",
         "Timed chapter WebVTT matched to the recording",
         "Browser-verified playback and chapter seeking"
       ],
-      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "blocker": "This guide\u2019s complete authorized product scenario remains unexecuted and no genuine per-guide WebM/VTT playback or chapter seek evidence exists.",
       "scaffoldPresent": {
         "chapterVtt": true,
         "recordingJson": true,
@@ -178,19 +174,19 @@
         "A production application read check is not full acceptance of this guide\u2019s scenario.",
         "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
       ],
-      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "metadataUpdatedAt": "2026-10-25T02:30:50Z",
       "runtime": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
         "mode": "production",
         "origin": "http://feature-co-managed-it.localhost:23374",
-        "productionVerified": false,
-        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+        "productionVerified": true,
+        "evidence": "runtime-postbuild-check.json"
       },
       "build": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
-        "priorBuildId": "build-1792892121948",
-        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
-        "status": "rebuilding; no current HTTP readiness"
+        "checkoutRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "status": "serving; application code files identical to adeabb source baseline"
       }
     },
     {
@@ -205,13 +201,12 @@
       "chapterSeekVerified": false,
       "status": "blocked",
       "missing": [
-        "Current HTTP-ready runtime for the guide scenario",
         "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
         "A genuine separate WebM captured during this guide\u2019s walkthrough",
         "Timed chapter WebVTT matched to the recording",
         "Browser-verified playback and chapter seeking"
       ],
-      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "blocker": "This guide\u2019s complete authorized product scenario remains unexecuted and no genuine per-guide WebM/VTT playback or chapter seek evidence exists.",
       "scaffoldPresent": {
         "chapterVtt": true,
         "recordingJson": true,
@@ -225,19 +220,19 @@
         "A production application read check is not full acceptance of this guide\u2019s scenario.",
         "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
       ],
-      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "metadataUpdatedAt": "2026-10-25T02:30:50Z",
       "runtime": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
         "mode": "production",
         "origin": "http://feature-co-managed-it.localhost:23374",
-        "productionVerified": false,
-        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+        "productionVerified": true,
+        "evidence": "runtime-postbuild-check.json"
       },
       "build": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
-        "priorBuildId": "build-1792892121948",
-        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
-        "status": "rebuilding; no current HTTP readiness"
+        "checkoutRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "status": "serving; application code files identical to adeabb source baseline"
       }
     },
     {
@@ -252,13 +247,12 @@
       "chapterSeekVerified": false,
       "status": "blocked",
       "missing": [
-        "Current HTTP-ready runtime for the guide scenario",
         "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
         "A genuine separate WebM captured during this guide\u2019s walkthrough",
         "Timed chapter WebVTT matched to the recording",
         "Browser-verified playback and chapter seeking"
       ],
-      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "blocker": "This guide\u2019s complete authorized product scenario remains unexecuted and no genuine per-guide WebM/VTT playback or chapter seek evidence exists.",
       "scaffoldPresent": {
         "chapterVtt": true,
         "recordingJson": true,
@@ -272,19 +266,19 @@
         "A production application read check is not full acceptance of this guide\u2019s scenario.",
         "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
       ],
-      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "metadataUpdatedAt": "2026-10-25T02:30:50Z",
       "runtime": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
         "mode": "production",
         "origin": "http://feature-co-managed-it.localhost:23374",
-        "productionVerified": false,
-        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+        "productionVerified": true,
+        "evidence": "runtime-postbuild-check.json"
       },
       "build": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
-        "priorBuildId": "build-1792892121948",
-        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
-        "status": "rebuilding; no current HTTP readiness"
+        "checkoutRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "status": "serving; application code files identical to adeabb source baseline"
       }
     },
     {
@@ -299,13 +293,12 @@
       "chapterSeekVerified": false,
       "status": "blocked",
       "missing": [
-        "Current HTTP-ready runtime for the guide scenario",
         "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
         "A genuine separate WebM captured during this guide\u2019s walkthrough",
         "Timed chapter WebVTT matched to the recording",
         "Browser-verified playback and chapter seeking"
       ],
-      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "blocker": "This guide\u2019s complete authorized product scenario remains unexecuted and no genuine per-guide WebM/VTT playback or chapter seek evidence exists.",
       "scaffoldPresent": {
         "chapterVtt": true,
         "recordingJson": true,
@@ -319,19 +312,19 @@
         "A production application read check is not full acceptance of this guide\u2019s scenario.",
         "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
       ],
-      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "metadataUpdatedAt": "2026-10-25T02:30:50Z",
       "runtime": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
         "mode": "production",
         "origin": "http://feature-co-managed-it.localhost:23374",
-        "productionVerified": false,
-        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+        "productionVerified": true,
+        "evidence": "runtime-postbuild-check.json"
       },
       "build": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
-        "priorBuildId": "build-1792892121948",
-        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
-        "status": "rebuilding; no current HTTP readiness"
+        "checkoutRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "status": "serving; application code files identical to adeabb source baseline"
       }
     },
     {
@@ -346,13 +339,12 @@
       "chapterSeekVerified": false,
       "status": "blocked",
       "missing": [
-        "Current HTTP-ready runtime for the guide scenario",
         "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
         "A genuine separate WebM captured during this guide\u2019s walkthrough",
         "Timed chapter WebVTT matched to the recording",
         "Browser-verified playback and chapter seeking"
       ],
-      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "blocker": "This guide\u2019s complete authorized product scenario remains unexecuted and no genuine per-guide WebM/VTT playback or chapter seek evidence exists.",
       "scaffoldPresent": {
         "chapterVtt": true,
         "recordingJson": true,
@@ -366,19 +358,19 @@
         "A production application read check is not full acceptance of this guide\u2019s scenario.",
         "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
       ],
-      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "metadataUpdatedAt": "2026-10-25T02:30:50Z",
       "runtime": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
         "mode": "production",
         "origin": "http://feature-co-managed-it.localhost:23374",
-        "productionVerified": false,
-        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+        "productionVerified": true,
+        "evidence": "runtime-postbuild-check.json"
       },
       "build": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
-        "priorBuildId": "build-1792892121948",
-        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
-        "status": "rebuilding; no current HTTP readiness"
+        "checkoutRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "status": "serving; application code files identical to adeabb source baseline"
       }
     },
     {
@@ -393,13 +385,12 @@
       "chapterSeekVerified": false,
       "status": "blocked",
       "missing": [
-        "Current HTTP-ready runtime for the guide scenario",
         "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
         "A genuine separate WebM captured during this guide\u2019s walkthrough",
         "Timed chapter WebVTT matched to the recording",
         "Browser-verified playback and chapter seeking"
       ],
-      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "blocker": "This guide\u2019s complete authorized product scenario remains unexecuted and no genuine per-guide WebM/VTT playback or chapter seek evidence exists.",
       "scaffoldPresent": {
         "chapterVtt": true,
         "recordingJson": true,
@@ -413,19 +404,19 @@
         "A production application read check is not full acceptance of this guide\u2019s scenario.",
         "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
       ],
-      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "metadataUpdatedAt": "2026-10-25T02:30:50Z",
       "runtime": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
         "mode": "production",
         "origin": "http://feature-co-managed-it.localhost:23374",
-        "productionVerified": false,
-        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+        "productionVerified": true,
+        "evidence": "runtime-postbuild-check.json"
       },
       "build": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
-        "priorBuildId": "build-1792892121948",
-        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
-        "status": "rebuilding; no current HTTP readiness"
+        "checkoutRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "status": "serving; application code files identical to adeabb source baseline"
       }
     },
     {
@@ -440,13 +431,12 @@
       "chapterSeekVerified": false,
       "status": "blocked",
       "missing": [
-        "Current HTTP-ready runtime for the guide scenario",
         "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
         "A genuine separate WebM captured during this guide\u2019s walkthrough",
         "Timed chapter WebVTT matched to the recording",
         "Browser-verified playback and chapter seeking"
       ],
-      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "blocker": "This guide\u2019s complete authorized product scenario remains unexecuted and no genuine per-guide WebM/VTT playback or chapter seek evidence exists.",
       "scaffoldPresent": {
         "chapterVtt": true,
         "recordingJson": true,
@@ -460,19 +450,19 @@
         "A production application read check is not full acceptance of this guide\u2019s scenario.",
         "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
       ],
-      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "metadataUpdatedAt": "2026-10-25T02:30:50Z",
       "runtime": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
         "mode": "production",
         "origin": "http://feature-co-managed-it.localhost:23374",
-        "productionVerified": false,
-        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+        "productionVerified": true,
+        "evidence": "runtime-postbuild-check.json"
       },
       "build": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
-        "priorBuildId": "build-1792892121948",
-        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
-        "status": "rebuilding; no current HTTP readiness"
+        "checkoutRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "status": "serving; application code files identical to adeabb source baseline"
       }
     },
     {
@@ -487,13 +477,12 @@
       "chapterSeekVerified": false,
       "status": "blocked",
       "missing": [
-        "Current HTTP-ready runtime for the guide scenario",
         "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
         "A genuine separate WebM captured during this guide\u2019s walkthrough",
         "Timed chapter WebVTT matched to the recording",
         "Browser-verified playback and chapter seeking"
       ],
-      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "blocker": "This guide\u2019s complete authorized product scenario remains unexecuted and no genuine per-guide WebM/VTT playback or chapter seek evidence exists.",
       "scaffoldPresent": {
         "chapterVtt": true,
         "recordingJson": true,
@@ -507,19 +496,19 @@
         "A production application read check is not full acceptance of this guide\u2019s scenario.",
         "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
       ],
-      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "metadataUpdatedAt": "2026-10-25T02:30:50Z",
       "runtime": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
         "mode": "production",
         "origin": "http://feature-co-managed-it.localhost:23374",
-        "productionVerified": false,
-        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+        "productionVerified": true,
+        "evidence": "runtime-postbuild-check.json"
       },
       "build": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
-        "priorBuildId": "build-1792892121948",
-        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
-        "status": "rebuilding; no current HTTP readiness"
+        "checkoutRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "status": "serving; application code files identical to adeabb source baseline"
       }
     },
     {
@@ -534,13 +523,12 @@
       "chapterSeekVerified": false,
       "status": "blocked",
       "missing": [
-        "Current HTTP-ready runtime for the guide scenario",
         "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
         "A genuine separate WebM captured during this guide\u2019s walkthrough",
         "Timed chapter WebVTT matched to the recording",
         "Browser-verified playback and chapter seeking"
       ],
-      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "blocker": "This guide\u2019s complete authorized product scenario remains unexecuted and no genuine per-guide WebM/VTT playback or chapter seek evidence exists.",
       "scaffoldPresent": {
         "chapterVtt": true,
         "recordingJson": true,
@@ -554,19 +542,19 @@
         "A production application read check is not full acceptance of this guide\u2019s scenario.",
         "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
       ],
-      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "metadataUpdatedAt": "2026-10-25T02:30:50Z",
       "runtime": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
         "mode": "production",
         "origin": "http://feature-co-managed-it.localhost:23374",
-        "productionVerified": false,
-        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+        "productionVerified": true,
+        "evidence": "runtime-postbuild-check.json"
       },
       "build": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
-        "priorBuildId": "build-1792892121948",
-        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
-        "status": "rebuilding; no current HTTP readiness"
+        "checkoutRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "status": "serving; application code files identical to adeabb source baseline"
       }
     },
     {
@@ -581,13 +569,12 @@
       "chapterSeekVerified": false,
       "status": "blocked",
       "missing": [
-        "Current HTTP-ready runtime for the guide scenario",
         "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
         "A genuine separate WebM captured during this guide\u2019s walkthrough",
         "Timed chapter WebVTT matched to the recording",
         "Browser-verified playback and chapter seeking"
       ],
-      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "blocker": "This guide\u2019s complete authorized product scenario remains unexecuted and no genuine per-guide WebM/VTT playback or chapter seek evidence exists.",
       "scaffoldPresent": {
         "chapterVtt": true,
         "recordingJson": true,
@@ -601,19 +588,19 @@
         "A production application read check is not full acceptance of this guide\u2019s scenario.",
         "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
       ],
-      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "metadataUpdatedAt": "2026-10-25T02:30:50Z",
       "runtime": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
         "mode": "production",
         "origin": "http://feature-co-managed-it.localhost:23374",
-        "productionVerified": false,
-        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+        "productionVerified": true,
+        "evidence": "runtime-postbuild-check.json"
       },
       "build": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
-        "priorBuildId": "build-1792892121948",
-        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
-        "status": "rebuilding; no current HTTP readiness"
+        "checkoutRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "status": "serving; application code files identical to adeabb source baseline"
       }
     },
     {
@@ -628,13 +615,12 @@
       "chapterSeekVerified": false,
       "status": "blocked",
       "missing": [
-        "Current HTTP-ready runtime for the guide scenario",
         "This guide\u2019s complete authorized product scenario with persisted/reloaded result",
         "A genuine separate WebM captured during this guide\u2019s walkthrough",
         "Timed chapter WebVTT matched to the recording",
         "Browser-verified playback and chapter seeking"
       ],
-      "blocker": "Current build is not yet HTTP ready, this guide\u2019s complete authorized product scenario remains unexecuted, and no genuine per-guide WebM/VTT playback and seek evidence exists.",
+      "blocker": "This guide\u2019s complete authorized product scenario remains unexecuted and no genuine per-guide WebM/VTT playback or chapter seek evidence exists.",
       "scaffoldPresent": {
         "chapterVtt": true,
         "recordingJson": true,
@@ -648,23 +634,23 @@
         "A production application read check is not full acceptance of this guide\u2019s scenario.",
         "No current production walkthrough WebM exists; playback and chapter seeking are unverified."
       ],
-      "metadataUpdatedAt": "2026-10-25T02:26:00Z",
+      "metadataUpdatedAt": "2026-10-25T02:30:50Z",
       "runtime": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
         "mode": "production",
         "origin": "http://feature-co-managed-it.localhost:23374",
-        "productionVerified": false,
-        "note": "Prior adeabb build was verified; current review-app rebuild is not yet listening. No complete scenario for this guide has been recorded."
+        "productionVerified": true,
+        "evidence": "runtime-postbuild-check.json"
       },
       "build": {
         "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
-        "priorBuildId": "build-1792892121948",
-        "currentCandidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
-        "status": "rebuilding; no current HTTP readiness"
+        "checkoutRevision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+        "buildId": "build-1792894631786",
+        "status": "serving; application code files identical to adeabb source baseline"
       }
     }
   ],
-  "runtimeSummary": "Production review-app:24 is in a normal board-admitted rebuild for evidence-only HEAD e88d530b4c0fadfa40d3c0a77cf7102745187219; application source revision remains adeabb3274fc18a62a101238c67729cd23435afb. The earlier adeabb production build was ready, but live-update repair has not yet been verified after restart. Full product scenarios and genuine walkthrough recordings remain incomplete: 0/14.",
+  "runtimeSummary": "Current production build build-1792894631786 is serving checkout e88d530b4c0fadfa40d3c0a77cf7102745187219. Application source files are identical to actual baseline revision adeabb3274fc18a62a101238c67729cd23435afb. QA direct entry and token endpoints pass; recipient-side live-update delivery and all other full acceptance journeys remain incomplete. Genuine recordings: 0/14.",
   "metadataUpdatedAt": "2026-10-25T01:18:28.714114+00:00",
   "runtime": {
     "sourceRevision": "4305dac1a97f004e963c390e585fb1437f79e5f0",
@@ -681,9 +667,24 @@
   "latestBuildAttempt": {
     "candidate": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
     "sourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
-    "status": "building",
-    "observedAt": "2026-10-25T02:26:00Z",
-    "readinessHttp": 0,
-    "log": "/home/robert/.alga-dev/card-services/card-service_964ce5e0-45a5-41b2-8e2c-73903742a85a_review-app_24/service.log"
+    "buildId": "build-1792894631786",
+    "status": "serving",
+    "observedAt": "2026-10-25T02:30:50Z",
+    "readinessHttp": 200,
+    "appPid": 2140829,
+    "appStartedAt": "2026-10-25T02:27:12Z",
+    "appCwd": "/home/robert/alga-copies/feature-co-managed-it/server"
+  },
+  "linkVerification": "guide-links-verification.json",
+  "linkVerificationSummary": {
+    "pagesHttp200": 14,
+    "vttHttp200": 14,
+    "jsonHttp200": 14,
+    "webmHttp200": 0,
+    "playbackVerified": false,
+    "chapterSeekVerified": false,
+    "browserMainVideoSourcePresent": false,
+    "browserMainChaptersDisabled": true,
+    "browserCollectionSectionLinks": 12
   }
 }

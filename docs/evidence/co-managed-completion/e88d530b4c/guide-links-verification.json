@@ -1,0 +1,366 @@
+{
+  "observedAt": "2026-10-25T02:33:00Z",
+  "base": "http://127.0.0.1:8874/",
+  "pageCount": 14,
+  "pagesHttp200": 14,
+  "recordingSets": 14,
+  "webmHttp200": 0,
+  "vttHttp200": 14,
+  "jsonHttp200": 14,
+  "playbackAndSeeking": "not verifiable: all 14 WebM assets absent and all guides remain blocked",
+  "rows": [
+    {
+      "guide": "index.html",
+      "page": {
+        "path": "index.html",
+        "http": 200
+      },
+      "artifacts": {
+        "webm": {
+          "path": "review-walkthrough.webm",
+          "http": 404
+        },
+        "chapterVtt": {
+          "path": "review-walkthrough.vtt",
+          "http": 200
+        },
+        "recordingJson": {
+          "path": "review-walkthrough.json",
+          "http": 200
+        }
+      },
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false
+    },
+    {
+      "guide": "guides/index.html",
+      "page": {
+        "path": "guides/index.html",
+        "http": 200
+      },
+      "artifacts": {
+        "webm": {
+          "path": "guides/collection-walkthrough.webm",
+          "http": 404
+        },
+        "chapterVtt": {
+          "path": "guides/collection-walkthrough.vtt",
+          "http": 200
+        },
+        "recordingJson": {
+          "path": "guides/collection-walkthrough.json",
+          "http": 200
+        }
+      },
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false
+    },
+    {
+      "guide": "guides/01-onboarding.html",
+      "page": {
+        "path": "guides/01-onboarding.html",
+        "http": 200
+      },
+      "artifacts": {
+        "webm": {
+          "path": "guides/01-onboarding-walkthrough.webm",
+          "http": 404
+        },
+        "chapterVtt": {
+          "path": "guides/01-onboarding-walkthrough.vtt",
+          "http": 200
+        },
+        "recordingJson": {
+          "path": "guides/01-onboarding-walkthrough.json",
+          "http": 200
+        }
+      },
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false
+    },
+    {
+      "guide": "guides/02-licensing-and-seats.html",
+      "page": {
+        "path": "guides/02-licensing-and-seats.html",
+        "http": 200
+      },
+      "artifacts": {
+        "webm": {
+          "path": "guides/02-licensing-and-seats-walkthrough.webm",
+          "http": 404
+        },
+        "chapterVtt": {
+          "path": "guides/02-licensing-and-seats-walkthrough.vtt",
+          "http": 200
+        },
+        "recordingJson": {
+          "path": "guides/02-licensing-and-seats-walkthrough.json",
+          "http": 200
+        }
+      },
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false
+    },
+    {
+      "guide": "guides/03-access-policies.html",
+      "page": {
+        "path": "guides/03-access-policies.html",
+        "http": 200
+      },
+      "artifacts": {
+        "webm": {
+          "path": "guides/03-access-policies-walkthrough.webm",
+          "http": 404
+        },
+        "chapterVtt": {
+          "path": "guides/03-access-policies-walkthrough.vtt",
+          "http": 200
+        },
+        "recordingJson": {
+          "path": "guides/03-access-policies-walkthrough.json",
+          "http": 200
+        }
+      },
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false
+    },
+    {
+      "guide": "guides/04-delegated-administration.html",
+      "page": {
+        "path": "guides/04-delegated-administration.html",
+        "http": 200
+      },
+      "artifacts": {
+        "webm": {
+          "path": "guides/04-delegated-administration-walkthrough.webm",
+          "http": 404
+        },
+        "chapterVtt": {
+          "path": "guides/04-delegated-administration-walkthrough.vtt",
+          "http": 200
+        },
+        "recordingJson": {
+          "path": "guides/04-delegated-administration-walkthrough.json",
+          "http": 200
+        }
+      },
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false
+    },
+    {
+      "guide": "guides/05-ticket-queue.html",
+      "page": {
+        "path": "guides/05-ticket-queue.html",
+        "http": 200
+      },
+      "artifacts": {
+        "webm": {
+          "path": "guides/05-ticket-queue-walkthrough.webm",
+          "http": 404
+        },
+        "chapterVtt": {
+          "path": "guides/05-ticket-queue-walkthrough.vtt",
+          "http": 200
+        },
+        "recordingJson": {
+          "path": "guides/05-ticket-queue-walkthrough.json",
+          "http": 200
+        }
+      },
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false
+    },
+    {
+      "guide": "guides/06-projects-and-tasks.html",
+      "page": {
+        "path": "guides/06-projects-and-tasks.html",
+        "http": 200
+      },
+      "artifacts": {
+        "webm": {
+          "path": "guides/06-projects-and-tasks-walkthrough.webm",
+          "http": 404
+        },
+        "chapterVtt": {
+          "path": "guides/06-projects-and-tasks-walkthrough.vtt",
+          "http": 200
+        },
+        "recordingJson": {
+          "path": "guides/06-projects-and-tasks-walkthrough.json",
+          "http": 200
+        }
+      },
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false
+    },
+    {
+      "guide": "guides/07-conversations-and-files.html",
+      "page": {
+        "path": "guides/07-conversations-and-files.html",
+        "http": 200
+      },
+      "artifacts": {
+        "webm": {
+          "path": "guides/07-conversations-and-files-walkthrough.webm",
+          "http": 404
+        },
+        "chapterVtt": {
+          "path": "guides/07-conversations-and-files-walkthrough.vtt",
+          "http": 200
+        },
+        "recordingJson": {
+          "path": "guides/07-conversations-and-files-walkthrough.json",
+          "http": 200
+        }
+      },
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false
+    },
+    {
+      "guide": "guides/08-sla.html",
+      "page": {
+        "path": "guides/08-sla.html",
+        "http": 200
+      },
+      "artifacts": {
+        "webm": {
+          "path": "guides/08-sla-walkthrough.webm",
+          "http": 404
+        },
+        "chapterVtt": {
+          "path": "guides/08-sla-walkthrough.vtt",
+          "http": 200
+        },
+        "recordingJson": {
+          "path": "guides/08-sla-walkthrough.json",
+          "http": 200
+        }
+      },
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false
+    },
+    {
+      "guide": "guides/09-time-and-billing.html",
+      "page": {
+        "path": "guides/09-time-and-billing.html",
+        "http": 200
+      },
+      "artifacts": {
+        "webm": {
+          "path": "guides/09-time-and-billing-walkthrough.webm",
+          "http": 404
+        },
+        "chapterVtt": {
+          "path": "guides/09-time-and-billing-walkthrough.vtt",
+          "http": 200
+        },
+        "recordingJson": {
+          "path": "guides/09-time-and-billing-walkthrough.json",
+          "http": 200
+        }
+      },
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false
+    },
+    {
+      "guide": "guides/10-departure-and-archives.html",
+      "page": {
+        "path": "guides/10-departure-and-archives.html",
+        "http": 200
+      },
+      "artifacts": {
+        "webm": {
+          "path": "guides/10-departure-and-archives-walkthrough.webm",
+          "http": 404
+        },
+        "chapterVtt": {
+          "path": "guides/10-departure-and-archives-walkthrough.vtt",
+          "http": 200
+        },
+        "recordingJson": {
+          "path": "guides/10-departure-and-archives-walkthrough.json",
+          "http": 200
+        }
+      },
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false
+    },
+    {
+      "guide": "guides/11-export-restore-and-upgrade.html",
+      "page": {
+        "path": "guides/11-export-restore-and-upgrade.html",
+        "http": 200
+      },
+      "artifacts": {
+        "webm": {
+          "path": "guides/11-export-restore-and-upgrade-walkthrough.webm",
+          "http": 404
+        },
+        "chapterVtt": {
+          "path": "guides/11-export-restore-and-upgrade-walkthrough.vtt",
+          "http": 200
+        },
+        "recordingJson": {
+          "path": "guides/11-export-restore-and-upgrade-walkthrough.json",
+          "http": 200
+        }
+      },
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false
+    },
+    {
+      "guide": "guides/12-customer-integrations.html",
+      "page": {
+        "path": "guides/12-customer-integrations.html",
+        "http": 200
+      },
+      "artifacts": {
+        "webm": {
+          "path": "guides/12-customer-integrations-walkthrough.webm",
+          "http": 404
+        },
+        "chapterVtt": {
+          "path": "guides/12-customer-integrations-walkthrough.vtt",
+          "http": 200
+        },
+        "recordingJson": {
+          "path": "guides/12-customer-integrations-walkthrough.json",
+          "http": 200
+        }
+      },
+      "status": "blocked",
+      "playbackVerified": false,
+      "chapterSeekVerified": false
+    }
+  ],
+  "browserVerification": {
+    "mainGuide": {
+      "page": "/",
+      "candidateBuildVisible": true,
+      "recordingStatus": "blocked",
+      "videoSourcePresent": false,
+      "chapterControlDisabled": true
+    },
+    "collectionGuide": {
+      "page": "/guides/index.html",
+      "sectionLinks": 12,
+      "blockedRecordingScaffolds": 2,
+      "webmSourcePresent": false
+    },
+    "playback": "not verified: no playable WebM exists",
+    "chapterSeeking": "not verified: chapter selector disabled"
+  }
+}

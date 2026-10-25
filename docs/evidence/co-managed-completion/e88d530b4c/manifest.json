@@ -9,15 +9,17 @@
   },
   "provenance": {
     "app": {
-      "revision": "adeabb3274fc18a62a101238c67729cd23435afb",
-      "buildId": "build-1792892121948",
-      "evidence": "../2b0ec8d9f5/runtime-readiness.json"
+      "revision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
+      "buildId": "build-1792894631786",
+      "evidence": "runtime-postbuild-check.json",
+      "applicationSourceBaseline": "adeabb3274fc18a62a101238c67729cd23435afb (application source files identical to this build checkout)"
     },
     "worker": {
       "revision": "adeabb3274fc18a62a101238c67729cd23435afb",
       "temporalEntrySha256": "d8328c8a383a8a6f66ab6ac5fd769e4a13a69b83da6e1ff88b3a1ec667c14d9c",
       "workflowEntrySha256": "f2be6be532957114654f14cf5b9c6e2f03ab77d2e8ecc3aeed23422a6e003ab1",
-      "inputAudit": "../2b0ec8d9f5/runtime-readiness.json"
+      "inputAudit": "../2b0ec8d9f5/runtime-readiness.json",
+      "inputEquivalence": "Compiled distribution and source-input audit remain identical to current candidate application source."
     },
     "migrations": "sha256:45093475b95a0f8616dd2066983e63df",
     "config": "sha256:bac51e51904540c60120240d65de27ef",
@@ -63,7 +65,7 @@
   "mergeability": {
     "mergeable": "CONFLICTING",
     "mergeStateStatus": "DIRTY",
-    "checkedAtSha": "e88d530b4c0fadfa40d3c0a77cf7102745187219"
+    "checkedAtSha": "57612f0ad021baae237f4eb475556e5ca7b76884"
   },
   "ci": {
     "runId": null,
@@ -76,9 +78,9 @@
   },
   "openDefects": [
     {
-      "id": "co-managed-live-update-runtime-unavailable",
+      "id": "co-managed-live-update-recipient-delivery-unverified",
       "kind": "functional",
-      "summary": "Live-update delivery was independently observed failing: notification-token HTTP 503 and ticket-token HTTP 500. A card-owned Hocuspocus service is now healthy on 1235 and ignored local JWT secret is configured; review-app:24 is rebuilding after normal board restart. Token status and websocket delivery remain unverified, so defect stays open."
+      "summary": "The previous 503/500 token failures are repaired: both live-token routes return HTTP 200, authenticated Hocuspocus ticket/notification rooms connect, and a Redis ticket update is broadcast. Recipient-side UI delivery was not established because the available two tabs shared the QA actor and self-originated events are suppressed; keep open until a distinct authorized recipient observes a live update."
     }
   ],
   "productionPrerequisites": [
