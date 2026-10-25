@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "candidateRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "testedRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "recordedAt": "2026-10-25T08:05:31.790Z",
+  "durationSeconds": 12.16,
+  "guide": "guides/11-export-restore-and-upgrade.html",
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T08:05:36.808Z",
+      "seconds": 5.018,
+      "title": "/msp/co-management/export",
+      "actor": "alice",
+      "result": " backup of your customer workspace.\n\nWhite Rabbit IT\n\nKeep the recovery passphrase somewhere safe. Without it, the backup cannot be opened.\n\nRestoring requires reconnecting external accounts and activating imported users.\n\nRecovery passphrase*\nConfirm recovery passphrase*\nPrepare and download backup",
+      "sourceClip": "11-export-restore-and-upgrade"
+    },
+    {
+      "at": "2026-10-25T08:05:38.055Z",
+      "seconds": 6.265,
+      "title": "Customer encrypted portable download",
+      "actor": "alice",
+      "result": {
+        "downloadName": "alga-workspace-e7fcf267-b84a-48db-9629-d50488d601a4.alga-backup",
+        "sizeBytes": 224250,
+        "sha256": "53a632c4515d1df22e84d9dbf8842e68df513a3ab235cf444f22772162794bbb",
+        "customerTenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+        "privateFileRetained": true
+      },
+      "sourceClip": "11-export-restore-and-upgrade"
+    },
+    {
+      "at": "2026-10-25T08:05:42.972Z",
+      "seconds": 11.182,
+      "title": "/msp/co-management/upgrade",
+      "actor": "alice",
+      "result": "\nAn active, paid AlgaPSA subscription belonging to this workspace is required before upgrading.\n\nThis purchase pays for this workspace. MSP access ends only when you confirm the upgrade after payment.\n\nTotal seats in your pool\nBilling frequency\nMonthly\nReview purchase\nUpgrade workspaceRefresh status",
+      "sourceClip": "11-export-restore-and-upgrade"
+    },
+    {
+      "at": "2026-10-25T08:05:42.977Z",
+      "seconds": 11.187,
+      "title": "Independent upgrade admission",
+      "actor": "alice",
+      "result": "Not admitted without a destination-owned paid PSA subscription",
+      "sourceClip": "11-export-restore-and-upgrade"
+    }
+  ],
+  "outcomes": [
+    {
+      "action": "/msp/co-management/export",
+      "result": " backup of your customer workspace.\n\nWhite Rabbit IT\n\nKeep the recovery passphrase somewhere safe. Without it, the backup cannot be opened.\n\nRestoring requires reconnecting external accounts and activating imported users.\n\nRecovery passphrase*\nConfirm recovery passphrase*\nPrepare and download backup"
+    },
+    {
+      "action": "Customer encrypted portable download",
+      "result": {
+        "downloadName": "alga-workspace-e7fcf267-b84a-48db-9629-d50488d601a4.alga-backup",
+        "sizeBytes": 224250,
+        "sha256": "53a632c4515d1df22e84d9dbf8842e68df513a3ab235cf444f22772162794bbb",
+        "customerTenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+        "privateFileRetained": true
+      }
+    },
+    {
+      "action": "/msp/co-management/upgrade",
+      "result": "\nAn active, paid AlgaPSA subscription belonging to this workspace is required before upgrading.\n\nThis purchase pays for this workspace. MSP access ends only when you confirm the upgrade after payment.\n\nTotal seats in your pool\nBilling frequency\nMonthly\nReview purchase\nUpgrade workspaceRefresh status"
+    },
+    {
+      "action": "Independent upgrade admission",
+      "result": "Not admitted without a destination-owned paid PSA subscription"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 6.265,
+      "title": "11 export restore and upgrade"
+    },
+    {
+      "start": 6.265,
+      "end": 11.187,
+      "title": "Customer encrypted portable download"
+    },
+    {
+      "start": 11.187,
+      "end": 12.16,
+      "title": "Independent upgrade admission"
+    }
+  ],
+  "recordingPaths": {
+    "webm": "guides/current/704fbdca25327d9bfc1b53d37771e05a4de3ca08/11-export-restore-and-upgrade.webm",
+    "chapterVtt": "guides/current/704fbdca25327d9bfc1b53d37771e05a4de3ca08/11-export-restore-and-upgrade.vtt",
+    "recordingJson": "guides/current/704fbdca25327d9bfc1b53d37771e05a4de3ca08/11-export-restore-and-upgrade.json"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true,
+  "runtime": {
+    "sourceRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+    "origin": "http://feature-co-managed-it.localhost:23377",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+    "buildId": "build-1792910542349"
+  },
+  "scenario": {
+    "status": "partial; consult outcomes and limitations",
+    "rawClips": [
+      "evidence/takeover-704f-production/11-export-restore-and-upgrade/recording.json"
+    ]
+  },
+  "limitations": [
+    "Real customer export downloaded and hashed. Isolated installation restore and paid activation were not performed; destination license/subscription is externally required.",
+    "Recorded against actual production source 704fbdca2532 (build-1792910542349). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance.",
+    "Separate operator CLI receipt verifies current encrypted package restored into new suspended tenant de000220; no paid activation or destination sign-in. Wrong passphrase and tamper rejected."
+  ]
+}

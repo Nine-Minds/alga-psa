@@ -1,0 +1,6 @@
+ ticket_number | revision | responsibility | assigned_to | assigned_team_id | response_state | handoffs 
+---------------+----------+----------------+-------------+------------------+----------------+----------
+ 000001        |       25 | customer       |             |                  |                |       21
+ 000002        |       34 | msp            |             |                  |                |       29
+(2 rows)
+

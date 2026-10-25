@@ -1,0 +1,119 @@
+AlgaPSA
+Home
+User Activities
+Tickets
+Service Requests
+Surveys
+Projects
+Clients
+Co-managed IT
+Opportunities
+Contacts
+Interactions
+Documents
+Assets
+Passwords
+Inventory
+Reports
+Time Management
+Billing
+Schedule
+Technician Dispatch
+Workflows
+System Monitoring
+Extensions
+Settings
+Support
+v1.6.12
+Home
+Time Entry
+24ac76c8-df59-4b10-8371-c56222904580
+Quick Create
+QT
+Back
+Time Sheet
+Fri, Oct 16 - Sat, Oct 31
+Status:
+In Progress
+Suggestions
+4
+Grid
+List
+Submit Time Sheet
+Add Item
+5 entries
+Total: 04:15
+Billable: 04:15
+	Work Item	Time Entry	Duration	Billable Duration	Actions	
+	Fri, Oct 16	2 entries	02:00	02:00	
+Entry
+	
+SMOKE callout count change 142333
+Co Managed
+	
+04:00 - 05:00
+	01:00	01:00	
+
+	
+Printer offline in accounts
+Co Managed
+	
+04:00 - 05:00
+	01:00	01:00	
+	Sat, Oct 17	1 entry	01:00	01:00	
+Entry
+	
+SMOKE callout count change 142333
+Co Managed
+	
+04:00 - 05:00
+	01:00	01:00	
+	Sun, Oct 18	1 entry	01:00	01:00	
+Entry
+	
+SMOKE callout count change 142333
+Co Managed
+	
+04:00 - 05:00
+	01:00	01:00	
+	Mon, Oct 19	No entries			
+Entry
+	Tue, Oct 20	No entries			
+Entry
+	Wed, Oct 21	No entries			
+Entry
+	Thu, Oct 22	No entries			
+Entry
+	Fri, Oct 23	No entries			
+Entry
+	Sat, Oct 24	No entries			
+Entry
+	Sun, Oct 25	1 entry	00:15	00:15	
+Entry
+	
+SMOKE callout count change 142333
+Co Managed
+	
+04:00 - 04:15
+	00:15	00:15	
+	Mon, Oct 26	No entries			
+Entry
+	Tue, Oct 27	No entries			
+Entry
+	Wed, Oct 28	No entries			
+Entry
+	Thu, Oct 29	No entries			
+Entry
+	Fri, Oct 30	No entries			
+Entry
+	Sat, Oct 31	No entries			
+Entry
+Billable Legend
+
+Color indicators for billable time ratios
+
+0%
+25%
+50%
+75%
+100%

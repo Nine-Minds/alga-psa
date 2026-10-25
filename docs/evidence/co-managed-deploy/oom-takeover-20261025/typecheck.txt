@@ -1,0 +1,4 @@
+Command: cd server && NODE_OPTIONS=--max-old-space-size=12288 npx tsc --noEmit
+Exit: 0
+Compiler output: empty
+Application start/restart commands: none

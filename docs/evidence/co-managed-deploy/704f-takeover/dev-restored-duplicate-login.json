@@ -1,0 +1,10 @@
+{
+  "checkedAt": "2026-10-25T08:23:49.332Z",
+  "mode": "existing dev server; no restart",
+  "sourceCheckout": "2c3f487bad8f53105c4198caf47addd02098669a",
+  "email": "alice@whiterabbit.test",
+  "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+  "normalCredentials": true,
+  "originalCustomerAfterReload": true,
+  "productionVerified": false
+}

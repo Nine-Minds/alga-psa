@@ -1,0 +1,191 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "candidateRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "testedRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "recordedAt": "2026-10-25T08:04:52.372Z",
+  "durationSeconds": 29.32,
+  "guide": "guides/06-projects-and-tasks.html",
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T08:04:57.584Z",
+      "seconds": 5.212,
+      "title": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "actor": "qa",
+      "result": "Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext",
+      "sourceClip": "06-task-edit-revocation"
+    },
+    {
+      "at": "2026-10-25T08:05:00.441Z",
+      "seconds": 8.069,
+      "title": "Qualified MSP task edit after reload",
+      "actor": "qa",
+      "result": "Persisted",
+      "sourceClip": "06-task-edit-revocation"
+    },
+    {
+      "at": "2026-10-25T08:05:01.572Z",
+      "seconds": 9.2,
+      "title": "Restored original task name",
+      "actor": "qa",
+      "result": "Comment publication is tracked in a separate failed capture",
+      "sourceClip": "06-task-edit-revocation"
+    },
+    {
+      "at": "2026-10-25T08:05:06.969Z",
+      "seconds": 14.597,
+      "title": "/msp/co-management",
+      "actor": "alice",
+      "result": " configured separately.\n\nBoards\nService Desk\nAccess for Service Desk\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nProjects\nCM Lead customer project 20261025\nAccess for CM Lead customer project 20261025\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nSave access\nReload current access",
+      "sourceClip": "06-task-edit-revocation"
+    },
+    {
+      "at": "2026-10-25T08:05:08.569Z",
+      "seconds": 16.197,
+      "title": "Customer project grant revoked",
+      "actor": "alice",
+      "result": "Verified after reload",
+      "sourceClip": "06-task-edit-revocation"
+    },
+    {
+      "at": "2026-10-25T08:05:13.613Z",
+      "seconds": 21.241,
+      "title": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "actor": "qa",
+      "result": "nts\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nShared Tasks\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nProject task\n\nCould not load this project or task.\n\nReload current access",
+      "sourceClip": "06-task-edit-revocation"
+    },
+    {
+      "at": "2026-10-25T08:05:13.616Z",
+      "seconds": 21.244,
+      "title": "Formerly authorized task now denied",
+      "actor": "qa",
+      "result": "Fresh MSP read fails closed",
+      "sourceClip": "06-task-edit-revocation"
+    },
+    {
+      "at": "2026-10-25T08:05:18.473Z",
+      "seconds": 26.101,
+      "title": "/msp/co-management",
+      "actor": "alice",
+      "result": "cket visibility to work explicitly escalated to the MSP. Project access is configured separately.\n\nBoards\nService Desk\nAccess for Service Desk\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nProjects\n\nNo access configured.\n\nSearch\nSelect an item\nSelect...\nAdd\nSave access\nReload current access",
+      "sourceClip": "06-task-edit-revocation"
+    },
+    {
+      "at": "2026-10-25T08:05:20.763Z",
+      "seconds": 28.391,
+      "title": "Restored explicit project grant",
+      "actor": "alice",
+      "result": "Reversible review change restored",
+      "sourceClip": "06-task-edit-revocation"
+    }
+  ],
+  "outcomes": [
+    {
+      "action": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "result": "Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nQA Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task\nQA Tester · Oz\nOct 24, 2026, 11:14 PM\nTask name\nCM Lead shared task verified\nPrevious\nNext"
+    },
+    {
+      "action": "Qualified MSP task edit after reload",
+      "result": "Persisted"
+    },
+    {
+      "action": "Restored original task name",
+      "result": "Comment publication is tracked in a separate failed capture"
+    },
+    {
+      "action": "/msp/co-management",
+      "result": " configured separately.\n\nBoards\nService Desk\nAccess for Service Desk\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nProjects\nCM Lead customer project 20261025\nAccess for CM Lead customer project 20261025\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nSave access\nReload current access"
+    },
+    {
+      "action": "Customer project grant revoked",
+      "result": "Verified after reload"
+    },
+    {
+      "action": "/msp/co-management/tasks/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/32bde60e-9e8b-4584-8926-8e7fb627d710",
+      "result": "nts\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nShared Tasks\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nProject task\n\nCould not load this project or task.\n\nReload current access"
+    },
+    {
+      "action": "Formerly authorized task now denied",
+      "result": "Fresh MSP read fails closed"
+    },
+    {
+      "action": "/msp/co-management",
+      "result": "cket visibility to work explicitly escalated to the MSP. Project access is configured separately.\n\nBoards\nService Desk\nAccess for Service Desk\nCollaborate\nRemove\nSearch\nSelect an item\nSelect...\nAdd\nProjects\n\nNo access configured.\n\nSearch\nSelect an item\nSelect...\nAdd\nSave access\nReload current access"
+    },
+    {
+      "action": "Restored explicit project grant",
+      "result": "Reversible review change restored"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 8.069,
+      "title": "06 task edit revocation"
+    },
+    {
+      "start": 8.069,
+      "end": 9.2,
+      "title": "Qualified MSP task edit after reload"
+    },
+    {
+      "start": 9.2,
+      "end": 16.197,
+      "title": "Restored original task name"
+    },
+    {
+      "start": 16.197,
+      "end": 21.244,
+      "title": "Customer project grant revoked"
+    },
+    {
+      "start": 21.244,
+      "end": 28.391,
+      "title": "Formerly authorized task now denied"
+    },
+    {
+      "start": 28.391,
+      "end": 29.32,
+      "title": "Restored explicit project grant"
+    }
+  ],
+  "recordingPaths": {
+    "webm": "guides/current/704fbdca25327d9bfc1b53d37771e05a4de3ca08/06-projects-and-tasks.webm",
+    "chapterVtt": "guides/current/704fbdca25327d9bfc1b53d37771e05a4de3ca08/06-projects-and-tasks.vtt",
+    "recordingJson": "guides/current/704fbdca25327d9bfc1b53d37771e05a4de3ca08/06-projects-and-tasks.json"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true,
+  "runtime": {
+    "sourceRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+    "origin": "http://feature-co-managed-it.localhost:23377",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+    "buildId": "build-1792910542349"
+  },
+  "scenario": {
+    "status": "partial; consult outcomes and limitations",
+    "rawClips": [
+      "evidence/takeover-704f-production/06-task-edit-revocation/recording.json"
+    ]
+  },
+  "limitations": [
+    "Shared task edit/revision and project revocation/restoration checked. Note publication was not established. Files, requester access, disclosure, assignment and operational time are separate checks.",
+    "Recorded against actual production source 704fbdca2532 (build-1792910542349). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+  ]
+}

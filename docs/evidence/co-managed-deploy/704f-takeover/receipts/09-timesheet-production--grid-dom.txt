@@ -1,0 +1,121 @@
+AlgaPSA
+Home
+User Activities
+Tickets
+Service Requests
+Surveys
+Projects
+Clients
+Co-managed IT
+Opportunities
+Contacts
+Interactions
+Documents
+Assets
+Passwords
+Inventory
+Reports
+Time Management
+Billing
+Schedule
+Technician Dispatch
+Workflows
+System Monitoring
+Extensions
+Settings
+Support
+v1.6.12
+Home
+Time Entry
+24ac76c8-df59-4b10-8371-c56222904580
+Quick Create
+QT
+Back
+Time Sheet
+Oct 16 - 23, 2026
+Page 1 of 2
+Status:
+In Progress
+Suggestions
+4
+Grid
+List
+Submit Time Sheet
+Add Item	
+FRI
+10/16
+	
+SAT
+10/17
+	
+SUN
+10/18
+	
+MON
+10/19
+	
+TUE
+10/20
+	
+WED
+10/21
+	
+THU
+10/22
+	
+FRI
+10/23
+
+
+SMOKE callout count change 142333
+Co Managed
+	
+01:00
+	
+01:00
+	
+01:00
+	
+	
+	
+	
+	
+
+
+Printer offline in accounts
+Co Managed
+	
+01:00
+	
+	
+	
+	
+	
+	
+	
+
+Weekly Total	
+02:00
+	
+01:00
+	
+01:00
+	
+00:00
+	
+00:00
+	
+00:00
+	
+00:00
+	
+00:00
+Billable Legend
+
+Color indicators for billable time ratios
+
+0%
+25%
+50%
+75%
+100%

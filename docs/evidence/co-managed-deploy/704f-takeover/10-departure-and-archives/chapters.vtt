@@ -1,0 +1,17 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:04.940
+10 departure retained
+
+2
+00:00:04.940 --> 00:00:10.500
+Fresh customer departure read
+
+3
+00:00:10.500 --> 00:00:17.425
+Customer retains native read workspace
+
+4
+00:00:17.425 --> 00:00:18.400
+MSP retained archive surface

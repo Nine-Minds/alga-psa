@@ -1,0 +1,69 @@
+{
+  "checkedAt": "2026-10-25T08:21:11.879Z",
+  "sourceRepairRevision": "2c3f487bad8f53105c4198caf47addd02098669a",
+  "recordedApplicationSourceRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "buildId": "build-1792910542349",
+  "recordedOrigin": "http://feature-co-managed-it.localhost:23377",
+  "canonicalOrigin": "http://feature-co-managed-it.localhost:23374",
+  "canonicalApplicationSourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+  "sourceRepairDeployed": false,
+  "appProcessStartedByTakeover": false,
+  "promotionPerformed": false,
+  "supportedOpenReviewOn704fVerified": false,
+  "qaCandidateIdentityVerified": true,
+  "reviewReady": false,
+  "recordingReady": false,
+  "fullyAcceptedGuideScenarios": 0,
+  "mediaReady": true,
+  "playSeekVerifiedGuides": 14,
+  "scenarioStatus": "all full guide scenarios partial",
+  "probes": [
+    {
+      "port": 3374,
+      "url": "http://127.0.0.1:3374/auth/msp/signin",
+      "httpStatus": 200,
+      "checkedAt": "2026-10-25T08:21:11.879Z"
+    },
+    {
+      "port": 23374,
+      "url": "http://127.0.0.1:23374/api/health",
+      "httpStatus": 200,
+      "checkedAt": "2026-10-25T08:21:11.738Z"
+    },
+    {
+      "port": 23377,
+      "url": "http://127.0.0.1:23377/api/health",
+      "httpStatus": 200,
+      "checkedAt": "2026-10-25T08:21:11.737Z"
+    },
+    {
+      "port": 8375,
+      "url": "http://127.0.0.1:8375/health",
+      "httpStatus": 200,
+      "checkedAt": "2026-10-25T08:21:11.736Z"
+    },
+    {
+      "port": 4374,
+      "url": "http://127.0.0.1:4374/health",
+      "httpStatus": 200,
+      "checkedAt": "2026-10-25T08:21:11.735Z"
+    },
+    {
+      "port": 8874,
+      "url": "http://127.0.0.1:8874/",
+      "httpStatus": 200,
+      "checkedAt": "2026-10-25T08:21:11.737Z"
+    }
+  ],
+  "remaining": [
+    "Deploy cookie issuer/reader, public-origin naming and restored-user login fixes; existing development QA/session coexistence and original Alice login passed, but card-browser revocation and production repair verification remain open",
+    "Promote704f through normal board registration and prove direct QA Open Review; current no-start instruction prevents process replacement",
+    "Microsoft/provider/inbound/directory runtime journeys",
+    "Complete requester/file-removal/disclosure/privacy matrices",
+    "Time approval/commercial invoice and paid activation/recovered native-login matrices",
+    "Reconcile all260 requirements with full evidence; bounded recordings do not promote whole requirements"
+  ],
+  "evidence": "docs/evidence/co-managed-deploy/704f-takeover",
+  "developmentSessionVerified": true,
+  "developmentOriginalCustomerLoginVerified": true
+}

@@ -1,0 +1,147 @@
+{
+  "guide": "guides/10-departure-and-archives.html",
+  "candidateRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "testedRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "status": "complete",
+  "recordedAt": "2026-10-25T08:10:20.258Z",
+  "durationSeconds": 18.4,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    },
+    {
+      "name": "previous disposable customer administrator",
+      "tenant": "a967fcd6-2fa7-4c16-833e-91a1ed6855ff"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T08:10:25.193Z",
+      "seconds": 4.935,
+      "title": "/msp/co-management/departure",
+      "result": " subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nUpgrade to AlgaPSAExport workspaceRefresh status",
+      "sourceClip": "10-departure-retained"
+    },
+    {
+      "at": "2026-10-25T08:10:25.198Z",
+      "seconds": 4.94,
+      "title": "Fresh customer departure read",
+      "result": "Ended; no live sponsor counterpart disclosure",
+      "sourceClip": "10-departure-retained"
+    },
+    {
+      "at": "2026-10-25T08:10:30.758Z",
+      "seconds": 10.5,
+      "title": "/msp/tickets",
+      "result": "echnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nAll Tickets\na967fcd6-2fa7-4c16-833e-91a1ed6855ff\nQuick Create\nLR\nTicketing Dashboard\nAdd Ticket\nAll tickets\nFilters\nBundled\nDefault view\nView\n2 columns hidden.\nShow all\n\t\nTitle\n\t\nStatus\n\t\nPriority\n\t\nBoard\n\t\nClient\n\t\nActions",
+      "sourceClip": "10-departure-retained"
+    },
+    {
+      "at": "2026-10-25T08:10:30.758Z",
+      "seconds": 10.5,
+      "title": "Customer retains native read workspace",
+      "result": "No data deletion",
+      "sourceClip": "10-departure-retained"
+    },
+    {
+      "at": "2026-10-25T08:10:35.880Z",
+      "seconds": 15.622,
+      "title": "/msp/co-managed/archive",
+      "actor": "qa",
+      "result": "red work archive\n\nRetained history and files from work your organization participated in.\n\nReload current access\nCM Lead shared task\nWhite Rabbit\nSMOKE callout count change 142333\nWhite Rabbit\nPrinter offline in accounts\nWhite Rabbit\nPrevious\nNext\n\nSelect retained work to view its history and files.",
+      "sourceClip": "10-departure-retained"
+    },
+    {
+      "at": "2026-10-25T08:10:37.683Z",
+      "seconds": 17.425,
+      "title": "MSP retained archive surface",
+      "actor": "qa",
+      "result": "e\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nOverview\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nShared work archive\n\nRetained history and files from work your organization participated in.\n\nReload current access\nCM Lead shared task\nWhite Rabbit\nSMOKE callout count change 142333\nWhite Rabbit\nPrinter offline in accounts\nWhite Rabbit\nPrevious\nNext\n\nSelect retained work to view its history and files.",
+      "sourceClip": "10-departure-retained"
+    }
+  ],
+  "outcomes": [
+    {
+      "action": "/msp/co-management/departure",
+      "result": " subscription remain available.\n\nThe MSP retains its own records and permitted historical evidence of shared work it participated in.\n\nAllocated co-managed seats return to the MSP\u2019s pool. This does not cancel subscriptions or delete either workspace.\n\nUpgrade to AlgaPSAExport workspaceRefresh status"
+    },
+    {
+      "action": "Fresh customer departure read",
+      "result": "Ended; no live sponsor counterpart disclosure"
+    },
+    {
+      "action": "/msp/tickets",
+      "result": "echnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nAll Tickets\na967fcd6-2fa7-4c16-833e-91a1ed6855ff\nQuick Create\nLR\nTicketing Dashboard\nAdd Ticket\nAll tickets\nFilters\nBundled\nDefault view\nView\n2 columns hidden.\nShow all\n\t\nTitle\n\t\nStatus\n\t\nPriority\n\t\nBoard\n\t\nClient\n\t\nActions"
+    },
+    {
+      "action": "Customer retains native read workspace",
+      "result": "No data deletion"
+    },
+    {
+      "action": "/msp/co-managed/archive",
+      "result": "red work archive\n\nRetained history and files from work your organization participated in.\n\nReload current access\nCM Lead shared task\nWhite Rabbit\nSMOKE callout count change 142333\nWhite Rabbit\nPrinter offline in accounts\nWhite Rabbit\nPrevious\nNext\n\nSelect retained work to view its history and files."
+    },
+    {
+      "action": "MSP retained archive surface",
+      "result": "e\nUser Activities\nTickets\nService Requests\nSurveys\nProjects\nClients\nCo-managed IT\nOpportunities\nContacts\nInteractions\nDocuments\nAssets\nPasswords\nInventory\nReports\nTime Management\nBilling\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nExtensions\nSettings\nSupport\nv1.6.12\nHome\nOverview\n24ac76c8-df59-4b10-8371-c56222904580\nQuick Create\nQT\nShared work archive\n\nRetained history and files from work your organization participated in.\n\nReload current access\nCM Lead shared task\nWhite Rabbit\nSMOKE callout count change 142333\nWhite Rabbit\nPrinter offline in accounts\nWhite Rabbit\nPrevious\nNext\n\nSelect retained work to view its history and files."
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 4.94,
+      "title": "10 departure retained"
+    },
+    {
+      "start": 4.94,
+      "end": 10.5,
+      "title": "Fresh customer departure read"
+    },
+    {
+      "start": 10.5,
+      "end": 17.425,
+      "title": "Customer retains native read workspace"
+    },
+    {
+      "start": 17.425,
+      "end": 18.4,
+      "title": "MSP retained archive surface"
+    }
+  ],
+  "runtime": {
+    "sourceRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+    "origin": "http://feature-co-managed-it.localhost:23377",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+    "buildId": "build-1792910542349"
+  },
+  "scenario": {
+    "status": "partial; consult outcomes and limitations",
+    "rawClips": [
+      "evidence/takeover-704f-production/10-departure-retained/recording.json"
+    ]
+  },
+  "limitations": [
+    "Read existing terminated disposable customer and retained workspace/archive surfaces. No fresh departure was performed in this recording; no archive body/file byte or post-closure invoicing acceptance claimed."
+  ],
+  "recordingPaths": {
+    "webm": "guides/current/704fbdca25327d9bfc1b53d37771e05a4de3ca08/10-departure-and-archives.webm",
+    "chapterVtt": "guides/current/704fbdca25327d9bfc1b53d37771e05a4de3ca08/10-departure-and-archives.vtt",
+    "recordingJson": "guides/current/704fbdca25327d9bfc1b53d37771e05a4de3ca08/10-departure-and-archives.json"
+  },
+  "recordingSourcePaths": {
+    "webm": "10-departure-and-archives/walkthrough.webm",
+    "chapterVtt": "10-departure-and-archives/chapters.vtt"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true
+}

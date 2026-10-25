@@ -1,0 +1,49 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:05.457
+account boundary
+
+2
+00:00:05.457 --> 00:00:10.372
+Customer denied /msp/account
+
+3
+00:00:10.372 --> 00:00:15.584
+Customer denied /msp/account/billing
+
+4
+00:00:15.584 --> 00:00:20.786
+Customer denied /msp/settings/integrations?category=accounting
+
+5
+00:00:20.786 --> 00:00:21.800
+Authorized PSA account
+
+6
+00:00:21.800 --> 00:00:28.155
+main native effect final
+
+7
+00:00:28.155 --> 00:01:22.684
+Temporarily resume existing published smoke workflow
+
+8
+00:01:22.684 --> 00:01:23.680
+Restored workflow paused state
+
+9
+00:01:23.680 --> 00:01:31.606
+main confirmed persisted effects
+
+10
+00:01:31.606 --> 00:01:34.155
+Native ticket and both workflow comments persist
+
+11
+00:01:34.155 --> 00:01:39.074
+Both comments survive reload
+
+12
+00:01:39.074 --> 00:01:40.000
+Workflow returned to original Paused state

@@ -1,0 +1,81 @@
+{
+  "checkedAt": "2026-10-25T08:22:56.060Z",
+  "origin": "http://feature-co-managed-it.localhost:3374",
+  "mode": "existing development app; no process started",
+  "sourceCheckout": "2c3f487bad8f53105c4198caf47addd02098669a",
+  "productionDeploymentClaim": false,
+  "passed": true,
+  "results": [
+    {
+      "importedProductionCookies": false,
+      "checks": [
+        {
+          "route": "/msp/tickets",
+          "actualPath": "/msp/tickets",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        },
+        {
+          "route": "/msp/tickets/customer",
+          "actualPath": "/msp/tickets/customer",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        },
+        {
+          "route": "/msp/tickets",
+          "actualPath": "/msp/tickets",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        }
+      ],
+      "cookies": [
+        {
+          "name": "authjs-port-3374.session-token",
+          "domain": "feature-co-managed-it.localhost",
+          "path": "/",
+          "secure": false,
+          "httpOnly": true
+        }
+      ]
+    },
+    {
+      "importedProductionCookies": true,
+      "checks": [
+        {
+          "route": "/msp/tickets",
+          "actualPath": "/msp/tickets",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        },
+        {
+          "route": "/msp/tickets/customer",
+          "actualPath": "/msp/tickets/customer",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        },
+        {
+          "route": "/msp/tickets",
+          "actualPath": "/msp/tickets",
+          "email": "qa@emeraldcity.oz",
+          "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+        }
+      ],
+      "cookies": [
+        {
+          "name": "authjs.session-token",
+          "domain": "feature-co-managed-it.localhost",
+          "path": "/",
+          "secure": false,
+          "httpOnly": true
+        },
+        {
+          "name": "authjs-port-3374.session-token",
+          "domain": "feature-co-managed-it.localhost",
+          "path": "/",
+          "secure": false,
+          "httpOnly": true
+        }
+      ]
+    }
+  ]
+}

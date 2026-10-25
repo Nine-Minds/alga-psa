@@ -1,0 +1,47 @@
+{
+  "capturedAt": "2026-10-25T10:02:30.079Z",
+  "snapshotPrivate": true,
+  "snapshotBytes": 1386705640,
+  "snapshotCommitted": false,
+  "processPid": 1722063,
+  "traversal": {
+    "root": "React Flight development pendingOperations",
+    "reachableNodes": 9764892,
+    "reachableShallowBytes": 422966376,
+    "excludedNodeTypes": [
+      "code",
+      "closure",
+      "object shape",
+      "synthetic",
+      "hidden"
+    ],
+    "caveat": "Reachability is not dominator retained size; shared descendants may have other roots."
+  },
+  "controls": {
+    "reactDebugChannels": {
+      "entriesCleared": 8,
+      "bufferedBytes": 2817424,
+      "heapBefore": 1746640176,
+      "heapAfterGc": 1726772600,
+      "interpretation": "Too small to explain the growing heap; not presented as the repair."
+    },
+    "nodeSourceMaps": {
+      "temporarilyDisabled": true,
+      "restored": true,
+      "interpretation": "Growth continued with source maps disabled; not a sufficient repair."
+    }
+  },
+  "realAsyncHookRegression": {
+    "iterations": 12000,
+    "baseline": {
+      "live": 6001,
+      "ancestry": 72002
+    },
+    "repaired": {
+      "live": 6001,
+      "ancestry": 6001
+    }
+  },
+  "loadedRuntimeRepaired": false,
+  "restartPerformed": false
+}

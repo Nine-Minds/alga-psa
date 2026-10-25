@@ -1,0 +1,35 @@
+{
+  "sourceRepair": "2c3f487bad8f53105c4198caf47addd02098669a",
+  "auth": {
+    "command": "cd packages/auth && npx vitest run",
+    "filesPassed": 56,
+    "testsPassed": 285
+  },
+  "authTypecheck": {
+    "command": "cd packages/auth && npx tsc --noEmit",
+    "exitCode": 0
+  },
+  "authBuild": {
+    "command": "npm run build --workspace=@alga-psa/auth",
+    "exitCode": 0
+  },
+  "serverTypecheck": {
+    "command": "cd server && NODE_OPTIONS=--max-old-space-size=12288 npx tsc --noEmit",
+    "exitCode": 0
+  },
+  "serverCookieBoundaries": {
+    "command": "cd server && npx vitest run src/lib/auth/sessionCookies.test.ts",
+    "testsPassed": 2
+  },
+  "counterfactual": {
+    "change": "Restore pre-repair auth.tsx in isolated temporary module",
+    "assertion": "inactive restored internal row cannot shadow active workspace",
+    "result": "Fails as expected; temporary files removed"
+  },
+  "renderer": {
+    "command": "node --test docs/guides/co-managed-it/render.test.cjs",
+    "testsPassed": 4,
+    "syntheticMediaIsAcceptanceEvidence": false
+  },
+  "deployedRepairVerified": false
+}

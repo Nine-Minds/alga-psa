@@ -1,0 +1,17 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:05.304
+02 current allocation verified
+
+2
+00:00:05.304 --> 00:00:13.902
+Sponsor purchased pool and allocations
+
+3
+00:00:13.902 --> 00:00:16.633
+Allocation increase persisted after reload
+
+4
+00:00:16.633 --> 00:00:17.920
+Original seat allocation restored after reload

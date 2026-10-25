@@ -1,0 +1,89 @@
+TAP version 13
+# Subtest: refuses to stamp or serve when tracked source changes during production compilation
+ok 1 - refuses to stamp or serve when tracked source changes during production compilation
+  ---
+  duration_ms: 61.180823
+  type: 'test'
+  ...
+# Subtest: refuses to stamp or serve when HEAD changes during production compilation
+ok 2 - refuses to stamp or serve when HEAD changes during production compilation
+  ---
+  duration_ms: 49.888846
+  type: 'test'
+  ...
+# Subtest: stamps and serves when the captured HEAD and source fingerprint remain stable
+ok 3 - stamps and serves when the captured HEAD and source fingerprint remain stable
+  ---
+  duration_ms: 94.547008
+  type: 'test'
+  ...
+# Subtest: prepare-only stamps a stable build without invoking next start
+ok 4 - prepare-only stamps a stable build without invoking next start
+  ---
+  duration_ms: 63.006445
+  type: 'test'
+  ...
+# Subtest: rejects invalid prepare-only values before typecheck or build
+ok 5 - rejects invalid prepare-only values before typecheck or build
+  ---
+  duration_ms: 16.535726
+  type: 'test'
+  ...
+# Subtest: prepare-only refuses to stamp when source changes during production compilation
+ok 6 - prepare-only refuses to stamp when source changes during production compilation
+  ---
+  duration_ms: 50.593788
+  type: 'test'
+  ...
+# Subtest: prepare-only refuses to stamp when HEAD changes during production compilation
+ok 7 - prepare-only refuses to stamp when HEAD changes during production compilation
+  ---
+  duration_ms: 58.348264
+  type: 'test'
+  ...
+# Subtest: destroyed async resources no longer pin an unbounded ancestry chain
+ok 8 - destroyed async resources no longer pin an unbounded ancestry chain
+  ---
+  duration_ms: 6.766173
+  type: 'test'
+  ...
+# Subtest: destroy preserves the retired frame and live child while releasing both ancestry links
+ok 9 - destroy preserves the retired frame and live child while releasing both ancestry links
+  ---
+  duration_ms: 2.543878
+  type: 'test'
+  ...
+# Subtest: patching is idempotent and fails closed when the target callback changes
+ok 10 - patching is idempotent and fails closed when the target callback changes
+  ---
+  duration_ms: 4.257882
+  type: 'test'
+  ...
+# Subtest: installation refuses a different Next version without changing files
+ok 11 - installation refuses a different Next version without changing files
+  ---
+  duration_ms: 1.803992
+  type: 'test'
+  ...
+# Subtest: real long-lived async work retains bounded ancestry after destroy (unpatched control grows)
+ok 12 - real long-lived async work retains bounded ancestry after destroy (unpatched control grows)
+  ---
+  duration_ms: 488.436952
+  type: 'test'
+  ...
+# {"baseline":{"live":6001,"ancestry":72002},"repaired":{"live":6001,"ancestry":6001}}
+# Subtest: installer covers both bundlers and channel variants, preserves production, and is idempotent
+ok 13 - installer covers both bundlers and channel variants, preserves production, and is idempotent
+  ---
+  duration_ms: 95.839522
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 645.37366

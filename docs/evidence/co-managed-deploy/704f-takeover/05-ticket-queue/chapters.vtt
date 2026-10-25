@@ -1,0 +1,25 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:05.514
+05 ticket queue
+
+2
+00:00:05.514 --> 00:00:10.722
+Native ticket list
+
+3
+00:00:10.722 --> 00:00:15.953
+Return selected shared ticket
+
+4
+00:00:15.953 --> 00:00:18.065
+Customer sees authoritative returned ticket
+
+5
+00:00:18.065 --> 00:00:23.349
+Customer re-escalates
+
+6
+00:00:23.349 --> 00:00:24.280
+Restored MSP working queue

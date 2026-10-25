@@ -1,0 +1,561 @@
+{
+  "startedAt": "2026-10-25T09:54:03.620Z",
+  "endedAt": "2026-10-25T09:54:51.859Z",
+  "pid": 1722063,
+  "origin": "http://feature-co-managed-it.localhost:3374",
+  "route": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+  "actor": {
+    "email": "qa@emeraldcity.oz",
+    "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+  },
+  "customerLinks": [
+    {
+      "href": "/msp/tickets/customer?queueView=working&workspace=all&signal=escalated_unassigned",
+      "text": "1 escalated ticket, unassigned"
+    }
+  ],
+  "reloads": [
+    {
+      "i": 1,
+      "at": "2026-10-25T09:54:19.630Z",
+      "ticketHeading": true,
+      "timeline": true,
+      "email": "qa@emeraldcity.oz",
+      "url": "http://feature-co-managed-it.localhost:3374/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "i": 2,
+      "at": "2026-10-25T09:54:23.122Z",
+      "ticketHeading": true,
+      "timeline": true,
+      "email": "qa@emeraldcity.oz",
+      "url": "http://feature-co-managed-it.localhost:3374/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "i": 3,
+      "at": "2026-10-25T09:54:26.675Z",
+      "ticketHeading": true,
+      "timeline": true,
+      "email": "qa@emeraldcity.oz",
+      "url": "http://feature-co-managed-it.localhost:3374/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "i": 4,
+      "at": "2026-10-25T09:54:30.124Z",
+      "ticketHeading": true,
+      "timeline": true,
+      "email": "qa@emeraldcity.oz",
+      "url": "http://feature-co-managed-it.localhost:3374/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "i": 5,
+      "at": "2026-10-25T09:54:33.828Z",
+      "ticketHeading": true,
+      "timeline": true,
+      "email": "qa@emeraldcity.oz",
+      "url": "http://feature-co-managed-it.localhost:3374/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "i": 6,
+      "at": "2026-10-25T09:54:37.201Z",
+      "ticketHeading": true,
+      "timeline": true,
+      "email": "qa@emeraldcity.oz",
+      "url": "http://feature-co-managed-it.localhost:3374/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "i": 7,
+      "at": "2026-10-25T09:54:40.327Z",
+      "ticketHeading": true,
+      "timeline": true,
+      "email": "qa@emeraldcity.oz",
+      "url": "http://feature-co-managed-it.localhost:3374/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "i": 8,
+      "at": "2026-10-25T09:54:43.795Z",
+      "ticketHeading": true,
+      "timeline": true,
+      "email": "qa@emeraldcity.oz",
+      "url": "http://feature-co-managed-it.localhost:3374/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "i": 9,
+      "at": "2026-10-25T09:54:47.261Z",
+      "ticketHeading": true,
+      "timeline": true,
+      "email": "qa@emeraldcity.oz",
+      "url": "http://feature-co-managed-it.localhost:3374/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "i": 10,
+      "at": "2026-10-25T09:54:50.978Z",
+      "ticketHeading": true,
+      "timeline": true,
+      "email": "qa@emeraldcity.oz",
+      "url": "http://feature-co-managed-it.localhost:3374/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+    }
+  ],
+  "samples": [
+    {
+      "at": "2026-10-25T09:54:03.649Z",
+      "label": "before",
+      "startTicks": "306838706",
+      "vmProbe": {
+        "counts": {}
+      },
+      "memory": {
+        "rss": 3658739712,
+        "heapTotal": 1029226496,
+        "heapUsed": 944546920,
+        "external": 34653012,
+        "arrayBuffers": 4880862
+      },
+      "heap": {
+        "total_heap_size": 1029226496,
+        "total_heap_size_executable": 12369920,
+        "total_physical_size": 998891520,
+        "total_available_size": 3386548824,
+        "used_heap_size": 944547160,
+        "heap_size_limit": 4345298944,
+        "malloced_memory": 4235384,
+        "peak_malloced_memory": 36721192,
+        "does_zap_garbage": 0,
+        "number_of_native_contexts": 9,
+        "number_of_detached_contexts": 0,
+        "total_global_handles_size": 3244032,
+        "used_global_handles_size": 480672,
+        "external_memory": 34653012
+      }
+    },
+    {
+      "at": "2026-10-25T09:54:03.913Z",
+      "label": "baseline-after-gc",
+      "startTicks": "306838706",
+      "vmProbe": {
+        "counts": {}
+      },
+      "memory": {
+        "rss": 3615625216,
+        "heapTotal": 957837312,
+        "heapUsed": 925661712,
+        "external": 34590148,
+        "arrayBuffers": 4819374
+      },
+      "heap": {
+        "total_heap_size": 957837312,
+        "total_heap_size_executable": 12107776,
+        "total_physical_size": 955297792,
+        "total_available_size": 3390288136,
+        "used_heap_size": 925662072,
+        "heap_size_limit": 4345298944,
+        "malloced_memory": 4235384,
+        "peak_malloced_memory": 36721192,
+        "does_zap_garbage": 0,
+        "number_of_native_contexts": 9,
+        "number_of_detached_contexts": 0,
+        "total_global_handles_size": 3244032,
+        "used_global_handles_size": 415936,
+        "external_memory": 34590148
+      }
+    },
+    {
+      "at": "2026-10-25T09:54:15.542Z",
+      "label": "cold-detail",
+      "startTicks": "306838706",
+      "vmProbe": {
+        "counts": {
+          "runInNewContext": 54
+        }
+      },
+      "memory": {
+        "rss": 4194738176,
+        "heapTotal": 1433210880,
+        "heapUsed": 1385610032,
+        "external": 40362153,
+        "arrayBuffers": 10415679
+      },
+      "heap": {
+        "total_heap_size": 1433210880,
+        "total_heap_size_executable": 17088512,
+        "total_physical_size": 1432465408,
+        "total_available_size": 2947714552,
+        "used_heap_size": 1385610272,
+        "heap_size_limit": 4345298944,
+        "malloced_memory": 4235384,
+        "peak_malloced_memory": 36721192,
+        "does_zap_garbage": 0,
+        "number_of_native_contexts": 57,
+        "number_of_detached_contexts": 0,
+        "total_global_handles_size": 3670016,
+        "used_global_handles_size": 3663616,
+        "external_memory": 40362153
+      }
+    },
+    {
+      "at": "2026-10-25T09:54:19.631Z",
+      "label": "reload-1",
+      "startTicks": "306838706",
+      "vmProbe": {
+        "counts": {
+          "runInNewContext": 73
+        }
+      },
+      "memory": {
+        "rss": 4328964096,
+        "heapTotal": 1546539008,
+        "heapUsed": 1368848928,
+        "external": 41931405,
+        "arrayBuffers": 12082444
+      },
+      "heap": {
+        "total_heap_size": 1546539008,
+        "total_heap_size_executable": 17350656,
+        "total_physical_size": 1546006528,
+        "total_available_size": 2962276152,
+        "used_heap_size": 1368849168,
+        "heap_size_limit": 4345298944,
+        "malloced_memory": 4235384,
+        "peak_malloced_memory": 36721192,
+        "does_zap_garbage": 0,
+        "number_of_native_contexts": 33,
+        "number_of_detached_contexts": 0,
+        "total_global_handles_size": 4849664,
+        "used_global_handles_size": 2383744,
+        "external_memory": 41931405
+      }
+    },
+    {
+      "at": "2026-10-25T09:54:23.123Z",
+      "label": "reload-2",
+      "startTicks": "306838706",
+      "vmProbe": {
+        "counts": {
+          "runInNewContext": 94
+        }
+      },
+      "memory": {
+        "rss": 4380073984,
+        "heapTotal": 1592418304,
+        "heapUsed": 1532210064,
+        "external": 45483049,
+        "arrayBuffers": 15512008
+      },
+      "heap": {
+        "total_heap_size": 1592418304,
+        "total_heap_size_executable": 17874944,
+        "total_physical_size": 1591869440,
+        "total_available_size": 2797334120,
+        "used_heap_size": 1532210304,
+        "heap_size_limit": 4345298944,
+        "malloced_memory": 4235384,
+        "peak_malloced_memory": 36721192,
+        "does_zap_garbage": 0,
+        "number_of_native_contexts": 54,
+        "number_of_detached_contexts": 0,
+        "total_global_handles_size": 5152768,
+        "used_global_handles_size": 5151296,
+        "external_memory": 45483049
+      }
+    },
+    {
+      "at": "2026-10-25T09:54:26.676Z",
+      "label": "reload-3",
+      "startTicks": "306838706",
+      "vmProbe": {
+        "counts": {
+          "runInNewContext": 114
+        }
+      },
+      "memory": {
+        "rss": 4569391104,
+        "heapTotal": 1756614656,
+        "heapUsed": 1696010800,
+        "external": 49204709,
+        "arrayBuffers": 19113495
+      },
+      "heap": {
+        "total_heap_size": 1756614656,
+        "total_heap_size_executable": 18661376,
+        "total_physical_size": 1755758592,
+        "total_available_size": 2630615824,
+        "used_heap_size": 1696011040,
+        "heap_size_limit": 4345298944,
+        "malloced_memory": 4235384,
+        "peak_malloced_memory": 36721192,
+        "does_zap_garbage": 0,
+        "number_of_native_contexts": 74,
+        "number_of_detached_contexts": 0,
+        "total_global_handles_size": 7888896,
+        "used_global_handles_size": 7885216,
+        "external_memory": 49204709
+      }
+    },
+    {
+      "at": "2026-10-25T09:54:30.125Z",
+      "label": "reload-4",
+      "startTicks": "306838706",
+      "vmProbe": {
+        "counts": {
+          "runInNewContext": 134
+        }
+      },
+      "memory": {
+        "rss": 4752318464,
+        "heapTotal": 1922146304,
+        "heapUsed": 1859599136,
+        "external": 53053273,
+        "arrayBuffers": 22843793
+      },
+      "heap": {
+        "total_heap_size": 1922146304,
+        "total_heap_size_executable": 18661376,
+        "total_physical_size": 1921572864,
+        "total_available_size": 2464423768,
+        "used_heap_size": 1859599376,
+        "heap_size_limit": 4345298944,
+        "malloced_memory": 4235384,
+        "peak_malloced_memory": 36721192,
+        "does_zap_garbage": 0,
+        "number_of_native_contexts": 94,
+        "number_of_detached_contexts": 0,
+        "total_global_handles_size": 10633216,
+        "used_global_handles_size": 10628672,
+        "external_memory": 53053273
+      }
+    },
+    {
+      "at": "2026-10-25T09:54:33.829Z",
+      "label": "reload-5",
+      "startTicks": "306838706",
+      "vmProbe": {
+        "counts": {
+          "runInNewContext": 154
+        }
+      },
+      "memory": {
+        "rss": 4858482688,
+        "heapTotal": 1975201792,
+        "heapUsed": 1480625696,
+        "external": 42430156,
+        "arrayBuffers": 12581195
+      },
+      "heap": {
+        "total_heap_size": 1975201792,
+        "total_heap_size_executable": 18923520,
+        "total_physical_size": 1969287168,
+        "total_available_size": 2843133520,
+        "used_heap_size": 1480625936,
+        "heap_size_limit": 4345298944,
+        "malloced_memory": 4235384,
+        "peak_malloced_memory": 36721192,
+        "does_zap_garbage": 0,
+        "number_of_native_contexts": 114,
+        "number_of_detached_contexts": 0,
+        "total_global_handles_size": 12165120,
+        "used_global_handles_size": 2183520,
+        "external_memory": 42430156
+      }
+    },
+    {
+      "at": "2026-10-25T09:54:37.202Z",
+      "label": "reload-6",
+      "startTicks": "306838706",
+      "vmProbe": {
+        "counts": {
+          "runInNewContext": 174
+        }
+      },
+      "memory": {
+        "rss": 4875288576,
+        "heapTotal": 1991958528,
+        "heapUsed": 1641585656,
+        "external": 46113641,
+        "arrayBuffers": 16144507
+      },
+      "heap": {
+        "total_heap_size": 1991958528,
+        "total_heap_size_executable": 18923520,
+        "total_physical_size": 1991376896,
+        "total_available_size": 2681342560,
+        "used_heap_size": 1641585896,
+        "heap_size_limit": 4345298944,
+        "malloced_memory": 4235384,
+        "peak_malloced_memory": 36721192,
+        "does_zap_garbage": 0,
+        "number_of_native_contexts": 134,
+        "number_of_detached_contexts": 0,
+        "total_global_handles_size": 12165120,
+        "used_global_handles_size": 4902944,
+        "external_memory": 46113641
+      }
+    },
+    {
+      "at": "2026-10-25T09:54:40.328Z",
+      "label": "reload-7",
+      "startTicks": "306838706",
+      "vmProbe": {
+        "counts": {
+          "runInNewContext": 194
+        }
+      },
+      "memory": {
+        "rss": 4880797696,
+        "heapTotal": 1997975552,
+        "heapUsed": 1790639832,
+        "external": 50179172,
+        "arrayBuffers": 20089865
+      },
+      "heap": {
+        "total_heap_size": 1997975552,
+        "total_heap_size_executable": 19185664,
+        "total_physical_size": 1997385728,
+        "total_available_size": 2531594776,
+        "used_heap_size": 1790640072,
+        "heap_size_limit": 4345298944,
+        "malloced_memory": 4235384,
+        "peak_malloced_memory": 36721192,
+        "does_zap_garbage": 0,
+        "number_of_native_contexts": 154,
+        "number_of_detached_contexts": 0,
+        "total_global_handles_size": 12165120,
+        "used_global_handles_size": 7656096,
+        "external_memory": 50179172
+      }
+    },
+    {
+      "at": "2026-10-25T09:54:43.796Z",
+      "label": "reload-8",
+      "startTicks": "306838706",
+      "vmProbe": {
+        "counts": {
+          "runInNewContext": 215
+        }
+      },
+      "memory": {
+        "rss": 4917329920,
+        "heapTotal": 2044608512,
+        "heapUsed": 1956448256,
+        "external": 54800348,
+        "arrayBuffers": 24588961
+      },
+      "heap": {
+        "total_heap_size": 2044608512,
+        "total_heap_size_executable": 19447808,
+        "total_physical_size": 2044002304,
+        "total_available_size": 2364519352,
+        "used_heap_size": 1956448496,
+        "heap_size_limit": 4345298944,
+        "malloced_memory": 4235384,
+        "peak_malloced_memory": 36721192,
+        "does_zap_garbage": 0,
+        "number_of_native_contexts": 175,
+        "number_of_detached_contexts": 0,
+        "total_global_handles_size": 12165120,
+        "used_global_handles_size": 10439232,
+        "external_memory": 54800348
+      }
+    },
+    {
+      "at": "2026-10-25T09:54:47.262Z",
+      "label": "reload-9",
+      "startTicks": "306838706",
+      "vmProbe": {
+        "counts": {
+          "runInNewContext": 235
+        }
+      },
+      "memory": {
+        "rss": 5059883008,
+        "heapTotal": 2178265088,
+        "heapUsed": 2104695192,
+        "external": 58487219,
+        "arrayBuffers": 28155659
+      },
+      "heap": {
+        "total_heap_size": 2178265088,
+        "total_heap_size_executable": 19447808,
+        "total_physical_size": 2177667072,
+        "total_available_size": 2213671016,
+        "used_heap_size": 2104695432,
+        "heap_size_limit": 4345298944,
+        "malloced_memory": 4235384,
+        "peak_malloced_memory": 36721192,
+        "does_zap_garbage": 0,
+        "number_of_native_contexts": 195,
+        "number_of_detached_contexts": 0,
+        "total_global_handles_size": 13164544,
+        "used_global_handles_size": 13163552,
+        "external_memory": 58487219
+      }
+    },
+    {
+      "at": "2026-10-25T09:54:50.979Z",
+      "label": "reload-10",
+      "startTicks": "306838706",
+      "vmProbe": {
+        "counts": {
+          "runInNewContext": 255
+        }
+      },
+      "memory": {
+        "rss": 5115281408,
+        "heapTotal": 2212331520,
+        "heapUsed": 1530277376,
+        "external": 42209142,
+        "arrayBuffers": 12358082
+      },
+      "heap": {
+        "total_heap_size": 2212331520,
+        "total_heap_size_executable": 19447808,
+        "total_physical_size": 2206654464,
+        "total_available_size": 2789339320,
+        "used_heap_size": 1530277616,
+        "heap_size_limit": 4345298944,
+        "malloced_memory": 4235384,
+        "peak_malloced_memory": 36721192,
+        "does_zap_garbage": 0,
+        "number_of_native_contexts": 33,
+        "number_of_detached_contexts": 0,
+        "total_global_handles_size": 14778368,
+        "used_global_handles_size": 2166656,
+        "external_memory": 42209142
+      }
+    },
+    {
+      "at": "2026-10-25T09:54:51.605Z",
+      "label": "after-gc",
+      "startTicks": "306838706",
+      "vmProbe": {
+        "counts": {
+          "runInNewContext": 256
+        }
+      },
+      "memory": {
+        "rss": 4412334080,
+        "heapTotal": 1621274624,
+        "heapUsed": 1331360120,
+        "external": 38165686,
+        "arrayBuffers": 8394912
+      },
+      "heap": {
+        "total_heap_size": 1621274624,
+        "total_heap_size_executable": 19447808,
+        "total_physical_size": 1517940736,
+        "total_available_size": 2727636296,
+        "used_heap_size": 1331360360,
+        "heap_size_limit": 4345298944,
+        "malloced_memory": 4235384,
+        "peak_malloced_memory": 36721192,
+        "does_zap_garbage": 0,
+        "number_of_native_contexts": 16,
+        "number_of_detached_contexts": 0,
+        "total_global_handles_size": 14778368,
+        "used_global_handles_size": 680480,
+        "external_memory": 38165686
+      }
+    }
+  ],
+  "completed": true,
+  "error": null
+}

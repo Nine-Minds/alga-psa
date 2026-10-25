@@ -1,0 +1,346 @@
+{
+  "runtimeSource": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "buildId": "build-1792910542349",
+  "artifacts": [
+    {
+      "path": "01-onboarding/chapters.vtt",
+      "sizeBytes": 427,
+      "sha256": "e33d745c04cf113d7fa0e18aee178c466bba4c0f0245a1270f6cafed620a7f61"
+    },
+    {
+      "path": "01-onboarding/published-recording.json",
+      "sizeBytes": 8877,
+      "sha256": "d6f5ecf08acfa56e993a05c2147cddcd3aeb753f7071e76375bb919c23519764"
+    },
+    {
+      "path": "01-onboarding/recording.json",
+      "sizeBytes": 8981,
+      "sha256": "763a60c840417b3614e9ed08a9eb18f0d928503056a2b3b041700ebe1233f48f"
+    },
+    {
+      "path": "01-onboarding/walkthrough.webm",
+      "sizeBytes": 4037239,
+      "sha256": "cc04dae3615a902c12afb746ffd50b106b9267f3838f19a42a776834a342b7f3"
+    },
+    {
+      "path": "02-licensing-and-seats/chapters.vtt",
+      "sizeBytes": 299,
+      "sha256": "56ab1b35f118ed42709881292125794d5d7a97aff190360c2c7f6cd0fc60822e"
+    },
+    {
+      "path": "02-licensing-and-seats/published-recording.json",
+      "sizeBytes": 7244,
+      "sha256": "3aca7217416c755ca34c7c564e3bd1e1b6fe80c59c309ea4c9f0386b8779ec58"
+    },
+    {
+      "path": "02-licensing-and-seats/recording.json",
+      "sizeBytes": 7372,
+      "sha256": "c3000c38df9f18f8e4a14cb52c944fb4e86ece5a0eb33eec8362d2164ff2ce97"
+    },
+    {
+      "path": "02-licensing-and-seats/walkthrough.webm",
+      "sizeBytes": 2085262,
+      "sha256": "92ba61547a18394b38be8bda76bda1dd9d9e100355d2fbcc45d6947bf2d1c6e3"
+    },
+    {
+      "path": "03-access-policies/chapters.vtt",
+      "sizeBytes": 271,
+      "sha256": "68a42bbcfdeb307304485edf11a52ff5fa8a024701b8b36dc3d50cbb060b8806"
+    },
+    {
+      "path": "03-access-policies/published-recording.json",
+      "sizeBytes": 6773,
+      "sha256": "6de9acda4e0e16f2af7b73ad2d0202f8d57a4c05dd796f932d569b0597fe0842"
+    },
+    {
+      "path": "03-access-policies/recording.json",
+      "sizeBytes": 6899,
+      "sha256": "a01feef2c7931435d14c6612e3ea78c0c7517fa55405e72edc11dbee105531c9"
+    },
+    {
+      "path": "03-access-policies/walkthrough.webm",
+      "sizeBytes": 1720719,
+      "sha256": "5f27a46c621235b5540a14b06020a7975160faa84e8734c86af1a3a89ba60773"
+    },
+    {
+      "path": "04-delegated-administration/chapters.vtt",
+      "sizeBytes": 201,
+      "sha256": "993b78e625ddd2a2e82ea4add770e4419e5dd1e6082bb8271265e32fbbbf2b24"
+    },
+    {
+      "path": "04-delegated-administration/published-recording.json",
+      "sizeBytes": 4929,
+      "sha256": "345e90bcb5dfdbe59bc3ac514d4eb74bf0a719e8af2a964d153b8150fa6d47d1"
+    },
+    {
+      "path": "04-delegated-administration/recording.json",
+      "sizeBytes": 5075,
+      "sha256": "172a0b9278108d855d1c116c98ca970b3e314a0d9adfe237f3b456ca40191d75"
+    },
+    {
+      "path": "04-delegated-administration/walkthrough.webm",
+      "sizeBytes": 2129597,
+      "sha256": "677ced63434334abb9d8f8e4befead76db2a7c745f4f694a232b8a37299aeb4c"
+    },
+    {
+      "path": "05-ticket-queue/chapters.vtt",
+      "sizeBytes": 363,
+      "sha256": "e8cd8bf26dfc212b3438fbe221b1f1598502e5e470a359e0a9a5e54f6b3cc66c"
+    },
+    {
+      "path": "05-ticket-queue/published-recording.json",
+      "sizeBytes": 7977,
+      "sha256": "7d84e5f26342e8eea2062639358660b949b87cc5d300f027e02d0e73668024c6"
+    },
+    {
+      "path": "05-ticket-queue/recording.json",
+      "sizeBytes": 8167,
+      "sha256": "eca4d406f9b84382b2a759b59f781bec1ef9a59b5a28ed39ecc476b81a690ee8"
+    },
+    {
+      "path": "05-ticket-queue/walkthrough.webm",
+      "sizeBytes": 2254810,
+      "sha256": "97d1dc3e70d1619c68de25b7318af54ee0584d63fc303337e8e88b80f6ff0568"
+    },
+    {
+      "path": "06-projects-and-tasks/chapters.vtt",
+      "sizeBytes": 393,
+      "sha256": "bd8f1e8058eea19f9c18d303317f94f9e62337296873c97e2cbb0a5ec0a64824"
+    },
+    {
+      "path": "06-projects-and-tasks/published-recording.json",
+      "sizeBytes": 8519,
+      "sha256": "877e28c1fd84f53d97a86ec6cc7c3cd66879d0015d770288be668abcea29ef85"
+    },
+    {
+      "path": "06-projects-and-tasks/recording.json",
+      "sizeBytes": 8671,
+      "sha256": "2ba7007924c0c143cb3f46265a362f4eaa01197faa1275362467a7d3fd7b064b"
+    },
+    {
+      "path": "06-projects-and-tasks/walkthrough.webm",
+      "sizeBytes": 2647153,
+      "sha256": "779a5dcd783a3b16a190325cd58d22a52544a9d243e70b7343341e47b1f5e812"
+    },
+    {
+      "path": "07-conversations-and-files/chapters.vtt",
+      "sizeBytes": 365,
+      "sha256": "d6c763035c2afce05a07e9dd92e39e66946b37f3e78cb9beb70cbee24737fa9d"
+    },
+    {
+      "path": "07-conversations-and-files/published-recording.json",
+      "sizeBytes": 7516,
+      "sha256": "f99552da73f9b706eaa6f3729bfc00f6467e58e6cedc7f51bfcb9453466eef73"
+    },
+    {
+      "path": "07-conversations-and-files/recording.json",
+      "sizeBytes": 7652,
+      "sha256": "709574ee98e3fb73209bd7b7769e303ebc91104c79337b72fe94cc01f905253e"
+    },
+    {
+      "path": "07-conversations-and-files/walkthrough.webm",
+      "sizeBytes": 2387160,
+      "sha256": "a23a566d96c4c948828d374c1ee6c30576bebe88dfaba37a01f12a403d1556c4"
+    },
+    {
+      "path": "08-sla/chapters.vtt",
+      "sizeBytes": 250,
+      "sha256": "13a9769820138b696aa4560ade3ec0be1c98bb76953a75bf74a89fcb525b38bf"
+    },
+    {
+      "path": "08-sla/published-recording.json",
+      "sizeBytes": 12647,
+      "sha256": "0d6f5f76f7f3f60a66586968d8cb1289e15f0dd3a78afa510dfb834dfd0dd6b9"
+    },
+    {
+      "path": "08-sla/recording.json",
+      "sizeBytes": 12769,
+      "sha256": "1d3b4df821731c9b4c2a865ebe3ebd075fce658744730698b8c64daff8515483"
+    },
+    {
+      "path": "08-sla/walkthrough.webm",
+      "sizeBytes": 2443588,
+      "sha256": "212e491851d5a7abc86aa5b914dd4a710d6b8f24abe470ae2aa704d4b4ba53b2"
+    },
+    {
+      "path": "09-time-and-billing/chapters.vtt",
+      "sizeBytes": 244,
+      "sha256": "9e321d113459c9a7cc1ad33356e0dc490f9fcc3e0eabc1fabd0451962299826d"
+    },
+    {
+      "path": "09-time-and-billing/published-recording.json",
+      "sizeBytes": 12390,
+      "sha256": "6dc3c99b57b47b00ceaeeef0a725547b5ad2cbc3940cfbd275ef548892a6275c"
+    },
+    {
+      "path": "09-time-and-billing/recording.json",
+      "sizeBytes": 12506,
+      "sha256": "7ef950ca8b25332aac925a874e34e4e75e4e69258f50349b96c5a7baa5a3a18e"
+    },
+    {
+      "path": "09-time-and-billing/walkthrough.webm",
+      "sizeBytes": 1193169,
+      "sha256": "2370a89f16f1a4bfcc49b473b655e8de3af7d9fdd0ff3563fe0f7d1e9e94b672"
+    },
+    {
+      "path": "10-departure-and-archives/chapters.vtt",
+      "sizeBytes": 259,
+      "sha256": "06ba393e295ccf46f709d9bed7f0a8a26ad360d9d37e3ff3dc2937baa532fe38"
+    },
+    {
+      "path": "10-departure-and-archives/published-recording.json",
+      "sizeBytes": 7372,
+      "sha256": "64fbee47e2f7710dccff4e8c9e1d7c157c71c5c0dd169e69e8a590e84fd9cfed"
+    },
+    {
+      "path": "10-departure-and-archives/recording.json",
+      "sizeBytes": 7478,
+      "sha256": "0bd743a81e7afc0f04d02fac2052cc0e35dda7d7a746641cc580e2df65e64112"
+    },
+    {
+      "path": "10-departure-and-archives/walkthrough.webm",
+      "sizeBytes": 1340345,
+      "sha256": "98abb201484d135b895a94a4c72ee340f22877cc4b429c0003eb960332303fda"
+    },
+    {
+      "path": "11-export-restore-and-upgrade/chapters.vtt",
+      "sizeBytes": 203,
+      "sha256": "18e37631bb4fe60aff70df2e1d3e20492b790ec80950d448ba6e8f90f05775b8"
+    },
+    {
+      "path": "11-export-restore-and-upgrade/published-recording.json",
+      "sizeBytes": 5692,
+      "sha256": "618dcd18fe387ce07e807c414e8607d88f6fbf545dc519ff1e98499918955425"
+    },
+    {
+      "path": "11-export-restore-and-upgrade/recording.json",
+      "sizeBytes": 5828,
+      "sha256": "25a50ea1ade9f269e13ab8cf663154c863115ef097d08a25948e9ef5e5753f0d"
+    },
+    {
+      "path": "11-export-restore-and-upgrade/walkthrough.webm",
+      "sizeBytes": 980451,
+      "sha256": "8aee5d4fb78f74948dc35dd932df050a7f88e16833385d227c13b37828feffaf"
+    },
+    {
+      "path": "12-customer-integrations/chapters.vtt",
+      "sizeBytes": 266,
+      "sha256": "82ee22a3cf9ce9ac371bb1efbf9a47c8c102d5f2f13ab5c02421fe3114a283b6"
+    },
+    {
+      "path": "12-customer-integrations/published-recording.json",
+      "sizeBytes": 10290,
+      "sha256": "705babe53c104fa2bd989eddc1ba6aeea1a94a8f1573e726fe5863d0ade72f27"
+    },
+    {
+      "path": "12-customer-integrations/recording.json",
+      "sizeBytes": 10404,
+      "sha256": "5ebfbb19c4aca850db2880ef95235ad8e5d0df78748565a94eed3c25ad3ec40f"
+    },
+    {
+      "path": "12-customer-integrations/walkthrough.webm",
+      "sizeBytes": 2213423,
+      "sha256": "74bb48c0f99361e86fe5d308e6e42cd24c67817c8b11b553952ed807819ec234"
+    },
+    {
+      "path": "collection/chapters.vtt",
+      "sizeBytes": 325,
+      "sha256": "b3750be68f55788be972ab452b8c894d54c257b2b177ad9315ec66cd660ce900"
+    },
+    {
+      "path": "collection/published-recording.json",
+      "sizeBytes": 9909,
+      "sha256": "51446bf807315bd74e51dbe1aae17defab62c6388ec4d5c89eb4263c5974202f"
+    },
+    {
+      "path": "collection/recording.json",
+      "sizeBytes": 10061,
+      "sha256": "633a74adc09c0cbe9d459c787e5a957a4a73b6f03e484a6b553fb3fa8180031b"
+    },
+    {
+      "path": "collection/walkthrough.webm",
+      "sizeBytes": 2610313,
+      "sha256": "a92c7e0c7f162748648724b4500c7581bbaac15849bb829ca474a029fe500db8"
+    },
+    {
+      "path": "dev-restored-duplicate-login.json",
+      "sizeBytes": 343,
+      "sha256": "e456e6e887197d2ede364ed93cafa30079492a47cc18520216f9707585245161"
+    },
+    {
+      "path": "dev-session-check.json",
+      "sizeBytes": 2326,
+      "sha256": "9201b455f6c749ddaca9e306d82ea78ae469436ba534a78c89a4ee129e859344"
+    },
+    {
+      "path": "main/chapters.vtt",
+      "sizeBytes": 838,
+      "sha256": "09b137e2cb682c1063dd59480ab5025eb497d62cbcd07cfed76aed0aa9fdf52a"
+    },
+    {
+      "path": "main/published-recording.json",
+      "sizeBytes": 15652,
+      "sha256": "7b73cc570875210a5424666a0879137248e5206c9b4c8e8d0d053fe194854407"
+    },
+    {
+      "path": "main/recording.json",
+      "sizeBytes": 15674,
+      "sha256": "8dab9f53659bc4ba25c9b63aa0e3d6b71a95c3d887ecf00170a54319d13f2e8e"
+    },
+    {
+      "path": "main/walkthrough.webm",
+      "sizeBytes": 8376080,
+      "sha256": "913ede0c7f3fdb6c95a67d209403ec0a7651666213ace6392403b27ba44a26b9"
+    },
+    {
+      "path": "playback-verification.json",
+      "sizeBytes": 3902,
+      "sha256": "7851510d03c8e0925d98d445d54b9c51eae55b84dbcfe4d1d5a52c21199ba550"
+    },
+    {
+      "path": "published-guide-verification.json",
+      "sizeBytes": 4818,
+      "sha256": "145cdade4b56a67859561e84ac574eae1ce6f225ae48812401cdd3e71f18b87c"
+    },
+    {
+      "path": "published-media-integrity.json",
+      "sizeBytes": 10377,
+      "sha256": "9afbf8bad8abbd5da698aa3b1456723186e1f5935f1c7cba8fecd7685700c851"
+    },
+    {
+      "path": "receipts/07-conversations-final--results.json",
+      "sizeBytes": 167,
+      "sha256": "7394f34e950bf48e9623f73f7d9ee5bc2dcc0499d580e0480fdd496dc19296ff"
+    },
+    {
+      "path": "receipts/09-timesheet-production--controls.json",
+      "sizeBytes": 2691,
+      "sha256": "62057bdd8c70bf306d7786301b126ed7522f39b84c29546de20d6b1c8bd007fa"
+    },
+    {
+      "path": "receipts/11-export-restore-and-upgrade--download-receipt.json",
+      "sizeBytes": 281,
+      "sha256": "3f02446ecf84d4433d842bee54b45f55e93c13e508a6129f1f1408d0e22c8db7"
+    },
+    {
+      "path": "receipts/restore-negative.json",
+      "sizeBytes": 453,
+      "sha256": "cee8793d2d1d8a2d05e5f5681037167b60731d4c5978bca2f9114a96633fe9ba"
+    },
+    {
+      "path": "runtime-acceptance.json",
+      "sizeBytes": 2657,
+      "sha256": "95a3b362a8f7869594c8e247ae447c2b1ffe511da01566d37891959df2a55221"
+    },
+    {
+      "path": "test-results.json",
+      "sizeBytes": 1091,
+      "sha256": "f7206886b050893e3f259bb33861bb68f8bbd844c3d83ffb4396dea51d78bb03"
+    },
+    {
+      "path": "video-coverage.json",
+      "sizeBytes": 138142,
+      "sha256": "ebd8fc9d73001956d7e4008eb5511990767e8c0ae5cf38bedc9d0d7d51493e01"
+    }
+  ]
+}

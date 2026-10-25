@@ -1,0 +1,335 @@
+{
+  "guide": "index.html",
+  "candidateRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "testedRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "status": "complete",
+  "recordedAt": "2026-10-25T08:11:44.014Z",
+  "durationSeconds": 100,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T08:11:49.465Z",
+      "seconds": 5.451,
+      "title": "/msp/account",
+      "actor": "alice",
+      "result": "Documents\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nDashboard\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nPage not available\n\nThis page is not available in your current product experience.\n\nGo to dashboard",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T08:11:49.471Z",
+      "seconds": 5.457,
+      "title": "Customer denied /msp/account",
+      "actor": "alice",
+      "result": "Page not available",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T08:11:54.381Z",
+      "seconds": 10.367,
+      "title": "/msp/account/billing",
+      "actor": "alice",
+      "result": "Documents\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nDashboard\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nPage not available\n\nThis page is not available in your current product experience.\n\nGo to dashboard",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T08:11:54.386Z",
+      "seconds": 10.372,
+      "title": "Customer denied /msp/account/billing",
+      "actor": "alice",
+      "result": "Page not available",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T08:11:59.596Z",
+      "seconds": 15.582,
+      "title": "/msp/settings/integrations?category=accounting",
+      "actor": "alice",
+      "result": "\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\n\nTIME & BILLING\n\nTime Entry\n\nCOMMUNICATION\n\nNotifications\nEmail\nv1.6.12\nHome\nIntegrations\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nPage not available\n\nThis page is not available in your current product experience.\n\nGo to dashboard",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T08:11:59.598Z",
+      "seconds": 15.584,
+      "title": "Customer denied /msp/settings/integrations?category=accounting",
+      "actor": "alice",
+      "result": "Page not available",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T08:12:04.795Z",
+      "seconds": 20.781,
+      "title": "/msp/account",
+      "actor": "qa",
+      "result": "Subscription Status\nUnknown\nBilling Cycle\nMonthly\nSwitch to Annual\nCurrent Period\nN/A\nNext Billing Date\nN/A\nMonthly Amount\nN/A\nRecent Invoices\n\nNo invoices found\n\nDanger Zone\n\nCanceling your subscription will disable access for all users at the end of the current billing period.\n\nCancel Subscription",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T08:12:04.800Z",
+      "seconds": 20.786,
+      "title": "Authorized PSA account",
+      "actor": "qa",
+      "result": "Account Management rendered",
+      "sourceClip": "account-boundary"
+    },
+    {
+      "at": "2026-10-25T08:12:31.597Z",
+      "seconds": 26.838,
+      "title": "/msp/workflow-editor",
+      "actor": "qa",
+      "result": "e CM: ticket created -> silent + cc comments\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\nabout 2 hours ago\n\t\n\n\n\t\nSmoke CM: email workflow handlers\nSmoke CM: email workflow handlers\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t\n\n\n\t\nSmoke CM: comment added probe\nSmoke CM: comment added probe\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t",
+      "sourceClip": "main-native-effect-final"
+    },
+    {
+      "at": "2026-10-25T08:12:32.915Z",
+      "seconds": 28.155,
+      "title": "Temporarily resume existing published smoke workflow",
+      "actor": "qa",
+      "result": "Only silent+cc flow enabled",
+      "sourceClip": "main-native-effect-final"
+    },
+    {
+      "at": "2026-10-25T08:12:38.323Z",
+      "seconds": 33.563,
+      "title": "/msp/tickets",
+      "actor": "qa",
+      "result": "1014\n·\nNo Category\n\t\nCurious Beginning\n\t\nWhimsical Wish\n\t\nGeneral Support\n\t\nEC\nEmerald City\n\t\nOpen menu\n\n\n\t\nSMOKE-WF native Oz ticket 3 (email handlers)\nTIC001013\n·\nNo Category\n\t\nCurious Beginning\n\t\nWhimsical Wish\n\t\nGeneral Support\n\t\nEC\nEmerald City\n\t\nOpen menu\n\n1 - 10 of 17 items\n\n1\n2\n10 items/page",
+      "sourceClip": "main-native-effect-final"
+    },
+    {
+      "at": "2026-10-25T08:13:26.407Z",
+      "seconds": 81.647,
+      "title": "/msp/workflow-editor",
+      "actor": "qa",
+      "result": "\nSmoke CM: ticket created -> silent + cc comments\n\t\nActive\n\t\nv1\n\t\nEvent\n\t\n1 minute ago\n\t\n\n\n\t\nSmoke CM: email workflow handlers\nSmoke CM: email workflow handlers\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t\n\n\n\t\nSmoke CM: comment added probe\nSmoke CM: comment added probe\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t",
+      "sourceClip": "main-native-effect-final"
+    },
+    {
+      "at": "2026-10-25T08:13:27.444Z",
+      "seconds": 82.684,
+      "title": "Restored workflow paused state",
+      "actor": "qa",
+      "result": " is_paused \n-----------\n t\n(1 row)\n\n",
+      "sourceClip": "main-native-effect-final"
+    },
+    {
+      "at": "2026-10-25T08:14:48.388Z",
+      "seconds": 89.394,
+      "title": "/msp/tickets/8e3b0965-3f2e-4f7d-b4e7-c9edd5365b43",
+      "actor": "qa",
+      "result": "LA policy applies\n\nChecklist\nTime logged\n00:00:00\nWork description\nAdd time entry\nLogged\n0 hrs\n\nNo time logged yet\n\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team…\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links",
+      "sourceClip": "main-confirmed-persisted-effects"
+    },
+    {
+      "at": "2026-10-25T08:14:50.600Z",
+      "seconds": 91.60600000000001,
+      "title": "Native ticket and both workflow comments persist",
+      "actor": "qa",
+      "result": "QA current production context",
+      "sourceClip": "main-confirmed-persisted-effects"
+    },
+    {
+      "at": "2026-10-25T08:14:53.149Z",
+      "seconds": 94.155,
+      "title": "Both comments survive reload",
+      "actor": "qa",
+      "result": "Matched Temporal run f6b4c8dc succeeded",
+      "sourceClip": "main-confirmed-persisted-effects"
+    },
+    {
+      "at": "2026-10-25T08:14:58.033Z",
+      "seconds": 99.039,
+      "title": "/msp/workflow-editor",
+      "actor": "qa",
+      "result": "\nSmoke CM: ticket created -> silent + cc comments\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n1 minute ago\n\t\n\n\n\t\nSmoke CM: email workflow handlers\nSmoke CM: email workflow handlers\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t\n\n\n\t\nSmoke CM: comment added probe\nSmoke CM: comment added probe\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t",
+      "sourceClip": "main-confirmed-persisted-effects"
+    },
+    {
+      "at": "2026-10-25T08:14:58.068Z",
+      "seconds": 99.07400000000001,
+      "title": "Workflow returned to original Paused state",
+      "actor": "qa",
+      "result": " is_paused \n-----------\n t\n(1 row)\n\n",
+      "sourceClip": "main-confirmed-persisted-effects"
+    }
+  ],
+  "outcomes": [
+    {
+      "action": "/msp/account",
+      "result": "Documents\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nDashboard\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nPage not available\n\nThis page is not available in your current product experience.\n\nGo to dashboard"
+    },
+    {
+      "action": "Customer denied /msp/account",
+      "result": "Page not available"
+    },
+    {
+      "action": "/msp/account/billing",
+      "result": "Documents\nAssets\nPasswords\nReports\nTime Management\nSchedule\nTechnician Dispatch\nWorkflows\nSystem Monitoring\nSettings\nSupport\nv1.6.12\nHome\nDashboard\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nPage not available\n\nThis page is not available in your current product experience.\n\nGo to dashboard"
+    },
+    {
+      "action": "Customer denied /msp/account/billing",
+      "result": "Page not available"
+    },
+    {
+      "action": "/msp/settings/integrations?category=accounting",
+      "result": "\nAppearance\nClient Portal\n\nWORK MANAGEMENT\n\nTicketing\nSLA\n\nTIME & BILLING\n\nTime Entry\n\nCOMMUNICATION\n\nNotifications\nEmail\nv1.6.12\nHome\nIntegrations\n1f98df77-cd15-44c2-8f4d-42ff52d01e84\nQuick Create\nAL\nPage not available\n\nThis page is not available in your current product experience.\n\nGo to dashboard"
+    },
+    {
+      "action": "Customer denied /msp/settings/integrations?category=accounting",
+      "result": "Page not available"
+    },
+    {
+      "action": "/msp/account",
+      "result": "Subscription Status\nUnknown\nBilling Cycle\nMonthly\nSwitch to Annual\nCurrent Period\nN/A\nNext Billing Date\nN/A\nMonthly Amount\nN/A\nRecent Invoices\n\nNo invoices found\n\nDanger Zone\n\nCanceling your subscription will disable access for all users at the end of the current billing period.\n\nCancel Subscription"
+    },
+    {
+      "action": "Authorized PSA account",
+      "result": "Account Management rendered"
+    },
+    {
+      "action": "/msp/workflow-editor",
+      "result": "e CM: ticket created -> silent + cc comments\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\nabout 2 hours ago\n\t\n\n\n\t\nSmoke CM: email workflow handlers\nSmoke CM: email workflow handlers\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t\n\n\n\t\nSmoke CM: comment added probe\nSmoke CM: comment added probe\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t"
+    },
+    {
+      "action": "Temporarily resume existing published smoke workflow",
+      "result": "Only silent+cc flow enabled"
+    },
+    {
+      "action": "/msp/tickets",
+      "result": "1014\n·\nNo Category\n\t\nCurious Beginning\n\t\nWhimsical Wish\n\t\nGeneral Support\n\t\nEC\nEmerald City\n\t\nOpen menu\n\n\n\t\nSMOKE-WF native Oz ticket 3 (email handlers)\nTIC001013\n·\nNo Category\n\t\nCurious Beginning\n\t\nWhimsical Wish\n\t\nGeneral Support\n\t\nEC\nEmerald City\n\t\nOpen menu\n\n1 - 10 of 17 items\n\n1\n2\n10 items/page"
+    },
+    {
+      "action": "/msp/workflow-editor",
+      "result": "\nSmoke CM: ticket created -> silent + cc comments\n\t\nActive\n\t\nv1\n\t\nEvent\n\t\n1 minute ago\n\t\n\n\n\t\nSmoke CM: email workflow handlers\nSmoke CM: email workflow handlers\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t\n\n\n\t\nSmoke CM: comment added probe\nSmoke CM: comment added probe\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t"
+    },
+    {
+      "action": "Restored workflow paused state",
+      "result": " is_paused \n-----------\n t\n(1 row)\n\n"
+    },
+    {
+      "action": "/msp/tickets/8e3b0965-3f2e-4f7d-b4e7-c9edd5365b43",
+      "result": "LA policy applies\n\nChecklist\nTime logged\n00:00:00\nWork description\nAdd time entry\nLogged\n0 hrs\n\nNo time logged yet\n\nBilling\n\nNothing billable yet\n\nTeam\nAdd agents or a team…\nWatch List\nDocuments\n\nNo documents yet\n\nAdd a document\nPasswords\n\nNo passwords attached yet.\n\nAttach a password\nExternal links"
+    },
+    {
+      "action": "Native ticket and both workflow comments persist",
+      "result": "QA current production context"
+    },
+    {
+      "action": "Both comments survive reload",
+      "result": "Matched Temporal run f6b4c8dc succeeded"
+    },
+    {
+      "action": "/msp/workflow-editor",
+      "result": "\nSmoke CM: ticket created -> silent + cc comments\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n1 minute ago\n\t\n\n\n\t\nSmoke CM: email workflow handlers\nSmoke CM: email workflow handlers\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t\n\n\n\t\nSmoke CM: comment added probe\nSmoke CM: comment added probe\n\t\nPaused\n\t\nv1\n\t\nEvent\n\t\n11 days ago\n\t"
+    },
+    {
+      "action": "Workflow returned to original Paused state",
+      "result": " is_paused \n-----------\n t\n(1 row)\n\n"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 5.457,
+      "title": "account boundary"
+    },
+    {
+      "start": 5.457,
+      "end": 10.372,
+      "title": "Customer denied /msp/account"
+    },
+    {
+      "start": 10.372,
+      "end": 15.584,
+      "title": "Customer denied /msp/account/billing"
+    },
+    {
+      "start": 15.584,
+      "end": 20.786,
+      "title": "Customer denied /msp/settings/integrations?category=accounting"
+    },
+    {
+      "start": 20.786,
+      "end": 21.8,
+      "title": "Authorized PSA account"
+    },
+    {
+      "start": 21.8,
+      "end": 28.155,
+      "title": "main native effect final"
+    },
+    {
+      "start": 28.155,
+      "end": 82.684,
+      "title": "Temporarily resume existing published smoke workflow"
+    },
+    {
+      "start": 82.684,
+      "end": 83.68,
+      "title": "Restored workflow paused state"
+    },
+    {
+      "start": 83.68,
+      "end": 91.606,
+      "title": "main confirmed persisted effects"
+    },
+    {
+      "start": 91.606,
+      "end": 94.155,
+      "title": "Native ticket and both workflow comments persist"
+    },
+    {
+      "start": 94.155,
+      "end": 99.074,
+      "title": "Both comments survive reload"
+    },
+    {
+      "start": 99.074,
+      "end": 100,
+      "title": "Workflow returned to original Paused state"
+    }
+  ],
+  "runtime": {
+    "sourceRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+    "origin": "http://feature-co-managed-it.localhost:23377",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+    "buildId": "build-1792910542349"
+  },
+  "scenario": {
+    "status": "partial; consult outcomes and limitations",
+    "rawClips": [
+      "evidence/takeover-704f-production/account-boundary/recording.json",
+      "evidence/takeover-704f-production/main-native-effect-final/recording.json",
+      "evidence/takeover-704f-production/main-confirmed-persisted-effects/recording.json"
+    ]
+  },
+  "limitations": [
+    "locator.waitFor: Timeout 40000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('SMOKE-SILENT workflow comment').first() to be visible\u001b[22m\n",
+    "The trigger clip timed out on an obsolete full comment label; actual workflow succeeded and two persisted comments are confirmed here. Two disposable tickets were created by separate recording attempts. No real mail delivery or co-managed-provider business effect is claimed.",
+    "Recorded against actual production source 704fbdca2532 (build-1792910542349). Later checkout documentation/tooling changes are not a new application build. This partial recording does not establish full guide or release acceptance."
+  ],
+  "recordingPaths": {
+    "webm": "current/704fbdca25327d9bfc1b53d37771e05a4de3ca08/main.webm",
+    "chapterVtt": "current/704fbdca25327d9bfc1b53d37771e05a4de3ca08/main.vtt",
+    "recordingJson": "current/704fbdca25327d9bfc1b53d37771e05a4de3ca08/main.json"
+  },
+  "recordingSourcePaths": {
+    "webm": "main/walkthrough.webm",
+    "chapterVtt": "main/chapters.vtt"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true
+}

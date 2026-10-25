@@ -1,0 +1,187 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "candidateRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "testedRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "recordedAt": "2026-10-25T08:11:55.119Z",
+  "durationSeconds": 44.2,
+  "guide": "guides/01-onboarding.html",
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    },
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    },
+    {
+      "name": "invited customer admin",
+      "email": "takeover.704f.20261025@cmreview.test",
+      "tenant": "aa2e4150-44e0-4a67-8b69-d8195be3b9a1"
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T08:12:00.737Z",
+      "seconds": 5.618,
+      "title": "/msp/clients",
+      "actor": "qa",
+      "result": "s\n\nNo contact details\n\nCR\nCM Review 20261018-E\nClient Actions\n\nNo contact details\n\nCR\nCM Review 20261018-F\nClient Actions\n\nNo contact details\n\nCR\nCM Review 20261018-G\nClient Actions\n\nNo contact details\n\nCR\nCM Review 20261018-H\nClient Actions\n\nNo contact details\n\n1 - 9 of 15 clients\n\n1\n2\n9 cards/page",
+      "sourceClip": "01-onboarding-provision-704f"
+    },
+    {
+      "at": "2026-10-25T08:12:01.561Z",
+      "seconds": 6.442,
+      "title": "Created disposable sponsor client",
+      "actor": "qa",
+      "result": "CM 704F Takeover 20261025",
+      "sourceClip": "01-onboarding-provision-704f"
+    },
+    {
+      "at": "2026-10-25T08:12:06.670Z",
+      "seconds": 11.551,
+      "title": "/msp/co-managed",
+      "actor": "qa",
+      "result": "a@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation",
+      "sourceClip": "01-onboarding-provision-704f"
+    },
+    {
+      "at": "2026-10-25T08:12:16.187Z",
+      "seconds": 21.068,
+      "title": "Submitted fresh customer provision",
+      "actor": "qa",
+      "result": "est\tSeats released\tCancelled\t\n\nCM Review 20261018-H\thana@cmreview-h.test\t2\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-G\tgina@cmreview-g.test\t3\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-F\tdana@cmreview-d.test\tSeats released\tCancelled\t\n\nCM Review 20261018-E\teve@cmreview-e.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-D\tdana@cmreview-d.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-C\tcal@cmreview-c.test\tSeats released\tCancelled\t\n\nCM Review 20261018-B\tbea@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation",
+      "sourceClip": "01-onboarding-provision-704f"
+    },
+    {
+      "at": "2026-10-25T08:14:44.891Z",
+      "seconds": 29.369,
+      "title": "Claimed original delivered invitation",
+      "result": "Customer administrator created through normal form",
+      "sourceClip": "01-fresh-claim-multipart-accepted"
+    },
+    {
+      "at": "2026-10-25T08:14:44.960Z",
+      "seconds": 29.438,
+      "title": "Pending customer scope rendered",
+      "result": "Exact administrator session; acceptance available",
+      "sourceClip": "01-fresh-claim-multipart-accepted"
+    },
+    {
+      "at": "2026-10-25T08:14:45.237Z",
+      "seconds": 29.715,
+      "title": "Multipart ordinary action denied before acceptance",
+      "result": {
+        "status": 500,
+        "redirected": false
+      },
+      "sourceClip": "01-fresh-claim-multipart-accepted"
+    },
+    {
+      "at": "2026-10-25T08:14:57.574Z",
+      "seconds": 42.052,
+      "title": "Accepted workspace ordinary setup writes and reload",
+      "result": "Native ticket workspace rendered",
+      "sourceClip": "01-fresh-claim-multipart-accepted"
+    }
+  ],
+  "outcomes": [
+    {
+      "action": "/msp/clients",
+      "result": "s\n\nNo contact details\n\nCR\nCM Review 20261018-E\nClient Actions\n\nNo contact details\n\nCR\nCM Review 20261018-F\nClient Actions\n\nNo contact details\n\nCR\nCM Review 20261018-G\nClient Actions\n\nNo contact details\n\nCR\nCM Review 20261018-H\nClient Actions\n\nNo contact details\n\n1 - 9 of 15 clients\n\n1\n2\n9 cards/page"
+    },
+    {
+      "action": "Created disposable sponsor client",
+      "result": "CM 704F Takeover 20261025"
+    },
+    {
+      "action": "/msp/co-managed",
+      "result": "a@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation"
+    },
+    {
+      "action": "Submitted fresh customer provision",
+      "result": "est\tSeats released\tCancelled\t\n\nCM Review 20261018-H\thana@cmreview-h.test\t2\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-G\tgina@cmreview-g.test\t3\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-F\tdana@cmreview-d.test\tSeats released\tCancelled\t\n\nCM Review 20261018-E\teve@cmreview-e.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-D\tdana@cmreview-d.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-C\tcal@cmreview-c.test\tSeats released\tCancelled\t\n\nCM Review 20261018-B\tbea@cmreview-b.test\t1\tActive\t\nManage access\nChange seat allocation\n\nCM Review 20261018-A\tcora@cmreview-a.test\t1\tActive\t\nManage access\nChange seat allocation\n\nWonderland\twonderland@email.com\tSeats released\tCancelled\t\n\nWhite Rabbit IT\talice@whiterabbit.test\t1\tActive\t\nManage access\nChange seat allocation"
+    },
+    {
+      "action": "Claimed original delivered invitation",
+      "result": "Customer administrator created through normal form"
+    },
+    {
+      "action": "Pending customer scope rendered",
+      "result": "Exact administrator session; acceptance available"
+    },
+    {
+      "action": "Multipart ordinary action denied before acceptance",
+      "result": {
+        "status": 500,
+        "redirected": false
+      }
+    },
+    {
+      "action": "Accepted workspace ordinary setup writes and reload",
+      "result": "Native ticket workspace rendered"
+    }
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 6.442,
+      "title": "01 onboarding provision 704f"
+    },
+    {
+      "start": 6.442,
+      "end": 21.068,
+      "title": "Created disposable sponsor client"
+    },
+    {
+      "start": 21.068,
+      "end": 26.04,
+      "title": "Submitted fresh customer provision"
+    },
+    {
+      "start": 26.04,
+      "end": 29.369,
+      "title": "01 fresh claim multipart accepted"
+    },
+    {
+      "start": 29.369,
+      "end": 42.052,
+      "title": "Claimed original delivered invitation"
+    },
+    {
+      "start": 42.052,
+      "end": 44.2,
+      "title": "Accepted workspace ordinary setup writes and reload"
+    }
+  ],
+  "recordingPaths": {
+    "webm": "guides/current/704fbdca25327d9bfc1b53d37771e05a4de3ca08/01-onboarding.webm",
+    "chapterVtt": "guides/current/704fbdca25327d9bfc1b53d37771e05a4de3ca08/01-onboarding.vtt",
+    "recordingJson": "guides/current/704fbdca25327d9bfc1b53d37771e05a4de3ca08/01-onboarding.json"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true,
+  "runtime": {
+    "sourceRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+    "origin": "http://feature-co-managed-it.localhost:23377",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+    "buildId": "build-1792910542349"
+  },
+  "scenario": {
+    "status": "partial; consult outcomes and limitations",
+    "rawClips": [
+      "evidence/takeover-704f-production/01-onboarding-provision-704f/recording.json",
+      "evidence/takeover-704f-production/01-fresh-claim-multipart-accepted/recording.json"
+    ]
+  },
+  "limitations": [
+    "Fresh client/workspace provision, original SMTP invitation, multipart denial before acceptance, acceptance and normal setup reload verified. Provision clip ends with an instrumentation-only SQL column error; corrected read verifies operation c4ceacf3 active and zero forbidden boards.",
+    "Invitation URL was opened on existing 704f candidate23377 with its original token; mail advertised canonical23374. Cancellation, stale acceptance and growth/lapse remain unverified."
+  ]
+}
