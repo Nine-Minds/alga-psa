@@ -32,9 +32,12 @@ import type {
   ConfiguredService,
   ContractChargeSource,
   FactsOf,
+  HourBlockDrawSupply,
+  HourBlockDrawSupplyRow,
   PoolDefinition,
   PoolPeriodState,
   PooledTimeExclusion,
+  PrepaidBlockIssuanceSupply,
   SuppliedCharge,
   TaxContextDemand,
   TimingRequest,
@@ -67,6 +70,14 @@ export interface DatabaseChargeLoaders {
     timing: ResolvedBillingTiming,
     sink: ContractObligationSink,
   ): Promise<void>;
+  /** Raw issuance rows for the named ids; throws if one is not the client's. */
+  prepaidBlockIssuances(
+    issuanceIds: string[],
+  ): Promise<PrepaidBlockIssuanceSupply[]>;
+  /** Allocation rows of the line's blocks inside the service period, FIFO. */
+  hourBlockDraws(
+    timing: ResolvedBillingTiming,
+  ): Promise<HourBlockDrawSupplyRow[]>;
 }
 
 /** Engine helpers the source needs; thin and structural so tests can stub them. */
@@ -108,6 +119,18 @@ export interface DatabaseChargeSourceInput {
    * never sets this.
    */
   untimedWithoutCadence?: boolean;
+  /**
+   * Prepaid-block issuances the caller selected for this invoice. They belong
+   * to the client's document, not to a line's service period, so only a
+   * document-scope source (see documentScope) is given them.
+   */
+  prepaidBlockIssuanceIds?: string[];
+  /**
+   * The source answers for the client's document rather than a contract line:
+   * `clientContractLine` is a placeholder for the document and its facts carry
+   * no currency, so they are not checked against a line's currency.
+   */
+  documentScope?: boolean;
   loaders: DatabaseChargeLoaders;
 }
 
@@ -150,7 +173,8 @@ export class DatabaseChargeSource implements ContractChargeSource {
     private readonly host: DatabaseChargeHost,
     private readonly input: DatabaseChargeSourceInput,
   ) {
-    this.line = lineFacts(input.clientContractLine, host.tenant);
+    const facts = lineFacts(input.clientContractLine, host.tenant);
+    this.line = input.documentScope ? { ...facts, currencyCode: "" } : facts;
     this.billingPeriod = input.billingPeriod;
   }
 
@@ -582,6 +606,36 @@ export class DatabaseChargeSource implements ContractChargeSource {
     return this.drain<"product" | "license">((sink) =>
       this.input.loaders.recurringQuantity(kind, timing, sink),
     );
+  }
+
+  async prepaidBlockIssuances(): Promise<PrepaidBlockIssuanceSupply[]> {
+    const ids = this.input.prepaidBlockIssuanceIds ?? [];
+    return ids.length > 0 ? this.input.loaders.prepaidBlockIssuances(ids) : [];
+  }
+
+  async hourBlockDraws(): Promise<HourBlockDrawSupply | null> {
+    const { recurringTimingSelection, recurringTimingSelectionSource, billingCycle } =
+      this.input;
+    // Without a cycle, a selected timing or persisted periods there is no
+    // service period to read draws for.
+    if (
+      !billingCycle &&
+      !recurringTimingSelection &&
+      recurringTimingSelectionSource !== "persisted"
+    ) {
+      return null;
+    }
+    const resolution = await this.resolveTiming({
+      policy: "service-driven",
+      duePosition: "line",
+    });
+    if (resolution.status !== "due") return null;
+    const { timing } = resolution;
+    return {
+      period: { startDate: timing.servicePeriodStart, endDate: timing.servicePeriodEnd },
+      timing,
+      allocations: await this.input.loaders.hourBlockDraws(timing),
+    };
   }
 
   private async drain<F extends ChargeFamily>(

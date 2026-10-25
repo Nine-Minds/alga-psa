@@ -1,6 +1,10 @@
 import type { ProjectCapContext, ProjectCapThresholdCrossing } from './projectCapAdjustments';
 import type { TimeBasedPhaseRateOverride, TimeBasedProjectChargeConfig } from '../compute/computeTimeBasedCharges';
 import type {
+  HourBlockDrawRow,
+  PrepaidBlockIssuanceInput,
+} from '../compute/computePrepaidBlockCharges';
+import type {
   ChargeExplanation,
   IAdjustment,
   IBillingCharge,
@@ -228,6 +232,26 @@ export type ResolvedContractBillingChargeFacts =
         overageHours?: number | string | null;
         rolledOverMinutes?: number | string | null;
       }>;
+    })
+  | (ContractChargeFactsBase & {
+      /**
+       * The up-front charge for one scheduled prepaid-block issuance. Its
+       * `billingProfile` is the issuance line's own (not the document line's).
+       */
+      kind: "prepaidBlock";
+      issuance: PrepaidBlockIssuanceInput;
+      /** Order key among a document's block charges (ISO date). */
+      dueDate: string;
+    })
+  | (ContractChargeFactsBase & {
+      /**
+       * $0 consumption lines for the time that drew a line's prepaid blocks.
+       * `allocations` are the rows the resolver selected (see
+       * chargeResolution/prepaidBlockRules.ts).
+       */
+      kind: "hourBlockDraw";
+      period: { startDate: string; endDate: string };
+      allocations: HourBlockDrawRow[];
     })
   | (ContractChargeFactsBase & {
       kind: "product" | "license";

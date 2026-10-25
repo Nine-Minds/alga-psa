@@ -41,6 +41,7 @@ import {
   updateBucketUsageMinutes,
 } from "@alga-psa/shared/billingClients/bucketUsageService";
 import { BillingEngine } from "@alga-psa/billing/lib/billing/billingEngine";
+import { syncPrepaidBlockIssuancesForContractLine } from "@alga-psa/billing/services/prepaidBlockIssuanceSync";
 import { generateInvoiceForNormalizedSelectionInputs } from "@alga-psa/billing/actions/invoiceGeneration";
 import { buildContractCadenceDueSelectionInput } from "@alga-psa/shared/billingClients/recurringRunExecutionIdentity";
 
@@ -398,6 +399,72 @@ describe("Contract charge resolution parity (simulator vs engine dry run)", () =
     // Everything except the hourly lines still matches.
     const rest = (lines: ParityLine[]) => lines.filter((line) => !hourlyOf(lines).includes(line));
     expect(rest(simulator)).toEqual(rest(engine));
+  }, 120_000);
+
+  it("consumption-mode prepaid block: the issuance line matches the engine's selected issuance", async () => {
+    const contract = await seedParityContract(context, {
+      hourlyMinutes: [150],
+      usageQuantities: [3],
+    });
+    // A 10 hour block sold as the hourly service, issued at contract start.
+    await context.db("contract_line_prepaid_blocks").insert({
+      tenant: context.tenantId,
+      contract_line_id: contract.hourlyLineId,
+      block_minutes: 600,
+      block_price: 150_000,
+      expiry_months: 12,
+      trigger_on_exhaustion: false,
+      trigger_on_expiry: false,
+      replenishment_tier: "draft",
+      sold_as_service_id: contract.hourlyServiceId,
+    });
+    await context.db.transaction((trx) =>
+      syncPrepaidBlockIssuancesForContractLine(trx, context.tenantId, contract.hourlyLineId),
+    );
+    const issuance = await context
+      .db("contract_line_block_issuances")
+      .where({ tenant: context.tenantId, contract_line_id: contract.hourlyLineId })
+      .first();
+    expect(issuance).toBeTruthy();
+
+    const result = await BillingEngine.forTransaction(context.db as never, context.tenantId)
+      .calculateBillingForExecutionWindow(context.clientId, WINDOW_START, WINDOW_END, {
+        // The options invoice generation passes for a block-only selection.
+        recurringTimingSelections: {},
+        recurringTimingSelectionSource: "persisted",
+        prepaidBlockSelection: { issuanceIds: [issuance.issuance_id] },
+        nonContractSelection: { include: false, timeEntryIds: [], usageRecordIds: [] },
+      });
+    recordInvoiceLineDump(result);
+    if (result.error) throw new Error(`Engine failed: ${result.error}`);
+    const engine = (result.charges as any[])
+      .filter((charge) => charge.type === "prepaid_block")
+      .map((charge): ParityLine => ({
+        kind: "prepaid_block",
+        serviceId: charge.serviceId ?? null,
+        quantity: round(Number(charge.quantity)),
+        net: Number(charge.total),
+      }));
+    expect(engine).toHaveLength(1);
+
+    // Re-snapshot: the block configuration was added after the seeded snapshot.
+    const scenario = await snapshotContractToScenario(context.db, context.tenantId, {
+      contractId: contract.contractId,
+      clientContractId: contract.clientContractId,
+    });
+    for (const line of scenario.lines) line.cadence_owner = "contract";
+    scenario.horizon = { start_date: "2025-01-15T00:00:00Z", period_count: 3 };
+    const simulated = await simulateContractScenario(context.db, context.tenantId, scenario);
+    const simulator = simulated.periods
+      .flatMap((period) => period.lines)
+      .filter((line) => line.charge_type === "prepaid_block")
+      .map((line): ParityLine => ({
+        kind: "prepaid_block",
+        serviceId: line.service_id,
+        quantity: round(Number(line.quantity ?? 0)),
+        net: line.net_amount,
+      }));
+    expect(simulator).toEqual(engine);
   }, 120_000);
 });
 

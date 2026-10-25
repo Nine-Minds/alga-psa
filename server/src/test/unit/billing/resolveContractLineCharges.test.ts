@@ -51,6 +51,8 @@ function fakeSource(overrides: Partial<ContractChargeSource> & {
       periods: (overrides.periods ?? [{}]) as any,
       taxRateIds: [],
     }),
+    prepaidBlockIssuances: async () => [],
+    hourBlockDraws: async () => null,
     fixed: charge("fixed") as any,
     hourly: (async (_t: unknown, exclusion: PooledTimeExclusion | null) => {
       exclusions.push(exclusion);

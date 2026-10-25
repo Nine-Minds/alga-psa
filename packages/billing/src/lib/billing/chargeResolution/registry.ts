@@ -1,7 +1,9 @@
 /**
  * The charge family registry: the single ordered list of what a contract line
  * can produce. Order is the order charges are emitted (and merged into the
- * invoice): fixed -> hourly -> usage -> bucket -> product -> license.
+ * invoice): fixed -> prepaidBlock -> hourly -> usage -> bucket -> product ->
+ * license -> hourBlockDraw. (A document merges lines in the legacy
+ * order; see orderChargesForInvoice.)
  *
  * Adding a family touches four places: one entry here, one `kind` in
  * ResolvedContractBillingChargeFacts, one case in calculateContractChargeImpl,
@@ -14,6 +16,7 @@ import type {
   ResolvedContractBillingChargeFacts,
   UnpricedContractBillingObligation,
 } from "../domain";
+import { selectHourBlockDrawRows, selectIssuableBlocks } from "./prepaidBlockRules";
 import type {
   ChargeFamily,
   ContractChargeSource,
@@ -43,8 +46,13 @@ export interface FamilyContext {
 
 export interface FamilyEntry {
   family: ChargeFamily;
-  /** The timing demand this family makes of its source. */
-  timing: TimingRequest;
+  /**
+   * The timing demand this family makes of its source. `null` marks a
+   * window-driven family: it is not tied to the line being due for a service
+   * period, so it runs (and its source answers for its own window) even where
+   * every timed family resolves `not-due`.
+   */
+  timing: TimingRequest | null;
   /** True when the family tolerates an `untimed` timing resolution. */
   allowsUntimed?: boolean;
   /** True when the family has nothing to ask the source if the line has no pools. */
@@ -118,6 +126,59 @@ async function poolCharges(context: FamilyContext): Promise<PlannedCharge[]> {
   return planned;
 }
 
+async function prepaidBlockCharges({ source }: FamilyContext): Promise<PlannedCharge[]> {
+  const issuable = selectIssuableBlocks(await source.prepaidBlockIssuances());
+  if (issuable.length === 0) return [];
+  const client = await source.client();
+  const taxContext = await source.taxContext({
+    taxRateIds: issuable.map((block) => block.issuance.soldAsTaxRateId),
+    billingProfileIds: [],
+  });
+  return issuable.map((block) => ({
+    discriminator: block.issuance.issuanceId,
+    facts: {
+      kind: "prepaidBlock",
+      line: source.line,
+      client,
+      billingPeriod: source.billingPeriod,
+      billingProfile: block.billingProfile,
+      issuance: block.issuance,
+      dueDate: block.dueDate,
+    },
+    taxContext,
+  }));
+}
+
+async function hourBlockDrawCharges({ source }: FamilyContext): Promise<PlannedCharge[]> {
+  // Prepaid blocks overlay an Hourly line.
+  const lineType = source.line.contractLineType;
+  if (lineType !== undefined && lineType !== "Hourly") return [];
+  const supply = await source.hourBlockDraws();
+  if (!supply) return [];
+  const allocations = selectHourBlockDrawRows(supply.allocations);
+  if (allocations.length === 0) return [];
+  return [
+    {
+      discriminator: supply.period.startDate,
+      facts: {
+        kind: "hourBlockDraw",
+        line: source.line,
+        client: await source.client(),
+        timing: supply.timing,
+        billingPeriod: source.billingPeriod,
+        billingProfile: await source.billingProfile(),
+        period: supply.period,
+        allocations,
+      },
+      taxContext: await source.taxContext({
+        taxRateIds: [],
+        billingProfileIds: [],
+        locationId: source.line.locationId,
+      }),
+    },
+  ];
+}
+
 const single = (
   charge: Pick<PlannedCharge, "facts" | "taxContext" | "metadata"> | null,
 ): PlannedCharge[] =>
@@ -129,6 +190,12 @@ export const CHARGE_FAMILY_REGISTRY: readonly FamilyEntry[] = [
     handles: { configurationTypes: ["Fixed"], lineTypes: ["Fixed"] },
     timing: { policy: "fixed-recurring", duePosition: LINE_POSITION },
     collect: async ({ source, timing }) => single(await source.fixed(timing!)),
+  },
+  {
+    family: "prepaidBlock",
+    handles: { configurationTypes: [], lineTypes: [] },
+    timing: null,
+    collect: prepaidBlockCharges,
   },
   {
     family: "hourly",
@@ -169,4 +236,24 @@ export const CHARGE_FAMILY_REGISTRY: readonly FamilyEntry[] = [
     collect: async ({ source, timing }) =>
       single(await source.recurringQuantity("license", timing!)),
   },
+  {
+    family: "hourBlockDraw",
+    handles: { configurationTypes: [], lineTypes: [] },
+    timing: null,
+    collect: hourBlockDrawCharges,
+  },
 ];
+
+/** Families the source resolves a service-period timing for. */
+export const TIMED_CHARGE_FAMILIES: ReadonlySet<ChargeFamily> = new Set(
+  CHARGE_FAMILY_REGISTRY.filter((entry) => entry.timing !== null).map(
+    (entry) => entry.family,
+  ),
+);
+
+/** Families whose window the source owns (see FamilyEntry.timing). */
+export const WINDOW_DRIVEN_CHARGE_FAMILIES: ReadonlySet<ChargeFamily> = new Set(
+  CHARGE_FAMILY_REGISTRY.filter((entry) => entry.timing === null).map(
+    (entry) => entry.family,
+  ),
+);

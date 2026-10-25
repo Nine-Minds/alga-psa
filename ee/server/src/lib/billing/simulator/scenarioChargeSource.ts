@@ -34,10 +34,12 @@ import {
   resolvePoolForService,
   type ConfiguredService,
   type ContractChargeSource,
+  type HourBlockDrawSupply,
   type PoolDefinition,
   type PoolPeriodState,
   type ResolutionDiagnostics,
   type PooledTimeExclusion,
+  type PrepaidBlockIssuanceSupply,
   type SuppliedCharge,
   type TaxContextDemand,
   type TimingRequest,
@@ -56,14 +58,17 @@ import {
   syntheticConfigId,
 } from "./syntheticActivity";
 import { simulationRefusal } from "./simulationRefusal";
+import type { PrepaidBlockLedger } from "./prepaidBlockLedger";
 
 /** State a simulation run threads across periods (pool rollover, in memory). */
 export interface ScenarioRunState {
   poolStates: Map<string, ReturnType<typeof calculateContractBucketPeriodState>>;
+  /** Prepaid Block lines' block timelines, by line key (see prepaidBlockLedger.ts). */
+  prepaidLedgers: Map<string, PrepaidBlockLedger>;
 }
 
 export function createScenarioRunState(): ScenarioRunState {
-  return { poolStates: new Map() };
+  return { poolStates: new Map(), prepaidLedgers: new Map() };
 }
 
 export interface ScenarioChargeSourceInput {
@@ -72,19 +77,18 @@ export interface ScenarioChargeSourceInput {
   lineFacts: ResolvedContractLineFacts;
   client: { client_id: string; is_tax_exempt?: boolean | null };
   billingPeriod: IBillingPeriod;
-  /** The line's covered service period for this invoice window. */
-  timing: ResolvedBillingTiming;
+  /**
+   * The line's covered service period for this invoice window, or null when
+   * the source answers only for the window itself (the window-driven
+   * prepaid-block families).
+   */
+  timing: ResolvedBillingTiming | null;
   periodIndex: number;
   taxPorts: ChargeComputeTaxContext;
   currencyCode: string;
   lineCycle: string;
   diagnostics: SimulationDiagnostic[];
   run: ScenarioRunState;
-  /**
-   * Prepaid Block lines: share of this period's assumed hours that blocks
-   * absorb (0-1). Only the remainder bills at the hourly (overage) rate.
-   */
-  coveredByBlock?: number | null;
 }
 
 /** A pool as the scenario describes it, whichever way it was declared. */
@@ -116,9 +120,11 @@ export class ScenarioChargeSource implements ContractChargeSource {
         `Scenario charge source cannot resolve a "${request.duePosition}" due position; only the line's own position is supported`,
       );
     }
-    // The caller only builds a source for a service period that is inside the
-    // contract's active window, so the line is always due here.
-    return { status: "due", timing: this.input.timing };
+    // The caller only builds a source with a timing for a service period that
+    // is inside the contract's active window, so the line is always due here.
+    return this.input.timing
+      ? { status: "due", timing: this.input.timing }
+      : { status: "not-due" };
   }
 
   async taxContext(_demand: TaxContextDemand): Promise<ChargeComputeTaxContext> {
@@ -373,6 +379,69 @@ export class ScenarioChargeSource implements ContractChargeSource {
   }
 
   /* -------------------------------------------------------------- */
+  /* Prepaid blocks                                                 */
+  /* -------------------------------------------------------------- */
+
+  private ledger(): PrepaidBlockLedger | undefined {
+    return this.input.run.prepaidLedgers.get(this.input.line.key);
+  }
+
+  async prepaidBlockIssuances(): Promise<PrepaidBlockIssuanceSupply[]> {
+    const ledger = this.ledger();
+    if (!ledger) return [];
+    const { scenario, line, lineFacts, billingPeriod, currencyCode, periodIndex } =
+      this.input;
+    const { config, soldAs } = ledger;
+    const hours = config.block_minutes / 60;
+    return (ledger.issuesByPeriod.get(periodIndex) ?? []).map((issue) => ({
+      issuanceId: `sim-issuance:${line.key}:${issue.blockOrdinal}`,
+      contractLineId: line.key,
+      clientContractLineId: line.key,
+      clientContractId: scenario.contract_id,
+      contractName: scenario.name,
+      tenant: lineFacts.tenantId,
+      blockMinutes: config.block_minutes,
+      blockPrice: config.block_price,
+      expiryMonths: config.expiry_months,
+      scopeServiceIds: line.services.map((service) => service.service_id),
+      soldAsServiceId: soldAs.service_id,
+      serviceName: `${soldAs.service_name} - prepaid block (${formatBlockHours(hours)} h, ${issue.trigger.replace("_", " ")})`,
+      soldAsTaxRateId: soldAs.tax_rate_id,
+      currencyCode,
+      taxDate: issue.issueDate,
+      servicePeriodStart: issue.issueDate,
+      servicePeriodEnd: billingPeriod.endDate,
+      // Simulated issues are dated, scheduled and ready by construction.
+      status: "scheduled",
+      dueDate: issue.issueDate,
+      readyAsOf: issue.issueDate,
+      billingProfile: null,
+    }));
+  }
+
+  async hourBlockDraws(): Promise<HourBlockDrawSupply | null> {
+    const ledger = this.ledger();
+    const draws = ledger?.drawsByPeriod.get(this.input.periodIndex) ?? [];
+    if (!ledger || draws.length === 0) return null;
+    const { line, billingPeriod } = this.input;
+    const { soldAs } = ledger;
+    return {
+      period: { startDate: billingPeriod.startDate, endDate: billingPeriod.endDate },
+      allocations: draws.map((draw) => ({
+        block_id: `sim-block:${line.key}:${draw.blockOrdinal}`,
+        block_status: "active",
+        service_id: soldAs.service_id,
+        service_name: `${soldAs.service_name} - block draw (block ${draw.blockOrdinal})`,
+        remaining_minutes: draw.remainingMinutes,
+        // A simulated draw is not attributable to a time entry.
+        time_entry_id: null,
+        minutes: draw.minutes,
+        billable_duration: 0,
+      })),
+    };
+  }
+
+  /* -------------------------------------------------------------- */
   /* Families                                                       */
   /* -------------------------------------------------------------- */
 
@@ -473,7 +542,7 @@ export class ScenarioChargeSource implements ContractChargeSource {
           service.service_id,
           periodIndex,
         ) *
-        (1 - Math.min(1, Math.max(0, this.input.coveredByBlock ?? 0)));
+        (1 - Math.min(1, Math.max(0, this.ledger()?.demandCoverage.get(periodIndex) ?? 0)));
       if (!(assumedHours > 0)) continue;
 
       if (!hasResolvableHourlyRate(service)) {
@@ -791,6 +860,10 @@ function usageUnitForPool(line: ScenarioLine, serviceId: string | undefined): st
   return usageConfig?.configuration_type === "Usage"
     ? usageConfig.unit_of_measure
     : "units";
+}
+
+function formatBlockHours(hours: number): string {
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(2);
 }
 
 function cadenceQuantityLabel(lineCycle: string): string {

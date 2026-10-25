@@ -10,7 +10,11 @@
  */
 
 import type { IBillingPeriod } from "@alga-psa/types";
-import type { ChargeComputeTaxContext } from "../compute";
+import type {
+  ChargeComputeTaxContext,
+  HourBlockDrawRow,
+  PrepaidBlockIssuanceInput,
+} from "../compute";
 import type {
   ResolvedBillingProfileAssignments,
   ResolvedBillingTiming,
@@ -114,6 +118,41 @@ export interface TaxContextDemand {
   locationId?: string | null;
 }
 
+/**
+ * One block issuance as a source supplies it, before the resolver's checks
+ * (see prepaidBlockRules.ts): the raw status, due date and sold-as/currency
+ * configuration, and the business date it is judged against.
+ */
+export interface PrepaidBlockIssuanceSupply
+  extends Omit<PrepaidBlockIssuanceInput, "soldAsServiceId" | "currencyCode"> {
+  soldAsServiceId: string | null;
+  currencyCode: string | null;
+  /** `contract_line_block_issuances.status`. */
+  status: string;
+  /** ISO date the issuance falls due. */
+  dueDate: string;
+  /** The business date the source judges readiness on (ISO date). */
+  readyAsOf: string;
+  /** The issuance line's own profile assignments; null leaves the profile off. */
+  billingProfile: ResolvedBillingProfileAssignments | null;
+}
+
+/** An allocation row; `block_status` is the draw block's lifecycle status. */
+export interface HourBlockDrawSupplyRow extends HourBlockDrawRow {
+  block_status: string;
+}
+
+/**
+ * The draws of a line's prepaid blocks inside the window the source chose,
+ * oldest block first. `timing` is the line's service period when the source
+ * derived the window from one (it feeds discount evaluation windows).
+ */
+export interface HourBlockDrawSupply {
+  period: { startDate: string; endDate: string };
+  timing?: ResolvedBillingTiming;
+  allocations: HourBlockDrawSupplyRow[];
+}
+
 export interface ConfiguredService {
   serviceId: string;
   /** `contract_line_service_configuration.configuration_type`. */
@@ -164,6 +203,19 @@ export interface ContractChargeSource {
     pool: PoolDefinition,
     timing: ResolvedBillingTiming | undefined,
   ): Promise<PoolPeriodState>;
+
+  /**
+   * The prepaid-block issuances this source selected for invoicing (the
+   * engine: those named by the caller; the simulator: the block timeline's
+   * issues for this window), in invoice order. Raw data: the resolver decides
+   * which of them become charges.
+   */
+  prepaidBlockIssuances(): Promise<PrepaidBlockIssuanceSupply[]>;
+  /**
+   * Draws of the line's prepaid blocks in the source's window, or null when
+   * the source has no window for the line (e.g. no service period due).
+   */
+  hourBlockDraws(): Promise<HourBlockDrawSupply | null>;
 
   fixed(timing: ResolvedBillingTiming): Promise<SuppliedCharge<"fixed"> | null>;
   hourly(
