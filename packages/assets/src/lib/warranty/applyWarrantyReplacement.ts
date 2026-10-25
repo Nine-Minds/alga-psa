@@ -31,7 +31,9 @@ const TRACKED = ['serial_number', 'model', 'manufacturer', 'warranty_end_date'] 
 
 const dateOnly = (v: unknown): string | null => {
   if (v == null) return null;
-  if (v instanceof Date) return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-${String(v.getDate()).padStart(2, '0')}`;
+  // timestamptz at UTC midnight: use UTC calendar parts so the date doesn't shift on non-UTC hosts.
+  // LEVERAGE: pattern utc-calendar-date — Date -> UTC YYYY-MM-DD also lives in warrantyReads.getAssetWarrantySummary
+  if (v instanceof Date) return `${v.getUTCFullYear()}-${String(v.getUTCMonth() + 1).padStart(2, '0')}-${String(v.getUTCDate()).padStart(2, '0')}`;
   return String(v).slice(0, 10);
 };
 

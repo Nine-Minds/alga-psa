@@ -43,7 +43,7 @@ export function WarrantyCard({ id, assetId }: { id: string; assetId: string }) {
       title={t('warranty.card.title', { defaultValue: 'Warranty' })}
       icon={<ShieldCheck className="h-4 w-4" />}
     >
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+      <div className="space-y-1.5 text-sm">
         <BentoLabelValue
           label={t('warranty.card.warrantyEnd', { defaultValue: 'Warranty ends' })}
           value={

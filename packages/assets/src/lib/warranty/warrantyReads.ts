@@ -129,9 +129,11 @@ export async function getAssetWarrantySummary(
     asset_id: assetId,
     ownership: asset.ownership,
     stock_tracked: Boolean(asset.stock_unit_id),
+    // assets.warranty_end_date is timestamptz at UTC midnight: read the calendar date in UTC, not host-local.
+    // LEVERAGE: pattern utc-calendar-date — Date -> UTC YYYY-MM-DD also lives in applyWarrantyReplacement.dateOnly
     warranty_end_date:
       wed == null ? null : wed instanceof Date
-        ? `${wed.getFullYear()}-${String(wed.getMonth() + 1).padStart(2, '0')}-${String(wed.getDate()).padStart(2, '0')}`
+        ? `${wed.getUTCFullYear()}-${String(wed.getUTCMonth() + 1).padStart(2, '0')}-${String(wed.getUTCDate()).padStart(2, '0')}`
         : String(wed).slice(0, 10),
     vendor_id: asset.vendor_id ?? null,
     vendor_name: vendor?.vendor_name ?? null,
