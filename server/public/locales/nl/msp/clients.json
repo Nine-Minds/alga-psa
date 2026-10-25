@@ -449,7 +449,7 @@
       "paused": "SLA gepauzeerd"
     },
     "software": {
-      "assetsMeta_one": "1 asset",
+      "assetsMeta_one": "{{count}} asset",
       "assetsMeta_other": "{{count}} assets",
       "loadError": "Softwareinventaris kon niet worden geladen.",
       "titles": "titels",

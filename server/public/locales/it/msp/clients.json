@@ -449,7 +449,7 @@
       "paused": "SLA in pausa"
     },
     "software": {
-      "assetsMeta_one": "1 asset",
+      "assetsMeta_one": "{{count}} asset",
       "assetsMeta_other": "{{count}} asset",
       "loadError": "Impossibile caricare l'inventario software.",
       "titles": "titoli",

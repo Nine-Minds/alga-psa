@@ -136,6 +136,7 @@ export default function ClientSoftwareView({ id, clientId, getSummary, onOpenAss
       title: t('clientSoftware.columns.title', { defaultValue: 'Title' }),
       dataIndex: 'title',
       id: 'title',
+      render: (title: string) => title,
     },
     {
       title: t('clientSoftware.columns.versions', { defaultValue: 'Versions' }),
