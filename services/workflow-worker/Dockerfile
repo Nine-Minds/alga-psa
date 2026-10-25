@@ -90,6 +90,7 @@ RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm ins
   --workspace=@alga-psa/validation \
   --workspace=@alga-psa/email \
   --workspace=@alga-psa/opportunities \
+  --workspace=@alga-psa/predicates \
   --workspace=@alga-psa/ui \
   && npm install --no-save openai@^4.104.0
 
@@ -102,6 +103,10 @@ COPY server/ ./server/
 COPY packages/ ./packages/
 
 # Build core workspace dependencies that export dist artifacts consumed by runtime packages.
+# Predicates must build first: types and shared/workflow/runtime import it via dist/.
+WORKDIR /app/packages/predicates
+RUN npm run build
+
 WORKDIR /app/packages/core
 RUN npm run build
 

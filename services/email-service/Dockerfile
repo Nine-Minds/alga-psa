@@ -45,6 +45,10 @@ COPY shared/ ./shared/
 COPY server/ ./server/
 COPY packages/ ./packages/
 
+# Predicates must build first: types and shared import it via dist/.
+WORKDIR /app/packages/predicates
+RUN npm run build
+
 WORKDIR /app/packages/core
 RUN npm run build && tsc-alias -p tsconfig.json -f --resolve-full-paths
 
