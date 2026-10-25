@@ -88,6 +88,8 @@ export interface LockedInvoiceBlock {
   client_contract_id: string | null;
   contract_line_id: string | null;
   issuance_id: string | null;
+  /** Set for a cadence-mode block (one per service period); null for consumption blocks. */
+  service_period_record_id: string | null;
 }
 
 /**
@@ -113,6 +115,7 @@ export async function lockInvoiceBlocksWithLineSiblings(
     .select(
       'block_id', 'status', 'total_minutes', 'remaining_minutes', 'first_allocated_at', 'source_invoice_id',
       'source_invoice_charge_id', 'service_id', 'client_id', 'client_contract_id', 'contract_line_id', 'issuance_id',
+      'service_period_record_id',
     );
   return rows.filter((r) => r.source_invoice_id === invoiceId);
 }
