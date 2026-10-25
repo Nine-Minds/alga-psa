@@ -148,6 +148,8 @@ export interface IStockUnit extends TenantEntity {
   client_id?: string | null;
   asset_id?: string | null;
   allocated_so_line_id?: string | null;
+  /** Serialized project staging claim (C6); never set together with allocated_so_line_id. */
+  allocated_staging_line_id?: string | null;
   warranty_expires_at?: string | Date | null;
   warranty_term?: string | null;
   loan_due_at?: string | Date | null;
