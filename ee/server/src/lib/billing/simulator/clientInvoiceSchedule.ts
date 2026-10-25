@@ -8,7 +8,7 @@ import {
 
 /**
  * The invoice schedule a scenario simulates a client on: the client's current
- * cycle and anchor, plus the persisted cycle windows (client_billing_cycles)
+ * cycle and anchor, plus the billed cycle windows (billed recurring service periods, merged with client_billing_cycles)
  * that were billed before any cycle change. Both scenario builders (saved
  * contract snapshot and unsaved draft) resolve cadence here, so a window the
  * client was billed under an older cycle keeps that cycle's boundaries and

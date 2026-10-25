@@ -17,6 +17,7 @@ import {
   type ClientCadenceScheduleContext,
 } from './clientCadenceScheduleContext';
 import { ensureClientBillingSettingsRow } from './billingSettings';
+import { loadBilledClientCadenceRecurringPeriods } from './billedClientCadenceRecurringPeriods';
 import type { HistoricalBillingCycleBoundary } from './clientCadenceServicePeriods';
 
 function isDateObject(val: unknown): val is Date {
@@ -78,11 +79,20 @@ export async function getClientBillingCycleAnchor(
 }
 
 /**
- * The client's persisted billing-cycle windows: the active `client_billing_cycles`
- * rows, each billed (or billable) under the cycle that was current when it was
- * generated. After a cycle change the older windows keep their old shape and only
- * the windows from the cut-over on follow the new cycle, so the scalar
- * `clients.billing_cycle` alone cannot say where a past window began or ended.
+ * The client's billed cycle windows, in the shape they were actually billed.
+ * After a cycle change older windows keep their old shape and only windows from
+ * the cut-over on follow the new cycle, so the scalar `clients.billing_cycle`
+ * alone cannot say where a past window began or ended.
+ *
+ * Primary source: the billed / invoice-linked client-cadence
+ * `recurring_service_periods` ledger (Due Work invoicing writes no
+ * `client_billing_cycles` rows). Each distinct `invoice_window_start/end` is one
+ * cycle; service periods are not used because they can be partial when a
+ * contract starts mid-cycle. Active `client_billing_cycles` rows are merged in
+ * only where they do not overlap any ledger window: the consumer
+ * (`normalizeHistoricalCycles`) keeps the earliest-starting window of an
+ * overlapping pair, so ledger precedence is enforced here by dropping
+ * overlapping table rows rather than by relying on sort order.
  * Shaped for `generateClientCadenceServicePeriods({ historicalCycles })`.
  */
 export async function loadClientBillingCycleHistory(
@@ -90,19 +100,46 @@ export async function loadClientBillingCycleHistory(
   tenant: string,
   clientId: string
 ): Promise<HistoricalBillingCycleBoundary[]> {
-  const rows = await tenantDb(knexOrTrx, tenant)
-    .table('client_billing_cycles')
-    .where({ client_id: clientId, is_active: true })
-    .whereNotNull('period_start_date')
-    .whereNotNull('period_end_date')
-    .orderBy('period_start_date', 'asc')
-    .select('billing_cycle_id', 'period_start_date', 'period_end_date');
+  const [ledgerRows, tableRows] = await Promise.all([
+    loadBilledClientCadenceRecurringPeriods(knexOrTrx, { tenant, clientId }),
+    tenantDb(knexOrTrx, tenant)
+      .table('client_billing_cycles')
+      .where({ client_id: clientId, is_active: true })
+      .whereNotNull('period_start_date')
+      .whereNotNull('period_end_date')
+      .select('billing_cycle_id', 'period_start_date', 'period_end_date'),
+  ]);
 
-  return rows.map((row: any) => ({
-    start: normalizeDbIsoUtcMidnight(row.period_start_date),
-    end: normalizeDbIsoUtcMidnight(row.period_end_date),
-    billingCycleId: row.billing_cycle_id,
-  }));
+  const ledger = new Map<string, HistoricalBillingCycleBoundary>();
+  for (const row of ledgerRows) {
+    if (row.invoice_window_start == null || row.invoice_window_end == null) {
+      continue;
+    }
+    const start = normalizeDbIsoUtcMidnight(row.invoice_window_start);
+    const end = normalizeDbIsoUtcMidnight(row.invoice_window_end);
+    if (start.slice(0, 10) >= end.slice(0, 10)) {
+      continue;
+    }
+    ledger.set(`${start.slice(0, 10)}|${end.slice(0, 10)}`, { start, end });
+  }
+  const ledgerWindows = [...ledger.values()];
+
+  const overlapsLedger = (start: string, end: string) =>
+    ledgerWindows.some(
+      (window) => start.slice(0, 10) < window.end.slice(0, 10) && window.start.slice(0, 10) < end.slice(0, 10)
+    );
+
+  const tableWindows: HistoricalBillingCycleBoundary[] = tableRows
+    .map((row: any) => ({
+      start: normalizeDbIsoUtcMidnight(row.period_start_date),
+      end: normalizeDbIsoUtcMidnight(row.period_end_date),
+      billingCycleId: row.billing_cycle_id as string,
+    }))
+    .filter((window) => !overlapsLedger(window.start, window.end));
+
+  return [...ledgerWindows, ...tableWindows].sort((left, right) =>
+    left.start.slice(0, 10).localeCompare(right.start.slice(0, 10))
+  );
 }
 
 export type UpdateClientBillingScheduleInput = {

@@ -36,6 +36,9 @@ import {
   snapshotContractToScenario,
 } from "@ee/lib/billing/simulator";
 import { assumptionKey } from "@ee/lib/billing/simulator/syntheticActivity";
+import { loadReplayAssumptions } from "@ee/lib/billing/simulator/activityAssumptions";
+import { pairReplayLines } from "@ee/lib/billing/simulator/replayLineIdentity";
+import { loadClientInvoiceSchedule } from "@ee/lib/billing/simulator/clientInvoiceSchedule";
 import {
   findOrCreateCurrentBucketUsageRecord,
   updateBucketUsageMinutes,
@@ -780,12 +783,12 @@ describe("Contract charge resolution parity (simulator vs engine dry run)", () =
 
   it("client cadence changes monthly -> quarterly mid-history: simulated windows, block fees and overage equal the engine", async () => {
     const contract = await seedCadenceBlockContract(context, { liveClientCadence: true });
-    // Nov and Dec bill on the monthly schedule; the invoices belong to their cycle rows.
+    // Nov and Dec bill on the monthly schedule through the production (Due Work)
+    // generation path, which writes no client_billing_cycles rows: the billed
+    // recurring_service_periods ledger is the only record of the monthly windows.
     const nov = await generateCadenceWindow(context, contract, NOV, { finalize: true });
-    await linkInvoiceToCycle(context, nov.invoiceId, NOV);
     await logHours(context, contract, "2025-11-10", [840]);
     const dec = await generateCadenceWindow(context, contract, DEC, { finalize: true });
-    await linkInvoiceToCycle(context, dec.invoiceId, DEC);
     expect(dec.lines.filter((line) => line.net === 60_000 && line.quantity === 4)).toHaveLength(1);
 
     // The client moves to a quarterly cycle (Jan/Apr/Jul/Oct); billed history stays monthly.
@@ -796,26 +799,88 @@ describe("Contract charge resolution parity (simulator vs engine dry run)", () =
         anchor: { dayOfMonth: 1, monthOfYear: 1 },
       }),
     );
-    const activeCycles = await context
-      .db("client_billing_cycles")
-      .where({ tenant: context.tenantId, client_id: context.clientId, is_active: true })
-      .orderBy("period_start_date");
-    expect(activeCycles.map((c) => `${toDateOnly(c.period_start_date)}:${toDateOnly(c.period_end_date)}`)).toEqual([
-      "2025-11-01:2025-12-01",
-      "2025-12-01:2026-01-01",
-    ]);
-
     const q1 = { start: "2026-01-01", end: "2026-04-01" };
     const engineQ1 = await generateCadenceWindow(context, contract, q1);
 
     const simulated = (index: number) =>
       simulatedWindow(context, contract, index, { 1: 14 }, "2025-11-01", true);
+    // Window boundaries (period_end is the inclusive last day): two monthly windows as billed, then the quarter.
+    const schedule = await loadClientInvoiceSchedule(context.db, context.tenantId, context.clientId);
+    expect(schedule.billing_cycle).toBe("quarterly");
+    // The Q1 draft generated above is invoice-linked, so its window is billed history too.
+    expect(schedule.history).toEqual([
+      { start_date: "2025-11-01", end_date: "2025-12-01" },
+      { start_date: "2025-12-01", end_date: "2026-01-01" },
+      { start_date: "2026-01-01", end_date: "2026-04-01" },
+    ]);
+    const windows = (await simulatedPeriods(context, contract, { 1: 14 })).map((p) => `${p.period_start.slice(0, 10)}:${p.period_end.slice(0, 10)}`);
+    expect(windows.slice(0, 3)).toEqual(["2025-11-01:2025-11-30", "2025-12-01:2025-12-31", "2026-01-01:2026-03-31"]);
     expect(await simulated(0)).toEqual(nov.lines);
     expect(await simulated(1)).toEqual(dec.lines);
     expect(await simulated(2)).toEqual(engineQ1.lines);
     // Window shape: two monthly block fees, then ONE block fee for the quarter.
     expect(dec.lines.filter((line) => line.kind === "prepaid_block")).toHaveLength(1);
     expect(engineQ1.lines.filter((line) => line.kind === "prepaid_block")).toHaveLength(1);
+  }, 300_000);
+
+  it("Compare with past invoices after a cycle change replays the billed monthly windows, not the current quarter", async () => {
+    const contract = await seedCadenceBlockContract(context, { liveClientCadence: true });
+    // The live repro client is untaxed ($1,500 / $2,100 invoices); line-level tax
+    // rounding is not what this case is about.
+    await context.db("clients").where({ tenant: context.tenantId, client_id: context.clientId }).update({ is_tax_exempt: true });
+    // Two monthly invoices through the production generation path: $1,500 block
+    // fee for the first month; the second is the $1,500 block fee plus 4 overage
+    // hours at $150.
+    const nov = await generateCadenceWindow(context, contract, NOV, { finalize: true });
+    await logHours(context, contract, "2025-11-10", [840]);
+    const dec = await generateCadenceWindow(context, contract, DEC, { finalize: true });
+    expect(nov.total).toBe(150_000);
+    expect(dec.total).toBe(210_000);
+
+    // The client then moves to a quarterly cycle. The billed boundary (2026-01-01)
+    // must be a quarter boundary, so the fixture uses Jan/Apr/Jul/Oct rather than
+    // the live repro's February quarters (Sep/Oct billed, boundary Nov 1).
+    await context.db.transaction((trx) =>
+      applyClientCadenceChange(trx, context.tenantId, {
+        clientId: context.clientId,
+        billingCycle: "quarterly",
+        anchor: { dayOfMonth: 1, monthOfYear: 1 },
+      }),
+    );
+
+    const scenario = structuredClone(
+      await snapshotContractToScenario(context.db, context.tenantId, {
+        contractId: contract.contractId,
+        clientContractId: contract.clientContractId,
+      }),
+    );
+    const prefill = await loadReplayAssumptions(
+      context.db,
+      context.tenantId,
+      scenario,
+      "2025-11-01T00:00:00Z",
+      "2026-01-01T00:00:00Z",
+    );
+    // Two monthly replay windows, not one merged quarter.
+    expect(prefill.horizon.period_count).toBe(2);
+    expect(prefill.actual_invoices).toHaveLength(2);
+
+    scenario.horizon = prefill.horizon;
+    scenario.assumptions = prefill.assumptions;
+    const simulated = await simulateContractScenario(context.db, context.tenantId, scenario);
+    const windows = simulated.periods.slice(0, 2).map((p) => `${p.period_start.slice(0, 10)}:${p.period_end.slice(0, 10)}`);
+    expect(windows).toEqual(["2025-11-01:2025-11-30", "2025-12-01:2025-12-31"]);
+
+    const actual = prefill.actual_invoices ?? [];
+    expect(actual.map((invoice) => invoice.subtotal)).toEqual([150_000, 210_000]);
+    expect(actual.map((invoice) => invoice.total)).toEqual([150_000, 210_000]);
+    simulated.periods.slice(0, 2).forEach((period, index) => {
+      const invoice = actual[index];
+      expect(invoice.period_start.slice(0, 10)).toBe(period.period_start.slice(0, 10));
+      const pairs = pairReplayLines(invoice.lines, period.lines);
+      expect(pairs.length).toBeGreaterThan(0);
+      for (const pair of pairs) expect(pair.delta).toBe(0);
+    });
   }, 300_000);
 
   it("a mode switch on a client-cadence line retires the block stream", async () => {
@@ -1713,20 +1778,6 @@ async function seedCadenceBlockContract(
         anchor: { dayOfMonth: 1 },
       }),
     );
-    // The monthly cycle rows the invoicing screen created for Nov and Dec.
-    const billingProfileId = await context.ensureDefaultBillingProfileId(context.clientId);
-    for (const window of [NOV, DEC]) {
-      await context.db("client_billing_cycles").insert({
-        tenant: context.tenantId,
-        client_id: context.clientId,
-        billing_profile_id: billingProfileId,
-        billing_cycle: "monthly",
-        effective_date: window.start,
-        period_start_date: window.start,
-        period_end_date: window.end,
-        is_active: true,
-      });
-    }
   } else {
     await context.db.transaction((trx) =>
       materializeContractCadenceServicePeriodsForContract(trx, {
@@ -1927,6 +1978,17 @@ async function simulatedRawLines(
   horizonStart = "2025-11-01",
   keepCadenceOwner = false,
 ) {
+  return (await simulatedPeriods(context, contract, hoursByWindow, horizonStart, keepCadenceOwner))[index]?.lines ?? [];
+}
+
+/** The simulator's windows (boundaries and lines) for the unedited snapshot. */
+async function simulatedPeriods(
+  context: TestContext,
+  contract: CadenceBlockContract,
+  hoursByWindow: Record<number, number> = {},
+  horizonStart = "2025-11-01",
+  keepCadenceOwner = true,
+) {
   const scenario = structuredClone(
     await snapshotContractToScenario(context.db, context.tenantId, {
       contractId: contract.contractId,
@@ -1940,24 +2002,6 @@ async function simulatedRawLines(
     overrides: hoursByWindow,
   };
   const simulated = await simulateContractScenario(context.db, context.tenantId, scenario);
-  return simulated.periods[index]?.lines ?? [];
+  return simulated.periods;
 }
 
-/** What the invoicing screen does: the generated invoice belongs to the cycle row it billed. */
-async function linkInvoiceToCycle(
-  context: TestContext,
-  invoiceId: string | null,
-  window: { start: string; end: string },
-): Promise<void> {
-  if (!invoiceId) throw new Error("No invoice to link");
-  const cycle = await context
-    .db("client_billing_cycles")
-    .where({ tenant: context.tenantId, client_id: context.clientId, is_active: true })
-    .whereRaw("period_start_date::date = ?", [window.start])
-    .first();
-  if (!cycle) throw new Error(`No client_billing_cycles row for ${window.start}`);
-  await context
-    .db("invoices")
-    .where({ tenant: context.tenantId, invoice_id: invoiceId })
-    .update({ billing_cycle_id: cycle.billing_cycle_id });
-}

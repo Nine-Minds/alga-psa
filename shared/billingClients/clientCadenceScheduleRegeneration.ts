@@ -17,6 +17,7 @@ import { clipRecurringCandidatesToObligationBounds } from './clipRecurringCandid
 import { isRecurringLineExpectedInClientCadenceWindow } from './recurringTiming';
 import { whereLiveClientCadenceRecurringLine } from './liveClientCadenceRecurringLine';
 import { getClientBillingCycleAnchor } from './billingSchedule';
+import { loadBilledClientCadenceRecurringPeriods } from './billedClientCadenceRecurringPeriods';
 import {
   backfillRecurringServicePeriods,
   type IRecurringServicePeriodBackfillPlan,
@@ -314,21 +315,7 @@ export async function loadClientCadenceContractBilledBoundaries(
   trx: Knex | Knex.Transaction,
   params: { tenant: string; clientId: string },
 ): Promise<Map<string, ISO8601String>> {
-  const db = tenantDb(trx, params.tenant);
-  const query = db.table('recurring_service_periods as rsp');
-  db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
-  db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
-  const billedRows = (await query
-    .where('rsp.cadence_owner', 'client')
-    .where('ct.owner_client_id', params.clientId)
-    .where((builder) => {
-      builder.where('rsp.lifecycle_state', 'billed')
-        .orWhereNotNull('rsp.invoice_charge_detail_id');
-    })
-    .select({
-      contract_id: 'cl.contract_id',
-      service_period_end: 'rsp.service_period_end',
-    })) as Array<{ contract_id: string; service_period_end: unknown }>;
+  const billedRows = await loadBilledClientCadenceRecurringPeriods(trx, params);
 
   const boundaries = new Map<string, ISO8601String>();
   for (const row of billedRows) {
