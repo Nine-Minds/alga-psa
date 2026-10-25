@@ -15,6 +15,7 @@ import {
 import { publishInventoryEvent, recordStockMovement, timestampPayload } from '../lib';
 import { resolveTenantCurrency } from '../lib';
 import { rmaCaseQuery } from '../lib/rmaCaseQuery';
+import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
 
 /**
  * RMA / return-path lifecycle (design §6.G).
@@ -282,6 +283,7 @@ export const openRma = withAuth(
       const [row] = await trx('rma_cases')
         .insert({
           tenant,
+          rma_number: await SharedNumberingService.getNextNumber('RMA', { knex: trx, tenant }),
           rma_type: 'standard',
           returned_unit_id: unit.unit_id,
           service_id: unit.service_id,
@@ -552,6 +554,7 @@ export const openAdvanceRma = withAuth(
       const [row] = await trx('rma_cases')
         .insert({
           tenant,
+          rma_number: await SharedNumberingService.getNextNumber('RMA', { knex: trx, tenant }),
           rma_type: 'advance_replacement',
           returned_unit_id: unit.unit_id,
           service_id: unit.service_id,
