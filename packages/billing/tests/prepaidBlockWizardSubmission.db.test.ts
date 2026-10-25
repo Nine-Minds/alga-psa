@@ -45,6 +45,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
+import { getContractMonthlyFixedValuesByContract } from '../../../shared/billingClients/contractMonthlyValue';
 import { contractLineRecurringStreams } from '../../../shared/billingClients/contractLineTimingRule';
 
 const wizard = enabled ? await import('../src/actions/contractWizardActions') : (null as any);
@@ -58,6 +59,7 @@ describe.runIf(enabled)('Prepaid Block lines in the contract and template wizard
   let svcA: string;
   let svcB: string;
   let svcProduct: string;
+  let svcFixed: string;
   const contractIds: string[] = [];
   const templateIds: string[] = [];
 
@@ -72,12 +74,12 @@ describe.runIf(enabled)('Prepaid Block lines in the contract and template wizard
     tenant = uuidv4();
     hoisted.tenant = tenant;
     clientId = uuidv4();
-    svcA = uuidv4(); svcB = uuidv4(); svcProduct = uuidv4();
+    svcA = uuidv4(); svcB = uuidv4(); svcProduct = uuidv4(); svcFixed = uuidv4();
     const typeId = uuidv4();
     await db('tenants').insert({ tenant, client_name: 'PBW Tenant', email: 'pbw@test.local', billing_source: 'test' });
     await db('clients').insert({ tenant, client_id: clientId, client_name: 'PBW Client', default_currency_code: 'EUR' });
     await db('service_types').insert({ id: typeId, tenant, name: 'PBW Type', is_active: true, order_number: 1 });
-    for (const [id, name, method] of [[svcA, 'Remote Support', 'hourly'], [svcB, 'Onsite Support', 'hourly'], [svcProduct, 'Router', 'fixed']] as const) {
+    for (const [id, name, method] of [[svcA, 'Remote Support', 'hourly'], [svcB, 'Onsite Support', 'hourly'], [svcProduct, 'Router', 'fixed'], [svcFixed, 'Managed Services', 'fixed']] as const) {
       await db('service_catalog').insert({
         service_id: id, tenant, service_name: name, custom_service_type_id: typeId, billing_method: method,
         default_rate: 11000, unit_of_measure: method === 'hourly' ? 'hour' : 'month', category_id: null, tax_rate_id: null,
@@ -241,5 +243,29 @@ describe.runIf(enabled)('Prepaid Block lines in the contract and template wizard
     expect(row.issue_mode).toBe('cadence');
     const streams = contractLineRecurringStreams({ contract_line_type: templateLine.line_type, billing_timing: templateLine.billing_timing }, row);
     expect(streams.map((s) => [s.stream, s.duePosition])).toEqual([['line', 'arrears'], ['prepaid_block', 'advance']]);
+  });
+  it('acceptance contract: the monthly estimate counts the fixed fee and the cadence block fee ($3,000)', async () => {
+    const result = await wizard.createClientContractFromWizard(clientSubmission({
+      billing_timing: 'advance',
+      billing_frequency: 'monthly',
+      fixed_lines: [{ line_key: 'fixed-1', billing_frequency: 'monthly', base_rate: 150000, services: [{ service_id: svcFixed, pricing_basis: 'bundle' }] }],
+      prepaid_block_lines: [{ name: 'Cadence block', services: [{ service_id: svcA, hourly_rate: 15000 }], block: cadenceBlock }],
+    }));
+    expect(messageOf(result)).toBe('');
+    contractIds.push(result.contract_id);
+
+    const value = (await getContractMonthlyFixedValuesByContract(db, tenant, [result.contract_id])).get(result.contract_id)!;
+    expect(value.monthlyValueCents).toBe(300000);
+    expect(value.hasCadencePrepaidBlock).toBe(true);
+  });
+
+  it('a consumption block adds nothing to the monthly estimate', async () => {
+    const result = await wizard.createClientContractFromWizard(clientSubmission({
+      prepaid_block_lines: [{ services: [{ service_id: svcA, hourly_rate: 12000 }], block }],
+    }));
+    contractIds.push(result.contract_id);
+    const value = (await getContractMonthlyFixedValuesByContract(db, tenant, [result.contract_id])).get(result.contract_id)!;
+    expect(value.monthlyValueCents).toBe(0);
+    expect(value.hasCadencePrepaidBlock).toBe(false);
   });
 });

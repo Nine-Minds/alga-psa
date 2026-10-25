@@ -5,6 +5,7 @@ import {
   type PrepaidBlockIssueMode,
   type PrepaidBlockReplenishmentTier,
 } from '@alga-psa/types';
+import { normalizeToMonthlyCents } from '@alga-psa/shared/billingClients/recurringMemberRate';
 import type { PrepaidBlockConfigInput } from '../../../services/prepaidBlockConfigService';
 
 /**
@@ -232,6 +233,24 @@ export function prepaidLineSoldAsRate(line: PrepaidBlockLineDraft): number | und
   const picked = line.services.filter((s) => s.service_id);
   const target = picked.find((s) => s.service_id === line.block.soldAsServiceId) ?? picked[0];
   return target?.hourly_rate || undefined;
+}
+
+/**
+ * Monthly-normalized fee of the cadence-mode Prepaid Block lines (one block per billing period, billed
+ * in advance), for the wizard's monthly estimate. Consumption blocks bill when issued, not on a cadence,
+ * so they add nothing; a draft that does not validate adds nothing yet. Uses the same cadence
+ * normalization as the fixed-fee lines.
+ */
+export function cadencePrepaidBlocksMonthlyCents(
+  lines: ReadonlyArray<PrepaidBlockLineDraft>,
+  billingFrequency: string | null | undefined,
+): number {
+  return lines.reduce((sum, line) => {
+    if (line.block.issueMode !== 'cadence' || !line.services.some((service) => service.service_id)) return sum;
+    const parsed = draftToInput(line.block, prepaidLineSoldAsRate(line));
+    if (!('input' in parsed)) return sum;
+    return sum + normalizeToMonthlyCents(parsed.input.block_price, billingFrequency);
+  }, 0);
 }
 
 export type PrepaidBlockLineSubmission = {

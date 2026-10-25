@@ -18,7 +18,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { CURRENCY_OPTIONS, fromMinorUnits } from '@alga-psa/core';
-import { draftToInput, minutesToHoursText, prepaidLineSoldAsRate } from '../prepaidBlockConfigDraft';
+import { cadencePrepaidBlocksMonthlyCents, draftToInput, minutesToHoursText, prepaidLineSoldAsRate } from '../prepaidBlockConfigDraft';
 import { describeRollover } from '../prepaidBlockLabels';
 import { parse } from 'date-fns';
 import { getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
@@ -234,8 +234,14 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
   // Products are priced by the shared resolver (the invoice engine's rate
   // chain: product override, then the contract-currency catalog price, then
   // the legacy default rate) — never a parallel copy of the rule here.
+  // A cadence Prepaid Block line adds its block fee per period (billed in advance) on the line's
+  // frequency, the same one the submission gives it.
   const calculateTotalMonthly = () =>
     fixedLinesRecurringTotalCents(fixedLines, data.billing_frequency) +
+    cadencePrepaidBlocksMonthlyCents(
+      data.prepaid_block_drafts ?? [],
+      data.hourly_billing_frequency ?? data.billing_frequency,
+    ) +
     (resolveFixedLineRecurringTotal(
       {
         custom_rate: null,

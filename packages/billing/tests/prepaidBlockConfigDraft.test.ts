@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  cadencePrepaidBlocksMonthlyCents,
   blockRatePerHourMinor,
   withIssueMode,
   defaultBlockPriceMinor,
@@ -168,6 +169,26 @@ describe('prepaid block wizard line drafts', () => {
         trigger_on_expiry: false, trigger_on_renewal: false, replenishment_tier: 'draft',
       } as never);
       expect(draft).toMatchObject({ issueMode: 'cadence', rolloverPeriods: '1', hours: '10', priceMinor: 90000 });
+    });
+  });
+
+  describe('cadencePrepaidBlocksMonthlyCents', () => {
+    const cadenceLine = (hours: string, priceMinor: number) => ({
+      services: [{ service_id: 's1', hourly_rate: 15000 }],
+      block: { ...withIssueMode(emptyPrepaidBlockDraft(), 'cadence'), hours, priceManual: true, priceMinor },
+    });
+
+    it('adds the block price of cadence lines, scaled like the fixed fees', () => {
+      expect(cadencePrepaidBlocksMonthlyCents([cadenceLine('10', 150000)], 'monthly')).toBe(150000);
+      expect(cadencePrepaidBlocksMonthlyCents([cadenceLine('10', 150000)], 'quarterly')).toBe(50000);
+      expect(cadencePrepaidBlocksMonthlyCents([cadenceLine('10', 150000)], 'annually')).toBe(12500);
+      expect(cadencePrepaidBlocksMonthlyCents([cadenceLine('10', 150000), cadenceLine('5', 70000)], 'monthly')).toBe(220000);
+    });
+
+    it('ignores consumption blocks, lines without a service and drafts that do not validate', () => {
+      const consumption = { ...cadenceLine('10', 150000), block: { ...emptyPrepaidBlockDraft(), hours: '10', priceManual: true, priceMinor: 150000 } };
+      const noService = { ...cadenceLine('10', 150000), services: [{ service_id: '' }] };
+      expect(cadencePrepaidBlocksMonthlyCents([consumption, noService, cadenceLine('', 150000)], 'monthly')).toBe(0);
     });
   });
 });
