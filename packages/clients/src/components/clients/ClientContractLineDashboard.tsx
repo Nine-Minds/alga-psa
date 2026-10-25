@@ -12,7 +12,7 @@ import { getRecentClientInvoices, type RecentInvoice } from '@alga-psa/reporting
 import { Skeleton } from '@alga-psa/ui/components/Skeleton'; // Import Skeleton for loading state
 import { useCurrencyFormat } from '@alga-psa/ui/lib'; // invoices.total_amount is in cents
 import { formatDateOnly } from '@alga-psa/core'; // Import date formatter
-import { parseISO, subDays, format } from 'date-fns'; // Import date functions
+import { addDays, parseISO, subDays, format } from 'date-fns'; // Import date functions
 import {
  getHoursByServiceType, HoursByServiceResult,
  getRemainingBucketUnits, RemainingBucketUnitsResult,
@@ -357,7 +357,9 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
       {renderClientUnresolvedChargeReview?.({
         clientId,
         windowStart: dateRange.startDate,
-        windowEnd: dateRange.endDate,
+        // The dashboard range includes its end date; the review's window end is
+        // exclusive, so today's work is reviewed today rather than tomorrow.
+        windowEnd: format(addDays(parseISO(dateRange.endDate), 1), 'yyyy-MM-dd'),
       })}
 
       {/* Spend by billing profile (F053). Renders nothing for a single-profile
