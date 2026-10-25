@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { CURRENCY_OPTIONS, fromMinorUnits } from '@alga-psa/core';
 import { draftToInput, minutesToHoursText, prepaidLineSoldAsRate } from '../prepaidBlockConfigDraft';
+import { describeRollover } from '../prepaidBlockLabels';
 import { parse } from 'date-fns';
 import { getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
@@ -806,6 +807,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             {prepaidBlockLines.map((line, idx) => {
               const parsed = draftToInput(line.block, prepaidLineSoldAsRate(line));
               const config = 'input' in parsed ? parsed.input : null;
+              const overageRateMinor = prepaidLineSoldAsRate(line);
               return (
                 <li key={idx} id={`wizard-review-prepaid-block-${idx}`} className="space-y-1">
                   <p className="font-medium">
@@ -825,7 +827,22 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
                         </li>
                       ))}
                   </ul>
-                  {config ? (
+                  {config && config.issue_mode === 'cadence' ? (
+                    <p id={`wizard-review-prepaid-block-${idx}-summary`} className="text-[rgb(var(--color-text-500))]">
+                      {t('wizardReview.prepaid.cadenceSummary', {
+                        hours: minutesToHoursText(config.block_minutes),
+                        price: formatCurrency(fromMinorUnits(config.block_price, undefined, currencyCode), currencyCode),
+                        defaultValue: '{{hours}} h every billing period for {{price}}',
+                      })}
+                      {`, ${describeRollover(t, config.rollover_periods ?? 0)}`}
+                      {overageRateMinor !== undefined
+                        ? `, ${t('wizardReview.prepaid.overageRate', {
+                            rate: formatCurrency(fromMinorUnits(overageRateMinor, undefined, currencyCode), currencyCode),
+                            defaultValue: 'overage {{rate}}/h',
+                          })}`
+                        : ''}
+                    </p>
+                  ) : config ? (
                     <p className="text-[rgb(var(--color-text-500))]">
                       {t('wizardReview.prepaid.blockSummary', {
                         hours: minutesToHoursText(config.block_minutes),
