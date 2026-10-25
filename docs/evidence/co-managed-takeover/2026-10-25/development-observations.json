@@ -1,0 +1,54 @@
+{
+  "recordedAt": "2026-10-25T01:17:25.522413+00:00",
+  "testedSourceRevision": "4305dac1a97f004e963c390e585fb1437f79e5f0",
+  "runtime": "development",
+  "origin": "http://feature-co-managed-it.localhost:3374",
+  "productionAcceptance": false,
+  "canonicalCommandlessEnsure": "succeeded, created=false, service dev-server:24",
+  "openReview": {
+    "signedInAs": "qa@emeraldcity.oz",
+    "verifiedBy": "workflow-open-review and independent /api/auth/session in card review pane"
+  },
+  "identities": {
+    "mspTenant": "24ac76c8-df59-4b10-8371-c56222904580",
+    "customerTenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+    "relationshipId": "c7de2b20-f1d9-4374-b7bb-c223f681955e",
+    "ticketId": "cfff4242-7962-4100-a54c-687eaa540500"
+  },
+  "checks": [
+    {
+      "name": "Customer account root denied",
+      "actor": "alice@whiterabbit.test",
+      "route": "/msp/account",
+      "result": "Page not available after loading settled",
+      "httpStatus": 200
+    },
+    {
+      "name": "Customer ticket reads",
+      "actor": "alice@whiterabbit.test",
+      "route": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500",
+      "result": "Existing shared IT and customer-private notes visible; MSP-private body absent"
+    },
+    {
+      "name": "MSP ticket reads",
+      "actor": "qa@emeraldcity.oz",
+      "route": "http://feature-co-managed-it.localhost:3374/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500",
+      "result": "Existing shared IT and MSP-private notes visible; customer-private body absent"
+    },
+    {
+      "name": "Customer scope editor",
+      "actor": "alice@whiterabbit.test",
+      "route": "/msp/co-management",
+      "result": "Current scope controls and Save access rendered; no mutation submitted"
+    }
+  ],
+  "limitations": [
+    "Development observations only; no production review-app has been admitted.",
+    "The account child-path navigation timed out; root denial does not prove child-route behavior.",
+    "Existing-message visibility only; no new conversation/file/assignment/time/handoff/revocation commands executed.",
+    "Multipart pending/accepted action controls, Microsoft OIDC, provider/inbound and full native regressions remain incomplete.",
+    "Worker local compiler input audit is not proof of fresh emitted distributions or business behavior.",
+    "All fourteen production guide recordings remain missing."
+  ],
+  "evidenceDirectory": "/home/robert/card-reviews/co-managed-it-3363/evidence/takeover-20261025T0110Z"
+}
