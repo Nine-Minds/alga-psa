@@ -1,0 +1,41 @@
+{
+  "observedAt": "2026-10-25T02:03:08Z",
+  "runtimeSourceRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+  "actor": "qa@emeraldcity.oz",
+  "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+  "productAction": {
+    "route": "/msp/create-ticket -> /msp/tickets/12f53fbf-edec-47b8-bb2c-e4e70cbe1819",
+    "record": "TIC001020",
+    "title": "CM-DEPLOY-ACCEPTANCE-20261025-0158-WORKER",
+    "client": "Emerald City",
+    "initialState": "Native All Tickets list at 14 items; QA Tester authenticated in Emerald City.",
+    "action": "Created an explicitly labeled MSP-only acceptance ticket with the browser UI.",
+    "persistedAfterReload": "Ticket detail reloaded successfully; TIC001020 and its description remained visible. The native list count advanced to 15.",
+    "result": "Create + View Ticket succeeded; this record is retained as test history."
+  },
+  "workflowWorker": {
+    "pid": 1949120,
+    "cwd": "/home/robert/alga-copies/feature-co-managed-it/services/workflow-worker",
+    "consumer": "consumer-1949120-308d2fae",
+    "group": "workflow-runtime-v2",
+    "stream": "workflow:events:global",
+    "eventType": "TICKET_CREATED",
+    "eventId": "fe19ca7c-3a17-4513-8b69-d1979eba13ca",
+    "streamMessageId": "1792893767326-0",
+    "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+    "payloadSchemaRef": "payload.TicketCreated.v1",
+    "correlationKey": "12f53fbf-edec-47b8-bb2c-e4e70cbe1819",
+    "correlationSource": "derived from paths:ticketId",
+    "matching": { "totalWorkflows": 3, "matchingWorkflows": 2, "startedRuns": 0, "signaledRuns": 0, "pausedMatches": 2 },
+    "acknowledged": true,
+    "effectVerdict": "Event schema validation, tenant correlation, workflow matching, paused-state filtering, and stream acknowledgement were observed. No business workflow run started because both matching workflows are paused; this does not pass automation completion acceptance.",
+    "log": ".card-service-logs/workflow-worker.log lines 127012-127052"
+  },
+  "temporalWorker": {
+    "pid": 1949060,
+    "cwd": "/home/robert/alga-copies/feature-co-managed-it/ee/temporal-workflows",
+    "health": "HTTP 200; five queues RUNNING",
+    "effect": "No Temporal run was started by this event; Temporal was not credited with a business effect."
+  },
+  "runtimeLimitation": "Ticket and global live-token endpoints fail because HOCUSPOCUS_JWT_SECRET is absent in the production review process. The UI reports live updates offline. No live collaborative update was verified."
+}

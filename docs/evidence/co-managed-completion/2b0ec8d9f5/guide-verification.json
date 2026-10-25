@@ -1,0 +1,327 @@
+{
+  "observedAt": "2026-10-25T02:00:25Z",
+  "packetRevision": "2b0ec8d9f541264a615933e6ab8a6c851da65f37",
+  "applicationBuildRevision": "adeabb3274fc18a62a101238c67729cd23435afb",
+  "method": "Used the card review browser pane to navigate the main guide, collection and all twelve section pages and inspect blocked player controls. Direct HTTP GET verified each guide JSON and chapter scaffold returns 200 and each expected WebM path returns 404.",
+  "pages": [
+    {
+      "guide": "index.html",
+      "browserTitle": "Co-Managed IT \u00b7 review blocked",
+      "http": 200,
+      "recordingStatus": "blocked",
+      "webm": {
+        "present": false,
+        "http": 404
+      },
+      "chapterVtt": {
+        "present": true,
+        "http": 200,
+        "contents": "blocked notice; no timed chapters claimed"
+      },
+      "recordingJson": {
+        "present": true,
+        "http": 200,
+        "status": "blocked"
+      },
+      "browserPlayback": "not verifiable without WebM",
+      "browserChapterSeek": "not verifiable; chapter selector disabled"
+    },
+    {
+      "guide": "guides/index.html",
+      "browserTitle": "Co-Managed IT review guides \u00b7 Co-Managed IT",
+      "http": 200,
+      "recordingStatus": "blocked",
+      "webm": {
+        "present": false,
+        "http": 404
+      },
+      "chapterVtt": {
+        "present": true,
+        "http": 200,
+        "contents": "blocked notice; no timed chapters claimed"
+      },
+      "recordingJson": {
+        "present": true,
+        "http": 200,
+        "status": "blocked"
+      },
+      "browserPlayback": "not verifiable without WebM",
+      "browserChapterSeek": "not verifiable; chapter selector disabled"
+    },
+    {
+      "guide": "guides/01-onboarding.html",
+      "browserTitle": "Customer onboarding \u00b7 Co-Managed IT",
+      "http": 200,
+      "recordingStatus": "blocked",
+      "webm": {
+        "present": false,
+        "http": 404
+      },
+      "chapterVtt": {
+        "present": true,
+        "http": 200,
+        "contents": "blocked notice; no timed chapters claimed"
+      },
+      "recordingJson": {
+        "present": true,
+        "http": 200,
+        "status": "blocked"
+      },
+      "browserPlayback": "not verifiable without WebM",
+      "browserChapterSeek": "not verifiable; chapter selector disabled"
+    },
+    {
+      "guide": "guides/02-licensing-and-seats.html",
+      "browserTitle": "Licensing and seats \u00b7 Co-Managed IT",
+      "http": 200,
+      "recordingStatus": "blocked",
+      "webm": {
+        "present": false,
+        "http": 404
+      },
+      "chapterVtt": {
+        "present": true,
+        "http": 200,
+        "contents": "blocked notice; no timed chapters claimed"
+      },
+      "recordingJson": {
+        "present": true,
+        "http": 200,
+        "status": "blocked"
+      },
+      "browserPlayback": "not verifiable without WebM",
+      "browserChapterSeek": "not verifiable; chapter selector disabled"
+    },
+    {
+      "guide": "guides/03-access-policies.html",
+      "browserTitle": "Access policies \u00b7 Co-Managed IT",
+      "http": 200,
+      "recordingStatus": "blocked",
+      "webm": {
+        "present": false,
+        "http": 404
+      },
+      "chapterVtt": {
+        "present": true,
+        "http": 200,
+        "contents": "blocked notice; no timed chapters claimed"
+      },
+      "recordingJson": {
+        "present": true,
+        "http": 200,
+        "status": "blocked"
+      },
+      "browserPlayback": "not verifiable without WebM",
+      "browserChapterSeek": "not verifiable; chapter selector disabled"
+    },
+    {
+      "guide": "guides/04-delegated-administration.html",
+      "browserTitle": "Delegated administration \u00b7 Co-Managed IT",
+      "http": 200,
+      "recordingStatus": "blocked",
+      "webm": {
+        "present": false,
+        "http": 404
+      },
+      "chapterVtt": {
+        "present": true,
+        "http": 200,
+        "contents": "blocked notice; no timed chapters claimed"
+      },
+      "recordingJson": {
+        "present": true,
+        "http": 200,
+        "status": "blocked"
+      },
+      "browserPlayback": "not verifiable without WebM",
+      "browserChapterSeek": "not verifiable; chapter selector disabled"
+    },
+    {
+      "guide": "guides/05-ticket-queue.html",
+      "browserTitle": "Ticket queue operations \u00b7 Co-Managed IT",
+      "http": 200,
+      "recordingStatus": "blocked",
+      "webm": {
+        "present": false,
+        "http": 404
+      },
+      "chapterVtt": {
+        "present": true,
+        "http": 200,
+        "contents": "blocked notice; no timed chapters claimed"
+      },
+      "recordingJson": {
+        "present": true,
+        "http": 200,
+        "status": "blocked"
+      },
+      "browserPlayback": "not verifiable without WebM",
+      "browserChapterSeek": "not verifiable; chapter selector disabled"
+    },
+    {
+      "guide": "guides/06-projects-and-tasks.html",
+      "browserTitle": "Projects and tasks \u00b7 Co-Managed IT",
+      "http": 200,
+      "recordingStatus": "blocked",
+      "webm": {
+        "present": false,
+        "http": 404
+      },
+      "chapterVtt": {
+        "present": true,
+        "http": 200,
+        "contents": "blocked notice; no timed chapters claimed"
+      },
+      "recordingJson": {
+        "present": true,
+        "http": 200,
+        "status": "blocked"
+      },
+      "browserPlayback": "not verifiable without WebM",
+      "browserChapterSeek": "not verifiable; chapter selector disabled"
+    },
+    {
+      "guide": "guides/07-conversations-and-files.html",
+      "browserTitle": "Conversations and files \u00b7 Co-Managed IT",
+      "http": 200,
+      "recordingStatus": "blocked",
+      "webm": {
+        "present": false,
+        "http": 404
+      },
+      "chapterVtt": {
+        "present": true,
+        "http": 200,
+        "contents": "blocked notice; no timed chapters claimed"
+      },
+      "recordingJson": {
+        "present": true,
+        "http": 200,
+        "status": "blocked"
+      },
+      "browserPlayback": "not verifiable without WebM",
+      "browserChapterSeek": "not verifiable; chapter selector disabled"
+    },
+    {
+      "guide": "guides/08-sla.html",
+      "browserTitle": "SLA configuration \u00b7 Co-Managed IT",
+      "http": 200,
+      "recordingStatus": "blocked",
+      "webm": {
+        "present": false,
+        "http": 404
+      },
+      "chapterVtt": {
+        "present": true,
+        "http": 200,
+        "contents": "blocked notice; no timed chapters claimed"
+      },
+      "recordingJson": {
+        "present": true,
+        "http": 200,
+        "status": "blocked"
+      },
+      "browserPlayback": "not verifiable without WebM",
+      "browserChapterSeek": "not verifiable; chapter selector disabled"
+    },
+    {
+      "guide": "guides/09-time-and-billing.html",
+      "browserTitle": "Time approval and billing \u00b7 Co-Managed IT",
+      "http": 200,
+      "recordingStatus": "blocked",
+      "webm": {
+        "present": false,
+        "http": 404
+      },
+      "chapterVtt": {
+        "present": true,
+        "http": 200,
+        "contents": "blocked notice; no timed chapters claimed"
+      },
+      "recordingJson": {
+        "present": true,
+        "http": 200,
+        "status": "blocked"
+      },
+      "browserPlayback": "not verifiable without WebM",
+      "browserChapterSeek": "not verifiable; chapter selector disabled"
+    },
+    {
+      "guide": "guides/10-departure-and-archives.html",
+      "browserTitle": "Departure and archives \u00b7 Co-Managed IT",
+      "http": 200,
+      "recordingStatus": "blocked",
+      "webm": {
+        "present": false,
+        "http": 404
+      },
+      "chapterVtt": {
+        "present": true,
+        "http": 200,
+        "contents": "blocked notice; no timed chapters claimed"
+      },
+      "recordingJson": {
+        "present": true,
+        "http": 200,
+        "status": "blocked"
+      },
+      "browserPlayback": "not verifiable without WebM",
+      "browserChapterSeek": "not verifiable; chapter selector disabled"
+    },
+    {
+      "guide": "guides/11-export-restore-and-upgrade.html",
+      "browserTitle": "Export, restore and independence \u00b7 Co-Managed IT",
+      "http": 200,
+      "recordingStatus": "blocked",
+      "webm": {
+        "present": false,
+        "http": 404
+      },
+      "chapterVtt": {
+        "present": true,
+        "http": 200,
+        "contents": "blocked notice; no timed chapters claimed"
+      },
+      "recordingJson": {
+        "present": true,
+        "http": 200,
+        "status": "blocked"
+      },
+      "browserPlayback": "not verifiable without WebM",
+      "browserChapterSeek": "not verifiable; chapter selector disabled"
+    },
+    {
+      "guide": "guides/12-customer-integrations.html",
+      "browserTitle": "Customer-owned integrations \u00b7 Co-Managed IT",
+      "http": 200,
+      "recordingStatus": "blocked",
+      "webm": {
+        "present": false,
+        "http": 404
+      },
+      "chapterVtt": {
+        "present": true,
+        "http": 200,
+        "contents": "blocked notice; no timed chapters claimed"
+      },
+      "recordingJson": {
+        "present": true,
+        "http": 200,
+        "status": "blocked"
+      },
+      "browserPlayback": "not verifiable without WebM",
+      "browserChapterSeek": "not verifiable; chapter selector disabled"
+    }
+  ],
+  "summary": {
+    "guides": 14,
+    "pagesLoaded": 14,
+    "recordingJsonPresent": 14,
+    "chapterVttPresent": 14,
+    "webmPresent": 0,
+    "genuineRecordings": 0,
+    "playbackVerified": 0,
+    "chapterSeekingVerified": 0
+  },
+  "limitation": "Page links and blocked state are verified; media playback and chapter seeking cannot be verified until genuine WebM walkthroughs exist."
+}
