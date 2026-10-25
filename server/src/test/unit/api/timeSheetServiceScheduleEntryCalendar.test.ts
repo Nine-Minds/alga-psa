@@ -35,6 +35,12 @@ function fakeTable(name: string, tenant: string) {
     },
     first: async () => rows()[0],
     pluck: async (column: string) => rows().map((row) => row[column]),
+    select: async (...columns: Array<string | string[]>) => {
+      const picked = columns.flat();
+      return rows().map((row) =>
+        picked.length === 0 ? { ...row } : Object.fromEntries(picked.map((column) => [column, row[column]])),
+      );
+    },
     update: async (data: any) => {
       state.updates.push({ table: name, data });
       rows().forEach((row) => Object.assign(row, data));
