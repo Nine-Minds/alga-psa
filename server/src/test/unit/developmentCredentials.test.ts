@@ -16,6 +16,7 @@ vi.mock('@alga-psa/db', () => ({ getTenantIdBySlug: vi.fn() }));
 // authenticateUser consults the tenant login policy (via passwordLoginGate); return the all-off default
 // so the test does not open an admin DB connection.
 vi.mock('@alga-psa/auth/lib/authPolicyStore', () => ({
+  listBreakGlassCandidates: vi.fn(async () => []),
   loadTenantAuthPolicy: vi.fn(async () => ({
     requireSsoForInternalUsers: false,
     require2faForInternalUsers: false,

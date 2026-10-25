@@ -24,6 +24,8 @@ const subject = (over: Partial<PolicySubject> = {}): PolicySubject => ({
   userType: 'internal',
   twoFactorEnabled: false,
   knownDeviceSkipEnabled: false,
+  isInactive: false,
+  isAdmin: false,
   ...over,
 });
 
@@ -66,7 +68,7 @@ describe('defaults leave login behavior unchanged', () => {
         policy(),
       ),
     ).toBe(false);
-    expect(isPasswordResetAllowed({ userId: 'u1', userType: 'internal' }, policy())).toBe(true);
+    expect(isPasswordResetAllowed(subject(), policy())).toBe(true);
   });
 });
 
@@ -83,23 +85,58 @@ describe('SSO required', () => {
     expect(evaluatePasswordLogin(subject({ userType: 'client' }), sso)).toEqual({ outcome: 'allow' });
   });
 
-  it('lets break-glass users in only with TOTP and never with the known-device skip', () => {
-    expect(
-      evaluatePasswordLogin(
-        subject({ userId: 'bg', twoFactorEnabled: true, knownDeviceSkipEnabled: true }),
-        policy({ ...sso, allowKnownDevice2faSkip: true }),
-      ),
-    ).toEqual({ outcome: 'require-2fa', allowKnownDeviceSkip: false, policyEnforced: true });
+  const listed = (over: Partial<PolicySubject> = {}) =>
+    subject({ userId: 'bg', isAdmin: true, twoFactorEnabled: true, ...over });
+  const ssoSkipOn = policy({ ...sso, allowKnownDevice2faSkip: true });
+
+  it('lets an eligible break-glass user in only with TOTP and never with the known-device skip', () => {
+    expect(evaluatePasswordLogin(listed({ knownDeviceSkipEnabled: true }), ssoSkipOn)).toEqual({
+      outcome: 'require-2fa',
+      allowKnownDeviceSkip: false,
+      policyEnforced: true,
+    });
   });
 
-  it('sends a break-glass user without 2FA to enrollment rather than letting the password through', () => {
-    expect(evaluatePasswordLogin(subject({ userId: 'bg' }), sso)).toEqual({ outcome: 'require-2fa-enrollment' });
+  it.each([
+    ['2FA was reset', { twoFactorEnabled: false }],
+    ['demoted (not admin)', { isAdmin: false }],
+    ['inactive', { isInactive: true }],
+  ])('denies a listed break-glass user who is no longer eligible: %s', (_name, over) => {
+    const decision = evaluatePasswordLogin(listed(over), sso);
+    expect(decision).toEqual({ outcome: 'deny-sso-required' });
+    expect(refusalReasonForDecision(decision)).toBe('sso_required');
   });
 
-  it('blocks password reset for non-break-glass internal users only', () => {
-    expect(isPasswordResetAllowed({ userId: 'u1', userType: 'internal' }, sso)).toBe(false);
-    expect(isPasswordResetAllowed({ userId: 'bg', userType: 'internal' }, sso)).toBe(true);
-    expect(isPasswordResetAllowed({ userId: 'c1', userType: 'client' }, sso)).toBe(true);
+  it('never returns require-2fa-enrollment for any break-glass state under SSO-required', () => {
+    for (const twoFactorEnabled of [true, false]) {
+      for (const isAdmin of [true, false]) {
+        for (const isInactive of [true, false]) {
+          const d = evaluatePasswordLogin(listed({ twoFactorEnabled, isAdmin, isInactive }), sso);
+          expect(d.outcome).not.toBe('require-2fa-enrollment');
+        }
+      }
+    }
+  });
+
+  describe('password reset gate', () => {
+    const ok = { isAdmin: true, isInactive: false, twoFactorEnabled: true };
+    it.each([
+      ['2FA was reset', { twoFactorEnabled: false }],
+      ['demoted', { isAdmin: false }],
+      ['inactive', { isInactive: true }],
+    ])('refuses a listed but ineligible user: %s', (_name, over) => {
+      expect(isPasswordResetAllowed({ userId: 'bg', userType: 'internal', ...ok, ...over }, sso)).toBe(false);
+    });
+    it('allows listed eligible; refuses unlisted internal; never affects clients', () => {
+      expect(isPasswordResetAllowed({ userId: 'bg', userType: 'internal', ...ok }, sso)).toBe(true);
+      expect(isPasswordResetAllowed({ userId: 'u1', userType: 'internal', ...ok }, sso)).toBe(false);
+      expect(
+        isPasswordResetAllowed(
+          { userId: 'c1', userType: 'client', isAdmin: false, isInactive: false, twoFactorEnabled: false },
+          sso,
+        ),
+      ).toBe(true);
+    });
   });
 });
 

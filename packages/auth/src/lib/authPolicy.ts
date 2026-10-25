@@ -87,6 +87,10 @@ export interface PolicySubject {
   twoFactorEnabled: boolean;
   /** The existing per-user flag (`two_factor_required_new_device`): skip TOTP on a recognised device. */
   knownDeviceSkipEnabled: boolean;
+  /** Deactivated account. Only consulted for break-glass eligibility under SSO-required. */
+  isInactive: boolean;
+  /** Holds the internal admin role. Only consulted for break-glass eligibility under SSO-required. */
+  isAdmin: boolean;
 }
 
 export type PasswordLoginDecision =
@@ -106,6 +110,19 @@ export function isBreakGlassUser(policy: TenantAuthPolicy, userId: string): bool
   return policy.passwordBreakGlassUserIds.includes(userId);
 }
 
+/** Current break-glass eligibility of a subject: the same rule the save-time guard and settings card use. */
+function isEligibleBreakGlassSubject(
+  subject: Pick<PolicySubject, 'userId' | 'userType' | 'isInactive' | 'isAdmin' | 'twoFactorEnabled'>,
+): boolean {
+  return isValidBreakGlassCandidate({
+    userId: subject.userId,
+    userType: subject.userType,
+    isInactive: subject.isInactive,
+    isAdmin: subject.isAdmin,
+    twoFactorEnabled: subject.twoFactorEnabled,
+  });
+}
+
 /**
  * Decide what a successful password check is allowed to become.
  *
@@ -122,10 +139,13 @@ export function evaluatePasswordLogin(
     if (!isBreakGlassUser(policy, subject.userId)) {
       return { outcome: 'deny-sso-required' };
     }
+    // A listed user who is no longer eligible (2FA reset, demoted, deactivated) gets no
+    // password path at all: enrolling a fresh authenticator on a password alone is an SSO bypass.
+    if (!isEligibleBreakGlassSubject(subject)) {
+      return { outcome: 'deny-sso-required' };
+    }
     // Break-glass: password only ever together with TOTP; the known-device skip is never allowed.
-    return subject.twoFactorEnabled
-      ? { outcome: 'require-2fa', allowKnownDeviceSkip: false, policyEnforced: true }
-      : { outcome: 'require-2fa-enrollment' };
+    return { outcome: 'require-2fa', allowKnownDeviceSkip: false, policyEnforced: true };
   }
 
   const twoFactorRequiredByPolicy =
@@ -182,18 +202,18 @@ export type PasswordAuthSurface =
 
 /**
  * Should a password reset be honoured for this user? Under SSO-required, an
- * internal non-break-glass user must not be able to request or complete a reset.
+ * internal user who is not a currently eligible break-glass admin must not be able to request or complete a reset.
  * (Even though a reset never itself creates a session, the reset email and the
  * new password would otherwise be a standing invitation to password login.)
  */
 export function isPasswordResetAllowed(
-  subject: Pick<PolicySubject, 'userId' | 'userType'>,
+  subject: Pick<PolicySubject, 'userId' | 'userType' | 'isInactive' | 'isAdmin' | 'twoFactorEnabled'>,
   policy: TenantAuthPolicy,
 ): boolean {
   if (subject.userType !== 'internal' || !policy.requireSsoForInternalUsers) {
     return true;
   }
-  return isBreakGlassUser(policy, subject.userId);
+  return isBreakGlassUser(policy, subject.userId) && isEligibleBreakGlassSubject(subject);
 }
 
 export interface TokenAuthClaims {

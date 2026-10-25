@@ -5,6 +5,7 @@ import logger from '@alga-psa/core/logger';
 import type { IUser } from '@alga-psa/types';
 import {
   evaluatePasswordLogin,
+  isBreakGlassUser,
   isPasswordResetAllowed,
   isPasswordSessionRevokedByPolicy,
   refusalReasonForDecision,
@@ -13,7 +14,7 @@ import {
   type PolicySubject,
   type TenantAuthPolicy,
 } from './authPolicy';
-import { loadTenantAuthPolicy, recordLoginRefusal } from './authPolicyStore';
+import { listBreakGlassCandidates, loadTenantAuthPolicy, recordLoginRefusal } from './authPolicyStore';
 
 /**
  * Shared enforcement for every surface that turns a verified password into a
@@ -48,7 +49,29 @@ export function toPolicySubject(user: IUser): PolicySubject {
     userType,
     twoFactorEnabled: Boolean(user.two_factor_enabled),
     knownDeviceSkipEnabled: Boolean((user as any).two_factor_required_new_device),
+    // IUser carries no role data; resolvePolicySubject fills these in when eligibility matters.
+    isInactive: Boolean(user.is_inactive),
+    isAdmin: false,
   };
+}
+
+/**
+ * Policy subject with break-glass eligibility data. The extra admin-role lookup
+ * only runs for an internal, break-glass-listed user while SSO is required; every
+ * other login skips it. Throws if the lookup fails (callers fail closed).
+ */
+async function resolvePolicySubject(user: IUser, policy: TenantAuthPolicy): Promise<PolicySubject> {
+  const subject = toPolicySubject(user);
+  if (
+    subject.userType === 'internal' &&
+    policy.requireSsoForInternalUsers &&
+    isBreakGlassUser(policy, subject.userId)
+  ) {
+    const [candidate] = await listBreakGlassCandidates(user.tenant, [subject.userId]);
+    // A user the lookup cannot find is not eligible.
+    return { ...subject, isAdmin: Boolean(candidate?.isAdmin), isInactive: candidate ? candidate.isInactive : true };
+  }
+  return subject;
 }
 
 /** Evaluate without side effects. Fails closed: a policy that cannot be read throws. */
@@ -56,7 +79,7 @@ export async function resolvePasswordLoginDecision(
   user: IUser,
 ): Promise<{ decision: PasswordLoginDecision; policy: TenantAuthPolicy }> {
   const policy = await loadTenantAuthPolicy(user.tenant);
-  return { decision: evaluatePasswordLogin(toPolicySubject(user), policy), policy };
+  return { decision: evaluatePasswordLogin(await resolvePolicySubject(user, policy), policy), policy };
 }
 
 /**
@@ -212,7 +235,13 @@ export async function isPasswordResetPermitted(
   }
   try {
     const policy = await loadTenantAuthPolicy(user.tenant);
-    if (isPasswordResetAllowed({ userId: String(user.user_id), userType: 'internal' }, policy)) {
+    const userId = String(user.user_id);
+    let eligibility = { isInactive: true, isAdmin: false, twoFactorEnabled: false };
+    if (policy.requireSsoForInternalUsers && isBreakGlassUser(policy, userId)) {
+      const [candidate] = await listBreakGlassCandidates(user.tenant, [userId]);
+      if (candidate) eligibility = candidate;
+    }
+    if (isPasswordResetAllowed({ userId, userType: 'internal', ...eligibility }, policy)) {
       return true;
     }
   } catch (error) {

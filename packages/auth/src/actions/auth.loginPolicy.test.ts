@@ -5,6 +5,7 @@ const findUsersByEmailAndTypeMock = vi.fn();
 const verifyPasswordMock = vi.fn();
 const loadTenantAuthPolicyMock = vi.fn();
 const recordLoginRefusalMock = vi.fn();
+const listBreakGlassCandidatesMock = vi.fn();
 
 vi.mock('@alga-psa/db/models/user', () => ({
   default: {
@@ -30,6 +31,7 @@ vi.mock('../lib/winback/enterpriseWinbackEntry', () => ({
 vi.mock('../lib/authPolicyStore', () => ({
   loadTenantAuthPolicy: (...args: unknown[]) => loadTenantAuthPolicyMock(...args),
   recordLoginRefusal: (...args: unknown[]) => recordLoginRefusalMock(...args),
+  listBreakGlassCandidates: (...args: unknown[]) => listBreakGlassCandidatesMock(...args),
 }));
 
 import { authenticateUser } from './auth';
@@ -91,7 +93,27 @@ describe('authenticateUser login policy gate', () => {
   it('lets a break-glass user past the SSO denial', async () => {
     loadTenantAuthPolicyMock.mockResolvedValue({ ...OFF, requireSsoForInternalUsers: true, passwordBreakGlassUserIds: ['u1'] });
     findUserByEmailAndTypeMock.mockResolvedValue(user('internal', { two_factor_enabled: true }));
+    listBreakGlassCandidatesMock.mockResolvedValue([
+      { userId: 'u1', userType: 'internal', isInactive: false, isAdmin: true, twoFactorEnabled: true },
+    ]);
     await expect(authenticateUser('pat@example.com', 'pw', 'internal')).resolves.toMatchObject({ user_id: 'u1' });
+  });
+
+  it('refuses a listed user who lost eligibility (2FA reset, demoted) instead of enrolling', async () => {
+    loadTenantAuthPolicyMock.mockResolvedValue({ ...OFF, requireSsoForInternalUsers: true, passwordBreakGlassUserIds: ['u1'] });
+    findUserByEmailAndTypeMock.mockResolvedValue(user('internal', { two_factor_enabled: false }));
+    listBreakGlassCandidatesMock.mockResolvedValue([
+      { userId: 'u1', userType: 'internal', isInactive: false, isAdmin: true, twoFactorEnabled: false },
+    ]);
+    await expect(authenticateUser('pat@example.com', 'pw', 'internal')).rejects.toMatchObject({ code: 'SSO_REQUIRED' });
+    expect(recordLoginRefusalMock).toHaveBeenCalledWith(expect.objectContaining({ reason: 'sso_required' }));
+  });
+
+  it('fails closed when the break-glass eligibility lookup throws', async () => {
+    loadTenantAuthPolicyMock.mockResolvedValue({ ...OFF, requireSsoForInternalUsers: true, passwordBreakGlassUserIds: ['u1'] });
+    findUserByEmailAndTypeMock.mockResolvedValue(user('internal', { two_factor_enabled: true }));
+    listBreakGlassCandidatesMock.mockRejectedValue(new Error('db down'));
+    await expect(authenticateUser('pat@example.com', 'pw', 'internal')).rejects.toBeDefined();
   });
 
   it('never applies the SSO requirement to client users', async () => {
