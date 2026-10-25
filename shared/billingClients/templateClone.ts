@@ -207,6 +207,8 @@ export async function cloneTemplateLinePoolsDetailed(
 type AmountReader = ReturnType<typeof legacyCloneAmountReader>;
 
 const PREPAID_BLOCK_CONFIG_COLUMNS = [
+  'issue_mode',
+  'rollover_periods',
   'block_minutes',
   'block_price',
   'expiry_months',

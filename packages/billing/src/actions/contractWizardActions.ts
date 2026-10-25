@@ -2871,6 +2871,8 @@ export const getDraftContractForResume = withAuth(async (
           ),
         })),
         block: {
+          issue_mode: prepaidConfig.issue_mode ?? 'consumption',
+          rollover_periods: Number(prepaidConfig.rollover_periods ?? 0),
           block_minutes: Number(prepaidConfig.block_minutes),
           block_price: Number(prepaidConfig.block_price),
           sold_as_service_id: prepaidConfig.sold_as_service_id ?? null,

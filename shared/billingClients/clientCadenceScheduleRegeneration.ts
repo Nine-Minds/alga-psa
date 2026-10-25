@@ -588,6 +588,34 @@ async function computeClientCadenceRegeneration(
         plan,
       });
     }
+
+    // A line that no longer has the block stream (a cadence block switched back to consumption,
+    // or its config removed) must not keep unbilled block periods that could still come due.
+    // Billed and protected (edited/locked) rows are preserved by the shared plan.
+    const vanishedBlockRecords = allExistingRecords.filter(
+      (record) => streamForChargeFamily(record.sourceObligation.chargeFamily) === 'prepaid_block',
+    );
+    const hasBlockStream = contractLineRecurringStreams(
+      obligation,
+      { issue_mode: obligation.prepaid_block_issue_mode ?? null },
+    ).some((entry) => entry.stream === 'prepaid_block');
+    if (!hasBlockStream && vanishedBlockRecords.length > 0) {
+      const plan = backfillRecurringServicePeriods({
+        candidateRecords: [],
+        existingRecords: vanishedBlockRecords,
+        backfilledAt: materializedAt,
+        sourceRuleVersion,
+        sourceRunKey,
+        regenerationReasonCode: 'billing_schedule_changed',
+        recordIdFactory: recurringServicePeriodRecordIdFactory,
+      });
+      obligationPlans.push({
+        obligationId: obligation.client_contract_line_id,
+        scheduleKey: vanishedBlockRecords[0].scheduleKey,
+        regenerationStart,
+        plan,
+      });
+    }
   }
 
   return { billedBoundaryEnd: clientBilledBoundaryEnd, obligationPlans };

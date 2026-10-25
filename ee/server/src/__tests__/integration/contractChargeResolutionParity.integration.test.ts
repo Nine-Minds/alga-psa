@@ -46,6 +46,12 @@ import { BillingEngine } from "@alga-psa/billing/lib/billing/billingEngine";
 import { syncPrepaidBlockIssuancesForContractLine } from "@alga-psa/billing/services/prepaidBlockIssuanceSync";
 import { generateInvoiceForNormalizedSelectionInputs } from "@alga-psa/billing/actions/invoiceGeneration";
 import { repairArrearsOnlyLineSchedulesForTenant } from "@alga-psa/billing/actions/arrearsOnlyLineRepair";
+import { fetchStrandedArrearsOnlyLineGaps } from "@alga-psa/billing/actions/arrearsOnlyLineGaps";
+import { repairAllClientCadenceServicePeriodsForTenant } from "@alga-psa/shared/billingClients/clientCadenceScheduleRegeneration";
+import {
+  removeContractLinePrepaidBlockInTransaction,
+  upsertContractLinePrepaidBlockInTransaction,
+} from "@alga-psa/billing/services/prepaidBlockConfigService";
 import { finalizeInvoiceWithKnex } from "@alga-psa/billing/actions/invoiceModification";
 import { materializeContractCadenceServicePeriodsForContract } from "@alga-psa/billing/actions/contractCadenceServicePeriodMaterialization";
 import {
@@ -645,6 +651,150 @@ describe("Contract charge resolution parity (simulator vs engine dry run)", () =
         lifecycle_state: "superseded",
       });
     expect(superseded).toEqual([]);
+  }, 180_000);
+
+  it("the tenant-wide repair's client-cadence pass and the stranded-gap reader leave cadence block rows alone", async () => {
+    const contract = await seedCadenceBlockContract(context, {
+      startDate: "2025-11-20",
+      clientCadence: {
+        servicePeriod: { start: "2025-11-20", end: "2025-12-15" },
+        window: { start: "2025-11-15", end: "2025-12-15" },
+      },
+    });
+    const blockRows = () =>
+      context
+        .db("recurring_service_periods")
+        .where({ tenant: context.tenantId, obligation_id: contract.hourlyLineId, charge_family: "prepaid_block" })
+        .whereNotIn("lifecycle_state", ["superseded", "archived"])
+        .orderBy("service_period_start")
+        .select("record_id", "due_position", "lifecycle_state", "period_key");
+    const before = await blockRows();
+    expect(before.length).toBeGreaterThan(0);
+
+    await context.db.transaction(async (trx) => {
+      await repairArrearsOnlyLineSchedulesForTenant(trx, { tenant: context.tenantId });
+      await repairAllClientCadenceServicePeriodsForTenant(trx, { tenant: context.tenantId });
+    });
+    // The client-cadence pass may backfill the block stream's horizon, but it keeps
+    // the existing rows as they were and never supersedes or re-times the stream.
+    const after = await blockRows();
+    expect(after.filter((row) => before.some((b) => b.record_id === row.record_id))).toEqual(before);
+    expect(after.every((row) => row.due_position === "advance")).toBe(true);
+
+    // A billed advance block period with no charge detail looks like a stranded
+    // hourly advance row to a careless reader; it must not be reported.
+    const now = new Date().toISOString();
+    await insertSupportedRows(context.db, "recurring_service_periods", [
+      {
+        tenant: context.tenantId,
+        record_id: uuidv4(),
+        schedule_key: `billed-block:${contract.hourlyLineId}`,
+        period_key: "2025-10-15:2025-11-15",
+        revision: 1,
+        obligation_id: contract.hourlyLineId,
+        charge_family: "prepaid_block",
+        cadence_owner: "client",
+        due_position: "advance",
+        lifecycle_state: "billed",
+        service_period_start: "2025-10-15",
+        service_period_end: "2025-11-15",
+        invoice_window_start: "2025-10-15",
+        invoice_window_end: "2025-11-15",
+        provenance_kind: "generated",
+        source_rule_version: "parity-v1",
+        reason_code: "initial_materialization",
+        source_run_key: "billed-block",
+        created_at: now,
+        updated_at: now,
+      },
+    ]);
+    const gaps = await fetchStrandedArrearsOnlyLineGaps(context.db, context.tenantId);
+    expect(gaps).toEqual([]);
+  }, 180_000);
+
+  it("switching a block line between cadence and consumption retires and restores the unbilled block stream", async () => {
+    const contract = await seedCadenceBlockContract(context, {});
+    const liveBlockRows = () =>
+      context
+        .db("recurring_service_periods")
+        .where({ tenant: context.tenantId, obligation_id: contract.hourlyLineId, charge_family: "prepaid_block" })
+        .whereNotIn("lifecycle_state", ["superseded", "archived"]);
+    const scheduledIssuances = async () =>
+      Number(
+        (
+          await context
+            .db("contract_line_block_issuances")
+            .where({ tenant: context.tenantId, contract_line_id: contract.hourlyLineId, status: "scheduled" })
+            .count({ count: "*" })
+            .first()
+        )?.count ?? 0,
+      );
+    const config = await context
+      .db("contract_line_prepaid_blocks")
+      .where({ tenant: context.tenantId, contract_line_id: contract.hourlyLineId })
+      .first();
+    const base = {
+      block_minutes: Number(config.block_minutes),
+      block_price: Number(config.block_price),
+      sold_as_service_id: config.sold_as_service_id,
+    };
+    expect((await liveBlockRows()).length).toBeGreaterThan(0);
+    expect(await scheduledIssuances()).toBe(0);
+
+    await context.db.transaction((trx) =>
+      upsertContractLinePrepaidBlockInTransaction(trx, context.tenantId, contract.hourlyLineId, {
+        ...base,
+        issue_mode: "consumption",
+        trigger_on_exhaustion: true,
+      }),
+    );
+    expect(await liveBlockRows()).toEqual([]);
+    expect(await scheduledIssuances()).toBeGreaterThan(0);
+
+    await context.db.transaction((trx) =>
+      upsertContractLinePrepaidBlockInTransaction(trx, context.tenantId, contract.hourlyLineId, {
+        ...base,
+        issue_mode: "cadence",
+        rollover_periods: 1,
+      }),
+    );
+    expect((await liveBlockRows()).length).toBeGreaterThan(0);
+    expect(await scheduledIssuances()).toBe(0);
+
+    await context.db.transaction((trx) =>
+      removeContractLinePrepaidBlockInTransaction(trx, context.tenantId, contract.hourlyLineId),
+    );
+    expect(await liveBlockRows()).toEqual([]);
+  }, 180_000);
+
+  it("a mode switch on a client-cadence line retires the block stream", async () => {
+    const contract = await seedCadenceBlockContract(context, {
+      startDate: "2025-11-20",
+      clientCadence: {
+        servicePeriod: { start: "2025-11-20", end: "2025-12-15" },
+        window: { start: "2025-11-15", end: "2025-12-15" },
+      },
+    });
+    const live = () =>
+      context
+        .db("recurring_service_periods")
+        .where({ tenant: context.tenantId, obligation_id: contract.hourlyLineId, charge_family: "prepaid_block" })
+        .whereNotIn("lifecycle_state", ["superseded", "archived"]);
+    expect((await live()).length).toBe(1);
+    const config = await context
+      .db("contract_line_prepaid_blocks")
+      .where({ tenant: context.tenantId, contract_line_id: contract.hourlyLineId })
+      .first();
+    await context.db.transaction((trx) =>
+      upsertContractLinePrepaidBlockInTransaction(trx, context.tenantId, contract.hourlyLineId, {
+        block_minutes: Number(config.block_minutes),
+        block_price: Number(config.block_price),
+        sold_as_service_id: config.sold_as_service_id,
+        issue_mode: "consumption",
+        trigger_on_exhaustion: true,
+      }),
+    );
+    expect(await live()).toEqual([]);
   }, 180_000);
 });
 
