@@ -37,6 +37,8 @@ vi.mock('@alga-psa/assets/lib/assetReadAuthorization', async (orig) => {
     ...actual,
     isAssetReadAllowed: async (...args: Parameters<typeof actual.isAssetReadAllowed>) =>
       denied.assetIds.has(args[3].asset_id) ? false : actual.isAssetReadAllowed(...args),
+    filterReadableAssets: async (...args: Parameters<typeof actual.filterReadableAssets>) =>
+      (await actual.filterReadableAssets(...args)).filter((a) => !denied.assetIds.has(a.asset_id)),
   };
 });
 
@@ -44,7 +46,7 @@ import {
   approveWarrantyClaim, cancelWarrantyClaim, closeWarrantyRma, denyWarrantyClaim, markDeviceReceived, openWarrantyClaim,
   receiveVendorReplacement, recordVendorCredit, recordVendorRepair, returnDeviceToClient, shipToVendor,
 } from './rmaWarrantyActions';
-import { closeRma, resolveRepair, receiveReturn, sendToVendor, resolveReplacement, resolveCredit, resolveScrap } from './rmaActions';
+import { getRmaCase, listRmaCases, closeRma, resolveRepair, receiveReturn, sendToVendor, resolveReplacement, resolveCredit, resolveScrap } from './rmaActions';
 import { openCustody } from '@alga-psa/assets/lib/custody/openCustody';
 import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
@@ -230,13 +232,34 @@ describe('warranty claims (C5)', () => {
       () => sendToVendor(c.rma_id, { vendor_id: VENDOR }),
       () => resolveRepair(c.rma_id, { location_id: LOCATION }),
       () => resolveReplacement(c.rma_id, { serial_number: 'S', location_id: LOCATION }),
-      () => resolveCredit(c.rma_id, {} as any),
-      () => resolveScrap(c.rma_id, {} as any),
+      () => resolveCredit(c.rma_id),
+      () => resolveScrap(c.rma_id),
       () => closeRma(c.rma_id),
     ]) {
       expect(await attempt()).toHaveProperty('actionError');
     }
     expect((await rmaRow(c.rma_id)).status).toBe('awaiting_return');
     expect(await counts()).toEqual(before);
+  });
+
+  it('reads: asset-linked cases honour the record-level check; warranty-only readers see no stock-unit RMAs', async () => {
+    const assetId = await newAsset();
+    await inCustody(assetId);
+    const c = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'x', ticket_id: TICKET }));
+    const row: any = ok(await getRmaCase(c.rma_id));
+    expect(row).toMatchObject({ asset_name: 'Dell WD19 dock', asset_serial_number: 'OLD-SERIAL', ticket_number: expect.any(String) });
+    expect((ok(await listRmaCases({ asset_id: assetId })) as any[]).map((r) => r.rma_id)).toEqual([c.rma_id]);
+
+    denied.assetIds.add(assetId);
+    expect(await getRmaCase(c.rma_id)).toBeNull();
+    expect((await listRmaCases({ asset_id: assetId })) as any[]).toHaveLength(0);
+    denied.assetIds.clear();
+
+    holder.grants = new Set(['warranty:read']);
+    const visible = (ok(await listRmaCases()) as any[]);
+    expect(visible.length).toBeGreaterThan(0);
+    expect(visible.every((r) => r.returned_unit_id === null)).toBe(true);
+    holder.grants = new Set(['asset:update']);
+    expect(await listRmaCases()).toHaveProperty('permissionError');
   });
 });
