@@ -48,10 +48,20 @@ describe('session utilities', () => {
     expect(getSessionCookieName()).toBe('authjs-port-23377.session-token');
   });
 
-  it('keeps secure production cookies unscoped when the public URL has no port', () => {
+  it('keeps the standard secure cookie name behind a port-forwarded production listener', () => {
     process.env.NODE_ENV = 'production';
     process.env.NEXTAUTH_URL = 'https://example.com';
+    process.env.PORT = '3000';
+    process.env.APP_PORT = '3000';
+    process.env.EXPOSE_SERVER_PORT = '3000';
     expect(getSessionCookieName()).toBe('__Secure-authjs.session-token');
+  });
+
+  it('scopes production cookies by a nondefault public URL port, not its listener port', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.NEXTAUTH_URL = 'https://example.com:8443';
+    process.env.PORT = '3000';
+    expect(getSessionCookieName()).toBe('__Secure-authjs-port-8443.session-token');
   });
 
   it('does not let a dev port cookie be parsed or cleared as a production token chunk', () => {
