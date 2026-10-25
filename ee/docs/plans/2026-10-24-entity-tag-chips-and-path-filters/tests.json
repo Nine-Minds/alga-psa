@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "Predicates conformance: the shared conformance table (scalar and set-valued paths, null and missing values, nested groups) passes on the in-memory evaluator",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F012",
@@ -17,7 +17,7 @@
   {
     "id": "T002",
     "description": "Predicates unit: zod schema accepts valid nested groups and rejects unknown operators, list values for single-value operators, and missing values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
@@ -25,7 +25,7 @@
   {
     "id": "T003",
     "description": "Predicates unit: query-schema validation rejects unknown paths and operators not allowed for an attribute",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F024"
@@ -34,7 +34,7 @@
   {
     "id": "T004",
     "description": "Predicates DB integration: the SQL compiler passes the full shared conformance table against a migrated schema (comparisons, in/not_in with NULLs, is_empty, tag relation in/not_in/is_empty)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F019",
@@ -47,7 +47,7 @@
   {
     "id": "T005",
     "description": "Predicates DB integration: self-or-any-child modifier matches a parent through a child on a one-relation and a tag relation, and compiled SQL never crosses tenants",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020",
       "F022"
@@ -56,7 +56,7 @@
   {
     "id": "T006",
     "description": "Workflow: existing conditionModel round-trip and WorkflowConditionBuilder tests pass with types imported from @alga-psa/predicates; temporal-workflows typecheck passes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025",
       "F026",
@@ -258,7 +258,7 @@
   {
     "id": "T026",
     "description": "Removal guard: repo search finds no is_vip, is_primary_contact, requester_vip or client_vip references and the flag migration is gone",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002",
@@ -273,7 +273,7 @@
   {
     "id": "T027",
     "description": "Workflow conformance: every conformance row the conditionModel adapter can represent, serialized through the adapter and evaluated by expressionEngine, matches the expected result; unrepresentable rows are flagged in the table",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076",
       "F025",
@@ -283,7 +283,7 @@
   {
     "id": "T028",
     "description": "Predicates unit: completeness check fails when an operator or path kind has no conformance row and passes for the shipped table",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F077",
       "F075"

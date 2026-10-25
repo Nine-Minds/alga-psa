@@ -69,6 +69,9 @@ export default defineConfig({
       // runtime) resolves its formatting dependency here. The package.json
       // exports point at dist/, which is not built in test environments, so map
       // it to source like the other workspace packages below.
+      { find: /^@alga-psa\/predicates$/, replacement: path.resolve(__dirname, '../../packages/predicates/src/index.ts') },
+      { find: /^@alga-psa\/predicates\/sql$/, replacement: path.resolve(__dirname, '../../packages/predicates/src/sql/index.ts') },
+      { find: /^@alga-psa\/predicates\/(.*)$/, replacement: path.resolve(__dirname, '../../packages/predicates/src/$1') },
       { find: /^@alga-psa\/formatting$/, replacement: path.resolve(__dirname, '../../packages/formatting/src/index.ts') },
       { find: /^@alga-psa\/formatting\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/formatting/src')}/$1` },
       // Workspace packages resolved from source — their package.json entries

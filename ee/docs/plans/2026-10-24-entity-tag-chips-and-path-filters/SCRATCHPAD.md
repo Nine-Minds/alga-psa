@@ -24,6 +24,12 @@
 - (2026-10-24, plan review) Computed attributes are fenced: enumerated in the ticket query schema file, each a named resolver with its own tests, and the only place raw SQL is allowed.
 - (2026-10-24, plan review) Open questions resolved: `settings:update` for display-rule writes; one readable versioned URL form; seed both VIP definitions; `maxBadges` fixed at 2.
 
+- (2026-10-25, implementation) `@alga-psa/predicates` ships as a prebuilt (tsup, `bundle: false`) package like `formatting`, not source-transpiled, so `server/next.config.mjs` has both a src alias and a `prebuiltDirAbs` alias. `shared` bundles it (`noExternal` in `shared/tsup.config.ts`), so the Temporal worker image needs no extra dist.
+- (2026-10-25, implementation) Complement operators (`not_in`, `is_empty`) compile as `NOT (positive form over the whole path)`. With a relation hop that is `NOT EXISTS`, so a missing relation row satisfies them. With `selfOrAnyChild` the negation wraps the whole self-or-any-child match: `contact.tags not_in [VIP]` excludes a bundle master whose child has a VIP requester.
+- (2026-10-25, implementation) `equals null` / `not_equals null` mean "no value" / "has a value" in the evaluator and the SQL compiler; zod and query-schema validation accept null for those two operators only.
+- (2026-10-25, implementation) The workflow engine throws "Expression result is not JSON-serializable" for ordering comparisons (`gt`..`lte`) on a missing value instead of returning false. Documented in SEMANTICS.md; the JSONata conformance harness maps that rejection to "not satisfied". JSONata also cannot represent set paths or null-vs-missing: those rows carry `skip.jsonata`.
+- (2026-10-25, implementation) SQL conformance and self-or-any-child tests use TEMP tables in a rolled-back transaction on the `postgres` database of the test container, so they need no migrated schema; the ticket-level suites use the migrated schema.
+
 ## Discoveries / Constraints
 
 - (2026-10-24) `tag_definitions` is unique on `(tenant, tag_text, tagged_type)`. "VIP" on a contact and "VIP" on a client are different definitions with different ids and colors.

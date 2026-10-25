@@ -153,5 +153,7 @@ export default defineConfig({
   ],
   noExternal: [
     /^@shared\//,
+    // Pure and sandbox-safe; bundled so the worker image needs no extra package dist.
+    /^@alga-psa\/predicates/,
   ],
 });

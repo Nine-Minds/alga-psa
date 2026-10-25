@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Delete migration 20261022120000_add_vip_and_primary_contact_flags.cjs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Removal of PR #3858 flags"
     ]
@@ -10,7 +10,7 @@
   {
     "id": "F002",
     "description": "Remove is_vip / is_primary_contact from contact and client interfaces, shared contact model, client and contact zod schemas",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Removal of PR #3858 flags"
     ]
@@ -18,7 +18,7 @@
   {
     "id": "F003",
     "description": "Remove is_vip / is_primary_contact from REST API contact and client schemas and ContactService / ClientService",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Removal of PR #3858 flags"
     ]
@@ -26,7 +26,7 @@
   {
     "id": "F004",
     "description": "Remove VIP / POC toggles from ContactDetailsEdit, QuickAddContact, ClientDetailsTabContent, Contacts and ClientDetails",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Removal of PR #3858 flags"
     ]
@@ -34,7 +34,7 @@
   {
     "id": "F005",
     "description": "Remove contact_is_vip / contact_is_primary_contact / client_is_vip from the ticket list select, mapTicketListItems and ITicketListItem",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Removal of PR #3858 flags"
     ]
@@ -42,7 +42,7 @@
   {
     "id": "F006",
     "description": "Remove requester_vip / client_vip from ITicketListFilters, ticket schemas, list-view and board schemas, URL parse/write, parseReturnFilters, the dashboard VIP toggle, reset and chip",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Removal of PR #3858 flags"
     ]
@@ -50,7 +50,7 @@
   {
     "id": "F007",
     "description": "Remove VipBadge / PocBadge usage from TicketBentoLayout, TicketProperties, ContactPicker and ticket-columns",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Removal of PR #3858 flags"
     ]
@@ -58,7 +58,7 @@
   {
     "id": "F008",
     "description": "Remove the VIP-specific tests and locale strings that the tag-based tests and strings replace",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Removal of PR #3858 flags"
     ]
@@ -66,7 +66,7 @@
   {
     "id": "F009",
     "description": "Keep the Contact column defaultVisible: true in ticketColumnCatalog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Removal of PR #3858 flags"
     ]
@@ -74,7 +74,7 @@
   {
     "id": "F010",
     "description": "Create packages/predicates (@alga-psa/predicates) as a source-transpiled horizontal leaf package with nx project, package.json and tests",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Shared predicate model"
     ]
@@ -82,7 +82,7 @@
   {
     "id": "F011",
     "description": "Wire @alga-psa/predicates aliases in tsconfig.base.json, server/tsconfig.json, ee/server/tsconfig.json, server/next.config.mjs (paths and transpile list) and ee/temporal-workflows/tsconfig.json; add dependency to shared/package.json",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Shared predicate model"
     ]
@@ -90,7 +90,7 @@
   {
     "id": "F012",
     "description": "PredicateClause and nestable PredicateGroup types",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Shared predicate model"
     ]
@@ -98,7 +98,7 @@
   {
     "id": "F013",
     "description": "Operator set using workflow condition names, with takesValue / takesList metadata",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Shared predicate model"
     ]
@@ -106,7 +106,7 @@
   {
     "id": "F014",
     "description": "Set-valued path semantics: in = has any of, not_in = has none of, is_empty / is_not_empty = no / some elements",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Shared predicate model"
     ]
@@ -114,7 +114,7 @@
   {
     "id": "F015",
     "description": "Shared null semantics: missing never satisfies comparisons, satisfies is_empty and not_in",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Shared predicate model"
     ]
@@ -122,7 +122,7 @@
   {
     "id": "F016",
     "description": "zod schema for predicate groups (storage and validation)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Shared predicate model"
     ]
@@ -130,7 +130,7 @@
   {
     "id": "F017",
     "description": "Deterministic in-memory evaluator over JSON values with no Node APIs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Shared predicate model"
     ]
@@ -138,7 +138,7 @@
   {
     "id": "F018",
     "description": "Query schema API: attributes (column or raw expression, type, allowed operators), relations (table, join keys, cardinality one/many)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Shared predicate model"
     ]
@@ -146,7 +146,7 @@
   {
     "id": "F019",
     "description": "Tag relation helper declaring <entity>.tags over tag_mappings / tag_definitions for a tagged_type",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Shared predicate model"
     ]
@@ -154,7 +154,7 @@
   {
     "id": "F020",
     "description": "SQL compiler (@alga-psa/predicates/sql, knex peer) that correlates every hop on tenant",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Shared predicate model"
     ]
@@ -162,7 +162,7 @@
   {
     "id": "F021",
     "description": "SQL compiler emits null-safe not_in (IS NULL OR NOT IN) and NOT EXISTS for set-valued not_in",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Shared predicate model"
     ]
@@ -170,7 +170,7 @@
   {
     "id": "F022",
     "description": "Root 'self or any child' modifier applied uniformly to every relation hop",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Shared predicate model"
     ]
@@ -186,7 +186,7 @@
   {
     "id": "F024",
     "description": "Validation rejects unknown paths and disallowed operators against a query schema",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Shared predicate model"
     ]
@@ -194,7 +194,7 @@
   {
     "id": "F025",
     "description": "Re-type conditionModel.ts clause, group and operator types as @alga-psa/predicates types; JSONata adapter behavior unchanged",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Workflow conditions on the shared model"
     ]
@@ -202,7 +202,7 @@
   {
     "id": "F026",
     "description": "Workflow designer condition builder and Temporal worker build and run against the shared types",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Workflow conditions on the shared model"
     ]
@@ -594,7 +594,7 @@
   {
     "id": "F075",
     "description": "Predicate semantics spec: packages/predicates/spec/SEMANTICS.md (operators, set-valued paths, null and missing values, coercion, string case rules, empty lists) and a JSON conformance table of (predicate, record, expected) rows, with rows the JSONata adapter cannot represent flagged",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Shared predicate model",
       "Design principles"
@@ -603,7 +603,7 @@
   {
     "id": "F076",
     "description": "Conformance runners: the in-memory evaluator, the SQL compiler against a migrated test database, and the workflow JSONata path (conditionModel adapter serialize + expressionEngine) each run the full conformance table",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Shared predicate model",
       "Workflow conditions on the shared model"
@@ -612,7 +612,7 @@
   {
     "id": "F077",
     "description": "Conformance completeness check: every operator x path kind (scalar, set-valued, missing) has at least one row",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Shared predicate model"
     ]
