@@ -69,9 +69,14 @@ function pickerLocalMidnightFor(isoDateOnly: string): Date {
   return new Date(y, m - 1, d, 0, 0, 0, 0);
 }
 
+// Probe a fixed instant inside the calendar window under test, never "now":
+// Europe/Berlin is only UTC+2 until the last Sunday of October, so a "now"
+// probe turned these summer offsets into a DST time bomb.
+const TZ_PROBE_MS = Date.UTC(2026, 7, 31, 12, 0, 0);
+
 function assertTz(zone: string, expectedOffsetMinutes: number) {
   process.env.TZ = zone;
-  expect(new Date().getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+  expect(new Date(TZ_PROBE_MS).getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
 }
 
 async function seedBase() {

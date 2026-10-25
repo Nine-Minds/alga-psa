@@ -161,10 +161,14 @@ async function insertBlock(
 
 // The burn engine's date normalization is process-timezone-dependent, so the
 // timezone regression tests pin TZ explicitly and guard that Node honored it
-// before asserting on dates.
+// before asserting on dates. The guard probes a fixed instant inside the
+// calendar window under test, never "now": Europe/Berlin is only UTC+2 until
+// the last Sunday of October, so a "now" probe expired with the season.
+const TZ_PROBE_MS = Date.UTC(2026, 7, 31, 12, 0, 0);
+
 function assertTz(zone: string, expectedOffsetMinutes: number) {
   process.env.TZ = zone;
-  expect(new Date().getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+  expect(new Date(TZ_PROBE_MS).getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
 }
 
 describe.runIf(enabled)('hourBlockService DB integration', () => {
