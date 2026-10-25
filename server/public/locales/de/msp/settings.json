@@ -2379,7 +2379,23 @@
         "nothingImportedBody": "Dieser Lauf hat keine neuen Datensätze erstellt. Jede Zeile entsprach etwas, das bereits vorhanden war, daher wurde nichts geändert.",
         "claimedBySamePackage": "Bereits durch dieses Paket migriert",
         "claimedByOtherPackage": "Bereits migriert durch {{file}}",
-        "claimedByExistingEntity": "Einer vorhandenen Entität zugeordnet"
+        "claimedByExistingEntity": "Einer vorhandenen Entität zugeordnet",
+        "matchedBySku": "Vorhandenem Produkt per SKU zugeordnet"
+      },
+      "spreadsheet": {
+        "entities": {
+          "products": "Produkte (Katalog / Preisliste)",
+          "vendorProducts": "Lieferantenpreisliste (Distributorkosten)"
+        },
+        "productsHint": "Preise und Kosten werden als Dezimalbeträge gelesen (z. B. 1.299,50 bzw. 1,299.50), mit der Währungsspalte, falls vorhanden, sonst mit der Mandantenwährung. Negative, nicht numerische oder zu genaue Beträge werden verworfen und gemeldet; die Zeile wird trotzdem importiert. Produkte werden über die SKU mit vorhandenen Produkten abgeglichen; Lieferantenpreislisten verweisen per SKU auf ein Produkt und legen den Lieferanten per Name an oder ordnen ihn zu."
+      },
+      "configure": {
+        "products": {
+          "title": "Produkte",
+          "serviceType": "Servicetyp für neue Produkte",
+          "serviceTypePlaceholder": "Servicetyp auswählen",
+          "serviceTypeHelp": "Produkte, deren SKU bereits existiert, werden zugeordnet und nicht verändert; nur neue Produkte werden diesem Servicetyp zugeordnet."
+        }
       }
     },
     "jobDetails": {

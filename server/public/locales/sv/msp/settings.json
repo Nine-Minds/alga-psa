@@ -2379,7 +2379,23 @@
         "nothingImportedBody": "Körningen skapade inga nya poster. Varje rad matchade något som redan fanns, så inget ändrades.",
         "claimedBySamePackage": "Redan migrerad av detta paket",
         "claimedByOtherPackage": "Redan migrerad av {{file}}",
-        "claimedByExistingEntity": "Matchad mot ett befintligt objekt"
+        "claimedByExistingEntity": "Matchad mot ett befintligt objekt",
+        "matchedBySku": "Matchad mot en befintlig produkt via SKU"
+      },
+      "spreadsheet": {
+        "entities": {
+          "products": "Produkter (katalog / prislista)",
+          "vendorProducts": "Leverantörsprislista (distributörens kostnader)"
+        },
+        "productsHint": "Priser och kostnader läses som decimalbelopp (till exempel 1,299.50) med valutakolumnen om den finns, annars hyresgästens valuta. Negativa, icke-numeriska eller alltför exakta belopp tas bort och rapporteras; raden importeras ändå. Produkter matchas mot befintliga produkter via SKU; rader i leverantörsprislistan refererar till en produkt via SKU och skapar eller matchar leverantören via namn."
+      },
+      "configure": {
+        "products": {
+          "title": "Produkter",
+          "serviceType": "Tjänstetyp för nya produkter",
+          "serviceTypePlaceholder": "Välj en tjänstetyp",
+          "serviceTypeHelp": "Produkter vars SKU redan finns matchas och lämnas oförändrade; endast nya produkter placeras under denna tjänstetyp."
+        }
       }
     },
     "jobDetails": {
