@@ -6,7 +6,8 @@
     "featureIds": [
       "F013"
     ],
-    "implemented": false
+    "implemented": true,
+    "evidence": "packages/inventory/src/lib/staging.db.test.ts (T001 describe, incl. committed-fixture concurrency case)"
   },
   {
     "id": "T002",
@@ -15,7 +16,8 @@
     "featureIds": [
       "F008"
     ],
-    "implemented": false
+    "implemented": true,
+    "evidence": "packages/inventory/src/lib/staging.db.test.ts (T002)"
   },
   {
     "id": "T003",
@@ -24,7 +26,8 @@
     "featureIds": [
       "F011"
     ],
-    "implemented": false
+    "implemented": true,
+    "evidence": "packages/inventory/src/lib/staging.db.test.ts (T003)"
   },
   {
     "id": "T004",
@@ -33,7 +36,8 @@
     "featureIds": [
       "F012"
     ],
-    "implemented": false
+    "implemented": true,
+    "evidence": "packages/inventory/src/lib/staging.db.test.ts (T004)"
   },
   {
     "id": "T005",
@@ -42,7 +46,8 @@
     "featureIds": [
       "F016"
     ],
-    "implemented": false
+    "implemented": true,
+    "evidence": "packages/inventory/src/lib/staging.db.test.ts (T005)"
   },
   {
     "id": "T006",
@@ -51,7 +56,8 @@
     "featureIds": [
       "F028"
     ],
-    "implemented": false
+    "implemented": true,
+    "evidence": "server/src/test/integration/projectStagingLabels.integration.test.ts (T006/T011)"
   },
   {
     "id": "T007",
@@ -60,7 +66,8 @@
     "featureIds": [
       "F015"
     ],
-    "implemented": false
+    "implemented": true,
+    "evidence": "packages/inventory/src/lib/staging.db.test.ts (T007); billing reads project_materials only, and none is written"
   },
   {
     "id": "T008",
@@ -69,7 +76,8 @@
     "featureIds": [
       "F019"
     ],
-    "implemented": false
+    "implemented": true,
+    "evidence": "packages/inventory/src/lib/staging.db.test.ts (T008)"
   },
   {
     "id": "T009",
@@ -78,7 +86,8 @@
     "featureIds": [
       "F022"
     ],
-    "implemented": false
+    "implemented": true,
+    "evidence": "packages/inventory/src/lib/staging.db.test.ts (T009)"
   },
   {
     "id": "T010",
@@ -87,7 +96,8 @@
     "featureIds": [
       "F024"
     ],
-    "implemented": false
+    "implemented": true,
+    "evidence": "server/src/test/integration/projectStagingLabels.integration.test.ts (T010) and packages/projects/src/actions/stagingActions.db.test.ts"
   },
   {
     "id": "T011",
@@ -96,7 +106,8 @@
     "featureIds": [
       "F028"
     ],
-    "implemented": false
+    "implemented": true,
+    "evidence": "server/src/test/unit/labels.printLabels.test.ts (mixed items), packages/types/src/lib/recordLinks.test.ts, packages/billing/src/lib/label-batch/buildLabelModel.test.ts, previewSheet.e2e.test.ts, packages/projects/src/lib/stagingPrintItems.test.ts"
   },
   {
     "id": "T012",
@@ -105,7 +116,8 @@
     "featureIds": [
       "F002"
     ],
-    "implemented": false
+    "implemented": true,
+    "evidence": "alloc.db.test.ts, flows.db.test.ts, salesOrderGuards.db.test.ts unmodified and green"
   },
   {
     "id": "T013",
@@ -114,6 +126,7 @@
     "featureIds": [
       "F004"
     ],
-    "implemented": false
+    "implemented": true,
+    "evidence": "packages/inventory/src/lib/staging.db.test.ts (T013)"
   }
 ]

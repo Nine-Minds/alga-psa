@@ -49,3 +49,19 @@ See design section 6: stale reservations starving stock, B1 soft override consum
 
 ## Acceptance criteria
 Every feature in `features.json` implemented; every test in `tests.json` passing, including: reserve respects availability; printing/scanning changes nothing; SO suites `alloc.db.test.ts`, `flows.db.test.ts`, `salesOrderGuards.db.test.ts` unmodified and green; recordLinks parity green; typecheck and build clean.
+
+## Implementation record (2026-10-25)
+
+Gate: B1 merged as `352dab4d35` (#3818); its `consume.ts` and `materials.ts` are byte-identical to `dea428483c`, so D7 needed no adaptation. C2 merged (#3879). C4 (#3890) is still open, so **D9 took the no-C4 branch**: `client_asset` lines are plain links to an asset of the project's client, and custody is a follow-up.
+
+Where the build differs from the design text, and why:
+- `createProjectReadAuthorizer` lives in the existing shared `packages/projects/src/lib/projectReadAuthorization.ts` (which already held `assertProjectReadAllowed`), not a new `projectReadAuthorizer.ts`. `assertProjectReadAllowed` now uses it; both private copies are gone and three contract tests follow the move.
+- Mixed-item `printLabels` keeps the skip-and-count rule C2 shipped for single-class batches (unreadable records are skipped and counted; all unreadable is the uniform 404), instead of "any null → 404".
+- Deleting an empty box is a soft delete (`deleted_at`) so its number is never reused; deleted boxes are invisible to labels, manifests and "n of m".
+- Standard template codes follow the existing naming: `standard-staging-container-label`, `standard-staging-manifest`.
+- `reverseStockConsumption` now restores non-serialized stock at the location the consume movement drew from (needed for D8 undo of an install at a non-default location; previously it used the current default).
+- The B1 material dialogs (tickets and projects) now say stock is held or reserved "for sales orders or projects", in every locale, in addition to the generalised `consume.ts` messages.
+- The manifest's owner and status words are localized from the `documents` namespace at render time.
+- No separate billing-run preview test: T007 proves reserve, stage and pack write no `project_materials` row, and billing reads only that table.
+
+Not verified in this run: the mobile workspace's recordLinks parity test could not start locally (Expo deps not installed in this worktree); byte identity was checked with `cmp`. No signed-in browser smoke test: the shared dev stack's login password was not available; the page and manifest routes were checked unauthenticated (redirect to sign-in, 401, 404).

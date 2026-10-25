@@ -206,7 +206,10 @@
             "title": "Attività del progetto"
           }
         },
-        "fallbackTitle": "Dettagli del progetto"
+        "fallbackTitle": "Dettagli del progetto",
+        "staging": {
+          "title": "Allestimento del progetto"
+        }
       },
       "templates": {
         "layout": {

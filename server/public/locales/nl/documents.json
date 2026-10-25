@@ -108,7 +108,7 @@
     "location": "Locatie",
     "checked": "Gecontroleerd",
     "item": "Artikel",
-    "skuOrTag": "SKU / tag",
+    "skuOrTag": "SKU / label",
     "serialNumber": "Serienummer",
     "owner": "Eigenaar",
     "ownerMsp": "MSP",
