@@ -254,7 +254,8 @@
     "moreActions": "Altre azioni",
     "createTemplate": "Crea modello dal ticket",
     "createWorkflowFromTicket": "Crea workflow dal ticket",
-    "printWorkTag": "Stampa etichetta di lavoro"
+    "printWorkTag": "Stampa etichetta di lavoro",
+    "retry": "Riprova"
   },
   "messages": {
     "noTickets": "Nessun ticket trovato",
@@ -364,7 +365,8 @@
     "pastedImagesDeleteFailed_many": "Impossibile eliminare {{count}} immagini incollate.",
     "pastedImagesDeleted_few": "{{count}} immagini incollate eliminate.",
     "pastedImagesDeleted_many": "{{count}} immagini incollate eliminate.",
-    "sharedWorkspaceReadOnly": "Vedi questo ticket perché riguarda un dispositivo di una postazione condivisa. Solo chi lo ha aperto può aggiungere contenuti."
+    "sharedWorkspaceReadOnly": "Vedi questo ticket perché riguarda un dispositivo di una postazione condivisa. Solo chi lo ha aperto può aggiungere contenuti.",
+    "loadPartyTagsFailed": "Impossibile caricare i tag del richiedente e del cliente"
   },
   "conversation": {
     "comments": "Commenti",

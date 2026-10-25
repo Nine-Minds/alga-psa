@@ -254,7 +254,8 @@
     "moreActions": "Więcej akcji",
     "createTemplate": "Utwórz szablon ze zgłoszenia",
     "createWorkflowFromTicket": "Utwórz workflow ze zgłoszenia",
-    "printWorkTag": "Drukuj etykietę roboczą"
+    "printWorkTag": "Drukuj etykietę roboczą",
+    "retry": "Ponów"
   },
   "messages": {
     "noTickets": "Brak zgłoszeń",
@@ -364,7 +365,8 @@
     "billingProfileUpdated": "Zaktualizowano profil rozliczeniowy",
     "updateBillingProfileFailed": "Nie udało się zaktualizować profilu rozliczeniowego",
     "scheduleOpenFailed": "Nie udało się otworzyć planera",
-    "sharedWorkspaceReadOnly": "Widzisz to zgłoszenie, ponieważ dotyczy urządzenia we wspólnym stanowisku. Tylko osoba, która je zgłosiła, może coś dodać."
+    "sharedWorkspaceReadOnly": "Widzisz to zgłoszenie, ponieważ dotyczy urządzenia we wspólnym stanowisku. Tylko osoba, która je zgłosiła, może coś dodać.",
+    "loadPartyTagsFailed": "Nie udało się załadować tagów zgłaszającego i klienta"
   },
   "conversation": {
     "comments": "Komentarze",

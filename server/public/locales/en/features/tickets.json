@@ -262,7 +262,8 @@
     "moreActions": "More actions",
     "createTemplate": "Create template from ticket",
     "createWorkflowFromTicket": "Create workflow from ticket",
-    "printWorkTag": "Print work tag"
+    "printWorkTag": "Print work tag",
+    "retry": "Retry"
   },
   "messages": {
     "noTickets": "No tickets found",
@@ -372,7 +373,8 @@
     "pastedImagesDeleteFailed_many": "Could not delete {{count}} pasted images.",
     "pastedImagesDeleted_few": "Deleted {{count}} pasted images.",
     "pastedImagesDeleted_many": "Deleted {{count}} pasted images.",
-    "sharedWorkspaceReadOnly": "You can see this ticket because it is about a device in a workspace you share. Only the person who raised it can add to it."
+    "sharedWorkspaceReadOnly": "You can see this ticket because it is about a device in a workspace you share. Only the person who raised it can add to it.",
+    "loadPartyTagsFailed": "Failed to load requester and client tags"
   },
   "conversation": {
     "comments": "Comments",

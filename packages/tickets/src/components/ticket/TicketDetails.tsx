@@ -61,7 +61,8 @@ import { findCommentsByTicketId, deleteComment, createComment, updateComment, fi
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { getAllActiveContacts, getClientLocations, getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
 import { EMPTY_PARTY_DISPLAY_TAGS, type PartyDisplayTags } from '../../lib/partyDisplayTags';
-import { addTicketCommentWithCache, updateTicketWithCache, getTicketPartyDisplayTags } from "../../actions/optimizedTicketActions";
+import { usePartyDisplayTags } from './usePartyDisplayTags';
+import { addTicketCommentWithCache, updateTicketWithCache } from "../../actions/optimizedTicketActions";
 import { getTicketById, updateTicket, deleteTicket } from "../../actions/ticketActions";
 import {
     checkTicketClosure,
@@ -637,22 +638,27 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }, [initialDocuments]);
     const [client, setClient] = useState<IClient | null>(initialClient);
     const [contactInfo, setContactInfo] = useState<IContact | null>(initialContactInfo);
-    const [displayTags, setDisplayTags] = useState<PartyDisplayTags>(initialDisplayTags);
-    // The requester or client can be changed in place; reload their chip tags when they move off
-    // the pair the server rendered.
-    const displayTagsPartyRef = useRef<string>(`${initialContactInfo?.contact_name_id ?? ''}|${initialClient?.client_id ?? ''}`);
-    useEffect(() => {
-      const partyKey = `${contactInfo?.contact_name_id ?? ''}|${client?.client_id ?? ''}`;
-      if (partyKey === displayTagsPartyRef.current) return;
-      const partyTicketId = ticket.ticket_id;
-      if (!partyTicketId) return;
-      displayTagsPartyRef.current = partyKey;
-      let cancelled = false;
-      void getTicketPartyDisplayTags(partyTicketId, contactInfo?.contact_name_id ?? null, client?.client_id ?? null).then((result) => {
-        if (!cancelled && result && 'contact' in result && 'client' in result) setDisplayTags(result);
-      });
-      return () => { cancelled = true; };
-    }, [ticket.ticket_id, contactInfo?.contact_name_id, client?.client_id]);
+    // The requester or client can be changed in place; the chips follow the new party (see the hook).
+    const displayTags = usePartyDisplayTags({
+      ticketId: ticket.ticket_id,
+      contactId: contactInfo?.contact_name_id,
+      clientId: client?.client_id,
+      initial: initialDisplayTags,
+      onError: (error, retry) => {
+        const message = isReturnedActionError(error)
+          ? getErrorMessage(error)
+          : t('messages.loadPartyTagsFailed', 'Failed to load requester and client tags');
+        toast.error(
+          <span>
+            {message}{' '}
+            <button type="button" className="underline" onClick={() => { toast.dismiss(); retry(); }}>
+              {t('actions.retry', 'Retry')}
+            </button>
+          </span>,
+          { id: 'ticket-party-tags-failed' },
+        );
+      },
+    });
     const [createdByUser, setCreatedByUser] = useState<IUser | null>(initialCreatedByUser);
     const [updatedByUser, setUpdatedByUser] = useState<IUser | null>(initialUpdatedByUser);
 

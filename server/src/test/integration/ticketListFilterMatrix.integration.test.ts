@@ -386,6 +386,7 @@ const CASES: MatrixCase[] = [
   { id: 'client-id', filters: (f) => ({ clientId: f.c1 }), individual: ['CH1', 'T1', 'T3'], bundled: ['M', 'T1', 'T3'] },
   { id: 'contact-id', filters: (f) => ({ contactId: f.k1 }), individual: ['CH1', 'T1'], bundled: ['M', 'T1'] },
   { id: 'ticket-tags-legacy-text', filters: () => ({ tags: ['urgent'] }), individual: ['CH1', 'T1'], bundled: ['M', 'T1'] },
+  { id: 'ticket-tags-where-empty-in-matches-nothing', filters: () => ({ where: { join: 'and', clauses: [{ path: 'tags', operator: 'in', value: [] }] } }), individual: [], bundled: [] },
   { id: 'ticket-tags-legacy-unknown-text', filters: () => ({ tags: ['no-such-tag'] }), individual: [], bundled: [] },
 
   // New predicate dimensions

@@ -93,6 +93,7 @@ import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorizatio
 import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
 import { compilePredicateFragment } from '@alga-psa/predicates/sql';
 import type { PredicateGroup } from '@alga-psa/predicates';
+import { resolveTicketTagIdsByText } from '../lib/ticketTagFilter';
 import { createTicketQuerySchema } from '../lib/ticketQuerySchema';
 import { ticketFiltersToPredicates, type TicketFilterCodecContext } from '../lib/ticketFilterPredicates';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
@@ -1284,16 +1285,7 @@ async function resolveTicketFilterCodecContext(
   const assignedToMeBypass = filters.assignedToMe
     ? await hasPermission(user as any, 'project', 'read', trx)
     : false;
-  const ticketTagIdsByText: Record<string, string> = {};
-  if (filters.tags && filters.tags.length > 0) {
-    const rows = await tenantScopedTable(trx, 'tag_definitions', tenant)
-      .select('tag_id', 'tag_text')
-      .where('tagged_type', 'ticket')
-      .whereIn('tag_text', filters.tags as string[]);
-    for (const row of rows as Array<{ tag_id: string; tag_text: string }>) {
-      ticketTagIdsByText[row.tag_text] = row.tag_id;
-    }
-  }
+  const ticketTagIdsByText = await resolveTicketTagIdsByText(trx, tenant, filters.tags);
   return { nowIso, timeZone, userId: user.user_id, assignedToMeBypass, ticketTagIdsByText };
 }
 

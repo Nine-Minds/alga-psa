@@ -254,7 +254,8 @@
     "moreActions": "Plus d'actions",
     "createTemplate": "Créer un modèle à partir du ticket",
     "createWorkflowFromTicket": "Créer un workflow à partir du ticket",
-    "printWorkTag": "Imprimer l'étiquette de travail"
+    "printWorkTag": "Imprimer l'étiquette de travail",
+    "retry": "Réessayer"
   },
   "messages": {
     "noTickets": "Aucun ticket trouvé",
@@ -364,7 +365,8 @@
     "pastedImagesDeleteFailed_many": "Impossible de supprimer {{count}} images collées.",
     "pastedImagesDeleted_few": "{{count}} images collées supprimées.",
     "pastedImagesDeleted_many": "{{count}} images collées supprimées.",
-    "sharedWorkspaceReadOnly": "Vous voyez ce ticket parce qu'il concerne un appareil d'un espace partagé. Seule la personne qui l'a créé peut y ajouter quelque chose."
+    "sharedWorkspaceReadOnly": "Vous voyez ce ticket parce qu'il concerne un appareil d'un espace partagé. Seule la personne qui l'a créé peut y ajouter quelque chose.",
+    "loadPartyTagsFailed": "Échec du chargement des étiquettes du demandeur et du client"
   },
   "conversation": {
     "comments": "Commentaires",

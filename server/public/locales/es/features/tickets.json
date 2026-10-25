@@ -254,7 +254,8 @@
     "moreActions": "Más acciones",
     "createTemplate": "Crear plantilla desde el ticket",
     "createWorkflowFromTicket": "Crear flujo de trabajo desde el ticket",
-    "printWorkTag": "Imprimir etiqueta de trabajo"
+    "printWorkTag": "Imprimir etiqueta de trabajo",
+    "retry": "Reintentar"
   },
   "messages": {
     "noTickets": "No se encontraron tickets",
@@ -364,7 +365,8 @@
     "pastedImagesDeleteFailed_many": "No se pudieron eliminar {{count}} imágenes pegadas.",
     "pastedImagesDeleted_few": "Se eliminaron {{count}} imágenes pegadas.",
     "pastedImagesDeleted_many": "Se eliminaron {{count}} imágenes pegadas.",
-    "sharedWorkspaceReadOnly": "Puede ver este ticket porque trata sobre un dispositivo de un espacio compartido. Solo quien lo creó puede añadir contenido."
+    "sharedWorkspaceReadOnly": "Puede ver este ticket porque trata sobre un dispositivo de un espacio compartido. Solo quien lo creó puede añadir contenido.",
+    "loadPartyTagsFailed": "No se pudieron cargar las etiquetas del solicitante y del cliente"
   },
   "conversation": {
     "comments": "Comentarios",

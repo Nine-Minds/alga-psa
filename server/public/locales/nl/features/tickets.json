@@ -254,7 +254,8 @@
     "moreActions": "Meer acties",
     "createTemplate": "Sjabloon maken van ticket",
     "createWorkflowFromTicket": "Workflow maken van ticket",
-    "printWorkTag": "Werklabel afdrukken"
+    "printWorkTag": "Werklabel afdrukken",
+    "retry": "Opnieuw proberen"
   },
   "messages": {
     "noTickets": "Geen tickets gevonden",
@@ -364,7 +365,8 @@
     "pastedImagesDeleteFailed_many": "{{count}} geplakte afbeeldingen konden niet worden verwijderd.",
     "pastedImagesDeleted_few": "{{count}} geplakte afbeeldingen verwijderd.",
     "pastedImagesDeleted_many": "{{count}} geplakte afbeeldingen verwijderd.",
-    "sharedWorkspaceReadOnly": "U ziet dit ticket omdat het over een apparaat in een gedeelde werkplek gaat. Alleen degene die het heeft gemeld, kan er iets aan toevoegen."
+    "sharedWorkspaceReadOnly": "U ziet dit ticket omdat het over een apparaat in een gedeelde werkplek gaat. Alleen degene die het heeft gemeld, kan er iets aan toevoegen.",
+    "loadPartyTagsFailed": "Kon de tags van aanvrager en klant niet laden"
   },
   "conversation": {
     "comments": "Reacties",

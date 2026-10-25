@@ -69,18 +69,21 @@ export function migrateTicketFilters(
     for (const key of REMOVED_V1_KEYS) delete out[key];
 
     const texts = legacyTagTexts(out);
+    // Without a context `tags` is deliberately kept as it is: nothing is widened, because the
+    // ticket-list codec (ticketFiltersToPredicates) still resolves the text at query time and
+    // an unknown text matches nothing there.
     if (texts.length > 0 && context.tagIdsByText) {
       const ids = Array.from(
         new Set(texts.map((text) => context.tagIdsByText!.get(text)).filter((id): id is string => !!id)),
       );
       delete out.tags;
-      if (ids.length > 0) {
-        const existing = (out.where as { clauses?: unknown[] } | undefined)?.clauses ?? [];
-        out.where = {
-          join: 'and',
-          clauses: [...existing, { path: 'tags', operator: 'in', value: ids }],
-        };
-      }
+      // When texts existed but none resolved, the clause is `in []`, which the predicates spec and
+      // compiler define as matching nothing. Dropping it would widen the view to every ticket.
+      const existing = (out.where as { clauses?: unknown[] } | undefined)?.clauses ?? [];
+      out.where = {
+        join: 'and',
+        clauses: [...existing, { path: 'tags', operator: 'in', value: ids }],
+      };
     }
   }
 
