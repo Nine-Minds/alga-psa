@@ -9,6 +9,7 @@ import {
   claimCounter,
   claimFifoUnits,
   claimSpecificUnit,
+  isUnitClaimRefused,
   freeQuantity,
   lockStockLevel,
   moveCounterClaim,
@@ -298,7 +299,7 @@ export async function reserveStagingLines(
         let unitId: string | null = null;
         if (unitIds.length > 0) {
           const claimed = await claimSpecificUnit(trx, tenant, { unitId: unitIds[i], serviceId: input.service_id, claimant });
-          if (!claimed.ok) throw new StagingError(unitRefusalMessage(claimed.reason, meta.service_name), 'unit_unavailable');
+          if (isUnitClaimRefused(claimed)) throw new StagingError(unitRefusalMessage(claimed.reason, meta.service_name), 'unit_unavailable');
           unitId = claimed.unit.unit_id;
         } else {
           const [unit] = await claimFifoUnits(trx, tenant, {
@@ -444,7 +445,7 @@ export async function swapUnit(
       serviceId: line.service_id!,
       claimant: { kind: 'staging_line', id: lineId },
     });
-    if (!claimed.ok) {
+    if (isUnitClaimRefused(claimed)) {
       const meta = await loadProductMeta(trx, tenant, line.service_id!);
       throw new StagingError(unitRefusalMessage(claimed.reason, meta?.service_name ?? 'product'), 'unit_unavailable');
     }
@@ -818,7 +819,7 @@ export async function undoInstall(
           serviceId: line.service_id!,
           claimant: { kind: 'staging_line', id: lineId },
         });
-        if (!claimed.ok) throw new StagingError(unitRefusalMessage(claimed.reason, name), 'unit_unavailable');
+        if (isUnitClaimRefused(claimed)) throw new StagingError(unitRefusalMessage(claimed.reason, name), 'unit_unavailable');
       } else if (line.reserved_location_id && meta?.track_stock) {
         const claim = await claimCounter(trx, tenant, {
           serviceId: line.service_id!,

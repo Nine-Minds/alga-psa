@@ -236,6 +236,16 @@ export async function claimFifoUnits(
 
 export type UnitClaimRefusal = 'not_found' | 'wrong_product' | 'not_in_stock';
 
+export type UnitClaimResult = { ok: true; unit: ClaimedUnit } | { ok: false; reason: UnitClaimRefusal };
+
+/**
+ * Type guard for a refused claim. Use this instead of `!r.ok`: consumers compiled with
+ * strictNullChecks off (ee/server, strict: false) do not narrow boolean-literal discriminants.
+ */
+export function isUnitClaimRefused(r: UnitClaimResult): r is { ok: false; reason: UnitClaimRefusal } {
+  return !r.ok;
+}
+
 /**
  * Claim one specific unit the user picked. It is locked FOR UPDATE (waiting for a concurrent claim
  * to finish) and must then be an unclaimed in_stock unit of the product. Returns the refusal
@@ -245,7 +255,7 @@ export async function claimSpecificUnit(
   trx: Knex.Transaction,
   tenant: string,
   input: { unitId: string; serviceId: string; claimant: AllocationClaimant },
-): Promise<{ ok: true; unit: ClaimedUnit } | { ok: false; reason: UnitClaimRefusal }> {
+): Promise<UnitClaimResult> {
   const unit = await trx('stock_units').where({ tenant, unit_id: input.unitId }).forUpdate().first();
   if (!unit) return { ok: false, reason: 'not_found' };
   if (unit.service_id !== input.serviceId) return { ok: false, reason: 'wrong_product' };
