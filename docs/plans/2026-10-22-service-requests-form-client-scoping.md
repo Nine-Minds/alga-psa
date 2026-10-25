@@ -185,12 +185,23 @@ dropped; saving persists the cleaned audience.
 tag definitions with no mappings, sparing only those a display rule references. A tag used by an audience but not
 yet applied to anyone would be deleted, silently emptying that entry.
 
-The fix is a general tag-reference mechanism in `packages/tags`: a registry of referrers, each declaring how to
-find the tag ids it references (display rules declare `tag_display_rules.tag_id`; service-request audiences
-declare the tag ids inside `service_request_definitions.audience`). Orphan cleanup and the option loaders consult
-the registry instead of special-casing display rules. If #3858 lands this mechanism, this card registers the
-audience referrer. If it does not, this card builds it, moves display rules onto it, and registers the audience
-referrer. Either way, an integration test proves an audience-only tag survives cleanup.
+The fix is a general tag-reference mechanism, built in #3858 by captain's order (note `e4e9dde5` on card
+`9798abc3`, 2026-10-25): a `tag_references (tenant, tag_id, referrer_type, referrer_id)` table in `packages/tags`,
+co-located with `tag_definitions`, maintained by referrers through `replaceTagReferences` /
+`deleteTagReferences` in the same transaction as their own write. Orphan cleanup and the tag option loaders check
+only that table; display rules are its first referrer.
+
+This card is its second referrer:
+
+- `saveServiceRequestDefinitionAudience` calls `replaceTagReferences(trx, tenant, 'service_request_audience',
+  definitionId, <every tag id in contact.tags / client.tags clauses>)` in the save transaction.
+- The §5 advanced-visibility migration writes no tag references (those configs hold no tags).
+- Deleting a definition calls `deleteTagReferences(trx, tenant, 'service_request_audience', definitionId)`;
+  duplicating one writes references for the copy.
+- An integration test proves an audience-only tag survives every cleanup path, and that saving an audience
+  without the tag drops its reference.
+
+If #3858 merges without the mechanism, stop and raise it with the captain rather than building a local workaround.
 
 Deleting a tag explicitly is still allowed. The audience entry then holds a missing id, handled by §4.4.
 
@@ -234,7 +245,7 @@ definitions to what a group scopes would put form access in two places that can 
 2. Migration (§2.2), `audienceSchema.ts`, revision 1 metadata cleanup.
 3. `definitionAudience.ts` (§3) with unit tests; wire catalog and detail.
 4. Save action, validation, duplicate copy, reach count action (§4.2–4.4).
-5. Tag-reference mechanism or audience referrer registration (§4.5).
+5. Audience tag references through #3858's `tag_references` API (§4.5).
 6. Advanced-visibility migration and removal (§5).
 7. Audience editor and page wiring; locale keys.
 8. Typecheck, service-request suites, predicates suites, i18n validation, browser pass.
