@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "candidateRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "buildId": "build-1792926045353",
+  "checks": [
+    {
+      "name": "server typecheck and isolated production build",
+      "result": "passed",
+      "evidence": ".card-service-logs/review-app-repaired-candidate.log",
+      "notes": "Typecheck passed; production compilation completed with warnings, static generation completed 74/74 and build tracing finalized."
+    },
+    {
+      "name": "canonical co-managed bootstrap integration",
+      "command": ". scripts/dev/load-env-local.sh server/.env.local; export DB_NAME_SERVER=server_co_managed VITEST_SEED=20260610; cd server; npx vitest run ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts",
+      "result": "passed",
+      "testFiles": 1,
+      "testsPassed": 1461,
+      "testsFailed": 0,
+      "durationSeconds": 429.2,
+      "runner": "server-configured canonical Vitest; alternate EE harness not used"
+    },
+    {
+      "name": "auth tenant-scoped credential selection and restored duplicate regression",
+      "result": "passed",
+      "testsPassed": 13,
+      "command": "npm --prefix packages/auth test -- --run src/actions/auth.tenantScoping.test.ts"
+    },
+    {
+      "name": "session cookie boundary tests",
+      "result": "passed",
+      "testsPassed": 2,
+      "command": "cd server && npx vitest run src/lib/auth/sessionCookies.test.ts"
+    },
+    {
+      "name": "review launcher and development React Flight ancestry tests",
+      "result": "passed",
+      "testsPassed": 13,
+      "command": "node --test scripts/tests/co-managed-review-app.test.mjs scripts/tests/next-flight-debug-ancestry.test.mjs"
+    },
+    {
+      "name": "native/shared ticket route and customer list boundaries",
+      "result": "passed",
+      "testsPassed": 22,
+      "command": "cd server && npx vitest run src/app/msp/co-management/sharedDetailRoutes.contract.test.ts src/test/unit/product/customerTicketsFlagOff.test.ts src/test/unit/product/customerTicketsRows.test.ts"
+    },
+    {
+      "name": "workflow worker workspace distribution closure",
+      "result": "passed",
+      "command": "npm --prefix services/workflow-worker run check:build-workspaces",
+      "notes": "46 workspace manifests, 22 npm selectors, 45 local dependency closure."
+    },
+    {
+      "name": "acceptance census readiness verifier",
+      "result": "correctly-failed-closed",
+      "counts": {
+        "implemented-unverified": 258,
+        "blocked-external": 2
+      },
+      "implementationReady": false,
+      "humanReviewReady": false,
+      "productionReady": false,
+      "command": "node scripts/verify-co-managed-completion.mjs --candidate c04a67fff5b553d2c2a1f55a14194f829343adae --json"
+    }
+  ],
+  "notRun": [
+    "Fourteen full current-build guide scenario recordings with embedded playback and chapter seeking.",
+    "Uncovered product runtime matrices listed in the acceptance PLAN."
+  ],
+  "ci": "No CI success or release readiness is claimed."
+}

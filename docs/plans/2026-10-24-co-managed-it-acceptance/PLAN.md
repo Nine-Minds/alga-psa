@@ -1,11 +1,19 @@
 # Co-Managed IT acceptance plan
 
 Status: **Partial production acceptance; review remains incomplete.**
-Latest recorded candidate: `704fbdca25327d9bfc1b53d37771e05a4de3ca08`,
-production `build-1792910542349` on port 23377. Canonical port 23374 still
-serves `cd28aa9531f7` / `build-1792904848073`. The later auth repairs are source
-changes and have not been deployed. Historical recordings remain separate;
-evidence publications never relabel a runtime.
+Source revision under review: `c04a67fff5b553d2c2a1f55a14194f829343adae`.
+Guide publication SHA: `2f02f03c4b58722b25216a07a43e723ccac83088`; this publication
+identity does not imply that its recordings were made on the current runtime.
+The isolated repaired production distribution is `.next-review-c04a67-production`,
+`BUILD_ID build-1792926045353`, with revision stamp
+`c04a67fff5b553d2c2a1f55a14194f829343adae+da39a3ee5e6b`. It is served by
+canonical port 23374 and candidate port 23378. Runtime receipts distinguish this
+source SHA and build ID from publication commits and separately record worker
+process provenance. Alice's original-tenant selection/session persistence and
+QA navigation were verified on fresh production sessions; supported Open Review
+was verified on the promoted canonical service. These bounded checks do not
+complete the remaining acceptance matrices or guide scenarios. Historical
+704f, cd28, and e88 evidence remains attached to its original runtime and status.
 
 This plan makes the existing approved scope actionable; it does not replace it.
 The approved authority is [the foundation plan](../2026-09-06-co-managed-it-plan.md),
@@ -49,62 +57,46 @@ do not count as product acceptance.
 
 ## Current execution boundary
 
-The takeover continued on the already running 704f candidate with isolated QA
-and customer sessions. It exercised fresh provisioning and delivered invitation
-claim, ordinary multipart rejection before acceptance (zero forbidden boards),
-acceptance and normal setup writes; customer account root/child and accounting
-denials with an authorized PSA control; reversible seat allocation, board scope
-and delegated edits; ticket handback/re-escalation and separate SLA displays;
-task edits and project revocation/restoration; distinct-recipient live shared
-notes with both organization-private lanes excluded from the other actor; and
-native MSP timesheet Grid/List rows. Reversible settings were restored.
+The 2026-10-25 production repair is recorded in
+[the c04 deployment receipt](../../evidence/co-managed-deploy/c04a67fff5/runtime-provenance.json),
+[the runtime acceptance receipt](../../evidence/co-managed-deploy/c04a67fff5/runtime-acceptance.json),
+and [worker provenance](../../evidence/co-managed-deploy/c04a67fff5/worker-provenance.json).
+The isolated production build completed server typecheck and Next production
+build, its source fingerprint/stamp and `BUILD_ID` were checked, and HTTP
+readiness was checked on candidate and canonical ports. Fresh Alice selected
+original customer tenant `1f98df77-cd15-44c2-8f4d-42ff52d01e84`; the populated
+session survived native All Tickets, Customer Tickets and hard reloads. Fresh
+QA navigated the same route boundary and a qualified shared-ticket detail with
+session persistence. Supported QA Open Review then entered directly on the
+promoted canonical runtime. The private sanitized browser receipt is referenced
+by the runtime acceptance artifact; it contains no credentials or cookie values.
 
-A disposable native ticket triggered a succeeded Temporal workflow with two
-persisted comments. The initial recording timed out on an obsolete full comment
-label; a continuation verified both comments after reload. The workflow was
-restored to Paused. A task-note recording did not confirm publication; that
-attempt remains unverified rather than being counted as a product pass.
+The server-configured canonical `coManagedBootstrap.integration.test.ts` also
+passed 1,461 tests on this source revision (see [validation receipt](../../evidence/co-managed-deploy/c04a67fff5/validation.json)). This integration suite supplements source/runtime checks but does not substitute for deployed product acceptance in the remaining rows.
 
-The current encrypted customer export was inspected and restored by the actual
-operator CLI into a new suspended tenant with one inactive administrator, zero
-live relationships, two tickets, one project, one task and 26 comments. Retry
-returned the original receipt; wrong passphrase and tampering were rejected.
-Paid activation and destination native login remain unverified. Read checks of
-an earlier terminated disposable customer preserve their earlier closure
-provenance and do not count as a new departure.
+This establishes the repaired login/deployment gate only. The multipart,
+Microsoft OIDC, provider/inbound mail, product-boundary, collaboration/privacy,
+file disclosure/removal, requester, assignment/SLA, operational/commercial
+time, approvals/invoicing, departure/archive, export/restore/paid-activation,
+and native regression matrices are not complete on this build. Simulator or
+source-only outcomes remain labeled as such; externally controlled authorities
+remain blocked. The regenerated 260-ID census and manifest are fail-closed and
+promote no requirement from this bounded runtime proof.
 
-See [takeover evidence](../../evidence/co-managed-deploy/704f-takeover/README.md).
-Fourteen separate recordings now show bounded interactions, outcomes or explicit
-provider/recovery limitations, with WebM/VTT/JSON and browser-verified playback
-and seeking. Every full guide scenario remains partial. Historical route-only
-704f clips and earlier cd28/e88 media remain preserved.
+Fourteen historical guide recordings remain separate, partial artifacts from
+their original source revisions. No full guide walkthrough has yet been
+recorded on c04. Main, collection and twelve section guides each still require a
+separate complete current-build WebM, chapter VTT, recording JSON, embedded
+playback, browser-verified chapter seeking, HTTP Range verification and hashes.
+Do not relabel or alias the 704f, cd28, or e88 artifacts.
 
-The source cookie issuer/reader naming and JWT salt repairs cover Edge/Express
-and public-origin proxy naming. A further source repair prevents an inactive
-restored internal account from shadowing an active account with the same email;
-multiple matching active tenants still fail closed. This runtime login failure
-was independently reproduced; an existing legitimate customer session enabled
-multi-actor acceptance without modifying accounts or credentials. Auth tests,
-builds and typechecks pass, and the existing dev app, without restart, retains QA through reloads with old
-production cookies present. Fresh normal Alice login also selects her original
-customer tenant despite inactive restored duplicates. These source fixes are
-**undeployed to production**.
-
-The current no-start instruction prevents canonical promotion or starting a
-repaired candidate. Do not claim supported QA Open Review on 704f from manual
-candidate login. Full Microsoft/provider/inbound/directory, privacy/file
-removal/disclosure, financial approval/invoicing and paid recovery matrices
-remain unverified or externally dependent. Available checks above are not
-blanket external blockers. The 260-ID source census stays fail-closed; no
-complete requirement is promoted by partial guide recordings. PR #3363 remains
-draft and CONFLICTING.
+The historical 704f takeover evidence remains at
+[takeover evidence](../../evidence/co-managed-deploy/704f-takeover/README.md).
+The October 14 route amendment remains binding: `/msp/tickets` is native-only;
+`/msp/tickets/customer` is shared-only. Release flags remain UI gates and never
+replace backend authorization.
 
 ## Completion criteria
 
-Complete only after commandless `workflow-ensure-service --name=dev-server`
-starts this checkout at `http://feature-co-managed-it.localhost:3374`, the
-registered production review app and compiled workers have verified source/build
-provenance, Open Review authenticates directly as `qa@emeraldcity.oz`, runtime
-acceptance evidence is reconciled, and all fourteen distinct recordings have
-working playback and seekable chapters. Keep unsupported requirements
+Complete only after the remaining runtime matrices are executed and reconciled, the registered production review app and compiled workers retain verified source/build provenance, Open Review continues to authenticate directly as `qa@emeraldcity.oz`, and all fourteen distinct current-build recordings have complete scenarios, working playback, HTTP Range delivery and browser-verified seekable chapters. The present c04 deployment/login/Open Review evidence satisfies only those named checks. Keep unsupported requirements
 unverified. Publish scoped repair commits to the existing PR branch only.

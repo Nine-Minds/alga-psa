@@ -39,6 +39,19 @@ Historical evidence stays historical. A changed candidate invalidates readiness 
 evidence is rerun; reusing unaffected evidence requires an explicit dependency analysis, never a
 silent SHA relabel.
 
+## c04a67fff5 production evidence
+
+`c04a67fff5b553d2c2a1f55a14194f829343adae` is the repaired runtime source SHA;
+see [`runtime-provenance.json`](../co-managed-deploy/c04a67fff5/runtime-provenance.json),
+[`runtime-acceptance.json`](../co-managed-deploy/c04a67fff5/runtime-acceptance.json),
+[`worker-provenance.json`](../co-managed-deploy/c04a67fff5/worker-provenance.json), and
+[`guide-coverage.json`](../co-managed-deploy/c04a67fff5/guide-coverage.json).
+The regenerated 260-ID census and manifest under this candidate folder remain
+fail-closed: bounded login/deployment proofs do not promote the unrelated
+requirements. Publication SHA, runtime source SHA, build ID and worker process
+provenance are separate fields in the receipts. The historical 704f coverage
+file remains unchanged and partial.
+
 ## `81fe5d58c8/` — the 2026-09-20 correction round
 
 Anchored at the `origin/main` base-reconciliation merge commit.

@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "candidateRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "buildId": "build-1792926045353",
+  "sanitizedPrivateEvidence": "/home/robert/card-review-private/co-managed-it-3363/production-c04a67-auth-smoke.json",
+  "checks": [
+    {
+      "actor": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+      "routes": [
+        "/msp/tickets",
+        "/msp/tickets/customer"
+      ],
+      "initialState": "Fresh isolated production browser session; inactive restored duplicate account exists.",
+      "action": "Fresh login, navigate each route, hard reload each route, inspect populated session.",
+      "persistedResult": "Original active customer tenant selected; populated session retained through navigation and reloads.",
+      "negativeControl": "No credentials, cookies, accounts, tenant state, roles or grants were changed.",
+      "status": "passed"
+    },
+    {
+      "actor": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+      "routes": [
+        "/msp/tickets",
+        "/msp/tickets/customer",
+        "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+      ],
+      "initialState": "Fresh isolated production browser session.",
+      "action": "Login, navigate native list, shared list and qualified shared detail; hard reload and recheck session.",
+      "persistedResult": "Shared detail title and Timeline rendered; populated session retained after reload.",
+      "negativeControl": "Native list and Customer Tickets remain distinct routes with separate data boundaries.",
+      "status": "passed"
+    },
+    {
+      "actor": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+      "route": "supported workflow-open-review on canonical review-app",
+      "initialState": "Promoted canonical service on port 23374, production build build-1792926045353.",
+      "action": "Invoke board-supported Open Review independently after promotion.",
+      "persistedResult": "Opened app URL with entryUrl /msp/tickets and signedInAs qa@emeraldcity.oz.",
+      "negativeControl": "Manual candidate login is not used as proof of supported Open Review.",
+      "status": "passed"
+    }
+  ],
+  "remainingAcceptance": "The multipart, OIDC, provider/inbound, product-boundary, collaboration/privacy/file, assignment/SLA, time, financial, departure, export/restore/activation and native regression matrices remain incomplete or externally blocked. No guide scenario is fully accepted on this build. Port-scoped cookie coexistence boundary cases were not separately exercised on the repaired production runtime; source-level cookie/session tests passed.",
+  "guideScenariosAccepted": 0
+}

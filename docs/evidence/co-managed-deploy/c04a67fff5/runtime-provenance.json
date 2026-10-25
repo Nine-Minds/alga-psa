@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-10-25T11:29:04Z",
+  "publicationRevision": "2f02f03c4b58722b25216a07a43e723ccac83088",
+  "runtimeSourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "sourceFingerprint": "da39a3ee5e6b",
+  "revisionStamp": "c04a67fff5b553d2c2a1f55a14194f829343adae+da39a3ee5e6b",
+  "buildId": "build-1792926045353",
+  "distribution": "server/.next-review-c04a67-production",
+  "candidate": {
+    "port": 23378,
+    "servingPid": 2334739,
+    "processStartedAtLocal": "2026-10-25T07:17:09-04:00",
+    "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+    "healthPath": "/api/health",
+    "httpStatus": 200,
+    "selectedDistributionEnvironment": "CO_MANAGED_REVIEW_DIST and NEXT_DIST_DIR both .next-review-c04a67-production"
+  },
+  "canonical": {
+    "port": 23374,
+    "servingPid": 2390309,
+    "processStartedAtLocal": "2026-10-25T07:26:42-04:00",
+    "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+    "healthPath": "/api/health",
+    "httpStatus": 200,
+    "registration": "review-app",
+    "promotion": "Supported board registration using the verified isolated distribution",
+    "selectedDistributionEnvironment": "CO_MANAGED_REVIEW_DIST and NEXT_DIST_DIR both .next-review-c04a67-production"
+  },
+  "build": {
+    "serverTypecheck": "passed",
+    "productionBuild": "passed",
+    "log": ".card-service-logs/review-app-repaired-candidate.log"
+  },
+  "limitations": [
+    "A live port and board registration were supplemented with distribution stamp, BUILD_ID, serving process, CWD and HTTP checks.",
+    "The production runtime proof does not establish long-term memory stability.",
+    "The development-only React Flight patch did not alter production bundles."
+  ],
+  "sourceDiffFingerprintFullSha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+}

@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "runtimeSourceRevision": "c04a67fff5b553d2c2a1f55a14194f829343adae",
+  "buildCommand": "flock -x /home/robert/.alga-dev/locks/next-build.lock -c \"npm --prefix ee/temporal-workflows run build && npm --prefix services/workflow-worker run build\"",
+  "buildResult": "passed",
+  "workspaceCheck": "npm --prefix services/workflow-worker run check:build-workspaces passed (46 manifests, 22 selectors, 45 local dependency closure)",
+  "temporalWorker": {
+    "pid": 2365752,
+    "startedAtUtc": "2026-10-25T11:21:36Z",
+    "cwd": "/home/robert/alga-copies/feature-co-managed-it/ee/temporal-workflows",
+    "entry": "dist/ee/temporal-workflows/src/worker.js",
+    "entrySha256": "d8328c8a383a8a6f66ab6ac5fd769e4a13a69b83da6e1ff88b3a1ec667c14d9c",
+    "healthPath": "/health",
+    "httpStatus": 200,
+    "restartType": "cold child restart through supported card-service cleanup and board restart",
+    "sourceTreeSha": "36a5beba7d1d75bebdd231d3689adc742dbcc81b"
+  },
+  "workflowWorker": {
+    "pid": 2368257,
+    "startedAtUtc": "2026-10-25T11:22:05Z",
+    "cwd": "/home/robert/alga-copies/feature-co-managed-it/services/workflow-worker",
+    "entry": "dist/services/workflow-worker/src/index.js",
+    "entrySha256": "f2be6be532957114654f14cf5b9c6e2f03ab77d2e8ecc3aeed23422a6e003ab1",
+    "healthPath": "/health",
+    "httpStatus": 200,
+    "restartType": "cold child restart through supported card-service cleanup and board restart",
+    "sourceTreeSha": "5127190ffc9c1ec6ad42820ad519df8b60757aac"
+  },
+  "buildLog": ".card-service-logs/co-managed-worker-provenance-build.log"
+}

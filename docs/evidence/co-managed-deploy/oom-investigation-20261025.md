@@ -376,13 +376,39 @@ next-server bundle syntax checks pass. Server `NODE_OPTIONS=--max-old-space-size
 npx tsc --noEmit` exited 0 on the takeover tree. See [heap findings](oom-takeover-20261025/heap-findings.json)
 and [test output](oom-takeover-20261025/tooling-tests.txt).
 
-The already running dev process loaded the old tracker before installation.
-No restart, production promotion, account mutation, or heap-limit increase was
-performed. This fixes the demonstrated retention mechanism in installed source,
-**not yet verified in a fresh registered application process**. Another leak or
-remaining fixed heap cost is not excluded. Registered activation and a repeated
-same-child memory run remain required after the no-start restriction is lifted.
-The auth artifact remains prepared at `71fd898d`; canonical production still
-predates the auth repairs. Repaired production QA/Alice entry, remaining PLAN
-matrices, and fourteen full current-build scenarios remain pending. Historical
-704f media and all acceptance statuses are preserved.
+The development measurements above are bounded verification only: authenticated
+reload runs showed heap growth, and long-term memory stability remains unproven.
+They do not establish production memory behavior. The React Flight ancestry patch
+is limited to Next development bundles; it did not change production bundles.
+
+## Repaired production proof (2026-10-25)
+
+After the earlier takeover notes, the admitted isolated production candidate
+completed server typecheck and production build without changing the frozen
+source checkout. Its full runtime source SHA is
+`c04a67fff5b553d2c2a1f55a14194f829343adae`; the distribution fingerprint is
+`da39a3ee5e6b4b0d3255bfef95601890afd80709`, the revision stamp is
+`c04a67fff5b553d2c2a1f55a14194f829343adae+da39a3ee5e6b`, and `BUILD_ID` is
+`build-1792926045353`. Candidate port 23378 and promoted canonical port 23374
+were HTTP-ready. The serving children used the server CWD and the isolated
+`.next-review-c04a67-production` distribution. See the co-located runtime and
+worker receipts for process identities, start times, source/build provenance,
+and readiness checks.
+
+Fresh isolated production browser sessions proved Alice selected the original
+active customer tenant `1f98df77-cd15-44c2-8f4d-42ff52d01e84` despite inactive
+restored duplicates, then retained a populated session through native All
+Tickets, Customer Tickets and hard reloads. Fresh QA navigated native All
+Tickets, shared Customer Tickets and qualified shared detail with reload
+persistence. Supported `workflow-open-review` independently opened the promoted
+canonical app directly as `qa@emeraldcity.oz`. The sanitized browser receipt is
+private at `/home/robert/card-review-private/co-managed-it-3363/production-c04a67-auth-smoke.json`;
+no credentials or cookie values are retained in repository evidence.
+
+This proof supersedes the stale deployment-pending statements in earlier
+preparation notes; it does not supersede the historical runtime evidence or
+claim complete acceptance. The 260-ID census remains unaccepted except for
+explicitly evidenced checks. The remaining PLAN matrices and fourteen full
+current-build walkthroughs remain incomplete. Historical 704f, cd28 and e88
+recordings retain their original provenance and partial status. No changes were
+made to accounts, passwords, hashes, tenant state, roles or grants.
