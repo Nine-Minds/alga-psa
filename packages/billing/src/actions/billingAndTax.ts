@@ -1232,6 +1232,101 @@ async function attachFixedContractLineAmountsToRows(
     );
 }
 
+/**
+ * A cadence Prepaid Block bills its configured block price once per service
+ * period, so the listing shows it as a known amount (plan D8) instead of
+ * "Calculated at generation". Proration scales the price by the period's
+ * coverage ratio, which the listing does not carry; so a proration-enabled line
+ * shows the amount only when the contract assignment covers the whole service
+ * period (ratio 1) and otherwise stays pending. Best-effort like the fixed path.
+ */
+async function attachCadencePrepaidBlockAmountsToRows(
+    knex: Knex,
+    tenant: string,
+    rows: IRecurringDueWorkRow[],
+    dbRows: PersistedRecurringDueWorkDbRow[],
+): Promise<void> {
+    const dbRowByRecordId = new Map(
+        dbRows.filter((dbRow) => dbRow.record_id).map((dbRow) => [dbRow.record_id, dbRow] as const),
+    );
+    const candidates = rows.flatMap((row) => {
+        const dbRow = row.recordId ? dbRowByRecordId.get(row.recordId) : undefined;
+        const lineId = row.contractLineId ?? dbRow?.contract_line_id;
+        if (
+            (row as { chargeType?: string | null }).chargeType !== 'PrepaidBlock'
+            || !dbRow
+            || !lineId
+            || dbRow.charge_family !== 'prepaid_block'
+            || typeof (row as { amountCents?: number | null }).amountCents === 'number'
+        ) {
+            return [];
+        }
+        return [{ row, dbRow, lineId: String(lineId) }];
+    });
+    if (candidates.length === 0) {
+        return;
+    }
+
+    try {
+        const lineIds = Array.from(new Set(candidates.map((candidate) => candidate.lineId)));
+        const configs = await knex('contract_line_prepaid_blocks as pb')
+            .join('contract_lines as cl', function () {
+                this.on('cl.tenant', '=', 'pb.tenant').andOn('cl.contract_line_id', '=', 'pb.contract_line_id');
+            })
+            .where('pb.tenant', tenant)
+            .whereIn('pb.contract_line_id', lineIds)
+            .where('pb.issue_mode', 'cadence')
+            .select('pb.contract_line_id', 'pb.block_price', 'cl.enable_proration') as Array<{
+                contract_line_id: string;
+                block_price: string | number | null;
+                enable_proration: boolean | null;
+            }>;
+        const configByLineId = new Map(configs.map((config) => [String(config.contract_line_id), config] as const));
+
+        const prorated = candidates.filter((candidate) => configByLineId.get(candidate.lineId)?.enable_proration);
+        const contractIds = Array.from(
+            new Set(prorated.map((candidate) => candidate.dbRow.contract_id).filter((id): id is string => Boolean(id))),
+        );
+        const assignments = contractIds.length === 0
+            ? []
+            : await knex('client_contracts')
+                .where({ tenant })
+                .whereIn('contract_id', contractIds)
+                .select('contract_id', 'client_id', 'start_date', 'end_date') as Array<{
+                    contract_id: string;
+                    client_id: string;
+                    start_date: string | Date | null;
+                    end_date: string | Date | null;
+                }>;
+
+        for (const { row, dbRow, lineId } of candidates) {
+            const config = configByLineId.get(lineId);
+            const price = config ? Number(config.block_price) : NaN;
+            if (!config || !Number.isFinite(price)) {
+                continue;
+            }
+            if (config.enable_proration) {
+                const periodStart = normalizeDateOnly(dbRow.service_period_start);
+                const periodEnd = normalizeDateOnly(dbRow.service_period_end);
+                const coversWholePeriod = assignments.some((assignment) => {
+                    if (assignment.contract_id !== dbRow.contract_id || assignment.client_id !== dbRow.client_id) {
+                        return false;
+                    }
+                    const start = assignment.start_date ? normalizeDateOnly(assignment.start_date as ISO8601String) : null;
+                    const end = assignment.end_date ? normalizeDateOnly(assignment.end_date as ISO8601String) : null;
+                    return (!start || start <= periodStart) && (!end || end >= periodEnd);
+                });
+                if (!coversWholePeriod) {
+                    continue;
+                }
+            }
+            (row as { amountCents?: number | null }).amountCents = price;
+        }
+    } catch (error) {
+        console.warn('[RecurringDueWork] Cadence prepaid block amount lookup failed.', error);
+    }
+}
+
 function buildRecurringDueWorkInvoiceCandidates(
     rows: IRecurringDueWorkRow[],
     metadataByRecordId: Map<string, RecurringDueWorkGroupingMetadata> = new Map(),
@@ -2085,6 +2180,12 @@ export const getAvailableRecurringDueWork = withAuth(async (
         // pre-pagination rows are no longer the ones we return. Nothing between
         // candidate building and here reads amountCents.
         await attachFixedContractLineAmountsToRows(
+            visibleInvoiceCandidates.flatMap((candidate) => candidate.members),
+            persistedDbRows,
+        );
+        await attachCadencePrepaidBlockAmountsToRows(
+            knex,
+            tenant,
             visibleInvoiceCandidates.flatMap((candidate) => candidate.members),
             persistedDbRows,
         );
