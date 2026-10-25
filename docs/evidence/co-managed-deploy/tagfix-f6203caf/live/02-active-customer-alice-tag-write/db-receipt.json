@@ -1,0 +1,18 @@
+{
+  "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84",
+  "ticket": "cfff4242-7962-4100-a54c-687eaa540500",
+  "tag": "SMOKE tagfix 1792964956535",
+  "added": [
+    {
+      "mapping_id": "afa565ac-3854-4c9c-aacc-3d75ccce97e8",
+      "tag_id": "efff5354-bcff-4222-bc73-3eb16c3e8a24",
+      "tag_text": "SMOKE tagfix 1792964956535",
+      "tagged_id": "cfff4242-7962-4100-a54c-687eaa540500",
+      "created_by": "ea343af6-c05d-471c-987d-635dca584d4a"
+    }
+  ],
+  "afterRemoval": {
+    "mappings": [],
+    "definitions": 0
+  }
+}

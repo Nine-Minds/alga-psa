@@ -1,0 +1,107 @@
+{
+  "scenario": "03-native-psa-qa-tag-write",
+  "recordedAt": "2026-10-25T21:49:29.731Z",
+  "runtime": {
+    "sourceRevision": "f6203cafff58164fa324424df8c20950107ca3ab",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "f6203cafff58164fa324424df8c20950107ca3ab",
+    "buildId": "build-1792963638060"
+  },
+  "assertions": [
+    {
+      "id": "tag-persisted",
+      "passed": true,
+      "at": "2026-10-25T21:49:37.199Z",
+      "data": {
+        "added": [
+          {
+            "mapping_id": "587e7bbc-a3e6-4a89-ba4f-d1de6cca22ca",
+            "tag_id": "fc709357-d674-49a4-a0c4-2ebfc40e5324",
+            "tag_text": "SMOKE tagfix 1792964969758",
+            "tagged_id": "68a51c93-2c2a-4bb6-be7e-5562d405a33d",
+            "created_by": "5e6e332e-047d-488f-be12-9bce7e5d7bf8"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tag-removed-and-cleaned",
+      "passed": true,
+      "at": "2026-10-25T21:49:40.809Z",
+      "data": {
+        "visible": 0
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T21:49:31.879Z",
+      "seconds": 2.148,
+      "actor": "qa",
+      "title": "Fresh normal login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+      }
+    },
+    {
+      "at": "2026-10-25T21:49:33.918Z",
+      "seconds": 4.187,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/68a51c93-2c2a-4bb6-be7e-5562d405a33d"
+    },
+    {
+      "at": "2026-10-25T21:49:36.165Z",
+      "seconds": 6.435,
+      "actor": "qa",
+      "title": "removed earlier attempt tag",
+      "data": {
+        "mapping_id": "d06729a4-c144-405a-88fb-2fd5d381b07c",
+        "tag_id": "12c1b89a-d846-4440-8c8a-faf3282fc6c3",
+        "tag_text": "SMOKE tagfix 1792964874632",
+        "tagged_id": "68a51c93-2c2a-4bb6-be7e-5562d405a33d",
+        "created_by": "5e6e332e-047d-488f-be12-9bce7e5d7bf8"
+      }
+    },
+    {
+      "at": "2026-10-25T21:49:37.199Z",
+      "seconds": 7.468,
+      "actor": "qa",
+      "title": "tag-persisted",
+      "data": {
+        "added": [
+          {
+            "mapping_id": "587e7bbc-a3e6-4a89-ba4f-d1de6cca22ca",
+            "tag_id": "fc709357-d674-49a4-a0c4-2ebfc40e5324",
+            "tag_text": "SMOKE tagfix 1792964969758",
+            "tagged_id": "68a51c93-2c2a-4bb6-be7e-5562d405a33d",
+            "created_by": "5e6e332e-047d-488f-be12-9bce7e5d7bf8"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-25T21:49:40.809Z",
+      "seconds": 11.078,
+      "actor": "qa",
+      "title": "tag-removed-and-cleaned",
+      "data": {
+        "visible": 0
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 11.68,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

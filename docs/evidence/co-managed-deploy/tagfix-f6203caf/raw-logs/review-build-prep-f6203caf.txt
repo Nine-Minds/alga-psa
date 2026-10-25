@@ -1,0 +1,17 @@
+=== 2026-10-25T21:24:00Z run-card-service.sh starting review-build-prep-f6203caf: bash /tmp/alga-smoke-evidence/co-managed-it-tagfix-f6203caf/prepare-f6203caf.sh
+[alga-card-service] phase=building
+Typechecking review candidate f6203cafff58164fa324424df8c20950107ca3ab+da39a3ee5e6b
+Typecheck passed for f6203cafff58164fa324424df8c20950107ca3ab+da39a3ee5e6b
+Building f6203cafff58164fa324424df8c20950107ca3ab+da39a3ee5e6b into .next-review-final-f6203caf (2026-10-25T21:27:05Z)
+[32mESM[39m [1mdist/lib/errors.js                               [22m[32m324.00 B[39m
+[32mESM[39m [1mdist/lib/providerErrors.js                       [22m[32m6.25 KB[39m
+[32mESM[39m [1mdist/billingClients/bucketUsageErrors.js                                        [22m[32m329.00 B[39m
+[32mESM[39m [1mdist/lib/errors.js                                     [22m[32m773.00 B[39m
+[32mESM[39m [1mdist/lib/localizeActionError.js                        [22m[32m1.61 KB[39m
+[32mESM[39m [1mdist/actions/tagActionErrors.js      [22m[32m240.00 B[39m
+[32mESM[39m [1mdist/actions/assetActionErrors.js                       [22m[32m6.78 KB[39m
+[32mESM[39m [1mdist/actions/loanerRestockErrors.js             [22m[32m6.30 KB[39m
+[32mESM[39m [1mdist/lib/kitActionErrors.js                     [22m[32m4.92 KB[39m
+[32mESM[39m [1mdist/components/clients/SectionLoadError.js                      [22m[32m736.00 B[39m
+[32mESM[39m [1mdist/lib/contactActionErrorCodes.js                              [22m[32m503.00 B[39m
+Review build f6203cafff58164fa324424df8c20950107ca3ab+da39a3ee5e6b prepared in .next-review-final-f6203caf; application startup skipped.

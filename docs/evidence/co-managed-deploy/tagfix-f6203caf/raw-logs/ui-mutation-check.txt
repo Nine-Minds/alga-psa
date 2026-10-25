@@ -1,0 +1,19 @@
+== mutation A: TagManager ignores readOnly for the add control and TagList ignores it for the remove control
+     × shows existing tags with no add, remove, or edit affordance when the screen is read-only 57ms
+     × shows existing tags with no add, remove, or edit affordance when the screen is read-only 25ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/components/ticket/__tests__/ticketTags.readOnly.test.tsx > Entry layout ticket tags > shows existing tags with no add, remove, or edit affordance when the screen is read-only
+ FAIL  src/components/ticket/__tests__/ticketTags.readOnly.test.tsx > Grid layout ticket tags > shows existing tags with no add, remove, or edit affordance when the screen is read-only
+      Tests  2 failed | 2 passed (4)
+== mutation: tickets/src/components/ticket/TicketInfo.tsx stops passing screen.readOnly to TagManager
+     × shows existing tags with no add, remove, or edit affordance when the screen is read-only 66ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/components/ticket/__tests__/ticketTags.readOnly.test.tsx > Entry layout ticket tags > shows existing tags with no add, remove, or edit affordance when the screen is read-only
+      Tests  1 failed | 3 passed (4)
+== mutation: tickets/src/components/ticket/bento/BentoHero.tsx stops passing screen.readOnly to TagManager
+     × shows existing tags with no add, remove, or edit affordance when the screen is read-only 31ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/components/ticket/__tests__/ticketTags.readOnly.test.tsx > Grid layout ticket tags > shows existing tags with no add, remove, or edit affordance when the screen is read-only
+      Tests  1 failed | 3 passed (4)
+== restored
+      Tests  4 passed (4)

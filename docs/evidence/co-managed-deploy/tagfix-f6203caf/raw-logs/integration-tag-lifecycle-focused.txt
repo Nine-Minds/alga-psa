@@ -1,0 +1,15 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "20260610"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts (1472 tests | 1469 skipped) 7548ms 192 MB heap used
+   ✓ co-managed tag lifecycle admission > refuses every tag write of a departed customer without changing a row, while reads still return its tags  1265ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed | 1469 skipped (1472)
+   Start at  21:13:08
+   Duration  16.34s (transform 3.77s, setup 271ms, collect 4.60s, tests 7.55s, environment 0ms, prepare 28ms)
+
+exit 0

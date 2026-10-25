@@ -1,0 +1,107 @@
+{
+  "scenario": "02-active-customer-alice-tag-write",
+  "recordedAt": "2026-10-25T21:49:16.486Z",
+  "runtime": {
+    "sourceRevision": "f6203cafff58164fa324424df8c20950107ca3ab",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "f6203cafff58164fa324424df8c20950107ca3ab",
+    "buildId": "build-1792963638060"
+  },
+  "assertions": [
+    {
+      "id": "tag-persisted",
+      "passed": true,
+      "at": "2026-10-25T21:49:24.479Z",
+      "data": {
+        "added": [
+          {
+            "mapping_id": "afa565ac-3854-4c9c-aacc-3d75ccce97e8",
+            "tag_id": "efff5354-bcff-4222-bc73-3eb16c3e8a24",
+            "tag_text": "SMOKE tagfix 1792964956535",
+            "tagged_id": "cfff4242-7962-4100-a54c-687eaa540500",
+            "created_by": "ea343af6-c05d-471c-987d-635dca584d4a"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tag-removed-and-cleaned",
+      "passed": true,
+      "at": "2026-10-25T21:49:29.207Z",
+      "data": {
+        "visible": 0
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T21:49:18.669Z",
+      "seconds": 2.183,
+      "actor": "alice",
+      "title": "Fresh normal login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+      }
+    },
+    {
+      "at": "2026-10-25T21:49:20.849Z",
+      "seconds": 4.363,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "at": "2026-10-25T21:49:23.192Z",
+      "seconds": 6.706,
+      "actor": "alice",
+      "title": "removed earlier attempt tag",
+      "data": {
+        "mapping_id": "4b4375e5-b713-4c36-8aa0-7f65f96e267f",
+        "tag_id": "7082cd9c-0f76-4791-86e7-5ddea55aca03",
+        "tag_text": "SMOKE tagfix 1792964815608",
+        "tagged_id": "cfff4242-7962-4100-a54c-687eaa540500",
+        "created_by": "ea343af6-c05d-471c-987d-635dca584d4a"
+      }
+    },
+    {
+      "at": "2026-10-25T21:49:24.479Z",
+      "seconds": 7.993,
+      "actor": "alice",
+      "title": "tag-persisted",
+      "data": {
+        "added": [
+          {
+            "mapping_id": "afa565ac-3854-4c9c-aacc-3d75ccce97e8",
+            "tag_id": "efff5354-bcff-4222-bc73-3eb16c3e8a24",
+            "tag_text": "SMOKE tagfix 1792964956535",
+            "tagged_id": "cfff4242-7962-4100-a54c-687eaa540500",
+            "created_by": "ea343af6-c05d-471c-987d-635dca584d4a"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-10-25T21:49:29.207Z",
+      "seconds": 12.721,
+      "actor": "alice",
+      "title": "tag-removed-and-cleaned",
+      "data": {
+        "visible": 0
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [],
+  "durationSeconds": 13.36,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ]
+}

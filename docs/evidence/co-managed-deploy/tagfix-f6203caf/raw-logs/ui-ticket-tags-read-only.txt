@@ -1,0 +1,66 @@
+▲ [WARNING] Duplicate key "@alga-psa/event-schemas" in object literal [duplicate-object-key]
+
+    package.json:65:4:
+      65 │     "@alga-psa/event-schemas": "*"
+         ╵     ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  The original key "@alga-psa/event-schemas" is here:
+
+    package.json:53:4:
+      53 │     "@alga-psa/event-schemas": "*",
+         ╵     ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+ RUN  v4.1.11 /home/robert/alga-copies/feature-co-managed-it/packages/tickets
+
+stdout | src/components/ticket/__tests__/ticketTags.readOnly.test.tsx > Entry layout ticket tags > shows existing tags with no add, remove, or edit affordance when the screen is read-only
+Fetched permissions for ticket : {
+  canAddExisting: true,
+  canCreateNew: true,
+  canEditColors: true,
+  canEditText: true,
+  canDelete: true,
+  canDeleteAll: true
+}
+
+stdout | src/components/ticket/__tests__/ticketTags.readOnly.test.tsx > Entry layout ticket tags > offers add, remove, and edit on an active (writable) workspace
+Fetched permissions for ticket : {
+  canAddExisting: true,
+  canCreateNew: true,
+  canEditColors: true,
+  canEditText: true,
+  canDelete: true,
+  canDeleteAll: true
+}
+
+stdout | src/components/ticket/__tests__/ticketTags.readOnly.test.tsx > Grid layout ticket tags > shows existing tags with no add, remove, or edit affordance when the screen is read-only
+Fetched permissions for ticket : {
+  canAddExisting: true,
+  canCreateNew: true,
+  canEditColors: true,
+  canEditText: true,
+  canDelete: true,
+  canDeleteAll: true
+}
+
+ ✓ src/components/ticket/__tests__/ticketTags.readOnly.test.tsx > Entry layout ticket tags > shows existing tags with no add, remove, or edit affordance when the screen is read-only 50ms
+ ✓ src/components/ticket/__tests__/ticketTags.readOnly.test.tsx > Entry layout ticket tags > offers add, remove, and edit on an active (writable) workspace 36ms
+stdout | src/components/ticket/__tests__/ticketTags.readOnly.test.tsx > Grid layout ticket tags > offers add, remove, and edit on an active (writable) workspace
+Fetched permissions for ticket : {
+  canAddExisting: true,
+  canCreateNew: true,
+  canEditColors: true,
+  canEditText: true,
+  canDelete: true,
+  canDeleteAll: true
+}
+
+ ✓ src/components/ticket/__tests__/ticketTags.readOnly.test.tsx > Grid layout ticket tags > shows existing tags with no add, remove, or edit affordance when the screen is read-only 16ms
+ ✓ src/components/ticket/__tests__/ticketTags.readOnly.test.tsx > Grid layout ticket tags > offers add, remove, and edit on an active (writable) workspace 25ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  17:49:56
+   Duration  1.49s (transform 595ms, setup 126ms, import 948ms, tests 129ms, environment 207ms)
+
+exit 0

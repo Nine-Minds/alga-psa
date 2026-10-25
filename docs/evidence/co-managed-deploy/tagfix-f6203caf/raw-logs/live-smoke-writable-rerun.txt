@@ -1,0 +1,11 @@
+02-active-customer-alice-tag-write Fresh normal login {"email":"alice@whiterabbit.test","tenant":"1f98df77-cd15-44c2-8f4d-42ff52d01e84"}
+02-active-customer-alice-tag-write navigate "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500"
+02-active-customer-alice-tag-write removed earlier attempt tag {"mapping_id":"4b4375e5-b713-4c36-8aa0-7f65f96e267f","tag_id":"7082cd9c-0f76-4791-86e7-5ddea55aca03","tag_text":"SMOKE tagfix 1792964815608","tagged_id":"cfff4242-7962-4100-a54c-687eaa540500","created_by":"ea343af6-c05d-471c-987d-635dca584d4a"}
+02-active-customer-alice-tag-write tag-persisted {"added":[{"mapping_id":"afa565ac-3854-4c9c-aacc-3d75ccce97e8","tag_id":"efff5354-bcff-4222-bc73-3eb16c3e8a24","tag_text":"SMOKE tagfix 1792964956535","tagged_id":"cfff4242-7962-4100-a54c-687eaa540500","created_by":"ea343af6-c05d-471c-987d-635dca584d4a"}]}
+02-active-customer-alice-tag-write tag-removed-and-cleaned {"visible":0}
+03-native-psa-qa-tag-write Fresh normal login {"email":"qa@emeraldcity.oz","tenant":"24ac76c8-df59-4b10-8371-c56222904580"}
+03-native-psa-qa-tag-write navigate "/msp/tickets/68a51c93-2c2a-4bb6-be7e-5562d405a33d"
+03-native-psa-qa-tag-write removed earlier attempt tag {"mapping_id":"d06729a4-c144-405a-88fb-2fd5d381b07c","tag_id":"12c1b89a-d846-4440-8c8a-faf3282fc6c3","tag_text":"SMOKE tagfix 1792964874632","tagged_id":"68a51c93-2c2a-4bb6-be7e-5562d405a33d","created_by":"5e6e332e-047d-488f-be12-9bce7e5d7bf8"}
+03-native-psa-qa-tag-write tag-persisted {"added":[{"mapping_id":"587e7bbc-a3e6-4a89-ba4f-d1de6cca22ca","tag_id":"fc709357-d674-49a4-a0c4-2ebfc40e5324","tag_text":"SMOKE tagfix 1792964969758","tagged_id":"68a51c93-2c2a-4bb6-be7e-5562d405a33d","created_by":"5e6e332e-047d-488f-be12-9bce7e5d7bf8"}]}
+03-native-psa-qa-tag-write tag-removed-and-cleaned {"visible":0}
+exit 0

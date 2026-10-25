@@ -1,0 +1,6 @@
+
+> check:transaction-threading
+> node scripts/check-transaction-threading.mjs
+
+OK: 753 files scanned, no transaction-accepting function opens its own connection.
+exit 0

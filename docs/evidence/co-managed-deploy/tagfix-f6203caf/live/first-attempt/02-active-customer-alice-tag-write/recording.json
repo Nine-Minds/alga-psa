@@ -1,0 +1,78 @@
+{
+  "scenario": "02-active-customer-alice-tag-write",
+  "recordedAt": "2026-10-25T21:46:55.577Z",
+  "runtime": {
+    "sourceRevision": "f6203cafff58164fa324424df8c20950107ca3ab",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "f6203cafff58164fa324424df8c20950107ca3ab",
+    "buildId": "build-1792963638060"
+  },
+  "assertions": [
+    {
+      "id": "tag-persisted",
+      "passed": true,
+      "at": "2026-10-25T21:47:03.713Z",
+      "data": {
+        "added": [
+          {
+            "mapping_id": "4b4375e5-b713-4c36-8aa0-7f65f96e267f",
+            "tag_id": "7082cd9c-0f76-4791-86e7-5ddea55aca03",
+            "tag_text": "SMOKE tagfix 1792964815608",
+            "tagged_id": "cfff4242-7962-4100-a54c-687eaa540500",
+            "created_by": "ea343af6-c05d-471c-987d-635dca584d4a"
+          }
+        ]
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T21:46:57.745Z",
+      "seconds": 2.168,
+      "actor": "alice",
+      "title": "Fresh normal login",
+      "data": {
+        "email": "alice@whiterabbit.test",
+        "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+      }
+    },
+    {
+      "at": "2026-10-25T21:47:00.058Z",
+      "seconds": 4.481,
+      "actor": "alice",
+      "title": "navigate",
+      "data": "/msp/tickets/cfff4242-7962-4100-a54c-687eaa540500"
+    },
+    {
+      "at": "2026-10-25T21:47:03.713Z",
+      "seconds": 8.136,
+      "actor": "alice",
+      "title": "tag-persisted",
+      "data": {
+        "added": [
+          {
+            "mapping_id": "4b4375e5-b713-4c36-8aa0-7f65f96e267f",
+            "tag_id": "7082cd9c-0f76-4791-86e7-5ddea55aca03",
+            "tag_text": "SMOKE tagfix 1792964815608",
+            "tagged_id": "cfff4242-7962-4100-a54c-687eaa540500",
+            "created_by": "ea343af6-c05d-471c-987d-635dca584d4a"
+          }
+        ]
+      }
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "Timed out cleanup of SMOKE tagfix 1792964815608 false",
+  "durationSeconds": 54.64,
+  "actors": [
+    {
+      "name": "alice",
+      "email": "alice@whiterabbit.test",
+      "tenant": "1f98df77-cd15-44c2-8f4d-42ff52d01e84"
+    }
+  ]
+}

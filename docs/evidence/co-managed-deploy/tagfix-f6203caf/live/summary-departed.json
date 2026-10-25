@@ -1,0 +1,42 @@
+[
+  {
+    "scenario": "01-departed-customer-tags-read-only",
+    "status": "passed",
+    "build": {
+      "sourceRevision": "f6203cafff58164fa324424df8c20950107ca3ab",
+      "buildId": "build-1792963638060"
+    },
+    "assertions": [
+      "relationship-terminated",
+      "entry-existing-tag-displayed",
+      "entry-no-tag-mutation-controls",
+      "grid-existing-tag-displayed",
+      "grid-no-tag-mutation-controls",
+      "db-unchanged"
+    ]
+  },
+  {
+    "scenario": "02-active-customer-alice-tag-write",
+    "status": "failed",
+    "error": "Timed out cleanup of SMOKE tagfix 1792964815608 false",
+    "build": {
+      "sourceRevision": "f6203cafff58164fa324424df8c20950107ca3ab",
+      "buildId": "build-1792963638060"
+    },
+    "assertions": [
+      "tag-persisted"
+    ]
+  },
+  {
+    "scenario": "03-native-psa-qa-tag-write",
+    "status": "failed",
+    "error": "Timed out cleanup of SMOKE tagfix 1792964874632 false",
+    "build": {
+      "sourceRevision": "f6203cafff58164fa324424df8c20950107ca3ab",
+      "buildId": "build-1792963638060"
+    },
+    "assertions": [
+      "tag-persisted"
+    ]
+  }
+]

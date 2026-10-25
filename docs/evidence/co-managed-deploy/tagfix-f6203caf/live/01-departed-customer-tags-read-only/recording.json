@@ -1,0 +1,157 @@
+{
+  "scenario": "01-departed-customer-tags-read-only",
+  "recordedAt": "2026-10-25T21:46:42.689Z",
+  "runtime": {
+    "sourceRevision": "f6203cafff58164fa324424df8c20950107ca3ab",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "f6203cafff58164fa324424df8c20950107ca3ab",
+    "buildId": "build-1792963638060"
+  },
+  "assertions": [
+    {
+      "id": "relationship-terminated",
+      "passed": true,
+      "at": "2026-10-25T21:46:43.593Z",
+      "data": {
+        "relationship": "38db9e8a-7f42-429c-baae-f0eb813b385b",
+        "state": "terminated"
+      }
+    },
+    {
+      "id": "entry-existing-tag-displayed",
+      "passed": true,
+      "at": "2026-10-25T21:46:50.100Z",
+      "data": {
+        "tag": "SMOKE ended tag 1792962099027"
+      }
+    },
+    {
+      "id": "entry-no-tag-mutation-controls",
+      "passed": true,
+      "at": "2026-10-25T21:46:50.101Z",
+      "data": {
+        "addPopover": 0,
+        "addInline": 0,
+        "remove": 0
+      }
+    },
+    {
+      "id": "grid-existing-tag-displayed",
+      "passed": true,
+      "at": "2026-10-25T21:46:51.848Z",
+      "data": {
+        "tag": "SMOKE ended tag 1792962099027"
+      }
+    },
+    {
+      "id": "grid-no-tag-mutation-controls",
+      "passed": true,
+      "at": "2026-10-25T21:46:51.848Z",
+      "data": {
+        "addPopover": 0,
+        "addInline": 0,
+        "remove": 0
+      }
+    },
+    {
+      "id": "db-unchanged",
+      "passed": true,
+      "at": "2026-10-25T21:46:54.833Z",
+      "data": {
+        "mappings": 1
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T21:46:43.594Z",
+      "seconds": 0.905,
+      "title": "relationship-terminated",
+      "data": {
+        "relationship": "38db9e8a-7f42-429c-baae-f0eb813b385b",
+        "state": "terminated"
+      }
+    },
+    {
+      "at": "2026-10-25T21:46:46.005Z",
+      "seconds": 3.316,
+      "actor": "departed-customer",
+      "title": "Fresh normal login",
+      "data": {
+        "email": "depart.admin.1792959853966@cmreview.test",
+        "tenant": "d46de2e8-21a5-424d-8699-f14e07e407a4"
+      }
+    },
+    {
+      "at": "2026-10-25T21:46:48.491Z",
+      "seconds": 5.802,
+      "actor": "departed-customer",
+      "title": "navigate",
+      "data": "/msp/tickets/c7c64319-d853-4b83-b774-a846d285aa1f"
+    },
+    {
+      "at": "2026-10-25T21:46:50.100Z",
+      "seconds": 7.411,
+      "actor": "departed-customer",
+      "title": "entry-existing-tag-displayed",
+      "data": {
+        "tag": "SMOKE ended tag 1792962099027"
+      }
+    },
+    {
+      "at": "2026-10-25T21:46:50.101Z",
+      "seconds": 7.412,
+      "actor": "departed-customer",
+      "title": "entry-no-tag-mutation-controls",
+      "data": {
+        "addPopover": 0,
+        "addInline": 0,
+        "remove": 0
+      }
+    },
+    {
+      "at": "2026-10-25T21:46:51.848Z",
+      "seconds": 9.159,
+      "actor": "departed-customer",
+      "title": "grid-existing-tag-displayed",
+      "data": {
+        "tag": "SMOKE ended tag 1792962099027"
+      }
+    },
+    {
+      "at": "2026-10-25T21:46:51.848Z",
+      "seconds": 9.159,
+      "actor": "departed-customer",
+      "title": "grid-no-tag-mutation-controls",
+      "data": {
+        "addPopover": 0,
+        "addInline": 0,
+        "remove": 0
+      }
+    },
+    {
+      "at": "2026-10-25T21:46:54.833Z",
+      "seconds": 12.144,
+      "actor": "departed-customer",
+      "title": "db-unchanged",
+      "data": {
+        "mappings": 1
+      }
+    }
+  ],
+  "scenarioStatus": "passed",
+  "limitations": [
+    "Departed actor is the disposable departure fixture admin used by the original reproduction (tenant d46de2e8), not alice@whiterabbit.test, whose workspace is active."
+  ],
+  "durationSeconds": 12.08,
+  "actors": [
+    {
+      "name": "departed-customer",
+      "email": "depart.admin.1792959853966@cmreview.test",
+      "tenant": "d46de2e8-21a5-424d-8699-f14e07e407a4"
+    }
+  ]
+}

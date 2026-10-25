@@ -1,0 +1,78 @@
+{
+  "scenario": "03-native-psa-qa-tag-write",
+  "recordedAt": "2026-10-25T21:47:54.604Z",
+  "runtime": {
+    "sourceRevision": "f6203cafff58164fa324424df8c20950107ca3ab",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "mode": "production"
+  },
+  "build": {
+    "sourceRevision": "f6203cafff58164fa324424df8c20950107ca3ab",
+    "buildId": "build-1792963638060"
+  },
+  "assertions": [
+    {
+      "id": "tag-persisted",
+      "passed": true,
+      "at": "2026-10-25T21:48:01.640Z",
+      "data": {
+        "added": [
+          {
+            "mapping_id": "d06729a4-c144-405a-88fb-2fd5d381b07c",
+            "tag_id": "12c1b89a-d846-4440-8c8a-faf3282fc6c3",
+            "tag_text": "SMOKE tagfix 1792964874632",
+            "tagged_id": "68a51c93-2c2a-4bb6-be7e-5562d405a33d",
+            "created_by": "5e6e332e-047d-488f-be12-9bce7e5d7bf8"
+          }
+        ]
+      }
+    }
+  ],
+  "steps": [
+    {
+      "at": "2026-10-25T21:47:56.749Z",
+      "seconds": 2.145,
+      "actor": "qa",
+      "title": "Fresh normal login",
+      "data": {
+        "email": "qa@emeraldcity.oz",
+        "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+      }
+    },
+    {
+      "at": "2026-10-25T21:47:58.877Z",
+      "seconds": 4.273,
+      "actor": "qa",
+      "title": "navigate",
+      "data": "/msp/tickets/68a51c93-2c2a-4bb6-be7e-5562d405a33d"
+    },
+    {
+      "at": "2026-10-25T21:48:01.640Z",
+      "seconds": 7.036,
+      "actor": "qa",
+      "title": "tag-persisted",
+      "data": {
+        "added": [
+          {
+            "mapping_id": "d06729a4-c144-405a-88fb-2fd5d381b07c",
+            "tag_id": "12c1b89a-d846-4440-8c8a-faf3282fc6c3",
+            "tag_text": "SMOKE tagfix 1792964874632",
+            "tagged_id": "68a51c93-2c2a-4bb6-be7e-5562d405a33d",
+            "created_by": "5e6e332e-047d-488f-be12-9bce7e5d7bf8"
+          }
+        ]
+      }
+    }
+  ],
+  "scenarioStatus": "failed",
+  "limitations": [],
+  "error": "Timed out cleanup of SMOKE tagfix 1792964874632 false",
+  "durationSeconds": 53.68,
+  "actors": [
+    {
+      "name": "qa",
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580"
+    }
+  ]
+}

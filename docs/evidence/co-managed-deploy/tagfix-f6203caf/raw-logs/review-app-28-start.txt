@@ -1,0 +1,13 @@
+=== 2026-10-25T21:43:08Z run-card-service.sh starting review-app: bash /home/robert/alga-copies/feature-co-managed-it/scripts/dev/run-co-managed-review-app.sh
+[alga-card-service] phase=building
+Typechecking review candidate f6203cafff58164fa324424df8c20950107ca3ab+da39a3ee5e6b
+Typecheck passed for f6203cafff58164fa324424df8c20950107ca3ab+da39a3ee5e6b
+Review build f6203cafff58164fa324424df8c20950107ca3ab+da39a3ee5e6b already exists in .next-review-final-f6203caf
+[alga-card-service] phase=serving
+✓ Ready in 81ms
+[EventBus] Redis Client Ready
+⨯ Error: The destination stream closed early.
+⨯ Error: The destination stream closed early.
+⨯ Error: The destination stream closed early.
+⨯ Error [CoManagedSharedWorkError]: This shared resource is not available for the requested operation.
+⨯ Error [CoManagedSharedWorkError]: This shared resource is not available for the requested operation.
