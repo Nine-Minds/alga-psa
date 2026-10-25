@@ -173,6 +173,13 @@ const servicePeriodPostInventoryRefs = new Set([
   // alga-2026-0002771: by-ticket plain-text/rounded-hours coverage builds
   // time-charge fixtures with service-period timing after this snapshot.
   'server/src/test/unit/billing/invoiceByTicketPlainText.test.ts',
+  // alga-2026-0002684: shared contract charge resolution (billing engine and
+  // simulator) reads contract-line service-period bounds through charge sources.
+  'packages/billing/src/lib/billing/chargeResolution/databaseChargeSource.ts',
+  'packages/billing/src/lib/billing/chargeResolution/resolveContractLineCharges.ts',
+  'server/src/test/unit/billing/engineUnhandledChargeConfiguration.test.ts',
+  'server/src/test/unit/billing/resolveContractLineCharges.test.ts',
+  'server/src/test/unit/billing/scenarioChargeSource.test.ts',
   // Explicit usage-contract measurement semantics (usage period totals, seat
   // revisions, unit-pricing revisions) added persisted service-period readers
   // and fixtures after the pass-0 snapshot.
