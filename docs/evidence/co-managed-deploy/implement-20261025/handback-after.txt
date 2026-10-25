@@ -1,0 +1,17 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "1792932157429"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ |jsdom| src/test/unit/product/qualifiedTicketList.test.tsx (28 tests) 2656ms 167 MB heap used
+   ✓ T007 — applied filters, sort and pagination reach the server > sends the submitted search and each toolbar filter, resetting to page 1 every time  546ms
+   ✓ T022 — Customer Tickets owns its toolbar and carries no native chrome > search runs as you type: keystrokes within the pause make one request, Enter applies at once, and Reset clears the text  558ms
+   ✓ T022 — Customer Tickets owns its toolbar and carries no native chrome > writes the typed search to the address bar with replaceState, never a history push  531ms
+ ✓ |jsdom| src/test/unit/product/coManagedHandbackRecovery.test.tsx (14 tests) 101ms 190 MB heap used
+
+ Test Files  2 passed (2)
+      Tests  42 passed (42)
+   Start at  12:42:37
+   Duration  11.71s (transform 1.74s, setup 141ms, collect 3.55s, tests 2.76s, environment 194ms, prepare 35ms)
+

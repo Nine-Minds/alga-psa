@@ -35,6 +35,14 @@ test('a current source census preserves every required ID without accepting unpr
   assert.equal(manifest.provenance.app.revision, null);
   assert.equal(manifest.provenance.worker.revision, null);
   assert.deepEqual(manifest.ci.checks, []);
+  const external = inventory.rows.filter(row => row.status === 'blocked-external');
+  assert.deepEqual(external.map(row => row.key).sort(), ['clientIntegration:T018', 'clientIntegration:T019']);
+  assert.match(external.find(row => row.key === 'clientIntegration:T018').remainingAcceptance, /real Stripe test-mode/);
+  assert.match(external.find(row => row.key === 'clientIntegration:T019').remainingAcceptance, /issuer-provided tenant-bound signed Pro license/);
+  for (const row of external) {
+    assert.match(row.remainingAcceptance, /in-card/);
+    assert.match(row.remainingAcceptance, /release-operator/);
+  }
   const verdict = evaluateCoManagedCompletion({ manifest, expectedRequirementIds: expected.keys });
   assert.equal(verdict.implementationReady, false);
   assert.equal(verdict.humanReviewReady, false);

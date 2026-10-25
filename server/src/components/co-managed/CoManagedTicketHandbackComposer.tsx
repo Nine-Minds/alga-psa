@@ -91,8 +91,15 @@ export default function CoManagedTicketHandbackComposer({
   const saved = useRef<PersistedIntent | null>(null);
   const mounted = useRef(false);
   const resultsRef = useRef<HTMLUListElement>(null);
-  // Focus return: the submit button disables once results land, so move focus to the outcome list.
-  useEffect(() => { if (results) resultsRef.current?.focus(); }, [results]);
+  // Reload recovery replaces the resume panel with a new, initially closed
+  // details element. Reveal its outcomes before moving focus into it.
+  useEffect(() => {
+    if (results) {
+      const disclosure = resultsRef.current?.closest('details');
+      if (disclosure) disclosure.open = true;
+      resultsRef.current?.focus();
+    }
+  }, [results]);
   const inFlight = useRef(false);
 
   useEffect(() => {

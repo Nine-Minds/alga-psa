@@ -1,9 +1,21 @@
 # Co-managed development server OOM investigation — 2026-10-25
 
+Production promotion is confirmed: canonical port 23374 serves source
+`c04a67fff5b553d2c2a1f55a14194f829343adae`, build `build-1792926045353`.
+Fresh Alice login, QA native/shared navigation and supported Open Review passed.
+See [runtime acceptance](c04a67fff5/runtime-acceptance.json) and
+[runtime provenance](c04a67fff5/runtime-provenance.json). Fourteen recorded
+production walkthroughs remain partial; deployment is no longer their blocker.
+The dated preparation notes below retain their original observations. They do
+not describe the current deployment. Bounded same-process development reload
+proof remains valid; long-term memory stability remains unproved.
+
 ## Registered runtime verification, 10:26–10:28 UTC
 
 The bounded runtime check **passes** on the repaired development process.
-Production deployment and full guide acceptance remain blocked.
+At that observation, production deployment and full guide acceptance were
+blocked. The later confirmed production promotion supersedes that deployment
+status.
 
 The board's 10:18 resume adopted PID `1722063`, started at 09:53 UTC.
 Inspector source inspection confirmed that it still held the unpatched React
@@ -71,7 +83,7 @@ finally block closes the inspector. The loaded-source reader ran while that
 connection was available. The commands above were separate calls, with the
 supervisor's ordinary replacement allowed to finish before the second run.
 
-### Authentication and production boundary
+### Authentication and production boundary at 10:28 UTC (historical)
 
 On `http://feature-co-managed-it.localhost:3374`, isolated Chrome contexts
 passed the same CSRF/credentials callback protocol used by Open Review. QA
@@ -97,9 +109,10 @@ The binding startup restriction is:
 
 No fresh admission grant or refusal was obtained. This quotation is the
 captain-controlled startup restriction, not an invented board refusal.
-Production deployment remains pending normal admission and registration.
+Production deployment was pending normal admission and registration at that
+time. It subsequently completed; see the current status above.
 
-### Acceptance limits
+### Acceptance limits at 10:28 UTC (historical)
 
 Fresh metadata in `desk-runtime-matrices.json` lists the outstanding production
 matrices individually. `desk-video-coverage.json` has fourteen BLOCKED
@@ -410,8 +423,10 @@ preparation notes; it does not supersede the historical runtime evidence or
 claim complete acceptance. The 260-ID census remains unaccepted except for
 explicitly evidenced checks. The remaining PLAN matrices and fourteen full
 current-build walkthroughs remain incomplete. Historical 704f, cd28 and e88
-recordings retain their original provenance and partial status. No changes were
-made to accounts, passwords, hashes, tenant state, roles or grants.
+recordings retain their original provenance and partial status. The
+authentication-only check made no changes to accounts, passwords, hashes,
+tenant state, roles or grants. Later product acceptance created disposable
+fixtures and exercised ordinary relationship and configuration mutations.
 
 ## Subsequent production matrix evidence
 

@@ -99,6 +99,28 @@ describe('restoring an unresolved handback', () => {
     expect(window.sessionStorage.getItem(KEY)).toBeNull();
   });
 
+  it('opens and focuses mixed results after resuming with no fresh selection', async () => {
+    mocks.submit.mockResolvedValue([
+      { index: 0, ok: false, code: 'changed' },
+      { index: 1, ok: true, receipt: {} },
+    ]);
+    const frozen = JSON.parse(intent());
+    frozen.labels.push('Customer B · T-2 · Network');
+    frozen.request.items.push({ ...frozen.request.items[0], operationId: 'second-frozen-operation' });
+    window.sessionStorage.setItem(KEY, JSON.stringify(frozen));
+    renderComposer({ selectedItems: [] });
+
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.ticket.retry' }));
+    const results = await screen.findByRole('status', { hidden: true });
+
+    expect(results.closest('details')).toHaveAttribute('open');
+    expect(results).toHaveFocus();
+    expect(results).toHaveTextContent('coManaged.queue.bulkHandback.changed');
+    expect(results).toHaveTextContent('coManaged.queue.bulkHandback.returned');
+    expect(mocks.submit).toHaveBeenCalledOnce();
+    expect(window.sessionStorage.getItem(KEY)).toBeNull();
+  });
+
   it('discarding removes the intent and returns to the ordinary composer', () => {
     window.sessionStorage.setItem(KEY, intent());
     renderComposer();

@@ -1,0 +1,53 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "1792932119881"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ❯ |jsdom| src/test/unit/product/coManagedHandbackRecovery.test.tsx (14 tests | 1 failed) 160ms 164 MB heap used
+   ✓ restoring an unresolved handback > never submits a restored intent automatically 7ms
+   ✓ restoring an unresolved handback > replays the EXACT frozen command, not a newly built one 12ms
+   ✓ restoring an unresolved handback > clears the persisted intent once the result is known 64ms
+   × restoring an unresolved handback > opens and focuses mixed results after resuming with no fresh selection 14ms
+     → expect(element).toHaveAttribute("open") // element.hasAttribute("open")
+
+Expected the element to have attribute:
+  open
+Received:
+  null
+   ✓ restoring an unresolved handback > discarding removes the intent and returns to the ordinary composer 9ms
+   ✓ intents that must NOT be restored > ignores and deletes an expired intent 2ms
+   ✓ intents that must NOT be restored > ignores an intent belonging to a different actor 2ms
+   ✓ intents that must NOT be restored > ignores an intent whose actorScope does not match its own key 3ms
+   ✓ intents that must NOT be restored > ignores an intent written by an older format version 2ms
+   ✓ intents that must NOT be restored > ignores a corrupt payload instead of throwing 2ms
+   ✓ intents that must NOT be restored > ignores an intent with no items 2ms
+   ✓ persisting before the first submission > writes the replay command BEFORE the action is called 16ms
+   ✓ persisting before the first submission > survives an uncertain result so a reload can resume it 11ms
+   ✓ persisting before the first submission > says so, and still allows a retry, when storage is unavailable 11ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |jsdom| src/test/unit/product/coManagedHandbackRecovery.test.tsx > restoring an unresolved handback > opens and focuses mixed results after resuming with no fresh selection
+Error: expect(element).toHaveAttribute("open") // element.hasAttribute("open")
+
+Expected the element to have attribute:
+  open
+Received:
+  null
+ ❯ src/test/unit/product/coManagedHandbackRecovery.test.tsx:116:40
+    114|     const results = await screen.findByRole('status', { hidden: true }…
+    115| 
+    116|     expect(results.closest('details')).toHaveAttribute('open');
+       |                                        ^
+    117|     expect(results).toHaveFocus();
+    118|     expect(results).toHaveTextContent('coManaged.queue.bulkHandback.ch…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 13 passed (14)
+   Start at  12:42:00
+   Duration  7.45s (transform 1.43s, setup 138ms, collect 2.70s, tests 160ms, environment 174ms, prepare 32ms)
+

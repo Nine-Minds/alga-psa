@@ -73,6 +73,12 @@ const correction = ['gate', 'intake', 'intake', 'intake', 'providers', 'provider
 const correctionTests = ['gate', 'intake', 'intake', 'intake', 'intake', 'providers', 'provision', 'oidc', 'providers', 'queue', 'queue', 'queue', 'presentation', 'time', 'isolation', 'lifecycle', 'sla', 'purchase', 'license', 'portable', 'archive', 'migrations', 'runtime', 'fixtures', 'builds', 'gate'];
 
 export function requirementSources(plan, row) {
+  if (plan === 'clientIntegration' && row.id === 'T018') {
+    return { ...domains.purchase, remaining: 'Complete the in-card hosted setup, acceptance, allocation, role and flag-off journeys with the configured simulator. The external portion requires real Stripe test-mode checkout/reconciliation and the licensed recurring price; release-operator must provide the approved Stripe account, test credentials and price, then record provider receipts. Simulator results do not satisfy that external portion.' };
+  }
+  if (plan === 'clientIntegration' && row.id === 'T019') {
+    return { ...domains.license, remaining: 'Complete the in-card signed-fixture, shortfall, preserved-draft, missing/expired-claim and UI-off journeys on an isolated self-host installation. The external portion requires an issuer-provided tenant-bound signed Pro license and license refresh; release-operator must arrange the installation and issuer evidence. A locally signed fixture does not establish real issuer availability.' };
+  }
   const n = Number(row.id.replace(/\D/g, ''));
   let name;
   if (plan === 'foundation') name = foundation[n - 1];
