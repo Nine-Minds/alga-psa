@@ -98,7 +98,7 @@ import {
   updateInvoiceTotalsAndRecordTransaction
 } from '@alga-psa/billing/services/invoiceService';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
-import { paymentTermDays } from '@alga-psa/shared/billingClients/paymentPreferences';
+import { resolveInvoiceDueDate } from '@alga-psa/billing/lib/billing/invoiceDueDate';
 import { getClientDefaultBillingProfileId } from '@alga-psa/billing/lib/billing/billingProfileLookup';
 
 type DeferredEvent = () => Promise<void>;
@@ -325,16 +325,10 @@ export class InvoiceService extends BaseService<IInvoice> {
     return summarizeInvoiceRecurringProvenance(charges);
   }
 
+  // Delegates to the shared resolver so REST and UI invoices agree: the
+  // client's default profile, then the client, then the tenant default.
   private async computeDueDate(trx: Knex.Transaction, tenant: string, clientId: string, invoiceDate: string): Promise<string> {
-    const client = await tenantDb(trx, tenant).table('clients')
-      .where({ client_id: clientId })
-      .select('payment_terms')
-      .first();
-
-    const plainInvoiceDate = Temporal.PlainDate.from(invoiceDate);
-    return plainInvoiceDate
-      .add({ days: paymentTermDays(client?.payment_terms) })
-      .toString();
+    return resolveInvoiceDueDate(trx, tenant, clientId, invoiceDate);
   }
 
   /**

@@ -5,13 +5,14 @@ import { buildDocumentMarkdown } from '@alga-psa/documents/lib/documentMarkdownE
 import { createPDFGenerationService } from '@alga-psa/billing/services';
 import { resolveClientPortalDocument } from '@alga-psa/client-portal/lib/clientDocumentAccess';
 import type { IUser } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 
 // LEVERAGE: pattern document-byte-serving
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ documentId: string }> }) {
   const user = await getCurrentUser().catch(() => null);
   if (!user?.tenant) return NextResponse.json({ error: 'Sign in to access this document.', code: 'unauthorized' }, { status: 401 });
-  if (user.user_type !== 'client') return NextResponse.json({ error: 'Client portal access is required.', code: 'forbidden' }, { status: 403 });
+  if (!isClientUserType(user.user_type)) return NextResponse.json({ error: 'Client portal access is required.', code: 'forbidden' }, { status: 403 });
   const { documentId } = await params;
   return runWithTenant(user.tenant, async () => {
     const db = await getConnection(user.tenant!);

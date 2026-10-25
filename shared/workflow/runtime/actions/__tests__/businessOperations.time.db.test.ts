@@ -3,7 +3,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 
-import { createTestDbConnection, createTenant, createUser } from './_dbTestUtils';
+import { createTestDbConnection, createTenant, createUser, createServiceUser } from './_dbTestUtils';
 
 const SCHEMA_INTROSPECTION_TENANT = '__workflow_time_db_test_schema__';
 
@@ -675,6 +675,35 @@ describe('time workflow runtime DB-backed action handlers', () => {
 
     expect(sheet).toBeTruthy();
     expect(sheet.user_id).toBe(entryUserId);
+  });
+
+  it('T043 (F055-F057): time.create_entry rejects a service owner; no time entry, time sheet or ticket assignment is written', async () => {
+    const serviceUserId = await createServiceUser(db, runtimeState.tenantId);
+    const clientId = await createClient(db, runtimeState.tenantId, 'Workflow Time Guard Client');
+    const ticketId = await createTicket(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+    });
+    const serviceId = await createService(db, runtimeState.tenantId);
+    await createTimePeriod(db, runtimeState.tenantId, '2026-04-01', '2026-04-08');
+
+    await expect(invokeAction('time.create_entry', {
+      user_id: serviceUserId,
+      start: '2026-04-02T06:30:00.000Z',
+      duration_minutes: 60,
+      billable: true,
+      service_id: serviceId,
+      link: { type: 'ticket', id: ticketId },
+    })).rejects.toMatchObject({ code: 'HUMAN_WORK_ASSIGNEE_INVALID', details: { userIds: [serviceUserId] } });
+
+    expect(await tenantTable(db, runtimeState.tenantId, 'time_entries').where({ user_id: serviceUserId })).toHaveLength(0);
+    expect(await tenantTable(db, runtimeState.tenantId, 'time_sheets').where({ user_id: serviceUserId })).toHaveLength(0);
+    const ticket = await tenantTable(db, runtimeState.tenantId, 'tickets').where({ ticket_id: ticketId }).first();
+    expect(ticket.assigned_to).not.toBe(serviceUserId);
+    expect(
+      await tenantTable(db, runtimeState.tenantId, 'ticket_resources').where({ additional_user_id: serviceUserId })
+    ).toHaveLength(0);
   });
 
   it('T002: create-entry resolves default contract line and updates bucket usage for a representative billable bucket-backed service', async () => {

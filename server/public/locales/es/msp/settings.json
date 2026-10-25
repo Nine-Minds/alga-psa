@@ -2964,7 +2964,8 @@
     "emptyState": "No hay usuarios disponibles.",
     "roles": {
       "client": "Usuario del cliente",
-      "internal": "Usuario interno"
+      "internal": "Usuario interno",
+      "service": "Cuenta de servicio"
     },
     "badge": {
       "inactive": "Inactivo"

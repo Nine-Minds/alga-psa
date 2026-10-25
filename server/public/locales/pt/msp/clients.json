@@ -572,13 +572,6 @@
     "invoiceDeliveryMethod": "Método de entrega de fatura",
     "invoiceTemplate": "Modelo de fatura",
     "invoiceTemplateHelp": "Selecione um modelo ou use o padrão",
-    "paymentTerms": {
-      "dueOnReceipt": "Vencimento no recebimento",
-      "net14": "Líquido 14",
-      "net15": "Líquido 15",
-      "net30": "Líquido 30",
-      "net7": "Líquido 7"
-    },
     "preferredPaymentMethod": "Método de pagamento preferido",
     "defaultCurrency": "Moeda padrão",
     "selectTaxRegion": "Selecione a região fiscal (opcional)",
@@ -590,11 +583,6 @@
       "both": "Ambos",
       "email": "E-mail",
       "mail": "Correspondência"
-    },
-    "paymentMethods": {
-      "bankTransfer": "Transferência Bancária",
-      "check": "Verificar",
-      "creditCard": "Cartão de crédito"
     },
     "paymentTermsLabel": "Condições de pagamento",
     "standardTemplateLabel": "(Padrão)",
@@ -1766,7 +1754,8 @@
     },
     "cardExpiry": ", expira em {{month}}/{{year}}",
     "legacyPaymentTerms": "«{{value}}» não é uma condição de pagamento reconhecida e nunca foi aplicada. Será removida ao guardar.",
-    "cardOnFile": "{{type}} com final {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} com final {{last4}}{{expiry}}",
+    "tenantDefaultValue": "Padrão do inquilino: {{value}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Alertas de saldo pré-pago",

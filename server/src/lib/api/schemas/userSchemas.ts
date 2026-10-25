@@ -37,7 +37,12 @@ export const passwordCriteriaSchema = z.object({
 });
 
 // User type enum
-export const userTypeSchema = z.enum(['internal', 'client', 'admin', 'contractor']);
+// Every value users.user_type can hold (the DB never allowed 'admin' or 'contractor').
+export const userTypeSchema = z.enum(['internal', 'client', 'service']);
+
+// User types that may be set through user create/update. A non-interactive type is never
+// assignable through user management.
+export const assignableUserTypeSchema = z.enum(['internal', 'client']);
 
 // Timezone schema: accepts "UTC" or an Area/Location IANA zone (UTC aliases are
 // stored as "UTC"); rejects non-city IDs such as EST, Etc/GMT+5 and US/Eastern.
@@ -262,7 +267,7 @@ export const registerUserSchema = z.object({
   first_name: z.string().min(1).max(100).optional(),
   last_name: z.string().min(1).max(100).optional(),
   client_name: z.string().min(1).max(255).optional(),
-  user_type: userTypeSchema.default('internal')
+  user_type: assignableUserTypeSchema.default('internal')
 });
 
 export const registerClientUserSchema = z.object({

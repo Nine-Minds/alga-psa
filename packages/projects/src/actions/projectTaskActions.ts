@@ -1,5 +1,6 @@
 'use server';
 
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { Knex } from 'knex';
 import ProjectTaskModel from '../models/projectTask';
 import ProjectModel from '@alga-psa/projects/models/project';
@@ -1622,6 +1623,9 @@ export const addTaskResourcesAction = withAuth(async (
             const primaryAgentId = task.assigned_to as string | null;
             const toInsert = wanted.filter((id) => id !== primaryAgentId && !existingIds.has(id));
 
+            // Human-work guard: only the resources this write adds.
+            await assertHumanWorkAssignee(trx, tenant, toInsert);
+
             if (toInsert.length > 0) {
                 await tenantScopedTable(trx, 'task_resources', tenant).insert(
                     toInsert.map((userId) => ({
@@ -1719,6 +1723,9 @@ export const assignTeamToProjectTask = withAuth(async (
             // overwriting any previous primary (e.g. the prior team's lead).
             const assignedTo: string = team.manager_id;
 
+            // Human-work guard: the new primary agent (team lead) is set by this write.
+            await assertHumanWorkAssignee(trx, tenant, [assignedTo]);
+
             // The new lead can't be both primary and an additional resource
             // (CHECK assigned_to != additional_user_id + unique index), so drop
             // any existing resource row for them before promoting to primary.
@@ -1746,6 +1753,9 @@ export const assignTeamToProjectTask = withAuth(async (
 
                 const existingIds = new Set(existingResources.map((row: { additional_user_id: string }) => row.additional_user_id));
                 const toInsert = memberIds.filter((userId) => !existingIds.has(userId));
+
+                // Human-work guard: only the resources this write adds.
+                await assertHumanWorkAssignee(trx, tenant, toInsert);
 
                 if (toInsert.length > 0) {
                     await tenantScopedTable(trx, 'task_resources', tenant).insert(

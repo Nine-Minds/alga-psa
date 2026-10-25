@@ -10,7 +10,7 @@ import {
 const { findUserByEmailMock } = vi.hoisted(() => ({ findUserByEmailMock: vi.fn() }));
 
 vi.mock('@alga-psa/db/models/user', () => ({
-  default: { findUserByEmail: findUserByEmailMock },
+  default: { findUserByEmail: findUserByEmailMock, findUserByEmailAndType: findUserByEmailMock },
 }));
 vi.mock('@alga-psa/db', () => ({ getTenantIdBySlug: vi.fn() }));
 
@@ -24,7 +24,9 @@ function makeStore(initialHash: string | null) {
     email: DEVELOPMENT_USER_EMAIL,
     tenant: 'development-tenant',
     hashed_password: initialHash,
-  };
+    // authenticateUser requires an interactive stored type.
+    user_type: 'internal',
+  } as StoredUser;
   const compareAndSet = vi.fn(async (
     userId: string,
     tenant: string,
@@ -81,7 +83,7 @@ describe('development credential initialization', () => {
       expect.any(String),
     );
     expect(announcements).toEqual([{ email: DEVELOPMENT_USER_EMAIL, password: 'first-bootstrap-credential' }]);
-    await expect(authenticateUser(DEVELOPMENT_USER_EMAIL, announcements[0].password)).resolves.toMatchObject({
+    await expect(authenticateUser(DEVELOPMENT_USER_EMAIL, announcements[0].password, 'internal')).resolves.toMatchObject({
       user_id: user.user_id,
     });
   });
@@ -107,7 +109,7 @@ describe('development credential initialization', () => {
     expect(user.hashed_password).toBe(originalHash);
     expect(compareAndSet).not.toHaveBeenCalled();
     expect(announcements).toEqual([]);
-    await expect(authenticateUser(DEVELOPMENT_USER_EMAIL, existingPassword)).resolves.toMatchObject({
+    await expect(authenticateUser(DEVELOPMENT_USER_EMAIL, existingPassword, 'internal')).resolves.toMatchObject({
       user_id: user.user_id,
     });
   });
@@ -155,7 +157,7 @@ describe('development credential initialization', () => {
     expect(compareAndSet).toHaveBeenCalledTimes(2);
     expect(first.announcements.length + second.announcements.length).toBe(1);
     const announced = first.announcements[0] ?? second.announcements[0];
-    await expect(authenticateUser(DEVELOPMENT_USER_EMAIL, announced.password)).resolves.toMatchObject({
+    await expect(authenticateUser(DEVELOPMENT_USER_EMAIL, announced.password, 'internal')).resolves.toMatchObject({
       user_id: user.user_id,
     });
   });
@@ -192,7 +194,7 @@ describe('development credential initialization', () => {
     expect(announcements).toEqual([
       { email: DEVELOPMENT_USER_EMAIL, password: 'operator-selected-recovery-credential' },
     ]);
-    await expect(authenticateUser(DEVELOPMENT_USER_EMAIL, announcements[0].password)).resolves.toMatchObject({
+    await expect(authenticateUser(DEVELOPMENT_USER_EMAIL, announcements[0].password, 'internal')).resolves.toMatchObject({
       user_id: user.user_id,
     });
   });

@@ -453,5 +453,20 @@
     "hoursUsed": "⟦{{hours}} ħȯŭřş ŭşḗḓ⟧",
     "hoursTotal": "⟦{{hours}} ħȯŭřş ŧȯŧȧŀ⟧",
     "rolloverHours": "⟦Īƞƈŀŭḓḗş {{hours}} řȯŀŀȯṽḗř ħȯŭřş⟧"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "⟦Ḓŭḗ ȯƞ Řḗƈḗīƥŧ⟧",
+      "net14": "⟦Ƞḗŧ 14⟧",
+      "net15": "⟦Ƞḗŧ 15⟧",
+      "net30": "⟦Ƞḗŧ 30⟧",
+      "net7": "⟦Ƞḗŧ 7⟧"
+    },
+    "paymentMethods": {
+      "bankTransfer": "⟦Ɓȧƞķ Ŧřȧƞşƒḗř⟧",
+      "check": "⟦Ƈħḗƈķ⟧",
+      "creditCard": "⟦Ƈřḗḓīŧ Ƈȧřḓ⟧"
+    },
+    "tenantDefault": "⟦Ŧḗƞȧƞŧ ḓḗƒȧŭŀŧ ({{value}})⟧"
   }
 }

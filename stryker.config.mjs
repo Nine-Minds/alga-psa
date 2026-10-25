@@ -14,6 +14,7 @@ export default {
     '!shared/billingClients/calendarMonthEndClosePolicy.ts',
     '!packages/authorization/src/kernel/**/*.ts',
     '!packages/authorization/src/portal/visibility.ts',
+    '!packages/types/src/**/*.ts',
     '!server/src/test/unit/billing/calendarMonthEndClosePolicy.test.ts',
     '!server/src/test/unit/authorization/kernel.failClosed.test.ts',
   ],
