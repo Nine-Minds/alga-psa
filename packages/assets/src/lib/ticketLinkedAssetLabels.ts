@@ -2,7 +2,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { LabelRequestContext } from '@alga-psa/types';
 
-import { createAssetReadContext, isAssetReadAllowed } from './assetReadAuthorization';
+import { createAssetReadContext, isAssetReadAllowed, type AssetAuthUser } from './assetReadAuthorization';
 
 /**
  * The asset half of a ticket work tag: the linked asset's tag and a serial SUFFIX. Read-only.
@@ -71,7 +71,7 @@ export async function getTicketLinkedAssetLabelParts(
     );
   const byId = new Map(assets.map((a) => [a.asset_id, a]));
 
-  const authContext = await createAssetReadContext(knex, context.tenant, context.user);
+  const authContext = await createAssetReadContext(knex, context.tenant, context.user as AssetAuthUser);
   const readable = new Map<string, boolean>();
   const canRead = async (assetId: string) => {
     const known = readable.get(assetId);
@@ -126,7 +126,7 @@ export async function listTicketLinkedAssetChoices(
       'name',
       'client_id'
     );
-  const authContext = await createAssetReadContext(knex, context.tenant, context.user);
+  const authContext = await createAssetReadContext(knex, context.tenant, context.user as AssetAuthUser);
   const out: Array<{ assetId: string; assetTag: string | null; name: string | null }> = [];
   for (const a of assets) {
     if (await isAssetReadAllowed(knex, context.tenant, authContext, a)) {
