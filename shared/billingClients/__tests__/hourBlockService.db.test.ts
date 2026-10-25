@@ -166,6 +166,7 @@ async function insertBlock(
 // where applicable), matching every fixture date in this file. Probe at that
 // fixed instant rather than wall-clock "now", which would flip the expected
 // offset whenever CI runs outside daylight-saving time.
+// LEVERAGE: pattern tz-offset-guard — assertTz/assertWorkerTz is copy-pasted across six hour-block/date test files; belongs in a shared test helper.
 const TZ_PROBE_INSTANT = new Date('2026-08-31T12:00:00.000Z');
 
 function assertTz(zone: string, expectedOffsetMinutes: number) {

@@ -55,9 +55,16 @@ vi.mock('@alga-psa/db', async () => {
   };
 });
 
+// The expected offsets are the zones' late-August 2026 offsets (DST in effect
+// where applicable), matching every fixture date in this file. Probe at that
+// fixed instant rather than wall-clock "now", which would flip the expected
+// offset whenever CI runs outside daylight-saving time.
+// LEVERAGE: pattern tz-offset-guard — assertTz/assertWorkerTz is copy-pasted across six hour-block/date test files; belongs in a shared test helper.
+const TZ_PROBE_INSTANT = new Date('2026-08-31T12:00:00.000Z');
+
 function assertWorkerTz(zone: string, expectedOffsetMinutes: number) {
   process.env.TZ = zone;
-  expect(new Date().getTimezoneOffset(), `worker TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+  expect(TZ_PROBE_INSTANT.getTimezoneOffset(), `worker TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
 }
 
 async function seedBase(timezone: string | null) {
