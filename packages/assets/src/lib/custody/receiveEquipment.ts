@@ -23,7 +23,16 @@ export interface ReceiveEquipmentResult {
   event: IAssetCustodyEvent;
 }
 
-/** `<ticket_number>-EQ<n>`: n is one more than the highest suffix already used for this ticket. */
+const MAX_TAG_ATTEMPTS = 25;
+
+/**
+ * `<ticket_number>-EQ<n>`: n is one more than the highest suffix already used for this ticket, then
+ * re-checked against every asset tag in the tenant (case-insensitive) and incremented until free.
+ *
+ * Uniqueness under concurrency comes from the caller holding the ticket row lock (`FOR UPDATE`, taken in
+ * `receiveEquipmentForTicket`) for the whole transaction: two receives on one ticket serialise, so the
+ * second sees the first's asset. The lock is keyed by tenant, so it is also correct on Citus.
+ */
 export async function nextEquipmentTag(trx: Knex.Transaction, tenant: string, ticketNumber: string): Promise<string> {
   const prefix = `${ticketNumber}-EQ`;
   const rows = await tenantDb(trx, tenant)
@@ -35,7 +44,15 @@ export async function nextEquipmentTag(trx: Knex.Transaction, tenant: string, ti
     const suffix = asset_tag.slice(prefix.length);
     if (/^\d+$/.test(suffix)) max = Math.max(max, Number(suffix));
   }
-  return `${prefix}${max + 1}`;
+  for (let attempt = 1; attempt <= MAX_TAG_ATTEMPTS; attempt += 1) {
+    const candidate = `${prefix}${max + attempt}`;
+    const taken = await tenantDb(trx, tenant)
+      .table('assets')
+      .whereRaw('lower(asset_tag) = lower(?)', [candidate])
+      .first('asset_id');
+    if (!taken) return candidate;
+  }
+  throw new CustodyError('tag_generation_failed', 'Could not generate a free equipment tag. Enter a tag manually.');
 }
 
 export async function receiveEquipmentForTicket(
@@ -49,6 +66,7 @@ export async function receiveEquipmentForTicket(
     .table('tickets')
     .where({ ticket_id: input.ticket_id })
     .select('ticket_id', 'ticket_number', 'client_id')
+    .forUpdate() // serialises concurrent receives on this ticket (generated tags); tenant-keyed, Citus-safe
     .first();
   if (!ticket) throw new CustodyError('ticket_not_found', 'Ticket not found.');
   if (!ticket.client_id) {

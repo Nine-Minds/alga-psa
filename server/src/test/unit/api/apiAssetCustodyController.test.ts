@@ -29,6 +29,7 @@ vi.mock('@alga-psa/assets/lib/custody/service', () => ({
     state.calls.push('get');
     return { open: state.open, episodes: [] };
   }),
+  resolveCustodyToday: vi.fn(async () => '2026-10-24'),
   listCustodyEventsService: vi.fn(async () => []),
   openCustodyService: vi.fn(async () => {
     state.calls.push('open');

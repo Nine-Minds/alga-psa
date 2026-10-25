@@ -19,6 +19,7 @@ import {
   listCustodyQueueService,
   openCustodyService,
   recordCustodyEventService,
+  resolveCustodyToday,
 } from '@alga-psa/assets/lib/custody/service';
 import { isCustodyError, type CustodyErrorCode } from '@alga-psa/assets/lib/custody/errors';
 import { ProductAccessError, getTenantProduct } from '@/lib/productAccess';
@@ -44,6 +45,7 @@ const STATUS_BY_CODE: Record<CustodyErrorCode, number> = {
   holder_invalid: 400,
   no_change: 400,
   invalid_date: 400,
+  tag_generation_failed: 409,
   permission_denied: 403,
 };
 
@@ -174,7 +176,9 @@ export class ApiAssetCustodyController {
         pageSize: num('pageSize'),
       });
       const knex = await getConnection(context.tenant);
-      const page = await listCustodyQueueService(knex, context.tenant, this.authUser(context), filters);
+      const authUser = this.authUser(context);
+      const today = await resolveCustodyToday(knex, context.tenant, authUser.user_id);
+      const page = await listCustodyQueueService(knex, context.tenant, authUser, filters, { today });
       return createApiResponse(page);
     } catch (error) {
       return this.fail(error);

@@ -90,15 +90,19 @@ export function matchesQueueTab(row: IAssetCustodyDetail, tab: CustodyQueueTab, 
     case 'waiting_on_vendor':
       return row.state === 'with_vendor' || row.next_action_party === 'vendor';
     case 'waiting_on_client':
-      return row.next_action_party === 'client';
+      return row.state === 'in_office' && row.next_action_party === 'client';
     case 'overdue':
       return row.follow_up_on !== null && row.follow_up_on < today;
   }
 }
 
 export interface ListCustodyQueueOptions {
-  /** Calendar date `YYYY-MM-DD` in the tenant's time zone, for "overdue". Defaults to the UTC date. */
-  today?: string;
+  /**
+   * Required. The caller's local calendar date `YYYY-MM-DD` (user time zone, then tenant, then UTC), for
+   * "overdue" (`follow_up_on < today`). There is deliberately no default: a UTC fallback would flip
+   * overdue at the wrong hour for non-UTC users. See `resolveCustodyToday` in service.ts.
+   */
+  today: string;
   /** Caller's user id, for `mine`. */
   userId?: string;
 }
@@ -113,9 +117,9 @@ export async function listCustodyQueue(
   tenant: string,
   authContext: AssetReadAuthorizationContext,
   filters: ICustodyQueueFilters,
-  options: ListCustodyQueueOptions = {}
+  options: ListCustodyQueueOptions
 ): Promise<ICustodyQueuePage> {
-  const today = options.today ?? new Date().toISOString().slice(0, 10);
+  const { today } = options;
   const page = filters.page && filters.page > 0 ? filters.page : 1;
   const pageSize = filters.pageSize && filters.pageSize > 0 ? Math.min(filters.pageSize, 200) : 25;
 

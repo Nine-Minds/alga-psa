@@ -196,7 +196,7 @@ async function cleanupTenant(tenant: string) {
   }
   for (const name of [
     'asset_custody_events', 'asset_custody', 'asset_history', 'asset_associations', 'assets', 'tickets',
-    'stock_locations', 'asset_statuses', 'clients', 'users',
+    'stock_locations', 'asset_statuses', 'tenant_settings', 'clients', 'users',
   ]) await del(name);
   if (!isCitus) await db.raw('ALTER TABLE asset_custody_events ENABLE TRIGGER USER').catch(() => undefined);
   await unscoped('tenants').where({ tenant }).del().catch(() => undefined);
@@ -422,6 +422,76 @@ describe('equipment custody (integration)', () => {
     const queue = unwrap<any>(await custody.listCustodyQueue({}));
     expect(queue.rows.map((x: any) => [x.asset_id, x.bin])).toEqual([[assetId, 'Shelf C1']]);
     expect(queue.rows[0].ticket_id ?? fx.ticketId).toBe(fx.ticketId);
+  });
+
+  it('waiting_on_client requires the item to be in the office (tab counts and rows)', async () => {
+    const fx = await seedFixture();
+    const inOffice = unwrap<any>(await receiveEquipment(intake(fx, { new_asset: { name: 'Held for pickup', asset_type: 'unknown' }, next_action_party: 'client', follow_up_on: null })));
+    const atVendor = unwrap<any>(await receiveEquipment(intake(fx, { new_asset: { name: 'Sent out', asset_type: 'unknown' }, next_action_party: 'client', follow_up_on: null })));
+    unwrap(await custody.shipCustody(atVendor.custody.custody_id, { counterparty: 'Dell' }));
+    unwrap(await custody.updateCustody(atVendor.custody.custody_id, { next_action_party: 'client' }));
+    const shipped = (await table(fx.tenantId, 'asset_custody').where({ custody_id: atVendor.custody.custody_id }).first());
+    expect(shipped).toMatchObject({ state: 'with_vendor', next_action_party: 'client' });
+
+    const queue = unwrap<any>(await custody.listCustodyQueue({ tab: 'waiting_on_client' }));
+    expect(queue.rows.map((r: any) => r.asset_id)).toEqual([inOffice.asset.asset_id]);
+    expect(queue.tabCounts).toMatchObject({ all_open: 2, in_office: 1, waiting_on_client: 1, waiting_on_vendor: 1 });
+  });
+
+  it('"today" for overdue is the caller local date: user time zone, then tenant time zone, then UTC', async () => {
+    const fx = await seedFixture();
+    const { resolveCustodyToday } = await import('@alga-psa/assets/lib/custody/service');
+    const { matchesQueueTab } = await import('@alga-psa/assets/lib/custody/queries');
+    // 23:30 UTC on the 23rd: already the 24th in Auckland, still the 23rd in UTC.
+    const now = new Date('2026-10-23T23:30:00Z');
+
+    expect(await resolveCustodyToday(db, fx.tenantId, fx.userId, now)).toBe('2026-10-23'); // no tz anywhere: UTC
+
+    await table(fx.tenantId, 'tenant_settings').insert({ tenant: fx.tenantId, settings: { timezone: 'Pacific/Auckland' } });
+    expect(await resolveCustodyToday(db, fx.tenantId, fx.userId, now)).toBe('2026-10-24'); // tenant tz
+
+    await table(fx.tenantId, 'users').where({ user_id: fx.userId }).update({ timezone: 'America/Los_Angeles' });
+    expect(await resolveCustodyToday(db, fx.tenantId, fx.userId, now)).toBe('2026-10-23'); // user tz wins over tenant tz
+
+    await table(fx.tenantId, 'users').where({ user_id: fx.userId }).update({ timezone: 'Pacific/Auckland' });
+    const today = await resolveCustodyToday(db, fx.tenantId, fx.userId, now);
+    expect(today).toBe('2026-10-24');
+
+    // End to end through the queue query: follow_up_on = 2026-10-23 is "today" in UTC but yesterday for this user.
+    const r = unwrap<any>(await receiveEquipment(intake(fx, { follow_up_on: '2026-10-23' })));
+    const { listCustodyQueueService } = await import('@alga-psa/assets/lib/custody/service');
+    const user = { user_id: fx.userId, user_type: 'internal', roles: [] } as any;
+    const local = await listCustodyQueueService(db, fx.tenantId, user, { tab: 'overdue' }, { today });
+    expect(local.rows.map((x: any) => x.asset_id)).toEqual([r.asset.asset_id]);
+    const utc = await listCustodyQueueService(db, fx.tenantId, user, { tab: 'overdue' }, { today: now.toISOString().slice(0, 10) });
+    expect(utc.total).toBe(0);
+    expect(matchesQueueTab(local.rows[0], 'overdue', today)).toBe(true);
+  });
+
+  it('generates distinct tags for concurrent receives on one ticket, with no stock rows', async () => {
+    const fx = await seedFixture();
+    const { receiveEquipmentForTicket } = await import('@alga-psa/assets/lib/custody/receiveEquipment');
+    const before = await counts(fx.tenantId);
+    const ticket = await table(fx.tenantId, 'tickets').where({ ticket_id: fx.ticketId }).first();
+    const run = (name: string) =>
+      db.transaction(async (trx) => {
+        const result = await receiveEquipmentForTicket(trx, fx.tenantId, fx.userId, intake(fx, { new_asset: { name, asset_type: 'unknown' } }) as any);
+        // Hold the transaction open briefly so the two overlap and the ticket row lock is what serialises them.
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        return result;
+      });
+    const [one, two] = await Promise.all([run('Dock A'), run('Dock B')]);
+    expect([one.asset.asset_tag, two.asset.asset_tag].sort()).toEqual([`${ticket.ticket_number}-EQ1`, `${ticket.ticket_number}-EQ2`]);
+    expect(await counts(fx.tenantId)).toEqual(before);
+  });
+
+  it('skips a generated tag already used by an unrelated asset in the tenant', async () => {
+    const fx = await seedFixture();
+    const ticket = await table(fx.tenantId, 'tickets').where({ ticket_id: fx.ticketId }).first();
+    // Different case, different client: the numeric-suffix scan misses it, the tenant-wide check must not.
+    await newAsset(fx, { client_id: fx.otherClientId, asset_tag: `${ticket.ticket_number}-eq1`.toLowerCase() });
+    const r = unwrap<any>(await receiveEquipment(intake(fx)));
+    expect(r.asset.asset_tag).toBe(`${ticket.ticket_number}-EQ2`);
   });
 
   it('record-level filtering: an unreadable asset is dropped from the queue (rows and counts), label parts and reads', async () => {

@@ -11,6 +11,7 @@ export type CustodyErrorCode =
   | 'holder_invalid'
   | 'no_change'
   | 'invalid_date'
+  | 'tag_generation_failed'
   | 'permission_denied';
 
 /** A refusal the user should see verbatim. Everything else is a real failure. */

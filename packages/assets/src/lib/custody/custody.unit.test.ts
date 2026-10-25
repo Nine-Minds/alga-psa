@@ -1,4 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { matchesQueueTab } from './queries';
+
+const tz = vi.hoisted(() => ({ value: 'UTC' }));
+vi.mock('@alga-psa/db', () => ({ resolveEffectiveTimeZone: async () => tz.value }));
 import { allowedCustodyEvents, assertCustodyTransition, nextCustodyState, CustodyTransitionError } from './stateMachine';
 import { formatCustodyForLabel, formatCustodyForLabelMulti, formatFollowUpDate } from './labelFormat';
 
@@ -47,5 +51,40 @@ describe('custody label format', () => {
     expect(formatCustodyForLabelMulti([one, one, one])).toEqual({ custodyLocation: '3 items held', nextAction: null });
     expect(formatCustodyForLabelMulti([one])).toEqual(one);
     expect(formatCustodyForLabelMulti([])).toBeNull();
+  });
+});
+
+describe('custody queue tabs', () => {
+  const row = (over: Record<string, unknown>) => ({ state: 'in_office', next_action_party: null, follow_up_on: null, ...over }) as any;
+
+  it('waiting_on_client needs the item in the office and the client as next actor', () => {
+    expect(matchesQueueTab(row({ state: 'in_office', next_action_party: 'client' }), 'waiting_on_client', '2026-10-24')).toBe(true);
+    expect(matchesQueueTab(row({ state: 'with_vendor', next_action_party: 'client' }), 'waiting_on_client', '2026-10-24')).toBe(false);
+  });
+
+  it('overdue compares follow_up_on to the given local date, strictly before', () => {
+    expect(matchesQueueTab(row({ follow_up_on: '2026-10-23' }), 'overdue', '2026-10-24')).toBe(true);
+    expect(matchesQueueTab(row({ follow_up_on: '2026-10-24' }), 'overdue', '2026-10-24')).toBe(false);
+  });
+});
+
+describe('resolveCustodyToday', () => {
+  // Fixed clock: 2026-10-23T23:30Z is already 2026-10-24 in Auckland but still 2026-10-23 in UTC.
+  const now = new Date('2026-10-23T23:30:00Z');
+
+  it('uses the resolved user time zone, so a UTC-today follow-up is overdue for an Auckland user', async () => {
+    tz.value = 'Pacific/Auckland';
+    const { resolveCustodyToday } = await import('./today');
+    const today = await resolveCustodyToday({} as any, 't', 'u', now);
+    expect(today).toBe('2026-10-24');
+    const followUp = { state: 'in_office', follow_up_on: '2026-10-23' } as any;
+    expect(matchesQueueTab(followUp, 'overdue', today)).toBe(true);
+    expect(matchesQueueTab(followUp, 'overdue', now.toISOString().slice(0, 10))).toBe(false);
+  });
+
+  it('a Los Angeles user is still on the previous day late in the UTC day', async () => {
+    tz.value = 'America/Los_Angeles';
+    const { resolveCustodyToday } = await import('./today');
+    expect(await resolveCustodyToday({} as any, 't', 'u', new Date('2026-10-24T03:00:00Z'))).toBe('2026-10-23');
   });
 });

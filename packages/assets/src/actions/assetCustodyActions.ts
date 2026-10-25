@@ -30,6 +30,7 @@ import {
   listHeldEquipmentService,
   openCustodyService,
   recordCustodyEventService,
+  resolveCustodyToday,
   updateCustodyService,
 } from '../lib/custody/service';
 import { toCustodyResult, type CustodyActionResult } from '../lib/custody/actionResult';
@@ -157,9 +158,11 @@ export const listCustodyQueue = withAuth(
   async (user, { tenant }, filters: ICustodyQueueFilters = {}): Promise<CustodyActionResult<ICustodyQueuePage> | Denied> => {
     const denied = await denyUnless(user, 'read');
     if (denied) return denied;
-    return toCustodyResult(async () =>
-      listCustodyQueueService(await ctx(), tenant, user as any, custodyQueueFiltersSchema.parse(filters))
-    );
+    return toCustodyResult(async () => {
+      const knex = await ctx();
+      const today = await resolveCustodyToday(knex, tenant, user.user_id);
+      return listCustodyQueueService(knex, tenant, user as any, custodyQueueFiltersSchema.parse(filters), { today });
+    });
   }
 );
 

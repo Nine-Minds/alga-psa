@@ -29,6 +29,7 @@ import { recordCustodyEvent } from './recordCustodyEvent';
 import { updateCustodyDetails } from './updateCustodyDetails';
 import { getOpenCustodyForAssets, listCustodyEpisodes, listCustodyQueue } from './queries';
 import { publishCustodyChanged } from './publishCustodyChanged';
+export { resolveCustodyToday } from './today';
 import { loadCustody, locationNames, userNames } from './shared';
 
 /**
@@ -253,7 +254,7 @@ export async function listCustodyQueueService(
   tenant: string,
   user: AssetAuthUser,
   filters: ICustodyQueueFilters,
-  options: { today?: string } = {}
+  options: { today: string }
 ): Promise<ICustodyQueuePage> {
   const ctx = await createAssetReadContext(knex, tenant, user);
   return listCustodyQueue(knex, tenant, ctx, filters, { ...options, userId: user.user_id });
