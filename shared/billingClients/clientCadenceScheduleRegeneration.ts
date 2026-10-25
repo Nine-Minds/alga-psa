@@ -21,7 +21,7 @@ import {
   backfillRecurringServicePeriods,
   type IRecurringServicePeriodBackfillPlan,
 } from './backfillRecurringServicePeriods';
-import { resolveEffectiveBillingTiming, resolveRecurringChargeFamily } from './contractLineTimingRule';
+import { contractLineOwnStream } from './contractLineTimingRule';
 
 type ClientCadenceRecurringObligationRow = {
   client_contract_line_id: string;
@@ -528,10 +528,8 @@ async function computeClientCadenceRegeneration(
       continue;
     }
 
-    const duePosition: DuePosition = resolveEffectiveBillingTiming(
-      obligation.contract_line_type,
-      obligation.billing_timing,
-    );
+    const { family: lineChargeFamily, duePosition } =
+      contractLineOwnStream(obligation);
     const existingRecords = await loadExistingRecurringServicePeriodRecords(trx, {
       tenant: params.tenant,
       obligationId: obligation.client_contract_line_id,
@@ -544,7 +542,7 @@ async function computeClientCadenceRegeneration(
       sourceObligation: {
         tenant: params.tenant,
         obligationId: obligation.client_contract_line_id,
-        chargeFamily: resolveRecurringChargeFamily(obligation.contract_line_type),
+        chargeFamily: lineChargeFamily,
       },
       duePosition,
       sourceRuleVersion,

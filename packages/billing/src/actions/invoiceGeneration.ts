@@ -1669,6 +1669,11 @@ function getSelectedRecurringObligationIdFromSelectorInput(
   throw new Error('Recurring selector input execution window kind is not supported.');
 }
 
+/**
+ * Scopes the engine's selections to the selected obligations. Selections are
+ * keyed by line, then stream, so scoping by line keeps every stream of a
+ * selected line (a line is due when any of its streams is).
+ */
 function scopeRecurringTimingSelectionsForSelectorInputs(
   recurringTimingSelections: Record<string, unknown>,
   selectorInputs: IRecurringDueSelectionInput[],

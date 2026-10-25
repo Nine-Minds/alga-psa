@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import type { DuePosition } from '@alga-psa/types';
-import { resolveEffectiveBillingTiming } from '@alga-psa/shared/billingClients/contractLineTimingRule';
+import { contractLineRecurringStreams } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { whereLiveRecurringContractLine } from '@alga-psa/shared/billingClients/liveClientCadenceRecurringLine';
 import {
   isClientCadenceLineExpectedInWindow,
@@ -182,15 +182,17 @@ export async function listUnmaterializedClientCadenceWindowLineIds(params: {
         // window start bills its first period in a later window, and demanding
         // materialization for it would falsely block every other line here.
         .filter((row) =>
-          isClientCadenceLineExpectedInWindow({
-            duePosition: resolveEffectiveBillingTiming(row.contract_line_type, row.billing_timing),
-            assignmentStart: row.start_date,
-            assignmentEnd: row.end_date ? toDateOnly(row.end_date) : null,
-            billedBoundaryEnd: row.billed_boundary_end,
-            fallbackStart,
-            windowStart,
-            windowEnd,
-          }),
+          contractLineRecurringStreams(row).some((stream) =>
+            isClientCadenceLineExpectedInWindow({
+              duePosition: stream.duePosition,
+              assignmentStart: row.start_date,
+              assignmentEnd: row.end_date ? toDateOnly(row.end_date) : null,
+              billedBoundaryEnd: row.billed_boundary_end,
+              fallbackStart,
+              windowStart,
+              windowEnd,
+            }),
+          ),
         )
         .map((row) => row.contract_line_id)
         .filter((value): value is string => Boolean(value)),

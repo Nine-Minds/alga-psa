@@ -40,6 +40,7 @@ import {
   type ResolutionDiagnostics,
   type PooledTimeExclusion,
   type PrepaidBlockIssuanceSupply,
+  type StreamTimings,
   type SuppliedCharge,
   type TaxContextDemand,
   type TimingRequest,
@@ -78,11 +79,11 @@ export interface ScenarioChargeSourceInput {
   client: { client_id: string; is_tax_exempt?: boolean | null };
   billingPeriod: IBillingPeriod;
   /**
-   * The line's covered service period for this invoice window, or null when
-   * the source answers only for the window itself (the window-driven
-   * prepaid-block families).
+   * The line's covered service period per stream for this invoice window; a
+   * stream with no entry is not due here. Empty when the source answers only
+   * for the window itself (the window-driven prepaid-block families).
    */
-  timing: ResolvedBillingTiming | null;
+  timings: StreamTimings;
   periodIndex: number;
   taxPorts: ChargeComputeTaxContext;
   currencyCode: string;
@@ -115,16 +116,10 @@ export class ScenarioChargeSource implements ContractChargeSource {
   }
 
   async resolveTiming(request: TimingRequest): Promise<TimingResolution> {
-    if (request.duePosition !== "line") {
-      throw new Error(
-        `Scenario charge source cannot resolve a "${request.duePosition}" due position; only the line's own position is supported`,
-      );
-    }
-    // The caller only builds a source with a timing for a service period that
-    // is inside the contract's active window, so the line is always due here.
-    return this.input.timing
-      ? { status: "due", timing: this.input.timing }
-      : { status: "not-due" };
+    // The caller only puts a stream in `timings` for a service period that is
+    // inside the contract's active window, so a stream present here is due.
+    const timing = this.input.timings[request.stream];
+    return timing ? { status: "due", timing } : { status: "not-due" };
   }
 
   async taxContext(_demand: TaxContextDemand): Promise<ChargeComputeTaxContext> {

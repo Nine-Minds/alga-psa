@@ -95,6 +95,7 @@ export async function fetchStrandedArrearsOnlyLineGaps(
         trx,
         tenant,
         row.obligation_id,
+        // LEVERAGE: pattern line-recurring-streams — normalizes a persisted family string, not a line type; fold once persisted rows carry a stream
         resolveRecurringChargeFamily(row.charge_family),
         dateOnly(row.service_period_start),
         dateOnly(row.service_period_end),

@@ -10,6 +10,7 @@
  */
 
 import type { IBillingPeriod } from "@alga-psa/types";
+import type { RecurringChargeStream } from "@alga-psa/shared/billingClients/contractLineTimingRule";
 import type {
   ChargeComputeTaxContext,
   HourBlockDrawRow,
@@ -36,15 +37,18 @@ export type FactsOf<F extends ChargeFamily> = Extract<
 
 /**
  * What one demand asks of the source's timing rule. `policy` names the existing
- * timing resolver the family uses today; `duePosition` lets a demand ask for a
- * position other than the line's own (e.g. a fee in advance and its overage in
- * arrears on one line). Only `line` is implemented: sources reject the others
- * explicitly rather than silently falling back to the line's position.
+ * timing resolver the family uses today; `stream` names the line's recurring
+ * stream whose due period is wanted. Timing is resolved per (line, stream): the
+ * due position is a property of the stream (decided once by materialization),
+ * never of a family, and a line is due when any of its streams is due.
  */
 export interface TimingRequest {
   policy: "fixed-recurring" | "service-driven" | "recurring";
-  duePosition: "line" | "advance" | "arrears";
+  stream: RecurringChargeStream;
 }
+
+/** A source's per-stream due timings (absent stream: not due in the window). */
+export type StreamTimings = Partial<Record<RecurringChargeStream, ResolvedBillingTiming>>;
 
 export type TimingResolution =
   /** The line is due for this window; charges are priced against `timing`. */

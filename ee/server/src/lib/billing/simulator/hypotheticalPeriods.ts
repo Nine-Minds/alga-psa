@@ -28,7 +28,10 @@ import { toISODate, toPlainDate } from '@alga-psa/core';
 import { materializeClientCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeClientCadenceServicePeriods';
 import { materializeContractCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeContractCadenceServicePeriods';
 import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
-import { resolveEffectiveBillingTiming } from '@alga-psa/shared/billingClients/contractLineTimingRule';
+import {
+  contractLineRecurringStreams,
+  type RecurringChargeStream,
+} from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { simulationRefusal } from './simulationRefusal';
 import {
   getBillingPeriodForDate,
@@ -166,14 +169,22 @@ export interface GenerateLineServicePeriodsInput {
   scenarioId: string;
 }
 
+/** One stream's hypothetical service periods for a line. */
+export interface LineStreamServicePeriods {
+  stream: RecurringChargeStream;
+  records: IRecurringServicePeriodRecord[];
+}
+
 /**
  * Generates a line's hypothetical service periods in memory via the shared
  * pure cadence layer (the same generalization recurringAuthoringPreview.ts
- * applies with hardcoded dates). No rows are read or written.
+ * applies with hardcoded dates), once per recurring stream of the line (the
+ * streams come from contractLineRecurringStreams, the same function the
+ * production materializers use). No rows are read or written.
  */
 export function generateLineServicePeriods(
   input: GenerateLineServicePeriodsInput,
-): IRecurringServicePeriodRecord[] {
+): LineStreamServicePeriods[] {
   const {
     line,
     horizon,
@@ -184,16 +195,9 @@ export function generateLineServicePeriods(
     input;
 
   const lineCycle = normalizeBillingCycle(line.billing_frequency);
-  const duePosition = resolveEffectiveBillingTiming(line.contract_line_type, line.billing_timing);
   const cadenceOwner = resolveCadenceOwner(line.cadence_owner);
   const asOf = toUtcMidnight(horizon.start_date);
   const anchorDate = toUtcMidnight(contractStartDate ?? horizon.start_date);
-
-  const sourceObligation: IPersistedRecurringObligationRef = {
-    tenant: 'contract-simulator',
-    obligationId: line.key,
-    chargeFamily: 'fixed',
-  };
 
   // Cover the whole invoice timeline plus one extra line-cadence period so
   // boundary periods (arrears due at the horizon edge) are always generated.
@@ -206,29 +210,42 @@ export function generateLineServicePeriods(
   const targetHorizonDays =
     invoiceHorizonDays + monthsPerCycle(lineCycle) * 31 + 60;
 
-  const common = {
-    asOf,
-    materializedAt: asOf,
-    billingCycle: lineCycle,
-    sourceObligation,
-    duePosition,
-    sourceRuleVersion: SIMULATOR_SOURCE_RULE_VERSION,
-    sourceRunKey: `simulation-${scenarioId}`,
-    targetHorizonDays,
-    replenishmentThresholdDays: 30,
-  } as const;
+  return contractLineRecurringStreams(line, line.prepaid_block).map(
+    ({ stream, family, duePosition }) => {
+      const sourceObligation: IPersistedRecurringObligationRef = {
+        tenant: 'contract-simulator',
+        obligationId: line.key,
+        chargeFamily: family,
+      };
+      const common = {
+        asOf,
+        materializedAt: asOf,
+        billingCycle: lineCycle,
+        sourceObligation,
+        duePosition,
+        sourceRuleVersion: SIMULATOR_SOURCE_RULE_VERSION,
+        sourceRunKey: `simulation-${scenarioId}`,
+        targetHorizonDays,
+        replenishmentThresholdDays: 30,
+      } as const;
 
-  return cadenceOwner === 'contract'
-    ? materializeContractCadenceServicePeriods({ ...common, anchorDate }).records
-    : materializeClientCadenceServicePeriods({
-        ...common,
-        anchorSettings: {
-          dayOfMonth: invoiceSchedule.anchor.day_of_month,
-          monthOfYear: invoiceSchedule.anchor.month_of_year,
-          dayOfWeek: invoiceSchedule.anchor.day_of_week,
-          referenceDate: invoiceSchedule.anchor.reference_date,
-        },
-      }).records;
+      return {
+        stream,
+        records:
+          cadenceOwner === 'contract'
+            ? materializeContractCadenceServicePeriods({ ...common, anchorDate }).records
+            : materializeClientCadenceServicePeriods({
+                ...common,
+                anchorSettings: {
+                  dayOfMonth: invoiceSchedule.anchor.day_of_month,
+                  monthOfYear: invoiceSchedule.anchor.month_of_year,
+                  dayOfWeek: invoiceSchedule.anchor.day_of_week,
+                  referenceDate: invoiceSchedule.anchor.reference_date,
+                },
+              }).records,
+      };
+    },
+  );
 }
 
 export interface ServicePeriodAssignment {

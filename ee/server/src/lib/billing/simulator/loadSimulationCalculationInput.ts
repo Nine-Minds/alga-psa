@@ -59,6 +59,7 @@ import {
   TIMED_CHARGE_FAMILIES,
   WINDOW_DRIVEN_CHARGE_FAMILIES,
   type ResolvedLineCharge,
+  type StreamTimings,
 } from "@alga-psa/billing/lib/billing/chargeResolution";
 import {
   ScenarioChargeSource,
@@ -242,97 +243,100 @@ export async function loadSimulationCalculationInput(
     });
     if (ledger) {
       run.prepaidLedgers.set(line.key, ledger);
-      for (const accumulator of periodAccumulators) {
-        const index = accumulator.window.index;
-        if (
-          !ledger.issuesByPeriod.has(index) &&
-          !ledger.drawsByPeriod.has(index)
-        ) {
-          continue;
-        }
-        collect(
-          index,
-          await resolveContractLineCharges(
-            new ScenarioChargeSource({
-              scenario,
-              line,
-              lineFacts,
-              client,
-              billingPeriod: {
-                tenant,
-                startDate: accumulator.window.startDate,
-                endDate: accumulator.window.endDateExclusive,
-              },
-              timing: null,
-              periodIndex: index,
-              taxPorts,
-              currencyCode,
-              lineCycle,
-              diagnostics,
-              run,
-            }),
-            { families: WINDOW_DRIVEN_CHARGE_FAMILIES, pools: "ignore" },
-          ),
-        );
-      }
     }
 
-    const records = generateLineServicePeriods({
+    const streamPeriods = generateLineServicePeriods({
       line,
       horizon: scenario.horizon,
       invoiceSchedule: scenario.invoice_schedule,
       contractStartDate: scenario.contract_start_date,
       scenarioId: scenario.scenario_id,
     });
-    const assignments = assignServicePeriodsToInvoicePeriods(
-      records,
-      invoicePeriods,
-    );
 
-    if (assignments.length === 0) {
+    // Per invoice window, the line's due timing per stream. A window normally
+    // holds one period per stream; when a finer line cadence lands several in
+    // one window they become further "rounds" (the engine refuses that case, the
+    // projection has always priced each period).
+    const roundsByWindow = new Map<number, StreamTimings[]>();
+    let assignedPeriods = 0;
+    for (const { stream, records } of streamPeriods) {
+      const countByWindow = new Map<number, number>();
+      for (const { periodIndex, record } of assignServicePeriodsToInvoicePeriods(
+        records,
+        invoicePeriods,
+      )) {
+        assignedPeriods += 1;
+        const timing = buildChargeTiming(record, activityWindow);
+        if (!timing) {
+          // Service period falls entirely outside the contract's active window;
+          // production settlement drops it the same way.
+          continue;
+        }
+        const round = countByWindow.get(periodIndex) ?? 0;
+        countByWindow.set(periodIndex, round + 1);
+        const rounds = roundsByWindow.get(periodIndex) ?? [];
+        rounds[round] = { ...rounds[round], [stream]: timing };
+        roundsByWindow.set(periodIndex, rounds);
+      }
+    }
+
+    if (assignedPeriods === 0) {
       diagnostics.push({
         severity: "warning",
         line_key: line.key,
         message: `Does not appear in the next ${scenario.horizon.period_count} invoices because it uses a ${lineCycle} schedule and bills in ${line.billing_timing}.`,
       });
-      continue;
     }
 
-    for (const { periodIndex, record } of assignments) {
-      const accumulator = periodAccumulators[periodIndex];
-      const timing = buildChargeTiming(record, activityWindow);
-      if (!timing) {
-        // Service period falls entirely outside the contract's active window;
-        // production settlement drops it the same way.
-        continue;
-      }
+    // One source per (line, invoice window), carrying the stream -> timing map.
+    for (const accumulator of periodAccumulators) {
+      const index = accumulator.window.index;
+      const windowDriven =
+        Boolean(ledger) &&
+        (ledger!.issuesByPeriod.has(index) || ledger.drawsByPeriod.has(index));
+      const rounds = roundsByWindow.get(index) ?? [];
+      if (!windowDriven && rounds.length === 0) continue;
 
       const billingPeriod: IBillingPeriod = {
         tenant,
         startDate: accumulator.window.startDate,
         endDate: accumulator.window.endDateExclusive,
       };
-
-      // Which charges the line produces is decided by the shared resolver, the
-      // same one the billing engine calls; this loop only supplies scenario data.
-      const resolved = await resolveContractLineCharges(
+      const sourceFor = (timings: StreamTimings) =>
         new ScenarioChargeSource({
           scenario,
           line,
           lineFacts,
           client,
           billingPeriod,
-          timing,
-          periodIndex: accumulator.window.index,
+          timings,
+          periodIndex: index,
           taxPorts,
           currencyCode,
           lineCycle,
           diagnostics,
           run,
-        }),
-        { families: TIMED_CHARGE_FAMILIES },
-      );
-      collect(periodIndex, resolved);
+        });
+
+      if (windowDriven) {
+        collect(
+          index,
+          await resolveContractLineCharges(sourceFor(rounds[0] ?? {}), {
+            families: WINDOW_DRIVEN_CHARGE_FAMILIES,
+            pools: "ignore",
+          }),
+        );
+      }
+      // Which charges the line produces is decided by the shared resolver, the
+      // same one the billing engine calls; this loop only supplies scenario data.
+      for (const timings of rounds) {
+        collect(
+          index,
+          await resolveContractLineCharges(sourceFor(timings), {
+            families: TIMED_CHARGE_FAMILIES,
+          }),
+        );
+      }
     }
   }
 

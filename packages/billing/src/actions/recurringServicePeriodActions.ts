@@ -2,7 +2,7 @@
 
 import {
   resolveEffectiveBillingTiming,
-  resolveRecurringChargeFamily,
+  contractLineOwnStream,
 } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import {
@@ -602,7 +602,7 @@ async function repairScheduleMaterialization(input: {
 }): Promise<RepairRecurringServicePeriodMaterializationResult> {
   const { trx, tenant, schedule, context, existingRecords } = input;
   const repairedAt = new Date().toISOString();
-  const chargeFamily = resolveRecurringChargeFamily(context.contract_line_type);
+  const chargeFamily = contractLineOwnStream(context).family;
 
   if (!context.contract_line_id) {
     throw new Error(`Recurring obligation ${schedule.obligationId} no longer exists.`);
@@ -895,7 +895,7 @@ export const getRecurringServicePeriodManagementView = withAuth(async (
         obligationId: parsedScheduleKey.obligationId,
         cadenceOwner: parsedScheduleKey.cadenceOwner,
         duePosition: parsedScheduleKey.duePosition,
-        chargeFamily: resolveRecurringChargeFamily(context.contract_line_type),
+        chargeFamily: contractLineOwnStream(context).family,
         clientId: context.client_id,
         clientName: context.client_name,
         contractId: context.contract_id,

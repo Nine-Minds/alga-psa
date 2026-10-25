@@ -68,7 +68,12 @@ import {
   getCurrencySymbol,
 } from "@alga-psa/core";
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from "@alga-psa/shared/billingClients";
-import { isAdvanceTimingAllowedForLineType, resolveEffectiveBillingTiming } from "@alga-psa/shared/billingClients/contractLineTimingRule";
+import {
+  isAdvanceTimingAllowedForLineType,
+  resolveEffectiveBillingTiming,
+  streamForChargeFamily,
+  type RecurringChargeStream,
+} from "@alga-psa/shared/billingClients/contractLineTimingRule";
 import {
   ambiguousTicketProjectLinksQuery,
   ticketProjectAttributionJoin,
@@ -179,10 +184,13 @@ type ResolvedRecurringChargeTiming = {
   coverageRatio: number;
 };
 
-type RecurringChargeTimingSelections = Record<
-  string,
-  ResolvedRecurringChargeTiming
+/** One line's due timing per recurring stream (absent stream: not due). */
+type RecurringStreamTimings = Partial<
+  Record<RecurringChargeStream, ResolvedRecurringChargeTiming>
 >;
+
+/** Keyed by line id, then stream: timing is resolved per (line, stream). */
+type RecurringChargeTimingSelections = Record<string, RecurringStreamTimings>;
 
 type CalculateBillingOptions = {
   recurringTimingSelections?: RecurringChargeTimingSelections;
@@ -1850,7 +1858,7 @@ export class BillingEngine {
         billingPeriod,
         line: clientContractLine,
         cycle,
-        timing:
+        timings:
           recurringTimingSelections[clientContractLine.client_contract_line_id],
         timingSource: options.recurringTimingSelectionSource,
         projectContext: projectBillingContext,
@@ -3755,7 +3763,7 @@ export class BillingEngine {
     const dueFixedLines = lines.filter(
       (line) =>
         String(line.contract_line_type ?? "").toLowerCase() === "fixed" &&
-        Boolean(persistedSelections![line.client_contract_line_id]),
+        Boolean(persistedSelections![line.client_contract_line_id]?.line),
     );
     if (dueFixedLines.length === 0) {
       return result;
@@ -3826,7 +3834,7 @@ export class BillingEngine {
     }
 
     for (const line of priceableLines) {
-      const selection = persistedSelections[line.client_contract_line_id];
+      const selection = persistedSelections[line.client_contract_line_id]?.line;
       let charges: IFixedPriceCharge[] = [];
       try {
         charges = await this.calculateFixedPriceCharges(
@@ -4367,7 +4375,7 @@ export class BillingEngine {
     billingPeriod: IBillingPeriod;
     line: IClientContractLine;
     cycle?: string;
-    timing?: ResolvedRecurringChargeTiming;
+    timings?: RecurringStreamTimings;
     timingSource?: CalculateBillingOptions["recurringTimingSelectionSource"];
     preloaded?: PreloadedFixedChargeInputs;
     projectContext?: ProjectBillingContext | null;
@@ -4403,7 +4411,7 @@ export class BillingEngine {
         billingPeriod,
         clientContractLine: line,
         billingCycle: input.cycle,
-        recurringTimingSelection: input.timing,
+        recurringTimingSelections: input.timings,
         recurringTimingSelectionSource: input.timingSource,
         projectTarget: Boolean(input.projectTarget),
         untimedWithoutCadence: input.untimedWithoutCadence,
@@ -4483,10 +4491,18 @@ export class BillingEngine {
   /** Compatibility adapter: resolve one family's facts, then use shared pricing. */
   private async calculateFamilyCharges<T extends IBillingCharge>(
     family: ChargeFamily,
-    input: Omit<Parameters<BillingEngine["resolveLineCharges"]>[0], "families">,
+    input: Omit<
+      Parameters<BillingEngine["resolveLineCharges"]>[0],
+      "families" | "timings"
+    > & {
+      /** The line stream's already selected timing (compatibility callers). */
+      timing?: ResolvedRecurringChargeTiming;
+    },
   ): Promise<T[]> {
+    const { timing, ...rest } = input;
     const { charges } = await this.resolveLineCharges({
-      ...input,
+      ...rest,
+      timings: timing ? { line: timing } : undefined,
       families: new Set([family]),
       pools: input.pools ?? (input.projectTarget ? "ignore" : "apply"),
     });
@@ -4645,7 +4661,7 @@ export class BillingEngine {
       billingPeriod,
       line,
       cycle: billingCycle,
-      timing: recurringTimingSelection,
+      timings: recurringTimingSelection ? { line: recurringTimingSelection } : undefined,
       timingSource: recurringTimingSelectionSource,
       families: new Set<ChargeFamily>(["bucket"]),
       untimedWithoutCadence: true,
@@ -5093,8 +5109,9 @@ export class BillingEngine {
       if (!timingSelection) {
         continue;
       }
-      recurringTimingSelections[clientContractLine.client_contract_line_id] =
-        timingSelection;
+      recurringTimingSelections[clientContractLine.client_contract_line_id] = {
+        line: timingSelection,
+      };
     }
 
     return recurringTimingSelections;
@@ -5107,9 +5124,11 @@ export class BillingEngine {
 
     for (const record of records) {
       const lineId = record.sourceObligation.obligationId;
-      if (recurringTimingSelections[lineId]) {
+      // Timing is selected per (line, stream); the guard is per stream.
+      const stream = streamForChargeFamily(record.sourceObligation.chargeFamily);
+      if (recurringTimingSelections[lineId]?.[stream]) {
         throw new Error(
-          `${RECURRING_TIMING_ROLLOUT_GUARD_PREFIX}: ${lineId}: multiple persisted due periods matched one runtime obligation`,
+          `${RECURRING_TIMING_ROLLOUT_GUARD_PREFIX}: ${lineId}${stream === "line" ? "" : ` (${stream})`}: multiple persisted due periods matched one runtime obligation`,
         );
       }
 
@@ -5137,7 +5156,8 @@ export class BillingEngine {
         coveragePeriod,
       );
 
-      recurringTimingSelections[lineId] = {
+      const lineTimings = (recurringTimingSelections[lineId] ??= {});
+      lineTimings[stream] = {
         servicePeriodRecordId: record.recordId,
         duePosition: record.duePosition,
         servicePeriodStart: toISODate(
@@ -5194,21 +5214,31 @@ export class BillingEngine {
     ).sort();
 
     for (const lineId of lineIds) {
-      const canonical = canonicalSelections[lineId];
-      const provided = providedSelections[lineId];
+      const streams = Array.from(
+        new Set([
+          ...(Object.keys(canonicalSelections[lineId] ?? {}) as RecurringChargeStream[]),
+          ...(Object.keys(providedSelections[lineId] ?? {}) as RecurringChargeStream[]),
+        ]),
+      ).sort();
 
-      if (!canonical) {
-        mismatches.push(`${lineId}: unexpected external selection`);
-        continue;
-      }
+      for (const stream of streams) {
+        const canonical = canonicalSelections[lineId]?.[stream];
+        const provided = providedSelections[lineId]?.[stream];
+        const label = stream === "line" ? lineId : `${lineId} (${stream})`;
 
-      if (!provided) {
-        mismatches.push(`${lineId}: missing canonical selection`);
-        continue;
-      }
+        if (!canonical) {
+          mismatches.push(`${label}: unexpected external selection`);
+          continue;
+        }
 
-      if (!this.areRecurringChargeTimingsEquivalent(canonical, provided)) {
-        mismatches.push(`${lineId}: selection diverged from canonical timing`);
+        if (!provided) {
+          mismatches.push(`${label}: missing canonical selection`);
+          continue;
+        }
+
+        if (!this.areRecurringChargeTimingsEquivalent(canonical, provided)) {
+          mismatches.push(`${label}: selection diverged from canonical timing`);
+        }
       }
     }
 
@@ -5245,6 +5275,7 @@ export class BillingEngine {
     );
   }
 
+  // LEVERAGE: pattern line-recurring-streams — derives the line stream's due position and a hardcoded "fixed" family by hand; belongs behind contractLineRecurringStreams (needs its inputs to be line rows with contract_line_type)
   private buildRecurringChargeTimingSelection(
     billingPeriod: IBillingPeriod,
     clientContractLine: IClientContractLine,

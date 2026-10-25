@@ -20,10 +20,7 @@ import {
   findUncoveredRecurringServicePeriodCandidates,
   isRecurringServicePeriodCandidateCovered,
 } from '@shared/billingClients/regenerateRecurringServicePeriods';
-import {
-  resolveEffectiveBillingTiming,
-  resolveRecurringChargeFamily,
-} from '@alga-psa/shared/billingClients/contractLineTimingRule';
+import { contractLineOwnStream } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 
 export { CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME };
 
@@ -493,10 +490,8 @@ async function syncContractCadenceObligation(
     return emptyObligationSyncResult(true);
   }
 
-  const duePosition: DuePosition = resolveEffectiveBillingTiming(
-    params.obligation.contract_line_type,
-    params.obligation.billing_timing,
-  );
+  const { family: lineChargeFamily, duePosition } =
+    contractLineOwnStream(params.obligation);
   const sourceRuleVersion = [
     'contract_cadence',
     `billing_cycle:${frequency}`,
@@ -545,7 +540,7 @@ async function syncContractCadenceObligation(
     sourceObligation: {
       tenant: params.tenant,
       obligationId: params.obligation.contract_line_id,
-      chargeFamily: resolveRecurringChargeFamily(params.obligation.contract_line_type),
+      chargeFamily: lineChargeFamily,
     },
     duePosition,
     sourceRuleVersion,

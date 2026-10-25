@@ -38,6 +38,7 @@ import type {
   PoolPeriodState,
   PooledTimeExclusion,
   PrepaidBlockIssuanceSupply,
+  StreamTimings,
   SuppliedCharge,
   TaxContextDemand,
   TimingRequest,
@@ -108,8 +109,8 @@ export interface DatabaseChargeSourceInput {
   clientContractLine: IClientContractLine;
   /** Client billing cycle rule, when the caller already knows it. */
   billingCycle?: string;
-  /** A timing the caller already selected for this line, if any. */
-  recurringTimingSelection?: ResolvedBillingTiming;
+  /** The per-stream timings the caller already selected for this line, if any. */
+  recurringTimingSelections?: StreamTimings;
   recurringTimingSelectionSource?: "derived" | "persisted";
   /** Project-driven runs are not cadence-driven (see resolveTiming). */
   projectTarget?: boolean;
@@ -206,14 +207,9 @@ export class DatabaseChargeSource implements ContractChargeSource {
   /* -------------------------------------------------------------- */
 
   async resolveTiming(request: TimingRequest): Promise<TimingResolution> {
-    if (request.duePosition !== "line") {
-      throw new Error(
-        `DatabaseChargeSource only resolves the line's own due position (requested "${request.duePosition}")`,
-      );
-    }
     const {
       projectTarget,
-      recurringTimingSelection,
+      recurringTimingSelections,
       recurringTimingSelectionSource,
       billingPeriod,
       clientContractLine,
@@ -235,6 +231,7 @@ export class DatabaseChargeSource implements ContractChargeSource {
         },
       };
     }
+    const recurringTimingSelection = recurringTimingSelections?.[request.stream];
     if (recurringTimingSelection) {
       return { status: "due", timing: recurringTimingSelection };
     }
@@ -614,20 +611,20 @@ export class DatabaseChargeSource implements ContractChargeSource {
   }
 
   async hourBlockDraws(): Promise<HourBlockDrawSupply | null> {
-    const { recurringTimingSelection, recurringTimingSelectionSource, billingCycle } =
+    const { recurringTimingSelections, recurringTimingSelectionSource, billingCycle } =
       this.input;
     // Without a cycle, a selected timing or persisted periods there is no
     // service period to read draws for.
     if (
       !billingCycle &&
-      !recurringTimingSelection &&
+      !recurringTimingSelections?.line &&
       recurringTimingSelectionSource !== "persisted"
     ) {
       return null;
     }
     const resolution = await this.resolveTiming({
       policy: "service-driven",
-      duePosition: "line",
+      stream: "line",
     });
     if (resolution.status !== "due") return null;
     const { timing } = resolution;

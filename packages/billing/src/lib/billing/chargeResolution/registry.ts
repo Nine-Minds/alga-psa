@@ -79,7 +79,7 @@ export interface FamilyEntry {
   collect(context: FamilyContext): Promise<PlannedCharge[]>;
 }
 
-const LINE_POSITION = "line" as const;
+const LINE_STREAM = "line" as const;
 
 function exclusionFor(context: FamilyContext): PooledTimeExclusion | null {
   return context.pooledServiceIds.length > 0
@@ -188,7 +188,7 @@ export const CHARGE_FAMILY_REGISTRY: readonly FamilyEntry[] = [
   {
     family: "fixed",
     handles: { configurationTypes: ["Fixed"], lineTypes: ["Fixed"] },
-    timing: { policy: "fixed-recurring", duePosition: LINE_POSITION },
+    timing: { policy: "fixed-recurring", stream: LINE_STREAM },
     collect: async ({ source, timing }) => single(await source.fixed(timing!)),
   },
   {
@@ -204,20 +204,20 @@ export const CHARGE_FAMILY_REGISTRY: readonly FamilyEntry[] = [
       lineTypes: ["Hourly"],
       legacyFallbackLineTypes: ["Hourly"],
     },
-    timing: { policy: "service-driven", duePosition: LINE_POSITION },
+    timing: { policy: "service-driven", stream: LINE_STREAM },
     collect: async (context) =>
       single(await context.source.hourly(context.timing!, exclusionFor(context))),
   },
   {
     family: "usage",
     handles: { configurationTypes: ["Usage"], lineTypes: ["Usage"] },
-    timing: { policy: "service-driven", duePosition: LINE_POSITION },
+    timing: { policy: "service-driven", stream: LINE_STREAM },
     collect: async ({ source, timing }) => single(await source.usage(timing!)),
   },
   {
     family: "bucket",
     handles: { configurationTypes: ["Bucket"], lineTypes: ["Bucket"] },
-    timing: { policy: "recurring", duePosition: LINE_POSITION },
+    timing: { policy: "recurring", stream: LINE_STREAM },
     allowsUntimed: true,
     requiresPools: true,
     collect: poolCharges,
@@ -225,14 +225,14 @@ export const CHARGE_FAMILY_REGISTRY: readonly FamilyEntry[] = [
   {
     family: "product",
     handles: { configurationTypes: [], lineTypes: [] },
-    timing: { policy: "recurring", duePosition: LINE_POSITION },
+    timing: { policy: "recurring", stream: LINE_STREAM },
     collect: async ({ source, timing }) =>
       single(await source.recurringQuantity("product", timing!)),
   },
   {
     family: "license",
     handles: { configurationTypes: [], lineTypes: [] },
-    timing: { policy: "recurring", duePosition: LINE_POSITION },
+    timing: { policy: "recurring", stream: LINE_STREAM },
     collect: async ({ source, timing }) =>
       single(await source.recurringQuantity("license", timing!)),
   },

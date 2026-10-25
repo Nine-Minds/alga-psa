@@ -431,6 +431,7 @@ async function linkAndMarkSourceBillingRecord(params: {
   }
 }
 
+// LEVERAGE: pattern line-recurring-streams — maps a charge type back to a recurring family/stream; it should come from the same source as contractLineRecurringStreams once prepaid_block charges are linked
 function getRecurringChargeFamilyForInvoiceLinkage(
   charge: IBillingCharge,
 ): RecurringChargeFamily | null {
