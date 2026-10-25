@@ -4,8 +4,6 @@
  * today's visibility.
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createRequire } from 'node:module';
-import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import knexLib, { type Knex } from 'knex';
 
@@ -53,13 +51,11 @@ vi.mock('@alga-psa/assets/lib/assetReadAuthorization', async (orig) => {
 import { approveWarrantyClaim, denyWarrantyClaim, openWarrantyClaim } from './rmaWarrantyActions';
 import { getRmaCase, listRmaCases } from './rmaActions';
 import { openCustody } from '@alga-psa/assets/lib/custody/openCustody';
+import { loadPermissionUtils, loadServerMigration } from '../test-utils/serverMigrations';
 import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
-const require = createRequire(import.meta.url);
-const permissionsDir = path.resolve(__dirname, '../../../../server/migrations/utils/permissions');
-const { DEFAULT_ROLES } = require(path.join(permissionsDir, 'roleGrants.cjs'));
-const { syncPermissionCatalog } = require(path.join(permissionsDir, 'syncPermissionCatalog.cjs'));
-const warrantyMigration = require(path.resolve(__dirname, '../../../../server/migrations/20261025130200_add_warranty_permissions.cjs'));
+const { DEFAULT_ROLES, syncPermissionCatalog } = loadPermissionUtils();
+const warrantyMigration = loadServerMigration<any>('20261025130200_add_warranty_permissions.cjs');
 
 let knex: Knex;
 let LOCATION: string;

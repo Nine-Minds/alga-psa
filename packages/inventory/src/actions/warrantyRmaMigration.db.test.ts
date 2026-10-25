@@ -4,19 +4,16 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { createRequire } from 'node:module';
-import path from 'node:path';
 import knexLib, { type Knex } from 'knex';
+import { loadServerMigration } from '../test-utils/serverMigrations';
 import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
-const require = createRequire(import.meta.url);
-const REPO = path.resolve(__dirname, '../../../..');
 const MIGRATIONS = [
   '20261025130000_add_warranty_review_to_rma_cases.cjs',
   '20261025130100_create_rma_events.cjs',
   '20261025130200_add_warranty_permissions.cjs',
   '20261025130300_upsert_inventory_rma_updated_event_catalog.cjs',
-].map((f) => require(path.join(REPO, 'server/migrations', f)) as { up: (k: Knex) => Promise<void>; down: (k: Knex) => Promise<void> });
+].map((f) => loadServerMigration<{ up: (k: Knex) => Promise<void>; down: (k: Knex) => Promise<void> }>(f));
 
 const NEW_COLUMNS = [
   'rma_number', 'ticket_id', 'custody_id', 'warranty_decided_by', 'denial_reason', 'closed_reason', 'warranty_outcome',

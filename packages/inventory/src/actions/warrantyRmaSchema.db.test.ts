@@ -7,20 +7,19 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { createRequire } from 'node:module';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import knexLib, { type Knex } from 'knex';
+import { loadServerMigration, serverMigrationPath } from '../test-utils/serverMigrations';
 import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
-const require = createRequire(import.meta.url);
 const REPO = path.resolve(__dirname, '../../../..');
 const MIGRATIONS = [
   '20261025130000_add_warranty_review_to_rma_cases.cjs',
   '20261025130100_create_rma_events.cjs',
   '20261025130200_add_warranty_permissions.cjs',
   '20261025130300_upsert_inventory_rma_updated_event_catalog.cjs',
-].map((f) => require(path.join(REPO, 'server/migrations', f)) as { up: (k: Knex) => Promise<void>; down: (k: Knex) => Promise<void> });
+].map((f) => loadServerMigration<{ up: (k: Knex) => Promise<void>; down: (k: Knex) => Promise<void> }>(f));
 
 const NEW_COLUMNS = [
   'rma_number', 'ticket_id', 'custody_id', 'warranty_decided_by', 'denial_reason', 'closed_reason', 'warranty_outcome',
@@ -129,8 +128,8 @@ describe('T011 rma_cases warranty schema', () => {
 
   it('rma_events exists, is registered for tenant scoping, and next_number has an RMA row per tenant', async () => {
     expect((await knex.schema.hasTable('rma_events'))).toBe(true);
-    for (const f of ['packages/db/src/lib/tenantTableMetadata.ts', 'server/migrations/utils/tenantDb.cjs']) {
-      expect(readFileSync(path.join(REPO, f), 'utf8'), f).toMatch(/rma_events:\s*\{\s*scope:\s*'tenant'\s*\}/);
+    for (const f of [path.join(REPO, 'packages/db/src/lib/tenantTableMetadata.ts'), serverMigrationPath('utils', 'tenantDb.cjs')]) {
+      expect(readFileSync(f, 'utf8'), f).toMatch(/rma_events:\s*\{\s*scope:\s*'tenant'\s*\}/);
     }
     const seeded = await knex('next_number').where({ tenant, entity_type: 'RMA' }).first();
     // createInventoryTestTenant creates the tenant after migration, so the row appears on first numbering use;
