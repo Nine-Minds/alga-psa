@@ -1,15 +1,17 @@
 {
-  "observedAt": "2026-10-25T05:52:00Z",
+  "observedAt": "2026-10-25T06:10:00Z",
   "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
   "buildId": "build-1792904848073",
-  "evidenceScope": "partial runtime acceptance against isolated production candidate :23376; no full PLAN pass claimed",
+  "evidenceScope": "Partial product acceptance against the cd28 production distribution, now registered as canonical review-app on :23374; no full PLAN pass claimed.",
   "runtime": {
-    "origin": "http://feature-co-managed-it.localhost:23376",
+    "origin": "http://feature-co-managed-it.localhost:23374",
     "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
     "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
     "buildId": "build-1792904848073",
     "liveNextProcessPid": 3876055,
-    "liveNextProcessCwd": "/home/robert/alga-copies/feature-co-managed-it/server"
+    "liveNextProcessCwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+    "isolatedCandidateOrigin": "http://feature-co-managed-it.localhost:23376",
+    "canonicalReviewAppSession": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-app:23"
   },
   "results": [
     {
@@ -19,9 +21,12 @@
       "route": "/api/health",
       "action": "Verified launcher-written revision stamp, BUILD_ID, live process CWD and HTTP health. Launcher writes the stamp after its post-build HEAD and tracked-source fingerprint checks.",
       "result": {
-        "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
+        "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
         "buildId": "build-1792904848073",
-        "httpStatus": 200
+        "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
+        "canonicalHttpStatus": 200,
+        "isolatedCandidateHttpStatus": 200,
+        "processCwd": "/home/robert/alga-copies/feature-co-managed-it/server"
       }
     },
     {
@@ -38,7 +43,7 @@
       "actor": "qa@emeraldcity.oz",
       "route": "/msp/tickets",
       "action": "Promoted the already-built candidate distribution to canonical review-app using board conclude/ensure; retained :23375 and :23376. Open Review resumed the registration and authenticated QA.",
-      "result": "Board annotation confirms Review opened as qa@emeraldcity.oz at http://feature-co-managed-it.localhost:23374/msp/tickets. Canonical /api/health returned 200; process serves .next-review-candidate-racefix with build-1792904848073 and stamp cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b."
+      "result": "Verified by board event annotation: workflow-open-review authenticated qa@emeraldcity.oz at http://feature-co-managed-it.localhost:23374/msp/tickets. Canonical review-app is running the cd28 distribution and /api/health returns 200. :23375 and :23376 fallbacks remain healthy."
     },
     {
       "area": "Customer account boundary",
@@ -128,18 +133,19 @@
     {
       "area": "PLAN acceptance remaining",
       "status": "blocked",
-      "result": "Multipart pending enforcement, acceptance/onboarding, Microsoft OIDC/provider behavior, inbound mail, full customer denial matrix, attachments/audience boundaries, revocation, operational vs commercial time, native timesheet rows, recipient refresh and native PSA regression have not all been executed against this candidate."
+      "result": "The following candidate-runtime scenarios are not yet complete: multipart pending enforcement and acceptance/onboarding; Microsoft OIDC negative cases and real sign-in; customer provider persistence and inbound/reply/deduplication/revocation; full account-root/child-route and PSA control matrix; ticket/task audience and attachment boundaries; revocation; commercial vs operational time; native timesheet rows and approval/billing; live recipient refresh; native PSA ticket/comment/attachment/project/time/workflow regression. Distinguish simulator tests from live Microsoft/provider delivery; neither is claimed here."
     },
     {
       "area": "Current runtime guide recordings",
       "status": "blocked",
-      "result": "0/14 current recordings. All destinations are distinct and revision-scoped under current/cd28aa9531f7bd465711f90b92bf8592185d9c77; none exist. Historical e88d530b4c media remains separate and is not current evidence."
+      "result": "0/14 current-build recordings complete. All 14 current destinations are unique and candidate revision scoped; historical e88d530b4c media remains separately identified."
     }
   ],
   "limitations": [
-    "PLAN scenarios listed under remainingPlanScenarios are incomplete; no full acceptance claim.",
-    "All 14 current guide recordings are absent; retained e88d530b4c playback evidence is historical only.",
-    "Temporal worker has no demonstrated post-start business effect."
+    "Full PLAN scenario acceptance remains incomplete.",
+    "Current-build recordings remain 0/14.",
+    "A post-start Temporal business effect with a matched execution is not yet demonstrated.",
+    "The in-app browser recording/control runtime failed to initialize in this session."
   ],
   "remainingPlanScenarios": [
     {
@@ -147,11 +153,11 @@
       "status": "not-run-on-current-candidate",
       "actorRequirement": "distinct pre-acceptance, accepting, and admitted actors; current actors/accounts may be used without credential changes",
       "persistedReloadEvidence": null,
-      "blocker": "Candidate was not promoted through supported Open Review; do not substitute prior e88d build results."
+      "blocker": "Not executed as a full candidate journey yet. Canonical QA Open Review is now verified; prior e88d evidence is not a substitute."
     },
     {
       "area": "Microsoft OIDC and customer provider/inbound mail",
-      "status": "blocked",
+      "status": "not-run-on-candidate",
       "simulator": "not-run on this candidate",
       "liveProvider": "not run; requires the configured Microsoft authority/provider and controlled callback/inbound sender",
       "requiredCases": [
@@ -166,7 +172,8 @@
         "duplicate delivery",
         "revocation",
         "cross-tenant denial"
-      ]
+      ],
+      "externalBlocker": "No live Microsoft/provider acceptance is claimed; live issuer, callback and inbound sender dependencies have not been exercised."
     },
     {
       "area": "Customer authorization and audience boundaries",
@@ -202,22 +209,17 @@
         "time/workflow behavior",
         "customer client tab"
       ],
-      "blocker": "No candidate Open Review session reached an authenticated QA runtime after promotion attempt."
+      "blocker": "QA Open Review succeeded on the candidate, but the required native list and mutation journeys have not been run/reloaded at this build."
     },
     {
       "area": "Current-runtime guide recordings",
       "status": "blocked",
       "required": 14,
       "complete": 0,
-      "blocker": "No current WebM/VTT/recording JSON; separate revision-specific destinations are inventoried, historical media retained under e88d530b4c."
+      "blocker": "Browser recording connection could not be initialized; no WebM/VTT/recording JSON was captured for the current build. Historical media is kept separate."
     }
   ],
   "externalBlockers": [
-    {
-      "dependency": "Supported Open Review canonical service",
-      "status": "local operational blocker",
-      "detail": "board registrations at :23374 were stopped before readiness; :23375 and :23376 remain live"
-    },
     {
       "dependency": "Microsoft identity authority and provider callbacks",
       "status": "not exercised",
@@ -232,6 +234,35 @@
       "dependency": "Current-build browser capture across all fourteen guides",
       "status": "incomplete",
       "detail": "requires working canonical Open Review and genuine browser recording artifacts"
+    }
+  ],
+  "temporalBusinessEffect": {
+    "status": "unverified",
+    "detail": "The workflow worker processed ticket comment/message events but matched zero authored workflows. A matched Temporal execution with a persisted business effect after its fresh start is still required."
+  },
+  "browserCapture": {
+    "status": "blocked-tooling",
+    "detail": "Browser plugin bootstrap failed before tab discovery (Node REPL import of node:process was rejected; no authenticated tab or recording was accessed). No current media is claimed."
+  },
+  "postStartTemporalInvestigation": {
+    "observedAt": "2026-10-25T05:56:57Z",
+    "workerChildPid": 4008993,
+    "workerStartedAt": "2026-10-25T05:33:49Z",
+    "health": "HTTP 200; five queues RUNNING",
+    "businessEffect": "not demonstrated",
+    "candidateTriggersChecked": {
+      "publishedAuthoredWorkflowsForTenant": 0,
+      "publishedWorkflowsGlobal": 0,
+      "tenantSlaPolicies": 0
+    },
+    "method": "read-only query of workflow_definitions and sla_policies in the co-managed candidate database; no configuration or credentials were changed",
+    "conclusion": "A real matched product-triggered Temporal effect requires an enabled workflow or applicable SLA policy and a real authenticated product action. Neither exists in the observed candidate tenant state, and browser control could not initialize; unmatched-event acknowledgements are not counted."
+  },
+  "clearedChecks": [
+    {
+      "dependency": "Supported Open Review canonical service",
+      "status": "verified",
+      "detail": "Board annotation confirms qa@emeraldcity.oz entered /msp/tickets on :23374; canonical service readiness is HTTP 200 and serves build-1792904848073."
     }
   ]
 }

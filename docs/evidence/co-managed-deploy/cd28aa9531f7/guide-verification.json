@@ -171,7 +171,7 @@
       "chapterScaffold": true
     }
   ],
-  "currentRecordingCoverage": "0/14 current candidate recordings complete; every current player is blocked with no source. Each guide links the retained historical e88d530b4c media and original coverage limitations.",
+  "currentRecordingCoverage": "0/14 current recordings; no current playback or chapter seek is claimed",
   "historicalRecordings": {
     "revision": "e88d530b4c0fadfa40d3c0a77cf7102745187219",
     "buildId": null,
@@ -490,5 +490,20 @@
     "Historical e88d recordings were range-served, played and sought to their archived chapter cues; they remain historical, with their original limitations.",
     "This does not verify playback or chapter seeking for current-candidate recordings, which do not exist."
   ],
-  "currentAllBlocked": true
+  "currentAllBlocked": true,
+  "observedAt": "2026-10-25T06:10:00Z",
+  "canonicalOpenReview": {
+    "status": "pass",
+    "actor": "qa@emeraldcity.oz",
+    "origin": "http://feature-co-managed-it.localhost:23374",
+    "entryPath": "/msp/tickets",
+    "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+    "buildId": "build-1792904848073"
+  },
+  "mainGuidePlayers": {
+    "count": 1,
+    "currentPlayerBlockedForMissingMedia": true,
+    "duplicateRemoved": true,
+    "staleAdmissionBlockRemoved": true
+  }
 }
