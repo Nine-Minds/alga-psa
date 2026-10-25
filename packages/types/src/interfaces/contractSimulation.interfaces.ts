@@ -467,6 +467,14 @@ export type SimulatedPeriodMarker =
 
 export interface SimulatedInvoiceLine {
   line_key: string;
+  /**
+   * The saved contract line this charge came from. Issued and simulated lines
+   * both carry it, so past-invoice comparison pairs on (origin line, charge
+   * type, service) instead of on resolver keys or description text. Null for
+   * lines with no saved origin (draft contracts, actual lines that are not
+   * contract charges).
+   */
+  origin_contract_line_id?: string | null;
   service_id: string | null;
   service_name: string;
   charge_type: string;

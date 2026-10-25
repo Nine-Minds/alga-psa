@@ -724,6 +724,9 @@ function mapPersistedRecurringDueWorkDbRowsToRows(
                 contractLineId: row.contract_line_id ?? null,
                 windowStart: invoiceWindowStart,
                 windowEnd: invoiceWindowEnd,
+                // The advance block fee shares its window with the previous period's
+                // arrears hourly row of the same line; the stream keeps them distinct.
+                chargeStream: row.charge_family === 'prepaid_block' ? 'prepaid_block' : null,
             })
             : buildClientCadenceDueSelectionInput({
                 clientId: row.client_id,

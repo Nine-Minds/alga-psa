@@ -573,6 +573,14 @@ export function buildSimulatedPeriod(
   const obligationById = new Map(
     obligations.map((obligation) => [obligation.obligationId, obligation]),
   );
+  // The resolver's canonical line carries the scenario line (contractLineId);
+  // comparison pairs on the saved contract line that scenario line came from.
+  const originByScenarioLine = new Map(
+    (scenario.lines ?? []).map((scenarioLine) => [
+      scenarioLine.key,
+      scenarioLine.origin_contract_line_id ?? null,
+    ]),
+  );
   const presentationLines: SimulatedInvoiceLine[] = calculation.lines.map(
     (canonicalLine, lineIndex) => {
       const obligation = obligationById.get(canonicalLine.obligationId);
@@ -616,6 +624,9 @@ export function buildSimulatedPeriod(
             : canonicalLine.chargeFamily);
       return {
         line_key: canonicalLine.lineKey,
+        origin_contract_line_id: canonicalLine.contractLineId
+          ? (originByScenarioLine.get(canonicalLine.contractLineId) ?? null)
+          : null,
         service_id: canonicalLine.serviceId ?? null,
         service_name:
           blockLine === "block_draw"

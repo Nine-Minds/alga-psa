@@ -1536,6 +1536,7 @@ async function normalizeRecurringSelectorInput(params: {
         ?? recurringServicePeriod.obligation_id,
       windowStart: normalizedWindowStart,
       windowEnd: normalizedWindowEnd,
+      chargeStream: params.selectorInput.executionWindow.chargeStream ?? null,
     });
   }
 
