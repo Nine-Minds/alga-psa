@@ -39,6 +39,7 @@ vi.mock('@alga-psa/shared/billingClients/billingSchedule', () => ({
     billingCycle: 'monthly',
     anchor: { dayOfMonth: 1, monthOfYear: null, dayOfWeek: null, referenceDate: null },
   }),
+  loadClientBillingCycleHistory: async () => [],
 }));
 
 import { draftContractToScenario } from '@ee/lib/billing/simulator/draftContractToScenario';

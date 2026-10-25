@@ -4,6 +4,8 @@ import type {
   IPrepaidBlockCharge,
   ISO8601String,
 } from "@alga-psa/types";
+import { formatCurrencyFromMinorUnits } from "@alga-psa/core";
+import { LOCALE_CONFIG } from "@alga-psa/core/i18n/config";
 import { prorateRecurringCoverageByRatio } from "@alga-psa/shared/billingClients/coverageProration";
 import { resolveChargeProfileFor } from "../billingProfileResolution";
 import {
@@ -72,14 +74,11 @@ export interface PrepaidBlockChargeComputeResult {
 /**
  * Formats minor units in the currency's own minor-unit scale (JPY has none,
  * KWD has three). The currency is always the contract's; there is no default.
+ * The explanation text has no viewer, so it renders in the platform default
+ * locale.
  */
 function formatMinorUnits(minorUnits: number, currencyCode: string): string {
-  const formatter = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currencyCode,
-  });
-  const digits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
-  return formatter.format(minorUnits / 10 ** digits);
+  return formatCurrencyFromMinorUnits(minorUnits, LOCALE_CONFIG.defaultLocale, currencyCode);
 }
 
 function formatHours(hours: number): string {

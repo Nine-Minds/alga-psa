@@ -2784,7 +2784,7 @@
     "done": "Klaar"
   },
   "sellHourBlockNote": {
-    "text": "Een contracturenbundel factureert alleen het meerverbruik. Om een blok uren vooraf in rekening te brengen, voeg je een Prepaid blok-regel aan het contract toe en geef je die elke factuurperiode uit."
+    "text": "Een contracturenbundel factureert alleen het meerverbruik. Om een blok uren vooraf in rekening te brengen, voegt u een Prepaid blok-regel aan het contract toe en geeft u die elke factuurperiode uit."
   },
   "review": {
     "saveTemplateRates": "Deze {{currency}}-tarieven opslaan in de sjabloon",

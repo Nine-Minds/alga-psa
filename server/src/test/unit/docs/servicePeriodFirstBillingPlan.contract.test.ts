@@ -196,6 +196,17 @@ const servicePeriodPostInventoryRefs = new Set([
   'server/src/test/unit/billing/prepaidBlockAcceptance.db.test.ts',
   'packages/billing/tests/prepaidBlockDueWork.db.test.ts',
   'packages/billing/tests/prepaidBlockInvoicing.db.test.ts',
+  // alga-2026-0002684: prepaid-block charge rules and compute (shared by the
+  // billing engine and the simulator) read issuance service-period bounds; the
+  // DB, migration and compute tests seed or assert them.
+  'packages/billing/src/lib/billing/chargeResolution/prepaidBlockRules.ts',
+  'packages/billing/src/lib/billing/compute/computePrepaidBlockCharges.ts',
+  'packages/billing/tests/prepaidBlockDeployFixes.db.test.ts',
+  'packages/billing/tests/prepaidBlockDuplicateGuard.db.test.ts',
+  'packages/client-portal/tests/clientHourBlocks.minorUnits.db.test.ts',
+  'server/migrations/__tests__/prepaidHoursContractsMigration.integration.test.ts',
+  'server/src/test/unit/billing/computeCadencePrepaidBlockCharges.test.ts',
+  'shared/billingClients/__tests__/recurringRunExecutionIdentity.prepaidBlockStream.test.ts',
   // Calendar month-end close and grouped zero-dollar claims added persisted
   // window readers and regression fixtures after the pass-0 snapshot.
   'packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts',

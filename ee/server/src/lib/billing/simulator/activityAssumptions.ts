@@ -11,14 +11,11 @@ import type {
 } from "@alga-psa/types";
 import { tenantDb } from "@alga-psa/db";
 import { toISODate, toPlainDate } from "@alga-psa/core";
-import {
-  getBillingPeriodForDate,
-  normalizeAnchorSettingsForCycle,
-} from "@alga-psa/shared/billingClients/billingCycleAnchors";
 import { assumptionKey } from "./syntheticActivity";
 import {
   assignServicePeriodsToInvoicePeriods,
   generateLineServicePeriods,
+  listInvoiceWindows,
 } from "./hypotheticalPeriods";
 import { validateScenarioTenantScope } from "./validateScenarioTenantScope";
 import { loadSimulatorInvoiceParties } from "./invoicePreviewContext";
@@ -46,30 +43,18 @@ export interface HistoricalUsageActivityRow {
   quantity: number | string;
 }
 
-function normalizedAnchor(scenario: ContractScenario) {
-  return normalizeAnchorSettingsForCycle(
-    scenario.invoice_schedule.billing_cycle,
-    {
-      dayOfMonth: scenario.invoice_schedule.anchor.day_of_month,
-      monthOfYear: scenario.invoice_schedule.anchor.month_of_year,
-      dayOfWeek: scenario.invoice_schedule.anchor.day_of_week,
-      referenceDate: scenario.invoice_schedule.anchor.reference_date,
-    },
-  );
-}
-
 function periodContaining(
   scenario: ContractScenario,
   date: ISO8601String,
 ): AssumptionPeriodWindow {
-  const period = getBillingPeriodForDate(
-    `${toISODate(toPlainDate(date))}T00:00:00Z`,
-    scenario.invoice_schedule.billing_cycle,
-    normalizedAnchor(scenario),
+  const [period] = listInvoiceWindows(
+    scenario.invoice_schedule,
+    toISODate(toPlainDate(date)),
+    1,
   );
   return {
-    start: period.periodStartDate,
-    endExclusive: period.periodEndDate,
+    start: `${period.start}T00:00:00Z`,
+    endExclusive: `${period.end}T00:00:00Z`,
   };
 }
 

@@ -25,6 +25,7 @@ import type {
   SimulationHorizon,
 } from '@alga-psa/types';
 import { toISODate, toPlainDate } from '@alga-psa/core';
+import { generateClientCadenceServicePeriods } from '@alga-psa/shared/billingClients/clientCadenceServicePeriods';
 import { materializeClientCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeClientCadenceServicePeriods';
 import { materializeContractCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeContractCadenceServicePeriods';
 import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
@@ -33,11 +34,6 @@ import {
   type RecurringChargeStream,
 } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { simulationRefusal } from './simulationRefusal';
-import {
-  getBillingPeriodForDate,
-  getNextBillingBoundaryAfter,
-  normalizeAnchorSettingsForCycle,
-} from '@alga-psa/shared/billingClients/billingCycleAnchors';
 
 export type SimulatorBillingCycle =
   | 'monthly'
@@ -128,32 +124,84 @@ export function buildInvoicePeriods(
     );
   }
 
-  const anchor = normalizeAnchorSettingsForCycle(schedule.billing_cycle, {
+  const windows = listInvoiceWindows(
+    schedule,
+    toISODate(toPlainDate(horizon.start_date)),
+    horizon.period_count,
+  );
+  return windows.map((window, index) => ({
+    index,
+    startDate: window.start,
+    endDateExclusive: window.end,
+  }));
+}
+
+const SCHEDULE_OBLIGATION: IPersistedRecurringObligationRef = {
+  tenant: 'contract-simulator',
+  obligationId: 'invoice-schedule',
+  chargeFamily: 'fixed',
+};
+
+/** More days than any one billing cycle spans, so a chunk always reaches its periods. */
+const MAX_CYCLE_DAYS = 366;
+const WINDOWS_PER_CHUNK = 60;
+
+/**
+ * `count` consecutive invoice windows of a client billing schedule, the first
+ * being the window that contains `from`. Windows come from the shared
+ * client-cadence generator, which takes the client's persisted cycle windows
+ * (`schedule.history`) verbatim and anchors the current cycle only outside
+ * them. Generation starts at the earliest history window, because the
+ * window containing `from` after a cycle change depends on where the last
+ * persisted window ended, not on the new anchor alone.
+ */
+export function listInvoiceWindows(
+  schedule: ScenarioBillingSchedule,
+  from: string,
+  count: number,
+): Array<{ start: string; end: string }> {
+  const historicalCycles = (schedule.history ?? []).map((cycle) => ({
+    start: toUtcMidnight(cycle.start_date),
+    end: toUtcMidnight(cycle.end_date),
+  }));
+  const earliestHistory = historicalCycles
+    .map((cycle) => toISODate(toPlainDate(cycle.start)))
+    .sort()[0];
+  let cursor = earliestHistory && earliestHistory < from ? earliestHistory : from;
+  const anchorSettings = {
     dayOfMonth: schedule.anchor.day_of_month,
     monthOfYear: schedule.anchor.month_of_year,
     dayOfWeek: schedule.anchor.day_of_week,
     referenceDate: schedule.anchor.reference_date,
-  });
-  const first = getBillingPeriodForDate(
-    toUtcMidnight(horizon.start_date),
-    schedule.billing_cycle,
-    anchor,
-  );
-  const periods: SimulatedInvoicePeriodWindow[] = [];
-  let start = first.periodStartDate;
-  let end = first.periodEndDate;
-
-  for (let index = 0; index < horizon.period_count; index += 1) {
-    periods.push({
-      index,
-      startDate: toISODate(toPlainDate(start)),
-      endDateExclusive: toISODate(toPlainDate(end)),
+  };
+  const windows: Array<{ start: string; end: string }> = [];
+  while (windows.length < count) {
+    const remaining = Math.min(count - windows.length, WINDOWS_PER_CHUNK);
+    const base = cursor > from ? cursor : from;
+    const rangeEnd = toISODate(
+      toPlainDate(base).add({ days: remaining * MAX_CYCLE_DAYS }),
+    );
+    const chunk = generateClientCadenceServicePeriods({
+      billingCycle: schedule.billing_cycle,
+      rangeStart: toUtcMidnight(cursor),
+      rangeEnd: toUtcMidnight(rangeEnd),
+      sourceObligation: SCHEDULE_OBLIGATION,
+      duePosition: 'advance',
+      anchorSettings,
+      historicalCycles,
     });
-    start = end;
-    end = getNextBillingBoundaryAfter(end, schedule.billing_cycle, anchor);
+    if (chunk.length === 0) {
+      throw new Error('Invoice schedule generation produced no windows.');
+    }
+    for (const period of chunk) {
+      const end = toISODate(toPlainDate(period.end));
+      if (end > from && windows.length < count) {
+        windows.push({ start: toISODate(toPlainDate(period.start)), end });
+      }
+    }
+    cursor = toISODate(toPlainDate(chunk[chunk.length - 1].end));
   }
-
-  return periods;
+  return windows;
 }
 
 function toUtcMidnight(value: ISO8601String): ISO8601String {
@@ -196,6 +244,10 @@ export function generateLineServicePeriods(
 
   const lineCycle = normalizeBillingCycle(line.billing_frequency);
   const cadenceOwner = resolveCadenceOwner(line.cadence_owner);
+  // A client-owned stream follows the CLIENT's cycle (as the production
+  // regeneration does), not the line's frequency.
+  const streamCycle =
+    cadenceOwner === 'client' ? normalizeBillingCycle(invoiceSchedule.billing_cycle) : lineCycle;
   const asOf = toUtcMidnight(horizon.start_date);
   const anchorDate = toUtcMidnight(contractStartDate ?? horizon.start_date);
 
@@ -208,7 +260,7 @@ export function generateLineServicePeriods(
     { largestUnit: 'days' },
   ).days;
   const targetHorizonDays =
-    invoiceHorizonDays + monthsPerCycle(lineCycle) * 31 + 60;
+    invoiceHorizonDays + monthsPerCycle(streamCycle) * 31 + 60;
 
   return contractLineRecurringStreams(line, line.prepaid_block).map(
     ({ stream, family, duePosition }) => {
@@ -236,12 +288,17 @@ export function generateLineServicePeriods(
             ? materializeContractCadenceServicePeriods({ ...common, anchorDate }).records
             : materializeClientCadenceServicePeriods({
                 ...common,
+                billingCycle: streamCycle,
                 anchorSettings: {
                   dayOfMonth: invoiceSchedule.anchor.day_of_month,
                   monthOfYear: invoiceSchedule.anchor.month_of_year,
                   dayOfWeek: invoiceSchedule.anchor.day_of_week,
                   referenceDate: invoiceSchedule.anchor.reference_date,
                 },
+                historicalCycles: (invoiceSchedule.history ?? []).map((cycle) => ({
+                  start: cycle.start_date,
+                  end: cycle.end_date,
+                })),
               }).records,
       };
     },

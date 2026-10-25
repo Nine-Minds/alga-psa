@@ -17,6 +17,7 @@ import {
   type ClientCadenceScheduleContext,
 } from './clientCadenceScheduleContext';
 import { ensureClientBillingSettingsRow } from './billingSettings';
+import type { HistoricalBillingCycleBoundary } from './clientCadenceServicePeriods';
 
 function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';
@@ -74,6 +75,34 @@ export async function getClientBillingCycleAnchor(
     anchor: normalized,
     cadenceContext: CLIENT_CADENCE_SCHEDULE_CONTEXT,
   };
+}
+
+/**
+ * The client's persisted billing-cycle windows: the active `client_billing_cycles`
+ * rows, each billed (or billable) under the cycle that was current when it was
+ * generated. After a cycle change the older windows keep their old shape and only
+ * the windows from the cut-over on follow the new cycle, so the scalar
+ * `clients.billing_cycle` alone cannot say where a past window began or ended.
+ * Shaped for `generateClientCadenceServicePeriods({ historicalCycles })`.
+ */
+export async function loadClientBillingCycleHistory(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  clientId: string
+): Promise<HistoricalBillingCycleBoundary[]> {
+  const rows = await tenantDb(knexOrTrx, tenant)
+    .table('client_billing_cycles')
+    .where({ client_id: clientId, is_active: true })
+    .whereNotNull('period_start_date')
+    .whereNotNull('period_end_date')
+    .orderBy('period_start_date', 'asc')
+    .select('billing_cycle_id', 'period_start_date', 'period_end_date');
+
+  return rows.map((row: any) => ({
+    start: normalizeDbIsoUtcMidnight(row.period_start_date),
+    end: normalizeDbIsoUtcMidnight(row.period_end_date),
+    billingCycleId: row.billing_cycle_id,
+  }));
 }
 
 export type UpdateClientBillingScheduleInput = {

@@ -286,6 +286,17 @@ export interface ScenarioBillingSchedule {
     day_of_week: number | null;
     reference_date: ISO8601String | null;
   };
+  /**
+   * The client's persisted (active) billing-cycle windows, [start, end). A
+   * client that changed billing cycle was billed under the old cycle for these
+   * windows; the simulator takes them verbatim and applies `billing_cycle` /
+   * `anchor` (the current schedule) only outside them. Absent for a schedule
+   * with no client (template contracts).
+   */
+  history?: Array<{
+    start_date: ISO8601String;
+    end_date: ISO8601String;
+  }>;
 }
 
 export interface ContractScenario {
