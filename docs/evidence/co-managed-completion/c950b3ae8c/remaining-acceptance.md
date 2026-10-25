@@ -3668,4 +3668,3 @@ Implementation: `packages/tickets/src/lib/ticketDataSource.ts`, `server/src/comp
 Regression locations: `server/src/test/unit/product/coManagedSharedTicketDataSource.test.tsx`, `ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts`.
 
 Still required: Browser evidence: MSP on the shared ticket in Entry and Grid layouts — status change, Shared IT message, private note, stopwatch/time entry, MSP assignment, hand back; customer side shows the Co-managed section Requires current Entry/Grid application walkthrough and recorded evidence; source and component tests do not establish the browser journey.
-
