@@ -13180,6 +13180,44 @@ async function withNativeOperationalTimeFixture(work: (fixture: any) => Promise<
   });
 }
 
+it.each(['project_task', 'ticket'] as const)('qualified time launch resolves customer-owned %s to native operational work', async kind => withNativeOperationalTimeFixture(async f => {
+  const { resolveCoManagedTimeWorkItem: resolve } = await import('../../../../../packages/co-managed/src/timeWorkItem');
+  const ticket = kind === 'ticket' ? await f.customer.table('tickets').first('ticket_id', 'title') : null;
+  const resource = { ...f.resource, kind, id: ticket?.ticket_id ?? f.resource.id };
+  const work = await resolve(db, f.customerPrincipal, resource);
+  expect(work).toEqual({ workItemType: kind, workItemId: resource.id, workItemName: ticket?.title ?? 'Verify rollout' });
+  const entry = await f.save({ work_item_type: work.workItemType, work_item_id: work.workItemId });
+  expect(entry).toMatchObject({ work_item_type: kind, work_item_id: resource.id, billing_mode: 'operational',
+    billable_duration: 0, service_id: null, contract_line_id: null, co_managed_work_reference_id: null });
+  expect(await f.customer.table('co_managed_time_work_references')).toHaveLength(0);
+  expect(await f.sponsor.table('co_managed_time_work_references')).toHaveLength(0);
+}));
+
+it('qualified customer time launch preserves the native source field mask', async () => withNativeOperationalTimeFixture(async f => {
+  const bundles = await import('@alga-psa/authorization');
+  const { resolveCoManagedTimeWorkItem: resolve } = await import('../../../../../packages/co-managed/src/timeWorkItem');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.resource.tenant,
+    name: 'Time launch labels', actorUserId: f.customerPrincipal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.resource.tenant, bundleId, revisionId, resourceType: 'project', action: 'read',
+    templateKey: 'selected_clients', config: { selectedClientIds: [f.project.client_id], redactedFields: ['task_name'] } });
+  await bundles.publishBundleRevision(db, { tenant: f.resource.tenant, bundleId, revisionId, actorUserId: f.customerPrincipal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.resource.tenant, bundleId, targetType: 'user', targetId: f.customerPrincipal.userId });
+  expect(await resolve(db, f.customerPrincipal, f.resource)).toEqual({ workItemType: 'project_task', workItemId: f.resource.id, workItemName: null });
+}));
+
+it.each(['relationship', 'source', 'session', 'time-permission'] as const)('qualified customer time launch rejects invalid %s authority', async reason => withNativeOperationalTimeFixture(async f => {
+  const { resolveCoManagedTimeWorkItem: resolve } = await import('../../../../../packages/co-managed/src/timeWorkItem');
+  const resource = { ...f.resource };
+  if (reason === 'relationship') resource.relationshipId = randomUUID();
+  if (reason === 'source') resource.id = randomUUID();
+  if (reason === 'session') await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ expires_at: new Date(0) });
+  if (reason === 'time-permission') await f.customer.table('role_permissions').whereIn('permission_id',
+    f.customer.table('permissions').where({ resource: 'time_entry', action: 'create' }).select('permission_id')).del();
+  await expect(resolve(db, f.customerPrincipal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await f.customer.table('time_entries')).toHaveLength(0);
+  expect(await f.customer.table('co_managed_time_work_references')).toHaveLength(0);
+}));
+
 it('native operational time saves and edits service-free effort without changing task assignments', async () => withNativeOperationalTimeFixture(async ({ save, actions, customer, resource, publish, input }: any) => {
   expect(await actions.getTimeEntryBillingMode()).toBe('operational');
   const entry = await save({ billable_duration: 90 });
@@ -18691,6 +18729,16 @@ async function withMspTimeWorkFixture(work: (fixture: any) => Promise<void>) {
     await work({ ...f, register, load, insertTime });
   });
 }
+
+it('qualified time launch keeps foreign work on the MSP commercial reference path', async () => withMspTimeWorkFixture(async f => {
+  const { resolveCoManagedTimeWorkItem: resolve } = await import('../../../../../packages/co-managed/src/timeWorkItem');
+  const work = await resolve(db, f.principal, f.resource);
+  const reference = await f.register();
+  expect(work).toEqual({ workItemType: 'co_managed', workItemId: reference.referenceId, workItemName: 'Customer issue' });
+  expect(work.workItemId).not.toBe(f.resource.id);
+  expect(await f.sponsor.table('co_managed_time_work_references')).toHaveLength(1);
+  expect(await f.customer.table('co_managed_time_work_references')).toHaveLength(0);
+}));
 
 it('MSP time billing work registers one qualified source and keeps customer work outside the MSP invoice loader', async () => withMspTimeWorkFixture(async f => {
   const [a, b] = await Promise.all([f.register(), f.register()]);

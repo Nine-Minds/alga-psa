@@ -5,7 +5,7 @@ import type { CoManagedSharedResource } from '@alga-psa/co-managed';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { prepareTimeEntryForWorkItem, NewWorkItemTimeEntry } from '@alga-psa/scheduling/lib/timeEntryLauncher';
-import { registerSharedTimeWorkAction } from '@/lib/actions/coManagedTimeActions';
+import { resolveTimeWorkItemAction } from '@/lib/actions/coManagedTimeActions';
 import { CoManagedFeatureBoundary } from './CoManagedFeatureBoundary';
 import CoManagedTimeBillingProfile from './CoManagedTimeBillingProfile';
 
@@ -28,10 +28,9 @@ function TimeEntry({ resource, onSaved }: Pick<Props, 'resource' | 'onSaved'>) {
     if (inFlight.current) return;
     inFlight.current = true; setBusy(true); setError(false);
     try {
-      const work = await registerSharedTimeWorkAction(target.current);
+      const work = await resolveTimeWorkItemAction(target.current);
       if (!mounted.current) return;
-      const result = await prepareTimeEntryForWorkItem({ workItemType: 'co_managed', workItemId: work.referenceId,
-        workItemName: work.title || t('coManaged.ticket.restricted') });
+      const result = await prepareTimeEntryForWorkItem({ ...work, workItemName: work.workItemName || t('coManaged.ticket.restricted') });
       if (mounted.current && result) setPrepared(result);
     } catch { if (mounted.current) setError(true); }
     finally { if (mounted.current) { inFlight.current = false; setBusy(false); } }

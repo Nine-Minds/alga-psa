@@ -2,7 +2,7 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
-import { getCoManagedEffortTotals, CoManagedSharedWorkError, registerCoManagedTimeWorkReference, getCoManagedTimeBillingProfile,
+import { getCoManagedEffortTotals, CoManagedSharedWorkError, registerCoManagedTimeWorkReference, resolveCoManagedTimeWorkItem, getCoManagedTimeBillingProfile,
   setCoManagedTimeBillingProfile, readCoManagedSharedTimeSummary, type CoManagedTimeBillingProfileChange, type CoManagedSharedResource } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 
@@ -10,6 +10,12 @@ export const registerSharedTimeWorkAction = withAuth(async (user, { tenant }, re
   const actor = await coManagedBrowserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
   return registerCoManagedTimeWorkReference(knex, actor, resource);
+});
+
+export const resolveTimeWorkItemAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource) => {
+  const actor = await coManagedBrowserActor(user, tenant);
+  const { knex } = await createTenantKnex(tenant);
+  return resolveCoManagedTimeWorkItem(knex, actor, resource);
 });
 
 /** The native ticket time-entries list for a shared work item. The actor is the
