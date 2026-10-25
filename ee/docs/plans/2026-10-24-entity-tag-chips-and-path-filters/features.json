@@ -177,7 +177,7 @@
   },
   {
     "id": "F023",
-    "description": "Computed attributes with custom resolvers",
+    "description": "Computed attributes as named resolvers declared in the query schema; the only place raw SQL is allowed",
     "implemented": false,
     "prdRefs": [
       "Shared predicate model"
@@ -289,7 +289,7 @@
   },
   {
     "id": "F037",
-    "description": "buildTicketListBaseQuery compiles codec output plus filters.where; hand-written where-clauses for legacy keys deleted",
+    "description": "buildTicketListBaseQuery compiles codec output plus filters.where; hand-written where-clauses for legacy keys deleted in the same change, with no fallback path or flag",
     "implemented": false,
     "prdRefs": [
       "Ticket list query schema and compiler"
@@ -377,7 +377,7 @@
   },
   {
     "id": "F048",
-    "description": "URL round-trip of where (readable single-level form, base64url fallback for nested groups) in container parse/write, page.tsx SSR parse, parseReturnFilters and getCurrentFiltersQuery",
+    "description": "URL round-trip of where in one versioned readable form (v1:<path>:<op>[:<values>];..., percent-encoded, no base64 fallback) in container parse/write, page.tsx SSR parse, parseReturnFilters and getCurrentFiltersQuery; unknown-version or malformed values dropped through the dropped-reference collector",
     "implemented": false,
     "prdRefs": [
       "Storage and URLs"
@@ -589,6 +589,74 @@
     "implemented": false,
     "prdRefs": [
       "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Predicate semantics spec: packages/predicates/spec/SEMANTICS.md (operators, set-valued paths, null and missing values, coercion, string case rules, empty lists) and a JSON conformance table of (predicate, record, expected) rows, with rows the JSONata adapter cannot represent flagged",
+    "implemented": false,
+    "prdRefs": [
+      "Shared predicate model",
+      "Design principles"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "Conformance runners: the in-memory evaluator, the SQL compiler against a migrated test database, and the workflow JSONata path (conditionModel adapter serialize + expressionEngine) each run the full conformance table",
+    "implemented": false,
+    "prdRefs": [
+      "Shared predicate model",
+      "Workflow conditions on the shared model"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "Conformance completeness check: every operator x path kind (scalar, set-valued, missing) has at least one row",
+    "implemented": false,
+    "prdRefs": [
+      "Shared predicate model"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "Ticket filter schema restricts where to a single flat and group; nested groups are rejected in storage, URLs and the toolbar",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list query schema and compiler",
+      "Storage and URLs"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "Ticket query schema file enumerates its computed attributes (SLA status, response state, due-date presets, assigned-to-me, inactive-board state, no-board, no-category, open-only) as named resolvers; no other raw SQL in the schema",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list query schema and compiler"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Path alias map in the tickets list-view migrate hook (and board / tenant default view migration) so a renamed path in stored where migrates to its new name",
+    "implemented": false,
+    "prdRefs": [
+      "Persisted and external formats",
+      "Storage and URLs"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "packages/predicates/README.md and the ticket query schema file header document the semantics spec and the add-a-dimension recipe",
+    "implemented": false,
+    "prdRefs": [
+      "Design principles"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "Release notes entry for the intended behavior changes: bundled tag matching through children, assigned-to-me honoured by the main list, chip tags from display rules",
+    "implemented": false,
+    "prdRefs": [
+      "Rollout / Migration"
     ]
   }
 ]

@@ -1,15 +1,17 @@
 [
   {
     "id": "T001",
-    "description": "Predicates unit: operator semantics table (scalar and set-valued paths, null semantics, nested groups) evaluated in memory",
+    "description": "Predicates conformance: the shared conformance table (scalar and set-valued paths, null and missing values, nested groups) passes on the in-memory evaluator",
     "implemented": false,
     "featureIds": [
+      "F010",
       "F012",
       "F013",
       "F014",
       "F015",
       "F017",
-      "F010"
+      "F075",
+      "F076"
     ]
   },
   {
@@ -31,13 +33,15 @@
   },
   {
     "id": "T004",
-    "description": "Predicates DB integration: compiler against a migrated schema returns the same rows as the in-memory evaluator for a shared fixture table (comparisons, in/not_in with NULLs, is_empty, tag relation in/not_in/is_empty)",
+    "description": "Predicates DB integration: the SQL compiler passes the full shared conformance table against a migrated schema (comparisons, in/not_in with NULLs, is_empty, tag relation in/not_in/is_empty)",
     "implemented": false,
     "featureIds": [
+      "F015",
       "F019",
       "F020",
       "F021",
-      "F015"
+      "F075",
+      "F076"
     ]
   },
   {
@@ -76,9 +80,10 @@
   },
   {
     "id": "T008",
-    "description": "Ticket list DB integration: one table-driven case per legacy filter key (board incl. inactive and no-board, status id/name/open-only, priority, category incl. subcategory and no-category, assignee/team/unassigned, assigned-to-me, due date presets, response state, SLA breached) compares compiled results to fixtures",
+    "description": "Ticket list DB integration: table-driven filter matrix on a seeded dataset with nulls, bundles, inactive boards, and internal and client-portal users; one or more cases per legacy filter key (board incl. inactive and no-board, status id/name/open-only, priority, category incl. subcategory and no-category, assignee/team/unassigned, assigned-to-me, due date presets, response state, SLA breached), each asserting explicit expected ids and totals in individual and bundled view",
     "implemented": false,
     "featureIds": [
+      "F023",
       "F028",
       "F029",
       "F031",
@@ -86,7 +91,7 @@
       "F033",
       "F035",
       "F037",
-      "F023"
+      "F079"
     ]
   },
   {
@@ -147,7 +152,7 @@
   },
   {
     "id": "T015",
-    "description": "Container contract: where survives URL write and parse, SSR parse, returnFilters prev/next, export and select-all scope; a where-only URL outranks the board default",
+    "description": "Container contract: a flat where survives URL write and parse in the v1 form, SSR parse, returnFilters prev/next, export and select-all scope; a where-only URL outranks the board default",
     "implemented": false,
     "featureIds": [
       "F048",
@@ -263,6 +268,59 @@
       "F006",
       "F007",
       "F008"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Workflow conformance: every conformance row the conditionModel adapter can represent, serialized through the adapter and evaluated by expressionEngine, matches the expected result; unrepresentable rows are flagged in the table",
+    "implemented": false,
+    "featureIds": [
+      "F076",
+      "F025",
+      "F075"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Predicates unit: completeness check fails when an operator or path kind has no conformance row and passes for the shipped table",
+    "implemented": false,
+    "featureIds": [
+      "F077",
+      "F075"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "URL unit: where v1 encode/decode round-trips clauses with special characters and every operator kind; unknown version and malformed input are dropped with a dropped-reference entry",
+    "implemented": false,
+    "featureIds": [
+      "F048"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Ticket filter schema unit: a flat and group of known paths is accepted; a nested group, an or group, unknown paths and disallowed operators are rejected",
+    "implemented": false,
+    "featureIds": [
+      "F078",
+      "F036"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "list-views unit: a stored view whose where uses a renamed path migrates through the alias map, for named views and board / tenant default views",
+    "implemented": false,
+    "featureIds": [
+      "F080"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Ticket query schema unit: each enumerated computed-attribute resolver compiles for every allowed operator, and the schema declares no raw SQL outside them",
+    "implemented": false,
+    "featureIds": [
+      "F079",
+      "F023"
     ]
   }
 ]

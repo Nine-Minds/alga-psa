@@ -16,6 +16,14 @@
 - (2026-10-24) Chip tags go on the row (`contact_tags`, `client_tags`), beside `client_logo_url` / `contact_avatar_url`. The ticket-tag metadata sidecar stays because tags are edited inline through it, but no new sidecar is added.
 - (2026-10-24) No display rules for an audience means no chip tags for that audience. Existing VIP definitions are seeded so current users see their VIP tags without configuring anything.
 
+- (2026-10-24, plan review) The semantics spec is the anchor of the shared model. `packages/predicates/spec/` holds `SEMANTICS.md` plus a JSON conformance table run by every backend: the in-memory evaluator, the SQL compiler, and the workflow JSONata path (adapter serialize + `expressionEngine`). The evaluator stays in scope; the spec is what makes sharing it with workflows safe.
+- (2026-10-24, plan review) Clean cutover. The compiler replaces the hand-written filter code in one change, with no side-by-side parity harness, fallback flag or kept-alive old builder. The old code is in git history for comparison; problems are fixed forward. Coverage comes from a table-driven filter matrix with explicit expected results instead.
+- (2026-10-24, plan review) Ticket `where` is a single flat `and` group in storage, URLs and the toolbar. The model allows nesting; ticket storage does not until a version bump says so.
+- (2026-10-24, plan review) One URL form for `where`: `v1:<path>:<op>[:<values>];...`, percent-encoded components, no base64 fallback. Unknown versions and malformed input are dropped through the dropped-reference collector.
+- (2026-10-24, plan review) Persisted formats are contracts: stored filter shape, path names, the URL parameter, `tag_display_rules`, the conformance table. Path renames go through a migrate-hook alias map. See the PRD's *Persisted and external formats* table.
+- (2026-10-24, plan review) Computed attributes are fenced: enumerated in the ticket query schema file, each a named resolver with its own tests, and the only place raw SQL is allowed.
+- (2026-10-24, plan review) Open questions resolved: `settings:update` for display-rule writes; one readable versioned URL form; seed both VIP definitions; `maxBadges` fixed at 2.
+
 ## Discoveries / Constraints
 
 - (2026-10-24) `tag_definitions` is unique on `(tenant, tag_text, tagged_type)`. "VIP" on a contact and "VIP" on a client are different definitions with different ids and colors.
@@ -41,6 +49,13 @@
 - Dev DB that ran the PR #3858 migration: `ALTER TABLE contacts DROP COLUMN IF EXISTS is_vip, DROP COLUMN IF EXISTS is_primary_contact; ALTER TABLE clients DROP COLUMN IF EXISTS is_vip;`, then delete its row from `knex_migrations`.
 - Citus: `tag_display_rules` must be distributed on `tenant` and co-located with `tag_definitions`. See the `citus-migration-gotchas` skill, and avoid `now()` inside CASE/COALESCE in any seed SQL.
 
+- Adding a ticket-list dimension (keep this recipe in `packages/predicates/README.md` and at the top of the ticket query schema file; it is reproduced here for the plan):
+  1. Declare the attribute or relation in the ticket query schema. If it is not a plain column or relation, add a named computed-attribute resolver beside the others.
+  2. If it introduces an operator, path kind or value type, update `SEMANTICS.md` and add conformance rows first; all backends must pass.
+  3. Add rows to the table-driven ticket filter matrix with explicit expected ids and totals, including bundled view and a client-portal user.
+  4. Add a filter descriptor table entry for the toolbar and active-filter chip.
+  5. The new path is a persisted contract from its first release.
+
 ## Links / References
 
 - PR #3858: https://github.com/Nine-Minds/alga-psa/pull/3858
@@ -54,7 +69,4 @@
 
 ## Open Questions
 
-- Display-rule writes: `settings:update` (draft) or `tag:update`?
-- `where` URL encoding: readable single-level form plus base64url fallback (draft), or always opaque?
-- Onboarding: seed both VIP definitions, or only the contact one?
-- `maxBadges` in list cells: fixed at 2 (draft), or a display setting?
+None open. See the plan-review decisions above.
