@@ -1,0 +1,8 @@
+[
+  {"id":"F001","description":"InventoryService.lookup accepts an asset-visibility function; omitted means no assets are returned (deny by default).","implemented":true,"prdRefs":["Binding decisions 1"]},
+  {"id":"F002","description":"Unreadable asset rows are removed before domains is computed, so multi collapses to a single type and asset collapses to none.","implemented":true,"prdRefs":["Binding decisions 2"]},
+  {"id":"F003","description":"ApiInventoryController builds the authorizer: asset:read short-circuit, then authorizeApiResourceRead per row using resolveAssetAuthorizationRecords.","implemented":true,"prdRefs":["Binding decisions 3"]},
+  {"id":"F004","description":"Denial is silent: response shape identical to a code that matched nothing.","implemented":true,"prdRefs":["Binding decisions 4"]},
+  {"id":"F005","description":"resolveAssetAuthorizationRecords moved to packages/assets/src/lib/assetRecordAuthorization.ts and imported by assetActions.ts.","implemented":true,"prdRefs":["Binding decisions 5"]},
+  {"id":"F006","description":"ScanResultCard tests cover an asset-less multi and a none result.","implemented":true,"prdRefs":["Binding decisions 6"]}
+]
