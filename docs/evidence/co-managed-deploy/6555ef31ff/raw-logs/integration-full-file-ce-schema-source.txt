@@ -1,0 +1,31 @@
+⎯⎯⎯⎯⎯⎯ Failed Tests 23 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > co-managed bootstrap against the complete installed schema > creates only customer-owned operational defaults and an invitation, without an MSP login or subscription copy
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > co-managed directory reactivation > keeps a directory-deactivated user inactive when another technician has taken the available seat
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > PSA capability backfills join the co-managed upgrade transaction and preserve customer work and existing grants
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > independent PSA upgrade atomically converts an active customer with its own license and closes live trust exactly once
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > independent PSA upgrade after departure preserves the original seal and never reopens or recaptures customer sources
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > tenant license controls renew independent PSA seats and retain tenant scope when its key disappears with final-session rollback
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > session tier resolution uses the customer entitlement through sign-in and upgrade in the async auth configuration
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > session tier resolution uses the customer entitlement through sign-in and upgrade in the sync auth configuration
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > public PSA upgrade binds the browser customer and worker to current authority and refreshes the completed state
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > self-host AI gateway ownership never lends appliance credits to active departed or independently upgraded customers
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > independent PSA upgrade rejects MSP actors and missing or insufficient customer entitlement and rolls final write failure back
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > hosted PSA upgrade verifies its own paid subscription outside locks and preserves MSP billing and another allocation
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > hosted PSA upgrade rejects unpaid or foreign provider state and rechecks local billing and session after provider reads
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > independent hosted checkout recovers a lost response and a paid webhook after the browser closes without changing MSP billing or converting early
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > independent hosted checkout refuses foreign payment ownership and rolls billing imports back when final reconciliation fails
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > independent hosted checkout cancellation before payment reconciliation releases the pending purchase without ending sponsorship
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > independent payment recovery retains asynchronous failure and resumes safely after a lost cancellation response
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > independent payment recovery refuses cancellation when the initial invoice has since been paid
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > independent billing portal binds paid seat confirmation to its own subscription and current customer authority
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > portable remote meeting files capture real bounded Graph response streams from retained original identities only
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > portable remote meeting files reject missing provider receipt and oversized or truncated responses without retained output
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > portable remote meeting files reject current provider configuration or session changes after the response stream
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > portable installation restore authenticates owner authority and converges retries without replacing tenants
+      Tests  23 failed | 1455 passed (1478)
+exit 1
+Error: Failed to run onboarding seeds: Failed to run seed 10_opportunity_workflows.cjs: select * from "tenant_workflow_schedule" where "tenant_workflow_schedule"."tenant" = $1 and "workflow_id" = $2 and "name" = $3 limit $4 - relation "tenant_workflow_schedule" does not exist
+error: insert into "scim_connections" ("created_at", "current_token_generation", "enabled", "tenant", "updated_at") values ($1, $2, $3, $4, $5) returning * - relation "scim_connections" does not exist
+error: insert into "stripe_products" ("name", "product_type", "stripe_product_external_id", "stripe_product_id", "tenant") values ($1, $2, $3, $4, $5) - relation "stripe_products" does not exist
+error: insert into "teams_integrations" ("install_status", "selected_profile_id", "tenant") values ($1, $2, $3) - relation "teams_integrations" does not exist
+error: select * from "stripe_subscriptions" where "stripe_subscriptions"."tenant" = $1 - relation "stripe_subscriptions" does not exist

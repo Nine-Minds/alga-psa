@@ -1,0 +1,5 @@
+   ✓ co-managed tag lifecycle admission > keeps REST TagService create, update and delete working for an active co-managed tenant  384ms
+   ✓ co-managed tag lifecycle admission > refuses every workflow and session-free ticket-creation tag write of a departed customer without changing a row  353ms
+ Test Files  1 passed (1)
+      Tests  1478 passed (1478)
+exit 0

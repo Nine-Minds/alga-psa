@@ -1,0 +1,20 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "20260610"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ |node| src/test/integration/ticketCreatedEventCoverage.integration.test.ts (18 tests) 2101ms 62 MB heap used
+ ✓ |node| src/test/integration/recurringTicketGenerator.integration.test.ts (18 tests) 978ms 82 MB heap used
+ ✓ |node| src/test/integration/renewalTicketEvents.integration.test.ts (2 tests) 3432ms 248 MB heap used
+   ✓ renewal ticket events (integration) > scheduled job: SYSTEM-created ticket, linked to the contract, events published once  415ms
+   ✓ renewal ticket events (integration) > manual retry: ticket entered by the billing user, USER-attributed events  2808ms
+ ✓ |node| src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts (30 tests) 4ms 253 MB heap used
+ ✓ |node| src/test/unit/workflowTicketAssignmentModelRuntime.test.ts (4 tests) 6ms 269 MB heap used
+ ✓ |node| src/test/unit/jobs/processRenewalQueueHandler.test.ts (10 tests) 7ms 265 MB heap used
+
+ Test Files  6 passed (6)
+      Tests  82 passed (82)
+   Start at  23:34:11
+   Duration  11.51s (transform 2.38s, setup 100ms, collect 1.05s, tests 6.53s, environment 0ms, prepare 41ms)
+

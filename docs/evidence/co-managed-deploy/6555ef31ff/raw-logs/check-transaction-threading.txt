@@ -1,0 +1,2 @@
+OK: 754 files scanned, no transaction-accepting function opens its own connection.
+exit 0

@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-25T23:35:50.597969Z",
+  "database": "server_co_managed",
+  "container": "co-managed-it-postgres",
+  "port": 5376,
+  "databaseCreatedAt": "2026-10-25 23:28:25+00",
+  "tenantRows": 0,
+  "publicTables": 544,
+  "archiveMode": "off",
+  "cause": "shared/workflow/runtime/actions/__tests__/*.db.test.ts recreateDatabase(DB_NAME_SERVER) run with DB_NAME_SERVER=server_co_managed",
+  "reviewApp": {
+    "pid": 2835854,
+    "nextDistDir": ".next-review-final-ccb29f50",
+    "buildId": "build-1792967039963",
+    "health": "{\"status\":\"ok\",\"version\":\"1.0.0\"} 200",
+    "signinStatus": 200
+  }
+}

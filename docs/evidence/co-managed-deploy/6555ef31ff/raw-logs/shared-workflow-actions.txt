@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 /home/robert/alga-copies/feature-co-managed-it/shared
+
+
+ Test Files  45 passed (45)
+      Tests  263 passed (263)
+   Start at  19:30:49
+   Duration  191.06s (transform 1.98s, setup 0ms, import 19.87s, tests 168.14s, environment 2ms)
+

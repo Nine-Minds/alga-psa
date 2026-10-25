@@ -1,0 +1,5 @@
+ ✓ |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts (1478 tests | 1469 skipped) 6123ms 224 MB heap used
+   ✓ co-managed tag lifecycle admission > keeps REST TagService create, update and delete working for an active co-managed tenant  1640ms
+   ✓ co-managed tag lifecycle admission > refuses every workflow and session-free ticket-creation tag write of a departed customer without changing a row  442ms
+ Test Files  1 passed (1)
+      Tests  9 passed | 1469 skipped (1478)

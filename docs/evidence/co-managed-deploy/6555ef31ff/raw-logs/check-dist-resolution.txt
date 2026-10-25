@@ -1,0 +1,2 @@
+OK: 241 built modules walked, every @alga-psa/* subpath resolves under plain Node.
+exit 0

@@ -8,13 +8,13 @@
 
 > **Historical.** Everything below this line was written for earlier builds and is kept as a record. The opening above is the current state.
 
-# Co-managed implementation acceptance
+# Co-managed implementation acceptance at build-1792934305248 (historical)
 
-Canonical review serves **build-1792934305248**, application source `a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8`, on port **23374**. The registered service was admitted normally. Two guides are covered; twelve remain partial. **32/260 requirement rows are verified, 226 implemented-unverified, and two external provider portions remain.** All three readiness predicates stay false. This desk order is incomplete.
+At the time of this record, canonical review served **build-1792934305248**, application source `a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8`, on port **23374**. The registered service was admitted normally. On that build, two guides were covered and twelve remained partial. **32/260 requirement rows were verified, 226 implemented-unverified, and two external provider portions remained.** All three readiness predicates were false. That desk order was incomplete.
 
 The two product repairs are visible recovered bulk-handback results (`1bdea5dd80`) and qualified Back navigation retaining filters/page (`a46feefa6f`). Both were found in real sessions, reproduced by failing regressions, repaired, built and deployed. Product history is retained. The invitation concurrency test now fixes its ordering. The added source/import-presence contract was removed under the latest AGENTS instructions, and nativeTicketScreen:T013 returned to unverified. Behavioral bug regressions remain; no application code changed after the deployed build.
 
-## Guide acceptance
+## Guide acceptance at build-1792934305248
 
 | Guide | Result | Remaining work or demonstrated outcome |
 | --- | --- | --- |
@@ -51,7 +51,7 @@ The two product repairs are visible recovered bulk-handback results (`1bdea5dd80
 
 Three newly accepted one-seat workspaces are retained for follow-up. Simulator-backed purchased capacity is 16, matching retained allocations; the temporary purchase/allocation checks are labelled simulator evidence. Unclaimed cancellation fixtures were cleaned through the product. Disposable bulk tickets and handoff history remain. Delegation approval was revoked after restoring its board description; task name/assignment were restored with qualified history retained. The isolated 15-minute commercial entry remains approved; its temporary staff grant was removed through the product, its account deactivated and test team removed. The temporary High-to-P1 SLA mapping was restored to Not mapped through the product.
 
-Fresh Alice/QA navigation and supported Open Review were already accepted on the prior c04 build and are not relabelled as new provider acceptance. The OOM report now points to the current receipt and retains its dated same-process dev proof. Neither this run nor that bounded check proves long-term memory stability. I would not sign full product, guide, financial/privacy/retention/provider or production readiness from this packet. Twelve guides and 226 requirement rows remain ours to finish; they are not 226 demonstrated missing implementations.
+Fresh Alice/QA navigation and supported Open Review were already accepted on the prior c04 build and are not relabelled as new provider acceptance. The OOM report now points to the current receipt and retains its dated same-process dev proof. Neither this run nor that bounded check proves long-term memory stability. I would not sign full product, guide, financial/privacy/retention/provider or production readiness from this packet. On that build, twelve guides and 226 requirement rows remained ours to finish; they were not 226 demonstrated missing implementations.
 
 The committed verifier receipt is evaluated at the application candidate before publication. Final publication verification is retained at `/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/verifier-final.json`; the verifier continues to fail closed rather than waive the later test/evidence HEAD difference.
 

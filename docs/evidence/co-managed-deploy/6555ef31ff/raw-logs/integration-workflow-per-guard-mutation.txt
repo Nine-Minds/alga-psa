@@ -1,0 +1,11 @@
+MUTATION createTicketWithSideEffects: removed guard -> RED | Tests 1 ⎯⎯⎯⎯⎯⎯⎯ | first failing writer: ? | promise resolved "{ …(6) }" instead of rejecting
+MUTATION admitWorkflowTagWrite helper: removed guard -> RED | Tests 1 ⎯⎯⎯⎯⎯⎯⎯ | first failing writer: ? | promise resolved "{ created: true, contact: { …(6) } }" instead of rejecting
+MUTATION contacts.create: removed guard -> RED | Tests 1 ⎯⎯⎯⎯⎯⎯⎯ | first failing writer: ? | promise resolved "{ created: true, contact: { …(6) } }" instead of rejecting
+MUTATION contacts.duplicate: removed guard -> RED | Tests 1 ⎯⎯⎯⎯⎯⎯⎯ | first failing writer: ? | promise resolved "{ source_contact: { …(6) }, …(2) }" instead of rejecting
+MUTATION contacts.add_tag: removed guard -> RED | Tests 1 ⎯⎯⎯⎯⎯⎯⎯ | first failing writer: ? | promise resolved "{ …(5) }" instead of rejecting
+MUTATION clients.create: removed guard -> RED | Tests 1 ⎯⎯⎯⎯⎯⎯⎯ | first failing writer: ? | promise resolved "{ client: { …(8) }, tags: [ { …(3) } ] }" instead of rejecting
+MUTATION clients.duplicate: removed guard -> RED | Tests 1 ⎯⎯⎯⎯⎯⎯⎯ | first failing writer: ? | promise resolved "{ source_client: { …(8) }, …(3) }" instead of rejecting
+MUTATION clients.add_tag: removed guard -> RED | Tests 1 ⎯⎯⎯⎯⎯⎯⎯ | first failing writer: ? | promise resolved "{ …(5) }" instead of rejecting
+MUTATION projects.add_tag: removed guard -> RED | Tests 1 ⎯⎯⎯⎯⎯⎯⎯ | first failing writer: ? | promise resolved "{ …(5) }" instead of rejecting
+MUTATION projects.add_task_tag: removed guard -> RED | Tests 1 ⎯⎯⎯⎯⎯⎯⎯ | first failing writer: ? | promise resolved "{ …(5) }" instead of rejecting
+MUTATION crm.tag_activity: removed guard -> RED | Tests 1 ⎯⎯⎯⎯⎯⎯⎯ | first failing writer: ? | promise resolved "{ …(6) }" instead of rejecting
