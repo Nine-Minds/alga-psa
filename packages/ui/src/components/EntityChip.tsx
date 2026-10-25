@@ -7,6 +7,7 @@ import ContactAvatar from './ContactAvatar';
 import { Tooltip } from './Tooltip';
 import { generateEntityColor } from '../lib/colorUtils';
 import { useTranslation } from '../lib/i18n/client';
+import { interpolateFallback } from '../lib/i18n/interpolateFallback';
 import { cn } from '../lib/utils';
 
 export interface EntityChipProps {
@@ -74,11 +75,14 @@ export const EntityTagBadges = ({ tags, maxBadges = 2 }: { tags?: readonly IDisp
           <span
             data-testid="entity-chip-overflow"
             className="inline-flex shrink-0 items-center rounded-full bg-[rgb(var(--color-border-100))] px-1.5 py-0.5 text-[11px] font-semibold leading-none text-[rgb(var(--color-text-600))]"
-            aria-label={t('entityChip.moreTags', {
-              defaultValue: '{{count}} more tags: {{names}}',
-              count: hidden.length,
-              names: hidden.map((tag) => tag.tag_text).join(', '),
-            })}
+            aria-label={interpolateFallback(
+              t('entityChip.moreTags', {
+                defaultValue: '{{count}} more tags: {{names}}',
+                count: hidden.length,
+                names: hidden.map((tag) => tag.tag_text).join(', '),
+              }),
+              { count: hidden.length, names: hidden.map((tag) => tag.tag_text).join(', ') }
+            )}
           >
             +{hidden.length}
           </span>
