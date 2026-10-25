@@ -1,5 +1,6 @@
 'use client';
 
+import { unresolvedAssigneeLabel } from '../../../lib/assigneeDisplay';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PartialBlock } from '@blocknote/core';
 import { Pencil, SlidersHorizontal, Flame, Save, CheckCircle, CalendarDays } from 'lucide-react';
@@ -803,7 +804,7 @@ export function BentoHero({
         const agent = availableAgents.find((user) => user.user_id === ticket.assigned_to);
         return agent
           ? `${agent.first_name ?? ''} ${agent.last_name ?? ''}`.trim() || t('bento.hero.notAssigned', 'Not assigned')
-          : t('bento.hero.notAssigned', 'Not assigned');
+          : (ticket.assigned_to_name?.trim() || t('bento.hero.notAssigned', 'Not assigned'));
       }
       case 'due_date':
         return (ticket.due_date as unknown as string) ?? t('properties.notAvailable', 'N/A');
@@ -1101,7 +1102,12 @@ export function BentoHero({
                 labelStyle="none"
                 buttonWidth="fit"
                 size="sm"
-                placeholder={t('bento.hero.notAssigned', 'Not assigned')}
+                placeholder={unresolvedAssigneeLabel({
+                  savedAssigneeId: ticket.assigned_to,
+                  savedAssigneeName: ticket.assigned_to_name,
+                  currentValue: displayValue('assigned_to'),
+                  selectableUserIds: availableAgents.map((user) => user.user_id),
+                }) ?? t('bento.hero.notAssigned', 'Not assigned')}
                 disabled={workflowLocked || isFrozen('assigned_to')}
               />
               {onAgentClick && ticket.assigned_to ? (

@@ -2,7 +2,7 @@
 /// <reference types="@testing-library/jest-dom/vitest" />
 
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, cleanup } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BentoHero } from './BentoHero';
 
@@ -118,7 +118,8 @@ vi.mock('@alga-psa/ui/components/DatePicker', () => ({
 
 vi.mock('@alga-psa/ui/components/UserAndTeamPicker', () => ({
   __esModule: true,
-  default: () => <div data-testid="assignee-picker" />,
+  // Renders what the real picker shows with no resolvable selection: its placeholder.
+  default: ({ placeholder }: { placeholder?: string }) => <div data-testid="assignee-picker">{placeholder}</div>,
 }));
 
 vi.mock('@alga-psa/ui/components/TeamAvatar', () => ({
@@ -536,6 +537,15 @@ describe('BentoHero unsaved change model', () => {
       expect(screen.queryByRole('button', { name: /Save Changes/i })).not.toBeInTheDocument();
       expect(screen.getByTestId('bento-hero-priority-select')).toHaveValue('priority-high');
     });
+  });
+
+
+  it("names a disclosed assignee the hero cannot resolve, and Not assigned otherwise", () => {
+    renderHero({ ticket: { ...baseTicket, assigned_to: undefined, assigned_to_name: 'Alice Liddell' } as any });
+    expect(screen.getByTestId('assignee-picker')).toHaveTextContent('Alice Liddell');
+    cleanup();
+    renderHero({ ticket: { ...baseTicket, assigned_to: undefined, assigned_to_name: null } as any });
+    expect(screen.getByTestId('assignee-picker')).toHaveTextContent('Not assigned');
   });
 
   it('renders the ticket description inline with the opened-by caption', () => {

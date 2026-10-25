@@ -55,6 +55,9 @@ export interface ITicket extends TenantEntity, ITaggable {
   updated_by: string | null;
   closed_by: string | null;
   assigned_to: string | null;
+  /** Display name of the assignee, when supplied with the ticket (for example an
+   * assignee disclosed by name only, or one no longer offered for assignment). */
+  assigned_to_name?: string | null;
   assigned_team_id?: string | null;
   entered_at: string | null; // Changed from Date to string
   /** When the ticket entered its current status (maintained on every status change). */

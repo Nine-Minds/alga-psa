@@ -10,7 +10,8 @@ const ref = (value: unknown): CoManagedDisplayReference | undefined =>
 
 /** Pure assembly of the `TicketDetailsContainer` data shape from already admitted,
  * already redacted co-managed reads. A key is written only when its source was
- * disclosed; nothing is padded with a placeholder identity. */
+ * disclosed; nothing is padded with a placeholder identity, and people are carried
+ * by display name only. */
 export function buildSharedTicketData(input: {
   resource: CoManagedSharedResource;
   screen: CoManagedTicketScreen;
@@ -37,6 +38,9 @@ export function buildSharedTicketData(input: {
   if (disclosed.category !== undefined) ticket.category_id = disclosed.category?.id ?? null;
   if (disclosed.client !== undefined) ticket.client_name = disclosed.client?.name ?? null;
   if (disclosed.requester !== undefined) ticket.contact_name = disclosed.requester?.name ?? null;
+  // The customer's own assignee is disclosed by name only; the native screen shows that
+  // name read-only and never receives the customer's user identity.
+  if (disclosed.customer_assignee !== undefined) ticket.assigned_to_name = disclosed.customer_assignee?.name ?? null;
 
   const withCurrent = <T extends object>(page: SharedTicketOptionPage, current: { id: string; name: string } | undefined, extra: T) => {
     const options = page.options.map(option => ({ value: option.id, label: option.name, ...extra }));
@@ -71,7 +75,6 @@ export function buildSharedTicketData(input: {
   return {
     resource,
     ticketData,
-    ...(disclosed.customer_assignee !== undefined ? { customerAssignee: disclosed.customer_assignee } : {}),
     screen: {
       side: screen.side, // Per-user authority: a view/oversight assignment can read but its update probe is denied.
       canWrite: screen.canWrite && screen.canUpdate, canEscalate: screen.canEscalate, canHandBack: screen.canHandBack, canRevoke: screen.canRevoke,

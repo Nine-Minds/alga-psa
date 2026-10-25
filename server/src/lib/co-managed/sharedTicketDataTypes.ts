@@ -1,5 +1,4 @@
-import type { getCoManagedTicketScreen, CoManagedSharedResource, CoManagedTicketEditField, CoManagedTicketEditPatch,
-  CoManagedNamedReference } from '@alga-psa/co-managed';
+import type { getCoManagedTicketScreen, CoManagedSharedResource, CoManagedTicketEditField, CoManagedTicketEditPatch } from '@alga-psa/co-managed';
 
 /** Types only: safe to import from client code and from "use server" modules. */
 export type CoManagedTicketScreen = Awaited<ReturnType<typeof getCoManagedTicketScreen>>;
@@ -18,6 +17,8 @@ export interface SharedTicketData {
     /** Present only when the description is disclosed; the value is the BlockNote JSON string. */
     attributes?: { description: string | null };
     category_id?: string | null; client_name?: string | null; contact_name?: string | null;
+    /** The customer's own assignee, disclosed by display name only (never its user ID). */
+    assigned_to_name?: string | null;
   };
   comments: never[];
   documents: never[];
@@ -45,7 +46,6 @@ export interface SharedTicketDetailsResult {
   resource: CoManagedSharedResource;
   ticketData: SharedTicketData;
   /** Read-only display of the customer's own assignee; present only when disclosed. */
-  customerAssignee?: CoManagedNamedReference | null;
   screen: {
     side: CoManagedTicketScreen['side']; canWrite: boolean; canEscalate: boolean; canHandBack: boolean; canRevoke: boolean;
     customerName: string; sponsorName: string | null; destinationName: string | undefined;

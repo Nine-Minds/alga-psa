@@ -27,7 +27,9 @@ it('assembles the native ticket data shape from disclosed fields only', () => {
     board: { board_id: 'board-1', board_name: 'Help desk' }, categories: [{ category_id: 'cat', category_name: 'Hardware', board_id: 'board-1' }] });
   expect(result.ticketData.options.board).toEqual([{ value: 'board-1', label: 'Help desk' }]);
   expect(result.ticketData.options.status.map(option => option.label)).toEqual(['Open', 'Closed']);
-  expect(result.customerAssignee).toEqual({ name: 'Ada' });
+  // The customer's assignee is shown by name; its user identity never reaches the screen.
+  expect(result.ticketData.ticket.assigned_to_name).toBe('Ada');
+  expect(result.ticketData.ticket).not.toHaveProperty('assigned_to');
   expect(result.screen).toMatchObject({ side: 'sponsor', canWrite: true, canHandBack: true, work_revision: 2, responsibility: 'msp', customerName: 'Customer IT' });
   expect(result.editor).toEqual({ editableFields: ['title', 'status_id', 'description'], baselines: { title: 'Printer', status_id: 'status-1', description: 'doc' } });
   expect(JSON.parse(JSON.stringify(result))).toEqual(result);
@@ -43,7 +45,7 @@ it('never pads undisclosed fields and keeps the current choice selectable', () =
   expect(rest).toMatchObject({ client: null, contactInfo: null, board: null, categories: [] });
   expect(rest.options.board).toEqual([]);
   expect(rest.options.status.map(option => option.value)).toEqual(['status-1', 'id-Closed']);
-  expect(result).not.toHaveProperty('customerAssignee');
+  expect(ticket).not.toHaveProperty('assigned_to_name');
   expect(result.editor.baselines).toEqual({});
 });
 
@@ -52,7 +54,7 @@ it('distinguishes a disclosed empty value (null) from an undisclosed one (absent
     details: { resource, revision: 4, fields: { description: null, requester: null, client: null, category: null, due_date: null, customer_assignee: null } },
     statusOptions: page(), priorityOptions: page() });
   expect(result.ticketData.ticket).toMatchObject({ attributes: { description: null }, category_id: null, client_name: null, contact_name: null, due_date: null });
-  expect(result.customerAssignee).toBeNull();
+  expect(result.ticketData.ticket.assigned_to_name).toBeNull();
 });
 
 it('is read-only for a viewer whose update probe is denied even when the relationship can write', () => {

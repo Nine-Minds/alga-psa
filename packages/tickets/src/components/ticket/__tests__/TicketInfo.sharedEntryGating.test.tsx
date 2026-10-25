@@ -63,7 +63,10 @@ vi.mock('@alga-psa/ui/components/tickets/PrioritySelect', () => ({
 
 vi.mock('@alga-psa/ui/components/UserAndTeamPicker', () => ({
   __esModule: true,
-  default: () => <button type="button">Assignee</button>,
+  // Renders what the real picker shows with no resolvable selection: its placeholder.
+  default: ({ placeholder, disabled }: { placeholder?: string; disabled?: boolean }) => (
+    <button type="button" data-testid="assignee-picker" disabled={disabled}>{placeholder}</button>
+  ),
 }));
 
 vi.mock('../../CategoryPicker', () => ({
@@ -225,12 +228,16 @@ function sharedDataSource(screen: { readOnly?: boolean } = {}): TicketDataSource
   });
 }
 
-function renderEntry(dataSource: TicketDataSource, statusOptions: Array<{ value: string; label: string }> = []) {
+function renderEntry(
+  dataSource: TicketDataSource,
+  statusOptions: Array<{ value: string; label: string }> = [],
+  ticketOverrides: Record<string, unknown> = {},
+) {
   return render(
     <TicketDataSourceProvider dataSource={dataSource}>
       <TicketInfo
         id="ticket-info"
-        ticket={ticket}
+        ticket={{ ...ticket, ...ticketOverrides }}
         conversations={[]}
         statusOptions={statusOptions}
         agentOptions={[]}
@@ -272,6 +279,19 @@ describe('TicketInfo Entry layout on a shared (non-native) data source', () => {
     await waitFor(() => expect(screen.getByTestId('category-picker')).toBeInTheDocument());
     expect(screen.getByText('Open')).toBeInTheDocument();
     expect(screen.queryByText('Select...')).not.toBeInTheDocument();
+  });
+
+
+  it("shows the customer's disclosed assignee by name, read-only, without its user identity", async () => {
+    renderEntry(sharedDataSource(), [], { assigned_to: undefined, assigned_to_name: 'Alice Liddell' });
+    await waitFor(() => expect(screen.getByTestId('category-picker')).toBeInTheDocument());
+    expect(screen.getByTestId('assignee-picker')).toHaveTextContent('Alice Liddell');
+  });
+
+  it('shows Not assigned when no customer assignee is disclosed', async () => {
+    renderEntry(sharedDataSource(), [], { assigned_to: undefined, assigned_to_name: null });
+    await waitFor(() => expect(screen.getByTestId('category-picker')).toBeInTheDocument());
+    expect(screen.getByTestId('assignee-picker')).toHaveTextContent('Not assigned');
   });
 
   it('renders no Tags block (heading or placeholder) when capabilities.tags is false', async () => {
