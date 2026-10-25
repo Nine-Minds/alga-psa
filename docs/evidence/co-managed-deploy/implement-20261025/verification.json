@@ -1,10 +1,10 @@
 {
-  "checkedAt": "2026-10-25T13:51:05.013442+00:00",
+  "checkedAt": "2026-10-25T14:10:38.372304+00:00",
   "applicationSource": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
   "counts": {
-    "implemented-unverified": 225,
+    "implemented-unverified": 226,
     "blocked-external": 2,
-    "verified": 33
+    "verified": 32
   },
   "knownProductRepairs": [
     "1bdea5dd80021b508699181b8906f4b233ce4efb",
@@ -15,9 +15,10 @@
   "productionReady": false,
   "rawEvidenceRoot": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025",
   "limitations": [
-    "Twelve full guides and 225 requirement rows remain unverified.",
+    "Twelve full guides and 226 requirement rows remain unverified.",
     "No real Stripe or real license-issuer acceptance.",
     "No long-term memory stability claim.",
     "Historical partial media retain their original provenance."
-  ]
+  ],
+  "policyCorrection": "Removed the added source/import-presence test; nativeTicketScreen:T013 is unverified. Behavioral bug regressions retained."
 }

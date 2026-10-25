@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "checkedAt": "2026-10-25T13:53:36.196134+00:00",
+  "checkedAt": "2026-10-25T14:10:38.372304+00:00",
   "candidateRevision": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
   "buildId": "build-1792934305248",
   "origin": "http://feature-co-managed-it.localhost:23374",
@@ -12,7 +12,7 @@
   "blockedGuides": 0,
   "reviewReady": false,
   "recordingReady": false,
-  "runtimeSummary": "Canonical build-1792934305248, source a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8. Two core guide scenarios covered on this build; twelve partial. 33 requirement rows verified, 225 implemented-unverified and two external provider portions. Historical partial media remain historical.",
+  "runtimeSummary": "Canonical build-1792934305248, source a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8. Two core guide scenarios covered on this build; twelve partial. 32 requirement rows verified, 226 implemented-unverified and two external provider portions. Historical partial media remain historical.",
   "mediaPlaybackVerified": 14,
   "mediaPlaybackScope": "Three new-build recordings plus eleven historical partial recordings. This is not fourteen accepted current-build scenarios.",
   "guides": [

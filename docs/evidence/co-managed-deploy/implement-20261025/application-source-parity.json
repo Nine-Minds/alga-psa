@@ -1,9 +1,9 @@
 {
-  "checkedAt": "2026-10-25T13:59:23.627349+00:00",
+  "checkedAt": "2026-10-25T14:10:38.372304+00:00",
   "applicationSource": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
   "trackedChangesBeforePacket": [
     "ee/temporal-workflows/src/__tests__/integration/helpers/coManagedInvitationRecoveryCases.ts"
   ],
-  "additionalTestFile": "server/src/test/unit/product/coManagedDeletedPanels.contract.test.ts",
-  "applicationChanges": []
+  "applicationChanges": [],
+  "policyCorrection": "Added source/import-presence test removed; application code remains unchanged."
 }

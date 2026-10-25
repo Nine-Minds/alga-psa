@@ -230,9 +230,11 @@
       "nativeTicketScreen:T001: implemented-unverified — not accepted on this candidate",
       "nativeTicketScreen:T007: implemented-unverified — not accepted on this candidate",
       "nativeTicketScreen:T011: implemented-unverified — not accepted on this candidate",
+      "nativeTicketScreen:T013: implemented-unverified — not accepted on this candidate",
       "nativeTicketScreen:T014: implemented-unverified — not accepted on this candidate"
     ],
     "humanReview": [
+      "manifest candidate a46feefa6f is not the current HEAD 5c42d3e257 (37 file(s) changed outside docs/evidence/co-managed-deploy/implement-20261025/census)",
       "implementationReady is false",
       "PR head missing is not the candidate",
       "running app revision missing is not the candidate",
@@ -249,6 +251,7 @@
       "review environment healed 4 times"
     ],
     "production": [
+      "manifest candidate a46feefa6f is not the current HEAD 5c42d3e257 (37 file(s) changed outside docs/evidence/co-managed-deploy/implement-20261025/census)",
       "humanReviewReady is false",
       "stripe-recurring-1149: not accepted by the release owner",
       "external-license-issuance: not accepted by the release owner",
@@ -257,9 +260,9 @@
     ]
   },
   "counts": {
-    "implemented-unverified": 225,
+    "implemented-unverified": 226,
     "blocked-external": 2,
-    "verified": 33
+    "verified": 32
   },
   "manifestPath": "docs/evidence/co-managed-deploy/implement-20261025/census/manifest.json"
 }

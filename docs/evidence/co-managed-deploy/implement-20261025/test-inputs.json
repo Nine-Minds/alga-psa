@@ -1,8 +1,8 @@
 {
   "applicationSource": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
   "testInputs": {
-    "ee/temporal-workflows/src/__tests__/integration/helpers/coManagedInvitationRecoveryCases.ts": "88478ebeb96140adbc519c8041dcad33b6f9ab5ef404839f54d9d6730a741dbc",
-    "server/src/test/unit/product/coManagedDeletedPanels.contract.test.ts": "8e79f986f5f2b38c83e424193ef4fa644052076aaee2d78ee943cf1068fb5381"
+    "ee/temporal-workflows/src/__tests__/integration/helpers/coManagedInvitationRecoveryCases.ts": "88478ebeb96140adbc519c8041dcad33b6f9ab5ef404839f54d9d6730a741dbc"
   },
-  "claim": "Only tests and evidence documentation differ from the deployed application source; no application code changed after its build."
+  "claim": "Only tests and evidence documentation differ from the deployed application source; no application code changed after its build.",
+  "policyCorrection": "New import-presence test removed; no replacement source-text check added."
 }

@@ -1,6 +1,6 @@
 # Remaining acceptance
 
-Current source: `a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8`. 33 verified; 225 implemented-unverified; two blocked-external provider portions. Source presence is not behavior acceptance.
+Application source: `a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8`. 32 verified; 226 implemented-unverified; two blocked-external provider portions. Source presence is not behavior acceptance.
 
 ## T01 — implemented-unverified
 
@@ -1807,6 +1807,14 @@ Source/test references: packages/tickets/src/lib/ticketDataSource.ts, server/src
 Unit: stopwatch/time entry on a shared ticket launches the native time entry with work_item_type co_managed; effort split refreshes after save
 
 Unit: stopwatch/time entry on a shared ticket launches the native time entry with work_item_type co_managed; effort split refreshes after save Attach the exact native/shared capability, read/write, route or locale acceptance named by this row; source presence is not an executed acceptance record.
+
+Source/test references: packages/tickets/src/lib/ticketDataSource.ts, server/src/components/co-managed/sharedTicketDataSource.tsx, server/src/components/co-managed/SharedTicketScreen.tsx, server/src/test/unit/product/coManagedSharedTicketDataSource.test.tsx, ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts
+
+## nativeTicketScreen:T013 — implemented-unverified
+
+Contract: no remaining imports of the deleted panel components
+
+No behavioral acceptance supplied for the retired-panel contract. The newly added source/import-presence test was removed under the latest AGENTS instructions; source presence is not a current behavioral pass.
 
 Source/test references: packages/tickets/src/lib/ticketDataSource.ts, server/src/components/co-managed/sharedTicketDataSource.tsx, server/src/components/co-managed/SharedTicketScreen.tsx, server/src/test/unit/product/coManagedSharedTicketDataSource.test.tsx, ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts
 

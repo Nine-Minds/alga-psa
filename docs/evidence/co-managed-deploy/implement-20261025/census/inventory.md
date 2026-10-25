@@ -260,5 +260,5 @@
 | nativeTicketScreen:T010 | verified | implement-unit |
 | nativeTicketScreen:T011 | implemented-unverified | current-source-census |
 | nativeTicketScreen:T012 | verified | implement-unit |
-| nativeTicketScreen:T013 | verified | implement-unit |
+| nativeTicketScreen:T013 | implemented-unverified | current-source-census |
 | nativeTicketScreen:T014 | implemented-unverified | current-source-census |

@@ -451,7 +451,7 @@ records the registered production process and bounded same-process guide window.
 The [new guide ledger](implement-20261025/guide-coverage.json) covers onboarding
 and ticket queues on this build; twelve guides remain partial. Historical c04
 and 704f partial recordings retain their original results. The 260-row inventory
-now has 33 verified rows, 225 implemented-unverified rows and two externally
+now has 32 verified rows, 226 implemented-unverified rows and two externally
 owned provider portions. All readiness predicates remain false. These product
 acceptance results do not extend the earlier dev memory observation or establish
 long-term memory stability.

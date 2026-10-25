@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "candidate": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
-  "generatedAt": "2026-10-25T13:51:05.013442+00:00",
+  "generatedAt": "2026-10-25T14:10:38.372304+00:00",
   "plans": {
     "foundation": "docs/plans/2026-09-06-co-managed-it-plan.md",
     "clientIntegration": "docs/plans/2026-09-11-co-managed-client-integration",
@@ -30,9 +30,9 @@
   "totals": {
     "rows": 260,
     "byStatus": {
-      "implemented-unverified": 225,
+      "implemented-unverified": 226,
       "blocked-external": 2,
-      "verified": 33
+      "verified": 32
     }
   },
   "failures": [],
@@ -48,10 +48,10 @@
     "implement-unit": {
       "type": "automated",
       "sha": "a46feefa6fff7aa76a8625f6e244dc79e5eb4cb8",
-      "command": "server: npx vitest run the nine files named in acceptance-unit.txt",
-      "result": "All 101 cases in 9 files passed; no test skipped.",
+      "command": "server: npx vitest run the eight files named in acceptance-unit.txt",
+      "result": "99 passed in 8 files. No newly added source/import-presence contract remains.",
       "artifact": "../acceptance-unit.txt",
-      "dependencyAnalysis": "Application code is exactly a46feefa6f. Added retired-panel test and deterministic invitation scheduling change are test inputs, preserved in the final tooling commit; neither changes application/runtime code.",
+      "dependencyAnalysis": "Application code is exactly a46feefa6f. The invitation test barrier is a test input preserved in the final tooling commit; no application code changed after its build. The added import-presence test was removed under the latest AGENTS instructions.",
       "artifactAvailable": true
     },
     "implement-db": {
@@ -12028,12 +12028,12 @@
       "dependsOn": [
         "F036"
       ],
-      "status": "verified",
-      "remainingAcceptance": "",
-      "justification": "AST contract scans production imports/re-exports/dynamic/CommonJS callers of retired panels; synthetic mutation controls establish scanner sensitivity.",
+      "status": "implemented-unverified",
+      "remainingAcceptance": "No behavioral acceptance supplied for the retired-panel contract. The newly added source/import-presence test was removed under the latest AGENTS instructions; source presence is not a current behavioral pass.",
+      "justification": "No behavioral acceptance supplied for the retired-panel contract. The newly added source/import-presence test was removed under the latest AGENTS instructions; source presence is not a current behavioral pass.",
       "evidence": [
         {
-          "id": "implement-unit"
+          "id": "current-source-census"
         }
       ]
     },

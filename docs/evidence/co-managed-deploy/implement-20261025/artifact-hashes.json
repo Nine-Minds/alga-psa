@@ -12,9 +12,9 @@
     "signedTokensRedacted": 0
   },
   "acceptance-unit.txt": {
-    "rawPath": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/acceptance-unit.log",
-    "rawSha256": "3733d16d512eb0938cb15327cf51a1392f5cc81bd143dc590661f03cbea57e7d",
-    "publishedSha256": "3733d16d512eb0938cb15327cf51a1392f5cc81bd143dc590661f03cbea57e7d",
+    "rawPath": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/acceptance-unit-behavioral-policy.log",
+    "rawSha256": "c667a508edad39376e68faa993b00241ea2cb44d12f227e62a81a582e52ffffa",
+    "publishedSha256": "c667a508edad39376e68faa993b00241ea2cb44d12f227e62a81a582e52ffffa",
     "signedTokensRedacted": 0
   },
   "native-capabilities.txt": {
@@ -45,6 +45,12 @@
     "rawPath": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/handback-after.log",
     "rawSha256": "f166e5e0ea79ed2aa43092aa432bf1d76e39e09218be8ba0f7d2943fdc4bf960",
     "publishedSha256": "f166e5e0ea79ed2aa43092aa432bf1d76e39e09218be8ba0f7d2943fdc4bf960",
+    "signedTokensRedacted": 0
+  },
+  "historical-101-checks.txt": {
+    "rawPath": "/tmp/alga-smoke-evidence/co-managed-it-implement-20261025/acceptance-unit.log",
+    "rawSha256": "3733d16d512eb0938cb15327cf51a1392f5cc81bd143dc590661f03cbea57e7d",
+    "publishedSha256": "3733d16d512eb0938cb15327cf51a1392f5cc81bd143dc590661f03cbea57e7d",
     "signedTokensRedacted": 0
   }
 }
