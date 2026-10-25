@@ -131,6 +131,7 @@ describe('menuConfig i18n metadata', () => {
       'settings.tabs.clientPortal',
       'settings.tabs.license',
       'settings.tabs.ticketing',
+      'settings.tabs.tags',
       'settings.tabs.sla',
       'settings.tabs.projects',
       'settings.tabs.assets',

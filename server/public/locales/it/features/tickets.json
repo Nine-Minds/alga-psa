@@ -110,7 +110,12 @@
     "allResponseStatuses": "Tutti gli stati di risposta",
     "responseStatus": "Stato risposta",
     "board": "Filtra per bacheca",
-    "searchSmart": "Cerca ticket e commenti… Invio per la ricerca intelligente"
+    "searchSmart": "Cerca ticket e commenti… Invio per la ricerca intelligente",
+    "requesterTags": "Tag del richiedente",
+    "clientTags": "Tag del cliente",
+    "tagModeAny": "Almeno uno tra",
+    "tagModeNone": "Nessuno tra",
+    "droppedFromLink": "Alcuni filtri di questo link non sono validi e sono stati ignorati."
   },
   "create": {
     "title": "Crea ticket di supporto",

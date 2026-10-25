@@ -118,7 +118,12 @@
     "allResponseStatuses": "Alla svarsstatusar",
     "responseStatus": "Svarsstatus",
     "board": "Filtrera efter tavla",
-    "searchSmart": "Sök i ärenden och kommentarer… Tryck på Enter för smart sökning"
+    "searchSmart": "Sök i ärenden och kommentarer… Tryck på Enter för smart sökning",
+    "requesterTags": "Beställarens taggar",
+    "clientTags": "Kundtaggar",
+    "tagModeAny": "Någon av",
+    "tagModeNone": "Ingen av",
+    "droppedFromLink": "Vissa filter i den här länken är ogiltiga och ignorerades."
   },
   "create": {
     "title": "Skapa supportärende",

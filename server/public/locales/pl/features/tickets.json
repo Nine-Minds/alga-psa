@@ -110,7 +110,12 @@
     "allResponseStatuses": "Wszystkie statusy odpowiedzi",
     "responseStatus": "Status odpowiedzi",
     "board": "Filtruj według tablicy",
-    "searchSmart": "Szukaj zgłoszeń i komentarzy… Enter dla inteligentnego wyszukiwania"
+    "searchSmart": "Szukaj zgłoszeń i komentarzy… Enter dla inteligentnego wyszukiwania",
+    "requesterTags": "Tagi zgłaszającego",
+    "clientTags": "Tagi klienta",
+    "tagModeAny": "Dowolny z",
+    "tagModeNone": "Żaden z",
+    "droppedFromLink": "Niektóre filtry w tym łączu są nieprawidłowe i zostały zignorowane."
   },
   "create": {
     "title": "Utwórz zgłoszenie wsparcia",

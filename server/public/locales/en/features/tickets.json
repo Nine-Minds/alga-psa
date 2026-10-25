@@ -118,7 +118,12 @@
     "allResponseStatuses": "All Response Statuses",
     "responseStatus": "Response Status",
     "board": "Filter by board",
-    "searchSmart": "Search tickets and comments… Enter for smart search"
+    "searchSmart": "Search tickets and comments… Enter for smart search",
+    "requesterTags": "Requester tags",
+    "clientTags": "Client tags",
+    "tagModeAny": "Any of",
+    "tagModeNone": "None of",
+    "droppedFromLink": "Some filters in this link are not valid and were ignored."
   },
   "create": {
     "title": "Create Support Ticket",

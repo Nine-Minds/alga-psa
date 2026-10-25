@@ -110,7 +110,12 @@
     "allResponseStatuses": "Todos los estados de respuesta",
     "responseStatus": "Estado de respuesta",
     "board": "Filtrar por tablero",
-    "searchSmart": "Buscar tickets y comentarios… Intro para búsqueda inteligente"
+    "searchSmart": "Buscar tickets y comentarios… Intro para búsqueda inteligente",
+    "requesterTags": "Etiquetas del solicitante",
+    "clientTags": "Etiquetas del cliente",
+    "tagModeAny": "Cualquiera de",
+    "tagModeNone": "Ninguna de",
+    "droppedFromLink": "Algunos filtros de este enlace no son válidos y se ignoraron."
   },
   "create": {
     "title": "Crear ticket de soporte",

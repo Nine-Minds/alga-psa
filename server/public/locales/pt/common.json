@@ -2172,5 +2172,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Alternar visualização"
+  },
+  "entityChip": {
+    "moreTags": "mais {{count}} tags: {{names}}"
   }
 }

@@ -506,7 +506,8 @@
       "extensions": "Tillägg",
       "experimentalFeatures": "Experimentella funktioner",
       "profile": "Profil",
-      "security": "Säkerhet"
+      "security": "Säkerhet",
+      "tags": "Taggar"
     }
   },
   "dashboard": {

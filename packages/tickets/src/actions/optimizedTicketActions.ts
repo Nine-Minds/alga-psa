@@ -2415,6 +2415,35 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         .orderBy('td.created_at', 'asc')
     ]);
 
+      // Contact and client tag definitions for the Requester tags / Client tags filters. A definition
+      // is listed when it has a mapping or a display rule points at it, so a rule's tag (e.g. VIP)
+      // stays selectable after its last mapping is removed.
+      const partyTagMappings = scopedDb.table('tag_mappings as tm')
+        .select(trx.raw('1'))
+        .whereRaw('?? = ??', ['tm.tag_id', 'td.tag_id']);
+      scopedDb.tenantWhereColumn(partyTagMappings, 'tm.tenant', 'td.tenant');
+      const partyTagRules = scopedDb.table('tag_display_rules as tdr')
+        .select(trx.raw('1'))
+        .whereRaw('?? = ??', ['tdr.tag_id', 'td.tag_id']);
+      scopedDb.tenantWhereColumn(partyTagRules, 'tdr.tenant', 'td.tenant');
+      const partyTagRows = await scopedDb.table('tag_definitions as td')
+        .select('td.tag_id', 'td.tag_text', 'td.tagged_type', 'td.background_color', 'td.text_color')
+        .whereIn('td.tagged_type', ['contact', 'client'])
+        .where((builder) => builder.whereExists(partyTagMappings).orWhereExists(partyTagRules))
+        .orderBy('td.tag_text', 'asc')
+        .orderBy('td.created_at', 'asc');
+      const toPartyTag = (row: any) => ({
+        tag_id: row.tag_id,
+        tag_text: row.tag_text,
+        tagged_id: '',
+        tagged_type: row.tagged_type as 'contact' | 'client',
+        tenant: tenant,
+        background_color: row.background_color,
+        text_color: row.text_color,
+      });
+      const contactTagDefinitions = partyTagRows.filter((row: any) => row.tagged_type === 'contact').map(toPartyTag);
+      const clientTagDefinitions = partyTagRows.filter((row: any) => row.tagged_type === 'client').map(toPartyTag);
+
       // Format options for dropdowns
       const statusOptions = [
         { value: TICKET_STATUS_FILTER_OPEN, label: 'All open statuses' },
@@ -2472,6 +2501,8 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         categories,
         clients: clientsWithLogos, // Return clients with logos
         users,
+        contactTagDefinitions,
+        clientTagDefinitions,
         tags: (tags || []).map((tag: any) => ({
           tag_id: tag.tag_id,
           tag_text: tag.tag_text,

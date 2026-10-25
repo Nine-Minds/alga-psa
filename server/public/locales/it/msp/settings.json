@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Scorciatoie da tastiera",
     "opportunities": "Opportunità",
     "mcpServer": "Server MCP",
-    "settingsFallback": "Impostazioni"
+    "settingsFallback": "Impostazioni",
+    "tags": "Tag"
   },
   "unsavedChanges": {
     "title": "Modifiche non salvate",
@@ -3827,5 +3828,21 @@
       "empty": "Nessuno stato standard disponibile per l’importazione",
       "importSelected": "Importa selezionati ({{count}})"
     }
+  },
+  "tagDisplay": {
+    "title": "Mostra sui chip",
+    "subtitle": "Tag mostrati accanto a contatti e clienti negli elenchi dei ticket, nelle intestazioni dei ticket e nei selettori.",
+    "loading": "Caricamento…",
+    "description": "Scegli quali tag vengono mostrati come badge accanto a contatti e clienti e in quale ordine. Un elenco senza tag non mostra badge per quel pubblico.",
+    "contacts": "Contatti",
+    "clients": "Clienti",
+    "audienceInternal": "Utenti interni",
+    "audienceClient": "Portale clienti",
+    "clientNote": "Parte vuoto. I tag elencati qui sono visibili agli utenti del cliente nel portale clienti.",
+    "noneSelected": "Nessun tag mostrato.",
+    "moveUp": "Sposta su",
+    "moveDown": "Sposta giù",
+    "remove": "Rimuovi",
+    "addTag": "Aggiungi un tag…"
   }
 }

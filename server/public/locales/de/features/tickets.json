@@ -110,7 +110,12 @@
     "allResponseStatuses": "Alle Antwortstatus",
     "responseStatus": "Antwortstatus",
     "board": "Nach Board filtern",
-    "searchSmart": "Tickets und Kommentare durchsuchen… Enter für intelligente Suche"
+    "searchSmart": "Tickets und Kommentare durchsuchen… Enter für intelligente Suche",
+    "requesterTags": "Tags des Anfragenden",
+    "clientTags": "Kunden-Tags",
+    "tagModeAny": "Mindestens eines von",
+    "tagModeNone": "Keines von",
+    "droppedFromLink": "Einige Filter in diesem Link sind ungültig und wurden ignoriert."
   },
   "create": {
     "title": "Support-Ticket erstellen",

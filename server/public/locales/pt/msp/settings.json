@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Atalhos de teclado",
     "opportunities": "Oportunidades",
     "mcpServer": "Servidor MCP",
-    "settingsFallback": "Configurações"
+    "settingsFallback": "Configurações",
+    "tags": "Tags"
   },
   "unsavedChanges": {
     "title": "Alterações não salvas",
@@ -3827,5 +3828,21 @@
       "empty": "Nenhum status padrão disponível para importação",
       "importSelected": "Importar selecionados ({{count}})"
     }
+  },
+  "tagDisplay": {
+    "title": "Exibir nos chips",
+    "subtitle": "Tags exibidas ao lado de contatos e clientes em listas de tickets, cabeçalhos de tickets e seletores.",
+    "loading": "Carregando…",
+    "description": "Escolha quais tags aparecem como selos ao lado de contatos e clientes e em que ordem. Uma lista sem tags não mostra selos para esse público.",
+    "contacts": "Contatos",
+    "clients": "Clientes",
+    "audienceInternal": "Usuários internos",
+    "audienceClient": "Portal do cliente",
+    "clientNote": "Começa vazia. As tags listadas aqui ficam visíveis para os próprios usuários do cliente no portal do cliente.",
+    "noneSelected": "Nenhuma tag exibida.",
+    "moveUp": "Mover para cima",
+    "moveDown": "Mover para baixo",
+    "remove": "Remover",
+    "addTag": "Adicionar uma tag…"
   }
 }

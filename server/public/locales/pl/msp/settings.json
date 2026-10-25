@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Skróty klawiaturowe",
     "mcpServer": "Serwer MCP",
     "opportunities": "Szanse sprzedaży",
-    "settingsFallback": "Ustawienia"
+    "settingsFallback": "Ustawienia",
+    "tags": "Tagi"
   },
   "unsavedChanges": {
     "title": "Niezapisane zmiany",
@@ -3827,5 +3828,21 @@
       "empty": "Brak standardowych statusów do zaimportowania",
       "importSelected": "Importuj wybrane ({{count}})"
     }
+  },
+  "tagDisplay": {
+    "title": "Wyświetlaj na chipach",
+    "subtitle": "Tagi wyświetlane obok kontaktów i klientów na listach zgłoszeń, w nagłówkach zgłoszeń i w selektorach.",
+    "loading": "Ładowanie…",
+    "description": "Wybierz, które tagi są wyświetlane jako odznaki obok kontaktów i klientów oraz w jakiej kolejności. Lista bez tagów nie pokazuje odznak dla tej grupy odbiorców.",
+    "contacts": "Kontakty",
+    "clients": "Klienci",
+    "audienceInternal": "Użytkownicy wewnętrzni",
+    "audienceClient": "Portal klienta",
+    "clientNote": "Domyślnie pusta. Tagi z tej listy są widoczne dla użytkowników klienta w portalu klienta.",
+    "noneSelected": "Nie wyświetlono żadnych tagów.",
+    "moveUp": "Przenieś w górę",
+    "moveDown": "Przenieś w dół",
+    "remove": "Usuń",
+    "addTag": "Dodaj tag…"
   }
 }

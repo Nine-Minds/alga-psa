@@ -60,6 +60,7 @@ import {
   Target,
   Repeat,
   Ticket,
+  Tags,
   BadgeCheck,
   Wrench
 } from 'lucide-react';
@@ -338,6 +339,7 @@ export const settingsNavigationSections: NavigationSection[] = [
     translationKey: 'settings.sections.workManagement',
     items: [
       { name: 'Ticketing', translationKey: 'settings.tabs.ticketing', icon: Ticket, href: '/msp/settings?tab=ticketing' },
+      { name: 'Tags', translationKey: 'settings.tabs.tags', icon: Tags, href: '/msp/settings/tags' },
       { name: 'SLA', translationKey: 'settings.tabs.sla', icon: Timer, href: '/msp/settings/sla' },
       { name: 'Projects', translationKey: 'settings.tabs.projects', icon: ListTodo, href: '/msp/settings/projects' },
       { name: 'Assets', translationKey: 'settings.tabs.assets', icon: Monitor, href: '/msp/settings/assets' },

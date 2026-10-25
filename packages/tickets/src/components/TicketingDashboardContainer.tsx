@@ -160,6 +160,20 @@ export interface TicketListMetadata {
   ticketTags: Record<string, ITag[]>;
 }
 
+function whereTagUniverses(options: {
+  contactTagDefinitions?: { tag_id?: string }[];
+  clientTagDefinitions?: { tag_id?: string }[];
+}): Partial<Record<'contact.tags' | 'client.tags', ReadonlySet<string>>> {
+  const universe: Partial<Record<'contact.tags' | 'client.tags', ReadonlySet<string>>> = {};
+  if (Array.isArray(options.contactTagDefinitions)) {
+    universe['contact.tags'] = new Set(options.contactTagDefinitions.map((d) => d.tag_id as string));
+  }
+  if (Array.isArray(options.clientTagDefinitions)) {
+    universe['client.tags'] = new Set(options.clientTagDefinitions.map((d) => d.tag_id as string));
+  }
+  return universe;
+}
+
 interface TicketingDashboardContainerProps {
   consolidatedData: {
     options: TicketFormOptions;
@@ -587,12 +601,17 @@ export default function TicketingDashboardContainer({
     categoryIds: effectiveOptions.categories.map((category: { category_id: string }) => category.category_id),
     clientIds: effectiveOptions.clients.map(client => client.client_id),
     userIds: effectiveOptions.users.map((user: { user_id: string }) => user.user_id),
+    // Contact / client tag universes for `where`. An older cached options payload has no such list:
+    // leave the universe absent ("cannot validate") rather than empty ("everything is deleted").
+    whereTagIds: whereTagUniverses(effectiveOptions),
   }), [
     effectiveOptions.statusOptions,
     effectiveOptions.priorityOptions,
     effectiveOptions.categories,
     effectiveOptions.clients,
     effectiveOptions.users,
+    effectiveOptions.contactTagDefinitions,
+    effectiveOptions.clientTagDefinitions,
   ]);
 
   /** The fully-layered view for a board (null = the All-tickets tab). */
@@ -988,6 +1007,7 @@ export default function TicketingDashboardContainer({
     clientIds: new Set<string>(knownFilterIds.clientIds as string[]),
     userIds: new Set<string>(knownFilterIds.userIds as string[]),
     teamIds: initialTeams ? new Set(initialTeams.map(team => team.team_id)) : undefined,
+    whereTagIds: knownFilterIds.whereTagIds,
     tags: effectiveOptions.tags ? new Set(effectiveOptions.tags.map(tag => tag.tag_text)) : undefined,
   }), [effectiveOptions.boardOptions, effectiveOptions.tags, knownFilterIds, initialTeams]);
 
@@ -1087,6 +1107,8 @@ export default function TicketingDashboardContainer({
       initialCategories={effectiveOptions.categories}
       initialClients={effectiveOptions.clients}
       initialTags={effectiveOptions.tags || []}
+      contactTagDefinitions={effectiveOptions.contactTagDefinitions}
+      clientTagDefinitions={effectiveOptions.clientTagDefinitions}
       initialUsers={effectiveOptions.users}
       totalCount={totalCount}
       currentPage={currentPage}

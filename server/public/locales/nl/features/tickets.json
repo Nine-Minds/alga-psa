@@ -110,7 +110,12 @@
     "allResponseStatuses": "Alle antwoordstatussen",
     "responseStatus": "Antwoordstatus",
     "board": "Filteren op bord",
-    "searchSmart": "Tickets en opmerkingen doorzoeken… Enter voor slim zoeken"
+    "searchSmart": "Tickets en opmerkingen doorzoeken… Enter voor slim zoeken",
+    "requesterTags": "Tags van aanvrager",
+    "clientTags": "Klanttags",
+    "tagModeAny": "Een van",
+    "tagModeNone": "Geen van",
+    "droppedFromLink": "Sommige filters in deze link zijn ongeldig en zijn genegeerd."
   },
   "create": {
     "title": "Supportticket aanmaken",

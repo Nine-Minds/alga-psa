@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Tangentbordsgenvägar",
     "opportunities": "Affärsmöjligheter",
     "mcpServer": "MCP-server",
-    "settingsFallback": "Inställningar"
+    "settingsFallback": "Inställningar",
+    "tags": "Taggar"
   },
   "unsavedChanges": {
     "title": "Osparade ändringar",
@@ -3827,5 +3828,21 @@
       "empty": "Inga standardstatusar tillgängliga för import",
       "importSelected": "Importera markerade ({{count}})"
     }
+  },
+  "tagDisplay": {
+    "title": "Visa på chips",
+    "subtitle": "Taggar som visas bredvid kontakter och kunder i ärendelistor, ärenderubriker och väljare.",
+    "loading": "Laddar…",
+    "description": "Välj vilka taggar som visas som märken bredvid kontakter och kunder, och i vilken ordning. En lista utan taggar visar inga märken för den målgruppen.",
+    "contacts": "Kontakter",
+    "clients": "Kunder",
+    "audienceInternal": "Interna användare",
+    "audienceClient": "Kundportal",
+    "clientNote": "Börjar tom. Taggar i den här listan syns för kundens egna användare i kundportalen.",
+    "noneSelected": "Inga taggar visas.",
+    "moveUp": "Flytta upp",
+    "moveDown": "Flytta ned",
+    "remove": "Ta bort",
+    "addTag": "Lägg till en tagg…"
   }
 }
