@@ -2938,7 +2938,8 @@
     "emptyState": "Inga användare är tillgängliga.",
     "roles": {
       "client": "Kundanvändare",
-      "internal": "Intern användare"
+      "internal": "Intern användare",
+      "service": "Tjänstekonto"
     },
     "badge": {
       "inactive": "Inaktiv"

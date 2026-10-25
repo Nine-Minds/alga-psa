@@ -1,23 +1,23 @@
 import { describe, expect, it, vi } from 'vitest';
 
-const clientRow = vi.hoisted(() => ({ current: { payment_terms: 'net_30' } as { payment_terms?: string | null } | undefined }));
+// computeDueDate delegates to the shared resolver, which resolves the effective
+// billing identity (profile → client → tenant default → Net 30). Mock the
+// identity and run the real resolver arithmetic so REST and UI cannot drift.
+const identity = vi.hoisted(() => ({ paymentTerms: 'net_30' as string }));
 
-vi.mock('@alga-psa/db', async (importOriginal) => {
+vi.mock('@alga-psa/shared/billingClients/billingProfileSettings', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
     ...actual,
-    tenantDb: () => ({
-      table: () => ({
-        where: () => ({ select: () => ({ first: async () => clientRow.current }) }),
-      }),
-    }),
+    resolveEffectiveBillingIdentity: async () => ({ paymentTerms: identity.paymentTerms }),
   };
 });
 
 import { InvoiceService } from '../../../lib/api/services/InvoiceService';
+import { resolveInvoiceDueDate } from '@alga-psa/billing/lib/billing/invoiceDueDate';
 
-async function dueDate(paymentTerms: string | null | undefined, invoiceDate = '2026-09-22') {
-  clientRow.current = { payment_terms: paymentTerms };
+async function dueDate(paymentTerms: string, invoiceDate = '2026-09-22') {
+  identity.paymentTerms = paymentTerms;
   const service = Object.create(InvoiceService.prototype) as any;
   return service.computeDueDate({}, 'tenant-1', 'client-1', invoiceDate);
 }
@@ -34,12 +34,20 @@ describe('InvoiceService.computeDueDate (REST invoice path)', () => {
     expect(await dueDate('due_on_receipt')).toBe('2026-09-22');
   });
 
-  it('falls back to Net 30 for unknown, empty, or missing terms', async () => {
-    expect(await dueDate('')).toBe('2026-10-22');
+  it('uses the tier the identity resolved, e.g. a Net 14 tenant default', async () => {
+    // The identity already folded profile → client → tenant; a client with no
+    // terms of its own arrives here as the tenant default.
+    expect(await dueDate('net_14')).toBe('2026-10-06');
+  });
+
+  it('falls back to Net 30 for an unrecognised resolved term', async () => {
     expect(await dueDate('Net 45 days')).toBe('2026-10-22');
-    expect(await dueDate(null)).toBe('2026-10-22');
-    clientRow.current = undefined;
-    const service = Object.create(InvoiceService.prototype) as any;
-    expect(await service.computeDueDate({}, 'tenant-1', 'client-1', '2026-09-22')).toBe('2026-10-22');
+  });
+
+  it('agrees with resolveInvoiceDueDate for every term', async () => {
+    for (const terms of ['net_30', 'net_15', 'net_14', 'net_7', 'due_on_receipt']) {
+      identity.paymentTerms = terms;
+      expect(await dueDate(terms)).toBe(await resolveInvoiceDueDate({} as any, 'tenant-1', 'client-1', '2026-09-22'));
+    }
   });
 });

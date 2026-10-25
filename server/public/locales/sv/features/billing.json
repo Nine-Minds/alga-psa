@@ -453,5 +453,20 @@
     "hoursUsed": "{{hours}} h förbrukade",
     "hoursTotal": "{{hours}} h totalt",
     "rolloverHours": "Inkluderar {{hours}} h överförd tid"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "Betalas vid mottagande",
+      "net14": "14 dagar netto",
+      "net15": "15 dagar netto",
+      "net30": "30 dagar netto",
+      "net7": "7 dagar netto"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Banköverföring",
+      "check": "Check",
+      "creditCard": "Kreditkort"
+    },
+    "tenantDefault": "Hyresgästens standard ({{value}})"
   }
 }

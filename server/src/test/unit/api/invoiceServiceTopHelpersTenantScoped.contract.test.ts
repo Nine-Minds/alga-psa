@@ -26,10 +26,12 @@ describe('invoice service top helper tenant-scoped query contract', () => {
     expect(amountDueSection).not.toMatch(/trx\('invoice_payments'\)\s*\./);
     expect(amountDueSection).not.toMatch(/\.where\(\{\s*invoice_id: params\.invoiceId,\s*tenant: params\.tenantId\s*\}\)/);
 
-    expect(dueDateSection).toContain('tenantDb(');
-    expect(dueDateSection).toContain(".table('clients')");
+    // Tenant scoping for due dates lives in the shared resolver
+    // (resolveEffectiveBillingIdentity -> tenantDb); the REST helper must delegate
+    // rather than read the clients table itself.
+    expect(dueDateSection).toContain('resolveInvoiceDueDate(trx, tenant, clientId, invoiceDate)');
+    expect(dueDateSection).not.toContain(".table('clients')");
     expect(dueDateSection).not.toMatch(/trx\('clients'\)\s*\./);
-    expect(dueDateSection).not.toMatch(/\.where\(\{\s*client_id: clientId,\s*tenant\s*\}\)/);
 
     expect(recurringSummarySection).toContain('tenantDb(');
     expect(recurringSummarySection).toContain(".table('recurring_service_periods as rsp')");

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isClientUserType, isInteractiveUserType } from '@alga-psa/types';
 import { auth } from './app/api/auth/[...nextauth]/edge-auth';
 import { getSessionCookieName } from './lib/auth/sessionCookies';
 import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
@@ -545,6 +546,15 @@ const _middleware = auth((request) => {
       const redirectResponse = NextResponse.redirect(loginUrl);
       redirectResponse.headers.set('x-pathname', loginUrl.pathname);
       return redirectResponse;
+    } else if (!isInteractiveUserType(request.auth.user?.user_type)) {
+      // A session whose type cannot hold a UI session goes to sign-in, never to the client portal.
+      const signinUrl = request.nextUrl.clone();
+      signinUrl.pathname = '/auth/msp/signin';
+      signinUrl.search = '';
+      signinUrl.searchParams.set('error', 'AccessDenied');
+      const redirectResponse = NextResponse.redirect(signinUrl);
+      redirectResponse.headers.set('x-pathname', signinUrl.pathname);
+      return redirectResponse;
     } else if (request.auth.user?.user_type !== 'internal') {
       // Redirect authenticated client users to their dashboard instead of trapping them in a login loop
       const canonicalUrlEnv = getCanonicalUrl();
@@ -617,7 +627,16 @@ const _middleware = auth((request) => {
       const redirectResponse = NextResponse.redirect(loginUrl);
       redirectResponse.headers.set('x-pathname', loginUrl.pathname);
       return redirectResponse;
-    } else if (request.auth.user?.user_type !== 'client') {
+    } else if (!isInteractiveUserType(request.auth.user?.user_type)) {
+      // Non-interactive session: back to client-portal sign-in, never into the portal.
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/auth/client-portal/signin';
+      loginUrl.search = '';
+      loginUrl.searchParams.set('error', 'AccessDenied');
+      const redirectResponse = NextResponse.redirect(loginUrl);
+      redirectResponse.headers.set('x-pathname', loginUrl.pathname);
+      return redirectResponse;
+    } else if (!isClientUserType(request.auth.user?.user_type)) {
       const redirectTarget = getVanityClientPortalInternalRedirectTarget({
         pathname,
         isAuthPage,

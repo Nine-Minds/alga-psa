@@ -572,13 +572,6 @@
     "invoiceDeliveryMethod": "⟦Īƞṽȯīƈḗ ḓḗŀīṽḗřẏ ḿḗŧħȯḓ⟧",
     "invoiceTemplate": "⟦Īƞṽȯīƈḗ ŧḗḿƥŀȧŧḗ⟧",
     "invoiceTemplateHelp": "⟦Şḗŀḗƈŧ ȧ ŧḗḿƥŀȧŧḗ ȯř ŭşḗ ḓḗƒȧŭŀŧ⟧",
-    "paymentTerms": {
-      "dueOnReceipt": "⟦Ḓŭḗ ȯƞ Řḗƈḗīƥŧ⟧",
-      "net14": "⟦Ƞḗŧ 14⟧",
-      "net15": "⟦Ƞḗŧ 15⟧",
-      "net30": "⟦Ƞḗŧ 30⟧",
-      "net7": "⟦Ƞḗŧ 7⟧"
-    },
     "preferredPaymentMethod": "⟦Ƥřḗƒḗřřḗḓ ƥȧẏḿḗƞŧ ḿḗŧħȯḓ⟧",
     "defaultCurrency": "⟦Ḓḗƒȧŭŀŧ ƈŭřřḗƞƈẏ⟧",
     "selectTaxRegion": "⟦Şḗŀḗƈŧ Ŧȧẋ Řḗɠīȯƞ (Ȯƥŧīȯƞȧŀ)⟧",
@@ -590,11 +583,6 @@
       "both": "⟦Ɓȯŧħ⟧",
       "email": "⟦Ḗḿȧīŀ⟧",
       "mail": "⟦Ḿȧīŀ⟧"
-    },
-    "paymentMethods": {
-      "bankTransfer": "⟦Ɓȧƞķ Ŧřȧƞşƒḗř⟧",
-      "check": "⟦Ƈħḗƈķ⟧",
-      "creditCard": "⟦Ƈřḗḓīŧ Ƈȧřḓ⟧"
     },
     "paymentTermsLabel": "⟦Ƥȧẏḿḗƞŧ ŧḗřḿş⟧",
     "standardTemplateLabel": "⟦(Şŧȧƞḓȧřḓ)⟧",
@@ -1793,7 +1781,8 @@
     },
     "cardExpiry": "⟦, ḗẋƥ {{month}}/{{year}}⟧",
     "legacyPaymentTerms": "⟦\"{{value}}\" īş ƞȯŧ ȧ řḗƈȯɠƞīẑḗḓ ƥȧẏḿḗƞŧ ŧḗřḿ ȧƞḓ ẇȧş ƞḗṽḗř ȧƥƥŀīḗḓ. Şȧṽīƞɠ ƈŀḗȧřş īŧ.⟧",
-    "cardOnFile": "⟦{{type}} ḗƞḓīƞɠ īƞ {{last4}}{{expiry}}⟧"
+    "cardOnFile": "⟦{{type}} ḗƞḓīƞɠ īƞ {{last4}}{{expiry}}⟧",
+    "tenantDefaultValue": "⟦Ŧḗƞȧƞŧ ḓḗƒȧŭŀŧ: {{value}}⟧"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "⟦Ƥřḗƥȧīḓ Ɓȧŀȧƞƈḗ Ȧŀḗřŧş⟧",

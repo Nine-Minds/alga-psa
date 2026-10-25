@@ -2938,7 +2938,8 @@
     "emptyState": "Geen gebruikers beschikbaar.",
     "roles": {
       "client": "Klantgebruiker",
-      "internal": "Interne gebruiker"
+      "internal": "Interne gebruiker",
+      "service": "Serviceaccount"
     },
     "badge": {
       "inactive": "Inactief"

@@ -17,6 +17,12 @@ const resolveContractLineSelectionMock = vi.fn(async () => ({
   candidateCount: 0,
 }));
 
+// The human-work guard is covered against a real database in T043; this fake DB has no users table.
+vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
+  assertHumanWorkAssignee: vi.fn(async () => undefined),
+  assertHumanWorkOwner: vi.fn(async () => undefined),
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => fn,
   hasPermission: (...args: any[]) => hasPermissionMock(...args),

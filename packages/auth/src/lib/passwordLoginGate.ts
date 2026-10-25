@@ -18,7 +18,7 @@ import { loadTenantAuthPolicy, recordLoginRefusal } from './authPolicyStore';
 /**
  * Shared enforcement for every surface that turns a verified password into a
  * session. `authenticateUser` calls `enforcePasswordLoginPolicy`; the NextAuth
- * credentials `authorize` callbacks (both copies) call `completePasswordLoginSecondFactor`.
+ * credentials `authorize` callbacks call `completePasswordLoginSecondFactor`.
  * Neither re-implements any policy: the decisions live in authPolicy.ts.
  *
  * Error `code`s are surfaced to the login forms through the signIn() response.
@@ -87,7 +87,7 @@ export function surfaceForUserType(userType: string | undefined): PasswordAuthSu
 }
 
 /**
- * Second-factor step of a password sign-in (shared by both `authorize` copies).
+ * Second-factor step of a password sign-in.
  * Resolves when the user may proceed; throws otherwise.
  *
  *  - no TOTP required                    -> resolves
