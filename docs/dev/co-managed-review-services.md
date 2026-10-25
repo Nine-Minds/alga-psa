@@ -427,10 +427,14 @@ visible beside each player.
 
 ## Typechecked production launch
 
-Use `PORT=23374 bash scripts/dev/run-co-managed-review-app.sh` from the worktree
-as the registered `review-app` command. It emits the building phase, runs the
-server typecheck, then delegates to the installed production review launcher.
-The compilers run sequentially in the board-admitted application service;
-neither a successful typecheck nor an admitted launch establishes HTTP readiness.
-Freeze the checkout while the launch runs, and verify the resulting build stamp
-and actual HTTP response before recording acceptance.
+Register `bash scripts/dev/run-co-managed-review-app.sh` through the board as
+the `review-app` command, with `/api/health` as its readiness probe. The card
+launcher typechecks, builds dependencies, makes a production Next build, then
+serves it with `next start`. By default it writes to the ignored
+`server/.next-review-candidate/`, preserving `server/.next-review/` and its
+historical runtime build. Set `CO_MANAGED_REVIEW_DIST` only when a different
+isolated build directory is needed. The compilers run sequentially in the
+board-admitted application service; neither a successful typecheck nor an
+admitted launch establishes HTTP readiness. Freeze the checkout while the
+launch runs, and verify the resulting build stamp, process provenance and
+actual HTTP response before recording acceptance.
