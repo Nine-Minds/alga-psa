@@ -85,16 +85,36 @@
       "noLineItems": "Geen regels",
       "noMonthlyItems": "Geen maandelijkse regels",
       "noOneTimeItems": "Geen eenmalige regels",
-      "noPhasesDefined": "Geen fasen gedefinieerd"
+      "noPhasesDefined": "Geen fasen gedefinieerd",
+      "noItemsInBox": "Deze doos is leeg"
     },
     "note": {
       "billedTimePortalDetail": "Neem contact op met uw dienstverlener voor een specificatie van de gefactureerde tijd.",
       "pickedBy": "Gepickt door: ____________________     Datum: ____________",
       "preTaxTotals": "De getoonde totalen zijn exclusief belasting. De verschuldigde belasting wordt op uw factuur berekend.",
-      "thankYouForOrder": "Bedankt voor uw order."
+      "thankYouForOrder": "Bedankt voor uw order.",
+      "checkedBy": "Gecontroleerd door: ____________________     Datum: ____________"
     },
     "serialNumbers": "Serienummers",
-    "allocatedSerialsNote": "Toegewezen serienummers; kunnen bij uitvoering wijzigen."
+    "allocatedSerialsNote": "Toegewezen serienummers; kunnen bij uitvoering wijzigen.",
+    "stagingManifestTitle": "PAKLIJST",
+    "boxNumber": "Doos nr.",
+    "project": "Project",
+    "client": "Klant",
+    "task": "Taak",
+    "status": "Status",
+    "sealedOn": "Verzegeld",
+    "sealedBy": "Verzegeld door",
+    "location": "Locatie",
+    "checked": "Gecontroleerd",
+    "item": "Artikel",
+    "skuOrTag": "SKU / tag",
+    "serialNumber": "Serienummer",
+    "owner": "Eigenaar",
+    "ownerMsp": "MSP",
+    "ownerClient": "Klant",
+    "statusOpen": "Open",
+    "statusSealed": "Verzegeld"
   },
   "errors": {
     "permissions": {

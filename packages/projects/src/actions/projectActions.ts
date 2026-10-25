@@ -54,15 +54,7 @@ import TagMapping from '@alga-psa/tags/models/tagMapping';
 import { filterAuthorizedTicketIds } from './projectTaskActions';
 import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import { revalidatePath } from 'next/cache';
-import {
-  BuiltinAuthorizationKernelProvider,
-  BundleAuthorizationKernelProvider,
-  RequestLocalAuthorizationCache,
-  createAuthorizationKernel,
-  type AuthorizationRecord,
-  type AuthorizationSubject,
-} from '@alga-psa/authorization/kernel';
-import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';
 
 type ProjectActionError = ActionMessageError | ActionPermissionError;
 
@@ -309,110 +301,6 @@ async function getContactFullNameByContactNameId(params: {
         .where({ contact_name_id: params.contactNameId })
         .first<{ full_name: string }>('full_name');
     return row?.full_name ?? null;
-}
-
-function extractRoleIdsFromUser(user: IUserWithRoles): string[] {
-  if (!Array.isArray(user.roles)) {
-    return [];
-  }
-
-  return user.roles
-    .map((role) => {
-      if (typeof role === 'string') {
-        return role;
-      }
-      return typeof role?.role_id === 'string' ? role.role_id : null;
-    })
-    .filter((value): value is string => Boolean(value));
-}
-
-async function resolveAuthorizationSubjectForUser(
-  trx: Knex.Transaction,
-  tenant: string,
-  user: IUserWithRoles
-): Promise<AuthorizationSubject> {
-  let roleIds = extractRoleIdsFromUser(user);
-  if (roleIds.length === 0) {
-    try {
-      const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
-        .where({ user_id: user.user_id })
-        .select<{ role_id: string }[]>('role_id');
-      roleIds = roleRows.map((row) => row.role_id);
-    } catch {
-      roleIds = [];
-    }
-  }
-
-  const [teamRows, managedRows] = await Promise.all([
-    tenantScopedTable(trx, 'team_members', tenant).where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
-    tenantScopedTable(trx, 'users', tenant).where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
-  ]);
-
-  return {
-    tenant,
-    userId: user.user_id,
-    userType: user.user_type,
-    roleIds,
-    teamIds: teamRows.map((row) => row.team_id),
-    managedUserIds: managedRows.map((row) => row.user_id),
-    clientId: user.clientId ?? null,
-    portfolioClientIds: user.clientId ? [user.clientId] : [],
-  };
-}
-
-function toProjectAuthorizationRecord(project: Partial<IProject>): AuthorizationRecord {
-  const assignedUserIds =
-    typeof project.assigned_to === 'string' && project.assigned_to.length > 0 ? [project.assigned_to] : [];
-
-  return {
-    id: project.project_id ?? null,
-    ownerUserId: project.assigned_to ?? null,
-    assignedUserIds,
-    clientId: project.client_id ?? null,
-  };
-}
-
-async function createProjectReadAuthorizer(
-  trx: Knex.Transaction,
-  tenant: string,
-  user: IUserWithRoles
-): Promise<(project: Partial<IProject>) => Promise<boolean>> {
-  const subject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
-  const authorizationKernel = createAuthorizationKernel({
-    builtinProvider: new BuiltinAuthorizationKernelProvider(),
-    bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(trx, input);
-        } catch {
-          return [];
-        }
-      },
-    }),
-    rbacEvaluator: async () => true,
-  });
-  const requestCache = new RequestLocalAuthorizationCache();
-
-  return async (project: Partial<IProject>): Promise<boolean> => {
-    const projectId = project.project_id;
-    if (!projectId) {
-      return false;
-    }
-
-    const decision = await authorizationKernel.authorizeResource({
-      subject,
-      resource: {
-        type: 'project',
-        action: 'read',
-        id: projectId,
-      },
-      record: toProjectAuthorizationRecord(project),
-      requestCache,
-      knex: trx,
-    });
-
-    return decision.allowed;
-  };
 }
 
 async function filterAuthorizedProjects<T extends Partial<IProject>>(

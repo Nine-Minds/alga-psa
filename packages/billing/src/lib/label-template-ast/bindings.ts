@@ -20,6 +20,10 @@ export const LABEL_TEMPLATE_VALUE_BINDINGS: LabelTemplateValueBindings = {
   // Display lines derived by the renderer AFTER hidden fields are nulled ("Asset {tag}", "S/N ...{suffix}").
   assetLine: { id: 'assetLine', kind: 'value', path: 'display.assetLine', fallback: '' },
   serialLine: { id: 'serialLine', kind: 'value', path: 'display.serialLine', fallback: '' },
+  // Staging box position, computed at render time: "Box n of m", and its parts.
+  sequenceLine: { id: 'sequenceLine', kind: 'value', path: 'display.sequenceLine', fallback: '' },
+  sequenceNumber: { id: 'sequenceNumber', kind: 'value', path: 'sequence.n', fallback: '' },
+  sequenceTotal: { id: 'sequenceTotal', kind: 'value', path: 'sequence.total', fallback: '' },
   tenantName: { id: 'tenantName', kind: 'value', path: 'tenantClient.name', fallback: '' },
   // The standard templates' text brand line: the issuer name, but only when there is no logo to show.
   tenantBrandText: { id: 'tenantBrandText', kind: 'value', path: 'tenantClient.brandText', fallback: '' },

@@ -2534,7 +2534,8 @@
       "salesOrder": "Verkaufsauftrag",
       "packingSlip": "Lieferschein",
       "pickList": "Kommissionierliste",
-      "workTag": "Arbeitsetikett / Label"
+      "workTag": "Arbeitsetikett / Label",
+      "stagingManifest": "Packliste"
     }
   },
   "errors": {
