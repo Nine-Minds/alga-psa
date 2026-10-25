@@ -1,0 +1,7 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:04.000
+QA opens the native Tickets dashboard
+
+00:00:04.000 --> 00:00:09.000
+Search TIC001022, clear the query, reload, sign out

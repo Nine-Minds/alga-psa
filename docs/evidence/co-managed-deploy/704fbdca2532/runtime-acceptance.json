@@ -1,9 +1,71 @@
 {
-  "checkoutRevisionAtStart":"704fbdca25327d9bfc1b53d37771e05a4de3ca08",
-  "candidate":{"origin":"http://127.0.0.1:23377","sourceRevision":"704fbdca25327d9bfc1b53d37771e05a4de3ca08","buildId":"build-1792910542349","dist":"server/.next-review-smoke-704f","apiHealth":200,"qaSessionAndHardReload":"pass"},
-  "canonicalReview":{"origin":"http://127.0.0.1:23374","sourceRevision":"cd28aa9531f7bd465711f90b92bf8592185d9c77","buildId":"build-1792904848073","apiHealth":200,"promotion":"not performed"},
-  "workers":[{"port":8375,"path":"/health","status":200},{"port":4374,"path":"/health","status":200}],
-  "guideServer":{"port":8874,"status":200,"rangeSupport":true},
-  "database":{"host":"127.0.0.1","port":5376,"name":"server_co_managed","historical5472":"not used"},
-  "openReview":{"command":"alga-dev workflow-open-review --projectId=964ce5e0-45a5-41b2-8e2c-73903742a85a","result":"Browser backend disposed before entry; direct supported QA Open Review not confirmed"}
+  "checkoutRevisionAtStart": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "candidate": {
+    "origin": "http://127.0.0.1:23377",
+    "sourceRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+    "buildId": "build-1792910542349",
+    "dist": "server/.next-review-smoke-704f",
+    "apiHealth": 200,
+    "qaSessionAndHardReload": "pass",
+    "process": {
+      "wrapperPid": 356622,
+      "nextPid": 479053,
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "dist": "server/.next-review-smoke-704f"
+    }
+  },
+  "canonicalReview": {
+    "origin": "http://127.0.0.1:23374",
+    "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+    "buildId": "build-1792904848073",
+    "apiHealth": 200,
+    "promotion": "not performed",
+    "process": {
+      "wrapperPid": 4168936,
+      "nextPid": 4168956,
+      "cwd": "/home/robert/alga-copies/feature-co-managed-it/server",
+      "dist": "server/.next-review-candidate-racefix"
+    }
+  },
+  "workers": [
+    {
+      "port": 8375,
+      "path": "/health",
+      "status": 200
+    },
+    {
+      "port": 4374,
+      "path": "/health",
+      "status": 200
+    }
+  ],
+  "guideServer": {
+    "port": 8874,
+    "status": 200,
+    "rangeSupport": true
+  },
+  "database": {
+    "host": "127.0.0.1",
+    "port": 5376,
+    "name": "server_co_managed",
+    "historical5472": "not used"
+  },
+  "openReview": {
+    "command": "alga-dev workflow-open-review --projectId=964ce5e0-45a5-41b2-8e2c-73903742a85a",
+    "result": "Browser backend disposed before entry; direct supported QA Open Review not confirmed"
+  },
+  "supplementalChecks": [
+    {
+      "area": "Native ticket dashboard search control",
+      "status": "bounded-pass-with-limitation",
+      "actor": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+      "route": "/msp/tickets",
+      "initial": "10 visible native rows; Ticketing Dashboard heading",
+      "action": "Search ticket and comments for TIC001022; clear query; reload; sign out",
+      "result": "URL recorded searchQuery=TIC001022 and 3 visible rows (TIC001022, TIC001021, TIC001020), indicating ticket/comment search. Clearing restored 10 visible rows; reload restored 10. QA session signed out.",
+      "evidence": "supplemental/native-ticket-search.json and .webm",
+      "limitations": "Read-only QA check only; customer actor not used, no mutation or detailed native ticket/comment/attachment/workflow acceptance."
+    }
+  ]
 }

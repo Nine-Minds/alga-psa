@@ -1,7 +1,7 @@
 {
   "candidateRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
   "metadataUpdatedAt": "2026-10-25T07:35:19.805Z",
-  "runtimeSummary": "Fourteen genuine read-only QA recordings from the verified 704f build. Browser playback and chapter seeking are verified separately; scenario acceptance is partial.",
+  "runtimeSummary": "Fourteen genuine read-only QA route recordings from verified build-1792910542349. Media playback and chapter seeking are verified; all fourteen guide walkthrough scenarios remain INCOMPLETE because only route navigation was recorded.",
   "runtime": {
     "sourceRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
     "buildId": "build-1792910542349",
@@ -59,15 +59,16 @@
         "buildId": "build-1792910542349"
       },
       "scenario": {
-        "status": "partial",
-        "summary": "Read-only route walkthrough; no acceptance mutation or customer actor."
+        "status": "incomplete",
+        "summary": "Route-only QA view. The corresponding guide walkthrough was not performed."
       },
       "limitations": [
         "Partial evidence only; no end-to-end acceptance workflow was performed.",
         "Only QA actor recorded; customer-side acceptance was not tested.",
         "No durable mutation or post-reload verification is claimed.",
         "A route HTTP 200 does not assert complete or authorized product behavior."
-      ]
+      ],
+      "walkthroughCoverageStatus": "incomplete"
     },
     {
       "guide": "guides/index.html",
@@ -116,15 +117,16 @@
         "buildId": "build-1792910542349"
       },
       "scenario": {
-        "status": "partial",
-        "summary": "Read-only route walkthrough; no acceptance mutation or customer actor."
+        "status": "incomplete",
+        "summary": "Route-only QA view. The corresponding guide walkthrough was not performed."
       },
       "limitations": [
         "Partial evidence only; no end-to-end acceptance workflow was performed.",
         "Only QA actor recorded; customer-side acceptance was not tested.",
         "No durable mutation or post-reload verification is claimed.",
         "A route HTTP 200 does not assert complete or authorized product behavior."
-      ]
+      ],
+      "walkthroughCoverageStatus": "incomplete"
     },
     {
       "guide": "guides/01-onboarding.html",
@@ -173,15 +175,16 @@
         "buildId": "build-1792910542349"
       },
       "scenario": {
-        "status": "partial",
-        "summary": "Read-only route walkthrough; no acceptance mutation or customer actor."
+        "status": "incomplete",
+        "summary": "Route-only QA view. The corresponding guide walkthrough was not performed."
       },
       "limitations": [
         "Partial evidence only; no end-to-end acceptance workflow was performed.",
         "Only QA actor recorded; customer-side acceptance was not tested.",
         "No durable mutation or post-reload verification is claimed.",
         "A route HTTP 200 does not assert complete or authorized product behavior."
-      ]
+      ],
+      "walkthroughCoverageStatus": "incomplete"
     },
     {
       "guide": "guides/02-licensing-and-seats.html",
@@ -230,15 +233,16 @@
         "buildId": "build-1792910542349"
       },
       "scenario": {
-        "status": "partial",
-        "summary": "Read-only route walkthrough; no acceptance mutation or customer actor."
+        "status": "incomplete",
+        "summary": "Route-only QA view. The corresponding guide walkthrough was not performed."
       },
       "limitations": [
         "Partial evidence only; no end-to-end acceptance workflow was performed.",
         "Only QA actor recorded; customer-side acceptance was not tested.",
         "No durable mutation or post-reload verification is claimed.",
         "A route HTTP 200 does not assert complete or authorized product behavior."
-      ]
+      ],
+      "walkthroughCoverageStatus": "incomplete"
     },
     {
       "guide": "guides/03-access-policies.html",
@@ -287,15 +291,16 @@
         "buildId": "build-1792910542349"
       },
       "scenario": {
-        "status": "partial",
-        "summary": "Read-only route walkthrough; no acceptance mutation or customer actor."
+        "status": "incomplete",
+        "summary": "Route-only QA view. The corresponding guide walkthrough was not performed."
       },
       "limitations": [
         "Partial evidence only; no end-to-end acceptance workflow was performed.",
         "Only QA actor recorded; customer-side acceptance was not tested.",
         "No durable mutation or post-reload verification is claimed.",
         "A route HTTP 200 does not assert complete or authorized product behavior."
-      ]
+      ],
+      "walkthroughCoverageStatus": "incomplete"
     },
     {
       "guide": "guides/04-delegated-administration.html",
@@ -344,15 +349,16 @@
         "buildId": "build-1792910542349"
       },
       "scenario": {
-        "status": "partial",
-        "summary": "Read-only route walkthrough; no acceptance mutation or customer actor."
+        "status": "incomplete",
+        "summary": "Route-only QA view. The corresponding guide walkthrough was not performed."
       },
       "limitations": [
         "Partial evidence only; no end-to-end acceptance workflow was performed.",
         "Only QA actor recorded; customer-side acceptance was not tested.",
         "No durable mutation or post-reload verification is claimed.",
         "A route HTTP 200 does not assert complete or authorized product behavior."
-      ]
+      ],
+      "walkthroughCoverageStatus": "incomplete"
     },
     {
       "guide": "guides/05-ticket-queue.html",
@@ -401,15 +407,16 @@
         "buildId": "build-1792910542349"
       },
       "scenario": {
-        "status": "partial",
-        "summary": "Read-only route walkthrough; no acceptance mutation or customer actor."
+        "status": "incomplete",
+        "summary": "Route-only QA view. The corresponding guide walkthrough was not performed."
       },
       "limitations": [
         "Partial evidence only; no end-to-end acceptance workflow was performed.",
         "Only QA actor recorded; customer-side acceptance was not tested.",
         "No durable mutation or post-reload verification is claimed.",
         "A route HTTP 200 does not assert complete or authorized product behavior."
-      ]
+      ],
+      "walkthroughCoverageStatus": "incomplete"
     },
     {
       "guide": "guides/06-projects-and-tasks.html",
@@ -458,15 +465,16 @@
         "buildId": "build-1792910542349"
       },
       "scenario": {
-        "status": "partial",
-        "summary": "Read-only route walkthrough; no acceptance mutation or customer actor."
+        "status": "incomplete",
+        "summary": "Route-only QA view. The corresponding guide walkthrough was not performed."
       },
       "limitations": [
         "Partial evidence only; no end-to-end acceptance workflow was performed.",
         "Only QA actor recorded; customer-side acceptance was not tested.",
         "No durable mutation or post-reload verification is claimed.",
         "A route HTTP 200 does not assert complete or authorized product behavior."
-      ]
+      ],
+      "walkthroughCoverageStatus": "incomplete"
     },
     {
       "guide": "guides/07-conversations-and-files.html",
@@ -515,15 +523,16 @@
         "buildId": "build-1792910542349"
       },
       "scenario": {
-        "status": "partial",
-        "summary": "Read-only route walkthrough; no acceptance mutation or customer actor."
+        "status": "incomplete",
+        "summary": "Route-only QA view. The corresponding guide walkthrough was not performed."
       },
       "limitations": [
         "Partial evidence only; no end-to-end acceptance workflow was performed.",
         "Only QA actor recorded; customer-side acceptance was not tested.",
         "No durable mutation or post-reload verification is claimed.",
         "A route HTTP 200 does not assert complete or authorized product behavior."
-      ]
+      ],
+      "walkthroughCoverageStatus": "incomplete"
     },
     {
       "guide": "guides/08-sla.html",
@@ -572,15 +581,16 @@
         "buildId": "build-1792910542349"
       },
       "scenario": {
-        "status": "partial",
-        "summary": "Read-only route walkthrough; no acceptance mutation or customer actor."
+        "status": "incomplete",
+        "summary": "Route-only QA view. The corresponding guide walkthrough was not performed."
       },
       "limitations": [
         "Partial evidence only; no end-to-end acceptance workflow was performed.",
         "Only QA actor recorded; customer-side acceptance was not tested.",
         "No durable mutation or post-reload verification is claimed.",
         "A route HTTP 200 does not assert complete or authorized product behavior."
-      ]
+      ],
+      "walkthroughCoverageStatus": "incomplete"
     },
     {
       "guide": "guides/09-time-and-billing.html",
@@ -629,15 +639,16 @@
         "buildId": "build-1792910542349"
       },
       "scenario": {
-        "status": "partial",
-        "summary": "Read-only route walkthrough; no acceptance mutation or customer actor."
+        "status": "incomplete",
+        "summary": "Route-only QA view. The corresponding guide walkthrough was not performed."
       },
       "limitations": [
         "Partial evidence only; no end-to-end acceptance workflow was performed.",
         "Only QA actor recorded; customer-side acceptance was not tested.",
         "No durable mutation or post-reload verification is claimed.",
         "A route HTTP 200 does not assert complete or authorized product behavior."
-      ]
+      ],
+      "walkthroughCoverageStatus": "incomplete"
     },
     {
       "guide": "guides/10-departure-and-archives.html",
@@ -686,15 +697,16 @@
         "buildId": "build-1792910542349"
       },
       "scenario": {
-        "status": "partial",
-        "summary": "Read-only route walkthrough; no acceptance mutation or customer actor."
+        "status": "incomplete",
+        "summary": "Route-only QA view. The corresponding guide walkthrough was not performed."
       },
       "limitations": [
         "Partial evidence only; no end-to-end acceptance workflow was performed.",
         "Only QA actor recorded; customer-side acceptance was not tested.",
         "No durable mutation or post-reload verification is claimed.",
         "A route HTTP 200 does not assert complete or authorized product behavior."
-      ]
+      ],
+      "walkthroughCoverageStatus": "incomplete"
     },
     {
       "guide": "guides/11-export-restore-and-upgrade.html",
@@ -743,15 +755,16 @@
         "buildId": "build-1792910542349"
       },
       "scenario": {
-        "status": "partial",
-        "summary": "Read-only route walkthrough; no acceptance mutation or customer actor."
+        "status": "incomplete",
+        "summary": "Route-only QA view. The corresponding guide walkthrough was not performed."
       },
       "limitations": [
         "Partial evidence only; no end-to-end acceptance workflow was performed.",
         "Only QA actor recorded; customer-side acceptance was not tested.",
         "No durable mutation or post-reload verification is claimed.",
         "A route HTTP 200 does not assert complete or authorized product behavior."
-      ]
+      ],
+      "walkthroughCoverageStatus": "incomplete"
     },
     {
       "guide": "guides/12-customer-integrations.html",
@@ -800,15 +813,17 @@
         "buildId": "build-1792910542349"
       },
       "scenario": {
-        "status": "partial",
-        "summary": "Read-only route walkthrough; no acceptance mutation or customer actor."
+        "status": "incomplete",
+        "summary": "Route-only QA view. The corresponding guide walkthrough was not performed."
       },
       "limitations": [
         "Partial evidence only; no end-to-end acceptance workflow was performed.",
         "Only QA actor recorded; customer-side acceptance was not tested.",
         "No durable mutation or post-reload verification is claimed.",
         "A route HTTP 200 does not assert complete or authorized product behavior."
-      ]
+      ],
+      "walkthroughCoverageStatus": "incomplete"
     }
-  ]
+  ],
+  "walkthroughCoverageStatus": "incomplete"
 }

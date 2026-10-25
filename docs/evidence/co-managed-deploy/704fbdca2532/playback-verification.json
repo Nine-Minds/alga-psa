@@ -1,9 +1,33 @@
 {
-  "checkedAt":"2026-10-25T07:36:30Z",
-  "browser":"Chromium via Playwright, executable /usr/bin/google-chrome",
-  "pages":14,
-  "assertions":"Every page returned HTTP 200, had exactly one video player, played the WebM and sought after selecting chapter 2.",
-  "paths":["/","/guides/index.html","/guides/01-onboarding.html","/guides/02-licensing-and-seats.html","/guides/03-access-policies.html","/guides/04-delegated-administration.html","/guides/05-ticket-queue.html","/guides/06-projects-and-tasks.html","/guides/07-conversations-and-files.html","/guides/08-sla.html","/guides/09-time-and-billing.html","/guides/10-departure-and-archives.html","/guides/11-export-restore-and-upgrade.html","/guides/12-customer-integrations.html"],
-  "range":"All 14 WebM URLs returned HTTP 206 for Range bytes=0-1 with correct Content-Range lengths.",
-  "scenarioAcceptance":"Media playback and seeking verified. The recorded product scenarios remain partial, read-only QA navigation."
+  "checkedAt": "2026-10-25T07:36:30Z",
+  "browser": "Chromium via Playwright, executable /usr/bin/google-chrome",
+  "pages": 14,
+  "assertions": "Every page returned HTTP 200, had exactly one video player, played the WebM and sought after selecting chapter 2.",
+  "paths": [
+    "/",
+    "/guides/index.html",
+    "/guides/01-onboarding.html",
+    "/guides/02-licensing-and-seats.html",
+    "/guides/03-access-policies.html",
+    "/guides/04-delegated-administration.html",
+    "/guides/05-ticket-queue.html",
+    "/guides/06-projects-and-tasks.html",
+    "/guides/07-conversations-and-files.html",
+    "/guides/08-sla.html",
+    "/guides/09-time-and-billing.html",
+    "/guides/10-departure-and-archives.html",
+    "/guides/11-export-restore-and-upgrade.html",
+    "/guides/12-customer-integrations.html"
+  ],
+  "range": "All 14 WebM URLs returned HTTP 206 for Range bytes=0-1 with correct Content-Range lengths.",
+  "scenarioAcceptance": "Media playback and seeking verified. The recorded product scenarios remain partial, read-only QA navigation.",
+  "walkthroughCoverageStatus": "incomplete for all fourteen guide scenarios; clips show route entry only",
+  "supplementalRecording": {
+    "path": "/evidence/704fbdca2532/native-ticket-search.html",
+    "playerCount": 1,
+    "playbackVerified": true,
+    "chapterSeekVerified": true,
+    "rangeStatus": 206,
+    "outcome": "Bounded QA search, clear, reload, sign-out interaction; separate from guide walkthrough coverage."
+  }
 }

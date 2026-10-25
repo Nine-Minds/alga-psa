@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "walkthroughCoverage": "supplemental bounded native ticket search check; does not complete any of the fourteen guide scenarios",
+  "candidateRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "buildId": "build-1792910542349",
+  "recordedAt": "2026-10-25T07:48:22.338Z",
+  "durationSeconds": 9.16,
+  "actors": [
+    {
+      "email": "qa@emeraldcity.oz",
+      "tenant": "24ac76c8-df59-4b10-8371-c56222904580",
+      "role": "MSP QA",
+      "sessionId": "f9e2bda1-5a49-4201-a7a1-18e67b90afa2"
+    }
+  ],
+  "route": "/msp/tickets",
+  "initialState": {
+    "visibleNativeRows": 10,
+    "heading": "Ticketing Dashboard",
+    "query": ""
+  },
+  "action": {
+    "control": "Search tickets and comments...",
+    "query": "TIC001022",
+    "url": "http://feature-co-managed-it.localhost:23377/msp/tickets?searchQuery=TIC001022"
+  },
+  "outcome": {
+    "visibleRowsForQuery": 3,
+    "visibleTicketNumbers": [
+      "TIC001022",
+      "TIC001021",
+      "TIC001020"
+    ],
+    "interpretation": "Query URL state updated and returned three visible rows whose ticket numbers/content include the query in ticket/comment search. This was not an exact-ticket-only assertion.",
+    "clearedRows": 10,
+    "afterHardReload": {
+      "url": "http://feature-co-managed-it.localhost:23377/msp/tickets",
+      "visibleRows": 10,
+      "heading": "Ticketing Dashboard"
+    },
+    "signOut": "session signed out and /api/auth/session returned no user"
+  },
+  "mutations": [],
+  "limitations": [
+    "QA actor only; no customer actor.",
+    "Read-only search interaction; no durable record mutation.",
+    "Candidate build predates the current source changes.",
+    "One supplemental control check does not satisfy the fourteen guide walkthroughs or full PLAN acceptance."
+  ],
+  "media": {
+    "webm": "native-ticket-search.webm",
+    "chapterVtt": "native-ticket-search.vtt"
+  },
+  "chapters": [
+    {
+      "start": 0,
+      "title": "QA opens the native Tickets dashboard",
+      "end": 4
+    },
+    {
+      "start": 4,
+      "title": "Search TIC001022, clear the query, reload, sign out",
+      "end": 9.16
+    }
+  ]
+}

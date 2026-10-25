@@ -1,12 +1,35 @@
 {
-  "checkedAt":"2026-10-25T07:39:52Z",
-  "commands":[
-    {"command":"npm -w packages/auth run build","result":"pass"},
-    {"command":"npm -w packages/auth run typecheck","result":"pass"},
-    {"command":"npm -w packages/auth test -- --run src/lib/session.test.ts src/lib/nextAuthOptions.sessionExpiry.test.ts src/lib/getSession.test.ts","result":"pass: 3 files, 26 tests"},
-    {"command":"cd server && NODE_OPTIONS=--max-old-space-size=12288 npx tsc --noEmit","result":"pass"},
-    {"command":"node docs/guides/co-managed-it/render.cjs ... --revision 704fbdca25327d9bfc1b53d37771e05a4de3ca08","result":"pass: renderer validated 14 guide rows and produced 13 collection/section guide pages; main page separately maintained"},
-    {"command":"node scripts/build-co-managed-inventory.mjs","result":"pass: 260 rows, 258 implemented-unverified, 2 blocked-external"}
+  "checkedAt": "2026-10-25T07:50:00Z",
+  "commands": [
+    {
+      "command": "npm -w packages/auth run build",
+      "result": "pass after latest session helper changes"
+    },
+    {
+      "command": "npm -w packages/auth run typecheck",
+      "result": "pass"
+    },
+    {
+      "command": "npm -w packages/auth test -- --run src/lib/session.test.ts src/lib/nextAuthOptions.sessionExpiry.test.ts src/lib/getSession.test.ts",
+      "result": "pass: 3 files, 27 tests including cookie collision counterfactual and existing revocation/identity fail-closed checks"
+    },
+    {
+      "command": "cd server && npx vitest run --config vitest.server-colocated.config.ts src/lib/auth/sessionCookies.test.ts",
+      "result": "pass: 1 file, 2 cross-boundary cookie name/JWT salt tests"
+    },
+    {
+      "command": "cd server && NODE_OPTIONS=--max-old-space-size=12288 npx tsc --noEmit",
+      "result": "pass after server helper delegates canonical name and cookie configuration"
+    },
+    {
+      "command": "node docs/guides/co-managed-it/render.cjs ... --revision 704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+      "result": "pass: validates fourteen media artifacts; route-only guide scenarios explicitly incomplete"
+    },
+    {
+      "command": "node scripts/build-co-managed-inventory.mjs",
+      "result": "pass: 260 rows; 258 implemented-unverified, 2 blocked-external"
+    }
   ],
-  "note":"The reviewed current runtime is unchanged 704f; no new application build or app startup was run after the auth source repair."
+  "note": "Only the auth package was built; no application build or startup followed the current source repairs. The 704f runtime and all runtime recordings predate those repairs.",
+  "sourceRepairRevision": "67c8fb5d10694260addde0b758c64d4caea8f52c"
 }

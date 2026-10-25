@@ -2,18 +2,18 @@
 
 ## Runtime and diagnosis
 
-The serving candidate tested for this packet is source `704fbdca25327d9bfc1b53d37771e05a4de3ca08`, build `build-1792910542349`, on port 23377 (`server/.next-review-smoke-704f`). The canonical 23374 registration still serves the older `cd28aa9531f7bd465711f90b92bf8592185d9c77` / `build-1792904848073` runtime. Health and process details are in `runtime-acceptance.json`.
+The runtime observed for product checks is source `704fbdca25327d9bfc1b53d37771e05a4de3ca08`, build `build-1792910542349`, on port 23377 (`server/.next-review-smoke-704f`). The service wrapper ran from the card's `server` working directory; Next process PID 479053. The canonical 23374 service remains on source `cd28aa9531f7bd465711f90b92bf8592185d9c77`, build `build-1792904848073`. It was not replaced.
 
-The session diagnosis and counterfactual are in `session-diagnosis.json`. The source repair moves explicit port scoping before the Auth.js cookie prefix; focused tests show the pre-fix cookie is deleted as a token chunk and the repaired name is not consumed. The repair is source-only and has not been built/deployed. Existing revocation and identity mismatch checks remain fail-closed; `nextAuthOptions.sessionExpiry.test.ts` and `getSession.test.ts` passed.
+Auth diagnosis and cookie timeline are in `session-diagnosis.json`. The server cookie helper now delegates both cookie name and configuration to `@alga-psa/auth/session`, aligning Express, Edge, portal-token issuers and NextAuth readers on the same name and JWT salt. Production cookie suffix selection uses a nondefault port from the public URL only; the internal `PORT=3000` does not override `https://example.com`. No source repair has been built into an application runtime.
 
-## Current-build guide recordings
+## Recordings and walkthrough coverage
 
-The packet contains 14 unique WebM files, 14 timed chapter VTTs and 14 recording JSON files. They were recorded from isolated Chromium QA navigation on the 704f runtime. Every packet page was browser-checked for one player, playback and chapter seek; all WebM endpoints returned HTTP 206 for byte ranges. See `video-coverage.json`, `playback-verification.json`, and `media-inventory.json`.
+The packet has 14 distinct current-704f WebM, timed VTT and JSON artifacts. Media playback and chapter seeking are verified. All 14 corresponding guide walkthrough scenarios are explicitly **incomplete**: those clips only show route entry and initial page state. They are retained as media artifacts, not accepted guide walkthroughs. See `video-coverage.json`, `playback-verification.json`, and `media-inventory.json`.
 
-All walkthrough scenarios are **partial**. QA is the only actor; no customer identity, durable mutation, workflow acceptance, or per-route post-reload result is claimed. A successful HTTP route or playable clip is not scenario acceptance. The separate historical cd28 recordings remain unchanged.
+A separate bounded native-ticket search check in `supplemental/` records QA's search, clear, reload, and sign-out. It is not a customer test or complete ticket acceptance. Search returned three related rows for `TIC001022`; exact-ticket-only behavior was not asserted.
 
 ## Promotion and remaining acceptance
 
-`promotion-preparation.md` contains the exact documented conclude/ensure lifecycle. It was not run because ensure starts an application process, prohibited by this step. The old target remains alive. `workflow-open-review` returned `Browser backend disposed`; direct QA Open Review on 704f was not verified.
+`promotion-preparation.md` contains the documented conclude/ensure lifecycle with the service wrapper. It was not run because ensure starts an application process, prohibited by this step. The old target remains running. `workflow-open-review` returned `Browser backend disposed`; direct QA entry on the promoted candidate is unconfirmed.
 
-The broader acceptance matrix remains incomplete. Existing settled evidence in the plan and prior completion packet is retained; this packet adds no new acceptance for multipart/PSA/SSR, real Microsoft credentials and negative cases, real customer-owned provider/email cases, exports/restores, external paid entitlements, complete financial ownership, or departure/upgrade on separate disposable relationships. Simulator evidence remains simulator evidence. The generated completion census keeps all unsupported requirements unverified or externally blocked and all readiness gates false.
+The latest PLAN check added here is native ticket search. Prior bounded October 25 product results remain in `docs/evidence/co-managed-deploy/cd28aa9531f7/runtime-acceptance.json`; they remain tied to cd28 and are not relabeled as 704f. Available supported checks should continue with isolated actors. Real Microsoft authority, customer-owned provider and inbound-mail integrations, full paid recovery, and other unavailable external dependencies remain unverified; other supported flows also remain unverified until recorded. The completion census keeps readiness false.
