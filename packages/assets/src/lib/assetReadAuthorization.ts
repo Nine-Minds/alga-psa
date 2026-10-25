@@ -9,6 +9,7 @@ import {
   type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import type { UserType } from '@alga-psa/types';
 
 /**
  * Asset read authorization, shared by the asset server actions and the label code paths.
@@ -20,7 +21,7 @@ import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorizatio
 
 export type AssetAuthUser = {
   user_id: string;
-  user_type: 'internal' | 'client';
+  user_type: UserType;
   clientId?: string | null;
   roles?: Array<{ role_id?: string } | string>;
 };
