@@ -1,4 +1,5 @@
 import { formatCurrency } from '@alga-psa/core/lib/formatters';
+import { formatLocalizedCalendarDate } from '@alga-psa/core';
 import type { IQuote } from '@alga-psa/types';
 
 interface QuoteEmailTemplateInput {
@@ -10,24 +11,18 @@ interface QuoteEmailTemplateInput {
   locale?: string;
 }
 
+// Quote dates are calendar dates: format the calendar day itself, never
+// through the process timezone (which can render the previous day).
 export const formatQuoteDate = (value?: string | null, locale?: string): string => {
   if (!value) {
     return 'N/A';
   }
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
+  try {
+    return formatLocalizedCalendarDate(value, locale || 'en');
+  } catch {
     return 'N/A';
   }
-
-  // A NAMED month is the one date shape the language still owns: its order is
-  // that language's grammar, so Intl stays in charge here. The country rule
-  // governs numeric dates, which this is not.
-  return date.toLocaleDateString(locale || 'en', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
 };
 
 export function buildQuoteSentEmailTemplate({

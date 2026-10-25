@@ -194,7 +194,7 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
 
     expect(template).toBeTruthy();
     expect(template?.template_name).toBe('USD Template Test');
-    expect(template).not.toHaveProperty('currency_code');
+    expect(template?.currency_code).toBe('USD');
     expect(template?.default_billing_frequency).toBe('monthly');
     expect(template?.template_description).toBe('Template with USD currency');
   });
@@ -258,7 +258,7 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
 
     expect(template).toBeTruthy();
     expect(template?.template_name).toBe('EUR Template Test');
-    expect(template).not.toHaveProperty('currency_code');
+    expect(template?.currency_code).toBe('EUR');
     expect(template?.default_billing_frequency).toBe('monthly');
   });
 
@@ -321,7 +321,7 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
 
     expect(template).toBeTruthy();
     expect(template?.template_name).toBe('GBP Hourly Template');
-    expect(template).not.toHaveProperty('currency_code');
+    expect(template?.currency_code).toBe('GBP');
     expect(template?.default_billing_frequency).toBe('monthly');
   });
 
@@ -391,25 +391,25 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
     const usdTemplate = await tenantTable(db, tenantId, 'contract_templates')
       .where({ tenant: tenantId, template_id: usdResult.contract_id })
       .first();
-    expect(usdTemplate).not.toHaveProperty('currency_code');
+    expect(usdTemplate?.currency_code).toBe('USD');
 
     const jpyTemplate = await tenantTable(db, tenantId, 'contract_templates')
       .where({ tenant: tenantId, template_id: jpyResult.contract_id })
       .first();
-    expect(jpyTemplate).not.toHaveProperty('currency_code');
+    expect(jpyTemplate?.currency_code).toBe('JPY');
 
     // Verify both templates are persisted separately
     const allTemplates = await tenantTable(db, tenantId, 'contract_templates')
       .where({ tenant: tenantId })
       .whereIn('template_id', [usdResult.contract_id, jpyResult.contract_id])
-      .select('template_id', 'template_name');
+      .select('template_id', 'template_name', 'currency_code');
 
     expect(allTemplates).toHaveLength(2);
     const usdEntry = allTemplates.find(t => t.template_id === usdResult.contract_id);
     const jpyEntry = allTemplates.find(t => t.template_id === jpyResult.contract_id);
 
-    expect(usdEntry).not.toHaveProperty('currency_code');
-    expect(jpyEntry).not.toHaveProperty('currency_code');
+    expect(usdEntry?.currency_code).toBe('USD');
+    expect(jpyEntry?.currency_code).toBe('JPY');
   });
 
   it('creates draft template with currency and verifies status and currency', async () => {
@@ -468,7 +468,7 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
 
     expect(template).toBeTruthy();
     expect(template?.template_status).toBe('draft');
-    expect(template).not.toHaveProperty('currency_code');
+    expect(template?.currency_code).toBe('CAD');
     expect(template?.default_billing_frequency).toBe('quarterly');
   });
 
@@ -522,7 +522,7 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
     const template = await tenantTable(db, tenantId, 'contract_templates')
       .where({ tenant: tenantId, template_id: templateResult.contract_id })
       .first();
-    expect(template).not.toHaveProperty('currency_code');
+    expect(template?.currency_code).toBe('EUR');
 
     // Create a client to associate the contract with
     const clientId = uuidv4();
@@ -644,12 +644,206 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
     const template = await tenantTable(db, tenantId, 'contract_templates')
       .where({ tenant: tenantId, template_id: templateResult.contract_id })
       .first();
-    expect(template).not.toHaveProperty('currency_code');
+    expect(template?.currency_code).toBe('JPY');
 
     const contract = await tenantTable(db, tenantId, 'contracts')
       .where({ tenant: tenantId, contract_id: contractResult.contract_id })
       .first();
     expect(contract?.currency_code).toBe('JPY');
+  });
+
+  describe('template currency authoring (step 6)', () => {
+    const seedService = async (name: string, legacyDefault: number) => {
+      const serviceTypeId = uuidv4();
+      await tenantTable(db, tenantId, 'service_types').insert({
+        id: serviceTypeId,
+        tenant: tenantId,
+        name: `Service Type ${serviceTypeId.slice(0, 8)}`,
+        order_number: Math.floor(Math.random() * 1000000),
+        created_at: db.fn.now(),
+        updated_at: db.fn.now()
+      });
+      createdIds.serviceTypeId = serviceTypeId;
+      const serviceId = uuidv4();
+      await tenantTable(db, tenantId, 'service_catalog').insert({
+        tenant: tenantId,
+        service_id: serviceId,
+        service_name: name,
+        description: name,
+        default_rate: legacyDefault,
+        unit_of_measure: 'month',
+        billing_method: 'fixed',
+        custom_service_type_id: serviceTypeId,
+        tax_rate_id: null,
+        category_id: null
+      });
+      createdIds.serviceId = serviceId;
+      return serviceId;
+    };
+
+    const makeTemplate = async (serviceId: string, currency: string, extra: Record<string, unknown> = {}) => {
+      const result: any = await createContractTemplateFromWizard({
+        contract_name: `Authoring ${currency} ${uuidv4().slice(0, 6)}`,
+        billing_frequency: 'monthly',
+        currency_code: currency,
+        fixed_services: [{ service_id: serviceId, quantity: 1 }],
+        hourly_services: [],
+        usage_services: [],
+        enable_proration: true,
+        ...extra
+      } as any);
+      expect(result.contract_id).toBeDefined();
+      createdIds.templateIds.push(result.contract_id);
+      if (result.contract_line_ids) createdIds.contractLineIds.push(...result.contract_line_ids);
+      return result;
+    };
+
+    it('rejects a currency that is not an ISO-4217 code and writes nothing', async () => {
+      const serviceId = await seedService('Bad Currency Service', 100);
+      for (const bad of ['usd', 'US', 'XXQ', '', undefined]) {
+        const result: any = await createContractTemplateFromWizard({
+          contract_name: 'Bad currency template',
+          billing_frequency: 'monthly',
+          currency_code: bad as any,
+          fixed_services: [{ service_id: serviceId }],
+          hourly_services: [],
+          usage_services: [],
+        } as any);
+        expect(result.actionError).toBeTruthy();
+        expect(result.messageKey).toBe('msp/contracts:errors.wizard.invalidTemplateCurrency');
+      }
+      const rows = await tenantTable(db, tenantId, 'contract_templates').where({ template_name: 'Bad currency template' });
+      expect(rows).toHaveLength(0);
+    });
+
+    it('snapshots member rates from the catalog in the TEMPLATE currency, never the untagged default_rate', async () => {
+      const serviceId = await seedService('Snapshot Service', 1000);
+      await tenantTable(db, tenantId, 'service_prices').insert([
+        { tenant: tenantId, service_id: serviceId, currency_code: 'USD', rate: 700 },
+        { tenant: tenantId, service_id: serviceId, currency_code: 'EUR', rate: 900 },
+      ]);
+      try {
+        const eur = await makeTemplate(serviceId, 'EUR');
+        const eurRows = await tenantTable(db, tenantId, 'contract_template_line_services')
+          .whereIn('template_line_id', eur.contract_line_ids)
+          .select('custom_rate');
+        expect(eurRows.map((r) => Number(r.custom_rate))).toEqual([900]);
+
+        // No GBP price: no snapshot rate (the member follows the catalog); in particular not 1000/700.
+        const gbp = await makeTemplate(serviceId, 'GBP');
+        const gbpRows = await tenantTable(db, tenantId, 'contract_template_line_services')
+          .whereIn('template_line_id', gbp.contract_line_ids)
+          .select('custom_rate');
+        expect(gbpRows.map((r) => r.custom_rate)).toEqual([null]);
+      } finally {
+        await tenantTable(db, tenantId, 'service_prices').where({ service_id: serviceId }).del();
+      }
+    });
+
+    it('price-set actions: save, read, relabel guard, delete', async () => {
+      const serviceId = await seedService('Price Set Service', 0);
+      const template = await makeTemplate(serviceId, 'USD', { fixed_base_rate: 5000 });
+      const actions = await import('@alga-psa/billing/actions/contractTemplatePriceSetActions');
+
+      const pricing: any = await actions.getContractTemplatePricing(template.contract_id);
+      expect(pricing.base_currency).toBe('USD');
+      const lineSlot = pricing.slots.find((s: any) => s.slot_kind === 'line_base_rate');
+      expect(lineSlot.base_amount).toBe(5000);
+      expect(pricing.sets).toEqual([]);
+
+      // Invalid and base-currency saves are rejected.
+      expect(((await actions.saveContractTemplatePriceSet(template.contract_id, 'nope', {})) as any).actionError).toBeTruthy();
+      expect(
+        ((await actions.saveContractTemplatePriceSet(template.contract_id, 'USD', { [lineSlot.slot_key]: 1 })) as any).actionError
+      ).toBeTruthy();
+
+      expect(await actions.saveContractTemplatePriceSet(template.contract_id, 'EUR', { [lineSlot.slot_key]: 4500 })).toEqual({ success: true });
+      const after: any = await actions.getContractTemplatePricing(template.contract_id);
+      expect(after.sets).toHaveLength(1);
+      expect(after.sets[0].currency_code).toBe('EUR');
+      expect(after.sets[0].amounts[lineSlot.slot_key]).toBe(4500);
+
+      // Relabelling the base onto a currency that already has a set is refused.
+      const refused: any = await actions.updateContractTemplateCurrency(template.contract_id, 'EUR');
+      expect(refused.messageKey).toBe('msp/contracts:errors.wizard.templateCurrencyHasPriceSet');
+
+      // Relabel to a free currency: amounts keep their value, no conversion.
+      expect(await actions.updateContractTemplateCurrency(template.contract_id, 'GBP')).toEqual({ success: true, currency_code: 'GBP' });
+      const relabelled: any = await actions.getContractTemplatePricing(template.contract_id);
+      expect(relabelled.base_currency).toBe('GBP');
+      expect(relabelled.slots.find((s: any) => s.slot_kind === 'line_base_rate').base_amount).toBe(5000);
+
+      expect(await actions.deleteContractTemplatePriceSet(template.contract_id, 'EUR')).toEqual({ success: true });
+      const gone: any = await actions.getContractTemplatePricing(template.contract_id);
+      expect(gone.sets).toEqual([]);
+    });
+
+    it('deleting a price set requires billing:delete (update alone is not enough); saving requires billing:update', async () => {
+      const serviceId = await seedService('Price Set Perm Service', 0);
+      const template = await makeTemplate(serviceId, 'USD', { fixed_base_rate: 5000 });
+      const actions = await import('@alga-psa/billing/actions/contractTemplatePriceSetActions');
+      const pricing: any = await actions.getContractTemplatePricing(template.contract_id);
+      const slotKey = pricing.slots.find((s: any) => s.slot_kind === 'line_base_rate').slot_key;
+      expect(await actions.saveContractTemplatePriceSet(template.contract_id, 'EUR', { [slotKey]: 4500 })).toEqual({ success: true });
+
+      const withOnly = (allowed: string) =>
+        setupCommonMocks({
+          tenantId,
+          userId: authRef.user.user_id,
+          permissionCheck: (_user, resource, action) => resource === 'billing' && action === allowed,
+        });
+      try {
+        withOnly('update');
+        const denied: any = await actions.deleteContractTemplatePriceSet(template.contract_id, 'EUR');
+        expect(denied.permissionError).toMatch(/Permission denied/);
+        expect(await tenantTable(db, tenantId, 'contract_template_price_sets').where({ template_id: template.contract_id })).toHaveLength(1);
+
+        withOnly('delete');
+        const noSave: any = await actions.saveContractTemplatePriceSet(template.contract_id, 'EUR', { [slotKey]: 1 });
+        expect(noSave.permissionError).toMatch(/Permission denied/);
+        expect(await actions.deleteContractTemplatePriceSet(template.contract_id, 'EUR')).toEqual({ success: true });
+      } finally {
+        setupCommonMocks({ tenantId, userId: authRef.user.user_id, permissionCheck: () => true });
+      }
+    });
+
+    it('ensureTemplateLineSnapshot refuses a live line priced in another currency than the template base', async () => {
+      const serviceId = await seedService('Snapshot Reject Service', 0);
+      const template = await makeTemplate(serviceId, 'USD', { fixed_base_rate: 1000 });
+      const contractId = uuidv4();
+      const lineId = uuidv4();
+      await tenantTable(db, tenantId, 'contracts').insert({
+        tenant: tenantId,
+        contract_id: contractId,
+        contract_name: 'Live EUR contract',
+        billing_frequency: 'monthly',
+        status: 'draft',
+        is_template: false,
+        currency_code: 'EUR',
+      });
+      createdIds.contractIds.push(contractId);
+      await tenantTable(db, tenantId, 'contract_lines').insert({
+        tenant: tenantId,
+        contract_line_id: lineId,
+        contract_id: contractId,
+        contract_line_name: 'Live EUR line',
+        billing_frequency: 'monthly',
+        contract_line_type: 'Fixed',
+        is_template: false,
+      });
+      createdIds.contractLineIds.push(lineId);
+
+      const { ensureTemplateLineSnapshot } = await import('@alga-psa/billing/repositories/contractLineRepository');
+      await expect(ensureTemplateLineSnapshot(db, tenantId, template.contract_id, lineId)).rejects.toThrow(
+        "This line is priced in EUR; the template's base currency is USD."
+      );
+      const copied = await tenantTable(db, tenantId, 'contract_template_lines').where({ template_line_id: lineId });
+      expect(copied).toHaveLength(0);
+
+      // The same line IS accepted into a EUR-based template.
+      const eurTemplate = await makeTemplate(serviceId, 'EUR', { fixed_base_rate: 1000 });
+      await expect(ensureTemplateLineSnapshot(db, tenantId, eurTemplate.contract_id, lineId)).resolves.toBe(lineId);
+    });
   });
 });
 

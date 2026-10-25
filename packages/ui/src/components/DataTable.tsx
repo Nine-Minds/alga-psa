@@ -158,6 +158,10 @@ const hasOverflow = (element: HTMLElement): boolean => {
     .some((child) => !child.closest('.sr-only') && isElementOverflowing(child));
 };
 
+const isEditableElement = (element: HTMLElement): boolean => (
+  element.tagName === 'INPUT' || element.tagName === 'TEXTAREA' || element.isContentEditable
+);
+
 // Shows the custom Tooltip only when the content is actually truncated. The open state is
 // controlled and vetoed in onOpenChange so overflow is measured lazily (on hover) — no tooltip
 // is shown for content that fits.
@@ -171,24 +175,29 @@ const OverflowTooltip = ({ text, children, className }: OverflowTooltipProps) =>
       return;
     }
     const element = contentRef.current;
-    if (text && element && hasOverflow(element)) {
+    if (!text || !element) {
+      return;
+    }
+    // A cell the user is typing in owns its surface: never cover the field.
+    const active = document.activeElement as HTMLElement | null;
+    if (active && element.contains(active) && isEditableElement(active)) {
+      return;
+    }
+    if (hasOverflow(element)) {
       setOpen(true);
     }
   };
 
-  const content = (
-    <div ref={contentRef} className={className}>
-      {children}
-    </div>
-  );
-
-  if (!text) {
-    return content;
-  }
-
+  // The wrapper is unconditional, even with nothing to show. Swapping between a
+  // bare div and a Tooltip-wrapped one when the text appears or disappears is a
+  // change of element type at that slot, so React remounts the cell's children:
+  // an editable cell lost its input — and the caret with it — on the keystroke
+  // that first gave the cell any text.
   return (
-    <Tooltip content={text} open={open} onOpenChange={handleOpenChange}>
-      {content}
+    <Tooltip content={text ?? ''} open={open} onOpenChange={handleOpenChange}>
+      <div ref={contentRef} className={className}>
+        {children}
+      </div>
     </Tooltip>
   );
 };

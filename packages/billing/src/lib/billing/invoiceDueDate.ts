@@ -6,12 +6,15 @@ import { paymentTermDays } from '@alga-psa/shared/billingClients/paymentPreferen
 
 /**
  * Invoice due dates follow the payment terms of the billing profile that the
- * invoice bills. The terms resolve field by field, profile first and then
- * client, so a client with no profile overrides gets exactly the due date it
- * always got.
+ * invoice bills. The terms resolve field by field: the profile, then the
+ * client, then the tenant default (Billing Settings), then Net 30. A client
+ * with no profile overrides and a tenant with no default gets exactly the due
+ * date it always got.
  */
 
-/** Due date for an invoice dated `invoiceDate` under `paymentTerms` (unknown terms → Net 30). */
+/** Due date for an invoice dated `invoiceDate` under `paymentTerms` (unknown terms → Net 30).
+ * Pure arithmetic over an already-resolved term; the profile → client → tenant
+ * default resolution happens in `resolveEffectiveBillingIdentity`. */
 export function dueDateForPaymentTerms(
   invoiceDate: ISO8601String,
   paymentTerms: string | null | undefined,

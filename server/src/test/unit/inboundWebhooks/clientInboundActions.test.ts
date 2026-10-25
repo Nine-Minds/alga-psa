@@ -42,6 +42,10 @@ vi.mock('@alga-psa/db', () => ({
   }),
   createTenantKnex: mocks.createTenantKnex,
   withTransaction: mocks.withTransaction,
+  // The mock transaction never commits, so run after-commit hooks (domain events) immediately.
+  registerAfterCommit: (_trx: unknown, fn: () => unknown) => {
+    void fn();
+  },
 }));
 
 vi.mock('@alga-psa/shared/inboundWebhooks/externalEntityMappings', () => ({
@@ -53,6 +57,8 @@ vi.mock('@alga-psa/shared/models/contactModel', () => ({
   ContactModel: {
     createContact: mocks.createContact,
     updateContact: mocks.updateContact,
+    // trackContactUpdates reads before/after rows through the model.
+    getContactById: vi.fn(async (id: string) => ({ contact_name_id: id, client_id: 'client-1', is_inactive: false })),
   },
 }));
 

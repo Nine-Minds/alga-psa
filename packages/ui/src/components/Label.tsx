@@ -1,6 +1,9 @@
 // server/src/components/ui/Label.tsx
 
+'use client';
+
 import * as React from 'react'
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client'
 import * as LabelPrimitive from '@radix-ui/react-label'
 import { AutomationProps } from '../ui-reflection/types'
 
@@ -24,6 +27,8 @@ function Label({
   size?: LabelSize;
   required?: boolean;
 }) {
+  const { t } = useTranslation('common');
+
   return (
     <LabelPrimitive.Root
       ref={ref}
@@ -31,7 +36,7 @@ function Label({
       {...props}
     >
       {children}
-      {required && <span className="text-[rgb(var(--color-text-500))] ml-0.5" aria-hidden="true">*</span>}
+      {required && <span className="text-[rgb(var(--color-text-500))] ml-0.5" aria-hidden="true" title={t('label.required')}>*</span>}
     </LabelPrimitive.Root>
   )
 }

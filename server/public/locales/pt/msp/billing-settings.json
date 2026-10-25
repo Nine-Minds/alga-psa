@@ -202,6 +202,27 @@
         "save": "Falha ao salvar configurações",
         "range": "Insira um número inteiro de 1 a 365."
       }
+    },
+    "paymentTerms": {
+      "title": "Condições de pagamento padrão",
+      "description": "Defina as condições de pagamento usadas pelas novas faturas quando nem o cliente nem o perfil de faturamento as definem.",
+      "fields": {
+        "terms": {
+          "label": "Condições de pagamento",
+          "help": "Aplica-se apenas a novas faturas. Faturas existentes e clientes com condições próprias as mantêm."
+        }
+      },
+      "actions": {
+        "save": "Salvar"
+      },
+      "toast": {
+        "updated": "As condições de pagamento padrão foram atualizadas."
+      },
+      "errors": {
+        "load": "Falha ao carregar as configurações",
+        "save": "Falha ao salvar as configurações",
+        "invalid": "Escolha uma condição de pagamento válida."
+      }
     }
   },
   "quoting": {
@@ -215,8 +236,56 @@
     }
   },
   "tax": {
-    "defaultRate": { "title": "Taxa de imposto predefinida", "tooltip": "Escolha a taxa herdada por novos clientes, produtos e serviços.", "description": "Defina a taxa atribuída a novos clientes e itens do catálogo. Os registos existentes não são alterados.", "loading": "A carregar taxa predefinida...", "empty": "Crie uma taxa ativa antes de escolher uma predefinida.", "invalid": "A taxa configurada já não está ativa ou válida. Escolha outra.", "field": { "label": "Taxa de imposto predefinida" }, "options": { "none": "Sem predefinição do inquilino" }, "help": "Sem taxa predefinida, novos itens ficam isentos e clientes usam a taxa ativa mais antiga, se existir.", "actions": { "save": "Guardar predefinição", "saving": "A guardar..." }, "toast": { "saved": "Taxa predefinida guardada." }, "errors": { "load": "Não foi possível carregar a taxa predefinida.", "save": "Não foi possível guardar a taxa predefinida." } },
-    "backfill": { "title": "Aplicar predefinição ao catálogo existente", "description": "Pré-visualize produtos e serviços sem taxa de imposto.", "warning": "Isto altera a tributação futura e não reescreve faturas emitidas.", "loading": "A carregar pré-visualização...", "empty": "Nenhum produto ou serviço elegível encontrado.", "target": "Taxa de destino: {{rate}}", "count": "{{count}} itens elegíveis", "dialog": { "title": "Aplicar taxa predefinida" }, "actions": { "preview": "Pré-visualizar itens", "apply": "Aplicar selecionados", "applying": "A aplicar..." }, "toast": { "applied": "Taxa predefinida aplicada aos itens selecionados." }, "errors": { "preview": "Não foi possível pré-visualizar o catálogo.", "apply": "Não foi possível aplicar a taxa predefinida." } },
+    "defaultRate": {
+      "title": "Taxa de imposto predefinida",
+      "tooltip": "Escolha a taxa herdada por novos clientes, produtos e serviços.",
+      "description": "Defina a taxa atribuída a novos clientes e itens do catálogo. Os registos existentes não são alterados.",
+      "loading": "A carregar taxa predefinida...",
+      "empty": "Crie uma taxa ativa antes de escolher uma predefinida.",
+      "invalid": "A taxa configurada já não está ativa ou válida. Escolha outra.",
+      "field": {
+        "label": "Taxa de imposto predefinida"
+      },
+      "options": {
+        "none": "Sem predefinição do inquilino"
+      },
+      "help": "Sem taxa predefinida, novos itens ficam isentos e clientes usam a taxa ativa mais antiga, se existir.",
+      "actions": {
+        "save": "Guardar predefinição",
+        "saving": "A guardar..."
+      },
+      "toast": {
+        "saved": "Taxa predefinida guardada."
+      },
+      "errors": {
+        "load": "Não foi possível carregar a taxa predefinida.",
+        "save": "Não foi possível guardar a taxa predefinida."
+      }
+    },
+    "backfill": {
+      "title": "Aplicar predefinição ao catálogo existente",
+      "description": "Pré-visualize produtos e serviços sem taxa de imposto.",
+      "warning": "Isto altera a tributação futura e não reescreve faturas emitidas.",
+      "loading": "A carregar pré-visualização...",
+      "empty": "Nenhum produto ou serviço elegível encontrado.",
+      "target": "Taxa de destino: {{rate}}",
+      "count": "{{count}} itens elegíveis",
+      "dialog": {
+        "title": "Aplicar taxa predefinida"
+      },
+      "actions": {
+        "preview": "Pré-visualizar itens",
+        "apply": "Aplicar selecionados",
+        "applying": "A aplicar..."
+      },
+      "toast": {
+        "applied": "Taxa predefinida aplicada aos itens selecionados."
+      },
+      "errors": {
+        "preview": "Não foi possível pré-visualizar o catálogo.",
+        "apply": "Não foi possível aplicar a taxa predefinida."
+      }
+    },
     "taxRegions": {
       "title": "Regiões fiscais",
       "description": "Gerencie regiões fiscais e configurações relacionadas."
@@ -998,7 +1067,10 @@
       "taxRate": {
         "label": "Taxa de imposto (opcional)",
         "placeholder": "Selecione a taxa de imposto (opcional)",
-        "loading": "Carregando taxas de imposto...", "inherit": "Usar predefinição do inquilino", "inheritNamed": "Usar predefinição do inquilino ({{rate}})", "nonTaxable": "Não tributável"
+        "loading": "Carregando taxas de imposto...",
+        "inherit": "Usar predefinição do inquilino",
+        "inheritNamed": "Usar predefinição do inquilino ({{rate}})",
+        "nonTaxable": "Não tributável"
       },
       "sku": {
         "label": "SKU",
@@ -1094,7 +1166,10 @@
       "taxRate": {
         "label": "Taxa de imposto",
         "placeholder": "Não Tributável",
-        "loading": "Carregando...", "inherit": "Usar predefinição do inquilino", "inheritNamed": "Usar predefinição do inquilino ({{rate}})", "nonTaxable": "Não tributável"
+        "loading": "Carregando...",
+        "inherit": "Usar predefinição do inquilino",
+        "inheritNamed": "Usar predefinição do inquilino ({{rate}})",
+        "nonTaxable": "Não tributável"
       },
       "active": {
         "label": "Ativo"
@@ -1446,7 +1521,7 @@
       "daysPlural": "{{count}} dias",
       "daysDecimal": "{{count}} dias",
       "hoursUnit": "horas ({{formatted}})",
-      "willExpireAfter": "Os links de pagamento expirarão após {{duration}}"
+      "willExpireAfter": "O link de pagamento enviado por e-mail funcionará durante {{duration}}"
     },
     "notConnected": {
       "title": "Faixa não conectada",
@@ -1464,7 +1539,7 @@
       },
       "paymentLinkExpiration": {
         "label": "Expiração do link de pagamento",
-        "description": "Quanto tempo os links de pagamento permanecem válidos antes de expirarem"
+        "description": "Por quanto tempo o link de pagamento nos e-mails de fatura continua a funcionar (de 1 hora a 30 dias). Cada clique abre um novo pagamento seguro enquanto a fatura estiver por pagar."
       },
       "actions": {
         "save": "Salvar configurações",

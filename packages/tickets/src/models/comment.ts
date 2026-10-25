@@ -3,6 +3,8 @@ import type { Knex } from 'knex';
 import type { IComment } from '@alga-psa/types';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
+import { isInteractiveUserType, isMspPrincipalUserType } from '@alga-psa/types';
+import { HumanWorkOwnerRequiredError } from '@alga-psa/shared/lib/humanWork/HumanWorkOwnerRequiredError';
 
 function tenantScopedTable<Row extends object = Record<string, unknown>>(
   conn: Knex | Knex.Transaction,
@@ -89,14 +91,28 @@ const Comment = {
 
       // First verify user exists and get their type
       if (comment.user_id) {
-        const user = await tenantScopedTable(trx, 'users', tenant)
+        const user = await tenantScopedTable<{ user_type: string | null }>(trx, 'users', tenant)
           .select('user_type')
           .where('user_id', comment.user_id)
           .first();
 
         if (user) {
-          // Ensure author_type matches user_type
-          comment.author_type = user.user_type === 'internal' ? 'internal' : 'client';
+          // Ensure author_type matches user_type. The comments.author_type enum is
+          // internal|client|unknown: a non-interactive (service) user is MSP-side, so it is
+          // stored as 'internal' and distinguished at read time via users.user_type.
+          comment.author_type = isMspPrincipalUserType(user.user_type) ? 'internal' : 'client';
+
+          // CE rule (R5.9): a non-interactive author can only write internal comments.
+          // Unspecified visibility defaults to internal; an explicit public comment is refused
+          // before anything is stored (a licensed human via act-as is required for that).
+          if (!isInteractiveUserType(user.user_type)) {
+            if (comment.is_internal === false) {
+              throw new HumanWorkOwnerRequiredError('is_internal');
+            }
+            if (comment.is_internal == null) {
+              comment.is_internal = true;
+            }
+          }
         }
       }
 
@@ -105,8 +121,8 @@ const Comment = {
       }
 
       const now = new Date().toISOString();
-      const parentCommentId = comment.parent_comment_id || null;
-      const isReply = Boolean(parentCommentId);
+      let parentCommentId = comment.parent_comment_id || null;
+      let isReply = Boolean(parentCommentId);
       let commentId = comment.comment_id;
       let threadId = comment.thread_id;
 
@@ -141,15 +157,29 @@ const Comment = {
         }
 
         const threadIsInternal = Boolean(parent.thread_is_internal);
-        if (comment.is_internal == null) {
-          comment.is_internal = threadIsInternal;
-        } else if (Boolean(comment.is_internal) !== threadIsInternal) {
-          throw new Error('Reply visibility must match the thread root visibility');
+        if (threadIsInternal && comment.author_type === 'client') {
+          // D1 (alga-2026-0002798): a client author can never create an internal
+          // comment, and a public comment cannot live in an internal thread. Store
+          // a top-level public comment in a fresh public thread instead of
+          // inheriting (or rejecting on) the internal thread's visibility.
+          // LEVERAGE: pattern non-internal-author-visibility-guard — duplicated in shared/models/ticketModel.ts (createComment); extract a shared visibility resolver.
+          comment.is_internal = false;
+          parentCommentId = null;
+          isReply = false;
+          threadId = undefined; // never reuse the internal thread id
+        } else {
+          if (comment.is_internal == null) {
+            comment.is_internal = threadIsInternal;
+          } else if (Boolean(comment.is_internal) !== threadIsInternal) {
+            throw new Error('Reply visibility must match the thread root visibility');
+          }
+          threadId = parent.thread_id;
         }
+      }
 
+      if (isReply) {
         const idsResult = await trx.raw('SELECT gen_random_uuid() AS comment_id');
         commentId = commentId || idsResult.rows?.[0]?.comment_id;
-        threadId = parent.thread_id;
       } else {
         const idsResult = await trx.raw('SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id');
         const generatedIds = idsResult.rows?.[0];
@@ -225,14 +255,14 @@ const Comment = {
 
       // If user_id is being updated, verify user exists and get their type
       if (comment.user_id) {
-        const user = await tenantScopedTable(trx, 'users', tenant)
+        const user = await tenantScopedTable<{ user_type: string | null }>(trx, 'users', tenant)
           .select('user_type')
           .where('user_id', comment.user_id)
           .first();
 
         if (user) {
           // Ensure author_type matches user_type
-          comment.author_type = user.user_type === 'internal' ? 'internal' : 'client';
+          comment.author_type = isMspPrincipalUserType(user.user_type) ? 'internal' : 'client';
         } else {
           comment.author_type = 'unknown';
         }

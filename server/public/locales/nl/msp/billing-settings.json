@@ -202,6 +202,27 @@
         "save": "Instellingen opslaan mislukt",
         "range": "Voer een geheel getal van 1 tot en met 365 in."
       }
+    },
+    "paymentTerms": {
+      "title": "Standaard betalingsvoorwaarden",
+      "description": "Stel de betalingsvoorwaarden in die nieuwe facturen gebruiken wanneer noch de klant noch het factuurprofiel er een instelt.",
+      "fields": {
+        "terms": {
+          "label": "Betalingsvoorwaarden",
+          "help": "Geldt alleen voor nieuwe facturen. Bestaande facturen en klanten met eigen voorwaarden behouden die."
+        }
+      },
+      "actions": {
+        "save": "Opslaan"
+      },
+      "toast": {
+        "updated": "De standaard betalingsvoorwaarden zijn bijgewerkt."
+      },
+      "errors": {
+        "load": "Instellingen laden mislukt",
+        "save": "Instellingen opslaan mislukt",
+        "invalid": "Kies een geldige betalingsvoorwaarde."
+      }
     }
   },
   "quoting": {
@@ -215,8 +236,56 @@
     }
   },
   "tax": {
-    "defaultRate": { "title": "Standaard belastingtarief", "tooltip": "Kies het tarief dat nieuwe klanten, producten en diensten overnemen.", "description": "Stel het tarief in voor nieuwe klanten en catalogusitems. Bestaande records blijven ongewijzigd.", "loading": "Standaardtarief laden...", "empty": "Maak een actief tarief voordat u een standaard kiest.", "invalid": "Het ingestelde standaardtarief is niet meer actief of geldig. Kies een ander tarief.", "field": { "label": "Standaard belastingtarief" }, "options": { "none": "Geen tenantstandaard" }, "help": "Zonder standaard blijven nieuwe catalogusitems onbelast en gebruiken klanten het oudste actieve tarief, indien aanwezig.", "actions": { "save": "Standaard opslaan", "saving": "Opslaan..." }, "toast": { "saved": "Standaardtarief opgeslagen." }, "errors": { "load": "Kan het standaardtarief niet laden.", "save": "Kan het standaardtarief niet opslaan." } },
-    "backfill": { "title": "Standaard toepassen op bestaande catalogusitems", "description": "Bekijk producten en diensten zonder belastingtarief.", "warning": "Dit wijzigt toekomstige belastbaarheid en herschrijft geen uitgegeven facturen.", "loading": "Voorbeeld laden...", "empty": "Geen geschikte producten of diensten gevonden.", "target": "Doeltarief: {{rate}}", "count": "{{count}} geschikte items", "dialog": { "title": "Standaardtarief toepassen" }, "actions": { "preview": "Bestaande items bekijken", "apply": "Selectie toepassen", "applying": "Toepassen..." }, "toast": { "applied": "Standaardtarief toegepast op geselecteerde items." }, "errors": { "preview": "Kan catalogusvoorbeeld niet laden.", "apply": "Kan het standaardtarief niet toepassen." } },
+    "defaultRate": {
+      "title": "Standaard belastingtarief",
+      "tooltip": "Kies het tarief dat nieuwe klanten, producten en diensten overnemen.",
+      "description": "Stel het tarief in voor nieuwe klanten en catalogusitems. Bestaande records blijven ongewijzigd.",
+      "loading": "Standaardtarief laden...",
+      "empty": "Maak een actief tarief voordat u een standaard kiest.",
+      "invalid": "Het ingestelde standaardtarief is niet meer actief of geldig. Kies een ander tarief.",
+      "field": {
+        "label": "Standaard belastingtarief"
+      },
+      "options": {
+        "none": "Geen tenantstandaard"
+      },
+      "help": "Zonder standaard blijven nieuwe catalogusitems onbelast en gebruiken klanten het oudste actieve tarief, indien aanwezig.",
+      "actions": {
+        "save": "Standaard opslaan",
+        "saving": "Opslaan..."
+      },
+      "toast": {
+        "saved": "Standaardtarief opgeslagen."
+      },
+      "errors": {
+        "load": "Kan het standaardtarief niet laden.",
+        "save": "Kan het standaardtarief niet opslaan."
+      }
+    },
+    "backfill": {
+      "title": "Standaard toepassen op bestaande catalogusitems",
+      "description": "Bekijk producten en diensten zonder belastingtarief.",
+      "warning": "Dit wijzigt toekomstige belastbaarheid en herschrijft geen uitgegeven facturen.",
+      "loading": "Voorbeeld laden...",
+      "empty": "Geen geschikte producten of diensten gevonden.",
+      "target": "Doeltarief: {{rate}}",
+      "count": "{{count}} geschikte items",
+      "dialog": {
+        "title": "Standaardtarief toepassen"
+      },
+      "actions": {
+        "preview": "Bestaande items bekijken",
+        "apply": "Selectie toepassen",
+        "applying": "Toepassen..."
+      },
+      "toast": {
+        "applied": "Standaardtarief toegepast op geselecteerde items."
+      },
+      "errors": {
+        "preview": "Kan catalogusvoorbeeld niet laden.",
+        "apply": "Kan het standaardtarief niet toepassen."
+      }
+    },
     "taxRegions": {
       "title": "Belastingregio's",
       "description": "Beheer belastingregio's en gerelateerde instellingen."
@@ -998,7 +1067,10 @@
       "taxRate": {
         "label": "Belastingtarief (optioneel)",
         "placeholder": "Selecteer belastingtarief (optioneel)",
-        "loading": "Belastingtarieven laden...", "inherit": "Tenantstandaard gebruiken", "inheritNamed": "Tenantstandaard gebruiken ({{rate}})", "nonTaxable": "Niet-belastbaar"
+        "loading": "Belastingtarieven laden...",
+        "inherit": "Tenantstandaard gebruiken",
+        "inheritNamed": "Tenantstandaard gebruiken ({{rate}})",
+        "nonTaxable": "Niet-belastbaar"
       },
       "sku": {
         "label": "SKU",
@@ -1094,7 +1166,10 @@
       "taxRate": {
         "label": "Belastingtarief",
         "placeholder": "Niet-belastbaar",
-        "loading": "Laden...", "inherit": "Tenantstandaard gebruiken", "inheritNamed": "Tenantstandaard gebruiken ({{rate}})", "nonTaxable": "Niet-belastbaar"
+        "loading": "Laden...",
+        "inherit": "Tenantstandaard gebruiken",
+        "inheritNamed": "Tenantstandaard gebruiken ({{rate}})",
+        "nonTaxable": "Niet-belastbaar"
       },
       "active": {
         "label": "Actief"
@@ -1446,7 +1521,7 @@
       "daysPlural": "{{count}} dagen",
       "daysDecimal": "{{count}} dagen",
       "hoursUnit": "uur ({{formatted}})",
-      "willExpireAfter": "Betaallinks verlopen na {{duration}}"
+      "willExpireAfter": "De betaallink in de e-mail werkt gedurende {{duration}}"
     },
     "notConnected": {
       "title": "Stripe niet verbonden",
@@ -1464,7 +1539,7 @@
       },
       "paymentLinkExpiration": {
         "label": "Vervaldatum betaallink",
-        "description": "Hoe lang betaallinks geldig blijven voordat ze verlopen"
+        "description": "Hoe lang de betaallink in factuurmails werkt (1 uur tot 30 dagen). Elke klik opent een nieuwe beveiligde betaalpagina zolang de factuur openstaat."
       },
       "actions": {
         "save": "Instellingen opslaan",

@@ -248,7 +248,8 @@
     "openMenu": "Otwórz menu",
     "moreActions": "Więcej akcji",
     "createTemplate": "Utwórz szablon ze zgłoszenia",
-    "createWorkflowFromTicket": "Utwórz workflow ze zgłoszenia"
+    "createWorkflowFromTicket": "Utwórz workflow ze zgłoszenia",
+    "printWorkTag": "Drukuj etykietę roboczą"
   },
   "messages": {
     "noTickets": "Brak zgłoszeń",
@@ -445,7 +446,9 @@
     "notSet": "Nie ustawiono",
     "set": "Ustaw stan odpowiedzi",
     "all": "Wszystkie stany odpowiedzi",
-    "none": "Brak stanu odpowiedzi"
+    "none": "Brak stanu odpowiedzi",
+    "awaitingClientTooltip": "Oczekiwanie na odpowiedź klienta",
+    "awaitingInternalTooltip": "Klient odpowiedział, oczekiwanie na działanie wewnętrzne"
   },
   "origin": {
     "internal": "Utworzono wewnętrznie",
@@ -458,6 +461,14 @@
   "responseSource": {
     "clientPortal": "Otrzymano przez Portal Klienta",
     "inboundEmail": "Otrzymano przez e-mail"
+  },
+  "originalEmail": {
+    "text": "Tekst",
+    "original": "Oryginalny e-mail",
+    "emailShort": "E-mail",
+    "loading": "Wczytywanie oryginalnego e-maila…",
+    "error": "Nie można wczytać oryginalnego e-maila.",
+    "group": "Widok wiadomości"
   },
   "documents": {
     "title": "Dokumenty",
@@ -657,7 +668,7 @@
     "bundleMasterLabel": "Wybierz zgłoszenie nadrzędne",
     "bundleMasterPlaceholder": "Wybierz zgłoszenie nadrzędne...",
     "bundleSyncUpdates": "Synchronizuj aktualizacje z nadrzędnego do podrzędnych (publiczne odpowiedzi + zmiany workflow)",
-    "bundleSyncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Następnie zamknięcie lub ponowne otwarcie zgłoszenia nadrzędnego zamyka lub ponownie otwiera wszystkie zgłoszenia podrzędne, a zmiany statusu, osoby przypisanej i priorytetu w zgłoszeniu nadrzędnym są stosowane do podrzędnych. Pola workflow są zablokowane dla zgłoszeń podrzędnych. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
+    "bundleSyncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Przy włączonej synchronizacji zamknięcie lub ponowne otwarcie zgłoszenia nadrzędnego zamyka lub ponownie otwiera wszystkie zgłoszenia podrzędne, zmiany statusu, osoby przypisanej i priorytetu w zgłoszeniu nadrzędnym są do nich stosowane, a ich pola workflow są zablokowane. Bez synchronizacji zgłoszenia podrzędne same zarządzają swoim statusem, osobą przypisaną i priorytetem. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
     "bundleSelectAtLeastTwo": "Wybierz co najmniej dwa zgłoszenia do połączenia.",
     "bundleSelectMaster": "Wybierz zgłoszenie nadrzędne.",
     "bundleSuccess": "Zgłoszenia połączone",
@@ -730,8 +741,8 @@
       "masterTicket": "Wybierz zgłoszenie nadrzędne",
       "selectMasterTicket": "Wybierz zgłoszenie nadrzędne...",
       "syncUpdates": "Synchronizuj aktualizacje z nadrzędnego do podrzędnych (publiczne odpowiedzi + zmiany workflow)",
-      "syncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Następnie zamknięcie lub ponowne otwarcie zgłoszenia nadrzędnego zamyka lub ponownie otwiera wszystkie zgłoszenia podrzędne, a zmiany statusu, osoby przypisanej i priorytetu w zgłoszeniu nadrzędnym są stosowane do podrzędnych. Pola workflow są zablokowane dla zgłoszeń podrzędnych. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
-      "childrenDescription": "Podrzędne zachowują swój obecny status; pola workflow są zablokowane na zgłoszeniach podrzędnych. Odpowiedzi przychodzące na podrzędne są wyświetlane poniżej jako tylko do odczytu.",
+      "syncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Przy włączonej synchronizacji zamknięcie lub ponowne otwarcie zgłoszenia nadrzędnego zamyka lub ponownie otwiera wszystkie zgłoszenia podrzędne, zmiany statusu, osoby przypisanej i priorytetu w zgłoszeniu nadrzędnym są do nich stosowane, a ich pola workflow są zablokowane. Bez synchronizacji zgłoszenia podrzędne same zarządzają swoim statusem, osobą przypisaną i priorytetem. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
+      "childrenDescription": "Zgłoszenia podrzędne zachowują obecny status. Pola workflow są zablokowane tylko w trybie Sync Updates. Odpowiedzi przychodzące na zgłoszenia podrzędne są wyświetlane poniżej jako tylko do odczytu.",
       "checkingMasters": "Sprawdzanie istniejących połączeń...",
       "existingMasterSuffix": "(istniejące zgłoszenie nadrzędne)",
       "existingMasterLocked": "Jedno z wybranych zgłoszeń jest już zgłoszeniem nadrzędnym. Zostanie użyte jako nadrzędne; pozostałe zostaną dodane jako podrzędne.",
@@ -782,7 +793,9 @@
       "more": "Więcej",
       "selectedCount_few": "Zaznaczono {{count}}",
       "selectedCount_many": "Zaznaczono {{count}}",
-      "bundleNeedsOne": "Wybierz co najmniej 1 zgłoszenie do połączenia"
+      "bundleNeedsOne": "Wybierz co najmniej 1 zgłoszenie do połączenia",
+      "printLabels": "Drukuj etykiety",
+      "printLabelsLimit": "Jednorazowo można wydrukować co najwyżej {{max}} etykiet"
     },
     "assign": {
       "dialogTitle": "Przypisz wybrane zgłoszenia",
@@ -965,7 +978,8 @@
     "templateCustomFieldsNote": "Wartości pól niestandardowych są kopiowane z szablonu.",
     "templateReplaceTitle": "Zastąpić wprowadzone zmiany?",
     "templateReplaceMessage": "Zastosowanie szablonu zastąpi tytuł, opis i inne wprowadzone pola.",
-    "templateReplaceConfirm": "Zastosuj szablon"
+    "templateReplaceConfirm": "Zastosuj szablon",
+    "templateTokenHint": "Tytuł uzupełnia się o wybranego klienta, kontakt i termin wykonania, dopóki go nie zmienisz."
   },
   "itil": {
     "calculatedPriority": "Priorytet (obliczony)",
@@ -1090,7 +1104,7 @@
     "noContact": "Brak kontaktu",
     "closeTicketTitle": "Zamknij zgłoszenie",
     "resolveAndClose": "Rozwiąż i zamknij",
-    "closeTicketResolutionPrompt": "Wybierz status zamknięcia i dodaj rozwiązanie tego zgłoszenia.",
+    "closeTicketResolutionPrompt": "Wybierz status zamknięcia. Dodaj rozwiązanie lub pozostaw pole puste, aby zamknąć bez rozwiązania.",
     "selectCloseStatus": "Wybierz status zamknięcia",
     "cannotCloseYet": "Tego zgłoszenia nie można jeszcze zamknąć",
     "closeRulesIntro": "Reguły zamykania tablicy wymagają spełnienia poniższych warunków przed zamknięciem tego zgłoszenia:",
@@ -1394,7 +1408,15 @@
     "selectUnit": "Wybierz jednostkę do dostarczenia...",
     "onHandByLocation": "Stan według lokalizacji",
     "catalogUnitCost": "Katalogowy koszt jednostkowy",
-    "costNotConfigured": "Nie skonfigurowano"
+    "costNotConfigured": "Nie skonfigurowano",
+    "availableBadge": "Dostępne: {{available}}",
+    "availableByLocation": "Wolny zapas według lokalizacji",
+    "freeOfOnHand": "{{free}} wolnych z {{onHand}}",
+    "stockHeld": "Dostępne tylko {{free}}. {{held}} sztuk na stanie jest twardo zablokowanych dla zamówień sprzedaży i nie można ich tu użyć.",
+    "stockInsufficient": "Na stanie tylko {{onHand}}, żądano {{requested}}.",
+    "reservedStockTitle": "Zapas jest zarezerwowany dla zamówienia sprzedaży",
+    "reservedStockMessage": "Tylko {{free}} sztuk tego produktu jest wolnych. {{reserved}} sztuk na stanie jest zarezerwowanych dla zamówień sprzedaży, a żądano {{requested}}. Dodanie ich mimo to zabiera zapas, na który liczy zamówienie sprzedaży, i może spowodować braki w tym zamówieniu.",
+    "reservedStockConfirm": "Dodaj mimo to"
   },
   "watchList": {
     "title": "Lista obserwujących",
@@ -1664,7 +1686,10 @@
       "ruleCategoryBoardMismatch": "Wybrana kategoria należy do innej tablicy niż reguła.",
       "ruleCategoryInvalid": "Wybrana kategoria nie jest kategorią najwyższego poziomu.",
       "ruleSubcategoryInvalid": "Wybrana podkategoria nie należy do wybranej kategorii.",
-      "ruleSubcategoryRequiresCategory": "Wybierz kategorię przed wybraniem podkategorii."
+      "ruleSubcategoryRequiresCategory": "Wybierz kategorię przed wybraniem podkategorii.",
+      "ruleTooManyKeywords": "Użyj co najwyżej {{max}} słów kluczowych w jednej regule.",
+      "ruleKeywordTooLong": "Każde słowo kluczowe może mieć najwyżej {{max}} znaków.",
+      "ruleOriginInvalid": "Jedno z wybranych źródeł zgłoszenia jest nieprawidłowe."
     }
   },
   "ticketSection": {
@@ -1693,9 +1718,11 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Następnie zamknięcie lub ponowne otwarcie zgłoszenia nadrzędnego zamyka lub ponownie otwiera wszystkie zgłoszenia podrzędne, a zmiany statusu, osoby przypisanej i priorytetu w zgłoszeniu nadrzędnym są stosowane do podrzędnych. Pola workflow są zablokowane dla zgłoszeń podrzędnych. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
+      "childrenDescription": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. W trybie Sync Updates zamknięcie lub ponowne otwarcie zgłoszenia nadrzędnego zamyka lub ponownie otwiera wszystkie zgłoszenia podrzędne, zmiany statusu, osoby przypisanej i priorytetu w zgłoszeniu nadrzędnym są do nich stosowane, a ich pola workflow są zablokowane. W trybie Link Only zgłoszenia podrzędne same zarządzają swoim statusem, osobą przypisaną i priorytetem. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
       "title": "Pakiet",
       "masterBanner": "To zgłoszenie jest nadrzędnym w pakiecie ({{count}} podrzędnych). Tryb: {{mode}}.",
+      "childLockedNotice": "Pola workflow są zablokowane; pracuj w zgłoszeniu nadrzędnym.",
+      "childLinkedNotice": "Jest powiązane ze zgłoszeniem nadrzędnym i zarządzane niezależnie.",
       "multipleClients": "Wielu klientów",
       "mode": "Tryb: {{mode}}",
       "unbundle": "Rozpakuj",
@@ -1731,7 +1758,15 @@
       "applyResolutionHelpNoComment": "Zamyka zgłoszenie podrzędne ze statusem {{status}}. Zgłoszenie nadrzędne nie ma publicznego komentarza z rozwiązaniem do opublikowania.",
       "reopenMasterLabel": "Dodaj i otwórz ponownie zgłoszenie nadrzędne",
       "reopenMasterHelp": "Otwiera ponownie tylko zgłoszenie nadrzędne. Już zamknięte zgłoszenia podrzędne w tym pakiecie pozostają zamknięte; powiadomienia o ponownym otwarciu i SLA dotyczą zgłoszenia nadrzędnego.",
-      "closedMasterGating": "Reguły zamykania tablicy nie zezwalają na otwarte zgłoszenia podrzędne w ramach zamkniętego zgłoszenia nadrzędnego, więc pozostawienie zgłoszenia nadrzędnego zamkniętego nie jest możliwe."
+      "closedMasterGating": "Reguły zamykania tablicy nie zezwalają na otwarte zgłoszenia podrzędne w ramach zamkniętego zgłoszenia nadrzędnego, więc pozostawienie zgłoszenia nadrzędnego zamkniętego nie jest możliwe.",
+      "modeSwitchDialogIntro": "Zgłoszenie nadrzędne jest zamknięte. Wybierz, co ma się stać z otwartymi zgłoszeniami podrzędnymi po przełączeniu pakietu na Sync Updates.",
+      "modeSwitchConfirm": "Przełącz na Sync Updates",
+      "keepClosedSwitchLabel": "Przełącz i pozostaw zgłoszenie nadrzędne zamknięte",
+      "keepClosedSwitchHelp": "Otwarte zgłoszenia podrzędne pozostają otwarte z własnym licznikiem SLA. Pakiet będzie oznaczony jako niespójny, dopóki nie zostaną rozwiązane.",
+      "applyResolutionSwitchLabel": "Przełącz i zastosuj rozwiązanie zgłoszenia nadrzędnego do otwartych zgłoszeń podrzędnych",
+      "applyResolutionSwitchHelp": "Zamyka każde otwarte zgłoszenie podrzędne ze statusem {{status}} i publikuje w nim rozwiązanie zgłoszenia nadrzędnego jako komentarz publiczny.",
+      "applyResolutionSwitchHelpNoComment": "Zamyka każde otwarte zgłoszenie podrzędne ze statusem {{status}}. Zgłoszenie nadrzędne nie ma publicznego komentarza z rozwiązaniem do opublikowania.",
+      "reopenMasterSwitchLabel": "Przełącz i otwórz ponownie zgłoszenie nadrzędne"
     },
     "autoClose": "Zostanie automatycznie zamknięte {{date}}, jeśli nie pojawi się nowa aktywność.",
     "autoCloseWarned": "Klient został powiadomiony.",
@@ -2248,7 +2283,9 @@
       "details": "Szczegóły",
       "template": "Szablon zgłoszenia",
       "schedule": "Harmonogram",
-      "behaviour": "Zachowanie"
+      "behaviour": "Zachowanie",
+      "overrides": "Nadpisania dla tego harmonogramu",
+      "dispatch": "Przydział"
     },
     "fields": {
       "board": "Tablica",
@@ -2455,6 +2492,22 @@
       "monthlyOnDay": "{{every}}, {{day}}",
       "monthlyOnNthWeekday": "{{every}}, {{ordinal}} {{weekday}}",
       "yearly": "Co rok (miesiąc: {{month}}, dzień: {{day}})"
+    },
+    "template": {
+      "intro": "Wygląd zgłoszenia pochodzi ze wspólnego szablonu zgłoszenia. Zmiana szablonu zmienia każdy harmonogram, który go używa, od następnego zgłoszenia.",
+      "select": "Szablon zgłoszenia",
+      "placeholder": "Wybierz szablon zgłoszenia",
+      "inactiveOption": "{{name}} (nieaktywny)",
+      "summary": "{{checklist}} element(ów) listy, {{tags}} tag(ów)",
+      "inactiveNotice": "Ten szablon jest nieaktywny: ukryty w selektorze szablonów; nadal używany przez {{count}} harmonogramów.",
+      "sharedNotice": "Używany przez {{count}} harmonogramów. Edycja szablonu zmienia je wszystkie.",
+      "edit": "Edytuj szablon",
+      "new": "Nowy szablon",
+      "sampleTitle": "Tytuł pierwszego zgłoszenia:",
+      "tokensHelp": "Tytuły szablonów mogą używać {{tokens}}; są wypełniane dla każdego zgłoszenia."
+    },
+    "overridesSection": {
+      "intro": "Pozostaw grupę wyłączoną, aby użyć szablonu. Każdy klient może je ponownie nadpisać."
     }
   },
   "stopwatch": {
@@ -2488,12 +2541,15 @@
         "title": "Tytuł zgłoszenia",
         "board": "Tablica",
         "checklist": "Pozycje listy kontrolnej",
-        "status": "Status"
-      }
+        "status": "Status",
+        "schedules": "Harmonogramy"
+      },
+      "deleteBlocked": "Używany przez {{count}} cykliczny(ch) harmonogram(ów). Najpierw wskaż im inny szablon lub zarchiwizuj je."
     },
     "status": {
       "active": "Aktywny",
-      "inactive": "Nieaktywny"
+      "inactive": "Nieaktywny",
+      "scheduledOnly": "Tylko harmonogram"
     },
     "actions": {
       "edit": "Edytuj",
@@ -2515,7 +2571,10 @@
       "notesHelp": "Tylko dla Twojego zespołu. Nie jest kopiowane do zgłoszeń.",
       "title": "Tytuł zgłoszenia",
       "description": "Opis",
-      "descriptionPlaceholder": "Opis"
+      "descriptionPlaceholder": "Opis",
+      "offerForManualUse": "Oferuj w selektorze nowego zgłoszenia",
+      "offerForManualUseHelp": "Wyłącz dla szablonów używanych tylko przez harmonogramy cykliczne.",
+      "titleTokens": "W tytule możesz użyć {{tokens}}; są wypełniane dla każdego zgłoszenia."
     },
     "checklist": {
       "empty": "Brak pozycji listy kontrolnej.",
@@ -2543,14 +2602,52 @@
       "fromTicket": "Wstępnie wypełniono ze zgłoszenia #{{number}}. Nic nie zostanie zapisane, dopóki nie klikniesz Zapisz.",
       "inlineImages": "Opis zawiera obrazy należące do zgłoszenia źródłowego. Mogą przestać się wyświetlać po usunięciu tego zgłoszenia. Usuń je lub wgraj ponownie, jeśli szablon ma przetrwać zgłoszenie.",
       "viewOnly": "Możesz wyświetlić ten szablon, ale nie możesz go zmieniać.",
-      "referenceProblems": "Niektóre pola tego szablonu wskazują elementy, które już nie istnieją. Przy użyciu szablonu pozostaną puste. Popraw je i zapisz:"
+      "referenceProblems": "Niektóre pola tego szablonu wskazują elementy, które już nie istnieją. Przy użyciu szablonu pozostaną puste. Popraw je i zapisz:",
+      "inactiveWarning": "Nieaktywny: ukryty w selektorze szablonów; nadal używany przez {{count}} harmonogramów.",
+      "sharedWarning": "Zmiany dotyczą każdego cyklicznego harmonogramu używającego tego szablonu, od następnego utworzonego zgłoszenia.",
+      "boardChangeWarning": "Zmiana tablicy czyści priorytet i kategorię i może unieważnić status harmonogramów używających tego szablonu. Te harmonogramy kończą się błędem, dopóki ich nie edytujesz. Dotknięte harmonogramy: {{schedules}}."
     },
     "errors": {
       "notFound": "Nie znaleziono szablonu zgłoszenia",
       "duplicateName": "Szablon o nazwie {{name}} już istnieje",
       "invalidReferences": "Szablon odwołuje się do tablicy, kategorii lub priorytetu, który jest niedostępny",
       "notAvailable": "Szablony zgłoszeń są niedostępne",
-      "subcategoryNeedsCategory": "Podkategoria wymaga kategorii"
+      "subcategoryNeedsCategory": "Podkategoria wymaga kategorii",
+      "inUseBySchedules": "Używany przez {{count}} cykliczny(ch) harmonogram(ów): {{schedules}}. Najpierw wskaż im inny szablon lub zarchiwizuj je."
+    },
+    "usage": {
+      "schedules": "Używany przez {{count}} harmonogramów",
+      "paused": "wstrzymany",
+      "tickets": "{{count}} zgłoszeń utworzonych z tego szablonu",
+      "scheduleThis": "Zaplanuj ten szablon…"
+    }
+  },
+  "enums": {
+    "slaStatus": {
+      "paused": "Wstrzymany",
+      "on_track": "Zgodnie z planem",
+      "at_risk": "Zagrożony",
+      "breached": "Naruszony",
+      "unknown": "Nieznany",
+      "response_breached": "Naruszono SLA odpowiedzi",
+      "resolution_breached": "Naruszono SLA rozwiązania"
+    }
+  },
+  "sla": {
+    "tooltip": {
+      "paused": "Licznik SLA: wstrzymany",
+      "status": "Status SLA: {{status}}",
+      "responseBreached": "Odpowiedź: przekroczono o {{time}}",
+      "responseRemaining": "Odpowiedź: pozostały czas — {{time}}",
+      "resolutionBreached": "Rozwiązanie: przekroczono o {{time}}",
+      "resolutionRemaining": "Rozwiązanie: pozostały czas — {{time}}"
+    },
+    "time": {
+      "minutes": "{{minutes}} min",
+      "hoursMinutes": "{{hours}} godz. {{minutes}} min",
+      "hours": "{{hours}} godz.",
+      "daysHours": "{{days}} dn. {{hours}} godz.",
+      "days": "{{days}} dn."
     }
   }
 }

@@ -10,6 +10,7 @@ export interface AlertProps {
 
 export interface TokenResponse {
     errorType: string | null;
+    messageKey?: string;
     userInfo: {
         username: string;
         email: string;

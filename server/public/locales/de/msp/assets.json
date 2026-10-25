@@ -38,6 +38,20 @@
       "offline": "Offline",
       "overdue": "Überfällig",
       "unknown": "Unbekannt"
+    },
+    "rmaStatus": {
+      "open": "Offen",
+      "awaiting_return": "Warten auf Rücksendung",
+      "returned": "Zurückgegeben",
+      "sent_to_vendor": "An Lieferant gesendet",
+      "replacement_received": "Ersatz erhalten",
+      "replacement_deployed": "Ersatz bereitgestellt",
+      "dead_unit_owed": "Defektgerät ausstehend",
+      "dead_unit_returned": "Defektgerät zurückgegeben",
+      "replaced": "Ersetzt",
+      "credited": "Gutgeschrieben",
+      "charged": "Berechnet",
+      "closed": "Geschlossen"
     }
   },
   "assetAlertsSection": {
@@ -232,7 +246,9 @@
         "setLocation": "Standort festlegen",
         "setStatus": "Status festlegen",
         "assignContact": "Kontakt zuweisen",
-        "addToGroup": "Zu Gruppe hinzufügen"
+        "addToGroup": "Zu Gruppe hinzufügen",
+        "printLabels": "Etiketten drucken",
+        "printLabelsLimit": "Sie können höchstens {{max}} Etiketten auf einmal drucken"
       },
       "actions": {
         "apply": "Anwenden",
@@ -432,7 +448,9 @@
       "rebootDevice": "Gerät neu starten",
       "rebooting": "Neustart läuft...",
       "editAsset": "Asset bearbeiten",
-      "deleteAsset": "Asset löschen"
+      "deleteAsset": "Asset löschen",
+      "printLabel": "Asset-Etikett drucken",
+      "printPage": "Seite drucken"
     },
     "values": {
       "unknownClient": "Unbekannter Kunde"
@@ -835,7 +853,8 @@
       "save": "Speichern",
       "label": "Schaltflächenbeschriftung",
       "template": "URL-Vorlage",
-      "tokens": "Verwenden Sie {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} und {field.<key>} mit benutzerdefinierten Feldschlüsseln aus Einstellungen → Assets → Asset-Typen.",
+      "ninjaExample": "Beispiel für das NinjaOne-Geräte-Dashboard: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Ersetzen Sie den Host durch Ihre NinjaOne-Region: app, eu, ca, oc oder us2 .ninjarmm.com.",
+      "tokens": "Verwenden Sie {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} und {field.<key>} mit benutzerdefinierten Feldschlüsseln aus Einstellungen → Assets → Asset-Typen.",
       "loading": "Fernzugriffsoptionen werden geladen…",
       "unavailable": "Für dieses Asset nicht verfügbar",
       "actions": "Aktionen",
@@ -1149,7 +1168,8 @@
       "unknown": "Unbekannt",
       "unifiedMemory": "{{size}}GB Einheitlicher Speicher",
       "memoryUsed": "({{size}}GB verwendet)",
-      "freeStorage": "{{size}} GB frei"
+      "freeStorage": "{{size}} GB frei",
+      "totalStorage": "{{size}} GB"
     },
     "empty": "Keine Hardwaredaten verfügbar",
     "emptyStorage": "Keine Speicherlaufwerke erkannt"
@@ -1503,13 +1523,6 @@
     }
   },
   "assetBento": {
-    "rmmUser": {
-      "looksLike": "· Vermutlich {{contact}}",
-      "mapDialogDescription": "„{{user}}“ wird für diese RMM-Organisation gespeichert.",
-      "mapDialogTitle": "Angemeldeten Benutzer einem Kontakt zuordnen",
-      "mapFailed": "Die Zuordnung konnte nicht gespeichert werden.",
-      "mapToContact": "Kontakt zuordnen…"
-    },
     "health": "Zustand",
     "security": "Sicherheit",
     "openTickets": "Offene Tickets",
@@ -1559,6 +1572,13 @@
     "lastDone": "Zuletzt erledigt",
     "noMaintenance": "Nichts geplant.",
     "docsHint": "Anhänge und Zugangsdaten für dieses Asset.",
+    "rmmUser": {
+      "looksLike": "· Vermutlich {{contact}}",
+      "mapDialogDescription": "„{{user}}“ wird für diese RMM-Organisation gespeichert.",
+      "mapDialogTitle": "Angemeldeten Benutzer einem Kontakt zuordnen",
+      "mapFailed": "Die Zuordnung konnte nicht gespeichert werden.",
+      "mapToContact": "Kontakt zuordnen…"
+    },
     "manufacturer": "Hersteller",
     "model": "Modell",
     "vendor": "Lieferant",
@@ -1714,6 +1734,36 @@
     "empty": "Keine passenden Assets für diesen Kunden",
     "loading": "Wird geladen...",
     "remove": "Asset entfernen"
+  },
+  "inventoryProvenance": {
+    "title": "Bestandsherkunft",
+    "fields": {
+      "product": {
+        "label": "Produkt"
+      },
+      "serial": {
+        "label": "Seriennummer"
+      },
+      "mac": {
+        "label": "MAC"
+      },
+      "originSalesOrder": {
+        "label": "Ursprünglicher Kundenauftrag"
+      },
+      "delivered": {
+        "label": "Geliefert"
+      }
+    },
+    "rmaHistory": {
+      "title": "RMA-Verlauf"
+    },
+    "emptyValue": "—",
+    "rmaLabel": "RMA"
+  },
+  "skeletons": {
+    "assetForm": {
+      "loading": "Asset-Formular wird geladen..."
+    }
   },
   "assetStatuses": {
     "active": "Aktiv",

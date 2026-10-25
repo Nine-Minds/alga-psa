@@ -383,6 +383,26 @@ describe('Manual Invoice Generation', () => {
       expect(result.total_amount).toBe(1089);
     });
 
+    it('stamps due_date from the tenant default payment term when the client has none (alga-2026-0002607)', async () => {
+      const serviceId = await createTestService();
+      await setupTaxConfiguration();
+      await tenantTable(context, 'default_billing_settings').update({ default_payment_terms: 'net_14' });
+      await tenantTable(context, 'clients')
+        .where({ client_id: context.clientId })
+        .update({ payment_terms: '' });
+
+      const result = await generateManualInvoiceOrThrow({
+        clientId: context.clientId,
+        items: [{ service_id: serviceId, quantity: 1, description: 'Tenant default terms', rate: 1000 }]
+      });
+
+      const row = await tenantTable(context, 'invoices').where({ invoice_id: result.invoice_id }).first('invoice_date', 'due_date');
+      const day = (v: unknown) => new Date(v as string).toISOString().slice(0, 10);
+      const expected = new Date(row.invoice_date);
+      expected.setUTCDate(expected.getUTCDate() + 14);
+      expect(day(row.due_date)).toBe(day(expected));
+    });
+
     it('preserves a manual invoice number and rejects its retry without another invoice or ledger entry', async () => {
       const serviceId = await createTestService();
       await setupTaxConfiguration();

@@ -33,7 +33,39 @@
     "createdSuccess_one": "Se creó {{count}} ticket correctamente.",
     "createdSuccess_other": "Se crearon {{count}} tickets correctamente.",
     "rowLimitExceeded": "Se superó el límite de filas:",
-    "rowLimitDescription": "Su CSV tiene {{original}} filas, pero solo se importarán las primeras {{kept}} filas. Divida el archivo en lotes más pequeños para las filas restantes."
+    "rowLimitDescription": "Su CSV tiene {{original}} filas, pero solo se importarán las primeras {{kept}} filas. Divida el archivo en lotes más pequeños para las filas restantes.",
+    "createdSuccess_few": "Se crearon {{count}} tickets correctamente.",
+    "createdSuccess_many": "Se crearon {{count}} tickets correctamente.",
+    "errorCount_few": "{{count}} errores:",
+    "errorCount_many": "{{count}} errores:",
+    "importTickets_few": "Importar {{count}} tickets",
+    "importTickets_many": "Importar {{count}} tickets",
+    "skipDropped_few": "Omitir (se descartarán {{count}} tickets)",
+    "skipDropped_many": "Omitir (se descartarán {{count}} tickets)",
+    "skippedCount_few": "Se omitieron {{count}} tickets.",
+    "skippedCount_many": "Se omitieron {{count}} tickets.",
+    "ticketCount_few": "({{count}} tickets)",
+    "ticketCount_many": "({{count}} tickets)",
+    "unmatchedAgents_few": "{{count}} agentes",
+    "unmatchedAgents_many": "{{count}} agentes",
+    "unmatchedCategories_few": "{{count}} categorías",
+    "unmatchedCategories_many": "{{count}} categorías",
+    "unmatchedClients_few": "{{count}} clientes",
+    "unmatchedClients_many": "{{count}} clientes",
+    "unmatchedContacts_few": "{{count}} contactos",
+    "unmatchedContacts_many": "{{count}} contactos",
+    "unmatchedDateFormats_few": "{{count}} formatos de fecha",
+    "unmatchedDateFormats_many": "{{count}} formatos de fecha",
+    "unmatchedPriorities_few": "{{count}} prioridades",
+    "unmatchedPriorities_many": "{{count}} prioridades",
+    "unmatchedStatuses_few": "{{count}} estados",
+    "unmatchedStatuses_many": "{{count}} estados",
+    "unmatchedTeams_few": "{{count}} equipos",
+    "unmatchedTeams_many": "{{count}} equipos",
+    "unmatchedValuesIntro_few": "{{count}} valores de su CSV no se pudieron asociar automáticamente.",
+    "unmatchedValuesIntro_many": "{{count}} valores de su CSV no se pudieron asociar automáticamente.",
+    "warningCount_few": "{{count}} advertencias:",
+    "warningCount_many": "{{count}} advertencias:"
   },
   "title": "Tickets de soporte",
   "subtitle": "Consulte y gestione sus tickets de soporte",
@@ -216,7 +248,8 @@
     "openMenu": "Abrir menú",
     "moreActions": "Más acciones",
     "createTemplate": "Crear plantilla desde el ticket",
-    "createWorkflowFromTicket": "Crear flujo de trabajo desde el ticket"
+    "createWorkflowFromTicket": "Crear flujo de trabajo desde el ticket",
+    "printWorkTag": "Imprimir etiqueta de trabajo"
   },
   "messages": {
     "noTickets": "No se encontraron tickets",
@@ -316,6 +349,16 @@
     "billingProfileUpdated": "Perfil de facturación actualizado",
     "updateBillingProfileFailed": "No se pudo actualizar el perfil de facturación",
     "scheduleOpenFailed": "No se pudo abrir el programador",
+    "commentWithImagesDeleted_few": "Comentario y {{count}} imágenes pegadas eliminados correctamente.",
+    "commentWithImagesDeleted_many": "Comentario y {{count}} imágenes pegadas eliminados correctamente.",
+    "deleteCommentWithImages_few": "Este comentario incluye {{count}} imágenes pegadas que se subieron como documentos del ticket. ¿Eliminar solo el comentario o también eliminar permanentemente las imágenes pegadas?",
+    "deleteCommentWithImages_many": "Este comentario incluye {{count}} imágenes pegadas que se subieron como documentos del ticket. ¿Eliminar solo el comentario o también eliminar permanentemente las imágenes pegadas?",
+    "pastedImageDeleteFailed_few": "Comentario eliminado, pero no se pudieron eliminar {{count}} imágenes pegadas.",
+    "pastedImageDeleteFailed_many": "Comentario eliminado, pero no se pudieron eliminar {{count}} imágenes pegadas.",
+    "pastedImagesDeleteFailed_few": "No se pudieron eliminar {{count}} imágenes pegadas.",
+    "pastedImagesDeleteFailed_many": "No se pudieron eliminar {{count}} imágenes pegadas.",
+    "pastedImagesDeleted_few": "Se eliminaron {{count}} imágenes pegadas.",
+    "pastedImagesDeleted_many": "Se eliminaron {{count}} imágenes pegadas.",
     "sharedWorkspaceReadOnly": "Puede ver este ticket porque trata sobre un dispositivo de un espacio compartido. Solo quien lo creó puede añadir contenido."
   },
   "conversation": {
@@ -403,7 +446,9 @@
     "notSet": "Sin definir",
     "set": "Establecer estado de respuesta",
     "all": "Todos los estados de respuesta",
-    "none": "Sin estado de respuesta"
+    "none": "Sin estado de respuesta",
+    "awaitingClientTooltip": "Esperando la respuesta del cliente",
+    "awaitingInternalTooltip": "El cliente ha respondido, esperando una acción interna"
   },
   "origin": {
     "internal": "Creado internamente",
@@ -416,6 +461,14 @@
   "responseSource": {
     "clientPortal": "Recibido vía Portal de Cliente",
     "inboundEmail": "Recibido vía correo electrónico"
+  },
+  "originalEmail": {
+    "text": "Texto",
+    "original": "Correo original",
+    "emailShort": "Correo",
+    "loading": "Cargando el correo original…",
+    "error": "No se pudo cargar el correo original.",
+    "group": "Vista del mensaje"
   },
   "documents": {
     "title": "Documentos",
@@ -492,7 +545,13 @@
       "allMatchingSelected_other": "Todos los {{count}} tickets que coinciden con sus filtros están seleccionados.",
       "clear": "Limpiar selección",
       "selectAllMatching_one": "Seleccionar todos los {{count}} ticket que coincidan con sus filtros",
-      "selectAllMatching_other": "Seleccionar todos los {{count}} tickets que coincidan con sus filtros"
+      "selectAllMatching_other": "Seleccionar todos los {{count}} tickets que coincidan con sus filtros",
+      "allMatchingSelected_few": "Todos los {{count}} tickets que coinciden con sus filtros están seleccionados.",
+      "allMatchingSelected_many": "Todos los {{count}} tickets que coinciden con sus filtros están seleccionados.",
+      "pageSelected_few": "Todos los {{count}} tickets de esta página están seleccionados.",
+      "pageSelected_many": "Todos los {{count}} tickets de esta página están seleccionados.",
+      "selectAllMatching_few": "Seleccionar todos los {{count}} tickets que coincidan con sus filtros",
+      "selectAllMatching_many": "Seleccionar todos los {{count}} tickets que coincidan con sus filtros"
     },
     "spacing": {
       "compact": "Compacto",
@@ -532,7 +591,13 @@
       },
       "selectedAction": "Imprimir seleccionados ({{count}})",
       "selectedTitle": "Tickets seleccionados ({{count}})",
-      "subtitle": "{{count}} tickets"
+      "subtitle": "{{count}} tickets",
+      "selectedAction_few": "Imprimir seleccionados ({{count}})",
+      "selectedAction_many": "Imprimir seleccionados ({{count}})",
+      "selectedTitle_few": "Tickets seleccionados ({{count}})",
+      "selectedTitle_many": "Tickets seleccionados ({{count}})",
+      "subtitle_few": "{{count}} tickets",
+      "subtitle_many": "{{count}} tickets"
     },
     "exportSelectedAction": "Exportar seleccionados ({{count}})",
     "exportAction": "Exportar CSV",
@@ -560,7 +625,15 @@
       "saveFailed": "No se pudo guardar la vista predeterminada",
       "reset": "Restablecer al valor predeterminado del inquilino",
       "resetFailed": "No se pudo restablecer la vista"
-    }
+    },
+    "allMatchingSelected_few": "Todos los {{count}} tickets que coinciden con sus filtros están seleccionados.",
+    "allMatchingSelected_many": "Todos los {{count}} tickets que coinciden con sus filtros están seleccionados.",
+    "allPageSelected_few": "Todos los {{count}} tickets de esta página están seleccionados.",
+    "allPageSelected_many": "Todos los {{count}} tickets de esta página están seleccionados.",
+    "exportSelectedTooltip_few": "Exportar {{count}} tickets seleccionados a CSV",
+    "exportSelectedTooltip_many": "Exportar {{count}} tickets seleccionados a CSV",
+    "selectAllMatching_few": "Seleccionar todos los {{count}} tickets que coincidan con sus filtros",
+    "selectAllMatching_many": "Seleccionar todos los {{count}} tickets que coincidan con sus filtros"
   },
   "bulk": {
     "bundleTickets": "Agrupar tickets",
@@ -595,7 +668,7 @@
     "bundleMasterLabel": "Seleccionar ticket maestro",
     "bundleMasterPlaceholder": "Seleccione un ticket maestro...",
     "bundleSyncUpdates": "Sincronizar actualizaciones del maestro a los hijos (respuestas públicas + cambios de flujo de trabajo)",
-    "bundleSyncUpdatesHelp": "Los tickets hijos conservan su estado actual al agruparse. Después, cerrar o reabrir el maestro cierra o reabre todos los tickets hijos, y los cambios de estado, responsable y prioridad en el maestro se aplican a los hijos. Los campos de flujo de trabajo están bloqueados en los hijos. Las notas internas permanecen en el maestro.",
+    "bundleSyncUpdatesHelp": "Los tickets hijos conservan su estado actual al agruparse. Con la sincronización activada, cerrar o reabrir el maestro cierra o reabre todos los hijos, los cambios de estado, responsable y prioridad en el maestro se aplican a ellos y sus campos de flujo de trabajo quedan bloqueados. Sin sincronización, los hijos gestionan por su cuenta su estado, responsable y prioridad. Las notas internas permanecen en el maestro.",
     "bundleSelectAtLeastTwo": "Seleccione al menos dos tickets para agrupar.",
     "bundleSelectMaster": "Seleccione un ticket maestro.",
     "bundleSuccess": "Tickets agrupados",
@@ -626,7 +699,11 @@
       "partialFailure": "Algunos tickets no se pudieron mover",
       "failure": "No se pudieron mover los tickets seleccionados",
       "confirm": "Mover {{count}} tickets",
-      "success": "{{count}} tickets movidos"
+      "success": "{{count}} tickets movidos",
+      "confirm_few": "Mover {{count}} tickets",
+      "confirm_many": "Mover {{count}} tickets",
+      "success_few": "{{count}} tickets movidos",
+      "success_many": "{{count}} tickets movidos"
     },
     "delete": {
       "dialogTitle": "Eliminar tickets seleccionados",
@@ -643,7 +720,13 @@
       "partialFailure": "Algunos tickets no se pudieron eliminar",
       "failure": "No se pudieron eliminar los tickets seleccionados",
       "confirm": "¿Seguro que quiere eliminar estos {{count}} tickets? Esta acción no se puede deshacer.",
-      "success": "{{count}} tickets eliminados"
+      "success": "{{count}} tickets eliminados",
+      "button_few": "Eliminar {{count}} tickets",
+      "button_many": "Eliminar {{count}} tickets",
+      "confirm_few": "¿Seguro que quiere eliminar estos {{count}} tickets? Esta acción no se puede deshacer.",
+      "confirm_many": "¿Seguro que quiere eliminar estos {{count}} tickets? Esta acción no se puede deshacer.",
+      "success_few": "{{count}} tickets eliminados",
+      "success_many": "{{count}} tickets eliminados"
     },
     "bundle": {
       "dialogTitle": "Agrupar tickets",
@@ -658,8 +741,8 @@
       "masterTicket": "Seleccionar ticket maestro",
       "selectMasterTicket": "Seleccione un ticket maestro...",
       "syncUpdates": "Sincronizar actualizaciones del maestro a los hijos (respuestas públicas + cambios de flujo de trabajo)",
-      "syncUpdatesHelp": "Los tickets hijos conservan su estado actual al agruparse. Después, cerrar o reabrir el maestro cierra o reabre todos los tickets hijos, y los cambios de estado, responsable y prioridad en el maestro se aplican a los hijos. Los campos de flujo de trabajo están bloqueados en los hijos. Las notas internas permanecen en el maestro.",
-      "childrenDescription": "Los secundarios mantienen su estado actual; los campos de flujo de trabajo están bloqueados en los secundarios. Las respuestas entrantes de los secundarios se muestran abajo como solo lectura.",
+      "syncUpdatesHelp": "Los tickets hijos conservan su estado actual al agruparse. Con la sincronización activada, cerrar o reabrir el maestro cierra o reabre todos los hijos, los cambios de estado, responsable y prioridad en el maestro se aplican a ellos y sus campos de flujo de trabajo quedan bloqueados. Sin sincronización, los hijos gestionan por su cuenta su estado, responsable y prioridad. Las notas internas permanecen en el maestro.",
+      "childrenDescription": "Los tickets hijos conservan su estado actual. Los campos de flujo de trabajo solo se bloquean en el modo Sync Updates. Las respuestas entrantes de los hijos se muestran abajo como solo lectura.",
       "checkingMasters": "Comprobando agrupaciones existentes...",
       "existingMasterSuffix": "(maestro existente)",
       "existingMasterLocked": "Un ticket seleccionado ya es un maestro de agrupación. Se usará como maestro; los demás se añadirán como hijos.",
@@ -679,7 +762,9 @@
       "needMoreTickets": "Añade al menos un ticket más al paquete.",
       "unresolvedSelectedTickets_one": "No se pudo cargar {{count}} ticket seleccionado.",
       "unresolvedSelectedTickets_other": "No se pudieron cargar {{count}} tickets seleccionados.",
-      "badgeClosed": "Cerrado"
+      "badgeClosed": "Cerrado",
+      "unresolvedSelectedTickets_few": "No se pudieron cargar {{count}} tickets seleccionados.",
+      "unresolvedSelectedTickets_many": "No se pudieron cargar {{count}} tickets seleccionados."
     },
     "auth": {
       "moveRequired": "Debe iniciar sesión para mover tickets",
@@ -706,7 +791,11 @@
       "statusDisabledMultiBoard": "Los tickets seleccionados están en tableros distintos",
       "statusResolvingBoards": "Comprobando los tableros de los tickets seleccionados…",
       "more": "Más",
-      "bundleNeedsOne": "Selecciona al menos 1 ticket para agrupar"
+      "bundleNeedsOne": "Selecciona al menos 1 ticket para agrupar",
+      "selectedCount_few": "{{count}} seleccionados",
+      "selectedCount_many": "{{count}} seleccionados",
+      "printLabels": "Imprimir etiquetas",
+      "printLabelsLimit": "Puede imprimir como máximo {{max}} etiquetas a la vez"
     },
     "assign": {
       "dialogTitle": "Asignar tickets seleccionados",
@@ -720,7 +809,11 @@
       "success_other": "{{count}} tickets reasignados",
       "partialFailure": "Algunos tickets no pudieron reasignarse",
       "failure": "No se pudieron reasignar los tickets seleccionados",
-      "failedHeading": "Los siguientes tickets no pudieron reasignarse:"
+      "failedHeading": "Los siguientes tickets no pudieron reasignarse:",
+      "confirm_few": "Reasignar {{count}} tickets",
+      "confirm_many": "Reasignar {{count}} tickets",
+      "success_few": "{{count}} tickets reasignados",
+      "success_many": "{{count}} tickets reasignados"
     },
     "tags": {
       "dialogTitle": "Añadir etiquetas a los tickets seleccionados",
@@ -733,7 +826,11 @@
       "success_other": "Etiquetas añadidas a {{count}} tickets",
       "partialFailure": "No se pudieron añadir etiquetas a algunos tickets",
       "failure": "Error al añadir etiquetas",
-      "failedHeading": "No se pudieron añadir etiquetas a los siguientes tickets:"
+      "failedHeading": "No se pudieron añadir etiquetas a los siguientes tickets:",
+      "confirm_few": "Añadir etiquetas a {{count}} tickets",
+      "confirm_many": "Añadir etiquetas a {{count}} tickets",
+      "success_few": "Etiquetas añadidas a {{count}} tickets",
+      "success_many": "Etiquetas añadidas a {{count}} tickets"
     },
     "dueDate": {
       "dialogTitle": "Establecer fecha de vencimiento",
@@ -748,7 +845,11 @@
       "success_other": "Fecha de vencimiento actualizada en {{count}} tickets",
       "partialFailure": "La fecha de vencimiento no se pudo actualizar en algunos tickets",
       "failure": "Error al actualizar la fecha de vencimiento",
-      "failedHeading": "No se pudo actualizar la fecha de vencimiento en los siguientes tickets:"
+      "failedHeading": "No se pudo actualizar la fecha de vencimiento en los siguientes tickets:",
+      "confirm_few": "Actualizar {{count}} tickets",
+      "confirm_many": "Actualizar {{count}} tickets",
+      "success_few": "Fecha de vencimiento actualizada en {{count}} tickets",
+      "success_many": "Fecha de vencimiento actualizada en {{count}} tickets"
     },
     "status": {
       "dialogTitle": "Cambiar estado de los tickets seleccionados",
@@ -767,7 +868,11 @@
       "resolutionLabelRequired": "Comentario de resolución",
       "resolutionRequiredHint": "Este tablero requiere un comentario de resolución antes de poder cerrar los tickets.",
       "resolutionPlaceholder": "Describa cómo se resolvieron estos tickets",
-      "resolutionHelper": "Se guarda como la resolución de cada ticket seleccionado y cumple con los tableros que exigen una antes de cerrar."
+      "resolutionHelper": "Se guarda como la resolución de cada ticket seleccionado y cumple con los tableros que exigen una antes de cerrar.",
+      "confirm_few": "Actualizar {{count}} tickets",
+      "confirm_many": "Actualizar {{count}} tickets",
+      "success_few": "Estado actualizado en {{count}} tickets",
+      "success_many": "Estado actualizado en {{count}} tickets"
     },
     "priority": {
       "dialogTitle": "Cambiar prioridad de los tickets seleccionados",
@@ -780,8 +885,24 @@
       "success_other": "Prioridad actualizada en {{count}} tickets",
       "partialFailure": "La prioridad no se pudo actualizar en algunos tickets",
       "failure": "Error al actualizar la prioridad",
-      "failedHeading": "No se pudo actualizar la prioridad en los siguientes tickets:"
-    }
+      "failedHeading": "No se pudo actualizar la prioridad en los siguientes tickets:",
+      "confirm_few": "Actualizar {{count}} tickets",
+      "confirm_many": "Actualizar {{count}} tickets",
+      "success_few": "Prioridad actualizada en {{count}} tickets",
+      "success_many": "Prioridad actualizada en {{count}} tickets"
+    },
+    "deleteConfirm_few": "Eliminar {{count}} tickets",
+    "deleteConfirm_many": "Eliminar {{count}} tickets",
+    "deleteDialogDescription_few": "¿Seguro que quiere eliminar estos {{count}} tickets? Esta acción no se puede deshacer.",
+    "deleteDialogDescription_many": "¿Seguro que quiere eliminar estos {{count}} tickets? Esta acción no se puede deshacer.",
+    "deleteSuccess_few": "{{count}} tickets eliminados",
+    "deleteSuccess_many": "{{count}} tickets eliminados",
+    "exportSelectedTooltip_few": "Exportar {{count}} tickets seleccionados a CSV",
+    "exportSelectedTooltip_many": "Exportar {{count}} tickets seleccionados a CSV",
+    "moveConfirm_few": "Mover {{count}} tickets",
+    "moveConfirm_many": "Mover {{count}} tickets",
+    "moveSuccess_few": "{{count}} tickets movidos",
+    "moveSuccess_many": "{{count}} tickets movidos"
   },
   "quickAdd": {
     "dialogTitle": "Alta rápida de ticket",
@@ -853,7 +974,12 @@
     "templateCustomFieldsNote": "Los valores de los campos personalizados se copian de la plantilla.",
     "templateReplaceTitle": "¿Reemplazar sus cambios?",
     "templateReplaceMessage": "Aplicar una plantilla reemplaza el título, la descripción y otros campos que ha introducido.",
-    "templateReplaceConfirm": "Aplicar plantilla"
+    "templateReplaceConfirm": "Aplicar plantilla",
+    "templateTokenHint": "El título se completa con el cliente, el contacto y la fecha de vencimiento que elija, hasta que lo edite.",
+    "tagCreatePartialFailure_few": "No se pudieron crear {{count}} etiquetas",
+    "tagCreatePartialFailure_many": "No se pudieron crear {{count}} etiquetas",
+    "tagCreationFailed_few": "No se pudieron crear {{count}} etiquetas",
+    "tagCreationFailed_many": "No se pudieron crear {{count}} etiquetas"
   },
   "itil": {
     "calculatedPriority": "Prioridad (calculada)",
@@ -978,7 +1104,7 @@
     "noContact": "Sin contacto",
     "closeTicketTitle": "Cerrar ticket",
     "resolveAndClose": "Resolver y cerrar",
-    "closeTicketResolutionPrompt": "Elija un estado de cierre y añada una resolución para este ticket.",
+    "closeTicketResolutionPrompt": "Elija un estado de cierre. Añada una resolución o déjela en blanco para cerrar sin resolución.",
     "selectCloseStatus": "Seleccione un estado de cierre",
     "cannotCloseYet": "Este ticket aún no se puede cerrar",
     "closeRulesIntro": "Las reglas de cierre del tablero requieren lo siguiente antes de poder cerrar este ticket:",
@@ -1142,7 +1268,9 @@
       "copyTargetBoard": "Seleccionar tablero de destino",
       "copyBoardTypeMismatch": "Las categorías de tickets solo se pueden copiar entre tableros del mismo tipo de categoría.",
       "copyConflicts_one": "{{count}} categoría omitida tiene una categoría superior distinta en el tablero de destino.",
-      "copyConflicts_other": "{{count}} categorías omitidas tienen una categoría superior distinta en el tablero de destino."
+      "copyConflicts_other": "{{count}} categorías omitidas tienen una categoría superior distinta en el tablero de destino.",
+      "copyConflicts_few": "{{count}} categorías omitidas tienen una categoría superior distinta en el tablero de destino.",
+      "copyConflicts_many": "{{count}} categorías omitidas tienen una categoría superior distinta en el tablero de destino."
     },
     "display": {
       "responseStateTrackingTitle": "Seguimiento del estado de respuesta",
@@ -1220,7 +1348,23 @@
     "appliedFiltersSummary": "(de {{count}} ticket que coincide con los filtros aplicados)",
     "completeMessage": "Se exportó correctamente {{count}} ticket a CSV.",
     "confirm": "Exportar {{count}} Ticket",
-    "selectedTicketsSummary": "Exportando {{count}} ticket seleccionado"
+    "selectedTicketsSummary": "Exportando {{count}} ticket seleccionado",
+    "appliedFiltersSummary_few": "(de {{count}} tickets que coinciden con los filtros aplicados)",
+    "appliedFiltersSummary_many": "(de {{count}} tickets que coinciden con los filtros aplicados)",
+    "completeDescription_few": "Se exportaron correctamente {{count}} tickets a CSV.",
+    "completeDescription_many": "Se exportaron correctamente {{count}} tickets a CSV.",
+    "completeMessage_few": "Se exportaron correctamente {{count}} tickets a CSV.",
+    "completeMessage_many": "Se exportaron correctamente {{count}} tickets a CSV.",
+    "confirm_few": "Exportar {{count}} Tickets",
+    "confirm_many": "Exportar {{count}} Tickets",
+    "selectedFields_few": "{{count}} de {{total}} campos seleccionados",
+    "selectedFields_many": "{{count}} de {{total}} campos seleccionados",
+    "selectedTicketsSummary_few": "Exportando {{count}} tickets seleccionados",
+    "selectedTicketsSummary_many": "Exportando {{count}} tickets seleccionados",
+    "summaryMatching_few": "(de {{total}} tickets que coinciden con los filtros aplicados)",
+    "summaryMatching_many": "(de {{total}} tickets que coinciden con los filtros aplicados)",
+    "summary_few": "Exportando {{selected}} tickets seleccionados",
+    "summary_many": "Exportando {{selected}} tickets seleccionados"
   },
   "materials": {
     "title": "Materiales",
@@ -1264,7 +1408,15 @@
     "selectUnit": "Seleccione una unidad para entregar...",
     "onHandByLocation": "Disponible por ubicación",
     "catalogUnitCost": "Costo unitario de catálogo",
-    "costNotConfigured": "No configurado"
+    "costNotConfigured": "No configurado",
+    "availableBadge": "Disponible: {{available}}",
+    "availableByLocation": "Existencias libres por ubicación",
+    "freeOfOnHand": "{{free}} libres de {{onHand}}",
+    "stockHeld": "Solo hay {{free}} disponibles. {{held}} en existencia están bloqueadas para pedidos de venta y no se pueden usar aquí.",
+    "stockInsufficient": "Solo hay {{onHand}} en existencia y se solicitaron {{requested}}.",
+    "reservedStockTitle": "Las existencias están reservadas para un pedido de venta",
+    "reservedStockMessage": "Solo {{free}} de este producto están libres. {{reserved}} en existencia están reservadas para pedidos de venta y solicitó {{requested}}. Si lo agrega de todos modos, toma existencias con las que cuenta un pedido de venta y es posible que ese pedido quede incompleto.",
+    "reservedStockConfirm": "Agregar de todos modos"
   },
   "watchList": {
     "title": "Lista de seguimiento",
@@ -1343,7 +1495,15 @@
     "excludingCount_other": "excluyendo {{count}} categorías",
     "excludingPrefix": "excluyendo {{name}}",
     "excludingCount": "excluyendo {{count}} categoría",
-    "selectedCount": "{{count}} categorías"
+    "selectedCount": "{{count}} categorías",
+    "categoriesCount_few": "{{count}} categorías",
+    "categoriesCount_many": "{{count}} categorías",
+    "excludingCategoriesCount_few": "excluyendo {{count}} categorías",
+    "excludingCategoriesCount_many": "excluyendo {{count}} categorías",
+    "excludingCount_few": "excluyendo {{count}} categorías",
+    "excludingCount_many": "excluyendo {{count}} categorías",
+    "selectedCount_few": "{{count}} categorías",
+    "selectedCount_many": "{{count}} categorías"
   },
   "navigation": {
     "previousTicket": "Ticket anterior",
@@ -1526,7 +1686,10 @@
       "ruleCategoryBoardMismatch": "La categoría seleccionada pertenece a un tablero distinto al de la regla.",
       "ruleCategoryInvalid": "La categoría seleccionada no es una categoría de nivel superior.",
       "ruleSubcategoryInvalid": "La subcategoría seleccionada no pertenece a la categoría seleccionada.",
-      "ruleSubcategoryRequiresCategory": "Seleccione una categoría antes de elegir una subcategoría."
+      "ruleSubcategoryRequiresCategory": "Seleccione una categoría antes de elegir una subcategoría.",
+      "ruleTooManyKeywords": "Use como máximo {{max}} palabras clave por regla.",
+      "ruleKeywordTooLong": "Cada palabra clave debe tener {{max}} caracteres o menos.",
+      "ruleOriginInvalid": "Uno de los orígenes de ticket seleccionados no es válido."
     }
   },
   "ticketSection": {
@@ -1555,9 +1718,11 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Los tickets hijos conservan su estado actual al agruparse. Después, cerrar o reabrir el maestro cierra o reabre todos los tickets hijos, y los cambios de estado, responsable y prioridad en el maestro se aplican a los hijos. Los campos de flujo de trabajo están bloqueados en los hijos. Las notas internas permanecen en el maestro.",
+      "childrenDescription": "Los tickets hijos conservan su estado actual al agruparse. En el modo Sync Updates, cerrar o reabrir el maestro cierra o reabre todos los hijos, los cambios de estado, responsable y prioridad en el maestro se aplican a ellos y sus campos de flujo de trabajo quedan bloqueados. En el modo Link Only, los hijos gestionan por su cuenta su estado, responsable y prioridad. Las notas internas permanecen en el maestro.",
       "title": "Paquete",
       "masterBanner": "Este ticket es el principal de un paquete ({{count}} secundarios). Modo: {{mode}}.",
+      "childLockedNotice": "Los campos de flujo de trabajo están bloqueados; trabaje desde el ticket maestro.",
+      "childLinkedNotice": "Está vinculado al maestro y se gestiona de forma independiente.",
       "multipleClients": "Varios clientes",
       "mode": "Modo: {{mode}}",
       "unbundle": "Deshacer paquete",
@@ -1593,7 +1758,15 @@
       "applyResolutionHelpNoComment": "Cierra el ticket secundario con el estado {{status}}. El ticket principal no tiene ningún comentario de resolución público para publicar.",
       "reopenMasterLabel": "Agregar y reabrir el ticket principal",
       "reopenMasterHelp": "Reabre solo el ticket principal. Los tickets secundarios ya cerrados de este paquete permanecen cerrados; las notificaciones de reapertura y el SLA se aplican al ticket principal.",
-      "closedMasterGating": "Las reglas de cierre del tablero no permiten tickets secundarios abiertos bajo un ticket principal cerrado, por lo que mantener cerrado el ticket principal no es una opción."
+      "closedMasterGating": "Las reglas de cierre del tablero no permiten tickets secundarios abiertos bajo un ticket principal cerrado, por lo que mantener cerrado el ticket principal no es una opción.",
+      "modeSwitchDialogIntro": "El ticket principal está cerrado. Elija qué debe ocurrir con los tickets secundarios abiertos cuando el paquete cambie a Sync Updates.",
+      "modeSwitchConfirm": "Cambiar a Sync Updates",
+      "keepClosedSwitchLabel": "Cambiar y mantener cerrado el ticket principal",
+      "keepClosedSwitchHelp": "Los tickets secundarios abiertos permanecen abiertos con su propio reloj de SLA. El paquete se mostrará como inconsistente hasta que se resuelvan.",
+      "applyResolutionSwitchLabel": "Cambiar y aplicar la resolución del ticket principal a los tickets secundarios abiertos",
+      "applyResolutionSwitchHelp": "Cierra cada ticket secundario abierto con el estado {{status}} y publica en él la resolución del ticket principal como comentario público.",
+      "applyResolutionSwitchHelpNoComment": "Cierra cada ticket secundario abierto con el estado {{status}}. El ticket principal no tiene un comentario de resolución público que publicar.",
+      "reopenMasterSwitchLabel": "Cambiar y reabrir el ticket principal"
     },
     "autoClose": "Se cerrará automáticamente el {{date}} salvo que haya nueva actividad.",
     "autoCloseWarned": "Se ha avisado al cliente.",
@@ -1635,7 +1808,9 @@
     "editing": {
       "single": "{{name}} está editando",
       "multiple_one": "{{name}} y {{count}} persona más están editando",
-      "multiple_other": "{{name}} y {{count}} personas más están editando"
+      "multiple_other": "{{name}} y {{count}} personas más están editando",
+      "multiple_few": "{{name}} y {{count}} personas más están editando",
+      "multiple_many": "{{name}} y {{count}} personas más están editando"
     },
     "remoteFieldUpdated": "{{name}} actualizó {{field}}",
     "connection": {
@@ -1663,7 +1838,11 @@
     "selectedCount": "{{count}} tableros",
     "statusActive": "Activos",
     "statusAll": "Todos",
-    "statusInactive": "Inactivos"
+    "statusInactive": "Inactivos",
+    "excludingCount_few": "excluyendo {{count}} tableros",
+    "excludingCount_many": "excluyendo {{count}} tableros",
+    "selectedCount_few": "{{count}} tableros",
+    "selectedCount_many": "{{count}} tableros"
   },
   "checklist": {
     "addFailed": "Error al agregar el elemento de la lista de verificación",
@@ -1801,7 +1980,6 @@
       "setClientToAddContact": "Primero seleccione un cliente para agregar un contacto",
       "logInteraction": "Registrar llamada o correo",
       "changeClient": "Cambiar cliente",
-      "changeLocation": "Cambiar ubicación",
       "teamFallback": "Equipo",
       "teamSectionLabel": "Asignar un equipo",
       "addAgentsOrTeam": "Agregar agentes o un equipo…",
@@ -1816,7 +1994,10 @@
         "cancelled": "Cancelada"
       },
       "scheduleTime": "Programar tiempo",
-      "openScheduleEntry": "Abrir entrada de agenda"
+      "openScheduleEntry": "Abrir entrada de agenda",
+      "acrossEntries_few": "en {{count}} entradas",
+      "acrossEntries_many": "en {{count}} entradas",
+      "changeLocation": "Cambiar ubicación"
     },
     "timeline": {
       "subtitle": "Respuestas, tiempo y cambios del sistema en un solo lugar",
@@ -2102,7 +2283,9 @@
       "details": "Detalles",
       "template": "Plantilla del ticket",
       "schedule": "Programación",
-      "behaviour": "Comportamiento"
+      "behaviour": "Comportamiento",
+      "overrides": "Anulaciones para esta programación",
+      "dispatch": "Despacho"
     },
     "fields": {
       "board": "Tablero",
@@ -2309,6 +2492,22 @@
       "monthlyOnDay": "{{every}}, {{day}}",
       "monthlyOnNthWeekday": "{{every}}, el {{ordinal}} {{weekday}}",
       "yearly": "Cada año el {{day}} de {{month}}"
+    },
+    "template": {
+      "intro": "El aspecto del ticket proviene de una plantilla de ticket compartida. Cambiar la plantilla cambia todas las programaciones que la usan, a partir del siguiente ticket.",
+      "select": "Plantilla de ticket",
+      "placeholder": "Seleccione una plantilla de ticket",
+      "inactiveOption": "{{name}} (inactiva)",
+      "summary": "{{checklist}} elemento(s) de lista, {{tags}} etiqueta(s)",
+      "inactiveNotice": "Esta plantilla está inactiva: oculta en el selector de plantillas; todavía la usan {{count}} programaciones.",
+      "sharedNotice": "Usada por {{count}} programaciones. Editar la plantilla las cambia a todas.",
+      "edit": "Editar plantilla",
+      "new": "Nueva plantilla",
+      "sampleTitle": "Título del primer ticket:",
+      "tokensHelp": "Los títulos de plantilla pueden usar {{tokens}}; se rellenan en cada ticket."
+    },
+    "overridesSection": {
+      "intro": "Deje un grupo desactivado para usar la plantilla. Cada cliente puede anularlos de nuevo."
     }
   },
   "stopwatch": {
@@ -2342,12 +2541,15 @@
         "title": "Título del ticket",
         "board": "Tablero",
         "checklist": "Elementos de la lista",
-        "status": "Estado"
-      }
+        "status": "Estado",
+        "schedules": "Programaciones"
+      },
+      "deleteBlocked": "Usada por {{count}} programación(es) recurrente(s). Asígneles otra plantilla o archívelas primero."
     },
     "status": {
       "active": "Activa",
-      "inactive": "Inactiva"
+      "inactive": "Inactiva",
+      "scheduledOnly": "Solo programada"
     },
     "actions": {
       "edit": "Editar",
@@ -2369,7 +2571,10 @@
       "notesHelp": "Solo para su equipo. No se copian a los tickets.",
       "title": "Título del ticket",
       "description": "Descripción",
-      "descriptionPlaceholder": "Descripción"
+      "descriptionPlaceholder": "Descripción",
+      "offerForManualUse": "Ofrecer en el selector de nuevo ticket",
+      "offerForManualUseHelp": "Desactívelo para plantillas que solo usan las programaciones recurrentes.",
+      "titleTokens": "Puede usar {{tokens}} en el título; se rellenan en cada ticket."
     },
     "checklist": {
       "empty": "Sin elementos de lista.",
@@ -2397,14 +2602,52 @@
       "fromTicket": "Rellenado desde el ticket #{{number}}. No se guarda nada hasta que haga clic en Guardar.",
       "inlineImages": "La descripción contiene imágenes que pertenecen al ticket de origen. Pueden dejar de mostrarse si ese ticket se elimina. Quítelas o vuelva a subirlas si la plantilla debe sobrevivir al ticket.",
       "viewOnly": "Puede ver esta plantilla pero no modificarla.",
-      "referenceProblems": "Algunos campos de esta plantilla apuntan a elementos que ya no existen. Se dejan en blanco al usar la plantilla. Corríjalos y guarde:"
+      "referenceProblems": "Algunos campos de esta plantilla apuntan a elementos que ya no existen. Se dejan en blanco al usar la plantilla. Corríjalos y guarde:",
+      "inactiveWarning": "Inactiva: oculta en el selector de plantillas; todavía la usan {{count}} programaciones.",
+      "sharedWarning": "Los cambios se aplican a cada programación recurrente que use esta plantilla, a partir del siguiente ticket que cree.",
+      "boardChangeWarning": "Cambiar el tablero borra la prioridad y la categoría, y puede invalidar el estado de las programaciones que usan esta plantilla. Esas programaciones fallan hasta que las edite. Programaciones afectadas: {{schedules}}."
     },
     "errors": {
       "notFound": "Plantilla de ticket no encontrada",
       "duplicateName": "Ya existe una plantilla llamada {{name}}",
       "invalidReferences": "La plantilla hace referencia a un tablero, una categoría o una prioridad que no está disponible",
       "notAvailable": "Las plantillas de tickets no están disponibles",
-      "subcategoryNeedsCategory": "Una subcategoría requiere una categoría"
+      "subcategoryNeedsCategory": "Una subcategoría requiere una categoría",
+      "inUseBySchedules": "Usada por {{count}} programación(es) recurrente(s): {{schedules}}. Asígneles otra plantilla o archívelas primero."
+    },
+    "usage": {
+      "schedules": "Usada por {{count}} programaciones",
+      "paused": "en pausa",
+      "tickets": "{{count}} tickets creados con esta plantilla",
+      "scheduleThis": "Programar esta plantilla…"
+    }
+  },
+  "enums": {
+    "slaStatus": {
+      "paused": "En pausa",
+      "on_track": "Dentro del plazo",
+      "at_risk": "En riesgo",
+      "breached": "Incumplido",
+      "unknown": "Desconocido",
+      "response_breached": "SLA de respuesta incumplido",
+      "resolution_breached": "SLA de resolución incumplido"
+    }
+  },
+  "sla": {
+    "tooltip": {
+      "paused": "Temporizador de SLA: en pausa",
+      "status": "Estado del SLA: {{status}}",
+      "responseBreached": "Respuesta: plazo excedido por {{time}}",
+      "responseRemaining": "Respuesta: quedan {{time}}",
+      "resolutionBreached": "Resolución: plazo excedido por {{time}}",
+      "resolutionRemaining": "Resolución: quedan {{time}}"
+    },
+    "time": {
+      "minutes": "{{minutes}} min",
+      "hoursMinutes": "{{hours}} h {{minutes}} min",
+      "hours": "{{hours}} h",
+      "daysHours": "{{days}} d {{hours}} h",
+      "days": "{{days}} d"
     }
   }
 }

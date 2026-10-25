@@ -30,6 +30,8 @@ interface ContractLinePresetPickerProps {
   resetFiltersId: string;
   filtersClassName?: string;
   listClassName?: string;
+  /** Currency of the contract the preset is being added to. */
+  currencyCode: string;
 }
 
 /**
@@ -44,6 +46,7 @@ export const ContractLinePresetPicker: React.FC<ContractLinePresetPickerProps> =
   resetFiltersId,
   filtersClassName = 'flex flex-wrap items-center gap-2',
   listClassName = 'overflow-y-auto border rounded-md p-2 space-y-1',
+  currencyCode,
 }) => {
   const { t } = useTranslation('msp/contracts');
   const { money, symbol } = useCurrencyFormat();
@@ -228,7 +231,7 @@ export const ContractLinePresetPicker: React.FC<ContractLinePresetPickerProps> =
                             </span>
                             <span className="ml-2 text-[rgb(var(--color-text-900))] font-semibold">
                               {fixedConfig?.base_rate !== null && fixedConfig?.base_rate !== undefined
-                                ? money(Number(fixedConfig.base_rate))
+                                ? money(Number(fixedConfig.base_rate), currencyCode)
                                 : t('addLines.fixedConfig.notSet', { defaultValue: 'Not set' })}
                             </span>
                           </div>
@@ -236,24 +239,23 @@ export const ContractLinePresetPicker: React.FC<ContractLinePresetPickerProps> =
                             <Label htmlFor={`rate-override-${presetId}`} className="text-sm font-medium text-[rgb(var(--color-text-700))]">
                               {t('addLines.fixedConfig.overrideBaseRate', { defaultValue: 'Override Base Rate' })}
                             </Label>
-                            <div className="relative mt-1.5">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol()}</span>
-                              <Input
-                                id={`rate-override-${presetId}`}
-                                type="text"
-                                inputMode="decimal"
-                                value={getRateInput(presetId)}
-                                onChange={(e) => handleRateInputChange(presetId, e.target.value)}
-                                onBlur={() => handleRateInputBlur(presetId)}
-                                placeholder={fixedConfig?.base_rate
-                                  ? t('addLines.fixedConfig.defaultRatePlaceholder', {
-                                    defaultValue: 'Default: ${{rate}}',
-                                    rate: (fixedConfig.base_rate / 100).toFixed(2),
-                                  })
-                                  : t('addLines.fixedConfig.enterBaseRate', { defaultValue: 'Enter base rate' })}
-                                className="pl-8 h-9 text-sm"
-                              />
-                            </div>
+                            <Input
+                              leadingAdornment={symbol(currencyCode)}
+                              containerClassName="mt-1.5"
+                              id={`rate-override-${presetId}`}
+                              type="text"
+                              inputMode="decimal"
+                              value={getRateInput(presetId)}
+                              onChange={(e) => handleRateInputChange(presetId, e.target.value)}
+                              onBlur={() => handleRateInputBlur(presetId)}
+                              placeholder={fixedConfig?.base_rate
+                                ? t('addLines.fixedConfig.defaultRatePlaceholder', {
+                                  defaultValue: 'Default: {{rate}}',
+                                  rate: money(Number(fixedConfig.base_rate), currencyCode),
+                                })
+                                : t('addLines.fixedConfig.enterBaseRate', { defaultValue: 'Enter base rate' })}
+                              className="h-9 text-sm"
+                            />
                             <p className="text-xs text-muted-foreground mt-1">
                               {t('addLines.fixedConfig.leaveBlankDefault', {
                                 defaultValue: 'Leave blank to use the default rate',
@@ -354,23 +356,22 @@ export const ContractLinePresetPicker: React.FC<ContractLinePresetPickerProps> =
                                     <Label htmlFor={`hourly-rate-${presetId}-${service.service_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
                                       {t('addLines.hourlyConfig.hourlyRate', { defaultValue: 'Hourly Rate' })}
                                     </Label>
-                                    <div className="relative mt-1">
-                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol()}</span>
-                                      <Input
-                                        id={`hourly-rate-${presetId}-${service.service_id}`}
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={getServiceRateInput(presetId, service)}
-                                        onChange={(e) => handleServiceRateChange(presetId, service.service_id, e.target.value)}
-                                        onBlur={() => handleServiceRateBlur(presetId, service)}
-                                        placeholder={(service.default_rate! / 100).toFixed(2)}
-                                        className="pl-8 h-9 text-sm"
-                                      />
-                                    </div>
+                                    <Input
+                                      leadingAdornment={symbol(currencyCode)}
+                                      containerClassName="mt-1"
+                                      id={`hourly-rate-${presetId}-${service.service_id}`}
+                                      type="text"
+                                      inputMode="decimal"
+                                      value={getServiceRateInput(presetId, service)}
+                                      onChange={(e) => handleServiceRateChange(presetId, service.service_id, e.target.value)}
+                                      onBlur={() => handleServiceRateBlur(presetId, service)}
+                                      placeholder={(service.default_rate! / 100).toFixed(2)}
+                                      className="h-9 text-sm"
+                                    />
                                     <p className="text-xs text-muted-foreground mt-0.5">
                                       {t('addLines.hourlyConfig.defaultRate', {
-                                        defaultValue: 'Default: ${{rate}}',
-                                        rate: (service.default_rate! / 100).toFixed(2),
+                                        defaultValue: 'Default: {{rate}}',
+                                        rate: money(Number(service.default_rate), currencyCode),
                                       })}
                                     </p>
                                   </div>
@@ -396,23 +397,22 @@ export const ContractLinePresetPicker: React.FC<ContractLinePresetPickerProps> =
                                   <Label htmlFor={`rate-${presetId}-${service.service_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
                                     {t('addLines.usageConfig.ratePerUnit', { defaultValue: 'Rate (per unit)' })}
                                   </Label>
-                                  <div className="relative mt-1">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol()}</span>
-                                    <Input
-                                      id={`rate-${presetId}-${service.service_id}`}
-                                      type="text"
-                                      inputMode="decimal"
-                                      value={getServiceRateInput(presetId, service)}
-                                      onChange={(e) => handleServiceRateChange(presetId, service.service_id, e.target.value)}
-                                      onBlur={() => handleServiceRateBlur(presetId, service)}
-                                      placeholder={(service.default_rate! / 100).toFixed(2)}
-                                      className="pl-8 h-9 text-sm"
-                                    />
-                                  </div>
+                                  <Input
+                                    leadingAdornment={symbol(currencyCode)}
+                                    containerClassName="mt-1"
+                                    id={`rate-${presetId}-${service.service_id}`}
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={getServiceRateInput(presetId, service)}
+                                    onChange={(e) => handleServiceRateChange(presetId, service.service_id, e.target.value)}
+                                    onBlur={() => handleServiceRateBlur(presetId, service)}
+                                    placeholder={(service.default_rate! / 100).toFixed(2)}
+                                    className="h-9 text-sm"
+                                  />
                                   <p className="text-xs text-muted-foreground mt-0.5">
                                     {t('addLines.usageConfig.defaultRate', {
-                                      defaultValue: 'Default: ${{rate}}',
-                                      rate: (service.default_rate! / 100).toFixed(2),
+                                      defaultValue: 'Default: {{rate}}',
+                                      rate: money(Number(service.default_rate), currencyCode),
                                     })}
                                   </p>
                                 </div>
