@@ -1420,10 +1420,10 @@
     "availableBadge": "Tillgängligt: {{available}}",
     "availableByLocation": "Fritt lager per plats",
     "freeOfOnHand": "{{free}} lediga av {{onHand}}",
-    "stockHeld": "Bara {{free}} tillgängliga. {{held}} i lager är hårt spärrade för försäljningsorder och kan inte användas här.",
+    "stockHeld": "Bara {{free}} tillgängliga. {{held}} i lager är hårt spärrade för försäljningsorder eller projekt och kan inte användas här.",
     "stockInsufficient": "Bara {{onHand}} i lager, {{requested}} begärda.",
-    "reservedStockTitle": "Lagret är reserverat för en försäljningsorder",
-    "reservedStockMessage": "Bara {{free}} av den här produkten är lediga. {{reserved}} i lager är reserverade för försäljningsorder och du begärde {{requested}}. Om du lägger till det ändå tas lager som en försäljningsorder räknar med, och ordern kan bli underfylld.",
+    "reservedStockTitle": "Lagret är reserverat för en försäljningsorder eller ett projekt",
+    "reservedStockMessage": "Bara {{free}} av den här produkten är lediga. {{reserved}} i lager är reserverade för försäljningsorder eller projekt och du begärde {{requested}}. Om du lägger till det ändå tas lager som en försäljningsorder eller ett projekt räknar med, och det kan bli underfyllt.",
     "reservedStockConfirm": "Lägg till ändå"
   },
   "watchList": {

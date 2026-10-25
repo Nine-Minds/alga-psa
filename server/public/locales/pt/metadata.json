@@ -212,7 +212,10 @@
             "title": "Tarefa do Projeto"
           }
         },
-        "fallbackTitle": "Detalhes do projeto"
+        "fallbackTitle": "Detalhes do projeto",
+        "staging": {
+          "title": "Preparação do projeto"
+        }
       },
       "title": "Projetos",
       "templates": {

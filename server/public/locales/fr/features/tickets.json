@@ -1412,10 +1412,10 @@
     "availableBadge": "Disponible : {{available}}",
     "availableByLocation": "Stock libre par emplacement",
     "freeOfOnHand": "{{free}} libres sur {{onHand}}",
-    "stockHeld": "Seulement {{free}} disponibles. {{held}} en stock sont bloqués fermement pour des commandes clients et ne peuvent pas être utilisés ici.",
+    "stockHeld": "Seulement {{free}} disponibles. {{held}} en stock sont bloqués fermement pour des commandes clients ou des projets et ne peuvent pas être utilisés ici.",
     "stockInsufficient": "Seulement {{onHand}} en stock, {{requested}} demandés.",
-    "reservedStockTitle": "Le stock est réservé pour une commande client",
-    "reservedStockMessage": "Seulement {{free}} de ce produit sont libres. {{reserved}} en stock sont réservés pour des commandes clients et vous en avez demandé {{requested}}. L'ajouter quand même prélève du stock sur lequel une commande client compte et peut la laisser incomplète.",
+    "reservedStockTitle": "Le stock est réservé pour une commande client ou un projet",
+    "reservedStockMessage": "Seulement {{free}} de ce produit sont libres. {{reserved}} en stock sont réservés pour des commandes clients ou des projets et vous en avez demandé {{requested}}. L'ajouter quand même prélève du stock sur lequel une commande client ou un projet compte et peut le laisser incomplet.",
     "reservedStockConfirm": "Ajouter quand même"
   },
   "watchList": {

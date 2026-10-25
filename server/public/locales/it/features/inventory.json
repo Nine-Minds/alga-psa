@@ -1713,7 +1713,11 @@
       "submit": "Reintegra"
     },
     "printLabel": "Stampa etichetta",
-    "printWithTemplate": "Stampa con {{code}}"
+    "printWithTemplate": "Stampa con {{code}}",
+    "claimant": {
+      "project": "Progetto {{number}}",
+      "salesOrder": "Ordine di vendita {{number}}"
+    }
   },
   "transfers": {
     "addLine": "Aggiungi riga",

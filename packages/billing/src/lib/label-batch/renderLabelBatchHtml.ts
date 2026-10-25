@@ -67,7 +67,7 @@ export function assertCanonicalLabelUrl(viewModel: LabelViewModel): void {
     !matched ||
     matched.entityType !== viewModel.entityType ||
     matched.id !== viewModel.recordId ||
-    viewModel.url !== recordUrl(viewModel.entityType, viewModel.recordId, origin)
+    viewModel.url !== recordUrl(viewModel.entityType, viewModel.recordId, origin, matched.projectId ? { projectId: matched.projectId } : {})
   ) {
     throw new LabelRenderError('Label URL is not the canonical record URL.');
   }
@@ -101,6 +101,7 @@ export function buildLabelModel(
     display: {
       assetLine: secondaryIdentifier ? `Asset ${secondaryIdentifier}` : null,
       serialLine: serialSuffix ? `S/N \u2026${serialSuffix}` : null,
+      sequenceLine: viewModel.sequence ? `Box ${viewModel.sequence.n} of ${viewModel.sequence.total}` : null,
     },
   };
 }

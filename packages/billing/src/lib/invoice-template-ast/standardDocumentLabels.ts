@@ -79,10 +79,33 @@ export const STANDARD_DOCUMENT_LABELS: readonly TemplateI18nRef[] = [
   { i18nKey: 'labels.yourPoNumber', defaultValue: 'Your PO #' },
   { i18nKey: 'labels.serialNumbers', defaultValue: 'Serial numbers' },
   { i18nKey: 'labels.allocatedSerialsNote', defaultValue: 'Allocated serial numbers; subject to change at fulfillment.' },
+  { i18nKey: 'labels.stagingManifestTitle', defaultValue: 'PACKING MANIFEST' },
+  { i18nKey: 'labels.boxNumber', defaultValue: 'Box no.' },
+  { i18nKey: 'labels.project', defaultValue: 'Project' },
+  { i18nKey: 'labels.client', defaultValue: 'Client' },
+  { i18nKey: 'labels.task', defaultValue: 'Task' },
+  { i18nKey: 'labels.status', defaultValue: 'Status' },
+  { i18nKey: 'labels.sealedOn', defaultValue: 'Sealed' },
+  { i18nKey: 'labels.sealedBy', defaultValue: 'Sealed by' },
+  { i18nKey: 'labels.location', defaultValue: 'Location' },
+  { i18nKey: 'labels.checked', defaultValue: 'Checked' },
+  { i18nKey: 'labels.item', defaultValue: 'Item' },
+  { i18nKey: 'labels.skuOrTag', defaultValue: 'SKU / tag' },
+  { i18nKey: 'labels.serialNumber', defaultValue: 'Serial number' },
+  { i18nKey: 'labels.owner', defaultValue: 'Owner' },
+  { i18nKey: 'labels.ownerMsp', defaultValue: 'MSP' },
+  { i18nKey: 'labels.ownerClient', defaultValue: 'Client' },
+  { i18nKey: 'labels.statusOpen', defaultValue: 'Open' },
+  { i18nKey: 'labels.statusSealed', defaultValue: 'Sealed' },
 ];
 
 const byKey = new Map(STANDARD_DOCUMENT_LABELS.map((label) => [label.i18nKey, label] as const));
-const byText = new Map(STANDARD_DOCUMENT_LABELS.map((label) => [label.defaultValue, label] as const));
+// Several labels share English text (e.g. "Client" is both the client field and the
+// client owner); text lookup resolves to the first, most general one.
+const byText = new Map<string, TemplateI18nRef>();
+for (const label of STANDARD_DOCUMENT_LABELS) {
+  if (!byText.has(label.defaultValue)) byText.set(label.defaultValue, label);
+}
 
 export const getStandardDocumentLabel = (i18nKey: string): TemplateI18nRef | undefined => byKey.get(i18nKey);
 
