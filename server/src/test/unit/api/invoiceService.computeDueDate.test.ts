@@ -12,6 +12,8 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
     ...actual,
     tenantDb: () => ({
       table: (name: string) => ({
+        // Tenant default (Billing Settings): none configured in these tests.
+        first: async () => undefined,
         where: () => ({
           first: async () => (name === 'clients' ? rows.client : rows.profile),
         }),

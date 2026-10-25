@@ -1408,7 +1408,15 @@
     "selectUnit": "Einheit zum Liefern auswählen...",
     "onHandByLocation": "Bestand nach Standort",
     "catalogUnitCost": "Katalogstückkosten",
-    "costNotConfigured": "Nicht konfiguriert"
+    "costNotConfigured": "Nicht konfiguriert",
+    "availableBadge": "Verfügbar: {{available}}",
+    "availableByLocation": "Freier Bestand nach Standort",
+    "freeOfOnHand": "{{free}} frei von {{onHand}}",
+    "stockHeld": "Nur {{free}} verfügbar. {{held}} vorrätige Stück sind für Kundenaufträge fest gesperrt und können hier nicht verwendet werden.",
+    "stockInsufficient": "Nur {{onHand}} auf Lager, {{requested}} angefordert.",
+    "reservedStockTitle": "Bestand ist für einen Kundenauftrag reserviert",
+    "reservedStockMessage": "Nur {{free}} dieses Produkts sind frei. {{reserved}} vorrätige Stück sind für Kundenaufträge reserviert, angefordert wurden {{requested}}. Wenn Sie sie trotzdem hinzufügen, entnehmen Sie Bestand, auf den ein Kundenauftrag zählt, und der Auftrag kann unterversorgt bleiben.",
+    "reservedStockConfirm": "Trotzdem hinzufügen"
   },
   "watchList": {
     "title": "Beobachtungsliste",

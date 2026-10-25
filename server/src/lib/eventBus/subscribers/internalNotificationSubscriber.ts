@@ -1,3 +1,4 @@
+import { isInteractiveUserType } from '@alga-psa/types';
 
 import { readAssignedTeamId } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
@@ -1825,7 +1826,10 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
             db.raw("CONCAT(first_name, ' ', last_name) as display_name"),
           )
           .whereIn('user_id', resolvedMentionedUserIds);
-        const mentionedUsersToNotify = mentionedUsers.filter((mentionedUser) =>
+        // Non-interactive (service) users have no UI inbox, so a mention never notifies them.
+        const mentionedUsersToNotify = mentionedUsers
+          .filter((mentionedUser) => isInteractiveUserType(mentionedUser.user_type) || !mentionedUser.user_type)
+          .filter((mentionedUser) =>
           shouldCreateTicketCommentNotification(
             suppression,
             mentionedUser.user_type === 'client' ? 'contact' : 'internal',

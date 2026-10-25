@@ -2938,7 +2938,8 @@
     "emptyState": "No users available.",
     "roles": {
       "client": "Client User",
-      "internal": "Internal User"
+      "internal": "Internal User",
+      "service": "Service"
     },
     "badge": {
       "inactive": "Inactive"

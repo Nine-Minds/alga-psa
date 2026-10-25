@@ -1,7 +1,9 @@
 'use server'
 
+import { getRoleAssignmentViolation, isMspPrincipalUserType } from '@alga-psa/types';
 import { IPermission, IRole, IPolicy, IUserRole, IUserWithRoles, ICondition, DeletionValidationResult } from '@alga-psa/types';
 import { ITicket } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 import { PolicyEngine } from '../lib/policy/PolicyEngine';
 import { USER_ATTRIBUTES, TICKET_ATTRIBUTES } from '../lib/attributes/EntityAttributes';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
@@ -143,7 +145,7 @@ async function checkClientPortalRoleScope(
   targetUser: { user_type?: string; contact_id?: string | null } | undefined,
   role: IRole | undefined
 ): Promise<AuthActionError | null> {
-  if (currentUser.user_type !== 'client') {
+  if (isMspPrincipalUserType(currentUser.user_type)) {
     return null;
   }
 
@@ -155,7 +157,7 @@ async function checkClientPortalRoleScope(
     return permissionError('Permission denied: Client portal admins may only manage client portal roles.', 'msp/settings:errors.security.permissions.portalRolesOnly');
   }
 
-  if (targetUser.user_type !== 'client') {
+  if (!isClientUserType(targetUser.user_type)) {
     return permissionError('Permission denied: Client portal admins may only manage client portal users.', 'msp/settings:errors.security.permissions.portalUsersOnly');
   }
 
@@ -450,11 +452,13 @@ export const assignRoleToUser = withAuth(async (currentUser, { tenant }, userId:
         }
 
         // Validate role compatibility based on user type
-        if (user.user_type === 'internal' && !role.msp) {
+        // LEVERAGE: pattern role-assignment-user-type — same decision in policyActions.assignRoleToUser and users roleActions.assignRoleToUser
+        const roleViolation = getRoleAssignmentViolation(user.user_type, role);
+        if (roleViolation === 'portal_role_on_msp_user') {
             return actionError('Cannot assign a client portal role to an MSP user.', 'msp/settings:errors.roles.portalRoleOnMspUser');
         }
 
-        if (user.user_type === 'client' && !role.client) {
+        if (roleViolation === 'msp_role_on_portal_user') {
             return actionError('Cannot assign an MSP role to a client portal user.', 'msp/settings:errors.roles.mspRoleOnPortalUser');
         }
 

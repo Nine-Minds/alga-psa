@@ -532,8 +532,9 @@ function makeFakeTrx(present: ReadonlySet<string>) {
       },
       first: async () => {
         ops.push({ table, op: 'first' });
-        // assignedClient lookup returns null (no FK to clients)
-        return null;
+        // The interactive-target guard reads users.user_type; the target is a
+        // regular internal user. assignedClient lookup returns null.
+        return table === 'users' ? { user_type: 'internal' } : null;
       },
     };
     return chain;

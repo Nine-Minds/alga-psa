@@ -1,5 +1,7 @@
 'use server';
 
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { isMspPrincipalUserType } from '@alga-psa/types';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
@@ -293,7 +295,7 @@ async function resolveClientVisibility(
   tenant: string,
   user: IUserWithRoles
 ): Promise<ContactVisibilityContext | null | undefined> {
-  if (user.user_type !== 'client') return undefined;
+  if (isMspPrincipalUserType(user.user_type)) return undefined;
   if (!user.contact_id) return null;
   try {
     return await getClientContactVisibilityContext(trx, tenant, user.contact_id);
@@ -1400,6 +1402,11 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
             source: TICKET_ACTIVITY_SOURCE.UI,
           });
         }
+      }
+
+      // Human-work guard: only when this write changes assigned_to (legacy references untouched).
+      if (isChangingAssignment && updateData.assigned_to) {
+        await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to]);
       }
 
       // Changing assigned_to needs the ticket_resources rows keyed to the old

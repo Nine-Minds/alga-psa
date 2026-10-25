@@ -3,6 +3,7 @@
  * Handles all time entry-related database operations for the REST API
  */
 
+import { assertHumanWorkAssignee, assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
 import {
@@ -309,6 +310,9 @@ export class TimeEntryService extends BaseService<any> {
       ]);
     }
 
+    // Human-work guard: the entry owner is the (effective) caller and must be a licensed user.
+    await assertHumanWorkOwner(knex, context.tenant, context.userId, 'user_id');
+
     const userTimeZone = await resolveUserTimeZone(knex, context.tenant, context.userId);
     const { work_date, work_timezone } = computeWorkDateFields(data.start_time, userTimeZone);
     
@@ -412,6 +416,12 @@ export class TimeEntryService extends BaseService<any> {
     }
 
     this.assertServiceIdPresent(data.service_id ?? existing.service_id);
+
+    // Human-work guard: only when this write changes the owner.
+    const requestedOwner = (data as { user_id?: string | null }).user_id;
+    if (requestedOwner && requestedOwner !== existing.user_id) {
+      await assertHumanWorkAssignee(knex, context.tenant, [requestedOwner]);
+    }
 
     // Extract is_billable from data as it's not a database column
     const { is_billable, ...dataWithoutBillable } = data;
@@ -578,7 +588,7 @@ export class TimeEntryService extends BaseService<any> {
 
   async bulkDeleteTimeEntries(data: BulkDeleteTimeEntryData, context: ServiceContext): Promise<any[]> {
     const results: { success: boolean; error?: string; entry_id: string }[] = [];
-    
+
     for (const entryId of data.entry_ids) {
       try {
         await this.delete(entryId, context);
@@ -816,7 +826,11 @@ export class TimeEntryService extends BaseService<any> {
   async approveTimeEntries(data: ApproveTimeEntriesData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
     const results: { success: boolean; error?: string; entry_id: string }[] = [];
-    
+
+    // Human-work guard: approval requires a human approver. Checked before the per-entry
+    // loop, whose catch would otherwise swallow the error into a per-entry failure.
+    await assertHumanWorkOwner(knex, context.tenant, context.userId, 'approved_by');
+
     for (const entryId of data.entry_ids) {
       try {
         // First check if the entry exists
@@ -1119,6 +1133,8 @@ export class TimeEntryService extends BaseService<any> {
 
     if (!timeSheet) {
       // Create new time sheet
+      // Human-work guard (R5.3): never create a time sheet for a non-internal user.
+      await assertHumanWorkAssignee(knex, context.tenant, [userId]);
       const [newTimeSheet] = await tenantDb(knex, context.tenant).table('time_sheets')
         .insert({
           period_id: period.period_id,
