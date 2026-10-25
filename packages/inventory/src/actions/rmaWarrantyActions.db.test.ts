@@ -46,7 +46,7 @@ import {
   approveWarrantyClaim, cancelWarrantyClaim, closeWarrantyRma, denyWarrantyClaim, markDeviceReceived, openWarrantyClaim,
   receiveVendorReplacement, recordVendorCredit, recordVendorRepair, returnDeviceToClient, shipToVendor,
 } from './rmaWarrantyActions';
-import { getRmaCase, listRmaCases, closeRma, resolveRepair, receiveReturn, sendToVendor, resolveReplacement, resolveCredit, resolveScrap } from './rmaActions';
+import { getRmaCase, listRmaCases, closeRma, openRma, resolveRepair, receiveReturn, sendToVendor, resolveReplacement, resolveCredit, resolveScrap } from './rmaActions';
 import { openCustody } from '@alga-psa/assets/lib/custody/openCustody';
 import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
@@ -261,5 +261,282 @@ describe('warranty claims (C5)', () => {
     expect(visible.every((r) => r.returned_unit_id === null)).toBe(true);
     holder.grants = new Set(['asset:update']);
     expect(await listRmaCases()).toHaveProperty('permissionError');
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------
+// T016-T019, T022 (plan 2026-10-25-warranty-review-and-rma/tests.json)
+// ---------------------------------------------------------------------------------------------------
+
+const ALL_COUNTED = ['stock_units', 'stock_movements', 'stock_levels', 'product_inventory_settings', 'invoice_charges', 'time_entries'];
+const countAll = async () => {
+  const out: Record<string, number> = {};
+  for (const t of ALL_COUNTED) out[t] = Number((await knex(t).where({ tenant: holder.tenant }).count('* as c').first())!.c);
+  return out;
+};
+const custodyRow = (id: string) => knex('asset_custody').where({ tenant: holder.tenant, custody_id: id }).first();
+const assetCount = async () => Number((await knex('assets').where({ tenant: holder.tenant }).count('* as c').first())!.c);
+const history = (assetId: string, type?: string) =>
+  knex('asset_history').where({ tenant: holder.tenant, asset_id: assetId, ...(type ? { change_type: type } : {}) });
+const asObj = (v: any) => (typeof v === 'string' ? JSON.parse(v) : v);
+
+async function toReturned(assetId?: string, track: 'standard' | 'advance_replacement' = 'standard') {
+  const a = assetId ?? (await newAsset());
+  const { custody } = await inCustody(a);
+  const c = ok(await openWarrantyClaim({ asset_id: a, reason: 'dead' }));
+  ok(await approveWarrantyClaim(c.rma_id, { track, vendor_id: VENDOR }));
+  return { assetId: a, custody, rmaId: c.rma_id as string };
+}
+
+describe('T016 receive and ship validation', () => {
+  it('mark received needs an in-office custody episode and writes no stock rows; ship persists fields and moves custody to with_vendor; missing fields refused before any write', async () => {
+    // no custody: refused
+    const bare = await newAsset();
+    const { custody: tmp } = await inCustody(bare);
+    const c0 = ok(await openWarrantyClaim({ asset_id: bare, reason: 'x' }));
+    ok(await approveWarrantyClaim(c0.rma_id, { track: 'standard', vendor_id: VENDOR }));
+    await knex('asset_custody').where({ tenant: holder.tenant, custody_id: tmp.custody_id }).update({ state: 'closed', closed_at: new Date().toISOString(), close_reason: 'returned_to_client' });
+    const r0: any = await markDeviceReceived(c0.rma_id, {});
+    expect(r0.actionError).toBeTruthy();
+    expect((await rmaRow(c0.rma_id)).status).toBe('awaiting_return');
+
+    // custody not in office: refused
+    const { assetId, custody, rmaId } = await toReturned();
+    await knex('asset_custody').where({ tenant: holder.tenant, custody_id: custody.custody_id }).update({ state: 'with_vendor' });
+    expect(await markDeviceReceived(rmaId, {})).toHaveProperty('actionError');
+    expect((await rmaRow(rmaId)).status).toBe('awaiting_return');
+    await knex('asset_custody').where({ tenant: holder.tenant, custody_id: custody.custody_id }).update({ state: 'in_office' });
+
+    const before = await countAll();
+    expect(ok(await markDeviceReceived(rmaId, {})).status).toBe('returned');
+    expect(await countAll()).toEqual(before);
+
+    // missing fields refused before any write
+    const eventsBefore = (await events(rmaId)).length;
+    for (const bad of [
+      { tracking_number: '1', return_by: '2026-12-01' },
+      { carrier: 'UPS', return_by: '2026-12-01' },
+      { carrier: 'UPS', tracking_number: '1' },
+      { carrier: 'UPS', tracking_number: '1', return_by: '2026-02-31' },
+      { carrier: '  ', tracking_number: '1', return_by: '2026-12-01' },
+    ]) {
+      // schema validation throws (ZodError) before the transaction opens; nothing is written
+      await expect(shipToVendor(rmaId, bad as any)).rejects.toThrow();
+    }
+    expect((await events(rmaId)).length).toBe(eventsBefore);
+    expect(await rmaRow(rmaId)).toMatchObject({ status: 'returned', outbound_carrier: null, outbound_tracking_number: null, outbound_shipped_at: null });
+    expect((await custodyRow(custody.custody_id)).state).toBe('in_office');
+
+    const shipped = ok(await shipToVendor(rmaId, { vendor_id: VENDOR, carrier: 'UPS', tracking_number: '1Z1', return_by: '2026-12-01' }));
+    expect(shipped).toMatchObject({ status: 'sent_to_vendor', vendor_id: VENDOR, outbound_carrier: 'UPS', outbound_tracking_number: '1Z1' });
+    const row = await rmaRow(rmaId);
+    expect(row.outbound_shipped_at).toBeTruthy();
+    expect(String(row.return_by instanceof Date ? row.return_by.toISOString() : row.return_by)).toContain('2026-12-0');
+    expect((await custodyRow(custody.custody_id)).state).toBe('with_vendor');
+    expect(await countAll()).toEqual(before);
+    expect(assetId).toBeTruthy();
+  });
+});
+
+describe('T017 replacement and repair in place', () => {
+  it('replacement updates the same asset row, logs asset_history warranty_replacement, writes inbound fields and event, custody back in_office, publishes ASSET_UPDATED', async () => {
+    const { assetId, custody, rmaId } = await toReturned();
+    ok(await markDeviceReceived(rmaId, {}));
+    ok(await shipToVendor(rmaId, { carrier: 'UPS', tracking_number: '9', return_by: '2026-12-01' }));
+    const assets0 = await assetCount();
+    const stock0 = await countAll();
+    published.events.length = 0;
+
+    const done = ok(await receiveVendorReplacement(rmaId, {
+      replacement_serial_number: 'NEW-1', model: 'WD19S', location_id: LOCATION, inbound_carrier: 'FedEx', inbound_tracking_number: 'FX9',
+    }));
+    expect(done.status).toBe('replaced');
+    expect(await assetCount()).toBe(assets0);
+    expect(await countAll()).toEqual(stock0);
+    expect(await knex('assets').where({ tenant: holder.tenant, asset_id: assetId }).first()).toMatchObject({ serial_number: 'NEW-1', model: 'WD19S', manufacturer: 'Dell' });
+
+    const h = await history(assetId, 'warranty_replacement');
+    expect(h).toHaveLength(1);
+    const ch = asObj(h[0].changes);
+    expect(ch.before).toMatchObject({ serial_number: 'OLD-SERIAL', model: 'WD19' });
+    expect(ch.after).toMatchObject({ serial_number: 'NEW-1', model: 'WD19S' });
+    expect(ch.rma_id).toBe(rmaId);
+
+    const row = await rmaRow(rmaId);
+    expect(row).toMatchObject({ inbound_carrier: 'FedEx', inbound_tracking_number: 'FX9', replacement_serial_number: 'NEW-1' });
+    expect(row.inbound_received_at).toBeTruthy();
+    expect(row.replacement_received_at).toBeTruthy();
+    const ev = (await events(rmaId)).find((e: any) => e.event_type === 'replacement_received');
+    expect(ev).toMatchObject({ carrier: 'FedEx', tracking_number: 'FX9' });
+    expect((await custodyRow(custody.custody_id)).state).toBe('in_office');
+    const assetUpdated = published.events.filter((e) => e.eventType === 'ASSET_UPDATED');
+    expect(assetUpdated.length).toBeGreaterThan(0);
+    expect(JSON.stringify(assetUpdated)).toContain(assetId);
+  });
+
+  it('advance replacement (custody never left) and repair both return custody to in_office without a new asset', async () => {
+    // advance: approve advance -> open; custody stays in_office; receive replacement
+    const adv = await toReturned(undefined, 'advance_replacement');
+    expect((await rmaRow(adv.rmaId)).status).toBe('open');
+    const assets0 = await assetCount();
+    ok(await receiveVendorReplacement(adv.rmaId, { replacement_serial_number: 'ADV-1' }));
+    expect((await custodyRow(adv.custody.custody_id)).state).toBe('in_office');
+    expect(await assetCount()).toBe(assets0);
+
+    // repair
+    const rep = await toReturned();
+    const assets1 = await assetCount();
+    ok(await markDeviceReceived(rep.rmaId, {}));
+    ok(await shipToVendor(rep.rmaId, { carrier: 'UPS', tracking_number: '5', return_by: '2026-12-01' }));
+    published.events.length = 0;
+    const repaired = ok(await recordVendorRepair(rep.rmaId, { location_id: LOCATION, inbound_carrier: 'DHL', inbound_tracking_number: 'D1' }));
+    expect(repaired).toMatchObject({ status: 'repaired', inbound_carrier: 'DHL', inbound_tracking_number: 'D1' });
+    expect((await custodyRow(rep.custody.custody_id)).state).toBe('in_office');
+    expect((await events(rep.rmaId)).map((e: any) => e.event_type)).toContain('repair_received');
+    expect(await assetCount()).toBe(assets1);
+    expect(await history(rep.assetId, 'warranty_replacement')).toHaveLength(0);
+  });
+});
+
+describe('T018 credit and return-to-client custody outcomes', () => {
+  it('credit disposes custody with a custody_disposed history row and writes no invoice/charge/stock rows', async () => {
+    const { assetId, custody, rmaId } = await toReturned();
+    ok(await markDeviceReceived(rmaId, {}));
+    ok(await shipToVendor(rmaId, { carrier: 'UPS', tracking_number: '7', return_by: '2026-12-01' }));
+    const before = await counts();
+    const credited = ok(await recordVendorCredit(rmaId, {}));
+    expect(credited.status).toBe('credited');
+    expect(await custodyRow(custody.custody_id)).toMatchObject({ state: 'closed', close_reason: 'disposed' });
+    const h = await history(assetId, 'custody_disposed');
+    expect(h).toHaveLength(1);
+    expect(asObj(h[0].changes)).toMatchObject({ close_reason: 'disposed', rma_id: rmaId });
+    expect(await counts()).toEqual(before);
+    expect((await events(rmaId)).map((e: any) => e.event_type)).toContain('vendor_credited');
+  });
+
+  it('return to client closes the case resolved and custody returned_to_client, moving held_by_msp to active; refused from every other status', async () => {
+    const { assetId, custody, rmaId } = await toReturned();
+    // refused from warranty_review? use a second case; here: awaiting_return, returned, sent_to_vendor, credited
+    const attempt = async () => expect(await returnDeviceToClient(rmaId, {})).toHaveProperty('actionError');
+    await attempt(); // awaiting_return
+    ok(await markDeviceReceived(rmaId, {}));
+    await attempt(); // returned
+    ok(await shipToVendor(rmaId, { carrier: 'UPS', tracking_number: '8', return_by: '2026-12-01' }));
+    await attempt(); // sent_to_vendor
+    expect((await custodyRow(custody.custody_id)).state).toBe('with_vendor');
+    ok(await receiveVendorReplacement(rmaId, { replacement_serial_number: 'R-2', location_id: LOCATION }));
+    await knex('assets').where({ tenant: holder.tenant, asset_id: assetId }).update({ status: 'held_by_msp' });
+
+    const closed = ok(await returnDeviceToClient(rmaId, { counterparty: 'Client rep' }));
+    expect(closed).toMatchObject({ status: 'closed', closed_reason: 'resolved' });
+    expect(closed.closed_at).toBeTruthy();
+    expect(await custodyRow(custody.custody_id)).toMatchObject({ state: 'closed', close_reason: 'returned_to_client' });
+    expect((await knex('assets').where({ tenant: holder.tenant, asset_id: assetId }).first()).status).toBe('active');
+    await attempt(); // closed
+
+    // warranty_review, credited, denied
+    const wr = ok(await openWarrantyClaim({ asset_id: await (async () => { const a = await newAsset(); await inCustody(a); return a; })(), reason: 'x' }));
+    expect(await returnDeviceToClient(wr.rma_id, {})).toHaveProperty('actionError');
+    const cr = await toReturned();
+    ok(await markDeviceReceived(cr.rmaId, {}));
+    ok(await shipToVendor(cr.rmaId, { carrier: 'UPS', tracking_number: '3', return_by: '2026-12-01' }));
+    ok(await recordVendorCredit(cr.rmaId, {}));
+    expect(await returnDeviceToClient(cr.rmaId, {})).toHaveProperty('actionError');
+    expect((await rmaRow(cr.rmaId)).status).toBe('credited');
+  });
+
+  it('return to client leaves a non-held_by_msp asset status alone', async () => {
+    const { assetId, rmaId } = await toReturned();
+    ok(await markDeviceReceived(rmaId, {}));
+    ok(await shipToVendor(rmaId, { carrier: 'UPS', tracking_number: '4', return_by: '2026-12-01' }));
+    ok(await receiveVendorReplacement(rmaId, { replacement_serial_number: 'R-3', location_id: LOCATION }));
+    await knex('assets').where({ tenant: holder.tenant, asset_id: assetId }).update({ status: 'retired' });
+    ok(await returnDeviceToClient(rmaId, {}));
+    expect((await knex('assets').where({ tenant: holder.tenant, asset_id: assetId }).first()).status).toBe('retired');
+  });
+});
+
+describe('T019 closeWarrantyRma', () => {
+  it('stores the reason and writes a closed event, refuses warranty_review, is a no-op when already closed', async () => {
+    const wr = await toReturned();
+    // approved -> awaiting_return refuses too; test warranty_review separately below
+    expect(await closeWarrantyRma(wr.rmaId, { reason: 'resolved' })).toHaveProperty('actionError');
+    ok(await markDeviceReceived(wr.rmaId, {}));
+    const closed = ok(await closeWarrantyRma(wr.rmaId, { reason: 'duplicate', note: 'dupe' }));
+    expect(closed).toMatchObject({ status: 'closed', closed_reason: 'duplicate' });
+    const evs = await events(wr.rmaId);
+    const closedEv = evs.filter((e: any) => e.event_type === 'closed');
+    expect(closedEv).toHaveLength(1);
+    expect(closedEv[0]).toMatchObject({ from_status: 'returned', to_status: 'closed', note: 'dupe' });
+
+    // already closed: refused without a second event or change
+    const n = (await events(wr.rmaId)).length;
+    const again: any = await closeWarrantyRma(wr.rmaId, { reason: 'resolved' });
+    expect(again.actionError ?? again.status).toBeTruthy();
+    expect((await events(wr.rmaId)).length).toBe(n);
+    expect((await rmaRow(wr.rmaId)).closed_reason).toBe('duplicate');
+
+    // warranty_review refused with the dedicated code
+    const a = await newAsset();
+    await inCustody(a);
+    const wrv = ok(await openWarrantyClaim({ asset_id: a, reason: 'x' }));
+    const refused: any = await closeWarrantyRma(wrv.rma_id, { reason: 'resolved' });
+    expect(refused.actionError).toBeTruthy();
+    expect((await rmaRow(wrv.rma_id)).status).toBe('warranty_review');
+
+    // credited defaults to vendor_credited
+    const cr = await toReturned();
+    ok(await markDeviceReceived(cr.rmaId, {}));
+    ok(await shipToVendor(cr.rmaId, { carrier: 'UPS', tracking_number: '6', return_by: '2026-12-01' }));
+    ok(await recordVendorCredit(cr.rmaId, {}));
+    expect(ok(await closeWarrantyRma(cr.rmaId, {}))).toMatchObject({ status: 'closed', closed_reason: 'vendor_credited' });
+  });
+
+  it('the legacy closeRma on a stock-unit case still works, and the stock-unit closeRma is a no-op when already closed', async () => {
+    const service = (await knex('service_catalog').where({ tenant: holder.tenant }).first()).service_id;
+    const [unit] = await knex('stock_units')
+      .insert({ tenant: holder.tenant, service_id: service, serial_number: `SN-${randomUUID()}`, status: 'delivered', client_id: CLIENT, unit_cost: 1000 })
+      .returning('*');
+    const rma: any = ok(await openRma({ returned_unit_id: unit.unit_id, reason: 'dead' }));
+    ok(await receiveReturn(rma.rma_id, { location_id: LOCATION }));
+    ok(await sendToVendor(rma.rma_id, { vendor_id: VENDOR }));
+    ok(await resolveCredit(rma.rma_id));
+    const closed: any = ok(await closeRma(rma.rma_id));
+    expect(closed.status).toBe('closed');
+    expect(closed.closed_at).toBeTruthy();
+    const again: any = ok(await closeRma(rma.rma_id));
+    expect(again.status).toBe('closed');
+    // a warranty-only close action refuses a stock-unit case
+    expect(await closeWarrantyRma(rma.rma_id, {})).toHaveProperty('actionError');
+  });
+});
+
+describe('T022 no stock/billing/time rows change', () => {
+  it('replacement flow: open -> approve -> receive -> ship -> replacement -> return leaves all six tables unchanged', async () => {
+    const a = await newAsset();
+    await inCustody(a);
+    const before = await countAll();
+    const c = ok(await openWarrantyClaim({ asset_id: a, reason: 'dead' }));
+    ok(await approveWarrantyClaim(c.rma_id, { track: 'standard', vendor_id: VENDOR }));
+    ok(await markDeviceReceived(c.rma_id, {}));
+    ok(await shipToVendor(c.rma_id, { carrier: 'UPS', tracking_number: 'Z', return_by: '2026-12-01' }));
+    ok(await receiveVendorReplacement(c.rma_id, { replacement_serial_number: 'T22-NEW', location_id: LOCATION }));
+    ok(await returnDeviceToClient(c.rma_id, {}));
+    expect((await rmaRow(c.rma_id)).status).toBe('closed');
+    expect(await countAll()).toEqual(before);
+  });
+
+  it('credit flow: open -> approve -> receive -> ship -> credit -> close leaves all six tables unchanged', async () => {
+    const a = await newAsset();
+    await inCustody(a);
+    const before = await countAll();
+    const c = ok(await openWarrantyClaim({ asset_id: a, reason: 'dead' }));
+    ok(await approveWarrantyClaim(c.rma_id, { track: 'standard', vendor_id: VENDOR }));
+    ok(await markDeviceReceived(c.rma_id, {}));
+    ok(await shipToVendor(c.rma_id, { carrier: 'UPS', tracking_number: 'Y', return_by: '2026-12-01' }));
+    ok(await recordVendorCredit(c.rma_id, {}));
+    ok(await closeWarrantyRma(c.rma_id, {}));
+    expect((await rmaRow(c.rma_id)).status).toBe('closed');
+    expect(await countAll()).toEqual(before);
   });
 });

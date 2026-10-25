@@ -135,5 +135,10 @@
 - **Vendor conversation link.** The ticket-conversations branch is not merged, so the RMA ships without a link from the vendor email thread to the case. When it merges: link the thread to the ticket and mirror `rma_reference`, and retire the `generic` external-link mirror.
 - Overlap with C3: the RMA detail is still the `?rmaId=` dialog C3 added; C5 extends it (`RmaWarrantyPanel`) and does not add an `[id]` route.
 
-## Test status at hand-off
-Implemented: T001-T007, T009, T013-T015, T025, T027 (T004-T006, T009, T013-T015, T025, T027 live in the files named by `actualTestFile`, not the planned paths; T013-T015 and T027 are covered by the two inventory DB tests). T028/T031/T032/T034 written but not run. Not written: T008, T010-T012, T016-T024, T026, T029, T030; behaviours are partly covered by `rmaWarrantyActions.db.test.ts`. T033 needs bwip-js/jsqr/@zxing which are missing in this worktree (10 pre-existing label/barcode test failures, same without this branch).
+## Test status at hand-off (revised after review)
+All 34 tests are now written. T001-T027, T029, T030 and T033 were run and pass; T028/T031/T032/T034 are the Playwright spec (`server/src/test/e2e/warranty-rma.playwright.test.ts`), written but NOT run (no app server) and unverified.
+- DB tests ran against the scratch Postgres `c5_warranty_test` (a copy of the dev DB with other branches' migration rows deleted there only); the migration up/down/up (T011) ran on `c5_migration_test`, created from it and dropped afterwards. `20261025130200_add_warranty_permissions` is deliberately irreversible; the cycle test asserts the throw.
+- bwip-js, jsqr and @zxing/library are declared in packages/billing/package.json and the lockfile; a plain `npm install` installed them (no lockfile churn committed). The earlier 10 label/barcode failures were only these missing modules; the billing suite is now green (T033 and an HTML/PDF render of the RMA tag and return slip pass).
+- Server `tsc --noEmit` is clean and its file list includes packages/msp-composition/src/tickets/rmaTicketActions.ts. `tsc` and `npm run build` pass for types, event-schemas, inventory, assets, billing.
+- Known behaviour: `shipToVendor` with a missing carrier/tracking/return-by throws a ZodError (nothing written) rather than returning `{actionError}`.
+- T020's permission test inserts `inventory:read` itself if absent: when run alongside another DB file it was missing once (cause not isolated).

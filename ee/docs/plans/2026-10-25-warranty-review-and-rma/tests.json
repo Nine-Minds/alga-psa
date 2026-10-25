@@ -12,7 +12,9 @@
       "F005.2",
       "F005.3"
     ],
-    "implemented": true
+    "implemented": true,
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
   },
   {
     "id": "T002",
@@ -29,7 +31,9 @@
     "covers": [
       "F010.3"
     ],
-    "implemented": true
+    "implemented": true,
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
   },
   {
     "id": "T003",
@@ -42,7 +46,9 @@
     "covers": [
       "F024.1"
     ],
-    "implemented": true
+    "implemented": true,
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
   },
   {
     "id": "T004",
@@ -56,7 +62,9 @@
       "F022.2"
     ],
     "implemented": true,
-    "actualTestFile": "packages/inventory/src/lib/rmaPrintData.unit.test.ts"
+    "actualTestFile": "packages/inventory/src/lib/rmaPrintData.unit.test.ts",
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
   },
   {
     "id": "T005",
@@ -70,7 +78,9 @@
       "F022.1"
     ],
     "implemented": true,
-    "actualTestFile": "packages/billing/tests/rmaTemplates.test.ts"
+    "actualTestFile": "packages/billing/tests/rmaTemplates.test.ts",
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
   },
   {
     "id": "T006",
@@ -84,7 +94,9 @@
       "F023.1"
     ],
     "implemented": true,
-    "actualTestFile": "packages/billing/tests/rmaTemplates.test.ts"
+    "actualTestFile": "packages/billing/tests/rmaTemplates.test.ts",
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
   },
   {
     "id": "T007",
@@ -97,7 +109,9 @@
     "covers": [
       "F023.2"
     ],
-    "implemented": true
+    "implemented": true,
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
   },
   {
     "id": "T008",
@@ -113,7 +127,10 @@
       "F004.1",
       "F004.3"
     ],
-    "implemented": false
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/components/RmaManager.warranty.test.tsx",
+    "ranAgainst": "vitest, no DB"
   },
   {
     "id": "T009",
@@ -129,7 +146,9 @@
       "F020.3"
     ],
     "implemented": true,
-    "actualTestFile": "packages/assets/src/components/warranty/warrantyDisplay.test.ts"
+    "actualTestFile": "packages/assets/src/components/warranty/warrantyDisplay.test.ts",
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
   },
   {
     "id": "T010",
@@ -143,7 +162,9 @@
       "F028.1",
       "F028.2"
     ],
-    "implemented": false
+    "implemented": true,
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
   },
   {
     "id": "T011",
@@ -162,7 +183,10 @@
       "F002.1",
       "F004.2"
     ],
-    "implemented": false
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/actions/warrantyRmaSchema.db.test.ts + packages/inventory/src/actions/warrantyRmaMigration.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB); migration up/down/up on c5_migration_test (dropped afterwards)"
   },
   {
     "id": "T012",
@@ -175,7 +199,10 @@
     "covers": [
       "F002.2"
     ],
-    "implemented": false
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/actions/warrantyRmaSchema.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
   },
   {
     "id": "T013",
@@ -190,7 +217,9 @@
       "F003.2"
     ],
     "implemented": true,
-    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyActions.db.test.ts"
+    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyActions.db.test.ts",
+    "verified": true,
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
   },
   {
     "id": "T014",
@@ -206,7 +235,9 @@
       "F006.3"
     ],
     "implemented": true,
-    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyActions.db.test.ts"
+    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyActions.db.test.ts",
+    "verified": true,
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
   },
   {
     "id": "T015",
@@ -225,7 +256,9 @@
       "F008.2"
     ],
     "implemented": true,
-    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyActions.db.test.ts"
+    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyActions.db.test.ts",
+    "verified": true,
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
   },
   {
     "id": "T016",
@@ -243,7 +276,10 @@
       "F010.2",
       "F010.3"
     ],
-    "implemented": false
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyActions.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
   },
   {
     "id": "T017",
@@ -264,7 +300,10 @@
       "F025.1",
       "F025.2"
     ],
-    "implemented": false
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyActions.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
   },
   {
     "id": "T018",
@@ -281,7 +320,10 @@
       "F014.1",
       "F014.2"
     ],
-    "implemented": false
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyActions.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
   },
   {
     "id": "T019",
@@ -296,7 +338,10 @@
       "F015.2",
       "F015.3"
     ],
-    "implemented": false
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyActions.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
   },
   {
     "id": "T020",
@@ -311,7 +356,10 @@
       "F016.2",
       "F016.3"
     ],
-    "implemented": false
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyPermissions.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
   },
   {
     "id": "T021",
@@ -326,7 +374,10 @@
       "F017.2",
       "F017.3"
     ],
-    "implemented": false
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyPermissions.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
   },
   {
     "id": "T022",
@@ -339,7 +390,10 @@
     "covers": [
       "F029.1"
     ],
-    "implemented": false
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyActions.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
   },
   {
     "id": "T023",
@@ -353,7 +407,10 @@
       "F021.1",
       "F021.2"
     ],
-    "implemented": false
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/assets/src/actions/assetWarrantyProvenance.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
   },
   {
     "id": "T024",
@@ -367,7 +424,10 @@
       "F022.2",
       "F022.3"
     ],
-    "implemented": false
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/lib/rmaLabelProvider.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
   },
   {
     "id": "T025",
@@ -382,7 +442,9 @@
       "F023.3"
     ],
     "implemented": true,
-    "actualTestFile": "server/src/test/unit/inventoryRmaDocumentRoute.test.ts"
+    "actualTestFile": "server/src/test/unit/inventoryRmaDocumentRoute.test.ts",
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
   },
   {
     "id": "T026",
@@ -398,7 +460,9 @@
       "F027.1",
       "F027.2"
     ],
-    "implemented": false
+    "implemented": true,
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
   },
   {
     "id": "T027",
@@ -413,7 +477,9 @@
       "F026.2"
     ],
     "implemented": true,
-    "actualTestFile": "packages/inventory/src/actions/rmaActions.stockUnit.db.test.ts"
+    "actualTestFile": "packages/inventory/src/actions/rmaActions.stockUnit.db.test.ts",
+    "verified": true,
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
   },
   {
     "id": "T028",
@@ -435,7 +501,8 @@
       "F019.5"
     ],
     "implemented": true,
-    "note": "written, not run (no app server in this task)"
+    "verified": false,
+    "note": "UNVERIFIED: Playwright spec written, not run (no app server). Selectors and auth setup unchecked."
   },
   {
     "id": "T029",
@@ -451,7 +518,10 @@
       "F019.3",
       "F019.4"
     ],
-    "implemented": false
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/components/rma/RmaWarrantyPanel.test.tsx",
+    "ranAgainst": "vitest, no DB"
   },
   {
     "id": "T030",
@@ -464,7 +534,10 @@
     "covers": [
       "F024.2"
     ],
-    "implemented": false
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/lib/rma/publishRmaUpdated.unit.test.ts",
+    "ranAgainst": "vitest, no DB"
   },
   {
     "id": "T031",
@@ -481,7 +554,8 @@
       "F020.4"
     ],
     "implemented": true,
-    "note": "written, not run (no app server in this task)"
+    "verified": false,
+    "note": "UNVERIFIED: Playwright spec written, not run (no app server). Selectors and auth setup unchecked."
   },
   {
     "id": "T032",
@@ -498,7 +572,8 @@
       "F023.4"
     ],
     "implemented": true,
-    "note": "written, not run (no app server in this task)"
+    "verified": false,
+    "note": "UNVERIFIED: Playwright spec written, not run (no app server). Selectors and auth setup unchecked."
   },
   {
     "id": "T033",
@@ -514,7 +589,10 @@
     "coversOnlyAtE2E": [
       "F022.4"
     ],
-    "implemented": false
+    "implemented": true,
+    "verified": true,
+    "ranAgainst": "vitest, no DB",
+    "note": "RMA describe block added to labelBatch.e2e.test.ts (jsqr decode); PDF render also in packages/billing/tests/rmaDocumentActions.pdf.e2e.test.ts"
   },
   {
     "id": "T034",
@@ -531,6 +609,7 @@
       "F029.2"
     ],
     "implemented": true,
-    "note": "written, not run (no app server in this task)"
+    "verified": false,
+    "note": "UNVERIFIED: Playwright spec written, not run (no app server). Selectors and auth setup unchecked."
   }
 ]
