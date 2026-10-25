@@ -10,6 +10,8 @@ export interface AuthorizationReason {
   sourceType?: 'builtin' | 'bundle' | 'system';
   sourceId?: string;
   metadata?: Record<string, unknown>;
+  /** Set only on joint (two-subject) evaluations: whose evaluation produced this reason. */
+  subjectUserId?: string;
 }
 
 export interface AuthorizationSubject {
@@ -87,6 +89,13 @@ export type ContactVisibilityScope = TicketVisibilityScope;
 export interface AuthorizationEvaluationInput {
   contactVisibility?: ContactVisibilityScope | null;
   subject: AuthorizationSubject;
+  /**
+   * Optional second subject authorized together with `subject`. The call is
+   * allowed only if both subjects are allowed; each subject is evaluated
+   * (RBAC, record-level rules, narrowing, mutation guards) independently and the
+   * scopes are intersected. Omitted, evaluation is exactly the single-subject path.
+   */
+  jointSubject?: AuthorizationSubject;
   resource: AuthorizationResourceRef;
   record?: AuthorizationRecord;
   selectedClientIds?: string[];

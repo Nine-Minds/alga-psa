@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { isTenantSuspended, tenantDb } from '@alga-psa/db';
 import { shouldTouchApiKeyLastUsed } from '@alga-psa/auth';
 import { getConnection } from '../db/db';
+import { servicePrincipalKeyGate } from '@product/service-principals/entry';
 
 interface ApiKey {
   api_key_id: string;
@@ -19,6 +20,7 @@ interface ApiKey {
   metadata: Record<string, unknown> | null;
   usage_limit: number | null;
   usage_count: number;
+  agent_id?: string | null;
 }
 
 /**
@@ -203,13 +205,19 @@ export class ApiKeyServiceForApi {
     knex: Knex,
     tenant: string,
     userId: string
-  ): Promise<'user_inactive' | 'client_owner' | 'tenant_suspended' | null> {
+  ): Promise<'user_inactive' | 'client_owner' | 'owner_type_rejected' | 'tenant_suspended' | null> {
     const user = await tenantDb(knex, tenant)
       .table('users')
       .where({ user_id: userId })
       .first('is_inactive', 'user_type');
     if (!user || user.is_inactive) return 'user_inactive';
     if (user.user_type === 'client') return 'client_owner';
+    // Allow-list: an active internal owner passes. Any other owner type is
+    // admitted only if the edition boundary approves it (the CE stub never does).
+    if (user.user_type !== 'internal') {
+      const approved = await servicePrincipalKeyGate({ ...user, user_id: userId, tenant });
+      if (!approved) return 'owner_type_rejected';
+    }
     if (await isTenantSuspended(knex, tenant)) return 'tenant_suspended';
     return null;
   }

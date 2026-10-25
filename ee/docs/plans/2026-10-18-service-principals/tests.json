@@ -354,7 +354,7 @@
   {
     "id": "T037",
     "description": "Unit (CE build): with the oss entry, buildAuthenticatedApiContext rejects a key owned by a non-internal, non-client user, getKeyGateReason rejects it, and the @enterprise service-principal component stubs render null",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F097",
       "F098",
@@ -365,7 +365,7 @@
   {
     "id": "T038",
     "description": "Unit (static guard): no file outside ee/, packages/product-service-principals/ or packages/ee/ references service_principals, X-Alga-Act-As, the 'service' key purpose or the entitlement constant",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F096"
     ]
@@ -389,7 +389,7 @@
   {
     "id": "T041",
     "description": "Unit: authorization kernel joint-subject evaluation \u2014 allows only when both subjects allow; record-level rules evaluated for each subject; a single-subject call behaves exactly as today",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ]

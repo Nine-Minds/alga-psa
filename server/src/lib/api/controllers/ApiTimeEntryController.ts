@@ -34,7 +34,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import {
-  assertInternalApiUser,
+  assertApiPrincipal,
   AuthenticatedApiRequest,
   UnauthorizedError,
   ForbiddenError,
@@ -118,7 +118,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -205,7 +205,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -275,7 +275,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -365,7 +365,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -443,7 +443,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -526,7 +526,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -579,7 +579,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -657,7 +657,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -735,7 +735,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -788,7 +788,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -866,7 +866,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -944,7 +944,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 

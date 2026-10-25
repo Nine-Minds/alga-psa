@@ -113,4 +113,45 @@ describe('enforceApiRateLimit', () => {
       },
     });
   });
+
+  it('F005: honors a context-supplied rateLimitConfig override for the bucket and the decision', async () => {
+    tryConsumeMock.mockResolvedValue({ allowed: true, remaining: 7 });
+    apiRateLimitConfigGetterMock.mockImplementation(async (_t: string, _k: string, override?: unknown) => override ?? { maxTokens: 120, refillRate: 1 });
+    const override = { maxTokens: 10, refillRate: 0.5 };
+
+    const { enforceApiRateLimit } = await import('@/lib/api/rateLimit/enforce');
+    const decision = await enforceApiRateLimit('http://example.com/api/v1/tickets', {
+      tenant: 'tenant-1',
+      userId: 'user-1',
+      apiKeyId: 'key-1',
+      rateLimitSubjectId: 'sp:user-1',
+      rateLimitConfig: override,
+    });
+
+    expect(decision?.limit).toBe(10);
+    expect(tryConsumeMock).toHaveBeenCalledWith('api', 'tenant-1', 'sp:user-1', 1, override);
+  });
+
+  it('F005: without an override the calls are exactly the default calls', async () => {
+    tryConsumeMock.mockResolvedValue({ allowed: true, remaining: 100 });
+
+    const { enforceApiRateLimit } = await import('@/lib/api/rateLimit/enforce');
+    await enforceApiRateLimit('http://example.com/api/v1/tickets', {
+      tenant: 'tenant-1',
+      userId: 'user-1',
+      apiKeyId: 'key-1',
+    });
+    // A malformed override is ignored too.
+    await enforceApiRateLimit('http://example.com/api/v1/tickets', {
+      tenant: 'tenant-1',
+      userId: 'user-1',
+      apiKeyId: 'key-1',
+      rateLimitConfig: { maxTokens: 0, refillRate: NaN },
+    });
+
+    expect(apiRateLimitConfigGetterMock).toHaveBeenNthCalledWith(1, 'tenant-1', 'key-1');
+    expect(apiRateLimitConfigGetterMock).toHaveBeenNthCalledWith(2, 'tenant-1', 'key-1');
+    expect(tryConsumeMock).toHaveBeenNthCalledWith(1, 'api', 'tenant-1', 'key-1');
+    expect(tryConsumeMock).toHaveBeenNthCalledWith(2, 'api', 'tenant-1', 'key-1');
+  });
 });
