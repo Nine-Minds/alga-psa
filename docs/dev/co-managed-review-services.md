@@ -424,3 +424,13 @@ for a `Range: bytes=0-31` request, then test playback and the actual chapter
 control on every guide. A successful media check does not establish product
 acceptance; keep partial scenario results and their actual build revision
 visible beside each player.
+
+## Typechecked production launch
+
+Use `PORT=23374 bash scripts/dev/run-co-managed-review-app.sh` from the worktree
+as the registered `review-app` command. It emits the building phase, runs the
+server typecheck, then delegates to the installed production review launcher.
+The compilers run sequentially in the board-admitted application service;
+neither a successful typecheck nor an admitted launch establishes HTTP readiness.
+Freeze the checkout while the launch runs, and verify the resulting build stamp
+and actual HTTP response before recording acceptance.
