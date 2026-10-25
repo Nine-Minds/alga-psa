@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // getTicketPartyDisplayTags must authorize the caller's ticket before loading any tags, and refuse
-// a contact/client that is not the ticket's own. The kernel is faked with the one rule that matters
-// for client-portal users: they may only read tickets of their own client.
+// a contact/client that is not the ticket's own. The authorization kernel is REAL (builtin
+// contact_visibility rule); only the DB, the bundle rules and the portal visibility lookup are faked.
 
 let currentUser: any;
 
@@ -10,7 +10,6 @@ const hasPermissionMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
 const loadDisplayTagsForEntitiesMock = vi.fn();
-const authorizeResourceMock = vi.fn();
 let ticketRow: Record<string, unknown> | undefined;
 
 vi.mock('@alga-psa/auth', () => ({
@@ -33,19 +32,17 @@ vi.mock('@alga-psa/db', () => ({
   getConnection: vi.fn(),
 }));
 
-vi.mock('@alga-psa/authorization/kernel', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@alga-psa/authorization/kernel')>()),
-  createAuthorizationKernel: () => ({
-    authorizeResource: (...args: any[]) => authorizeResourceMock(...args),
-  }),
-}));
-
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => []),
 }));
 
 vi.mock('../lib/clientPortalVisibility.server', () => ({
-  getClientContactVisibilityContext: vi.fn(async () => ({ visibleBoardIds: undefined })),
+  getClientContactVisibilityContext: vi.fn(async () => ({
+    effectiveTicketScope: 'client',
+    contactId: 'contact-own',
+    clientId: 'client-own',
+    visibleBoardIds: null,
+  })),
 }));
 
 vi.mock('@alga-psa/tags/lib/loadDisplayTags', () => ({
@@ -144,11 +141,6 @@ describe('getTicketPartyDisplayTags authorization', () => {
       attributes: {},
       assigned_team_id: null,
     };
-    // Portal users only read their own client's tickets; MSP users read all.
-    authorizeResourceMock.mockImplementation(async (input: any) => ({
-      allowed:
-        currentUser.user_type !== 'client' || input.record.clientId === currentUser.clientId,
-    }));
     loadDisplayTagsForEntitiesMock.mockImplementation(async (_t, _tenant, _aud, groups: any[]) => {
       const map = new Map<string, unknown>();
       for (const g of groups) for (const id of g.ids) if (id) map.set(`${g.taggedType}:${id}`, chipsFor(g.taggedType, id));
@@ -231,10 +223,5 @@ describe('getTicketPartyDisplayTags authorization', () => {
       't.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id',
       't.contact_name_id', 't.billing_profile_id', 't.attributes', 't.assigned_team_id'
     );
-    expect(authorizeResourceMock.mock.calls[0][0].record).toMatchObject({
-      id: TICKET_ID,
-      clientId: OWN_CLIENT,
-      contactId: OWN_CONTACT,
-    });
   });
 });
