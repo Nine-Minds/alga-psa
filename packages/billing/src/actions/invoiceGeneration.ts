@@ -12,7 +12,9 @@ import { BillingEngine, UnresolvedCatalogPricingError } from '../lib/billing/bil
 import { reconcileWindowAttribution } from '../lib/billing/contractLineAttributionWriter';
 import { listUnmaterializedClientCadenceWindowLineIds } from '../lib/billing/clientCadenceWindowMaterialization';
 import {
+  chargeBelongsToScope,
   getCycleBillingProfileId,
+  type InvoiceProfileScope,
   resolveInvoiceProfileForAttribution,
   resolveInvoiceProfileScope,
   scopeChargesToProfile,
@@ -2502,6 +2504,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     client_id,
     selectedProfileId,
   );
+  assertSelectionChargesFitProfileScope(billingResult.charges, previewProfileScope);
   const previewCharges = scopeChargesToProfile(billingResult.charges, previewProfileScope);
   if (billingResult.charges.length > 0 && previewCharges.length === 0) {
     throw withRecurringWindowErrorContext(
@@ -2889,6 +2892,28 @@ async function resolveRecurringSelectionBillingProfileId(
 
   // Attributed profiles without separate invoicing remain reporting dimensions.
   return defaultScope.billingProfileId;
+}
+
+/**
+ * Charge-level backstop for recurring SELECTION paths. The engine only returns
+ * charges for the selected periods / source records, so any of them the invoice
+ * profile scope would filter out is a selected charge that would silently go
+ * unbilled (e.g. a time entry whose work item lands on another profile than the
+ * selected contract line). Refuse instead. Not for the billing-cycle path, where
+ * per-scope filtering of the whole client window is intended.
+ */
+function assertSelectionChargesFitProfileScope(
+  charges: IBillingCharge[],
+  scope: InvoiceProfileScope,
+): void {
+  const dropped = charges.filter((charge) => !chargeBelongsToScope(charge, scope));
+  if (dropped.length === 0) return;
+  const droppedProfiles = Array.from(new Set(dropped.map((charge) => charge.billing_profile_id ?? 'unattributed')));
+  throw new Error(
+    `The selection contains ${dropped.length} charge(s) attributed to invoice profile(s) ${droppedProfiles.join(', ')} `
+    + `that do not belong on the ${scope.billingProfileId} invoice and would be left out. `
+    + 'Select each invoice profile\'s lines separately.',
+  );
 }
 
 async function buildPreviewInvoiceForSelectionInput(params: {
@@ -3622,6 +3647,7 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
       client_id,
       intendedBillingProfileId,
     );
+    assertSelectionChargesFitProfileScope(billingResult.charges, intendedScope);
     const scopedCharges = scopeChargesToProfile(billingResult.charges, intendedScope);
     if (billingResult.charges.length > 0 && scopedCharges.length === 0) {
       throw withRecurringWindowErrorContext(

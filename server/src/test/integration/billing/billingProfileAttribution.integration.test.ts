@@ -1086,4 +1086,78 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
       new Set([northPlant, southPlant]),
     );
   }, HOOK_TIMEOUT);
+
+  // Charge-level backstop: a selection that mixes a separately billed contract
+  // line with an unresolved time entry whose work item lands on the default
+  // profile must never become one invoice that silently omits the time entry.
+  it('refuses a selection whose unresolved time entry lands on a different invoice profile than its contract line', async () => {
+    const { clientId } = await seedClient('T004 Unresolved Time Mixed Landing');
+    const defaultProfileId = await ensureDefaultBillingProfile({ db, tenantId }, clientId, { name: 'Mixed Default' });
+    const sepProfileId = await createBillingProfile({ db, tenantId }, clientId, 'Mixed Separate');
+    await table('client_billing_profiles').where({ billing_profile_id: sepProfileId })
+      .update({ payment_terms: 'due_on_receipt', bills_separately: true });
+    const otherProfileId = await createBillingProfile({ db, tenantId }, clientId, 'Mixed Other');
+
+    const fixedServiceId = await createTestService({ db, tenantId, clientId } as any, {
+      service_name: 'Mixed Fixed Service', billing_method: 'fixed',
+      default_rate: FIXED_RATE_CENTS, unit_of_measure: 'month', tax_region: 'US-NY',
+    });
+    await ensureUsdServicePrice({ db, tenantId }, fixedServiceId, FIXED_RATE_CENTS);
+    const fixed = await createFixedPlanAssignment({ db, tenantId, clientId } as any, fixedServiceId, {
+      planName: 'Mixed Fixed Plan', billingFrequency: 'monthly', baseRateCents: FIXED_RATE_CENTS,
+      startDate: '2024-12-01', endDate: null, billingTiming: 'advance', cadenceOwner: 'client', clientId,
+      enableProration: false,
+    });
+    await table('contract_lines').where({ contract_line_id: fixed.contractLineId })
+      .update({ billing_profile_id: sepProfileId });
+    await db.transaction(async (trx) => syncRecurringServicePeriodsForContractLine(trx, {
+      tenant: tenantId, contractLineId: fixed.contractLineId, sourceRunPrefix: 'mixed-unresolved',
+    }));
+
+    // Time on a service no contract line covers => unresolved non-contract work.
+    const hourlyServiceId = await createTestService({ db, tenantId, clientId } as any, {
+      service_name: 'Mixed Unresolved Hourly', billing_method: 'per_unit',
+      default_rate: HOURLY_RATE_CENTS, unit_of_measure: 'hour', tax_region: 'US-NY',
+    });
+    await ensureUsdServicePrice({ db, tenantId }, hourlyServiceId, HOURLY_RATE_CENTS);
+    await assignServiceTaxRate({ db, tenantId, clientId } as any, '*', 'US-NY', { onlyUnset: true });
+    // The ticket's profile does not bill separately, so the time lands on the default invoice.
+    const ticketId = await createTicket({ db, tenantId }, {
+      clientId, title: 'Mixed unresolved work', ticketNumber: 'MIX-1', billingProfileId: otherProfileId,
+    });
+    await createApprovedTimeEntry({ db, tenantId }, {
+      userId, ticketId, serviceId: hourlyServiceId, contractLineId: null as any, workDate: '2025-01-10', minutes: 60,
+    });
+
+    const dueWork = await getAvailableRecurringDueWork({
+      dateRange: { from: JANUARY_START, to: FEBRUARY_START }, pageSize: 100,
+    } as any) as any;
+    const members = dueWork.invoiceCandidates.flatMap((candidate: any) => candidate.members)
+      .filter((member: any) => member.clientId === clientId);
+    const fixedMember = members.find((member: any) => member.contractLineName === 'Mixed Fixed Plan'
+      && member.servicePeriodStart === JANUARY_START && member.servicePeriodEnd === FEBRUARY_START);
+    const timeMember = members.find((member: any) => member.contractLineName === 'Unresolved time entry');
+    expect(fixedMember?.invoiceBillingProfileId).toBe(sepProfileId);
+    expect(timeMember).toBeTruthy();
+
+    transactionControl.useRealTransactions = true;
+    const invoiceCountBefore = Number((await table('invoices').where({ client_id: clientId })
+      .count<{ count: string }[]>('* as count'))[0].count);
+
+    const preview = await previewGroupedInvoicesForSelectionInputs([
+      { previewGroupKey: 'mixed-unresolved', selectorInputs: [fixedMember.selectorInput, timeMember.selectorInput] },
+    ]) as any;
+    expect(preview.success).toBe(false);
+    const run = await generateGroupedInvoicesAsRecurringBillingRun({
+      groupedTargets: [{
+        groupKey: 'mixed-unresolved',
+        selectorInputs: [fixedMember.selectorInput, timeMember.selectorInput],
+        billingCycleId: null,
+      }],
+    });
+    expect(run).toMatchObject({ invoicesCreated: 0, failedCount: 1 });
+    expect(Number((await table('invoices').where({ client_id: clientId })
+      .count<{ count: string }[]>('* as count'))[0].count)).toBe(invoiceCountBefore);
+    expect(defaultProfileId).not.toBe(sepProfileId);
+  }, HOOK_TIMEOUT);
 });
