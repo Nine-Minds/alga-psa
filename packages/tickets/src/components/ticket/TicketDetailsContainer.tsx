@@ -264,10 +264,10 @@ export default function TicketDetailsContainer({
     schedule?: { publishAt: string; timeZone: string } | null,
     emailRecipients?: CommentEmailRecipientsPayload,
     audienceId?: string,
-  ) => {
+  ): Promise<boolean> => {
     if (!session?.user) {
       toast.error(t('errors.authRequiredComment', 'You must be logged in to add comments'));
-      return;
+      return false;
     }
 
     try {
@@ -293,8 +293,12 @@ export default function TicketDetailsContainer({
 
       setComments(prev => [...prev, newComment]);
       toast.success(t('messages.commentAdded', 'Comment added successfully'));
+      return true;
     } catch (error) {
+      // The failure is reported here; the composer learns only that the message was not
+      // confirmed, so it keeps the draft for the same intent to be retried.
       handleTicketActionError(error, t('errors.addComment', 'Failed to add comment'));
+      return false;
     } finally {
       setIsSubmitting(false);
     }

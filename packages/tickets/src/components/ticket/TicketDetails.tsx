@@ -181,7 +181,7 @@ interface TicketDetailsProps {
         changes: Record<string, unknown>,
         options?: Partial<TicketNotificationSuppressionValue> & { propagateToChildren?: boolean }
     ) => Promise<boolean>;
-    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null, emailRecipients?: CommentEmailRecipientsPayload, audienceId?: string) => Promise<void>;
+    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null, emailRecipients?: CommentEmailRecipientsPayload, audienceId?: string) => Promise<boolean>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
     isSubmitting?: boolean;
     /**
@@ -2022,10 +2022,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     schedule,
                     emailRecipients,
                 ] as const;
-                if (audienceId !== undefined) {
-                    await onAddComment(...addCommentArgs, audienceId);
-                } else {
-                    await onAddComment(...addCommentArgs);
+                const confirmed = audienceId !== undefined
+                    ? await onAddComment(...addCommentArgs, audienceId)
+                    : await onAddComment(...addCommentArgs);
+                // An unconfirmed publish (rejected or unknown outcome) has already been
+                // reported by the handler; keep the composer and its draft intact.
+                if (!confirmed) {
+                    return false;
                 }
                 await refreshTicketDocuments();
 

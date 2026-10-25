@@ -489,7 +489,7 @@ describe('TicketDetails remote live updates', () => {
     vi.mocked(createComment).mockResolvedValue(comment as any);
     vi.mocked(updateComment).mockResolvedValue(comment as any);
     vi.mocked(findCommentById).mockResolvedValue(comment as any);
-    const onAddComment = operation === 'optimized create' ? vi.fn().mockResolvedValue(undefined) : undefined;
+    const onAddComment = operation === 'optimized create' ? vi.fn().mockResolvedValue(true) : undefined;
     await act(async () => { renderTicketDetails({ initialDocuments: [draft], onAddComment }); });
     expect(screen.getByTestId('ticket-documents')).toHaveTextContent(JSON.stringify([draft]));
     getDocumentsMock.mockResolvedValue([claimed]);
