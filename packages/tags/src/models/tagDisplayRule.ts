@@ -1,6 +1,10 @@
 import type { Knex } from 'knex';
 import type { ITagDisplayRule, TagDisplayAudience, TagDisplayEntityType } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
+import { deleteTagReferences, replaceTagReferences } from '../lib/tagReferences';
+
+/** The referrer type this model registers in tag_references. Owned here: tag_references itself is type-agnostic. */
+const REFERRER_TYPE = 'tag_display_rule';
 
 const rulesQuery = (knexOrTrx: Knex | Knex.Transaction, tenant: string) =>
   tenantDb(knexOrTrx, tenant).table('tag_display_rules');
@@ -48,9 +52,17 @@ const TagDisplayRule = {
       }
     }
 
-    await rulesQuery(trx, tenant).where({ tagged_type: taggedType, audience }).del();
+    // Rules are recreated wholesale, so the removed rules' references go and the new rules' arrive in
+    // the same transaction. This also drops any dangling rule (tag deleted) in this list.
+    const removed = await rulesQuery(trx, tenant)
+      .where({ tagged_type: taggedType, audience })
+      .del()
+      .returning('rule_id') as Array<{ rule_id: string }>;
+    for (const { rule_id } of removed) {
+      await deleteTagReferences(trx, tenant, REFERRER_TYPE, rule_id);
+    }
     if (ordered.length > 0) {
-      await rulesQuery(trx, tenant).insert(
+      const inserted = await rulesQuery(trx, tenant).insert(
         ordered.map((tag_id, position) => ({
           tenant,
           tagged_type: taggedType,
@@ -59,7 +71,10 @@ const TagDisplayRule = {
           position,
           created_by: userId,
         })),
-      );
+      ).returning(['rule_id', 'tag_id']) as Array<{ rule_id: string; tag_id: string }>;
+      for (const { rule_id, tag_id } of inserted) {
+        await replaceTagReferences(trx, tenant, REFERRER_TYPE, rule_id, [tag_id]);
+      }
     }
     return TagDisplayRule.list(trx, tenant, { taggedType, audience });
   },

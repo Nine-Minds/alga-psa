@@ -782,7 +782,7 @@ export const findAllTagsByType = withOptionalAuth(async (user: IUserWithRoles | 
     const { knex: db } = await createTenantKnex();
     const { tenant } = ctx;
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Get tag definitions that have at least one mapping or a display rule (filter out orphans)
+      // Get tag definitions that have at least one mapping or reference (filter out orphans)
       // Use DISTINCT ON for deduplication by tag_text (PostgreSQL-specific but works with Citus)
       const scopedDb = tenantDb(trx, tenant);
       const tagMappingsQuery = scopedDb.table('tag_mappings as tm')
@@ -790,18 +790,18 @@ export const findAllTagsByType = withOptionalAuth(async (user: IUserWithRoles | 
         .whereRaw('?? = ??', ['tm.tag_id', 'td.tag_id']);
       scopedDb.tenantWhereColumn(tagMappingsQuery, 'tm.tenant', 'td.tenant');
 
-      // A definition a display rule points at is listed even with no mappings, so the rule's tag can
+      // A definition something refers to is listed even with no mappings, so a referrer's tag can
       // still be picked in filters and settings.
-      const displayRulesQuery = scopedDb.table('tag_display_rules as tdr')
+      const tagReferencesQuery = scopedDb.table('tag_references as tr')
         .select(trx.raw('1'))
-        .whereRaw('?? = ??', ['tdr.tag_id', 'td.tag_id']);
-      scopedDb.tenantWhereColumn(displayRulesQuery, 'tdr.tenant', 'td.tenant');
+        .whereRaw('?? = ??', ['tr.tag_id', 'td.tag_id']);
+      scopedDb.tenantWhereColumn(tagReferencesQuery, 'tr.tenant', 'td.tenant');
 
       const definitions = await scopedDb.table('tag_definitions as td')
         .distinctOn('td.tag_text')
         .select('td.*')
         .where('td.tagged_type', entityType)
-        .where((builder) => builder.whereExists(tagMappingsQuery).orWhereExists(displayRulesQuery))
+        .where((builder) => builder.whereExists(tagMappingsQuery).orWhereExists(tagReferencesQuery))
         .orderBy('td.tag_text', 'asc')
         .orderBy('td.created_at', 'asc');
 

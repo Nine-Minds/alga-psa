@@ -46,6 +46,11 @@
       "import": "./dist/lib/tagDisplayRules.js",
       "require": "./dist/lib/tagDisplayRules.js"
     },
+    "./lib/tagReferences": {
+      "types": "./dist/lib/tagReferences.d.ts",
+      "import": "./dist/lib/tagReferences.js",
+      "require": "./dist/lib/tagReferences.js"
+    },
     "./lib/loadDisplayTags": {
       "types": "./dist/lib/loadDisplayTags.d.ts",
       "import": "./dist/lib/loadDisplayTags.js",

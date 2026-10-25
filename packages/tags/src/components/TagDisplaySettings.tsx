@@ -44,9 +44,12 @@ export function TagDisplaySettings(): React.JSX.Element {
       }
       setDefinitions({ contact: contactTags as ITag[], client: clientTags as ITag[] });
       const next: RulesByKey = {};
+      // A rule whose tag was deleted is dangling: never shown, so skip it here. It goes away the next
+      // time that list is saved.
+      const existing = new Set([...(contactTags as ITag[]), ...(clientTags as ITag[])].map((d) => d.tag_id as string));
       for (const rule of [...(allRules as Array<{ tagged_type: TagDisplayEntityType; audience: TagDisplayAudience; tag_id: string; position: number }>)].sort(
         (a, b) => a.position - b.position,
-      )) {
+      ).filter((rule) => existing.has(rule.tag_id))) {
         (next[keyOf(rule.tagged_type, rule.audience)] ??= []).push(rule.tag_id);
       }
       setRules(next);

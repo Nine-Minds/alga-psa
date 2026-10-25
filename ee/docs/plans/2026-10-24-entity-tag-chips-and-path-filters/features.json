@@ -658,5 +658,13 @@
     "prdRefs": [
       "Rollout / Migration"
     ]
+  },
+  {
+    "id": "F083",
+    "description": "tag_references table (tenant, tag_id, referrer_type, referrer_id) plus replaceTagReferences/deleteTagReferences in packages/tags; orphan cleanup, TagDefinition.delete and the tag option loaders consult tag_references only and know no referrer types; display rules are the first referrer, maintained in the rule write transaction (replace, seed, backfill); referrers tolerate a missing tag",
+    "implemented": true,
+    "prdRefs": [
+      "Design principles"
+    ]
   }
 ]

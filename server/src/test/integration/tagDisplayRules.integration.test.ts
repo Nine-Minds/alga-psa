@@ -102,6 +102,7 @@ describeDb('tag display rules (DB)', () => {
     authMocks.user = { user_id: actorId, user_type: 'internal', tenant: tenantId };
     authMocks.hasPermission.mockResolvedValue(true);
     await db('tag_display_rules').where({ tenant: tenantId }).del();
+    await db('tag_references').where({ tenant: tenantId }).del();
   });
 
   describe('T016 rules, orphan cleanup, cascade', () => {
@@ -135,9 +136,9 @@ describeDb('tag display rules (DB)', () => {
       await db('tag_mappings').insert({
         tenant: tenantId, mapping_id: mappingId, tag_id: contactGold, tagged_id: contactId, tagged_type: 'contact',
       });
-      await db('tag_display_rules').insert({
-        tenant: tenantId, tagged_type: 'contact', audience: 'internal', tag_id: contactGold, position: 0,
-      });
+      // Rules are written through the action so their tag_references come with them.
+      const actions = await import('../../../../packages/tags/src/actions/tagDisplayRuleActions');
+      await actions.replaceTagDisplayRules('contact', 'internal', [contactGold]);
 
       await db('tag_mappings').where({ tenant: tenantId, mapping_id: mappingId }).del();
       const { default: TagDefinition } = await import('../../../../packages/tags/src/models/tagDefinition');
@@ -148,8 +149,8 @@ describeDb('tag display rules (DB)', () => {
       const listed = await tags.findAllTagsByType('contact');
       expect(Array.isArray(listed) && listed.map((t) => t.tag_text)).toContain('Gold');
 
-      // Without the rule the same orphan is cleaned up and unlisted.
-      await db('tag_display_rules').where({ tenant: tenantId }).del();
+      // Without the rule (and so its reference) the same orphan is cleaned up and unlisted.
+      await actions.replaceTagDisplayRules('contact', 'internal', []);
       const listedWithoutRule = await tags.findAllTagsByType('contact');
       expect(Array.isArray(listedWithoutRule) && listedWithoutRule.map((t) => t.tag_text)).not.toContain('Gold');
       expect(await TagDefinition.deleteOrphaned(db, tenantId, [contactGold])).toBe(1);
@@ -166,16 +167,38 @@ describeDb('tag display rules (DB)', () => {
       expect(await db('tag_display_rules').where({ tenant: tenantId, tag_id: tempId })).toHaveLength(0);
     });
 
-    it('TagDefinition.delete removes the definition\'s rules whether or not the FK exists', async () => {
+    it('TagDefinition.delete removes the definition and its references; a rule left behind is dangling and never shown', async () => {
       const tempId = uuidv4();
       await db('tag_definitions').insert(def(tempId, 'TempModelDelete', 'client'));
-      await db('tag_display_rules').insert({
-        tenant: tenantId, tagged_type: 'client', audience: 'internal', tag_id: tempId, position: 0,
-      });
+      const actions = await import('../../../../packages/tags/src/actions/tagDisplayRuleActions');
+      await actions.replaceTagDisplayRules('client', 'internal', [tempId]);
       const { default: TagDefinition } = await import('../../../../packages/tags/src/models/tagDefinition');
       await db.transaction((trx) => TagDefinition.delete(trx, tenantId, tempId));
-      expect(await db('tag_display_rules').where({ tenant: tenantId, tag_id: tempId })).toHaveLength(0);
       expect(await db('tag_definitions').where({ tenant: tenantId, tag_id: tempId })).toHaveLength(0);
+      expect(await db('tag_references').where({ tenant: tenantId, tag_id: tempId })).toHaveLength(0);
+
+      // With the FK the rule cascades away; without it (Citus) the rule dangles. Either way no chip.
+      const { loadDisplayTagsForEntities } = await import('../../../../packages/tags/src/lib/loadDisplayTags');
+      const shown = await loadDisplayTagsForEntities(db, tenantId, 'internal', [{ taggedType: 'client', ids: [uuidv4()] }]);
+      expect(shown.size).toBe(0);
+
+      // The next write of that list prunes any dangling rule.
+      await actions.replaceTagDisplayRules('client', 'internal', [clientVip]);
+      expect((await db('tag_display_rules').where({ tenant: tenantId, tagged_type: 'client' })).map((r) => r.tag_id)).toEqual([clientVip]);
+    });
+
+    it('rule writes create and remove tag_references rows', async () => {
+      const actions = await import('../../../../packages/tags/src/actions/tagDisplayRuleActions');
+      const refs = () => db('tag_references').where({ tenant: tenantId, referrer_type: 'tag_display_rule' });
+      await actions.replaceTagDisplayRules('contact', 'internal', [contactGold, contactVip]);
+      const rules = await db('tag_display_rules').where({ tenant: tenantId });
+      expect((await refs()).map((r) => [r.referrer_id, r.tag_id]).sort()).toEqual(
+        rules.map((r) => [r.rule_id, r.tag_id]).sort(),
+      );
+      await actions.replaceTagDisplayRules('contact', 'internal', [contactVip]);
+      expect((await refs()).map((r) => r.tag_id)).toEqual([contactVip]);
+      await actions.replaceTagDisplayRules('contact', 'internal', []);
+      expect(await refs()).toHaveLength(0);
     });
 
     it('rules are tenant scoped', async () => {
@@ -228,6 +251,22 @@ describeDb('tag display rules (DB)', () => {
       const rules = await db('tag_display_rules').where({ tenant }).orderBy('tagged_type');
       expect(rules.map((r) => [r.tagged_type, r.audience])).toEqual([['client', 'internal'], ['contact', 'internal']]);
       expect(rules.map((r) => r.tag_id).sort()).toEqual(defs.map((d) => d.tag_id).sort());
+      const refs = await db('tag_references').where({ tenant, referrer_type: 'tag_display_rule' });
+      expect(refs.map((r) => r.referrer_id).sort()).toEqual(rules.map((r) => r.rule_id).sort());
+    });
+
+    it('the tag_references migration backfills one reference per existing rule, idempotently', async () => {
+      const { tenant } = await seedTenant('RefBackfill');
+      const c = uuidv4();
+      await db('tag_definitions').insert(def(c, 'BackfillTag', 'contact', tenant));
+      const [rule] = await db('tag_display_rules')
+        .insert({ tenant, tagged_type: 'contact', audience: 'internal', tag_id: c, position: 0 })
+        .returning('rule_id');
+      const migration = require(path.join(root, 'server/migrations/20261025120000_create_tag_references.cjs'));
+      await migration.up(db);
+      await migration.up(db);
+      const refs = await db('tag_references').where({ tenant });
+      expect(refs.map((r) => [r.tag_id, r.referrer_type, r.referrer_id])).toEqual([[c, 'tag_display_rule', rule.rule_id]]);
     });
   });
 

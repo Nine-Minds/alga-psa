@@ -52,6 +52,22 @@ exports.seed = async function (knex, tenantId) {
       })
       .onConflict(['tenant', 'tagged_type', 'audience', 'tag_id'])
       .ignore();
+
+    // A rule is a tag referrer: register it so orphan cleanup keeps the definition. Same rows
+    // replaceTagReferences (packages/tags TagDisplayRule model) writes; inserted directly because this
+    // seed is plain CommonJS run from the onboarding workflow. Idempotent.
+    const rule = await db.table('tag_display_rules')
+      .where({ tagged_type: taggedType, audience: 'internal', tag_id: definition.tag_id })
+      .first('rule_id');
+    await db.table('tag_references')
+      .insert({
+        tenant: tenantId,
+        tag_id: definition.tag_id,
+        referrer_type: 'tag_display_rule',
+        referrer_id: rule.rule_id,
+      })
+      .onConflict(['tenant', 'tag_id', 'referrer_type', 'referrer_id'])
+      .ignore();
   }
 
   console.log(`Seeded VIP contact and client tags with internal display rules for tenant ${tenantId}`);

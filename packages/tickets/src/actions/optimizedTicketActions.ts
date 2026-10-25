@@ -2463,16 +2463,16 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
     ]);
 
       // Contact and client tag definitions for the Requester tags / Client tags filters. A definition
-      // is listed when it has a mapping or a display rule points at it, so a rule's tag (e.g. VIP)
-      // stays selectable after its last mapping is removed.
+      // is listed when it has a mapping or something refers to it (tag_references), so a referenced tag
+      // (e.g. VIP under a display rule) stays selectable after its last mapping is removed.
       const partyTagMappings = scopedDb.table('tag_mappings as tm')
         .select(trx.raw('1'))
         .whereRaw('?? = ??', ['tm.tag_id', 'td.tag_id']);
       scopedDb.tenantWhereColumn(partyTagMappings, 'tm.tenant', 'td.tenant');
-      const partyTagRules = scopedDb.table('tag_display_rules as tdr')
+      const partyTagRules = scopedDb.table('tag_references as tr')
         .select(trx.raw('1'))
-        .whereRaw('?? = ??', ['tdr.tag_id', 'td.tag_id']);
-      scopedDb.tenantWhereColumn(partyTagRules, 'tdr.tenant', 'td.tenant');
+        .whereRaw('?? = ??', ['tr.tag_id', 'td.tag_id']);
+      scopedDb.tenantWhereColumn(partyTagRules, 'tr.tenant', 'td.tenant');
       const partyTagRows = await scopedDb.table('tag_definitions as td')
         .select('td.tag_id', 'td.tag_text', 'td.tagged_type', 'td.background_color', 'td.text_color')
         .whereIn('td.tagged_type', ['contact', 'client'])

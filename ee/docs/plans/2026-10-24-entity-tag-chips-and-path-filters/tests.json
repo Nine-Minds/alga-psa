@@ -322,5 +322,21 @@
       "F079",
       "F023"
     ]
+  },
+  {
+    "id": "T033",
+    "description": "Integration (tagReferences.integration): a referenced unmapped tag survives deleteOrphaned, both tagCleanup modules and the deleteTag orphan branch; the option loader lists it; explicit delete clears references with and without the FK; references are tenant scoped; replace is idempotent; display-rule writes and the migration backfill create tag_references rows",
+    "implemented": true,
+    "featureIds": [
+      "F083"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Unit (packages/tags tagReferences.test): API refuses without a transaction, validates arguments, replaces with a deduplicated tenant-scoped set",
+    "implemented": true,
+    "featureIds": [
+      "F083"
+    ]
   }
 ]

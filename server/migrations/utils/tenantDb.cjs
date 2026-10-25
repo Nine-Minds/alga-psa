@@ -475,6 +475,7 @@ const TENANT_TABLE_METADATA = {
   tag_definitions: { scope: 'tenant' },
   tag_display_rules: { scope: 'tenant' },
   tag_mappings: { scope: 'tenant' },
+  tag_references: { scope: 'tenant' },
   task_assignments: { scope: 'tenant' },
   task_checklist_items: { scope: 'tenant' },
   task_resources: { scope: 'tenant' },

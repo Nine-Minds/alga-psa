@@ -227,7 +227,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'google_calendar_provider_config', 'microsoft_calendar_provider_config', 'calendar_providers',
 
   // Tags and resources
-  'tag_mappings', 'tag_display_rules', 'ticket_resources',
+  'tag_mappings', 'tag_references', 'tag_display_rules', 'ticket_resources',
 
   // Client portal visibility leaf table (depends on groups and boards)
   'client_portal_visibility_group_boards',
