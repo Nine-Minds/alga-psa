@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ZodError, z } from 'zod';
 import { handleApiError, UnauthorizedError, ValidationError } from '@/lib/api/middleware/apiMiddleware';
 import { tenantDb } from '@alga-psa/db';
+import { assertActiveInternalUser } from '@alga-psa/auth';
 import { getConnection } from '@/lib/db/db';
 import { issueMobileOtt } from '@/lib/mobileAuth/mobileAuthService';
 import {
@@ -144,6 +145,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             'No AlgaPSA account is linked to this Apple ID. If you have a Solo plan, subscribe from the "Create a new workspace" screen; otherwise ask your workspace admin to provision an account for your email.',
         },
         { status: 404 },
+      );
+    }
+
+    // An already-linked identity skipped the email-match filters above, so re-check that
+    // the bound user is still an active internal user (never client or non-interactive).
+    if (!(await assertActiveInternalUser(identity.user_id, identity.tenant))) {
+      return NextResponse.json(
+        {
+          error: 'account_not_allowed',
+          message: 'This Apple ID is linked to an account that cannot use the mobile app.',
+        },
+        { status: 403 },
       );
     }
 

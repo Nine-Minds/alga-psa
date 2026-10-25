@@ -3,6 +3,8 @@
  * Handles all time sheet-related database operations for the REST API
  */
 
+import { v4 as uuidv4 } from 'uuid';
+import { assertHumanWorkAssignee, assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
 import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
@@ -342,6 +344,13 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       const created = await withTransaction(knex, async (trx) => {
+        // Human-work guard: an explicit owner must be a licensed user; a defaulted owner
+        // (the caller) must be one too.
+        if (data.user_id) {
+          await assertHumanWorkAssignee(trx, context.tenant, [data.user_id]);
+        } else {
+          await assertHumanWorkOwner(trx, context.tenant, context.userId, 'user_id');
+        }
         const timeSheetData = {
           ...data,
           user_id: data.user_id || context.userId,
@@ -533,24 +542,38 @@ export class TimeSheetService extends BaseService<any> {
         if (timeSheet.approval_status !== 'SUBMITTED') {
           throw new ConflictError('Time sheet must be submitted before approval');
         }
+
+        // Human-work guard: approval requires a human approver.
+        await assertHumanWorkOwner(trx, context.tenant, context.userId, 'approved_by');
   
         await this.buildTenantScopedQuery(trx, context)
           .where({ id })
           .update({
             approval_status: 'APPROVED',
             approved_at: new Date(),
-            approved_by: context.userId,
-            approval_notes: data.approval_notes,
-            updated_at: new Date()
+            approved_by: context.userId
           });
+
+        // time_sheets has neither approval_notes nor updated_at; keep the notes as an approver comment
+        // using the real time_sheet_comments columns (same shape the workflow runtime writes).
+        if (data.approval_notes) {
+          await tenantDb(trx, context.tenant).table('time_sheet_comments').insert({
+            comment_id: uuidv4(),
+            time_sheet_id: id,
+            user_id: context.userId,
+            comment: data.approval_notes,
+            is_approver: true,
+            created_at: trx.fn.now(),
+            tenant: context.tenant
+          });
+        }
   
-        // Update all time entries to approved status
+        // Update all time entries to approved status. time_entries has no approved_at/approved_by
+        // columns (they live on time_sheets), so only approval_status/updated_at are written.
         await tenantDb(trx, context.tenant).table('time_entries')
           .where({ time_sheet_id: id })
           .update({
             approval_status: 'APPROVED',
-            approved_at: new Date(),
-            approved_by: context.userId,
             updated_at: new Date()
           });
   
@@ -1251,6 +1274,17 @@ export class TimeSheetService extends BaseService<any> {
   
         // Update assignees if provided
         if (data.assigned_user_ids !== undefined) {
+          // Human-work guard: validate only assignees this write adds (legacy ones are kept).
+          const currentAssignees = await tenantDb(trx, context.tenant).table('schedule_entry_assignees')
+            .where({ entry_id: id })
+            .select('user_id');
+          const currentAssigneeIds = new Set(currentAssignees.map((row: { user_id: string }) => row.user_id));
+          await assertHumanWorkAssignee(
+            trx,
+            context.tenant,
+            data.assigned_user_ids.filter((userId: string) => !currentAssigneeIds.has(userId))
+          );
+
           await tenantDb(trx, context.tenant).table('schedule_entry_assignees')
             .where({ entry_id: id })
             .del();

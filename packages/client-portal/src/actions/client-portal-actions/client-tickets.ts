@@ -14,6 +14,7 @@ import { reconcileCommentAttachments, filterReadableCommentAttachments, withdraw
 import { stripCommentBccFromMetadata } from '@shared/lib/tickets/commentEmailRecipientsCore';
 import { isUuidShaped, validateData } from '@alga-psa/validation';
 import { COMMENT_RESPONSE_SOURCES, IComment, IStatus, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { z } from 'zod';
@@ -142,7 +143,7 @@ function clientPortalUserIdOrError(user: { user_id?: string | null; user_type?: 
     return permissionError('User ID not found in session', 'common:errors.auth.userIdNotFound');
   }
 
-  if (user.user_type !== 'client') {
+  if (!isClientUserType(user.user_type)) {
     return permissionError('Access denied: Client portal actions are restricted to client users', 'common:errors.auth.clientPortalOnly');
   }
 

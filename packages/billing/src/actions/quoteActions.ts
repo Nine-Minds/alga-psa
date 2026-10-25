@@ -1,6 +1,7 @@
 'use server';
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Quote lifecycle spans opportunities/documents in server action context */
 
+import { isMspPrincipalUserType } from '@alga-psa/types';
 import Handlebars from 'handlebars';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
@@ -1445,7 +1446,7 @@ export const getQuoteApprovalSettings = withAuth(async (
 
   const currentUserIsSoleApprover =
     settings.approvalRequired &&
-    (user as any).user_type !== 'client' &&
+    isMspPrincipalUserType((user as any).user_type) &&
     await hasPermission(user as any, 'quotes', 'approve') &&
     await allowSelfQuoteApproval(knex, tenant, (user as any).user_id);
 
