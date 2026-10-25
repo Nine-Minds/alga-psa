@@ -25,6 +25,7 @@
     },
     "states": {
       "active": "Activo",
+      "scheduled": "Programado",
       "inactive": "Inactivo",
       "loading": "Cargando...",
       "na": "N/D",
@@ -571,11 +572,6 @@
     "invoiceDeliveryMethod": "Método de entrega de facturas",
     "invoiceTemplate": "Plantilla de factura",
     "invoiceTemplateHelp": "Seleccione una plantilla o use la predeterminada",
-    "paymentTerms": {
-      "dueOnReceipt": "Vencimiento al recibir",
-      "net15": "neto 15",
-      "net30": "neto 30"
-    },
     "preferredPaymentMethod": "Método de pago preferido",
     "defaultCurrency": "Moneda predeterminada",
     "selectTaxRegion": "Seleccionar región fiscal (opcional)",
@@ -587,11 +583,6 @@
       "both": "Ambos",
       "email": "Correo electrónico",
       "mail": "Correo"
-    },
-    "paymentMethods": {
-      "bankTransfer": "Transferencia bancaria",
-      "check": "Cheque",
-      "creditCard": "Tarjeta de crédito"
     },
     "paymentTermsLabel": "Condiciones de pago",
     "standardTemplateLabel": "(Estándar)",
@@ -1763,7 +1754,8 @@
     },
     "cardExpiry": ", caduca {{month}}/{{year}}",
     "legacyPaymentTerms": "«{{value}}» no es una condición de pago reconocida y nunca se ha aplicado. Se elimina al guardar.",
-    "cardOnFile": "{{type}} terminada en {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} terminada en {{last4}}{{expiry}}",
+    "tenantDefaultValue": "Predeterminado del inquilino: {{value}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Alertas de saldo prepagado",

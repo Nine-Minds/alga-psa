@@ -25,6 +25,7 @@
     },
     "states": {
       "active": "Actif",
+      "scheduled": "Planifié",
       "inactive": "Inactif",
       "loading": "Chargement...",
       "na": "S/O",
@@ -571,11 +572,6 @@
     "invoiceDeliveryMethod": "Méthode de livraison des factures",
     "invoiceTemplate": "Modèle de facture",
     "invoiceTemplateHelp": "Sélectionnez un modèle ou utilisez la valeur par défaut",
-    "paymentTerms": {
-      "dueOnReceipt": "Exigible à réception",
-      "net15": "Net à 15 jours",
-      "net30": "Net à 30 jours"
-    },
     "preferredPaymentMethod": "Mode de paiement préféré",
     "defaultCurrency": "Devise par défaut",
     "selectTaxRegion": "Sélectionnez la région fiscale (facultatif)",
@@ -587,11 +583,6 @@
       "both": "Les deux",
       "email": "E-mail",
       "mail": "Courrier"
-    },
-    "paymentMethods": {
-      "bankTransfer": "Virement bancaire",
-      "check": "Chèque",
-      "creditCard": "Carte de crédit"
     },
     "paymentTermsLabel": "Conditions de paiement",
     "standardTemplateLabel": "(Standard)",
@@ -1763,7 +1754,8 @@
     },
     "cardExpiry": ", expire le {{month}}/{{year}}",
     "legacyPaymentTerms": "« {{value}} » n’est pas une condition de paiement reconnue et n’a jamais été appliquée. Elle sera supprimée lors de l’enregistrement.",
-    "cardOnFile": "{{type}} se terminant par {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} se terminant par {{last4}}{{expiry}}",
+    "tenantDefaultValue": "Valeur par défaut du locataire : {{value}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Alertes de solde prépayé",

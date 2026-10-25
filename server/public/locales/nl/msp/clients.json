@@ -25,6 +25,7 @@
     },
     "states": {
       "active": "Actief",
+      "scheduled": "Gepland",
       "inactive": "Inactief",
       "loading": "Laden...",
       "na": "N.v.t.",
@@ -571,11 +572,6 @@
     "invoiceDeliveryMethod": "Factuurleveringsmethode",
     "invoiceTemplate": "Factuursjabloon",
     "invoiceTemplateHelp": "Selecteer een sjabloon of gebruik de standaardsjabloon",
-    "paymentTerms": {
-      "dueOnReceipt": "Verschuldigd bij ontvangst",
-      "net15": "Netto 15",
-      "net30": "Netto 30"
-    },
     "preferredPaymentMethod": "Voorkeursbetaalmethode",
     "defaultCurrency": "Standaardvaluta",
     "selectTaxRegion": "Selecteer belastingregio (optioneel)",
@@ -587,11 +583,6 @@
       "both": "Beide",
       "email": "E-mail",
       "mail": "E-mail"
-    },
-    "paymentMethods": {
-      "bankTransfer": "Bankoverschrijving",
-      "check": "Rekening",
-      "creditCard": "Creditcard"
     },
     "paymentTermsLabel": "Betalingsvoorwaarden",
     "standardTemplateLabel": "(Standaard)",
@@ -1763,7 +1754,8 @@
     },
     "cardExpiry": ", geldig tot {{month}}/{{year}}",
     "legacyPaymentTerms": "‘{{value}}’ is geen erkende betalingsvoorwaarde en is nooit toegepast. Bij het opslaan wordt deze verwijderd.",
-    "cardOnFile": "{{type}} eindigend op {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} eindigend op {{last4}}{{expiry}}",
+    "tenantDefaultValue": "Standaard van de tenant: {{value}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Prepaid-saldo-meldingen",

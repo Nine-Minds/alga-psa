@@ -33,6 +33,8 @@ export const updateBundleSettingsSchema = z
   .object({
     mode: bundleModeSchema.optional(),
     reopen_on_child_reply: z.boolean().optional(),
+    // Required when switching a bundle with a closed master to sync_updates.
+    on_closed_master: closedMasterChoiceSchema.optional(),
   })
   .refine((data) => data.mode !== undefined || data.reopen_on_child_reply !== undefined, {
     message: 'Provide mode and/or reopen_on_child_reply',

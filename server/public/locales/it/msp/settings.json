@@ -1024,13 +1024,40 @@
         },
         "rules": {
           "label": "Regole di applicazione automatica",
-          "help": "Il modello viene applicato automaticamente ai nuovi ticket che corrispondono a una qualsiasi di queste regole. Lascia un campo come \"Qualsiasi\" per corrispondere a tutti i valori.",
+          "help": "Un modello viene applicato a un nuovo ticket quando corrisponde a una delle sue regole. Una regola corrisponde solo se il ticket soddisfa tutti i filtri impostati. Lasci vuoto un filtro per ignorarlo.",
           "empty": "Nessuna regola di applicazione automatica. Questo modello può comunque essere applicato ai ticket manualmente.",
           "board": "Bacheca",
           "category": "Categoria",
           "subcategory": "Sottocategoria",
           "priority": "Priorità",
-          "any": "Qualsiasi"
+          "any": "Qualsiasi",
+          "appliesToAll": "Si applica a tutti i ticket",
+          "clients": "Clienti",
+          "clientsAny": "Qualsiasi cliente",
+          "clientsAddAnother": "Aggiungi un altro cliente",
+          "removeClient": "Rimuovi {{name}}",
+          "origins": "Origine del ticket",
+          "originsAny": "Qualsiasi origine",
+          "fromServiceRequest": "Solo ticket da una richiesta di servizio",
+          "anyServiceRequest": "Qualsiasi richiesta di servizio",
+          "keywords": "Parole chiave",
+          "keywordsPlaceholder": "Digiti una parola o una frase e prema Invio",
+          "keywordsHelp": "Corrispondono anche parti di parola: \"onboard\" trova \"onboarding\". Maiuscole e minuscole sono ignorate.",
+          "removeKeyword": "Rimuovi {{keyword}}",
+          "keywordMode": "Corrispondenza",
+          "keywordModeAny": "Almeno una parola chiave",
+          "keywordModeAll": "Tutte le parole chiave",
+          "keywordTarget": "Cerca in",
+          "keywordTargetBoth": "Titolo e descrizione",
+          "keywordTargetTitle": "Titolo",
+          "keywordTargetDescription": "Descrizione",
+          "originLabels": {
+            "internal": "Creato dal personale",
+            "client_portal": "Portale clienti",
+            "inbound_email": "E-mail in arrivo",
+            "api": "API",
+            "recurring": "Pianificazione ricorrente"
+          }
         }
       },
       "dialog": {
@@ -2911,7 +2938,8 @@
     "emptyState": "Nessun utente disponibile.",
     "roles": {
       "client": "Utente cliente",
-      "internal": "Utente interno"
+      "internal": "Utente interno",
+      "service": "Account di servizio"
     },
     "badge": {
       "inactive": "Inattivo"

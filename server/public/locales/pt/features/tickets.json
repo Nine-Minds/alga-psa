@@ -248,7 +248,8 @@
     "openMenu": "Abrir menu",
     "moreActions": "Mais ações",
     "createTemplate": "Criar modelo a partir do ticket",
-    "createWorkflowFromTicket": "Criar fluxo de trabalho a partir do ticket"
+    "createWorkflowFromTicket": "Criar fluxo de trabalho a partir do ticket",
+    "printWorkTag": "Imprimir etiqueta de trabalho"
   },
   "messages": {
     "noTickets": "Nenhum ticket encontrado",
@@ -461,6 +462,14 @@
     "clientPortal": "Recebido via Portal do Cliente",
     "inboundEmail": "Recebido via e-mail de entrada"
   },
+  "originalEmail": {
+    "text": "Texto",
+    "original": "Email original",
+    "emailShort": "Email",
+    "loading": "Carregando o email original…",
+    "error": "Não foi possível carregar o email original.",
+    "group": "Visualização da mensagem"
+  },
   "documents": {
     "title": "Documentos",
     "noDocuments": "Nenhum documento anexado",
@@ -646,7 +655,9 @@
       "more": "Mais",
       "bundleNeedsOne": "Selecione pelo menos 1 ticket para agrupar",
       "selectedCount_few": "{{count}} selecionado",
-      "selectedCount_many": "{{count}} selecionado"
+      "selectedCount_many": "{{count}} selecionado",
+      "printLabels": "Imprimir etiquetas",
+      "printLabelsLimit": "Você pode imprimir no máximo {{max}} etiquetas por vez"
     },
     "moveDialogTitle": "Mover tickets selecionados",
     "moveDialogDescription": "Selecione um quadro de destino e status e confirme a movimentação dos tickets selecionados.",
@@ -679,7 +690,7 @@
     "bundleMasterLabel": "Selecione o ticket mestre",
     "bundleMasterPlaceholder": "Selecione o ticket mestre...",
     "bundleSyncUpdates": "Sincronizar atualizações do mestre para os filhos (respostas públicas + alterações no fluxo de trabalho)",
-    "bundleSyncUpdatesHelp": "Os tickets filhos mantêm seu status atual ao serem agrupados. Depois, fechar ou reabrir o mestre fecha ou reabre todos os tickets filhos, e as alterações de status, responsável e prioridade no mestre se aplicam aos filhos. Os campos de fluxo de trabalho ficam bloqueados nos filhos. As notas internas permanecem no mestre.",
+    "bundleSyncUpdatesHelp": "Os tickets filhos mantêm seu status atual ao serem agrupados. Com a sincronização ativada, fechar ou reabrir o mestre fecha ou reabre todos os filhos, as alterações de status, responsável e prioridade no mestre se aplicam a eles e seus campos de fluxo de trabalho ficam bloqueados. Sem a sincronização, os filhos gerenciam por conta própria status, responsável e prioridade. As notas internas permanecem no mestre.",
     "bundleSelectAtLeastTwo": "Selecione pelo menos dois tickets para agrupar.",
     "bundleSelectMaster": "Selecione um ticket mestre.",
     "bundleSuccess": "Tickets agrupados",
@@ -752,8 +763,8 @@
       "masterTicket": "Selecione o ticket mestre",
       "selectMasterTicket": "Selecione o ticket mestre...",
       "syncUpdates": "Sincronizar atualizações do mestre para os filhos (respostas públicas + alterações no fluxo de trabalho)",
-      "syncUpdatesHelp": "Os tickets filhos mantêm seu status atual ao serem agrupados. Depois, fechar ou reabrir o mestre fecha ou reabre todos os tickets filhos, e as alterações de status, responsável e prioridade no mestre se aplicam aos filhos. Os campos de fluxo de trabalho ficam bloqueados nos filhos. As notas internas permanecem no mestre.",
-      "childrenDescription": "As crianças mantêm o seu estado atual; os campos de fluxo de trabalho estão bloqueados para filhos. As respostas derivadas de entrada são exibidas abaixo como somente visualização.",
+      "syncUpdatesHelp": "Os tickets filhos mantêm seu status atual ao serem agrupados. Com a sincronização ativada, fechar ou reabrir o mestre fecha ou reabre todos os filhos, as alterações de status, responsável e prioridade no mestre se aplicam a eles e seus campos de fluxo de trabalho ficam bloqueados. Sem a sincronização, os filhos gerenciam por conta própria status, responsável e prioridade. As notas internas permanecem no mestre.",
+      "childrenDescription": "Os tickets filhos mantêm seu status atual. Os campos de fluxo de trabalho ficam bloqueados somente no modo Sync Updates. As respostas recebidas dos filhos são exibidas abaixo como somente leitura.",
       "checkingMasters": "Verificando pacotes existentes...",
       "existingMasterSuffix": "(mestre existente)",
       "existingMasterLocked": "Um ticket selecionado já é um pacote master. Ele será usado como mestre; os outros serão adicionados como filhos.",
@@ -964,6 +975,7 @@
     "templateReplaceTitle": "Substituir as suas alterações?",
     "templateReplaceMessage": "Aplicar um modelo substitui o título, a descrição e outros campos que preencheu.",
     "templateReplaceConfirm": "Aplicar modelo",
+    "templateTokenHint": "O título é preenchido com o cliente, o contato e a data de vencimento escolhidos, até você editá-lo.",
     "tagCreatePartialFailure_few": "Não foi possível criar tags {{count}}",
     "tagCreatePartialFailure_many": "Não foi possível criar tags {{count}}",
     "tagCreationFailed_few": "Não foi possível criar tags {{count}}",
@@ -1396,7 +1408,15 @@
     "selectUnit": "Selecione uma unidade para entregar...",
     "onHandByLocation": "Em estoque por localização",
     "catalogUnitCost": "Custo unitário do catálogo",
-    "costNotConfigured": "Não configurado"
+    "costNotConfigured": "Não configurado",
+    "availableBadge": "Disponível: {{available}}",
+    "availableByLocation": "Estoque livre por local",
+    "freeOfOnHand": "{{free}} livres de {{onHand}}",
+    "stockHeld": "Apenas {{free}} disponíveis. {{held}} em estoque estão em bloqueio firme para pedidos de venda e não podem ser usados aqui.",
+    "stockInsufficient": "Apenas {{onHand}} em estoque, {{requested}} solicitados.",
+    "reservedStockTitle": "O estoque está reservado para um pedido de venda",
+    "reservedStockMessage": "Apenas {{free}} deste produto estão livres. {{reserved}} em estoque estão reservados para pedidos de venda e você solicitou {{requested}}. Adicionar mesmo assim retira estoque com que um pedido de venda conta e pode deixá-lo incompleto.",
+    "reservedStockConfirm": "Adicionar mesmo assim"
   },
   "watchList": {
     "title": "Lista de observação",
@@ -1666,7 +1686,10 @@
       "ruleCategoryBoardMismatch": "A categoria selecionada pertence a um quadro diferente do da regra.",
       "ruleCategoryInvalid": "A categoria selecionada não é uma categoria de nível superior.",
       "ruleSubcategoryInvalid": "A subcategoria selecionada não pertence à categoria selecionada.",
-      "ruleSubcategoryRequiresCategory": "Selecione uma categoria antes de escolher uma subcategoria."
+      "ruleSubcategoryRequiresCategory": "Selecione uma categoria antes de escolher uma subcategoria.",
+      "ruleTooManyKeywords": "Use no máximo {{max}} palavras-chave por regra.",
+      "ruleKeywordTooLong": "Cada palavra-chave deve ter no máximo {{max}} caracteres.",
+      "ruleOriginInvalid": "Uma das origens de ticket selecionadas não é válida."
     }
   },
   "ticketSection": {
@@ -1695,9 +1718,11 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Os tickets filhos mantêm seu status atual ao serem agrupados. Depois, fechar ou reabrir o mestre fecha ou reabre todos os tickets filhos, e as alterações de status, responsável e prioridade no mestre se aplicam aos filhos. Os campos de fluxo de trabalho ficam bloqueados nos filhos. As notas internas permanecem no mestre.",
+      "childrenDescription": "Os tickets filhos mantêm seu status atual ao serem agrupados. No modo Sync Updates, fechar ou reabrir o mestre fecha ou reabre todos os filhos, as alterações de status, responsável e prioridade no mestre se aplicam a eles e seus campos de fluxo de trabalho ficam bloqueados. No modo Link Only, os filhos gerenciam por conta própria status, responsável e prioridade. As notas internas permanecem no mestre.",
       "title": "Pacote",
       "masterBanner": "Este ticket é o mestre de um pacote ({{count}} filhos). Modo: {{mode}}.",
+      "childLockedNotice": "Os campos de fluxo de trabalho estão bloqueados; trabalhe a partir do ticket mestre.",
+      "childLinkedNotice": "Ele está vinculado ao mestre e é gerenciado de forma independente.",
       "multipleClients": "Vários clientes",
       "mode": "Modo: {{mode}}",
       "unbundle": "Desagrupar",
@@ -1733,7 +1758,15 @@
       "applyResolutionHelpNoComment": "Fecha o ticket filho com o status {{status}}. O ticket principal não tem nenhum comentário de resolução público para publicar.",
       "reopenMasterLabel": "Adicionar e reabrir o ticket principal",
       "reopenMasterHelp": "Reabre apenas o ticket principal. Os tickets filhos já fechados neste pacote permanecem fechados; as notificações de reabertura e o SLA se aplicam ao ticket principal.",
-      "closedMasterGating": "As regras de fechamento do quadro não permitem tickets filhos abertos sob um ticket principal fechado, portanto manter o ticket principal fechado não é uma opção."
+      "closedMasterGating": "As regras de fechamento do quadro não permitem tickets filhos abertos sob um ticket principal fechado, portanto manter o ticket principal fechado não é uma opção.",
+      "modeSwitchDialogIntro": "O ticket principal está fechado. Escolha o que deve acontecer com os tickets filhos abertos quando o pacote mudar para Sync Updates.",
+      "modeSwitchConfirm": "Mudar para Sync Updates",
+      "keepClosedSwitchLabel": "Mudar e manter o ticket principal fechado",
+      "keepClosedSwitchHelp": "Os tickets filhos abertos permanecem abertos com o próprio cronômetro de SLA. O pacote será exibido como inconsistente até que sejam resolvidos.",
+      "applyResolutionSwitchLabel": "Mudar e aplicar a resolução do ticket principal aos tickets filhos abertos",
+      "applyResolutionSwitchHelp": "Fecha cada ticket filho aberto com o status {{status}} e publica nele a resolução do ticket principal como comentário público.",
+      "applyResolutionSwitchHelpNoComment": "Fecha cada ticket filho aberto com o status {{status}}. O ticket principal não tem um comentário de resolução público para publicar.",
+      "reopenMasterSwitchLabel": "Mudar e reabrir o ticket principal"
     },
     "autoClose": "Será fechado automaticamente em {{date}}, a menos que haja nova atividade.",
     "autoCloseWarned": "O cliente foi avisado.",
@@ -2250,7 +2283,9 @@
       "details": "Detalhes",
       "template": "Modelo de ticket",
       "schedule": "Agendamento",
-      "behaviour": "Comportamento"
+      "behaviour": "Comportamento",
+      "overrides": "Substituições para este agendamento",
+      "dispatch": "Despacho"
     },
     "fields": {
       "board": "Quadro",
@@ -2457,6 +2492,22 @@
       "monthlyOnDay": "{{every}} no {{day}}",
       "monthlyOnNthWeekday": "{{every}}, {{ordinal}}: {{weekday}}",
       "yearly": "Todo ano em {{day}} de {{month}}"
+    },
+    "template": {
+      "intro": "A aparência do ticket vem de um modelo de ticket compartilhado. Alterar o modelo altera todos os agendamentos que o usam, a partir do próximo ticket.",
+      "select": "Modelo de ticket",
+      "placeholder": "Selecione um modelo de ticket",
+      "inactiveOption": "{{name}} (inativo)",
+      "summary": "{{checklist}} item(ns) de checklist, {{tags}} tag(s)",
+      "inactiveNotice": "Este modelo está inativo: oculto no seletor de modelos; ainda usado por {{count}} agendamentos.",
+      "sharedNotice": "Usado por {{count}} agendamentos. Editar o modelo altera todos eles.",
+      "edit": "Editar modelo",
+      "new": "Novo modelo",
+      "sampleTitle": "Título do primeiro ticket:",
+      "tokensHelp": "Os títulos de modelo podem usar {{tokens}}; eles são preenchidos por ticket."
+    },
+    "overridesSection": {
+      "intro": "Deixe um grupo desativado para usar o modelo. Cada cliente pode substituí-los novamente."
     }
   },
   "stopwatch": {
@@ -2490,12 +2541,15 @@
         "title": "Título do ticket",
         "board": "Quadro",
         "checklist": "Itens da checklist",
-        "status": "Estado"
-      }
+        "status": "Estado",
+        "schedules": "Agendamentos"
+      },
+      "deleteBlocked": "Usado por {{count}} agendamento(s) recorrente(s). Aponte-os para outro modelo ou arquive-os primeiro."
     },
     "status": {
       "active": "Ativo",
-      "inactive": "Inativo"
+      "inactive": "Inativo",
+      "scheduledOnly": "Apenas agendado"
     },
     "actions": {
       "edit": "Editar",
@@ -2517,7 +2571,10 @@
       "notesHelp": "Apenas para a sua equipa. Não é copiado para os tickets.",
       "title": "Título do ticket",
       "description": "Descrição",
-      "descriptionPlaceholder": "Descrição"
+      "descriptionPlaceholder": "Descrição",
+      "offerForManualUse": "Oferecer no seletor de novo ticket",
+      "offerForManualUseHelp": "Desative para modelos usados apenas por agendamentos recorrentes.",
+      "titleTokens": "Você pode usar {{tokens}} no título; eles são preenchidos por ticket."
     },
     "checklist": {
       "empty": "Sem itens de checklist.",
@@ -2545,14 +2602,24 @@
       "fromTicket": "Preenchido a partir do ticket #{{number}}. Nada é guardado até clicar em Guardar.",
       "inlineImages": "A descrição contém imagens que pertencem ao ticket de origem. Podem deixar de ser apresentadas se esse ticket for eliminado. Remova-as ou carregue-as novamente se o modelo deve sobreviver ao ticket.",
       "viewOnly": "Pode ver este modelo, mas não o alterar.",
-      "referenceProblems": "Alguns campos deste modelo apontam para itens que já não existem. Ficam em branco quando o modelo é usado. Corrija-os e guarde:"
+      "referenceProblems": "Alguns campos deste modelo apontam para itens que já não existem. Ficam em branco quando o modelo é usado. Corrija-os e guarde:",
+      "inactiveWarning": "Inativo: oculto no seletor de modelos; ainda usado por {{count}} agendamentos.",
+      "sharedWarning": "As alterações aplicam-se a todos os agendamentos recorrentes que usam este modelo, a partir do próximo ticket criado.",
+      "boardChangeWarning": "Alterar o quadro limpa a prioridade e a categoria e pode invalidar o status dos agendamentos que usam este modelo. Esses agendamentos falham até que você os edite. Agendamentos afetados: {{schedules}}."
     },
     "errors": {
       "notFound": "Modelo de ticket não encontrado",
       "duplicateName": "Já existe um modelo com o nome {{name}}",
       "invalidReferences": "O modelo refere um quadro, categoria ou prioridade que não está disponível",
       "notAvailable": "Os modelos de tickets não estão disponíveis",
-      "subcategoryNeedsCategory": "Uma subcategoria requer uma categoria"
+      "subcategoryNeedsCategory": "Uma subcategoria requer uma categoria",
+      "inUseBySchedules": "Usado por {{count}} agendamento(s) recorrente(s): {{schedules}}. Aponte-os para outro modelo ou arquive-os primeiro."
+    },
+    "usage": {
+      "schedules": "Usado por {{count}} agendamentos",
+      "paused": "pausado",
+      "tickets": "{{count}} tickets criados a partir deste modelo",
+      "scheduleThis": "Agendar este modelo…"
     }
   },
   "enums": {

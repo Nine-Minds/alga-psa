@@ -1024,13 +1024,40 @@
         },
         "rules": {
           "label": "Regeln für automatische Anwendung",
-          "help": "Die Vorlage wird automatisch auf neue Tickets angewendet, die einer dieser Regeln entsprechen. Lassen Sie ein Feld auf \"Beliebig\", um alle Werte zu erfassen.",
+          "help": "Eine Vorlage wird auf ein neues Ticket angewendet, wenn es mindestens einer ihrer Regeln entspricht. Eine Regel greift nur, wenn das Ticket alle festgelegten Filter erfüllt. Lassen Sie einen Filter leer, um ihn zu ignorieren.",
           "empty": "Keine Regeln für automatische Anwendung. Diese Vorlage kann weiterhin manuell auf Tickets angewendet werden.",
           "board": "Board",
           "category": "Kategorie",
           "subcategory": "Unterkategorie",
           "priority": "Priorität",
-          "any": "Beliebig"
+          "any": "Beliebig",
+          "appliesToAll": "Gilt für alle Tickets",
+          "clients": "Kunden",
+          "clientsAny": "Beliebiger Kunde",
+          "clientsAddAnother": "Weiteren Kunden hinzufügen",
+          "removeClient": "{{name}} entfernen",
+          "origins": "Ticketquelle",
+          "originsAny": "Beliebige Quelle",
+          "fromServiceRequest": "Nur Tickets aus einer Serviceanfrage",
+          "anyServiceRequest": "Beliebige Serviceanfrage",
+          "keywords": "Schlüsselwörter",
+          "keywordsPlaceholder": "Wort oder Wendung eingeben und Enter drücken",
+          "keywordsHelp": "Auch Wortteile werden gefunden, \"onboard\" findet also auch \"onboarding\". Groß- und Kleinschreibung wird ignoriert.",
+          "removeKeyword": "{{keyword}} entfernen",
+          "keywordMode": "Übereinstimmung",
+          "keywordModeAny": "Ein beliebiges Schlüsselwort",
+          "keywordModeAll": "Alle Schlüsselwörter",
+          "keywordTarget": "Suchen in",
+          "keywordTargetBoth": "Titel und Beschreibung",
+          "keywordTargetTitle": "Titel",
+          "keywordTargetDescription": "Beschreibung",
+          "originLabels": {
+            "internal": "Von Mitarbeitenden erstellt",
+            "client_portal": "Kundenportal",
+            "inbound_email": "Eingehende E-Mail",
+            "api": "API",
+            "recurring": "Wiederkehrender Zeitplan"
+          }
         }
       },
       "dialog": {
@@ -2911,7 +2938,8 @@
     "emptyState": "Keine Benutzer verfügbar.",
     "roles": {
       "client": "Kundenbenutzer",
-      "internal": "Interner Benutzer"
+      "internal": "Interner Benutzer",
+      "service": "Dienstkonto"
     },
     "badge": {
       "inactive": "Inaktiv"

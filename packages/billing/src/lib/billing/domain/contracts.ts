@@ -109,6 +109,8 @@ export type ResolvedContractBillingChargeFacts =
         configurationQuantity?: number | string | null;
         configurationCustomRate?: unknown;
         baseRate: number | string | null;
+        /** What `baseRate` means: 'per_unit' (× quantity) or 'share' (as-is). NULL reads as per_unit. */
+        baseRateBasis?: string | null;
         enableProration?: boolean | null;
         quantity?: number | string | null;
         /** Explicit fixed pricing basis ('unit' recurring seats vs 'bundle'/NULL). */

@@ -246,7 +246,9 @@
         "setLocation": "Standort festlegen",
         "setStatus": "Status festlegen",
         "assignContact": "Kontakt zuweisen",
-        "addToGroup": "Zu Gruppe hinzufügen"
+        "addToGroup": "Zu Gruppe hinzufügen",
+        "printLabels": "Etiketten drucken",
+        "printLabelsLimit": "Sie können höchstens {{max}} Etiketten auf einmal drucken"
       },
       "actions": {
         "apply": "Anwenden",
@@ -446,7 +448,9 @@
       "rebootDevice": "Gerät neu starten",
       "rebooting": "Neustart läuft...",
       "editAsset": "Asset bearbeiten",
-      "deleteAsset": "Asset löschen"
+      "deleteAsset": "Asset löschen",
+      "printLabel": "Asset-Etikett drucken",
+      "printPage": "Seite drucken"
     },
     "values": {
       "unknownClient": "Unbekannter Kunde"
@@ -849,7 +853,8 @@
       "save": "Speichern",
       "label": "Schaltflächenbeschriftung",
       "template": "URL-Vorlage",
-      "tokens": "Verwenden Sie {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {client.name} und {field.<key>} mit benutzerdefinierten Feldschlüsseln aus Einstellungen → Assets → Asset-Typen.",
+      "ninjaExample": "Beispiel für das NinjaOne-Geräte-Dashboard: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Ersetzen Sie den Host durch Ihre NinjaOne-Region: app, eu, ca, oc oder us2 .ninjarmm.com.",
+      "tokens": "Verwenden Sie {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} und {field.<key>} mit benutzerdefinierten Feldschlüsseln aus Einstellungen → Assets → Asset-Typen.",
       "loading": "Fernzugriffsoptionen werden geladen…",
       "unavailable": "Für dieses Asset nicht verfügbar",
       "actions": "Aktionen",

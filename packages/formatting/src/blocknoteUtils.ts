@@ -1469,5 +1469,71 @@ export function flattenBlockContentToPlainText(blockData: unknown): string {
     return lines.join('\n');
   }
 
-  return String(parsed);
+  // A lone BlockNote block object (not wrapped in an array).
+  if (typeof (parsed as { type?: unknown }).type === 'string') {
+    const lines: string[] = [];
+    collectBlockNoteLines(parsed, lines);
+    return lines.join('\n');
+  }
+
+  // Unknown object shape: nothing human-readable to project (never "[object Object]").
+  return '';
+}
+
+/** Default max length (characters) of the plain-text projection shown on invoices. */
+export const BLOCKNOTE_PLAIN_TEXT_MAX_LENGTH = 160;
+
+const looksLikeBlockContent = (value: unknown): boolean => {
+  const isBlock = (item: unknown): boolean =>
+    Boolean(item) && typeof item === 'object' && !Array.isArray(item) && typeof (item as { type?: unknown }).type === 'string';
+  return Array.isArray(value) ? value.length > 0 && value.every(isBlock) : isBlock(value);
+};
+
+const truncateAtWordBoundary = (text: string, maxLen: number): string => {
+  if (text.length <= maxLen) return text;
+  const slice = text.slice(0, Math.max(0, maxLen));
+  // Cut back to the last whitespace unless that would discard nearly everything.
+  const lastSpace = slice.search(/\s\S*$/);
+  const cut = lastSpace > maxLen / 2 ? slice.slice(0, lastSpace) : slice;
+  return `${cut.replace(/[\s.,;:!?-]+$/, '')}…`;
+};
+
+/**
+ * Converts a ticket/rich-text description to a single-line plain string for
+ * contexts that cannot render rich content (invoices, PDFs).
+ *
+ * Accepts a BlockNote/ProseMirror JSON string, an already-parsed tree, or plain
+ * text. Never throws. Idempotent: plain text returns unchanged (whitespace
+ * collapsed), so it is safe to apply at both write and read time. A document
+ * with only empty blocks yields ''. Output longer than `maxLen` is cut at a word
+ * boundary and suffixed with "…".
+ */
+export function blockNoteToPlainText(value: unknown, maxLen: number = BLOCKNOTE_PLAIN_TEXT_MAX_LENGTH): string {
+  try {
+    if (value === null || value === undefined) return '';
+    let source: unknown = value;
+    let structured = typeof value === 'object';
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          // An empty BlockNote document serialises as "[]". It carries no text,
+          // so never let it become the literal string "[]".
+          if (Array.isArray(parsed) && parsed.length === 0) return '';
+          if (looksLikeBlockContent(parsed) || (parsed && (parsed as { type?: unknown }).type === 'doc')) {
+            source = parsed;
+            structured = true;
+          }
+        } catch {
+          // Not JSON: treat as plain text.
+        }
+      }
+    }
+    const raw = structured ? flattenBlockContentToPlainText(source) : String(source);
+    const text = raw.replace(/\s+/g, ' ').trim();
+    return truncateAtWordBoundary(text, maxLen);
+  } catch {
+    return '';
+  }
 }

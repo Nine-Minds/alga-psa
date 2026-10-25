@@ -248,7 +248,8 @@
     "openMenu": "Menu openen",
     "moreActions": "Meer acties",
     "createTemplate": "Sjabloon maken van ticket",
-    "createWorkflowFromTicket": "Workflow maken van ticket"
+    "createWorkflowFromTicket": "Workflow maken van ticket",
+    "printWorkTag": "Werklabel afdrukken"
   },
   "messages": {
     "noTickets": "Geen tickets gevonden",
@@ -461,6 +462,14 @@
     "clientPortal": "Ontvangen via Klantenportaal",
     "inboundEmail": "Ontvangen via e-mail"
   },
+  "originalEmail": {
+    "text": "Tekst",
+    "original": "Originele e-mail",
+    "emailShort": "E-mail",
+    "loading": "Originele e-mail wordt geladen…",
+    "error": "De originele e-mail kan niet worden geladen.",
+    "group": "Berichtweergave"
+  },
   "documents": {
     "title": "Documenten",
     "noDocuments": "Geen documenten toegevoegd",
@@ -659,7 +668,7 @@
     "bundleMasterLabel": "Hoofdticket selecteren",
     "bundleMasterPlaceholder": "Hoofdticket selecteren...",
     "bundleSyncUpdates": "Wijzigingen synchroniseren van hoofd- naar onderliggende tickets (openbare reacties + workflowwijzigingen)",
-    "bundleSyncUpdatesHelp": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. Daarna sluit of heropent het sluiten of heropenen van de master alle kindtickets, en wijzigingen van status, toegewezene en prioriteit op de master worden op de kinderen toegepast. Workflowvelden zijn vergrendeld op kinderen. Interne notities blijven op de master.",
+    "bundleSyncUpdatesHelp": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. Als synchronisatie is ingeschakeld, sluit of heropent het sluiten of heropenen van de master alle kindtickets, worden wijzigingen van status, toegewezene en prioriteit op de master op hen toegepast en zijn hun workflowvelden vergrendeld. Zonder synchronisatie beheren kindtickets zelf hun status, toegewezene en prioriteit. Interne notities blijven op de master.",
     "bundleSelectAtLeastTwo": "Selecteer ten minste twee tickets om te bundelen.",
     "bundleSelectMaster": "Selecteer een hoofdticket.",
     "bundleSuccess": "Tickets gebundeld",
@@ -732,8 +741,8 @@
       "masterTicket": "Hoofdticket selecteren",
       "selectMasterTicket": "Hoofdticket selecteren...",
       "syncUpdates": "Wijzigingen synchroniseren van hoofd- naar onderliggende tickets (openbare reacties + workflowwijzigingen)",
-      "syncUpdatesHelp": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. Daarna sluit of heropent het sluiten of heropenen van de master alle kindtickets, en wijzigingen van status, toegewezene en prioriteit op de master worden op de kinderen toegepast. Workflowvelden zijn vergrendeld op kinderen. Interne notities blijven op de master.",
-      "childrenDescription": "Onderliggende behouden hun huidige status; workflowvelden zijn vergrendeld op onderliggende tickets. Inkomende reacties op onderliggende tickets worden hieronder als alleen-lezen weergegeven.",
+      "syncUpdatesHelp": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. Als synchronisatie is ingeschakeld, sluit of heropent het sluiten of heropenen van de master alle kindtickets, worden wijzigingen van status, toegewezene en prioriteit op de master op hen toegepast en zijn hun workflowvelden vergrendeld. Zonder synchronisatie beheren kindtickets zelf hun status, toegewezene en prioriteit. Interne notities blijven op de master.",
+      "childrenDescription": "Kindtickets behouden hun huidige status. Workflowvelden zijn alleen in de modus Sync Updates vergrendeld. Inkomende reacties op kindtickets worden hieronder als alleen-lezen weergegeven.",
       "checkingMasters": "Bestaande bundels controleren...",
       "existingMasterSuffix": "(bestaand hoofdticket)",
       "existingMasterLocked": "Eén geselecteerd ticket is al een hoofdticket. Dit wordt als hoofdticket gebruikt; de andere worden als onderliggende tickets toegevoegd.",
@@ -784,7 +793,9 @@
       "more": "Meer",
       "bundleNeedsOne": "Selecteer minstens 1 ticket om te bundelen",
       "selectedCount_few": "{{count}} geselecteerd",
-      "selectedCount_many": "{{count}} geselecteerd"
+      "selectedCount_many": "{{count}} geselecteerd",
+      "printLabels": "Labels afdrukken",
+      "printLabelsLimit": "U kunt maximaal {{max}} labels tegelijk afdrukken"
     },
     "assign": {
       "dialogTitle": "Geselecteerde tickets toewijzen",
@@ -964,6 +975,7 @@
     "templateReplaceTitle": "Uw wijzigingen vervangen?",
     "templateReplaceMessage": "Het toepassen van een sjabloon vervangt de titel, beschrijving en andere velden die u hebt ingevuld.",
     "templateReplaceConfirm": "Sjabloon toepassen",
+    "templateTokenHint": "De titel vult de gekozen klant, contactpersoon en vervaldatum in, totdat u hem bewerkt.",
     "tagCreatePartialFailure_few": "{{count}} tags konden niet worden aangemaakt",
     "tagCreatePartialFailure_many": "{{count}} tags konden niet worden aangemaakt",
     "tagCreationFailed_few": "{{count}} tags konden niet worden aangemaakt",
@@ -1396,7 +1408,15 @@
     "selectUnit": "Selecteer een eenheid om te leveren...",
     "onHandByLocation": "Voorraad per locatie",
     "catalogUnitCost": "Cataloguskostprijs per eenheid",
-    "costNotConfigured": "Niet geconfigureerd"
+    "costNotConfigured": "Niet geconfigureerd",
+    "availableBadge": "Beschikbaar: {{available}}",
+    "availableByLocation": "Vrije voorraad per locatie",
+    "freeOfOnHand": "{{free}} vrij van {{onHand}}",
+    "stockHeld": "Slechts {{free}} beschikbaar. {{held}} op voorraad is vastgezet voor verkooporders en kan hier niet worden gebruikt.",
+    "stockInsufficient": "Slechts {{onHand}} op voorraad, {{requested}} gevraagd.",
+    "reservedStockTitle": "Voorraad is gereserveerd voor een verkooporder",
+    "reservedStockMessage": "Slechts {{free}} van dit product is vrij. {{reserved}} op voorraad is gereserveerd voor verkooporders en u vroeg er {{requested}}. Als u het toch toevoegt, neemt u voorraad af waar een verkooporder op rekent en kan die order tekortkomen.",
+    "reservedStockConfirm": "Toch toevoegen"
   },
   "watchList": {
     "title": "Volglijst",
@@ -1666,7 +1686,10 @@
       "ruleCategoryBoardMismatch": "De geselecteerde categorie hoort bij een ander bord dan de regel.",
       "ruleCategoryInvalid": "De geselecteerde categorie is geen categorie op het hoogste niveau.",
       "ruleSubcategoryInvalid": "De geselecteerde subcategorie hoort niet bij de geselecteerde categorie.",
-      "ruleSubcategoryRequiresCategory": "Selecteer een categorie voordat u een subcategorie kiest."
+      "ruleSubcategoryRequiresCategory": "Selecteer een categorie voordat u een subcategorie kiest.",
+      "ruleTooManyKeywords": "Gebruik maximaal {{max}} trefwoorden per regel.",
+      "ruleKeywordTooLong": "Elk trefwoord mag maximaal {{max}} tekens bevatten.",
+      "ruleOriginInvalid": "Een van de geselecteerde ticketbronnen is ongeldig."
     }
   },
   "ticketSection": {
@@ -1695,9 +1718,11 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. Daarna sluit of heropent het sluiten of heropenen van de master alle kindtickets, en wijzigingen van status, toegewezene en prioriteit op de master worden op de kinderen toegepast. Workflowvelden zijn vergrendeld op kinderen. Interne notities blijven op de master.",
+      "childrenDescription": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. In de modus Sync Updates sluit of heropent het sluiten of heropenen van de master alle kindtickets, worden wijzigingen van status, toegewezene en prioriteit op de master op hen toegepast en zijn hun workflowvelden vergrendeld. In de modus Link Only beheren kindtickets zelf hun status, toegewezene en prioriteit. Interne notities blijven op de master.",
       "title": "Bundel",
       "masterBanner": "Dit ticket is het hoofdticket van een bundel ({{count}} onderliggende tickets). Modus: {{mode}}.",
+      "childLockedNotice": "Workflowvelden zijn vergrendeld; werk vanuit het masterticket.",
+      "childLinkedNotice": "Het is gekoppeld aan de master en wordt zelfstandig beheerd.",
       "multipleClients": "Meerdere klanten",
       "mode": "Modus: {{mode}}",
       "unbundle": "Ontbundelen",
@@ -1733,7 +1758,15 @@
       "applyResolutionHelpNoComment": "Sluit het onderliggende ticket met status {{status}}. Het hoofdticket heeft geen openbare oplossingsopmerking om te plaatsen.",
       "reopenMasterLabel": "Toevoegen en hoofdticket heropenen",
       "reopenMasterHelp": "Heropent alleen het hoofdticket. Al gesloten onderliggende tickets in deze bundel blijven gesloten; heropeningsmeldingen en SLA gelden voor het hoofdticket.",
-      "closedMasterGating": "De sluitregels van het bord staan geen open onderliggende tickets onder een gesloten hoofdticket toe, dus het hoofdticket gesloten houden is geen optie."
+      "closedMasterGating": "De sluitregels van het bord staan geen open onderliggende tickets onder een gesloten hoofdticket toe, dus het hoofdticket gesloten houden is geen optie.",
+      "modeSwitchDialogIntro": "Het hoofdticket is gesloten. Kies wat er met de open onderliggende tickets moet gebeuren wanneer de bundel naar Sync Updates overschakelt.",
+      "modeSwitchConfirm": "Overschakelen naar Sync Updates",
+      "keepClosedSwitchLabel": "Overschakelen en hoofdticket gesloten houden",
+      "keepClosedSwitchHelp": "Open onderliggende tickets blijven open met een eigen SLA-klok. De bundel wordt als inconsistent weergegeven totdat ze zijn opgelost.",
+      "applyResolutionSwitchLabel": "Overschakelen en de oplossing van het hoofdticket op open onderliggende tickets toepassen",
+      "applyResolutionSwitchHelp": "Sluit elk open onderliggend ticket met status {{status}} en plaatst de oplossing van het hoofdticket als openbare opmerking erbij.",
+      "applyResolutionSwitchHelpNoComment": "Sluit elk open onderliggend ticket met status {{status}}. Het hoofdticket heeft geen openbare oplossingsopmerking om te plaatsen.",
+      "reopenMasterSwitchLabel": "Overschakelen en hoofdticket heropenen"
     },
     "autoClose": "Wordt automatisch gesloten op {{date}}, tenzij er nieuwe activiteit is.",
     "autoCloseWarned": "De klant is gewaarschuwd.",
@@ -2250,7 +2283,9 @@
       "details": "Details",
       "template": "Ticketsjabloon",
       "schedule": "Planning",
-      "behaviour": "Gedrag"
+      "behaviour": "Gedrag",
+      "overrides": "Overschrijvingen voor dit schema",
+      "dispatch": "Toewijzing"
     },
     "fields": {
       "board": "Bord",
@@ -2457,6 +2492,22 @@
       "monthlyOnDay": "{{every}} op {{day}}",
       "monthlyOnNthWeekday": "{{every}} op de {{ordinal}} {{weekday}}",
       "yearly": "Elk jaar op {{day}} {{month}}"
+    },
+    "template": {
+      "intro": "Hoe het ticket eruitziet komt uit een gedeelde tickettemplate. Een wijziging van de sjabloon wijzigt elk schema dat deze gebruikt, vanaf het volgende ticket.",
+      "select": "Tickettemplate",
+      "placeholder": "Selecteer een tickettemplate",
+      "inactiveOption": "{{name}} (inactief)",
+      "summary": "{{checklist}} checklistitem(s), {{tags}} tag(s)",
+      "inactiveNotice": "Deze sjabloon is inactief: verborgen in de sjabloonkiezer; wordt nog gebruikt door {{count}} schema's.",
+      "sharedNotice": "In gebruik door {{count}} schema's. Het bewerken van de sjabloon wijzigt ze allemaal.",
+      "edit": "Sjabloon bewerken",
+      "new": "Nieuwe sjabloon",
+      "sampleTitle": "Titel van het eerste ticket:",
+      "tokensHelp": "Sjabloontitels kunnen {{tokens}} gebruiken; ze worden per ticket ingevuld."
+    },
+    "overridesSection": {
+      "intro": "Laat een groep uit om de sjabloon te gebruiken. Elke klant kan deze opnieuw overschrijven."
     }
   },
   "stopwatch": {
@@ -2490,12 +2541,15 @@
         "title": "Tickettitel",
         "board": "Bord",
         "checklist": "Checklistitems",
-        "status": "Status"
-      }
+        "status": "Status",
+        "schedules": "Schema's"
+      },
+      "deleteBlocked": "In gebruik door {{count}} terugkerend(e) schema('s). Wijs ze eerst naar een andere sjabloon of archiveer ze."
     },
     "status": {
       "active": "Actief",
-      "inactive": "Inactief"
+      "inactive": "Inactief",
+      "scheduledOnly": "Alleen gepland"
     },
     "actions": {
       "edit": "Bewerken",
@@ -2517,7 +2571,10 @@
       "notesHelp": "Alleen voor uw team. Wordt niet naar tickets gekopieerd.",
       "title": "Tickettitel",
       "description": "Beschrijving",
-      "descriptionPlaceholder": "Beschrijving"
+      "descriptionPlaceholder": "Beschrijving",
+      "offerForManualUse": "Aanbieden in de kiezer voor nieuwe tickets",
+      "offerForManualUseHelp": "Uitschakelen voor sjablonen die alleen door terugkerende schema's worden gebruikt.",
+      "titleTokens": "U kunt {{tokens}} in de titel gebruiken; ze worden per ticket ingevuld."
     },
     "checklist": {
       "empty": "Geen checklistitems.",
@@ -2545,14 +2602,24 @@
       "fromTicket": "Vooraf ingevuld vanuit ticket #{{number}}. Er wordt niets opgeslagen tot u op Opslaan klikt.",
       "inlineImages": "De beschrijving bevat afbeeldingen die bij het brionticket horen. Ze worden mogelijk niet meer getoond als dat ticket wordt verwijderd. Verwijder ze of upload ze opnieuw als het sjabloon het ticket moet overleven.",
       "viewOnly": "U kunt dit sjabloon bekijken maar niet wijzigen.",
-      "referenceProblems": "Sommige velden in dit sjabloon verwijzen naar dingen die niet meer bestaan. Ze blijven leeg wanneer het sjabloon wordt gebruikt. Corrigeer ze en sla op:"
+      "referenceProblems": "Sommige velden in dit sjabloon verwijzen naar dingen die niet meer bestaan. Ze blijven leeg wanneer het sjabloon wordt gebruikt. Corrigeer ze en sla op:",
+      "inactiveWarning": "Inactief: verborgen in de sjabloonkiezer; wordt nog gebruikt door {{count}} schema's.",
+      "sharedWarning": "Wijzigingen gelden voor elk terugkerend schema dat deze sjabloon gebruikt, vanaf het volgende ticket dat het aanmaakt.",
+      "boardChangeWarning": "Het wijzigen van het bord wist prioriteit en categorie en kan de status van schema's met deze sjabloon ongeldig maken. Die schema's mislukken totdat u ze bewerkt. Betrokken schema's: {{schedules}}."
     },
     "errors": {
       "notFound": "Ticketsjabloon niet gevonden",
       "duplicateName": "Er bestaat al een sjabloon met de naam {{name}}",
       "invalidReferences": "Het sjabloon verwijst naar een bord, categorie of prioriteit die niet beschikbaar is",
       "notAvailable": "Ticketsjablonen zijn niet beschikbaar",
-      "subcategoryNeedsCategory": "Een subcategorie vereist een categorie"
+      "subcategoryNeedsCategory": "Een subcategorie vereist een categorie",
+      "inUseBySchedules": "In gebruik door {{count}} terugkerend(e) schema('s): {{schedules}}. Wijs ze eerst naar een andere sjabloon of archiveer ze."
+    },
+    "usage": {
+      "schedules": "In gebruik door {{count}} schema's",
+      "paused": "gepauzeerd",
+      "tickets": "{{count}} tickets aangemaakt met deze sjabloon",
+      "scheduleThis": "Deze sjabloon inplannen…"
     }
   },
   "enums": {

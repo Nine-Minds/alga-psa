@@ -202,6 +202,27 @@
         "save": "Det gick inte att spara inställningarna",
         "range": "Ange ett heltal från 1 till 365."
       }
+    },
+    "paymentTerms": {
+      "title": "Standardbetalningsvillkor",
+      "description": "Ange de betalningsvillkor som nya fakturor använder när varken kunden eller dess faktureringsprofil anger något.",
+      "fields": {
+        "terms": {
+          "label": "Betalningsvillkor",
+          "help": "Gäller endast nya fakturor. Befintliga fakturor och kunder med egna villkor behåller sina."
+        }
+      },
+      "actions": {
+        "save": "Spara"
+      },
+      "toast": {
+        "updated": "Standardbetalningsvillkoren har uppdaterats."
+      },
+      "errors": {
+        "load": "Det gick inte att läsa in inställningarna",
+        "save": "Det gick inte att spara inställningarna",
+        "invalid": "Välj ett giltigt betalningsvillkor."
+      }
     }
   },
   "quoting": {
@@ -1597,7 +1618,7 @@
       "daysPlural": "{{count}} dagar",
       "daysDecimal": "{{count}} dagar",
       "hoursUnit": "timmar ({{formatted}})",
-      "willExpireAfter": "Betalningslänkar löper ut efter {{duration}}"
+      "willExpireAfter": "Betalningslänken i mejlet fungerar i {{duration}}"
     },
     "notConnected": {
       "title": "Stripe är inte anslutet",
@@ -1615,7 +1636,7 @@
       },
       "paymentLinkExpiration": {
         "label": "Giltighetstid för betalningslänkar",
-        "description": "Hur länge betalningslänkar är giltiga innan de löper ut"
+        "description": "Hur länge betalningslänken i fakturamejl fungerar (1 timme till 30 dagar). Varje klick öppnar en ny säker betalning så länge fakturan är obetald."
       },
       "actions": {
         "save": "Spara inställningar",

@@ -104,6 +104,15 @@ export const invoiceWrittenOffEventPayloadSchema = BaseDomainEventPayloadSchema.
 
 export type InvoiceWrittenOffEventPayload = z.infer<typeof invoiceWrittenOffEventPayloadSchema>;
 
+/**
+ * Where a recorded payment came from. Consumers that act on payments (e.g. the
+ * confirmation email) allow-list on this value; a missing or unknown value must
+ * be treated as "do not act".
+ */
+export const PAYMENT_RECORDED_SOURCES = ['online_payment', 'manual', 'accounting_sync'] as const;
+export const paymentRecordedSourceSchema = z.enum(PAYMENT_RECORDED_SOURCES);
+export type PaymentRecordedSource = z.infer<typeof paymentRecordedSourceSchema>;
+
 export const paymentRecordedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   paymentId: paymentIdSchema,
   clientId: clientIdSchema.optional(),
@@ -113,6 +122,7 @@ export const paymentRecordedEventPayloadSchema = BaseDomainEventPayloadSchema.ex
   method: z.string().min(1),
   receivedByUserId: userIdSchema.optional(),
   gatewayTransactionId: z.string().optional(),
+  source: paymentRecordedSourceSchema.optional(),
 }).describe('Payload for PAYMENT_RECORDED');
 
 export type PaymentRecordedEventPayload = z.infer<typeof paymentRecordedEventPayloadSchema>;
@@ -319,6 +329,16 @@ export const prepaidBalanceAlertScanRequestedEventPayloadSchema = BaseDomainEven
 
 export type PrepaidBalanceAlertScanRequestedEventPayload = z.infer<typeof prepaidBalanceAlertScanRequestedEventPayloadSchema>;
 
+// Emitted (post-commit) when a time-entry save drew minutes from a contract-issued
+// Prepaid Block. The server subscriber runs evaluate -> replenish -> deliver scoped
+// to this client; the daily scan remains the correctness backstop.
+export const prepaidBlockUsageChangedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  clientId: z.string().describe('Client whose prepaid block usage changed'),
+  contractLineId: z.string().describe('Prepaid Block contract line whose block was drawn'),
+}).describe('Payload for PREPAID_BLOCK_USAGE_CHANGED');
+
+export type PrepaidBlockUsageChangedEventPayload = z.infer<typeof prepaidBlockUsageChangedEventPayloadSchema>;
+
 export const hourBlockExpiringEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   clientId: z.string().describe('Client ID whose hour blocks are expiring'),
   daysBeforeExpiration: z.number().describe('Days remaining before the hour blocks expire'),
@@ -328,6 +348,10 @@ export const hourBlockExpiringEventPayloadSchema = BaseDomainEventPayloadSchema.
         blockId: z.string().describe('Hour block ID'),
         remainingMinutes: z.number().describe('Remaining minutes on the block'),
         expirationDate: z.string().describe('Block expiration date (ISO 8601)'),
+        contractName: z
+          .string()
+          .nullish()
+          .describe('Name of the contract a Prepaid Block contract-line block belongs to (absent for client-level blocks)'),
       })
     )
     .describe('Hour blocks expiring on the target date'),

@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } fr
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getUserTimeZone } from '@alga-psa/core';
+import { deriveWorkReason } from '../../lib/deriveWorkReason';
 import { formatTicketDateTime, formatTicketRelativeToNow } from '../../lib/ticketDateTimeFormat';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
@@ -40,6 +41,7 @@ import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
 import type { CommentEmailRecipientsPayload } from "./CommentEmailRecipientsControl";
 import { TicketActivityTimeline } from "./TicketActivityTimeline";
+import { useInboundEmailViewPreference } from "../../hooks/useInboundEmailViewPreference";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import {
@@ -87,7 +89,7 @@ import { Input } from "@alga-psa/ui/components/Input";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { Label } from "@alga-psa/ui/components/Label";
 import { PresenceBar } from '@alga-psa/ui/presence/PresenceBar';
-import { ExternalLink, Mail, History, Trash2, Copy, MoreHorizontal, LayoutTemplate, Workflow } from 'lucide-react';
+import { ExternalLink, Printer, Mail, History, Trash2, Copy, MoreHorizontal, LayoutTemplate, Workflow } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { useTicketTemplatePermissions } from '../templates/useTicketTemplatePermissions';
 import { WorkItemType } from "@alga-psa/types";
@@ -96,7 +98,7 @@ import { PartialBlock, StyledText } from '@blocknote/core';
 import { hasEditorContent } from '@alga-psa/ui/editor/hasEditorContent';
 import { convertBlockNoteToMarkdown } from "@alga-psa/formatting/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
-import { ResponseStateBadge } from '@alga-psa/ui/components';
+import { ResponseStateBadge, LabelPrintDialog } from '@alga-psa/ui/components';
 import TicketNavigation from './TicketNavigation';
 import LayoutToggle from './bento/LayoutToggle';
 import TicketBentoLayout from './bento/TicketBentoLayout';
@@ -130,6 +132,7 @@ import {
     type EligibleChildTicket
 } from '../../actions/ticketBundleActions';
 import { ClosedMasterChoiceFields } from './ClosedMasterChoiceFields';
+import { isChildWorkflowLocked } from '../../lib/bundleWorkflowLock';
 import type { ClosedMasterChoice } from '../../lib/ticketBundlePolicy';
 import { deleteDraftClipboardImages } from '../../actions/comment-actions/clipboardImageDraftActions';
 import {
@@ -370,7 +373,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const { formatDate, locale, dateFormat } = useFormatters();
     const ticketLive = useTicketLiveContext();
     const { data: session } = useSession();
+    // Keeps the Text / Email choice on inbound-email bodies a stored per-user
+    // preference rather than per-message state.
+    useInboundEmailViewPreference();
     const [hasHydrated, setHasHydrated] = useState(false);
+    const [isPrintWorkTagOpen, setIsPrintWorkTagOpen] = useState(false);
     const [canViewCommentMetadataDebug, setCanViewCommentMetadataDebug] = useState(
         bootstrap?.canViewCommentMetadataDebug ?? false,
     );
@@ -565,6 +572,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         ticket.priority_id,
     ]);
 
+    // Reason prefill: subcategory name, else category name (same rule as the server provider). The dialog
+    // sends an override only if the user edits the field.
+    const printWorkReason = useMemo(() => {
+        const nameOf = (categoryId?: string | null) =>
+            categoryId ? initialCategories.find((c) => c.category_id === categoryId)?.category_name : undefined;
+        return deriveWorkReason(nameOf(ticket.subcategory_id), nameOf(ticket.category_id)) ?? '';
+    }, [initialCategories, ticket.category_id, ticket.subcategory_id]);
+
     const checklistSummary = useMemo(
         () => summarizeChecklist(checklistItems ?? []),
         [checklistItems]
@@ -719,6 +734,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [closedMasterContext, setClosedMasterContext] = useState<BundleMasterClosedContextActionResult | null>(null);
     const [closedMasterChoice, setClosedMasterChoice] = useState<ClosedMasterChoice | null>(null);
     const [pendingClosedMasterChildId, setPendingClosedMasterChildId] = useState<string | null>(null);
+    const [isModeSwitchPending, setIsModeSwitchPending] = useState(false);
     const [isLoadingClosedMasterContext, setIsLoadingClosedMasterContext] = useState(false);
     const [isWatchListSaving, setIsWatchListSaving] = useState(false);
     const [allContactsForWatchList, setAllContactsForWatchList] = useState<IContact[]>([]);
@@ -3404,12 +3420,18 @@ const handleClose = () => {
         }
     }, [ticket.ticket_id, router, onSaved, t]);
 
-    const handleToggleBundleMode = useCallback(async () => {
-        if (!ticket.ticket_id || !bundle?.isBundleMaster) return;
+    const performBundleModeChange = useCallback(async (
+        nextMode: 'link_only' | 'sync_updates',
+        onClosedMaster?: ClosedMasterChoice,
+    ) => {
+        if (!ticket.ticket_id) return;
         try {
             setIsUpdatingBundleSettings(true);
-            const nextMode = bundle.mode === 'link_only' ? 'sync_updates' : 'link_only';
-            const result = await updateBundleSettingsAction({ masterTicketId: ticket.ticket_id, mode: nextMode });
+            const result = await updateBundleSettingsAction({
+                masterTicketId: ticket.ticket_id,
+                mode: nextMode,
+                ...(onClosedMaster ? { onClosedMaster } : {}),
+            });
             if (isReturnedActionError(result)) {
                 handleTicketActionError(result, t('messages.updateBundleSettingsFailed'));
                 return;
@@ -3422,7 +3444,44 @@ const handleClose = () => {
         } finally {
             setIsUpdatingBundleSettings(false);
         }
-    }, [ticket.ticket_id, bundle?.isBundleMaster, bundle?.mode, router, onSaved, t]);
+    }, [ticket.ticket_id, router, onSaved, t]);
+
+    // Switching to sync_updates on a closed master needs the same explicit
+    // choice as adding a child to one, so the closed-master dialog is reused.
+    const handleToggleBundleMode = useCallback(async () => {
+        if (!ticket.ticket_id || !bundle?.isBundleMaster) return;
+        const nextMode = bundle.mode === 'link_only' ? 'sync_updates' : 'link_only';
+        if (nextMode === 'link_only') {
+            await performBundleModeChange(nextMode);
+            return;
+        }
+        try {
+            setIsUpdatingBundleSettings(true);
+            const context = await getBundleMasterClosedContextAction({ masterTicketId: ticket.ticket_id });
+            if (isReturnedActionError(context)) {
+                handleTicketActionError(context, t('messages.updateBundleSettingsFailed'));
+                return;
+            }
+            if (!context.isClosed) {
+                setIsUpdatingBundleSettings(false);
+                await performBundleModeChange(nextMode);
+                return;
+            }
+            setClosedMasterContext(context);
+            setClosedMasterChoice(
+                context.allowedChoices.includes('keep_closed')
+                    ? 'keep_closed'
+                    : (context.allowedChoices[0] ?? null)
+            );
+            setPendingClosedMasterChildId(null);
+            setIsModeSwitchPending(true);
+            setIsClosedMasterChoiceOpen(true);
+        } catch (error) {
+            handleTicketActionError(error, t('messages.updateBundleSettingsFailed'));
+        } finally {
+            setIsUpdatingBundleSettings(false);
+        }
+    }, [ticket.ticket_id, bundle?.isBundleMaster, bundle?.mode, t, performBundleModeChange]);
 
     if (!tenant) {
         return (
@@ -3445,6 +3504,13 @@ const handleClose = () => {
             ? t('liveUpdates.connection.unavailable', 'Live updates unavailable')
             : null;
 
+    // Children lock their workflow fields only under a sync_updates master;
+    // bundle.mode is the master's ticket_bundle_settings.mode from the detail load.
+    const bundleWorkflowLocked = isChildWorkflowLocked({
+        isBundledChild: Boolean(bundle?.isBundleChild),
+        masterSettings: { mode: bundle?.mode },
+    });
+
     const bundleAndCloseBanners = (
         <>
                                 {bundle?.isBundleChild && bundle?.masterTicket ? (
@@ -3453,7 +3519,10 @@ const handleClose = () => {
                                         <a className="font-medium underline" href={`/msp/tickets/${bundle.masterTicket.ticket_id}`}>
                                             {bundle.masterTicket.ticket_number}
                                         </a>
-                                        . Workflow fields are locked; work from the master ticket.
+                                        .{' '}
+                                        {bundleWorkflowLocked
+                                            ? t('details.bundle.childLockedNotice', 'Workflow fields are locked; work from the master ticket.')
+                                            : t('details.bundle.childLinkedNotice', 'It is linked to the master and managed on its own.')}
                                     </div>
                                 ) : null}
 
@@ -3504,7 +3573,7 @@ const handleClose = () => {
                                             </div>
                                         </div>
                                         <div className="text-xs text-gray-500 mb-2">
-                                            {t('details.bundle.childrenDescription')}
+                                            {t('details.bundle.childrenDescription', 'Children keep their current status when bundled. In Sync Updates mode, closing or reopening the master closes or reopens all children, status, assignee and priority changes on the master apply to them, and their workflow fields are locked. In Link Only mode, children manage their own status, assignee and priority. Internal notes stay on the master.')}
                                         </div>
                                         <div className="flex items-center gap-2 mb-3" ref={searchContainerRef}>
                                             <div className="relative flex-1">
@@ -3754,6 +3823,16 @@ const handleClose = () => {
                                         <span>{t('fields.openInNewTab', 'Open in new tab')}</span>
                                     </Button>
                                 )}
+                                <Button
+                                    id={`${id}-print-work-tag-button`}
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setIsPrintWorkTagOpen(true)}
+                                    className="flex items-center gap-2"
+                                >
+                                    <Printer className="h-4 w-4" />
+                                    <span>{t('actions.printWorkTag', 'Print work tag')}</span>
+                                </Button>
                                 <Button
                                     id={`${id}-duplicate-ticket-button`}
                                     variant="outline"
@@ -4168,6 +4247,7 @@ const handleClose = () => {
                     onClose={() => {
                         setIsClosedMasterChoiceOpen(false);
                         setPendingClosedMasterChildId(null);
+                        setIsModeSwitchPending(false);
                     }}
                     className="max-w-lg"
                 >
@@ -4176,7 +4256,9 @@ const handleClose = () => {
                             {t('details.bundle.closedMasterDialogTitle', "This bundle's master is closed")}
                         </h2>
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            {t('details.bundle.closedMasterDialogIntro', 'The master is closed. Choose what should happen to the child when it is added.')}
+                            {isModeSwitchPending
+                                ? t('details.bundle.modeSwitchDialogIntro', 'The master is closed. Choose what should happen to the open children when the bundle switches to Sync Updates.')
+                                : t('details.bundle.closedMasterDialogIntro', 'The master is closed. Choose what should happen to the child when it is added.')}
                         </p>
                         {closedMasterContext && (
                             <div className="mt-4">
@@ -4187,6 +4269,7 @@ const handleClose = () => {
                                     onChange={setClosedMasterChoice}
                                     hasResolutionComment={closedMasterContext.hasResolutionComment}
                                     masterStatusName={closedMasterContext.masterStatusName}
+                                    variant={isModeSwitchPending ? 'switch' : 'add'}
                                 />
                             </div>
                         )}
@@ -4198,6 +4281,7 @@ const handleClose = () => {
                                 onClick={() => {
                                     setIsClosedMasterChoiceOpen(false);
                                     setPendingClosedMasterChildId(null);
+                                    setIsModeSwitchPending(false);
                                 }}
                             >
                                 {t('actions.cancel', 'Cancel')}
@@ -4205,8 +4289,15 @@ const handleClose = () => {
                             <Button
                                 id={`${id}-bundle-closed-master-confirm`}
                                 type="button"
-                                disabled={!closedMasterChoice || !pendingClosedMasterChildId}
+                                disabled={!closedMasterChoice || (!pendingClosedMasterChildId && !isModeSwitchPending)}
                                 onClick={async () => {
+                                    if (isModeSwitchPending && closedMasterChoice) {
+                                        const choice = closedMasterChoice;
+                                        setIsClosedMasterChoiceOpen(false);
+                                        setIsModeSwitchPending(false);
+                                        await performBundleModeChange('sync_updates', choice);
+                                        return;
+                                    }
                                     if (!pendingClosedMasterChildId || !closedMasterChoice) return;
                                     const childId = pendingClosedMasterChildId;
                                     const choice = closedMasterChoice;
@@ -4215,7 +4306,9 @@ const handleClose = () => {
                                     await performAddChildToBundle(childId, choice);
                                 }}
                             >
-                                {t('details.bundle.add', 'Add')}
+                                {isModeSwitchPending
+                                    ? t('details.bundle.modeSwitchConfirm', 'Switch to Sync Updates')
+                                    : t('details.bundle.add', 'Add')}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -4268,7 +4361,7 @@ const handleClose = () => {
                     hideSlaStatus={hideSlaStatus}
                     hideBilling={hideBilling}
                     hideScheduling={hideScheduling}
-                    workflowLocked={Boolean(bundle?.isBundleChild)}
+                    workflowLocked={bundleWorkflowLocked}
                     onOpenAllFields={() => setIsAllFieldsDrawerOpen(true)}
                     tags={tags}
                     onTagsChange={handleTagsChange}
@@ -4403,7 +4496,7 @@ const handleClose = () => {
                                     initialCategories={initialCategories}
                                     itilImpact={itilImpact}
                                     itilUrgency={itilUrgency}
-                                    isBundledChild={Boolean(bundle?.isBundleChild)}
+                                    isBundledChild={bundleWorkflowLocked}
                                     responseStateTrackingEnabled={responseStateTrackingEnabled}
                                     renderProjectTaskActions={renderCreateProjectTask}
                                     renderQuickInvoiceActions={hideBilling ? undefined : renderQuickInvoice}
@@ -4624,7 +4717,7 @@ const handleClose = () => {
                             initialCategories={initialCategories}
                             itilImpact={itilImpact}
                             itilUrgency={itilUrgency}
-                            isBundledChild={Boolean(bundle?.isBundleChild)}
+                            isBundledChild={bundleWorkflowLocked}
                             responseStateTrackingEnabled={responseStateTrackingEnabled}
                             renderProjectTaskActions={renderCreateProjectTask}
                             renderQuickInvoiceActions={hideBilling ? undefined : renderQuickInvoice}
@@ -4743,6 +4836,17 @@ const handleClose = () => {
                     ) : null}
                 </div>
             </Drawer>
+            {isPrintWorkTagOpen && (
+                <LabelPrintDialog
+                    isOpen={isPrintWorkTagOpen}
+                    onClose={() => setIsPrintWorkTagOpen(false)}
+                    labelClass="ticket-work-tag"
+                    ids={[ticket.ticket_id as string]}
+                    defaultTitle={ticket.title ?? ''}
+                    defaultDetail={printWorkReason}
+                    idPrefix={`${id}-print-work-tag`}
+                />
+            )}
         </ReflectionContainer>
     );
 };

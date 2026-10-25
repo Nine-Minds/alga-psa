@@ -3,6 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { queueContactCreated } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { createDefaultTaxSettings } from '@alga-psa/shared/billingClients';
 import {
   buildClientCreatedPayload,
@@ -128,7 +129,7 @@ export const findIntegrationContactByEmailAddress = withAuth(async (
 });
 
 export const createOrFindIntegrationContactByEmail = withAuth(async (
-  _user,
+  user,
   { tenant },
   input: {
     email: string;
@@ -179,6 +180,7 @@ export const createOrFindIntegrationContactByEmail = withAuth(async (
       role: input.title,
       is_inactive: false,
     }, tenant, trx);
+    queueContactCreated(trx, tenant, newContact as any, { actorUserId: user?.user_id });
 
     const client = await tenantDb(trx, tenant).table('clients')
       .select('client_name')

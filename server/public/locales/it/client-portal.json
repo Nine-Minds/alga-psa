@@ -478,6 +478,15 @@
         "failed": "Non è stato possibile salvare la tua carta",
         "savedDescription": "La tua carta è pronta per i pagamenti futuri.",
         "failedDescription": "Non è stato possibile verificare la configurazione. Chiedi un nuovo link al tuo fornitore di fatturazione."
+      },
+      "payLink": {
+        "heading": "Questo link di pagamento non può essere usato",
+        "expired": "Questo link di pagamento è scaduto.",
+        "invalid": "Questo link di pagamento non è valido.",
+        "notPayable": "Questa fattura non può più essere pagata con questo link. Potrebbe essere già pagata o non più disponibile per il pagamento online.",
+        "unavailable": "Non è stato possibile aprire la pagina di pagamento. Riprova tra qualche minuto.",
+        "viewInPortal": "Visualizza la fattura nel portale clienti",
+        "contactProvider": "Contatta il tuo fornitore di fatturazione per ottenere un nuovo link."
       }
     }
   },

@@ -584,6 +584,7 @@ vi.mock('@alga-psa/auth', async () => {
     localizeActionError: vi.fn(async (result: any) => result),
     runWithApiKeyUser,
     getApiKeyUserOverride,
+    assertActiveInternalUser: vi.fn(async () => true),
     getSessionCookieName: vi.fn(() => 'authjs.session-token'),
     getNextAuthSecret: vi.fn(async () => 'test-nextauth-secret'),
     formatRateLimitError: vi.fn(async () => 'Too many attempts. Please try again later.'),

@@ -52,7 +52,7 @@ export interface CreateSessionParams {
 
 export interface SessionIdentity {
   userId: string;
-  userType: 'internal' | 'client';
+  userType: 'internal' | 'client' | 'service';
 }
 
 export type UserSessionRejectionReason = 'missing' | 'revoked' | 'user_missing' | 'identity_mismatch' | null;
