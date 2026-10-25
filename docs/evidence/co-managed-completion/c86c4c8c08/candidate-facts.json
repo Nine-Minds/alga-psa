@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "collectedAt": "2026-10-25T05:58:53.289Z",
+  "candidate": "c86c4c8c085379d4e4d8c27cb80e99ad94f82450",
+  "provenance": {
+    "app": {
+      "revision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "buildId": "build-1792904848073",
+      "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
+      "distribution": "server/.next-review-candidate-racefix",
+      "port": 23374,
+      "health": 200
+    },
+    "worker": {
+      "revision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+      "children": [
+        {
+          "pid": 4008993,
+          "startedAt": "2026-10-25T05:33:49Z",
+          "health": 200
+        },
+        {
+          "pid": 4012279,
+          "startedAt": "2026-10-25T05:34:09Z",
+          "health": 200
+        }
+      ]
+    },
+    "migrations": "sha256:45093475b95a0f8616dd2066983e63df",
+    "config": "sha256:bac51e51904540c60120240d65de27ef",
+    "simulator": "sha256:c4383b99747336d32ad5cba5165d909f",
+    "inputs": {
+      "migrations": [
+        {
+          "path": "server/migrations",
+          "tree": "b5f3404146f62a7f5a183fb0fde6fada5cd2c437"
+        },
+        {
+          "path": "ee/server/migrations",
+          "tree": "83c1856a5dd9d9132391dd9da4c5599c2216b705"
+        }
+      ],
+      "config": [
+        {
+          "path": "docker-compose.yaml",
+          "tree": "8ee152aaa05d1254e37ca1d161522d8176af8e7b"
+        },
+        {
+          "path": "docker-compose.ee.yaml",
+          "tree": "e6a51193c5e744a1a024eec3b03f1ee85f7aae57"
+        },
+        {
+          "path": "docker-compose.e2e-emulators.yaml",
+          "tree": "bb3df55beb7072666dd936df1ed3a88b80dd1195"
+        },
+        {
+          "path": ".env.example",
+          "tree": "dcc4995d53fdbbe53e8d80c550bb45336ba96d23"
+        }
+      ],
+      "simulator": [
+        {
+          "path": "packages/emulators",
+          "tree": "dbda2738114d57f7af857c2e8aebf7606e777ad9"
+        }
+      ]
+    }
+  },
+  "worktreeClean": false,
+  "pr": {
+    "number": 3363,
+    "head": "c86c4c8c085379d4e4d8c27cb80e99ad94f82450",
+    "state": "OPEN",
+    "isDraft": true
+  },
+  "mergeability": {
+    "mergeable": "CONFLICTING",
+    "mergeStateStatus": "DIRTY",
+    "checkedAtSha": "c86c4c8c085379d4e4d8c27cb80e99ad94f82450"
+  },
+  "ci": null,
+  "runtimeEvidence": "docs/evidence/co-managed-deploy/cd28aa9531f7/runtime-provenance.json"
+}
