@@ -3586,7 +3586,16 @@
     "breakGlass": {
       "title": "Administradores de emergencia",
       "body": "Estos administradores pueden seguir iniciando sesión con contraseña cuando se exige el inicio de sesión único. Deben ser administradores activos con la autenticación de dos factores habilitada y siempre necesitan un código.",
-      "noEligible": "No hay administradores elegibles. Un administrador debe estar activo y tener habilitada la autenticación de dos factores."
+      "noEligible": "No hay administradores elegibles. Un administrador debe estar activo y tener habilitada la autenticación de dos factores.",
+      "noLongerEligible": "Ya no es apto.",
+      "remove": "Quitar",
+      "reasons": {
+        "no_two_factor": "La autenticación de dos factores se restableció o falta.",
+        "inactive": "El usuario está desactivado.",
+        "not_admin": "El usuario ya no es administrador.",
+        "not_internal": "El usuario no es un usuario interno.",
+        "not_found": "El usuario ya no existe."
+      }
     },
     "guard": {
       "sso_provider_required": "Configure al menos un proveedor de inicio de sesión único antes de exigirlo.",

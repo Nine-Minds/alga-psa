@@ -16,6 +16,12 @@ export interface LoginPolicyState {
     passwordAuthDisabledAt: string | null;
   };
   eligibleBreakGlassAdmins: Array<{ userId: string; name: string; email: string }>;
+  ineligibleBreakGlassUsers: Array<{
+    userId: string;
+    name?: string;
+    email?: string;
+    reason?: 'inactive' | 'not_admin' | 'no_two_factor' | 'not_internal' | 'not_found';
+  }>;
   hasConfiguredSsoProvider: boolean;
 }
 
@@ -41,6 +47,7 @@ export async function getLoginPolicyAction(): Promise<LoginPolicyState> {
       passwordAuthDisabledAt: null,
     },
     eligibleBreakGlassAdmins: [],
+    ineligibleBreakGlassUsers: [],
     hasConfiguredSsoProvider: false,
   };
 }

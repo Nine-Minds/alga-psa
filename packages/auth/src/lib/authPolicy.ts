@@ -262,6 +262,8 @@ export type PolicyGuardErrorCode =
 
 export interface PolicyGuardInput {
   next: TenantAuthPolicy;
+  /** The policy as currently stored. Ids already in its break-glass list are "stored"; all others are "newly added". */
+  previous?: TenantAuthPolicy;
   /** True when the tenant has at least one active, configured SSO provider. */
   hasConfiguredSsoProvider: boolean;
   /** Candidate records for every id in `next.passwordBreakGlassUserIds` that could be found. */
@@ -271,39 +273,73 @@ export interface PolicyGuardInput {
 export interface PolicyGuardResult {
   ok: boolean;
   errors: PolicyGuardErrorCode[];
-  /** Ids in the requested list that are not valid break-glass admins. */
+  /** Newly added ids in the request that are not valid break-glass admins (the reason for `break_glass_invalid_user`). */
   invalidBreakGlassUserIds: string[];
+  /** The break-glass list to persist: `next`'s list minus every ineligible id. */
+  breakGlassUserIds: string[];
+  /** Stored ids that were dropped because they are no longer eligible (2FA reset, deactivated, demoted, deleted). */
+  prunedBreakGlassUserIds: string[];
 }
 
 /**
  * Save-time guard, run by the server on EVERY save (not just on the transition to
  * "on"), so the last valid break-glass admin cannot be removed while the SSO
- * requirement is active, and listed admins that later lose eligibility are caught
- * at the next save.
+ * requirement is active.
  *
- *  - An invalid id in the list is always rejected (policy on or off).
- *  - With SSO required: at least one configured provider AND >= 1 valid admin.
+ * Prune-vs-reject: an id that was already stored and has since lost eligibility is
+ * stale state the admin may not even see, so it is pruned from the persisted list
+ * rather than blocking the save. An id newly added by this request that is not
+ * eligible is a bad request and is rejected, except when the save turns Require
+ * SSO off from on: an OFF transition must always succeed, so it prunes instead.
+ *
+ *  - With SSO required: at least one configured provider AND >= 1 valid admin
+ *    (counted after pruning).
  */
 export function validatePolicyChange(input: PolicyGuardInput): PolicyGuardResult {
   const errors: PolicyGuardErrorCode[] = [];
   const byId = new Map(input.breakGlassCandidates.map((c) => [c.userId, c]));
-  const invalid = input.next.passwordBreakGlassUserIds.filter((id) => {
+  const stored = new Set(input.previous?.passwordBreakGlassUserIds ?? []);
+  const isValid = (id: string) => {
     const candidate = byId.get(id);
-    return !candidate || !isValidBreakGlassCandidate(candidate);
-  });
-  if (invalid.length > 0) {
+    return Boolean(candidate && isValidBreakGlassCandidate(candidate));
+  };
+  const requested = input.next.passwordBreakGlassUserIds;
+  const breakGlassUserIds = requested.filter(isValid);
+  const ineligible = requested.filter((id) => !isValid(id));
+  const prunedBreakGlassUserIds = ineligible.filter((id) => stored.has(id));
+  const newlyInvalid = ineligible.filter((id) => !stored.has(id));
+
+  const turningOff =
+    !input.next.requireSsoForInternalUsers && Boolean(input.previous?.requireSsoForInternalUsers);
+  if (turningOff) {
+    // Never block an OFF transition: drop everything ineligible.
+    return {
+      ok: true,
+      errors,
+      invalidBreakGlassUserIds: [],
+      breakGlassUserIds,
+      prunedBreakGlassUserIds: ineligible,
+    };
+  }
+
+  if (newlyInvalid.length > 0) {
     errors.push('break_glass_invalid_user');
   }
   if (input.next.requireSsoForInternalUsers) {
     if (!input.hasConfiguredSsoProvider) {
       errors.push('sso_provider_required');
     }
-    const validCount = input.next.passwordBreakGlassUserIds.length - invalid.length;
-    if (validCount < 1) {
+    if (breakGlassUserIds.length < 1) {
       errors.push('break_glass_required');
     }
   }
-  return { ok: errors.length === 0, errors, invalidBreakGlassUserIds: invalid };
+  return {
+    ok: errors.length === 0,
+    errors,
+    invalidBreakGlassUserIds: newlyInvalid,
+    breakGlassUserIds,
+    prunedBreakGlassUserIds,
+  };
 }
 
 /**

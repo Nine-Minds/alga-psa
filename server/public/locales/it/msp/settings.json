@@ -3586,7 +3586,16 @@
     "breakGlass": {
       "title": "Amministratori di emergenza",
       "body": "Questi amministratori possono continuare ad accedere con una password quando il Single Sign-On è obbligatorio. Devono essere amministratori attivi con l’autenticazione a due fattori abilitata e hanno sempre bisogno di un codice.",
-      "noEligible": "Nessun amministratore idoneo. Un amministratore deve essere attivo e avere l’autenticazione a due fattori abilitata."
+      "noEligible": "Nessun amministratore idoneo. Un amministratore deve essere attivo e avere l’autenticazione a due fattori abilitata.",
+      "noLongerEligible": "Non più idoneo.",
+      "remove": "Rimuovi",
+      "reasons": {
+        "no_two_factor": "L'autenticazione a due fattori è stata reimpostata o manca.",
+        "inactive": "L'utente è disattivato.",
+        "not_admin": "L'utente non è più un amministratore.",
+        "not_internal": "L'utente non è un utente interno.",
+        "not_found": "L'utente non esiste più."
+      }
     },
     "guard": {
       "sso_provider_required": "Configura almeno un provider Single Sign-On prima di richiederlo.",

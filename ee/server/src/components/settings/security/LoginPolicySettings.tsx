@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@alga
 import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
 import { Switch } from "@alga-psa/ui/components/Switch";
 import { Checkbox } from "@alga-psa/ui/components/Checkbox";
+import { Button } from "@alga-psa/ui/components/Button";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import {
   getLoginPolicyAction,
@@ -75,6 +76,7 @@ export default function LoginPolicySettings() {
   }
 
   const { policy, eligibleBreakGlassAdmins } = state;
+  const ineligibleBreakGlassUsers = state.ineligibleBreakGlassUsers ?? [];
 
   const toggles: Array<{
     id: string;
@@ -172,6 +174,44 @@ export default function LoginPolicySettings() {
             })
           )}
         </div>
+
+        {ineligibleBreakGlassUsers.length > 0 && (
+          <div className="space-y-2 rounded-lg border border-muted-foreground/20 p-4" id="login-policy-break-glass-stale-list">
+            {ineligibleBreakGlassUsers.map((stale) => (
+              <div
+                key={stale.userId}
+                id={`login-policy-break-glass-stale-${stale.userId}`}
+                className="flex items-center justify-between gap-4"
+              >
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">
+                    {stale.name ? `${stale.name} (${stale.email})` : stale.userId}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {t("loginPolicy.breakGlass.noLongerEligible")}
+                    {stale.reason ? ` ${t(`loginPolicy.breakGlass.reasons.${stale.reason}`)}` : ""}
+                  </p>
+                </div>
+                <Button
+                  id={`login-policy-break-glass-remove-${stale.userId}`}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={pending}
+                  onClick={() =>
+                    void save({
+                      passwordBreakGlassUserIds: policy.passwordBreakGlassUserIds.filter(
+                        (id) => id !== stale.userId
+                      ),
+                    })
+                  }
+                >
+                  {t("loginPolicy.breakGlass.remove")}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {guardErrors.length > 0 && (
           <Alert variant="destructive" id="login-policy-guard-errors">

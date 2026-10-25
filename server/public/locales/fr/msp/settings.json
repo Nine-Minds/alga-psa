@@ -3586,7 +3586,16 @@
     "breakGlass": {
       "title": "Administrateurs d’urgence",
       "body": "Ces administrateurs peuvent toujours se connecter avec un mot de passe lorsque l’authentification unique est exigée. Ils doivent être des administrateurs actifs avec l’authentification à deux facteurs activée et ont toujours besoin d’un code.",
-      "noEligible": "Aucun administrateur éligible. Un administrateur doit être actif et avoir activé l’authentification à deux facteurs."
+      "noEligible": "Aucun administrateur éligible. Un administrateur doit être actif et avoir activé l’authentification à deux facteurs.",
+      "noLongerEligible": "N'est plus éligible.",
+      "remove": "Retirer",
+      "reasons": {
+        "no_two_factor": "L'authentification à deux facteurs a été réinitialisée ou est absente.",
+        "inactive": "L'utilisateur est désactivé.",
+        "not_admin": "L'utilisateur n'est plus administrateur.",
+        "not_internal": "L'utilisateur n'est pas un utilisateur interne.",
+        "not_found": "L'utilisateur n'existe plus."
+      }
     },
     "guard": {
       "sso_provider_required": "Configurez au moins un fournisseur d’authentification unique avant de l’exiger.",

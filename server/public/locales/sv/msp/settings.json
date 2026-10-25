@@ -3586,7 +3586,16 @@
     "breakGlass": {
       "title": "Nödadministratörer",
       "body": "Dessa administratörer kan fortfarande logga in med lösenord när enkel inloggning krävs. De måste vara aktiva administratörer med tvåfaktorsautentisering aktiverad och behöver alltid en kod.",
-      "noEligible": "Inga behöriga administratörer. En administratör måste vara aktiv och ha tvåfaktorsautentisering aktiverad."
+      "noEligible": "Inga behöriga administratörer. En administratör måste vara aktiv och ha tvåfaktorsautentisering aktiverad.",
+      "noLongerEligible": "Är inte längre behörig.",
+      "remove": "Ta bort",
+      "reasons": {
+        "no_two_factor": "Tvåfaktorsautentiseringen har återställts eller saknas.",
+        "inactive": "Användaren är inaktiverad.",
+        "not_admin": "Användaren är inte längre administratör.",
+        "not_internal": "Användaren är inte en intern användare.",
+        "not_found": "Användaren finns inte längre."
+      }
     },
     "guard": {
       "sso_provider_required": "Konfigurera minst en leverantör av enkel inloggning innan du kräver enkel inloggning.",

@@ -10,12 +10,13 @@ vi.mock('@alga-psa/db/admin', () => ({
 }));
 
 import {
+  listBreakGlassCandidates,
   loadTenantAuthPolicy,
   recordForcedTwoFactorEnrollment,
   recordLoginRefusal,
   saveTenantAuthPolicy,
 } from '@alga-psa/auth/lib/authPolicyStore';
-import { applyPolicyChange, normalizeTenantAuthPolicy } from '@alga-psa/auth/lib/authPolicy';
+import { applyPolicyChange, normalizeTenantAuthPolicy, validatePolicyChange } from '@alga-psa/auth/lib/authPolicy';
 
 describe('login policy: tenant-scoped audits, atomic save, SSO-required revocation', () => {
   let db: Knex;
@@ -179,5 +180,95 @@ describe('login policy: tenant-scoped audits, atomic save, SSO-required revocati
 
     expect(result.revokedSessions).toBe(0);
     expect((await db('sessions').where({ session_id: sessionIds.late }).first()).revoked_at).toBeNull();
+  });
+
+  describe('stale break-glass ids (2FA reset after selection)', () => {
+    let staleId: string;
+    let validAdminId: string;
+    let roleId: string;
+
+    // Mirrors updateLoginPolicyAction: load stored policy, apply, validate against live candidates, prune, save.
+    async function saveLikeAction(update: Parameters<typeof applyPolicyChange>[1]) {
+      const settings = await currentSettings();
+      const previous = normalizeTenantAuthPolicy(settings);
+      const requested = applyPolicyChange(previous, update);
+      const candidates = await listBreakGlassCandidates(tenant, requested.passwordBreakGlassUserIds);
+      const guard = validatePolicyChange({
+        next: requested,
+        previous,
+        hasConfiguredSsoProvider: true,
+        breakGlassCandidates: candidates,
+      });
+      if (!guard.ok) return { guard };
+      const after = { ...requested, passwordBreakGlassUserIds: guard.breakGlassUserIds };
+      await saveTenantAuthPolicy({
+        knex: db,
+        tenant,
+        actorUserId: adminId,
+        currentSettings: settings,
+        before: previous,
+        after,
+        prunedBreakGlassUserIds: guard.prunedBreakGlassUserIds,
+      });
+      return { guard };
+    }
+
+    beforeAll(async () => {
+      roleId = (await db('roles').insert({ tenant, role_name: 'Admin', msp: true, client: false }).returning('role_id'))[0].role_id;
+      staleId = await createUser(db, tenant, { user_type: 'internal', two_factor_enabled: true });
+      validAdminId = await createUser(db, tenant, { user_type: 'internal', two_factor_enabled: true });
+      await db('user_roles').insert([
+        { tenant, user_id: staleId, role_id: roleId },
+        { tenant, user_id: validAdminId, role_id: roleId },
+      ]);
+    });
+
+    beforeEach(async () => {
+      await db('users').where({ tenant, user_id: staleId }).update({ two_factor_enabled: true });
+      // SSO on with the stale user stored as the break-glass admin.
+      const on = applyPolicyChange(normalizeTenantAuthPolicy({}), {
+        requireSsoForInternalUsers: true,
+        passwordBreakGlassUserIds: [staleId],
+      });
+      await saveTenantAuthPolicy({ knex: db, tenant, actorUserId: adminId, currentSettings: {}, before: normalizeTenantAuthPolicy({}), after: on });
+      await db('audit_logs').where({ tenant }).delete();
+      // The admin then has their 2FA reset.
+      await db('users').where({ tenant, user_id: staleId }).update({ two_factor_enabled: false });
+    });
+
+    it('turning Require SSO off succeeds, prunes the stored list and audits the pruned id', async () => {
+      const { guard } = await saveLikeAction({ requireSsoForInternalUsers: false });
+      expect(guard.ok).toBe(true);
+
+      const settings = await currentSettings();
+      expect(settings.sso.requireSsoForInternalUsers).toBe(false);
+      expect(settings.sso.passwordBreakGlassUserIds).toEqual([]);
+      expect(settings.sso.passwordAuthDisabledAt).toBeNull();
+
+      const rows = await auditRows('LOGIN_POLICY_CHANGED');
+      expect(rows).toHaveLength(1);
+      const details = typeof rows[0].details === 'string' ? JSON.parse(rows[0].details) : rows[0].details;
+      expect(details.pruned_break_glass_user_ids).toEqual([staleId]);
+    });
+
+    it('a save with SSO on plus another valid admin succeeds and prunes the stale id', async () => {
+      const { guard } = await saveLikeAction({ passwordBreakGlassUserIds: [staleId, validAdminId] });
+      expect(guard.ok).toBe(true);
+
+      const settings = await currentSettings();
+      expect(settings.sso.requireSsoForInternalUsers).toBe(true);
+      expect(settings.sso.passwordBreakGlassUserIds).toEqual([validAdminId]);
+      const rows = await auditRows('LOGIN_POLICY_CHANGED');
+      const details = typeof rows[0].details === 'string' ? JSON.parse(rows[0].details) : rows[0].details;
+      expect(details.pruned_break_glass_user_ids).toEqual([staleId]);
+    });
+
+    it('a save with SSO on and only the stale admin is still refused and persists nothing', async () => {
+      const { guard } = await saveLikeAction({ require2faForClientUsers: true });
+      expect(guard.ok).toBe(false);
+      expect(guard.errors).toEqual(['break_glass_required']);
+      expect((await currentSettings()).sso.passwordBreakGlassUserIds).toEqual([staleId]);
+      expect(await auditRows('LOGIN_POLICY_CHANGED')).toHaveLength(0);
+    });
   });
 });

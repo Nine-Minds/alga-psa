@@ -6,6 +6,7 @@ import { getSsoProviderOptions } from "@ee/lib/auth/providerConfig";
 import { ensureSsoSettingsPermission } from "@ee/lib/actions/auth/ssoPermissions";
 import {
   applyPolicyChange,
+  isValidBreakGlassCandidate,
   normalizeTenantAuthPolicy,
   validatePolicyChange,
   type PolicyGuardErrorCode,
@@ -27,6 +28,16 @@ export interface LoginPolicyState {
   policy: TenantAuthPolicy;
   /** Internal admins with 2FA enrolled and active: the only users who may be break-glass. */
   eligibleBreakGlassAdmins: Array<{ userId: string; name: string; email: string }>;
+  /**
+   * Stored break-glass ids that are no longer eligible (2FA reset, deactivated,
+   * demoted or deleted). `name`/`email` are set when the user still exists.
+   */
+  ineligibleBreakGlassUsers: Array<{
+    userId: string;
+    name?: string;
+    email?: string;
+    reason?: "inactive" | "not_admin" | "no_two_factor" | "not_internal" | "not_found";
+  }>;
   hasConfiguredSsoProvider: boolean;
 }
 
@@ -74,6 +85,43 @@ async function listEligibleAdmins(
   }));
 }
 
+async function listIneligibleStoredUsers(
+  knex: Awaited<ReturnType<typeof ensureSsoSettingsPermission>>["knex"],
+  tenant: string,
+  policy: TenantAuthPolicy
+): Promise<LoginPolicyState["ineligibleBreakGlassUsers"]> {
+  const storedIds = policy.passwordBreakGlassUserIds;
+  if (storedIds.length === 0) return [];
+  const candidates = await listBreakGlassCandidates(tenant, storedIds);
+  const candidateById = new Map(candidates.map((c) => [c.userId, c]));
+  const stale = storedIds.filter((id) => {
+    const c = candidateById.get(id);
+    return !c || !isValidBreakGlassCandidate(c);
+  });
+  if (stale.length === 0) return [];
+  const rows = await knex("users")
+    .where({ tenant })
+    .whereIn("user_id", stale)
+    .select("user_id", "first_name", "last_name", "email");
+  const rowById = new Map<string, any>(rows.map((row: any) => [row.user_id, row]));
+  return stale.map((userId) => {
+    const row = rowById.get(userId);
+    const c = candidateById.get(userId);
+    let reason: LoginPolicyState["ineligibleBreakGlassUsers"][number]["reason"];
+    if (!c) reason = row ? "not_internal" : "not_found";
+    else if (c.isInactive) reason = "inactive";
+    else if (!c.isAdmin) reason = "not_admin";
+    else if (!c.twoFactorEnabled) reason = "no_two_factor";
+    if (!row) return { userId, reason };
+    return {
+      userId,
+      name: `${row.first_name ?? ""} ${row.last_name ?? ""}`.trim() || row.email,
+      email: row.email,
+      reason,
+    };
+  });
+}
+
 export async function getLoginPolicyAction(): Promise<LoginPolicyState> {
   const { tenant, knex } = await ensureSsoSettingsPermission();
   const [policy, eligibleBreakGlassAdmins, hasConfiguredSsoProvider] = await Promise.all([
@@ -81,7 +129,8 @@ export async function getLoginPolicyAction(): Promise<LoginPolicyState> {
     listEligibleAdmins(knex, tenant),
     hasConfiguredProvider(tenant),
   ]);
-  return { policy, eligibleBreakGlassAdmins, hasConfiguredSsoProvider };
+  const ineligibleBreakGlassUsers = await listIneligibleStoredUsers(knex, tenant, policy);
+  return { policy, eligibleBreakGlassAdmins, ineligibleBreakGlassUsers, hasConfiguredSsoProvider };
 }
 
 export async function updateLoginPolicyAction(
@@ -96,14 +145,19 @@ export async function updateLoginPolicyAction(
       : tenantSettings?.settings) ?? {};
 
   const previous = normalizeTenantAuthPolicy(currentSettings);
-  const next = applyPolicyChange(previous, updates);
+  const requested = applyPolicyChange(previous, updates);
 
   const [hasConfiguredSsoProvider, breakGlassCandidates] = await Promise.all([
-    next.requireSsoForInternalUsers ? hasConfiguredProvider(tenant) : Promise.resolve(true),
-    listBreakGlassCandidates(tenant, next.passwordBreakGlassUserIds),
+    requested.requireSsoForInternalUsers ? hasConfiguredProvider(tenant) : Promise.resolve(true),
+    listBreakGlassCandidates(tenant, requested.passwordBreakGlassUserIds),
   ]);
 
-  const guard = validatePolicyChange({ next, hasConfiguredSsoProvider, breakGlassCandidates });
+  const guard = validatePolicyChange({
+    next: requested,
+    previous,
+    hasConfiguredSsoProvider,
+    breakGlassCandidates,
+  });
   if (!guard.ok) {
     return {
       success: false,
@@ -111,6 +165,8 @@ export async function updateLoginPolicyAction(
       invalidBreakGlassUserIds: guard.invalidBreakGlassUserIds,
     };
   }
+  // Server-side prune: never persist what the client sent verbatim.
+  const next: TenantAuthPolicy = { ...requested, passwordBreakGlassUserIds: guard.breakGlassUserIds };
 
   try {
     await saveTenantAuthPolicy({
@@ -120,6 +176,7 @@ export async function updateLoginPolicyAction(
       currentSettings,
       before: previous,
       after: next,
+      prunedBreakGlassUserIds: guard.prunedBreakGlassUserIds,
     });
   } catch (error) {
     // Details stay server-side; the client only gets a generic code.
@@ -135,6 +192,7 @@ export async function updateLoginPolicyAction(
     state: {
       policy: next,
       eligibleBreakGlassAdmins: await listEligibleAdmins(knex, tenant),
+      ineligibleBreakGlassUsers: await listIneligibleStoredUsers(knex, tenant, next),
       hasConfiguredSsoProvider,
     },
   };

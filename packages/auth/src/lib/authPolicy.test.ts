@@ -213,15 +213,80 @@ describe('save-time guard', () => {
     expect(removedLast.errors).toContain('break_glass_required');
   });
 
-  it('does not require a provider or admins while SSO is off, but still rejects invalid ids', () => {
+  it('does not require a provider or admins while SSO is off, but still rejects a newly added invalid id', () => {
     expect(validatePolicyChange({ next: policy(), hasConfiguredSsoProvider: false, breakGlassCandidates: [] }).ok).toBe(true);
-    expect(
-      validatePolicyChange({
-        next: policy({ passwordBreakGlassUserIds: ['a1'] }),
+    const result = validatePolicyChange({
+      next: policy({ passwordBreakGlassUserIds: ['a1'] }),
+      previous: policy(),
+      hasConfiguredSsoProvider: false,
+      breakGlassCandidates: [admin({ twoFactorEnabled: false })],
+    });
+    expect(result.ok).toBe(false);
+    expect(result.errors).toEqual(['break_glass_invalid_user']);
+    expect(result.invalidBreakGlassUserIds).toEqual(['a1']);
+  });
+
+  describe('stale stored break-glass ids', () => {
+    const stale = admin({ userId: 'stale', twoFactorEnabled: false });
+    const stored = (over: Partial<TenantAuthPolicy> = {}) =>
+      policy({ passwordBreakGlassUserIds: ['stale'], ...over });
+
+    it('(a) turning SSO off succeeds and prunes the stale id', () => {
+      const result = validatePolicyChange({
+        next: stored({ requireSsoForInternalUsers: false }),
+        previous: stored({ requireSsoForInternalUsers: true }),
         hasConfiguredSsoProvider: false,
-        breakGlassCandidates: [admin({ twoFactorEnabled: false })],
-      }).ok,
-    ).toBe(false);
+        breakGlassCandidates: [stale],
+      });
+      expect(result).toMatchObject({ ok: true, errors: [], breakGlassUserIds: [], prunedBreakGlassUserIds: ['stale'] });
+    });
+
+    it('(a2) an OFF transition succeeds even when it also adds an invalid id (pruned, not rejected)', () => {
+      const result = validatePolicyChange({
+        next: policy({ passwordBreakGlassUserIds: ['stale', 'bad'] }),
+        previous: stored({ requireSsoForInternalUsers: true }),
+        hasConfiguredSsoProvider: false,
+        breakGlassCandidates: [stale, admin({ userId: 'bad', isAdmin: false })],
+      });
+      expect(result.ok).toBe(true);
+      expect(result.prunedBreakGlassUserIds).toEqual(['stale', 'bad']);
+    });
+
+    it('(b) SSO on with another valid admin succeeds and prunes the stale id', () => {
+      const prev = stored({ requireSsoForInternalUsers: true });
+      const result = validatePolicyChange({
+        next: { ...prev, passwordBreakGlassUserIds: ['stale', 'a1'] },
+        previous: prev,
+        hasConfiguredSsoProvider: true,
+        breakGlassCandidates: [stale, admin()],
+      });
+      expect(result).toMatchObject({ ok: true, breakGlassUserIds: ['a1'], prunedBreakGlassUserIds: ['stale'] });
+    });
+
+    it('(c) a stale id as the only admin with SSO on gives break_glass_required', () => {
+      const prev = stored();
+      const result = validatePolicyChange({
+        next: { ...prev, requireSsoForInternalUsers: true },
+        previous: prev,
+        hasConfiguredSsoProvider: true,
+        breakGlassCandidates: [stale],
+      });
+      expect(result.ok).toBe(false);
+      expect(result.errors).toEqual(['break_glass_required']);
+    });
+
+    it('(d) a newly added invalid id is rejected even next to a stale one', () => {
+      const prev = stored({ requireSsoForInternalUsers: true });
+      const result = validatePolicyChange({
+        next: { ...prev, passwordBreakGlassUserIds: ['stale', 'a1', 'new-bad'] },
+        previous: prev,
+        hasConfiguredSsoProvider: true,
+        breakGlassCandidates: [stale, admin(), admin({ userId: 'new-bad', isInactive: true })],
+      });
+      expect(result.ok).toBe(false);
+      expect(result.errors).toContain('break_glass_invalid_user');
+      expect(result.invalidBreakGlassUserIds).toEqual(['new-bad']);
+    });
   });
 });
 

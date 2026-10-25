@@ -3616,7 +3616,16 @@
     "breakGlass": {
       "title": "Administratorzy awaryjni",
       "body": "Ci administratorzy mogą nadal logować się hasłem, gdy wymagane jest logowanie jednokrotne. Muszą być aktywnymi administratorami z włączonym uwierzytelnianiem dwuskładnikowym i zawsze potrzebują kodu.",
-      "noEligible": "Brak kwalifikujących się administratorów. Administrator musi być aktywny i mieć włączone uwierzytelnianie dwuskładnikowe."
+      "noEligible": "Brak kwalifikujących się administratorów. Administrator musi być aktywny i mieć włączone uwierzytelnianie dwuskładnikowe.",
+      "noLongerEligible": "Nie kwalifikuje się już.",
+      "remove": "Usuń",
+      "reasons": {
+        "no_two_factor": "Uwierzytelnianie dwuskładnikowe zostało zresetowane lub nie jest włączone.",
+        "inactive": "Użytkownik jest dezaktywowany.",
+        "not_admin": "Użytkownik nie jest już administratorem.",
+        "not_internal": "Użytkownik nie jest użytkownikiem wewnętrznym.",
+        "not_found": "Użytkownik już nie istnieje."
+      }
     },
     "guard": {
       "sso_provider_required": "Skonfiguruj co najmniej jednego dostawcę logowania jednokrotnego, zanim go wymusisz.",

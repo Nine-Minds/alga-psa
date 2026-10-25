@@ -3586,7 +3586,16 @@
     "breakGlass": {
       "title": "Notfall-Administratoren",
       "body": "Diese Administratoren können sich weiterhin per Passwort anmelden, wenn Single Sign-On erzwungen wird. Sie müssen aktive Administratoren mit aktivierter Zwei-Faktor-Authentifizierung sein und benötigen immer einen Code.",
-      "noEligible": "Keine geeigneten Administratoren. Ein Administrator muss aktiv sein und die Zwei-Faktor-Authentifizierung aktiviert haben."
+      "noEligible": "Keine geeigneten Administratoren. Ein Administrator muss aktiv sein und die Zwei-Faktor-Authentifizierung aktiviert haben.",
+      "noLongerEligible": "Nicht mehr berechtigt.",
+      "remove": "Entfernen",
+      "reasons": {
+        "no_two_factor": "Die Zwei-Faktor-Authentifizierung wurde zurückgesetzt oder fehlt.",
+        "inactive": "Der Benutzer ist deaktiviert.",
+        "not_admin": "Der Benutzer ist kein Administrator mehr.",
+        "not_internal": "Der Benutzer ist kein interner Benutzer.",
+        "not_found": "Der Benutzer existiert nicht mehr."
+      }
     },
     "guard": {
       "sso_provider_required": "Richten Sie mindestens einen Single-Sign-On-Anbieter ein, bevor Sie Single Sign-On erzwingen.",

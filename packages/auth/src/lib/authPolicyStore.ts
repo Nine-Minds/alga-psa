@@ -191,6 +191,8 @@ export async function recordPolicyChange(params: {
   actorUserId: string;
   before: TenantAuthPolicy;
   after: TenantAuthPolicy;
+  /** Stale break-glass ids dropped by this save (ids only). */
+  prunedBreakGlassUserIds?: string[];
   /** Pass the settings-write transaction so the audit row and the save commit (or roll back) together. */
   trx?: Knex.Transaction;
 }): Promise<void> {
@@ -199,7 +201,13 @@ export async function recordPolicyChange(params: {
     recordId: params.tenant,
     userId: params.actorUserId,
     changedData: { before: params.before, after: params.after },
-    details: { operation: 'login_policy_changed', changed_by: params.actorUserId },
+    details: {
+      operation: 'login_policy_changed',
+      changed_by: params.actorUserId,
+      ...(params.prunedBreakGlassUserIds?.length
+        ? { pruned_break_glass_user_ids: params.prunedBreakGlassUserIds }
+        : {}),
+    },
   }, params.trx);
 }
 
@@ -221,6 +229,7 @@ export async function saveTenantAuthPolicy(params: {
   currentSettings: Record<string, any>;
   before: TenantAuthPolicy;
   after: TenantAuthPolicy;
+  prunedBreakGlassUserIds?: string[];
 }): Promise<{ revokedSessions: number }> {
   const { knex, tenant, currentSettings, before, after } = params;
   const nextSettings = {
@@ -244,7 +253,14 @@ export async function saveTenantAuthPolicy(params: {
       .onConflict('tenant')
       .merge({ settings: JSON.stringify(nextSettings), updated_at: now });
 
-    await recordPolicyChange({ tenant, actorUserId: params.actorUserId, before, after, trx });
+    await recordPolicyChange({
+      tenant,
+      actorUserId: params.actorUserId,
+      before,
+      after,
+      prunedBreakGlassUserIds: params.prunedBreakGlassUserIds,
+      trx,
+    });
 
     if (!before.requireSsoForInternalUsers && after.requireSsoForInternalUsers) {
       const { UserSession } = await import('@alga-psa/db/models/UserSession');

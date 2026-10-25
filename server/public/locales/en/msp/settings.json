@@ -3586,7 +3586,16 @@
     "breakGlass": {
       "title": "Break-glass administrators",
       "body": "These administrators can still sign in with a password when single sign-on is required. They must be active administrators with two-factor authentication enabled, and they always need a code.",
-      "noEligible": "No eligible administrators. An administrator must be active and have two-factor authentication enabled."
+      "noEligible": "No eligible administrators. An administrator must be active and have two-factor authentication enabled.",
+      "noLongerEligible": "No longer eligible.",
+      "remove": "Remove",
+      "reasons": {
+        "no_two_factor": "Two-factor authentication was reset or is missing.",
+        "inactive": "The user is deactivated.",
+        "not_admin": "The user is no longer an administrator.",
+        "not_internal": "The user is not an internal user.",
+        "not_found": "The user no longer exists."
+      }
     },
     "guard": {
       "sso_provider_required": "Configure at least one single sign-on provider before requiring single sign-on.",
