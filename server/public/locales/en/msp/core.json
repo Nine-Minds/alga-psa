@@ -105,7 +105,8 @@
     "extensions": "Extensions",
     "ticketsAll": "All Tickets",
     "ticketsRecurring": "Recurring Tickets",
-    "ticketsTemplates": "Ticket Templates"
+    "ticketsTemplates": "Ticket Templates",
+    "ticketsCannedResponses": "Canned Responses"
   },
   "marketing": {
     "dialogs": {
