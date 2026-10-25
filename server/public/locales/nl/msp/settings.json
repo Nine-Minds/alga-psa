@@ -1448,7 +1448,9 @@
         "saveDomain": "Domein opslaan",
         "updateDomain": "Domein bijwerken",
         "submitting": "Bezig met verzenden…",
-        "cancelEdit": "Bewerken annuleren"
+        "cancelEdit": "Bewerken annuleren",
+        "confirmUris": "Ik heb deze geregistreerd — bevestigen",
+        "confirmingUris": "Bevestigen…"
       },
       "form": {
         "label": "Aangepast domein",
@@ -1486,7 +1488,8 @@
         "deploying": "Implementeren",
         "active": "Actief",
         "disabled": "Uitgeschakeld",
-        "unknown": "Onbekend"
+        "unknown": "Onbekend",
+        "pending_redirect_uri": "Redirect-URI's in afwachting"
       },
       "messages": {
         "requestSubmitted": "Aanvraag voor aangepast domein verzonden.",
@@ -1498,9 +1501,32 @@
         "registerFailed": "Kan aangepast domein niet registreren.",
         "refreshFailed": "Kan domeinstatus niet vernieuwen.",
         "retryFailed": "Opnieuw proberen mislukt.",
-        "disableFailed": "Kan aangepast domein niet uitschakelen."
+        "disableFailed": "Kan aangepast domein niet uitschakelen.",
+        "confirmUrisFailed": "Bevestigen van redirect-URI's mislukt.",
+        "urisConfirmed": "Redirect-URI's bevestigd."
       },
-      "hostedTlsNote": "We voorzien automatisch in TLS-certificaten zodra DNS is geverifieerd."
+      "hostedTlsNote": "We voorzien automatisch in TLS-certificaten zodra DNS is geverifieerd.",
+      "surface": {
+        "label": "Bedient",
+        "current": "Bedient: {{value}}",
+        "updatingSurface": "Opslaan wijzigt welke app dit domein bedient en start de provisioning opnieuw.",
+        "options": {
+          "client_portal": "Klantenportaal",
+          "msp": "MSP-app",
+          "both": "Beide"
+        },
+        "descriptions": {
+          "client_portal": "Het domein opent uw klantenportaal. Dit is de standaardinstelling.",
+          "msp": "Het domein opent de MSP-app (technici). De redirect-URI's voor single sign-on moeten eerst worden geregistreerd.",
+          "both": "Eén domein bedient beide apps. Paden onder /msp openen de MSP-app en paden onder /client-portal openen het klantenportaal."
+        }
+      },
+      "redirectUris": {
+        "title": "SSO-redirect-URI's moeten worden geregistreerd",
+        "description": "Dit domein bedient de MSP-app, dus single sign-on werkt pas zodra de onderstaande redirect-URI's bij uw SSO-provider zijn geregistreerd. Het domein blijft in behandeling totdat ze zijn bevestigd.",
+        "listLabel": "Registreer deze redirect-URI's:",
+        "contactSupport": "Vraag uw beheerder of neem contact op met support om deze redirect-URI's te registreren en te bevestigen."
+      }
     },
     "yourCompanyName": "Naam van uw bedrijf",
     "brandingPreviewMode": "Branding-voorbeeldthemamodus",
@@ -3711,7 +3737,12 @@
       "noLeadingTrailingDot": "Het domein mag niet met een punt beginnen of eindigen.",
       "notApplianceHost": "Kies een ander domein dan de primaire host van deze server. Het aangepaste portaaldomein moet een andere hostnaam zijn die uw reverse proxy hierheen doorstuurt.",
       "nothingToRetry": "Er is geen mislukte registratie van een aangepast domein om opnieuw te proberen.",
-      "retryOnlyAfterFailure": "Opnieuw proberen is alleen mogelijk na een mislukte registratie."
+      "retryOnlyAfterFailure": "Opnieuw proberen is alleen mogelijk na een mislukte registratie.",
+      "alreadyInUse": "Dit domein is al in gebruik. Kies een ander domein.",
+      "usedByOtherSurface": "Dit domein wordt al gebruikt door een ander aangepast domein van u. Kies \"Beide\" om het klantportaal en de MSP-app via één domein aan te bieden.",
+      "invalidSurface": "Kies wat het aangepaste domein aanbiedt: klantportaal, MSP-app of beide.",
+      "redirectUrisHosted": "Omleidings-URI's voor gehoste domeinen worden door platformondersteuning geregistreerd.",
+      "nothingToConfirm": "Er staat geen bevestiging van SSO-omleidings-URI's open voor dit domein."
     }
   },
   "common": {

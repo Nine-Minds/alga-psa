@@ -21,6 +21,8 @@
     "./core/secretProvider.js": "./dist/core/secretProvider.js",
     "./core/deploymentProfile": "./dist/core/deploymentProfile.js",
     "./core/deploymentProfile.js": "./dist/core/deploymentProfile.js",
+    "./core/portalDomainSurface": "./dist/core/portalDomainSurface.js",
+    "./core/portalDomainSurface.js": "./dist/core/portalDomainSurface.js",
     "./db": "./dist/db/index.js",
     "./db/admin.js": "./dist/db/admin.js",
     "./services/diagnostics": "./dist/services/diagnostics/index.js",

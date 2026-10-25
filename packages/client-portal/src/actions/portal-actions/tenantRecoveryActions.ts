@@ -3,7 +3,7 @@
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { IUser } from '@alga-psa/types';
-import { getPortalDomain } from '@alga-psa/client-portal/models/PortalDomainModel';
+import { resolveTenantAppBase } from '@alga-psa/tenancy/server';
 import { getTenantSlugForTenant, tenantDb } from '@alga-psa/db';
 import { sendTenantRecoveryEmail } from '@alga-psa/email';
 
@@ -70,11 +70,11 @@ async function buildPortalLoginLink(tenantId: string, callbackUrl?: string): Pro
 
   try {
     const tenantSlug = await getTenantSlugForTenant(tenantId);
-    const portalDomain = await getPortalDomain(db, tenantId);
+    const resolved = await resolveTenantAppBase(tenantId, 'client_portal', { knex: db });
 
-    // Prefer vanity domain if active
-    if (portalDomain && portalDomain.status === 'active' && portalDomain.domain) {
-      const url = new URL(`https://${portalDomain.domain}/auth/client-portal/signin`);
+    // Prefer a vanity domain that serves the client portal
+    if (resolved.source === 'vanity') {
+      const url = new URL('/auth/client-portal/signin', resolved.baseUrl);
       if (callbackUrl) {
         url.searchParams.set('callbackUrl', callbackUrl);
       }

@@ -54,6 +54,7 @@ export default defineConfig({
       'src/activities/__tests__/portal-domain-reconcile.integration.test.ts',
       'src/activities/__tests__/portal-domain-activities.git.test.ts',
       'src/activities/__tests__/portal-domain-nextauth-url.test.ts',
+      'src/activities/__tests__/portal-domain-redirect-uri-gate.test.ts',
       'src/activities/__tests__/threecx-call-control-events.test.ts',
       'src/activities/__tests__/threecx-call-control-host.test.ts',
       'src/activities/__tests__/threecx-call-control-session.test.ts',

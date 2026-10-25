@@ -152,3 +152,12 @@ test('invoice auto-pay Temporal suites are assigned to the lanes that execute th
     assert.equal(isAdditionalWorkspaceTest(`ee/server/src/__tests__/unit/payments/${file}.test.ts`, 'enterprise-unit'), true);
   }
 });
+
+test('the portal-domain SSO redirect URI gate must execute in Temporal readiness', () => {
+  const file = 'ee/temporal-workflows/src/activities/__tests__/portal-domain-redirect-uri-gate.test.ts';
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true);
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-engine'), false);
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-database'), false);
+  const candidates = [file].filter(candidate => isAdditionalWorkspaceTest(candidate, 'temporal-readiness'));
+  assert.equal(inspect({ candidates, collections: [] }).status, 'failed');
+});
