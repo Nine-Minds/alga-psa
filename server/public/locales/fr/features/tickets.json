@@ -1408,7 +1408,15 @@
     "selectUnit": "Sélectionnez une unité à livrer...",
     "onHandByLocation": "En stock par emplacement",
     "catalogUnitCost": "Coût unitaire du catalogue",
-    "costNotConfigured": "Non configuré"
+    "costNotConfigured": "Non configuré",
+    "availableBadge": "Disponible : {{available}}",
+    "availableByLocation": "Stock libre par emplacement",
+    "freeOfOnHand": "{{free}} libres sur {{onHand}}",
+    "stockHeld": "Seulement {{free}} disponibles. {{held}} en stock sont bloqués fermement pour des commandes clients et ne peuvent pas être utilisés ici.",
+    "stockInsufficient": "Seulement {{onHand}} en stock, {{requested}} demandés.",
+    "reservedStockTitle": "Le stock est réservé pour une commande client",
+    "reservedStockMessage": "Seulement {{free}} de ce produit sont libres. {{reserved}} en stock sont réservés pour des commandes clients et vous en avez demandé {{requested}}. L'ajouter quand même prélève du stock sur lequel une commande client compte et peut la laisser incomplète.",
+    "reservedStockConfirm": "Ajouter quand même"
   },
   "watchList": {
     "title": "Liste de surveillance",

@@ -1563,6 +1563,8 @@ export class TicketService extends BaseService<ITicket> {
           { path: [e.path], message: e.message },
         ]);
       }
+      // B1: the REST path never passes allow_reserved_override — that is an interactive
+      // confirm — so stock reserved or held for sales orders is a clean refusal here.
       if (error instanceof InsufficientStockError || name === 'InsufficientStockError') {
         throw new ValidationError('Validation failed', [
           { path: ['quantity'], message: (error as Error).message },
