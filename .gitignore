@@ -277,3 +277,6 @@ server/knexfile-overlay-probe.cjs
 
 # Card-service logs (see scripts/dev/run-card-service.sh)
 .card-service-logs/
+
+# co-managed review build output (generated, never tracked)
+server/.next-review*/
