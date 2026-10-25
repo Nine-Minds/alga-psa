@@ -11,6 +11,7 @@ import {
   type CurrencyAmount,
 } from '@alga-psa/shared/billingClients/contractMonthlyValue';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
+import { computeRemainingBlockValueMinor } from '@alga-psa/shared/billingClients/hourBlockService';
 import type { Knex } from 'knex';
 import { isActionPermissionError, permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -600,7 +601,15 @@ export interface HourBlockUsage {
   /** Cents per hour the block is valued at (minor units). */
   hourly_rate: number;
   currency_code: string;
+  /**
+   * Value of the unused hours, minor units of `currency_code`: remaining hours x hourly_rate,
+   * rounded once on the server (computeRemainingBlockValueMinor). Zero unless the block is
+   * active, since an expired or voided block's remaining hours are forfeited.
+   */
+  remaining_value: number;
   purchased_at: string | null;
+  /** First day the block can be drawn (cadence blocks); null = no lower bound. */
+  valid_from: string | null;
   expiration_date: string | null;
 }
 
@@ -627,6 +636,7 @@ export const getHourBlockUsageReport = withAuth(async (user, { tenant }): Promis
         'hb.hourly_rate',
         'hb.currency_code',
         'hb.purchased_at',
+        'hb.valid_from',
         'hb.expiration_date',
         'cl.contract_line_name as line_name',
         'c.contract_name',
@@ -660,7 +670,11 @@ export const getHourBlockUsageReport = withAuth(async (user, { tenant }): Promis
         utilization_percentage: totalMinutes > 0 ? Math.round((usedMinutes / totalMinutes) * 100) : 0,
         hourly_rate: Number(row.hourly_rate ?? 0),
         currency_code: row.currency_code || 'USD',
+        remaining_value: row.status === 'active'
+          ? computeRemainingBlockValueMinor({ remaining_minutes: remainingMinutes, hourly_rate: row.hourly_rate })
+          : 0,
         purchased_at: row.purchased_at ? new Date(row.purchased_at).toISOString().slice(0, 10) : null,
+        valid_from: normalizeDateOnly(row.valid_from),
         expiration_date: row.expiration_date ? new Date(row.expiration_date).toISOString().slice(0, 10) : null,
       };
     });
