@@ -24,6 +24,7 @@ import {
   isoDateTimeSchema,
   actionProvidedKey,
   withTenantTransaction,
+  admitWorkflowTagWrite,
   requirePermission,
   writeRunAudit,
   throwActionError,
@@ -2014,6 +2015,7 @@ export function registerCrmActions(): void {
     handler: async (input, ctx) =>
       withTenantTransaction(ctx, async (tx) => {
         await requirePermission(ctx, tx, { resource: 'interaction', action: 'update' });
+        await admitWorkflowTagWrite(ctx, tx);
 
         const interaction = await tenantScopedTable(tx, 'interactions')
           .where({ interaction_id: input.activity_id })

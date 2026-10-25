@@ -2909,6 +2909,117 @@ describe('co-managed tag lifecycle admission', () => {
     await clients.update(operation.customer_client_id, { tags: ['API client tag'] } as any, context);
     expect(await customer.table('tag_mappings').where({ tagged_id: operation.customer_client_id, tagged_type: 'client' })).toHaveLength(1);
   }));
+
+  // Workflow actions and session-free ticket creation (workflow tickets.create,
+  // recurring and renewal tickets) write tags outside the tag actions and REST.
+  const workflowTagFixture = async ({ operation, actor, customer, actions }: any) => {
+    const workflowId = randomUUID(), runId = randomUUID();
+    await customer.table('workflow_definitions').insert({ tenant: actor.tenant, workflow_id: workflowId, name: 'Tag workflow',
+      payload_schema_ref: 'schema://test', draft_definition: {}, created_by: actor.userId });
+    await customer.table('workflow_definition_versions').insert({ tenant: actor.tenant, workflow_id: workflowId, version: 1, definition_json: {}, published_by: actor.userId });
+    await customer.table('workflow_runs').insert({ tenant: actor.tenant, run_id: runId, workflow_id: workflowId, workflow_version: 1,
+      status: 'RUNNING', lease_expires_at: new Date(Date.now() + 600_000) });
+    const { getActionRegistryV2 } = await import('../../../../../shared/workflow/runtime/registries/actionRegistry');
+    const registry = getActionRegistryV2();
+    if (!registry.get('tickets.create', 1)) (await import('../../../../../shared/workflow/runtime/actions/businessOperations/tickets')).registerTicketActions();
+    if (!registry.get('contacts.add_tag', 1)) (await import('../../../../../shared/workflow/runtime/actions/businessOperations/contacts')).registerContactActions();
+    if (!registry.get('clients.add_tag', 1)) (await import('../../../../../shared/workflow/runtime/actions/businessOperations/clients')).registerClientActions();
+    if (!registry.get('projects.add_tag', 1)) (await import('../../../../../shared/workflow/runtime/actions/businessOperations/projects')).registerProjectActions();
+    if (!registry.get('crm.tag_activity', 1)) (await import('../../../../../shared/workflow/runtime/actions/businessOperations/crm')).registerCrmActions();
+    const act = (id: string, input: any): Promise<any> => {
+      const action = registry.get(id, 1)!;
+      return action.handler(action.inputSchema.parse(input), { tenantId: actor.tenant, runId, knex: db, stepPath: `test.${id}`, attempt: 1,
+        idempotencyKey: randomUUID(), env: {}, nowIso: () => new Date().toISOString() } as any) as Promise<any>;
+    };
+    const { createTicketWithSideEffects } = await import('../../../../../shared/services/tickets/createTicketWithSideEffects');
+    const { withTransaction: transaction } = await import('@alga-psa/db');
+    const status = await customer.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket' }).first();
+    const priority = await customer.table('priorities').where('item_type', 'ticket').first();
+    const ticketInput = (title: string) => ({ title, client_id: operation.customer_client_id, board_id: operation.customer_board_id,
+      status_id: status.status_id, priority_id: priority.priority_id });
+    // The recurring generator and renewal tickets call the shared service as the system actor.
+    const createSystemTicket = (title: string, tags: string[]) => transaction(db, trx => createTicketWithSideEffects(trx, actor.tenant,
+      { actor: { type: 'system' }, ticket: { ...ticketInput(title), source: 'recurring' } as any, tags }));
+
+    // Entities to tag, built while the workspace is writable.
+    const { contact } = await act('contacts.create', { full_name: 'Tagged contact', email: `tagged-${randomUUID().slice(0, 8)}@cmreview.test`,
+      client_id: operation.customer_client_id, tags: ['Contact tag'] });
+    await act('clients.add_tag', { client_id: operation.customer_client_id, tags: ['Client tag'] });
+    const projectStatus = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
+    const project = await actions.createProject({ tenant: actor.tenant, project_name: 'Tagged project', client_id: operation.customer_client_id,
+      status: projectStatus.status_id, description: null, start_date: null, end_date: null, is_inactive: false } as any) as any;
+    const phase = await actions.addProjectPhase({ project_id: project.project_id, phase_name: 'Tagged phase', description: null,
+      start_date: null, end_date: null, status: 'planning', order_number: 1, wbs_code: '' } as any) as any;
+    const taskId = randomUUID();
+    await customer.table('project_tasks').insert({ tenant: actor.tenant, task_id: taskId, phase_id: phase.phase_id, task_name: 'Tagged task', wbs_code: '1.1' });
+    const interactionTypeId = randomUUID(), interactionId = randomUUID();
+    await customer.table('interaction_types').insert({ tenant: actor.tenant, type_id: interactionTypeId, type_name: 'Tagged activity type' });
+    await customer.table('interactions').insert({ tenant: actor.tenant, interaction_id: interactionId, type_id: interactionTypeId,
+      user_id: actor.userId, client_id: operation.customer_client_id, title: 'Tagged activity', interaction_date: new Date() });
+
+    const writers: Array<[string, () => Promise<unknown>]> = [
+      ['workflow tickets.create', () => act('tickets.create', { ...ticketInput('Workflow tagged ticket'), tags: ['Workflow ticket tag'] })],
+      ['system createTicketWithSideEffects', () => createSystemTicket('Recurring tagged ticket', ['Recurring ticket tag'])],
+      ['contacts.create', () => act('contacts.create', { full_name: 'New tagged contact', email: `new-${randomUUID().slice(0, 8)}@cmreview.test`,
+        client_id: operation.customer_client_id, tags: ['New contact tag'] })],
+      ['contacts.add_tag', () => act('contacts.add_tag', { contact_id: contact.contact_name_id, tags: ['Added contact tag'] })],
+      ['contacts.duplicate', () => act('contacts.duplicate', { source_contact_id: contact.contact_name_id, email: `copy-${randomUUID().slice(0, 8)}@cmreview.test` })],
+      ['clients.create', () => act('clients.create', { client_name: `Tagged client ${randomUUID().slice(0, 6)}`, tags: ['New client tag'] })],
+      ['clients.add_tag', () => act('clients.add_tag', { client_id: operation.customer_client_id, tags: ['Added client tag'] })],
+      ['clients.duplicate', () => act('clients.duplicate', { source_client_id: operation.customer_client_id, client_name: `Copied client ${randomUUID().slice(0, 6)}` })],
+      ['projects.add_tag', () => act('projects.add_tag', { project_id: project.project_id, tags: ['Project tag'] })],
+      ['projects.add_task_tag', () => act('projects.add_task_tag', { task_id: taskId, tags: ['Task tag'] })],
+      ['crm.tag_activity', () => act('crm.tag_activity', { activity_id: interactionId, tags: ['Activity tag'] })],
+    ];
+    const rows = async () => ({
+      definitions: await customer.table('tag_definitions').orderBy('tag_id').select('*'),
+      mappings: await customer.table('tag_mappings').orderBy('mapping_id').select('*'),
+      tickets: await customer.table('tickets').orderBy('ticket_id').pluck('ticket_id'),
+      contacts: await customer.table('contacts').orderBy('contact_name_id').pluck('contact_name_id'),
+      clients: await customer.table('clients').orderBy('client_id').pluck('client_id'),
+    });
+    return { writers, rows, contact, project, taskId, interactionId };
+  };
+
+  it('refuses every workflow and session-free ticket-creation tag write of a departed customer without changing a row', async () => withProjectActionsFixture(async (fixture) => {
+    const { actor, input, customer, workflow } = fixture;
+    await acceptCoManagedRelationship(db, actor, input);
+    const { writers, rows } = await workflowTagFixture(fixture);
+    await customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+    expect((await getCoManagedOperationalState(db, actor.tenant)).state).toBe('terminated');
+    const before = await rows();
+    workflow.mockClear();
+    for (const [name, write] of writers) {
+      await expect(write(), name).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY', message: readOnlyMessage });
+    }
+    // Each refusal rolls its whole transaction back: no tag, ticket, contact or client row.
+    expect(await rows()).toEqual(before);
+    expect(workflow).not.toHaveBeenCalled();
+  }));
+
+  it.each(['active co-managed', 'native PSA'] as const)('keeps workflow and session-free ticket-creation tag writes working for an %s tenant', async kind => withProjectActionsFixture(async (fixture) => {
+    const { actor, input, customer } = fixture;
+    await acceptCoManagedRelationship(db, actor, input);
+    if (kind === 'native PSA') await customer.table('tenants').update({ product_code: 'psa' });
+    expect((await getCoManagedOperationalState(db, actor.tenant)).state).toBe(kind === 'native PSA' ? 'independent' : 'active');
+    const { writers, contact, project, taskId } = await workflowTagFixture(fixture);
+    const results: Record<string, any> = {};
+    for (const [name, write] of writers) results[name] = await write();
+    const tagsOf = async (taggedId: string, taggedType: string) => (await customer.table('tag_mappings as tm')
+      .join('tag_definitions as td', function () { this.on('td.tag_id', 'tm.tag_id').andOn('td.tenant', 'tm.tenant'); })
+      .where({ 'tm.tenant': actor.tenant, 'tm.tagged_id': taggedId, 'tm.tagged_type': taggedType }).pluck('td.tag_text')).sort();
+    expect(await tagsOf(results['workflow tickets.create'].ticket_id, 'ticket')).toEqual(['Workflow ticket tag']);
+    expect(await tagsOf(results['system createTicketWithSideEffects'].ticketId, 'ticket')).toEqual(['Recurring ticket tag']);
+    expect(await tagsOf(results['contacts.create'].contact.contact_name_id, 'contact')).toEqual(['New contact tag']);
+    expect(await tagsOf(contact.contact_name_id, 'contact')).toEqual(['Added contact tag', 'Contact tag']);
+    expect(results['contacts.duplicate'].copied_tags).toBe(2);
+    expect(await tagsOf(results['clients.create'].client.client_id, 'client')).toEqual(['New client tag']);
+    expect(results['clients.duplicate'].copied_tags).toBe(2);
+    expect(await tagsOf(project.project_id, 'project')).toEqual(['Project tag']);
+    expect(await tagsOf(taskId, 'project_task')).toEqual(['Task tag']);
+    // The activity is linked to the client, so its tag lands there.
+    expect(await tagsOf(fixture.operation.customer_client_id, 'client')).toEqual(['Activity tag', 'Added client tag', 'Client tag']);
+  }));
 });
 
 describe('co-managed KB import staging', () => {

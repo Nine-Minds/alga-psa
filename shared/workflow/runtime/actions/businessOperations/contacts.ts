@@ -21,6 +21,7 @@ import {
   actionProvidedKey,
   withTenantTransaction,
   requirePermission,
+  admitWorkflowTagWrite,
   writeRunAudit,
   throwActionError,
   rethrowAsStandardError,
@@ -886,6 +887,7 @@ export function registerContactActions(): void {
     handler: async (input, ctx) =>
       withTenantTransaction(ctx, async (tx) => {
         await requirePermission(ctx, tx, { resource: 'contact', action: 'create' });
+        if (uniqueNormalizedTags(input.tags).length > 0) await admitWorkflowTagWrite(ctx, tx);
 
         if (input.client_id) {
           await ensureClientExists(ctx, tx, input.client_id);
@@ -1276,6 +1278,25 @@ export function registerContactActions(): void {
           await ensureClientExists(ctx, tx, targetClientId);
         }
 
+        // Read before the duplicate is written, so tag admission can come first.
+        let sourceTagTexts: string[] = [];
+        if (input.copy_tags) {
+          const db = tenantDb(tx.trx, tx.tenantId);
+          const sourceTagsQuery = db.table('tag_mappings as tm');
+          db.tenantJoin(sourceTagsQuery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id', {
+            rootTenantColumn: 'tm.tenant',
+          });
+          const sourceTags = await sourceTagsQuery
+            .where({
+              'tm.tagged_type': 'contact',
+              'tm.tagged_id': input.source_contact_id,
+              'td.tagged_type': 'contact',
+            })
+            .select('td.tag_text');
+          sourceTagTexts = (sourceTags as unknown as Array<{ tag_text: string }>).map((row) => row.tag_text);
+          if (uniqueNormalizedTags(sourceTagTexts).length > 0) await admitWorkflowTagWrite(ctx, tx);
+        }
+
         let duplicate: Record<string, any>;
         const sourcePhoneNumbers: ContactModelPhoneInput[] = Array.isArray(source.phone_numbers)
           ? source.phone_numbers.map((phone: Record<string, unknown>, index: number) => ({
@@ -1310,24 +1331,7 @@ export function registerContactActions(): void {
 
         let copiedTags = 0;
         if (input.copy_tags) {
-          const db = tenantDb(tx.trx, tx.tenantId);
-          const sourceTagsQuery = db.table('tag_mappings as tm');
-          db.tenantJoin(sourceTagsQuery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id', {
-            rootTenantColumn: 'tm.tenant',
-          });
-          const sourceTags = await sourceTagsQuery
-            .where({
-              'tm.tagged_type': 'contact',
-              'tm.tagged_id': input.source_contact_id,
-              'td.tagged_type': 'contact',
-            })
-            .select('td.tag_text');
-
-          const tagResult = await ensureContactTagMappings(
-            tx,
-            duplicate.contact_name_id,
-            (sourceTags as unknown as Array<{ tag_text: string }>).map((row) => row.tag_text)
-          );
+          const tagResult = await ensureContactTagMappings(tx, duplicate.contact_name_id, sourceTagTexts);
           copiedTags = tagResult.added.length + tagResult.existing.length;
         }
 
@@ -1383,6 +1387,7 @@ export function registerContactActions(): void {
     handler: async (input, ctx) =>
       withTenantTransaction(ctx, async (tx) => {
         await requirePermission(ctx, tx, { resource: 'contact', action: 'update' });
+        await admitWorkflowTagWrite(ctx, tx);
 
         await ensureContactExists(ctx, tx, input.contact_id);
         const tagResult = await ensureContactTagMappings(tx, input.contact_id, input.tags);

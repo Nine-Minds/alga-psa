@@ -17,6 +17,7 @@ import {
   isoDateTimeSchema,
   actionProvidedKey,
   withTenantTransaction,
+  admitWorkflowTagWrite,
   requirePermission,
   writeRunAudit,
   throwActionError,
@@ -1205,6 +1206,7 @@ export function registerClientActions(): void {
     handler: async (input, ctx) =>
       withTenantTransaction(ctx, async (tx) => {
         await requirePermission(ctx, tx, { resource: 'client', action: 'create' });
+        if (uniqueNormalizedTags(input.tags).length > 0) await admitWorkflowTagWrite(ctx, tx);
 
         if (input.parent_client_id) {
           await ensureClientExists(ctx, tx, input.parent_client_id);
@@ -1654,6 +1656,26 @@ export function registerClientActions(): void {
 
         const source = await ensureClientExists(ctx, tx, input.source_client_id);
 
+        // Read before the duplicate is written, so tag admission can come first.
+        let sourceTagTexts: string[] = [];
+        if (input.copy_tags) {
+          const db = tenantDb(tx.trx, tx.tenantId);
+          const sourceTags = await db.tenantJoin(
+            db.table('tag_mappings as tm'),
+            'tag_definitions as td',
+            'tm.tag_id',
+            'td.tag_id'
+          )
+            .where({
+              'tm.tagged_type': 'client',
+              'tm.tagged_id': input.source_client_id,
+              'td.tagged_type': 'client',
+            })
+            .select('td.tag_text');
+          sourceTagTexts = sourceTags.map((row: { tag_text: string }) => row.tag_text);
+          if (uniqueNormalizedTags(sourceTagTexts).length > 0) await admitWorkflowTagWrite(ctx, tx);
+        }
+
         const nowIso = new Date().toISOString();
         const duplicateId = uuidv4();
         const clientColumns = await getTableColumns(tx, 'clients');
@@ -1708,25 +1730,7 @@ export function registerClientActions(): void {
 
         let copiedTags = 0;
         if (input.copy_tags) {
-          const db = tenantDb(tx.trx, tx.tenantId);
-          const sourceTags = await db.tenantJoin(
-            db.table('tag_mappings as tm'),
-            'tag_definitions as td',
-            'tm.tag_id',
-            'td.tag_id'
-          )
-            .where({
-              'tm.tagged_type': 'client',
-              'tm.tagged_id': input.source_client_id,
-              'td.tagged_type': 'client',
-            })
-            .select('td.tag_text');
-
-          const tagResult = await ensureClientTagMappings(
-            tx,
-            duplicateId,
-            sourceTags.map((row: { tag_text: string }) => row.tag_text)
-          );
+          const tagResult = await ensureClientTagMappings(tx, duplicateId, sourceTagTexts);
           copiedTags = tagResult.added.length + tagResult.existing.length;
         }
 
@@ -1808,6 +1812,7 @@ export function registerClientActions(): void {
     handler: async (input, ctx) =>
       withTenantTransaction(ctx, async (tx) => {
         await requirePermission(ctx, tx, { resource: 'client', action: 'update' });
+        await admitWorkflowTagWrite(ctx, tx);
 
         await ensureClientExists(ctx, tx, input.client_id);
         const tagResult = await ensureClientTagMappings(tx, input.client_id, input.tags);

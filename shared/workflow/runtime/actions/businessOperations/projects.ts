@@ -20,6 +20,7 @@ import {
   isoDateTimeSchema,
   actionProvidedKey,
   withTenantTransaction,
+  admitWorkflowTagWrite,
   requirePermission,
   writeRunAudit,
   throwActionError,
@@ -3101,6 +3102,7 @@ export function registerProjectActions(): void {
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       try {
         await requireProjectUpdatePermission(ctx, tx);
+        await admitWorkflowTagWrite(ctx, tx);
         const project = await ensureProjectExists(ctx, tx, input.project_id);
         await assertProjectReadable(ctx, tx, project);
         const tagResult = await ensureTagMappings(tx, {
@@ -3149,6 +3151,7 @@ export function registerProjectActions(): void {
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       try {
         await requireProjectUpdatePermission(ctx, tx);
+        await admitWorkflowTagWrite(ctx, tx);
         const task = await ensureTaskContext(ctx, tx, input.task_id);
         validateOptionalTaskScope(ctx, task, { project_id: input.project_id, phase_id: input.phase_id });
         const project = await ensureProjectExists(ctx, tx, String(task.project_id));

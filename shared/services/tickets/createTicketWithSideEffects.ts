@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
 import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/publishers';
 import { TicketModel, type CreateTicketInput } from '../../models/ticketModel';
 import { TagModel } from '../../models/tagModel';
@@ -131,6 +132,13 @@ export async function createTicketWithSideEffects(
   input: CreateTicketWithSideEffectsInput,
 ): Promise<CreateTicketWithSideEffectsResult> {
   const { actorUserId, activityActor, activitySource, busActor, provenance } = resolveActorEffects(input.actor);
+  const tagTexts = [...new Set((input.tags ?? []).map((tag) => tag.trim()).filter(Boolean))];
+  // Tag writes are lifecycle-admitted before the ticket row exists, so the
+  // admission locks come first in the caller's transaction and a read-only
+  // co-managed workspace rolls the whole creation back. Independent PSA
+  // tenants pass.
+  // LEVERAGE: friction ticket-create-lifecycle-admission — only the tag step is admitted; creating a ticket without tags (workflow, recurring, renewal) is not, because ticket creation has no lifecycle admission layer of its own
+  if (tagTexts.length > 0) await assertCoManagedOperationalWrite(trx, tenant);
   const suppressionPayload = {
     suppressContactNotifications: input.notificationSuppression?.suppressContactNotifications === true,
     suppressInternalNotifications: input.notificationSuppression?.suppressInternalNotifications === true,
@@ -192,7 +200,7 @@ export async function createTicketWithSideEffects(
     if (result.resource && result.event.eventType === 'TICKET_ADDITIONAL_AGENT_ASSIGNED') agentEvents.push(result.event);
   }
 
-  for (const tagText of new Set((input.tags ?? []).map((tag) => tag.trim()).filter(Boolean))) {
+  for (const tagText of tagTexts) {
     const definition = await TagModel.getOrCreateTagDefinition(tagText, 'ticket', tenant, trx);
     await TagModel.createTagMapping(
       definition.tag_id,
