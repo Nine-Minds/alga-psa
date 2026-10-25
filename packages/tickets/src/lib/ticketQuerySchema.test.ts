@@ -32,7 +32,7 @@ describe('ticket query schema: computed attributes (T032)', () => {
   it.each(TICKET_COMPUTED_ATTRIBUTES)('%s compiles for every allowed operator and correlates on tenant', (name) => {
     const attribute = schema.attributes[name];
     for (const operator of allowedOperators(attribute)) {
-      const value = operator === 'in' || operator === 'not_in' ? (SAMPLE_VALUES[name] as unknown[]) : SAMPLE_VALUES[name];
+      const value = SAMPLE_VALUES[name] as PredicateClause["value"];
       const clause: PredicateClause = { path: name, operator, value };
       expect(validateClause(schema, clause)).toBeNull();
       const fragment = compilePredicateFragment(schema, clause, { rootAlias: 't' });

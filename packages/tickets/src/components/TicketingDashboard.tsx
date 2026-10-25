@@ -1,5 +1,6 @@
 'use client'
 
+import { encodeTicketWhere } from '../lib/ticketWhereUrl';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -520,6 +521,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   // Tag filter values from props
   const selectedTags = filterValues.tags ?? EMPTY_STRING_ARRAY;
+  const selectedWhere = filterValues.where;
   const ticketTagsRef = useRef<Record<string, ITag[]>>(initialTicketTags);
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>(initialTags || []);
   const [tagsVersion, setTagsVersion] = useState(0); // Used to force re-render when tags are fetched
@@ -868,6 +870,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (f.tags && f.tags.length > 0) {
       params.set('tags', f.tags.join(','));
     }
+    const whereParam = encodeTicketWhere(f.where);
+    if (whereParam) params.set('where', whereParam);
     if (sortBy && sortBy !== 'entered_at') {
       params.set('sortBy', sortBy);
     }
@@ -1201,12 +1205,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     sortBy,
     sortDirection,
     bundleView,
+    where: selectedWhere,
   }), [
     selectedBoards, excludedBoards, selectedStatus, selectedPriority, selectedCategories, excludedCategories,
     selectedClient, debouncedSearchQuery, boardFilterState, selectedTags,
     selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
     filterValues.dueDateFrom, filterValues.dueDateTo, selectedResponseState,
-    allowSlaStatusFilter, selectedSlaStatus, sortBy, sortDirection, bundleView,
+    allowSlaStatusFilter, selectedSlaStatus, sortBy, sortDirection, bundleView, selectedWhere,
   ]);
 
   // Smart search runs over the chips alone; the typed text is the Jev query.

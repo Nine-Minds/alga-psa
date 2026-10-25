@@ -322,7 +322,7 @@
   {
     "id": "F041",
     "description": "One exported ticket filter schema; named-view and board default-view schemas derive from it",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Storage and URLs"
     ]
@@ -330,7 +330,7 @@
   {
     "id": "F042",
     "description": "Delete the dead filter schema in server/src/lib/schemas/ticket.schema.ts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Storage and URLs"
     ]
@@ -338,7 +338,7 @@
   {
     "id": "F043",
     "description": "list-views define() accepts schemaVersion and migrate",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Storage and URLs"
     ]
@@ -346,7 +346,7 @@
   {
     "id": "F044",
     "description": "Tickets named-view definition schemaVersion 2 with migrate: v1 tags text to ids, drop requester_vip / client_vip",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Storage and URLs"
     ]
@@ -354,7 +354,7 @@
   {
     "id": "F045",
     "description": "Board default views and tenant default view gain a version field and the same migration on read",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Storage and URLs"
     ]
@@ -362,7 +362,7 @@
   {
     "id": "F046",
     "description": "sanitizeStoredTicketView and validateCapturedFilters keep and validate where instead of dropping non-scalars",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Storage and URLs"
     ]
@@ -370,7 +370,7 @@
   {
     "id": "F047",
     "description": "Sanitize drops predicate clauses referencing deleted tag ids through the dropped-reference collector and toast",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Storage and URLs"
     ]
@@ -378,7 +378,7 @@
   {
     "id": "F048",
     "description": "URL round-trip of where in one versioned readable form (v1:<path>:<op>[:<values>];..., percent-encoded, no base64 fallback) in container parse/write, page.tsx SSR parse, parseReturnFilters and getCurrentFiltersQuery; unknown-version or malformed values dropped through the dropped-reference collector",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Storage and URLs"
     ]
@@ -386,7 +386,7 @@
   {
     "id": "F049",
     "description": "TICKET_VIEW_URL_FILTER_PARAMS includes where so predicate-only URLs outrank the board default",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Storage and URLs"
     ]
@@ -394,7 +394,7 @@
   {
     "id": "F050",
     "description": "exportFilters, select-all, smart-search scope and prev/next carry where",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Storage and URLs"
     ]
@@ -620,7 +620,7 @@
   {
     "id": "F078",
     "description": "Ticket filter schema restricts where to a single flat and group; nested groups are rejected in storage, URLs and the toolbar",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list query schema and compiler",
       "Storage and URLs"
@@ -637,7 +637,7 @@
   {
     "id": "F080",
     "description": "Path alias map in the tickets list-view migrate hook (and board / tenant default view migration) so a renamed path in stored where migrates to its new name",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Persisted and external formats",
       "Storage and URLs"

@@ -30,6 +30,7 @@ import {
 } from '../lib/boardTabs';
 import { shouldWriteTicketListUrl, TICKET_LIST_PATHNAME } from '../lib/ticketListUrlSync';
 import { normalizeAssignedToIds } from '../lib/ticketFilterUtils';
+import { decodeTicketWhere, encodeTicketWhere } from '../lib/ticketWhereUrl';
 import {
   DEFAULT_TICKET_LIST_SORT_KEY,
   isTicketListSortKey,
@@ -81,6 +82,8 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
   pageSize: number;
   sortBy: string;
   sortDirection: 'asc' | 'desc';
+  /** `where` clauses (or whole values) the URL carried that could not be applied. */
+  droppedWhere: number;
 } {
   const params = new URLSearchParams(search);
   const parsedPage = Number.parseInt(params.get('page') || '1', 10);
@@ -107,9 +110,11 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
     : undefined;
 
   const assignedTo = normalizeAssignedToIds(params.get('assignedToIds'));
+  const decodedWhere = decodeTicketWhere(params.get('where'));
 
   const filters: Partial<ITicketListFilters> = {
     boardId: params.get('boardId') || undefined,
+    where: decodedWhere.where,
     boardIds: decodeCsvParam(params.get('boardIds')),
     excludeBoardIds: decodeCsvParam(params.get('excludeBoardIds')),
     clientId: params.get('clientId') || undefined,
@@ -145,6 +150,7 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
     pageSize: Number.isFinite(parsedPageSize) && parsedPageSize > 0 ? parsedPageSize : 10,
     sortBy,
     sortDirection,
+    droppedWhere: decodedWhere.dropped,
   };
 }
 
@@ -365,6 +371,8 @@ export default function TicketingDashboardContainer({
       const encodedTags = filters.tags.map(tag => encodeURIComponent(String(tag)));
       params.set('tags', encodedTags.join(','));
     }
+    const whereParam = encodeTicketWhere(filters.where);
+    if (whereParam) params.set('where', whereParam);
     if (filters.sortBy && filters.sortBy !== 'entered_at') {
       params.set('sortBy', filters.sortBy);
     }
@@ -464,7 +472,8 @@ export default function TicketingDashboardContainer({
         slaStatusFilter: allowSlaStatusFilter ? (filters.slaStatusFilter || undefined) : undefined,
         sortBy: effectiveSortBy,
         sortDirection: effectiveSortDirection,
-        bundleView: filters.bundleView || 'bundled'
+        bundleView: filters.bundleView || 'bundled',
+        where: filters.where && filters.where.clauses.length > 0 ? filters.where : undefined,
       };
 
       console.log('[Container] Fetching with defaults:', currentFiltersWithDefaults);
@@ -702,6 +711,9 @@ export default function TicketingDashboardContainer({
       setSortBy(parsed.sortBy);
       setSortDirection(parsed.sortDirection);
       setActiveFilters(parsed.filters);
+      if (parsed.droppedWhere > 0) {
+        toast(t('filters.droppedFromLink', 'Some filters in this link are not valid and were ignored.'));
+      }
       // Columns and density are not URL state, so a history step has to be told
       // which board it landed on for them to follow. Presentation only: the
       // filters come from the URL, which already *is* the state a back step is

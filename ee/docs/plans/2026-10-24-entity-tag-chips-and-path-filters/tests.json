@@ -133,7 +133,7 @@
   {
     "id": "T013",
     "description": "list-views unit: tickets v1 view migrates to v2 (tags text to ids, VIP keys dropped) and passes the strict v2 schema; board default and tenant default views migrate on read",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043",
       "F044",
@@ -144,7 +144,7 @@
   {
     "id": "T014",
     "description": "Adapter unit: sanitize keeps valid where clauses and drops clauses referencing deleted tag ids with a dropped-reference entry",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046",
       "F047"
@@ -153,7 +153,7 @@
   {
     "id": "T015",
     "description": "Container contract: a flat where survives URL write and parse in the v1 form, SSR parse, returnFilters prev/next, export and select-all scope; a where-only URL outranks the board default",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048",
       "F049",
@@ -292,7 +292,7 @@
   {
     "id": "T029",
     "description": "URL unit: where v1 encode/decode round-trips clauses with special characters and every operator kind; unknown version and malformed input are dropped with a dropped-reference entry",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048"
     ]
@@ -309,7 +309,7 @@
   {
     "id": "T031",
     "description": "list-views unit: a stored view whose where uses a renamed path migrates through the alias map, for named views and board / tenant default views",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080"
     ]
