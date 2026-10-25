@@ -178,16 +178,68 @@ describe('authenticateUser tenant scoping', () => {
     expect(findUserByEmailTenantAndTypeMock).not.toHaveBeenCalled();
   });
 
-  it('leaves the internal (MSP) lookup on its existing unscoped path', async () => {
-    findUserByEmailAndTypeMock.mockResolvedValue({
+  it('signs in a single internal user through the ambiguity-safe discovery path', async () => {
+    findUsersByEmailAndTypeMock.mockResolvedValue([{
       ...clientUser(NINE_MINDS_TENANT, 'u-msp'),
       user_type: 'internal',
-    });
+    }]);
 
     const user = await authenticateUser('tinus@example.com', 'correct-horse', 'internal');
 
-    expect(findUserByEmailAndTypeMock).toHaveBeenCalledWith('tinus@example.com', 'internal');
-    expect(findUsersByEmailAndTypeMock).not.toHaveBeenCalled();
+    expect(findUsersByEmailAndTypeMock).toHaveBeenCalledWith('tinus@example.com', 'internal');
+    expect(findUserByEmailAndTypeMock).not.toHaveBeenCalled();
     expect(user?.user_type).toBe('internal');
+  });
+
+  it('keeps an inactive restored internal identity from shadowing the live customer administrator', async () => {
+    const live = { ...clientUser(NINE_MINDS_TENANT, 'u-live'), user_type: 'internal' };
+    const restored = { ...clientUser(OTHER_MSP_TENANT, 'u-restored'), user_type: 'internal', is_inactive: true };
+    findUsersByEmailAndTypeMock.mockResolvedValue([restored, live]);
+
+    expect(await authenticateUser('tinus@example.com', 'correct-horse', 'internal')).toEqual(live);
+    expect(verifyPasswordMock).not.toHaveBeenCalledWith('correct-horse', restored.hashed_password);
+    expect(findUserByEmailAndTypeMock).not.toHaveBeenCalled();
+  });
+
+  it('refuses equally valid internal credentials in different live tenants', async () => {
+    findUsersByEmailAndTypeMock.mockResolvedValue([
+      { ...clientUser(NINE_MINDS_TENANT, 'u-one'), user_type: 'internal' },
+      { ...clientUser(OTHER_MSP_TENANT, 'u-two'), user_type: 'internal' },
+    ]);
+
+    await expect(authenticateUser('tinus@example.com', 'correct-horse', 'internal'))
+      .rejects.toMatchObject({ code: 'TENANT_REQUIRED' });
+  });
+
+  it('does not reveal internal tenant ambiguity for an incorrect password', async () => {
+    findUsersByEmailAndTypeMock.mockResolvedValue([
+      { ...clientUser(NINE_MINDS_TENANT, 'u-one'), user_type: 'internal' },
+      { ...clientUser(OTHER_MSP_TENANT, 'u-two'), user_type: 'internal' },
+    ]);
+    verifyPasswordMock.mockResolvedValue(false);
+
+    await expect(authenticateUser('tinus@example.com', 'guess', 'internal')).resolves.toBeNull();
+  });
+
+  it('does not authenticate when all restored internal identities are inactive', async () => {
+    findUsersByEmailAndTypeMock.mockResolvedValue([
+      { ...clientUser(NINE_MINDS_TENANT, 'u-one'), user_type: 'internal', is_inactive: true },
+      { ...clientUser(OTHER_MSP_TENANT, 'u-two'), user_type: 'internal', is_inactive: true },
+    ]);
+
+    await expect(authenticateUser('tinus@example.com', 'correct-horse', 'internal')).resolves.toBeNull();
+    expect(verifyPasswordMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps an explicit internal tenant hint scoped, including an inactive restored account', async () => {
+    findUserByEmailTenantAndTypeMock.mockResolvedValue({
+      ...clientUser(OTHER_MSP_TENANT, 'u-restored'), user_type: 'internal', is_inactive: true,
+    });
+
+    await expect(authenticateUser('tinus@example.com', 'correct-horse', 'internal', {
+      tenantId: OTHER_MSP_TENANT, requireTenantMatch: true,
+    })).resolves.toBeNull();
+    expect(findUsersByEmailAndTypeMock).not.toHaveBeenCalled();
+    expect(findUserByEmailTenantAndTypeMock).toHaveBeenCalledWith('tinus@example.com', OTHER_MSP_TENANT, 'internal');
   });
 });

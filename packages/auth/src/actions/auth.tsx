@@ -65,18 +65,18 @@ async function resolveTenantFromPortalDomain(portalDomain: string): Promise<stri
 }
 
 /**
- * Client sign-in with no tenant in hand. The old `.first()` lookup answered an
- * arbitrary tenant here, so an email with client users in two portals could be
- * authenticated against — and handed off to — the wrong MSP. Look at every
- * match instead, and when the credentials prove out in more than one tenant,
- * refuse and let the form ask which organization was meant. Only an attempt
+ * Sign-in with no tenant in hand. A `.first()` lookup answers an arbitrary
+ * tenant and can select an inactive restored account instead of the live
+ * workspace. Look at every match instead, and when the credentials prove out
+ * in more than one tenant, refuse instead of choosing a workspace. Only an attempt
  * that already knows the password learns that the email spans tenants.
  */
-async function resolveUnscopedClientUser(
+async function resolveUnscopedUser(
     normalizedEmail: string,
     password: string,
+    userType: 'client' | 'internal',
 ): Promise<IUser | undefined> {
-    const candidates = await User.findUsersByEmailAndType(normalizedEmail, 'client');
+    const candidates = await User.findUsersByEmailAndType(normalizedEmail, userType);
 
     if (candidates.length <= 1) {
         return candidates[0];
@@ -94,8 +94,9 @@ async function resolveUnscopedClientUser(
 
     const tenants = new Set(authenticated.map((candidate) => candidate.tenant));
     if (tenants.size > 1) {
-        logger.warn('[authenticateUser] Email resolves to client users in multiple tenants', {
+        logger.warn('[authenticateUser] Credentials resolve to users in multiple tenants', {
             email: normalizedEmail,
+            userType,
             tenantCount: tenants.size,
         });
         const { TenantRequiredError } = await import('../lib/security/loginProtection');
@@ -158,10 +159,8 @@ export async function authenticateUser(
     if (userType === 'client' || userType === 'internal') {
         if (resolvedTenantId) {
             user = await User.findUserByEmailTenantAndType(normalizedEmail, resolvedTenantId, userType);
-        } else if (userType === 'client') {
-            user = await resolveUnscopedClientUser(normalizedEmail, password);
         } else {
-            user = await User.findUserByEmailAndType(normalizedEmail, userType);
+            user = await resolveUnscopedUser(normalizedEmail, password, userType);
         }
     } else {
         user = await User.findUserByEmail(normalizedEmail);
