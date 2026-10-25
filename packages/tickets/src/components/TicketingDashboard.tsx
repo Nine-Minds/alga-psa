@@ -1016,11 +1016,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           handleError(getErrorMessage(children), t('errors.loadBundledTickets', 'Failed to load bundled tickets'));
           return;
         }
-        if (children.length > 0) {
+        ticketTagsRef.current = { ...ticketTagsRef.current, ...children.metadata.ticketTags };
+        setTagsVersion((v) => v + 1);
+        setAdditionalAgentAvatarUrls((prev) => ({ ...prev, ...children.metadata.agentAvatarUrls }));
+        setTeamAvatarUrls((prev) => ({ ...prev, ...children.metadata.teamAvatarUrls }));
+        if (children.tickets.length > 0) {
           setTickets(prev => {
             const existing = new Set(prev.map(t => t.ticket_id).filter((id): id is string => !!id));
             const next = [...prev];
-            for (const child of children) {
+            for (const child of children.tickets) {
               if (child.ticket_id && !existing.has(child.ticket_id)) {
                 next.push(child);
                 existing.add(child.ticket_id);

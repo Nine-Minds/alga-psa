@@ -316,9 +316,9 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(section).toContain('applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext)');
     expect(section).toContain('filterAuthorizedTickets(trx, authorizationContext, candidates)');
     expect(section).toContain("whereIn('t.ticket_id', requestedIds)");
-    expect(section).toContain('enrichTicketListItems(trx, tenant, mapTicketListItems(ordered))');
+    expect(section).toContain('enrichTicketListItems(trx, tenant, mapTicketListItems(ordered), displayAudienceForUser(user))');
 
     // The paginated list ends in the same enrichment, so both paths render identical rows.
-    expect(source).toContain('const enriched = await enrichTicketListItems(trx, tenant, ticketListItems);');
+    expect(source).toContain('const enriched = await enrichTicketListItems(trx, tenant, ticketListItems, displayAudienceForUser(user));');
   });
 });

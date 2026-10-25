@@ -1,7 +1,7 @@
 // server/src/interfaces/ticket.interfaces.tsx
 import { TenantEntity } from ".";
 import type { PredicateGroup } from '@alga-psa/predicates';
-import { ITaggable } from './tag.interfaces';
+import { ITaggable, type IDisplayTag } from './tag.interfaces';
 import { IClientLocation } from "./client.interfaces";
 import { IComment } from './comment.interface';
 import { IDocument } from './document.interface';
@@ -123,6 +123,10 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   client_logo_url?: string | null;
   contact_name: string | null;
   contact_avatar_url?: string | null;
+  /** Chip tags for the requester, already filtered to the caller's audience by the display rules. */
+  contact_tags?: IDisplayTag[];
+  /** Chip tags for the client, already filtered to the caller's audience by the display rules. */
+  client_tags?: IDisplayTag[];
   entered_by_name: string;
   assigned_to_name: string | null;
   additional_agent_count?: number;

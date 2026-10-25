@@ -24,7 +24,10 @@ import type {
   ITag,
   IUserWithRoles,
   TicketResponseState,
+  TagDisplayAudience,
 } from '@alga-psa/types';
+import { loadDisplayTagsForEntities, displayTagKey } from '@alga-psa/tags/lib/loadDisplayTags';
+import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import {
   withTransaction,
   registerAfterCommit,
@@ -1880,7 +1883,8 @@ async function attachLatestActivityActors(
 async function enrichTicketListItems(
   trx: Knex.Transaction,
   tenant: string,
-  ticketListItems: ITicketListItem[]
+  ticketListItems: ITicketListItem[],
+  audience: TagDisplayAudience
 ): Promise<TicketListRowsWithMetadata> {
   // Fetch metadata in parallel: avatar URLs, team avatar URLs, ticket tags
   const ticketIds = ticketListItems
@@ -1918,7 +1922,7 @@ async function enrichTicketListItems(
     }
   });
 
-  const [agentAvatarUrlsMap, teamAvatarUrlsMap, ticketTagRows, clientLogoUrlsMap, contactAvatarUrlsMap] = await Promise.all([
+  const [agentAvatarUrlsMap, teamAvatarUrlsMap, ticketTagRows, clientLogoUrlsMap, contactAvatarUrlsMap, chipTags] = await Promise.all([
     agentUserIds.size > 0
       ? getEntityImageUrlsBatch('user', Array.from(agentUserIds), tenant)
       : Promise.resolve(new Map<string, string | null>()),
@@ -1952,6 +1956,11 @@ async function enrichTicketListItems(
     contactIds.size > 0
       ? getEntityImageUrlsBatch('contact', Array.from(contactIds), tenant)
       : Promise.resolve(new Map<string, string | null>()),
+    // Chip tags: which contact/client tags show is decided by the display rules for this audience.
+    loadDisplayTagsForEntities(trx, tenant, audience, [
+      { taggedType: 'contact', ids: Array.from(contactIds) },
+      { taggedType: 'client', ids: Array.from(clientIds) },
+    ]),
   ]);
 
   // Attach batched client logo and contact avatar URLs to each row (single query each, no N+1).
@@ -1960,6 +1969,12 @@ async function enrichTicketListItems(
     ticket.contact_avatar_url = ticket.contact_name_id
       ? (contactAvatarUrlsMap.get(ticket.contact_name_id) ?? null)
       : null;
+    ticket.contact_tags = ticket.contact_name_id
+      ? (chipTags.get(displayTagKey('contact', ticket.contact_name_id)) ?? [])
+      : [];
+    ticket.client_tags = ticket.client_id
+      ? (chipTags.get(displayTagKey('client', ticket.client_id)) ?? [])
+      : [];
   });
 
   await attachLatestActivityActors(trx, tenant, ticketListItems, ticketIds);
@@ -2073,7 +2088,7 @@ export const getTicketsForList = withAuth(async (
       ticketListItems = mapTicketListItems(paginatedAuthorizedTickets);
     }
 
-    const enriched = await enrichTicketListItems(trx, tenant, ticketListItems);
+    const enriched = await enrichTicketListItems(trx, tenant, ticketListItems, displayAudienceForUser(user));
     return {
       tickets: enriched.tickets,
       totalCount,
@@ -2209,7 +2224,7 @@ export const loadTicketListItemsByIds = withAuth(async (
         .map((id) => byId.get(id))
         .filter((row): row is any => Boolean(row));
 
-      return enrichTicketListItems(trx, tenant, mapTicketListItems(ordered));
+      return enrichTicketListItems(trx, tenant, mapTicketListItems(ordered), displayAudienceForUser(user));
     } catch (error) {
       const expected = ticketListActionErrorFrom(error);
       if (expected) {
@@ -3704,7 +3719,7 @@ export const fetchBundleChildrenForMaster = withAuth(async (
   user,
   { tenant },
   masterTicketId: string
-): Promise<ITicketListItem[] | TicketActionError> => {
+): Promise<TicketListRowsWithMetadata | TicketActionError> => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
@@ -3728,6 +3743,7 @@ export const fetchBundleChildrenForMaster = withAuth(async (
       tenantLeftJoin(trx, tenant, childrenQuery, 'boards as c', 't.board_id', 'c.board_id');
       tenantLeftJoin(trx, tenant, childrenQuery, 'categories as cat', 't.category_id', 'cat.category_id');
       tenantLeftJoin(trx, tenant, childrenQuery, 'clients as comp', 't.client_id', 'comp.client_id');
+      tenantLeftJoin(trx, tenant, childrenQuery, 'contacts as cn', 't.contact_name_id', 'cn.contact_name_id');
       tenantLeftJoin(trx, tenant, childrenQuery, 'users as u', 't.entered_by', 'u.user_id');
       tenantLeftJoin(trx, tenant, childrenQuery, 'users as au', 't.assigned_to', 'au.user_id');
       tenantLeftJoin(trx, tenant, childrenQuery, 'teams as tm', 't.assigned_team_id', 'tm.team_id');
@@ -3741,6 +3757,7 @@ export const fetchBundleChildrenForMaster = withAuth(async (
           'c.board_name',
           'cat.category_name',
           'comp.client_name as client_name',
+          'cn.full_name as contact_name',
           trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
           trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
           'tm.team_name as assigned_team_name',
@@ -3751,7 +3768,7 @@ export const fetchBundleChildrenForMaster = withAuth(async (
 
       const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, rows);
 
-      return authorizedRows.map((ticket: any): ITicketListItem => {
+      const mapped = authorizedRows.map((ticket: any): ITicketListItem => {
         const {
           status_id,
           priority_id,
@@ -3764,6 +3781,7 @@ export const fetchBundleChildrenForMaster = withAuth(async (
           board_name,
           category_name,
           client_name,
+          contact_name,
           entered_by_name,
           assigned_to_name,
           assigned_team_name,
@@ -3784,6 +3802,7 @@ export const fetchBundleChildrenForMaster = withAuth(async (
           board_name: board_name || 'Unknown',
           category_name: category_name || 'Unknown',
           client_name: client_name || 'Unknown',
+          contact_name: contact_name || null,
           entered_by_name: entered_by_name || 'Unknown',
           assigned_to_name: assigned_to_name || 'Unknown',
           assigned_team_name: assigned_team_name || null,
@@ -3793,6 +3812,10 @@ export const fetchBundleChildrenForMaster = withAuth(async (
           bundle_master_ticket_number: bundle_master_ticket_number ?? null,
         };
       });
+
+      // Same enrichment as the list page: avatars, logos, ticket tags and chip tags, so an expanded
+      // bundle child renders exactly like a top-level row.
+      return enrichTicketListItems(trx, tenant, mapped, displayAudienceForUser(user));
     } catch (error) {
       const expected = ticketListActionErrorFrom(error);
       if (expected) {

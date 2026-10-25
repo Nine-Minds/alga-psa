@@ -192,7 +192,7 @@
   {
     "id": "T019",
     "description": "Hydration DB integration: getTicketsForList rows carry contact_tags and client_tags filtered by internal rules; a client-audience load returns none without a client rule",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063",
       "F064"
@@ -201,7 +201,7 @@
   {
     "id": "T020",
     "description": "Hydration DB integration: expanded bundle children include contact name, avatar, logo, ticket tags and chip tags",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F065"
     ]

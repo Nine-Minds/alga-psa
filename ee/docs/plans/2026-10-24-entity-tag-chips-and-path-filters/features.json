@@ -498,7 +498,7 @@
   {
     "id": "F063",
     "description": "loadDisplayTagsForEntities(knex, tenant, audience, refs) batch loader in packages/tags; audience from user.user_type",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Chip hydration"
     ]
@@ -506,7 +506,7 @@
   {
     "id": "F064",
     "description": "enrichTicketListItems adds contact_tags and client_tags on the row; ITicketListItem gains both fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Chip hydration"
     ]
@@ -514,7 +514,7 @@
   {
     "id": "F065",
     "description": "fetchBundleChildrenForMaster joins contacts and runs through enrichTicketListItems",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Chip hydration"
     ]
