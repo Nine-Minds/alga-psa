@@ -21,6 +21,8 @@ import {
   effectiveServiceNameSql,
   effectiveServiceSourceSql,
 } from '@alga-psa/core';
+import { readCoManagedNativeTimeSheet } from '@alga-psa/co-managed';
+import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
 
 const NON_BILLABLE_FALLBACK_WORK_ITEM_ID = '__non_billable__';
 
@@ -36,6 +38,21 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   try {
   const {knex: db} = await createTenantKnex();
   const scopedDb = tenantDb(db, tenant) as any;
+
+  // Reuse the admitted entry projection: shared work has MSP-local references,
+  // and customer work may have masked or excluded source fields. Native joins
+  // cannot reconstruct either safely.
+  const current = await readCoManagedNativeTimeSheet(db, tenant, timeSheetId, () => resolveNativeTimeBrowserActor(user, tenant));
+  if (current.handled) {
+    const items = new Map<string, IExtendedWorkItem>();
+    for (const entry of current.entries) {
+      const workItem = entry.workItem;
+      if (!workItem || typeof workItem.name !== 'string') throw new Error('Admitted time entry is missing its work item projection');
+      const key = `${entry.work_item_type}:${entry.work_item_id}`;
+      if (!items.has(key)) items.set(key, { ...workItem, tenant, work_item_id: entry.work_item_id, type: entry.work_item_type });
+    }
+    return [...items.values()];
+  }
 
   // Check permission for time entry reading (reading work items for time entries)
   if (!await hasPermission(user, 'time_entry', 'read', db)) {

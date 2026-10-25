@@ -14374,6 +14374,8 @@ it('native time sheet details omit excluded effort and withhold comments about p
   await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: user.user_id });
   expect(await sheets.fetchTimeSheet(entry.time_sheet_id)).toMatchObject({ entry_count: 1, total_hours: 1 });
   expect(await sheets.fetchTimeEntriesForTimeSheet(entry.time_sheet_id)).toMatchObject([{ entry_id: general.entry_id }]);
+  const { fetchWorkItemsForTimeSheet } = await import('../../../../../packages/scheduling/src/actions/timeEntryWorkItemActions');
+  expect(await fetchWorkItemsForTimeSheet(entry.time_sheet_id)).toEqual([expect.objectContaining({ name: 'Visible planning', type: 'non_billable_category' })]);
   expect(await sheets.fetchTimeSheetComments(entry.time_sheet_id)).toEqual([]);
   await expect(sheets.addCommentToTimeSheet(entry.time_sheet_id, context.userId, 'Blind sheet feedback', false)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
 }));
@@ -14382,13 +14384,15 @@ it('native time sheet details respect field masks for notes, sheet totals, perio
   await sheets.addCommentToTimeSheet(entry.time_sheet_id, context.userId, 'Private original notes', false);
   const bundles = await import('@alga-psa/authorization');
   const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Sheet detail fields', actorUserId: user.user_id });
-  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.customer_client_id], redactedFields: ['notes'] } });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.customer_client_id], redactedFields: ['notes', 'workItem'] } });
   await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_sheet', action: 'read', templateKey: 'own', config: { redactedFields: ['time_period', 'total_hours'] } });
   await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
   await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: user.user_id });
   const view = await sheets.fetchTimeSheet(entry.time_sheet_id);
   expect(view).toMatchObject({ entry_count: 1 }); expect(view.time_period).toBeUndefined(); expect(view.total_hours).toBeUndefined(); expect(view.total_minutes).toBeUndefined();
   expect(await sheets.fetchTimeEntriesForTimeSheet(entry.time_sheet_id)).toMatchObject([{ notes: '', elapsed_minutes: 90 }]);
+  const { fetchWorkItemsForTimeSheet } = await import('../../../../../packages/scheduling/src/actions/timeEntryWorkItemActions');
+  expect(await fetchWorkItemsForTimeSheet(entry.time_sheet_id)).toEqual([expect.objectContaining({ name: '', description: '' })]);
   expect(await sheets.fetchTimeSheetComments(entry.time_sheet_id)).toEqual([]);
   await expect(sheets.addCommentToTimeSheet(entry.time_sheet_id, context.userId, 'New blind notes', false)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
 }));
@@ -18830,6 +18834,18 @@ it('MSP shared time save uses the existing writer and reads its own commercial e
   const changed = await f.save({ entry_id: entry.entry_id, end_time: '2026-09-08T10:30:00Z', billable_duration: 90 });
   expect(changed).toMatchObject({ entry_id: entry.entry_id, billable_duration: 90 });
   expect(await f.sponsor.table('time_entries')).toHaveLength(1);
+}));
+
+it('MSP timesheet work items include shared references once and retain admitted evidence after revocation', async () => withMspSharedTimeSaveFixture(async f => {
+  const { fetchWorkItemsForTimeSheet } = await import('../../../../../packages/scheduling/src/actions/timeEntryWorkItemActions');
+  await f.save();
+  await f.save({ entry_id: '', start_time: '2026-09-08T10:00:00Z', end_time: '2026-09-08T10:15:00Z', billable_duration: 15 });
+  const before = await fetchWorkItemsForTimeSheet(f.sheetId);
+  expect(before).toEqual([expect.objectContaining({ work_item_id: f.referenceId, type: 'co_managed', name: 'Customer issue' })]);
+  await (await import('../../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 1, note: 'End live sharing' });
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Newly private source title' });
+  expect(await fetchWorkItemsForTimeSheet(f.sheetId)).toEqual(before);
 }));
 
 it('MSP shared time save retains existing effort after revocation and blocks fresh contributions', async () => withMspSharedTimeSaveFixture(async f => {
