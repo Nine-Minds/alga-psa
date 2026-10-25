@@ -1,13 +1,13 @@
 {
-  "observedAt": "2026-10-25T05:39:39Z",
+  "observedAt": "2026-10-25T05:56:57Z",
   "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
   "buildId": "build-1792904848073",
   "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
   "checkout": "/home/robert/alga-copies/feature-co-managed-it",
   "dist": "server/.next-review-candidate-racefix",
-  "port": 23376,
+  "port": 23374,
   "launcherPid": 3423588,
-  "liveNextPid": 3876055,
+  "liveNextPid": 4168956,
   "liveNextCwd": "/home/robert/alga-copies/feature-co-managed-it/server",
   "httpHealth": 200,
   "authenticatedActor": "qa@emeraldcity.oz",
@@ -16,11 +16,15 @@
     "/msp/tickets/customer"
   ],
   "openReview": {
-    "status": "succeeded",
+    "status": "pass",
     "signedInAs": "qa@emeraldcity.oz",
     "returnedUrl": "http://feature-co-managed-it.localhost:23374",
-    "candidateUrl": "http://feature-co-managed-it.localhost:23376",
-    "matchesCandidate": false
+    "entryUrl": "http://feature-co-managed-it.localhost:23374/msp/tickets",
+    "candidateUrl": "http://feature-co-managed-it.localhost:23374",
+    "matchesCandidate": true,
+    "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
+    "buildId": "build-1792904848073",
+    "boardAnnotation": "af7e3735-5de8-4d34-91e4-8c5b5a16421f"
   },
   "canonicalPromotion": {
     "attemptedAt": "2026-10-25T05:50:46Z",
@@ -45,11 +49,20 @@
       "23375": "HTTP 200",
       "23376": "HTTP 200"
     },
-    "note": "The board command timed out client-side after successful service resume and QA sign-in; the durable board annotation and live health confirm the review entry completed."
+    "note": "The board command timed out client-side after successful service resume and QA sign-in; the durable board annotation and live health confirm the review entry completed.",
+    "liveNextPid": 4168956,
+    "lastHealthCheckedAt": "2026-10-25T05:56:01Z"
   },
   "runtimeServices": {
     "23374": "canonical review-app; candidate distribution; HTTP 200; QA Open Review success",
     "23375": "fallback; HTTP 200",
     "23376": "isolated candidate; HTTP 200"
+  },
+  "priorIsolatedTargetAttempt": {
+    "status": "superseded",
+    "returnedUrl": "http://feature-co-managed-it.localhost:23374",
+    "candidateUrl": "http://feature-co-managed-it.localhost:23376",
+    "matchesCandidate": false,
+    "note": "Earlier separate registration before supported promotion; not the current Open Review result."
   }
 }

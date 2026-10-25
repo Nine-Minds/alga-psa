@@ -8,10 +8,13 @@
     "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
     "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
     "buildId": "build-1792904848073",
-    "liveNextProcessPid": 3876055,
+    "liveNextProcessPid": 4168956,
     "liveNextProcessCwd": "/home/robert/alga-copies/feature-co-managed-it/server",
     "isolatedCandidateOrigin": "http://feature-co-managed-it.localhost:23376",
-    "canonicalReviewAppSession": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-app:23"
+    "canonicalReviewAppSession": "card-service:964ce5e0-45a5-41b2-8e2c-73903742a85a:review-app:23",
+    "isolatedNextProcessPid": 3876055,
+    "canonicalHealthStatus": 200,
+    "observedAt": "2026-10-25T05:56:57Z"
   },
   "results": [
     {

@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-25T05:39:39Z",
+  "checkedAt": "2026-10-25T05:56:57Z",
   "candidateRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
   "requiredGuides": 14,
   "coveredGuides": 0,
@@ -35,7 +35,7 @@
       },
       "limitations": [
         "This is runtime smoke evidence, not the complete main-guide acceptance journey.",
-        "Open Review currently resolves to the separate registered :23374 app."
+        "Supported Open Review now enters QA on canonical :23374; main scenario and current recording are still incomplete."
       ],
       "metadataUpdatedAt": "2026-10-25T05:39:39Z",
       "runtime": {
@@ -45,7 +45,9 @@
         "productionVerified": true,
         "buildId": "build-1792904848073",
         "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
-        "evidence": "runtime-acceptance.json"
+        "evidence": "runtime-acceptance.json",
+        "canonicalOrigin": "http://feature-co-managed-it.localhost:23374",
+        "openReviewStatus": "verified as qa@emeraldcity.oz; canonical service serves this same distribution"
       },
       "build": {
         "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
@@ -111,7 +113,7 @@
       },
       "limitations": [
         "The full collection scenario and every section were not walked.",
-        "Open Review returned QA on :23374 rather than this candidate."
+        "Supported Open Review now enters QA on canonical :23374; collection and all section scenarios remain partial."
       ],
       "metadataUpdatedAt": "2026-10-25T05:39:39Z",
       "runtime": {
@@ -121,7 +123,9 @@
         "productionVerified": true,
         "buildId": "build-1792904848073",
         "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
-        "evidence": "runtime-acceptance.json"
+        "evidence": "runtime-acceptance.json",
+        "canonicalOrigin": "http://feature-co-managed-it.localhost:23374",
+        "openReviewStatus": "verified as qa@emeraldcity.oz; canonical service serves this same distribution"
       },
       "build": {
         "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
@@ -196,7 +200,9 @@
         "productionVerified": true,
         "buildId": "build-1792904848073",
         "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
-        "evidence": "runtime-acceptance.json"
+        "evidence": "runtime-acceptance.json",
+        "canonicalOrigin": "http://feature-co-managed-it.localhost:23374",
+        "openReviewStatus": "verified as qa@emeraldcity.oz; canonical service serves this same distribution"
       },
       "build": {
         "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
@@ -264,7 +270,9 @@
         "productionVerified": true,
         "buildId": "build-1792904848073",
         "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
-        "evidence": "runtime-acceptance.json"
+        "evidence": "runtime-acceptance.json",
+        "canonicalOrigin": "http://feature-co-managed-it.localhost:23374",
+        "openReviewStatus": "verified as qa@emeraldcity.oz; canonical service serves this same distribution"
       },
       "build": {
         "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
@@ -331,7 +339,9 @@
         "productionVerified": true,
         "buildId": "build-1792904848073",
         "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
-        "evidence": "runtime-acceptance.json"
+        "evidence": "runtime-acceptance.json",
+        "canonicalOrigin": "http://feature-co-managed-it.localhost:23374",
+        "openReviewStatus": "verified as qa@emeraldcity.oz; canonical service serves this same distribution"
       },
       "build": {
         "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
@@ -405,7 +415,9 @@
         "productionVerified": true,
         "buildId": "build-1792904848073",
         "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
-        "evidence": "runtime-acceptance.json"
+        "evidence": "runtime-acceptance.json",
+        "canonicalOrigin": "http://feature-co-managed-it.localhost:23374",
+        "openReviewStatus": "verified as qa@emeraldcity.oz; canonical service serves this same distribution"
       },
       "build": {
         "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
@@ -472,7 +484,9 @@
         "productionVerified": true,
         "buildId": "build-1792904848073",
         "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
-        "evidence": "runtime-acceptance.json"
+        "evidence": "runtime-acceptance.json",
+        "canonicalOrigin": "http://feature-co-managed-it.localhost:23374",
+        "openReviewStatus": "verified as qa@emeraldcity.oz; canonical service serves this same distribution"
       },
       "build": {
         "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
@@ -550,7 +564,9 @@
         "productionVerified": true,
         "buildId": "build-1792904848073",
         "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
-        "evidence": "runtime-acceptance.json"
+        "evidence": "runtime-acceptance.json",
+        "canonicalOrigin": "http://feature-co-managed-it.localhost:23374",
+        "openReviewStatus": "verified as qa@emeraldcity.oz; canonical service serves this same distribution"
       },
       "build": {
         "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
@@ -618,7 +634,9 @@
         "productionVerified": true,
         "buildId": "build-1792904848073",
         "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
-        "evidence": "runtime-acceptance.json"
+        "evidence": "runtime-acceptance.json",
+        "canonicalOrigin": "http://feature-co-managed-it.localhost:23374",
+        "openReviewStatus": "verified as qa@emeraldcity.oz; canonical service serves this same distribution"
       },
       "build": {
         "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
@@ -686,7 +704,9 @@
         "productionVerified": true,
         "buildId": "build-1792904848073",
         "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
-        "evidence": "runtime-acceptance.json"
+        "evidence": "runtime-acceptance.json",
+        "canonicalOrigin": "http://feature-co-managed-it.localhost:23374",
+        "openReviewStatus": "verified as qa@emeraldcity.oz; canonical service serves this same distribution"
       },
       "build": {
         "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
@@ -753,7 +773,9 @@
         "productionVerified": true,
         "buildId": "build-1792904848073",
         "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
-        "evidence": "runtime-acceptance.json"
+        "evidence": "runtime-acceptance.json",
+        "canonicalOrigin": "http://feature-co-managed-it.localhost:23374",
+        "openReviewStatus": "verified as qa@emeraldcity.oz; canonical service serves this same distribution"
       },
       "build": {
         "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
@@ -827,7 +849,9 @@
         "productionVerified": true,
         "buildId": "build-1792904848073",
         "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
-        "evidence": "runtime-acceptance.json"
+        "evidence": "runtime-acceptance.json",
+        "canonicalOrigin": "http://feature-co-managed-it.localhost:23374",
+        "openReviewStatus": "verified as qa@emeraldcity.oz; canonical service serves this same distribution"
       },
       "build": {
         "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
@@ -895,7 +919,9 @@
         "productionVerified": true,
         "buildId": "build-1792904848073",
         "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
-        "evidence": "runtime-acceptance.json"
+        "evidence": "runtime-acceptance.json",
+        "canonicalOrigin": "http://feature-co-managed-it.localhost:23374",
+        "openReviewStatus": "verified as qa@emeraldcity.oz; canonical service serves this same distribution"
       },
       "build": {
         "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
@@ -963,7 +989,9 @@
         "productionVerified": true,
         "buildId": "build-1792904848073",
         "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
-        "evidence": "runtime-acceptance.json"
+        "evidence": "runtime-acceptance.json",
+        "canonicalOrigin": "http://feature-co-managed-it.localhost:23374",
+        "openReviewStatus": "verified as qa@emeraldcity.oz; canonical service serves this same distribution"
       },
       "build": {
         "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
@@ -1003,7 +1031,8 @@
     "revisionStamp": "cd28aa9531f7bd465711f90b92bf8592185d9c77+da39a3ee5e6b",
     "evidence": "runtime-acceptance.json",
     "canonicalOrigin": "http://feature-co-managed-it.localhost:23374",
-    "openReviewActor": "qa@emeraldcity.oz"
+    "openReviewActor": "qa@emeraldcity.oz",
+    "openReviewStatus": "verified"
   },
   "build": {
     "sourceRevision": "cd28aa9531f7bd465711f90b92bf8592185d9c77",
