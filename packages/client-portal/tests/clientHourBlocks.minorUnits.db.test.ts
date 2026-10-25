@@ -6,7 +6,7 @@ import { computeRemainingBlockValueMinor } from '@alga-psa/shared/billingClients
 import { currencyFractionDigits } from '@alga-psa/core';
 
 // Guarded DB test for the client portal hour-block list: a cadence (contract-sourced) block
-// carries currency_code, valid_from and a remaining value (derived from hourly_rate, which is not itself exposed) in the currency's minor
+// carries currency_code, valid_from and a remaining value (derived from the exposed hourly_rate) in the currency's minor
 // units, for currencies that are not 2-decimal (JPY has 0, KWD has 3). Run with
 // HOUR_BLOCK_DB_TESTS=1 and the HOUR_BLOCK_DB_* env; skipped by default.
 
@@ -128,6 +128,7 @@ describe.runIf(enabled)('client portal hour blocks in non-2-decimal currencies',
       expect(block).toBeDefined();
       expect(block.currency_code).toBe(c.currency);
       expect(block.valid_from).toBe(c.validFrom);
+      expect(block.hourly_rate).toBe(c.rate);
       expect(block.remaining_minutes).toBe(c.minutes);
       expect(block.remaining_value).toBe(c.expected);
       expect(block.remaining_value).toBe(

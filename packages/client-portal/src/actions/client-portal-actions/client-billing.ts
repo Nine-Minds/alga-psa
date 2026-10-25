@@ -1449,6 +1449,8 @@ export interface ClientPortalHourBlock {
   expiration_date: string | null;
   status: string;
   currency_code: string | null;
+  /** The block's hourly rate in minor units of `currency_code`; null when it carries none. */
+  hourly_rate: number | null;
   /**
    * Value of the remaining hours in minor units of `currency_code` (remaining hours x the
    * block's hourly rate), rounded once here so the portal only formats it. 0 when the block
@@ -1551,6 +1553,7 @@ export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<Cl
           expiration_date: expirationDate,
           status: String(row.status),
           currency_code: (row.currency_code as string) ?? null,
+          hourly_rate: row.hourly_rate == null ? null : Number(row.hourly_rate),
           remaining_value: computeRemainingBlockValueMinor({
             remaining_minutes: remaining,
             hourly_rate: row.hourly_rate as number | string | null,
