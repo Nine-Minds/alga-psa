@@ -144,12 +144,13 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Prepaid hour blocks. The three child tables FK to hour_blocks, so they go
   // first; hour_blocks itself FKs to time_entries, service_catalog, invoices and
   // clients, so the whole group has to precede time tracking below.
-  // Prepaid Block issuances soft-reference hour_blocks, invoices and alerts
-  // (SET NULL) and hour_blocks references them back (SET NULL), so the ledger
-  // goes with the hour-block group ahead of contract lines.
-  'contract_line_block_issuances',
+  // hour_blocks_issuance_fkey is a plain (NO ACTION) composite FK to
+  // contract_line_block_issuances, so hour_blocks must go BEFORE the issuance
+  // ledger. Issuances only soft-reference hour_blocks (SET NULL), so deleting
+  // blocks first is safe in the other direction.
   'hour_block_audit', 'hour_block_service_scopes', 'hour_block_time_allocations',
   'hour_blocks',
+  'contract_line_block_issuances',
 
   // Time tracking. Stopwatch sessions, their segments and suggestion
   // dismissals FK only to users (segments cascade from sessions).

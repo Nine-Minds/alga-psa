@@ -446,9 +446,9 @@ export class ScenarioChargeSource implements ContractChargeSource {
   private readonly syntheticMinutes = new Map<string, number>();
 
   /**
-   * The simulated draw as per-entry rows: the ledger's share of the period's
-   * demand that blocks absorbed, taken from every synthetic entry as an active
-   * block draw. The resolver applies the same subtraction it applies to the
+   * The simulated draw as per-entry rows: the minutes of the period's demand
+   * that blocks absorbed, allocated to the synthetic entries in order as active
+   * block draws. The resolver applies the same subtraction it applies to the
    * engine's real allocation rows.
    */
   async prepaidCoverage(entryIds: string[]): Promise<PrepaidCoverageRow[]> {
@@ -457,11 +457,21 @@ export class ScenarioChargeSource implements ContractChargeSource {
       Math.max(0, this.ledger()?.demandCoverage.get(this.input.periodIndex) ?? 0),
     );
     if (!(share > 0)) return [];
-    const rows: PrepaidCoverageRow[] = [];
-    for (const entryId of entryIds) {
+    // The engine allocates entry by entry in order (each entry draws from the
+    // earliest-expiring block with minutes left), so the period's covered
+    // minutes fill entries first-to-last rather than spreading one ratio over
+    // all of them.
+    const entries = entryIds.flatMap((entryId) => {
       const minutes = this.syntheticMinutes.get(entryId);
-      if (minutes === undefined) continue;
-      rows.push({ entryId, blockStatus: "active", minutes: minutes * share });
+      return minutes === undefined ? [] : [{ entryId, minutes }];
+    });
+    let remaining = entries.reduce((sum, entry) => sum + entry.minutes, 0) * share;
+    const rows: PrepaidCoverageRow[] = [];
+    for (const { entryId, minutes } of entries) {
+      if (!(remaining > 0)) break;
+      const drawn = Math.min(minutes, remaining);
+      rows.push({ entryId, blockStatus: "active", minutes: drawn });
+      remaining -= drawn;
     }
     return rows;
   }
