@@ -3,6 +3,7 @@
  * Handles all project-related database operations for the REST API
  */
 
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
 import { 
@@ -766,6 +767,9 @@ export class ProjectService extends BaseService<IProject> {
           updated_at: new Date()
         };
   
+        // Human-work guard: a task's assignee must be an active internal user.
+        await assertHumanWorkAssignee(trx, context.tenant, [(taskData as { assigned_to?: string | null }).assigned_to]);
+
         const [task] = await db.table('project_tasks')
           .insert(taskData)
           .returning('*');
@@ -840,6 +844,12 @@ export class ProjectService extends BaseService<IProject> {
           updated_at: new Date()
         };
   
+        // Human-work guard: only when this write changes assigned_to (legacy references untouched).
+        const requestedAssignee = (updateData as { assigned_to?: string | null }).assigned_to;
+        if (requestedAssignee && requestedAssignee !== beforeTask.assigned_to) {
+          await assertHumanWorkAssignee(trx, context.tenant, [requestedAssignee]);
+        }
+
         const [task] = await db.table('project_tasks')
           .where({ task_id: taskId })
           .update(updateData)

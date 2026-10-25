@@ -26,15 +26,14 @@ function pickerLocalMidnightFor(isoDateOnly: string): Date {
   return new Date(y, m - 1, d, 0, 0, 0, 0);
 }
 
-// The guard probes a fixed instant inside the calendar window these tests
-// exercise, never "now": a zone's offset is not constant (Europe/Berlin leaves
-// UTC+2 on the last Sunday of October), so probing the current date made the
-// summer offsets below expire with the season.
-const TZ_PROBE_MS = Date.UTC(2026, 7, 31, 12, 0, 0);
+// Probe the offset at a fixed summer instant (the scenarios below are Aug/Sep 2026), not "now":
+// Europe/Berlin and America/New_York change offset at DST transitions, so a wall-clock probe
+// fails whenever the suite runs outside summer time.
+const TZ_PROBE_INSTANT = new Date('2026-08-31T12:00:00.000Z');
 
 function assertTz(zone: string, expectedOffsetMinutes: number) {
   process.env.TZ = zone;
-  expect(new Date(TZ_PROBE_MS).getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+  expect(TZ_PROBE_INSTANT.getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
 }
 
 describe('toCalendarDateString — DatePicker Date → YYYY-MM-DD', () => {

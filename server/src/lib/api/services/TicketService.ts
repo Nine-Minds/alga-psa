@@ -1,3 +1,5 @@
+import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { publishTicketTransitionsAfterCommit, silentTicketCreation, ticketCreatedPublishedByCaller } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import {
@@ -413,7 +415,8 @@ export class TicketService extends BaseService<ITicket> {
   private async resolveClientTicketVisibility(
     context: ServiceContext
   ): Promise<ContactVisibilityContext | null> {
-    if (context.user?.user_type !== 'client') {
+    // Client path only for a real client user; missing/undefined user_type and service stay on the MSP path.
+    if (!isClientUserType(context.user?.user_type)) {
       return null;
     }
 
@@ -1582,6 +1585,8 @@ export class TicketService extends BaseService<ITicket> {
           { path: [e.path], message: e.message },
         ]);
       }
+      // B1: the REST path never passes allow_reserved_override — that is an interactive
+      // confirm — so stock reserved or held for sales orders is a clean refusal here.
       if (error instanceof InsufficientStockError || name === 'InsufficientStockError') {
         throw new ValidationError('Validation failed', [
           { path: ['quantity'], message: (error as Error).message },
@@ -2156,6 +2161,10 @@ export class TicketService extends BaseService<ITicket> {
         'assigned_to' in cleanedData &&
         cleanedData.assigned_to !== undefined &&
         cleanedData.assigned_to !== currentTicket.assigned_to;
+      // Human-work guard: only when this write changes assigned_to (legacy references untouched).
+      if (isChangingAssignment && (cleanedData as { assigned_to?: string | null }).assigned_to) {
+        await assertHumanWorkAssignee(trx, context.tenant, [(cleanedData as { assigned_to?: string | null }).assigned_to]);
+      }
       const finalizeResourceReassignment = isChangingAssignment
         ? await prepareTicketResourceReassignment(
           trx,
@@ -2913,7 +2922,7 @@ export class TicketService extends BaseService<ITicket> {
       if (existing.publish_state !== 'scheduled') {
         throw new ValidationError('Only scheduled comments can be canceled');
       }
-      if (existing.user_id !== context.userId && context.user?.user_type !== 'internal') {
+      if (existing.user_id !== context.userId && !isMspPrincipalUserType(context.user?.user_type)) {
         throw new ForbiddenError('You can only cancel your own scheduled comments');
       }
 

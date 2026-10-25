@@ -492,7 +492,8 @@
               "active",
               "trialing",
               "past_due",
-              "unpaid"
+              "unpaid",
+              null
             ],
             "description": "Billing subscription status copied into the session token."
           },
@@ -6230,7 +6231,8 @@
                     "mobile",
                     "home",
                     "fax",
-                    "other"
+                    "other",
+                    null
                   ]
                 },
                 "custom_type": {
@@ -6308,7 +6310,8 @@
               "work",
               "personal",
               "billing",
-              "other"
+              "other",
+              null
             ]
           },
           "primary_email_custom_type": {
@@ -6348,7 +6351,8 @@
                     "work",
                     "personal",
                     "billing",
-                    "other"
+                    "other",
+                    null
                   ]
                 },
                 "custom_type": {
@@ -6479,7 +6483,8 @@
                     "mobile",
                     "home",
                     "fax",
-                    "other"
+                    "other",
+                    null
                   ]
                 },
                 "custom_type": {
@@ -6557,7 +6562,8 @@
               "work",
               "personal",
               "billing",
-              "other"
+              "other",
+              null
             ]
           },
           "primary_email_custom_type": {
@@ -6597,7 +6603,8 @@
                     "work",
                     "personal",
                     "billing",
-                    "other"
+                    "other",
+                    null
                   ]
                 },
                 "custom_type": {
@@ -7319,7 +7326,8 @@
                 ],
                 "enum": [
                   "company",
-                  "individual"
+                  "individual",
+                  null
                 ]
               },
               "tax_id_number": {
@@ -7613,7 +7621,8 @@
                   ],
                   "enum": [
                     "company",
-                    "individual"
+                    "individual",
+                    null
                   ]
                 },
                 "tax_id_number": {
@@ -15846,7 +15855,8 @@
             ],
             "enum": [
               "custom",
-              "itil"
+              "itil",
+              null
             ]
           },
           "priority_type": {
@@ -15856,7 +15866,8 @@
             ],
             "enum": [
               "custom",
-              "itil"
+              "itil",
+              null
             ]
           },
           "display_itil_impact": {
@@ -19707,7 +19718,8 @@
             ],
             "enum": [
               "awaiting_client",
-              "awaiting_internal"
+              "awaiting_internal",
+              null
             ],
             "description": "Current response state of the ticket. On ticket.response_state_changed it equals new_response_state."
           },
@@ -19733,7 +19745,8 @@
             ],
             "enum": [
               "awaiting_client",
-              "awaiting_internal"
+              "awaiting_internal",
+              null
             ],
             "description": "Only populated on ticket.response_state_changed. null when there was no prior state."
           },
@@ -19744,7 +19757,8 @@
             ],
             "enum": [
               "awaiting_client",
-              "awaiting_internal"
+              "awaiting_internal",
+              null
             ],
             "description": "Only populated on ticket.response_state_changed. null when the state was cleared (e.g. ticket closed)."
           },
@@ -23691,6 +23705,628 @@
           "pagination"
         ]
       },
+      "WorkV1TimeSheetEntriesResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "tenant": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "entry_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "user_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "start_time": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "end_time": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "notes": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "work_item_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "billable_duration": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "work_item_type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "ticket",
+                    "project_task",
+                    "non_billable_category",
+                    "ad_hoc",
+                    "interaction",
+                    null
+                  ]
+                },
+                "approval_status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "DRAFT",
+                    "SUBMITTED",
+                    "APPROVED",
+                    "REJECTED",
+                    "CHANGES_REQUESTED",
+                    null
+                  ]
+                },
+                "time_sheet_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "created_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "updated_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "service_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "tax_region": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "invoiced": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "tax_rate_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "contract_line_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "work_date": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "work_timezone": {
+                  "type": "string"
+                },
+                "created_by": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "updated_by": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "contract_line_source": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "explicit",
+                    "auto_unique_service",
+                    "auto_bucket_overlay",
+                    "unresolved",
+                    "reconciled_at_generation",
+                    "auto_billing_profile",
+                    null
+                  ]
+                },
+                "contract_line_unresolved_reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "ambiguous",
+                    "no_match",
+                    "error",
+                    null
+                  ]
+                },
+                "catalog_pricing_acknowledged_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "catalog_pricing_acknowledged_by": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "tenant",
+                "entry_id",
+                "user_id",
+                "start_time",
+                "end_time",
+                "notes",
+                "work_item_id",
+                "billable_duration",
+                "work_item_type",
+                "approval_status",
+                "time_sheet_id",
+                "created_at",
+                "updated_at",
+                "service_id",
+                "tax_region",
+                "invoiced",
+                "tax_rate_id",
+                "contract_line_id",
+                "work_date",
+                "work_timezone",
+                "created_by",
+                "updated_by",
+                "contract_line_source",
+                "contract_line_unresolved_reason",
+                "catalog_pricing_acknowledged_at",
+                "catalog_pricing_acknowledged_by"
+              ]
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "WorkV1TimeSheetSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "total_hours": {
+                "type": "number"
+              },
+              "billable_hours": {
+                "type": "number"
+              },
+              "non_billable_hours": {
+                "type": "number"
+              },
+              "entries_by_type": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              "entries_by_day": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              "approval_ready": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "total_hours",
+              "billable_hours",
+              "non_billable_hours",
+              "entries_by_type",
+              "entries_by_day",
+              "approval_ready"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "WorkV1TimeSheetSearchQuery": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search text (required). Case-insensitive substring match."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Fields to search. Only `user_name` (the user's full name) is supported, and it is the default."
+          },
+          "approval_statuses": {
+            "type": "string",
+            "description": "Approval statuses to keep (e.g. DRAFT, SUBMITTED, APPROVED, CHANGES_REQUESTED). Repeat or comma-separate."
+          },
+          "user_ids": {
+            "type": "string",
+            "description": "User UUIDs to keep. Repeat or comma-separate."
+          },
+          "period_ids": {
+            "type": "string",
+            "description": "Time period UUIDs to keep. Repeat or comma-separate."
+          },
+          "date_from": {
+            "type": "string",
+            "description": "Keep sheets whose period starts on/after this YYYY-MM-DD date."
+          },
+          "date_to": {
+            "type": "string",
+            "description": "Keep sheets whose period ends on/before this YYYY-MM-DD date."
+          },
+          "include_entries": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "description": "Include time_entries on each sheet. Default false."
+          },
+          "limit": {
+            "type": "string",
+            "description": "Max results, 1-100. Default 25."
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "WorkV1TimeSheetSearchResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "tenant": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "user_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "period_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "approval_status": {
+                  "type": "string",
+                  "enum": [
+                    "DRAFT",
+                    "SUBMITTED",
+                    "APPROVED",
+                    "CHANGES_REQUESTED"
+                  ]
+                },
+                "submitted_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "approved_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "approved_by": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "user_name": {
+                  "type": "string"
+                },
+                "time_entries": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "tenant": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "entry_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "user_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "start_time": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "date-time"
+                      },
+                      "end_time": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "notes": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "work_item_id": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "uuid"
+                      },
+                      "billable_duration": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ]
+                      },
+                      "work_item_type": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "enum": [
+                          "ticket",
+                          "project_task",
+                          "non_billable_category",
+                          "ad_hoc",
+                          "interaction",
+                          null
+                        ]
+                      },
+                      "approval_status": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "enum": [
+                          "DRAFT",
+                          "SUBMITTED",
+                          "APPROVED",
+                          "REJECTED",
+                          "CHANGES_REQUESTED",
+                          null
+                        ]
+                      },
+                      "time_sheet_id": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "uuid"
+                      },
+                      "created_at": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "date-time"
+                      },
+                      "updated_at": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "date-time"
+                      },
+                      "service_id": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "uuid"
+                      },
+                      "tax_region": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "invoiced": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "tax_rate_id": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "uuid"
+                      },
+                      "contract_line_id": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "uuid"
+                      },
+                      "work_date": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      "work_timezone": {
+                        "type": "string"
+                      },
+                      "created_by": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "uuid"
+                      },
+                      "updated_by": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "uuid"
+                      },
+                      "contract_line_source": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "enum": [
+                          "explicit",
+                          "auto_unique_service",
+                          "auto_bucket_overlay",
+                          "unresolved",
+                          "reconciled_at_generation",
+                          "auto_billing_profile",
+                          null
+                        ]
+                      },
+                      "contract_line_unresolved_reason": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "enum": [
+                          "ambiguous",
+                          "no_match",
+                          "error",
+                          null
+                        ]
+                      },
+                      "catalog_pricing_acknowledged_at": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "date-time"
+                      },
+                      "catalog_pricing_acknowledged_by": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "uuid"
+                      }
+                    },
+                    "required": [
+                      "tenant",
+                      "entry_id",
+                      "user_id",
+                      "start_time",
+                      "end_time",
+                      "notes",
+                      "work_item_id",
+                      "billable_duration",
+                      "work_item_type",
+                      "approval_status",
+                      "time_sheet_id",
+                      "created_at",
+                      "updated_at",
+                      "service_id",
+                      "tax_region",
+                      "invoiced",
+                      "tax_rate_id",
+                      "contract_line_id",
+                      "work_date",
+                      "work_timezone",
+                      "created_by",
+                      "updated_by",
+                      "contract_line_source",
+                      "contract_line_unresolved_reason",
+                      "catalog_pricing_acknowledged_at",
+                      "catalog_pricing_acknowledged_by"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "tenant",
+                "id",
+                "user_id",
+                "period_id",
+                "approval_status",
+                "submitted_at",
+                "approved_at",
+                "approved_by",
+                "user_name"
+              ]
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
       "WorkV1CalendarListQuery": {
         "type": "object",
         "properties": {
@@ -24876,6 +25512,92 @@
           "data"
         ]
       },
+      "ContractListItemV1": {
+        "type": "object",
+        "properties": {
+          "contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contract_name": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Earliest start_date across the contract's client assignments (client_contracts); MIN ignores assignments with a null start_date. Falls back to the contract's own stored start_date only when the contract has no assignments."
+          },
+          "end_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Latest end_date across the contract's client assignments (client_contracts); MAX ignores assignments with a null (open-ended) end_date. Falls back to the contract's own stored end_date only when the contract has no assignments."
+          },
+          "total_plans": {
+            "type": "integer",
+            "description": "Count of contract lines on the contract."
+          },
+          "clients_using_contract": {
+            "type": "integer",
+            "description": "Count of distinct clients assigned the contract."
+          }
+        },
+        "required": [
+          "contract_id",
+          "contract_name"
+        ],
+        "description": "Contract header as returned by the list endpoint; see contractResponseSchema for the full field set."
+      },
+      "ContractsApiPaginatedV1": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContractListItemV1"
+            }
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer"
+              },
+              "limit": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              },
+              "totalPages": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "_links": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
       "OpportunityIdParamV1": {
         "type": "object",
         "properties": {
@@ -25169,7 +25891,8 @@
               "tm_conversion",
               "whitespace",
               "asset_aging",
-              "inbound-lead"
+              "inbound-lead",
+              null
             ]
           },
           "generator_context": {
@@ -25274,7 +25997,8 @@
               "tm_conversion",
               "whitespace",
               "asset_aging",
-              "inbound-lead"
+              "inbound-lead",
+              null
             ]
           },
           "generator_context": {
@@ -25463,7 +26187,8 @@
               "assessment",
               "proposed",
               "verbal",
-              "won"
+              "won",
+              null
             ]
           }
         }
@@ -94990,7 +95715,7 @@
     "/api/v1/tickets/{id}/bundle/settings": {
       "put": {
         "summary": "Update ticket bundle settings",
-        "description": "Updates the bundle mode and/or reopen-on-child-reply policy for master {id}.",
+        "description": "Updates the bundle mode and/or reopen-on-child-reply policy for master {id}. Children lock status, assignee and priority only in sync_updates mode; link_only children manage their own. Switching to link_only never changes children. Switching to sync_updates while the master is open changes no children. Switching to sync_updates while the master is closed requires on_closed_master (keep_closed, apply_resolution to the still-open children, or reopen_master); omitting it returns 409 naming the allowed choices. Supplying it when switching to sync_updates on an open master returns 400; it is ignored for any other change.",
         "tags": [
           "Work Management v1"
         ],
@@ -98479,7 +99204,7 @@
     "/api/v1/time-sheets/search": {
       "get": {
         "summary": "Search time sheets",
-        "description": "Current route delegates to ApiTimeSheetController.list() rather than search().",
+        "description": "Searches time sheets via ApiTimeSheetController.search(). `query` is required and is matched as a case-insensitive substring against the sheet owner's full name (first name + space + last name). `user_name` is the only searchable field and the default. Optional filters narrow by approval status, user, period and period date range. Array params (`fields`, `approval_statuses`, `user_ids`, `period_ids`) accept repeated params or comma-separated values. `include_entries=true` adds each sheet's `time_entries`. Returns at most `limit` sheets (default 25, max 100).",
         "tags": [
           "Work Management v1"
         ],
@@ -98492,8 +99217,7 @@
           "x-tenant-scoped": true,
           "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or controller-specific equivalent",
           "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
-          "x-rbac-resource": "time_sheet",
-          "x-route-controller-mismatch": true
+          "x-rbac-resource": "time_sheet"
         },
         "x-alga-products": [
           "psa"
@@ -98501,173 +99225,107 @@
         "parameters": [
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1,
+              "description": "Search text (required). Case-insensitive substring match."
             },
-            "required": false,
-            "name": "page",
+            "required": true,
+            "description": "Search text (required). Case-insensitive substring match.",
+            "name": "query",
             "in": "query"
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Fields to search. Only `user_name` (the user's full name) is supported, and it is the default."
             },
             "required": false,
-            "name": "limit",
+            "description": "Fields to search. Only `user_name` (the user's full name) is supported, and it is the default.",
+            "name": "fields",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Approval statuses to keep (e.g. DRAFT, SUBMITTED, APPROVED, CHANGES_REQUESTED). Repeat or comma-separate."
+            },
+            "required": false,
+            "description": "Approval statuses to keep (e.g. DRAFT, SUBMITTED, APPROVED, CHANGES_REQUESTED). Repeat or comma-separate.",
+            "name": "approval_statuses",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "User UUIDs to keep. Repeat or comma-separate."
+            },
+            "required": false,
+            "description": "User UUIDs to keep. Repeat or comma-separate.",
+            "name": "user_ids",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Time period UUIDs to keep. Repeat or comma-separate."
+            },
+            "required": false,
+            "description": "Time period UUIDs to keep. Repeat or comma-separate.",
+            "name": "period_ids",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Keep sheets whose period starts on/after this YYYY-MM-DD date."
+            },
+            "required": false,
+            "description": "Keep sheets whose period starts on/after this YYYY-MM-DD date.",
+            "name": "date_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Keep sheets whose period ends on/before this YYYY-MM-DD date."
+            },
+            "required": false,
+            "description": "Keep sheets whose period ends on/before this YYYY-MM-DD date.",
+            "name": "date_to",
             "in": "query"
           },
           {
             "schema": {
               "type": "string",
               "enum": [
-                "approval_status",
-                "approved_at",
-                "created_at",
-                "period_end",
-                "period_start",
-                "submitted_at"
+                "true",
+                "false"
               ],
-              "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400."
+              "description": "Include time_entries on each sheet. Default false."
             },
             "required": false,
-            "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400.",
-            "name": "sort",
+            "description": "Include time_entries on each sheet. Default false.",
+            "name": "include_entries",
             "in": "query"
           },
           {
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+              "description": "Max results, 1-100. Default 25."
             },
             "required": false,
-            "name": "order",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": false,
-            "name": "user_id",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": false,
-            "name": "period_id",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "approval_status",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": false,
-            "name": "approved_by",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            },
-            "required": false,
-            "name": "submitted_from",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            },
-            "required": false,
-            "name": "submitted_to",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            },
-            "required": false,
-            "name": "approved_from",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            },
-            "required": false,
-            "name": "approved_to",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "has_entries",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            },
-            "required": false,
-            "name": "period_start_from",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            },
-            "required": false,
-            "name": "period_start_to",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            },
-            "required": false,
-            "name": "period_end_from",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            },
-            "required": false,
-            "name": "period_end_to",
+            "description": "Max results, 1-100. Default 25.",
+            "name": "limit",
             "in": "query"
           }
         ],
         "responses": {
           "200": {
-            "description": "Collection response returned.",
+            "description": "Matching time sheets (at most `limit`).",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkV1ApiPaginated"
+                  "$ref": "#/components/schemas/WorkV1TimeSheetSearchResponse"
                 }
               }
             }
@@ -99268,7 +99926,7 @@
     "/api/v1/time-sheets/{id}/entries": {
       "get": {
         "summary": "List time sheet entries",
-        "description": "Current route delegates to ApiTimeSheetController.list() rather than a per-sheet entries reader.",
+        "description": "Returns the time_entries of the time sheet in the path (ordered by start_time) via ApiTimeSheetController.getEntries(). 404 when the sheet does not exist in the caller's tenant.",
         "tags": [
           "Work Management v1"
         ],
@@ -99281,8 +99939,7 @@
           "x-tenant-scoped": true,
           "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or controller-specific equivalent",
           "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
-          "x-rbac-resource": "time_sheet",
-          "x-route-controller-mismatch": true
+          "x-rbac-resource": "time_sheet"
         },
         "x-alga-products": [
           "psa"
@@ -99298,75 +99955,15 @@
             "description": "UUID path identifier from underlying resource tables.",
             "name": "id",
             "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "page",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "limit",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "sort",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
-            },
-            "required": false,
-            "name": "order",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "fields",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "search",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "query",
-            "in": "query"
           }
         ],
         "responses": {
           "200": {
-            "description": "Collection response returned.",
+            "description": "Time entries of the sheet, ordered by start_time.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkV1ApiPaginated"
+                  "$ref": "#/components/schemas/WorkV1TimeSheetEntriesResponse"
                 }
               }
             }
@@ -100012,7 +100609,7 @@
     "/api/v1/time-sheets/{id}/summary": {
       "get": {
         "summary": "Get time sheet summary",
-        "description": "Current route delegates to ApiTimeSheetController.list() instead of summary-specific computation.",
+        "description": "Returns the summary (hours totals, billable split, approval_ready) of the time sheet in the path via ApiTimeSheetController.getSummary(). 404 when the sheet does not exist in the caller's tenant.",
         "tags": [
           "Work Management v1"
         ],
@@ -100025,8 +100622,7 @@
           "x-tenant-scoped": true,
           "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or controller-specific equivalent",
           "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
-          "x-rbac-resource": "time_sheet",
-          "x-route-controller-mismatch": true
+          "x-rbac-resource": "time_sheet"
         },
         "x-alga-products": [
           "psa"
@@ -100042,75 +100638,15 @@
             "description": "UUID path identifier from underlying resource tables.",
             "name": "id",
             "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "page",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "limit",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "sort",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
-            },
-            "required": false,
-            "name": "order",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "fields",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "search",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "query",
-            "in": "query"
           }
         ],
         "responses": {
           "200": {
-            "description": "Collection response returned.",
+            "description": "Summary of the sheet.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkV1ApiPaginated"
+                  "$ref": "#/components/schemas/WorkV1TimeSheetSummaryResponse"
                 }
               }
             }
@@ -106353,7 +106889,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/QuotesContractsApiPaginatedV1"
+                  "$ref": "#/components/schemas/ContractsApiPaginatedV1"
                 }
               }
             }

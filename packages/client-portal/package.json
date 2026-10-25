@@ -39,6 +39,7 @@
     "@alga-psa/opportunities": "*",
     "@alga-psa/projects": "*",
     "@alga-psa/scheduling": "*",
+    "@alga-psa/shared": "*",
     "@alga-psa/storage": "*",
     "@alga-psa/tickets": "*",
     "@alga-psa/types": "*",

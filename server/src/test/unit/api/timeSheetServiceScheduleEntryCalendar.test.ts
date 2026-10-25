@@ -11,6 +11,7 @@ const state = vi.hoisted(() => ({
   created: [] as Array<{ entry: any; options: any }>,
   updates: [] as any[],
   groupLevels: new Map<string, { calendarId: string; level: string; isArchived: boolean }>(),
+  userLevels: new Map<string, string>(),
 }));
 
 const TENANT = 'tenant-1';
@@ -21,16 +22,25 @@ const CAL_VIEW = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const CAL_HIDDEN = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const CAL_OTHER_TENANT = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 const ENTRY_ID = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+const SERVICE_USER = '33333333-3333-4333-8333-333333333333';
 
 function fakeTable(name: string, tenant: string) {
   let filter: Record<string, any> = {};
+  const inFilters: Array<[string, any[]]> = [];
   const rows = () =>
     (state.tables[name] ?? []).filter(
-      (row) => row.tenant === tenant && Object.entries(filter).every(([k, v]) => row[k] === v),
+      (row) =>
+        row.tenant === tenant &&
+        Object.entries(filter).every(([k, v]) => row[k] === v) &&
+        inFilters.every(([k, values]) => values.includes(row[k])),
     );
   const api: any = {
     where(f: Record<string, any>) {
       filter = { ...filter, ...f };
+      return api;
+    },
+    whereIn(column: string, values: any[]) {
+      inFilters.push([column, values]);
       return api;
     },
     first: async () => rows()[0],
@@ -73,7 +83,7 @@ vi.mock('@alga-psa/scheduling/lib/calendarAccess', async (importOriginal) => {
     resolveCalendarAccess: async (_knex: unknown, _tenant: string, viewer: { user_id: string }) => ({
       viewerUserId: viewer.user_id,
       canViewAll: false,
-      userLevels: new Map(),
+      userLevels: state.userLevels,
       groupLevels: state.groupLevels,
       hiddenCalendarIds: [],
     }),
@@ -123,6 +133,7 @@ describe('REST schedule entries: calendar_id', () => {
     state.published.length = 0;
     state.created.length = 0;
     state.updates.length = 0;
+    state.userLevels = new Map();
     state.groupLevels = new Map([
       [CAL_EDIT, { calendarId: CAL_EDIT, level: 'edit', isArchived: false }],
       [CAL_VIEW, { calendarId: CAL_VIEW, level: 'view', isArchived: false }],
@@ -139,6 +150,11 @@ describe('REST schedule entries: calendar_id', () => {
           is_all_day: false, scheduled_start: new Date('2026-10-22T10:00:00Z'), scheduled_end: new Date('2026-10-22T11:00:00Z') },
       ],
       schedule_entry_assignees: [{ tenant: TENANT, entry_id: ENTRY_ID, user_id: USER }],
+      users: [
+        { tenant: TENANT, user_id: USER, user_type: 'internal', is_inactive: false },
+        { tenant: TENANT, user_id: OTHER_USER, user_type: 'internal', is_inactive: false },
+        { tenant: TENANT, user_id: SERVICE_USER, user_type: 'service', is_inactive: false },
+      ],
     };
   });
 
@@ -258,6 +274,44 @@ describe('REST schedule entries: calendar_id', () => {
       expect(event!.payload.changes.before.assignedUserIds).toEqual([USER]);
       expect(event!.payload.changes.after.assignedUserIds).toEqual([]);
       expect(event!.payload.entryId).toBe(ENTRY_ID);
+    });
+
+    // The caller holds edit on these users' calendars, so the assignment right is not what blocks.
+    const grantAssign = (...userIds: string[]) => userIds.forEach((userId) => state.userLevels.set(userId, 'edit'));
+
+    it('replaces assignees when every added assignee is an active internal user', async () => {
+      grantAssign(OTHER_USER);
+      await makeService().updateScheduleEntry(ENTRY_ID, { assigned_user_ids: [USER, OTHER_USER] } as any, context);
+
+      expect(state.tables.schedule_entry_assignees.map((a) => a.user_id)).toEqual([USER, OTHER_USER]);
+      const event = state.published.find((e) => e.eventType === 'SCHEDULE_ENTRY_UPDATED');
+      expect(event!.payload.changes.after.assignedUserIds).toEqual([USER, OTHER_USER]);
+    });
+
+    it('rejects adding a service user as assignee and leaves the existing assignees in place', async () => {
+      grantAssign(SERVICE_USER);
+      await expect(
+        makeService().updateScheduleEntry(ENTRY_ID, { assigned_user_ids: [USER, SERVICE_USER] } as any, context),
+      ).rejects.toMatchObject({ name: 'HumanWorkAssigneeInvalidError' });
+
+      expect(state.tables.schedule_entry_assignees.map((a) => a.user_id)).toEqual([USER]);
+      expect(state.published).toHaveLength(0);
+    });
+
+    it('keeps a legacy non-human assignee without blocking the edit (only added ids are validated)', async () => {
+      grantAssign(OTHER_USER);
+      state.tables.schedule_entries[0].calendar_id = CAL_EDIT;
+      state.tables.schedule_entry_assignees = [
+        { tenant: TENANT, entry_id: ENTRY_ID, user_id: USER },
+        { tenant: TENANT, entry_id: ENTRY_ID, user_id: SERVICE_USER },
+      ];
+      await makeService().updateScheduleEntry(
+        ENTRY_ID,
+        { assigned_user_ids: [USER, SERVICE_USER, OTHER_USER] } as any,
+        context,
+      );
+
+      expect(state.tables.schedule_entry_assignees.map((a) => a.user_id)).toEqual([USER, SERVICE_USER, OTHER_USER]);
     });
 
     it('carries the existing assignees into the event when assigned_user_ids is not supplied', async () => {

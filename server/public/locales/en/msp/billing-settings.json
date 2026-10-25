@@ -202,6 +202,27 @@
         "save": "Failed to save settings",
         "range": "Enter a whole number from 1 to 365."
       }
+    },
+    "paymentTerms": {
+      "title": "Default payment terms",
+      "description": "Set the payment terms new invoices use when neither the client nor its billing profile sets any.",
+      "fields": {
+        "terms": {
+          "label": "Payment terms",
+          "help": "Applies to new invoices only. Existing invoices and clients that already have their own terms keep them."
+        }
+      },
+      "actions": {
+        "save": "Save"
+      },
+      "toast": {
+        "updated": "Default payment terms have been updated."
+      },
+      "errors": {
+        "load": "Failed to load settings",
+        "save": "Failed to save settings",
+        "invalid": "Choose a valid payment term."
+      }
     }
   },
   "quoting": {
@@ -222,11 +243,20 @@
       "loading": "Loading default tax rate...",
       "empty": "Create an active tax rate before choosing a default.",
       "invalid": "The configured default is no longer active or valid. Choose another rate.",
-      "field": { "label": "Default tax rate" },
-      "options": { "none": "No tenant default" },
+      "field": {
+        "label": "Default tax rate"
+      },
+      "options": {
+        "none": "No tenant default"
+      },
       "help": "When unset, new catalog items remain non-taxable and new clients use the oldest active rate when one exists.",
-      "actions": { "save": "Save default", "saving": "Saving..." },
-      "toast": { "saved": "Default tax rate saved." },
+      "actions": {
+        "save": "Save default",
+        "saving": "Saving..."
+      },
+      "toast": {
+        "saved": "Default tax rate saved."
+      },
       "errors": {
         "load": "Failed to load the default tax rate.",
         "save": "Failed to save the default tax rate."
@@ -240,9 +270,17 @@
       "empty": "No eligible products or services found.",
       "target": "Target rate: {{rate}}",
       "count": "{{count}} eligible item(s)",
-      "dialog": { "title": "Apply default tax rate" },
-      "actions": { "preview": "Preview existing items", "apply": "Apply selected", "applying": "Applying..." },
-      "toast": { "applied": "Default tax rate applied to selected items." },
+      "dialog": {
+        "title": "Apply default tax rate"
+      },
+      "actions": {
+        "preview": "Preview existing items",
+        "apply": "Apply selected",
+        "applying": "Applying..."
+      },
+      "toast": {
+        "applied": "Default tax rate applied to selected items."
+      },
       "errors": {
         "preview": "Failed to preview catalog items.",
         "apply": "Failed to apply the default tax rate."

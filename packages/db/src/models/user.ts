@@ -7,6 +7,7 @@ import type {
   IUserWithRoles,
   IRoleWithPermissions,
 } from '@alga-psa/types';
+import { INTERACTIVE_USER_TYPES } from '@alga-psa/types';
 import { getAdminConnection } from '../lib/admin';
 import { tenantDb } from '../lib/tenantDb';
 import { requireTenantId } from '../lib/tenantId';
@@ -70,10 +71,18 @@ export function groupRolePermissionRows(rows: RoleWithPermissionRow[]): IRoleWit
 }
 
 const User = {
-  getAll: async (knexOrTrx: Knex | Knex.Transaction, includeInactive = false): Promise<IUser[]> => {
+  getAll: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    includeInactive = false,
+    options: { includeNonInteractive?: boolean } = {}
+  ): Promise<IUser[]> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
       let query = tenantDb(knexOrTrx, tenant).table<IUser>('users').select('*');
+      // Non-interactive principals (e.g. service) are never part of the default user list.
+      if (!options.includeNonInteractive) {
+        query = query.whereIn('user_type', [...INTERACTIVE_USER_TYPES]);
+      }
       if (!includeInactive) {
         query = query.andWhere('is_inactive', false);
       }
@@ -105,7 +114,7 @@ const User = {
     }
   },
 
-  findUserByEmailAndType: async (email: string, userType: 'internal' | 'client'): Promise<IUser | undefined> => {
+  findUserByEmailAndType: async (email: string, userType: 'internal' | 'client' | 'service'): Promise<IUser | undefined> => {
     const db = await getAdminConnection();
     try {
       const user = await tenantDb(db, USER_MODEL_DISCOVERY_TENANT)
@@ -125,7 +134,7 @@ const User = {
    * sibling above answers an arbitrary one of them, which is wrong for sign-in
    * when no tenant is known: callers need to see the ambiguity to refuse it.
    */
-  findUsersByEmailAndType: async (email: string, userType: 'internal' | 'client'): Promise<IUser[]> => {
+  findUsersByEmailAndType: async (email: string, userType: 'internal' | 'client' | 'service'): Promise<IUser[]> => {
     const db = await getAdminConnection();
     try {
       return await tenantDb(db, USER_MODEL_DISCOVERY_TENANT)
@@ -141,7 +150,7 @@ const User = {
   findUserByEmailTenantAndType: async (
     email: string,
     tenantId: string,
-    userType: 'internal' | 'client'
+    userType: 'internal' | 'client' | 'service'
   ): Promise<IUser | undefined> => {
     const db = await getAdminConnection();
     try {

@@ -9,6 +9,7 @@ import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
 import { tenantDb } from '@alga-psa/db';
+import { assertHumanWorkAssignee } from '../lib/humanWork/assertHumanWorkAssignee';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
@@ -1152,6 +1153,9 @@ export class TicketModel {
       attributes: completeValidation.attributes ? JSON.stringify(completeValidation.attributes) : null
     };
 
+    // Human-work guard: a ticket's primary assignee must be an active internal user.
+    await assertHumanWorkAssignee(trx, tenant, [dbData.assigned_to]);
+
     // Insert the ticket
     await tenantDb(trx, tenant).table('tickets').insert(dbData);
 
@@ -1423,6 +1427,12 @@ export class TicketModel {
           throw new Error(categoryResult.error);
         }
       }
+    }
+
+    // Human-work guard: validate assigned_to only when this write changes it, so legacy
+    // references (e.g. a former agent user) never block unrelated edits.
+    if ('assigned_to' in updateData && updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
+      await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to]);
     }
 
     // Update the ticket
