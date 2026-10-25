@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { v5 as uuidv5 } from 'uuid';
-import { tenantDb } from '@alga-psa/db';
+import { registerAfterCommit, tenantDb } from '@alga-psa/db';
 import { createCoManagedTicketComment, CoManagedSharedWorkError, type CoManagedCommentCreateRequest, type CoManagedSharedResource, type CoManagedSessionActor } from '@alga-psa/co-managed';
 import Comment from '@alga-psa/tickets/models/comment';
 import { isResponseStateTrackingEnabled } from '@alga-psa/tickets/lib/responseStateSettings';
@@ -9,6 +9,7 @@ import { writeTicketActivity } from '@alga-psa/shared/lib/ticketActivity';
 import { queueCoManagedConversationEvent } from './conversationEvents';
 import { EventSchemas, buildWorkflowPayload, type WorkflowEventPublishContext } from '@alga-psa/event-schemas';
 import { collaborationActorReferenceSchema } from '@alga-psa/event-schemas/collaboration';
+import { publishTicketUpdate } from '@alga-psa/tickets/lib/liveUpdates';
 
 /** Production adapter: admission, native comment, response state, activity and
  * receipt share one transaction. Publication starts only after its owner commits. */
@@ -63,5 +64,16 @@ export async function createSharedTicketComment(db: Knex, actor: CoManagedSessio
           idempotencyKey: `co-managed-comment:${context.resource.tenant}:${comment.comment_id}:${event.eventType}` } });
     }
     await context.assertWriteAuthority(trx);
+    // Only customer-owned comments reach this adapter. MSP-private comments
+    // stay in their own store and never signal the customer's live room.
+    registerAfterCommit(trx, () => publishTicketUpdate({
+      tenantId: context.resource.tenant,
+      ticketId: context.resource.id,
+      updatedFields: ['comments'],
+      updatedBy: reference
+        ? { userId: null, displayName, actorReference: reference }
+        : { userId: context.actor.userId, displayName },
+      updatedAt: occurredAt,
+    }), `co-managed comment refresh ${context.resource.tenant}:${comment.comment_id}`);
   });
 }

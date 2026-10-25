@@ -5609,6 +5609,35 @@ it('delivers qualified comment names to customer recipients without colliding au
   } finally { notify.mockRestore(); send.mockRestore(); for (const spy of spies.reverse()) spy.mockRestore(); }
 }));
 
+it('signals customer live comment refresh after commit with qualified identity and no content, but never on rollback or receipt replay', async () => withSharedTicketMutationFixture(async ({
+  principal, resource, customer, live: send,
+}) => {
+  const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
+  send.mockClear();
+  const request = { operationId: randomUUID(), audience: 'shared_it' as const, text: 'Body must never enter the live signal' };
+  await expect(withTransaction(db, async trx => {
+    await createSharedTicketComment(trx, principal, resource, request);
+    expect(send).not.toHaveBeenCalled();
+    throw new Error('Roll back live comment');
+  })).rejects.toThrow('Roll back live comment');
+  expect(send).not.toHaveBeenCalled();
+  await withTransaction(db, async trx => {
+    await createSharedTicketComment(trx, principal, resource, request);
+    expect(send).not.toHaveBeenCalled();
+  });
+  expect(send).toHaveBeenCalledTimes(1);
+  const hint = send.mock.calls[0][0];
+  expect(hint).toMatchObject({ tenantId: resource.tenant, ticketId: resource.id });
+  const encoded = JSON.stringify(hint);
+  expect(hint).toMatchObject({ updatedFields: ['comments'], updatedBy: { userId: null,
+    actorReference: { ownerTenantId: resource.tenant, tenantId: principal.tenant, userId: principal.userId } } });
+  expect(encoded).not.toContain(request.text);
+  expect(await customer.table('comments').where('comment_id', request.operationId).first()).toBeDefined();
+  await createSharedTicketComment(db, principal, resource, request);
+  expect(send).toHaveBeenCalledTimes(1);
+}));
+
+
 it('commits shared comment response state, qualified activity and receipts before publishing production events exactly once', async () => withSharedTicketMutationFixture(async ({
   principal, resource, customer, publish, workflow,
 }) => {
