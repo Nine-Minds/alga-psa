@@ -949,11 +949,6 @@
       "type": "⟦Ŧẏƥḗ⟧",
       "status": "⟦Şŧȧŧŭş⟧"
     },
-    "assetStatuses": {
-      "active": "⟦Ȧƈŧīṽḗ⟧",
-      "inactive": "⟦Īƞȧƈŧīṽḗ⟧",
-      "maintenance": "⟦Ḿȧīƞŧḗƞȧƞƈḗ⟧"
-    },
     "assetTypes": {
       "workstation": "⟦Ẇȯřķşŧȧŧīȯƞ⟧",
       "server": "⟦Şḗřṽḗř⟧",
@@ -1812,7 +1807,8 @@
     "in_stock": "⟦Īƞ şŧȯƈķ⟧",
     "maintenance": "⟦Īƞ ḿȧīƞŧḗƞȧƞƈḗ⟧",
     "inactive": "⟦Īƞȧƈŧīṽḗ⟧",
-    "retired": "⟦Řḗŧīřḗḓ⟧"
+    "retired": "⟦Řḗŧīřḗḓ⟧",
+    "held_by_msp": "⟦Ħḗŀḓ ƀẏ ḾŞƤ⟧"
   },
   "assetStatusKinds": {
     "deployable": "⟦Ḓḗƥŀȯẏȧƀŀḗ⟧",
@@ -2076,7 +2072,8 @@
       "doneBody": "⟦{{name}} ({{tag}}) īş ƞȯẇ īƞ ḾŞƤ ƈŭşŧȯḓẏ.⟧",
       "printLabel": "⟦Ƥřīƞŧ ȧşşḗŧ ŀȧƀḗŀ⟧",
       "openAsset": "⟦Ȯƥḗƞ ȧşşḗŧ⟧",
-      "close": "⟦Ƈŀȯşḗ⟧"
+      "close": "⟦Ƈŀȯşḗ⟧",
+      "inCustodyOption": "⟦{{asset}} — Īƞ ƈŭşŧȯḓẏ: {{location}}⟧"
     }
   }
 }

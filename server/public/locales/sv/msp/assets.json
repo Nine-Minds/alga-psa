@@ -949,11 +949,6 @@
       "type": "Typ",
       "status": "Status"
     },
-    "assetStatuses": {
-      "active": "Aktiv",
-      "inactive": "Inaktiv",
-      "maintenance": "Underhåll"
-    },
     "assetTypes": {
       "workstation": "Arbetsstation",
       "server": "Server",
@@ -1812,7 +1807,8 @@
     "in_stock": "I lager",
     "maintenance": "Under underhåll",
     "inactive": "Inaktiv",
-    "retired": "Utfasad"
+    "retired": "Utfasad",
+    "held_by_msp": "Hos MSP"
   },
   "assetStatusKinds": {
     "deployable": "Driftsättningsbar",
@@ -2076,7 +2072,8 @@
       "doneBody": "{{name}} ({{tag}}) är nu i MSP:ns förvar.",
       "printLabel": "Skriv ut tillgångsetikett",
       "openAsset": "Öppna tillgång",
-      "close": "Stäng"
+      "close": "Stäng",
+      "inCustodyOption": "{{asset}} — I förvar: {{location}}"
     }
   }
 }

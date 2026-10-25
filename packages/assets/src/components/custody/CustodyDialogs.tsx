@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { IAssetCustodyDetail } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -43,6 +43,9 @@ interface StepDialogProps {
   onDone: () => void;
 }
 
+/** A refusal from a dialog's `onSubmit`; `fieldId` names the control to focus and mark `aria-invalid`. */
+export type DialogSubmitError = string | { message: string; fieldId?: string };
+
 export function DialogShell({
   id,
   title,
@@ -60,14 +63,15 @@ export function DialogShell({
   submitLabel: string;
   isOpen: boolean;
   onClose: () => void;
-  /** Resolve to an error message to keep the dialog open, or null on success. */
-  onSubmit: () => Promise<string | null>;
+  /** Resolve to an error (message, or message + the id of the offending field) to keep the dialog open, or null on success. */
+  onSubmit: () => Promise<DialogSubmitError | null>;
   canSubmit?: boolean;
   children: React.ReactNode;
 }) {
   const { t } = useTranslation('msp/assets');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; fieldId?: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const alertRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -76,14 +80,38 @@ export function DialogShell({
     }
   }, [isOpen]);
 
+  // The error sits in a sticky region at the top of the body, so it is in view whatever the scroll
+  // position. Announce it by moving focus: to the offending field when the caller named one, else to the alert.
+  useEffect(() => {
+    if (!error) return;
+    alertRef.current?.scrollIntoView?.({ block: 'nearest' });
+    const field = error.fieldId ? document.getElementById(error.fieldId) : null;
+    if (!field) {
+      alertRef.current?.focus();
+      return;
+    }
+    field.setAttribute('aria-invalid', 'true');
+    field.focus();
+    const clear = () => field.removeAttribute('aria-invalid');
+    field.addEventListener('input', clear);
+    field.addEventListener('change', clear);
+    return () => {
+      clear();
+      field.removeEventListener('input', clear);
+      field.removeEventListener('change', clear);
+    };
+  }, [error]);
+
   const submit = async () => {
     setBusy(true);
     setError(null);
     try {
-      const message = await onSubmit();
-      if (message) setError(message);
+      const failure = await onSubmit();
+      if (failure) setError(typeof failure === 'string' ? { message: failure } : failure);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t('custody.errors.generic', { defaultValue: 'Something went wrong.' }));
+      setError({
+        message: cause instanceof Error ? cause.message : t('custody.errors.generic', { defaultValue: 'Something went wrong.' }),
+      });
     } finally {
       setBusy(false);
     }
@@ -109,13 +137,19 @@ export function DialogShell({
     >
       <DialogContent>
         <div className="space-y-4">
+          {error ? (
+            <div
+              id={`${id}-error`}
+              ref={alertRef}
+              role="alert"
+              tabIndex={-1}
+              className="sticky top-0 z-10 rounded-md border border-destructive bg-alert-destructive-bg px-3 py-2 text-sm text-[rgb(var(--color-text-800))] outline-none"
+            >
+              {error.message}
+            </div>
+          ) : null}
           {description ? <p className="text-sm text-[rgb(var(--color-text-600))]">{description}</p> : null}
           {children}
-          {error ? (
-            <p role="alert" className="text-sm text-[rgb(var(--badge-danger-text))]">
-              {error}
-            </p>
-          ) : null}
         </div>
       </DialogContent>
     </Dialog>

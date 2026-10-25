@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import useSWR from 'swr';
 import type { Asset, AssetAssociation, AssetListResponse } from '@alga-psa/types';
 import { listEntityAssets, createAssetAssociation, removeAssetAssociation, listAssets } from '../actions/assetActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
@@ -22,6 +23,8 @@ import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Monitor, Server, Smartphone, Printer, Network, Boxes } from 'lucide-react';
 import { getIconComponent } from '@alga-psa/ui/components/IconPicker';
+import { ticketAssetsKey } from '../lib/assetCacheKeys';
+import { useAssetStatusLabel } from '../lib/assetStatus';
 import { useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { ContentCard } from '@alga-psa/ui/components';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -57,16 +60,6 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
     const [hasTemplateLinks, setHasTemplateLinks] = useState(false);
     useEffect(() => { void hasRemoteAccessLinks().then((result) => setHasTemplateLinks(result === true)).catch(() => setHasTemplateLinks(false)); }, []);
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [associatedAssets, setAssociatedAssets] = useState<AssetAssociation[]>([]);
-    // The type registry only informs CUSTOM asset-type icons; builtin types
-    // render local icons. Fetch it lazily, and only when a custom-typed asset
-    // is actually on screen — most tickets never pay this request.
-    const needsTypeRegistry = associatedAssets.some((association) => {
-        const type = association.asset?.asset_type;
-        return Boolean(type) && !BUILTIN_ICON_TYPES.has(type as string);
-    });
-    const assetTypeEntries = useAssetTypeRegistry(needsTypeRegistry);
 
     // Multi-select state for asset selection
     const [selectedAssets, setSelectedAssets] = useState<Map<string, SelectedAsset>>(new Map());
@@ -80,9 +73,6 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoadingAssets, setIsLoadingAssets] = useState(false);
 
-    // Track already-associated asset IDs to filter them out
-    const [associatedAssetIds, setAssociatedAssetIds] = useState<Set<string>>(new Set());
-
     // Asset detail drawer state
     const [drawerAssetId, setDrawerAssetId] = useState<string | null>(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -92,10 +82,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
     const [drawerLoading, setDrawerLoading] = useState(false);
     const lastRequestIdRef = useRef<number>(0);
 
-    const getAssetStatusLabel = (status: string) =>
-        t(`associatedAssets.assetStatuses.${status}`, {
-            defaultValue: status.charAt(0).toUpperCase() + status.slice(1)
-        });
+    const getAssetStatusLabel = useAssetStatusLabel();
 
     const getAssetTypeLabel = (type: string) =>
         t(`associatedAssets.assetTypes.${type}`, {
@@ -110,79 +97,60 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
             defaultValue: type.charAt(0).toUpperCase() + type.slice(1)
         });
 
-    const loadAssociatedAssets = useCallback(async () => {
-        try {
-            setIsLoading(true);
-            const assets = unwrapAssetActionResult(await listEntityAssets(entityId, entityType));
+    const shapeAssociations = useCallback((assets: Asset[]): AssetAssociation[] =>
+        assets.map((asset): AssetAssociation => ({
+            tenant: asset.tenant,
+            asset_id: asset.asset_id,
+            entity_id: entityId,
+            entity_type: entityType,
+            relationship_type: 'affected',
+            created_by: 'system',
+            created_at: new Date().toISOString(),
+            asset,
+        })), [entityId, entityType]);
 
-            // Track associated asset IDs to filter them from available list
-            setAssociatedAssetIds(new Set(assets.map(a => a.asset_id)));
-
-            // Create associations with assets
-            const associations: AssetAssociation[] = await Promise.all(
-                assets.map(async (asset): Promise<AssetAssociation> => ({
-                    tenant: asset.tenant,
-                    asset_id: asset.asset_id,
-                    entity_id: entityId,
-                    entity_type: entityType,
-                    relationship_type: 'affected',
-                    created_by: 'system',
-                    created_at: new Date().toISOString(),
-                    asset: asset
-                }))
-            );
-
-            setAssociatedAssets(associations);
-        } catch (error) {
-            handleError(error, t('associatedAssets.errors.loadAssociatedAssets', {
-                defaultValue: 'Failed to load associated assets'
-            }));
-        } finally {
-            setIsLoading(false);
+    // The server-started promise feeds the first read only; every later
+    // revalidation (a receive, a custody change, add/remove) hits the action.
+    const initialAssetsRef = useRef<{ entityId: string; promise: Promise<Asset[]> } | null>(
+        initialAssets ? { entityId, promise: initialAssets } : null
+    );
+    const { data: associatedAssets = [], isLoading: isFetching, mutate: mutateAssociations } = useSWR(
+        ticketAssetsKey(entityType, entityId),
+        async (): Promise<AssetAssociation[]> => {
+            const initial = initialAssetsRef.current;
+            initialAssetsRef.current = null;
+            // initialAssets may be a React Flight thenable (RSC-streamed) whose
+            // .then() returns undefined; normalize to a real, chainable Promise.
+            const assets = initial && initial.entityId === entityId
+                ? unwrapAssetActionResult(await Promise.resolve(initial.promise))
+                : unwrapAssetActionResult(await listEntityAssets(entityId, entityType));
+            return shapeAssociations(assets);
+        },
+        {
+            revalidateOnFocus: false,
+            onError: (error) => {
+                handleError(error, t('associatedAssets.errors.loadAssociatedAssets', {
+                    defaultValue: 'Failed to load associated assets'
+                }));
+            },
         }
-    }, [entityId, entityType, t]);
+    );
+    const isLoading = isFetching;
+    // Track associated asset IDs to filter them from the available list
+    const associatedAssetIds = useMemo(
+        () => new Set(associatedAssets.map((a) => a.asset_id)),
+        [associatedAssets]
+    );
+    const loadAssociatedAssets = useCallback(() => mutateAssociations(), [mutateAssociations]);
 
-    const skipFirstAssetsFetch = useRef(Boolean(initialAssets));
-    useEffect(() => {
-        if (!initialAssets) return;
-        let cancelled = false;
-        // initialAssets may be a React Flight thenable (RSC-streamed) whose
-        // .then() returns undefined; normalize to a real, chainable Promise.
-        Promise.resolve(initialAssets).then((assets) => {
-            if (cancelled) return;
-            const expectedAssets = unwrapAssetActionResult(assets);
-            // Same shaping as loadAssociatedAssets, minus the network round-trip.
-            setAssociatedAssetIds(new Set(expectedAssets.map((a) => a.asset_id)));
-            setAssociatedAssets(expectedAssets.map((asset): AssetAssociation => ({
-                tenant: asset.tenant,
-                asset_id: asset.asset_id,
-                entity_id: entityId,
-                entity_type: entityType,
-                relationship_type: 'affected',
-                created_by: 'system',
-                created_at: new Date().toISOString(),
-                asset,
-            })));
-            setIsLoading(false);
-        }).catch((error) => {
-            if (cancelled) return;
-            handleError(error, t('associatedAssets.errors.loadAssociatedAssets', {
-                defaultValue: 'Failed to load associated assets'
-            }));
-            setAssociatedAssetIds(new Set());
-            setAssociatedAssets([]);
-            setIsLoading(false);
-        });
-        return () => { cancelled = true; };
-    }, [initialAssets, entityId, entityType]);
-
-    useEffect(() => {
-        if (skipFirstAssetsFetch.current) {
-            skipFirstAssetsFetch.current = false;
-            return;
-        }
-        void loadAssociatedAssets();
-    }, [loadAssociatedAssets]);
+    // The type registry only informs CUSTOM asset-type icons; builtin types
+    // render local icons. Fetch it lazily, and only when a custom-typed asset
+    // is actually on screen — most tickets never pay this request.
+    const needsTypeRegistry = associatedAssets.some((association) => {
+        const type = association.asset?.asset_type;
+        return Boolean(type) && !BUILTIN_ICON_TYPES.has(type as string);
+    });
+    const assetTypeEntries = useAssetTypeRegistry(needsTypeRegistry);
 
     const loadAvailableAssets = useCallback(async () => {
         try {
@@ -507,7 +475,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                             >
                                 {/* Row 1: Name + Status + Remove */}
                                 <div className="flex items-center justify-between gap-2">
-                                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 sm:flex-nowrap">
                                 {association.asset ? (
                                     (() => {
                                         const asset = association.asset;
@@ -518,14 +486,14 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                             size="sm"
                                             onClick={() => openDrawerForAsset(asset)}
                                             title={asset.name}
-                                            className="h-auto min-w-0 max-w-full p-0 text-sm font-medium truncate text-left justify-start"
+                                            className="h-auto min-w-0 flex-1 max-w-full p-0 text-sm font-medium truncate text-left justify-start"
                                         >
                                             {asset.name}
                                         </Button>
                                         );
                                     })()
                                 ) : (
-                                    <span className="text-sm font-medium text-gray-900 truncate">
+                                    <span className="min-w-0 flex-1 text-sm font-medium text-gray-900 truncate">
                                         {t('associatedAssets.empty.unknownAsset', {
                                             defaultValue: 'Unknown Asset'
                                                 })}
@@ -534,7 +502,9 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                         {association.asset && (
                                             <RmmStatusIndicator asset={association.asset} size="sm" />
                                         )}
-                                        <CustodyBadge id={`associated-asset-custody-${association.asset_id}`} badge={custodyBadges.get(association.asset_id)} />
+                                        <span className="shrink-0 max-sm:basis-full">
+                                            <CustodyBadge id={`associated-asset-custody-${association.asset_id}`} badge={custodyBadges.get(association.asset_id)} />
+                                        </span>
                                     </div>
                                     <div className="flex flex-shrink-0 items-center gap-2">
                                         {association.asset && (

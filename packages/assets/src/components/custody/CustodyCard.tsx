@@ -20,7 +20,7 @@ import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { formatCalendarDate, getCurrentDateInUserTimeZone } from '@alga-psa/core';
 import { getAssetCustody, listCustodyEvents } from '../../actions/assetCustodyActions';
 import { useAssetCrossFeature } from '../../context/AssetCrossFeatureContext';
-import { matchAssetCacheKeys } from '../../lib/assetCacheKeys';
+import { matchAnyEntityAssetsKeys, matchAssetCacheKeys } from '../../lib/assetCacheKeys';
 import {
   custodyEventToHistoryEntry,
   daysHeldSince,
@@ -62,7 +62,10 @@ export function CustodyCard({ id, assetId }: { id: string; assetId: string }) {
 
   const refresh = () => {
     void mutate(matchAssetCacheKeys([assetId]));
-    void mutate(['custody', 'queue']);
+    // Every custody read (queue, list badges) and any mounted ticket/project Assets panel, which show this
+    // asset's status and custody chip but are keyed by the ticket, not the asset.
+    void mutate((key: unknown) => Array.isArray(key) && key[0] === 'custody');
+    void mutate(matchAnyEntityAssetsKeys);
   };
 
   if (isLoading || !data || data.denied) return null;

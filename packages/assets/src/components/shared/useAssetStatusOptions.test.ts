@@ -5,7 +5,8 @@ vi.mock('../../actions/assetStatusActions', () => ({
   listAssetStatuses: vi.fn(),
 }));
 
-const { buildAssetStatusOptions, resolveAssetStatusLabel } = await import('./useAssetStatusOptions');
+const { buildAssetStatusOptions } = await import('./useAssetStatusOptions');
+const { assetStatusLabel: resolveAssetStatusLabel } = await import('../../lib/assetStatus');
 
 const t = (key: string, options?: Record<string, unknown>) => String(options?.defaultValue ?? key);
 

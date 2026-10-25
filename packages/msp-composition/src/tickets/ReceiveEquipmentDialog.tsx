@@ -13,6 +13,7 @@ import { LabelPrintDialog } from '@alga-psa/ui/components/labels/LabelPrintDialo
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { listAssets } from '@alga-psa/assets/actions/assetActions';
+import { useCustodyBadges } from '@alga-psa/assets/components/custody/CustodyBadge';
 import { custodyOutcome, useCustodyLocations } from '@alga-psa/assets/components/custody/custodyClient';
 import {
   CustodyDetailFields,
@@ -21,7 +22,7 @@ import {
   emptyCustodyDetails,
   type CustodyDetailsValue,
 } from '@alga-psa/assets/components/custody/CustodyFields';
-import { DialogShell, HolderPicker } from '@alga-psa/assets/components/custody/CustodyDialogs';
+import { DialogShell, HolderPicker, type DialogSubmitError } from '@alga-psa/assets/components/custody/CustodyDialogs';
 import { buildAssetTypeOptions, useAssetTypeRegistry } from '@alga-psa/assets/components/shared/useAssetTypeOptions';
 import { matchAssetCacheKeys } from '@alga-psa/assets/lib/assetCacheKeys';
 import { uploadDocument } from '@alga-psa/documents/actions/documentActions';
@@ -103,9 +104,31 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
     }
   }, [isOpen, locationId, locations]);
 
+  // Held assets cannot be received again. The batched badge read is silent (empty map) on any refusal, so
+  // a failed read leaves every option enabled and the server refusal (shown at the top) stays the gate.
+  const assetIds = useMemo(() => (assets ?? []).map((a) => a.asset_id), [assets]);
+  const custodyBadges = useCustodyBadges(assetIds);
   const assetOptions = useMemo(
-    () => (assets ?? []).map((a) => ({ value: a.asset_id, label: a.asset_tag ? `${a.name} (${a.asset_tag})` : a.name })),
-    [assets]
+    () =>
+      (assets ?? []).map((a) => {
+        const base = a.asset_tag ? `${a.name} (${a.asset_tag})` : a.name;
+        const badge = custodyBadges.get(a.asset_id);
+        if (!badge) return { value: a.asset_id, label: base };
+        const where =
+          badge.state === 'with_vendor'
+            ? t('custody.badge.withVendor', { defaultValue: 'With vendor' })
+            : badge.location_label ?? t('custody.badge.inOffice', { defaultValue: 'In office' });
+        return {
+          value: a.asset_id,
+          disabled: true,
+          label: t('custody.receiveEquipment.inCustodyOption', {
+            defaultValue: '{{asset}} — In custody: {{location}}',
+            asset: base,
+            location: where,
+          }),
+        };
+      }),
+    [assets, custodyBadges, t]
   );
 
   if (!ticketId || !clientId || !canUpdate) return null;
@@ -113,7 +136,8 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
   const canSubmit =
     Boolean(locationId) && (mode === 'existing' ? Boolean(assetId) : newItem.name.trim().length > 0);
 
-  const submit = async (): Promise<string | null> => {
+  const id = `receive-equipment-${ticketId}`;
+  const submit = async (): Promise<DialogSubmitError | null> => {
     // Photos first: the documents are client-hidden and removed server-side if the receive fails.
     const documentIds: string[] = [];
     for (const file of photos) {
@@ -154,17 +178,20 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
       })
     );
     if (!outcome.ok) {
-      return outcome.messageKey
+      const message = outcome.messageKey
         ? t(outcome.messageKey, { defaultValue: outcome.message, ...(outcome.messageParams ?? {}) })
         : outcome.message;
+      // Point the refusal at the control the user has to change.
+      if (mode === 'existing') return { message, fieldId: `${id}-asset` };
+      return { message };
     }
     setResult(outcome.data);
-    void mutate(matchAssetCacheKeys([outcome.data.asset.asset_id]));
+    // The ticket id revalidates this ticket's Assets panel (and only this ticket's).
+    void mutate(matchAssetCacheKeys([outcome.data.asset.asset_id, ticketId]));
     void mutate((key: unknown) => Array.isArray(key) && key[0] === 'custody');
     return null;
   };
 
-  const id = `receive-equipment-${ticketId}`;
   return (
     <>
       <Button

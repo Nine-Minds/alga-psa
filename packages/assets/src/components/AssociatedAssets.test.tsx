@@ -1,11 +1,18 @@
 /* @vitest-environment jsdom */
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { SWRConfig, useSWRConfig } from 'swr';
+import { matchAssetCacheKeys } from '../lib/assetCacheKeys';
+import { listEntityAssets } from '../actions/assetActions';
 import AssociatedAssets from './AssociatedAssets';
 
 vi.mock('../actions/assetActions', () => ({ listEntityAssets: vi.fn(async () => []), createAssetAssociation: vi.fn(), removeAssetAssociation: vi.fn(), listAssets: vi.fn(async () => ({ assets: [], total: 0 })) }));
-vi.mock('./custody/CustodyBadge', () => ({ useCustodyBadges: () => new Map(), CustodyBadge: () => null }));
+const badges = vi.hoisted(() => ({ map: new Map<string, unknown>() }));
+vi.mock('./custody/CustodyBadge', () => ({
+  useCustodyBadges: () => badges.map,
+  CustodyBadge: ({ id }: any) => <span id={id}>In office</span>,
+}));
 vi.mock('../actions/remoteAccessLinkActions', () => ({ hasRemoteAccessLinks: vi.fn(async () => false) }));
 vi.mock('../actions/assetDrawerActions', () => ({ loadAssetDetailDrawerData: vi.fn() }));
 vi.mock('../actions/assetActionErrors', () => ({ unwrapAssetActionResult: (value: any) => value }));
@@ -33,7 +40,7 @@ afterEach(cleanup);
 describe('AssociatedAssets asset name width', () => {
   it('keeps the asset name flexing with a full-name title and an icon-only remove control', async () => {
     const asset = { asset_id: 'a1', asset_type: 'workstation', name: 'Smoke25 QA Workstation with a Long Name', status: 'active', asset_tag: 'QA-1', client_id: 'c1' } as any;
-    render(<AssociatedAssets id="ticket-assets" entityId="ticket-1" entityType="ticket" clientId="c1" initialAssets={Promise.resolve([asset])} />);
+    render(<SWRConfig value={{ provider: () => new Map() }}><AssociatedAssets id="ticket-assets" entityId="ticket-1" entityType="ticket" clientId="c1" initialAssets={Promise.resolve([asset])} /></SWRConfig>);
     const name = await screen.findByRole('button', { name: asset.name });
     expect(name.getAttribute('title')).toBe(asset.name);
     expect(name.className).toContain('min-w-0');
@@ -41,5 +48,60 @@ describe('AssociatedAssets asset name width', () => {
     expect(remove.getAttribute('title')).toBe('Remove');
     expect(remove.textContent).toBe('×');
     await waitFor(() => expect(name).toBeTruthy());
+  });
+});
+
+describe('AssociatedAssets shared cache', () => {
+  const held = { asset_id: 'a2', asset_type: 'unknown', name: 'Dell WD19 Dock', status: 'held_by_msp', asset_tag: 'AST-2', client_id: 'c1' } as any;
+  let mutateRef: ReturnType<typeof useSWRConfig>['mutate'];
+  const Capture = () => { mutateRef = useSWRConfig().mutate; return null; };
+  const renderPanel = (props: Record<string, unknown> = {}) =>
+    render(
+      <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+        <Capture />
+        <AssociatedAssets id="ticket-assets" entityId="ticket-1" entityType="ticket" clientId="c1" {...props} />
+      </SWRConfig>
+    );
+
+  it('revalidates when the receive dialog invalidates the ticket and asset keys, without a remount', async () => {
+    vi.mocked(listEntityAssets).mockResolvedValue([] as any);
+    renderPanel();
+    await waitFor(() => expect(screen.getAllByText(/No assets associated with this ticket/).length).toBeGreaterThan(0));
+
+    vi.mocked(listEntityAssets).mockResolvedValue([held] as any);
+    await act(async () => {
+      await mutateRef(matchAssetCacheKeys(['a2', 'ticket-1']));
+    });
+    expect(await screen.findByRole('button', { name: 'Dell WD19 Dock' })).toBeTruthy();
+    expect(screen.queryByText(/No assets associated with this ticket/)).toBeNull();
+  });
+
+  it('does not refetch a different ticket\'s panel', async () => {
+    vi.mocked(listEntityAssets).mockClear();
+    vi.mocked(listEntityAssets).mockResolvedValue([] as any);
+    renderPanel();
+    await waitFor(() => expect(screen.getAllByText(/No assets associated with this ticket/).length).toBeGreaterThan(0));
+    const calls = vi.mocked(listEntityAssets).mock.calls.length;
+    await act(async () => {
+      await mutateRef(matchAssetCacheKeys(['a2', 'ticket-other']));
+    });
+    expect(vi.mocked(listEntityAssets).mock.calls.length).toBe(calls);
+  });
+
+  it('shows "Held by MSP", not the slug, and keeps the custody chip shrink-0 beside a truncating name', async () => {
+    badges.map = new Map([['a2', { asset_id: 'a2', state: 'in_office', location_label: 'Main', next_action_party: 'msp' }]]);
+    renderPanel({ initialAssets: Promise.resolve([held]) });
+    const name = await screen.findByRole('button', { name: 'Dell WD19 Dock' });
+    expect(screen.getByText('Held by MSP')).toBeTruthy();
+    expect(screen.queryByText('Held_by_msp')).toBeNull();
+    expect(screen.queryByText('held_by_msp')).toBeNull();
+    expect(name.className).toContain('truncate');
+    expect(name.className).toContain('min-w-0');
+    expect(name.className).toContain('flex-1');
+    expect(name.getAttribute('title')).toBe('Dell WD19 Dock');
+    const chipWrapper = document.getElementById('associated-asset-custody-a2')!.parentElement!;
+    expect(chipWrapper.className).toContain('shrink-0');
+    expect(chipWrapper.className).toContain('max-sm:basis-full');
+    badges.map = new Map();
   });
 });

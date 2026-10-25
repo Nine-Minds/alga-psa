@@ -949,11 +949,6 @@
       "type": "Type",
       "status": "Status"
     },
-    "assetStatuses": {
-      "active": "Actief",
-      "inactive": "Inactief",
-      "maintenance": "Onderhoud"
-    },
     "assetTypes": {
       "workstation": "Werkstation",
       "server": "Server",
@@ -1812,7 +1807,8 @@
     "in_stock": "Op voorraad",
     "maintenance": "In onderhoud",
     "inactive": "Inactief",
-    "retired": "Afgevoerd"
+    "retired": "Afgevoerd",
+    "held_by_msp": "In bewaring bij MSP"
   },
   "assetStatusKinds": {
     "deployable": "Inzetbaar",
@@ -2076,7 +2072,8 @@
       "doneBody": "{{name}} ({{tag}}) is nu in bewaring bij de MSP.",
       "printLabel": "Assetlabel afdrukken",
       "openAsset": "Asset openen",
-      "close": "Sluiten"
+      "close": "Sluiten",
+      "inCustodyOption": "{{asset}} — In bewaring: {{location}}"
     }
   }
 }

@@ -32,7 +32,7 @@ export function CustodyBadge({ badge, id }: { badge: OpenCustodyBadge | undefine
   return (
     <span id={id} className="inline-flex max-w-full">
       <BentoChip tone={withVendor ? 'warning' : 'info'}>
-        <span className="inline-flex max-w-[200px] items-center gap-1 truncate">
+        <span className="inline-flex max-w-[200px] items-center gap-1 truncate" title={label}>
           <PackageOpen className="h-3 w-3 flex-shrink-0" />
           <span className="truncate">{label}</span>
         </span>
