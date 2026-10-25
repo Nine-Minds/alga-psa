@@ -18,6 +18,7 @@ import {
 } from '../lib/billing/billingProfileInvoiceScope';
 import { resolveEffectiveBillingIdentity } from '@alga-psa/shared/billingClients/billingProfileSettings';
 import { paymentMethodDisplayLabel } from '@alga-psa/shared/billingClients/paymentPreferences';
+import { overPrepaidBlockDescription, prepaidBlockFeeDescription } from '../lib/billing/compute/prepaidBlockDescriptions';
 import { dueDateForPaymentTerms } from '../lib/billing/invoiceDueDate';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingConfig from '../models/projectBillingConfig';
@@ -279,7 +280,7 @@ function timeChargeDescription(charge: IBillingCharge): string {
   return isTimeBasedCharge(charge) && charge.timeSegment === 'overtime'
     ? `${charge.serviceName} (overtime)`
     : isTimeBasedCharge(charge) && charge.overPrepaidBlock
-      ? `${charge.serviceName} (over prepaid block)`
+      ? overPrepaidBlockDescription(charge.serviceName)
       : charge.serviceName;
 }
 
@@ -289,8 +290,7 @@ function formatHourBlockChargeDescription(charge: IHourBlockCharge): string {
 }
 
 function formatPrepaidBlockChargeDescription(charge: IPrepaidBlockCharge): string {
-  const hourShortLabel = resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel;
-  return `Prepaid block (${charge.serviceName}) — ${charge.quantity.toFixed(2)} ${hourShortLabel}`;
+  return prepaidBlockFeeDescription({ name: charge.serviceName, hours: charge.quantity });
 }
 
 function normalizePreviewRecurringDetailPeriods(

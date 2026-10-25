@@ -18,6 +18,7 @@ import { DEFAULT_UNIT_CODE, HOUR_UNIT_CODE, resolveUnitOfMeasure } from '@alga-p
 import { computePrepaidBlockExpirationDate } from '../lib/prepaidBlockDates';
 import { createPendingHourBlockForInvoiceCharge } from './pendingHourBlockService';
 import { reconcileLineAllocations } from '@alga-psa/shared/billingClients/hourBlockService';
+import { overPrepaidBlockDescription, prepaidBlockFeeDescription } from '../lib/billing/compute/prepaidBlockDescriptions';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import { resolveChargeProfile } from '../lib/billing/billingProfileResolution';
 import { resolveInvoiceBillingRecipient } from './invoiceBillingRecipientService';
@@ -1961,7 +1962,7 @@ export async function persistInvoiceCharges(
         : charge.type === 'license'
           ? `License: ${charge.serviceName}`
           : charge.type === 'prepaid_block'
-            ? `Prepaid block (${charge.serviceName}) — ${(charge as IPrepaidBlockCharge).quantity.toFixed(2)} ${resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel}`
+            ? prepaidBlockFeeDescription({ name: charge.serviceName, hours: (charge as IPrepaidBlockCharge).quantity })
           : charge.type === 'hour_block'
             ? `Prepaid hour block (${charge.serviceName}) — ${(charge as IHourBlockCharge).hoursUsed.toFixed(1)} ${resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel} consumed, ${(charge as IHourBlockCharge).hoursRemaining.toFixed(1)} ${resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel} remaining`
             : charge.type === 'time' && (charge as ITimeBasedCharge).timeSegment === 'overtime'
@@ -1969,7 +1970,7 @@ export async function persistInvoiceCharges(
               // formatHourBlockChargeDescription) and persist each derive line descriptions from a charge
               ? `${charge.serviceName} (overtime)`
               : charge.type === 'time' && (charge as ITimeBasedCharge).overPrepaidBlock
-                ? `${charge.serviceName} (over prepaid block)`
+                ? overPrepaidBlockDescription(charge.serviceName)
                 : charge.serviceName;
     const invoiceItem = {
       item_id: uuidv4(),

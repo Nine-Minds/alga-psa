@@ -449,6 +449,10 @@
     "hoursLeftValue": "〖{{hours}}ħ ŀḗƒŧ · {{value}} ···········〗",
     "validFrom": "〖Ṽȧŀīḓ ƒřȯḿ {{date}} ········〗"
   },
+  "invoiceLines": {
+    "prepaidBlockFee": "〖{{name}} — ƥřḗƥȧīḓ ƀŀȯƈķ, {{hours}} ħ ···············〗",
+    "overPrepaidBlock": "〖{{name}} (ȯṽḗř ƥřḗƥȧīḓ ƀŀȯƈķ) ············〗"
+  },
   "bucketUsage": {
     "contractLine": "〖Ɓŭƈķḗŧ Ƈȯƞŧřȧƈŧ Ŀīƞḗ ········〗",
     "usage": "〖Ŭşȧɠḗ ··〗",

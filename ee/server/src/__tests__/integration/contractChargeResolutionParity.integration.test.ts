@@ -543,6 +543,7 @@ describe("Contract charge resolution parity (simulator vs engine dry run)", () =
     expect(dec.lines.some((line) => line.net === 60_000 && line.quantity === 4)).toBe(true);
     expect(dec.lines.some((line) => line.net === 0 && line.quantity === 10)).toBe(true);
     expect(dec.descriptions.some((text) => text.includes("(over prepaid block)"))).toBe(true);
+    expect(dec.descriptions.some((text) => /prepaid block, 10 h$/.test(text))).toBe(true);
     expect(await simulatedWindow(context, contract, 1, { 1: 14 })).toEqual(dec.lines);
 
     // Editing the block changes only the next unbilled period.

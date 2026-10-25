@@ -449,6 +449,10 @@
     "hoursLeftValue": "{{hours}} h kvar · {{value}}",
     "validFrom": "Giltig från {{date}}"
   },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — förbetalt block, {{hours}} tim",
+    "overPrepaidBlock": "{{name}} (utöver förbetalt block)"
+  },
   "bucketUsage": {
     "contractLine": "Avtalsrad med timpott",
     "usage": "Förbrukning",

@@ -449,6 +449,10 @@
     "hoursLeftValue": "{{hours}} u over · {{value}}",
     "validFrom": "Geldig vanaf {{date}}"
   },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — prepaid blok, {{hours}} u",
+    "overPrepaidBlock": "{{name}} (boven prepaid blok)"
+  },
   "bucketUsage": {
     "contractLine": "Contractregel voor urenbundel",
     "usage": "Verbruik",

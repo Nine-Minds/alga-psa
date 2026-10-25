@@ -449,6 +449,10 @@
     "hoursLeftValue": "{{hours}} h restantes · {{value}}",
     "validFrom": "Válido desde {{date}}"
   },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — bloque prepago, {{hours}} h",
+    "overPrepaidBlock": "{{name}} (por encima del bloque prepago)"
+  },
   "bucketUsage": {
     "contractLine": "Línea de contrato de bolsa de horas",
     "usage": "Uso",

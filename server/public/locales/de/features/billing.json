@@ -449,6 +449,10 @@
     "hoursLeftValue": "{{hours}} Std. übrig · {{value}}",
     "validFrom": "Gültig ab {{date}}"
   },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — Prepaid-Block, {{hours}} Std.",
+    "overPrepaidBlock": "{{name}} (über Prepaid-Block hinaus)"
+  },
   "bucketUsage": {
     "contractLine": "Vertragslinie für Stundenkontingent",
     "usage": "Verbrauch",
