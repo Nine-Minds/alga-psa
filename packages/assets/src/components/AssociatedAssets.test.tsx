@@ -108,6 +108,18 @@ describe('AssociatedAssets shared cache', () => {
     expect(chip.closest('[data-testid="associated-asset-custody-row-a2"]')).toBeTruthy();
     expect(chip.closest('[class*="sm:"]')).toBeNull();
     expect(nameRow.parentElement!.contains(chip)).toBe(false);
+
+    // Status badge lives in the meta row beside the custody chip, not in row 1.
+    const row1 = name.closest('[data-testid="associated-asset-name-row-a2"]') as HTMLElement;
+    const metaRow = chip.closest('[data-testid="associated-asset-custody-row-a2"]') as HTMLElement;
+    const status = screen.getByText('Held by MSP');
+    expect(row1.contains(status)).toBe(false);
+    expect(metaRow.contains(status)).toBe(true);
+    expect(metaRow.contains(chip)).toBe(true);
+    expect(metaRow.className).toContain('flex-wrap');
+    expect(row1.contains(screen.getByRole('button', { name: 'Remove' }))).toBe(true);
+    expect(row1.contains(screen.getByRole('button', { name: 'Remote access' }))).toBe(false);
+    expect(name.getAttribute('title')).toBe('Dell WD19 Dock');
     badges.map = new Map();
   });
 

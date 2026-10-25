@@ -473,8 +473,8 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                 key={`${association.asset_id}-${association.entity_id}`}
                                 className="p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                             >
-                                {/* Row 1: Name + Status + Remove */}
-                                <div className="flex items-center justify-between gap-2">
+                                {/* Row 1: Name + RMM indicator + Remove (fixed-size icon buttons only on the right) */}
+                                <div className="flex items-center justify-between gap-2" data-testid={`associated-asset-name-row-${association.asset_id}`}>
                                     <div className="flex min-w-0 flex-1 items-center gap-2">
                                 {association.asset ? (
                                     (() => {
@@ -503,26 +503,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                             <RmmStatusIndicator asset={association.asset} size="sm" />
                                         )}
                                     </div>
-                                    <div className="flex flex-shrink-0 items-center gap-2">
-                                        {association.asset && (
-                                            <Badge variant={
-                                                association.asset.status === 'active' ? 'success' :
-                                                association.asset.status === 'maintenance' ? 'warning' :
-                                                'default-muted'
-                                            }>
-                                                {getAssetStatusLabel(association.asset.status)}
-                                            </Badge>
-                                        )}
-                                        {association.asset && (
-                                            <RemoteAccessButton
-                                                asset={association.asset}
-                                                variant="ghost"
-                                                size="sm"
-                                                hasTemplateLinks={hasTemplateLinks}
-                                                surface="ticket-sidebar"
-                                                iconOnly
-                                            />
-                                        )}
+                                    <div className="flex flex-shrink-0 items-center">
                                         <Button
                                             id={`remove-asset-${association.asset_id}`}
                                             variant="outline"
@@ -536,10 +517,30 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                         </Button>
                                     </div>
                                 </div>
-                                {/* Custody chip: always on its own line. The panel is ~281px wide on a wide desktop, so viewport
-                                    breakpoints cannot decide whether it fits beside the name. */}
-                                <div className="mt-1.5 min-w-0 empty:hidden" data-testid={`associated-asset-custody-row-${association.asset_id}`}>
+                                {/* Meta row: status badge, custody chip and remote-access icon wrap together beneath the name so the
+                                    name keeps the full row-1 width. The panel is ~230px wide at every desktop viewport, so viewport
+                                    breakpoints cannot decide what fits; wrapping does. Collapses when it has no content. */}
+                                <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5 empty:hidden" data-testid={`associated-asset-custody-row-${association.asset_id}`}>
+                                    {association.asset && (
+                                        <Badge variant={
+                                            association.asset.status === 'active' ? 'success' :
+                                            association.asset.status === 'maintenance' ? 'warning' :
+                                            'default-muted'
+                                        }>
+                                            {getAssetStatusLabel(association.asset.status)}
+                                        </Badge>
+                                    )}
                                     <CustodyBadge id={`associated-asset-custody-${association.asset_id}`} badge={custodyBadges.get(association.asset_id)} />
+                                    {association.asset && (
+                                        <RemoteAccessButton
+                                            asset={association.asset}
+                                            variant="ghost"
+                                            size="sm"
+                                            hasTemplateLinks={hasTemplateLinks}
+                                            surface="ticket-sidebar"
+                                            iconOnly
+                                        />
+                                    )}
                                 </div>
                                 {/* Row 2: Icon + Tag + Type + Relationship */}
                                 <div className="flex min-w-0 items-center gap-2 mt-1.5 text-xs text-gray-500">
