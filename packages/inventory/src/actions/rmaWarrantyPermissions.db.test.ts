@@ -2,6 +2,10 @@
  * C5 T020 / T021 (real DB): the warranty permission is granted to existing tenants by the migration and to new ones
  * by the catalog; refusals happen before any write; a hidden asset reads as not found; rows without an asset keep
  * today's visibility.
+ *
+ * Test order is shuffled (sequence.shuffle), so no test may rely on RBAC state another test leaves behind. The suite
+ * tenant is provisioned in beforeAll the way a new tenant is (default roles + catalog sync); the migration test
+ * builds its own pre-warranty "existing tenant".
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
@@ -65,20 +69,27 @@ let TICKET: string;
 let TECH_USER: string;
 let INV_READ_USER: string;
 let NO_ROLE_USER: string;
+let OPERATOR: string;
 
 const ok = (r: any): any => {
   expect(r?.actionError ?? r?.permissionError, JSON.stringify(r)).toBeUndefined();
   return r;
 };
 
-const grantsOf = async (roleName: string) => {
+const grantsOf = async (tenant: string, roleName: string) => {
   const rows = await knex('role_permissions as rp')
     .join('roles as r', (j) => j.on('r.tenant', 'rp.tenant').andOn('r.role_id', 'rp.role_id'))
     .join('permissions as p', (j) => j.on('p.tenant', 'rp.tenant').andOn('p.permission_id', 'rp.permission_id'))
-    .where('rp.tenant', holder.tenant).where('r.role_name', roleName).where('r.msp', true).where('p.resource', 'warranty')
+    .where('rp.tenant', tenant).where('r.role_name', roleName).where('r.msp', true).where('p.resource', 'warranty')
     .select('p.action');
   return rows.map((r: any) => r.action).sort();
 };
+
+async function insertRoles(tenant: string, { includeLegacy }: { includeLegacy: boolean }) {
+  await knex('roles').insert(DEFAULT_ROLES.psa.filter((r: any) => includeLegacy || !r.legacy).map((r: any) => ({
+    tenant, role_name: r.roleName, description: r.roleName, msp: r.msp, client: r.client,
+  })));
+}
 
 async function addUser(roleId: string | null): Promise<string> {
   const userId = randomUUID();
@@ -94,7 +105,8 @@ beforeAll(async () => {
   knex = knexLib({ client: 'pg', connection: getInventoryTestDatabaseConnection(), pool: { min: 1, max: 4 } });
   holder.knex = knex;
   holder.tenant = await createInventoryTestTenant(knex);
-  holder.userId = (await knex('users').where({ tenant: holder.tenant }).first()).user_id;
+  OPERATOR = (await knex('users').where({ tenant: holder.tenant }).first()).user_id;
+  holder.userId = OPERATOR;
   LOCATION = (await knex('stock_locations').where({ tenant: holder.tenant }).first()).location_id;
   VENDOR = (await knex('vendors').where({ tenant: holder.tenant }).first()).vendor_id;
   CLIENT = (await knex('clients').where({ tenant: holder.tenant }).first()).client_id;
@@ -105,12 +117,12 @@ beforeAll(async () => {
     { slug: 'retired', label: 'Retired', kind: 'archived', display_order: 4 },
   ].map((s) => ({ tenant: holder.tenant, ...s, is_builtin: true, is_active: true })));
 
-  // An "existing tenant": default roles and the pre-warranty permission catalog only (no warranty rows).
-  await knex('roles').insert(DEFAULT_ROLES.psa.map((r: any) => ({
-    tenant: holder.tenant, role_name: r.roleName, description: r.roleName, msp: r.msp, client: r.client,
-  })));
+  // The suite tenant is provisioned like a new tenant, so real-RBAC checks see the current catalog's grants.
+  await insertRoles(holder.tenant, { includeLegacy: false });
+  const provisioned = await syncPermissionCatalog(knex, holder.tenant, 'psa', { onDrift: 'throw' });
+  expect(provisioned.skipped).toBeFalsy();
 });
-beforeEach(() => { holder.grants = null; holder.userType = 'internal'; denied.assetIds.clear(); });
+beforeEach(() => { holder.grants = null; holder.userType = 'internal'; holder.userId = OPERATOR; denied.assetIds.clear(); });
 afterAll(async () => { await knex?.destroy(); });
 
 const roleId = async (name: string) =>
@@ -135,7 +147,10 @@ const inCustody = (assetId: string) =>
 
 describe('T020 warranty permission provisioning and enforcement', () => {
   it('the migration grants warranty read/create/update to existing tenants Admin, Manager and Technician; the catalog does the same for a new tenant', async () => {
-    expect(await knex('permissions').where({ tenant: holder.tenant, resource: 'warranty' }).count('* as c').first()).toMatchObject({ c: '0' });
+    // An "existing tenant": default roles only, created before the warranty catalog entries (no permission rows).
+    const existing = await createInventoryTestTenant(knex);
+    await insertRoles(existing, { includeLegacy: true });
+    expect(await knex('permissions').where({ tenant: existing, resource: 'warranty' }).count('* as c').first()).toMatchObject({ c: '0' });
 
     const quiet = { log: () => undefined, warn: () => undefined, error: () => undefined };
     const lines: string[] = [];
@@ -144,23 +159,21 @@ describe('T020 warranty permission provisioning and enforcement', () => {
     try { await warrantyMigration.up(knex); } finally { log.mockRestore(); warn.mockRestore(); }
 
 
-    const perms = await knex('permissions').where({ tenant: holder.tenant, resource: 'warranty' }).select('action', 'msp', 'client');
+    const perms = await knex('permissions').where({ tenant: existing, resource: 'warranty' }).select('action', 'msp', 'client');
     expect(perms.map((p: any) => p.action).sort()).toEqual(['create', 'read', 'update']);
     expect(perms.every((p: any) => p.msp === true && p.client === false)).toBe(true);
-    for (const role of ['Admin', 'Manager', 'Technician']) expect(await grantsOf(role)).toEqual(['create', 'read', 'update']);
-    expect(await grantsOf('Dispatcher')).toEqual([]);
+    for (const role of ['Admin', 'Manager', 'Technician']) expect(await grantsOf(existing, role)).toEqual(['create', 'read', 'update']);
+    expect(await grantsOf(existing, 'Dispatcher')).toEqual([]);
 
     // Re-running is additive and writes nothing more.
-    const before = Number((await knex('role_permissions').where({ tenant: holder.tenant }).count('* as c').first())!.c);
+    const before = Number((await knex('role_permissions').where({ tenant: existing }).count('* as c').first())!.c);
     const l2 = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     try { await warrantyMigration.up(knex); } finally { l2.mockRestore(); }
-    expect(Number((await knex('role_permissions').where({ tenant: holder.tenant }).count('* as c').first())!.c)).toBe(before);
+    expect(Number((await knex('role_permissions').where({ tenant: existing }).count('* as c').first())!.c)).toBe(before);
 
     // New tenant: the catalog sync alone provisions it.
     const fresh = await createInventoryTestTenant(knex);
-    await knex('roles').insert(DEFAULT_ROLES.psa.filter((r: any) => !r.legacy).map((r: any) => ({
-      tenant: fresh, role_name: r.roleName, description: r.roleName, msp: r.msp, client: r.client,
-    })));
+    await insertRoles(fresh, { includeLegacy: false });
     const res = await syncPermissionCatalog(knex, fresh, 'psa', { onDrift: 'throw' });
     expect(res.skipped).toBeFalsy();
     const freshGrants = await knex('role_permissions as rp')
@@ -175,14 +188,7 @@ describe('T020 warranty permission provisioning and enforcement', () => {
     // inventory:read-only custom role
     const customRole = randomUUID();
     await knex('roles').insert({ tenant: holder.tenant, role_id: customRole, role_name: 'Inventory viewer', description: 'x', msp: true, client: false });
-    let invRead = await knex('permissions').where({ tenant: holder.tenant, resource: 'inventory', action: 'read', msp: true }).first();
-    if (!invRead) {
-      // When this file runs alongside other DB test files the reconciler did not always leave this row behind
-      // (cause not isolated); this scenario only needs the permission to exist, so provision it directly.
-      [invRead] = await knex('permissions').insert({
-        tenant: holder.tenant, permission_id: randomUUID(), resource: 'inventory', action: 'read', msp: true, client: false,
-      }).returning('*');
-    }
+    const invRead = await knex('permissions').where({ tenant: holder.tenant, resource: 'inventory', action: 'read', msp: true }).first();
     expect(invRead).toBeTruthy();
     await knex('role_permissions').insert({ tenant: holder.tenant, role_id: customRole, permission_id: invRead.permission_id });
     INV_READ_USER = await addUser(customRole);
