@@ -71,7 +71,9 @@ function pickerLocalMidnightFor(isoDateOnly: string): Date {
 
 function assertTz(zone: string, expectedOffsetMinutes: number) {
   process.env.TZ = zone;
-  expect(new Date().getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+  // Probe a fixed northern-summer instant: the expected offsets are DST offsets,
+  // and probing "now" breaks the guard whenever the run falls outside DST.
+  expect(new Date('2026-07-01T12:00:00Z').getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
 }
 
 async function seedBase() {
