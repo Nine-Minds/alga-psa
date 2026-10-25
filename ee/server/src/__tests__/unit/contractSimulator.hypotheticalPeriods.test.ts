@@ -141,7 +141,7 @@ describe('generateLineServicePeriods + assignServicePeriodsToInvoicePeriods', ()
       invoiceSchedule: MONTHLY_FIRST,
       contractStartDate: '2026-08-01T00:00:00Z',
       scenarioId: 'scenario-1',
-    });
+    }).flatMap((streamPeriods) => streamPeriods.records);
     const invoicePeriods = buildInvoicePeriods(HORIZON, MONTHLY_FIRST);
     const assignments = assignServicePeriodsToInvoicePeriods(
       records,
@@ -174,7 +174,7 @@ describe('generateLineServicePeriods + assignServicePeriodsToInvoicePeriods', ()
       invoiceSchedule: MONTHLY_FIRST,
       contractStartDate: '2026-08-01T00:00:00Z',
       scenarioId: 'scenario-1',
-    });
+    }).flatMap((streamPeriods) => streamPeriods.records);
     const invoicePeriods = buildInvoicePeriods(HORIZON, MONTHLY_FIRST);
     const assignments = assignServicePeriodsToInvoicePeriods(
       records,
@@ -209,7 +209,7 @@ describe('generateLineServicePeriods + assignServicePeriodsToInvoicePeriods', ()
       invoiceSchedule: MONTHLY_FIRST,
       contractStartDate: '2026-08-01T00:00:00Z',
       scenarioId: 'scenario-1',
-    });
+    }).flatMap((streamPeriods) => streamPeriods.records);
     const invoicePeriods = buildInvoicePeriods(HORIZON, MONTHLY_FIRST);
 
     expect(

@@ -204,12 +204,12 @@ describe("resolveContractLineCharges", () => {
     expect(untimed.map((r) => r.family)).toEqual(["bucket"]);
   });
 
-  it("every family makes a line-position timing demand", async () => {
+  it("every family makes a line-stream timing demand", async () => {
     const { source } = fakeSource({ pools: [POOL] });
     await resolveContractLineCharges(source);
     const requests = (source.resolveTiming as any).mock.calls.map((c: any[]) => c[0]);
     expect(requests.length).toBeGreaterThan(0);
-    for (const request of requests) expect(request.duePosition).toBe("line");
+    for (const request of requests) expect(request.stream).toBe("line");
   });
 
   it("assigns stable obligation ids keyed by pool", async () => {
