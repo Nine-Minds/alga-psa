@@ -35,6 +35,10 @@
       "types": "./src/lib/tenantDefaultCountry.ts",
       "import": "./src/lib/tenantDefaultCountry.ts"
     },
+    "./lib/tenantPortalUrl": {
+      "types": "./src/lib/tenantPortalUrl.ts",
+      "import": "./src/lib/tenantPortalUrl.ts"
+    },
     "./lib/tenantDefaultCompanyName": {
       "types": "./src/lib/tenantDefaultCompanyName.ts",
       "import": "./src/lib/tenantDefaultCompanyName.ts"

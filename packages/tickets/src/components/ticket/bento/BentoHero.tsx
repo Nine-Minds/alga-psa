@@ -27,6 +27,11 @@ import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossF
 import { computeSlaClocks, formatSlaLabel, type TicketSlaFields } from './slaClocks';
 import { useTeamAvatarUrl } from './useTeamAvatarUrl';
 import type { TicketLiveConflictState } from '../ticketLiveFields';
+import { useInboundEmailView } from '@alga-psa/ui/components/EmailHtmlViewer';
+import {
+  originalEmailSourceForTicket,
+  originalEmailToggleLabels,
+} from '../../../lib/inboundEmailOriginalView';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../../lib/ticketRichText';
 import { useTicketRichTextUploadSession } from '../useTicketRichTextUploadSession';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
@@ -318,6 +323,8 @@ export function BentoHero({
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [descriptionOverflows, setDescriptionOverflows] = useState(false);
   const descriptionBodyRef = useRef<HTMLDivElement>(null);
+  // Only the view mode offers it: the editor owns the stored body, not the archive.
+  const originalEmailSrc = useMemo(() => originalEmailSourceForTicket(ticket), [ticket]);
 
   const discardDescriptionEdit = useCallback(() => {
     const originalDescription =
@@ -363,11 +370,28 @@ export function BentoHero({
     [descriptionContent],
   );
 
+  // The switcher rides the heading row, so the clamped box below measures only
+  // the body; the editor owns the stored text, so no original is offered there.
+  const emailView = useInboundEmailView({
+    id: `${id}-description-original-email`,
+    src: !isEditingDescription && hasDescription ? originalEmailSrc : null,
+    labels: originalEmailToggleLabels(t),
+    switcherClassName: 'ml-auto',
+  });
+
   useEffect(() => {
     const el = descriptionBodyRef.current;
     if (!el || descriptionExpanded) return;
-    setDescriptionOverflows(el.scrollHeight > el.clientHeight + 4);
-  }, [descriptionContent, descriptionExpanded, hasDescription]);
+    const check = () => setDescriptionOverflows(el.scrollHeight > el.clientHeight + 4);
+    check();
+    // The body grows after this effect runs — a late image, or the original-email
+    // frame resolving its height — and the box is already clamped, so `el` itself
+    // never resizes. Observe what grows inside it instead.
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(check);
+    for (const child of Array.from(el.children)) observer.observe(child);
+    return () => observer.disconnect();
+  }, [descriptionContent, descriptionExpanded, hasDescription, originalEmailSrc]);
 
   const responseStateOptions = useMemo<SelectOption[]>(
     () => [
@@ -1231,6 +1255,7 @@ export function BentoHero({
                 <Pencil className="h-3.5 w-3.5" />
               </button>
             ) : null}
+            {emailView.switcher}
           </div>
 
           {isEditingDescription ? (
@@ -1256,7 +1281,9 @@ export function BentoHero({
                 ref={descriptionBodyRef}
                 className={`text-sm ${descriptionExpanded ? '' : 'max-h-40 overflow-hidden'}`}
               >
-                <RichTextViewer id={`${id}-description-view`} content={descriptionContent} />
+                {emailView.body(
+                  <RichTextViewer id={`${id}-description-view`} content={descriptionContent} />,
+                )}
               </div>
               {descriptionOverflows || descriptionExpanded ? (
                 <button

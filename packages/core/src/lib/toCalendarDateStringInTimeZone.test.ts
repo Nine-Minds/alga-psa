@@ -11,9 +11,14 @@ import { toCalendarDateStringInTimeZone } from './dateTimeUtils';
 // test pins the process TZ to a zone that disagrees with the asserted target
 // zone and asserts the exact same result — proving host-TZ independence.
 
+// Probe the offset at a fixed summer instant (the scenarios below are Aug/Sep 2026), not "now":
+// Europe/Berlin and America/New_York change offset at DST transitions, so a wall-clock probe
+// fails whenever the suite runs outside summer time.
+const TZ_PROBE_INSTANT = new Date('2026-08-31T12:00:00.000Z');
+
 function assertTz(zone: string, expectedOffsetMinutes: number) {
   process.env.TZ = zone;
-  expect(new Date().getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+  expect(TZ_PROBE_INSTANT.getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
 }
 
 describe('toCalendarDateStringInTimeZone', () => {

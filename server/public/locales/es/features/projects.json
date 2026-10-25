@@ -617,7 +617,15 @@
     "invoiceLinksHelp": "Se crearon borradores de factura. Abra cada grupo de monedas para revisarlo.",
     "currencyDraftLink": "Borrador de factura ({{currency}})",
     "productCount": "{{count}} productos",
-    "productsMovedToHoldOnClose": "{{count}} producto(s) vinculado(s) se movieron a En espera porque se canceló su evento de facturación."
+    "productsMovedToHoldOnClose": "{{count}} producto(s) vinculado(s) se movieron a En espera porque se canceló su evento de facturación.",
+    "availableBadge": "Disponible: {{available}}",
+    "availableByLocation": "Existencias libres por ubicación",
+    "freeOfOnHand": "{{free}} libres de {{onHand}}",
+    "stockHeld": "Solo hay {{free}} disponibles. {{held}} en existencia están bloqueadas para pedidos de venta y no se pueden usar aquí.",
+    "stockInsufficient": "Solo hay {{onHand}} en existencia y se solicitaron {{requested}}.",
+    "reservedStockTitle": "Las existencias están reservadas para un pedido de venta",
+    "reservedStockMessage": "Solo {{free}} de este producto están libres. {{reserved}} en existencia están reservadas para pedidos de venta y solicitó {{requested}}. Si lo agrega de todos modos, toma existencias con las que cuenta un pedido de venta y es posible que ese pedido quede incompleto.",
+    "reservedStockConfirm": "Agregar de todos modos"
   },
   "export": {
     "title": "Exportar tareas del proyecto",

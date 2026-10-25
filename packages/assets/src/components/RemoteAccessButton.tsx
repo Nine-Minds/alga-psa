@@ -25,6 +25,7 @@ const ninjaOneTypes: AssetRemoteConnectionType[] = ['splashtop', 'teamviewer', '
 const providerTypes: Record<string, AssetRemoteConnectionType[]> = {
   ninjaone: ninjaOneTypes,
   tacticalrmm: ['splashtop', 'shell'], // Tactical's `control` URL is its desktop session.
+  datto: ['splashtop'], // Datto Web Remote (device webRemoteUrl), shown as Remote Desktop.
 };
 
 function connectionLabel(type: AssetRemoteConnectionType, t: (key: string) => string): string {

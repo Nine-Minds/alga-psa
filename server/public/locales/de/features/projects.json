@@ -617,7 +617,15 @@
     "invoiceLinksHelp": "Die Rechnungsentwürfe wurden erstellt. Öffnen Sie jede Währungsgruppe, um sie zu prüfen.",
     "currencyDraftLink": "Rechnungsentwurf in {{currency}}",
     "productCount": "{{count}} Produkte",
-    "productsMovedToHoldOnClose": "{{count}} verknüpfte Produkte wurden auf „Zurückgestellt“ gesetzt, da ihr Abrechnungsereignis storniert wurde."
+    "productsMovedToHoldOnClose": "{{count}} verknüpfte Produkte wurden auf „Zurückgestellt“ gesetzt, da ihr Abrechnungsereignis storniert wurde.",
+    "availableBadge": "Verfügbar: {{available}}",
+    "availableByLocation": "Freier Bestand nach Standort",
+    "freeOfOnHand": "{{free}} frei von {{onHand}}",
+    "stockHeld": "Nur {{free}} verfügbar. {{held}} vorrätige Stück sind für Kundenaufträge fest gesperrt und können hier nicht verwendet werden.",
+    "stockInsufficient": "Nur {{onHand}} auf Lager, {{requested}} angefordert.",
+    "reservedStockTitle": "Bestand ist für einen Kundenauftrag reserviert",
+    "reservedStockMessage": "Nur {{free}} dieses Produkts sind frei. {{reserved}} vorrätige Stück sind für Kundenaufträge reserviert, angefordert wurden {{requested}}. Wenn Sie sie trotzdem hinzufügen, entnehmen Sie Bestand, auf den ein Kundenauftrag zählt, und der Auftrag kann unterversorgt bleiben.",
+    "reservedStockConfirm": "Trotzdem hinzufügen"
   },
   "export": {
     "title": "Projektaufgaben exportieren",

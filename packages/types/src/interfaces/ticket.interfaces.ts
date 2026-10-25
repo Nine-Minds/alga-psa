@@ -100,7 +100,7 @@ export interface ITicket extends TenantEntity, ITaggable {
   external_links?: IExternalEntityLink[];
 }
 
-export type TicketLatestActivityActorKind = 'user' | 'client_user' | 'contact' | 'email_sender' | 'system';
+export type TicketLatestActivityActorKind = 'user' | 'client_user' | 'service' | 'contact' | 'email_sender' | 'system';
 
 export interface ITicketLatestActivityActor {
   kind: TicketLatestActivityActorKind;

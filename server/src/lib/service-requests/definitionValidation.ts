@@ -91,7 +91,7 @@ export async function validateServiceRequestDefinitionForPublish(
     warnings.push(...(validation.warnings ?? []).map((warning) => `Form behavior: ${warning}`));
   }
 
-  // LEVERAGE: pattern condition-dialects — overlapping condition dialect; candidate to converge on @alga-psa/predicates (also: workflow event-wait filters, reporting FilterDefinition, inbound email rules, automation API conditions, service-request visibility)
+  // LEVERAGE: pattern condition-dialects — overlapping condition dialect; candidate to converge on @alga-psa/predicates (also: workflow event-wait filters, reporting FilterDefinition, inbound email rules, service-request visibility)
   const visibilityProvider = getServiceRequestVisibilityProvider(definition.visibility_provider);
   if (!visibilityProvider) {
     errors.push(`Unknown visibility provider: ${definition.visibility_provider}`);

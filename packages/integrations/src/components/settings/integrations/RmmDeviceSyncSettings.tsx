@@ -26,7 +26,7 @@ import {
  * Every other provider gets no control at all rather than one that saves a
  * setting nothing reads.
  */
-export const DEVICE_SYNC_SUPPORTED_PROVIDERS: readonly RmmProvider[] = ['ninjaone', 'levelio', 'tacticalrmm', 'tanium'];
+export const DEVICE_SYNC_SUPPORTED_PROVIDERS: readonly RmmProvider[] = ['ninjaone', 'levelio', 'tacticalrmm', 'datto', 'tanium'];
 
 export function supportsScheduledDeviceSync(provider: RmmProvider): boolean {
   return DEVICE_SYNC_SUPPORTED_PROVIDERS.includes(provider);

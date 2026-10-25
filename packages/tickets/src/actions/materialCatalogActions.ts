@@ -14,7 +14,8 @@ import {
   queryCatalogPickerItems,
   queryServicePrices,
 } from '@alga-psa/inventory/lib';
-import { InsufficientStockError } from '@alga-psa/inventory/lib/consume';
+import { InsufficientStockError, stockConflictResultFrom } from '@alga-psa/inventory/lib/consume';
+import type { StockConflictResult } from '@alga-psa/inventory/lib/stockConflict';
 import {
   actionError,
   permissionError,
@@ -137,8 +138,10 @@ export const addTicketMaterial = withAuth(async (
     currency_code: string;
     description?: string | null;
     unit_id?: string | null; // serialized: the picked stock unit to deliver
+    /** Set only after the user confirmed a stockConflict result with overrideable=true. */
+    allow_reserved_override?: boolean;
   }
-): Promise<ITicketMaterial | TicketMaterialActionError> => {
+): Promise<ITicketMaterial | TicketMaterialActionError | StockConflictResult> => {
   try {
     if (!await hasPermission(user, 'ticket', 'update')) {
       throw new Error('Permission denied: ticket update required');
@@ -151,6 +154,11 @@ export const addTicketMaterial = withAuth(async (
       (user as any)?.user_id ?? null,
     )) as ITicketMaterial;
   } catch (error) {
+    // Stock-level refusals travel as a structured, serializable result so the dialog can
+    // show the refusal or the override prompt (thrown messages do not cross the boundary).
+    // LEVERAGE: pattern stock-conflict-action-mapping — the stockConflictResultFrom -> actionErrorFrom sequence repeats in tickets, projects and billing add actions.
+    const conflict = stockConflictResultFrom(error);
+    if (conflict) return conflict;
     const expected = ticketMaterialActionErrorFrom(error);
     if (expected) {
       return expected;

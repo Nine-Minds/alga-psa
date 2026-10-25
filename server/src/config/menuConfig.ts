@@ -210,7 +210,10 @@ export const navigationSections: NavigationSection[] = [
         name: 'Inventory',
         translationKey: 'nav.inventory.label',
         icon: Package,
-        href: '/msp/inventory'
+        href: '/msp/inventory',
+        // Document Layouts lives under the Inventory sidebar (inventoryNavigationSections) but at
+        // /msp/document-templates, so the header breadcrumb needs it named here too.
+        relatedPaths: ['/msp/document-templates'],
       },
       {
         name: 'Reports',

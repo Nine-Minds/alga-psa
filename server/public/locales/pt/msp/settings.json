@@ -1025,13 +1025,40 @@
         },
         "rules": {
           "label": "Regras de aplicação automática",
-          "help": "O modelo é aplicado automaticamente a novos tickets que correspondam a qualquer uma dessas regras. Deixe um campo como \"Qualquer\" para corresponder a todos os valores.",
+          "help": "Um modelo é aplicado a um novo ticket quando ele corresponde a qualquer uma de suas regras. Uma regra só corresponde quando o ticket atende a todos os filtros definidos. Deixe um filtro vazio para ignorá-lo.",
           "empty": "Sem regras de aplicação automática. Este modelo ainda pode ser aplicado aos tickets manualmente.",
           "board": "Quadro",
           "category": "Categoria",
           "subcategory": "Subcategoria",
           "priority": "Prioridade",
-          "any": "Qualquer"
+          "any": "Qualquer",
+          "appliesToAll": "Aplica-se a todos os tickets",
+          "clients": "Clientes",
+          "clientsAny": "Qualquer cliente",
+          "clientsAddAnother": "Adicionar outro cliente",
+          "removeClient": "Remover {{name}}",
+          "origins": "Origem do ticket",
+          "originsAny": "Qualquer origem",
+          "fromServiceRequest": "Somente tickets de uma solicitação de serviço",
+          "anyServiceRequest": "Qualquer solicitação de serviço",
+          "keywords": "Palavras-chave",
+          "keywordsPlaceholder": "Digite uma palavra ou frase e pressione Enter",
+          "keywordsHelp": "Partes de palavras também correspondem, então \"onboard\" encontra \"onboarding\". Maiúsculas e minúsculas são ignoradas.",
+          "removeKeyword": "Remover {{keyword}}",
+          "keywordMode": "Correspondência",
+          "keywordModeAny": "Qualquer palavra-chave",
+          "keywordModeAll": "Todas as palavras-chave",
+          "keywordTarget": "Procurar em",
+          "keywordTargetBoth": "Título e descrição",
+          "keywordTargetTitle": "Título",
+          "keywordTargetDescription": "Descrição",
+          "originLabels": {
+            "internal": "Criado pela equipe",
+            "client_portal": "Portal do cliente",
+            "inbound_email": "E-mail recebido",
+            "api": "API",
+            "recurring": "Agendamento recorrente"
+          }
         }
       },
       "dialog": {
@@ -2353,7 +2380,23 @@
         "nothingImportedBody": "Esta execução não criou novos registros. Cada linha correspondeu a algo que já existia, então nada foi alterado.",
         "claimedBySamePackage": "Já migrado por este pacote",
         "claimedByOtherPackage": "Já migrado por {{file}}",
-        "claimedByExistingEntity": "Corresponde a uma entidade existente"
+        "claimedByExistingEntity": "Corresponde a uma entidade existente",
+        "matchedBySku": "Associado a um produto existente por SKU"
+      },
+      "spreadsheet": {
+        "entities": {
+          "products": "Produtos (catálogo / lista de preços)",
+          "vendorProducts": "Lista de preços de fornecedores (custos do distribuidor)"
+        },
+        "productsHint": "Preços e custos são lidos como valores decimais (por exemplo 1,299.50) usando a coluna de moeda, se existir; caso contrário, a moeda do locatário. Valores negativos, não numéricos ou com precisão excessiva são descartados e reportados; a linha é importada mesmo assim. Os produtos são associados aos existentes por SKU; as linhas da lista de fornecedores referenciam um produto por SKU e criam ou associam o fornecedor pelo nome."
+      },
+      "configure": {
+        "products": {
+          "title": "Produtos",
+          "serviceType": "Tipo de serviço para novos produtos",
+          "serviceTypePlaceholder": "Selecione um tipo de serviço",
+          "serviceTypeHelp": "Produtos cujo SKU já existe são associados e mantidos sem alterações; apenas produtos novos são arquivados neste tipo de serviço."
+        }
       }
     },
     "jobDetails": {
@@ -2912,7 +2955,8 @@
     "emptyState": "Nenhum usuário disponível.",
     "roles": {
       "client": "Usuário cliente",
-      "internal": "Usuário Interno"
+      "internal": "Usuário Interno",
+      "service": "Conta de serviço"
     },
     "badge": {
       "inactive": "Inativo"

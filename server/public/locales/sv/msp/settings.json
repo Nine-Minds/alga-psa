@@ -1025,13 +1025,40 @@
         },
         "rules": {
           "label": "Regler för automatisk tillämpning",
-          "help": "Mallen tillämpas automatiskt på nya ärenden som matchar någon av dessa regler. Låt ett fält stå som ”Alla” för att matcha alla värden.",
+          "help": "En mall tillämpas på ett nytt ärende när det matchar någon av mallens regler. En regel matchar bara om ärendet uppfyller alla filter du angett. Lämna ett filter tomt för att ignorera det.",
           "empty": "Inga regler för automatisk tillämpning. Mallen kan fortfarande tillämpas manuellt på ärenden.",
           "board": "Tavla",
           "category": "Kategori",
           "subcategory": "Underkategori",
           "priority": "Prioritet",
-          "any": "Alla"
+          "any": "Alla",
+          "appliesToAll": "Gäller alla ärenden",
+          "clients": "Kunder",
+          "clientsAny": "Valfri kund",
+          "clientsAddAnother": "Lägg till en kund till",
+          "removeClient": "Ta bort {{name}}",
+          "origins": "Ärendets källa",
+          "originsAny": "Valfri källa",
+          "fromServiceRequest": "Endast ärenden från en tjänstebegäran",
+          "anyServiceRequest": "Valfri tjänstebegäran",
+          "keywords": "Nyckelord",
+          "keywordsPlaceholder": "Skriv ett ord eller en fras och tryck på Retur",
+          "keywordsHelp": "Delar av ord matchar också, så \"onboard\" hittar \"onboarding\". Skiftläge ignoreras.",
+          "removeKeyword": "Ta bort {{keyword}}",
+          "keywordMode": "Matchning",
+          "keywordModeAny": "Valfritt nyckelord",
+          "keywordModeAll": "Alla nyckelord",
+          "keywordTarget": "Sök i",
+          "keywordTargetBoth": "Titel och beskrivning",
+          "keywordTargetTitle": "Titel",
+          "keywordTargetDescription": "Beskrivning",
+          "originLabels": {
+            "internal": "Skapat av personal",
+            "client_portal": "Kundportal",
+            "inbound_email": "Inkommande e-post",
+            "api": "API",
+            "recurring": "Återkommande schema"
+          }
         }
       },
       "dialog": {
@@ -2353,7 +2380,23 @@
         "nothingImportedBody": "Körningen skapade inga nya poster. Varje rad matchade något som redan fanns, så inget ändrades.",
         "claimedBySamePackage": "Redan migrerad av detta paket",
         "claimedByOtherPackage": "Redan migrerad av {{file}}",
-        "claimedByExistingEntity": "Matchad mot ett befintligt objekt"
+        "claimedByExistingEntity": "Matchad mot ett befintligt objekt",
+        "matchedBySku": "Matchad mot en befintlig produkt via SKU"
+      },
+      "spreadsheet": {
+        "entities": {
+          "products": "Produkter (katalog / prislista)",
+          "vendorProducts": "Leverantörsprislista (distributörens kostnader)"
+        },
+        "productsHint": "Priser och kostnader läses som decimalbelopp (till exempel 1,299.50) med valutakolumnen om den finns, annars hyresgästens valuta. Negativa, icke-numeriska eller alltför exakta belopp tas bort och rapporteras; raden importeras ändå. Produkter matchas mot befintliga produkter via SKU; rader i leverantörsprislistan refererar till en produkt via SKU och skapar eller matchar leverantören via namn."
+      },
+      "configure": {
+        "products": {
+          "title": "Produkter",
+          "serviceType": "Tjänstetyp för nya produkter",
+          "serviceTypePlaceholder": "Välj en tjänstetyp",
+          "serviceTypeHelp": "Produkter vars SKU redan finns matchas och lämnas oförändrade; endast nya produkter placeras under denna tjänstetyp."
+        }
       }
     },
     "jobDetails": {
@@ -2912,7 +2955,8 @@
     "emptyState": "Inga användare är tillgängliga.",
     "roles": {
       "client": "Kundanvändare",
-      "internal": "Intern användare"
+      "internal": "Intern användare",
+      "service": "Tjänstekonto"
     },
     "badge": {
       "inactive": "Inaktiv"

@@ -148,7 +148,7 @@ export const ticketListItemSchema = baseTicketSchema.extend({
   latest_activity_at: z.string().nullable().optional(),
   latest_activity_actor: z
     .object({
-      kind: z.enum(['user', 'client_user', 'contact', 'email_sender', 'system']),
+      kind: z.enum(['user', 'client_user', 'service', 'contact', 'email_sender', 'system']),
       name: z.string().nullable(),
     })
     .nullable()

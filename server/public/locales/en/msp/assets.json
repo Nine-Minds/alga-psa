@@ -246,7 +246,9 @@
         "setLocation": "Set location",
         "setStatus": "Set status",
         "assignContact": "Assign to contact",
-        "addToGroup": "Add to group"
+        "addToGroup": "Add to group",
+        "printLabels": "Print labels",
+        "printLabelsLimit": "You can print at most {{max}} labels at a time"
       },
       "actions": {
         "apply": "Apply",
@@ -446,7 +448,9 @@
       "rebootDevice": "Reboot Device",
       "rebooting": "Rebooting...",
       "editAsset": "Edit Asset",
-      "deleteAsset": "Delete Asset"
+      "deleteAsset": "Delete Asset",
+      "printLabel": "Print asset label",
+      "printPage": "Print page"
     },
     "values": {
       "unknownClient": "Unknown Client"

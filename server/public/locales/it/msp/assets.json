@@ -246,7 +246,9 @@
         "setLocation": "Imposta posizione",
         "setStatus": "Imposta stato",
         "assignContact": "Assegna a contatto",
-        "addToGroup": "Aggiungi al gruppo"
+        "addToGroup": "Aggiungi al gruppo",
+        "printLabels": "Stampa etichette",
+        "printLabelsLimit": "Puoi stampare al massimo {{max}} etichette alla volta"
       },
       "actions": {
         "apply": "Applica",
@@ -446,7 +448,9 @@
       "rebootDevice": "Riavvia il dispositivo",
       "rebooting": "Riavvio in corso...",
       "editAsset": "Modifica asset",
-      "deleteAsset": "Elimina asset"
+      "deleteAsset": "Elimina asset",
+      "printLabel": "Stampa etichetta dell'asset",
+      "printPage": "Stampa pagina"
     },
     "values": {
       "unknownClient": "Cliente sconosciuto"

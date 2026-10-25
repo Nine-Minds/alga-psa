@@ -1025,13 +1025,40 @@
         },
         "rules": {
           "label": "Auto-Apply Rules",
-          "help": "The template is automatically applied to new tickets matching any of these rules. Leave a field as \"Any\" to match all values.",
+          "help": "A template is applied to a new ticket when the ticket matches any one of its rules. A rule matches only when the ticket meets every filter you set. Leave a filter empty to ignore it.",
           "empty": "No auto-apply rules. This template can still be applied to tickets manually.",
           "board": "Board",
           "category": "Category",
           "subcategory": "Subcategory",
           "priority": "Priority",
-          "any": "Any"
+          "any": "Any",
+          "appliesToAll": "Applies to all tickets",
+          "clients": "Clients",
+          "clientsAny": "Any client",
+          "clientsAddAnother": "Add another client",
+          "removeClient": "Remove {{name}}",
+          "origins": "Ticket source",
+          "originsAny": "Any source",
+          "fromServiceRequest": "Only tickets from a service request",
+          "anyServiceRequest": "Any service request",
+          "keywords": "Keywords",
+          "keywordsPlaceholder": "Type a word or phrase and press Enter",
+          "keywordsHelp": "Partial words match too, so \"onboard\" also finds \"onboarding\". Capitalization is ignored.",
+          "removeKeyword": "Remove {{keyword}}",
+          "keywordMode": "Match",
+          "keywordModeAny": "Any keyword",
+          "keywordModeAll": "All keywords",
+          "keywordTarget": "Look in",
+          "keywordTargetBoth": "Title and description",
+          "keywordTargetTitle": "Title",
+          "keywordTargetDescription": "Description",
+          "originLabels": {
+            "internal": "Created by staff",
+            "client_portal": "Client portal",
+            "inbound_email": "Inbound email",
+            "api": "API",
+            "recurring": "Recurring schedule"
+          }
         }
       },
       "dialog": {
@@ -2353,7 +2380,23 @@
         "nothingImportedBody": "This run created no new records. Every row matched something that already existed, so nothing was changed.",
         "claimedBySamePackage": "Already migrated by this package",
         "claimedByOtherPackage": "Already migrated by {{file}}",
-        "claimedByExistingEntity": "Matched to an existing entity"
+        "claimedByExistingEntity": "Matched to an existing entity",
+        "matchedBySku": "Matched existing product by SKU"
+      },
+      "spreadsheet": {
+        "entities": {
+          "products": "Products (catalog / price list)",
+          "vendorProducts": "Vendor price list (distributor costs)"
+        },
+        "productsHint": "Prices and costs are read as decimal amounts (for example 1,299.50) using the currency column when present, otherwise the tenant currency. Negative, non-numeric or over-precise amounts are dropped and reported; the row is still imported. Products match existing products by SKU; vendor price-list rows reference a product by SKU and create or match the vendor by name."
+      },
+      "configure": {
+        "products": {
+          "title": "Products",
+          "serviceType": "Service type for new products",
+          "serviceTypePlaceholder": "Select a service type",
+          "serviceTypeHelp": "Products whose SKU already exists are matched and left unchanged; only new products are filed under this service type."
+        }
       }
     },
     "jobDetails": {
@@ -2912,7 +2955,8 @@
     "emptyState": "No users available.",
     "roles": {
       "client": "Client User",
-      "internal": "Internal User"
+      "internal": "Internal User",
+      "service": "Service"
     },
     "badge": {
       "inactive": "Inactive"

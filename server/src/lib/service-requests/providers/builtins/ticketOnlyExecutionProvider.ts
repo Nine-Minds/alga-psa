@@ -231,7 +231,10 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
           ticketCreatedPublishedByCaller('published on the owning transaction after the savepoint succeeds'),
           undefined,
           context.requesterUserId,
-          1
+          1,
+          // The submission row does not link to this ticket yet, so checklist
+          // auto-apply rules cannot discover the service request on their own.
+          { serviceRequest: { definitionId: context.definitionId } }
         );
 
         await new WorkflowEventPublisher({ transaction: outerTrx! }).publishTicketCreated({

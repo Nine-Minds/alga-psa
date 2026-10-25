@@ -246,7 +246,9 @@
         "setLocation": "Establecer ubicación",
         "setStatus": "Establecer estado",
         "assignContact": "Asignar a contacto",
-        "addToGroup": "Añadir a grupo"
+        "addToGroup": "Añadir a grupo",
+        "printLabels": "Imprimir etiquetas",
+        "printLabelsLimit": "Puede imprimir como máximo {{max}} etiquetas a la vez"
       },
       "actions": {
         "apply": "Aplicar",
@@ -446,7 +448,9 @@
       "rebootDevice": "Reiniciar dispositivo",
       "rebooting": "Reiniciando...",
       "editAsset": "Editar activo",
-      "deleteAsset": "Eliminar activo"
+      "deleteAsset": "Eliminar activo",
+      "printLabel": "Imprimir etiqueta del activo",
+      "printPage": "Imprimir página"
     },
     "values": {
       "unknownClient": "Cliente desconocido"

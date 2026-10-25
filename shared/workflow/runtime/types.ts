@@ -113,7 +113,7 @@ export type ControlStepType =
   | 'control.callWorkflow'
   | 'control.return';
 
-// LEVERAGE: pattern condition-dialects — overlapping condition dialect; candidate to converge on @alga-psa/predicates (also: workflow event-wait filters, reporting FilterDefinition, inbound email rules, automation API conditions, service-request visibility)
+// LEVERAGE: pattern condition-dialects — overlapping condition dialect; candidate to converge on @alga-psa/predicates (also: workflow event-wait filters, reporting FilterDefinition, inbound email rules, service-request visibility)
 export const eventWaitFilterOperatorSchema = z.enum([
   '=',
   '!=',

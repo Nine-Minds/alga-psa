@@ -131,7 +131,11 @@ const OrgChart = ({ users, onUserUpdated, searchTerm = '' }: OrgChartProps) => {
         data: {
           user,
           avatarUrl: avatarUrls[user.user_id] ?? null,
-          roleLabel: user.user_type === 'client' ? t('orgChart.roles.client') : t('orgChart.roles.internal'),
+          roleLabel: user.user_type === 'client'
+            ? t('orgChart.roles.client')
+            : user.user_type === 'service'
+              ? t('orgChart.roles.service', 'Service')
+              : t('orgChart.roles.internal'),
           isHighlighted,
         },
       });

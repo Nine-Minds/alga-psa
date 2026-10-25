@@ -80,6 +80,62 @@ describe('EntraDiagnosticsDialog', () => {
     mocks.getMappings.mockResolvedValue({ success: true, data: { mappings: [] } });
   });
 
+  it('renders API-client remedies from rec.text and keeps the legacy key text', async () => {
+    const allowlist = "CIPP refused the tenant list (listtenants) with HTTP 403. This usually means our egress IP is not in the API client's allowlist: add our egress IPs under Allowed IP Ranges.";
+    const html = 'CIPP answered with a web page instead of API data: the API URL is missing /api or points at the wrong host.';
+    mocks.runConnection.mockResolvedValue({
+      success: true,
+      data: {
+        ...connectionReport,
+        recommendations: [
+          { code: 'cipp_auth_rejected', severity: 'fail', text: allowlist },
+          { code: 'cipp_html_response', severity: 'fail', text: html },
+          {
+            code: 'cipp_auth_rejected',
+            severity: 'fail',
+            text: 'legacy fallback text that the locale must override',
+            messageKey: 'cippAuthRejected',
+          },
+        ],
+      },
+    });
+    render(<EntraDiagnosticsDialog isOpen onClose={() => {}} />);
+    await waitFor(() => {
+      expect(screen.getByText(/egress IP is not in the API client's allowlist/)).toBeTruthy();
+    });
+    expect(screen.getByText(/missing \/api or points at the wrong host/)).toBeTruthy();
+    // Legacy key path still renders the locale string.
+    expect(screen.getByText(/CIPP rejected the legacy API key\. Reconnect with a CIPP API client/)).toBeTruthy();
+    // The allowlist remedy is not replaced by the legacy-key text.
+    expect(screen.getAllByText(/CIPP rejected the legacy API key/)).toHaveLength(1);
+    // The stale "Settings > CIPP > API access" guidance is gone.
+    expect(document.body.textContent).not.toContain('API access');
+  });
+
+  it('renders the token-mint failure with the classified message and its step title', async () => {
+    const mint = 'Microsoft rejected the client secret for this API client (AADSTS7000215). Create a new secret in CIPP > Integrations > CIPP-API.';
+    const scope = 'Microsoft would not issue a token for the CIPP API scope. Check the CIPP-API client configuration.';
+    mocks.runConnection.mockResolvedValue({
+      success: true,
+      data: {
+        ...connectionReport,
+        steps: [
+          ...connectionReport.steps,
+          { id: 'cipp_token_mint', title: 'CIPP API token mint', status: 'fail' },
+        ],
+        recommendations: [
+          { code: 'cipp_token_mint_failed', severity: 'fail', text: mint, messageKey: 'cippTokenMintFailed' },
+          { code: 'cipp_token_scope_rejected', severity: 'fail', text: scope, messageKey: 'cippTokenScopeRejected' },
+        ],
+      },
+    });
+    render(<EntraDiagnosticsDialog isOpen onClose={() => {}} />);
+    // The specific classified text (AADSTS code, remedy) survives; no generic locale copy replaces it.
+    await waitFor(() => expect(screen.getByText(mint)).toBeTruthy());
+    expect(screen.getByText(scope)).toBeTruthy();
+    expect(screen.getAllByText('CIPP API token mint').length).toBeGreaterThan(0);
+  });
+
   it('renders the overall badge, steps, and recommendations from a fixture', async () => {
     mocks.runConnection.mockResolvedValue({ success: true, data: connectionReport });
     render(<EntraDiagnosticsDialog isOpen onClose={() => {}} />);
