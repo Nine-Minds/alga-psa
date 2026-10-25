@@ -7,6 +7,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 
 export type TicketActionError = ActionMessageError | ActionPermissionError;
 
@@ -139,6 +140,11 @@ function ticketErrorCodeOf(error: unknown): TicketErrorCode | undefined {
 }
 
 export function ticketActionErrorFrom(error: unknown): TicketActionError | null {
+  // A co-managed workspace that is pending acceptance or has ended refuses
+  // operational writes; that is an expected outcome with a message for the user.
+  if (isCoManagedLifecycleError(error)) {
+    return actionError(error.message);
+  }
   if (isAuthorizationThrow(error)) {
     return permissionError(error instanceof Error ? error.message : String(error));
   }

@@ -13,6 +13,6 @@ it('no longer mounts the stacked co-managed panel above the native ticket screen
 });
 
 it('wraps the native screen in the local co-managed data source only for the co_managed product', () => {
-  expect(page).toMatch(/productCode === 'co_managed'\s*\?\s*<CoManagedLocalTicketDataSourceProvider ticketId=\{id\}>\{ticketScreen\}<\/CoManagedLocalTicketDataSourceProvider>\s*:\s*ticketScreen/);
+  expect(page).toMatch(/productCode === 'co_managed'\s*\?\s*<CoManagedLocalTicketDataSourceProvider ticketId=\{id\} readOnly=\{workspaceReadOnly\}>\{ticketScreen\}<\/CoManagedLocalTicketDataSourceProvider>\s*:\s*ticketScreen/);
   expect(page.match(/<MspTicketDetailsContainerClient/g)).toHaveLength(1);
 });

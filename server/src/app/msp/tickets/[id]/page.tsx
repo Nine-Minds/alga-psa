@@ -36,6 +36,8 @@ import { getTeams, isTeamActionError } from '@alga-psa/teams/actions';
 import { fetchTimeEntriesForTicket } from '@alga-psa/scheduling/actions/timeEntryTicketActions';
 import { AIChatContextBoundary } from '@product/chat/context';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
+import { createTenantKnex } from '@alga-psa/db';
+import { getCoManagedOperationalState } from '@alga-psa/licensing';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
@@ -121,6 +123,13 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
     const { t } = await getServerTranslation(undefined, 'common');
     return <div id="ticket-error-message">{t('pages.errors.userNotAuthenticatedError')}</div>;
   }
+
+  // A co-managed workspace that is pending acceptance or has ended can still be read but not changed.
+  const workspaceReadOnly = productCode === 'co_managed'
+    ? await createTenantKnex(user.tenant)
+      .then(({ knex }) => getCoManagedOperationalState(knex, user.tenant))
+      .then((state) => !state.canWrite)
+    : false;
 
   try {
     // Everything the first paint needs, gathered in ONE parallel batch so the
@@ -247,7 +256,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
     const detailsContent = (
       <div id="ticket-details-container" className="bg-[rgb(var(--color-app-ground))]">
         {productCode === 'co_managed'
-          ? <CoManagedLocalTicketDataSourceProvider ticketId={id}>{ticketScreen}</CoManagedLocalTicketDataSourceProvider>
+          ? <CoManagedLocalTicketDataSourceProvider ticketId={id} readOnly={workspaceReadOnly}>{ticketScreen}</CoManagedLocalTicketDataSourceProvider>
           : ticketScreen}
       </div>
     );

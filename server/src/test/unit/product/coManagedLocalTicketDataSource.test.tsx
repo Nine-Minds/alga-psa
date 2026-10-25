@@ -132,9 +132,30 @@ it('hides the native time panel (denied on co_managed tenants) and supplies the 
   expect(source.capabilities.tags).toBe(true);
 });
 
-it('keeps native time capabilities until the co-managed screen has loaded or when the flag is off', async () => {
+it('never offers the native time panel, which co_managed tenants cannot use, even before the screen loads or with the flag off', async () => {
   mocks.flag.mockReturnValue({ enabled: false, loading: false, error: null });
   mount();
   await act(async () => {});
   expect(source.slots.timeSummary).toBeUndefined();
+  expect(source.capabilities.timeEntry).toBe(false);
+});
+
+it('is read-only when the workspace lifecycle cannot write, whether or not the co-managed screen loads', async () => {
+  const mountReadOnly = () => render(<CoManagedLocalTicketDataSourceProvider ticketId="ticket-a" readOnly><Probe /></CoManagedLocalTicketDataSourceProvider>);
+  // An ended relationship: the co-managed screen is no longer available.
+  mocks.screen.mockRejectedValue(new Error('relationship ended'));
+  mountReadOnly();
+  await waitFor(() => expect(mocks.screen).toHaveBeenCalled());
+  await act(async () => {});
+  expect(source.screen.readOnly).toBe(true);
+  expect(source.capabilities.timeEntry).toBe(false);
+  cleanup();
+  mocks.screen.mockResolvedValue({ summary: { resource }, customerName: 'Customer A' });
+  mountReadOnly();
+  await waitFor(() => expect(source.slots.timeSummary).toBeTypeOf('function'));
+  expect(source.screen.readOnly).toBe(true);
+  cleanup();
+  mount();
+  await waitFor(() => expect(source.slots.timeSummary).toBeTypeOf('function'));
+  expect(source.screen?.readOnly).toBeFalsy();
 });

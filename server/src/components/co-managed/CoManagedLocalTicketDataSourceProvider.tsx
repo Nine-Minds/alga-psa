@@ -40,7 +40,11 @@ const actionError = (message: string) => ({ actionError: message });
  * Audience writes go through the existing co-managed comment command
  * (`createCoManagedTicketCommentAction`); this component adds no authority.
  */
-export default function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: { ticketId: string; children: React.ReactNode }) {
+/** A co_managed tenant's native ticket screen. `readOnly` is the workspace lifecycle
+ * (pending acceptance or ended): the screen then offers no edits the server would refuse. */
+export default function CoManagedLocalTicketDataSourceProvider({ ticketId, readOnly = false, children }: {
+  ticketId: string; readOnly?: boolean; children: React.ReactNode;
+}) {
   const { t } = useTranslation('msp/licensing');
   // Presentation gate only (same flag as CoManagedFeatureBoundary). The provider stays mounted either way so the
   // native screen never remounts when the flag resolves; off or unresolved means the plain native data source.
@@ -124,7 +128,14 @@ export default function CoManagedLocalTicketDataSourceProvider({ ticketId, child
 
   const dataSource = useMemo<TicketDataSource>(() => {
     // Native until the co-managed screen has loaded; a ticket that is not co-managed stays native.
-    if (!enabled || !screenState || screenState === 'failed') return nativeTicketDataSource;
+    // A co_managed tenant never has native time-entry authority, so that panel is never offered,
+    // and the workspace lifecycle decides whether the screen can write at all.
+    if (!enabled || !screenState || screenState === 'failed') {
+      return composeTicketDataSource(nativeTicketDataSource, {
+        capabilities: { ...NATIVE_TICKET_CAPABILITIES, timeEntry: false },
+        ...(readOnly ? { screen: { readOnly: true } } : {}),
+      });
+    }
     const customerName = screenState.customerName;
     const allowed = writeAudiences ?? ALL_AUDIENCES;
     const label = (audience: CommentAudience) => audience === 'organization_private' && customerName
@@ -185,6 +196,7 @@ export default function CoManagedLocalTicketDataSourceProvider({ ticketId, child
       // A co_managed tenant has no native time-entry authority (scheduling_time_actions is denied), so the native
       // time panel and stopwatch are hidden in both layouts; time is shown as the operational effort split instead.
       capabilities: { ...NATIVE_TICKET_CAPABILITIES, timeEntry: false },
+      ...(readOnly ? { screen: { readOnly: true } } : {}),
       comments: { addTicketCommentWithCacheForCurrentUser: addComment, createComment },
       conversation: {
         ...(audiences ? { audiences } : {}),
