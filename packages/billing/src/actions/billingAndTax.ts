@@ -1314,7 +1314,7 @@ async function attachCadencePrepaidBlockAmountsToRows(
                     }
                     const start = assignment.start_date ? normalizeDateOnly(assignment.start_date as ISO8601String) : null;
                     const end = assignment.end_date ? normalizeDateOnly(assignment.end_date as ISO8601String) : null;
-                    return (!start || start <= periodStart) && (!end || end >= periodEnd);
+                    return (!start || start <= (periodStart ?? '')) && (!end || end >= (periodEnd ?? ''));
                 });
                 if (!coversWholePeriod) {
                     continue;
