@@ -1,6 +1,12 @@
 import axios, { AxiosInstance } from 'axios';
 import { microsoftIssuerKindFromSource, resolveMicrosoftOAuthAuthority } from '@alga-psa/shared/services/email/microsoftAuthority';
 import { getMicrosoftGraphBaseUrl, getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
+import {
+  MICROSOFT_OAUTH_FAILURE_ERROR_CODES,
+  classifySafeMicrosoftOAuthFailure,
+  formatMicrosoftOAuthFailureForMailboxFlow,
+  toSafeMicrosoftOAuthFailure,
+} from '@alga-psa/shared/services/email/microsoftOAuthErrors';
 import { BaseCalendarAdapter } from './base/BaseCalendarAdapter';
 import type { CalendarProviderConfig, ExternalCalendarEvent } from '@alga-psa/types';
 import { resolveMicrosoftConsumerProfileConfig } from '../../../microsoftConsumerProfileResolution';
@@ -186,6 +192,22 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
 
       this.log('info', 'Access token refreshed successfully');
     } catch (error) {
+      // Classify Microsoft's OAuth error body (AADSTS) before the generic
+      // wrapper, which only reads Graph-style error.code/message. Only safe
+      // fields are carried; never the axios config/body.
+      const safeFailure = toSafeMicrosoftOAuthFailure(error);
+      const failureKind = classifySafeMicrosoftOAuthFailure(safeFailure);
+      if (failureKind) {
+        this.log('error', 'Microsoft Calendar token refresh rejected', safeFailure);
+        const wrapped = new Error(formatMicrosoftOAuthFailureForMailboxFlow(failureKind));
+        Object.assign(wrapped, {
+          status: safeFailure.status,
+          code: MICROSOFT_OAUTH_FAILURE_ERROR_CODES[failureKind],
+          microsoftOAuthFailureKind: failureKind,
+          microsoftOAuthFailure: safeFailure,
+        });
+        throw wrapped;
+      }
       throw this.handleError(error, 'refreshAccessToken');
     }
   }

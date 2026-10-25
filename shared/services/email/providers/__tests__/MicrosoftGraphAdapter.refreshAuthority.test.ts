@@ -19,6 +19,10 @@ vi.mock('../../../../core/secretProvider', () => ({
 }));
 
 import { MicrosoftGraphAdapter } from '../MicrosoftGraphAdapter';
+import {
+  describeMicrosoftOAuthFailureForMailboxFlow,
+  formatMicrosoftOAuthFailureForMailboxFlow,
+} from '../../microsoftOAuthErrors';
 
 const ENV_TENANT = '11111111-1111-4111-8111-111111111111';
 const PROFILE_TENANT = '22222222-2222-4222-8222-222222222222';
@@ -97,5 +101,63 @@ describe('MicrosoftGraphAdapter refresh authority', () => {
     });
     expect(url).toContain('/common/oauth2/v2.0/token');
     expect(url).not.toContain(PROFILE_TENANT);
+  });
+
+  describe('AADSTS classification on refresh failure', () => {
+    const rejection = (status: number, data: Record<string, unknown>) =>
+      Object.assign(new Error(`Request failed with status code ${status}`), {
+        isAxiosError: true,
+        response: { status, data, headers: {} },
+        config: { data: 'client_id=app-id&client_secret=app-secret&refresh_token=refresh-token' },
+      });
+
+    it('stores/throws the <code>: <message> text for an expired client secret, without leaking secrets', async () => {
+      axiosPost.mockRejectedValue(
+        rejection(401, {
+          error: 'invalid_client',
+          error_codes: [7000222],
+          error_description: "AADSTS7000222: The provided client secret keys for app 'app-id' are expired.",
+        })
+      );
+      const logSpies = (['log', 'info', 'warn', 'error'] as const).map((m) => vi.spyOn(console, m).mockImplementation(() => {}));
+      const adapter = makeAdapter({ resolved_issuer_kind: 'tenant-owned' });
+      const error: any = await (adapter as any).refreshAccessToken().catch((e: unknown) => e);
+      const expected = formatMicrosoftOAuthFailureForMailboxFlow('expired_client_secret');
+      expect(error.message).toBe(expected);
+      expect(error.message).toBe(
+        `aadsts_7000222_expired_secret: ${describeMicrosoftOAuthFailureForMailboxFlow('expired_client_secret')}`
+      );
+      expect(error.message).not.toContain('Request failed with status code');
+      expect(error.status).toBe(401);
+      expect(error.config).toBeUndefined();
+      expect(JSON.stringify(error)).not.toMatch(/app-secret|refresh-token/);
+
+      // testConnection surfaces the same text unchanged.
+      (adapter as any).accessToken = undefined;
+      (adapter as any).tokenExpiresAt = new Date(0);
+      const result = await adapter.testConnection();
+      expect(result.success).toBe(false);
+      expect(result.error).toBe(expected);
+
+      const logged = JSON.stringify(logSpies.flatMap((spy) => spy.mock.calls));
+      expect(logged).not.toContain('client_secret');
+      expect(logged).not.toContain('app-secret');
+      expect(logged).not.toContain('refresh-token');
+      logSpies.forEach((spy) => spy.mockRestore());
+    });
+
+    it('keeps the existing message for an unmapped 401 (AADSTS70008)', async () => {
+      axiosPost.mockRejectedValue(
+        rejection(401, {
+          error: 'invalid_grant',
+          error_codes: [70008],
+          error_description: 'AADSTS70008: The provided authorization code or refresh token has expired.',
+        })
+      );
+      const adapter = makeAdapter({ resolved_issuer_kind: 'tenant-owned' });
+      const error: any = await (adapter as any).refreshAccessToken().catch((e: unknown) => e);
+      expect(error.message).toMatch(/^Error in refreshAccessToken:/);
+      expect(error.microsoftOAuthFailureKind).toBeUndefined();
+    });
   });
 });

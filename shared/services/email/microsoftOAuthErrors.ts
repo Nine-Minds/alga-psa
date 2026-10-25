@@ -98,6 +98,19 @@ export function describeMicrosoftOAuthFailureForMailboxFlow(
   }
 }
 
+/**
+ * The `<machine code>: <message>` string persisted to a provider's error field
+ * (email_providers.error_message) for a mapped failure. Shared by the OAuth
+ * callbacks' persistence and the background token-refresh paths so a stored
+ * error reads the same whichever path produced it.
+ */
+export function formatMicrosoftOAuthFailureForMailboxFlow(
+  kind: MicrosoftOAuthFailureKind,
+  context: { redirectUri?: string | null } = {}
+): string {
+  return `${MICROSOFT_OAUTH_FAILURE_ERROR_CODES[kind]}: ${describeMicrosoftOAuthFailureForMailboxFlow(kind, context)}`;
+}
+
 export interface SafeMicrosoftOAuthFailure {
   status?: number;
   error?: string;

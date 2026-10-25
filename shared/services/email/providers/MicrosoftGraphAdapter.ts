@@ -20,6 +20,12 @@ import {
   toDiagnosticsErrorMeta,
   type GraphFailure,
 } from '../../diagnostics/graphFailure';
+import {
+  MICROSOFT_OAUTH_FAILURE_ERROR_CODES,
+  classifySafeMicrosoftOAuthFailure,
+  formatMicrosoftOAuthFailureForMailboxFlow,
+  toSafeMicrosoftOAuthFailure,
+} from '../microsoftOAuthErrors';
 import { mapInboundRecommendations } from '../microsoftGraphDiagnostics';
 import { getSecretProviderInstance } from '../../../core/secretProvider';
 import { resolveDeploymentCapabilities } from '../../../core/deploymentProfile';
@@ -452,6 +458,21 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
 
       this.log('info', 'Access token refreshed successfully');
     } catch (error) {
+      // Microsoft's token endpoint answers with an OAuth body (error /
+      // error_codes / error_description), not a Graph error, so classify that
+      // first. Only safe fields are carried; never the axios config/body.
+      const safeFailure = toSafeMicrosoftOAuthFailure(error);
+      const failureKind = classifySafeMicrosoftOAuthFailure(safeFailure);
+      if (failureKind) {
+        const wrapped = new Error(formatMicrosoftOAuthFailureForMailboxFlow(failureKind));
+        Object.assign(wrapped, {
+          status: safeFailure.status,
+          code: MICROSOFT_OAUTH_FAILURE_ERROR_CODES[failureKind],
+          microsoftOAuthFailureKind: failureKind,
+          microsoftOAuthFailure: safeFailure,
+        });
+        throw wrapped;
+      }
       throw this.toSanitizedGraphError(error, 'refreshAccessToken');
     }
   }
@@ -1055,7 +1076,9 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         .join(' ');
       return {
         success: false,
-        error: detail
+        error: (error as any)?.microsoftOAuthFailureKind
+          ? failure.message
+          : detail
           ? `${failure.message} (${detail})`
           : failure.message || 'Connection test failed',
         status: failure.status,

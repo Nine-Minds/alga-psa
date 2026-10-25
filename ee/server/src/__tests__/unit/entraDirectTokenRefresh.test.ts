@@ -150,4 +150,71 @@ describe('refreshEntraDirectToken', () => {
       + 'The app has not been granted admin consent in the managed tenant — grant consent there, then retry; reconnecting will not help.'
     );
   });
+
+  describe('AADSTS classification', () => {
+    const axiosRejection = (status: number, data: Record<string, unknown>) =>
+      Object.assign(new Error(`Request failed with status code ${status}`), {
+        isAxiosError: true,
+        response: { status, data, headers: { 'request-id': 'req-1' } },
+        config: { data: 'client_secret=client-secret-x' },
+      });
+
+    beforeEach(() => {
+      resolveMicrosoftCredentialsForTenantMock.mockResolvedValue({
+        clientId: 'client-id-x',
+        clientSecret: 'client-secret-x',
+        tenantId: null,
+        source: 'tenant-secret',
+      });
+      getEntraDirectRefreshTokenMock.mockResolvedValue('refresh-token-x');
+    });
+
+    it('maps 7000222 from the description to the mailbox-flow text and keeps metadata', async () => {
+      axiosPostMock.mockRejectedValue(axiosRejection(401, {
+        error: 'invalid_client',
+        error_codes: [7000222],
+        error_description: "AADSTS7000222: The provided client secret keys for app 'x' are expired.",
+      }));
+      const { refreshEntraDirectToken } = await import('@ee/lib/integrations/entra/auth/refreshDirectToken');
+      const { formatMicrosoftOAuthFailureForMailboxFlow } = await import('@alga-psa/shared/services/email/microsoftOAuthErrors');
+      const error: any = await refreshEntraDirectToken('tenant-x').catch((e) => e);
+      expect(error.name).toBe('EntraOperatorError');
+      expect(error.code).toBe('credential-rejected');
+      expect(error.message).toBe(formatMicrosoftOAuthFailureForMailboxFlow('expired_client_secret'));
+      expect(error.message).toMatch(/^aadsts_7000222_expired_secret: /);
+      expect(error.aadstsCode).toBe('AADSTS7000222');
+      expect(error.oauthError).toBe('invalid_client');
+      expect(error.status).toBe(401);
+      expect(error.requestId).toBe('req-1');
+      expect(JSON.stringify(error)).not.toContain('client-secret-x');
+    });
+
+    it('populates aadstsCode and maps the kind when the code is only in error_codes', async () => {
+      axiosPostMock.mockRejectedValue(axiosRejection(401, {
+        error: 'invalid_client',
+        error_codes: [7000222],
+        error_description: 'The client secret has expired.',
+      }));
+      const { refreshEntraDirectToken } = await import('@ee/lib/integrations/entra/auth/refreshDirectToken');
+      const error: any = await refreshEntraDirectToken('tenant-x').catch((e) => e);
+      expect(error.code).toBe('credential-rejected');
+      expect(error.message).toMatch(/^aadsts_7000222_expired_secret: /);
+      expect(error.aadstsCode).toBe('AADSTS7000222');
+    });
+
+    it('keeps the existing message for an unmapped 401 (AADSTS70008)', async () => {
+      axiosPostMock.mockRejectedValue(axiosRejection(401, {
+        error: 'invalid_grant',
+        error_codes: [70008],
+        error_description: 'AADSTS70008: The refresh token has expired.',
+      }));
+      const { refreshEntraDirectToken } = await import('@ee/lib/integrations/entra/auth/refreshDirectToken');
+      const error: any = await refreshEntraDirectToken('tenant-x').catch((e) => e);
+      expect(error.code).toBe('credential-rejected');
+      expect(error.message).toBe(
+        'Microsoft rejected the stored credentials for this connection (invalid_grant, AADSTS70008). Reconnect Microsoft Entra to resume syncing.'
+      );
+      expect(error.aadstsCode).toBe('AADSTS70008');
+    });
+  });
 });
