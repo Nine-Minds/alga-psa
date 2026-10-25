@@ -1,10 +1,13 @@
 import React from 'react';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
-const enterpriseOnly = () =>
-  new Response(JSON.stringify({ error: 'Chat features are only available in Enterprise Edition' }), {
+const enterpriseOnly = async () => {
+  const { t } = await getServerTranslation(undefined, 'msp/core');
+  return new Response(JSON.stringify({ error: t('chat.errors.enterpriseOnly') }), {
     status: 404,
     headers: { 'Content-Type': 'application/json' },
   });
+};
 
 export const ChatStreamService = {
   handleChatStream: async (_req: unknown) => enterpriseOnly(),
@@ -20,13 +23,14 @@ export const ChatCompletionsService = {
   handleExecute: async (_req: unknown) => enterpriseOnly(),
 } as const;
 
-export const ChatPage = () => {
+export const ChatPage = async () => {
+  const { t } = await getServerTranslation(undefined, 'msp/core');
   return (
     <div className="flex items-center justify-center h-64">
       <div className="text-center">
-        <h2 className="text-xl font-semibold mb-2">Pro Feature</h2>
+        <h2 className="text-xl font-semibold mb-2">{t('chat.page.title')}</h2>
         <p className="text-gray-600">
-          AI Chat features require Pro. Please upgrade to access this feature.
+          {t('chat.page.description')}
         </p>
       </div>
     </div>
@@ -35,11 +39,12 @@ export const ChatPage = () => {
 
 export const ChatComponent = ChatPage;
 
-export const MessageComponent = () => {
+export const MessageComponent = async () => {
+  const { t } = await getServerTranslation(undefined, 'msp/core');
   return (
     <div className="flex items-center justify-center h-32">
       <div className="text-center">
-        <p className="text-gray-600">Message features require Pro.</p>
+        <p className="text-gray-600">{t('chat.messages.proRequired')}</p>
       </div>
     </div>
   );

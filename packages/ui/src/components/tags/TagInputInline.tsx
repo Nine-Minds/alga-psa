@@ -8,6 +8,7 @@ import { ITag } from '@alga-psa/types';
 import { generateEntityColor, adaptColorsForDarkMode } from '../../lib/colorUtils';
 import { useTheme } from 'next-themes';
 import { tagInputSizeConfig, type TagSize } from './tagSizeConfig';
+import { useTranslation } from '../../lib/i18n/client';
 
 interface TagInputInlineProps {
   id?: string;
@@ -24,10 +25,11 @@ export const TagInputInline: React.FC<TagInputInlineProps> = ({
   existingTags,
   currentTags,
   onAddTag,
-  placeholder = 'Add tag...',
+  placeholder,
   className = '',
   size = 'md'
 }) => {
+  const { t } = useTranslation('common');
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -128,7 +130,7 @@ export const TagInputInline: React.FC<TagInputInlineProps> = ({
           onKeyDown={handleKeyPress}
           onBlur={handleBlur}
           className={`rounded-l-md border-0 ${sizeConfig.inputClass}`}
-          placeholder={placeholder}
+          placeholder={placeholder ?? t('tags.fields.tags.placeholder')}
           autoComplete="off"
           containerClassName="m-0"
         />
@@ -141,7 +143,7 @@ export const TagInputInline: React.FC<TagInputInlineProps> = ({
           variant={isSaving || !inputValue.trim() ? "outline" : "default"}
           size={size === 'sm' ? "xs" : "sm"}
         >
-          {isSaving ? '...' : 'Save'}
+          {isSaving ? t('tags.actions.saving') : t('actions.save')}
         </Button>
       </div>
       

@@ -1,0 +1,122 @@
+[
+  {
+    "id": "F001",
+    "description": "Record link resolver recordPath/recordUrl/matchRecordPath in packages/types",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Mobile verbatim copy with byte-identity test; hostedUrls uses it",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Search indexers, notificationLinkResolver, buildTeamsFullPsaUrl use resolver (LEVERAGE marked)",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "customPageSize in print settings with validation",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "resolve*PdfPrintOptions emits width/height/preferCSSPageSize; HTML @page rule",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "Designer custom size entry and preview",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "description": "barcode AST node and schema",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "description": "Server barcode prepass to SVG keyed by node id; sync renderer inlines",
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "description": "Quiet zone, min module size, fit errors",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "description": "Designer qr block reconciled to barcode",
+    "implemented": true
+  },
+  {
+    "id": "F011",
+    "description": "LabelViewModel and LabelViewModelProvider contracts in packages/types",
+    "implemented": true
+  },
+  {
+    "id": "F012",
+    "description": "work-tag document type, bindings, sample data, DesignerDocumentKind",
+    "implemented": true
+  },
+  {
+    "id": "F013",
+    "description": "Standard templates per label class",
+    "implemented": true
+  },
+  {
+    "id": "F014",
+    "description": "Batch layout planner: one-per-page and n-up grid",
+    "implemented": true
+  },
+  {
+    "id": "F015",
+    "description": "Batch composer and canonical-URL guard",
+    "implemented": true
+  },
+  {
+    "id": "F016",
+    "description": "labelPdfService (Puppeteer)",
+    "implemented": true
+  },
+  {
+    "id": "F017",
+    "description": "Ticket, asset, stock-unit providers",
+    "implemented": true
+  },
+  {
+    "id": "F018",
+    "description": "POST /api/labels/pdf route with withAuth, internal-only, uniform 404, middleware skip-list",
+    "implemented": true
+  },
+  {
+    "id": "F019",
+    "description": "Translations for workTag in all locales",
+    "implemented": true
+  },
+  {
+    "id": "F020",
+    "description": "Label text never leaves the label: wrap-anywhere identifiers (never clipped), whole-line caps on free text; AST style schema accepts overflow/overflowWrap",
+    "implemented": true
+  },
+  {
+    "id": "F021",
+    "description": "Sheet composer applies the template margin once (renderer root padding only); printable area is the designed 95.6 x 44.8 mm on 4x2in",
+    "implemented": true
+  },
+  {
+    "id": "F022",
+    "description": "422 for a refused batch lists every failing record (LabelPrintFailure) with suggestedTemplateCode (Code 128 -> QR-only asset label)",
+    "implemented": true
+  },
+  {
+    "id": "F023",
+    "description": "Designer barcode Value placeholder/hint shows the real work-tag binding {{label.recordUrl}}",
+    "implemented": true
+  },
+  {
+    "id": "F024",
+    "description": "Work-tag designer preview drawn on a sheet the size of the printed label cell (screen-only CSS, clipped, printable-area guide), with Fit/100% zoom; registry printGeometry selects it and full-page documents stay unframed",
+    "implemented": true
+  }
+]

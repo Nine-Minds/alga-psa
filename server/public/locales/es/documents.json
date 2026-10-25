@@ -14,6 +14,7 @@
       "semiAnnually": "Semestral"
     },
     "cadenceTotal": "Total {{cadence}}",
+    "currency": "Moneda",
     "date": "Fecha",
     "description": "Descripción",
     "discounts": "Descuentos",
@@ -60,6 +61,7 @@
     "rate": "Tarifa",
     "recurring": "Recurrente",
     "service": "Servicio",
+    "servicePeriod": "Período de servicio",
     "shipDate": "Fecha de envío",
     "shipTo": "Enviar a",
     "shipped": "Enviado",

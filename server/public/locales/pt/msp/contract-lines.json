@@ -135,7 +135,6 @@
         "overtime": {
           "enableLabel": "Habilitar taxas de horas extras",
           "rateHelp": "Taxa aplicada após o limite.",
-          "rateLabel": "Taxa de horas extras ($/hora)",
           "thresholdHelp": "Horas antes da aplicação do OT.",
           "thresholdLabel": "Limite de horas extras (horas/período)",
           "thresholdPlaceholder": "40",
@@ -375,7 +374,6 @@
     },
     "hourlyConfig": {
       "labels": {
-        "hourlyRate": "Taxa horária ($)",
         "minimumBillableTime": "Tempo mínimo faturável (minutos)",
         "roundUpToNearest": "Arredondar para o mais próximo (minutos)"
       },
@@ -398,7 +396,6 @@
           "technician": "Técnico"
         },
         "perHourSuffix": "/hora",
-        "rateSrLabel": "Taxa ($/hora)",
         "selectTypePlaceholder": "Selecione o tipo",
         "tooltip": "Defina diferentes taxas horárias para tipos específicos de usuários que trabalham neste serviço. Eles substituem a taxa horária padrão do serviço.",
         "userTypeSrLabel": "Tipo de usuário",

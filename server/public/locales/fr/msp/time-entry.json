@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Ajouter une entrée de temps"
+    }
+  },
   "common": {
     "actions": {
       "view": "Voir",
@@ -127,12 +132,14 @@
       "billable": "Facturable",
       "notes": "Remarques",
       "deleteTimeEntry": "Supprimer l'entrée de temps",
-      "unsavedChanges": "Modifications non enregistrées"
+      "unsavedChanges": "Modifications non enregistrées",
+      "contractLine": "Ligne de contrat"
     },
     "placeholders": {
       "selectService": "Sélectionnez une prestation",
       "selectDate": "Sélectionnez une date",
-      "addNotes": "Ajouter des notes"
+      "addNotes": "Ajouter des notes",
+      "selectContractLine": "Sélectionner une ligne de contrat"
     },
     "validation": {
       "startBeforeEnd": "L'heure de début doit être antérieure à l'heure de fin",
@@ -150,6 +157,9 @@
       "task": "Par défaut depuis la tâche",
       "phase": "Par défaut depuis la phase",
       "project": "Par défaut depuis le projet"
+    },
+    "options": {
+      "resolveContractLineLater": "Aucune ligne - résoudre plus tard"
     }
   },
   "workItemPicker": {
@@ -396,7 +406,7 @@
     "noContract": "Aucune ligne de contrat trouvée pour ce service. Le temps sera acheminé vers le contrat par défaut géré par le système.",
     "contract": "Contrat: {{name}}",
     "defaultContract": "Contrat par défaut géré par le système",
-    "multipleLines": "Plusieurs lignes de contrat disponibles - en utilisant la sélection par défaut"
+    "multipleEligible": "Plusieurs lignes de contrat sont admissibles à cette date. Sélectionnez une ligne de contrat pour enregistrer l'affectation."
   },
   "billableLegend": {
     "title": "Légende facturable",
@@ -513,7 +523,8 @@
     "entryMissingPeriod": "La feuille de temps de cette entrée n'a pas de période et ne peut pas être ouverte.",
     "noPeriods": "Aucune période de temps n'est configurée, la saisie du temps est donc impossible. Demandez à un administrateur de créer des périodes de temps sous Paramètres → Saisie du temps.",
     "noEditablePeriods": "Toutes les feuilles de temps sont soumises ou approuvées ; il n’y a donc aucun jour où ajouter du temps. Demandez à un approbateur de rouvrir une feuille, ou à un administrateur d’ajouter une période.",
-    "prepareFailed": "Une erreur s'est produite lors de la préparation de l'entrée de temps. Veuillez réessayer."
+    "prepareFailed": "Une erreur s'est produite lors de la préparation de l'entrée de temps. Veuillez réessayer.",
+    "periodRange": "{{start}} – {{end}}"
   },
   "suggestions": {
     "title": "Suggestions",
@@ -538,7 +549,9 @@
       "checklistChanged": "liste de contrôle modifiée",
       "linksChanged": "liens modifiés",
       "updated": "mis à jour"
-    }
+    },
+    "activitySummary_few": "première activité {{first}} · dernière {{last}} · {{count}} actions ({{kinds}})",
+    "activitySummary_many": "première activité {{first}} · dernière {{last}} · {{count}} actions ({{kinds}})"
   },
   "stopwatch": {
     "pausedNotice_one": "{{active}} suivi en {{count}} segment (pause : {{paused}})",
@@ -557,6 +570,8 @@
       "confirm": "Continuer",
       "cancel": "Annuler"
     },
-    "ticketFallbackName": "Ticket {{number}}"
+    "ticketFallbackName": "Ticket {{number}}",
+    "pausedNotice_few": "{{active}} suivis en {{count}} segments (pause : {{paused}})",
+    "pausedNotice_many": "{{active}} suivis en {{count}} segments (pause : {{paused}})"
   }
 }

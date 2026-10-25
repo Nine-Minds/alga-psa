@@ -8,6 +8,8 @@ const root = fileURLToPath(new URL('../../', import.meta.url));
 export default defineConfig({
   root,
   resolve: { alias: {
+    // The kernel imports the user-type predicates; resolve them from source (dist is not built here).
+    '@alga-psa/types': `${root}packages/types/src/index.ts`,
     '@alga-psa/authorization/kernel': `${root}packages/authorization/src/kernel/index.ts`,
     '@alga-psa/shared/billingClients/calendarMonthEndClosePolicy': `${root}shared/billingClients/calendarMonthEndClosePolicy.ts`,
   } },

@@ -186,3 +186,47 @@ export async function createUser(
 
   return userId;
 }
+
+/**
+ * Insert a non-interactive ('service') user. The CE schema rejects that user_type, so the
+ * EE F001 migration is applied first through an admin connection (the app user does not own
+ * the tables). The migration is idempotent.
+ */
+export async function createServiceUser(db: Knex, tenantId: string): Promise<string> {
+  const adminPassword = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'postpass123');
+  const admin = knex({
+    client: 'pg',
+    connection: {
+      host: process.env.DB_HOST || 'localhost',
+      port: Number.parseInt(process.env.DB_PORT || '5432', 10),
+      user: process.env.DB_USER_ADMIN || 'postgres',
+      password: adminPassword,
+      database: process.env.DB_NAME_SERVER,
+    },
+  });
+  try {
+    const migration = (await import(
+      path.join(repoRoot, 'ee', 'server', 'migrations', '20261018090000_widen_users_user_type_check_for_service.cjs')
+    )) as { up?: (k: Knex) => Promise<void>; default?: { up: (k: Knex) => Promise<void> } };
+    await (migration.up ?? migration.default!.up)(admin);
+  } finally {
+    await admin.destroy().catch(() => undefined);
+  }
+
+  const userId = uuidv4();
+  await db('users').insert({
+    user_id: userId,
+    tenant: tenantId,
+    username: `svc.${userId}`,
+    first_name: 'Service',
+    last_name: 'Principal',
+    email: `svc.${userId}@example.com`,
+    hashed_password: 'hashed_password_here',
+    created_at: new Date(),
+    two_factor_enabled: false,
+    is_google_user: false,
+    is_inactive: false,
+    user_type: 'service',
+  });
+  return userId;
+}

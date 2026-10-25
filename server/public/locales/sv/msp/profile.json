@@ -533,6 +533,8 @@
         "customHeadersPlaceholder": "Authorization: Bearer abc123\nX-Source: alga-psa",
         "ticketFilter": "Ärendefilter",
         "ticketFilterPlaceholder": "Ett ärende-UUID per rad. Lämna tomt för att ta emot alla matchande ärendehändelser.",
+        "legacyEventsHelp": "Dessa händelsetyper stöds inte längre. De finns kvar på den här webhooken men levereras aldrig. Avmarkera en typ för att ta bort den.",
+        "legacyEventLabel": "stöds inte",
         "retryConfig": "Inställningar för nya försök i JSON",
         "verifySsl": "Verifiera SSL-certifikat",
         "webhookActive": "Webhooken är aktiv",
@@ -731,6 +733,9 @@
     }
   },
   "connectSso": {
+    "proFeature": {
+      "description": "Kontokoppling med SSO är tillgänglig i Pro. Uppgradera för att ansluta ditt Google Workspace- eller Microsoft 365-konto för smidig autentisering."
+    },
     "linkError": {
       "title": "SSO-kopplingen misslyckades.",
       "no_matching_user": "Kontot du loggade in med är {{providerEmail}}, men din AlgaPSA-inloggning är {{accountEmail}}. Koppla ett konto som använder {{accountEmail}}, eller be administratören för din identitetsleverantör att göra {{accountEmail}} till kontots primära e-postadress.",
@@ -797,6 +802,7 @@
       "signingSecretMissing": "Webhookens signeringshemlighet saknas. Rotera signeringshemligheten och försök igen.",
       "deliveryNotFound": "Leveransen hittades inte.",
       "testNotRetryable": "Testleveranser kan inte skickas igen.",
+      "unsupportedEventType": "Händelsetypen stöds inte: {{eventTypes}}",
       "payloadInvalid": "Denna leverans kan inte skickas igen eftersom den sparade nyttolasten är ogiltig.",
       "validation": {
         "unknownEntity": "Okänd webhookentitet ”{{entity}}”.",

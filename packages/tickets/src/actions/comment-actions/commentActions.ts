@@ -1,6 +1,7 @@
 // @ts-nocheck
 // TODO: Comment model method signature changes
 'use server'
+import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
@@ -72,7 +73,7 @@ async function assertClientCanCreateComment(
   user: any,
   comment: Omit<IComment, 'tenant'>
 ): Promise<void> {
-  if (user?.user_type !== 'client') {
+  if (!isClientUserType(user?.user_type)) {
     return;
   }
 
@@ -115,6 +116,26 @@ async function assertClientCanCreateComment(
 
   if (!ticket || ticket.client_id !== clientId) {
     throw new Error('Client user cannot access this ticket');
+  }
+
+  // Comment.insert re-roots a client reply aimed at an internal thread into a
+  // fresh public thread (D1, for inbound email whose headers resolve to an
+  // internal thread). A portal user never sees internal threads, so an explicit
+  // parent_comment_id pointing at one is rejected here instead.
+  if (comment.parent_comment_id) {
+    const parentThread = await tenantDb(trx, tenant)
+      .tenantJoin(
+        tenantScopedTable(trx, 'comments as parent', tenant),
+        'comment_threads as thread',
+        'parent.thread_id',
+        'thread.thread_id'
+      )
+      .select('thread.is_internal as thread_is_internal')
+      .where('parent.comment_id', comment.parent_comment_id)
+      .first();
+    if (parentThread?.thread_is_internal) {
+      throw new Error('Reply visibility must match the thread root visibility');
+    }
   }
 }
 
@@ -333,7 +354,8 @@ export const createComment = withAuth(async (
           const createdAt = insertedComment?.created_at ?? undefined;
           const visibility = comment.is_internal ? 'internal' : 'public';
 
-          const isInternalUser = user?.user_type === 'internal';
+          // internal | service are both 'user' authors (a service user is never a contact author).
+          const isInternalUser = isMspPrincipalUserType(user?.user_type);
           const hasContactId = Boolean(user?.contact_id);
           const author = isInternalUser
             ? { authorType: 'user', authorId: comment.user_id }
@@ -533,7 +555,11 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, comme
 
       // Set author_type based on user type
       if (user) {
-        comment.author_type = user.user_type === 'internal' ? 'internal' : 'client';
+        comment.author_type = isClientUserType(user.user_type)
+          ? 'client'
+          : isMspPrincipalUserType(user.user_type)
+            ? 'internal'
+            : 'unknown';
       } else {
         comment.author_type = 'unknown';
       }

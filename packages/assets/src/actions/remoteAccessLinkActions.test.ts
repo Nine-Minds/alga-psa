@@ -7,12 +7,18 @@ const mocks = vi.hoisted(() => {
     name: 'Workstation One',
     asset_tag: 'A-1',
     serial_number: null,
+    rmm_device_id: '12345',
+    rmm_provider: 'ninjaone',
+    rmm_organization_id: null,
     attributes: {},
     client_name: 'Example Client',
   };
   const links = [
     { label: 'Name link', url_template: 'https://remote.example/{asset.name}' },
     { label: 'Serial link', url_template: 'https://remote.example/{asset.serial_number}' },
+    { label: 'Ninja link', url_template: 'https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview' },
+    { label: 'Org link', url_template: 'https://remote.example/{asset.rmm_organization_id}' },
+    { label: 'RMM link', url_template: 'https://remote.example/#/deviceDashboard/{asset.rmm_device_id}/details' },
   ];
   const assetQuery: any = {
     select: vi.fn(() => assetQuery),
@@ -21,6 +27,7 @@ const mocks = vi.hoisted(() => {
   };
   const linkQuery: any = {
     orderBy: vi.fn(() => linkQuery),
+    insert: vi.fn(async () => undefined),
     then: (resolve: (value: typeof links) => unknown, reject?: (reason: unknown) => unknown) =>
       Promise.resolve(links).then(resolve, reject),
   };
@@ -37,7 +44,7 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: vi.fn(async () => ({ knex: {} })),
+  createTenantKnex: vi.fn(async () => ({ knex: { fn: { now: () => 'now' } } })),
   tenantDb: () => mocks.db,
 }));
 
@@ -59,6 +66,21 @@ describe('getRemoteAccessLinksForAsset', () => {
     expect(result).toMatchObject({ actionError: 'Template must begin with http:// or https:// and a literal host.' });
   });
 
+  it('accepts RMM placeholders when saving a template', async () => {
+    const result = await saveRemoteAccessLink({
+      label: 'Ninja',
+      url_template: 'https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview',
+    });
+    expect(result).toBeUndefined();
+    expect(mocks.linkQuery.insert).toHaveBeenCalled();
+    expect(await saveRemoteAccessLink({ label: 'P', url_template: 'https://remote.example/{asset.rmm_provider}/{asset.rmm_organization_id}' })).toBeUndefined();
+  });
+
+  it('still rejects unsupported asset placeholders', async () => {
+    const result = await saveRemoteAccessLink({ label: 'Bad', url_template: 'https://remote.example/{asset.attributes}' });
+    expect(result).toMatchObject({ actionError: 'Template contains an unsupported placeholder.' });
+  });
+
   it('returns a permissionError when settings permission is missing', async () => {
     mocks.hasPermission.mockResolvedValue(false);
     const result = await listRemoteAccessLinks();
@@ -69,6 +91,28 @@ describe('getRemoteAccessLinksForAsset', () => {
     await expect(getRemoteAccessLinksForAsset('asset-1')).resolves.toEqual([
       { label: 'Name link', url: 'https://remote.example/Workstation%20One' },
       { label: 'Serial link', url: null },
+      { label: 'Ninja link', url: 'https://app.ninjarmm.com/#/deviceDashboard/12345/overview' },
+      { label: 'Org link', url: null },
+      { label: 'RMM link', url: 'https://remote.example/#/deviceDashboard/12345/details' },
     ]);
+    expect(mocks.assetQuery.select).toHaveBeenCalledWith(expect.arrayContaining([
+      'assets.rmm_device_id',
+      'assets.rmm_provider',
+      'assets.rmm_organization_id',
+    ]));
+  });
+
+  it('accepts the RMM device id placeholder when saving a template', async () => {
+    const result = await saveRemoteAccessLink({
+      label: 'NinjaOne',
+      url_template: 'https://example.rmmservice.com/#/deviceDashboard/{asset.rmm_device_id}/details',
+    });
+    expect(result).toBeUndefined();
+    expect(mocks.linkQuery.insert).toHaveBeenCalled();
+  });
+
+  it('still rejects unsupported asset placeholders when saving a template', async () => {
+    const result = await saveRemoteAccessLink({ label: 'Bad', url_template: 'https://remote.example/{asset.hostname}' });
+    expect(result).toMatchObject({ actionError: 'Template contains an unsupported placeholder.' });
   });
 });

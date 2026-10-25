@@ -454,7 +454,7 @@ const InteractionStatusSettings = (): React.JSX.Element => {
           setStatusToDelete(null);
         }}
         itemName={statusToDelete?.name || ''}
-        itemType="Status"
+        itemType={t('interactions.statuses.table.status')}
         onConfirm={confirmDeleteStatus}
       />
     </div>
