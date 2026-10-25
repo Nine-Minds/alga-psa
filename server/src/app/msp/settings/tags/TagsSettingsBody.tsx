@@ -3,7 +3,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { TagDisplaySettings } from '@alga-psa/tags/components';
+import { TagDisplaySettings } from '@alga-psa/tags/components/TagDisplaySettings';
 
 export default function TagsSettingsBody(): React.JSX.Element {
   const { t } = useTranslation('msp/settings');
