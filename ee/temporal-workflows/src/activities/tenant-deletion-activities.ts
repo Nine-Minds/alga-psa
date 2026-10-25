@@ -66,12 +66,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // top-level parent: 20261009120000 added assets.vendor_id -> vendors
   // (NO ACTION), and assets sits far below in the Asset details block, so
   // vendors has to move down with it (see the comment near the assets entry). ===
-  'staging_container_members', 'staging_containers', 'project_staging_lines',
+  'staging_container_members', 'staging_containers',
   'stock_movements', 'stock_transfer_lines', 'rma_cases', 'kit_components',
   'stock_levels', 'product_inventory_settings', 'count_lines', 'vendor_bill_lines',
   'po_landed_costs', 'purchase_order_lines', 'sales_order_lines',
   'document_template_assignments', 'vendor_products', 'ghost_usage_reviews',
-  'stock_units', 'count_sessions', 'vendor_bills', 'sales_orders',
+  'stock_units', 'project_staging_lines', 'count_sessions', 'vendor_bills', 'sales_orders',
   'stock_transfers', 'purchase_orders', 'document_templates',
   'stock_locations',
 
