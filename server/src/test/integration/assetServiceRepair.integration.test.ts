@@ -453,7 +453,7 @@ describe('AssetService REST repairs (integration)', () => {
   it('resolves a scanned serial to its asset via inventory lookup', async () => {
     const fx = await seedFixture();
     const ctx = { tenant: fx.tenantId, userId: fx.userId, db } as any;
-    const result = await new InventoryService().lookup('ASSET-PRIMARY', ctx);
+    const result = await new InventoryService().lookup('ASSET-PRIMARY', ctx, async (_trx, assets) => assets);
     expect(result.type).toBe('asset');
     if (result.type === 'asset') {
       expect(result.asset).toMatchObject({ asset_id: fx.assetId, name: 'Front desk workstation' });
