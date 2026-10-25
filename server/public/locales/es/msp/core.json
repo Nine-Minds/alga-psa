@@ -105,7 +105,8 @@
     "passwords": "Contraseñas",
     "ticketsAll": "Todos los tickets",
     "ticketsRecurring": "Tickets recurrentes",
-    "ticketsTemplates": "Plantillas de tickets"
+    "ticketsTemplates": "Plantillas de tickets",
+    "ticketsCannedResponses": "Respuestas predefinidas"
   },
   "sidebar": {
     "backToMain": "Volver al inicio",
