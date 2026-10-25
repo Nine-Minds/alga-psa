@@ -53,12 +53,13 @@ function fakeSource(overrides: Partial<ContractChargeSource> & {
     }),
     prepaidBlockIssuances: async () => [],
     hourBlockDraws: async () => null,
+    prepaidCoverage: async () => [],
     cadencePrepaidBlock: async () => null,
     fixed: charge("fixed") as any,
     hourly: (async (_t: unknown, exclusion: PooledTimeExclusion | null) => {
       exclusions.push(exclusion);
       calls.push("hourly");
-      return { facts: { kind: "hourly" } as any, taxContext: {} as any };
+      return { facts: { kind: "hourly", activity: [] } as any, taxContext: {} as any };
     }) as any,
     usage: charge("usage") as any,
     recurringQuantity: (async (kind: string) => {

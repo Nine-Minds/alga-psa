@@ -180,6 +180,17 @@ export interface CadencePrepaidBlockSupply {
   cadence: CadenceAdvanceRule;
 }
 
+/**
+ * One draw of a Prepaid Block line's block on a time entry, as a source
+ * supplies it. `blockStatus` is the block's lifecycle status (raw);
+ * the resolver decides what each status means (see applyPrepaidCoverage).
+ */
+export interface PrepaidCoverageRow {
+  entryId: string;
+  blockStatus: string;
+  minutes: number;
+}
+
 export interface ConfiguredService {
   serviceId: string;
   /** `contract_line_service_configuration.configuration_type`. */
@@ -248,6 +259,13 @@ export interface ContractChargeSource {
    * the source has no window for the line (e.g. no service period due).
    */
   hourBlockDraws(): Promise<HourBlockDrawSupply | null>;
+  /**
+   * The line's block draws on the given time entries (the activity the hourly
+   * charge would price). Raw data: the resolver decides which minutes are
+   * already paid for and which entries are held. Empty when the line has no
+   * blocks, or the source has no per-entry draws to report.
+   */
+  prepaidCoverage(entryIds: string[]): Promise<PrepaidCoverageRow[]>;
 
   fixed(timing: ResolvedBillingTiming): Promise<SuppliedCharge<"fixed"> | null>;
   hourly(

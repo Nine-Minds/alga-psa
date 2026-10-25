@@ -21,6 +21,7 @@ import type {
   CadencePrepaidBlockSupply,
   HourBlockDrawSupplyRow,
   PrepaidBlockIssuanceSupply,
+  PrepaidCoverageRow,
 } from "./types";
 
 export interface IssuableBlock {
@@ -98,6 +99,47 @@ export function selectHourBlockDrawRows(
         (row.block_status === "active" || row.block_status === "expired"),
     )
     .map(({ block_status: _blockStatus, ...row }) => row);
+}
+
+/**
+ * Overage subtraction for Prepaid Block lines (plan section 4).
+ *
+ * Minutes an entry drew from the line's `active` or `expired` blocks are
+ * already paid for and are removed from what the hourly charge prices; the
+ * remainder bills at the line's hourly rate. An entry with ANY minutes drawn
+ * from a `pending` block is HELD: not priced, not marked invoiced. It surfaces
+ * once the block activates (then it is covered or partially covered) or falls
+ * back to overage if the block is voided. Fully covered entries drop out.
+ * Entries with no rows pass through untouched.
+ */
+export function applyPrepaidCoverage<
+  A extends { sourceId: string; billableMinutes: number },
+>(activity: readonly A[], rows: readonly PrepaidCoverageRow[]): A[] {
+  if (rows.length === 0) return [...activity];
+  const covered = new Map<string, number>();
+  const held = new Set<string>();
+  for (const row of rows) {
+    const minutes = Number(row.minutes) || 0;
+    if (minutes <= 0) continue;
+    if (row.blockStatus === "pending") {
+      held.add(row.entryId);
+    } else if (row.blockStatus === "active" || row.blockStatus === "expired") {
+      covered.set(row.entryId, (covered.get(row.entryId) ?? 0) + minutes);
+    }
+  }
+  const result: A[] = [];
+  for (const entry of activity) {
+    if (held.has(entry.sourceId)) continue;
+    const drawn = covered.get(entry.sourceId) ?? 0;
+    if (drawn <= 0) {
+      result.push(entry);
+      continue;
+    }
+    const remainder = Number(entry.billableMinutes) - drawn;
+    if (remainder <= 0) continue;
+    result.push({ ...entry, billableMinutes: remainder });
+  }
+  return result;
 }
 
 /**

@@ -17,6 +17,7 @@ import type {
   UnpricedContractBillingObligation,
 } from "../domain";
 import {
+  applyPrepaidCoverage,
   planCadenceBlock,
   selectHourBlockDrawRows,
   selectIssuableBlocks,
@@ -27,6 +28,7 @@ import type {
   PoolDefinition,
   PoolPeriodState,
   PooledTimeExclusion,
+  SuppliedCharge,
   TimingRequest,
 } from "./types";
 
@@ -186,12 +188,31 @@ async function cadencePrepaidBlockCharges({
 }
 
 /**
+ * Removes what the line's prepaid blocks already cover from the hourly
+ * activity (see applyPrepaidCoverage). Null when nothing is left to price.
+ */
+async function withPrepaidCoverage(
+  source: ContractChargeSource,
+  charge: SuppliedCharge<"hourly">,
+): Promise<SuppliedCharge<"hourly"> | null> {
+  const activity = charge.facts.activity;
+  if (activity.length === 0) return charge;
+  const rows = await source.prepaidCoverage(activity.map((entry) => entry.sourceId));
+  if (rows.length === 0) return charge;
+  const remaining = applyPrepaidCoverage(activity, rows);
+  if (remaining.length === 0) return null;
+  return { ...charge, facts: { ...charge.facts, activity: remaining } };
+}
+
+/**
  * Hourly pricing, flagged when the line carries a cadence Prepaid Block: the
  * time left after the block's coverage is the "over prepaid block" overage,
  * billed at the line's own hourly rate in arrears.
  */
 async function hourlyCharges(context: FamilyContext): Promise<PlannedCharge[]> {
-  const charge = await context.source.hourly(context.timing!, exclusionFor(context));
+  const supplied = await context.source.hourly(context.timing!, exclusionFor(context));
+  if (!supplied) return [];
+  const charge = await withPrepaidCoverage(context.source, supplied);
   if (!charge) return [];
   const overPrepaidBlock = (await context.source.cadencePrepaidBlock()) !== null;
   return [

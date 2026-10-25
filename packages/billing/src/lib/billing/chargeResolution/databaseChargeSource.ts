@@ -35,6 +35,7 @@ import type {
   FactsOf,
   HourBlockDrawSupply,
   HourBlockDrawSupplyRow,
+  PrepaidCoverageRow,
   PoolDefinition,
   PoolPeriodState,
   PooledTimeExclusion,
@@ -78,6 +79,8 @@ export interface DatabaseChargeLoaders {
   ): Promise<PrepaidBlockIssuanceSupply[]>;
   /** The line's cadence-mode Prepaid Block terms, or null if it has none. */
   cadencePrepaidBlock(): Promise<CadencePrepaidBlockSupply | null>;
+  /** The line's block draws on these time entries (raw rows, no decisions). */
+  prepaidCoverage(entryIds: string[]): Promise<PrepaidCoverageRow[]>;
   /** Allocation rows of the line's blocks inside the service period, FIFO. */
   hourBlockDraws(
     timing: ResolvedBillingTiming,
@@ -629,6 +632,12 @@ export class DatabaseChargeSource implements ContractChargeSource {
     }
     this.cadenceBlock ??= this.input.loaders.cadencePrepaidBlock();
     return this.cadenceBlock;
+  }
+
+  async prepaidCoverage(entryIds: string[]): Promise<PrepaidCoverageRow[]> {
+    // Project-driven runs price project work, not a line's service period.
+    if (this.input.projectTarget || entryIds.length === 0) return [];
+    return this.input.loaders.prepaidCoverage(entryIds);
   }
 
   async hourBlockDraws(): Promise<HourBlockDrawSupply | null> {

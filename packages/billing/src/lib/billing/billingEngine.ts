@@ -129,6 +129,7 @@ import {
   type ChargeFamily,
   type ContractObligationSink,
   type HourBlockDrawSupplyRow,
+  type PrepaidCoverageRow,
   type PooledTimeExclusion,
   type CadencePrepaidBlockSupply,
   type PrepaidBlockIssuanceSupply,
@@ -4525,6 +4526,8 @@ export class BillingEngine {
             this.loadCadencePrepaidBlockSupply(clientId, line),
           prepaidBlockIssuances: (issuanceIds) =>
             this.loadPrepaidBlockIssuanceSupply(clientId, billingPeriod, issuanceIds),
+          prepaidCoverage: (entryIds) =>
+            this.loadPrepaidCoverageRows(line.contract_line_id, entryIds),
           hourBlockDraws: (timing) =>
             this.loadHourBlockDrawRows(clientId, line, asRecurring(timing)),
           fixed: (timing, sink) =>
@@ -5965,14 +5968,9 @@ export class BillingEngine {
     );
 
     const loadedTimeEntries = await query;
-    // Prepaid Block lines: minutes already drawn from the line's blocks are
-    // not priced here, and entries touching a pending block are held.
-    const timeEntries = projectTarget
-      ? loadedTimeEntries
-      : await this.applyPrepaidBlockCoverageToTimeEntries(
-          clientContractLine.contract_line_id,
-          loadedTimeEntries,
-        );
+    // Prepaid Block coverage (minutes already drawn, entries held by a pending
+    // block) is decided by the charge resolver from loadPrepaidCoverageRows.
+    const timeEntries = loadedTimeEntries;
 
     const obligation = {
       kind: "hourly",
@@ -6035,62 +6033,29 @@ export class BillingEngine {
   }
 
   /**
-   * Overage subtraction for Prepaid Block lines (plan section 4).
-   *
-   * Minutes an entry drew from the line's `active` or `expired` blocks are
-   * already paid for and are removed from what the hourly obligation prices;
-   * the remainder bills at the line's hourly rate. An entry with ANY minutes
-   * allocated to the line's `pending` block is HELD: not priced, not marked
-   * invoiced. It surfaces once the block activates (then it is covered or
-   * partially covered) or falls back to overage if the block is voided. Only
-   * blocks owned by this contract line count; ad-hoc blocks are untouched.
-   * Lines without blocks pay one indexed lookup and change nothing.
+   * Data supply for the resolver's prepaid coverage (see applyPrepaidCoverage
+   * in chargeResolution/prepaidBlockRules.ts): the allocations of the given
+   * time entries to blocks owned by this contract line, with the block status.
+   * Ad-hoc blocks are untouched. Lines without blocks pay one indexed lookup.
    */
-  private async applyPrepaidBlockCoverageToTimeEntries<
-    T extends { entry_id: string; billable_duration: number | string },
-  >(contractLineId: string, timeEntries: T[]): Promise<T[]> {
-    if (timeEntries.length === 0) return timeEntries;
+  private async loadPrepaidCoverageRows(
+    contractLineId: string,
+    entryIds: string[],
+  ): Promise<PrepaidCoverageRow[]> {
+    if (entryIds.length === 0) return [];
     const db = tenantDb(this.knex, this.tenant as string);
     const query = db.table("hour_block_time_allocations as hba");
     db.tenantJoin(query, "hour_blocks as hb", "hba.block_id", "hb.block_id");
     const rows: Array<{ time_entry_id: string; status: string; minutes: string | number }> =
       await query
         .where("hb.contract_line_id", contractLineId)
-        .whereIn(
-          "hba.time_entry_id",
-          timeEntries.map((entry) => entry.entry_id),
-        )
+        .whereIn("hba.time_entry_id", entryIds)
         .select("hba.time_entry_id", "hb.status", "hba.minutes");
-    if (rows.length === 0) return timeEntries;
-
-    const coveredByEntry = new Map<string, number>();
-    const heldEntries = new Set<string>();
-    for (const row of rows) {
-      const minutes = Number(row.minutes) || 0;
-      if (minutes <= 0) continue;
-      if (row.status === "pending") {
-        heldEntries.add(row.time_entry_id);
-      } else if (row.status === "active" || row.status === "expired") {
-        coveredByEntry.set(
-          row.time_entry_id,
-          (coveredByEntry.get(row.time_entry_id) ?? 0) + minutes,
-        );
-      }
-    }
-
-    const result: T[] = [];
-    for (const entry of timeEntries) {
-      if (heldEntries.has(entry.entry_id)) continue;
-      const covered = coveredByEntry.get(entry.entry_id) ?? 0;
-      if (covered <= 0) {
-        result.push(entry);
-        continue;
-      }
-      const remainder = Number(entry.billable_duration) - covered;
-      if (remainder <= 0) continue;
-      result.push({ ...entry, billable_duration: remainder });
-    }
-    return result;
+    return rows.map((row) => ({
+      entryId: row.time_entry_id,
+      blockStatus: row.status,
+      minutes: Number(row.minutes),
+    }));
   }
 
   /** Resolve entry eligibility with the same timing/coverage rules used to bill it. */

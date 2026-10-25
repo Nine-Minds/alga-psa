@@ -36,6 +36,7 @@ import {
   type ContractChargeSource,
   type CadencePrepaidBlockSupply,
   type HourBlockDrawSupply,
+  type PrepaidCoverageRow,
   type PoolDefinition,
   type PoolPeriodState,
   type ResolutionDiagnostics,
@@ -440,6 +441,30 @@ export class ScenarioChargeSource implements ContractChargeSource {
     };
   }
 
+  /** Billable minutes of each synthetic entry the hourly charge was built from. */
+  private readonly syntheticMinutes = new Map<string, number>();
+
+  /**
+   * The simulated draw as per-entry rows: the ledger's share of the period's
+   * demand that blocks absorbed, taken from every synthetic entry as an active
+   * block draw. The resolver applies the same subtraction it applies to the
+   * engine's real allocation rows.
+   */
+  async prepaidCoverage(entryIds: string[]): Promise<PrepaidCoverageRow[]> {
+    const share = Math.min(
+      1,
+      Math.max(0, this.ledger()?.demandCoverage.get(this.input.periodIndex) ?? 0),
+    );
+    if (!(share > 0)) return [];
+    const rows: PrepaidCoverageRow[] = [];
+    for (const entryId of entryIds) {
+      const minutes = this.syntheticMinutes.get(entryId);
+      if (minutes === undefined) continue;
+      rows.push({ entryId, blockStatus: "active", minutes: minutes * share });
+    }
+    return rows;
+  }
+
   async hourBlockDraws(): Promise<HourBlockDrawSupply | null> {
     const ledger = this.ledger();
     const draws = ledger?.drawsByPeriod.get(this.input.periodIndex) ?? [];
@@ -556,14 +581,14 @@ export class ScenarioChargeSource implements ContractChargeSource {
     const timeEntries = [] as Array<ReturnType<typeof buildSyntheticTimeEntry>>;
 
     for (const service of hourlyServices) {
-      const assumedHours =
-        resolveAssumedQuantity(
-          scenario.assumptions,
-          line.key,
-          service.service_id,
-          periodIndex,
-        ) *
-        (1 - Math.min(1, Math.max(0, this.ledger()?.demandCoverage.get(periodIndex) ?? 0)));
+      // The full assumed demand: what the blocks cover is subtracted by the
+      // resolver from prepaidCoverage(), the same rule the engine's draws use.
+      const assumedHours = resolveAssumedQuantity(
+        scenario.assumptions,
+        line.key,
+        service.service_id,
+        periodIndex,
+      );
       if (!(assumedHours > 0)) continue;
 
       if (!hasResolvableHourlyRate(service)) {
@@ -585,15 +610,15 @@ export class ScenarioChargeSource implements ContractChargeSource {
         continue;
       }
 
-      timeEntries.push(
-        buildSyntheticTimeEntry({
-          line,
-          service,
-          periodIndex,
-          assumedHours,
-          servicePeriodStart: timing.servicePeriodStart,
-        }),
-      );
+      const entry = buildSyntheticTimeEntry({
+        line,
+        service,
+        periodIndex,
+        assumedHours,
+        servicePeriodStart: timing.servicePeriodStart,
+      });
+      this.syntheticMinutes.set(entry.entry_id, Number(entry.billable_duration));
+      timeEntries.push(entry);
     }
 
     if (timeEntries.length === 0) return null;
