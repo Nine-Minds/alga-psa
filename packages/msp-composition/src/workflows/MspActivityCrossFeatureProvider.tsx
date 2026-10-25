@@ -68,6 +68,7 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
         initialClient={d.client}
         initialContacts={d.contacts}
         initialContactInfo={d.contactInfo}
+        initialDisplayTags={d.displayTags}
         {...ticketDetailsInitialProps(d)}
         initialAdditionalAgents={d.additionalAgents}
         statusOptions={d.options.status}

@@ -25,6 +25,7 @@ import type {
   IUserWithRoles,
   TicketResponseState,
   TagDisplayAudience,
+  IDisplayTag,
 } from '@alga-psa/types';
 import { loadDisplayTagsForEntities, displayTagKey } from '@alga-psa/tags/lib/loadDisplayTags';
 import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
@@ -745,6 +746,16 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         .first();
     }
 
+    // Chip tags for the requester and client, restricted to the caller's audience by display rules.
+    const chipTags = await loadDisplayTagsForEntities(trx, tenant, displayAudienceForUser(user), [
+      { taggedType: 'contact', ids: [ticket.contact_name_id] },
+      { taggedType: 'client', ids: [ticket.client_id] },
+    ]);
+    const displayTags = {
+      contact: ticket.contact_name_id ? (chipTags.get(displayTagKey('contact', ticket.contact_name_id)) ?? []) : [],
+      client: ticket.client_id ? (chipTags.get(displayTagKey('client', ticket.client_id)) ?? []) : [],
+    };
+
     // Fetch created by user
     const createdByUser = ticket.entered_by ? 
       await tenantScopedTable(trx, 'users', tenant)
@@ -1140,6 +1151,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       client,
       contacts,
       contactInfo,
+      displayTags,
       createdByUser,
       updatedByUser,
       board,
@@ -1172,6 +1184,38 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     if (expected) {
       return expected;
     }
+    throw error;
+  }
+});
+
+/**
+ * Chip tags for a ticket's requester and client, for the caller's audience. The ticket page calls
+ * this when the requester or client is changed in place, so the header badges follow the new party.
+ */
+export const getTicketPartyDisplayTags = withAuth(async (
+  user,
+  { tenant },
+  contactId: string | null,
+  clientId: string | null
+): Promise<{ contact: IDisplayTag[]; client: IDisplayTag[] } | TicketActionError> => {
+  const { knex: db } = await createTenantKnex();
+  try {
+    return await withTransaction(db, async (trx) => {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view ticket');
+      }
+      const chipTags = await loadDisplayTagsForEntities(trx, tenant, displayAudienceForUser(user), [
+        { taggedType: 'contact', ids: [contactId] },
+        { taggedType: 'client', ids: [clientId] },
+      ]);
+      return {
+        contact: contactId ? (chipTags.get(displayTagKey('contact', contactId)) ?? []) : [],
+        client: clientId ? (chipTags.get(displayTagKey('client', clientId)) ?? []) : [],
+      };
+    });
+  } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) return expected;
     throw error;
   }
 });

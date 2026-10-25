@@ -58,7 +58,8 @@ import { findBoardById } from "../../actions/board-actions/boardActions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "../../actions/comment-actions/commentActions";
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { getAllActiveContacts, getClientLocations, getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
-import { addTicketCommentWithCache, updateTicketWithCache } from "../../actions/optimizedTicketActions";
+import { EMPTY_PARTY_DISPLAY_TAGS, type PartyDisplayTags } from '../../lib/partyDisplayTags';
+import { addTicketCommentWithCache, updateTicketWithCache, getTicketPartyDisplayTags } from "../../actions/optimizedTicketActions";
 import { getTicketById, updateTicket, deleteTicket } from "../../actions/ticketActions";
 import {
     checkTicketClosure,
@@ -181,6 +182,8 @@ interface TicketDetailsProps {
     initialClient?: IClient | null;
     initialContacts?: IContact[];
     initialContactInfo?: IContact | null;
+    /** Chip tags for the requester and client, already filtered to the viewer's audience. */
+    initialDisplayTags?: PartyDisplayTags;
     initialCreatedByUser?: IUser | null;
     initialUpdatedByUser?: IUser | null;
     initialBoard?: any;
@@ -319,6 +322,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     initialClient = null,
     initialContacts = [],
     initialContactInfo = null,
+    initialDisplayTags = EMPTY_PARTY_DISPLAY_TAGS,
     initialCreatedByUser = null,
     initialUpdatedByUser = null,
     initialBoard = null,
@@ -618,6 +622,20 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }, [initialDocuments]);
     const [client, setClient] = useState<IClient | null>(initialClient);
     const [contactInfo, setContactInfo] = useState<IContact | null>(initialContactInfo);
+    const [displayTags, setDisplayTags] = useState<PartyDisplayTags>(initialDisplayTags);
+    // The requester or client can be changed in place; reload their chip tags when they move off
+    // the pair the server rendered.
+    const displayTagsPartyRef = useRef<string>(`${initialContactInfo?.contact_name_id ?? ''}|${initialClient?.client_id ?? ''}`);
+    useEffect(() => {
+      const partyKey = `${contactInfo?.contact_name_id ?? ''}|${client?.client_id ?? ''}`;
+      if (partyKey === displayTagsPartyRef.current) return;
+      displayTagsPartyRef.current = partyKey;
+      let cancelled = false;
+      void getTicketPartyDisplayTags(contactInfo?.contact_name_id ?? null, client?.client_id ?? null).then((result) => {
+        if (!cancelled && result && 'contact' in result && 'client' in result) setDisplayTags(result);
+      });
+      return () => { cancelled = true; };
+    }, [contactInfo?.contact_name_id, client?.client_id]);
     const [createdByUser, setCreatedByUser] = useState<IUser | null>(initialCreatedByUser);
     const [updatedByUser, setUpdatedByUser] = useState<IUser | null>(initialUpdatedByUser);
 
@@ -4324,6 +4342,7 @@ const handleClose = () => {
                     resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
                     createdByUser={createdByUser}
                     contactInfo={contactInfo}
+                    displayTags={displayTags}
                     client={client}
                     onContactClick={handleContactClick}
                     onClientClick={handleClientClick}
@@ -4529,6 +4548,7 @@ const handleClose = () => {
                                     ticket={ticket}
                                 client={client}
                                 contactInfo={contactInfo}
+                                displayTags={displayTags}
                                 createdByUser={createdByUser}
                                 board={board}
                                 timeDescription={timeDescription}
