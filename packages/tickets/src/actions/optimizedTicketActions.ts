@@ -748,9 +748,11 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     // Chip tags for the requester and client, restricted to the caller's audience by display rules.
     const chipTags = await loadDisplayTagsForEntities(trx, tenant, displayAudienceForUser(user), [
-      { taggedType: 'contact', ids: [ticket.contact_name_id] },
+      { taggedType: 'contact', ids: [ticket.contact_name_id, ...contacts.map((c) => c.contact_name_id)] },
       { taggedType: 'client', ids: [ticket.client_id] },
     ]);
+    // The requester picker shows the same chips as the header.
+    contacts = contacts.map((c) => ({ ...c, displayTags: chipTags.get(displayTagKey('contact', c.contact_name_id)) ?? [] }));
     const displayTags = {
       contact: ticket.contact_name_id ? (chipTags.get(displayTagKey('contact', ticket.contact_name_id)) ?? []) : [],
       client: ticket.client_id ? (chipTags.get(displayTagKey('client', ticket.client_id)) ?? []) : [],
@@ -2481,12 +2483,16 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
       const clientIds = clientsData.map((c: IClient) => c.client_id);
       const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
     
+      const clientChipTags = await loadDisplayTagsForEntities(trx, tenant, displayAudienceForUser(user), [
+        { taggedType: 'client', ids: clientIds },
+      ]);
       const clientsWithLogos = clientsData.map((clientData: IClient) => {
         const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
         return {
           ...clientData,
           properties: clientData.properties || {},
           logoUrl,
+          displayTags: clientChipTags.get(displayTagKey('client', clientData.client_id)) ?? [],
         };
       });
       // --- End Logo URL Processing ---

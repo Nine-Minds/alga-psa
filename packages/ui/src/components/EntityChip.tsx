@@ -49,44 +49,15 @@ const TagBadge = ({ tag }: { tag: IDisplayTag }) => {
 };
 
 /**
- * One way to show a client or a requester anywhere: avatar, name, and the tags the display rules
- * picked for this viewer. Used by the ticket list, ticket header, detail properties and the pickers
- * so a "VIP" badge looks and behaves the same everywhere.
+ * The badge run on its own: the first `maxBadges` tags in the given order, then a "+n" whose tooltip
+ * lists the rest. Pickers use this next to their own row layout; `EntityChip` uses it internally.
  */
-export const EntityChip = ({
-  kind,
-  id,
-  name,
-  imageUrl = null,
-  tags,
-  maxBadges = 2,
-  onClick,
-  buttonId,
-  emptyLabel,
-  extra,
-  className,
-}: EntityChipProps) => {
+export const EntityTagBadges = ({ tags, maxBadges = 2 }: { tags?: readonly IDisplayTag[] | null; maxBadges?: number }) => {
   const { t } = useTranslation('common');
-  const label = name?.trim();
   const shown = (tags ?? []).slice(0, Math.max(0, maxBadges));
   const hidden = (tags ?? []).slice(Math.max(0, maxBadges));
-
-  const avatar = !label ? (
-    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#cbd5e1] text-[10px] font-bold text-white">
-      —
-    </span>
-  ) : kind === 'client' ? (
-    <ClientAvatar clientId={id || label} clientName={label} logoUrl={imageUrl ?? null} size="xs" />
-  ) : (
-    <ContactAvatar contactId={id || label} contactName={label} avatarUrl={imageUrl ?? null} size="xs" />
-  );
-
-  const body = (
-    <span data-testid="entity-chip" className={cn('flex min-w-0 max-w-full items-center gap-2 overflow-hidden', className)}>
-      {avatar}
-      <span className="min-w-[6ch] truncate">
-        {label || <span className="text-[rgb(var(--color-text-400))]">{emptyLabel ?? '—'}</span>}
-      </span>
+  return (
+    <>
       {shown.map((tag) => (
         <TagBadge key={tag.tag_id} tag={tag} />
       ))}
@@ -113,6 +84,47 @@ export const EntityChip = ({
           </span>
         </Tooltip>
       ) : null}
+    </>
+  );
+};
+
+/**
+ * One way to show a client or a requester anywhere: avatar, name, and the tags the display rules
+ * picked for this viewer. Used by the ticket list, ticket header, detail properties and the pickers
+ * so a "VIP" badge looks and behaves the same everywhere.
+ */
+export const EntityChip = ({
+  kind,
+  id,
+  name,
+  imageUrl = null,
+  tags,
+  maxBadges = 2,
+  onClick,
+  buttonId,
+  emptyLabel,
+  extra,
+  className,
+}: EntityChipProps) => {
+  const label = name?.trim();
+
+  const avatar = !label ? (
+    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#cbd5e1] text-[10px] font-bold text-white">
+      —
+    </span>
+  ) : kind === 'client' ? (
+    <ClientAvatar clientId={id || label} clientName={label} logoUrl={imageUrl ?? null} size="xs" />
+  ) : (
+    <ContactAvatar contactId={id || label} contactName={label} avatarUrl={imageUrl ?? null} size="xs" />
+  );
+
+  const body = (
+    <span data-testid="entity-chip" className={cn('flex min-w-0 max-w-full items-center gap-2 overflow-hidden', className)}>
+      {avatar}
+      <span className="min-w-[6ch] truncate">
+        {label || <span className="text-[rgb(var(--color-text-400))]">{emptyLabel ?? '—'}</span>}
+      </span>
+      <EntityTagBadges tags={tags} maxBadges={maxBadges} />
       {extra}
     </span>
   );
