@@ -404,7 +404,7 @@ export class ScenarioChargeSource implements ContractChargeSource {
           ? (service.configuration_quantity ?? service.quantity)
           : service.quantity,
         service_base_rate: config.base_rate,
-        base_rate_basis: service.configuration.base_rate_basis ?? null,
+        base_rate_basis: config.base_rate_basis ?? null,
         pricing_basis: isUnit(service) ? ("unit" as const) : null,
       };
     });

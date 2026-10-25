@@ -61,6 +61,7 @@ import {
   hasRecurringQuantityPrice,
   uniqueProductServices,
 } from "./scenarioChargeSource";
+import { resolveAssumedQuantity } from "./syntheticActivity";
 import { createReadOnlyTaxPorts } from "./readOnlyTaxPorts";
 import { simulatePrepaidBlockTimeline } from "./prepaidBlockTimeline";
 import { validateScenarioTenantScope } from "./validateScenarioTenantScope";
