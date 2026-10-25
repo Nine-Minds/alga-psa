@@ -1998,7 +1998,7 @@
     },
     "total": {
       "title": "Geschätzte monatliche Summe",
-      "description": "Nur feste Gebühren. Stunden- und nutzungsbasierte Services werden separat basierend auf der tatsächlichen Nutzung abgerechnet.",
+      "description": "Produkte und feste Gebühren sind in dieser Summe enthalten. Stunden- und nutzungsbasierte Services werden nach tatsächlichem Aufwand abgerechnet.",
       "perMonth": "pro Monat",
       "savedDraftValue": "Gespeicherter Entwurfswert: {{amount}}"
     },
@@ -2427,6 +2427,22 @@
       "description": "Dieser Vertrag hat keine Vertragspositionen. Fügen Sie zuerst Vertragspositionen hinzu und kehren Sie dann zur Simulation zurück.",
       "title": "Noch nichts zu simulieren"
     },
+    "errors": {
+      "title": "Die Simulation kann nicht ausgeführt werden",
+      "baselineTitle": "Der aktuelle Vertrag kann nicht simuliert werden, daher gibt es nichts zum Vergleichen",
+      "unsupportedLineType": "Die Vertragsposition „{{lineName}}\" hat den Positionstyp „{{lineType}}\", den der Simulator nicht berechnen kann. Ändern Sie die Position auf Festpreis, Stundensatz oder Nutzung und simulieren Sie erneut.",
+      "unsupportedServiceConfiguration": "„{{serviceName}}\" in der Vertragsposition „{{lineName}}\" hat den Konfigurationstyp „{{configurationType}}\", den der Simulator nicht berechnen kann. Stellen Sie die Leistung auf Festpreis, Stundensatz, Nutzung oder Kontingent ein und simulieren Sie erneut.",
+      "serviceNotInCatalog": "Die Vertragsposition „{{lineName}}\" verwendet eine Leistung, die nicht mehr im Servicekatalog enthalten ist ({{serviceId}}). Entfernen Sie sie aus der Position oder stellen Sie die Leistung wieder her und simulieren Sie erneut.",
+      "poolMissing": "„{{serviceName}}\" in der Vertragsposition „{{lineName}}\" ist als Kontingent eingerichtet, hat aber keinen Pool mit inkludierten Stunden. Ergänzen Sie die inkludierten Stunden des Pools in der Vertragsposition und simulieren Sie erneut.",
+      "contractNotFound": "Dieser Vertrag ist nicht verfügbar. Möglicherweise wurde er gelöscht. Laden Sie die Seite neu.",
+      "clientNotAvailable": "Der Kunde für diese Simulation ist nicht verfügbar. Möglicherweise wurde er gelöscht. Wählen Sie einen anderen Kunden.",
+      "clientRequired": "Wählen Sie vor der Simulation einen Kunden aus.",
+      "historyRequiresClient": "Historische Annahmen benötigen ein Szenario, das an einen echten Kunden gebunden ist. Wählen Sie einen Kunden für diese Simulation und versuchen Sie es erneut.",
+      "invalidReplayRange": "Der Wiedergabezeitraum ist ungültig. Wählen Sie einen Zeitraum, der nach seinem Beginn endet und höchstens 120 Abrechnungszeiträume umfasst.",
+      "scenarioInvalid": "Dieses Szenario kann nicht simuliert werden, weil seine Einrichtung unvollständig ist. Laden Sie die Seite neu und versuchen Sie es erneut.",
+      "scenarioReferenceInvalid": "Dieses Szenario verweist auf etwas, das nicht mehr verfügbar ist, etwa eine Vertragsposition, Leistung, einen Steuersatz oder Kundenstandort. Laden Sie die Seite neu, um mit dem aktuellen Vertrag zu beginnen.",
+      "unexpected": "Der Simulator konnte wegen eines unerwarteten Fehlers nicht ausgeführt werden. Versuchen Sie es erneut. Wenn das Problem weiterhin besteht, wenden Sie sich an den Support."
+    },
     "explanation": {
       "amount": "Betrag",
       "close": "Schließen",
@@ -2473,6 +2489,7 @@
       "simulatedDelta": "simulierte Differenz"
     },
     "runBar": {
+      "blocked": "Simulation nicht möglich",
       "compareToggle": "Änderungen gegenüber aktuellem Vertrag anzeigen",
       "horizonOption": "{{count}} Kundenabrechnungszeiträume",
       "lastRun": "Simulation aktuell · {{count}} Kundenabrechnungszeiträume",
@@ -2481,6 +2498,7 @@
       "simulating": "Simulation läuft…",
       "stale": "Änderungen nicht simuliert",
       "staleBanner": "Diese Beträge stammen aus der vorherigen Simulation. Simulation aktualisieren, um die neuesten Änderungen einzubeziehen.",
+      "staleBlockedBanner": "Diese Meldung stammt aus der vorherigen Simulation. Aktualisieren Sie die Simulation, um Ihre letzten Änderungen zu berücksichtigen.",
       "updateSimulation": "Simulation aktualisieren"
     },
     "scenario": {

@@ -1275,15 +1275,7 @@ export class TimeSheetService extends BaseService<any> {
         // Update assignees if provided
         if (data.assigned_user_ids !== undefined) {
           // Human-work guard: validate only assignees this write adds (legacy ones are kept).
-          const currentAssignees = await tenantDb(trx, context.tenant).table('schedule_entry_assignees')
-            .where({ entry_id: id })
-            .select('user_id');
-          const currentAssigneeIds = new Set(currentAssignees.map((row: { user_id: string }) => row.user_id));
-          await assertHumanWorkAssignee(
-            trx,
-            context.tenant,
-            data.assigned_user_ids.filter((userId: string) => !currentAssigneeIds.has(userId))
-          );
+          await assertHumanWorkAssignee(trx, context.tenant, addedToEntry);
 
           await tenantDb(trx, context.tenant).table('schedule_entry_assignees')
             .where({ entry_id: id })
@@ -1411,22 +1403,11 @@ export class TimeSheetService extends BaseService<any> {
       
       const query = this.buildTenantScopedQuery(knex, context);
   
-      // Build search query
-      if (searchData.fields && searchData.fields.length > 0) {
-        query.where(function() {
-          searchData.fields!.forEach(field => {
-            if (field === 'user_name') {
-              this.orWhere(knex.raw(`CONCAT(users.first_name, ' ', users.last_name)`), 'ilike', `%${searchData.query}%`);
-            } else {
-              this.orWhere(`${tableName}.${field}`, 'ilike', `%${searchData.query}%`);
-            }
-          });
-        });
-      } else {
-        // Default search in notes
-        query.where(`${tableName}.notes`, 'ilike', `%${searchData.query}%`);
-      }
-  
+      // Join users first: the name match below references users.*.
+      // `user_name` is the only searchable field; no column name derived from input reaches SQL.
+      db.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id', { type: 'left' });
+      query.where(knex.raw(`CONCAT(users.first_name, ' ', users.last_name)`), 'ilike', `%${searchData.query}%`);
+
       // Apply filters
       if (searchData.approval_statuses && searchData.approval_statuses.length > 0) {
         query.whereIn(`${tableName}.approval_status`, searchData.approval_statuses);
@@ -1448,9 +1429,6 @@ export class TimeSheetService extends BaseService<any> {
         query.where('time_periods.end_date', '<=', searchData.date_to);
       }
   
-      // Add joins
-      db.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id', { type: 'left' });
-
       query.select(
           `${tableName}.*`,
           knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`)
@@ -1596,37 +1574,59 @@ export class TimeSheetService extends BaseService<any> {
     }
 
 
-  private async getTimeSheetEntries(timeSheetId: string, context: ServiceContext): Promise<any[]> {
+  async getTimeSheetEntries(timeSheetId: string, context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
       
+      // work_date is a DATE column; node-pg would turn it into a JS Date (serialized as an
+      // ISO datetime), so format it in SQL. The later alias overrides the `*` value.
       return tenantDb(knex, context.tenant).table('time_entries')
         .where({ time_sheet_id: timeSheetId })
+        .select('time_entries.*', knex.raw("to_char(work_date, 'YYYY-MM-DD') as work_date"))
         .orderBy('start_time');
     }
 
 
-  private async getTimeSheetSummary(timeSheetId: string, context: ServiceContext): Promise<any> {
+  async getTimeSheetSummary(timeSheetId: string, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
-      const stats = await tenantDb(knex, context.tenant).table('time_entries')
+      // worked_minutes is the real duration (end - start); billable_duration is the billed
+      // subset in minutes, so non-billable hours are the difference. Billable minutes are
+      // clamped to the entry's worked minutes (an entry with NULL start_time/end_time has 0
+      // worked minutes but may still carry a billable_duration), so billable <= total and
+      // non-billable >= 0 always hold.
+      const rows = await tenantDb(knex, context.tenant).table('time_entries')
         .where({ time_sheet_id: timeSheetId })
         .select([
-          knex.raw('SUM(billable_duration) / 60.0 as total_hours'),
-          knex.raw('SUM(CASE WHEN billable_duration > 0 THEN billable_duration ELSE 0 END) / 60.0 as billable_hours'),
-          knex.raw('COUNT(*) as entry_count')
-        ])
-        .first() as any;
-  
-      const totalHours = parseFloat(stats?.total_hours || '0');
-      const billableHours = parseFloat(stats?.billable_hours || '0');
+          knex.raw("COALESCE(work_item_type, 'unknown') as work_item_type"),
+          knex.raw("to_char(work_date, 'YYYY-MM-DD') as work_date"),
+          knex.raw('COALESCE(EXTRACT(EPOCH FROM (end_time - start_time)) / 60.0, 0) as worked_minutes'),
+          knex.raw(
+            'LEAST(COALESCE(billable_duration, 0), COALESCE(EXTRACT(EPOCH FROM (end_time - start_time)) / 60.0, 0)) as billable_minutes'
+          )
+        ]) as any[];
+
+      let workedMinutes = 0;
+      let billableMinutes = 0;
+      const entriesByType: Record<string, number> = {};
+      const entriesByDay: Record<string, number> = {};
+      for (const row of rows) {
+        const worked = Number(row.worked_minutes);
+        workedMinutes += worked;
+        billableMinutes += Number(row.billable_minutes);
+        entriesByType[row.work_item_type] = (entriesByType[row.work_item_type] ?? 0) + worked / 60;
+        entriesByDay[row.work_date] = (entriesByDay[row.work_date] ?? 0) + worked / 60;
+      }
+
+      const totalHours = workedMinutes / 60;
+      const billableHours = billableMinutes / 60;
   
       return {
         total_hours: totalHours,
         billable_hours: billableHours,
         non_billable_hours: totalHours - billableHours,
-        entries_by_type: {}, // Would calculate from entries
-        entries_by_day: {}, // Would calculate from entries
-        approval_ready: parseInt(stats?.entry_count || '0') > 0
+        entries_by_type: entriesByType,
+        entries_by_day: entriesByDay,
+        approval_ready: rows.length > 0
       };
     }
 

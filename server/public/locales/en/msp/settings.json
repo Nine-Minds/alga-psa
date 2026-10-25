@@ -2379,7 +2379,23 @@
         "nothingImportedBody": "This run created no new records. Every row matched something that already existed, so nothing was changed.",
         "claimedBySamePackage": "Already migrated by this package",
         "claimedByOtherPackage": "Already migrated by {{file}}",
-        "claimedByExistingEntity": "Matched to an existing entity"
+        "claimedByExistingEntity": "Matched to an existing entity",
+        "matchedBySku": "Matched existing product by SKU"
+      },
+      "spreadsheet": {
+        "entities": {
+          "products": "Products (catalog / price list)",
+          "vendorProducts": "Vendor price list (distributor costs)"
+        },
+        "productsHint": "Prices and costs are read as decimal amounts (for example 1,299.50) using the currency column when present, otherwise the tenant currency. Negative, non-numeric or over-precise amounts are dropped and reported; the row is still imported. Products match existing products by SKU; vendor price-list rows reference a product by SKU and create or match the vendor by name."
+      },
+      "configure": {
+        "products": {
+          "title": "Products",
+          "serviceType": "Service type for new products",
+          "serviceTypePlaceholder": "Select a service type",
+          "serviceTypeHelp": "Products whose SKU already exists are matched and left unchanged; only new products are filed under this service type."
+        }
       }
     },
     "jobDetails": {

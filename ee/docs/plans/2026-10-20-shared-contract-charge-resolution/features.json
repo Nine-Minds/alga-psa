@@ -1,0 +1,67 @@
+[
+  {
+    "id": "F001",
+    "description": "Parity suite comparing simulator vs engine dry run for live contract fixtures",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Pool line identity settled on contract_line_id (documented, no live charge change)",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "ContractChargeSource port with per-demand TimingRequest and source-supplied poolPeriodState",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "Family registry in fixed order fixed, hourly, usage, bucket, product, license",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Pure pool coverage rule (member first, catch-all limited to line services)",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "resolveContractLineCharges returns obligations plus pooled-time exclusion",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "description": "Database source (moved engine loaders incl. pooled-hour exclusion)",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "description": "Engine switched to resolver; invoice-line output unchanged",
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "description": "Scenario source for saved contracts, drafts, legacy and new-style templates",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "description": "Simulator switched to resolver; configuration_type sorting removed from simulator and engine loaders",
+    "implemented": true
+  },
+  {
+    "id": "F011",
+    "description": "Acceptance test: hourly line + 10h pool + 14 assumed hours = 4 overage hours, no plain hourly",
+    "implemented": true
+  },
+  {
+    "id": "F012",
+    "description": "Template contract_template_line_buckets pool simulated",
+    "implemented": true
+  },
+  {
+    "id": "F013",
+    "description": "LEVERAGE markers at remaining engine/simulator splits",
+    "implemented": true
+  }
+]

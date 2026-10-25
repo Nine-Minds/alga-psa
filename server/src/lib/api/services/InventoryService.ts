@@ -292,6 +292,17 @@ function throwInventoryApiError(error: unknown): never {
   throw new ValidationError(message);
 }
 
+/**
+ * Decides which scanned asset rows the caller may see. Receives the candidate
+ * rows (already tenant scoped) and the lookup transaction, and returns the
+ * subset the caller is authorized to read. Lookup is deny-by-default: when no
+ * authorizer is supplied no asset is ever returned.
+ */
+export type InventoryLookupAssetAuthorizer = <T extends { asset_id: string; client_id?: string | null }>(
+  trx: Knex.Transaction,
+  assets: T[],
+) => Promise<T[]>;
+
 export class InventoryService extends BaseService<any> {
   constructor() {
     super({
@@ -301,7 +312,11 @@ export class InventoryService extends BaseService<any> {
     });
   }
 
-  async lookup(code: string, context: ServiceContext): Promise<InventoryLookupResult> {
+  async lookup(
+    code: string,
+    context: ServiceContext,
+    authorizeAssets?: InventoryLookupAssetAuthorizer,
+  ): Promise<InventoryLookupResult> {
     const knex = await this.getDbForContext(context);
     return withTransaction(knex, async (trx) => {
       const trimmed = code.trim();
@@ -338,8 +353,15 @@ export class InventoryService extends BaseService<any> {
       // offers "View asset"); don't also surface that same asset as a separate
       // hit. Only directly-matched assets NOT reachable through a found unit.
       const unitAssetIds = new Set(units.map((row: any) => row.asset_id).filter(Boolean));
-      const assets = [...new Map((assetRows as any[]).map((row) => [row.asset_id, row])).values()]
+      const candidateAssets = [...new Map((assetRows as any[]).map((row) => [row.asset_id, row])).values()]
         .filter((row: any) => !unitAssetIds.has(row.asset_id));
+      // Deny by default, and filter BEFORE `domains` is computed: an unreadable
+      // asset must not count as a match domain (it would turn a product result
+      // into a `multi`, or an `asset` result into something other than `none`).
+      // Never post-filter the response union; `multi` requires >= 2 matches.
+      const assets = authorizeAssets && candidateAssets.length > 0
+        ? await authorizeAssets(trx, candidateAssets)
+        : [];
 
       const domains = (products.length > 0 ? 1 : 0) + (units.length > 0 ? 1 : 0) + (assets.length > 0 ? 1 : 0);
 

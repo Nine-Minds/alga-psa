@@ -346,7 +346,8 @@
     "inboundDomainAutoCreateHelp": "Przypisane domeny mogą tworzyć kontakt dla zaufanego nowego nadawcy.",
     "inboundDomainAutoCreateUpdated": "Zaktualizowano ustawienie kontaktów nadawców.",
     "inboundDomainAutoCreateUpdateFailed": "Nie udało się zaktualizować ustawienia kontaktów nadawców.",
-    "recurringTickets": "Zgłoszenia cykliczne"
+    "recurringTickets": "Zgłoszenia cykliczne",
+    "software": "Oprogramowanie"
   },
   "clientCommandCenter": {
     "cards": {
@@ -359,7 +360,8 @@
       "people": "Osoby",
       "record": "Karta klienta",
       "service": "Serwis",
-      "timeline": "Wszystko po kolei"
+      "timeline": "Wszystko po kolei",
+      "software": "Oprogramowanie"
     },
     "csatEmpty": "Brak odpowiedzi w ankietach.",
     "discardCancel": "Edytuj dalej",
@@ -456,6 +458,12 @@
       "primary": "Główny"
     },
     "pulseError": "Nie udało się załadować podsumowania klienta.",
+    "quickLinks": {
+      "assets": "Zasoby",
+      "contacts": "Kontakty",
+      "label": "Szybkie linki",
+      "software": "Oprogramowanie"
+    },
     "rail": {
       "close": "Zamknij",
       "installBase": "Baza instalacji",
@@ -490,6 +498,15 @@
       "onTrack": "SLA zgodnie z planem",
       "onTrackLeft": "SLA: pozostało {{left}}",
       "paused": "SLA wstrzymane"
+    },
+    "software": {
+      "assetsMeta_few": "{{count}} zasoby",
+      "assetsMeta_many": "{{count}} zasobów",
+      "assetsMeta_one": "1 zasób",
+      "assetsMeta_other": "{{count}} zasobów",
+      "loadError": "Nie udało się wczytać inwentarza oprogramowania.",
+      "titles": "tytułów",
+      "viewAll": "Całe oprogramowanie"
     },
     "timeline": {
       "daysAgo": "{{count}} dni temu",
@@ -2074,5 +2091,21 @@
     "manager": "Kierownik",
     "seesTickets": "Widzi zgłoszenia profilu",
     "editHint": "Edytuje się je przy profilu rozliczeniowym, w ustawieniach rozliczeń klienta."
+  },
+  "clientSoftware": {
+    "columns": {
+      "assets": "Zasoby",
+      "lastSeen": "Ostatnio widziano",
+      "title": "Tytuł",
+      "versions": "Wersje"
+    },
+    "empty": "Brak inwentarza oprogramowania — inwentarz jest zbierany dla każdego urządzenia",
+    "emptyAssetsLink": "Zobacz zasoby",
+    "exportCsv": "Eksportuj CSV",
+    "exportError": "Nie udało się wyeksportować inwentarza oprogramowania.",
+    "installedOn": "Zainstalowano na",
+    "loadError": "Nie udało się wczytać inwentarza oprogramowania.",
+    "moreAssets": "i {{count}} więcej (pierwsze {{limit}} według nazwy)",
+    "searchPlaceholder": "Szukaj oprogramowania..."
   }
 }

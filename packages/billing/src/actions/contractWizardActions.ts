@@ -2074,16 +2074,23 @@ export const createClientContractFromWizard = withAuth(async (
             tenant,
             custom_rate: customRate,
           },
-          // Placeholder (products bill on their own); kept so readers that
-          // expect a fixed-config row for a Fixed member still find one.
-          { base_rate: 0, base_rate_basis: 'per_unit' }
+          // No placeholder zero: absent a member rate the catalog price in the
+          // contract currency resolves (the engine's chain), and a stored 0
+          // 'bundle' base_rate would shadow it in readers. The basis is 'unit'
+          // because that is how the engine bills a product member (quantity x
+          // resolved rate, never a share of a line total) -- 'bundle' made the
+          // UI call the seat count "an allocation of the bundle price". The
+          // engine and valuation never branch on a product's pricing_basis.
+          { base_rate: null, rate_provenance: 'inherited', pricing_basis: 'unit' }
         );
       }
 
       const fixedConfigModel = new ContractLineFixedConfig(trx, tenant);
       await fixedConfigModel.upsert({
         contract_line_id: productsLineId,
-        base_rate: 0,
+        // NULL = no line override. A line-level 0 is read as a price by anything
+        // that reads contract_lines.custom_rate directly.
+        base_rate: null,
         enable_proration: recurringAuthoringPolicy.enableProration,
         billing_cycle_alignment: recurringAuthoringPolicy.billingCycleAlignment,
         tenant,
