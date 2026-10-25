@@ -196,7 +196,7 @@ async function cleanupTenant(tenant: string) {
   }
   for (const name of [
     'asset_custody_events', 'asset_custody', 'asset_history', 'asset_associations', 'assets', 'tickets',
-    'stock_locations', 'asset_statuses', 'tenant_settings', 'clients', 'users',
+    'asset_type_registry', 'stock_locations', 'asset_statuses', 'tenant_settings', 'clients', 'users',
   ]) await del(name);
   if (!isCitus) await db.raw('ALTER TABLE asset_custody_events ENABLE TRIGGER USER').catch(() => undefined);
   await unscoped('tenants').where({ tenant }).del().catch(() => undefined);
@@ -483,6 +483,50 @@ describe('equipment custody (integration)', () => {
     const [one, two] = await Promise.all([run('Dock A'), run('Dock B')]);
     expect([one.asset.asset_tag, two.asset.asset_tag].sort()).toEqual([`${ticket.ticket_number}-EQ1`, `${ticket.ticket_number}-EQ2`]);
     expect(await counts(fx.tenantId)).toEqual(before);
+  });
+
+  it('receives a New item of a tenant type with a Required field, with no attributes and no stock rows', async () => {
+    const fx = await seedFixture();
+    await table(fx.tenantId, 'asset_type_registry').insert({
+      tenant: fx.tenantId, slug: 'rack_server', name: 'Rack Server', icon: null, is_builtin: false, display_order: 0,
+      fields_schema: JSON.stringify([{ key: 'rack_unit', label: 'Rack Unit', kind: 'number', required: true }]),
+    });
+    const stockFor = async () => ({
+      units: Number((await table(fx.tenantId, 'stock_units').where({ client_id: fx.clientId }).count('* as count').first() as any).count),
+      movements: Number((await table(fx.tenantId, 'stock_movements').where({ source_doc_id: fx.ticketId }).count('* as count').first() as any).count),
+    });
+    const before = await stockFor();
+    const r = unwrap<any>(await receiveEquipment(intake(fx, { new_asset: { name: 'DL380', asset_type: 'rack_server' } })));
+    const row = await table(fx.tenantId, 'assets').where({ asset_id: r.asset.asset_id }).first();
+    expect(row).toMatchObject({ status: 'held_by_msp', ownership: 'client', client_id: fx.clientId, asset_type: 'rack_server' });
+    const open = await table(fx.tenantId, 'asset_custody').where({ asset_id: r.asset.asset_id }).whereNull('closed_at');
+    expect(open).toHaveLength(1);
+    expect(await stockFor()).toEqual(before);
+    expect(before).toEqual({ units: 0, movements: 0 });
+  });
+
+  it('still rejects an invalid supplied attribute, without an attributes.* path in the message', async () => {
+    const fx = await seedFixture();
+    await table(fx.tenantId, 'asset_type_registry').insert({
+      tenant: fx.tenantId, slug: 'rack_server', name: 'Rack Server', icon: null, is_builtin: false, display_order: 0,
+      fields_schema: JSON.stringify([{ key: 'rack_unit', label: 'Rack Unit', kind: 'number', required: true }]),
+    });
+    const { toCustodyResult } = await import('@alga-psa/assets/lib/custody/actionResult');
+    const { createAssetInTransaction } = await import('@alga-psa/assets/actions/assetActions');
+    // Receive's input cannot carry attributes, so exercise the same call options directly: required is relaxed,
+    // but a supplied wrong-typed value is still validated.
+    const invalid = await toCustodyResult(() =>
+      db.transaction((trx) =>
+        createAssetInTransaction(trx, fx.tenantId, fx.userId, {
+          asset_type: 'rack_server', client_id: fx.clientId, asset_tag: `BAD-${randomUUID().slice(0, 6)}`, name: 'Bad',
+          status: 'held_by_msp', attributes: { rack_unit: 'not-a-number' },
+        } as any, { requireCustomAttributes: false })
+      )
+    );
+    expect(invalid.success).toBe(false);
+    if (invalid.success) return;
+    expect(invalid.error.message).not.toContain('attributes.');
+    expect(invalid.error.messageKey).toMatch(/^msp\/assets:errors\.asset\.missingField/);
   });
 
   it('skips a generated tag already used by an unrelated asset in the tenant', async () => {

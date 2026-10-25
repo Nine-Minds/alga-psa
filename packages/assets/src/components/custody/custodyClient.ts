@@ -23,6 +23,11 @@ export function looksLikeRawPayload(message: string | undefined | null): boolean
   return typeof message === 'string' && message.trimStart().startsWith('{');
 }
 
+/** An internal field path (`attributes.rack_unit`) is as unfit for users as a JSON payload. */
+export function looksLikeInternalPath(message: string | undefined | null): boolean {
+  return typeof message === 'string' && /^\s*attributes\./.test(message);
+}
+
 export function custodyOutcome<T>(result: unknown): CustodyOutcome<T> {
   if (isActionPermissionError(result)) return { ok: false, message: result.permissionError, denied: true };
   const r = result as {
@@ -32,7 +37,7 @@ export function custodyOutcome<T>(result: unknown): CustodyOutcome<T> {
   } | null;
   if (r && r.success === true) return { ok: true, data: r.data as T };
   const raw = r?.error?.message;
-  if (!raw || looksLikeRawPayload(raw)) {
+  if (!raw || looksLikeRawPayload(raw) || looksLikeInternalPath(raw)) {
     return { ok: false, message: 'Something went wrong.', denied: false, messageKey: 'msp/assets:custody.errors.generic' };
   }
   return {

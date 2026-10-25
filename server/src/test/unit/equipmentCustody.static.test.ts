@@ -49,4 +49,9 @@ describe('equipment custody static guards', () => {
   it('never calls createAssetAssociation (intake links the ticket itself)', () => {
     for (const f of SOURCES) expect(strip(fs.readFileSync(f, 'utf8')), f).not.toMatch(/createAssetAssociation/);
   });
+
+  it('intake creates the asset without requiring custom attributes', () => {
+    const code = strip(fs.readFileSync(path.join(ROOT, 'packages/assets/src/lib/custody/receiveEquipment.ts'), 'utf8'));
+    expect(code).toMatch(/createAssetInTransaction\([\s\S]*?\}\s*as any,\s*\{\s*requireCustomAttributes:\s*false\s*\}\)/);
+  });
 });

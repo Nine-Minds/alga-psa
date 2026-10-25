@@ -5,7 +5,7 @@ import {
   isActionMessageError,
   type ActionMessageParams,
 } from '@alga-psa/ui/lib/errorHandling';
-import { assetActionErrorFrom } from '../../actions/assetActionErrors';
+import { assetActionErrorFrom, isAssetValidationError } from '../../actions/assetActionErrors';
 import { isCustodyError, type CustodyErrorCode } from './errors';
 
 /** What custody server actions return. Refusals are values (Next masks thrown messages in production). */
@@ -34,6 +34,22 @@ export async function toCustodyResult<T>(run: () => Promise<T>): Promise<Custody
     // mapping; reuse it so the caller gets a message plus i18n key instead of a rethrown raw payload.
     const mapped = assetActionErrorFrom(error);
     if (mapped && isActionMessageError(mapped)) {
+      // An attribute issue carries an internal `attributes.<key>` path; never surface it. Keep a field-named
+      // key if the receive path already supplied one, otherwise fall back to the generic missing-field key.
+      const asValidation: unknown = mapped;
+      if (isAssetValidationError(asValidation) && asValidation.validationIssues.some((i) => i.path[0] === 'attributes')) {
+        const keyed = getActionErrorMessageKey(mapped);
+        const named = keyed === 'msp/assets:errors.asset.missingFieldNamed' && !/attributes\./.test(asValidation.actionError);
+        return {
+          success: false,
+          error: {
+            code: 'validation',
+            message: named ? asValidation.actionError : 'Missing required asset field.',
+            messageKey: named ? keyed : 'msp/assets:errors.asset.missingField',
+            ...(named && getActionErrorMessageParams(mapped) ? { messageParams: getActionErrorMessageParams(mapped) } : {}),
+          },
+        };
+      }
       const messageKey = getActionErrorMessageKey(mapped);
       const messageParams = getActionErrorMessageParams(mapped);
       return {

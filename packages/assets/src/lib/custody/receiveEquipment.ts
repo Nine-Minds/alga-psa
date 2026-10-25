@@ -4,6 +4,7 @@ import { HELD_BY_MSP_STATUS, type Asset, type IAssetCustody, type IAssetCustodyE
 import type { ReceiveEquipmentInput } from '../schemas/assetCustody.schema';
 import { createAssetInTransaction } from '../../actions/assetActions';
 import { CustodyError } from './errors';
+import { getAssetTypeBySlug } from '../assetTypeRegistry';
 import { openCustody } from './openCustody';
 
 /**
@@ -55,6 +56,36 @@ export async function nextEquipmentTag(trx: Knex.Transaction, tenant: string, ti
   throw new CustodyError('tag_generation_failed', 'Could not generate a free equipment tag. Enter a tag manually.');
 }
 
+/**
+ * An attribute validation error is thrown as JSON with `attributes.<key>` paths. Re-throw it with each issue
+ * mapped to the translated "Missing required asset field: {{field}}" key, naming the field by the label from
+ * the type's fields_schema, so the dialog never shows an internal path. Anything else is returned unchanged.
+ */
+async function withAttributeFieldLabels(error: unknown, trx: Knex.Transaction, tenant: string, assetType: string): Promise<unknown> {
+  if (!(error instanceof Error) || !error.message.startsWith('{')) return error;
+  let parsed: { kind?: string; issues?: Array<{ path?: Array<string | number>; message?: string; code?: string }> };
+  try {
+    parsed = JSON.parse(error.message);
+  } catch {
+    return error;
+  }
+  if (parsed.kind !== 'validation' || !Array.isArray(parsed.issues)) return error;
+  const entry = await getAssetTypeBySlug(trx, tenant, assetType).catch(() => null);
+  const issues = parsed.issues.map((issue) => {
+    if (issue.path?.[0] !== 'attributes') return issue;
+    const key = String(issue.path[1] ?? '');
+    const label = entry?.fields_schema?.find((f) => f.key === key)?.label;
+    return label
+      ? {
+          ...issue,
+          message: `Missing required asset field: ${label}.`,
+          params: { messageKey: 'msp/assets:errors.asset.missingFieldNamed', messageParams: { field: label } },
+        }
+      : issue;
+  });
+  return new Error(JSON.stringify({ ...parsed, issues }));
+}
+
 export async function receiveEquipmentForTicket(
   trx: Knex.Transaction,
   tenant: string,
@@ -80,6 +111,8 @@ export async function receiveEquipmentForTicket(
   if (input.new_asset) {
     const n = input.new_asset;
     const assetTag = n.asset_tag ?? (await nextEquipmentTag(trx, tenant, String(ticket.ticket_number)));
+    // Intake creates a lightweight held asset: the dialog has no custom-field inputs, so do not require
+    // every custom attribute. Any attributes that are supplied are still schema-validated.
     const created = await createAssetInTransaction(trx, tenant, actorUserId, {
       asset_type: n.asset_type,
       client_id: ticket.client_id,
@@ -90,7 +123,9 @@ export async function receiveEquipmentForTicket(
       serial_number: n.serial_number ?? undefined,
       manufacturer: n.manufacturer,
       model: n.model,
-    } as any);
+    } as any, { requireCustomAttributes: false }).catch(async (error: unknown) => {
+      throw await withAttributeFieldLabels(error, trx, tenant, n.asset_type);
+    });
     assetId = created.asset_id;
     createdAsset = true;
     assetSummary = {

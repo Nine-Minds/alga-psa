@@ -105,6 +105,33 @@ describe('toCustodyResult asset-layer errors', () => {
     expect(result.error.messageParams).toEqual({ assetType: 'docking station' });
   });
 
+  it('never surfaces an attributes.<key> path: generic missing-field key without a label', async () => {
+    const { toCustodyResult } = await import('./actionResult');
+    const { attributeValidationError } = await import('../assetTypeAttributes');
+    const result = await toCustodyResult(async () => {
+      throw attributeValidationError([{ key: 'rack_unit', code: 'required', message: 'is required' }]);
+    });
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error.messageKey).toBe('msp/assets:errors.asset.missingField');
+    expect(result.error.message).not.toContain('attributes.');
+  });
+
+  it('keeps a field-named key when the issue carries the label', async () => {
+    const { toCustodyResult } = await import('./actionResult');
+    const result = await toCustodyResult(async () => {
+      throw new Error(JSON.stringify({ kind: 'validation', issues: [{
+        path: ['attributes', 'rack_unit'], code: 'required', message: 'Missing required asset field: Rack Unit.',
+        params: { messageKey: 'msp/assets:errors.asset.missingFieldNamed', messageParams: { field: 'Rack Unit' } },
+      }] }));
+    });
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error.messageKey).toBe('msp/assets:errors.asset.missingFieldNamed');
+    expect(result.error.messageParams).toEqual({ field: 'Rack Unit' });
+    expect(result.error.message).toBe('Missing required asset field: Rack Unit.');
+  });
+
   it('still rethrows unrelated errors', async () => {
     const { toCustodyResult } = await import('./actionResult');
     await expect(toCustodyResult(async () => { throw new Error('boom'); })).rejects.toThrow('boom');
