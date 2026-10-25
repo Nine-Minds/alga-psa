@@ -31,15 +31,20 @@ So there is no batch mode, no batch flag, and no second endpoint.
 Replace `formatCustodyForLabelMulti(facts)` with the full rule, keeping every function pure:
 
 ```ts
-/** The custody line for ONE label. `picked` is the picked asset's facts (null when none picked or it is not held). */
+/** The custody line for ONE label. `pick` is null when no asset was picked (valid pick); otherwise `pick.facts` are
+ *  the picked asset's facts, or null when the picked asset has no open custody. */
 export function formatCustodyForLabelSubject(
   held: ReadonlyArray<CustodyLabelFacts>,   // every readable held item on the ticket, in caller order
-  picked: CustodyLabelFacts | null
+  pick: { facts: CustodyLabelFacts | null } | null
 ): CustodyLabelFacts | null;
 ```
 
-- `picked` non-null → return it verbatim (the picked item decides; a picked item with no open custody
-  passes `null` here and so never prints the ticket count).
+> Implementation note: the first draft typed the pick as `CustodyLabelFacts | null`, which cannot tell "no pick"
+> from "picked, not held" (both `null`), so a not-held pick would have printed the ticket count. The wrapper object
+> makes the two cases distinct.
+
+- `pick` non-null → return `pick.facts` verbatim (the picked item decides; a picked item with no open custody has
+  `facts: null` and so never prints the ticket count).
 - no pick, `held.length === 0` → `null`.
 - no pick, `held.length === 1` → `held[0]`.
 - no pick, `held.length > 1` → `{ custodyLocation: `${n} items held`, nextAction: earliestFollowUp(held) }`.
