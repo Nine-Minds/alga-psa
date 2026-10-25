@@ -101,6 +101,7 @@
   },
   "dependencies": {
     "@alga-psa/assets": "*",
+    "@alga-psa/inventory": "*",
     "@alga-psa/auth": "*",
     "@alga-psa/billing": "*",
     "@alga-psa/clients": "*",
