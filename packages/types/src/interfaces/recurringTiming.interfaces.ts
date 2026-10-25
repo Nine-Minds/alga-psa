@@ -22,7 +22,8 @@ export type RecurringChargeFamily =
   | 'license'
   | 'bucket'
   | 'hourly'
-  | 'usage';
+  | 'usage'
+  | 'prepaid_block';
 export type RecurringTimingMetadataValue = string | number | boolean | null;
 export type RecurringTimingMetadata = Record<string, RecurringTimingMetadataValue>;
 

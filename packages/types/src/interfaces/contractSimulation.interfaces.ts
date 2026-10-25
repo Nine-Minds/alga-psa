@@ -180,6 +180,10 @@ export interface ScenarioPrepaidBlockConfig {
   /** Carried for display; renewal issuance is not simulated. */
   trigger_on_renewal: boolean;
   replenishment_tier: "draft" | "auto_issue";
+  /** Defaults to 'consumption'. 'cadence' issues one block per service period, billed in advance. */
+  issue_mode?: "consumption" | "cadence";
+  /** Cadence mode: further periods an unused block stays valid (0..12). Defaults to 0. */
+  rollover_periods?: number;
 }
 
 export interface ScenarioLine {
@@ -404,6 +408,8 @@ export interface ContractDraftPrepaidBlockLine {
     trigger_on_expiry?: boolean;
     trigger_on_renewal?: boolean;
     replenishment_tier?: "draft" | "auto_issue";
+    issue_mode?: "consumption" | "cadence";
+    rollover_periods?: number;
   };
 }
 

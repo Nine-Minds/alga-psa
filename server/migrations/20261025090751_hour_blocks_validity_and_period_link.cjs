@@ -1,0 +1,70 @@
+/**
+ * Prepaid hours on contracts (alga-2026-0002684), migration 2 of 3: block
+ * validity window and the link from a block to the service period that issued it.
+ *
+ *   hour_blocks + valid_from              date NULL   (null = no lower bound; every existing row)
+ *               + service_period_record_id uuid NULL  (soft reference, like issuance_id)
+ *   CHECK valid_from <= expiration_date
+ *   CHECK source_type = 'contract' requires issuance_id or service_period_record_id
+ *   INDEX (tenant, contract_line_id, valid_from)
+ *
+ * See ee/docs/plans/2026-10-20-prepaid-hours-contracts.md (D5, D8, section 4).
+ * No data backfill. service_period_record_id carries no FK: recurring service
+ * periods are colocated differently from hour_blocks on Citus, and the period
+ * is released/voided by the lifecycle code rather than by cascade.
+ * Transaction-free, like the other hour_blocks migrations.
+ */
+exports.config = { transaction: false };
+
+const VALIDITY_CK = 'hour_blocks_valid_from_expiration_check';
+const SOURCE_CK = 'hour_blocks_contract_source_check';
+
+exports.up = async function up(knex) {
+  await knex.raw('ALTER TABLE hour_blocks ADD COLUMN IF NOT EXISTS valid_from date NULL');
+  await knex.raw('ALTER TABLE hour_blocks ADD COLUMN IF NOT EXISTS service_period_record_id uuid NULL');
+
+  await knex.raw('ALTER TABLE hour_blocks DROP CONSTRAINT IF EXISTS ??', [VALIDITY_CK]);
+  await knex.raw(
+    'ALTER TABLE hour_blocks ADD CONSTRAINT ?? CHECK (valid_from IS NULL OR expiration_date IS NULL OR valid_from <= expiration_date)',
+    [VALIDITY_CK],
+  );
+
+  // Existing contract blocks are all issuance-issued; guard anyway so an odd
+  // legacy row cannot fail the deploy (NOT VALID still enforces new writes).
+  const orphan = await knex.raw(
+    "SELECT 1 FROM hour_blocks WHERE source_type = 'contract' AND issuance_id IS NULL AND service_period_record_id IS NULL LIMIT 1",
+  );
+  await knex.raw('ALTER TABLE hour_blocks DROP CONSTRAINT IF EXISTS ??', [SOURCE_CK]);
+  await knex.raw(
+    "ALTER TABLE hour_blocks ADD CONSTRAINT ?? CHECK (source_type <> 'contract' OR issuance_id IS NOT NULL OR service_period_record_id IS NOT NULL)" +
+      (orphan.rows.length > 0 ? ' NOT VALID' : ''),
+    [SOURCE_CK],
+  );
+
+  await knex.raw(
+    'CREATE INDEX IF NOT EXISTS hour_blocks_contract_line_valid_from_idx ON hour_blocks (tenant, contract_line_id, valid_from)',
+  );
+  await knex.raw(
+    'CREATE INDEX IF NOT EXISTS hour_blocks_service_period_record_idx ON hour_blocks (tenant, service_period_record_id) WHERE service_period_record_id IS NOT NULL',
+  );
+};
+
+exports.down = async function down(knex) {
+  const row = await knex('hour_blocks')
+    .whereNotNull('valid_from')
+    .orWhereNotNull('service_period_record_id')
+    .count({ n: '*' })
+    .first();
+  if (Number(row.n) > 0) {
+    throw new Error(
+      `Cannot roll back hour block validity: ${row.n} hour block(s) carry valid_from or service_period_record_id ` +
+        '(cadence prepaid blocks). Void and remove them explicitly first.',
+    );
+  }
+  await knex.raw('DROP INDEX IF EXISTS hour_blocks_service_period_record_idx');
+  await knex.raw('DROP INDEX IF EXISTS hour_blocks_contract_line_valid_from_idx');
+  await knex.raw('ALTER TABLE hour_blocks DROP CONSTRAINT IF EXISTS ??', [SOURCE_CK]);
+  await knex.raw('ALTER TABLE hour_blocks DROP CONSTRAINT IF EXISTS ??', [VALIDITY_CK]);
+  await knex.raw('ALTER TABLE hour_blocks DROP COLUMN IF EXISTS service_period_record_id');
+  await knex.raw('ALTER TABLE hour_blocks DROP COLUMN IF EXISTS valid_from');
+};
