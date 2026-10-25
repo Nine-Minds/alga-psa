@@ -3,14 +3,16 @@
 import type { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
-import type { IRmaCase } from '@alga-psa/types';
+import type { IRmaCase, IRmaEvent } from '@alga-psa/types';
+import { createAssetReadContext, filterReadableAssets } from '@alga-psa/assets/lib/assetReadAuthorization';
+import { getOpenCustodyForAssets } from '@alga-psa/assets/lib/custody/queries';
 import {
   approveWarrantyClaimCore, approveWarrantyClaimSchema, assetGate, cancelWarrantyClaimCore, cancelWarrantyClaimSchema,
   closeWarrantyRmaCore, closeWarrantyRmaSchema, denyWarrantyClaimCore, denyWarrantyClaimSchema, markDeviceReceivedCore,
   markDeviceReceivedSchema, openWarrantyClaimCore, openWarrantyClaimSchema, publishWarrantyClaimOpened, publishRmaUpdated,
   receiveVendorReplacementCore, receiveVendorReplacementSchema, recordVendorCreditCore, recordVendorCreditSchema,
   recordVendorRepairCore, recordVendorRepairSchema, requireWarrantyPerm, returnDeviceToClientCore, returnDeviceToClientSchema,
-  runWarrantyTransition, shipToVendorCore, shipToVendorSchema, withWarrantyErrors, type WarrantyActionError,
+  runWarrantyTransition, shipToVendorCore, resolveRmaReadScope, filterReadableRmaCases, listRmaEvents as listRmaEventRows, shipToVendorSchema, withWarrantyErrors, type WarrantyActionError,
 } from '../lib/rma';
 import { rmaCaseQuery } from '../lib/rmaCaseQuery';
 import type { z } from 'zod';
@@ -69,3 +71,88 @@ export const recordVendorRepair = transition(recordVendorRepairSchema, recordVen
 export const recordVendorCredit = transition(recordVendorCreditSchema, recordVendorCreditCore);
 export const returnDeviceToClient = transition(returnDeviceToClientSchema, returnDeviceToClientCore);
 export const closeWarrantyRma = transition(closeWarrantyRmaSchema, closeWarrantyRmaCore);
+
+/** A history row with the actor's display name joined, for the RMA timeline. */
+export type IRmaEventView = IRmaEvent & { actor_name: string | null };
+
+/**
+ * The append-only history of one case, oldest first. Gated like `getRmaCase`: a case the caller cannot read
+ * (permission, stock-unit scope, or the asset record check) yields an empty list. Read-only.
+ */
+export const listRmaCaseEvents = withAuth(async (user, { tenant }, rmaId: string): Promise<IRmaEventView[] | WarrantyActionError> =>
+  withWarrantyErrors(async () => {
+    const scope = await resolveRmaReadScope(user);
+    if (!scope.allowed) return [];
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const row = await trx('rma_cases').where({ tenant, rma_id: rmaId }).select('rma_id', 'asset_id', 'client_id', 'returned_unit_id').first();
+      if (!row) return [];
+      const visible = await filterReadableRmaCases(trx, tenant, user, [row], scope);
+      if (visible.length === 0) return [];
+      const events = await listRmaEventRows(trx, tenant, rmaId);
+      const actorIds = [...new Set(events.map((e) => e.actor_user_id).filter((id): id is string => !!id))];
+      const names = new Map<string, string>();
+      if (actorIds.length > 0) {
+        const users = await trx('users').where({ tenant }).whereIn('user_id', actorIds).select('user_id', 'first_name', 'last_name');
+        for (const u of users) {
+          const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim();
+          if (name) names.set(u.user_id, name);
+        }
+      }
+      return events.map((e) => ({ ...e, actor_name: e.actor_user_id ? names.get(e.actor_user_id) ?? null : null }));
+    });
+  })
+);
+
+export interface IClaimableAsset {
+  asset_id: string;
+  name: string;
+  asset_tag: string | null;
+  serial_number: string | null;
+  client_name: string | null;
+  in_custody: boolean;
+}
+
+const CLAIMABLE_ASSET_LIMIT = 50;
+
+/**
+ * Client-owned assets the caller may open a warranty claim against (no stock unit, not MSP-owned), narrowed by
+ * the asset record check. `search` matches name, tag or serial. Read-only; capped for the picker.
+ */
+export const listClaimableAssets = withAuth(async (user, { tenant }, search?: string): Promise<IClaimableAsset[] | WarrantyActionError> =>
+  withWarrantyErrors(async () => {
+    await requireWarrantyPerm(user, 'create');
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const q = trx('assets as a')
+        .leftJoin('clients as c', function () {
+          this.on('a.client_id', '=', 'c.client_id').andOn('a.tenant', '=', 'c.tenant');
+        })
+        .where({ 'a.tenant': tenant })
+        .whereNull('a.stock_unit_id')
+        .andWhere('a.ownership', '<>', 'msp')
+        .select('a.asset_id', 'a.name', 'a.asset_tag', 'a.serial_number', 'a.client_id', 'c.client_name')
+        .orderBy('a.name', 'asc')
+        .limit(CLAIMABLE_ASSET_LIMIT * 2);
+      const term = search?.trim();
+      if (term) {
+        const like = `%${term.replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
+        q.andWhere((w) => w.whereILike('a.name', like).orWhereILike('a.asset_tag', like).orWhereILike('a.serial_number', like));
+      }
+      const rows = await q;
+      const ctx = await createAssetReadContext(trx, tenant, user as any);
+      const readable = (await filterReadableAssets(trx, tenant, ctx, rows.map((r: any) => ({ asset_id: r.asset_id, client_id: r.client_id ?? null })))).slice(0, CLAIMABLE_ASSET_LIMIT);
+      const keep = new Set(readable.map((a) => a.asset_id));
+      const kept = rows.filter((r: any) => keep.has(r.asset_id)).slice(0, CLAIMABLE_ASSET_LIMIT);
+      const custody = await getOpenCustodyForAssets(trx, tenant, kept.map((r: any) => r.asset_id));
+      return kept.map((r: any): IClaimableAsset => ({
+        asset_id: r.asset_id,
+        name: r.name,
+        asset_tag: r.asset_tag ?? null,
+        serial_number: r.serial_number ?? null,
+        client_name: r.client_name ?? null,
+        in_custody: custody.has(r.asset_id),
+      }));
+    });
+  })
+);
