@@ -11,6 +11,12 @@ export DEV_ALLOWED_ORIGINS="${DEV_ALLOWED_ORIGINS:-feature-co-managed-it.localho
 export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=12288}"
 DIST="${CO_MANAGED_REVIEW_DIST:-.next-review-candidate}"
 STAMP="$REPO_ROOT/server/$DIST/.alga-review-revision"
+PREPARE_ONLY="${CO_MANAGED_REVIEW_PREPARE_ONLY:-0}"
+
+if [[ "$PREPARE_ONLY" != 0 && "$PREPARE_ONLY" != 1 ]]; then
+  echo "CO_MANAGED_REVIEW_PREPARE_ONLY must be 0 or 1" >&2
+  exit 2
+fi
 
 source_fingerprint() {
   git -C "$REPO_ROOT" diff HEAD -- . ':(exclude)server/.next*' | sha1sum | cut -c1-12
@@ -59,6 +65,11 @@ else
 fi
 
 verify_source_snapshot 'before serving the review candidate'
+
+if [[ "$PREPARE_ONLY" == 1 ]]; then
+  echo "Review build $WANT prepared in $DIST; application startup skipped."
+  exit 0
+fi
 
 REVIEW_ENV="$(PORT="$PORT" python3 - "$REPO_ROOT/server/.env.local" <<'PY'
 import os, shlex, sys
