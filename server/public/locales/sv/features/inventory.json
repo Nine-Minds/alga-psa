@@ -603,7 +603,16 @@
       "ticketNotFound": "Ärendet hittades inte.",
       "noTicket": "Den här RMA:n är inte länkad till ett ärende.",
       "referenceRequired": "Lägg först till leverantörens ärendenummer.",
-      "warrantyClaimUnitAction": "Det här är ett garantiärende på kundutrustning. Använd garantiåtgärderna på RMA:n."
+      "warrantyClaimUnitAction": "Det här är ett garantiärende på kundutrustning. Använd garantiåtgärderna på RMA:n.",
+      "warrantyReasonRequired": "Beskriv vad som är fel på enheten.",
+      "warrantyDenialReasonRequired": "Ange varför anspråket inte täcks.",
+      "warrantyCarrierRequired": "Ange fraktbolaget.",
+      "warrantyTrackingRequired": "Ange spårningsnumret.",
+      "warrantyReplacementSerialRequired": "Ange ersättningsenhetens serienummer.",
+      "warrantyDateFormat": "Använd formatet ÅÅÅÅ-MM-DD.",
+      "warrantyDateInvalid": "Det är inte ett giltigt datum.",
+      "warrantyInputInvalid": "Vissa uppgifter är ogiltiga. Kontrollera dem och försök igen.",
+      "baseUrlMissing": "Programmets URL är inte konfigurerad."
     },
     "salesOrders": {
       "clientRequired": "Välj en kund innan du skapar försäljningsordern.",

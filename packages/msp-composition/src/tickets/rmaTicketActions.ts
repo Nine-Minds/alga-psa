@@ -3,10 +3,12 @@
 import { withAuth, hasPermission } from "@alga-psa/auth";
 import { createTenantKnex } from "@alga-psa/db";
 import { authorizeTicketRecordAccess } from "@alga-psa/tickets/lib/ticketRecordAuthorization";
-import { addExternalLink } from "@alga-psa/tickets/actions/externalLinks/externalLinkActions";
+import {
+  addExternalLink, getTicketExternalLinks, removeExternalLink, updateExternalLink,
+} from "@alga-psa/tickets/actions/externalLinks/externalLinkActions";
 import { openWarrantyClaim, getRmaCase } from "@alga-psa/inventory/actions";
 import { actionError, permissionError, type ActionMessageError, type ActionPermissionError } from "@alga-psa/ui/lib/errorHandling";
-import type { IRmaCase } from "@alga-psa/types";
+import { recordUrl, type IRmaCase } from "@alga-psa/types";
 
 /**
  * Ticket-aware wrappers for warranty claims (alga-2026-0002683 C5).
@@ -50,18 +52,43 @@ export const mirrorRmaToTicketLinks = withAuth(
     if (!rma.rma_reference) {
       return actionError("Add the vendor's case number first.", "features/inventory:errors.rma.referenceRequired");
     }
+    // The external-link store needs an absolute http(s) url for a `generic` system; C1's recordUrl gives the RMA record's.
+    const baseUrl = process.env.NEXTAUTH_URL;
+    if (!baseUrl) return actionError("The application URL is not configured.", "features/inventory:errors.rma.baseUrlMissing");
+    const url = recordUrl("rma", rma.rma_id, baseUrl);
+    const fields = {
+      external_status: rma.status,
+      metadata: { source: "rma", rma_id: rma.rma_id, rma_number: rma.rma_number, vendor_name: rma.vendor_name ?? null },
+    };
+
+    // Upsert keyed by (ticket, metadata.rma_id): clicking twice refreshes the one link instead of adding another.
+    const links = await getTicketExternalLinks(rma.ticket_id);
+    if (!Array.isArray(links)) return asError(links, "Could not read the ticket's links.");
+    const existing = links.find((l) => l.system === "generic" && (l.metadata as { rma_id?: string } | null)?.rma_id === rma.rma_id);
+    if (existing && existing.external_id === rma.rma_reference) {
+      const updated = await updateExternalLink(existing.link_id, { url, ...fields });
+      return "link_id" in (updated as object) ? { link_id: existing.link_id } : asError(updated, "Could not update the link.");
+    }
+    // The vendor case number changed (external_id is not patchable): replace the stale link.
+    if (existing) {
+      const removed = await removeExternalLink(existing.link_id);
+      if (!("link_id" in (removed as object))) return asError(removed, "Could not replace the link.");
+    }
     const result = await addExternalLink({
       ticket_id: rma.ticket_id,
       system: "generic",
       external_id: rma.rma_reference,
       relationship: "reference",
-      external_status: rma.status,
-      metadata: { source: "rma", rma_id: rma.rma_id, rma_number: rma.rma_number, vendor_name: rma.vendor_name ?? null },
+      url,
+      ...fields,
     });
-    if ("link_id" in (result as object)) return { link_id: (result as { link_id: string }).link_id };
-    const err = result as { actionError?: string; permissionError?: string; messageKey?: string };
-    return err.permissionError
-      ? (permissionError(err.permissionError) as ActionPermissionError)
-      : actionError(err.actionError ?? "Could not add the link.", err.messageKey);
+    return "link_id" in (result as object) ? { link_id: (result as { link_id: string }).link_id } : asError(result, "Could not add the link.");
   },
 );
+
+function asError(value: unknown, fallback: string): RmaTicketError {
+  const err = value as { actionError?: string; permissionError?: string; messageKey?: string };
+  return err.permissionError
+    ? (permissionError(err.permissionError) as ActionPermissionError)
+    : actionError(err.actionError ?? fallback, err.messageKey);
+}

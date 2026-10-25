@@ -320,8 +320,8 @@ describe('T016 receive and ship validation', () => {
       { carrier: 'UPS', tracking_number: '1', return_by: '2026-02-31' },
       { carrier: '  ', tracking_number: '1', return_by: '2026-12-01' },
     ]) {
-      // schema validation throws (ZodError) before the transaction opens; nothing is written
-      await expect(shipToVendor(rmaId, bad as any)).rejects.toThrow();
+      // schema validation comes back as an {actionError} value before the transaction opens; nothing is written
+      expect(await shipToVendor(rmaId, bad as any)).toMatchObject({ actionError: expect.any(String), messageKey: expect.stringContaining('features/inventory:errors.rma.warranty') });
     }
     expect((await events(rmaId)).length).toBe(eventsBefore);
     expect(await rmaRow(rmaId)).toMatchObject({ status: 'returned', outbound_carrier: null, outbound_tracking_number: null, outbound_shipped_at: null });

@@ -125,14 +125,14 @@ async function pick(page: Page, triggerId: string, optionText: string | RegExp):
 /** Opens a claim from the New warranty claim dialog; lands in the detail dialog. Returns the RMA number. */
 async function openClaimViaDialog(page: Page, assetName: string, reason: string, reference?: string): Promise<string> {
   await page.locator('#rma-new-warranty-claim-button').click();
-  const dialog = page.locator('#rma-new-claim-dialog');
+  const dialog = page.locator('#rma-new-claim-dialog-dialog');
   await expect(dialog).toBeVisible();
   await dialog.locator('#rma-new-claim-search').fill(assetName);
   await pick(page, 'rma-new-claim-asset', new RegExp(assetName));
   await dialog.locator('#rma-new-claim-reason').fill(reason);
   if (reference) await dialog.locator('#rma-new-claim-reference').fill(reference);
   await dialog.locator('#rma-new-claim-save').click();
-  const detail = page.locator('#rma-detail-dialog');
+  const detail = page.locator('#rma-detail-dialog-dialog');
   await expect(detail.locator('#rma-warranty-panel')).toBeVisible({ timeout: 20_000 });
   const title = (await detail.getByText(/RMA-\d+/).first().textContent()) ?? '';
   const match = title.match(/RMA-\d+/);
@@ -142,7 +142,7 @@ async function openClaimViaDialog(page: Page, assetName: string, reason: string,
 
 async function runAction(page: Page, action: string, fill: (dialog: ReturnType<Page['locator']>) => Promise<void> = async () => undefined): Promise<void> {
   await page.locator(`#rma-warranty-action-${action}`).click();
-  const dialog = page.locator('#rma-warranty-action-dialog');
+  const dialog = page.locator('#rma-warranty-action-dialog-dialog');
   await expect(dialog).toBeVisible();
   await fill(dialog);
   await dialog.locator('#rma-warranty-action-submit').click();
@@ -198,7 +198,7 @@ test.describe('Warranty review and RMA E2E', () => {
       // ?assetId= opens the dialog prefilled with that equipment.
       if (second) {
         await gotoRma(page, `?assetId=${second}`);
-        const dialog = page.locator('#rma-new-claim-dialog');
+        const dialog = page.locator('#rma-new-claim-dialog-dialog');
         await expect(dialog).toBeVisible({ timeout: 20_000 });
         await expect(dialog.locator('#rma-new-claim-asset')).toContainText('Dell WD19 dock B');
       }

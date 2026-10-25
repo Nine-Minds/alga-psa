@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import type { ZodError } from 'zod';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { actionError, permissionError, type ActionMessageError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -42,6 +43,29 @@ const CODE_MESSAGES: Record<string, [string, string]> = {
   invalid_transition: ['That step is not available in the RMA’s current status. Refresh and try again.', 'features/inventory:errors.rma.warrantyInvalidTransition'],
   warranty_review_close: ['Approve or deny the claim before closing it.', 'features/inventory:errors.rma.warrantyReviewClose'],
 };
+
+/**
+ * Input that fails its Zod schema is a refusal, not a throw: a ZodError's `issues` do not survive the server-action
+ * boundary, so the first issue is returned as a value with its translation key. Messages in the schemas are the
+ * user-facing strings; anything without a curated one (a malformed id, say) gets the generic message.
+ */
+const VALIDATION_MESSAGES: Record<string, string> = {
+  'Describe what is wrong with the device': 'features/inventory:errors.rma.warrantyReasonRequired',
+  'Give the reason the claim is not covered': 'features/inventory:errors.rma.warrantyDenialReasonRequired',
+  'Enter the carrier': 'features/inventory:errors.rma.warrantyCarrierRequired',
+  'Enter the tracking number': 'features/inventory:errors.rma.warrantyTrackingRequired',
+  'Enter the replacement serial number': 'features/inventory:errors.rma.warrantyReplacementSerialRequired',
+  'Use YYYY-MM-DD': 'features/inventory:errors.rma.warrantyDateFormat',
+  'Not a real calendar date': 'features/inventory:errors.rma.warrantyDateInvalid',
+};
+
+export function validationActionError(error: ZodError): WarrantyActionError {
+  const message = error.issues[0]?.message ?? '';
+  const key = VALIDATION_MESSAGES[message];
+  return key
+    ? actionError(message, key)
+    : actionError('Some of the details are not valid. Check them and try again.', 'features/inventory:errors.rma.warrantyInputInvalid');
+}
 
 export function warrantyActionErrorFrom(error: unknown): WarrantyActionError | null {
   if (error instanceof Error) {

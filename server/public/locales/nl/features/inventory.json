@@ -603,7 +603,16 @@
       "ticketNotFound": "Ticket niet gevonden.",
       "noTicket": "Deze RMA is niet aan een ticket gekoppeld.",
       "referenceRequired": "Voeg eerst het dossiernummer van de leverancier toe.",
-      "warrantyClaimUnitAction": "Dit is een garantieclaim op apparatuur van de klant. Gebruik de garantieacties van de RMA."
+      "warrantyClaimUnitAction": "Dit is een garantieclaim op apparatuur van de klant. Gebruik de garantieacties van de RMA.",
+      "warrantyReasonRequired": "Beschrijf wat er mis is met het apparaat.",
+      "warrantyDenialReasonRequired": "Geef de reden waarom de claim niet gedekt is.",
+      "warrantyCarrierRequired": "Voer de vervoerder in.",
+      "warrantyTrackingRequired": "Voer het trackingnummer in.",
+      "warrantyReplacementSerialRequired": "Voer het serienummer van het vervangende apparaat in.",
+      "warrantyDateFormat": "Gebruik het formaat JJJJ-MM-DD.",
+      "warrantyDateInvalid": "Dat is geen geldige datum.",
+      "warrantyInputInvalid": "Sommige gegevens zijn ongeldig. Controleer ze en probeer het opnieuw.",
+      "baseUrlMissing": "De applicatie-URL is niet geconfigureerd."
     },
     "salesOrders": {
       "clientRequired": "Selecteer een klant voordat u de verkooporder aanmaakt.",

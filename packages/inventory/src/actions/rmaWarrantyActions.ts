@@ -12,7 +12,7 @@ import {
   markDeviceReceivedSchema, openWarrantyClaimCore, openWarrantyClaimSchema, publishWarrantyClaimOpened, publishRmaUpdated,
   receiveVendorReplacementCore, receiveVendorReplacementSchema, recordVendorCreditCore, recordVendorCreditSchema,
   recordVendorRepairCore, recordVendorRepairSchema, requireWarrantyPerm, returnDeviceToClientCore, returnDeviceToClientSchema,
-  runWarrantyTransition, shipToVendorCore, resolveRmaReadScope, filterReadableRmaCases, listRmaEvents as listRmaEventRows, shipToVendorSchema, withWarrantyErrors, type WarrantyActionError,
+  runWarrantyTransition, shipToVendorCore, resolveRmaReadScope, filterReadableRmaCases, listRmaEvents as listRmaEventRows, shipToVendorSchema, validationActionError, withWarrantyErrors, type WarrantyActionError,
 } from '../lib/rma';
 import { rmaCaseQuery } from '../lib/rmaCaseQuery';
 import type { z } from 'zod';
@@ -38,7 +38,9 @@ function transition<S extends z.ZodTypeAny>(
   return withAuth(async (user, { tenant }, rmaId: string, rawInput: unknown): Promise<Result> =>
     withWarrantyErrors(async () => {
       await requireWarrantyPerm(user, 'update');
-      const input = schema.parse(rawInput ?? {});
+      const parsed = schema.safeParse(rawInput ?? {});
+      if (!parsed.success) return validationActionError(parsed.error);
+      const input = parsed.data;
       const result = await runWarrantyTransition(user as any, tenant, (trx, authorizeAsset) =>
         core(trx, tenant, user.user_id, rmaId, input, { authorizeAsset })
       );
@@ -50,7 +52,9 @@ function transition<S extends z.ZodTypeAny>(
 export const openWarrantyClaim = withAuth(async (user, { tenant }, rawInput: unknown): Promise<Result> =>
   withWarrantyErrors(async () => {
     await requireWarrantyPerm(user, 'create');
-    const input = openWarrantyClaimSchema.parse(rawInput);
+    const parsed = openWarrantyClaimSchema.safeParse(rawInput);
+    if (!parsed.success) return validationActionError(parsed.error);
+    const input = parsed.data;
     const { knex: db } = await createTenantKnex();
     const result = await withTransaction(db, async (trx: Knex.Transaction) =>
       openWarrantyClaimCore(trx, tenant, user.user_id, input, { authorizeAsset: await assetGate(trx, tenant, user as any) })

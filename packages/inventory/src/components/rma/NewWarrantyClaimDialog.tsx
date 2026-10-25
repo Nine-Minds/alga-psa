@@ -103,7 +103,7 @@ export function NewWarrantyClaimDialog({ isOpen, onClose, vendors, initialAssetI
       toast.success(t('rma.warranty.claim.opened', 'Warranty claim opened.'));
       await onCreated(result);
     } catch (e: any) {
-      setError(e?.issues?.[0]?.message || e?.message || t('rma.warranty.claim.openFailed', "Couldn't open the warranty claim."));
+      setError(e?.message || t('rma.warranty.claim.openFailed', "Couldn't open the warranty claim."));
     } finally {
       setSaving(false);
     }

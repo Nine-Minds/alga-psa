@@ -253,9 +253,8 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
       setAction(null);
       await onChanged(result as IRmaCase);
     } catch (e: any) {
-      // Zod parse failures arrive as thrown errors; show the first issue's message when there is one.
-      const issue = e?.issues?.[0]?.message ?? e?.errors?.[0]?.message;
-      toast.error(issue || e?.message || t('rma.warranty.updateFailed', "Couldn't update the RMA."));
+      // Refusals (including invalid input) come back as values above; this catches unexpected failures only.
+      toast.error(e?.message || t('rma.warranty.updateFailed', "Couldn't update the RMA."));
     } finally {
       setBusy(false);
     }
@@ -487,7 +486,7 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
           {action && renderFields(action)}
           <TextArea id="rma-warranty-note" label={t('rma.warranty.fields.note', 'Note')} value={form.note} onChange={(e) => set('note', e.target.value)} />
           <div className="flex justify-end gap-2 pt-2">
-            <Button id="rma-warranty-action-cancel" variant="outline" onClick={() => setAction(null)}>
+            <Button id="rma-warranty-action-dialog-cancel" variant="outline" onClick={() => setAction(null)}>
               {t('common.cancel', 'Cancel')}
             </Button>
             <Button id="rma-warranty-action-submit" onClick={() => void submit()} disabled={busy}>

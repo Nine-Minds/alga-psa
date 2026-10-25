@@ -603,7 +603,16 @@
       "ticketNotFound": "Ticket no encontrado.",
       "noTicket": "Este RMA no está vinculado a un ticket.",
       "referenceRequired": "Primero agregue el número de caso del proveedor.",
-      "warrantyClaimUnitAction": "Esta es una reclamación de garantía sobre equipos del cliente. Use las acciones de garantía del RMA."
+      "warrantyClaimUnitAction": "Esta es una reclamación de garantía sobre equipos del cliente. Use las acciones de garantía del RMA.",
+      "warrantyReasonRequired": "Describa qué le pasa al dispositivo.",
+      "warrantyDenialReasonRequired": "Indique el motivo por el que la reclamación no está cubierta.",
+      "warrantyCarrierRequired": "Introduzca el transportista.",
+      "warrantyTrackingRequired": "Introduzca el número de seguimiento.",
+      "warrantyReplacementSerialRequired": "Introduzca el número de serie del reemplazo.",
+      "warrantyDateFormat": "Use el formato AAAA-MM-DD.",
+      "warrantyDateInvalid": "Esa no es una fecha válida.",
+      "warrantyInputInvalid": "Algunos datos no son válidos. Revíselos e inténtelo de nuevo.",
+      "baseUrlMissing": "La URL de la aplicación no está configurada."
     },
     "salesOrders": {
       "clientRequired": "Seleccione un cliente antes de crear la orden de venta.",
