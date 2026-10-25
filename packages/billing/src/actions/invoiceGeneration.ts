@@ -278,7 +278,9 @@ function getChargeUnitPrice(charge: IBillingCharge): number {
 function timeChargeDescription(charge: IBillingCharge): string {
   return isTimeBasedCharge(charge) && charge.timeSegment === 'overtime'
     ? `${charge.serviceName} (overtime)`
-    : charge.serviceName;
+    : isTimeBasedCharge(charge) && charge.overPrepaidBlock
+      ? `${charge.serviceName} (over prepaid block)`
+      : charge.serviceName;
 }
 
 function formatHourBlockChargeDescription(charge: IHourBlockCharge): string {

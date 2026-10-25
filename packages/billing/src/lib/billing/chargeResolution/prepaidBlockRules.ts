@@ -5,9 +5,20 @@
  * supply the data these functions read.
  */
 
-import type { HourBlockDrawRow, PrepaidBlockIssuanceInput } from "../compute";
-import type { ResolvedBillingProfileAssignments } from "../domain";
+import { Temporal } from "@js-temporal/polyfill";
+import { nthCadenceBoundaryAfter } from "@alga-psa/shared/billingClients/cadenceBoundaryAdvance";
 import type {
+  CadencePrepaidBlockInput,
+  HourBlockDrawRow,
+  PrepaidBlockIssuanceInput,
+} from "../compute";
+import type {
+  ResolvedBillingProfileAssignments,
+  ResolvedBillingTiming,
+  ResolvedContractLineFacts,
+} from "../domain";
+import type {
+  CadencePrepaidBlockSupply,
   HourBlockDrawSupplyRow,
   PrepaidBlockIssuanceSupply,
 } from "./types";
@@ -87,4 +98,60 @@ export function selectHourBlockDrawRows(
         (row.block_status === "active" || row.block_status === "expired"),
     )
     .map(({ block_status: _blockStatus, ...row }) => row);
+}
+
+/**
+ * Turns a line's cadence block terms into the block billed for one service
+ * period. A block is valid from the first day of its period through the last
+ * day of the period `rolloverPeriods` cadence periods later (inclusive), so
+ * rollover counts whole cadence periods, never calendar months. A line whose
+ * block cannot be sold (no sold-as service, no currency) is a refusal, never a
+ * silently dropped charge.
+ */
+export function planCadenceBlock(
+  supply: CadencePrepaidBlockSupply,
+  line: ResolvedContractLineFacts,
+  timing: ResolvedBillingTiming,
+): CadencePrepaidBlockInput {
+  if (!supply.soldAsServiceId) {
+    throw new Error(
+      `Prepaid block line ${supply.contractLineId} has no sold-as service configured.`,
+    );
+  }
+  if (!line.currencyCode) {
+    throw new Error(
+      `Contract for prepaid block line ${supply.contractLineId} has no currency.`,
+    );
+  }
+  const validUntilExclusive = nthCadenceBoundaryAfter(
+    timing.servicePeriodStart,
+    supply.rolloverPeriods + 1,
+    supply.cadence,
+  );
+  return {
+    contractLineId: supply.contractLineId,
+    clientContractLineId: line.clientContractLineId,
+    clientContractId: line.clientContractId,
+    contractName: line.contractName,
+    tenant: line.tenantId,
+    blockMinutes: supply.blockMinutes,
+    blockPrice: supply.blockPrice,
+    rolloverPeriods: supply.rolloverPeriods,
+    scopeServiceIds: supply.scopeServiceIds,
+    soldAsServiceId: supply.soldAsServiceId,
+    serviceName: supply.serviceName,
+    soldAsTaxRateId: supply.soldAsTaxRateId,
+    currencyCode: line.currencyCode,
+    locationId: line.locationId,
+    taxDate: timing.servicePeriodStart,
+    servicePeriodStart: timing.servicePeriodStart,
+    servicePeriodEnd: timing.servicePeriodEnd,
+    servicePeriodRecordId: timing.servicePeriodRecordId ?? null,
+    coverageRatio: timing.coverageRatio,
+    enableProration: Boolean(line.enableProration),
+    validFrom: timing.servicePeriodStart,
+    expirationDate: Temporal.PlainDate.from(validUntilExclusive)
+      .subtract({ days: 1 })
+      .toString(),
+  };
 }

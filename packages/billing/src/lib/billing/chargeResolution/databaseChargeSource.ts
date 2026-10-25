@@ -29,6 +29,7 @@ import type {
 import { lineFacts } from "../domain/calculateContractCharge";
 import type {
   ChargeFamily,
+  CadencePrepaidBlockSupply,
   ConfiguredService,
   ContractChargeSource,
   FactsOf,
@@ -75,6 +76,8 @@ export interface DatabaseChargeLoaders {
   prepaidBlockIssuances(
     issuanceIds: string[],
   ): Promise<PrepaidBlockIssuanceSupply[]>;
+  /** The line's cadence-mode Prepaid Block terms, or null if it has none. */
+  cadencePrepaidBlock(): Promise<CadencePrepaidBlockSupply | null>;
   /** Allocation rows of the line's blocks inside the service period, FIFO. */
   hourBlockDraws(
     timing: ResolvedBillingTiming,
@@ -236,6 +239,11 @@ export class DatabaseChargeSource implements ContractChargeSource {
       return { status: "due", timing: recurringTimingSelection };
     }
     if (recurringTimingSelectionSource === "persisted") {
+      return { status: "not-due" };
+    }
+    // A stream other than the line's own (a cadence block fee) is due only by
+    // its persisted service period; there is no derived timing to fall back on.
+    if (request.stream !== "line") {
       return { status: "not-due" };
     }
 
@@ -608,6 +616,19 @@ export class DatabaseChargeSource implements ContractChargeSource {
   async prepaidBlockIssuances(): Promise<PrepaidBlockIssuanceSupply[]> {
     const ids = this.input.prepaidBlockIssuanceIds ?? [];
     return ids.length > 0 ? this.input.loaders.prepaidBlockIssuances(ids) : [];
+  }
+
+  private cadenceBlock?: Promise<CadencePrepaidBlockSupply | null>;
+
+  /** Memoized: the resolver asks once per stream and once for the overage flag. */
+  cadencePrepaidBlock(): Promise<CadencePrepaidBlockSupply | null> {
+    // Blocks belong to a line's service periods; the document-scope and
+    // project-driven sources have no such line.
+    if (this.input.documentScope || this.input.projectTarget) {
+      return Promise.resolve(null);
+    }
+    this.cadenceBlock ??= this.input.loaders.cadencePrepaidBlock();
+    return this.cadenceBlock;
   }
 
   async hourBlockDraws(): Promise<HourBlockDrawSupply | null> {

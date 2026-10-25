@@ -11,6 +11,7 @@
 
 import type { IBillingPeriod } from "@alga-psa/types";
 import type { RecurringChargeStream } from "@alga-psa/shared/billingClients/contractLineTimingRule";
+import type { CadenceAdvanceRule } from "@alga-psa/shared/billingClients/cadenceBoundaryAdvance";
 import type {
   ChargeComputeTaxContext,
   HourBlockDrawRow,
@@ -157,6 +158,28 @@ export interface HourBlockDrawSupply {
   allocations: HourBlockDrawSupplyRow[];
 }
 
+/**
+ * The terms of a line's cadence-mode Prepaid Block, as a source supplies them
+ * (one block per service period, no issuance). Raw data: the resolver decides
+ * whether the line is billable, dates the block's validity and prices it.
+ * Amounts are minor units of the line's contract currency.
+ */
+export interface CadencePrepaidBlockSupply {
+  /** `contract_lines.contract_line_id` carrying the block configuration. */
+  contractLineId: string;
+  blockMinutes: number;
+  blockPrice: number;
+  /** Cadence periods the block's hours stay usable after its own period. */
+  rolloverPeriods: number;
+  scopeServiceIds: string[];
+  /** Catalog service the invoice line is sold as; null when not configured. */
+  soldAsServiceId: string | null;
+  serviceName: string;
+  soldAsTaxRateId: string | null;
+  /** The cadence rollover is counted on (see nthCadenceBoundaryAfter). */
+  cadence: CadenceAdvanceRule;
+}
+
 export interface ConfiguredService {
   serviceId: string;
   /** `contract_line_service_configuration.configuration_type`. */
@@ -215,6 +238,11 @@ export interface ContractChargeSource {
    * which of them become charges.
    */
   prepaidBlockIssuances(): Promise<PrepaidBlockIssuanceSupply[]>;
+  /**
+   * The line's cadence-mode Prepaid Block terms, or null when the line has no
+   * such block (no block, or a consumption-mode one).
+   */
+  cadencePrepaidBlock(): Promise<CadencePrepaidBlockSupply | null>;
   /**
    * Draws of the line's prepaid blocks in the source's window, or null when
    * the source has no window for the line (e.g. no service period due).

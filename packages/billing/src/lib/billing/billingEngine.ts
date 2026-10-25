@@ -13,6 +13,8 @@ import {
   normalizeResolvedContractCharge,
 } from "./domain/calculateContractCharge";
 import { createTenantKnex, tenantDb, withTransaction } from "@alga-psa/db";
+import { ensureUtcMidnightIsoDate, normalizeAnchorSettingsForCycle } from "@alga-psa/shared/billingClients/billingCycleAnchors";
+import type { CadenceAdvanceRule } from "@alga-psa/shared/billingClients/cadenceBoundaryAdvance";
 import { resolvePrepaidBlockBusinessDate, toDateOnly as toPrepaidBlockDateOnly } from "../prepaidBlockDates";
 import {
   IBillingPeriod,
@@ -128,6 +130,7 @@ import {
   type ContractObligationSink,
   type HourBlockDrawSupplyRow,
   type PooledTimeExclusion,
+  type CadencePrepaidBlockSupply,
   type PrepaidBlockIssuanceSupply,
   type ResolvedLineCharge,
 } from "./chargeResolution";
@@ -1852,6 +1855,7 @@ export class BillingEngine {
             "product",
             "license",
             "hourBlockDraw",
+            "cadencePrepaidBlock",
           ]);
       const resolved = await this.resolveLineCharges({
         clientId,
@@ -3357,6 +3361,105 @@ export class BillingEngine {
     return supplies;
   }
 
+  /**
+   * Data supply for the shared resolver's cadencePrepaidBlock family: the
+   * line's stored block terms (null unless the block is cadence-issued) and the
+   * cadence rollover is counted on. Whether a period is due, and the block's
+   * dates and price, are the resolver's call.
+   */
+  private async loadCadencePrepaidBlockSupply(
+    clientId: string,
+    line: IClientContractLine,
+  ): Promise<CadencePrepaidBlockSupply | null> {
+    await this.initKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+    const db = tenantDb(this.knex, this.tenant);
+    const query = db.table("contract_line_prepaid_blocks as cfg");
+    db.tenantJoin(
+      query,
+      "service_catalog as sc",
+      "sc.service_id",
+      "cfg.sold_as_service_id",
+      { type: "left" },
+    );
+    const cfg = await query
+      .where("cfg.contract_line_id", line.contract_line_id)
+      .where("cfg.issue_mode", "cadence")
+      .first(
+        "cfg.block_minutes",
+        "cfg.block_price",
+        "cfg.rollover_periods",
+        "cfg.sold_as_service_id",
+        "sc.service_name as sold_as_service_name",
+        "sc.tax_rate_id as sold_as_tax_rate_id",
+      );
+    if (!cfg) return null;
+
+    const scopeRows = await db
+      .table("contract_line_services")
+      .where({ contract_line_id: line.contract_line_id })
+      .select("service_id");
+
+    const isClientCadence =
+      (line as { is_system_managed_default?: boolean | null })
+        .is_system_managed_default === true ||
+      resolveCadenceOwner(line.cadence_owner) === "client";
+    let cadence: CadenceAdvanceRule;
+    if (isClientCadence) {
+      const clientRow = await db
+        .table("clients")
+        .where({ client_id: clientId })
+        .first("billing_cycle");
+      const settings = await db
+        .table("client_billing_settings")
+        .where({ client_id: clientId })
+        .first(
+          "billing_cycle_anchor_day_of_month",
+          "billing_cycle_anchor_month_of_year",
+          "billing_cycle_anchor_day_of_week",
+          "billing_cycle_anchor_reference_date",
+        );
+      const billingCycle = (clientRow?.billing_cycle ??
+        "monthly") as BillingCycleType;
+      cadence = {
+        owner: "client",
+        billingCycle,
+        anchor: normalizeAnchorSettingsForCycle(billingCycle, {
+          dayOfMonth: settings?.billing_cycle_anchor_day_of_month ?? null,
+          monthOfYear: settings?.billing_cycle_anchor_month_of_year ?? null,
+          dayOfWeek: settings?.billing_cycle_anchor_day_of_week ?? null,
+          referenceDate: settings?.billing_cycle_anchor_reference_date
+            ? ensureUtcMidnightIsoDate(
+              new Date(settings.billing_cycle_anchor_reference_date).toISOString(),
+            )
+            : null,
+        }),
+      };
+    } else {
+      cadence = {
+        owner: "contract",
+        billingCycle: (line.billing_frequency ?? "monthly") as BillingCycleType,
+        anchorDate: resolveContractCadenceAnchorDate({
+          assignmentStartDate: toISOTimestamp(toPlainDate(line.start_date)),
+        }).slice(0, 10),
+      };
+    }
+
+    return {
+      contractLineId: line.contract_line_id,
+      blockMinutes: Number(cfg.block_minutes),
+      blockPrice: Number(cfg.block_price),
+      rolloverPeriods: Number(cfg.rollover_periods ?? 0),
+      scopeServiceIds: scopeRows.map((scope: any) => scope.service_id),
+      soldAsServiceId: cfg.sold_as_service_id ?? null,
+      serviceName: cfg.sold_as_service_name ?? "Prepaid block",
+      soldAsTaxRateId: cfg.sold_as_tax_rate_id ?? null,
+      cadence,
+    };
+  }
+
   private async getClientContractLinesForBillingPeriod(
     clientId: string,
     billingPeriod: IBillingPeriod,
@@ -4418,6 +4521,8 @@ export class BillingEngine {
         prepaidBlockIssuanceIds: input.prepaidBlockIssuanceIds,
         documentScope: input.prepaidBlockIssuanceIds !== undefined,
         loaders: {
+          cadencePrepaidBlock: () =>
+            this.loadCadencePrepaidBlockSupply(clientId, line),
           prepaidBlockIssuances: (issuanceIds) =>
             this.loadPrepaidBlockIssuanceSupply(clientId, billingPeriod, issuanceIds),
           hourBlockDraws: (timing) =>

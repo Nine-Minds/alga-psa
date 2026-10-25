@@ -1,8 +1,8 @@
 /**
  * The charge family registry: the single ordered list of what a contract line
  * can produce. Order is the order charges are emitted (and merged into the
- * invoice): fixed -> prepaidBlock -> hourly -> usage -> bucket -> product ->
- * license -> hourBlockDraw. (A document merges lines in the legacy
+ * invoice): fixed -> prepaidBlock -> cadencePrepaidBlock -> hourly -> usage ->
+ * bucket -> product -> license -> hourBlockDraw. (A document merges lines in the legacy
  * order; see orderChargesForInvoice.)
  *
  * Adding a family touches four places: one entry here, one `kind` in
@@ -16,7 +16,11 @@ import type {
   ResolvedContractBillingChargeFacts,
   UnpricedContractBillingObligation,
 } from "../domain";
-import { selectHourBlockDrawRows, selectIssuableBlocks } from "./prepaidBlockRules";
+import {
+  planCadenceBlock,
+  selectHourBlockDrawRows,
+  selectIssuableBlocks,
+} from "./prepaidBlockRules";
 import type {
   ChargeFamily,
   ContractChargeSource,
@@ -80,6 +84,7 @@ export interface FamilyEntry {
 }
 
 const LINE_STREAM = "line" as const;
+const PREPAID_BLOCK_STREAM = "prepaid_block" as const;
 
 function exclusionFor(context: FamilyContext): PooledTimeExclusion | null {
   return context.pooledServiceIds.length > 0
@@ -149,6 +154,53 @@ async function prepaidBlockCharges({ source }: FamilyContext): Promise<PlannedCh
   }));
 }
 
+async function cadencePrepaidBlockCharges({
+  source,
+  timing,
+}: FamilyContext): Promise<PlannedCharge[]> {
+  const supply = await source.cadencePrepaidBlock();
+  if (!supply || !timing) return [];
+  const block = planCadenceBlock(supply, source.line, timing);
+  const billingProfile = await source.billingProfile();
+  return [
+    {
+      facts: {
+        kind: "cadencePrepaidBlock",
+        line: source.line,
+        client: await source.client(),
+        timing,
+        billingPeriod: source.billingPeriod,
+        billingProfile,
+        block,
+      },
+      taxContext: await source.taxContext({
+        taxRateIds: [supply.soldAsTaxRateId],
+        billingProfileIds: [
+          billingProfile?.contractLineBillingProfileId,
+          billingProfile?.contractBillingProfileId,
+        ],
+        locationId: source.line.locationId,
+      }),
+    },
+  ];
+}
+
+/**
+ * Hourly pricing, flagged when the line carries a cadence Prepaid Block: the
+ * time left after the block's coverage is the "over prepaid block" overage,
+ * billed at the line's own hourly rate in arrears.
+ */
+async function hourlyCharges(context: FamilyContext): Promise<PlannedCharge[]> {
+  const charge = await context.source.hourly(context.timing!, exclusionFor(context));
+  if (!charge) return [];
+  const overPrepaidBlock = (await context.source.cadencePrepaidBlock()) !== null;
+  return [
+    overPrepaidBlock
+      ? { ...charge, facts: { ...charge.facts, overPrepaidBlock: true } }
+      : charge,
+  ];
+}
+
 async function hourBlockDrawCharges({ source }: FamilyContext): Promise<PlannedCharge[]> {
   // Prepaid blocks overlay an Hourly line.
   const lineType = source.line.contractLineType;
@@ -198,6 +250,12 @@ export const CHARGE_FAMILY_REGISTRY: readonly FamilyEntry[] = [
     collect: prepaidBlockCharges,
   },
   {
+    family: "cadencePrepaidBlock",
+    handles: { configurationTypes: [], lineTypes: [] },
+    timing: { policy: "fixed-recurring", stream: PREPAID_BLOCK_STREAM },
+    collect: cadencePrepaidBlockCharges,
+  },
+  {
     family: "hourly",
     handles: {
       configurationTypes: ["Hourly"],
@@ -205,8 +263,7 @@ export const CHARGE_FAMILY_REGISTRY: readonly FamilyEntry[] = [
       legacyFallbackLineTypes: ["Hourly"],
     },
     timing: { policy: "service-driven", stream: LINE_STREAM },
-    collect: async (context) =>
-      single(await context.source.hourly(context.timing!, exclusionFor(context))),
+    collect: hourlyCharges,
   },
   {
     family: "usage",

@@ -3,6 +3,7 @@ import type { TimeBasedPhaseRateOverride, TimeBasedProjectChargeConfig } from '.
 import type {
   HourBlockDrawRow,
   PrepaidBlockIssuanceInput,
+  CadencePrepaidBlockInput,
 } from '../compute/computePrepaidBlockCharges';
 import type {
   ChargeExplanation,
@@ -131,6 +132,8 @@ export type ResolvedContractBillingChargeFacts =
     })
   | (ContractChargeFactsBase & {
       kind: "hourly";
+      /** The line carries a cadence Prepaid Block (see TimeBasedChargeComputeInputs). */
+      overPrepaidBlock?: boolean;
       overtime: {
         enabled?: boolean | null;
         threshold?: number | null;
@@ -242,6 +245,15 @@ export type ResolvedContractBillingChargeFacts =
       issuance: PrepaidBlockIssuanceInput;
       /** Order key among a document's block charges (ISO date). */
       dueDate: string;
+    })
+  | (ContractChargeFactsBase & {
+      /**
+       * The block fee of a cadence-mode Prepaid Block for one service period
+       * (the timing on the facts), billed in advance. The resolver derives
+       * the block's validity from the cadence; a source only supplies terms.
+       */
+      kind: "cadencePrepaidBlock";
+      block: CadencePrepaidBlockInput;
     })
   | (ContractChargeFactsBase & {
       /**

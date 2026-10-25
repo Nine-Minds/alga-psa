@@ -4,6 +4,7 @@ import type {
   IPrepaidBlockCharge,
   ISO8601String,
 } from "@alga-psa/types";
+import { prorateRecurringCoverageByRatio } from "@alga-psa/shared/billingClients/coverageProration";
 import { resolveChargeProfileFor } from "../billingProfileResolution";
 import {
   aggregateHourBlockBurnRows,
@@ -68,30 +69,38 @@ export interface PrepaidBlockChargeComputeResult {
   explanations: ChargeExplanation[];
 }
 
-function formatCents(cents: number, currencyCode: string): string {
-  return new Intl.NumberFormat("en-US", {
+/**
+ * Formats minor units in the currency's own minor-unit scale (JPY has none,
+ * KWD has three). The currency is always the contract's; there is no default.
+ */
+function formatMinorUnits(minorUnits: number, currencyCode: string): string {
+  const formatter = new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: currencyCode || "USD",
-    // LEVERAGE: pattern currency-minor-units — hard-coded /100 assumes a 2-digit currency; display/compute formatting should go through formatCurrencyFromMinorUnits (alga0002091 follow-up)
-  }).format(cents / 100);
+    currency: currencyCode,
+  });
+  const digits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
+  return formatter.format(minorUnits / 10 ** digits);
 }
 
 function formatHours(hours: number): string {
   return Number.isInteger(hours) ? String(hours) : hours.toFixed(2);
 }
 
-export function computePrepaidBlockCharges(
-  inputs: PrepaidBlockChargeComputeInputs,
-  taxContext: ChargeComputeTaxContext,
-): PrepaidBlockChargeComputeResult {
-  const { client, issuance, billingProfile } = inputs;
-  const hours = issuance.blockMinutes / 60;
-  const rate = Math.round(issuance.blockPrice / hours);
-
+function computeBlockTax(input: {
+  client: ChargeComputeClient;
+  taxContext: ChargeComputeTaxContext;
+  soldAsServiceId: string;
+  soldAsTaxRateId: string | null;
+  amount: number;
+  taxDate: ISO8601String;
+  currencyCode: string;
+  label: string;
+}) {
+  const { client, taxContext } = input;
   const { taxRegion: serviceTaxRegion, isTaxable } =
     taxContext.getTaxInfoFromService({
-      service_id: issuance.soldAsServiceId,
-      tax_rate_id: issuance.soldAsTaxRateId,
+      service_id: input.soldAsServiceId,
+      tax_rate_id: input.soldAsTaxRateId,
     });
   // Region chain of a block: the sold-as service, then the client default. A
   // block is not tied to a service location.
@@ -110,21 +119,39 @@ export function computePrepaidBlockCharges(
     try {
       const result = taxContext.calculateTax(
         client.client_id,
-        issuance.blockPrice,
-        issuance.taxDate,
+        input.amount,
+        input.taxDate,
         effectiveTaxRegion,
         true,
-        issuance.currencyCode,
+        input.currencyCode,
       );
       taxRate = result.taxRate;
       taxAmount = result.taxAmount;
     } catch (error) {
-      console.error(
-        `Error calculating tax for prepaid block issuance ${issuance.issuanceId}:`,
-        error,
-      );
+      console.error(`Error calculating tax for ${input.label}:`, error);
     }
   }
+  return { taxAmount, taxRate, effectiveTaxRegion, isTaxable };
+}
+
+export function computePrepaidBlockCharges(
+  inputs: PrepaidBlockChargeComputeInputs,
+  taxContext: ChargeComputeTaxContext,
+): PrepaidBlockChargeComputeResult {
+  const { client, issuance, billingProfile } = inputs;
+  const hours = issuance.blockMinutes / 60;
+  const rate = Math.round(issuance.blockPrice / hours);
+
+  const { taxAmount, taxRate, effectiveTaxRegion, isTaxable } = computeBlockTax({
+    client,
+    taxContext,
+    soldAsServiceId: issuance.soldAsServiceId,
+    soldAsTaxRateId: issuance.soldAsTaxRateId,
+    amount: issuance.blockPrice,
+    taxDate: issuance.taxDate,
+    currencyCode: issuance.currencyCode,
+    label: `prepaid block issuance ${issuance.issuanceId}`,
+  });
 
   const profile = resolveChargeProfileFor(billingProfile);
   const charge: IPrepaidBlockCharge = {
@@ -176,13 +203,156 @@ export function computePrepaidBlockCharges(
           { label: "Block size", value: `${formatHours(hours)} hrs` },
           {
             label: "Block price",
-            value: formatCents(issuance.blockPrice, issuance.currencyCode),
+            value: formatMinorUnits(issuance.blockPrice, issuance.currencyCode),
           },
         ],
         steps: [
-          `${formatHours(hours)} hrs block at ${formatCents(issuance.blockPrice, issuance.currencyCode)} = ${formatCents(issuance.blockPrice, issuance.currencyCode)}`,
+          `${formatHours(hours)} hrs block at ${formatMinorUnits(issuance.blockPrice, issuance.currencyCode)} = ${formatMinorUnits(issuance.blockPrice, issuance.currencyCode)}`,
         ],
         markers: [],
+      },
+    ],
+  };
+}
+
+/**
+ * One cadence-mode Prepaid Block: the block fee for one recurring service
+ * period, billed in advance. There is no issuance; the service period record
+ * is the charge's identity. All amounts are minor units of `currencyCode`.
+ */
+export interface CadencePrepaidBlockInput {
+  /** `contract_lines.contract_line_id` carrying the block configuration. */
+  contractLineId: string;
+  clientContractLineId: string;
+  clientContractId?: string | null;
+  contractName?: string | null;
+  tenant?: string;
+  /** Full-period block size and price, before proration. */
+  blockMinutes: number;
+  blockPrice: number;
+  rolloverPeriods: number;
+  scopeServiceIds: string[];
+  soldAsServiceId: string;
+  serviceName: string;
+  soldAsTaxRateId: string | null;
+  /** The contract's currency. */
+  currencyCode: string;
+  locationId?: string | null;
+  /** Date the block's tax is evaluated on. */
+  taxDate: ISO8601String;
+  /** The service period the block covers (end inclusive, like every charge). */
+  servicePeriodStart: ISO8601String;
+  servicePeriodEnd: ISO8601String;
+  servicePeriodRecordId: string | null;
+  /** Share of the cadence period covered, in [0, 1]. */
+  coverageRatio: number;
+  /** When false the block is billed whole whatever the coverage. */
+  enableProration: boolean;
+  /** First and last (inclusive) day the issued block may be drawn. */
+  validFrom: ISO8601String;
+  expirationDate: ISO8601String;
+}
+
+export interface CadencePrepaidBlockChargeComputeInputs {
+  client: ChargeComputeClient;
+  block: CadencePrepaidBlockInput;
+  billingProfile?: ChargeProfileAssignments | null;
+}
+
+export function computeCadencePrepaidBlockCharges(
+  inputs: CadencePrepaidBlockChargeComputeInputs,
+  taxContext: ChargeComputeTaxContext,
+): PrepaidBlockChargeComputeResult {
+  const { client, block, billingProfile } = inputs;
+  const coverageRatio = block.enableProration
+    ? Math.max(0, Math.min(block.coverageRatio, 1))
+    : 1;
+  // Hours and price scale together through the one shared coverage primitive,
+  // so a part-period block is the same fraction of both.
+  const blockMinutes = prorateRecurringCoverageByRatio(block.blockMinutes, coverageRatio);
+  const blockPrice = prorateRecurringCoverageByRatio(block.blockPrice, coverageRatio);
+  const hours = blockMinutes / 60;
+  // The total is authoritative; the rate is the rounded price per hour.
+  const rate = hours > 0 ? Math.round(blockPrice / hours) : 0;
+
+  const { taxAmount, taxRate, effectiveTaxRegion, isTaxable } = computeBlockTax({
+    client,
+    taxContext,
+    soldAsServiceId: block.soldAsServiceId,
+    soldAsTaxRateId: block.soldAsTaxRateId,
+    amount: blockPrice,
+    taxDate: block.taxDate,
+    currencyCode: block.currencyCode,
+    label: `cadence prepaid block ${block.contractLineId} (${block.servicePeriodStart})`,
+  });
+
+  const profile = resolveChargeProfileFor(billingProfile);
+  const charge: IPrepaidBlockCharge = {
+    type: "prepaid_block",
+    ...(block.tenant ? { tenant: block.tenant } : {}),
+    issuance_id: null,
+    contract_line_id: block.contractLineId,
+    client_contract_line_id: block.clientContractLineId,
+    config_id: block.contractLineId,
+    client_contract_id: block.clientContractId as string,
+    contract_name: block.contractName || undefined,
+    serviceId: block.soldAsServiceId,
+    serviceName: block.serviceName,
+    block_minutes: blockMinutes,
+    block_price: blockPrice,
+    currency_code: block.currencyCode,
+    expiry_months: null,
+    scope_service_ids: block.scopeServiceIds,
+    quantity: hours,
+    rate,
+    total: blockPrice,
+    tax_amount: taxAmount,
+    tax_rate: taxRate,
+    tax_region: effectiveTaxRegion,
+    is_taxable: isTaxable,
+    servicePeriodStart: block.servicePeriodStart,
+    servicePeriodEnd: block.servicePeriodEnd,
+    servicePeriodRecordId: block.servicePeriodRecordId,
+    billingTiming: "advance",
+    valid_from: block.validFrom,
+    expiration_date: block.expirationDate,
+    rollover_periods: block.rolloverPeriods,
+    ...(block.locationId !== undefined ? { location_id: block.locationId } : {}),
+    ...(profile
+      ? {
+          billing_profile_id: profile.billingProfileId,
+          billing_profile_source: profile.source,
+        }
+      : {}),
+  };
+
+  const prorated = coverageRatio < 1;
+  return {
+    charges: [charge],
+    explanations: [
+      {
+        chargeKey: `prepaid_block:${block.contractLineId}:${block.servicePeriodStart}`,
+        serviceName: block.serviceName,
+        chargeType: "prepaid_block",
+        inputs: [
+          { label: "Block size", value: `${formatHours(block.blockMinutes / 60)} hrs` },
+          {
+            label: "Block price",
+            value: formatMinorUnits(block.blockPrice, block.currencyCode),
+          },
+          ...(prorated
+            ? [{ label: "Coverage", value: `${(coverageRatio * 100).toFixed(2)}%` }]
+            : []),
+        ],
+        steps: [
+          `${formatHours(block.blockMinutes / 60)} hrs block at ${formatMinorUnits(block.blockPrice, block.currencyCode)}`,
+          ...(prorated
+            ? [
+                `${(coverageRatio * 100).toFixed(2)}% coverage = ${formatHours(hours)} hrs at ${formatMinorUnits(blockPrice, block.currencyCode)}`,
+              ]
+            : []),
+        ],
+        markers: prorated ? ["proration"] : [],
       },
     ],
   };

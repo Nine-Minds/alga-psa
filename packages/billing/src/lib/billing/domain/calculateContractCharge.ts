@@ -5,12 +5,14 @@ import {
   computeDiscountsAndAdjustments,
   computeFixedCharges,
   computeHourBlockDrawCharges,
+  computeCadencePrepaidBlockCharges,
   computePrepaidBlockCharges,
   computeRecurringQuantityCharges,
   computeTimeBasedCharges,
   computeUsageBasedCharges,
   type BucketChargeComputeInputs,
   type BucketChargeComputeResult,
+  type CadencePrepaidBlockChargeComputeInputs,
   type ChargeComputeTaxContext,
   type DiscountsAndAdjustmentsComputeInputs,
   type DiscountsAndAdjustmentsComputeResult,
@@ -75,6 +77,11 @@ export type ResolvedContractChargeObligation = {
       taxContext: ChargeComputeTaxContext;
     }
   | {
+      kind: "cadencePrepaidBlock";
+      inputs: CadencePrepaidBlockChargeComputeInputs;
+      taxContext: ChargeComputeTaxContext;
+    }
+  | {
       kind: "hourBlockDraw";
       inputs: HourBlockDrawChargeComputeInputs;
       taxContext: ChargeComputeTaxContext;
@@ -117,7 +124,7 @@ export function lineFacts(
  */
 export type LoadedContractChargeObligation = Exclude<
   ResolvedContractChargeObligation,
-  { kind: "prepaidBlock" | "hourBlockDraw" }
+  { kind: "prepaidBlock" | "cadencePrepaidBlock" | "hourBlockDraw" }
 >;
 
 /** Adapter-only bridge from loaded production data into the public fact model. */
@@ -361,6 +368,7 @@ export type ContractChargeCalculationResult = {
   | ({ kind: "bucket" } & BucketChargeComputeResult)
   | ({ kind: "product" | "license" } & RecurringQuantityChargeComputeResult)
   | ({ kind: "prepaidBlock" } & PrepaidBlockChargeComputeResult)
+  | ({ kind: "cadencePrepaidBlock" } & PrepaidBlockChargeComputeResult)
   | ({ kind: "hourBlockDraw" } & HourBlockDrawChargeComputeResult)
 );
 
@@ -455,6 +463,7 @@ export function calculateNormalizedContractCharge(
           clientContractLine,
           timing: facts.timing!,
           client,
+          ...(facts.overPrepaidBlock ? { overPrepaidBlock: true } : {}),
           plan: {
             enable_overtime: facts.overtime.enabled,
             overtime_threshold: facts.overtime.threshold,
@@ -608,6 +617,18 @@ export function calculateNormalizedContractCharge(
         },
       };
       break;
+    case "cadencePrepaidBlock":
+      obligation = {
+        kind: "cadencePrepaidBlock",
+        executionMode,
+        taxContext,
+        inputs: {
+          client,
+          block: facts.block,
+          billingProfile: facts.billingProfile,
+        },
+      };
+      break;
     case "prepaidBlock":
       obligation = {
         kind: "prepaidBlock",
@@ -697,6 +718,9 @@ export function calculateContractCharge(
   obligation: Extract<ResolvedContractChargeObligation, { kind: "prepaidBlock" }>,
 ): Extract<ContractChargeCalculationResult, { kind: "prepaidBlock" }>;
 export function calculateContractCharge(
+  obligation: Extract<ResolvedContractChargeObligation, { kind: "cadencePrepaidBlock" }>,
+): Extract<ContractChargeCalculationResult, { kind: "cadencePrepaidBlock" }>;
+export function calculateContractCharge(
   obligation: Extract<ResolvedContractChargeObligation, { kind: "hourBlockDraw" }>,
 ): Extract<ContractChargeCalculationResult, { kind: "hourBlockDraw" }>;
 export function calculateContractCharge(
@@ -768,6 +792,14 @@ function calculateContractChargeImpl(
         executionMode: obligation.executionMode,
         ...associate(
           computePrepaidBlockCharges(obligation.inputs, obligation.taxContext),
+        ),
+      };
+    case "cadencePrepaidBlock":
+      return {
+        kind: obligation.kind,
+        executionMode: obligation.executionMode,
+        ...associate(
+          computeCadencePrepaidBlockCharges(obligation.inputs, obligation.taxContext),
         ),
       };
     case "hourBlockDraw":
