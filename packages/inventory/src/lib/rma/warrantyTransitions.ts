@@ -210,6 +210,7 @@ export async function openWarrantyClaimCore(
   const [row] = await db
     .table('rma_cases')
     .insert({
+      tenant,
       rma_number: rmaNumber,
       rma_type: input.rma_type,
       returned_unit_id: null,

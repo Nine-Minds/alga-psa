@@ -64,6 +64,8 @@ function rmaActionErrorFrom(error: unknown): RmaActionError | null {
         return actionError('Returned stock unit not found. Please refresh and choose another unit.', 'features/inventory:errors.rma.returnedUnitNotFound');
       case 'RMA case has no associated product service_id':
         return actionError('This RMA is missing product details. Please refresh and try again.', 'features/inventory:errors.rma.missingProductDetails');
+      case 'RMA case is a warranty claim':
+        return actionError('This is a warranty claim on client equipment. Use the warranty actions on the RMA.', 'features/inventory:errors.rma.warrantyClaimUnitAction');
       case 'RMA case has no returned unit':
         return actionError('This RMA has no returned unit recorded. Please refresh and try again.', 'features/inventory:errors.rma.noReturnedUnit');
     }
@@ -101,6 +103,9 @@ async function loadRma(trx: Knex.Transaction, tenant: string, rmaId: string): Pr
   // concurrent transitions serialize here and assertStatus() is authoritative (F021).
   const rma = await trx('rma_cases').where({ tenant, rma_id: rmaId }).forUpdate().first();
   if (!rma) throw new Error('RMA case not found');
+  // Every writer in this file moves stock units. A client-asset warranty claim (no returned unit) has its own
+  // actions in rmaWarrantyActions.ts and must never reach these, so the guard sits at the single lock point.
+  if (!rma.returned_unit_id) throw new Error('RMA case is a warranty claim');
   return rma as IRmaCase;
 }
 

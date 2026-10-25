@@ -23,6 +23,8 @@ export function rmaCaseQuery(trx: Knex.Transaction, tenant: string): Knex.QueryB
     .where({ 'r.tenant': tenant })
     .select(
       'r.*',
+      // DATE columns come back from pg as JS Dates and would shift a day when serialised; send the calendar date.
+      trx.raw(`to_char(r.return_by, 'YYYY-MM-DD') as return_by`),
       'c.client_name',
       'v.vendor_name',
       'sc.service_name',
