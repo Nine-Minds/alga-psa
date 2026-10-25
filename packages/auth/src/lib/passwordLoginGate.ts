@@ -40,9 +40,12 @@ export class TwoFactorEnrollmentRequiredError extends CredentialsSignin {
 }
 
 export function toPolicySubject(user: IUser): PolicySubject {
+  // Callers have already passed the interactive-user gate, so anything not 'client' is 'internal'.
+  let userType: PolicySubject['userType'] = 'internal';
+  if (user.user_type === 'client') userType = 'client';
   return {
     userId: String(user.user_id),
-    userType: user.user_type === 'client' ? 'client' : 'internal',
+    userType,
     twoFactorEnabled: Boolean(user.two_factor_enabled),
     knownDeviceSkipEnabled: Boolean((user as any).two_factor_required_new_device),
   };
