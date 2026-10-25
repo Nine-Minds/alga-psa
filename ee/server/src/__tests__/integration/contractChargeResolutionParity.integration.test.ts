@@ -40,10 +40,18 @@ import {
   findOrCreateCurrentBucketUsageRecord,
   updateBucketUsageMinutes,
 } from "@alga-psa/shared/billingClients/bucketUsageService";
+import { buildRecurringServicePeriodScheduleKey } from "@alga-psa/shared/billingClients/recurringServicePeriodKeys";
+import { reconcileLineAllocations } from "@alga-psa/shared/billingClients/hourBlockService";
 import { BillingEngine } from "@alga-psa/billing/lib/billing/billingEngine";
 import { syncPrepaidBlockIssuancesForContractLine } from "@alga-psa/billing/services/prepaidBlockIssuanceSync";
 import { generateInvoiceForNormalizedSelectionInputs } from "@alga-psa/billing/actions/invoiceGeneration";
-import { buildContractCadenceDueSelectionInput } from "@alga-psa/shared/billingClients/recurringRunExecutionIdentity";
+import { repairArrearsOnlyLineSchedulesForTenant } from "@alga-psa/billing/actions/arrearsOnlyLineRepair";
+import { finalizeInvoiceWithKnex } from "@alga-psa/billing/actions/invoiceModification";
+import { materializeContractCadenceServicePeriodsForContract } from "@alga-psa/billing/actions/contractCadenceServicePeriodMaterialization";
+import {
+  buildClientCadenceDueSelectionInput,
+  buildContractCadenceDueSelectionInput,
+} from "@alga-psa/shared/billingClients/recurringRunExecutionIdentity";
 
 process.env.DB_PORT =
   process.env.DB_PORT === "6432" ? "5432" : process.env.DB_PORT;
@@ -466,6 +474,178 @@ describe("Contract charge resolution parity (simulator vs engine dry run)", () =
       }));
     expect(simulator).toEqual(engine);
   }, 120_000);
+
+  // -------------------------------------------------------------------------
+  // Cadence-mode prepaid block: the block fee is its own advance stream on the
+  // Hourly line, time draws it first, overage bills in arrears.
+
+  it("cadence block: the first window bills the block in advance and not the hourly stream", async () => {
+    const contract = await seedCadenceBlockContract(context, {});
+    const nov = await generateCadenceWindow(context, contract, NOV);
+    expect(nov.lines.map((line) => line.kind).sort()).toEqual(["fixed", "prepaid_block"]);
+    expect(nov.lines.find((line) => line.kind === "prepaid_block")?.net).toBe(150_000);
+    expect(nov.lines.some((line) => line.kind === "hourly")).toBe(false);
+    expect(nov.total).toBe(300_000);
+    expect(await simulatedWindow(context, contract, 0, {})).toEqual(nov.lines);
+  }, 180_000);
+
+  it("cadence block draw-down: 8 h bills no overage, no plain hourly charge and a zero draw line", async () => {
+    const contract = await seedCadenceBlockContract(context, {});
+    await generateCadenceWindow(context, contract, NOV, { finalize: true });
+    await logHours(context, contract, "2025-11-10", [480]);
+    const dec = await generateCadenceWindow(context, contract, DEC);
+    expect(dec.lines.filter((line) => line.kind === "hourly")).toEqual([]);
+    expect(dec.lines.some((line) => line.net === 0 && line.quantity === 8)).toBe(true);
+    expect(await simulatedWindow(context, contract, 1, { 1: 8 })).toEqual(dec.lines);
+  }, 180_000);
+
+  it("cadence block arrears overage: 14 h bills 4 h at the line rate beside the next block", async () => {
+    const contract = await seedCadenceBlockContract(context, {});
+    await generateCadenceWindow(context, contract, NOV, { finalize: true });
+    await logHours(context, contract, "2025-11-10", [840]);
+    const dec = await generateCadenceWindow(context, contract, DEC);
+    expect(dec.lines.filter((line) => line.net === 60_000 && line.quantity === 4)).toHaveLength(1);
+    expect(dec.lines.filter((line) => line.kind === "prepaid_block" && line.net === 150_000)).toHaveLength(1);
+    expect(await simulatedWindow(context, contract, 1, { 1: 14 })).toEqual(dec.lines);
+  }, 180_000);
+
+  it.each([
+    { rollover: 1, hours: [6, 13], overageHours: 0 },
+    { rollover: 0, hours: [6, 13], overageHours: 3 },
+  ])("cadence block rollover_periods=$rollover: $hours h then bills $overageHours h overage", async ({ rollover, hours, overageHours }) => {
+    const contract = await seedCadenceBlockContract(context, { rolloverPeriods: rollover });
+    await generateCadenceWindow(context, contract, NOV, { finalize: true });
+    await logHours(context, contract, "2025-11-10", [hours[0] * 60]);
+    await generateCadenceWindow(context, contract, DEC, { finalize: true });
+    await logHours(context, contract, "2025-12-10", [hours[1] * 60]);
+    const jan = await generateCadenceWindow(context, contract, JAN);
+    const overage = jan.lines.filter((line) => line.kind === "hourly");
+    expect(overage.reduce((sum, line) => sum + line.quantity, 0)).toBe(overageHours);
+    expect(await simulatedWindow(context, contract, 2, { 1: hours[0], 2: hours[1] })).toEqual(jan.lines);
+  }, 240_000);
+
+  it("acceptance: unedited snapshot, Nov 3,000 then Dec 3,600 with 14 h, simulator equals engine, edit moves only the next unbilled period", async () => {
+    const contract = await seedCadenceBlockContract(context, {});
+    const nov = await generateCadenceWindow(context, contract, NOV, { finalize: true });
+    expect(nov.total).toBe(300_000);
+    await logHours(context, contract, "2025-11-10", [840]);
+    const dec = await generateCadenceWindow(context, contract, DEC);
+    expect(dec.total).toBe(360_000);
+    expect(dec.lines.filter((line) => line.kind === "fixed")).toHaveLength(1);
+    expect(dec.lines.find((line) => line.kind === "fixed")?.net).toBe(150_000);
+    expect(dec.lines.find((line) => line.kind === "prepaid_block")?.net).toBe(150_000);
+    expect(dec.lines.some((line) => line.net === 60_000 && line.quantity === 4)).toBe(true);
+    expect(dec.lines.some((line) => line.net === 0 && line.quantity === 10)).toBe(true);
+    expect(dec.descriptions.some((text) => text.includes("(over prepaid block)"))).toBe(true);
+    expect(await simulatedWindow(context, contract, 1, { 1: 14 })).toEqual(dec.lines);
+
+    // Editing the block changes only the next unbilled period.
+    await context
+      .db("contract_line_prepaid_blocks")
+      .where({ tenant: context.tenantId, contract_line_id: contract.hourlyLineId })
+      .update({ block_minutes: 720, block_price: 180_000 });
+    const billed = await context
+      .db("hour_blocks")
+      .where({ tenant: context.tenantId, contract_line_id: contract.hourlyLineId })
+      .orderBy("valid_from");
+    // The December block was minted with the December invoice and keeps its size.
+    expect(billed.map((row) => Number(row.total_minutes))).toEqual([600, 600]);
+    await generateCadenceWindow(context, contract, DEC, { finalize: true, reuse: dec });
+    const jan = await generateCadenceWindow(context, contract, JAN);
+    expect(jan.lines.find((line) => line.kind === "prepaid_block")?.net).toBe(180_000);
+  }, 300_000);
+
+  it("cadence block mid-period start prorates hours and price together, with an indivisible price", async () => {
+    // Client cadence anchored on the 15th; the block starts on the 20th, so the
+    // first service period covers 25 of the 30 days of the cycle.
+    const contract = await seedCadenceBlockContract(context, {
+      startDate: "2025-11-20",
+      blockPrice: 100_001,
+      blockMinutes: 600,
+      enableProration: true,
+      clientCadence: { servicePeriod: { start: "2025-11-20", end: "2025-12-15" }, window: { start: "2025-11-15", end: "2025-12-15" } },
+    });
+    const first = await generateCadenceWindow(context, contract, { start: "2025-11-15", end: "2025-12-15" });
+    const block = first.lines.find((line) => line.kind === "prepaid_block");
+    expect(block).toBeTruthy();
+    // 100001 * 25 / 30 = 83334.17 cents; the shared coverage rule rounds up, and the total stays authoritative.
+    expect(block!.net).toBe(83_335);
+    expect(block!.quantity).toBeCloseTo((600 * 25) / 30 / 60, 4);
+    const hourBlock = await context
+      .db("hour_blocks")
+      .where({ tenant: context.tenantId, contract_line_id: contract.hourlyLineId })
+      .first();
+    expect(Number(hourBlock.total_minutes)).toBe(500);
+    expect(Number(hourBlock.purchase_amount)).toBe(83_335);
+    const sim = await simulatedWindow(context, contract, 0, {}, "2025-11-20", true);
+    expect(sim).toEqual(first.lines);
+  }, 180_000);
+
+  it("the Hourly/Usage advance repair leaves a cadence block's advance rows alone", async () => {
+    const contract = await seedCadenceBlockContract(context, {});
+    const blockRows = () =>
+      context
+        .db("recurring_service_periods")
+        .where({
+          tenant: context.tenantId,
+          obligation_id: contract.hourlyLineId,
+          charge_family: "prepaid_block",
+        })
+        .whereNotIn("lifecycle_state", ["superseded", "archived"])
+        .orderBy("service_period_start")
+        .select("record_id", "due_position", "lifecycle_state");
+    const before = await blockRows();
+    expect(before.length).toBeGreaterThan(0);
+    expect(before.every((row) => row.due_position === "advance")).toBe(true);
+
+    // A legacy hourly row scheduled in advance: the repair's target on this very line.
+    const now = new Date().toISOString();
+    const staleId = uuidv4();
+    await insertSupportedRows(context.db, "recurring_service_periods", [
+      {
+        tenant: context.tenantId,
+        record_id: staleId,
+        schedule_key: `legacy-advance:${contract.hourlyLineId}`,
+        period_key: "2025-10-01:2025-11-01",
+        revision: 1,
+        obligation_id: contract.hourlyLineId,
+        charge_family: "hourly",
+        cadence_owner: "contract",
+        due_position: "advance",
+        lifecycle_state: "generated",
+        service_period_start: "2025-10-01",
+        service_period_end: "2025-11-01",
+        invoice_window_start: "2025-10-01",
+        invoice_window_end: "2025-11-01",
+        provenance_kind: "generated",
+        source_rule_version: "parity-v1",
+        reason_code: "initial_materialization",
+        source_run_key: "legacy",
+        created_at: now,
+        updated_at: now,
+      },
+    ]);
+    const summary = await context.db.transaction((trx) =>
+      repairArrearsOnlyLineSchedulesForTenant(trx, { tenant: context.tenantId }),
+    );
+    expect(summary.advanceRowsSuperseded).toBe(1);
+    const stale = await context
+      .db("recurring_service_periods")
+      .where({ tenant: context.tenantId, record_id: staleId })
+      .first("lifecycle_state");
+    expect(stale.lifecycle_state).toBe("superseded");
+
+    expect(await blockRows()).toEqual(before);
+    const superseded = await context
+      .db("recurring_service_periods")
+      .where({
+        tenant: context.tenantId,
+        obligation_id: contract.hourlyLineId,
+        charge_family: "prepaid_block",
+        lifecycle_state: "superseded",
+      });
+    expect(superseded).toEqual([]);
+  }, 180_000);
 });
 
 // ---------------------------------------------------------------------------
@@ -1158,4 +1338,344 @@ async function insertSupportedRows(
       Object.fromEntries(Object.entries(row).filter(([column]) => column in columns)),
     ),
   );
+}
+
+// ---------------------------------------------------------------------------
+// Cadence-mode prepaid block fixtures.
+
+const NOV = { start: "2025-11-01", end: "2025-12-01" };
+const DEC = { start: "2025-12-01", end: "2026-01-01" };
+const JAN = { start: "2026-01-01", end: "2026-02-01" };
+
+interface CadenceBlockContract {
+  contractId: string;
+  clientContractId: string;
+  hourlyLineId: string;
+  hourlyServiceId: string;
+  fixedLineId: string;
+  scenario: ContractScenario;
+}
+
+interface CadenceWindowResult {
+  lines: ParityLine[];
+  total: number;
+  descriptions: string[];
+  invoiceId: string | null;
+}
+
+/**
+ * A contract-cadence contract from 1 Nov: a $1,500 Fixed advance line and an
+ * Hourly line ($150/h) carrying a monthly cadence prepaid block (10 h / $1,500
+ * by default). Service periods are materialized by the production
+ * materializer, so both recurring streams exist for the engine.
+ */
+async function seedCadenceBlockContract(
+  context: TestContext,
+  options: {
+    rolloverPeriods?: number;
+    startDate?: string;
+    blockMinutes?: number;
+    blockPrice?: number;
+    enableProration?: boolean;
+    /** Client-owned cadence (anchor day 15) with one hand-persisted block period. */
+    clientCadence?: {
+      servicePeriod: { start: string; end: string };
+      window: { start: string; end: string };
+    };
+  },
+): Promise<CadenceBlockContract> {
+  const taxRateId = await setupClientTaxConfiguration(context);
+  const fixedService = await pricedService(context, "Cadence managed support", "fixed", 150_000, taxRateId);
+  const hourlyService = await pricedService(context, "Cadence engineering", "hourly", 15_000, taxRateId);
+  const contractId = uuidv4();
+  const clientContractId = uuidv4();
+  const common = {
+    contractId,
+    clientContractId,
+    clientId: context.clientId,
+    startDate: options.startDate ?? "2025-11-01",
+    endDate: null,
+    billingFrequency: "monthly" as const,
+    cadenceOwner: options.clientCadence ? ("client" as const) : ("contract" as const),
+    enableProration: options.enableProration ?? false,
+  };
+  if (options.clientCadence) {
+    await ensureClientBillingSettingsRow(context.db, {
+      tenant: context.tenantId,
+      clientId: context.clientId,
+    });
+    await context
+      .db("clients")
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .update({ billing_cycle: "monthly" });
+    await context
+      .db("client_billing_settings")
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .update({
+        billing_cycle_anchor_day_of_month: 15,
+        billing_cycle_anchor_month_of_year: null,
+        billing_cycle_anchor_day_of_week: null,
+        billing_cycle_anchor_reference_date: null,
+      });
+  }
+  // The client-cadence variant carries only the block line.
+  const fixed = options.clientCadence
+    ? null
+    : await createFixedPlanAssignment(context, fixedService, {
+        ...common,
+        billingTiming: "advance" as const,
+        planName: "Cadence fixed",
+        baseRateCents: 150_000,
+      });
+  const hourly = await createFixedPlanAssignment(context, hourlyService, {
+    ...common,
+    billingTiming: "arrears" as const,
+    planName: "Cadence prepaid block",
+    baseRateCents: 15_000,
+  });
+  const hourlyConfig = await convertConfiguration(context, hourly.contractLineId, hourlyService, "Hourly");
+  await context.db("contract_line_service_hourly_configs").insert({
+    tenant: context.tenantId,
+    config_id: hourlyConfig,
+    hourly_rate: 15_000,
+    minimum_billable_time: 1,
+    round_up_to_nearest: 1,
+  });
+  await context.db("contract_line_service_hourly_config").insert({
+    tenant: context.tenantId,
+    config_id: hourlyConfig,
+    minimum_billable_time: 1,
+    round_up_to_nearest: 1,
+    enable_overtime: false,
+    enable_after_hours_rate: false,
+  });
+  await context.db("contract_line_prepaid_blocks").insert({
+    tenant: context.tenantId,
+    contract_line_id: hourly.contractLineId,
+    block_minutes: options.blockMinutes ?? 600,
+    block_price: options.blockPrice ?? 150_000,
+    expiry_months: null,
+    trigger_on_exhaustion: false,
+    trigger_on_expiry: false,
+    replenishment_tier: "draft",
+    sold_as_service_id: hourlyService,
+    issue_mode: "cadence",
+    rollover_periods: options.rolloverPeriods ?? 0,
+  });
+  if (options.clientCadence) {
+    const { servicePeriod, window } = options.clientCadence;
+    const now = new Date().toISOString();
+    await insertSupportedRows(context.db, "recurring_service_periods", [
+      {
+        tenant: context.tenantId,
+        record_id: uuidv4(),
+        schedule_key: buildRecurringServicePeriodScheduleKey({
+          tenant: context.tenantId,
+          obligationId: hourly.contractLineId,
+          cadenceOwner: "client",
+          duePosition: "advance",
+        }),
+        period_key: `${window.start}:${window.end}`,
+        revision: 1,
+        obligation_id: hourly.contractLineId,
+        charge_family: "prepaid_block",
+        cadence_owner: "client",
+        due_position: "advance",
+        lifecycle_state: "generated",
+        // The full cycle, with the part of it the line was active in.
+        service_period_start: window.start,
+        service_period_end: window.end,
+        activity_window_start: servicePeriod.start,
+        activity_window_end: servicePeriod.end,
+        invoice_window_start: window.start,
+        invoice_window_end: window.end,
+        provenance_kind: "generated",
+        source_rule_version: "parity-v1",
+        reason_code: "initial_materialization",
+        source_run_key: "cadence-block-parity",
+        created_at: now,
+        updated_at: now,
+      },
+    ]);
+  } else {
+    await context.db.transaction((trx) =>
+      materializeContractCadenceServicePeriodsForContract(trx, {
+        tenant: context.tenantId,
+        contractId,
+        sourceRunPrefix: "cadence-block-parity",
+      }),
+    );
+  }
+  const scenario = await snapshotContractToScenario(context.db, context.tenantId, {
+    contractId,
+    clientContractId,
+  });
+  return {
+    contractId,
+    clientContractId,
+    hourlyLineId: hourly.contractLineId,
+    hourlyServiceId: hourlyService,
+    fixedLineId: fixed?.contractLineId ?? "",
+    scenario,
+  };
+}
+
+async function logHours(
+  context: TestContext,
+  contract: CadenceBlockContract,
+  date: string,
+  minutes: number[],
+): Promise<void> {
+  const real = minutes.filter((value) => value > 0);
+  if (real.length === 0) return;
+  await seedActivity(context, {
+    hourlyLineId: contract.hourlyLineId,
+    hourlyServiceId: contract.hourlyServiceId,
+    hourlyMinutes: real,
+    usageLineId: contract.hourlyLineId,
+    usageServiceId: contract.hourlyServiceId,
+    usageQuantities: [],
+    activityDate: date,
+    ticketNumber: `CAD-${date}`,
+  });
+  // What the time-entry save does in production: draw the new work against the
+  // line's live blocks.
+  await context.db.transaction((trx) =>
+    reconcileLineAllocations(trx, context.tenantId, contract.hourlyLineId),
+  );
+}
+
+/**
+ * Generates (and optionally finalizes) the real invoice for the window and
+ * returns the lines the engine produced, in the simulator's comparable shape.
+ */
+async function generateCadenceWindow(
+  context: TestContext,
+  contract: CadenceBlockContract,
+  window: { start: string; end: string },
+  options: { finalize?: boolean; reuse?: CadenceWindowResult } = {},
+): Promise<CadenceWindowResult> {
+  if (options.reuse) {
+    if (options.finalize && options.reuse.invoiceId) {
+      await finalizeInvoiceWithKnex(options.reuse.invoiceId, context.db, context.tenantId, context.userId);
+    }
+    return options.reuse;
+  }
+  const captured: any[] = [];
+  const original = BillingEngine.prototype.calculateBillingForExecutionWindow;
+  const spy = vi
+    .spyOn(BillingEngine.prototype, "calculateBillingForExecutionWindow")
+    .mockImplementation(async function (this: BillingEngine, ...args) {
+      const result = await original.apply(this, args);
+      captured.push(result);
+      return result;
+    });
+  let invoice: any;
+  try {
+    invoice = await generateInvoiceForNormalizedSelectionInputs({
+      user: { user_id: context.userId, user_type: "internal", tenant: context.tenantId } as never,
+      tenant: context.tenantId,
+      knex: context.db,
+      normalizedSelectorInputs: await cadenceSelectorInputs(context, contract, window),
+    });
+  } finally {
+    spy.mockRestore();
+  }
+  const result = captured[0];
+  if (!result) throw new Error("Engine did not run for the window");
+  if (result.error) throw new Error(`Engine failed: ${result.error}`);
+  const invoiceId: string | null = invoice?.invoice_id ?? null;
+  const rows = invoiceId
+    ? await context.db("invoice_charges").where({ tenant: context.tenantId, invoice_id: invoiceId })
+    : [];
+  const lines = (result.charges as any[])
+    .map((charge): ParityLine => {
+      const kind = normalizeKind(String(charge.type));
+      return {
+        kind,
+        serviceId: serviceIdFor(kind, charge.serviceId ?? charge.service_catalog_id ?? null),
+        // A draw line carries its hours in hoursUsed, not the quantity.
+        quantity:
+          kind === "hour_block"
+            ? round(Number(charge.hoursUsed ?? 0))
+            : quantityFor(kind, Number(charge.quantity ?? 0)),
+        net: Number(charge.total),
+      };
+    })
+    .sort(compareLines);
+  if (options.finalize && invoiceId) {
+    await finalizeInvoiceWithKnex(invoiceId, context.db, context.tenantId, context.userId);
+  }
+  return {
+    lines,
+    total: lines.reduce((sum, line) => sum + line.net, 0),
+    descriptions: rows.map((row) => String(row.description ?? "")),
+    invoiceId,
+  };
+}
+
+async function cadenceSelectorInputs(
+  context: TestContext,
+  contract: CadenceBlockContract,
+  window: { start: string; end: string },
+) {
+  const clientRows = await context
+    .db("recurring_service_periods")
+    .where({ tenant: context.tenantId, cadence_owner: "client", obligation_id: contract.hourlyLineId });
+  if (clientRows.length > 0) {
+    const row = clientRows[0];
+    return [
+      buildClientCadenceDueSelectionInput({
+        clientId: context.clientId,
+        scheduleKey: row.schedule_key,
+        periodKey: row.period_key,
+        windowStart: `${window.start}T00:00:00Z`,
+        windowEnd: `${window.end}T00:00:00Z`,
+      }),
+    ];
+  }
+  return contract.scenario.lines.map((line) =>
+    buildContractCadenceDueSelectionInput({
+      clientId: context.clientId,
+      contractId: contract.contractId,
+      contractLineId: line.origin_contract_line_id ?? line.key,
+      windowStart: `${window.start}T00:00:00Z`,
+      windowEnd: `${window.end}T00:00:00Z`,
+    }),
+  );
+}
+
+/** The simulator's lines for invoice window `index` (0 = November) of the unedited snapshot. */
+async function simulatedWindow(
+  context: TestContext,
+  contract: CadenceBlockContract,
+  index: number,
+  hoursByWindow: Record<number, number>,
+  horizonStart = "2025-11-01",
+  keepCadenceOwner = false,
+): Promise<ParityLine[]> {
+  const scenario = structuredClone(
+    await snapshotContractToScenario(context.db, context.tenantId, {
+      contractId: contract.contractId,
+      clientContractId: contract.clientContractId,
+    }),
+  );
+  if (!keepCadenceOwner) for (const line of scenario.lines) line.cadence_owner = "contract";
+  scenario.horizon = { start_date: `${horizonStart}T00:00:00Z`, period_count: 4 };
+  scenario.assumptions[assumptionKey(contract.hourlyLineId, contract.hourlyServiceId)] = {
+    flat: 0,
+    overrides: hoursByWindow,
+  };
+  const simulated = await simulateContractScenario(context.db, context.tenantId, scenario);
+  return (simulated.periods[index]?.lines ?? [])
+    .map((line): ParityLine => {
+      const kind = line.charge_type === "block_draw" ? "hour_block" : normalizeKind(line.charge_type);
+      return {
+        kind,
+        serviceId: serviceIdFor(kind, line.service_id),
+        quantity: kind === "hour_block" ? round(Number(line.quantity ?? 0)) : quantityFor(kind, Number(line.quantity ?? 0)),
+        net: line.net_amount,
+      };
+    })
+    .sort(compareLines);
 }
