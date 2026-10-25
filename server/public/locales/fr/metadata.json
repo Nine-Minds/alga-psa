@@ -340,7 +340,10 @@
         },
         "fallbackTitle": "Détails de l'actif"
       },
-      "title": "Actifs"
+      "title": "Actifs",
+      "custody": {
+        "title": "Matériel sous garde"
+      }
     },
     "chat": {
       "title": "Discussion"

@@ -105,7 +105,8 @@
     "passwords": "Hasła",
     "ticketsAll": "Wszystkie zgłoszenia",
     "ticketsRecurring": "Zgłoszenia cykliczne",
-    "ticketsTemplates": "Szablony zgłoszeń"
+    "ticketsTemplates": "Szablony zgłoszeń",
+    "assetsCustody": "Sprzęt w przechowaniu"
   },
   "sidebar": {
     "backToMain": "Powrót do głównego",

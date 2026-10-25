@@ -501,6 +501,8 @@ export interface CreateAssetRequest {
   asset_tag: string;
   name: string;
   status: string;
+  /** Who owns the device. Defaults to 'client' server-side. */
+  ownership?: 'client' | 'msp';
   location_id?: string | null;
   contact_name_id?: string | null;
   location?: string;

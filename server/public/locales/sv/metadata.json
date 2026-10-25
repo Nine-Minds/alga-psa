@@ -217,7 +217,10 @@
       "policies": {
         "title": "Tillgångspolicyer"
       },
-      "title": "Tillgångar"
+      "title": "Tillgångar",
+      "custody": {
+        "title": "Utrustning i förvar"
+      }
     },
     "billing": {
       "title": "Fakturering",

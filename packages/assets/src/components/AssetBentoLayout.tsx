@@ -36,6 +36,7 @@ import {
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import useSWR from 'swr';
 import { getAssetLinkedTickets, getAssetMaintenanceReport } from '../actions/assetActions';
+import { CustodyCard } from './custody/CustodyCard';
 import { getAssetGroup } from '../actions/assetGroupActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { useClientDrawer } from '@alga-psa/ui';
@@ -525,6 +526,8 @@ export function AssetBentoLayout({
                 </ul>
               ) : null}
             </BentoTile>
+
+            <CustodyCard id="asset-bento-custody" assetId={asset.asset_id} />
 
             <BentoTile
               id="asset-bento-related"

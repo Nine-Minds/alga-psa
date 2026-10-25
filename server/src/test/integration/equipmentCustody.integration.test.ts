@@ -14,6 +14,18 @@ import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 
 const published = vi.hoisted(() => ({ events: [] as Array<{ eventType: string; payload: any }> }));
+/** Assets the record-level asset read check refuses (per test). Empty = the real kernel decision (allow). */
+const denied = vi.hoisted(() => ({ assetIds: new Set<string>() }));
+vi.mock('@alga-psa/assets/lib/assetReadAuthorization', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/assets/lib/assetReadAuthorization')>();
+  return {
+    ...actual,
+    isAssetReadAllowed: async (...args: Parameters<typeof actual.isAssetReadAllowed>) =>
+      denied.assetIds.has(args[3].asset_id) ? false : actual.isAssetReadAllowed(...args),
+    filterReadableAssets: async (...args: Parameters<typeof actual.filterReadableAssets>) =>
+      (await actual.filterReadableAssets(...args)).filter((a) => !denied.assetIds.has(a.asset_id)),
+  };
+});
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn().mockResolvedValue(undefined),
   publishWorkflowEvent: vi.fn(async (e: any) => {
@@ -376,5 +388,101 @@ describe('equipment custody (integration)', () => {
       table(fx.tenantId, 'asset_custody_events').where({ custody_id: r.custody.custody_id }).update({ note: 'tamper' })
     ).rejects.toThrow(/append-only/i);
     await expect(table(fx.tenantId, 'asset_custody_events').where({ custody_id: r.custody.custody_id }).del()).rejects.toThrow(/append-only/i);
+  });
+
+  it('Dell scenario: receive, shelve, print the work-tag facts, move, then read timeline and queue', async () => {
+    const fx = await seedFixture();
+    const ctx = { tenant: fx.tenantId, user: { user_id: fx.userId, user_type: 'internal', roles: [] } as any, baseUrl: 'https://psa.example.com' };
+    const { getTicketLinkedAssetLabelParts } = await import('@alga-psa/assets/lib/ticketLinkedAssetLabels');
+
+    const r = unwrap<any>(await receiveEquipment(intake(fx)));
+    const assetId = r.asset.asset_id;
+
+    // Print: the shelf and who acts next are on the tag; the free-text note never is.
+    const writes = async () => ({
+      events: Number((await table(fx.tenantId, 'asset_custody_events').count('* as c').first() as any).c),
+      episodes: Number((await table(fx.tenantId, 'asset_custody').count('* as c').first() as any).c),
+      history: Number((await table(fx.tenantId, 'asset_history').count('* as c').first() as any).c),
+    });
+    const beforePrint = await writes();
+    const first = (await getTicketLinkedAssetLabelParts(ctx as any, [fx.ticketId]))[fx.ticketId];
+    expect(first).toMatchObject({ assetId, custodyLocation: 'Main Office / Shelf B3', nextAction: 'Waiting on vendor, Oct 29' });
+    expect(JSON.stringify(first)).not.toMatch(/follow up in 5 days|waiting on vendor, follow/i);
+    expect(await writes()).toEqual(beforePrint); // printing writes nothing
+
+    // Move to Shelf C1: the tag follows.
+    unwrap(await custody.moveCustody(r.custody.custody_id, { bin: 'Shelf C1' }));
+    const second = (await getTicketLinkedAssetLabelParts(ctx as any, [fx.ticketId]))[fx.ticketId];
+    expect(second?.custodyLocation).toBe('Main Office / Shelf C1');
+
+    // Both positions and the move are on the timeline and the queue shows the item.
+    const events = unwrap<any[]>(await custody.listCustodyEvents(assetId));
+    expect(events.map((e) => [e.event_type, e.to_bin])).toEqual([['received', 'Shelf B3'], ['moved', 'Shelf C1']]);
+    expect(events[1].from_bin).toBe('Shelf B3');
+    const queue = unwrap<any>(await custody.listCustodyQueue({}));
+    expect(queue.rows.map((x: any) => [x.asset_id, x.bin])).toEqual([[assetId, 'Shelf C1']]);
+    expect(queue.rows[0].ticket_id ?? fx.ticketId).toBe(fx.ticketId);
+  });
+
+  it('record-level filtering: an unreadable asset is dropped from the queue (rows and counts), label parts and reads', async () => {
+    const fx = await seedFixture();
+    const ctx = { tenant: fx.tenantId, user: { user_id: fx.userId, user_type: 'internal', roles: [] } as any, baseUrl: 'https://x.test' };
+    const { getTicketLinkedAssetLabelParts } = await import('@alga-psa/assets/lib/ticketLinkedAssetLabels');
+    const a = unwrap<any>(await receiveEquipment(intake(fx)));
+    const b = unwrap<any>(await receiveEquipment(intake(fx, { new_asset: { name: 'Second item' }, bin: 'Shelf D4' })));
+
+    // Two held items on one ticket: a count, and no next action.
+    const both = (await getTicketLinkedAssetLabelParts(ctx as any, [fx.ticketId]))[fx.ticketId];
+    expect(both).toMatchObject({ custodyLocation: '2 items held', nextAction: null });
+
+    denied.assetIds.add(a.asset.asset_id);
+    try {
+      const queue = unwrap<any>(await custody.listCustodyQueue({}));
+      expect(queue.rows.map((x: any) => x.asset_id)).toEqual([b.asset.asset_id]);
+      expect(queue.total).toBe(1);
+      expect(queue.tabCounts.all_open).toBe(1);
+
+      const parts = (await getTicketLinkedAssetLabelParts(ctx as any, [fx.ticketId]))[fx.ticketId];
+      expect(parts?.custodyLocation).toBe('Main Office / Shelf D4');
+      expect(JSON.stringify(parts)).not.toContain('Shelf B3');
+
+      expect(await custody.getAssetCustody(a.asset.asset_id)).toMatchObject({ success: false, error: { code: 'not_found' } });
+      expect(await custody.moveCustody(a.custody.custody_id, { bin: 'Z' })).toMatchObject({ success: false, error: { code: 'not_found' } });
+      // Held-equipment chip on the ticket drops it too.
+      expect(unwrap<any[]>(await custody.listHeldEquipment(fx.ticketId)).map((c) => c.asset_id)).toEqual([b.asset.asset_id]);
+    } finally {
+      denied.assetIds.clear();
+    }
+  });
+
+  it('the asset identity label view model never carries custody', async () => {
+    // Identity labels come from the assets provider, which must have no custody dependency at all.
+    const src = (await import('node:fs')).readFileSync(
+      new URL('../../../../packages/assets/src/lib/labelViewModelProvider.ts', import.meta.url),
+      'utf8'
+    );
+    expect(src).not.toMatch(/custody/i);
+  });
+
+  it('migration: ownership defaults to client with a CHECK, held_by_msp is seeded for existing tenants, and up() is idempotent', async () => {
+    const { createRequire } = await import('node:module');
+    const migration = createRequire(import.meta.url)('../../../migrations/20261024100000_create_asset_custody.cjs');
+    const fx = await seedFixture();
+    await table(fx.tenantId, 'asset_statuses').where({ slug: 'held_by_msp' }).del();
+
+    const assetId = randomUUID();
+    await table(fx.tenantId, 'assets').insert({
+      tenant: fx.tenantId, asset_id: assetId, asset_type: 'unknown', client_id: fx.clientId, asset_tag: 'LEGACY-1',
+      name: 'Legacy device', status: 'active', location: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    });
+    expect((await table(fx.tenantId, 'assets').where({ asset_id: assetId }).first()).ownership).toBe('client');
+    await expect(table(fx.tenantId, 'assets').where({ asset_id: assetId }).update({ ownership: 'other' })).rejects.toThrow(/ownership/i);
+
+    await migration.up(db);
+    await migration.up(db);
+    const rows = await table(fx.tenantId, 'asset_statuses').where({ slug: 'held_by_msp' });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ kind: 'pending', is_builtin: true });
+    expect((await table(fx.tenantId, 'assets').where({ asset_id: assetId }).first()).ownership).toBe('client');
   });
 });

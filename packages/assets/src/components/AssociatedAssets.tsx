@@ -17,6 +17,7 @@ import { RemoteAccessButton } from './RemoteAccessButton';
 import { hasRemoteAccessLinks } from '../actions/remoteAccessLinkActions';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import Pagination from '@alga-psa/ui/components/Pagination';
+import { CustodyBadge, useCustodyBadges } from './custody/CustodyBadge';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Monitor, Server, Smartphone, Printer, Network, Boxes } from 'lucide-react';
@@ -442,6 +443,8 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
     const INITIAL_DISPLAY_COUNT = 2;
     const [isExpanded, setIsExpanded] = useState(false);
     const visibleAssets = isExpanded ? associatedAssets : associatedAssets.slice(0, INITIAL_DISPLAY_COUNT);
+    // C4: "In office - Main Office / Shelf B3" / "With vendor" chip for equipment the MSP holds.
+    const custodyBadges = useCustodyBadges(visibleAssets.map((association) => association.asset_id));
     const hiddenCount = associatedAssets.length - INITIAL_DISPLAY_COUNT;
 
     const getAssetTypeIcon = (type: string) => {
@@ -531,6 +534,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                         {association.asset && (
                                             <RmmStatusIndicator asset={association.asset} size="sm" />
                                         )}
+                                        <CustodyBadge id={`associated-asset-custody-${association.asset_id}`} badge={custodyBadges.get(association.asset_id)} />
                                     </div>
                                     <div className="flex flex-shrink-0 items-center gap-2">
                                         {association.asset && (

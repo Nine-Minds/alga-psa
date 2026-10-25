@@ -93,6 +93,8 @@ const LABEL_FIELD_DEFAULT_LABELS: Record<LabelHideableField, string> = {
   detail: 'Detail / reason',
   secondaryIdentifier: 'Secondary identifier',
   serialSuffix: 'Serial suffix',
+  custodyLocation: 'Custody location',
+  nextAction: 'Next action',
   tenantLogo: 'Company logo',
   tenantName: 'Company name',
 };

@@ -365,7 +365,10 @@
         },
         "fallbackTitle": "Detalles del activo"
       },
-      "title": "Activos"
+      "title": "Activos",
+      "custody": {
+        "title": "Equipos en custodia"
+      }
     },
     "chat": {
       "title": "Chat"

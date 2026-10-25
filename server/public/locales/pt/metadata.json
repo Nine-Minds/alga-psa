@@ -380,7 +380,10 @@
         },
         "fallbackTitle": "Detalhes do ativo"
       },
-      "title": "Ativos"
+      "title": "Ativos",
+      "custody": {
+        "title": "Equipamento sob custódia"
+      }
     },
     "createContact": {
       "title": "Criar contato"

@@ -48,10 +48,50 @@ describe('buildLabelModel', () => {
   it('T-sens: the binding catalog exposes only view-model fields and never a full serial or ids', () => {
     const paths = Object.values(LABEL_TEMPLATE_VALUE_BINDINGS).map((b) => (b as { path: string }).path).sort();
     expect(paths).toEqual([
-      'clientName', 'code128Value', 'detail', 'display.assetLine', 'display.serialLine', 'identifier',
-      'secondaryIdentifier', 'serialSuffix', 'tenantClient.brandText', 'tenantClient.logoUrl', 'tenantClient.name',
+      'clientName', 'code128Value', 'custodyLocation', 'detail', 'display.assetLine', 'display.serialLine', 'identifier',
+      'nextAction', 'secondaryIdentifier', 'serialSuffix', 'tenantClient.brandText', 'tenantClient.logoUrl', 'tenantClient.name',
       'title', 'url',
     ]);
     expect(paths.some((p) => /serial$|recordId|email|phone/i.test(p) && p !== 'serialSuffix')).toBe(false);
+  });
+});
+
+describe('buildLabelModel: held-equipment (custody) lines', () => {
+  const held = { ...vm, custodyLocation: 'Main Office / Shelf B3', nextAction: 'Waiting on vendor, Oct 29' };
+
+  it('custody lines replace the work-reason line (line budget) and are hideable', () => {
+    const m = buildLabelModel(held, tenant);
+    expect(m).toMatchObject({ detail: null, custodyLocation: 'Main Office / Shelf B3', nextAction: 'Waiting on vendor, Oct 29' });
+    expect(buildLabelModel(held, tenant, ['custodyLocation', 'nextAction']).detail).toBe('Hardware');
+    expect(buildLabelModel(held, tenant, ['custodyLocation']).nextAction).toBe('Waiting on vendor, Oct 29');
+  });
+
+  it('a tag with no custody prints exactly as before', () => {
+    const m = buildLabelModel(vm, tenant);
+    expect(m).toMatchObject({ detail: 'Hardware', custodyLocation: null, nextAction: null });
+  });
+
+  it('binds custodyLocation and nextAction, and the work tag template uses them', async () => {
+    expect(LABEL_TEMPLATE_VALUE_BINDINGS.custodyLocation).toMatchObject({ path: 'custodyLocation' });
+    expect(LABEL_TEMPLATE_VALUE_BINDINGS.nextAction).toMatchObject({ path: 'nextAction' });
+    const { STANDARD_LABEL_TEMPLATE_ASTS } = await import('../label-template-ast/standardTemplates');
+    const json = JSON.stringify(Object.values(STANDARD_LABEL_TEMPLATE_ASTS));
+    expect(json).toContain('"bindingId":"custodyLocation"');
+  });
+
+  it('line budget holds with the longest strings: the work-tag text column stays within the 44 mm row', async () => {
+    const { getStandardLabelTemplateAstByCode, STANDARD_LABEL_TICKET_WORK_TAG_CODE } = await import('../label-template-ast/standardTemplates');
+    
+    const ast: any = getStandardLabelTemplateAstByCode(STANDARD_LABEL_TICKET_WORK_TAG_CODE);
+    const column = ast.layout.children[0].children[0].children as any[];
+    const px = (n: any) => Number.parseFloat(String(n.style.inline.maxHeight ?? '0'));
+    const byId = (id: string) => column.find((n) => n.id === id);
+    // Worst case: custody prints, so the reason line is collapsed. The identifier is uncapped: allow 3 lines at 20px.
+    const heights = column.filter((n) => n.id !== 'reason').map((n) => (n.id === 'ticket-number' ? 3 * 20 * 1.1 : px(n)));
+    const gaps = (column.length - 1) * (0.5 * 3.7795);
+    const total = heights.reduce((a, b) => a + b, 0) + gaps;
+    expect(byId('custody-location')).toBeTruthy();
+    expect(byId('next-action')).toBeTruthy();
+    expect(total).toBeLessThanOrEqual(44 * 3.7795);
   });
 });

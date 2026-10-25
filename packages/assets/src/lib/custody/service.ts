@@ -285,6 +285,41 @@ export async function listHeldEquipmentService(
   return Array.from(open.values()).filter((c) => readable.has(c.asset_id));
 }
 
+export interface OpenCustodyBadge {
+  asset_id: string;
+  state: 'in_office' | 'with_vendor';
+  /** "Main Office / Shelf B3" while in the office; null while with a vendor. */
+  location_label: string | null;
+  next_action_party: 'msp' | 'client' | 'vendor';
+}
+
+/** Cheap per-asset custody lookup for list badges. Record-level filtered; no free-text notes leave. */
+export async function getOpenCustodyBadgesService(
+  knex: Knex,
+  tenant: string,
+  user: AssetAuthUser,
+  assetIds: string[]
+): Promise<OpenCustodyBadge[]> {
+  const ids = Array.from(new Set(assetIds)).slice(0, 500);
+  const open = await getOpenCustodyForAssets(knex, tenant, ids);
+  if (open.size === 0) return [];
+  const assets = await tenantDb(knex, tenant)
+    .table('assets')
+    .whereIn('asset_id', Array.from(open.keys()))
+    .select<Array<{ asset_id: string; client_id: string }>>('asset_id', 'client_id');
+  const ctx = await createAssetReadContext(knex, tenant, user);
+  const readable = new Set((await filterReadableAssets(knex, tenant, ctx, assets)).map((a) => a.asset_id));
+  return Array.from(open.values())
+    .filter((c) => readable.has(c.asset_id))
+    .map((c) => ({
+      asset_id: c.asset_id,
+      state: c.state === 'with_vendor' ? ('with_vendor' as const) : ('in_office' as const),
+      location_label:
+        c.state === 'with_vendor' ? null : [c.location_name, c.bin].filter(Boolean).join(' / ') || null,
+      next_action_party: c.next_action_party,
+    }));
+}
+
 /** Distinct bins previously used at a location, for the bin combobox. Free text stays free text. */
 export async function listCustodyBinsService(knex: Knex, tenant: string, locationId: string): Promise<string[]> {
   const rows = await tenantDb(knex, tenant)

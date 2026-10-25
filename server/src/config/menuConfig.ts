@@ -61,7 +61,8 @@ import {
   Repeat,
   Ticket,
   BadgeCheck,
-  Wrench
+  Wrench,
+  PackageOpen
 } from 'lucide-react';
 
 // Navigation modes for the unified sidebar
@@ -194,7 +195,8 @@ export const navigationSections: NavigationSection[] = [
         icon: Monitor,
         subItems: [
           { name: 'All Assets', translationKey: 'nav.assetsAll', icon: Monitor, href: '/msp/assets' },
-          { name: 'Maintenance', translationKey: 'nav.assetsMaintenance', icon: Wrench, href: '/msp/assets/maintenance' }
+          { name: 'Maintenance', translationKey: 'nav.assetsMaintenance', icon: Wrench, href: '/msp/assets/maintenance' },
+          { name: 'Equipment in custody', translationKey: 'nav.assetsCustody', icon: PackageOpen, href: '/msp/assets/custody' }
         ]
       },
       {

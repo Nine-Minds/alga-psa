@@ -88,6 +88,21 @@ describe('printLabels', () => {
     expect((s.deps.getLinkedAssetParts as ReturnType<typeof vi.fn>).mock.calls[1][2]).toEqual({});
   });
 
+  it('T-custody: merges custody lines from the same seam; a ticket with no readable held asset is unchanged', async () => {
+    const s = setup([A, B]);
+    (s.deps.getLinkedAssetParts as ReturnType<typeof vi.fn>).mockResolvedValue({
+      [A]: { assetId: C, assetTag: 'WL-1', serialSuffix: null, custodyLocation: 'Main Office / Shelf B3', nextAction: 'Waiting on vendor, Oct 29' },
+      [B]: null,
+    });
+    await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', ids: [A, B] });
+    const vms = ((s.renderPdf.mock.calls[0] as unknown[])[1] as Array<{ viewModel: LabelViewModel }>).map((i) => i.viewModel);
+    expect(vms[0]).toMatchObject({ custodyLocation: 'Main Office / Shelf B3', nextAction: 'Waiting on vendor, Oct 29' });
+    expect(vms[1].custodyLocation ?? null).toBeNull();
+    expect(vms[1].nextAction ?? null).toBeNull();
+    // Only the seam is called: printing has no write dependency to call.
+    expect(s.deps.getLinkedAssetParts).toHaveBeenCalledTimes(1);
+  });
+
   it('T-resolve: a template of the wrong class is a 400 before any data read', async () => {
     const s = setup([A]);
     (s.deps.resolveTemplate as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: false, message: 'wrong class' });

@@ -105,7 +105,8 @@
     "passwords": "Password",
     "ticketsAll": "Tutti i ticket",
     "ticketsRecurring": "Ticket ricorrenti",
-    "ticketsTemplates": "Modelli di ticket"
+    "ticketsTemplates": "Modelli di ticket",
+    "assetsCustody": "Apparecchiature in custodia"
   },
   "sidebar": {
     "backToMain": "Torna al principale",

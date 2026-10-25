@@ -44,15 +44,11 @@ export function formatCustodyForLabel(
 }
 
 /**
- * A ticket with several held items prints the first line plus a count, never a list (the label has a fixed
+ * A ticket with several held items prints a count only (and no next action), never a list (the label has a fixed
  * line budget). `facts` is in the order the caller wants them to win.
  */
 export function formatCustodyForLabelMulti(facts: ReadonlyArray<CustodyLabelFacts>): CustodyLabelFacts | null {
   if (facts.length === 0) return null;
   if (facts.length === 1) return facts[0];
-  const first = facts[0];
-  return {
-    custodyLocation: `${facts.length} items in custody`,
-    nextAction: first.nextAction,
-  };
+  return { custodyLocation: `${facts.length} items held`, nextAction: null };
 }

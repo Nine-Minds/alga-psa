@@ -26,6 +26,8 @@ export const LABEL_HIDEABLE_FIELDS = [
   'detail',
   'secondaryIdentifier',
   'serialSuffix',
+  'custodyLocation',
+  'nextAction',
   'tenantLogo',
   'tenantName',
 ] as const;
@@ -73,6 +75,13 @@ export interface LabelViewModel {
   secondaryIdentifier: string | null;
   /** Last characters of the serial number, never the whole serial. */
   serialSuffix: string | null;
+  /**
+   * Ticket work tag only: where held client equipment is ("Main Office / Shelf B3", "With vendor"). Filled by the
+   * linked-asset seam from the open custody episode, behind the asset read check. Never the free-text note.
+   */
+  custodyLocation?: string | null;
+  /** Ticket work tag only: who acts next ("Waiting on vendor, Oct 29"). Derived from party + follow-up date only. */
+  nextAction?: string | null;
   /** Filled by the renderer, not by providers. */
   tenantClient?: LabelTenantClient | null;
   /** Filled by the renderer from the (already visibility-filtered) fields above: "Asset {tag}", "S/N ...{suffix}". */

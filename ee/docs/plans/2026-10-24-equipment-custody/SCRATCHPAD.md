@@ -11,3 +11,11 @@ RMM resync never overwrites `assets.status` on existing assets (FR-B6): `shared/
 
 ## Log
 (append as work proceeds)
+
+## Implementation log (final pass)
+
+- Label seam: `custodyLocation` / `nextAction` added to `LabelViewModel`, bindings, `buildTicketWorkTag`, `ticketLinkedAssetLabels` and `printLabels` merge. Custody lines replace the work-reason line at render time (`buildLabelModel`, ticket-work-tag only). Several held items -> "<n> items held", no next action. Designer sample data keeps custody empty so preview == print.
+- Line budget: verified arithmetically in `buildLabelModel.test.ts` (text column worst case incl. 3-line identifier <= 44 mm). The Puppeteer containment test has a new worst-case entry but its suite (`labelBatch.e2e`) cannot run in this checkout (missing `jsqr`, `@zxing/library`, `bwip-js` packages), so the rendered check is not executed.
+- REST: `ApiAssetCustodyController`; OpenAPI routes registered in `openapi/routes/assets.ts`. Generated artefacts (`sdk/docs/openapi/*.json`, `registry.generated.ts`) NOT regenerated: the generator needs built workspace dists that are absent here.
+- Tests: unit (state machine, label format, schemas via integration), integration (invariant, refusals, Dell scenario, record-level filtering, migration idempotence/ownership default), API controller, static import guards, label tests.
+- Browser walkthrough not done (left to a later step).

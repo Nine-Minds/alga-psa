@@ -362,7 +362,10 @@
         },
         "fallbackTitle": "Szczegóły zasobu"
       },
-      "title": "Zasoby"
+      "title": "Zasoby",
+      "custody": {
+        "title": "Sprzęt w przechowaniu"
+      }
     },
     "createContact": {
       "title": "Utwórz kontakt"

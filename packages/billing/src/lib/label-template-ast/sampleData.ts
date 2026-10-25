@@ -13,6 +13,10 @@ export const buildSampleLabelViewModel = (): LabelViewModel => ({
   detail: 'Diagnose power fault',
   secondaryIdentifier: 'AT-000123',
   serialSuffix: '7K2Q',
+  // Held-equipment lines replace the reason line when present; the preview shows the common case (none) so it
+  // matches the print path, which collapses the reason when custody prints.
+  custodyLocation: null,
+  nextAction: null,
   tenantClient: { name: 'Example MSP', logoUrl: null, brandText: 'Example MSP' },
   display: { assetLine: 'Asset AT-000123', serialLine: 'S/N \u20267K2Q' },
 });

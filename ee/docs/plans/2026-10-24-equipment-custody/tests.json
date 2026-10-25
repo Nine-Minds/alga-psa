@@ -5,7 +5,7 @@
     "featureIds": [
       "F009"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T002",
@@ -13,7 +13,7 @@
     "featureIds": [
       "F015"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T003",
@@ -22,7 +22,7 @@
       "F007",
       "F018"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T004",
@@ -30,7 +30,7 @@
     "featureIds": [
       "F024"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T005",
@@ -41,7 +41,7 @@
       "F012",
       "F017"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T006",
@@ -52,7 +52,7 @@
       "F011",
       "F034"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T007",
@@ -60,7 +60,7 @@
     "featureIds": [
       "F018"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T008",
@@ -68,7 +68,7 @@
     "featureIds": [
       "F004"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T009",
@@ -77,7 +77,7 @@
       "F014",
       "F022"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T010",
@@ -88,7 +88,7 @@
       "F003",
       "F006"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T011",
@@ -98,7 +98,7 @@
       "F032",
       "F033"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T012",
@@ -109,7 +109,7 @@
       "F022",
       "F023"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T013",
@@ -118,7 +118,7 @@
       "F029",
       "F015"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T014",
@@ -126,7 +126,7 @@
     "featureIds": [
       "F034"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T015",
@@ -139,6 +139,6 @@
       "F024",
       "F014"
     ],
-    "implemented": false
+    "implemented": true
   }
 ]

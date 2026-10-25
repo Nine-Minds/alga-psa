@@ -18,6 +18,8 @@ import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorizatio
  * provider. Both now delegate here. Read-only; nothing here writes.
  */
 
+// LEVERAGE: pattern asset-read-authorization-wrappers — assetActions, the label seam, the custody services and the
+// REST guard each still wrap subject/record resolution + authorizeResource; one "readable assets" layer would absorb them.
 export type AssetAuthUser = {
   user_id: string;
   user_type: 'internal' | 'client';

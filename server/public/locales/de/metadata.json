@@ -365,7 +365,10 @@
         },
         "fallbackTitle": "Asset-Details"
       },
-      "title": "Asset-Inventar"
+      "title": "Asset-Inventar",
+      "custody": {
+        "title": "Equipment in Verwahrung"
+      }
     },
     "chat": {
       "title": "Chat"

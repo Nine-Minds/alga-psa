@@ -90,13 +90,19 @@ export function buildLabelModel(
   const logoUrl = hidden.has('tenantLogo') ? null : base?.logoUrl ?? null;
   const secondaryIdentifier = hidden.has('secondaryIdentifier') ? null : viewModel.secondaryIdentifier;
   const serialSuffix = hidden.has('serialSuffix') ? null : viewModel.serialSuffix;
+  const custodyLocation = hidden.has('custodyLocation') ? null : viewModel.custodyLocation ?? null;
+  const nextAction = hidden.has('nextAction') ? null : viewModel.nextAction ?? null;
+  // Line budget: held-equipment lines take the work-reason line's place (the 4x2 in tag has no spare height).
+  const custodyPrints = viewModel.labelClass === 'ticket-work-tag' && Boolean(custodyLocation || nextAction);
   return {
     ...viewModel,
     title: hidden.has('title') ? null : viewModel.title,
     clientName: hidden.has('clientName') ? null : viewModel.clientName,
-    detail: hidden.has('detail') ? null : viewModel.detail,
+    detail: hidden.has('detail') || custodyPrints ? null : viewModel.detail,
     secondaryIdentifier,
     serialSuffix,
+    custodyLocation,
+    nextAction,
     tenantClient: base || name || logoUrl ? { name, logoUrl, brandText: logoUrl ? null : name } : null,
     display: {
       assetLine: secondaryIdentifier ? `Asset ${secondaryIdentifier}` : null,

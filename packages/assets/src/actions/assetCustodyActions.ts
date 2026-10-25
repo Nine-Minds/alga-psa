@@ -21,6 +21,8 @@ import {
 } from '../lib/schemas/assetCustody.schema';
 import {
   getAssetCustodyService,
+  getOpenCustodyBadgesService,
+  type OpenCustodyBadge,
   listCustodyBinsService,
   listCustodyEventsService,
   listCustodyLocationsService,
@@ -184,5 +186,16 @@ export const listCustodyLocations = withAuth(
     const denied = await denyUnless(user, 'update');
     if (denied) return denied;
     return toCustodyResult(async () => listCustodyLocationsService(await ctx(), tenant));
+  }
+);
+
+/** Custody badges for a page of assets (list rows, ticket chips). Record-level filtered. */
+export const getOpenCustodyBadges = withAuth(
+  async (user, { tenant }, assetIds: string[]): Promise<CustodyActionResult<OpenCustodyBadge[]> | Denied> => {
+    const denied = await denyUnless(user, 'read');
+    if (denied) return denied;
+    return toCustodyResult(async () =>
+      getOpenCustodyBadgesService(await ctx(), tenant, user as any, z.array(idSchema).max(500).parse(assetIds))
+    );
   }
 );
