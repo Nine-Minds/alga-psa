@@ -525,7 +525,8 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // BEFORE those (tickets at LEVEL 5 below, boards at LEVEL 7, statuses at LEVEL 8).
   // Internal order follows the FKs among them: ticket_auto_close_state →
   // board_auto_close_rules, and checklist_template_items / _apply_rules →
-  // checklist_templates. ticket_checklist_items.template_id is a soft ref (no FK),
+  // checklist_templates. checklist_templates.client_id FKs to clients (2026-10-18), which is already
+  // satisfied because this group is deleted before clients. ticket_checklist_items.template_id is a soft ref (no FK),
   // and board_close_rules only FKs to boards.
   'ticket_auto_close_state', 'board_auto_close_rules',
   'ticket_checklist_items',

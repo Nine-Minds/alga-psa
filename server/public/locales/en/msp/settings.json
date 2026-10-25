@@ -984,7 +984,8 @@
         "description": "Description",
         "items": "Items",
         "status": "Status",
-        "actions": "Actions"
+        "actions": "Actions",
+        "scope": "Available to"
       },
       "statusLabels": {
         "active": "Active",
@@ -1002,7 +1003,9 @@
         "down": "Down",
         "remove": "Remove",
         "addItem": "Add Item",
-        "addRule": "Add Rule"
+        "addRule": "Add Rule",
+        "duplicateToClient": "Duplicate to client…",
+        "duplicate": "Duplicate"
       },
       "fields": {
         "name": {
@@ -1032,8 +1035,10 @@
           "priority": "Priority",
           "any": "Any",
           "appliesToAll": "Applies to all tickets",
+          "appliesToAllClientTickets": "Applies to all {{client}} tickets",
           "clients": "Clients",
           "clientsAny": "Any client",
+          "clientsFixedByTemplate": "{{client}} only (set by the template's client)",
           "clientsAddAnother": "Add another client",
           "removeClient": "Remove {{name}}",
           "origins": "Ticket source",
@@ -1057,7 +1062,13 @@
             "inbound_email": "Inbound email",
             "api": "API",
             "recurring": "Recurring schedule"
-          }
+          },
+          "clientScopedWarning": "This template is scoped to {{client}}: these rules only apply to {{client}} tickets."
+        },
+        "availableTo": {
+          "label": "Available to",
+          "clear": "All clients",
+          "help": "Leave as All clients to offer this template on every ticket, or pick a client to restrict it to that client's tickets."
         }
       },
       "dialog": {
@@ -1065,13 +1076,17 @@
         "editTemplate": "Edit Checklist Template",
         "createFirstHelp": "Create the template first, then add checklist items and auto-apply rules.",
         "deleteTitle": "Delete Checklist Template",
-        "deleteMessage": "Are you sure you want to delete \"{{name}}\"? Checklists already added to tickets will not be affected."
+        "deleteMessage": "Are you sure you want to delete \"{{name}}\"? Checklists already added to tickets will not be affected.",
+        "duplicateTitle": "Duplicate to Client",
+        "duplicateHelp": "Copy \"{{name}}\" and its items into a new template scoped to one client. The copy is independent: later edits to either template do not affect the other.",
+        "duplicateClientPlaceholder": "Select a client"
       },
       "messages": {
         "success": {
           "created": "Checklist template created successfully",
           "updated": "Checklist template updated successfully",
-          "deleted": "Checklist template deleted successfully"
+          "deleted": "Checklist template deleted successfully",
+          "duplicated": "Checklist template duplicated to client"
         },
         "error": {
           "fetchFailed": "Failed to fetch checklist templates",
@@ -1081,8 +1096,18 @@
           "deleteFailed": "Failed to delete checklist template",
           "updateStatusFailed": "Failed to update template status",
           "itemSaveFailed": "Failed to save checklist item",
-          "ruleSaveFailed": "Failed to save auto-apply rule"
+          "ruleSaveFailed": "Failed to save auto-apply rule",
+          "duplicateFailed": "Failed to duplicate checklist template"
         }
+      },
+      "scope": {
+        "allClients": "All clients",
+        "unknownClient": "Unknown client"
+      },
+      "filter": {
+        "client": "Client",
+        "allClients": "All clients",
+        "clear": "Clear filter"
       }
     },
     "externalSystems": {

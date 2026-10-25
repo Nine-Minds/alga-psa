@@ -317,7 +317,19 @@
     "inboundDomainAutoCreateUpdated": "Absendereinstellung aktualisiert.",
     "inboundDomainAutoCreateUpdateFailed": "Absendereinstellung konnte nicht aktualisiert werden.",
     "recurringTickets": "Wiederkehrende Tickets",
-    "software": "Software"
+    "software": "Software",
+    "checklistsTab": "Checklisten",
+    "checklists": {
+      "name": "Name",
+      "items": "Punkte",
+      "status": "Status",
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "description": "Checklistenvorlagen, die nur bei Tickets dieses Clients angeboten werden. Bearbeitung unter Einstellungen > Tickets > Checklistenvorlagen.",
+      "empty": "Keine clientspezifischen Checklistenvorlagen.",
+      "loadFailed": "Checklistenvorlagen konnten nicht geladen werden",
+      "retry": "Erneut versuchen"
+    }
   },
   "clientCommandCenter": {
     "cards": {

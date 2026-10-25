@@ -1689,7 +1689,11 @@
       "ruleSubcategoryRequiresCategory": "Wybierz kategorię przed wybraniem podkategorii.",
       "ruleTooManyKeywords": "Użyj co najwyżej {{max}} słów kluczowych w jednej regule.",
       "ruleKeywordTooLong": "Każde słowo kluczowe może mieć najwyżej {{max}} znaków.",
-      "ruleOriginInvalid": "Jedno z wybranych źródeł zgłoszenia jest nieprawidłowe."
+      "ruleOriginInvalid": "Jedno z wybranych źródeł zgłoszenia jest nieprawidłowe.",
+      "templateClientMismatch": "Ten szablon listy kontrolnej jest ograniczony do innego klienta niż klient zgłoszenia.",
+      "templateClientInvalid": "Nie znaleziono wybranego klienta.",
+      "ruleClientOutsideTemplateScope": "Ten szablon należy do jednego klienta, więc jego reguły nie mogą dotyczyć innych klientów.",
+      "templateRulesTargetOtherClients": "Niektóre reguły automatycznego stosowania tego szablonu dotyczą innych klientów. Usuń tych klientów z reguł, zanim przypiszesz szablon do jednego klienta."
     }
   },
   "ticketSection": {

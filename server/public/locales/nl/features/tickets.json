@@ -1689,7 +1689,11 @@
       "ruleSubcategoryRequiresCategory": "Selecteer een categorie voordat u een subcategorie kiest.",
       "ruleTooManyKeywords": "Gebruik maximaal {{max}} trefwoorden per regel.",
       "ruleKeywordTooLong": "Elk trefwoord mag maximaal {{max}} tekens bevatten.",
-      "ruleOriginInvalid": "Een van de geselecteerde ticketbronnen is ongeldig."
+      "ruleOriginInvalid": "Een van de geselecteerde ticketbronnen is ongeldig.",
+      "templateClientMismatch": "Dit checklistsjabloon is beperkt tot een andere klant dan die van het ticket.",
+      "templateClientInvalid": "De geselecteerde klant is niet gevonden.",
+      "ruleClientOutsideTemplateScope": "Dit sjabloon hoort bij één klant, dus de regels kunnen geen andere klanten selecteren.",
+      "templateRulesTargetOtherClients": "Sommige regels voor automatisch toepassen van dit sjabloon richten zich op andere klanten. Verwijder die klanten uit de regels voordat u het sjabloon aan één klant toewijst."
     }
   },
   "ticketSection": {
