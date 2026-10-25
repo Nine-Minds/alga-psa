@@ -108,3 +108,29 @@
 4. The C4 extension for `disposed` custody closure: it is the only write into C4's tables from C5.
 5. The return-slip render action reading `rma_cases` from billing — same pattern as sales orders, but it
    is a second reader of the RMA row.
+
+## Implementation log (2026-10-25, branch rebased onto origin/main with C4 merged)
+
+### PRD-versus-reality divergences (the code wins; the PRD wins over the 2026-10-20 dossier)
+
+- **No `returnCustodyToClient` core.** C4's real API is `recordCustodyEvent(trx, tenant, actor, custodyId, {event_type: 'returned' | 'shipped' | 'received' …})`. C5 calls it for ship, receive-back and return. The only C4 extension is `closeCustodyEpisode(..., 'disposed')` in `packages/assets/src/lib/custody/closeCustodyEpisode.ts`.
+- **`disposed` closure writes no custody event row.** The C4 event vocabulary is physical movement only and nothing moved. It writes an `asset_history` row (`custody_disposed`) and leaves the asset's lifecycle status alone.
+- **Migration timestamps renumbered** to `20261025130000` … `130300` (the PRD said earlier stamps) because C4 and later migrations on main sort after the PRD's numbers.
+- **`rmaTicketLink.ts` and the ticket RMA panel in both layouts (2026-10-20 dossier) were not built.** The PRD wins: the ticket shows its RMA through the associated-assets `RmaBadge` plus `ticket_id` on the RMA; the RMA shows its ticket number and links back. No ticket-side panel.
+- **`publishAssetChanged` is not used for the replacement.** The cores return `assetEffect`/`assetStatusChange` and `runWarrantyTransition` publishes `ASSET_UPDATED` after commit, as the C4 service does (`publishAssetStatusChange` pattern), so a rollback never emits.
+- **Vendor case link is a generic external link.** `mirrorRmaToTicketLinks` (msp-composition) uses the built-in `generic` system with `relationship: 'reference'`; the PRD's `custom:<slug>` tenant system does not exist by default. Marked `LEVERAGE: friction rma-vendor-case-link`.
+- **Reads:** `getRmaCase`/`listRmaCases` now hide a case whose asset the caller cannot read, and a caller with only `warranty:read` sees client-asset claims only (never stock-unit RMAs).
+- **`return_by` is selected as `to_char(..., 'YYYY-MM-DD')`** in `rmaCaseQuery` so a DATE never travels as a JS Date (day shift).
+
+### Gotchas
+
+- Dev-DB: the scratch copy (`c5_warranty_test`) had other branches' `knex_migrations` rows deleted so the migrations from this branch could run; the dev stack's own database was not touched.
+- `tenantDb(trx, tenant).table(x).insert()` does NOT inject `tenant`; inserts must include it.
+- `@alga-psa/event-schemas` resolves to `dist` in vitest; tests that need new schemas import from the package source.
+- `loadRma` in `rmaActions.ts` now refuses unit-less cases (`RMA case is a warranty claim`): it is the single lock point of every unit-only transition and `closeRma`.
+- A warranty-only user cannot call `closeRma`; warranty cases close through `closeWarrantyRma` (refuses `warranty_review`).
+
+### Follow-up (not in this card)
+
+- **Vendor conversation link.** The ticket-conversations branch is not merged, so the RMA ships without a link from the vendor email thread to the case. When it merges: link the thread to the ticket and mirror `rma_reference`, and retire the `generic` external-link mirror.
+- Overlap with C3: the RMA detail is still the `?rmaId=` dialog C3 added; C5 extends it (`RmaWarrantyPanel`) and does not add an `[id]` route.
