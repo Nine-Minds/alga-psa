@@ -542,17 +542,19 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                     <CustodyBadge id={`associated-asset-custody-${association.asset_id}`} badge={custodyBadges.get(association.asset_id)} />
                                 </div>
                                 {/* Row 2: Icon + Tag + Type + Relationship */}
-                                <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-500">
+                                <div className="flex min-w-0 items-center gap-2 mt-1.5 text-xs text-gray-500">
                                     {association.asset && (
                                         <span className="flex-shrink-0">{getAssetTypeIcon(association.asset.asset_type)}</span>
                                     )}
-                                    <span className="font-mono">
+                                    <span className="min-w-0 truncate font-mono" title={association.asset?.asset_tag || undefined}>
                                         {association.asset?.asset_tag || t('common.states.na', { defaultValue: 'N/A' })}
                                     </span>
-                                    <span>•</span>
-                                    <span>{association.asset ? getAssetTypeLabel(association.asset.asset_type) : ''}</span>
-                                    <span>•</span>
-                                    <span className="capitalize">
+                                    <span className="flex-shrink-0">•</span>
+                                    <span className="min-w-0 truncate" title={association.asset ? getAssetTypeLabel(association.asset.asset_type) : undefined}>
+                                        {association.asset ? getAssetTypeLabel(association.asset.asset_type) : ''}
+                                    </span>
+                                    <span className="flex-shrink-0">•</span>
+                                    <span className="min-w-0 truncate capitalize" title={getRelationshipTypeLabel(association.relationship_type)}>
                                         {getRelationshipTypeLabel(association.relationship_type)}
                                     </span>
                                 </div>

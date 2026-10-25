@@ -110,4 +110,15 @@ describe('AssociatedAssets shared cache', () => {
     expect(nameRow.parentElement!.contains(chip)).toBe(false);
     badges.map = new Map();
   });
+
+  it('lets the row-2 metadata spans shrink and truncate instead of overflowing a narrow card', async () => {
+    renderPanel({ initialAssets: Promise.resolve([held]) });
+    const name = await screen.findByRole('button', { name: 'Dell WD19 Dock' });
+    const card = name.closest('.rounded-lg') as HTMLElement;
+    const row2 = Array.from(card.children).find((c) => c.className.includes('text-xs')) as HTMLElement;
+    expect(row2.className).toContain('min-w-0');
+    const truncating = Array.from(row2.querySelectorAll('span')).filter((s) => s.className.includes('truncate'));
+    expect(truncating.length).toBe(3);
+    truncating.forEach((s) => expect(s.className).toContain('min-w-0'));
+  });
 });
