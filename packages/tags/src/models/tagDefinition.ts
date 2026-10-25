@@ -95,6 +95,11 @@ const TagDefinition = {
   },
 
   delete: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, tag_id: string): Promise<void> => {
+    // On Citus the tag_display_rules -> tag_definitions FK (and its ON DELETE CASCADE) may be
+    // skipped, so delete the rules explicitly. Callers pass a transaction so both deletes commit together.
+    await tagDisplayRulesQuery(knexOrTrx, tenant)
+      .where('tag_id', tag_id)
+      .del();
     await tagDefinitionsQuery(knexOrTrx, tenant)
       .where('tag_id', tag_id)
       .del();

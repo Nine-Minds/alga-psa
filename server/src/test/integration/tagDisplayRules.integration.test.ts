@@ -166,6 +166,18 @@ describeDb('tag display rules (DB)', () => {
       expect(await db('tag_display_rules').where({ tenant: tenantId, tag_id: tempId })).toHaveLength(0);
     });
 
+    it('TagDefinition.delete removes the definition\'s rules whether or not the FK exists', async () => {
+      const tempId = uuidv4();
+      await db('tag_definitions').insert(def(tempId, 'TempModelDelete', 'client'));
+      await db('tag_display_rules').insert({
+        tenant: tenantId, tagged_type: 'client', audience: 'internal', tag_id: tempId, position: 0,
+      });
+      const { default: TagDefinition } = await import('../../../../packages/tags/src/models/tagDefinition');
+      await db.transaction((trx) => TagDefinition.delete(trx, tenantId, tempId));
+      expect(await db('tag_display_rules').where({ tenant: tenantId, tag_id: tempId })).toHaveLength(0);
+      expect(await db('tag_definitions').where({ tenant: tenantId, tag_id: tempId })).toHaveLength(0);
+    });
+
     it('rules are tenant scoped', async () => {
       await db('tag_display_rules').insert({
         tenant: tenantId, tagged_type: 'contact', audience: 'internal', tag_id: contactVip, position: 0,

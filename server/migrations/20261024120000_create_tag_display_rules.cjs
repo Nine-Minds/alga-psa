@@ -8,15 +8,18 @@
  * `audience` is 'internal' (MSP users) or 'client' (client-portal users); no rule for an audience
  * means no chip tags for it. `tag_id` is the tag DEFINITION id (tag_definitions.tag_id), so a rule
  * survives the tag being untagged everywhere (orphan cleanup keeps referenced definitions) and is
- * removed by the FK cascade when the definition is explicitly deleted.
+ * deleted together with the definition: by the FK cascade where the FK exists, and explicitly by
+ * TagDefinition.delete (application code) everywhere, since the FK may be absent on Citus.
  *
  * Seed: existing contact and client definitions whose text is "VIP" (any case) get an internal rule,
  * so users who already tag VIP see the chip without configuring anything.
  *
  * Citus: new table (no pre-existing rows to truncate), distributed on `tenant` colocated with
- * `tenants` like tag_definitions; the unique index includes the distribution column and the
- * composite FK to tag_definitions is created after distribution, only when both sides' distribution
- * is compatible (ensureCompositeFk). The seed uses no now() inside CASE/COALESCE.
+ * `tenants`; the unique index includes the distribution column. No migration distributes
+ * tag_definitions, so it is coordinator-local there, and ensureCompositeFk skips the composite FK
+ * to tag_definitions ("incompatible distribution": one side distributed, the other not). On Citus
+ * the FK and its ON DELETE CASCADE may therefore not exist; application code deletes the rules
+ * explicitly. Plain Postgres gets the FK. The seed uses no now() inside CASE/COALESCE.
  */
 
 const TABLE = 'tag_display_rules';
