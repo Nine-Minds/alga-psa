@@ -23,7 +23,7 @@ const isPartyTags = (value: unknown): value is PartyDisplayTags =>
 export function usePartyDisplayTags({ ticketId, contactId, clientId, initial, onError }: Options) {
   const [displayTags, setDisplayTags] = useState<PartyDisplayTags>(initial);
   const [retryNonce, setRetryNonce] = useState(0);
-  const loadedPartyRef = useRef<string>(`${contactId ?? ''}|${clientId ?? ''}`);
+  const loadedPartyRef = useRef<string | null>(`${contactId ?? ''}|${clientId ?? ''}`);
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
   const retry = useCallback(() => setRetryNonce((n) => n + 1), []);
@@ -32,6 +32,9 @@ export function usePartyDisplayTags({ ticketId, contactId, clientId, initial, on
     const partyKey = `${contactId ?? ''}|${clientId ?? ''}`;
     if (partyKey === loadedPartyRef.current) return;
     if (!ticketId) return;
+    // The chips no longer belong to any party: null matches no key, so returning to the old pair
+    // (or a retry) after a failed load refetches instead of hitting the early return above.
+    loadedPartyRef.current = null;
     setDisplayTags(EMPTY_PARTY_DISPLAY_TAGS);
     let cancelled = false;
     getTicketPartyDisplayTags(ticketId, contactId ?? null, clientId ?? null).then(

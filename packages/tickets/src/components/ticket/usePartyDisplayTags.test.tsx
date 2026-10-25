@@ -64,4 +64,30 @@ describe('usePartyDisplayTags', () => {
     await act(async () => resolveFirst(OLD));
     expect(result.current).toEqual(NEW);
   });
+
+  it('refetches the original party after a failed change away and back', async () => {
+    const onError = vi.fn();
+    fetchTags.mockResolvedValueOnce({ type: 'error', message: 'nope' });
+    const { result, rerender } = setup(onError);
+    rerender({ contactId: 'b' });
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
+
+    fetchTags.mockResolvedValueOnce(OLD);
+    rerender({ contactId: 'a' });
+    await waitFor(() => expect(result.current).toEqual(OLD));
+    expect(fetchTags).toHaveBeenCalledTimes(2);
+    expect(fetchTags).toHaveBeenLastCalledWith('t1', 'a', 'c1');
+  });
+
+  it('Retry after a failure fetches again for the current party', async () => {
+    const onError = vi.fn();
+    fetchTags.mockRejectedValueOnce(new Error('x'));
+    const { result, rerender } = setup(onError);
+    rerender({ contactId: 'b' });
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
+    fetchTags.mockResolvedValueOnce(NEW);
+    act(() => onError.mock.calls[0][1]());
+    await waitFor(() => expect(result.current).toEqual(NEW));
+    expect(fetchTags).toHaveBeenLastCalledWith('t1', 'b', 'c1');
+  });
 });

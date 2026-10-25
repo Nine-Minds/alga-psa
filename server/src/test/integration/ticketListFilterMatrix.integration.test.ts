@@ -425,6 +425,29 @@ describeDb('ticket list filter matrix (DB-backed, compiled predicates)', () => {
     });
   });
 
+  // The projects package still calls ticketActions.getTicketsForList; its tag branch resolves text to
+  // definition ids and compiles `tags in` (rootAlias 't'), so it must agree with the matrix above.
+  describe('ticketActions.getTicketsForList tag filter', () => {
+    async function legacyNames(tags: string[]): Promise<TicketName[]> {
+      const legacy = await import('@alga-psa/tickets/actions/ticketActions');
+      const result = await legacy.getTicketsForList({ ...base, tags } as ITicketListFilters);
+      if (!Array.isArray(result)) throw new Error(`legacy list returned an error: ${JSON.stringify(result)}`);
+      return result.map((row) => (idToName.get(row.ticket_id) ?? `UNKNOWN:${row.ticket_id}`) as TicketName).sort();
+    }
+
+    it('a known tag text returns only the tickets carrying that tag', async () => {
+      expect(await legacyNames(['urgent'])).toEqual(['CH1', 'T1']);
+    });
+
+    it('an unknown tag text returns no tickets', async () => {
+      expect(await legacyNames(['no-such-tag'])).toEqual([]);
+    });
+
+    it('known plus unknown text returns the known tag tickets', async () => {
+      expect(await legacyNames(['urgent', 'no-such-tag'])).toEqual(['CH1', 'T1']);
+    });
+  });
+
   it('paginates a filtered result without losing or repeating rows (totals hold on every page)', async () => {
     const filters = { ...base, bundleView: 'individual', boardIds: [fx.b1] } as ITicketListFilters;
     const seen: TicketName[] = [];
