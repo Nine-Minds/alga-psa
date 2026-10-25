@@ -91,6 +91,7 @@ interface TicketDetailsContainerProps {
   renderContactDetails?: React.ComponentProps<typeof TicketDetails>['renderContactDetails'];
   renderCreateProjectTask?: React.ComponentProps<typeof TicketDetails>['renderCreateProjectTask'];
   renderQuickInvoice?: React.ComponentProps<typeof TicketDetails>['renderQuickInvoice'];
+  renderReceiveEquipment?: React.ComponentProps<typeof TicketDetails>['renderReceiveEquipment'];
   renderCreateWorkflowFromTicket?: React.ComponentProps<typeof TicketDetails>['renderCreateWorkflowFromTicket'];
   renderClientDetails?: React.ComponentProps<typeof TicketDetails>['renderClientDetails'];
   isAlgaDeskMode?: boolean;
@@ -122,6 +123,7 @@ export default function TicketDetailsContainer({
   renderContactDetails,
   renderCreateProjectTask,
   renderQuickInvoice,
+  renderReceiveEquipment,
   renderCreateWorkflowFromTicket,
   renderClientDetails,
   isAlgaDeskMode = false,
@@ -358,6 +360,7 @@ export default function TicketDetailsContainer({
       renderContactDetails={renderContactDetails}
       renderCreateProjectTask={renderCreateProjectTask}
       renderQuickInvoice={renderQuickInvoice}
+      renderReceiveEquipment={renderReceiveEquipment}
       renderCreateWorkflowFromTicket={renderCreateWorkflowFromTicket}
       renderClientDetails={renderClientDetails}
       isAlgaDeskMode={isAlgaDeskMode}

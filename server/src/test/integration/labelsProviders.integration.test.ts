@@ -64,14 +64,14 @@ describe('C2 label integration (real providers, real storage)', () => {
 
     it('one readable linked asset gives its tag and the last four of the serial', async () => {
       const r = await parts(world.tech, [world.tickets.withOneAsset, world.tickets.a1]);
-      expect(r[world.tickets.withOneAsset]).toEqual({ assetId: world.assets.a1, assetTag: 'TAG-A1', serialSuffix: '5678' });
+      expect(r[world.tickets.withOneAsset]).toEqual({ assetId: world.assets.a1, assetTag: 'TAG-A1', serialSuffix: '5678', custodyLocation: null, nextAction: null });
       expect(r[world.tickets.a1]).toBeNull(); // no link at all
       expect(JSON.stringify(r)).not.toContain(world.serials.a1);
     });
 
     it('a serial shorter than eight characters yields no suffix', async () => {
       const r = await parts(world.tech, [world.tickets.withShortSerial]);
-      expect(r[world.tickets.withShortSerial]).toEqual({ assetId: world.assets.a2, assetTag: 'TAG-A2', serialSuffix: null });
+      expect(r[world.tickets.withShortSerial]).toEqual({ assetId: world.assets.a2, assetTag: 'TAG-A2', serialSuffix: null, custodyLocation: null, nextAction: null });
     });
 
     it('two readable linked assets and no choice give null; a valid choice picks that one', async () => {

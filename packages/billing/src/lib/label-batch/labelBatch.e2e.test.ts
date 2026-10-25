@@ -424,6 +424,16 @@ describe('label PDF end to end', () => {
         }),
       ],
       [
+        'ticket work tag with held equipment, longest location/bin and next-action strings (they replace the reason line)',
+        worstCase(STANDARD_LABEL_TICKET_WORK_TAG_CODE, {
+          labelClass: 'ticket-work-tag',
+          entityType: 'ticket',
+          identifier: 'TICKET-2026-0000123456789',
+          custodyLocation: 'Main Office Headquarters Annex / Rack 14 Shelf B3 Upper Left Bin',
+          nextAction: 'Waiting on vendor, Oct 29 and then a very long trailing explanation',
+        }),
+      ],
+      [
         'stock unit label, long unit code',
         worstCase(STANDARD_LABEL_STOCK_UNIT_CODE, { labelClass: 'stock-unit-identity', entityType: 'stock_unit' }),
       ],

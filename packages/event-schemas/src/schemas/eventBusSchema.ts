@@ -140,6 +140,7 @@ import {
 import {
   assetAssignedEventPayloadSchema,
   assetCreatedEventPayloadSchema,
+  assetCustodyChangedEventPayloadSchema,
   assetUnassignedEventPayloadSchema,
   assetUpdatedEventPayloadSchema,
   assetWarrantyExpiringEventPayloadSchema,
@@ -503,6 +504,7 @@ export const EVENT_TYPES = [
   'ASSET_ASSIGNED',
   'ASSET_UNASSIGNED',
   'ASSET_WARRANTY_EXPIRING',
+  'ASSET_CUSTODY_CHANGED',
   'FILE_UPLOADED',
   'MEDIA_PROCESSING_SUCCEEDED',
   'MEDIA_PROCESSING_FAILED',
@@ -1541,6 +1543,7 @@ export const EventPayloadSchemas = {
   ASSET_ASSIGNED: assetAssignedEventPayloadSchema,
   ASSET_UNASSIGNED: assetUnassignedEventPayloadSchema,
   ASSET_WARRANTY_EXPIRING: assetWarrantyExpiringEventPayloadSchema,
+  ASSET_CUSTODY_CHANGED: assetCustodyChangedEventPayloadSchema,
   FILE_UPLOADED: fileUploadedEventPayloadSchema,
   MEDIA_PROCESSING_SUCCEEDED: mediaProcessingSucceededEventPayloadSchema,
   MEDIA_PROCESSING_FAILED: mediaProcessingFailedEventPayloadSchema,

@@ -2534,7 +2534,8 @@
       "salesOrder": "Pedido de venda",
       "packingSlip": "Nota de entrega",
       "pickList": "Lista de separação",
-      "workTag": "Etiqueta de trabalho / Etiqueta"
+      "workTag": "Etiqueta de trabalho / Etiqueta",
+      "stagingManifest": "Manifesto de embalagem"
     }
   },
   "errors": {

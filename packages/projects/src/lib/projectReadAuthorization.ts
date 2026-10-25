@@ -6,8 +6,8 @@
  * work with projects at all; it says nothing about *this* project. Bundle
  * narrowing can restrict a user to a subset of the tenant's projects, so any
  * action that accepts a projectId has to run the kernel decision for that
- * record too. The task, phase and status actions each carry their own copy of
- * this helper; the import/export actions use this one.
+ * record too. This module is the one implementation: the project, task, staging,
+ * import and export actions all decide through it.
  */
 
 import type { Knex } from 'knex';
@@ -81,7 +81,9 @@ async function resolveAuthorizationSubjectForUser(
   };
 }
 
-function toProjectAuthorizationRecord(project: Partial<IProject>): AuthorizationRecord {
+type ProjectAuthorizationFields = { project_id?: string | null; client_id?: string | null; assigned_to?: string | null };
+
+function toProjectAuthorizationRecord(project: ProjectAuthorizationFields): AuthorizationRecord {
   const assignedUserIds =
     typeof project.assigned_to === 'string' && project.assigned_to.length > 0 ? [project.assigned_to] : [];
 
@@ -90,6 +92,49 @@ function toProjectAuthorizationRecord(project: Partial<IProject>): Authorization
     ownerUserId: project.assigned_to ?? null,
     assignedUserIds,
     clientId: project.client_id ?? null,
+  };
+}
+
+/**
+ * The record-level project read decision for one user, reusable across many projects in one request
+ * (subject and kernel are resolved once). Returns false for a row without a project id.
+ */
+export async function createProjectReadAuthorizer(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles
+): Promise<(project: ProjectAuthorizationFields) => Promise<boolean>> {
+  const subject = await resolveAuthorizationSubjectForUser(conn, tenant, user);
+  const authorizationKernel = createAuthorizationKernel({
+    builtinProvider: new BuiltinAuthorizationKernelProvider(),
+    bundleProvider: new BundleAuthorizationKernelProvider({
+      resolveRules: async (input) => {
+        try {
+          return await resolveBundleNarrowingRulesForEvaluation(conn, input);
+        } catch {
+          return [];
+        }
+      },
+    }),
+    rbacEvaluator: async () => true,
+  });
+  const requestCache = new RequestLocalAuthorizationCache();
+
+  return async (project: ProjectAuthorizationFields): Promise<boolean> => {
+    const projectId = project.project_id;
+    if (!projectId) {
+      return false;
+    }
+
+    const decision = await authorizationKernel.authorizeResource({
+      subject,
+      resource: { type: 'project', action: 'read', id: projectId },
+      record: toProjectAuthorizationRecord(project),
+      requestCache,
+      knex: conn,
+    });
+
+    return decision.allowed;
   };
 }
 
@@ -108,31 +153,8 @@ export async function assertProjectReadAllowed(
     throw new Error('Project not found');
   }
 
-  const subject = await resolveAuthorizationSubjectForUser(conn, tenant, user);
-  const authorizationKernel = createAuthorizationKernel({
-    builtinProvider: new BuiltinAuthorizationKernelProvider(),
-    bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(conn, input);
-        } catch {
-          return [];
-        }
-      },
-    }),
-    rbacEvaluator: async () => true,
-  });
-  const requestCache = new RequestLocalAuthorizationCache();
-
-  const decision = await authorizationKernel.authorizeResource({
-    subject,
-    resource: { type: 'project', action: 'read', id: projectId },
-    record: toProjectAuthorizationRecord(project),
-    requestCache,
-    knex: conn,
-  });
-
-  if (!decision.allowed) {
+  const authorize = await createProjectReadAuthorizer(conn, tenant, user);
+  if (!(await authorize(project))) {
     throw new Error('Permission denied: Cannot read project');
   }
 

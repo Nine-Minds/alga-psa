@@ -1,3 +1,4 @@
+import { deactivateClientScopedChecklistTemplates } from '../../../../lib/ticketChecklists/clientDeletion';
 import { z } from 'zod';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -716,6 +717,7 @@ async function cleanupClientDeleteArtifacts(
   clientId: string
 ): Promise<void> {
   await cleanupDefaultContractsForDeletedClient(trx, tenant, clientId);
+  await deactivateClientScopedChecklistTemplates(trx, tenant, clientId);
   await deleteFromTenantTableIfExists(trx, tenant, 'client_billing_settings', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_billing_cycles', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_tax_settings', { client_id: clientId });

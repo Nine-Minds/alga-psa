@@ -1412,10 +1412,10 @@
     "availableBadge": "Beschikbaar: {{available}}",
     "availableByLocation": "Vrije voorraad per locatie",
     "freeOfOnHand": "{{free}} vrij van {{onHand}}",
-    "stockHeld": "Slechts {{free}} beschikbaar. {{held}} op voorraad is vastgezet voor verkooporders en kan hier niet worden gebruikt.",
+    "stockHeld": "Slechts {{free}} beschikbaar. {{held}} op voorraad is vastgezet voor verkooporders of projecten en kan hier niet worden gebruikt.",
     "stockInsufficient": "Slechts {{onHand}} op voorraad, {{requested}} gevraagd.",
-    "reservedStockTitle": "Voorraad is gereserveerd voor een verkooporder",
-    "reservedStockMessage": "Slechts {{free}} van dit product is vrij. {{reserved}} op voorraad is gereserveerd voor verkooporders en u vroeg er {{requested}}. Als u het toch toevoegt, neemt u voorraad af waar een verkooporder op rekent en kan die order tekortkomen.",
+    "reservedStockTitle": "Voorraad is gereserveerd voor een verkooporder of project",
+    "reservedStockMessage": "Slechts {{free}} van dit product is vrij. {{reserved}} op voorraad is gereserveerd voor verkooporders of projecten en u vroeg er {{requested}}. Als u het toch toevoegt, neemt u voorraad af waar een verkooporder of project op rekent en kan die tekortkomen.",
     "reservedStockConfirm": "Toch toevoegen"
   },
   "watchList": {
@@ -1689,7 +1689,11 @@
       "ruleSubcategoryRequiresCategory": "Selecteer een categorie voordat u een subcategorie kiest.",
       "ruleTooManyKeywords": "Gebruik maximaal {{max}} trefwoorden per regel.",
       "ruleKeywordTooLong": "Elk trefwoord mag maximaal {{max}} tekens bevatten.",
-      "ruleOriginInvalid": "Een van de geselecteerde ticketbronnen is ongeldig."
+      "ruleOriginInvalid": "Een van de geselecteerde ticketbronnen is ongeldig.",
+      "templateClientMismatch": "Dit checklistsjabloon is beperkt tot een andere klant dan die van het ticket.",
+      "templateClientInvalid": "De geselecteerde klant is niet gevonden.",
+      "ruleClientOutsideTemplateScope": "Dit sjabloon hoort bij één klant, dus de regels kunnen geen andere klanten selecteren.",
+      "templateRulesTargetOtherClients": "Sommige regels voor automatisch toepassen van dit sjabloon richten zich op andere klanten. Verwijder die klanten uit de regels voordat u het sjabloon aan één klant toewijst."
     }
   },
   "ticketSection": {
@@ -2648,6 +2652,116 @@
       "hours": "{{hours}} u",
       "daysHours": "{{days}} d {{hours}} u",
       "days": "{{days}} d"
+    }
+  },
+  "cannedResponses": {
+    "picker": {
+      "button": "Standaardantwoorden",
+      "buttonTooltip": "Standaardantwoord invoegen (Ctrl/Cmd+J, of typ /)",
+      "title": "Standaardantwoord invoegen",
+      "searchPlaceholder": "Standaardantwoorden zoeken…",
+      "searchLabel": "Standaardantwoorden zoeken",
+      "loading": "Standaardantwoorden laden…",
+      "empty": "Er zijn nog geen standaardantwoorden.",
+      "noResults": "Geen standaardantwoorden komen overeen met uw zoekopdracht.",
+      "loadFailed": "De standaardantwoorden konden niet worden geladen.",
+      "insertFailed": "Het standaardantwoord kon niet worden ingevoegd.",
+      "favorites": "Favorieten",
+      "recent": "Recent gebruikt",
+      "uncategorized": "Zonder categorie",
+      "slashGroup": "Standaardantwoorden",
+      "slashBrowse": "Standaardantwoorden…",
+      "slashBrowseHint": "Een opgeslagen antwoord zoeken en invoegen"
+    },
+    "scope": {
+      "personal": "Persoonlijk",
+      "team": "Team",
+      "board": "Bord",
+      "clientPortal": "Klantenportaal",
+      "personalHelp": "Alleen u kunt dit antwoord gebruiken.",
+      "teamHelp": "Leden van het gekozen team kunnen dit antwoord gebruiken.",
+      "boardHelp": "Iedereen die tickets op het gekozen bord beantwoordt, kan dit antwoord gebruiken.",
+      "clientPortalHelp": "Gereserveerd voor antwoorden in het klantenportaal. Wordt niet aangeboden bij antwoorden vanuit het MSP-portaal."
+    },
+    "list": {
+      "title": "Standaardantwoorden",
+      "new": "Nieuw standaardantwoord",
+      "showInactive": "Inactieve tonen",
+      "searchPlaceholder": "Zoek op naam, categorie of tekst…",
+      "searchLabel": "Standaardantwoorden zoeken",
+      "allCategories": "Alle categorieën",
+      "noResults": "Geen standaardantwoorden komen overeen met uw filters.",
+      "empty": "Nog geen standaardantwoorden. Maak er een om het opnieuw te gebruiken in ticketantwoorden.",
+      "deleteTitle": "Standaardantwoord verwijderen",
+      "deleteMessage": "‘{{name}}’ verwijderen? Antwoorden die het al gebruikten, blijven ongewijzigd.",
+      "deleted": "Standaardantwoord verwijderd",
+      "favorite": "Favoriet",
+      "columns": {
+        "name": "Naam",
+        "category": "Categorie",
+        "scope": "Beschikbaar voor",
+        "preview": "Voorbeeld",
+        "status": "Status"
+      }
+    },
+    "status": {
+      "active": "Actief",
+      "inactive": "Inactief"
+    },
+    "actions": {
+      "favorite": "Aan favorieten toevoegen",
+      "unfavorite": "Uit favorieten verwijderen",
+      "edit": "Bewerken",
+      "activate": "Activeren",
+      "deactivate": "Deactiveren",
+      "delete": "Verwijderen",
+      "cancel": "Annuleren"
+    },
+    "loading": "Laden…",
+    "editor": {
+      "back": "Standaardantwoorden",
+      "newTitle": "Nieuw standaardantwoord",
+      "save": "Opslaan",
+      "saving": "Opslaan…",
+      "saved": "Standaardantwoord opgeslagen",
+      "created": "Standaardantwoord aangemaakt",
+      "viewOnly": "U kunt dit standaardantwoord bekijken maar niet wijzigen."
+    },
+    "sections": {
+      "details": "Details",
+      "body": "Antwoord"
+    },
+    "fields": {
+      "name": "Naam",
+      "category": "Categorie",
+      "categoryHelp": "Groepeert antwoorden in de kiezer. Optioneel.",
+      "scope": "Beschikbaar voor",
+      "team": "Team",
+      "teamPlaceholder": "Selecteer een team",
+      "board": "Bord",
+      "boardPlaceholder": "Selecteer een bord",
+      "body": "Antwoordtekst",
+      "bodyPlaceholder": "Schrijf het antwoord…"
+    },
+    "mergeFields": {
+      "title": "Samenvoegvelden",
+      "help": "Worden ingevuld wanneer het antwoord in een reactie wordt ingevoegd. Een veld zonder waarde wordt leeg; een onbekend veld blijft ongewijzigd.",
+      "descriptions": {
+        "contact_first_name": "De voornaam van de contactpersoon",
+        "contact_last_name": "De achternaam van de contactpersoon",
+        "contact_name": "De volledige naam van de contactpersoon",
+        "ticket_number": "Het ticketnummer",
+        "ticket_title": "De tickettitel",
+        "agent_name": "Uw naam (de antwoordende agent)",
+        "client_name": "De naam van de klant"
+      }
+    },
+    "errors": {
+      "notFound": "Standaardantwoord niet gevonden.",
+      "duplicateName": "Er bestaat hier al een standaardantwoord met de naam ‘{{name}}’.",
+      "invalidReferences": "Het geselecteerde team of bord bestaat niet meer.",
+      "notAvailable": "Dit standaardantwoord is niet beschikbaar voor dit ticket.",
+      "notATeamMember": "U kunt teamantwoorden alleen beheren voor teams waartoe u behoort."
     }
   }
 }

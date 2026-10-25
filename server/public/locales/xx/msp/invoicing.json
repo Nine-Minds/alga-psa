@@ -2534,7 +2534,8 @@
       "salesOrder": "⟦Şȧŀḗş Ȯřḓḗř⟧",
       "packingSlip": "⟦Ƥȧƈķīƞɠ Şŀīƥ⟧",
       "pickList": "⟦Ƥīƈķ Ŀīşŧ⟧",
-      "workTag": "⟦Ẇȯřķ Ŧȧɠ / Ŀȧƀḗŀ⟧"
+      "workTag": "⟦Ẇȯřķ Ŧȧɠ / Ŀȧƀḗŀ⟧",
+      "stagingManifest": "⟦Ƥȧƈķīƞɠ Ḿȧƞīƒḗşŧ⟧"
     }
   },
   "errors": {

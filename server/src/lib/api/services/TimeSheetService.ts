@@ -1275,15 +1275,7 @@ export class TimeSheetService extends BaseService<any> {
         // Update assignees if provided
         if (data.assigned_user_ids !== undefined) {
           // Human-work guard: validate only assignees this write adds (legacy ones are kept).
-          const currentAssignees = await tenantDb(trx, context.tenant).table('schedule_entry_assignees')
-            .where({ entry_id: id })
-            .select('user_id');
-          const currentAssigneeIds = new Set(currentAssignees.map((row: { user_id: string }) => row.user_id));
-          await assertHumanWorkAssignee(
-            trx,
-            context.tenant,
-            data.assigned_user_ids.filter((userId: string) => !currentAssigneeIds.has(userId))
-          );
+          await assertHumanWorkAssignee(trx, context.tenant, addedToEntry);
 
           await tenantDb(trx, context.tenant).table('schedule_entry_assignees')
             .where({ entry_id: id })

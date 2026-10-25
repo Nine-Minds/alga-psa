@@ -1713,7 +1713,11 @@
       "submit": "Przyjmij ponownie na stan"
     },
     "printLabel": "Drukuj etykietę",
-    "printWithTemplate": "Drukuj z użyciem {{code}}"
+    "printWithTemplate": "Drukuj z użyciem {{code}}",
+    "claimant": {
+      "project": "Projekt {{number}}",
+      "salesOrder": "Zamówienie sprzedaży {{number}}"
+    }
   },
   "transfers": {
     "addLine": "Dodaj linię",

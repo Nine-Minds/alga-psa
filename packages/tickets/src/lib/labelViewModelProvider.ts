@@ -90,6 +90,8 @@ export const ticketLabelViewModelProvider: LabelViewModelProvider = {
           detail: deriveWorkReason(row.subcategory_name, row.category_name),
           secondaryIdentifier: null,
           serialSuffix: null,
+          custodyLocation: null,
+          nextAction: null,
         };
       })
     );

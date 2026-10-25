@@ -1412,10 +1412,10 @@
     "availableBadge": "Disponibile: {{available}}",
     "availableByLocation": "Scorte libere per ubicazione",
     "freeOfOnHand": "{{free}} libere su {{onHand}}",
-    "stockHeld": "Solo {{free}} disponibili. {{held}} in giacenza sono bloccate in modo definitivo per ordini di vendita e non possono essere usate qui.",
+    "stockHeld": "Solo {{free}} disponibili. {{held}} in giacenza sono bloccate in modo definitivo per ordini di vendita o progetti e non possono essere usate qui.",
     "stockInsufficient": "Solo {{onHand}} in giacenza, {{requested}} richiesti.",
-    "reservedStockTitle": "Le scorte sono riservate a un ordine di vendita",
-    "reservedStockMessage": "Solo {{free}} di questo prodotto sono libere. {{reserved}} in giacenza sono riservate a ordini di vendita e ne hai richiesti {{requested}}. Aggiungerlo comunque sottrae scorte su cui conta un ordine di vendita e può lasciarlo incompleto.",
+    "reservedStockTitle": "Le scorte sono riservate a un ordine di vendita o a un progetto",
+    "reservedStockMessage": "Solo {{free}} di questo prodotto sono libere. {{reserved}} in giacenza sono riservate a ordini di vendita o progetti e ne hai richiesti {{requested}}. Aggiungerlo comunque sottrae scorte su cui conta un ordine di vendita o un progetto e può lasciarlo incompleto.",
     "reservedStockConfirm": "Aggiungi comunque"
   },
   "watchList": {
@@ -1689,7 +1689,11 @@
       "ruleSubcategoryRequiresCategory": "Seleziona una categoria prima di scegliere una sottocategoria.",
       "ruleTooManyKeywords": "Usi al massimo {{max}} parole chiave per regola.",
       "ruleKeywordTooLong": "Ogni parola chiave può avere al massimo {{max}} caratteri.",
-      "ruleOriginInvalid": "Una delle origini ticket selezionate non è valida."
+      "ruleOriginInvalid": "Una delle origini ticket selezionate non è valida.",
+      "templateClientMismatch": "Questo modello di checklist è limitato a un cliente diverso da quello del ticket.",
+      "templateClientInvalid": "Il cliente selezionato non è stato trovato.",
+      "ruleClientOutsideTemplateScope": "Questo modello appartiene a un cliente, quindi le sue regole non possono riguardare altri clienti.",
+      "templateRulesTargetOtherClients": "Alcune regole di applicazione automatica di questo modello riguardano altri clienti. Rimuovi quei clienti dalle regole prima di assegnare il modello a un cliente."
     }
   },
   "ticketSection": {
@@ -2648,6 +2652,116 @@
       "hours": "{{hours}} h",
       "daysHours": "{{days}} g {{hours}} h",
       "days": "{{days}} g"
+    }
+  },
+  "cannedResponses": {
+    "picker": {
+      "button": "Risposte predefinite",
+      "buttonTooltip": "Inserisci una risposta predefinita (Ctrl/Cmd+J, oppure digita /)",
+      "title": "Inserisci una risposta predefinita",
+      "searchPlaceholder": "Cerca risposte predefinite…",
+      "searchLabel": "Cerca risposte predefinite",
+      "loading": "Caricamento delle risposte predefinite…",
+      "empty": "Non ci sono ancora risposte predefinite.",
+      "noResults": "Nessuna risposta predefinita corrisponde alla ricerca.",
+      "loadFailed": "Impossibile caricare le risposte predefinite.",
+      "insertFailed": "Impossibile inserire la risposta predefinita.",
+      "favorites": "Preferite",
+      "recent": "Usate di recente",
+      "uncategorized": "Senza categoria",
+      "slashGroup": "Risposte predefinite",
+      "slashBrowse": "Risposte predefinite…",
+      "slashBrowseHint": "Sfoglia e inserisci una risposta salvata"
+    },
+    "scope": {
+      "personal": "Personale",
+      "team": "Team",
+      "board": "Bacheca",
+      "clientPortal": "Portale clienti",
+      "personalHelp": "Solo tu puoi usare questa risposta.",
+      "teamHelp": "I membri del team scelto possono usare questa risposta.",
+      "boardHelp": "Chiunque risponda ai ticket della bacheca scelta può usare questa risposta.",
+      "clientPortalHelp": "Riservata alle risposte del portale clienti. Non viene proposta quando si risponde dal portale MSP."
+    },
+    "list": {
+      "title": "Risposte predefinite",
+      "new": "Nuova risposta predefinita",
+      "showInactive": "Mostra inattive",
+      "searchPlaceholder": "Cerca per nome, categoria o testo…",
+      "searchLabel": "Cerca risposte predefinite",
+      "allCategories": "Tutte le categorie",
+      "noResults": "Nessuna risposta predefinita corrisponde ai filtri.",
+      "empty": "Ancora nessuna risposta predefinita. Creane una per riutilizzarla nelle risposte ai ticket.",
+      "deleteTitle": "Elimina risposta predefinita",
+      "deleteMessage": "Eliminare «{{name}}»? Le risposte che l'hanno già usata non vengono modificate.",
+      "deleted": "Risposta predefinita eliminata",
+      "favorite": "Preferita",
+      "columns": {
+        "name": "Nome",
+        "category": "Categoria",
+        "scope": "Disponibile per",
+        "preview": "Anteprima",
+        "status": "Stato"
+      }
+    },
+    "status": {
+      "active": "Attiva",
+      "inactive": "Inattiva"
+    },
+    "actions": {
+      "favorite": "Aggiungi ai preferiti",
+      "unfavorite": "Rimuovi dai preferiti",
+      "edit": "Modifica",
+      "activate": "Attiva",
+      "deactivate": "Disattiva",
+      "delete": "Elimina",
+      "cancel": "Annulla"
+    },
+    "loading": "Caricamento…",
+    "editor": {
+      "back": "Risposte predefinite",
+      "newTitle": "Nuova risposta predefinita",
+      "save": "Salva",
+      "saving": "Salvataggio…",
+      "saved": "Risposta predefinita salvata",
+      "created": "Risposta predefinita creata",
+      "viewOnly": "Puoi visualizzare questa risposta predefinita ma non modificarla."
+    },
+    "sections": {
+      "details": "Dettagli",
+      "body": "Risposta"
+    },
+    "fields": {
+      "name": "Nome",
+      "category": "Categoria",
+      "categoryHelp": "Raggruppa le risposte nel selettore. Facoltativo.",
+      "scope": "Disponibile per",
+      "team": "Team",
+      "teamPlaceholder": "Seleziona un team",
+      "board": "Bacheca",
+      "boardPlaceholder": "Seleziona una bacheca",
+      "body": "Testo della risposta",
+      "bodyPlaceholder": "Scrivi la risposta…"
+    },
+    "mergeFields": {
+      "title": "Campi di unione",
+      "help": "Compilati quando la risposta viene inserita in una replica. Un campo senza valore diventa vuoto; un campo non riconosciuto resta invariato.",
+      "descriptions": {
+        "contact_first_name": "Il nome del contatto",
+        "contact_last_name": "Il cognome del contatto",
+        "contact_name": "Il nome completo del contatto",
+        "ticket_number": "Il numero del ticket",
+        "ticket_title": "Il titolo del ticket",
+        "agent_name": "Il tuo nome (l'agente che risponde)",
+        "client_name": "Il nome del cliente"
+      }
+    },
+    "errors": {
+      "notFound": "Risposta predefinita non trovata.",
+      "duplicateName": "Esiste già qui una risposta predefinita chiamata «{{name}}».",
+      "invalidReferences": "Il team o la bacheca selezionati non esistono più.",
+      "notAvailable": "Questa risposta predefinita non è disponibile per questo ticket.",
+      "notATeamMember": "Puoi gestire le risposte di team solo per i team di cui fai parte."
     }
   }
 }

@@ -1855,7 +1855,8 @@ export function registerTicketActions(): void {
       ticket_id: uuidSchema,
       template_id: uuidSchema,
       applied: z.boolean().describe('False when the template was already on the ticket (idempotent no-op)'),
-      items_added: z.number().int()
+      items_added: z.number().int(),
+      reason: z.enum(['template-client-mismatch']).optional().describe('Set when the template is scoped to a different client than the ticket and was not applied')
     }),
     sideEffectful: true,
     idempotency: { mode: 'engineProvided' },
@@ -1902,7 +1903,10 @@ export function registerTicketActions(): void {
         ticket_id: input.ticket_id,
         template_id: input.template_id,
         applied: applyResult.applied,
-        items_added: applyResult.itemsAdded
+        items_added: applyResult.itemsAdded,
+        // Workflow choice: a client-scope mismatch is a non-fatal no-op reported in the output
+        // (like the idempotent already-applied case) so a run isn't failed by template scope.
+        ...(applyResult.reason ? { reason: applyResult.reason } : {})
       };
     })
   });

@@ -1,5 +1,5 @@
 /**
- * GET /api/labels/templates?labelClass=ticket-work-tag|asset-identity|stock-unit-identity
+ * GET /api/labels/templates?labelClass=ticket-work-tag|asset-identity|stock-unit-identity|staging-container
  *
  * Read-only lookup for the print dialog: the templates a tenant can print a label class with and the
  * one that is the default. Session-authenticated in-handler (withAuth), internal users only, and the
@@ -16,6 +16,7 @@ const RBAC_RESOURCE_BY_CLASS: Record<LabelClass, string> = {
   'ticket-work-tag': 'ticket',
   'asset-identity': 'asset',
   'stock-unit-identity': 'inventory',
+  'staging-container': 'project',
 };
 
 const json = (status: number, body: unknown) =>

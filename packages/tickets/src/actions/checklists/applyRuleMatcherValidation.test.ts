@@ -5,7 +5,9 @@ import {
   APPLY_RULE_MAX_KEYWORD_LENGTH,
   APPLY_RULE_ORIGIN_INVALID,
   APPLY_RULE_TOO_MANY_KEYWORDS,
+  APPLY_RULE_CLIENT_OUTSIDE_TEMPLATE_SCOPE,
   normalizeRuleKeywords,
+  ruleClientIdsForTemplate,
   uniqueIdsOrNull,
   validateRuleKeywords,
   validateRuleOrigins,
@@ -38,5 +40,24 @@ describe('apply rule matcher validation', () => {
   it('de-duplicates ids and collapses empty to null', () => {
     expect(uniqueIdsOrNull(['a', 'a', 'b'])).toEqual(['a', 'b']);
     expect(uniqueIdsOrNull([])).toBeNull();
+  });
+
+  describe('ruleClientIdsForTemplate', () => {
+    const owner = '11111111-1111-1111-1111-111111111111';
+    const other = '22222222-2222-2222-2222-222222222222';
+
+    it('keeps the client list as given on a tenant-wide template', () => {
+      expect(ruleClientIdsForTemplate(null, [owner, other, owner])).toEqual([owner, other]);
+      expect(ruleClientIdsForTemplate(null, [])).toBeNull();
+    });
+
+    it('stores "any client" when an owned template\'s rule names nobody or only the owner', () => {
+      expect(ruleClientIdsForTemplate(owner, null)).toBeNull();
+      expect(ruleClientIdsForTemplate(owner, [owner])).toBeNull();
+    });
+
+    it('rejects another client on an owned template', () => {
+      expect(() => ruleClientIdsForTemplate(owner, [owner, other])).toThrow(APPLY_RULE_CLIENT_OUTSIDE_TEMPLATE_SCOPE);
+    });
   });
 });

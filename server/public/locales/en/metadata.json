@@ -217,7 +217,10 @@
       "policies": {
         "title": "Asset Policies"
       },
-      "title": "Assets"
+      "title": "Assets",
+      "custody": {
+        "title": "Equipment in custody"
+      }
     },
     "billing": {
       "title": "Billing",
@@ -403,6 +406,9 @@
           "detail": {
             "title": "Project Task"
           }
+        },
+        "staging": {
+          "title": "Project Staging"
         }
       },
       "templates": {
@@ -552,6 +558,9 @@
       },
       "templates": {
         "title": "Ticket templates"
+      },
+      "cannedResponses": {
+        "title": "Canned responses"
       }
     },
     "timeEntry": {

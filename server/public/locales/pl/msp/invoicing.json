@@ -2586,7 +2586,8 @@
       "salesOrder": "Zamówienie sprzedaży",
       "packingSlip": "Dokument dostawy",
       "pickList": "Lista kompletacyjna",
-      "workTag": "Etykieta robocza / Etykieta"
+      "workTag": "Etykieta robocza / Etykieta",
+      "stagingManifest": "Lista pakowa"
     }
   },
   "errors": {

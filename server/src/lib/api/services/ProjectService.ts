@@ -5,6 +5,7 @@
 
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { Knex } from 'knex';
+import { releaseStagingForTask, releaseStagingForTasks } from '@alga-psa/inventory/lib';
 import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
 import { 
   IProject, 
@@ -647,9 +648,16 @@ export class ProjectService extends BaseService<IProject> {
   async deletePhase(phaseId: string, context: ServiceContext): Promise<void> {
       const { knex } = await this.getKnex();
       
-      const result = await scopedTable(knex, context.tenant, 'project_phases')
-        .where({ phase_id: phaseId })
-        .del();
+      const result = await withTransaction(knex, async (trx) => {
+        // C6: tasks in the phase may carry staging claims/boxes; release them before the delete.
+        const taskIds = await scopedTable(trx, context.tenant, 'project_tasks')
+          .where({ phase_id: phaseId })
+          .pluck('task_id');
+        await releaseStagingForTasks(trx, context.tenant, taskIds, context.userId ?? null);
+        return scopedTable(trx, context.tenant, 'project_phases')
+          .where({ phase_id: phaseId })
+          .del();
+      });
   
       if (result === 0) {
         throw new NotFoundError('Project phase not found');
@@ -942,9 +950,13 @@ export class ProjectService extends BaseService<IProject> {
   async deleteTask(taskId: string, context: ServiceContext): Promise<void> {
       const { knex } = await this.getKnex();
       
-      const result = await scopedTable(knex, context.tenant, 'project_tasks')
-        .where({ task_id: taskId })
-        .del();
+      const result = await withTransaction(knex, async (trx) => {
+        // C6: release staging claims/boxes on the task (task FKs are NO ACTION) before the delete.
+        await releaseStagingForTask(trx, context.tenant, taskId, context.userId ?? null);
+        return scopedTable(trx, context.tenant, 'project_tasks')
+          .where({ task_id: taskId })
+          .del();
+      });
   
       if (result === 0) {
         throw new NotFoundError('Project task not found');

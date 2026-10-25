@@ -1704,6 +1704,129 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     edition: 'both',
   });
 
+  // Equipment custody (alga-2026-0002683, C4). No new RBAC resource: asset:read / asset:update plus the record check.
+  const CustodyEnvelope = registry.registerSchema(
+    'AssetCustodyEnvelope',
+    zOpenApi.object({ data: zOpenApi.record(zOpenApi.any()) }).describe('Custody data wrapped in the standard envelope.'),
+  );
+  const OpenCustodyRequest = registry.registerSchema(
+    'OpenAssetCustodyRequest',
+    zOpenApi
+      .object({
+        ticket_id: zOpenApi.string().uuid().nullable().optional().describe('Ticket the equipment was received for; its client must match the asset.'),
+        location_id: zOpenApi.string().uuid().describe('Active stock location the item is shelved at.'),
+        bin: zOpenApi.string().max(64).describe('Free-text bin or shelf label.'),
+        purpose: zOpenApi.enum(['repair', 'warranty_evaluation', 'loaner_prep', 'staging']),
+        next_action_party: zOpenApi.enum(['msp', 'client', 'vendor']).optional(),
+        next_action_note: zOpenApi.string().max(2000).nullable().optional(),
+        follow_up_on: zOpenApi.string().describe('Date only, YYYY-MM-DD.').nullable().optional(),
+        condition_note: zOpenApi.string().max(2000).nullable().optional(),
+      })
+      .passthrough(),
+  );
+  const CustodyEventRequest = registry.registerSchema(
+    'AssetCustodyEventRequest',
+    zOpenApi
+      .object({ event_type: zOpenApi.enum(['moved', 'handed_off', 'shipped', 'received', 'returned']) })
+      .passthrough()
+      .describe('Fields depend on event_type: moved {location_id?, bin?}, handed_off {to_holder_user_id}, shipped {counterparty}, received {location_id, bin}, returned {counterparty?}.'),
+  );
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/assets/{id}/custody',
+    summary: 'Get asset custody',
+    description: 'Returns the open custody episode (if any), the episode history and the append-only event timeline of the asset. An asset the caller cannot read answers 404 with no data.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: AssetIdParams },
+    responses: {
+      200: { description: 'Custody returned successfully.', schema: CustodyEnvelope },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset read permission.', schema: ApiErrorEnvelope },
+      404: { description: 'Asset not found or not readable.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: { ...assetRouteExtensions, 'x-rbac-resource': 'asset', 'x-rbac-action': 'read', 'x-not-paginated': true },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/assets/{id}/custody',
+    summary: 'Receive an asset into custody',
+    description: 'Opens a custody episode for the asset. Never touches stock, billing or time. 409 when an episode is already open.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: AssetIdParams, body: { schema: OpenCustodyRequest, description: 'Where the item is shelved and who acts next.', required: true } },
+    responses: {
+      201: { description: 'Custody episode opened.', schema: CustodyEnvelope },
+      400: { description: 'Validation failed (inactive location, client mismatch, invalid date).', schema: ApiErrorEnvelope },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset update permission.', schema: ApiErrorEnvelope },
+      404: { description: 'Asset not found or not readable.', schema: ApiErrorEnvelope },
+      409: { description: 'An episode is already open for this asset.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: { ...assetRouteExtensions, 'x-rbac-resource': 'asset', 'x-rbac-action': 'update' },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/assets/{id}/custody/events',
+    summary: 'Record a custody step',
+    description: 'Appends a moved, handed_off, shipped, received or returned step to the asset\u2019s open episode. Invalid transitions answer 409.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: AssetIdParams, body: { schema: CustodyEventRequest, description: 'The step to record.', required: true } },
+    responses: {
+      201: { description: 'Step recorded.', schema: CustodyEnvelope },
+      400: { description: 'Validation failed.', schema: ApiErrorEnvelope },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset update permission.', schema: ApiErrorEnvelope },
+      404: { description: 'Asset not found or not readable.', schema: ApiErrorEnvelope },
+      409: { description: 'The asset is not in custody, or the step is not allowed from the current state.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: { ...assetRouteExtensions, 'x-rbac-resource': 'asset', 'x-rbac-action': 'update' },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/asset-custody',
+    summary: 'List equipment in custody',
+    description: 'The custody queue. Rows and tab counts exclude assets the caller cannot read.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      query: registry.registerSchema(
+        'AssetCustodyQueueQuery',
+        zOpenApi.object({
+          tab: zOpenApi.string().optional(),
+          client_id: zOpenApi.string().uuid().optional(),
+          location_id: zOpenApi.string().uuid().optional(),
+          holder_user_id: zOpenApi.string().uuid().optional(),
+          purpose: zOpenApi.enum(['repair', 'warranty_evaluation', 'loaner_prep', 'staging']),
+          next_action_party: zOpenApi.enum(['msp', 'client', 'vendor']).optional(),
+          mine: zOpenApi.enum(['true', 'false']).optional(),
+          page: zOpenApi.string().optional(),
+          pageSize: zOpenApi.string().optional(),
+        }),
+      ),
+    },
+    responses: {
+      200: { description: 'Queue returned successfully.', schema: CustodyEnvelope },
+      400: { description: 'Invalid filter.', schema: ApiErrorEnvelope },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset read permission.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: { ...assetRouteExtensions, 'x-rbac-resource': 'asset', 'x-rbac-action': 'read', 'x-no-asset-existence-check': true, 'x-not-paginated': true },
+    edition: 'both',
+  });
+
   registry.registerRoute({
     method: 'get',
     path: '/api/v1/asset-groups',

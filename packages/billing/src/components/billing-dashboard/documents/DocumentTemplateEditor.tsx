@@ -85,6 +85,7 @@ export const LABEL_CLASS_DEFAULT_LABELS: Record<LabelClass, string> = {
   'ticket-work-tag': 'Ticket work tag',
   'asset-identity': 'Asset label',
   'stock-unit-identity': 'Stock unit label',
+  'staging-container': 'Staging box label',
 };
 
 const LABEL_FIELD_DEFAULT_LABELS: Record<LabelHideableField, string> = {
@@ -93,6 +94,8 @@ const LABEL_FIELD_DEFAULT_LABELS: Record<LabelHideableField, string> = {
   detail: 'Detail / reason',
   secondaryIdentifier: 'Secondary identifier',
   serialSuffix: 'Serial suffix',
+  custodyLocation: 'Custody location',
+  nextAction: 'Next action',
   tenantLogo: 'Company logo',
   tenantName: 'Company name',
 };

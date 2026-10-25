@@ -22,6 +22,7 @@ const mockGetClientMaintenanceSummaries = vi.fn();
 const mockGetAssetTypes = vi.fn();
 const mockGetAssetCountsByType = vi.fn();
 
+vi.mock('./custody/CustodyBadge', () => ({ useCustodyBadges: () => new Map(), CustodyBadge: () => null }));
 vi.mock('../actions/assetActions', () => ({
   listAssets: (...args: unknown[]) => mockListAssets(...args),
   bulkUpdateAssets: vi.fn(),

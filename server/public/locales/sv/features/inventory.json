@@ -1713,7 +1713,11 @@
       "submit": "Återlägg i lager"
     },
     "printLabel": "Skriv ut etikett",
-    "printWithTemplate": "Skriv ut med {{code}}"
+    "printWithTemplate": "Skriv ut med {{code}}",
+    "claimant": {
+      "project": "Projekt {{number}}",
+      "salesOrder": "Försäljningsorder {{number}}"
+    }
   },
   "transfers": {
     "addLine": "Lägg till rad",
