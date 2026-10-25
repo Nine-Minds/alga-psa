@@ -76,6 +76,12 @@ export abstract class BaseCalendarAdapter {
    * Handle errors consistently across providers
    */
   protected handleError(error: any, context: string): Error {
+    // A classified Microsoft OAuth rejection already carries the user-facing
+    // `<code>: <message>`; re-wrapping would bury it under `Error in <ctx>:`
+    // and drop the code and kind that the UI and status writers rely on.
+    if (error instanceof Error && (error as any).microsoftOAuthFailureKind) {
+      return error;
+    }
     // Try to extract helpful details from Axios-style errors
     let details = '';
     const res = error?.response;

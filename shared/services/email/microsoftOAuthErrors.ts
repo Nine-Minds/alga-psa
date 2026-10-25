@@ -75,6 +75,18 @@ export function kindFromMicrosoftOAuthErrorCode(code: string | null | undefined)
   return null;
 }
 
+/**
+ * True for a `<machine code>: <message>` string produced by
+ * formatMicrosoftOAuthFailureForMailboxFlow (the code before the first `:` is a
+ * known MICROSOFT_OAUTH_FAILURE_ERROR_CODES value).
+ */
+export function isMappedMicrosoftOAuthMessage(message: string | null | undefined): boolean {
+  if (!message) return false;
+  const idx = message.indexOf(':');
+  if (idx <= 0) return false;
+  return kindFromMicrosoftOAuthErrorCode(message.slice(0, idx)) !== null;
+}
+
 /** Email / calendar callback copy (the callbacks post this to the opener window). */
 export function describeMicrosoftOAuthFailureForMailboxFlow(
   kind: MicrosoftOAuthFailureKind,

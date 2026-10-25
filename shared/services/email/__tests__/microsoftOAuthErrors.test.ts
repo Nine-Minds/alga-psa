@@ -3,6 +3,8 @@ import {
   classifyMicrosoftOAuthFailure,
   describeMicrosoftOAuthFailureForMailboxFlow,
   extractRedirectUriFromDescription,
+  formatMicrosoftOAuthFailureForMailboxFlow,
+  isMappedMicrosoftOAuthMessage,
   toSafeMicrosoftOAuthFailure,
 } from '../microsoftOAuthErrors';
 
@@ -61,5 +63,16 @@ describe('toSafeMicrosoftOAuthFailure', () => {
     expect(JSON.stringify(safe)).not.toContain('SUPERSECRET');
     expect(JSON.stringify(safe)).not.toContain('client_secret');
     expect(safe).toMatchObject({ status: 400, error: 'invalid_request', errorCodes: [50194], traceId: 't', correlationId: 'c' });
+  });
+});
+
+describe('isMappedMicrosoftOAuthMessage', () => {
+  it('recognises formatted mapped messages and rejects everything else', () => {
+    expect(isMappedMicrosoftOAuthMessage(formatMicrosoftOAuthFailureForMailboxFlow('invalid_client_secret'))).toBe(true);
+    expect(isMappedMicrosoftOAuthMessage(formatMicrosoftOAuthFailureForMailboxFlow('expired_client_secret'))).toBe(true);
+    expect(isMappedMicrosoftOAuthMessage('aadsts_9999_unknown: nope')).toBe(false);
+    expect(isMappedMicrosoftOAuthMessage('Error in createEvent: aadsts_7000215_invalid_secret: x')).toBe(false);
+    expect(isMappedMicrosoftOAuthMessage('no colon')).toBe(false);
+    expect(isMappedMicrosoftOAuthMessage(undefined)).toBe(false);
   });
 });

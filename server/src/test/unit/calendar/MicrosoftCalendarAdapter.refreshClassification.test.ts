@@ -86,4 +86,22 @@ describe('enterprise MicrosoftCalendarAdapter refresh classification', () => {
     expect(error.message).toMatch(/^Error in refreshAccessToken: /);
     expect(error.microsoftOAuthFailureKind).toBeUndefined();
   });
+
+  it('handleError returns a classified Microsoft OAuth error unchanged, but still prefixes other errors', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const adapter = makeAdapter();
+    const mapped = Object.assign(
+      new Error(`aadsts_7000215_invalid_secret: ${describeMicrosoftOAuthFailureForMailboxFlow('invalid_client_secret')}`),
+      { code: 'aadsts_7000215_invalid_secret', microsoftOAuthFailureKind: 'invalid_client_secret' }
+    );
+
+    const passed = adapter.handleError(mapped, 'createEvent');
+    expect(passed).toBe(mapped);
+    expect(passed.message).toBe(mapped.message);
+    expect(passed.message.startsWith('Error in')).toBe(false);
+    expect(passed.microsoftOAuthFailureKind).toBe('invalid_client_secret');
+
+    const plain = adapter.handleError(new Error('boom'), 'createEvent');
+    expect(plain.message).toBe('Error in createEvent: boom');
+  });
 });
