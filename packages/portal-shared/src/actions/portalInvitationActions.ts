@@ -1,7 +1,8 @@
 'use server'
 
 import { randomBytes } from 'node:crypto';
-import { createTenantKnex, tenantDb, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, runWithTenant, withTransaction } from '@alga-psa/db';
+import { queueContactCreated } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { PortalInvitationService } from '../services/PortalInvitationService';
 import { getTenantSlugForTenant } from '@alga-psa/db';
 import { getTenantPortalBaseUrl } from '@alga-psa/tenancy/server';
@@ -283,7 +284,7 @@ export const createClientPortalUser = withAuth(async (
     }
 
     // Create user and assign role
-    const result = await knex.transaction(async (trx) => {
+    const result = await withTransaction(knex, async (trx) => {
       const scopedDb = tenantDb(trx, tenant);
 
       // 1) Resolve or create contact
@@ -309,6 +310,7 @@ export const createClientPortalUser = withAuth(async (
               updated_at: trx.raw('now()')
             })
             .returning('*');
+          queueContactCreated(trx, tenant, createdContact, { actorUserId: user.user_id });
           contact = createdContact;
         }
       }
@@ -338,6 +340,7 @@ export const createClientPortalUser = withAuth(async (
               updated_at: trx.raw('now()')
             })
             .returning('*');
+          queueContactCreated(trx, tenant, createdContact, { actorUserId: user.user_id });
           contact = createdContact;
         }
       }
