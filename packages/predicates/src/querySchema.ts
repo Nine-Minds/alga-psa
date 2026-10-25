@@ -16,6 +16,11 @@ export interface ColumnAttribute {
   type: AttributeType;
   /** Restrict the operators allowed for this attribute. Defaults to the operators valid for `type`. */
   operators?: readonly PredicateOperator[];
+  /**
+   * The column is a string-valued type that rejects `''` (a Postgres enum): emptiness tests compare
+   * `column::text` so the "empty string counts as empty" rule still holds without a cast error.
+   */
+  castToText?: boolean;
 }
 
 /** Values held by child rows: a set-valued path (`tags`). */

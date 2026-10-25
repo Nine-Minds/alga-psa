@@ -178,7 +178,7 @@
   {
     "id": "F023",
     "description": "Computed attributes as named resolvers declared in the query schema; the only place raw SQL is allowed",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Shared predicate model"
     ]
@@ -218,7 +218,7 @@
   {
     "id": "F028",
     "description": "Ticket query schema: board (inactive-board state, no-board sentinel), status (id, name, open-only via is_closed), priority",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list query schema and compiler"
     ]
@@ -226,7 +226,7 @@
   {
     "id": "F029",
     "description": "Ticket query schema: category matching category or subcategory, with no-category sentinel",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list query schema and compiler"
     ]
@@ -234,7 +234,7 @@
   {
     "id": "F030",
     "description": "Ticket query schema: client, contact relations",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list query schema and compiler"
     ]
@@ -242,7 +242,7 @@
   {
     "id": "F031",
     "description": "Ticket query schema: assignee / team / unassigned as one OR group; assigned-to-me resolved to the current user id",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list query schema and compiler"
     ]
@@ -250,7 +250,7 @@
   {
     "id": "F032",
     "description": "Ticket query schema: due date presets resolved to absolute ranges in the user's timezone",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list query schema and compiler"
     ]
@@ -258,7 +258,7 @@
   {
     "id": "F033",
     "description": "Ticket query schema: response state and SLA status as computed attributes (SLA reuses ticketSlaBreachedSql)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list query schema and compiler"
     ]
@@ -266,7 +266,7 @@
   {
     "id": "F034",
     "description": "Ticket query schema: tags, contact.tags, client.tags tag relations",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list query schema and compiler"
     ]
@@ -274,7 +274,7 @@
   {
     "id": "F035",
     "description": "ticketFiltersToPredicates codec converts every legacy ITicketListFilters key to a predicate group",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list query schema and compiler"
     ]
@@ -282,7 +282,7 @@
   {
     "id": "F036",
     "description": "ITicketListFilters gains where?: PredicateGroup; ticket filter zod schema validates it against the ticket query schema",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list query schema and compiler"
     ]
@@ -290,7 +290,7 @@
   {
     "id": "F037",
     "description": "buildTicketListBaseQuery compiles codec output plus filters.where; hand-written where-clauses for legacy keys deleted in the same change, with no fallback path or flag",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list query schema and compiler"
     ]
@@ -298,7 +298,7 @@
   {
     "id": "F038",
     "description": "Bundled view uses the self-or-any-child modifier for every relation hop, including ticket, contact and client tags",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list query schema and compiler"
     ]
@@ -306,7 +306,7 @@
   {
     "id": "F039",
     "description": "Update optimizedTicketActions.tenantScopedAuth source-string contract test to pin tenant correlation in the compiler",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list query schema and compiler"
     ]
@@ -314,7 +314,7 @@
   {
     "id": "F040",
     "description": "Tag filter values are definition ids; legacy tags text converts to ticket tag definition ids by (tag_text, 'ticket')",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Storage and URLs"
     ]
@@ -629,7 +629,7 @@
   {
     "id": "F079",
     "description": "Ticket query schema file enumerates its computed attributes (SLA status, response state, due-date presets, assigned-to-me, inactive-board state, no-board, no-category, open-only) as named resolvers; no other raw SQL in the schema",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list query schema and compiler"
     ]

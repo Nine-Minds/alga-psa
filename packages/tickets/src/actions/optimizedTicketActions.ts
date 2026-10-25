@@ -84,7 +84,10 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
-import { ticketSlaBreachedBindings, ticketSlaBreachedSql } from '../lib/ticketSlaSql';
+import { compilePredicateFragment } from '@alga-psa/predicates/sql';
+import type { PredicateGroup } from '@alga-psa/predicates';
+import { createTicketQuerySchema } from '../lib/ticketQuerySchema';
+import { ticketFiltersToPredicates, type TicketFilterCodecContext } from '../lib/ticketFilterPredicates';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import {
@@ -106,8 +109,6 @@ import {
   type BundleStatusPropagationPreview,
 } from '../lib/ticketBundlePropagation';
 import {
-  parseTicketStatusFilterValue,
-  shouldApplyOpenOnlyStatusFilter,
   TICKET_STATUS_FILTER_ALL,
   TICKET_STATUS_FILTER_OPEN,
 } from '../lib/ticketStatusFilter';
@@ -1173,6 +1174,36 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 });
 
 /**
+ * Resolves what the pure filter codec cannot know: the clock, the caller's time zone and
+ * `project:read` bypass, and the ticket tag definition ids behind the legacy tag-text filter.
+ */
+async function resolveTicketFilterCodecContext(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: { user_id: string; user_type?: string; clientId?: string | null },
+  filters: ITicketListFilters
+): Promise<TicketFilterCodecContext> {
+  const nowIso = Temporal.Now.instant().toString();
+  const timeZone = filters.dueDateFilter === 'today'
+    ? await resolveUserTimeZone(trx, tenant, user.user_id)
+    : 'UTC';
+  const assignedToMeBypass = filters.assignedToMe
+    ? await hasPermission(user as any, 'project', 'read', trx)
+    : false;
+  const ticketTagIdsByText: Record<string, string> = {};
+  if (filters.tags && filters.tags.length > 0) {
+    const rows = await tenantScopedTable(trx, 'tag_definitions', tenant)
+      .select('tag_id', 'tag_text')
+      .where('tagged_type', 'ticket')
+      .whereIn('tag_text', filters.tags as string[]);
+    for (const row of rows as Array<{ tag_id: string; tag_text: string }>) {
+      ticketTagIdsByText[row.tag_text] = row.tag_id;
+    }
+  }
+  return { nowIso, timeZone, userId: user.user_id, assignedToMeBypass, ticketTagIdsByText };
+}
+
+/**
  * Build the base filtered query for the ticket list.
  * Returns a Knex query builder with all JOINs and WHERE clauses applied,
  * but no SELECT, ORDER BY, LIMIT, or OFFSET.
@@ -1184,7 +1215,6 @@ async function buildTicketListBaseQuery(
   user: { user_id: string; user_type?: string; clientId?: string | null },
   validatedFilters: ITicketListFilters
 ): Promise<{ builder: Knex.QueryBuilder; scopedQuery: TenantScopedQuery }> {
-    const parsedStatusFilter = parseTicketStatusFilterValue(validatedFilters.statusId);
     const scopedQuery = tenantDb(trx, tenant).scoped('tickets as t');
     let baseQuery = scopedQuery.builder;
     tenantLeftJoin(trx, tenant, baseQuery, 'tickets as mt', 't.master_ticket_id', 'mt.ticket_id');
@@ -1200,310 +1230,27 @@ async function buildTicketListBaseQuery(
     tenantLeftJoin(trx, tenant, baseQuery, 'users as au', 't.assigned_to', 'au.user_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'teams as tm', 't.assigned_team_id', 'tm.team_id');
 
-    // Bundle view filter: hide children in bundled view
-    if (validatedFilters.bundleView === 'bundled') {
-      baseQuery = baseQuery.whereNull('t.master_ticket_id');
-    }
-
-    // Board include filter. Prefers the multi-select `boardIds`; falls back to the
-    // legacy single `boardId`. An explicit board selection takes precedence over the
-    // active/inactive status restriction (the user has positively chosen boards).
-    const includeBoardIds = (validatedFilters.boardIds && validatedFilters.boardIds.length > 0)
-      ? validatedFilters.boardIds
-      : (validatedFilters.boardId ? [validatedFilters.boardId] : []);
-    const includeNoBoard = includeBoardIds.includes('no-board');
-    const includeRealBoardIds = includeBoardIds.filter(id => id !== 'no-board');
-    if (includeBoardIds.length > 0) {
-      baseQuery = baseQuery.where(function () {
-        if (includeNoBoard && includeRealBoardIds.length > 0) {
-          this.whereNull('t.board_id').orWhereIn('t.board_id', includeRealBoardIds);
-        } else if (includeNoBoard) {
-          this.whereNull('t.board_id');
-        } else {
-          this.whereIn('t.board_id', includeRealBoardIds);
-        }
-      });
-    } else if (validatedFilters.boardFilterState !== 'all') {
-      const boardSubquery = tenantScopedTable(trx, 'boards', tenant)
-        .select('board_id')
-        .where('is_inactive', validatedFilters.boardFilterState === 'inactive');
-
-      baseQuery = baseQuery.whereIn('t.board_id', boardSubquery);
-    }
-
-    // Board exclude filter. Excludes any ticket on an excluded board; the 'no-board'
-    // sentinel excludes tickets that have no board.
-    const excludeBoardIds = validatedFilters.excludeBoardIds ?? [];
-    if (excludeBoardIds.includes('no-board')) {
-      baseQuery = baseQuery.whereNotNull('t.board_id');
-    }
-    const excludeRealBoardIds = excludeBoardIds.filter(id => id !== 'no-board');
-    if (excludeRealBoardIds.length > 0) {
-      baseQuery = baseQuery.where(function () {
-        this.whereNull('t.board_id').orWhereNotIn('t.board_id', excludeRealBoardIds);
-      });
-    }
-
-    if (shouldApplyOpenOnlyStatusFilter(validatedFilters.statusId, validatedFilters.showOpenOnly)) {
-      baseQuery = baseQuery.whereExists(
-        tenantScopedTable(trx, 'statuses', tenant)
-          .select('*')
-          // LEVERAGE: pattern tenant-correlated-exists — correlate on the distribution column so Citus can co-locate the subquery
-          .whereRaw('statuses.tenant = t.tenant')
-          .andWhereRaw('statuses.status_id = t.status_id')
-          .andWhere('statuses.is_closed', false)
-      );
-    } else if (parsedStatusFilter.kind === 'name') {
-      baseQuery = baseQuery.where('s.name', parsedStatusFilter.statusName);
-    } else if (parsedStatusFilter.kind === 'id') {
-      baseQuery = baseQuery.where('t.status_id', parsedStatusFilter.statusId);
-    }
-
-    if (validatedFilters.priorityId && validatedFilters.priorityId !== 'all') {
-      baseQuery = baseQuery.where('t.priority_id', validatedFilters.priorityId);
-    }
-
-    // Category include filter. A ticket "has" a category if either its
-    // category_id (parent) or subcategory_id (child) matches the selection, so
-    // selecting a parent matches its subcategorized tickets and selecting a
-    // subcategory matches tickets that reference it via subcategory_id.
-    // Prefers the multi-select `categoryIds`; falls back to legacy single `categoryId`.
-    const includeCategoryIds = (validatedFilters.categoryIds && validatedFilters.categoryIds.length > 0)
-      ? validatedFilters.categoryIds
-      : (validatedFilters.categoryId && validatedFilters.categoryId !== 'all'
-          ? [validatedFilters.categoryId]
-          : []);
-    const includeNoCategory = includeCategoryIds.includes('no-category');
-    const includeRealCategoryIds = includeCategoryIds.filter(id => id !== 'no-category' && id !== 'all');
-    if (includeNoCategory || includeRealCategoryIds.length > 0) {
-      baseQuery = baseQuery.where(function () {
-        if (includeNoCategory && includeRealCategoryIds.length > 0) {
-          this.whereNull('t.category_id').orWhere(function () {
-            this.whereIn('t.category_id', includeRealCategoryIds)
-              .orWhereIn('t.subcategory_id', includeRealCategoryIds);
-          });
-        } else if (includeNoCategory) {
-          this.whereNull('t.category_id');
-        } else {
-          this.whereIn('t.category_id', includeRealCategoryIds)
-            .orWhereIn('t.subcategory_id', includeRealCategoryIds);
-        }
-      });
-    }
-
-    // Category exclude filter. Excludes any ticket whose parent or subcategory is
-    // in the excluded set; null columns are kept (unless 'no-category' is excluded).
-    const excludeCategoryIds = validatedFilters.excludeCategoryIds ?? [];
-    const excludeNoCategory = excludeCategoryIds.includes('no-category');
-    const excludeRealCategoryIds = excludeCategoryIds.filter(id => id !== 'no-category' && id !== 'all');
-    if (excludeNoCategory) {
-      baseQuery = baseQuery.whereNotNull('t.category_id');
-    }
-    if (excludeRealCategoryIds.length > 0) {
-      baseQuery = baseQuery.where(function () {
-        this.where(function () {
-          this.whereNull('t.category_id').orWhereNotIn('t.category_id', excludeRealCategoryIds);
-        }).andWhere(function () {
-          this.whereNull('t.subcategory_id').orWhereNotIn('t.subcategory_id', excludeRealCategoryIds);
-        });
-      });
-    }
-
-    if (validatedFilters.clientId) {
-      if (validatedFilters.bundleView === 'bundled') {
-        baseQuery = baseQuery.where(function(this: any) {
-          this.where('t.client_id', validatedFilters.clientId)
-            .orWhereExists(
-              tenantScopedTable(trx, 'tickets as tc', tenant)
-                .select('*')
-                .whereRaw('tc.tenant = t.tenant')
-                .whereRaw('tc.master_ticket_id = t.ticket_id')
-                // LEVERAGE: pattern tenant-correlated-exists — correlate on the distribution column so Citus can co-locate the subquery
-                .andWhereRaw('tc.tenant = t.tenant')
-                .andWhere('tc.client_id', validatedFilters.clientId)
-            );
-        });
-      } else {
-        baseQuery = baseQuery.where('t.client_id', validatedFilters.clientId);
-      }
-    }
-
-    if (validatedFilters.contactId) {
-      if (validatedFilters.bundleView === 'bundled') {
-        baseQuery = baseQuery.where(function(this: any) {
-          this.where('t.contact_name_id', validatedFilters.contactId)
-            .orWhereExists(
-              tenantScopedTable(trx, 'tickets as tc', tenant)
-                .select('*')
-                .whereRaw('tc.tenant = t.tenant')
-                .whereRaw('tc.master_ticket_id = t.ticket_id')
-                // LEVERAGE: pattern tenant-correlated-exists — correlate on the distribution column so Citus can co-locate the subquery
-                .andWhereRaw('tc.tenant = t.tenant')
-                .andWhere('tc.contact_name_id', validatedFilters.contactId)
-            );
-        });
-      } else {
-        baseQuery = baseQuery.where('t.contact_name_id', validatedFilters.contactId);
-      }
+    // Every filter goes through the predicate compiler: the legacy keys are translated by the codec,
+    // `filters.where` is appended, and the group compiles to one tenant-correlated boolean. There is
+    // no hand-written filter SQL here; see lib/ticketQuerySchema.ts for what each path means.
+    const codecContext = await resolveTicketFilterCodecContext(trx, tenant, user, validatedFilters);
+    const filterGroup: PredicateGroup = {
+      join: 'and',
+      clauses: [
+        ticketFiltersToPredicates(validatedFilters, codecContext),
+        ...(validatedFilters.where?.clauses ?? []),
+      ],
+    };
+    const compiled = compilePredicateFragment(
+      createTicketQuerySchema(() => codecContext.nowIso),
+      filterGroup,
+      { rootAlias: 't', selfOrAnyChild: validatedFilters.bundleView === 'bundled' }
+    );
+    if (compiled.sql !== 'TRUE') {
+      baseQuery = baseQuery.whereRaw(compiled.sql, compiled.bindings as Knex.RawBinding[]);
     }
 
     baseQuery = applyTicketListIndexedSearchFilter(trx, baseQuery, tenant, user, validatedFilters);
-
-    // Apply tag filter if provided
-    if (validatedFilters.tags && validatedFilters.tags.length > 0) {
-      const tagSubquery = tenantScopedTable(trx, 'tag_mappings as tm', tenant)
-        .select('tm.tagged_id')
-        .where('tm.tagged_type', 'ticket')
-        .whereIn('td.tag_text', validatedFilters.tags as string[]);
-      tenantDb(trx, tenant).tenantJoin(tagSubquery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
-      baseQuery = baseQuery.whereIn('t.ticket_id', tagSubquery);
-    }
-
-    // Apply assignee filter if provided
-    if (validatedFilters.assignedToIds?.length || validatedFilters.assignedTeamIds?.length || validatedFilters.includeUnassigned) {
-      baseQuery = baseQuery.where(function(this: any) {
-        // Handle specific assignee IDs
-        if (validatedFilters.assignedToIds?.length) {
-          this.whereIn('t.assigned_to', validatedFilters.assignedToIds);
-        }
-
-        if (validatedFilters.assignedTeamIds?.length) {
-          if (validatedFilters.assignedToIds?.length) {
-            this.orWhereIn('t.assigned_team_id', validatedFilters.assignedTeamIds);
-          } else {
-            this.whereIn('t.assigned_team_id', validatedFilters.assignedTeamIds);
-          }
-        }
-
-        // Handle unassigned (OR condition if both specified)
-        if (validatedFilters.includeUnassigned) {
-          if (validatedFilters.assignedToIds?.length || validatedFilters.assignedTeamIds?.length) {
-            this.orWhereNull('t.assigned_to');
-          } else {
-            this.whereNull('t.assigned_to');
-          }
-        }
-      });
-    }
-
-    // Apply due date filters (timezone-aware for 'today' filter)
-    if (validatedFilters.dueDateFilter && validatedFilters.dueDateFilter !== 'all') {
-      const nowInstant = Temporal.Now.instant();
-      const nowIso = nowInstant.toString();
-
-      switch (validatedFilters.dueDateFilter) {
-        case 'overdue':
-          // Due date is in the past
-          baseQuery = baseQuery.where('t.due_date', '<', nowIso);
-          break;
-        case 'upcoming':
-          // Due date is within the next 7 days (not overdue)
-          const weekFromNow = nowInstant.add({ hours: 24 * 7 });
-          baseQuery = baseQuery
-            .where('t.due_date', '>=', nowIso)
-            .where('t.due_date', '<=', weekFromNow.toString());
-          break;
-        case 'today':
-          // Due date is today in user's timezone
-          const userTz = await resolveUserTimeZone(trx, tenant, user.user_id);
-          const zonedNow = nowInstant.toZonedDateTimeISO(userTz);
-          const startOfTodayZoned = zonedNow.startOfDay();
-          const endOfTodayZoned = startOfTodayZoned.add({ days: 1 });
-          baseQuery = baseQuery
-            .where('t.due_date', '>=', startOfTodayZoned.toInstant().toString())
-            .where('t.due_date', '<', endOfTodayZoned.toInstant().toString());
-          break;
-        case 'no_due_date':
-          // No due date set
-          baseQuery = baseQuery.whereNull('t.due_date');
-          break;
-        case 'before':
-          // Due date is before a specific date
-          if (validatedFilters.dueDateTo) {
-            baseQuery = baseQuery.where('t.due_date', '<', validatedFilters.dueDateTo);
-          }
-          break;
-        case 'after':
-          // Due date is after a specific date
-          if (validatedFilters.dueDateFrom) {
-            baseQuery = baseQuery.where('t.due_date', '>', validatedFilters.dueDateFrom);
-          }
-          break;
-        case 'custom':
-          // Custom date range
-          if (validatedFilters.dueDateFrom) {
-            baseQuery = baseQuery.where('t.due_date', '>=', validatedFilters.dueDateFrom);
-          }
-          if (validatedFilters.dueDateTo) {
-            baseQuery = baseQuery.where('t.due_date', '<=', validatedFilters.dueDateTo);
-          }
-          break;
-      }
-    }
-
-    // Apply response state filter if provided (F017-F021)
-    if (validatedFilters.responseState && validatedFilters.responseState !== 'all') {
-      if (validatedFilters.responseState === 'none') {
-        // Filter for tickets with no response state set
-        baseQuery = baseQuery.whereNull('t.response_state');
-      } else {
-        // Filter for specific response state
-        baseQuery = baseQuery.where('t.response_state', validatedFilters.responseState);
-      }
-    }
-
-    // Apply SLA status filter
-    if (validatedFilters.slaStatusFilter && validatedFilters.slaStatusFilter !== 'all') {
-      const nowIso = Temporal.Now.instant().toString();
-
-      switch (validatedFilters.slaStatusFilter) {
-        case 'has_sla':
-          baseQuery = baseQuery.whereNotNull('t.sla_policy_id');
-          break;
-
-        case 'no_sla':
-          baseQuery = baseQuery.whereNull('t.sla_policy_id');
-          break;
-
-        case 'on_track':
-          baseQuery = baseQuery
-            .whereNotNull('t.sla_policy_id')
-            .whereNull('t.sla_paused_at')
-            .where(function() {
-              this.whereNotNull('t.sla_response_at')
-                .orWhereNull('t.sla_response_due_at')
-                .orWhere('t.sla_response_due_at', '>=', nowIso);
-            })
-            .where(function() {
-              this.whereNotNull('t.sla_resolution_at')
-                .orWhereNull('t.sla_resolution_due_at')
-                .orWhere('t.sla_resolution_due_at', '>=', nowIso);
-            })
-            .where(function() {
-              this.whereNull('t.sla_response_met').orWhere('t.sla_response_met', true);
-            })
-            .where(function() {
-              this.whereNull('t.sla_resolution_met').orWhere('t.sla_resolution_met', true);
-            });
-          break;
-
-        case 'breached':
-          // Shared with getBoardListStats' sla_breached aggregate: the board
-          // header's breach count and this filter must describe the same set,
-          // which they can only be relied on to do if they read one predicate.
-          baseQuery = baseQuery.whereRaw(
-            ticketSlaBreachedSql('t'),
-            ticketSlaBreachedBindings(nowIso)
-          );
-          break;
-
-        case 'paused':
-          baseQuery = baseQuery
-            .whereNotNull('t.sla_policy_id')
-            .whereNotNull('t.sla_paused_at');
-          break;
-      }
-    }
 
     // Wrap in object to prevent Promise thenable unwrapping.
     // Knex query builders have .then(), so returning one from an async function

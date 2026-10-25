@@ -106,7 +106,9 @@ class Compiler {
     switch (operator) {
       case 'is_not_empty':
         return type === 'string'
-          ? { sql: `${ref} IS NOT NULL AND ${ref} <> ''`, bindings: [colBinding, colBinding] }
+          ? attribute.kind === 'column' && attribute.castToText
+            ? { sql: `${ref} IS NOT NULL AND ${ref}::text <> ''`, bindings: [colBinding, colBinding] }
+            : { sql: `${ref} IS NOT NULL AND ${ref} <> ''`, bindings: [colBinding, colBinding] }
           : { sql: `${ref} IS NOT NULL`, bindings: [colBinding] };
       case 'in': {
         if (list.length === 0) return FALSE;
@@ -266,7 +268,12 @@ export const compilePredicateFragment = (
   schema: QuerySchema,
   predicate: PredicateNode,
   options: CompileOptions,
-): SqlFragment => new Compiler(schema, options).node(predicate);
+): SqlFragment => {
+  const fragment = new Compiler(schema, options).node(predicate);
+  // Parenthesized so the fragment is safe to AND/OR into any surrounding WHERE: a bare top-level
+  // `a OR b` would otherwise bind looser than the caller's tenant scope.
+  return fragment === TRUE || fragment === FALSE ? fragment : { sql: `(${fragment.sql})`, bindings: fragment.bindings };
+};
 
 /** Compiles a predicate into a knex raw boolean expression for `whereRaw`. */
 export const compilePredicate = (

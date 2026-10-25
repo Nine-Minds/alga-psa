@@ -164,8 +164,26 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     const boardIdsSection = source.slice(boardIdsStart, boardIdsEnd);
     const optionsSection = source.slice(optionsStart, optionsEnd);
 
-    expect(listBaseSection).toContain("tenantScopedTable(trx, 'boards', tenant)");
+    // Filters compile through the predicate compiler; no hand-written filter clauses remain here.
+    expect(listBaseSection).toContain('compilePredicateFragment(');
+    expect(listBaseSection).toContain('ticketFiltersToPredicates(');
+    expect(listBaseSection).not.toContain(".whereIn('t.board_id'");
+    expect(listBaseSection).not.toContain('tc.master_ticket_id = t.ticket_id');
+    expect(listBaseSection).not.toContain(".where('t.client_id'");
     expect(listBaseSection).not.toContain(".where('tenant', tenant)");
+
+    // Tenant correlation lives in the compiler (every hop) and in each computed resolver.
+    const compilerSource = fs.readFileSync(
+      path.resolve(__dirname, '../../../predicates/src/sql/compile.ts'),
+      'utf8'
+    );
+    expect(compilerSource).toContain('const tenant = tenantColumnOf(this.schema);');
+    expect(compilerSource).toContain("bindings: [`${childAlias}.${tenant}`, `${parentAlias}.${tenant}`]");
+    const schemaSource = fs.readFileSync(path.resolve(__dirname, '../lib/ticketQuerySchema.ts'), 'utf8');
+    const resolverTables = schemaSource.match(/FROM \w+ AS __\w+ WHERE __\w+\.tenant = \?\?/g) ?? [];
+    const resolverSubqueries = schemaSource.match(/FROM \w+ AS __\w+/g) ?? [];
+    expect(resolverSubqueries.length).toBeGreaterThan(0);
+    expect(resolverTables).toHaveLength(resolverSubqueries.length);
 
     expect(listActionSection).toContain("tenantScopedTable(trx, 'tag_mappings as tm', tenant)");
     expect(listActionSection).not.toContain(".where('tm.tenant', tenant)");

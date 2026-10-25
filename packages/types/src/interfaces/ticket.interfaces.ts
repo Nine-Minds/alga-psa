@@ -1,5 +1,6 @@
 // server/src/interfaces/ticket.interfaces.tsx
 import { TenantEntity } from ".";
+import type { PredicateGroup } from '@alga-psa/predicates';
 import { ITaggable } from './tag.interfaces';
 import { IClientLocation } from "./client.interfaces";
 import { IComment } from './comment.interface';
@@ -165,6 +166,11 @@ export interface ITicketListFilters {
   responseState?: 'awaiting_client' | 'awaiting_internal' | 'none' | 'all';
   slaStatusFilter?: 'all' | 'has_sla' | 'no_sla' | 'on_track' | 'breached' | 'paused';
   bundleView?: 'bundled' | 'individual';
+  /**
+   * Predicate filters over the ticket query schema (packages/tickets/src/lib/ticketQuerySchema.ts):
+   * one flat `and` group. New filter dimensions are expressed here, not as new keys on this interface.
+   */
+  where?: PredicateGroup;
 }
 
 export interface IPriority extends TenantEntity {

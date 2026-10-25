@@ -29,6 +29,8 @@
 - (2026-10-25, implementation) `equals null` / `not_equals null` mean "no value" / "has a value" in the evaluator and the SQL compiler; zod and query-schema validation accept null for those two operators only.
 - (2026-10-25, implementation) The workflow engine throws "Expression result is not JSON-serializable" for ordering comparisons (`gt`..`lte`) on a missing value instead of returning false. Documented in SEMANTICS.md; the JSONata conformance harness maps that rejection to "not satisfied". JSONata also cannot represent set paths or null-vs-missing: those rows carry `skip.jsonata`.
 - (2026-10-25, implementation) SQL conformance and self-or-any-child tests use TEMP tables in a rolled-back transaction on the `postgres` database of the test container, so they need no migrated schema; the ticket-level suites use the migrated schema.
+- (2026-10-25, implementation) Cutover: `buildTicketListBaseQuery` compiles codec output plus `where` through `compilePredicateFragment` (whole fragment parenthesized so a top-level OR cannot escape the tenant AND; found by the matrix). `response_state` is an enum, so the column attribute has `castToText` (`<> ''` on the enum raised invalid input). Legacy `closed`/`all` status sentinels never restricted the list and still do not. `assignedToMe` now resolves to `involves_user` (assignee, ticket_resources, team member) and the `project:read` bypass is resolved in `resolveTicketFilterCodecContext`.
+- (2026-10-25, implementation) Intended behaviour changes for the release notes: bundled-view ticket tag match goes through children; `assignedToMe` honoured by the main list; chip tags come from display rules.
 
 ## Discoveries / Constraints
 

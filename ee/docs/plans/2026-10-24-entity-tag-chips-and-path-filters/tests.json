@@ -66,7 +66,7 @@
   {
     "id": "T007",
     "description": "Ticket list parity (DB integration): existing suites stay green through the compiler: ticketListBundledClientContactFilter, ticketListAssigneeSort, ticketListActivitySort, api/ticketListLatestActivityApi, ticketClientPortalAbac",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028",
       "F029",
@@ -81,7 +81,7 @@
   {
     "id": "T008",
     "description": "Ticket list DB integration: table-driven filter matrix on a seeded dataset with nulls, bundles, inactive boards, and internal and client-portal users; one or more cases per legacy filter key (board incl. inactive and no-board, status id/name/open-only, priority, category incl. subcategory and no-category, assignee/team/unassigned, assigned-to-me, due date presets, response state, SLA breached), each asserting explicit expected ids and totals in individual and bundled view",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023",
       "F028",
@@ -97,7 +97,7 @@
   {
     "id": "T009",
     "description": "Ticket list DB integration: contact.tags in / not_in and client.tags in / not_in return correct rows and totals across pages; not_in keeps tickets with no client",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034",
       "F036",
@@ -107,7 +107,7 @@
   {
     "id": "T010",
     "description": "Ticket list DB integration: bundled view includes a master when a child's requester, client or ticket tag matches; individual view does not; tenant isolation holds",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038",
       "F034"
@@ -116,7 +116,7 @@
   {
     "id": "T011",
     "description": "Contract: tenantScopedAuth source-string test pins tenant correlation in the compiler and the ticket query schema",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ]
@@ -124,7 +124,7 @@
   {
     "id": "T012",
     "description": "Codec unit: legacy tags text resolves to ticket tag definition ids; every legacy key round-trips into an equivalent predicate group",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035",
       "F040"
@@ -300,7 +300,7 @@
   {
     "id": "T030",
     "description": "Ticket filter schema unit: a flat and group of known paths is accepted; a nested group, an or group, unknown paths and disallowed operators are rejected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F078",
       "F036"
@@ -317,7 +317,7 @@
   {
     "id": "T032",
     "description": "Ticket query schema unit: each enumerated computed-attribute resolver compiles for every allowed operator, and the schema declares no raw SQL outside them",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F079",
       "F023"
