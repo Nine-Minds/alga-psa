@@ -260,10 +260,14 @@ async function publishEntityTagUpdateEvent(params: {
   }
 }
 
-export const findTagsByEntityId = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext, entityId: string, entityType: string): Promise<ITag[] | TagActionError> => {
+export const findTagsByEntityId = withAuth(async (user: IUserWithRoles, { tenant }: AuthContext, entityId: string, entityType: string): Promise<ITag[] | TagActionError> => {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Client-portal users hold no tag:read; chip tags reach them only through display rules.
+      if (!await hasPermissionAsync(user, 'tag', 'read', trx)) {
+        return permissionError('Permission denied: Cannot read tags');
+      }
       const tagsWithDefinitions = await TagMapping.getByEntity(trx, tenant, entityId, entityType as TaggedEntityType);
       return tagsWithDefinitions.map(tag => ({
         tag_id: tag.mapping_id,
@@ -703,13 +707,16 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
   });
 });
 
-export const findTagsByEntityIds = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext, entityIds: string[], entityType: TaggedEntityType): Promise<ITag[] | TagActionError> => {
+export const findTagsByEntityIds = withAuth(async (user: IUserWithRoles, { tenant }: AuthContext, entityIds: string[], entityType: TaggedEntityType): Promise<ITag[] | TagActionError> => {
   const { knex: db } = await createTenantKnex();
   try {
     if (entityIds.length === 0) {
       return [];
     }
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermissionAsync(user, 'tag', 'read', trx)) {
+        return permissionError('Permission denied: Cannot read tags');
+      }
       const tagsWithDefinitions = await TagMapping.getByEntities(trx, tenant, entityIds, entityType);
       return tagsWithDefinitions.map(tag => ({
         tag_id: tag.mapping_id,
@@ -775,7 +782,7 @@ export const findAllTagsByType = withOptionalAuth(async (user: IUserWithRoles | 
     const { knex: db } = await createTenantKnex();
     const { tenant } = ctx;
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Get tag definitions that have at least one mapping (filter out orphans)
+      // Get tag definitions that have at least one mapping or a display rule (filter out orphans)
       // Use DISTINCT ON for deduplication by tag_text (PostgreSQL-specific but works with Citus)
       const scopedDb = tenantDb(trx, tenant);
       const tagMappingsQuery = scopedDb.table('tag_mappings as tm')
@@ -783,11 +790,18 @@ export const findAllTagsByType = withOptionalAuth(async (user: IUserWithRoles | 
         .whereRaw('?? = ??', ['tm.tag_id', 'td.tag_id']);
       scopedDb.tenantWhereColumn(tagMappingsQuery, 'tm.tenant', 'td.tenant');
 
+      // A definition a display rule points at is listed even with no mappings, so the rule's tag can
+      // still be picked in filters and settings.
+      const displayRulesQuery = scopedDb.table('tag_display_rules as tdr')
+        .select(trx.raw('1'))
+        .whereRaw('?? = ??', ['tdr.tag_id', 'td.tag_id']);
+      scopedDb.tenantWhereColumn(displayRulesQuery, 'tdr.tenant', 'td.tenant');
+
       const definitions = await scopedDb.table('tag_definitions as td')
         .distinctOn('td.tag_text')
         .select('td.*')
         .where('td.tagged_type', entityType)
-        .whereExists(tagMappingsQuery)
+        .where((builder) => builder.whereExists(tagMappingsQuery).orWhereExists(displayRulesQuery))
         .orderBy('td.tag_text', 'asc')
         .orderBy('td.created_at', 'asc');
 

@@ -517,6 +517,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   tax_rates: { scope: 'tenant' },
   tax_regions: { scope: 'tenant' },
   tag_definitions: { scope: 'tenant' },
+  tag_display_rules: { scope: 'tenant' },
   tag_mappings: { scope: 'tenant' },
   task_assignments: { scope: 'tenant' },
   task_checklist_items: { scope: 'tenant' },

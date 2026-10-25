@@ -35,6 +35,16 @@
       "types": "./dist/lib/tagCleanup.d.ts",
       "import": "./dist/lib/tagCleanup.js",
       "require": "./dist/lib/tagCleanup.js"
+    },
+    "./lib/tagDisplayRules": {
+      "types": "./dist/lib/tagDisplayRules.d.ts",
+      "import": "./dist/lib/tagDisplayRules.js",
+      "require": "./dist/lib/tagDisplayRules.js"
+    },
+    "./lib/loadDisplayTags": {
+      "types": "./dist/lib/loadDisplayTags.d.ts",
+      "import": "./dist/lib/loadDisplayTags.js",
+      "require": "./dist/lib/loadDisplayTags.js"
     }
   },
   "scripts": {

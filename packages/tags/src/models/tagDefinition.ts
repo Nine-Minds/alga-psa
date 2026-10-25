@@ -20,6 +20,9 @@ const tagDefinitionsQuery = (knexOrTrx: Knex | Knex.Transaction, tenant: string)
 const tagMappingsQuery = (knexOrTrx: Knex | Knex.Transaction, tenant: string) =>
   tenantDb(knexOrTrx, tenant).table('tag_mappings');
 
+const tagDisplayRulesQuery = (knexOrTrx: Knex | Knex.Transaction, tenant: string) =>
+  tenantDb(knexOrTrx, tenant).table('tag_display_rules');
+
 const TagDefinition = {
   getAll: async (knexOrTrx: Knex | Knex.Transaction, tenant: string): Promise<ITagDefinition[]> => {
     const definitions = await tagDefinitionsQuery(knexOrTrx, tenant)
@@ -106,6 +109,12 @@ const TagDefinition = {
         tagMappingsQuery(knexOrTrx, tenant)
           .select(knexOrTrx.raw('1'))
           .whereRaw('tag_mappings.tag_id = tag_definitions.tag_id')
+      )
+      // A definition a display rule points at is configuration, not litter: it stays while unmapped.
+      .whereNotExists(
+        tagDisplayRulesQuery(knexOrTrx, tenant)
+          .select(knexOrTrx.raw('1'))
+          .whereRaw('tag_display_rules.tag_id = tag_definitions.tag_id')
       )
       .del();
   },

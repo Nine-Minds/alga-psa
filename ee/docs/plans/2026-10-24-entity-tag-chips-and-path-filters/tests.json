@@ -163,7 +163,7 @@
   {
     "id": "T016",
     "description": "Display rules DB integration: replace ordered list and read back; deleting the last mapping keeps a referenced definition and findAllTagsByType still lists it; explicitly deleting the tag cascades its rules",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055",
       "F057",
@@ -175,7 +175,7 @@
   {
     "id": "T017",
     "description": "Display rules DB integration: migration seeds VIP rules for existing contact and client VIP definitions; onboarding creates both definitions and rules",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056",
       "F062"
@@ -184,7 +184,7 @@
   {
     "id": "T018",
     "description": "Resolver unit: displayed tags follow rule order, exclude unruled tags, and return none for an audience with no rules",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060"
     ]
@@ -209,7 +209,7 @@
   {
     "id": "T021",
     "description": "Security DB integration: a client-portal user is denied findTagsByEntityIds / findTagsByEntityId; display-rule writes require settings:update",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F074",
       "F059"

@@ -434,7 +434,7 @@
   {
     "id": "F055",
     "description": "Migration: tag_display_rules table with unique (tenant, tagged_type, audience, tag_id), FK to tag_definitions with cascade delete, Citus distribution co-located with tag_definitions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Display rules"
     ]
@@ -442,7 +442,7 @@
   {
     "id": "F056",
     "description": "Migration seeds internal display rules for existing contact and client definitions with text VIP (case-insensitive)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Display rules"
     ]
@@ -450,7 +450,7 @@
   {
     "id": "F057",
     "description": "Orphan cleanup (deleteOrphaned, tagCleanup, deleteTag orphan branch) keeps definitions referenced by a display rule",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Display rules"
     ]
@@ -458,7 +458,7 @@
   {
     "id": "F058",
     "description": "findAllTagsByType includes definitions referenced by a display rule even with no mappings",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Display rules"
     ]
@@ -466,7 +466,7 @@
   {
     "id": "F059",
     "description": "Display rule actions: list by entity type and audience; replace ordered list (settings:update)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Display rules"
     ]
@@ -474,7 +474,7 @@
   {
     "id": "F060",
     "description": "Pure resolver: displayed tags for an audience and entity type, in rule order; no rules means none",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Display rules"
     ]
@@ -490,7 +490,7 @@
   {
     "id": "F062",
     "description": "New-tenant onboarding creates VIP contact and client tag definitions with internal display rules",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Display rules"
     ]
@@ -586,7 +586,7 @@
   {
     "id": "F074",
     "description": "findTagsByEntityId and findTagsByEntityIds require tag:read",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions"
     ]
