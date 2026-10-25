@@ -7584,7 +7584,8 @@ export class BillingEngine {
     );
     const recurringLinkedCharge = await db
       .table("recurring_service_periods")
-      .where("charge_family", "fixed")
+      // A cadence prepaid block fee is the other advance stream a line can bill.
+      .whereIn("charge_family", ["fixed", "prepaid_block"])
       .where("due_position", billingTiming)
       .whereNotNull("invoice_id")
       .where("obligation_id", clientContractLineId)

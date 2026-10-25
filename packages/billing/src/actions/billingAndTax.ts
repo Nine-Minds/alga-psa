@@ -132,6 +132,7 @@ interface PersistedRecurringDueWorkDbRow {
     contract_line_id?: string | null;
     contract_line_name?: string | null;
     contract_line_type?: string | null;
+    charge_family?: string | null;
     is_system_managed_default?: boolean | null;
     client_contract_id?: string | null;
     po_required?: boolean | null;
@@ -760,7 +761,11 @@ function mapPersistedRecurringDueWorkDbRowsToRows(
             attribution,
         });
 
-        const chargeType = normalizeChargeType(row.contract_line_type);
+        // A cadence prepaid-block row (charge_family='prepaid_block') belongs to a line of any
+        // type, so the line type would mislabel it; the family is what it actually bills.
+        const chargeType = row.charge_family === 'prepaid_block'
+            ? 'PrepaidBlock'
+            : normalizeChargeType(row.contract_line_type);
         const rowWithChargeType = (chargeType
             ? { ...dueWorkRow, chargeType }
             : dueWorkRow) as IRecurringDueWorkRow;
@@ -1291,7 +1296,7 @@ function buildRecurringDueWorkInvoiceCandidates(
     // which reads as "Not yet due" with the block's due date. Other ineligible
     // members still block their group, unchanged.
     const isEarlyPrepaidBlockRow = (row: IRecurringDueWorkRow) =>
-        row.chargeType === 'PrepaidBlock' && row.isEarly === true;
+        row.chargeType === 'PrepaidBlock' && row.isEarly === true && Boolean(row.blockDueDate);
     const withKeySuffix = (suffix: string) => (group: ReturnType<typeof groupDueServicePeriodsForInvoiceCandidates>[number]) => ({
         ...group,
         groupKey: `${group.groupKey}${suffix}`,

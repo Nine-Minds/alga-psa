@@ -72,6 +72,24 @@ interface FifoAllocation {
 }
 
 /**
+ * Value of a block's unused hours, in the block currency's minor units:
+ * remaining_minutes / 60 x hourly_rate (hourly_rate is already minor units per
+ * hour). Rounded once here so every surface (reports, MSP dashboard, portal)
+ * shows the same figure; clients format it, they never recompute it.
+ */
+export function computeRemainingBlockValueMinor(block: {
+  remaining_minutes: number | string | null | undefined;
+  hourly_rate: number | string | null | undefined;
+}): number {
+  const minutes = Number(block.remaining_minutes ?? 0);
+  const rate = Number(block.hourly_rate ?? 0);
+  if (!Number.isFinite(minutes) || !Number.isFinite(rate) || minutes <= 0 || rate <= 0) {
+    return 0;
+  }
+  return Math.round((minutes * rate) / 60);
+}
+
+/**
  * Pure FIFO allocation math (no I/O), exported for unit tests and for callers
  * that must preview a burn without writing. `blocks` must already be ordered
  * FIFO (expiration_date ASC NULLS LAST, purchased_at ASC). The entry is burned
