@@ -114,17 +114,21 @@ export interface BlockConfigStreamInput {
  */
 export function contractLineRecurringStreams(
   line: LineStreamInput,
-  // Reserved for the cadence-mode prepaid block (adds the 'prepaid_block'
-  // stream); no block config adds a stream yet.
-  _blockConfig?: BlockConfigStreamInput | null,
+  blockConfig?: BlockConfigStreamInput | null,
 ): LineRecurringStream[] {
-  return [
+  const streams: LineRecurringStream[] = [
     {
       stream: 'line',
       family: resolveRecurringChargeFamily(line.contract_line_type),
       duePosition: resolveEffectiveBillingTiming(line.contract_line_type, line.billing_timing),
     },
   ];
+  // A cadence-mode block fee is billed in advance each period, whatever the
+  // line's own (arrears) timing is.
+  if (blockConfig?.issue_mode === 'cadence') {
+    streams.push({ stream: 'prepaid_block', family: 'prepaid_block', duePosition: 'advance' });
+  }
+  return streams;
 }
 
 /**

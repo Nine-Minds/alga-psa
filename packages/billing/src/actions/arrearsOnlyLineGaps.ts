@@ -70,6 +70,8 @@ export async function fetchStrandedArrearsOnlyLineGaps(
   const lineIds = Array.from(new Set(advanceRows.map((row) => row.obligation_id)));
   const coverRows = (await db.table('recurring_service_periods')
     .whereIn('obligation_id', lineIds)
+    // A cadence block fee is another stream of the line; it never covers hourly work.
+    .whereNot('charge_family', 'prepaid_block')
     .where((builder) => {
       builder
         .where((arrears) => arrears

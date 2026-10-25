@@ -21,7 +21,7 @@ import {
   backfillRecurringServicePeriods,
   type IRecurringServicePeriodBackfillPlan,
 } from './backfillRecurringServicePeriods';
-import { contractLineOwnStream } from './contractLineTimingRule';
+import { contractLineRecurringStreams, streamForChargeFamily } from './contractLineTimingRule';
 
 type ClientCadenceRecurringObligationRow = {
   client_contract_line_id: string;
@@ -33,6 +33,8 @@ type ClientCadenceRecurringObligationRow = {
   line_end_date?: unknown;
   contract_line_type: string | null;
   billing_timing: string | null;
+  /** contract_line_prepaid_blocks.issue_mode (null when the line has no block config). */
+  prepaid_block_issue_mode?: string | null;
 };
 
 const recurringServicePeriodRecordIdFactory = () => uuidv4();
@@ -371,6 +373,7 @@ async function loadClientCadenceRecurringObligations(
   // client-owned contract that owns the live cloned lines.
   db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
   db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
+  db.tenantJoin(query, 'contract_line_prepaid_blocks as pb', 'pb.contract_line_id', 'cl.contract_line_id', { type: 'left' });
   return whereLiveClientCadenceRecurringLine(query.andWhere('cc.client_id', params.clientId))
     .select(
       'cl.contract_line_id as client_contract_line_id',
@@ -381,6 +384,7 @@ async function loadClientCadenceRecurringObligations(
       'cl.end_date as line_end_date',
       'cl.contract_line_type',
       'cl.billing_timing',
+      'pb.issue_mode as prepaid_block_issue_mode',
     );
 }
 
@@ -528,53 +532,62 @@ async function computeClientCadenceRegeneration(
       continue;
     }
 
-    const { family: lineChargeFamily, duePosition } =
-      contractLineOwnStream(obligation);
-    const existingRecords = await loadExistingRecurringServicePeriodRecords(trx, {
+    const allExistingRecords = await loadExistingRecurringServicePeriodRecords(trx, {
       tenant: params.tenant,
       obligationId: obligation.client_contract_line_id,
     });
 
-    const materialized = materializeClientCadenceServicePeriods({
-      asOf: regenerationStart,
-      materializedAt,
-      billingCycle: params.billingCycle,
-      sourceObligation: {
-        tenant: params.tenant,
+    // One schedule per recurring stream of the line (the line's own charge and,
+    // for a cadence-mode prepaid block, the advance block fee).
+    for (const { stream, family: lineChargeFamily, duePosition } of contractLineRecurringStreams(
+      obligation,
+      { issue_mode: obligation.prepaid_block_issue_mode ?? null },
+    )) {
+      const existingRecords = allExistingRecords.filter(
+        (record) => streamForChargeFamily(record.sourceObligation.chargeFamily) === stream,
+      );
+
+      const materialized = materializeClientCadenceServicePeriods({
+        asOf: regenerationStart,
+        materializedAt,
+        billingCycle: params.billingCycle,
+        sourceObligation: {
+          tenant: params.tenant,
+          obligationId: obligation.client_contract_line_id,
+          chargeFamily: lineChargeFamily,
+        },
+        duePosition,
+        sourceRuleVersion,
+        sourceRunKey,
+        anchorSettings: params.anchor,
+        recordIdFactory: recurringServicePeriodRecordIdFactory,
+      });
+
+      const candidateRecords = clipRecurringCandidatesToObligationBounds(
+        materialized.records,
+        obligationStart,
+        obligationEnd,
+      );
+
+      const plan = backfillRecurringServicePeriods({
+        candidateRecords,
+        existingRecords,
+        candidateCoverageEnd: materialized.generationRangeEnd,
+        backfilledAt: materializedAt,
+        sourceRuleVersion,
+        sourceRunKey,
+        legacyBilledThroughEnd: billedBoundaryEnd,
+        regenerationReasonCode: 'billing_schedule_changed',
+        recordIdFactory: recurringServicePeriodRecordIdFactory,
+      });
+
+      obligationPlans.push({
         obligationId: obligation.client_contract_line_id,
-        chargeFamily: lineChargeFamily,
-      },
-      duePosition,
-      sourceRuleVersion,
-      sourceRunKey,
-      anchorSettings: params.anchor,
-      recordIdFactory: recurringServicePeriodRecordIdFactory,
-    });
-
-    const candidateRecords = clipRecurringCandidatesToObligationBounds(
-      materialized.records,
-      obligationStart,
-      obligationEnd,
-    );
-
-    const plan = backfillRecurringServicePeriods({
-      candidateRecords,
-      existingRecords,
-      candidateCoverageEnd: materialized.generationRangeEnd,
-      backfilledAt: materializedAt,
-      sourceRuleVersion,
-      sourceRunKey,
-      legacyBilledThroughEnd: billedBoundaryEnd,
-      regenerationReasonCode: 'billing_schedule_changed',
-      recordIdFactory: recurringServicePeriodRecordIdFactory,
-    });
-
-    obligationPlans.push({
-      obligationId: obligation.client_contract_line_id,
-      scheduleKey: materialized.scheduleKey,
-      regenerationStart,
-      plan,
-    });
+        scheduleKey: materialized.scheduleKey,
+        regenerationStart,
+        plan,
+      });
+    }
   }
 
   return { billedBoundaryEnd: clientBilledBoundaryEnd, obligationPlans };

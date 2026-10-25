@@ -105,6 +105,15 @@ describe('contractLineRecurringStreams', () => {
     expect(contractLineRecurringStreams(line, { issue_mode: 'consumption' })).toHaveLength(1);
   });
 
+  it('adds an advance prepaid_block stream for a cadence block config on an arrears line', () => {
+    expect(
+      contractLineRecurringStreams({ contract_line_type: 'Hourly', billing_timing: 'arrears' }, { issue_mode: 'cadence' }),
+    ).toEqual([
+      { stream: 'line', family: 'hourly', duePosition: 'arrears' },
+      { stream: 'prepaid_block', family: 'prepaid_block', duePosition: 'advance' },
+    ]);
+  });
+
   it('exposes the line stream and maps persisted families to streams', () => {
     expect(contractLineOwnStream({ contract_line_type: 'Usage' })).toMatchObject({ stream: 'line', family: 'usage' });
     expect(streamForChargeFamily('fixed')).toBe('line');
