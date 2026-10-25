@@ -244,7 +244,7 @@
   },
   {
     "id": "T025",
-    "description": "E2E (Playwright): tag a contact VIP, see the VIP badge on that requester's ticket rows and ticket header, filter Requester tags: any of VIP, and confirm results; save as a named view and reload",
+    "description": "E2E (Playwright): tag a contact VIP, see the VIP badge on that requester's ticket rows and ticket header, filter Requester tags: any of VIP, and confirm results; save as a named view and reload; fresh load of a malformed / unknown-version `where` URL shows the dropped-filters toast once and strips the param from the URL (AC12)",
     "implemented": false,
     "featureIds": [
       "F052",

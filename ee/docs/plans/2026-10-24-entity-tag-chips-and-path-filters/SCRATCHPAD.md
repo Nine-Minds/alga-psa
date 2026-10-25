@@ -92,3 +92,9 @@ None open. See the plan-review decisions above.
 - T025 (Playwright, `server/src/test/e2e/entity-tag-chips.playwright.test.ts`) is written and type-checks but was NOT run (the app server must not be started). Left `implemented: false`. Selectors for the filter popover options and the save dialog textbox are unverified.
 - F027: `LEVERAGE: pattern condition-dialects` markers at the five dialect sites. F081: header doc in `predicates/src/index.ts`, README recipe already present. F082: `RELEASE_NOTES.md` here.
 - Browser criteria 1, 5, 9 verified only via component/unit/integration tests.
+
+## 2026-10-25 — AC12 repair: invalid `where` on fresh load
+
+- Root cause: the container's mount effect seeds `lastAppliedSearchRef.current = window.location.search`, so `syncFromUrl` (the only toast site) never runs on load. SSR dropped the bad clauses silently and the param stayed in the URL.
+- Fix, approach (b): the same mount effect runs `decodeTicketWhere` on `window.location.search`; if `dropped > 0` it toasts `filters.droppedFromLink` (guarded by `initialWhereCheckedRef` for StrictMode), `history.replaceState`s the URL with the valid clauses re-encoded via `encodeTicketWhere` (or no `where`), and sets `lastAppliedSearchRef` to the rewritten search so popstate neither re-toasts nor refetches. Chosen over (a) because it needs no new prop through `MspTicketsPageClient` and uses the same decoder as `syncFromUrl`; server filters are unchanged.
+- Tests: `TicketingDashboardContainer.initialWhere.test.tsx`; T025 gained a fresh-load case (written, NOT run). Contract tests needed no edits.

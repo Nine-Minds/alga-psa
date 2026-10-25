@@ -218,6 +218,11 @@ export default function TicketingDashboardContainer({
   const latestFetchRequestIdRef = useRef(0);
   const filterFetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastAppliedSearchRef = useRef<string>('');
+  // The initial-load `where` check runs once per mount; StrictMode re-runs effects.
+  const initialWhereCheckedRef = useRef(false);
+  // `t` may change identity per render; the mount effect must not re-run for it.
+  const tRef = useRef(t);
+  tRef.current = t;
   const isSyncingFromHistoryRef = useRef(false);
   const navigatingAwayRef = useRef(false);
 
@@ -757,6 +762,30 @@ export default function TicketingDashboardContainer({
     }
 
     lastAppliedSearchRef.current = window.location.search;
+
+    // AC12 on a fresh load: the seed above is why syncFromUrl never runs on
+    // mount, so an invalid `where` would otherwise be dropped silently (SSR
+    // already filtered it out) and linger in the URL. Toast once, then rewrite
+    // the URL to only the valid clauses. No refetch: the server rendered the
+    // list from the same valid clauses.
+    // LEVERAGE: pattern dropped-where-toast — same toast/dropped shape as syncFromUrl
+    if (!initialWhereCheckedRef.current) {
+      initialWhereCheckedRef.current = true;
+      const initialParams = new URLSearchParams(window.location.search);
+      const decoded = decodeTicketWhere(initialParams.get('where'));
+      if (decoded.dropped > 0) {
+        toast(tRef.current('filters.droppedFromLink', 'Some filters in this link are not valid and were ignored.'));
+        const validWhere = encodeTicketWhere(decoded.where);
+        if (validWhere) {
+          initialParams.set('where', validWhere);
+        } else {
+          initialParams.delete('where');
+        }
+        const rewrittenSearch = initialParams.toString() ? `?${initialParams.toString()}` : '';
+        window.history.replaceState(null, '', `${window.location.pathname}${rewrittenSearch}${window.location.hash}`);
+        lastAppliedSearchRef.current = rewrittenSearch;
+      }
+    }
 
     const handlePopState = () => {
       void syncFromUrl(window.location.search);

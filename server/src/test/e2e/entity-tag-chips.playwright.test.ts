@@ -3,7 +3,9 @@
  *
  * Tag a contact VIP, expect the VIP badge on that requester's ticket row and on
  * the ticket header, filter "Requester tags: any of VIP", and confirm the result
- * set survives saving a named view and reloading.
+ * set survives saving a named view and reloading. Also covers AC12 on a fresh
+ * load: a malformed or unknown-version `where` shows the dropped-filters toast
+ * and is removed from the URL.
  *
  * Tags and display rules are seeded straight into the database: the subject is
  * the rendering and the filter, not the tag editor.
@@ -132,6 +134,15 @@ test.describe('Entity tag chips and path filters', () => {
       await page.reload({ waitUntil: 'domcontentloaded' });
       await expect(page.getByText(titles[vipContactId]).first()).toBeVisible({ timeout: 30000 });
       await expect(page.getByText(titles[plainContactId])).toHaveCount(0);
+
+      // AC12 fresh load: an invalid `where` is toasted once and stripped from the URL.
+      for (const bad of ['v1:contact.tags:bogus_op:x', 'v9:contact.tags:in:abc']) {
+        await page.goto(`${BASE_URL}/msp/tickets?where=${encodeURIComponent(bad)}`, { waitUntil: 'domcontentloaded' });
+        await expect(
+          page.getByText('Some filters in this link are not valid and were ignored.'),
+        ).toHaveCount(1, { timeout: 30000 });
+        await expect.poll(() => new URL(page.url()).searchParams.has('where')).toBe(false);
+      }
     } finally {
       await db.destroy();
     }
