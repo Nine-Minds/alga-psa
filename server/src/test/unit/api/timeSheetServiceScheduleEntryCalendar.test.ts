@@ -11,6 +11,7 @@ const state = vi.hoisted(() => ({
   created: [] as Array<{ entry: any; options: any }>,
   updates: [] as any[],
   groupLevels: new Map<string, { calendarId: string; level: string; isArchived: boolean }>(),
+  userLevels: new Map<string, string>(),
 }));
 
 const TENANT = 'tenant-1';
@@ -24,17 +25,27 @@ const ENTRY_ID = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
 
 function fakeTable(name: string, tenant: string) {
   let filter: Record<string, any> = {};
+  const inFilters: Array<[string, any[]]> = [];
   const rows = () =>
     (state.tables[name] ?? []).filter(
-      (row) => row.tenant === tenant && Object.entries(filter).every(([k, v]) => row[k] === v),
+      (row) =>
+        row.tenant === tenant &&
+        Object.entries(filter).every(([k, v]) => row[k] === v) &&
+        inFilters.every(([k, values]) => values.includes(row[k])),
     );
   const api: any = {
     where(f: Record<string, any>) {
       filter = { ...filter, ...f };
       return api;
     },
+    whereIn(column: string, values: any[]) {
+      inFilters.push([column, values]);
+      return api;
+    },
     first: async () => rows()[0],
     pluck: async (column: string) => rows().map((row) => row[column]),
+    select: async (...columns: string[]) =>
+      rows().map((row) => Object.fromEntries(columns.map((column) => [column, row[column]]))),
     update: async (data: any) => {
       state.updates.push({ table: name, data });
       rows().forEach((row) => Object.assign(row, data));
@@ -67,7 +78,7 @@ vi.mock('@alga-psa/scheduling/lib/calendarAccess', async (importOriginal) => {
     resolveCalendarAccess: async (_knex: unknown, _tenant: string, viewer: { user_id: string }) => ({
       viewerUserId: viewer.user_id,
       canViewAll: false,
-      userLevels: new Map(),
+      userLevels: state.userLevels,
       groupLevels: state.groupLevels,
       hiddenCalendarIds: [],
     }),
@@ -117,6 +128,7 @@ describe('REST schedule entries: calendar_id', () => {
     state.published.length = 0;
     state.created.length = 0;
     state.updates.length = 0;
+    state.userLevels = new Map();
     state.groupLevels = new Map([
       [CAL_EDIT, { calendarId: CAL_EDIT, level: 'edit', isArchived: false }],
       [CAL_VIEW, { calendarId: CAL_VIEW, level: 'view', isArchived: false }],
@@ -133,6 +145,10 @@ describe('REST schedule entries: calendar_id', () => {
           is_all_day: false, scheduled_start: new Date('2026-10-22T10:00:00Z'), scheduled_end: new Date('2026-10-22T11:00:00Z') },
       ],
       schedule_entry_assignees: [{ tenant: TENANT, entry_id: ENTRY_ID, user_id: USER }],
+      users: [
+        { tenant: TENANT, user_id: USER, user_type: 'internal', is_inactive: false },
+        { tenant: TENANT, user_id: OTHER_USER, user_type: 'internal', is_inactive: false },
+      ],
     };
   });
 
@@ -252,6 +268,28 @@ describe('REST schedule entries: calendar_id', () => {
       expect(event!.payload.changes.before.assignedUserIds).toEqual([USER]);
       expect(event!.payload.changes.after.assignedUserIds).toEqual([]);
       expect(event!.payload.entryId).toBe(ENTRY_ID);
+    });
+
+    it('replaces assignees, validating only the ones the write adds (human-work guard)', async () => {
+      vi.mocked(hasPermission).mockResolvedValue(true);
+      // The caller holds an edit share on OTHER_USER's calendar, so may assign them.
+      state.userLevels = new Map([[OTHER_USER, 'edit']]);
+      // The legacy assignee is no longer a licensed user; keeping it must not block the edit.
+      state.tables.users[0].user_type = 'service';
+      await makeService().updateScheduleEntry(
+        ENTRY_ID,
+        { calendar_id: CAL_EDIT, assigned_user_ids: [USER, OTHER_USER] } as any,
+        context,
+      );
+      expect(state.tables.schedule_entry_assignees.map((a) => a.user_id)).toEqual([USER, OTHER_USER]);
+
+      // A newly added non-licensed user is rejected and the assignees are left as they were.
+      state.tables.users[1].user_type = 'client';
+      state.tables.schedule_entry_assignees = [{ tenant: TENANT, entry_id: ENTRY_ID, user_id: USER }];
+      await expect(
+        makeService().updateScheduleEntry(ENTRY_ID, { assigned_user_ids: [USER, OTHER_USER] } as any, context),
+      ).rejects.toMatchObject({ name: 'HumanWorkAssigneeInvalidError' });
+      expect(state.tables.schedule_entry_assignees.map((a) => a.user_id)).toEqual([USER]);
     });
 
     it('carries the existing assignees into the event when assigned_user_ids is not supplied', async () => {
