@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AssetDetailHeader } from './AssetDetailHeader';
 import { AssetBentoLayout } from './AssetBentoLayout';
 import { useAssetDetail } from '@alga-psa/assets/hooks/useAssetDetail';
@@ -10,6 +11,8 @@ import { PrintableDetailHeader, type PrintableDetailField } from '@alga-psa/ui/c
 import { AlertCircle } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { resolveAssetStatusLabel, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
+
+const DEEP_LINKABLE_FOCUS_VIEWS = ['software'];
 
 interface AssetDetailViewProps {
   assetId: string;
@@ -30,7 +33,13 @@ export const AssetDetailView: React.FC<AssetDetailViewProps> = ({ assetId }) => 
   } = useAssetDetail(assetId);
   // Shared by the header's Edit action and the layout's tiles so there is only
   // ever one drawer open, with one rail.
-  const [focusView, setFocusView] = useState<string | null>(null);
+  // Deep links (?tab=software) open the matching focus view; the Software tab
+  // also reads ?software= as its initial filter.
+  const searchParams = useSearchParams();
+  const [focusView, setFocusView] = useState<string | null>(() => {
+    const tab = searchParams?.get('tab');
+    return tab && DEEP_LINKABLE_FOCUS_VIEWS.includes(tab) ? tab : null;
+  });
   // F021: the print header reads the status label, not the stored slug.
   const { statuses: assetStatuses } = useAssetStatusRegistry();
 

@@ -1487,6 +1487,8 @@
       "installDate": "Data de instalação"
     },
     "empty": "Nenhum software encontrado que corresponda à sua pesquisa.",
+    "noInventory": "Ainda não foi coletado inventário de software para este dispositivo.",
+    "loadError": "Não foi possível carregar o inventário de software.",
     "totalItems": "Total de itens: {{count}}",
     "values": {
       "unknown": "Desconhecido"

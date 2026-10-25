@@ -316,7 +316,8 @@
     "inboundDomainAutoCreateHelp": "Zugeordnete Domains können für vertrauenswürdige neue Absender einen Kontakt erstellen.",
     "inboundDomainAutoCreateUpdated": "Absendereinstellung aktualisiert.",
     "inboundDomainAutoCreateUpdateFailed": "Absendereinstellung konnte nicht aktualisiert werden.",
-    "recurringTickets": "Wiederkehrende Tickets"
+    "recurringTickets": "Wiederkehrende Tickets",
+    "software": "Software"
   },
   "clientCommandCenter": {
     "cards": {
@@ -329,7 +330,8 @@
       "people": "Personen",
       "record": "Kundendatensatz",
       "service": "Dienst",
-      "timeline": "Alles der Reihe nach"
+      "timeline": "Alles der Reihe nach",
+      "software": "Software"
     },
     "csatEmpty": "Noch keine Umfrageantworten.",
     "discardCancel": "Weiter bearbeiten",
@@ -406,6 +408,12 @@
       "primary": "Primär"
     },
     "pulseError": "Die Kundenübersicht konnte nicht geladen werden.",
+    "quickLinks": {
+      "assets": "Assets",
+      "contacts": "Kontakte",
+      "label": "Schnellzugriff",
+      "software": "Software"
+    },
     "rail": {
       "close": "Schließen",
       "installBase": "Installationsbasis",
@@ -440,6 +448,13 @@
       "onTrack": "SLA im Plan",
       "onTrackLeft": "SLA {{left}} übrig",
       "paused": "SLA pausiert"
+    },
+    "software": {
+      "assetsMeta_one": "1 Gerät",
+      "assetsMeta_other": "{{count}} Geräte",
+      "loadError": "Software-Inventar konnte nicht geladen werden.",
+      "titles": "Titel",
+      "viewAll": "Gesamte Software"
     },
     "timeline": {
       "daysAgo": "vor {{count}} T",
@@ -2022,5 +2037,21 @@
     "manager": "Leitung",
     "seesTickets": "Sieht Profil-Tickets",
     "editHint": "Diese Angaben werden am Abrechnungsprofil in den Abrechnungseinstellungen des Kunden bearbeitet."
+  },
+  "clientSoftware": {
+    "columns": {
+      "assets": "Assets",
+      "lastSeen": "Zuletzt gesehen",
+      "title": "Titel",
+      "versions": "Versionen"
+    },
+    "empty": "Noch kein Software-Inventar — das Inventar wird pro Gerät erfasst",
+    "emptyAssetsLink": "Assets anzeigen",
+    "exportCsv": "CSV exportieren",
+    "exportError": "Software-Inventar konnte nicht exportiert werden.",
+    "installedOn": "Installiert auf",
+    "loadError": "Software-Inventar konnte nicht geladen werden.",
+    "moreAssets": "und {{count}} weitere (die ersten {{limit}} nach Name)",
+    "searchPlaceholder": "Software suchen..."
   }
 }
