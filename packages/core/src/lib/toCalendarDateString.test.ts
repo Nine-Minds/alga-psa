@@ -26,9 +26,15 @@ function pickerLocalMidnightFor(isoDateOnly: string): Date {
   return new Date(y, m - 1, d, 0, 0, 0, 0);
 }
 
+// The expected offsets are the zones' offsets during the August 2026 scenarios
+// these tests exercise. Measure at a fixed instant in that window rather than
+// wall-clock now, which flips the DST zones (Berlin, New York) twice a year.
+// LEVERAGE: pattern tz-guard-helper — same assertTz helper copied across core, billing and shared tests.
+const TZ_GUARD_INSTANT = '2026-08-31T12:00:00.000Z';
+
 function assertTz(zone: string, expectedOffsetMinutes: number) {
   process.env.TZ = zone;
-  expect(new Date().getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+  expect(new Date(TZ_GUARD_INSTANT).getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
 }
 
 describe('toCalendarDateString — DatePicker Date → YYYY-MM-DD', () => {
