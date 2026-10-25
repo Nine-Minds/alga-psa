@@ -735,16 +735,24 @@ async function sendQuoteEmailBestEffort(params: {
   }
 
   try {
-    const { TenantEmailService, StaticTemplateProcessor } = getWorkflowEmailProvider();
+    const emailProvider = getWorkflowEmailProvider();
+    const { TenantEmailService, StaticTemplateProcessor } = emailProvider;
     const service = TenantEmailService.getInstance(params.tenantId);
 
-    const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
+    // Deep link on the tenant's portal origin (active custom domain, else the
+    // public base URL). Without an origin the email carries no link.
+    const portalLink = (await emailProvider.buildTenantPortalUrl?.(
+      params.tenantId,
+      `/client-portal/billing/quotes/${encodeURIComponent(String(params.quote.quote_id))}`,
+    )) ?? null;
     const defaultSubject = `Quote ${String(params.quote.quote_number ?? params.quote.quote_id)} is ready`;
-    const defaultText = params.message?.trim()
-      ? `${params.message.trim()}\n\nView quote: ${portalLink}`
-      : `Your quote is available in the client portal.\n\nView quote: ${portalLink}`;
-    const defaultHtml = `<p>${params.message?.trim() || 'Your quote is available in the client portal.'}</p><p><a href=\"${portalLink}\">View quote</a></p>`;
+    const intro = params.message?.trim() || 'Your quote is available in the client portal.';
+    const defaultText = portalLink
+      ? `${intro}\n\nView quote: ${portalLink}`
+      : intro;
+    const defaultHtml = portalLink
+      ? `<p>${intro}</p><p><a href="${portalLink}">View quote</a></p>`
+      : `<p>${intro}</p>`;
 
     const templateProcessor = new StaticTemplateProcessor(
       params.subject?.trim() || defaultSubject,

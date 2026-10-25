@@ -166,6 +166,9 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/billing/src/lib/invoice-template-ast/collectionDescriptors.ts',
   'server/src/test/integration/invoiceTicketProduction.integration.test.ts',
   'server/src/test/unit/billing/invoiceTicketPresentation.test.ts',
+  // alga-2026-0002771: by-ticket plain-text/rounded-hours coverage builds
+  // time-charge fixtures with service-period timing after this snapshot.
+  'server/src/test/unit/billing/invoiceByTicketPlainText.test.ts',
   // Explicit usage-contract measurement semantics (usage period totals, seat
   // revisions, unit-pricing revisions) added persisted service-period readers
   // and fixtures after the pass-0 snapshot.
@@ -176,6 +179,12 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/billing/src/lib/billing/usagePeriodTotalIdentity.ts',
   'packages/billing/tests/automaticInvoices.duplicateIdentityDedupe.test.tsx',
   'server/src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts',
+  // alga-2026-0002695: Prepaid Block issuance due-work rows map issuances onto
+  // service-period windows; added after the pass-0 snapshot.
+  'packages/billing/src/lib/prepaidBlockDueWork.ts',
+  'server/src/test/unit/billing/prepaidBlockAcceptance.db.test.ts',
+  'packages/billing/tests/prepaidBlockDueWork.db.test.ts',
+  'packages/billing/tests/prepaidBlockInvoicing.db.test.ts',
   // Calendar month-end close and grouped zero-dollar claims added persisted
   // window readers and regression fixtures after the pass-0 snapshot.
   'packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts',
@@ -353,6 +362,11 @@ const servicePeriodPostInventoryRefs = new Set([
   // Quote-converted first-invoice regression (alga0002168) asserts the contract
   // line's first service period was materialized.
   'server/src/test/integration/billing/quoteConvertedFirstInvoice.integration.test.ts',
+  // Arrears-only line gap detection and repair (block In Advance billing on Hourly/Usage
+  // lines) read and rewrite persisted service-period rows; like the contract-cadence
+  // materialization and coverage-audit actions above, they landed after the pass-0 snapshot.
+  'packages/billing/src/actions/arrearsOnlyLineGaps.ts',
+  'packages/billing/src/actions/arrearsOnlyLineRepair.ts',
 ]);
 
 // Files whose persisted service-period field references were removed after the

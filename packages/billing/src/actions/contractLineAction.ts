@@ -21,8 +21,13 @@ import {
     normalizeLiveRecurringStorage,
     normalizeTemplateRecurringStorage,
 } from '@shared/billingClients/recurrenceStorageModel';
+import {
+    ContractLineTimingNotAllowedError,
+    isAdvanceTimingAllowedForLineType,
+} from '@shared/billingClients/contractLineTimingRule';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
 import { validateContractLineWindow, normalizeContractLineDate } from '../lib/billing/contractLineWindow';
+import { syncPrepaidBlockIssuancesForContractLine } from '../services/prepaidBlockIssuanceSync';
 import { actionError, getErrorMessage, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -104,8 +109,8 @@ function contractLineActionErrorFrom(error: unknown): ContractLineActionError | 
         if (error.message === 'System-managed default contracts are attribution-only; contract-line authoring is disabled.') {
             return actionError(error.message);
         }
-        if (error.message === 'Advance billing is only supported for fixed contract lines.') {
-            return actionError(error.message);
+        if (error instanceof ContractLineTimingNotAllowedError) {
+            return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
         }
         if (error.message.startsWith('Cannot update fixed')) {
             return actionError(error.message);
@@ -298,6 +303,7 @@ export const createContractLine = withAuth(async (
             const { tenant: _, ...safePlanData } = planData;
             assertNonNegativeContractLineRate(safePlanData.custom_rate);
             const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+                lineType: safePlanData.contract_line_type ?? null,
                 cadenceOwner: safePlanData.cadence_owner,
                 defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
                 billingTiming: safePlanData.billing_timing,
@@ -308,11 +314,13 @@ export const createContractLine = withAuth(async (
             const enrichedPlan: IContractLine = normalizeLiveRecurringStorage(plan);
 
             if (enrichedPlan.contract_line_id) {
+                // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
                 await syncRecurringServicePeriodsForContractLine(trx, {
                     tenant,
                     contractLineId: enrichedPlan.contract_line_id,
                     sourceRunPrefix: 'contract_line_create',
                 });
+                await syncPrepaidBlockIssuancesForContractLine(trx, tenant, enrichedPlan.contract_line_id);
             }
 
             // Track analytics
@@ -367,6 +375,8 @@ export const updateContractLine = withAuth(async (
                 if (updateData.round_up_to_nearest !== undefined) templatePatch.round_up_to_nearest = updateData.round_up_to_nearest;
                 if (updateData.cadence_owner !== undefined || updateData.billing_timing !== undefined) {
                     const templatePolicy = resolveRecurringAuthoringPolicy({
+                        // This branch never changes line_type, so the stored type governs timing.
+                        lineType: existingTemplateLine.line_type ?? null,
                         cadenceOwner: updateData.cadence_owner,
                         fallbackCadenceOwner: existingTemplateLine.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
                         billingTiming: updateData.billing_timing,
@@ -466,6 +476,8 @@ export const updateContractLine = withAuth(async (
                 safeUpdateData.invoice_line_description = safeUpdateData.invoice_line_description.trim() || null;
             }
             const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+                // Post-update type: a type change to Hourly/Usage resets inherited advance.
+                lineType: safeUpdateData.contract_line_type ?? existingPlan.contract_line_type ?? null,
                 cadenceOwner: safeUpdateData.cadence_owner,
                 fallbackCadenceOwner: existingPlan.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
                 billingTiming: safeUpdateData.billing_timing,
@@ -485,11 +497,13 @@ export const updateContractLine = withAuth(async (
             const plan = await ContractLine.update(trx, planId, safeUpdateData);
             const enrichedPlan: IContractLine = normalizeLiveRecurringStorage(plan);
 
+            // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
             await syncRecurringServicePeriodsForContractLine(trx, {
                 tenant,
                 contractLineId: planId,
                 sourceRunPrefix: 'contract_line_update',
             });
+            await syncPrepaidBlockIssuancesForContractLine(trx, tenant, planId);
 
             // Track analytics
             const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
@@ -535,8 +549,8 @@ export const upsertContractLineTerms = withAuth(async (
             }
             await assertContractLineIsAuthorable(trx, tenant, contractLineId);
 
-            if (billingTiming === 'advance' && contractLine.contract_line_type !== 'Fixed') {
-                throw new Error('Advance billing is only supported for fixed contract lines.');
+            if (billingTiming === 'advance' && !isAdvanceTimingAllowedForLineType(contractLine.contract_line_type)) {
+                throw new ContractLineTimingNotAllowedError();
             }
 
             await tenantDb(trx, tenant).table('contract_lines')
@@ -546,11 +560,13 @@ export const upsertContractLineTerms = withAuth(async (
                     updated_at: trx.fn.now(),
                 });
 
+            // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
             await syncRecurringServicePeriodsForContractLine(trx, {
                 tenant,
                 contractLineId,
                 sourceRunPrefix: 'contract_line_terms_update',
             });
+            await syncPrepaidBlockIssuancesForContractLine(trx, tenant, contractLineId);
 
         });
     } catch (error) {
@@ -811,88 +827,3 @@ export const updateContractLineFixedConfig = withAuth(async (
 });
 
 
-/**
- * Updates only the base_rate for a specific service within a fixed plan.
- * Interacts with contract_line_service_fixed_config.
- * Renamed from updateFixedPlanConfiguration.
- */
-export const updatePlanServiceFixedConfigRate = withAuth(async (
-    user,
-    { tenant },
-    planId: string,
-    serviceId: string,
-    baseRate: number | null // Only accept base_rate
-): Promise<boolean | ContractLineActionError> => {
-    try {
-        const { knex } = await createTenantKnex();
-        if (!tenant) {
-            throw new Error("tenant context not found");
-        }
-
-        return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'billing', 'update', trx)) {
-                throw new Error('Permission denied: Cannot update contract line configurations');
-            }
-
-            // Fetch the existing plan to check its type
-            const existingPlan = await ContractLine.findById(trx, planId); // Use ContractLine model directly
-            if (!existingPlan) {
-                throw new Error(`Contract Line with ID ${planId} not found.`);
-            }
-            await assertContractLineIsAuthorable(trx, tenant, planId);
-            if (existingPlan.contract_line_type !== 'Fixed') {
-                throw new Error(`Cannot update fixed service config rate for non-fixed plan type: ${existingPlan.contract_line_type}`);
-            }
-
-            assertNonNegativeContractLineRate(baseRate, 'Base rate');
-
-            // Create configuration service
-            const configService = new ContractLineServiceConfigurationService(trx, tenant);
-
-            // Get existing configuration for this plan and service
-            let config = await configService.getConfigurationForService(planId, serviceId);
-
-            if (!config) {
-                // If no configuration exists, create a new one with the provided base_rate
-                console.log(`Creating new fixed plan service configuration for plan ${planId}, service ${serviceId}`);
-
-                const configId = await configService.createConfiguration(
-                    { // Base config data
-                        contract_line_id: planId,
-                        service_id: serviceId,
-                        configuration_type: 'Fixed',
-                        tenant
-                    },
-                    { // Type config data (only base_rate now)
-                        base_rate: baseRate
-                    }
-                    // No legacy partial-period compatibility data is passed here anymore
-                );
-
-                return !!configId;
-            } else {
-                // Update existing configuration's base_rate
-                console.log(`Updating fixed plan service configuration base_rate for plan ${planId}, service ${serviceId}`);
-
-                // Prepare fixed config update data (only base_rate)
-                const fixedConfigData: Partial<IContractLineServiceFixedConfig> = {
-                     base_rate: baseRate
-                };
-
-                // Update the configuration using the service
-                return await configService.updateConfiguration(
-                    config.config_id,
-                    undefined, // No base config updates needed
-                    fixedConfigData // Only contains base_rate
-                );
-            }
-        });
-    } catch (error) {
-        console.error('Error updating fixed plan service config rate:', error);
-        const expected = contractLineActionErrorFrom(error);
-        if (expected) {
-            return expected;
-        }
-        throw error;
-    }
-});

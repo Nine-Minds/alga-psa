@@ -294,7 +294,7 @@ async function levelCall(path: string, body: unknown) {
   }).then((r) => r.json() as Promise<{ ok: boolean; result: any }>);
 }
 
-async function seedAcmeWithServer(webhookEventTypes: string[]) {
+async function seedAcmeWithServer(webhookEventTypes: string[], webhookSecret = LEVEL_WEBHOOK_SIGNING_SECRET) {
   await clearAlertsAndTickets();
   await fetch(`${control}/control/levelio/reset`, { method: 'POST' });
   await levelCall('seed/group', { id: ACME, name: 'Acme Corp' });
@@ -302,7 +302,7 @@ async function seedAcmeWithServer(webhookEventTypes: string[]) {
   await levelCall('seed/webhook', {
     id: 'alga-native',
     url: `${routeOrigin}/api/webhooks/levelio?tenant=${tenantId}`,
-    secret: LEVEL_WEBHOOK_SIGNING_SECRET,
+    secret: webhookSecret,
     eventTypes: webhookEventTypes,
   });
 }
@@ -566,6 +566,18 @@ describe('Level.io alert ingestion through the Level emulator (route + DB)', { s
     expect(rows[0].ticket_id).toBeTruthy();
     expect(rows[0].ticket_id).not.toBe(firstTicketId);
     expect(await ticketCount()).toBe(2);
+  });
+
+  it('a native webhook keyed with the legacy shared secret (pre-signing-secret setups) creates a ticket', async () => {
+    // Before the signing secret existed the settings card showed only the shared
+    // webhook secret, so existing Level webhooks are signed with it.
+    await seedAcmeWithServer(['alert_active'], ALGA_WEBHOOK_SECRET);
+    await levelCall('actions/fire-alert', { deviceId: SRV_01, name: 'Legacy-keyed cpu', severity: 'critical' });
+
+    const [delivery] = await levelState('webhook-deliveries');
+    expect(delivery.status).toBe(200);
+    expect(JSON.parse(delivery.response)).toMatchObject({ ok: true, recorded: true, outcome: 'ticket_created' });
+    expect(await ticketCount()).toBe(1);
   });
 
   it('a native alert is resolved in Level (POST /v2/alerts/:id/resolve) when its ticket closes', async () => {

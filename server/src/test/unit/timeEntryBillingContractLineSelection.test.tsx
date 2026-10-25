@@ -4,7 +4,7 @@
 import React from 'react';
 import { WorkItemType } from '../../interfaces/workItem.interfaces';
 import { TimeSheetStatus } from '../../interfaces/timeEntry.interfaces';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 import TimeEntryEditForm from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/TimeEntryEditForm';
 // TimeEntryEditForm moved into @alga-psa/scheduling and now imports the contract
@@ -24,11 +24,9 @@ vi.mock('@alga-psa/scheduling/actions/clientInteractionLookupActions', () => ({
   getSchedulingClientById: vi.fn().mockResolvedValue({ client_id: 'test-client-id' })
 }));
 
-// NOTE: The interactive "Contract Line" dropdown (label, disabled state and
-// explanatory copy) has been removed from TimeEntryEditForm. The component still
-// resolves the client, loads eligible contract lines and auto-selects a default
-// contract_line_id (pushed back via onUpdateEntry); these tests assert that
-// retained data + default-selection behavior rather than the removed UI.
+// NOTE: TimeEntryEditForm never auto-fills contract_line_id. The server resolver
+// owns auto-pick (so auto lines are not mislabeled 'explicit'); the form only
+// renders a picker when the choice is ambiguous and reports a person's pick.
 
 describe('TimeEntryEditForm with Contract Line Selection', () => {
   const defaultStartDate = '2023-01-01T00:00:00.000Z';
@@ -81,7 +79,7 @@ describe('TimeEntryEditForm with Contract Line Selection', () => {
     cleanup();
   });
 
-  test('auto-selects the only eligible contract line for the entry', async () => {
+  test('does not auto-fill or show a picker for the only eligible contract line', async () => {
     // Mock the getClientIdForWorkItem function to return a client ID
     vi.mocked(planDisambiguation.getClientIdForWorkItem).mockResolvedValue('test-client-id');
 
@@ -123,13 +121,11 @@ describe('TimeEntryEditForm with Contract Line Selection', () => {
       );
     });
 
-    // With a single eligible line, it is auto-selected onto the entry.
-    await waitFor(() => {
-      expect(mockOnUpdateEntry).toHaveBeenCalledWith(0, {
-        ...mockEntry,
-        contract_line_id: 'test-plan-id'
-      });
-    });
+    // The server resolver picks a single eligible line; the form sends nothing
+    // and renders no picker.
+    await act(async () => {});
+    expect(mockOnUpdateEntry).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText('Contract line')).not.toBeInTheDocument();
   });
 
   test('does not load contract lines when no client ID can be resolved', async () => {
@@ -168,7 +164,7 @@ describe('TimeEntryEditForm with Contract Line Selection', () => {
     expect(mockOnUpdateEntry).not.toHaveBeenCalled();
   });
 
-  test('defaults to the single bucket-overlay line when multiple plans are available', async () => {
+  test('does not auto-fill the single bucket-overlay line; picker is not shown for it', async () => {
     // Mock the getClientIdForWorkItem function to return a client ID
     vi.mocked(planDisambiguation.getClientIdForWorkItem).mockResolvedValue('test-client-id');
 
@@ -217,14 +213,35 @@ describe('TimeEntryEditForm with Contract Line Selection', () => {
       );
     });
 
-    // With multiple eligible lines but a single bucket-overlay line, that line
-    // is auto-selected as the default.
+    // Exactly one bucket-overlay line is not ambiguous: the server resolver
+    // picks it (auto_bucket_overlay). The form sends no id and shows no picker.
+    await act(async () => {});
+    expect(mockOnUpdateEntry).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText('Contract line')).not.toBeInTheDocument();
+  });
+
+  test('ambiguous lines render the picker, send no preselected id, and report a pick as explicit', async () => {
+    vi.mocked(planDisambiguation.getClientIdForWorkItem).mockResolvedValue('test-client-id');
+    vi.mocked(planDisambiguation.getEligibleContractLinesForUI).mockResolvedValue([
+      { client_contract_line_id: 'plan-id-1', contract_line_name: 'Fixed Plan A', contract_line_type: 'Fixed',
+        start_date: defaultStartDate, end_date: defaultEndDate, has_bucket_overlay: false },
+      { client_contract_line_id: 'plan-id-2', contract_line_name: 'Fixed Plan B', contract_line_type: 'Fixed',
+        start_date: defaultStartDate, end_date: defaultEndDate, has_bucket_overlay: false }
+    ]);
+
+    render(
+      <TimeEntryEditForm
+        id="test-form" entry={mockEntry} index={0} isEditable={true} services={mockServices}
+        taxRegions={mockTaxRegions} timeInputs={mockTimeInputs} totalDuration={60} onSave={mockOnSave}
+        onDelete={mockOnDelete} onUpdateEntry={mockOnUpdateEntry} onUpdateTimeInputs={mockOnUpdateTimeInputs}
+      />
+    );
+
     await waitFor(() => {
-      expect(mockOnUpdateEntry).toHaveBeenCalledWith(0, {
-        ...mockEntry,
-        contract_line_id: 'plan-id-2'
-      });
+      expect(screen.getByText(/Multiple contract lines are eligible/)).toBeInTheDocument();
     });
+    // Nothing was preselected onto the entry.
+    expect(mockOnUpdateEntry).not.toHaveBeenCalled();
   });
 
   test('should allow saving without contract line selection', async () => {

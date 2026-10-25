@@ -24,6 +24,8 @@ const h = vi.hoisted(() => {
   const secrets = {
     'tenant-a': 'secret-a',
     'tenant-b': 'secret-b',
+    // Connected before native support: no signing secret generated yet.
+    'tenant-legacy': 'secret-legacy',
   };
   const signingSecrets = {
     'tenant-a': 'sign-a',
@@ -378,7 +380,14 @@ describe('Level.io native webhook (X-Level-Signature)', () => {
 
   it('missing, malformed, wrong-secret and wrong-tenant signatures → 401 with zero side effects', async () => {
     const raw = JSON.stringify(envelope('alert_active'));
-    for (const header of ['', 'sha256=abc', sign(raw, 'wrong'), sign(raw).replace('sha256=', ''), sign(raw, 'sign-b')]) {
+    for (const header of [
+      '',
+      'sha256=abc',
+      sign(raw, 'wrong'),
+      sign(raw).replace('sha256=', ''),
+      sign(raw, 'sign-b'),
+      sign(raw, 'secret-b'),
+    ]) {
       const res = await POST(signed(raw, header));
       expect(res.status).toBe(401);
     }
@@ -387,6 +396,25 @@ describe('Level.io native webhook (X-Level-Signature)', () => {
     expect(h.processRmmAlertEvent).not.toHaveBeenCalled();
     expect(h.publishEvent).not.toHaveBeenCalled();
     expect(h.claimedEvents.size).toBe(0);
+  });
+
+  it('a signature keyed with the legacy shared webhook secret is accepted', async () => {
+    // Setups made before the signing secret existed pasted the shared secret
+    // into Level's signing field.
+    const raw = JSON.stringify(envelope('alert_active'));
+    const res = await POST(signed(raw, sign(raw, 'secret-a')));
+    expect(res.status).toBe(200);
+    expect(await processCall()).toMatchObject({ tenantId: 'tenant-a', externalAlertId: 'alert-9' });
+  });
+
+  it('a tenant with no signing secret yet still verifies against its legacy secret', async () => {
+    const raw = JSON.stringify(envelope('alert_active'));
+    const res = await POST(signed(raw, sign(raw, 'secret-legacy'), 'tenant-legacy'));
+    expect(res.status).toBe(200);
+    expect(await processCall()).toMatchObject({ tenantId: 'tenant-legacy' });
+    // Another tenant's legacy secret never authorizes it.
+    h.claimedEvents.clear();
+    expect((await POST(signed(raw, sign(raw, 'secret-a'), 'tenant-legacy'))).status).toBe(401);
   });
 
   it('a Level delivery without X-Level-Signature and without the custom header → 401', async () => {

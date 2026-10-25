@@ -68,7 +68,7 @@ import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalytic
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { enforceTicketCloseRules, TicketCloseValidationError, type CloseRuleFailure } from '../lib/validateTicketClosure';
 import { prepareTicketResourceReassignment } from '@alga-psa/db/reassignTicketResources';
-import { applyMatchingChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
+import { applyMatchingChecklistTemplates, ticketDescriptionFromAttributes } from '@alga-psa/shared/lib/ticketChecklists';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
 import {
   BuiltinAuthorizationKernelProvider,
@@ -87,20 +87,24 @@ import {
   buildTicketUpdatedPayload,
 } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { buildTicketCommunicationWorkflowEvents, publishTicketCommunicationWorkflowEvent } from '../lib/workflowTicketCommunicationEvents';
+import { applyCreatedFromTemplateEffects } from '@alga-psa/shared/services/tickets/createTicketWithSideEffects';
 import { getTicketOrigin, type ResolvedTicketOrigin } from '../lib/ticketOrigin';
 import type { TicketWorkflowBlueprint } from '@alga-psa/shared/workflow/runtime/designer/draftFromTicket';
 import {
   copyChecklistFromSource,
   countDuplicableCustomFields,
-  insertChecklistItemsReplacingTemplates,
   pickDuplicableAttributes,
   type TicketDuplicateSource,
 } from '../lib/ticketDuplicate';
 import {
   descriptionHasInlineImages,
-  templateChecklistToItems,
   ticketToTemplateDraft,
 } from '../lib/ticketTemplates';
+import {
+  loadTemplateForInstantiation,
+  templateTicketProvenance,
+  type TemplateForInstantiation,
+} from '../lib/instantiateTicketTemplate';
 import { asJsonColumn } from '../lib/recurring/jsonColumn';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
@@ -665,11 +669,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
 
       // Template path: authorize and load the template before creating anything, so a refused
       // request rolls back with nothing written.
-      let sourceTemplate: {
-        template_id: string;
-        name: string;
-        custom_fields: Record<string, unknown>;
-      } | null = null;
+      let sourceTemplate: TemplateForInstantiation | null = null;
       if (ticketTemplateId) {
         if (user.user_type !== 'internal') {
           throw new Error('Permission denied: operation not available in client portal');
@@ -677,21 +677,19 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         if (!await hasPermission(user, 'ticket_template', 'read', trx)) {
           throw new Error('Permission denied: Cannot use ticket templates');
         }
-        const templateRow = UUID_PATTERN.test(ticketTemplateId)
+        // Manual use needs an active template that is offered for it (R4/R5); schedules ignore both.
+        const offered = UUID_PATTERN.test(ticketTemplateId)
           ? await tenantScopedTable(trx, 'ticket_templates', tenant)
-              .where({ template_id: ticketTemplateId, is_active: true })
-              .first('template_id', 'name', 'custom_fields')
+              .where({ template_id: ticketTemplateId, is_active: true, offer_for_manual_use: true })
+              .first('template_id')
           : undefined;
-        if (!templateRow) {
+        sourceTemplate = offered ? await loadTemplateForInstantiation(trx, tenant, ticketTemplateId) : null;
+        if (!sourceTemplate) {
           throw new Error('Ticket template not found');
         }
-        sourceTemplate = {
-          template_id: templateRow.template_id,
-          name: templateRow.name,
-          custom_fields: asJsonColumn<Record<string, unknown>>(templateRow.custom_fields ?? {}),
-        };
-        createTicketInput.created_from_template_id = sourceTemplate.template_id;
-        createTicketInput.attributes = pickDuplicableAttributes({ custom_fields: sourceTemplate.custom_fields });
+        const provenance = templateTicketProvenance(sourceTemplate);
+        createTicketInput.created_from_template_id = provenance.created_from_template_id;
+        createTicketInput.attributes = provenance.attributes;
       }
 
       // Server-specific: Create adapters for dependency injection.
@@ -700,7 +698,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       const analyticsTracker = new TicketModelAnalyticsTracker();
 
       // Use shared TicketModel with retry logic
-      // LEVERAGE: pattern ticket-create-composition — creates a ticket then composes assets/agents/team/tags/checklist/activity/events by hand; see createTicketWithSideEffects (shared/services/tickets/createTicketWithSideEffects.ts)
+      // LEVERAGE: friction ticket-create-composition — template provenance and owned checklist items already go through the shared applyCreatedFromTemplateEffects; what still diverges from createTicketWithSideEffects is the form-driven create: single asset, ITIL priority mapping from form values, the analytics tracker and the UI-specific activity/event wiring
       const ticketResult = await TicketModel.createTicketWithRetry(
         createTicketInput,
         tenant,
@@ -831,34 +829,20 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       }
 
       if (sourceTemplate) {
-        const templateItems = copyChecklistFromTemplate
-          ? await tenantScopedTable(trx, 'ticket_template_checklist_items', tenant)
-              .where({ template_id: sourceTemplate.template_id })
-              .orderBy('order_number', 'asc')
-              .orderBy('created_at', 'asc')
-              .select('item_name', 'description', 'is_required', 'checklist_template_id')
-          : [];
-        const checklistItemsCopied = await insertChecklistItemsReplacingTemplates(trx, tenant, {
-          targetTicketId: ticketResult.ticket_id,
-          items: templateChecklistToItems(templateItems),
-          userId: user.user_id,
-        });
-
-        await writeTicketActivity(trx, {
-          tenant,
+        await applyCreatedFromTemplateEffects(trx, tenant, {
           ticketId: ticketResult.ticket_id,
-          eventType: TICKET_ACTIVITY_EVENT.CREATED_FROM_TEMPLATE,
-          entityType: TICKET_ACTIVITY_ENTITY.TICKET,
-          entityId: ticketResult.ticket_id,
-          actor: {
-            actorType: TICKET_ACTIVITY_ACTOR.USER,
-            userId: user.user_id,
-          },
-          source: TICKET_ACTIVITY_SOURCE.UI,
-          details: {
+          actor: { type: 'user', userId: user.user_id },
+          checklistItems: copyChecklistFromTemplate
+            ? sourceTemplate.checklist.map((item) => ({
+                item_name: item.item_name,
+                description: item.description,
+                is_required: item.is_required,
+                checklist_template_id: item.checklist_template_id,
+              }))
+            : [],
+          fromTemplate: {
             template_id: sourceTemplate.template_id,
             template_name: sourceTemplate.name,
-            checklist_items_copied: checklistItemsCopied,
             custom_fields_copied: countDuplicableCustomFields(createTicketInput.attributes),
           },
         });
@@ -1597,6 +1581,10 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
             category_id: updatedTicket.category_id,
             subcategory_id: updatedTicket.subcategory_id,
             priority_id: updatedTicket.priority_id,
+            client_id: updatedTicket.client_id,
+            ticket_origin: updatedTicket.ticket_origin,
+            title: updatedTicket.title,
+            description: ticketDescriptionFromAttributes(updatedTicket.attributes),
           }, {
             actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: user.user_id },
             source: TICKET_ACTIVITY_SOURCE.UI,
@@ -1870,7 +1858,9 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
       query = query.whereExists(
         tenantScopedTable(trx, 'statuses', tenant)
           .select('*')
-          .whereRaw('statuses.status_id = t.status_id')
+          // LEVERAGE: pattern tenant-correlated-exists — correlate on the distribution column so Citus can co-locate the subquery
+          .whereRaw('statuses.tenant = t.tenant')
+          .andWhereRaw('statuses.status_id = t.status_id')
           .andWhere('statuses.is_closed', false)
       );
     } else if (parsedStatusFilter.kind === 'name') {

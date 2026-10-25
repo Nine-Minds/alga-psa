@@ -185,6 +185,12 @@ const mocks = vi.hoisted(() => {
   };
 });
 
+// Not under test here: the stranded arrears-only line gap query has its own coverage, and the
+// hand-rolled knex mock below does not model its recurring_service_periods query shape.
+vi.mock('../../../../../packages/billing/src/actions/arrearsOnlyLineGaps', () => ({
+  fetchStrandedArrearsOnlyLineGaps: vi.fn(async () => []),
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: (...args: any[]) => Promise<unknown>) =>
     (...args: any[]) =>

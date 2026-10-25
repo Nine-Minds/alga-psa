@@ -811,5 +811,37 @@
   "githubStar": {
     "label": "Stjärnmärk",
     "ariaLabel": "Stjärnmärk {{repository}} på GitHub"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "MSP-portal",
+      "dashboard": "Översikt",
+      "ticketDetails": "Ärendedetaljer",
+      "tickets": "Ärenden",
+      "projectDetails": "Projektdetaljer",
+      "projects": "Projekt",
+      "clientDetails": "Kunduppgifter",
+      "clients": "Kunder",
+      "contactDetails": "Kontaktuppgifter",
+      "contacts": "Kontakter",
+      "assetDetails": "Tillgångsdetaljer",
+      "assets": "Tillgångar",
+      "billing": "Fakturering",
+      "settings": "Inställningar",
+      "settingsSection": "Inställningar: {{section}}",
+      "chat": "Chatt"
+    }
+  },
+  "chat": {
+    "page": {
+      "title": "Pro-funktion",
+      "description": "AI-chattfunktionerna kräver Pro. Uppgradera för att få tillgång till den här funktionen."
+    },
+    "messages": {
+      "proRequired": "Meddelandefunktionerna kräver Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Chattfunktionerna är endast tillgängliga i Enterprise Edition"
+    }
   }
 }

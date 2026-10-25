@@ -31,6 +31,10 @@ function humanizeReasonCode(reasonCode: string) {
       return 'Repaired after invoice-linkage correction';
     case 'admin_correction':
       return 'Corrected administratively';
+    case 'hourly_usage_arrears_repair':
+      return 'Moved to arrears billing (hourly and usage lines bill in arrears)';
+    case 'stranded_advance_catch_up':
+      return 'Catch-up for time logged after an advance invoice was issued';
     case 'initial_materialization':
       return 'Generated from source cadence';
     case 'backfill_materialization':

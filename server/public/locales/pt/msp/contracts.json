@@ -53,6 +53,8 @@
   },
   "status": {
     "active": "Ativo",
+    "scheduled": "Agendado",
+    "startsOn": "Começa em {{date}}",
     "draft": "Rascunho",
     "expired": "Expirado",
     "terminated": "Terminado"
@@ -94,7 +96,7 @@
     },
     "timing": {
       "advance": "Antecipadamente",
-      "arrears": "Em atraso"
+      "arrears": "No final do período"
     }
   },
   "po": {
@@ -177,6 +179,7 @@
     },
     "headerCard": {
       "assignmentLifecycleHint": "O status do cliente ativo é controlado pelo ciclo de vida da atribuição abaixo.",
+      "scheduledExplanation": "Este contrato está ativo e começará a faturar em {{date}}.",
       "assignmentStatus": "Status da Atribuição",
       "billingFrequencyLabel": "Frequência de cobrança *",
       "billingFrequencyPlaceholder": "Selecione a frequência de cobrança",
@@ -298,6 +301,7 @@
     },
     "status": {
       "active": "Ativo",
+      "scheduled": "Agendado",
       "draft": "Rascunho",
       "expired": "Expirado",
       "terminated": "Terminado"
@@ -583,7 +587,8 @@
       "failedToUpdate": "Falha ao atualizar a linha de contrato",
       "failedToResetRate": "Falha ao redefinir o preço da linha",
       "protectedStartDate": "A data de início deve ser {{boundary}} ou anterior para incluir o histórico protegido.",
-      "protectedEndDate": "A data de término deve ser {{boundary}} ou posterior para incluir o histórico protegido."
+      "protectedEndDate": "A data de término deve ser {{boundary}} ou posterior para incluir o histórico protegido.",
+      "cannotEditWithInvoices": "Não é possível editar a linha de contrato: este contrato tem faturas associadas. As linhas de contrato não podem ser editadas depois que as faturas forem geradas."
     },
     "loading": {
       "contractLines": "Carregando linhas de contrato",
@@ -611,6 +616,7 @@
       "quantityShort": "Quantidade: {{quantity}}",
       "quantityTaxAllocation": "Quantidade (para alocação de impostos)",
       "rateTaxAllocation": "Taxa (para alocação de impostos)",
+      "shareOfLineFee": "Parcela da tarifa da linha",
       "title": "Serviços ({{count}})",
       "typeLabel": "Serviço {{type}}",
       "unitOfMeasure": "Unidade de Medida",
@@ -766,7 +772,7 @@
     },
     "fixedConfig": {
       "defaultBaseRate": "Taxa básica padrão:",
-      "defaultRatePlaceholder": "Padrão: ${{rate}}",
+      "defaultRatePlaceholder": "Padrão: {{rate}}",
       "enterBaseRate": "Insira a taxa básica",
       "leaveBlankDefault": "Deixe em branco para usar a taxa padrão",
       "notSet": "Não definido",
@@ -774,7 +780,7 @@
       "title": "Configuração de taxa fixa"
     },
     "hourlyConfig": {
-      "defaultRate": "Padrão: ${{rate}}",
+      "defaultRate": "Padrão: {{rate}}",
       "hourlyRate": "Taxa horária",
       "minimumBillableMinutes": "Minutos mínimos faturáveis",
       "roundUpToNearest": "Arredondar para o mais próximo (minutos)",
@@ -800,7 +806,7 @@
     },
     "title": "Adicionar linhas de contrato de predefinições",
     "usageConfig": {
-      "defaultRate": "Padrão: ${{rate}}",
+      "defaultRate": "Padrão: {{rate}}",
       "recordDrivenNote": "Os serviços baseados em uso são faturados com base no uso registrado no Rastreamento de uso para cada período de serviço. Um período sem registro de uso não gera cobrança — registre o uso (ou um zero explícito) em cada período para faturar esses serviços.",
       "ratePerUnit": "Taxa (por unidade)",
       "unitHint": "por exemplo, GB, chamada de API, usuário",
@@ -827,13 +833,15 @@
       "hourlyTitle": "De hora em hora",
       "usageDescription": "Fatura por unidades consumidas.",
       "usageTitle": "Baseado no uso",
-      "fixedSemantics": "Fature um preço de pacote ou quantidade recorrente × taxa unitária a cada período."
+      "fixedSemantics": "Fature um preço de pacote ou quantidade recorrente × taxa unitária a cada período.",
+      "prepaidBlockTitle": "Bloco pré-pago",
+      "prepaidBlockDescription": "Fature um bloco de horas antecipadamente; o tempo registado consome-o e o bloco seguinte é faturado quando se esgota."
     },
     "billingTiming": {
       "advance": "Adiantamento (fatura no início do período)",
       "arrears": "Atrasos (fatura no final do período)"
     },
-    "billingTimingHelp": "O faturamento antecipado é típico para taxas fixas; atrasos por serviços baseados em tempo/utilização.",
+    "billingTimingHelp": "As linhas fixas podem ser faturadas antecipadamente ou após o período. As linhas por hora e por utilização são sempre faturadas após o período, depois de o trabalho ser realizado.",
     "chooseBillingModel": "Escolha um modelo de cobrança *",
     "chooseBillingModelDescription": "Selecione o comportamento de cobrança adequado a esta oferta.",
     "contractLineNameLabel": "Nome da linha de contrato *",
@@ -895,7 +903,8 @@
       "usageServiceRequired": "É necessário pelo menos um serviço baseado em uso",
       "usageServiceSelectRequired": "Serviço {{index}}: Selecione um serviço",
       "invalidQuantity": "A quantidade deve ser zero ou maior.",
-      "recurringUnitRateRequired": "Insira uma taxa unitária para cada serviço recorrente."
+      "recurringUnitRateRequired": "Insira uma taxa unitária para cada serviço recorrente.",
+      "prepaidBlockCurrencyRequired": "O contrato precisa de uma moeda antes de se poder definir o preço de um bloco pré-pago."
     },
     "fixedServicesPricingIntent": "Escolha um preço de pacote ou postos/unidades recorrentes para cada serviço.",
     "fixedServicesPricingExplanation": "As alocações de pacote compartilham a taxa básica da linha. Os postos recorrentes faturam a quantidade acordada × taxa unitária a cada período, sem registros de uso.",
@@ -906,7 +915,9 @@
     "invoiceTextPlaceholder": "Impresso na fatura; por padrão, o nome da linha",
     "invoiceTextHelp": "Este texto é impresso literalmente na linha de fatura recorrente.",
     "startDateLabel": "Data de início da linha",
-    "endDateLabel": "Data de término da linha"
+    "endDateLabel": "Data de término da linha",
+    "prepaidBlockTitle": "Bloco pré-pago",
+    "prepaidBlockDescription": "Defina o tamanho e o preço do bloco. O preço por predefinição é horas x tarifa do serviço e é guardado como valor explícito."
   },
   "pricingSchedules": {
     "list": {
@@ -1252,7 +1263,8 @@
       "hourlyRateLabel": "Tarifa por hora:",
       "unitRateFromCatalog": "Preço de catálogo na moeda do cliente",
       "unitAmountLabel": "Valor recorrente:",
-      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}",
+      "prepaidBlockKind": "Bloco pré-pago"
     },
     "editBasicsTitle": "Editar princípios básicos do modelo",
     "editGuidanceTitle": "Editar orientação do modelo",
@@ -1279,9 +1291,7 @@
     },
     "loadingTemplate": "Carregando modelo...",
     "servicesLabel": "Serviços",
-    "summary": {
-      "clientCurrency": "Moeda do cliente"
-    },
+    "summary": {},
     "templateBadge": "Modelo",
     "templateNotFound": "Modelo de contrato não encontrado",
     "templateSnapshotTitle": "Instantâneo do modelo",
@@ -1327,6 +1337,16 @@
       "open": "Simular",
       "title": "Simulação do modelo"
     },
+    "pricing": {
+      "title": "Preços por moeda",
+      "addCurrency": "Adicionar moeda",
+      "removeCurrency": "Remover",
+      "missing": "{{count}} valor(es) em falta",
+      "baseCurrency": "(moeda base)",
+      "changeBaseCurrency": "Alterar moeda base",
+      "changeBaseConfirm": "Alterar a moeda base para {{currency}}? Os valores existentes NÃO são convertidos: mantêm o valor numérico e passam a ser lidos como {{currency}}.",
+      "noSlots": "Este modelo ainda não tem valores para precificar."
+    },
     "discounts": {
       "title": "Descontos padrão do contrato",
       "help": "Cada contrato de cliente recebe uma cópia editável independente. Descontos gerais aplicam-se às linhas elegíveis.",
@@ -1341,6 +1361,10 @@
       "add": "Adicionar desconto padrão",
       "chooseLine": "Escolha uma linha do modelo",
       "chooseService": "Escolha um serviço"
+    },
+    "prepaidBlock": {
+      "setup": "Vender como bloco pré-pago",
+      "blockNeutral": "{{hours}} h / {{price}} (na moeda do cliente)"
     }
   },
   "quickStart": {
@@ -1529,6 +1553,9 @@
       "confirm": "Confirmar e continuar",
       "cancel": "Voltar"
     },
+    "templatePicker": {
+      "needsRates": "Requer tarifas em {{currency}}"
+    },
     "discounts": {
       "help": "Descontos gerais aplicam-se a cada cobrança elegível faturada por este contrato. Eles são criados junto com o contrato ao concluir a configuração, e a simulação abaixo os calcula.",
       "draftDialog": {
@@ -1658,7 +1685,8 @@
       "preview": {
         "billingCadenceLabel": "Cadência de cobrança:",
         "notSpecified": "Não especificado",
-        "templateLabel": "Modelo:"
+        "templateLabel": "Modelo:",
+        "currencyLabel": "Moeda base:"
       },
       "selectTemplateOptional": "Selecione um modelo (opcional)",
       "startFromTemplate": "Começar a partir do modelo"
@@ -1850,7 +1878,8 @@
       "products": "Produtos",
       "hourlyServices": "Serviços por hora",
       "usageBasedServices": "Serviços baseados em uso",
-      "fixedFeeServicesNumbered": "Serviços de taxa fixa ({{number}})"
+      "fixedFeeServicesNumbered": "Serviços de taxa fixa ({{number}})",
+      "prepaidBlocks": "Linhas de blocos pré-pagos"
     },
     "fields": {
       "client": "Cliente",
@@ -1979,6 +2008,14 @@
       "itemPo": "Confirme os requisitos do pedido de compra (se houver)",
       "itemDates": "Verifique as datas de início e término",
       "itemEditLater": "Lembre-se: você pode editar o contrato posteriormente, se necessário"
+    },
+    "prepaid": {
+      "badgeCount_one": "{{count}} linha",
+      "badgeCount_other": "{{count}} linhas",
+      "blockSummary": "{{hours}} horas por {{price}}",
+      "expiresAfter_one": "expira após {{count}} mês",
+      "expiresAfter_other": "expira após {{count}} meses",
+      "neverExpires": "nunca expira"
     }
   },
   "wizardTemplateLines": {
@@ -2001,8 +2038,15 @@
     "unitRate": "Tarifa unitária",
     "serviceRate": "Tarifa do serviço",
     "noCurrencyPrice": "Não há preço em {{currency}} para este serviço. Informe uma tarifa ou o contrato não poderá ser criado.",
-    "templateRateNote": "Do modelo (o valor não está associado a uma moeda).",
-    "reviewTitle": "Linhas criadas a partir do modelo"
+    "reviewTitle": "Linhas criadas a partir do modelo",
+    "fallbackAlert": "Este modelo não tem tarifas em {{currency}}. A estrutura é copiada; introduza abaixo os valores em {{currency}}. Os valores do modelo são mostrados apenas como referência e não são convertidos.",
+    "templateReference": "Modelo: {{amount}} {{currency}}",
+    "catalogPrice": "Preço do catálogo",
+    "fromTemplateCurrency": "Do modelo ({{currency}})",
+    "fromTemplatePriceSet": "Das tarifas em {{currency}} do modelo",
+    "noCurrencyAmount": "Sem valor em {{currency}}. Introduza um, caso contrário o contrato não pode ser criado.",
+    "overtimeRate": "Tarifa de horas extra",
+    "bucketOverageRate": "Tarifa de excedente"
   },
   "templateWizard": {
     "title": {
@@ -2046,8 +2090,10 @@
           "usage": "Uso"
         }
       },
-      "recurringQuantityInvalid": "A quantidade recorrente de \"{{serviceName}}\" deve ser um número inteiro igual ou superior a zero e qualquer tarifa unitária deve ser um valor válido."
-    }
+      "recurringQuantityInvalid": "A quantidade recorrente de \"{{serviceName}}\" deve ser um número inteiro igual ou superior a zero e qualquer tarifa unitária deve ser um valor válido.",
+      "currencyRequired": "A moeda base é obrigatória"
+    },
+    "currency": "Moeda base *"
   },
   "templateBasics": {
     "heading": "Noções básicas do modelo",
@@ -2065,7 +2111,8 @@
     "help": {
       "templateName": "Use um nome descritivo para que as equipes possam identificar rapidamente o modelo certo.",
       "internalNotes": "Essas notas permanecem com o modelo para fornecer contexto quando os colegas de equipe o utilizam.",
-      "billingFrequency": "Define a cadência padrão quando o modelo é aplicado. Ainda pode ser ajustado por cliente."
+      "billingFrequency": "Define a cadência padrão quando o modelo é aplicado. Ainda pode ser ajustado por cliente.",
+      "currency": "As tarifas introduzidas neste assistente estão nesta moeda. Os preços noutras moedas podem ser adicionados depois ao modelo. Os valores nunca são convertidos."
     }
   },
   "templateFixed": {
@@ -2092,7 +2139,7 @@
       "advance": "Adiantamento - fatura no início do período"
     },
     "fields": {
-      "billingTiming": "Tempo de faturamento",
+      "billingTiming": "Momento de faturação das linhas de valor fixo",
       "adjustPartialPeriods": "Ajuste para períodos parciais",
       "services": "Serviços",
       "serviceNumber": "Serviço {{index}}",
@@ -2200,18 +2247,20 @@
   },
   "templateReview": {
     "heading": "Modelo de revisão",
-    "description": "Confirme o conteúdo do modelo. As tarifas são determinadas pelo preço de cada serviço na moeda do cliente quando um contrato é criado a partir deste modelo.",
+    "description": "Confirme o conteúdo do modelo. As tarifas são guardadas na moeda base do modelo. As outras moedas usam os conjuntos de preços do modelo, ou introduz os valores ao criar um contrato.",
     "sections": {
       "basics": "Noções básicas do modelo",
       "fixedFeeServices": "Serviços de taxa fixa",
       "products": "Produtos",
       "hourlyServices": "Serviços por hora",
-      "usageBasedServices": "Serviços baseados em uso"
+      "usageBasedServices": "Serviços baseados em uso",
+      "prepaidBlocks": "Linhas de blocos pré-pagos"
     },
     "fields": {
       "templateName": "Nome do modelo",
       "billingFrequency": "Frequência de cobrança",
-      "internalNotes": "Notas internas"
+      "internalNotes": "Notas internas",
+      "baseCurrency": "Moeda base"
     },
     "fallback": {
       "none": "-",
@@ -2247,8 +2296,7 @@
       "serviceLabel": "Serviço:",
       "invoiceWindowLabel": "Janela de fatura:",
       "unitRateLabel": "Tarifa unitária:",
-      "unitRateFromCatalog": "Preço de catálogo na moeda do cliente",
-      "unitRateNeutral": "{{rate}} na moeda do cliente"
+      "unitRateFromCatalog": "Preço de catálogo na moeda do cliente"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Tempo mínimo faturável:",
@@ -2262,11 +2310,14 @@
       "hoursIncluded": "Horas {{value}} incluídas",
       "unitsIncluded": "{{value}} {{unit}} incluído",
       "unitsFallback": "unidades",
-      "overage": "Excedente ${{amount}}/{{unit}}",
+      "overage": "Excedente {{amount}}/{{unit}}",
       "hourSingular": "hora",
       "unitSingular": "unidade",
       "rolloverEnabled": "Rollover ativado",
       "period": "Período: {{period}}"
+    },
+    "prepaid": {
+      "blockSummaryNeutral": "{{hours}} horas por {{price}} (na moeda do cliente)"
     }
   },
   "templatePreview": {
@@ -2464,7 +2515,7 @@
       "editDetails": "Editar regras",
       "editDetailsFor": "Editar detalhes de {{line}}",
       "fields": {
-        "adjustmentAmount": "Valor do ajuste em dólares",
+        "adjustmentAmount": "Valor do ajuste",
         "adjustmentDescription": "Descrição do ajuste",
         "adjustmentPeriod": "Período do ajuste",
         "billingFrequency": "Frequência de faturamento",
@@ -2482,16 +2533,16 @@
         "lineType": "Tipo de linha",
         "minimumBillableMinutes": "Minutos mínimos faturáveis",
         "minimumUsage": "Uso mínimo",
-        "overtimeRate": "Tarifa de hora extra ($/h)",
+        "overtimeRate": "Tarifa de hora extra por hora",
         "overtimeThreshold": "Limite de horas extras (horas)",
         "roundUpMinutes": "Arredondar para minutos",
         "scheduleEffectiveDate": "Data de vigência do cronograma",
         "scheduleEndDate": "Data de término do cronograma",
-        "scheduleRate": "Tarifa do cronograma em dólares",
+        "scheduleRate": "Tarifa do cronograma",
         "serviceQuantity": "Quantidade de licenças ou produtos",
         "tierMaximum": "Máximo da faixa",
         "tierMinimum": "Mínimo da faixa",
-        "tierRate": "Tarifa da faixa em dólares",
+        "tierRate": "Tarifa da faixa",
         "usageUnit": "Unidade de uso"
       },
       "frequencies": {
@@ -2516,7 +2567,7 @@
       "placeholders": {
         "minimum": "mínimo",
         "minimumMinutes": "minutos mínimos",
-        "overtimeRate": "hora extra $/h",
+        "overtimeRate": "tarifa de hora extra por hora",
         "roundMinutes": "arredondamento em minutos",
         "thresholdHours": "horas do limite"
       },
@@ -2539,7 +2590,8 @@
       "tieredPricing": "preços por faixas",
       "timing": {
         "advance": "Faturar antecipadamente",
-        "arrears": "Faturar postecipadamente"
+        "arrears": "Faturar postecipadamente",
+        "arrearsOnly": "Faturado postecipadamente"
       },
       "title": "Alterações do contrato",
       "types": {
@@ -2555,7 +2607,8 @@
         "value": "Valor",
         "appliesTo": "Aplica-se a",
         "description": "Descrição",
-        "amount": "Valor ($)",
+        "amount": "Valor",
+        "rate": "Tarifa",
         "billingPeriod": "Período de faturamento",
         "timing": "Momento"
       }
@@ -2655,6 +2708,10 @@
       "duplicate": "Já existe um registro correspondente do assistente de contrato.",
       "resumeUnsupportedShape": "Este rascunho não pode ser retomado no assistente sem alterar os seus preços: {{lines}}",
       "fixedLineNoService": "A linha fixa \"{{lineName}}\" tem um valor recorrente mas nenhum serviço sobre o qual faturá-lo. Adicione um serviço antes de concluir.",
+      "templateAmountsMissing": "Não é possível criar o contrato em {{currency}}. Os seguintes valores não têm montante em {{currency}}: {{amounts}}. Introduza um valor para cada um ou adicione tarifas em {{currency}} ao modelo.",
+      "currencyPricingMissing": "Não é possível criar o contrato em {{currency}}. Não há preço em {{currency}} definido para: {{services}}.",
+      "invalidTemplateCurrency": "\"{{currency}}\" não é um código de moeda ISO 4217 válido",
+      "templateCurrencyHasPriceSet": "Este modelo já tem uma tabela de preços em {{currency}}. Elimine-a antes de tornar {{currency}} a moeda base.",
       "standingTerms": "Este rascunho contém condições de desconto recorrentes. Edite os separadores Linhas e Descontos para as preservar."
     },
     "pricingSchedule": {
@@ -2706,7 +2763,21 @@
     "done": "Concluído"
   },
   "sellHourBlockNote": {
-    "text": "Um pacote de horas do contrato fatura apenas o excedente. Para cobrar antecipadamente um bloco de horas, use Vender bloco em Blocos de horas, na guia Painel de faturamento do cliente."
+    "text": "Um pacote de horas do contrato fatura apenas o excedente. Para cobrar antecipadamente um bloco de horas, adicione uma linha de Bloco pré-pago a este contrato."
+  },
+  "review": {
+    "saveTemplateRates": "Guardar estas tarifas em {{currency}} no modelo",
+    "saveMissingTemplateRates": "Adicionar ao modelo as tarifas em {{currency}} em falta",
+    "updateTemplateRates": "Atualizar as tarifas em {{currency}} do modelo com estes valores"
+  },
+  "billingTimingField": {
+    "arrears": "Pós-pago",
+    "fixedHelp": "As linhas fixas podem ser faturadas antecipadamente ou após o período.",
+    "nonFixedHelp": "As linhas por hora e por utilização são sempre faturadas após o período, depois de o trabalho ser realizado.",
+    "options": {
+      "advance": "Antecipado (faturar no início do período)",
+      "arrears": "Após o período (faturar no fim do período)"
+    }
   },
   "contractDiscounts": {
     "title": "Descontos",
@@ -2778,6 +2849,126 @@
     "errors": {
       "loadFailed": "Falha ao carregar os descontos.",
       "saveFailed": "Falha ao salvar o desconto."
+    }
+  },
+  "prepaidBlock": {
+    "errors": {
+      "hoursInvalid": "Introduza um tamanho de bloco superior a zero (frações de hora são permitidas).",
+      "priceInvalid": "Introduza um preço de bloco de zero ou mais.",
+      "expiryInvalid": "A expiração deve ser um número inteiro de meses entre 1 e 120, ou vazia.",
+      "thresholdInvalid": "O limite de utilização deve ser uma percentagem inteira de 1 a 99, ou vazio.",
+      "serviceRequired": "A linha precisa de pelo menos um serviço por hora."
+    },
+    "hoursValue": "{{hours}} h",
+    "trigger": {
+      "initial": "Bloco inicial",
+      "exhaustion": "Bloco esgotado",
+      "threshold": "Limite de utilização",
+      "expiry": "Bloco expirado",
+      "renewal": "Renovação do contrato",
+      "manual": "Emitido manualmente"
+    },
+    "loading": "A carregar detalhes do bloco pré-pago...",
+    "heading": "Bloco pré-pago",
+    "actions": {
+      "edit": "Editar",
+      "remove": "Remover configuração do bloco",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "issueNext": "Emitir próximo bloco"
+    },
+    "warnings": {
+      "coveredServiceOnOtherLine": "{{service}} também está noutra linha ativa ({{line}}). O tempo pode ser faturado lá em vez de ser descontado deste bloco."
+    },
+    "summary": {
+      "block": "Bloco",
+      "expiry": "Expiração",
+      "neverExpires": "Nunca expira",
+      "expiresAfterMonths": "{{months}} meses",
+      "soldAs": "Vendido como",
+      "triggers": "O bloco seguinte é faturado quando",
+      "onExhaustion": "o bloco se esgota",
+      "onThreshold": "{{percent}}% utilizado",
+      "onExpiry": "o bloco expira",
+      "onRenewal": "o contrato é renovado",
+      "tierAutoIssue": "Finalizado automaticamente",
+      "tierDraft": "Rascunho para revisão"
+    },
+    "balance": {
+      "label": "Saldo ativo",
+      "value": "{{remaining}} de {{total}} restantes",
+      "none": "Ainda não há bloco ativo. Um bloco ativa-se quando a sua fatura é finalizada.",
+      "contractEnded": "Contrato terminado; as horas restantes foram perdidas."
+    },
+    "pending": {
+      "heading": "Bloco pendente a aguardar a finalização da fatura",
+      "draftInvoice": "Fatura rascunho",
+      "noInvoice": "Sem fatura associada",
+      "ageDays": "{{days}} dias",
+      "held": "{{hours}} de tempo registado ficam retidas até este bloco ser ativado."
+    },
+    "next": {
+      "label": "Próxima emissão agendada",
+      "none": "Nenhuma"
+    },
+    "history": {
+      "heading": "Histórico de blocos",
+      "empty": "Ainda não foram emitidos blocos.",
+      "columns": {
+        "issued": "Emitido",
+        "reason": "Motivo",
+        "status": "Estado",
+        "hours": "Restante",
+        "amount": "Valor",
+        "invoice": "Fatura"
+      }
+    },
+    "fields": {
+      "blockHours": "Tamanho do bloco (horas)",
+      "blockHoursHelp": "São permitidas frações, por exemplo 1,5 para 90 minutos.",
+      "blockPrice": "Preço do bloco ({{currency}})",
+      "blockPriceManualHelp": "Definido explicitamente. É guardado como introduzido e não acompanha a tarifa horária.",
+      "blockPriceDefaultHelp": "Por predefinição, horas x tarifa do serviço. É guardado como preço explícito.",
+      "useRateTimesHours": "Usar horas x tarifa",
+      "soldAs": "A linha da fatura é vendida como",
+      "soldAsHelp": "Define o imposto, o razão e o mapeamento da exportação contabilística da linha de fatura do bloco.",
+      "expiryMonths": "Expira após (meses)",
+      "neverExpires": "Nunca expira",
+      "expiryMonthsHelp": "Deixe vazio para horas que nunca expiram. As horas não utilizadas perdem-se na expiração.",
+      "thresholdPercent": "Emitir o próximo bloco na utilização (%)",
+      "noThreshold": "Sem limite",
+      "triggersHeading": "Faturar o próximo bloco quando",
+      "triggerExhaustion": "O bloco se esgota",
+      "triggerExpiry": "O bloco expira",
+      "triggerRenewal": "O contrato é renovado",
+      "triggerRenewalHint": "Fatura um novo bloco em cada renovação (aniversário de um contrato sem termo ou contrato de renovação ativado). Os blocos existentes mantêm a sua própria validade.",
+      "tier": "Fatura seguinte",
+      "tierDraft": "Criar um rascunho para revisão",
+      "tierAutoIssue": "Finalizar e enviar automaticamente",
+      "blockPriceNeutral": "Preço do bloco (na moeda do cliente)"
+    },
+    "status": {
+      "pending": "Pendente",
+      "active": "Ativo",
+      "expired": "Expirado",
+      "voided": "Anulado"
+    }
+  },
+  "wizardPrepaidBlock": {
+    "heading": "Linhas de blocos pré-pagos",
+    "description": "Venda horas antecipadamente. Cada linha fatura um bloco de horas a preço fixo e o tempo registado consome o bloco; as horas além do bloco são faturadas à tarifa horária.",
+    "templateDescription": "Venda horas antecipadamente. Cada linha fatura um bloco de horas a preço fixo e o tempo registado consome o bloco. O preço assume a moeda do cliente quando um contrato é criado a partir deste modelo.",
+    "lineName": "Nome da linha (opcional)",
+    "lineNamePlaceholder": "Bloco pré-pago",
+    "removeLine": "Remover linha de bloco pré-pago",
+    "serviceItem": "Serviço {{index}}",
+    "overageRate": "Tarifa horária",
+    "removeService": "Remover serviço",
+    "addService": "Adicionar serviço a esta linha",
+    "addLine": "Adicionar linha de bloco pré-pago",
+    "validation": {
+      "invalidBlock": "Preencha o tamanho, o preço e os gatilhos de cada linha de bloco pré-pago antes de concluir.",
+      "rateRequired": "O serviço de bloco pré-pago \"{{serviceName}}\" precisa de uma tarifa horária superior a zero (as horas além do bloco são faturadas a essa tarifa)."
     }
   }
 }

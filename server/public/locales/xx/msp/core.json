@@ -811,5 +811,37 @@
   "githubStar": {
     "label": "⟦Şŧȧř⟧",
     "ariaLabel": "⟦Şŧȧř {{repository}} ȯƞ ƓīŧĦŭƀ⟧"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "⟦ḾŞƤ Ƥȯřŧȧŀ⟧",
+      "dashboard": "⟦Ḓȧşħƀȯȧřḓ⟧",
+      "ticketDetails": "⟦Ŧīƈķḗŧ Ḓḗŧȧīŀş⟧",
+      "tickets": "⟦Ŧīƈķḗŧş⟧",
+      "projectDetails": "⟦Ƥřȯĵḗƈŧ Ḓḗŧȧīŀş⟧",
+      "projects": "⟦Ƥřȯĵḗƈŧş⟧",
+      "clientDetails": "⟦Ƈŀīḗƞŧ Ḓḗŧȧīŀş⟧",
+      "clients": "⟦Ƈŀīḗƞŧş⟧",
+      "contactDetails": "⟦Ƈȯƞŧȧƈŧ Ḓḗŧȧīŀş⟧",
+      "contacts": "⟦Ƈȯƞŧȧƈŧş⟧",
+      "assetDetails": "⟦Ȧşşḗŧ Ḓḗŧȧīŀş⟧",
+      "assets": "⟦Ȧşşḗŧş⟧",
+      "billing": "⟦Ɓīŀŀīƞɠ⟧",
+      "settings": "⟦Şḗŧŧīƞɠş⟧",
+      "settingsSection": "⟦Şḗŧŧīƞɠş: {{section}}⟧",
+      "chat": "⟦Ƈħȧŧ⟧"
+    }
+  },
+  "chat": {
+    "page": {
+      "title": "⟦Ƥřȯ Ƒḗȧŧŭřḗ⟧",
+      "description": "⟦ȦĪ Ƈħȧŧ ƒḗȧŧŭřḗş řḗʠŭīřḗ Ƥřȯ. Ƥŀḗȧşḗ ŭƥɠřȧḓḗ ŧȯ ȧƈƈḗşş ŧħīş ƒḗȧŧŭřḗ.⟧"
+    },
+    "messages": {
+      "proRequired": "⟦Ḿḗşşȧɠḗ ƒḗȧŧŭřḗş řḗʠŭīřḗ Ƥřȯ.⟧"
+    },
+    "errors": {
+      "enterpriseOnly": "⟦Ƈħȧŧ ƒḗȧŧŭřḗş ȧřḗ ȯƞŀẏ ȧṽȧīŀȧƀŀḗ īƞ Ḗƞŧḗřƥřīşḗ Ḗḓīŧīȯƞ⟧"
+    }
   }
 }

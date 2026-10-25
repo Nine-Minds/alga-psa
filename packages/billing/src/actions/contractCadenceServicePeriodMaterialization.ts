@@ -20,6 +20,10 @@ import {
   findUncoveredRecurringServicePeriodCandidates,
   isRecurringServicePeriodCandidateCovered,
 } from '@shared/billingClients/regenerateRecurringServicePeriods';
+import {
+  resolveEffectiveBillingTiming,
+  resolveRecurringChargeFamily,
+} from '@alga-psa/shared/billingClients/contractLineTimingRule';
 
 export { CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME };
 
@@ -140,26 +144,6 @@ function compareIsoDateOnly(left: ISO8601String, right: ISO8601String) {
 
 function maxIsoDateOnly(left: ISO8601String, right: ISO8601String) {
   return compareIsoDateOnly(left, right) >= 0 ? left : right;
-}
-
-function resolveRecurringChargeFamily(contractLineType: string | null): RecurringChargeFamily {
-  switch ((contractLineType ?? 'fixed').toLowerCase()) {
-    case 'fixed':
-      return 'fixed';
-    case 'time':
-    case 'hourly':
-      return 'hourly';
-    case 'usage':
-      return 'usage';
-    case 'bucket':
-      return 'bucket';
-    case 'product':
-      return 'product';
-    case 'license':
-      return 'license';
-    default:
-      return 'fixed';
-  }
 }
 
 function mapRecurringServicePeriodRow(row: RecurringServicePeriodDbRow): IRecurringServicePeriodRecord {
@@ -509,8 +493,10 @@ async function syncContractCadenceObligation(
     return emptyObligationSyncResult(true);
   }
 
-  const duePosition: DuePosition =
-    params.obligation.billing_timing === 'advance' ? 'advance' : 'arrears';
+  const duePosition: DuePosition = resolveEffectiveBillingTiming(
+    params.obligation.contract_line_type,
+    params.obligation.billing_timing,
+  );
   const sourceRuleVersion = [
     'contract_cadence',
     `billing_cycle:${frequency}`,

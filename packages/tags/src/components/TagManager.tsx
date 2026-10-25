@@ -8,6 +8,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
 import { useTags } from '../context/TagContext';
 import { handleError } from '@alga-psa/ui';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TagManagerProps {
   id?: string;
@@ -43,6 +44,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
   size = 'md',
   permissions: passedPermissions
 }) => {
+  const { t } = useTranslation('common');
   // Always call useTags to avoid conditional hooks
   const tagContext = useTags();
   const [tags, setTags] = useState<ITag[]>(initialTags);
@@ -186,13 +188,13 @@ export const TagManager: React.FC<TagManagerProps> = ({
     );
 
     if (isDuplicate) {
-      toast.error(`Tag "${tagText}" already exists on this item`);
+      toast.error(t('tags.messages.error.duplicate', { tag: tagText }));
       return;
     }
 
     if (!entityId) {
       console.error('Entity ID is missing, cannot add tag');
-      toast.error('Cannot add tag: entity ID is missing');
+      toast.error(t('tags.messages.error.missingEntityId'));
       return;
     }
 
@@ -215,7 +217,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
 
       // Skip TagContext updates to prevent circular updates
       // Global syncing is handled by the parent component through onTagsChange
-      toast.success(`Tag "${tagText}" added successfully`);
+      toast.success(t('tags.messages.success.added', { tag: tagText }));
     } catch (error) {
       console.error('Failed to add tag:', error);
       handleError(error);
@@ -395,11 +397,11 @@ export const TagManager: React.FC<TagManagerProps> = ({
         }}
         onConfirm={handleConfirmRemoveAndDeleteDefinition}
         onCancel={handleRemoveAndKeepDefinition}
-        title="Last Tag Usage"
-        message={`This is the last use of tag "${pendingRemoveTagText}". Delete the tag definition, or keep it for future use?`}
-        confirmLabel="Remove & Delete Definition"
-        thirdButtonLabel="Remove & Keep Definition"
-        cancelLabel="Cancel"
+        title={t('tags.dialogs.lastUsage.title')}
+        message={t('tags.dialogs.lastUsage.message', { tag: pendingRemoveTagText })}
+        confirmLabel={t('tags.dialogs.lastUsage.confirm')}
+        thirdButtonLabel={t('tags.dialogs.lastUsage.keep')}
+        cancelLabel={t('actions.cancel')}
       />
     </>
   );
