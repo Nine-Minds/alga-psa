@@ -2970,6 +2970,7 @@
       "ratePerHour": "Works out to {{rate}} per hour of the block.",
       "issueMode": "Issue blocks",
       "issueModeCadence": "Every billing period",
+      "blockFeeInAdvance": "The line bills in arrears; the block fee bills in advance.",
       "issueModeConsumption": "When the current block runs out or expires",
       "rolloverPeriods": "Unused hours",
       "rolloverNone": "Expire at the end of the period",

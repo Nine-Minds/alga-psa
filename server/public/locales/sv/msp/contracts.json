@@ -2970,6 +2970,7 @@
       "ratePerHour": "Motsvarar {{rate}} per timme i blocket.",
       "issueMode": "Utfärda block",
       "issueModeCadence": "Varje faktureringsperiod",
+      "blockFeeInAdvance": "Raden faktureras i efterskott; blockavgiften faktureras i förskott.",
       "issueModeConsumption": "När det aktuella blocket är slut eller har gått ut",
       "rolloverPeriods": "Oanvända timmar",
       "rolloverNone": "Förfaller i slutet av perioden",

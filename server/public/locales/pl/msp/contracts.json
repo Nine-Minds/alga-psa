@@ -2980,6 +2980,7 @@
       "ratePerHour": "Daje to {{rate}} za godzinę bloku.",
       "issueMode": "Wystawiaj bloki",
       "issueModeCadence": "W każdym okresie rozliczeniowym",
+      "blockFeeInAdvance": "Pozycja jest rozliczana z dołu; opłata za blok jest rozliczana z góry.",
       "issueModeConsumption": "Gdy bieżący blok się wyczerpie lub wygaśnie",
       "rolloverPeriods": "Niewykorzystane godziny",
       "rolloverNone": "Wygasają na koniec okresu",

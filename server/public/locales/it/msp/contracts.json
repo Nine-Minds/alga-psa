@@ -2970,6 +2970,7 @@
       "ratePerHour": "Equivale a {{rate}} per ora del blocco.",
       "issueMode": "Emetti blocchi",
       "issueModeCadence": "Ogni periodo di fatturazione",
+      "blockFeeInAdvance": "La riga è fatturata in posticipo; il costo del blocco è fatturato in anticipo.",
       "issueModeConsumption": "Quando il blocco corrente si esaurisce o scade",
       "rolloverPeriods": "Ore non utilizzate",
       "rolloverNone": "Scadono alla fine del periodo",

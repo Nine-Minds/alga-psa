@@ -2970,6 +2970,7 @@
       "ratePerHour": "Equivale a {{rate}} por hora del bloque.",
       "issueMode": "Emitir bloques",
       "issueModeCadence": "Cada periodo de facturación",
+      "blockFeeInAdvance": "La línea se factura a mes vencido; la tarifa del bloque se factura por adelantado.",
       "issueModeConsumption": "Cuando el bloque actual se agota o caduca",
       "rolloverPeriods": "Horas sin usar",
       "rolloverNone": "Caducan al final del periodo",

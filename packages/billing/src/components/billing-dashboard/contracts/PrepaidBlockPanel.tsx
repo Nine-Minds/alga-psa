@@ -335,6 +335,11 @@ export const PrepaidBlockPanel: React.FC<PrepaidBlockPanelProps> = ({
           </div>
         </dl>
       )}
+      {config && isCadenceBlock(config) && !editing && (
+        <p id={`${idPrefix}-fee-in-advance-note`} className="text-xs text-muted-foreground">
+          {t('prepaidBlock.fields.blockFeeInAdvance', { defaultValue: 'The line bills in arrears; the block fee bills in advance.' })}
+        </p>
+      )}
 
       <div id={`${idPrefix}-balance`} className="space-y-1">
         <div className="flex items-center justify-between text-sm">
@@ -412,7 +417,7 @@ export const PrepaidBlockPanel: React.FC<PrepaidBlockPanelProps> = ({
             ? `${triggerLabel(summary.next_issuance.trigger_kind)} (${dateText(summary.next_issuance.due_date)})`
             : t('prepaidBlock.next.none', { defaultValue: 'None' })}
         </div>
-        {!isReadOnly && (
+        {!isReadOnly && !isCadenceBlock(config) && (
           <Button
             id={`${idPrefix}-issue-next`}
             type="button"

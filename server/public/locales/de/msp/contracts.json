@@ -2970,6 +2970,7 @@
       "ratePerHour": "Entspricht {{rate}} pro Stunde des Blocks.",
       "issueMode": "Blöcke ausstellen",
       "issueModeCadence": "Jeden Abrechnungszeitraum",
+      "blockFeeInAdvance": "Die Position wird nachträglich abgerechnet; die Blockgebühr wird im Voraus berechnet.",
       "issueModeConsumption": "Wenn der aktuelle Block aufgebraucht oder abgelaufen ist",
       "rolloverPeriods": "Ungenutzte Stunden",
       "rolloverNone": "Am Ende des Zeitraums verfallen",

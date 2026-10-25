@@ -2970,6 +2970,7 @@
       "ratePerHour": "Komt neer op {{rate}} per uur van het blok.",
       "issueMode": "Blokken uitgeven",
       "issueModeCadence": "Elke factuurperiode",
+      "blockFeeInAdvance": "De regel wordt achteraf gefactureerd; de blokvergoeding wordt vooraf gefactureerd.",
       "issueModeConsumption": "Wanneer het huidige blok op is of verloopt",
       "rolloverPeriods": "Ongebruikte uren",
       "rolloverNone": "Verlopen aan het einde van de periode",
