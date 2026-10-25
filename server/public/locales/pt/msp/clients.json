@@ -318,7 +318,7 @@
     "inboundDomainAutoCreateUpdateFailed": "Não foi possível atualizar a configuração de contatos do remetente.",
     "recurringTickets": "Tickets recorrentes",
     "software": "Software",
-    "checklistsTab": "Checklists",
+    "checklistsTab": "Listas de verificação",
     "checklists": {
       "name": "Nome",
       "items": "Itens",

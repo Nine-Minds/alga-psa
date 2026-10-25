@@ -318,10 +318,10 @@
     "inboundDomainAutoCreateUpdateFailed": "Instelling voor afzendercontacten kan niet worden bijgewerkt.",
     "recurringTickets": "Terugkerende tickets",
     "software": "Software",
-    "checklistsTab": "Checklists",
+    "checklistsTab": "Controlelijsten",
     "checklists": {
       "name": "Naam",
-      "items": "Items",
+      "items": "Punten",
       "status": "Status",
       "active": "Actief",
       "inactive": "Inactief",

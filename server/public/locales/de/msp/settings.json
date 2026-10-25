@@ -1099,12 +1099,12 @@
         }
       },
       "scope": {
-        "allClients": "Alle Clients",
-        "unknownClient": "Unbekannter Client"
+        "allClients": "Alle Kunden",
+        "unknownClient": "Unbekannter Kunde"
       },
       "filter": {
-        "client": "Client",
-        "allClients": "Alle Clients",
+        "client": "Kunde",
+        "allClients": "Alle Kunden",
         "clear": "Filter zurücksetzen"
       }
     },
