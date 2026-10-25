@@ -58,6 +58,12 @@ export interface ScenarioFixedConfig {
    */
   base_rate: number | null;
   /**
+   * What `base_rate` means: 'per_unit' (× quantity) or 'share' (the member's
+   * slice of the line fee, as-is). Absent on a non-null rate reads as per_unit.
+   * Interpreted by `fixedMemberRate` in shared/billingClients.
+   */
+  base_rate_basis?: "per_unit" | "share" | null;
+  /**
    * 'unit' bills quantity × unit rate (zero bills zero) through the shared
    * fixed-charge path; absent/'bundle' keeps allocation semantics.
    */
@@ -154,6 +160,28 @@ export interface ScenarioPool {
   members: Array<{ service_id: string; burn_multiplier: number }>;
 }
 
+/**
+ * Prepaid Block overlay on an Hourly scenario line (contract_line_prepaid_blocks).
+ * Present only on block lines; the line stays contract_line_type "Hourly".
+ */
+export interface ScenarioPrepaidBlockConfig {
+  /** Block size in minutes. */
+  block_minutes: number;
+  /** Cents, in the scenario currency. */
+  block_price: number;
+  /** Catalog service the block invoice line is sold as (tax, GL, export mapping). */
+  sold_as_service_id: string | null;
+  /** Null = never expires. */
+  expiry_months: number | null;
+  trigger_on_exhaustion: boolean;
+  /** 1-99, or null when no usage threshold is configured. */
+  trigger_threshold_percent: number | null;
+  trigger_on_expiry: boolean;
+  /** Carried for display; renewal issuance is not simulated. */
+  trigger_on_renewal: boolean;
+  replenishment_tier: "draft" | "auto_issue";
+}
+
 export interface ScenarioLine {
   /** Stable key inside the scenario: live contract_line_id or `scenario-<n>`. */
   key: string;
@@ -172,6 +200,8 @@ export interface ScenarioLine {
   overtime_threshold: number | null;
   /** Cents per hour. */
   overtime_rate: number | null;
+  /** Prepaid Block config when this Hourly line sells prepaid blocks. */
+  prepaid_block?: ScenarioPrepaidBlockConfig | null;
   services: ScenarioLineService[];
   /** Line-owned pools; see ScenarioPool. */
   pools?: ScenarioPool[];
@@ -360,6 +390,23 @@ export interface ContractDraftBucketPoolInput {
   }>;
 }
 
+/** A wizard Prepaid Block line: its own Hourly services plus the block config (minor units of the draft currency). */
+export interface ContractDraftPrepaidBlockLine {
+  name?: string;
+  services: Array<{ service_id: string; service_name?: string; hourly_rate?: number }>;
+  block: {
+    block_minutes: number;
+    block_price: number;
+    sold_as_service_id?: string | null;
+    expiry_months?: number | null;
+    trigger_on_exhaustion?: boolean;
+    trigger_threshold_percent?: number | null;
+    trigger_on_expiry?: boolean;
+    trigger_on_renewal?: boolean;
+    replenishment_tier?: "draft" | "auto_issue";
+  };
+}
+
 /** Minimal unsaved ContractWizard state accepted by the EE scenario hydrator. */
 export interface ContractDraftSimulationInput {
   client_id: string;
@@ -399,6 +446,8 @@ export interface ContractDraftSimulationInput {
   bucket_pools?: ContractDraftBucketPoolInput[];
   /** Contract-wide discounts authored in the wizard, priced by the simulator. */
   discounts?: ContractDraftDiscount[];
+  /** Prepaid Block lines (validated wizard drafts); each simulates its block issue like a saved block line. */
+  prepaid_block_lines?: ContractDraftPrepaidBlockLine[];
 }
 
 /* ----------------------------- results ----------------------------- */

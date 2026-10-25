@@ -121,6 +121,7 @@ async function seedCustomerShapedTemplate(
     tenant: context.tenantId,
     template_id: templateId,
     template_name: `Managed Care ${templateId}`,
+    currency_code: 'USD',
     default_billing_frequency: "monthly",
     template_status: "published",
     created_at: now,

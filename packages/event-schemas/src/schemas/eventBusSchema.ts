@@ -55,6 +55,7 @@ import {
   paymentRecordedEventPayloadSchema,
   paymentRefundedEventPayloadSchema,
   prepaidBalanceAlertScanRequestedEventPayloadSchema,
+  prepaidBlockUsageChangedEventPayloadSchema,
   recurringBillingRunCompletedEventPayloadSchema,
   recurringBillingRunFailedEventPayloadSchema,
   recurringBillingRunStartedEventPayloadSchema,
@@ -64,6 +65,10 @@ import {
   clientArchivedEventPayloadSchema,
   clientCreatedEventPayloadSchema,
   clientDeletedEventPayloadSchema,
+  clientLocationCreatedEventPayloadSchema,
+  clientLocationUpdatedEventPayloadSchema,
+  clientLocationDeactivatedEventPayloadSchema,
+  clientLocationDeletedEventPayloadSchema,
   clientMergedEventPayloadSchema,
   clientOwnerAssignedEventPayloadSchema,
   clientStatusChangedEventPayloadSchema,
@@ -342,6 +347,7 @@ export const EVENT_TYPES = [
   'CREDIT_NOTE_VOIDED',
   'CREDIT_EXPIRING',
   'PREPAID_BALANCE_ALERT_SCAN_REQUESTED',
+  'PREPAID_BLOCK_USAGE_CHANGED',
   'HOUR_BLOCK_EXPIRING',
   'CONTRACT_CREATED',
   'CONTRACT_UPDATED',
@@ -364,6 +370,10 @@ export const EVENT_TYPES = [
   'CLIENT_MERGED',
   'CLIENT_ARCHIVED',
   'CLIENT_DELETED',
+  'CLIENT_LOCATION_CREATED',
+  'CLIENT_LOCATION_UPDATED',
+  'CLIENT_LOCATION_DEACTIVATED',
+  'CLIENT_LOCATION_DELETED',
   'CONTACT_CREATED',
   'CONTACT_UPDATED',
   'CONTACT_PRIMARY_SET',
@@ -887,7 +897,7 @@ export const ClientEventPayloadSchema = BasePayloadSchema.extend({
 
 export const UserEventPayloadSchema = BasePayloadSchema.extend({
   userId: z.string().uuid(),
-  userType: z.enum(['internal', 'client']).optional(),
+  userType: z.enum(['internal', 'client', 'service']).optional(),
   email: z.string().email().optional(),
   changedFields: z.array(z.string()).optional(),
   roleIds: z.array(z.string().uuid()).optional(),
@@ -1374,6 +1384,7 @@ export const EventPayloadSchemas = {
   CREDIT_NOTE_VOIDED: creditNoteVoidedEventPayloadSchema,
   CREDIT_EXPIRING: creditExpiringEventPayloadSchema,
   PREPAID_BALANCE_ALERT_SCAN_REQUESTED: prepaidBalanceAlertScanRequestedEventPayloadSchema,
+  PREPAID_BLOCK_USAGE_CHANGED: prepaidBlockUsageChangedEventPayloadSchema,
   HOUR_BLOCK_EXPIRING: hourBlockExpiringEventPayloadSchema,
   CONTRACT_CREATED: ContractCreatedPayloadSchema,
   CONTRACT_UPDATED: ContractUpdatedPayloadSchema,
@@ -1396,6 +1407,10 @@ export const EventPayloadSchemas = {
   CLIENT_MERGED: clientMergedEventPayloadSchema,
   CLIENT_ARCHIVED: clientArchivedEventPayloadSchema,
   CLIENT_DELETED: clientDeletedEventPayloadSchema,
+  CLIENT_LOCATION_CREATED: clientLocationCreatedEventPayloadSchema,
+  CLIENT_LOCATION_UPDATED: clientLocationUpdatedEventPayloadSchema,
+  CLIENT_LOCATION_DEACTIVATED: clientLocationDeactivatedEventPayloadSchema,
+  CLIENT_LOCATION_DELETED: clientLocationDeletedEventPayloadSchema,
   CONTACT_CREATED: contactCreatedEventPayloadSchema,
   CONTACT_UPDATED: contactUpdatedEventPayloadSchema,
   CONTACT_PRIMARY_SET: contactPrimarySetEventPayloadSchema,
@@ -1630,6 +1645,7 @@ export type InvoiceGeneratedEvent = z.infer<typeof EventSchemas.INVOICE_GENERATE
 export type InvoiceFinalizedEvent = z.infer<typeof EventSchemas.INVOICE_FINALIZED>;
 export type CreditExpiringEvent = z.infer<typeof EventSchemas.CREDIT_EXPIRING>;
 export type PrepaidBalanceAlertScanRequestedEvent = z.infer<typeof EventSchemas.PREPAID_BALANCE_ALERT_SCAN_REQUESTED>;
+export type PrepaidBlockUsageChangedEvent = z.infer<typeof EventSchemas.PREPAID_BLOCK_USAGE_CHANGED>;
 export type HourBlockExpiringEvent = z.infer<typeof EventSchemas.HOUR_BLOCK_EXPIRING>;
 export type CustomEvent = z.infer<typeof EventSchemas.CUSTOM_EVENT>;
 export type InboundEmailReceivedEvent = z.infer<typeof EventSchemas.INBOUND_EMAIL_RECEIVED>;
@@ -1715,7 +1731,9 @@ export function convertToWorkflowEvent(event: Event, hooks?: WorkflowPublishHook
   // matching workflow at payload validation. Default it at the stream boundary
   // so no publisher can silently opt out of workflow triggers (alga-2026-0002379).
   // LEVERAGE: friction workflow-payload-occurred-at — publishers should build payloads with
-  // buildWorkflowPayload; this default is the backstop for the raw publishEvent callers.
+  // buildWorkflowPayload; this default is the backstop for the raw publishEvent callers. The workflow
+  // worker repeats the default from the envelope timestamp at its consumer boundary
+  // (WorkflowRuntimeV2EventStreamWorker.normalizeSourcePayload), so three layers now stamp one field.
   const rawPayload = event.payload as Record<string, unknown> | undefined;
   const payload =
     rawPayload && typeof rawPayload === 'object' && typeof rawPayload.occurredAt !== 'string'

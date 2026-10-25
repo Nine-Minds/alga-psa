@@ -2218,6 +2218,8 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{from}} → {{to}}",
+      "RMA {{id}}",
       "({{count}} ticket)",
       "({{count}} tickets)",
       ",",
@@ -2276,6 +2278,7 @@
       "Contract.pdf",
       "Contract:",
       "Contract: {{name}}",
+      "Contract: {{contract}}",
       "Control",
       "CPU",
       "Cron",
@@ -2285,6 +2288,7 @@
       "Dashboard | AlgaPSA",
       "date",
       "Datto",
+      "Datto RMM",
       "Deadline",
       "Debug",
       "December",
@@ -2447,6 +2451,7 @@
       "Shift",
       "short-text",
       "Simulator",
+      "Sites",
       "SKU",
       "SLA",
       "Slug",
@@ -2558,7 +2563,8 @@
       "Cc",
       "Bcc",
       "Cc/Bcc",
-      "Training"
+      "Training",
+      "Code 128"
     ],
     "caseInsensitive": [
       "account",

@@ -132,6 +132,8 @@ vi.mock('@alga-psa/auth/deviceFingerprint', () => ({
 }));
 vi.mock('@alga-psa/auth/geolocation', () => ({ getLocationFromIp: vi.fn() }));
 vi.mock('@alga-psa/db', () => ({ getConnection: vi.fn(), tenantDb: vi.fn() }));
+// The DB layer is mocked above; the user row is faked, so the interactive-user gate is stubbed (as in the other nextAuthOptions tests).
+vi.mock('../../../../packages/auth/src/lib/assertInteractiveUser', () => ({ assertInteractiveUser: vi.fn(async () => true) }));
 vi.mock('@alga-psa/auth/lib/PortalDomainModel', () => ({
   getPortalDomain: vi.fn(),
   getPortalDomainByHostname: vi.fn(),

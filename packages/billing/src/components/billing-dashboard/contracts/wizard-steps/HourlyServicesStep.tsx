@@ -15,6 +15,7 @@ import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnu
 import { listBucketBusinessHoursSchedules } from '@alga-psa/billing/actions/bucketPoolActions';
 import { BucketPoolDraftEditor } from './BucketPoolDraftEditor';
 import { resolveContractAuthoringRate } from '../../../../lib/contractAuthoringRate';
+import { PrepaidBlockLinesEditor } from '../PrepaidBlockLinesEditor';
 
 interface HourlyServicesStepProps {
   data: ContractWizardData;
@@ -356,7 +357,16 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
         />
       </div>
 
-      {data.hourly_services.length > 0 && (
+      <div className="rounded-lg border border-[rgb(var(--color-border-200))] p-4">
+        <PrepaidBlockLinesEditor
+          idPrefix="wizard-prepaid-block"
+          lines={data.prepaid_block_drafts ?? []}
+          onChange={(lines) => updateData({ prepaid_block_drafts: lines })}
+          currencyCode={data.currency_code || 'USD'}
+        />
+      </div>
+
+      {(data.hourly_services.length > 0 || (data.prepaid_block_drafts ?? []).length > 0) && (
         <BillingFrequencyOverrideSelect
           contractBillingFrequency={data.billing_frequency}
           value={data.hourly_billing_frequency}

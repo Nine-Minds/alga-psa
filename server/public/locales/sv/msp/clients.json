@@ -25,6 +25,7 @@
     },
     "states": {
       "active": "Aktiv",
+      "scheduled": "Schemalagt",
       "inactive": "Inaktiv",
       "loading": "Läser in…",
       "na": "Ej tillämpligt",
@@ -571,11 +572,6 @@
     "invoiceDeliveryMethod": "Leveranssätt för fakturor",
     "invoiceTemplate": "Fakturamall",
     "invoiceTemplateHelp": "Välj en mall eller använd standardmallen",
-    "paymentTerms": {
-      "dueOnReceipt": "Betalas vid mottagande",
-      "net15": "15 dagar netto",
-      "net30": "30 dagar netto"
-    },
     "preferredPaymentMethod": "Önskad betalningsmetod",
     "defaultCurrency": "Standardvaluta",
     "selectTaxRegion": "Välj skatteregion (valfritt)",
@@ -587,11 +583,6 @@
       "both": "Båda",
       "email": "E-post",
       "mail": "Post"
-    },
-    "paymentMethods": {
-      "bankTransfer": "Banköverföring",
-      "check": "Check",
-      "creditCard": "Kreditkort"
     },
     "paymentTermsLabel": "Betalningsvillkor",
     "standardTemplateLabel": "(standard)",
@@ -1781,7 +1772,8 @@
     },
     "cardExpiry": ", giltigt t.o.m. {{month}}/{{year}}",
     "legacyPaymentTerms": "”{{value}}” är inte ett känt betalningsvillkor och har aldrig tillämpats. Det rensas när du sparar.",
-    "cardOnFile": "{{type}} som slutar på {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} som slutar på {{last4}}{{expiry}}",
+    "tenantDefaultValue": "Hyresgästens standard: {{value}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Aviseringar om förbetalt saldo",

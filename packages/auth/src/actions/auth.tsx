@@ -5,7 +5,7 @@ import { getTenantIdBySlug } from "@alga-psa/db";
 import { verifyPassword } from '@alga-psa/core/encryption';
 import logger from "@alga-psa/core/logger";
 
-import { IUser } from '@alga-psa/types';
+import { IUser, isInteractiveUserType } from '@alga-psa/types';
 import { isValidTenantSlug } from '@alga-psa/validation';
 import { isEnterprise } from '@alga-psa/core/features';
 import { loadEnterpriseInactiveLoginWinbackHook } from '../lib/winback/enterpriseWinbackEntry';
@@ -154,17 +154,20 @@ export async function authenticateUser(
         tenantFromPortalDomain = Boolean(resolvedTenantId);
     }
 
+    // Only interactive types may authenticate with a password, and the caller must say
+    // which one: there is no untyped lookup, so a POST that omits userType is refused.
+    if (!isInteractiveUserType(userType)) {
+        logger.warn('[authenticateUser] Missing or non-interactive userType rejected', { email, userType });
+        return null;
+    }
+
     let user: IUser | undefined;
-    if (userType === 'client' || userType === 'internal') {
-        if (resolvedTenantId) {
-            user = await User.findUserByEmailTenantAndType(normalizedEmail, resolvedTenantId, userType);
-        } else if (userType === 'client') {
-            user = await resolveUnscopedClientUser(normalizedEmail, password);
-        } else {
-            user = await User.findUserByEmailAndType(normalizedEmail, userType);
-        }
+    if (resolvedTenantId) {
+        user = await User.findUserByEmailTenantAndType(normalizedEmail, resolvedTenantId, userType);
+    } else if (userType === 'client') {
+        user = await resolveUnscopedClientUser(normalizedEmail, password);
     } else {
-        user = await User.findUserByEmail(normalizedEmail);
+        user = await User.findUserByEmailAndType(normalizedEmail, userType);
     }
 
     if (!user || !user.user_id) {
@@ -183,6 +186,11 @@ export async function authenticateUser(
             actualTenant: user.tenant,
             tenantSlug: options.tenantSlug,
         });
+        return null;
+    }
+
+    if (!isInteractiveUserType(user.user_type)) {
+        logger.warn('[authenticateUser] Non-interactive user attempted to login', { email });
         return null;
     }
 
@@ -215,9 +223,9 @@ export async function authenticateUser(
 
 
 
-export async function have_two_factor_enabled( password: string, email: string): Promise<boolean> {
+export async function have_two_factor_enabled( password: string, email: string, userType: 'internal' | 'client'): Promise<boolean> {
     logger.system(`Checking if user has 2FA enabled for email ${email}`);
-    const user = await authenticateUser(email, password);
+    const user = await authenticateUser(email, password, userType);
     if (!user || !user.two_factor_enabled) { return false; }
     return true;
 }

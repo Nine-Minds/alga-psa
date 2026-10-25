@@ -115,16 +115,17 @@ export async function getUnattributedCredit(
 
 /**
  * Per-client available-credit sums, for joining into client lists, stats, and
- * reports: SELECT client_id, available_credit FROM (this) GROUP BY client_id.
+ * reports. Yields (tenant, client_id, available_credit) rows; callers must join
+ * on (tenant, client_id) so the join stays co-located on one Citus shard.
  */
 export function availableCreditByClientQuery(
     conn: Knex | Knex.Transaction,
     tenant: string
 ): Knex.QueryBuilder {
     return activeCreditRows(conn, tenant)
-        .select('credit_tracking.client_id')
+        .select('credit_tracking.tenant', 'credit_tracking.client_id')
         .sum({ available_credit: 'credit_tracking.remaining_amount' })
-        .groupBy('credit_tracking.client_id');
+        .groupBy('credit_tracking.tenant', 'credit_tracking.client_id');
 }
 
 /**

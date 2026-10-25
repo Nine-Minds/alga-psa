@@ -20,6 +20,7 @@
     "datePlaceholder": "Seleziona una data",
     "optionLabel": "Opzione {{index}}",
     "submit": "Invia richiesta",
+    "requiredField": "Questo campo è obbligatorio.",
     "initialValuesTitle": "Valori iniziali",
     "noInitialValues": "Nessun valore predefinito statico configurato."
   },

@@ -24,12 +24,41 @@ describe('ticket bundle status propagation copy contract', () => {
 
   it('states the propagation behaviour in the bundle help and master panel for every locale', () => {
     const english = readLocale('en');
-    const expectedEnglish =
-      'Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children';
+    const opening = 'Children keep their current status when bundled.';
+    const syncMeaning = [
+      /closing or reopening the master closes or reopens all children/,
+      /their workflow fields are locked/,
+    ];
+    const linkOnlyMeaning = /children manage their own status, assignee and priority/;
+    const englishCopy: Record<string, { value: string; syncLead: RegExp; offLead: RegExp }> = {
+      'bulk.bundleSyncUpdatesHelp': {
+        value: english.bulk.bundleSyncUpdatesHelp,
+        syncLead: /With sync updates on, closing or reopening/,
+        offLead: /With it off, children manage/,
+      },
+      'bulk.bundle.syncUpdatesHelp': {
+        value: english.bulk.bundle.syncUpdatesHelp,
+        syncLead: /With sync updates on, closing or reopening/,
+        offLead: /With it off, children manage/,
+      },
+      'details.bundle.childrenDescription': {
+        value: english.details.bundle.childrenDescription,
+        syncLead: /In Sync Updates mode, closing or reopening/,
+        offLead: /In Link Only mode, children manage/,
+      },
+    };
 
-    expect(english.bulk.bundleSyncUpdatesHelp).toContain(expectedEnglish);
-    expect(english.bulk.bundle.syncUpdatesHelp).toContain(expectedEnglish);
-    expect(english.details.bundle.childrenDescription).toContain(expectedEnglish);
+    for (const [key, { value, syncLead, offLead }] of Object.entries(englishCopy)) {
+      expect(typeof value, key).toBe('string');
+      expect(value, key).toContain(opening);
+      // Sync mode: master close/reopen cascades and child workflow fields are locked.
+      for (const re of syncMeaning) expect(value, key).toMatch(re);
+      expect(value, key).toMatch(syncLead);
+      // Link Only / sync off: children manage themselves, and that is scoped to the off mode.
+      expect(value, key).toMatch(linkOnlyMeaning);
+      expect(value, key).toMatch(offLead);
+      expect(value.search(syncLead), key).toBeLessThan(value.search(offLead));
+    }
 
     for (const locale of locales) {
       const json = readLocale(locale);
@@ -44,7 +73,11 @@ describe('ticket bundle status propagation copy contract', () => {
       if (locale !== 'en') {
         // Translations must not leave the English text in place.
         expect(json.bulk.bundleSyncUpdatesHelp).not.toBe(english.bulk.bundleSyncUpdatesHelp);
+        expect(json.bulk.bundle.syncUpdatesHelp).not.toBe(english.bulk.bundle.syncUpdatesHelp);
         expect(json.details.bundle.childrenDescription).not.toBe(english.details.bundle.childrenDescription);
+        // The panel copy names both modes (product terms stay untranslated).
+        expect(json.details.bundle.childrenDescription).toContain('Sync Updates');
+        expect(json.details.bundle.childrenDescription).toContain('Link Only');
       }
     }
   });

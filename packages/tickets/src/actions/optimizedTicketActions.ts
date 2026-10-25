@@ -1,5 +1,7 @@
 'use server';
 
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
@@ -68,9 +70,10 @@ import {
   hasCuratedChanges,
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
-import { applyMatchingChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
+import { applyMatchingChecklistTemplates, ticketDescriptionFromAttributes } from '@alga-psa/shared/lib/ticketChecklists';
 import { enforceTicketCloseRules, type CloseRuleBypassSource } from '../lib/validateTicketClosure';
 import { maybeReopenBundleMasterFromChildReply, mirrorCommentToChild } from './ticketBundleUtils';
+import { BUNDLE_CHILD_LOCKED_FIELDS, isChildWorkflowLocked } from '../lib/bundleWorkflowLock';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -112,7 +115,7 @@ import {
   TICKET_STATUS_FILTER_OPEN,
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
-import { resolveTicketListSortSpec, TICKET_LATEST_ACTIVITY_SQL } from './ticketListSortSql';
+import { resolveTicketListSortSpec, ticketLatestActivitySql } from './ticketListSortSql';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { resolveBoardStopwatchEnabled } from '../lib/boardLiveTicketTimer';
 import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
@@ -247,7 +250,7 @@ async function resolveClientVisibility(
   tenant: string,
   user: IUserWithRoles
 ): Promise<ContactVisibilityContext | null | undefined> {
-  if (user.user_type !== 'client') return undefined;
+  if (isMspPrincipalUserType(user.user_type)) return undefined;
   if (!user.contact_id) return null;
   try {
     return await getClientContactVisibilityContext(trx, tenant, user.contact_id);
@@ -1248,7 +1251,9 @@ async function buildTicketListBaseQuery(
       baseQuery = baseQuery.whereExists(
         tenantScopedTable(trx, 'statuses', tenant)
           .select('*')
-          .whereRaw('statuses.status_id = t.status_id')
+          // LEVERAGE: pattern tenant-correlated-exists — correlate on the distribution column so Citus can co-locate the subquery
+          .whereRaw('statuses.tenant = t.tenant')
+          .andWhereRaw('statuses.status_id = t.status_id')
           .andWhere('statuses.is_closed', false)
       );
     } else if (parsedStatusFilter.kind === 'name') {
@@ -1314,7 +1319,10 @@ async function buildTicketListBaseQuery(
             .orWhereExists(
               tenantScopedTable(trx, 'tickets as tc', tenant)
                 .select('*')
+                .whereRaw('tc.tenant = t.tenant')
                 .whereRaw('tc.master_ticket_id = t.ticket_id')
+                // LEVERAGE: pattern tenant-correlated-exists — correlate on the distribution column so Citus can co-locate the subquery
+                .andWhereRaw('tc.tenant = t.tenant')
                 .andWhere('tc.client_id', validatedFilters.clientId)
             );
         });
@@ -1330,7 +1338,10 @@ async function buildTicketListBaseQuery(
             .orWhereExists(
               tenantScopedTable(trx, 'tickets as tc', tenant)
                 .select('*')
+                .whereRaw('tc.tenant = t.tenant')
                 .whereRaw('tc.master_ticket_id = t.ticket_id')
+                // LEVERAGE: pattern tenant-correlated-exists — correlate on the distribution column so Citus can co-locate the subquery
+                .andWhereRaw('tc.tenant = t.tenant')
                 .andWhere('tc.contact_name_id', validatedFilters.contactId)
             );
         });
@@ -1609,7 +1620,7 @@ function applyTicketListIndexedSearchFilter(
   const prefixTsquery = buildTicketListSearchPrefixTsquery(rawSearch);
   const identifier = rawSearch.match(TICKET_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
   const includeBundledChildren = validatedFilters.bundleView === 'bundled';
-  const isInternalUser = user.user_type !== 'client';
+  const isInternalUser = isMspPrincipalUserType(user.user_type);
   const clientScopePredicate = isInternalUser
     ? 'TRUE'
     : user.clientId
@@ -1788,6 +1799,7 @@ function applyTicketListIndexedSearchFilter(
  */
 function applyTicketListSort(
   query: Knex.QueryBuilder,
+  tenant: string,
   validatedFilters: ITicketListFilters
 ): Knex.QueryBuilder {
     const sortDirection: 'asc' | 'desc' = validatedFilters.sortDirection ?? 'desc';
@@ -1795,7 +1807,10 @@ function applyTicketListSort(
 
     return query
       .modify(queryBuilder => {
-        if (selectedSort.rawExpression) {
+        if (selectedSort.activity) {
+          const activity = ticketLatestActivitySql(tenant);
+          queryBuilder.orderByRaw(`${activity.sql} ${sortDirection}`, activity.bindings);
+        } else if (selectedSort.rawExpression) {
           queryBuilder.orderByRaw(`${selectedSort.rawExpression} ${sortDirection}`);
         } else if (selectedSort.column) {
           queryBuilder.orderBy(selectedSort.column, sortDirection);
@@ -1810,12 +1825,20 @@ function applyTicketListSort(
  * Get the ORDER BY clause as a raw SQL string for use in window functions.
  * Mirrors applyTicketListSort but returns a string instead of modifying a query.
  */
-function getTicketListSortOrderByClause(validatedFilters: ITicketListFilters): string {
+function getTicketListSortOrderByClause(
+  tenant: string,
+  validatedFilters: ITicketListFilters
+): { sql: string; bindings: Knex.RawBinding[] } {
     const sortDirection: 'asc' | 'desc' = validatedFilters.sortDirection ?? 'desc';
     const selectedSort = resolveTicketListSortSpec(validatedFilters.sortBy);
 
     let primarySort: string;
-    if (selectedSort.rawExpression) {
+    let bindings: Knex.RawBinding[] = [];
+    if (selectedSort.activity) {
+      const activity = ticketLatestActivitySql(tenant);
+      primarySort = `${activity.sql} ${sortDirection}`;
+      bindings = activity.bindings;
+    } else if (selectedSort.rawExpression) {
       primarySort = `${selectedSort.rawExpression} ${sortDirection}`;
     } else if (selectedSort.column) {
       primarySort = `${selectedSort.column} ${sortDirection}`;
@@ -1823,7 +1846,7 @@ function getTicketListSortOrderByClause(validatedFilters: ITicketListFilters): s
       primarySort = `t.entered_at ${sortDirection}`;
     }
 
-    return `${primarySort}, t.ticket_id DESC`;
+    return { sql: `${primarySort}, t.ticket_id DESC`, bindings };
 }
 
 /**
@@ -1851,6 +1874,7 @@ function buildTicketListItemsQuery(
   baseQuery: Knex.QueryBuilder
 ): Knex.QueryBuilder {
   const db = tenantDb(trx, tenant);
+  const latestActivity = ticketLatestActivitySql(tenant);
   const bundleStats = db.table('tickets as tc')
     .select(
       'tc.master_ticket_id',
@@ -1937,7 +1961,7 @@ function buildTicketListItemsQuery(
       trx.raw("COALESCE(ags.additional_agents, '[]'::json) as additional_agents"),
       // Same expression the latest_activity_at sort orders by, so the column
       // renders exactly the value the ordering used.
-      trx.raw(`${TICKET_LATEST_ACTIVITY_SQL} as latest_activity_at`),
+      trx.raw(`${latestActivity.sql} as latest_activity_at`, latestActivity.bindings),
     );
 }
 
@@ -2045,7 +2069,7 @@ async function attachLatestActivityActors(
     return;
   }
 
-  // Same visibility filter as TICKET_LATEST_ACTIVITY_SQL.
+  // Same visibility filter as ticketLatestActivitySql.
   const commentRows: Array<{
     ticket_id: string;
     created_at: Date | string;
@@ -2279,6 +2303,7 @@ export const getTicketsForList = withAuth(async (
 
       const pageQuery = applyTicketListSort(
         buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder),
+        tenant,
         validatedFilters
       )
         .limit(normalizedPageSize)
@@ -2292,6 +2317,7 @@ export const getTicketsForList = withAuth(async (
       // Fall back to the exact JS kernel path instead of risking overexposure.
       const tickets = await applyTicketListSort(
         buildTicketListItemsQuery(trx, tenant, baseQuery),
+        tenant,
         validatedFilters
       );
       const authorizedTickets = await filterAuthorizedTickets(trx, authorizationContext, tickets);
@@ -2726,13 +2752,18 @@ export async function updateTicketInTransaction(
       throw new Error('Ticket not found');
     }
 
-    // Bundled child tickets lock workflow fields by default
-    const isBundledChild = Boolean(currentTicket.master_ticket_id);
-    const lockedFields = new Set(['status_id', 'assigned_to', 'priority_id']);
-    if (isBundledChild) {
-      const attempted = Object.keys(validatedData).filter((k) => lockedFields.has(k));
-      if (attempted.length > 0) {
-        throw new Error(`This ticket is bundled; workflow fields are locked (${attempted.join(', ')}). Update the master ticket instead.`);
+    // A bundled child's workflow fields are locked only while its master is in
+    // sync_updates mode; link_only children manage their own.
+    if (currentTicket.master_ticket_id) {
+      const masterSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+        .where({ master_ticket_id: currentTicket.master_ticket_id })
+        .first();
+      if (isChildWorkflowLocked({ isBundledChild: true, masterSettings })) {
+        const lockedFields = new Set<string>(BUNDLE_CHILD_LOCKED_FIELDS);
+        const attempted = Object.keys(validatedData).filter((k) => lockedFields.has(k));
+        if (attempted.length > 0) {
+          throw new Error(`This ticket is bundled; workflow fields are locked (${attempted.join(', ')}). Update the master ticket instead.`);
+        }
       }
     }
 
@@ -2902,6 +2933,11 @@ export async function updateTicketInTransaction(
       ) {
         throw new BundlePropagationConfirmationRequiredError(propagationPreview);
       }
+    }
+
+    // Human-work guard: only when this write changes assigned_to (legacy references untouched).
+    if (isChangingAssignment && updateData.assigned_to) {
+      await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to]);
     }
 
     let updatedTicket;
@@ -3108,6 +3144,10 @@ export async function updateTicketInTransaction(
           category_id: updatedTicket.category_id,
           subcategory_id: updatedTicket.subcategory_id,
           priority_id: updatedTicket.priority_id,
+          client_id: updatedTicket.client_id,
+          ticket_origin: updatedTicket.ticket_origin,
+          title: updatedTicket.title,
+          description: ticketDescriptionFromAttributes(updatedTicket.attributes),
         }, isSystemActor
           ? undefined
           : {
@@ -3446,8 +3486,11 @@ export async function addTicketCommentInTransaction(
     throw new Error('suppressInternalNotifications requires suppressContactNotifications');
   }
 
+  // comments.author_type is internal|client|unknown: a service user is MSP-side so it is stored
+  // as 'internal' (kind is recovered from users.user_type); Comment.insert enforces the
+  // internal-only visibility rule for non-interactive authors.
   const authorType: 'internal' | 'client' | 'unknown' =
-    user.user_type === 'client' ? 'client' : 'internal';
+    isClientUserType(user.user_type) ? 'client' : 'internal';
 
   if (isInternal && authorType !== 'internal') {
     throw new Error('Only MSP users can create internal comments');
@@ -4097,7 +4140,7 @@ export const getAdjacentTicketIds = withAuth(async (
     const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
 
     if (authSqlResult.supported) {
-      const sortOrderBy = getTicketListSortOrderByClause(validatedFilters);
+      const sortOrderBy = getTicketListSortOrderByClause(tenant, validatedFilters);
       const innerQuery = scopedBaseQuery.builder
         .clone()
         .clearSelect()
@@ -4105,11 +4148,11 @@ export const getAdjacentTicketIds = withAuth(async (
         .select(
           't.ticket_id',
           't.ticket_number',
-          trx.raw(`LAG(t.ticket_id) OVER (ORDER BY ${sortOrderBy}) as prev_ticket_id`),
-          trx.raw(`LAG(t.ticket_number) OVER (ORDER BY ${sortOrderBy}) as prev_ticket_number`),
-          trx.raw(`LEAD(t.ticket_id) OVER (ORDER BY ${sortOrderBy}) as next_ticket_id`),
-          trx.raw(`LEAD(t.ticket_number) OVER (ORDER BY ${sortOrderBy}) as next_ticket_number`),
-          trx.raw(`ROW_NUMBER() OVER (ORDER BY ${sortOrderBy}) as rn`),
+          trx.raw(`LAG(t.ticket_id) OVER (ORDER BY ${sortOrderBy.sql}) as prev_ticket_id`, sortOrderBy.bindings),
+          trx.raw(`LAG(t.ticket_number) OVER (ORDER BY ${sortOrderBy.sql}) as prev_ticket_number`, sortOrderBy.bindings),
+          trx.raw(`LEAD(t.ticket_id) OVER (ORDER BY ${sortOrderBy.sql}) as next_ticket_id`, sortOrderBy.bindings),
+          trx.raw(`LEAD(t.ticket_number) OVER (ORDER BY ${sortOrderBy.sql}) as next_ticket_number`, sortOrderBy.bindings),
+          trx.raw(`ROW_NUMBER() OVER (ORDER BY ${sortOrderBy.sql}) as rn`, sortOrderBy.bindings),
           trx.raw('COUNT(*) OVER () as total_count')
         );
 
@@ -4149,6 +4192,7 @@ export const getAdjacentTicketIds = withAuth(async (
 
     const orderedRows = await applyTicketListSort(
       baseQuery.clone().clearSelect().select('t.ticket_id', 't.ticket_number', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id', 't.billing_profile_id', 't.attributes'),
+      tenant,
       validatedFilters
     );
     const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, orderedRows);

@@ -1,6 +1,9 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { resolveProductCode } from '@alga-psa/types';
 import { createDefaultTaxSettings } from '@alga-psa/shared/billingClients';
+import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
+import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
 
 export interface ProvisionEntraClientResult {
   client: {
@@ -62,6 +65,12 @@ export async function provisionEntraClientForMapping(
       || managedTenant.entra_tenant_id
       || 'Imported Entra Tenant'
     );
+    // Adopt the tenant's configured default currency rather than the column's
+    // own 'USD' default, exactly as createClient does.
+    const billingSettings = await db.table('default_billing_settings')
+      .select('default_currency_code')
+      .first();
+
     const now = new Date().toISOString();
     const [client] = await db.table('clients')
       .insert({
@@ -73,6 +82,7 @@ export async function provisionEntraClientForMapping(
           : {},
         entra_tenant_id: managedTenant.entra_tenant_id,
         entra_primary_domain: managedTenant.primary_domain || null,
+        default_currency_code: billingSettings?.default_currency_code || 'USD',
         created_at: now,
         updated_at: now,
       })
@@ -82,7 +92,23 @@ export async function provisionEntraClientForMapping(
       throw new Error(`Failed to provision a client for ${clientName}.`);
     }
 
-    await createDefaultTaxSettings(trx, params.tenantId, String(client.client_id));
+    // Every client must have exactly one default billing profile — it is the
+    // terminal step of charge attribution.
+    await ensureClientDefaultBillingProfile(trx, params.tenantId, String(client.client_id), {
+      clientName,
+    });
+
+    await ensureDefaultContractForClientIfBillingConfigured(trx, {
+      tenant: params.tenantId,
+      clientId: String(client.client_id),
+    });
+
+    // AlgaDesk has no billing tax setup and keeps its existing exemption.
+    const tenantRow = await db.table('tenants').first('product_code');
+    if (resolveProductCode(tenantRow?.product_code).productCode !== 'algadesk') {
+      await createDefaultTaxSettings(trx, params.tenantId, String(client.client_id));
+    }
+
     await db.table('entra_client_tenant_mappings')
       .where({ mapping_id: activeMapping.mapping_id })
       .update({

@@ -80,6 +80,11 @@ export interface ScenarioChargeSourceInput {
   lineCycle: string;
   diagnostics: SimulationDiagnostic[];
   run: ScenarioRunState;
+  /**
+   * Prepaid Block lines: share of this period's assumed hours that blocks
+   * absorb (0-1). Only the remainder bills at the hourly (overage) rate.
+   */
+  coveredByBlock?: number | null;
 }
 
 /** A pool as the scenario describes it, whichever way it was declared. */
@@ -399,6 +404,7 @@ export class ScenarioChargeSource implements ContractChargeSource {
           ? (service.configuration_quantity ?? service.quantity)
           : service.quantity,
         service_base_rate: config.base_rate,
+        base_rate_basis: service.configuration.base_rate_basis ?? null,
         pricing_basis: isUnit(service) ? ("unit" as const) : null,
       };
     });
@@ -431,6 +437,7 @@ export class ScenarioChargeSource implements ContractChargeSource {
           configurationId: service.config_id,
           configurationQuantity: service.configuration_quantity,
           baseRate: service.service_base_rate,
+          baseRateBasis: service.base_rate_basis,
           pricingBasis: service.pricing_basis,
         })),
         // The scenario carries the full service list; there is no separate
@@ -459,12 +466,14 @@ export class ScenarioChargeSource implements ContractChargeSource {
     const timeEntries = [] as Array<ReturnType<typeof buildSyntheticTimeEntry>>;
 
     for (const service of hourlyServices) {
-      const assumedHours = resolveAssumedQuantity(
-        scenario.assumptions,
-        line.key,
-        service.service_id,
-        periodIndex,
-      );
+      const assumedHours =
+        resolveAssumedQuantity(
+          scenario.assumptions,
+          line.key,
+          service.service_id,
+          periodIndex,
+        ) *
+        (1 - Math.min(1, Math.max(0, this.input.coveredByBlock ?? 0)));
       if (!(assumedHours > 0)) continue;
 
       if (!hasResolvableHourlyRate(service)) {

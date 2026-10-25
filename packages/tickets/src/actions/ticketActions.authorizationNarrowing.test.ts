@@ -209,6 +209,7 @@ function buildTrx(params: {
       const builder: any = {
         select: vi.fn(() => builder),
         whereRaw: vi.fn(() => builder),
+        andWhereRaw: vi.fn(() => builder),
         andWhere: vi.fn(() => builder),
       };
       return builder;
@@ -228,6 +229,7 @@ function buildTrx(params: {
       const builder: any = {
         select: vi.fn(() => builder),
         whereRaw: vi.fn(() => builder),
+        andWhereRaw: vi.fn(() => builder),
         andWhere: vi.fn(() => builder),
       };
       return builder;

@@ -54,6 +54,7 @@
     "taxBreakdown": "Repartição de impostos",
     "manualInvoice": "Fatura manual",
     "credits": "Créditos",
+    "currency": "Moeda",
     "financialArtifactSummary": "Fatura apenas financeira. Os períodos de serviço recorrentes aparecem somente nas linhas de detalhe recorrentes.",
     "servicePeriod": "Período de serviço",
     "servicePeriods": "Períodos de serviço",
@@ -360,7 +361,8 @@
     "contractLineType": {
       "Fixed": "Fixo",
       "Hourly": "De hora em hora",
-      "Usage": "Baseado no uso"
+      "Usage": "Baseado no uso",
+      "PrepaidBlock": "Bloco pré-pago"
     },
     "quoteStatus": {
       "draft": "Rascunho",
@@ -442,7 +444,8 @@
     "hoursLeft": "{{hours}}h restantes",
     "expires": "Expira em {{date}}",
     "recentBurn": "Uso recente",
-    "timeEntry": "Lançamento de horas"
+    "timeEntry": "Lançamento de horas",
+    "contractLabel": "Contrato: {{contract}}"
   },
   "bucketUsage": {
     "contractLine": "Linha de contrato de banco de horas",
@@ -450,5 +453,20 @@
     "hoursUsed": "{{hours}} horas utilizadas",
     "hoursTotal": "{{hours}} horas no total",
     "rolloverHours": "Inclui {{hours}} horas transferidas"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "Vencimento no recebimento",
+      "net14": "Líquido 14",
+      "net15": "Líquido 15",
+      "net30": "Líquido 30",
+      "net7": "Líquido 7"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Transferência Bancária",
+      "check": "Verificar",
+      "creditCard": "Cartão de crédito"
+    },
+    "tenantDefault": "Padrão do inquilino ({{value}})"
   }
 }

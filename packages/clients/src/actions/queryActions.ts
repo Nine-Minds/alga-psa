@@ -1,5 +1,6 @@
 'use server'
 
+import { queueContactCreated } from '../lib/contactEvents';
 import type { IClient, IClientWithLocation, IContact, IInteraction } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
@@ -608,6 +609,7 @@ export const createOrFindContactByEmail = withAuth(async (
         role: title,
         is_inactive: false,
       }, tenant, trx);
+      queueContactCreated(trx, tenant, newContact as any, { actorUserId: user?.user_id });
 
       const client = await tenantScopedTable(trx, 'clients', tenant)
         .select('client_name')

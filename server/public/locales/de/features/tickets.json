@@ -248,7 +248,8 @@
     "openMenu": "Menü öffnen",
     "moreActions": "Weitere Aktionen",
     "createTemplate": "Vorlage aus Ticket erstellen",
-    "createWorkflowFromTicket": "Workflow aus Ticket erstellen"
+    "createWorkflowFromTicket": "Workflow aus Ticket erstellen",
+    "printWorkTag": "Arbeitsetikett drucken"
   },
   "messages": {
     "noTickets": "Keine Tickets gefunden",
@@ -461,6 +462,14 @@
     "clientPortal": "Empfangen über Kundenportal",
     "inboundEmail": "Empfangen über E-Mail"
   },
+  "originalEmail": {
+    "text": "Text",
+    "original": "Original-E-Mail",
+    "emailShort": "E-Mail",
+    "loading": "Original-E-Mail wird geladen …",
+    "error": "Die Original-E-Mail konnte nicht geladen werden.",
+    "group": "Nachrichtenansicht"
+  },
   "documents": {
     "title": "Dokumente",
     "noDocuments": "Keine Dokumente angehängt",
@@ -659,7 +668,7 @@
     "bundleMasterLabel": "Hauptticket auswählen",
     "bundleMasterPlaceholder": "Hauptticket auswählen...",
     "bundleSyncUpdates": "Synchronisiere Aktualisierungen vom Hauptticket zu den Untertickets (öffentliche Antworten + Workflow-Änderungen)",
-    "bundleSyncUpdatesHelp": "Beim Bündeln behalten untergeordnete Tickets ihren aktuellen Status. Danach schließt oder öffnet das Schließen bzw. Wiederöffnen des Masters alle untergeordneten Tickets, und Status-, Bearbeiter- und Prioritätsänderungen am Master werden auf die untergeordneten Tickets angewendet. Workflow-Felder sind bei untergeordneten Tickets gesperrt. Interne Notizen verbleiben am Master.",
+    "bundleSyncUpdatesHelp": "Untergeordnete Tickets behalten beim Bündeln ihren aktuellen Status. Bei aktivierter Synchronisierung schließt oder öffnet das Schließen bzw. Wiederöffnen des Masters alle untergeordneten Tickets, Status-, Bearbeiter- und Prioritätsänderungen am Master werden auf sie angewendet, und ihre Workflow-Felder sind gesperrt. Ohne Synchronisierung verwalten untergeordnete Tickets Status, Bearbeiter und Priorität selbst. Interne Notizen verbleiben am Master.",
     "bundleSelectAtLeastTwo": "Wählen Sie mindestens zwei Tickets zum Bündeln aus.",
     "bundleSelectMaster": "Wählen Sie ein Hauptticket aus.",
     "bundleSuccess": "Tickets gebündelt",
@@ -732,8 +741,8 @@
       "masterTicket": "Hauptticket auswählen",
       "selectMasterTicket": "Hauptticket auswählen...",
       "syncUpdates": "Synchronisiere Aktualisierungen vom Hauptticket zu den Untertickets (öffentliche Antworten + Workflow-Änderungen)",
-      "syncUpdatesHelp": "Beim Bündeln behalten untergeordnete Tickets ihren aktuellen Status. Danach schließt oder öffnet das Schließen bzw. Wiederöffnen des Masters alle untergeordneten Tickets, und Status-, Bearbeiter- und Prioritätsänderungen am Master werden auf die untergeordneten Tickets angewendet. Workflow-Felder sind bei untergeordneten Tickets gesperrt. Interne Notizen verbleiben am Master.",
-      "childrenDescription": "Untergeordnete behalten ihren aktuellen Status; Workflow-Felder sind bei untergeordneten Tickets gesperrt. Eingehende Antworten auf untergeordnete Tickets werden unten als schreibgeschützt angezeigt.",
+      "syncUpdatesHelp": "Untergeordnete Tickets behalten beim Bündeln ihren aktuellen Status. Bei aktivierter Synchronisierung schließt oder öffnet das Schließen bzw. Wiederöffnen des Masters alle untergeordneten Tickets, Status-, Bearbeiter- und Prioritätsänderungen am Master werden auf sie angewendet, und ihre Workflow-Felder sind gesperrt. Ohne Synchronisierung verwalten untergeordnete Tickets Status, Bearbeiter und Priorität selbst. Interne Notizen verbleiben am Master.",
+      "childrenDescription": "Untergeordnete Tickets behalten ihren aktuellen Status. Workflow-Felder sind nur im Modus Sync Updates gesperrt. Eingehende Antworten auf untergeordnete Tickets werden unten schreibgeschützt angezeigt.",
       "checkingMasters": "Vorhandene Bündel werden geprüft...",
       "existingMasterSuffix": "(vorhandenes Hauptticket)",
       "existingMasterLocked": "Ein ausgewähltes Ticket ist bereits ein Hauptticket. Es wird als Hauptticket verwendet; die anderen werden als Untertickets hinzugefügt.",
@@ -784,7 +793,9 @@
       "more": "Mehr",
       "bundleNeedsOne": "Wählen Sie mindestens 1 Ticket zum Bündeln aus",
       "selectedCount_few": "{{count}} ausgewählt",
-      "selectedCount_many": "{{count}} ausgewählt"
+      "selectedCount_many": "{{count}} ausgewählt",
+      "printLabels": "Etiketten drucken",
+      "printLabelsLimit": "Sie können höchstens {{max}} Etiketten auf einmal drucken"
     },
     "assign": {
       "dialogTitle": "Ausgewählte Tickets zuweisen",
@@ -964,6 +975,7 @@
     "templateReplaceTitle": "Ihre Änderungen ersetzen?",
     "templateReplaceMessage": "Beim Anwenden einer Vorlage werden Titel, Beschreibung und andere eingegebene Felder ersetzt.",
     "templateReplaceConfirm": "Vorlage anwenden",
+    "templateTokenHint": "Der Titel übernimmt den gewählten Kunden, Kontakt und das Fälligkeitsdatum, bis Sie ihn bearbeiten.",
     "tagCreatePartialFailure_few": "{{count}} Tags konnten nicht erstellt werden",
     "tagCreatePartialFailure_many": "{{count}} Tags konnten nicht erstellt werden",
     "tagCreationFailed_few": "{{count}} Tags konnten nicht erstellt werden",
@@ -1396,7 +1408,15 @@
     "selectUnit": "Einheit zum Liefern auswählen...",
     "onHandByLocation": "Bestand nach Standort",
     "catalogUnitCost": "Katalogstückkosten",
-    "costNotConfigured": "Nicht konfiguriert"
+    "costNotConfigured": "Nicht konfiguriert",
+    "availableBadge": "Verfügbar: {{available}}",
+    "availableByLocation": "Freier Bestand nach Standort",
+    "freeOfOnHand": "{{free}} frei von {{onHand}}",
+    "stockHeld": "Nur {{free}} verfügbar. {{held}} vorrätige Stück sind für Kundenaufträge fest gesperrt und können hier nicht verwendet werden.",
+    "stockInsufficient": "Nur {{onHand}} auf Lager, {{requested}} angefordert.",
+    "reservedStockTitle": "Bestand ist für einen Kundenauftrag reserviert",
+    "reservedStockMessage": "Nur {{free}} dieses Produkts sind frei. {{reserved}} vorrätige Stück sind für Kundenaufträge reserviert, angefordert wurden {{requested}}. Wenn Sie sie trotzdem hinzufügen, entnehmen Sie Bestand, auf den ein Kundenauftrag zählt, und der Auftrag kann unterversorgt bleiben.",
+    "reservedStockConfirm": "Trotzdem hinzufügen"
   },
   "watchList": {
     "title": "Beobachtungsliste",
@@ -1666,7 +1686,10 @@
       "ruleCategoryBoardMismatch": "Die ausgewählte Kategorie gehört zu einem anderen Board als die Regel.",
       "ruleCategoryInvalid": "Die ausgewählte Kategorie ist keine Kategorie der obersten Ebene.",
       "ruleSubcategoryInvalid": "Die ausgewählte Unterkategorie gehört nicht zur ausgewählten Kategorie.",
-      "ruleSubcategoryRequiresCategory": "Wählen Sie eine Kategorie aus, bevor Sie eine Unterkategorie wählen."
+      "ruleSubcategoryRequiresCategory": "Wählen Sie eine Kategorie aus, bevor Sie eine Unterkategorie wählen.",
+      "ruleTooManyKeywords": "Verwenden Sie höchstens {{max}} Schlüsselwörter pro Regel.",
+      "ruleKeywordTooLong": "Jedes Schlüsselwort darf höchstens {{max}} Zeichen lang sein.",
+      "ruleOriginInvalid": "Eine der ausgewählten Ticketquellen ist ungültig."
     }
   },
   "ticketSection": {
@@ -1695,9 +1718,11 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Beim Bündeln behalten untergeordnete Tickets ihren aktuellen Status. Danach schließt oder öffnet das Schließen bzw. Wiederöffnen des Masters alle untergeordneten Tickets, und Status-, Bearbeiter- und Prioritätsänderungen am Master werden auf die untergeordneten Tickets angewendet. Workflow-Felder sind bei untergeordneten Tickets gesperrt. Interne Notizen verbleiben am Master.",
+      "childrenDescription": "Untergeordnete Tickets behalten beim Bündeln ihren aktuellen Status. Im Modus Sync Updates schließt oder öffnet das Schließen bzw. Wiederöffnen des Masters alle untergeordneten Tickets, Status-, Bearbeiter- und Prioritätsänderungen am Master werden auf sie angewendet, und ihre Workflow-Felder sind gesperrt. Im Modus Link Only verwalten untergeordnete Tickets Status, Bearbeiter und Priorität selbst. Interne Notizen verbleiben am Master.",
       "title": "Bündel",
       "masterBanner": "Dieses Ticket ist das Hauptticket eines Bündels ({{count}} Untertickets). Modus: {{mode}}.",
+      "childLockedNotice": "Workflow-Felder sind gesperrt; arbeiten Sie am Master-Ticket.",
+      "childLinkedNotice": "Es ist mit dem Master verknüpft und wird eigenständig verwaltet.",
       "multipleClients": "Mehrere Kunden",
       "mode": "Modus: {{mode}}",
       "unbundle": "Bündel auflösen",
@@ -1733,7 +1758,15 @@
       "applyResolutionHelpNoComment": "Schließt das Unterticket mit dem Status {{status}}. Das Haupt-Ticket hat keinen öffentlichen Lösungskommentar zum Veröffentlichen.",
       "reopenMasterLabel": "Hinzufügen und Haupt-Ticket wieder öffnen",
       "reopenMasterHelp": "Öffnet nur das Haupt-Ticket wieder. Bereits geschlossene Untertickets in diesem Bündel bleiben geschlossen; Benachrichtigungen zur Wiedereröffnung und SLA gelten für das Haupt-Ticket.",
-      "closedMasterGating": "Die Abschlussregeln des Boards lassen keine offenen Untertickets unter einem geschlossenen Haupt-Ticket zu. Daher ist es nicht möglich, das Haupt-Ticket geschlossen zu lassen."
+      "closedMasterGating": "Die Abschlussregeln des Boards lassen keine offenen Untertickets unter einem geschlossenen Haupt-Ticket zu. Daher ist es nicht möglich, das Haupt-Ticket geschlossen zu lassen.",
+      "modeSwitchDialogIntro": "Das Haupt-Ticket ist geschlossen. Wählen Sie, was mit den offenen Untertickets geschehen soll, wenn das Bündel auf Sync Updates umgestellt wird.",
+      "modeSwitchConfirm": "Auf Sync Updates umstellen",
+      "keepClosedSwitchLabel": "Umstellen und Haupt-Ticket geschlossen lassen",
+      "keepClosedSwitchHelp": "Offene Untertickets bleiben mit eigener SLA-Uhr offen. Das Bündel wird als inkonsistent angezeigt, bis sie gelöst sind.",
+      "applyResolutionSwitchLabel": "Umstellen und die Lösung des Haupt-Tickets auf offene Untertickets anwenden",
+      "applyResolutionSwitchHelp": "Schließt jedes offene Unterticket mit dem Status {{status}} und veröffentlicht die Lösung des Haupt-Tickets als öffentlichen Kommentar darin.",
+      "applyResolutionSwitchHelpNoComment": "Schließt jedes offene Unterticket mit dem Status {{status}}. Das Haupt-Ticket hat keinen öffentlichen Lösungskommentar zum Veröffentlichen.",
+      "reopenMasterSwitchLabel": "Umstellen und Haupt-Ticket wieder öffnen"
     },
     "autoClose": "Wird am {{date}} automatisch geschlossen, sofern keine neue Aktivität erfolgt.",
     "autoCloseWarned": "Der Kunde wurde benachrichtigt.",
@@ -2250,7 +2283,9 @@
       "details": "Details",
       "template": "Ticketvorlage",
       "schedule": "Zeitplan",
-      "behaviour": "Verhalten"
+      "behaviour": "Verhalten",
+      "overrides": "Überschreibungen für diesen Zeitplan",
+      "dispatch": "Disposition"
     },
     "fields": {
       "board": "Board",
@@ -2457,6 +2492,22 @@
       "monthlyOnDay": "{{every}} am {{day}}",
       "monthlyOnNthWeekday": "{{every}} am {{ordinal}} {{weekday}}",
       "yearly": "Jedes Jahr am {{day}}. {{month}}"
+    },
+    "template": {
+      "intro": "Das Aussehen des Tickets stammt aus einer gemeinsamen Ticketvorlage. Eine Änderung der Vorlage ändert jeden Zeitplan, der sie verwendet, ab dem nächsten Ticket.",
+      "select": "Ticketvorlage",
+      "placeholder": "Ticketvorlage auswählen",
+      "inactiveOption": "{{name}} (inaktiv)",
+      "summary": "{{checklist}} Checklistenpunkt(e), {{tags}} Tag(s)",
+      "inactiveNotice": "Diese Vorlage ist inaktiv: in der Vorlagenauswahl ausgeblendet; wird weiterhin von {{count}} Zeitplänen verwendet.",
+      "sharedNotice": "Wird von {{count}} Zeitplänen verwendet. Eine Änderung der Vorlage ändert alle.",
+      "edit": "Vorlage bearbeiten",
+      "new": "Neue Vorlage",
+      "sampleTitle": "Titel des ersten Tickets:",
+      "tokensHelp": "Vorlagentitel können {{tokens}} verwenden; sie werden pro Ticket ausgefüllt."
+    },
+    "overridesSection": {
+      "intro": "Lassen Sie eine Gruppe ausgeschaltet, um die Vorlage zu verwenden. Jeder Kunde kann diese erneut überschreiben."
     }
   },
   "stopwatch": {
@@ -2490,12 +2541,15 @@
         "title": "Tickettitel",
         "board": "Board",
         "checklist": "Checklistenpunkte",
-        "status": "Status"
-      }
+        "status": "Status",
+        "schedules": "Zeitpläne"
+      },
+      "deleteBlocked": "Wird von {{count}} wiederkehrenden Zeitplan/Zeitplänen verwendet. Weisen Sie ihnen zuerst eine andere Vorlage zu oder archivieren Sie sie."
     },
     "status": {
       "active": "Aktiv",
-      "inactive": "Inaktiv"
+      "inactive": "Inaktiv",
+      "scheduledOnly": "Nur geplant"
     },
     "actions": {
       "edit": "Bearbeiten",
@@ -2517,7 +2571,10 @@
       "notesHelp": "Nur für Ihr Team. Wird nicht in Tickets übernommen.",
       "title": "Tickettitel",
       "description": "Beschreibung",
-      "descriptionPlaceholder": "Beschreibung"
+      "descriptionPlaceholder": "Beschreibung",
+      "offerForManualUse": "In der Auswahl für neue Tickets anbieten",
+      "offerForManualUseHelp": "Ausschalten für Vorlagen, die nur wiederkehrende Zeitpläne verwenden.",
+      "titleTokens": "Im Titel können Sie {{tokens}} verwenden; sie werden pro Ticket ausgefüllt."
     },
     "checklist": {
       "empty": "Keine Checklistenpunkte.",
@@ -2545,14 +2602,24 @@
       "fromTicket": "Aus Ticket #{{number}} vorausgefüllt. Es wird erst gespeichert, wenn Sie auf Speichern klicken.",
       "inlineImages": "Die Beschreibung enthält Bilder, die zum Quellticket gehören. Sie werden möglicherweise nicht mehr angezeigt, wenn dieses Ticket gelöscht wird. Entfernen Sie sie oder laden Sie sie erneut hoch, wenn die Vorlage das Ticket überdauern soll.",
       "viewOnly": "Sie können diese Vorlage ansehen, aber nicht ändern.",
-      "referenceProblems": "Einige Felder dieser Vorlage verweisen auf nicht mehr vorhandene Elemente. Sie bleiben leer, wenn die Vorlage verwendet wird. Korrigieren Sie sie und speichern Sie:"
+      "referenceProblems": "Einige Felder dieser Vorlage verweisen auf nicht mehr vorhandene Elemente. Sie bleiben leer, wenn die Vorlage verwendet wird. Korrigieren Sie sie und speichern Sie:",
+      "inactiveWarning": "Inaktiv: in der Vorlagenauswahl ausgeblendet; wird weiterhin von {{count}} Zeitplänen verwendet.",
+      "sharedWarning": "Änderungen gelten für jeden wiederkehrenden Zeitplan, der diese Vorlage verwendet, ab dem nächsten erstellten Ticket.",
+      "boardChangeWarning": "Beim Ändern des Boards werden Priorität und Kategorie zurückgesetzt, und der Status von Zeitplänen mit dieser Vorlage kann ungültig werden. Diese Zeitpläne schlagen fehl, bis Sie sie bearbeiten. Betroffene Zeitpläne: {{schedules}}."
     },
     "errors": {
       "notFound": "Ticket-Vorlage nicht gefunden",
       "duplicateName": "Eine Vorlage mit dem Namen {{name}} existiert bereits",
       "invalidReferences": "Die Vorlage verweist auf ein Board, eine Kategorie oder eine Priorität, die nicht verfügbar ist",
       "notAvailable": "Ticket-Vorlagen sind nicht verfügbar",
-      "subcategoryNeedsCategory": "Eine Unterkategorie erfordert eine Kategorie"
+      "subcategoryNeedsCategory": "Eine Unterkategorie erfordert eine Kategorie",
+      "inUseBySchedules": "Wird von {{count}} wiederkehrenden Zeitplan/Zeitplänen verwendet: {{schedules}}. Weisen Sie ihnen zuerst eine andere Vorlage zu oder archivieren Sie sie."
+    },
+    "usage": {
+      "schedules": "Wird von {{count}} Zeitplänen verwendet",
+      "paused": "pausiert",
+      "tickets": "{{count}} Tickets aus dieser Vorlage erstellt",
+      "scheduleThis": "Diese Vorlage planen…"
     }
   },
   "enums": {

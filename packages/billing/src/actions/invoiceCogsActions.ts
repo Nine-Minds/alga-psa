@@ -64,6 +64,7 @@ export async function getInvoiceLineCogsForTenant(
       ),
       so_line_cogs AS (
         SELECT
+          il.tenant,
           il.item_id,
           so.so_id,
           so.so_number,
@@ -83,7 +84,7 @@ export async function getInvoiceLineCogsForTenant(
          AND sm.source_doc_id = so.so_id
          AND sm.service_id = sol.service_id
         WHERE il.so_line_id IS NOT NULL
-        GROUP BY il.item_id, so.so_id, so.so_number, sol.so_line_id
+        GROUP BY il.tenant, il.item_id, so.so_id, so.so_number, sol.so_line_id
       ),
       material_candidates AS (
         SELECT
@@ -139,6 +140,7 @@ export async function getInvoiceLineCogsForTenant(
       ),
       material_line_cogs AS (
         SELECT
+          il.tenant,
           il.item_id,
           SUM(sm.cogs_cost) AS cogs_total
         FROM invoice_lines il
@@ -156,7 +158,7 @@ export async function getInvoiceLineCogsForTenant(
          AND sm.source_doc_type = nm.source_doc_type
          AND sm.source_doc_id = nm.source_doc_id
         WHERE il.so_line_id IS NULL
-        GROUP BY il.item_id
+        GROUP BY il.tenant, il.item_id
       )
       SELECT
         il.item_id,
@@ -170,9 +172,11 @@ export async function getInvoiceLineCogsForTenant(
         COALESCE(il.net_amount, 0) AS line_amount
       FROM invoice_lines il
       LEFT JOIN so_line_cogs slc
-        ON slc.item_id = il.item_id
+        ON slc.tenant = il.tenant
+       AND slc.item_id = il.item_id
       LEFT JOIN material_line_cogs mlc
-        ON mlc.item_id = il.item_id
+        ON mlc.tenant = il.tenant
+       AND mlc.item_id = il.item_id
       ORDER BY il.created_at ASC, il.item_id ASC
     `,
     [tenant, invoiceId, tenant, invoiceId, tenant, invoiceId],

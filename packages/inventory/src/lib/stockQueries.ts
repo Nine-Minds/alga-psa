@@ -64,23 +64,27 @@ export async function queryStockLocations(
   }
 
   const levelAgg = trx('stock_levels')
-    .select('location_id')
+    .select('tenant', 'location_id')
     .countDistinct({ item_type_count: 'service_id' })
     .sum({ on_hand_qty: 'quantity_on_hand' })
     .where({ tenant })
     .andWhere('quantity_on_hand', '>', 0)
-    .groupBy('location_id')
+    .groupBy('tenant', 'location_id')
     .as('lvl');
   const unitAgg = trx('stock_units')
-    .select('location_id')
+    .select('tenant', 'location_id')
     .count({ unit_count: '*' })
     .where({ tenant })
     .whereIn('status', ['in_stock', 'allocated', 'in_transit'])
-    .groupBy('location_id')
+    .groupBy('tenant', 'location_id')
     .as('un');
   const query = trx('stock_locations as loc')
-    .leftJoin(levelAgg, 'lvl.location_id', 'loc.location_id')
-    .leftJoin(unitAgg, 'un.location_id', 'loc.location_id')
+    .leftJoin(levelAgg, function () {
+      this.on('lvl.location_id', '=', 'loc.location_id').andOn('lvl.tenant', '=', 'loc.tenant');
+    })
+    .leftJoin(unitAgg, function () {
+      this.on('un.location_id', '=', 'loc.location_id').andOn('un.tenant', '=', 'loc.tenant');
+    })
     .where('loc.tenant', tenant);
   if (!opts?.includeInactive) query.andWhere('loc.is_active', true);
   const rows = await query

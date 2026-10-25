@@ -17,7 +17,8 @@ import {
   Repeat,
   Wallet,
 } from 'lucide-react';
-import { CURRENCY_OPTIONS } from '@alga-psa/core';
+import { CURRENCY_OPTIONS, fromMinorUnits } from '@alga-psa/core';
+import { draftToInput, minutesToHoursText, prepaidLineSoldAsRate } from '../prepaidBlockConfigDraft';
 import { parse } from 'date-fns';
 import { getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
@@ -32,6 +33,8 @@ import {
   isUnitFixedService,
   unitFixedServiceAmountCents,
 } from '../../../../lib/fixedServiceBasis';
+import { resolveFixedLineRecurringTotal } from '../../../../lib/billing/compute/recurringMemberRate';
+import { getServiceCatalogRatesForCurrency } from '@alga-psa/billing/actions/serviceActions';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   useBillingFrequencyOptions,
@@ -202,15 +205,58 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
     return formatDateInLocale(local);
   };
 
+  // Products resumed from a saved draft carry no catalog price; look it up in
+  // the contract currency so the total prices them like the engine does.
+  const [resumedCatalogRates, setResumedCatalogRates] = useState<Record<string, number | null>>({});
+  const unpricedProductIds = data.product_services
+    .filter((product) => product.service_id && product.currency_rate === undefined)
+    .map((product) => product.service_id)
+    .join(',');
+  useEffect(() => {
+    if (!unpricedProductIds) return;
+    let cancelled = false;
+    getServiceCatalogRatesForCurrency(unpricedProductIds.split(','), currencyCode)
+      .then((rates) => {
+        if (!cancelled && rates && !isActionMessageError(rates) && !isActionPermissionError(rates)) {
+          setResumedCatalogRates(rates as Record<string, number | null>);
+        }
+      })
+      .catch((error) => console.error('Error loading product catalog prices:', error));
+    return () => {
+      cancelled = true;
+    };
+  }, [unpricedProductIds, currencyCode]);
+
   // Per line: unit members bill quantity × unit rate; the base rate is the
   // bundle total and counts only when an allocation member exists. Lines are
   // normalized to a monthly amount by their own billing frequency.
+  // Products are priced by the shared resolver (the invoice engine's rate
+  // chain: product override, then the contract-currency catalog price, then
+  // the legacy default rate) — never a parallel copy of the rule here.
   const calculateTotalMonthly = () =>
-    fixedLinesRecurringTotalCents(fixedLines, data.billing_frequency);
+    fixedLinesRecurringTotalCents(fixedLines, data.billing_frequency) +
+    (resolveFixedLineRecurringTotal(
+      {
+        custom_rate: null,
+        members: data.product_services
+          .filter((product) => product.service_id)
+          .map((product) => ({
+            item_kind: 'product',
+            quantity: product.quantity,
+            configuration_custom_rate: product.custom_rate,
+            price_rate: product.currency_rate ?? resumedCatalogRates[product.service_id] ?? null,
+            default_rate: product.default_rate,
+          })),
+      },
+      data.billing_frequency,
+    ) ?? 0);
 
   const hasFixedServices = fixedLines.length > 0;
   const hasProducts = data.product_services.length > 0;
   const hasHourlyServices = data.hourly_services.length > 0;
+  const prepaidBlockLines = (data.prepaid_block_drafts ?? []).filter((line) =>
+    line.services.some((service) => service.service_id),
+  );
   const hasUsageServices = !!(data.usage_services && data.usage_services.length > 0);
 
   const recurringCadenceOwnerLabel =
@@ -740,6 +786,67 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
         </Card>
       )}
 
+      {prepaidBlockLines.length > 0 && (
+        <Card className="p-4" id="wizard-review-prepaid-blocks">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-[rgb(var(--color-primary-500))]" />
+              <h4 className="font-semibold">
+                {t('wizardReview.sections.prepaidBlocks', { defaultValue: 'Prepaid Block Lines' })}
+              </h4>
+            </div>
+            <Badge variant="default" className="chip-primary">
+              {t('wizardReview.prepaid.badgeCount', {
+                count: prepaidBlockLines.length,
+                defaultValue: '{{count}} lines',
+              })}
+            </Badge>
+          </div>
+          <ul className="space-y-3 text-sm">
+            {prepaidBlockLines.map((line, idx) => {
+              const parsed = draftToInput(line.block, prepaidLineSoldAsRate(line));
+              const config = 'input' in parsed ? parsed.input : null;
+              return (
+                <li key={idx} id={`wizard-review-prepaid-block-${idx}`} className="space-y-1">
+                  <p className="font-medium">
+                    {line.name?.trim() ||
+                      t('wizardPrepaidBlock.lineNamePlaceholder', { defaultValue: 'Prepaid Block' })}
+                  </p>
+                  <ul className="list-disc list-inside ml-2">
+                    {line.services
+                      .filter((service) => service.service_id)
+                      .map((service) => (
+                        <li key={service.service_id}>
+                          {t('wizardReview.hourly.serviceRateRow', {
+                            serviceName: service.service_name || service.service_id,
+                            rate: formatCurrency(fromMinorUnits(service.hourly_rate ?? 0, undefined, currencyCode), currencyCode),
+                            defaultValue: '{{serviceName}} - {{rate}}/hour',
+                          })}
+                        </li>
+                      ))}
+                  </ul>
+                  {config ? (
+                    <p className="text-[rgb(var(--color-text-500))]">
+                      {t('wizardReview.prepaid.blockSummary', {
+                        hours: minutesToHoursText(config.block_minutes),
+                        price: formatCurrency(fromMinorUnits(config.block_price, undefined, currencyCode), currencyCode),
+                        defaultValue: '{{hours}} hours for {{price}}',
+                      })}
+                      {config.expiry_months
+                        ? ` - ${t('wizardReview.prepaid.expiresAfter', {
+                            count: config.expiry_months,
+                            defaultValue: 'expires after {{count}} months',
+                          })}`
+                        : ` - ${t('wizardReview.prepaid.neverExpires', { defaultValue: 'never expires' })}`}
+                    </p>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      )}
+
       {hasUsageServices && (
         <Card className="p-4">
           <div className="flex items-center justify-between mb-3">
@@ -817,7 +924,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             <p className="text-sm text-[rgb(var(--color-text-500))]">
               {t('wizardReview.total.description', {
                 defaultValue:
-                  'Fixed charges only. Hourly and usage services bill separately based on actual usage.',
+                  'Products and fixed charges are included in this total. Hourly and usage services are billed on actuals.',
               })}
             </p>
           </div>

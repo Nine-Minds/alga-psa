@@ -1,5 +1,6 @@
 'use server'
 
+import { assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import {
   ITimeEntry,
   ITimeSheetApproval,
@@ -268,6 +269,8 @@ export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheet
         }
 
         await assertCanApproveSubject(user, tenant, timeSheet.user_id, trx);
+        // Human-work guard: approval requires a human approver.
+        await assertHumanWorkOwner(trx, tenant, user.user_id, 'approved_by');
 
         // Get analytics data before approval
         const entriesInfo = await scopedDb.table('time_entries')
@@ -532,6 +535,8 @@ export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: s
       }
 
       await assertCanApproveSubject(user, tenant, timeSheet.user_id, trx);
+      // Human-work guard: approval requires a human approver.
+      await assertHumanWorkOwner(trx, tenant, approverId, 'approved_by');
 
       // Get analytics data
       const entriesInfo = await scopedDb.table('time_entries')
