@@ -475,7 +475,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                             >
                                 {/* Row 1: Name + Status + Remove */}
                                 <div className="flex items-center justify-between gap-2">
-                                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 sm:flex-nowrap">
+                                    <div className="flex min-w-0 flex-1 items-center gap-2">
                                 {association.asset ? (
                                     (() => {
                                         const asset = association.asset;
@@ -502,9 +502,6 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                         {association.asset && (
                                             <RmmStatusIndicator asset={association.asset} size="sm" />
                                         )}
-                                        <span className="shrink-0 max-sm:basis-full">
-                                            <CustodyBadge id={`associated-asset-custody-${association.asset_id}`} badge={custodyBadges.get(association.asset_id)} />
-                                        </span>
                                     </div>
                                     <div className="flex flex-shrink-0 items-center gap-2">
                                         {association.asset && (
@@ -538,6 +535,11 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                             <span aria-hidden="true">×</span>
                                         </Button>
                                     </div>
+                                </div>
+                                {/* Custody chip: always on its own line. The panel is ~281px wide on a wide desktop, so viewport
+                                    breakpoints cannot decide whether it fits beside the name. */}
+                                <div className="mt-1.5 min-w-0 empty:hidden" data-testid={`associated-asset-custody-row-${association.asset_id}`}>
+                                    <CustodyBadge id={`associated-asset-custody-${association.asset_id}`} badge={custodyBadges.get(association.asset_id)} />
                                 </div>
                                 {/* Row 2: Icon + Tag + Type + Relationship */}
                                 <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-500">

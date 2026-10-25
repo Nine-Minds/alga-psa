@@ -45,7 +45,7 @@
   },
   {
     "id": "T006",
-    "description": "AssociatedAssets row: name truncates with title; chip wrapper shrink-0 and wraps below sm",
+    "description": "AssociatedAssets row: name truncates with title; custody chip is in its own row, never inside the name's flex container; no sm:/max-sm: classes (viewport-independent)",
     "implemented": true,
     "featureIds": [
       "F006"
@@ -69,7 +69,7 @@
   },
   {
     "id": "T009",
-    "description": "DialogShell: string error in top sticky alert, focused; {message, fieldId} focuses field and sets/clears aria-invalid; thrown error shown",
+    "description": "DialogShell: string error in top sticky alert, focused; {message, fieldId} focuses field (preventScroll), sets/clears aria-invalid and scrolls it into view with scroll-margin-top = alert height + 16; thrown error shown",
     "implemented": true,
     "featureIds": [
       "F008"

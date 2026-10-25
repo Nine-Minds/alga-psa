@@ -41,7 +41,7 @@
   },
   {
     "id": "F006",
-    "description": "F3: panel row name is min-w-0 flex-1 truncate with full-name title; custody chip wrapper shrink-0 and wraps below the name under sm; chip gains a full-label title",
+    "description": "F3: panel row name is min-w-0 flex-1 truncate with full-name title; custody chip always renders on its own row below the name (no viewport breakpoints; the panel is ~281px wide on a 1725px desktop); chip gains a full-label title",
     "implemented": true,
     "prdRefs": [
       "Findings to fix"
@@ -57,7 +57,7 @@
   },
   {
     "id": "F008",
-    "description": "F5: DialogShell shows errors in a sticky top role=alert region that is scrolled into view and focused; onSubmit may return {message, fieldId} which focuses the field and sets aria-invalid",
+    "description": "F5: DialogShell shows errors in a sticky top role=alert region that is focused; a named field is focused with preventScroll and scrolled into view with scroll-margin-top = the alert's measured height + padding so the alert never covers it; onSubmit may return {message, fieldId} which focuses the field and sets aria-invalid",
     "implemented": true,
     "prdRefs": [
       "Findings to fix"

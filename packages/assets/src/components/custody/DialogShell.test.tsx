@@ -58,6 +58,25 @@ describe('DialogShell error contract', () => {
     expect(field.hasAttribute('aria-invalid')).toBe(false);
   });
 
+  it('scrolls the named field clear of the sticky alert using the alert height as scroll-margin', async () => {
+    const scroll = vi.fn();
+    (Element.prototype as any).scrollIntoView = scroll;
+    const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ height: 38 } as DOMRect);
+    try {
+      renderShell(async () => ({ message: 'Already held', fieldId: 'shell-field' }));
+      fireEvent.click(document.getElementById('shell-submit')!);
+      const field = document.getElementById('shell-field')!;
+      await waitFor(() => expect(document.activeElement).toBe(field));
+      expect(field.getAttribute('aria-invalid')).toBe('true');
+      expect(field.style.scrollMarginTop).toBe('54px');
+      expect(scroll).toHaveBeenCalledWith({ block: 'nearest' });
+      expect(scroll.mock.instances).toContain(field);
+    } finally {
+      rect.mockRestore();
+      delete (Element.prototype as any).scrollIntoView;
+    }
+  });
+
   it('falls back to the alert when the field id does not exist, and clears on the next submit', async () => {
     const onSubmit = vi.fn().mockResolvedValueOnce({ message: 'Nope', fieldId: 'missing' }).mockResolvedValueOnce(null);
     renderShell(onSubmit);

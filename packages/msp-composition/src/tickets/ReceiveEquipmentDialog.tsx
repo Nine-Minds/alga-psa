@@ -113,20 +113,17 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
       (assets ?? []).map((a) => {
         const base = a.asset_tag ? `${a.name} (${a.asset_tag})` : a.name;
         const badge = custodyBadges.get(a.asset_id);
-        if (!badge) return { value: a.asset_id, label: base };
+        if (!badge) return { value: a.asset_id, label: <span title={base}>{base}</span>, textValue: base };
         const where =
           badge.state === 'with_vendor'
             ? t('custody.badge.withVendor', { defaultValue: 'With vendor' })
             : badge.location_label ?? t('custody.badge.inOffice', { defaultValue: 'In office' });
-        return {
-          value: a.asset_id,
-          disabled: true,
-          label: t('custody.receiveEquipment.inCustodyOption', {
-            defaultValue: '{{asset}} — In custody: {{location}}',
-            asset: base,
-            location: where,
-          }),
-        };
+        const heldLabel = t('custody.receiveEquipment.inCustodyOption', {
+          defaultValue: '{{asset}} — In custody: {{location}}',
+          asset: base,
+          location: where,
+        });
+        return { value: a.asset_id, disabled: true, label: <span title={heldLabel}>{heldLabel}</span>, textValue: heldLabel };
       }),
     [assets, custodyBadges, t]
   );
@@ -253,6 +250,8 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
                 value={assetId}
                 onValueChange={setAssetId}
                 options={assetOptions}
+                // Long "In custody: …" labels: list no wider than the trigger, labels truncate (full text in title).
+                customStyles={{ content: 'max-w-[var(--radix-select-trigger-width)]', item: '[&>span]:min-w-0 [&>span]:truncate' }}
                 placeholder={t('custody.receiveEquipment.assetPlaceholder', { defaultValue: 'Select an asset' })}
               />
             </div>

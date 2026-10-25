@@ -84,19 +84,26 @@ export function DialogShell({
   // position. Announce it by moving focus: to the offending field when the caller named one, else to the alert.
   useEffect(() => {
     if (!error) return;
-    alertRef.current?.scrollIntoView?.({ block: 'nearest' });
+    const alert = alertRef.current;
     const field = error.fieldId ? document.getElementById(error.fieldId) : null;
     if (!field) {
-      alertRef.current?.focus();
+      alert?.scrollIntoView?.({ block: 'nearest' });
+      alert?.focus();
       return;
     }
     field.setAttribute('aria-invalid', 'true');
-    field.focus();
+    // The sticky alert would otherwise sit on top of the field. Focus without scrolling, then scroll the
+    // field into view with a scroll-margin equal to the alert's measured height (plus padding).
+    const previousMargin = field.style.scrollMarginTop;
+    field.style.scrollMarginTop = `${(alert?.getBoundingClientRect().height ?? 0) + 16}px`;
+    field.focus({ preventScroll: true });
+    field.scrollIntoView?.({ block: 'nearest' });
     const clear = () => field.removeAttribute('aria-invalid');
     field.addEventListener('input', clear);
     field.addEventListener('change', clear);
     return () => {
       clear();
+      field.style.scrollMarginTop = previousMargin;
       field.removeEventListener('input', clear);
       field.removeEventListener('change', clear);
     };

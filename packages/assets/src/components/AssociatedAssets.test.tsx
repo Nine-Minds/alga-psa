@@ -99,9 +99,15 @@ describe('AssociatedAssets shared cache', () => {
     expect(name.className).toContain('min-w-0');
     expect(name.className).toContain('flex-1');
     expect(name.getAttribute('title')).toBe('Dell WD19 Dock');
-    const chipWrapper = document.getElementById('associated-asset-custody-a2')!.parentElement!;
-    expect(chipWrapper.className).toContain('shrink-0');
-    expect(chipWrapper.className).toContain('max-sm:basis-full');
+    // Layout must not depend on viewport breakpoints (the panel is ~281px wide on a 1725px desktop):
+    // the chip lives in its own row, never inside the name's single-line flex container.
+    const chip = document.getElementById('associated-asset-custody-a2')!;
+    const nameRow = name.parentElement!;
+    expect(nameRow.contains(chip)).toBe(false);
+    expect(nameRow.className).not.toMatch(/(^|\s)(max-)?sm:/);
+    expect(chip.closest('[data-testid="associated-asset-custody-row-a2"]')).toBeTruthy();
+    expect(chip.closest('[class*="sm:"]')).toBeNull();
+    expect(nameRow.parentElement!.contains(chip)).toBe(false);
     badges.map = new Map();
   });
 });
