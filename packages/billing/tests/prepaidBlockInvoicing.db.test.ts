@@ -106,7 +106,7 @@ async function insertBlock(w: World, status: 'active' | 'pending' | 'expired', t
     tenant: w.tenant, block_id: blockId, client_id: w.clientId, service_id: w.serviceId,
     total_minutes: total, remaining_minutes: total, hourly_rate: 11000, purchase_amount: 110000,
     currency_code: 'EUR', status, purchased_at: status === 'pending' ? null : new Date().toISOString(),
-    source_type: 'contract', contract_line_id: w.lineId,
+    source_type: 'contract', contract_line_id: w.lineId, service_period_record_id: uuidv4(),
   });
   return blockId;
 }

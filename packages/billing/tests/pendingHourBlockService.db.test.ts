@@ -76,7 +76,7 @@ describe.runIf(enabled)('createPendingHourBlockForInvoiceCharge', () => {
       expect(await db('hour_block_audit').where({ tenant, block_id: adhoc.blockId })).toHaveLength(0);
 
       const contract = await db.transaction((trx) => createPendingHourBlockForInvoiceCharge(trx, {
-        ...base, sourceType: 'contract', contractLineId: lineId, clientContractId,
+        ...base, sourceType: 'contract', contractLineId: lineId, clientContractId, servicePeriodRecordId: uuidv4(),
         scopeServiceIds: [serviceId, scopeSvc],
       }));
       const c = await db('hour_blocks').where({ tenant, block_id: contract.blockId }).first();

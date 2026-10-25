@@ -448,7 +448,7 @@ describe.runIf(enabled)('hour block lock discipline (29.8.18 mitigation round 3)
         block_id: blockId, tenant, client_id: base.clientId, service_id: base.serviceId,
         total_minutes: 600, remaining_minutes: 600, hourly_rate: 10000, purchase_amount: 100000,
         currency_code: 'USD', status, purchased_at: status === 'pending' ? null : new Date().toISOString(),
-        source_type: 'contract', contract_line_id: lineId,
+        source_type: 'contract', contract_line_id: lineId, service_period_record_id: uuidv4(),
       });
       return blockId;
     };

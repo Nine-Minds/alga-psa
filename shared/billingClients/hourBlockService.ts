@@ -520,7 +520,8 @@ export async function isEntryEligibleForBlockBurn(
 
 /**
  * Selects the FIFO-ordered blocks eligible to burn for one entry: active, with
- * remaining minutes, not expired at the entry's date, and whose scope covers
+ * remaining minutes, inside the block's validity window at the entry's date
+ * (`valid_from <= date <= expiration_date`, either bound may be null), and whose scope covers
  * the entry's service. Scope semantics: a block with zero scope rows covers all
  * labor; a block with scope rows covers exactly those services. Implemented
  * with NOT EXISTS/EXISTS so a block scoped to [A,B] is NOT eligible for an
@@ -567,6 +568,11 @@ async function selectEligibleBlocks(
     .where('hb.remaining_minutes', '>', 0)
     .where(function (this: Knex.QueryBuilder) {
       this.whereNull('hb.expiration_date').orWhere('hb.expiration_date', '>=', workDate);
+    })
+    // Burn window lower bound (D5/R8): a cadence block never draws time worked
+    // before its service period starts. NULL valid_from = no bound (existing blocks).
+    .where(function (this: Knex.QueryBuilder) {
+      this.whereNull('hb.valid_from').orWhere('hb.valid_from', '<=', workDate);
     })
     .where(function (this: Knex.QueryBuilder) {
       this.whereNotExists(function (this: Knex.QueryBuilder) {
@@ -1146,6 +1152,9 @@ export async function getAvailableHourBlockMinutes(
     .where(function (this: Knex.QueryBuilder) {
       this.whereNull('hb.expiration_date').orWhere('hb.expiration_date', '>=', today);
     })
+    .where(function (this: Knex.QueryBuilder) {
+      this.whereNull('hb.valid_from').orWhere('hb.valid_from', '<=', today);
+    })
     .sum({ total: 'hb.remaining_minutes' })
     .first<{ total: string | number }>();
   return Number(row?.total ?? 0);
@@ -1179,6 +1188,9 @@ export async function getAvailableHourBlockMinutesForSubjects(
     .where('hb.remaining_minutes', '>', 0)
     .where(function (this: Knex.QueryBuilder) {
       this.whereNull('hb.expiration_date').orWhere('hb.expiration_date', '>=', today);
+    })
+    .where(function (this: Knex.QueryBuilder) {
+      this.whereNull('hb.valid_from').orWhere('hb.valid_from', '<=', today);
     })
     .select('hb.block_id', 'hb.remaining_minutes', 'hb.replenishment_bucket_usage_id')
     .orderBy('hb.block_id', 'asc');
