@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "candidateRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "testedRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "recordedAt": "2026-10-25T07:35:19.805Z",
+  "durationSeconds": 4.88,
+  "guide": "guides/06-projects-and-tasks.html",
+  "actors": [
+    "qa@emeraldcity.oz (MSP QA; read-only navigation)"
+  ],
+  "steps": [
+    "Opened /msp/co-management/tasks on build-1792910542349 using an isolated Chromium context.",
+    "Observed the route; no mutation attempted."
+  ],
+  "outcomes": [
+    "Route returned HTTP 200; recording is limited to visible navigation state."
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 2,
+      "title": "Projects and tasks: route and initial view"
+    },
+    {
+      "start": 2,
+      "end": 4,
+      "title": "Observed QA navigation and outcome"
+    }
+  ],
+  "recordingPaths": {
+    "webm": "guides/current/704fbdca2532/recordings/06-projects-and-tasks.webm",
+    "chapterVtt": "guides/current/704fbdca2532/recordings/06-projects-and-tasks.vtt",
+    "recordingJson": "guides/current/704fbdca2532/recordings/06-projects-and-tasks.json"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true,
+  "runtime": {
+    "origin": "http://feature-co-managed-it.localhost:23377",
+    "sourceRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+    "buildId": "build-1792910542349",
+    "route": "/msp/co-management/tasks"
+  },
+  "build": {
+    "sourceRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+    "buildId": "build-1792910542349"
+  },
+  "scenario": {
+    "status": "partial",
+    "summary": "Read-only route walkthrough; no acceptance mutation or customer actor."
+  },
+  "limitations": [
+    "Partial evidence only; no end-to-end acceptance workflow was performed.",
+    "Only QA actor recorded; customer-side acceptance was not tested.",
+    "No durable mutation or post-reload verification is claimed.",
+    "A route HTTP 200 does not assert complete or authorized product behavior."
+  ]
+}

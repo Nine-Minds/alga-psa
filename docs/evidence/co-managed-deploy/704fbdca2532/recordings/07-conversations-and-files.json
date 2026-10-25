@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "candidateRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "testedRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "recordedAt": "2026-10-25T07:35:19.805Z",
+  "durationSeconds": 3.04,
+  "guide": "guides/07-conversations-and-files.html",
+  "actors": [
+    "qa@emeraldcity.oz (MSP QA; read-only navigation)"
+  ],
+  "steps": [
+    "Opened /msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500 on build-1792910542349 using an isolated Chromium context.",
+    "Observed the route; no mutation attempted."
+  ],
+  "outcomes": [
+    "Route returned HTTP 200; recording is limited to visible navigation state."
+  ],
+  "chapters": [
+    {
+      "start": 0,
+      "end": 1,
+      "title": "Conversations and files: route and initial view"
+    },
+    {
+      "start": 1,
+      "end": 3,
+      "title": "Observed QA navigation and outcome"
+    }
+  ],
+  "recordingPaths": {
+    "webm": "guides/current/704fbdca2532/recordings/07-conversations-and-files.webm",
+    "chapterVtt": "guides/current/704fbdca2532/recordings/07-conversations-and-files.vtt",
+    "recordingJson": "guides/current/704fbdca2532/recordings/07-conversations-and-files.json"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true,
+  "runtime": {
+    "origin": "http://feature-co-managed-it.localhost:23377",
+    "sourceRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+    "buildId": "build-1792910542349",
+    "route": "/msp/co-management/tickets/1f98df77-cd15-44c2-8f4d-42ff52d01e84/c7de2b20-f1d9-4374-b7bb-c223f681955e/cfff4242-7962-4100-a54c-687eaa540500"
+  },
+  "build": {
+    "sourceRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+    "buildId": "build-1792910542349"
+  },
+  "scenario": {
+    "status": "partial",
+    "summary": "Read-only route walkthrough; no acceptance mutation or customer actor."
+  },
+  "limitations": [
+    "Partial evidence only; no end-to-end acceptance workflow was performed.",
+    "Only QA actor recorded; customer-side acceptance was not tested.",
+    "No durable mutation or post-reload verification is claimed.",
+    "A route HTTP 200 does not assert complete or authorized product behavior."
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "checkoutRevisionAtStart":"704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "candidate":{"origin":"http://127.0.0.1:23377","sourceRevision":"704fbdca25327d9bfc1b53d37771e05a4de3ca08","buildId":"build-1792910542349","dist":"server/.next-review-smoke-704f","apiHealth":200,"qaSessionAndHardReload":"pass"},
+  "canonicalReview":{"origin":"http://127.0.0.1:23374","sourceRevision":"cd28aa9531f7bd465711f90b92bf8592185d9c77","buildId":"build-1792904848073","apiHealth":200,"promotion":"not performed"},
+  "workers":[{"port":8375,"path":"/health","status":200},{"port":4374,"path":"/health","status":200}],
+  "guideServer":{"port":8874,"status":200,"rangeSupport":true},
+  "database":{"host":"127.0.0.1","port":5376,"name":"server_co_managed","historical5472":"not used"},
+  "openReview":{"command":"alga-dev workflow-open-review --projectId=964ce5e0-45a5-41b2-8e2c-73903742a85a","result":"Browser backend disposed before entry; direct supported QA Open Review not confirmed"}
+}

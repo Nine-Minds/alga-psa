@@ -1,0 +1,57 @@
+{
+  "guide": "index.html",
+  "candidateRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "status": "complete",
+  "testedRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+  "recordedAt": "2026-10-25T07:35:19.805Z",
+  "durationSeconds": 2.68,
+  "actors": [
+    "qa@emeraldcity.oz (MSP QA; read-only navigation)"
+  ],
+  "steps": [
+    "Opened /msp/tickets on build-1792910542349 using an isolated Chromium context.",
+    "Observed the route; no mutation attempted."
+  ],
+  "outcomes": [
+    "Route returned HTTP 200; recording is limited to visible navigation state."
+  ],
+  "chapters": [
+    {
+      "title": "Main ticket dashboard: route and initial view"
+    },
+    {
+      "title": "Observed QA navigation and outcome"
+    }
+  ],
+  "recordingPaths": {
+    "webm": "guides/current/704fbdca2532/recordings/main.webm",
+    "chapterVtt": "guides/current/704fbdca2532/recordings/main.vtt",
+    "recordingJson": "guides/current/704fbdca2532/recordings/main.json"
+  },
+  "recordingSourcePaths": {
+    "webm": "recordings/main.webm",
+    "chapterVtt": "recordings/main.vtt"
+  },
+  "playbackVerified": true,
+  "chapterSeekVerified": true,
+  "runtime": {
+    "origin": "http://feature-co-managed-it.localhost:23377",
+    "sourceRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+    "buildId": "build-1792910542349",
+    "route": "/msp/tickets"
+  },
+  "build": {
+    "sourceRevision": "704fbdca25327d9bfc1b53d37771e05a4de3ca08",
+    "buildId": "build-1792910542349"
+  },
+  "scenario": {
+    "status": "partial",
+    "summary": "Read-only route walkthrough; no acceptance mutation or customer actor."
+  },
+  "limitations": [
+    "Partial evidence only; no end-to-end acceptance workflow was performed.",
+    "Only QA actor recorded; customer-side acceptance was not tested.",
+    "No durable mutation or post-reload verification is claimed.",
+    "A route HTTP 200 does not assert complete or authorized product behavior."
+  ]
+}
